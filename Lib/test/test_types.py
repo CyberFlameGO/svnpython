@@ -221,8 +221,6 @@ print '6.6 Mappings == Dictionaries'
 d = {}
 if d.keys() != []: raise TestFailed, '{}.keys()'
 if d.has_key('a') != 0: raise TestFailed, '{}.has_key(\'a\')'
-if ('a' in d) != 0: raise TestFailed, "'a' in {}"
-if ('a' not in d) != 1: raise TestFailed, "'a' not in {}"
 if len(d) != 0: raise TestFailed, 'len({})'
 d = {'a': 1, 'b': 2}
 if len(d) != 2: raise TestFailed, 'len(dict)'
@@ -231,91 +229,19 @@ k.sort()
 if k != ['a', 'b']: raise TestFailed, 'dict keys()'
 if d.has_key('a') and d.has_key('b') and not d.has_key('c'): pass
 else: raise TestFailed, 'dict keys()'
-if 'a' in d and 'b' in d and 'c' not in d: pass
-else: raise TestFailed, 'dict keys() # in/not in version'
 if d['a'] != 1 or d['b'] != 2: raise TestFailed, 'dict item'
 d['c'] = 3
 d['a'] = 4
 if d['c'] != 3 or d['a'] != 4: raise TestFailed, 'dict item assignment'
 del d['b']
 if d != {'a': 4, 'c': 3}: raise TestFailed, 'dict item deletion'
-# dict.clear()
 d = {1:1, 2:2, 3:3}
 d.clear()
 if d != {}: raise TestFailed, 'dict clear'
-# dict.update()
 d.update({1:100})
 d.update({2:20})
 d.update({1:1, 2:2, 3:3})
 if d != {1:1, 2:2, 3:3}: raise TestFailed, 'dict update'
-d.clear()
-try: d.update(None)
-except AttributeError: pass
-else: raise TestFailed, 'dict.update(None), AttributeError expected'
-class SimpleUserDict:
-    def __init__(self):
-        self.d = {1:1, 2:2, 3:3}
-    def keys(self):
-        return self.d.keys()
-    def __getitem__(self, i):
-        return self.d[i]
-d.update(SimpleUserDict())
-if d != {1:1, 2:2, 3:3}: raise TestFailed, 'dict.update(instance)'
-d.clear()
-class FailingUserDict:
-    def keys(self):
-        raise ValueError
-try: d.update(FailingUserDict())
-except ValueError: pass
-else: raise TestFailed, 'dict.keys() expected ValueError'
-class FailingUserDict:
-    def keys(self):
-        class BogonIter:
-            def __iter__(self):
-                raise ValueError
-        return BogonIter()
-try: d.update(FailingUserDict())
-except ValueError: pass
-else: raise TestFailed, 'iter(dict.keys()) expected ValueError'
-class FailingUserDict:
-    def keys(self):
-        class BogonIter:
-            def __init__(self):
-                self.i = 1
-            def __iter__(self):
-                return self
-            def next(self):
-                if self.i:
-                    self.i = 0
-                    return 'a'
-                raise ValueError
-        return BogonIter()
-    def __getitem__(self, key):
-        return key
-try: d.update(FailingUserDict())
-except ValueError: pass
-else: raise TestFailed, 'iter(dict.keys()).next() expected ValueError'
-class FailingUserDict:
-    def keys(self):
-        class BogonIter:
-            def __init__(self):
-                self.i = ord('a')
-            def __iter__(self):
-                return self
-            def next(self):
-                if self.i <= ord('z'):
-                    rtn = chr(self.i)
-                    self.i += 1
-                    return rtn
-                raise StopIteration
-        return BogonIter()
-    def __getitem__(self, key):
-        raise ValueError
-try: d.update(FailingUserDict())
-except ValueError: pass
-else: raise TestFailed, 'dict.update(), __getitem__ expected ValueError'
-# dict.copy()
-d = {1:1, 2:2, 3:3}
 if d.copy() != {1:1, 2:2, 3:3}: raise TestFailed, 'dict copy'
 if {}.copy() != {}: raise TestFailed, 'empty dict copy'
 # dict.get()

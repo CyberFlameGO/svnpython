@@ -470,23 +470,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        */
 
-/* Iterators */
-
-     DL_IMPORT(PyObject *) PyObject_GetIter(PyObject *);
-     /* Takes an object and returns an iterator for it.
-        This is typically a new iterator but if the argument
-	is an iterator, this returns itself. */
-
-#define PyIter_Check(obj) \
-    (PyType_HasFeature((obj)->ob_type, Py_TPFLAGS_HAVE_ITER) && \
-     (obj)->ob_type->tp_iternext != NULL)
-
-     DL_IMPORT(PyObject *) PyIter_Next(PyObject *);
-     /* Takes an iterator object and calls its tp_iternext slot,
-	returning the next value.  If the iterator is exhausted,
-	this returns NULL without setting an exception.
-	NULL with an exception means an error occurred. */
-
 /*  Number Protocol:*/
 
      DL_IMPORT(int) PyNumber_Check(PyObject *o);
@@ -911,7 +894,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
          tuple or list.  Use PySequence_Fast_GET_ITEM to access the
          members of this list.
 
-         Returns NULL on failure.  If the object does not support iteration,
+         Returns NULL on failure.  If the object is not a sequence,
          raises a TypeError exception with m as the message text.
        */
 
@@ -932,17 +915,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 expression: o.count(value).
        */
 
-     DL_IMPORT(int) PySequence_Contains(PyObject *seq, PyObject *ob);
-       /*
-         Return -1 if error; 1 if ob in seq; 0 if ob not in seq.
-         Use __contains__ if possible, else _PySequence_IterContains().
-       */
-
-     DL_IMPORT(int) _PySequence_IterContains(PyObject *seq, PyObject *ob);
-       /*
-         Return -1 if error; 1 if ob in seq; 0 if ob not in seq.
-         Always uses the iteration protocol, and only Py_EQ comparisons.
-       */
+     DL_IMPORT(int) PySequence_Contains(PyObject *o, PyObject *value);
 
 /* For DLL-level backwards compatibility */
 #undef PySequence_In

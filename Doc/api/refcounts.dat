@@ -363,11 +363,6 @@ PyInterpreterState_Delete:PyInterpreterState*:interp::
 
 PyInterpreterState_New:PyInterpreterState*:::
 
-PyIter_Check:int:o:0:
-
-PyIter_Next:PyObject*::+1:
-PyIter_Next:PyObject*:o:0:
-
 PyList_Append:int:::
 PyList_Append:PyObject*:list:0:
 PyList_Append:PyObject*:item:+1:
@@ -704,14 +699,6 @@ PyObject_InitVar:PyVarObject*:op:0:
 PyObject_Length:int:::
 PyObject_Length:PyObject*:o:0:
 
-PyObject_NEW:PyObject*::+1:
-
-PyObject_New:PyObject*::+1:
-
-PyObject_NEW_VAR:PyObject*::+1:
-
-PyObject_NewVar:PyObject*::+1:
-
 PyObject_Print:int:::
 PyObject_Print:PyObject*:o:0:
 PyObject_Print:FILE*:fp::
@@ -740,9 +727,6 @@ PyObject_Str:PyObject*:o:0:
 
 PyObject_Type:PyObject*::+1:
 PyObject_Type:PyObject*:o:0:
-
-PyObject_Unicode:PyObject*::+1:
-PyObject_Unicode:PyObject*:o:0:
 
 PyParser_SimpleParseFile:struct _node*:::
 PyParser_SimpleParseFile:FILE*:fp::
@@ -862,16 +846,6 @@ PySequence_Tuple:PyObject*:o:0:
 PyString_AS_STRING:char*:::
 PyString_AS_STRING:PyObject*:string:0:
 
-PyString_AsDecodedObject:PyObject*::+1:
-PyString_AsDecodedObject:PyObject*:str:0:
-PyString_AsDecodedObject:const char*:encoding::
-PyString_AsDecodedObject:const char*:errors::
-
-PyString_AsEncodedObject:PyObject*::+1:
-PyString_AsEncodedObject:PyObject*:str:0:
-PyString_AsEncodedObject:const char*:encoding::
-PyString_AsEncodedObject:const char*:errors::
-
 PyString_AsString:char*:::
 PyString_AsString:PyObject*:string:0:
 
@@ -942,8 +916,6 @@ PyThreadState_Delete:void:::
 PyThreadState_Delete:PyThreadState*:tstate::
 
 PyThreadState_Get:PyThreadState*:::
-
-PyThreadState_GetDict:PyObject*::0:
 
 PyThreadState_New:PyThreadState*:::
 PyThreadState_New:PyInterpreterState*:interp::
@@ -1346,7 +1318,7 @@ _PyObject_Del:PyObject*:op:0:
 _PyObject_New:PyObject*::+1:
 _PyObject_New:PyTypeObject*:type:0:
 
-_PyObject_NewVar:PyObject*::+1:
+_PyObject_NewVar:PyVarObject*::+1:
 _PyObject_NewVar:PyTypeObject*:type:0:
 _PyObject_NewVar:int:size::
 
@@ -1357,6 +1329,7 @@ _PyString_Resize:int:newsize::
 _PyTuple_Resize:int:::
 _PyTuple_Resize:PyTupleObject**:p:+1:
 _PyTuple_Resize:int:new::
+_PyTuple_Resize:int:last_is_sticky::
 
 _Py_c_diff:Py_complex:::
 _Py_c_diff:Py_complex:left::

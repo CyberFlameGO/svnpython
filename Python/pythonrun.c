@@ -1076,10 +1076,8 @@ run_pyc_file(FILE *fp, char *filename, PyObject *globals, PyObject *locals,
 	if (v && flags) {
 		if (co->co_flags & CO_NESTED)
 			flags->cf_nested_scopes = 1;
-#if 0
 		fprintf(stderr, "run_pyc_file: nested_scopes: %d\n",
-			flags->cf_nested_scopes);
-#endif
+			flags->cf_nested_scopes);			
 	}
 	Py_DECREF(co);
 	return v;

@@ -113,7 +113,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	lib/libgopherlib.tex \
 	lib/libnntplib.tex \
 	lib/liburlparse.tex \
-	lib/libhtmlparser.tex \
 	lib/libhtmllib.tex \
 	lib/libsgmllib.tex \
 	lib/librfc822.tex \
@@ -178,7 +177,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	lib/libuserdict.tex \
 	lib/libdis.tex \
 	lib/libxmllib.tex \
-	lib/libxmlrpclib.tex \
 	lib/libpyexpat.tex \
 	lib/xmldom.tex \
 	lib/xmldomminidom.tex \

@@ -123,14 +123,6 @@ you're editing someone else's Python code."
   :type 'integer
   :group 'python)
 
-(defcustom py-continuation-offset 4
-  "*Additional amount of offset to give for some continuation lines.
-Continuation lines are those that immediately follow a backslash
-terminated line.  Only those continuation lines for a block opening
-statement are given this extra offset."
-  :type 'integer
-  :group 'python)
-
 (defcustom py-smart-indentation t
   "*Should `python-mode' try to automagically set some indentation variables?
 When this variable is non-nil, two things happen when a buffer is set
@@ -311,7 +303,7 @@ support for features needed by `python-mode'.")
 			  "from"     "global"   "if"      "import"
 			  "in"       "is"       "lambda"  "not"
 			  "or"       "pass"     "print"   "raise"
-			  "return"   "while"    "yield"
+			  "return"   "while"
 			  )
 			"\\|"))
 	(kw2 (mapconcat 'identity
@@ -1808,8 +1800,7 @@ dedenting."
 	      ;; chunk of non-whitespace characters on base line, + 1 more
 	      ;; column
 	      (end-of-line)
-	      (setq endpos (point)
-		    searching t)
+	      (setq endpos (point)  searching t)
 	      (back-to-indentation)
 	      (setq startpos (point))
 	      ;; look at all "=" from left to right, stopping at first
@@ -1834,12 +1825,7 @@ dedenting."
 		  (progn
 		    (goto-char startpos)
 		    (skip-chars-forward "^ \t\n")))
-	      ;; if this is a continuation for a block opening
-	      ;; statement, add some extra offset.
-	      (+ (current-column) (if (py-statement-opens-block-p)
-				      py-continuation-offset 0)
-		 1)
-	      ))))
+	      (1+ (current-column))))))
 
        ;; not on a continuation line
        ((bobp) (current-indentation))

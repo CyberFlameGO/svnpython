@@ -40,7 +40,7 @@ and \function{str()} respectively.
 \begin{classdesc}{SerialCookie}{\optional{input}}
 This class derives from \class{BaseCookie} and overrides
 \method{value_decode()} and \method{value_encode()} to be the
-\function{pickle.loads()} and  \function{pickle.dumps()}.  
+\function{pickle.loads()} and \function{pickle.dumps()}.  
 
 Do not use this class.  Reading pickled values from a cookie is a
 security hole, as arbitrary client-code can be run on
@@ -76,11 +76,12 @@ so it can be overridden.
 
 \begin{methoddesc}[BaseCookie]{value_encode}{val}
 Return an encoded value. \var{val} can be any type, but return value
-must be a string. This method does nothing in \class{BaseCookie} --- it exists
-so it can be overridden
+must be a string. This method does nothing in \class{BaseCookie} ---
+it exists so it can be overridden
 
 In general, it should be the case that \method{value_encode()} and 
-\method{value_decode()} are inverses on the range of \var{value_decode}.
+\method{value_decode()} are inverses on the range of
+\var{value_decode}.
 \end{methoddesc}
 
 \begin{methoddesc}[BaseCookie]{output}{\optional{attrs\optional{, header\optional{, sep}}}}

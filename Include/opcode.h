@@ -53,7 +53,6 @@ extern "C" {
 #define BINARY_XOR	65
 #define BINARY_OR	66
 #define INPLACE_POWER	67
-#define GET_ITER	68
 
 #define PRINT_EXPR	70
 #define PRINT_ITEM	71
@@ -71,7 +70,6 @@ extern "C" {
 #define RETURN_VALUE	83
 #define IMPORT_STAR	84
 #define EXEC_STMT	85
-#define YIELD_VALUE	86
 
 #define POP_BLOCK	87
 #define END_FINALLY	88
@@ -82,7 +80,6 @@ extern "C" {
 #define STORE_NAME	90	/* Index in name list */
 #define DELETE_NAME	91	/* "" */
 #define UNPACK_SEQUENCE	92	/* Number of sequence items */
-#define FOR_ITER	93
 
 #define STORE_ATTR	95	/* Index in name list */
 #define DELETE_ATTR	96	/* "" */

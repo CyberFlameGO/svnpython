@@ -530,7 +530,7 @@ class Folder:
             try:
                 toseq = tosequences[name]
                 new = 0
-            except KeyError:
+            except:
                 toseq = []
                 new = 1
             for fromn, ton in refileditems:

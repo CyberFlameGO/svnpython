@@ -1,200 +1,70 @@
-What's New in Python 2.2a0?
-===========================
+What's New in Python 2.1.1c1 ?
+==============================
 
-Core
+- Python 2.1.1 comes with the new, GPL-compatible PSF licence.
 
-- The UTF-16 codec was modified to be more RFC compliant. It will now
-  only remove BOM characters at the start of the string and then
-  only if running in native mode (UTF-16-LE and -BE won't remove a
-  leading BMO character).
-
-- Strings now have a new method .decode() to complement the already
-  existing .encode() method. These two methods provide direct access
-  to the corresponding decoders and encoders of the registered codecs.
-
-  To enhance the usability of the .encode() method, the special
-  casing of Unicode object return values was dropped (Unicode objects
-  were auto-magically converted to string using the default encoding).
-
-  Both methods will now return whatever the codec in charge of the
-  requested encoding returns as object, e.g. Unicode codecs will
-  return Unicode objects when decoding is requested ("הצü".decode("latin-1")
-  will return u"הצü"). This enables codec writer to create codecs
-  for various simple to use conversions.
-
-  New codecs were added to demonstrate these new features (the .encode()
-  and .decode() columns indicate the type of the returned objects):
-
-  Name     | .encode() | .decode() | Description
-  ----------------------------------------------------------------------
-  uu       | string    | string    | UU codec (e.g. for email)
-  base64   | string    | string    | base64 codec
-  quopri   | string    | string    | quoted-printable codec
-  zlib     | string    | string    | zlib compression
-  hex      | string    | string    | 2-byte hex codec
-  rot-13   | string    | Unicode   | ROT-13 Unicode charmap codec
-
-- Some operating systems now support the concept of a default Unicode
-  encoding for file system operations.  Notably, Windows supports 'mbcs'
-  as the default.  The Macintosh will also adopt this concept in the medium
-  term, although the default encoding for that platform will be other than
-  'mbcs'.
-
-  On operating system that support non-ASCII filenames, it is common for
-  functions that return filenames (such as os.listdir()) to return Python
-  string objects pre-encoded using the default file system encoding for
-  the platform.  As this encoding is likely to be different from Python's
-  default encoding, converting this name to a Unicode object before passing
-  it back to the Operating System would result in a Unicode error, as Python
-  would attempt to use its default encoding (generally ASCII) rather than
-  the default encoding for the file system.
-
-  In general, this change simply removes surprises when working with
-  Unicode and the file system, making these operations work as you expect,
-  increasing the transparency of Unicode objects in this context.
-  See [????] for more details, including examples.
-
-- Float (and complex) literals in source code were evaluated to full
-  precision only when running from a .py file; the same code loaded from a
-  .pyc (or .pyo) file could suffer numeric differences starting at about the
-  12th significant decimal digit.  For example, on a machine with IEEE-754
-  floating arithmetic,
-
-      x = 9007199254740992.0
-      print long(x)
-
-  printed 9007199254740992 if run directly from .py, but 9007199254740000
-  if from a compiled (.pyc or .pyo) file.  This was due to marshal using
-  str(float) instead of repr(float) when building code objects.  marshal
-  now uses repr(float) instead, which should reproduce floats to full
-  machine precision (assuming the platform C float<->string I/O conversion
-  functions are of good quality).
-
-  This may cause floating-point results to change in some cases, and
-  usually for the better, but may also cause numerically unstable
-  algorithms to break.
-
-- The implementation of dicts suffers fewer collisions, which has speed
-  benefits.  However, the order in which dict entries appear in dict.keys(),
-  dict.values() and dict.items() may differ from previous releases for a
-  given dict.  Nothing is defined about this order, so no program should
-  rely on it.  Nevertheless, it's easy to write test cases that rely on the
-  order by accident, typically because of printing the str() or repr() of a
-  dict to an "expected results" file.  See Lib/test/test_support.py's new
-  sortdict(dict) function for a simple way to display a dict in sorted
-  order.
-
-- Many other small changes to dicts were made, resulting in faster
-  operation along the most common code paths.
-
-- Dictionary objects now support the "in" operator: "x in dict" means
-  the same as dict.has_key(x).
-
-- The update() method of dictionaries now accepts generic mapping
-  objects.  Specifically the argument object must support the .keys()
-  and __getitem__() methods.  This allows you to say, for example,
-  {}.update(UserDict())
-
-- Iterators were added; this is a generalized way of providing values
-  to a for loop.  See PEP 234.  There's a new built-in function iter()
-  to return an iterator.  There's a new protocol to get the next value
-  from an iterator using the next() method (in Python) or the
-  tp_iternext slot (in C).  There's a new protocol to get iterators
-  using the __iter__() method (in Python) or the tp_iter slot (in C).
-  Iterating (i.e. a for loop) over a dictionary generates its keys.
-  Iterating over a file generates its lines.
-
-- The following functions were generalized to work nicely with iterator
-  arguments:
-    map(), filter(), reduce(), zip()
-    list(), tuple() (PySequence_Tuple() and PySequence_Fast() in C API)
-    max(), min()
-    join() method of strings
-    extend() method of lists
-    'x in y' and 'x not in y' (PySequence_Contains() in C API)
-    operator.countOf() (PySequence_Count() in C API)
-    right-hand side of assignment statements with multiple targets, such as
-        x, y, z = some_iterable_object_returning_exactly_3_values
-
-- Accessing module attributes is significantly faster (for example,
-  random.random or os.path or yourPythonModule.yourAttribute).
-
-- Comparing dictionary objects via == and != is faster, and now works even
-  if the keys and values don't support comparisons other than ==.
-
-- Comparing dictionaries in ways other than == and != is slower:  there were
-  insecurities in the dict comparison implementation that could cause Python
-  to crash if the element comparison routines for the dict keys and/or
-  values mutated the dicts.  Making the code bulletproof slowed it down.
-
-- Collisions in dicts are resolved via a new approach, which can help
-  dramatically in bad cases.  For example, looking up every key in a dict
-  d with d.keys() == [i << 16 for i in range(20000)] is approximately 500x
-  faster now.  Thanks to Christian Tismer for pointing out the cause and
-  the nature of an effective cure (last December! better late than never).
-
-- repr() is much faster for large containers (dict, list, tuple).
-
-
-Library
-
-- Fredrik Lundh's xmlrpclib is now a standard library module.  This
-  provides full client-side XML-RPC support.  In addition,
-  Demo/xmlrpc/ contains two server frameworks (one SocketServer-based,
-  one asyncore-based).  Thanks to Eric Raymond for the documentation.
-
-- The xrange() object is simplified: it no longer supports slicing,
-  repetition, comparisons, efficient 'in' checking, the tolist()
-  method, or the start, stop and step attributes.  See PEP 260.
-
-- A new function fnmatch.filter to filter lists of file names was added.
-
-- calendar.py uses month and day names based on the current locale.
-
-- strop is now *really* obsolete (this was announced before with 1.6),
-  and issues DeprecationWarning when used (except for the four items
-  that are still imported into string.py).
-
-- Cookie.py now sorts key+value pairs by key in output strings.
-
-- pprint.isrecursive(object) didn't correctly identify recursive objects.
-  Now it does.
-
-- pprint functions now much faster for large containers (tuple, list, dict).
-
-- New 'q' and 'Q' format codes in the struct module, corresponding to C
-  types "long long" and "unsigned long long" (on Windows, __int64).  In
-  native mode, these can be used only when the platform C compiler supports
-  these types (when HAVE_LONG_LONG is #define'd by the Python config
-  process), and then they inherit the sizes and alignments of the C types.
-  In standard mode, 'q' and 'Q' are supported on all platforms, and are
-  8-byte integral types.
-
-- The site module installs a new built-in function 'help' that invokes
-  pydoc.help.  It must be invoked as 'help()'; when invoked as 'help',
-  it displays a message reminding the user to use 'help()' or
-  'help(object)'.
-
-Tests
-
-- New test_mutants.py runs dict comparisons where the key and value
-  comparison operators mutute the dicts randomly during comparison.  This
-  rapidly causes Python to crash under earlier releases (not for the faint
-  of heart:  it can also cause Win9x to freeze or reboot!).
-
-- New test_pprint.py verfies that pprint.isrecursive() and
-  pprint.isreadable() return sensible results.  Also verifies that simple
-  cases produce correct output.
-
-New platforms
+- Several insecurities in dict comparison as well as a scoping bug,
+  that could lead to the Python interpreter crashing were fixed.
 
 - Python should compile and run out of the box using the Borland C
   compiler (under Windows), thanks to Stephen Hansen.
 
-C API
+- A large number of bugs was fixed, both in code and in the
+  documentation, including (but not limited to) the following
+  bugreports from SourceForge:
 
-- Removed the unused last_is_sticky argument from the internal
-  _PyTuple_Resize().  If this affects you, you were cheating.
+    [ #416530 ] No notes for building on Mac OS X 10.0
+    [ #416573 ] makesockaddr() AF_UNIX ignores sun_len
+    [ #417030 ] print '%*s' fails for unicode string
+    [ #417093 ] Case sensitive import: dir and .py file w/ same name
+    [ #417418 ] Python 2.1 compile error on HPUX
+    [ #417587 ] compiler warnings compiling 2.1
+    [ #417845 ] Python 2.1: SocketServer.ThreadingMixIn
+    [ #417943 ] xreadlines documented twice for file obj
+    [ #418296 ] WinMain.c should use WIN32_LEAN_AND_MEAN.
+    [ #418615 ] regular expression bug in pipes.py.
+    [ #418977 ] Access Violation in PyCell_Set
+    [ #419434 ] Tutorial contains wrong sample code.
+    [ #419873 ] ThreadingTCPServer invalidating sockets
+    [ #420216 ] bad links in v2.1 docs
+    [ #420230 ] fileinput deletes backups without warnin
+    [ #420343 ] SystemError from tuple() builtin
+    [ #420399 ] wrong HTML ("trademark" symbols?)
+    [ #421999 ] wrong priority doc for ** vs unary -
+    [ #422108 ] Error in rich comparisons
+    [ #422121 ] Insecurities in dict comparison
+    [ #422702 ] dbhash.open default
+    [ #423087 ] A small typo in weakref documentation
+    [ #423429 ] very minor nit in library ref
+    [ #424776 ] SMTP Example does not work
+    [ #424951 ] ThreadingTCPServer file handle errors.
+    [ #425320 ] Typo in introduction.
+    [ #427698 ] objects with __eq__ are not hashable
+    [ #427783 ] Lang Ref section 4.1 s/is/in/
+    [ #427985 ] optional "listen" parameter in asyncore
+    [ #428419 ] include/rangeobject.h needs extern "C"
+    [ #429059 ] No docs for os.getenv()
+    [ #429070 ] Thread.getDaemon()should be isDaemon()
+    [ #429361 ] popen2.Popen3.wait() exit code
+    [ #429554 ] PyList_SET_ITEM documentation omission
+    [ #430627 ] Fixes for templates/module.tex file
+    [ #430991 ] wrong co_lnotab
+    [ #431772 ] traceback.print_exc() causes traceback
+    [ #432369 ] ConfigParser: problem w/ mixed-case opts
+    [ #433228 ] repr(list) woes when len(list) big
+    [ #433904 ] rexec: all s_* methods return None only
+    [ #434186 ] 0x80000000/2 != 0x80000000>>1
+    [ #434975 ] Typo on Posix Large File Support page
+    [ #435066 ] PyObject_ClearWeakRefs misdocumented
+    [ #436525 ] Wrong macro name
+    [ #437041 ] strfime %Z isn't an RFC 822 timezone
+    [ #437879 ] SocketServer.py related problems
+    [ #438032 ] Documentation errors in module "profile"
+    [ #439012 ] Need doc: initial state of allocs
+    [ #439104 ] Tuple richcompares has code-typo
+    [ #439798 ] Nested scopes core dump
+    [ #439823 ] poll docs should mention timeout unit
+    [ #440037 ] C API descriptions not complete/consistent
 
 
 What's New in Python 2.1 (final)?
@@ -413,7 +283,7 @@ Tools
 - IDLE: syntax warnings in interactive mode are changed into errors.
 
 - Some improvements to Tools/webchecker (ignore some more URL types,
-  follow some more links).
+  follow some more links). 
 
 - Brought the Tools/compiler package up to date.
 
@@ -501,23 +371,23 @@ Python/C API
   in Flags and take an extra argument, a PyCompilerFlags *; examples:
   PyRun_AnyFileExFlags(), PyRun_InteractiveLoopFlags().  These
   variants may be removed in Python 2.2, when nested scopes are
-  mandatory.
+  mandatory. 
 
 Distutils
 
 - the sdist command now writes a PKG-INFO file, as described in PEP 241,
   into the release tree.
 
-- several enhancements to the bdist_wininst command from Thomas Heller
+- several enhancements to the bdist_wininst command from Thomas Heller 
   (an uninstaller, more customization of the installer's display)
 
 - from Jack Jansen: added Mac-specific code to generate a dialog for
   users to specify the command-line (because providing a command-line with
-  MacPython is awkward).  Jack also made various fixes for the Mac
+  MacPython is awkward).  Jack also made various fixes for the Mac 
   and the Metrowerks compiler.
-
-- added 'platforms' and 'keywords' to the set of metadata that can be
-  specified for a distribution.
+  
+- added 'platforms' and 'keywords' to the set of metadata that can be 
+  specified for a distribution.  
 
 - applied patches from Jason Tishler to make the compiler class work with
   Cygwin.

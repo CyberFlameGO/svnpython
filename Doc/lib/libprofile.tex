@@ -319,8 +319,8 @@ made in calls to sub-functions),
 is the quotient of \code{tottime} divided by \code{ncalls}
 
 \item[cumtime ]
-is the total time spent in this and all subfunctions (from invocation
-till exit). This figure is accurate \emph{even} for recursive
+is the total time spent in this and all subfunctions (i.e., from
+invocation till exit). This figure is accurate \emph{even} for recursive
 functions.
 
 \item[percall ]
@@ -331,11 +331,11 @@ provides the respective data of each function
 
 \end{description}
 
-When there are two numbers in the first column (for example,
-\samp{43/3}), then the latter is the number of primitive calls, and
-the former is the actual number of calls.  Note that when the function
-does not recurse, these two values are the same, and only the single
-figure is printed.
+When there are two numbers in the first column (e.g.: \samp{43/3}),
+then the latter is the number of primitive calls, and the former is
+the actual number of calls.  Note that when the function does not
+recurse, these two values are the same, and only the single figure is
+printed.
 
 \end{funcdesc}
 
@@ -355,7 +355,7 @@ The file selected by the above constructor must have been created by
 the corresponding version of \module{profile}.  To be specific, there is
 \emph{no} file compatibility guaranteed with future versions of this
 profiler, and there is no compatibility with files produced by other
-profilers (such as the old system profiler).
+profilers (e.g., the old system profiler).
 
 If several files are provided, all the statistics for identical
 functions will be coalesced, so that an overall view of several
@@ -377,7 +377,7 @@ modifies the object, and the stripped information is lost.  After
 performing a strip operation, the object is considered to have its
 entries in a ``random'' order, as it was just after object
 initialization and loading.  If \method{strip_dirs()} causes two
-function names to be indistinguishable (they are on the same
+function names to be indistinguishable (i.e., they are on the same
 line of the same filename, and have the same function name), then the
 statistics for these two entries are accumulated into a single entry.
 \end{methoddesc}
@@ -423,7 +423,7 @@ defined:
 
 Note that all sorts on statistics are in descending order (placing
 most time consuming items first), where as name, file, and line number
-searches are in ascending order (alphabetical). The subtle
+searches are in ascending order (i.e., alphabetical). The subtle
 distinction between \code{'nfl'} and \code{'stdname'} is that the
 standard name is a sort of the name as printed, which means that the
 embedded line numbers get compared in an odd way.  For example, lines
@@ -538,10 +538,10 @@ value was obtained (and then squirreled away), until the user's code
 is once again executing.  As a result, functions that are called many
 times, or call many functions, will typically accumulate this error.
 The error that accumulates in this fashion is typically less than the
-accuracy of the clock (less than one clock tick), but it
+accuracy of the clock (i.e., less than one clock tick), but it
 \emph{can} accumulate and become very significant.  This profiler
 provides a means of calibrating itself for a given platform so that
-this error can be probabilistically (on the average) removed.
+this error can be probabilistically (i.e., on the average) removed.
 After the profiler is calibrated, it will be more accurate (in a least
 square sense), but it will sometimes produce negative numbers (when
 call counts are exceptionally low, and the gods of probability work
@@ -655,48 +655,20 @@ Be warned that you \emph{should} calibrate the profiler class for the
 timer function that you choose.  For most machines, a timer that
 returns a lone integer value will provide the best results in terms of
 low overhead during profiling.  (\function{os.times()} is
-\emph{pretty} bad, as it returns a tuple of floating point values,
+\emph{pretty} bad, 'cause it returns a tuple of floating point values,
 so all arithmetic is floating point in the profiler!).  If you want to
 substitute a better timer in the cleanest fashion, you should derive a
 class, and simply put in the replacement dispatch method that better
 handles your timer call, along with the appropriate calibration
-constant.
-
-Note that subclasses which override any of the
-\method{trace_dispatch_call()}, \method{trace_dispatch_exception()},
-or \method{trace_dispatch_return()} methods also need to specify a
-dispatch table as well.  The table, named \member{dispatch}, should
-have the three keys \code{'call'}, \code{'exception'}, and
-\code{'return'}, each giving the function of the corresponding
-handler.  Note that best performance is achieved by using the
-\emph{function} objects for the handlers and not bound methods.  This
-is preferred since calling a simple function object executes less code
-in the runtime than calling either bound or unbound methods.  For
-example, if the derived profiler overrides only one method, the
-\member{dispatch} table can be built like this:
-
-\begin{verbatim}
-from profile import Profile
-
-class MyProfiler(Profile):
-    def trace_dispath_call(self, frame, t):
-        # do something interesting here
-        ...
-
-    dispatch = {
-        'call': trace_dispatch_call,
-        'exception': Profile.__dict__['trace_dispatch_exception'],
-        'return': Profile.__dict__['trace_dispatch_return'],
-    }
-\end{verbatim}
+constant :-).
 
 
 \subsection{OldProfile Class \label{profile-old}}
 
 The following derived profiler simulates the old style profiler,
 providing errant results on recursive functions. The reason for the
-usefulness of this profiler is that it runs faster (less
-overhead) than the new profiler.  It still creates all the caller
+usefulness of this profiler is that it runs faster (i.e., less
+overhead) than the old profiler.  It still creates all the caller
 stats, and is quite useful when there is \emph{no} recursion in the
 user's code.  It is also a lot more accurate than the old profiler, as
 it does not charge all its overhead time to the user's code.
@@ -712,7 +684,7 @@ class OldProfile(Profile):
 
     def trace_dispatch_call(self, frame, t):
         fn = `frame.f_code`
-
+        
         self.cur = (t, 0, 0, fn, frame, self.cur)
         if self.timings.has_key(fn):
             tt, ct, callers = self.timings[fn]
@@ -738,23 +710,20 @@ class OldProfile(Profile):
 
         return 1
 
-    dispatch = {
-        "call": trace_dispatch_call,
-        "exception": trace_dispatch_exception,
-        "return": trace_dispatch_return,
-        }
 
     def snapshot_stats(self):
         self.stats = {}
         for func in self.timings.keys():
             tt, ct, callers = self.timings[func]
-            callers = callers.copy()
+            nor_func = self.func_normalize(func)
+            nor_callers = {}
             nc = 0
             for func_caller in callers.keys():
+                nor_callers[self.func_normalize(func_caller)] = \
+                    callers[func_caller]
                 nc = nc + callers[func_caller]
-            self.stats[func] = nc, nc, tt, ct, callers
+            self.stats[nor_func] = nc, nc, tt, ct, nor_callers
 \end{verbatim}
-
 
 \subsection{HotProfile Class \label{profile-HotProfile}}
 
@@ -794,15 +763,11 @@ class HotProfile(Profile):
 
         return 1
 
-    dispatch = {
-        "call": trace_dispatch_call,
-        "exception": trace_dispatch_exception,
-        "return": trace_dispatch_return,
-        }
 
     def snapshot_stats(self):
         self.stats = {}
         for func in self.timings.keys():
             nc, tt = self.timings[func]
-            self.stats[func] = nc, nc, tt, 0, {}
+            nor_func = self.func_normalize(func)
+            self.stats[nor_func] = nc, nc, tt, 0, {}
 \end{verbatim}

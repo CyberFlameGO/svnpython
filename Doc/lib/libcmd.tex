@@ -33,10 +33,10 @@ The optional argument is a banner or intro string to be issued before the
 first prompt (this overrides the \member{intro} class member).
 
 If the \module{readline} module is loaded, input will automatically
-inherit \program{bash}-like history-list editing (e.g. \kbd{Control-P}
-scrolls back to the last command, \kbd{Control-N} forward to the next
-one, \kbd{Control-F} moves the cursor to the right non-destructively,
-\kbd{Control-B} moves the cursor to the left non-destructively, etc.).
+inherit \program{bash}-like history-list editing (e.g. \kbd{Ctrl-P}
+scrolls back to the last command, \kbd{Ctrl-N} forward to the next
+one, \kbd{Ctrl-F} moves the cursor to the right non-destructively,
+\kbd{Ctrl-B} moves the cursor to the left non-destructively, etc.).
 
 An end-of-file on input is passed back as the string \code{'EOF'}.
 
@@ -73,8 +73,7 @@ error message and returns.
 \end{methoddesc}
 
 \begin{methoddesc}{precmd}{}
-Hook method executed just before the command line is interpreted, but
-after the input prompt is generated and issued.  This
+Hook method executed just before the input prompt is issued.  This
 method is a stub in \class{Cmd}; it exists to be overridden by
 subclasses.
 \end{methoddesc}
@@ -143,8 +142,5 @@ headers.  If empty, no ruler line is drawn.  It defaults to
 A flag, defaulting to true.  If true, \method{cmdloop()} uses
 \function{raw_input()} to display a prompt and read the next command;
 if false, \function{sys.stdout.write()} and
-\function{sys.stdin.readline()} are used. (This means that by
-importing \module{readline}, on systems that support it, the
-interpreter will automatically support Emacs-like line editing 
-and command-history keystrokes.)
+\function{sys.stdin.readline()} are used.
 \end{memberdesc}

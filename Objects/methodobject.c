@@ -24,7 +24,6 @@ PyCFunction_New(PyMethodDef *ml, PyObject *self)
 	op->m_ml = ml;
 	Py_XINCREF(self);
 	op->m_self = self;
-	PyObject_GC_Init(op);
 	return (PyObject *)op;
 }
 
@@ -63,19 +62,9 @@ PyCFunction_GetFlags(PyObject *op)
 static void
 meth_dealloc(PyCFunctionObject *m)
 {
-	PyObject_GC_Fini(m);
 	Py_XDECREF(m->m_self);
 	m->m_self = (PyObject *)free_list;
 	free_list = m;
-}
-
-static int
-meth_traverse(PyCFunctionObject *m, visitproc visit, void *arg)
-{
-	if (m->m_self != NULL)
-		return visit(m->m_self, arg);
-	else
-		return 0;
 }
 
 static PyObject *
@@ -163,26 +152,18 @@ PyTypeObject PyCFunction_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"builtin_function_or_method",
-	sizeof(PyCFunctionObject) + PyGC_HEAD_SIZE,
+	sizeof(PyCFunctionObject),
 	0,
-	(destructor)meth_dealloc, 		/* tp_dealloc */
-	0,					/* tp_print */
-	(getattrfunc)meth_getattr,		/* tp_getattr */
-	0,					/* tp_setattr */
-	(cmpfunc)meth_compare,			/* tp_compare */
-	(reprfunc)meth_repr,			/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	(hashfunc)meth_hash,			/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	0,					/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
- 	0,					/* tp_doc */
- 	(traverseproc)meth_traverse,		/* tp_traverse */
+	(destructor)meth_dealloc, /*tp_dealloc*/
+	0,		/*tp_print*/
+	(getattrfunc)meth_getattr, /*tp_getattr*/
+	0,		/*tp_setattr*/
+	(cmpfunc)meth_compare, /*tp_compare*/
+	(reprfunc)meth_repr, /*tp_repr*/
+	0,		/*tp_as_number*/
+	0,		/*tp_as_sequence*/
+	0,		/*tp_as_mapping*/
+	(hashfunc)meth_hash, /*tp_hash*/
 };
 
 /* List all methods in a chain -- helper for findmethodinchain */
@@ -264,7 +245,6 @@ PyCFunction_Fini(void)
 	while (free_list) {
 		PyCFunctionObject *v = free_list;
 		free_list = (PyCFunctionObject *)(v->m_self);
-		v = (PyCFunctionObject *) PyObject_AS_GC(v);
 		PyObject_DEL(v);
 	}
 }

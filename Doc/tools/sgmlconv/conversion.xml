@@ -52,16 +52,15 @@
     <content/>
     </macro>
   <macro name="shortversion"/>
-  <!-- These are broken:  we need to re-order the optional and required
-       parameters, making the optional parameter the content for the
-       element.  latex2esis.py is not powerful enough to handle this.
-    -->
   <macro name="versionadded">
-    <attribute name="info" optional="yes"/>
     <attribute name="version"/>
     </macro>
+  <!-- This is broken:  we need to re-order the optional and required
+       parameters, making the optional parameter the content for the
+       element.  The processor is not powerful enough to handle this.
+    -->
   <macro name="versionchanged">
-    <attribute name="info" optional="yes"/>
+    <attribute name="how" optional="yes"/>
     <attribute name="version"/>
     </macro>
 
@@ -98,23 +97,12 @@
     <attribute name="name"/>
     <child name="args"/>
     </environment>
-  <environment name="classdesc*" outputname="classdesc">
-    <attribute name="name"/>
-    </environment>
   <environment name="datadesc">
-    <attribute name="name"/>
-    </environment>
-  <environment name="datadescni" outputname="datadesc">
-    <attribute name="index">no</attribute>
     <attribute name="name"/>
     </environment>
   <macro name="dataline">
     <attribute name="name"/>
     </macro>
-  <environment name="excclassdesc">
-    <attribute name="name"/>
-    <child name="args"/>
-    </environment>
   <environment name="excdesc">
     <attribute name="name"/>
     </environment>
@@ -147,9 +135,6 @@
     <attribute name="class" optional="yes"/>
     <attribute name="name"/>
     </environment>
-  <macro name="memberline">
-    <attribute name="name"/>
-    </macro>
 
   <environment name="methoddesc">
     <attribute name="class" optional="yes"/>
@@ -567,9 +552,6 @@
   <macro name="geq" outputname="">
     <entityref name="geq"/>
     </macro>
-  <macro name="infinity" outputname="">
-    <entityref name="infin"/>
-    </macro>
   <macro name="LaTeX" outputname="">
     <text>LaTeX</text>
     </macro>
@@ -578,9 +560,6 @@
     </macro>
   <macro name="leq" outputname="">
     <entityref name="leq"/>
-    </macro>
-  <macro name="plusminus" outputname="">
-    <entityref name="plusmn"/>
     </macro>
   <macro name="TeX" outputname="">
     <text>TeX</text>
@@ -600,22 +579,6 @@
   <macro name="XXX" outputname="editorial-comment">
     <content/>
     </macro>
-
-  <!-- Grammar production lists -->
-  <environment name="productionlist">
-    <attribute name="grammar" optional="yes"/>
-    </environment>
-  <macro name="production">
-    <attribute name="token"/>
-    <content/>
-    </macro>
-  <macro name="token">
-    <content/>
-    </macro>
-  <macro name="orgroup">
-    <content/>
-    </macro>
-  <macro name="oritem"/>
 
   <!-- Misc. -->
   <macro name="emph">
@@ -712,14 +675,6 @@
   <macro name="email">
     <content/>
     </macro>
-  <macro name="ulink">
-    <!-- order of the parameters makes this difficult;
-         we'll need to fix it up tp <ulink href="...">...</ulink>
-         in docfixer.py.
-      -->
-    <child name="text"/>
-    <child name="href"/>
-    </macro>
   <macro name="url">
     <content/>
     </macro>
@@ -773,14 +728,8 @@
   <macro name="UNIX" outputname="">
     <text>Unix</text>
     </macro>
-  <macro name="textasciicircum" outputname="">
-    <text>^</text>
-    </macro>
   <macro name="textasciitilde" outputname="">
     <text>~</text>
-    </macro>
-  <macro name="textbar" outputname="">
-    <text>|</text>
     </macro>
 
   <!-- These will end up disappearing as well! -->

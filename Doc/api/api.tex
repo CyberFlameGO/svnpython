@@ -2110,51 +2110,11 @@ Return element of \var{o} corresponding to the object \var{key} or
 \samp{\var{o}[\var{key}]}.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{int}{PyMapping_SetItemString}{PyObject *o, char *key,
-                                                PyObject *v}
+\begin{cfuncdesc}{int}{PyMapping_SetItemString}{PyObject *o, char *key, PyObject *v}
 Map the object \var{key} to the value \var{v} in object \var{o}.
 Returns \code{-1} on failure.  This is the equivalent of the Python
 statement \samp{\var{o}[\var{key}] = \var{v}}.
 \end{cfuncdesc}
-
-
-\section{Iterator Protocol \label{iterator}}
-
-\versionadded{2.2}
-
-There are only a couple of functions specifically for working with
-iterators.
-
-\begin{cfuncdesc}{int}{PyIter_Check}{PyObject *o}
-  Return true if the object \var{o} supports the iterator protocol.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{PyObject*}{PyIter_Next}{PyObject *o}
-  Return the next value from the iteration \var{o}.  If the object is
-  an iterator, this retrieves the next value from the iteration, and
-  returns \NULL{} with no exception set if there are no remaining
-  items.  If the object is not an iterator, \exception{TypeError} is
-  raised, or if there is an error in retrieving the item, returns
-  \NULL{} and passes along the exception.
-\end{cfuncdesc}
-
-To write a loop which iterates over an iterator, the C code should
-look something like this:
-
-\begin{verbatim}
-PyObject *iterator = ...;
-PyObject *item;
-
-while (item = PyIter_Next(iter)) {
-    /* do something with item */
-}
-if (PyErr_Occurred()) {
-    /* propogate error */
-}
-else {
-    /* continue doing useful work */
-}
-\end{verbatim}
 
 
 \chapter{Concrete Objects Layer \label{concrete}}
@@ -2603,44 +2563,30 @@ interned string object with the same value.
                                                int size,
                                                const char *encoding,
                                                const char *errors}
-Creates an object by decoding \var{size} bytes of the encoded
-buffer \var{s} using the codec registered
-for \var{encoding}. \var{encoding} and \var{errors} have the same meaning
+Create a string object by decoding \var{size} bytes of the encoded
+buffer \var{s}. \var{encoding} and \var{errors} have the same meaning
 as the parameters of the same name in the unicode() builtin
 function. The codec to be used is looked up using the Python codec
 registry. Returns \NULL{} in case an exception was raised by the
 codec.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{PyObject*}{PyString_AsDecodedObject}{PyObject *str,
-                                               const char *encoding,
-                                               const char *errors}
-Decodes a string object by passing it to the codec registered
-for \var{encoding} and returns the result as Python 
-object. \var{encoding} and \var{errors} have the same meaning as the
-parameters of the same name in the string .encode() method. The codec
-to be used is looked up using the Python codec registry. Returns
-\NULL{} in case an exception was raised by the codec.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{PyObject*}{PyString_Encode}{const char *s,
+\begin{cfuncdesc}{PyObject*}{PyString_Encode}{const Py_UNICODE *s,
                                                int size,
                                                const char *encoding,
                                                const char *errors}
-Encodes the \ctype{char} buffer of the given size by passing it to 
-the codec registered for \var{encoding} and returns a Python object. 
-\var{encoding} and \var{errors} have the same
+Encodes the \ctype{Py_UNICODE} buffer of the given size and returns a
+Python string object. \var{encoding} and \var{errors} have the same
 meaning as the parameters of the same name in the string .encode()
 method. The codec to be used is looked up using the Python codec
 registry. Returns \NULL{} in case an exception was raised by the
 codec.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{PyObject*}{PyString_AsEncodedObject}{PyObject *str,
+\begin{cfuncdesc}{PyObject*}{PyString_AsEncodedString}{PyObject *unicode,
                                                const char *encoding,
                                                const char *errors}
-Encodes a string object using the codec registered
-for \var{encoding} and returns the result as Python 
+Encodes a string object and returns the result as Python string
 object. \var{encoding} and \var{errors} have the same meaning as the
 parameters of the same name in the string .encode() method. The codec
 to be used is looked up using the Python codec registry. Returns
@@ -2788,9 +2734,7 @@ use these APIs:
 Create a Unicode Object from the Py_UNICODE buffer \var{u} of the
 given size. \var{u} may be \NULL{} which causes the contents to be
 undefined. It is the user's responsibility to fill in the needed data.
-The buffer is copied into the new object. If the buffer is not \NULL{},
-the return value might be a shared object. Therefore, modification of
-the resulting Unicode Object is only allowed when \var{u} is \NULL{}.
+The buffer is copied into the new object.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{Py_UNICODE*}{PyUnicode_AsUnicode}{PyObject *unicode}
@@ -3482,8 +3426,7 @@ sets an \exception{IndexError} exception.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyTuple_GET_ITEM}{PyObject *p, int pos}
-Like \cfunction{PyTuple_GetItem()}, but does no checking of its
-arguments.
+Does the same, but does no checking of its arguments.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyTuple_GetSlice}{PyObject *p,
@@ -3501,25 +3444,23 @@ the tuple pointed to by \var{p}. It returns \code{0} on success.
 
 \begin{cfuncdesc}{void}{PyTuple_SET_ITEM}{PyObject *p,
                                           int pos, PyObject *o}
-Like \cfunction{PyTuple_SetItem()}, but does no error checking, and
+Does the same, but does no error checking, and
 should \emph{only} be used to fill in brand new tuples.
 \strong{Note:}  This function ``steals'' a reference to \var{o}.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{int}{_PyTuple_Resize}{PyObject **p, int newsize}
+\begin{cfuncdesc}{int}{_PyTuple_Resize}{PyObject **p,
+                                        int newsize, int last_is_sticky}
 Can be used to resize a tuple.  \var{newsize} will be the new length
 of the tuple.  Because tuples are \emph{supposed} to be immutable,
 this should only be used if there is only one reference to the object.
 Do \emph{not} use this if the tuple may already be known to some other
-part of the code.  The tuple will always grow or shrink at the end.
-Think of this as destroying the old tuple and creating a new one, only
-more efficiently.  Returns \code{0} on success.  Client code should
-never assume that the resulting value of \code{*\var{p}} will be the
-same as before calling this function.  If the object referenced by
-\code{*\var{p}} is replaced, the original \code{*\var{p}} is
-destroyed.  On failure, returns \code{-1} and sets \code{*\var{p}} to
-\NULL, and raises \exception{MemoryError} or \exception{SystemError}.
-\versionchanged[Removed unused third parameter, \var{last_is_sticky}]{2.2}
+part of the code.  The tuple will always grow or shrink at the end.  The
+\var{last_is_sticky} flag is not used and should always be false.  Think
+of this as destroying the old tuple and creating a new one, only more
+efficiently.  Returns \code{0} on success and \code{-1} on failure (in
+which case a \exception{MemoryError} or \exception{SystemError} will be
+raised).
 \end{cfuncdesc}
 
 

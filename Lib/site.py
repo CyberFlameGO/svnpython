@@ -79,10 +79,6 @@ del m
 L = []
 dirs_in_sys_path = {}
 for dir in sys.path:
-    # Filter out paths that don't exist, but leave in the empty string
-    # since it's a special case.
-    if dir and not os.path.isdir(dir):
-        continue
     dir, dircase = makepath(dir)
     if not dirs_in_sys_path.has_key(dircase):
         L.append(dir)
@@ -145,8 +141,10 @@ for prefix in prefixes:
                                      "python" + sys.version[:3],
                                      "site-packages"),
                         os.path.join(prefix, "lib", "site-python")]
+        elif os.sep == ':':
+            sitedirs = [os.path.join(prefix, "lib", "site-packages")]
         else:
-            sitedirs = [prefix, os.path.join(prefix, "lib", "site-packages")]
+            sitedirs = [prefix]
         for sitedir in sitedirs:
             if os.path.isdir(sitedir):
                 addsitedir(sitedir)
@@ -239,20 +237,6 @@ __builtin__.license = _Printer(
     "license", "See http://www.pythonlabs.com/products/python2.0/license.html",
     ["LICENSE.txt", "LICENSE"],
     [os.path.join(here, os.pardir), here, os.curdir])
-
-
-# Define new built-in 'help'.
-# This is a wrapper around pydoc.help (with a twist).
-
-class _Helper:
-    def __repr__(self):
-        return "Type help() for interactive help, " \
-               "or help(object) for help about object."
-    def __call__(self, *args, **kwds):
-        import pydoc
-        return pydoc.help(*args, **kwds)
-
-__builtin__.help = _Helper()
 
 
 # Set the string encoding used by the Unicode implementation.  The

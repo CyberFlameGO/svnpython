@@ -1,5 +1,4 @@
 from test_support import verify, verbose, TestFailed
-import sys
 import gc
 
 def run_test(name, thunk):
@@ -108,15 +107,6 @@ def test_function():
     if gc.collect() != 2:
         raise TestFailed
 
-def test_frame():
-    def f():
-        frame = sys._getframe()
-    gc.collect()
-    f()
-    if gc.collect() != 1:
-        raise TestFailed
-
-
 def test_saveall():
     # Verify that cyclic garbage like lists show up in gc.garbage if the
     # SAVEALL option is enabled.
@@ -162,7 +152,6 @@ def test_all():
     run_test("instances", test_instance)
     run_test("methods", test_method)
     run_test("functions", test_function)
-    run_test("frames", test_frame)
     run_test("finalizers", test_finalizer)
     run_test("__del__", test_del)
     run_test("saveall", test_saveall)

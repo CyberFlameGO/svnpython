@@ -868,7 +868,6 @@ instance_traverse(PyInstanceObject *o, visitproc visit, void *arg)
 }
 
 static PyObject *getitemstr, *setitemstr, *delitemstr, *lenstr;
-static PyObject *iterstr, *nextstr;
 
 static int
 instance_length(PyInstanceObject *inst)
@@ -1131,15 +1130,11 @@ instance_ass_slice(PyInstanceObject *inst, int i, int j, PyObject *value)
 	return 0;
 }
 
-static int
-instance_contains(PyInstanceObject *inst, PyObject *member)
+static int instance_contains(PyInstanceObject *inst, PyObject *member)
 {
 	static PyObject *__contains__;
-	PyObject *func;
-
-	/* Try __contains__ first.
-	 * If that can't be done, try iterator-based searching.
-	 */
+	PyObject *func, *arg, *res;
+	int ret;
 
 	if(__contains__ == NULL) {
 		__contains__ = PyString_InternFromString("__contains__");
@@ -1147,34 +1142,45 @@ instance_contains(PyInstanceObject *inst, PyObject *member)
 			return -1;
 	}
 	func = instance_getattr(inst, __contains__);
-	if (func) {
-		PyObject *res;
-		int ret;
-		PyObject *arg = Py_BuildValue("(O)", member);
-		if(arg == NULL) {
-			Py_DECREF(func);
-			return -1;
-		}
-		res = PyEval_CallObject(func, arg);
-		Py_DECREF(func);
-		Py_DECREF(arg);
-		if(res == NULL) 
-			return -1;
-		ret = PyObject_IsTrue(res);
-		Py_DECREF(res);
-		return ret;
-	}
+	if(func == NULL) {
+		/* fall back to previous behavior */
+		int i, cmp_res;
 
-	/* Couldn't find __contains__. */
-	if (PyErr_ExceptionMatches(PyExc_AttributeError)) {
-		/* Assume the failure was simply due to that there is no
-		 * __contains__ attribute, and try iterating instead.
-		 */
+		if(!PyErr_ExceptionMatches(PyExc_AttributeError))
+			return -1;
 		PyErr_Clear();
-		return _PySequence_IterContains((PyObject *)inst, member);
+		for(i=0;;i++) {
+			PyObject *obj = instance_item(inst, i);
+			int ret = 0;
+
+			if(obj == NULL) {
+				if(!PyErr_ExceptionMatches(PyExc_IndexError))
+					return -1;
+				PyErr_Clear();
+				return 0;
+			}
+			if(PyObject_Cmp(obj, member, &cmp_res) == -1)
+				ret = -1;
+			if(cmp_res == 0) 
+				ret = 1;
+			Py_DECREF(obj);
+			if(ret)
+				return ret;
+		}
 	}
-	else
+	arg = Py_BuildValue("(O)", member);
+	if(arg == NULL) {
+		Py_DECREF(func);
 		return -1;
+	}
+	res = PyEval_CallObject(func, arg);
+	Py_DECREF(func);
+	Py_DECREF(arg);
+	if(res == NULL) 
+		return -1;
+	ret = PyObject_IsTrue(res);
+	Py_DECREF(res);
+	return ret;
 }
 
 static PySequenceMethods
@@ -1651,68 +1657,38 @@ instance_ipow(PyObject *v, PyObject *w, PyObject *z)
 
 
 /* Map rich comparison operators to their __xx__ namesakes */
-#define NAME_OPS 6
-static PyObject **name_op = NULL;
-
-static int 
-init_name_op(void)
-{
-	int i;
-	char *_name_op[] = {
-		"__lt__",
-		"__le__",
-		"__eq__",
-		"__ne__",
-		"__gt__",
-		"__ge__",
-	};
-
-	name_op = (PyObject **)malloc(sizeof(PyObject *) * NAME_OPS);
-	if (name_op == NULL)
-		return -1;
-	for (i = 0; i < NAME_OPS; ++i) {
-		name_op[i] = PyString_InternFromString(_name_op[i]);
-		if (name_op[i] == NULL)
-			return -1;
-	}
-	return 0;
-}
+static char *name_op[] = {
+	"__lt__",
+	"__le__",
+	"__eq__",
+	"__ne__",
+	"__gt__",
+	"__ge__",
+};
 
 static PyObject *
 half_richcompare(PyObject *v, PyObject *w, int op)
 {
+	PyObject *name;
 	PyObject *method;
 	PyObject *args;
 	PyObject *res;
 
 	assert(PyInstance_Check(v));
 
-	if (name_op == NULL) {
-		if (init_name_op() < 0)
+	name = PyString_InternFromString(name_op[op]);
+	if (name == NULL)
+		return NULL;
+
+	method = PyObject_GetAttr(v, name);
+	Py_DECREF(name);
+	if (method == NULL) {
+		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
 			return NULL;
-	}
-	/* If the instance doesn't define an __getattr__ method, use
-	   instance_getattr2 directly because it will not set an
-	   exception on failure. */
-	if (((PyInstanceObject *)v)->in_class->cl_getattr == NULL) {
-		method = instance_getattr2((PyInstanceObject *)v, 
-					   name_op[op]);
-		if (method == NULL) {
-			assert(!PyErr_Occurred());
-			res = Py_NotImplemented;
-			Py_INCREF(res);
-			return res;
-		}
-	} else {
-		method = PyObject_GetAttr(v, name_op[op]);
-		if (method == NULL) {
-			if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-				return NULL;
-			PyErr_Clear();
-			res = Py_NotImplemented;
-			Py_INCREF(res);
-			return res;
-		}
+		PyErr_Clear();
+		res = Py_NotImplemented;
+		Py_INCREF(res);
+		return res;
 	}
 
 	args = Py_BuildValue("(O)", w);
@@ -1752,66 +1728,6 @@ instance_richcompare(PyObject *v, PyObject *w, int op)
 
 	Py_INCREF(Py_NotImplemented);
 	return Py_NotImplemented;
-}
-
-
-/* Get the iterator */
-static PyObject *
-instance_getiter(PyInstanceObject *self)
-{
-	PyObject *func;
-
-	if (iterstr == NULL)
-		iterstr = PyString_InternFromString("__iter__");
-	if (getitemstr == NULL)
-		getitemstr = PyString_InternFromString("__getitem__");
-
-	if ((func = instance_getattr(self, iterstr)) != NULL) {
-		PyObject *res = PyEval_CallObject(func, (PyObject *)NULL);
-		Py_DECREF(func);
-		if (res != NULL && !PyIter_Check(res)) {
-			PyErr_Format(PyExc_TypeError,
-				     "__iter__ returned non-iterator "
-				     "of type '%.100s'",
-				     res->ob_type->tp_name);
-			Py_DECREF(res);
-			res = NULL;
-		}
-		return res;
-	}
-	PyErr_Clear();
-	if ((func = instance_getattr(self, getitemstr)) == NULL) {
-		PyErr_SetString(PyExc_TypeError, "iter() of non-sequence");
-		return NULL;
-	}
-	Py_DECREF(func);
-	return PySeqIter_New((PyObject *)self);
-}
-
-
-/* Call the iterator's next */
-static PyObject *
-instance_iternext(PyInstanceObject *self)
-{
-	PyObject *func;
-
-	if (nextstr == NULL)
-		nextstr = PyString_InternFromString("next");
-
-	if ((func = instance_getattr(self, nextstr)) != NULL) {
-		PyObject *res = PyEval_CallObject(func, (PyObject *)NULL);
-		Py_DECREF(func);
-		if (res != NULL) {
-			return res;
-		}
-		if (PyErr_ExceptionMatches(PyExc_StopIteration)) {
-			PyErr_Clear();
-			return NULL;
-		}
-		return NULL;
-	}
-	PyErr_SetString(PyExc_TypeError, "instance has no next() method");
-	return NULL;
 }
 
 
@@ -1878,9 +1794,7 @@ PyTypeObject PyInstance_Type = {
 	(traverseproc)instance_traverse,	/* tp_traverse */
 	0,					/* tp_clear */
 	instance_richcompare,			/* tp_richcompare */
- 	offsetof(PyInstanceObject, in_weakreflist), /* tp_weaklistoffset */
-	(getiterfunc)instance_getiter,		/* tp_iter */
-	(iternextfunc)instance_iternext,	/* tp_iternext */
+ 	offsetof(PyInstanceObject, in_weakreflist) /* tp_weaklistoffset */
 };
 
 
@@ -2126,7 +2040,7 @@ PyTypeObject PyMethod_Type = {
 	(getattrofunc)instancemethod_getattro,	/* tp_getattro */
 	(setattrofunc)instancemethod_setattro,	/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,     /* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC | Py_TPFLAGS_HAVE_WEAKREFS,
 	0,					/* tp_doc */
 	(traverseproc)instancemethod_traverse,	/* tp_traverse */
 	0,					/* tp_clear */

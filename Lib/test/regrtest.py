@@ -37,7 +37,6 @@ import os
 import getopt
 import traceback
 import random
-import StringIO
 
 import test_support
 
@@ -200,6 +199,11 @@ NOTTESTS = [
     'test_b2',
     'test_future1',
     'test_future2',
+    'test_future3',
+    'test_future4',
+    'test_future5',
+    'test_future6',
+    'test_future7',
     ]
 
 def findtests(testdir=None, stdtests=STDTESTS, nottests=NOTTESTS):
@@ -230,7 +234,7 @@ def runtest(test, generate, verbose, quiet, testdir = None):
     outputfile = os.path.join(outputdir, test)
     try:
         if generate:
-            cfp = StringIO.StringIO()
+            cfp = open(outputfile, "w")
         elif verbose:
             cfp = sys.stdout
         else:
@@ -244,14 +248,7 @@ def runtest(test, generate, verbose, quiet, testdir = None):
             if cfp:
                 sys.stdout = cfp
                 print test              # Output file starts with test name
-            the_module = __import__(test, globals(), locals(), [])
-            # Most tests run to completion simply as a side-effect of
-            # being imported.  For the benefit of tests that can't run
-            # that way (like test_threaded_import), explicitly invoke
-            # their test_main() function (if it exists).
-            indirect_test = getattr(the_module, "test_main", None)
-            if indirect_test is not None:
-                indirect_test()
+            __import__(test, globals(), locals(), [])
             if cfp and not (generate or verbose):
                 cfp.close()
         finally:
@@ -273,24 +270,6 @@ def runtest(test, generate, verbose, quiet, testdir = None):
             traceback.print_exc(file=sys.stdout)
         return 0
     else:
-        if generate:
-            output = cfp.getvalue()
-            if output == test + "\n":
-                if os.path.exists(outputfile):
-                    # Write it since it already exists (and the contents
-                    # may have changed), but let the user know it isn't
-                    # needed:
-                    fp = open(outputfile, "w")
-                    fp.write(output)
-                    fp.close()
-                    print "output file", outputfile, \
-                          "is no longer needed; consider removing it"
-                # else:
-                #     We don't need it, so don't create it.
-            else:
-                fp = open(outputfile, "w")
-                fp.write(output)
-                fp.close()
         return 1
 
 def findtestdir():
@@ -310,11 +289,7 @@ def count(n, word):
 class Compare:
 
     def __init__(self, filename):
-        if os.path.exists(filename):
-            self.fp = open(filename, 'r')
-        else:
-            self.fp = StringIO.StringIO(
-                os.path.basename(filename) + "\n")
+        self.fp = open(filename, 'r')
         self.stuffthatmatched = []
 
     def write(self, data):

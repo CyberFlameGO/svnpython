@@ -1276,15 +1276,21 @@ parsestrplus(node *n)
 static void
 com_list_for(struct compiling *c, node *n, node *e, char *t)
 {
+	PyObject *v;
 	int anchor = 0;
 	int save_begin = c->c_begin;
 
 	/* list_iter: for v in expr [list_iter] */
 	com_node(c, CHILD(n, 3)); /* expr */
-	com_addbyte(c, GET_ITER);
+	v = PyInt_FromLong(0L);
+	if (v == NULL)
+		c->c_errors++;
+	com_addoparg(c, LOAD_CONST, com_addconst(c, v));
+	com_push(c, 1);
+	Py_XDECREF(v);
 	c->c_begin = c->c_nexti;
 	com_addoparg(c, SET_LINENO, n->n_lineno);
-	com_addfwref(c, FOR_ITER, &anchor);
+	com_addfwref(c, FOR_LOOP, &anchor);
 	com_push(c, 1);
 	com_assign(c, CHILD(n, 1), OP_ASSIGN, NULL);
 	c->c_loops++;
@@ -1293,7 +1299,7 @@ com_list_for(struct compiling *c, node *n, node *e, char *t)
 	com_addoparg(c, JUMP_ABSOLUTE, c->c_begin);
 	c->c_begin = save_begin;
 	com_backpatch(c, anchor);
-	com_pop(c, 1); /* FOR_ITER has popped this */
+	com_pop(c, 2); /* FOR_LOOP has popped these */
 }  
 
 static void
@@ -2634,12 +2640,6 @@ com_return_stmt(struct compiling *c, node *n)
 	if (!c->c_infunction) {
 		com_error(c, PyExc_SyntaxError, "'return' outside function");
 	}
-	if (c->c_flags & CO_GENERATOR) {
-		if (NCH(n) > 1) {
-			com_error(c, PyExc_SyntaxError,
-				  "'return' with argument inside generator");
-		}
-	}
 	if (NCH(n) < 2) {
 		com_addoparg(c, LOAD_CONST, com_addconst(c, Py_None));
 		com_push(c, 1);
@@ -2647,28 +2647,6 @@ com_return_stmt(struct compiling *c, node *n)
 	else
 		com_node(c, CHILD(n, 1));
 	com_addbyte(c, RETURN_VALUE);
-	com_pop(c, 1);
-}
-
-static void
-com_yield_stmt(struct compiling *c, node *n)
-{
-	int i;
-	REQ(n, yield_stmt); /* 'yield' testlist */
-	if (!c->c_infunction) {
-		com_error(c, PyExc_SyntaxError, "'yield' outside function");
-	}
-	
-	for (i = 0; i < c->c_nblocks; ++i) {
-		if (c->c_block[i] == SETUP_FINALLY) {
-			com_error(c, PyExc_SyntaxError,
-				  "'yield' not allowed in a 'try' block "
-				  "with a 'finally' clause");
-			return;
-		}
-	}
-	com_node(c, CHILD(n, 1));
-	com_addbyte(c, YIELD_VALUE);
 	com_pop(c, 1);
 }
 
@@ -2876,45 +2854,6 @@ is_constant_false(struct compiling *c, node *n)
 	return 0;
 }
 
-
-/* Look under n for a return stmt with an expression.
- * This hack is used to find illegal returns under "if 0:" blocks in
- * functions already known to be generators (as determined by the symtable
- * pass).
- * Return the offending return node if found, else NULL.
- */
-static node *
-look_for_offending_return(node *n)
-{
-	int i;
-
-	for (i = 0; i < NCH(n); ++i) {
-		node *kid = CHILD(n, i);
-
-		switch (TYPE(kid)) {
-			case classdef:
-			case funcdef:
-			case lambdef:
-				/* Stuff in nested functions & classes doesn't
-				   affect the code block we started in. */
-				return NULL;
-
-			case return_stmt:
-				if (NCH(kid) > 1)
-					return kid;
-				break;
-
-			default: {
-				node *bad = look_for_offending_return(kid);
-				if (bad != NULL)
-					return bad;
-			}
-		}
-	}
-
-	return NULL;
-}			
-
 static void
 com_if_stmt(struct compiling *c, node *n)
 {
@@ -2925,24 +2864,8 @@ com_if_stmt(struct compiling *c, node *n)
 	for (i = 0; i+3 < NCH(n); i+=4) {
 		int a = 0;
 		node *ch = CHILD(n, i+1);
-		if (is_constant_false(c, ch)) {
-			/* We're going to skip this block.  However, if this
-			   is a generator, we have to check the dead code
-			   anyway to make sure there aren't any return stmts
-			   with expressions, in the same scope. */
-			if (c->c_flags & CO_GENERATOR) {
-				node *p = look_for_offending_return(n);
-				if (p != NULL) {
-					int savelineno = c->c_lineno;
-					c->c_lineno = p->n_lineno;
-					com_error(c, PyExc_SyntaxError,
-			  	   		"'return' with argument "
-			  	   		"inside generator");
-			  	   	c->c_lineno = savelineno;
-				}
-			}
+		if (is_constant_false(c, ch))
 			continue;
-		}
 		if (i > 0)
 			com_addoparg(c, SET_LINENO, ch->n_lineno);
 		com_node(c, ch);
@@ -2994,6 +2917,7 @@ com_while_stmt(struct compiling *c, node *n)
 static void
 com_for_stmt(struct compiling *c, node *n)
 {
+	PyObject *v;
 	int break_anchor = 0;
 	int anchor = 0;
 	int save_begin = c->c_begin;
@@ -3002,10 +2926,15 @@ com_for_stmt(struct compiling *c, node *n)
 	com_addfwref(c, SETUP_LOOP, &break_anchor);
 	block_push(c, SETUP_LOOP);
 	com_node(c, CHILD(n, 3));
-	com_addbyte(c, GET_ITER);
+	v = PyInt_FromLong(0L);
+	if (v == NULL)
+		c->c_errors++;
+	com_addoparg(c, LOAD_CONST, com_addconst(c, v));
+	com_push(c, 1);
+	Py_XDECREF(v);
 	c->c_begin = c->c_nexti;
 	com_addoparg(c, SET_LINENO, n->n_lineno);
-	com_addfwref(c, FOR_ITER, &anchor);
+	com_addfwref(c, FOR_LOOP, &anchor);
 	com_push(c, 1);
 	com_assign(c, CHILD(n, 1), OP_ASSIGN, NULL);
 	c->c_loops++;
@@ -3014,7 +2943,7 @@ com_for_stmt(struct compiling *c, node *n)
 	com_addoparg(c, JUMP_ABSOLUTE, c->c_begin);
 	c->c_begin = save_begin;
 	com_backpatch(c, anchor);
-	com_pop(c, 1); /* FOR_ITER has popped this */
+	com_pop(c, 2); /* FOR_LOOP has popped these */
 	com_addbyte(c, POP_BLOCK);
 	block_pop(c, SETUP_LOOP);
 	if (NCH(n) > 8)
@@ -3538,9 +3467,6 @@ com_node(struct compiling *c, node *n)
 	case return_stmt:
 		com_return_stmt(c, n);
 		break;
-	case yield_stmt:
-		com_yield_stmt(c, n);
-		break;
 	case raise_stmt:
 		com_raise_stmt(c, n);
 		break;
@@ -3669,11 +3595,13 @@ com_arglist(struct compiling *c, node *n)
 	for (i = 0, narg = 0; i < nch; i++) {
 		node *ch = CHILD(n, i);
 		node *fp;
+		char *name;
 		if (TYPE(ch) == STAR || TYPE(ch) == DOUBLESTAR)
 			break;
 		REQ(ch, fpdef); /* fpdef: NAME | '(' fplist ')' */
 		fp = CHILD(ch, 0);
 		if (TYPE(fp) != NAME) {
+			name = nbuf;
 			sprintf(nbuf, ".%d", i);
 			complex = 1;
 		}
@@ -4206,7 +4134,7 @@ symtable_resolve_free(struct compiling *c, PyObject *name, int flags,
 		   anything here.
 		*/
 		if (is_free(flags ^ DEF_FREE_CLASS) 
-		    || (flags == DEF_FREE_CLASS))
+		    || flags == DEF_FREE_CLASS)
 			return 0;
 		v = PyInt_FromLong(si->si_nfrees++);
 		dict = c->c_freevars;
@@ -4388,7 +4316,6 @@ symtable_check_shadow(struct symtable *st, PyObject *name, int flags)
 
 	if (!(flags & DEF_BOUND))
 		return 0;
-
 	/* The semantics of this code will change with nested scopes.
 	   It is defined in the current scope and referenced in a
 	   child scope.  Under the old rules, the child will see a
@@ -4428,8 +4355,6 @@ symtable_update_flags(struct compiling *c, PySymtableEntryObject *ste,
 {
 	if (c->c_future && c->c_future->ff_nested_scopes)
 		c->c_flags |= CO_NESTED;
-	if (ste->ste_generator)
-		c->c_flags |= CO_GENERATOR;
 	if (ste->ste_type != TYPE_MODULE)
 		c->c_flags |= CO_NEWLOCALS;
 	if (ste->ste_type == TYPE_FUNCTION) {
@@ -4495,10 +4420,8 @@ symtable_load_symbols(struct compiling *c)
 		   2. Free variables in methods that are also class
 		   variables or declared global.
 		*/
-		if (st->st_nested_scopes) {
-		    if (flags & (DEF_FREE | DEF_FREE_CLASS)) {
+		if (flags & (DEF_FREE | DEF_FREE_CLASS)) {
 			symtable_resolve_free(c, name, flags, &si);
-		    }
 		}
 
 		if (flags & DEF_STAR) {
@@ -4558,10 +4481,14 @@ symtable_load_symbols(struct compiling *c)
 		}
 	}
 
+	/*
+	fprintf(stderr, 
+		"cells %d: %s\n"
+		"frees %d: %s\n",
+		si.si_ncells, PyObject_REPR(c->c_cellvars),
+		si.si_nfrees, PyObject_REPR(c->c_freevars));
+	*/
 	assert(PyDict_Size(c->c_freevars) == si.si_nfrees);
-
-	if (st->st_nested_scopes == 0)
-		assert(si.si_nfrees == 0);
 
 	if (si.si_ncells > 1) { /* one cell is always in order */
 		if (symtable_cellvar_offsets(&c->c_cellvars, c->c_argcount,
@@ -4667,9 +4594,7 @@ symtable_update_free_vars(struct symtable *st)
 			   referenced in scope B contained (perhaps
 			   indirectly) in A and there are no scopes
 			   with bindings for N between B and A, then N
-			   is global in B.  Unless A is a class scope,
-			   because class scopes are not considered for
-			   nested scopes.
+			   is global in B.
 			*/
 			if (v && (ste->ste_type != TYPE_CLASS)) {
 				int flags = PyInt_AS_LONG(v); 
@@ -4895,38 +4820,6 @@ symtable_add_def_o(struct symtable *st, PyObject *dict,
 
 #define symtable_add_use(ST, NAME) symtable_add_def((ST), (NAME), USE)
 
-/* Look for a yield stmt under n.  Return 1 if found, else 0.
-   This hack is used to look inside "if 0:" blocks (which are normally
-   ignored) in case those are the only places a yield occurs (so that this
-   function is a generator). */
-static int
-look_for_yield(node *n)
-{
-	int i;
-
-	for (i = 0; i < NCH(n); ++i) {
-		node *kid = CHILD(n, i);
-
-		switch (TYPE(kid)) {
-
-		case classdef:
-		case funcdef:
-		case lambdef:
-			/* Stuff in nested functions and classes can't make
-			   the parent a generator. */
-			return 0;
-
-		case yield_stmt:
-			return 1;
-
-		default:
-			if (look_for_yield(kid))
-				return 1;
-		}
-	}
-	return 0;
-}			
-
 static void
 symtable_node(struct symtable *st, node *n)
 {
@@ -4970,12 +4863,8 @@ symtable_node(struct symtable *st, node *n)
 	}
 	case if_stmt:
 		for (i = 0; i + 3 < NCH(n); i += 4) {
-			if (is_constant_false(NULL, (CHILD(n, i + 1)))) {
-				if (st->st_cur->ste_generator == 0)
-					st->st_cur->ste_generator =
-						look_for_yield(CHILD(n, i+3));
+			if (is_constant_false(NULL, (CHILD(n, i + 1))))
 				continue;
-			}
 			symtable_node(st, CHILD(n, i + 1));
 			symtable_node(st, CHILD(n, i + 3));
 		}
@@ -5024,10 +4913,6 @@ symtable_node(struct symtable *st, node *n)
 	case del_stmt:
 		symtable_assign(st, CHILD(n, 1), 0);
 		break;
-	case yield_stmt:
-		st->st_cur->ste_generator = 1;
-		n = CHILD(n, 1);
-		goto loop;
 	case expr_stmt:
 		if (NCH(n) == 1)
 			n = CHILD(n, 0);

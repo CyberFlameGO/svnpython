@@ -67,7 +67,7 @@ TOOLSDIR=	tools
 
 # This is the *documentation* release, and is used to construct the file
 # names of the downloadable tarballs.
-RELEASE=2.2a0
+RELEASE=2.1.1c1
 
 PYTHON=	   python
 DVIPS=	   dvips -N0 -t $(PAPER)
@@ -349,18 +349,18 @@ postscript-$(PAPER)-$(RELEASE).zip: ps paper-$(PAPER)/README
 
 html-$(RELEASE).tgz:	html
 	(cd $(HTMLDIR); \
-		tar cf - *.html */*.css */*.html */*.gif */*.txt) \
+		tar cf - *.html */*.css */*.html */*.gif) \
 		| gzip -9 >$@
 
 html-$(RELEASE).tar.bz2:	html
 	(cd $(HTMLDIR); \
-		tar cf - *.html */*.css */*.html */*.gif */*.txt) \
+		tar cf - *.html */*.css */*.html */*.gif) \
 		| bzip2 -9 >$@
 
 html-$(RELEASE).zip:	html
 	rm -f $@
 	(cd $(HTMLDIR); \
-		zip -q -9 ../$@ *.html */*.css */*.html */*.gif */*.txt)
+		zip -q -9 ../$@ *.html */*.css */*.html */*.gif)
 
 # convenience targets:
 

@@ -33,7 +33,6 @@ typedef struct {
 #define CO_VARARGS	0x0004
 #define CO_VARKEYWORDS	0x0008
 #define CO_NESTED       0x0010
-#define CO_GENERATOR    0x0020
 
 extern DL_IMPORT(PyTypeObject) PyCode_Type;
 
@@ -62,7 +61,7 @@ DL_IMPORT(PyFutureFeatures *) PyNode_Future(struct _node *, char *);
 DL_IMPORT(PyCodeObject *) PyNode_CompileFlags(struct _node *, char *,
 					      PyCompilerFlags *);
 
-#define NESTED_SCOPES_DEFAULT 1
+#define NESTED_SCOPES_DEFAULT 0
 #define FUTURE_NESTED_SCOPES "nested_scopes"
 
 /* for internal use only */
