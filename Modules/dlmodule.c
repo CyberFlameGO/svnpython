@@ -120,9 +120,9 @@ dl_call(dlobject *xp, PyObject *args)
 }
 
 static PyMethodDef dlobject_methods[] = {
-	{"call",	(PyCFunction)dl_call, METH_VARARGS},
-	{"sym", 	(PyCFunction)dl_sym, METH_OLDARGS},
-	{"close",	(PyCFunction)dl_close, METH_OLDARGS},
+	{"call",	(PyCFunction)dl_call,	1 /* varargs */},
+	{"sym", 	(PyCFunction)dl_sym},
+	{"close",	(PyCFunction)dl_close},
 	{NULL,  	NULL}			 /* Sentinel */
 };
 
@@ -158,13 +158,6 @@ dl_open(PyObject *self, PyObject *args)
 	char *name;
 	int mode;
 	PyUnivPtr *handle;
-	if (sizeof(int) != sizeof(long) ||
-	    sizeof(long) != sizeof(char *)) {
-		PyErr_SetString(PyExc_SystemError,
- "module dl requires sizeof(int) == sizeof(long) == sizeof(char*)");
-		return NULL;
-	}
-
 	if (PyArg_Parse(args, "z", &name))
 		mode = RTLD_LAZY;
 	else {
@@ -187,7 +180,7 @@ dl_open(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef dl_methods[] = {
-	{"open",	dl_open, METH_OLDARGS},
+	{"open",	dl_open},
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -210,6 +203,13 @@ DL_EXPORT(void)
 initdl(void)
 {
 	PyObject *m, *d, *x;
+
+	if (sizeof(int) != sizeof(long) ||
+	    sizeof(long) != sizeof(char *)) {
+		PyErr_SetString(PyExc_SystemError,
+ "module dl requires sizeof(int) == sizeof(long) == sizeof(char*)");
+		return;
+	}
 
 	/* Initialize object type */
 	Dltype.ob_type = &PyType_Type;

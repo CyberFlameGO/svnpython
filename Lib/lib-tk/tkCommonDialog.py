@@ -13,6 +13,7 @@
 #
 
 from Tkinter import *
+import os
 
 class Dialog:
 

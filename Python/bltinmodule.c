@@ -536,6 +536,9 @@ builtin_execfile(PyObject *self, PyObject *args)
 	FILE* fp = NULL;
 	PyCompilerFlags cf;
 	int exists;
+#ifndef RISCOS
+	struct stat s;
+#endif
 
 	if (!PyArg_ParseTuple(args, "s|O!O!:execfile",
 			&filename,
@@ -557,40 +560,25 @@ builtin_execfile(PyObject *self, PyObject *args)
 
 	exists = 0;
 	/* Test for existence or directory. */
-#if defined(PLAN9)
-	{
-		Dir *d;
-
-		if ((d = dirstat(filename))!=nil) {
-			if(d->mode & DMDIR)
-				werrstr("is a directory");
-			else
-				exists = 1;
-			free(d);
-		}
+#ifndef RISCOS
+	if (!stat(filename, &s)) {
+		if (S_ISDIR(s.st_mode))
+#if defined(PYOS_OS2) && defined(PYCC_VACPP)
+			errno = EOS2ERR;
+#else
+			errno = EISDIR;
+#endif
+		else
+			exists = 1;
 	}
-#elif defined(RISCOS)
+#else
 	if (object_exists(filename)) {
 		if (isdir(filename))
 			errno = EISDIR;
 		else
 			exists = 1;
 	}
-#else	/* standard Posix */
-	{
-		struct stat s;
-		if (stat(filename, &s) == 0) {
-			if (S_ISDIR(s.st_mode))
-#				if defined(PY_OS2) && defined(PYCC_VACPP)
-					errno = EOS2ERR;
-#				else
-					errno = EISDIR;
-#				endif
-			else
-				exists = 1;
-		}
-	}
-#endif
+#endif /* RISCOS */
 
         if (exists) {
 		Py_BEGIN_ALLOW_THREADS

@@ -14,6 +14,7 @@
  */
 #ifdef MS_WIN32
 #include <windows.h>
+#include <largeint.h>
 #include <direct.h>    /* for getcwd() */
 typedef __int64 hs_time;
 #define GETTIMEOFDAY(P_HS_TIME) \
@@ -26,7 +27,7 @@ typedef __int64 hs_time;
 #ifndef HAVE_GETTIMEOFDAY
 #error "This module requires gettimeofday() on non-Windows platforms!"
 #endif
-#if defined(macintosh) || (defined(PYOS_OS2) && defined(PYCC_GCC))
+#ifdef macintosh
 #include <sys/time.h>
 #else
 #include <sys/resource.h>
@@ -49,10 +50,6 @@ typedef struct timeval hs_time;
 
 #ifdef macintosh
 #define PATH_MAX 254
-#endif
-
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-#define PATH_MAX 260
 #endif
 
 #ifndef PATH_MAX
@@ -991,7 +988,7 @@ calibrate(void)
         }
 #endif
     }
-#if defined(MS_WIN32) || defined(macintosh) || defined(PYOS_OS2)
+#if defined(MS_WIN32) || defined(macintosh)
     rusage_diff = -1;
 #else
     {

@@ -88,8 +88,6 @@ sub do_cmd_let{
 sub do_cmd_textasciitilde{ '&#126;' . @_[0]; }
 sub do_cmd_textasciicircum{ '^' . @_[0]; }
 sub do_cmd_textbar{ '|' . @_[0]; }
-sub do_cmd_textgreater{ '&gt;' . @_[0]; }
-sub do_cmd_textless{ '&lt;' . @_[0]; }
 sub do_cmd_infinity{ '&infin;' . @_[0]; }
 sub do_cmd_plusminus{ '&plusmn;' . @_[0]; }
 sub do_cmd_menuselection{ @_[0]; }

@@ -432,21 +432,6 @@ try: int('123\0')
 except ValueError: pass
 else: raise TestFailed("int('123\0') didn't raise exception")
 
-try: int('53', 40)
-except ValueError: pass
-else: raise TestFailed("int('53', 40) didn't raise ValueError")
-
-try: int('1' * 512)
-except ValueError: pass
-else: raise TestFailed("int('1' * 512) didn't raise ValueError")
-
-try: int(1, 12)
-except TypeError: pass
-else: raise TestFailed("int(1, 12) didn't raise TypeError")
-
-if int('0123', 0) != 83:
-    raise TestFailed("int('0123', 0) != 83")
-
 print 'isinstance'
 class C:
     pass
@@ -548,14 +533,6 @@ for s, v in L + LL:
 try: long('123\0')
 except ValueError: pass
 else: raise TestFailed("long('123\0') didn't raise exception")
-
-try: long('53', 40)
-except ValueError: pass
-else: raise TestFailed("long('53', 40) didn't raise ValueError")
-
-try: long(1, 12)
-except TypeError: pass
-else: raise TestFailed("long(1, 12) didn't raise TypeError")
 
 print 'map'
 if map(None, 'hello world') != ['h','e','l','l','o',' ','w','o','r','l','d']:

@@ -680,7 +680,6 @@ eval_frame(PyFrameObject *f)
 #endif
 		}
 
-	fast_next_opcode:
 		/* Extract opcode and argument */
 
 #if defined(Py_DEBUG) || defined(LLTRACE)
@@ -725,53 +724,10 @@ eval_frame(PyFrameObject *f)
 
 		/* case STOP_CODE: this is an error! */
 
-		case SET_LINENO:
-#ifdef LLTRACE
-			if (lltrace)
-				printf("--- %s:%d \n", filename, oparg);
-#endif
-			f->f_lineno = oparg;
-			if (tstate->c_tracefunc == NULL || tstate->tracing)
-				goto fast_next_opcode;
-			/* Trace each line of code reached */
-			f->f_lasti = INSTR_OFFSET();
-			/* Inline call_trace() for performance: */
-			tstate->tracing++;
-			tstate->use_tracing = 0;
-			err = (tstate->c_tracefunc)(tstate->c_traceobj, f,
-						    PyTrace_LINE, Py_None);
-			tstate->use_tracing = (tstate->c_tracefunc
-					       || tstate->c_profilefunc);
-			tstate->tracing--;
-			break;
-
-		case LOAD_FAST:
-			x = GETLOCAL(oparg);
-			if (x != NULL) {
-				Py_INCREF(x);
-				PUSH(x);
-				goto fast_next_opcode;
-			}
-			format_exc_check_arg(PyExc_UnboundLocalError,
-				UNBOUNDLOCAL_ERROR_MSG,
-				PyTuple_GetItem(co->co_varnames, oparg));
-			break;
-
-		case LOAD_CONST:
-			x = GETCONST(oparg);
-			Py_INCREF(x);
-			PUSH(x);
-			goto fast_next_opcode;
-
-		case STORE_FAST:
-			v = POP();
-			SETLOCAL(oparg, v);
-			goto fast_next_opcode;
-
 		case POP_TOP:
 			v = POP();
 			Py_DECREF(v);
-			goto fast_next_opcode;
+			continue;
 
 		case ROT_TWO:
 			v = POP();
@@ -1661,6 +1617,12 @@ eval_frame(PyFrameObject *f)
 				    PyExc_NameError, GLOBAL_NAME_ERROR_MSG, w);
 			break;
 
+		case LOAD_CONST:
+			x = GETCONST(oparg);
+			Py_INCREF(x);
+			PUSH(x);
+			break;
+
 		case LOAD_NAME:
 			w = GETNAMEV(oparg);
 			if ((x = f->f_locals) == NULL) {
@@ -1701,6 +1663,26 @@ eval_frame(PyFrameObject *f)
 			Py_INCREF(x);
 			PUSH(x);
 			break;
+
+		case LOAD_FAST:
+			x = GETLOCAL(oparg);
+			if (x == NULL) {
+				format_exc_check_arg(
+					PyExc_UnboundLocalError,
+					UNBOUNDLOCAL_ERROR_MSG,
+					PyTuple_GetItem(co->co_varnames, oparg)
+					);
+				break;
+			}
+			Py_INCREF(x);
+			PUSH(x);
+			if (x != NULL) continue;
+			break;
+
+		case STORE_FAST:
+			v = POP();
+			SETLOCAL(oparg, v);
+			continue;
 
 		case DELETE_FAST:
 			x = GETLOCAL(oparg);
@@ -1803,14 +1785,14 @@ eval_frame(PyFrameObject *f)
 				a = PyInt_AS_LONG(v);
 				b = PyInt_AS_LONG(w);
 				switch (oparg) {
-				case PyCmp_LT: res = a <  b; break;
-				case PyCmp_LE: res = a <= b; break;
-				case PyCmp_EQ: res = a == b; break;
-				case PyCmp_NE: res = a != b; break;
-				case PyCmp_GT: res = a >  b; break;
-				case PyCmp_GE: res = a >= b; break;
-				case PyCmp_IS: res = v == w; break;
-				case PyCmp_IS_NOT: res = v != w; break;
+				case LT: res = a <  b; break;
+				case LE: res = a <= b; break;
+				case EQ: res = a == b; break;
+				case NE: res = a != b; break;
+				case GT: res = a >  b; break;
+				case GE: res = a >= b; break;
+				case IS: res = v == w; break;
+				case IS_NOT: res = v != w; break;
 				default: goto slow_compare;
 				}
 				x = res ? Py_True : Py_False;
@@ -1969,6 +1951,26 @@ eval_frame(PyFrameObject *f)
 			PyFrame_BlockSetup(f, opcode, INSTR_OFFSET() + oparg,
 					   STACK_LEVEL());
 			continue;
+
+		case SET_LINENO:
+#ifdef LLTRACE
+			if (lltrace)
+				printf("--- %s:%d \n", filename, oparg);
+#endif
+			f->f_lineno = oparg;
+			if (tstate->c_tracefunc == NULL || tstate->tracing)
+				continue;
+			/* Trace each line of code reached */
+			f->f_lasti = INSTR_OFFSET();
+			/* Inline call_trace() for performance: */
+			tstate->tracing++;
+			tstate->use_tracing = 0;
+			err = (tstate->c_tracefunc)(tstate->c_traceobj, f,
+						    PyTrace_LINE, Py_None);
+			tstate->use_tracing = (tstate->c_tracefunc
+					       || tstate->c_profilefunc);
+			tstate->tracing--;
+			break;
 
 		case CALL_FUNCTION:
 		{
@@ -2984,10 +2986,6 @@ PyEval_MergeCompilerFlags(PyCompilerFlags *cf)
 			result = 1;
 			cf->cf_flags |= compilerflags;
 		}
-		if (codeflags & CO_GENERATOR_ALLOWED) {
-			result = 1;
-			cf->cf_flags |= CO_GENERATOR_ALLOWED;
-		}
 	}
 	return result;
 }
@@ -3472,21 +3470,21 @@ cmp_outcome(int op, register PyObject *v, register PyObject *w)
 {
 	int res = 0;
 	switch (op) {
-	case PyCmp_IS:
-	case PyCmp_IS_NOT:
+	case IS:
+	case IS_NOT:
 		res = (v == w);
-		if (op == (int) PyCmp_IS_NOT)
+		if (op == (int) IS_NOT)
 			res = !res;
 		break;
-	case PyCmp_IN:
-	case PyCmp_NOT_IN:
+	case IN:
+	case NOT_IN:
 		res = PySequence_Contains(w, v);
 		if (res < 0)
 			return NULL;
-		if (op == (int) PyCmp_NOT_IN)
+		if (op == (int) NOT_IN)
 			res = !res;
 		break;
-	case PyCmp_EXC_MATCH:
+	case EXC_MATCH:
 		res = PyErr_GivenExceptionMatches(v, w);
 		break;
 	default:

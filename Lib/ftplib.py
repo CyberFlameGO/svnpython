@@ -6,7 +6,7 @@ Example:
 
 >>> from ftplib import FTP
 >>> ftp = FTP('ftp.python.org') # connect to host, default port
->>> ftp.login() # default, i.e.: user anonymous, passwd anonymous@
+>>> ftp.login() # default, i.e.: user anonymous, passwd user@hostname
 '230 Guest login ok, access restrictions apply.'
 >>> ftp.retrlines('LIST') # list directory contents
 total 9
@@ -351,14 +351,19 @@ class FTP:
         if not passwd: passwd = ''
         if not acct: acct = ''
         if user == 'anonymous' and passwd in ('', '-'):
-            # If there is no anonymous ftp password specified
-            # then we'll just use anonymous@
-            # We don't send any other thing because:
-            # - We want to remain anonymous
-            # - We want to stop SPAM
-            # - We don't want to let ftp sites to discriminate by the user,
-            #   host or country.
-            passwd = passwd + 'anonymous@'
+            # get fully qualified domain name of local host
+            thishost = socket.getfqdn()
+            try:
+                if os.environ.has_key('LOGNAME'):
+                    realuser = os.environ['LOGNAME']
+                elif os.environ.has_key('USER'):
+                    realuser = os.environ['USER']
+                else:
+                    realuser = 'anonymous'
+            except AttributeError:
+                # Not all systems have os.environ....
+                realuser = 'anonymous'
+            passwd = passwd + realuser + '@' + thishost
         resp = self.sendcmd('USER ' + user)
         if resp[0] == '3': resp = self.sendcmd('PASS ' + passwd)
         if resp[0] == '3': resp = self.sendcmd('ACCT ' + acct)

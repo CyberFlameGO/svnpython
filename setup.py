@@ -3,7 +3,7 @@
 
 __version__ = "$Revision$"
 
-import sys, os, getopt, imp
+import sys, os, getopt
 from distutils import sysconfig
 from distutils import text_file
 from distutils.errors import *
@@ -13,13 +13,6 @@ from distutils.command.install import install
 
 # This global variable is used to hold the list of modules to be disabled.
 disabled_module_list = []
-
-def add_dir_to_list(dirlist, dir):
-    """Add the directory 'dir' to the list 'dirlist' (at the front) if
-    1) 'dir' is not already in 'dirlist'
-    2) 'dir' actually exists, and is a directory."""
-    if os.path.isdir(dir) and dir not in dirlist:
-        dirlist.insert(0, dir)
 
 def find_file(filename, std_dirs, paths):
     """Searches for the directory where a given file is located,
@@ -168,31 +161,23 @@ class PyBuildExt(build_ext):
                 'WARNING: skipping import check for Carbon-based "%s"' %
                 ext.name)
             return
-        ext_filename = os.path.join(
-            self.build_lib,
-            self.get_ext_filename(self.get_ext_fullname(ext.name)))
         try:
-            imp.load_dynamic(ext.name, ext_filename)
-        except ImportError, why:
+            __import__(ext.name)
+        except ImportError:
+            self.announce('WARNING: removing "%s" since importing it failed' %
+                          ext.name)
+            assert not self.inplace
+            fullname = self.get_ext_fullname(ext.name)
+            ext_filename = os.path.join(self.build_lib,
+                                        self.get_ext_filename(fullname))
+            os.remove(ext_filename)
 
-            if 1:
-                self.announce('*** WARNING: renaming "%s" since importing it'
-                              ' failed: %s' % (ext.name, why))
-                assert not self.inplace
-                basename, tail = os.path.splitext(ext_filename)
-                newname = basename + "_failed" + tail
-                if os.path.exists(newname): os.remove(newname)
-                os.rename(ext_filename, newname)
-
-                # XXX -- This relies on a Vile HACK in
-                # distutils.command.build_ext.build_extension().  The
-                # _built_objects attribute is stored there strictly for
-                # use here.
-                for filename in self._built_objects:
-                    os.remove(filename)
-            else:
-                self.announce('*** WARNING: importing extension "%s" '
-                              'failed: %s' % (ext.name, why))
+            # XXX -- This relies on a Vile HACK in
+            # distutils.command.build_ext.build_extension().  The
+            # _built_objects attribute is stored there strictly for
+            # use here.
+            for filename in self._built_objects:
+                os.remove(filename)
 
     def get_platform (self):
         # Get value of sys.platform
@@ -208,13 +193,10 @@ class PyBuildExt(build_ext):
 
     def detect_modules(self):
         # Ensure that /usr/local is always used
-        add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
-        add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
-
-        add_dir_to_list(self.compiler.library_dirs,
-                        sysconfig.get_config_var("LIBDIR"))
-        add_dir_to_list(self.compiler.include_dirs,
-                        sysconfig.get_config_var("INCLUDEDIR"))
+        if '/usr/local/lib' not in self.compiler.library_dirs:
+            self.compiler.library_dirs.insert(0, '/usr/local/lib')
+        if '/usr/local/include' not in self.compiler.include_dirs:
+            self.compiler.include_dirs.insert(0, '/usr/local/include' )
 
         try:
             have_unicode = unicode
@@ -229,7 +211,6 @@ class PyBuildExt(build_ext):
         exts = []
 
         platform = self.get_platform()
-        (srcdir,) = sysconfig.get_config_vars('srcdir')
 
         # Check for MacOS X, which doesn't need libm.a at all
         math_libs = ['m']
@@ -364,8 +345,7 @@ class PyBuildExt(build_ext):
         exts.append( Extension('crypt', ['cryptmodule.c'], libraries=libs) )
 
         # socket(2)
-        exts.append( Extension('_socket', ['socketmodule.c']) )
-        # Detect SSL support for the socket module (via _ssl)
+        # Detect SSL support for the socket module
         ssl_incs = find_file('openssl/ssl.h', inc_dirs,
                              ['/usr/local/ssl/include',
                               '/usr/contrib/ssl/include/'
@@ -378,10 +358,13 @@ class PyBuildExt(build_ext):
 
         if (ssl_incs is not None and
             ssl_libs is not None):
-            exts.append( Extension('_ssl', ['_ssl.c'],
+            exts.append( Extension('_socket', ['socketmodule.c'],
                                    include_dirs = ssl_incs,
                                    library_dirs = ssl_libs,
-                                   libraries = ['ssl', 'crypto']) )
+                                   libraries = ['ssl', 'crypto'],
+                                   define_macros = [('USE_SSL',1)] ) )
+        else:
+            exts.append( Extension('_socket', ['socketmodule.c']) )
 
         # Modules that provide persistent dictionary-like semantics.  You will
         # probably want to arrange for at least one of them to be available on
@@ -554,36 +537,35 @@ class PyBuildExt(build_ext):
         #
         # Expat is written by James Clark and must be downloaded separately
         # (see below).  The pyexpat module was written by Paul Prescod after a
-        # prototype by Jack Jansen. Source of Expat 1.95.2 is included
-        # in Modules/expat. Usage of a system shared libexpat.so/expat.dll
-        # is only advised if that has the same or newer version and was
-        # build using the same defines.
-        if sys.byteorder == "little":
-            xmlbo = "12"
+        # prototype by Jack Jansen.
+        #
+        # The Expat dist includes Windows .lib and .dll files.  Home page is
+        # at http://www.jclark.com/xml/expat.html, the current production
+        # release is always ftp://ftp.jclark.com/pub/xml/expat.zip.
+        #
+        # EXPAT_DIR, below, should point to the expat/ directory created by
+        # unpacking the Expat source distribution.
+        #
+        # Note: the expat build process doesn't yet build a libexpat.a; you
+        # can do this manually while we try convince the author to add it.  To
+        # do so, cd to EXPAT_DIR, run "make" if you have not done so, then
+        # run:
+        #
+        #    ar cr libexpat.a xmltok/*.o xmlparse/*.o
+        #
+        expat_defs = []
+        expat_incs = find_file('expat.h', inc_dirs, [])
+        if expat_incs is not None:
+            # expat.h was found
+            expat_defs = [('HAVE_EXPAT_H', 1)]
         else:
-            xmlbo = "21"
-        expatinc = os.path.join(os.getcwd(), srcdir, 'Modules', 'expat')
-        exts.append(Extension('pyexpat',
-                              sources = [
-            'pyexpat.c',
-            'expat/xmlparse.c',
-            'expat/xmlrole.c',
-            'expat/xmltok.c',
-            ],
-                              define_macros = [
-            ('HAVE_EXPAT_H',None),
-            ('XML_NS', '1'),
-            ('XML_DTD', '1'),
-            ('XML_BYTE_ORDER', xmlbo),
-            ('XML_CONTEXT_BYTES','1024'),
-            ],
-                              include_dirs = [expatinc]
-                               ))                        
+            expat_incs = find_file('xmlparse.h', inc_dirs, [])
 
-        # Dynamic loading module
-        dl_inc = find_file('dlfcn.h', [], inc_dirs)
-        if dl_inc is not None:
-            exts.append( Extension('dl', ['dlmodule.c']) )
+        if (expat_incs is not None and
+            self.compiler.find_library_file(lib_dirs, 'expat')):
+            exts.append( Extension('pyexpat', ['pyexpat.c'],
+                                   define_macros = expat_defs,
+                                   libraries = ['expat']) )
 
         # Platform-specific libraries
         if platform == 'linux2':
@@ -659,8 +641,7 @@ class PyBuildExt(build_ext):
                 exts.append( Extension('_Qt', ['qt/_Qtmodule.c'],
                         extra_link_args=['-framework', 'QuickTime',
                                          '-framework', 'Carbon']) )
-                exts.append( Extension('_Scrap', ['scrap/_Scrapmodule.c'],
-                        extra_link_args=['-framework', 'Carbon']) )
+##              exts.append( Extension('_Scrap', ['scrap/_Scrapmodule.c']) )
                 exts.append( Extension('_TE', ['te/_TEmodule.c'],
                         extra_link_args=['-framework', 'Carbon']) )
                 # As there is no standardized place (yet) to put user-installed

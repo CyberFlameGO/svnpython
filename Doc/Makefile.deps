@@ -333,8 +333,7 @@ MACFILES= $(HOWTOSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	mac/libmacui.tex \
 	mac/libmacic.tex \
 	mac/libframework.tex \
-	mac/libminiae.tex \
-	mac/libscrap.tex
+	mac/libminiae.tex
 
 INSTFILES = $(HOWTOSTYLES) inst/inst.tex
 

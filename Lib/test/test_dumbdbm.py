@@ -30,8 +30,11 @@ class DumbDBMTestCase(unittest.TestCase):
 
     def __init__(self, *args):
         unittest.TestCase.__init__(self, *args)
+        self._dkeys = self._dict.keys()
+        self._dkeys.sort()
 
     def test_dumbdbm_creation(self):
+        _delete_files()
         f = dumbdbm.open(_fname, 'c')
         self.assertEqual(f.keys(), [])
         for key in self._dict:
@@ -40,32 +43,19 @@ class DumbDBMTestCase(unittest.TestCase):
         f.close()
 
     def test_dumbdbm_modification(self):
-        self.init_db()
         f = dumbdbm.open(_fname, 'w')
         self._dict['g'] = f['g'] = "indented"
         self.read_helper(f)
         f.close()
 
     def test_dumbdbm_read(self):
-        self.init_db()
         f = dumbdbm.open(_fname, 'r')
         self.read_helper(f)
         f.close()
 
     def test_dumbdbm_keys(self):
-        self.init_db()
         f = dumbdbm.open(_fname)
         keys = self.keys_helper(f)
-        f.close()
-
-    def test_write_write_read(self):
-        # test for bug #482460
-        f = dumbdbm.open(_fname)
-        f['1'] = 'hello'
-        f['1'] = 'hello2'
-        f.close()
-        f = dumbdbm.open(_fname)
-        self.assertEqual(f['1'], 'hello2')
         f.close()
 
     def read_helper(self, f):
@@ -73,25 +63,11 @@ class DumbDBMTestCase(unittest.TestCase):
         for key in self._dict:
             self.assertEqual(self._dict[key], f[key])
 
-    def init_db(self):
-        f = dumbdbm.open(_fname, 'w')
-        for k in self._dict:
-            f[k] = self._dict[k]
-        f.close()
-
     def keys_helper(self, f):
         keys = f.keys()
         keys.sort()
-        dkeys = self._dict.keys()
-        dkeys.sort()
-        self.assertEqual(keys, dkeys)
+        self.assertEqual(keys, self._dkeys)
         return keys
-
-    def tearDown(self):
-        _delete_files()
-
-    def setUp(self):
-        _delete_files()
 
 def test_main():
     try:

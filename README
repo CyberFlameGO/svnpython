@@ -1,5 +1,5 @@
-This is Python version 2.3 (pre-alpha)
-==========================
+This is Python version 2.2.1
+============================
 
 Copyright (c) 2001, 2002 Python Software Foundation.
 All rights reserved.
@@ -45,7 +45,7 @@ current directory and when it finishes, type "make".  This creates an
 executable "./python"; to install in /usr/local, first do "su root"
 and then "make install".
 
-The section `Build instructions' below is still recommended reading,
+The section `Build Instructions' below is still recommended reading,
 especially the part on customizing Modules/Setup.
 
 
@@ -410,10 +410,9 @@ Reliant UNIX: The thread support does not compile on Reliant UNIX, and
         platform as well.  This should be resolved in time for a
         future release.
 
-Mac OS X 10: One of the regular expression tests fails with a segmentation 
-        violation (SIGSEGV) due to the small stack size used by default,
-        if you give the command "limit stacksize 2048" before "make test"
-        it should work.
+Mac OS X 10: One of the regular expression tests fails
+        with a SEGV due to the small stack size used by default, if you do
+        "limit stacksize 2048" before "make test" it should work.
 
         On naked Darwin you may want to add the configure option
         "--disable-toolbox-glue" to disable the glue code for the Carbon
@@ -421,7 +420,7 @@ Mac OS X 10: One of the regular expression tests fails with a segmentation
         if you add the --enable-framework option, see below.
 
         On a clean OSX /usr/local does not exist. Do a
-        "sudo mkdir -m 775 /usr/local"
+	"sudo mkdir -m 775 /usr/local"
         before you do a make install. Alternatively, do "sudo make install"
         which installs everything as superuser.
 

@@ -1,6 +1,7 @@
 // Resource script for Python core DLL.
 // Currently only holds version information.
 //
+#include "ver.h"
 #include "winver.h"
 
 #define MS_WINDOWS
@@ -12,7 +13,7 @@
  *    PYTHON_DLL_NAME ditto.
  * MS_DLL_ID must match PY_VERSION in the Windows install script.
  */
-#define MS_DLL_ID "2.3"
+#define MS_DLL_ID "2.2"
 
 #ifndef PYTHON_DLL_NAME
 #define PYTHON_DLL_NAME "python22.dll"

@@ -30,15 +30,12 @@ class bdist_dumb (Command):
                      "creating the distribution archive"),
                     ('dist-dir=', 'd',
                      "directory to put final built distributions in"),
-                    ('skip-build', None,
-                     "skip rebuilding everything (for testing/debugging)"),
                    ]
 
-    boolean_options = ['keep-temp', 'skip-build']
+    boolean_options = ['keep-temp']
 
     default_format = { 'posix': 'gztar',
-                       'nt': 'zip',
-                       'os2': 'zip' }
+                       'nt': 'zip', }
 
 
     def initialize_options (self):
@@ -47,7 +44,6 @@ class bdist_dumb (Command):
         self.format = None
         self.keep_temp = 0
         self.dist_dir = None
-        self.skip_build = 0
 
     # initialize_options()
 
@@ -75,12 +71,10 @@ class bdist_dumb (Command):
 
     def run (self):
 
-        if not self.skip_build:
-            self.run_command('build')
+        self.run_command('build')
 
         install = self.reinitialize_command('install', reinit_subcommands=1)
         install.root = self.bdist_dir
-        install.skip_build = self.skip_build
 
         self.announce("installing to %s" % self.bdist_dir)
         self.run_command('install')
@@ -89,12 +83,6 @@ class bdist_dumb (Command):
         # pseudo-installation tree.
         archive_basename = "%s.%s" % (self.distribution.get_fullname(),
                                       self.plat_name)
-
-        # OS/2 objects to any ":" characters in a filename (such as when
-        # a timestamp is used in a version) so change them to hyphens.
-        if os.name == "os2":
-            archive_basename = archive_basename.replace(":", "-")
-
         self.make_archive(os.path.join(self.dist_dir, archive_basename),
                           self.format,
                           root_dir=self.bdist_dir)

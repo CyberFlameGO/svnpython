@@ -348,7 +348,7 @@ class PureProxy(SMTPServer):
         data = NEWLINE.join(lines)
         refused = self._deliver(mailfrom, rcpttos, data)
         # TBD: what to do with refused addresses?
-        print >> DEBUGSTREAM, 'we got some refusals:', refused
+        print >> DEBUGSTREAM, 'we got some refusals'
 
     def _deliver(self, mailfrom, rcpttos, data):
         import smtplib
@@ -417,7 +417,7 @@ class MailmanProxy(PureProxy):
         if rcpttos:
             refused = self._deliver(mailfrom, rcpttos, data)
             # TBD: what to do with refused addresses?
-            print >> DEBUGSTREAM, 'we got refusals:', refused
+            print >> DEBUGSTREAM, 'we got refusals'
         # Now deliver directly to the list commands
         mlists = {}
         s = StringIO(data)

@@ -460,9 +460,6 @@ on_completion(char *text, int state)
 		   lock released! */
 		save_tstate = PyThreadState_Swap(NULL);
 		PyEval_RestoreThread(completer_tstate);
-		/* Don't use the default filename completion if we
-		 * have a custom completion function... */
-		rl_attempted_completion_over = 1;
 		r = PyObject_CallFunction(completer, "si", text, state);
 		if (r == NULL)
 			goto error;
@@ -507,10 +504,6 @@ static void
 setup_readline(void)
 {
 	rl_readline_name = "python";
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-	/* Allow $if term= in .inputrc to work */
-	rl_terminal_name = getenv("TERM");
-#endif
 	/* Force rebind of TAB to insert-tab */
 	rl_bind_key('\t', rl_insert);
 	/* Bind both ESC-TAB and ESC-ESC to the completion function */

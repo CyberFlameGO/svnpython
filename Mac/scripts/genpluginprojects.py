@@ -36,7 +36,7 @@ def genpluginproject(architecture, module,
 		sources=[], sourcedirs=[],
 		libraries=[], extradirs=[],
 		extraexportsymbols=[], outputdir=":::Lib:lib-dynload",
-		libraryflags=None, stdlibraryflags=None, prefixname=None):
+		libraryflags=None, stdlibraryflags=None):
 	if architecture == "all":
 		# For the time being we generate two project files. Not as nice as
 		# a single multitarget project, but easier to implement for now.
@@ -76,9 +76,7 @@ def genpluginproject(architecture, module,
 		else:
 			print "Warning: %s: sourcefile not found: %s"%(module, sources[0])
 			sourcedirs = []
-	if prefixname:
-		pass
-	elif architecture == "carbon":
+	if architecture == "carbon":
 		prefixname = "mwerks_carbonplugin_config.h"
 	else:
 		prefixname = "mwerks_plugin_config.h"
@@ -104,16 +102,10 @@ def	genallprojects(force=0):
 	global FORCEREBUILD
 	FORCEREBUILD = force
 	# Standard Python modules
-	genpluginproject("ppc", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_pyexpat_config.h"
-		)
-	genpluginproject("carbon", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_carbonpyexpat_config.h"
-		)
+	genpluginproject("all", "pyexpat", 
+		sources=["pyexpat.c"], 
+		libraries=["libexpat.ppc.lib"], 
+		extradirs=["::::expat:*"])
 	genpluginproject("all", "zlib", 
 		libraries=["zlib.ppc.Lib"], 
 		extradirs=["::::imglibs:zlib:mac", "::::imglibs:zlib"])
@@ -183,40 +175,23 @@ def	genallprojects(force=0):
 	genpluginproject("all", "calldll", sources=["calldll.c"])
 	genpluginproject("all", "ColorPicker")
 	genpluginproject("ppc", "Printing")
-##	genpluginproject("ppc", "waste",
-##		sources=[
-##			"wastemodule.c",
-##			'WEAccessors.c', 'WEBirthDeath.c', 'WEDebug.c',
-##			'WEDrawing.c', 'WEFontTables.c', 'WEHighLevelEditing.c',
-##			'WEICGlue.c', 'WEInlineInput.c', 'WELineLayout.c', 'WELongCoords.c',
-##			'WELowLevelEditing.c', 'WEMouse.c', 'WEObjects.c', 'WEScraps.c',
-##			'WESelecting.c', 'WESelectors.c', 'WEUserSelectors.c', 'WEUtilities.c',
-##			'WEObjectHandlers.c',
-##			'WETabs.c',
-##			'WETabHooks.c'],
-##		libraries=['DragLib'],
-##		extradirs=[
-##			'::::Waste 1.3 Distribution:*',
-##			'::::ICProgKit1.4:APIs']
-##		)
-	# This is a hack, combining parts of Waste 2.0 with parts of 1.3
 	genpluginproject("ppc", "waste",
 		sources=[
 			"wastemodule.c",
-			"WEObjectHandlers.c",
-			"WETabs.c", "WETabHooks.c"],
-		libraries=[
-			"WASTE.PPC.lib",
-			"TextCommon",
-			"UnicodeConverter",
-			"DragLib",
-			],
+			'WEAccessors.c', 'WEBirthDeath.c', 'WEDebug.c',
+			'WEDrawing.c', 'WEFontTables.c', 'WEHighLevelEditing.c',
+			'WEICGlue.c', 'WEInlineInput.c', 'WELineLayout.c', 'WELongCoords.c',
+			'WELowLevelEditing.c', 'WEMouse.c', 'WEObjects.c', 'WEScraps.c',
+			'WESelecting.c', 'WESelectors.c', 'WEUserSelectors.c', 'WEUtilities.c',
+			'WEObjectHandlers.c',
+			'WETabs.c',
+			'WETabHooks.c'],
+		libraries=['DragLib'],
 		extradirs=[
-			'{Compiler}:MacOS Support:(Third Party Support):Waste 2.0 Distribution:C_C++ Headers',
-			'{Compiler}:MacOS Support:(Third Party Support):Waste 2.0 Distribution:Static Libraries',
-			'::wastemods',
-			]
+			'::::Waste 1.3 Distribution:*',
+			'::::ICProgKit1.4:APIs']
 		)
+	# This is a hack, combining parts of Waste 2.0 with parts of 1.3
 	genpluginproject("carbon", "waste",
 		sources=[
 			"wastemodule.c",
@@ -226,15 +201,15 @@ def	genallprojects(force=0):
 		extradirs=[
 			'{Compiler}:MacOS Support:(Third Party Support):Waste 2.0 Distribution:C_C++ Headers',
 			'{Compiler}:MacOS Support:(Third Party Support):Waste 2.0 Distribution:Static Libraries',
-			'::wastemods',
-			]
+			'::::Waste 1.3 Distribution:Extras:Sample Object Handlers',
+			'::::Waste 1.3 Distribution:Extras:Waste Tabs 1.3.2']
 		)
-##			'::::Waste 1.3 Distribution:Extras:Sample Object Handlers',
-##			'::::Waste 1.3 Distribution:Extras:Waste Tabs 1.3.2']
 	genpluginproject("ppc", "ctb")
 	genpluginproject("ppc", "icglue", sources=["icgluemodule.c"], 
-		libraries=["InternetConfigLib"])
-	genpluginproject("carbon", "icglue", sources=["icgluemodule.c"])
+		libraries=["ICGlueCFM-PPC.lib"], 
+		extradirs=["::::ICProgKit1.4:APIs"])
+	genpluginproject("carbon", "icglue", sources=["icgluemodule.c"], 
+		extradirs=["::::ICProgKit1.4:APIs"])
 	genpluginproject("ppc", "macspeech", libraries=["SpeechLib"])
 
 if __name__ == '__main__':

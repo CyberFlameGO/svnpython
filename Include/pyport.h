@@ -33,6 +33,7 @@ Used in:  LONG_LONG
 
 
 /* For backward compatibility only. Obsolete, do not use. */
+#define ANY void
 #ifdef HAVE_PROTOTYPES
 #define Py_PROTO(x) x
 #else
@@ -157,9 +158,6 @@ typedef LONG_LONG		Py_intptr_t;
 #endif
 
 #ifndef DONT_HAVE_SYS_STAT_H
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-#include <sys/types.h>
-#endif
 #include <sys/stat.h>
 #elif defined(HAVE_STAT_H)
 #include <stat.h>
@@ -499,7 +497,8 @@ typedef	struct fd_set {
  * Hide GCC attributes from compilers that don't support them.
  */
 #if (!defined(__GNUC__) || __GNUC__ < 2 || \
-     (__GNUC__ == 2 && __GNUC_MINOR__ < 7) ) && \
+     (__GNUC__ == 2 && __GNUC_MINOR__ < 7) || \
+     defined(NEXT) ) && \
     !defined(RISCOS)
 #define __attribute__(__x)
 #endif

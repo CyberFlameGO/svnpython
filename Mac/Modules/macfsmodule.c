@@ -776,7 +776,7 @@ mfsr_as_fsspec(mfsrobject *self, PyObject *args)
 static PyObject *
 mfsr_as_pathname(mfsrobject *self, PyObject *args)
 {
-	unsigned char strbuf[PATHNAMELEN];
+	char strbuf[PATHNAMELEN];
 	OSStatus err;
 	
 	if (!PyArg_ParseTuple(args, ""))
@@ -786,7 +786,7 @@ mfsr_as_pathname(mfsrobject *self, PyObject *args)
 		PyErr_Mac(ErrorObject, err);
 		return NULL;
 	}
-	return PyString_FromString((char *)strbuf);
+	return PyString_FromString(strbuf);
 }
 
 static struct PyMethodDef mfsr_methods[] = {

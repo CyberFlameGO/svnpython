@@ -147,90 +147,98 @@ resource_getpagesize(PyObject *self, PyObject *args)
 
 static struct PyMethodDef
 resource_methods[] = {
-	{"getrusage",    resource_getrusage,   METH_VARARGS},
-	{"getrlimit",    resource_getrlimit,   METH_VARARGS},
-	{"setrlimit",    resource_setrlimit,   METH_VARARGS},
-	{"getpagesize",  resource_getpagesize, METH_VARARGS},
+	{"getrusage",    resource_getrusage,   1},
+	{"getrlimit",    resource_getrlimit,   1},
+	{"setrlimit",    resource_setrlimit,   1},
+	{"getpagesize",  resource_getpagesize, 1},
 	{NULL, NULL}			     /* sentinel */
 };
 
 
 /* Module initialization */
 
+static void
+ins(PyObject *dict, char *name, int value)
+{
+	PyObject *v = PyInt_FromLong((long) value);
+	if (v) {
+		PyDict_SetItemString(dict, name, v);
+		Py_DECREF(v);
+	}
+	/* errors will be checked by initresource() */
+}
+
 DL_EXPORT(void)
 initresource(void)
 {
-	PyObject *m;
+	PyObject *m, *d;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("resource", resource_methods);
 
 	/* Add some symbolic constants to the module */
-	if (ResourceError == NULL) {
-		ResourceError = PyErr_NewException("resource.error",
-						   NULL, NULL);
-	}
-	Py_INCREF(ResourceError);
-	PyModule_AddObject(m, "error", ResourceError);
+	d = PyModule_GetDict(m);
+	ResourceError = PyErr_NewException("resource.error", NULL, NULL);
+	PyDict_SetItemString(d, "error", ResourceError);
 
 	/* insert constants */
 #ifdef RLIMIT_CPU
-	PyModule_AddIntConstant(m, "RLIMIT_CPU", RLIMIT_CPU);
+	ins(d, "RLIMIT_CPU", RLIMIT_CPU);
 #endif
 
 #ifdef RLIMIT_FSIZE
-	PyModule_AddIntConstant(m, "RLIMIT_FSIZE", RLIMIT_FSIZE);
+	ins(d, "RLIMIT_FSIZE", RLIMIT_FSIZE);
 #endif
 
 #ifdef RLIMIT_DATA
-	PyModule_AddIntConstant(m, "RLIMIT_DATA", RLIMIT_DATA);
+	ins(d, "RLIMIT_DATA", RLIMIT_DATA);
 #endif
 
 #ifdef RLIMIT_STACK
-	PyModule_AddIntConstant(m, "RLIMIT_STACK", RLIMIT_STACK);
+	ins(d, "RLIMIT_STACK", RLIMIT_STACK);
 #endif
 
 #ifdef RLIMIT_CORE
-	PyModule_AddIntConstant(m, "RLIMIT_CORE", RLIMIT_CORE);
+	ins(d, "RLIMIT_CORE", RLIMIT_CORE);
 #endif
 
 #ifdef RLIMIT_NOFILE
-	PyModule_AddIntConstant(m, "RLIMIT_NOFILE", RLIMIT_NOFILE);
+	ins(d, "RLIMIT_NOFILE", RLIMIT_NOFILE);
 #endif
 
 #ifdef RLIMIT_OFILE
-	PyModule_AddIntConstant(m, "RLIMIT_OFILE", RLIMIT_OFILE);
+	ins(d, "RLIMIT_OFILE", RLIMIT_OFILE);
 #endif
 
 #ifdef RLIMIT_VMEM
-	PyModule_AddIntConstant(m, "RLIMIT_VMEM", RLIMIT_VMEM);
+	ins(d, "RLIMIT_VMEM", RLIMIT_VMEM);
 #endif
 
 #ifdef RLIMIT_AS
-	PyModule_AddIntConstant(m, "RLIMIT_AS", RLIMIT_AS);
+	ins(d, "RLIMIT_AS", RLIMIT_AS);
 #endif
 
 #ifdef RLIMIT_RSS
-	PyModule_AddIntConstant(m, "RLIMIT_RSS", RLIMIT_RSS);
+	ins(d, "RLIMIT_RSS", RLIMIT_RSS);
 #endif
 
 #ifdef RLIMIT_NPROC
-	PyModule_AddIntConstant(m, "RLIMIT_NPROC", RLIMIT_NPROC);
+	ins(d, "RLIMIT_NPROC", RLIMIT_NPROC);
 #endif
 
 #ifdef RLIMIT_MEMLOCK
-	PyModule_AddIntConstant(m, "RLIMIT_MEMLOCK", RLIMIT_MEMLOCK);
+	ins(d, "RLIMIT_MEMLOCK", RLIMIT_MEMLOCK);
 #endif
 
 #ifdef RUSAGE_SELF
-	PyModule_AddIntConstant(m, "RUSAGE_SELF", RUSAGE_SELF);
+	ins(d, "RUSAGE_SELF", RUSAGE_SELF);
 #endif
 
 #ifdef RUSAGE_CHILDREN
-	PyModule_AddIntConstant(m, "RUSAGE_CHILDREN", RUSAGE_CHILDREN);
+	ins(d, "RUSAGE_CHILDREN", RUSAGE_CHILDREN);
 #endif
 
 #ifdef RUSAGE_BOTH
-	PyModule_AddIntConstant(m, "RUSAGE_BOTH", RUSAGE_BOTH);
+	ins(d, "RUSAGE_BOTH", RUSAGE_BOTH);
 #endif
 }

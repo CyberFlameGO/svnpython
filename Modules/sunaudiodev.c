@@ -322,20 +322,20 @@ sad_fileno(sadobject *self, PyObject *args)
 
 
 static PyMethodDef sad_methods[] = {
-        { "read",	(PyCFunction)sad_read, METH_OLDARGS },
-        { "write",	(PyCFunction)sad_write, METH_OLDARGS },
-        { "ibufcount",	(PyCFunction)sad_ibufcount, METH_OLDARGS },
-        { "obufcount",	(PyCFunction)sad_obufcount, METH_OLDARGS },
+        { "read",	(PyCFunction)sad_read },
+        { "write",	(PyCFunction)sad_write },
+        { "ibufcount",	(PyCFunction)sad_ibufcount },
+        { "obufcount",	(PyCFunction)sad_obufcount },
 #define CTL_METHODS 4
-        { "getinfo",	(PyCFunction)sad_getinfo, METH_OLDARGS },
-        { "setinfo",	(PyCFunction)sad_setinfo, METH_OLDARGS },
-        { "drain",	(PyCFunction)sad_drain, METH_OLDARGS },
-        { "flush",	(PyCFunction)sad_flush, METH_OLDARGS },
+        { "getinfo",	(PyCFunction)sad_getinfo },
+        { "setinfo",	(PyCFunction)sad_setinfo },
+        { "drain",	(PyCFunction)sad_drain },
+        { "flush",	(PyCFunction)sad_flush },
 #ifdef SOLARIS
-	{ "getdev",	(PyCFunction)sad_getdev, METH_OLDARGS },
+	{ "getdev",	(PyCFunction)sad_getdev },
 #endif
-        { "close",	(PyCFunction)sad_close, METH_OLDARGS },
-	{ "fileno",     (PyCFunction)sad_fileno, METH_OLDARGS },
+        { "close",	(PyCFunction)sad_close },
+	{ "fileno",     (PyCFunction)sad_fileno },
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -465,7 +465,7 @@ sadopen(PyObject *self, PyObject *args)
 }
     
 static PyMethodDef sunaudiodev_methods[] = {
-    { "open", sadopen, METH_OLDARGS },
+    { "open", sadopen },
     { 0, 0 },
 };
 

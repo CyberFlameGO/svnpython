@@ -16,7 +16,7 @@
 #define SIG_ERR ((PyOS_sighandler_t)(-1))
 #endif
 
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
+#if defined(PYOS_OS2)
 #define NSIG 12
 #include <process.h>
 #endif
@@ -542,11 +542,6 @@ initsignal(void)
 #ifdef SIGXFSZ
 	x = PyInt_FromLong(SIGXFSZ);
 	PyDict_SetItemString(d, "SIGXFSZ", x);
-        Py_XDECREF(x);
-#endif
-#ifdef SIGINFO
-	x = PyInt_FromLong(SIGINFO);
-	PyDict_SetItemString(d, "SIGINFO", x);
         Py_XDECREF(x);
 #endif
         if (!PyErr_Occurred())
