@@ -49,7 +49,7 @@
 # The formatted output is located in subdirectories.  For PDF and
 # PostScript, look in the paper-$(PAPER)/ directory.  For HTML, look in
 # the html/ directory.  If you want to fix the GNU info process, look
-# in the info/ directory; please send patches to docs@python.org.
+# in the info/ directory; please send patches to python-docs@python.org.
 
 # This Makefile only includes information on how to perform builds; for
 # dependency information, see Makefile.deps.
@@ -66,7 +66,7 @@ TOOLSDIR=	tools
 
 # This is the *documentation* release, and is used to construct the file
 # names of the downloadable tarballs.
-RELEASE=2.4a0
+RELEASE=2.3
 
 PYTHON=	   python
 DVIPS=	   dvips -N0 -t $(PAPER)
@@ -95,7 +95,7 @@ EMACS=     emacs
 
 # The end of this should reflect the major/minor version numbers of
 # the release:
-WHATSNEW=whatsnew24
+WHATSNEW=whatsnew23
 
 # what's what
 MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \
