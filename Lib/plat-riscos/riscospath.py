@@ -311,8 +311,10 @@ def expandvars(p):
     return b.tostring(0, swi.swi('OS_GSTrans', 'sbi;..i', p, b, l))
 
 
-# Return an absolute path. RISC OS' osfscontrol_canonicalise_path does this among others
-abspath = os.expand
+# Return an absolute path.
+
+def abspath(p):
+    return normpath(join(os.getcwd(), p))
 
 
 # realpath is a no-op on systems without islink support

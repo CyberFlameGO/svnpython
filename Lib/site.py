@@ -14,7 +14,7 @@ This will append site-specific paths to to the module search path.  On
 Unix, it starts with sys.prefix and sys.exec_prefix (if different) and
 appends lib/python<version>/site-packages as well as lib/site-python.
 On other platforms (mainly Mac and Windows), it uses just sys.prefix
-(and sys.exec_prefix, if different, but this is unlikely).  The
+\(and sys.exec_prefix, if different, but this is unlikely).  The
 resulting directories, if they exist, are appended to sys.path, and
 also inspected for path configuration files.
 
@@ -23,7 +23,7 @@ A path configuration file is a file whose name has the form
 to be added to sys.path.  Non-existing directories (or
 non-directories) are never added to sys.path; no directory is added to
 sys.path more than once.  Blank lines and lines beginning with
-'#' are skipped. Lines starting with 'import' are executed.
+\code{#} are skipped. Lines starting with \code{import} are executed.
 
 For example, suppose sys.prefix and sys.exec_prefix are set to
 /usr/local and there is a directory /usr/local/lib/python1.5/site-packages

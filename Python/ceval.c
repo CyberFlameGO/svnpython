@@ -497,7 +497,7 @@ eval_frame(PyFrameObject *f)
 #ifdef DXPAIRS
 	int lastopcode = 0;
 #endif
-	PyObject **stack_pointer; /* Next free slot in value stack */
+	PyObject **stack_pointer;
 	register unsigned char *next_instr;
 	register int opcode=0;	/* Current opcode */
 	register int oparg=0;	/* Current opcode argument, if any */
@@ -586,7 +586,7 @@ eval_frame(PyFrameObject *f)
 	next_instr = first_instr + f->f_lasti;
 	stack_pointer = f->f_stacktop;
 	assert(stack_pointer != NULL);
-	f->f_stacktop = NULL;	/* remains NULL unless yield suspends frame */
+	f->f_stacktop = NULL;
 
 	if (tstate->use_tracing) {
 		if (tstate->c_tracefunc != NULL) {
@@ -634,8 +634,6 @@ eval_frame(PyFrameObject *f)
 	w = NULL;
 
 	for (;;) {
-		assert(stack_pointer >= f->f_valuestack);	/* else underflow */
-		assert(STACK_LEVEL() <= f->f_stacksize);	/* else overflow */
 		/* Do periodic things.  Doing this every time through
 		   the loop would add too much overhead, so we do it
 		   only every Nth instruction.  We also do it if
@@ -1364,7 +1362,6 @@ eval_frame(PyFrameObject *f)
 				    s[len-1] != ' ')
 					PyFile_SoftSpace(w, 0);
 			    } 
-#ifdef Py_USING_UNICODE
 			    else if (PyUnicode_Check(v)) {
 				Py_UNICODE *s = PyUnicode_AS_UNICODE(v);
 				int len = PyUnicode_GET_SIZE(v);
@@ -1373,7 +1370,6 @@ eval_frame(PyFrameObject *f)
 				    s[len-1] != ' ')
 				    PyFile_SoftSpace(w, 0);
 			    }
-#endif
 			}
 			Py_DECREF(v);
 			Py_XDECREF(stream);
@@ -3332,14 +3328,10 @@ loop_subscript(PyObject *v, PyObject *w)
 	return NULL;
 }
 
-/* Extract a slice index from a PyInt or PyLong, and store in *pi.
-   Silently reduce values larger than INT_MAX to INT_MAX, and silently
-   boost values less than -INT_MAX to 0.  Return 0 on error, 1 on success.
-*/
-/* Note:  If v is NULL, return success without storing into *pi.  This
-   is because_PyEval_SliceIndex() is called by apply_slice(), which can be
-   called by the SLICE opcode with v and/or w equal to NULL.
-*/
+/* Extract a slice index from a PyInt or PyLong, the index is bound to
+   the range [-INT_MAX+1, INTMAX]. Returns 0 and an exception if there is
+   and error. Returns 1 on success.*/
+
 int
 _PyEval_SliceIndex(PyObject *v, int *pi)
 {
@@ -3370,8 +3362,7 @@ _PyEval_SliceIndex(PyObject *v, int *pi)
 
 				/* Create a long integer with a value of 0 */
 				long_zero = PyLong_FromLong(0L);
-				if (long_zero == NULL)
-					return 0;
+				if (long_zero == NULL) return 0;
 
 				/* Check sign */
 				cmp = PyObject_RichCompareBool(v, long_zero,

@@ -1,8 +1,7 @@
 import cPickle
-import test_support
-import unittest
 from cStringIO import StringIO
 from pickletester import AbstractPickleTests, AbstractPickleModuleTests
+from test_support import run_unittest
 
 class cPickleTests(AbstractPickleTests, AbstractPickleModuleTests):
 
@@ -80,14 +79,8 @@ class cPickleFastPicklerTests(AbstractPickleTests):
                           AbstractPickleTests.test_recursive_multi,
                           self)
 
-def test_main():
-    loader = unittest.TestLoader()
-    suite = unittest.TestSuite()
-    suite.addTest(loader.loadTestsFromTestCase(cPickleTests))
-    suite.addTest(loader.loadTestsFromTestCase(cPicklePicklerTests))
-    suite.addTest(loader.loadTestsFromTestCase(cPickleListPicklerTests))
-    suite.addTest(loader.loadTestsFromTestCase(cPickleFastPicklerTests))
-    test_support.run_suite(suite)
-
 if __name__ == "__main__":
-    test_main()
+    run_unittest(cPickleTests)
+    run_unittest(cPicklePicklerTests)
+    run_unittest(cPickleListPicklerTests)
+    run_unittest(cPickleFastPicklerTests)

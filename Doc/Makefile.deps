@@ -102,7 +102,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libgc.tex \
 	lib/libweakref.tex \
 	lib/libinspect.tex \
-	lib/libpydoc.tex \
 	lib/libdifflib.tex \
 	lib/libdoctest.tex \
 	lib/libunittest.tex \

@@ -14,21 +14,12 @@ class myint(int):
         self.str = str(x)
 
 class initarg(C):
-
-    __safe_for_unpickling__ = 1
-
     def __init__(self, a, b):
         self.a = a
         self.b = b
 
     def __getinitargs__(self):
         return self.a, self.b
-
-class metaclass(type):
-    pass
-
-class use_metaclass(object):
-    __metaclass__ = metaclass
 
 # break into multiple strings to avoid confusing font-lock-mode
 DATA = """(lp1
@@ -241,12 +232,6 @@ class AbstractPickleTests(unittest.TestCase):
 
     def test_getinitargs(self):
         pass
-
-    def test_metaclass(self):
-        a = use_metaclass()
-        s = self.dumps(a)
-        b = self.loads(s)
-        self.assertEqual(a.__class__, b.__class__)
 
 class AbstractPickleModuleTests(unittest.TestCase):
 
