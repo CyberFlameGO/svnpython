@@ -80,7 +80,7 @@ typedef struct {
 	int err;			/* Error to pass to the callback */
 } ctbcmobject;
 
-static PyTypeObject ctbcmtype;
+staticforward PyTypeObject ctbcmtype;
 
 #define is_ctbcmobject(v)		((v)->ob_type == &ctbcmtype)
 
@@ -186,7 +186,7 @@ ctbcm_dealloc(self)
 		CMDispose(self->hdl);
 		self->hdl = NULL;
 	}
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *

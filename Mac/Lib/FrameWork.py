@@ -13,7 +13,6 @@ from Carbon.Dlg import *
 from Carbon.Dialogs import *
 from Carbon.Evt import *
 from Carbon.Events import *
-from Carbon.Help import *
 from Carbon.Menu import *
 from Carbon.Menus import *
 from Carbon.Qd import *
@@ -108,7 +107,6 @@ class Application:
 		self.quitting = 0
 		self.needmenubarredraw = 0
 		self._windows = {}
-		self._helpmenu = None
 		if nomenubar:
 			self.menubar = None
 		else:
@@ -127,11 +125,6 @@ class Application:
 	def makeusermenus(self):
 		self.filemenu = m = Menu(self.menubar, "File")
 		self._quititem = MenuItem(m, "Quit", "Q", self._quit)
-		
-	def gethelpmenu(self):
-		if self._helpmenu == None:
-			self._helpmenu = HelpMenu(self.menubar)
-		return self._helpmenu
 	
 	def _quit(self, *args):
 		self.quitting = 1
@@ -304,8 +297,6 @@ class Application:
 		(what, message, when, where, modifiers) = event
 		result = MenuSelect(where)
 		id = (result>>16) & 0xffff	# Hi word
-		if id >= 0x8000:
-			id = -65536 + id
 		item = result & 0xffff		# Lo word
 		self.do_rawmenu(id, item, window, event)
 	
@@ -724,18 +715,6 @@ class AppleMenu(Menu):
 		elif MacOS.runtimemodel == 'ppc':
 			name = self.menu.GetMenuItemText(item)
 			OpenDeskAcc(name)
-			
-class HelpMenu(Menu):
-	def __init__(self, bar):
-		# Note we don't call Menu.__init__, we do the necessary things by hand
-		self.bar = bar
-		self.menu, index = HMGetHelpMenu()
-		self.id = self.menu.GetMenuID()
-		bar.menus[self.id] = self
-		# The next line caters for the entries the system already handles for us
-		self.items = [None]*(index-1)
-		self._parent = None
-		
 
 class Window:
 	"""A single window belonging to an application"""
@@ -1087,9 +1066,6 @@ class TestApp(Application):
 		self.opt2 = CheckItem(mm, "Being hit on the head lessons", (kMenuOptionModifier, "A"))
 		self.opt3 = CheckItem(mm, "Complaints", (kMenuOptionModifier|kMenuNoCommandModifier, "A"))
 		Separator(m)
-		self.itemeh = MenuItem(m, "Enable Help", None, self.enablehelp)
-		self.itemdbg = MenuItem(m, "Debug", None, self.debug)
-		Separator(m)
 		self.quititem = MenuItem(m, "Quit", "Q", self.quit)
 	
 	def save(self, *args):
@@ -1097,17 +1073,6 @@ class TestApp(Application):
 	
 	def quit(self, *args):
 		raise self
-		
-	def enablehelp(self, *args):
-		hm = self.gethelpmenu()
-		self.nohelpitem = MenuItem(hm, "There isn't any", None, self.nohelp)
-		
-	def nohelp(self, *args):
-		print "I told you there isn't any!"
-		
-	def debug(self, *args):
-		import pdb
-		pdb.set_trace()
 
 
 def test():

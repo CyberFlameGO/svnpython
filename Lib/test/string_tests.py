@@ -1,7 +1,7 @@
 """Common tests shared by test_string and test_userstring"""
 
 import string
-from test.test_support import verify, vereq, verbose, TestFailed, have_unicode
+from test_support import verify, verbose, TestFailed, have_unicode
 
 transtable = '\000\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037 !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`xyzdefghijklmnopqrstuvwxyz{|}~\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377'
 
@@ -176,15 +176,10 @@ def run_method_tests(test):
     test('strip', 'hello', 'hello', 'xyz')
 
     # strip/lstrip/rstrip with unicode arg
-    if have_unicode:
-        test('strip', 'xyzzyhelloxyzzy',
-             unicode('hello', 'ascii'), unicode('xyz', 'ascii'))
-        test('lstrip', 'xyzzyhelloxyzzy',
-             unicode('helloxyzzy', 'ascii'), unicode('xyz', 'ascii'))
-        test('rstrip', 'xyzzyhelloxyzzy',
-             unicode('xyzzyhello', 'ascii'), unicode('xyz', 'ascii'))
-        test('strip', 'hello',
-             unicode('hello', 'ascii'), unicode('xyz', 'ascii'))
+    test('strip', 'xyzzyhelloxyzzy', u'hello', u'xyz')
+    test('lstrip', 'xyzzyhelloxyzzy', u'helloxyzzy', u'xyz')
+    test('rstrip', 'xyzzyhelloxyzzy', u'xyzzyhello', u'xyz')
+    test('strip', 'hello', u'hello', u'xyz')
 
     test('swapcase', 'HeLLo cOmpUteRs', 'hEllO CoMPuTErS')
     test('translate', 'xyzabcdef', 'xyzxyz', transtable, 'def')
@@ -202,10 +197,6 @@ def run_method_tests(test):
     test('replace', 'one!two!three!', 'one@two@three@', '!', '@')
     test('replace', 'one!two!three!', 'one!two!three!', 'x', '@')
     test('replace', 'one!two!three!', 'one!two!three!', 'x', '@', 2)
-    test('replace', 'abc', '-a-b-c-', '', '-')
-    test('replace', 'abc', '-a-b-c', '', '-', 3)
-    test('replace', 'abc', 'abc', '', '-', 0)
-    test('replace', '', '', '', '')
     # Next three for SF bug 422088: [OSF1 alpha] string.replace(); died with
     # MemoryError due to empty result (platform malloc issue when requesting
     # 0 bytes).
@@ -227,18 +218,6 @@ def run_method_tests(test):
     test('startswith', 'helloworld', 1, 'lowo', 3, 7)
     test('startswith', 'helloworld', 0, 'lowo', 3, 6)
 
-    # test negative indices in startswith
-    test('startswith', 'hello', 1, 'he', 0, -1)
-    test('startswith', 'hello', 1, 'he', -53, -1)
-    test('startswith', 'hello', 0, 'hello', 0, -1)
-    test('startswith', 'hello', 0, 'hello world', -1, -10)
-    test('startswith', 'hello', 0, 'ello', -5)
-    test('startswith', 'hello', 1, 'ello', -4)
-    test('startswith', 'hello', 0, 'o', -2)
-    test('startswith', 'hello', 1, 'o', -1)
-    test('startswith', 'hello', 1, '', -3, -3)
-    test('startswith', 'hello', 0, 'lo', -9)
-
     test('endswith', 'hello', 1, 'lo')
     test('endswith', 'hello', 0, 'he')
     test('endswith', 'hello', 1, '')
@@ -253,21 +232,6 @@ def run_method_tests(test):
     test('endswith', 'helloworld', 0, 'lowo', 3, 8)
     test('endswith', 'ab', 0, 'ab', 0, 1)
     test('endswith', 'ab', 0, 'ab', 0, 0)
-
-    # test negative indices in endswith
-    test('endswith', 'hello', 1, 'lo', -2)
-    test('endswith', 'hello', 0, 'he', -2)
-    test('endswith', 'hello', 1, '', -3, -3)
-    test('endswith', 'hello', 0, 'hello world', -10, -2)
-    test('endswith', 'helloworld', 0, 'worl', -6)
-    test('endswith', 'helloworld', 1, 'worl', -5, -1)
-    test('endswith', 'helloworld', 1, 'worl', -5, 9)
-    test('endswith', 'helloworld', 1, 'world', -7, 12)
-    test('endswith', 'helloworld', 1, 'lowo', -99, -3)
-    test('endswith', 'helloworld', 1, 'lowo', -8, -3)
-    test('endswith', 'helloworld', 1, 'lowo', -7, -3)
-    test('endswith', 'helloworld', 0, 'lowo', 3, -4)
-    test('endswith', 'helloworld', 0, 'lowo', -8, -2)
 
     test('zfill', '123', '123', 2)
     test('zfill', '123', '123', 3)
@@ -299,28 +263,3 @@ def run_method_tests(test):
         data = 'x\x9c\xcbH\xcd\xc9\xc9W(\xcf/\xcaI\x01\x00\x1a\x0b\x04]'
         verify('hello world'.encode('zlib') == data)
         verify(data.decode('zlib') == 'hello world')
-
-def test_exception(lhs, rhs, msg):
-    try:
-        lhs in rhs
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, msg
-
-def run_contains_tests(test):
-    test('__contains__', '', True, '')         # vereq('' in '', True)
-    test('__contains__', 'abc', True, '')      # vereq('' in 'abc', True)
-    test('__contains__', 'abc', False, '\0')   # vereq('\0' in 'abc', False)
-    test('__contains__', '\0abc', True, '\0')  # vereq('\0' in '\0abc', True)
-    test('__contains__', 'abc\0', True, '\0')  # vereq('\0' in 'abc\0', True)
-    test('__contains__', '\0abc', True, 'a')   # vereq('a' in '\0abc', True)
-    test('__contains__', 'asdf', True, 'asdf') # vereq('asdf' in 'asdf', True)
-    test('__contains__', 'asd', False, 'asdf') # vereq('asdf' in 'asd', False)
-    test('__contains__', '', False, 'asdf')    # vereq('asdf' in '', False)
-
-def run_inplace_tests(constructor):
-    # Verify clearing of SF bug #592573
-    s = t = constructor('abc')
-    s += constructor('def')
-    verify(s != t, 'in-place concatenate should create a new object')

@@ -40,10 +40,10 @@ typedef struct {
    compiled *by* a code object knows whether to allow yield stmts.  In
    effect, this passes on the "from __future__ import generators" state
    in effect when the code block was compiled. */
-#define CO_GENERATOR_ALLOWED    0x1000 /* no longer used in an essential way */
+#define CO_GENERATOR_ALLOWED    0x1000
 #define CO_FUTURE_DIVISION    	0x2000
 
-PyAPI_DATA(PyTypeObject) PyCode_Type;
+extern DL_IMPORT(PyTypeObject) PyCode_Type;
 
 #define PyCode_Check(op) ((op)->ob_type == &PyCode_Type)
 #define PyCode_GetNumFree(op) (PyTuple_GET_SIZE((op)->co_freevars))
@@ -52,12 +52,12 @@ PyAPI_DATA(PyTypeObject) PyCode_Type;
 
 /* Public interface */
 struct _node; /* Declare the existence of this type */
-PyAPI_FUNC(PyCodeObject *) PyNode_Compile(struct _node *, char *);
-PyAPI_FUNC(PyCodeObject *) PyCode_New(
+DL_IMPORT(PyCodeObject *) PyNode_Compile(struct _node *, char *);
+DL_IMPORT(PyCodeObject *) PyCode_New(
 	int, int, int, int, PyObject *, PyObject *, PyObject *, PyObject *,
 	PyObject *, PyObject *, PyObject *, PyObject *, int, PyObject *); 
         /* same as struct above */
-PyAPI_FUNC(int) PyCode_Addr2Line(PyCodeObject *, int);
+DL_IMPORT(int) PyCode_Addr2Line(PyCodeObject *, int);
 
 /* Future feature support */
 
@@ -67,8 +67,8 @@ typedef struct {
     int ff_features;
 } PyFutureFeatures;
 
-PyAPI_FUNC(PyFutureFeatures *) PyNode_Future(struct _node *, char *);
-PyAPI_FUNC(PyCodeObject *) PyNode_CompileFlags(struct _node *, char *,
+DL_IMPORT(PyFutureFeatures *) PyNode_Future(struct _node *, char *);
+DL_IMPORT(PyCodeObject *) PyNode_CompileFlags(struct _node *, char *,
 					      PyCompilerFlags *);
 
 #define FUTURE_NESTED_SCOPES "nested_scopes"

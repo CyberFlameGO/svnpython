@@ -369,48 +369,48 @@ static PyMethodDef Fm_methods[] = {
 
 #if !TARGET_API_MAC_CARBON
 	{"InitFonts", (PyCFunction)Fm_InitFonts, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 	{"GetFontName", (PyCFunction)Fm_GetFontName, 1,
-	 PyDoc_STR("(short familyID) -> (Str255 name)")},
+	 "(short familyID) -> (Str255 name)"},
 	{"GetFNum", (PyCFunction)Fm_GetFNum, 1,
-	 PyDoc_STR("(Str255 name) -> (short familyID)")},
+	 "(Str255 name) -> (short familyID)"},
 	{"RealFont", (PyCFunction)Fm_RealFont, 1,
-	 PyDoc_STR("(short fontNum, short size) -> (Boolean _rv)")},
+	 "(short fontNum, short size) -> (Boolean _rv)"},
 
 #if !TARGET_API_MAC_CARBON
 	{"SetFontLock", (PyCFunction)Fm_SetFontLock, 1,
-	 PyDoc_STR("(Boolean lockFlag) -> None")},
+	 "(Boolean lockFlag) -> None"},
 #endif
 	{"SetFScaleDisable", (PyCFunction)Fm_SetFScaleDisable, 1,
-	 PyDoc_STR("(Boolean fscaleDisable) -> None")},
+	 "(Boolean fscaleDisable) -> None"},
 	{"FontMetrics", (PyCFunction)Fm_FontMetrics, 1,
-	 PyDoc_STR("() -> (FMetricRec theMetrics)")},
+	 "() -> (FMetricRec theMetrics)"},
 	{"SetFractEnable", (PyCFunction)Fm_SetFractEnable, 1,
-	 PyDoc_STR("(Boolean fractEnable) -> None")},
+	 "(Boolean fractEnable) -> None"},
 	{"GetDefFontSize", (PyCFunction)Fm_GetDefFontSize, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"IsOutline", (PyCFunction)Fm_IsOutline, 1,
-	 PyDoc_STR("(Point numer, Point denom) -> (Boolean _rv)")},
+	 "(Point numer, Point denom) -> (Boolean _rv)"},
 	{"SetOutlinePreferred", (PyCFunction)Fm_SetOutlinePreferred, 1,
-	 PyDoc_STR("(Boolean outlinePreferred) -> None")},
+	 "(Boolean outlinePreferred) -> None"},
 	{"GetOutlinePreferred", (PyCFunction)Fm_GetOutlinePreferred, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"SetPreserveGlyph", (PyCFunction)Fm_SetPreserveGlyph, 1,
-	 PyDoc_STR("(Boolean preserveGlyph) -> None")},
+	 "(Boolean preserveGlyph) -> None"},
 	{"GetPreserveGlyph", (PyCFunction)Fm_GetPreserveGlyph, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 
 #if !TARGET_API_MAC_CARBON
 	{"FlushFonts", (PyCFunction)Fm_FlushFonts, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 	{"GetSysFont", (PyCFunction)Fm_GetSysFont, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"GetAppFont", (PyCFunction)Fm_GetAppFont, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"QDTextBounds", (PyCFunction)Fm_QDTextBounds, 1,
-	 PyDoc_STR("(Buffer inText) -> (Rect bounds)")},
+	 "(Buffer inText) -> (Rect bounds)"},
 	{NULL, NULL, 0}
 };
 

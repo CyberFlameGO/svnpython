@@ -7,14 +7,11 @@ chapter describes how the lexical analyzer breaks a file into tokens.
 \index{parser}
 \index{token}
 
-Python uses the 7-bit \ASCII{} character set for program text.
-\versionadded[An encoding declaration can be used to indicate that 
-string literals and comments use an encoding different from ASCII.]{2.3}
-For compatibility with older versions, Python only warns if it finds
-8-bit characters; those warnings should be corrected by either declaring
-an explicit encoding, or using escape sequences if those bytes are binary
-data, instead of characters.
-
+Python uses the 7-bit \ASCII{} character set for program text and string
+literals. 8-bit characters may be used in string literals and comments
+but their interpretation is platform dependent; the proper way to
+insert 8-bit characters in string literals is by using octal or
+hexadecimal escape sequences.
 
 The run-time character set depends on the I/O devices connected to the
 program but is generally a superset of \ASCII.
@@ -56,7 +53,7 @@ by following the explicit or implicit \emph{line joining} rules.
 
 A physical line ends in whatever the current platform's convention is
 for terminating lines.  On \UNIX, this is the \ASCII{} LF (linefeed)
-character.  On Windows, it is the \ASCII{} sequence CR LF (return
+character.  On DOS/Windows, it is the \ASCII{} sequence CR LF (return
 followed by linefeed).  On Macintosh, it is the \ASCII{} CR (return)
 character.
 
@@ -71,37 +68,6 @@ Comments are ignored by the syntax; they are not tokens.
 \index{comment}
 \index{hash character}
 
-
-\subsection{Encoding declarations\label{encodings}}
-
-If a comment in the first or second line of the Python script matches
-the regular expression \regexp{coding[=:]\e s*([\e w-_.]+)}, this comment is
-processed as an encoding declaration; the first group of this
-expression names the encoding of the source code file. The recommended
-forms of this expression are
-
-\begin{verbatim}
-# -*- coding: <encoding-name> -*-
-\end{verbatim}
-
-which is recognized also by GNU Emacs, and
-
-\begin{verbatim}
-# vim:fileencoding=<encoding-name>
-\end{verbatim}
-
-which is recognized by Bram Moolenar's VIM. In addition, if the first
-bytes of the file are the UTF-8 byte-order mark
-(\code{'\e xef\e xbb\e xbf'}), the declared file encoding is UTF-8
-(this is supported, among others, by Microsoft's \program{notepad}).
-
-If an encoding is declared, the encoding name must be recognized by
-Python. % XXX there should be a list of supported encodings.
-The encoding is used for all lexical analysis, in particular to find
-the end of a string, and to interpret the contents of Unicode literals.
-String literals are converted to Unicode for syntactical analysis,
-then converted back to their original encoding before interpretation
-starts. The encoding declaration must appear on a line of its own.
 
 \subsection{Explicit line joining\label{explicit-joining}}
 
@@ -389,23 +355,23 @@ backslash (\code{\e}) character is used to escape characters that
 otherwise have a special meaning, such as newline, backslash itself,
 or the quote character.  String literals may optionally be prefixed
 with a letter \character{r} or \character{R}; such strings are called
-\dfn{raw strings}\index{raw string} and use different rules for interpreting
-backslash escape sequences.  A prefix of \character{u} or \character{U}
-makes the string a Unicode string.  Unicode strings use the Unicode character
-set as defined by the Unicode Consortium and ISO~10646.  Some additional
-escape sequences, described below, are available in Unicode strings.
-The two prefix characters may be combined; in this case, \character{u} must
-appear before \character{r}.
+\dfn{raw strings}\index{raw string} and use different rules for
+interpreting backslash escape sequences.  A prefix of \character{u} or
+\character{U} makes the string a Unicode string.  Unicode strings use
+the Unicode character set as defined by the Unicode Consortium and
+ISO~10646.  Some additional escape sequences, described below, are
+available in Unicode strings.  The two prefix characters may be
+combined; in this case, \character{u} must appear before
+\character{r}.
 
-In triple-quoted strings,
-unescaped newlines and quotes are allowed (and are retained), except
-that three unescaped quotes in a row terminate the string.  (A
-``quote'' is the character used to open the string, i.e. either
-\code{'} or \code{"}.)
+In triple-quoted strings, unescaped newlines and quotes are allowed
+(and are retained), except that three unescaped quotes in a row
+terminate the string.  (A ``quote'' is the character used to open the
+string, i.e. either \code{'} or \code{"}.)
 
 Unless an \character{r} or \character{R} prefix is present, escape
-sequences in strings are interpreted according to rules similar
-to those used by Standard C.  The recognized escape sequences are:
+sequences in strings are interpreted according to rules similar to
+those used by Standard C.  The recognized escape sequences are:
 \index{physical line}
 \index{escape sequence}
 \index{Standard C}
@@ -464,25 +430,25 @@ only)'' in the table above fall into the category of unrecognized
 escapes for non-Unicode string literals.
 
 When an \character{r} or \character{R} prefix is present, a character
-following a backslash is included in the string without change, and \emph{all
-backslashes are left in the string}.  For example, the string literal
-\code{r"\e n"} consists of two characters: a backslash and a lowercase
-\character{n}.  String quotes can be escaped with a backslash, but the
-backslash remains in the string; for example, \code{r"\e""} is a valid string
-literal consisting of two characters: a backslash and a double quote;
-\code{r"\e"} is not a valid string literal (even a raw string cannot
-end in an odd number of backslashes).  Specifically, \emph{a raw
-string cannot end in a single backslash} (since the backslash would
-escape the following quote character).  Note also that a single
-backslash followed by a newline is interpreted as those two characters
-as part of the string, \emph{not} as a line continuation.
+following a backslash is included in the string without change, and
+\emph{all backslashes are left in the string}.  For example, the
+string literal \code{r"\e n"} consists of two characters: a backslash
+and a lowercase `n'.  String quotes can be escaped with a backslash,
+but the backslash remains in the string; for example, \code{r"\e""} is
+a valid string literal consisting of two characters: a backslash and a
+double quote; \code{r"\e"} is not a valid string literal (even a raw
+string cannot end in an odd number of backslashes).  Specifically,
+\emph{a raw string cannot end in a single backslash} (since the
+backslash would escape the following quote character).  Note also that
+a single backslash followed by a newline is interpreted as those two
+characters as part of the string, \emph{not} as a line continuation.
 
 When an \character{r} or \character{R} prefix is used in conjunction
 with a \character{u} or \character{U} prefix, then the \code{\e uXXXX}
 escape sequence is processed while \emph{all other backslashes are
 left in the string}.  For example, the string literal
-\code{ur"\e{}u0062\e n"} consists of three Unicode characters: `LATIN
-SMALL LETTER B', `REVERSE SOLIDUS', and `LATIN SMALL LETTER N'.
+\code{ur"\e{}u0062\e n"} consists of three Unicode characters:
+`LATIN SMALL LETTER B', `REVERSE SOLIDUS', and `LATIN SMALL LETTER N'.
 Backslashes can be escaped with a preceding backslash; however, both
 remain in the string.  As a result, \code{\e uXXXX} escape sequences
 are only recognized when there are an odd number of backslashes.
@@ -526,7 +492,7 @@ number and an imaginary number).
 \index{octal literal}
 \index{decimal literal}
 \index{imaginary literal}
-\index{complex!literal}
+\index{complex literal}
 
 Note that numeric literals do not include a sign; a phrase like
 \code{-1} is actually an expression composed of the unary operator
@@ -557,10 +523,9 @@ lexical definitions:
              {\token{digit} | "a"..."f" | "A"..."F"}
 \end{productionlist}
 
-Although both lower case \character{l} and upper case \character{L} are
-allowed as suffix for long integers, it is strongly recommended to always
-use \character{L}, since the letter \character{l} looks too much like the
-digit \character{1}.
+Although both lower case `l' and upper case `L' are allowed as suffix
+for long integers, it is strongly recommended to always use `L', since
+the letter `l' looks too much like the digit `1'.
 
 Plain integer decimal literals must be at most 2147483647 (i.e., the
 largest positive integer, using 32-bit arithmetic).  Plain octal and

@@ -23,15 +23,16 @@ the following command can be used to get the disassembly of
 
 \begin{verbatim}
 >>> dis.dis(myfunc)
-  2           0 LOAD_GLOBAL              0 (len)
-              3 LOAD_FAST                0 (alist)
-              6 CALL_FUNCTION            1
-              9 RETURN_VALUE        
-             10 LOAD_CONST               0 (None)
-             13 RETURN_VALUE
-\end{verbatim}
+          0 SET_LINENO          1
 
-(The ``2'' is a line number).
+          3 SET_LINENO          2
+          6 LOAD_GLOBAL         0 (len)
+          9 LOAD_FAST           0 (alist)
+         12 CALL_FUNCTION       1
+         15 RETURN_VALUE   
+         16 LOAD_CONST          0 (None)
+         19 RETURN_VALUE   
+\end{verbatim}
 
 The \module{dis} module defines the following functions and constants:
 
@@ -55,7 +56,6 @@ Disassembles a code object, indicating the last instruction if \var{lasti}
 was provided.  The output is divided in the following columns:
 
 \begin{enumerate}
-\item the line number, for the first instruction of each line
 \item the current instruction, indicated as \samp{-->},
 \item a labelled instruction, indicated with \samp{>\code{>}},
 \item the address of the instruction,
@@ -621,7 +621,7 @@ free variable storage.
 \end{opcodedesc}
 
 \begin{opcodedesc}{SET_LINENO}{lineno}
-This opcode is obsolete.
+Sets the current line number to \var{lineno}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{RAISE_VARARGS}{argc}

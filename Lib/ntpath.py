@@ -7,13 +7,11 @@ module as os.path.
 
 import os
 import stat
-import sys
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "basename","dirname","commonprefix","getsize","getmtime",
            "getatime","islink","exists","isdir","isfile","ismount",
-           "walk","expanduser","expandvars","normpath","abspath","splitunc",
-           "supports_unicode_filenames"]
+           "walk","expanduser","expandvars","normpath","abspath","splitunc"]
 
 # Normalize the case of a pathname and map slashes to backslashes.
 # Other normalizations (such as optimizing '../' away) are not done
@@ -218,15 +216,18 @@ def commonprefix(m):
 
 def getsize(filename):
     """Return the size of a file, reported by os.stat()"""
-    return os.stat(filename).st_size
+    st = os.stat(filename)
+    return st[stat.ST_SIZE]
 
 def getmtime(filename):
     """Return the last modification time of a file, reported by os.stat()"""
-    return os.stat(filename).st_mtime
+    st = os.stat(filename)
+    return st[stat.ST_MTIME]
 
 def getatime(filename):
     """Return the last access time of a file, reported by os.stat()"""
-    return os.stat(filename).st_atime
+    st = os.stat(filename)
+    return st[stat.ST_ATIME]
 
 
 # Is a path a symbolic link?
@@ -234,7 +235,7 @@ def getatime(filename):
 
 def islink(path):
     """Test for symbolic link.  On WindowsNT/95 always returns false"""
-    return False
+    return 0
 
 
 # Does a path exist?
@@ -245,8 +246,8 @@ def exists(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 # Is a path a dos directory?
@@ -258,8 +259,8 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return stat.S_ISDIR(st.st_mode)
+        return 0
+    return stat.S_ISDIR(st[stat.ST_MODE])
 
 
 # Is a path a regular file?
@@ -271,8 +272,8 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return stat.S_ISREG(st.st_mode)
+        return 0
+    return stat.S_ISREG(st[stat.ST_MODE])
 
 
 # Is a path a mount point?  Either a root (with or without drive letter)
@@ -342,9 +343,9 @@ def expanduser(path):
     while i < n and path[i] not in '/\\':
         i = i + 1
     if i == 1:
-        if 'HOME' in os.environ:
+        if os.environ.has_key('HOME'):
             userhome = os.environ['HOME']
-        elif not 'HOMEPATH' in os.environ:
+        elif not os.environ.has_key('HOMEPATH'):
             return path
         else:
             try:
@@ -398,7 +399,7 @@ def expandvars(path):
                 try:
                     index = path.index('}')
                     var = path[:index]
-                    if var in os.environ:
+                    if os.environ.has_key(var):
                         res = res + os.environ[var]
                 except ValueError:
                     res = res + path
@@ -411,7 +412,7 @@ def expandvars(path):
                     var = var + c
                     index = index + 1
                     c = path[index:index + 1]
-                if var in os.environ:
+                if os.environ.has_key(var):
                     res = res + os.environ[var]
                 if c != '':
                     res = res + c
@@ -478,6 +479,3 @@ def abspath(path):
 
 # realpath is a no-op on systems without islink support
 realpath = abspath
-# Win9x family and earlier have no Unicode filename support.
-supports_unicode_filenames = (hasattr(sys, "getwindowsversion") and
-                              sys.getwindowsversion()[3] >= 2)

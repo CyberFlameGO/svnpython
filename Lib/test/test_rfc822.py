@@ -1,7 +1,7 @@
 import rfc822
 import sys
+import test_support
 import unittest
-from test import test_support
 
 try:
     from cStringIO import StringIO
@@ -185,7 +185,7 @@ class MessageTestCase(unittest.TestCase):
         self.check('To: User J. Person <person@dom.ain>\n\n',
                    [('User J. Person', 'person@dom.ain')])
 
-    # This takes too long to add to the test suite
+    # This takes to long to add to the test suite
 ##    def test_an_excrutiatingly_long_address_field(self):
 ##        OBSCENELY_LONG_HEADER_MULTIPLIER = 10000
 ##        oneaddr = ('Person' * 10) + '@' + ('.'.join(['dom']*10)) + '.com'
@@ -193,25 +193,6 @@ class MessageTestCase(unittest.TestCase):
 ##        lst = rfc822.AddrlistClass(addr).getaddrlist()
 ##        self.assertEqual(len(lst), OBSCENELY_LONG_HEADER_MULTIPLIER)
 
-    def test_2getaddrlist(self):
-        eq = self.assertEqual
-        msg = self.create_message("""\
-To: aperson@dom.ain
-Cc: bperson@dom.ain
-Cc: cperson@dom.ain
-Cc: dperson@dom.ain
-
-A test message.
-""")
-        ccs = [('', a) for a in
-               ['bperson@dom.ain', 'cperson@dom.ain', 'dperson@dom.ain']]
-        addrs = msg.getaddrlist('cc')
-        addrs.sort()
-        eq(addrs, ccs)
-        # Try again, this one used to fail
-        addrs = msg.getaddrlist('cc')
-        addrs.sort()
-        eq(addrs, ccs)
 
     def test_parseaddr(self):
         eq = self.assertEqual
@@ -221,12 +202,6 @@ A test message.
            ('Bea A. Person', 'bperson@dom.ain'))
         eq(rfc822.parseaddr('Cynthia Person <cperson@dom.ain>'),
            ('Cynthia Person', 'cperson@dom.ain'))
-
-    def test_quote_unquote(self):
-        eq = self.assertEqual
-        eq(rfc822.quote('foo\\wacky"name'), 'foo\\\\wacky\\"name')
-        eq(rfc822.unquote('"foo\\\\wacky\\"name"'), 'foo\\wacky"name')
-
 
 def test_main():
     test_support.run_unittest(MessageTestCase)

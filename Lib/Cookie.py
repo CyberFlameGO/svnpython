@@ -216,6 +216,7 @@ Finis.
 # Import our required modules
 #
 import string
+from UserDict import UserDict
 
 try:
     from cPickle import dumps, loads
@@ -229,9 +230,6 @@ except ImportError:
 
 __all__ = ["CookieError","BaseCookie","SimpleCookie","SerialCookie",
            "SmartCookie","Cookie"]
-
-_nulljoin = ''.join
-_spacejoin = ' '.join
 
 #
 # Define an exception visible to External modules
@@ -313,7 +311,7 @@ _Translator       = {
     }
 
 def _quote(str, LegalChars=_LegalChars,
-           idmap=string._idmap, translate=string.translate):
+    join=string.join, idmap=string._idmap, translate=string.translate):
     #
     # If the string does not need to be double-quoted,
     # then just return the string.  Otherwise, surround
@@ -323,14 +321,14 @@ def _quote(str, LegalChars=_LegalChars,
     if "" == translate(str, idmap, LegalChars):
         return str
     else:
-        return '"' + _nulljoin( map(_Translator.get, str, str) ) + '"'
+        return '"' + join( map(_Translator.get, str, str), "" ) + '"'
 # end _quote
 
 
 _OctalPatt = re.compile(r"\\[0-3][0-7][0-7]")
 _QuotePatt = re.compile(r"[\\].")
 
-def _unquote(str):
+def _unquote(str, join=string.join, atoi=string.atoi):
     # If there aren't any doublequotes,
     # then there can't be any special characters.  See RFC 2109.
     if  len(str) < 2:
@@ -367,9 +365,9 @@ def _unquote(str):
             i = k+2
         else:                                      # OctalPatt matched
             res.append(str[i:j])
-            res.append( chr( int(str[j+1:j+4], 8) ) )
+            res.append( chr( atoi(str[j+1:j+4], 8) ) )
             i = j+4
-    return _nulljoin(res)
+    return join(res, "")
 # end _unquote
 
 # The _getdate() routine is used to set the expiration time in
@@ -405,7 +403,7 @@ def _getdate(future=0, weekdayname=_weekdayname, monthname=_monthname):
 #       pickled for network transit.
 #
 
-class Morsel(dict):
+class Morsel(UserDict):
     # RFC 2109 lists these attributes as reserved:
     #   path       comment         domain
     #   max-age    secure      version
@@ -424,25 +422,27 @@ class Morsel(dict):
                    "secure"      : "secure",
                    "version" : "Version",
                    }
+    _reserved_keys = _reserved.keys()
 
     def __init__(self):
         # Set defaults
         self.key = self.value = self.coded_value = None
+        UserDict.__init__(self)
 
         # Set default attributes
-        for K in self._reserved:
-            dict.__setitem__(self, K, "")
+        for K in self._reserved_keys:
+            UserDict.__setitem__(self, K, "")
     # end __init__
 
     def __setitem__(self, K, V):
-        K = K.lower()
-        if not K in self._reserved:
+        K = string.lower(K)
+        if not K in self._reserved_keys:
             raise CookieError("Invalid Attribute %s" % K)
-        dict.__setitem__(self, K, V)
+        UserDict.__setitem__(self, K, V)
     # end __setitem__
 
     def isReservedKey(self, K):
-        return K.lower() in self._reserved
+        return string.lower(K) in self._reserved_keys
     # end isReservedKey
 
     def set(self, key, val, coded_val,
@@ -450,7 +450,7 @@ class Morsel(dict):
             idmap=string._idmap, translate=string.translate ):
         # First we verify that the key isn't a reserved word
         # Second we make sure it only contains legal characters
-        if key.lower() in self._reserved:
+        if string.lower(key) in self._reserved_keys:
             raise CookieError("Attempt to set a reserved key: %s" % key)
         if "" != translate(key, idmap, LegalChars):
             raise CookieError("Illegal key value: %s" % key)
@@ -492,7 +492,7 @@ class Morsel(dict):
 
         # Now add any defined attributes
         if attrs is None:
-            attrs = self._reserved
+            attrs = self._reserved_keys
         items = self.items()
         items.sort()
         for K,V in items:
@@ -508,7 +508,7 @@ class Morsel(dict):
                 RA("%s=%s;" % (self._reserved[K], V))
 
         # Return the result
-        return _spacejoin(result)
+        return string.join(result, " ")
     # end OutputString
 # end Morsel class
 
@@ -543,7 +543,7 @@ _CookiePattern = re.compile(
 #   Using this class is almost just like using a dictionary.
 # See this module's docstring for example usage.
 #
-class BaseCookie(dict):
+class BaseCookie(UserDict):
     # A container class for a set of Morsels
     #
 
@@ -568,6 +568,7 @@ class BaseCookie(dict):
     # end value_encode
 
     def __init__(self, input=None):
+        UserDict.__init__(self)
         if input: self.load(input)
     # end __init__
 
@@ -575,7 +576,7 @@ class BaseCookie(dict):
         """Private method for setting a cookie's value"""
         M = self.get(key, Morsel())
         M.set(key, real_value, coded_value)
-        dict.__setitem__(self, key, M)
+        UserDict.__setitem__(self, key, M)
     # end __set
 
     def __setitem__(self, key, value):
@@ -591,7 +592,7 @@ class BaseCookie(dict):
         items.sort()
         for K,V in items:
             result.append( V.output(attrs, header) )
-        return sep.join(result)
+        return string.join(result, sep)
     # end output
 
     __str__ = output
@@ -602,7 +603,7 @@ class BaseCookie(dict):
         items.sort()
         for K,V in items:
             L.append( '%s=%s' % (K,repr(V.value) ) )
-        return '<%s: %s>' % (self.__class__.__name__, _spacejoin(L))
+        return '<%s: %s>' % (self.__class__.__name__, string.join(L))
 
     def js_output(self, attrs=None):
         """Return a string suitable for JavaScript."""
@@ -611,7 +612,7 @@ class BaseCookie(dict):
         items.sort()
         for K,V in items:
             result.append( V.js_output(attrs) )
-        return _nulljoin(result)
+        return string.join(result, "")
     # end js_output
 
     def load(self, rawdata):
@@ -647,7 +648,7 @@ class BaseCookie(dict):
                 # (Does anyone care?)
                 if M:
                     M[ K[1:] ] = V
-            elif K.lower() in Morsel._reserved:
+            elif string.lower(K) in Morsel._reserved_keys:
                 if M:
                     M[ K ] = _unquote(V)
             else:

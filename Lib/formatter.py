@@ -18,7 +18,9 @@ available mechanisms for setting the properties which formatter objects
 manage and inserting data into the output.
 """
 
+import string
 import sys
+from types import StringType
 
 
 AS_IS = None
@@ -36,7 +38,7 @@ class NullFormatter:
     """
 
     def __init__(self, writer=None):
-        if writer is None:
+        if not writer:
             writer = NullWriter()
         self.writer = writer
     def end_paragraph(self, blankline): pass
@@ -117,7 +119,7 @@ class AbstractFormatter:
             self.writer.send_line_break()
         if not self.para_end:
             self.writer.send_paragraph((blankline and 1) or 0)
-        if isinstance(format, str):
+        if type(format) is StringType:
             self.writer.send_label_data(self.format_counter(format, counter))
         else:
             self.writer.send_label_data(format)
@@ -174,13 +176,16 @@ class AbstractFormatter:
             return label.upper()
         return label
 
-    def add_flowing_data(self, data):
+    def add_flowing_data(self, data,
+                         # These are only here to load them into locals:
+                         whitespace = string.whitespace,
+                         join = string.join, split = string.split):
         if not data: return
         # The following looks a bit convoluted but is a great improvement over
         # data = regsub.gsub('[' + string.whitespace + ']+', ' ', data)
-        prespace = data[:1].isspace()
-        postspace = data[-1:].isspace()
-        data = " ".join(data.split())
+        prespace = data[:1] in whitespace
+        postspace = data[-1:] in whitespace
+        data = join(split(data))
         if self.nospace and not data:
             return
         elif prespace or self.softspace:
@@ -406,7 +411,7 @@ class DumbWriter(NullWriter):
 
     def send_flowing_data(self, data):
         if not data: return
-        atbreak = self.atbreak or data[0].isspace()
+        atbreak = self.atbreak or data[0] in string.whitespace
         col = self.col
         maxcol = self.maxcol
         write = self.file.write
@@ -422,13 +427,13 @@ class DumbWriter(NullWriter):
             col = col + len(word)
             atbreak = 1
         self.col = col
-        self.atbreak = data[-1].isspace()
+        self.atbreak = data[-1] in string.whitespace
 
 
 def test(file = None):
     w = DumbWriter()
     f = AbstractFormatter(w)
-    if file is not None:
+    if file:
         fp = open(file)
     elif sys.argv[1:]:
         fp = open(sys.argv[1])

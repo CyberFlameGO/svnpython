@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings("ignore", "tempnam", RuntimeWarning, __name__)
 warnings.filterwarnings("ignore", "tmpnam", RuntimeWarning, __name__)
 
-from test.test_support import TESTFN, run_suite
+from test_support import TESTFN, run_unittest
 
 class TemporaryFileTests(unittest.TestCase):
     def setUp(self):
@@ -33,7 +33,7 @@ class TemporaryFileTests(unittest.TestCase):
         if not hasattr(os, "tempnam"):
             return
         warnings.filterwarnings("ignore", "tempnam", RuntimeWarning,
-                                r"test_os$")
+                                "test_os")
         self.check_tempfile(os.tempnam())
 
         name = os.tempnam(TESTFN)
@@ -57,7 +57,7 @@ class TemporaryFileTests(unittest.TestCase):
         if not hasattr(os, "tmpnam"):
             return
         warnings.filterwarnings("ignore", "tmpnam", RuntimeWarning,
-                                r"test_os$")
+                                "test_os")
         self.check_tempfile(os.tmpnam())
 
 # Test attributes on return values from os.*stat* family.
@@ -139,13 +139,7 @@ class StatAttributeTests(unittest.TestCase):
             return
 
         import statvfs
-        try:
-            result = os.statvfs(self.fname)
-        except OSError, e:
-            # On AtheOS, glibc always returns ENOSYS
-            import errno
-            if e.errno == errno.ENOSYS:
-                return
+        result = os.statvfs(self.fname)
 
         # Make sure direct access works
         self.assertEquals(result.f_bfree, result[statvfs.F_BFREE])
@@ -186,10 +180,8 @@ class StatAttributeTests(unittest.TestCase):
             pass
 
 def test_main():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TemporaryFileTests))
-    suite.addTest(unittest.makeSuite(StatAttributeTests))
-    run_suite(suite)
+    run_unittest(TemporaryFileTests)
+    run_unittest(StatAttributeTests)
 
 if __name__ == "__main__":
     test_main()

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: Latin-1 -*-
 """Generate Python documentation in HTML or text for interactive use.
 
 In the Python interpreter, do "from pydoc import help" to provide online
@@ -44,7 +43,7 @@ Mynd you, møøse bites Kan be pretty nasti..."""
 #     the current directory is changed with os.chdir(), an incorrect
 #     path will be displayed.
 
-import sys, imp, os, re, types, inspect
+import sys, imp, os, stat, re, types, inspect
 from repr import Repr
 from string import expandtabs, find, join, lower, split, strip, rfind, rstrip
 
@@ -99,7 +98,7 @@ def replace(text, *pairs):
 def cram(text, maxlen):
     """Omit part of a string if needed to make it fit in a maximum length."""
     if len(text) > maxlen:
-        pre = max(0, (maxlen-3)//2)
+        pre = max(0, (maxlen-3)/2)
         post = max(0, maxlen-3-pre)
         return text[:pre] + '...' + text[len(text)-post:]
     return text
@@ -149,12 +148,11 @@ def ispackage(path):
     if os.path.isdir(path):
         for ext in ['.py', '.pyc', '.pyo']:
             if os.path.isfile(os.path.join(path, '__init__' + ext)):
-                return True
-    return False
+                return 1
 
 def synopsis(filename, cache={}):
     """Get the one-line summary out of a module file."""
-    mtime = os.stat(filename).st_mtime
+    mtime = os.stat(filename)[stat.ST_MTIME]
     lastupdate, result = cache.get(filename, (0, None))
     if lastupdate < mtime:
         info = inspect.getmoduleinfo(filename)
@@ -224,7 +222,7 @@ def safeimport(path, forceload=0, cache={}):
     package path is specified, the module at the end of the path is returned,
     not the package at the beginning.  If the optional 'forceload' argument
     is 1, we reload the module from disk (unless it's a dynamic extension)."""
-    if forceload and path in sys.modules:
+    if forceload and sys.modules.has_key(path):
         # This is the only way to be sure.  Checking the mtime of the file
         # isn't good enough (e.g. what if the module contains a class that
         # inherits from another module that has changed?).
@@ -242,7 +240,7 @@ def safeimport(path, forceload=0, cache={}):
     except:
         # Did the error occur before or after the module was found?
         (exc, value, tb) = info = sys.exc_info()
-        if path in sys.modules:
+        if sys.modules.has_key(path):
             # An error occured while executing the imported module.
             raise ErrorDuringImport(sys.modules[path].__file__, info)
         elif exc is SyntaxError:
@@ -404,7 +402,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
     def namelink(self, name, *dicts):
         """Make a link for an identifier, given name-to-URL mappings."""
         for dict in dicts:
-            if name in dict:
+            if dict.has_key(name):
                 return '<a href="%s">%s</a>' % (dict[name], name)
         return name
 
@@ -444,7 +442,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
                                 r'RFC[- ]?(\d+)|'
                                 r'PEP[- ]?(\d+)|'
                                 r'(self\.)?(\w+))')
-        while True:
+        while 1:
             match = pattern.search(text, here)
             if not match: break
             start, end = match.span()
@@ -537,7 +535,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
                 module = sys.modules.get(modname)
                 if modname != name and module and hasattr(module, key):
                     if getattr(module, key) is base:
-                        if not key in cdict:
+                        if not cdict.has_key(key):
                             cdict[key] = cdict[base] = modname + '.html#' + key
         funcs, fdict = [], {}
         for key, value in inspect.getmembers(object, inspect.isroutine):
@@ -779,7 +777,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
         if name == realname:
             title = '<a name="%s"><strong>%s</strong></a>' % (anchor, realname)
         else:
-            if (cl and realname in cl.__dict__ and
+            if (cl and cl.__dict__.has_key(realname) and
                 cl.__dict__[realname] is object):
                 reallink = '<a href="#%s">%s</a>' % (
                     cl.__name__ + '-' + realname, realname)
@@ -823,8 +821,8 @@ TT { font-family: lucidatypewriter, lucida console, courier }
 
         def found(name, ispackage,
                   modpkgs=modpkgs, shadowed=shadowed, seen=seen):
-            if not name in seen:
-                modpkgs.append((name, '', ispackage, name)) in shadowed
+            if not seen.has_key(name):
+                modpkgs.append((name, '', ispackage, shadowed.has_key(name)))
                 seen[name] = 1
                 shadowed[name] = 1
 
@@ -1141,7 +1139,7 @@ class TextDoc(Doc):
         if name == realname:
             title = self.bold(realname)
         else:
-            if (cl and realname in cl.__dict__ and
+            if (cl and cl.__dict__.has_key(realname) and
                 cl.__dict__[realname] is object):
                 skipdocs = 1
             title = self.bold(name) + ' = ' + realname
@@ -1190,21 +1188,21 @@ def getpager():
         return plainpager
     if os.environ.get('TERM') in ['dumb', 'emacs']:
         return plainpager
-    if 'PAGER' in os.environ:
+    if os.environ.has_key('PAGER'):
         if sys.platform == 'win32': # pipes completely broken in Windows
             return lambda text: tempfilepager(plain(text), os.environ['PAGER'])
         elif os.environ.get('TERM') in ['dumb', 'emacs']:
             return lambda text: pipepager(plain(text), os.environ['PAGER'])
         else:
             return lambda text: pipepager(text, os.environ['PAGER'])
-    if sys.platform == 'win32' or sys.platform.startswith('os2'):
+    if sys.platform == 'win32':
         return lambda text: tempfilepager(plain(text), 'more <')
     if hasattr(os, 'system') and os.system('(less) 2>/dev/null') == 0:
         return lambda text: pipepager(text, 'less')
 
     import tempfile
-    (fd, filename) = tempfile.mkstemp()
-    os.close(fd)
+    filename = tempfile.mktemp()
+    open(filename, 'w').close()
     try:
         if hasattr(os, 'system') and os.system('more %s' % filename) == 0:
             return lambda text: pipepager(text, 'more')
@@ -1229,8 +1227,8 @@ def pipepager(text, cmd):
 def tempfilepager(text, cmd):
     """Page through text by invoking a program on a temporary file."""
     import tempfile
-    (fd, filename) = tempfile.mkstemp()
-    file = os.fdopen(fd, 'w')
+    filename = tempfile.mktemp()
+    file = open(filename, 'w')
     file.write(text)
     file.close()
     try:
@@ -1372,7 +1370,7 @@ def writedocs(dir, pkgpath='', done=None):
             modname = inspect.getmodulename(path)
             if modname:
                 modname = pkgpath + modname
-                if not modname in done:
+                if not done.has_key(modname):
                     done[modname] = 1
                     writedoc(modname)
 
@@ -1499,8 +1497,7 @@ class Helper:
                     '/usr/doc/python-docs-' + split(sys.version)[0],
                     '/usr/doc/python-' + split(sys.version)[0],
                     '/usr/doc/python-docs-' + sys.version[:3],
-                    '/usr/doc/python-' + sys.version[:3],
-                    os.path.join(sys.prefix, 'Resources/English.lproj/Documentation')]:
+                    '/usr/doc/python-' + sys.version[:3]]:
             if dir and os.path.isdir(os.path.join(dir, 'lib')):
                 self.docdir = dir
 
@@ -1525,7 +1522,7 @@ has the same effect as typing a particular string at the help> prompt.
 
     def interact(self):
         self.output.write('\n')
-        while True:
+        while 1:
             self.output.write('help> ')
             self.output.flush()
             try:
@@ -1544,8 +1541,8 @@ has the same effect as typing a particular string at the help> prompt.
             elif request == 'modules': self.listmodules()
             elif request[:8] == 'modules ':
                 self.listmodules(split(request)[1])
-            elif request in self.keywords: self.showtopic(request)
-            elif request in self.topics: self.showtopic(request)
+            elif self.keywords.has_key(request): self.showtopic(request)
+            elif self.topics.has_key(request): self.showtopic(request)
             elif request: doc(request, 'Help on %s:')
         elif isinstance(request, Helper): self()
         else: doc(request, 'Help on %s:')
@@ -1696,7 +1693,7 @@ class ModuleScanner(Scanner):
     def __init__(self):
         roots = map(lambda dir: (dir, ''), pathdirs())
         Scanner.__init__(self, roots, self.submodules, self.isnewpackage)
-        self.inodes = map(lambda (dir, pkg): os.stat(dir).st_ino, roots)
+        self.inodes = map(lambda (dir, pkg): os.stat(dir)[1], roots)
 
     def submodules(self, (dir, package)):
         children = []
@@ -1710,15 +1707,14 @@ class ModuleScanner(Scanner):
         return children
 
     def isnewpackage(self, (dir, package)):
-        inode = os.path.exists(dir) and os.stat(dir).st_ino
+        inode = os.path.exists(dir) and os.stat(dir)[1]
         if not (os.path.islink(dir) and inode in self.inodes):
             self.inodes.append(inode) # detect circular symbolic links
             return ispackage(dir)
-        return False
 
     def run(self, callback, key=None, completer=None):
         if key: key = lower(key)
-        self.quit = False
+        self.quit = 0
         seen = {}
 
         for modname in sys.builtin_module_names:
@@ -1738,7 +1734,7 @@ class ModuleScanner(Scanner):
             modname = inspect.getmodulename(path)
             if os.path.isfile(path) and modname:
                 modname = package + (package and '.') + modname
-                if not modname in seen:
+                if not seen.has_key(modname):
                     seen[modname] = 1 # if we see spam.py, skip spam.pyc
                     if key is None:
                         callback(path, modname, '')
@@ -1830,7 +1826,7 @@ pydoc</strong> by Ka-Ping Yee &lt;ping@lfw.org&gt;</font>'''
 
         def serve_until_quit(self):
             import select
-            self.quit = False
+            self.quit = 0
             while not self.quit:
                 rd, wr, ex = select.select([self.socket.fileno()], [], [], 1)
                 if rd: self.handle_request()

@@ -1,10 +1,6 @@
 # Python test set -- part 4b, built-in functions n-z
 
-import warnings
-warnings.filterwarnings("ignore", "hex../oct.. of negative int",
-                        FutureWarning, __name__)
-
-from test.test_support import TestFailed, fcmp, TESTFN, unlink, vereq
+from test_support import *
 
 print 'oct'
 if oct(100) != '0144': raise TestFailed, 'oct(100)'
@@ -108,26 +104,6 @@ for x in 2, 2L, 2.0:
             else:
                 if fcmp(pow(x, y, z), 24.0):
                     raise TestFailed, 'pow(%s, %s, %s)' % (x, y, z)
-
-try: pow(-1, -2, 3)
-except TypeError: pass
-else: raise TestFailed, 'pow(1, -2, 3) should raise TypeError'
-
-try: pow(1, 2, 0)
-except ValueError: pass
-else: raise TestFailed, 'pow(1, 2, 0) should raise ValueError'
-
-try: pow(-1L, -2L, 3L)
-except TypeError: pass
-else: raise TestFailed, 'pow(1L, -2L, 3L) should raise TypeError'
-
-try: pow(1L, 2L, 0L)
-except ValueError: pass
-else: raise TestFailed, 'pow(1L, 2L, 0L) should raise ValueError'
-
-try: pow(-342.43, 0.234)
-except ValueError: pass
-else: raise TestFailed, 'pow(-342.43, 0.234) should raise ValueError'
 
 print 'range'
 if range(3) != [0, 1, 2]: raise TestFailed, 'range(3)'
@@ -299,11 +275,41 @@ if tuple(xrange(10)) != tuple(range(10)): raise TestFailed, 'xrange(10)'
 if tuple(xrange(5,10)) != tuple(range(5,10)): raise TestFailed, 'xrange(5,10)'
 if tuple(xrange(0,10,2)) != tuple(range(0,10,2)):
     raise TestFailed, 'xrange(0,10,2)'
-x = xrange(10); a = iter(x); b = iter(a)  # test clearing of SF bug 564601
-if id(x) == id(a): raise TestFailed, "xrange doesn't have a separate iterator"
-if id(a) != id(b): raise TestFailed, "xrange iterator not behaving like range"
-if type(x) != xrange: raise TestFailed, "xrange type not exposed"  # SF 559833
-if list(x) != list(x): raise TestFailed, "xrange should be restartable"
+r = xrange(10)
+if r.tolist() != range(10): raise TestFailed, 'xrange(10).tolist()'
+if r.start != 0: raise TestFailed, 'xrange(10).start'
+if r.stop != 10: raise TestFailed, 'xrange(10).stop'
+if r.step != 1: raise TestFailed, 'xrange(10).step'
+r = xrange(3, 10)
+if r.tolist() != range(3, 10): raise TestFailed, 'xrange(3, 10).tolist()'
+if r.start != 3: raise TestFailed, 'xrange(3, 10).start'
+if r.stop != 10: raise TestFailed, 'xrange(3, 10).stop'
+if r.step != 1: raise TestFailed, 'xrange(3, 10).step'
+r = xrange(3, 10, 2)
+if r.tolist() != range(3, 10, 2): raise TestFailed, 'xrange(3, 10, 2).tolist()'
+if r.start != 3: raise TestFailed, 'xrange(3, 10, 2).start'
+if r.stop != 11: raise TestFailed, 'xrange(3, 10, 2).stop'
+if r.step != 2: raise TestFailed, 'xrange(3, 10, 2).step'
+r = xrange(10, 3, -1)
+if r.tolist() != range(10, 3, -1):
+    raise TestFailed, 'xrange(10, 3, -1).tolist()'
+if r.start != 10: raise TestFailed, 'xrange(10, 3, -1).start'
+if r.stop != 3: raise TestFailed, 'xrange(10, 3, -1).stop'
+if r.step != -1: raise TestFailed, 'xrange(10, 3, -1).step'
+# regression tests for SourceForge bug #221965
+def _range_test(r):
+    verify(r.start != r.stop, 'Test not valid for passed-in xrange object.')
+    if r.stop in r:
+        raise TestFailed, 'r.stop in ' + `r`
+    if r.stop-r.step not in r:
+        raise TestFailed, 'r.stop-r.step not in ' + `r`
+    if r.start not in r:
+        raise TestFailed, 'r.start not in ' + `r`
+    if r.stop+r.step in r:
+        raise TestFailed, 'r.stop+r.step in ' + `r`
+_range_test(xrange(10))
+_range_test(xrange(9, -1, -1))
+_range_test(xrange(0, 10, 2))
 
 print 'zip'
 a = (1, 2, 3)
@@ -353,17 +359,7 @@ except:
 if not exc:
     raise TestFailed, 'zip(a, b) - missing expected TypeError'
 
-# Make sure zip doesn't try to allocate a billion elements for the
-# result list when one of its arguments doesn't say how long it is.
-# A MemoryError is the most likely failure mode.
-class SequenceWithoutALength:
-    def __getitem__(self, i):
-        if i == 5:
-            raise IndexError
-        else:
-            return i
-vereq(zip(SequenceWithoutALength(), xrange(2**30)),
-      list(enumerate(range(5))))
 
 # Epilogue -- unlink the temp file
+
 unlink(TESTFN)

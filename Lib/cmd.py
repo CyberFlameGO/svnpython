@@ -109,7 +109,8 @@ class Cmd:
         stop = None
         while not stop:
             if self.cmdqueue:
-                line = self.cmdqueue.pop(0)
+                line = self.cmdqueue[0]
+                del self.cmdqueue[0]
             else:
                 if self.use_rawinput:
                     try:
@@ -260,10 +261,11 @@ class Cmd:
         names = []
         classes = [self.__class__]
         while classes:
-            aclass = classes.pop(0)
+            aclass = classes[0]
             if aclass.__bases__:
                 classes = classes + list(aclass.__bases__)
             names = names + dir(aclass)
+            del classes[0]
         return names
 
     def complete_help(self, *args):
@@ -274,13 +276,13 @@ class Cmd:
             # XXX check arg syntax
             try:
                 func = getattr(self, 'help_' + arg)
-            except AttributeError:
+            except:
                 try:
                     doc=getattr(self, 'do_' + arg).__doc__
                     if doc:
                         print doc
                         return
-                except AttributeError:
+                except:
                     pass
                 print self.nohelp % (arg,)
                 return
@@ -302,7 +304,7 @@ class Cmd:
                         continue
                     prevname = name
                     cmd=name[3:]
-                    if cmd in help:
+                    if help.has_key(cmd):
                         cmds_doc.append(cmd)
                         del help[cmd]
                     elif getattr(self, name).__doc__:

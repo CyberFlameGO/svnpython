@@ -108,7 +108,7 @@ int MenuObj_Convert(PyObject *v, MenuHandle *p_itself)
 static void MenuObj_dealloc(MenuObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	PyObject_Del(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *MenuObj_DisposeMenu(MenuObject *_self, PyObject *_args)
@@ -2597,406 +2597,406 @@ static PyObject *MenuObj_CheckMenuItem(MenuObject *_self, PyObject *_args)
 
 static PyMethodDef MenuObj_methods[] = {
 	{"DisposeMenu", (PyCFunction)MenuObj_DisposeMenu, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"CalcMenuSize", (PyCFunction)MenuObj_CalcMenuSize, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 
 #if !TARGET_API_MAC_CARBON
 	{"CountMItems", (PyCFunction)MenuObj_CountMItems, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 #endif
 	{"CountMenuItems", (PyCFunction)MenuObj_CountMenuItems, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"GetMenuFont", (PyCFunction)MenuObj_GetMenuFont, 1,
-	 PyDoc_STR("() -> (SInt16 outFontID, UInt16 outFontSize)")},
+	 "() -> (SInt16 outFontID, UInt16 outFontSize)"},
 	{"SetMenuFont", (PyCFunction)MenuObj_SetMenuFont, 1,
-	 PyDoc_STR("(SInt16 inFontID, UInt16 inFontSize) -> None")},
+	 "(SInt16 inFontID, UInt16 inFontSize) -> None"},
 	{"GetMenuExcludesMarkColumn", (PyCFunction)MenuObj_GetMenuExcludesMarkColumn, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"SetMenuExcludesMarkColumn", (PyCFunction)MenuObj_SetMenuExcludesMarkColumn, 1,
-	 PyDoc_STR("(Boolean excludesMark) -> None")},
+	 "(Boolean excludesMark) -> None"},
 
 #if TARGET_API_MAC_CARBON
 	{"IsValidMenu", (PyCFunction)MenuObj_IsValidMenu, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuRetainCount", (PyCFunction)MenuObj_GetMenuRetainCount, 1,
-	 PyDoc_STR("() -> (ItemCount _rv)")},
+	 "() -> (ItemCount _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"RetainMenu", (PyCFunction)MenuObj_RetainMenu, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"ReleaseMenu", (PyCFunction)MenuObj_ReleaseMenu, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"DuplicateMenu", (PyCFunction)MenuObj_DuplicateMenu, 1,
-	 PyDoc_STR("() -> (MenuHandle outMenu)")},
+	 "() -> (MenuHandle outMenu)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"CopyMenuTitleAsCFString", (PyCFunction)MenuObj_CopyMenuTitleAsCFString, 1,
-	 PyDoc_STR("() -> (CFStringRef outString)")},
+	 "() -> (CFStringRef outString)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"SetMenuTitleWithCFString", (PyCFunction)MenuObj_SetMenuTitleWithCFString, 1,
-	 PyDoc_STR("(CFStringRef inString) -> None")},
+	 "(CFStringRef inString) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"InvalidateMenuSize", (PyCFunction)MenuObj_InvalidateMenuSize, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"IsMenuSizeInvalid", (PyCFunction)MenuObj_IsMenuSizeInvalid, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 #endif
 	{"MacAppendMenu", (PyCFunction)MenuObj_MacAppendMenu, 1,
-	 PyDoc_STR("(Str255 data) -> None")},
+	 "(Str255 data) -> None"},
 	{"InsertResMenu", (PyCFunction)MenuObj_InsertResMenu, 1,
-	 PyDoc_STR("(ResType theType, short afterItem) -> None")},
+	 "(ResType theType, short afterItem) -> None"},
 	{"AppendResMenu", (PyCFunction)MenuObj_AppendResMenu, 1,
-	 PyDoc_STR("(ResType theType) -> None")},
+	 "(ResType theType) -> None"},
 	{"MacInsertMenuItem", (PyCFunction)MenuObj_MacInsertMenuItem, 1,
-	 PyDoc_STR("(Str255 itemString, short afterItem) -> None")},
+	 "(Str255 itemString, short afterItem) -> None"},
 	{"DeleteMenuItem", (PyCFunction)MenuObj_DeleteMenuItem, 1,
-	 PyDoc_STR("(short item) -> None")},
+	 "(short item) -> None"},
 	{"InsertFontResMenu", (PyCFunction)MenuObj_InsertFontResMenu, 1,
-	 PyDoc_STR("(short afterItem, short scriptFilter) -> None")},
+	 "(short afterItem, short scriptFilter) -> None"},
 	{"InsertIntlResMenu", (PyCFunction)MenuObj_InsertIntlResMenu, 1,
-	 PyDoc_STR("(ResType theType, short afterItem, short scriptFilter) -> None")},
+	 "(ResType theType, short afterItem, short scriptFilter) -> None"},
 	{"AppendMenuItemText", (PyCFunction)MenuObj_AppendMenuItemText, 1,
-	 PyDoc_STR("(Str255 inString) -> None")},
+	 "(Str255 inString) -> None"},
 	{"InsertMenuItemText", (PyCFunction)MenuObj_InsertMenuItemText, 1,
-	 PyDoc_STR("(Str255 inString, MenuItemIndex afterItem) -> None")},
+	 "(Str255 inString, MenuItemIndex afterItem) -> None"},
 
 #if TARGET_API_MAC_CARBON
 	{"CopyMenuItems", (PyCFunction)MenuObj_CopyMenuItems, 1,
-	 PyDoc_STR("(MenuItemIndex inFirstItem, ItemCount inNumItems, MenuHandle inDestMenu, MenuItemIndex inInsertAfter) -> None")},
+	 "(MenuItemIndex inFirstItem, ItemCount inNumItems, MenuHandle inDestMenu, MenuItemIndex inInsertAfter) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"DeleteMenuItems", (PyCFunction)MenuObj_DeleteMenuItems, 1,
-	 PyDoc_STR("(MenuItemIndex inFirstItem, ItemCount inNumItems) -> None")},
+	 "(MenuItemIndex inFirstItem, ItemCount inNumItems) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"AppendMenuItemTextWithCFString", (PyCFunction)MenuObj_AppendMenuItemTextWithCFString, 1,
-	 PyDoc_STR("(CFStringRef inString, MenuItemAttributes inAttributes, MenuCommand inCommandID) -> (MenuItemIndex outNewItem)")},
+	 "(CFStringRef inString, MenuItemAttributes inAttributes, MenuCommand inCommandID) -> (MenuItemIndex outNewItem)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"InsertMenuItemTextWithCFString", (PyCFunction)MenuObj_InsertMenuItemTextWithCFString, 1,
-	 PyDoc_STR("(CFStringRef inString, MenuItemIndex inAfterItem, MenuItemAttributes inAttributes, MenuCommand inCommandID) -> None")},
+	 "(CFStringRef inString, MenuItemIndex inAfterItem, MenuItemAttributes inAttributes, MenuCommand inCommandID) -> None"},
 #endif
 	{"PopUpMenuSelect", (PyCFunction)MenuObj_PopUpMenuSelect, 1,
-	 PyDoc_STR("(short top, short left, short popUpItem) -> (long _rv)")},
+	 "(short top, short left, short popUpItem) -> (long _rv)"},
 
 #if TARGET_API_MAC_CARBON
 	{"InvalidateMenuEnabling", (PyCFunction)MenuObj_InvalidateMenuEnabling, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"IsMenuBarInvalid", (PyCFunction)MenuObj_IsMenuBarInvalid, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 #endif
 	{"MacInsertMenu", (PyCFunction)MenuObj_MacInsertMenu, 1,
-	 PyDoc_STR("(MenuID beforeID) -> None")},
+	 "(MenuID beforeID) -> None"},
 
 #if TARGET_API_MAC_CARBON
 	{"SetRootMenu", (PyCFunction)MenuObj_SetRootMenu, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if !TARGET_API_MAC_CARBON
 	{"CheckItem", (PyCFunction)MenuObj_CheckItem, 1,
-	 PyDoc_STR("(short item, Boolean checked) -> None")},
+	 "(short item, Boolean checked) -> None"},
 #endif
 	{"MacCheckMenuItem", (PyCFunction)MenuObj_MacCheckMenuItem, 1,
-	 PyDoc_STR("(short item, Boolean checked) -> None")},
+	 "(short item, Boolean checked) -> None"},
 	{"SetMenuItemText", (PyCFunction)MenuObj_SetMenuItemText, 1,
-	 PyDoc_STR("(short item, Str255 itemString) -> None")},
+	 "(short item, Str255 itemString) -> None"},
 	{"GetMenuItemText", (PyCFunction)MenuObj_GetMenuItemText, 1,
-	 PyDoc_STR("(short item) -> (Str255 itemString)")},
+	 "(short item) -> (Str255 itemString)"},
 	{"SetItemMark", (PyCFunction)MenuObj_SetItemMark, 1,
-	 PyDoc_STR("(short item, CharParameter markChar) -> None")},
+	 "(short item, CharParameter markChar) -> None"},
 	{"GetItemMark", (PyCFunction)MenuObj_GetItemMark, 1,
-	 PyDoc_STR("(short item) -> (CharParameter markChar)")},
+	 "(short item) -> (CharParameter markChar)"},
 	{"SetItemCmd", (PyCFunction)MenuObj_SetItemCmd, 1,
-	 PyDoc_STR("(short item, CharParameter cmdChar) -> None")},
+	 "(short item, CharParameter cmdChar) -> None"},
 	{"GetItemCmd", (PyCFunction)MenuObj_GetItemCmd, 1,
-	 PyDoc_STR("(short item) -> (CharParameter cmdChar)")},
+	 "(short item) -> (CharParameter cmdChar)"},
 	{"SetItemIcon", (PyCFunction)MenuObj_SetItemIcon, 1,
-	 PyDoc_STR("(short item, short iconIndex) -> None")},
+	 "(short item, short iconIndex) -> None"},
 	{"GetItemIcon", (PyCFunction)MenuObj_GetItemIcon, 1,
-	 PyDoc_STR("(short item) -> (short iconIndex)")},
+	 "(short item) -> (short iconIndex)"},
 	{"SetItemStyle", (PyCFunction)MenuObj_SetItemStyle, 1,
-	 PyDoc_STR("(short item, StyleParameter chStyle) -> None")},
+	 "(short item, StyleParameter chStyle) -> None"},
 	{"GetItemStyle", (PyCFunction)MenuObj_GetItemStyle, 1,
-	 PyDoc_STR("(short item) -> (Style chStyle)")},
+	 "(short item) -> (Style chStyle)"},
 
 #if !TARGET_API_MAC_CARBON
 	{"DisableItem", (PyCFunction)MenuObj_DisableItem, 1,
-	 PyDoc_STR("(short item) -> None")},
+	 "(short item) -> None"},
 #endif
 
 #if !TARGET_API_MAC_CARBON
 	{"EnableItem", (PyCFunction)MenuObj_EnableItem, 1,
-	 PyDoc_STR("(short item) -> None")},
+	 "(short item) -> None"},
 #endif
 	{"SetMenuItemCommandID", (PyCFunction)MenuObj_SetMenuItemCommandID, 1,
-	 PyDoc_STR("(SInt16 inItem, MenuCommand inCommandID) -> None")},
+	 "(SInt16 inItem, MenuCommand inCommandID) -> None"},
 	{"GetMenuItemCommandID", (PyCFunction)MenuObj_GetMenuItemCommandID, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (MenuCommand outCommandID)")},
+	 "(SInt16 inItem) -> (MenuCommand outCommandID)"},
 	{"SetMenuItemModifiers", (PyCFunction)MenuObj_SetMenuItemModifiers, 1,
-	 PyDoc_STR("(SInt16 inItem, UInt8 inModifiers) -> None")},
+	 "(SInt16 inItem, UInt8 inModifiers) -> None"},
 	{"GetMenuItemModifiers", (PyCFunction)MenuObj_GetMenuItemModifiers, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (UInt8 outModifiers)")},
+	 "(SInt16 inItem) -> (UInt8 outModifiers)"},
 	{"SetMenuItemIconHandle", (PyCFunction)MenuObj_SetMenuItemIconHandle, 1,
-	 PyDoc_STR("(SInt16 inItem, UInt8 inIconType, Handle inIconHandle) -> None")},
+	 "(SInt16 inItem, UInt8 inIconType, Handle inIconHandle) -> None"},
 	{"GetMenuItemIconHandle", (PyCFunction)MenuObj_GetMenuItemIconHandle, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (UInt8 outIconType, Handle outIconHandle)")},
+	 "(SInt16 inItem) -> (UInt8 outIconType, Handle outIconHandle)"},
 	{"SetMenuItemTextEncoding", (PyCFunction)MenuObj_SetMenuItemTextEncoding, 1,
-	 PyDoc_STR("(SInt16 inItem, TextEncoding inScriptID) -> None")},
+	 "(SInt16 inItem, TextEncoding inScriptID) -> None"},
 	{"GetMenuItemTextEncoding", (PyCFunction)MenuObj_GetMenuItemTextEncoding, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (TextEncoding outScriptID)")},
+	 "(SInt16 inItem) -> (TextEncoding outScriptID)"},
 	{"SetMenuItemHierarchicalID", (PyCFunction)MenuObj_SetMenuItemHierarchicalID, 1,
-	 PyDoc_STR("(SInt16 inItem, MenuID inHierID) -> None")},
+	 "(SInt16 inItem, MenuID inHierID) -> None"},
 	{"GetMenuItemHierarchicalID", (PyCFunction)MenuObj_GetMenuItemHierarchicalID, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (MenuID outHierID)")},
+	 "(SInt16 inItem) -> (MenuID outHierID)"},
 	{"SetMenuItemFontID", (PyCFunction)MenuObj_SetMenuItemFontID, 1,
-	 PyDoc_STR("(SInt16 inItem, SInt16 inFontID) -> None")},
+	 "(SInt16 inItem, SInt16 inFontID) -> None"},
 	{"GetMenuItemFontID", (PyCFunction)MenuObj_GetMenuItemFontID, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (SInt16 outFontID)")},
+	 "(SInt16 inItem) -> (SInt16 outFontID)"},
 	{"SetMenuItemRefCon", (PyCFunction)MenuObj_SetMenuItemRefCon, 1,
-	 PyDoc_STR("(SInt16 inItem, UInt32 inRefCon) -> None")},
+	 "(SInt16 inItem, UInt32 inRefCon) -> None"},
 	{"GetMenuItemRefCon", (PyCFunction)MenuObj_GetMenuItemRefCon, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (UInt32 outRefCon)")},
+	 "(SInt16 inItem) -> (UInt32 outRefCon)"},
 
 #if !TARGET_API_MAC_CARBON
 	{"SetMenuItemRefCon2", (PyCFunction)MenuObj_SetMenuItemRefCon2, 1,
-	 PyDoc_STR("(SInt16 inItem, UInt32 inRefCon2) -> None")},
+	 "(SInt16 inItem, UInt32 inRefCon2) -> None"},
 #endif
 
 #if !TARGET_API_MAC_CARBON
 	{"GetMenuItemRefCon2", (PyCFunction)MenuObj_GetMenuItemRefCon2, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (UInt32 outRefCon2)")},
+	 "(SInt16 inItem) -> (UInt32 outRefCon2)"},
 #endif
 	{"SetMenuItemKeyGlyph", (PyCFunction)MenuObj_SetMenuItemKeyGlyph, 1,
-	 PyDoc_STR("(SInt16 inItem, SInt16 inGlyph) -> None")},
+	 "(SInt16 inItem, SInt16 inGlyph) -> None"},
 	{"GetMenuItemKeyGlyph", (PyCFunction)MenuObj_GetMenuItemKeyGlyph, 1,
-	 PyDoc_STR("(SInt16 inItem) -> (SInt16 outGlyph)")},
+	 "(SInt16 inItem) -> (SInt16 outGlyph)"},
 	{"MacEnableMenuItem", (PyCFunction)MenuObj_MacEnableMenuItem, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> None")},
+	 "(MenuItemIndex item) -> None"},
 	{"DisableMenuItem", (PyCFunction)MenuObj_DisableMenuItem, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> None")},
+	 "(MenuItemIndex item) -> None"},
 	{"IsMenuItemEnabled", (PyCFunction)MenuObj_IsMenuItemEnabled, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> (Boolean _rv)")},
+	 "(MenuItemIndex item) -> (Boolean _rv)"},
 	{"EnableMenuItemIcon", (PyCFunction)MenuObj_EnableMenuItemIcon, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> None")},
+	 "(MenuItemIndex item) -> None"},
 	{"DisableMenuItemIcon", (PyCFunction)MenuObj_DisableMenuItemIcon, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> None")},
+	 "(MenuItemIndex item) -> None"},
 	{"IsMenuItemIconEnabled", (PyCFunction)MenuObj_IsMenuItemIconEnabled, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> (Boolean _rv)")},
+	 "(MenuItemIndex item) -> (Boolean _rv)"},
 
 #if TARGET_API_MAC_CARBON
 	{"SetMenuItemHierarchicalMenu", (PyCFunction)MenuObj_SetMenuItemHierarchicalMenu, 1,
-	 PyDoc_STR("(MenuItemIndex inItem, MenuHandle inHierMenu) -> None")},
+	 "(MenuItemIndex inItem, MenuHandle inHierMenu) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuItemHierarchicalMenu", (PyCFunction)MenuObj_GetMenuItemHierarchicalMenu, 1,
-	 PyDoc_STR("(MenuItemIndex inItem) -> (MenuHandle outHierMenu)")},
+	 "(MenuItemIndex inItem) -> (MenuHandle outHierMenu)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"CopyMenuItemTextAsCFString", (PyCFunction)MenuObj_CopyMenuItemTextAsCFString, 1,
-	 PyDoc_STR("(MenuItemIndex inItem) -> (CFStringRef outString)")},
+	 "(MenuItemIndex inItem) -> (CFStringRef outString)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"SetMenuItemTextWithCFString", (PyCFunction)MenuObj_SetMenuItemTextWithCFString, 1,
-	 PyDoc_STR("(MenuItemIndex inItem, CFStringRef inString) -> None")},
+	 "(MenuItemIndex inItem, CFStringRef inString) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuItemIndent", (PyCFunction)MenuObj_GetMenuItemIndent, 1,
-	 PyDoc_STR("(MenuItemIndex inItem) -> (UInt32 outIndent)")},
+	 "(MenuItemIndex inItem) -> (UInt32 outIndent)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"SetMenuItemIndent", (PyCFunction)MenuObj_SetMenuItemIndent, 1,
-	 PyDoc_STR("(MenuItemIndex inItem, UInt32 inIndent) -> None")},
+	 "(MenuItemIndex inItem, UInt32 inIndent) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuItemCommandKey", (PyCFunction)MenuObj_GetMenuItemCommandKey, 1,
-	 PyDoc_STR("(MenuItemIndex inItem, Boolean inGetVirtualKey) -> (UInt16 outKey)")},
+	 "(MenuItemIndex inItem, Boolean inGetVirtualKey) -> (UInt16 outKey)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"SetMenuItemCommandKey", (PyCFunction)MenuObj_SetMenuItemCommandKey, 1,
-	 PyDoc_STR("(MenuItemIndex inItem, Boolean inSetVirtualKey, UInt16 inKey) -> None")},
+	 "(MenuItemIndex inItem, Boolean inSetVirtualKey, UInt16 inKey) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuItemPropertyAttributes", (PyCFunction)MenuObj_GetMenuItemPropertyAttributes, 1,
-	 PyDoc_STR("(MenuItemIndex item, OSType propertyCreator, OSType propertyTag) -> (UInt32 attributes)")},
+	 "(MenuItemIndex item, OSType propertyCreator, OSType propertyTag) -> (UInt32 attributes)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"ChangeMenuItemPropertyAttributes", (PyCFunction)MenuObj_ChangeMenuItemPropertyAttributes, 1,
-	 PyDoc_STR("(MenuItemIndex item, OSType propertyCreator, OSType propertyTag, UInt32 attributesToSet, UInt32 attributesToClear) -> None")},
+	 "(MenuItemIndex item, OSType propertyCreator, OSType propertyTag, UInt32 attributesToSet, UInt32 attributesToClear) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuAttributes", (PyCFunction)MenuObj_GetMenuAttributes, 1,
-	 PyDoc_STR("() -> (MenuAttributes outAttributes)")},
+	 "() -> (MenuAttributes outAttributes)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"ChangeMenuAttributes", (PyCFunction)MenuObj_ChangeMenuAttributes, 1,
-	 PyDoc_STR("(MenuAttributes setTheseAttributes, MenuAttributes clearTheseAttributes) -> None")},
+	 "(MenuAttributes setTheseAttributes, MenuAttributes clearTheseAttributes) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuItemAttributes", (PyCFunction)MenuObj_GetMenuItemAttributes, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> (MenuItemAttributes outAttributes)")},
+	 "(MenuItemIndex item) -> (MenuItemAttributes outAttributes)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"ChangeMenuItemAttributes", (PyCFunction)MenuObj_ChangeMenuItemAttributes, 1,
-	 PyDoc_STR("(MenuItemIndex item, MenuItemAttributes setTheseAttributes, MenuItemAttributes clearTheseAttributes) -> None")},
+	 "(MenuItemIndex item, MenuItemAttributes setTheseAttributes, MenuItemAttributes clearTheseAttributes) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"DisableAllMenuItems", (PyCFunction)MenuObj_DisableAllMenuItems, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"EnableAllMenuItems", (PyCFunction)MenuObj_EnableAllMenuItems, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"MenuHasEnabledItems", (PyCFunction)MenuObj_MenuHasEnabledItems, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuType", (PyCFunction)MenuObj_GetMenuType, 1,
-	 PyDoc_STR("() -> (UInt16 outType)")},
+	 "() -> (UInt16 outType)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"CountMenuItemsWithCommandID", (PyCFunction)MenuObj_CountMenuItemsWithCommandID, 1,
-	 PyDoc_STR("(MenuCommand inCommandID) -> (ItemCount _rv)")},
+	 "(MenuCommand inCommandID) -> (ItemCount _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetIndMenuItemWithCommandID", (PyCFunction)MenuObj_GetIndMenuItemWithCommandID, 1,
-	 PyDoc_STR("(MenuCommand inCommandID, UInt32 inItemIndex) -> (MenuHandle outMenu, MenuItemIndex outIndex)")},
+	 "(MenuCommand inCommandID, UInt32 inItemIndex) -> (MenuHandle outMenu, MenuItemIndex outIndex)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"EnableMenuCommand", (PyCFunction)MenuObj_EnableMenuCommand, 1,
-	 PyDoc_STR("(MenuCommand inCommandID) -> None")},
+	 "(MenuCommand inCommandID) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"DisableMenuCommand", (PyCFunction)MenuObj_DisableMenuCommand, 1,
-	 PyDoc_STR("(MenuCommand inCommandID) -> None")},
+	 "(MenuCommand inCommandID) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"IsMenuCommandEnabled", (PyCFunction)MenuObj_IsMenuCommandEnabled, 1,
-	 PyDoc_STR("(MenuCommand inCommandID) -> (Boolean _rv)")},
+	 "(MenuCommand inCommandID) -> (Boolean _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"SetMenuCommandMark", (PyCFunction)MenuObj_SetMenuCommandMark, 1,
-	 PyDoc_STR("(MenuCommand inCommandID, UniChar inMark) -> None")},
+	 "(MenuCommand inCommandID, UniChar inMark) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuCommandMark", (PyCFunction)MenuObj_GetMenuCommandMark, 1,
-	 PyDoc_STR("(MenuCommand inCommandID) -> (UniChar outMark)")},
+	 "(MenuCommand inCommandID) -> (UniChar outMark)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuCommandPropertySize", (PyCFunction)MenuObj_GetMenuCommandPropertySize, 1,
-	 PyDoc_STR("(MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> (ByteCount outSize)")},
+	 "(MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> (ByteCount outSize)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"RemoveMenuCommandProperty", (PyCFunction)MenuObj_RemoveMenuCommandProperty, 1,
-	 PyDoc_STR("(MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> None")},
+	 "(MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"IsMenuItemInvalid", (PyCFunction)MenuObj_IsMenuItemInvalid, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> (Boolean _rv)")},
+	 "(MenuItemIndex item) -> (Boolean _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"InvalidateMenuItems", (PyCFunction)MenuObj_InvalidateMenuItems, 1,
-	 PyDoc_STR("(MenuItemIndex firstItem, ItemCount numItems) -> None")},
+	 "(MenuItemIndex firstItem, ItemCount numItems) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"UpdateInvalidMenuItems", (PyCFunction)MenuObj_UpdateInvalidMenuItems, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"CreateStandardFontMenu", (PyCFunction)MenuObj_CreateStandardFontMenu, 1,
-	 PyDoc_STR("(MenuItemIndex afterItem, MenuID firstHierMenuID, OptionBits options) -> (ItemCount outHierMenuCount)")},
+	 "(MenuItemIndex afterItem, MenuID firstHierMenuID, OptionBits options) -> (ItemCount outHierMenuCount)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"UpdateStandardFontMenu", (PyCFunction)MenuObj_UpdateStandardFontMenu, 1,
-	 PyDoc_STR("() -> (ItemCount outHierMenuCount)")},
+	 "() -> (ItemCount outHierMenuCount)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetFontFamilyFromMenuSelection", (PyCFunction)MenuObj_GetFontFamilyFromMenuSelection, 1,
-	 PyDoc_STR("(MenuItemIndex item) -> (FMFontFamily outFontFamily, FMFontStyle outStyle)")},
+	 "(MenuItemIndex item) -> (FMFontFamily outFontFamily, FMFontStyle outStyle)"},
 #endif
 	{"GetMenuID", (PyCFunction)MenuObj_GetMenuID, 1,
-	 PyDoc_STR("() -> (MenuID _rv)")},
+	 "() -> (MenuID _rv)"},
 	{"GetMenuWidth", (PyCFunction)MenuObj_GetMenuWidth, 1,
-	 PyDoc_STR("() -> (SInt16 _rv)")},
+	 "() -> (SInt16 _rv)"},
 	{"GetMenuHeight", (PyCFunction)MenuObj_GetMenuHeight, 1,
-	 PyDoc_STR("() -> (SInt16 _rv)")},
+	 "() -> (SInt16 _rv)"},
 	{"SetMenuID", (PyCFunction)MenuObj_SetMenuID, 1,
-	 PyDoc_STR("(MenuID menuID) -> None")},
+	 "(MenuID menuID) -> None"},
 	{"SetMenuWidth", (PyCFunction)MenuObj_SetMenuWidth, 1,
-	 PyDoc_STR("(SInt16 width) -> None")},
+	 "(SInt16 width) -> None"},
 	{"SetMenuHeight", (PyCFunction)MenuObj_SetMenuHeight, 1,
-	 PyDoc_STR("(SInt16 height) -> None")},
+	 "(SInt16 height) -> None"},
 	{"as_Resource", (PyCFunction)MenuObj_as_Resource, 1,
-	 PyDoc_STR("() -> (Handle _rv)")},
+	 "() -> (Handle _rv)"},
 	{"AppendMenu", (PyCFunction)MenuObj_AppendMenu, 1,
-	 PyDoc_STR("(Str255 data) -> None")},
+	 "(Str255 data) -> None"},
 	{"InsertMenu", (PyCFunction)MenuObj_InsertMenu, 1,
-	 PyDoc_STR("(short beforeID) -> None")},
+	 "(short beforeID) -> None"},
 	{"InsertMenuItem", (PyCFunction)MenuObj_InsertMenuItem, 1,
-	 PyDoc_STR("(Str255 itemString, short afterItem) -> None")},
+	 "(Str255 itemString, short afterItem) -> None"},
 	{"EnableMenuItem", (PyCFunction)MenuObj_EnableMenuItem, 1,
-	 PyDoc_STR("(UInt16 item) -> None")},
+	 "(UInt16 item) -> None"},
 	{"CheckMenuItem", (PyCFunction)MenuObj_CheckMenuItem, 1,
-	 PyDoc_STR("(short item, Boolean checked) -> None")},
+	 "(short item, Boolean checked) -> None"},
 	{NULL, NULL, 0}
 };
 
@@ -3942,155 +3942,155 @@ static PyMethodDef Menu_methods[] = {
 
 #if !TARGET_API_MAC_CARBON
 	{"InitProcMenu", (PyCFunction)Menu_InitProcMenu, 1,
-	 PyDoc_STR("(short resID) -> None")},
+	 "(short resID) -> None"},
 #endif
 
 #if !TARGET_API_MAC_CARBON
 	{"InitMenus", (PyCFunction)Menu_InitMenus, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 #endif
 	{"NewMenu", (PyCFunction)Menu_NewMenu, 1,
-	 PyDoc_STR("(MenuID menuID, Str255 menuTitle) -> (MenuHandle _rv)")},
+	 "(MenuID menuID, Str255 menuTitle) -> (MenuHandle _rv)"},
 	{"MacGetMenu", (PyCFunction)Menu_MacGetMenu, 1,
-	 PyDoc_STR("(short resourceID) -> (MenuHandle _rv)")},
+	 "(short resourceID) -> (MenuHandle _rv)"},
 
 #if TARGET_API_MAC_CARBON
 	{"CreateNewMenu", (PyCFunction)Menu_CreateNewMenu, 1,
-	 PyDoc_STR("(MenuID inMenuID, MenuAttributes inMenuAttributes) -> (MenuHandle outMenuRef)")},
+	 "(MenuID inMenuID, MenuAttributes inMenuAttributes) -> (MenuHandle outMenuRef)"},
 #endif
 	{"MenuKey", (PyCFunction)Menu_MenuKey, 1,
-	 PyDoc_STR("(CharParameter ch) -> (long _rv)")},
+	 "(CharParameter ch) -> (long _rv)"},
 	{"MenuSelect", (PyCFunction)Menu_MenuSelect, 1,
-	 PyDoc_STR("(Point startPt) -> (long _rv)")},
+	 "(Point startPt) -> (long _rv)"},
 	{"MenuChoice", (PyCFunction)Menu_MenuChoice, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"MenuEvent", (PyCFunction)Menu_MenuEvent, 1,
-	 PyDoc_STR("(EventRecord inEvent) -> (UInt32 _rv)")},
+	 "(EventRecord inEvent) -> (UInt32 _rv)"},
 	{"GetMBarHeight", (PyCFunction)Menu_GetMBarHeight, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"MacDrawMenuBar", (PyCFunction)Menu_MacDrawMenuBar, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"InvalMenuBar", (PyCFunction)Menu_InvalMenuBar, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"HiliteMenu", (PyCFunction)Menu_HiliteMenu, 1,
-	 PyDoc_STR("(MenuID menuID) -> None")},
+	 "(MenuID menuID) -> None"},
 	{"GetNewMBar", (PyCFunction)Menu_GetNewMBar, 1,
-	 PyDoc_STR("(short menuBarID) -> (MenuBarHandle _rv)")},
+	 "(short menuBarID) -> (MenuBarHandle _rv)"},
 	{"GetMenuBar", (PyCFunction)Menu_GetMenuBar, 1,
-	 PyDoc_STR("() -> (MenuBarHandle _rv)")},
+	 "() -> (MenuBarHandle _rv)"},
 	{"SetMenuBar", (PyCFunction)Menu_SetMenuBar, 1,
-	 PyDoc_STR("(MenuBarHandle mbar) -> None")},
+	 "(MenuBarHandle mbar) -> None"},
 
 #if TARGET_API_MAC_CARBON
 	{"DuplicateMenuBar", (PyCFunction)Menu_DuplicateMenuBar, 1,
-	 PyDoc_STR("(MenuBarHandle inMbar) -> (MenuBarHandle outMbar)")},
+	 "(MenuBarHandle inMbar) -> (MenuBarHandle outMbar)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"DisposeMenuBar", (PyCFunction)Menu_DisposeMenuBar, 1,
-	 PyDoc_STR("(MenuBarHandle inMbar) -> None")},
+	 "(MenuBarHandle inMbar) -> None"},
 #endif
 	{"GetMenuHandle", (PyCFunction)Menu_GetMenuHandle, 1,
-	 PyDoc_STR("(MenuID menuID) -> (MenuHandle _rv)")},
+	 "(MenuID menuID) -> (MenuHandle _rv)"},
 	{"MacDeleteMenu", (PyCFunction)Menu_MacDeleteMenu, 1,
-	 PyDoc_STR("(MenuID menuID) -> None")},
+	 "(MenuID menuID) -> None"},
 	{"ClearMenuBar", (PyCFunction)Menu_ClearMenuBar, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 
 #if !TARGET_API_MAC_CARBON
 	{"SetMenuFlash", (PyCFunction)Menu_SetMenuFlash, 1,
-	 PyDoc_STR("(short count) -> None")},
+	 "(short count) -> None"},
 #endif
 	{"SetMenuFlashCount", (PyCFunction)Menu_SetMenuFlashCount, 1,
-	 PyDoc_STR("(short count) -> None")},
+	 "(short count) -> None"},
 	{"FlashMenuBar", (PyCFunction)Menu_FlashMenuBar, 1,
-	 PyDoc_STR("(MenuID menuID) -> None")},
+	 "(MenuID menuID) -> None"},
 
 #if !TARGET_API_MAC_CARBON
 	{"SystemEdit", (PyCFunction)Menu_SystemEdit, 1,
-	 PyDoc_STR("(short editCmd) -> (Boolean _rv)")},
+	 "(short editCmd) -> (Boolean _rv)"},
 #endif
 
 #if !TARGET_API_MAC_CARBON
 	{"SystemMenu", (PyCFunction)Menu_SystemMenu, 1,
-	 PyDoc_STR("(long menuResult) -> None")},
+	 "(long menuResult) -> None"},
 #endif
 	{"IsMenuBarVisible", (PyCFunction)Menu_IsMenuBarVisible, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"ShowMenuBar", (PyCFunction)Menu_ShowMenuBar, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"HideMenuBar", (PyCFunction)Menu_HideMenuBar, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 
 #if TARGET_API_MAC_CARBON
 	{"AcquireRootMenu", (PyCFunction)Menu_AcquireRootMenu, 1,
-	 PyDoc_STR("() -> (MenuHandle _rv)")},
+	 "() -> (MenuHandle _rv)"},
 #endif
 	{"DeleteMCEntries", (PyCFunction)Menu_DeleteMCEntries, 1,
-	 PyDoc_STR("(MenuID menuID, short menuItem) -> None")},
+	 "(MenuID menuID, short menuItem) -> None"},
 	{"InitContextualMenus", (PyCFunction)Menu_InitContextualMenus, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"IsShowContextualMenuClick", (PyCFunction)Menu_IsShowContextualMenuClick, 1,
-	 PyDoc_STR("(EventRecord inEvent) -> (Boolean _rv)")},
+	 "(EventRecord inEvent) -> (Boolean _rv)"},
 	{"LMGetTheMenu", (PyCFunction)Menu_LMGetTheMenu, 1,
-	 PyDoc_STR("() -> (SInt16 _rv)")},
+	 "() -> (SInt16 _rv)"},
 
 #if !TARGET_API_MAC_CARBON
 	{"OpenDeskAcc", (PyCFunction)Menu_OpenDeskAcc, 1,
-	 PyDoc_STR("(Str255 name) -> None")},
+	 "(Str255 name) -> None"},
 #endif
 	{"as_Menu", (PyCFunction)Menu_as_Menu, 1,
-	 PyDoc_STR("(Handle h) -> (MenuHandle _rv)")},
+	 "(Handle h) -> (MenuHandle _rv)"},
 	{"GetMenu", (PyCFunction)Menu_GetMenu, 1,
-	 PyDoc_STR("(short resourceID) -> (MenuHandle _rv)")},
+	 "(short resourceID) -> (MenuHandle _rv)"},
 	{"DeleteMenu", (PyCFunction)Menu_DeleteMenu, 1,
-	 PyDoc_STR("(short menuID) -> None")},
+	 "(short menuID) -> None"},
 	{"DrawMenuBar", (PyCFunction)Menu_DrawMenuBar, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 
 #if TARGET_API_MAC_CARBON
 	{"CountMenuItemsWithCommandID", (PyCFunction)Menu_CountMenuItemsWithCommandID, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID) -> (ItemCount _rv)")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID) -> (ItemCount _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetIndMenuItemWithCommandID", (PyCFunction)Menu_GetIndMenuItemWithCommandID, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID, UInt32 inItemIndex) -> (MenuHandle outMenu, MenuItemIndex outIndex)")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID, UInt32 inItemIndex) -> (MenuHandle outMenu, MenuItemIndex outIndex)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"EnableMenuCommand", (PyCFunction)Menu_EnableMenuCommand, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID) -> None")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"DisableMenuCommand", (PyCFunction)Menu_DisableMenuCommand, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID) -> None")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"IsMenuCommandEnabled", (PyCFunction)Menu_IsMenuCommandEnabled, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID) -> (Boolean _rv)")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID) -> (Boolean _rv)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"SetMenuCommandMark", (PyCFunction)Menu_SetMenuCommandMark, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID, UniChar inMark) -> None")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID, UniChar inMark) -> None"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuCommandMark", (PyCFunction)Menu_GetMenuCommandMark, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID) -> (UniChar outMark)")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID) -> (UniChar outMark)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"GetMenuCommandPropertySize", (PyCFunction)Menu_GetMenuCommandPropertySize, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> (ByteCount outSize)")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> (ByteCount outSize)"},
 #endif
 
 #if TARGET_API_MAC_CARBON
 	{"RemoveMenuCommandProperty", (PyCFunction)Menu_RemoveMenuCommandProperty, 1,
-	 PyDoc_STR("(MenuHandle inMenu, MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> None")},
+	 "(MenuHandle inMenu, MenuCommand inCommandID, OSType inPropertyCreator, OSType inPropertyTag) -> None"},
 #endif
 	{NULL, NULL, 0}
 };

@@ -40,7 +40,7 @@ class ObjectDefinition(GeneratorGroup):
 
 		OutHeader2("Object type " + self.name)
 
-		sf = self.static and "static "
+		sf = self.static and "staticforward "
 		Output("%sPyTypeObject %s;", sf, self.typename)
 		Output()
 		Output("#define %s_Check(x) ((x)->ob_type == &%s)",
@@ -123,7 +123,7 @@ class ObjectDefinition(GeneratorGroup):
 		Output("static void %s_dealloc(%s *self)", self.prefix, self.objecttype)
 		OutLbrace()
 		self.outputCleanupStructMembers()
-		Output("PyObject_Del(self);")
+		Output("PyMem_DEL(self);")
 		OutRbrace()
 
 	def outputCleanupStructMembers(self):
@@ -164,7 +164,7 @@ class ObjectDefinition(GeneratorGroup):
 		Output("#define %s_hash NULL", self.prefix)
 
 	def outputTypeObject(self):
-		sf = self.static and "static "
+		sf = self.static and "staticforward "
 		Output()
 		Output("%sPyTypeObject %s = {", sf, self.typename)
 		IndentLevel()

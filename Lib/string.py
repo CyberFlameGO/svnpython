@@ -34,10 +34,9 @@ punctuation = """!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""
 printable = digits + letters + punctuation + whitespace
 
 # Case conversion helpers
-# Use str to convert Unicode literal in case of -U
-l = map(chr, xrange(256))
-_idmap = str('').join(l)
-del l
+_idmap = ''
+for i in range(256): _idmap = _idmap + chr(i)
+del i
 
 # Backward compatible names for exceptions
 index_error = ValueError
@@ -191,6 +190,10 @@ def rfind(s, *args):
 _float = float
 _int = int
 _long = long
+try:
+    _StringTypes = (str, unicode)
+except NameError:
+    _StringTypes = (str,)
 
 # Convert string to float
 def atof(s):
@@ -276,7 +279,7 @@ def zfill(x, width):
     of the specified width.  The string x is never truncated.
 
     """
-    if not isinstance(x, basestring):
+    if not isinstance(x, _StringTypes):
         x = repr(x)
     return x.zfill(width)
 

@@ -9,6 +9,7 @@ set the first day of the week (0=Monday, 6=Sunday)."""
 
 # Import functions and variables from time module
 from time import localtime, mktime, strftime
+from types import SliceType
 
 __all__ = ["error","setfirstweekday","firstweekday","isleap",
            "leapdays","weekday","monthrange","monthcalendar",
@@ -30,28 +31,36 @@ mdays = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 # that, but supply localized names.  Note that the values are computed
 # fresh on each call, in case the user changes locale between calls.
 
-class _localized_month:
+class _indexer:
+    def __getitem__(self, i):
+        if isinstance(i, SliceType):
+            return self.data[i.start : i.stop]
+        else:
+            # May raise an appropriate exception.
+            return self.data[i]
+
+class _localized_month(_indexer):
     def __init__(self, format):
         self.format = format
 
     def __getitem__(self, i):
-        data = [strftime(self.format, (2001, j, 1, 12, 0, 0, 1, 1, 0))
+        self.data = [strftime(self.format, (2001, j, 1, 12, 0, 0, 1, 1, 0))
                      for j in range(1, 13)]
-        data.insert(0, "")
-        return data[i]
+        self.data.insert(0, "")
+        return _indexer.__getitem__(self, i)
 
     def __len__(self):
         return 13
 
-class _localized_day:
+class _localized_day(_indexer):
     def __init__(self, format):
         self.format = format
 
     def __getitem__(self, i):
         # January 1, 2001, was a Monday.
-        data = [strftime(self.format, (2001, 1, j+1, 12, 0, 0, j, j+1, 0))
+        self.data = [strftime(self.format, (2001, 1, j+1, 12, 0, 0, j, j+1, 0))
                      for j in range(7)]
-        return data[i]
+        return _indexer.__getitem__(self, i)
 
     def __len__(self_):
         return 7
@@ -122,6 +131,13 @@ def monthcalendar(year, month):
         rows.append(row)
     return rows
 
+def _center(str, width):
+    """Center a string in a field."""
+    n = width - len(str)
+    if n <= 0:
+        return str
+    return ' '*((n+1)/2) + str + ' '*((n)/2)
+
 def prweek(theweek, width):
     """Print a single week (no newline)."""
     print week(theweek, width),
@@ -134,7 +150,7 @@ def week(theweek, width):
             s = ''
         else:
             s = '%2i' % day             # right-align single-digit days
-        days.append(s.center(width))
+        days.append(_center(s, width))
     return ' '.join(days)
 
 def weekheader(width):
@@ -145,7 +161,7 @@ def weekheader(width):
         names = day_abbr
     days = []
     for i in range(_firstweekday, _firstweekday + 7):
-        days.append(names[i%7][:width].center(width))
+        days.append(_center(names[i%7][:width], width))
     return ' '.join(days)
 
 def prmonth(theyear, themonth, w=0, l=0):
@@ -156,7 +172,7 @@ def month(theyear, themonth, w=0, l=0):
     """Return a month's calendar string (multi-line)."""
     w = max(2, w)
     l = max(1, l)
-    s = ((month_name[themonth] + ' ' + `theyear`).center(
+    s = (_center(month_name[themonth] + ' ' + `theyear`,
                  7 * (w + 1) - 1).rstrip() +
          '\n' * l + weekheader(w).rstrip() + '\n' * l)
     for aweek in monthcalendar(theyear, themonth):
@@ -173,8 +189,8 @@ def format3c(a, b, c, colwidth=_colwidth, spacing=_spacing):
 
 def format3cstring(a, b, c, colwidth=_colwidth, spacing=_spacing):
     """Returns a string formatted from 3 strings, centered within 3 columns."""
-    return (a.center(colwidth) + ' ' * spacing + b.center(colwidth) +
-            ' ' * spacing + c.center(colwidth))
+    return (_center(a, colwidth) + ' ' * spacing + _center(b, colwidth) +
+            ' ' * spacing + _center(c, colwidth))
 
 def prcal(year, w=0, l=0, c=_spacing):
     """Print a year's calendar."""
@@ -186,7 +202,7 @@ def calendar(year, w=0, l=0, c=_spacing):
     l = max(1, l)
     c = max(2, c)
     colwidth = (w + 1) * 7 - 1
-    s = `year`.center(colwidth * 3 + c * 2).rstrip() + '\n' * l
+    s = _center(`year`, colwidth * 3 + c * 2).rstrip() + '\n' * l
     header = weekheader(w)
     header = format3cstring(header, header, header, colwidth, c).rstrip()
     for q in range(January, January+12, 3):

@@ -15,7 +15,7 @@ class Codec(codecs.Codec):
 
 class StreamWriter(Codec,codecs.StreamWriter):
     pass
-
+        
 class StreamReader(Codec,codecs.StreamReader):
     pass
 
@@ -24,3 +24,4 @@ class StreamReader(Codec,codecs.StreamReader):
 def getregentry():
 
     return (Codec.encode,Codec.decode,StreamReader,StreamWriter)
+

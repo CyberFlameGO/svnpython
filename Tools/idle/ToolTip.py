@@ -1,5 +1,6 @@
 # Ideas gleaned from PySol
 
+import os
 from Tkinter import *
 
 class ToolTipBase:

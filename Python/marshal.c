@@ -17,8 +17,6 @@
 
 #define TYPE_NULL	'0'
 #define TYPE_NONE	'N'
-#define TYPE_FALSE	'F'
-#define TYPE_TRUE	'T'
 #define TYPE_STOPITER	'S'
 #define TYPE_ELLIPSIS   '.'
 #define TYPE_INT	'i'
@@ -128,12 +126,6 @@ w_object(PyObject *v, WFILE *p)
 	else if (v == Py_Ellipsis) {
 	        w_byte(TYPE_ELLIPSIS, p);
 	}
-	else if (v == Py_False) {
-	        w_byte(TYPE_FALSE, p);
-	}
-	else if (v == Py_True) {
-	        w_byte(TYPE_TRUE, p);
-	}
 	else if (PyInt_Check(v)) {
 		long x = PyInt_AS_LONG((PyIntObject *)v);
 #if SIZEOF_LONG > 4
@@ -241,10 +233,10 @@ w_object(PyObject *v, WFILE *p)
 	else if (PyCode_Check(v)) {
 		PyCodeObject *co = (PyCodeObject *)v;
 		w_byte(TYPE_CODE, p);
-		w_long(co->co_argcount, p);
-		w_long(co->co_nlocals, p);
-		w_long(co->co_stacksize, p);
-		w_long(co->co_flags, p);
+		w_short(co->co_argcount, p);
+		w_short(co->co_nlocals, p);
+		w_short(co->co_stacksize, p);
+		w_short(co->co_flags, p);
 		w_object(co->co_code, p);
 		w_object(co->co_consts, p);
 		w_object(co->co_names, p);
@@ -253,7 +245,7 @@ w_object(PyObject *v, WFILE *p)
 		w_object(co->co_cellvars, p);
 		w_object(co->co_filename, p);
 		w_object(co->co_name, p);
-		w_long(co->co_firstlineno, p);
+		w_short(co->co_firstlineno, p);
 		w_object(co->co_lnotab, p);
 	}
 	else if (PyObject_CheckReadBuffer(v)) {
@@ -405,14 +397,6 @@ r_object(RFILE *p)
 	case TYPE_ELLIPSIS:
 		Py_INCREF(Py_Ellipsis);
 		return Py_Ellipsis;
-
-	case TYPE_FALSE:
-		Py_INCREF(Py_False);
-		return Py_False;
-
-	case TYPE_TRUE:
-		Py_INCREF(Py_True);
-		return Py_True;
 
 	case TYPE_INT:
 		return PyInt_FromLong(r_long(p));
@@ -588,10 +572,10 @@ r_object(RFILE *p)
 			return NULL;
 		}
 		else {
-			int argcount = r_long(p);
-			int nlocals = r_long(p);
-			int stacksize = r_long(p);
-			int flags = r_long(p);
+			int argcount = r_short(p);
+			int nlocals = r_short(p);
+			int stacksize = r_short(p);
+			int flags = r_short(p);
 			PyObject *code = NULL;
 			PyObject *consts = NULL;
 			PyObject *names = NULL;
@@ -612,7 +596,7 @@ r_object(RFILE *p)
 			if (cellvars) filename = r_object(p);
 			if (filename) name = r_object(p);
 			if (name) {
-				firstlineno = r_long(p);
+				firstlineno = r_short(p);
 				lnotab = r_object(p);
 			}
 
@@ -868,10 +852,10 @@ marshal_loads(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef marshal_methods[] = {
-	{"dump",	marshal_dump,	METH_VARARGS},
-	{"load",	marshal_load,	METH_VARARGS},
-	{"dumps",	marshal_dumps,	METH_VARARGS},
-	{"loads",	marshal_loads,	METH_VARARGS},
+	{"dump",	marshal_dump,	1},
+	{"load",	marshal_load,	1},
+	{"dumps",	marshal_dumps,	1},
+	{"loads",	marshal_loads,	1},
 	{NULL,		NULL}		/* sentinel */
 };
 

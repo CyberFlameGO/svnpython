@@ -39,7 +39,7 @@ typedef struct {
 #endif
 } bsddbobject;
 
-static PyTypeObject Bsddbtype;
+staticforward PyTypeObject Bsddbtype;
 
 #define is_bsddbobject(v) ((v)->ob_type == &Bsddbtype)
 #define check_bsddbobject_open(v, r) if ((v)->di_bsddb == NULL) \
@@ -380,8 +380,10 @@ static PyMappingMethods bsddb_as_mapping = {
 };
 
 static PyObject *
-bsddb_close(bsddbobject *dp)
+bsddb_close(bsddbobject *dp, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	if (dp->di_bsddb != NULL) {
 		int status;
 		BSDDB_BGN_SAVE(dp)
@@ -399,7 +401,7 @@ bsddb_close(bsddbobject *dp)
 }
 
 static PyObject *
-bsddb_keys(bsddbobject *dp)
+bsddb_keys(bsddbobject *dp, PyObject *args)
 {
 	PyObject *list, *item=NULL;
 	DBT krec, drec;
@@ -407,6 +409,8 @@ bsddb_keys(bsddbobject *dp)
 	int status;
 	int err;
 
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	check_bsddbobject_open(dp, NULL);
 	list = PyList_New(0);
 	if (list == NULL)
@@ -470,16 +474,18 @@ bsddb_has_key(bsddbobject *dp, PyObject *args)
 	recno_t recno;
 
 	if (dp->di_type == DB_RECNO) {
-		if (!PyArg_ParseTuple(args, "i;key type must be integer",
-				      &recno)) {
+		if (!PyArg_Parse(args, "i", &recno)) {
+			PyErr_SetString(PyExc_TypeError,
+					"key type must be integer");
 			return NULL;
 		}
 		krec.data = &recno;
 		krec.size = sizeof(recno);
 	}
 	else {
-		if (!PyArg_ParseTuple(args, "s#;key type must be string",
-				      &data, &size)) {
+		if (!PyArg_Parse(args, "s#", &data, &size)) {
+			PyErr_SetString(PyExc_TypeError,
+					"key type must be string");
 			return NULL;
 		}
 		krec.data = data;
@@ -509,16 +515,18 @@ bsddb_set_location(bsddbobject *dp, PyObject *key)
 	recno_t recno;
 
 	if (dp->di_type == DB_RECNO) {
-		if (!PyArg_ParseTuple(key, "i;key type must be integer",
-				      &recno)) {
+		if (!PyArg_Parse(key, "i", &recno)) {
+			PyErr_SetString(PyExc_TypeError,
+					"key type must be integer");
 			return NULL;
 		}
 		krec.data = &recno;
 		krec.size = sizeof(recno);
 	}
 	else {
-		if (!PyArg_ParseTuple(key, "s#;key type must be string",
-				      &data, &size)) {
+		if (!PyArg_Parse(key, "s#", &data, &size)) {
+			PyErr_SetString(PyExc_TypeError,
+					"key type must be string");
 			return NULL;
 		}
 		krec.data = data;
@@ -554,13 +562,16 @@ bsddb_set_location(bsddbobject *dp, PyObject *key)
 }
 
 static PyObject *
-bsddb_seq(bsddbobject *dp, int sequence_request)
+bsddb_seq(bsddbobject *dp, PyObject *args, int sequence_request)
 {
 	int status;
 	DBT krec, drec;
 	char *kdata=NULL,kbuf[4096];
 	char *ddata=NULL,dbuf[4096];
 	PyObject *result;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	check_bsddbobject_open(dp, NULL);
 	krec.data = 0;
@@ -587,10 +598,11 @@ bsddb_seq(bsddbobject *dp, int sequence_request)
 		if (status < 0)
 			PyErr_SetFromErrno(BsddbError);
 		else
-			PyErr_SetString(PyExc_KeyError, "no key/data pairs");
+			PyErr_SetObject(PyExc_KeyError, args);
 		return NULL;
 	}
 
+	
 	if (dp->di_type == DB_RECNO)
 		result = Py_BuildValue("is#", *((int*)kdata),
 				       ddata, drec.size);
@@ -603,30 +615,32 @@ bsddb_seq(bsddbobject *dp, int sequence_request)
 }
 
 static PyObject *
-bsddb_next(bsddbobject *dp)
+bsddb_next(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_NEXT);
+	return bsddb_seq(dp, key, R_NEXT);
 }
 static PyObject *
-bsddb_previous(bsddbobject *dp)
+bsddb_previous(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_PREV);
+	return bsddb_seq(dp, key, R_PREV);
 }
 static PyObject *
-bsddb_first(bsddbobject *dp)
+bsddb_first(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_FIRST);
+	return bsddb_seq(dp, key, R_FIRST);
 }
 static PyObject *
-bsddb_last(bsddbobject *dp)
+bsddb_last(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_LAST);
+	return bsddb_seq(dp, key, R_LAST);
 }
 static PyObject *
-bsddb_sync(bsddbobject *dp)
+bsddb_sync(bsddbobject *dp, PyObject *args)
 {
 	int status;
 
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	check_bsddbobject_open(dp, NULL);
 	BSDDB_BGN_SAVE(dp)
 	status = (dp->di_bsddb->sync)(dp->di_bsddb, 0);
@@ -638,15 +652,15 @@ bsddb_sync(bsddbobject *dp)
 	return PyInt_FromLong(status = 0);
 }
 static PyMethodDef bsddb_methods[] = {
-	{"close",		(PyCFunction)bsddb_close, METH_NOARGS},
-	{"keys",		(PyCFunction)bsddb_keys, METH_NOARGS},
-	{"has_key",		(PyCFunction)bsddb_has_key, METH_VARARGS},
-	{"set_location",	(PyCFunction)bsddb_set_location, METH_VARARGS},
-	{"next",		(PyCFunction)bsddb_next, METH_NOARGS},
-	{"previous",	(PyCFunction)bsddb_previous, METH_NOARGS},
-	{"first",		(PyCFunction)bsddb_first, METH_NOARGS},
-	{"last",		(PyCFunction)bsddb_last, METH_NOARGS},
-	{"sync",		(PyCFunction)bsddb_sync, METH_NOARGS},
+	{"close",		(PyCFunction)bsddb_close},
+	{"keys",		(PyCFunction)bsddb_keys},
+	{"has_key",		(PyCFunction)bsddb_has_key},
+	{"set_location",	(PyCFunction)bsddb_set_location},
+	{"next",		(PyCFunction)bsddb_next},
+	{"previous",	(PyCFunction)bsddb_previous},
+	{"first",		(PyCFunction)bsddb_first},
+	{"last",		(PyCFunction)bsddb_last},
+	{"sync",		(PyCFunction)bsddb_sync},
 	{NULL,	       	NULL}		/* sentinel */
 };
 
@@ -687,7 +701,7 @@ bsdhashopen(PyObject *self, PyObject *args)
 	int hash = 0; /* XXX currently ignored */
 	int lorder = 0;
 
-	if (!PyArg_ParseTuple(args, "z|siiiiiii:hashopen",
+	if (!PyArg_ParseTuple(args, "s|siiiiiii:hashopen",
 			      &file, &flag, &mode,
 			      &bsize, &ffactor, &nelem, &cachesize,
 			      &hash, &lorder))
@@ -738,7 +752,7 @@ bsdbtopen(PyObject *self, PyObject *args)
 	unsigned int psize = 0;
 	int lorder = 0;
 
-	if (!PyArg_ParseTuple(args, "z|siiiiiii:btopen",
+	if (!PyArg_ParseTuple(args, "s|siiiiiii:btopen",
 			      &file, &flag, &mode,
 			      &btflags, &cachesize, &maxkeypage, &minkeypage,
 			      &psize, &lorder))
@@ -791,7 +805,7 @@ bsdrnopen(PyObject *self, PyObject *args)
 	char  *bval = "";
 	char *bfname = NULL;
 
-	if (!PyArg_ParseTuple(args, "z|siiiiiiss:rnopen",
+	if (!PyArg_ParseTuple(args, "s|siiiiiiss:rnopen",
 			      &file, &flag, &mode,
 			      &rnflags, &cachesize, &psize, &lorder,
 			      &reclen, &bval, &bfname))
@@ -835,13 +849,13 @@ bsdrnopen(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef bsddbmodule_methods[] = {
-	{"hashopen",	(PyCFunction)bsdhashopen, METH_VARARGS},
-	{"btopen",	(PyCFunction)bsdbtopen, METH_VARARGS},
-	{"rnopen",	(PyCFunction)bsdrnopen, METH_VARARGS},
+	{"hashopen",	(PyCFunction)bsdhashopen, 1},
+	{"btopen",	(PyCFunction)bsdbtopen, 1},
+	{"rnopen",	(PyCFunction)bsdrnopen, 1},
 	{0,		0},
 };
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initbsddb(void) {
 	PyObject *m, *d;
 

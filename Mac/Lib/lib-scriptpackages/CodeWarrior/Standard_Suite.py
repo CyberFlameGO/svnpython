@@ -1,7 +1,7 @@
 """Suite Standard Suite: Common terms for most applications
 Level 1, version 1
 
-Generated from /Volumes/Sap/Applications (Mac OS 9)/Metrowerks CodeWarrior 7.0/Metrowerks CodeWarrior/CodeWarrior IDE 4.2.5
+Generated from Moes:Applications (Mac OS 9):Metrowerks CodeWarrior 7.0:Metrowerks CodeWarrior:CodeWarrior IDE 4.2.6
 AETE/AEUT resource version 1/0, language 0, script 0
 """
 
@@ -103,7 +103,7 @@ class Standard_Suite_Events(Standard_Suite_Events):
 
 	def make(self, _no_object=None, _attributes={}, **_arguments):
 		"""make: make a new element
-		Keyword argument new: the class of the new element\xd1keyword 'new' is optional in AppleScript
+		Keyword argument new: the class of the new element„keyword 'new' is optional in AppleScript
 		Keyword argument as: the desired types for the data, in order of preference
 		Keyword argument at: the location at which to insert the element
 		Keyword argument with_data: the initial data for the element
@@ -285,23 +285,20 @@ class zoomed(aetools.NProperty):
 	want = 'bool'
 
 windows = window
-application._superclassnames = []
-application._privpropdict = {
+application._propdict = {
 	'user_interaction' : user_interaction,
 }
-application._privelemdict = {
+application._elemdict = {
 	'document' : document,
 	'window' : window,
 }
-character._superclassnames = []
-character._privpropdict = {
+character._propdict = {
 	'offset' : offset,
 	'length' : length,
 }
-character._privelemdict = {
+character._elemdict = {
 }
-document._superclassnames = []
-document._privpropdict = {
+document._propdict = {
 	'name' : name,
 	'kind' : kind,
 	'index' : index,
@@ -309,53 +306,47 @@ document._privpropdict = {
 	'file_permissions' : file_permissions,
 	'window' : window,
 }
-document._privelemdict = {
+document._elemdict = {
 }
-file._superclassnames = []
-file._privpropdict = {
+file._propdict = {
 }
-file._privelemdict = {
+file._elemdict = {
 }
-insertion_point._superclassnames = []
-insertion_point._privpropdict = {
+insertion_point._propdict = {
 	'length' : length,
 	'offset' : offset,
 }
-insertion_point._privelemdict = {
+insertion_point._elemdict = {
 }
-line._superclassnames = []
-line._privpropdict = {
+line._propdict = {
 	'index' : index,
 	'offset' : offset,
 	'length' : length,
 }
-line._privelemdict = {
+line._elemdict = {
 	'character' : character,
 }
-selection_2d_object._superclassnames = []
-selection_2d_object._privpropdict = {
+selection_2d_object._propdict = {
 	'contents' : contents,
 	'length' : length,
 	'offset' : offset,
 }
-selection_2d_object._privelemdict = {
+selection_2d_object._elemdict = {
 	'character' : character,
 	'line' : line,
 	'text' : text,
 }
-text._superclassnames = []
-text._privpropdict = {
+text._propdict = {
 	'length' : length,
 	'offset' : offset,
 }
-text._privelemdict = {
+text._elemdict = {
 	'character' : character,
 	'insertion_point' : insertion_point,
 	'line' : line,
 	'text' : text,
 }
-window._superclassnames = []
-window._privpropdict = {
+window._propdict = {
 	'name' : name,
 	'index' : index,
 	'bounds' : bounds,
@@ -364,7 +355,7 @@ window._privpropdict = {
 	'visible' : visible,
 	'zoomed' : zoomed,
 }
-window._privelemdict = {
+window._elemdict = {
 }
 
 #

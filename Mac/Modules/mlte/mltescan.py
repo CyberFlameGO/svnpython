@@ -2,9 +2,10 @@
 
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 from scantools import Scanner_OSX
+from bgenlocations import TOOLBOXDIR
 
 LONG = "MacTextEditor"
 SHORT = "mlte"
@@ -19,8 +20,6 @@ def main():
 	scanner.scan()
 	scanner.gentypetest(SHORT+"typetest.py")
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now importing the generated code... ==="
 	exec "import " + SHORT + "support"
 	print "=== Done.  It's up to you to compile it now! ==="
@@ -50,8 +49,6 @@ kTXNUseCurrentSelection = 0xFFFFFFFF
 kTXNStartOffset = 0
 kTXNEndOffset = 0x7FFFFFFF
 MovieFileType = FOUR_CHAR_CODE('moov')
-kTXNUseEncodingWordRulesMask = 0x80000000
-kTXNFontSizeAttributeSize = 4
 """)
 
 	def makeblacklistnames(self):
@@ -74,8 +71,6 @@ kTXNFontSizeAttributeSize = 4
 			"kTXNQDFontStyleAttributeSize",
 			"kTXNQDFontColorAttributeSize",
 			"kTXNTextEncodingAttributeSize",
-			"kTXNUseEncodingWordRulesMask",
-			"kTXNFontSizeAttributeSize",
 			"status",
 			"justification",
 			]

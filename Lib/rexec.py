@@ -143,9 +143,8 @@ class RExec(ihooks._Verbose):
                       'stat', 'times', 'uname', 'getpid', 'getppid',
                       'getcwd', 'getuid', 'getgid', 'geteuid', 'getegid')
 
-    ok_sys_names = ('byteorder', 'copyright', 'exit', 'getdefaultencoding',
-                    'getrefcount', 'hexversion', 'maxint', 'maxunicode',
-                    'platform', 'ps1', 'ps2', 'version', 'version_info')
+    ok_sys_names = ('ps1', 'ps2', 'copyright', 'version',
+                    'platform', 'exit', 'maxint')
 
     nok_builtin_names = ('open', 'file', 'reload', '__import__')
 
@@ -207,7 +206,7 @@ class RExec(ihooks._Verbose):
     def load_dynamic(self, name, filename, file):
         if name not in self.ok_dynamic_modules:
             raise ImportError, "untrusted dynamic module: %s" % name
-        if name in sys.modules:
+        if sys.modules.has_key(name):
             src = sys.modules[name]
         else:
             src = imp.load_dynamic(name, filename, file)
@@ -553,19 +552,25 @@ def test():
             print "%s: can't open file %s" % (sys.argv[0], `args[0]`)
             return 1
     if fp.isatty():
-        try:
-            import readline
-        except ImportError:
-            pass
-        import code
-        class RestrictedConsole(code.InteractiveConsole):
-            def runcode(self, co):
-                self.locals['__builtins__'] = r.modules['__builtin__']
-                r.s_apply(code.InteractiveConsole.runcode, (self, co))
-        try:
-            RestrictedConsole(r.modules['__main__'].__dict__).interact()
-        except SystemExit, n:
-            return n
+        print "*** RESTRICTED *** Python", sys.version
+        print 'Type "help", "copyright", "credits" or "license" ' \
+              'for more information.'
+
+        while 1:
+            try:
+                try:
+                    s = raw_input('>>> ')
+                except EOFError:
+                    print
+                    break
+                if s and s[0] != '#':
+                    s = s + '\n'
+                    c = compile(s, '<stdin>', 'single')
+                    r.s_exec(c)
+            except SystemExit, n:
+                return n
+            except:
+                traceback.print_exc()
     else:
         text = fp.read()
         fp.close()

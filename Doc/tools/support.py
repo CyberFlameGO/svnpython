@@ -8,6 +8,7 @@ __version__ = '$Revision$'
 
 
 import getopt
+import string
 import sys
 
 
@@ -24,26 +25,8 @@ class Options:
     outputfile = "-"
     columns = 1
     letters = 0
-    uplink = "index.html"
+    uplink = "./"
     uptitle = "Python Documentation Index"
-
-    # The "Aesop Meta Tag" is poorly described, and may only be used
-    # by the Aesop search engine (www.aesop.com), but doesn't hurt.
-    #
-    # There are a number of values this may take to roughly categorize
-    # a page.  A page should be marked according to its primary
-    # category.  Known values are:
-    #   'personal'    -- personal-info
-    #   'information' -- information
-    #   'interactive' -- interactive media
-    #   'multimedia'  -- multimedia presenetation (non-sales)
-    #   'sales'       -- sales material
-    #   'links'       -- links to other information pages
-    #
-    # Setting the aesop_type value to one of these strings will cause
-    # get_header() to add the appropriate <meta> tag to the <head>.
-    #
-    aesop_type = None
 
     def __init__(self):
         self.args = []
@@ -70,7 +53,7 @@ class Options:
         self.args = self.args + args
         for opt, val in opts:
             if opt in ("-a", "--address"):
-                val = val.strip()
+                val = string.strip(val)
                 if val:
                     val = "<address>\n%s\n</address>\n" % val
                     self.variables["address"] = val
@@ -113,12 +96,6 @@ class Options:
                 link = '<link rel="up" href="%s">' % self.uplink
             repl = "  %s\n</head>" % link
             s = s.replace("</head>", repl, 1)
-        if self.aesop_type:
-            meta = '\n  <meta name="aesop" content="%s">'
-            # Insert this in the middle of the head that's been
-            # generated so far, keeping <meta> and <link> elements in
-            # neat groups:
-            s = s.replace("<link ", meta + "<link ", 1)
         return s
 
     def get_footer(self):

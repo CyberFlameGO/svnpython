@@ -7,6 +7,7 @@ def test_api_1(localedir, mofile):
     print 'test api 1'
 
     # Test basic interface
+    os.environ['LANGUAGE'] = 'xx'
 
     print 'installing gettext'
     gettext.install('gettext', localedir)
@@ -131,10 +132,8 @@ def setup():
     fp = open(MOFILE, 'wb')
     fp.write(base64.decodestring(GNU_MO_DATA))
     fp.close()
-    os.environ['LANGUAGE'] = 'xx'
 
 def teardown():
-    os.environ['LANGUAGE'] = 'en'
     os.unlink(MOFILE)
     os.removedirs(LOCALEDIR)
 

@@ -1,14 +1,9 @@
 """Do a minimal test of all the modules that aren't otherwise tested."""
 
 import warnings
-warnings.filterwarnings('ignore', r".*posixfile module",
-                        DeprecationWarning, 'posixfile$')
-warnings.filterwarnings('ignore', r".*statcache module",
-                        DeprecationWarning, 'statcache$')
-warnings.filterwarnings('ignore', r".*'re' module",
-                        DeprecationWarning, 'pre$')
+warnings.filterwarnings('ignore', '', DeprecationWarning, 'posixfile')
 
-from test.test_support import verbose
+from test_support import verbose
 
 import BaseHTTPServer
 import CGIHTTPServer

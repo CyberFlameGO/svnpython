@@ -183,14 +183,7 @@ class WeakKeyDictionary(UserDict.UserDict):
             wr = ref(key)
         except TypeError:
             return 0
-        return wr in self.data
-
-    def __contains__(self, key):
-        try:
-            wr = ref(key)
-        except TypeError:
-            return 0
-        return wr in self.data
+        return self.data.has_key(wr)
 
     def items(self):
         L = []

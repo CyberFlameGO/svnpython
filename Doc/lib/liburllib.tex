@@ -18,7 +18,7 @@ operations are available.
 
 It defines the following public functions:
 
-\begin{funcdesc}{urlopen}{url\optional{, data\optional{, proxies}}}
+\begin{funcdesc}{urlopen}{url\optional{, data}}
 Open a network object denoted by a URL for reading.  If the URL does
 not have a scheme identifier, or if it has \file{file:} as its scheme
 identifier, this opens a local file; otherwise it opens a socket to a
@@ -77,38 +77,11 @@ the proxy server before starting the Python interpreter.  For example
 ...
 \end{verbatim}
 
-In a Windows environment, if no proxy envvironment variables are set,
-proxy settings are obtained from the registry's Internet Settings
-section.
-
 In a Macintosh environment, \function{urlopen()} will retrieve proxy
 information from Internet\index{Internet Config} Config.
 
-Alternatively, the optional \var{proxies} argument may be used to
-explicitly specify proxies.  It must be a dictionary mapping scheme
-names to proxy URLs, where an empty dictionary causes no proxies to be
-used, and \code{None} (the default value) causes environmental proxy
-settings to be used as discussed above.  For example:
-
-\begin{verbatim}
-# Use http://www.someproxy.com:3128 for http proxying
-proxies = proxies={'http': 'http://www.someproxy.com:3128'}
-filehandle = urllib.urlopen(some_url, proxies=proxies)
-# Don't use any proxies
-filehandle = urllib.urlopen(some_url, proxies={})
-# Use proxies from environment - both versions are equivalent
-filehandle = urllib.urlopen(some_url, proxies=None)
-filehandle = urllib.urlopen(some_url)
-\end{verbatim} 
-
-The \function{urlopen()} function does not support explicit proxy
-specification.  If you need to override environmental proxy settings,
-use \class{URLopener}, or a subclass such as \class{FancyURLopener}.
-
 Proxies which require authentication for use are not currently
 supported; this is considered an implementation limitation.
-
-\versionchanged[Added the \var{proxies} support]{2.3}
 \end{funcdesc}
 
 \begin{funcdesc}{urlretrieve}{url\optional{, filename\optional{,
@@ -239,12 +212,6 @@ define their own \mailheader{User-Agent} header by subclassing
 attribute \member{version} to an appropriate string value before the
 \method{open()} method is called.
 
-The optional \var{proxies} parameter should be a dictionary mapping
-scheme names to proxy URLs, where an empty dictionary turns proxies
-off completely.  Its default value is \code{None}, in which case
-environmental proxy settings will be used if present, as discussed in
-the definition of \function{urlopen()}, above.
-
 Additional keyword parameters, collected in \var{x509}, are used for
 authentication with the \file{https:} scheme.  The keywords
 \var{key_file} and \var{cert_file} are supported; both are needed to
@@ -350,7 +317,7 @@ Overridable interface to open unknown URL types.
 Retrieves the contents of \var{url} and places it in \var{filename}.  The
 return value is a tuple consisting of a local filename and either a
 \class{mimetools.Message} object containing the response headers (for remote
-URLs) or \code{None} (for local URLs).  The caller must then open and read the
+URLs) or None (for local URLs).  The caller must then open and read the
 contents of \var{filename}.  If \var{filename} is not given and the URL
 refers to a local file, the input filename is returned.  If the URL is
 non-local and \var{filename} is not given, the filename is the output of
@@ -409,25 +376,4 @@ The following example uses the \samp{POST} method instead:
 >>> params = urllib.urlencode({'spam': 1, 'eggs': 2, 'bacon': 0})
 >>> f = urllib.urlopen("http://www.musi-cal.com/cgi-bin/query", params)
 >>> print f.read()
-\end{verbatim}
-
-The following example uses an explicitly specified HTTP proxy,
-overriding environment settings:
-
-\begin{verbatim}
->>> import urllib
->>> proxies = {'http': 'http://proxy.example.com:8080/'}
->>> opener = urllib.FancyURLopener(proxies)
->>> f = opener.open("http://www.python.org")
->>> f.read()
-\end{verbatim}
-
-The following example uses no proxies at all, overriding environment
-settings:
-
-\begin{verbatim}
->>> import urllib
->>> opener = urllib.FancyURLopener({})
->>> f = opener.open("http://www.python.org/")
->>> f.read()
 \end{verbatim}

@@ -4,18 +4,14 @@
 #include "osdefs.h"
 #include "compile.h" /* For CO_FUTURE_DIVISION */
 
-#if defined(MS_WINDOWS) || defined(__CYGWIN__)
+#ifdef MS_WINDOWS
 #include <fcntl.h>
 #endif
 
-#if (defined(PYOS_OS2) && !defined(PYCC_GCC)) || defined(MS_WINDOWS)
+#if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-#define PYTHONHOMEHELP "<prefix>/Lib"
-#else
 #define PYTHONHOMEHELP "<prefix>/pythonX.X"
-#endif
 #endif
 
 #include "pygetopt.h"
@@ -62,7 +58,6 @@ static char *usage_2 = "\
 -S     : don't imply 'import site' on initialization\n\
 -t     : issue warnings about inconsistent tab usage (-tt: issue errors)\n\
 -u     : unbuffered binary stdout and stderr (also PYTHONUNBUFFERED=x)\n\
-         see man page for details on internal buffering relating to '-u'\n\
 ";
 static char *usage_3 = "\
 -v     : verbose (trace import statements) (also PYTHONVERBOSE=x)\n\
@@ -105,7 +100,7 @@ usage(int exitcode, char* program)
 
 /* Main program */
 
-int
+DL_EXPORT(int)
 Py_Main(int argc, char **argv)
 {
 	int c;
@@ -135,22 +130,6 @@ Py_Main(int argc, char **argv)
 
 	PySys_ResetWarnOptions();
 
-#if defined(WITH_NEXT_FRAMEWORK)
-	/* If we are running from a framework it could be that we are actually
-	** the main program for an applet. If so, the next call will return the
-	** filename that we are supposed to run.
-	*/
-	filename = PyMac_GetAppletScriptFile();
-	if (filename != NULL) {
-		if ((fp = fopen(filename, "r")) == NULL) {
-			fprintf(stderr, "%s: can't open file '%s'\n",
-				argv[0], filename);
-			exit(2);
-		}
-	}
-	/* Skip option-processing if we are an applet */
-	if (filename == NULL)
-#endif
 	while ((c = _PyOS_GetOpt(argc, argv, PROGRAM_OPTS)) != EOF) {
 		if (c == 'c') {
 			/* -c is the last option; following arguments
@@ -277,7 +256,7 @@ Py_Main(int argc, char **argv)
 	    (p = Py_GETENV("PYTHONUNBUFFERED")) && *p != '\0')
 		unbuffered = 1;
 
-	if (command == NULL && filename == NULL && _PyOS_optind < argc &&
+	if (command == NULL && _PyOS_optind < argc &&
 	    strcmp(argv[_PyOS_optind], "-") != 0)
 	{
 		filename = argv[_PyOS_optind];
@@ -304,7 +283,7 @@ Py_Main(int argc, char **argv)
 	stdin_is_interactive = Py_FdIsInteractive(stdin, (char *)0);
 
 	if (unbuffered) {
-#if defined(MS_WINDOWS) || defined(__CYGWIN__)
+#ifdef MS_WINDOWS
 		_setmode(fileno(stdin), O_BINARY);
 		_setmode(fileno(stdout), O_BINARY);
 #endif
@@ -395,7 +374,7 @@ Py_Main(int argc, char **argv)
 
 	Py_Finalize();
 #ifdef RISCOS
-	if (Py_RISCOSWimpFlag)
+	if(Py_RISCOSWimpFlag)
                 fprintf(stderr, "\x0cq\x0c"); /* make frontend quit */
 #endif
 

@@ -7,6 +7,11 @@
 
 #include "Python.h"
 
+/* pyconfig.h may or may not define DL_IMPORT */
+#ifndef DL_IMPORT	/* declarations for DLL import/export */
+#define DL_IMPORT(RTYPE) RTYPE
+#endif
+
 #ifndef DONT_HAVE_STDIO_H
 #include <stdio.h>
 #endif
@@ -31,6 +36,10 @@ extern char *getenv(const char *);
 
 #include "pythread.h"
 
+#ifdef __ksr__
+#define _POSIX_THREADS
+#endif
+
 #ifndef _POSIX_THREADS
 
 #ifdef __sgi
@@ -54,7 +63,7 @@ extern char *getenv(const char *);
 
 #ifdef Py_DEBUG
 static int thread_debug = 0;
-#define dprintf(args)	(void)((thread_debug & 1) && printf args)
+#define dprintf(args)	((thread_debug & 1) && printf args)
 #define d2printf(args)	((thread_debug & 8) && printf args)
 #else
 #define dprintf(args)
@@ -122,14 +131,6 @@ void PyThread_init_thread(void)
 
 #ifdef WINCE_THREADS
 #include "thread_wince.h"
-#endif
-
-#ifdef PLAN9_THREADS
-#include "thread_plan9.h"
-#endif
-
-#ifdef ATHEOS_THREADS
-#include "thread_atheos.h"
 #endif
 
 /*

@@ -1,4 +1,3 @@
-# -*- coding: iso-8859-1 -*-
 """ Test script for the Unicode implementation.
 
 Written by Marc-Andre Lemburg (mal@lemburg.com).
@@ -6,7 +5,7 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 (c) Copyright CNRI, All Rights Reserved. NO WARRANTY.
 
 """#"
-from test.test_support import verify, vereq, verbose, TestFailed
+from test_support import verify, verbose, TestFailed
 import sys, string
 
 if not sys.platform.startswith('java'):
@@ -24,23 +23,21 @@ if not sys.platform.startswith('java'):
     verify(repr(u"'\"") == """u'\\'"'""")
     verify(repr(u"'") == '''u"'"''')
     verify(repr(u'"') == """u'"'""")
-    latin1repr = (
-        "u'\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t\\n\\x0b\\x0c\\r"
-        "\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a"
-        "\\x1b\\x1c\\x1d\\x1e\\x1f !\"#$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHI"
-        "JKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\\x7f"
-        "\\x80\\x81\\x82\\x83\\x84\\x85\\x86\\x87\\x88\\x89\\x8a\\x8b\\x8c\\x8d"
-        "\\x8e\\x8f\\x90\\x91\\x92\\x93\\x94\\x95\\x96\\x97\\x98\\x99\\x9a\\x9b"
-        "\\x9c\\x9d\\x9e\\x9f\\xa0\\xa1\\xa2\\xa3\\xa4\\xa5\\xa6\\xa7\\xa8\\xa9"
-        "\\xaa\\xab\\xac\\xad\\xae\\xaf\\xb0\\xb1\\xb2\\xb3\\xb4\\xb5\\xb6\\xb7"
-        "\\xb8\\xb9\\xba\\xbb\\xbc\\xbd\\xbe\\xbf\\xc0\\xc1\\xc2\\xc3\\xc4\\xc5"
-        "\\xc6\\xc7\\xc8\\xc9\\xca\\xcb\\xcc\\xcd\\xce\\xcf\\xd0\\xd1\\xd2\\xd3"
-        "\\xd4\\xd5\\xd6\\xd7\\xd8\\xd9\\xda\\xdb\\xdc\\xdd\\xde\\xdf\\xe0\\xe1"
-        "\\xe2\\xe3\\xe4\\xe5\\xe6\\xe7\\xe8\\xe9\\xea\\xeb\\xec\\xed\\xee\\xef"
-        "\\xf0\\xf1\\xf2\\xf3\\xf4\\xf5\\xf6\\xf7\\xf8\\xf9\\xfa\\xfb\\xfc\\xfd"
-        "\\xfe\\xff'")
-    testrepr = repr(u''.join(map(unichr, range(256))))
-    verify(testrepr == latin1repr)
+    verify(repr(u''.join(map(unichr, range(256)))) ==
+       "u'\\x00\\x01\\x02\\x03\\x04\\x05\\x06\\x07\\x08\\t\\n\\x0b\\x0c\\r"
+       "\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a"
+       "\\x1b\\x1c\\x1d\\x1e\\x1f !\"#$%&\\'()*+,-./0123456789:;<=>?@ABCDEFGHI"
+       "JKLMNOPQRSTUVWXYZ[\\\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\\x7f"
+       "\\x80\\x81\\x82\\x83\\x84\\x85\\x86\\x87\\x88\\x89\\x8a\\x8b\\x8c\\x8d"
+       "\\x8e\\x8f\\x90\\x91\\x92\\x93\\x94\\x95\\x96\\x97\\x98\\x99\\x9a\\x9b"
+       "\\x9c\\x9d\\x9e\\x9f\\xa0\\xa1\\xa2\\xa3\\xa4\\xa5\\xa6\\xa7\\xa8\\xa9"
+       "\\xaa\\xab\\xac\\xad\\xae\\xaf\\xb0\\xb1\\xb2\\xb3\\xb4\\xb5\\xb6\\xb7"
+       "\\xb8\\xb9\\xba\\xbb\\xbc\\xbd\\xbe\\xbf\\xc0\\xc1\\xc2\\xc3\\xc4\\xc5"
+       "\\xc6\\xc7\\xc8\\xc9\\xca\\xcb\\xcc\\xcd\\xce\\xcf\\xd0\\xd1\\xd2\\xd3"
+       "\\xd4\\xd5\\xd6\\xd7\\xd8\\xd9\\xda\\xdb\\xdc\\xdd\\xde\\xdf\\xe0\\xe1"
+       "\\xe2\\xe3\\xe4\\xe5\\xe6\\xe7\\xe8\\xe9\\xea\\xeb\\xec\\xed\\xee\\xef"
+       "\\xf0\\xf1\\xf2\\xf3\\xf4\\xf5\\xf6\\xf7\\xf8\\xf9\\xfa\\xfb\\xfc\\xfd"
+       "\\xfe\\xff'")
 
 def test(method, input, output, *args):
     if verbose:
@@ -83,7 +80,6 @@ def test(method, input, output, *args):
             print 'yes'
 
 test('capitalize', u' hello ', u' hello ')
-test('capitalize', u'Hello ', u'Hello ')
 test('capitalize', u'hello ', u'Hello ')
 test('capitalize', u'aaaa', u'Aaaa')
 test('capitalize', u'AaAa', u'Aaaa')
@@ -96,7 +92,6 @@ test('count', u'aaa', 3, 'a')
 test('count', u'aaa', 0, 'b')
 
 test('title', u' hello ', u' Hello ')
-test('title', u'Hello ', u'Hello ')
 test('title', u'hello ', u'Hello ')
 test('title', u"fOrMaT thIs aS titLe String", u'Format This As Title String')
 test('title', u"fOrMaT,thIs-aS*titLe;String", u'Format,This-As*Title;String')
@@ -210,49 +205,44 @@ test('replace', u'one!two!three!', u'one!two!three!', u'!', u'@', 0)
 test('replace', u'one!two!three!', u'one@two@three@', u'!', u'@')
 test('replace', u'one!two!three!', u'one!two!three!', u'x', u'@')
 test('replace', u'one!two!three!', u'one!two!three!', u'x', u'@', 2)
-test('replace', u'abc', u'-a-b-c-', u'', u'-')
-test('replace', u'abc', u'-a-b-c', u'', u'-', 3)
-test('replace', u'abc', u'abc', u'', u'-', 0)
 test('replace', u'abc', u'abc', u'ab', u'--', 0)
 test('replace', u'abc', u'abc', u'xy', u'--')
-test('replace', u'', u'', u'', u'')
 
-test('startswith', u'hello', True, u'he')
-test('startswith', u'hello', True, u'hello')
-test('startswith', u'hello', False, u'hello world')
-test('startswith', u'hello', True, u'')
-test('startswith', u'hello', False, u'ello')
-test('startswith', u'hello', True, u'ello', 1)
-test('startswith', u'hello', True, u'o', 4)
-test('startswith', u'hello', False, u'o', 5)
-test('startswith', u'hello', True, u'', 5)
-test('startswith', u'hello', False, u'lo', 6)
-test('startswith', u'helloworld', True, u'lowo', 3)
-test('startswith', u'helloworld', True, u'lowo', 3, 7)
-test('startswith', u'helloworld', False, u'lowo', 3, 6)
+test('startswith', u'hello', 1, u'he')
+test('startswith', u'hello', 1, u'hello')
+test('startswith', u'hello', 0, u'hello world')
+test('startswith', u'hello', 1, u'')
+test('startswith', u'hello', 0, u'ello')
+test('startswith', u'hello', 1, u'ello', 1)
+test('startswith', u'hello', 1, u'o', 4)
+test('startswith', u'hello', 0, u'o', 5)
+test('startswith', u'hello', 1, u'', 5)
+test('startswith', u'hello', 0, u'lo', 6)
+test('startswith', u'helloworld', 1, u'lowo', 3)
+test('startswith', u'helloworld', 1, u'lowo', 3, 7)
+test('startswith', u'helloworld', 0, u'lowo', 3, 6)
 
-test('endswith', u'hello', True, u'lo')
-test('endswith', u'hello', False, u'he')
-test('endswith', u'hello', True, u'')
-test('endswith', u'hello', False, u'hello world')
-test('endswith', u'helloworld', False, u'worl')
-test('endswith', u'helloworld', True, u'worl', 3, 9)
-test('endswith', u'helloworld', True, u'world', 3, 12)
-test('endswith', u'helloworld', True, u'lowo', 1, 7)
-test('endswith', u'helloworld', True, u'lowo', 2, 7)
-test('endswith', u'helloworld', True, u'lowo', 3, 7)
-test('endswith', u'helloworld', False, u'lowo', 4, 7)
-test('endswith', u'helloworld', False, u'lowo', 3, 8)
-test('endswith', u'ab', False, u'ab', 0, 1)
-test('endswith', u'ab', False, u'ab', 0, 0)
-test('endswith', 'helloworld', True, u'd')
-test('endswith', 'helloworld', False, u'l')
+test('endswith', u'hello', 1, u'lo')
+test('endswith', u'hello', 0, u'he')
+test('endswith', u'hello', 1, u'')
+test('endswith', u'hello', 0, u'hello world')
+test('endswith', u'helloworld', 0, u'worl')
+test('endswith', u'helloworld', 1, u'worl', 3, 9)
+test('endswith', u'helloworld', 1, u'world', 3, 12)
+test('endswith', u'helloworld', 1, u'lowo', 1, 7)
+test('endswith', u'helloworld', 1, u'lowo', 2, 7)
+test('endswith', u'helloworld', 1, u'lowo', 3, 7)
+test('endswith', u'helloworld', 0, u'lowo', 4, 7)
+test('endswith', u'helloworld', 0, u'lowo', 3, 8)
+test('endswith', u'ab', 0, u'ab', 0, 1)
+test('endswith', u'ab', 0, u'ab', 0, 0)
+test('endswith', 'helloworld', 1, u'd')
+test('endswith', 'helloworld', 0, u'l')
 
 test('expandtabs', u'abc\rab\tdef\ng\thi', u'abc\rab      def\ng       hi')
 test('expandtabs', u'abc\rab\tdef\ng\thi', u'abc\rab      def\ng       hi', 8)
 test('expandtabs', u'abc\rab\tdef\ng\thi', u'abc\rab  def\ng   hi', 4)
 test('expandtabs', u'abc\r\nab\tdef\ng\thi', u'abc\r\nab  def\ng   hi', 4)
-test('expandtabs', u'abc\r\nab\r\ndef\ng\r\nhi', u'abc\r\nab\r\ndef\ng\r\nhi', 4)
 
 if 0:
     test('capwords', u'abc def ghi', u'Abc Def Ghi')
@@ -349,50 +339,50 @@ test('ljust', u'abc', u'abc', 2)
 test('rjust', u'abc', u'abc', 2)
 test('center', u'abc', u'abc', 2)
 
-test('islower', u'a', True)
-test('islower', u'A', False)
-test('islower', u'\n', False)
-test('islower', u'\u1FFc', False)
-test('islower', u'abc', True)
-test('islower', u'aBc', False)
-test('islower', u'abc\n', True)
+test('islower', u'a', 1)
+test('islower', u'A', 0)
+test('islower', u'\n', 0)
+test('islower', u'\u1FFc', 0)
+test('islower', u'abc', 1)
+test('islower', u'aBc', 0)
+test('islower', u'abc\n', 1)
 
-test('isupper', u'a', False)
-test('isupper', u'A', True)
-test('isupper', u'\n', False)
+test('isupper', u'a', 0)
+test('isupper', u'A', 1)
+test('isupper', u'\n', 0)
 if sys.platform[:4] != 'java':
-    test('isupper', u'\u1FFc', False)
-test('isupper', u'ABC', True)
-test('isupper', u'AbC', False)
-test('isupper', u'ABC\n', True)
+    test('isupper', u'\u1FFc', 0)
+test('isupper', u'ABC', 1)
+test('isupper', u'AbC', 0)
+test('isupper', u'ABC\n', 1)
 
-test('istitle', u'a', False)
-test('istitle', u'A', True)
-test('istitle', u'\n', False)
-test('istitle', u'\u1FFc', True)
-test('istitle', u'A Titlecased Line', True)
-test('istitle', u'A\nTitlecased Line', True)
-test('istitle', u'A Titlecased, Line', True)
-test('istitle', u'Greek \u1FFcitlecases ...', True)
-test('istitle', u'Not a capitalized String', False)
-test('istitle', u'Not\ta Titlecase String', False)
-test('istitle', u'Not--a Titlecase String', False)
+test('istitle', u'a', 0)
+test('istitle', u'A', 1)
+test('istitle', u'\n', 0)
+test('istitle', u'\u1FFc', 1)
+test('istitle', u'A Titlecased Line', 1)
+test('istitle', u'A\nTitlecased Line', 1)
+test('istitle', u'A Titlecased, Line', 1)
+test('istitle', u'Greek \u1FFcitlecases ...', 1)
+test('istitle', u'Not a capitalized String', 0)
+test('istitle', u'Not\ta Titlecase String', 0)
+test('istitle', u'Not--a Titlecase String', 0)
 
-test('isalpha', u'a', True)
-test('isalpha', u'A', True)
-test('isalpha', u'\n', False)
-test('isalpha', u'\u1FFc', True)
-test('isalpha', u'abc', True)
-test('isalpha', u'aBc123', False)
-test('isalpha', u'abc\n', False)
+test('isalpha', u'a', 1)
+test('isalpha', u'A', 1)
+test('isalpha', u'\n', 0)
+test('isalpha', u'\u1FFc', 1)
+test('isalpha', u'abc', 1)
+test('isalpha', u'aBc123', 0)
+test('isalpha', u'abc\n', 0)
 
-test('isalnum', u'a', True)
-test('isalnum', u'A', True)
-test('isalnum', u'\n', False)
-test('isalnum', u'123abc456', True)
-test('isalnum', u'a1b3c', True)
-test('isalnum', u'aBc000 ', False)
-test('isalnum', u'abc\n', False)
+test('isalnum', u'a', 1)
+test('isalnum', u'A', 1)
+test('isalnum', u'\n', 0)
+test('isalnum', u'123abc456', 1)
+test('isalnum', u'a1b3c', 1)
+test('isalnum', u'aBc000 ', 0)
+test('isalnum', u'abc\n', 0)
 
 test('splitlines', u"abc\ndef\n\rghi", [u'abc', u'def', u'', u'ghi'])
 test('splitlines', u"abc\ndef\n\r\nghi", [u'abc', u'def', u'', u'ghi'])
@@ -400,46 +390,31 @@ test('splitlines', u"abc\ndef\r\nghi", [u'abc', u'def', u'ghi'])
 test('splitlines', u"abc\ndef\r\nghi\n", [u'abc', u'def', u'ghi'])
 test('splitlines', u"abc\ndef\r\nghi\n\r", [u'abc', u'def', u'ghi', u''])
 test('splitlines', u"\nabc\ndef\r\nghi\n\r", [u'', u'abc', u'def', u'ghi', u''])
-test('splitlines', u"\nabc\ndef\r\nghi\n\r", [u'\n', u'abc\n', u'def\r\n', u'ghi\n', u'\r'], True)
+test('splitlines', u"\nabc\ndef\r\nghi\n\r", [u'\n', u'abc\n', u'def\r\n', u'ghi\n', u'\r'], 1)
 
 test('translate', u"abababc", u'bbbc', {ord('a'):None})
 test('translate', u"abababc", u'iiic', {ord('a'):None, ord('b'):ord('i')})
 test('translate', u"abababc", u'iiix', {ord('a'):None, ord('b'):ord('i'), ord('c'):u'x'})
-test('translate', u"abababc", u'<i><i><i>c', {ord('a'):None, ord('b'):u'<i>'})
-test('translate', u"abababc", u'c', {ord('a'):None, ord('b'):u''})
 
 # Contains:
 print 'Testing Unicode contains method...',
-vereq(('a' in u'abdb'), True)
-vereq(('a' in u'bdab'), True)
-vereq(('a' in u'bdaba'), True)
-vereq(('a' in u'bdba'), True)
-vereq(('a' in u'bdba'), True)
-vereq((u'a' in u'bdba'), True)
-vereq((u'a' in u'bdb'), False)
-vereq((u'a' in 'bdb'), False)
-vereq((u'a' in 'bdba'), True)
-vereq((u'a' in ('a',1,None)), True)
-vereq((u'a' in (1,None,'a')), True)
-vereq((u'a' in (1,None,u'a')), True)
-vereq(('a' in ('a',1,None)), True)
-vereq(('a' in (1,None,'a')), True)
-vereq(('a' in (1,None,u'a')), True)
-vereq(('a' in ('x',1,u'y')), False)
-vereq(('a' in ('x',1,None)), False)
-vereq(u'abcd' in u'abcxxxx', False)
-vereq((u'ab' in u'abcd'), True)
-vereq(('ab' in u'abc'), True)
-vereq((u'ab' in 'abc'), True)
-vereq((u'ab' in (1,None,u'ab')), True)
-vereq((u'' in u'abc'), True)
-vereq(('' in u'abc'), True)
-try:
-    u'\xe2' in 'g\xe2teau'
-except UnicodeError:
-    pass
-else:
-    print '*** contains operator does not propagate UnicodeErrors'
+verify(('a' in u'abdb') == 1)
+verify(('a' in u'bdab') == 1)
+verify(('a' in u'bdaba') == 1)
+verify(('a' in u'bdba') == 1)
+verify(('a' in u'bdba') == 1)
+verify((u'a' in u'bdba') == 1)
+verify((u'a' in u'bdb') == 0)
+verify((u'a' in 'bdb') == 0)
+verify((u'a' in 'bdba') == 1)
+verify((u'a' in ('a',1,None)) == 1)
+verify((u'a' in (1,None,'a')) == 1)
+verify((u'a' in (1,None,u'a')) == 1)
+verify(('a' in ('a',1,None)) == 1)
+verify(('a' in (1,None,'a')) == 1)
+verify(('a' in (1,None,u'a')) == 1)
+verify(('a' in ('x',1,u'y')) == 0)
+verify(('a' in ('x',1,None)) == 0)
 print 'done.'
 
 # Formatting:
@@ -615,6 +590,11 @@ verify(u'\u6b63\u78ba\u306b\u8a00\u3046\u3068\u7ffb\u8a33\u306f'
 verify(unicode('\xf0\xa3\x91\x96', 'utf-8') == u'\U00023456' )
 verify(unicode('\xf0\x90\x80\x82', 'utf-8') == u'\U00010002' )
 verify(unicode('\xe2\x82\xac', 'utf-8') == u'\u20ac' )
+# test UTF-8 2.2.1 bug work-around
+verify(unicode('\xa0\x80', 'utf-8') == u'\ud800' )
+verify(unicode('\xaf\xbf', 'utf-8') == u'\udbff' )
+verify(unicode('\xed\xb0\x80', 'utf-8') == u'\udc00' )
+verify(unicode('\xed\xbf\xbf', 'utf-8') == u'\udfff' )
 
 # Other possible utf-8 test cases:
 # * strict decoding testing for all of the
@@ -668,7 +648,14 @@ for encoding in ('utf-7', 'utf-8', 'utf-16', 'utf-16-le', 'utf-16-be',
                  'raw_unicode_escape', 'unicode_escape', 'unicode_internal'):
     verify(unicode(u.encode(encoding),encoding) == u)
 
-# Roundtrip safety for BMP (just the first 256 chars)
+# Roundtrip safety for non-BMP (just a few chars)
+u = u'\U00010001\U00020002\U00030003\U00040004\U00050005'
+for encoding in ('utf-8',
+                 'utf-16', 'utf-16-le', 'utf-16-be',
+                 #'raw_unicode_escape',
+                 'unicode_escape', 'unicode_internal'):
+    verify(unicode(u.encode(encoding),encoding) == u)
+
 u = u''.join(map(unichr, range(256)))
 for encoding in (
     'latin-1',
@@ -680,7 +667,6 @@ for encoding in (
     except ValueError,why:
         print '*** codec for "%s" failed: %s' % (encoding, why)
 
-# Roundtrip safety for BMP (just the first 128 chars)
 u = u''.join(map(unichr, range(128)))
 for encoding in (
     'ascii',
@@ -691,22 +677,6 @@ for encoding in (
         print '*** codec "%s" failed round-trip' % encoding
     except ValueError,why:
         print '*** codec for "%s" failed: %s' % (encoding, why)
-
-# Roundtrip safety for non-BMP (just a few chars)
-u = u'\U00010001\U00020002\U00030003\U00040004\U00050005'
-for encoding in ('utf-8',
-                 'utf-16', 'utf-16-le', 'utf-16-be',
-                 #'raw_unicode_escape',
-                 'unicode_escape', 'unicode_internal'):
-    verify(unicode(u.encode(encoding),encoding) == u)
-
-# UTF-8 must be roundtrip safe for all UCS-2 code points
-# This excludes surrogates: in the full range, there would be
-# a surrogate pair (\udbff\udc00), which gets converted back
-# to a non-BMP character (\U0010fc00)
-u = u''.join(map(unichr, range(0,0xd800)+range(0xe000,0x10000)))
-for encoding in ('utf-8',):
-    verify(unicode(u.encode(encoding),encoding) == u)
 
 print 'done.'
 
@@ -775,6 +745,14 @@ for encoding in (
     except ValueError,why:
         print '*** codec for "%s" failed: %s' % (encoding, why)
 
+# UTF-8 must be roundtrip safe for all UCS-2 code points
+# This excludes surrogates: in the full range, there would be
+# a surrogate pair (\udbff\udc00), which gets converted back
+# to a non-BMP character (\U0010fc00)
+u = u''.join(map(unichr, range(0,0xd800)+range(0xe000,0x10000)))
+for encoding in ('utf-8',):
+    verify(unicode(u.encode(encoding),encoding) == u)
+
 print 'done.'
 
 print 'Testing Unicode string concatenation...',
@@ -796,42 +774,3 @@ print u'abc\n',
 print u'def\n'
 print u'def\n'
 print 'done.'
-
-def test_exception(lhs, rhs, msg):
-    try:
-        lhs in rhs
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, msg
-
-def run_contains_tests():
-    vereq(u'' in '', True)
-    vereq('' in u'', True)
-    vereq(u'' in u'', True)
-    vereq(u'' in 'abc', True)
-    vereq('' in u'abc', True)
-    vereq(u'' in u'abc', True)
-    vereq(u'\0' in 'abc', False)
-    vereq('\0' in u'abc', False)
-    vereq(u'\0' in u'abc', False)
-    vereq(u'\0' in '\0abc', True)
-    vereq('\0' in u'\0abc', True)
-    vereq(u'\0' in u'\0abc', True)
-    vereq(u'\0' in 'abc\0', True)
-    vereq('\0' in u'abc\0', True)
-    vereq(u'\0' in u'abc\0', True)
-    vereq(u'a' in '\0abc', True)
-    vereq('a' in u'\0abc', True)
-    vereq(u'a' in u'\0abc', True)
-    vereq(u'asdf' in 'asdf', True)
-    vereq('asdf' in u'asdf', True)
-    vereq(u'asdf' in u'asdf', True)
-    vereq(u'asdf' in 'asd', False)
-    vereq('asdf' in u'asd', False)
-    vereq(u'asdf' in u'asd', False)
-    vereq(u'asdf' in '', False)
-    vereq('asdf' in u'', False)
-    vereq(u'asdf' in u'', False)
-
-run_contains_tests()

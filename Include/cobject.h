@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-PyAPI_DATA(PyTypeObject) PyCObject_Type;
+extern DL_IMPORT(PyTypeObject) PyCObject_Type;
 
 #define PyCObject_Check(op) ((op)->ob_type == &PyCObject_Type)
 
@@ -24,8 +24,8 @@ PyAPI_DATA(PyTypeObject) PyCObject_Type;
    destroyed.
 
 */
-PyAPI_FUNC(PyObject *) PyCObject_FromVoidPtr(
-	void *cobj, void (*destruct)(void*));
+extern DL_IMPORT(PyObject *)
+PyCObject_FromVoidPtr(void *cobj, void (*destruct)(void*));
 
 
 /* Create a PyCObject from a pointer to a C object, a description object,
@@ -33,17 +33,21 @@ PyAPI_FUNC(PyObject *) PyCObject_FromVoidPtr(
    then it will be called with the first and second arguments if and when 
    the PyCObject is destroyed.
 */
-PyAPI_FUNC(PyObject *) PyCObject_FromVoidPtrAndDesc(
-	void *cobj, void *desc, void (*destruct)(void*,void*));
+extern DL_IMPORT(PyObject *)
+PyCObject_FromVoidPtrAndDesc(void *cobj, void *desc,
+                             void (*destruct)(void*,void*));
 
 /* Retrieve a pointer to a C object from a PyCObject. */
-PyAPI_FUNC(void *) PyCObject_AsVoidPtr(PyObject *);
+extern DL_IMPORT(void *)
+PyCObject_AsVoidPtr(PyObject *);
 
 /* Retrieve a pointer to a description object from a PyCObject. */
-PyAPI_FUNC(void *) PyCObject_GetDesc(PyObject *);
+extern DL_IMPORT(void *)
+PyCObject_GetDesc(PyObject *);
 
 /* Import a pointer to a C object from a module using a PyCObject. */
-PyAPI_FUNC(void *) PyCObject_Import(char *module_name, char *cobject_name);
+extern DL_IMPORT(void *)
+PyCObject_Import(char *module_name, char *cobject_name);
 
 #ifdef __cplusplus
 }

@@ -22,6 +22,8 @@ are the same, except instead of generating tokens, tokeneater is a callback
 function to which the 5 fields described above are passed as 5 arguments,
 each time a new token is found."""
 
+from __future__ import generators
+
 __author__ = 'Ka-Ping Yee <ping@lfw.org>'
 __credits__ = \
     'GvR, ESR, Tim Peters, Thomas Wouters, Fred Drake, Skip Montanaro'
@@ -31,7 +33,6 @@ from token import *
 
 import token
 __all__ = [x for x in dir(token) if x[0] != '_'] + ["COMMENT", "tokenize", "NL"]
-del x
 del token
 
 COMMENT = N_TOKENS
@@ -109,21 +110,6 @@ endprogs = {"'": re.compile(Single), '"': re.compile(Double),
             "Ur'''": single3prog, 'Ur"""': double3prog,
             "UR'''": single3prog, 'UR"""': double3prog,
             'r': None, 'R': None, 'u': None, 'U': None}
-
-triple_quoted = {}
-for t in ("'''", '"""',
-          "r'''", 'r"""', "R'''", 'R"""',
-          "u'''", 'u"""', "U'''", 'U"""',
-          "ur'''", 'ur"""', "Ur'''", 'Ur"""',
-          "uR'''", 'uR"""', "UR'''", 'UR"""'):
-    triple_quoted[t] = t
-single_quoted = {}
-for t in ("'", '"',
-          "r'", 'r"', "R'", 'R"',
-          "u'", 'u"', "U'", 'U"',
-          "ur'", 'ur"', "Ur'", 'Ur"',
-          "uR'", 'uR"', "UR'", 'UR"' ):
-    single_quoted[t] = t
 
 tabsize = 8
 
@@ -247,7 +233,11 @@ def generate_tokens(readline):
                                token, spos, epos, line)
                 elif initial == '#':
                     yield (COMMENT, token, spos, epos, line)
-                elif token in triple_quoted:
+                elif token in ("'''", '"""',               # triple-quoted
+                               "r'''", 'r"""', "R'''", 'R"""',
+                               "u'''", 'u"""', "U'''", 'U"""',
+                               "ur'''", 'ur"""', "Ur'''", 'Ur"""',
+                               "uR'''", 'uR"""', "UR'''", 'UR"""'):
                     endprog = endprogs[token]
                     endmatch = endprog.match(line, pos)
                     if endmatch:                           # all on one line
@@ -259,9 +249,11 @@ def generate_tokens(readline):
                         contstr = line[start:]
                         contline = line
                         break
-                elif initial in single_quoted or \
-                    token[:2] in single_quoted or \
-                    token[:3] in single_quoted:
+                elif initial in ("'", '"') or \
+                    token[:2] in ("r'", 'r"', "R'", 'R"',
+                                  "u'", 'u"', "U'", 'U"') or \
+                    token[:3] in ("ur'", 'ur"', "Ur'", 'Ur"',
+                                  "uR'", 'uR"', "UR'", 'UR"' ):
                     if token[-1] == '\n':                  # continued string
                         strstart = (lnum, start)
                         endprog = (endprogs[initial] or endprogs[token[1]] or

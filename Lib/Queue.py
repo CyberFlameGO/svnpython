@@ -1,7 +1,5 @@
 """A multi-producer, multi-consumer queue."""
 
-from time import time as _time, sleep as _sleep
-
 class Empty(Exception):
     "Exception raised by Queue.get(block=0)/get_nowait()."
     pass
@@ -31,54 +29,29 @@ class Queue:
         return n
 
     def empty(self):
-        """Return True if the queue is empty, False otherwise (not reliable!)."""
+        """Return 1 if the queue is empty, 0 otherwise (not reliable!)."""
         self.mutex.acquire()
         n = self._empty()
         self.mutex.release()
         return n
 
     def full(self):
-        """Return True if the queue is full, False otherwise (not reliable!)."""
+        """Return 1 if the queue is full, 0 otherwise (not reliable!)."""
         self.mutex.acquire()
         n = self._full()
         self.mutex.release()
         return n
 
-    def put(self, item, block=True, timeout=None):
+    def put(self, item, block=1):
         """Put an item into the queue.
 
-        If optional args 'block' is true and 'timeout' is None (the default),
-        block if necessary until a free slot is available. If 'timeout' is
-        a positive number, it blocks at most 'timeout' seconds and raises
-        the Full exception if no free slot was available within that time.
-        Otherwise ('block' is false), put an item on the queue if a free slot
-        is immediately available, else raise the Full exception ('timeout'
-        is ignored in that case).
+        If optional arg 'block' is 1 (the default), block if
+        necessary until a free slot is available.  Otherwise (block
+        is 0), put an item on the queue if a free slot is immediately
+        available, else raise the Full exception.
         """
         if block:
-            if timeout is None:
-                # blocking, w/o timeout, i.e. forever
-                self.fsema.acquire()
-            elif timeout >= 0:
-                # waiting max. 'timeout' seconds.
-                # this code snipped is from threading.py: _Event.wait():
-                # Balancing act:  We can't afford a pure busy loop, so we
-                # have to sleep; but if we sleep the whole timeout time,
-                # we'll be unresponsive.  The scheme here sleeps very
-                # little at first, longer as time goes on, but never longer
-                # than 20 times per second (or the timeout time remaining).
-                delay = 0.0005 # 500 us -> initial delay of 1 ms
-                endtime = _time() + timeout
-                while True:
-                    if self.fsema.acquire(0):
-                        break
-                    remaining = endtime - _time()
-                    if remaining <= 0:  #time is over and no slot was free
-                        raise Full
-                    delay = min(delay * 2, remaining, .05)
-                    _sleep(delay)       #reduce CPU usage by using a sleep
-            else:
-                raise ValueError("'timeout' must be a positive number")
+            self.fsema.acquire()
         elif not self.fsema.acquire(0):
             raise Full
         self.mutex.acquire()
@@ -107,43 +80,18 @@ class Queue:
         Only enqueue the item if a free slot is immediately available.
         Otherwise raise the Full exception.
         """
-        return self.put(item, False)
+        return self.put(item, 0)
 
-    def get(self, block=True, timeout=None):
+    def get(self, block=1):
         """Remove and return an item from the queue.
 
-        If optional args 'block' is true and 'timeout' is None (the default),
-        block if necessary until an item is available. If 'timeout' is
-        a positive number, it blocks at most 'timeout' seconds and raises
-        the Empty exception if no item was available within that time.
-        Otherwise ('block' is false), return an item if one is immediately
-        available, else raise the Empty exception ('timeout' is ignored
-        in that case).
+        If optional arg 'block' is 1 (the default), block if
+        necessary until an item is available.  Otherwise (block is 0),
+        return an item if one is immediately available, else raise the
+        Empty exception.
         """
         if block:
-            if timeout is None:
-                # blocking, w/o timeout, i.e. forever
-                self.esema.acquire()
-            elif timeout >= 0:
-                # waiting max. 'timeout' seconds.
-                # this code snipped is from threading.py: _Event.wait():
-                # Balancing act:  We can't afford a pure busy loop, so we
-                # have to sleep; but if we sleep the whole timeout time,
-                # we'll be unresponsive.  The scheme here sleeps very
-                # little at first, longer as time goes on, but never longer
-                # than 20 times per second (or the timeout time remaining).
-                delay = 0.0005 # 500 us -> initial delay of 1 ms
-                endtime = _time() + timeout
-                while 1:
-                    if self.esema.acquire(0):
-                        break
-                    remaining = endtime - _time()
-                    if remaining <= 0:  #time is over and no element arrived
-                        raise Empty
-                    delay = min(delay * 2, remaining, .05)
-                    _sleep(delay)       #reduce CPU usage by using a sleep
-            else:
-                raise ValueError("'timeout' must be a positive number")
+            self.esema.acquire()
         elif not self.esema.acquire(0):
             raise Empty
         self.mutex.acquire()
@@ -167,10 +115,10 @@ class Queue:
     def get_nowait(self):
         """Remove and return an item from the queue without blocking.
 
-        Only get an item if one is immediately available. Otherwise
+        Only get an item if one is immediately available.  Otherwise
         raise the Empty exception.
         """
-        return self.get(False)
+        return self.get(0)
 
     # Override these methods to implement other queue organizations
     # (e.g. stack or priority queue).
@@ -198,4 +146,6 @@ class Queue:
 
     # Get an item from the queue
     def _get(self):
-        return self.queue.pop(0)
+        item = self.queue[0]
+        del self.queue[0]
+        return item

@@ -396,7 +396,7 @@ class SGMLParser(markupbase.ParserBase):
         tailored by setting up the self.entitydefs mapping appropriately.
         """
         table = self.entitydefs
-        if name in table:
+        if table.has_key(name):
             self.handle_data(table[name])
         else:
             self.unknown_entityref(name)
@@ -479,7 +479,7 @@ class TestSGMLParser(SGMLParser):
 def test(args = None):
     import sys
 
-    if args is None:
+    if not args:
         args = sys.argv[1:]
 
     if args and args[0] == '-s':

@@ -29,13 +29,12 @@ APIFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	api/refcounting.tex \
 	api/utilities.tex \
 	api/veryhigh.tex \
-	texinputs/typestruct.h \
 	texinputs/reportingbugs.tex
 
 # These files are generated from those listed above, and are used to
 # generate the typeset versions of the manuals.  The list is defined
 # here to make it easier to ensure parallelism.
-ANNOAPIFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) api/refcounts.dat \
+ANNOAPIFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	paper-$(PAPER)/api.tex \
 	paper-$(PAPER)/abstract.tex \
 	paper-$(PAPER)/concrete.tex \
@@ -60,10 +59,6 @@ EXTFILES= ext/ext.tex $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	ext/building.tex \
 	ext/windows.tex \
 	ext/embedding.tex \
-	ext/cycle-gc.c \
-	ext/noddy.c \
-	ext/run-func.c \
-	texinputs/typestruct.h \
 	texinputs/reportingbugs.tex
 
 TUTFILES= tut/tut.tex $(MANSTYLES) $(COMMONTEX)
@@ -83,7 +78,6 @@ REFFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 
 # LaTeX source files for the Python Library Reference
 LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
-	texinputs/reportingbugs.tex \
 	lib/lib.tex \
 	lib/asttable.tex \
 	lib/compiler.tex \
@@ -96,6 +90,7 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/emailmessage.tex \
 	lib/emailparser.tex \
 	lib/emailutil.tex \
+	texinputs/reportingbugs.tex \
 	lib/libintro.tex \
 	lib/libobjs.tex \
 	lib/libstdtypes.tex \
@@ -105,7 +100,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libsys.tex \
 	lib/libfpectl.tex \
 	lib/libgc.tex \
-	lib/libsets.tex \
 	lib/libweakref.tex \
 	lib/libinspect.tex \
 	lib/libpydoc.tex \
@@ -125,7 +119,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libmain.tex \
 	lib/libstrings.tex \
 	lib/libstring.tex \
-	lib/libtextwrap.tex \
 	lib/libcodecs.tex \
 	lib/libunicodedata.tex \
 	lib/libstruct.tex \
@@ -262,7 +255,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libcalendar.tex \
 	lib/libpopen2.tex \
 	lib/libbisect.tex \
-	lib/libheapq.tex \
 	lib/libmimetypes.tex \
 	lib/libsmtplib.tex \
 	lib/libcmd.tex \
@@ -317,7 +309,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libstatvfs.tex \
 	lib/libtty.tex \
 	lib/libasyncore.tex \
-	lib/libasynchat.tex \
 	lib/libatexit.tex \
 	lib/libmmap.tex \
 	lib/tkinter.tex \
@@ -342,8 +333,7 @@ MACFILES= $(HOWTOSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	mac/libmacui.tex \
 	mac/libmacic.tex \
 	mac/libframework.tex \
-	mac/libminiae.tex \
-	mac/libscrap.tex
+	mac/libminiae.tex
 
 INSTFILES = $(HOWTOSTYLES) inst/inst.tex
 

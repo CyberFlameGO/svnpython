@@ -1,4 +1,4 @@
-from test.test_support import vereq
+from test_support import vereq
 
 import time
 

@@ -190,7 +190,7 @@ def _test():
 ### Locale name aliasing engine
 
 # Author: Marc-Andre Lemburg, mal@lemburg.com
-# Various tweaks by Fredrik Lundh <fredrik@pythonware.com>
+# Various tweaks by Fredrik Lundh <effbot@telia.com>
 
 # store away the low-level version of setlocale (it's
 # overridden below)
@@ -623,12 +623,9 @@ locale_alias = {
 # this maps windows language identifiers (as used on Windows 95 and
 # earlier) to locale strings.
 #
-# NOTE: this mapping is incomplete.  If your language is missing, please
-# submit a bug report to Python bug manager, which you can find via:
-#     http://www.python.org/dev/
-# Make sure you include the missing language identifier and the suggested
-# locale code.
-#
+# NOTE: this mapping is incomplete.  If your language is missing, send
+# a note with the missing language identifier and the suggested locale
+# code to Fredrik Lundh <effbot@telia.com>.  Thanks /F
 
 windows_locale = {
     0x0404: "zh_TW", # Chinese (Taiwan)
@@ -722,7 +719,7 @@ def _print_locale():
 
 try:
     LC_MESSAGES
-except NameError:
+except:
     pass
 else:
     __all__.append("LC_MESSAGES")

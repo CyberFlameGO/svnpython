@@ -21,10 +21,4 @@ __all__ = ['build',
            'bdist_dumb',
            'bdist_rpm',
            'bdist_wininst',
-           # These two are reserved for future use:
-           #'bdist_sdux',
-           #'bdist_pkgtool',
-           # Note:
-           # bdist_packager is not included because it only provides
-           # an abstract base class
           ]

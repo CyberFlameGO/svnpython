@@ -46,17 +46,20 @@ char *strdup(char *);
 /*  String constants used to initialize module attributes.
  *
  */
-static char parser_copyright_string[] =
-"Copyright 1995-1996 by Virginia Polytechnic Institute & State\n\
+static char*
+parser_copyright_string
+= "Copyright 1995-1996 by Virginia Polytechnic Institute & State\n\
 University, Blacksburg, Virginia, USA, and Fred L. Drake, Jr., Reston,\n\
 Virginia, USA.  Portions copyright 1991-1995 by Stichting Mathematisch\n\
 Centrum, Amsterdam, The Netherlands.";
 
 
-PyDoc_STRVAR(parser_doc_string,
-"This is an interface to Python's internal parser.");
+static char*
+parser_doc_string
+= "This is an interface to Python's internal parser.";
 
-static char parser_version_string[] = "0.5";
+static char*
+parser_version_string = "0.5";
 
 
 typedef PyObject* (*SeqMaker) (int length);
@@ -157,9 +160,14 @@ typedef struct {
 } PyST_Object;
 
 
-static void parser_free(PyST_Object *st);
-static int parser_compare(PyST_Object *left, PyST_Object *right);
-static PyObject *parser_getattr(PyObject *self, char *name);
+staticforward void
+parser_free(PyST_Object *st);
+
+staticforward int
+parser_compare(PyST_Object *left, PyST_Object *right);
+
+staticforward PyObject *
+parser_getattr(PyObject *self, char *name);
 
 
 static
@@ -442,15 +450,15 @@ parser_issuite(PyST_Object *self, PyObject *args, PyObject *kw)
 static PyMethodDef
 parser_methods[] = {
     {"compile",         (PyCFunction)parser_compilest,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Compile this ST object into a code object.")},
+        "Compile this ST object into a code object."},
     {"isexpr",          (PyCFunction)parser_isexpr,     PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Determines if this ST object was created from an expression.")},
+        "Determines if this ST object was created from an expression."},
     {"issuite",         (PyCFunction)parser_issuite,    PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Determines if this ST object was created from a suite.")},
+        "Determines if this ST object was created from a suite."},
     {"tolist",          (PyCFunction)parser_st2list,    PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates a list-tree representation of this ST.")},
+        "Creates a list-tree representation of this ST."},
     {"totuple",         (PyCFunction)parser_st2tuple,   PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates a tuple-tree representation of this ST.")},
+        "Creates a tuple-tree representation of this ST."},
 
     {NULL, NULL, 0, NULL}
 };
@@ -545,9 +553,9 @@ parser_suite(PyST_Object *self, PyObject *args, PyObject *kw)
  */
 
 
-static node* build_node_tree(PyObject *tuple);
-static int   validate_expr_tree(node *tree);
-static int   validate_file_input(node *tree);
+staticforward node* build_node_tree(PyObject *tuple);
+staticforward int   validate_expr_tree(node *tree);
+staticforward int   validate_file_input(node *tree);
 
 
 /*  PyObject* parser_tuple2st(PyObject* self, PyObject* args)
@@ -788,7 +796,7 @@ build_node_tree(PyObject *tuple)
 /*
  *  Validation routines used within the validation section:
  */
-static int validate_terminal(node *terminal, int type, char *string);
+staticforward int validate_terminal(node *terminal, int type, char *string);
 
 #define validate_ampersand(ch)  validate_terminal(ch,      AMPER, "&")
 #define validate_circumflex(ch) validate_terminal(ch, CIRCUMFLEX, "^")
@@ -836,7 +844,6 @@ VALIDATER(subscriptlist);       VALIDATER(sliceop);
 VALIDATER(exprlist);            VALIDATER(dictmaker);
 VALIDATER(arglist);             VALIDATER(argument);
 VALIDATER(listmaker);           VALIDATER(yield_stmt);
-VALIDATER(testlist1);
 
 #undef VALIDATER
 
@@ -1046,14 +1053,6 @@ validate_testlist(node *tree)
 {
     return (validate_repeating_list(tree, testlist,
                                     validate_test, "testlist"));
-}
-
-
-static int
-validate_testlist1(node *tree)
-{
-    return (validate_repeating_list(tree, testlist1,
-                                    validate_test, "testlist1"));
 }
 
 
@@ -2186,7 +2185,7 @@ validate_atom(node *tree)
             break;
           case BACKQUOTE:
             res = ((nch == 3)
-                   && validate_testlist1(CHILD(tree, 1))
+                   && validate_testlist(CHILD(tree, 1))
                    && validate_ntype(CHILD(tree, 2), BACKQUOTE));
             break;
           case NAME:
@@ -2672,9 +2671,6 @@ validate_node(node *tree)
           case testlist:
             res = validate_testlist(tree);
             break;
-          case testlist1:
-            res = validate_testlist1(tree);
-            break;
           case test:
             res = validate_test(tree);
             break;
@@ -2816,45 +2812,45 @@ parser__pickler(PyObject *self, PyObject *args)
  */
 static PyMethodDef parser_functions[] =  {
     {"ast2tuple",       (PyCFunction)parser_st2tuple,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates a tuple-tree representation of an ST.")},
+        "Creates a tuple-tree representation of an ST."},
     {"ast2list",        (PyCFunction)parser_st2list,   PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates a list-tree representation of an ST.")},
+        "Creates a list-tree representation of an ST."},
     {"compileast",      (PyCFunction)parser_compilest, PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Compiles an ST object into a code object.")},
+        "Compiles an ST object into a code object."},
     {"compilest",      (PyCFunction)parser_compilest,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Compiles an ST object into a code object.")},
+        "Compiles an ST object into a code object."},
     {"expr",            (PyCFunction)parser_expr,      PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates an ST object from an expression.")},
+        "Creates an ST object from an expression."},
     {"isexpr",          (PyCFunction)parser_isexpr,    PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Determines if an ST object was created from an expression.")},
+        "Determines if an ST object was created from an expression."},
     {"issuite",         (PyCFunction)parser_issuite,   PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Determines if an ST object was created from a suite.")},
+        "Determines if an ST object was created from a suite."},
     {"suite",           (PyCFunction)parser_suite,     PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates an ST object from a suite.")},
+        "Creates an ST object from a suite."},
     {"sequence2ast",    (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates an ST object from a tree representation.")},
+        "Creates an ST object from a tree representation."},
     {"sequence2st",     (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates an ST object from a tree representation.")},
+        "Creates an ST object from a tree representation."},
     {"st2tuple",        (PyCFunction)parser_st2tuple,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates a tuple-tree representation of an ST.")},
+        "Creates a tuple-tree representation of an ST."},
     {"st2list",         (PyCFunction)parser_st2list,   PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates a list-tree representation of an ST.")},
+        "Creates a list-tree representation of an ST."},
     {"tuple2ast",       (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates an ST object from a tree representation.")},
+        "Creates an ST object from a tree representation."},
     {"tuple2st",        (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        PyDoc_STR("Creates an ST object from a tree representation.")},
+        "Creates an ST object from a tree representation."},
 
     /* private stuff: support pickle module */
     {"_pickler",        (PyCFunction)parser__pickler,  METH_VARARGS,
-        PyDoc_STR("Returns the pickle magic to allow ST objects to be pickled.")},
+        "Returns the pickle magic to allow ST objects to be pickled."},
 
     {NULL, NULL, 0, NULL}
     };
 
 
-PyMODINIT_FUNC initparser(void);  /* supply a prototype */
+DL_EXPORT(void) initparser(void);  /* supply a prototype */
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initparser(void)
 {
     PyObject *module, *copyreg;

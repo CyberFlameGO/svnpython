@@ -12,14 +12,6 @@
 #endif
 #include <signal.h>
 
-/* The POSIX spec says that implementations supporting the sem_*
-   family of functions must indicate this by defining
-   _POSIX_SEMAPHORES. */   
-#ifdef _POSIX_SEMAPHORES
-#include <semaphore.h>
-#include <errno.h>
-#endif
-
 
 /* try to determine what version of the Pthread Standard is installed.
  * this is important, since all sorts of parameter types changed from
@@ -81,16 +73,6 @@
 #  define pthread_attr_default ((pthread_attr_t *)NULL)
 #  define pthread_mutexattr_default ((pthread_mutexattr_t *)NULL)
 #  define pthread_condattr_default ((pthread_condattr_t *)NULL)
-#endif
-
-
-/* Whether or not to use semaphores directly rather than emulating them with
- * mutexes and condition variables:
- */
-#ifdef _POSIX_SEMAPHORES
-#  define USE_SEMAPHORES
-#else
-#  undef USE_SEMAPHORES
 #endif
 
 
@@ -312,109 +294,6 @@ PyThread__exit_prog(int status)
 }
 #endif /* NO_EXIT_PROG */
 
-#ifdef USE_SEMAPHORES
-
-/*
- * Lock support.
- */
-
-PyThread_type_lock 
-PyThread_allocate_lock(void)
-{
-	sem_t *lock;
-	int status, error = 0;
-
-	dprintf(("PyThread_allocate_lock called\n"));
-	if (!initialized)
-		PyThread_init_thread();
-
-	lock = (sem_t *)malloc(sizeof(sem_t));
-
-	if (lock) {
-		status = sem_init(lock,0,1);
-		CHECK_STATUS("sem_init");
-
-		if (error) {
-			free((void *)lock);
-			lock = NULL;
-		}
-	}
-
-	dprintf(("PyThread_allocate_lock() -> %p\n", lock));
-	return (PyThread_type_lock)lock;
-}
-
-void 
-PyThread_free_lock(PyThread_type_lock lock)
-{
-	sem_t *thelock = (sem_t *)lock;
-	int status, error = 0;
-
-	dprintf(("PyThread_free_lock(%p) called\n", lock));
-
-	if (!thelock)
-		return;
-
-	status = sem_destroy(thelock);
-	CHECK_STATUS("sem_destroy");
-
-	free((void *)thelock);
-}
-
-/*
- * As of February 2002, Cygwin thread implementations mistakenly report error
- * codes in the return value of the sem_ calls (like the pthread_ functions).
- * Correct implementations return -1 and put the code in errno. This supports
- * either.
- */
-static int
-fix_status(int status)
-{
-	return (status == -1) ? errno : status;
-}
-
-int 
-PyThread_acquire_lock(PyThread_type_lock lock, int waitflag)
-{
-	int success;
-	sem_t *thelock = (sem_t *)lock;
-	int status, error = 0;
-
-	dprintf(("PyThread_acquire_lock(%p, %d) called\n", lock, waitflag));
-
-	do {
-		if (waitflag)
-			status = fix_status(sem_wait(thelock));
-		else
-			status = fix_status(sem_trywait(thelock));
-	} while (status == EINTR); /* Retry if interrupted by a signal */
-
-	if (waitflag) {
-		CHECK_STATUS("sem_wait");
-	} else if (status != EAGAIN) {
-		CHECK_STATUS("sem_trywait");
-	}
-	
-	success = (status == 0) ? 1 : 0;
-
-	dprintf(("PyThread_acquire_lock(%p, %d) -> %d\n", lock, waitflag, success));
-	return success;
-}
-
-void 
-PyThread_release_lock(PyThread_type_lock lock)
-{
-	sem_t *thelock = (sem_t *)lock;
-	int status, error = 0;
-
-	dprintf(("PyThread_release_lock(%p) called\n", lock));
-
-	status = sem_post(thelock);
-	CHECK_STATUS("sem_post");
-}
-
-#else /* USE_SEMAPHORES */
-
 /*
  * Lock support.
  */
@@ -527,4 +406,100 @@ PyThread_release_lock(PyThread_type_lock lock)
 	CHECK_STATUS("pthread_cond_signal");
 }
 
-#endif /* USE_SEMAPHORES */
+/*
+ * Semaphore support.
+ */
+
+struct semaphore {
+	pthread_mutex_t mutex;
+	pthread_cond_t cond;
+	int value;
+};
+
+PyThread_type_sema 
+PyThread_allocate_sema(int value)
+{
+	struct semaphore *sema;
+	int status, error = 0;
+
+	dprintf(("PyThread_allocate_sema called\n"));
+	if (!initialized)
+		PyThread_init_thread();
+
+	sema = (struct semaphore *) malloc(sizeof(struct semaphore));
+	if (sema != NULL) {
+		sema->value = value;
+		status = pthread_mutex_init(&sema->mutex,
+					    pthread_mutexattr_default);
+		CHECK_STATUS("pthread_mutex_init");
+		status = pthread_cond_init(&sema->cond,
+					   pthread_condattr_default);
+		CHECK_STATUS("pthread_cond_init");
+		if (error) {
+			free((void *) sema);
+			sema = NULL;
+		}
+	}
+	dprintf(("PyThread_allocate_sema() -> %p\n",  sema));
+	return (PyThread_type_sema) sema;
+}
+
+void 
+PyThread_free_sema(PyThread_type_sema sema)
+{
+	int status, error = 0;
+	struct semaphore *thesema = (struct semaphore *) sema;
+
+	dprintf(("PyThread_free_sema(%p) called\n",  sema));
+	status = pthread_cond_destroy(&thesema->cond);
+	CHECK_STATUS("pthread_cond_destroy");
+	status = pthread_mutex_destroy(&thesema->mutex);
+	CHECK_STATUS("pthread_mutex_destroy");
+	free((void *) thesema);
+}
+
+int 
+PyThread_down_sema(PyThread_type_sema sema, int waitflag)
+{
+	int status, error = 0, success;
+	struct semaphore *thesema = (struct semaphore *) sema;
+
+	dprintf(("PyThread_down_sema(%p, %d) called\n",  sema, waitflag));
+	status = pthread_mutex_lock(&thesema->mutex);
+	CHECK_STATUS("pthread_mutex_lock");
+	if (waitflag) {
+		while (!error && thesema->value <= 0) {
+			status = pthread_cond_wait(&thesema->cond,
+						   &thesema->mutex);
+			CHECK_STATUS("pthread_cond_wait");
+		}
+	}
+	if (error)
+		success = 0;
+	else if (thesema->value > 0) {
+		thesema->value--;
+		success = 1;
+	}
+	else
+		success = 0;
+	status = pthread_mutex_unlock(&thesema->mutex);
+	CHECK_STATUS("pthread_mutex_unlock");
+	dprintf(("PyThread_down_sema(%p) return\n",  sema));
+	return success;
+}
+
+void 
+PyThread_up_sema(PyThread_type_sema sema)
+{
+	int status, error = 0;
+	struct semaphore *thesema = (struct semaphore *) sema;
+
+	dprintf(("PyThread_up_sema(%p)\n",  sema));
+	status = pthread_mutex_lock(&thesema->mutex);
+	CHECK_STATUS("pthread_mutex_lock");
+	thesema->value++;
+	status = pthread_cond_signal(&thesema->cond);
+	CHECK_STATUS("pthread_cond_signal");
+	status = pthread_mutex_unlock(&thesema->mutex);
+	CHECK_STATUS("pthread_mutex_unlock");
+}

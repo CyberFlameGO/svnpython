@@ -1,10 +1,11 @@
 # Scan <Menus.h>, generating menugen.py.
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 
 from scantools import Scanner
+from bgenlocations import TOOLBOXDIR
 
 def main():
 	input = "Menus.h"
@@ -13,8 +14,6 @@ def main():
 	scanner = MyScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now doing 'import menusupport' ==="
 	import menusupport
 	print "=== Done.  It's up to you to compile Menumodule.c ==="

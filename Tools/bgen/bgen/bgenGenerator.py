@@ -5,7 +5,6 @@ from bgenVariable import *
 
 Error = "bgenGenerator.Error"
 
-DEBUG=0
 
 # Strings to specify argument transfer modes in generator calls
 IN = "in"
@@ -16,7 +15,7 @@ INOUT = IN_OUT = "in-out"
 class BaseFunctionGenerator:
 
 	def __init__(self, name, condition=None):
-		if DEBUG: print "<--", name
+		print "<--", name
 		self.name = name
 		self.prefix = name
 		self.objecttype = "PyObject" # Type of _self argument to function
@@ -26,7 +25,7 @@ class BaseFunctionGenerator:
 		self.prefix = prefix
 
 	def generate(self):
-		if DEBUG: print "-->", self.name
+		print "-->", self.name
 		if self.condition:
 			Output()
 			Output(self.condition)
@@ -57,7 +56,7 @@ class BaseFunctionGenerator:
 			Output()
 			Output(self.condition)		
 		Output("{\"%s\", (PyCFunction)%s_%s, 1,", name, self.prefix, self.name)
-		Output(" PyDoc_STR(%s)},", stringify(docstring))
+		Output(" %s},", stringify(docstring))
 		if self.condition:
 			Output("#endif")
 
@@ -131,6 +130,7 @@ class FunctionGenerator(BaseFunctionGenerator):
 			self.argumentList.append(arg)
 	
 	def docstring(self):
+		import string
 		input = []
 		output = []
 		for arg in self.argumentList:
@@ -155,11 +155,11 @@ class FunctionGenerator(BaseFunctionGenerator):
 		if not input:
 			instr = "()"
 		else:
-			instr = "(%s)" % ", ".join(input)
+			instr = "(%s)" % string.joinfields(input, ", ")
 		if not output or output == ["void"]:
 			outstr = "None"
 		else:
-			outstr = "(%s)" % ", ".join(output)
+			outstr = "(%s)" % string.joinfields(output, ", ")
 		return instr + " -> " + outstr
 	
 	def functionbody(self):

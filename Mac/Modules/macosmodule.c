@@ -60,7 +60,7 @@ typedef struct {
 	int isclosed;
 } rfobject;
 
-static PyTypeObject Rftype;
+staticforward PyTypeObject Rftype;
 
 
 
@@ -259,7 +259,7 @@ static void
 rf_dealloc(rfobject *self)
 {
 	do_close(self);
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *
@@ -757,6 +757,11 @@ initMacOS(void)
 		if( PyDict_SetItemString(d, "string_id_to_buffer", Py_BuildValue("i", off)) != 0)
 			return;
 	}
+#if !TARGET_API_MAC_OSX
+	if (PyDict_SetItemString(d, "AppearanceCompliant", 
+				Py_BuildValue("i", PyMac_AppearanceCompliant)) != 0)
+		return;
+#endif
 #if TARGET_API_MAC_OSX
 #define PY_RUNTIMEMODEL "macho"
 #elif TARGET_API_MAC_OS8

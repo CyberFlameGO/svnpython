@@ -1,7 +1,7 @@
 """Suite Type Names Suite: Terminology for Registry data types
 Level 1, version 1
 
-Generated from /Volumes/Sap/System Folder/Extensions/AppleScript
+Generated from Moes:Systeemmap:Extensies:AppleScript
 AETE/AEUT resource version 1/0, language 0, script 0
 """
 
@@ -178,210 +178,169 @@ class type_suite_info(aetools.ComponentItem):
 class target_id(aetools.ComponentItem):
 	"""target id -  """
 	want = 'targ'
-type_class_info._superclassnames = []
-type_class_info._privpropdict = {
+type_class_info._propdict = {
 }
-type_class_info._privelemdict = {
+type_class_info._elemdict = {
 }
-type_event_info._superclassnames = []
-type_event_info._privpropdict = {
+type_event_info._propdict = {
 }
-type_event_info._privelemdict = {
+type_event_info._elemdict = {
 }
-plain_text._superclassnames = []
-plain_text._privpropdict = {
+plain_text._propdict = {
 }
-plain_text._privelemdict = {
+plain_text._elemdict = {
 }
-plain_text._superclassnames = []
-plain_text._privpropdict = {
+plain_text._propdict = {
 }
-plain_text._privelemdict = {
+plain_text._elemdict = {
 }
-bounding_rectangle._superclassnames = []
-bounding_rectangle._privpropdict = {
+bounding_rectangle._propdict = {
 }
-bounding_rectangle._privelemdict = {
+bounding_rectangle._elemdict = {
 }
-point._superclassnames = []
-point._privpropdict = {
+point._propdict = {
 }
-point._privelemdict = {
+point._elemdict = {
 }
-fixed._superclassnames = []
-fixed._privpropdict = {
+fixed._propdict = {
 }
-fixed._privelemdict = {
+fixed._elemdict = {
 }
-location_reference._superclassnames = []
-location_reference._privpropdict = {
+location_reference._propdict = {
 }
-location_reference._privelemdict = {
+location_reference._elemdict = {
 }
-application_dictionary._superclassnames = []
-application_dictionary._privpropdict = {
+application_dictionary._propdict = {
 }
-application_dictionary._privelemdict = {
+application_dictionary._elemdict = {
 }
-color_table._superclassnames = []
-color_table._privpropdict = {
+color_table._propdict = {
 }
-color_table._privelemdict = {
+color_table._elemdict = {
 }
-dash_style._superclassnames = []
-dash_style._privpropdict = {
+dash_style._propdict = {
 }
-dash_style._privelemdict = {
+dash_style._elemdict = {
 }
-double_integer._superclassnames = []
-double_integer._privpropdict = {
+double_integer._propdict = {
 }
-double_integer._privelemdict = {
+double_integer._elemdict = {
 }
-extended_real._superclassnames = []
-extended_real._privpropdict = {
+extended_real._propdict = {
 }
-extended_real._privelemdict = {
+extended_real._elemdict = {
 }
-fixed_point._superclassnames = []
-fixed_point._privpropdict = {
+fixed_point._propdict = {
 }
-fixed_point._privelemdict = {
+fixed_point._elemdict = {
 }
-fixed_rectangle._superclassnames = []
-fixed_rectangle._privpropdict = {
+fixed_rectangle._propdict = {
 }
-fixed_rectangle._privelemdict = {
+fixed_rectangle._elemdict = {
 }
-long_fixed._superclassnames = []
-long_fixed._privpropdict = {
+long_fixed._propdict = {
 }
-long_fixed._privelemdict = {
+long_fixed._elemdict = {
 }
-long_fixed_point._superclassnames = []
-long_fixed_point._privpropdict = {
+long_fixed_point._propdict = {
 }
-long_fixed_point._privelemdict = {
+long_fixed_point._elemdict = {
 }
-long_fixed_rectangle._superclassnames = []
-long_fixed_rectangle._privpropdict = {
+long_fixed_rectangle._propdict = {
 }
-long_fixed_rectangle._privelemdict = {
+long_fixed_rectangle._elemdict = {
 }
-long_point._superclassnames = []
-long_point._privpropdict = {
+long_point._propdict = {
 }
-long_point._privelemdict = {
+long_point._elemdict = {
 }
-long_rectangle._superclassnames = []
-long_rectangle._privpropdict = {
+long_rectangle._propdict = {
 }
-long_rectangle._privelemdict = {
+long_rectangle._elemdict = {
 }
-machine_location._superclassnames = []
-machine_location._privpropdict = {
+machine_location._propdict = {
 }
-machine_location._privelemdict = {
+machine_location._elemdict = {
 }
-menu._superclassnames = []
-menu._privpropdict = {
+menu._propdict = {
 }
-menu._privelemdict = {
+menu._elemdict = {
 }
-menu_item._superclassnames = []
-menu_item._privpropdict = {
+menu_item._propdict = {
 }
-menu_item._privelemdict = {
+menu_item._elemdict = {
 }
-null._superclassnames = []
-null._privpropdict = {
+null._propdict = {
 }
-null._privelemdict = {
+null._elemdict = {
 }
-pixel_map_record._superclassnames = []
-pixel_map_record._privpropdict = {
+pixel_map_record._propdict = {
 }
-pixel_map_record._privelemdict = {
+pixel_map_record._elemdict = {
 }
-PostScript_picture._superclassnames = []
-PostScript_picture._privpropdict = {
+PostScript_picture._propdict = {
 }
-PostScript_picture._privelemdict = {
+PostScript_picture._elemdict = {
 }
-RGB16_color._superclassnames = []
-RGB16_color._privpropdict = {
+RGB16_color._propdict = {
 }
-RGB16_color._privelemdict = {
+RGB16_color._elemdict = {
 }
-RGB96_color._superclassnames = []
-RGB96_color._privpropdict = {
+RGB96_color._propdict = {
 }
-RGB96_color._privelemdict = {
+RGB96_color._elemdict = {
 }
-small_integer._superclassnames = []
-small_integer._privpropdict = {
+small_integer._propdict = {
 }
-small_integer._privelemdict = {
+small_integer._elemdict = {
 }
-small_real._superclassnames = []
-small_real._privpropdict = {
+small_real._propdict = {
 }
-small_real._privelemdict = {
+small_real._elemdict = {
 }
-system_dictionary._superclassnames = []
-system_dictionary._privpropdict = {
+system_dictionary._propdict = {
 }
-system_dictionary._privelemdict = {
+system_dictionary._elemdict = {
 }
-rotation._superclassnames = []
-rotation._privpropdict = {
+rotation._propdict = {
 }
-rotation._privelemdict = {
+rotation._elemdict = {
 }
-scrap_styles._superclassnames = []
-scrap_styles._privpropdict = {
+scrap_styles._propdict = {
 }
-scrap_styles._privelemdict = {
+scrap_styles._elemdict = {
 }
-TIFF_picture._superclassnames = []
-TIFF_picture._privpropdict = {
+TIFF_picture._propdict = {
 }
-TIFF_picture._privelemdict = {
+TIFF_picture._elemdict = {
 }
-version._superclassnames = []
-version._privpropdict = {
+version._propdict = {
 }
-version._privelemdict = {
+version._elemdict = {
 }
-unsigned_integer._superclassnames = []
-unsigned_integer._privpropdict = {
+unsigned_integer._propdict = {
 }
-unsigned_integer._privelemdict = {
+unsigned_integer._elemdict = {
 }
-type_property_info._superclassnames = []
-type_property_info._privpropdict = {
+type_property_info._propdict = {
 }
-type_property_info._privelemdict = {
+type_property_info._elemdict = {
 }
-type_element_info._superclassnames = []
-type_element_info._privpropdict = {
+type_element_info._propdict = {
 }
-type_element_info._privelemdict = {
+type_element_info._elemdict = {
 }
-type_parameter_info._superclassnames = []
-type_parameter_info._privpropdict = {
+type_parameter_info._propdict = {
 }
-type_parameter_info._privelemdict = {
+type_parameter_info._elemdict = {
 }
-type_suite_info._superclassnames = []
-type_suite_info._privpropdict = {
+type_suite_info._propdict = {
 }
-type_suite_info._privelemdict = {
+type_suite_info._elemdict = {
 }
-target_id._superclassnames = []
-target_id._privpropdict = {
+target_id._propdict = {
 }
-target_id._privelemdict = {
+target_id._elemdict = {
 }
 
 #

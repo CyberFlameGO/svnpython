@@ -15,14 +15,13 @@ PyCFunction_New(PyMethodDef *ml, PyObject *self)
 		PyObject_INIT(op, &PyCFunction_Type);
 	}
 	else {
-		op = PyObject_GC_New(PyCFunctionObject, &PyCFunction_Type);
+		op = PyObject_NEW(PyCFunctionObject, &PyCFunction_Type);
 		if (op == NULL)
 			return NULL;
 	}
 	op->m_ml = ml;
 	Py_XINCREF(self);
 	op->m_self = self;
-	_PyObject_GC_TRACK(op);
 	return (PyObject *)op;
 }
 
@@ -62,7 +61,7 @@ PyCFunction_Call(PyObject *func, PyObject *arg, PyObject *kw)
 	PyCFunctionObject* f = (PyCFunctionObject*)func;
 	PyCFunction meth = PyCFunction_GET_FUNCTION(func);
 	PyObject *self = PyCFunction_GET_SELF(func);
-	int flags = PyCFunction_GET_FLAGS(func) & ~(METH_CLASS | METH_STATIC);
+	int flags = PyCFunction_GET_FLAGS(func);
 	int size = PyTuple_GET_SIZE(arg);
 
 	if (flags & METH_KEYWORDS) {
@@ -111,7 +110,6 @@ PyCFunction_Call(PyObject *func, PyObject *arg, PyObject *kw)
 static void
 meth_dealloc(PyCFunctionObject *m)
 {
-	_PyObject_GC_UNTRACK(m);
 	Py_XDECREF(m->m_self);
 	m->m_self = (PyObject *)free_list;
 	free_list = m;
@@ -233,7 +231,7 @@ PyTypeObject PyCFunction_Type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
+	Py_TPFLAGS_DEFAULT,			/* tp_flags */
  	0,					/* tp_doc */
  	(traverseproc)meth_traverse,		/* tp_traverse */
 	0,					/* tp_clear */
@@ -327,6 +325,6 @@ PyCFunction_Fini(void)
 	while (free_list) {
 		PyCFunctionObject *v = free_list;
 		free_list = (PyCFunctionObject *)(v->m_self);
-		PyObject_GC_Del(v);
+		PyObject_DEL(v);
 	}
 }

@@ -2,7 +2,7 @@ import formatter
 import htmllib
 import unittest
 
-from test import test_support
+import test_support
 
 
 class AnchorCollector(htmllib.HTMLParser):

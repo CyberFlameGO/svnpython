@@ -236,7 +236,7 @@ sizeofimage(PyObject *self, PyObject *args)
 	IMAGE image;
 	FILE *inf;
 
-	if (!PyArg_ParseTuple(args, "s:sizeofimage", &name))
+	if (!PyArg_Parse(args, "s", &name))
 		return NULL;
 
 	inf = fopen(name, "rb");
@@ -275,7 +275,7 @@ longimagedata(PyObject *self, PyObject *args)
 	int rlebuflen;
 	PyObject *rv = NULL;
 
-	if (!PyArg_ParseTuple(args, "s:longimagedata", &name))
+	if (!PyArg_Parse(args, "s", &name))
 		return NULL;
 
 	inf = fopen(name,"rb");
@@ -570,8 +570,8 @@ longstoimage(PyObject *self, PyObject *args)
 	int rlebuflen, goodwrite;
 	PyObject *retval = NULL;
 
-	if (!PyArg_ParseTuple(args, "s#iiis:longstoimage", &lptr, &len,
-			      &xsize, &ysize, &zsize, &name))
+	if (!PyArg_Parse(args, "(s#iiis)", &lptr, &len, &xsize, &ysize, &zsize,
+			 &name))
 		return NULL;
 
 	goodwrite = 1;
@@ -734,7 +734,7 @@ ttob(PyObject *self, PyObject *args)
 {
 	int order, oldorder;
 
-	if (!PyArg_ParseTuple(args, "i:ttob", &order))
+	if (!PyArg_Parse(args, "i", &order))
 		return NULL;
 	oldorder = reverse_order;
 	reverse_order = order;
@@ -743,15 +743,15 @@ ttob(PyObject *self, PyObject *args)
 
 static PyMethodDef
 rgbimg_methods[] = {
-	{"sizeofimage",	   sizeofimage, METH_VARARGS},
-	{"longimagedata",  longimagedata, METH_VARARGS},
-	{"longstoimage",   longstoimage, METH_VARARGS},
-	{"ttob",	   ttob, METH_VARARGS},
+	{"sizeofimage",	   sizeofimage},
+	{"longimagedata",  longimagedata},
+	{"longstoimage",   longstoimage},
+	{"ttob",	   ttob},
 	{NULL,             NULL}	     /* sentinel */
 };
 
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initrgbimg(void)
 {
 	PyObject *m, *d;

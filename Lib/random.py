@@ -434,10 +434,6 @@ class Random:
         """
         # mean: mean angle (in radians between 0 and pi)
         # arc:  range of distribution (in radians between 0 and pi)
-        import warnings
-        warnings.warn("The cunifvariate function is deprecated; Use (mean "
-                      "+ arc * (Random.random() - 0.5)) % Math.pi instead",
-                      DeprecationWarning)
 
         return (mean + arc * (self.random() - 0.5)) % _pi
 

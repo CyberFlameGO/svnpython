@@ -65,7 +65,7 @@ descr_check(PyDescrObject *descr, PyObject *obj, PyTypeObject *type,
 		*pres = (PyObject *)descr;
 		return 1;
 	}
-	if (!PyObject_TypeCheck(obj, descr->d_type)) {
+	if (!PyObject_IsInstance(obj, (PyObject *)(descr->d_type))) {
 		PyErr_Format(PyExc_TypeError,
 			     "descriptor '%s' for '%s' objects "
 			     "doesn't apply to '%s' object",
@@ -555,6 +555,12 @@ PyDescr_NewWrapper(PyTypeObject *type, struct wrapperbase *base, void *wrapped)
 	return (PyObject *)descr;
 }
 
+int
+PyDescr_IsData(PyObject *d)
+{
+	return d->ob_type->tp_descr_set != NULL;
+}
+
 
 /* --- Readonly proxy for dictionaries (actually any mapping) --- */
 
@@ -638,49 +644,18 @@ proxy_items(proxyobject *pp)
 }
 
 static PyObject *
-proxy_iterkeys(proxyobject *pp)
-{
-	return PyObject_CallMethod(pp->dict, "iterkeys", NULL);
-}
-
-static PyObject *
-proxy_itervalues(proxyobject *pp)
-{
-	return PyObject_CallMethod(pp->dict, "itervalues", NULL);
-}
-
-static PyObject *
-proxy_iteritems(proxyobject *pp)
-{
-	return PyObject_CallMethod(pp->dict, "iteritems", NULL);
-}
-static PyObject *
 proxy_copy(proxyobject *pp)
 {
 	return PyObject_CallMethod(pp->dict, "copy", NULL);
 }
 
 static PyMethodDef proxy_methods[] = {
-	{"has_key",   (PyCFunction)proxy_has_key,    METH_O,
-	 PyDoc_STR("D.has_key(k) -> 1 if D has a key k, else 0")},
-	{"get",       (PyCFunction)proxy_get,        METH_VARARGS,
-	 PyDoc_STR("D.get(k[,d]) -> D[k] if D.has_key(k), else d."
-	 				"  d defaults to None.")},
-	{"keys",      (PyCFunction)proxy_keys,       METH_NOARGS,
-	 PyDoc_STR("D.keys() -> list of D's keys")},
-	{"values",    (PyCFunction)proxy_values,     METH_NOARGS,
-	 PyDoc_STR("D.values() -> list of D's values")},
-	{"items",     (PyCFunction)proxy_items,      METH_NOARGS,
-	 PyDoc_STR("D.items() -> list of D's (key, value) pairs, as 2-tuples")},
-	{"iterkeys",  (PyCFunction)proxy_iterkeys,   METH_NOARGS,
-	 PyDoc_STR("D.iterkeys() -> an iterator over the keys of D")},
-	{"itervalues",(PyCFunction)proxy_itervalues, METH_NOARGS,
-	 PyDoc_STR("D.itervalues() -> an iterator over the values of D")},
-	{"iteritems", (PyCFunction)proxy_iteritems,  METH_NOARGS,
-	 PyDoc_STR("D.iteritems() ->"
-	 	   " an iterator over the (key, value) items of D")},
-	{"copy",      (PyCFunction)proxy_copy,       METH_NOARGS,
-	 PyDoc_STR("D.copy() -> a shallow copy of D")},
+	{"has_key", (PyCFunction)proxy_has_key, METH_O, "XXX"},
+	{"get",	    (PyCFunction)proxy_get,     METH_VARARGS, "XXX"},
+	{"keys",    (PyCFunction)proxy_keys,    METH_NOARGS, "XXX"},
+	{"values",  (PyCFunction)proxy_values,  METH_NOARGS, "XXX"},
+	{"items",   (PyCFunction)proxy_items,   METH_NOARGS, "XXX"},
+	{"copy",    (PyCFunction)proxy_copy,    METH_NOARGS, "XXX"},
 	{0}
 };
 
@@ -718,22 +693,10 @@ proxy_traverse(PyObject *self, visitproc visit, void *arg)
 	return 0;
 }
 
-static int
-proxy_compare(proxyobject *v, PyObject *w)
-{
-	return PyObject_Compare(v->dict, w);
-}
-
-static PyObject *
-proxy_richcompare(proxyobject *v, PyObject *w, int op)
-{
-	return PyObject_RichCompare(v->dict, w, op);
-}
-
 static PyTypeObject proxytype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
-	"dictproxy",				/* tp_name */
+	"dict-proxy",				/* tp_name */
 	sizeof(proxyobject),			/* tp_basicsize */
 	0,					/* tp_itemsize */
 	/* methods */
@@ -741,7 +704,7 @@ static PyTypeObject proxytype = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	(cmpfunc)proxy_compare,			/* tp_compare */
+	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	&proxy_as_sequence,			/* tp_as_sequence */
@@ -756,7 +719,7 @@ static PyTypeObject proxytype = {
  	0,					/* tp_doc */
 	proxy_traverse,				/* tp_traverse */
  	0,					/* tp_clear */
-	(richcmpfunc)proxy_richcompare,		/* tp_richcompare */
+	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
 	(getiterfunc)proxy_getiter,		/* tp_iter */
 	0,					/* tp_iternext */
@@ -1070,7 +1033,7 @@ property_init(PyObject *self, PyObject *args, PyObject *kwds)
 	return 0;
 }
 
-PyDoc_STRVAR(property_doc,
+static char property_doc[] =
 "property(fget=None, fset=None, fdel=None, doc=None) -> property attribute\n"
 "\n"
 "fget is a function to be used for getting an attribute value, and likewise\n"
@@ -1080,7 +1043,7 @@ PyDoc_STRVAR(property_doc,
 "    def getx(self): return self.__x\n"
 "    def setx(self, value): self.__x = value\n"
 "    def delx(self): del self.__x\n"
-"    x = property(getx, setx, delx, \"I'm the 'x' property.\")");
+"    x = property(getx, setx, delx, \"I'm the 'x' property.\")";
 
 static int
 property_traverse(PyObject *self, visitproc visit, void *arg)
@@ -1144,5 +1107,5 @@ PyTypeObject PyProperty_Type = {
 	property_init,				/* tp_init */
 	PyType_GenericAlloc,			/* tp_alloc */
 	PyType_GenericNew,			/* tp_new */
-	PyObject_GC_Del,               		/* tp_free */
+	_PyObject_GC_Del,			/* tp_free */
 };

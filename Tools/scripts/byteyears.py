@@ -7,6 +7,7 @@
 # Options -[amc] select atime, mtime (default) or ctime as age.
 
 import sys, os, time
+import string
 from stat import *
 
 # Use lstat() to stat files if it exists, else stat()
@@ -50,7 +51,7 @@ for file in sys.argv[1:]:
         size = st[ST_SIZE]
         age = now - anytime
         byteyears = float(size) * float(age) / secs_per_year
-        print file.ljust(maxlen),
-        print repr(int(byteyears)).rjust(8)
+        print string.ljust(file, maxlen),
+        print string.rjust(`int(byteyears)`, 8)
 
 sys.exit(status)

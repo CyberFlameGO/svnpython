@@ -35,7 +35,7 @@ def cmp(f1, f2, shallow=1, use_statcache=0):
 
     Return value:
 
-    True if the files are the same, False otherwise.
+    integer -- 1 if the files are the same, 0 otherwise.
 
     This function uses a cache for past comparisons and the results,
     with a cache invalidation mechanism relying on stale signatures.
@@ -50,11 +50,11 @@ def cmp(f1, f2, shallow=1, use_statcache=0):
     s1 = _sig(stat_function(f1))
     s2 = _sig(stat_function(f2))
     if s1[0] != stat.S_IFREG or s2[0] != stat.S_IFREG:
-        return False
+        return 0
     if shallow and s1 == s2:
-        return True
+        return 1
     if s1[1] != s2[1]:
-        return False
+        return 0
 
     result = _cache.get((f1, f2))
     if result and (s1, s2) == result[:2]:
@@ -64,9 +64,9 @@ def cmp(f1, f2, shallow=1, use_statcache=0):
     return outcome
 
 def _sig(st):
-    return (stat.S_IFMT(st.st_mode),
-            st.st_size,
-            st.st_mtime)
+    return (stat.S_IFMT(st[stat.ST_MODE]),
+            st[stat.ST_SIZE],
+            st[stat.ST_MTIME])
 
 def _do_cmp(f1, f2):
     bufsize = BUFSIZE
@@ -199,8 +199,8 @@ class dircmp:
                 ok = 0
 
             if ok:
-                a_type = stat.S_IFMT(a_stat.st_mode)
-                b_type = stat.S_IFMT(b_stat.st_mode)
+                a_type = stat.S_IFMT(a_stat[stat.ST_MODE])
+                b_type = stat.S_IFMT(b_stat[stat.ST_MODE])
                 if a_type != b_type:
                     self.common_funny.append(x)
                 elif stat.S_ISDIR(a_type):
@@ -228,8 +228,8 @@ class dircmp:
 
     def phase4_closure(self): # Recursively call phase4() on subdirectories
         self.phase4()
-        for sd in self.subdirs.itervalues():
-            sd.phase4_closure()
+        for x in self.subdirs.keys():
+            self.subdirs[x].phase4_closure()
 
     def report(self): # Print a report on the differences between a and b
         # Output format is purposely lousy
@@ -258,15 +258,15 @@ class dircmp:
 
     def report_partial_closure(self): # Print reports on self and on subdirs
         self.report()
-        for sd in self.subdirs.itervalues():
+        for x in self.subdirs.keys():
             print
-            sd.report()
+            self.subdirs[x].report()
 
     def report_full_closure(self): # Report on self and subdirs recursively
         self.report()
-        for sd in self.subdirs.itervalues():
+        for x in self.subdirs.keys():
             print
-            sd.report_full_closure()
+            self.subdirs[x].report_full_closure()
 
 
 def cmpfiles(a, b, common, shallow=1, use_statcache=0):

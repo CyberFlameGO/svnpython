@@ -7,7 +7,6 @@ from Carbon import Events
 import traceback
 from types import *
 from Carbon import Menu; MenuToolbox = Menu; del Menu
-import macresource
 
 if hasattr(Win, "FrontNonFloatingWindow"):
 	MyFrontWindow = Win.FrontNonFloatingWindow
@@ -20,8 +19,6 @@ KILLUNKNOWNWINDOWS = 0  # Set to 0 for debugging.
 class Application(FrameWork.Application):
 	
 	def __init__(self, signature='Pyth'):
-		# Open our resource file, if it is not open yet
-		macresource.need('CURS', 468, "Widgets.rsrc")
 		import W
 		W.setapplication(self, signature)
 		FrameWork.Application.__init__(self)
@@ -190,8 +187,6 @@ class Application(FrameWork.Application):
 			self.checkmenus(None)
 		result = MenuToolbox.MenuSelect(where)
 		id = (result>>16) & 0xffff	# Hi word
-		if id >= 0x8000:
-			id = -0x10000 + id
 		item = result & 0xffff		# Lo word
 		self.do_rawmenu(id, item, window, event)
 	
@@ -207,10 +202,7 @@ class Application(FrameWork.Application):
 				import sys
 				sys.stderr.write("XXX killed unknown (crashed?) Python window.\n")
 			else:
-				if hasattr(MacOS, 'HandleEvent'):
-					MacOS.HandleEvent(event)
-				else:
-					print 'Unexpected updateEvent:', event
+				MacOS.HandleEvent(event)
 	
 	def suspendresume(self, onoff):
 		pass

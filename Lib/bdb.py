@@ -6,8 +6,7 @@ import types
 
 __all__ = ["BdbQuit","Bdb","Breakpoint"]
 
-class BdbQuit(Exception):
-    """Exception to give up completely"""
+BdbQuit = 'bdb.BdbQuit' # Exception to give up completely
 
 
 class Bdb:
@@ -94,29 +93,29 @@ class Bdb:
         # (CT) stopframe may now also be None, see dispatch_call.
         # (CT) the former test for None is therefore removed from here.
         if frame is self.stopframe:
-            return True
+            return 1
         while frame is not None and frame is not self.stopframe:
             if frame is self.botframe:
-                return True
+                return 1
             frame = frame.f_back
-        return False
+        return 0
 
     def break_here(self, frame):
         filename = self.canonic(frame.f_code.co_filename)
-        if not filename in self.breaks:
-            return False
+        if not self.breaks.has_key(filename):
+            return 0
         lineno = frame.f_lineno
         if not lineno in self.breaks[filename]:
-            return False
+            return 0
         # flag says ok to delete temp. bp
         (bp, flag) = effective(filename, lineno, frame)
         if bp:
             self.currentbp = bp.number
             if (flag and bp.temporary):
                 self.do_clear(str(bp.number))
-            return True
+            return 1
         else:
-            return False
+            return 0
 
     def do_clear(self, arg):
         raise NotImplementedError, "subclass of bdb must implement do_clear()"
@@ -211,7 +210,7 @@ class Bdb:
         if not line:
             return 'Line %s:%d does not exist' % (filename,
                                    lineno)
-        if not filename in self.breaks:
+        if not self.breaks.has_key(filename):
             self.breaks[filename] = []
         list = self.breaks[filename]
         if not lineno in list:
@@ -220,7 +219,7 @@ class Bdb:
 
     def clear_break(self, filename, lineno):
         filename = self.canonic(filename)
-        if not filename in self.breaks:
+        if not self.breaks.has_key(filename):
             return 'There are no breakpoints in %s' % filename
         if lineno not in self.breaks[filename]:
             return 'There is no breakpoint at %s:%d' % (filename,
@@ -249,7 +248,7 @@ class Bdb:
 
     def clear_all_file_breaks(self, filename):
         filename = self.canonic(filename)
-        if not filename in self.breaks:
+        if not self.breaks.has_key(filename):
             return 'There are no breakpoints in %s' % filename
         for line in self.breaks[filename]:
             blist = Breakpoint.bplist[filename, line]
@@ -267,18 +266,18 @@ class Bdb:
 
     def get_break(self, filename, lineno):
         filename = self.canonic(filename)
-        return filename in self.breaks and \
+        return self.breaks.has_key(filename) and \
             lineno in self.breaks[filename]
 
     def get_breaks(self, filename, lineno):
         filename = self.canonic(filename)
-        return filename in self.breaks and \
+        return self.breaks.has_key(filename) and \
             lineno in self.breaks[filename] and \
             Breakpoint.bplist[filename, lineno] or []
 
     def get_file_breaks(self, filename):
         filename = self.canonic(filename)
-        if filename in self.breaks:
+        if self.breaks.has_key(filename):
             return self.breaks[filename]
         else:
             return []
@@ -316,7 +315,7 @@ class Bdb:
             s = s + frame.f_code.co_name
         else:
             s = s + "<lambda>"
-        if '__args__' in frame.f_locals:
+        if frame.f_locals.has_key('__args__'):
             args = frame.f_locals['__args__']
         else:
             args = None
@@ -324,7 +323,7 @@ class Bdb:
             s = s + repr.repr(args)
         else:
             s = s + '()'
-        if '__return__' in frame.f_locals:
+        if frame.f_locals.has_key('__return__'):
             rv = frame.f_locals['__return__']
             s = s + '->'
             s = s + repr.repr(rv)

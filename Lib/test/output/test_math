@@ -8,7 +8,6 @@ atan2
 ceil
 cos
 cosh
-degrees
 exp
 fabs
 floor
@@ -20,7 +19,6 @@ log
 log10
 modf
 pow
-radians
 sin
 sinh
 sqrt

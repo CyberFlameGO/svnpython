@@ -1,16 +1,11 @@
 \section{Built-in Types \label{types}}
 
 The following sections describe the standard types that are built into
-the interpreter.  Historically, Python's built-in types have differed
-from user-defined types because it was not possible to use the built-in
-types as the basis for object-oriented inheritance. With the 2.2
-release this situation has started to change, although the intended
-unification of user-defined and built-in types is as yet far from
-complete.
-
-The principal built-in types are numerics, sequences, mappings, files
-classes, instances and exceptions.
+the interpreter.  These are the numeric types, sequence types, and
+several others, including types themselves.  There is no explicit
+Boolean type; use integers instead.
 \indexii{built-in}{types}
+\indexii{Boolean}{type}
 
 Some operations are supported by several object types; in particular,
 all objects can be compared, tested for truth value, and converted to
@@ -19,7 +14,7 @@ conversion is implicitly used when an object is written by the
 \keyword{print}\stindex{print} statement.
 
 
-\subsection{Truth Value Testing} \label{truth}
+\subsection{Truth Value Testing \label{truth}}
 
 Any object can be tested for truth value, for use in an \keyword{if} or
 \keyword{while} condition or as operand of the Boolean operations below.
@@ -35,7 +30,7 @@ The following values are considered false:
 \item	\code{None}
         \withsubitem{(Built-in object)}{\ttindex{None}}
 
-\item	\code{False}
+\item   \code{False}
         \withsubitem{(Built-in object)}{\ttindex{False}}
 
 \item	zero of any numeric type, for example, \code{0}, \code{0L},
@@ -59,12 +54,11 @@ always true.
 \index{true}
 
 Operations and built-in functions that have a Boolean result always
-return \code{0} or \code{False} for false and \code{1} or \code{True}
-for true, unless otherwise stated.  (Important exception: the Boolean
-operations \samp{or}\opindex{or} and \samp{and}\opindex{and} always
-return one of their operands.)
-\index{False}
-\index{True}
+return \code{0} for false and \code{1} for true, unless otherwise
+stated.  (Important exception: the Boolean operations
+\samp{or}\opindex{or} and \samp{and}\opindex{and} always return one of
+their operands.)
+
 
 \subsection{Boolean Operations \label{boolean}}
 
@@ -78,7 +72,7 @@ These are the Boolean operations, ordered by ascending priority:
           {if \var{x} is false, then \var{x}, else \var{y}}{(1)}
   \hline
   \lineiii{not \var{x}}
-          {if \var{x} is false, then \code{True}, else \code{False}}{(2)}
+          {if \var{x} is false, then \code{1}, else \code{0}}{(2)}
 \end{tableiii}
 \opindex{and}
 \opindex{or}
@@ -136,6 +130,10 @@ Notes:
 
 \item[(1)]
 \code{<>} and \code{!=} are alternate spellings for the same operator.
+(I couldn't choose between \ABC{} and C! :-)
+\index{ABC language@\ABC{} language}
+\index{language!ABC@\ABC}
+\indexii{C}{language}
 \code{!=} is the preferred spelling; \code{<>} is obsolescent.
 
 \end{description}
@@ -146,9 +144,7 @@ compare equal; such objects are ordered consistently but arbitrarily
 Furthermore, some types (for example, file objects) support only a
 degenerate notion of comparison where any two objects of that type are
 unequal.  Again, such objects are ordered arbitrarily but
-consistently. The \code{<}, \code{<=}, \code{>} and \code{>=}
-operators will raise a \exception{TypeError} exception when any operand
-is a complex number. 
+consistently.
 \indexii{object}{numeric}
 \indexii{objects}{comparing}
 
@@ -169,10 +165,8 @@ only by sequence types (below).
 
 \subsection{Numeric Types \label{typesnumeric}}
 
-There are four distinct numeric types: \dfn{plain integers},
-\dfn{long integers}, 
+There are four numeric types: \dfn{plain integers}, \dfn{long integers}, 
 \dfn{floating point numbers}, and \dfn{complex numbers}.
-In addition, Booleans are a subtype of plain integers.
 Plain integers (also just called \dfn{integers})
 are implemented using \ctype{long} in C, which gives them at least 32
 bits of precision.  Long integers have unlimited precision.  Floating
@@ -180,29 +174,24 @@ point numbers are implemented using \ctype{double} in C.  All bets on
 their precision are off unless you happen to know the machine you are
 working with.
 \obindex{numeric}
-\obindex{Boolean}
 \obindex{integer}
 \obindex{long integer}
 \obindex{floating point}
 \obindex{complex number}
 \indexii{C}{language}
 
-Complex numbers have a real and imaginary part, which are each
+Complex numbers have a real and imaginary part, which are both
 implemented using \ctype{double} in C.  To extract these parts from
-a complex number \var{z}, use \code{\var{z}.real} and \code{\var{z}.imag}.
+a complex number \var{z}, use \code{\var{z}.real} and \code{\var{z}.imag}.  
 
 Numbers are created by numeric literals or as the result of built-in
 functions and operators.  Unadorned integer literals (including hex
-and octal numbers) yield plain integers unless the value they denote
-is too large to be represented as a plain integer, in which case
-they yield a long integer.  Integer literals with an
+and octal numbers) yield plain integers.  Integer literals with an
 \character{L} or \character{l} suffix yield long integers
 (\character{L} is preferred because \samp{1l} looks too much like
 eleven!).  Numeric literals containing a decimal point or an exponent
 sign yield floating point numbers.  Appending \character{j} or
-\character{J} to a numeric literal yields a complex number with a
-zero real part. A complex numeric literal is the sum of a real and
-an imaginary part.
+\character{J} to a numeric literal yields a complex number.
 \indexii{numeric}{literals}
 \indexii{integer}{literals}
 \indexiii{long}{integer}{literals}
@@ -213,23 +202,23 @@ an imaginary part.
 
 Python fully supports mixed arithmetic: when a binary arithmetic
 operator has operands of different numeric types, the operand with the
-``narrower'' type is widened to that of the other, where plain
-integer is narrower than long integer is narrower than floating point is
-narrower than complex.
+``smaller'' type is converted to that of the other, where plain
+integer is smaller than long integer is smaller than floating point is
+smaller than complex.
 Comparisons between numbers of mixed type use the same rule.\footnote{
 	As a consequence, the list \code{[1, 2]} is considered equal
-        to \code{[1.0, 2.0]}, and similarly for tuples.
-} The constructors \function{int()}, \function{long()}, \function{float()},
+        to \code{[1.0, 2.0]}, and similar for tuples.
+} The functions \function{int()}, \function{long()}, \function{float()},
 and \function{complex()} can be used
-to produce numbers of a specific type.
+to coerce numbers to a specific type.
 \index{arithmetic}
 \bifuncindex{int}
 \bifuncindex{long}
 \bifuncindex{float}
 \bifuncindex{complex}
 
-All numeric types support the following operations, sorted by
-ascending priority (operations in the same box have the same
+All numeric types (except complex) support the following operations,
+sorted by ascending priority (operations in the same box have the same
 priority; all numeric operations have a higher priority than
 comparison operations):
 
@@ -239,7 +228,7 @@ comparison operations):
   \hline
   \lineiii{\var{x} * \var{y}}{product of \var{x} and \var{y}}{}
   \lineiii{\var{x} / \var{y}}{quotient of \var{x} and \var{y}}{(1)}
-  \lineiii{\var{x} \%{} \var{y}}{remainder of \code{\var{x} / \var{y}}}{}
+  \lineiii{\var{x} \%{} \var{y}}{remainder of \code{\var{x} / \var{y}}}{(4)}
   \hline
   \lineiii{-\var{x}}{\var{x} negated}{}
   \lineiii{+\var{x}}{\var{x} unchanged}{}
@@ -250,7 +239,7 @@ comparison operations):
   \lineiii{float(\var{x})}{\var{x} converted to floating point}{}
   \lineiii{complex(\var{re},\var{im})}{a complex number with real part \var{re}, imaginary part \var{im}.  \var{im} defaults to zero.}{}
   \lineiii{\var{c}.conjugate()}{conjugate of the complex number \var{c}}{}
-  \lineiii{divmod(\var{x}, \var{y})}{the pair \code{(\var{x} / \var{y}, \var{x} \%{} \var{y})}}{(3)}
+  \lineiii{divmod(\var{x}, \var{y})}{the pair \code{(\var{x} / \var{y}, \var{x} \%{} \var{y})}}{(3)(4)}
   \lineiii{pow(\var{x}, \var{y})}{\var{x} to the power \var{y}}{}
   \lineiii{\var{x} ** \var{y}}{\var{x} to the power \var{y}}{}
 \end{tableiii}
@@ -263,7 +252,7 @@ Notes:
 
 \item[(1)]
 For (plain or long) integer division, the result is an integer.
-The result is always rounded towards minus infinity: 1/2 is 0,
+The result is always rounded towards minus infinity: 1/2 is 0, 
 (-1)/2 is -1, 1/(-2) is -1, and (-1)/(-2) is 0.  Note that the result
 is a long integer if either operand is a long integer, regardless of
 the numeric value.
@@ -282,6 +271,12 @@ for well-defined conversions.
 \item[(3)]
 See section \ref{built-in-funcs}, ``Built-in Functions,'' for a full
 description.
+
+\item[(4)]
+Complex floor division operator, modulo operator, and \function{divmod()}.
+
+\deprecated{2.3}{Instead convert to float using \function{abs()}
+if appropriate.}
 
 \end{description}
 % XXXJH exceptions: overflow (when? what operations?) zerodivision
@@ -391,7 +386,7 @@ broken according to this rule.)
 There are six sequence types: strings, Unicode strings, lists,
 tuples, buffers, and xrange objects.
 
-String literals are written in single or double quotes:
+Strings literals are written in single or double quotes:
 \code{'xyzzy'}, \code{"frobozz"}.  See chapter 2 of the
 \citetitle[../ref/strings.html]{Python Reference Manual} for more about
 string literals.  Unicode strings are much like strings, but are
@@ -410,15 +405,17 @@ item tuple must have a trailing comma, e.g., \code{(d,)}.
 
 Buffer objects are not directly supported by Python syntax, but can be
 created by calling the builtin function
-\function{buffer()}.\bifuncindex{buffer}  They don't support
-concatenation or repetition.
+\function{buffer()}.\bifuncindex{buffer}  They support concatenation
+and repetition, but the result is a new string object rather than a
+new buffer object.
 \obindex{buffer}
 
 Xrange objects are similar to buffers in that there is no specific
-syntax to create them, but they are created using the \function{xrange()}
-function.\bifuncindex{xrange}  They don't support slicing,
-concatenation or repetition, and using \code{in}, \code{not in},
-\function{min()} or \function{max()} on them is inefficient.
+syntax to create them, but they are created using the
+\function{xrange()} function.\bifuncindex{xrange}  They don't support
+slicing or concatenation, but do support repetition, and using
+\code{in}, \code{not in}, \function{min()} or \function{max()} on them
+is inefficient.
 \obindex{xrange}
 
 Most sequence types support the following operations.  The \samp{in} and
@@ -433,15 +430,15 @@ This table lists the sequence operations sorted in ascending priority
 and \var{j} are integers:
 
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
-  \lineiii{\var{x} in \var{s}}{\code{1} if an item of \var{s} is equal to \var{x}, else \code{0}}{(1)}
+  \lineiii{\var{x} in \var{s}}{\code{1} if an item of \var{s} is equal to \var{x}, else \code{0}}{}
   \lineiii{\var{x} not in \var{s}}{\code{0} if an item of \var{s} is
-equal to \var{x}, else \code{1}}{(1)}
+equal to \var{x}, else \code{1}}{}
   \hline
   \lineiii{\var{s} + \var{t}}{the concatenation of \var{s} and \var{t}}{}
-  \lineiii{\var{s} * \var{n}\textrm{,} \var{n} * \var{s}}{\var{n} shallow copies of \var{s} concatenated}{(2)}
+  \lineiii{\var{s} * \var{n}\textrm{,} \var{n} * \var{s}}{\var{n} shallow copies of \var{s} concatenated}{(1)}
   \hline
-  \lineiii{\var{s}[\var{i}]}{\var{i}'th item of \var{s}, origin 0}{(3)}
-  \lineiii{\var{s}[\var{i}:\var{j}]}{slice of \var{s} from \var{i} to \var{j}}{(3), (4)}
+  \lineiii{\var{s}[\var{i}]}{\var{i}'th item of \var{s}, origin 0}{(2)}
+  \lineiii{\var{s}[\var{i}:\var{j}]}{slice of \var{s} from \var{i} to \var{j}}{(2), (3)}
   \hline
   \lineiii{len(\var{s})}{length of \var{s}}{}
   \lineiii{min(\var{s})}{smallest item of \var{s}}{}
@@ -462,12 +459,7 @@ equal to \var{x}, else \code{1}}{(1)}
 Notes:
 
 \begin{description}
-\item[(1)] When \var{s} is a string or Unicode string object the
-\code{in} and \code{not in} operations act like a substring test.  In
-Python versions before 2.3, \var{x} had to be a string of length 1.
-In Python 2.3 and beyond, \var{x} may be a string of any length.
-
-\item[(2)] Values of \var{n} less than \code{0} are treated as
+\item[(1)] Values of \var{n} less than \code{0} are treated as
   \code{0} (which yields an empty sequence of the same type as
   \var{s}).  Note also that the copies are shallow; nested structures
   are not copied.  This often haunts new Python programmers; consider:
@@ -495,12 +487,12 @@ In Python 2.3 and beyond, \var{x} may be a string of any length.
 [[3], [5], [7]]
 \end{verbatim}
 
-\item[(3)] If \var{i} or \var{j} is negative, the index is relative to
+\item[(2)] If \var{i} or \var{j} is negative, the index is relative to
   the end of the string: \code{len(\var{s}) + \var{i}} or
   \code{len(\var{s}) + \var{j}} is substituted.  But note that \code{-0} is
   still \code{0}.
-
-\item[(4)] The slice of \var{s} from \var{i} to \var{j} is defined as
+  
+\item[(3)] The slice of \var{s} from \var{i} to \var{j} is defined as
   the sequence of items with index \var{k} such that \code{\var{i} <=
   \var{k} < \var{j}}.  If \var{i} or \var{j} is greater than
   \code{len(\var{s})}, use \code{len(\var{s})}.  If \var{i} is omitted,
@@ -743,12 +735,11 @@ are replaced with zero or more elements of \var{values}.  The effect
 is similar to the using \cfunction{sprintf()} in the C language.  If
 \var{format} is a Unicode object, or if any of the objects being
 converted using the \code{\%s} conversion are Unicode objects, the
-result will also be a Unicode object.
+result will be a Unicode object as well.
 
 If \var{format} requires a single argument, \var{values} may be a
-single non-tuple object. \footnote{To format only a tuple you
-should therefore provide a singleton tuple whose only element
-is the tuple to be formatted.}  Otherwise, \var{values} must be a tuple with
+single non-tuple object. \footnote{A tuple object in this case should
+  be a singleton.}  Otherwise, \var{values} must be a tuple with
 exactly the number of items specified by the format string, or a
 single mapping object (for example, a dictionary).
 
@@ -758,8 +749,8 @@ following components, which must occur in this order:
 \begin{enumerate}
   \item  The \character{\%} character, which marks the start of the
          specifier.
-  \item  Mapping key (optional), consisting of a parenthesised sequence
-         of characters (for example, \code{(somename)}).
+  \item  Mapping key value (optional), consisting of an identifier in
+         parentheses (for example, \code{(somename)}).
   \item  Conversion flags (optional), which affect the result of some
          conversion types.
   \item  Minimum field width (optional).  If specified as an
@@ -776,15 +767,16 @@ following components, which must occur in this order:
   \item  Conversion type.
 \end{enumerate}
 
-When the right argument is a dictionary (or other mapping type), then
-the formats in the string \emph{must} include a parenthesised mapping key into
+If the right argument is a dictionary (or any kind of mapping), then
+the formats in the string \emph{must} have a parenthesized key into
 that dictionary inserted immediately after the \character{\%}
-character. The mapping key selects the value to be formatted from the
+character, and each format formats the corresponding entry from the
 mapping.  For example:
 
 \begin{verbatim}
->>> print '%(language)s has %(#)03d quote types.' % \
-          {'language': "Python", "#": 2}
+>>> count = 2
+>>> language = 'Python'
+>>> print '%(language)s has %(count)03d quote types.' % vars()
 Python has 002 quote types.
 \end{verbatim}
 
@@ -869,7 +861,7 @@ are replaced by \code{\%g} conversions.\footnote{
 
 Additional string operations are defined in standard modules
 \refmodule{string}\refstmodindex{string} and
-\refmodule{re}.\refstmodindex{re}
+\refmodule{re}.\refstmodindex{re} 
 
 
 \subsubsection{XRange Type \label{typesseq-xrange}}
@@ -888,9 +880,9 @@ and the \function{len()} function.
 
 List objects support additional operations that allow in-place
 modification of the object.
-Other mutable sequence types (when added to the language) should
-also support these operations.
-Strings and tuples are immutable sequence types: such objects cannot
+These operations would be supported by other mutable sequence types
+(when added to the language) as well.
+Strings and tuples are immutable sequence types and such objects cannot
 be modified once created.
 The following operations are defined on mutable sequence types (where
 \var{x} is an arbitrary object):
@@ -922,7 +914,7 @@ The following operations are defined on mutable sequence types (where
   \lineiii{\var{s}.reverse()}
 	{reverses the items of \var{s} in place}{(6)}
   \lineiii{\var{s}.sort(\optional{\var{cmpfunc}})}
-	{sort the items of \var{s} in place}{(6), (7), (8)}
+	{sort the items of \var{s} in place}{(6), (7)}
 \end{tableiii}
 \indexiv{operations on}{mutable}{sequence}{types}
 \indexiii{operations on}{sequence}{types}
@@ -937,12 +929,12 @@ The following operations are defined on mutable sequence types (where
 \noindent
 Notes:
 \begin{description}
-\item[(1)] The C implementation of Python historically accepted
-  multiple parameters and implicitly joined them into a tuple;
-  Use of this misfeature has been deprecated since Python 1.4,
-  and became an error with the introduction of Python 2.0.
+\item[(1)] The C implementation of Python has historically accepted
+  multiple parameters and implicitly joined them into a tuple; this
+  no longer works in Python 2.0.  Use of this misfeature has been
+  deprecated since Python 1.4.
 
-\item[(2)] Raises an exception when \var{x} is not a list object.  The
+\item[(2)] Raises an exception when \var{x} is not a list object.  The 
   \method{extend()} method is experimental and not supported by
   mutable sequence types other than lists.
 
@@ -968,18 +960,10 @@ Notes:
   the first argument is considered smaller than, equal to, or larger
   than the second argument.  Note that this slows the sorting process
   down considerably; e.g. to sort a list in reverse order it is much
-  faster to call method \method{sort()} followed by
-  \method{reverse()} than to use method
-  \method{sort()} with a comparison function that reverses the
+  faster to use calls to the methods \method{sort()} and
+  \method{reverse()} than to use the built-in function
+  \function{sort()} with a comparison function that reverses the
   ordering of the elements.
-
-\item[(8)] Whether the \method{sort()} method is stable is not defined by
-  the language (a sort is stable if it guarantees not to change the
-  relative order of elements that compare equal).  In the C
-  implementation of Python, sorts were stable only by accident through
-  Python 2.2.  The C implementation of Python 2.3 introduced a stable
-  \method{sort()} method, but code that intends to be portable across
-  implementations and versions must not rely on stability.
 \end{description}
 
 
@@ -987,12 +971,12 @@ Notes:
 \obindex{mapping}
 \obindex{dictionary}
 
-A \dfn{mapping} object maps  immutable values to
+A \dfn{mapping} object maps values of one type (the key type) to
 arbitrary objects.  Mappings are mutable objects.  There is currently
 only one standard mapping type, the \dfn{dictionary}.  A dictionary's keys are
-almost arbitrary values.  Only values containing lists, dictionaries
-or other mutable types (that are compared by value rather than by
-object identity) may not be used as keys.
+almost arbitrary values.  The only types of values not acceptable as
+keys are values containing lists or dictionaries or other mutable
+types that are compared by value rather than by object identity.
 Numeric types used for keys obey the normal rules for numeric
 comparison: if two numbers compare equal (e.g. \code{1} and
 \code{1.0}) then they can be used interchangeably to index the same
@@ -1018,7 +1002,12 @@ arbitrary objects):
   \ttindex{keys()}
   \ttindex{update()}
   \ttindex{values()}
-  \ttindex{get()}}
+  \ttindex{get()}
+  \ttindex{setdefault()}
+  \ttindex{popitem()}
+  \ttindex{iteritems()}
+  \ttindex{iterkeys)}
+  \ttindex{itervalues()}}
 
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
   \lineiii{len(\var{a})}{the number of items in \var{a}}{}
@@ -1056,9 +1045,6 @@ arbitrary objects):
           {\code{\var{a}[\var{k}]} if \code{\var{k} in \var{a}},
            else \var{x} (also setting it)}
           {(5)}
-  \lineiii{\var{a}.pop(\var{k})}
-          {remove specified \var{key} and return corresponding \var{value}}
-          {}			     
   \lineiii{\var{a}.popitem()}
           {remove and return an arbitrary (\var{key}, \var{value}) pair}
           {(6)}
@@ -1112,11 +1098,11 @@ over a dictionary, as often used in set algorithms.
 
 File objects\obindex{file} are implemented using C's \code{stdio}
 package and can be created with the built-in constructor
-\function{file()}\bifuncindex{file} described in section
+\function{file()}\bifuncindex{file} described in section 
 \ref{built-in-funcs}, ``Built-in Functions.''\footnote{\function{file()}
 is new in Python 2.2.  The older built-in \function{open()} is an
 alias for \function{file()}.}
-File objects are also returned
+They are also returned
 by some other built-in functions and methods, such as
 \function{os.popen()} and \function{os.fdopen()} and the
 \method{makefile()} method of socket objects.
@@ -1132,7 +1118,7 @@ Files have the following methods:
 
 
 \begin{methoddesc}[file]{close}{}
-  Close the file.  A closed file cannot be read or written any more.
+  Close the file.  A closed file cannot be read or written anymore.
   Any operation which requires that the file be open will raise a
   \exception{ValueError} after the file has been closed.  Calling
   \method{close()} more than once is allowed.
@@ -1142,6 +1128,12 @@ Files have the following methods:
   Flush the internal buffer, like \code{stdio}'s
   \cfunction{fflush()}.  This may be a no-op on some file-like
   objects.
+\end{methoddesc}
+
+\begin{methoddesc}[file]{isatty}{}
+  Return true if the file is connected to a tty(-like) device, else
+  false.  \note{If a file-like object is not associated
+  with a real file, this method should \emph{not} be implemented.}
 \end{methoddesc}
 
 \begin{methoddesc}[file]{fileno}{}
@@ -1155,29 +1147,6 @@ Files have the following methods:
   \function{os.read()} and friends.  \note{File-like objects
   which do not have a real file descriptor should \emph{not} provide
   this method!}
-\end{methoddesc}
-
-\begin{methoddesc}[file]{isatty}{}
-  Return \code{True} if the file is connected to a tty(-like) device, else
-  \code{False}.  \note{If a file-like object is not associated
-  with a real file, this method should \emph{not} be implemented.}
-\end{methoddesc}
-
-\begin{methoddesc}[file]{next}{}
-A file object is its own iterator, i.e. \code{iter(\var{f})} returns
-\var{f} (unless \var{f} is closed).  When a file is used as an
-iterator, typically in a \keyword{for} loop (for example,
-\code{for line in f: print line}), the \method{next()} method is
-called repeatedly.  This method returns the next input line, or raises
-\exception{StopIteration} when \EOF{} is hit.  In order to make a
-\keyword{for} loop the most efficient way of looping over the lines of
-a file (a very common operation), the \method{next()} method uses a
-hidden read-ahead buffer.  As a consequence of using a read-ahead
-buffer, combining \method{next()} with other file methods (like
-\method{readline()}) does not work right.  However, using
-\method{seek()} to reposition the file to an absolute position will
-flush the read-ahead buffer.
-\versionadded{2.3}
 \end{methoddesc}
 
 \begin{methoddesc}[file]{read}{\optional{size}}
@@ -1195,18 +1164,17 @@ flush the read-ahead buffer.
 \begin{methoddesc}[file]{readline}{\optional{size}}
   Read one entire line from the file.  A trailing newline character is
   kept in the string\footnote{
-	The advantage of leaving the newline on is that
-	returning an empty string is then an unambiguous \EOF{}
-	indication.  It is also possible (in cases where it might
-	matter, for example, if you
-	want to make an exact copy of a file while scanning its lines)
-	to tell whether the last line of a file ended in a newline
+	The advantage of leaving the newline on is that an empty string 
+	can be returned to mean \EOF{} without being ambiguous.  Another 
+	advantage is that (in cases where it might matter, for example. if you 
+	want to make an exact copy of a file while scanning its lines) 
+	you can tell whether the last line of a file ended in a newline
 	or not (yes this happens!).
   } (but may be absent when a file ends with an
   incomplete line).  If the \var{size} argument is present and
   non-negative, it is a maximum byte count (including the trailing
   newline) and an incomplete line may be returned.
-  An empty string is returned \emph{only} when \EOF{} is encountered
+  An empty string is returned when \EOF{} is hit
   immediately.  \note{Unlike \code{stdio}'s \cfunction{fgets()}, the
   returned string contains null characters (\code{'\e 0'}) if they
   occurred in the input.}
@@ -1223,9 +1191,10 @@ flush the read-ahead buffer.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{xreadlines}{}
-  This method returns the same thing as \code{iter(f)}.
+  Equivalent to
+  \function{xreadlines.xreadlines(\var{file})}.\refstmodindex{xreadlines}
+  (See the \refmodule{xreadlines} module for more information.)
   \versionadded{2.1}
-  \deprecated{2.3}{Use \code{for line in file} instead.}
 \end{methoddesc}
 
 \begin{methoddesc}[file]{seek}{offset\optional{, whence}}
@@ -1247,15 +1216,11 @@ flush the read-ahead buffer.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{truncate}{\optional{size}}
-  Truncate the file's size.  If the optional \var{size} argument is
+  Truncate the file's size.  If the optional \var{size} argument
   present, the file is truncated to (at most) that size.  The size
-  defaults to the current position.  The current file position is
-  not changed.  Note that if a specified size exceeds the file's
-  current size, the result is platform-dependent:  possibilities
-  include that file may remain unchanged, increase to the specified
-  size as if zero-filled, or increase to the specified size with
-  undefined new content.
-  Availability:  Windows, many \UNIX variants.
+  defaults to the current position.  Availability of this function
+  depends on the operating system version (for example, not all
+  \UNIX{} versions support this operation).
 \end{methoddesc}
 
 \begin{methoddesc}[file]{write}{str}
@@ -1283,7 +1248,7 @@ These are not required for file-like objects, but should be
 implemented if they make sense for the particular object.
 
 \begin{memberdesc}[file]{closed}
-bool indicating the current state of the file object.  This is a
+Boolean indicating the current state of the file object.  This is a
 read-only attribute; the \method{close()} method changes the value.
 It may not be available on all file-like objects.
 \end{memberdesc}
@@ -1483,22 +1448,6 @@ special operations.  There is exactly one ellipsis object, named
 \constant{Ellipsis} (a built-in name).
 
 It is written as \code{Ellipsis}.
-
-\subsubsection{Boolean Values}
-
-Boolean values are the two constant objects \code{False} and
-\code{True}.  They are used to represent truth values (although other
-values can also be considered false or true).  In numeric contexts
-(for example when used as the argument to an arithmetic operator),
-they behave like the integers 0 and 1, respectively.  The built-in
-function \function{bool()} can be used to cast any value to a Boolean,
-if the value can be interpreted as a truth value (see section Truth
-Value Testing above).
-
-They are written as \code{False} and \code{True}, respectively.
-\index{False}
-\index{True}
-\indexii{Boolean}{values}
 
 
 \subsubsection{Internal Objects \label{typesinternal}}

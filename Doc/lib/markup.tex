@@ -8,11 +8,14 @@ Language (HTML), and several interfaces for working with the
 Extensible Markup Language (XML).
 
 It is important to note that modules in the \module{xml} package
-require that there be at least one SAX-compliant XML parser available.
-Starting with Python 2.3, the Expat parser is included with Python, so
-the \refmodule{xml.parsers.expat} module will always be available.
-You may still want to be aware of the \ulink{PyXML add-on
-package}{http://pyxml.sourceforge.net/}; that package provides an
+require that there be at least one SAX-compliant XML parser
+available.  Python includes an interface to the Expat parser as the
+\refmodule{xml.parsers.expat} module, but this may not be built by
+default on all platforms, since Expat is not always installed, or not
+installed in the default location for libraries.  If this is the case
+for your system, the easiest way to add support for the \module{xml}
+package is to install the \ulink{PyXML add-on
+package}{http://pyxml.sourceforge.net/}.  That package provides an
 extended set of XML libraries for Python.
 
 The documentation for the \module{xml.dom} and \module{xml.sax}

@@ -54,8 +54,9 @@ MAKESETUP=      $(srcdir)/Modules/makesetup
 
 # Compiler options
 OPT=		@OPT@
+DEFS=		@DEFS@
 CFLAGS=		$(OPT)
-CPPFLAGS=	-I. -I$(srcdir)/Include
+CPPFLAGS=	-I. -I$(srcdir)/Include $(DEFS)
 LDFLAGS=	@LDFLAGS@
 LDLAST=		@LDLAST@
 SGI_ABI=	@SGI_ABI@
@@ -64,7 +65,7 @@ LINKFORSHARED=	@LINKFORSHARED@
 # Extra C flags added for building the interpreter object files.
 CFLAGSFORSHARED=@CFLAGSFORSHARED@
 # C flags used for building the interpreter object files
-PY_CFLAGS=	$(CFLAGS) $(CPPFLAGS) $(CFLAGSFORSHARED) -DPy_BUILD_CORE
+PY_CFLAGS=	$(CFLAGS) $(CPPFLAGS) $(CFLAGSFORSHARED)
 
 
 # Machine-dependent subdirectories
@@ -107,9 +108,6 @@ PYTHONFRAMEWORKDIR=	@PYTHONFRAMEWORKDIR@
 PYTHONFRAMEWORKPREFIX=	@PYTHONFRAMEWORKPREFIX@
 PYTHONFRAMEWORKINSTALLDIR= @PYTHONFRAMEWORKINSTALLDIR@
 
-# Environment to run shared python without installed libraries
-RUNSHARED=       @RUNSHARED@
-
 # Modes for directories, executables and data files created by the
 # install process.  Default to user-only-writable for all file types.
 DIRMODE=	755
@@ -138,17 +136,15 @@ LDLIBRARY=      @LDLIBRARY@
 BLDLIBRARY=     @BLDLIBRARY@
 DLLLIBRARY=	@DLLLIBRARY@
 LDLIBRARYDIR=   @LDLIBRARYDIR@
-INSTSONAME=	@INSTSONAME@
 
 
 LIBS=		@LIBS@
 LIBM=		@LIBM@
 LIBC=		@LIBC@
 SYSLIBS=	$(LIBM) $(LIBC)
-SHLIBS=		@SHLIBS@
 
 MAINOBJ=	@MAINOBJ@
-THREADOBJ=	@THREADOBJ@
+LIBOBJS=	@LIBOBJS@
 DLINCLDIR=	@DLINCLDIR@
 DYNLOADFILE=	@DYNLOADFILE@
 MACHDEP_OBJS=	@MACHDEP_OBJS@
@@ -190,15 +186,14 @@ POBJS=		\
 		Parser/node.o \
 		Parser/parser.o \
 		Parser/parsetok.o \
+		Parser/tokenizer.o \
 		Parser/bitset.o \
 		Parser/metagrammar.o
 
-PARSER_OBJS=	$(POBJS) Parser/myreadline.o Parser/tokenizer.o
+PARSER_OBJS=	$(POBJS) Parser/myreadline.o
 
 PGOBJS=		\
-		Objects/obmalloc.o \
 		Python/mysnprintf.o \
-		Parser/tokenizer_pgen.o \
 		Parser/firstsets.o \
 		Parser/grammar.o \
 		Parser/pgen.o \
@@ -243,21 +238,19 @@ PYTHON_OBJS=	\
 		Python/getopt.o \
 		Python/$(DYNLOADFILE) \
 		$(MACHDEP_OBJS) \
-		$(THREADOBJ)
+		$(LIBOBJS)
 
 
 ##########################################################################
 # Objects
 OBJECT_OBJS=	\
 		Objects/abstract.o \
-		Objects/boolobject.o \
 		Objects/bufferobject.o \
 		Objects/cellobject.o \
 		Objects/classobject.o \
 		Objects/cobject.o \
 		Objects/complexobject.o \
 		Objects/descrobject.o \
-		Objects/enumobject.o \
 		Objects/fileobject.o \
 		Objects/floatobject.o \
 		Objects/frameobject.o \
@@ -270,7 +263,6 @@ OBJECT_OBJS=	\
 		Objects/methodobject.o \
 		Objects/moduleobject.o \
 		Objects/object.o \
-		Objects/obmalloc.o \
 		Objects/rangeobject.o \
 		Objects/sliceobject.o \
 		Objects/stringobject.o \
@@ -299,20 +291,20 @@ LIBRARY_OBJS=	\
 all:		$(BUILDPYTHON) oldsharedmods sharedmods
 
 # Build the interpreter
-$(BUILDPYTHON):	Modules/$(MAINOBJ) $(LIBRARY) $(LDLIBRARY)
+$(BUILDPYTHON):	Modules/$(MAINOBJ) $(LDLIBRARY)
 		$(LINKCC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
 			Modules/$(MAINOBJ) \
 			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
 
 platform: $(BUILDPYTHON)
-	$(RUNSHARED) ./$(BUILDPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print get_platform()+"-"+sys.version[0:3]' >platform
+	./$(BUILDPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print get_platform()+"-"+sys.version[0:3]' >platform
 
 
 # Build the shared modules
 sharedmods: $(BUILDPYTHON)
 	case $$MAKEFLAGS in \
-	*-s*) $(RUNSHARED) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py -q build;; \
-	*) $(RUNSHARED) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py build;; \
+	*-s*) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py -q build;; \
+	*) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py build;; \
 	esac
 
 # buildno should really depend on something like LIBRARY_SRC
@@ -340,39 +332,27 @@ $(LIBRARY): $(LIBRARY_OBJS)
 	$(AR) cr $@ $(MODOBJS)
 	$(RANLIB) $@
 
-libpython$(VERSION).so: $(LIBRARY_OBJS)
-	$(LDSHARED) -o $@ $(LIBRARY_OBJS) $(SHLIBS) $(LIBC) $(LIBM)
+# This rule is only here for DG/UX and BeOS!!!
+libpython$(VERSION).so:	$(LIBRARY)
+	case `uname -s | tr -d '/ ' | tr '[A-Z]' '[a-z]'` in \
+	*dgux*) \
+	    test -d dgux || mkdir dgux; \
+	    (cd dgux;ar x ../$^;ld -G -o ../$@ * ); \
+	    /bin/rm -rf ./dgux \
+	    ;; \
+	beos) \
+	    $(AR) so $(LIBRARY) $@ \
+	    ;; \
+	esac
 
-libpython$(VERSION).sl: $(LIBRARY_OBJS)
-	$(LDSHARED) -o $@ $(LIBRARY_OBJS) $(LIBC) $(LIBM)
-
-# This rule is here for OPENSTEP/Rhapsody/MacOSX. It builds a temporary
-# minimal framework (not including the Lib directory and such) in the current
-# directory.
-RESSRCDIR=$(srcdir)/Mac/OSXResources/framework
-$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK): \
-		$(LIBRARY) \
-		$(RESSRCDIR)/Info.plist \
-                $(RESSRCDIR)/version.plist \
-                $(RESSRCDIR)/English.lproj/InfoPlist.strings
-	$(INSTALL) -d -m $(DIRMODE) $(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)
+# This rule is here for OPENSTEP/Rhapsody/MacOSX
+$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK): $(LIBRARY) $(PYTHONFRAMEWORKDIR)
 	libtool -o $(LDLIBRARY) -dynamic $(OTHER_LIBTOOL_OPT) $(LIBRARY) \
 		-framework System @LIBTOOL_CRUFT@
-	$(INSTALL) -d -m $(DIRMODE)  \
-		$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/Resources/English.lproj
-	$(INSTALL_DATA) $(RESSRCDIR)/Info.plist \
-		$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/Resources/Info.plist
-	$(INSTALL_DATA) $(RESSRCDIR)/version.plist \
-		$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/Resources/version.plist
-	$(INSTALL_DATA) $(RESSRCDIR)/English.lproj/InfoPlist.strings \
-		$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/Resources/English.lproj/InfoPlist.strings
-	$(LN) -fsn $(VERSION) $(PYTHONFRAMEWORKDIR)/Versions/Current
-	$(LN) -fsn Versions/Current/Python $(PYTHONFRAMEWORKDIR)/Python
-	$(LN) -fsn Versions/Current/Headers $(PYTHONFRAMEWORKDIR)/Headers
-	$(LN) -fsn Versions/Current/Resources $(PYTHONFRAMEWORKDIR)/Resources
 
 # This rule builds the Cygwin Python DLL
 libpython$(VERSION).dll.a: $(LIBRARY_OBJS)
+	dlltool --export-all --output-def $@ $^
 	$(LDSHARED) -Wl,--out-implib=$@ -o $(DLLLIBRARY) $^ \
 		$(LIBS) $(MODLIBS) $(SYSLIBS)
 
@@ -434,16 +414,16 @@ Parser/grammar.o:	$(srcdir)/Parser/grammar.c \
 				$(srcdir)/Include/grammar.h
 Parser/metagrammar.o:	$(srcdir)/Parser/metagrammar.c
 
-Parser/tokenizer_pgen.o:	$(srcdir)/Parser/tokenizer.c
-
 
 Python/compile.o Python/symtable.o: $(GRAMMAR_H)
 
 Python/getplatform.o: $(srcdir)/Python/getplatform.c
-		$(CC) -c $(PY_CFLAGS) -DPLATFORM='"$(MACHDEP)"' -o $@ $(srcdir)/Python/getplatform.c
+		$(CC) -c $(CFLAGS) $(CPPFLAGS) -DPLATFORM='"$(MACHDEP)"' -o $@ $(srcdir)/Python/getplatform.c
 
 Python/importdl.o: $(srcdir)/Python/importdl.c
-		$(CC) -c $(PY_CFLAGS) -I$(DLINCLDIR) -o $@ $(srcdir)/Python/importdl.c
+		$(CC) -c $(CFLAGS) $(CPPFLAGS) -I$(DLINCLDIR) -o $@ $(srcdir)/Python/importdl.c
+
+Objects/object.o: $(srcdir)/Objects/object.c $(srcdir)/Objects/obmalloc.c
 
 Objects/unicodectype.o:	$(srcdir)/Objects/unicodectype.c \
 				$(srcdir)/Objects/unicodetype_db.h
@@ -454,7 +434,6 @@ Objects/unicodectype.o:	$(srcdir)/Objects/unicodectype.c \
 PYTHON_HEADERS= \
 		Include/Python.h \
 		Include/abstract.h \
-		Include/boolobject.h \
 		Include/bufferobject.h \
 		Include/ceval.h \
 		Include/classobject.h \
@@ -464,7 +443,6 @@ PYTHON_HEADERS= \
 		Include/complexobject.h \
 		Include/descrobject.h \
 		Include/dictobject.h \
-		Include/enumobject.h \
 		Include/fileobject.h \
 		Include/floatobject.h \
 		Include/funcobject.h \
@@ -508,7 +486,7 @@ $(LIBRARY_OBJS) $(MODOBJS) Modules/$(MAINOBJ): $(PYTHON_HEADERS)
 # Test the interpreter (twice, once without .pyc files, once with)
 TESTOPTS=	-l
 TESTPROG=	$(srcdir)/Lib/test/regrtest.py
-TESTPYTHON=	$(RUNSHARED) ./$(BUILDPYTHON) -E -tt
+TESTPYTHON=	./$(BUILDPYTHON) -E -tt
 test:		all platform
 		-find $(srcdir)/Lib -name '*.py[co]' -print | xargs rm -f
 		-$(TESTPYTHON) $(TESTPROG) $(TESTOPTS)
@@ -516,7 +494,7 @@ test:		all platform
 
 QUICKTESTOPTS=	$(TESTOPTS) -x test_thread test_signal test_strftime \
 		test_unicodedata test_re test_sre test_select test_poll \
-		test_linuxaudiodev test_struct test_sunaudiodev test_zlib
+		test_linuxaudiodev test_sunaudiodev
 quicktest:	all platform
 		-find $(srcdir)/Lib -name '*.py[co]' -print | xargs rm -f
 		-$(TESTPYTHON) $(TESTPROG) $(QUICKTESTOPTS)
@@ -560,7 +538,7 @@ $(DESTSHARED):
 
 # Install the interpreter (by creating a hard link to python$(VERSION))
 bininstall:	altbininstall
-	-if test -f $(BINDIR)/$(PYTHON) -o -L $(BINDIR)/$(PYTHON); \
+	-if test -f $(BINDIR)/$(PYTHON); \
 	then rm -f $(BINDIR)/$(PYTHON); \
 	else true; \
 	fi
@@ -569,12 +547,6 @@ bininstall:	altbininstall
 # Install the interpreter with $(VERSION) affixed
 # This goes into $(exec_prefix)
 altbininstall:	$(BUILDPYTHON)
-	@if test "$(PYTHONFRAMEWORKDIR)" != no-framework; then \
-		if test ! -f $(PYTHONFRAMEWORKINSTALLDIR)/Versions/Current/Resources/Info.plist; then \
-			echo 'Framework build: use "make frameworkinstall" in stead of "make install"'; \
-			exit 1; \
-		fi; \
-	fi
 	@for i in $(BINDIR) $(LIBDIR); \
 	do \
 		if test ! -d $$i; then \
@@ -584,12 +556,12 @@ altbininstall:	$(BUILDPYTHON)
 		fi; \
 	done
 	$(INSTALL_PROGRAM) $(BUILDPYTHON) $(BINDIR)/python$(VERSION)$(EXE)
-	if test -f libpython$(VERSION)$(SO); then \
-		if test "$(SO)" = .dll; then \
-			$(INSTALL_SHARED) libpython$(VERSION)$(SO) $(BINDIR); \
-		else \
-			$(INSTALL_SHARED) libpython$(VERSION)$(SO) $(LIBDIR)/$(INSTSONAME); \
-		fi; \
+	if test -f libpython$(VERSION).so; then \
+		$(INSTALL_DATA) libpython$(VERSION).so $(LIBDIR); \
+	else	true; \
+	fi
+	if test -f "$(DLLLIBRARY)"; then \
+		$(INSTALL_SHARED) $(DLLLIBRARY) $(BINDIR); \
 	else	true; \
 	fi
 
@@ -668,12 +640,11 @@ libinstall:	$(BUILDPYTHON) $(srcdir)/Lib/$(PLATDIR)
 		done; \
 	done
 	$(INSTALL_DATA) $(srcdir)/LICENSE $(LIBDEST)/LICENSE.txt
-	PYTHONPATH=$(LIBDEST)  $(RUNSHARED) \
-		./$(BUILDPYTHON) -Wi -tt $(LIBDEST)/compileall.py \
-		-x badsyntax $(LIBDEST)
-	PYTHONPATH=$(LIBDEST) $(RUNSHARED) \
-		./$(BUILDPYTHON) -Wi -tt -O $(LIBDEST)/compileall.py \
-		-x badsyntax $(LIBDEST)
+	PYTHONPATH=$(LIBDEST) \
+		./$(BUILDPYTHON) -tt $(LIBDEST)/compileall.py -x badsyntax \
+	        $(LIBDEST)
+	PYTHONPATH=$(LIBDEST) \
+		./$(BUILDPYTHON) -O $(LIBDEST)/compileall.py -x badsyntax $(LIBDEST)
 
 # Create the PLATDIR source directory, if one wasn't distributed..
 $(srcdir)/Lib/$(PLATDIR):
@@ -715,16 +686,12 @@ libainstall:	all
 		else	true; \
 		fi; \
 	done
-	@if test -d $(LIBRARY); then :; else \
+	@if test -d $(LDLIBRARY); then :; else \
 		if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
-			if test "$(SO)" = .dll; then \
-				$(INSTALL_DATA) $(LDLIBRARY) $(LIBPL) ; \
-			else \
-				$(INSTALL_DATA) $(LIBRARY) $(LIBPL)/$(LIBRARY) ; \
-				$(RANLIB) $(LIBPL)/$(LIBRARY) ; \
-			fi; \
+			$(INSTALL_DATA) $(LDLIBRARY) $(LIBPL)/$(LDLIBRARY) ; \
+			$(RANLIB) $(LIBPL)/$(LDLIBRARY) ; \
 		else \
-			echo Skip install of $(LIBRARY) - use make frameworkinstall; \
+			echo Skip install of $(LDLIBRARY) - use make frameworkinstall; \
 		fi; \
 	fi
 	$(INSTALL_DATA) Modules/config.c $(LIBPL)/config.c
@@ -766,18 +733,35 @@ libainstall:	all
 # Install the dynamically loadable modules
 # This goes into $(exec_prefix)
 sharedinstall:
-	$(RUNSHARED) ./$(BUILDPYTHON) -E $(srcdir)/setup.py install \
-	   	--prefix=$(prefix) \
+	./$(BUILDPYTHON) -E $(srcdir)/setup.py install \
 		--install-scripts=$(BINDIR) \
 		--install-platlib=$(DESTSHARED)
 
-# Here are a couple of targets for MacOSX again, to install a full
-# framework-based Python. frameworkinstall installs everything, the
-# subtargets install specific parts. Much of the actual work is offloaded to
-# the Makefile in Mac/OSX
-#
-frameworkinstall: frameworkinstallframework \
-	frameworkinstallapps frameworkinstallunixtools
+# Install a MacOSX framework During build (before
+# setup.py), make a minimal Python.framework directory structure in the build
+# directory. This framework is minimal, it doesn't contain the Lib directory
+# and such, but together with some magic in Modules/getpath.c it is good enough
+# to run python from the install dir.
+
+FRAMEWORKDEST=$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)
+RESSRCDIR=$(srcdir)/Mac/OSXResources/framework
+$(PYTHONFRAMEWORKDIR): $(RESSRCDIR)/Info.plist \
+                $(RESSRCDIR)/version.plist \
+                $(RESSRCDIR)/English.lproj/InfoPlist.strings
+	@if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
+		echo Not configured with --enable-framework; \
+		exit 1; \
+	else true; \
+	fi
+	$(INSTALL) -d -m $(DIRMODE)  $(FRAMEWORKDEST)/Resources/English.lproj
+	$(INSTALL_DATA) $(RESSRCDIR)/Info.plist $(FRAMEWORKDEST)/Resources/Info.plist
+	$(INSTALL_DATA) $(RESSRCDIR)/version.plist $(FRAMEWORKDEST)/Resources/version.plist
+	$(INSTALL_DATA) $(RESSRCDIR)/English.lproj/InfoPlist.strings \
+		$(FRAMEWORKDEST)/Resources/English.lproj/InfoPlist.strings
+	$(LN) -fs $(VERSION) $(PYTHONFRAMEWORKDIR)/Versions/Current
+	$(LN) -fs Versions/Current/Python $(PYTHONFRAMEWORKDIR)/Python
+	$(LN) -fs Versions/Current/Headers $(PYTHONFRAMEWORKDIR)/Headers
+	$(LN) -fs Versions/Current/Resources $(PYTHONFRAMEWORKDIR)/Resources
 
 # On install, we re-make the framework
 # structure in the install location, /Library/Frameworks/ or the argument to
@@ -785,46 +769,31 @@ frameworkinstall: frameworkinstallframework \
 # automatically set prefix to the location deep down in the framework, so we
 # only have to cater for the structural bits of the framework.
 
-frameworkinstallframework: frameworkinstallstructure install frameworkinstallmaclib
-
-frameworkinstallstructure:	$(LDLIBRARY)
+frameworkinstall: install frameworkinfrastructureinstall
+FRAMEWORKFINALDEST=$(PYTHONFRAMEWORKINSTALLDIR)/Versions/$(VERSION)
+frameworkinfrastructureinstall:	$(LDLIBRARY)
 	@if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
 		echo Not configured with --enable-framework; \
 		exit 1; \
 	else true; \
 	fi
-	@for i in $(prefix)/Resources/English.lproj $(prefix)/lib; do\
+	@for i in $(FRAMEWORKFINALDEST)/Resources/English.lproj $(FRAMEWORKFINALDEST)/lib; do\
 		if test ! -d $$i; then \
 			echo "Creating directory $$i"; \
 			$(INSTALL) -d -m $(DIRMODE) $$i; \
 		else	true; \
 		fi; \
 	done
-	$(LN) -fsn include/python$(VERSION) $(prefix)/Headers
-	$(INSTALL_DATA) $(RESSRCDIR)/Info.plist $(prefix)/Resources/Info.plist
-	$(INSTALL_DATA) $(RESSRCDIR)/version.plist $(prefix)/Resources/version.plist
+	$(LN) -sf $(INCLUDEPY) $(FRAMEWORKFINALDEST)/Headers
+	$(INSTALL_DATA) $(RESSRCDIR)/Info.plist $(FRAMEWORKFINALDEST)/Resources/Info.plist
+	$(INSTALL_DATA) $(RESSRCDIR)/version.plist $(FRAMEWORKFINALDEST)/Resources/version.plist
 	$(INSTALL_DATA) $(RESSRCDIR)/English.lproj/InfoPlist.strings \
-		$(prefix)/Resources/English.lproj/InfoPlist.strings
-	$(LN) -fsn $(VERSION) $(PYTHONFRAMEWORKINSTALLDIR)/Versions/Current
-	$(LN) -fsn Versions/Current/Python $(PYTHONFRAMEWORKINSTALLDIR)/Python
-	$(LN) -fsn Versions/Current/Headers $(PYTHONFRAMEWORKINSTALLDIR)/Headers
-	$(LN) -fsn Versions/Current/Resources $(PYTHONFRAMEWORKINSTALLDIR)/Resources
+		$(FRAMEWORKFINALDEST)/Resources/English.lproj/InfoPlist.strings
+	$(LN) -fs $(VERSION) $(PYTHONFRAMEWORKINSTALLDIR)/Versions/Current
+	$(LN) -fs Versions/Current/Python $(PYTHONFRAMEWORKINSTALLDIR)/Python
+	$(LN) -fs Versions/Current/Headers $(PYTHONFRAMEWORKINSTALLDIR)/Headers
+	$(LN) -fs Versions/Current/Resources $(PYTHONFRAMEWORKINSTALLDIR)/Resources
 	$(INSTALL_DATA) $(LDLIBRARY) $(PYTHONFRAMEWORKPREFIX)/$(LDLIBRARY)
-
-# This installs Mac/Lib into the framework
-frameworkinstallmaclib:
-	$(MAKE) -f $(srcdir)/Mac/OSX/Makefile installmacsubtree \
-		srcdir=$(srcdir) builddir=. prefix=$(prefix) LIBDEST=$(LIBDEST)
-
-# This installs the IDE, the Launcher and other apps into /Applications
-frameworkinstallapps:
-	$(MAKE) -f $(srcdir)/Mac/OSX/Makefile installapps \
-		srcdir=$(srcdir) builddir=. dstroot=$(PYTHONFRAMEWORKPREFIX)/../..
-
-# This install the unix python and pythonw tools in /usr/local/bin
-frameworkinstallunixtools:
-	$(MAKE) -f $(srcdir)/Mac/OSX/Makefile installunixtools \
-		srcdir=$(srcdir) builddir=. dstroot=$(PYTHONFRAMEWORKPREFIX)/../..
 
 # Build the toplevel Makefile
 Makefile.pre: Makefile.pre.in config.status
@@ -928,13 +897,5 @@ funny:
 # Dependencies
 
 Python/thread.o: @THREADHEADERS@
-
-# Declare targets that aren't real files
-.PHONY: all sharedmods oldsharedmods test quicktest memtest
-.PHONY: install altinstall oldsharedinstall bininstall altbininstall
-.PHONY: maninstall libinstall inclinstall libainstall sharedinstall
-.PHONY: frameworkinstall frameworkinstallframework frameworkinstallstructure
-.PHONY: frameworkinstallmaclib frameworkinstallapps frameworkinstallunixtools
-.PHONY: recheck autoconf clean clobber distclean smelly funny
 
 # IF YOU PUT ANYTHING HERE IT WILL GO AWAY

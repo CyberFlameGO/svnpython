@@ -39,13 +39,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 #include "getapplbycreator.h"
 
-/*
-** The next define uses PBGetCatInfoSync for GetFInfo, allowing you
-** to get FInfo for folders. This works on OSX, but it may result
-** in problems on OS9, hence the define (for the time being).
-*/
-#define USE_CATINFO_FOR_FINFO
-
 #ifndef TARGET_API_MAC_OSX
 #include "pythonresources.h"
 extern PyMac_PrefRecord PyMac_options;
@@ -77,7 +70,7 @@ typedef struct {
 	AliasHandle alias;
 } mfsaobject;
 
-static PyTypeObject Mfsatype;
+staticforward PyTypeObject Mfsatype;
 
 #define is_mfsaobject(v)		((v)->ob_type == &Mfsatype)
 
@@ -89,7 +82,7 @@ typedef struct {
 	FSSpec fsspec;
 } mfssobject;
 
-static PyTypeObject Mfsstype;
+staticforward PyTypeObject Mfsstype;
 
 #define is_mfssobject(v)		((v)->ob_type == &Mfsstype)
 
@@ -101,7 +94,7 @@ typedef struct {
 	FSRef fsref;
 } mfsrobject;
 
-static PyTypeObject Mfsrtype;
+staticforward PyTypeObject Mfsrtype;
 
 #define is_mfsrobject(v)		((v)->ob_type == &Mfsrtype)
 
@@ -114,13 +107,13 @@ typedef struct {
 	FInfo finfo;
 } mfsiobject;
 
-static PyTypeObject Mfsitype;
+staticforward PyTypeObject Mfsitype;
 
 #define is_mfsiobject(v)		((v)->ob_type == &Mfsitype)
 
 
-static mfssobject *newmfssobject(FSSpec *fss); /* Forward */
-static mfsrobject *newmfsrobject(FSRef *fsr); /* Forward */
+staticforward mfssobject *newmfssobject(FSSpec *fss); /* Forward */
+staticforward mfsrobject *newmfsrobject(FSRef *fsr); /* Forward */
 
 /* ---------------------------------------------------------------- */
 
@@ -234,7 +227,7 @@ mfsa_dealloc(mfsaobject *self)
 	}
 #endif
 		
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 statichere PyTypeObject Mfsatype = {
@@ -283,7 +276,7 @@ newmfsiobject(void)
 static void
 mfsi_dealloc(mfsiobject *self)
 {
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *
@@ -599,33 +592,18 @@ mfss_GetFInfo(mfssobject *self, PyObject *args)
 {
 	OSErr err;
 	mfsiobject *fip;
-	CInfoPBRec pb;
-	FSSpec*	fss = &self->fsspec;
-
+	
+	
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
 	if ( (fip=newmfsiobject()) == NULL )
 		return NULL;
-#ifdef USE_CATINFO_FOR_FINFO
-	pb.dirInfo.ioNamePtr = fss->name;
-	pb.dirInfo.ioFDirIndex = 0;
-	pb.dirInfo.ioVRefNum = fss->vRefNum;
-	pb.dirInfo.ioDrDirID = fss->parID;
-	err = PBGetCatInfoSync(&pb);
-	if ( err ) {
-		PyErr_Mac(ErrorObject, err);
-		Py_DECREF(fip);
-		return NULL;
-	}
-	memcpy(&fip->finfo, &pb.hFileInfo.ioFlFndrInfo, sizeof(FileInfo));
-#else
 	err = FSpGetFInfo(&self->fsspec, &fip->finfo);
 	if ( err ) {
 		PyErr_Mac(ErrorObject, err);
 		Py_DECREF(fip);
 		return NULL;
 	}
-#endif
 	return (PyObject *)fip;
 }
 
@@ -722,7 +700,7 @@ newmfssobject(FSSpec *fss)
 static void
 mfss_dealloc(mfssobject *self)
 {
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *
@@ -868,7 +846,7 @@ mfsr_compare(mfsrobject *v, mfsrobject *w)
 static void
 mfsr_dealloc(mfsrobject *self)
 {
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 statichere PyTypeObject Mfsrtype = {

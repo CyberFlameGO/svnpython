@@ -64,7 +64,7 @@ PyFloat_FromDouble(double fval)
 		if ((free_list = fill_free_list()) == NULL)
 			return NULL;
 	}
-	/* Inline PyObject_New */
+	/* PyObject_New is inlined */
 	op = free_list;
 	free_list = (PyFloatObject *)op->ob_type;
 	PyObject_INIT(op, &PyFloat_Type);
@@ -678,7 +678,7 @@ float_float(PyObject *v)
 }
 
 
-static PyObject *
+staticforward PyObject *
 float_subtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 
 static PyObject *
@@ -719,10 +719,10 @@ float_subtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	return new;
 }
 
-PyDoc_STRVAR(float_doc,
+static char float_doc[] =
 "float(x) -> floating point number\n\
 \n\
-Convert a string or number to a floating point number, if possible.");
+Convert a string or number to a floating point number, if possible.";
 
 
 static PyNumberMethods float_as_number = {

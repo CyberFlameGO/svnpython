@@ -15,13 +15,15 @@ import test
 import tempfile
 
 def copy_test_suite():
-    dest = tempfile.mkdtemp()
+    dest = tempfile.mktemp()
+    os.mkdir(dest)
     os.system("cp -r %s/* %s" % (test.__path__[0], dest))
     print "Creating copy of test suite in", dest
     return dest
 
 def copy_library():
-    dest = tempfile.mkdtemp()
+    dest = tempfile.mktemp()
+    os.mkdir(dest)
     libdir = os.path.split(test.__path__[0])[0]
     print "Found standard library in", libdir
     print "Creating copy of standard library in", dest

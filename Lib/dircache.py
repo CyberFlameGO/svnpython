@@ -23,7 +23,7 @@ def listdir(path):
     except KeyError:
         cached_mtime, list = -1, []
     try:
-        mtime = os.stat(path).st_mtime
+        mtime = os.stat(path)[8]
     except os.error:
         return []
     if mtime != cached_mtime:

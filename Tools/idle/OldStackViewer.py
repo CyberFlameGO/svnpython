@@ -1,3 +1,4 @@
+import string
 import sys
 import os
 from Tkinter import *
@@ -120,7 +121,7 @@ class StackViewer(ScrolledList):
             filename = code.co_filename
             funcname = code.co_name
             sourceline = linecache.getline(filename, lineno)
-            sourceline = sourceline.strip()
+            sourceline = string.strip(sourceline)
             if funcname in ("?", "", None):
                 item = "%s, line %d: %s" % (modname, lineno, sourceline)
             else:

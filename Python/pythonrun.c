@@ -17,7 +17,7 @@
 #include <signal.h>
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 #undef BYTE
 #include "windows.h"
 #endif
@@ -42,6 +42,11 @@ static void err_input(perrdetail *);
 static void initsigs(void);
 static void call_sys_exitfunc(void);
 static void call_ll_exitfuncs(void);
+
+#ifdef Py_TRACE_REFS
+int _Py_AskYesNo(char *prompt);
+#endif
+
 extern void _PyUnicode_Init(void);
 extern void _PyUnicode_Fini(void);
 extern void _PyCodecRegistry_Init(void);
@@ -270,11 +275,6 @@ Py_Finalize(void)
 	*/
 
 	PyGrammar_RemoveAccelerators(&_PyParser_Grammar);
-
-#ifdef PYMALLOC_DEBUG
-	if (Py_GETENV("PYTHONMALLOCSTATS"))
-		_PyObject_DebugMallocStats();
-#endif
 
 	call_ll_exitfuncs();
 
@@ -542,15 +542,6 @@ PyRun_InteractiveOne(FILE *fp, char *filename)
 	return PyRun_InteractiveOneFlags(fp, filename, NULL);
 }
 
-/* compute parser flags based on compiler flags */
-#if 0 /* future keyword */
-#define PARSER_FLAGS(flags) \
-	(((flags) && (flags)->cf_flags & CO_GENERATOR_ALLOWED) ? \
-		PyPARSE_YIELD_IS_KEYWORD : 0)
-#else
-#define PARSER_FLAGS(flags) 0
-#endif
-
 int
 PyRun_InteractiveOneFlags(FILE *fp, char *filename, PyCompilerFlags *flags)
 {
@@ -577,7 +568,9 @@ PyRun_InteractiveOneFlags(FILE *fp, char *filename, PyCompilerFlags *flags)
 	}
 	n = PyParser_ParseFileFlags(fp, filename, &_PyParser_Grammar,
 			    	    Py_single_input, ps1, ps2, &err,
-			    	    PARSER_FLAGS(flags));
+			    	    (flags &&
+			    	     flags->cf_flags & CO_GENERATOR_ALLOWED) ?
+			    	    	PyPARSE_YIELD_IS_KEYWORD : 0);
 	Py_XDECREF(v);
 	Py_XDECREF(w);
 	if (n == NULL) {
@@ -675,22 +668,12 @@ PyRun_SimpleFileExFlags(FILE *fp, char *filename, int closeit,
 	if (m == NULL)
 		return -1;
 	d = PyModule_GetDict(m);
-	if (PyDict_GetItemString(d, "__file__") == NULL) {
-		PyObject *f = PyString_FromString(filename);
-		if (f == NULL)
-			return -1;
-		if (PyDict_SetItemString(d, "__file__", f) < 0) {
-			Py_DECREF(f);
-			return -1;
-		}
-		Py_DECREF(f);
-	}
 	ext = filename + strlen(filename) - 4;
 	if (maybe_pyc_file(fp, filename, ext, closeit)) {
 		/* Try to run a pyc file. First, re-open in binary */
 		if (closeit)
 			fclose(fp);
-		if ((fp = fopen(filename, "rb")) == NULL) {
+		if( (fp = fopen(filename, "rb")) == NULL ) {
 			fprintf(stderr, "python: Can't reopen .pyc file\n");
 			return -1;
 		}
@@ -746,8 +729,8 @@ parse_syntax_error(PyObject *err, PyObject **message, char **filename,
 
 	/* old style errors */
 	if (PyTuple_Check(err))
-		return PyArg_ParseTuple(err, "O(ziiz)", message, filename,
-				        lineno, offset, text);
+		return PyArg_Parse(err, "(O(ziiz))", message, filename,
+				   lineno, offset, text);
 
 	/* new style errors.  `err' is an instance */
 
@@ -1048,7 +1031,9 @@ PyRun_StringFlags(char *str, int start, PyObject *globals, PyObject *locals,
 		  PyCompilerFlags *flags)
 {
 	return run_err_node(PyParser_SimpleParseStringFlags(
-				    str, start, PARSER_FLAGS(flags)),
+			str, start,
+			(flags && flags->cf_flags & CO_GENERATOR_ALLOWED) ?
+				PyPARSE_YIELD_IS_KEYWORD : 0),
 			    "<string>", globals, locals, flags);
 }
 
@@ -1065,7 +1050,8 @@ PyRun_FileExFlags(FILE *fp, char *filename, int start, PyObject *globals,
 		  PyObject *locals, int closeit, PyCompilerFlags *flags)
 {
 	node *n = PyParser_SimpleParseFileFlags(fp, filename, start,
-						PARSER_FLAGS(flags));
+			(flags && flags->cf_flags & CO_GENERATOR_ALLOWED) ?
+				PyPARSE_YIELD_IS_KEYWORD : 0);
 	if (closeit)
 		fclose(fp);
 	return run_err_node(n, filename, globals, locals, flags);
@@ -1139,9 +1125,9 @@ Py_CompileStringFlags(char *str, char *filename, int start,
 {
 	node *n;
 	PyCodeObject *co;
-
-	n = PyParser_SimpleParseStringFlagsFilename(str, filename, start,
-						    PARSER_FLAGS(flags));
+	n = PyParser_SimpleParseStringFlags(str, start,
+		(flags && flags->cf_flags & CO_GENERATOR_ALLOWED) ?
+			PyPARSE_YIELD_IS_KEYWORD : 0);
 	if (n == NULL)
 		return NULL;
 	co = PyNode_CompileFlags(n, filename, flags);
@@ -1154,8 +1140,7 @@ Py_SymtableString(char *str, char *filename, int start)
 {
 	node *n;
 	struct symtable *st;
-	n = PyParser_SimpleParseStringFlagsFilename(str, filename,
-						    start, 0);
+	n = PyParser_SimpleParseString(str, start);
 	if (n == NULL)
 		return NULL;
 	st = PyNode_CompileSymtable(n, filename);
@@ -1203,35 +1188,12 @@ PyParser_SimpleParseString(char *str, int start)
 	return PyParser_SimpleParseStringFlags(str, start, 0);
 }
 
-node *
-PyParser_SimpleParseStringFlagsFilename(char *str, char *filename,
-					int start, int flags)
-{
-	node *n;
-	perrdetail err;
-
-	n = PyParser_ParseStringFlagsFilename(str, filename, 
-					      &_PyParser_Grammar,
-					      start, &err, flags);
-	if (n == NULL)
-		err_input(&err);
-	return n;
-}
-
-node *
-PyParser_SimpleParseStringFilename(char *str, char *filename, int start)
-{
-	return PyParser_SimpleParseStringFlagsFilename(str, filename,
-						       start, 0);
-}
-
 /* Set the error appropriate to the given input error code (see errcode.h) */
 
 static void
 err_input(perrdetail *err)
 {
 	PyObject *v, *w, *errtype;
-	PyObject* u = NULL;
 	char *msg = NULL;
 	errtype = PyExc_SyntaxError;
 	v = Py_BuildValue("(ziiz)", err->filename,
@@ -1256,12 +1218,6 @@ err_input(perrdetail *err)
 		break;
 	case E_TOKEN:
 		msg = "invalid token";
-		break;
-	case E_EOFS:
-		msg = "EOF while scanning triple-quoted string";
-		break;
-	case E_EOLS:
-		msg = "EOL while scanning single-quoted string";
 		break;
 	case E_INTR:
 		PyErr_SetNone(PyExc_KeyboardInterrupt);
@@ -1289,24 +1245,12 @@ err_input(perrdetail *err)
 		errtype = PyExc_IndentationError;
 		msg = "too many levels of indentation";
 		break;
-	case E_DECODE: {	/* XXX */
-		PyThreadState* tstate = PyThreadState_Get();
-		PyObject* value = tstate->curexc_value;
-		if (value != NULL) {
-			u = PyObject_Repr(value);
-			if (u != NULL) {
-				msg = PyString_AsString(u);
-				break;
-			}
-		}
-	}
 	default:
 		fprintf(stderr, "error=%d\n", err->error);
 		msg = "unknown parsing error";
 		break;
 	}
 	w = Py_BuildValue("(sO)", msg, v);
-	Py_XDECREF(u);
 	Py_XDECREF(v);
 	PyErr_SetObject(errtype, w);
 	Py_XDECREF(w);
@@ -1315,20 +1259,20 @@ err_input(perrdetail *err)
 /* Print fatal error message and abort */
 
 void
-Py_FatalError(const char *msg)
+Py_FatalError(char *msg)
 {
 	fprintf(stderr, "Fatal Python error: %s\n", msg);
 #ifdef macintosh
 	for (;;);
 #endif
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	OutputDebugString("Fatal Python error: ");
 	OutputDebugString(msg);
 	OutputDebugString("\n");
 #ifdef _DEBUG
 	DebugBreak();
 #endif
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 	abort();
 }
 
@@ -1406,12 +1350,24 @@ initsigs(void)
 #ifdef SIGXFZ
 	signal(SIGXFZ, SIG_IGN);
 #endif
-#ifdef SIGXFSZ
-	signal(SIGXFSZ, SIG_IGN);
-#endif
 #endif /* HAVE_SIGNAL_H */
 	PyOS_InitInterrupts(); /* May imply initsignal() */
 }
+
+#ifdef Py_TRACE_REFS
+/* Ask a yes/no question */
+
+int
+_Py_AskYesNo(char *prompt)
+{
+	char buf[256];
+	
+	fprintf(stderr, "%s [ny] ", prompt);
+	if (fgets(buf, sizeof buf, stdin) == NULL)
+		return 0;
+	return buf[0] == 'y' || buf[0] == 'Y';
+}
+#endif
 
 #ifdef MPW
 
@@ -1460,9 +1416,9 @@ int
 PyOS_CheckStack(void)
 {
 	__try {
-		/* alloca throws a stack overflow exception if there's
+		/* _alloca throws a stack overflow exception if there's
 		   not enough space left on the stack */
-		alloca(PYOS_STACK_MARGIN * sizeof(void*));
+		_alloca(PYOS_STACK_MARGIN * sizeof(void*));
 		return 0;
 	} __except (EXCEPTION_EXECUTE_HANDLER) {
 		/* just ignore all errors */

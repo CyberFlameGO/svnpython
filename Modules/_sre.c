@@ -1293,9 +1293,9 @@ SRE_LITERAL_TEMPLATE(SRE_CHAR* ptr, int len)
 
 /* see sre.h for object declarations */
 
-static PyTypeObject Pattern_Type;
-static PyTypeObject Match_Type;
-static PyTypeObject Scanner_Type;
+staticforward PyTypeObject Pattern_Type;
+staticforward PyTypeObject Match_Type;
+staticforward PyTypeObject Scanner_Type;
 
 static PyObject *
 _compile(PyObject* self_, PyObject* args)
@@ -1376,10 +1376,13 @@ sre_getlower(PyObject* self, PyObject* args)
 LOCAL(void)
 state_reset(SRE_STATE* state)
 {
+    int i;
+
     state->lastmark = 0;
 
     /* FIXME: dynamic! */
-    memset(state->mark, 0, sizeof(*state->mark) * SRE_MARK_SIZE);
+    for (i = 0; i < SRE_MARK_SIZE; i++)
+        state->mark[i] = NULL;
 
     state->lastindex = -1;
 
@@ -2935,8 +2938,6 @@ scanner_search(ScannerObject* self, PyObject* args)
 }
 
 static PyMethodDef scanner_methods[] = {
-    /* FIXME: use METH_OLDARGS instead of 0 or fix to use METH_VARARGS */
-    /*        METH_OLDARGS is not in Python 1.5.2 */
     {"match", (PyCFunction) scanner_match, 0},
     {"search", (PyCFunction) scanner_search, 0},
     {NULL, NULL}
@@ -2973,13 +2974,14 @@ statichere PyTypeObject Scanner_Type = {
 };
 
 static PyMethodDef _functions[] = {
-    {"compile", _compile, METH_VARARGS},
-    {"getcodesize", sre_codesize, METH_VARARGS},
-    {"getlower", sre_getlower, METH_VARARGS},
+    {"compile", _compile, 1},
+    {"getcodesize", sre_codesize, 1},
+    {"getlower", sre_getlower, 1},
     {NULL, NULL}
 };
 
-PyMODINIT_FUNC init_sre(void)
+DL_EXPORT(void)
+init_sre(void)
 {
     PyObject* m;
     PyObject* d;

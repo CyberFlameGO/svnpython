@@ -10,13 +10,12 @@ latex2esis.py script when run over the Python documentation.
 # generated from an SGML or an XML application.
 
 import errno
+import esistools
 import os
 import re
 import string
 
 from xml.sax.saxutils import escape
-
-import esistools
 
 
 AUTOCLOSE = ()
@@ -64,7 +63,7 @@ def format_attrs(attrs, xml=0):
                 append('%s="%s"' % (name, escape(value)))
     if parts:
         parts.insert(0, '')
-    return " ".join(parts)
+    return string.join(parts)
 
 
 _nmtoken_rx = re.compile("[a-z][-._a-z0-9]*$", re.IGNORECASE)
@@ -172,7 +171,7 @@ def dump_empty_element_names(knownempties):
     fp = open(EMPTIES_FILENAME, "w")
     gilist = d.keys()
     gilist.sort()
-    fp.write("\n".join(gilist))
+    fp.write(string.join(gilist, "\n"))
     fp.write("\n")
     fp.close()
 

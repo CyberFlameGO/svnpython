@@ -14,6 +14,10 @@ Todo:
  * SAX 2 namespaces
 """
 
+import string
+_string = string
+del string
+
 from xml.dom import HierarchyRequestErr, EMPTY_NAMESPACE
 
 # localize the types, and allow support for Unicode values if available:
@@ -40,7 +44,7 @@ if list is type([]):
 else:
     def NodeList():
         return []
-
+    
 
 class Node(xml.dom.Node):
     allnodes = {}
@@ -65,22 +69,16 @@ class Node(xml.dom.Node):
     def __nonzero__(self):
         return 1
 
-    def toxml(self, encoding = None):
-        return self.toprettyxml("", "", encoding)
+    def toxml(self):
+        writer = _get_StringIO()
+        self.writexml(writer)
+        return writer.getvalue()
 
-    def toprettyxml(self, indent="\t", newl="\n", encoding = None):
+    def toprettyxml(self, indent="\t", newl="\n"):
         # indent = the indentation string to prepend, per level
         # newl = the newline string to append
         writer = _get_StringIO()
-        if encoding is not None:
-            import codecs
-            # Can't use codecs.getwriter to preserve 2.0 compatibility
-            writer = codecs.lookup(encoding)[3](writer)
-        if self.nodeType == Node.DOCUMENT_NODE:
-            # Can pass encoding only to document, to put it into XML header
-            self.writexml(writer, "", indent, newl, encoding)
-        else:
-            self.writexml(writer, "", indent, newl)
+        self.writexml(writer, "", indent, newl)
         return writer.getvalue()
 
     def hasChildNodes(self):
@@ -286,10 +284,11 @@ class Node(xml.dom.Node):
 
 def _write_data(writer, data):
     "Writes datachars to writer."
-    data = data.replace("&", "&amp;")
-    data = data.replace("<", "&lt;")
-    data = data.replace("\"", "&quot;")
-    data = data.replace(">", "&gt;")
+    replace = _string.replace
+    data = replace(data, "&", "&amp;")
+    data = replace(data, "<", "&lt;")
+    data = replace(data, "\"", "&quot;")
+    data = replace(data, ">", "&gt;")
     writer.write(data)
 
 def _getElementsByTagNameHelper(parent, name, rc):
@@ -459,6 +458,7 @@ class NamedNodeMap:
         node.unlink()
         del self._attrs[node.name]
         del self._attrsNS[(node.namespaceURI, node.localName)]
+        self.length = len(self._attrs)
 
 AttributeList = NamedNodeMap
 
@@ -758,7 +758,7 @@ class CDATASection(Text):
 
 
 def _nssplit(qualifiedName):
-    fields = qualifiedName.split(':', 1)
+    fields = _string.split(qualifiedName, ':', 1)
     if len(fields) == 2:
         return fields
     elif len(fields) == 1:
@@ -787,7 +787,7 @@ class DOMImplementation:
     def hasFeature(self, feature, version):
         if version not in ("1.0", "2.0"):
             return 0
-        feature = feature.lower()
+        feature = _string.lower(feature)
         return feature == "core"
 
     def createDocument(self, namespaceURI, qualifiedName, doctype):
@@ -939,12 +939,8 @@ class Document(Node):
         return _getElementsByTagNameNSHelper(self, namespaceURI, localName,
                                              NodeList())
 
-    def writexml(self, writer, indent="", addindent="", newl="",
-                 encoding = None):
-        if encoding is None:
-            writer.write('<?xml version="1.0" ?>\n')
-        else:
-            writer.write('<?xml version="1.0" encoding="%s"?>\n' % encoding)
+    def writexml(self, writer, indent="", addindent="", newl=""):
+        writer.write('<?xml version="1.0" ?>\n')
         for node in self.childNodes:
             node.writexml(writer, indent, addindent, newl)
 

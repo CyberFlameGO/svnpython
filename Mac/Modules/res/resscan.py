@@ -7,8 +7,9 @@ import os
 import string
 import MacOS
 
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
+from bgenlocations import TOOLBOXDIR
 
 from scantools import Scanner
 
@@ -19,8 +20,6 @@ def main():
 	scanner = ResourcesScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now doing 'import ressupport' ==="
 	import ressupport
 	print "=== Done 'import ressupport'.  It's up to you to compile Resmodule.c ==="

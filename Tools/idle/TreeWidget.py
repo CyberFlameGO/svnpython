@@ -16,6 +16,7 @@
 
 import os
 import sys
+import string
 from Tkinter import *
 import imp
 
@@ -186,7 +187,7 @@ class TreeNode:
                 # _IsExpandable() was mistaken; that's allowed
                 return y+17
             for item in sublist:
-                child = self.__class__(self.canvas, self, item)
+                child = TreeNode(self.canvas, self, item)
                 self.children.append(child)
         cx = x+20
         cy = y+17

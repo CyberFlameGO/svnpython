@@ -46,7 +46,6 @@ internationalized, to the local language and cultural habits.
 import os
 import sys
 import struct
-import copy
 from errno import ENOENT
 
 __all__ = ["bindtextdomain","textdomain","gettext","dgettext",
@@ -103,27 +102,16 @@ class NullTranslations:
     def __init__(self, fp=None):
         self._info = {}
         self._charset = None
-        self._fallback = None
-        if fp is not None:
+        if fp:
             self._parse(fp)
 
     def _parse(self, fp):
         pass
 
-    def add_fallback(self, fallback):
-        if self._fallback:
-            self._fallback.add_fallback(fallback)
-        else:
-            self._fallback = fallback
-
     def gettext(self, message):
-        if self._fallback:
-            return self._fallback.gettext(message)
         return message
 
     def ugettext(self, message):
-        if self._fallback:
-            return self._fallback.ugettext(message)
         return unicode(message)
 
     def info(self):
@@ -139,11 +127,14 @@ class NullTranslations:
 
 class GNUTranslations(NullTranslations):
     # Magic number of .mo files
-    LE_MAGIC = 0x950412deL
-    BE_MAGIC = 0xde120495L
+    LE_MAGIC = 0x950412de
+    BE_MAGIC = 0xde120495
 
     def _parse(self, fp):
         """Override this method to support alternative .mo formats."""
+        # We need to & all 32 bit unsigned integers with 0xffffffff for
+        # portability to 64 bit machines.
+        MASK = 0xffffffff
         unpack = struct.unpack
         filename = getattr(fp, 'name', '')
         # Parse the .mo file header, which consists of 5 little endian 32
@@ -152,22 +143,28 @@ class GNUTranslations(NullTranslations):
         buf = fp.read()
         buflen = len(buf)
         # Are we big endian or little endian?
-        magic = unpack('<I', buf[:4])[0]
+        magic = unpack('<i', buf[:4])[0] & MASK
         if magic == self.LE_MAGIC:
-            version, msgcount, masteridx, transidx = unpack('<4I', buf[4:20])
-            ii = '<II'
+            version, msgcount, masteridx, transidx = unpack('<4i', buf[4:20])
+            ii = '<ii'
         elif magic == self.BE_MAGIC:
-            version, msgcount, masteridx, transidx = unpack('>4I', buf[4:20])
-            ii = '>II'
+            version, msgcount, masteridx, transidx = unpack('>4i', buf[4:20])
+            ii = '>ii'
         else:
             raise IOError(0, 'Bad magic number', filename)
+        # more unsigned ints
+        msgcount &= MASK
+        masteridx &= MASK
+        transidx &= MASK
         # Now put all messages from the .mo file buffer into the catalog
         # dictionary.
         for i in xrange(0, msgcount):
             mlen, moff = unpack(ii, buf[masteridx:masteridx+8])
-            mend = moff + mlen
+            moff &= MASK
+            mend = moff + (mlen & MASK)
             tlen, toff = unpack(ii, buf[transidx:transidx+8])
-            tend = toff + tlen
+            toff &= MASK
+            tend = toff + (tlen & MASK)
             if mend < buflen and tend < buflen:
                 tmsg = buf[toff:tend]
                 catalog[buf[moff:mend]] = tmsg
@@ -191,26 +188,16 @@ class GNUTranslations(NullTranslations):
             transidx += 8
 
     def gettext(self, message):
-        try:
-            return self._catalog[message]
-        except KeyError:
-            if self._fallback:
-                return self._fallback.gettext(message)
-            return message
+        return self._catalog.get(message, message)
 
     def ugettext(self, message):
-        try:
-            tmsg = self._catalog[message]
-        except KeyError:
-            if self._fallback:
-                return self._fallback.ugettext(message)
-            tmsg = message
+        tmsg = self._catalog.get(message, message)
         return unicode(tmsg, self._charset)
 
 
 
 # Locate a .mo file using the gettext strategy
-def find(domain, localedir=None, languages=None, all=0):
+def find(domain, localedir=None, languages=None):
     # Get some reasonable defaults for arguments that were not supplied
     if localedir is None:
         localedir = _default_localedir
@@ -230,20 +217,13 @@ def find(domain, localedir=None, languages=None, all=0):
             if nelang not in nelangs:
                 nelangs.append(nelang)
     # select a language
-    if all:
-        result = []
-    else:
-        result = None
     for lang in nelangs:
         if lang == 'C':
             break
         mofile = os.path.join(localedir, lang, 'LC_MESSAGES', '%s.mo' % domain)
         if os.path.exists(mofile):
-            if all:
-                result.append(mofile)
-            else:
-                return mofile
-    return result
+            return mofile
+    return None
 
 
 
@@ -254,28 +234,20 @@ def translation(domain, localedir=None, languages=None,
                 class_=None, fallback=0):
     if class_ is None:
         class_ = GNUTranslations
-    mofiles = find(domain, localedir, languages, all=1)
-    if len(mofiles)==0:
+    mofile = find(domain, localedir, languages)
+    if mofile is None:
         if fallback:
             return NullTranslations()
         raise IOError(ENOENT, 'No translation file found for domain', domain)
+    key = os.path.abspath(mofile)
     # TBD: do we need to worry about the file pointer getting collected?
     # Avoid opening, reading, and parsing the .mo file after it's been done
     # once.
-    result = None
-    for mofile in mofiles:
-        key = os.path.abspath(mofile)
-        t = _translations.get(key)
-        if t is None:
-            t = _translations.setdefault(key, class_(open(mofile, 'rb')))
-        # Copy the translation object to allow setting fallbacks.
-        # All other instance data is shared with the cached object.
-        t = copy.copy(t)
-        if result is None:
-            result = t
-        else:
-            result.add_fallback(t)
-    return result
+    t = _translations.get(key)
+    if t is None:
+        t = _translations.setdefault(key, class_(open(mofile, 'rb')))
+    return t
+
 
 
 def install(domain, localedir=None, unicode=0):

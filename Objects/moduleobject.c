@@ -147,23 +147,10 @@ _PyModule_Clear(PyObject *m)
 /* Methods */
 
 static int
-module_init(PyModuleObject *m, PyObject *args, PyObject *kwds)
+module_init(PyModuleObject *m, PyObject *args, PyObject *kw)
 {
-	static char *kwlist[] = {"name", "doc", NULL};
-	PyObject *dict, *name = Py_None, *doc = Py_None;
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "S|O", kwlist,
-					 &name, &doc))
-		return -1;
-	dict = m->md_dict;
-	if (dict == NULL) {
-		dict = PyDict_New();
-		if (dict == NULL)
-			return -1;
-		m->md_dict = dict;
-	}
-	if (PyDict_SetItemString(dict, "__name__", name) < 0)
-		return -1;
-	if (PyDict_SetItemString(dict, "__doc__", doc) < 0)
+	m->md_dict = PyDict_New();
+	if (m->md_dict == NULL)
 		return -1;
 	return 0;
 }
@@ -209,12 +196,6 @@ module_traverse(PyModuleObject *m, visitproc visit, void *arg)
 	return 0;
 }
 
-PyDoc_STRVAR(module_doc,
-"module(name[, doc])\n\
-\n\
-Create a module object.\n\
-The name must be a string; the optional doc argument can have any type.");
-
 PyTypeObject PyModule_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
@@ -238,7 +219,7 @@ PyTypeObject PyModule_Type = {
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
 		Py_TPFLAGS_BASETYPE,		/* tp_flags */
-	module_doc,				/* tp_doc */
+	0,					/* tp_doc */
 	(traverseproc)module_traverse,		/* tp_traverse */
 	0,					/* tp_clear */
 	0,					/* tp_richcompare */
@@ -256,5 +237,5 @@ PyTypeObject PyModule_Type = {
 	(initproc)module_init,			/* tp_init */
 	PyType_GenericAlloc,			/* tp_alloc */
 	PyType_GenericNew,			/* tp_new */
-	PyObject_GC_Del,		        /* tp_free */
+	_PyObject_GC_Del,			/* tp_free */
 };

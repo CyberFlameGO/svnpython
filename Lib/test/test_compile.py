@@ -1,4 +1,4 @@
-from test.test_support import verbose, TestFailed
+from test_support import verbose, TestFailed
 
 if verbose:
     print "Testing whether compiler catches assignment to __debug__"
@@ -21,15 +21,6 @@ try:
     raise TestFailed, "duplicate arguments"
 except SyntaxError:
     pass
-
-if verbose:
-    print "compiling string with syntax error"
-
-try:
-    compile("1+*3", "filename", "exec")
-except SyntaxError, detail:
-    if not detail.filename == "filename":
-        raise TestFailed, "expected 'filename', got %r" % detail.filename
 
 try:
     exec 'def f(a = 0, a = 1): pass'

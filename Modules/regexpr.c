@@ -1243,7 +1243,7 @@ char *re_compile_pattern(unsigned char *regex, int size, regexp_t bufp)
 		}
 		case Rquote:
 		{
-			Py_FatalError("Rquote");
+			abort();
 			/*NOTREACHED*/
 		}
 		case Rbol:

@@ -28,7 +28,7 @@ post-condition with that defined in the derived class', for example:
 
 class D(C):
     def m1(self, arg):
-        return arg**2
+        return whatever**2
     def m1_post(self, Result, arg):
         C.m1_post(self, Result, arg)
         assert Result < 100

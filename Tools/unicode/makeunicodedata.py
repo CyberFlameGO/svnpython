@@ -100,7 +100,7 @@ def makeunicodedata(unicode, trace):
         record = unicode.table[char]
         if record:
             if record[5]:
-                decomp = record[5].split()
+                decomp = string.split(record[5])
                 # prefix
                 if decomp[0][0] == "<":
                     prefix = decomp.pop(0)
@@ -223,21 +223,15 @@ def makeunicodetype(unicode, trace):
                 flags |= UPPER_MASK
             # use delta predictor for upper/lower/title
             if record[12]:
-                upper = int(record[12], 16) - char
-                assert -32768 <= upper <= 32767
-                upper = upper & 0xffff
+                upper = (int(record[12], 16) - char) & 0xffff
             else:
                 upper = 0
             if record[13]:
-                lower = int(record[13], 16) - char
-                assert -32768 <= lower <= 32767
-                lower = lower & 0xffff
+                lower = (int(record[13], 16) - char) & 0xffff
             else:
                 lower = 0
             if record[14]:
-                title = int(record[14], 16) - char
-                assert -32768 <= lower <= 32767
-                title = title & 0xffff
+                title = (int(record[14], 16) - char) & 0xffff
             else:
                 title = 0
             # decimal digit, integer digit
@@ -328,8 +322,6 @@ def makeunicodename(unicode, trace):
     wordlist = words.items()
 
     # sort on falling frequency
-    # XXX: different Python versions produce a different order
-    # for words with equal frequency
     wordlist.sort(lambda a, b: len(b[1])-len(a[1]))
 
     # figure out how many phrasebook escapes we need
@@ -370,7 +362,7 @@ def makeunicodename(unicode, trace):
         # indicates the last character in an entire string)
         ww = w[:-1] + chr(ord(w[-1])+128)
         # reuse string tails, when possible
-        o = lexicon.find(ww)
+        o = string.find(lexicon, ww)
         if o < 0:
             o = offset
             lexicon = lexicon + ww
@@ -450,19 +442,19 @@ def makeunicodename(unicode, trace):
 
 # load a unicode-data file from disk
 
-import sys
+import string, sys
 
 class UnicodeData:
 
     def __init__(self, filename, expand=1):
         file = open(filename)
-        table = [None] * 0x110000
+        table = [None] * 65536
         while 1:
             s = file.readline()
             if not s:
                 break
-            s = s.strip().split(";")
-            char = int(s[0], 16)
+            s = string.split(string.strip(s), ";")
+            char = string.atoi(s[0], 16)
             table[char] = s
 
         # expand first-last ranges (ignore surrogates and private use)
@@ -484,7 +476,7 @@ class UnicodeData:
         # public attributes
         self.filename = filename
         self.table = table
-        self.chars = range(0x110000) # unicode 3.2
+        self.chars = range(65536) # unicode
 
     def uselatin1(self):
         # restrict character range to ISO Latin 1
@@ -498,7 +490,7 @@ class UnicodeData:
 
 def myhash(s, magic):
     h = 0
-    for c in map(ord, s.upper()):
+    for c in map(ord, string.upper(s)):
         h = (h * magic) + c
         ix = h & 0xff000000
         if ix:
@@ -606,7 +598,7 @@ class Array:
                     s = "    " + i
                 else:
                     s = s + i
-            if s.strip():
+            if string.strip(s):
                 file.write(s + "\n")
         file.write("};\n\n")
 

@@ -102,7 +102,7 @@ int CmpInstObj_Convert(PyObject *v, ComponentInstance *p_itself)
 static void CmpInstObj_dealloc(ComponentInstanceObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	PyObject_Del(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *CmpInstObj_CloseComponent(ComponentInstanceObject *_self, PyObject *_args)
@@ -277,31 +277,31 @@ static PyObject *CmpInstObj_ComponentSetTarget(ComponentInstanceObject *_self, P
 
 static PyMethodDef CmpInstObj_methods[] = {
 	{"CloseComponent", (PyCFunction)CmpInstObj_CloseComponent, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetComponentInstanceError", (PyCFunction)CmpInstObj_GetComponentInstanceError, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"SetComponentInstanceError", (PyCFunction)CmpInstObj_SetComponentInstanceError, 1,
-	 PyDoc_STR("(OSErr theError) -> None")},
+	 "(OSErr theError) -> None"},
 	{"GetComponentInstanceStorage", (PyCFunction)CmpInstObj_GetComponentInstanceStorage, 1,
-	 PyDoc_STR("() -> (Handle _rv)")},
+	 "() -> (Handle _rv)"},
 	{"SetComponentInstanceStorage", (PyCFunction)CmpInstObj_SetComponentInstanceStorage, 1,
-	 PyDoc_STR("(Handle theStorage) -> None")},
+	 "(Handle theStorage) -> None"},
 
 #if !TARGET_API_MAC_CARBON
 	{"GetComponentInstanceA5", (PyCFunction)CmpInstObj_GetComponentInstanceA5, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 #endif
 
 #if !TARGET_API_MAC_CARBON
 	{"SetComponentInstanceA5", (PyCFunction)CmpInstObj_SetComponentInstanceA5, 1,
-	 PyDoc_STR("(long theA5) -> None")},
+	 "(long theA5) -> None"},
 #endif
 	{"ComponentFunctionImplemented", (PyCFunction)CmpInstObj_ComponentFunctionImplemented, 1,
-	 PyDoc_STR("(short ftnNumber) -> (long _rv)")},
+	 "(short ftnNumber) -> (long _rv)"},
 	{"GetComponentVersion", (PyCFunction)CmpInstObj_GetComponentVersion, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"ComponentSetTarget", (PyCFunction)CmpInstObj_ComponentSetTarget, 1,
-	 PyDoc_STR("(ComponentInstance target) -> (long _rv)")},
+	 "(ComponentInstance target) -> (long _rv)"},
 	{NULL, NULL, 0}
 };
 
@@ -384,7 +384,7 @@ int CmpObj_Convert(PyObject *v, Component *p_itself)
 static void CmpObj_dealloc(ComponentObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	PyObject_Del(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *CmpObj_UnregisterComponent(ComponentObject *_self, PyObject *_args)
@@ -669,35 +669,35 @@ static PyObject *CmpObj_GetComponentIconSuite(ComponentObject *_self, PyObject *
 
 static PyMethodDef CmpObj_methods[] = {
 	{"UnregisterComponent", (PyCFunction)CmpObj_UnregisterComponent, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetComponentInfo", (PyCFunction)CmpObj_GetComponentInfo, 1,
-	 PyDoc_STR("(Handle componentName, Handle componentInfo, Handle componentIcon) -> (ComponentDescription cd)")},
+	 "(Handle componentName, Handle componentInfo, Handle componentIcon) -> (ComponentDescription cd)"},
 	{"OpenComponent", (PyCFunction)CmpObj_OpenComponent, 1,
-	 PyDoc_STR("() -> (ComponentInstance _rv)")},
+	 "() -> (ComponentInstance _rv)"},
 	{"ResolveComponentAlias", (PyCFunction)CmpObj_ResolveComponentAlias, 1,
-	 PyDoc_STR("() -> (Component _rv)")},
+	 "() -> (Component _rv)"},
 	{"GetComponentPublicIndString", (PyCFunction)CmpObj_GetComponentPublicIndString, 1,
-	 PyDoc_STR("(Str255 theString, short strListID, short index) -> None")},
+	 "(Str255 theString, short strListID, short index) -> None"},
 	{"GetComponentRefcon", (PyCFunction)CmpObj_GetComponentRefcon, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"SetComponentRefcon", (PyCFunction)CmpObj_SetComponentRefcon, 1,
-	 PyDoc_STR("(long theRefcon) -> None")},
+	 "(long theRefcon) -> None"},
 	{"OpenComponentResFile", (PyCFunction)CmpObj_OpenComponentResFile, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"GetComponentResource", (PyCFunction)CmpObj_GetComponentResource, 1,
-	 PyDoc_STR("(OSType resType, short resID) -> (Handle theResource)")},
+	 "(OSType resType, short resID) -> (Handle theResource)"},
 	{"GetComponentIndString", (PyCFunction)CmpObj_GetComponentIndString, 1,
-	 PyDoc_STR("(Str255 theString, short strListID, short index) -> None")},
+	 "(Str255 theString, short strListID, short index) -> None"},
 	{"CountComponentInstances", (PyCFunction)CmpObj_CountComponentInstances, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"SetDefaultComponent", (PyCFunction)CmpObj_SetDefaultComponent, 1,
-	 PyDoc_STR("(short flags) -> None")},
+	 "(short flags) -> None"},
 	{"CaptureComponent", (PyCFunction)CmpObj_CaptureComponent, 1,
-	 PyDoc_STR("(Component capturingComponent) -> (Component _rv)")},
+	 "(Component capturingComponent) -> (Component _rv)"},
 	{"UncaptureComponent", (PyCFunction)CmpObj_UncaptureComponent, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetComponentIconSuite", (PyCFunction)CmpObj_GetComponentIconSuite, 1,
-	 PyDoc_STR("() -> (Handle iconSuite)")},
+	 "() -> (Handle iconSuite)"},
 	{NULL, NULL, 0}
 };
 
@@ -870,19 +870,19 @@ static PyObject *Cm_RegisterComponentResourceFile(PyObject *_self, PyObject *_ar
 
 static PyMethodDef Cm_methods[] = {
 	{"RegisterComponentResource", (PyCFunction)Cm_RegisterComponentResource, 1,
-	 PyDoc_STR("(ComponentResourceHandle cr, short global) -> (Component _rv)")},
+	 "(ComponentResourceHandle cr, short global) -> (Component _rv)"},
 	{"FindNextComponent", (PyCFunction)Cm_FindNextComponent, 1,
-	 PyDoc_STR("(Component aComponent, ComponentDescription looking) -> (Component _rv)")},
+	 "(Component aComponent, ComponentDescription looking) -> (Component _rv)"},
 	{"CountComponents", (PyCFunction)Cm_CountComponents, 1,
-	 PyDoc_STR("(ComponentDescription looking) -> (long _rv)")},
+	 "(ComponentDescription looking) -> (long _rv)"},
 	{"GetComponentListModSeed", (PyCFunction)Cm_GetComponentListModSeed, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"CloseComponentResFile", (PyCFunction)Cm_CloseComponentResFile, 1,
-	 PyDoc_STR("(short refnum) -> None")},
+	 "(short refnum) -> None"},
 	{"OpenDefaultComponent", (PyCFunction)Cm_OpenDefaultComponent, 1,
-	 PyDoc_STR("(OSType componentType, OSType componentSubType) -> (ComponentInstance _rv)")},
+	 "(OSType componentType, OSType componentSubType) -> (ComponentInstance _rv)"},
 	{"RegisterComponentResourceFile", (PyCFunction)Cm_RegisterComponentResourceFile, 1,
-	 PyDoc_STR("(short resRefNum, short global) -> (long _rv)")},
+	 "(short resRefNum, short global) -> (long _rv)"},
 	{NULL, NULL, 0}
 };
 

@@ -23,6 +23,7 @@ import sys
 import regex
 import os
 from stat import *
+import string
 import getopt
 
 err = sys.stderr.write
@@ -139,9 +140,9 @@ def fix(filename):
     return 0
 
 def fixline(line):
-    if not line.startswith('#!'):
+    if line[:2] != '#!':
         return line
-    if "python" not in line:
+    if string.find(line, "python") < 0:
         return line
     return '#! %s\n' % new_interpreter
 

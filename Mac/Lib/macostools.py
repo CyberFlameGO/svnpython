@@ -27,8 +27,6 @@ BUFSIZ=0x80000		# Copy in 0.5Mb chunks
 def mkalias(src, dst, relative=None):
 	"""Create a finder alias"""
 	srcfss = macfs.FSSpec(src)
-	# The next line will fail under unix-Python if the destination
-	# doesn't exist yet. We should change this code to be fsref-based.
 	dstfss = macfs.FSSpec(dst)
 	if relative:
 		relativefss = macfs.FSSpec(relative)
@@ -57,7 +55,7 @@ def mkdirs(dst):
 	if dst == '' or os.path.exists(dst):
 		return
 	head, tail = os.path.split(dst)
-	if os.sep == ':' and not ':' in head:
+	if not ':' in head:
 		head = head + ':'
 	mkdirs(head)
 	os.mkdir(dst, 0777)
@@ -71,7 +69,10 @@ def touched(dst):
 	now = time.time()
 	if now == moddate:
 		now = now + 1
-	dir_fss.SetDates(crdate, now, bkdate)
+	try:
+		dir_fss.SetDates(crdate, now, bkdate)
+	except macfs.error:
+		pass
 	
 def touched_ae(dst):
 	"""Tell the finder a file has changed"""
@@ -84,33 +85,29 @@ def touched_ae(dst):
 	
 def copy(src, dst, createpath=0, copydates=1, forcetype=None):
 	"""Copy a file, including finder info, resource fork, etc"""
-	if hasattr(src, 'as_pathname'):
-		src = src.as_pathname()
-	if hasattr(dst, 'as_pathname'):
-		dst = dst.as_pathname()
 	if createpath:
 		mkdirs(os.path.split(dst)[0])
-	
-	ifp = open(src, 'rb')
-	ofp = open(dst, 'wb')
-	d = ifp.read(BUFSIZ)
-	while d:
-		ofp.write(d)
-		d = ifp.read(BUFSIZ)
-	ifp.close()
-	ofp.close()
-	
-	ifp = openrf(src, '*rb')
-	ofp = openrf(dst, '*wb')
-	d = ifp.read(BUFSIZ)
-	while d:
-		ofp.write(d)
-		d = ifp.read(BUFSIZ)
-	ifp.close()
-	ofp.close()
-	
 	srcfss = macfs.FSSpec(src)
 	dstfss = macfs.FSSpec(dst)
+	
+	ifp = open(srcfss.as_pathname(), 'rb')
+	ofp = open(dstfss.as_pathname(), 'wb')
+	d = ifp.read(BUFSIZ)
+	while d:
+		ofp.write(d)
+		d = ifp.read(BUFSIZ)
+	ifp.close()
+	ofp.close()
+	
+	ifp = openrf(srcfss.as_pathname(), '*rb')
+	ofp = openrf(dstfss.as_pathname(), '*wb')
+	d = ifp.read(BUFSIZ)
+	while d:
+		ofp.write(d)
+		d = ifp.read(BUFSIZ)
+	ifp.close()
+	ofp.close()
+	
 	sf = srcfss.GetFInfo()
 	df = dstfss.GetFInfo()
 	df.Creator, df.Type = sf.Creator, sf.Type

@@ -3,7 +3,7 @@ Tests for uu module.
 Nick Mathewson
 """
 
-from test.test_support import verify, TestFailed, verbose, TESTFN
+from test_support import verify, TestFailed, verbose, TESTFN
 import sys, os
 import uu
 from StringIO import StringIO
@@ -124,7 +124,8 @@ except uu.Error, e:
     verify(str(e) == 'No valid begin line found in input file')
 
 # Test to verify that decode() will refuse to overwrite an existing file
-outfile = TESTFN + "out"
+import tempfile
+outfile = tempfile.mktemp()
 inp = StringIO('Here is a message to be uuencoded')
 out = StringIO()
 uu.encode(inp, out, outfile)

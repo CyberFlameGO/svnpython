@@ -157,7 +157,7 @@ extern int _QdRGB_Convert(PyObject *, RGBColorPtr);
 #define QDIsPortBuffered(port) 0
 #endif /* !TARGET_API_MAC_CARBON  */
 
-static PyObject *BMObj_NewCopied(BitMapPtr);
+staticforward PyObject *BMObj_NewCopied(BitMapPtr);
 
 /*
 ** Parse/generate RGB records

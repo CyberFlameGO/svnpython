@@ -28,6 +28,7 @@ import parser
 # 1.5.2 for code branches executed in 1.5.2
 import symbol
 import token
+import string
 import sys
 
 error = 'walker.error'
@@ -110,7 +111,7 @@ class Transformer:
     def parsesuite(self, text):
         """Return a modified parse tree for the given suite text."""
         # Hack for handling non-native line endings on non-DOS like OSs.
-        text = text.replace('\x0d', '')
+        text = string.replace(text, '\x0d', '')
         return self.transform(parser.suite(text))
 
     def parseexpr(self, text):
@@ -291,10 +292,10 @@ class Transformer:
             n.lineno = exprNode.lineno
             return n
         if nodelist[1][0] == token.EQUAL:
-            nodesl = []
+            nodes = []
             for i in range(0, len(nodelist) - 2, 2):
-                nodesl.append(self.com_assign(nodelist[i], OP_ASSIGN))
-            n = Assign(nodesl, exprNode)
+                nodes.append(self.com_assign(nodelist[i], OP_ASSIGN))
+            n = Assign(nodes, exprNode)
             n.lineno = nodelist[1][2]
         else:
             lval = self.com_augassign(nodelist[0])

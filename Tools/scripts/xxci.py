@@ -9,6 +9,7 @@ import os
 from stat import *
 import commands
 import fnmatch
+import string
 
 EXECMAGIC = '\001\140\000\010'
 
@@ -56,7 +57,7 @@ def setup():
         f = open('.xxcign', 'r')
     except IOError:
         return
-    ignore[:] = ignore + f.read().split()
+    ignore[:] = ignore + string.split(f.read())
 
 def skipfile(file):
     for p in ignore:

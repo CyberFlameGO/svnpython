@@ -1,8 +1,8 @@
 import pickle
+import test_support
 import unittest
 from cStringIO import StringIO
-from test.pickletester import AbstractPickleTests, AbstractPickleModuleTests
-from test import test_support
+from pickletester import AbstractPickleTests, AbstractPickleModuleTests
 
 class PickleTests(AbstractPickleTests, AbstractPickleModuleTests):
 

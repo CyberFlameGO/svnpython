@@ -13,7 +13,6 @@
 #include "pgen.h"
 
 extern int Py_DebugFlag;
-extern int Py_IgnoreEnvironmentFlag; /* needed by Py_GETENV */
 
 
 /* PART ONE -- CONSTRUCT NFA -- Cf. Algorithm 3.2 from [Aho&Ullman 77] */

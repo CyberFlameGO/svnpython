@@ -44,7 +44,7 @@
 #include "Python.h"
 
 static PyObject *fpe_error;
-PyMODINIT_FUNC initfpetest(void);
+DL_EXPORT(void) initfpetest(void);
 static PyObject *test(PyObject *self,PyObject *args);
 static double db0(double);
 static double overflow(double);
@@ -54,7 +54,7 @@ static double nest3(double);
 static void printerr(double);
 
 static PyMethodDef fpetest_methods[] = {
-    {"test",		 (PyCFunction) test,		 METH_VARARGS},
+    {"test",		 (PyCFunction) test,		 1},
     {0,0}
 };
 
@@ -172,7 +172,7 @@ static double overflow(double b)
   return a;
 }
 
-PyMODINIT_FUNC initfpetest(void)
+DL_EXPORT(void) initfpetest(void)
 {
     PyObject *m, *d;
 

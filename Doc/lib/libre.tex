@@ -1,7 +1,7 @@
 \section{\module{re} ---
          Regular expression operations}
 \declaremodule{standard}{re}
-\moduleauthor{Fredrik Lundh}{fredrik@pythonware.com}
+\moduleauthor{Fredrik Lundh}{effbot@telia.com}
 \sectionauthor{Andrew M. Kuchling}{akuchlin@mems-exchange.org}
 
 
@@ -32,6 +32,15 @@ two-character string containing \character{\e} and \character{n},
 while \code{"\e n"} is a one-character string containing a newline.
 Usually patterns will be expressed in Python code using this raw
 string notation.
+
+\strong{Implementation note:}
+The \module{re}\refstmodindex{pre} module has two distinct
+implementations: \module{sre} is the default implementation and
+includes Unicode support, but may run into stack limitations for some
+patterns.  Though this will be fixed for a future release of Python,
+the older implementation (without Unicode support) is still available
+as the \module{pre}\refstmodindex{pre} module.
+
 
 \begin{seealso}
   \seetitle{Mastering Regular Expressions}{Book on regular expressions
@@ -377,9 +386,11 @@ also accepted by the regular expression parser:
 \\
 \end{verbatim}
 
-Octal escapes are included in a limited form: If the first digit is a
-0, or if there are three octal digits, it is considered an octal
-escape. Otherwise, it is a group reference.
+Note that octal escapes are not included.  While the parser can
+attempt to determine whether a character is being specified by it's
+ordinal value expressed in octal, doing so yields an expression which
+is relatively difficult to maintain, as the same syntax is used to
+refer to numbered groups.
 
 
 % Note the lack of a period in the section title; it causes problems
@@ -845,6 +856,10 @@ The string passed to \function{match()} or \function{search()}.
 
 \subsection{Examples}
 
+%\begin{list}{}{\leftmargin 0.7in \labelwidth 0.65in}
+
+%\item[Simulating scanf]
+
 \leftline{\strong{Simulating \cfunction{scanf()}}}
 
 Python does not currently have an equivalent to \cfunction{scanf()}.
@@ -890,27 +905,7 @@ you would use a \cfunction{scanf()} format like
 The equivalent regular expression would be
 
 \begin{verbatim}
-    (\S+) - (\d+) errors, (\d+) warnings
+    ([^\s]+) - (\d+) errors, (\d+) warnings
 \end{verbatim}
 
-\leftline{\strong{Avoiding backtracking}}
-
-If you create regular expressions that require the engine to perform a lot
-of backtracking, you may encounter a RuntimeError exception with the message
-\code{maximum recursion limit exceeded}.  For example,
-
-\begin{verbatim}
->>> s = "<" + "that's a very big string!"*1000 + ">"
->>> re.match('<.*?>', s)
-Traceback (most recent call last):
-  File "<stdin>", line 1, in ?
-  File "/usr/local/lib/python2.3/sre.py", line 132, in match
-    return _compile(pattern, flags).match(string)
-RuntimeError: maximum recursion limit exceeded
-\end{verbatim}
-
-You can often restructure your regular expression to avoid backtracking.
-The above regular expression can be recast as
-\regexp{\textless[\textasciicircum \textgreater]*\textgreater}.  As a
-further benefit, such regular expressions will run faster than their
-backtracking equivalents.
+%\end{list}
