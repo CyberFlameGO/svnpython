@@ -15,7 +15,7 @@
 
 /*
 Table of irreducible polynomials to efficiently cycle through
-GF(2^n)-{0}, 2<=n<=30.  A table size is always a power of 2.
+GF(2^n)-{0}, 2<=n<=30.
 */
 static long polys[] = {
 	4 + 3,
@@ -54,30 +54,13 @@ static long polys[] = {
 static PyObject *dummy; /* Initialized by first call to newdictobject() */
 
 /*
-There are three kinds of slots in the table:
-
-1. Unused.  me_key == me_value == NULL
-   Does not hold an active (key, value) pair now and never did.  Unused can
-   transition to Active upon key insertion.  This is the only case in which
-   me_key is NULL, and is each slot's initial state.
-
-2. Active.  me_key != NULL and me_key != dummy and me_value != NULL
-   Holds an active (key, value) pair.  Active can transition to Dummy upon
-   key deletion.  This is the only case in which me_value != NULL.
-
-3. Dummy.  me_key == dummy and me_value == NULL
-   Previously held an active (key, value) pair, but that was deleted and an
-   active pair has not yet overwritten the slot.  Dummy can transition to
-   Active upon key insertion.  Dummy slots cannot be made Unused again
-   (cannot have me_key set to NULL), else the probe sequence in case of
-   collision would have no way to know they were once active.
-
-Note: .popitem() abuses the me_hash field of an Unused or Dummy slot to
-hold a search finger.  The me_hash field of Unused or Dummy slots has no
-meaning otherwise.
+Invariant for entries: when in use, me_value is not NULL and me_key is
+not NULL and not dummy; when not in use, me_value is NULL and me_key
+is either NULL or dummy.  A dummy key value cannot be replaced by
+NULL, since otherwise other keys may be lost.
 */
 typedef struct {
-	long me_hash;      /* cached hash code of me_key */
+	long me_hash;
 	PyObject *me_key;
 	PyObject *me_value;
 #ifdef USE_CACHE_ALIGNED
@@ -86,21 +69,20 @@ typedef struct {
 } dictentry;
 
 /*
-To ensure the lookup algorithm terminates, there must be at least one Unused
-slot (NULL key) in the table.
-The value ma_fill is the number of non-NULL keys (sum of Active and Dummy);
-ma_used is the number of non-NULL, non-dummy keys (== the number of non-NULL
-values == the number of Active items).
-To avoid slowing down lookups on a near-full table, we resize the table when
-it is more than half filled.
+To ensure the lookup algorithm terminates, the table size must be a
+prime number and there must be at least one NULL key in the table.
+The value ma_fill is the number of non-NULL keys; ma_used is the number
+of non-NULL, non-dummy keys.
+To avoid slowing down lookups on a near-full table, we resize the table
+when it is more than half filled.
 */
 typedef struct dictobject dictobject;
 struct dictobject {
 	PyObject_HEAD
-	int ma_fill;  /* # Active + # Dummy */
-	int ma_used;  /* # Active */
-	int ma_size;  /* total # slots in ma_table */
-	int ma_poly;  /* appopriate entry from polys vector */
+	int ma_fill;
+	int ma_used;
+	int ma_size;
+	int ma_poly;
 	dictentry *ma_table;
 	dictentry *(*ma_lookup)(dictobject *mp, PyObject *key, long hash);
 };
@@ -156,12 +138,12 @@ This is based on Algorithm D from Knuth Vol. 3, Sec. 6.4.
 Open addressing is preferred over chaining since the link overhead for
 chaining would be substantial (100% with typical malloc overhead).
 However, instead of going through the table at constant steps, we cycle
-through the values of GF(2^n).  This avoids modulo computations, being
+through the values of GF(2^n)-{0}. This avoids modulo computations, being
 much cheaper on RISC machines, without leading to clustering.
 
 The initial probe index is computed as hash mod the table size.
-Subsequent probe indices use the values of x^i in GF(2^n)-{0} as an offset,
-where x is a root. The initial offset is derived from hash, too.
+Subsequent probe indices use the values of x^i in GF(2^n) as an offset,
+where x is a root. The initial value is derived from hash, too.
 
 All arithmetic on hash should ignore overflow.
 
@@ -186,14 +168,11 @@ lookdict(dictobject *mp, PyObject *key, register long hash)
 	register int cmp;
 	PyObject *err_type, *err_value, *err_tb;
 	/* We must come up with (i, incr) such that 0 <= i < ma_size
-	   and 0 < incr < ma_size and both are a function of hash.
-	   i is the initial table index and incr the initial probe offset. */
+	   and 0 < incr < ma_size and both are a function of hash */
 	i = (~hash) & mask;
 	/* We use ~hash instead of hash, as degenerate hash functions, such
 	   as for ints <sigh>, can have lots of leading zeros. It's not
-	   really a performance risk, but better safe than sorry.
-	   12-Dec-00 tim:  so ~hash produces lots of leading ones instead --
-	   what's the gain? */
+	   really a performance risk, but better safe than sorry. */
 	ep = &ep0[i];
 	if (ep->me_key == NULL || ep->me_key == key)
 		return ep;
@@ -535,8 +514,8 @@ PyDict_DelItem(PyObject *op, PyObject *key)
 	old_value = ep->me_value;
 	ep->me_value = NULL;
 	mp->ma_used--;
-	Py_DECREF(old_value);
-	Py_DECREF(old_key);
+	Py_DECREF(old_value); 
+	Py_DECREF(old_key); 
 	return 0;
 }
 
@@ -1153,58 +1132,6 @@ dict_clear(register dictobject *mp, PyObject *args)
 	return Py_None;
 }
 
-static PyObject *
-dict_popitem(dictobject *mp, PyObject *args)
-{
-	int i = 0;
-	dictentry *ep;
-	PyObject *res;
-
-	if (!PyArg_NoArgs(args))
-		return NULL;
-	if (mp->ma_used == 0) {
-		PyErr_SetString(PyExc_KeyError,
-				"popitem(): dictionary is empty");
-		return NULL;
-	}
-	/* Set ep to "the first" dict entry with a value.  We abuse the hash
-	 * field of slot 0 to hold a search finger:
-	 * If slot 0 has a value, use slot 0.
-	 * Else slot 0 is being used to hold a search finger,
-	 * and we use its hash value as the first index to look.
-	 */
-	ep = &mp->ma_table[0];
-	if (ep->me_value == NULL) {
-		i = (int)ep->me_hash;
-		/* The hash field may be uninitialized trash, or it
-		 * may be a real hash value, or it may be a legit
-		 * search finger, or it may be a once-legit search
-		 * finger that's out of bounds now because it
-		 * wrapped around or the table shrunk -- simply
-		 * make sure it's in bounds now.
-		 */
-		if (i >= mp->ma_size || i < 1)
-			i = 1;	/* skip slot 0 */
-		while ((ep = &mp->ma_table[i])->me_value == NULL) {
-			i++;
-			if (i >= mp->ma_size)
-				i = 1;
-		}
-	}
-	res = PyTuple_New(2);
-	if (res != NULL) {
-		PyTuple_SET_ITEM(res, 0, ep->me_key);
-		PyTuple_SET_ITEM(res, 1, ep->me_value);
-		Py_INCREF(dummy);
-		ep->me_key = dummy;
-		ep->me_value = NULL;
-		mp->ma_used--;
-		assert(mp->ma_table[0].me_value == NULL);
-		mp->ma_table[0].me_hash = i + 1;  /* next place to start */
-	}
-	return res;
-}
-
 static int
 dict_traverse(PyObject *op, visitproc visit, void *arg)
 {
@@ -1230,60 +1157,17 @@ dict_tp_clear(PyObject *op)
 	return 0;
 }
 
-
-static char has_key__doc__[] =
-"D.has_key(k) -> 1 if D has a key k, else 0";
-
-static char get__doc__[] =
-"D.get(k[,d]) -> D[k] if D.has_key(k), else d.  d defaults to None.";
-
-static char setdefault_doc__[] =
-"D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if not D.has_key(k)";
-
-static char popitem__doc__[] =
-"D.popitem() -> (k, v), remove and return some (key, value) pair as a\n\
-2-tuple; but raise KeyError if D is empty";
-
-static char keys__doc__[] =
-"D.keys() -> list of D's keys";
-
-static char items__doc__[] =
-"D.items() -> list of D's (key, value) pairs, as 2-tuples";
-
-static char values__doc__[] =
-"D.values() -> list of D's values";
-
-static char update__doc__[] =
-"D.update(E) -> None.  Update D from E: for k in E.keys(): D[k] = E[k]";
-
-static char clear__doc__[] =
-"D.clear() -> None.  Remove all items from D.";
-
-static char copy__doc__[] =
-"D.copy() -> a shallow copy of D";
-
 static PyMethodDef mapp_methods[] = {
-	{"has_key",	(PyCFunction)dict_has_key,      METH_VARARGS,
-	 has_key__doc__},
-	{"get",         (PyCFunction)dict_get,          METH_VARARGS,
-	 get__doc__},
-	{"setdefault",  (PyCFunction)dict_setdefault,   METH_VARARGS,
-	 setdefault_doc__},
-	{"popitem",	(PyCFunction)dict_popitem,	METH_OLDARGS,
-	 popitem__doc__},
-	{"keys",	(PyCFunction)dict_keys,		METH_OLDARGS,
-	keys__doc__},
-	{"items",	(PyCFunction)dict_items,	METH_OLDARGS,
-	 items__doc__},
-	{"values",	(PyCFunction)dict_values,	METH_OLDARGS,
-	 values__doc__},
-	{"update",	(PyCFunction)dict_update,	METH_OLDARGS,
-	 update__doc__},
-	{"clear",	(PyCFunction)dict_clear,	METH_OLDARGS,
-	 clear__doc__},
-	{"copy",	(PyCFunction)dict_copy,		METH_OLDARGS,
-	 copy__doc__},
-	{NULL,		NULL}	/* sentinel */
+	{"has_key",	(PyCFunction)dict_has_key,      METH_VARARGS},
+	{"keys",	(PyCFunction)dict_keys},
+	{"items",	(PyCFunction)dict_items},
+	{"values",	(PyCFunction)dict_values},
+	{"update",	(PyCFunction)dict_update},
+	{"clear",	(PyCFunction)dict_clear},
+	{"copy",	(PyCFunction)dict_copy},
+	{"get",         (PyCFunction)dict_get,          METH_VARARGS},
+	{"setdefault",  (PyCFunction)dict_setdefault,   METH_VARARGS},
+	{NULL,		NULL}		/* sentinel */
 };
 
 static PyObject *

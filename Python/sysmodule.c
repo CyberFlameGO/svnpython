@@ -15,8 +15,6 @@ Data members:
 */
 
 #include "Python.h"
-#include "compile.h"
-#include "frameobject.h"
 
 #include "osdefs.h"
 
@@ -286,40 +284,6 @@ sys_getcounts(PyObject *self, PyObject *args)
 }
 #endif
 
-static char getframe_doc[] =
-"_getframe([depth]) -> frameobject\n\
-\n\
-Return a frame object from the call stack.  If optional integer depth is\n\
-given, return the frame object that many calls below the top of the stack.\n\
-If that is deeper than the call stack, ValueError is raised.  The default\n\
-for depth is zero, returning the frame at the top of the call stack.\n\
-\n\
-This function should be used for internal and specialized\n\
-purposes only.";
-
-static PyObject *
-sys_getframe(PyObject *self, PyObject *args)
-{
-	PyFrameObject *f = PyThreadState_Get()->frame;
-	int depth = -1;
-
-	if (!PyArg_ParseTuple(args, "|i:_getframe", &depth))
-		return NULL;
-
-	while (depth > 0 && f != NULL) {
-		f = f->f_back;
-		--depth;
-	}
-	if (f == NULL) {
-		PyErr_SetString(PyExc_ValueError,
-				"call stack is not deep enough");
-		return NULL;
-	}
-	Py_INCREF(f);
-	return (PyObject*)f;
-}
-
-
 #ifdef Py_TRACE_REFS
 /* Defined in objects.c because it uses static globals if that file */
 extern PyObject *_Py_GetObjects(PyObject *, PyObject *);
@@ -349,7 +313,6 @@ static PyMethodDef sys_methods[] = {
 	{"getrefcount",	sys_getrefcount, 1, getrefcount_doc},
 	{"getrecursionlimit", sys_getrecursionlimit, 1,
 	 getrecursionlimit_doc},
-	{"_getframe", sys_getframe, 1, getframe_doc},
 #ifdef USE_MALLOPT
 	{"mdebug",	sys_mdebug, 1},
 #endif
@@ -389,34 +352,6 @@ list_builtin_module_names(void)
 		list = v;
 	}
 	return list;
-}
-
-static PyObject *warnoptions = NULL;
-
-void
-PySys_ResetWarnOptions(void)
-{
-	if (warnoptions == NULL || !PyList_Check(warnoptions))
-		return;
-	PyList_SetSlice(warnoptions, 0, PyList_GET_SIZE(warnoptions), NULL);
-}
-
-void
-PySys_AddWarnOption(char *s)
-{
-	PyObject *str;
-
-	if (warnoptions == NULL || !PyList_Check(warnoptions)) {
-		Py_XDECREF(warnoptions);
-		warnoptions = PyList_New(0);
-		if (warnoptions == NULL)
-			return;
-	}
-	str = PyString_FromString(s);
-	if (str != NULL) {
-		PyList_Append(warnoptions, str);
-		Py_DECREF(str);
-	}
 }
 
 /* XXX This doc string is too long to be a single string literal in VC++ 5.0.
@@ -581,17 +516,6 @@ _PySys_Init(void)
 			     v = PyString_FromString(PyWin_DLLVersionString));
 	Py_XDECREF(v);
 #endif
-	if (warnoptions == NULL) {
-		warnoptions = PyList_New(0);
-	}
-	else {
-		Py_INCREF(warnoptions);
-	}
-	if (warnoptions != NULL) {
-		PyDict_SetItemString(sysdict, "warnoptions", v = warnoptions);
-		Py_DECREF(v);
-	}
-	
 	if (PyErr_Occurred())
 		return NULL;
 	return m;

@@ -57,7 +57,7 @@ class Cmd:
 
     def cmdloop(self, intro=None):
         self.preloop()
-        if intro is not None:
+        if intro != None:
             self.intro = intro
         if self.intro:
             print self.intro

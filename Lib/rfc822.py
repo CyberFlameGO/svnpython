@@ -132,25 +132,21 @@ class Message:
             tell = self.fp.tell
         while 1:
             if tell:
-                try:
-                    startofline = tell()
-                except IOError:
-                    startofline = tell = None
-                    self.seekable = 0
+                startofline = tell()
             line = self.fp.readline()
             if not line:
                 self.status = 'EOF in headers'
                 break
             # Skip unix From name time lines
-            if firstline and line.startswith('From '):
+            if firstline and line[:5] == 'From ':
                 self.unixfrom = self.unixfrom + line
                 continue
             firstline = 0
             if headerseen and line[0] in ' \t':
                 # It's a continuation line.
                 list.append(line)
-                x = (self.dict[headerseen] + "\n " + line.strip())
-                self.dict[headerseen] = x.strip()
+                x = (self.dict[headerseen] + "\n " + string.strip(line))
+                self.dict[headerseen] = string.strip(x)
                 continue
             elif self.iscomment(line):
                 # It's a comment.  Ignore it.
@@ -162,7 +158,7 @@ class Message:
             if headerseen:
                 # It's a legal header line, save it.
                 list.append(line)
-                self.dict[headerseen] = line[len(headerseen)+1:].strip()
+                self.dict[headerseen] = string.strip(line[len(headerseen)+1:])
                 continue
             else:
                 # It's not a header line; throw it back and stop here.
@@ -186,9 +182,9 @@ class Message:
         You may override this method in order to use Message parsing
         on tagged data in RFC822-like formats with special header formats.
         """
-        i = line.find(':')
+        i = string.find(line, ':')
         if i > 0:
-            return line[:i].lower()
+            return string.lower(line[:i])
         else:
             return None
     
@@ -223,12 +219,12 @@ class Message:
         times, all occurrences are returned.  Case is not
         important in the header name.
         """
-        name = name.lower() + ':'
+        name = string.lower(name) + ':'
         n = len(name)
         list = []
         hit = 0
         for line in self.headers:
-            if line[:n].lower() == name:
+            if string.lower(line[:n]) == name:
                 hit = 1
             elif line[:1] not in string.whitespace:
                 hit = 0
@@ -243,7 +239,7 @@ class Message:
         only the first matching header (and its continuation
         lines).
         """
-        name = name.lower() + ':'
+        name = string.lower(name) + ':'
         n = len(name)
         list = []
         hit = 0
@@ -251,7 +247,7 @@ class Message:
             if hit:
                 if line[:1] not in string.whitespace:
                     break
-            elif line[:n].lower() == name:
+            elif string.lower(line[:n]) == name:
                 hit = 1
             if hit:
                 list.append(line)
@@ -271,7 +267,7 @@ class Message:
         if not list:
             return None
         list[0] = list[0][len(name) + 1:]
-        return ''.join(list)
+        return string.joinfields(list, '')
     
     def getheader(self, name, default=None):
         """Get the header value for a name.
@@ -282,7 +278,7 @@ class Message:
         version which finds the *last* such header.
         """
         try:
-            return self.dict[name.lower()]
+            return self.dict[string.lower(name)]
         except KeyError:
             return default
     get = getheader
@@ -301,13 +297,13 @@ class Message:
         for s in self.getallmatchingheaders(name):
             if s[0] in string.whitespace:
                 if current:
-                    current = "%s\n %s" % (current, s.strip())
+                    current = "%s\n %s" % (current, string.strip(s))
                 else:
-                    current = s.strip()
+                    current = string.strip(s)
             else:
                 if have_header:
                     result.append(current)
-                current = s[s.find(":") + 1:].strip()
+                current = string.strip(s[string.find(s, ":") + 1:])
                 have_header = 1
         if have_header:
             result.append(current)
@@ -341,11 +337,11 @@ class Message:
             else:
                 if raw:
                     raw.append(', ')
-                i = h.find(':')
+                i = string.find(h, ':')
                 if i > 0:
                     addr = h[i+1:]
                 raw.append(addr)
-        alladdrs = ''.join(raw)
+        alladdrs = string.join(raw, '')
         a = AddrlistClass(alladdrs)
         return a.getaddrlist()
     
@@ -383,7 +379,7 @@ class Message:
     
     def __getitem__(self, name):
         """Get a specific header, as from a dictionary."""
-        return self.dict[name.lower()]
+        return self.dict[string.lower(name)]
 
     def __setitem__(self, name, value):
         """Set the value of a header.
@@ -393,15 +389,15 @@ class Message:
         rather than where the altered header was.
         """
         del self[name] # Won't fail if it doesn't exist
-        self.dict[name.lower()] = value
+        self.dict[string.lower(name)] = value
         text = name + ": " + value
-        lines = text.split("\n")
+        lines = string.split(text, "\n")
         for line in lines:
             self.headers.append(line + "\n")
     
     def __delitem__(self, name):
         """Delete all occurrences of a specific header, if it is present."""
-        name = name.lower()
+        name = string.lower(name)
         if not self.dict.has_key(name):
             return
         del self.dict[name]
@@ -411,7 +407,7 @@ class Message:
         hit = 0
         for i in range(len(self.headers)):
             line = self.headers[i]
-            if line[:n].lower() == name:
+            if string.lower(line[:n]) == name:
                 hit = 1
             elif line[:1] not in string.whitespace:
                 hit = 0
@@ -423,7 +419,7 @@ class Message:
 
     def has_key(self, name):
         """Determine whether a message contains the named header."""
-        return self.dict.has_key(name.lower())
+        return self.dict.has_key(string.lower(name))
     
     def keys(self):
         """Get all of a message's header field names."""
@@ -466,7 +462,13 @@ def unquote(str):
 
 def quote(str):
     """Add quotes around a string."""
-    return str.replace('\\', '\\\\').replace('"', '\\"')
+    return '"%s"' % string.join(
+    string.split(
+    string.join(
+    string.split(str, '\\'),
+    '\\\\'),
+    '"'),
+    '\\"')
 
 
 def parseaddr(address):
@@ -537,7 +539,7 @@ class AddrlistClass:
         if self.pos >= len(self.field):
             # Bad email address technically, no domain.
             if plist:
-                returnlist = [(' '.join(self.commentlist), plist[0])]
+                returnlist = [(string.join(self.commentlist), plist[0])]
             
         elif self.field[self.pos] in '.@':
             # email address is just an addrspec
@@ -545,7 +547,7 @@ class AddrlistClass:
             self.pos = oldpos
             self.commentlist = oldcl
             addrspec = self.getaddrspec()
-            returnlist = [(' '.join(self.commentlist), addrspec)]
+            returnlist = [(string.join(self.commentlist), addrspec)]
             
         elif self.field[self.pos] == ':':
             # address is a group
@@ -565,13 +567,13 @@ class AddrlistClass:
             routeaddr = self.getrouteaddr()
             
             if self.commentlist:
-                returnlist = [(' '.join(plist) + ' (' + \
-                         ' '.join(self.commentlist) + ')', routeaddr)]
-            else: returnlist = [(' '.join(plist), routeaddr)]
+                returnlist = [(string.join(plist) + ' (' + \
+                         string.join(self.commentlist) + ')', routeaddr)]
+            else: returnlist = [(string.join(plist), routeaddr)]
             
         else:
             if plist:
-                returnlist = [(' '.join(self.commentlist), plist[0])]
+                returnlist = [(string.join(self.commentlist), plist[0])]
             elif self.field[self.pos] in self.specials:
                 self.pos = self.pos + 1
         
@@ -630,12 +632,12 @@ class AddrlistClass:
             self.gotonext()
         
         if self.pos >= len(self.field) or self.field[self.pos] != '@':
-            return ''.join(aslist)
+            return string.join(aslist, '')
         
         aslist.append('@')
         self.pos = self.pos + 1
         self.gotonext()
-        return ''.join(aslist) + self.getdomain()
+        return string.join(aslist, '') + self.getdomain()
     
     def getdomain(self):
         """Get the complete domain name from an address."""
@@ -653,7 +655,7 @@ class AddrlistClass:
             elif self.field[self.pos] in self.atomends:
                 break
             else: sdlist.append(self.getatom())
-        return ''.join(sdlist)
+        return string.join(sdlist, '')
     
     def getdelimited(self, beginchar, endchars, allowcomments = 1):
         """Parse a header fragment delimited by special characters.
@@ -689,7 +691,7 @@ class AddrlistClass:
                 slist.append(self.field[self.pos])
             self.pos = self.pos + 1
         
-        return ''.join(slist)
+        return string.join(slist, '')
     
     def getquote(self):
         """Get a quote-delimited fragment from self's field."""
@@ -713,7 +715,7 @@ class AddrlistClass:
             else: atomlist.append(self.field[self.pos])
             self.pos = self.pos + 1
         
-        return ''.join(atomlist)
+        return string.join(atomlist, '')
     
     def getphraselist(self):
         """Parse a sequence of RFC-822 phrases.
@@ -750,7 +752,7 @@ class AddressList(AddrlistClass):
         return len(self.addresslist)
 
     def __str__(self):
-        return ", ".join(map(dump_address_pair, self.addresslist))
+        return string.joinfields(map(dump_address_pair, self.addresslist),", ")
 
     def __add__(self, other):
         # Set union
@@ -822,17 +824,17 @@ def parsedate_tz(data):
     
     Accounts for military timezones.
     """
-    data = data.split()
-    if data[0][-1] in (',', '.') or data[0].lower() in _daynames:
+    data = string.split(data)
+    if data[0][-1] in (',', '.') or string.lower(data[0]) in _daynames:
         # There's a dayname here. Skip it
         del data[0]
     if len(data) == 3: # RFC 850 date, deprecated
-        stuff = data[0].split('-')
+        stuff = string.split(data[0], '-')
         if len(stuff) == 3:
             data = stuff + data[1:]
     if len(data) == 4:
         s = data[3]
-        i = s.find('+')
+        i = string.find(s, '+')
         if i > 0:
             data[3:] = [s[:i], s[i+1:]]
         else:
@@ -841,16 +843,16 @@ def parsedate_tz(data):
         return None
     data = data[:5]
     [dd, mm, yy, tm, tz] = data
-    mm = mm.lower()
+    mm = string.lower(mm)
     if not mm in _monthnames:
-        dd, mm = mm, dd.lower()
+        dd, mm = mm, string.lower(dd)
         if not mm in _monthnames:
             return None
     mm = _monthnames.index(mm)+1
     if mm > 12: mm = mm - 12
     if dd[-1] == ',':
         dd = dd[:-1]
-    i = yy.find(':')
+    i = string.find(yy, ':')
     if i > 0:
         yy, tm = tm, yy
     if yy[-1] == ',':
@@ -859,7 +861,7 @@ def parsedate_tz(data):
         yy, tz = tz, yy
     if tm[-1] == ',':
         tm = tm[:-1]
-    tm = tm.split(':')
+    tm = string.splitfields(tm, ':')
     if len(tm) == 2:
         [thh, tmm] = tm
         tss = '0'
@@ -868,21 +870,21 @@ def parsedate_tz(data):
     else:
         return None
     try:
-        yy = int(yy)
-        dd = int(dd)
-        thh = int(thh)
-        tmm = int(tmm)
-        tss = int(tss)
-    except ValueError:
+        yy = string.atoi(yy)
+        dd = string.atoi(dd)
+        thh = string.atoi(thh)
+        tmm = string.atoi(tmm)
+        tss = string.atoi(tss)
+    except string.atoi_error:
         return None
-    tzoffset = None
-    tz = tz.upper()
+    tzoffset=None
+    tz=string.upper(tz)
     if _timezones.has_key(tz):
-        tzoffset = _timezones[tz]
+        tzoffset=_timezones[tz]
     else:
         try: 
-            tzoffset = int(tz)
-        except ValueError: 
+            tzoffset=string.atoi(tz)
+        except string.atoi_error: 
             pass
     # Convert a timezone offset into seconds ; -0500 -> -18000
     if tzoffset:
@@ -898,8 +900,8 @@ def parsedate_tz(data):
 
 def parsedate(data):
     """Convert a time string to a time tuple."""
-    t = parsedate_tz(data)
-    if type(t) == type( () ):
+    t=parsedate_tz(data)
+    if type(t)==type( () ):
         return t[:9]
     else: return t    
 

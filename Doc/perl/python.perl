@@ -103,13 +103,13 @@ sub do_cmd_e{ '&#92;' . @_[0]; }
 
 $DEVELOPER_ADDRESS = '';
 $SHORT_VERSION = '';
-$PACKAGE_VERSION = '';
+$PYTHON_VERSION = '';
 
-sub do_cmd_version{ $PACKAGE_VERSION . @_[0]; }
+sub do_cmd_version{ $PYTHON_VERSION . @_[0]; }
 sub do_cmd_shortversion{ $SHORT_VERSION . @_[0]; }
 sub do_cmd_release{
     local($_) = @_;
-    $PACKAGE_VERSION = next_argument();
+    $PYTHON_VERSION = next_argument();
     return $_;
 }
 
@@ -607,7 +607,7 @@ sub define_module{
     }
     $word = "$word " if $word;
     $THIS_MODULE = "$name";
-    $INDEX_SUBITEM = "(in module $name)";
+    $INDEX_SUBITEM = "(in $name)";
     print "[$name]";
     return make_mod_index_entry(
         "<tt class='module'>$name</tt> (${word}module)", 'DEF');
@@ -1018,17 +1018,11 @@ sub fix_font{
     elsif ($font eq 'member') {
         $font = 'tt class="member"';
     }
-    elsif ($font eq 'class') {
-        $font = 'tt class="class"';
-    }
     elsif ($font eq 'constant') {
         $font = 'tt class="constant"';
     }
     elsif ($font eq 'kbd') {
         $font = 'kbd';
-    }
-    elsif ($font eq 'programopt') {
-        $font = 'b';
     }
     return $font;
 }
@@ -1071,7 +1065,7 @@ sub get_table_col1_fonts{
         $efont = "</$font>";
         $efont =~ s/ .*>/>/;
     }
-    return ($sfont, $efont);
+    return ($font, $sfont, $efont);
 }
 
 sub do_env_tableii{
@@ -1086,14 +1080,13 @@ sub do_env_tableii{
     my $a2 = $col_aligns[1];
     s/\\lineii</\\lineii[$a1|$a2]</g;
     return '<table border align="center" style="border-collapse: collapse">'
-	   . "\n  <thead>"
-	   . "\n    <tr class=\"tableheader\">"
+           . "\n  <thead>"
+           . "\n    <tr class=\"tableheader\">"
 	   . "\n      $th1<b>$h1</b>\&nbsp;</th>"
 	   . "\n      $th2<b>$h2</b>\&nbsp;</th>"
-	   . "\n      </tr>"
 	   . "\n    </thead>"
 	   . "\n  <tbody valign='baseline'>"
-	   . $_
+           . $_
 	   . "\n    </tbody>"
 	   . "\n</table>";
 }
@@ -1108,11 +1101,11 @@ sub do_cmd_lineii{
     my $c1 = next_argument();
     my $c2 = next_argument();
     s/[\s\n]+//;
-    my($sfont,$efont) = get_table_col1_fonts();
+    my($font,$sfont,$efont) = get_table_col1_fonts();
     $c2 = '&nbsp;' if ($c2 eq '');
     my($c1align,$c2align) = split('\|', $aligns);
     my $padding = '';
-    if ($c1align =~ /align="right"/ || $c1 eq '') {
+    if ($c1align =~ /align="right"/) {
         $padding = '&nbsp;';
     }
     return "\n    <tr>$c1align$sfont$c1$efont$padding</td>\n"
@@ -1134,12 +1127,11 @@ sub do_env_tableiii{
     my $a3 = $col_aligns[2];
     s/\\lineiii</\\lineiii[$a1|$a2|$a3]</g;
     return '<table border align="center" style="border-collapse: collapse">'
-	   . "\n  <thead>"
-	   . "\n    <tr class=\"tableheader\">"
+           . "\n  <thead>"
+           . "\n    <tr$TABLE_HEADER_BGCOLOR>"
 	   . "\n      $th1<b>$h1</b>\&nbsp;</th>"
 	   . "\n      $th2<b>$h2</b>\&nbsp;</th>"
 	   . "\n      $th3<b>$h3</b>\&nbsp;</th>"
-	   . "\n      </tr>"
 	   . "\n    </thead>"
 	   . "\n  <tbody valign='baseline'>"
 	   . $_
@@ -1158,11 +1150,11 @@ sub do_cmd_lineiii{
     my $c2 = next_argument(); 
     my $c3 = next_argument();
     s/[\s\n]+//;
-    my($sfont,$efont) = get_table_col1_fonts();
+    my($font,$sfont,$efont) = get_table_col1_fonts();
     $c3 = '&nbsp;' if ($c3 eq '');
     my($c1align,$c2align,$c3align) = split('\|', $aligns);
     my $padding = '';
-    if ($c1align =~ /align="right"/ || $c1 eq '') {
+    if ($c1align =~ /align="right"/) {
         $padding = '&nbsp;';
     }
     return "\n    <tr>$c1align$sfont$c1$efont$padding</td>\n"
@@ -1187,13 +1179,12 @@ sub do_env_tableiv{
     my $a4 = $col_aligns[3];
     s/\\lineiv</\\lineiv[$a1|$a2|$a3|$a4]</g;
     return '<table border align="center" style="border-collapse: collapse">'
-	   . "\n  <thead>"
-	   . "\n    <tr class=\"tableheader\">"
+           . "\n  <thead>"
+           . "\n    <tr$TABLE_HEADER_BGCOLOR>"
 	   . "\n      $th1<b>$h1</b>\&nbsp;</th>"
 	   . "\n      $th2<b>$h2</b>\&nbsp;</th>"
 	   . "\n      $th3<b>$h3</b>\&nbsp;</th>"
 	   . "\n      $th4<b>$h4</b>\&nbsp;</th>"
-	   . "\n      </tr>"
 	   . "\n    </thead>"
 	   . "\n  <tbody valign='baseline'>"
 	   . $_
@@ -1213,11 +1204,11 @@ sub do_cmd_lineiv{
     my $c3 = next_argument();
     my $c4 = next_argument();
     s/[\s\n]+//;
-    my($sfont,$efont) = get_table_col1_fonts();
+    my($font,$sfont,$efont) = get_table_col1_fonts();
     $c4 = '&nbsp;' if ($c4 eq '');
     my($c1align,$c2align,$c3align,$c4align) = split('\|', $aligns);
     my $padding = '';
-    if ($c1align =~ /align="right"/ || $c1 eq '') {
+    if ($c1align =~ /align="right"/) {
         $padding = '&nbsp;';
     }
     return "\n    <tr>$c1align$sfont$c1$efont$padding</td>\n"
@@ -1278,11 +1269,11 @@ sub make_my_titlepage() {
 	$the_title .= "\n<p><i>$t_affil</i></p>";
     }
     if ($t_date) {
-	$the_title .= "\n<p>";
-	if ($PACKAGE_VERSION) {
-	    $the_title .= "<strong>Release $PACKAGE_VERSION</strong><br>\n";
+	$the_title .= "\n<p><strong>$t_date</strong>";
+	if ($PYTHON_VERSION) {
+	    $the_title .= "<br><strong>Release $PYTHON_VERSION</strong>";
         }
-	$the_title .= "<strong>$t_date</strong></p>"
+	$the_title .= "</p>"
     }
     if ($t_address) {
 	$the_title .= "\n<p>$t_address</p>";

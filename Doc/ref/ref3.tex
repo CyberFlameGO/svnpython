@@ -841,13 +841,6 @@ a list object, \code{x.__getitem__(i)} is not equivalent to
 operation raise an exception when no appropriate method is defined.
 \withsubitem{(mapping object method)}{\ttindex{__getitem__()}}
 
-When implementing a class that emulates any built-in type, it is
-important that the emulation only be implemented to the degree that it
-makes sense for the object being modelled.  For example, some
-sequences may work well with retrieval of individual elements, but
-extracting a slice may not make sense.  (One example of this is the
-\class{NodeList} interface in the W3C's Document Object Model.)
-
 
 \subsection{Basic customization\label{customization}}
 
@@ -910,15 +903,12 @@ imported modules are still available at the time when the
 \begin{methoddesc}[object]{__repr__}{self}
 Called by the \function{repr()}\bifuncindex{repr} built-in function
 and by string conversions (reverse quotes) to compute the ``official''
-string representation of an object.  If at all possible, this should
-look like a valid Python expression that could be used to recreate an
-object with the same value (given an appropriate environment).  If
-this is not possible, a string of the form \samp{<\var{...some useful
-description...}>} should be returned.  The return value must be a
-string object.
-
-This is typically used for debugging, so it is important that the
-representation is information-rich and unambiguous.
+string representation of an object.  This should normally look like a
+valid Python expression that can be used to recreate an object with
+the same value.  By convention, objects which cannot be trivially
+converted to strings which can be used to create a similar object
+produce a string of the form \samp{<\var{...some useful
+description...}>}.
 \indexii{string}{conversion}
 \indexii{reverse}{quotes}
 \indexii{backward}{quotes}
@@ -931,7 +921,7 @@ by the \keyword{print}\stindex{print} statement to compute the
 ``informal'' string representation of an object.  This differs from
 \method{__repr__()} in that it does not have to be a valid Python
 expression: a more convenient or concise representation may be used
-instead.  The return value must be a string object.
+instead.
 \end{methoddesc}
 
 \begin{methoddesc}[object]{__cmp__}{self, other}
@@ -1294,32 +1284,6 @@ has an \method{__rsub__()} method, \code{\var{y}.__rsub__(\var{x})} is
 called.  Note that ternary \function{pow()}\bifuncindex{pow} will not
 try calling \method{__rpow__()} (the coercion rules would become too
 complicated).
-\end{methoddesc}
-
-\begin{methoddesc}[numeric object]{__iadd__}{self, other}
-\methodline[numeric object]{__isub__}{self, other}
-\methodline[numeric object]{__imul__}{self, other}
-\methodline[numeric object]{__idiv__}{self, other}
-\methodline[numeric object]{__imod__}{self, other}
-\methodline[numeric object]{__ipow__}{self, other\optional{, modulo}}
-\methodline[numeric object]{__ilshift__}{self, other}
-\methodline[numeric object]{__irshift__}{self, other}
-\methodline[numeric object]{__iand__}{self, other}
-\methodline[numeric object]{__ixor__}{self, other}
-\methodline[numeric object]{__ior__}{self, other}
-These methods are called to implement the augmented arithmetic operations
-(\code{+=}, \code{-=}, \code{*=}, \code{/=}, \code{\%=}, \code{**=},
-\code{<<=}, \code{>>=}, \code{\&=}, \code{\^=}, \code{|=}).  These methods
-should attempt to do the operation in-place (modifying \var{self}) and
-return the result (which could be, but does not have to be, \var{self}).  If
-a specific method is not defined, the augmented operation falls back to the
-normal methods.  For instance, to evaluate the expression
-\var{x}\code{+=}\var{y}, where \var{x} is an instance of a class that has an
-\method{__iadd__()} method, \code{\var{x}.__iadd__(\var{y})} is called.  If
-\var{x} is an instance of a class that does not define a \method{__iadd()}
-method, \code{\var{x}.__add__(\var{y})} and \code{\var{y}.__radd__(\var{x})}
-are considered, as with the evaluation of \var{x}\code{+}\var{y}.
-
 \end{methoddesc}
 
 \begin{methoddesc}[numeric object]{__neg__}{self}

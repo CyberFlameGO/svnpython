@@ -71,7 +71,7 @@ builtin_apply(PyObject *self, PyObject *args)
 		if (!PyTuple_Check(alist)) {
 			if (!PySequence_Check(alist)) {
 				PyErr_SetString(PyExc_TypeError,
-				    "apply() arg 2 must be a sequence");
+				    "apply() 2nd argument must be a sequence");
 				return NULL;
 			}
 			t = PySequence_Tuple(alist);
@@ -82,7 +82,7 @@ builtin_apply(PyObject *self, PyObject *args)
 	}
 	if (kwdict != NULL && !PyDict_Check(kwdict)) {
 		PyErr_SetString(PyExc_TypeError,
-			   "apply() arg 3 must be a dictionary");
+			   "apply() 3rd argument must be dictionary");
 		goto finally;
 	}
 	retval = PyEval_CallObjectWithKeywords(func, alist, kwdict);
@@ -181,7 +181,7 @@ builtin_filter(PyObject *self, PyObject *args)
 	sqf = seq->ob_type->tp_as_sequence;
 	if (sqf == NULL || sqf->sq_length == NULL || sqf->sq_item == NULL) {
 		PyErr_SetString(PyExc_TypeError,
-			   "filter() arg 2 must be a sequence");
+			   "argument 2 to filter() must be a sequence type");
 		goto Fail_2;
 	}
 
@@ -368,7 +368,7 @@ builtin_compile(PyObject *self, PyObject *args)
 		start = Py_single_input;
 	else {
 		PyErr_SetString(PyExc_ValueError,
-		   "compile() arg 3 must be 'exec' or 'eval' or 'single'");
+		   "compile() mode must be 'exec' or 'eval' or 'single'");
 		return NULL;
 	}
 	return Py_CompileString(str, filename, start);
@@ -421,7 +421,7 @@ complex_from_string(PyObject *v)
 	}
 	else if (PyObject_AsCharBuffer(v, &s, &len)) {
 		PyErr_SetString(PyExc_TypeError,
-				"complex() arg is not a string");
+				"complex() needs a string first argument");
 		return NULL;
 	}
 
@@ -431,7 +431,7 @@ complex_from_string(PyObject *v)
 		s++;
 	if (s[0] == '\0') {
 		PyErr_SetString(PyExc_ValueError,
-				"complex() arg is an empty string");
+				"empty string for complex()");
 		return NULL;
 	}
 
@@ -445,7 +445,7 @@ complex_from_string(PyObject *v)
 			if (s-start != len) {
 				PyErr_SetString(
 					PyExc_ValueError,
-					"complex() arg contains a null byte");
+					"null byte in argument for complex()");
 				return NULL;
 			}
 			if(!done) sw_error=1;
@@ -531,7 +531,7 @@ complex_from_string(PyObject *v)
 
 	if (sw_error) {
 		PyErr_SetString(PyExc_ValueError,
-				"complex() arg is a malformed string");
+				"malformed string for complex()");
 		return NULL;
 	}
 
@@ -557,7 +557,7 @@ builtin_complex(PyObject *self, PyObject *args)
 	     ((nbi = i->ob_type->tp_as_number) == NULL ||
 	      nbi->nb_float == NULL))) {
 		PyErr_SetString(PyExc_TypeError,
-			   "complex() arg can't be converted to complex");
+			   "complex() argument can't be converted to complex");
 		return NULL;
 	}
 	/* XXX Hack to support classes with __complex__ method */
@@ -748,7 +748,7 @@ builtin_eval(PyObject *self, PyObject *args)
 	if (!PyString_Check(cmd) &&
 	    !PyUnicode_Check(cmd)) {
 		PyErr_SetString(PyExc_TypeError,
-			   "eval() arg 1 must be a string or code object");
+			   "eval() argument 1 must be string or code object");
 		return NULL;
 	}
 	if (PyString_AsStringAndSize(cmd, &str, NULL))
@@ -1224,7 +1224,7 @@ builtin_int(PyObject *self, PyObject *args)
 					 base);
 	else {
 		PyErr_SetString(PyExc_TypeError,
-				"int() can't convert non-string with explicit base");
+				"can't convert non-string with explicit base");
 		return NULL;
 	}
 }
@@ -1257,7 +1257,7 @@ builtin_long(PyObject *self, PyObject *args)
 					  base);
 	else {
 		PyErr_SetString(PyExc_TypeError,
-				"long() can't convert non-string with explicit base");
+				"can't convert non-string with explicit base");
 		return NULL;
 	}
 }
@@ -1384,7 +1384,7 @@ min_max(PyObject *args, int sign)
 	sq = v->ob_type->tp_as_sequence;
 	if (sq == NULL || sq->sq_item == NULL) {
 		PyErr_SetString(PyExc_TypeError,
-				"min() or max() arg must be a sequence");
+				"min() or max() of non-sequence");
 		return NULL;
 	}
 	w = NULL;
@@ -1417,7 +1417,7 @@ min_max(PyObject *args, int sign)
 	}
 	if (w == NULL)
 		PyErr_SetString(PyExc_ValueError,
-				"min() or max() arg is an empty sequence");
+				"min() or max() of empty sequence");
 	return w;
 }
 
@@ -1512,26 +1512,23 @@ builtin_ord(PyObject *self, PyObject *args)
 
 	if (PyString_Check(obj)) {
 		size = PyString_GET_SIZE(obj);
-		if (size == 1) {
+		if (size == 1)
 			ord = (long)((unsigned char)*PyString_AS_STRING(obj));
-			return PyInt_FromLong(ord);
-		}
 	} else if (PyUnicode_Check(obj)) {
 		size = PyUnicode_GET_SIZE(obj);
-		if (size == 1) {
+		if (size == 1)
 			ord = (long)*PyUnicode_AS_UNICODE(obj);
-			return PyInt_FromLong(ord);
-		}
 	} else {
 		PyErr_Format(PyExc_TypeError,
-			     "ord() expected string of length 1, but " \
+			     "expected string or Unicode character, " \
 			     "%.200s found", obj->ob_type->tp_name);
 		return NULL;
 	}
+	if (size == 1)
+		return PyInt_FromLong(ord);
 
 	PyErr_Format(PyExc_TypeError, 
-		     "ord() expected a character, "
-		     "but string of length %d found",
+		     "expected a character, length-%d string found",
 		     size);
 	return NULL;
 }
@@ -1610,7 +1607,7 @@ builtin_range(PyObject *self, PyObject *args)
 			return NULL;
 	}
 	if (istep == 0) {
-		PyErr_SetString(PyExc_ValueError, "range() arg 3 must not be zero");
+		PyErr_SetString(PyExc_ValueError, "zero step for range()");
 		return NULL;
 	}
 	if (istep > 0)
@@ -1620,7 +1617,7 @@ builtin_range(PyObject *self, PyObject *args)
 	n = (int)bign;
 	if (bign < 0 || (long)n != bign) {
 		PyErr_SetString(PyExc_OverflowError,
-				"range() result has too many items");
+				"range() has too many items");
 		return NULL;
 	}
 	v = PyList_New(n);
@@ -1667,7 +1664,7 @@ builtin_xrange(PyObject *self, PyObject *args)
 			return NULL;
 	}
 	if (istep == 0) {
-		PyErr_SetString(PyExc_ValueError, "xrange() arg 3 must not be zero");
+		PyErr_SetString(PyExc_ValueError, "zero step for xrange()");
 		return NULL;
 	}
 	if (istep > 0)
@@ -1676,7 +1673,7 @@ builtin_xrange(PyObject *self, PyObject *args)
 		n = get_len_of_range(ihigh, ilow, -istep);
 	if (n < 0) {
 		PyErr_SetString(PyExc_OverflowError,
-				"xrange() result has too many items");
+				"xrange() has more than sys.maxint items");
 		return NULL;
 	}
 	return PyRange_New(ilow, n, istep, 1);
@@ -1782,7 +1779,7 @@ builtin_reduce(PyObject *self, PyObject *args)
 	sqf = seq->ob_type->tp_as_sequence;
 	if (sqf == NULL || sqf->sq_item == NULL) {
 		PyErr_SetString(PyExc_TypeError,
-		    "reduce() arg 2 must be a sequence");
+		    "2nd argument to reduce() must be a sequence object");
 		return NULL;
 	}
 
@@ -1820,7 +1817,7 @@ builtin_reduce(PyObject *self, PyObject *args)
 
 	if (result == NULL)
 		PyErr_SetString(PyExc_TypeError,
-			   "reduce() of empty sequence with no initial value");
+			   "reduce of empty sequence with no initial value");
 
 	return result;
 
@@ -1998,7 +1995,7 @@ Without arguments, equivalent to locals().\n\
 With an argument, equivalent to object.__dict__.";
 
 static int
-abstract_issubclass(PyObject *derived, PyObject *cls, int first)
+abstract_issubclass(PyObject *derived, PyObject *cls, char *err, int first)
 {
 	static PyObject *__bases__ = NULL;
 	PyObject *bases;
@@ -2015,8 +2012,7 @@ abstract_issubclass(PyObject *derived, PyObject *cls, int first)
 		bases = PyObject_GetAttr(cls, __bases__);
 		if (bases == NULL || !PyTuple_Check(bases)) {
 		        Py_XDECREF(bases);
-	        	PyErr_SetString(PyExc_TypeError,
-					"arg 2 must be a class or type");
+	        	PyErr_SetString(PyExc_TypeError, err);
 			return -1;
 		}
 		Py_DECREF(bases);
@@ -2028,14 +2024,14 @@ abstract_issubclass(PyObject *derived, PyObject *cls, int first)
 	bases = PyObject_GetAttr(derived, __bases__);
 	if (bases == NULL || !PyTuple_Check(bases)) {
 	        Py_XDECREF(bases);
-		PyErr_SetString(PyExc_TypeError,
-				"arg 2 must be a class or type");
+	        PyErr_SetString(PyExc_TypeError, err);
 		return -1;
 	}
 
 	n = PyTuple_GET_SIZE(bases);
 	for (i = 0; i < n; i++) {
-		r = abstract_issubclass(PyTuple_GET_ITEM(bases, i), cls, 0);
+		r = abstract_issubclass(PyTuple_GET_ITEM(bases, i),
+					cls, err, 0);
 		if (r != 0)
 			break;
 	}
@@ -2075,16 +2071,24 @@ builtin_isinstance(PyObject *self, PyObject *args)
 		}
 		icls = PyObject_GetAttr(inst, __class__);
 		if (icls != NULL) {
-			retval = abstract_issubclass( icls, cls, 1);
+			retval = abstract_issubclass(
+				icls, cls,
+				"second argument must be a class", 
+				1);
 			Py_DECREF(icls);
 			if (retval < 0)
 				return NULL;
 		}
 		else {
 			PyErr_SetString(PyExc_TypeError,
-					"arg 2 must be a class or type");
+					"second argument must be a class");
 			return NULL;
 		}
+	}
+        else {
+		PyErr_SetString(PyExc_TypeError,
+				"second argument must be a class");
+		return NULL;
 	}
 	return PyInt_FromLong(retval);
 }
@@ -2107,7 +2111,8 @@ builtin_issubclass(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!PyClass_Check(derived) || !PyClass_Check(cls)) {
-		retval = abstract_issubclass(derived, cls, 1);
+		retval = abstract_issubclass(
+				derived, cls, "arguments must be classes", 1);
 		if (retval < 0) 
 			return NULL;
 	}
@@ -2135,7 +2140,7 @@ builtin_zip(PyObject *self, PyObject *args)
 
 	if (itemsize < 1) {
 		PyErr_SetString(PyExc_TypeError,
-				"zip() requires at least one sequence");
+				"at least one sequence is required");
 		return NULL;
 	}
 	/* args must be a tuple */

@@ -29,7 +29,8 @@ To build,
 
    1)  ./configure --prefix=/boot/home/config
 
-   2)  edit Modules/Setup
+   2)  cp Modules/Setup.in Modules/Setup
+       edit Modules/Setup
           comment out grp and mmap, and pwd on 4.5 or earlier
           uncomment any modules you want to include in python
           (you can also add them later as shared libraries.)

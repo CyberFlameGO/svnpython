@@ -20,7 +20,7 @@ def test():
     start = 'Jack is my hero'
     f.write(start)
     f.close()
-
+    
     binhex.binhex(fname1, fname2)
     if verbose:
         print 'binhex'
@@ -32,8 +32,8 @@ def test():
     f = open(fname1, 'r')
     finish = f.readline()
 
-    if start != finish:
-        print 'Error: binhex != hexbin'
+    if start <> finish:
+        print 'Error: binhex <> hexbin'
     elif verbose:
         print 'binhex == hexbin'
 

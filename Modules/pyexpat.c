@@ -719,7 +719,7 @@ xmlparse_getattr(xmlparseobject *self, char *name)
     if (strcmp(name, "__members__") == 0) {
         int i;
         PyObject *rc = PyList_New(0);
-        for(i = 0; handler_info[i].name != NULL; i++) {
+        for(i = 0; handler_info[i].name!=NULL; i++) {
             PyList_Append(rc, 
                           PyString_FromString(handler_info[i].name));
         }
@@ -727,7 +727,6 @@ xmlparse_getattr(xmlparseobject *self, char *name)
         PyList_Append(rc, PyString_FromString("ErrorLineNumber"));
         PyList_Append(rc, PyString_FromString("ErrorColumnNumber"));
         PyList_Append(rc, PyString_FromString("ErrorByteIndex"));
-        PyList_Append(rc, PyString_FromString("returns_unicode"));
 
         return rc;
     }
@@ -827,13 +826,6 @@ pyexpat_ParserCreate(PyObject *notused, PyObject *args, PyObject *kw)
 	if (!PyArg_ParseTupleAndKeywords(args, kw, "|zz:ParserCreate", kwlist,
 					 &encoding, &namespace_separator))
 		return NULL;
-	if (namespace_separator != NULL
-	    && strlen(namespace_separator) != 1) {
-		PyErr_SetString(PyExc_ValueError,
-				"namespace_separator must be one character,"
-				" omitted, or None");
-		return NULL;
-	}
 	return (PyObject *)newxmlparseobject(encoding, namespace_separator);
 }
 
@@ -921,18 +913,9 @@ initpyexpat(void)
         ErrorObject = PyErr_NewException("xml.parsers.expat.error",
                                          NULL, NULL);
     PyModule_AddObject(m, "error", ErrorObject);
-    Py_INCREF(&Xmlparsetype);
-    PyModule_AddObject(m, "XMLParserType", (PyObject *) &Xmlparsetype);
 
     PyModule_AddObject(m, "__version__",
                        PyString_FromStringAndSize(rev+11, strlen(rev+11)-2));
-#ifdef XML_MAJOR_VERSION
-    PyModule_AddStringConstant(m, "EXPAT_VERSION",
-                               (char *) XML_ExpatVersion());
-    PyModule_AddObject(m, "version_info",
-                       Py_BuildValue("(iii)", XML_MAJOR_VERSION,
-                                     XML_MINOR_VERSION, XML_MICRO_VERSION));
-#endif
 
     /* XXX When Expat supports some way of figuring out how it was
        compiled, this should check and set native_encoding 

@@ -456,7 +456,7 @@ def incr_item(dict, key):
         item = dict[key]
     except KeyError:
         item = 0
-    dict[key] = item + 1
+    return item + 1
 \end{verbatim}
 \ttindex{incr_item()}
 
@@ -472,25 +472,21 @@ int incr_item(PyObject *dict, PyObject *key)
     item = PyObject_GetItem(dict, key);
     if (item == NULL) {
         /* Handle KeyError only: */
-        if (!PyErr_ExceptionMatches(PyExc_KeyError))
-            goto error;
+        if (!PyErr_ExceptionMatches(PyExc_KeyError)) goto error;
 
         /* Clear the error and use zero: */
         PyErr_Clear();
         item = PyInt_FromLong(0L);
-        if (item == NULL)
-            goto error;
+        if (item == NULL) goto error;
     }
+
     const_one = PyInt_FromLong(1L);
-    if (const_one == NULL)
-        goto error;
+    if (const_one == NULL) goto error;
 
     incremented_item = PyNumber_Add(item, const_one);
-    if (incremented_item == NULL)
-        goto error;
+    if (incremented_item == NULL) goto error;
 
-    if (PyObject_SetItem(dict, key, incremented_item) < 0)
-        goto error;
+    if (PyObject_SetItem(dict, key, incremented_item) < 0) goto error;
     rv = 0; /* Success */
     /* Continue with cleanup code */
 
@@ -943,40 +939,6 @@ This is a shorthand for \samp{PyErr_SetString(PyExc_TypeError,
 \var{message})}, where \var{message} indicates that an internal
 operation (e.g. a Python/C API function) was invoked with an illegal
 argument.  It is mostly for internal use.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{int}{PyErr_Warn}{PyObject *category, char *message}
-Issue a warning message.  The \var{category} argument is a warning
-category (see below) or NULL; the \var{message} argument is a message
-string.
-
-This function normally prints a warning message to \var{sys.stderr};
-however, it is also possible that the user has specified that warnings
-are to be turned into errors, and in that case this will raise an
-exception.  It is also possible that the function raises an exception
-because of a problem with the warning machinery (the implementation
-imports the \module{warnings} module to do the heavy lifting).  The
-return value is \code{0} if no exception is raised, or \code{-1} if
-an exception is raised.  (It is not possible to determine whether a
-warning message is actually printed, nor what the reason is for the
-exception; this is intentional.)  If an exception is raised, the
-caller should do its normal exception handling (e.g. DECREF owned
-references and return an error value).
-
-Warning categories must be subclasses of \cdata{Warning}; the default
-warning category is \cdata{RuntimeWarning}.  The standard Python
-warning categories are available as global variables whose names are
-\samp{PyExc_} followed by the Python exception name.  These have the
-type \ctype{PyObject*}; they are all class objects.  Their names are
-\cdata{PyExc_Warning}, \cdata{PyExc_UserWarning},
-\cdata{PyExc_DeprecationWarning}, \cdata{PyExc_SyntaxWarning}, and
-\cdata{PyExc_RuntimeWarning}.  \cdata{PyExc_Warning} is a subclass of
-\cdata{PyExc_Exception}; the other warning categories are subclasses
-of \cdata{PyExc_Warning}.
-
-For information about warning control, see the documentation for the
-\module{warnings} module and the \samp{-W} option in the command line
-documentation.  There is no C API for warning control.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{int}{PyErr_CheckSignals}{}
@@ -2039,13 +2001,6 @@ for example. to check that an object is a dictionary, use
 \cfunction{PyDict_Check()}.  The chapter is structured like the
 ``family tree'' of Python object types.
 
-\strong{Warning:}
-While the functions described in this chapter carefully check the type
-of the objects which are passed in, many of them do not check for
-\NULL{} being passed instead of a valid object.  Allowing \NULL{} to
-be passed in can cause memory access violations and immediate
-termination of the interpreter.
-
 
 \section{Fundamental Objects \label{fundamental}}
 
@@ -2102,9 +2057,6 @@ objects that are intrinsic to the Python language.
 
 \subsection{String Objects \label{stringObjects}}
 
-These functions raise \exception{TypeError} when expecting a string
-parameter and are called with a non-string parameter.
-
 \obindex{string}
 \begin{ctypedesc}{PyStringObject}
 This subtype of \ctype{PyObject} represents a Python string object.
@@ -2144,10 +2096,8 @@ checking.
 \begin{cfuncdesc}{char*}{PyString_AsString}{PyObject *string}
 Returns a null-terminated representation of the contents of
 \var{string}.  The pointer refers to the internal buffer of
-\var{string}, not a copy.  The data must not be modified in any way,
-unless the string was just created using
-\code{PyString_FromStringAndSize(NULL, \var{size})}.
-It must not be deallocated.
+\var{string}, not a copy.  The data must not be modified in any way.
+It must not be de-allocated.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{char*}{PyString_AS_STRING}{PyObject *string}
@@ -2168,9 +2118,8 @@ null characters; if it does, the function returns -1 and a
 TypeError is raised.
 
 The buffer refers to an internal string buffer of \var{obj}, not a
-copy. The data must not be modified in any way, unless the string was
-just created using \code{PyString_FromStringAndSize(NULL,
-\var{size})}.  It must not be deallocated.
+copy. The data must not be modified in any way.  It must not be
+de-allocated.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{void}{PyString_Concat}{PyObject **string,
@@ -4688,37 +4637,7 @@ implementing new object types in C.
 \begin{cfuncdesc}{void}{PyObject_DEL}{PyObject *op}
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{PyObject*}{Py_InitModule}{char *name,
-                                            PyMethodDef *methods}
-  Create a new module object based on a name and table of functions,
-  returning the new module object.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{PyObject*}{Py_InitModule3}{char *name,
-                                             PyMethodDef *methods,
-                                             char *doc}
-  Create a new module object based on a name and table of functions,
-  returning the new module object.  If \var{doc} is non-\NULL, it will
-  be used to define the docstring for the module.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{PyObject*}{Py_InitModule4}{char *name,
-                                             PyMethodDef *methods,
-                                             char *doc, PyObject *self,
-                                             int apiver}
-  Create a new module object based on a name and table of functions,
-  returning the new module object.  If \var{doc} is non-\NULL, it will
-  be used to define the docstring for the module.  If \var{self} is
-  non-\NULL, it will passed to the functions of the module as their
-  (otherwise \NULL) first parameter.  (This was added as an
-  experimental feature, and there are no known uses in the current
-  version of Python.)  For \var{apiver}, the only value which should
-  be passed is defined by the constant \constant{PYTHON_API_VERSION}.
-
-  \strong{Note:}  Most uses of this function should probably be using
-  the \cfunction{Py_InitModule3()} instead; only use this if you are
-  sure you need it.
-\end{cfuncdesc}
+Py_InitModule (!!!)
 
 PyArg_ParseTupleAndKeywords, PyArg_ParseTuple, PyArg_Parse
 

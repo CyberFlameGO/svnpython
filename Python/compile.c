@@ -767,6 +767,7 @@ com_addopname(struct compiling *c, int op, node *n)
 static PyObject *
 parsenumber(struct compiling *co, char *s)
 {
+	extern double atof(const char *);
 	char *end;
 	long x;
 	double dx;
@@ -2325,11 +2326,11 @@ static void
 com_import_stmt(struct compiling *c, node *n)
 {
 	int i;
+	PyObject *tup;
 	REQ(n, import_stmt);
 	/* 'import' dotted_name (',' dotted_name)* |
 	   'from' dotted_name 'import' ('*' | NAME (',' NAME)*) */
 	if (STR(CHILD(n, 0))[0] == 'f') {
-		PyObject *tup;
 		/* 'from' dotted_name 'import' ... */
 		REQ(CHILD(n, 1), dotted_name);
 		
@@ -2344,7 +2345,6 @@ com_import_stmt(struct compiling *c, node *n)
 			}
 		}
 		com_addoparg(c, LOAD_CONST, com_addconst(c, tup));
-		Py_DECREF(tup);
 		com_push(c, 1);
 		com_addopname(c, IMPORT_NAME, CHILD(n, 1));
 		if (TYPE(CHILD(n, 3)) == STAR) 

@@ -2925,7 +2925,7 @@ PyObject *split_substring(PyUnicodeObject *self,
     int sublen = substring->length;
     PyObject *str;
 
-    for (i = j = 0; i <= len - sublen; ) {
+    for (i = j = 0; i < len - sublen; ) {
 	if (Py_UNICODE_MATCH(self, i, substring)) {
 	    if (maxcount-- <= 0)
 		break;
@@ -5020,7 +5020,9 @@ PyObject *PyUnicode_Format(PyObject *format,
 	    case 'X':
 		if (c == 'i')
 		    c = 'd';
-		if (PyLong_Check(v)) {
+		if (PyLong_Check(v) && PyLong_AsLong(v) == -1
+		    && PyErr_Occurred()) {
+		    PyErr_Clear();
 		    temp = formatlong(v, flags, prec, c);
 		    if (!temp)
 			goto onError;
@@ -5067,10 +5069,8 @@ PyObject *PyUnicode_Format(PyObject *format,
 
 	    default:
 		PyErr_Format(PyExc_ValueError,
-			     "unsupported format character '%c' (0x%x) "
-			     "at index %i",
-			     (31<=c && c<=126) ? c : '?', 
-                             c, fmt -1 - PyUnicode_AS_UNICODE(uformat));
+			     "unsupported format character '%c' (0x%x)",
+			     c, c);
 		goto onError;
 	    }
 	    if (sign) {

@@ -67,6 +67,7 @@ Req-sent-unread-response       _CS_REQ_SENT       <response_class>
 """
 
 import socket
+import string
 import mimetools
 
 try:
@@ -111,10 +112,10 @@ class HTTPResponse:
         if self.debuglevel > 0:
             print "reply:", repr(line)
         try:
-            [version, status, reason] = line.split(None, 2)
+            [version, status, reason] = string.split(line, None, 2)
         except ValueError:
             try:
-                [version, status] = line.split(None, 1)
+                [version, status] = string.split(line, None, 1)
                 reason = ""
             except ValueError:
                 version = "HTTP/0.9"
@@ -125,7 +126,7 @@ class HTTPResponse:
             raise BadStatusLine(line)
 
         self.status = status = int(status)
-        self.reason = reason.strip()
+        self.reason = string.strip(reason)
 
         if version == 'HTTP/1.0':
             self.version = 10
@@ -151,7 +152,7 @@ class HTTPResponse:
         # are we using the chunked-style of transfer encoding?
         tr_enc = self.msg.getheader('transfer-encoding')
         if tr_enc:
-            if tr_enc.lower() != 'chunked':
+            if string.lower(tr_enc) != 'chunked':
                 raise UnknownTransferEncoding()
             self.chunked = 1
             self.chunk_left = None
@@ -161,11 +162,11 @@ class HTTPResponse:
         # will the connection close at the end of the response?
         conn = self.msg.getheader('connection')
         if conn:
-            conn = conn.lower()
+            conn = string.lower(conn)
             # a "Connection: close" will always close the connection. if we
             # don't see that and this is not HTTP/1.1, then the connection will
             # close unless we see a Keep-Alive header.
-            self.will_close = conn.find('close') != -1 or \
+            self.will_close = string.find(conn, 'close') != -1 or \
                               ( self.version != 11 and \
                                 not self.msg.getheader('keep-alive') )
         else:
@@ -223,10 +224,10 @@ class HTTPResponse:
             while 1:
                 if chunk_left is None:
                     line = self.fp.readline()
-                    i = line.find(';')
+                    i = string.find(line, ';')
                     if i >= 0:
                         line = line[:i]	# strip chunk-extensions
-                    chunk_left = int(line, 16)
+                    chunk_left = string.atoi(line, 16)
                     if chunk_left == 0:
                         break
                 if amt is None:
@@ -330,7 +331,7 @@ class HTTPConnection:
 
     def _set_hostport(self, host, port):
         if port is None:
-            i = host.find(':')
+            i = string.find(host, ':')
             if i >= 0:
                 port = int(host[i+1:])
                 host = host[:i]
@@ -612,10 +613,7 @@ class HTTPSConnection(HTTPConnection):
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.host, self.port))
-        realsock = sock
-        if hasattr(sock, "_sock"):
-            realsock = sock._sock
-        ssl = socket.ssl(realsock, self.key_file, self.cert_file)
+        ssl = socket.ssl(sock, self.key_file, self.cert_file)
         self.sock = FakeSocket(sock, ssl)
 
 
@@ -670,7 +668,8 @@ class HTTP:
 
     def putheader(self, header, *values):
         "The superclass allows only one value argument."
-        self._conn.putheader(header, '\r\n\t'.join(values))
+        self._conn.putheader(header,
+                             string.joinfields(values, '\r\n\t'))
 
     def getreply(self):
         """Compat definition since superclass does not define it.
@@ -796,7 +795,7 @@ def test():
     print 'reason =', reason
     print
     if headers:
-        for header in headers.headers: print header.strip()
+        for header in headers.headers: print string.strip(header)
     print
     print h.getfile().read()
 
@@ -811,7 +810,7 @@ def test():
         print 'reason =', reason
         print
         if headers:
-            for header in headers.headers: print header.strip()
+            for header in headers.headers: print string.strip(header)
         print
         print hs.getfile().read()
 

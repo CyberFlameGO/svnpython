@@ -17,10 +17,14 @@
 #define PYTHONHOMEHELP "<prefix>/python2.0"
 #endif
 
-#include "pygetopt.h"
-
 #define COPYRIGHT \
     "Type \"copyright\", \"credits\" or \"license\" for more information."
+
+/* Interface to getopt(): */
+extern int optind;
+extern char *optarg;
+extern int getopt(); /* PROTO((int, char **, char *)); -- not standardized */
+
 
 /* For Py_GetArgcArgv(); set by main() */
 static char **orig_argv;
@@ -48,7 +52,6 @@ static char *usage_mid = "\
 -x     : skip first line of source, allowing use of non-Unix forms of #!cmd\n\
 -h     : print this help message and exit\n\
 -V     : print the Python version number and exit\n\
--W arg : warning control (arg is action:message:category:module:lineno)\n\
 -c cmd : program passed in as string (terminates option list)\n\
 file   : program read from script file\n\
 -      : program read from stdin (default; interactive mode if a tty)\n\
@@ -102,18 +105,16 @@ Py_Main(int argc, char **argv)
 	if ((p = getenv("PYTHONUNBUFFERED")) && *p != '\0')
 		unbuffered = 1;
 
-	PySys_ResetWarnOptions();
-
-	while ((c = _PyOS_GetOpt(argc, argv, "c:diOStuUvxXhVW:")) != EOF) {
+	while ((c = getopt(argc, argv, "c:diOStuUvxXhV")) != EOF) {
 		if (c == 'c') {
 			/* -c is the last option; following arguments
 			   that look like options are left for the
 			   the command to interpret. */
-			command = malloc(strlen(_PyOS_optarg) + 2);
+			command = malloc(strlen(optarg) + 2);
 			if (command == NULL)
 				Py_FatalError(
 				   "not enough memory to copy -c argument");
-			strcpy(command, _PyOS_optarg);
+			strcpy(command, optarg);
 			strcat(command, "\n");
 			break;
 		}
@@ -163,10 +164,6 @@ Py_Main(int argc, char **argv)
 			version++;
 			break;
 
-		case 'W':
-			PySys_AddWarnOption(_PyOS_optarg);
-			break;
-
 		/* This space reserved for other options */
 
 		default:
@@ -184,10 +181,10 @@ Py_Main(int argc, char **argv)
 		exit(0);
 	}
 
-	if (command == NULL && _PyOS_optind < argc &&
-	    strcmp(argv[_PyOS_optind], "-") != 0)
+	if (command == NULL && optind < argc &&
+	    strcmp(argv[optind], "-") != 0)
 	{
-		filename = argv[_PyOS_optind];
+		filename = argv[optind];
 		if (filename != NULL) {
 			if ((fp = fopen(filename, "r")) == NULL) {
 				fprintf(stderr, "%s: can't open file '%s'\n",
@@ -256,12 +253,12 @@ Py_Main(int argc, char **argv)
 	
 	
 	if (command != NULL) {
-		/* Backup _PyOS_optind and force sys.argv[0] = '-c' */
-		_PyOS_optind--;
-		argv[_PyOS_optind] = "-c";
+		/* Backup optind and force sys.argv[0] = '-c' */
+		optind--;
+		argv[optind] = "-c";
 	}
 
-	PySys_SetArgv(argc-_PyOS_optind, argv+_PyOS_optind);
+	PySys_SetArgv(argc-optind, argv+optind);
 
 	if ((inspect || (command == NULL && filename == NULL)) &&
 	    isatty(fileno(stdin))) {

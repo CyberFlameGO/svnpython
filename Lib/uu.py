@@ -46,9 +46,9 @@ def encode(in_file, out_file, name=None, mode=None):
     if in_file == '-':
         in_file = sys.stdin
     elif type(in_file) == type(''):
-        if name is None:
+        if name == None:
             name = os.path.basename(in_file)
-        if mode is None:
+        if mode == None:
             try:
                 mode = os.stat(in_file)[0]
             except AttributeError:
@@ -64,9 +64,9 @@ def encode(in_file, out_file, name=None, mode=None):
     #
     # Set defaults for name and mode
     #
-    if name is None:
+    if name == None:
         name = '-'
-    if mode is None:
+    if mode == None:
         mode = 0666
     #
     # Write the data
@@ -104,9 +104,9 @@ def decode(in_file, out_file=None, mode=None):
                 break
             except ValueError:
                 pass
-    if out_file is None:
+    if out_file == None:
         out_file = hdrfields[2]
-    if mode is None:
+    if mode == None:
         mode = string.atoi(hdrfields[1], 8)
     #
     # Open the output file

@@ -605,13 +605,7 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args, struct sockaddr **addr_ret
 		char *host;
 		int port;
  		addr=(struct sockaddr_in*)&(s->sock_addr).in;
-		if (!PyTuple_Check(args)) {
-			PyErr_Format(PyExc_TypeError,
-		  "getsockaddrarg: AF_INET address must be tuple, not %.500s",
-				     args->ob_type->tp_name);
-			return 0;
-		}
-		if (!PyArg_ParseTuple(args, "si:getsockaddrarg", &host, &port))
+		if (!PyArg_Parse(args, "(si)", &host, &port))
 			return 0;
 		if (setipaddr(host, addr) < 0)
 			return 0;
@@ -904,15 +898,14 @@ pair (host, port); the host must refer to the local host.";
 static PyObject *
 PySocketSock_close(PySocketSockObject *s, PyObject *args)
 {
-	SOCKET_T fd;
 	if (!PyArg_ParseTuple(args, ":close"))
 		return NULL;
-	if ((fd = s->sock_fd) != -1) {
-		s->sock_fd = -1;
+	if (s->sock_fd != -1) {
 		Py_BEGIN_ALLOW_THREADS
-		(void) SOCKETCLOSE(fd);
+		(void) SOCKETCLOSE(s->sock_fd);
 		Py_END_ALLOW_THREADS
 	}
+	s->sock_fd = -1;
 	Py_INCREF(Py_None);
 	return Py_None;
 }

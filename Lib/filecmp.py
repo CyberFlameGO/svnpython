@@ -199,7 +199,7 @@ class dircmp:
             if ok:
                 a_type = stat.S_IFMT(a_stat[stat.ST_MODE])
                 b_type = stat.S_IFMT(b_stat[stat.ST_MODE])
-                if a_type != b_type:
+                if a_type <> b_type:
                     self.common_funny.append(x)
                 elif stat.S_ISDIR(a_type):
                     self.common_dirs.append(x)
@@ -295,9 +295,9 @@ def cmpfiles(a, b, common, shallow=1, use_statcache=0):
 #	1 for different
 #	2 for funny cases (can't stat, etc.)
 #
-def _cmp(a, b, sh, st):
+def _cmp(a, b):
     try:
-        return not abs(cmp(a, b, sh, st))
+        return not abs(cmp(a, b))
     except os.error:
         return 2
 
@@ -317,8 +317,7 @@ def demo():
     import sys
     import getopt
     options, args = getopt.getopt(sys.argv[1:], 'r')
-    if len(args) != 2:
-        raise getopt.error, 'need exactly two args'
+    if len(args) <> 2: raise getopt.error, 'need exactly two args'
     dd = dircmp(args[0], args[1])
     if ('-r', '') in options:
         dd.report_full_closure()

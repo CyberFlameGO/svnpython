@@ -21,13 +21,6 @@
 # always return NULL.  This is used by some of the PyErr_*() functions, in
 # particular.
 
-# XXX NOTE: the 0/+1/-1 refcount information for arguments is
-# confusing!  Much more useful would be to indicate whether the
-# function "steals" a reference to the argument or not.  Take for
-# example PyList_SetItem(list, i, item).  This lists as a 0 change for
-# both the list and the item arguments.  However, in fact it steals a
-# reference to the item argument!
-
 # The parameter names are as they appear in the API manual, not the source
 # code. 
 
@@ -206,10 +199,6 @@ PyErr_Format:PyObject*:exception:+1:
 PyErr_Format:char*:format::
 PyErr_Format::...::
 
-PyErr_Warn:int:::
-PyErr_Warn:PyObject*:category:0:
-PyErr_Warn:char*:message::
-
 PyEval_AcquireLock:void:::
 
 PyEval_AcquireThread:void:::
@@ -284,22 +273,6 @@ PyFloat_Check:PyObject*:p:0:
 
 PyFloat_FromDouble:PyObject*::+1:
 PyFloat_FromDouble:double:v::
-
-Py_InitModule:PyObject*::0:
-Py_InitModule:name:char*::
-Py_InitModule:methods:PyMethodDef[]::
-
-Py_InitModule3:PyObject*::0:
-Py_InitModule3:name:char*::
-Py_InitModule3:methods:PyMethodDef[]::
-Py_InitModule3:doc:char*::
-
-Py_InitModule4:PyObject*::0:
-Py_InitModule4:name:char*::
-Py_InitModule4:methods:PyMethodDef[]::
-Py_InitModule4:doc:char*::
-Py_InitModule4:self:PyObject*::
-Py_InitModule4:apiver:int::usually provided by Py_InitModule or Py_InitModule3
 
 PyImport_AddModule:PyObject*::0:reference borrowed from sys.modules
 PyImport_AddModule:char*:name::

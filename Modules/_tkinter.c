@@ -572,13 +572,13 @@ Tkapp_Call(PyObject *self, PyObject *args)
 	objv = objStore;
 
 	if (args == NULL)
-		/* do nothing */;
+		objc = 0;
 
 	else if (!PyTuple_Check(args)) {
+		objc = 1;
 		objv[0] = AsObj(args);
 		if (objv[0] == 0)
 			goto finally;
-		objc = 1;
 		Tcl_IncrRefCount(objv[0]);
 	}
 	else {
@@ -588,7 +588,6 @@ Tkapp_Call(PyObject *self, PyObject *args)
 			objv = (Tcl_Obj **)ckalloc(objc * sizeof(char *));
 			if (objv == NULL) {
 				PyErr_NoMemory();
-				objc = 0;
 				goto finally;
 			}
 		}
@@ -600,12 +599,8 @@ Tkapp_Call(PyObject *self, PyObject *args)
 				break;
 			}
 			objv[i] = AsObj(v);
-			if (!objv[i]) {
-				/* Reset objc, so it attempts to clear
-				   objects only up to i. */
-				objc = i;
+			if (!objv[i])
 				goto finally;
-			}
 			Tcl_IncrRefCount(objv[i]);
 		}
 	}

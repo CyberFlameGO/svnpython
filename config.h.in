@@ -25,6 +25,9 @@
    tzname.  */
 #undef HAVE_TZNAME
 
+/* Define as __inline if that's what the C compiler calls it.  */
+#undef inline
+
 /* Define if on MINIX.  */
 #undef _MINIX
 
@@ -340,9 +343,6 @@
 
 /* Define if you have the gethostbyname function.  */
 #undef HAVE_GETHOSTBYNAME
-
-/* Define if you have the getline function.  */
-#undef HAVE_GETLINE
 
 /* Define if you have the getlogin function.  */
 #undef HAVE_GETLOGIN

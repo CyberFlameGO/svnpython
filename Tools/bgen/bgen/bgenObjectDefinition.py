@@ -23,9 +23,9 @@ class ObjectDefinition(GeneratorGroup):
 		self.static = "static " # set to "" to make <type>_New and <type>_Convert public
 		self.basechain = "NULL" # set to &<basetype>_chain to chain methods
 
-	def add(self, g, dupcheck=0):
+	def add(self, g):
 		g.setselftype(self.objecttype, self.itselftype)
-		GeneratorGroup.add(self, g, dupcheck)
+		GeneratorGroup.add(self, g)
 
 	def reference(self):
 		# In case we are referenced from a module

@@ -565,7 +565,7 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				    arg = _PyUnicode_AsDefaultEncodedString(
 							            arg, NULL);
 				    if (arg == NULL)
-					return "(unicode conversion error)";
+					return "unicode conversion error";
 				    *p = PyString_AS_STRING(arg);
 				    *q = PyString_GET_SIZE(arg);
 				}
@@ -575,9 +575,9 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				    if ( pb == NULL ||
 					 pb->bf_getreadbuffer == NULL ||
 					 pb->bf_getsegcount == NULL )
-					return "string or read-only buffer";
+					return "read-only buffer";
 				    if ( (*pb->bf_getsegcount)(arg, NULL) != 1 )
-					return "string or single-segment read-only buffer";
+					return "single-segment read-only buffer";
 				    if ( (count =
 					  (*pb->bf_getreadbuffer)(arg, 0, p)) < 0 )
 					return "(unspecified)";
@@ -593,7 +593,7 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				    arg = _PyUnicode_AsDefaultEncodedString(
 							            arg, NULL);
 				    if (arg == NULL)
-					return "(unicode conversion error)";
+					return "unicode conversion error";
 				    *p = PyString_AS_STRING(arg);
 				}
 				else
@@ -622,7 +622,7 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				    arg = _PyUnicode_AsDefaultEncodedString(
 							            arg, NULL);
 				    if (arg == NULL)
-					return "(unicode conversion error)";
+					return "unicode conversion error";
 				    *p = PyString_AS_STRING(arg);
 				    *q = PyString_GET_SIZE(arg);
 				}
@@ -632,9 +632,9 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				    if ( pb == NULL ||
 					 pb->bf_getreadbuffer == NULL ||
 					 pb->bf_getsegcount == NULL )
-					return "string or read-only buffer";
+					return "read-only buffer";
 				    if ( (*pb->bf_getsegcount)(arg, NULL) != 1 )
-					return "string or single-segment read-only buffer";
+					return "single-segment read-only buffer";
 				    if ( (count =
 					  (*pb->bf_getreadbuffer)(arg, 0, p)) < 0 )
 					return "(unspecified)";
@@ -652,11 +652,11 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				  arg = _PyUnicode_AsDefaultEncodedString(
 								  arg, NULL);
 				  if (arg == NULL)
-				      return "(unicode conversion error)";
+				      return "unicode conversion error";
 				  *p = PyString_AS_STRING(arg);
 				}
 				else
-				  return "string or None";
+				  return "None or string";
 				if (*format == '#') {
 				  int *q = va_arg(*p_va, int *);
 				  if (arg == Py_None)
@@ -667,7 +667,7 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				}
 				else if (*p != NULL &&
 					 (int)strlen(*p) != PyString_Size(arg))
-				  return "string without null bytes or None";
+				  return "None or string without null bytes";
 			}
 			break;
 		}
@@ -695,7 +695,7 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 			/* Convert object to Unicode */
 			u = PyUnicode_FromObject(arg);
 			if (u == NULL)
-				return "string or unicode or text buffer";
+				return "string, unicode or text buffer";
 			
 			/* Encode object; use default error handling */
 			s = PyUnicode_AsEncodedString(u,
@@ -773,7 +773,8 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 
 				 */
 				if ((int)strlen(PyString_AS_STRING(s)) != size)
-					return "(encoded string without NULL bytes)";
+					return "(encoded string without "\
+					       "NULL bytes)";
 				*buffer = PyMem_NEW(char, size + 1);
 				if (*buffer == NULL) {
 					Py_DECREF(s);
@@ -798,9 +799,9 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				if ( pb == NULL ||
 				     pb->bf_getreadbuffer == NULL ||
 				     pb->bf_getsegcount == NULL )
-				  return "unicode or read-only buffer";
+				  return "read-only buffer";
 				if ( (*pb->bf_getsegcount)(arg, NULL) != 1 )
-				  return "unicode or single-segment read-only buffer";
+				  return "single-segment read-only buffer";
 				if ( (count =
 				      (*pb->bf_getreadbuffer)(arg, 0, p)) < 0 )
 				  return "(unspecified)";
@@ -915,9 +916,9 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 			     pb == NULL ||
 			     pb->bf_getcharbuffer == NULL ||
 			     pb->bf_getsegcount == NULL )
-				return "string or read-only character buffer";
+				return "read-only character buffer";
 			if ( (*pb->bf_getsegcount)(arg, NULL) != 1 )
-				return "string or single-segment read-only buffer";
+				return "single-segment read-only buffer";
 			if ( (count = pb->bf_getcharbuffer(arg, 0, p)) < 0 )
 				return "(unspecified)";
 
@@ -1123,7 +1124,6 @@ vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
 				return 0;
 			}
 			converted++;
-			Py_DECREF(item);
 		}
 		else {
 			PyErr_Clear();

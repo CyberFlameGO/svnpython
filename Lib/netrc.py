@@ -17,7 +17,7 @@ class netrc:
         while 1:
             # Look for a machine, default, or macdef top-level keyword
             toplevel = tt = lexer.get_token()
-            if not tt:
+            if tt == '' or tt == None:
                 break
             elif tt == 'machine':
                 entryname = lexer.get_token()
@@ -46,7 +46,7 @@ class netrc:
                 tt = lexer.get_token()
                 if tt=='' or tt == 'machine' or tt == 'default' or tt == 'macdef':
                     if toplevel == 'macdef':
-                        break
+                        break;
                     elif login and password:
                         self.hosts[entryname] = (login, account, password)
                         lexer.push_token(tt)

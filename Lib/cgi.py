@@ -19,7 +19,7 @@ written in Python.
 # responsible for its maintenance.
 # 
 
-__version__ = "2.5"
+__version__ = "2.4"
 
 
 # Imports
@@ -497,6 +497,7 @@ class FieldStorage:
 
         self.list = self.file = None
         self.done = 0
+        self.lines = []
         if ctype == 'application/x-www-form-urlencoded':
             self.read_urlencoded()
         elif ctype[:10] == 'multipart/':
@@ -632,6 +633,7 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             self.file.write(line)
 
     def read_lines_to_outerboundary(self):
@@ -644,6 +646,7 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             if line[:2] == "--":
                 strippedline = string.strip(line)
                 if strippedline == next:
@@ -673,6 +676,7 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             if line[:2] == "--":
                 strippedline = string.strip(line)
                 if strippedline == next:
@@ -864,7 +868,7 @@ def print_exception(type=None, value=None, tb=None, limit=None):
         type, value, tb = sys.exc_info()
     import traceback
     print
-    print "<H3>Traceback (most recent call last):</H3>"
+    print "<H3>Traceback (innermost last):</H3>"
     list = traceback.format_tb(tb, limit) + \
            traceback.format_exception_only(type, value)
     print "<PRE>%s<B>%s</B></PRE>" % (

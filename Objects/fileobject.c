@@ -58,7 +58,7 @@
 /* define the appropriate 64-bit capable tell() function */
 #if defined(MS_WIN64)
 #define TELL64 _telli64
-#elif defined(__NetBSD__) || defined(__OpenBSD__) || defined(_HAVE_BSDI) || defined(__APPLE__)
+#elif defined(__NetBSD__) || defined(__OpenBSD__)
 /* NOTE: this is only used on older
    NetBSD prior to f*o() funcions */
 #define TELL64(fd) lseek((fd),0,SEEK_CUR)
@@ -645,43 +645,13 @@ file_readinto(PyFileObject *f, PyObject *args)
 static PyObject *
 get_line(PyFileObject *f, int n)
 {
-	register FILE *fp = f->f_fp;
+	register FILE *fp;
 	register int c;
-	char *buf, *end;
+	register char *buf, *end;
 	size_t n1, n2;
 	PyObject *v;
 
-#if defined(HAVE_GETLINE) && defined(_GNU_SOURCE)
-	/* Use GNU libc extension getline() for arbitrary-sized lines */
-	if (n == 0) {
-		size_t size = 0;
-		buf = NULL;
-		Py_BEGIN_ALLOW_THREADS
-		n1 = getline(&buf, &size, fp);
-		Py_END_ALLOW_THREADS
-		if (n1 == -1) {
-			if (buf){
-				free(buf);
-			}
-			clearerr(fp);
-			if (PyErr_CheckSignals()) {
-				return NULL;
-			}
-			if (n < 0 && feof(fp)) {
-				PyErr_SetString(PyExc_EOFError,
-						"EOF when reading a line");
-				return NULL;
-			}
-			return PyString_FromStringAndSize(NULL, 0);
-		}
-		/* No error */
-		
-		v = PyString_FromStringAndSize(buf, n1);
-		free(buf);
-		return v;
-	}
-#endif
-
+	fp = f->f_fp;
 	n2 = n > 0 ? n : 100;
 	v = PyString_FromStringAndSize((char *)NULL, n2);
 	if (v == NULL)
@@ -863,7 +833,7 @@ file_readlines(PyFileObject *f, PyObject *args)
 			buffersize *= 2;
 			if (buffersize > INT_MAX) {
 				PyErr_SetString(PyExc_OverflowError,
-					"line is longer than a Python string can hold");
+					"line is too long for a Python string");
 				goto error;
 			}
 			if (big_buffer == NULL) {
@@ -968,7 +938,7 @@ file_writelines(PyFileObject *f, PyObject *args)
 		return err_closed();
 	if (args == NULL || !PySequence_Check(args)) {
 		PyErr_SetString(PyExc_TypeError,
-			   "writelines() argument must be a sequence of strings");
+			   "writelines() requires sequence of strings");
 		return NULL;
 	}
 	islist = PyList_Check(args);
@@ -1031,7 +1001,7 @@ file_writelines(PyFileObject *f, PyObject *args)
 							   &buffer,
 							   &len))) {
 					PyErr_SetString(PyExc_TypeError,
-				"writelines() argument must be a sequence of strings");
+				"writelines() requires sequences of strings");
 					goto error;
 				}
 				line = PyString_FromStringAndSize(buffer,

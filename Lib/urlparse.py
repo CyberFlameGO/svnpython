@@ -4,6 +4,10 @@ See RFC 1808: "Relative Uniform Resource Locators", by R. Fielding,
 UC Irvine, June 1995.
 """
 
+# Standard/builtin Python modules
+import string
+from string import join, split, rfind
+
 # A classification of schemes ('' means apply by default)
 uses_relative = ['ftp', 'http', 'gopher', 'nntp', 'wais', 'file',
 		 'https', 'shttp',
@@ -27,10 +31,7 @@ uses_fragment = ['ftp', 'hdl', 'http', 'gopher', 'news', 'nntp', 'wais',
 		 'file', 'prospero', '']
 
 # Characters valid in scheme names
-scheme_chars = ('abcdefghijklmnopqrstuvwxyz'
-                'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                '0123456789'
-                '+-.')
+scheme_chars = string.letters + string.digits + '+-.'
 
 MAX_CACHE_SIZE = 20
 _parse_cache = {}
@@ -53,28 +54,29 @@ def urlparse(url, scheme = '', allow_fragments = 1):
 		return cached
 	if len(_parse_cache) >= MAX_CACHE_SIZE:	# avoid runaway growth
 		clear_cache()
+	find = string.find
 	netloc = path = params = query = fragment = ''
-	i = url.find(':')
+	i = find(url, ':')
 	if i > 0:
 		if url[:i] == 'http': # optimize the common case
-			scheme = url[:i].lower()
+			scheme = string.lower(url[:i])
 			url = url[i+1:]
 			if url[:2] == '//':
-				i = url.find('/', 2)
+				i = find(url, '/', 2)
 				if i < 0:
 					i = len(url)
 				netloc = url[2:i]
 				url = url[i:]
 			if allow_fragments:
-				i = url.rfind('#')
+				i = string.rfind(url, '#')
 				if i >= 0:
 					fragment = url[i+1:]
 					url = url[:i]
-			i = url.find('?')
+			i = find(url, '?')
 			if i >= 0:
 				query = url[i+1:]
 				url = url[:i]
-			i = url.find(';')
+			i = find(url, ';')
 			if i >= 0:
 				params = url[i+1:]
 				url = url[:i]
@@ -85,23 +87,23 @@ def urlparse(url, scheme = '', allow_fragments = 1):
 			if c not in scheme_chars:
 				break
 		else:
-			scheme, url = url[:i].lower(), url[i+1:]
+			scheme, url = string.lower(url[:i]), url[i+1:]
 	if scheme in uses_netloc:
 		if url[:2] == '//':
-			i = url.find('/', 2)
+			i = find(url, '/', 2)
 			if i < 0:
 				i = len(url)
 			netloc, url = url[2:i], url[i:]
 	if allow_fragments and scheme in uses_fragment:
-		i = url.rfind('#')
+		i = string.rfind(url, '#')
 		if i >= 0:
 			url, fragment = url[:i], url[i+1:]
 	if scheme in uses_query:
-		i = url.find('?')
+		i = find(url, '?')
 		if i >= 0:
 			url, query = url[:i], url[i+1:]
 	if scheme in uses_params:
-		i = url.find(';')
+		i = find(url, ';')
 		if i >= 0:
 			url, params = url[:i], url[i+1:]
 	tuple = scheme, netloc, url, params, query, fragment
@@ -149,7 +151,7 @@ def urljoin(base, url, allow_fragments = 1):
 	if not path:
 		return urlunparse((scheme, netloc, bpath,
 				   params, query or bquery, fragment))
-	segments = bpath.split('/')[:-1] + path.split('/')
+	segments = split(bpath, '/')[:-1] + split(path, '/')
 	# XXX The stuff below is bogus in various ways...
 	if segments[-1] == '.':
 		segments[-1] = ''
@@ -169,7 +171,7 @@ def urljoin(base, url, allow_fragments = 1):
 		segments[-1] = ''
 	elif len(segments) >= 2 and segments[-1] == '..':
 		segments[-2:] = ['']
-	return urlunparse((scheme, netloc, '/'.join(segments),
+	return urlunparse((scheme, netloc, join(segments, '/'),
 			   params, query, fragment))
 
 def urldefrag(url):
@@ -234,7 +236,7 @@ def test():
 	while 1:
 		line = fp.readline()
 		if not line: break
-		words = line.split()
+		words = string.split(line)
 		if not words:
 			continue
 		url = words[0]

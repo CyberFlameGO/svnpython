@@ -835,7 +835,7 @@ string_join(PyStringObject *self, PyObject *args)
 			if (PyUnicode_Check(item)) {
 				Py_DECREF(res);
 				Py_DECREF(seq);
-				return PyUnicode_Join((PyObject *)self, orig);
+				return PyUnicode_Join((PyObject *)self, seq);
 			}
 			PyErr_Format(PyExc_TypeError,
 				     "sequence item %i: expected string,"
@@ -1143,7 +1143,7 @@ Return a titlecased version of S, i.e. words start with uppercase\n\
 characters, all remaining cased characters have lowercase.";
 
 static PyObject*
-string_title(PyStringObject *self, PyObject *args)
+string_title(PyUnicodeObject *self, PyObject *args)
 {
 	char *s = PyString_AS_STRING(self), *s_new;
 	int i, n = PyString_GET_SIZE(self);
@@ -1974,7 +1974,7 @@ Return 1 if  all characters in S are alphabetic\n\
 and there is at least one character in S, 0 otherwise.";
 
 static PyObject*
-string_isalpha(PyStringObject *self, PyObject *args)
+string_isalpha(PyUnicodeObject *self, PyObject *args)
 {
     register const unsigned char *p
         = (unsigned char *) PyString_AS_STRING(self);
@@ -2008,7 +2008,7 @@ Return 1 if  all characters in S are alphanumeric\n\
 and there is at least one character in S, 0 otherwise.";
 
 static PyObject*
-string_isalnum(PyStringObject *self, PyObject *args)
+string_isalnum(PyUnicodeObject *self, PyObject *args)
 {
     register const unsigned char *p
         = (unsigned char *) PyString_AS_STRING(self);
@@ -2460,7 +2460,7 @@ formatfloat(char *buf, size_t buflen, int flags,
 	   always given), therefore increase by one to 10+prec. */
 	if (buflen <= (size_t)10 + (size_t)prec) {
 		PyErr_SetString(PyExc_OverflowError,
-			"formatted float is too long (precision too large?)");
+			"formatted float is too long (precision too long?)");
 		return -1;
 	}
 	sprintf(buf, fmt, x);
@@ -2626,7 +2626,7 @@ formatint(char *buf, size_t buflen, int flags,
 	   worst case buf = '0x' + [0-9]*prec, where prec >= 11 */
 	if (buflen <= 13 || buflen <= (size_t)2 + (size_t)prec) {
 		PyErr_SetString(PyExc_OverflowError,
-			"formatted integer is too long (precision too large?)");
+			"formatted integer is too long (precision too long?)");
 		return -1;
 	}
 	sprintf(buf, fmt, x);
@@ -2897,7 +2897,10 @@ PyString_Format(PyObject *format, PyObject *args)
 			case 'X':
 				if (c == 'i')
 					c = 'd';
-				if (PyLong_Check(v)) {
+				if (PyLong_Check(v) && PyLong_AsLong(v) == -1
+				    && PyErr_Occurred()) {
+					/* Too big for a C long. */
+					PyErr_Clear();
 					temp = _PyString_FormatLong(v, flags,
 						prec, c, &pbuf, &len);
 					if (!temp)
@@ -2939,9 +2942,8 @@ PyString_Format(PyObject *format, PyObject *args)
 				break;
 			default:
 				PyErr_Format(PyExc_ValueError,
-				  "unsupported format character '%c' (0x%x) "
-				  "at index %i",
-				  c, c, fmt - 1 - PyString_AsString(format));
+				"unsupported format character '%c' (0x%x)",
+					c, c);
 				goto error;
 			}
 			if (sign) {

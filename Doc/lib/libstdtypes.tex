@@ -425,7 +425,6 @@ error handling scheme.  The default for \var{errors} is
 \code{'strict'}, meaning that encoding errors raise a
 \exception{ValueError}.  Other possible values are \code{'ignore'} and
 \code{'replace'}.
-\versionadded{2.0}
 \end{methoddesc}
 
 \begin{methoddesc}[string]{endswith}{suffix\optional{, start\optional{, end}}}
@@ -601,17 +600,15 @@ The right argument should be a tuple with one item for each argument
 required by the format string; if the string requires a single
 argument, the right argument may also be a single non-tuple
 object.\footnote{A tuple object in this case should be a singleton.
-}  The following format characters are understood: \code{\%},
-\code{c}, \code{r}, \code{s}, \code{i}, \code{d}, \code{u}, \code{o},
-\code{x}, \code{X}, \code{e}, \code{E}, \code{f}, \code{g}, \code{G}.
+}  The following format characters are understood:
+\code{\%}, \code{c}, \code{s}, \code{i}, \code{d}, \code{u}, \code{o},
+\code{x}, \code{X}, \code{e}, \code{E}, \code{f}, \code{g}, \code{G}. 
 Width and precision may be a \code{*} to specify that an integer argument
 specifies the actual width or precision.  The flag characters
 \code{-}, \code{+}, blank, \code{\#} and \code{0} are understood.  The 
 size specifiers \code{h}, \code{l} or \code{L} may be present but are
 ignored.  The \code{\%s} conversion takes any Python object and
-converts it to a string using \code{str()} before formatting it; the
-\code{\%r} conversion is similar but applies the \function{repr()}
-function instead.  The
+converts it to a string using \code{str()} before formatting it.  The
 ANSI features \code{\%p} and \code{\%n} are not supported.  Since
 Python strings have an explicit length, \code{\%s} conversions don't
 assume that \code{'\e0'} is the end of the string.
@@ -817,9 +814,6 @@ arbitrary objects):
           {\code{\var{a}[\var{k}]} if \code{\var{a}.has_key(\var{k})},
            else \var{x} (also setting it)}
           {(5)}
-  \lineiii{\var{a}.popitem()}
-          {remove and return an arbitrary (\var{key}, \var{value}) pair}
-          {(6)}
 \end{tableiii}
 
 \noindent
@@ -844,9 +838,6 @@ provided and \var{k} is not in the map, \code{None} is returned.
 \item[(5)] \function{setdefault()} is like \function{get()}, except
 that if \var{k} is missing, \var{x} is both returned and inserted into
 the dictionary as the value of \var{k}.
-
-\item[(6)] \function{popitem()} is useful to destructively iterate
-over a dictionary, as often used in set algorithms.
 \end{description}
 
 
@@ -980,7 +971,6 @@ special operations.  There is exactly one ellipsis object, named
 
 It is written as \code{Ellipsis}.
 
-
 \subsubsection{File Objects\obindex{file}
                \label{bltin-file-objects}}
 
@@ -1004,8 +994,8 @@ Files have the following methods:
 
 \begin{methoddesc}[file]{close}{}
   Close the file.  A closed file cannot be read or written anymore.
-  Any operation which requires that the file be open will raise a
-  \exception{ValueError} after the file has been closed.  Calling
+  Any operation which requires that the file be open will raise an
+  \exception{IOError} after the file has been closed.  Calling
   \method{close()} more than once is allowed.
 \end{methoddesc}
 
@@ -1146,7 +1136,6 @@ implemented in C will have to provide a writable
 \keyword{print} to keep track of its internal state.
 \end{memberdesc}
 
-
 \subsubsection{Internal Objects \label{typesinternal}}
 
 See the \citetitle[../ref/ref.html]{Python Reference Manual} for this
@@ -1159,28 +1148,26 @@ slice objects.
 The implementation adds a few special read-only attributes to several
 object types, where they are relevant:
 
-\begin{memberdesc}[object]{__dict__}
-A dictionary or other mapping object used to store an
+\begin{memberdescni}{__dict__}
+A dictionary of some sort used to store an
 object's (writable) attributes.
-\end{memberdesc}
+\end{memberdescni}
 
-\begin{memberdesc}[object]{__methods__}
+\begin{memberdescni}{__methods__}
 List of the methods of many built-in object types,
 e.g., \code{[].__methods__} yields
 \code{['append', 'count', 'index', 'insert', 'pop', 'remove',
-'reverse', 'sort']}.  This usually does not need to be explicitly
-provided by the object.
-\end{memberdesc}
+'reverse', 'sort']}.
+\end{memberdescni}
 
-\begin{memberdesc}[object]{__members__}
-Similar to \member{__methods__}, but lists data attributes.  This
-usually does not need to be explicitly provided by the object.
-\end{memberdesc}
+\begin{memberdescni}{__members__}
+Similar to \member{__methods__}, but lists data attributes.
+\end{memberdescni}
 
-\begin{memberdesc}[instance]{__class__}
+\begin{memberdescni}{__class__}
 The class to which a class instance belongs.
-\end{memberdesc}
+\end{memberdescni}
 
-\begin{memberdesc}[class]{__bases__}
+\begin{memberdescni}{__bases__}
 The tuple of base classes of a class object.
-\end{memberdesc}
+\end{memberdescni}

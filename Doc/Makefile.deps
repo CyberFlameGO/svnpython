@@ -58,7 +58,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libshelve.tex \
 	../lib/libcopy.tex \
 	../lib/libmarshal.tex \
-	../lib/libwarnings.tex \
 	../lib/libimp.tex \
 	../lib/libparser.tex \
 	../lib/libbltin.tex \
@@ -171,9 +170,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libdis.tex \
 	../lib/libxmllib.tex \
 	../lib/libpyexpat.tex \
-	../lib/xmldom.tex \
-	../lib/xmldomminidom.tex \
-	../lib/xmldompulldom.tex \
 	../lib/xmlsax.tex \
 	../lib/xmlsaxhandler.tex \
 	../lib/xmlsaxutils.tex \

@@ -7,16 +7,12 @@ import os, urlparse, urllib, types
 import handler
 import xmlreader
 
-try:
-    _StringTypes = [types.StringType, types.UnicodeType]
-except AttributeError:
-    _StringTypes = [types.StringType]
-
+_StringTypes = [types.StringType, types.UnicodeType]
 
 def escape(data, entities={}):
     """Escape &, <, and > in a string of data.
 
-    You can escape other strings of data by passing a dictionary as
+    You can escape other strings of data by passing a dictionary as 
     the optional entities parameter.  The keys and values must all be
     strings; each key will be replaced with its corresponding value.
     """
@@ -24,7 +20,7 @@ def escape(data, entities={}):
     data = data.replace("<", "&lt;")
     data = data.replace(">", "&gt;")
     for chars, entity in entities.items():
-        data = data.replace(chars, entity)
+        data = data.replace(chars, entity)        
     return data
 
 
@@ -61,7 +57,7 @@ class XMLGenerator(handler.ContentHandler):
         for (name, value) in attrs.items():
             self._out.write(' %s="%s"' % (name, escape(value)))
         self._out.write('>')
-
+        
     def endElement(self, name):
         self._out.write('</%s>' % name)
 
@@ -77,7 +73,7 @@ class XMLGenerator(handler.ContentHandler):
         for pair in self._undeclared_ns_maps:
             self._out.write(' xmlns:%s="%s"' % pair)
         self._undeclared_ns_maps = []
-
+        
         for (name, value) in attrs.items():
             name = self._current_context[name[0]] + ":" + name[1]
             self._out.write(' %s="%s"' % (name, escape(value)))
@@ -89,7 +85,7 @@ class XMLGenerator(handler.ContentHandler):
         else:
             name = self._current_context[name[0]] + ":" + name[1]
         self._out.write('</%s>' % name)
-
+        
     def characters(self, content):
         self._out.write(escape(content))
 
@@ -111,7 +107,7 @@ class XMLFilterBase(xmlreader.XMLReader):
     def __init__(self, parent = None):
         xmlreader.XMLReader.__init__(self)
         self._parent = parent
-
+    
     # ErrorHandler methods
 
     def error(self, exception):
@@ -214,7 +210,7 @@ class XMLFilterBase(xmlreader.XMLReader):
 def prepare_input_source(source, base = ""):
     """This function takes an InputSource and an optional base URL and
     returns a fully resolved InputSource object ready for reading."""
-
+    
     if type(source) in _StringTypes:
         source = xmlreader.InputSource(source)
     elif hasattr(source, "read"):
@@ -222,7 +218,7 @@ def prepare_input_source(source, base = ""):
         source = xmlreader.InputSource()
         source.setByteStream(f)
         if hasattr(f, "name"):
-            source.setSystemId(f.name)
+            f.setSystemId(f.name)
 
     if source.getByteStream() is None:
         sysid = source.getSystemId()
@@ -233,7 +229,7 @@ def prepare_input_source(source, base = ""):
         else:
             source.setSystemId(urlparse.urljoin(base, sysid))
             f = urllib.urlopen(source.getSystemId())
-
+            
         source.setByteStream(f)
-
+        
     return source

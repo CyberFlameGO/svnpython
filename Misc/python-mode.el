@@ -332,8 +332,6 @@ support for features needed by `python-mode'.")
      ;; block introducing keywords with immediately following colons.
      ;; Yes "except" is in both lists.
      (cons (concat "\\b\\(" kw2 "\\)[ \n\t(]") 1)
-     ;; `as' but only in "import foo as bar"
-     '("[ \t]*\\(\\bfrom\\b.*\\)?\\bimport\\b.*\\b\\(as\\)\\b" . 2)
      ;; classes
      '("\\bclass[ \t]+\\([a-zA-Z_]+[a-zA-Z0-9_]*\\)"
        1 font-lock-type-face)
@@ -2866,16 +2864,12 @@ If nesting level is zero, return nil."
   "Go to the beginning of the triple quoted string we find ourselves in.
 DELIM is the TQS string delimiter character we're searching backwards
 for."
-  (let ((skip (and delim (make-string 1 delim)))
-	(continue t))
+  (let ((skip (and delim (make-string 1 delim))))
     (when skip
       (save-excursion
-	(while continue
-	  (py-safe (search-backward skip))
-	  (setq continue (and (not (bobp))
-			      (= (char-before) ?\\))))
-	(if (and (= (char-before) delim)
-		 (= (char-before (1- (point))) delim))
+	(py-safe (search-backward skip))
+	(if (and (eq (char-before) delim)
+		 (eq (char-before (1- (point))) delim))
 	    (setq skip (make-string 3 delim))))
       ;; we're looking at a triple-quoted string
       (py-safe (search-backward skip)))))

@@ -327,8 +327,8 @@ bziplatex:	latex-$(RELEASE).tar.bz2
 
 bzips:		bzippdf bzipps bziphtml
 
-distfiles:	tarballs zips
-	$(TOOLSDIR)/mksourcepkg --zip --gzip $(RELEASE)
+distfiles:	tarballs zips bzips
+	$(TOOLSDIR)/mksourcepkg --all $(RELEASE)
 
 
 # Housekeeping targets

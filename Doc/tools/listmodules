@@ -8,24 +8,18 @@
 
 """%(program)s - list modules in the Python standard library
 
--a, --annotate	  Annotate the module names with the subdirectory they
-                  live in
+-a, --annotate	  Annotate the module names with the subdirectory they live in
 -c, --categorize  Group the modules by subdirectory
 -i <file>,
+--ignore-from <file>  Ignore the modules listed in <file>.  <file> may contain
+		  a list of module names or a module index file as produced
+                  when formatting the Python documentation (.idx flavor).
 
---ignore-from <file>	Ignore the modules listed in <file>.  <file> may
-                  contain a list of module names or a module index file
-                  as produced when formatting the Python documentation
-                  (.idx or .html flavor).
-
-If neither -a nor -c are given, the modules are listed in alphabetical
-order.
+If neither -a nor -c are given, the modules are listed in alphabetical order.
 
 Note that -a and -c are mutually exclusive.
 
-Limitation: Modules loadable as shared objects may not be listed,
-though this script attempts to locate such modules.
-
+Limitation:  Modules loadable as shared objects are not listed.
 """
 
 __version__ = '$Revision$'
@@ -38,8 +32,7 @@ import string
 import sys
 
 
-REMOVE_DIRS = ["dos-8x3", "encodings", "distutils",
-               "lib-old", "lib-stdwin", "test"]
+REMOVE_DIRS = ["dos-8x3", "lib-old", "lib-stdwin", "test"]
 
 
 def main():
@@ -93,7 +86,7 @@ def main():
             if not ignore(name):
                 modules_by_name[name] = "<built-in>"
                 l.append(name)
-    rx = re.compile("Lib/plat-[a-zA-Z0-9]*/")
+    rx = re.compile("Lib/plat-[a-z0-9]*/", re.IGNORECASE)
     fp = os.popen("find Lib -name \*.py -print", "r")
     while 1:
         line = fp.readline()

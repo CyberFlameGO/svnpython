@@ -108,7 +108,7 @@ class RawPen:
     def write(self, arg, move=0):
         x, y = start = self._position
         x = x-1 # correction -- calibrated for Windows
-        item = self._canvas.create_text(x, y,
+        item = self._canvas.create_text(x, y, 
                                         text=str(arg), anchor="sw",
                                         fill=self._color)
         self._items.append(item)
@@ -221,8 +221,6 @@ class RawPen:
                         self._canvas.coords(item, x0, y0, x, y)
                         self._canvas.update()
                         self._canvas.after(10)
-                    # in case nhops==0
-                    self._canvas.coords(item, x0, y0, x1, y1)
                     self._canvas.itemconfigure(item, arrow="none")
                 except Tkinter.TclError:
                     # Probably the window was closed!
@@ -260,7 +258,7 @@ class Pen(RawPen):
             _root = None
             _canvas = None
         root.destroy()
-
+        
 
 def _getpen():
     global _pen

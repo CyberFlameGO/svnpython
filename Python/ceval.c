@@ -61,9 +61,9 @@ static void reset_exc_info(PyThreadState *);
 static void format_exc_check_arg(PyObject *, char *, PyObject *);
 
 #define NAME_ERROR_MSG \
-	"name '%.200s' is not defined"
+	"There is no variable named '%s'"
 #define UNBOUNDLOCAL_ERROR_MSG \
-	"local variable '%.200s' referenced before assignment"
+	"Local variable '%.200s' referenced before assignment"
 
 /* Dynamic execution profile */
 #ifdef DYNAMIC_EXECUTION_PROFILE
@@ -439,10 +439,8 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 		if (argcount > co->co_argcount) {
 			if (!(co->co_flags & CO_VARARGS)) {
 				PyErr_Format(PyExc_TypeError,
-				    "too many arguments to %s(); "
-				    "expected %d, got %d",
-				    PyString_AsString(co->co_name),
-				    co->co_argcount, argcount);
+				"too many arguments; expected %d, got %d",
+					     co->co_argcount, argcount);
 				goto fail;
 			}
 			n = co->co_argcount;
@@ -485,9 +483,7 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 			if (j >= co->co_argcount) {
 				if (kwdict == NULL) {
 					PyErr_Format(PyExc_TypeError,
-					    "%.200s() got an unexpected "
-					    "keyword argument '%.400s'",
-					    PyString_AsString(co->co_name),
+					 "unexpected keyword argument: %.400s",
 					    PyString_AsString(keyword));
 					goto fail;
 				}
@@ -496,10 +492,8 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 			else {
 				if (GETLOCAL(j) != NULL) {
 					PyErr_Format(PyExc_TypeError, 
-					     "keyword parameter '%.400s' "
-					     "redefined in call to %.200s()",
-					     PyString_AsString(keyword),
-					     PyString_AsString(co->co_name));
+				     "keyword parameter redefined: %.400s",
+					     PyString_AsString(keyword));
 					goto fail;
 				}
 				Py_INCREF(value);
@@ -511,10 +505,8 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 			for (i = argcount; i < m; i++) {
 				if (GETLOCAL(i) == NULL) {
 					PyErr_Format(PyExc_TypeError,
-					    "not enough arguments to "
-					    "%.200s(); expected %d, got %d",
-					    PyString_AsString(co->co_name),
-					    m, i);
+				"not enough arguments; expected %d, got %d",
+						     m, i);
 					goto fail;
 				}
 			}
@@ -533,9 +525,8 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 	}
 	else {
 		if (argcount > 0 || kwcount > 0) {
-			PyErr_Format(PyExc_TypeError,
-				     "%.200s() expected no arguments",
-				     PyString_AsString(co->co_name));
+			PyErr_SetString(PyExc_TypeError,
+					"no arguments expected");
 			goto fail;
 		}
 	}
@@ -574,7 +565,7 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 	if (++tstate->recursion_depth > recursion_limit) {
 		--tstate->recursion_depth;
 		PyErr_SetString(PyExc_RuntimeError,
-				"maximum recursion depth exceeded");
+				"Maximum recursion depth exceeded");
 		tstate->frame = f->f_back;
 		Py_DECREF(f);
 		return NULL;
@@ -1822,7 +1813,7 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 			    na++;
 			    n++;
 			}
-			else if (!((flags & 1) && na == 0)) {
+			else {
 			    /* Unbound methods must be called with an
 			       instance of the class (or a derived
 			       class) as first argument */ 
@@ -1834,7 +1825,7 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
                                   /* Handy-dandy */ ;
 			    else {
 				PyErr_SetString(PyExc_TypeError,
-	    "unbound method must be called with instance as first argument");
+	    "unbound method must be called with class instance 1st argument");
 				x = NULL;
 				break;
 			    }
@@ -1895,20 +1886,6 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 			    if (nstar < 0) {
 				goto extcall_fail;
 			    }
-			    if (class && self == NULL && na == 0) {
-				/* * arg is first argument of method,
-				   so check it is isinstance of class */
-				self = PyTuple_GET_ITEM(stararg, 0);
-				if (!(PyInstance_Check(self) &&
-				      PyClass_IsSubclass((PyObject *)
-				   (((PyInstanceObject *)self)->in_class),
-							 class))) {
-				    PyErr_SetString(PyExc_TypeError,
-	    "unbound method must be called with instance as first argument");
-				    x = NULL;
-				    break;
-				}
-			    }
 			}
 			if (nk > 0) {
 			    if (kwdict == NULL) {
@@ -1931,10 +1908,9 @@ eval_code2(PyCodeObject *co, PyObject *globals, PyObject *locals,
 				PyObject *key = POP();
 				if (PyDict_GetItem(kwdict, key) != NULL) {
 				    err = 1;
-				    PyErr_Format(PyExc_TypeError, 
-					 "keyword parameter '%.400s' "
-					 "redefined in function call",
-					 PyString_AsString(key));
+				    PyErr_Format(PyExc_TypeError,
+					"keyword parameter redefined: %.400s",
+						 PyString_AsString(key));
 				    Py_DECREF(key);
 				    Py_DECREF(value);
 				    goto extcall_fail;
@@ -2332,7 +2308,7 @@ do_raise(PyObject *type, PyObject *value, PyObject *tb)
 	}
 	else if (tb != NULL && !PyTraceBack_Check(tb)) {
 		PyErr_SetString(PyExc_TypeError,
-			   "raise: arg 3 must be a traceback or None");
+			   "raise 3rd arg must be traceback or None");
 		goto raise_error;
 	}
 
@@ -2654,7 +2630,6 @@ static PyObject *
 call_builtin(PyObject *func, PyObject *arg, PyObject *kw)
 {
 	if (PyCFunction_Check(func)) {
-		PyCFunctionObject* f = (PyCFunctionObject*) func;
 		PyCFunction meth = PyCFunction_GetFunction(func);
 		PyObject *self = PyCFunction_GetSelf(func);
 		int flags = PyCFunction_GetFlags(func);
@@ -2668,9 +2643,8 @@ call_builtin(PyObject *func, PyObject *arg, PyObject *kw)
 		if (flags & METH_KEYWORDS)
 			return (*(PyCFunctionWithKeywords)meth)(self, arg, kw);
 		if (kw != NULL && PyDict_Size(kw) != 0) {
-			PyErr_Format(PyExc_TypeError,
-				"%.200s() takes no keyword arguments",
-				f->m_ml->ml_name);
+			PyErr_SetString(PyExc_TypeError,
+				   "this function takes no keyword arguments");
 			return NULL;
 		}
 		return (*meth)(self, arg);
@@ -2679,13 +2653,11 @@ call_builtin(PyObject *func, PyObject *arg, PyObject *kw)
 		return PyInstance_New(func, arg, kw);
 	}
 	if (PyInstance_Check(func)) {
-	        PyObject *res, *call = PyObject_GetAttrString(func, "__call__");
+	        PyObject *res, *call = PyObject_GetAttrString(func,"__call__");
 		if (call == NULL) {
-			PyInstanceObject *inst = (PyInstanceObject*) func;
 			PyErr_Clear();
-			PyErr_Format(PyExc_AttributeError,
-				"%.200s instance has no __call__ method",
-				PyString_AsString(inst->in_class->cl_name));
+			PyErr_SetString(PyExc_AttributeError,
+				   "no __call__ method defined");
 			return NULL;
 		}
 		res = PyEval_CallObjectWithKeywords(call, arg, kw);
@@ -2731,7 +2703,7 @@ call_function(PyObject *func, PyObject *arg, PyObject *kw)
 			}
 			if (self == NULL) {
 				PyErr_SetString(PyExc_TypeError,
-	   "unbound method must be called with instance as first argument");
+	   "unbound method must be called with class instance 1st argument");
 				return NULL;
 			}
 			Py_INCREF(arg);
@@ -2877,7 +2849,7 @@ _PyEval_SliceIndex(PyObject *v, int *pi)
 			}
 		} else {
 			PyErr_SetString(PyExc_TypeError,
-					"slice indices must be integers");
+					"slice index must be int");
 			return 0;
 		}
 		/* Truncate -- very long indices are truncated anyway */
@@ -2963,7 +2935,7 @@ import_from(PyObject *v, PyObject *name)
 	PyObject *w, *x;
 	if (!PyModule_Check(v)) {
 		PyErr_SetString(PyExc_TypeError,
-				"import-from requires a module object");
+				"import-from requires module object");
 		return NULL;
 	}
 	w = PyModule_GetDict(v); /* TDB: can this not fail ? */
@@ -2986,7 +2958,7 @@ import_all_from(PyObject *locals, PyObject *v)
 
 	if (!PyModule_Check(v)) {
 		PyErr_SetString(PyExc_TypeError,
-				"import-from requires a module object");
+				"import-from requires module object");
 		return -1;
 	}
 	w = PyModule_GetDict(v); /* TBD: can this not fail ? */
@@ -3096,17 +3068,12 @@ exec_statement(PyFrameObject *f, PyObject *prog, PyObject *globals,
 	    !PyCode_Check(prog) &&
 	    !PyFile_Check(prog)) {
 		PyErr_SetString(PyExc_TypeError,
-			   "exec: arg 1 must be a string, file, or code object");
+			   "exec 1st arg must be string, code or file object");
 		return -1;
 	}
-	if (!PyDict_Check(globals)) {
+	if (!PyDict_Check(globals) || !PyDict_Check(locals)) {
 		PyErr_SetString(PyExc_TypeError,
-		    "exec: arg 2 must be a dictionary or None");
-		return -1;
-	}
-	if (!PyDict_Check(locals)) {
-		PyErr_SetString(PyExc_TypeError,
-		    "exec: arg 3 must be a dictionary or None");
+		    "exec 2nd/3rd args must be dict or None");
 		return -1;
 	}
 	if (PyDict_GetItemString(globals, "__builtins__") == NULL)

@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
-# Module ndiff version 1.6.0
-# Released to the public domain 08-Dec-2000,
-# by Tim Peters (tim.one@home.com).
+# Module ndiff version 1.4.0
+# Released to the public domain 27-Mar-1999,
+# by Tim Peters (tim_one@email.msn.com).
 
 # Provided as-is; use at your own risk; no warranty; no promises; enjoy!
 
@@ -28,14 +28,14 @@ Each remaining line begins with a two-letter code:
     "? "    line not present in either input file
 
 Lines beginning with "? " attempt to guide the eye to intraline
-differences, and were not present in either input file.  These lines can be
-confusing if the source files contain tab characters.
+differences, and were not present in either input file.  These lines can
+be confusing if the source files contain tab characters.
 
 The first file can be recovered by retaining only lines that begin with
 "  " or "- ", and deleting those 2-character prefixes; use ndiff with -r1.
 
-The second file can be recovered similarly, but by retaining only "  " and
-"+ " lines; use ndiff with -r2; or, on Unix, the second file can be
+The second file can be recovered similarly, but by retaining only "  "
+and "+ " lines; use ndiff with -r2; or, on Unix, the second file can be
 recovered by piping the output through
 
     sed -n '/^[+ ] /s/^..//p'
@@ -43,7 +43,7 @@ recovered by piping the output through
 See module comments for details and programmatic interface.
 """
 
-__version__ = 1, 5, 0
+__version__ = 1, 4, 0
 
 # SequenceMatcher tries to compute a "human-friendly diff" between
 # two sequences (chiefly picturing a file as a sequence of lines,
@@ -408,6 +408,13 @@ def dump(tag, x, lo, hi):
     for i in xrange(lo, hi):
         print tag, x[i],
 
+# figure out which mark to stick under characters in lines that
+# have changed (blank = same, - = deleted, + = inserted, ^ = replaced)
+_combine = { '  ': ' ',
+             '. ': '-',
+             ' .': '+',
+             '..': '^' }
+
 def plain_replace(a, alo, ahi, b, blo, bhi):
     assert alo < ahi and blo < bhi
     # dump the shorter block first -- reduces the burden on short-term
@@ -484,24 +491,31 @@ def fancy_replace(a, alo, ahi, b, blo, bhi):
     # do intraline marking on the synch pair
     aelt, belt = a[best_i], b[best_j]
     if eqi is None:
-        # pump out a '-', '?', '+', '?' quad for the synched lines
+        # pump out a '-', '+', '?' triple for the synched lines;
         atags = btags = ""
         cruncher.set_seqs(aelt, belt)
         for tag, ai1, ai2, bj1, bj2 in cruncher.get_opcodes():
             la, lb = ai2 - ai1, bj2 - bj1
             if tag == 'replace':
-                atags += '^' * la
-                btags += '^' * lb
+                atags = atags + '.' * la
+                btags = btags + '.' * lb
             elif tag == 'delete':
-                atags += '-' * la
+                atags = atags + '.' * la
             elif tag == 'insert':
-                btags += '+' * lb
+                btags = btags + '.' * lb
             elif tag == 'equal':
-                atags += ' ' * la
-                btags += ' ' * lb
+                atags = atags + ' ' * la
+                btags = btags + ' ' * lb
             else:
                 raise ValueError, 'unknown tag ' + `tag`
-        printq(aelt, belt, atags, btags)
+        la, lb = len(atags), len(btags)
+        if la < lb:
+            atags = atags + ' ' * (lb - la)
+        elif lb < la:
+            btags = btags + ' ' * (la - lb)
+        combined = map(lambda x,y: _combine[x+y], atags, btags)
+        print '-', aelt, '+', belt, '?', \
+              string.rstrip(string.join(combined, ''))
     else:
         # the synch pair is identical
         print ' ', aelt,
@@ -517,26 +531,6 @@ def fancy_helper(a, alo, ahi, b, blo, bhi):
             dump('-', a, alo, ahi)
     elif blo < bhi:
         dump('+', b, blo, bhi)
-
-# Crap to deal with leading tabs in "?" output.  Can hurt, but will
-# probably help most of the time.
-
-def printq(aline, bline, atags, btags):
-    common = min(count_leading(aline, "\t"),
-                 count_leading(bline, "\t"))
-    common = min(common, count_leading(atags[:common], " "))
-    print "-", aline,
-    if count_leading(atags, " ") < len(atags):
-        print "?", "\t" * common + atags[common:]
-    print "+", bline,
-    if count_leading(btags, " ") < len(btags):
-        print "?", "\t" * common + btags[common:]
-
-def count_leading(line, ch):
-    i, n = 0, len(line)
-    while i < n and line[i] == ch:
-        i += 1
-    return i
 
 def fail(msg):
     import sys
