@@ -5,7 +5,12 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
@@ -15,7 +20,18 @@
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <CFBase.h>
+#include <CFArray.h>
+#include <CFData.h>
+#include <CFDictionary.h>
+#include <CFString.h>
+#include <CFURL.h>
+#include <CFPropertyList.h>
+#include <CFPreferences.h>
+#else
 #include <CoreServices/CoreServices.h>
+#endif
 
 #include "pycfbridge.h"
 

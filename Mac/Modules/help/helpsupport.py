@@ -36,7 +36,14 @@ MenuItemIndex = Type("MenuItemIndex", "H")
 #EventKind = Type("EventKind", "H")
 
 includestuff = includestuff + """
+#ifndef PyDoc_STR
+#define PyDoc_STR(x) (x)
+#endif
+#ifdef WITHOUT_FRAMEWORKS
+#include <MacHelp.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 """
 
 class MyObjectDefinition(PEP253Mixin, GlobalObjectDefinition):

@@ -975,7 +975,8 @@ def test():
     print seqs
     f.putsequences(seqs)
     do('f.getsequences()')
-    for t in reversed(testfolders): do('mh.deletefolder(%s)' % `t`)
+    testfolders.reverse()
+    for t in testfolders: do('mh.deletefolder(%s)' % `t`)
     do('mh.getcontext()')
     context = mh.getcontext()
     f = mh.openfolder(context)

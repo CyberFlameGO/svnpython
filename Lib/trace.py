@@ -46,6 +46,7 @@ Sample use, programmatically
 """
 
 import linecache
+import marshal
 import os
 import re
 import sys
@@ -179,11 +180,7 @@ def fullmodname(path):
             if len(dir) > len(longest):
                 longest = dir
 
-    if longest:
-        base = path[len(longest) + 1:]
-    else:
-        base = path
-    base = base.replace("/", ".")
+    base = path[len(longest) + 1:].replace("/", ".")
     filename, ext = os.path.splitext(base)
     return filename
 
@@ -203,11 +200,13 @@ class CoverageResults:
         if self.infile:
             # Try to merge existing counts file.
             try:
-                counts, calledfuncs = pickle.load(open(self.infile, 'rb'))
+                counts, calledfuncs = pickle.load(open(self.infile, 'r'))
                 self.update(self.__class__(counts, calledfuncs))
             except (IOError, EOFError, ValueError), err:
                 print >> sys.stderr, ("Skipping counts file %r: %s"
                                       % (self.infile, err))
+            except pickle.UnpicklingError:
+                self.update(self.__class__(marshal.load(open(self.infile))))
 
     def update(self, other):
         """Merge in the data from another CoverageResults"""
@@ -285,7 +284,7 @@ class CoverageResults:
             # try and store counts and module info into self.outfile
             try:
                 pickle.dump((self.counts, self.calledfuncs),
-                            open(self.outfile, 'wb'), 1)
+                            open(self.outfile, 'w'), 1)
             except IOError, err:
                 print >> sys.stderr, "Can't save counts files because %s" % err
 

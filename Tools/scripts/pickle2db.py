@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Synopsis: %(prog)s [-h|-b|-g|-r|-a|-d] dbfile [ picklefile ]
+Synopsis: %(prog)s [-h|-b|-r|-a|-d] dbfile [ picklefile ]
 
 Read the given picklefile as a series of key/value pairs and write to a new
 database.  If the database already exists, any contents are deleted.  The
@@ -25,10 +25,6 @@ try:
 except ImportError:
     dbm = None
 try:
-    import gdbm
-except ImportError:
-    gdbm = None
-try:
     import anydbm
 except ImportError:
     anydbm = None
@@ -45,9 +41,8 @@ def usage():
 
 def main(args):
     try:
-        opts, args = getopt.getopt(args, "hbrdag",
-                                   ["hash", "btree", "recno", "dbm", "anydbm",
-                                    "gdbm"])
+        opts, args = getopt.getopt(args, "hbrda",
+                                   ["hash", "btree", "recno", "dbm", "anydbm"])
     except getopt.error:
         usage()
         return 1
@@ -91,12 +86,6 @@ def main(args):
                 dbopen = anydbm.open
             except AttributeError:
                 sys.stderr.write("anydbm module unavailable.\n")
-                return 1
-        elif opt in ("-g", "--gdbm"):
-            try:
-                dbopen = gdbm.open
-            except AttributeError:
-                sys.stderr.write("gdbm module unavailable.\n")
                 return 1
         elif opt in ("-d", "--dbm"):
             try:

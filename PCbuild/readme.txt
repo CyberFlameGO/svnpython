@@ -148,14 +148,19 @@ bz2
     must disable its "TAR file smart CR/LF conversion" feature (under
     Options -> Configuration -> Miscellaneous -> Other) for the duration.
 
-    A custom pre-link step in the bz2 project settings should manage to
-    build bzip2-1.0.2\libbz2.lib by magic before bz2.pyd (or bz2_d.pyd) is
-    linked in PCbuild\.
-    However, the bz2 project is not smart enough to remove anything under
-    bzip2-1.0.2\ when you do a clean, so if you want to rebuild bzip2.lib
-    you need to clean up bzip2-1.0.2\ by hand.
+    Don't bother trying to use libbz2.dsp with MSVC.  After 10 minutes
+    of fiddling, I couldn't get it to work.  Perhaps it works with
+    MSVC 5 (I used MSVC 6).  It's better to run the by-hand makefile
+    anyway, because it runs a helpful test step at the end.
 
-    The build step shouldn't yield any warnings or errors, and should end
+    cd into dist\bzip2-1.0.2, and run
+        nmake -f makefile.msc
+    [Note that if you're running Win9X, you'll need to run vcvars32.bat
+     before running nmake (this batch file is in your MSVC installation).
+     TODO:  make this work like zlib (in particular, MSVC runs the prelink
+     step in an enviroment that already has the correct envars set up).
+    ]
+    The make step shouldn't yield any warnings or errors, and should end
     by displaying 6 blocks each terminated with
         FC: no differences encountered
     If FC finds differences, see the warning abou WinZip above (when I
@@ -238,13 +243,13 @@ _ssl
         http://www.openssl.org
 
     You (probably) don't want the "engine" code.  For example, get
-        openssl-0.9.6g.tar.gz
+        openssl-0.9.7b.tar.gz
     not
-        openssl-engine-0.9.6g.tar.gz
+        openssl-engine-0.9.7b.tar.gz
 
     Unpack into the "dist" directory, retaining the folder name from
     the archive - for example, the latest stable OpenSSL will install as
-        dist/openssl-0.9.6g
+        dist/openssl-0.9.7b
 
     You can (theoretically) use any version of OpenSSL you like - the
     build process will automatically select the latest version.
@@ -273,7 +278,7 @@ _ssl
     Win9x note:  If, near the start of the build process, you see
     something like
 
-        C:\Code\openssl-0.9.6g>set OPTS=no-asm
+        C:\Code\openssl-0.9.7b>set OPTS=no-asm
         Out of environment space
 
     then you're in trouble, and will probably also see these errors near
@@ -283,7 +288,7 @@ _ssl
             'crypto\md5\asm\m5_win32.asm'
         Stop.
         NMAKE : fatal error U1073: don't know how to make
-            'C:\Code\openssl-0.9.6g/out32/libeay32.lib'
+            'C:\Code\openssl-0.9.7b/out32/libeay32.lib'
         Stop.
 
     You need more environment space.  Win9x only has room for 256 bytes
@@ -300,3 +305,10 @@ YOUR OWN EXTENSION DLLs
 If you want to create your own extension module DLL, there's an example
 with easy-to-follow instructions in ../PC/example/; read the file
 readme.txt there first.
+
+HTML Help
+---------
+
+The compiled HTML help file is built from the HTML pages by the script
+Doc/tools/prechm.py. This creates project files which must be compiled
+with MS HTML Help Workshop.

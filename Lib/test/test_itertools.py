@@ -3,7 +3,6 @@ from test import test_support
 from itertools import *
 import sys
 import operator
-import random
 
 def onearg(x):
     'Test function of one argument'
@@ -88,7 +87,7 @@ class TestBasicOps(unittest.TestCase):
         self.assertEqual(list(izip('abcdef', range(3))), zip('abcdef', range(3)))
         self.assertEqual(take(3,izip('abcdef', count())), zip('abcdef', range(3)))
         self.assertEqual(list(izip('abcdef')), zip('abcdef'))
-        self.assertEqual(list(izip()), zip())
+        self.assertEqual(list(izip()), [])
         self.assertRaises(TypeError, izip, 3)
         self.assertRaises(TypeError, izip, range(3), 3)
         # Check tuple re-use (implementation detail)
@@ -199,72 +198,6 @@ class TestBasicOps(unittest.TestCase):
         self.assertRaises(TypeError, dropwhile(10, [(4,5)]).next)
         self.assertRaises(ValueError, dropwhile(errfunc, [(4,5)]).next)
 
-    def test_tee(self):
-        n = 200
-        def irange(n):
-            for i in xrange(n):
-                yield i
-
-        a, b = tee([])        # test empty iterator
-        self.assertEqual(list(a), [])
-        self.assertEqual(list(b), [])
-
-        a, b = tee(irange(n)) # test 100% interleaved
-        self.assertEqual(zip(a,b), zip(range(n),range(n)))
-
-        a, b = tee(irange(n)) # test 0% interleaved
-        self.assertEqual(list(a), range(n))
-        self.assertEqual(list(b), range(n))
-
-        a, b = tee(irange(n)) # test dealloc of leading iterator
-        for i in xrange(100):
-            self.assertEqual(a.next(), i)
-        del a
-        self.assertEqual(list(b), range(n))
-
-        a, b = tee(irange(n)) # test dealloc of trailing iterator
-        for i in xrange(100):
-            self.assertEqual(a.next(), i)
-        del b
-        self.assertEqual(list(a), range(100, n))
-
-        for j in xrange(5):   # test randomly interleaved
-            order = [0]*n + [1]*n
-            random.shuffle(order)
-            lists = ([], [])
-            its = tee(irange(n))
-            for i in order:
-                value = its[i].next()
-                lists[i].append(value)
-            self.assertEqual(lists[0], range(n))
-            self.assertEqual(lists[1], range(n))
-
-        # test argument format checking
-        self.assertRaises(TypeError, tee)
-        self.assertRaises(TypeError, tee, 3)
-        self.assertRaises(TypeError, tee, [1,2], 'x')
-        self.assertRaises(TypeError, tee, [1,2], 3, 'x')
-
-        # tee object should be instantiable
-        a, b = tee('abc')
-        c = type(a)('def')
-        self.assertEqual(list(c), list('def'))
-
-        # test long-lagged and multi-way split
-        a, b, c = tee(xrange(2000), 3)
-        for i in xrange(100):
-            self.assertEqual(a.next(), i)
-        self.assertEqual(list(b), range(2000))
-        self.assertEqual([c.next(), c.next()], range(2))
-        self.assertEqual(list(a), range(100,2000))
-        self.assertEqual(list(c), range(2,2000))
-
-        # tee pass-through to copyable iterator
-        a, b = tee('abc')
-        c, d = tee(a)
-        self.assert_(a is c)
-
-
     def test_StopIteration(self):
         self.assertRaises(StopIteration, izip().next)
 
@@ -275,57 +208,11 @@ class TestBasicOps(unittest.TestCase):
         self.assertRaises(StopIteration, islice([], None).next)
         self.assertRaises(StopIteration, islice(StopNow(), None).next)
 
-        p, q = tee([])
-        self.assertRaises(StopIteration, p.next)
-        self.assertRaises(StopIteration, q.next)
-        p, q = tee(StopNow())
-        self.assertRaises(StopIteration, p.next)
-        self.assertRaises(StopIteration, q.next)
-
         self.assertRaises(StopIteration, repeat(None, 0).next)
 
         for f in (ifilter, ifilterfalse, imap, takewhile, dropwhile, starmap):
             self.assertRaises(StopIteration, f(lambda x:x, []).next)
             self.assertRaises(StopIteration, f(lambda x:x, StopNow()).next)
-
-class TestGC(unittest.TestCase):
-
-    def makecycle(self, iterator, container):
-        container.append(iterator)
-        iterator.next()
-        del container, iterator
-
-    def test_chain(self):
-        a = []
-        self.makecycle(chain(a), a)
-
-    def test_cycle(self):
-        a = []
-        self.makecycle(cycle([a]*2), a)
-
-    def test_ifilter(self):
-        a = []
-        self.makecycle(ifilter(lambda x:True, [a]*2), a)
-
-    def test_ifilterfalse(self):
-        a = []
-        self.makecycle(ifilterfalse(lambda x:False, a), a)
-
-    def test_izip(self):
-        a = []
-        self.makecycle(izip([a]*2, [a]*3), a)
-
-    def test_imap(self):
-        a = []
-        self.makecycle(imap(lambda x:x, [a]*2), a)
-
-    def test_islice(self):
-        a = []
-        self.makecycle(islice([a]*2, None), a)
-
-    def test_starmap(self):
-        a = []
-        self.makecycle(starmap(lambda *t: t, [(a,a)]*2), a)
 
 def R(seqn):
     'Regular generator'
@@ -402,6 +289,45 @@ class S:
 def L(seqn):
     'Test multiple tiers of iterators'
     return chain(imap(lambda x:x, R(Ig(G(seqn)))))
+
+class TestGC(unittest.TestCase):
+
+    def makecycle(self, iterator, container):
+        container.append(iterator)
+        iterator.next()
+        del container, iterator
+
+    def test_chain(self):
+        a = []
+        self.makecycle(chain(a), a)
+
+    def test_cycle(self):
+        a = []
+        self.makecycle(cycle([a]*2), a)
+
+    def test_ifilter(self):
+        a = []
+        self.makecycle(ifilter(lambda x:True, [a]*2), a)
+
+    def test_ifilterfalse(self):
+        a = []
+        self.makecycle(ifilterfalse(lambda x:False, a), a)
+
+    def test_izip(self):
+        a = []
+        self.makecycle(izip([a]*2, [a]*3), a)
+
+    def test_imap(self):
+        a = []
+        self.makecycle(imap(lambda x:x, [a]*2), a)
+
+    def test_islice(self):
+        a = []
+        self.makecycle(islice([a]*2, None), a)
+
+    def test_starmap(self):
+        a = []
+        self.makecycle(starmap(lambda *t: t, [(a,a)]*2), a)
 
 
 class TestVariousIteratorArgs(unittest.TestCase):
@@ -501,16 +427,6 @@ class TestVariousIteratorArgs(unittest.TestCase):
             self.assertRaises(TypeError, list, dropwhile(isOdd, N(s)))
             self.assertRaises(ZeroDivisionError, list, dropwhile(isOdd, E(s)))
 
-    def test_tee(self):
-        for s in ("123", "", range(1000), ('do', 1.2), xrange(2000,2200,5)):
-            for g in (G, I, Ig, S, L, R):
-                it1, it2 = tee(g(s))
-                self.assertEqual(list(it1), list(g(s)))
-                self.assertEqual(list(it2), list(g(s)))
-            self.assertRaises(TypeError, tee, X(s))
-            self.assertRaises(TypeError, list, tee(N(s))[0])
-            self.assertRaises(ZeroDivisionError, list, tee(E(s))[0])
-
 class RegressionTests(unittest.TestCase):
 
     def test_sf_793826(self):
@@ -571,9 +487,6 @@ Martin
 Walter
 Samuele
 
->>> def take(n, seq):
-...     return list(islice(seq, n))
-
 >>> def enumerate(iterable):
 ...     return izip(count(), iterable)
 
@@ -615,31 +528,22 @@ Samuele
 >>> def dotproduct(vec1, vec2):
 ...     return sum(imap(operator.mul, vec1, vec2))
 
->>> def flatten(listOfLists):
-...     return list(chain(*listOfLists))
+>>> def window(seq, n=2):
+...     "Returns a sliding window (of width n) over data from the iterable"
+...     "   s -> (s0,s1,...s[n-1]), (s1,s2,...,sn), ...                   "
+...     it = iter(seq)
+...     result = tuple(islice(it, n))
+...     if len(result) == n:
+...         yield result
+...     for elem in it:
+...         result = result[1:] + (elem,)
+...         yield result
 
->>> def repeatfunc(func, times=None, *args):
-...     "Repeat calls to func with specified arguments."
-...     "   Example:  repeatfunc(random.random)"
-...     if times is None:
-...         return starmap(func, repeat(args))
-...     else:
-...         return starmap(func, repeat(args, times))
-
->>> def pairwise(iterable):
-...     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-...     a, b = tee(iterable)
-...     try:
-...         b.next()
-...     except StopIteration:
-...         pass
-...     return izip(a, b)
+>>> def take(n, seq):
+...     return list(islice(seq, n))
 
 This is not part of the examples but it tests to make sure the definitions
 perform as purported.
-
->>> take(10, count())
-[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 >>> list(enumerate('abc'))
 [(0, 'a'), (1, 'b'), (2, 'c')]
@@ -671,24 +575,10 @@ False
 >>> quantify(xrange(99), lambda x: x%2==0)
 50
 
->>> a = [[1, 2, 3], [4, 5, 6]]
->>> flatten(a)
-[1, 2, 3, 4, 5, 6]
+>>> list(window('abc'))
+[('a', 'b'), ('b', 'c')]
 
->>> list(repeatfunc(pow, 5, 2, 3))
-[8, 8, 8, 8, 8]
-
->>> import random
->>> take(5, imap(int, repeatfunc(random.random)))
-[0, 0, 0, 0, 0]
-
->>> list(pairwise('abcd'))
-[('a', 'b'), ('b', 'c'), ('c', 'd')]
-
->>> list(pairwise([]))
-[]
-
->>> list(pairwise('a'))
+>>> list(window('abc',5))
 []
 
 >>> list(islice(padnone('abc'), 0, 6))
@@ -699,6 +589,9 @@ False
 
 >>> dotproduct([1,2,3], [4,5,6])
 32
+
+>>> take(10, count())
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 """
 

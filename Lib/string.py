@@ -1,9 +1,9 @@
-"""A collection of string operations (most are no longer used).
+"""A collection of string operations (most are no longer used in Python 1.6).
 
-Warning: most of the code you see here isn't normally used nowadays.
-Beginning with Python 1.6, many of these functions are implemented as
-methods on the standard string object. They used to be implemented by
-a built-in module called strop, but strop is now obsolete itself.
+Warning: most of the code you see here isn't normally used nowadays.  With
+Python 1.6, many of these functions are implemented as methods on the
+standard string object. They used to be implemented by a built-in module
+called strop, but strop is now obsolete itself.
 
 Public module variables:
 
@@ -237,37 +237,37 @@ def atol(s, base=10):
 
 
 # Left-justify a string
-def ljust(s, width, *args):
-    """ljust(s, width[, fillchar]) -> string
+def ljust(s, width):
+    """ljust(s, width) -> string
 
     Return a left-justified version of s, in a field of the
     specified width, padded with spaces as needed.  The string is
-    never truncated.  If specified the fillchar is used instead of spaces.
+    never truncated.
 
     """
-    return s.ljust(width, *args)
+    return s.ljust(width)
 
 # Right-justify a string
-def rjust(s, width, *args):
-    """rjust(s, width[, fillchar]) -> string
+def rjust(s, width):
+    """rjust(s, width) -> string
 
     Return a right-justified version of s, in a field of the
     specified width, padded with spaces as needed.  The string is
-    never truncated.  If specified the fillchar is used instead of spaces.
+    never truncated.
 
     """
-    return s.rjust(width, *args)
+    return s.rjust(width)
 
 # Center a string
-def center(s, width, *args):
-    """center(s, width[, fillchar]) -> string
+def center(s, width):
+    """center(s, width) -> string
 
     Return a center version of s, in a field of the specified
     width. padded with spaces as needed.  The string is never
-    truncated.  If specified the fillchar is used instead of spaces.
+    truncated.
 
     """
-    return s.center(width, *args)
+    return s.center(width)
 
 # Zero-fill a number, e.g., (12, 3) --> '012' and (-3, 3) --> '-03'
 # Decadent feature: the argument may be a string or a number

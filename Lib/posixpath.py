@@ -10,6 +10,7 @@ Some of this can actually be useful on non-Posix systems too, e.g.
 for manipulation of the pathname component of URLs.
 """
 
+import sys
 import os
 import stat
 

@@ -16,12 +16,7 @@ import exceptions
 import linecache
 from code import InteractiveInterpreter
 
-try:
-    from Tkinter import *
-except ImportError:
-    print>>sys.__stderr__, "** IDLE can't import Tkinter.  " \
-                           "Your Python may not be configured for Tk. **"
-    sys.exit(1)
+from Tkinter import *
 import tkMessageBox
 
 from EditorWindow import EditorWindow, fixwordbreaks
@@ -336,7 +331,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
             command = "__import__('idlelib.run').run.main(" + `del_exitf` +")"
         else:
             command = "__import__('run').main(" + `del_exitf` + ")"
-        if sys.platform[:3] == 'win' and ' ' in sys.executable:
+        if sys.platform == 'win32' and ' ' in sys.executable:
             # handle embedded space in path by quoting the argument
             decorated_exec = '"%s"' % sys.executable
         else:

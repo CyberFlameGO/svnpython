@@ -212,7 +212,6 @@ Instead, you can get the same information from the list type:
      '__reduce__',
      '__reduce_ex__',
      '__repr__',
-     '__reversed__',
      '__rmul__',
      '__setattr__',
      '__setitem__',
@@ -226,8 +225,7 @@ Instead, you can get the same information from the list type:
      'pop',
      'remove',
      'reverse',
-     'sort',
-     'sorted']
+     'sort']
 
 The new introspection API gives more information than the old one:  in
 addition to the regular methods, it also shows the methods that are

@@ -84,7 +84,6 @@
 
 /* --------------------------------------------------------------------- */
 
-#include <stddef.h>   /* for offsetof() */
 #include <Python.h>
 #include <db.h>
 
@@ -93,11 +92,8 @@
 
 /* 40 = 4.0, 33 = 3.3; this will break if the second number is > 9 */
 #define DBVER (DB_VERSION_MAJOR * 10 + DB_VERSION_MINOR)
-#if DB_VERSION_MINOR > 9
-#error "eek! DBVER can't handle minor versions > 9"
-#endif
 
-#define PY_BSDDB_VERSION "4.2.4"
+#define PY_BSDDB_VERSION "4.2.0"
 static char *rcs_id = "$Id$";
 
 
@@ -152,7 +148,6 @@ static PyInterpreterState* _db_interpreterState = NULL;
 /* Exceptions */
 
 static PyObject* DBError;               /* Base class, all others derive from this */
-static PyObject* DBCursorClosedError;   /* raised when trying to use a closed cursor object */
 static PyObject* DBKeyEmptyError;       /* DB_KEYEMPTY */
 static PyObject* DBKeyExistError;       /* DB_KEYEXIST */
 static PyObject* DBLockDeadlockError;   /* DB_LOCK_DEADLOCK */
@@ -188,12 +183,6 @@ static PyObject* DBPermissionsError;    /* EPERM  */
 /* --------------------------------------------------------------------- */
 /* Structure definitions */
 
-#if PYTHON_API_VERSION >= 1010       /* python >= 2.1 support weak references */
-#define HAVE_WEAKREF
-#else
-#undef HAVE_WEAKREF
-#endif
-
 struct behaviourFlags {
     /* What is the default behaviour when DB->get or DBCursor->get returns a
        DB_NOTFOUND error?  Return None or raise an exception? */
@@ -204,7 +193,7 @@ struct behaviourFlags {
 };
 
 #define DEFAULT_GET_RETURNS_NONE                1
-#define DEFAULT_CURSOR_SET_RETURNS_NONE         1   /* 0 in pybsddb < 4.2, python < 2.4 */
+#define DEFAULT_CURSOR_SET_RETURNS_NONE         0   /* 0 in pybsddb < 4.2, python < 2.4 */
 
 typedef struct {
     PyObject_HEAD
@@ -234,9 +223,6 @@ typedef struct {
     PyObject_HEAD
     DBC*            dbc;
     DBObject*       mydb;
-#ifdef HAVE_WEAKREF
-    PyObject        *in_weakreflist; /* List of weak references */
-#endif
 } DBCursorObject;
 
 
@@ -272,23 +258,27 @@ staticforward PyTypeObject DB_Type, DBCursor_Type, DBEnv_Type, DBTxn_Type, DBLoc
 
 #define RETURN_NONE()  Py_INCREF(Py_None); return Py_None;
 
-#define _CHECK_OBJECT_NOT_CLOSED(nonNull, pyErrObj, name) \
-    if ((nonNull) == NULL) {          \
-        PyObject *errTuple = NULL;    \
-        errTuple = Py_BuildValue("(is)", 0, #name " object has been closed"); \
-        PyErr_SetObject((pyErrObj), errTuple);  \
-	Py_DECREF(errTuple);          \
-        return NULL;                  \
+#define CHECK_DB_NOT_CLOSED(dbobj)                              \
+    if (dbobj->db == NULL) {                                    \
+        PyErr_SetObject(DBError, Py_BuildValue("(is)", 0,       \
+                                "DB object has been closed"));  \
+        return NULL;                                            \
     }
 
-#define CHECK_DB_NOT_CLOSED(dbobj) \
-        _CHECK_OBJECT_NOT_CLOSED(dbobj->db, DBError, DB)
-
-#define CHECK_ENV_NOT_CLOSED(env) \
-        _CHECK_OBJECT_NOT_CLOSED(env->db_env, DBError, DBEnv)
+#define CHECK_ENV_NOT_CLOSED(env)                               \
+    if (env->db_env == NULL) {                                  \
+        PyErr_SetObject(DBError, Py_BuildValue("(is)", 0,       \
+                                 "DBEnv object has been closed"));\
+        return NULL;                                            \
+    }
 
 #define CHECK_CURSOR_NOT_CLOSED(curs) \
-        _CHECK_OBJECT_NOT_CLOSED(curs->dbc, DBCursorClosedError, DBCursor)
+    if (curs->dbc == NULL) {                                  \
+        PyErr_SetObject(DBError, Py_BuildValue("(is)", 0,       \
+                                 "DBCursor object has been closed"));\
+        return NULL;                                            \
+    }
+
 
 
 #define CHECK_DBFLAG(mydb, flag)    (((mydb)->flags & (flag)) || \
@@ -773,9 +763,6 @@ newDBCursorObject(DBC* dbc, DBObject* db)
 
     self->dbc = dbc;
     self->mydb = db;
-#ifdef HAVE_WEAKREF
-    self->in_weakreflist = NULL;
-#endif
     Py_INCREF(self->mydb);
     return self;
 }
@@ -785,13 +772,6 @@ static void
 DBCursor_dealloc(DBCursorObject* self)
 {
     int err;
-
-#ifdef HAVE_WEAKREF
-    if (self->in_weakreflist != NULL) {
-        PyObject_ClearWeakRefs((PyObject *) self);
-    }
-#endif
-
     if (self->dbc != NULL) {
         MYDB_BEGIN_ALLOW_THREADS;
 	/* If the underlying database has been closed, we don't
@@ -1560,11 +1540,11 @@ DB_join(DBObject* self, PyObject* args)
     free(cursors);
     RETURN_IF_ERR();
 
-    /* FIXME: this is a buggy interface.  The returned cursor
-       contains internal references to the passed in cursors
-       but does not hold python references to them or prevent
-       them from being closed prematurely.  This can cause
-       python to crash when things are done in the wrong order. */
+    // FIXME: this is a buggy interface.  The returned cursor
+    // contains internal references to the passed in cursors
+    // but does not hold python references to them or prevent
+    // them from being closed prematurely.  This can cause
+    // python to crash when things are done in the wrong order.
     return (PyObject*) newDBCursorObject(dbc, self);
 }
 
@@ -2946,7 +2926,7 @@ _DBC_get_set_both(DBCursorObject* self, PyObject* keyobj, PyObject* dataobj,
     DBT key, data;
     PyObject* retval;
 
-    /* the caller did this:  CHECK_CURSOR_NOT_CLOSED(self); */
+    // the caller did this:  CHECK_CURSOR_NOT_CLOSED(self);
     if (!make_key_dbt(self->mydb, keyobj, &key, NULL))
         return NULL;
     if (!make_dbt(dataobj, &data))
@@ -2994,44 +2974,11 @@ DBC_get_both(DBCursorObject* self, PyObject* args)
     if (!PyArg_ParseTuple(args, "OO|i:get_both", &keyobj, &dataobj, &flags))
         return NULL;
 
-    /* if the cursor is closed, self->mydb may be invalid */
+    // if the cursor is closed, self->mydb may be invalid
     CHECK_CURSOR_NOT_CLOSED(self);
 
     return _DBC_get_set_both(self, keyobj, dataobj, flags,
                 self->mydb->moduleFlags.getReturnsNone);
-}
-
-/* Return size of entry */
-static PyObject*
-DBC_get_current_size(DBCursorObject* self, PyObject* args)
-{
-    int err, flags=DB_CURRENT;
-    PyObject* retval = NULL;
-    DBT key, data;
-
-    if (!PyArg_ParseTuple(args, ":get_current_size"))
-        return NULL;
-    CHECK_CURSOR_NOT_CLOSED(self);
-    CLEAR_DBT(key);
-    CLEAR_DBT(data);
-
-    /* We don't allocate any memory, forcing a ENOMEM error and thus
-       getting the record size. */
-    data.flags = DB_DBT_USERMEM;
-    data.ulen = 0;
-    MYDB_BEGIN_ALLOW_THREADS;
-    err = self->dbc->c_get(self->dbc, &key, &data, flags);
-    MYDB_END_ALLOW_THREADS;
-    if (err == ENOMEM || !err) {
-        /* ENOMEM means positive size, !err means zero length value */
-        retval = PyInt_FromLong((long)data.size);
-        err = 0;
-    }
-
-    FREE_DBT(key);
-    FREE_DBT(data);
-    RETURN_IF_ERR();
-    return retval;
 }
 
 static PyObject*
@@ -3043,7 +2990,7 @@ DBC_set_both(DBCursorObject* self, PyObject* args)
     if (!PyArg_ParseTuple(args, "OO|i:set_both", &keyobj, &dataobj, &flags))
         return NULL;
 
-    /* if the cursor is closed, self->mydb may be invalid */
+    // if the cursor is closed, self->mydb may be invalid
     CHECK_CURSOR_NOT_CLOSED(self);
 
     return _DBC_get_set_both(self, keyobj, dataobj, flags,
@@ -4132,7 +4079,6 @@ static PyMethodDef DBCursor_methods[] = {
     {"set",             (PyCFunction)DBC_set,           METH_VARARGS|METH_KEYWORDS},
     {"set_range",       (PyCFunction)DBC_set_range,     METH_VARARGS|METH_KEYWORDS},
     {"get_both",        (PyCFunction)DBC_get_both,      METH_VARARGS},
-    {"get_current_size",(PyCFunction)DBC_get_current_size, METH_VARARGS},
     {"set_both",        (PyCFunction)DBC_set_both,      METH_VARARGS},
     {"set_recno",       (PyCFunction)DBC_set_recno,     METH_VARARGS|METH_KEYWORDS},
     {"consume",         (PyCFunction)DBC_consume,       METH_VARARGS|METH_KEYWORDS},
@@ -4275,19 +4221,6 @@ statichere PyTypeObject DBCursor_Type = {
     0,                  /*tp_as_sequence*/
     0,                  /*tp_as_mapping*/
     0,                  /*tp_hash*/
-#ifdef HAVE_WEAKREF
-    0,			/* tp_call */
-    0,			/* tp_str */
-    0,  		/* tp_getattro */
-    0,                  /* tp_setattro */
-    0,			/* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_WEAKREFS,      /* tp_flags */
-    0,                  /* tp_doc */
-    0,		        /* tp_traverse */
-    0,			/* tp_clear */
-    0,			/* tp_richcompare */
-    offsetof(DBCursorObject, in_weakreflist),   /* tp_weaklistoffset */
-#endif
 };
 
 
@@ -4418,9 +4351,6 @@ static PyMethodDef bsddb_methods[] = {
  */
 #define ADD_INT(dict, NAME)         _addIntToDict(dict, #NAME, NAME)
 
-#define MODULE_NAME_MAX_LEN     11
-static char _bsddbModuleName[MODULE_NAME_MAX_LEN+1] = "_bsddb";
-
 DL_EXPORT(void) init_bsddb(void)
 {
     PyObject* m;
@@ -4444,7 +4374,7 @@ DL_EXPORT(void) init_bsddb(void)
 #endif
 
     /* Create the module and add the functions */
-    m = Py_InitModule(_bsddbModuleName, bsddb_methods);
+    m = Py_InitModule("_bsddb", bsddb_methods);
 
     /* Add some symbolic constants to the module */
     d = PyModule_GetDict(m);
@@ -4750,7 +4680,6 @@ DL_EXPORT(void) init_bsddb(void)
 #if !INCOMPLETE_IS_WARNING
     MAKE_EX(DBIncompleteError);
 #endif
-    MAKE_EX(DBCursorClosedError);
     MAKE_EX(DBKeyEmptyError);
     MAKE_EX(DBKeyExistError);
     MAKE_EX(DBLockDeadlockError);
@@ -4783,13 +4712,4 @@ DL_EXPORT(void) init_bsddb(void)
         PyErr_Print();
         Py_FatalError("can't initialize module _bsddb");
     }
-}
-
-/* allow this module to be named _pybsddb so that it can be installed
- * and imported on top of python >= 2.3 that includes its own older
- * copy of the library named _bsddb without importing the old version. */
-DL_EXPORT(void) init_pybsddb(void)
-{
-    strncpy(_bsddbModuleName, "_pybsddb", MODULE_NAME_MAX_LEN);
-    init_bsddb();
 }

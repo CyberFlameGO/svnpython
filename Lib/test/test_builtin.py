@@ -2,6 +2,7 @@
 
 import test.test_support, unittest
 from test.test_support import fcmp, have_unicode, TESTFN, unlink
+from sets import Set
 
 import sys, warnings, cStringIO
 warnings.filterwarnings("ignore", "hex../oct.. of negative int",
@@ -166,16 +167,16 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(cmp(-1, 1), -1)
         self.assertEqual(cmp(1, -1), 1)
         self.assertEqual(cmp(1, 1), 0)
-        # verify that circular objects are not handled
+        # verify that circular objects are handled
         a = []; a.append(a)
         b = []; b.append(b)
         from UserList import UserList
         c = UserList(); c.append(c)
-        self.assertRaises(RuntimeError, cmp, a, b)
-        self.assertRaises(RuntimeError, cmp, b, c)
-        self.assertRaises(RuntimeError, cmp, c, a)
-        self.assertRaises(RuntimeError, cmp, a, c)
-       # okay, now break the cycles
+        self.assertEqual(cmp(a, b), 0)
+        self.assertEqual(cmp(b, c), 0)
+        self.assertEqual(cmp(c, a), 0)
+        self.assertEqual(cmp(a, c), 0)
+        # okay, now break the cycles
         a.pop(); b.pop(); c.pop()
         self.assertRaises(TypeError, cmp)
 
@@ -437,7 +438,8 @@ class BuiltinTest(unittest.TestCase):
     def test_hex(self):
         self.assertEqual(hex(16), '0x10')
         self.assertEqual(hex(16L), '0x10L')
-        self.assertEqual(hex(-16), '-0x10')
+        self.assertEqual(len(hex(-1)), len(hex(sys.maxint)))
+        self.assert_(hex(-16) in ('0xfffffff0', '0xfffffffffffffff0'))
         self.assertEqual(hex(-16L), '-0x10L')
         self.assertRaises(TypeError, hex, {})
 
@@ -756,7 +758,7 @@ class BuiltinTest(unittest.TestCase):
     def test_oct(self):
         self.assertEqual(oct(100), '0144')
         self.assertEqual(oct(100L), '0144L')
-        self.assertEqual(oct(-100), '-0144')
+        self.assert_(oct(-100) in ('037777777634', '01777777777777777777634'))
         self.assertEqual(oct(-100L), '-0144L')
         self.assertRaises(TypeError, oct, ())
 
@@ -1102,9 +1104,9 @@ class BuiltinTest(unittest.TestCase):
     get_vars_f2 = staticmethod(get_vars_f2)
 
     def test_vars(self):
-        self.assertEqual(set(vars()), set(dir()))
+        self.assertEqual(Set(vars()), Set(dir()))
         import sys
-        self.assertEqual(set(vars(sys)), set(dir(sys)))
+        self.assertEqual(Set(vars(sys)), Set(dir(sys)))
         self.assertEqual(self.get_vars_f0(), {})
         self.assertEqual(self.get_vars_f2(), {'a': 1, 'b': 2})
         self.assertRaises(TypeError, vars, 42, 42)
@@ -1124,8 +1126,7 @@ class BuiltinTest(unittest.TestCase):
                 if i < 0 or i > 2: raise IndexError
                 return i + 4
         self.assertEqual(zip(a, I()), t)
-        self.assertEqual(zip(), [])
-        self.assertEqual(zip(*[]), [])
+        self.assertRaises(TypeError, zip)
         self.assertRaises(TypeError, zip, None)
         class G:
             pass

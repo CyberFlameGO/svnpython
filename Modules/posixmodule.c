@@ -122,9 +122,7 @@ corresponding Unix manual entries for more information on calls.");
 #define HAVE_KILL       1
 #define HAVE_OPENDIR    1
 #define HAVE_PIPE       1
-#ifndef __rtems__
 #define HAVE_POPEN      1
-#endif
 #define HAVE_SYSTEM	1
 #define HAVE_WAIT       1
 #define HAVE_TTYNAME	1
@@ -1029,22 +1027,6 @@ posix_access(PyObject *self, PyObject *args)
 	int mode;
 	int res;
 
-#ifdef Py_WIN_WIDE_FILENAMES
-	if (unicode_file_names()) {
-		PyUnicodeObject *po;
-		if (PyArg_ParseTuple(args, "Ui:access", &po, &mode)) {
-			Py_BEGIN_ALLOW_THREADS
-			/* PyUnicode_AS_UNICODE OK without thread lock as
-			   it is a simple dereference. */
-			res = _waccess(PyUnicode_AS_UNICODE(po), mode);
-			Py_END_ALLOW_THREADS
-			return(PyBool_FromLong(res == 0));
-		}
-		/* Drop the argument parsing error as narrow strings
-		   are also valid. */
-		PyErr_Clear();
-	}
-#endif
 	if (!PyArg_ParseTuple(args, "si:access", &path, &mode))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
@@ -3423,10 +3405,10 @@ _PyPopen(char *cmdstring, int mode, int n, int bufsize)
 	{
 		if ((p_f[2] = PyFile_FromFile(p_s[2], cmdstring, rd_mode, _PyPclose)) != NULL)
 			PyFile_SetBufSize(p_f[0], bufsize);
-		f = PyTuple_Pack(3, p_f[0], p_f[1], p_f[2]);
+		f = Py_BuildValue("OOO", p_f[0], p_f[1], p_f[2]);
 	}
 	else
-		f = PyTuple_Pack(2, p_f[0], p_f[1]);
+		f = Py_BuildValue("OO", p_f[0], p_f[1]);
 
 	/*
 	 * Insert the files we've created into the process dictionary
@@ -4116,7 +4098,7 @@ _PyPopen(char *cmdstring, int mode, int n)
 		 if (n != 4)
 			 CloseHandle(hChildStderrRdDup);
 
-		 f = PyTuple_Pack(2,p1,p2);
+		 f = Py_BuildValue("OO",p1,p2);
 		 Py_XDECREF(p1);
 		 Py_XDECREF(p2);
 		 file_count = 2;
@@ -4148,7 +4130,7 @@ _PyPopen(char *cmdstring, int mode, int n)
 		 PyFile_SetBufSize(p1, 0);
 		 PyFile_SetBufSize(p2, 0);
 		 PyFile_SetBufSize(p3, 0);
-		 f = PyTuple_Pack(3,p1,p2,p3);
+		 f = Py_BuildValue("OOO",p1,p2,p3);
 		 Py_XDECREF(p1);
 		 Py_XDECREF(p2);
 		 Py_XDECREF(p3);
@@ -4800,25 +4782,6 @@ PyDoc_STRVAR(posix_times__doc__,
 "times() -> (utime, stime, cutime, cstime, elapsed_time)\n\n\
 Return a tuple of floating point numbers indicating process times.");
 #endif
-
-
-#ifdef HAVE_GETSID
-PyDoc_STRVAR(posix_getsid__doc__,
-"getsid(pid) -> sid\n\n\
-Call the system call getsid().");
-
-static PyObject *
-posix_getsid(PyObject *self, PyObject *args)
-{
-	int pid, sid;
-	if (!PyArg_ParseTuple(args, "i:getsid", &pid))
-		return NULL;
-	sid = getsid(pid);
-	if (sid < 0)
-		return posix_error();
-	return PyInt_FromLong((long)sid);
-}
-#endif /* HAVE_GETSID */
 
 
 #ifdef HAVE_SETSID
@@ -7086,9 +7049,6 @@ static PyMethodDef posix_methods[] = {
 #if defined(HAVE_WAITPID) || defined(HAVE_CWAIT)
 	{"waitpid",	posix_waitpid, METH_VARARGS, posix_waitpid__doc__},
 #endif /* HAVE_WAITPID */
-#ifdef HAVE_GETSID
-	{"getsid",	posix_getsid, METH_VARARGS, posix_getsid__doc__},
-#endif /* HAVE_GETSID */
 #ifdef HAVE_SETSID
 	{"setsid",	posix_setsid, METH_NOARGS, posix_setsid__doc__},
 #endif /* HAVE_SETSID */

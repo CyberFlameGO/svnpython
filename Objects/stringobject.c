@@ -2617,18 +2617,16 @@ pad(PyStringObject *self, int left, int right, char fill)
 }
 
 PyDoc_STRVAR(ljust__doc__,
-"S.ljust(width[, fillchar]) -> string\n"
+"S.ljust(width) -> string\n"
 "\n"
 "Return S left justified in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space).");
+"done using spaces.");
 
 static PyObject *
 string_ljust(PyStringObject *self, PyObject *args)
 {
     int width;
-    char fillchar = ' ';
-
-    if (!PyArg_ParseTuple(args, "i|c:ljust", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:ljust", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2636,23 +2634,21 @@ string_ljust(PyStringObject *self, PyObject *args)
         return (PyObject*) self;
     }
 
-    return pad(self, 0, width - PyString_GET_SIZE(self), fillchar);
+    return pad(self, 0, width - PyString_GET_SIZE(self), ' ');
 }
 
 
 PyDoc_STRVAR(rjust__doc__,
-"S.rjust(width[, fillchar]) -> string\n"
+"S.rjust(width) -> string\n"
 "\n"
 "Return S right justified in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space)");
+"done using spaces.");
 
 static PyObject *
 string_rjust(PyStringObject *self, PyObject *args)
 {
     int width;
-    char fillchar = ' ';
-
-    if (!PyArg_ParseTuple(args, "i|c:rjust", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:rjust", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2660,24 +2656,23 @@ string_rjust(PyStringObject *self, PyObject *args)
         return (PyObject*) self;
     }
 
-    return pad(self, width - PyString_GET_SIZE(self), 0, fillchar);
+    return pad(self, width - PyString_GET_SIZE(self), 0, ' ');
 }
 
 
 PyDoc_STRVAR(center__doc__,
-"S.center(width[, fillchar]) -> string\n"
+"S.center(width) -> string\n"
 "\n"
-"Return S centered in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space)");
+"Return S centered in a string of length width. Padding is done\n"
+"using spaces.");
 
 static PyObject *
 string_center(PyStringObject *self, PyObject *args)
 {
     int marg, left;
     int width;
-    char fillchar = ' ';
 
-    if (!PyArg_ParseTuple(args, "i|c:center", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:center", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2688,7 +2683,7 @@ string_center(PyStringObject *self, PyObject *args)
     marg = width - PyString_GET_SIZE(self);
     left = marg / 2 + (marg & width & 1);
 
-    return pad(self, left, marg - left, fillchar);
+    return pad(self, left, marg - left, ' ');
 }
 
 PyDoc_STRVAR(zfill__doc__,
@@ -3565,7 +3560,6 @@ formatint(char *buf, size_t buflen, int flags,
 	   worst case length = 3 + 19 (worst len of INT_MAX on 64-bit machine)
 	   + 1 + 1 = 24 */
 	char fmt[64];	/* plenty big enough! */
-	char *sign;
 	long x;
 
 	x = PyInt_AsLong(v);
@@ -3573,13 +3567,12 @@ formatint(char *buf, size_t buflen, int flags,
 		PyErr_SetString(PyExc_TypeError, "int argument required");
 		return -1;
 	}
-	if (x < 0 && type == 'u') {
-		type = 'd';
+	if (x < 0 && type != 'd' && type != 'i') {
+		if (PyErr_Warn(PyExc_FutureWarning,
+			       "%u/%o/%x/%X of negative int will return "
+			       "a signed string in Python 2.4 and up") < 0)
+			return -1;
 	}
-	if (x < 0 && (type == 'x' || type == 'X' || type == 'o'))
-		sign = "-";
-	else
-		sign = "";
 	if (prec < 0)
 		prec = 1;
 
@@ -3605,27 +3598,24 @@ formatint(char *buf, size_t buflen, int flags,
 		 * Note that this is the same approach as used in
 		 * formatint() in unicodeobject.c
 		 */
-		PyOS_snprintf(fmt, sizeof(fmt), "%s0%c%%.%dl%c",
-			      sign, type, prec, type);
+		PyOS_snprintf(fmt, sizeof(fmt), "0%c%%.%dl%c",
+			      type, prec, type);
 	}
 	else {
-		PyOS_snprintf(fmt, sizeof(fmt), "%s%%%s.%dl%c",
-			      sign, (flags&F_ALT) ? "#" : "",
+		PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%dl%c",
+			      (flags&F_ALT) ? "#" : "",
 			      prec, type);
 	}
 
-	/* buf = '+'/'-'/'' + '0'/'0x'/'' + '[0-9]'*max(prec, len(x in octal))
-	 * worst case buf = '-0x' + [0-9]*prec, where prec >= 11
+	/* buf = '+'/'-'/'0'/'0x' + '[0-9]'*max(prec, len(x in octal))
+	 * worst case buf = '0x' + [0-9]*prec, where prec >= 11
 	 */
-	if (buflen <= 14 || buflen <= (size_t)3 + (size_t)prec) {
+	if (buflen <= 13 || buflen <= (size_t)2 + (size_t)prec) {
 		PyErr_SetString(PyExc_OverflowError,
 		    "formatted integer is too long (precision too large?)");
 		return -1;
 	}
-	if (sign[0])
-		PyOS_snprintf(buf, buflen, fmt, -x);
-	else
-		PyOS_snprintf(buf, buflen, fmt, x);
+	PyOS_snprintf(buf, buflen, fmt, x);
 	return strlen(buf);
 }
 
@@ -3912,6 +3902,8 @@ PyString_Format(PyObject *format, PyObject *args)
 						prec, c, &pbuf, &len);
 					if (!temp)
 						goto error;
+					/* unbounded ints can always produce
+					   a sign character! */
 					sign = 1;
 				}
 				else {
@@ -3921,7 +3913,8 @@ PyString_Format(PyObject *format, PyObject *args)
 							flags, prec, c, v);
 					if (len < 0)
 						goto error;
-					sign = 1;
+					/* only d conversion is signed */
+					sign = c == 'd';
 				}
 				if (flags & F_ZERO)
 					fill = '0';

@@ -105,6 +105,14 @@ class MyScanner(Scanner_OSX):
 			
 			]
 
+	def makegreylist(self):
+		return [
+			('#if TARGET_API_MAC_OSX', [
+				'FNNotifyAll',
+				'FNNotifyByPath',
+				'FNNotify',
+			])]
+			
 	def makeblacklisttypes(self):
 		return [
 			"CInfoPBPtr", # Old stuff
@@ -136,9 +144,7 @@ class MyScanner(Scanner_OSX):
 			"IOCompletionUPP", # Proc pointer
 			"AliasFilterProcPtr",
 			"AliasFilterUPP",
-			"FNSubscriptionUPP",
 			
-			"FNSubscriptionRef", # Lazy, for now.
 			]
 
 	def makerepairinstructions(self):

@@ -1656,186 +1656,13 @@ merge_compute_minrun(int n)
 	return n + r;
 }
 
-/* Special wrapper to support stable sorting using the decorate-sort-undecorate
-   pattern.  Holds a key which is used for comparisions and the original record
-   which is returned during the undecorate phase.  By exposing only the key 
-   during comparisons, the underlying sort stability characteristics are left 
-   unchanged.  Also, if a custom comparison function is used, it will only see 
-   the key instead of a full record. */
-
-typedef struct {
-	PyObject_HEAD
-	PyObject *key;
-	PyObject *value;
-} sortwrapperobject;
-
-static PyTypeObject sortwrapper_type;
-
-static PyObject *
-sortwrapper_richcompare(sortwrapperobject *a, sortwrapperobject *b, int op)
-{
-	if (!PyObject_TypeCheck(b, &sortwrapper_type)) {
-		PyErr_SetString(PyExc_TypeError, 
-			"expected a sortwrapperobject");
-		return NULL;
-	}
-	return PyObject_RichCompare(a->key, b->key, op);
-}
-
-static void
-sortwrapper_dealloc(sortwrapperobject *so)
-{
-	Py_XDECREF(so->key);
-	Py_XDECREF(so->value);
-	PyObject_Del(so);
-}
-
-PyDoc_STRVAR(sortwrapper_doc, "Object wrapper with a custom sort key.");
-
-static PyTypeObject sortwrapper_type = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,					/* ob_size */
-	"sortwrapper",				/* tp_name */
-	sizeof(sortwrapperobject),		/* tp_basicsize */
-	0,					/* tp_itemsize */
-	/* methods */
-	(destructor)sortwrapper_dealloc,	/* tp_dealloc */
-	0,					/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	0,					/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	PyObject_GenericGetAttr,		/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | 
-	Py_TPFLAGS_HAVE_RICHCOMPARE, 		/* tp_flags */
-	sortwrapper_doc,			/* tp_doc */
-	0,					/* tp_traverse */
-	0,					/* tp_clear */
-	(richcmpfunc)sortwrapper_richcompare,	/* tp_richcompare */
-};
-
-/* Returns a new reference to a sortwrapper.
-   Consumes the references to the two underlying objects. */
-
-static PyObject *
-build_sortwrapper(PyObject *key, PyObject *value)
-{
-	sortwrapperobject *so;
-	
-	so = PyObject_New(sortwrapperobject, &sortwrapper_type);
-	if (so == NULL)
-		return NULL;
-	so->key = key;
-	so->value = value;
-	return (PyObject *)so;
-}
-
-/* Returns a new reference to the value underlying the wrapper. */
-static PyObject *
-sortwrapper_getvalue(PyObject *so)
-{
-	PyObject *value;
-
-	if (!PyObject_TypeCheck(so, &sortwrapper_type)) {
-		PyErr_SetString(PyExc_TypeError, 
-			"expected a sortwrapperobject");
-		return NULL;
-	}
-	value = ((sortwrapperobject *)so)->value;
-	Py_INCREF(value);
-	return value;
-}
-
-/* Wrapper for user specified cmp functions in combination with a
-   specified key function.  Makes sure the cmp function is presented
-   with the actual key instead of the sortwrapper */
-
-typedef struct {
-	PyObject_HEAD
-	PyObject *func;
-} cmpwrapperobject;
-
-static void
-cmpwrapper_dealloc(cmpwrapperobject *co)
-{
-	Py_XDECREF(co->func);
-	PyObject_Del(co);
-}
-
-static PyObject *
-cmpwrapper_call(cmpwrapperobject *co, PyObject *args, PyObject *kwds)
-{
-	PyObject *x, *y, *xx, *yy;
-
-	if (!PyArg_UnpackTuple(args, "", 2, 2, &x, &y))
-		return NULL;
-	if (!PyObject_TypeCheck(x, &sortwrapper_type) ||
-	    !PyObject_TypeCheck(y, &sortwrapper_type)) {
-		PyErr_SetString(PyExc_TypeError, 
-			"expected a sortwrapperobject");
-		return NULL;
-	}
-	xx = ((sortwrapperobject *)x)->key;
-	yy = ((sortwrapperobject *)y)->key;
-	return PyObject_CallFunctionObjArgs(co->func, xx, yy, NULL);
-}
-
-PyDoc_STRVAR(cmpwrapper_doc, "cmp() wrapper for sort with custom keys.");
-
-static PyTypeObject cmpwrapper_type = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,					/* ob_size */
-	"cmpwrapper",				/* tp_name */
-	sizeof(cmpwrapperobject),		/* tp_basicsize */
-	0,					/* tp_itemsize */
-	/* methods */
-	(destructor)cmpwrapper_dealloc,		/* tp_dealloc */
-	0,					/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	0,					/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	(ternaryfunc)cmpwrapper_call,		/* tp_call */
-	0,					/* tp_str */
-	PyObject_GenericGetAttr,		/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,			/* tp_flags */
-	cmpwrapper_doc,				/* tp_doc */
-};
-
-static PyObject *
-build_cmpwrapper(PyObject *cmpfunc)
-{
-	cmpwrapperobject *co;
-	
-	co = PyObject_New(cmpwrapperobject, &cmpwrapper_type);
-	if (co == NULL)
-		return NULL;
-	Py_INCREF(cmpfunc);
-	co->func = cmpfunc;
-	return (PyObject *)co;
-}
-
 /* An adaptive, stable, natural mergesort.  See listsort.txt.
  * Returns Py_None on success, NULL on error.  Even in case of error, the
  * list will be some permutation of its input state (nothing is lost or
  * duplicated).
  */
 static PyObject *
-listsort(PyListObject *self, PyObject *args, PyObject *kwds)
+listsort(PyListObject *self, PyObject *args)
 {
 	MergeState ms;
 	PyObject **lo, **hi;
@@ -1846,29 +1673,16 @@ listsort(PyListObject *self, PyObject *args, PyObject *kwds)
 	PyObject **empty_ob_item;
 	PyObject *compare = NULL;
 	PyObject *result = NULL;	/* guilty until proved innocent */
-	int reverse = 0;
-	PyObject *keyfunc = NULL;
-	int i;
-	PyObject *key, *value, *kvpair;
-	static char *kwlist[] = {"cmp", "key", "reverse", 0};
 
 	assert(self != NULL);
-	assert (PyList_Check(self));
 	if (args != NULL) {
-		if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOi:sort",
-			kwlist, &compare, &keyfunc, &reverse))
+		if (!PyArg_UnpackTuple(args, "sort", 0, 1, &compare))
 			return NULL;
 	}
 	if (compare == Py_None)
 		compare = NULL;
-	if (keyfunc == Py_None)
-		keyfunc = NULL;
-	if (compare != NULL && keyfunc != NULL) {
-		compare = build_cmpwrapper(compare);
-		if (compare == NULL)
-			goto dsu_fail;
-	} else
-		Py_XINCREF(compare);
+
+	merge_init(&ms, compare);
 
 	/* The list is temporarily made empty, so that mutations performed
 	 * by comparison functions can't affect the slice of memory we're
@@ -1879,46 +1693,6 @@ listsort(PyListObject *self, PyObject *args, PyObject *kwds)
 	saved_ob_item = self->ob_item;
 	self->ob_size = 0;
 	self->ob_item = empty_ob_item = PyMem_NEW(PyObject *, 0);
-
-	if (keyfunc != NULL) {
-		for (i=0 ; i < saved_ob_size ; i++) {
-			value = saved_ob_item[i];
-			key = PyObject_CallFunctionObjArgs(keyfunc, value, 
-							   NULL);
-			if (key == NULL) {
-				for (i=i-1 ; i>=0 ; i--) {
-					kvpair = saved_ob_item[i];
-					value = sortwrapper_getvalue(kvpair);
-					saved_ob_item[i] = value;
-					Py_DECREF(kvpair);
-				}
-				if (self->ob_item != empty_ob_item 
-				    || self->ob_size) {
-					/* If the list changed *as well* we
-					   have two errors.  We let the first
-					   one "win", but we shouldn't let
-					   what's in the list currently
-					   leak. */
-					(void)list_ass_slice(
-						self, 0, self->ob_size,
-						(PyObject *)NULL);
-				}
-				
-				goto dsu_fail;
-			}
-			kvpair = build_sortwrapper(key, value);
-			if (kvpair == NULL)
-				goto dsu_fail;
-			saved_ob_item[i] = kvpair;
-		}
-	}
-
-	/* Reverse sort stability achieved by initially reversing the list,
-	applying a stable forward sort, then reversing the final result. */
-	if (reverse && saved_ob_size > 1)
-		reverse_slice(saved_ob_item, saved_ob_item + saved_ob_size);
-
-	merge_init(&ms, compare);
 
 	nremaining = saved_ob_size;
 	if (nremaining < 2)
@@ -1970,15 +1744,6 @@ listsort(PyListObject *self, PyObject *args, PyObject *kwds)
 succeed:
 	result = Py_None;
 fail:
-	if (keyfunc != NULL) {
-		for (i=0 ; i < saved_ob_size ; i++) {
-			kvpair = saved_ob_item[i];
-			value = sortwrapper_getvalue(kvpair);
-			saved_ob_item[i] = value;
-			Py_DECREF(kvpair);
-		}
-	}
-
 	if (self->ob_item != empty_ob_item || self->ob_size) {
 		/* The user mucked with the list during the sort. */
 		(void)list_ass_slice(self, 0, self->ob_size, (PyObject *)NULL);
@@ -1988,18 +1753,11 @@ fail:
 			result = NULL;
 		}
 	}
-
-	if (reverse && saved_ob_size > 1)
-		reverse_slice(saved_ob_item, saved_ob_item + saved_ob_size);
-
-	merge_freemem(&ms);
-
-dsu_fail:
 	if (self->ob_item == empty_ob_item)
 		PyMem_FREE(empty_ob_item);
 	self->ob_size = saved_ob_size;
 	self->ob_item = saved_ob_item;
-	Py_XDECREF(compare);
+	merge_freemem(&ms);
 	Py_XINCREF(result);
 	return result;
 }
@@ -2013,43 +1771,11 @@ PyList_Sort(PyObject *v)
 		PyErr_BadInternalCall();
 		return -1;
 	}
-	v = listsort((PyListObject *)v, (PyObject *)NULL, (PyObject *)NULL);
+	v = listsort((PyListObject *)v, (PyObject *)NULL);
 	if (v == NULL)
 		return -1;
 	Py_DECREF(v);
 	return 0;
-}
-
-static PyObject *
-listsorted(PyObject *cls, PyObject *args, PyObject *kwds)
-{
-	PyObject *newlist, *v, *seq, *compare=NULL, *keyfunc=NULL, *newargs;
-	static char *kwlist[] = {"iterable", "cmp", "key", "reverse", 0};
-	long reverse;
-
-	if (args != NULL) {
-		if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|OOi:sorted",
-			kwlist, &seq, &compare, &keyfunc, &reverse))
-			return NULL;
-	}
-
-	newlist = PyObject_CallFunctionObjArgs(cls, seq, NULL);
-	if (newlist == NULL)
-		return NULL;
-	
-	newargs = PyTuple_GetSlice(args, 1, 4);
-	if (newargs == NULL) {
-		Py_DECREF(newlist);
-		return NULL;
-	}
-	v = listsort((PyListObject *)newlist, newargs, kwds);
-	Py_DECREF(newargs);
-	if (v == NULL) {
-		Py_DECREF(newlist);
-		return NULL;
-	}
-	Py_DECREF(v);
-	return newlist;
 }
 
 static PyObject *
@@ -2368,11 +2094,6 @@ list_nohash(PyObject *self)
 	return -1;
 }
 
-static PyObject *list_iter(PyObject *seq);
-static PyObject *list_reversed(PyListObject* seq, PyObject* unused);
-
-PyDoc_STRVAR(reversed_doc,
-"L.__reversed__() -- return a reverse iterator over the list");
 PyDoc_STRVAR(append_doc,
 "L.append(object) -- append object to end");
 PyDoc_STRVAR(extend_doc,
@@ -2390,14 +2111,9 @@ PyDoc_STRVAR(count_doc,
 PyDoc_STRVAR(reverse_doc,
 "L.reverse() -- reverse *IN PLACE*");
 PyDoc_STRVAR(sort_doc,
-"L.sort(cmp=None, key=None, reverse=False) -- stable sort *IN PLACE*;\n\
-cmp(x, y) -> -1, 0, 1");
-PyDoc_STRVAR(sorted_doc,
-"list.sorted(iterable, cmp=None, key=None, reverse=False) --> new sorted list;\n\
-cmp(x, y) -> -1, 0, 1");
+"L.sort(cmpfunc=None) -- stable sort *IN PLACE*; cmpfunc(x, y) -> -1, 0, 1");
 
 static PyMethodDef list_methods[] = {
-	{"__reversed__",(PyCFunction)list_reversed, METH_NOARGS, reversed_doc},
 	{"append",	(PyCFunction)listappend,  METH_O, append_doc},
 	{"insert",	(PyCFunction)listinsert,  METH_VARARGS, insert_doc},
 	{"extend",      (PyCFunction)listextend,  METH_O, extend_doc},
@@ -2406,9 +2122,7 @@ static PyMethodDef list_methods[] = {
 	{"index",	(PyCFunction)listindex,   METH_VARARGS, index_doc},
 	{"count",	(PyCFunction)listcount,   METH_O, count_doc},
 	{"reverse",	(PyCFunction)listreverse, METH_NOARGS, reverse_doc},
-	{"sort",	(PyCFunction)listsort, 	  METH_VARARGS | METH_KEYWORDS, sort_doc},
-	{"sorted",	(PyCFunction)listsorted,  
-		METH_VARARGS | METH_KEYWORDS | METH_CLASS, sorted_doc},
+	{"sort",	(PyCFunction)listsort, 	  METH_VARARGS, sort_doc},
  	{NULL,		NULL}		/* sentinel */
 };
 
@@ -2428,6 +2142,8 @@ static PySequenceMethods list_as_sequence = {
 PyDoc_STRVAR(list_doc,
 "list() -> new list\n"
 "list(sequence) -> new list initialized from sequence's items");
+
+static PyObject *list_iter(PyObject *seq);
 
 static PyObject *
 list_subscript(PyListObject* self, PyObject* item)
@@ -2782,97 +2498,4 @@ PyTypeObject PyListIter_Type = {
 	0,					/* tp_dict */
 	0,					/* tp_descr_get */
 	0,					/* tp_descr_set */
-};
-
-/*********************** List Reverse Iterator **************************/
-
-typedef struct {
-	PyObject_HEAD
-	long it_index;
-	PyListObject *it_seq; /* Set to NULL when iterator is exhausted */
-} listreviterobject;
-
-PyTypeObject PyListRevIter_Type;
-
-static PyObject *
-list_reversed(PyListObject *seq, PyObject *unused)
-{
-	listreviterobject *it;
-
-	it = PyObject_GC_New(listreviterobject, &PyListRevIter_Type);
-	if (it == NULL)
-		return NULL;
-	assert(PyList_Check(seq));
-	it->it_index = PyList_GET_SIZE(seq) - 1;
-	Py_INCREF(seq);
-	it->it_seq = seq;
-	PyObject_GC_Track(it);
-	return (PyObject *)it;
-}
-
-static void
-listreviter_dealloc(listreviterobject *it)
-{
-	PyObject_GC_UnTrack(it);
-	Py_XDECREF(it->it_seq);
-	PyObject_GC_Del(it);
-}
-
-static int
-listreviter_traverse(listreviterobject *it, visitproc visit, void *arg)
-{
-	if (it->it_seq == NULL)
-		return 0;
-	return visit((PyObject *)it->it_seq, arg);
-}
-
-static PyObject *
-listreviter_next(listreviterobject *it)
-{
-	PyObject *item = NULL;
-
-	assert(PyList_Check(it->it_seq));
-	if (it->it_index >= 0) {
-		assert(it->it_index < PyList_GET_SIZE(it->it_seq));
-		item = PyList_GET_ITEM(it->it_seq, it->it_index);
-		it->it_index--;
-		Py_INCREF(item);
-	} else if (it->it_seq != NULL) {
-		Py_DECREF(it->it_seq);
-		it->it_seq = NULL;
-	}
-	return item;
-}
-
-PyTypeObject PyListRevIter_Type = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,					/* ob_size */
-	"listreverseiterator",			/* tp_name */
-	sizeof(listreviterobject),		/* tp_basicsize */
-	0,					/* tp_itemsize */
-	/* methods */
-	(destructor)listreviter_dealloc,	/* tp_dealloc */
-	0,					/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	0,					/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	PyObject_GenericGetAttr,		/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
-	0,					/* tp_doc */
-	(traverseproc)listreviter_traverse,	/* tp_traverse */
-	0,					/* tp_clear */
-	0,					/* tp_richcompare */
-	0,					/* tp_weaklistoffset */
-	PyObject_SelfIter,			/* tp_iter */
-	(iternextfunc)listreviter_next,		/* tp_iternext */
-	0,
 };

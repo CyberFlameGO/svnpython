@@ -7,294 +7,6 @@
    All rights reserved.
 */
 
-/* tee object and with supporting function and objects ***************/
-
-/* The teedataobject pre-allocates space for LINKCELLS number of objects.
-   To help the object fit neatly inside cache lines (space for 16 to 32
-   pointers), the value should be a multiple of 16 minus  space for 
-   the other structure members including PyHEAD overhead.  The larger the
-   value, the less memory overhead per object and the less time spent
-   allocating/deallocating new links.  The smaller the number, the less
-   wasted space and the more rapid freeing of older data.
-*/
-#define LINKCELLS 57
-
-typedef struct {
-	PyObject_HEAD
-	PyObject *it;
-	int numread;
-	PyObject *nextlink;
-	PyObject *(values[LINKCELLS]);
-} teedataobject;
-
-typedef struct {
-	PyObject_HEAD
-	teedataobject *dataobj;
-	int index;
-} teeobject;
-
-static PyTypeObject teedataobject_type;
-
-static PyObject *
-teedataobject_new(PyObject *it)
-{
-	teedataobject *tdo;
-
-	tdo = PyObject_New(teedataobject, &teedataobject_type);
-	if (tdo == NULL)
-		return NULL;
-
-	tdo->numread = 0;
-	tdo->nextlink = NULL;
-	Py_INCREF(it);
-	tdo->it = it;
-	return (PyObject *)tdo;
-}
-
-static PyObject *
-teedataobject_jumplink(teedataobject *tdo)
-{
-	if (tdo->nextlink == NULL)
-		tdo->nextlink = teedataobject_new(tdo->it);
-	Py_INCREF(tdo->nextlink);
-	return tdo->nextlink;
-}
-
-static PyObject *
-teedataobject_getitem(teedataobject *tdo, int i)
-{
-	PyObject *value;
-
-	assert(i < LINKCELLS);
-	if (i < tdo->numread)
-		value = tdo->values[i];
-	else {
-		/* this is the lead iterator, so fetch more data */
-		assert(i == tdo->numread);
-		value = PyIter_Next(tdo->it);
-		if (value == NULL)
-			return NULL;
-		tdo->numread++;
-		tdo->values[i] = value;
-	}
-	Py_INCREF(value);
-	return value;
-}
-
-static void
-teedataobject_dealloc(teedataobject *tdo)
-{
-	int i;
-
-	for (i=0 ; i<tdo->numread ; i++)
-		Py_DECREF(tdo->values[i]);
-	Py_XDECREF(tdo->it);
-	Py_XDECREF(tdo->nextlink);
-	PyObject_Del(tdo);
-}
-
-PyDoc_STRVAR(teedataobject_doc, "Data container common to multiple tee objects.");
-
-static PyTypeObject teedataobject_type = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,					/* ob_size */
-	"itertools.tee_dataobject",		/* tp_name */
-	sizeof(teedataobject),			/* tp_basicsize */
-	0,					/* tp_itemsize */
-	/* methods */
-	(destructor)teedataobject_dealloc,	/* tp_dealloc */
-	0,					/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	0,					/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	PyObject_GenericGetAttr,		/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,			/* tp_flags */
-	teedataobject_doc,			/* tp_doc */
-	0,					/* tp_traverse */
-};
-
-
-static PyTypeObject tee_type;
-
-static PyObject *
-tee_next(teeobject *to)
-{
-	PyObject *value, *link;
-
-	if (to->index >= LINKCELLS) {
-		link = teedataobject_jumplink(to->dataobj);
-		Py_XDECREF(to->dataobj);
-		to->dataobj = (teedataobject *)link;
-		to->index = 0;
-	}
-	value = teedataobject_getitem(to->dataobj, to->index);
-	if (value == NULL)
-		return NULL;
-	to->index++;
-	return value;
-}
-
-static PyObject *
-tee_copy(teeobject *to)
-{
-	teeobject *newto;
-
-	newto = PyObject_New(teeobject, &tee_type);
-	if (newto == NULL)
-		return NULL;
-	Py_INCREF(to->dataobj);
-	newto->dataobj = to->dataobj;
-	newto->index = to->index;
-	return (PyObject *)newto;
-}
-
-PyDoc_STRVAR(teecopy_doc, "Returns an independent iterator.");
-
-static PyObject *
-tee_fromiterable(PyObject *iterable)
-{
-	teeobject *to;
-	PyObject *it = NULL;
-
-	it = PyObject_GetIter(iterable);
-	if (it == NULL)
-		return NULL;
-	if (PyObject_TypeCheck(it, &tee_type)) {
-		to = (teeobject *)tee_copy((teeobject *)it);
-		goto done;
-	}
-
-	to = PyObject_New(teeobject, &tee_type);
-	if (to == NULL) 
-		goto done;
-	to->dataobj = (teedataobject *)teedataobject_new(it);
-	to->index = 0;
-done:
-	Py_XDECREF(it);
-	return (PyObject *)to;
-}
-
-static PyObject *
-tee_new(PyTypeObject *type, PyObject *args, PyObject *kw)
-{
-	PyObject *iterable;
-
-	if (!PyArg_UnpackTuple(args, "tee", 1, 1, &iterable))
-		return NULL;
-	return tee_fromiterable(iterable);
-}
-
-static void
-tee_dealloc(teeobject *to)
-{
-	Py_XDECREF(to->dataobj);
-	PyObject_Del(to);
-}
-
-PyDoc_STRVAR(teeobject_doc,
-"Iterator wrapped to make it copyable");
-
-static PyMethodDef tee_methods[] = {
-	{"__copy__",	(PyCFunction)tee_copy,	METH_NOARGS, teecopy_doc},
- 	{NULL,		NULL}		/* sentinel */
-};
-
-static PyTypeObject tee_type = {
-	PyObject_HEAD_INIT(NULL)
-	0,				/* ob_size */
-	"itertools.tee",		/* tp_name */
-	sizeof(teeobject),		/* tp_basicsize */
-	0,				/* tp_itemsize */
-	/* methods */
-	(destructor)tee_dealloc,	/* tp_dealloc */
-	0,				/* tp_print */
-	0,				/* tp_getattr */
-	0,				/* tp_setattr */
-	0,				/* tp_compare */
-	0,				/* tp_repr */
-	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
-	0,				/* tp_as_mapping */
-	0,				/* tp_hash */
-	0,				/* tp_call */
-	0,				/* tp_str */
-	0,				/* tp_getattro */
-	0,				/* tp_setattro */
-	0,				/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,		/* tp_flags */
-	teeobject_doc,			/* tp_doc */
-	0,				/* tp_traverse */
-	0,				/* tp_clear */
-	0,				/* tp_richcompare */
-	0,				/* tp_weaklistoffset */
-	PyObject_SelfIter,		/* tp_iter */
-	(iternextfunc)tee_next,		/* tp_iternext */
-	tee_methods,			/* tp_methods */
-	0,				/* tp_members */
-	0,				/* tp_getset */
-	0,				/* tp_base */
-	0,				/* tp_dict */
-	0,				/* tp_descr_get */
-	0,				/* tp_descr_set */
-	0,				/* tp_dictoffset */
-	0,				/* tp_init */
-	0,				/* tp_alloc */
-	tee_new,			/* tp_new */
-	PyObject_Del,			/* tp_free */
-};
-
-static PyObject *
-tee(PyObject *self, PyObject *args)
-{
-	int i, n=2;
-	PyObject *it, *iterable, *copyable, *result;
-
-	if (!PyArg_ParseTuple(args, "O|i", &iterable, &n))
-		return NULL;
-	result = PyTuple_New(n);
-	if (result == NULL)
-		return NULL;
-	if (n == 0)
-		return result;
-	it = PyObject_GetIter(iterable);
-	if (it == NULL) {
-		Py_DECREF(result);
-		return NULL;
-	}
-	if (!PyObject_HasAttrString(it, "__copy__")) {
-		copyable = tee_fromiterable(it);
-		Py_DECREF(it);
-		if (copyable == NULL) {
-			Py_DECREF(result);
-			return NULL;
-		}
-	} else
-		copyable = it;
-	PyTuple_SET_ITEM(result, 0, copyable);
-	for (i=1 ; i<n ; i++) {
-		copyable = PyObject_CallMethod(copyable, "__copy__", NULL);
-		if (copyable == NULL) {
-			Py_DECREF(result);
-			return NULL;
-		}
-		PyTuple_SET_ITEM(result, i, copyable);
-	}
-	return result;
-}
-
-PyDoc_STRVAR(tee_doc,
-"tee(iterable, n=2) --> tuple of n independent iterators.");
-
-
 /* cycle object **********************************************************/
 
 typedef struct {
@@ -775,7 +487,7 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 				if (PyErr_Occurred())
 					PyErr_Clear();
 				PyErr_SetString(PyExc_ValueError,
-				   "Stop argument must be a non-negative integer or None.");
+				   "Stop argument must be an integer or None.");
 				return NULL;
 			}
 		}
@@ -784,7 +496,7 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		if (start == -1 && PyErr_Occurred()) {
 			PyErr_Clear();
 			PyErr_SetString(PyExc_ValueError,
-			   "Start argument must be a non-negative integer.");
+			   "Start argument must be an integer.");
 			return NULL;
 		}
 		if (a2 != Py_None) {
@@ -793,7 +505,7 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 				if (PyErr_Occurred())
 					PyErr_Clear();
 				PyErr_SetString(PyExc_ValueError,
-				   "Stop argument must be a non-negative integer or None.");
+				   "Stop argument must be an integer or None.");
 				return NULL;
 			}
 		}
@@ -801,7 +513,7 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 	if (start<0 || stop<-1) {
 		PyErr_SetString(PyExc_ValueError,
-		   "Indices for islice() must be non-negative integers.");
+		   "Indices for islice() must be positive.");
 		return NULL;
 	}
 
@@ -2099,17 +1811,11 @@ islice(seq, [start,] stop [, step]) --> elements from\n\
        seq[start:stop:step]\n\
 imap(fun, p, q, ...) --> fun(p0, q0), fun(p1, q1), ...\n\
 starmap(fun, seq) --> fun(*seq[0]), fun(*seq[1]), ...\n\
-tee(it, n=2) --> (it1, it2 , ... itn) splits one iterator into n\n\
 chain(p, q, ...) --> p0, p1, ... plast, q0, q1, ... \n\
 takewhile(pred, seq) --> seq[0], seq[1], until pred fails\n\
 dropwhile(pred, seq) --> seq[n], seq[n+1], starting when pred fails\n\
 ");
 
-
-static PyMethodDef module_methods[] = {
-	{"tee",	(PyCFunction)tee,	METH_VARARGS, tee_doc},
- 	{NULL,		NULL}		/* sentinel */
-};
 
 PyMODINIT_FUNC
 inititertools(void)
@@ -2133,7 +1839,7 @@ inititertools(void)
 		NULL
 	};
 
-	m = Py_InitModule3("itertools", module_methods, module_doc);
+	m = Py_InitModule3("itertools", NULL, module_doc);
 
 	for (i=0 ; typelist[i] != NULL ; i++) {
 		if (PyType_Ready(typelist[i]) < 0)
@@ -2143,10 +1849,4 @@ inititertools(void)
 		Py_INCREF(typelist[i]);
 		PyModule_AddObject(m, name+1, (PyObject *)typelist[i]);
 	}
-
-	if (PyType_Ready(&teedataobject_type) < 0)
-		return;
-	if (PyType_Ready(&tee_type) < 0)
-		return;
-
 }
