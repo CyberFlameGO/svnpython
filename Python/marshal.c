@@ -17,7 +17,6 @@
 
 #define TYPE_NULL	'0'
 #define TYPE_NONE	'N'
-#define TYPE_STOPITER	'S'
 #define TYPE_ELLIPSIS   '.'
 #define TYPE_INT	'i'
 #define TYPE_INT64	'I'
@@ -108,6 +107,7 @@ static void
 w_object(PyObject *v, WFILE *p)
 {
 	int i, n;
+	PyBufferProcs *pb;
 
 	p->depth++;
 
@@ -119,9 +119,6 @@ w_object(PyObject *v, WFILE *p)
 	}
 	else if (v == Py_None) {
 		w_byte(TYPE_NONE, p);
-	}
-	else if (v == PyExc_StopIteration) {
-		w_byte(TYPE_STOPITER, p);
 	}
 	else if (v == Py_Ellipsis) {
 	        w_byte(TYPE_ELLIPSIS, p);
@@ -152,8 +149,9 @@ w_object(PyObject *v, WFILE *p)
 			w_short(ob->ob_digit[i], p);
 	}
 	else if (PyFloat_Check(v)) {
+		extern void PyFloat_AsString(char *, PyFloatObject *);
 		char buf[256]; /* Plenty to format any double */
-		PyFloat_AsReprString(buf, (PyFloatObject *)v);
+		PyFloat_AsString(buf, (PyFloatObject *)v);
 		n = strlen(buf);
 		w_byte(TYPE_FLOAT, p);
 		w_byte(n, p);
@@ -161,19 +159,20 @@ w_object(PyObject *v, WFILE *p)
 	}
 #ifndef WITHOUT_COMPLEX
 	else if (PyComplex_Check(v)) {
+		extern void PyFloat_AsString(char *, PyFloatObject *);
 		char buf[256]; /* Plenty to format any double */
 		PyFloatObject *temp;
 		w_byte(TYPE_COMPLEX, p);
 		temp = (PyFloatObject*)PyFloat_FromDouble(
 			PyComplex_RealAsDouble(v));
-		PyFloat_AsReprString(buf, temp);
+		PyFloat_AsString(buf, temp);
 		Py_DECREF(temp);
 		n = strlen(buf);
 		w_byte(n, p);
 		w_string(buf, n, p);
 		temp = (PyFloatObject*)PyFloat_FromDouble(
 			PyComplex_ImagAsDouble(v));
-		PyFloat_AsReprString(buf, temp);
+		PyFloat_AsString(buf, temp);
 		Py_DECREF(temp);
 		n = strlen(buf);
 		w_byte(n, p);
@@ -186,7 +185,6 @@ w_object(PyObject *v, WFILE *p)
 		w_long((long)n, p);
 		w_string(PyString_AS_STRING(v), n, p);
 	}
-#ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(v)) {
 	        PyObject *utf8;
 		utf8 = PyUnicode_AsUTF8String(v);
@@ -201,7 +199,6 @@ w_object(PyObject *v, WFILE *p)
 		w_string(PyString_AS_STRING(utf8), n, p);
 		Py_DECREF(utf8);
 	}
-#endif
 	else if (PyTuple_Check(v)) {
 		w_byte(TYPE_TUPLE, p);
 		n = PyTuple_Size(v);
@@ -248,10 +245,13 @@ w_object(PyObject *v, WFILE *p)
 		w_short(co->co_firstlineno, p);
 		w_object(co->co_lnotab, p);
 	}
-	else if (PyObject_CheckReadBuffer(v)) {
+	else if ((pb = v->ob_type->tp_as_buffer) != NULL &&
+		 pb->bf_getsegcount != NULL &&
+		 pb->bf_getreadbuffer != NULL &&
+		 (*pb->bf_getsegcount)(v, NULL) == 1)
+	{
 		/* Write unknown buffer-style objects as a string */
 		char *s;
-		PyBufferProcs *pb = v->ob_type->tp_as_buffer;
 		w_byte(TYPE_STRING, p);
 		n = (*pb->bf_getreadbuffer)(v, 0, (void **)&s);
 		w_long((long)n, p);
@@ -338,35 +338,23 @@ r_long(RFILE *p)
 	return x;
 }
 
-/* r_long64 deals with the TYPE_INT64 code.  On a machine with
-   sizeof(long) > 4, it returns a Python int object, else a Python long
-   object.  Note that w_long64 writes out TYPE_INT if 32 bits is enough,
-   so there's no inefficiency here in returning a PyLong on 32-bit boxes
-   for everything written via TYPE_INT64 (i.e., if an int is written via
-   TYPE_INT64, it *needs* more than 32 bits).
-*/
-static PyObject *
+static long
 r_long64(RFILE *p)
 {
-	long lo4 = r_long(p);
-	long hi4 = r_long(p);
+	register long x;
+	x = r_long(p);
 #if SIZEOF_LONG > 4
-	long x = (hi4 << 32) | (lo4 & 0xFFFFFFFFL);
-	return PyInt_FromLong(x);
+	x = (x & 0xFFFFFFFFL) | (r_long(p) << 32);
 #else
-	unsigned char buf[8];
-	int one = 1;
-	int is_little_endian = (int)*(char*)&one;
-	if (is_little_endian) {
-		memcpy(buf, &lo4, 4);
-		memcpy(buf+4, &hi4, 4);
+	if (r_long(p) != 0) {
+		PyObject *f = PySys_GetObject("stderr");
+		if (f != NULL)
+			(void) PyFile_WriteString(
+			    "Warning: un-marshal 64-bit int in 32-bit mode\n",
+			    f);
 	}
-	else {
-		memcpy(buf, &hi4, 4);
-		memcpy(buf+4, &lo4, 4);
-	}
-	return _PyLong_FromByteArray(buf, 8, is_little_endian, 1);
 #endif
+	return x;
 }
 
 static PyObject *
@@ -390,10 +378,6 @@ r_object(RFILE *p)
 		Py_INCREF(Py_None);
 		return Py_None;
 
-	case TYPE_STOPITER:
-		Py_INCREF(PyExc_StopIteration);
-		return PyExc_StopIteration;
-
 	case TYPE_ELLIPSIS:
 		Py_INCREF(Py_Ellipsis);
 		return Py_Ellipsis;
@@ -402,7 +386,7 @@ r_object(RFILE *p)
 		return PyInt_FromLong(r_long(p));
 
 	case TYPE_INT64:
-		return r_long64(p);
+		return PyInt_FromLong(r_long64(p));
 
 	case TYPE_LONG:
 		{
@@ -482,7 +466,6 @@ r_object(RFILE *p)
 		}
 		return v;
 
-#ifdef Py_USING_UNICODE
 	case TYPE_UNICODE:
 	    {
 		char *buffer;
@@ -505,7 +488,6 @@ r_object(RFILE *p)
 		PyMem_DEL(buffer);
 		return v;
 	    }
-#endif
 
 	case TYPE_TUPLE:
 		n = r_long(p);
@@ -565,13 +547,7 @@ r_object(RFILE *p)
 		return v;
 
 	case TYPE_CODE:
-		if (PyEval_GetRestricted()) {
-			PyErr_SetString(PyExc_RuntimeError,
-				"cannot unmarshal code objects in "
-				"restricted execution mode");
-			return NULL;
-		}
-		else {
+		{
 			int argcount = r_short(p);
 			int nlocals = r_short(p);
 			int stacksize = r_short(p);
@@ -629,14 +605,6 @@ r_object(RFILE *p)
 		return NULL;
 
 	}
-}
-
-int
-PyMarshal_ReadShortFromFile(FILE *fp)
-{
-	RFILE rf;
-	rf.fp = fp;
-	return r_short(&rf);
 }
 
 long

@@ -145,9 +145,15 @@ findnamedresource(
 	if ( ok && dataptr != NULL ) {
 		HLock(h);
 		/* XXXX Unsafe if resource not correctly formatted! */
+#ifdef __CFM68K__
+		/* for cfm68k we take the second pstring */
+		*dataptr = *((*h)+(**h)+1);
+		memcpy(dataptr+1, (*h)+(**h)+2, (int)*dataptr);
+#else
 		/* for ppc we take the first pstring */
 		*dataptr = **h;
 		memcpy(dataptr+1, (*h)+1, (int)*dataptr);
+#endif
 		HUnlock(h);
 	}
 	if ( filerh != -1 )
@@ -223,7 +229,7 @@ PyMac_LoadCodeResourceModule(name, pathname)
 		packagecontext = name;
 		shortname = lastdot+1;
 	}
-	PyOS_snprintf(funcname, sizeof(funcname), FUNCNAME_PATTERN, shortname);
+	sprintf(funcname, FUNCNAME_PATTERN, shortname);
 	if( !findnamedresource((PyStringObject *)0, name, pathname, 'PYD ', fragmentname)) {
 		PyErr_SetString(PyExc_ImportError, "PYD resource not found");
 		return NULL;
@@ -235,7 +241,7 @@ PyMac_LoadCodeResourceModule(name, pathname)
 			      kLoadCFrag, &connID, &mainAddr,
 			      errMessage);
 	if ( err ) {
-		PyOS_snprintf(buf, sizeof(buf), "%.*s: %.200s",
+		sprintf(buf, "%.*s: %.200s",
 			errMessage[0], errMessage+1,
 			PyMac_StrError(err));
 		PyErr_SetString(PyExc_ImportError, buf);
@@ -244,7 +250,7 @@ PyMac_LoadCodeResourceModule(name, pathname)
 	/* Locate the address of the correct init function */
 	err = FindSymbol(connID, Pstring(funcname), &symAddr, &class);
 	if ( err ) {
-		PyOS_snprintf(buf, sizeof(buf), "%s: %.200s",
+		sprintf(buf, "%s: %.200s",
 			funcname, PyMac_StrError(err));
 		PyErr_SetString(PyExc_ImportError, buf);
 		return NULL;
@@ -405,7 +411,7 @@ error:
 	{
 		char buf[512];
 		
-		PyOS_snprintf(buf, sizeof(buf), "%s: %s", filename, PyMac_StrError(err));
+		sprintf(buf, "%s: %s", filename, PyMac_StrError(err));
 		PyErr_SetString(PyExc_ImportError, buf);
 		return NULL;
 	}
@@ -437,7 +443,13 @@ PyMac_FindModuleExtension(char *buf, size_t *lenp, char *module)
 	if ( !_PyImport_Filetab[0].suffix )
 		return 0;
 		
+#if 0
+	/* Pre 1.5a4 */
+	strcpy(buf+*lenp, module);
+	strcpy(buf+*lenp+modnamelen, _PyImport_Filetab[0].suffix);
+#else
 	strcpy(buf+*lenp, _PyImport_Filetab[0].suffix);
+#endif
 #ifdef USE_GUSI1
 	if ( Path2FSSpec(buf, &fss) == noErr && 
 			FSpGetFInfo(&fss, &finfo) == noErr)
@@ -459,7 +471,6 @@ PyMac_FindModuleExtension(char *buf, size_t *lenp, char *module)
 	*/
 	if ( modnamelen > 54 ) return 0;	/* Leave room for extension */
 	strcpy((char *)fnbuf+1, module);
-	buf[*lenp] = '\0';
 	
 	for( fdp = _PyImport_Filetab+1; fdp->suffix; fdp++ ) {
 		strcpy((char *)fnbuf+1+modnamelen, fdp->suffix);
@@ -468,7 +479,12 @@ PyMac_FindModuleExtension(char *buf, size_t *lenp, char *module)
 			PySys_WriteStderr("# trying %s%s\n", buf, fdp->suffix);
 		if ( FSMakeFSSpec(refnum, dirid, fnbuf, &fss) == noErr ) {
 			/* Found it. */
+#if 0
+			strcpy(buf+*lenp+modnamelen, fdp->suffix);
+#else
 			strcpy(buf+*lenp, fdp->suffix);
+#endif
+			*lenp = strlen(buf);
 			return fdp;
 		}
 	}

@@ -17,31 +17,28 @@ import test_future1
 unload('test_future2')
 import test_future2
 
-unload('test_future3')
-import test_future3
-
 # The remaining tests should fail
 try:
-    import badsyntax_future3
+    import test_future3
 except SyntaxError, msg:
     check_error_location(str(msg))
 
 try:
-    import badsyntax_future4
+    import test_future4
 except SyntaxError, msg:
     check_error_location(str(msg))
 
 try:
-    import badsyntax_future5
+    import test_future5
 except SyntaxError, msg:
     check_error_location(str(msg))
 
 try:
-    import badsyntax_future6
+    import test_future6
 except SyntaxError, msg:
     check_error_location(str(msg))
 
 try:
-    import badsyntax_future7
+    import test_future7
 except SyntaxError, msg:
     check_error_location(str(msg))

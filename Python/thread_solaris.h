@@ -36,10 +36,9 @@ new_func(void *funcarg)
 }
 
 
-long
+int 
 PyThread_start_new_thread(void (*func)(void *), void *arg)
 {
-	thread_t tid;
 	struct func_arg *funcarg;
 	int success = 0;	/* init not needed when SOLARIS_THREADS and */
 				/* C_THREADS implemented properly */
@@ -51,12 +50,12 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 	funcarg->func = func;
 	funcarg->arg = arg;
 	if (thr_create(0, 0, new_func, funcarg,
-		       THR_DETACHED | THR_NEW_LWP, &tid)) {
+		       THR_DETACHED | THR_NEW_LWP, 0)) {
 		perror("thr_create");
 		free((void *) funcarg);
 		success = -1;
 	}
-	return tid;
+	return success < 0 ? 0 : 1;
 }
 
 long

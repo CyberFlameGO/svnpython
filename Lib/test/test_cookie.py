@@ -1,7 +1,9 @@
 # Simple test suite for Cookie.py
 
-from test_support import verify, verbose, run_doctest
+from test_support import verify
 import Cookie
+from test_support import verify, verbose
+import doctest
 
 # Currently this only tests SimpleCookie
 
@@ -18,9 +20,7 @@ for data, dict in cases:
     C = Cookie.SimpleCookie() ; C.load(data)
     print repr(C)
     print str(C)
-    items = dict.items()
-    items.sort()
-    for k, v in items:
+    for k, v in dict.items():
         print ' ', k, repr( C[k].value ), repr(v)
         verify(C[k].value == v)
         print C[k]
@@ -44,4 +44,4 @@ verify(C['Customer']['version'] == '1')
 verify(C['Customer']['path'] == '/acme')
 
 print "If anything blows up after this line, it's from Cookie's doctest."
-run_doctest(Cookie)
+doctest.testmod(Cookie)

@@ -31,7 +31,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /* Return a string representing the compiler name */
 
-#include "pyconfig.h"
+#include "config.h"
 #include "Python.h"
 
 #ifdef __MWERKS__
@@ -57,13 +57,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #define TARGET_API " PPC"
 #endif
 
-#ifdef WITH_CYCLE_GC
-#define HASGC " GC"
-#else
-#define HASGC ""
-#endif
-
-#define COMPILER " [CW" TARGET_API HASGUSI HASTHREAD HASGC"]"
+#define COMPILER " [CW" TARGET_API HASGUSI HASTHREAD"]"
 #endif
 
 #ifdef MPW

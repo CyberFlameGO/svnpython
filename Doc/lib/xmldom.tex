@@ -98,69 +98,24 @@ for the specific implementation (e.g. if that implementation supports
 some customization).
 \end{funcdesc}
 
-\begin{funcdesc}{getDOMImplementation}{\optional{name\optional{, features}}}
+\begin{funcdesc}{getDOMImplementation}{name = None, features = ()}
 Return a suitable DOM implementation. The \var{name} is either
 well-known, the module name of a DOM implementation, or
-\code{None}. If it is not \code{None}, imports the corresponding
-module and returns a \class{DOMImplementation} object if the import
-succeeds.  If no name is given, and if the environment variable
-\envvar{PYTHON_DOM} is set, this variable is used to find the
-implementation.
+\code{None}. If it is not \code{None}, imports the corresponding module and
+returns a \class{DOMImplementation} object if the import succeeds.  If
+no name is given, and if the environment variable \envvar{PYTHON_DOM} is
+set, this variable is used to find the implementation.
 
-If name is not given, this examines the available implementations to
-find one with the required feature set.  If no implementation can be
-found, raise an \exception{ImportError}.  The features list must be a
-sequence of \code{(\var{feature}, \var{version})} pairs which are
-passed to the \method{hasFeature()} method on available
-\class{DOMImplementation} objects.
+If name is not given, consider the available implementations to find
+one with the required feature set. If no implementation can be found,
+raise an \exception{ImportError}. The features list must be a sequence of
+(feature, version) pairs which are passed to hasFeature.
 \end{funcdesc}
-
-
-Some convenience constants are also provided:
-
-\begin{datadesc}{EMPTY_NAMESPACE}
-  The value used to indicate that no namespace is associated with a
-  node in the DOM.  This is typically found as the
-  \member{namespaceURI} of a node, or used as the \var{namespaceURI}
-  parameter to a namespaces-specific method.
-  \versionadded{2.2}
-\end{datadesc}
-
-\begin{datadesc}{XML_NAMESPACE}
-  The namespace URI associated with the reserved prefix \code{xml}, as
-  defined by
-  \citetitle[http://www.w3.org/TR/REC-xml-names/]{Namespaces in XML}
-  (section~4).
-  \versionadded{2.2}
-\end{datadesc}
-
-\begin{datadesc}{XMLNS_NAMESPACE}
-  The namespace URI for namespace declarations, as defined by
-  \citetitle[http://www.w3.org/TR/DOM-Level-2-Core/core.html]{Document
-  Object Model (DOM) Level 2 Core Specification} (section~1.1.8).
-  \versionadded{2.2}
-\end{datadesc}
-
-\begin{datadesc}{XHTML_NAMESPACE}
-  The URI of the XHTML namespace as defined by
-  \citetitle[http://www.w3.org/TR/xhtml1/]{XHTML 1.0: The Extensible
-  HyperText Markup Language} (section~3.1.1).
-  \versionadded{2.2}
-\end{datadesc}
-
 
 % Should the Node documentation go here?
 
-In addition, \module{xml.dom} contains a base \class{Node} class and
-the DOM exception classes.  The \class{Node} class provided by this
-module does not implement any of the methods or attributes defined by
-the DOM specification; concrete DOM implementations must provide
-those.  The \class{Node} class provided as part of this module does
-provide the constants used for the \member{nodeType} attribute on
-concrete \class{Node} objects; they are located within the class
-rather than at the module level to conform with the DOM
-specifications.
-
+In addition, \module{xml.dom} contains the \class{Node}, and the DOM
+exceptions.
 
 \subsection{Objects in the DOM \label{dom-objects}}
 
@@ -319,11 +274,11 @@ This is especially useful for DOM implementations which use any sort
 of proxy architecture (because more than one object can refer to the
 same node).
 
-\note{This is based on a proposed DOM Level 3 API which is
+\strong{Note:}  This is based on a proposed DOM Level 3 API which is
 still in the ``working draft'' stage, but this particular interface
 appears uncontroversial.  Changes from the W3C will not necessarily
 affect this method in the Python DOM interface (though any new W3C
-API for this would also be supported).}
+API for this would also be supported).
 \end{methoddesc}
 
 \begin{methoddesc}[Node]{appendChild}{newChild}
@@ -403,10 +358,7 @@ Information about the notations and entities declared by a document
 (including the external subset if the parser uses it and can provide
 the information) is available from a \class{DocumentType} object.  The
 \class{DocumentType} for a document is available from the
-\class{Document} object's \member{doctype} attribute; if there is no
-\code{DOCTYPE} declaration for the document, the document's
-\member{doctype} attribute will be set to \code{None} instead of an
-instance of this interface.
+\class{Document} object's \member{doctype} attribute.
 
 \class{DocumentType} is a specialization of \class{Node}, and adds the
 following attributes:
@@ -429,7 +381,8 @@ following attributes:
 
 \begin{memberdesc}[DocumentType]{name}
   The name of the root element as given in the \code{DOCTYPE}
-  declaration, if present.
+  declaration, if present.  If the was no \code{DOCTYPE} declaration,
+  this will be \code{None}.
 \end{memberdesc}
 
 \begin{memberdesc}[DocumentType]{entities}
@@ -636,8 +589,7 @@ DOM.  Each item is an attribute node.  Get its value with the
 
 There are also experimental methods that give this class more mapping
 behavior.  You can use them or you can use the standardized
-\method{getAttribute*()} family of methods on the \class{Element}
-objects.
+\method{getAttribute*()}-family methods on the \class{Element} objects.
 
 
 \subsubsection{Comment Objects \label{dom-comment-objects}}
@@ -667,12 +619,12 @@ child nodes.
 The content of the text node as a string.
 \end{memberdesc}
 
-\note{The use of a \class{CDATASection} node does not
+\strong{Note:}  The use of a \class{CDATASection} node does not
 indicate that the node represents a complete CDATA marked section,
 only that the content of the node was part of a CDATA section.  A
 single CDATA section may be represented by more than one node in the
 document tree.  There is no way to determine whether two adjacent
-\class{CDATASection} nodes represent different CDATA marked sections.}
+\class{CDATASection} nodes represent different CDATA marked sections.
 
 
 \subsubsection{ProcessingInstruction Objects \label{dom-pi-objects}}
@@ -856,7 +808,7 @@ readonly attribute string someValue;
          attribute string anotherValue;
 \end{verbatim}
 
-yields three accessor functions:  a ``get'' method for
+yeilds three accessor functions:  a ``get'' method for
 \member{someValue} (\method{_get_someValue()}), and ``get'' and
 ``set'' methods for
 \member{anotherValue} (\method{_get_anotherValue()} and

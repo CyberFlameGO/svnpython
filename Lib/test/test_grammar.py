@@ -2,7 +2,6 @@
 # This just tests whether the parser accepts them all.
 
 from test_support import *
-import sys
 
 print '1. Parser'
 
@@ -38,7 +37,10 @@ if maxint == 2147483647:
         try:
             x = eval(s)
         except OverflowError:
-            print "OverflowError on huge integer literal " + `s`
+            continue
+##              raise TestFailed, \
+        print \
+                  'No OverflowError on huge integer literal ' + `s`
 elif eval('maxint == 9223372036854775807'):
     if eval('-9223372036854775807-1 != 01000000000000000000000'):
         raise TestFailed, 'max negative int'
@@ -49,7 +51,9 @@ elif eval('maxint == 9223372036854775807'):
         try:
             x = eval(s)
         except OverflowError:
-            print "OverflowError on huge integer literal " + `s`
+            continue
+        raise TestFailed, \
+                  'No OverflowError on huge integer literal ' + `s`
 else:
     print 'Weird maxint value', maxint
 
@@ -150,26 +154,16 @@ def f4(two, (compound, (argument, list))): pass
 def f5((compound, first), two): pass
 verify(f2.func_code.co_varnames == ('one_argument',))
 verify(f3.func_code.co_varnames == ('two', 'arguments'))
-if sys.platform.startswith('java'):
-    verify(f4.func_code.co_varnames ==
-           ('two', '(compound, (argument, list))', 'compound', 'argument',
-                        'list',))
-    verify(f5.func_code.co_varnames ==
-           ('(compound, first)', 'two', 'compound', 'first'))
-else:
-    verify(f4.func_code.co_varnames == ('two', '.2', 'compound',
-                                        'argument',  'list'))
-    verify(f5.func_code.co_varnames == ('.0', 'two', 'compound', 'first'))
+verify(f4.func_code.co_varnames == ('two', '.2', 'compound', 'argument',
+                                    'list'))
+verify(f5.func_code.co_varnames == ('.0', 'two', 'compound', 'first'))
 def a1(one_arg,): pass
 def a2(two, args,): pass
 def v0(*rest): pass
 def v1(a, *rest): pass
 def v2(a, b, *rest): pass
 def v3(a, (b, c), *rest): return a, b, c, rest
-if sys.platform.startswith('java'):
-    verify(v3.func_code.co_varnames == ('a', '(b, c)', 'rest', 'b', 'c'))
-else:
-    verify(v3.func_code.co_varnames == ('a', '.2', 'rest', 'b', 'c'))
+verify(v3.func_code.co_varnames == ('a', '.2', 'rest', 'b', 'c'))
 verify(v3(1, (2, 3), 4) == (1, 2, 3, (4,)))
 def d01(a=1): pass
 d01()
@@ -369,33 +363,6 @@ while not msg:
         msg = "continue + try/finally ok"
 print msg
 
-
-# This test warrants an explanation. It is a test specifically for SF bugs
-# #463359 and #462937. The bug is that a 'break' statement executed or
-# exception raised inside a try/except inside a loop, *after* a continue
-# statement has been executed in that loop, will cause the wrong number of
-# arguments to be popped off the stack and the instruction pointer reset to
-# a very small number (usually 0.) Because of this, the following test
-# *must* written as a function, and the tracking vars *must* be function
-# arguments with default values. Otherwise, the test will loop and loop.
-
-print "testing continue and break in try/except in loop"
-def test_break_continue_loop(extra_burning_oil = 1, count=0):
-    big_hippo = 2
-    while big_hippo:
-        count += 1
-        try:
-            if extra_burning_oil and big_hippo == 1:
-                extra_burning_oil -= 1
-                break
-            big_hippo -= 1
-            continue
-        except:
-            raise
-    if count > 2 or big_hippo <> 1:
-        print "continue then break in try/except in loop broken!"
-test_break_continue_loop()
-
 print 'return_stmt' # 'return' [testlist]
 def g1(): return
 def g2(): return 1
@@ -432,15 +399,11 @@ def f():
     if z != 2: raise TestFailed, 'exec \'z=1+1\''
     z = None
     del z
-    import types
-    if hasattr(types, "UnicodeType"):
-        exec r"""if 1:
     exec u'z=1+1\n'
     if z != 2: raise TestFailed, 'exec u\'z=1+1\'\\n'
     del z
     exec u'z=1+1'
     if z != 2: raise TestFailed, 'exec u\'z=1+1\''
-"""
 f()
 g = {}
 exec 'z = 1' in g

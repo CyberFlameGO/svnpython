@@ -5,7 +5,7 @@ copy(src, dst) - Full copy of 'src' to 'dst'
 """
 
 import macfs
-from Carbon import Res
+import Res
 import os
 from MACFS import *
 import MacOS

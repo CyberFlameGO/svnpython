@@ -30,12 +30,6 @@
 #include "macglue.h"
 extern Boolean SIOUXUseWaitNextEvent;
 
-static PyReadHandler sInConsole = 0L;
-static PyWriteHandler sOutConsole = 0L;
-static PyWriteHandler sErrConsole = 0L;
-
-inline bool hasCustomConsole(void) { return sInConsole != 0L; }
-
 class GUSISIOUXSocket : public GUSISocket {
 public:
 	~GUSISIOUXSocket();
@@ -48,12 +42,14 @@ virtual int	fstat(struct stat * buf);
 virtual int	isatty();
 bool select(bool * canRead, bool * canWrite, bool *);
 
-	static GUSISIOUXSocket *	Instance(int fd);
-private:	
-	GUSISIOUXSocket(int fd);
-	static bool initialized;
-	static void Initialize();
-	int fFd;
+	static GUSISIOUXSocket *	Instance();
+private:
+	static GUSISIOUXSocket *	sInstance;
+	
+	GUSISIOUXSocket();
+	bool initialized;
+	void Initialize();
+	bool fDelayConsole;
 };
 class GUSISIOUXDevice : public GUSIDevice {
 public:
@@ -67,19 +63,28 @@ private:
 	
 	static GUSISIOUXDevice *	sInstance;
 };
+GUSISIOUXSocket * GUSISIOUXSocket::sInstance;
 
-GUSISIOUXSocket * GUSISIOUXSocket::Instance(int fd)
+GUSISIOUXSocket * GUSISIOUXSocket::Instance()
 {
-	return new GUSISIOUXSocket(fd);
+	if (!sInstance)
+		if (sInstance = new GUSISIOUXSocket)
+			sInstance->AddReference();
+
+	return sInstance;
 }
 // This declaration lies about the return type
 extern "C" void SIOUXHandleOneEvent(EventRecord *userevent);
 
-bool GUSISIOUXSocket::initialized = false;
-
-GUSISIOUXSocket::GUSISIOUXSocket(int fd) : fFd(fd) 
+GUSISIOUXSocket::GUSISIOUXSocket() 
 {
-	if (!PyMac_GetDelayConsoleFlag() && !hasCustomConsole() && !initialized)
+	if (PyMac_GetDelayConsoleFlag())
+		fDelayConsole = true;
+	else
+		fDelayConsole = false;
+	if ( fDelayConsole )
+		initialized = 0;
+	else
 		Initialize();
 	/* Tell the upper layers there's no unseen output */
 	PyMac_OutputSeen();
@@ -88,39 +93,24 @@ GUSISIOUXSocket::GUSISIOUXSocket(int fd) : fFd(fd)
 void
 GUSISIOUXSocket::Initialize()
 {
-	if(!initialized && !hasCustomConsole())
-	{
-		initialized = true;
-		InstallConsole(0);
-		GUSISetHook(GUSI_EventHook+nullEvent, 	(GUSIHook)SIOUXHandleOneEvent);
-		GUSISetHook(GUSI_EventHook+mouseDown, 	(GUSIHook)SIOUXHandleOneEvent);
-		GUSISetHook(GUSI_EventHook+mouseUp, 	(GUSIHook)SIOUXHandleOneEvent);
-		GUSISetHook(GUSI_EventHook+updateEvt, 	(GUSIHook)SIOUXHandleOneEvent);
-		GUSISetHook(GUSI_EventHook+diskEvt, 	(GUSIHook)SIOUXHandleOneEvent);
-		GUSISetHook(GUSI_EventHook+activateEvt, (GUSIHook)SIOUXHandleOneEvent);
-		GUSISetHook(GUSI_EventHook+osEvt, 		(GUSIHook)SIOUXHandleOneEvent);
-		PyMac_InitMenuBar();
-	}
+	initialized = 1;
+	InstallConsole(0);
+	GUSISetHook(GUSI_EventHook+nullEvent, 	(GUSIHook)SIOUXHandleOneEvent);
+	GUSISetHook(GUSI_EventHook+mouseDown, 	(GUSIHook)SIOUXHandleOneEvent);
+	GUSISetHook(GUSI_EventHook+mouseUp, 	(GUSIHook)SIOUXHandleOneEvent);
+	GUSISetHook(GUSI_EventHook+updateEvt, 	(GUSIHook)SIOUXHandleOneEvent);
+	GUSISetHook(GUSI_EventHook+diskEvt, 	(GUSIHook)SIOUXHandleOneEvent);
+	GUSISetHook(GUSI_EventHook+activateEvt, (GUSIHook)SIOUXHandleOneEvent);
+	GUSISetHook(GUSI_EventHook+osEvt, 		(GUSIHook)SIOUXHandleOneEvent);
+	PyMac_InitMenuBar();
 }
 GUSISIOUXSocket::~GUSISIOUXSocket()
 {
-	if ( !initialized || hasCustomConsole() )
-		return;
-	
-	initialized = false;
+	if ( !initialized ) return;
 	RemoveConsole();
 }
 ssize_t GUSISIOUXSocket::read(const GUSIScatterer & buffer)
 {
-	if(hasCustomConsole())
-	{
-		if(fFd == 0)
-			return buffer.SetLength(
-				sInConsole((char *) buffer.Buffer(), (int)buffer.Length()));
-		
-		return 0;
-	}
-	
 	if ( !initialized ) Initialize();
 	GUSIStdioFlush();
 	PyMac_OutputSeen();
@@ -131,16 +121,6 @@ ssize_t GUSISIOUXSocket::read(const GUSIScatterer & buffer)
 }
 ssize_t GUSISIOUXSocket::write(const GUSIGatherer & buffer)
 {
-	if(hasCustomConsole())
-	{
-		if(fFd == 1)
-			return sOutConsole((char *) buffer.Buffer(), (int)buffer.Length());
-		else if(fFd == 2)
-			return sErrConsole((char *) buffer.Buffer(), (int)buffer.Length());
-		
-		return 0;
-	}
-	
 	ssize_t rv;
 			
 	if ( !initialized ) Initialize();
@@ -218,33 +198,14 @@ bool GUSISIOUXDevice::Want(GUSIFileToken & file)
 }
 GUSISocket * GUSISIOUXDevice::open(GUSIFileToken &, int)
 {
-	return GUSISIOUXSocket::Instance(1);
+	return GUSISIOUXSocket::Instance();
 }
 void GUSISetupConsoleDescriptors()
 {
 	GUSIDescriptorTable * table = GUSIDescriptorTable::Instance();
+	GUSISIOUXSocket *     SIOUX = GUSISIOUXSocket::Instance();
 	
-	table->InstallSocket(GUSISIOUXSocket::Instance(0));
-	table->InstallSocket(GUSISIOUXSocket::Instance(1));
-	table->InstallSocket(GUSISIOUXSocket::Instance(2));
-}
-
-void PyMac_SetConsoleHandler(PyReadHandler stdinH, PyWriteHandler stdoutH, PyWriteHandler stderrH)
-{
-	if(stdinH && stdoutH && stderrH)
-	{
-		sInConsole = stdinH;
-		sOutConsole = stdoutH;
-		sErrConsole = stderrH;
-	}
-}
-
-long PyMac_DummyReadHandler(char *buffer, long n)
-{
-	return 0;
-}
-
-long PyMac_DummyWriteHandler(char *buffer, long n)
-{
-	return 0;
+	table->InstallSocket(SIOUX);
+	table->InstallSocket(SIOUX);
+	table->InstallSocket(SIOUX);
 }

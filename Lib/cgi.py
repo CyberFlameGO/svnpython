@@ -247,9 +247,9 @@ def parse_multipart(fp, pdict):
     if pdict.has_key('boundary'):
         boundary = pdict['boundary']
     if not valid_boundary(boundary):
-        raise ValueError,  ('Invalid boundary in multipart form: %s'
+        raise ValueError,  ('Invalid boundary in multipart form: %s' 
                             % `boundary`)
-
+    
     nextpart = "--" + boundary
     lastpart = "--" + boundary + "--"
     partdict = {}
@@ -564,28 +564,6 @@ class FieldStorage:
         else:
             return default
 
-    def getfirst(self, key, default=None):
-        """ Return the first value received."""
-        if self.has_key(key):
-            value = self[key]
-            if type(value) is type([]):
-                return value[0].value
-            else:
-                return value.value
-        else:
-            return default
-
-    def getlist(self, key):
-        """ Return list of received values."""
-        if self.has_key(key):
-            value = self[key]
-            if type(value) is type([]):
-                return map(lambda v: v.value, value)
-            else:
-                return [value.value]
-        else:
-            return []
-
     def keys(self):
         """Dictionary style keys() method."""
         if self.list is None:
@@ -622,7 +600,7 @@ class FieldStorage:
         """Internal: read a part that is itself multipart."""
         ib = self.innerboundary
         if not valid_boundary(ib):
-            raise ValueError, ('Invalid boundary in multipart form: %s'
+            raise ValueError, ('Invalid boundary in multipart form: %s' 
                                % `ib`)
         self.list = []
         klass = self.FieldStorageClass or self.__class__

@@ -11,22 +11,19 @@ LINKCC=$(PURIFY) $(CC)
 # Optimization preferences
 OPT=-g
 
-# Which Python version we're using
-VER=2.2
+# Where Python is installed, and which version
+INST=/usr/local
+VER=2.0
 
-# Expressions using the above definitions
+# Expressions using the above definitions -- no need to change
 PYVER=python$(VER)
-
 # Use these defs when compiling against installed Python
-##INST=/usr/local
-##PYC=$(INST)/lib/$(PYVER)/config
-##PYINCL=-I$(INST)/include/$(PYVER) -I$(PYC)
-##PYLIBS=$(PYC)/lib$(PYVER).a
-
+PYC=$(INST)/lib/$(PYVER)/config
+PYINCL=-I$(INST)/include/$(PYVER) -I$(PYC)
+PYLIBS=$(PYC)/lib$(PYVER).a
 # Use these defs when compiling against built Python
-PLAT=linux
-PYINCL=-I../../Include -I../../$(PLAT)
-PYLIBS=../../$(PLAT)/lib$(PYVER).a
+##PYINCL=-I../../Include -I../../sparc
+##PYLIBS=../../sparc/lib$(PYVER).a
 
 # Libraries to link with -- very installation dependent
 # (See LIBS= in Modules/Makefile in build tree)
@@ -34,8 +31,7 @@ RLLIBS=-lreadline -ltermcap
 OTHERLIBS=-lnsl -lpthread -ldl -lm -ldb -lutil
 
 # Compilation and link flags -- no need to change normally
-CFLAGS=$(OPT)
-CPPFLAGS=$(PYINCL)
+CFLAGS=$(PYINCL) $(OPT)
 LIBS=$(PYLIBS) $(RLLIBS) $(OTHERLIBS)
 
 # Default port for the pysvr application

@@ -52,6 +52,14 @@ extern void bzero(void *, int);
 #endif
 #endif
 
+#ifdef RISCOS
+#define NO_DUP
+#undef off_t
+#undef uid_t
+#undef gid_t
+#undef errno
+#include "socklib.h"
+#endif /* RISCOS */
 
 static PyObject *SelectError;
 
@@ -218,8 +226,7 @@ select_select(PyObject *self, PyObject *args)
 	}
 	else {
 		if (timeout > (double)LONG_MAX) {
-			PyErr_SetString(PyExc_OverflowError,
-					"timeout period too long");
+			PyErr_SetString(PyExc_OverflowError, "timeout period too long");
 			return NULL;
 		}
 		seconds = (long)timeout;
@@ -334,7 +341,7 @@ staticforward PyTypeObject poll_Type;
 static int
 update_ufd_array(pollObject *self)
 {
-	int i, pos;
+	int i, j, pos;
 	PyObject *key, *value;
 
 	self->ufd_len = PyDict_Size(self->dict);
@@ -345,9 +352,9 @@ update_ufd_array(pollObject *self)
 	}
 
 	i = pos = 0;
-	while (PyDict_Next(self->dict, &pos, &key, &value)) {
+	while ((j = PyDict_Next(self->dict, &pos, &key, &value))) {
 		self->ufds[i].fd = PyInt_AsLong(key);
-		self->ufds[i].events = (short)PyInt_AsLong(value);
+		self->ufds[i].events = PyInt_AsLong(value);
 		i++;
 	}
 	self->ufd_uptodate = 1;
@@ -357,8 +364,7 @@ update_ufd_array(pollObject *self)
 static char poll_register_doc[] =
 "register(fd [, eventmask] ) -> None\n\n\
 Register a file descriptor with the polling object.\n\
-fd -- either an integer, or an object with a fileno() method returning an\n\
-      int.\n\
+fd -- either an integer, or an object with a fileno() method returning an int.\n\
 events -- an optional bitmask describing the type of events to check for";
 
 static PyObject *
@@ -567,7 +573,7 @@ statichere PyTypeObject poll_Type = {
 	 * to be portable to Windows without using C++. */
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"select.poll",		/*tp_name*/
+	"poll",			/*tp_name*/
 	sizeof(pollObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
 	/* methods */

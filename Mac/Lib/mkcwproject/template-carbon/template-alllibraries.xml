@@ -3,5 +3,5 @@
                     <PATH>%(libraries)s</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS>%(libraryflags)s</FILEFLAGS>
+                    <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>

@@ -27,12 +27,11 @@ def getapplication():
 def getdefaultfont():
 	prefs = getapplication().getprefs()
 	if not prefs.defaultfont:
-		prefs.defaultfont = ("Geneva", 0, 10, (0, 0, 0))
+		prefs.defaultfont = ("Python-Sans", 0, 9, (0, 0, 0))
 	return prefs.defaultfont
 
 def Message(text):
-	import EasyDialogs, string
-	from Carbon import Qd
+	import EasyDialogs, Qd, string
 	Qd.InitCursor()
 	text = string.replace(text, "\n", "\r")
 	if not text:

@@ -24,7 +24,6 @@ DL_IMPORT(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 /* Predefined exceptions */
 
 extern DL_IMPORT(PyObject *) PyExc_Exception;
-extern DL_IMPORT(PyObject *) PyExc_StopIteration;
 extern DL_IMPORT(PyObject *) PyExc_StandardError;
 extern DL_IMPORT(PyObject *) PyExc_ArithmeticError;
 extern DL_IMPORT(PyObject *) PyExc_LookupError;
@@ -48,7 +47,6 @@ extern DL_IMPORT(PyObject *) PyExc_NotImplementedError;
 extern DL_IMPORT(PyObject *) PyExc_SyntaxError;
 extern DL_IMPORT(PyObject *) PyExc_IndentationError;
 extern DL_IMPORT(PyObject *) PyExc_TabError;
-extern DL_IMPORT(PyObject *) PyExc_ReferenceError;
 extern DL_IMPORT(PyObject *) PyExc_SystemError;
 extern DL_IMPORT(PyObject *) PyExc_SystemExit;
 extern DL_IMPORT(PyObject *) PyExc_TypeError;
@@ -67,7 +65,6 @@ extern DL_IMPORT(PyObject *) PyExc_Warning;
 extern DL_IMPORT(PyObject *) PyExc_UserWarning;
 extern DL_IMPORT(PyObject *) PyExc_DeprecationWarning;
 extern DL_IMPORT(PyObject *) PyExc_SyntaxWarning;
-extern DL_IMPORT(PyObject *) PyExc_OverflowWarning;
 extern DL_IMPORT(PyObject *) PyExc_RuntimeWarning;
 
 
@@ -77,8 +74,7 @@ extern DL_IMPORT(int) PyErr_BadArgument(void);
 extern DL_IMPORT(PyObject *) PyErr_NoMemory(void);
 extern DL_IMPORT(PyObject *) PyErr_SetFromErrno(PyObject *);
 extern DL_IMPORT(PyObject *) PyErr_SetFromErrnoWithFilename(PyObject *, char *);
-extern DL_IMPORT(PyObject *) PyErr_Format(PyObject *, const char *, ...)
-			__attribute__((format(printf, 2, 3)));
+extern DL_IMPORT(PyObject *) PyErr_Format(PyObject *, const char *, ...);
 #ifdef MS_WINDOWS
 extern DL_IMPORT(PyObject *) PyErr_SetFromWindowsErrWithFilename(int, const char *);
 extern DL_IMPORT(PyObject *) PyErr_SetFromWindowsErr(int);
@@ -108,26 +104,7 @@ extern DL_IMPORT(void) PyErr_SetInterrupt(void);
 /* Support for adding program text to SyntaxErrors */
 extern DL_IMPORT(void) PyErr_SyntaxLocation(char *, int);
 extern DL_IMPORT(PyObject *) PyErr_ProgramText(char *, int);
-
-/* These APIs aren't really part of the error implementation, but
-   often needed to format error messages; the native C lib APIs are
-   not available on all platforms, which is why we provide emulations
-   for those platforms in Python/mysnprintf.c,
-   WARNING:  The return value of snprintf varies across platforms; do
-   not rely on any particular behavior; eventually the C99 defn may
-   be reliable.
-*/
-#if defined(MS_WIN32) && !defined(HAVE_SNPRINTF)
-# define HAVE_SNPRINTF
-# define snprintf _snprintf
-# define vsnprintf _vsnprintf
-#endif
-
-#include <stdarg.h>
-extern DL_IMPORT(int) PyOS_snprintf(char *str, size_t size, const char  *format, ...)
-			__attribute__((format(printf, 3, 4)));
-extern DL_IMPORT(int) PyOS_vsnprintf(char *str, size_t size, const char  *format, va_list va)
-			__attribute__((format(printf, 3, 0)));
+	
 
 #ifdef __cplusplus
 }

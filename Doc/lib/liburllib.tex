@@ -5,12 +5,12 @@
 \modulesynopsis{Open an arbitrary network resource by URL (requires sockets).}
 
 \index{WWW}
-\index{World Wide Web}
+\index{World-Wide Web}
 \index{URL}
 
 
 This module provides a high-level interface for fetching data across
-the World Wide Web.  In particular, the \function{urlopen()} function
+the World-Wide Web.  In particular, the \function{urlopen()} function
 is similar to the built-in function \function{open()}, but accepts
 Universal Resource Locators (URLs) instead of filenames.  Some
 restrictions apply --- it can only open URLs for reading, and no seek
@@ -43,8 +43,7 @@ returned by the server at the head of the retrieved HTML page
 (including Content-Length and Content-Type).  When the method is FTP,
 a Content-Length header will be present if (as is now usual) the
 server passed back a file length in response to the FTP retrieval
-request. A Content-Type header will be present if the MIME type can
-be guessed.  When the method is local-file, returned headers will include
+request.  When the method is local-file, returned headers will include
 a Date representing the file's last-modified time, a Content-Length
 giving file size, and a Content-Type containing a guess at the file's
 type. See also the description of the
@@ -169,14 +168,14 @@ subclass of \class{URLopener} or \class{FancyURLopener}, then assign
 that an instance of that class to the
 \code{urllib._urlopener} variable before calling the desired function.
 For example, applications may want to specify a different
-\mailheader{User-Agent} header than \class{URLopener} defines.  This
-can be accomplished with the following code:
+\code{user-agent} header than \class{URLopener} defines.  This can be
+accomplished with the following code:
 
 \begin{verbatim}
 class AppURLopener(urllib.FancyURLopener):
     def __init__(self, *args):
         self.version = "App/1.7"
-        urllib.FancyURLopener.__init__(self, *args)
+        apply(urllib.FancyURLopener.__init__, (self,) + args)
 
 urllib._urlopener = AppURLopener()
 \end{verbatim}
@@ -188,9 +187,9 @@ opening objects using schemes other than \file{http:}, \file{ftp:},
 \class{FancyURLopener}.
 
 By default, the \class{URLopener} class sends a
-\mailheader{User-Agent} header of \samp{urllib/\var{VVV}}, where
+\code{user-agent} header of \samp{urllib/\var{VVV}}, where
 \var{VVV} is the \module{urllib} version number.  Applications can
-define their own \mailheader{User-Agent} header by subclassing
+define their own \code{user-agent} header by subclassing
 \class{URLopener} or \class{FancyURLopener} and setting the instance
 attribute \member{version} to an appropriate string value before the
 \method{open()} method is called.
@@ -204,7 +203,7 @@ actually retrieve a resource at an \file{https:} URL.
 \begin{classdesc}{FancyURLopener}{...}
 \class{FancyURLopener} subclasses \class{URLopener} providing default
 handling for the following HTTP response codes: 301, 302 or 401.  For
-301 and 302 response codes, the \mailheader{Location} header is used to
+301 and 302 response codes, the \code{location} header is used to
 fetch the actual URL.  For 401 response codes (authentication
 required), basic HTTP authentication is performed.  For 301 and 302 response
 codes, recursion is bounded by the value of the \var{maxtries} attribute,
@@ -213,12 +212,12 @@ which defaults 10.
 The parameters to the constructor are the same as those for
 \class{URLopener}.
 
-\note{When performing basic authentication, a
+\strong{Note:}  When performing basic authentication, a
 \class{FancyURLopener} instance calls its
 \method{prompt_user_passwd()} method.  The default implementation asks
 the users for the required information on the controlling terminal.  A
 subclass may override this method to support more appropriate behavior
-if needed.}
+if needed.
 \end{classdesc}
 
 Restrictions:
@@ -250,7 +249,7 @@ protocol.  This can sometimes cause confusing error messages.
 The \function{urlopen()} and \function{urlretrieve()} functions can
 cause arbitrarily long delays while waiting for a network connection
 to be set up.  This means that it is difficult to build an interactive
-Web client using these functions without using threads.
+web client using these functions without using threads.
 
 \item
 The data returned by \function{urlopen()} or \function{urlretrieve()}
@@ -258,11 +257,10 @@ is the raw data returned by the server.  This may be binary data
 (e.g. an image), plain text or (for example) HTML\index{HTML}.  The
 HTTP\indexii{HTTP}{protocol} protocol provides type information in the
 reply header, which can be inspected by looking at the
-\mailheader{Content-Type} header.  For the
-Gopher\indexii{Gopher}{protocol} protocol, type information is encoded
-in the URL; there is currently no easy way to extract it.  If the
-returned data is HTML, you can use the module
-\refmodule{htmllib}\refstmodindex{htmllib} to parse it.
+\code{content-type} header.  For the Gopher\indexii{Gopher}{protocol}
+protocol, type information is encoded in the URL; there is currently
+no easy way to extract it.  If the returned data is HTML, you can use
+the module \refmodule{htmllib}\refstmodindex{htmllib} to parse it.
 
 \item
 This module does not support the use of proxies which require

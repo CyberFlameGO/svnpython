@@ -22,7 +22,7 @@ PyObject *
 _PyImport_LoadDynamicModule(char *name, char *pathname, FILE *fp)
 {
 	PyObject *m, *d, *s;
-	char *lastdot, *shortname, *packagecontext, *oldcontext;
+	char *lastdot, *shortname, *packagecontext;
 	dl_funcptr p;
 
 	if ((m = _PyImport_FindExtension(name, pathname)) != NULL) {
@@ -48,10 +48,9 @@ _PyImport_LoadDynamicModule(char *name, char *pathname, FILE *fp)
 			     shortname);
 		return NULL;
 	}
-        oldcontext = _Py_PackageContext;
 	_Py_PackageContext = packagecontext;
 	(*p)();
-	_Py_PackageContext = oldcontext;
+	_Py_PackageContext = NULL;
 	if (PyErr_Occurred())
 		return NULL;
 	if (_PyImport_FixupExtension(name, pathname) == NULL)

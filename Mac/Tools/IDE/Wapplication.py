@@ -1,15 +1,14 @@
 import FrameWork
-from Carbon import Win
-from Carbon import Qd
-from Carbon import Evt
+import Win
+import Qd
+import Evt
 import MacOS
-from Carbon import Events
+import Events
 import traceback
 from types import *
 
-from Carbon import Menu; MenuToolbox = Menu; del Menu
+import Menu; MenuToolbox = Menu; del Menu
 
-KILLUNKNOWNWINDOWS = 0  # Set to 0 for debugging.
 
 class Application(FrameWork.Application):
 	
@@ -185,7 +184,7 @@ class Application(FrameWork.Application):
 			window = self._windows[wid]
 			window.do_rawupdate(wid, event)
 		else:
-			if KILLUNKNOWNWINDOWS and wid:
+			if wid:
 				wid.HideWindow()
 				import sys
 				sys.stderr.write("XXX killed unknown (crashed?) Python window.\n")

@@ -49,9 +49,9 @@ The module \module{curses} defines the following exception:
 Exception raised when a curses library function returns an error.
 \end{excdesc}
 
-\note{Whenever \var{x} or \var{y} arguments to a function
+\strong{Note:} Whenever \var{x} or \var{y} arguments to a function
 or a method are optional, they default to the current cursor location.
-Whenever \var{attr} is optional, it defaults to \constant{A_NORMAL}.}
+Whenever \var{attr} is optional, it defaults to \constant{A_NORMAL}.
 
 The module \module{curses} defines the following functions:
 
@@ -150,7 +150,7 @@ De-initialize the library, and return terminal to normal status.
 \end{funcdesc}
 
 \begin{funcdesc}{erasechar}{}
-Returns the user's current erase character.  Under \UNIX{} operating
+Returns the user's current erase character.  Under Unix operating
 systems this is a property of the controlling tty of the curses
 program, and is not set by the curses library itself.
 \end{funcdesc}
@@ -284,7 +284,7 @@ prefix `M-' followed by the name of the corresponding ASCII character.
 \end{funcdesc}
 
 \begin{funcdesc}{killchar}{}
-Returns the user's current line kill character. Under \UNIX{} operating
+Returns the user's current line kill character. Under Unix operating
 systems this is a property of the controlling tty of the curses
 program, and is not set by the curses library itself.
 \end{funcdesc}
@@ -331,7 +331,7 @@ A pad is like a window, except that it is not restricted by the screen
 size, and is not necessarily associated with a particular part of the
 screen.  Pads can be used when a large window is needed, and only a
 part of the window will be on the screen at one time.  Automatic
-refreshes of pads (such as from scrolling or echoing of input) do not
+refreshes of pads (e.g., from scrolling or echoing of input) do not
 occur.  The \method{refresh()} and \method{noutrefresh()} methods of a
 pad require 6 arguments to specify the part of the pad to be
 displayed and the location on the screen to be used for the display.
@@ -516,8 +516,8 @@ characters are left as they are.
 
 \begin{funcdesc}{ungetch}{ch}
 Push \var{ch} so the next \method{getch()} will return it.
-\note{Only one \var{ch} can be pushed before \method{getch()}
-is called.}
+\strong{Note:} only one \var{ch} can be pushed before \method{getch()}
+is called.
 \end{funcdesc}
 
 \begin{funcdesc}{ungetmouse}{id, x, y, z, bstate}
@@ -542,10 +542,10 @@ Window objects, as returned by \function{initscr()} and
 following methods:
 
 \begin{methoddesc}[window]{addch}{\optional{y, x,} ch\optional{, attr}}
-\note{A \emph{character} means a C character (an
+\strong{Note:} A \emph{character} means a C character (i.e., an
 \ASCII{} code), rather then a Python character (a string of length 1).
 (This note is true whenever the documentation mentions a character.)
-The builtin \function{ord()} is handy for conveying strings to codes.}
+The builtin \function{ord()} is handy for conveying strings to codes.
 
 Paint character \var{ch} at \code{(\var{y}, \var{x})} with attributes
 \var{attr}, overwriting any character previously painter at that
@@ -610,12 +610,13 @@ operations.
                                    tr\optional{, bl\optional{, br}}}}}}}}}
 Draw a border around the edges of the window. Each parameter specifies 
 the character to use for a specific part of the border; see the table
-below for more details.  The characters can be specified as integers
-or as one-character strings.
+below for more details.  The characters must be specified as integers;
+using one-character strings will cause \exception{TypeError} to be
+raised.
 
-\note{A \code{0} value for any parameter will cause the
+\strong{Note:} A \code{0} value for any parameter will cause the
 default character to be used for that parameter.  Keyword parameters
-can \emph{not} be used.  The defaults are listed in this table:}
+can \emph{not} be used.  The defaults are listed in this table:
 
 \begin{tableiii}{l|l|l}{var}{Parameter}{Description}{Default value}
   \lineiii{ls}{Left side}{\constant{ACS_VLINE}}
@@ -1180,8 +1181,8 @@ These are inherited from the VT100 terminal, and will generally be
 available on software emulations such as X terminals.  When there
 is no graphic available, curses falls back on a crude printable ASCII
 approximation.
-\note{These are available only after \function{initscr()} has 
-been called.}
+\strong{Note:} These are available only after \function{initscr()} has 
+been called.
 
 \begin{longtableii}{l|l}{code}{ACS code}{Meaning}
   \lineii{ACS_BBSS}{alternate name for upper right corner}
@@ -1302,22 +1303,20 @@ Process a single command keystroke.  Here are the supported special
 keystrokes: 
 
 \begin{tableii}{l|l}{kbd}{Keystroke}{Action}
-  \lineii{Control-A}{Go to left edge of window.}
-  \lineii{Control-B}{Cursor left, wrapping to previous line if appropriate.}
-  \lineii{Control-D}{Delete character under cursor.}
-  \lineii{Control-E}{Go to right edge (stripspaces off) or end of line
+  \lineii{Ctrl-A}{Go to left edge of window.}
+  \lineii{Ctrl-B}{Cursor left, wrapping to previous line if appropriate.}
+  \lineii{Ctrl-D}{Delete character under cursor.}
+  \lineii{Ctrl-E}{Go to right edge (stripspaces off) or end of line
                   (stripspaces on).}
-  \lineii{Control-F}{Cursor right, wrapping to next line when appropriate.}
-  \lineii{Control-G}{Terminate, returning the window contents.}
-  \lineii{Control-H}{Delete character backward.}
-  \lineii{Control-J}{Terminate if the window is 1 line, otherwise
-                     insert newline.}
-  \lineii{Control-K}{If line is blank, delete it, otherwise clear to
-                     end of line.}
-  \lineii{Control-L}{Refresh screen.}
-  \lineii{Control-N}{Cursor down; move down one line.}
-  \lineii{Control-O}{Insert a blank line at cursor location.}
-  \lineii{Control-P}{Cursor up; move up one line.}
+  \lineii{Ctrl-F}{Cursor right, wrapping to next line when appropriate.}
+  \lineii{Ctrl-G}{Terminate, returning the window contents.}
+  \lineii{Ctrl-H}{Delete character backward.}
+  \lineii{Ctrl-J}{Terminate if the window is 1 line, otherwise insert newline.}
+  \lineii{Ctrl-K}{If line is blank, delete it, otherwise clear to end of line.}
+  \lineii{Ctrl-L}{Refresh screen.}
+  \lineii{Ctrl-N}{Cursor down; move down one line.}
+  \lineii{Ctrl-O}{Insert a blank line at cursor location.}
+  \lineii{Ctrl-P}{Cursor up; move up one line.}
 \end{tableii}
 
 Move operations do nothing if the cursor is at an edge where the
@@ -1325,11 +1324,11 @@ movement is not possible.  The following synonyms are supported where
 possible:
 
 \begin{tableii}{l|l}{constant}{Constant}{Keystroke}
-  \lineii{KEY_LEFT}{\kbd{Control-B}}
-  \lineii{KEY_RIGHT}{\kbd{Control-F}}
-  \lineii{KEY_UP}{\kbd{Control-P}}
-  \lineii{KEY_DOWN}{\kbd{Control-N}}
-  \lineii{KEY_BACKSPACE}{\kbd{Control-h}}
+  \lineii{KEY_LEFT}{\kbd{Ctrl-B}}
+  \lineii{KEY_RIGHT}{\kbd{Ctrl-F}}
+  \lineii{KEY_UP}{\kbd{Ctrl-P}}
+  \lineii{KEY_DOWN}{\kbd{Ctrl-N}}
+  \lineii{KEY_BACKSPACE}{\kbd{Ctrl-h}}
 \end{tableii}
 
 All other keystrokes are treated as a command to insert the given

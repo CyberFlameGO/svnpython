@@ -14,17 +14,13 @@ typedef struct {
 } PyTryBlock;
 
 typedef struct _frame {
-    PyObject_VAR_HEAD
+    PyObject_HEAD
     struct _frame *f_back;	/* previous frame, or NULL */
     PyCodeObject *f_code;	/* code segment */
     PyObject *f_builtins;	/* builtin symbol table (PyDictObject) */
     PyObject *f_globals;	/* global symbol table (PyDictObject) */
     PyObject *f_locals;		/* local symbol table (PyDictObject) */
     PyObject **f_valuestack;	/* points after the last local */
-    /* Next free slot in f_valuestack.  Frame creation sets to f_valuestack.
-       Frame evaluation usually NULLs it, but a frame that yields sets it
-       to the current stack top. */
-    PyObject **f_stacktop;
     PyObject *f_trace;		/* Trace function */
     PyObject *f_exc_type, *f_exc_value, *f_exc_traceback;
     PyThreadState *f_tstate;
@@ -34,6 +30,7 @@ typedef struct _frame {
 				   in this scope */
     int f_iblock;		/* index in f_blockstack */
     PyTryBlock f_blockstack[CO_MAXBLOCKS]; /* for try and loop blocks */
+    int f_size;                 /* size of localsplus */
     int f_nlocals;		/* number of locals */
     int f_ncells;
     int f_nfreevars;

@@ -3,7 +3,7 @@
 import icglue
 import string
 import sys
-from Carbon import Res
+import Res
 import macfs
 import macostools
 

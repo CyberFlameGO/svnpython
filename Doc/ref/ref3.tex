@@ -1,6 +1,5 @@
 \chapter{Data model\label{datamodel}}
 
-
 \section{Objects, values and types\label{objects}}
 
 \dfn{Objects} are Python's abstraction for data.  All data in a Python
@@ -96,7 +95,6 @@ lists.
 (Note that \samp{c = d = []} assigns the same object to both
 \code{c} and \code{d}.)
 
-
 \section{The standard type hierarchy\label{types}}
 
 Below is a list of the types that are built into Python.  Extension
@@ -112,10 +110,17 @@ numbers, efficiently stored arrays of integers, etc.).
 Some of the type descriptions below contain a paragraph listing
 `special attributes.'  These are attributes that provide access to the
 implementation and are not intended for general use.  Their definition
-may change in the future.
+may change in the future.  There are also some `generic' special
+attributes, not listed with the individual objects: \member{__methods__}
+is a list of the method names of a built-in object, if it has any;
+\member{__members__} is a list of the data attribute names of a built-in
+object, if it has any.
 \index{attribute}
 \indexii{special}{attribute}
 \indexiii{generic}{special}{attribute}
+\withsubitem{(built-in object attribute)}{
+  \ttindex{__methods__}
+  \ttindex{__members__}}
 
 \begin{description}
 
@@ -203,7 +208,7 @@ These represent machine-level double precision floating point numbers.
 You are at the mercy of the underlying machine architecture and
 \C{} implementation for the accepted range and handling of overflow.
 Python does not support single-precision floating point numbers; the
-savings in processor and memory usage that are usually the reason for using
+savings in CPU and memory usage that are usually the reason for using
 these is dwarfed by the overhead of using objects in Python, so there
 is no reason to complicate the language with two kinds of floating
 point numbers.
@@ -272,14 +277,14 @@ read from a file.
 \obindex{string}
 \index{character}
 \index{byte}
-\index{ASCII@\ASCII}
+\index{ASCII@\ASCII{}}
 
-(On systems whose native character set is not \ASCII, strings may use
+(On systems whose native character set is not \ASCII{}, strings may use
 EBCDIC in their internal representation, provided the functions
 \function{chr()} and \function{ord()} implement a mapping between \ASCII{} and
 EBCDIC, and string comparison preserves the \ASCII{} order.
 Or perhaps someone can propose a better rule?)
-\index{ASCII@\ASCII}
+\index{ASCII@\ASCII{}}
 \index{EBCDIC}
 \index{character set}
 \indexii{string}{comparison}
@@ -373,7 +378,7 @@ comparison: if two numbers compare equal (e.g., \code{1} and
 \code{1.0}) then they can be used interchangeably to index the same
 dictionary entry.
 
-Dictionaries are mutable; they are created by the
+Dictionaries are \obindex{mutable}mutable; they are created by the
 \code{\{...\}} notation (see section \ref{dict}, ``Dictionary
 Displays'').
 
@@ -439,21 +444,18 @@ unless nested scopes are enabled.  (See the appendix.)
 
 \item[User-defined methods]
 A user-defined method object combines a class, a class instance (or
-\code{None}) and any callable object (normally a user-defined
-function).
+\code{None}) and a user-defined function.
 \obindex{method}
 \obindex{user-defined method}
 \indexii{user-defined}{method}
 
 Special read-only attributes: \member{im_self} is the class instance
 object, \member{im_func} is the function object;
-\member{im_class} is the class of \member{im_self} for bound methods,
-or the class that asked for the method for unbound methods);
+\member{im_class} is the class that defined the method (which may be a
+base class of the class of which \member{im_self} is an instance);
 \member{__doc__} is the method's documentation (same as
 \code{im_func.__doc__}); \member{__name__} is the method name (same as
 \code{im_func.__name__}).
-\versionchanged[\member{im_self} used to refer to the class that
-                defined the method]{2.2}
 \withsubitem{(method attribute)}{
   \ttindex{im_func}
   \ttindex{im_self}}
@@ -469,8 +471,8 @@ case (class attribute), the \member{im_self} attribute is \code{None},
 and the method object is said to be unbound; in the latter case
 (instance attribute), \method{im_self} is the instance, and the method
 object is said to be bound.  For
-instance, when \class{C} is a class which has a method
-\method{f()}, \code{C.f} does not yield the function object
+instance, when \class{C} is a class which contains a definition for a
+function \method{f()}, \code{C.f} does not yield the function object
 \code{f}; rather, it yields an unbound method object \code{m} where
 \code{m.im_class} is \class{C}, \code{m.im_func} is \method{f()}, and
 \code{m.im_self} is \code{None}.  When \code{x} is a \class{C}
@@ -503,18 +505,6 @@ user-defined functions which are attributes of a class instance are
 not converted to bound methods; this \emph{only} happens when the
 function is an attribute of the class.
 
-\item[Generator functions\index{generator!function}\index{generator!iterator}]
-A function or method which uses the \keyword{yield} statement (see
-section~\ref{yield}, ``The \keyword{yield} statement'') is called a
-\dfn{generator function}.  Such a function, when called, always
-returns an iterator object which can be used to execute the body of
-the function:  calling the iterator's \method{next()} method will
-cause the function to execute until it provides a value using the
-\keyword{yield} statement.  When the function executes a
-\keyword{return} statement or falls off the end, a
-\exception{StopIteration} exception is raised and the iterator will
-have reached the end of the set of values to be returned.
-
 \item[Built-in functions]
 A built-in function object is a wrapper around a \C{} function.  Examples
 of built-in functions are \function{len()} and \function{math.sin()}
@@ -536,7 +526,7 @@ argument.  An example of a built-in method is
 \code{\var{list}.append()}, assuming
 \var{list} is a list object.
 In this case, the special read-only attribute \member{__self__} is set
-to the object denoted by \var{list}.
+to the object denoted by \code{list}.
 \obindex{built-in method}
 \obindex{method}
 \indexii{built-in}{method}
@@ -611,6 +601,7 @@ base class list.
 When a class attribute reference would yield a user-defined function
 object, it is transformed into an unbound user-defined method object
 (see above).  The \member{im_class} attribute of this method object is the
+class in which the function object was found, not necessarily the
 class for which the attribute reference was initiated.
 \obindex{class}
 \obindex{class instance}
@@ -652,7 +643,7 @@ the search continues with the class attributes.  If a class attribute
 is found that is a user-defined function object (and in no other
 case), it is transformed into an unbound user-defined method object
 (see above).  The \member{im_class} attribute of this method object is
-the
+the class in which the function object was found, not necessarily the
 class of the instance for which the attribute reference was initiated.
 If no class attribute is found, and the object's class has a
 \method{__getattr__()} method, that is called to satisfy the lookup.
@@ -899,15 +890,14 @@ extracting a slice may not make sense.  (One example of this is the
 
 \subsection{Basic customization\label{customization}}
 
-\begin{methoddesc}[object]{__init__}{self\optional{, \moreargs}}
-Called\indexii{class}{constructor} when the instance is created.  The
-arguments are those passed to the class constructor expression.  If a
-base class has an \method{__init__()} method the derived class's
-\method{__init__()} method must explicitly call it to ensure proper
-initialization of the base class part of the instance; for example:
-\samp{BaseClass.__init__(\var{self}, [\var{args}...])}.  As a special
-contraint on constructors, no value may be returned; doing so will
-cause a \exception{TypeError} to be raised at runtime.
+\begin{methoddesc}[object]{__init__}{self\optional{, args...}}
+Called when the instance is created.  The arguments are those passed
+to the class constructor expression.  If a base class has an
+\method{__init__()} method the derived class's \method{__init__()} method must
+explicitly call it to ensure proper initialization of the base class
+part of the instance, e.g., \samp{BaseClass.__init__(\var{self},
+[\var{args}...])}.
+\indexii{class}{constructor}
 \end{methoddesc}
 
 
@@ -925,8 +915,7 @@ reference is deleted.  It is not guaranteed that
 the interpreter exits.
 \stindex{del}
 
-\begin{notice}
-\samp{del x} doesn't directly call
+\strong{Programmer's note:} \samp{del x} doesn't directly call
 \code{x.__del__()} --- the former decrements the reference count for
 \code{x} by one, and the latter is only called when its reference
 count reaches zero.  Some common situations that may prevent the
@@ -939,22 +928,13 @@ alive); or a reference to the object on the stack frame that raised an
 unhandled exception in interactive mode (the traceback stored in
 \code{sys.last_traceback} keeps the stack frame alive).  The first
 situation can only be remedied by explicitly breaking the cycles; the
-latter two situations can be resolved by storing \code{None} in
-\code{sys.exc_traceback} or \code{sys.last_traceback}.  Circular
-references which are garbage are detected when the option cycle
-detector is enabled (it's on by default), but can only be cleaned up
-if there are no Python-level \method{__del__()} methods involved.
-Refer to the documentation for the \ulink{\module{gc}
-module}{../lib/module-gc.html} for more information about how
-\method{__del__()} methods are handled by the cycle detector,
-particularly the description of the \code{garbage} value.
-\end{notice}
+latter two situations can be resolved by storing None in
+\code{sys.exc_traceback} or \code{sys.last_traceback}.
 
-\begin{notice}[warning]
-Due to the precarious circumstances under which
+\strong{Warning:} due to the precarious circumstances under which
 \method{__del__()} methods are invoked, exceptions that occur during their
 execution are ignored, and a warning is printed to \code{sys.stderr}
-instead.  Also, when \method{__del__()} is invoked in response to a module
+instead.  Also, when \method{__del__()} is invoked is response to a module
 being deleted (e.g., when execution of the program is done), other
 globals referenced by the \method{__del__()} method may already have been
 deleted.  For this reason, \method{__del__()} methods should do the
@@ -963,8 +943,7 @@ guarantees that globals whose name begins with a single underscore are
 deleted from their module before other globals are deleted; if no
 other references to such globals exist, this may help in assuring that
 imported modules are still available at the time when the
-\method{__del__()} method is called.
-\end{notice}
+\method{__del__()} method is called. 
 \end{methoddesc}
 
 \begin{methoddesc}[object]{__repr__}{self}
@@ -1139,12 +1118,10 @@ is defined, \code{\var{x}(arg1, arg2, ...)} is a shorthand for
 \end{methoddesc}
 
 
-\subsection{Emulating container types\label{sequence-types}}
+\subsection{Emulating sequence and mapping types\label{sequence-types}}
 
-The following methods can be defined to implement container
-objects.  Containers usually are sequences (such as lists or tuples)
-or mappings (like dictionaries), but can represent other containers as
-well.  The first set of methods is used either to emulate a
+The following methods can be defined to emulate sequence or mapping
+objects.  The first set of methods is used either to emulate a
 sequence or to emulate a mapping; the difference is that for a
 sequence, the allowable keys should be the integers \var{k} for which
 \code{0 <= \var{k} < \var{N}} where \var{N} is the length of the
@@ -1164,10 +1141,9 @@ multiplication (meaning repetition) by defining the methods
 \method{__mul__()}, \method{__rmul__()} and \method{__imul__()} described
 below; they should not define \method{__coerce__()} or other numerical
 operators.  It is recommended that both mappings and sequences
-implement the \method{__contains__()} method to allow efficient use of
-the \code{in} operator; for mappings, \code{in} should be equivalent
-of \method{has_key()}; for sequences, it should search through the
-values.
+implement the \method{__contains__}, to allow efficient use of the
+\code{in} operator; for mappings, \code{in} should be equivalent of
+\method{has_key()}; for sequences, it should search through the values.
 \withsubitem{(mapping object method)}{
   \ttindex{keys()}
   \ttindex{values()}
@@ -1196,7 +1172,7 @@ values.
   \ttindex{__contains__()}}
 \withsubitem{(numeric object method)}{\ttindex{__coerce__()}}
 
-\begin{methoddesc}[container object]{__len__}{self}
+\begin{methoddesc}[mapping object]{__len__}{self}
 Called to implement the built-in function
 \function{len()}\bifuncindex{len}.  Should return the length of the
 object, an integer \code{>=} 0.  Also, an object that doesn't define a
@@ -1205,7 +1181,7 @@ returns zero is considered to be false in a Boolean context.
 \withsubitem{(object method)}{\ttindex{__nonzero__()}}
 \end{methoddesc}
 
-\begin{methoddesc}[container object]{__getitem__}{self, key}
+\begin{methoddesc}[mapping object]{__getitem__}{self, key}
 Called to implement evaluation of \code{\var{self}[\var{key}]}.
 For sequence types, the accepted keys should be integers and slice
 objects.\obindex{slice}  Note that
@@ -1215,12 +1191,12 @@ If \var{key} is of an inappropriate type, \exception{TypeError} may be
 raised; if of a value outside the set of indexes for the sequence
 (after any special interpretation of negative values),
 \exception{IndexError} should be raised.
-\note{\keyword{for} loops expect that an
+\strong{Note:}  \keyword{for} loops expect that an
 \exception{IndexError} will be raised for illegal indexes to allow
-proper detection of the end of the sequence.}
+proper detection of the end of the sequence.
 \end{methoddesc}
 
-\begin{methoddesc}[container object]{__setitem__}{self, key, value}
+\begin{methoddesc}[mapping object]{__setitem__}{self, key, value}
 Called to implement assignment to \code{\var{self}[\var{key}]}.  Same
 note as for \method{__getitem__()}.  This should only be implemented
 for mappings if the objects support changes to the values for keys, or
@@ -1229,39 +1205,13 @@ replaced.  The same exceptions should be raised for improper
 \var{key} values as for the \method{__getitem__()} method.
 \end{methoddesc}
 
-\begin{methoddesc}[container object]{__delitem__}{self, key}
+\begin{methoddesc}[mapping object]{__delitem__}{self, key}
 Called to implement deletion of \code{\var{self}[\var{key}]}.  Same
 note as for \method{__getitem__()}.  This should only be implemented
 for mappings if the objects support removal of keys, or for sequences
 if elements can be removed from the sequence.  The same exceptions
 should be raised for improper \var{key} values as for the
 \method{__getitem__()} method.
-\end{methoddesc}
-
-\begin{methoddesc}[container object]{__iter__}{self}
-This method is called when an iterator is required for a container.
-This method should return a new iterator object that can iterate over
-all the objects in the container.  For mappings, it should iterate
-over the keys of the container, and should also be made available as
-the method \method{iterkeys()}.
-
-Iterator objects also need to implement this method; they are required
-to return themselves.  For more information on iterator objects, see
-``\ulink{Iterator Types}{../lib/typeiter.html}'' in the
-\citetitle[../lib/lib.html]{Python Library Reference}.
-\end{methoddesc}
-
-The membership test operators (\keyword{in} and \keyword{not in}) are
-normally implemented as an iteration through a sequence.  However,
-container objects can supply the following special method with a more
-efficient implementation, which also does not require the object be a
-sequence.
-
-\begin{methoddesc}[container object]{__contains__}{self, item}
-Called to implement membership test operators.  Should return true if
-\var{item} is in \var{self}, false otherwise.  For mapping objects,
-this should consider the keys of the mapping rather than the values or
-the key-item pairs.
 \end{methoddesc}
 
 
@@ -1355,6 +1305,16 @@ be be constrained to the bounds of the sequence before being passed to
 the \method{__*item__()} methods.
 Calling \code{max(0, i)} conveniently returns the proper value.
 
+The membership test operators (\keyword{in} and \keyword{not in}) are
+normally implemented as iteration loop through the sequence.  However,
+sequence objects can supply the following special method with a more
+efficient implementation:
+
+\begin{methoddesc}[sequence object]{__contains__}{self, item}
+Called to implement membership test operators.  Should return true if
+\var{item} is in \var{self}, false otherwise.
+\end{methoddesc}
+
 
 \subsection{Emulating numeric types\label{numeric-types}}
 
@@ -1366,7 +1326,7 @@ non-integral numbers) should be left undefined.
 \begin{methoddesc}[numeric object]{__add__}{self, other}
 \methodline[numeric object]{__sub__}{self, other}
 \methodline[numeric object]{__mul__}{self, other}
-\methodline[numeric object]{__floordiv__}{self, other}
+\methodline[numeric object]{__div__}{self, other}
 \methodline[numeric object]{__mod__}{self, other}
 \methodline[numeric object]{__divmod__}{self, other}
 \methodline[numeric object]{__pow__}{self, other\optional{, modulo}}
@@ -1375,30 +1335,18 @@ non-integral numbers) should be left undefined.
 \methodline[numeric object]{__and__}{self, other}
 \methodline[numeric object]{__xor__}{self, other}
 \methodline[numeric object]{__or__}{self, other}
-These methods are
+These functions are
 called to implement the binary arithmetic operations (\code{+},
-\code{-}, \code{*}, \code{//}, \code{\%},
+\code{-}, \code{*}, \code{/}, \code{\%},
 \function{divmod()}\bifuncindex{divmod},
 \function{pow()}\bifuncindex{pow}, \code{**}, \code{<}\code{<},
 \code{>}\code{>}, \code{\&}, \code{\^}, \code{|}).  For instance, to
 evaluate the expression \var{x}\code{+}\var{y}, where \var{x} is an
 instance of a class that has an \method{__add__()} method,
-\code{\var{x}.__add__(\var{y})} is called.  The \method{__divmod__()}
-method should be the equivalent to using \method{__floordiv__()} and
-\method{__mod__()}; it should not be related to \method{__truediv__()}
-(described below).  Note that
+\code{\var{x}.__add__(\var{y})} is called.  Note that
 \method{__pow__()} should be defined to accept an optional third
 argument if the ternary version of the built-in
 \function{pow()}\bifuncindex{pow} function is to be supported.
-\end{methoddesc}
-
-\begin{methoddesc}[numeric object]{__div__}{self, other}
-\methodline[numeric object]{__truediv__}{self, other}
-The division operator (\code{/}) is implemented by these methods.  The
-\method{__truediv__()} method is used when \code{__future__.division}
-is in effect, otherwise \method{__div__()} is used.  If only one of
-these two methods is defined, the object will not support division in
-the alternate context; \exception{TypeError} will be raised instead.
 \end{methoddesc}
 
 \begin{methoddesc}[numeric object]{__radd__}{self, other}
@@ -1413,7 +1361,7 @@ the alternate context; \exception{TypeError} will be raised instead.
 \methodline[numeric object]{__rand__}{self, other}
 \methodline[numeric object]{__rxor__}{self, other}
 \methodline[numeric object]{__ror__}{self, other}
-These methods are
+These functions are
 called to implement the binary arithmetic operations (\code{+},
 \code{-}, \code{*}, \code{/}, \code{\%},
 \function{divmod()}\bifuncindex{divmod},

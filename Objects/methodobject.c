@@ -3,6 +3,8 @@
 
 #include "Python.h"
 
+#include "token.h"
+
 static PyCFunctionObject *free_list = NULL;
 
 PyObject *
@@ -22,7 +24,6 @@ PyCFunction_New(PyMethodDef *ml, PyObject *self)
 	op->m_ml = ml;
 	Py_XINCREF(self);
 	op->m_self = self;
-	PyObject_GC_Init(op);
 	return (PyObject *)op;
 }
 
@@ -56,126 +57,62 @@ PyCFunction_GetFlags(PyObject *op)
 	return ((PyCFunctionObject *)op) -> m_ml -> ml_flags;
 }
 
-PyObject *
-PyCFunction_Call(PyObject *func, PyObject *arg, PyObject *kw)
-{
-	PyCFunctionObject* f = (PyCFunctionObject*)func;
-	PyCFunction meth = PyCFunction_GET_FUNCTION(func);
-	PyObject *self = PyCFunction_GET_SELF(func);
-	int flags = PyCFunction_GET_FLAGS(func);
-	int size = PyTuple_GET_SIZE(arg);
-
-	if (flags & METH_KEYWORDS) {
-		return (*(PyCFunctionWithKeywords)meth)(self, arg, kw);
-	}
-	if (kw != NULL && PyDict_Size(kw) != 0) {
-		PyErr_Format(PyExc_TypeError,
-			     "%.200s() takes no keyword arguments",
-			     f->m_ml->ml_name);
-		return NULL;
-	}
-
-	switch (flags) {
-	case METH_VARARGS:
-		return (*meth)(self, arg);
-	case METH_NOARGS:
-		if (size == 0)
-			return (*meth)(self, NULL);
-		PyErr_Format(PyExc_TypeError,
-			     "%.200s() takes no arguments (%d given)",
-			     f->m_ml->ml_name, size);
-		return NULL;
-	case METH_O:
-		if (size == 1)
-			return (*meth)(self, PyTuple_GET_ITEM(arg, 0));
-		PyErr_Format(PyExc_TypeError,
-			     "%.200s() takes exactly one argument (%d given)",
-			     f->m_ml->ml_name, size);
-		return NULL;
-	case METH_OLDARGS:
-		/* the really old style */
-		if (size == 1)
-			arg = PyTuple_GET_ITEM(arg, 0);
-		else if (size == 0)
-			arg = NULL;
-		return (*meth)(self, arg);
-	default:
-		/* should never get here ??? */
-		PyErr_BadInternalCall();
-		return NULL;
-	}
-}
-
 /* Methods (the standard built-in methods, that is) */
 
 static void
 meth_dealloc(PyCFunctionObject *m)
 {
-	PyObject_GC_Fini(m);
 	Py_XDECREF(m->m_self);
 	m->m_self = (PyObject *)free_list;
 	free_list = m;
 }
 
 static PyObject *
-meth_get__doc__(PyCFunctionObject *m, void *closure)
+meth_getattr(PyCFunctionObject *m, char *name)
 {
-	char *doc = m->m_ml->ml_doc;
-
-	if (doc != NULL)
-		return PyString_FromString(doc);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-static PyObject *
-meth_get__name__(PyCFunctionObject *m, void *closure)
-{
-	return PyString_FromString(m->m_ml->ml_name);
-}
-
-static int
-meth_traverse(PyCFunctionObject *m, visitproc visit, void *arg)
-{
-	if (m->m_self != NULL)
-		return visit(m->m_self, arg);
-	else
-		return 0;
-}
-
-static PyObject *
-meth_get__self__(PyCFunctionObject *m, void *closure)
-{
-	PyObject *self;
-	if (PyEval_GetRestricted()) {
-		PyErr_SetString(PyExc_RuntimeError,
-			"method.__self__ not accessible in restricted mode");
-		return NULL;
+	if (strcmp(name, "__name__") == 0) {
+		return PyString_FromString(m->m_ml->ml_name);
 	}
-	self = m->m_self;
-	if (self == NULL)
-		self = Py_None;
-	Py_INCREF(self);
-	return self;
+	if (strcmp(name, "__doc__") == 0) {
+		char *doc = m->m_ml->ml_doc;
+		if (doc != NULL)
+			return PyString_FromString(doc);
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	if (strcmp(name, "__self__") == 0) {
+		PyObject *self;
+		if (PyEval_GetRestricted()) {
+			PyErr_SetString(PyExc_RuntimeError,
+			 "method.__self__ not accessible in restricted mode");
+			return NULL;
+		}
+		self = m->m_self;
+		if (self == NULL)
+			self = Py_None;
+		Py_INCREF(self);
+		return self;
+	}
+	if (strcmp(name, "__members__") == 0) {
+		return Py_BuildValue("[sss]",
+				     "__doc__", "__name__", "__self__");
+	}
+	PyErr_SetString(PyExc_AttributeError, name);
+	return NULL;
 }
-
-static PyGetSetDef meth_getsets [] = {
-	{"__doc__",  (getter)meth_get__doc__,  NULL, NULL},
-	{"__name__", (getter)meth_get__name__, NULL, NULL},
-	{"__self__", (getter)meth_get__self__, NULL, NULL},
-	{0}
-};
 
 static PyObject *
 meth_repr(PyCFunctionObject *m)
 {
+	char buf[200];
 	if (m->m_self == NULL)
-		return PyString_FromFormat("<built-in function %s>",
-					   m->m_ml->ml_name);
-	return PyString_FromFormat("<built-in method %s of %s object at %p>",
-				   m->m_ml->ml_name,
-				   m->m_self->ob_type->tp_name,
-				   m->m_self);
+		sprintf(buf, "<built-in function %.80s>", m->m_ml->ml_name);
+	else
+		sprintf(buf,
+			"<built-in method %.80s of %.80s object at %p>",
+			m->m_ml->ml_name, m->m_self->ob_type->tp_name,
+			m->m_self);
+	return PyString_FromString(buf);
 }
 
 static int
@@ -211,41 +148,22 @@ meth_hash(PyCFunctionObject *a)
 	return x;
 }
 
-
 PyTypeObject PyCFunction_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"builtin_function_or_method",
-	sizeof(PyCFunctionObject) + PyGC_HEAD_SIZE,
+	sizeof(PyCFunctionObject),
 	0,
-	(destructor)meth_dealloc, 		/* tp_dealloc */
-	0,					/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	(cmpfunc)meth_compare,			/* tp_compare */
-	(reprfunc)meth_repr,			/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	(hashfunc)meth_hash,			/* tp_hash */
-	PyCFunction_Call,			/* tp_call */
-	0,					/* tp_str */
-	PyObject_GenericGetAttr,		/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
- 	0,					/* tp_doc */
- 	(traverseproc)meth_traverse,		/* tp_traverse */
-	0,					/* tp_clear */
-	0,					/* tp_richcompare */
-	0,					/* tp_weaklistoffset */
-	0,					/* tp_iter */
-	0,					/* tp_iternext */
-	0,					/* tp_methods */
-	0,					/* tp_members */
-	meth_getsets,				/* tp_getset */
-	0,					/* tp_base */
-	0,					/* tp_dict */
+	(destructor)meth_dealloc, /*tp_dealloc*/
+	0,		/*tp_print*/
+	(getattrfunc)meth_getattr, /*tp_getattr*/
+	0,		/*tp_setattr*/
+	(cmpfunc)meth_compare, /*tp_compare*/
+	(reprfunc)meth_repr, /*tp_repr*/
+	0,		/*tp_as_number*/
+	0,		/*tp_as_sequence*/
+	0,		/*tp_as_mapping*/
+	(hashfunc)meth_hash, /*tp_hash*/
 };
 
 /* List all methods in a chain -- helper for findmethodinchain */
@@ -327,7 +245,6 @@ PyCFunction_Fini(void)
 	while (free_list) {
 		PyCFunctionObject *v = free_list;
 		free_list = (PyCFunctionObject *)(v->m_self);
-		v = (PyCFunctionObject *) PyObject_AS_GC(v);
 		PyObject_DEL(v);
 	}
 }

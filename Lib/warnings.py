@@ -24,10 +24,7 @@ def warn(message, category=None, stacklevel=1):
     else:
         globals = caller.f_globals
         lineno = caller.f_lineno
-    if globals.has_key('__name__'):
-        module = globals['__name__']
-    else:
-        module = "<string>"
+    module = globals['__name__']
     filename = globals.get('__file__')
     if filename:
         fnl = filename.lower()
@@ -252,4 +249,3 @@ if __name__ == "__main__":
     _test()
 else:
     _processoptions(sys.warnoptions)
-    filterwarnings("ignore", category=OverflowWarning, append=1)

@@ -3,15 +3,15 @@
 # To be done:
 # - Functionality: find, etc.
 
-from Carbon.Menu import DrawMenuBar
+from Menu import DrawMenuBar
 from FrameWork import *
-from Carbon import Win
-from Carbon import Qd
-from Carbon import Res
-from Carbon import Fm
+import Win
+import Qd
+import Res
+import Fm
 import waste
 import WASTEconst
-from Carbon import Scrap
+import Scrap
 import os
 import macfs
 import MACFS
@@ -297,19 +297,14 @@ class WasteWindow(ScrolledWindow):
 		
 	def menu_cut(self):
 		self.ted.WESelView()
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		self.ted.WECut()
+		Scrap.ZeroScrap()
 		self.ted.WECut()
 		self.updatescrollbars()
 		self.parent.updatemenubar()
 		
 	def menu_copy(self):
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		self.ted.WECopy()
 		self.updatescrollbars()
 		self.parent.updatemenubar()

@@ -16,7 +16,7 @@ import distutils.dir_util
 import mkcwproject
 
 class MWerksCompiler (CCompiler) :
-    """Concrete class that implements an interface to MetroWerks CodeWarrior,
+    """Concrete class that implements an interface to Microsoft Visual C++,
        as defined by the CCompiler abstract class."""
 
     compiler_type = 'mwerks'
@@ -52,8 +52,8 @@ class MWerksCompiler (CCompiler) :
                   force=0):
 
         CCompiler.__init__ (self, verbose, dry_run, force)
-
-
+        
+        
     def compile (self,
                  sources,
                  output_dir=None,
@@ -62,14 +62,14 @@ class MWerksCompiler (CCompiler) :
                  debug=0,
                  extra_preargs=None,
                  extra_postargs=None):
-        (output_dir, macros, include_dirs) = \
-           self._fix_compile_args (output_dir, macros, include_dirs)
-        self.__sources = sources
-        self.__macros = macros
-        self.__include_dirs = include_dirs
-        # Don't need extra_preargs and extra_postargs for CW
-        return []
-
+         (output_dir, macros, include_dirs) = \
+            self._fix_compile_args (output_dir, macros, include_dirs)
+         self.__sources = sources
+         self.__macros = macros
+         self.__include_dirs = include_dirs
+         # Don't need extra_preargs and extra_postargs for CW
+         return []
+         
     def link (self,
               target_desc,
               objects,
@@ -150,7 +150,6 @@ class MWerksCompiler (CCompiler) :
             if not dirname in sourcefiledirs:
                 sourcefiledirs.append(dirname)
         settings['sources'] = sourcefilenames
-        settings['libraries'] = libraries
         settings['extrasearchdirs'] = sourcefiledirs + include_dirs + library_dirs
         if self.dry_run:
             print 'CALLING LINKER IN', os.getcwd()
@@ -198,7 +197,7 @@ class MWerksCompiler (CCompiler) :
         if self.verbose:
             print '\tBuild project'
         mkcwproject.buildproject(projectfilename)
-
+        
     def _filename_to_abs(self, filename):
         # Some filenames seem to be unix-like. Convert to Mac names.
 ##        if '/' in filename and ':' in filename:
@@ -207,11 +206,13 @@ class MWerksCompiler (CCompiler) :
 ##           filename = macurl2path(filename)
         filename = distutils.util.convert_path(filename)
         if not os.path.isabs(filename):
-            curdir = os.getcwd()
-            filename = os.path.join(curdir, filename)
+           curdir = os.getcwd()
+           filename = os.path.join(curdir, filename)
         # Finally remove .. components
         components = string.split(filename, ':')
         for i in range(1, len(components)):
-            if components[i] == '..':
-                components[i] = ''
+           if components[i] == '..':
+              components[i] = ''
         return string.join(components, ':')
+        
+        

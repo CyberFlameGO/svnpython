@@ -95,14 +95,13 @@ SMStatus = StructOutputBufferType('SMStatus')
 CompressionInfo = StructOutputBufferType('CompressionInfo')
 
 includestuff = includestuff + """
-#if !TARGET_API_MAC_CARBON
+
 /* Create a SndCommand object (an (int, int, int) tuple) */
 static PyObject *
 SndCmd_New(SndCommand *pc)
 {
 	return Py_BuildValue("hhl", pc->cmd, pc->param1, pc->param2);
 }
-#endif
 
 /* Convert a SndCommand argument */
 static int
@@ -231,9 +230,6 @@ class SndObjectDefinition(ObjectDefinition):
 	def outputFreeIt(self, itselfname):
 		Output("SndDisposeChannel(%s, 1);", itselfname)
 		
-	def outputConvert(self):
-		pass # Not needed
-		
 #
 
 class SpbObjectDefinition(ObjectDefinition):
@@ -274,7 +270,7 @@ class SpbObjectDefinition(ObjectDefinition):
 		Output("Py_XDECREF(self->ob_interrupt);")
 	
 	def outputConvert(self):
-		Output("%sint %s_Convert(PyObject *v, %s *p_itself)", self.static, self.prefix, self.itselftype)
+		Output("%s%s_Convert(PyObject *v, %s *p_itself)", self.static, self.prefix, self.itselftype)
 		OutLbrace()
 		self.outputCheckConvertArg()
 		Output("if (!%s_Check(v))", self.prefix)
@@ -337,8 +333,8 @@ class SpbObjectDefinition(ObjectDefinition):
 
 sndobject = SndObjectDefinition('SndChannel', 'SndCh', 'SndChannelPtr')
 spbobject = SpbObjectDefinition('SPB', 'SPBObj', 'SPBPtr')
-spbgenerator = ManualGenerator("SPB", "_res = SPBObj_New(); return _res;")
-module = MacModule('_Snd', 'Snd', includestuff, finalstuff, initstuff)
+spbgenerator = ManualGenerator("SPB", "return SPBObj_New();")
+module = MacModule('Snd', 'Snd', includestuff, finalstuff, initstuff)
 module.addobject(sndobject)
 module.addobject(spbobject)
 module.add(spbgenerator)
@@ -363,5 +359,5 @@ for f in sndmethods: sndobject.add(f)
 
 # generate output
 
-SetOutputFileName('_Sndmodule.c')
+SetOutputFileName('Sndmodule.c')
 module.generate()

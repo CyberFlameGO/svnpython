@@ -2,9 +2,7 @@
 
 from compiler import ast
 from compiler.consts import SC_LOCAL, SC_GLOBAL, SC_FREE, SC_CELL, SC_UNKNOWN
-from compiler.misc import mangle
 import types
-
 
 import sys
 
@@ -25,7 +23,6 @@ class Scope:
         # nested is true if the class could contain free variables,
         # i.e. if it is nested within another function.
         self.nested = None
-        self.generator = None
         self.klass = None
         if klass is not None:
             for i in range(len(klass)):
@@ -39,7 +36,13 @@ class Scope:
     def mangle(self, name):
         if self.klass is None:
             return name
-        return mangle(name, self.klass)
+        if not name.startswith('__'):
+            return name
+        if len(name) + 2 >= MANGLE_LEN:
+            return name
+        if name.endswith('__'):
+            return name
+        return "_%s%s" % (self.klass, name)
 
     def add_def(self, name):
         self.defs[self.mangle(name)] = 1
@@ -76,6 +79,7 @@ class Scope:
         return self.children
 
     def DEBUG(self):
+        return
         print >> sys.stderr, self.name, self.nested and "nested" or ""
         print >> sys.stderr, "\tglobals: ", self.globals
         print >> sys.stderr, "\tcells: ", self.cells
@@ -131,7 +135,7 @@ class Scope:
         rather than free.
 
         Be careful to stop if a child does not think the name is
-        free.
+        free. 
         """
         self.globals[name] = 1
         if self.frees.has_key(name):
@@ -158,12 +162,12 @@ class Scope:
                     child_globals.append(name)
                 elif isinstance(self, FunctionScope) and sc == SC_LOCAL:
                     self.cells[name] = 1
-                elif sc != SC_CELL:
+                else:
                     child_globals.append(name)
             else:
                 if sc == SC_LOCAL:
                     self.cells[name] = 1
-                elif sc != SC_CELL:
+                else:
                     child_globals.append(name)
         return child_globals
 
@@ -172,7 +176,7 @@ class Scope:
 
 class ModuleScope(Scope):
     __super_init = Scope.__init__
-
+    
     def __init__(self):
         self.__super_init("global", self)
 
@@ -183,7 +187,7 @@ class LambdaScope(FunctionScope):
     __super_init = Scope.__init__
 
     __counter = 1
-
+    
     def __init__(self, module, klass=None):
         i = self.__counter
         self.__counter += 1
@@ -199,14 +203,12 @@ class SymbolVisitor:
     def __init__(self):
         self.scopes = {}
         self.klass = None
-
+        
     # node that define new scopes
 
     def visitModule(self, node):
         scope = self.module = self.scopes[node] = ModuleScope()
         self.visit(node.node, scope)
-
-    visitExpression = visitModule
 
     def visitFunction(self, node, parent):
         parent.add_def(node.name)
@@ -219,7 +221,8 @@ class SymbolVisitor:
         self._do_args(scope, node.argnames)
         self.visit(node.code, scope)
         self.handle_free_vars(scope, parent)
-
+        scope.DEBUG()
+        
     def visitLambda(self, node, parent):
         for n in node.defaults:
             self.visit(n, parent)
@@ -240,6 +243,8 @@ class SymbolVisitor:
 
     def handle_free_vars(self, scope, parent):
         parent.add_child(scope)
+        if scope.children:
+            scope.DEBUG()
         scope.handle_children()
 
     def visitClass(self, node, parent):
@@ -290,44 +295,8 @@ class SymbolVisitor:
                 name = name[:i]
             scope.add_def(asname or name)
 
-    def visitGlobal(self, node, scope):
-        for name in node.names:
-            scope.add_global(name)
-
-    def visitAssign(self, node, scope):
-        """Propagate assignment flag down to child nodes.
-
-        The Assign node doesn't itself contains the variables being
-        assigned to.  Instead, the children in node.nodes are visited
-        with the assign flag set to true.  When the names occur in
-        those nodes, they are marked as defs.
-
-        Some names that occur in an assignment target are not bound by
-        the assignment, e.g. a name occurring inside a slice.  The
-        visitor handles these nodes specially; they do not propagate
-        the assign flag to their children.
-        """
-        for n in node.nodes:
-            self.visit(n, scope, 1)
-        self.visit(node.expr, scope)
-
     def visitAssName(self, node, scope, assign=1):
         scope.add_def(node.name)
-
-    def visitAssAttr(self, node, scope, assign=0):
-        self.visit(node.expr, scope, 0)
-
-    def visitSubscript(self, node, scope, assign=0):
-        self.visit(node.expr, scope, 0)
-        for n in node.subs:
-            self.visit(n, scope, 0)
-
-    def visitSlice(self, node, scope, assign=0):
-        self.visit(node.expr, scope, 0)
-        if node.lower:
-            self.visit(node.lower, scope, 0)
-        if node.upper:
-            self.visit(node.upper, scope, 0)
 
     def visitAugAssign(self, node, scope):
         # If the LHS is a name, then this counts as assignment.
@@ -336,6 +305,15 @@ class SymbolVisitor:
         if isinstance(node.node, ast.Name):
             self.visit(node.node, scope, 1) # XXX worry about this
         self.visit(node.expr, scope)
+
+    def visitAssign(self, node, scope):
+        for n in node.nodes:
+            self.visit(n, scope, 1)
+        self.visit(node.expr, scope)
+
+    def visitGlobal(self, node, scope):
+        for name in node.names:
+            scope.add_global(name)
 
     # prune if statements if tests are false
 
@@ -352,12 +330,6 @@ class SymbolVisitor:
         if node.else_:
             self.visit(node.else_, scope)
 
-    # a yield statement signals a generator
-
-    def visitYield(self, node, scope):
-        scope.generator = 1
-        self.visit(node.value, scope)
-
 def sort(l):
     l = l[:]
     l.sort()
@@ -373,8 +345,8 @@ if __name__ == "__main__":
 
     def get_names(syms):
         return [s for s in [s.get_name() for s in syms.get_symbols()]
-                if not (s.startswith('_[') or s.startswith('.'))]
-
+                if not (s.startswith('_[') or s.startswith('.'))]        
+    
     for file in sys.argv[1:]:
         print file
         f = open(file)

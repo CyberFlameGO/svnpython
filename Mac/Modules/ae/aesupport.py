@@ -105,12 +105,10 @@ static pascal Boolean AEIdleProc(EventRecord *theEvent, long *sleepTime, RgnHand
 {
 	if ( PyOS_InterruptOccurred() )
 		return 1;
-#if !TARGET_API_MAC_OSX
 	if ( PyMac_HandleEvent(theEvent) < 0 ) {
 		PySys_WriteStderr("Exception in user event handler during AE processing\\n");
 		PyErr_Clear();
 	}
-#endif
 	return 0;
 }
 
@@ -148,11 +146,8 @@ GenericEventHandler(const AppleEvent *request, AppleEvent *reply, refcontype ref
 	replyObject->ob_itself.descriptorType = 'null';
 	replyObject->ob_itself.dataHandle = NULL;
 	Py_DECREF(args);
-	if (res == NULL) {
-		PySys_WriteStderr("Exception in AE event handler function\\n");
-		PyErr_Print();
+	if (res == NULL)
 		return -1;
-	}
 	Py_DECREF(res);
 	return noErr;
 }
@@ -169,7 +164,7 @@ initstuff = initstuff + """
 	PyMac_INIT_TOOLBOX_OBJECT_CONVERT(AEDesc, AEDesc_Convert);
 """
 
-module = MacModule('_AE', 'AE', includestuff, finalstuff, initstuff)
+module = MacModule('AE', 'AE', includestuff, finalstuff, initstuff)
 
 class AEDescDefinition(GlobalObjectDefinition):
 
@@ -227,5 +222,5 @@ execfile('aegen.py')
 for f in functions: module.add(f)
 for f in aedescmethods: aedescobject.add(f)
 
-SetOutputFileName('_AEmodule.c')
+SetOutputFileName('AEmodule.c')
 module.generate()

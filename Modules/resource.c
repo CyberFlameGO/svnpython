@@ -169,8 +169,7 @@ ins(PyObject *dict, char *name, int value)
 	/* errors will be checked by initresource() */
 }
 
-DL_EXPORT(void)
-initresource(void)
+void initresource(void)
 {
 	PyObject *m, *d;
 

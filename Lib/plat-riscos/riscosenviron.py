@@ -1,4 +1,4 @@
-"""A more or less complete dictionary like interface for the RISC OS environment."""
+"""A more or less complete user-defined wrapper around dictionary objects."""
 
 import riscos
 
@@ -8,7 +8,8 @@ class _Environ:
     def __repr__(self):
         return repr(riscos.getenvdict())
     def __cmp__(self, dict):
-        return cmp(riscos.getenvdict(), dict)
+        if isinstance(dict, UserDict):
+            return cmp(riscos.getenvdict(), dict)
     def __len__(self):
         return len(riscos.getenvdict())
     def __getitem__(self, key):
@@ -41,3 +42,4 @@ class _Environ:
             return value
         else:
             return failobj
+

@@ -5,20 +5,13 @@
 \modulesynopsis{Telnet client class.}
 \sectionauthor{Skip Montanaro}{skip@mojam.com}
 
-\index{protocol!Telnet}
-
 The \module{telnetlib} module provides a \class{Telnet} class that
 implements the Telnet protocol.  See \rfc{854} for details about the
-protocol. In addition, it provides symbolic constants for the protocol
-characters (IAC/DONT/DO/WONT/WILL), and for the telnet options. The
-symbolic names of the telnet options follow the definitions in
-\code{arpa/telnet.h}, with the leading \code{TELOPT_} removed. For
-symbolic names of options which are traditionally not included in
-\code{arpa/telnet.h}, see the module source itself.
+protocol.
 
 
 \begin{classdesc}{Telnet}{\optional{host\optional{, port}}}
-\class{Telnet} represents a connection to a Telnet server. The
+\class{Telnet} represents a connection to a telnet server. The
 instance is initially not connected by default; the \method{open()}
 method must be used to establish a connection.  Alternatively, the
 host name and optional port number can be passed to the constructor,
@@ -55,7 +48,7 @@ is closed and no cooked data is available.
 \end{methoddesc}
 
 \begin{methoddesc}{read_all}{}
-Read all data until \EOF; block until connection closed.
+Read all data until \EOF{}; block until connection closed.
 \end{methoddesc}
 
 \begin{methoddesc}{read_some}{}
@@ -99,7 +92,7 @@ never blocks.
 \begin{methoddesc}{open}{host\optional{, port}}
 Connect to a host.
 The optional second argument is the port number, which
-defaults to the standard Telnet port (23).
+defaults to the standard telnet port (23).
 
 Do not try to reopen an already connected instance.
 \end{methoddesc}
@@ -134,7 +127,7 @@ This can block if the connection is blocked.  May raise
 \end{methoddesc}
 
 \begin{methoddesc}{interact}{}
-Interaction function, emulates a very dumb Telnet client.
+Interaction function, emulates a very dumb telnet client.
 \end{methoddesc}
 
 \begin{methoddesc}{mt_interact}{}
@@ -158,16 +151,9 @@ If end of file is found and no text was read, raise
 \code{(-1, None, \var{text})} where \var{text} is the text received so
 far (may be the empty string if a timeout happened).
 
-If a regular expression ends with a greedy match (such as \regexp{.*})
+If a regular expression ends with a greedy match (e.g. \regexp{.*})
 or if more than one expression can match the same input, the
 results are indeterministic, and may depend on the I/O timing.
-\end{methoddesc}
-
-\begin{methoddesc}{set_option_negotiation_callback}{callback}
-Each time a telnet option is read on the input flow, this
-\var{callback} (if set) is called with the following parameters :
-callback(telnet socket, command (DO/DONT/WILL/WONT), option).  No other
-action is done afterwards by telnetlib.
 \end{methoddesc}
 
 

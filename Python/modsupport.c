@@ -26,8 +26,8 @@ char *_Py_PackageContext = NULL;
 */
 
 static char api_version_warning[] =
-"Python C API version mismatch for module %.100s:\
- This Python has API version %d, module %.100s has version %d.";
+"WARNING: Python C API version mismatch for module %s:\n\
+  This Python has API version %d, module %s has version %d.\n";
 
 PyObject *
 Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
@@ -37,15 +37,9 @@ Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 	PyMethodDef *ml;
 	if (!Py_IsInitialized())
 	    Py_FatalError("Interpreter not initialized (version mismatch?)");
-	if (module_api_version != PYTHON_API_VERSION) {
-		char message[512];
-		PyOS_snprintf(message, sizeof(message), 
-			      api_version_warning, name, 
-			      PYTHON_API_VERSION, name, 
-			      module_api_version);
-		if (PyErr_Warn(PyExc_RuntimeWarning, message)) 
-			return NULL;
-	}
+	if (module_api_version != PYTHON_API_VERSION)
+		fprintf(stderr, api_version_warning,
+			name, PYTHON_API_VERSION, name, module_api_version);
 	if (_Py_PackageContext != NULL) {
 		char *p = strrchr(_Py_PackageContext, '.');
 		if (p != NULL && strcmp(name, p+1) == 0) {
@@ -60,18 +54,14 @@ Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 		v = PyCFunction_New(ml, passthrough);
 		if (v == NULL)
 			return NULL;
-		if (PyDict_SetItemString(d, ml->ml_name, v) != 0) {
-			Py_DECREF(v);
+		if (PyDict_SetItemString(d, ml->ml_name, v) != 0)
 			return NULL;
-		}
 		Py_DECREF(v);
 	}
 	if (doc != NULL) {
 		v = PyString_FromString(doc);
-		if (v == NULL || PyDict_SetItemString(d, "__doc__", v) != 0) {
-			Py_DECREF(v);
+		if (v == NULL || PyDict_SetItemString(d, "__doc__", v) != 0)
 			return NULL;
-		}
 		Py_DECREF(v);
 	}
 	return m;
@@ -199,7 +189,6 @@ do_mklist(char **p_format, va_list *p_va, int endchar, int n)
 	return v;
 }
 
-#ifdef Py_USING_UNICODE
 static int
 _ustrlen(Py_UNICODE *u)
 {
@@ -208,7 +197,6 @@ _ustrlen(Py_UNICODE *u)
 	while (*v != 0) { i++; v++; } 
 	return i;
 }
-#endif
 
 static PyObject *
 do_mktuple(char **p_format, va_list *p_va, int endchar, int n)
@@ -271,7 +259,6 @@ do_mkvalue(char **p_format, va_list *p_va)
 		case 'L':
 			return PyLong_FromLongLong((LONG_LONG)va_arg(*p_va, LONG_LONG));
 #endif
-#ifdef Py_USING_UNICODE
 		case 'u':
 		{
 			PyObject *v;
@@ -294,7 +281,6 @@ do_mkvalue(char **p_format, va_list *p_va)
 			}
 			return v;
 		}
-#endif
 		case 'f':
 		case 'd':
 			return PyFloat_FromDouble(

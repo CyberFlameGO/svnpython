@@ -22,10 +22,15 @@ import re
 import string
 import sys
 import UserList
-import xml.sax
 import xml.sax.saxutils
 
 from types import ListType, StringType, TupleType
+
+try:
+    from xml.parsers.xmllib import XMLParser
+except ImportError:
+    from xmllib import XMLParser
+
 
 from esistools import encode
 
@@ -51,7 +56,7 @@ _end_env_rx = re.compile(r"[\\]end{([^}]*)}")
 _begin_macro_rx = re.compile(r"[\\]([a-zA-Z]+[*]?) ?({|\s*\n?)")
 _comment_rx = re.compile("%+ ?(.*)\n[ \t]*")
 _text_rx = re.compile(r"[^]~%\\{}]+")
-_optional_rx = re.compile(r"\s*[[]([^]]*)[]]", re.MULTILINE)
+_optional_rx = re.compile(r"\s*[[]([^]]*)[]]")
 # _parameter_rx is this complicated to allow {...} inside a parameter;
 # this is useful to match tabular layout specifications like {c|p{24pt}}
 _parameter_rx = re.compile("[ \n]*{(([^{}}]|{[^}]*})*)}")
@@ -104,9 +109,7 @@ class Conversion:
         self.write = ofp.write
         self.ofp = ofp
         self.table = table
-        L = [s.rstrip() for s in ifp.readlines()]
-        L.append("")
-        self.line = string.join(L, "\n")
+        self.line = string.join(map(string.rstrip, ifp.readlines()), "\n")
         self.preamble = 1
 
     def convert(self):
@@ -167,7 +170,7 @@ class Conversion:
                 entry = self.get_entry(macroname)
                 if entry.verbatim:
                     # magic case!
-                    pos = line.find("\\end{%s}" % macroname)
+                    pos = string.find(line, "\\end{%s}" % macroname)
                     text = line[m.end(1):pos]
                     stack.append(entry.name)
                     self.write("(%s\n" % entry.outputname)
@@ -182,10 +185,11 @@ class Conversion:
                     if topentry.outputname:
                         self.write(")%s\n-\\n\n" % topentry.outputname)
                 #
-                if entry.outputname and entry.empty:
-                    self.write("e\n")
+                if entry.outputname:
+                    if entry.empty:
+                        self.write("e\n")
                 #
-                params, optional, empty = self.start_macro(macroname)
+                params, optional, empty, environ = self.start_macro(macroname)
                 # rip off the macroname
                 if params:
                     line = line[m.end(1):]
@@ -359,7 +363,7 @@ class Conversion:
         conversion = self.get_entry(name)
         parameters = conversion.parameters
         optional = parameters and parameters[0].optional
-        return parameters, optional, conversion.empty
+        return parameters, optional, conversion.empty, conversion.environment
 
     def get_entry(self, name):
         entry = self.table.get(name)
@@ -407,7 +411,7 @@ def convert(ifp, ofp, table):
 
 def skip_white(line):
     while line and line[0] in " %\n\t\r":
-        line = line[1:].lstrip()
+        line = string.lstrip(line[1:])
     return line
 
 
@@ -434,11 +438,14 @@ class Parameter:
         self.implied = 0
 
 
-class TableHandler(xml.sax.handler.ContentHandler):
-    def __init__(self):
-        self.__table = {}
+class TableParser(XMLParser):
+    def __init__(self, table=None):
+        if table is None:
+            table = {}
+        self.__table = table
+        self.__current = None
         self.__buffer = ''
-        self.__methods = {}
+        XMLParser.__init__(self)
 
     def get_table(self):
         for entry in self.__table.values():
@@ -449,41 +456,20 @@ class TableHandler(xml.sax.handler.ContentHandler):
                 entry.has_content = 1
         return self.__table
 
-    def startElement(self, tag, attrs):
-        try:
-            start, end = self.__methods[tag]
-        except KeyError:
-            start = getattr(self, "start_" + tag, None)
-            end = getattr(self, "end_" + tag, None)
-            self.__methods[tag] = (start, end)
-        if start:
-            start(attrs)
-
-    def endElement(self, tag):
-        start, end = self.__methods[tag]
-        if end:
-            end()
-
-    def endDocument(self):
-        self.__methods.clear()
-
-    def characters(self, data):
-        self.__buffer += data
-
     def start_environment(self, attrs):
         name = attrs["name"]
         self.__current = TableEntry(name, environment=1)
         self.__current.verbatim = attrs.get("verbatim") == "yes"
         if attrs.has_key("outputname"):
             self.__current.outputname = attrs.get("outputname")
-        self.__current.endcloses = attrs.get("endcloses", "").split()
+        self.__current.endcloses = string.split(attrs.get("endcloses", ""))
     def end_environment(self):
         self.end_macro()
 
     def start_macro(self, attrs):
         name = attrs["name"]
         self.__current = TableEntry(name)
-        self.__current.closes = attrs.get("closes", "").split()
+        self.__current.closes = string.split(attrs.get("closes", ""))
         if attrs.has_key("outputname"):
             self.__current.outputname = attrs.get("outputname")
     def end_macro(self):
@@ -530,11 +516,15 @@ class TableHandler(xml.sax.handler.ContentHandler):
         p.text = self.__buffer
         self.__current.parameters.append(p)
 
+    def handle_data(self, data):
+        self.__buffer = self.__buffer + data
 
-def load_table(fp):
-    ch = TableHandler()
-    xml.sax.parse(fp, ch)
-    return ch.get_table()
+
+def load_table(fp, table=None):
+    parser = TableParser(table=table)
+    parser.feed(fp.read())
+    parser.close()
+    return parser.get_table()
 
 
 def main():

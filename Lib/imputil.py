@@ -1,18 +1,13 @@
-"""
-Import utilities
+#
+# imputil.py: import utilities
+#
 
-Exported classes:
-    ImportManager   Manage the import process
-
-    Importer        Base class for replacing standard import functions
-    BuiltinImporter Emulate the import mechanism for builtin and frozen modules
-
-    DynLoadSuffixImporter
-"""
+### docco needed here and in Docs/ ...
 
 # note: avoid importing non-builtin modules
 import imp                      ### not available in JPython?
 import sys
+import strop
 import __builtin__
 
 # for the DirectoryImporter
@@ -83,7 +78,7 @@ class ImportManager:
     def _import_hook(self, fqname, globals=None, locals=None, fromlist=None):
         """Python calls this hook to locate and import a module."""
 
-        parts = fqname.split('.')
+        parts = strop.split(fqname, '.')
 
         # determine the context of this import
         parent = self._determine_import_context(globals)
@@ -131,10 +126,6 @@ class ImportManager:
         if importer:
             return importer._finish_import(top_module, parts[1:], fromlist)
 
-        # Grrr, some people "import os.path"
-        if len(parts) == 2 and hasattr(top_module, parts[1]):
-            return top_module
-
         # If the importer does not exist, then we have to bail. A missing
         # importer means that something else imported the module, and we have
         # no knowledge of how to get sub-modules out of the thing.
@@ -166,7 +157,7 @@ class ImportManager:
             assert globals is parent.__dict__
             return parent
 
-        i = parent_fqname.rfind('.')
+        i = strop.rfind(parent_fqname, '.')
 
         # a module outside of a package has no particular import context
         if i == -1:
@@ -300,11 +291,7 @@ class Importer:
             exec code in module.__dict__
 
         # fetch from sys.modules instead of returning module directly.
-        # also make module's __name__ agree with fqname, in case
-        # the "exec code in module.__dict__" played games on us.
-        module = sys.modules[fqname]
-        module.__name__ = fqname
-        return module
+        return sys.modules[fqname]
 
     def _load_tail(self, m, parts):
         """Import the rest of the modules, down from the top-level module.
@@ -625,6 +612,7 @@ def _test_revamp():
 # TODO
 #
 # from Finn Bock:
+#   remove use of "strop" -- not available in JPython
 #   type(sys) is not a module in JPython. what to use instead?
 #   imp.C_EXTENSION is not in JPython. same for get_suffixes and new_module
 #
@@ -650,6 +638,7 @@ def _test_revamp():
 #   need __path__ processing
 #   performance
 #   move chaining to a subclass [gjs: it's been nuked]
+#   avoid strop
 #   deinstall should be possible
 #   query mechanism needed: is a specific Importer installed?
 #   py/pyc/pyo piping hooks to filter/process these files

@@ -28,15 +28,6 @@
  * 2001-01-16 fl  fixed memory leak in pattern destructor
  * 2001-03-20 fl  lots of fixes for 2.1b2
  * 2001-04-15 fl  export copyright as Python attribute, not global
- * 2001-04-28 fl  added __copy__ methods (work in progress)
- * 2001-05-14 fl  fixes for 1.5.2
- * 2001-07-01 fl  added BIGCHARSET support (from Martin von Loewis)
- * 2001-10-18 fl  fixed group reset issue (from Matthew Mueller)
- * 2001-10-20 fl  added split primitive; reenable unicode for 1.6/2.0/2.1
- * 2001-10-21 fl  added sub/subn primitive
- * 2001-10-22 fl  check for literal sub/subn templates
- * 2001-10-24 fl  added finditer primitive (for 2.2 only)
- * 2001-12-07 fl  fixed memory leak in sub/subn (Guido van Rossum)
  *
  * Copyright (c) 1997-2001 by Secret Labs AB.  All rights reserved.
  *
@@ -52,10 +43,9 @@
 #ifndef SRE_RECURSIVE
 
 static char copyright[] =
-    " SRE 2.2.1 Copyright (c) 1997-2001 by Secret Labs AB ";
+    " SRE 2.1b2 Copyright (c) 1997-2001 by Secret Labs AB ";
 
 #include "Python.h"
-#include "structmember.h" /* offsetof */
 
 #include "sre.h"
 
@@ -70,10 +60,8 @@ static char copyright[] =
 #undef VERBOSE
 
 #if PY_VERSION_HEX >= 0x01060000
-#if PY_VERSION_HEX  < 0x02020000 || defined(Py_USING_UNICODE)
 /* defining this enables unicode support (default under 1.6a1 and later) */
 #define HAVE_UNICODE
-#endif
 #endif
 
 /* -------------------------------------------------------------------- */
@@ -97,9 +85,6 @@ static char copyright[] =
 
 /* enables aggressive inlining (always on for Visual C) */
 #undef USE_INLINE
-
-/* enables copy/deepcopy handling (work in progress) */
-#undef USE_BUILTIN_COPY
 
 #if PY_VERSION_HEX < 0x01060000
 #define PyObject_DEL(op) PyMem_DEL((op))
@@ -140,8 +125,6 @@ static char copyright[] =
 #define SRE_LINEBREAK_MASK 4
 #define SRE_ALNUM_MASK 8
 #define SRE_WORD_MASK 16
-
-/* FIXME: this assumes ASCII.  create tables in init_sre() instead */
 
 static char sre_char_info[128] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6, 2,
 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
@@ -362,7 +345,6 @@ mark_restore(SRE_STATE* state, int lo, int hi)
 #define SRE_INFO sre_info
 #define SRE_MATCH sre_match
 #define SRE_SEARCH sre_search
-#define SRE_LITERAL_TEMPLATE sre_literal_template
 
 #if defined(HAVE_UNICODE)
 
@@ -370,7 +352,6 @@ mark_restore(SRE_STATE* state, int lo, int hi)
 #include "_sre.c"
 #undef SRE_RECURSIVE
 
-#undef SRE_LITERAL_TEMPLATE
 #undef SRE_SEARCH
 #undef SRE_MATCH
 #undef SRE_INFO
@@ -388,7 +369,6 @@ mark_restore(SRE_STATE* state, int lo, int hi)
 #define SRE_INFO sre_uinfo
 #define SRE_MATCH sre_umatch
 #define SRE_SEARCH sre_usearch
-#define SRE_LITERAL_TEMPLATE sre_uliteral_template
 #endif
 
 #endif /* SRE_RECURSIVE */
@@ -464,7 +444,6 @@ SRE_AT(SRE_STATE* state, SRE_CHAR* ptr, SRE_CODE at)
             SRE_LOC_IS_WORD((int) ptr[0]) : 0;
         return this == that;
 
-#if defined(HAVE_UNICODE)
     case SRE_AT_UNI_BOUNDARY:
         if (state->beginning == state->end)
             return 0;
@@ -482,8 +461,6 @@ SRE_AT(SRE_STATE* state, SRE_CHAR* ptr, SRE_CODE at)
         this = ((void*) ptr < state->end) ?
             SRE_UNI_IS_WORD((int) ptr[0]) : 0;
         return this == that;
-#endif
-
     }
 
     return 0;
@@ -519,19 +496,6 @@ SRE_CHARSET(SRE_CODE* set, SRE_CODE ch)
                 return ok;
             set += 16;
             break;
-
-        case SRE_OP_BIGCHARSET:
-            /* <BIGCHARSET> <blockcount> <256 blockindices> <blocks> */
-        {
-            int count, block;
-            count = *(set++);
-            block = ((unsigned char*)set)[ch >> 8];
-            set += 128;
-            if (set[block*16 + ((ch & 255)>>4)] & (1 << (ch & 15)))
-                return ok;
-            set += count*16;
-            break;
-        }
 
         case SRE_OP_CATEGORY:
             /* <CATEGORY> <code> */
@@ -1071,7 +1035,6 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                 if (i)
                     return i;
                 i = mark_restore(state, 0, lastmark);
-                state->lastmark = lastmark;
                 if (i < 0)
                     return i;
                 rp->count = count - 1;
@@ -1117,9 +1080,21 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
 
             /* see if the tail matches */
             state->repeat = rp->prev;
-            i = SRE_MATCH(state, pattern, level + 1);
-            if (i)
+            /* FIXME: the following fix doesn't always work (#133283) */
+            if (0 && rp->pattern[2] == 65535) {
+                /* unbounded repeat */
+                for (;;) {
+                    i = SRE_MATCH(state, pattern, level + 1);
+                    if (i || ptr >= end)
+                        break;
+                    state->ptr = ++ptr;
+                }
+            } else
+                i = SRE_MATCH(state, pattern, level + 1);
+            if (i) {
+                /* free(rp); */
                 return i;
+            }
 
             state->ptr = ptr;
             state->repeat = rp;
@@ -1142,8 +1117,8 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
         }
     }
 
-    /* can't end up here */
-    /* return SRE_ERROR_ILLEGAL; -- see python-dev discussion */
+    /* shouldn't end up here */
+    return SRE_ERROR_ILLEGAL;
 }
 
 LOCAL(int)
@@ -1241,8 +1216,6 @@ SRE_SEARCH(SRE_STATE* state, SRE_CODE* pattern)
             TRACE(("|%p|%p|SEARCH LITERAL\n", pattern, ptr));
             state->start = ptr;
             state->ptr = ++ptr;
-            if (flags & SRE_INFO_LITERAL)
-                return 1; /* we got all of it */
             status = SRE_MATCH(state, pattern + 2, 1);
             if (status != 0)
                 break;
@@ -1276,15 +1249,6 @@ SRE_SEARCH(SRE_STATE* state, SRE_CODE* pattern)
     return status;
 }
     
-LOCAL(int)
-SRE_LITERAL_TEMPLATE(SRE_CHAR* ptr, int len)
-{
-    /* check if given string is a literal template (i.e. no escapes) */
-    while (len-- > 0)
-        if (*ptr++ == '\\')
-            return 0;
-    return 1;
-}
 
 #if !defined(SRE_RECURSIVE)
 
@@ -1321,8 +1285,6 @@ _compile(PyObject* self_, PyObject* args)
     self = PyObject_NEW_VAR(PatternObject, &Pattern_Type, n);
     if (!self)
         return NULL;
-
-    self->codesize = n;
 
     for (i = 0; i < n; i++) {
         PyObject *o = PyList_GET_ITEM(code, i);
@@ -1391,16 +1353,19 @@ state_reset(SRE_STATE* state)
     mark_fini(state);
 }
 
-static void*
-getstring(PyObject* string, int* p_length, int* p_charsize)
+LOCAL(PyObject*)
+state_init(SRE_STATE* state, PatternObject* pattern, PyObject* string,
+           int start, int end)
 {
-    /* given a python object, return a data pointer, a length (in
-       characters), and a character size.  return NULL if the object
-       is not a string (or not compatible) */
-    
+    /* prepare state object */
+
     PyBufferProcs *buffer;
-    int size, bytes, charsize;
+    int size, bytes;
     void* ptr;
+
+    memset(state, 0, sizeof(SRE_STATE));
+
+    state->lastindex = -1;
 
 #if defined(HAVE_UNICODE)
     if (PyUnicode_Check(string)) {
@@ -1408,7 +1373,7 @@ getstring(PyObject* string, int* p_length, int* p_charsize)
         ptr = (void*) PyUnicode_AS_DATA(string);
         bytes = PyUnicode_GET_DATA_SIZE(string);
         size = PyUnicode_GET_SIZE(string);
-        charsize = sizeof(Py_UNICODE);
+        state->charsize = sizeof(Py_UNICODE);
 
     } else {
 #endif
@@ -1436,10 +1401,10 @@ getstring(PyObject* string, int* p_length, int* p_charsize)
 #endif
 
     if (PyString_Check(string) || bytes == size)
-        charsize = 1;
+        state->charsize = 1;
 #if defined(HAVE_UNICODE)
     else if (bytes == (int) (size * sizeof(Py_UNICODE)))
-        charsize = sizeof(Py_UNICODE);
+        state->charsize = sizeof(Py_UNICODE);
 #endif
     else {
         PyErr_SetString(PyExc_TypeError, "buffer size mismatch");
@@ -1450,42 +1415,16 @@ getstring(PyObject* string, int* p_length, int* p_charsize)
     }
 #endif
 
-    *p_length = size;
-    *p_charsize = charsize;
-
-    return ptr;
-}
-
-LOCAL(PyObject*)
-state_init(SRE_STATE* state, PatternObject* pattern, PyObject* string,
-           int start, int end)
-{
-    /* prepare state object */
-
-    int length;
-    int charsize;
-    void* ptr;
-
-    memset(state, 0, sizeof(SRE_STATE));
-
-    state->lastindex = -1;
-
-    ptr = getstring(string, &length, &charsize);
-    if (!ptr)
-        return NULL;
-
     /* adjust boundaries */
     if (start < 0)
         start = 0;
-    else if (start > length)
-        start = length;
+    else if (start > size)
+        start = size;
 
     if (end < 0)
         end = 0;
-    else if (end > length)
-        end = length;
-
-    state->charsize = charsize;
+    else if (end > size)
+        end = size;
 
     state->beginning = ptr;
 
@@ -1518,28 +1457,20 @@ state_fini(SRE_STATE* state)
     mark_fini(state);
 }
 
-/* calculate offset from start of string */
-#define STATE_OFFSET(state, member)\
-    (((char*)(member) - (char*)(state)->beginning) / (state)->charsize)
-
 LOCAL(PyObject*)
-state_getslice(SRE_STATE* state, int index, PyObject* string, int empty)
+state_getslice(SRE_STATE* state, int index, PyObject* string)
 {
     int i, j;
 
     index = (index - 1) * 2;
 
     if (string == Py_None || !state->mark[index] || !state->mark[index+1]) {
-        if (empty)
-            /* want empty string */
-            i = j = 0;
-        else {
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
+        i = j = 0;
     } else {
-        i = STATE_OFFSET(state, state->mark[index]);
-        j = STATE_OFFSET(state, state->mark[index+1]);
+        i = ((char*)state->mark[index] - (char*)state->beginning) /
+            state->charsize;
+        j = ((char*)state->mark[index+1] - (char*)state->beginning) /
+            state->charsize;
     }
 
     return PySequence_GetSlice(string, i, j);
@@ -1741,24 +1672,22 @@ pattern_search(PatternObject* self, PyObject* args, PyObject* kw)
 }
 
 static PyObject*
-call(char* module, char* function, PyObject* args)
+call(char* function, PyObject* args)
 {
     PyObject* name;
-    PyObject* mod;
+    PyObject* module;
     PyObject* func;
     PyObject* result;
 
-    if (!args)
-        return NULL;
-    name = PyString_FromString(module);
+    name = PyString_FromString(SRE_MODULE);
     if (!name)
         return NULL;
-    mod = PyImport_Import(name);
+    module = PyImport_Import(name);
     Py_DECREF(name);
-    if (!mod)
+    if (!module)
         return NULL;
-    func = PyObject_GetAttrString(mod, function);
-    Py_DECREF(mod);
+    func = PyObject_GetAttrString(module, function);
+    Py_DECREF(module);
     if (!func)
         return NULL;
     result = PyObject_CallObject(func, args);
@@ -1767,81 +1696,48 @@ call(char* module, char* function, PyObject* args)
     return result;
 }
 
-#ifdef USE_BUILTIN_COPY
-static int
-deepcopy(PyObject** object, PyObject* memo)
+static PyObject*
+pattern_sub(PatternObject* self, PyObject* args, PyObject* kw)
 {
-    PyObject* copy;
+    PyObject* template;
+    PyObject* string;
+    PyObject* count = Py_False; /* zero */
+    static char* kwlist[] = { "repl", "string", "count", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO|O:sub", kwlist,
+                                     &template, &string, &count))
+        return NULL;
 
-    copy = call(
-        "copy", "deepcopy",
-        Py_BuildValue("OO", *object, memo)
-        );
-    if (!copy)
-        return 0;
-
-    Py_DECREF(*object);
-    *object = copy;
-
-    return 1; /* success */
+    /* delegate to Python code */
+    return call("_sub", Py_BuildValue("OOOO", self, template, string, count));
 }
-#endif
 
 static PyObject*
-join(PyObject* list, PyObject* pattern)
+pattern_subn(PatternObject* self, PyObject* args, PyObject* kw)
 {
-    /* join list elements */
-
-    PyObject* joiner;
-#if PY_VERSION_HEX >= 0x01060000
-    PyObject* function;
-    PyObject* args;
-#endif
-    PyObject* result;
-
-    switch (PyList_GET_SIZE(list)) {
-    case 0:
-        Py_DECREF(list);
-        return PyString_FromString("");
-    case 1:
-        result = PyList_GET_ITEM(list, 0);
-        Py_INCREF(result);
-        Py_DECREF(list);
-        return result;
-    }
-
-    /* two or more elements: slice out a suitable separator from the
-       first member, and use that to join the entire list */
-
-    joiner = PySequence_GetSlice(pattern, 0, 0);
-    if (!joiner)
+    PyObject* template;
+    PyObject* string;
+    PyObject* count = Py_False; /* zero */
+    static char* kwlist[] = { "repl", "string", "count", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO|O:subn", kwlist,
+                                     &template, &string, &count))
         return NULL;
 
-#if PY_VERSION_HEX >= 0x01060000
-    function = PyObject_GetAttrString(joiner, "join");
-    if (!function) {
-        Py_DECREF(joiner);
-        return NULL;
-    }
-    args = PyTuple_New(1);
-    if (!args) {
-        Py_DECREF(function);
-        Py_DECREF(joiner);
-        return NULL;
-    }
-    PyTuple_SET_ITEM(args, 0, list);
-    result = PyObject_CallObject(function, args);
-    Py_DECREF(args); /* also removes list */
-    Py_DECREF(function);
-#else
-    result = call(
-        "string", "join",
-        Py_BuildValue("OO", list, joiner)
-        );
-#endif
-    Py_DECREF(joiner);
+    /* delegate to Python code */
+    return call("_subn", Py_BuildValue("OOOO", self, template, string, count));
+}
 
-    return result;
+static PyObject*
+pattern_split(PatternObject* self, PyObject* args, PyObject* kw)
+{
+    PyObject* string;
+    PyObject* maxsplit = Py_False; /* zero */
+    static char* kwlist[] = { "source", "maxsplit", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|O:split", kwlist,
+                                     &string, &maxsplit))
+        return NULL;
+
+    /* delegate to Python code */
+    return call("_split", Py_BuildValue("OOO", self, string, maxsplit));
 }
 
 static PyObject*
@@ -1850,7 +1746,7 @@ pattern_findall(PatternObject* self, PyObject* args, PyObject* kw)
     SRE_STATE state;
     PyObject* list;
     int status;
-    int i, b, e;
+    int i;
 
     PyObject* string;
     int start = 0;
@@ -1865,10 +1761,6 @@ pattern_findall(PatternObject* self, PyObject* args, PyObject* kw)
         return NULL;
 
     list = PyList_New(0);
-    if (!list) {
-        state_fini(&state);
-        return NULL;
-    }
 
     while (state.start <= state.end) {
 
@@ -1886,52 +1778,60 @@ pattern_findall(PatternObject* self, PyObject* args, PyObject* kw)
 #endif
         }
 
-        if (status <= 0) {
-            if (status == 0)
-                break;
-            pattern_error(status);
-            goto error;
-        }
-        
-        /* don't bother to build a match object */
-        switch (self->groups) {
-        case 0:
-            b = STATE_OFFSET(&state, state.start);
-            e = STATE_OFFSET(&state, state.ptr);
-            item = PySequence_GetSlice(string, b, e);
-            if (!item)
-                goto error;
-            break;
-        case 1:
-            item = state_getslice(&state, 1, string, 1);
-            if (!item)
-                goto error;
-            break;
-        default:
-            item = PyTuple_New(self->groups);
-            if (!item)
-                goto error;
-            for (i = 0; i < self->groups; i++) {
-                PyObject* o = state_getslice(&state, i+1, string, 1);
-                if (!o) {
-                    Py_DECREF(item);
+        if (status > 0) {
+
+            /* don't bother to build a match object */
+            switch (self->groups) {
+            case 0:
+                item = PySequence_GetSlice(
+                    string,
+                    ((char*) state.start - (char*) state.beginning) /
+                    state.charsize,
+                    ((char*) state.ptr - (char*) state.beginning) /
+                    state.charsize);
+                if (!item)
                     goto error;
+                break;
+            case 1:
+                item = state_getslice(&state, 1, string);
+                if (!item)
+                    goto error;
+                break;
+            default:
+                item = PyTuple_New(self->groups);
+                if (!item)
+                    goto error;
+                for (i = 0; i < self->groups; i++) {
+                    PyObject* o = state_getslice(&state, i+1, string);
+                    if (!o) {
+                        Py_DECREF(item);
+                        goto error;
+                    }
+                    PyTuple_SET_ITEM(item, i, o);
                 }
-                PyTuple_SET_ITEM(item, i, o);
+                break;
             }
-            break;
-        }
 
-        status = PyList_Append(list, item);
-        Py_DECREF(item);
-        if (status < 0)
+            status = PyList_Append(list, item);
+            Py_DECREF(item);
+
+            if (status < 0)
+                goto error;
+
+            if (state.ptr == state.start)
+                state.start = (void*) ((char*) state.ptr + state.charsize);
+            else
+                state.start = state.ptr;
+
+        } else {
+
+            if (status == 0)
+                break;
+
+            pattern_error(status);
             goto error;
 
-        if (state.ptr == state.start)
-            state.start = (void*) ((char*) state.ptr + state.charsize);
-        else
-            state.start = state.ptr;
-
+        }
     }
 
     state_fini(&state);
@@ -1942,406 +1842,6 @@ error:
     state_fini(&state);
     return NULL;
     
-}
-
-#if PY_VERSION_HEX >= 0x02020000
-static PyObject*
-pattern_finditer(PatternObject* pattern, PyObject* args)
-{
-    PyObject* scanner;
-    PyObject* search;
-    PyObject* iterator;
-
-    scanner = pattern_scanner(pattern, args);
-    if (!scanner)
-        return NULL;
-
-    search = PyObject_GetAttrString(scanner, "search");
-    Py_DECREF(scanner);
-    if (!search)
-        return NULL;
-
-    iterator = PyCallIter_New(search, Py_None);
-    Py_DECREF(search);
-
-    return iterator;
-}
-#endif
-
-static PyObject*
-pattern_split(PatternObject* self, PyObject* args, PyObject* kw)
-{
-    SRE_STATE state;
-    PyObject* list;
-    PyObject* item;
-    int status;
-    int n;
-    int i;
-    void* last;
-
-    PyObject* string;
-    int maxsplit = 0;
-    static char* kwlist[] = { "source", "maxsplit", NULL };
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|i:split", kwlist,
-                                     &string, &maxsplit))
-        return NULL;
-
-    string = state_init(&state, self, string, 0, INT_MAX);
-    if (!string)
-        return NULL;
-
-    list = PyList_New(0);
-    if (!list) {
-        state_fini(&state);
-        return NULL;
-    }
-
-    n = 0;
-    last = state.start;
-
-    while (!maxsplit || n < maxsplit) {
-
-        state_reset(&state);
-
-        state.ptr = state.start;
-
-        if (state.charsize == 1) {
-            status = sre_search(&state, PatternObject_GetCode(self));
-        } else {
-#if defined(HAVE_UNICODE)
-            status = sre_usearch(&state, PatternObject_GetCode(self));
-#endif
-        }
-
-        if (status <= 0) {
-            if (status == 0)
-                break;
-            pattern_error(status);
-            goto error;
-        }
-        
-        if (state.start == state.ptr) {
-            if (last == state.end)
-                break;
-            /* skip one character */
-            state.start = (void*) ((char*) state.ptr + state.charsize);
-            continue;
-        }
-
-        /* get segment before this match */
-        item = PySequence_GetSlice(
-            string, STATE_OFFSET(&state, last),
-            STATE_OFFSET(&state, state.start)
-            );
-        if (!item)
-            goto error;
-        status = PyList_Append(list, item);
-        Py_DECREF(item);
-        if (status < 0)
-            goto error;
-
-        /* add groups (if any) */
-        for (i = 0; i < self->groups; i++) {
-            item = state_getslice(&state, i+1, string, 0);
-            if (!item)
-                goto error;
-            status = PyList_Append(list, item);
-            Py_DECREF(item);
-            if (status < 0)
-                goto error;
-        }
-
-        n = n + 1;
-
-        last = state.start = state.ptr;
-
-    }
-
-    /* get segment following last match (even if empty) */
-    item = PySequence_GetSlice(
-        string, STATE_OFFSET(&state, last), state.endpos
-        );
-    if (!item)
-        goto error;
-    status = PyList_Append(list, item);
-    Py_DECREF(item);
-    if (status < 0)
-        goto error;
-
-    state_fini(&state);
-    return list;
-
-error:
-    Py_DECREF(list);
-    state_fini(&state);
-    return NULL;
-    
-}
-
-static PyObject*
-pattern_subx(PatternObject* self, PyObject* template, PyObject* string,
-             int count, int subn)
-{
-    SRE_STATE state;
-    PyObject* list;
-    PyObject* item;
-    PyObject* filter;
-    PyObject* args;
-    PyObject* match;
-    void* ptr;
-    int status;
-    int n;
-    int i, b, e;
-    int filter_is_callable;
-
-    if (PyCallable_Check(template)) {
-        /* sub/subn takes either a function or a template */
-        filter = template;
-        Py_INCREF(filter);
-        filter_is_callable = 1;
-    } else {
-        /* if not callable, check if it's a literal string */
-        int literal;
-        ptr = getstring(template, &n, &b);
-        if (ptr) {
-            if (b == 1) {
-                literal = sre_literal_template(ptr, n);
-            } else {
-#if defined(HAVE_UNICODE)
-                literal = sre_uliteral_template(ptr, n);
-#endif
-            }
-        } else {
-            PyErr_Clear();
-            literal = 0;
-        }
-        if (literal) {
-            filter = template;
-            Py_INCREF(filter);
-            filter_is_callable = 0;
-        } else {
-            /* not a literal; hand it over to the template compiler */
-            filter = call(
-                SRE_MODULE, "_subx",
-                Py_BuildValue("OO", self, template)
-                );
-            if (!filter)
-                return NULL;
-            filter_is_callable = PyCallable_Check(filter);
-        }
-    }
-
-    string = state_init(&state, self, string, 0, INT_MAX);
-    if (!string) {
-        Py_DECREF(filter);
-        return NULL;
-    }
-
-    list = PyList_New(0);
-    if (!list) {
-        Py_DECREF(filter);
-        state_fini(&state);
-        return NULL;
-    }
-
-    n = i = 0;
-
-    while (!count || n < count) {
-
-        state_reset(&state);
-
-        state.ptr = state.start;
-
-        if (state.charsize == 1) {
-            status = sre_search(&state, PatternObject_GetCode(self));
-        } else {
-#if defined(HAVE_UNICODE)
-            status = sre_usearch(&state, PatternObject_GetCode(self));
-#endif
-        }
-
-        if (status <= 0) {
-            if (status == 0)
-                break;
-            pattern_error(status);
-            goto error;
-        }
-        
-        b = STATE_OFFSET(&state, state.start);
-        e = STATE_OFFSET(&state, state.ptr);
-
-        if (i < b) {
-            /* get segment before this match */
-            item = PySequence_GetSlice(string, i, b);
-            if (!item)
-                goto error;
-            status = PyList_Append(list, item);
-            Py_DECREF(item);
-            if (status < 0)
-                goto error;
-
-        } else if (i == b && i == e && n > 0)
-            /* ignore empty match on latest position */
-            goto next;
-
-        if (filter_is_callable) {
-            /* pass match object through filter */
-            match = pattern_new_match(self, &state, 1);
-            if (!match)
-                goto error;
-            args = Py_BuildValue("(O)", match);
-            if (!args) {
-                Py_DECREF(match);
-                goto error;
-            }
-            item = PyObject_CallObject(filter, args);
-            Py_DECREF(args);
-            Py_DECREF(match);
-            if (!item)
-                goto error;
-        } else {
-            /* filter is literal string */
-            item = filter;
-            Py_INCREF(item);
-        }
-
-        /* add to list */
-        if (item != Py_None) {
-            status = PyList_Append(list, item);
-            Py_DECREF(item);
-            if (status < 0)
-                goto error;
-        }
-        
-        i = e;
-        n = n + 1;
-
-next:
-        /* move on */
-        if (state.ptr == state.start)
-            state.start = (void*) ((char*) state.ptr + state.charsize);
-        else
-            state.start = state.ptr;
-
-    }
-
-    /* get segment following last match */
-    if (i < state.endpos) {
-        item = PySequence_GetSlice(string, i, state.endpos);
-        if (!item)
-            goto error;
-        status = PyList_Append(list, item);
-        Py_DECREF(item);
-        if (status < 0)
-            goto error;
-    }
-
-    state_fini(&state);
-
-    Py_DECREF(filter);
-
-    /* convert list to single string (also removes list) */
-    item = join(list, self->pattern);
-
-    if (!item)
-        return NULL;
-
-    if (subn)
-        return Py_BuildValue("Ni", item, n);
-
-    return item;
-
-error:
-    Py_DECREF(list);
-    state_fini(&state);
-    Py_DECREF(filter);
-    return NULL;
-    
-}
-
-static PyObject*
-pattern_sub(PatternObject* self, PyObject* args, PyObject* kw)
-{
-    PyObject* template;
-    PyObject* string;
-    int count = 0;
-    static char* kwlist[] = { "repl", "string", "count", NULL };
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO|i:sub", kwlist,
-                                     &template, &string, &count))
-        return NULL;
-
-    return pattern_subx(self, template, string, count, 0);
-}
-
-static PyObject*
-pattern_subn(PatternObject* self, PyObject* args, PyObject* kw)
-{
-    PyObject* template;
-    PyObject* string;
-    int count = 0;
-    static char* kwlist[] = { "repl", "string", "count", NULL };
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO|i:subn", kwlist,
-                                     &template, &string, &count))
-        return NULL;
-
-    return pattern_subx(self, template, string, count, 1);
-}
-
-static PyObject*
-pattern_copy(PatternObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    PatternObject* copy;
-    int offset;
-
-    if (args != Py_None && !PyArg_ParseTuple(args, ":__copy__"))
-        return NULL;
-    
-    copy = PyObject_NEW_VAR(PatternObject, &Pattern_Type, self->codesize);
-    if (!copy)
-        return NULL;
-
-    offset = offsetof(PatternObject, groups);
-
-    Py_XINCREF(self->groupindex);
-    Py_XINCREF(self->indexgroup);
-    Py_XINCREF(self->pattern);
-
-    memcpy((char*) copy + offset, (char*) self + offset,
-           sizeof(PatternObject) + self->codesize * sizeof(SRE_CODE) - offset);
-
-    return (PyObject*) copy;
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot copy this pattern object");
-    return NULL;
-#endif
-}
-
-static PyObject*
-pattern_deepcopy(PatternObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    PatternObject* copy;
-    
-    PyObject* memo;
-    if (!PyArg_ParseTuple(args, "O:__deepcopy__", &memo))
-        return NULL;
-
-    copy = (PatternObject*) pattern_copy(self, Py_None);
-    if (!copy)
-        return NULL;
-
-    if (!deepcopy(&copy->groupindex, memo) ||
-        !deepcopy(&copy->indexgroup, memo) ||
-        !deepcopy(&copy->pattern, memo)) {
-        Py_DECREF(copy);
-        return NULL;
-    }
-
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot deepcopy this pattern object");
-    return NULL;
-#endif
 }
 
 static PyMethodDef pattern_methods[] = {
@@ -2351,12 +1851,8 @@ static PyMethodDef pattern_methods[] = {
     {"subn", (PyCFunction) pattern_subn, METH_VARARGS|METH_KEYWORDS},
     {"split", (PyCFunction) pattern_split, METH_VARARGS|METH_KEYWORDS},
     {"findall", (PyCFunction) pattern_findall, METH_VARARGS|METH_KEYWORDS},
-#if PY_VERSION_HEX >= 0x02020000
-    {"finditer", (PyCFunction) pattern_finditer, METH_VARARGS},
-#endif
+    /* experimental */
     {"scanner", (PyCFunction) pattern_scanner, METH_VARARGS},
-    {"__copy__", (PyCFunction) pattern_copy, METH_VARARGS},
-    {"__deepcopy__", (PyCFunction) pattern_deepcopy, METH_VARARGS},
     {NULL, NULL}
 };
 
@@ -2395,7 +1891,7 @@ pattern_getattr(PatternObject* self, char* name)
 
 statichere PyTypeObject Pattern_Type = {
     PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Pattern",
+    0, "SRE_Pattern",
     sizeof(PatternObject), sizeof(SRE_CODE),
     (destructor)pattern_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -2477,7 +1973,7 @@ match_expand(MatchObject* self, PyObject* args)
 
     /* delegate to Python code */
     return call(
-        SRE_MODULE, "_expand",
+        "_expand",
         Py_BuildValue("OOO", self->pattern, self, template)
         );
 }
@@ -2715,67 +2211,6 @@ match_regs(MatchObject* self)
     return regs;
 }
 
-static PyObject*
-match_copy(MatchObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    MatchObject* copy;
-    int slots, offset;
-    
-    if (args != Py_None && !PyArg_ParseTuple(args, ":__copy__"))
-        return NULL;
-
-    slots = 2 * (self->pattern->groups+1);
-
-    copy = PyObject_NEW_VAR(MatchObject, &Match_Type, slots);
-    if (!copy)
-        return NULL;
-
-    /* this value a constant, but any compiler should be able to
-       figure that out all by itself */
-    offset = offsetof(MatchObject, string);
-
-    Py_XINCREF(self->pattern);
-    Py_XINCREF(self->string);
-    Py_XINCREF(self->regs);
-
-    memcpy((char*) copy + offset, (char*) self + offset,
-           sizeof(MatchObject) + slots * sizeof(int) - offset);
-
-    return (PyObject*) copy;
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot copy this match object");
-    return NULL;
-#endif
-}
-
-static PyObject*
-match_deepcopy(MatchObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    MatchObject* copy;
-    
-    PyObject* memo;
-    if (!PyArg_ParseTuple(args, "O:__deepcopy__", &memo))
-        return NULL;
-
-    copy = (MatchObject*) match_copy(self, Py_None);
-    if (!copy)
-        return NULL;
-
-    if (!deepcopy((PyObject**) &copy->pattern, memo) ||
-        !deepcopy(&copy->string, memo) ||
-        !deepcopy(&copy->regs, memo)) {
-        Py_DECREF(copy);
-        return NULL;
-    }
-
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot deepcopy this match object");
-    return NULL;
-#endif
-}
-
 static PyMethodDef match_methods[] = {
     {"group", (PyCFunction) match_group, METH_VARARGS},
     {"start", (PyCFunction) match_start, METH_VARARGS},
@@ -2784,8 +2219,6 @@ static PyMethodDef match_methods[] = {
     {"groups", (PyCFunction) match_groups, METH_VARARGS|METH_KEYWORDS},
     {"groupdict", (PyCFunction) match_groupdict, METH_VARARGS|METH_KEYWORDS},
     {"expand", (PyCFunction) match_expand, METH_VARARGS},
-    {"__copy__", (PyCFunction) match_copy, METH_VARARGS},
-    {"__deepcopy__", (PyCFunction) match_deepcopy, METH_VARARGS},
     {NULL, NULL}
 };
 
@@ -2858,7 +2291,7 @@ match_getattr(MatchObject* self, char* name)
 
 statichere PyTypeObject Match_Type = {
     PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Match",
+    0, "SRE_Match",
     sizeof(MatchObject), sizeof(int),
     (destructor)match_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -2966,7 +2399,7 @@ scanner_getattr(ScannerObject* self, char* name)
 
 statichere PyTypeObject Scanner_Type = {
     PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Scanner",
+    0, "SRE_Scanner",
     sizeof(ScannerObject), 0,
     (destructor)scanner_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -2985,7 +2418,6 @@ init_sre(void)
 {
     PyObject* m;
     PyObject* d;
-    PyObject* x;
 
     /* Patch object types */
     Pattern_Type.ob_type = Match_Type.ob_type =
@@ -2994,17 +2426,14 @@ init_sre(void)
     m = Py_InitModule("_" SRE_MODULE, _functions);
     d = PyModule_GetDict(m);
 
-    x = PyInt_FromLong(SRE_MAGIC);
-    if (x) {
-        PyDict_SetItemString(d, "MAGIC", x);
-        Py_DECREF(x);
-    }
+    PyDict_SetItemString(
+        d, "MAGIC", (PyObject*) PyInt_FromLong(SRE_MAGIC)
+        );
 
-    x = PyString_FromString(copyright);
-    if (x) {
-        PyDict_SetItemString(d, "copyright", x);
-        Py_DECREF(x);
-    }
+    PyDict_SetItemString(
+        d, "copyright", (PyObject*) PyString_FromString(copyright)
+        );
+
 }
 
 #endif /* !defined(SRE_RECURSIVE) */

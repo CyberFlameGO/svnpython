@@ -15,19 +15,9 @@ Interpreters constructed with this class obey the following conventions:
    commands, miscellaneous help topics, and undocumented commands.
 6. The command '?' is a synonym for `help'.  The command '!' is a synonym
    for `shell', if a do_shell method exists.
-7. If completion is enabled, completing commands will be done automatically,
-   and completing of commands args is done by calling complete_foo() with
-   arguments text, line, begidx, endidx.  text is string we are matching
-   against, all returned matches must begin with it.  line is the current
-   input line (lstripped), begidx and endidx are the beginning and end
-   indexes of the text being matched, which could be used to provide
-   different completion depending upon which position the argument is in.
 
 The `default' method may be overridden to intercept commands for which there
 is no do_ method.
-
-The `completedefault' method may be overridden to intercept completions for
-commands that have no complete_ method.
 
 The data member `self.ruler' sets the character used to draw separator lines
 in the help messages.  If empty, no ruler line is drawn.  It defaults to "=".
@@ -50,7 +40,7 @@ import string, sys
 __all__ = ["Cmd"]
 
 PROMPT = '(Cmd) '
-IDENTCHARS = string.ascii_letters + string.digits + '_'
+IDENTCHARS = string.letters + string.digits + '_'
 
 class Cmd:
     prompt = PROMPT
@@ -66,14 +56,7 @@ class Cmd:
     nohelp = "*** No help on %s"
     use_rawinput = 1
 
-    def __init__(self, completekey='tab'):
-        if completekey:
-            try:
-                import readline
-                readline.set_completer(self.complete)
-                readline.parse_and_bind(completekey+": complete")
-            except ImportError:
-                pass
+    def __init__(self): pass
 
     def cmdloop(self, intro=None):
         self.preloop()
@@ -116,29 +99,21 @@ class Cmd:
     def postloop(self):
         pass
 
-    def parseline(self, line):
+    def onecmd(self, line):
         line = line.strip()
         if not line:
-            return None, None, line
+            return self.emptyline()
         elif line[0] == '?':
             line = 'help ' + line[1:]
         elif line[0] == '!':
             if hasattr(self, 'do_shell'):
                 line = 'shell ' + line[1:]
             else:
-                return None, None, line
+                return self.default(line)
+        self.lastcmd = line
         i, n = 0, len(line)
         while i < n and line[i] in self.identchars: i = i+1
         cmd, arg = line[:i], line[i:].strip()
-        return cmd, arg, line
-
-    def onecmd(self, line):
-        cmd, arg, line = self.parseline(line)
-        if not line:
-            return self.emptyline()
-        if cmd is None:
-            return self.default(line)
-        self.lastcmd = line
         if cmd == '':
             return self.default(line)
         else:
@@ -154,59 +129,6 @@ class Cmd:
 
     def default(self, line):
         print '*** Unknown syntax:', line
-
-    def completedefault(self, *ignored):
-        return []
-
-    def completenames(self, text, *ignored):
-        dotext = 'do_'+text
-        return [a[3:] for a in self.get_names() if a.startswith(dotext)]
-
-    def complete(self, text, state):
-        """Return the next possible completion for 'text'.
-
-        If a command has not been entered, then complete against command list.
-        Otherwise try to call complete_<command> to get list of completions.
-        """
-        if state == 0:
-            import readline
-            origline = readline.get_line_buffer()
-            line = origline.lstrip()
-            stripped = len(origline) - len(line)
-            begidx = readline.get_begidx() - stripped
-            endidx = readline.get_endidx() - stripped
-            if begidx>0:
-                cmd, args, foo = self.parseline(line)
-                if cmd == '':
-                    compfunc = self.completedefault
-                else:
-                    try:
-                        compfunc = getattr(self, 'complete_' + cmd)
-                    except AttributeError:
-                        compfunc = self.completedefault
-            else:
-                compfunc = self.completenames
-            self.completion_matches = compfunc(text, line, begidx, endidx)
-        try:
-            return self.completion_matches[state]
-        except IndexError:
-            return None
-
-    def get_names(self):
-        # Inheritance says we have to look in class and
-        # base classes; order is not important.
-        names = []
-        classes = [self.__class__]
-        while classes:
-            aclass = classes[0]
-            if aclass.__bases__:
-                classes = classes + list(aclass.__bases__)
-            names = names + dir(aclass)
-            del classes[0]
-        return names
-
-    def complete_help(self, *args):
-        return self.completenames(*args)
 
     def do_help(self, arg):
         if arg:
@@ -225,7 +147,16 @@ class Cmd:
                 return
             func()
         else:
-            names = self.get_names()
+            # Inheritance says we have to look in class and
+            # base classes; order is not important.
+            names = []
+            classes = [self.__class__]
+            while classes:
+                aclass = classes[0]
+                if aclass.__bases__:
+                    classes = classes + list(aclass.__bases__)
+                names = names + dir(aclass)
+                del classes[0]
             cmds_doc = []
             cmds_undoc = []
             help = {}

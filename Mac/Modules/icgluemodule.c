@@ -88,7 +88,9 @@ static char ici_ICFindConfigFile__doc__[] =
 ;
 
 static PyObject *
-ici_ICFindConfigFile(iciobject *self, PyObject *args)
+ici_ICFindConfigFile(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	
@@ -106,7 +108,9 @@ static char ici_ICFindUserConfigFile__doc__[] =
 ;
 
 static PyObject *
-ici_ICFindUserConfigFile(iciobject *self, PyObject *args)
+ici_ICFindUserConfigFile(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	ICDirSpec where;	
@@ -125,7 +129,9 @@ static char ici_ICChooseConfig__doc__[] =
 ;
 
 static PyObject *
-ici_ICChooseConfig(iciobject *self, PyObject *args)
+ici_ICChooseConfig(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	
@@ -142,7 +148,9 @@ static char ici_ICChooseNewConfig__doc__[] =
 ;
 
 static PyObject *
-ici_ICChooseNewConfig(iciobject *self, PyObject *args)
+ici_ICChooseNewConfig(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	
@@ -161,7 +169,9 @@ static char ici_ICGetSeed__doc__[] =
 ;
 
 static PyObject *
-ici_ICGetSeed(iciobject *self, PyObject *args)
+ici_ICGetSeed(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	long seed;
@@ -179,7 +189,9 @@ static char ici_ICBegin__doc__[] =
 ;
 
 static PyObject *
-ici_ICBegin(iciobject *self, PyObject *args)
+ici_ICBegin(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	int perm;
@@ -198,7 +210,9 @@ static char ici_ICFindPrefHandle__doc__[] =
 ;
 
 static PyObject *
-ici_ICFindPrefHandle(iciobject *self, PyObject *args)
+ici_ICFindPrefHandle(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	Str255 key;
@@ -218,7 +232,9 @@ static char ici_ICSetPref__doc__[] =
 ;
 
 static PyObject *
-ici_ICSetPref(iciobject *self, PyObject *args)
+ici_ICSetPref(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	Str255 key;
@@ -242,7 +258,9 @@ static char ici_ICCountPref__doc__[] =
 ;
 
 static PyObject *
-ici_ICCountPref(iciobject *self, PyObject *args)
+ici_ICCountPref(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	long count;
@@ -260,7 +278,9 @@ static char ici_ICGetIndPref__doc__[] =
 ;
 
 static PyObject *
-ici_ICGetIndPref(iciobject *self, PyObject *args)
+ici_ICGetIndPref(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	long num;
@@ -279,7 +299,9 @@ static char ici_ICDeletePref__doc__[] =
 ;
 
 static PyObject *
-ici_ICDeletePref(iciobject *self, PyObject *args)
+ici_ICDeletePref(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	Str255 key;
@@ -298,7 +320,9 @@ static char ici_ICEnd__doc__[] =
 ;
 
 static PyObject *
-ici_ICEnd(iciobject *self, PyObject *args)
+ici_ICEnd(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	
@@ -316,7 +340,9 @@ static char ici_ICEditPreferences__doc__[] =
 ;
 
 static PyObject *
-ici_ICEditPreferences(iciobject *self, PyObject *args)
+ici_ICEditPreferences(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	Str255 key;
@@ -335,7 +361,9 @@ static char ici_ICParseURL__doc__[] =
 ;
 
 static PyObject *
-ici_ICParseURL(iciobject *self, PyObject *args)
+ici_ICParseURL(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	Str255 hint;
@@ -359,7 +387,9 @@ static char ici_ICLaunchURL__doc__[] =
 ;
 
 static PyObject *
-ici_ICLaunchURL(iciobject *self, PyObject *args)
+ici_ICLaunchURL(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	Str255 hint;
@@ -382,7 +412,9 @@ static char ici_ICMapFilename__doc__[] =
 ;
 
 static PyObject *
-ici_ICMapFilename(iciobject *self, PyObject *args)
+ici_ICMapFilename(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	Str255 filename;
@@ -410,7 +442,9 @@ static char ici_ICMapTypeCreator__doc__[] =
 ;
 
 static PyObject *
-ici_ICMapTypeCreator(iciobject *self, PyObject *args)
+ici_ICMapTypeCreator(self, args)
+	iciobject *self;
+	PyObject *args;
 {
 	ICError err;
 	OSType type, creator;
@@ -483,14 +517,17 @@ newiciobject(OSType creator)
 
 
 static void
-ici_dealloc(iciobject *self)
+ici_dealloc(self)
+	iciobject *self;
 {
 	(void)ICStop(self->inst);
 	PyMem_DEL(self);
 }
 
 static PyObject *
-ici_getattr(iciobject *self, char *name)
+ici_getattr(self, name)
+	iciobject *self;
+	char *name;
 {
 	return Py_FindMethod(ici_methods, (PyObject *)self, name);
 }
@@ -502,7 +539,7 @@ static char Icitype__doc__[] =
 static PyTypeObject Icitype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"icglue.ic_instance",		/*tp_name*/
+	"ic_instance",			/*tp_name*/
 	sizeof(iciobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -533,7 +570,9 @@ static char ic_ICStart__doc__[] =
 ;
 
 static PyObject *
-ic_ICStart(PyObject *self, PyObject *args)
+ic_ICStart(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 	OSType creator;
 
@@ -558,7 +597,7 @@ static char icglue_module_documentation[] =
 ;
 
 void
-initicglue(void)
+initicglue()
 {
 	PyObject *m, *d;
 

@@ -9,23 +9,7 @@
 
 static PyObject *TestError;	/* set to exception object in init */
 
-/* Raise TestError with test_name + ": " + msg, and return NULL. */
-
-static PyObject *
-raiseTestError(const char* test_name, const char* msg)
-{
-	char buf[2048];
-
-	if (strlen(test_name) + strlen(msg) > sizeof(buf) - 50)
-		PyErr_SetString(TestError, "internal error msg too large");
-	else {
-		PyOS_snprintf(buf, sizeof(buf), "%s: %s", test_name, msg);
-		PyErr_SetString(TestError, buf);
-	}
-	return NULL;
-}
-
-/* Test #defines from pyconfig.h (particularly the SIZEOF_* defines).
+/* Test #defines from config.h (particularly the SIZEOF_* defines).
 
    The ones derived from autoconf on the UNIX-like OSes can be relied
    upon (in the absence of sloppy cross-compiling), but the Windows
@@ -36,8 +20,7 @@ sizeof_error(const char* fatname, const char* typename,
         int expected, int got)
 {
 	char buf[1024];
-	PyOS_snprintf(buf, sizeof(buf), 
-		"%.200s #define == %d but sizeof(%.200s) == %d",
+	sprintf(buf, "%s #define == %d but sizeof(%s) == %d",
 		fatname, expected, typename, got);
 	PyErr_SetString(TestError, buf);
 	return (PyObject*)NULL;
@@ -53,7 +36,6 @@ test_config(PyObject *self, PyObject *args)
 	    if (FATNAME != sizeof(TYPE)) \
     	    	return sizeof_error(#FATNAME, #TYPE, FATNAME, sizeof(TYPE))
 
-	CHECK_SIZEOF(SIZEOF_SHORT, short);
 	CHECK_SIZEOF(SIZEOF_INT, int);
 	CHECK_SIZEOF(SIZEOF_LONG, long);
 	CHECK_SIZEOF(SIZEOF_VOID_P, void*);
@@ -163,7 +145,7 @@ test_dict_iteration(PyObject* self, PyObject* args)
 
         if (!PyArg_ParseTuple(args, ":test_dict_iteration"))
                 return NULL;
-
+	
 	for (i = 0; i < 200; i++) {
 		if (test_dict_inner(i) < 0) {
 			return NULL;
@@ -174,225 +156,10 @@ test_dict_iteration(PyObject* self, PyObject* args)
 	return Py_None;
 }
 
-
-/* Tests of PyLong_{As, From}{Unsigned,}Long(), and (#ifdef HAVE_LONG_LONG)
-   PyLong_{As, From}{Unsigned,}LongLong().
-
-   Note that the meat of the test is contained in testcapi_long.h.
-   This is revolting, but delicate code duplication is worse:  "almost
-   exactly the same" code is needed to test LONG_LONG, but the ubiquitous
-   dependence on type names makes it impossible to use a parameterized
-   function.  A giant macro would be even worse than this.  A C++ template
-   would be perfect.
-
-   The "report an error" functions are deliberately not part of the #include
-   file:  if the test fails, you can set a breakpoint in the appropriate
-   error function directly, and crawl back from there in the debugger.
-*/
-
-#define UNBIND(X)  Py_DECREF(X); (X) = NULL
-
-static PyObject *
-raise_test_long_error(const char* msg)
-{
-	return raiseTestError("test_long_api", msg);
-}
-
-#define TESTNAME	test_long_api_inner
-#define TYPENAME	long
-#define F_S_TO_PY	PyLong_FromLong
-#define F_PY_TO_S	PyLong_AsLong
-#define F_U_TO_PY	PyLong_FromUnsignedLong
-#define F_PY_TO_U	PyLong_AsUnsignedLong
-
-#include "testcapi_long.h"
-
-static PyObject *
-test_long_api(PyObject* self, PyObject* args)
-{
-        if (!PyArg_ParseTuple(args, ":test_long_api"))
-                return NULL;
-
-	return TESTNAME(raise_test_long_error);
-}
-
-#undef TESTNAME
-#undef TYPENAME
-#undef F_S_TO_PY
-#undef F_PY_TO_S
-#undef F_U_TO_PY
-#undef F_PY_TO_U
-
-#ifdef HAVE_LONG_LONG
-
-static PyObject *
-raise_test_longlong_error(const char* msg)
-{
-	return raiseTestError("test_longlong_api", msg);
-}
-
-#define TESTNAME	test_longlong_api_inner
-#define TYPENAME	LONG_LONG
-#define F_S_TO_PY	PyLong_FromLongLong
-#define F_PY_TO_S	PyLong_AsLongLong
-#define F_U_TO_PY	PyLong_FromUnsignedLongLong
-#define F_PY_TO_U	PyLong_AsUnsignedLongLong
-
-#include "testcapi_long.h"
-
-static PyObject *
-test_longlong_api(PyObject* self, PyObject* args)
-{
-        if (!PyArg_ParseTuple(args, ":test_longlong_api"))
-                return NULL;
-
-	return TESTNAME(raise_test_longlong_error);
-}
-
-#undef TESTNAME
-#undef TYPENAME
-#undef F_S_TO_PY
-#undef F_PY_TO_S
-#undef F_U_TO_PY
-#undef F_PY_TO_U
-
-/* Test the L code for PyArg_ParseTuple.  This should deliver a LONG_LONG
-   for both long and int arguments.  The test may leak a little memory if
-   it fails.
-*/
-static PyObject *
-test_L_code(PyObject *self, PyObject *args)
-{
-	PyObject *tuple, *num;
-	LONG_LONG value;
-
-        if (!PyArg_ParseTuple(args, ":test_L_code"))
-                return NULL;
-
-        tuple = PyTuple_New(1);
-        if (tuple == NULL)
-        	return NULL;
-
-        num = PyLong_FromLong(42);
-        if (num == NULL)
-        	return NULL;
-
-        PyTuple_SET_ITEM(tuple, 0, num);
-
-        value = -1;
-        if (PyArg_ParseTuple(tuple, "L:test_L_code", &value) < 0)
-        	return NULL;
-        if (value != 42)
-        	return raiseTestError("test_L_code",
-			"L code returned wrong value for long 42");
-
-	Py_DECREF(num);
-        num = PyInt_FromLong(42);
-        if (num == NULL)
-        	return NULL;
-
-        PyTuple_SET_ITEM(tuple, 0, num);
-
-	value = -1;
-        if (PyArg_ParseTuple(tuple, "L:test_L_code", &value) < 0)
-        	return NULL;
-        if (value != 42)
-        	return raiseTestError("test_L_code",
-			"L code returned wrong value for int 42");
-
-	Py_DECREF(tuple);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-#endif	/* ifdef HAVE_LONG_LONG */
-
-#ifdef Py_USING_UNICODE
-
-/* Test the u and u# codes for PyArg_ParseTuple. May leak memory in case
-   of an error.
-*/
-static PyObject *
-test_u_code(PyObject *self, PyObject *args)
-{
-	PyObject *tuple, *obj;
-	Py_UNICODE *value;
-	int len;
-
-        if (!PyArg_ParseTuple(args, ":test_u_code"))
-                return NULL;
-
-        tuple = PyTuple_New(1);
-        if (tuple == NULL)
-        	return NULL;
-
-        obj = PyUnicode_Decode("test", strlen("test"),
-			       "ascii", NULL);
-        if (obj == NULL)
-        	return NULL;
-
-        PyTuple_SET_ITEM(tuple, 0, obj);
-
-        value = 0;
-        if (PyArg_ParseTuple(tuple, "u:test_u_code", &value) < 0)
-        	return NULL;
-        if (value != PyUnicode_AS_UNICODE(obj))
-        	return raiseTestError("test_u_code",
-			"u code returned wrong value for u'test'");
-        value = 0;
-        if (PyArg_ParseTuple(tuple, "u#:test_u_code", &value, &len) < 0)
-        	return NULL;
-        if (value != PyUnicode_AS_UNICODE(obj) ||
-	    len != PyUnicode_GET_SIZE(obj))
-        	return raiseTestError("test_u_code",
-			"u# code returned wrong values for u'test'");
-	
-	Py_DECREF(tuple);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-#endif
-
-static PyObject *
-raise_exception(PyObject *self, PyObject *args)
-{
-	PyObject *exc;
-	PyObject *exc_args, *v;
-	int num_args, i;
-
-	if (!PyArg_ParseTuple(args, "Oi:raise_exception",
-			      &exc, &num_args))
-		return NULL;
-
-	exc_args = PyTuple_New(num_args);
-	if (exc_args == NULL)
-		return NULL;
-	for (i = 0; i < num_args; ++i) {
-		v = PyInt_FromLong(i);
-		if (v == NULL) {
-			Py_DECREF(exc_args);
-			return NULL;
-		}
-		PyTuple_SET_ITEM(exc_args, i, v);
-	}
-	PyErr_SetObject(exc, exc_args);
-	return NULL;
-}
-
 static PyMethodDef TestMethods[] = {
-	{"raise_exception",	raise_exception,	METH_VARARGS},
-	{"test_config",		test_config,		METH_VARARGS},
-	{"test_list_api",	test_list_api,		METH_VARARGS},
-	{"test_dict_iteration",	test_dict_iteration,	METH_VARARGS},
-	{"test_long_api",	test_long_api,		METH_VARARGS},
-#ifdef HAVE_LONG_LONG
-	{"test_longlong_api",	test_longlong_api,	METH_VARARGS},
-	{"test_L_code",		test_L_code,		METH_VARARGS},
-#endif
-#ifdef Py_USING_UNICODE
-	{"test_u_code",		test_u_code,		METH_VARARGS},
-#endif
+	{"test_config", test_config, METH_VARARGS},
+	{"test_list_api", test_list_api, METH_VARARGS},
+	{"test_dict_iteration", test_dict_iteration, METH_VARARGS},
 	{NULL, NULL} /* sentinel */
 };
 

@@ -1,4 +1,5 @@
 """Interface to the compiler's internal symbol tables"""
+from __future__ import nested_scopes
 
 import _symtable
 from _symtable import USE, DEF_GLOBAL, DEF_LOCAL, DEF_PARAM, \

@@ -44,13 +44,5 @@ def test():
                     print "%s == %s" % (a, b)
                 else:
                     print "%s != %s" % (a, b)
-    # Ensure default comparison compares id() of args
-    L = []
-    for i in range(10):
-        L.insert(len(L)//2, Empty())
-    for a in L:
-        for b in L:
-            if cmp(a, b) != cmp(id(a), id(b)):
-                print "ERROR:", cmp(a, b), cmp(id(a), id(b)), id(a), id(b)
 
 test()

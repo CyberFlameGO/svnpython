@@ -82,48 +82,17 @@ if fcmp(pow(2.,10), 1024.): raise TestFailed, 'pow(2.,10)'
 if fcmp(pow(2.,20), 1024.*1024.): raise TestFailed, 'pow(2.,20)'
 if fcmp(pow(2.,30), 1024.*1024.*1024.): raise TestFailed, 'pow(2.,30)'
 #
-if fcmp(pow(-2.,0), 1.): raise TestFailed, 'pow(-2.,0)'
-if fcmp(pow(-2.,1), -2.): raise TestFailed, 'pow(-2.,1)'
-if fcmp(pow(-2.,2), 4.): raise TestFailed, 'pow(-2.,2)'
-if fcmp(pow(-2.,3), -8.): raise TestFailed, 'pow(-2.,3)'
-
-from types import FloatType
+# XXX These don't work -- negative float to the float power...
+#if fcmp(pow(-2.,0), 1.): raise TestFailed, 'pow(-2.,0)'
+#if fcmp(pow(-2.,1), -2.): raise TestFailed, 'pow(-2.,1)'
+#if fcmp(pow(-2.,2), 4.): raise TestFailed, 'pow(-2.,2)'
+#if fcmp(pow(-2.,3), -8.): raise TestFailed, 'pow(-2.,3)'
+#
 for x in 2, 2L, 2.0:
     for y in 10, 10L, 10.0:
         for z in 1000, 1000L, 1000.0:
-            if isinstance(x, FloatType) or \
-               isinstance(y, FloatType) or \
-               isinstance(z, FloatType):
-                try:
-                    pow(x, y, z)
-                except TypeError:
-                    pass
-                else:
-                    raise TestFailed("3-arg float pow(%s, %s, %s) should "
-                                     "have raised TypeError" % (x, y, z))
-            else:
-                if fcmp(pow(x, y, z), 24.0):
-                    raise TestFailed, 'pow(%s, %s, %s)' % (x, y, z)
-
-try: pow(-1, -2, 3)
-except TypeError: pass
-else: raise TestFailed, 'pow(1, -2, 3) should raise TypeError'
-
-try: pow(1, 2, 0)
-except ValueError: pass
-else: raise TestFailed, 'pow(1, 2, 0) should raise ValueError'
-
-try: pow(-1L, -2L, 3L)
-except TypeError: pass
-else: raise TestFailed, 'pow(1L, -2L, 3L) should raise TypeError'
-
-try: pow(1L, 2L, 0L)
-except ValueError: pass
-else: raise TestFailed, 'pow(1L, 2L, 0L) should raise ValueError'
-
-try: pow(-342.43, 0.234)
-except ValueError: pass
-else: raise TestFailed, 'pow(-342.43, 0.234) should raise ValueError'
+            if fcmp(pow(x, y, z), 24.0):
+                raise TestFailed, 'pow(%s, %s, %s)' % (x, y, z)
 
 print 'range'
 if range(3) != [0, 1, 2]: raise TestFailed, 'range(3)'
@@ -236,12 +205,6 @@ print 'setattr'
 import sys
 setattr(sys, 'spam', 1)
 if sys.spam != 1: raise TestFailed, 'setattr(sys, \'spam\', 1)'
-try:
-    setattr(sys, 1, 'spam')
-except TypeError:
-    pass
-else:
-    raise TestFailed, "setattr(sys, 1, 'spam') should raise exception"
 
 print 'str'
 if str('') != '': raise TestFailed, 'str(\'\')'
@@ -291,6 +254,20 @@ if tuple(xrange(10)) != tuple(range(10)): raise TestFailed, 'xrange(10)'
 if tuple(xrange(5,10)) != tuple(range(5,10)): raise TestFailed, 'xrange(5,10)'
 if tuple(xrange(0,10,2)) != tuple(range(0,10,2)):
     raise TestFailed, 'xrange(0,10,2)'
+# regression tests for SourceForge bug #121695
+def _range_test(r):
+    verify(r.start != r.stop, 'Test not valid for passed-in xrange object.')
+    if r.stop in r:
+        raise TestFailed, 'r.stop in ' + `r`
+    if r.stop-r.step not in r:
+        raise TestFailed, 'r.stop-r.step not in ' + `r`
+    if r.start not in r:
+        raise TestFailed, 'r.start not in ' + `r`
+    if r.stop+r.step in r:
+        raise TestFailed, 'r.stop+r.step in ' + `r`
+_range_test(xrange(10))
+_range_test(xrange(9, -1, -1))
+_range_test(xrange(0, 10, 2))
 
 print 'zip'
 a = (1, 2, 3)
@@ -332,13 +309,13 @@ class G:
 exc = 0
 try:
     zip(a, G())
-except TypeError:
+except AttributeError:
     exc = 1
 except:
     e = sys.exc_info()[0]
     raise TestFailed, 'zip(a, b) - b instance w/o __getitem__'
 if not exc:
-    raise TestFailed, 'zip(a, b) - missing expected TypeError'
+    raise TestFailed, 'zip(a, b) - missing expected AttributeError'
 
 
 # Epilogue -- unlink the temp file

@@ -7,9 +7,9 @@
 
 import sys
 import traceback
-from codeop import CommandCompiler, compile_command
+from codeop import compile_command
 
-__all__ = ["InteractiveInterpreter", "InteractiveConsole", "interact",
+__all__ = ["InteractiveInterpreter","InteractiveConsole","interact",
            "compile_command"]
 
 def softspace(file, newvalue):
@@ -20,8 +20,7 @@ def softspace(file, newvalue):
         pass
     try:
         file.softspace = newvalue
-    except (AttributeError, TypeError):
-        # "attribute-less object" or "read-only attributes"
+    except TypeError: # "attribute-less object" or "read-only attributes"
         pass
     return oldvalue
 
@@ -46,7 +45,6 @@ class InteractiveInterpreter:
         if locals is None:
             locals = {"__name__": "__console__", "__doc__": None}
         self.locals = locals
-        self.compile = CommandCompiler()
 
     def runsource(self, source, filename="<input>", symbol="single"):
         """Compile and run some source in the interpreter.
@@ -73,7 +71,7 @@ class InteractiveInterpreter:
 
         """
         try:
-            code = self.compile(source, filename, symbol)
+            code = compile_command(source, filename, symbol)
         except (OverflowError, SyntaxError, ValueError):
             # Case 1
             self.showsyntaxerror(filename)
@@ -139,7 +137,6 @@ class InteractiveInterpreter:
                 except:
                     # If that failed, assume SyntaxError is a string
                     value = msg, (filename, lineno, offset, line)
-                sys.last_value = value
         list = traceback.format_exception_only(type, value)
         map(self.write, list)
 

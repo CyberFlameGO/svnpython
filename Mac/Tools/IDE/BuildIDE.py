@@ -5,7 +5,7 @@ which reduces the startup time (especially on slower machines)."""
 import sys
 import os
 import buildtools
-from Carbon import Res
+import Res
 import py_resource
 
 buildtools.DEBUG=1

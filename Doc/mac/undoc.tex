@@ -3,16 +3,9 @@
 
 The modules in this chapter are poorly documented (if at all).  If you
 wish to contribute documentation of any of these modules, please get in
-touch with
-\ulink{\email{python-docs@python.org}}{mailto:python-docs@python.org}.
+touch with \email{python-docs@python.org}.
 
 \localmoduletable
-
-
-\section{\module{applesingle} --- AppleSingle decoder}
-\declaremodule{standard}{applesingle}
-  \platform{Mac}
-\modulesynopsis{Rudimentary decoder for AppleSingle format files}
 
 
 \section{\module{buildtools} --- Helper module for BuildApplet and Friends}
@@ -28,9 +21,9 @@ touch with
 \modulesynopsis{Helper to create \texttt{'PYC '} resources for compiled
                 applications}
 
-This module is primarily used as a help module for
-\program{BuildApplet} and \program{BuildApplication}.  It is able to
-store compiled Python code as \texttt{'PYC~'} resources in a file.
+This module is primarily used as a help module for BuildApplet and
+BuildApplication.  It is able to store compiled Python code as
+\texttt{'PYC '} resources in a file.
 
 
 \section{\module{cfmfile} --- Code Fragment Resource module}
@@ -44,6 +37,26 @@ used by BuildApplication to combine all plugin modules to a single
 executable.
 
 
+\section{\module{macerrors} --- MacOS Errors}
+\declaremodule{standard}{macerrors}
+  \platform{Mac}
+\modulesynopsis{Constant definitions for many MacOS error codes}
+
+\module{macerrors} cotains constant definitions for many MacOS error codes.
+
+
+\section{\module{macfsn} --- NavServices calls}
+\declaremodule{standard}{macfsn}
+  \platform{Mac}
+\modulesynopsis{NavServices versions of StandardFile calls}
+
+
+\module{macfsn} contains wrapper functions that have the same API as the macfs 
+StandardFile calls, but are implemented with Navigation Services. Importing it 
+will replace the methods in macfs with these, if Navigation Services is 
+available on your machine.
+
+
 \section{\module{icopen} --- Internet Config replacement for \method{open()}}
 \declaremodule{standard}{icopen}
   \platform{Mac}
@@ -54,62 +67,10 @@ with a version that uses Internet Config to set file type and creator
 for new files.
 
 
-\section{\module{macerrors} --- Mac OS Errors}
-\declaremodule{standard}{macerrors}
-  \platform{Mac}
-\modulesynopsis{Constant definitions for many Mac OS error codes}
-
-\module{macerrors} cotains constant definitions for many Mac OS error codes.
-
-
-\section{\module{macfsn} --- NavServices calls}
-\declaremodule{standard}{macfsn}
-  \platform{Mac}
-\modulesynopsis{NavServices versions of StandardFile calls}
-
-
-\module{macfsn} contains wrapper functions that have the same API as the macfs 
-StandardFile calls, but are implemented with Navigation Services through the
-\refmodule{Nav}\refbimodindex{Nav} module. Importing it 
-will replace the methods in \refmodule{macfs}\refbimodindex{macfs} with these,
-if Navigation Services is 
-available on your machine.
-
-
-\section{\module{macresource} --- Locate script resources}
-\declaremodule{standard}{macresource}
-  \platform{Mac}
-\modulesynopsis{Locate script resources}
-
-\module{macresource} helps scripts finding their resources, such as
-dialogs and menus, without requiring special case code for when the
-script is run under MacPython, as a MacPython applet or under OSX Python.
-
-\section{\module{Nav} --- NavServices calls}
-\declaremodule{standard}{Nac}
-  \platform{Mac}
-\modulesynopsis{Interface to Navigation Services}
-
-A low-level interface to Navigation Services. 
-
-
 \section{\module{mactty} --- Serial line connections}
 \declaremodule{standard}{mactty}
   \platform{Mac}
 \modulesynopsis{Easy access serial to line connections}
-
-This module is only available under Mac OS 9 or earlier in classic PPC
-MacPython.
-
-\section{\module{mkcwproject} --- Create CodeWarrior projects}
-\declaremodule{standard}{mkcwproject}
-  \platform{Mac}
-\modulesynopsis{Create CodeWarrior projects}
-
-\module{mkcwproject} creates project files for the Metrowerks CodeWarrior
-development environment. It is a helper module for
-\refmodule{distutils}\refbimodindex{distutils} but can be used separately for more
-control.
 
 
 \section{\module{nsremote} --- Wrapper around Netscape OSA modules}
@@ -166,18 +127,9 @@ interpreter.
 without displaying it (or without displaying the stdout window
 altogether, if set with \program{EditPythonPrefs}) until you try to read from
 stdin or disable the buffering, at which point all the saved output is
-sent to the window.  Good for programs with graphical user interfaces
-that do want to display their output at a crash.
+sent to the window. Good for GUI programs that do want to display their
+output at a crash.
 
-
-\section{\module{videoreader} --- read QuickTime movies}
-\declaremodule{standard}{videoreader}
-  \platform{Mac}
-\modulesynopsis{read QuickTime movies frame by frame for further processing}
-
-\module{videoreader} reads and decodes QuickTime movies and passes
-a stream of images to your program. It also provides some support for
-audio tracks.
 
 \section{\module{W} --- Widgets built on \module{FrameWork}}
 \declaremodule{standard}{W}
@@ -185,15 +137,3 @@ audio tracks.
 \modulesynopsis{Widgets for the Mac, built on top of \module{FrameWork}}
 
 The \module{W} widgets are used extensively in the \program{IDE}.
-
-\section{\module{waste} --- non-Apple \program{TextEdit} replacement}
-\declaremodule{standard}{waste}
-  \platform{Mac}
-\modulesynopsis{Interface to the ``WorldScript-Aware Styled Text Engine.''}
-
-\begin{seealso}
-  \seetitle[http://www.merzwaren.com/waste/]{About WASTE}{Information
-            about the WASTE widget and library, including
-            documentation and downloads.}
-\end{seealso}
-

@@ -46,15 +46,16 @@ Where:
 
     initialcolor
         initial color, as a color name or #RRGGBB format
+
 """
 
-__version__ = '1.3'
+__version__ = '1.0'
 
 import sys
 import os
+import string
 import getopt
 import ColorDB
-
 from PyncheWidget import PyncheWidget
 from Switchboard import Switchboard
 from StripViewer import StripViewer
@@ -78,17 +79,15 @@ RGB_TXT = [
 
 
 
-# Do this because PyncheWidget.py wants to get at the interpolated docstring
-# too, for its Help menu.
 def docstring():
-    return __doc__ % globals()
+    return string.rstrip(__doc__ % globals())
 
 
-def usage(code, msg=''):
+def usage(status, msg=''):
     print docstring()
     if msg:
         print msg
-    sys.exit(code)
+    sys.exit(status)
 
 
 
@@ -217,7 +216,6 @@ Version: %s''' % __version__
                     ignore=ignore)
     run(app, sb)
     sb.save_views()
-
 
 
 if __name__ == '__main__':

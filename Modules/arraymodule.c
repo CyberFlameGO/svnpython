@@ -880,9 +880,7 @@ static char buffer_info_doc [] =
 "buffer_info() -> (address, length)\n\
 \n\
 Return a tuple (address, length) giving the current memory address and\n\
-the length in items of the buffer used to hold array's contents\n\
-The length should be multiplied by the itemsize attribute to calculate\n\
-the buffer length in bytes.";
+the length in bytes of the buffer used to hold array's contents.";
 
 
 static PyObject *
@@ -1313,13 +1311,12 @@ array_repr(arrayobject *a)
 	int i, len;
 	len = a->ob_size;
 	if (len == 0) {
-		PyOS_snprintf(buf, sizeof(buf), "array('%c')",
-			      a->ob_descr->typecode);
+		sprintf(buf, "array('%c')", a->ob_descr->typecode);
 		return PyString_FromString(buf);
 	}
 	if (a->ob_descr->typecode == 'c') {
 		PyObject *t_empty = PyTuple_New(0);
-		PyOS_snprintf(buf, sizeof(buf), "array('c', ");
+		sprintf(buf, "array('c', ");
 		s = PyString_FromString(buf);
 		v = array_tostring(a, t_empty);
 		Py_DECREF(t_empty);
@@ -1329,7 +1326,7 @@ array_repr(arrayobject *a)
 		PyString_ConcatAndDel(&s, PyString_FromString(")"));
 		return s;
 	}
-	PyOS_snprintf(buf, sizeof(buf), "array('%c', [", a->ob_descr->typecode);
+	sprintf(buf, "array('%c', [", a->ob_descr->typecode);
 	s = PyString_FromString(buf);
 	comma = PyString_FromString(", ");
 	for (i = 0; i < len && !PyErr_Occurred(); i++) {
@@ -1528,7 +1525,7 @@ itemsize -- the length in bytes of one array item\n\
 statichere PyTypeObject Arraytype = {
 	PyObject_HEAD_INIT(NULL)
 	0,
-	"array.array",
+	"array",
 	sizeof(arrayobject),
 	0,
 	(destructor)array_dealloc,		/* tp_dealloc */
@@ -1545,7 +1542,7 @@ statichere PyTypeObject Arraytype = {
 	0,					/* tp_str */
 	0,					/* tp_getattro */
 	0,					/* tp_setattro */
-	&array_as_buffer,			/* tp_as_buffer*/
+	&array_as_buffer,			/* tp_as _buffer*/
 	Py_TPFLAGS_DEFAULT,			/* tp_flags */
 	arraytype_doc,				/* tp_doc */
  	0,					/* tp_traverse */

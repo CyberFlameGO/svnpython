@@ -5,20 +5,8 @@
 
 
 
-#ifdef _WIN32
-#include "pywintoolbox.h"
-#else
 #include "macglue.h"
 #include "pymactoolbox.h"
-#endif
-
-/* Macro to test whether a weak-loaded CFM function exists */
-#define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-    	PyErr_SetString(PyExc_NotImplementedError, \
-    	"Not available in this shared library/OS version"); \
-    	return NULL; \
-    }} while(0)
-
 
 #include <WASTE.h>
 #include <WEObjectHandlers.h>
@@ -225,7 +213,7 @@ PyObject *WEOObj_New(WEObjectReference itself)
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-int WEOObj_Convert(PyObject *v, WEObjectReference *p_itself)
+WEOObj_Convert(PyObject *v, WEObjectReference *p_itself)
 {
 	if (!WEOObj_Check(v))
 	{
@@ -348,9 +336,9 @@ static PyObject *WEOObj_getattr(WEOObject *self, char *name)
 #define WEOObj_hash NULL
 
 PyTypeObject WEO_Type = {
-	PyObject_HEAD_INIT(NULL)
+	PyObject_HEAD_INIT(&PyType_Type)
 	0, /*ob_size*/
-	"waste.WEO", /*tp_name*/
+	"WEO", /*tp_name*/
 	sizeof(WEOObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
 	/* methods */
@@ -393,7 +381,7 @@ PyObject *wasteObj_New(WEReference itself)
 	WESetInfo(weRefCon, (void *)&it, itself);
 	return (PyObject *)it;
 }
-int wasteObj_Convert(PyObject *v, WEReference *p_itself)
+wasteObj_Convert(PyObject *v, WEReference *p_itself)
 {
 	if (!wasteObj_Check(v))
 	{
@@ -1073,6 +1061,7 @@ static PyObject *wasteObj_WEInsert(wasteObject *_self, PyObject *_args)
 	if (_err != noErr) return PyMac_Error(_err);
 	Py_INCREF(Py_None);
 	_res = Py_None;
+ pText__error__: ;
 	return _res;
 }
 
@@ -1713,9 +1702,9 @@ static PyObject *wasteObj_getattr(wasteObject *self, char *name)
 #define wasteObj_hash NULL
 
 PyTypeObject waste_Type = {
-	PyObject_HEAD_INIT(NULL)
+	PyObject_HEAD_INIT(&PyType_Type)
 	0, /*ob_size*/
-	"waste.waste", /*tp_name*/
+	"waste", /*tp_name*/
 	sizeof(wasteObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
 	/* methods */

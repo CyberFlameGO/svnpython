@@ -565,7 +565,7 @@ static char Cdrtype__doc__[] =
 static PyTypeObject Cdrtype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"calldll.routine",		/*tp_name*/
+	"routine",			/*tp_name*/
 	sizeof(cdrobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -755,7 +755,7 @@ static char Cdctype__doc__[] =
 static PyTypeObject Cdctype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"calldll.callable",		/*tp_name*/
+	"callable",			/*tp_name*/
 	sizeof(cdcobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -964,7 +964,7 @@ static char Cdftype__doc__[] =
 static PyTypeObject Cdftype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"calldll.fragment",		/*tp_name*/
+	"fragment",			/*tp_name*/
 	sizeof(cdfobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */

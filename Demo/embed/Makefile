@@ -10,13 +10,12 @@ blddir=		../..
 srcdir=		../..
 
 # Python version
-VERSION=	2.2
+VERSION=	2.1
 
 # Compiler flags
 OPT=		-g
 INCLUDES=	-I$(srcdir)/Include -I$(blddir)
-CFLAGS=		$(OPT)
-CPPFLAGS=	$(INCLUDES)
+CFLAGS=		$(OPT) $(INCLUDES)
 
 # The Python library
 LIBPYTHON=	$(blddir)/libpython$(VERSION).a

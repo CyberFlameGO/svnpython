@@ -17,10 +17,6 @@ This software comes with no warranty. Use at your own risk.
 #include <string.h>
 #include <ctype.h>
 
-#ifdef HAVE_LANGINFO_H
-#include <langinfo.h>
-#endif
-
 #if defined(MS_WIN32)
 #define WINDOWS_LEAN_AND_MEAN
 #include <windows.h>
@@ -153,10 +149,7 @@ fixup_ulcase(void)
         PyDict_SetItemString(string, "letters", ulo);
     Py_DECREF(ulo);
 }
-
-#if defined(HAVE_LANGINFO_H) && defined(CODESET)
-static int fileencoding_uses_locale = 0;
-#endif
+  
 
 static PyObject*
 PyLocale_setlocale(PyObject* self, PyObject* args)
@@ -206,22 +199,6 @@ PyLocale_setlocale(PyObject* self, PyObject* args)
             fixup_ulcase();
         /* things that got wrong up to here are ignored */
         PyErr_Clear();
-#if defined(HAVE_LANGINFO_H) && defined(CODESET)
-	if (Py_FileSystemDefaultEncoding == NULL)
-	    fileencoding_uses_locale = 1;
-	if (fileencoding_uses_locale) {
-	    char *codeset = nl_langinfo(CODESET);
-	    PyObject *enc = NULL;
-	    if (*codeset && (enc = PyCodec_Encoder(codeset))) {
-		/* Release previous file encoding */
-		if (Py_FileSystemDefaultEncoding)
-		    free((char *)Py_FileSystemDefaultEncoding);
-		Py_FileSystemDefaultEncoding = strdup(codeset);
-		Py_DECREF(enc);
-	    } else
-		PyErr_Clear();
-	}
-#endif
     } else {
         /* get locale */
         /* restore LC_NUMERIC first, if appropriate */
@@ -376,7 +353,7 @@ PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
     if (!PyArg_NoArgs(args))
         return NULL;
 
-    PyOS_snprintf(encoding, sizeof(encoding), "cp%d", GetACP());
+    sprintf(encoding, "cp%d", GetACP());
 
     if (GetLocaleInfo(LOCALE_USER_DEFAULT,
                       LOCALE_SISO639LANGNAME,
@@ -414,23 +391,6 @@ PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
 }
 #endif
 
-#ifdef HAVE_LANGINFO_H
-static char nl_langinfo__doc__[] =
-"nl_langinfo(key) -> string\n"
-"Return the value for the locale information associated with key."
-;
-
-static PyObject*
-PyLocale_nl_langinfo(PyObject* self, PyObject* args)
-{
-    int item;
-    if (!PyArg_ParseTuple(args, "i:nl_langinfo", &item))
-        return NULL;
-    return PyString_FromString(nl_langinfo(item));
-}
-#endif
-    
-
 static struct PyMethodDef PyLocale_Methods[] = {
   {"setlocale", (PyCFunction) PyLocale_setlocale, 
    METH_VARARGS, setlocale__doc__},
@@ -443,11 +403,6 @@ static struct PyMethodDef PyLocale_Methods[] = {
 #if defined(MS_WIN32) || defined(macintosh)
   {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, 0},
 #endif
-#ifdef HAVE_LANGINFO_H
-  {"nl_langinfo", (PyCFunction) PyLocale_nl_langinfo,
-   METH_VARARGS, nl_langinfo__doc__},
-#endif
-  
   {NULL, NULL}
 };
 
@@ -500,87 +455,4 @@ init_locale(void)
     x = PyString_FromString(locale__doc__);
     PyDict_SetItemString(d, "__doc__", x);
     Py_XDECREF(x);
-
-#define ADDINT(X) PyModule_AddIntConstant(m, #X, X)
-#ifdef HAVE_LANGINFO_H
-    /* These constants should exist on any langinfo implementation */
-    ADDINT(DAY_1);
-    ADDINT(DAY_2);
-    ADDINT(DAY_3);
-    ADDINT(DAY_4);
-    ADDINT(DAY_5);
-    ADDINT(DAY_6);
-    ADDINT(DAY_7);
-
-    ADDINT(ABDAY_1);
-    ADDINT(ABDAY_2);
-    ADDINT(ABDAY_3);
-    ADDINT(ABDAY_4);
-    ADDINT(ABDAY_5);
-    ADDINT(ABDAY_6);
-    ADDINT(ABDAY_7);
-
-    ADDINT(MON_1);
-    ADDINT(MON_2);
-    ADDINT(MON_3);
-    ADDINT(MON_4);
-    ADDINT(MON_5);
-    ADDINT(MON_6);
-    ADDINT(MON_7);
-    ADDINT(MON_8);
-    ADDINT(MON_9);
-    ADDINT(MON_10);
-    ADDINT(MON_11);
-    ADDINT(MON_12);
-
-    ADDINT(ABMON_1);
-    ADDINT(ABMON_2);
-    ADDINT(ABMON_3);
-    ADDINT(ABMON_4);
-    ADDINT(ABMON_5);
-    ADDINT(ABMON_6);
-    ADDINT(ABMON_7);
-    ADDINT(ABMON_8);
-    ADDINT(ABMON_9);
-    ADDINT(ABMON_10);
-    ADDINT(ABMON_11);
-    ADDINT(ABMON_12);
-
-#ifdef RADIXCHAR
-    /* The following are not available with glibc 2.0 */
-    ADDINT(RADIXCHAR);
-    ADDINT(THOUSEP);
-    /* YESSTR and NOSTR are deprecated in glibc, since they are
-       a special case of message translation, which should be rather
-       done using gettext. So we don't expose it to Python in the
-       first place.
-    ADDINT(YESSTR);
-    ADDINT(NOSTR);
-    */
-    ADDINT(CRNCYSTR);
-#endif
-
-    ADDINT(D_T_FMT);
-    ADDINT(D_FMT);
-    ADDINT(T_FMT);
-    ADDINT(AM_STR);
-    ADDINT(PM_STR);
-
-#ifdef CODESET
-    /* The following constants are available only with XPG4. */
-    ADDINT(CODESET);
-    ADDINT(T_FMT_AMPM);
-    ADDINT(ERA);
-    ADDINT(ERA_D_FMT);
-    ADDINT(ERA_D_T_FMT);
-    ADDINT(ERA_T_FMT);
-    ADDINT(ALT_DIGITS);
-    ADDINT(YESEXPR);
-    ADDINT(NOEXPR);
-#endif
-#ifdef _DATE_FMT
-    /* This is not available in all glibc versions that have CODESET. */
-    ADDINT(_DATE_FMT);
-#endif
-#endif /* HAVE_LANGINFO_H */
 }

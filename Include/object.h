@@ -150,7 +150,6 @@ typedef struct {
 	unaryfunc nb_float;
 	unaryfunc nb_oct;
 	unaryfunc nb_hex;
-	/* Added in release 2.0 */
 	binaryfunc nb_inplace_add;
 	binaryfunc nb_inplace_subtract;
 	binaryfunc nb_inplace_multiply;
@@ -162,13 +161,6 @@ typedef struct {
 	binaryfunc nb_inplace_and;
 	binaryfunc nb_inplace_xor;
 	binaryfunc nb_inplace_or;
-
-	/* Added in release 2.2 */
-	/* The following require the Py_TPFLAGS_HAVE_CLASS flag */
-	binaryfunc nb_floor_divide;
-	binaryfunc nb_true_divide;
-	binaryfunc nb_inplace_floor_divide;
-	binaryfunc nb_inplace_true_divide;
 } PyNumberMethods;
 
 typedef struct {
@@ -180,7 +172,6 @@ typedef struct {
 	intobjargproc sq_ass_item;
 	intintobjargproc sq_ass_slice;
 	objobjproc sq_contains;
-	/* Added in release 2.0 */
 	binaryfunc sq_inplace_concat;
 	intargfunc sq_inplace_repeat;
 } PySequenceMethods;
@@ -209,17 +200,10 @@ typedef int (*cmpfunc)(PyObject *, PyObject *);
 typedef PyObject *(*reprfunc)(PyObject *);
 typedef long (*hashfunc)(PyObject *);
 typedef PyObject *(*richcmpfunc) (PyObject *, PyObject *, int);
-typedef PyObject *(*getiterfunc) (PyObject *);
-typedef PyObject *(*iternextfunc) (PyObject *);
-typedef PyObject *(*descrgetfunc) (PyObject *, PyObject *, PyObject *);
-typedef int (*descrsetfunc) (PyObject *, PyObject *, PyObject *);
-typedef int (*initproc)(PyObject *, PyObject *, PyObject *);
-typedef PyObject *(*newfunc)(struct _typeobject *, PyObject *, PyObject *);
-typedef PyObject *(*allocfunc)(struct _typeobject *, int);
 
 typedef struct _typeobject {
 	PyObject_VAR_HEAD
-	char *tp_name; /* For printing, in format "<module>.<name>" */
+	char *tp_name; /* For printing */
 	int tp_basicsize, tp_itemsize; /* For allocation */
 	
 	/* Methods to implement standard operations */
@@ -253,81 +237,37 @@ typedef struct _typeobject {
 
 	char *tp_doc; /* Documentation string */
 
-	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
 	traverseproc tp_traverse;
 	
 	/* delete references to contained objects */
 	inquiry tp_clear;
 
-	/* Assigned meaning in release 2.1 */
 	/* rich comparisons */
 	richcmpfunc tp_richcompare;
 
 	/* weak reference enabler */
 	long tp_weaklistoffset;
 
-	/* Added in release 2.2 */
-	/* Iterators */
-	getiterfunc tp_iter;
-	iternextfunc tp_iternext;
-
-	/* Attribute descriptor and subclassing stuff */
-	struct PyMethodDef *tp_methods;
-	struct PyMemberDef *tp_members;
-	struct PyGetSetDef *tp_getset;
-	struct _typeobject *tp_base;
-	PyObject *tp_dict;
-	descrgetfunc tp_descr_get;
-	descrsetfunc tp_descr_set;
-	long tp_dictoffset;
-	initproc tp_init;
-	allocfunc tp_alloc;
-	newfunc tp_new;
-	destructor tp_free; /* Low-level free-memory routine */
-	inquiry tp_is_gc; /* For PyObject_IS_GC */
-	PyObject *tp_bases;
-	PyObject *tp_mro; /* method resolution order */
-	PyObject *tp_cache;
-	PyObject *tp_subclasses;
-	PyObject *tp_weaklist;
-
 #ifdef COUNT_ALLOCS
-	/* these must be last and never explicitly initialized */
-	int tp_allocs;
-	int tp_frees;
+	/* these must be last */
+	int tp_alloc;
+	int tp_free;
 	int tp_maxalloc;
 	struct _typeobject *tp_next;
 #endif
 } PyTypeObject;
 
+extern DL_IMPORT(PyTypeObject) PyType_Type; /* The type of type objects */
 
-/* Generic type check */
-extern DL_IMPORT(int) PyType_IsSubtype(PyTypeObject *, PyTypeObject *);
-#define PyObject_TypeCheck(ob, tp) \
-	((ob)->ob_type == (tp) || PyType_IsSubtype((ob)->ob_type, (tp)))
-
-extern DL_IMPORT(PyTypeObject) PyType_Type; /* built-in 'type' */
-extern DL_IMPORT(PyTypeObject) PyBaseObject_Type; /* built-in 'object' */
-extern DL_IMPORT(PyTypeObject) PySuper_Type; /* built-in 'super' */
-
-#define PyType_Check(op) PyObject_TypeCheck(op, &PyType_Type)
-#define PyType_CheckExact(op) ((op)->ob_type == &PyType_Type)
-
-extern DL_IMPORT(int) PyType_Ready(PyTypeObject *);
-extern DL_IMPORT(PyObject *) PyType_GenericAlloc(PyTypeObject *, int);
-extern DL_IMPORT(PyObject *) PyType_GenericNew(PyTypeObject *,
-					       PyObject *, PyObject *);
-extern DL_IMPORT(PyObject *) _PyType_Lookup(PyTypeObject *, PyObject *);
+#define PyType_Check(op) ((op)->ob_type == &PyType_Type)
 
 /* Generic operations on objects */
 extern DL_IMPORT(int) PyObject_Print(PyObject *, FILE *, int);
 extern DL_IMPORT(void) _PyObject_Dump(PyObject *);
 extern DL_IMPORT(PyObject *) PyObject_Repr(PyObject *);
 extern DL_IMPORT(PyObject *) PyObject_Str(PyObject *);
-#ifdef Py_USING_UNICODE
 extern DL_IMPORT(PyObject *) PyObject_Unicode(PyObject *);
-#endif
 extern DL_IMPORT(int) PyObject_Compare(PyObject *, PyObject *);
 extern DL_IMPORT(PyObject *) PyObject_RichCompare(PyObject *, PyObject *, int);
 extern DL_IMPORT(int) PyObject_RichCompareBool(PyObject *, PyObject *, int);
@@ -337,10 +277,6 @@ extern DL_IMPORT(int) PyObject_HasAttrString(PyObject *, char *);
 extern DL_IMPORT(PyObject *) PyObject_GetAttr(PyObject *, PyObject *);
 extern DL_IMPORT(int) PyObject_SetAttr(PyObject *, PyObject *, PyObject *);
 extern DL_IMPORT(int) PyObject_HasAttr(PyObject *, PyObject *);
-extern DL_IMPORT(PyObject **) _PyObject_GetDictPtr(PyObject *);
-extern DL_IMPORT(PyObject *) PyObject_GenericGetAttr(PyObject *, PyObject *);
-extern DL_IMPORT(int) PyObject_GenericSetAttr(PyObject *,
-					      PyObject *, PyObject *);
 extern DL_IMPORT(long) PyObject_Hash(PyObject *);
 extern DL_IMPORT(int) PyObject_IsTrue(PyObject *);
 extern DL_IMPORT(int) PyObject_Not(PyObject *);
@@ -348,19 +284,7 @@ extern DL_IMPORT(int) PyCallable_Check(PyObject *);
 extern DL_IMPORT(int) PyNumber_Coerce(PyObject **, PyObject **);
 extern DL_IMPORT(int) PyNumber_CoerceEx(PyObject **, PyObject **);
 
-extern DL_IMPORT(void) PyObject_ClearWeakRefs(PyObject *);
-
-/* A slot function whose address we need to compare */
-extern int _PyObject_SlotCompare(PyObject *, PyObject *);
-
-
-/* PyObject_Dir(obj) acts like Python __builtin__.dir(obj), returning a
-   list of strings.  PyObject_Dir(NULL) is like __builtin__.dir(),
-   returning the names of the current locals.  In this case, if there are
-   no current locals, NULL is returned, and PyErr_Occurred() is false.
-*/
-extern DL_IMPORT(PyObject *) PyObject_Dir(PyObject *);
-
+extern DL_IMPORT(void) (*PyObject_ClearWeakRefs)(PyObject *);
 
 /* Helpers for printing recursive container types */
 extern DL_IMPORT(int) Py_ReprEnter(PyObject *);
@@ -405,9 +329,12 @@ given type object has a specified feature.
 /* PySequenceMethods contains sq_contains */
 #define Py_TPFLAGS_HAVE_SEQUENCE_IN (1L<<1)
 
-/* This is here for backwards compatibility.  Extensions that use the old GC
- * API will still compile but the objects will not be tracked by the GC. */
-#define Py_TPFLAGS_GC 0 /* used to be (1L<<2) */
+/* Objects which participate in garbage collection (see objimp.h) */
+#ifdef WITH_CYCLE_GC
+#define Py_TPFLAGS_GC (1L<<2)
+#else
+#define Py_TPFLAGS_GC 0
+#endif
 
 /* PySequenceMethods and PyNumberMethods contain in-place operators */
 #define Py_TPFLAGS_HAVE_INPLACEOPS (1L<<3)
@@ -415,36 +342,13 @@ given type object has a specified feature.
 /* PyNumberMethods do their own coercion */
 #define Py_TPFLAGS_CHECKTYPES (1L<<4)
 
-/* tp_richcompare is defined */
 #define Py_TPFLAGS_HAVE_RICHCOMPARE (1L<<5)
 
 /* Objects which are weakly referencable if their tp_weaklistoffset is >0 */
+/* XXX Should this have the same value as Py_TPFLAGS_HAVE_RICHCOMPARE?
+ * These both indicate a feature that appeared in the same alpha release.
+ */
 #define Py_TPFLAGS_HAVE_WEAKREFS (1L<<6)
-
-/* tp_iter is defined */
-#define Py_TPFLAGS_HAVE_ITER (1L<<7)
-
-/* New members introduced by Python 2.2 exist */
-#define Py_TPFLAGS_HAVE_CLASS (1L<<8)
-
-/* Set if the type object is dynamically allocated */
-#define Py_TPFLAGS_HEAPTYPE (1L<<9)
-
-/* Set if the type allows subclassing */
-#define Py_TPFLAGS_BASETYPE (1L<<10)
-
-/* Set if the type is 'ready' -- fully initialized */
-#define Py_TPFLAGS_READY (1L<<12)
-
-/* Set while the type is being 'readied', to prevent recursive ready calls */
-#define Py_TPFLAGS_READYING (1L<<13)
-
-/* Objects support garbage collection (see objimp.h) */
-#ifdef WITH_CYCLE_GC
-#define Py_TPFLAGS_HAVE_GC (1L<<14)
-#else
-#define Py_TPFLAGS_HAVE_GC 0
-#endif
 
 #define Py_TPFLAGS_DEFAULT  ( \
                              Py_TPFLAGS_HAVE_GETCHARBUFFER | \
@@ -452,8 +356,6 @@ given type object has a specified feature.
                              Py_TPFLAGS_HAVE_INPLACEOPS | \
                              Py_TPFLAGS_HAVE_RICHCOMPARE | \
                              Py_TPFLAGS_HAVE_WEAKREFS | \
-                             Py_TPFLAGS_HAVE_ITER | \
-                             Py_TPFLAGS_HAVE_CLASS | \
                             0)
 
 #define PyType_HasFeature(t,f)  (((t)->tp_flags & (f)) != 0)
@@ -502,8 +404,8 @@ extern DL_IMPORT(void) _Py_ResetReferences(void);
 
 #ifndef Py_TRACE_REFS
 #ifdef COUNT_ALLOCS
-#define _Py_Dealloc(op) ((op)->ob_type->tp_frees++, (*(op)->ob_type->tp_dealloc)((PyObject *)(op)))
-#define _Py_ForgetReference(op) ((op)->ob_type->tp_frees++)
+#define _Py_Dealloc(op) ((op)->ob_type->tp_free++, (*(op)->ob_type->tp_dealloc)((PyObject *)(op)))
+#define _Py_ForgetReference(op) ((op)->ob_type->tp_free++)
 #else /* !COUNT_ALLOCS */
 #define _Py_Dealloc(op) (*(op)->ob_type->tp_dealloc)((PyObject *)(op))
 #define _Py_ForgetReference(op) /*empty*/
@@ -527,12 +429,11 @@ extern DL_IMPORT(long) _Py_RefTotal;
 #endif /* !Py_TRACE_REFS */
 
 #define Py_INCREF(op) (_Py_RefTotal++, (op)->ob_refcnt++)
-  /* under Py_REF_DEBUG: also log negative ref counts after Py_DECREF() !! */
-#define Py_DECREF(op)							\
-       if (--_Py_RefTotal, 0 < (--((op)->ob_refcnt))) ;			\
-       else if (0 == (op)->ob_refcnt) _Py_Dealloc( (PyObject*)(op));	\
-       else (void)fprintf( stderr, "%s:%i negative ref count %i\n",	\
-		           __FILE__, __LINE__, (op)->ob_refcnt)
+#define Py_DECREF(op) \
+	if (--_Py_RefTotal, (--((op)->ob_refcnt) != 0)) \
+		; \
+	else \
+		_Py_Dealloc((PyObject *)(op))
 #else /* !Py_REF_DEBUG */
 
 #ifdef COUNT_ALLOCS

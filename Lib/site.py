@@ -14,7 +14,7 @@ This will append site-specific paths to to the module search path.  On
 Unix, it starts with sys.prefix and sys.exec_prefix (if different) and
 appends lib/python<version>/site-packages as well as lib/site-python.
 On other platforms (mainly Mac and Windows), it uses just sys.prefix
-(and sys.exec_prefix, if different, but this is unlikely).  The
+\(and sys.exec_prefix, if different, but this is unlikely).  The
 resulting directories, if they exist, are appended to sys.path, and
 also inspected for path configuration files.
 
@@ -23,7 +23,7 @@ A path configuration file is a file whose name has the form
 to be added to sys.path.  Non-existing directories (or
 non-directories) are never added to sys.path; no directory is added to
 sys.path more than once.  Blank lines and lines beginning with
-'#' are skipped. Lines starting with 'import' are executed.
+\code{#} are skipped. Lines starting with \code{import} are executed.
 
 For example, suppose sys.prefix and sys.exec_prefix are set to
 /usr/local and there is a directory /usr/local/lib/python1.5/site-packages
@@ -59,6 +59,11 @@ ImportError exception, it is silently ignored.
 
 import sys, os
 
+if os.sep==".":
+    endsep = "/"
+else:
+    endsep = "."
+
 
 def makepath(*paths):
     dir = os.path.abspath(os.path.join(*paths))
@@ -72,21 +77,12 @@ del m
 # This ensures that the initial path provided by the interpreter contains
 # only absolute pathnames, even if we're running from the build directory.
 L = []
-_dirs_in_sys_path = {}
+dirs_in_sys_path = {}
 for dir in sys.path:
-    # Filter out paths that don't exist, but leave in the empty string
-    # since it's a special case. We also need to special-case the Mac,
-    # as file names are allowed on sys.path there.
-    if sys.platform != 'mac':
-        if dir and not os.path.isdir(dir):
-            continue
-    else:
-        if dir and not os.path.exists(dir):
-            continue
     dir, dircase = makepath(dir)
-    if not _dirs_in_sys_path.has_key(dircase):
+    if not dirs_in_sys_path.has_key(dircase):
         L.append(dir)
-        _dirs_in_sys_path[dircase] = 1
+        dirs_in_sys_path[dircase] = 1
 sys.path[:] = L
 del dir, L
 
@@ -99,24 +95,9 @@ if os.name == "posix" and os.path.basename(sys.path[-1]) == "Modules":
     sys.path.append(s)
     del get_platform, s
 
-def _init_pathinfo():
-    global _dirs_in_sys_path
-    _dirs_in_sys_path = d = {}
-    for dir in sys.path:
-        if dir and not os.path.isdir(dir):
-            continue
-        dir, dircase = makepath(dir)
-        d[dircase] = 1
-
 def addsitedir(sitedir):
-    global _dirs_in_sys_path
-    if _dirs_in_sys_path is None:
-        _init_pathinfo()
-        reset = 1
-    else:
-        reset = 0
     sitedir, sitedircase = makepath(sitedir)
-    if not _dirs_in_sys_path.has_key(sitedircase):
+    if not dirs_in_sys_path.has_key(sitedircase):
         sys.path.append(sitedir)        # Add path component
     try:
         names = os.listdir(sitedir)
@@ -124,18 +105,10 @@ def addsitedir(sitedir):
         return
     names.sort()
     for name in names:
-        if name[-4:] == os.extsep + "pth":
+        if name[-4:] == endsep + "pth":
             addpackage(sitedir, name)
-    if reset:
-        _dirs_in_sys_path = None
 
 def addpackage(sitedir, name):
-    global _dirs_in_sys_path
-    if _dirs_in_sys_path is None:
-        _init_pathinfo()
-        reset = 1
-    else:
-        reset = 0
     fullname = os.path.join(sitedir, name)
     try:
         f = open(fullname)
@@ -153,11 +126,9 @@ def addpackage(sitedir, name):
         if dir[-1] == '\n':
             dir = dir[:-1]
         dir, dircase = makepath(sitedir, dir)
-        if not _dirs_in_sys_path.has_key(dircase) and os.path.exists(dir):
+        if not dirs_in_sys_path.has_key(dircase) and os.path.exists(dir):
             sys.path.append(dir)
-            _dirs_in_sys_path[dircase] = 1
-    if reset:
-        _dirs_in_sys_path = None
+            dirs_in_sys_path[dircase] = 1
 
 prefixes = [sys.prefix]
 if sys.exec_prefix != sys.prefix:
@@ -170,13 +141,13 @@ for prefix in prefixes:
                                      "python" + sys.version[:3],
                                      "site-packages"),
                         os.path.join(prefix, "lib", "site-python")]
+        elif os.sep == ':':
+            sitedirs = [os.path.join(prefix, "lib", "site-packages")]
         else:
-            sitedirs = [prefix, os.path.join(prefix, "lib", "site-packages")]
+            sitedirs = [prefix]
         for sitedir in sitedirs:
             if os.path.isdir(sitedir):
                 addsitedir(sitedir)
-
-_dirs_in_sys_path = None
 
 
 # Define new built-ins 'quit' and 'exit'.
@@ -262,23 +233,9 @@ Thanks to CWI, CNRI, BeOpen.com, Digital Creations and a cast of thousands
 for supporting Python development.  See www.python.org for more information.""")
 here = os.path.dirname(os.__file__)
 __builtin__.license = _Printer(
-    "license", "See http://www.python.org/%.3s/license.html" % sys.version,
+    "license", "See http://www.pythonlabs.com/products/python2.0/license.html",
     ["LICENSE.txt", "LICENSE"],
     [os.path.join(here, os.pardir), here, os.curdir])
-
-
-# Define new built-in 'help'.
-# This is a wrapper around pydoc.help (with a twist).
-
-class _Helper:
-    def __repr__(self):
-        return "Type help() for interactive help, " \
-               "or help(object) for help about object."
-    def __call__(self, *args, **kwds):
-        import pydoc
-        return pydoc.help(*args, **kwds)
-
-__builtin__.help = _Helper()
 
 
 # Set the string encoding used by the Unicode implementation.  The
@@ -300,8 +257,7 @@ if 0:
     encoding = "undefined"
 
 if encoding != "ascii":
-    # On Non-Unicode builds this will raise an AttributeError...
-    sys.setdefaultencoding(encoding) # Needs Python Unicode build !
+    sys.setdefaultencoding(encoding)
 
 #
 # Run custom site specific code, if available.

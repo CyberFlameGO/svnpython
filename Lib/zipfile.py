@@ -66,10 +66,7 @@ _FH_FILENAME_LENGTH = 10
 _FH_EXTRA_FIELD_LENGTH = 11
 
 # Used to compare file passed to ZipFile
-import types
-_STRING_TYPES = (types.StringType,)
-if hasattr(types, "UnicodeType"):
-    _STRING_TYPES = _STRING_TYPES + (types.UnicodeType,)
+_STRING_TYPES = (type('s'), type(u's'))
 
 
 def is_zipfile(filename):
@@ -84,7 +81,7 @@ def is_zipfile(filename):
         fpin.close()
         if endrec[0:4] == "PK\005\006" and endrec[-2:] == "\000\000":
             return 1    # file has correct magic number
-    except IOError:
+    except:
         pass
 
 
@@ -117,7 +114,7 @@ class ZipInfo:
         """Return the per-file header as a string."""
         dt = self.date_time
         dosdate = (dt[0] - 1980) << 9 | dt[1] << 5 | dt[2]
-        dostime = dt[3] << 11 | dt[4] << 5 | (dt[5] // 2)
+        dostime = dt[3] << 11 | dt[4] << 5 | dt[5] / 2
         if self.flag_bits & 0x08:
             # Set these to zero because we write them after the file data
             CRC = compress_size = file_size = 0
@@ -386,14 +383,13 @@ class ZipFile:
             zinfo.compress_type = compress_type
         self._writecheck(zinfo)
         fp = open(filename, "rb")
-        zinfo.flag_bits = 0x00
+        zinfo.flag_bits = 0x08
         zinfo.header_offset = self.fp.tell()    # Start of header bytes
-        # Must overwrite CRC and sizes with correct data later
-        zinfo.CRC = CRC = 0
-        zinfo.compress_size = compress_size = 0
-        zinfo.file_size = file_size = 0
         self.fp.write(zinfo.FileHeader())
         zinfo.file_offset = self.fp.tell()      # Start of file bytes
+        CRC = 0
+        compress_size = 0
+        file_size = 0
         if zinfo.compress_type == ZIP_DEFLATED:
             cmpr = zlib.compressobj(zlib.Z_DEFAULT_COMPRESSION,
                  zlib.DEFLATED, -15)
@@ -419,12 +415,9 @@ class ZipFile:
             zinfo.compress_size = file_size
         zinfo.CRC = CRC
         zinfo.file_size = file_size
-        # Seek backwards and write CRC and file sizes
-        position = self.fp.tell()       # Preserve current position in file
-        self.fp.seek(zinfo.header_offset + 14, 0)
+        # Write CRC and file sizes after the file data
         self.fp.write(struct.pack("<lll", zinfo.CRC, zinfo.compress_size,
               zinfo.file_size))
-        self.fp.seek(position, 0)
         self.filelist.append(zinfo)
         self.NameToInfo[zinfo.filename] = zinfo
 
@@ -454,13 +447,13 @@ class ZipFile:
 
     def __del__(self):
         """Call the "close()" method in case the user forgot."""
-        self.close()
+        if self.fp and not self._filePassed:
+            self.fp.close()
+            self.fp = None
 
     def close(self):
         """Close the file, and for mode "w" and "a" write the ending
         records."""
-        if self.fp is None:
-            return
         if self.mode in ("w", "a"):             # write ending records
             count = 0
             pos1 = self.fp.tell()
@@ -468,7 +461,7 @@ class ZipFile:
                 count = count + 1
                 dt = zinfo.date_time
                 dosdate = (dt[0] - 1980) << 9 | dt[1] << 5 | dt[2]
-                dostime = dt[3] << 11 | dt[4] << 5 | (dt[5] // 2)
+                dostime = dt[3] << 11 | dt[4] << 5 | dt[5] / 2
                 centdir = struct.pack(structCentralDir,
                   stringCentralDir, zinfo.create_version,
                   zinfo.create_system, zinfo.extract_version, zinfo.reserved,

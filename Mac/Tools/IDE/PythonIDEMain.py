@@ -1,4 +1,4 @@
-# copyright 1997-2001 Just van Rossum, Letterror. just@letterror.com
+# copyright 1997-2000 Just van Rossum, Letterror. just@letterror.com
 
 import Splash
 
@@ -14,8 +14,7 @@ class PythonIDE(Wapplication.Application):
 	def __init__(self):
 		self.preffilepath = ":Python:PythonIDE preferences"
 		Wapplication.Application.__init__(self, 'Pide')
-		from Carbon import AE
-		from Carbon import AppleEvents
+		import AE, AppleEvents
 		
 		AE.AEInstallEventHandler(AppleEvents.kCoreEventClass, AppleEvents.kAEOpenApplication, 
 				self.ignoreevent)
@@ -29,6 +28,7 @@ class PythonIDE(Wapplication.Application):
 				self.quitevent)
 		import PyConsole, PyEdit
 		Splash.wait()
+		Splash.uninstall_importhook()
 		PyConsole.installoutput()
 		PyConsole.installconsole()
 		import sys
@@ -123,7 +123,7 @@ class PythonIDE(Wapplication.Application):
 		self.makescriptsmenu()
 	
 	def quitevent(self, theAppleEvent, theReply):
-		from Carbon import AE
+		import AE
 		AE.AEInteractWithUser(50000000)
 		self._quit()
 	

@@ -5,9 +5,9 @@
    which is included by this file dependent on config settings.
    Stuff shared by all thread_*.h files is collected here. */
 
-#include "pyconfig.h"
+#include "config.h"
 
-/* pyconfig.h may or may not define DL_IMPORT */
+/* config.h may or may not define DL_IMPORT */
 #ifndef DL_IMPORT	/* declarations for DLL import/export */
 #define DL_IMPORT(RTYPE) RTYPE
 #endif
@@ -111,6 +111,7 @@ void PyThread_init_thread(void)
 
 #ifdef HAVE_PTH
 #include "thread_pth.h"
+#undef _POSIX_THREADS
 #endif
 
 #ifdef _POSIX_THREADS

@@ -2,7 +2,7 @@
          General calendar-related functions}
 
 \declaremodule{standard}{calendar}
-\modulesynopsis{Functions for working with calendars,
+\modulesynopsis{General functions for working with the calendar,
                 including some emulation of the \UNIX\ \program{cal}
                 program.}
 \sectionauthor{Drew Csillag}{drew_csillag@geocities.com}
@@ -12,8 +12,7 @@ This module allows you to output calendars like the \UNIX{}
 related to the calendar. By default, these calendars have Monday as
 the first day of the week, and Sunday as the last (the European
 convention). Use \function{setfirstweekday()} to set the first day of the
-week to Sunday (6) or to any other weekday.  Parameters that specify
-dates are given as integers.
+week to Sunday (6) or to any other weekday.
 
 \begin{funcdesc}{setfirstweekday}{weekday}
 Sets the weekday (\code{0} is Monday, \code{6} is Sunday) to start
@@ -33,12 +32,12 @@ Returns the current setting for the weekday to start each week.
 \end{funcdesc}
 
 \begin{funcdesc}{isleap}{year}
-Returns \code{1} if \var{year} is a leap year, otherwise \code{0}.
+Returns true if \var{year} is a leap year.
 \end{funcdesc}
 
 \begin{funcdesc}{leapdays}{y1, y2}
 Returns the number of leap years in the range
-[\var{y1}\ldots\var{y2}), where \var{y1} and \var{y2} are years.
+[\var{y1}\ldots\var{y2}).
 \end{funcdesc}
 
 \begin{funcdesc}{weekday}{year, month, day}
@@ -80,14 +79,13 @@ Returns a 3-column calendar for an entire year as a multi-line string.
 Optional parameters \var{w}, \var{l}, and \var{c} are for date column
 width, lines per week, and number of spaces between month columns,
 respectively. Depends on the first weekday as set by
-\function{setfirstweekday()}.  The earliest year for which a calendar can
-be generated is platform-dependent.
+\function{setfirstweekday()}.
 \end{funcdesc}
 
 \begin{funcdesc}{timegm}{tuple}
 An unrelated but handy function that takes a time tuple such as
 returned by the \function{gmtime()} function in the \refmodule{time}
-module, and returns the corresponding \UNIX{} timestamp value, assuming
+module, and returns the corresponding Unix timestamp value, assuming
 an epoch of 1970, and the POSIX encoding.  In fact,
 \function{time.gmtime()} and \function{timegm()} are each others' inverse.
 \end{funcdesc}

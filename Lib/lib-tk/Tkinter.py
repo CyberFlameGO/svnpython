@@ -3,16 +3,16 @@
 Tkinter provides classes which allow the display, positioning and
 control of widgets. Toplevel widgets are Tk and Toplevel. Other
 widgets are Frame, Label, Entry, Text, Canvas, Button, Radiobutton,
-Checkbutton, Scale, Listbox, Scrollbar, OptionMenu. Properties of the
-widgets are specified with keyword arguments.  Keyword arguments have
-the same name as the corresponding resource under Tk.
+Checkbutton, Scale, Listbox, Scrollbar, OptionMenu. Properties of the widgets are
+specified with keyword arguments.  Keyword arguments have the same
+name as the corresponding resource under Tk.
 
 Widgets are positioned with one of the geometry managers Place, Pack
 or Grid. These managers can be called with methods place, pack, grid
 available in every Widget.
 
-Actions are bound to events by resources (e.g. keyword argument
-command) or with the method bind.
+Actions are bound to events by resources (e.g. keyword argument command) or
+with the method bind.
 
 Example (Hello, World):
 import Tkinter
@@ -848,7 +848,8 @@ class Misc:
             cmd = ('%sif {"[%s %s]" == "break"} break\n'
                    %
                    (add and '+' or '',
-                funcid, self._subst_format_str))
+                funcid,
+                " ".join(self._subst_format)))
             self.tk.call(what + (sequence, cmd))
             return funcid
         elif sequence:
@@ -1011,7 +1012,6 @@ class Misc:
     _subst_format = ('%#', '%b', '%f', '%h', '%k',
              '%s', '%t', '%w', '%x', '%y',
              '%A', '%E', '%K', '%N', '%W', '%T', '%X', '%Y', '%D')
-    _subst_format_str = " ".join(_subst_format)
     def _substitute(self, *args):
         """Internal function."""
         if len(args) != len(self._subst_format): return args
@@ -1191,13 +1191,6 @@ class Misc:
         and pad (how much space to let additionally)."""
         return self._grid_configure('columnconfigure', index, cnf, kw)
     columnconfigure = grid_columnconfigure
-    def grid_location(self, x, y):
-        """Return a tuple of column and row which identify the cell
-        at which the pixel at position X and Y inside the master
-        widget is located."""
-        return self._getints(
-            self.tk.call(
-                'grid', 'location', self._w, x, y)) or None
     def grid_propagate(self, flag=_noarg_):
         """Set or get the status for propagation of geometry information.
 
@@ -1485,7 +1478,7 @@ class Tk(Misc, Wm):
             if ext not in ('.py', '.pyc', '.pyo'):
                 baseName = baseName + ext
         self.tk = _tkinter.create(screenName, baseName, className)
-        if _MacOS and hasattr(_MacOS, 'SchedParams'):
+        if _MacOS:
             # Disable event scanning except for Command-Period
             _MacOS.SchedParams(1, 0)
             # Work around nasty MacTk bug
@@ -1708,7 +1701,14 @@ class Grid:
             dict[key] = value
         return dict
     info = grid_info
-    location = grid_location = Misc.grid_location
+    def grid_location(self, x, y):
+        """Return a tuple of column and row which identify the cell
+        at which the pixel at position X and Y inside the master
+        widget is located."""
+        return self._getints(
+            self.tk.call(
+                'grid', 'location', self._w, x, y)) or None
+    location = grid_location
     propagate = grid_propagate = Misc.grid_propagate
     rowconfigure = grid_rowconfigure = Misc.grid_rowconfigure
     size = grid_size = Misc.grid_size
@@ -2363,31 +2363,6 @@ class Listbox(Widget):
     def yview_scroll(self, number, what):
         """Shift the y-view according to NUMBER which is measured in "units" or "pages" (WHAT)."""
         self.tk.call(self._w, 'yview', 'scroll', number, what)
-    def itemcget(self, index, option):
-        """Return the resource value for an ITEM and an OPTION."""
-        return self.tk.call(
-            (self._w, 'itemcget') + (index, '-'+option))
-    def itemconfigure(self, index, cnf=None, **kw):
-        """Configure resources of an ITEM.
-
-        The values for resources are specified as keyword arguments.
-        To get an overview about the allowed keyword arguments
-        call the method without arguments.
-        Valid resource names: background, bg, foreground, fg,
-        selectbackground, selectforeground."""
-        if cnf is None and not kw:
-            cnf = {}
-            for x in self.tk.split(
-                self.tk.call(self._w, 'itemconfigure', index)):
-                cnf[x[0][1:]] = (x[0][1:],) + x[1:]
-            return cnf
-        if type(cnf) == StringType and not kw:
-            x = self.tk.split(self.tk.call(
-                self._w, 'itemconfigure', index, '-'+cnf))
-            return (x[0][1:],) + x[1:]
-        self.tk.call((self._w, 'itemconfigure', index) +
-                     self._options(cnf, kw))
-    itemconfig = itemconfigure
 
 class Menu(Widget):
     """Menu widget which allows to display menu bars, pull-down menus and pop-up menus."""

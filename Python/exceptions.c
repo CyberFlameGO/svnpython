@@ -52,7 +52,6 @@ recommended that user defined class based exceptions be derived from the\n\
 Exception\n\
  |\n\
  +-- SystemExit\n\
- +-- StopIteration\n\
  +-- StandardError\n\
  |    |\n\
  |    +-- KeyboardInterrupt\n\
@@ -97,7 +96,6 @@ Exception\n\
  |    |    |\n\
  |    |    +-- UnicodeError\n\
  |    |\n\
- |    +-- ReferenceError\n\
  |    +-- SystemError\n\
  |    +-- MemoryError\n\
  |\n\
@@ -106,7 +104,6 @@ Exception\n\
       +-- UserWarning\n\
       +-- DeprecationWarning\n\
       +-- SyntaxWarning\n\
-      +-- OverflowWarning\n\
       +-- RuntimeWarning";
 
 
@@ -371,9 +368,6 @@ StandardError__doc__[] = "Base class for all standard Python exceptions.";
 
 static char
 TypeError__doc__[] = "Inappropriate argument type.";
-
-static char
-StopIteration__doc__[] = "Signal the end from iterator.next().";
 
 
 
@@ -810,21 +804,21 @@ SyntaxError__str__(PyObject *self, PyObject *args)
 	    if (have_filename)
 		bufsize += PyString_GET_SIZE(filename);
 
-	    buffer = PyMem_MALLOC(bufsize);
+	    buffer = PyMem_Malloc(bufsize);
 	    if (buffer != NULL) {
 		if (have_filename && have_lineno)
-		    PyOS_snprintf(buffer, bufsize, "%s (%s, line %ld)",
-				  PyString_AS_STRING(str),
-				  my_basename(PyString_AS_STRING(filename)),
-				  PyInt_AsLong(lineno));
+		    sprintf(buffer, "%s (%s, line %ld)",
+			    PyString_AS_STRING(str),
+			    my_basename(PyString_AS_STRING(filename)),
+			    PyInt_AsLong(lineno));
 		else if (have_filename)
-		    PyOS_snprintf(buffer, bufsize, "%s (%s)",
-				  PyString_AS_STRING(str),
-				  my_basename(PyString_AS_STRING(filename)));
+		    sprintf(buffer, "%s (%s)",
+			    PyString_AS_STRING(str),
+			    my_basename(PyString_AS_STRING(filename)));
 		else if (have_lineno)
-		    PyOS_snprintf(buffer, bufsize, "%s (line %ld)",
-				  PyString_AS_STRING(str),
-				  PyInt_AsLong(lineno));
+		    sprintf(buffer, "%s (line %ld)",
+			    PyString_AS_STRING(str),
+			    PyInt_AsLong(lineno));
 
 		result = PyString_FromString(buffer);
 		PyMem_FREE(buffer);
@@ -890,9 +884,6 @@ Please report this to the Python maintainer, along with the traceback,\n\
 the Python version, and the hardware/OS platform and version.";
 
 static char
-ReferenceError__doc__[] = "Weak ref proxy used after referent went away.";
-
-static char
 MemoryError__doc__[] = "Out of memory.";
 
 static char
@@ -917,9 +908,6 @@ static char
 SyntaxWarning__doc__[] = "Base class for warnings about dubious syntax.";
 
 static char
-OverflowWarning__doc__[] = "Base class for warnings about numeric overflow.";
-
-static char
 RuntimeWarning__doc__[] =
 "Base class for warnings about dubious runtime behavior.";
 
@@ -936,7 +924,6 @@ static PyMethodDef functions[] = {
 /* Global C API defined exceptions */
 
 PyObject *PyExc_Exception;
-PyObject *PyExc_StopIteration;
 PyObject *PyExc_StandardError;
 PyObject *PyExc_ArithmeticError;
 PyObject *PyExc_LookupError;
@@ -960,7 +947,6 @@ PyObject *PyExc_NotImplementedError;
 PyObject *PyExc_SyntaxError;
 PyObject *PyExc_IndentationError;
 PyObject *PyExc_TabError;
-PyObject *PyExc_ReferenceError;
 PyObject *PyExc_SystemError;
 PyObject *PyExc_SystemExit;
 PyObject *PyExc_UnboundLocalError;
@@ -982,7 +968,6 @@ PyObject *PyExc_Warning;
 PyObject *PyExc_UserWarning;
 PyObject *PyExc_DeprecationWarning;
 PyObject *PyExc_SyntaxWarning;
-PyObject *PyExc_OverflowWarning;
 PyObject *PyExc_RuntimeWarning;
 
 
@@ -1000,8 +985,6 @@ static struct {
   * The first three classes MUST appear in exactly this order
   */
  {"Exception", &PyExc_Exception},
- {"StopIteration", &PyExc_StopIteration, &PyExc_Exception,
-  StopIteration__doc__},
  {"StandardError", &PyExc_StandardError, &PyExc_Exception,
   StandardError__doc__},
  {"TypeError", &PyExc_TypeError, 0, TypeError__doc__},
@@ -1049,7 +1032,6 @@ static struct {
   FloatingPointError__doc__},
  {"ValueError",   &PyExc_ValueError,  0, ValueError__doc__},
  {"UnicodeError", &PyExc_UnicodeError, &PyExc_ValueError, UnicodeError__doc__},
- {"ReferenceError",  &PyExc_ReferenceError, 0, ReferenceError__doc__},
  {"SystemError",  &PyExc_SystemError, 0, SystemError__doc__},
  {"MemoryError",  &PyExc_MemoryError, 0, MemoryError__doc__},
  /* Warning categories */
@@ -1058,8 +1040,6 @@ static struct {
  {"DeprecationWarning", &PyExc_DeprecationWarning, &PyExc_Warning,
   DeprecationWarning__doc__},
  {"SyntaxWarning", &PyExc_SyntaxWarning, &PyExc_Warning, SyntaxWarning__doc__},
- {"OverflowWarning", &PyExc_OverflowWarning, &PyExc_Warning,
-  OverflowWarning__doc__},
  {"RuntimeWarning", &PyExc_RuntimeWarning, &PyExc_Warning,
   RuntimeWarning__doc__},
  /* Sentinel */
@@ -1069,36 +1049,23 @@ static struct {
 
 
 DL_EXPORT(void)
-_PyExc_Init(void)
+init_exceptions(void)
 {
     char *modulename = "exceptions";
     int modnamesz = strlen(modulename);
     int i;
-    PyObject *me, *mydict, *bltinmod, *bdict, *doc, *args;
 
-    me = Py_InitModule(modulename, functions);
-    if (me == NULL)
-	goto err;
-    mydict = PyModule_GetDict(me);
-    if (mydict == NULL)
-	goto err;
-    bltinmod = PyImport_ImportModule("__builtin__");
-    if (bltinmod == NULL)
-	goto err;
-    bdict = PyModule_GetDict(bltinmod);
-    if (bdict == NULL)
-	goto err;
-    doc = PyString_FromString(module__doc__);
-    if (doc == NULL)
-	goto err;
+    PyObject *me = Py_InitModule(modulename, functions);
+    PyObject *mydict = PyModule_GetDict(me);
+    PyObject *bltinmod = PyImport_ImportModule("__builtin__");
+    PyObject *bdict = PyModule_GetDict(bltinmod);
+    PyObject *doc = PyString_FromString(module__doc__);
+    PyObject *args;
 
-    i = PyDict_SetItemString(mydict, "__doc__", doc);
+    PyDict_SetItemString(mydict, "__doc__", doc);
     Py_DECREF(doc);
-    if (i < 0) {
- err:
+    if (PyErr_Occurred())
 	Py_FatalError("exceptions bootstrapping error.");
-	return;
-    }
 
     /* This is the base class of all exceptions, so make it first. */
     if (make_Exception(modulename) ||
@@ -1165,7 +1132,7 @@ _PyExc_Init(void)
 
 
 DL_EXPORT(void)
-_PyExc_Fini(void)
+fini_exceptions(void)
 {
     int i;
 

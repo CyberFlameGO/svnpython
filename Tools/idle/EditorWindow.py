@@ -6,8 +6,12 @@ import imp
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
-
-import webbrowser
+try:
+    import webbrowser
+except ImportError:
+    import BrowserControl
+    webbrowser = BrowserControl
+    del BrowserControl
 import idlever
 import WindowList
 from IdleConf import idleconf
@@ -294,7 +298,7 @@ class EditorWindow:
     help_url = "http://www.python.org/doc/current/"
     if sys.platform[:3] == "win":
         fn = os.path.dirname(__file__)
-        fn = os.path.join(fn, os.pardir, os.pardir, "Doc", "index.html")
+        fn = os.path.join(fn, "../../Doc/index.html")
         fn = os.path.normpath(fn)
         if os.path.isfile(fn):
             help_url = fn

@@ -75,7 +75,7 @@ PyErr_SetString(PyObject *exception, const char *string)
 PyObject *
 PyErr_Occurred(void)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 
 	return tstate->curexc_type;
 }
@@ -128,7 +128,6 @@ PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)
 	PyObject *type = *exc;
 	PyObject *value = *val;
 	PyObject *inclass = NULL;
-	PyObject *initial_tb = NULL;
 
 	if (type == NULL) {
 		/* This is a bug.  Should never happen.  Don't dump core. */
@@ -192,18 +191,8 @@ PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)
 finally:
 	Py_DECREF(type);
 	Py_DECREF(value);
-	/* If the new exception doesn't set a traceback and the old
-	   exception had a traceback, use the old traceback for the
-	   new exception.  It's better than nothing.
-	*/
-	initial_tb = *tb;
+	Py_XDECREF(*tb);
 	PyErr_Fetch(exc, val, tb);
-	if (initial_tb != NULL) {
-		if (*tb == NULL)
-			*tb = initial_tb;
-		else
-			Py_DECREF(initial_tb);
-	}
 	/* normalize recursively */
 	PyErr_NormalizeException(exc, val, tb);
 }
@@ -396,7 +385,12 @@ PyObject *
 PyErr_Format(PyObject *exception, const char *format, ...)
 {
 	va_list vargs;
+	int n, i;
+	const char* f;
+	char* s;
 	PyObject* string;
+
+	/* step 1: figure out how large a buffer we need */
 
 #ifdef HAVE_STDARG_PROTOTYPES
 	va_start(vargs, format);
@@ -404,7 +398,115 @@ PyErr_Format(PyObject *exception, const char *format, ...)
 	va_start(vargs);
 #endif
 
-	string = PyString_FromFormatV(format, vargs);
+	n = 0;
+	for (f = format; *f; f++) {
+		if (*f == '%') {
+			const char* p = f;
+			while (*++f && *f != '%' && !isalpha(Py_CHARMASK(*f)))
+				;
+			switch (*f) {
+			case 'c':
+				(void) va_arg(vargs, int);
+				/* fall through... */
+			case '%':
+				n++;
+				break;
+			case 'd': case 'i': case 'x':
+				(void) va_arg(vargs, int);
+				/* 20 bytes should be enough to hold a 64-bit
+				   integer */
+				n = n + 20;
+				break;
+			case 's':
+				s = va_arg(vargs, char*);
+				n = n + strlen(s);
+				break;
+			default:
+				/* if we stumble upon an unknown
+				   formatting code, copy the rest of
+				   the format string to the output
+				   string. (we cannot just skip the
+				   code, since there's no way to know
+				   what's in the argument list) */ 
+				n = n + strlen(p);
+				goto expand;
+			}
+		} else
+			n = n + 1;
+	}
+	
+ expand:
+	
+	string = PyString_FromStringAndSize(NULL, n);
+	if (!string)
+		return NULL;
+	
+#ifdef HAVE_STDARG_PROTOTYPES
+	va_start(vargs, format);
+#else
+	va_start(vargs);
+#endif
+
+	/* step 2: fill the buffer */
+
+	s = PyString_AsString(string);
+
+	for (f = format; *f; f++) {
+		if (*f == '%') {
+			const char* p = f++;
+			/* parse the width.precision part (we're only
+			   interested in the precision value, if any) */
+			n = 0;
+			while (isdigit(Py_CHARMASK(*f)))
+				n = (n*10) + *f++ - '0';
+			if (*f == '.') {
+				f++;
+				n = 0;
+				while (isdigit(Py_CHARMASK(*f)))
+					n = (n*10) + *f++ - '0';
+			}
+			while (*f && *f != '%' && !isalpha(Py_CHARMASK(*f)))
+				f++;
+			switch (*f) {
+			case 'c':
+				*s++ = va_arg(vargs, int);
+				break;
+			case 'd': 
+				sprintf(s, "%d", va_arg(vargs, int));
+				s = s + strlen(s);
+				break;
+			case 'i':
+				sprintf(s, "%i", va_arg(vargs, int));
+				s = s + strlen(s);
+				break;
+			case 'x':
+				sprintf(s, "%x", va_arg(vargs, int));
+				s = s + strlen(s);
+				break;
+			case 's':
+				p = va_arg(vargs, char*);
+				i = strlen(p);
+				if (n > 0 && i > n)
+					i = n;
+				memcpy(s, p, i);
+				s = s + i;
+				break;
+			case '%':
+				*s++ = '%';
+				break;
+			default:
+				strcpy(s, p);
+				s = s + strlen(s);
+				goto end;
+			}
+		} else
+			*s++ = *f;
+	}
+	
+ end:
+	
+	_PyString_Resize(&string, s - PyString_AsString(string));
+	
 	PyErr_SetObject(exception, string);
 	Py_XDECREF(string);
 	va_end(vargs);

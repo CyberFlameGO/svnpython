@@ -1,14 +1,11 @@
-from test_support import TestFailed, vereq
+from test_support import TestFailed
 from random import random
-
-# These tests ensure that complex math does the right thing; tests of
-# the complex() function/constructor are in test_b1.py.
 
 # XXX need many, many more tests here.
 
 nerrors = 0
 
-def check_close_real(x, y, eps=1e-9):
+def check_close_real(x, y, eps=1e-12):
     """Return true iff floats x and y "are close\""""
     # put the one with larger magnitude second
     if abs(x) > abs(y):
@@ -20,7 +17,7 @@ def check_close_real(x, y, eps=1e-9):
     # check that relative difference < eps
     return abs((x-y)/y) < eps
 
-def check_close(x, y, eps=1e-9):
+def check_close(x, y, eps=1e-12):
     """Return true iff complexes x and y "are close\""""
     return check_close_real(x.real, y.real, eps) and \
            check_close_real(x.imag, y.imag, eps)
@@ -33,12 +30,12 @@ def test_div(x, y):
         q = z / x
         if not check_close(q, y):
             nerrors += 1
-            print "%r / %r == %r but expected %r" % (z, x, q, y)
+            print `z`, "/", `x`, "==", `q`, "but expected", `y`
     if y != 0:
         q = z / y
         if not check_close(q, x):
             nerrors += 1
-            print "%r / %r == %r but expected %r" % (z, y, q, x)
+            print `z`, "/", `y`, "==", `q`, "but expected", `x`
 
 simple_real = [float(i) for i in range(-5, 6)]
 simple_complex = [complex(x, y) for x in simple_real for y in simple_real]
@@ -55,29 +52,6 @@ test_div(complex(1e-200, 1e-200), 1+0j)
 for i in range(100):
     test_div(complex(random(), random()),
              complex(random(), random()))
-
-for i in range(100):
-    if not complex(random() + 1e-6, random() + 1e-6):
-        raise TestFailed("complex(random(), random()) should be true")
-
-if complex(0.0, 0.0):
-    raise TestFailed("complex(0.0, 0.0) should be false")
-
-vereq(complex(5.3, 9.8).conjugate(), 5.3-9.8j)
-
-try:
-    print int(5+3j)
-except TypeError:
-    pass
-else:
-    raise TestFailed("int(complex()) didn't raise TypeError")
-
-try:
-    print float(5+3j)
-except TypeError:
-    pass
-else:
-    raise TestFailed("float(complex()) didn't raise TypeError")
 
 try:
     z = 1.0 / (0+0j)

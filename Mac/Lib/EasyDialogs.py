@@ -14,18 +14,18 @@ This module uses DLOG resources 260 and on.
 Based upon STDWIN dialogs with the same names and functions.
 """
 
-from Carbon.Dlg import GetNewDialog, SetDialogItemText, GetDialogItemText, ModalDialog
-from Carbon import Qd
-from Carbon import QuickDraw
-from Carbon import Dialogs
-from Carbon import Windows
-from Carbon import Dlg,Win,Evt,Events # sdm7g
-from Carbon import Ctl
-from Carbon import Controls
-from Carbon import Menu
+from Dlg import GetNewDialog, SetDialogItemText, GetDialogItemText, ModalDialog
+import Qd
+import QuickDraw
+import Dialogs
+import Windows
+import Dlg,Win,Evt,Events # sdm7g
+import Ctl
+import Controls
+import Menu
 import MacOS
 import string
-from Carbon.ControlAccessor import *	# Also import Controls constants
+from ControlAccessor import *	# Also import Controls constants
 import macfs
 
 def cr2lf(text):
@@ -214,19 +214,19 @@ screenbounds = Qd.qd.screenBits.bounds
 screenbounds = screenbounds[0]+4, screenbounds[1]+4, \
 	screenbounds[2]-4, screenbounds[3]-4
 
-kControlProgressBarIndeterminateTag = 'inde'	# from Controls.py
-
-
+				
 class ProgressBar:
-	def __init__(self, title="Working...", maxval=0, label="", id=263):
+	def __init__(self, title="Working...", maxval=100, label="", id=263):
 		self.w = None
 		self.d = None
+		self.maxval = maxval
+		self.curval = -1
 		self.d = GetNewDialog(id, -1)
 		self.w = self.d.GetDialogWindow()
 		self.label(label)
-		self.title(title)
-		self.set(0, maxval)
+		self._update(0)
 		self.d.AutoSizeDialog()
+		self.title(title)
 		self.w.ShowWindow()
 		self.d.DrawDialog()
 
@@ -248,23 +248,24 @@ class ProgressBar:
 		if newstr:
 			self._label = lf2cr(newstr[0])
 		text_h = self.d.GetDialogItemAsControl(2)
-		SetDialogItemText(text_h, self._label)
-
+		SetDialogItemText(text_h, self._label)		
+				
 	def _update(self, value):
 		maxval = self.maxval
-		if maxval == 0:		# an indeterminate bar
-			Ctl.IdleControls(self.w)	# spin the barber pole
-		else:				# a determinate bar
-			if maxval > 32767:
-				value = int(value/(maxval/32767.0))
-				maxval = 32767
-			progbar = self.d.GetDialogItemAsControl(3)
-			progbar.SetControlMaximum(maxval)
-			progbar.SetControlValue(value)	# set the bar length
-
+		if maxval == 0:
+			# XXXX Quick fix. Should probably display an unknown duration
+			value = 0
+			maxval = 1
+		if maxval > 32767:
+			value = int(value/(maxval/32767.0))
+			maxval = 32767
+		progbar = self.d.GetDialogItemAsControl(3)
+		progbar.SetControlMaximum(maxval)
+		progbar.SetControlValue(value)	
 		# Test for cancel button
+		
 		ready, ev = Evt.WaitNextEvent( Events.mDownMask, 1  )
-		if ready :
+		if ready : 
 			what,msg,when,where,mod = ev
 			part = Win.FindWindow(where)[0]
 			if Dlg.IsDialogEvent(ev):
@@ -285,15 +286,8 @@ class ProgressBar:
 		"""set(value) - Set progress bar position"""
 		if max != None:
 			self.maxval = max
-			bar = self.d.GetDialogItemAsControl(3)
-			if max <= 0:	# indeterminate bar
-				bar.SetControlData(0,kControlProgressBarIndeterminateTag,'\x01')
-			else:			# determinate bar
-				bar.SetControlData(0,kControlProgressBarIndeterminateTag,'\x00')
-		if value < 0:
-			value = 0
-		elif value > self.maxval:
-			value = self.maxval
+		if value < 0: value = 0
+		if value > self.maxval: value = self.maxval
 		self.curval = value
 		self._update(value)
 
@@ -418,8 +412,7 @@ def GetArgv(optionlist=None, commandlist=None, addoldfile=1, addnewfile=1, addfo
 	d.SetDialogCancelItem(ARGV_ITEM_CANCEL)
 	d.GetDialogWindow().ShowWindow()
 	d.DrawDialog()
-	if hasattr(MacOS, 'SchedParams'):
-		appsw = MacOS.SchedParams(1, 0)
+	appsw = MacOS.SchedParams(1, 0)
 	try:
 		while 1:
 			stringstoadd = []
@@ -523,8 +516,7 @@ def GetArgv(optionlist=None, commandlist=None, addoldfile=1, addnewfile=1, addfo
 			newlist.append(item)
 		return newlist
 	finally:
-		if hasattr(MacOS, 'SchedParams'):
-			apply(MacOS.SchedParams, appsw)
+		apply(MacOS.SchedParams, appsw)
 		del d
 	
 def test():
@@ -548,27 +540,21 @@ def test():
 			Message("%s has no secret nickname"%s)
 		else:
 			Message("Hello everybody!!\nThe secret nickname of %s is %s!!!"%(s, s2))
-	text = ( "Working Hard...", "Hardly Working..." ,
+	text = ( "Working Hard...", "Hardly Working..." , 
 			"So far, so good!", "Keep on truckin'" )
-	bar = ProgressBar("Progress, progress...", 0, label="Ramping up...")
+	bar = ProgressBar("Progress, progress...", 100)
 	try:
-		if hasattr(MacOS, 'SchedParams'):
-			appsw = MacOS.SchedParams(1, 0)
-		for i in xrange(20):
-			bar.inc()
-			time.sleep(0.05)
-		bar.set(0,100)
-		for i in xrange(100):
+		appsw = MacOS.SchedParams(1, 0)
+		for i in range(100):
 			bar.set(i)
-			time.sleep(0.05)
+			time.sleep(0.1)
 			if i % 10 == 0:
 				bar.label(text[(i/10) % 4])
 		bar.label("Done.")
-		time.sleep(1.0) 	# give'em a chance to see "Done."
+		time.sleep(0.3) 	# give'em a chance to see the done.
 	finally:
 		del bar
-		if hasattr(MacOS, 'SchedParams'):
-			apply(MacOS.SchedParams, appsw)
+		apply(MacOS.SchedParams, appsw)
 
 if __name__ == '__main__':
 	try:

@@ -258,6 +258,15 @@ lad_setparameters(lad_t *self, PyObject *args)
 	return NULL;
     }
 
+    if (ioctl(self->x_fd, SNDCTL_DSP_SPEED, &rate) == -1) {
+        PyErr_SetFromErrno(LinuxAudioError);
+        return NULL;
+    }
+    if (ioctl(self->x_fd, SNDCTL_DSP_CHANNELS, &nchannels) == -1) {
+        PyErr_SetFromErrno(LinuxAudioError);
+        return NULL;
+    }
+
     for (n = 0; n < n_audio_types; n++)
         if (fmt == audio_types[n].a_fmt)
             break;
@@ -282,14 +291,6 @@ lad_setparameters(lad_t *self, PyObject *args)
     }
     if (ioctl(self->x_fd, SNDCTL_DSP_SETFMT, 
 	      &audio_types[n].a_fmt) == -1) {
-        PyErr_SetFromErrno(LinuxAudioError);
-        return NULL;
-    }
-    if (ioctl(self->x_fd, SNDCTL_DSP_CHANNELS, &nchannels) == -1) {
-        PyErr_SetFromErrno(LinuxAudioError);
-        return NULL;
-    }
-    if (ioctl(self->x_fd, SNDCTL_DSP_SPEED, &rate) == -1) {
         PyErr_SetFromErrno(LinuxAudioError);
         return NULL;
     }
@@ -455,7 +456,7 @@ lad_getattr(lad_t *xp, char *name)
 static PyTypeObject Ladtype = {
     PyObject_HEAD_INIT(&PyType_Type)
     0,				/*ob_size*/
-    "linuxaudiodev.linux_audio_device", /*tp_name*/
+    "linux_audio_device",	/*tp_name*/
     sizeof(lad_t),		/*tp_size*/
     0,				/*tp_itemsize*/
     /* methods */

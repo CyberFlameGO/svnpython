@@ -14,10 +14,6 @@ aliases = {
     'latin': 'latin_1',
     'latin1': 'latin_1',
     
-    # UTF-7
-    'utf7': 'utf_7',
-    'u7': 'utf_7',
-    
     # UTF-8
     'utf': 'utf_8',
     'utf8': 'utf_8',
@@ -35,14 +31,7 @@ aliases = {
 
     # ASCII
     'us_ascii': 'ascii',
-    'ansi_x3.4_1968': 'ascii', # used on Linux
-    '646': 'ascii',            # used on Solaris
 
-    # EBCDIC
-    'ebcdic_cp_us': 'cp037',
-    'ibm039': 'cp037',
-    'ibm1140': 'cp1140',
-    
     # ISO
     '8859': 'latin_1',
     'iso8859': 'latin_1',
@@ -70,12 +59,6 @@ aliases = {
     'macroman': 'mac_roman',
     'macturkish': 'mac_turkish',
 
-    # Windows
-    'windows_1251': 'cp1251',
-    'windows_1252': 'cp1252',
-    'windows_1254': 'cp1254',
-    'windows_1255': 'cp1255',
-
     # MBCS
     'dbcs': 'mbcs',
 
@@ -95,17 +78,5 @@ aliases = {
     'eucjp': 'euc_jp',
     'tis260': 'tactis',
     'sjis': 'shift_jis',
-
-    # Content transfer/compression encodings
-    'rot13': 'rot_13',
-    'base64': 'base64_codec',
-    'base_64': 'base64_codec',
-    'zlib': 'zlib_codec',
-    'zip': 'zlib_codec',
-    'hex': 'hex_codec',
-    'uu': 'uu_codec',
-    'quopri': 'quopri_codec',
-    'quotedprintable': 'quopri_codec',
-    'quoted_printable': 'quopri_codec',
 
 }

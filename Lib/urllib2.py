@@ -72,11 +72,11 @@ f = urllib2.urlopen('http://www.python.org/')
 
 # XXX issues:
 # If an authentication error handler that tries to perform
-# authentication for some reason but fails, how should the error be
-# signalled?  The client needs to know the HTTP error code.  But if
-# the handler knows that the problem was, e.g., that it didn't know
-# that hash algo that requested in the challenge, it would be good to
-# pass that information along to the client, too.
+ # authentication for some reason but fails, how should the error be
+ # signalled?  The client needs to know the HTTP error code.  But if
+ # the handler knows that the problem was, e.g., that it didn't know
+ # that hash algo that requested in the challenge, it would be good to
+ # pass that information along to the client, too.
 
 # XXX to do:
 # name!
@@ -88,8 +88,8 @@ f = urllib2.urlopen('http://www.python.org/')
 # check digest against correct (i.e. non-apache) implementation
 
 import socket
+import UserDict
 import httplib
-import inspect
 import re
 import base64
 import types
@@ -97,12 +97,9 @@ import urlparse
 import md5
 import mimetypes
 import mimetools
-import rfc822
 import ftplib
 import sys
 import time
-import os
-import stat
 import gopherlib
 import posixpath
 
@@ -220,8 +217,7 @@ class Request:
     def get_type(self):
         if self.type is None:
             self.type, self.__r_type = splittype(self.__original)
-            if self.type is None:
-                raise ValueError, "unknown url type: %s" % self.__original
+            assert self.type is not None, self.__original
         return self.type
 
     def get_host(self):
@@ -253,7 +249,7 @@ class OpenerDirector:
 
     def add_handler(self, handler):
         added = 0
-        for meth in dir(handler):
+        for meth in get_methods(handler):
             if meth[-5:] == '_open':
                 protocol = meth[:-5]
                 if self.handle_open.has_key(protocol):
@@ -304,7 +300,7 @@ class OpenerDirector:
 
     def open(self, fullurl, data=None):
         # accept a URL or a Request object
-        if isinstance(fullurl, (types.StringType, types.UnicodeType)):
+        if type(fullurl) == types.StringType:
             req = Request(fullurl, data)
         else:
             req = fullurl
@@ -328,8 +324,8 @@ class OpenerDirector:
 
     def error(self, proto, *args):
         if proto in ['http', 'https']:
-            # XXX http[s] protocols are special-cased
-            dict = self.handle_error['http'] # https is not different than http
+            # XXX http[s] protocols are special cased
+            dict = self.handle_error['http'] # https is not different then http
             proto = args[2]  # YUCK!
             meth_name = 'http_error_%d' % proto
             http_err = 1
@@ -346,6 +342,34 @@ class OpenerDirector:
         if http_err:
             args = (dict, 'default', 'http_error_default') + orig_args
             return self._call_chain(*args)
+
+def is_callable(obj):
+    # not quite like builtin callable (which I didn't know existed),
+    # not entirely sure it needs to be different
+    if type(obj) in (types.BuiltinFunctionType,
+                     types.BuiltinMethodType,  types.LambdaType,
+                     types.MethodType):
+        return 1
+    if type(obj) == types.InstanceType:
+        return hasattr(obj, '__call__')
+    return 0
+
+def get_methods(inst):
+    methods = {}
+    classes = []
+    classes.append(inst.__class__)
+    while classes:
+        klass = classes[0]
+        del classes[0]
+        classes = classes + list(klass.__bases__)
+        for name in dir(klass):
+            attr = getattr(klass, name)
+            if type(attr) == types.UnboundMethodType:
+                methods[name] = 1
+    for name in dir(inst):
+        if is_callable(getattr(inst, name)):
+            methods[name] = 1
+    return methods.keys()
 
 # XXX probably also want an abstract factory that knows things like
  # the fact that a ProxyHandler needs to get inserted first.
@@ -372,11 +396,12 @@ def build_opener(*handlers):
     skip = []
     for klass in default_classes:
         for check in handlers:
-            if inspect.isclass(check):
+            if type(check) == types.ClassType:
                 if issubclass(check, klass):
                     skip.append(klass)
-            elif isinstance(check, klass):
-                skip.append(klass)
+            elif type(check) == types.InstanceType:
+                if isinstance(check, klass):
+                    skip.append(klass)
     for klass in skip:
         default_classes.remove(klass)
 
@@ -384,7 +409,7 @@ def build_opener(*handlers):
         opener.add_handler(klass())
 
     for h in handlers:
-        if inspect.isclass(h):
+        if type(h) == types.ClassType:
             h = h()
         opener.add_handler(h)
     return opener
@@ -427,7 +452,7 @@ class HTTPRedirectHandler(BaseHandler):
         new.error_302_dict[newurl] = newurl
 
         # Don't close the fp until we are sure that we won't use it
-        # with HTTPError.
+        # with HTTPError.  
         fp.read()
         fp.close()
 
@@ -517,7 +542,7 @@ class HTTPPasswordMgr:
 
     def add_password(self, realm, uri, user, passwd):
         # uri could be a single URI or a sequence
-        if isinstance(uri, (types.StringType, types.UnicodeType)):
+        if type(uri) == types.StringType:
             uri = [uri]
         uri = tuple(map(self.reduce_uri, uri))
         if not self.passwd.has_key(realm):
@@ -578,6 +603,11 @@ class AbstractBasicAuthHandler:
             password_mgr = HTTPPasswordMgr()
         self.passwd = password_mgr
         self.add_password = self.passwd.add_password
+        self.__current_realm = None
+        # if __current_realm is not None, then the server must have
+        # refused our name/password and is asking for authorization
+        # again.  must be careful to set it to None on successful
+        # return.
 
     def http_error_auth_reqed(self, authreq, host, req, headers):
         # XXX could be multiple headers
@@ -590,20 +620,26 @@ class AbstractBasicAuthHandler:
                     return self.retry_http_basic_auth(host, req, realm)
 
     def retry_http_basic_auth(self, host, req, realm):
+        if self.__current_realm is None:
+            self.__current_realm = realm
+        else:
+            self.__current_realm = realm
+            return None
         user,pw = self.passwd.find_user_password(realm, host)
         if pw:
             raw = "%s:%s" % (user, pw)
-            auth = 'Basic %s' % base64.encodestring(raw).strip()
-            if req.headers.get(self.auth_header, None) == auth:
-                return None
-            req.add_header(self.auth_header, auth)
-            return self.parent.open(req)
+            auth = base64.encodestring(raw).strip()
+            req.add_header(self.header, 'Basic %s' % auth)
+            resp = self.parent.open(req)
+            self.__current_realm = None
+            return resp
         else:
+            self.__current_realm = None
             return None
 
 class HTTPBasicAuthHandler(AbstractBasicAuthHandler, BaseHandler):
 
-    auth_header = 'Authorization'
+    header = 'Authorization'
 
     def http_error_401(self, req, fp, code, msg, headers):
         host = urlparse.urlparse(req.get_full_url())[1]
@@ -613,7 +649,7 @@ class HTTPBasicAuthHandler(AbstractBasicAuthHandler, BaseHandler):
 
 class ProxyBasicAuthHandler(AbstractBasicAuthHandler, BaseHandler):
 
-    auth_header = 'Proxy-Authorization'
+    header = 'Proxy-Authorization'
 
     def http_error_407(self, req, fp, code, msg, headers):
         host = req.get_host()
@@ -628,9 +664,10 @@ class AbstractDigestAuthHandler:
             passwd = HTTPPasswordMgr()
         self.passwd = passwd
         self.add_password = self.passwd.add_password
+        self.__current_realm = None
 
     def http_error_auth_reqed(self, authreq, host, req, headers):
-        authreq = headers.get(self.auth_header, None)
+        authreq = headers.get(self.header, None)
         if authreq:
             kind = authreq.split()[0]
             if kind == 'Digest':
@@ -641,11 +678,9 @@ class AbstractDigestAuthHandler:
         chal = parse_keqv_list(parse_http_list(challenge))
         auth = self.get_authorization(req, chal)
         if auth:
-            auth_val = 'Digest %s' % auth
-            if req.headers.get(self.auth_header, None) == auth_val:
-                return None
-            req.add_header(self.auth_header, auth_val)
+            req.add_header(self.header, 'Digest %s' % auth)
             resp = self.parent.open(req)
+            self.__current_realm = None
             return resp
 
     def get_authorization(self, req, chal):
@@ -657,6 +692,12 @@ class AbstractDigestAuthHandler:
             # supposed to be optional
             opaque = chal.get('opaque', None)
         except KeyError:
+            return None
+
+        if self.__current_realm is None:
+            self.__current_realm = realm
+        else:
+            self.__current_realm = realm
             return None
 
         H, KD = self.get_algorithm_impls(algorithm)
@@ -873,22 +914,16 @@ class FileHandler(BaseHandler):
 
     # not entirely sure what the rules are here
     def open_local_file(self, req):
+        mtype = mimetypes.guess_type(req.get_selector())[0]
+        headers = mimetools.Message(StringIO('Content-Type: %s\n' \
+                                             % (mtype or 'text/plain')))
         host = req.get_host()
         file = req.get_selector()
-        localfile = url2pathname(file)
-        stats = os.stat(localfile)
-        size = stats[stat.ST_SIZE]
-        modified = rfc822.formatdate(stats[stat.ST_MTIME])
-        mtype = mimetypes.guess_type(file)[0]
-        stats = os.stat(localfile)
-        headers = mimetools.Message(StringIO(
-            'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
-            (mtype or 'text/plain', size, modified)))
         if host:
             host, port = splitport(host)
         if not host or \
            (not port and socket.gethostbyname(host) in self.get_names()):
-            return addinfourl(open(localfile, 'rb'),
+            return addinfourl(open(url2pathname(file), 'rb'),
                               headers, 'file:'+file)
         raise URLError('file not on local host')
 
@@ -921,14 +956,11 @@ class FTPHandler(BaseHandler):
                    value in ('a', 'A', 'i', 'I', 'd', 'D'):
                     type = value.upper()
             fp, retrlen = fw.retrfile(file, type)
-            headers = ""
-            mtype = mimetypes.guess_type(req.get_full_url())[0]
-            if mtype:
-                headers += "Content-Type: %s\n" % mtype
             if retrlen is not None and retrlen >= 0:
-                headers += "Content-Length: %d\n" % retrlen
-            sf = StringIO(headers)
-            headers = mimetools.Message(sf)
+                sf = StringIO('Content-Length: %d\n' % retrlen)
+                headers = mimetools.Message(sf)
+            else:
+                headers = noheaders()
             return addinfourl(fp, headers, req.get_full_url())
         except ftplib.all_errors, msg:
             raise IOError, ('ftp error', msg), sys.exc_info()[2]
@@ -1023,7 +1055,7 @@ class OpenerFactory:
     def build_opener(self):
         opener = OpenerDirector()
         for ph in self.proxy_handlers:
-            if inspect.isclass(ph):
+            if type(ph) == types.ClassType:
                 ph = ph()
             opener.add_handler(ph)
 
@@ -1044,49 +1076,52 @@ if __name__ == "__main__":
 
         'file:/etc/passwd',
         'file://nonsensename/etc/passwd',
-        'ftp://www.python.org/pub/python/misc/sousa.au',
+        'ftp://www.python.org/pub/tmp/httplib.py',
+        'ftp://www.python.org/pub/tmp/imageop.c',
         'ftp://www.python.org/pub/tmp/blat',
         'http://www.espn.com/', # redirect
         'http://www.python.org/Spanish/Inquistion/',
-        ('http://www.python.org/cgi-bin/faqw.py',
+        ('http://grail.cnri.reston.va.us/cgi-bin/faqw.py',
          'query=pythonistas&querytype=simple&casefold=yes&req=search'),
         'http://www.python.org/',
-        'ftp://gatekeeper.research.compaq.com/pub/DEC/SRC/research-reports/00README-Legal-Rules-Regs',
+        'ftp://prep.ai.mit.edu/welcome.msg',
+        'ftp://www.python.org/pub/tmp/figure.prn',
+        'ftp://www.python.org/pub/tmp/interp.pl',
+        'http://checkproxy.cnri.reston.va.us/test/test.html',
             ]
 
-##    if localhost is not None:
-##        urls = urls + [
-##            'file://%s/etc/passwd' % localhost,
-##            'http://%s/simple/' % localhost,
-##            'http://%s/digest/' % localhost,
-##            'http://%s/not/found.h' % localhost,
-##            ]
+    if localhost is not None:
+        urls = urls + [
+            'file://%s/etc/passwd' % localhost,
+            'http://%s/simple/' % localhost,
+            'http://%s/digest/' % localhost,
+            'http://%s/not/found.h' % localhost,
+            ]
 
-##        bauth = HTTPBasicAuthHandler()
-##        bauth.add_password('basic_test_realm', localhost, 'jhylton',
-##                           'password')
-##        dauth = HTTPDigestAuthHandler()
-##        dauth.add_password('digest_test_realm', localhost, 'jhylton',
-##                           'password')
+        bauth = HTTPBasicAuthHandler()
+        bauth.add_password('basic_test_realm', localhost, 'jhylton',
+                           'password')
+        dauth = HTTPDigestAuthHandler()
+        dauth.add_password('digest_test_realm', localhost, 'jhylton',
+                           'password')
 
 
     cfh = CacheFTPHandler()
     cfh.setTimeout(1)
 
-##    # XXX try out some custom proxy objects too!
-##    def at_cnri(req):
-##        host = req.get_host()
-##        print host
-##        if host[-18:] == '.cnri.reston.va.us':
-##            return 1
-##    p = CustomProxy('http', at_cnri, 'proxy.cnri.reston.va.us')
-##    ph = CustomProxyHandler(p)
+    # XXX try out some custom proxy objects too!
+    def at_cnri(req):
+        host = req.get_host()
+        print host
+        if host[-18:] == '.cnri.reston.va.us':
+            return 1
+    p = CustomProxy('http', at_cnri, 'proxy.cnri.reston.va.us')
+    ph = CustomProxyHandler(p)
 
-##    install_opener(build_opener(dauth, bauth, cfh, GopherHandler, ph))
-    install_opener(build_opener(cfh, GopherHandler))
+    #install_opener(build_opener(dauth, bauth, cfh, GopherHandler, ph))
 
     for url in urls:
-        if isinstance(url, types.TupleType):
+        if type(url) == types.TupleType:
             url, req = url
         else:
             req = None

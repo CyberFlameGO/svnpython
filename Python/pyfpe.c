@@ -1,4 +1,4 @@
-#include "pyconfig.h"
+#include "config.h"
 #include "pyfpe.h"
 /* 
  * The signal handler for SIGFPE is actually declared in an external

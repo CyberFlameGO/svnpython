@@ -28,7 +28,7 @@
 \noindent
 Python is an extensible, interpreted, object-oriented programming
 language.  It supports a wide range of applications, from simple text
-processing scripts to interactive Web browsers.
+processing scripts to interactive WWW browsers.
 
 While the \citetitle[../ref/ref.html]{Python Reference Manual}
 describes the exact syntax and semantics of the language, it does not
@@ -67,9 +67,9 @@ and how to embed it in other applications.
 \input{libintro}                % Introduction
 
 \input{libobjs}                 % Built-in Types, Exceptions and Functions
-\input{libfuncs}
 \input{libstdtypes}
 \input{libexcs}
+\input{libfuncs}
 
 \input{libpython}               % Python Runtime Services
 \input{libsys}
@@ -111,7 +111,6 @@ and how to embed it in other applications.
 \input{libunicodedata}
 
 \input{libmisc}                 % Miscellaneous Services
-\input{libpydoc}
 \input{libdoctest}
 \input{libunittest}
 \input{libmath}
@@ -196,7 +195,6 @@ and how to embed it in other applications.
 \input{internet}                % Internet Protocols
 \input{libwebbrowser}
 \input{libcgi}
-\input{libcgitb}
 \input{liburllib}
 \input{liburllib2}
 \input{libhttplib}
@@ -213,39 +211,29 @@ and how to embed it in other applications.
 \input{libsimplehttp}
 \input{libcgihttp}
 \input{libcookie}
-\input{libxmlrpclib}
-\input{libsimplexmlrpc}
 \input{libasyncore}
 
 \input{netdata}                 % Internet Data Handling
 \input{libformatter}
-
-% MIME & email stuff
-\input{email}
+\input{librfc822}
+\input{libmimetools}
+\input{libmimewriter}
+\input{libmultifile}
+\input{libbinhex}
+\input{libuu}
+\input{libbinascii}
+\input{libxdrlib}
 \input{libmailcap}
+\input{libmimetypes}
+\input{libbase64}
+\input{libquopri}
 \input{libmailbox}
 \input{libmhlib}
-\input{libmimetools}
-\input{libmimetypes}
-\input{libmimewriter}
 \input{libmimify}
-\input{libmultifile}
-\input{librfc822}
-
-% encoding stuff
-\input{libbase64}
-\input{libbinascii}
-\input{libbinhex}
-\input{libquopri}
-\input{libuu}
-\input{libxdrlib}
-
-% file formats
 \input{libnetrc}
 \input{librobotparser}
 
 \input{markup}                  % Structured Markup Processing Tools
-\input{libhtmlparser}
 \input{libsgmllib}
 \input{libhtmllib}
 \input{libpyexpat}
@@ -271,13 +259,10 @@ and how to embed it in other applications.
 \input{libsndhdr}
 
 \input{libcrypto}               % Cryptographic Services
-\input{libhmac}
 \input{libmd5}
 \input{libsha}
 \input{libmpz}
 \input{librotor}
-
-\input{tkinter}
 
 \input{librestricted}           % Restricted Execution
 \input{librexec}
@@ -294,9 +279,6 @@ and how to embed it in other applications.
 \input{libpycompile}            % really py_compile
 \input{libcompileall}
 \input{libdis}
-\input{distutils}
-
-\input{compiler}                % compiler package
 
 %\input{libamoeba}              % AMOEBA ONLY
 
@@ -333,9 +315,6 @@ and how to embed it in other applications.
 
 \chapter{Reporting Bugs}
 \input{reportingbugs}
-
-\chapter{History and License}
-\input{license}
 
 %
 %  The ugly "%begin{latexonly}" pseudo-environments are really just to

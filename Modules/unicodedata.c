@@ -227,7 +227,7 @@ unicodedata_decomposition(PyObject *self, PyObject *args)
                              (code&((1<<DECOMP_SHIFT)-1))];
     }
 
-    /* high byte is number of hex bytes (usually one or two), low byte
+    /* high byte is of hex bytes (usually one or two), low byte
        is prefix code (from*/
     count = decomp_data[index] >> 8;
 
@@ -241,9 +241,7 @@ unicodedata_decomposition(PyObject *self, PyObject *args)
     while (count-- > 0) {
         if (i)
             decomp[i++] = ' ';
-        assert((size_t)i < sizeof(decomp));
-        PyOS_snprintf(decomp + i, sizeof(decomp) - i, "%04X",
-                      decomp_data[++index]);
+        sprintf(decomp + i, "%04X", decomp_data[++index]);
         i += strlen(decomp + i);
     }
     
@@ -284,7 +282,7 @@ _getname(Py_UCS4 code, char* buffer, int buflen)
     int word;
     unsigned char* w;
 
-    if (code >= 65536)
+    if (code < 0 || code >= 65536)
         return 0;
 
     /* get offset into phrasebook */

@@ -2,7 +2,6 @@
 /* Time module */
 
 #include "Python.h"
-#include "structseq.h"
 
 #include <ctype.h>
 
@@ -17,7 +16,9 @@
 #define GUSI_TO_MSL_EPOCH (4*365*24*60*60)
 #endif /* USE_GUSI2 */
 #else
+#ifndef RISCOS
 #include <sys/types.h>
+#endif /* RISCOS */
 #endif
 
 #ifdef QUICKWIN
@@ -87,22 +88,22 @@ static PyObject *moddict;
 */
 static long timezone;
 
-static void
+static void 
 initmactimezone(void)
 {
 	MachineLocation	loc;
 	long		delta;
 
 	ReadLocation(&loc);
-
+	
 	if (loc.latitude == 0 && loc.longitude == 0 && loc.u.gmtDelta == 0)
 		return;
-
+	
 	delta = loc.u.gmtDelta & 0x00FFFFFF;
-
+	
 	if (delta & 0x00800000)
 		delta |= 0xFF000000;
-
+	
 	timezone = -delta;
 }
 #endif /* macintosh */
@@ -161,10 +162,10 @@ time_clock(PyObject *self, PyObject *args)
 
 	if (LargeIntegerEqualToZero(divisor)) {
 		QueryPerformanceCounter(&ctrStart);
-		if (!QueryPerformanceFrequency(&divisor) ||
+		if (!QueryPerformanceFrequency(&divisor) || 
 		    LargeIntegerEqualToZero(divisor)) {
-				/* Unlikely to happen -
-				   this works on all intel machines at least!
+				/* Unlikely to happen - 
+				   this works on all intel machines at least! 
 				   Revert to clock() */
 			return PyFloat_FromDouble(clock());
 		}
@@ -173,10 +174,10 @@ time_clock(PyObject *self, PyObject *args)
 	diff = LargeIntegerSubtract(now, ctrStart);
 	diff = LargeIntegerDivide(diff, divisor, &rem);
 	/* XXX - we assume both divide results fit in 32 bits.  This is
-	   true on Intels.  First person who can afford a machine that
+	   true on Intels.  First person who can afford a machine that 
 	   doesnt deserves to fix it :-)
 	*/
-	return PyFloat_FromDouble((double)diff.LowPart +
+	return PyFloat_FromDouble((double)diff.LowPart + 
 		              ((double)rem.LowPart / (double)divisor.LowPart));
 }
 
@@ -209,53 +210,19 @@ static char sleep_doc[] =
 Delay execution for a given number of seconds.  The argument may be\n\
 a floating point number for subsecond precision.";
 
-static PyStructSequence_Field struct_time_type_fields[] = {
-	{"tm_year", NULL},
-	{"tm_mon", NULL},
-	{"tm_mday", NULL},
-	{"tm_hour", NULL},
-	{"tm_min", NULL},
-	{"tm_sec", NULL},
-	{"tm_wday", NULL},
-	{"tm_yday", NULL},
-	{"tm_isdst", NULL},
-	{0}
-};
-
-static PyStructSequence_Desc struct_time_type_desc = {
-	"time.struct_time",
-	NULL,
-	struct_time_type_fields,
-	9,
-};
-	
-static PyTypeObject StructTimeType;
-
 static PyObject *
 tmtotuple(struct tm *p)
 {
-	PyObject *v = PyStructSequence_New(&StructTimeType);
-	if (v == NULL)
-		return NULL;
-	
-#define SET(i,val) PyStructSequence_SET_ITEM(v, i, PyInt_FromLong((long) val))
-
-	SET(0, p->tm_year + 1900);
-	SET(1, p->tm_mon + 1);	   /* Want January == 1 */
-	SET(2, p->tm_mday);
-	SET(3, p->tm_hour);
-	SET(4, p->tm_min);
-	SET(5, p->tm_sec);
-	SET(6, (p->tm_wday + 6) % 7); /* Want Monday == 0 */
-	SET(7, p->tm_yday + 1);	   /* Want January, 1 == 1 */
-	SET(8, p->tm_isdst);
-#undef SET
-	if (PyErr_Occurred()) {
-		Py_XDECREF(v);
-		return NULL;
-	}
-
-	return v;
+	return Py_BuildValue("(iiiiiiiii)",
+			     p->tm_year + 1900,
+			     p->tm_mon + 1,	   /* Want January == 1 */
+			     p->tm_mday,
+			     p->tm_hour,
+			     p->tm_min,
+			     p->tm_sec,
+			     (p->tm_wday + 6) % 7, /* Want Monday == 0 */
+			     p->tm_yday + 1,	   /* Want January, 1 == 1 */
+			     p->tm_isdst);
 }
 
 static PyObject *
@@ -289,7 +256,7 @@ time_gmtime(PyObject *self, PyObject *args)
 }
 
 static char gmtime_doc[] =
-"gmtime([seconds]) -> (year,month,day,hour,minute,second,weekday,dayofyear,dst)\n\
+"gmtime([seconds]) -> tuple\n\
 \n\
 Convert seconds since the Epoch to a time tuple expressing UTC (a.k.a.\n\
 GMT).  When 'seconds' is not passed in, convert the current time instead.";
@@ -306,8 +273,7 @@ time_localtime(PyObject *self, PyObject *args)
 }
 
 static char localtime_doc[] =
-"localtime([seconds]) -> (year,month,day,hour,minute,second,weekday,dayofyear,dst)\n\
-\n\
+"localtime([seconds]) -> tuple\n\
 Convert seconds since the Epoch to a time tuple expressing local time.\n\
 When 'seconds' is not passed in, convert the current time instead.";
 
@@ -343,7 +309,7 @@ gettmarg(PyObject *args, struct tm *p)
 			y += 2000;
 		else {
 			PyErr_SetString(PyExc_ValueError,
-					"year out of range");
+					"year out of range (00-99, 1900-*)");
 			return 0;
 		}
 	}
@@ -375,7 +341,7 @@ time_strftime(PyObject *self, PyObject *args)
 		buf = *localtime(&tt);
 	} else if (!gettmarg(tup, &buf))
 		return NULL;
-
+	
 	fmtlen = strlen(fmt);
 
 	/* I hate these functions that presume you know how big the output
@@ -445,7 +411,6 @@ time_strptime(PyObject *self, PyObject *args)
 
 static char strptime_doc[] =
 "strptime(string, format) -> tuple\n\
-\n\
 Parse a string to a time tuple according to a format specification.\n\
 See the library reference manual for formatting codes (same as strftime()).";
 #endif /* HAVE_STRPTIME */
@@ -482,7 +447,7 @@ time_ctime(PyObject *self, PyObject *args)
 	double dt;
 	time_t tt;
 	char *p;
-
+	
 	if (PyTuple_Size(args) == 0)
 		tt = time(NULL);
 	else {
@@ -526,7 +491,7 @@ time_mktime(PyObject *self, PyObject *args)
 	tt = mktime(&buf);
 	if (tt == (time_t)(-1)) {
 		PyErr_SetString(PyExc_OverflowError,
-				"mktime argument out of range");
+                                "mktime argument out of range");
 		return NULL;
 	}
 #if defined(macintosh) && defined(USE_GUSI211)
@@ -619,7 +584,7 @@ mktime() -- convert local time tuple to seconds since Epoch\n\
 strftime() -- convert time tuple to string according to format specification\n\
 strptime() -- parse string to time tuple according to format specification\n\
 ";
-
+  
 
 DL_EXPORT(void)
 inittime(void)
@@ -629,7 +594,7 @@ inittime(void)
 	m = Py_InitModule3("time", time_methods, module_doc);
 	d = PyModule_GetDict(m);
 	/* Accept 2-digit dates unless PYTHONY2K is set and non-empty */
-	p = Py_GETENV("PYTHONY2K");
+	p = getenv("PYTHONY2K");
 	ins(d, "accept2dyear", PyInt_FromLong((long) (!p || !*p)));
 	/* Squirrel away the module's dictionary for the y2k check */
 	Py_INCREF(d);
@@ -670,7 +635,7 @@ inittime(void)
 		julyzone = -p->tm_gmtoff;
 		strncpy(julyname, p->tm_zone ? p->tm_zone : "   ", 9);
 		julyname[9] = '\0';
-
+		
 		if( janzone < julyzone ) {
 			/* DST is reversed in the southern hemisphere */
 			ins(d, "timezone", PyInt_FromLong(julyzone));
@@ -709,9 +674,6 @@ inittime(void)
 	ins(d, "tzname", Py_BuildValue("(zz)", _tzname[0], _tzname[1]));
 #endif /* __CYGWIN__ */
 #endif /* !HAVE_TZNAME || __GLIBC__ || __CYGWIN__*/
-
-        PyStructSequence_InitType(&StructTimeType, &struct_time_type_desc);
-	PyDict_SetItemString(d, "struct_time", (PyObject*) &StructTimeType);
 }
 
 
@@ -858,7 +820,7 @@ floatsleep(double secs)
 		if( secs <= 0.0 ) {
 			return;
 		}
-
+		
 		Py_BEGIN_ALLOW_THREADS
 		/* BeOS snooze() is in microseconds... */
 		if( snooze( (bigtime_t)( secs * 1000.0 * 1000.0 ) ) == B_INTERRUPTED ) {
@@ -890,6 +852,5 @@ floatsleep(double secs)
 #endif /* !__WATCOMC__ || __QNX__ */
 #endif /* !macintosh */
 #endif /* !HAVE_SELECT */
-
 	return 0;
 }

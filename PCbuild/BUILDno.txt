@@ -33,35 +33,11 @@ How to change the Windows build number:
 
 Windows Python BUILD numbers
 ----------------------------
-  29    CVS development
-        21-Dec-2001
-  28    2.2 final
-        21-Dec-2001
-  27    2.2c1
-        14-Dec-2001
-  26    2.2b2
-        16-Nov-2001
-  25    2.2b1
-        19-Oct-2001
-  24    2.2a4
-        28-Sep-2001
-  23    2.2a3
-        07-Sep-2001
-  22    2.2a2
-        22-Aug-2001
-  21    2.2a1
-        18-Jul-2001
   20    2.1.1
         20-Jul-2001
   19    2.1.1c1
         13-Jul-2001
-  18    2.0.1
-        22-Jun-2001
-  17    2.0.1c1
-        13-Jun-2001
-  16    CVS development
-        18-Apr-2001
-  15    2.1 final
+  15    2.1
         16-Apr-2001
   14    2.1c2
         15-Apr-2001

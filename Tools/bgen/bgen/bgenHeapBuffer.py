@@ -24,7 +24,6 @@ class HeapInputOutputBufferType(FixedInputOutputBufferType):
 		OutLbrace()
 		Output('PyErr_NoMemory();')
 		Output("goto %s__error__;", name)
-		self.label_needed = 1
 		OutRbrace()
 		Output("%s__len__ = %s__in_len__;", name, name)
 
