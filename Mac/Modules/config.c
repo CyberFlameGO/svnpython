@@ -324,15 +324,12 @@ struct {
 #endif
 /* This is really "Guido van Rossum" specific... :-) */
 	{"AE", initAE},
-#ifdef THINK_C
 	{"Ctl", initCtl},
 	{"Dlg", initDlg},
-#endif
 	{"Evt", initEvt},
 	{"Menu", initMenu},
 	{"Qd", initQd},
 	{"Res", initRes},
-#ifdef THINK_C
 	{"Snd", initSnd},
 	{"Win", initWin},
 
