@@ -33,7 +33,6 @@ decode(in_file [, out_file, mode])
 import binascii
 import os
 import sys
-from types import StringType
 
 __all__ = ["Error", "encode", "decode"]
 
@@ -47,7 +46,7 @@ def encode(in_file, out_file, name=None, mode=None):
     #
     if in_file == '-':
         in_file = sys.stdin
-    elif isinstance(in_file, StringType):
+    elif type(in_file) == type(''):
         if name is None:
             name = os.path.basename(in_file)
         if mode is None:
@@ -61,7 +60,7 @@ def encode(in_file, out_file, name=None, mode=None):
     #
     if out_file == '-':
         out_file = sys.stdout
-    elif isinstance(out_file, StringType):
+    elif type(out_file) == type(''):
         out_file = open(out_file, 'w')
     #
     # Set defaults for name and mode
@@ -81,14 +80,14 @@ def encode(in_file, out_file, name=None, mode=None):
     out_file.write(' \nend\n')
 
 
-def decode(in_file, out_file=None, mode=None, quiet=0):
+def decode(in_file, out_file=None, mode=None):
     """Decode uuencoded file"""
     #
     # Open the input file, if needed.
     #
     if in_file == '-':
         in_file = sys.stdin
-    elif isinstance(in_file, StringType):
+    elif type(in_file) == type(''):
         in_file = open(in_file)
     #
     # Read until a begin is encountered or we've exhausted the file
@@ -108,8 +107,6 @@ def decode(in_file, out_file=None, mode=None, quiet=0):
                 pass
     if out_file is None:
         out_file = hdrfields[2].rstrip()
-        if os.path.exists(out_file):
-            raise Error, 'Cannot overwrite existing file: %s' % out_file
     if mode is None:
         mode = int(hdrfields[1], 8)
     #
@@ -117,7 +114,7 @@ def decode(in_file, out_file=None, mode=None, quiet=0):
     #
     if out_file == '-':
         out_file = sys.stdout
-    elif isinstance(out_file, StringType):
+    elif type(out_file) == type(''):
         fp = open(out_file, 'wb')
         try:
             os.path.chmod(out_file, mode)
@@ -128,15 +125,14 @@ def decode(in_file, out_file=None, mode=None, quiet=0):
     # Main decoding loop
     #
     s = in_file.readline()
-    while s and s.strip() != 'end':
+    while s and s != 'end\n':
         try:
             data = binascii.a2b_uu(s)
         except binascii.Error, v:
             # Workaround for broken uuencoders by /Fredrik Lundh
             nbytes = (((ord(s[0])-32) & 63) * 4 + 5) / 3
             data = binascii.a2b_uu(s[:nbytes])
-            if not quiet:
-                sys.stderr.write("Warning: %s\n" % str(v))
+            sys.stderr.write("Warning: %s\n" % str(v))
         out_file.write(data)
         s = in_file.readline()
     if not s:
@@ -172,7 +168,7 @@ def test():
 
     if dopt:
         if topt:
-            if isinstance(output, StringType):
+            if type(output) == type(''):
                 output = open(output, 'w')
             else:
                 print sys.argv[0], ': cannot do -t to stdout'
@@ -180,7 +176,7 @@ def test():
         decode(input, output)
     else:
         if topt:
-            if isinstance(input, StringType):
+            if type(input) == type(''):
                 input = open(input, 'r')
             else:
                 print sys.argv[0], ': cannot do -t from stdin'

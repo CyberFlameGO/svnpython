@@ -107,20 +107,20 @@ gettext message catalog library.''')
 
 GNU_MO_DATA = '''\
 3hIElQAAAAAFAAAAHAAAAEQAAAAHAAAAbAAAAAAAAACIAAAAFQAAAIkAAAChAAAAnwAAAAcAAABB
-AQAACwAAAEkBAAAZAQAAVQEAABYAAABvAgAAoQAAAIYCAAAFAAAAKAMAAAkAAAAuAwAAAQAAAAQA
+AQAACwAAAEkBAAAbAQAAVQEAABYAAABxAgAAoQAAAIgCAAAFAAAAKgMAAAkAAAAwAwAAAQAAAAQA
 AAACAAAAAAAAAAUAAAAAAAAAAwAAAABSYXltb25kIEx1eHVyeSBZYWNoLXQAVGhpcyBtb2R1bGUg
 cHJvdmlkZXMgaW50ZXJuYXRpb25hbGl6YXRpb24gYW5kIGxvY2FsaXphdGlvbgpzdXBwb3J0IGZv
 ciB5b3VyIFB5dGhvbiBwcm9ncmFtcyBieSBwcm92aWRpbmcgYW4gaW50ZXJmYWNlIHRvIHRoZSBH
 TlUKZ2V0dGV4dCBtZXNzYWdlIGNhdGFsb2cgbGlicmFyeS4AbXVsbHVzawBudWRnZSBudWRnZQBQ
 cm9qZWN0LUlkLVZlcnNpb246IDIuMApQTy1SZXZpc2lvbi1EYXRlOiAyMDAwLTA4LTI5IDEyOjE5
-LTA0OjAwCkxhc3QtVHJhbnNsYXRvcjogQmFycnkgQS4gV2Fyc2F3IDxiYXJyeUBweXRob24ub3Jn
-PgpMYW5ndWFnZS1UZWFtOiBYWCA8cHl0aG9uLWRldkBweXRob24ub3JnPgpNSU1FLVZlcnNpb246
-IDEuMApDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9a29pOF9yCkNvbnRlbnQtVHJh
-bnNmZXItRW5jb2Rpbmc6IG5vbmUKR2VuZXJhdGVkLUJ5OiBweWdldHRleHQucHkgMS4xCgBUaHJv
-YXR3b2JibGVyIE1hbmdyb3ZlAEd1dmYgemJxaHlyIGNlYml2cXJmIHZhZ3JlYW5ndmJhbnl2bW5n
-dmJhIG5hcSB5YnBueXZtbmd2YmEKZmhjY2JlZyBzYmUgbGJoZSBDbGd1YmEgY2VidGVuemYgb2wg
-Y2ViaXZxdmF0IG5hIHZhZ3Jlc25wciBnYiBndXIgVEFICnRyZ2dya2cgenJmZm50ciBwbmdueWJ0
-IHl2b2VuZWwuAGJhY29uAHdpbmsgd2luawA=
+LTA0OjAwCkxhc3QtVHJhbnNsYXRvcjogQmFycnkgQS4gV2Fyc2F3IDxid2Fyc2F3QGJlb3Blbi5j
+b20+Ckxhbmd1YWdlLVRlYW06IFhYIDxweXRob24tZGV2QHB5dGhvbi5vcmc+Ck1JTUUtVmVyc2lv
+bjogMS4wCkNvbnRlbnQtVHlwZTogdGV4dC9wbGFpbjsgY2hhcnNldD1rb2k4X3IKQ29udGVudC1U
+cmFuc2Zlci1FbmNvZGluZzogbm9uZQpHZW5lcmF0ZWQtQnk6IHB5Z2V0dGV4dC5weSAxLjEKAFRo
+cm9hdHdvYmJsZXIgTWFuZ3JvdmUAR3V2ZiB6YnFoeXIgY2ViaXZxcmYgdmFncmVhbmd2YmFueXZt
+bmd2YmEgbmFxIHlicG55dm1uZ3ZiYQpmaGNjYmVnIHNiZSBsYmhlIENsZ3ViYSBjZWJ0ZW56ZiBv
+bCBjZWJpdnF2YXQgbmEgdmFncmVzbnByIGdiIGd1ciBUQUgKdHJnZ3JrZyB6cmZmbnRyIHBuZ255
+YnQgeXZvZW5lbC4AYmFjb24Ad2luayB3aW5rAA==
 '''
 
 
@@ -152,14 +152,14 @@ finally:
 
 '''
 # Dummy translation for Python's test_gettext.py module.
-# Copyright (C) 2001 Python Software Foundation
-# Barry Warsaw <barry@python.org>, 2000.
+# Copyright (C) 2000 BeOpen.com
+# Barry Warsaw <bwarsaw@beopen.com>, 2000.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: 2.0\n"
 "PO-Revision-Date: 2000-08-29 12:19-04:00\n"
-"Last-Translator: Barry A. Warsaw <barry@python.org>\n"
+"Last-Translator: Barry A. Warsaw <bwarsaw@beopen.com>\n"
 "Language-Team: XX <python-dev@python.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=koi8_r\n"

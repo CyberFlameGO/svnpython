@@ -70,8 +70,7 @@ Content-type: text/html
 
 def get_cgi_code():
 	# If we're a CGI wrapper, the CGI code resides in a PYC resource.
-	from Carbon import Res
-	import marshal
+	import Res, marshal
 	try:
 		code = Res.GetNamedResource('PYC ', "CGI_MAIN")
 	except Res.Error:

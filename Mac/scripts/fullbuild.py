@@ -18,11 +18,9 @@ import MacOS
 import EasyDialogs
 import re
 import string
-import genpluginprojects
-import macresource
 
 import aetools
-from Carbon import AppleEvents
+import AppleEvents
 
 OLDAESUPPORT = 0
 
@@ -34,8 +32,8 @@ if OLDAESUPPORT:
 else:
 	import CodeWarrior
 
-from Carbon import Res
-from Carbon import Dlg
+import Res
+import Dlg
 
 import buildtools
 import cfmfile
@@ -239,9 +237,6 @@ I_PPC_PLUGINS : (buildmwproject, "CWIE", [
 	(":Mac:Build:_weakref.mcp", "_weakref.ppc"),
 	(":Mac:Build:_symtable.mcp", "_symtable.ppc"),
 	(":Mac:Build:_testcapi.mcp", "_testcapi.ppc"),
-	(":Mac:Build:_hotshot.mcp", "_hotshot.ppc"),
-	(":Mac:Build:xx.mcp", "xx.ppc"),
-	(":Mac:Build:xxsubtype.mcp", "xxsubtype.ppc"),
 	(":Mac:Build:pyexpat.mcp", "pyexpat.ppc"),
 	(":Mac:Build:calldll.mcp", "calldll.ppc"),
 	(":Mac:Build:ctb.mcp", "ctb.ppc"),
@@ -254,37 +249,25 @@ I_PPC_PLUGINS : (buildmwproject, "CWIE", [
 	(":Extensions:Imaging:_tkinter.mcp", "_tkinter.ppc"),
 	(":Mac:Build:ColorPicker.mcp", "ColorPicker.ppc"),
 	(":Mac:Build:Printing.mcp", "Printing.ppc"),
-	(":Mac:Build:_AE.mcp", "_AE.ppc"),
-	(":Mac:Build:_App.mcp", "_App.ppc"),
-	(":Mac:Build:_Cm.mcp", "_Cm.ppc"),
-	(":Mac:Build:_Ctl.mcp", "_Ctl.ppc"),
-	(":Mac:Build:_Dlg.mcp", "_Dlg.ppc"),
-	(":Mac:Build:_Drag.mcp", "_Drag.ppc"),
-	(":Mac:Build:_Evt.mcp", "_Evt.ppc"),
-	(":Mac:Build:_Fm.mcp", "_Fm.ppc"),
-	(":Mac:Build:_Help.mcp", "_Help.ppc"),
-	(":Mac:Build:_Icn.mcp", "_Icn.ppc"),
-	(":Mac:Build:_List.mcp", "_List.ppc"),
-	(":Mac:Build:_Menu.mcp", "_Menu.ppc"),
-	(":Mac:Build:_Mlte.mcp", "_Mlte.ppc"),
-	(":Mac:Build:_Qd.mcp", "_Qd.ppc"),
-	(":Mac:Build:_Qdoffs.mcp", "_Qdoffs.ppc"),
-	(":Mac:Build:_Qt.mcp", "_Qt.ppc"),
-	(":Mac:Build:_Res.mcp", "_Res.ppc"),
-	(":Mac:Build:_Scrap.mcp", "_Scrap.ppc"),
-	(":Mac:Build:_Snd.mcp", "_Snd.ppc"),
-	(":Mac:Build:_Sndihooks.mcp", "_Sndihooks.ppc"),
-	(":Mac:Build:_TE.mcp", "_TE.ppc"),
-	(":Mac:Build:_Win.mcp", "_Win.ppc"),
+	(":Mac:Build:App.mcp", "App.ppc"),
+	(":Mac:Build:Cm.mcp", "Cm.ppc"),
+	(":Mac:Build:Fm.mcp", "Fm.ppc"),
+	(":Mac:Build:Help.mcp", "Help.ppc"),
+	(":Mac:Build:Icn.mcp", "Icn.ppc"),
+	(":Mac:Build:List.mcp", "List.ppc"),
+	(":Mac:Build:Qdoffs.mcp", "Qdoffs.ppc"),
+	(":Mac:Build:Qt.mcp", "Qt.ppc"),
+	(":Mac:Build:Scrap.mcp", "Scrap.ppc"),
+	(":Mac:Build:Snd.mcp", "Snd.ppc"),
+	(":Mac:Build:Sndihooks.mcp", "Sndihooks.ppc"),
+	(":Mac:Build:TE.mcp", "TE.ppc"),
+	(":Mac:Build:Mlte.mcp", "Mlte.ppc"),
 	]),
 
 I_CARBON_PLUGINS :  (buildmwproject, "CWIE", [
 	(":Mac:Build:_weakref.carbon.mcp", "_weakref.carbon"),
 	(":Mac:Build:_symtable.carbon.mcp", "_symtable.carbon"),
 	(":Mac:Build:_testcapi.carbon.mcp", "_testcapi.carbon"),
-	(":Mac:Build:_hotshot.carbon.mcp", "_hotshot.carbon"),
-	(":Mac:Build:xx.carbon.mcp", "xx.carbon"),
-	(":Mac:Build:xxsubtype.carbon.mcp", "xxsubtype.carbon"),
 	(":Mac:Build:pyexpat.carbon.mcp", "pyexpat.carbon"),
 	(":Mac:Build:calldll.carbon.mcp", "calldll.carbon"),
 	(":Mac:Build:gdbm.carbon.mcp", "gdbm.carbon"),
@@ -292,34 +275,22 @@ I_CARBON_PLUGINS :  (buildmwproject, "CWIE", [
 	(":Mac:Build:waste.carbon.mcp", "waste.carbon"),
 	(":Mac:Build:zlib.carbon.mcp", "zlib.carbon"),
 	(":Mac:Build:_dummy_tkinter.mcp", "_tkinter.carbon"),
-	(":Mac:Build:hfsplus.carbon.mcp", "hfsplus.carbon"),
 ##	(":Extensions:Imaging:_tkinter.carbon.mcp", "_tkinter.carbon"),
 	(":Mac:Build:ColorPicker.carbon.mcp", "ColorPicker.carbon"),
-	(":Mac:Build:_AE.carbon.mcp", "_AE.carbon"),
-	(":Mac:Build:_App.carbon.mcp", "_App.carbon"),
-	(":Mac:Build:_CF.carbon.mcp", "_CF.carbon"),
-	(":Mac:Build:_CG.carbon.mcp", "_CG.carbon"),
-	(":Mac:Build:_CarbonEvt.carbon.mcp", "_CarbonEvt.carbon"),
-	(":Mac:Build:_Cm.carbon.mcp", "_Cm.carbon"),
-	(":Mac:Build:_Ctl.carbon.mcp", "_Ctl.carbon"),
-	(":Mac:Build:_Dlg.carbon.mcp", "_Dlg.carbon"),
-	(":Mac:Build:_Drag.carbon.mcp", "_Drag.carbon"),
-	(":Mac:Build:_Evt.carbon.mcp", "_Evt.carbon"),
-	(":Mac:Build:_Fm.carbon.mcp", "_Fm.carbon"),
-	(":Mac:Build:_Icn.carbon.mcp", "_Icn.carbon"),
-	(":Mac:Build:_List.carbon.mcp", "_List.carbon"),
-	(":Mac:Build:_Menu.carbon.mcp", "_Menu.carbon"),
-	(":Mac:Build:_Mlte.carbon.mcp", "_Mlte.carbon"),
-	(":Mac:Build:_Qd.carbon.mcp", "_Qd.carbon"),
-	(":Mac:Build:_Qdoffs.carbon.mcp", "_Qdoffs.carbon"),
-	(":Mac:Build:_Qt.carbon.mcp", "_Qt.carbon"),
-	(":Mac:Build:_Res.carbon.mcp", "_Res.carbon"),
-	(":Mac:Build:_Scrap.carbon.mcp", "_Scrap.carbon"),
-	(":Mac:Build:_Snd.carbon.mcp", "_Snd.carbon"),
-	(":Mac:Build:_Sndihooks.carbon.mcp", "_Sndihooks.carbon"),
-	(":Mac:Build:_TE.carbon.mcp", "_TE.carbon"),
-	(":Mac:Build:_Win.carbon.mcp", "_Win.carbon"),
+	(":Mac:Build:App.carbon.mcp", "App.carbon"),
+	(":Mac:Build:Cm.carbon.mcp", "Cm.carbon"),
+	(":Mac:Build:Fm.carbon.mcp", "Fm.carbon"),
+	(":Mac:Build:Icn.carbon.mcp", "Icn.carbon"),
+	(":Mac:Build:List.carbon.mcp", "List.carbon"),
+	(":Mac:Build:Qdoffs.carbon.mcp", "Qdoffs.carbon"),
+	(":Mac:Build:Qt.carbon.mcp", "Qt.carbon"),
+	(":Mac:Build:Scrap.carbon.mcp", "Scrap.carbon"),
+	(":Mac:Build:Snd.carbon.mcp", "Snd.carbon"),
+	(":Mac:Build:Sndihooks.carbon.mcp", "Sndihooks.carbon"),
+	(":Mac:Build:TE.carbon.mcp", "TE.carbon"),
 	
+	(":Mac:Build:CF.carbon.mcp", "CF.carbon"),
+	(":Mac:Build:Mlte.carbon.mcp", "Mlte.carbon"),
 	]),
 
 I_PPC_FULL : (buildmwproject, "CWIE", [
@@ -379,13 +350,15 @@ def incbuildno(filename):
 	fp.close()
 				
 def main():
-	macresource.need('DLOG', DIALOG_ID, 'fullbuild.rsrc')
+	try:
+		h = Res.FSpOpenResFile('fullbuild.rsrc', 1)
+	except Res.Error:
+		pass	# Assume we already have acces to our own resource
+
 	dir, ok = macfs.GetDirectory('Python source folder:')
 	if not ok:
 		sys.exit(0)
 	dir = dir.as_pathname()
-	# Set genpluginprojects to use this folder (slight hack)
-	genpluginprojects.PYTHONDIR = dir
 	
 	todo = handle_dialog(os.path.join(dir, MACBUILDNO))
 		

@@ -234,7 +234,7 @@ class WindowsDefault:
 # the TERM and DISPLAY cases, because we might be running Python from inside
 # an xterm.
 if os.environ.get("TERM") or os.environ.get("DISPLAY"):
-    _tryorder = ["mozilla","netscape","kfm","grail","links","lynx","w3m"]
+    _tryorder = ("mozilla","netscape","kfm","grail","links","lynx","w3m")
 
     # Easy cases first -- register console browsers if we have them.
     if os.environ.get("TERM"):
@@ -283,7 +283,7 @@ class InternetConfig:
 #
 
 if sys.platform[:3] == "win":
-    _tryorder = ["netscape", "windows-default"]
+    _tryorder = ("netscape", "windows-default")
     register("windows-default", WindowsDefault)
 
 #
@@ -297,17 +297,8 @@ except ImportError:
 else:
     # internet-config is the only supported controller on MacOS,
     # so don't mess with the default!
-    _tryorder = ["internet-config"]
+    _tryorder = ("internet-config")
     register("internet-config", InternetConfig)
-
-#
-# Platform support for OS/2
-#
-
-if sys.platform[:3] == "os2" and _iscommand("netscape.exe"):
-    _tryorder = ["os2netscape"]
-    register("os2netscape", None,
-             GenericBrowser("start netscape.exe %s"))
 
 # OK, now that we know what the default preference orders for each
 # platform are, allow user to override them with the BROWSER variable.
@@ -315,7 +306,7 @@ if sys.platform[:3] == "os2" and _iscommand("netscape.exe"):
 if os.environ.has_key("BROWSER"):
     # It's the user's responsibility to register handlers for any unknown
     # browser referenced by this value, before calling open().
-    _tryorder = os.environ["BROWSER"].split(os.pathsep)
+    _tryorder = os.environ["BROWSER"].split(":")
 
 for cmd in _tryorder:
     if not _browsers.has_key(cmd.lower()):

@@ -161,10 +161,6 @@ static PyMethodDef md5_methods[] = {
 static PyObject *
 md5_getattr(md5object *self, char *name)
 {
-        if (strcmp(name, "digest_size") == 0) {
-    		return PyInt_FromLong(16);
-        }
-
 	return Py_FindMethod(md5_methods, (PyObject *)self, name);
 }
 
@@ -202,7 +198,7 @@ copy() -- return a copy of the current md5 object\n\
 statichere PyTypeObject MD5type = {
 	PyObject_HEAD_INIT(NULL)
 	0,			  /*ob_size*/
-	"md5.md5",		  /*tp_name*/
+	"md5",			  /*tp_name*/
 	sizeof(md5object),	  /*tp_size*/
 	0,			  /*tp_itemsize*/
 	/* methods */
@@ -274,6 +270,5 @@ initmd5(void)
 	m = Py_InitModule3("md5", md5_functions, module_doc);
 	d = PyModule_GetDict(m);
 	PyDict_SetItemString(d, "MD5Type", (PyObject *)&MD5type);
-	PyModule_AddIntConstant(m, "digest_size", 16);
 	/* No need to check the error here, the caller will do that */
 }

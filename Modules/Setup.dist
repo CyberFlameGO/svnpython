@@ -98,7 +98,6 @@ PYTHONPATH=$(COREPYTHONPATH)
 
 posix posixmodule.c		# posix (UNIX) system calls
 _sre _sre.c			# Fredrik Lundh's new regular expressions
-new newmodule.c			# Tommy Burnette's 'new' module
 
 # The rest of the modules listed in this file are all commented out by
 # default.  Usually they can be detected and built as dynamically
@@ -109,9 +108,6 @@ new newmodule.c			# Tommy Burnette's 'new' module
 # appropriate lines below.
 
 # ======================================================================
-
-# The Python symtable module depends on .h files that setup.py doesn't track
-_symtable symtablemodule.c
 
 # The SGI specific GL module:
 
@@ -351,6 +347,11 @@ GLHACK=-Dclear=__GLclear
 #_curses_panel _curses_panel.c -lpanel -lncurses 
 
 
+# Tommy Burnette's 'new' module (creates new empty objects of certain kinds):
+
+#new newmodule.c
+
+
 # Generic (SunOS / SVR4) dynamic loading module.
 # This is not needed for dynamic loading of Python modules --
 # it is a highly experimental and dangerous device for calling
@@ -463,5 +464,3 @@ GLHACK=-Dclear=__GLclear
 # Example -- included for reference only:
 # xx xxmodule.c
 
-# Another example -- the 'xxsubtype' module shows C-level subtyping in action
-xxsubtype xxsubtype.c

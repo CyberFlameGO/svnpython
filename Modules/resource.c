@@ -2,6 +2,7 @@
 #include "Python.h"
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <unistd.h>
 #include <string.h>
 #include <errno.h>
 
@@ -168,8 +169,7 @@ ins(PyObject *dict, char *name, int value)
 	/* errors will be checked by initresource() */
 }
 
-DL_EXPORT(void)
-initresource(void)
+void initresource(void)
 {
 	PyObject *m, *d;
 

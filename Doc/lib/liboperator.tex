@@ -12,128 +12,11 @@ corresponding to the intrinsic operators of Python.  For example,
 function names are those used for special class methods; variants without
 leading and trailing \samp{__} are also provided for convenience.
 
-The functions fall into categories that perform object comparisons,
-logical operations, mathematical operations, sequence operations, and
-abstract type tests.
-
-The object comparison functions are useful for all objects, and are
-named after the rich comparison operators they support:
-
-\begin{funcdesc}{lt}{a, b}
-\funcline{le}{a, b}
-\funcline{eq}{a, b}
-\funcline{ne}{a, b}
-\funcline{ge}{a, b}
-\funcline{gt}{a, b}
-\funcline{__lt__}{a, b}
-\funcline{__le__}{a, b}
-\funcline{__eq__}{a, b}
-\funcline{__ne__}{a, b}
-\funcline{__ge__}{a, b}
-\funcline{__gt__}{a, b}
-Perform ``rich comparisons'' between \var{a} and \var{b}. Specifically,
-\code{lt(\var{a}, \var{b})} is equivalent to \code{\var{a} < \var{b}},
-\code{le(\var{a}, \var{b})} is equivalent to \code{\var{a} <= \var{b}},
-\code{eq(\var{a}, \var{b})} is equivalent to \code{\var{a} == \var{b}},
-\code{ne(\var{a}, \var{b})} is equivalent to \code{\var{a} != \var{b}},
-\code{gt(\var{a}, \var{b})} is equivalent to \code{\var{a} > \var{b}}
-and
-\code{ge(\var{a}, \var{b})} is equivalent to \code{\var{a} >= \var{b}}.
-Note that unlike the built-in \function{cmp()}, these functions can
-return any value, which may or may not be interpretable as a Boolean
-value.  See the \citetitle[../ref/ref.html]{Python Reference Manual}
-for more informations about rich comparisons.
-\versionadded{2.2}
-\end{funcdesc}
-
-
-The logical operations are also generally applicable to all objects,
-and support truth tests and Boolean operations:
-
-\begin{funcdesc}{not_}{o}
-\funcline{__not__}{o}
-Return the outcome of \keyword{not} \var{o}.  (Note that there is no
-\method{__not__()} method for object instances; only the interpreter
-core defines this operation.  The result is affected by the
-\method{__nonzero__()} and \method{__len__()} methods.)
-\end{funcdesc}
-
-\begin{funcdesc}{truth}{o}
-Return \code{1} if \var{o} is true, and 0 otherwise.
-\end{funcdesc}
-
-
-The mathematical and bitwise operations are the most numerous:
-
-\begin{funcdesc}{abs}{o}
-\funcline{__abs__}{o}
-Return the absolute value of \var{o}.
-\end{funcdesc}
+The \module{operator} module defines the following functions:
 
 \begin{funcdesc}{add}{a, b}
 \funcline{__add__}{a, b}
 Return \var{a} \code{+} \var{b}, for \var{a} and \var{b} numbers.
-\end{funcdesc}
-
-\begin{funcdesc}{and_}{a, b}
-\funcline{__and__}{a, b}
-Return the bitwise and of \var{a} and \var{b}.
-\end{funcdesc}
-
-\begin{funcdesc}{div}{a, b}
-\funcline{__div__}{a, b}
-Return \var{a} \code{/} \var{b} when \code{__future__.division} is not
-in effect.  This is also known as ``classic'' division.
-\end{funcdesc}
-
-\begin{funcdesc}{floordiv}{a, b}
-\funcline{__floordiv__}{a, b}
-Return \var{a} \code{//} \var{b}.
-\versionadded{2.2}
-\end{funcdesc}
-
-\begin{funcdesc}{inv}{o}
-\funcline{invert}{o}
-\funcline{__inv__}{o}
-\funcline{__invert__}{o}
-Return the bitwise inverse of the number \var{o}.  This is equivalent
-to \code{\textasciitilde}\var{o}.  The names \function{invert()} and
-\function{__invert__()} were added in Python 2.0.
-\end{funcdesc}
-
-\begin{funcdesc}{lshift}{a, b}
-\funcline{__lshift__}{a, b}
-Return \var{a} shifted left by \var{b}.
-\end{funcdesc}
-
-\begin{funcdesc}{mod}{a, b}
-\funcline{__mod__}{a, b}
-Return \var{a} \code{\%} \var{b}.
-\end{funcdesc}
-
-\begin{funcdesc}{mul}{a, b}
-\funcline{__mul__}{a, b}
-Return \var{a} \code{*} \var{b}, for \var{a} and \var{b} numbers.
-\end{funcdesc}
-
-\begin{funcdesc}{neg}{o}
-\funcline{__neg__}{o}
-Return \var{o} negated.
-\end{funcdesc}
-
-\begin{funcdesc}{or_}{a, b}
-\funcline{__or__}{a, b}
-Return the bitwise or of \var{a} and \var{b}.
-\end{funcdesc}
-
-\begin{funcdesc}{pos}{o}
-\funcline{__pos__}{o}
-Return \var{o} positive.
-\end{funcdesc}
-
-\begin{funcdesc}{rshift}{a, b}
-\funcline{__rshift__}{a, b}
-Return \var{a} shifted right by \var{b}.
 \end{funcdesc}
 
 \begin{funcdesc}{sub}{a, b}
@@ -141,11 +24,63 @@ Return \var{a} shifted right by \var{b}.
 Return \var{a} \code{-} \var{b}.
 \end{funcdesc}
 
-\begin{funcdesc}{truediv}{a, b}
-\funcline{__truediv__}{a, b}
-Return \var{a} \code{/} \var{b} when \code{__future__.division} is in
-effect.  This is also known as division.
-\versionadded{2.2}
+\begin{funcdesc}{mul}{a, b}
+\funcline{__mul__}{a, b}
+Return \var{a} \code{*} \var{b}, for \var{a} and \var{b} numbers.
+\end{funcdesc}
+
+\begin{funcdesc}{div}{a, b}
+\funcline{__div__}{a, b}
+Return \var{a} \code{/} \var{b}.
+\end{funcdesc}
+
+\begin{funcdesc}{mod}{a, b}
+\funcline{__mod__}{a, b}
+Return \var{a} \code{\%} \var{b}.
+\end{funcdesc}
+
+\begin{funcdesc}{neg}{o}
+\funcline{__neg__}{o}
+Return \var{o} negated.
+\end{funcdesc}
+
+\begin{funcdesc}{pos}{o}
+\funcline{__pos__}{o}
+Return \var{o} positive.
+\end{funcdesc}
+
+\begin{funcdesc}{abs}{o}
+\funcline{__abs__}{o}
+Return the absolute value of \var{o}.
+\end{funcdesc}
+
+\begin{funcdesc}{inv}{o}
+\funcline{invert}{o}
+\funcline{__inv__}{o}
+\funcline{__invert__}{o}
+Return the bitwise inverse of the number \var{o}.  The names
+\function{invert()} and \function{__invert__()} were added in Python
+2.0.
+\end{funcdesc}
+
+\begin{funcdesc}{lshift}{a, b}
+\funcline{__lshift__}{a, b}
+Return \var{a} shifted left by \var{b}.
+\end{funcdesc}
+
+\begin{funcdesc}{rshift}{a, b}
+\funcline{__rshift__}{a, b}
+Return \var{a} shifted right by \var{b}.
+\end{funcdesc}
+
+\begin{funcdesc}{and_}{a, b}
+\funcline{__and__}{a, b}
+Return the bitwise and of \var{a} and \var{b}.
+\end{funcdesc}
+
+\begin{funcdesc}{or_}{a, b}
+\funcline{__or__}{a, b}
+Return the bitwise or of \var{a} and \var{b}.
 \end{funcdesc}
 
 \begin{funcdesc}{xor}{a, b}
@@ -153,12 +88,26 @@ effect.  This is also known as division.
 Return the bitwise exclusive or of \var{a} and \var{b}.
 \end{funcdesc}
 
+\begin{funcdesc}{not_}{o}
+\funcline{__not__}{o}
+Return the outcome of \keyword{not} \var{o}.  (Note that there is no
+\method{__not__()} method for object instances; only the interpreter
+core defines this operation.)
+\end{funcdesc}
 
-Operations which work with sequences include:
+\begin{funcdesc}{truth}{o}
+Return \code{1} if \var{o} is true, and 0 otherwise.
+\end{funcdesc}
 
 \begin{funcdesc}{concat}{a, b}
 \funcline{__concat__}{a, b}
 Return \var{a} \code{+} \var{b} for \var{a} and \var{b} sequences.
+\end{funcdesc}
+
+\begin{funcdesc}{repeat}{a, b}
+\funcline{__repeat__}{a, b}
+Return \var{a} \code{*} \var{b} where \var{a} is a sequence and
+\var{b} is an integer.
 \end{funcdesc}
 
 \begin{funcdesc}{contains}{a, b}
@@ -168,18 +117,17 @@ Note the reversed operands.  The name \function{__contains__()} was
 added in Python 2.0.
 \end{funcdesc}
 
+\begin{funcdesc}{sequenceIncludes}{\unspecified}
+\deprecated{2.0}{Use \function{contains()} instead.}
+Alias for \function{contains()}.
+\end{funcdesc}
+
 \begin{funcdesc}{countOf}{a, b}
 Return the number of occurrences of \var{b} in \var{a}.
 \end{funcdesc}
 
-\begin{funcdesc}{delitem}{a, b}
-\funcline{__delitem__}{a, b}
-Remove the value of \var{a} at index \var{b}.
-\end{funcdesc}
-
-\begin{funcdesc}{delslice}{a, b, c}
-\funcline{__delslice__}{a, b, c}
-Delete the slice of \var{a} from index \var{b} to index \var{c}\code{-1}.
+\begin{funcdesc}{indexOf}{a, b}
+Return the index of the first of occurrence of \var{b} in \var{a}.
 \end{funcdesc}
 
 \begin{funcdesc}{getitem}{a, b}
@@ -187,29 +135,19 @@ Delete the slice of \var{a} from index \var{b} to index \var{c}\code{-1}.
 Return the value of \var{a} at index \var{b}.
 \end{funcdesc}
 
-\begin{funcdesc}{getslice}{a, b, c}
-\funcline{__getslice__}{a, b, c}
-Return the slice of \var{a} from index \var{b} to index \var{c}\code{-1}.
-\end{funcdesc}
-
-\begin{funcdesc}{indexOf}{a, b}
-Return the index of the first of occurrence of \var{b} in \var{a}.
-\end{funcdesc}
-
-\begin{funcdesc}{repeat}{a, b}
-\funcline{__repeat__}{a, b}
-Return \var{a} \code{*} \var{b} where \var{a} is a sequence and
-\var{b} is an integer.
-\end{funcdesc}
-
-\begin{funcdesc}{sequenceIncludes}{\unspecified}
-\deprecated{2.0}{Use \function{contains()} instead.}
-Alias for \function{contains()}.
-\end{funcdesc}
-
 \begin{funcdesc}{setitem}{a, b, c}
 \funcline{__setitem__}{a, b, c}
 Set the value of \var{a} at index \var{b} to \var{c}.
+\end{funcdesc}
+
+\begin{funcdesc}{delitem}{a, b}
+\funcline{__delitem__}{a, b}
+Remove the value of \var{a} at index \var{b}.
+\end{funcdesc}
+
+\begin{funcdesc}{getslice}{a, b, c}
+\funcline{__getslice__}{a, b, c}
+Return the slice of \var{a} from index \var{b} to index \var{c}\code{-1}.
 \end{funcdesc}
 
 \begin{funcdesc}{setslice}{a, b, c, v}
@@ -218,11 +156,15 @@ Set the slice of \var{a} from index \var{b} to index \var{c}\code{-1} to the
 sequence \var{v}.
 \end{funcdesc}
 
+\begin{funcdesc}{delslice}{a, b, c}
+\funcline{__delslice__}{a, b, c}
+Delete the slice of \var{a} from index \var{b} to index \var{c}\code{-1}.
+\end{funcdesc}
 
-The \module{operator} module also defines a few predicates to test the
-type of objects.  \note{Be careful not to misinterpret the
+The \module{operator} also defines a few predicates to test the type
+of objects.  \strong{Note:}  Be careful not to misinterpret the
 results of these functions; only \function{isCallable()} has any
-measure of reliability with instance objects.  For example:}
+measure of reliability with instance objects.  For example:
 
 \begin{verbatim}
 >>> class C:
@@ -245,28 +187,28 @@ unbound methods, class objects, and instance objects which support the
 \begin{funcdesc}{isMappingType}{o}
 Returns true if the object \var{o} supports the mapping interface.
 This is true for dictionaries and all instance objects.
-\warning{There is no reliable way to test if an instance
+\strong{Warning:} There is no reliable way to test if an instance
 supports the complete mapping protocol since the interface itself is
 ill-defined.  This makes this test less useful than it otherwise might
-be.}
+be.
 \end{funcdesc}
 
 \begin{funcdesc}{isNumberType}{o}
 Returns true if the object \var{o} represents a number.  This is true
 for all numeric types implemented in C, and for all instance objects.
-\warning{There is no reliable way to test if an instance
+\strong{Warning:}  There is no reliable way to test if an instance
 supports the complete numeric interface since the interface itself is
 ill-defined.  This makes this test less useful than it otherwise might
-be.}
+be.
 \end{funcdesc}
 
 \begin{funcdesc}{isSequenceType}{o}
 Returns true if the object \var{o} supports the sequence protocol.
 This returns true for all objects which define sequence methods in C,
-and for all instance objects.  \warning{There is no reliable
+and for all instance objects.  \strong{Warning:} There is no reliable
 way to test if an instance supports the complete sequence interface
 since the interface itself is ill-defined.  This makes this test less
-useful than it otherwise might be.}
+useful than it otherwise might be.
 \end{funcdesc}
 
 
@@ -297,11 +239,7 @@ symbols in the Python syntax and the functions in the
   \lineiii{Containment Test}{\code{\var{o} in \var{seq}}}
           {\code{contains(\var{seq}, \var{o})}}
   \lineiii{Division}{\code{\var{a} / \var{b}}}
-          {\code{div(\var{a}, \var{b}) \#} without \code{__future__.division}}
-  \lineiii{Division}{\code{\var{a} / \var{b}}}
-          {\code{truediv(\var{a}, \var{b}) \#} with \code{__future__.division}}
-  \lineiii{Division}{\code{\var{a} // \var{b}}}
-          {\code{floordiv(\var{a}, \var{b})}}
+          {\code{div(\var{a}, \var{b})}}
   \lineiii{Bitwise And}{\code{\var{a} \&\ \var{b}}}
           {\code{and_(\var{a}, \var{b})}}
   \lineiii{Bitwise Exclusive Or}{\code{\var{a} \^\ \var{b}}}
@@ -342,16 +280,4 @@ symbols in the Python syntax and the functions in the
           {\code{sub(\var{a}, \var{b})}}
   \lineiii{Truth Test}{\code{\var{o}}}
           {\code{truth(\var{o})}}
-  \lineiii{Ordering}{\code{\var{a} < \var{b}}}
-          {\code{lt(\var{a}, \var{b})}}
-  \lineiii{Ordering}{\code{\var{a} <= \var{b}}}
-          {\code{le(\var{a}, \var{b})}}
-  \lineiii{Equality}{\code{\var{a} == \var{b}}}
-          {\code{eq(\var{a}, \var{b})}}
-  \lineiii{Difference}{\code{\var{a} != \var{b}}}
-          {\code{ne(\var{a}, \var{b})}}
-  \lineiii{Ordering}{\code{\var{a} >= \var{b}}}
-          {\code{ge(\var{a}, \var{b})}}
-  \lineiii{Ordering}{\code{\var{a} > \var{b}}}
-          {\code{gt(\var{a}, \var{b})}}
 \end{tableiii}

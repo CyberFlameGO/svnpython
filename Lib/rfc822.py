@@ -1,66 +1,52 @@
-"""RFC 2822 message manipulation.
+"""RFC-822 message manipulation class.
 
-Note: This is only a very rough sketch of a full RFC-822 parser; in particular
-the tokenizing of addresses does not adhere to all the quoting rules.
-
-Note: RFC 2822 is a long awaited update to RFC 822.  This module should
-conform to RFC 2822, and is thus mis-named (it's not worth renaming it).  Some
-effort at RFC 2822 updates have been made, but a thorough audit has not been
-performed.  Consider any RFC 2822 non-conformance to be a bug.
-
-    RFC 2822: http://www.faqs.org/rfcs/rfc2822.html
-    RFC 822 : http://www.faqs.org/rfcs/rfc822.html (obsolete)
+XXX This is only a very rough sketch of a full RFC-822 parser;
+in particular the tokenizing of addresses does not adhere to all the
+quoting rules.
 
 Directions for use:
 
 To create a Message object: first open a file, e.g.:
-
   fp = open(file, 'r')
-
 You can use any other legal way of getting an open file object, e.g. use
-sys.stdin or call os.popen().  Then pass the open file object to the Message()
-constructor:
-
+sys.stdin or call os.popen().
+Then pass the open file object to the Message() constructor:
   m = Message(fp)
 
-This class can work with any input object that supports a readline method.  If
-the input object has seek and tell capability, the rewindbody method will
-work; also illegal lines will be pushed back onto the input stream.  If the
-input object lacks seek but has an `unread' method that can push back a line
-of input, Message will use that to push back illegal lines.  Thus this class
-can be used to parse messages coming from a buffered stream.
+This class can work with any input object that supports a readline
+method.  If the input object has seek and tell capability, the
+rewindbody method will work; also illegal lines will be pushed back
+onto the input stream.  If the input object lacks seek but has an
+`unread' method that can push back a line of input, Message will use
+that to push back illegal lines.  Thus this class can be used to parse
+messages coming from a buffered stream.
 
-The optional `seekable' argument is provided as a workaround for certain stdio
-libraries in which tell() discards buffered data before discovering that the
-lseek() system call doesn't work.  For maximum portability, you should set the
-seekable argument to zero to prevent that initial \code{tell} when passing in
-an unseekable object such as a a file object created from a socket object.  If
-it is 1 on entry -- which it is by default -- the tell() method of the open
-file object is called once; if this raises an exception, seekable is reset to
-0.  For other nonzero values of seekable, this test is not made.
+The optional `seekable' argument is provided as a workaround for
+certain stdio libraries in which tell() discards buffered data before
+discovering that the lseek() system call doesn't work.  For maximum
+portability, you should set the seekable argument to zero to prevent
+that initial \code{tell} when passing in an unseekable object such as
+a a file object created from a socket object.  If it is 1 on entry --
+which it is by default -- the tell() method of the open file object is
+called once; if this raises an exception, seekable is reset to 0.  For
+other nonzero values of seekable, this test is not made.
 
 To get the text of a particular header there are several methods:
-
   str = m.getheader(name)
   str = m.getrawheader(name)
-
-where name is the name of the header, e.g. 'Subject'.  The difference is that
-getheader() strips the leading and trailing whitespace, while getrawheader()
-doesn't.  Both functions retain embedded whitespace (including newlines)
-exactly as they are specified in the header, and leave the case of the text
-unchanged.
+where name is the name of the header, e.g. 'Subject'.
+The difference is that getheader() strips the leading and trailing
+whitespace, while getrawheader() doesn't.  Both functions retain
+embedded whitespace (including newlines) exactly as they are
+specified in the header, and leave the case of the text unchanged.
 
 For addresses and address lists there are functions
-
-  realname, mailaddress = m.getaddr(name)
+  realname, mailaddress = m.getaddr(name) and
   list = m.getaddrlist(name)
-
 where the latter returns a list of (realname, mailaddr) tuples.
 
 There is also a method
-
   time = m.getdate(name)
-
 which parses a Date-like field and returns a time-compatible tuple,
 i.e. a tuple such as returned by time.localtime() or accepted by
 time.mktime().
@@ -79,7 +65,7 @@ _blanklines = ('\r\n', '\n')            # Optimization for islast()
 
 
 class Message:
-    """Represents a single RFC 2822-compliant message."""
+    """Represents a single RFC-822-compliant message."""
 
     def __init__(self, fp, seekable = 1):
         """Initialize the class instance and read the headers."""
@@ -88,7 +74,7 @@ class Message:
             # (and then assume seek() works, too)
             try:
                 fp.tell()
-            except (AttributeError, IOError):
+            except:
                 seekable = 0
             else:
                 seekable = 1
@@ -120,17 +106,18 @@ class Message:
     def readheaders(self):
         """Read header lines.
 
-        Read header lines up to the entirely blank line that terminates them.
-        The (normally blank) line that ends the headers is skipped, but not
-        included in the returned list.  If a non-header line ends the headers,
-        (which is an error), an attempt is made to backspace over it; it is
-        never included in the returned list.
+        Read header lines up to the entirely blank line that
+        terminates them.  The (normally blank) line that ends the
+        headers is skipped, but not included in the returned list.
+        If a non-header line ends the headers, (which is an error),
+        an attempt is made to backspace over it; it is never
+        included in the returned list.
 
-        The variable self.status is set to the empty string if all went well,
-        otherwise it is an error message.  The variable self.headers is a
-        completely uninterpreted list of lines contained in the header (so
-        printing them will reproduce the header exactly as it appears in the
-        file).
+        The variable self.status is set to the empty string if all
+        went well, otherwise it is an error message.
+        The variable self.headers is a completely uninterpreted list
+        of lines contained in the header (so printing them will
+        reproduce the header exactly as it appears in the file).
         """
         self.dict = {}
         self.unixfrom = ''
@@ -196,8 +183,8 @@ class Message:
         """Determine whether a given line is a legal header.
 
         This method should return the header name, suitably canonicalized.
-        You may override this method in order to use Message parsing on tagged
-        data in RFC 2822-like formats with special header formats.
+        You may override this method in order to use Message parsing
+        on tagged data in RFC822-like formats with special header formats.
         """
         i = line.find(':')
         if i > 0:
@@ -206,32 +193,35 @@ class Message:
             return None
 
     def islast(self, line):
-        """Determine whether a line is a legal end of RFC 2822 headers.
+        """Determine whether a line is a legal end of RFC-822 headers.
 
-        You may override this method if your application wants to bend the
-        rules, e.g. to strip trailing whitespace, or to recognize MH template
-        separators ('--------').  For convenience (e.g. for code reading from
-        sockets) a line consisting of \r\n also matches.
+        You may override this method if your application wants
+        to bend the rules, e.g. to strip trailing whitespace,
+        or to recognize MH template separators ('--------').
+        For convenience (e.g. for code reading from sockets) a
+        line consisting of \r\n also matches.
         """
         return line in _blanklines
 
     def iscomment(self, line):
         """Determine whether a line should be skipped entirely.
 
-        You may override this method in order to use Message parsing on tagged
-        data in RFC 2822-like formats that support embedded comments or
-        free-text data.
+        You may override this method in order to use Message parsing
+        on tagged data in RFC822-like formats that support embedded
+        comments or free-text data.
         """
         return None
 
     def getallmatchingheaders(self, name):
         """Find all header lines matching a given header name.
 
-        Look through the list of headers and find all lines matching a given
-        header name (and their continuation lines).  A list of the lines is
-        returned, without interpretation.  If the header does not occur, an
-        empty list is returned.  If the header occurs multiple times, all
-        occurrences are returned.  Case is not important in the header name.
+        Look through the list of headers and find all lines
+        matching a given header name (and their continuation
+        lines).  A list of the lines is returned, without
+        interpretation.  If the header does not occur, an
+        empty list is returned.  If the header occurs multiple
+        times, all occurrences are returned.  Case is not
+        important in the header name.
         """
         name = name.lower() + ':'
         n = len(name)
@@ -249,8 +239,9 @@ class Message:
     def getfirstmatchingheader(self, name):
         """Get the first header line matching name.
 
-        This is similar to getallmatchingheaders, but it returns only the
-        first matching header (and its continuation lines).
+        This is similar to getallmatchingheaders, but it returns
+        only the first matching header (and its continuation
+        lines).
         """
         name = name.lower() + ':'
         n = len(name)
@@ -269,10 +260,11 @@ class Message:
     def getrawheader(self, name):
         """A higher-level interface to getfirstmatchingheader().
 
-        Return a string containing the literal text of the header but with the
-        keyword stripped.  All leading, trailing and embedded whitespace is
-        kept in the string, however.  Return None if the header does not
-        occur.
+        Return a string containing the literal text of the
+        header but with the keyword stripped.  All leading,
+        trailing and embedded whitespace is kept in the
+        string, however.
+        Return None if the header does not occur.
         """
 
         list = self.getfirstmatchingheader(name)
@@ -284,9 +276,10 @@ class Message:
     def getheader(self, name, default=None):
         """Get the header value for a name.
 
-        This is the normal interface: it returns a stripped version of the
-        header value for a given header name, or None if it doesn't exist.
-        This uses the dictionary version which finds the *last* such header.
+        This is the normal interface: it returns a stripped
+        version of the header value for a given header name,
+        or None if it doesn't exist.  This uses the dictionary
+        version which finds the *last* such header.
         """
         try:
             return self.dict[name.lower()]
@@ -297,9 +290,10 @@ class Message:
     def getheaders(self, name):
         """Get all values for a header.
 
-        This returns a list of values for headers given more than once; each
-        value in the result list is stripped in the same way as the result of
-        getheader().  If the header is not given, return an empty list.
+        This returns a list of values for headers given more than once;
+        each value in the result list is stripped in the same way as the
+        result of getheader().  If the header is not given, return an
+        empty list.
         """
         result = []
         current = ''
@@ -338,6 +332,7 @@ class Message:
         Retrieves a list of addresses from a header, where each address is a
         tuple as returned by getaddr().  Scans all named headers, so it works
         properly with multiple To: or Cc: headers for example.
+
         """
         raw = []
         for h in self.getallmatchingheaders(name):
@@ -357,8 +352,8 @@ class Message:
     def getdate(self, name):
         """Retrieve a date field from a header.
 
-        Retrieves a date field from the named header, returning a tuple
-        compatible with time.mktime().
+        Retrieves a date field from the named header, returning
+        a tuple compatible with time.mktime().
         """
         try:
             data = self[name]
@@ -369,8 +364,9 @@ class Message:
     def getdate_tz(self, name):
         """Retrieve a date field from a header as a 10-tuple.
 
-        The first 9 elements make up a tuple compatible with time.mktime(),
-        and the 10th is the offset of the poster's time zone from GMT/UTC.
+        The first 9 elements make up a tuple compatible with
+        time.mktime(), and the 10th is the offset of the poster's
+        time zone from GMT/UTC.
         """
         try:
             data = self[name]
@@ -392,9 +388,9 @@ class Message:
     def __setitem__(self, name, value):
         """Set the value of a header.
 
-        Note: This is not a perfect inversion of __getitem__, because any
-        changed headers get stuck at the end of the raw-headers list rather
-        than where the altered header was.
+        Note: This is not a perfect inversion of __getitem__, because
+        any changed headers get stuck at the end of the raw-headers list
+        rather than where the altered header was.
         """
         del self[name] # Won't fail if it doesn't exist
         self.dict[name.lower()] = value
@@ -424,25 +420,6 @@ class Message:
         list.reverse()
         for i in list:
             del self.headers[i]
-
-    def get(self, name, default=""):
-        name = name.lower()
-        if self.dict.has_key(name):
-            return self.dict[name]
-        else:
-            return default
-
-    def setdefault(self, name, default=""):
-        lowername = name.lower()
-        if self.dict.has_key(lowername):
-            return self.dict[lowername]
-        else:
-            text = name + ": " + default
-            lines = text.split("\n")
-            for line in lines:
-                self.headers.append(line + "\n")
-            self.dict[lowername] = default
-            return default
 
     def has_key(self, name):
         """Determine whether a message contains the named header."""
@@ -506,9 +483,7 @@ class AddrlistClass:
     """Address parser class by Ben Escoto.
 
     To understand what this class does, it helps to have a copy of
-    RFC 2822 in front of you.
-
-    http://www.faqs.org/rfcs/rfc2822.html
+    RFC-822 in front of you.
 
     Note: this class interface is deprecated and may be removed in the future.
     Use rfc822.AddressList instead.
@@ -517,18 +492,14 @@ class AddrlistClass:
     def __init__(self, field):
         """Initialize a new instance.
 
-        `field' is an unparsed address header field, containing one or more
-        addresses.
+        `field' is an unparsed address header field, containing
+        one or more addresses.
         """
         self.specials = '()<>@,:;.\"[]'
         self.pos = 0
         self.LWS = ' \t'
         self.CR = '\r\n'
         self.atomends = self.specials + self.LWS + self.CR
-        # Note that RFC 2822 now specifies `.' as obs-phrase, meaning that it
-        # is obsolete syntax.  RFC 2822 requires that we recognize obsolete
-        # syntax, so allow dots in phrases.
-        self.phraseends = self.atomends.replace('.', '')
         self.field = field
         self.commentlist = []
 
@@ -546,14 +517,10 @@ class AddrlistClass:
 
         Returns a list containing all of the addresses.
         """
-        result = []
-        while 1:
-            ad = self.getaddress()
-            if ad:
-                result += ad
-            else:
-                break
-        return result
+        ad = self.getaddress()
+        if ad:
+            return ad + self.getaddrlist()
+        else: return []
 
     def getaddress(self):
         """Parse the next address."""
@@ -637,6 +604,7 @@ class AddrlistClass:
                 expectroute = 1
             elif self.field[self.pos] == ':':
                 self.pos = self.pos + 1
+                expectaddrspec = 1
             else:
                 adlist = self.getaddrspec()
                 self.pos = self.pos + 1
@@ -646,7 +614,7 @@ class AddrlistClass:
         return adlist
 
     def getaddrspec(self):
-        """Parse an RFC 2822 addr-spec."""
+        """Parse an RFC-822 addr-spec."""
         aslist = []
 
         self.gotonext()
@@ -690,15 +658,15 @@ class AddrlistClass:
     def getdelimited(self, beginchar, endchars, allowcomments = 1):
         """Parse a header fragment delimited by special characters.
 
-        `beginchar' is the start character for the fragment.  If self is not
-        looking at an instance of `beginchar' then getdelimited returns the
-        empty string.
+        `beginchar' is the start character for the fragment.
+        If self is not looking at an instance of `beginchar' then
+        getdelimited returns the empty string.
 
         `endchars' is a sequence of allowable end-delimiting characters.
         Parsing stops when one of these is encountered.
 
-        If `allowcomments' is non-zero, embedded RFC 2822 comments are allowed
-        within the parsed fragment.
+        If `allowcomments' is non-zero, embedded RFC-822 comments
+        are allowed within the parsed fragment.
         """
         if self.field[self.pos] != beginchar:
             return ''
@@ -732,22 +700,15 @@ class AddrlistClass:
         return self.getdelimited('(', ')\r', 1)
 
     def getdomainliteral(self):
-        """Parse an RFC 2822 domain-literal."""
+        """Parse an RFC-822 domain-literal."""
         return '[%s]' % self.getdelimited('[', ']\r', 0)
 
-    def getatom(self, atomends=None):
-        """Parse an RFC 2822 atom.
-
-        Optional atomends specifies a different set of end token delimiters
-        (the default is to use self.atomends).  This is used e.g. in
-        getphraselist() since phrase endings must not include the `.' (which
-        is legal in phrases)."""
+    def getatom(self):
+        """Parse an RFC-822 atom."""
         atomlist = ['']
-        if atomends is None:
-            atomends = self.atomends
 
         while self.pos < len(self.field):
-            if self.field[self.pos] in atomends:
+            if self.field[self.pos] in self.atomends:
                 break
             else: atomlist.append(self.field[self.pos])
             self.pos = self.pos + 1
@@ -755,11 +716,11 @@ class AddrlistClass:
         return ''.join(atomlist)
 
     def getphraselist(self):
-        """Parse a sequence of RFC 2822 phrases.
+        """Parse a sequence of RFC-822 phrases.
 
-        A phrase is a sequence of words, which are in turn either RFC 2822
-        atoms or quoted-strings.  Phrases are canonicalized by squeezing all
-        runs of continuous whitespace into one space.
+        A phrase is a sequence of words, which are in turn either
+        RFC-822 atoms or quoted-strings.  Phrases are canonicalized
+        by squeezing all runs of continuous whitespace into one space.
         """
         plist = []
 
@@ -770,15 +731,14 @@ class AddrlistClass:
                 plist.append(self.getquote())
             elif self.field[self.pos] == '(':
                 self.commentlist.append(self.getcomment())
-            elif self.field[self.pos] in self.phraseends:
+            elif self.field[self.pos] in self.atomends:
                 break
-            else:
-                plist.append(self.getatom(self.phraseends))
+            else: plist.append(self.getatom())
 
         return plist
 
 class AddressList(AddrlistClass):
-    """An AddressList encapsulates a list of parsed RFC 2822 addresses."""
+    """An AddressList encapsulates a list of parsed RFC822 addresses."""
     def __init__(self, field):
         AddrlistClass.__init__(self, field)
         if field:
@@ -862,8 +822,6 @@ def parsedate_tz(data):
 
     Accounts for military timezones.
     """
-    if not data:
-        return None
     data = data.split()
     if data[0][-1] in (',', '.') or data[0].lower() in _daynames:
         # There's a dayname here. Skip it
@@ -933,7 +891,7 @@ def parsedate_tz(data):
             tzoffset = -tzoffset
         else:
             tzsign = 1
-        tzoffset = tzsign * ( (tzoffset//100)*3600 + (tzoffset % 100)*60)
+        tzoffset = tzsign * ( (tzoffset/100)*3600 + (tzoffset % 100)*60)
     tuple = (yy, mm, dd, thh, tmm, tss, 0, 0, 0, tzoffset)
     return tuple
 
@@ -959,21 +917,11 @@ def formatdate(timeval=None):
     """Returns time format preferred for Internet standards.
 
     Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
-
-    According to RFC 1123, day and month names must always be in
-    English.  If not for that, this code could use strftime().  It
-    can't because strftime() honors the locale and could generated
-    non-English names.
     """
     if timeval is None:
         timeval = time.time()
-    timeval = time.gmtime(timeval)
-    return "%s, %02d %s %04d %02d:%02d:%02d GMT" % (
-            ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][timeval[6]],
-            timeval[2],
-            ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][timeval[1]-1],
-                                timeval[0], timeval[3], timeval[4], timeval[5])
+    return "%s" % time.strftime('%a, %d %b %Y %H:%M:%S GMT',
+                                time.gmtime(timeval))
 
 
 # When used as script, run a small test program.

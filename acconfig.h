@@ -19,20 +19,11 @@
 /* Define if you have the Mach cthreads package */
 #undef C_THREADS
 
-/* Define if you are using Mach cthreads under mach / */
-#undef MACH_C_THREADS
-
-/* Define if you are using Mach cthreads directly under /include */
-#undef HURD_C_THREADS
-
 /* Define to `long' if <time.h> doesn't define.  */
 #undef clock_t
 
 /* Defined on Solaris to see additional function prototypes. */
 #undef __EXTENSIONS__
-
-/* This must be set to 64 on some systems to enable large file support */
-#undef _FILE_OFFSET_BITS
 
 /* Define if getpgrp() must be called as getpgrp(0). */
 #undef GETPGRP_HAVE_ARG
@@ -43,21 +34,6 @@
 
 /* Define this if your time.h defines altzone */
 #undef HAVE_ALTZONE
-
-/* Define if --enable-ipv6 is specified */
-#undef ENABLE_IPV6
-
-/* Define if sockaddr has sa_len member */
-#undef HAVE_SOCKADDR_SA_LEN
-
-/* struct addrinfo (netdb.h) */
-#undef HAVE_ADDRINFO
-
-/* Define if you have the getaddrinfo function. */
-#undef HAVE_GETADDRINFO
-
-/* struct sockaddr_storage (sys/socket.h) */
-#undef HAVE_SOCKADDR_STORAGE
 
 /* Defined when any dynamic module loading is enabled */
 #undef HAVE_DYNAMIC_LOADING
@@ -83,7 +59,9 @@
 /* Defined to enable large file support when an off_t is bigger than a long
    and long long is available and at least as big as an off_t. You may need
    to add some flags for configuration and compilation to enable this mode.
-   (For Solaris and Linux, the necessary defines are already defined.)
+   E.g, for Solaris 2.7:
+   CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64" OPT="-O2 $CFLAGS" \
+	configure
 */
 #undef HAVE_LARGEFILE_SUPPORT
 
@@ -95,9 +73,6 @@
 
 /* Define if you have GNU PTH threads */
 #undef HAVE_PTH
-
-/* Define if you have readline 4.0 */
-#undef HAVE_RL_PRE_INPUT_HOOK
 
 /* Define if you have readline 4.2 */
 #undef HAVE_RL_COMPLETION_MATCHES
@@ -119,18 +94,6 @@
 
 /* Define if the compiler provides a wchar.h header file. */
 #undef HAVE_WCHAR_H
-
-/* This must be defined on some systems to enable large file support */
-#undef _LARGEFILE_SOURCE
-
-/* Define if you want to have a Unicode type. */
-#undef Py_USING_UNICODE
-
-/* Define as the integral type used for Unicode representation. */
-#undef PY_UNICODE_TYPE
-
-/* Define as the size of the unicode type. */
-#undef Py_UNICODE_SIZE
 
 /* Define if nice() returns success/failure instead of the new priority. */
 #undef HAVE_BROKEN_NICE
@@ -228,9 +191,6 @@
    (shared library plus accessory files). */
 #undef WITH_NEXT_FRAMEWORK
 
-/* Define if you want to use MacPython modules on MacOSX in unix-Python */
-#undef USE_TOOLBOX_OBJECT_GLUE
-
 /* Define if you want to use SGI (IRIX 4) dynamic linking.
    This requires the "dl" library by Jack Jansen,
    ftp://ftp.cwi.nl/pub/dynload/dl-1.6.tar.Z.
@@ -240,12 +200,6 @@
 
 /* Define if you want to compile in rudimentary thread support */
 #undef WITH_THREAD
-
-/* Define if mvwdelch in curses.h is an expression. */
-#undef MVWDELCH_IS_EXPRESSION
-
-/* Define if WINDOW in curses.h offers a field _flags. */
-#undef WINDOW_HAS_FLAGS
 
 
 /* Leave that blank line there-- autoheader needs it! */
@@ -261,9 +215,3 @@
 #define DL_EXPORT(RTYPE) __declspec(dllexport) RTYPE
 #endif
 #endif
-
-/* Define the macros needed if on a UnixWare 7.x system. */
-#if defined(__USLC__) && defined(__SCO_VERSION__)
-#define STRICT_SYSV_CURSES /* Don't use ncurses extensions */
-#endif
-

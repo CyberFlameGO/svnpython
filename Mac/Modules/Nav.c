@@ -60,13 +60,11 @@ my_eventProc(NavEventCallbackMessage callBackSelector,
 		return;
 	}
 	if ( pyfunc == Py_None ) {
-#if !TARGET_API_MAC_OSX
 		/* Special case: give update events to the Python event handling code */
 		if ( callBackSelector == kNavCBEvent && 
 				callBackParms->eventData.eventDataParms.event->what == updateEvt)
 			PyMac_HandleEvent(callBackParms->eventData.eventDataParms.event);
 		/* Ignore others */
-#endif
 		return;
 	}
 	rv = PyObject_CallFunction(pyfunc, "ls#", (long)callBackSelector,
@@ -88,10 +86,10 @@ my_previewProc(NavCBRecPtr callBackParms,
 	PyObject *rv;
 	Boolean c_rv = false;
 	
-	if (!dict) return false;
+	if (!dict) return;
 	if ( (pyfunc = PyDict_GetItemString(dict, "previewProc")) == NULL ) {
 		PyErr_Clear();
-		return false;
+		return;
 	}
 	rv = PyObject_CallFunction(pyfunc, "s#", (void *)callBackParms, sizeof(NavCBRec));
 	if ( rv ) {
@@ -114,10 +112,10 @@ my_filterProc(AEDesc *theItem, void *info,
 	PyObject *rv;
 	Boolean c_rv = false;
 	
-	if (!dict) return false;
+	if (!dict) return;
 	if ( (pyfunc = PyDict_GetItemString(dict, "filterProc")) == NULL ) {
 		PyErr_Clear();
-		return false;
+		return;
 	}
 	rv = PyObject_CallFunction(pyfunc, "O&s#h",
 		AEDesc_New, theItem, info, sizeof(NavFileOrFolderInfo), (short)filterMode);
@@ -244,7 +242,9 @@ static char nav_NavTranslateFile__doc__[] =
 ;
 
 static PyObject *
-nav_NavTranslateFile(navrrobject *self, PyObject *args)
+nav_NavTranslateFile(self, args)
+	navrrobject *self;
+	PyObject *args;
 {
 	NavTranslationOptions howToTranslate;
 	OSErr err;
@@ -265,7 +265,9 @@ static char nav_NavCompleteSave__doc__[] =
 ;
 
 static PyObject *
-nav_NavCompleteSave(navrrobject *self, PyObject *args)
+nav_NavCompleteSave(self, args)
+	navrrobject *self;
+	PyObject *args;
 {
 	NavTranslationOptions howToTranslate;
 	OSErr err;
@@ -306,14 +308,17 @@ newnavrrobject(NavReplyRecord *itself)
 
 
 static void
-navrr_dealloc(navrrobject *self)
+navrr_dealloc(self)
+	navrrobject *self;
 {
 	NavDisposeReply(&self->itself);
 	PyMem_DEL(self);
 }
 
 static PyObject *
-navrr_getattr(navrrobject *self, char *name)
+navrr_getattr(self, name)
+	navrrobject *self;
+	char *name;
 {
 	FSSpec fss;
 	
@@ -372,7 +377,10 @@ navrr_getattr(navrrobject *self, char *name)
 }
 
 static int
-navrr_setattr(navrrobject *self, char *name, PyObject *v)
+navrr_setattr(self, name, v)
+	navrrobject *self;
+	char *name;
+	PyObject *v;
 {
 	/* Set attribute 'name' to value 'v'. v==NULL means delete */
 	
@@ -387,7 +395,7 @@ static char Navrrtype__doc__[] =
 static PyTypeObject Navrrtype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"Nav.NavReplyRecord",			/*tp_name*/
+	"NavReplyRecord",			/*tp_name*/
 	sizeof(navrrobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -418,7 +426,10 @@ static char nav_NavGetFile__doc__[] =
 ;
 
 static PyObject *
-nav_NavGetFile(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavGetFile(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	AEDesc	*defaultLocation = NULL;
@@ -453,7 +464,10 @@ static char nav_NavPutFile__doc__[] =
 ;
 
 static PyObject *
-nav_NavPutFile(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavPutFile(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	AEDesc	*defaultLocation = NULL;
@@ -488,7 +502,10 @@ static char nav_NavAskSaveChanges__doc__[] =
 ;
 
 static PyObject *
-nav_NavAskSaveChanges(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavAskSaveChanges(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	NavDialogOptions dialogOptions;
@@ -518,7 +535,10 @@ static char nav_NavCustomAskSaveChanges__doc__[] =
 ;
 
 static PyObject *
-nav_NavCustomAskSaveChanges(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavCustomAskSaveChanges(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	NavDialogOptions dialogOptions;
@@ -547,7 +567,10 @@ static char nav_NavAskDiscardChanges__doc__[] =
 ;
 
 static PyObject *
-nav_NavAskDiscardChanges(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavAskDiscardChanges(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	NavDialogOptions dialogOptions;
@@ -576,7 +599,10 @@ static char nav_NavChooseFile__doc__[] =
 ;
 
 static PyObject *
-nav_NavChooseFile(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavChooseFile(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	AEDesc	*defaultLocation = NULL;
@@ -611,7 +637,10 @@ static char nav_NavChooseFolder__doc__[] =
 ;
 
 static PyObject *
-nav_NavChooseFolder(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavChooseFolder(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	AEDesc	*defaultLocation = NULL;
@@ -644,7 +673,10 @@ static char nav_NavChooseVolume__doc__[] =
 ;
 
 static PyObject *
-nav_NavChooseVolume(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavChooseVolume(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	AEDesc	*defaultLocation = NULL;
@@ -677,7 +709,10 @@ static char nav_NavChooseObject__doc__[] =
 ;
 
 static PyObject *
-nav_NavChooseObject(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavChooseObject(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	AEDesc	*defaultLocation = NULL;
@@ -710,7 +745,10 @@ static char nav_NavNewFolder__doc__[] =
 ;
 
 static PyObject *
-nav_NavNewFolder(PyObject *self, PyObject *args, PyObject *kw)
+nav_NavNewFolder(self, args, kw)
+	PyObject *self;	/* Not used */
+	PyObject *args;
+	PyObject *kw;
 {
 	PyObject *dict;
 	AEDesc	*defaultLocation = NULL;
@@ -744,7 +782,9 @@ static char nav_NavCustomControl__doc__[] =
 
 
 static PyObject *
-nav_NavCustomControl(PyObject *self, PyObject *args)
+nav_NavCustomControl(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 
 	if (!PyArg_ParseTuple(args, ""))
@@ -759,7 +799,9 @@ static char nav_NavServicesCanRun__doc__[] =
 ;
 
 static PyObject *
-nav_NavServicesCanRun(PyObject *self, PyObject *args)
+nav_NavServicesCanRun(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 	Boolean rv;
 	if (!PyArg_ParseTuple(args, ""))
@@ -773,7 +815,9 @@ static char nav_NavServicesAvailable__doc__[] =
 ;
 
 static PyObject *
-nav_NavServicesAvailable(PyObject *self, PyObject *args)
+nav_NavServicesAvailable(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 	Boolean rv;
 	
@@ -788,7 +832,9 @@ static char nav_NavLoad__doc__[] =
 ;
 
 static PyObject *
-nav_NavLoad(PyObject *self, PyObject *args)
+nav_NavLoad(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 
 	if (!PyArg_ParseTuple(args, ""))
@@ -803,7 +849,9 @@ static char nav_NavUnload__doc__[] =
 ;
 
 static PyObject *
-nav_NavUnload(PyObject *self, PyObject *args)
+nav_NavUnload(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 
 	if (!PyArg_ParseTuple(args, ""))
@@ -818,7 +866,9 @@ static char nav_NavLibraryVersion__doc__[] =
 ;
 
 static PyObject *
-nav_NavLibraryVersion(PyObject *self, PyObject *args)
+nav_NavLibraryVersion(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 	UInt32 rv;
 	
@@ -833,7 +883,9 @@ static char nav_NavGetDefaultDialogOptions__doc__[] =
 ;
 
 static PyObject *
-nav_NavGetDefaultDialogOptions(PyObject *self, PyObject *args)
+nav_NavGetDefaultDialogOptions(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 	NavDialogOptions dialogOptions;
 	OSErr err;
@@ -895,7 +947,7 @@ static char Nav_module_documentation[] =
 ;
 
 void
-initNav(void)
+initNav()
 {
 	PyObject *m, *d;
 

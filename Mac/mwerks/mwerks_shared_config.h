@@ -10,7 +10,7 @@
 #define USE_GUSI2		/* Stdio implemented with GUSI */
 #define WITH_THREAD		/* Use thread support (needs GUSI 2, not GUSI 1) */
 #define USE_MSL			/* Use Mw Standard Library (as opposed to Plaugher C libraries) */
-/* #define USE_CORE_TOOLBOX	/* Include core toolbox modules (Dlg,Ctl,Menu,Win,Res,Qd) */
+#define USE_CORE_TOOLBOX	/* Include core toolbox modules (Dlg,Ctl,Menu,Win,Res,Qd) */
 /* #define USE_TOOLBOX		/* Include all toolbox modules in core Python */
 /* #define USE_QT		/* Include quicktime modules in core Python */
 /* #define USE_WASTE		/* Include waste module in core Python */
@@ -33,7 +33,9 @@
 #define USE_MSL_MALLOC	/* Disable private malloc. Also disables next two defines */
 #ifndef USE_MSL_MALLOC
 /* #define USE_MALLOC_DEBUG			/* Enable range checking and other malloc debugging */
+#ifdef __powerc
 #define USE_CACHE_ALIGNED 8		/* Align on 32-byte boundaries for 604 */
+#endif
 #endif
 
 #ifdef USE_MSL
@@ -44,7 +46,4 @@
 #ifdef USE_GUSI2
 #include <stdio.h>
 extern int fileno(FILE *);
-#endif
-#ifndef Py_DEBUG
-#define NDEBUG
 #endif

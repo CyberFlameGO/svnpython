@@ -13,6 +13,10 @@
 #include "eval.h"
 #include "marshal.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif
@@ -59,11 +63,6 @@ int Py_NoSiteFlag; /* Suppress 'import site' */
 int Py_UseClassExceptionsFlag = 1; /* Needed by bltinmodule.c: deprecated */
 int Py_FrozenFlag; /* Needed by getpath.c */
 int Py_UnicodeFlag = 0; /* Needed by compile.c */
-int Py_IgnoreEnvironmentFlag; /* e.g. PYTHONPATH, PYTHONHOME */
-/* _XXX Py_QnewFlag should go away in 2.3.  It's true iff -Qnew is passed,
-  on the command line, and is used in 2.2 by ceval.c to make all "/" divisions
-  true divisions (which they will be in 2.3). */
-int _Py_QnewFlag = 0;
 
 static int initialized = 0;
 
@@ -87,17 +86,6 @@ Py_IsInitialized(void)
 
 */
 
-static int
-add_flag(int flag, const char *envs)
-{
-	int env = atoi(envs);
-	if (flag < env)
-		flag = env;
-	if (flag < 1)
-		flag = 1;
-	return flag;
-}
-
 void
 Py_Initialize(void)
 {
@@ -105,18 +93,17 @@ Py_Initialize(void)
 	PyThreadState *tstate;
 	PyObject *bimod, *sysmod;
 	char *p;
-	extern void _Py_ReadyTypes(void);
 
 	if (initialized)
 		return;
 	initialized = 1;
 	
-	if ((p = Py_GETENV("PYTHONDEBUG")) && *p != '\0')
-		Py_DebugFlag = add_flag(Py_DebugFlag, p);
-	if ((p = Py_GETENV("PYTHONVERBOSE")) && *p != '\0')
-		Py_VerboseFlag = add_flag(Py_VerboseFlag, p);
-	if ((p = Py_GETENV("PYTHONOPTIMIZE")) && *p != '\0')
-		Py_OptimizeFlag = add_flag(Py_OptimizeFlag, p);
+	if ((p = getenv("PYTHONDEBUG")) && *p != '\0')
+		Py_DebugFlag = Py_DebugFlag ? Py_DebugFlag : 1;
+	if ((p = getenv("PYTHONVERBOSE")) && *p != '\0')
+		Py_VerboseFlag = Py_VerboseFlag ? Py_VerboseFlag : 1;
+	if ((p = getenv("PYTHONOPTIMIZE")) && *p != '\0')
+		Py_OptimizeFlag = Py_OptimizeFlag ? Py_OptimizeFlag : 1;
 
 	interp = PyInterpreterState_New();
 	if (interp == NULL)
@@ -127,8 +114,6 @@ Py_Initialize(void)
 		Py_FatalError("Py_Initialize: can't make first thread");
 	(void) PyThreadState_Swap(tstate);
 
-	_Py_ReadyTypes();
-
 	interp->modules = PyDict_New();
 	if (interp->modules == NULL)
 		Py_FatalError("Py_Initialize: can't make modules dictionary");
@@ -136,10 +121,8 @@ Py_Initialize(void)
 	/* Init codec registry */
 	_PyCodecRegistry_Init();
 
-#ifdef Py_USING_UNICODE
 	/* Init Unicode implementation; relies on the codec registry */
 	_PyUnicode_Init();
-#endif
 
 	bimod = _PyBuiltin_Init();
 	if (bimod == NULL)
@@ -160,7 +143,7 @@ Py_Initialize(void)
 	_PyImport_Init();
 
 	/* initialize builtin exceptions */
-	_PyExc_Init();
+	init_exceptions();
 	_PyImport_FixupExtension("exceptions", "exceptions");
 
 	/* phase 2 of builtins */
@@ -219,10 +202,8 @@ Py_Finalize(void)
 	/* Disable signal handling */
 	PyOS_FiniInterrupts();
 
-#ifdef Py_USING_UNICODE
 	/* Cleanup Unicode implementation */
 	_PyUnicode_Fini();
-#endif
 
 	/* Cleanup Codec registry */
 	_PyCodecRegistry_Fini();
@@ -243,7 +224,11 @@ Py_Finalize(void)
 #endif
 
 #ifdef Py_TRACE_REFS
-	if (Py_GETENV("PYTHONDUMPREFS")) {
+	if (
+#ifdef MS_WINDOWS /* Only ask on Windows if env var set */
+	    getenv("PYTHONDUMPREFS") &&
+#endif /* MS_WINDOWS */
+	    _Py_AskYesNo("Print left references?")) {
 		_Py_PrintReferences(stderr);
 	}
 #endif /* Py_TRACE_REFS */
@@ -253,7 +238,7 @@ Py_Finalize(void)
 	   below has been checked to make sure no exceptions are ever
 	   raised.
 	*/
-	_PyExc_Fini();
+	fini_exceptions();
 
 	/* Delete current thread */
 	PyInterpreterState_Clear(interp);
@@ -410,8 +395,8 @@ char *
 Py_GetPythonHome(void)
 {
 	char *home = default_home;
-	if (home == NULL && !Py_IgnoreEnvironmentFlag)
-		home = Py_GETENV("PYTHONHOME");
+	if (home == NULL)
+		home = getenv("PYTHONHOME");
 	return home;
 }
 
@@ -510,7 +495,7 @@ PyRun_InteractiveLoopFlags(FILE *fp, char *filename, PyCompilerFlags *flags)
 
 	if (flags == NULL) {
 		flags = &local_flags;
-		local_flags.cf_flags = 0;
+		local_flags.cf_nested_scopes = 0;
 	}
 	v = PySys_GetObject("ps1");
 	if (v == NULL) {
@@ -549,7 +534,6 @@ PyRun_InteractiveOneFlags(FILE *fp, char *filename, PyCompilerFlags *flags)
 	node *n;
 	perrdetail err;
 	char *ps1 = "", *ps2 = "";
-
 	v = PySys_GetObject("ps1");
 	if (v != NULL) {
 		v = PyObject_Str(v);
@@ -566,11 +550,8 @@ PyRun_InteractiveOneFlags(FILE *fp, char *filename, PyCompilerFlags *flags)
 		else if (PyString_Check(w))
 			ps2 = PyString_AsString(w);
 	}
-	n = PyParser_ParseFileFlags(fp, filename, &_PyParser_Grammar,
-			    	    Py_single_input, ps1, ps2, &err,
-			    	    (flags &&
-			    	     flags->cf_flags & CO_GENERATOR_ALLOWED) ?
-			    	    	PyPARSE_YIELD_IS_KEYWORD : 0);
+	n = PyParser_ParseFile(fp, filename, &_PyParser_Grammar,
+			       Py_single_input, ps1, ps2, &err);
 	Py_XDECREF(v);
 	Py_XDECREF(w);
 	if (n == NULL) {
@@ -698,18 +679,12 @@ PyRun_SimpleFileExFlags(FILE *fp, char *filename, int closeit,
 int
 PyRun_SimpleString(char *command)
 {
-	return PyRun_SimpleStringFlags(command, NULL);
-}
-
-int
-PyRun_SimpleStringFlags(char *command, PyCompilerFlags *flags)
-{
 	PyObject *m, *d, *v;
 	m = PyImport_AddModule("__main__");
 	if (m == NULL)
 		return -1;
 	d = PyModule_GetDict(m);
-	v = PyRun_StringFlags(command, Py_file_input, d, d, flags);
+	v = PyRun_String(command, Py_file_input, d, d);
 	if (v == NULL) {
 		PyErr_Print();
 		return -1;
@@ -936,7 +911,7 @@ void PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 				else
 					PyFile_WriteString(filename, f);
 				PyFile_WriteString("\", line ", f);
-				PyOS_snprintf(buf, sizeof(buf), "%d", lineno);
+				sprintf(buf, "%d", lineno);
 				PyFile_WriteString(buf, f);
 				PyFile_WriteString("\n", f);
 				if (text != NULL)
@@ -1030,10 +1005,7 @@ PyObject *
 PyRun_StringFlags(char *str, int start, PyObject *globals, PyObject *locals,
 		  PyCompilerFlags *flags)
 {
-	return run_err_node(PyParser_SimpleParseStringFlags(
-			str, start,
-			(flags && flags->cf_flags & CO_GENERATOR_ALLOWED) ?
-				PyPARSE_YIELD_IS_KEYWORD : 0),
+	return run_err_node(PyParser_SimpleParseString(str, start),
 			    "<string>", globals, locals, flags);
 }
 
@@ -1049,9 +1021,7 @@ PyObject *
 PyRun_FileExFlags(FILE *fp, char *filename, int start, PyObject *globals,
 		  PyObject *locals, int closeit, PyCompilerFlags *flags)
 {
-	node *n = PyParser_SimpleParseFileFlags(fp, filename, start,
-			(flags && flags->cf_flags & CO_GENERATOR_ALLOWED) ?
-				PyPARSE_YIELD_IS_KEYWORD : 0);
+	node *n = PyParser_SimpleParseFile(fp, filename, start);
 	if (closeit)
 		fclose(fp);
 	return run_err_node(n, filename, globals, locals, flags);
@@ -1107,8 +1077,12 @@ run_pyc_file(FILE *fp, char *filename, PyObject *globals, PyObject *locals,
 	}
 	co = (PyCodeObject *)v;
 	v = PyEval_EvalCode(co, globals, locals);
-	if (v && flags)
-		flags->cf_flags |= (co->co_flags & PyCF_MASK);
+	if (v && flags) {
+		if (co->co_flags & CO_NESTED)
+			flags->cf_nested_scopes = 1;
+		fprintf(stderr, "run_pyc_file: nested_scopes: %d\n",
+			flags->cf_nested_scopes);			
+	}
 	Py_DECREF(co);
 	return v;
 }
@@ -1125,9 +1099,7 @@ Py_CompileStringFlags(char *str, char *filename, int start,
 {
 	node *n;
 	PyCodeObject *co;
-	n = PyParser_SimpleParseStringFlags(str, start,
-		(flags && flags->cf_flags & CO_GENERATOR_ALLOWED) ?
-			PyPARSE_YIELD_IS_KEYWORD : 0);
+	n = PyParser_SimpleParseString(str, start);
 	if (n == NULL)
 		return NULL;
 	co = PyNode_CompileFlags(n, filename, flags);
@@ -1151,41 +1123,28 @@ Py_SymtableString(char *str, char *filename, int start)
 /* Simplified interface to parsefile -- return node or set exception */
 
 node *
-PyParser_SimpleParseFileFlags(FILE *fp, char *filename, int start, int flags)
+PyParser_SimpleParseFile(FILE *fp, char *filename, int start)
 {
 	node *n;
 	perrdetail err;
-	n = PyParser_ParseFileFlags(fp, filename, &_PyParser_Grammar, start,
-					(char *)0, (char *)0, &err, flags);
+	n = PyParser_ParseFile(fp, filename, &_PyParser_Grammar, start,
+				(char *)0, (char *)0, &err);
 	if (n == NULL)
 		err_input(&err);
 	return n;
-}
-
-node *
-PyParser_SimpleParseFile(FILE *fp, char *filename, int start)
-{
-	return PyParser_SimpleParseFileFlags(fp, filename, start, 0);
 }
 
 /* Simplified interface to parsestring -- return node or set exception */
 
 node *
-PyParser_SimpleParseStringFlags(char *str, int start, int flags)
+PyParser_SimpleParseString(char *str, int start)
 {
 	node *n;
 	perrdetail err;
-	n = PyParser_ParseStringFlags(str, &_PyParser_Grammar, start, &err,
-				      flags);
+	n = PyParser_ParseString(str, &_PyParser_Grammar, start, &err);
 	if (n == NULL)
 		err_input(&err);
 	return n;
-}
-
-node *
-PyParser_SimpleParseString(char *str, int start)
-{
-	return PyParser_SimpleParseStringFlags(str, start, 0);
 }
 
 /* Set the error appropriate to the given input error code (see errcode.h) */
@@ -1347,9 +1306,6 @@ initsigs(void)
 #ifdef SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 #endif
-#ifdef SIGXFZ
-	signal(SIGXFZ, SIG_IGN);
-#endif
 #endif /* HAVE_SIGNAL_H */
 	PyOS_InitInterrupts(); /* May imply initsignal() */
 }
@@ -1362,7 +1318,7 @@ _Py_AskYesNo(char *prompt)
 {
 	char buf[256];
 	
-	fprintf(stderr, "%s [ny] ", prompt);
+	printf("%s [ny] ", prompt);
 	if (fgets(buf, sizeof buf, stdin) == NULL)
 		return 0;
 	return buf[0] == 'y' || buf[0] == 'Y';
@@ -1440,12 +1396,6 @@ PyOS_getsig(int sig)
 {
 #ifdef HAVE_SIGACTION
 	struct sigaction context;
-	/* Initialize context.sa_handler to SIG_ERR which makes about as
-	 * much sense as anything else.  It should get overwritten if
-	 * sigaction actually succeeds and otherwise we avoid an
-	 * uninitialized memory read.
-	 */
-	context.sa_handler = SIG_ERR;
 	sigaction(sig, NULL, &context);
 	return context.sa_handler;
 #else
@@ -1462,12 +1412,6 @@ PyOS_setsig(int sig, PyOS_sighandler_t handler)
 #ifdef HAVE_SIGACTION
 	struct sigaction context;
 	PyOS_sighandler_t oldhandler;
-	/* Initialize context.sa_handler to SIG_ERR which makes about as
-	 * much sense as anything else.  It should get overwritten if
-	 * sigaction actually succeeds and otherwise we avoid an
-	 * uninitialized memory read.
-	 */
-	context.sa_handler = SIG_ERR;
 	sigaction(sig, NULL, &context);
 	oldhandler = context.sa_handler;
 	context.sa_handler = handler;

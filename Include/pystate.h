@@ -23,9 +23,6 @@ typedef struct _is {
     PyObject *builtins;
 
     int checkinterval;
-#ifdef HAVE_DLOPEN
-    int dlopenflags;
-#endif
 
 } PyInterpreterState;
 
@@ -33,15 +30,6 @@ typedef struct _is {
 /* State unique per thread */
 
 struct _frame; /* Avoid including frameobject.h */
-
-/* Py_tracefunc return -1 when raising an exception, or 0 for success. */
-typedef int (*Py_tracefunc)(PyObject *, struct _frame *, int, PyObject *);
-
-/* The following values are used for 'what' for tracefunc functions: */
-#define PyTrace_CALL 0
-#define PyTrace_EXCEPTION 1
-#define PyTrace_LINE 2
-#define PyTrace_RETURN 3
 
 typedef struct _ts {
 
@@ -52,12 +40,9 @@ typedef struct _ts {
     int recursion_depth;
     int ticker;
     int tracing;
-    int use_tracing;
 
-    Py_tracefunc c_profilefunc;
-    Py_tracefunc c_tracefunc;
-    PyObject *c_profileobj;
-    PyObject *c_traceobj;
+    PyObject *sys_profilefunc;
+    PyObject *sys_tracefunc;
 
     PyObject *curexc_type;
     PyObject *curexc_value;
@@ -99,13 +84,6 @@ extern DL_IMPORT(PyThreadState *) _PyThreadState_Current;
 #else
 #define PyThreadState_GET() (_PyThreadState_Current)
 #endif
-
-/* Routines for advanced debuggers, requested by David Beazley.
-   Don't use unless you know what you are doing! */
-DL_IMPORT(PyInterpreterState *) PyInterpreterState_Head(void);
-DL_IMPORT(PyInterpreterState *) PyInterpreterState_Next(PyInterpreterState *);
-DL_IMPORT(PyThreadState *) PyInterpreterState_ThreadHead(PyInterpreterState *);
-DL_IMPORT(PyThreadState *) PyThreadState_Next(PyThreadState *);
 
 #ifdef __cplusplus
 }

@@ -2,18 +2,20 @@
          Parser for robots.txt}
 
 \declaremodule{standard}{robotparser}
-\modulesynopsis{Loads a \protect\file{robots.txt} file and
-                answers questions about fetchability of other URLs.}
+\modulesynopsis{Accepts as input a list of lines or URL that refers to a
+                robots.txt file, parses the file, then builds a
+                set of rules from that list and answers questions
+                about fetchability of other URLs.}
 \sectionauthor{Skip Montanaro}{skip@mojam.com}
 
 \index{WWW}
-\index{World Wide Web}
+\index{World-Wide Web}
 \index{URL}
 \index{robots.txt}
 
 This module provides a single class, \class{RobotFileParser}, which answers
 questions about whether or not a particular user agent can fetch a URL on
-the Web site that published the \file{robots.txt} file.  For more details on 
+the web site that published the \file{robots.txt} file.  For more details on 
 the structure of \file{robots.txt} files, see
 \url{http://info.webcrawler.com/mak/projects/robots/norobots.html}. 
 

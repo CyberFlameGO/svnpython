@@ -597,7 +597,7 @@ static char Alctype__doc__[] =
 static PyTypeObject Alctype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"al.config",			/*tp_name*/
+	"config",			/*tp_name*/
 	sizeof(alcobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -1203,7 +1203,7 @@ alp_getstatus(alpobject *self, PyObject *args)
 	long length;
 	int i;
 	
-	if (!PyArg_ParseTuple(args, "O!", &PyList_Type, &list))
+	if (!PyArg_Parse(args, "O!", &PyList_Type, &list))
 		return NULL;
 	length = PyList_Size(list);
 	PVbuffer = PyMem_NEW(long, length);
@@ -1321,7 +1321,7 @@ static char Alptype__doc__[] =
 static PyTypeObject Alptype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"al.port",			/*tp_name*/
+	"port",			/*tp_name*/
 	sizeof(alpobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -1519,8 +1519,7 @@ al_GetParams(PyObject *self, PyObject *args)
 	for (i = 0; i < npvs; i++) {
 		if (pvs[i].sizeOut < 0) {
 			char buf[32];
-			PyOS_snprintf(buf, sizeof(buf),
-				      "problem with param %d", i);
+			sprintf(buf, "problem with param %d", i);
 			PyErr_SetString(ErrorObject, buf);
 			goto error;
 		}

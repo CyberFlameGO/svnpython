@@ -1,4 +1,4 @@
-from test_support import verify, verbose, TestFailed, fcmp
+from test_support import verify, verbose, TestFailed
 from string import join
 from random import random, randint
 
@@ -76,7 +76,7 @@ def getran2(ndigits):
 
 def test_division_2(x, y):
     q, r = divmod(x, y)
-    q2, r2 = x//y, x%y
+    q2, r2 = x/y, x%y
     pab, pba = x*y, y*x
     check(pab == pba, "multiplication does not commute for", x, y)
     check(q == q2, "divmod returns different quotient than / for", x, y)
@@ -88,8 +88,7 @@ def test_division_2(x, y):
         check(y < r <= 0, "bad mod from divmod on", x, y)
 
 def test_division(maxdigits=MAXDIGITS):
-    if verbose:
-        print "long / * % divmod"
+    print "long / * % divmod"
     digits = range(1, maxdigits+1)
     for lenx in digits:
         x = getran(lenx)
@@ -117,7 +116,7 @@ def test_bitop_identities_1(x):
     for n in range(2*SHIFT):
         p2 = 2L ** n
         check(x << n >> n == x, "x << n >> n != x for", x, n)
-        check(x // p2 == x >> n, "x // p2 != x >> n for x n p2", x, n, p2)
+        check(x / p2 == x >> n, "x / p2 != x >> n for x n p2", x, n, p2)
         check(x * p2 == x << n, "x * p2 != x << n for x n p2", x, n, p2)
         check(x & -p2 == x >> n << n == x & ~(p2 - 1),
             "not x & -p2 == x >> n << n == x & ~(p2 - 1) for x n p2",
@@ -150,8 +149,7 @@ def test_bitop_identities_3(x, y, z):
          "x | (y & z) != (x | y) & (x | z) for", x, y, z)
 
 def test_bitop_identities(maxdigits=MAXDIGITS):
-    if verbose:
-        print "long bit-operation identities"
+    print "long bit-operation identities"
     for x in special:
         test_bitop_identities_1(x)
     digits = range(1, maxdigits+1)
@@ -161,7 +159,7 @@ def test_bitop_identities(maxdigits=MAXDIGITS):
         for leny in digits:
             y = getran(leny)
             test_bitop_identities_2(x, y)
-            test_bitop_identities_3(x, y, getran((lenx + leny)//2))
+            test_bitop_identities_3(x, y, getran((lenx + leny)/2))
 
 # ------------------------------------------------- hex oct repr str atol
 
@@ -199,8 +197,7 @@ def test_format_1(x):
           got, "but expected", expected, "for", x)
 
 def test_format(maxdigits=MAXDIGITS):
-    if verbose:
-        print "long str/hex/oct/atol"
+    print "long str/hex/oct/atol"
     for x in special:
         test_format_1(x)
     for i in range(10):
@@ -211,8 +208,7 @@ def test_format(maxdigits=MAXDIGITS):
 # ----------------------------------------------------------------- misc
 
 def test_misc(maxdigits=MAXDIGITS):
-    if verbose:
-        print "long miscellaneous operations"
+    print "long miscellaneous operations"
     import sys
 
     # check the extremes in int<->long conversion
@@ -255,154 +251,9 @@ def test_misc(maxdigits=MAXDIGITS):
     except:
         raise TestFailed, "int(long(-sys.maxint-1) - 1) didn't overflow"
 
-# ----------------------------------- tests of auto int->long conversion
-
-def test_auto_overflow():
-    import math, sys
-
-    if verbose:
-        print "auto-convert int->long on overflow"
-
-    special = [0, 1, 2, 3, sys.maxint-1, sys.maxint, sys.maxint+1]
-    sqrt = int(math.sqrt(sys.maxint))
-    special.extend([sqrt-1, sqrt, sqrt+1])
-    special.extend([-i for i in special])
-
-    def checkit(*args):
-        # Heavy use of nested scopes here!
-        verify(got == expected, "for %r expected %r got %r" %
-                                (args, expected, got))
-
-    for x in special:
-        longx = long(x)
-
-        expected = -longx
-        got = -x
-        checkit('-', x)
-
-        for y in special:
-            longy = long(y)
-
-            expected = longx + longy
-            got = x + y
-            checkit(x, '+', y)
-
-            expected = longx - longy
-            got = x - y
-            checkit(x, '-', y)
-
-            expected = longx * longy
-            got = x * y
-            checkit(x, '*', y)
-
-            if y:
-                expected = longx / longy
-                got = x / y
-                checkit(x, '/', y)
-
-                expected = longx // longy
-                got = x // y
-                checkit(x, '//', y)
-
-                expected = divmod(longx, longy)
-                got = divmod(longx, longy)
-                checkit(x, 'divmod', y)
-
-            if abs(y) < 5 and not (x == 0 and y < 0):
-                expected = longx ** longy
-                got = x ** y
-                checkit(x, '**', y)
-
-                for z in special:
-                    if z != 0 :
-                        if y >= 0:
-                            expected = pow(longx, longy, long(z))
-                            got = pow(x, y, z)
-                            checkit('pow', x, y, '%', z)
-                        else:
-                            try:
-                                pow(longx, longy, long(z))
-                            except TypeError:
-                                pass
-                            else:
-                                raise TestFailed("pow%r should have raised "
-                                "TypeError" % ((longx, longy, long(z))))
-
-# ---------------------------------------- tests of long->float overflow
-
-def test_float_overflow():
-    import math
-
-    if verbose:
-        print "long->float overflow"
-
-    for x in -2.0, -1.0, 0.0, 1.0, 2.0:
-        verify(float(long(x)) == x)
-
-    huge = 1L << 30000
-    mhuge = -huge
-    namespace = {'huge': huge, 'mhuge': mhuge, 'math': math}
-    for test in ["float(huge)", "float(mhuge)",
-                 "complex(huge)", "complex(mhuge)",
-                 "complex(huge, 1)", "complex(mhuge, 1)",
-                 "complex(1, huge)", "complex(1, mhuge)",
-                 "1. + huge", "huge + 1.", "1. + mhuge", "mhuge + 1.",
-                 "1. - huge", "huge - 1.", "1. - mhuge", "mhuge - 1.",
-                 "1. * huge", "huge * 1.", "1. * mhuge", "mhuge * 1.",
-                 "1. // huge", "huge // 1.", "1. // mhuge", "mhuge // 1.",
-                 "1. / huge", "huge / 1.", "1. / mhuge", "mhuge / 1.",
-                 "1. ** huge", "huge ** 1.", "1. ** mhuge", "mhuge ** 1.",
-                 "math.sin(huge)", "math.sin(mhuge)",
-                 "math.sqrt(huge)", "math.sqrt(mhuge)", # should do better
-                 "math.floor(huge)", "math.floor(mhuge)"]:
-
-        try:
-            eval(test, namespace)
-        except OverflowError:
-            pass
-        else:
-            raise TestFailed("expected OverflowError from %s" % test)
-
-# ---------------------------------------------- test huge log and log10
-
-def test_logs():
-    import math
-
-    if verbose:
-        print "log and log10"
-
-    LOG10E = math.log10(math.e)
-
-    for exp in range(10) + [100, 1000, 10000]:
-        value = 10 ** exp
-        log10 = math.log10(value)
-        verify(fcmp(log10, exp) == 0)
-
-        # log10(value) == exp, so log(value) == log10(value)/log10(e) ==
-        # exp/LOG10E
-        expected = exp / LOG10E
-        log = math.log(value)
-        verify(fcmp(log, expected) == 0)
-
-    for bad in -(1L << 10000), -2L, 0L:
-        try:
-            math.log(bad)
-            raise TestFailed("expected ValueError from log(<= 0)")
-        except ValueError:
-            pass
-
-        try:
-            math.log10(bad)
-            raise TestFailed("expected ValueError from log10(<= 0)")
-        except ValueError:
-            pass
-
 # ---------------------------------------------------------------- do it
 
 test_division()
 test_bitop_identities()
 test_format()
 test_misc()
-test_auto_overflow()
-test_float_overflow()
-test_logs()

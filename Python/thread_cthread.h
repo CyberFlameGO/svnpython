@@ -1,11 +1,6 @@
 
-#ifdef MACH_C_THREADS
 #include <mach/cthreads.h>
-#endif
 
-#ifdef HURD_C_THREADS
-#include <cthreads.h>
-#endif
 
 /*
  * Initialization.
@@ -13,20 +8,13 @@
 static void
 PyThread__init_thread(void)
 {
-#ifndef HURD_C_THREADS
-	/* Roland McGrath said this should not be used since this is
-	done while linking to threads */
-	cthread_init(); 
-#else
-/* do nothing */
-	;
-#endif
+	cthread_init();
 }
 
 /*
  * Thread support.
  */
-long
+int
 PyThread_start_new_thread(void (*func)(void *), void *arg)
 {
 	int success = 0;	/* init not needed when SOLARIS_THREADS and */
@@ -39,7 +27,7 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 	 * so well do it here
 	 */
 	cthread_detach(cthread_fork((cthread_fn_t) func, arg));
-	return success < 0 ? -1 : 0;
+	return success < 0 ? 0 : 1;
 }
 
 long
@@ -139,10 +127,10 @@ PyThread_acquire_lock(PyThread_type_lock lock, int waitflag)
 
 	dprintf(("PyThread_acquire_lock(%p, %d) called\n", lock, waitflag));
 	if (waitflag) { 	/* blocking */
-		mutex_lock((mutex_t)lock);
+		mutex_lock(lock);
 		success = TRUE;
 	} else {		/* non blocking */
-		success = mutex_try_lock((mutex_t)lock);
+		success = mutex_try_lock(lock);
 	}
 	dprintf(("PyThread_acquire_lock(%p, %d) -> %d\n", lock, waitflag, success));
 	return success;

@@ -8,13 +8,14 @@
 #define ACCESSOR_CALLS_ARE_FUNCTIONS 1
 #define OPAQUE_TOOLBOX_STRUCTS 1
 #define TARGET_API_MAC_CARBON 1
+#define TARGET_API_MAC_CARBON_NOTYET 1 /* Things we should do eventually, but not now */
 
 #define USE_ARGV0_CHDIR		/* Workaround for OSXDP4: change dir to argv[0] dir */
 #define USE_GUSI2		/* Stdio implemented with GUSI 2 */
 /* # define USE_GUSI1	/* Stdio implemented with GUSI 1 */
 #define WITH_THREAD		/* Use thread support (needs GUSI 2, not GUSI 1) */
 #define USE_MSL			/* Use Mw Standard Library (as opposed to Plaugher C libraries) */
-/* #define USE_CORE_TOOLBOX	/* Include core toolbox modules (Dlg,Ctl,Menu,Win,Res,Qd) */
+#define USE_CORE_TOOLBOX	/* Include core toolbox modules (Dlg,Ctl,Menu,Win,Res,Qd) */
 /* #define USE_TOOLBOX		/* Include all toolbox modules in core Python */
 /* #define USE_QT		/* Include quicktime modules in core Python */
 /* #define USE_WASTE		/* Include waste module in core Python */
@@ -37,7 +38,9 @@
 #define USE_MSL_MALLOC	/* Disable private malloc. Also disables next two defines */
 #ifndef USE_MSL_MALLOC
 /* #define USE_MALLOC_DEBUG			/* Enable range checking and other malloc debugging */
+#ifdef __powerc
 #define USE_CACHE_ALIGNED 8		/* Align on 32-byte boundaries for 604 */
+#endif
 #endif
 
 #ifdef USE_MSL
@@ -48,7 +51,4 @@
 #ifdef USE_GUSI2
 #include <stdio.h>
 extern int fileno(FILE *);
-#endif
-#ifndef Py_DEBUG
-#define NDEBUG
 #endif

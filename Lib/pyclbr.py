@@ -50,6 +50,7 @@ PACKAGE RELATED BUGS
   exists coded in Python in the freeze package.)
 """
 
+import os
 import sys
 import imp
 import re
@@ -167,8 +168,8 @@ def readmodule_ex(module, path=[], inpackage=0):
         # Dotted module name
         package = module[:i].strip()
         submodule = module[i+1:].strip()
-        parent = readmodule_ex(package, path, inpackage)
-        child = readmodule_ex(submodule, parent['__path__'], 1)
+        parent = readmodule(package, path, inpackage)
+        child = readmodule(submodule, parent['__path__'], 1)
         return child
 
     if _modules.has_key(module):
@@ -203,6 +204,7 @@ def readmodule_ex(module, path=[], inpackage=0):
         return dict
 
     _modules[module] = dict
+    imports = []
     classstack = [] # stack of (class, indent) pairs
     src = f.read()
     f.close()
@@ -296,7 +298,7 @@ def readmodule_ex(module, path=[], inpackage=0):
                 n = n.strip()
                 try:
                     # recursively read the imported module
-                    d = readmodule_ex(n, path, inpackage)
+                    d = readmodule(n, path, inpackage)
                 except:
                     ##print 'module', n, 'not found'
                     pass
@@ -307,7 +309,7 @@ def readmodule_ex(module, path=[], inpackage=0):
             names = m.group("ImportFromList").split(',')
             try:
                 # recursively read the imported module
-                d = readmodule_ex(mod, path, inpackage)
+                d = readmodule(mod, path, inpackage)
             except:
                 ##print 'module', mod, 'not found'
                 continue

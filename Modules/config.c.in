@@ -22,7 +22,6 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 extern void PyMarshal_Init(void);
 extern void initimp(void);
-extern void initgc(void);
 
 struct _inittab _PyImport_Inittab[] = {
 
@@ -38,12 +37,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"__main__", NULL},
 	{"__builtin__", NULL},
 	{"sys", NULL},
-	{"exceptions", NULL},
-
-#ifdef WITH_CYCLE_GC
-	/* This lives in gcmodule.c */
-	{"gc", initgc},
-#endif
+	{"exceptions", init_exceptions},
 
 	/* Sentinel */
 	{0, 0}

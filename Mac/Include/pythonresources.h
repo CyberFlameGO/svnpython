@@ -77,9 +77,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #define OPT_NOSITE	14
 #define OPT_HELP	15
 #define OPT_NONAVSERV 16
-#define OPT_VERBOSEVERBOSE	19
-#define OPT_DIVISIONWARN	20
-#define OPT_UNIXNEWLINES		21
 
 /* Dialog for 'No preferences directory' */
 #define NOPREFDIR_ID	BASE_ID+5
@@ -143,7 +140,7 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #define PYTHONOPTIONS_ID 228
 #define PYTHONOPTIONSOVERRIDE_ID 229
 
-#define POPT_VERSION_CURRENT	8	/* Current version number */
+#define POPT_VERSION_CURRENT	7	/* Current version number */
 #define   POPT_KEEPCONSOLE_NEVER  0
 #define   POPT_KEEPCONSOLE_OUTPUT 1
 #define   POPT_KEEPCONSOLE_ERROR  2
@@ -165,8 +162,6 @@ typedef struct PyMac_PrefRecord {
 	unsigned char	nosite;
 	unsigned char	nonavservice;
 	unsigned char	delayconsole;
-	unsigned char	divisionwarn;
-	unsigned char	unixnewlines;
 } PyMac_PrefRecord;
 #endif
 

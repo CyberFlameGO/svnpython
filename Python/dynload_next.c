@@ -44,7 +44,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	dl_funcptr p = NULL;
 	char funcname[258];
 
-	PyOS_snprintf(funcname, sizeof(funcname), "_init%.200s", shortname);
+	sprintf(funcname, "_init%.200s", shortname);
 
 #ifdef USE_RLD
 	{
@@ -148,8 +148,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 			break;
 		}
 		if (errString == NULL) {
-			newModule = NSLinkModule(image, pathname,
-				NSLINKMODULE_OPTION_BINDNOW|NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+			newModule = NSLinkModule(image, pathname, TRUE);
 			if (!newModule)
 				errString = "Failure linking new module";
 		}

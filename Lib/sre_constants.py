@@ -9,11 +9,9 @@
 # See the sre.py file for information on usage and redistribution.
 #
 
-"""Internal support module for sre"""
-
 # update when constants are added or removed
 
-MAGIC = 20010701
+MAGIC = 20010320
 
 # max code word in this release
 
@@ -35,7 +33,6 @@ ANY_ALL = "any_all"
 ASSERT = "assert"
 ASSERT_NOT = "assert_not"
 AT = "at"
-BIGCHARSET = "bigcharset"
 BRANCH = "branch"
 CALL = "call"
 CATEGORY = "category"
@@ -106,7 +103,7 @@ OPCODES = [
     BRANCH,
     CALL,
     CATEGORY,
-    CHARSET, BIGCHARSET,
+    CHARSET,
     GROUPREF, GROUPREF_IGNORE,
     IN, IN_IGNORE,
     INFO,

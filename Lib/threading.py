@@ -191,22 +191,15 @@ class _Condition(_Verbose):
                 if __debug__:
                     self._note("%s.wait(): got it", self)
             else:
-                # Balancing act:  We can't afford a pure busy loop, so we
-                # have to sleep; but if we sleep the whole timeout time,
-                # we'll be unresponsive.  The scheme here sleeps very
-                # little at first, longer as time goes on, but never longer
-                # than 20 times per second (or the timeout time remaining).
                 endtime = _time() + timeout
-                delay = 0.0005 # 500 us -> initial delay of 1 ms
+                delay = 0.000001 # 1 usec
                 while 1:
                     gotit = waiter.acquire(0)
-                    if gotit:
+                    if gotit or _time() >= endtime:
                         break
-                    remaining = endtime - _time()
-                    if remaining <= 0:
-                        break
-                    delay = min(delay * 2, remaining, .05)
                     _sleep(delay)
+                    if delay < 1.0:
+                        delay = delay * 2.0
                 if not gotit:
                     if __debug__:
                         self._note("%s.wait(%s): timed out", self, timeout)
@@ -261,15 +254,9 @@ class _Semaphore(_Verbose):
         while self.__value == 0:
             if not blocking:
                 break
-            if __debug__:
-                self._note("%s.acquire(%s): blocked waiting, value=%s",
-                           self, blocking, self.__value)
             self.__cond.wait()
         else:
             self.__value = self.__value - 1
-            if __debug__:
-                self._note("%s.acquire: success, value=%s",
-                           self, self.__value)
             rc = 1
         self.__cond.release()
         return rc
@@ -277,26 +264,8 @@ class _Semaphore(_Verbose):
     def release(self):
         self.__cond.acquire()
         self.__value = self.__value + 1
-        if __debug__:
-            self._note("%s.release: success, value=%s",
-                       self, self.__value)
         self.__cond.notify()
         self.__cond.release()
-
-
-def BoundedSemaphore(*args, **kwargs):
-    return apply(_BoundedSemaphore, args, kwargs)
-
-class _BoundedSemaphore(_Semaphore):
-    """Semaphore that checks that # releases is <= # acquires"""
-    def __init__(self, value=1, verbose=None):
-        _Semaphore.__init__(self, value, verbose)
-        self._initial_value = value
-
-    def release(self):
-        if self._Semaphore__value >= self._initial_value:
-            raise ValueError, "Semaphore released too many times"
-        return _Semaphore.release(self)
 
 
 def Event(*args, **kwargs):
@@ -330,6 +299,7 @@ class _Event(_Verbose):
         if not self.__flag:
             self.__cond.wait(timeout)
         self.__cond.release()
+
 
 # Helper to generate new thread names
 _counter = 0
@@ -485,36 +455,6 @@ class Thread(_Verbose):
         assert not self.__started, "cannot set daemon status of active thread"
         self.__daemonic = daemonic
 
-# The timer class was contributed by Itamar Shtull-Trauring
-
-def Timer(*args, **kwargs):
-    return _Timer(*args, **kwargs)
-
-class _Timer(Thread):
-    """Call a function after a specified number of seconds:
-
-    t = Timer(30.0, f, args=[], kwargs={})
-    t.start()
-    t.cancel() # stop the timer's action if it's still waiting
-    """
-
-    def __init__(self, interval, function, args=[], kwargs={}):
-        Thread.__init__(self)
-        self.interval = interval
-        self.function = function
-        self.args = args
-        self.kwargs = kwargs
-        self.finished = Event()
-
-    def cancel(self):
-        """Stop the timer if it hasn't finished yet"""
-        self.finished.set()
-
-    def run(self):
-        self.finished.wait(self.interval)
-        if not self.finished.isSet():
-            self.function(*self.args, **self.kwargs)
-        self.finished.set()
 
 # Special thread class to represent the main thread
 # This is garbage collected through an exit handler
@@ -607,6 +547,8 @@ _MainThread()
 
 def _test():
 
+    import random
+
     class BoundedQueue(_Verbose):
 
         def __init__(self, limit):
@@ -668,6 +610,8 @@ def _test():
                 item = self.queue.get()
                 print item
                 self.count = self.count - 1
+
+    import time
 
     NP = 3
     QL = 4

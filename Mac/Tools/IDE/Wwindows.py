@@ -1,11 +1,18 @@
-from Carbon import Dlg, Evt, Events, Fm
-from Carbon import Menu, Qd, Win, Windows
+import Qd
+import Win
+import Evt
+import Fm
 import FrameWork
+import Windows
+import Events
 import Wbase
+import Dlg
 import MacOS
+import Menu
 import struct
 import traceback
-from types import InstanceType, StringType
+
+from types import *
 
 
 class Window(FrameWork.Window, Wbase.SelectableWidget):
@@ -563,14 +570,9 @@ def FrontWindowInsert(stuff):
 	if EasyDialogs.AskYesNoCancel(
 			"Can't find window or widget to insert text into; copy to clipboard instead?", 
 			1) == 1:
-		from Carbon import Scrap
-		if hasattr(Scrap, 'PutScrap'):
-			Scrap.ZeroScrap()
-			Scrap.PutScrap('TEXT', stuff)
-		else:
-			Scrap.ClearCurrentScrap()
-			sc = Scrap.GetCurrentScrap()
-			sc.PutScrapFlavor('TEXT', 0, stuff)
+		import Scrap
+		Scrap.ZeroScrap()
+		Scrap.PutScrap('TEXT', stuff)
 
 
 # not quite based on the same function in FrameWork	

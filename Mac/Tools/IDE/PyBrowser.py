@@ -127,7 +127,7 @@ class BrowserWidget(W.List):
 		return abs(abscol - x) < 3
 	
 	def trackcolumn(self, (x, y)):
-		from Carbon import Qd, QuickDraw, Evt
+		import Qd, QuickDraw, Evt
 		self.SetPort()
 		l, t, r, b = self._bounds
 		bounds = l, t, r, b = l + 1, t + 1, r - 16, b - 1
@@ -143,7 +143,6 @@ class BrowserWidget(W.List):
 		newcol = -1
 		#W.SetCursor('fist')
 		while Evt.Button():
-			Evt.WaitNextEvent(0, 1, None)  # needed for OSX
 			(x, y) = Evt.GetMouse()
 			if (x, y) <> lastpoint:
 				newcol = x + diff
@@ -290,14 +289,9 @@ class BrowserWidget(W.List):
 			selitems.append(double_repr(key, value))
 		text = string.join(selitems, '\r')
 		if text:
-			from Carbon import Scrap
-			if hasattr(Scrap, 'PutScrap'):
-				Scrap.ZeroScrap()
-				Scrap.PutScrap('TEXT', text)
-			else:
-				Scrap.ClearCurrentScrap()
-				sc = Scrap.GetCurrentScrap()
-				sc.PutScrapFlavor('TEXT', 0, text)
+			import Scrap
+			Scrap.ZeroScrap()
+			Scrap.PutScrap('TEXT', text)
 
 
 class Browser:
@@ -313,7 +307,7 @@ class Browser:
 				title = title + ': ' + name
 		self.w = w = W.Window((300, 400), title, minsize = (100, 100))
 		w.info = W.TextBox((18, 8, -70, 15))
-		w.updatebutton = W.BevelButton((-64, 4, 50, 16), 'Update', self.update)
+		w.updatebutton = W.Button((-64, 4, 50, 16), 'Update', self.update)
 		w.browser = BrowserWidget((-1, 24, 1, -14), None)
 		w.bind('cmdu', w.updatebutton.push)
 		w.open()
@@ -407,15 +401,6 @@ def unpack_other(object, indent = 0):
 		attrs = attrs + object.__members__
 	if hasattr(object, '__methods__'):
 		attrs = attrs + object.__methods__
-	if hasattr(object, '__dict__'):
-		attrs = attrs + object.__dict__.keys()
-	if hasattr(object, '__slots__'):
-		# XXX??
-		attrs = attrs + object.__slots__
-	if hasattr(object, "__class__") and "__class__" not in attrs:
-		attrs.append("__class__")
-	if hasattr(object, "__doc__") and "__doc__" not in attrs:
-		attrs.append("__doc__")
 	items = []
 	for attr in attrs:
 		items.append((attr, getattr(object, attr)))

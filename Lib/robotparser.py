@@ -231,6 +231,7 @@ def _check(a,b):
 
 def _test():
     global debug
+    import sys
     rp = RobotFileParser()
     debug = 1
 

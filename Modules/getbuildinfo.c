@@ -1,4 +1,4 @@
-#include "Python.h"
+#include "config.h"
 
 #ifdef macintosh
 #include "macbuildno.h"
@@ -33,7 +33,6 @@ const char *
 Py_GetBuildInfo(void)
 {
 	static char buildinfo[50];
-	PyOS_snprintf(buildinfo, sizeof(buildinfo),
-		      "#%d, %.20s, %.9s", BUILD, DATE, TIME);
+	sprintf(buildinfo, "#%d, %.20s, %.9s", BUILD, DATE, TIME);
 	return buildinfo;
 }

@@ -25,7 +25,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 /* Mac module implementation */
 
 #include "Python.h"
-#include "structseq.h"
 #include "ceval.h"
 
 #include <stdio.h>
@@ -114,12 +113,14 @@ char *getwd(char *);
 char *getbootvol(void);
 
 
+static PyObject *MacError; /* Exception mac.error */
+
 /* Set a MAC-specific error from errno, and return NULL */
 
 static PyObject * 
 mac_error() 
 {
-	return PyErr_SetFromErrno(PyExc_OSError);
+	return PyErr_SetFromErrno(MacError);
 }
 
 /* MAC generic methods */
@@ -131,7 +132,7 @@ mac_1str(args, func)
 {
 	char *path1;
 	int res;
-	if (!PyArg_ParseTuple(args, "s", &path1))
+	if (!PyArg_Parse(args, "s", &path1))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = (*func)(path1);
@@ -149,7 +150,7 @@ mac_2str(args, func)
 {
 	char *path1, *path2;
 	int res;
-	if (!PyArg_ParseTuple(args, "ss", &path1, &path2))
+	if (!PyArg_Parse(args, "(ss)", &path1, &path2))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = (*func)(path1, path2);
@@ -168,7 +169,7 @@ mac_strint(args, func)
 	char *path;
 	int i;
 	int res;
-	if (!PyArg_ParseTuple(args, "si", &path, &i))
+	if (!PyArg_Parse(args, "(si)", &path, &i))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = (*func)(path, i);
@@ -203,7 +204,7 @@ mac_close(self, args)
 	PyObject *args;
 {
 	int fd, res;
-	if (!PyArg_ParseTuple(args, "i", &fd))
+	if (!PyArg_Parse(args, "i", &fd))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = close(fd);
@@ -225,7 +226,7 @@ mac_dup(self, args)
 	PyObject *args;
 {
 	int fd;
-	if (!PyArg_ParseTuple(args, "i", &fd))
+	if (!PyArg_Parse(args, "i", &fd))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	fd = dup(fd);
@@ -247,7 +248,7 @@ mac_fdopen(self, args)
 	int fd;
 	char *mode;
 	FILE *fp;
-	if (!PyArg_ParseTuple(args, "is", &fd, &mode))
+	if (!PyArg_Parse(args, "(is)", &fd, &mode))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	fp = fdopen(fd, mode);
@@ -265,7 +266,7 @@ mac_getbootvol(self, args)
 	PyObject *args;
 {
 	char *res;
-	if (!PyArg_ParseTuple(args, ""))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = getbootvol();
@@ -283,7 +284,7 @@ mac_getcwd(self, args)
 {
 	char path[MAXPATHLEN];
 	char *res;
-	if (!PyArg_ParseTuple(args, ""))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 #ifdef USE_GUSI
@@ -293,7 +294,8 @@ mac_getcwd(self, args)
 #endif
 	Py_END_ALLOW_THREADS
 	if (res == NULL) {
-		return mac_error();
+		PyErr_SetString(MacError, path);
+		return NULL;
 	}
 	return PyString_FromString(res);
 }
@@ -307,26 +309,8 @@ mac_listdir(self, args)
 	PyObject *d, *v;
 	DIR *dirp;
 	struct dirent *ep;
-	if (!PyArg_ParseTuple(args, "s", &name))
+	if (!PyArg_Parse(args, "s", &name))
 		return NULL;
-#ifdef USE_GUSI
-	/* Work around a bug in GUSI: if you opendir() a file it will
-	** actually opendir() the parent directory.
-	*/
-	{
-		struct stat stb;
-		int res;
-		
-		res = stat(name, &stb);
-		if ( res < 0 )
-			return mac_error();
-		if (!S_ISDIR(stb.st_mode) ) {
-			errno = ENOTDIR;
-			return mac_error();
-		}
-	}
-#endif
-		
 	Py_BEGIN_ALLOW_THREADS
 	if ((dirp = opendir(name)) == NULL) {
 		Py_BLOCK_THREADS
@@ -367,7 +351,7 @@ mac_lseek(self, args)
 	int where;
 	int how;
 	long res;
-	if (!PyArg_ParseTuple(args, "iii", &fd, &where, &how))
+	if (!PyArg_Parse(args, "(iii)", &fd, &where, &how))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = lseek(fd, (long)where, how);
@@ -407,9 +391,8 @@ mac_open(self, args)
 {
 	char *path;
 	int mode;
-	int perm; /* Accepted but ignored */
 	int fd;
-	if (!PyArg_ParseTuple(args, "si|i", &path, &mode, &perm))
+	if (!PyArg_Parse(args, "(si)", &path, &mode))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	fd = open(path, mode);
@@ -426,7 +409,7 @@ mac_read(self, args)
 {
 	int fd, size;
 	PyObject *buffer;
-	if (!PyArg_ParseTuple(args, "ii", &fd, &size))
+	if (!PyArg_Parse(args, "(ii)", &fd, &size))
 		return NULL;
 	buffer = PyString_FromStringAndSize((char *)NULL, size);
 	if (buffer == NULL)
@@ -458,110 +441,6 @@ mac_rmdir(self, args)
 	return mac_1str(args, rmdir);
 }
 
-static char stat_result__doc__[] = 
-"stat_result: Result from stat or lstat.\n\n\
-This object may be accessed either as a tuple of\n\
-  (mode,ino,dev,nlink,uid,gid,size,atime,mtime,ctime)\n\
-or via the attributes st_mode, st_ino, st_dev, st_nlink, st_uid, and so on.\n\
-\n\
-See os.stat for more information.\n";
-
-#define COMMON_STAT_RESULT_FIELDS \
-        { "st_mode",  "protection bits" }, \
-        { "st_ino",   "inode" }, \
-        { "st_dev",   "device" }, \
-        { "st_nlink", "number of hard links" }, \
-        { "st_uid",   "user ID of owner" }, \
-        { "st_gid",   "group ID of owner" }, \
-        { "st_size",  "total size, in bytes" }, \
-        { "st_atime", "time of last access" }, \
-        { "st_mtime", "time of last modification" }, \
-        { "st_ctime", "time of last change" },
-
-
-
-static PyStructSequence_Field stat_result_fields[] = {
-	COMMON_STAT_RESULT_FIELDS
-	{0}
-};
-
-static PyStructSequence_Desc stat_result_desc = {
-	"mac.stat_result",
-	stat_result__doc__,
-	stat_result_fields,
-	10
-};
-
-static PyTypeObject StatResultType;
-
-#ifdef TARGET_API_MAC_OS8
-static PyStructSequence_Field xstat_result_fields[] = {
-	COMMON_STAT_RESULT_FIELDS
-	{ "st_rsize" },
-	{ "st_creator" },
-	{ "st_type "},
-	{0}
-};
-
-static PyStructSequence_Desc xstat_result_desc = {
-	"mac.xstat_result",
-	stat_result__doc__,
-	xstat_result_fields,
-	13
-};
-
-static PyTypeObject XStatResultType;
-#endif
-
-static PyObject *
-_pystat_from_struct_stat(struct stat st, void* _mst) 
-{
-	PyObject *v;
-
-#if TARGET_API_MAC_OS8
-	struct macstat *mst;
-
-	if (_mst != NULL)
-		v = PyStructSequence_New(&XStatResultType);
-	else
-#endif
-		v = PyStructSequence_New(&StatResultType);
-	PyStructSequence_SET_ITEM(v, 0, PyInt_FromLong((long)st.st_mode));
-	PyStructSequence_SET_ITEM(v, 1, PyInt_FromLong((long)st.st_ino));
-	PyStructSequence_SET_ITEM(v, 2, PyInt_FromLong((long)st.st_dev));
-	PyStructSequence_SET_ITEM(v, 3, PyInt_FromLong((long)st.st_nlink));
-	PyStructSequence_SET_ITEM(v, 4, PyInt_FromLong((long)st.st_uid));
-	PyStructSequence_SET_ITEM(v, 5, PyInt_FromLong((long)st.st_gid));
-	PyStructSequence_SET_ITEM(v, 6, PyInt_FromLong((long)st.st_size));
-	PyStructSequence_SET_ITEM(v, 7, 
-				  PyFloat_FromDouble((double)st.st_atime));
-	PyStructSequence_SET_ITEM(v, 8, 
-				  PyFloat_FromDouble((double)st.st_mtime));
-	PyStructSequence_SET_ITEM(v, 9, 
-				  PyFloat_FromDouble((double)st.st_ctime));
-#if TARGET_API_MAC_OS8
-	if (_mst != NULL) {
-		mst = (struct macstat *) _mst;
-		PyStructSequence_SET_ITEM(v, 10, 
-					  PyInt_FromLong((long)mst->st_rsize));
-		PyStructSequence_SET_ITEM(v, 11, 
-				PyString_FromStringAndSize(mst->st_creator, 
-							   4));
-		PyStructSequence_SET_ITEM(v, 12, 
-				PyString_FromStringAndSize(mst->st_type, 
-							   4));
-	}
-#endif
-
-        if (PyErr_Occurred()) {
-                Py_DECREF(v);
-                return NULL;
-        }
-
-        return v;
-}
-
-
 static PyObject *
 mac_stat(self, args)
 	PyObject *self;
@@ -570,15 +449,24 @@ mac_stat(self, args)
 	struct stat st;
 	char *path;
 	int res;
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_Parse(args, "s", &path))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = stat(path, &st);
 	Py_END_ALLOW_THREADS
 	if (res != 0)
 		return mac_error();
-
-	return _pystat_from_struct_stat(st, NULL);
+	return Py_BuildValue("(lllllllddd)",
+		    (long)st.st_mode,
+		    (long)st.st_ino,
+		    (long)st.st_dev,
+		    (long)st.st_nlink,
+		    (long)st.st_uid,
+		    (long)st.st_gid,
+		    (long)st.st_size,
+		    (double)st.st_atime,
+		    (double)st.st_mtime,
+		    (double)st.st_ctime);
 }
 
 #ifdef WEHAVE_FSTAT
@@ -590,15 +478,24 @@ mac_fstat(self, args)
 	struct stat st;
 	long fd;
 	int res;
-	if (!PyArg_ParseTuple(args, "l", &fd))
+	if (!PyArg_Parse(args, "l", &fd))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = fstat((int)fd, &st);
 	Py_END_ALLOW_THREADS
 	if (res != 0)
 		return mac_error();
-
-	return _pystat_from_struct_stat(st, NULL);
+	return Py_BuildValue("(lllllllddd)",
+		    (long)st.st_mode,
+		    (long)st.st_ino,
+		    (long)st.st_dev,
+		    (long)st.st_nlink,
+		    (long)st.st_uid,
+		    (long)st.st_gid,
+		    (long)st.st_size,
+		    (double)st.st_atime,
+		    (double)st.st_mtime,
+		    (double)st.st_ctime);
 }
 #endif /* WEHAVE_FSTAT */
 
@@ -612,7 +509,7 @@ mac_xstat(self, args)
 	struct stat st;
 	char *path;
 	int res;
-	if (!PyArg_ParseTuple(args, "s", &path))
+	if (!PyArg_Parse(args, "s", &path))
 		return NULL;
 	/*
 	** Convoluted: we want stat() and xstat() to agree, so we call both
@@ -629,8 +526,20 @@ mac_xstat(self, args)
 	Py_END_ALLOW_THREADS
 	if (res != 0)
 		return mac_error();
-
-	return _pystat_from_struct_stat(st, (void*) &mst);
+	return Py_BuildValue("(llllllldddls#s#)",
+		    (long)st.st_mode,
+		    (long)st.st_ino,
+		    (long)st.st_dev,
+		    (long)st.st_nlink,
+		    (long)st.st_uid,
+		    (long)st.st_gid,
+		    (long)st.st_size,
+		    (double)st.st_atime,
+		    (double)st.st_mtime,
+		    (double)st.st_ctime,
+		    (long)mst.st_rsize,
+		    mst.st_creator, 4,
+		    mst.st_type, 4);
 }
 #endif
 
@@ -640,7 +549,7 @@ mac_sync(self, args)
 	PyObject *args;
 {
 	int res;
-	if (!PyArg_ParseTuple(args, ""))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	res = sync();
@@ -666,7 +575,7 @@ mac_write(self, args)
 {
 	int fd, size;
 	char *buffer;
-	if (!PyArg_ParseTuple(args, "is#", &fd, &buffer, &size))
+	if (!PyArg_Parse(args, "(is#)", &fd, &buffer, &size))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	size = write(fd, buffer, size);
@@ -691,137 +600,42 @@ mac_mstats(self, args)
 #endif /* USE_MALLOC_DEBUG */
 
 static struct PyMethodDef mac_methods[] = {
-	{"chdir",	mac_chdir, 1},
-	{"close",	mac_close, 1},
+	{"chdir",	mac_chdir},
+	{"close",	mac_close},
 #ifdef WEHAVE_DUP
-	{"dup",		mac_dup, 1},
+	{"dup",		mac_dup},
 #endif
 #ifdef WEHAVE_FDOPEN
-	{"fdopen",	mac_fdopen, 1},
+	{"fdopen",	mac_fdopen},
 #endif
 #ifdef WEHAVE_FSTAT
-	{"fstat",	mac_fstat, 1},
+	{"fstat",	mac_fstat},
 #endif
 #if TARGET_API_MAC_OS8
-	{"getbootvol",	mac_getbootvol, 1}, /* non-standard */
+	{"getbootvol",	mac_getbootvol}, /* non-standard */
 #endif
-	{"getcwd",	mac_getcwd, 1},
-	{"listdir",	mac_listdir, 1},
-	{"lseek",	mac_lseek, 1},
+	{"getcwd",	mac_getcwd},
+	{"listdir",	mac_listdir, 0},
+	{"lseek",	mac_lseek},
 	{"mkdir",	mac_mkdir, 1},
-	{"open",	mac_open, 1},
-	{"read",	mac_read, 1},
-	{"rename",	mac_rename, 1},
-	{"rmdir",	mac_rmdir, 1},
-	{"stat",	mac_stat, 1},
+	{"open",	mac_open},
+	{"read",	mac_read},
+	{"rename",	mac_rename},
+	{"rmdir",	mac_rmdir},
+	{"stat",	mac_stat},
 #if TARGET_API_MAC_OS8
-	{"xstat",	mac_xstat, 1},
+	{"xstat",	mac_xstat},
 #endif
-	{"sync",	mac_sync, 1},
-	{"remove",	mac_unlink, 1},
-	{"unlink",	mac_unlink, 1},
-	{"write",	mac_write, 1},
+	{"sync",	mac_sync},
+	{"remove",	mac_unlink},
+	{"unlink",	mac_unlink},
+	{"write",	mac_write},
 #ifdef USE_MALLOC_DEBUG
-	{"mstats",	mac_mstats, 1},
+	{"mstats",	mac_mstats},
 #endif
 
 	{NULL,		NULL}		 /* Sentinel */
 };
-
-static int
-ins(PyObject *d, char *symbol, long value)
-{
-        PyObject* v = PyInt_FromLong(value);
-        if (!v || PyDict_SetItemString(d, symbol, v) < 0)
-                return -1;                   /* triggers fatal error */
-
-        Py_DECREF(v);
-        return 0;
-}
-
-static int
-all_ins(PyObject *d)
-{
-#ifdef F_OK
-        if (ins(d, "F_OK", (long)F_OK)) return -1;
-#endif        
-#ifdef R_OK
-        if (ins(d, "R_OK", (long)R_OK)) return -1;
-#endif        
-#ifdef W_OK
-        if (ins(d, "W_OK", (long)W_OK)) return -1;
-#endif        
-#ifdef X_OK
-        if (ins(d, "X_OK", (long)X_OK)) return -1;
-#endif        
-#ifdef NGROUPS_MAX
-        if (ins(d, "NGROUPS_MAX", (long)NGROUPS_MAX)) return -1;
-#endif
-#ifdef TMP_MAX
-        if (ins(d, "TMP_MAX", (long)TMP_MAX)) return -1;
-#endif
-#ifdef WNOHANG
-        if (ins(d, "WNOHANG", (long)WNOHANG)) return -1;
-#endif        
-#ifdef O_RDONLY
-        if (ins(d, "O_RDONLY", (long)O_RDONLY)) return -1;
-#endif
-#ifdef O_WRONLY
-        if (ins(d, "O_WRONLY", (long)O_WRONLY)) return -1;
-#endif
-#ifdef O_RDWR
-        if (ins(d, "O_RDWR", (long)O_RDWR)) return -1;
-#endif
-#ifdef O_NDELAY
-        if (ins(d, "O_NDELAY", (long)O_NDELAY)) return -1;
-#endif
-#ifdef O_NONBLOCK
-        if (ins(d, "O_NONBLOCK", (long)O_NONBLOCK)) return -1;
-#endif
-#ifdef O_APPEND
-        if (ins(d, "O_APPEND", (long)O_APPEND)) return -1;
-#endif
-#ifdef O_DSYNC
-        if (ins(d, "O_DSYNC", (long)O_DSYNC)) return -1;
-#endif
-#ifdef O_RSYNC
-        if (ins(d, "O_RSYNC", (long)O_RSYNC)) return -1;
-#endif
-#ifdef O_SYNC
-        if (ins(d, "O_SYNC", (long)O_SYNC)) return -1;
-#endif
-#ifdef O_NOCTTY
-        if (ins(d, "O_NOCTTY", (long)O_NOCTTY)) return -1;
-#endif
-#ifdef O_CREAT
-        if (ins(d, "O_CREAT", (long)O_CREAT)) return -1;
-#endif
-#ifdef O_EXCL
-        if (ins(d, "O_EXCL", (long)O_EXCL)) return -1;
-#endif
-#ifdef O_TRUNC
-        if (ins(d, "O_TRUNC", (long)O_TRUNC)) return -1;
-#endif
-#ifdef O_BINARY
-        if (ins(d, "O_BINARY", (long)O_BINARY)) return -1;
-#endif
-#ifdef O_TEXT
-        if (ins(d, "O_TEXT", (long)O_TEXT)) return -1;
-#endif
-
-#ifdef HAVE_SPAWNV
-        if (ins(d, "P_WAIT", (long)_P_WAIT)) return -1;
-        if (ins(d, "P_NOWAIT", (long)_P_NOWAIT)) return -1;
-        if (ins(d, "P_OVERLAY", (long)_OLD_P_OVERLAY)) return -1;
-        if (ins(d, "P_NOWAITO", (long)_P_NOWAITO)) return -1;
-        if (ins(d, "P_DETACH", (long)_P_DETACH)) return -1;
-#endif
-
-#if defined(PYOS_OS2)
-        if (insertvalues(d)) return -1;
-#endif
-        return 0;
-}
 
 
 void
@@ -832,17 +646,7 @@ initmac()
 	m = Py_InitModule("mac", mac_methods);
 	d = PyModule_GetDict(m);
 	
-        if (all_ins(d))
-                return;
-
 	/* Initialize mac.error exception */
-	PyDict_SetItemString(d, "error", PyExc_OSError);
-
-	PyStructSequence_InitType(&StatResultType, &stat_result_desc);
-	PyDict_SetItemString(d, "stat_result", (PyObject*) &StatResultType);
-
-#if TARGET_API_MAC_OS8
-	PyStructSequence_InitType(&XStatResultType, &xstat_result_desc);
-	PyDict_SetItemString(d, "xstat_result", (PyObject*) &XStatResultType);
-#endif
+	MacError = PyErr_NewException("mac.error", NULL, NULL);
+	PyDict_SetItemString(d, "error", MacError);
 }

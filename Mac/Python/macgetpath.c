@@ -38,11 +38,6 @@ PERFORMANCE OF THIS SOFTWARE.
 #include <unistd.h>
 #endif
 
-#ifdef TARGET_API_MAC_OSX
-#define PATHNAMELEN 1024
-#else
-#define PATHNAMELEN 256
-#endif
 
 /* Return the initial python search path.  This is called once from
 ** initsys() to initialize sys.path.
@@ -249,7 +244,7 @@ char *
 PyMac_GetPythonDir()
 {
 	static int diditbefore = 0;
-	static char name[PATHNAMELEN] = {':', '\0'};
+	static char name[256] = {':', '\0'};
 	AliasHandle handle;
 	FSSpec dirspec;
 	Boolean modified = 0;
@@ -290,13 +285,13 @@ PyMac_GetPythonDir()
 	if ( prefrh != -1 ) CloseResFile(prefrh);
 	UseResFile(oldrh);
 
-   	if ( PyMac_GetFullPathname(&dirspec, name, PATHNAMELEN) == 0 ) {
+   	if ( PyMac_GetFullPath(&dirspec, name) == 0 ) {
    		strcat(name, ":");
 	} else {
  		/* If all fails, we return the current directory */
    		printf("Python home dir exists but I cannot find the pathname!!\n");
 		name[0] = 0;
-		(void)getcwd(name, sizeof(name));
+		(void)getwd(name);
 	}
 	diditbefore = 1;
 	return name;

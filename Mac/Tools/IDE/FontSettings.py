@@ -8,8 +8,8 @@ if newsettings:
 
 import W
 import PyEdit
-from Carbon import TextEdit
-from Carbon import Qd
+import TextEdit
+import Qd
 import string
 import types
 import sys
@@ -104,7 +104,7 @@ class _FontDialog:
 	def set(self, fontsettings):
 		font, style, size, color = fontsettings
 		if type(font) <> types.StringType:
-			from Carbon import Res
+			import Res
 			res = Res.GetResource('FOND', font)
 			font = res.GetResInfo()[2]
 		self.w.fontname.set(font)

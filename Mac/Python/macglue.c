@@ -46,7 +46,19 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <Menus.h>
 #include <TextUtils.h>
 #include <LowMem.h>
+#ifdef __CFM68K__
+/* cfm68k InterfaceLib exports GetEventQueue, but Events.h doesn't know this
+** and defines it as GetEvQHdr (which is correct for PPC). This fix is for
+** CW9, check that the workaround is still needed for the next release.
+*/
+#define GetEvQHdr GetEventQueue
+#endif /* __CFM68K__ */
+
 #include <Events.h>
+
+#ifdef __CFM68K__
+#undef GetEventQueue
+#endif /* __CFM68K__ */
 #else
 #include <Carbon/Carbon.h>
 #endif
@@ -87,7 +99,11 @@ extern pascal unsigned char *PLstrrchr(unsigned char *, unsigned char);
 ** raise a MemoryError.
 */
 #ifndef MINIMUM_STACK_SIZE
+#ifdef __powerc
 #define MINIMUM_STACK_SIZE 8192
+#else
+#define MINIMUM_STACK_SIZE 4096
+#endif
 #endif
 
 #if TARGET_API_MAC_CARBON
@@ -179,6 +195,42 @@ static PyObject *python_event_handler;
 */
 int PyMac_AppearanceCompliant;
 
+/*
+** Find out what the current script is.
+** Donated by Fredrik Lund.
+*/
+char *PyMac_getscript()
+{
+   int font, script, lang;
+    font = 0;
+    font = GetSysFont();
+    script = FontToScript(font);
+    switch (script) {
+    case smRoman:
+        lang = GetScriptVariable(script, smScriptLang);
+        if (lang == langIcelandic)
+            return "mac-iceland";
+        else if (lang == langTurkish)
+            return "mac-turkish";
+        else if (lang == langGreek)
+            return "mac-greek";
+        else
+            return "mac-roman";
+        break;
+#if 0
+    /* We don't have a codec for this, so don't return it */
+    case smJapanese:
+        return "mac-japan";
+#endif
+    case smGreek:
+        return "mac-greek";
+    case smCyrillic:
+        return "mac-cyrillic";
+    default:
+        return "ascii"; /* better than nothing */
+    }
+}
+
 /* Given an FSSpec, return the FSSpec of the parent folder */
 
 static OSErr
@@ -203,7 +255,7 @@ get_folder_parent (FSSpec * fss, FSSpec * parent)
 /* Given an FSSpec return a full, colon-separated pathname */
 
 OSErr
-PyMac_GetFullPathname (FSSpec *fss, char *buf, int length)
+PyMac_GetFullPath (FSSpec *fss, char *buf)
 {
 	short err;
 	FSSpec fss_parent, fss_current;
@@ -212,10 +264,6 @@ PyMac_GetFullPathname (FSSpec *fss, char *buf, int length)
 
 	fss_current = *fss;
 	plen = fss_current.name[0];
-	if ( plen+2 > length ) {
-		*buf = 0;
-		return errFSNameTooLong;
-	}
 	memcpy(buf, &fss_current.name[1], plen);
 	buf[plen] = 0;
 	/* Special case for disk names */
@@ -226,25 +274,19 @@ PyMac_GetFullPathname (FSSpec *fss, char *buf, int length)
 	}
 	while (fss_current.parID > 1) {
     		/* Get parent folder name */
-                if (err = get_folder_parent(&fss_current, &fss_parent)) {
-                	*buf = 0;
+                if (err = get_folder_parent(&fss_current, &fss_parent))
              		return err;
-             	}
                 fss_current = fss_parent;
                 /* Prepend path component just found to buf */
     			plen = fss_current.name[0];
     			if (strlen(buf) + plen + 1 > 1024) {
     				/* Oops... Not enough space (shouldn't happen) */
     				*buf = 0;
-    				return errFSNameTooLong;
+    				return -1;
     			}
     			memcpy(tmpbuf, &fss_current.name[1], plen);
     			tmpbuf[plen] = ':';
     			strcpy(&tmpbuf[plen+1], buf);
-    			if ( strlen(tmpbuf) > length ) {
-    				*buf = 0;
-    				return errFSNameTooLong;
-    			}
     			strcpy(buf, tmpbuf);
         }
         return 0;
@@ -298,21 +340,12 @@ PyMac_GUSISpin(spin_msg msg, long arg)
 		SpinCursor(msg == SP_AUTO_SPIN ? short(arg) : 1);
 #endif
 
+	if (interrupted) return -1;
 
 	if ( msg == SP_AUTO_SPIN )
 		maxsleep = 0;
-	if ( msg==SP_SLEEP||msg==SP_SELECT ) {
+	if ( msg==SP_SLEEP||msg==SP_SELECT )
 		maxsleep = arg;
-		/*
-		** We force-scan for interrupts. Not pretty, but otherwise
-		** a program may hang in select or sleep forever.
-		*/
-		scan_event_queue(1);
-	}
-	if (interrupted) {
-		interrupted = 0;
-		return -1;
-	}
 
 	PyMac_DoYield(maxsleep, 0); /* XXXX or is it safe to call python here? */
 
@@ -392,17 +425,6 @@ Pstring(char *str)
 }
 
 #if TARGET_API_MAC_OS8
-Point
-LMGetMouse(void)
-{
-	return LMGetMouseLocation();
-}
-
-long LMGetExpandMem(void)
-{
-	return 0;
-}
-
 void
 c2pstrcpy(unsigned char *dst, const char *src)
 {
@@ -414,6 +436,66 @@ c2pstrcpy(unsigned char *dst, const char *src)
 	dst[0] = len;
 }
 #endif /* TARGET_API_MAC_OS8 */
+
+/* Like strerror() but for Mac OS error numbers */
+char *PyMac_StrError(int err)
+{
+	static char buf[256];
+	Handle h;
+	char *str;
+	
+	h = GetResource('Estr', err);
+	if ( h ) {
+		HLock(h);
+		str = (char *)*h;
+		memcpy(buf, str+1, (unsigned char)str[0]);
+		buf[(unsigned char)str[0]] = '\0';
+		HUnlock(h);
+		ReleaseResource(h);
+	} else {
+		sprintf(buf, "Mac OS error code %d", err);
+	}
+	return buf;
+}
+
+/* Exception object shared by all Mac specific modules for Mac OS errors */
+PyObject *PyMac_OSErrException;
+
+/* Initialize and return PyMac_OSErrException */
+PyObject *
+PyMac_GetOSErrException()
+{
+	if (PyMac_OSErrException == NULL)
+		PyMac_OSErrException = PyString_FromString("MacOS.Error");
+	return PyMac_OSErrException;
+}
+
+/* Set a MAC-specific error from errno, and return NULL; return None if no error */
+PyObject * 
+PyErr_Mac(PyObject *eobj, int err)
+{
+	char *msg;
+	PyObject *v;
+	
+	if (err == 0 && !PyErr_Occurred()) {
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	if (err == -1 && PyErr_Occurred())
+		return NULL;
+	msg = PyMac_StrError(err);
+	v = Py_BuildValue("(is)", err, msg);
+	PyErr_SetObject(eobj, v);
+	Py_DECREF(v);
+	return NULL;
+}
+
+/* Call PyErr_Mac with PyMac_OSErrException */
+PyObject *
+PyMac_Error(OSErr err)
+{
+	return PyErr_Mac(PyMac_GetOSErrException(), err);
+}
 
 #ifdef USE_STACKCHECK
 /* Check for stack overflow */
@@ -473,6 +555,65 @@ PyOS_FiniInterrupts()
 {
 }
 
+/*
+** This routine scans the event queue looking for cmd-.
+** This is the only way to get an interrupt under THINK (since it
+** doesn't do SIGINT handling), but is also used under MW, when
+** the full-fledged event loop is disabled. This way, we can at least
+** interrupt a runaway python program.
+*/
+static void
+scan_event_queue(flush)
+	int flush;
+{
+#if !TARGET_API_MAC_OS8
+	if ( CheckEventQueueForUserCancel() )
+		interrupted = 1;
+#else
+	register EvQElPtr q;
+	
+	q = (EvQElPtr) LMGetEventQueue()->qHead;
+	
+	for (; q; q = (EvQElPtr)q->qLink) {
+		if (q->evtQWhat == keyDown &&
+				(char)q->evtQMessage == '.' &&
+				(q->evtQModifiers & cmdKey) != 0) {
+			if ( flush )
+				FlushEvents(keyDownMask, 0);
+			interrupted = 1;
+			break;
+		}
+	}
+#endif
+}
+
+int
+PyErr_CheckSignals()
+{
+	if (schedparams.enabled) {
+		if ( (unsigned long)LMGetTicks() > schedparams.next_check ) {
+			if ( PyMac_Yield() < 0)
+				return -1;
+			schedparams.next_check = (unsigned long)LMGetTicks()
+					 + schedparams.check_interval;
+			if (interrupted) {
+				scan_event_queue(1);	/* Eat events up to cmd-. */
+				interrupted = 0;
+				PyErr_SetNone(PyExc_KeyboardInterrupt);
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+
+int
+PyOS_InterruptOccurred()
+{
+	scan_event_queue(1);
+	return interrupted;
+}
+
 /* Check whether we are in the foreground */
 static int
 PyMac_InForeground(void)
@@ -491,67 +632,6 @@ PyMac_InForeground(void)
 	else if ( SameProcess(&ours, &curfg, &eq) < 0 )
 		eq = 1;
 	return (int)eq;
-}
-
-/*
-** This routine scans the event queue looking for cmd-.
-*/
-static void
-scan_event_queue(force)
-	int force;
-{
-#if !TARGET_API_MAC_OS8
-	if ( interrupted || (!schedparams.check_interrupt && !force) )
-		return;
-	if ( CheckEventQueueForUserCancel() )
-		interrupted = 1;
-#else
-	register EvQElPtr q;
-	
-	if ( interrupted || (!schedparams.check_interrupt && !force) || !PyMac_InForeground() )
-		return;
-	q = (EvQElPtr) LMGetEventQueue()->qHead;
-	
-	for (; q; q = (EvQElPtr)q->qLink) {
-		if (q->evtQWhat == keyDown &&
-				(char)q->evtQMessage == '.' &&
-				(q->evtQModifiers & cmdKey) != 0) {
-			FlushEvents(keyDownMask, 0);
-			interrupted = 1;
-			break;
-		}
-	}
-#endif
-}
-
-int
-PyErr_CheckSignals()
-{
-	if (schedparams.enabled) {
-		if ( interrupted || (unsigned long)LMGetTicks() > schedparams.next_check ) {
-			scan_event_queue(0);
-			if (interrupted) {
-				interrupted = 0;
-				PyErr_SetNone(PyExc_KeyboardInterrupt);
-				return -1;
-			}
-			if ( PyMac_Yield() < 0)
-				return -1;
-			schedparams.next_check = (unsigned long)LMGetTicks()
-					 + schedparams.check_interval;
-		}
-	}
-	return 0;
-}
-
-int
-PyOS_InterruptOccurred()
-{
-	scan_event_queue(0);
-	if ( !interrupted )
-		return 0;
-	interrupted = 0;
-	return 1;
 }
 #endif
 
@@ -638,6 +718,15 @@ PyMac_DoYield(int maxsleep, int maycallpython)
 	static int in_here = 0;
 	
 	in_here++;
+	/*
+	** First check for interrupts, if wanted.
+	** This sets a flag that will be picked up at an appropriate
+	** moment in the mainloop.
+	*/
+	if (schedparams.check_interrupt)
+		scan_event_queue(0);
+	
+	/* XXXX Implementing an idle routine goes here */
 		
 	/*
 	** Check which of the eventloop cases we have:
@@ -731,29 +820,16 @@ void
 PyMac_InitMenuBar()
 {
 	MenuHandle applemenu;
-	Str255 about_text;
-	static unsigned char about_sioux[] = "\pAbout SIOUX";
 	
 	if ( sioux_mbar ) return;
-#if 0
-	/* This code does not seem to work anymore: apparently
-	** we now always have a menubar (since MacOS9?).
-	** So we simply always setup the Sioux menus here.
-	*/
 	if ( (sioux_mbar=GetMenuBar()) == NULL )  {
-#else
-	if ( (sioux_mbar=GetMenuBar()) == NULL || GetMenuHandle(SIOUX_APPLEID) == NULL)  {
-#endif
 		/* Sioux menu not installed yet. Do so */
 		SIOUXSetupMenus();
 		if ( (sioux_mbar=GetMenuBar()) == NULL )
 			return;
 	}
 	if ( (applemenu=GetMenuHandle(SIOUX_APPLEID)) == NULL ) return;
-	GetMenuItemText(applemenu, 1, about_text);
-	if ( about_text[0] == about_sioux[0] && 
-		strncmp((char *)(about_text+1), (char *)(about_sioux+1), about_text[0]) == 0 )
-		SetMenuItemText(applemenu, 1, "\pAbout Python...");
+	SetMenuItemText(applemenu, 1, "\pAbout Python...");
 }
 
 /*
@@ -814,7 +890,7 @@ SIOUXDoAboutBox(void)
 		fontID = kFontIDGeneva;
 	TextFont(fontID);
 	TextSize(9);
-	ParamText(Pstring(PY_VERSION), "\p", "\p", "\p");
+	ParamText(Pstring(PATCHLEVEL), "\p", "\p", "\p");
 	ShowWindow(theWindow);
 	ModalDialog(NULL, &item);
 	DisposeDialog(theDialog);
@@ -899,4 +975,283 @@ void PyMac_PromptGetFile(short numTypes, ConstSFTypeListPtr typeList,
 }
 #endif /* TARGET_API_MAC_OS8 */
 
+/* Convert a 4-char string object argument to an OSType value */
+int
+PyMac_GetOSType(PyObject *v, OSType *pr)
+{
+	if (!PyString_Check(v) || PyString_Size(v) != 4) {
+		PyErr_SetString(PyExc_TypeError,
+			"OSType arg must be string of 4 chars");
+		return 0;
+	}
+	memcpy((char *)pr, PyString_AsString(v), 4);
+	return 1;
+}
 
+/* Convert an OSType value to a 4-char string object */
+PyObject *
+PyMac_BuildOSType(OSType t)
+{
+	return PyString_FromStringAndSize((char *)&t, 4);
+}
+
+/* Convert an NumVersion value to a 4-element tuple */
+PyObject *
+PyMac_BuildNumVersion(NumVersion t)
+{
+	return Py_BuildValue("(hhhh)", t.majorRev, t.minorAndBugRev, t.stage, t.nonRelRev);
+}
+
+
+/* Convert a Python string object to a Str255 */
+int
+PyMac_GetStr255(PyObject *v, Str255 pbuf)
+{
+	int len;
+	if (!PyString_Check(v) || (len = PyString_Size(v)) > 255) {
+		PyErr_SetString(PyExc_TypeError,
+			"Str255 arg must be string of at most 255 chars");
+		return 0;
+	}
+	pbuf[0] = len;
+	memcpy((char *)(pbuf+1), PyString_AsString(v), len);
+	return 1;
+}
+
+/* Convert a Str255 to a Python string object */
+PyObject *
+PyMac_BuildStr255(Str255 s)
+{
+	if ( s == NULL ) {
+		PyErr_SetString(PyExc_SystemError, "Str255 pointer is NULL");
+		return NULL;
+	}
+	return PyString_FromStringAndSize((char *)&s[1], (int)s[0]);
+}
+
+PyObject *
+PyMac_BuildOptStr255(Str255 s)
+{
+	if ( s == NULL ) {
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	return PyString_FromStringAndSize((char *)&s[1], (int)s[0]);
+}
+
+
+
+/* Convert a Python object to a Rect.
+   The object must be a (left, top, right, bottom) tuple.
+   (This differs from the order in the struct but is consistent with
+   the arguments to SetRect(), and also with STDWIN). */
+int
+PyMac_GetRect(PyObject *v, Rect *r)
+{
+	return PyArg_Parse(v, "(hhhh)", &r->left, &r->top, &r->right, &r->bottom);
+}
+
+/* Convert a Rect to a Python object */
+PyObject *
+PyMac_BuildRect(Rect *r)
+{
+	return Py_BuildValue("(hhhh)", r->left, r->top, r->right, r->bottom);
+}
+
+
+/* Convert a Python object to a Point.
+   The object must be a (h, v) tuple.
+   (This differs from the order in the struct but is consistent with
+   the arguments to SetPoint(), and also with STDWIN). */
+int
+PyMac_GetPoint(PyObject *v, Point *p)
+{
+	return PyArg_Parse(v, "(hh)", &p->h, &p->v);
+}
+
+/* Convert a Point to a Python object */
+PyObject *
+PyMac_BuildPoint(Point p)
+{
+	return Py_BuildValue("(hh)", p.h, p.v);
+}
+
+
+/* Convert a Python object to an EventRecord.
+   The object must be a (what, message, when, (v, h), modifiers) tuple. */
+int
+PyMac_GetEventRecord(PyObject *v, EventRecord *e)
+{
+	return PyArg_Parse(v, "(Hll(hh)H)",
+	                   &e->what,
+	                   &e->message,
+	                   &e->when,
+	                   &e->where.h,
+	                   &e->where.v,                   
+	                   &e->modifiers);
+}
+
+/* Convert a Rect to an EventRecord object */
+PyObject *
+PyMac_BuildEventRecord(EventRecord *e)
+{
+	return Py_BuildValue("(hll(hh)h)",
+	                     e->what,
+	                     e->message,
+	                     e->when,
+	                     e->where.h,
+	                     e->where.v,
+	                     e->modifiers);
+}
+
+/* Convert Python object to Fixed */
+int
+PyMac_GetFixed(PyObject *v, Fixed *f)
+{
+	double d;
+	
+	if( !PyArg_Parse(v, "d", &d))
+		return 0;
+	*f = (Fixed)(d * 0x10000);
+	return 1;
+}
+
+/* Convert a Point to a Python object */
+PyObject *
+PyMac_BuildFixed(Fixed f)
+{
+	double d;
+	
+	d = f;
+	d = d / 0x10000;
+	return Py_BuildValue("d", d);
+}
+
+/* Convert wide to/from Python int or (hi, lo) tuple. XXXX Should use Python longs */
+int
+PyMac_Getwide(PyObject *v, wide *rv)
+{
+	if (PyInt_Check(v)) {
+		rv->hi = 0;
+		rv->lo = PyInt_AsLong(v);
+		if( rv->lo & 0x80000000 )
+			rv->hi = -1;
+		return 1;
+	}
+	return PyArg_Parse(v, "(ll)", &rv->hi, &rv->lo);
+}
+
+
+PyObject *
+PyMac_Buildwide(wide *w)
+{
+	if ( (w->hi == 0 && (w->lo & 0x80000000) == 0) ||
+	     (w->hi == -1 && (w->lo & 0x80000000) ) )
+		return PyInt_FromLong(w->lo);
+	return Py_BuildValue("(ll)", w->hi, w->lo);
+}
+
+#ifdef USE_TOOLBOX_OBJECT_GLUE
+/*
+** Glue together the toolbox objects.
+**
+** Because toolbox modules interdepend on each other, they use each others
+** object types, on MacOSX/MachO this leads to the situation that they
+** cannot be dynamically loaded (or they would all have to be lumped into
+** a single .so, but this would be bad for extensibility).
+**
+** This file defines wrappers for all the _New and _Convert functions,
+** which are the Py_BuildValue and PyArg_ParseTuple helpers. The wrappers
+** check an indirection function pointer, and if it isn't filled in yet
+** they import the appropriate module, whose init routine should fill in
+** the pointer.
+*/
+
+#define GLUE_NEW(object, routinename, module) \
+PyObject *(*PyMacGluePtr_##routinename)(object); \
+\
+PyObject *routinename(object cobj) { \
+    if (!PyMacGluePtr_##routinename) { \
+       if (!PyImport_ImportModule(module)) return NULL; \
+       if (!PyMacGluePtr_##routinename) { \
+           PyErr_SetString(PyExc_ImportError, "Module did not provide routine: " module ": " #routinename); \
+           return NULL; \
+       } \
+    } \
+    return (*PyMacGluePtr_##routinename)(cobj); \
+}
+
+#define GLUE_CONVERT(object, routinename, module) \
+int (*PyMacGluePtr_##routinename)(PyObject *, object *); \
+\
+int routinename(PyObject *pyobj, object *cobj) { \
+    if (!PyMacGluePtr_##routinename) { \
+       if (!PyImport_ImportModule(module)) return NULL; \
+       if (!PyMacGluePtr_##routinename) { \
+           PyErr_SetString(PyExc_ImportError, "Module did not provide routine: " module ": " #routinename); \
+           return NULL; \
+       } \
+    } \
+    return (*PyMacGluePtr_##routinename)(pyobj, cobj); \
+}
+
+GLUE_NEW(AppleEvent *, AEDesc_New, "AE") /* XXXX Why by address? */
+GLUE_CONVERT(AppleEvent, AEDesc_Convert, "AE")
+
+GLUE_NEW(Component, CmpObj_New, "Cm")
+GLUE_CONVERT(Component, CmpObj_Convert, "Cm")
+GLUE_NEW(ComponentInstance, CmpInstObj_New, "Cm")
+GLUE_CONVERT(ComponentInstance, CmpInstObj_Convert, "Cm")
+
+GLUE_NEW(ControlHandle, CtlObj_New, "Ctl")
+GLUE_CONVERT(ControlHandle, CtlObj_Convert, "Ctl")
+
+GLUE_NEW(DialogPtr, DlgObj_New, "Dlg")
+GLUE_CONVERT(DialogPtr, DlgObj_Convert, "Dlg")
+GLUE_NEW(DialogPtr, DlgObj_WhichDialog, "Dlg")
+
+GLUE_NEW(DragReference, DragObj_New, "Drag")
+GLUE_CONVERT(DragReference, DragObj_Convert, "Drag")
+
+GLUE_NEW(ListHandle, ListObj_New, "List")
+GLUE_CONVERT(ListHandle, ListObj_Convert, "List")
+
+GLUE_NEW(MenuHandle, MenuObj_New, "Menu")
+GLUE_CONVERT(MenuHandle, MenuObj_Convert, "Menu")
+
+GLUE_NEW(GrafPtr, GrafObj_New, "Qd")
+GLUE_CONVERT(GrafPtr, GrafObj_Convert, "Qd")
+GLUE_NEW(BitMapPtr, BMObj_New, "Qd")
+GLUE_CONVERT(BitMapPtr, BMObj_Convert, "Qd")
+GLUE_NEW(RGBColor *, QdRGB_New, "Qd") /* XXXX Why? */
+GLUE_CONVERT(RGBColor, QdRGB_Convert, "Qd")
+
+GLUE_NEW(GWorldPtr, GWorldObj_New, "Qdoffs")
+GLUE_CONVERT(GWorldPtr, GWorldObj_Convert, "Qdoffs")
+
+GLUE_NEW(Track, TrackObj_New, "Qt")
+GLUE_CONVERT(Track, TrackObj_Convert, "Qt")
+GLUE_NEW(Movie, MovieObj_New, "Qt")
+GLUE_CONVERT(Movie, MovieObj_Convert, "Qt")
+GLUE_NEW(MovieController, MovieCtlObj_New, "Qt")
+GLUE_CONVERT(MovieController, MovieCtlObj_Convert, "Qt")
+GLUE_NEW(TimeBase, TimeBaseObj_New, "Qt")
+GLUE_CONVERT(TimeBase, TimeBaseObj_Convert, "Qt")
+GLUE_NEW(UserData, UserDataObj_New, "Qt")
+GLUE_CONVERT(UserData, UserDataObj_Convert, "Qt")
+GLUE_NEW(Media, MediaObj_New, "Qt")
+GLUE_CONVERT(Media, MediaObj_Convert, "Qt")
+
+GLUE_NEW(Handle, ResObj_New, "Res")
+GLUE_CONVERT(Handle, ResObj_Convert, "Res")
+GLUE_NEW(Handle, OptResObj_New, "Res")
+GLUE_CONVERT(Handle, OptResObj_Convert, "Res")
+
+GLUE_NEW(TEHandle, TEObj_New, "TE")
+GLUE_CONVERT(TEHandle, TEObj_Convert, "TE")
+
+GLUE_NEW(WindowPtr, WinObj_New, "Win")
+GLUE_CONVERT(WindowPtr, WinObj_Convert, "Win")
+GLUE_NEW(WindowPtr, WinObj_WhichWindow, "Win")
+
+#endif /* USE_TOOLBOX_OBJECT_GLUE */

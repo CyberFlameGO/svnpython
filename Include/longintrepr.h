@@ -46,9 +46,6 @@ struct _longobject {
 
 DL_IMPORT(PyLongObject *) _PyLong_New(int);
 
-/* Return a copy of src. */
-DL_IMPORT(PyObject *) _PyLong_Copy(PyLongObject *src);
-
 #ifdef __cplusplus
 }
 #endif

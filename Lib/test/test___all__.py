@@ -2,6 +2,9 @@ from test_support import verify, verbose
 import sys
 
 def check_all(modname):
+    import warnings
+    warnings.filterwarnings("ignore", "", DeprecationWarning, modname)
+
     names = {}
     try:
         exec "import %s" % modname in names
@@ -15,7 +18,7 @@ def check_all(modname):
         # caught here.  It also leaves a partial pty module in sys.modules.
         # So when test_pty is called later, the import of pty succeeds,
         # but shouldn't.  As a result, test_pty crashes with an
-        # AttributeError instead of an ImportError, and regrtest interprets
+        # AtttributeError instead of an ImportError, and regrtest interprets
         # the latter as a test failure (ImportError is treated as "test
         # skipped" -- which is what test_pty should say on Windows).
         try:
@@ -34,11 +37,6 @@ def check_all(modname):
     all = list(sys.modules[modname].__all__) # in case it's a tuple
     all.sort()
     verify(keys==all, "%s != %s" % (keys, all))
-
-if not sys.platform.startswith('java'):
-    # In case _socket fails to build, make this test fail more gracefully
-    # than an AttributeError somewhere deep in CGIHTTPServer.
-    import _socket
 
 check_all("BaseHTTPServer")
 check_all("CGIHTTPServer")
@@ -120,9 +118,6 @@ check_all("quopri")
 check_all("random")
 check_all("re")
 check_all("reconvert")
-import warnings
-warnings.filterwarnings("ignore", ".* regsub .*", DeprecationWarning, "regsub",
-                        append=1)
 check_all("regsub")
 check_all("repr")
 check_all("rexec")

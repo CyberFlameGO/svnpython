@@ -149,7 +149,6 @@ double = Type("double", "d")
 # For input, this is easy.  For output, and for other uses of char *,
 # see the module bgenBuffer.
 stringptr = InputOnlyType("char*", "s")
-unicodestringptr = InputOnlyType("wchar_t *", "u")
 
 
 # Some Python related types.

@@ -66,9 +66,8 @@ Req-started-unread-response    _CS_REQ_STARTED    <response_class>
 Req-sent-unread-response       _CS_REQ_SENT       <response_class>
 """
 
-import errno
-import mimetools
 import socket
+import mimetools
 
 try:
     from cStringIO import StringIO
@@ -358,24 +357,10 @@ class HTTPConnection:
 
     def connect(self):
         """Connect to the host and port specified in __init__."""
-        msg = "getaddrinfo returns an empty list"
-        for res in socket.getaddrinfo(self.host, self.port, 0, socket.SOCK_STREAM):
-            af, socktype, proto, canonname, sa = res
-            try:
-                self.sock = socket.socket(af, socktype, proto)
-                if self.debuglevel > 0:
-                    print "connect: (%s, %s)" % (self.host, self.port)
-                self.sock.connect(sa)
-            except socket.error, msg:
-                if self.debuglevel > 0:
-                    print 'connect fail:', (self.host, self.port)
-                if self.sock:
-                    self.sock.close()
-                self.sock = None
-                continue
-            break
-        if not self.sock:
-            raise socket.error, msg
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if self.debuglevel > 0:
+            print "connect: (%s, %s)" % (self.host, self.port)
+        self.sock.connect((self.host, self.port))
 
     def close(self):
         """Close the connection to the HTTP server."""
@@ -403,7 +388,7 @@ class HTTPConnection:
         if self.debuglevel > 0:
             print "send:", repr(str)
         try:
-            self.sock.send(str)
+            self.sock.sendall(str)
         except socket.error, v:
             if v[0] == 32:      # Broken pipe
                 self.close()
@@ -605,18 +590,8 @@ class FakeSocket:
         while 1:
             try:
                 buf = self.__ssl.read()
-            except socket.sslerror, err:
-                if (err[0] == socket.SSL_ERROR_WANT_READ
-                    or err[0] == socket.SSL_ERROR_WANT_WRITE
-                    or 0):
-                    continue
-                if err[0] == socket.SSL_ERROR_ZERO_RETURN:
-                    break
-                raise
-            except socket.error, err:
-                if err[0] == errno.EINTR:
-                    continue
-                raise
+            except socket.sslerror, msg:
+                break
             if buf == '':
                 break
             msgbuf.append(buf)
@@ -675,7 +650,7 @@ class HTTP:
 
     _connection_class = HTTPConnection
 
-    def __init__(self, host='', port=None):
+    def __init__(self, host='', port=None, **x509):
         "Provide a default host, since the superclass requires one."
 
         # some joker passed 0 explicitly, meaning default port
@@ -685,19 +660,18 @@ class HTTP:
         # Note that we may pass an empty string as the host; this will throw
         # an error when we attempt to connect. Presumably, the client code
         # will call connect before then, with a proper host.
-        self._setup(self._connection_class(host, port))
-
-    def _setup(self, conn):
-        self._conn = conn
-
+        self._conn = self._connection_class(host, port)
         # set up delegation to flesh out interface
-        self.send = conn.send
-        self.putrequest = conn.putrequest
-        self.endheaders = conn.endheaders
-        self.set_debuglevel = conn.set_debuglevel
+        self.send = self._conn.send
+        self.putrequest = self._conn.putrequest
+        self.endheaders = self._conn.endheaders
+        self._conn._http_vsn = self._http_vsn
+        self._conn._http_vsn_str = self._http_vsn_str
 
-        conn._http_vsn = self._http_vsn
-        conn._http_vsn_str = self._http_vsn_str
+        # we never actually use these for anything, but we keep them here for
+        # compatibility with post-1.5.2 CVS.
+        self.key_file = x509.get('key_file')
+        self.cert_file = x509.get('cert_file')
 
         self.file = None
 
@@ -707,6 +681,9 @@ class HTTP:
         if host is not None:
             self._conn._set_hostport(host, port)
         self._conn.connect()
+
+    def set_debuglevel(self, debuglevel):
+        self._conn.set_debuglevel(debuglevel)
 
     def getfile(self):
         "Provide a getfile, since the superclass' does not use this concept."
@@ -764,19 +741,6 @@ if hasattr(socket, 'ssl'):
         """
 
         _connection_class = HTTPSConnection
-
-        def __init__(self, host='', port=None, **x509):
-            # provide a default host, pass the X509 cert info
-
-            # urf. compensate for bad input.
-            if port == 0:
-                port = None
-            self._setup(self._connection_class(host, port, **x509))
-
-            # we never actually use these for anything, but we keep them
-            # here for compatibility with post-1.5.2 CVS.
-            self.key_file = x509.get('key_file')
-            self.cert_file = x509.get('cert_file')
 
 
 class HTTPException(Exception):

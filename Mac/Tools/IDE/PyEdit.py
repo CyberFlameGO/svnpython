@@ -7,9 +7,9 @@ from Wkeys import *
 import macfs
 import MACFS
 import MacOS
-from Carbon import Win
-from Carbon import Res
-from Carbon import Evt
+import Win
+import Res
+import Evt
 import os
 import imp
 import sys
@@ -25,7 +25,8 @@ else:
 	haveThreading = Wthreading.haveThreading
 
 _scriptuntitledcounter = 1
-_wordchars = string.ascii_letters + string.digits + "_"
+# _wordchars = string.letters + string.digits + "_"
+_wordchars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_'
 
 
 runButtonLabels = ["Run all", "Stop!"]
@@ -96,7 +97,7 @@ class Editor(W.Window):
 		W.Window.__init__(self, bounds, self.title, minsize = (330, 120), tabbable = 0)
 		self.setupwidgets(text)
 		if change > 0:
-			self.editgroup.editor.textchanged()
+			self.editgroup.editor.changed = 1
 		
 		if self.settings.has_key("selection"):
 			selstart, selend = self.settings["selection"]
@@ -198,8 +199,8 @@ class Editor(W.Window):
 		self.bevelbox = W.BevelBox((0, 0, 0, topbarheight))
 		self.hline = W.HorizontalLine((0, topbarheight, 0, 0))
 		self.infotext = W.TextBox((175, 6, -4, 14), backgroundcolor = (0xe000, 0xe000, 0xe000))
-		self.runbutton = W.BevelButton((6, 4, 80, 16), runButtonLabels[0], self.run)
-		self.runselbutton = W.BevelButton((90, 4, 80, 16), runSelButtonLabels[0], self.runselection)
+		self.runbutton = W.Button((5, 4, 80, 16), runButtonLabels[0], self.run)
+		self.runselbutton = W.Button((90, 4, 80, 16), runSelButtonLabels[0], self.runselection)
 		
 		# bind some keys
 		editor.bind("cmdr", self.runbutton.push)
@@ -247,12 +248,12 @@ class Editor(W.Window):
 	def domenu_toggle_run_as_main(self):
 		self.run_as_main = not self.run_as_main
 		self.run_with_interpreter = 0
-		self.editgroup.editor.selectionchanged()
+		self.editgroup.editor.selchanged = 1
 	
 	def domenu_toggle_run_with_interpreter(self):
 		self.run_with_interpreter = not self.run_with_interpreter
 		self.run_as_main = 0
-		self.editgroup.editor.selectionchanged()
+		self.editgroup.editor.selchanged = 1
 	
 	def showbreakpoints(self, onoff):
 		self.editgroup.editor.showbreakpoints(onoff)
@@ -314,7 +315,7 @@ class Editor(W.Window):
 	def domenu_options(self, *args):
 		rv = SaveOptions(self._creator)
 		if rv:
-			self.editgroup.editor.selectionchanged() # ouch...
+			self.editgroup.editor.selchanged = 1 # ouch...
 			self._creator = rv
 	
 	def clicklinefield(self):
@@ -357,7 +358,7 @@ class Editor(W.Window):
 	def close(self):
 		if self.editgroup.editor.changed:
 			import EasyDialogs
-			from Carbon import Qd
+			import Qd
 			Qd.InitCursor()
 			save = EasyDialogs.AskYesNoCancel('Save window "%s" before closing?' % self.title,
 					default=1, no="Don\xd5t save")
@@ -633,8 +634,6 @@ class Editor(W.Window):
 				dir, dirname = os.path.split(dir)
 				modname = dirname + '.' + modname
 			subname = _filename_as_modname(self.title)
-			if subname is None:
-				return self.globals, file, None
 			if modname:
 				if subname == "__init__":
 					# strip trailing period
@@ -801,7 +800,6 @@ def _makewholewordpattern(word):
 		pattern = pattern + notwordcharspat
 	return re.compile(pattern)
 
-
 class SearchEngine:
 	
 	def __init__(self):
@@ -951,9 +949,9 @@ class SearchEngine:
 		if counter:
 			self.hide()
 			import EasyDialogs
-			from Carbon import Res
-			editor.textchanged()
-			editor.selectionchanged()
+			import Res
+			editor.changed = 1
+			editor.selchanged = 1
 			editor.ted.WEUseText(Res.Resource(Text))
 			editor.ted.WECalText()
 			editor.SetPort()
@@ -1150,9 +1148,6 @@ def execstring(pytext, globals, locals, filename="<string>", debugging=0,
 		raise W.AlertError, detail
 	except (KeyboardInterrupt, BdbQuit):
 		pass
-	except SystemExit, arg:
-		if arg.code:
-			sys.stderr.write("Script exited with status code: %s\n" % repr(arg.code))
 	except:
 		if haveThreading:
 			import continuation
@@ -1274,7 +1269,7 @@ def geteditorprefs():
 		tabsettings = prefs.pyedit.tabsettings
 		windowsize = prefs.pyedit.windowsize
 	except:
-		fontsettings = prefs.pyedit.fontsettings = ("Geneva", 0, 10, (0, 0, 0))
+		fontsettings = prefs.pyedit.fontsettings = ("Python-Sans", 0, 9, (0, 0, 0))
 		tabsettings = prefs.pyedit.tabsettings = (8, 1)
 		windowsize = prefs.pyedit.windowsize = (500, 250)
 		sys.exc_traceback = None

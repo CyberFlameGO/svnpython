@@ -1,8 +1,5 @@
 """Do a minimal test of all the modules that aren't otherwise tested."""
 
-import warnings
-warnings.filterwarnings('ignore', '', DeprecationWarning, 'posixfile')
-
 from test_support import verbose
 
 import BaseHTTPServer
@@ -25,6 +22,7 @@ try:
 except ImportError:
     if verbose:
         print "skipping curses"
+import dbhash
 import dircache
 import dis
 import distutils
@@ -32,6 +30,7 @@ import doctest
 import dumbdbm
 import encodings
 import filecmp
+import fileinput
 import fnmatch
 import formatter
 import fpformat
@@ -97,6 +96,7 @@ import urllib2
 # Can't test the "user" module -- if the user has a ~/.pythonrc.py, it
 # can screw up all sorts of things (esp. if it prints!).
 #import user
+import uu
 import webbrowser
 import whichdb
 import xdrlib

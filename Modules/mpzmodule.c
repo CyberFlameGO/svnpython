@@ -12,6 +12,7 @@
 
 #include "Python.h"
 
+#include <assert.h>
 #include <sys/types.h>		/* For size_t */
 
 /*
@@ -1591,7 +1592,7 @@ static PyNumberMethods mpz_as_number = {
 static PyTypeObject MPZtype = {
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"mpz.mpz",		/*tp_name*/
+	"mpz",			/*tp_name*/
 	sizeof(mpzobject),	/*tp_size*/
 	0,			/*tp_itemsize*/
 	/* methods */

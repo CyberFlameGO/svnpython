@@ -5,33 +5,30 @@ DEBUG=0
 import MacOS
 import traceback
 
-from Carbon.AE import *
-from Carbon.AppleEvents import *
-from Carbon.Ctl import *
-from Carbon.Controls import *
-from Carbon.Dlg import *
-from Carbon.Dialogs import *
-from Carbon.Evt import *
-from Carbon.Events import *
-from Carbon.Menu import *
-from Carbon.Menus import *
-from Carbon.Qd import *
-from Carbon.QuickDraw import *
-#from Carbon.Res import *
-#from Carbon.Resources import *
-#from Carbon.Snd import *
-#from Carbon.Sound import *
-from Carbon.Win import *
-from Carbon.Windows import *
+from AE import *
+from AppleEvents import *
+from Ctl import *
+from Controls import *
+from Dlg import *
+from Dialogs import *
+from Evt import *
+from Events import *
+from Menu import *
+from Menus import *
+from Qd import *
+from QuickDraw import *
+#from Res import *
+#from Resources import *
+#from Snd import *
+#from Sound import *
+from Win import *
+from Windows import *
 import types
 
 import EasyDialogs
 
 kHighLevelEvent = 23	# Don't know what header file this should come from
 SCROLLBARWIDTH = 16		# Again, not a clue...
-
-# Trick to forestall a set of SIOUX menus being added to our menubar
-SIOUX_APPLEMENU_ID=32000
 
 
 # Map event 'what' field to strings
@@ -392,9 +389,8 @@ class Application:
 		try:
 			AEProcessAppleEvent(event)
 		except:
-			pass
-			#print "AEProcessAppleEvent error:"
-			#traceback.print_exc()
+			print "AEProcessAppleEvent error:"
+			traceback.print_exc()
 	
 	def do_unknownevent(self, event):
 		if DEBUG:
@@ -446,9 +442,8 @@ class MenuBar:
 		self.bar = None
 		self.menus = None
 	
-	def addmenu(self, title, after = 0, id=None):
-		if id == None:
-			id = self.getnextid()
+	def addmenu(self, title, after = 0):
+		id = self.getnextid()
 		if DEBUG: print 'Newmenu', title, id # XXXX
 		m = NewMenu(id, title)
 		m.InsertMenu(after)
@@ -512,9 +507,9 @@ class MenuBar:
 class Menu:
 	"One menu."
 	
-	def __init__(self, bar, title, after=0, id=None):
+	def __init__(self, bar, title, after=0):
 		self.bar = bar
-		self.id, self.menu = self.bar.addmenu(title, after, id)
+		self.id, self.menu = self.bar.addmenu(title, after)
 		bar.menus[self.id] = self
 		self.items = []
 		self._parent = None
@@ -680,7 +675,7 @@ def SubMenu(menu, label, title=''):
 class AppleMenu(Menu):
 	
 	def __init__(self, bar, abouttext="About me...", aboutcallback=None):
-		Menu.__init__(self, bar, "\024", id=SIOUX_APPLEMENU_ID)
+		Menu.__init__(self, bar, "\024")
 		if MacOS.runtimemodel == 'ppc':
 			self.additem(abouttext, None, aboutcallback)
 			self.addseparator()

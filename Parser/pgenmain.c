@@ -62,8 +62,7 @@ main(int argc, char **argv)
 		perror(graminit_c);
 		Py_Exit(1);
 	}
-	if (Py_DebugFlag)
-		printf("Writing %s ...\n", graminit_c);
+	printf("Writing %s ...\n", graminit_c);
 	printgrammar(g, fp);
 	fclose(fp);
 	fp = fopen(graminit_h, "w");
@@ -71,8 +70,7 @@ main(int argc, char **argv)
 		perror(graminit_h);
 		Py_Exit(1);
 	}
-	if (Py_DebugFlag)
-		printf("Writing %s ...\n", graminit_h);
+	printf("Writing %s ...\n", graminit_h);
 	printnonterminals(g, fp);
 	fclose(fp);
 	Py_Exit(0);

@@ -8,6 +8,10 @@
 #define SOLARIS
 #endif
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -99,7 +103,6 @@ newsadobject(PyObject *args)
 	}
 	if (fd < 0) {
 		PyErr_SetFromErrnoWithFilename(SunAudioError, opendev);
-		PyMem_DEL(ctldev);
 		return NULL;
 	}
 	PyMem_DEL(ctldev);
@@ -430,7 +433,7 @@ sads_setattr(sadstatusobject *xp, char *name, PyObject *v)
 static PyTypeObject Sadtype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"sunaudiodev.sun_audio_device",	/*tp_name*/
+	"sun_audio_device",		/*tp_name*/
 	sizeof(sadobject),		/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -445,7 +448,7 @@ static PyTypeObject Sadtype = {
 static PyTypeObject Sadstatustype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"sunaudiodev.sun_audio_device_status", /*tp_name*/
+	"sun_audio_device_status",	/*tp_name*/
 	sizeof(sadstatusobject),	/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */

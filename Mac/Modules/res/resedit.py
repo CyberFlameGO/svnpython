@@ -13,8 +13,7 @@ if ( h == NULL ) {
 HLock(h);
 memcpy(*h, buf, len);
 HUnlock(h);
-_res = ResObj_New(h);
-return _res;
+return ResObj_New(h);
 """
 
 f = ManualGenerator("Resource", resource_body)
@@ -44,8 +43,7 @@ memcpy(*h, buf, len);
 HUnlock(h);
 rv = (ResourceObject *)ResObj_New(h);
 rv->ob_freeit = PyMac_AutoDisposeHandle;
-_res = (PyObject *)rv;
-return _res;
+return (PyObject *)rv;
 """
 
 f = ManualGenerator("Handle", handle_body)
@@ -60,8 +58,7 @@ functions.append(f)
 # Convert resources to other things.
 
 as_xxx_body = """
-_res = %sObj_New((%sHandle)_self->ob_itself);
-return _res;
+return %sObj_New((%sHandle)_self->ob_itself);
 """
 
 def genresconverter(longname, shortname):
@@ -94,8 +91,7 @@ if ( onoff )
 	_self->ob_freeit = PyMac_AutoDisposeHandle;
 else
 	_self->ob_freeit = NULL;
-_res = Py_BuildValue("i", old);
-return _res;
+return Py_BuildValue("i", old);
 """
 f = ManualGenerator("AutoDispose", AutoDispose_body)
 f.docstring = lambda: "(int)->int. Automatically DisposeHandle the object on Python object cleanup"

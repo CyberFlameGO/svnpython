@@ -60,10 +60,6 @@ XXX To be done...
 """
 
 
-import warnings
-warnings.filterwarnings("ignore", ".* regex .*", DeprecationWarning, __name__,
-                        append=1)
-
 import regex
 from regex_syntax import * # RE_*
 

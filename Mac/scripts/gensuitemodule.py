@@ -14,7 +14,7 @@ import types
 import StringIO
 import macfs
 
-from Carbon.Res import *
+from Res import *
 
 def main():
 	fss, ok = macfs.PromptGetFile('Select file with aeut/aete resource:')
@@ -825,7 +825,7 @@ def identify(str):
 	if not str:
 		return "_empty_ae_name"
 	rv = ''
-	ok = string.ascii_letters + '_'
+	ok = string.letters  + '_'
 	ok2 = ok + string.digits
 	for c in str:
 		if c in ok:

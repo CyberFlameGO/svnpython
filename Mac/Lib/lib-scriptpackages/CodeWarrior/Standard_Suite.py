@@ -10,8 +10,7 @@ import MacOS
 
 _code = 'CoRe'
 
-from StdSuites.Standard_Suite import *
-class Standard_Suite_Events(Standard_Suite_Events):
+class Standard_Suite_Events:
 
 	_argmap_close = {
 		'saving' : 'savo',

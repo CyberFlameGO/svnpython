@@ -1,36 +1,35 @@
 from test_support import verify, verbose, TestFailed
-import sys
 import gc
-
-def expect(actual, expected, name):
-    if actual != expected:
-        raise TestFailed, "test_%s: actual %d, expected %d" % (
-            name, actual, expected)
-
-def expect_nonzero(actual, name):
-    if actual == 0:
-        raise TestFailed, "test_%s: unexpected zero" % name
 
 def run_test(name, thunk):
     if verbose:
         print "testing %s..." % name,
-    thunk()
-    if verbose:
-        print "ok"
+    try:
+        thunk()
+    except TestFailed:
+        if verbose:
+            print "failed (expected %s but got %s)" % (result,
+                                                       test_result)
+        raise TestFailed, name
+    else:
+        if verbose:
+            print "ok"
 
 def test_list():
     l = []
     l.append(l)
     gc.collect()
     del l
-    expect(gc.collect(), 1, "list")
+    if gc.collect() != 1:
+        raise TestFailed
 
 def test_dict():
     d = {}
     d[1] = d
     gc.collect()
     del d
-    expect(gc.collect(), 1, "dict")
+    if gc.collect() != 1:
+        raise TestFailed
 
 def test_tuple():
     # since tuples are immutable we close the loop with a list
@@ -40,7 +39,8 @@ def test_tuple():
     gc.collect()
     del t
     del l
-    expect(gc.collect(), 2, "tuple")
+    if gc.collect() != 2:
+        raise TestFailed
 
 def test_class():
     class A:
@@ -48,14 +48,8 @@ def test_class():
     A.a = A
     gc.collect()
     del A
-    expect_nonzero(gc.collect(), "class")
-
-def test_newstyleclass():
-    class A(object):
-        pass
-    gc.collect()
-    del A
-    expect_nonzero(gc.collect(), "staticclass")
+    if gc.collect() == 0:
+        raise TestFailed
 
 def test_instance():
     class A:
@@ -64,25 +58,8 @@ def test_instance():
     a.a = a
     gc.collect()
     del a
-    expect_nonzero(gc.collect(), "instance")
-
-def test_newinstance():
-    class A(object):
-        pass
-    a = A()
-    a.a = a
-    gc.collect()
-    del a
-    expect_nonzero(gc.collect(), "newinstance")
-    class B(list):
-        pass
-    class C(B, A):
-        pass
-    a = C()
-    a.a = a
-    gc.collect()
-    del a
-    expect_nonzero(gc.collect(), "newinstance(2)")
+    if gc.collect() == 0:
+        raise TestFailed
 
 def test_method():
     # Tricky: self.__init__ is a bound method, it references the instance.
@@ -92,7 +69,8 @@ def test_method():
     a = A()
     gc.collect()
     del a
-    expect_nonzero(gc.collect(), "method")
+    if gc.collect() == 0:
+        raise TestFailed
 
 def test_finalizer():
     # A() is uncollectable if it is part of a cycle, make sure it shows up
@@ -109,13 +87,14 @@ def test_finalizer():
     gc.collect()
     del a
     del b
-    expect_nonzero(gc.collect(), "finalizer")
+    if gc.collect() == 0:
+        raise TestFailed
     for obj in gc.garbage:
         if id(obj) == id_a:
             del obj.a
             break
     else:
-        raise TestFailed, "didn't find obj in garbage (finalizer)"
+        raise TestFailed
     gc.garbage.remove(obj)
 
 def test_function():
@@ -125,15 +104,8 @@ def test_function():
     exec("def f(): pass\n") in d
     gc.collect()
     del d
-    expect(gc.collect(), 2, "function")
-
-def test_frame():
-    def f():
-        frame = sys._getframe()
-    gc.collect()
-    f()
-    expect(gc.collect(), 1, "frame")
-
+    if gc.collect() != 2:
+        raise TestFailed
 
 def test_saveall():
     # Verify that cyclic garbage like lists show up in gc.garbage if the
@@ -151,7 +123,7 @@ def test_saveall():
                 del obj[:]
                 break
         else:
-            raise TestFailed, "didn't find obj in garbage (saveall)"
+            raise TestFailed
         gc.garbage.remove(obj)
     finally:
         gc.set_debug(debug)
@@ -173,17 +145,13 @@ def test_del():
 
 
 def test_all():
-    gc.collect() # Delete 2nd generation garbage
     run_test("lists", test_list)
     run_test("dicts", test_dict)
     run_test("tuples", test_tuple)
     run_test("classes", test_class)
-    run_test("new style classes", test_newstyleclass)
     run_test("instances", test_instance)
-    run_test("new instances", test_newinstance)
     run_test("methods", test_method)
     run_test("functions", test_function)
-    run_test("frames", test_frame)
     run_test("finalizers", test_finalizer)
     run_test("__del__", test_del)
     run_test("saveall", test_saveall)

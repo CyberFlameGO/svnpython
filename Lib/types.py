@@ -2,53 +2,35 @@
 
 Types that are part of optional modules (e.g. array) are not listed.
 """
-from __future__ import generators
 
 import sys
 
-# Iterators in Python aren't a matter of type but of protocol.  A large
-# and changing number of builtin types implement *some* flavor of
-# iterator.  Don't check the type!  Use hasattr to check for both
-# "__iter__" and "next" attributes instead.
-
 NoneType = type(None)
-TypeType = type
-ObjectType = object
+TypeType = type(NoneType)
 
-IntType = int
-LongType = long
-FloatType = float
+IntType = type(0)
+LongType = type(0L)
+FloatType = type(0.0)
 try:
-    ComplexType = complex
+    ComplexType = type(complex(0,1))
 except NameError:
     pass
 
-StringType = str
-try:
-    UnicodeType = unicode
-    StringTypes = (StringType, UnicodeType)
-except NameError:
-    StringTypes = (StringType,)
-
+StringType = type('')
+UnicodeType = type(u'')
 BufferType = type(buffer(''))
 
-TupleType = tuple
-ListType = list
-DictType = DictionaryType = dict
+TupleType = type(())
+ListType = type([])
+DictType = DictionaryType = type({})
 
 def _f(): pass
 FunctionType = type(_f)
 LambdaType = type(lambda: None)         # Same as FunctionType
 try:
     CodeType = type(_f.func_code)
-except RuntimeError:
-    # Execution in restricted environment
+except:
     pass
-
-def g():
-    yield 1
-GeneratorType = type(g())
-del g
 
 class _C:
     def _m(self): pass
@@ -62,7 +44,11 @@ BuiltinFunctionType = type(len)
 BuiltinMethodType = type([].append)     # Same as BuiltinFunctionType
 
 ModuleType = type(sys)
-FileType = file
+
+try:
+    FileType = type(sys.__stdin__)
+except:
+    pass
 XRangeType = type(xrange(0))
 
 try:
@@ -72,15 +58,11 @@ except TypeError:
         tb = sys.exc_info()[2]
         TracebackType = type(tb)
         FrameType = type(tb.tb_frame)
-    except AttributeError:
-        # In the restricted environment, exc_info returns (None, None,
-        # None) Then, tb.tb_frame gives an attribute error
+    except:
         pass
     tb = None; del tb
 
 SliceType = type(slice(0))
 EllipsisType = type(Ellipsis)
 
-DictProxyType = type(TypeType.__dict__)
-
-del sys, _f, _C, _x, generators                  # Not for export
+del sys, _f, _C, _x                     # Not for export

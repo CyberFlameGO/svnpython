@@ -96,6 +96,7 @@ class shlex:
 
     def read_token(self):
         "Read a token from the input stream (no pushback or inclusions)"
+        tok = ''
         while 1:
             nextchar = self.instream.read(1)
             if nextchar == '\n':

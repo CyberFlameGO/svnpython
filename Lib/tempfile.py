@@ -34,10 +34,6 @@ def gettempdir():
             attempdirs.insert(0, dirname)
         except macfs.error:
             pass
-    elif os.name == 'riscos':
-        scrapdir = os.getenv('Wimp$ScrapDir')
-        if scrapdir:
-            attempdirs.insert(0, scrapdir)
     for envname in 'TMPDIR', 'TEMP', 'TMP':
         if os.environ.has_key(envname):
             attempdirs.insert(0, os.environ[envname])
@@ -91,7 +87,7 @@ if os.name == "posix":
 # string.
 elif os.name == "nt":
     template = '~' + `os.getpid()` + '-'
-elif os.name in ('mac', 'riscos'):
+elif os.name == 'mac':
     template = 'Python-Tmp-'
 else:
     template = 'tmp' # XXX might choose a better one
@@ -128,26 +124,17 @@ class TemporaryFileWrapper:
     In particular, it seeks to automatically remove the file when it is
     no longer needed.
     """
-
-    # Cache the unlinker so we don't get spurious errors at shutdown
-    # when the module-level "os" is None'd out.  Note that this must
-    # be referenced as self.unlink, because the name TemporaryFileWrapper
-    # may also get None'd out before __del__ is called.
-    unlink = os.unlink
-
     def __init__(self, file, path):
         self.file = file
         self.path = path
-        self.close_called = 0
 
     def close(self):
-        if not self.close_called:
-            self.close_called = 1
-            self.file.close()
-            self.unlink(self.path)
+        self.file.close()
+        os.unlink(self.path)
 
     def __del__(self):
-        self.close()
+        try: self.close()
+        except: pass
 
     def __getattr__(self, name):
         file = self.__dict__['file']

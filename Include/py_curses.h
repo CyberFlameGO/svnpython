@@ -6,21 +6,6 @@
 #include <ncurses.h>
 #else
 #include <curses.h>
-#ifdef HAVE_TERM_H
-/* for tigetstr, which is not declared in SysV curses */
-#include <term.h>
-#endif
-#endif
-
-#ifdef HAVE_NCURSES_H
-/* configure was checking <curses.h>, but we will
-   use <ncurses.h>, which has all these features. */
-#ifndef WINDOW_HAS_FLAGS
-#define WINDOW_HAS_FLAGS 1
-#endif
-#ifndef MVWDELCH_IS_EXPRESSION
-#define MVWDELCH_IS_EXPRESSION 1
-#endif
 #endif
 
 #ifdef __cplusplus

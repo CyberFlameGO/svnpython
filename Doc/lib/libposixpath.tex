@@ -7,10 +7,6 @@
 This module implements some useful functions on pathnames.
 \index{path!operations}
 
-\warning{On Windows, many of these functions do not properly
-support UNC pathnames.  \function{splitunc()} and \function{ismount()}
-do handle them correctly.}
-
 
 \begin{funcdesc}{abspath}{path}
 Return a normalized absolutized version of the pathname \var{path}.
@@ -127,7 +123,7 @@ inserted between components, unless \var{path} is empty.
 \end{funcdesc}
 
 \begin{funcdesc}{normcase}{path}
-Normalize the case of a pathname.  On \UNIX, this returns the path
+Normalize the case of a pathname.  On \UNIX{}, this returns the path
 unchanged; on case-insensitive filesystems, it converts the path to
 lowercase.  On Windows, it also converts forward slashes to backward
 slashes.
@@ -141,26 +137,19 @@ case (use \function{normcase()} for that).  On Windows, it converts
 forward slashes to backward slashes.
 \end{funcdesc}
 
-\begin{funcdesc}{realpath}{path}
-Return the canonical path of the specified filename, eliminating any
-symbolic links encountered in the path.
-Availability:  \UNIX.
-\versionadded{2.2}
-\end{funcdesc}
-
 \begin{funcdesc}{samefile}{path1, path2}
 Return true if both pathname arguments refer to the same file or
 directory (as indicated by device number and i-node number).
 Raise an exception if a \function{os.stat()} call on either pathname
 fails.
-Availability:  Macintosh, \UNIX.
+Availability:  Macintosh, \UNIX{}.
 \end{funcdesc}
 
 \begin{funcdesc}{sameopenfile}{fp1, fp2}
 Return true if the file objects \var{fp1} and \var{fp2} refer to the
 same file.  The two file objects may represent different file
 descriptors.
-Availability:  Macintosh, \UNIX.
+Availability:  Macintosh, \UNIX{}.
 \end{funcdesc}
 
 \begin{funcdesc}{samestat}{stat1, stat2}
@@ -169,7 +158,7 @@ the same file.  These structures may have been returned by
 \function{fstat()}, \function{lstat()}, or \function{stat()}.  This
 function implements the underlying comparison used by
 \function{samefile()} and \function{sameopenfile()}.
-Availability:  Macintosh, \UNIX.
+Availability:  Macintosh, \UNIX{}.
 \end{funcdesc}
 
 \begin{funcdesc}{split}{path}

@@ -73,13 +73,11 @@ _PyBuffer_FromObject(PyObject *base, int offset, int size,
 		offset = count;
 	if ( offset + size > count )
 		size = count - offset;
-	
-	/* if the base object is another buffer, then "deref" it,
-	 * except if the base of the other buffer is NULL
-	 */
-	if ( PyBuffer_Check(base) && (((PyBufferObject *)base)->b_base) )
+
+	/* if the base object is another buffer, then "deref" it */
+	if ( PyBuffer_Check(base) )
 		base = ((PyBufferObject *)base)->b_base;
-	
+
 	return _PyBuffer_FromMemory(base, (char *)p + offset, size, readonly);
 }
 
@@ -186,22 +184,28 @@ buffer_compare(PyBufferObject *self, PyBufferObject *other)
 static PyObject *
 buffer_repr(PyBufferObject *self)
 {
+	char buf[300];
 	char *status = self->b_readonly ? "read-only" : "read-write";
 
 	if ( self->b_base == NULL )
-		return PyString_FromFormat("<%s buffer ptr %p, size %d at %p>",
-					   status,
-					   self->b_ptr,
-					   self->b_size,
-					   self);
+	{
+		sprintf(buf, "<%s buffer ptr %p, size %d at %p>",
+			status,
+			self->b_ptr,
+			self->b_size,
+			self);
+	}
 	else
-		return PyString_FromFormat(
-			"<%s buffer for %p, ptr %p, size %d at %p>",
+	{
+		sprintf(buf, "<%s buffer for %p, ptr %p, size %d at %p>",
 			status,
 			self->b_base,
 			self->b_ptr,
 			self->b_size,
 			self);
+	}
+
+	return PyString_FromString(buf);
 }
 
 static long
@@ -533,21 +537,21 @@ PyTypeObject PyBuffer_Type = {
 	"buffer",
 	sizeof(PyBufferObject),
 	0,
-	(destructor)buffer_dealloc, 		/* tp_dealloc */
-	0,					/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	(cmpfunc)buffer_compare,		/* tp_compare */
-	(reprfunc)buffer_repr,			/* tp_repr */
-	0,					/* tp_as_number */
-	&buffer_as_sequence,			/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	(hashfunc)buffer_hash,			/* tp_hash */
-	0,					/* tp_call */
-	(reprfunc)buffer_str,			/* tp_str */
-	PyObject_GenericGetAttr,		/* tp_getattro */
-	0,					/* tp_setattro */
-	&buffer_as_buffer,			/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,			/* tp_flags */
-	0,					/* tp_doc */
+	(destructor)buffer_dealloc, /*tp_dealloc*/
+	0,		/*tp_print*/
+	0,		/*tp_getattr*/
+	0,		/*tp_setattr*/
+	(cmpfunc)buffer_compare, /*tp_compare*/
+	(reprfunc)buffer_repr, /*tp_repr*/
+	0,		/*tp_as_number*/
+	&buffer_as_sequence,	/*tp_as_sequence*/
+	0,		/*tp_as_mapping*/
+	(hashfunc)buffer_hash,	/*tp_hash*/
+	0,		/*tp_call*/
+	(reprfunc)buffer_str,		/*tp_str*/
+	0,		/*tp_getattro*/
+	0,		/*tp_setattro*/
+	&buffer_as_buffer,	/*tp_as_buffer*/
+	Py_TPFLAGS_DEFAULT,	/*tp_flags*/
+	0,		/*tp_doc*/
 };

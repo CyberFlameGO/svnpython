@@ -4,6 +4,7 @@
 #include <kernel/image.h>
 #include <kernel/OS.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "Python.h"
 #include "importdl.h"
@@ -193,20 +194,20 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 			printf( "load_add_on( %s ) failed", fullpath );
 		}
 
-		if( the_id == B_ERROR )
-			PyOS_snprintf( buff, sizeof(buff),
-				       "BeOS: Failed to load %.200s",
-				       fullpath );
-		else
-			PyOS_snprintf( buff, sizeof(buff), 
-				       "Unknown error loading %.200s", 
-				       fullpath );
+		switch( the_id ) {
+		case B_ERROR:
+			sprintf( buff, "BeOS: Failed to load %.200s", fullpath );
+			break;
+		default:
+			sprintf( buff, "Unknown error loading %.200s", fullpath );
+			break;
+		}
 
 		PyErr_SetString( PyExc_ImportError, buff );
 		return NULL;
 	}
 
-	PyOs_snprintf(funcname, sizeof(funcname), "init%.200s", shortname);
+	sprintf(funcname, "init%.200s", shortname);
 	if( Py_VerboseFlag ) {
 		printf( "get_image_symbol( %s )\n", funcname );
 	}
@@ -223,19 +224,16 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 
 		switch( retval ) {
 		case B_BAD_IMAGE_ID:
-			PyOS_snprintf( buff, sizeof(buff),
-			       "can't load init function for dynamic module: "
-		               "Invalid image ID for %.180s", fullpath );
+			sprintf( buff, "can't load init function for dynamic module: "
+			               "Invalid image ID for %.180s", fullpath );
 			break;
 		case B_BAD_INDEX:
-			PyOS_snprintf( buff, sizeof(buff),
-			       "can't load init function for dynamic module: "
-		               "Bad index for %.180s", funcname );
+			sprintf( buff, "can't load init function for dynamic module: "
+			               "Bad index for %.180s", funcname );
 			break;
 		default:
-			PyOS_snprintf( buff, sizeof(buf),
-			       "can't load init function for dynamic module: "
-		               "Unknown error looking up %.180s", funcname );
+			sprintf( buff, "can't load init function for dynamic module: "
+			               "Unknown error looking up %.180s", funcname );
 			break;
 		}
 

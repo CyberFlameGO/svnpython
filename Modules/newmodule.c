@@ -40,8 +40,10 @@ new_instancemethod(PyObject* unused, PyObject* args)
 	PyObject* self;
 	PyObject* classObj;
 
-	if (!PyArg_ParseTuple(args, "OOO:instancemethod",
-			      &func, &self, &classObj))
+	if (!PyArg_ParseTuple(args, "OOO!:instancemethod",
+			      &func,
+			      &self,
+			      &PyClass_Type, &classObj))
 		return NULL;
 	if (!PyCallable_Check(func)) {
 		PyErr_SetString(PyExc_TypeError,
@@ -50,6 +52,11 @@ new_instancemethod(PyObject* unused, PyObject* args)
 	}
 	if (self == Py_None)
 		self = NULL;
+	else if (!PyInstance_Check(self)) {
+		PyErr_SetString(PyExc_TypeError,
+				"second argument must be instance or None");
+		return NULL;
+	}
 	return PyMethod_New(func, self, classObj);
 }
 
@@ -117,6 +124,7 @@ new_code(PyObject* unused, PyObject* args)
 	PyObject* name;
 	int firstlineno;
 	PyObject* lnotab;
+	PyBufferProcs *pb;
 
 	if (!PyArg_ParseTuple(args, "iiiiSO!O!O!SSiS|O!O!:code",
 			      &argcount, &nlocals, &stacksize, &flags,
@@ -145,7 +153,12 @@ new_code(PyObject* unused, PyObject* args)
 		Py_DECREF(empty);
 	}
 
-	if (!PyObject_CheckReadBuffer(code)) {
+	pb = code->ob_type->tp_as_buffer;
+	if (pb == NULL ||
+	    pb->bf_getreadbuffer == NULL ||
+	    pb->bf_getsegcount == NULL ||
+	    (*pb->bf_getsegcount)(code, NULL) != 1)
+	{
 		PyErr_SetString(PyExc_TypeError,
 		  "bytecode object must be a single-segment read-only buffer");
 		return NULL;
@@ -202,7 +215,7 @@ static PyMethodDef new_methods[] = {
 	{NULL,			NULL}		/* sentinel */
 };
 
-static char new_doc[] =
+char new_doc[] =
 "Functions to create new objects used by the interpreter.\n\
 \n\
 You need to know a great deal about the interpreter to use this!";

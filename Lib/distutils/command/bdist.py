@@ -17,7 +17,7 @@ from distutils.util import get_platform
 def show_formats ():
     """Print list of available formats (arguments to "--format" option).
     """
-    from distutils.fancy_getopt import FancyGetopt
+    from distutils.fancy_getopt import FancyGetopt 
     formats=[]
     for format in bdist.format_commands:
         formats.append(("formats=" + format, None,
@@ -40,11 +40,7 @@ class bdist (Command):
                     ('dist-dir=', 'd',
                      "directory to put final built distributions in "
                      "[default: dist]"),
-                    ('skip-build', None,
-                     "skip rebuilding everything (for testing/debugging)"),
                    ]
-
-    boolean_options = ['skip-build']
 
     help_options = [
         ('help-formats', None,
@@ -80,7 +76,6 @@ class bdist (Command):
         self.plat_name = None
         self.formats = None
         self.dist_dir = None
-        self.skip_build = 0
 
     # initialize_options()
 
@@ -109,7 +104,7 @@ class bdist (Command):
 
         if self.dist_dir is None:
             self.dist_dir = "dist"
-
+            
     # finalize_options()
 
 

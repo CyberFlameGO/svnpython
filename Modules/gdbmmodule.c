@@ -382,7 +382,7 @@ dbm_getattr(dbmobject *dp, char *name)
 static PyTypeObject Dbmtype = {
     PyObject_HEAD_INIT(0)
     0,
-    "gdbm.gdbm",
+    "gdbm",
     sizeof(dbmobject),
     0,
     (destructor)dbm_dealloc,            /*tp_dealloc*/
@@ -477,8 +477,7 @@ dbmopen(PyObject *self, PyObject *args)
                 break;
 #endif
             default:
-                PyOS_snprintf(buf, sizeof(buf), "Flag '%c' is not supported.",
-                	      *flags);
+                sprintf(buf, "Flag '%c' is not supported.", *flags);
                 PyErr_SetString(DbmError, buf);
                 return NULL;
         }
@@ -506,7 +505,7 @@ static PyMethodDef dbmmodule_methods[] = {
 
 DL_EXPORT(void)
 initgdbm(void) {
-    PyObject *m, *d, *s;
+    PyObject *m, *d;
 
     Dbmtype.ob_type = &PyType_Type;
     m = Py_InitModule4("gdbm", dbmmodule_methods,
@@ -516,8 +515,7 @@ initgdbm(void) {
     DbmError = PyErr_NewException("gdbm.error", NULL, NULL);
     if (DbmError != NULL) {
         PyDict_SetItemString(d, "error", DbmError);
-        s = PyString_FromString(dbmmodule_open_flags);
-        PyDict_SetItemString(d, "open_flags", s);
-        Py_DECREF(s);
+        PyDict_SetItemString(d, "open_flags",
+                PyString_FromString(dbmmodule_open_flags));
     }
 }

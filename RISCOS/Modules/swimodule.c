@@ -13,10 +13,11 @@
    * Added "errnum" attribute to swi.error, so one can now check to see what the error number was
 */
 
-#include "oslib/os.h"
-#include <kernel.h>
+#include "h.os"
+#include "h.kernel"
 #include "Python.h"
 
+#include <errno.h>
 
 #define PyBlock_Check(op) ((op)->ob_type == &PyBlockType)
 

@@ -2,13 +2,12 @@
 
 import FrameWork
 import EasyDialogs
-from Carbon import Res
-from Carbon import Qd
-from Carbon import Win
-from Carbon import List
+import Res
+import Qd
+import Win
+import List
 import sys
 import struct
-import macresource
 
 #
 # Resource definitions
@@ -21,7 +20,14 @@ LEFT=200
 TOP=64
 
 def main():
-	macresource.need('DLOG', ID_MAIN, "oldPICTbrowse.rsrc")
+	try:
+		dummy = Res.GetResource('DLOG', ID_MAIN)
+	except Res.Error:
+		try:
+			Res.FSpOpenResFile("oldPICTbrowse.rsrc", 0)
+		except Res.Error, arg:
+			EasyDialogs.Message("Cannot open PICTbrowse.rsrc: "+arg[1])
+			sys.exit(1)	
 	PICTbrowse()
 
 class PICTbrowse(FrameWork.Application):

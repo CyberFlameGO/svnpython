@@ -5,10 +5,7 @@
 
 import sys
 import os
-if os.sep == ':':
-	BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
-else:
-	BGENDIR="../../../Tools/bgen/bgen"
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 from scantools import Scanner
 from bgenlocations import TOOLBOXDIR
@@ -32,16 +29,10 @@ class MyScanner(Scanner):
 	def destination(self, type, name, arglist):
 		classname = "Function"
 		listname = "functions"
-		if arglist:
-			t, n, m = arglist[0]
-			if t == 'ScrapRef' and m == "InMode":
-				classname = "Method"
-				listname = "methods"
 		return classname, listname
 
 	def makeblacklistnames(self):
 		return [
-			"GetScrapFlavorInfoList",
 			]
 
 	def makegreylist(self):
@@ -59,7 +50,7 @@ class MyScanner(Scanner):
 
 	def makeblacklisttypes(self):
 		return [
-			'ScrapPromiseKeeperUPP',
+			"ScrapRef",		# For now -- This is the Carbon scrap main object
 			]
 
 	def makerepairinstructions(self):

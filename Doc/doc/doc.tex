@@ -11,7 +11,7 @@
 \author{Fred L. Drake, Jr.}
 \authoraddress{
 	PythonLabs \\
-	Email: \email{fdrake@acm.org}
+	E-mail: \email{fdrake@acm.org}
 }
 
 
@@ -38,7 +38,7 @@ distribution, to create or maintain whole documents or sections.
 \tableofcontents
 
 
-\section{Introduction \label{intro}}
+\section{Introduction}
 
   Python's documentation has long been considered to be good for a
   free programming language.  There are a number of reasons for this,
@@ -71,7 +71,7 @@ distribution, to create or maintain whole documents or sections.
   discussing future directions for the Python documentation and where
   to turn for more information.
 
-\section{Directory Structure \label{directories}}
+\section{Directory Structure}
 
   The source distribution for the standard Python documentation
   contains a large number of directories.  While third-party documents
@@ -153,59 +153,6 @@ distribution, to create or maintain whole documents or sections.
   \end{definitions}
 
 
-\section{Style Guide \label{style-guide}}
-
-  The Python documentation should follow the \citetitle
-  [http://developer.apple.com/techpubs/macos8/pdf/apple_styleguide00.pdf]
-  {Apple Publications Style Guide} wherever possible.  This particular
-  style guide was selected mostly because it seems reasonable and is
-  easy to get online.  (Printed copies are available; see the Apple's
-  \citetitle[http://developer.apple.com/techpubs/faq.html]{Developer
-  Documentation FAQ} for more information.)
-
-  Topics which are not covered in the Apple's style guide will be
-  discussed in this document if necessary.
-
-  Many special names are used in the Python documentation, including
-  the names of operating systems, programming languages, standards
-  bodies, and the like.  Many of these were assigned \LaTeX{} macros
-  at some point in the distant past, and these macros lived on long
-  past their usefulness.  In the current markup, most of these entities
-  are not assigned any special markup, but the preferred spellings are
-  given here to aid authors in maintaining the consistency of
-  presentation in the Python documentation.
-
-  Other terms and words deserve special mention as well; these conventions
-  should be used to ensure consistency throughout the documentation:
-
-  \begin{description}
-    \item[CPU]
-    For ``central processing unit.''  Many style guides say this
-    should be spelled out on the first use (and if you must use it,
-    do so!).  For the Python documentation, this abbreviation should
-    be avoided since there's no reasonable way to predict which occurance
-    will be the first seen by the reader.  It is better to use the
-    word ``processor'' instead.
-
-    \item[\POSIX]
-	The name assigned to a particular group of standards.  This is
-	always uppercase.  Use the macro \macro{POSIX} to represent this
-    name.
-
-    \item[Python]
-	The name of our favorite programming language is always
-	capitalized.
-
-    \item[Unicode]
-	The name of a character set and matching encoding.  This is
-    always written capitalized.
-
-    \item[\UNIX]
-    The name of the operating system developed at AT\&T Bell Labs
-    in the early 1970s.  Use the macro \macro{UNIX} to use this name.
-  \end{description}
-
-
 \section{\LaTeX{} Primer \label{latex-primer}}
 
   This section is a brief introduction to \LaTeX{} concepts and
@@ -249,7 +196,7 @@ distribution, to create or maintain whole documents or sections.
   bulleted lists, and special structures for the document abstract and
   indexes.
 
-  \subsection{Syntax \label{latex-syntax}}
+  \subsection{Syntax}
 
     There are some things that an author of Python documentation needs
     to know about \LaTeX{} syntax.
@@ -403,7 +350,7 @@ This \UNIX\ is also followed by a space.
 \end{tableii}
 
 
-  \subsection{Hierarchical Structure \label{latex-syntax}}
+  \subsection{Hierarchical Structure}
 
     \LaTeX{} expects documents to be arranged in a conventional,
     hierarchical way, with chapters, sections, sub-sections,
@@ -462,13 +409,15 @@ This \UNIX\ is also followed by a space.
   broader.  This class is used for ``how-to'' documents (this
   document is an example) and for shorter reference manuals for small,
   fairly cohesive module libraries.  Examples of the later use include
+  the standard \citetitle[../mac/mac.html]{Macintosh Library Modules}
+  and
 \citetitle[http://starship.python.net/crew/fdrake/manuals/krb5py/krb5py.html]{Using
   Kerberos from Python}, which contains reference material for an
   extension package.  These documents are roughly equivalent to a
   single chapter from a larger work.
 
 
-\section{Special Markup Constructs \label{special-constructs}}
+\section{Special Markup Constructs}
 
   The Python document classes define a lot of new environments and
   macros.  This section contains the reference material for these
@@ -570,19 +519,9 @@ This \UNIX\ is also followed by a space.
       Like \env{datadesc}, but without creating any index entries.
     \end{envdesc}
 
-    \begin{envdesc}{excclassdesc}{\p{name}\p{constructor parameters}}
-      Descibe an exception defined by a class.  \var{constructor
-      parameters} should not include the \var{self} parameter or
-      the parentheses used in the call syntax.  To describe an
-      exception class without describing the parameters to its
-      constructor, use the \env{excdesc} environment.
-    \end{envdesc}
-
     \begin{envdesc}{excdesc}{\p{name}}
       Describe an exception.  This may be either a string exception or
-      a class exception.  In the case of class exceptions, the
-      constructor parameters are not described; use \env{excclassdesc}
-      to describe an exception class and its constructor.
+      a class exception.
     \end{envdesc}
 
     \begin{envdesc}{funcdesc}{\p{name}\p{parameters}}
@@ -608,13 +547,6 @@ This \UNIX\ is also followed by a space.
       the parentheses used in the call syntax.
     \end{envdesc}
 
-    \begin{envdesc}{classdesc*}{\p{name}}
-      Describe a class without describing the constructor.  This can
-      be used to describe classes that are merely containers for
-      attributes or which should never be instantiated or subclassed
-      by user code.
-    \end{envdesc}
-
     \begin{envdesc}{memberdesc}{\op{type name}\p{name}}
       Describe an object data attribute.  The description should
       include information about the type of the data to be expected
@@ -635,7 +567,7 @@ This \UNIX\ is also followed by a space.
     \end{envdesc}
 
 
-  \subsection{Showing Code Examples \label{showing-examples}}
+  \subsection{Showing Code Examples}
 
     Examples of Python source code or interactive sessions are
     represented as \env{verbatim} environments.  This environment
@@ -662,28 +594,13 @@ This \UNIX\ is also followed by a space.
     non-Python code and non-code displays.  There should be no blank
     lines at the top or bottom of any \env{verbatim} display.
 
-    Longer displays of verbatim text may be included by storing the
-    example text in an external file containing only plain text.  The
-    file may be included using the standard \macro{verbatiminput}
-    macro; this macro takes a single argument naming the file
-    containing the text.  For example, to include the Python source
-    file \file{example.py}, use:
-
-\begin{verbatim}
-\verbatiminput{example.py}
-\end{verbatim}
-
-    Use of \macro{verbatiminput} allows easier use of special editing
-    modes for the included file.  The file should be placed in the
-    same directory as the \LaTeX{} files for the document.
-
     The Python Documentation Special Interest Group has discussed a
     number of approaches to creating pretty-printed code displays and
     interactive sessions; see the Doc-SIG area on the Python Web site
     for more information on this topic.
 
 
-  \subsection{Inline Markup \label{inline-markup}}
+  \subsection{Inline Markup}
 
     The macros described in this section are used to mark just about
     anything interesting in the document text.  They may be used in
@@ -776,55 +693,31 @@ This \UNIX\ is also followed by a space.
       The name of a file or directory.  In the PDF and PostScript
       outputs, single quotes and a font change are used to indicate
       the file name, but no quotes are used in the HTML output.
-      \warning{The \macro{file} macro cannot be used in the
-      content of a section title due to processing limitations.}
+      \strong{Warning:} The \macro{file} macro cannot be used in the
+      content of a section title due to processing limitations.
     \end{macrodesc}
 
     \begin{macrodesc}{filenq}{\p{file or dir}}
       Like \macro{file}, but single quotes are never used.  This can
       be used in conjunction with tables if a column will only contain 
       file or directory names.
-      \warning{The \macro{filenq} macro cannot be used in the
-      content of a section title due to processing limitations.}
+      \strong{Warning:} The \macro{filenq} macro cannot be used in the
+      content of a section title due to processing limitations.
     \end{macrodesc}
 
     \begin{macrodesc}{function}{\p{name}}
       The name of a Python function; dotted names may be used.
     \end{macrodesc}
 
-    \begin{macrodesc}{infinity}{}
-      The symbol for mathematical infinity: \infinity.  Some Web
-      browsers are not able to render the HTML representation of this
-      symbol properly, but support is growing.
-    \end{macrodesc}
-
     \begin{macrodesc}{kbd}{\p{key sequence}}
       Mark a sequence of keystrokes.  What form \var{key sequence}
       takes may depend on platform- or application-specific
-      conventions.  When there are no relevant conventions, the names
-      of modifier keys should be spelled out, to improve accessibility
-      for new users and non-native speakers.  For example, an
-      \program{xemacs} key sequence may be marked like
-      \code{\e kbd\{C-x C-f\}}, but without reference to a specific
-      application or platform, the same sequence should be marked as
-      \code{\e kbd\{Control-x Control-f\}}.
+      conventions.  For example, an \program{xemacs} key sequence
+      may be marked like \code{\e kbd\{C-x C-f\}}.
     \end{macrodesc}
 
     \begin{macrodesc}{keyword}{\p{name}}
       The name of a keyword in a programming language.
-    \end{macrodesc}
-
-    \begin{macrodesc}{mailheader}{\p{name}}
-      The name of an \rfc{822}-style mail header.  This markup does
-      not imply that the header is being used in an email message, but
-      can be used to refer to any header of the same ``style.''  This
-      is also used for headers defined by the various MIME
-      specifications.  The header name should be entered in the same
-      way it would normally be found in practice, with the
-      camel-casing conventions being preferred where there is more
-      than one common usage.  The colon which follows the name of the
-      header should not be included.
-      For example: \code{\e mailheader\{Content-Type\}}.
     \end{macrodesc}
 
     \begin{macrodesc}{makevar}{\p{name}}
@@ -846,8 +739,7 @@ This \UNIX\ is also followed by a space.
     \end{macrodesc}
 
     \begin{macrodesc}{mimetype}{\p{name}}
-      The name of a MIME type, or a component of a MIME type (the
-      major or minor portion, taken alone).
+      The name of a MIME type.
     \end{macrodesc}
 
     \begin{macrodesc}{module}{\p{name}}
@@ -856,30 +748,7 @@ This \UNIX\ is also followed by a space.
     \end{macrodesc}
 
     \begin{macrodesc}{newsgroup}{\p{name}}
-      The name of a Usenet newsgroup.
-    \end{macrodesc}
-
-    \begin{macrodesc}{note}{\p{text}}
-      An especially important bit of information about an API that a
-      user should be aware of when using whatever bit of API the
-      note pertains to.  This should be the last thing in the
-      paragraph as the end of the note is not visually marked in
-      any way.  The content of \var{text} should be written in
-      complete sentences and include all appropriate punctuation.
-    \end{macrodesc}
-
-    \begin{macrodesc}{pep}{\p{number}}
-      A reference to a Python Enhancement Proposal.  This generates
-      appropriate index entries.  The text \samp{PEP \var{number}} is
-      generated; in the HTML output, this text is a hyperlink to an
-      online copy of the specified PEP.
-    \end{macrodesc}
-
-    \begin{macrodesc}{plusminus}{}
-      The symbol for indicating a value that may take a positive or
-      negative value of a specified magnitude, typically represented
-      by a plus sign placed over a minus sign.  For example:
-      \code{\e plusminus 3\%{}}.
+      The name of a USENET newsgroup.
     \end{macrodesc}
 
     \begin{macrodesc}{program}{\p{name}}
@@ -899,6 +768,13 @@ This \UNIX\ is also followed by a space.
       should only be used for long option names which will be prefixed
       by two hyphens; the hyphens should not be provided as part of
       \var{option}.
+    \end{macrodesc}
+
+    \begin{macrodesc}{pep}{\p{number}}
+      A reference to a Python Enhancement Proposal.  This generates
+      appropriate index entries.  The text \samp{PEP \var{number}} is
+      generated; in the HTML output, this text is a hyperlink to an
+      online copy of the specified PEP.
     \end{macrodesc}
 
     \begin{macrodesc}{refmodule}{\op{key}\p{name}}
@@ -943,26 +819,15 @@ This \UNIX\ is also followed by a space.
       font.
     \end{macrodesc}
 
-    \begin{macrodesc}{ulink}{\p{text}\p{url}}
-      A hypertext link with a target specified by a URL, but for which
-      the link text should not be the title of the resource.  For
-      resources being referenced by name, use the \macro{citetitle}
-      macro.  Not all formatted versions support arbitrary hypertext
-      links.  Note that many characters are special to \LaTeX{} and
-      this macro does not always do the right thing.  In particular,
-      the tilde character (\character{\~}) is mis-handled; encoding it
-      as a hex-sequence does work, use \samp{\%7e} in place of the
-      tilde character.
-    \end{macrodesc}
-
     \begin{macrodesc}{url}{\p{url}}
       A URL (or URN).  The URL will be presented as text.  In the HTML 
       and PDF formatted versions, the URL will also be a hyperlink.
-      This can be used when referring to external resources without
-      specific titles; references to resources which have titles
-      should be marked using the \macro{citetitle} macro.  See the
-      comments about special characters in the description of the
-      \macro{ulink} macro for special considerations.
+      This can be used when referring to external resources.  Note
+      that many characters are special to \LaTeX{} and this macro
+      does not always do the right thing.  In particular, the tilde
+      character (\character{\~}) is mis-handled; encoding it as a
+      hex-sequence does work, use \samp{\%7e} in place of the tilde
+      character.
     \end{macrodesc}
 
     \begin{macrodesc}{var}{\p{name}}
@@ -998,38 +863,8 @@ This \UNIX\ is also followed by a space.
       explanation makes sense and may vary as needed.
     \end{macrodesc}
 
-    \begin{macrodesc}{warning}{\p{text}}
-      An important bit of information about an API that a user should
-      be very aware of when using whatever bit of API the warning
-      pertains to.  This should be the last thing in the paragraph as
-      the end of the warning is not visually marked in any way.  The
-      content of \var{text} should be written in complete sentences
-      and include all appropriate punctuation.  This differs from
-      \macro{note} in that it is recommended over \macro{note} for
-      information regarding security.
-    \end{macrodesc}
 
-
-  \subsection{Miscellaneous Text Markup \label{misc-text-markup}}
-
-  In addition to the inline markup, some additional ``block'' markup
-  is defined to make it easier to bring attention to various bits of
-  text.  The markup described here serves this purpose, and is
-  intended to be used when marking one or more paragraphs or other
-  block constructs (such as \env{verbatim} environments).
-
-  \begin{envdesc}{notice}{\op{type}}
-    Label some paragraphs as being worthy of additional attention from
-    the reader.  What sort of attention is warrented can be indicated
-    by specifying the \var{type} of the notice.  The only values
-    defined for \var{type} are \code{note} and \code{warning}; these
-    are equivalent in intent to the inline markup of the same name.
-    If \var{type} is omitted, \code{note} is used.  Additional values
-    may be defined in the future.
-  \end{envdesc}
-
-
-  \subsection{Module-specific Markup \label{module-markup}}
+  \subsection{Module-specific Markup}
 
   The markup described in this section is used to provide information
   about a module being documented.  A typical use of this markup
@@ -1042,16 +877,16 @@ This \UNIX\ is also followed by a space.
 
 \declaremodule{extension}{spam}
   \platform{Unix}
-\modulesynopsis{Access to the SPAM facility of \UNIX.}
+\modulesynopsis{Access to the SPAM facility of \UNIX{}.}
 \moduleauthor{Jane Doe}{jane.doe@frobnitz.org}
 \end{verbatim}
 
   Python packages\index{packages} --- collections of modules that can
   be described as a unit --- are documented using the same markup as
   modules.  The name for a module in a package should be typed in
-  ``fully qualified'' form (it should include the package name).
+  ``fully qualified'' form (i.e., it should include the package name).
   For example, a module ``foo'' in package ``bar'' should be marked as
-  \code{\e module\{bar.foo\}}, and the beginning of the reference
+  \samp{\e module\{bar.foo\}}, and the beginning of the reference
   section would appear as:
 
 \begin{verbatim}
@@ -1107,7 +942,7 @@ This \UNIX\ is also followed by a space.
   \end{macrodesc}
 
 
-  \subsection{Library-level Markup \label{library-markup}}
+  \subsection{Library-level Markup}
 
     This markup is used when describing a selection of modules.  For
     example, the \citetitle[../mac/mac.html]{Macintosh Library
@@ -1124,7 +959,7 @@ This \UNIX\ is also followed by a space.
   \end{macrodesc}
 
 
-  \subsection{Table Markup \label{table-markup}}
+  \subsection{Table Markup}
 
     There are three general-purpose table environments defined which
     should be used whenever possible.  These environments are defined
@@ -1134,7 +969,7 @@ This \UNIX\ is also followed by a space.
     be used for an advantage when the documents are processed using
     the tools for Python documentation processing.  In particular, the
     generated HTML looks good!  There is also an advantage for the
-    eventual conversion of the documentation to XML (see section
+    eventual conversion of the documentation to SGML (see section
     \ref{futures}, ``Future Directions'').
 
     Each environment is named \env{table\var{cols}}, where \var{cols}
@@ -1222,22 +1057,6 @@ This \UNIX\ is also followed by a space.
       text for the fourth column is given by \var{column4}.
     \end{macrodesc}
 
-    \begin{envdesc}{tablev}{\p{colspec}\p{col1font}\p{heading1}\p{heading2}\p{heading3}\p{heading4}\p{heading5}}
-      Like the \env{tableiv} environment, but with a fifth column.
-      The heading for the fifth column is given by \var{heading5}.
-    \end{envdesc}
-
-    \begin{envdesc}{longtablev}{\unspecified}
-      Like \env{tablev}, but produces a table which may be broken
-      across page boundaries.  The parameters are the same as for
-      \env{tablev}.
-    \end{envdesc}
-
-    \begin{macrodesc}{linev}{\p{column1}\p{column2}\p{column3}\p{column4}\p{column5}}
-      Like the \macro{lineiv} macro, but with a fifth column.  The
-      text for the fifth column is given by \var{column5}.
-    \end{macrodesc}
-
 
     An additional table-like environment is \env{synopsistable}.  The
     table generated by this environment contains two columns, and each
@@ -1245,107 +1064,23 @@ This \UNIX\ is also followed by a space.
     \macro{modulesynopsis}.  This environment is not normally used by
     authors, but is created by the \macro{localmoduletable} macro.
 
-    Here is a small example of a table given in the documentation for
-    the \module{warnings} module; markup inside the table cells is
-    minimal so the markup for the table itself is readily discernable.
-    Here is the markup for the table:
-
-\begin{verbatim}
-\begin{tableii}{l|l}{exception}{Class}{Description}
-  \lineii{Warning}
-         {This is the base class of all warning category classes.  It
-          is a subclass of \exception{Exception}.}
-  \lineii{UserWarning}
-         {The default category for \function{warn()}.}
-  \lineii{DeprecationWarning}
-         {Base category for warnings about deprecated features.}
-  \lineii{SyntaxWarning}
-         {Base category for warnings about dubious syntactic
-          features.}
-  \lineii{RuntimeWarning}
-         {Base category for warnings about dubious runtime features.}
-\end{tableii}
-\end{verbatim}
-
-    Here is the resulting table:
-
-\begin{tableii}{l|l}{exception}{Class}{Description}
-  \lineii{Warning}
-         {This is the base class of all warning category classes.  It
-          is a subclass of \exception{Exception}.}
-  \lineii{UserWarning}
-         {The default category for \function{warn()}.}
-  \lineii{DeprecationWarning}
-         {Base category for warnings about deprecated features.}
-  \lineii{SyntaxWarning}
-         {Base category for warnings about dubious syntactic
-          features.}
-  \lineii{RuntimeWarning}
-         {Base category for warnings about dubious runtime features.}
-\end{tableii}
-
-    Note that the class names are implicitly marked using the
-    \macro{exception} macro, since that is given as the \var{col1font}
-    value for the \env{tableii} environment.  To create a table using
-    different markup for the first column, use \code{textrm} for the
-    \var{col1font} value and mark each entry individually.
-
-    To add a horizontal line between vertical sections of a table, use
-    the standard \macro{hline} macro between the rows which should be
-    separated:
-
-\begin{verbatim}
-\begin{tableii}{l|l}{constant}{Language}{Audience}
-  \lineii{APL}{Masochists.}
-  \lineii{BASIC}{First-time programmers on PC hardware.}
-  \lineii{C}{\UNIX{} \&\ Linux kernel developers.}
-    \hline
-  \lineii{Python}{Everyone!}
-\end{tableii}
-\end{verbatim}
-
-    Note that not all presentation formats are capable of displaying a
-    horizontal rule in this position.  This is how the table looks in
-    the format you're reading now:
-
-\begin{tableii}{l|l}{constant}{Language}{Audience}
-  \lineii{APL}{Masochists.}
-  \lineii{C}{\UNIX{} \&\ Linux kernel developers.}
-  \lineii{JavaScript}{Web developers.}
-    \hline
-  \lineii{Python}{Everyone!}
-\end{tableii}
-
 
   \subsection{Reference List Markup \label{references}}
 
     Many sections include a list of references to module documentation
     or external documents.  These lists are created using the
-    \env{seealso} or \env{seealso*} environments.  These environments
-    define some additional macros to support creating reference
-    entries in a reasonable manner.
+    \env{seealso} environment.  This environment defines some
+    additional macros to support creating reference entries in a
+    reasonable manner.
 
     The \env{seealso} environment is typically placed in a section
     just before any sub-sections.  This is done to ensure that
     reference links related to the section are not hidden in a
-    subsection in the hypertext renditions of the documentation.  For
-    the HTML output, it is shown as a ``side bar,'' boxed off from the
-    main flow of the text.  The \env{seealso*} environment is
-    different in that it should be used when a list of references is
-    being presented as part of the primary content; it is not
-    specially set off from the text.
+    subsection in the hypertext renditions of the documentation.
 
     \begin{envdesc}{seealso}{}
       This environment creates a ``See also:'' heading and defines the
       markup used to describe individual references.
-    \end{envdesc}
-
-    \begin{envdesc}{seealso*}{}
-      This environment is used to create a list of references which
-      form part of the main content.  It is not given a special
-      header and is not set off from the main flow of the text.  It
-      provides the same additional markup used to describe individual
-      references.
     \end{envdesc}
 
     For each of the following macros, \var{why} should be one or more
@@ -1354,7 +1089,7 @@ This \UNIX\ is also followed by a space.
     ending with the apropriate punctuation.
 
     These macros are only defined within the content of the
-    \env{seealso} and \env{seealso*} environments.
+    \env{seealso} environment.
 
     \begin{macrodesc}{seemodule}{\op{key}\p{name}\p{why}}
       Refer to another module.  \var{why} should be a brief
@@ -1362,8 +1097,8 @@ This \UNIX\ is also followed by a space.
       name is given in \var{name}, with the link key given in
       \var{key} if necessary.  In the HTML and PDF conversions, the
       module name will be a hyperlink to the referred-to module.
-      \note{The module must be documented in the same
-      document (the corresponding \macro{declaremodule} is required).}
+      \strong{Note:}  The module must be documented in the same
+      document (the corresponding \macro{declaremodule} is required).
     \end{macrodesc}
 
     \begin{macrodesc}{seepep}{\p{number}\p{title}\p{why}}
@@ -1401,10 +1136,9 @@ This \UNIX\ is also followed by a space.
 
     \begin{macrodesc}{seeurl}{\p{url}\p{why}}
       References to specific on-line resources should be given using
-      the \macro{seeurl} macro if they don't have a meaningful title.
-      Online documents which have identifiable titles should be
-      referenced using the \macro{seetitle} macro, using the optional
-      parameter to that macro to provide the URL.
+      the \macro{seeurl} macro.  No title is associated with the
+      reference, but the \var{why} text may include a title marked
+      using the \macro{citetitle} macro.
     \end{macrodesc}
 
 
@@ -1533,78 +1267,36 @@ This \UNIX\ is also followed by a space.
       \code{\e index\{\var{word4}!\var{word1} \var{word2} \var{word3}\}}.
     \end{macrodesc}
 
-  \subsection{Grammar Production Displays \label{grammar-displays}}
 
-    Special markup is available for displaying the productions of a
-    formal grammar.  The markup is simple and does not attempt to
-    model all aspects of BNF (or any derived forms), but provides
-    enough to allow context-free grammars to be displayed in a way
-    that causes uses of a symbol to be rendered as hyperlinks to the
-    definition of the symbol.  There is one environment and a pair of
-    macros:
+\section{Special Names}
 
-    \begin{envdesc}{productionlist}{\op{language}}
-      This environment is used to enclose a group of productions.  The
-      two macros are only defined within this environment.  If a
-      document descibes more than one language, the optional parameter
-      \var{language} should be used to distinguish productions between
-      languages.  The value of the parameter should be a short name
-      that can be used as part of a filename; colons or other
-      characters that can't be used in filename across platforms
-      should be included.
-    \end{envdesc}
+  Many special names are used in the Python documentation, including
+  the names of operating systems, programming languages, standards
+  bodies, and the like.  Many of these were assigned \LaTeX{} macros
+  at some point in the distant past, and these macros lived on long
+  past their usefulness.  In the current markup, these entities are
+  not assigned any special markup, but the preferred spellings are
+  given here to aid authors in maintaining the consistency of
+  presentation in the Python documentation.
 
-    \begin{macrodesc}{production}{\p{name}\p{definition}}
-      A production rule in the grammar.  The rule defines the symbol
-      \var{name} to be \var{definition}.  \var{name} should not
-      contain any markup, and the use of hyphens in a document which
-      supports more than one grammar is undefined.  \var{definition}
-      may contain \macro{token} macros and any additional content
-      needed to describe the grammatical model of \var{symbol}.  Only
-      one \macro{production} may be used to define a symbol ---
-      multiple definitions are not allowed.
-    \end{macrodesc}
+  \begin{description}
+    \item[POSIX]
+	The name assigned to a particular group of standards.  This is
+	always uppercase.
 
-    \begin{macrodesc}{token}{\p{name}}
-      The name of a symbol defined by a \macro{production} macro, used
-      in the \var{definition} of a symbol.  Where possible, this will
-      be rendered as a hyperlink to the definition of the symbol
-      \var{name}.
-    \end{macrodesc}
+    \item[Python]
+	The name of our favorite programming language is always
+	capitalized.
 
-    Note that the entire grammar does not need to be defined in a
-    single \env{productionlist} environment; any number of
-    groupings may be used to describe the grammar.  Every use of the
-    \macro{token} must correspond to a \macro{production}.
-
-    The following is an example taken from the
-    \citetitle[../ref/identifiers.html]{Python Reference Manual}:
-
-\begin{verbatim}
-\begin{productionlist}
-  \production{identifier}
-             {(\token{letter}|"_") (\token{letter} | \token{digit} | "_")*}
-  \production{letter}
-             {\token{lowercase} | \token{uppercase}}
-  \production{lowercase}
-             {"a"..."z"}
-  \production{uppercase}
-             {"A"..."Z"}
-  \production{digit}
-             {"0"..."9"}
-\end{productionlist}
-\end{verbatim}
+    \item[Unicode]
+	The name of a character set and matching encoding.  This is
+        always written capitalized.
+  \end{description}
 
 
-\section{Graphical Interface Components \label{gui-markup}}
+\section{Processing Tools}
 
-  The components of graphical interfaces will be assigned markup, but
-  the specifics have not been determined.
-
-
-\section{Processing Tools \label{tools}}
-
-  \subsection{External Tools \label{tools-external}}
+  \subsection{External Tools}
 
     Many tools are needed to be able to process the Python
     documentation if all supported formats are required.  This
@@ -1630,11 +1322,10 @@ This \UNIX\ is also followed by a space.
         Emacs Texinfo code in a portable manner.
 
       \item[\program{latex}]
-        \LaTeX{} is a large and extensible macro package by Leslie
-        Lamport, based on \TeX, a world-class typesetter by Donald
-        Knuth.  It is used for the conversion to PostScript, and is
-        needed for the HTML conversion as well (\LaTeX2HTML requires
-        one of the intermediate files it creates).
+        This is a world-class typesetter by Donald Knuth.  It is used
+        for the conversion to PostScript, and is needed for the HTML
+        conversion as well (\LaTeX2HTML requires one of the
+        intermediate files it creates).
 
       \item[\program{latex2html}]
         Probably the longest Perl script anyone ever attempted to
@@ -1651,8 +1342,7 @@ This \UNIX\ is also followed by a space.
         Just about any version should work for the standard documents,
         but GNU \program{make} is required for the experimental
         processes in \file{Doc/tools/sgmlconv/}, at least while
-        they're experimental.  This is not required for running the
-        \program{mkhowto} script.
+        they're experimental.
 
       \item[\program{makeindex}]
         This is a standard program for converting \LaTeX{} index data
@@ -1686,7 +1376,7 @@ This \UNIX\ is also followed by a space.
     \end{description}
 
 
-  \subsection{Internal Tools \label{tools-internal}}
+  \subsection{Internal Tools}
 
     This section describes the various scripts that are used to
     implement various stages of document processing or to orchestrate
@@ -1760,7 +1450,7 @@ This \UNIX\ is also followed by a space.
     SGML offers advantages which may appeal most to authors,
     especially those using ordinary text editors.  There are also
     additional abilities to define content models.  A number of
-    high-quality tools with demonstrated maturity are available, but
+    high-quality tools with demonstrated maturity is available, but
     most are not free; for those which are, portability issues remain
     a problem.
 
@@ -1772,28 +1462,9 @@ This \UNIX\ is also followed by a space.
     short term.  The promised availability of a wide variety of
     high-quality tools which support some of the most important
     related standards is not immediate.  Many tools are likely to be
-    free, and the portability issues of those which are, are not
-    expected to be significant.
+    free.
 
-    It turns out that converting to an XML or SGML system holds
-    promise for translators as well; how much can be done to ease the
-    burden on translators remains to be seen, and may have some impact
-    on the schema and specific technologies used.
-
-    XXX Eventual migration to XML.
-
-    The documentation will be moved to XML in the future, and tools
-    are being written which will convert the documentation from the
-    current format to something close to a finished version, to the
-    extent that the desired information is already present in the
-    documentation.  Some XSLT stylesheets have been started for
-    presenting a preliminary XML version as HTML, but the results are
-    fairly rough..
-
-    The timeframe for the conversion is not clear since there doesn't
-    seem to be much time available to work on this, but the appearant
-    benefits are growing more substantial at a moderately rapid pace.
-
+    XXX Eventual migration to SGML/XML.
 
   \subsection{Discussion Forums \label{discussion}}
 

@@ -28,6 +28,9 @@ typedef unsigned long Py_UInt32;
 #endif
 #endif
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #include <string.h>
 
 /*

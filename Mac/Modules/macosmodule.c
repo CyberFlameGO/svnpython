@@ -40,15 +40,11 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 static PyObject *MacOS_Error; /* Exception MacOS.Error */
 
-#ifdef TARGET_API_MAC_OSX
-#define PATHNAMELEN 1024
-#else
-#define PATHNAMELEN 256
-#endif
-
 #ifdef MPW
 #define bufferIsSmall -607	/*error returns from Post and Accept */
 #endif
+
+static PyObject *ErrorObject;
 
 /* ----------------------------------------------------- */
 
@@ -67,7 +63,8 @@ staticforward PyTypeObject Rftype;
 /* ---------------------------------------------------------------- */
 
 static void
-do_close(rfobject *self)
+do_close(self)
+	rfobject *self;
 {
 	if (self->isclosed ) return;
 	(void)FSClose(self->fRefNum);
@@ -79,7 +76,9 @@ static char rf_read__doc__[] =
 ;
 
 static PyObject *
-rf_read(rfobject *self, PyObject *args)
+rf_read(self, args)
+	rfobject *self;
+	PyObject *args;
 {
 	long n;
 	PyObject *v;
@@ -113,7 +112,9 @@ static char rf_write__doc__[] =
 ;
 
 static PyObject *
-rf_write(rfobject *self, PyObject *args)
+rf_write(self, args)
+	rfobject *self;
+	PyObject *args;
 {
 	char *buffer;
 	long size;
@@ -140,7 +141,9 @@ static char rf_seek__doc__[] =
 ;
 
 static PyObject *
-rf_seek(rfobject *self, PyObject *args)
+rf_seek(self, args)
+	rfobject *self;
+	PyObject *args;
 {
 	long amount, pos;
 	int whence = SEEK_SET;
@@ -154,12 +157,12 @@ rf_seek(rfobject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "l|i", &amount, &whence))
 		return NULL;
 	
-	if ((err = GetEOF(self->fRefNum, &eof)))
+	if ( err = GetEOF(self->fRefNum, &eof))
 		goto ioerr;
 	
 	switch (whence) {
 	case SEEK_CUR:
-		if ((err = GetFPos(self->fRefNum, &pos)))
+		if (err = GetFPos(self->fRefNum, &pos))
 			goto ioerr; 
 		break;
 	case SEEK_END:
@@ -181,7 +184,7 @@ rf_seek(rfobject *self, PyObject *args)
 		return NULL;
 	}
 	
-	if ((err = SetFPos(self->fRefNum, fsFromStart, pos)) ) {
+	if ( err = SetFPos(self->fRefNum, fsFromStart, pos) ) {
 ioerr:
 		PyMac_Error(err);
 		return NULL;
@@ -196,7 +199,9 @@ static char rf_tell__doc__[] =
 ;
 
 static PyObject *
-rf_tell(rfobject *self, PyObject *args)
+rf_tell(self, args)
+	rfobject *self;
+	PyObject *args;
 {
 	long where;
 	OSErr err;
@@ -207,7 +212,7 @@ rf_tell(rfobject *self, PyObject *args)
 	}
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
-	if ((err = GetFPos(self->fRefNum, &where)) ) {
+	if ( err = GetFPos(self->fRefNum, &where) ) {
 		PyMac_Error(err);
 		return NULL;
 	}
@@ -219,7 +224,9 @@ static char rf_close__doc__[] =
 ;
 
 static PyObject *
-rf_close(rfobject *self, PyObject *args)
+rf_close(self, args)
+	rfobject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ""))
 		return NULL;
@@ -230,11 +237,11 @@ rf_close(rfobject *self, PyObject *args)
 
 
 static struct PyMethodDef rf_methods[] = {
- {"read",	(PyCFunction)rf_read,	1,	rf_read__doc__},
- {"write",	(PyCFunction)rf_write,	1,	rf_write__doc__},
- {"seek",	(PyCFunction)rf_seek,	1,	rf_seek__doc__},
- {"tell",	(PyCFunction)rf_tell,	1,	rf_tell__doc__},
- {"close",	(PyCFunction)rf_close,	1,	rf_close__doc__},
+	{"read",	rf_read,	1,	rf_read__doc__},
+ {"write",	rf_write,	1,	rf_write__doc__},
+ {"seek",	rf_seek,	1,	rf_seek__doc__},
+ {"tell",	rf_tell,	1,	rf_tell__doc__},
+ {"close",	rf_close,	1,	rf_close__doc__},
  
 	{NULL,		NULL}		/* sentinel */
 };
@@ -243,7 +250,7 @@ static struct PyMethodDef rf_methods[] = {
 
 
 static rfobject *
-newrfobject(void)
+newrfobject()
 {
 	rfobject *self;
 	
@@ -256,14 +263,17 @@ newrfobject(void)
 
 
 static void
-rf_dealloc(rfobject *self)
+rf_dealloc(self)
+	rfobject *self;
 {
 	do_close(self);
 	PyMem_DEL(self);
 }
 
 static PyObject *
-rf_getattr(rfobject *self, char *name)
+rf_getattr(self, name)
+	rfobject *self;
+	char *name;
 {
 	return Py_FindMethod(rf_methods, (PyObject *)self, name);
 }
@@ -275,7 +285,7 @@ static char Rftype__doc__[] =
 static PyTypeObject Rftype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"MacOS.ResourceFork",		/*tp_name*/
+	"ResourceFork",			/*tp_name*/
 	sizeof(rfobject),		/*tp_basicsize*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -447,7 +457,9 @@ MacOS_EnableAppswitch(PyObject *self, PyObject *args)
 static char setevh_doc[] = "Set python event handler to be called in mainloop";
 
 static PyObject *
-MacOS_SetEventHandler(PyObject *self, PyObject *args)
+MacOS_SetEventHandler(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *evh = NULL;
 	
@@ -607,9 +619,9 @@ MacOS_openrf(PyObject *self, PyObject *args)
 		** correct we let the standard i/o library handle it
 		*/
 		FILE *tfp;
-		char pathname[PATHNAMELEN];
+		char pathname[257];
 		
-		if ( err=PyMac_GetFullPathname(&fss, pathname, PATHNAMELEN) ) {
+		if ( err=PyMac_GetFullPath(&fss, pathname) ) {
 			PyMac_Error(err);
 			Py_DECREF(fp);
 			return NULL;
@@ -730,7 +742,7 @@ static PyMethodDef MacOS_Methods[] = {
 
 
 void
-initMacOS(void)
+initMacOS()
 {
 	PyObject *m, *d;
 	
@@ -757,11 +769,9 @@ initMacOS(void)
 		if( PyDict_SetItemString(d, "string_id_to_buffer", Py_BuildValue("i", off)) != 0)
 			return;
 	}
-#if !TARGET_API_MAC_OSX
 	if (PyDict_SetItemString(d, "AppearanceCompliant", 
 				Py_BuildValue("i", PyMac_AppearanceCompliant)) != 0)
 		return;
-#endif
 #if TARGET_API_MAC_OSX
 #define PY_RUNTIMEMODEL "macho"
 #elif TARGET_API_MAC_OS8

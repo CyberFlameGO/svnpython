@@ -4,11 +4,10 @@ import sys
 import os
 BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
-from scantools import Scanner
+from scantools import Scanner_PreUH3
 from bgenlocations import MWERKSDIR, TOOLBOXDIR
 
-#WASTEDIR=":::::Waste 1.3 Distribution:WASTE C/C++ Headers:"
-WASTEDIR=MWERKSDIR + 'MacOS Support:(Third Party Support):Waste 2.0 Distribution:C_C++ Headers:'
+WASTEDIR=":::::Waste 1.3 Distribution:WASTE C/C++ Headers:"
 
 OBJECT = "TEHandle"
 SHORT = "waste"
@@ -27,8 +26,7 @@ def main():
 	exec "import " + SHORT + "support"
 	print "=== Done.  It's up to you to compile it now! ==="
 
-#class MyScanner(Scanner_PreUH3):
-class MyScanner(Scanner):
+class MyScanner(Scanner_PreUH3):
 
 	def destination(self, type, name, arglist):
 		classname = "Function"
@@ -54,8 +52,6 @@ class MyScanner(Scanner):
 			"WESetInfo", # Argument type unknown...
 			"WEGetInfo",
 			"WEVersion", # Unfortunately...
-			"WEPut", # XXXX TBD: needs array of flavortypes.
-			"WEGetOneAttribute", # XXXX TBD: output buffer
 			]
 
 	def makeblacklisttypes(self):
@@ -64,34 +60,6 @@ class MyScanner(Scanner):
 			"UniversalProcPtr",
 			"WEFontIDToNameUPP",
 			"WEFontNameToIDUPP",
-			"WEClickLoopUPP",
-			"WEScrollUPP",
-			"WETSMPreUpdateUPP",
-			"WETSMPostUpdateUPP",
-			"WEPreTrackDragUPP",
-			"WETranslateDragUPP",
-			"WEHiliteDropAreaUPP",
-			"WEDrawTextUPP",
-			"WEDrawTSMHiliteUPP",
-			"WEPixelToCharUPP",
-			"WECharToPixelUPP",
-			"WELineBreakUPP",
-			"WEWordBreakUPP",
-			"WECharByteUPP",
-			"WECharTypeUPP",
-			"WEEraseUPP",
-			"WEFluxUPP",
-			"WENewObjectUPP",
-			"WEDisposeObjectUPP",
-			"WEDrawObjectUPP",
-			"WEClickObjectUPP",
-			"WEStreamObjectUPP",
-			"WEHoverObjectUPP",
-			"WERuler",		# XXXX To be done
-			"WERuler_ptr",	# ditto
-			"WEParaInfo",	# XXXX To be done
-			"WEPrintSession",	# XXXX To be done
-			"WEPrintOptions_ptr", # XXXX To be done
 			]
 
 	def makerepairinstructions(self):
@@ -100,31 +68,24 @@ class MyScanner(Scanner):
 			 [("InBuffer", "*", "*")]),
 
 			# WEContinuousStyle
-			([("WEStyleMode", "ioMode", "OutMode"), ("TextStyle", "outTextStyle", "OutMode")],
-			 [("WEStyleMode", "*", "InOutMode"), ("TextStyle", "*", "*")]),
+			([("WEStyleMode", "mode", "OutMode"), ("TextStyle", "ts", "OutMode")],
+			 [("WEStyleMode", "mode", "InOutMode"), ("TextStyle", "ts", "OutMode")]),
 			 
 			# WECopyRange
-			([('Handle', 'outText', 'InMode'), ('StScrpHandle', 'outStyles', 'InMode'),
-    			('WESoupHandle', 'outSoup', 'InMode')],
-    		 [('OptHandle', '*', '*'), ('OptStScrpHandle', '*', '*'),
-    			('OptSoupHandle', '*', '*')]),
+			([('Handle', 'hText', 'InMode'), ('StScrpHandle', 'hStyles', 'InMode'),
+    			('WESoupHandle', 'hSoup', 'InMode')],
+    		 [('OptHandle', 'hText', 'InMode'), ('OptStScrpHandle', 'hStyles', 'InMode'),
+    			('OptSoupHandle', 'hSoup', 'InMode')]),
 			 
 			# WEInsert
-			([('StScrpHandle', 'inStyles', 'InMode'), ('WESoupHandle', 'inSoup', 'InMode')],
-    		 [('OptStScrpHandle', '*', '*'), ('OptSoupHandle', '*', '*')]),
+			([('StScrpHandle', 'hStyles', 'InMode'), ('WESoupHandle', 'hSoup', 'InMode')],
+    		 [('OptStScrpHandle', 'hStyles', 'InMode'), ('OptSoupHandle', 'hSoup', 'InMode')]),
     		 
     		# WEGetObjectOwner
     		("WEGetObjectOwner",
     		 [('WEReference', '*', 'ReturnMode')],
-    		 [('ExistingWEReference', '*', 'ReturnMode')]),
-    		 
-    		# WEFindParagraph
-    		([("char_ptr", "inKey", "InMode")],
-    		 [("stringptr", "*", "*")]),
-			
-			# WESetOneAttribute
-			([("void_ptr", "*", "InMode"), ("ByteCount", "*", "InMode")],
-			 [("InBuffer", "*", "*")]),
+    		 [('ExistingWEReference', '*', 'ReturnMode')])
+
 			]
 			
 if __name__ == "__main__":

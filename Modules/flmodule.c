@@ -370,15 +370,15 @@ static PyObject *
 generic_repr(genericobject *g)
 {
 	char buf[100];
-	PyOS_snprintf(buf, sizeof(buf), "<FORMS_object at %p, objclass=%d>",
-		      g, g->ob_generic->objclass);
+	sprintf(buf, "<FORMS_object at %p, objclass=%d>",
+		g, g->ob_generic->objclass);
 	return PyString_FromString(buf);
 }
 
 static PyTypeObject GenericObjecttype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"fl.FORMS_object",		/*tp_name*/
+	"FORMS_object",			/*tp_name*/
 	sizeof(genericobject),		/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -1580,15 +1580,15 @@ static PyObject *
 form_repr(formobject *f)
 {
 	char buf[100];
-	PyOS_snprintf(buf, sizeof(buf), "<FORMS_form at %p, window=%ld>",
-		      f, f->ob_form->window);
+	sprintf(buf, "<FORMS_form at %p, window=%ld>",
+		f, f->ob_form->window);
 	return PyString_FromString(buf);
 }
 
 static PyTypeObject Formtype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"fl.FORMS_form",		/*tp_name*/
+	"FORMS_form",			/*tp_name*/
 	sizeof(formobject),		/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */

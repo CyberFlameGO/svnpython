@@ -30,7 +30,9 @@
 #define USE_MSL_MALLOC	/* Disable private malloc. Also disables next two defines */
 #ifndef USE_MSL_MALLOC
 /* #define USE_MALLOC_DEBUG			/* Enable range checking and other malloc debugging */
+#ifdef __powerc
 #define USE_CACHE_ALIGNED 8		/* Align on 32-byte boundaries for 604 */
+#endif
 #endif
 #define WITHOUT_FRAMEWORKS /* Use old-style Universal Header includes, not Carbon/Carbon.h */
 
@@ -42,7 +44,4 @@
 #ifdef USE_GUSI2
 #include <stdio.h>
 extern int fileno(FILE *);
-#endif
-#ifndef Py_DEBUG
-#define NDEBUG
 #endif

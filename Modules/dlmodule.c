@@ -136,7 +136,7 @@ dl_getattr(dlobject *xp, char *name)
 static PyTypeObject Dltype = {
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"dl.dl",		/*tp_name*/
+	"dl",			/*tp_name*/
 	sizeof(dlobject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
 	/* methods */
@@ -158,13 +158,6 @@ dl_open(PyObject *self, PyObject *args)
 	char *name;
 	int mode;
 	PyUnivPtr *handle;
-	if (sizeof(int) != sizeof(long) ||
-	    sizeof(long) != sizeof(char *)) {
-		PyErr_SetString(PyExc_SystemError,
- "module dl requires sizeof(int) == sizeof(long) == sizeof(char*)");
-		return NULL;
-	}
-
 	if (PyArg_Parse(args, "z", &name))
 		mode = RTLD_LAZY;
 	else {
@@ -210,6 +203,13 @@ DL_EXPORT(void)
 initdl(void)
 {
 	PyObject *m, *d, *x;
+
+	if (sizeof(int) != sizeof(long) ||
+	    sizeof(long) != sizeof(char *)) {
+		PyErr_SetString(PyExc_SystemError,
+ "module dl requires sizeof(int) == sizeof(long) == sizeof(char*)");
+		return;
+	}
 
 	/* Initialize object type */
 	Dltype.ob_type = &PyType_Type;

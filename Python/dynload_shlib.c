@@ -26,6 +26,10 @@
 #define LEAD_UNDERSCORE ""
 #endif
 
+#ifndef RTLD_LAZY
+#define RTLD_LAZY 1
+#endif
+
 
 const struct filedescr _PyImport_DynLoadFiletab[] = {
 #ifdef __CYGWIN__
@@ -53,16 +57,14 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	void *handle;
 	char funcname[258];
 	char pathbuf[260];
-        int dlopenflags=0;
 
 	if (strchr(pathname, '/') == NULL) {
 		/* Prefix bare filename with "./" */
-		PyOS_snprintf(pathbuf, sizeof(pathbuf), "./%-.255s", pathname);
+		sprintf(pathbuf, "./%-.255s", pathname);
 		pathname = pathbuf;
 	}
 
-	PyOS_snprintf(funcname, sizeof(funcname), 
-		      LEAD_UNDERSCORE "init%.200s", shortname);
+	sprintf(funcname, LEAD_UNDERSCORE "init%.200s", shortname);
 
 	if (fp != NULL) {
 		int i;
@@ -82,13 +84,16 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 		}
 	}
 
-        dlopenflags = PyThreadState_Get()->interp->dlopenflags;
-
+#ifdef RTLD_NOW
+	/* RTLD_NOW: resolve externals now
+	   (i.e. core dump now if some are missing) */
+	handle = dlopen(pathname, RTLD_NOW);
+#else
 	if (Py_VerboseFlag)
-		printf("dlopen(\"%s\", %x);\n", pathname, dlopenflags);
-
-	handle = dlopen(pathname, dlopenflags);
-
+		printf("dlopen(\"%s\", %d);\n", pathname,
+		       RTLD_LAZY);
+	handle = dlopen(pathname, RTLD_LAZY);
+#endif /* RTLD_NOW */
 	if (handle == NULL) {
 		PyErr_SetString(PyExc_ImportError, dlerror());
 		return NULL;

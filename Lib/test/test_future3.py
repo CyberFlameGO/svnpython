@@ -1,11 +1,10 @@
+"""This is a test"""
 from __future__ import nested_scopes
-from __future__ import division
-from __future__ import nested_scopes
+from __future__ import rested_snopes
 
 def f(x):
     def g(y):
-        return y // x
+        return x + y
     return g
 
-
-print f(2)(5)
+print f(2)(4)

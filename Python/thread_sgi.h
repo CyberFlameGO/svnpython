@@ -168,7 +168,7 @@ static void clean_threads(void)
 	}
 }
 
-long PyThread_start_new_thread(void (*func)(void *), void *arg)
+int PyThread_start_new_thread(void (*func)(void *), void *arg)
 {
 #ifdef USE_DL
 	long addr, size;
@@ -223,7 +223,7 @@ long PyThread_start_new_thread(void (*func)(void *), void *arg)
 	}
 	if (usunsetlock(count_lock) < 0)
 		perror("usunsetlock (count_lock)");
-	return success;
+	return success < 0 ? 0 : 1;
 }
 
 long PyThread_get_thread_ident(void)

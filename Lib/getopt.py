@@ -68,7 +68,7 @@ def getopt(args, shortopts, longopts = []):
         if args[0] == '--':
             args = args[1:]
             break
-        if args[0].startswith('--'):
+        if args[0][:2] == '--':
             opts, args = do_longs(opts, args[0][2:], longopts, args[1:])
         else:
             opts, args = do_shorts(opts, args[0][1:], shortopts, args[1:])
@@ -124,8 +124,7 @@ def do_shorts(opts, optstring, shortopts, args):
         if short_has_arg(opt, shortopts):
             if optstring == '':
                 if not args:
-                    raise GetoptError('option -%s requires argument' % opt,
-                                      opt)
+                    raise GetoptError('option -%s requires argument' % opt, opt)
                 optstring, args = args[0], args[1:]
             optarg, optstring = optstring, ''
         else:
@@ -136,7 +135,7 @@ def do_shorts(opts, optstring, shortopts, args):
 def short_has_arg(opt, shortopts):
     for i in range(len(shortopts)):
         if opt == shortopts[i] != ':':
-            return shortopts.startswith(':', i+1)
+            return shortopts[i+1:i+2] == ':'
     raise GetoptError('option -%s not recognized' % opt, opt)
 
 if __name__ == '__main__':

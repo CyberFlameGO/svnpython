@@ -123,7 +123,7 @@ class RExec(ihooks._Verbose):
                           'cmath', 'errno', 'imageop',
                           'marshal', 'math', 'md5', 'operator',
                           'parser', 'regex', 'pcre', 'rotor', 'select',
-                          'sha', '_sre', 'strop', 'struct', 'time')
+                          'strop', 'struct', 'time')
 
     ok_posix_names = ('error', 'fstat', 'listdir', 'lstat', 'readlink',
                       'stat', 'times', 'uname', 'getpid', 'getppid',
@@ -132,7 +132,7 @@ class RExec(ihooks._Verbose):
     ok_sys_names = ('ps1', 'ps2', 'copyright', 'version',
                     'platform', 'exit', 'maxint')
 
-    nok_builtin_names = ('open', 'file', 'reload', '__import__')
+    nok_builtin_names = ('open', 'reload', '__import__')
 
     def __init__(self, hooks = None, verbose = 0):
         ihooks._Verbose.__init__(self, verbose)
@@ -154,6 +154,9 @@ class RExec(ihooks._Verbose):
         self.make_sys()
         self.loader = RModuleLoader(self.hooks, verbose)
         self.importer = RModuleImporter(self.loader, verbose)
+        # but since re isn't normally built-in, we can add it at the end;
+        # we need the imported to be set before this can be imported.
+        self.make_re()
 
     def set_trusted_path(self):
         # Set the path from which dynamic modules may be loaded.
@@ -186,7 +189,7 @@ class RExec(ihooks._Verbose):
         m = self.copy_except(__builtin__, self.nok_builtin_names)
         m.__import__ = self.r_import
         m.reload = self.r_reload
-        m.open = m.file = self.r_open
+        m.open = self.r_open
 
     def make_main(self):
         m = self.add_module('__main__')
@@ -198,6 +201,13 @@ class RExec(ihooks._Verbose):
         dst.environ = e = {}
         for key, value in os.environ.items():
             e[key] = value
+
+    def make_re(self):
+        dst = self.add_module("re")
+        src = self.r_import("pre")
+        for name in dir(src):
+            if name != "__name__":
+                setattr(dst, name, getattr(src, name))
 
     def make_sys(self):
         m = self.copy_only(sys, self.ok_sys_names)
@@ -259,7 +269,7 @@ class RExec(ihooks._Verbose):
 
     def r_execfile(self, file):
         m = self.add_module('__main__')
-        execfile(file, m.__dict__)
+        return execfile(file, m.__dict__)
 
     def r_import(self, mname, globals={}, locals={}, fromlist=[]):
         return self.importer.import_module(mname, globals, locals, fromlist)
@@ -358,7 +368,7 @@ class RExec(ihooks._Verbose):
 
 
 def test():
-    import getopt, traceback
+    import sys, getopt, traceback
     opts, args = getopt.getopt(sys.argv[1:], 'vt:')
     verbose = 0
     trusted = []
@@ -384,9 +394,7 @@ def test():
             return 1
     if fp.isatty():
         print "*** RESTRICTED *** Python", sys.version
-        print 'Type "help", "copyright", "credits" or "license" ' \
-              'for more information.'
-
+        print sys.copyright
         while 1:
             try:
                 try:

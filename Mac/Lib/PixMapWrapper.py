@@ -5,8 +5,8 @@ Python Imaging Library Image object.
 
 J. Strout <joe@strout.net>  February 1999"""
 
-from Carbon import Qd
-from Carbon import QuickDraw
+import Qd
+import QuickDraw
 import struct
 import MacOS
 import img

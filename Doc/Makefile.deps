@@ -1,9 +1,8 @@
 # LaTeX source dependencies.
 
 COMMONSTYLES= texinputs/python.sty \
-	texinputs/pypaper.sty
-
-INDEXSTYLES=texinputs/python.ist
+	texinputs/pypaper.sty \
+	texinputs/python.ist
 
 COMMONTEX= texinputs/copyright.tex \
 	texinputs/license.tex \
@@ -17,54 +16,20 @@ HOWTOSTYLES= texinputs/howto.cls \
 	$(COMMONSTYLES)
 
 
-APIFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
-	api/api.tex \
-	api/abstract.tex \
-	api/concrete.tex \
-	api/exceptions.tex \
-	api/init.tex \
-	api/intro.tex \
-	api/memory.tex \
-	api/newtypes.tex \
-	api/refcounting.tex \
-	api/utilities.tex \
-	api/veryhigh.tex \
+APIFILES= api/api.tex $(MANSTYLES) $(COMMONTEX) \
 	texinputs/reportingbugs.tex
 
-# These files are generated from those listed above, and are used to
-# generate the typeset versions of the manuals.  The list is defined
-# here to make it easier to ensure parallelism.
-ANNOAPIFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
-	paper-$(PAPER)/api.tex \
-	paper-$(PAPER)/abstract.tex \
-	paper-$(PAPER)/concrete.tex \
-	paper-$(PAPER)/exceptions.tex \
-	paper-$(PAPER)/init.tex \
-	paper-$(PAPER)/intro.tex \
-	paper-$(PAPER)/memory.tex \
-	paper-$(PAPER)/newtypes.tex \
-	paper-$(PAPER)/refcounting.tex \
-	paper-$(PAPER)/utilities.tex \
-	paper-$(PAPER)/veryhigh.tex \
-	texinputs/reportingbugs.tex
-
-DOCFILES= $(HOWTOSTYLES) \
-	texinputs/boilerplate.tex \
+DOCFILES= $(HOWTOSTYLES) $(COMMONTEX) \
 	texinputs/ltxmarkup.sty \
 	doc/doc.tex
 
-EXTFILES= ext/ext.tex $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
-	ext/extending.tex \
-	ext/newtypes.tex \
-	ext/unix.tex \
-	ext/windows.tex \
-	ext/embedding.tex \
+EXTFILES= ext/ext.tex $(MANSTYLES) $(COMMONTEX) \
 	texinputs/reportingbugs.tex
 
 TUTFILES= tut/tut.tex $(MANSTYLES) $(COMMONTEX)
 
 # LaTeX source files for the Python Reference Manual
-REFFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+REFFILES= $(MANSTYLES) $(COMMONTEX) \
 	ref/ref.tex \
 	ref/ref1.tex \
 	ref/ref2.tex \
@@ -77,19 +42,8 @@ REFFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	ref/refa1.tex
 
 # LaTeX source files for the Python Library Reference
-LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	lib/lib.tex \
-	lib/asttable.tex \
-	lib/compiler.tex \
-	lib/distutils.tex \
-	lib/email.tex \
-	lib/emailencoders.tex \
-	lib/emailexc.tex \
-	lib/emailgenerator.tex \
-	lib/emailiter.tex \
-	lib/emailmessage.tex \
-	lib/emailparser.tex \
-	lib/emailutil.tex \
 	texinputs/reportingbugs.tex \
 	lib/libintro.tex \
 	lib/libobjs.tex \
@@ -102,7 +56,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libgc.tex \
 	lib/libweakref.tex \
 	lib/libinspect.tex \
-	lib/libpydoc.tex \
 	lib/libdifflib.tex \
 	lib/libdoctest.tex \
 	lib/libunittest.tex \
@@ -153,7 +106,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libpdb.tex \
 	lib/libprofile.tex \
 	lib/libcgi.tex \
-	lib/libcgitb.tex \
 	lib/liburllib.tex \
 	lib/liburllib2.tex \
 	lib/libhttplib.tex \
@@ -161,7 +113,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libgopherlib.tex \
 	lib/libnntplib.tex \
 	lib/liburlparse.tex \
-	lib/libhtmlparser.tex \
 	lib/libhtmllib.tex \
 	lib/libsgmllib.tex \
 	lib/librfc822.tex \
@@ -178,7 +129,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libmd5.tex \
 	lib/libsha.tex \
 	lib/libmpz.tex \
-	lib/libhmac.tex \
 	lib/librotor.tex \
 	lib/libstdwin.tex \
 	lib/libsgi.tex \
@@ -227,8 +177,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libuserdict.tex \
 	lib/libdis.tex \
 	lib/libxmllib.tex \
-	lib/libxmlrpclib.tex \
-	lib/libsimplexmlrpc.tex \
 	lib/libpyexpat.tex \
 	lib/xmldom.tex \
 	lib/xmldomminidom.tex \
@@ -310,12 +258,10 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libasyncore.tex \
 	lib/libatexit.tex \
 	lib/libmmap.tex \
-	lib/tkinter.tex \
-	lib/libturtle.tex \
 	lib/libcfgparser.tex
 
 # LaTeX source files for Macintosh Library Modules.
-MACFILES= $(HOWTOSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+MACFILES= $(HOWTOSTYLES) $(COMMONTEX) \
 	mac/mac.tex \
 	mac/using.tex \
 	mac/toolbox.tex \
@@ -325,17 +271,17 @@ MACFILES= $(HOWTOSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	mac/libaepack.tex \
 	mac/libaetypes.tex \
 	mac/libctb.tex \
+	mac/libmacdnr.tex \
 	mac/libmacfs.tex \
 	mac/libmacos.tex \
 	mac/libmacostools.tex \
+	mac/libmactcp.tex \
 	mac/libmacspeech.tex \
 	mac/libmacui.tex \
 	mac/libmacic.tex \
 	mac/libframework.tex \
 	mac/libminiae.tex
 
-INSTFILES = $(HOWTOSTYLES) inst/inst.tex
+INSTFILES = $(HOWTOSTYLES) $(COMMONTEX) inst/inst.tex
 
-DISTFILES = $(HOWTOSTYLES) \
-	dist/dist.tex \
-	dist/sysconfig.tex
+DISTFILES = $(HOWTOSTYLES) $(COMMONTEX) dist/dist.tex
