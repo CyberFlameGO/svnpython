@@ -60,7 +60,7 @@ int Py_OptimizeFlag = 0;
 #define GLOBAL_AFTER_USE \
 "name '%.400s' is used prior to global declaration"
 
-#define PARAM_GLOBAL \
+#define LOCAL_GLOBAL \
 "name '%.400s' is a function parameter and declared global"
 
 #define LATE_FUTURE \
@@ -610,7 +610,7 @@ com_error(struct compiling *c, PyObject *exc, char *msg)
 				  Py_None, line);
 		if (t == NULL)
 			goto exit;
-		w = PyTuple_Pack(2, v, t);
+		w = Py_BuildValue("(OO)", v, t);
 		if (w == NULL)
 			goto exit;
 		PyErr_SetObject(exc, w);
@@ -969,7 +969,7 @@ com_add(struct compiling *c, PyObject *list, PyObject *dict, PyObject *v)
 	PyObject *w, *t, *np=NULL;
 	long n;
 	
-	t = PyTuple_Pack(2, v, v->ob_type);
+	t = Py_BuildValue("(OO)", v, v->ob_type);
 	if (t == NULL)
 	    goto fail;
 	w = PyDict_GetItem(dict, t);
@@ -1258,7 +1258,19 @@ parsenumber(struct compiling *c, char *s)
 	if (s[0] == '0') {
 		x = (long) PyOS_strtoul(s, &end, 0);
 		if (x < 0 && errno == 0) {
-			return PyLong_FromString(s, (char **)0, 0);
+			if (PyErr_WarnExplicit(
+				    PyExc_FutureWarning,
+				    "hex/oct constants > sys.maxint "
+				    "will return positive values "
+				    "in Python 2.4 and up",
+				    /* XXX: Give WarnExplicit
+				       a const char* argument. */
+				    (char*)c->c_filename,
+				    c->c_lineno,
+				    NULL,
+				    NULL) < 0)
+				return NULL;
+			errno = 0; /* Might be changed by PyErr_Warn() */
 		}
 	}
 	else
@@ -3653,16 +3665,10 @@ com_continue_stmt(struct compiling *c, node *n)
 	   XXX if we could pop the exception still on the stack */
 }
 
-/* Return the number of default values in the argument list.
-
-   If a non-default argument follows a default argument, set an
-   exception and return -1.
-*/
-
 static int
 com_argdefs(struct compiling *c, node *n)
 {
-	int i, nch, ndefs;
+	int i, nch, nargs, ndefs;
 	if (TYPE(n) == lambdef) {
 		/* lambdef: 'lambda' [varargslist] ':' test */
 		n = CHILD(n, 1);
@@ -3679,12 +3685,14 @@ com_argdefs(struct compiling *c, node *n)
 		(fpdef ['=' test] ',')* '*' ....... |
 		fpdef ['=' test] (',' fpdef ['=' test])* [','] */
 	nch = NCH(n);
+	nargs = 0;
 	ndefs = 0;
 	for (i = 0; i < nch; i++) {
 		int t;
 		if (TYPE(CHILD(n, i)) == STAR ||
 		    TYPE(CHILD(n, i)) == DOUBLESTAR)
 			break;
+		nargs++;
 		i++;
 		if (i >= nch)
 			t = RPAR; /* Anything except EQUAL or COMMA */
@@ -3701,11 +3709,9 @@ com_argdefs(struct compiling *c, node *n)
 		}
 		else {
 			/* Treat "(a=1, b)" as an error */
-			if (ndefs) {
+			if (ndefs)
 				com_error(c, PyExc_SyntaxError,
 			    "non-default argument follows default argument");
-				return -1;
-			}
 		}
 		if (t != COMMA)
 			break;
@@ -3720,8 +3726,6 @@ com_funcdef(struct compiling *c, node *n)
 	int ndefs;
 	REQ(n, funcdef); /* funcdef: 'def' NAME parameters ':' suite */
 	ndefs = com_argdefs(c, n);
-	if (ndefs < 0)
-		return;
 	symtable_enter_scope(c->c_symtable, STR(CHILD(n, 1)), TYPE(n),
 			     n->n_lineno);
 	co = (PyObject *)icompile(n, c);
@@ -4831,7 +4835,7 @@ symtable_load_symbols(struct compiling *c)
 			c->c_argcount--;
 		else if (flags & DEF_GLOBAL) {
 			if (flags & DEF_PARAM) {
-				PyErr_Format(PyExc_SyntaxError, PARAM_GLOBAL,
+				PyErr_Format(PyExc_SyntaxError, LOCAL_GLOBAL,
 					     PyString_AS_STRING(name));
 				symtable_error(st, 0);
 				goto fail;
@@ -5580,7 +5584,8 @@ symtable_global(struct symtable *st, node *n)
 		if (flags && flags != DEF_GLOBAL) {
 			char buf[500];
 			if (flags & DEF_PARAM) {
-				PyErr_Format(PyExc_SyntaxError, PARAM_GLOBAL,
+				PyErr_Format(PyExc_SyntaxError,
+				     "name '%.400s' is local and global",
 					     name);
 				symtable_error(st, 0);
 				return;

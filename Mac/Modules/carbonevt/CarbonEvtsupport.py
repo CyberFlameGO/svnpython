@@ -73,8 +73,29 @@ GrafPtr = OpaqueByValueType("GrafPtr", "GrafObj")
 MouseTrackingResult = UInt16
 
 
-includestuff = includestuff + r"""
+includestuff = r"""
+#ifdef WITHOUT_FRAMEWORKS
+#include <CarbonEvents.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
+
+#include "macglue.h"
+
+/* Macro to test whether a weak-loaded CFM function exists */
+#define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
+		PyErr_SetString(PyExc_NotImplementedError, \
+		"Not available in this shared library/OS version"); \
+		return; \
+	}} while(0)
+
+
+#define USE_MAC_MP_MULTITHREADING 0
+
+#if USE_MAC_MP_MULTITHREADING
+static PyThreadState *_save;
+static MPCriticalRegionID reentrantLock;
+#endif /* USE_MAC_MP_MULTITHREADING */
 
 extern int CFStringRef_New(CFStringRef *);
 
@@ -151,6 +172,11 @@ myEventHandler(EventHandlerCallRef handlerRef, EventRef event, void *outPyObject
 	PyObject *retValue;
 	int status;
 
+#if USE_MAC_MP_MULTITHREADING
+	MPEnterCriticalRegion(reentrantLock, kDurationForever);
+	PyEval_RestoreThread(_save);
+#endif /* USE_MAC_MP_MULTITHREADING */
+
 	retValue = PyObject_CallFunction((PyObject *)outPyObject, "O&O&",
 	                                 EventHandlerCallRef_New, handlerRef,
 	                                 EventRef_New, event);
@@ -168,6 +194,11 @@ myEventHandler(EventHandlerCallRef handlerRef, EventRef event, void *outPyObject
 		Py_DECREF(retValue);
 	}
 
+#if USE_MAC_MP_MULTITHREADING
+	_save = PyEval_SaveThread();
+	MPExitCriticalRegion(reentrantLock);
+#endif /* USE_MAC_MP_MULTITHREADING */
+
 	return status;
 }
 
@@ -176,6 +207,7 @@ myEventHandler(EventHandlerCallRef handlerRef, EventRef event, void *outPyObject
 """
 
 initstuff = initstuff + """
+PyMac_PRECHECK(NewEventHandlerUPP); /* This can fail if CarbonLib is too old */
 myEventHandlerUPP = NewEventHandlerUPP(myEventHandler);
 """
 module = MacModule('_CarbonEvt', 'CarbonEvents', includestuff, finalstuff, initstuff)
@@ -306,6 +338,32 @@ return _res;
 f = ManualGenerator("GetEventParameter", geteventparameter);
 f.docstring = lambda: "(EventParamName eventName, EventParamType eventType) -> (String eventParamData)"
 EventRefobject.add(f)
+
+runappeventloop = """
+#if USE_MAC_MP_MULTITHREADING
+if (MPCreateCriticalRegion(&reentrantLock) != noErr) {
+	PySys_WriteStderr("lock failure\\n");
+	return NULL;
+}
+_save = PyEval_SaveThread();
+#endif /* USE_MAC_MP_MULTITHREADING */
+
+RunApplicationEventLoop();
+
+#if USE_MAC_MP_MULTITHREADING
+PyEval_RestoreThread(_save);
+
+MPDeleteCriticalRegion(reentrantLock);
+#endif /* USE_MAC_MP_MULTITHREADING */
+
+Py_INCREF(Py_None);
+_res = Py_None;
+return _res;
+"""			
+
+f = ManualGenerator("RunApplicationEventLoop", runappeventloop);
+f.docstring = lambda: "() -> ()"
+module.add(f)
 
 SetOutputFileName('_CarbonEvtmodule.c')
 module.generate()

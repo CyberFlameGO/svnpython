@@ -46,6 +46,17 @@ import shutil
 import sys
 
 
+if not hasattr(os.path, "abspath"):
+    # Python 1.5.1 or earlier
+    def abspath(path):
+        """Return an absolute path."""
+        if not os.path.isabs(path):
+            path = os.path.join(os.getcwd(), path)
+        return os.path.normpath(path)
+
+    os.path.abspath = abspath
+
+
 MYDIR = os.path.abspath(sys.path[0])
 TOPDIR = os.path.dirname(MYDIR)
 
@@ -64,13 +75,14 @@ PERL_BINARY = "perl"
 PYTHON_BINARY = "python"
 
 
-def usage(options, file):
-    print >>file, __doc__ % options
+def usage(options):
+    print __doc__ % options
 
 def error(options, message, err=2):
-    print >>sys.stderr, message
-    print >>sys.stderr
-    usage(options, sys.stderr)
+    sys.stdout = sys.stderr
+    print message
+    print
+    usage(options)
     sys.exit(2)
 
 
@@ -150,7 +162,7 @@ class Options:
                 self.formats = list(self.ALL_FORMATS)
                 self.dvips_safe = "ps" in self.formats
             elif opt in ("-H", "--help"):
-                usage(self, sys.stdout)
+                usage(self)
                 sys.exit()
             elif opt == "--iconserver":
                 self.icon_server = arg
@@ -313,7 +325,8 @@ class Job:
 
     def setup_texinputs(self):
         texinputs = [self.filedir] + self.options.base_texinputs
-        os.environ["TEXINPUTS"] = os.pathsep.join(texinputs)
+        texinputs = os.pathsep.join(texinputs)
+        os.environ["TEXINPUTS"] = texinputs
         self.message("TEXINPUTS=" + os.environ["TEXINPUTS"])
 
     def build_aux(self, binary=None):
@@ -628,7 +641,7 @@ _to_perl["$"] = "\\$"
 _to_perl['"'] = '\\"'
 
 def string_to_perl(s):
-    return ''.join(map(_to_perl.get, s))
+    return "".join(map(_to_perl.get, s))
 
 
 def check_for_bibtex(filename):

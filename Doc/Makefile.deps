@@ -106,7 +106,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libfuncs.tex \
 	lib/libpython.tex \
 	lib/libsys.tex \
-	lib/libplatform.tex \
 	lib/libfpectl.tex \
 	lib/libgc.tex \
 	lib/libsets.tex \

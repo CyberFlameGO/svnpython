@@ -1,11 +1,7 @@
-What's New in IDLE 1.0+?
+What's New in IDLE 1.0.2?
 ===================================
 
-*Release date: XX-XXX-2003*
-
-- Keybindings with the Shift modifier now work correctly.  So do bindings which
-  use the Space key.  Limit unmodified user keybindings to the function keys.
-  Python Bug 775353, IDLEfork Bugs 755647, 761557
+*Release date: 05-Dec-2003*
 
 - After an exception, run.py was not setting the exception vector. Noam
   Raphael suggested correcting this so pdb's postmortem pm() would work. 
@@ -14,12 +10,18 @@ What's New in IDLE 1.0+?
 - IDLE now does not fail to save the file anymore if the Tk buffer is not a
   Unicode string, yet eol_convention is.  Python Bugs 774680, 788378
 
+- IDLE will use the Python html docs on the system, if found
+
+What's New in IDLE 1.0.1?
+===================================
+
+*Release date: 23-Sep-2003*
+
 - IDLE didn't start correctly when Python was installed in "Program Files" on
   W2K and XP.  Python Bugs 780451, 784183
 
-- config-main.def documentation incorrectly referred to idle- instead of
+- config-main.def documentation incorrectly referred to idle- instead of 
   config-  filenames.  SF 782759  Also added note about .idlerc location.
-
 
 What's New in IDLE 1.0?
 ===================================

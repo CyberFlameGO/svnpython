@@ -3372,9 +3372,9 @@ time_getstate(PyDateTime_Time *self)
 						_PyDateTime_TIME_DATASIZE);
 	if (basestate != NULL) {
 		if (! HASTZINFO(self) || self->tzinfo == Py_None)
-			result = PyTuple_Pack(1, basestate);
+			result = Py_BuildValue("(O)", basestate);
 		else
-			result = PyTuple_Pack(2, basestate, self->tzinfo);
+			result = Py_BuildValue("OO", basestate, self->tzinfo);
 		Py_DECREF(basestate);
 	}
 	return result;
@@ -4350,9 +4350,9 @@ datetime_getstate(PyDateTime_DateTime *self)
 					  _PyDateTime_DATETIME_DATASIZE);
 	if (basestate != NULL) {
 		if (! HASTZINFO(self) || self->tzinfo == Py_None)
-			result = PyTuple_Pack(1, basestate);
+			result = Py_BuildValue("(O)", basestate);
 		else
-			result = PyTuple_Pack(2, basestate, self->tzinfo);
+			result = Py_BuildValue("OO", basestate, self->tzinfo);
 		Py_DECREF(basestate);
 	}
 	return result;

@@ -61,10 +61,11 @@ class EditorWindow:
                     dochome = os.path.join(basepath, pyver,
                                            'Doc', 'index.html')
             elif sys.platform.count('win') or sys.platform.count('nt'):
-                chmfile = os.path.join(sys.prefix, "Python%d%d.chm" % sys.version_info[:2])
-                if os.path.isfile(chmfile):
-                    dochome = chmfile
-                    print "dochome =", dochome
+                # Try the HTMLHelp file
+                chmpath = os.path.join(sys.prefix, 'Doc',
+                                       'Python%d%d.chm' % sys.version_info[:2])
+                if os.path.isfile(chmpath):
+                    dochome = chmpath
             dochome = os.path.normpath(dochome)
             if os.path.isfile(dochome):
                 EditorWindow.help_url = dochome

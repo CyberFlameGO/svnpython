@@ -1161,7 +1161,7 @@ sock_accept(PySocketSockObject *s)
 	if (addr == NULL)
 		goto finally;
 
-	res = PyTuple_Pack(2, sock, addr);
+	res = Py_BuildValue("OO", sock, addr);
 
 finally:
 	Py_XDECREF(sock);
@@ -1739,6 +1739,11 @@ sock_makefile(PySocketSockObject *s, PyObject *args)
 			SOCKETCLOSE(fd);
 		return s->errorhandler();
 	}
+#ifdef USE_GUSI2
+	/* Workaround for bug in Metrowerks MSL vs. GUSI I/O library */
+	if (strchr(mode, 'b') != NULL)
+		bufsize = 0;
+#endif
 	f = PyFile_FromFile(fp, "<socket>", mode, fclose);
 	if (f != NULL)
 		PyFile_SetBufSize(f, bufsize);
@@ -1906,7 +1911,7 @@ sock_recvfrom(PySocketSockObject *s, PyObject *args)
 				  addrlen)))
 		goto finally;
 
-	ret = PyTuple_Pack(2, buf, addr);
+	ret = Py_BuildValue("OO", buf, addr);
 
 finally:
 	Py_XDECREF(addr);
@@ -2097,8 +2102,8 @@ sock_shutdown(PySocketSockObject *s, PyObject *arg)
 PyDoc_STRVAR(shutdown_doc,
 "shutdown(flag)\n\
 \n\
-Shut down the reading side of the socket (flag == SHUT_RD), the writing side\n\
-of the socket (flag == SHUT_WR), or both ends (flag == SHUT_RDWR).");
+Shut down the reading side of the socket (flag == 0), the writing side\n\
+of the socket (flag == 1), or both ends (flag == 2).");
 
 
 /* List of methods for socket objects */
@@ -2813,7 +2818,7 @@ Convert a 32-bit integer from network to host byte order.");
 static PyObject *
 socket_htons(PyObject *self, PyObject *args)
 {
-	int x1, x2;
+	unsigned long x1, x2;
 
 	if (!PyArg_ParseTuple(args, "i:htons", &x1)) {
 		return NULL;
@@ -4099,29 +4104,6 @@ init_socket(void)
 #endif
 #ifdef NI_DGRAM
 	PyModule_AddIntConstant(m, "NI_DGRAM", NI_DGRAM);
-#endif
-
-	/* shutdown() parameters */
-#ifdef SHUT_RD
-	PyModule_AddIntConstant(m, "SHUT_RD", SHUT_RD);
-#elif defined(SD_RECEIVE)
-	PyModule_AddIntConstant(m, "SHUT_RD", SD_RECEIVE);
-#else
-	PyModule_AddIntConstant(m, "SHUT_RD", 0);
-#endif
-#ifdef SHUT_WR
-	PyModule_AddIntConstant(m, "SHUT_WR", SHUT_WR);
-#elif defined(SD_SEND)
-	PyModule_AddIntConstant(m, "SHUT_WR", SD_SEND);
-#else
-	PyModule_AddIntConstant(m, "SHUT_WR", 1);
-#endif
-#ifdef SHUT_RDWR
-	PyModule_AddIntConstant(m, "SHUT_RDWR", SHUT_RDWR);
-#elif defined(SD_BOTH)
-	PyModule_AddIntConstant(m, "SHUT_RDWR", SD_BOTH);
-#else
-	PyModule_AddIntConstant(m, "SHUT_RDWR", 2);
 #endif
 
 	/* Initialize gethostbyname lock */

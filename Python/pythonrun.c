@@ -27,6 +27,9 @@
 #include "windows.h"
 #endif
 
+#ifdef macintosh
+#include "macglue.h"
+#endif
 extern char *Py_GetPath(void);
 
 extern grammar _PyParser_Grammar; /* From graminit.c */
@@ -777,6 +780,13 @@ maybe_pyc_file(FILE *fp, const char* filename, const char* ext, int closeit)
 	if (strcmp(ext, ".pyc") == 0 || strcmp(ext, ".pyo") == 0)
 		return 1;
 
+#ifdef macintosh
+	/* On a mac, we also assume a pyc file for types 'PYC ' and 'APPL' */
+	if (PyMac_getfiletype((char *)filename) == 'PYC '
+	    || PyMac_getfiletype((char *)filename) == 'APPL')
+		return 1;
+#endif /* macintosh */
+
 	/* Only look into the file if we are allowed to close it, since
 	   it then should also be seekable. */
 	if (closeit) {
@@ -1053,7 +1063,7 @@ PyErr_PrintEx(int set_sys_last_vars)
 	}
 	hook = PySys_GetObject("excepthook");
 	if (hook) {
-		PyObject *args = PyTuple_Pack(3,
+		PyObject *args = Py_BuildValue("(OOO)",
                     exception, v ? v : Py_None, tb ? tb : Py_None);
 		PyObject *result = PyEval_CallObject(hook, args);
 		if (result == NULL) {
@@ -1557,7 +1567,11 @@ Py_Exit(int sts)
 {
 	Py_Finalize();
 
+#ifdef macintosh
+	PyMac_Exit(sts);
+#else
 	exit(sts);
+#endif
 }
 
 static void
@@ -1577,6 +1591,18 @@ initsigs(void)
 	PyOS_InitInterrupts(); /* May imply initsignal() */
 }
 
+#ifdef MPW
+
+/* Check for file descriptor connected to interactive device.
+   Pretend that stdin is always interactive, other files never. */
+
+int
+isatty(int fd)
+{
+	return fd == fileno(stdin);
+}
+
+#endif
 
 /*
  * The file descriptor fd is considered ``interactive'' if either

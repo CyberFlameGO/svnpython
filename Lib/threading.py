@@ -8,8 +8,9 @@ except ImportError:
     del _sys.modules[__name__]
     raise
 
+from StringIO import StringIO as _StringIO
 from time import time as _time, sleep as _sleep
-from traceback import format_exc as _format_exc
+from traceback import print_exc as _print_exc
 
 # Rename some stuff so "from threading import *" is safe
 __all__ = ['activeCount', 'Condition', 'currentThread', 'enumerate', 'Event',
@@ -439,8 +440,10 @@ class Thread(_Verbose):
             except:
                 if __debug__:
                     self._note("%s.__bootstrap(): unhandled exception", self)
+                s = _StringIO()
+                _print_exc(file=s)
                 _sys.stderr.write("Exception in thread %s:\n%s\n" %
-                                  (self.getName(), _format_exc()))
+                                 (self.getName(), s.getvalue()))
             else:
                 if __debug__:
                     self._note("%s.__bootstrap(): normal return", self)

@@ -21,6 +21,17 @@
 #include <windows.h>
 #endif /* _MSC_VER */
 
+#ifdef macintosh
+#ifdef USE_GUSI
+#define HAVE_FTRUNCATE
+#endif
+#endif
+
+#ifdef __MWERKS__
+/* Mwerks fopen() doesn't always set errno */
+#define NO_FOPEN_ERRNO
+#endif
+
 #if defined(PYOS_OS2) && defined(PYCC_GCC)
 #include <io.h>
 #endif
@@ -85,7 +96,7 @@ dircheck(PyFileObject* f)
 #else
 		char *msg = "Is a directory";
 #endif
-		PyObject *exc = PyObject_CallFunction(PyExc_IOError, "(is)",
+		PyObject *exc = PyObject_CallFunction(PyExc_IOError, "(is)", 
 						      EISDIR, msg);
 		PyErr_SetObject(PyExc_IOError, exc);
 		Py_XDECREF(exc);
@@ -126,7 +137,7 @@ fill_file_fields(PyFileObject *f, FILE *fp, char *name, char *mode,
 #endif
 	Py_INCREF(Py_None);
 	f->f_encoding = Py_None;
-
+	
 	if (f->f_name == NULL || f->f_mode == NULL)
 		return NULL;
 	f->f_fp = fp;
@@ -178,8 +189,8 @@ open_the_file(PyFileObject *f, char *name, char *mode)
 #endif
 #ifdef MS_WINDOWS
 		if (PyUnicode_Check(f->f_name)) {
-			PyObject *wmode;
-			wmode = PyUnicode_DecodeASCII(mode, strlen(mode), NULL);
+			PyObject *wmode; 
+			wmode = PyUnicode_DecodeASCII(mode, strlen(mode), NULL); 
 			if (f->f_name && wmode) {
 				Py_BEGIN_ALLOW_THREADS
 				/* PyUnicode_AS_UNICODE OK without thread
@@ -198,6 +209,18 @@ open_the_file(PyFileObject *f, char *name, char *mode)
 		}
 	}
 	if (f->f_fp == NULL) {
+#ifdef NO_FOPEN_ERRNO
+		/* Metroworks only, wich does not always sets errno */
+		if (errno == 0) {
+			PyObject *v;
+			v = Py_BuildValue("(is)", 0, "Cannot open file");
+			if (v != NULL) {
+				PyErr_SetObject(PyExc_IOError, v);
+				Py_DECREF(v);
+			}
+			return NULL;
+		}
+#endif
 #ifdef _MSC_VER
 		/* MSVC 6 (Microsoft) leaves errno at 0 for bad mode strings,
 		 * across all Windows flavors.  When it sets EINVAL varies
@@ -506,33 +529,18 @@ file_seek(PyFileObject *f, PyObject *args)
 static PyObject *
 file_truncate(PyFileObject *f, PyObject *args)
 {
-	Py_off_t newsize;
-	PyObject *newsizeobj = NULL;
-	Py_off_t initialpos;
 	int ret;
+	Py_off_t newsize;
+	PyObject *newsizeobj;
 
 	if (f->f_fp == NULL)
 		return err_closed();
+	newsizeobj = NULL;
 	if (!PyArg_UnpackTuple(args, "truncate", 0, 1, &newsizeobj))
 		return NULL;
 
-	/* Get current file position.  If the file happens to be open for
-	 * update and the last operation was an input operation, C doesn't
-	 * define what the later fflush() will do, but we promise truncate()
-	 * won't change the current position (and fflush() *does* change it
-	 * then at least on Windows).  The easiest thing is to capture
-	 * current pos now and seek back to it at the end.
-	 */
-	Py_BEGIN_ALLOW_THREADS
-	errno = 0;
-	initialpos = _portable_ftell(f->f_fp);
-	Py_END_ALLOW_THREADS
-	if (initialpos == -1)
-		goto onioerror;
-
 	/* Set newsize to current postion if newsizeobj NULL, else to the
-	 * specified value.
-	 */
+	   specified value. */
 	if (newsizeobj != NULL) {
 #if !defined(HAVE_LARGEFILE_SUPPORT)
 		newsize = PyInt_AsLong(newsizeobj);
@@ -544,13 +552,17 @@ file_truncate(PyFileObject *f, PyObject *args)
 		if (PyErr_Occurred())
 			return NULL;
 	}
-	else /* default to current position */
-		newsize = initialpos;
+	else {
+		/* Default to current position. */
+		Py_BEGIN_ALLOW_THREADS
+		errno = 0;
+		newsize = _portable_ftell(f->f_fp);
+		Py_END_ALLOW_THREADS
+		if (newsize == -1)
+			goto onioerror;
+	}
 
-	/* Flush the stream.  We're mixing stream-level I/O with lower-level
-	 * I/O, and a flush may be necessary to synch both platform views
-	 * of the current file state.
-	 */
+	/* Flush the file. */
 	Py_BEGIN_ALLOW_THREADS
 	errno = 0;
 	ret = fflush(f->f_fp);
@@ -562,46 +574,65 @@ file_truncate(PyFileObject *f, PyObject *args)
 	/* MS _chsize doesn't work if newsize doesn't fit in 32 bits,
 	   so don't even try using it. */
 	{
+		Py_off_t current;	/* current file position */
 		HANDLE hFile;
+		int error;
 
-		/* Have to move current pos to desired endpoint on Windows. */
-		Py_BEGIN_ALLOW_THREADS
-		errno = 0;
-		ret = _portable_fseek(f->f_fp, newsize, SEEK_SET) != 0;
-		Py_END_ALLOW_THREADS
-		if (ret)
-			goto onioerror;
+		/* current <- current file postion. */
+		if (newsizeobj == NULL)
+			current = newsize;
+		else {
+			Py_BEGIN_ALLOW_THREADS
+			errno = 0;
+			current = _portable_ftell(f->f_fp);
+			Py_END_ALLOW_THREADS
+			if (current == -1)
+				goto onioerror;
+		}
+
+		/* Move to newsize. */
+		if (current != newsize) {
+			Py_BEGIN_ALLOW_THREADS
+			errno = 0;
+			error = _portable_fseek(f->f_fp, newsize, SEEK_SET)
+				!= 0;
+			Py_END_ALLOW_THREADS
+			if (error)
+				goto onioerror;
+		}
 
 		/* Truncate.  Note that this may grow the file! */
 		Py_BEGIN_ALLOW_THREADS
 		errno = 0;
 		hFile = (HANDLE)_get_osfhandle(fileno(f->f_fp));
-		ret = hFile == (HANDLE)-1;
-		if (ret == 0) {
-			ret = SetEndOfFile(hFile) == 0;
-			if (ret)
+		error = hFile == (HANDLE)-1;
+		if (!error) {
+			error = SetEndOfFile(hFile) == 0;
+			if (error)
 				errno = EACCES;
 		}
 		Py_END_ALLOW_THREADS
-		if (ret)
+		if (error)
 			goto onioerror;
+
+		/* Restore original file position. */
+		if (current != newsize) {
+			Py_BEGIN_ALLOW_THREADS
+			errno = 0;
+			error = _portable_fseek(f->f_fp, current, SEEK_SET)
+				!= 0;
+			Py_END_ALLOW_THREADS
+			if (error)
+				goto onioerror;
+		}
 	}
 #else
 	Py_BEGIN_ALLOW_THREADS
 	errno = 0;
 	ret = ftruncate(fileno(f->f_fp), newsize);
 	Py_END_ALLOW_THREADS
-	if (ret != 0)
-		goto onioerror;
+	if (ret != 0) goto onioerror;
 #endif /* !MS_WINDOWS */
-
-	/* Restore original file position. */
-	Py_BEGIN_ALLOW_THREADS
-	errno = 0;
-	ret = _portable_fseek(f->f_fp, initialpos, SEEK_SET) != 0;
-	Py_END_ALLOW_THREADS
-	if (ret)
-		goto onioerror;
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -716,7 +747,12 @@ new_buffersize(PyFileObject *f, size_t currentsize)
 		   works.  We can't use the lseek() value either, because we
 		   need to take the amount of buffered data into account.
 		   (Yet another reason why stdio stinks. :-) */
+#ifdef USE_GUSI2
+		pos = lseek(fileno(f->f_fp), 1L, SEEK_CUR);
+		pos = lseek(fileno(f->f_fp), -1L, SEEK_CUR);
+#else
 		pos = lseek(fileno(f->f_fp), 0L, SEEK_CUR);
+#endif
 		if (pos >= 0) {
 			pos = ftell(f->f_fp);
 		}
@@ -830,7 +866,7 @@ file_readinto(PyFileObject *f, PyObject *args)
 	while (ntodo > 0) {
 		Py_BEGIN_ALLOW_THREADS
 		errno = 0;
-		nnow = Py_UniversalNewlineFread(ptr+ndone, ntodo, f->f_fp,
+		nnow = Py_UniversalNewlineFread(ptr+ndone, ntodo, f->f_fp, 
 						(PyObject *)f);
 		Py_END_ALLOW_THREADS
 		if (nnow == 0) {
@@ -1101,8 +1137,8 @@ get_line(PyFileObject *f, int n)
 				if (skipnextlf ) {
 					skipnextlf = 0;
 					if (c == '\n') {
-						/* Seeing a \n here with
-						 * skipnextlf true means we
+						/* Seeing a \n here with 
+						 * skipnextlf true means we 
 						 * saw a \r before.
 						 */
 						newlinetypes |= NEWLINE_CRLF;
@@ -1199,7 +1235,7 @@ PyFile_GetLine(PyObject *f, int n)
 		if (reader == NULL)
 			return NULL;
 		if (n <= 0)
-			args = PyTuple_New(0);
+			args = Py_BuildValue("()");
 		else
 			args = Py_BuildValue("(i)", n);
 		if (args == NULL) {
@@ -1700,8 +1736,8 @@ get_newlines(PyFileObject *f, void *closure)
 	case NEWLINE_CR|NEWLINE_LF|NEWLINE_CRLF:
 		return Py_BuildValue("(sss)", "\r", "\n", "\r\n");
 	default:
-		PyErr_Format(PyExc_SystemError,
-			     "Unknown newlines value 0x%x\n",
+		PyErr_Format(PyExc_SystemError, 
+			     "Unknown newlines value 0x%x\n", 
 			     f->f_newlinetypes);
 		return NULL;
 	}
@@ -1711,7 +1747,7 @@ get_newlines(PyFileObject *f, void *closure)
 static PyGetSetDef file_getsetlist[] = {
 	{"closed", (getter)get_closed, NULL, "True if the file is closed"},
 #ifdef WITH_UNIVERSAL_NEWLINES
-	{"newlines", (getter)get_newlines, NULL,
+	{"newlines", (getter)get_newlines, NULL, 
 	 "end-of-line convention used in this file"},
 #endif
 	{0},
@@ -1726,8 +1762,8 @@ drop_readahead(PyFileObject *f)
 	}
 }
 
-/* Make sure that file has a readahead buffer with at least one byte
-   (unless at EOF) and no more than bufsize.  Returns negative value on
+/* Make sure that file has a readahead buffer with at least one byte 
+   (unless at EOF) and no more than bufsize.  Returns negative value on 
    error */
 static int
 readahead(PyFileObject *f, int bufsize)
@@ -1735,7 +1771,7 @@ readahead(PyFileObject *f, int bufsize)
 	int chunksize;
 
 	if (f->f_buf != NULL) {
-		if( (f->f_bufend - f->f_bufptr) >= 1)
+		if( (f->f_bufend - f->f_bufptr) >= 1) 
 			return 0;
 		else
 			drop_readahead(f);
@@ -1762,8 +1798,8 @@ readahead(PyFileObject *f, int bufsize)
 }
 
 /* Used by file_iternext.  The returned string will start with 'skip'
-   uninitialized bytes followed by the remainder of the line. Don't be
-   horrified by the recursive call: maximum recursion depth is limited by
+   uninitialized bytes followed by the remainder of the line. Don't be 
+   horrified by the recursive call: maximum recursion depth is limited by 
    logarithmic buffer growth to about 50 even when reading a 1gb line. */
 
 static PyStringObject *
@@ -1775,11 +1811,11 @@ readahead_get_line_skip(PyFileObject *f, int skip, int bufsize)
 	int len;
 
 	if (f->f_buf == NULL)
-		if (readahead(f, bufsize) < 0)
+		if (readahead(f, bufsize) < 0) 
 			return NULL;
 
 	len = f->f_bufend - f->f_bufptr;
-	if (len == 0)
+	if (len == 0) 
 		return (PyStringObject *)
 			PyString_FromStringAndSize(NULL, skip);
 	bufptr = memchr(f->f_bufptr, '\n', len);
@@ -1788,7 +1824,7 @@ readahead_get_line_skip(PyFileObject *f, int skip, int bufsize)
 		len = bufptr - f->f_bufptr;
 		s = (PyStringObject *)
 			PyString_FromStringAndSize(NULL, skip+len);
-		if (s == NULL)
+		if (s == NULL) 
 			return NULL;
 		memcpy(PyString_AS_STRING(s)+skip, f->f_bufptr, len);
 		f->f_bufptr = bufptr;
@@ -2045,7 +2081,7 @@ PyFile_WriteObject(PyObject *v, PyObject *f, int flags)
 			return -1;
 		}
 #ifdef Py_USING_UNICODE
-                if ((flags & Py_PRINT_RAW) &&
+                if ((flags & Py_PRINT_RAW) && 
 		    PyUnicode_Check(v) && enc != Py_None) {
 			char *cenc = PyString_AS_STRING(enc);
 			value = PyUnicode_AsEncodedString(v, cenc, "strict");
@@ -2078,7 +2114,7 @@ PyFile_WriteObject(PyObject *v, PyObject *f, int flags)
 		Py_DECREF(writer);
 		return -1;
 	}
-	args = PyTuple_Pack(1, value);
+	args = Py_BuildValue("(O)", value);
 	if (args == NULL) {
 		Py_DECREF(value);
 		Py_DECREF(writer);

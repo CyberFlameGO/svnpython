@@ -48,15 +48,14 @@ _len = len
 _type = type
 
 
-def pprint(object, stream=None, indent=1, width=80, depth=None):
+def pprint(object, stream=None):
     """Pretty-print a Python object to a stream [default is sys.sydout]."""
-    printer = PrettyPrinter(
-        stream=stream, indent=indent, width=width, depth=depth)
+    printer = PrettyPrinter(stream=stream)
     printer.pprint(object)
 
-def pformat(object, indent=1, width=80, depth=None):
+def pformat(object):
     """Format a Python object into a pretty-printed representation."""
-    return PrettyPrinter(indent=indent, width=width, depth=depth).pformat(object)
+    return PrettyPrinter().pformat(object)
 
 def saferepr(object):
     """Version of repr() which can handle recursive data structures."""
@@ -91,9 +90,9 @@ class PrettyPrinter:
         """
         indent = int(indent)
         width = int(width)
-        assert indent >= 0, "indent must be >= 0"
+        assert indent >= 0
         assert depth is None or depth > 0, "depth must be > 0"
-        assert width, "width must be != 0"
+        assert width
         self._depth = depth
         self._indent_per_level = indent
         self._width = width
@@ -131,8 +130,7 @@ class PrettyPrinter:
         write = stream.write
 
         if sepLines:
-            r = typ.__repr__
-            if issubclass(typ, dict) and r is dict.__repr__:
+            if typ is dict:
                 write('{')
                 if self._indent_per_level > 1:
                     write((self._indent_per_level - 1) * ' ')
@@ -159,9 +157,8 @@ class PrettyPrinter:
                 write('}')
                 return
 
-            if (issubclass(typ, list) and r is list.__repr__) or \
-               (issubclass(typ, tuple) and r is tuple.__repr__):
-                if issubclass(typ, list):
+            if typ is list or typ is tuple:
+                if typ is list:
                     write('[')
                     endchar = ']'
                 else:
@@ -182,7 +179,7 @@ class PrettyPrinter:
                                           allowance + 1, context, level)
                     indent = indent - self._indent_per_level
                     del context[objid]
-                if issubclass(typ, tuple) and length == 1:
+                if typ is tuple and length == 1:
                     write(',')
                 write(endchar)
                 return
@@ -229,8 +226,7 @@ def _safe_repr(object, context, maxlevels, level):
                 write(qget(char, `char`[1:-1]))
         return ("%s%s%s" % (closure, sio.getvalue(), closure)), True, False
 
-    r = typ.__repr__
-    if issubclass(typ, dict) and r is dict.__repr__:
+    if typ is dict:
         if not object:
             return "{}", True, False
         objid = _id(object)
@@ -255,9 +251,8 @@ def _safe_repr(object, context, maxlevels, level):
         del context[objid]
         return "{%s}" % _commajoin(components), readable, recursive
 
-    if (issubclass(typ, list) and r is list.__repr__) or \
-       (issubclass(typ, tuple) and r is tuple.__repr__):
-        if issubclass(typ, list):
+    if typ is list or typ is tuple:
+        if typ is list:
             if not object:
                 return "[]", True, False
             format = "[%s]"

@@ -546,10 +546,9 @@ objects support:
 Return a copy of the string with only its first character capitalized.
 \end{methoddesc}
 
-\begin{methoddesc}[string]{center}{width\optional{, fillchar}}
+\begin{methoddesc}[string]{center}{width}
 Return centered in a string of length \var{width}. Padding is done
-using the specified \var{fillchar} (default is a space).
-\versionchanged[Support for the \var{fillchar} argument]{2.4}
+using spaces.
 \end{methoddesc}
 
 \begin{methoddesc}[string]{count}{sub\optional{, start\optional{, end}}}
@@ -630,7 +629,7 @@ there is at least one character, false otherwise.
 
 \begin{methoddesc}[string]{istitle}{}
 Return true if the string is a titlecased string and there is at least one
-character, for example uppercase characters may only follow uncased
+character, i.e. uppercase characters may only follow uncased
 characters and lowercase characters only cased ones.  Return false
 otherwise.
 \end{methoddesc}
@@ -646,12 +645,10 @@ sequence \var{seq}.  The separator between elements is the string
 providing this method.
 \end{methoddesc}
 
-\begin{methoddesc}[string]{ljust}{width\optional{, fillchar}}
+\begin{methoddesc}[string]{ljust}{width}
 Return the string left justified in a string of length \var{width}.
-Padding is done using the specified \var{fillchar} (default is a
-space).  The original string is returned if
+Padding is done using spaces.  The original string is returned if
 \var{width} is less than \code{len(\var{s})}.
-\versionchanged[Support for the \var{fillchar} argument]{2.4}
 \end{methoddesc}
 
 \begin{methoddesc}[string]{lower}{}
@@ -686,20 +683,10 @@ Like \method{rfind()} but raises \exception{ValueError} when the
 substring \var{sub} is not found.
 \end{methoddesc}
 
-\begin{methoddesc}[string]{rjust}{width\optional{, fillchar}}
+\begin{methoddesc}[string]{rjust}{width}
 Return the string right justified in a string of length \var{width}.
-Padding is done using the specified \var{fillchar} (default is a space).
-The original string is returned if
+Padding is done using spaces.  The original string is returned if
 \var{width} is less than \code{len(\var{s})}.
-\versionchanged[Support for the \var{fillchar} argument]{2.4}
-\end{methoddesc}
-
-\begin{methoddesc}[string]{rsplit}{\optional{sep \optional{,maxsplit}}}
-Return a list of the words in the string, using \var{sep} as the
-delimiter string.  If \var{maxsplit} is given, at most \var{maxsplit}
-splits are done, the \em{rightmost} ones.  If \var{sep} is not specified
-or \code{None}, any whitespace string is a separator.
-\versionadded{2.4}
 \end{methoddesc}
 
 \begin{methoddesc}[string]{rstrip}{\optional{chars}}
@@ -985,8 +972,7 @@ The following operations are defined on mutable sequence types (where
 	{same as \code{del \var{s}[\var{s}.index(\var{x})]}}{(4)}
   \lineiii{\var{s}.reverse()}
 	{reverses the items of \var{s} in place}{(7)}
-  \lineiii{\var{s}.sort(\optional{\var{cmp}=None\optional{, \var{key}=None
-                        \optional{, \var{reverse}=False}}})}
+  \lineiii{\var{s}.sort(\optional{\var{cmpfunc=None}})}
 	{sort the items of \var{s} in place}{(7), (8), (9), (10)}
 \end{tableiii}
 \indexiv{operations on}{mutable}{sequence}{types}
@@ -1037,38 +1023,47 @@ Notes:
   list.  To remind you that they operate by side effect, they don't return
   the sorted or reversed list.
 
-\item[(8)] The \method{sort()} method takes optional arguments for
-  controlling the comparisions.
-
-  \var{cmp} specifies a custom comparison function of two arguments
-     (list items) which should return a negative, zero or positive number
-     depending on whether the first argument is considered smaller than,
-     equal to, or larger than the second argument:
-     \samp{\var{cmp}=\keyword{lambda} \var{x},\var{y}:
-     \function{cmp}(x.lower(), y.lower())}
-     
-  \var{key} specifies a function of one argument that is used to
-     extract a comparison key from each list element:
-     \samp{\var{cmp}=\function{str.lower}}
-
-  \var{reverse} is a boolean value.  If set to \code{True}, then the
-     list elements are sorted as if each comparison were reversed.
-
-  In general, the \var{key} and \var{reverse} conversion processes are
-  much faster than specifying an equivalent \var{cmp} function.  This is
-  because \var{cmp} is called multiple times for each list element while
-  \var{key} and \var{reverse} touch each element only once.
-
+\item[(8)] The \method{sort()} method takes an optional argument
+  specifying a comparison function of two arguments (list items) which
+  should return a negative, zero or positive number depending on whether
+  the first argument is considered smaller than, equal to, or larger
+  than the second argument.  Note that this slows the sorting process
+  down considerably; for example to sort a list in reverse order it is much
+  faster to call \method{sort()} followed by \method{reverse()}
+  than to use \method{sort()} with a comparison function that
+  reverses the ordering of the elements.  Passing \constant{None} as the
+  comparison function is semantically equivalent to calling
+  \method{sort()} with no comparison function.
   \versionchanged[Support for \code{None} as an equivalent to omitting
   \var{cmpfunc} was added]{2.3}
 
-  \versionchanged[Support for \var{key} and \var{reverse} was added]{2.4}
+  As an example of using the \var{cmpfunc} argument to the
+  \method{sort()} method, consider sorting a list of sequences by the
+  second element of that list:
 
-\item[(9)]  Starting with Python 2.3, the \method{sort()} method is
-  guaranteed to be stable.  A sort is stable if it guarantees not to
-  change the relative order of elements that compare equal --- this is
-  helpful for sorting in multiple passes (for example, sort by
-  department, then by salary grade).
+\begin{verbatim}
+def mycmp(a, b):
+    return cmp(a[1], b[1])
+
+mylist.sort(mycmp)
+\end{verbatim}
+
+  A more time-efficient approach for reasonably-sized data structures can
+  often be used:
+
+\begin{verbatim}
+tmplist = [(x[1], x) for x in mylist]
+tmplist.sort()
+mylist = [x for (key, x) in tmplist]
+\end{verbatim}
+
+\item[(9)] Whether the \method{sort()} method is stable is not defined by
+  the language (a sort is stable if it guarantees not to change the
+  relative order of elements that compare equal).  In the C
+  implementation of Python, sorts were stable only by accident through
+  Python 2.2.  The C implementation of Python 2.3 introduced a stable
+  \method{sort()} method, but code that intends to be portable across
+  implementations and versions must not rely on stability.
 
 \item[(10)] While a list is being sorted, the effect of attempting to
   mutate, or even inspect, the list is undefined.  The C implementation
@@ -1076,126 +1071,6 @@ Notes:
   \exception{ValueError} if it can detect that the list has been
   mutated during a sort.
 \end{description}
-
-\subsection{Set Types \label{types-set}}
-\obindex{set}
-
-A \dfn{set} object is an unordered collection of immutable values.
-Common uses include membership testing, removing duplicates from a sequence,
-and computing mathematical operations such as intersection, union, difference,
-and symmetric difference.
-\versionadded{2.4}     
-
-Like other collections, sets support \code{\var{x} in \var{set}},
-\code{len(\var{set})}, and \code{for \var{x} in \var{set}}.  Being an
-unordered collection, sets do not record element position or order of
-insertion.  Accordingly, sets do not support indexing, slicing, or
-other sequence-like behavior.     
-
-There are currently two builtin set types, \class{set} and \class{frozenset}.
-The \class{set} type is mutable --- the contents can be changed using methods
-like \method{add()} and \method{remove()}.  Since it is mutable, it has no
-hash value and cannot be used as either a dictionary key or as an element of
-another set.  The \class{frozenset} type is immutable and hashable --- its
-contents cannot be altered after is created; however, it can be used as
-a dictionary key or as an element of another set.
-
-Instances of \class{set} and \class{frozenset} provide the following operations:
-
-\begin{tableiii}{c|c|l}{code}{Operation}{Equivalent}{Result}
-  \lineiii{len(\var{s})}{}{cardinality of set \var{s}}
-
-  \hline
-  \lineiii{\var{x} in \var{s}}{}
-         {test \var{x} for membership in \var{s}}
-  \lineiii{\var{x} not in \var{s}}{}
-         {test \var{x} for non-membership in \var{s}}
-  \lineiii{\var{s}.issubset(\var{t})}{\code{\var{s} <= \var{t}}}
-         {test whether every element in \var{s} is in \var{t}}
-  \lineiii{\var{s}.issuperset(\var{t})}{\code{\var{s} >= \var{t}}}
-         {test whether every element in \var{t} is in \var{s}}
-
-  \hline
-  \lineiii{\var{s}.union(\var{t})}{\var{s} | \var{t}}
-         {new set with elements from both \var{s} and \var{t}}
-  \lineiii{\var{s}.intersection(\var{t})}{\var{s} \&\ \var{t}}
-         {new set with elements common to \var{s} and \var{t}}
-  \lineiii{\var{s}.difference(\var{t})}{\var{s} - \var{t}}
-         {new set with elements in \var{s} but not in \var{t}}
-  \lineiii{\var{s}.symmetric_difference(\var{t})}{\var{s} \^\ \var{t}}
-         {new set with elements in either \var{s} or \var{t} but not both}
-  \lineiii{\var{s}.copy()}{}
-         {new set with a shallow copy of \var{s}}
-\end{tableiii}
-
-Note, the non-operator versions of \method{union()}, \method{intersection()},
-\method{difference()}, and \method{symmetric_difference()},
-\method{issubset()}, and \method{issuperset()} methods will accept any
-iterable as an argument.  In contrast, their operator based counterparts
-require their arguments to be sets.  This precludes error-prone constructions
-like \code{set('abc') \&\ 'cbs'} in favor of the more readable
-\code{set('abc').intersection('cbs')}.
-
-Both \class{set} and \class{frozenset} support set to set comparisons.
-Two sets are equal if and only if every element of each set is contained in
-the other (each is a subset of the other).
-A set is less than another set if and only if the first set is a proper
-subset of the second set (is a subset, but is not equal).
-A set is greater than another set if and only if the first set is a proper
-superset of the second set (is a superset, but is not equal).
-
-The subset and equality comparisons do not generalize to a complete
-ordering function.  For example, any two disjoint sets are not equal and
-are not subsets of each other, so \emph{all} of the following return
-\code{False}:  \code{\var{a}<\var{b}}, \code{\var{a}==\var{b}}, or
-\code{\var{a}>\var{b}}.
-Accordingly, sets do not implement the \method{__cmp__} method.
-
-Since sets only define partial ordering (subset relationships), the output
-of the \method{list.sort()} method is undefined for lists of sets.
-
-For convenience in implementing sets of sets, the \method{__contains__()},
-\method{remove()}, and \method{discard()} methods automatically match
-instances of the \class{set} class their \class{frozenset} counterparts
-inside a set.  For example, \code{set('abc') in set([frozenset('abc')])}
-returns \code{True}.
-
-The following table lists operations available for \class{set}
-that do not apply to immutable instances of \class{frozenset}:
-
-\begin{tableiii}{c|c|l}{code}{Operation}{Equivalent}{Result}
-  \lineiii{\var{s}.update(\var{t})}
-         {\var{s} |= \var{t}}
-         {return set \var{s} with elements added from \var{t}}
-  \lineiii{\var{s}.intersection_update(\var{t})}
-         {\var{s} \&= \var{t}}
-         {return set \var{s} keeping only elements also found in \var{t}}
-  \lineiii{\var{s}.difference_update(\var{t})}
-         {\var{s} -= \var{t}}
-         {return set \var{s} after removing elements found in \var{t}}
-  \lineiii{\var{s}.symmetric_difference_update(\var{t})}
-         {\var{s} \textasciicircum= \var{t}}
-         {return set \var{s} with elements from \var{s} or \var{t}
-          but not both}
-
-  \hline
-  \lineiii{\var{s}.add(\var{x})}{}
-         {add element \var{x} to set \var{s}}
-  \lineiii{\var{s}.remove(\var{x})}{}
-         {remove \var{x} from set \var{s}; raises KeyError if not present}
-  \lineiii{\var{s}.discard(\var{x})}{}
-         {removes \var{x} from set \var{s} if present}
-  \lineiii{\var{s}.pop()}{}
-         {remove and return an arbitrary element from \var{s}; raises
-	  \exception{KeyError} if empty}
-  \lineiii{\var{s}.clear()}{}
-         {remove all elements from set \var{s}}
-\end{tableiii}
-
-Note, the non-operator versions of the \method{update()},
-\method{intersection_update()}, \method{difference_update()}, and
-\method{symmetric_difference_update()} methods will accept any iterable
-as an argument.
 
 
 \subsection{Mapping Types \label{typesmapping}}

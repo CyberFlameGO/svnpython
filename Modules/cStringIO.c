@@ -439,7 +439,7 @@ O_writelines(Oobject *self, PyObject *args) {
         tmp = PyObject_CallFunction(joiner, "O", args);
         UNLESS (tmp) return NULL;
 
-        args = PyTuple_Pack(1, tmp);
+        args = Py_BuildValue("(O)", tmp);
         Py_DECREF(tmp);
         UNLESS (args) return NULL;
 

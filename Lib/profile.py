@@ -183,8 +183,10 @@ class Profile:
                 # list (for performance).  Note that we can't assume
                 # the timer() result contains two values in all
                 # cases.
-                def get_time_timer(timer=timer, sum=sum):
-                    return sum(timer())
+                import operator
+                def get_time_timer(timer=timer,
+                                   reduce=reduce, reducer=operator.add):
+                    return reduce(reducer, timer(), 0)
                 self.get_time = get_time_timer
         self.t = self.get_time()
         self.simulate_call('profiler')

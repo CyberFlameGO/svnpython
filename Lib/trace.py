@@ -46,6 +46,7 @@ Sample use, programmatically
 """
 
 import linecache
+import marshal
 import os
 import re
 import sys

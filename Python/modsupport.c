@@ -3,7 +3,11 @@
 
 #include "Python.h"
 
+#ifdef MPW /* MPW pushes 'extended' for float and double types with varargs */
+typedef extended va_double;
+#else
 typedef double va_double;
+#endif
 
 /* Package context -- the full module name for package imports */
 char *_Py_PackageContext = NULL;
@@ -516,9 +520,8 @@ PyModule_AddObject(PyObject *m, char *name, PyObject *o)
 		return -1;
 	}
 	if (!o) {
-		if (!PyErr_Occurred())
-			PyErr_SetString(PyExc_TypeError,
-					"PyModule_AddObject() needs non-NULL value");
+		PyErr_SetString(PyExc_TypeError,
+				"PyModule_AddObject() needs non-NULL value");
 		return -1;
 	}
 

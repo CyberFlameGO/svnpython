@@ -97,10 +97,6 @@ There is no \cfunction{PyNone_Check()} function for the same reason.
   with respect to reference counts.
 \end{cvardesc}
 
-\begin{csimplemacrodesc}{Py_RETURN_NONE}
-  Properly handles returning \cdata{Py_None} from within a C function.
-\end{csimplemacrodesc}
-
 
 \section{Numeric Objects \label{numericObjects}}
 
@@ -977,7 +973,7 @@ which is \ASCII.  The file system calls should use
 \cdata{Py_FileSystemDefaultEncoding} as the encoding for file
 names. This variable should be treated as read-only: On some systems,
 it will be a pointer to a static string, on others, it will change at
-run-time (such as when the application invokes setlocale).
+run-time, e.g. when the application invokes setlocale.
 
 Error handling is set by errors which may also be set to \NULL{}
 meaning to use the default handling defined for the codec.  Default
@@ -1588,14 +1584,6 @@ format.
   Return a new tuple object of size \var{len}, or \NULL{} on failure.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{PyObject*}{PyTuple_Pack}{int n, \moreargs}
-  Return a new tuple object of size \var{n}, or \NULL{} on failure.
-  The tuple values are initialized to the subsequent \var{n} C arguments
-  pointing to Python objects.  \samp{PyTuple_Pack(2, \var{a}, \var{b})}
-  is equivalent to \samp{Py_BuildValue("(OO)", \var{a}, \var{b})}.
-  \versionadded{2.4}			 
-\end{cfuncdesc}
-
 \begin{cfuncdesc}{int}{PyTuple_Size}{PyObject *p}
   Takes a pointer to a tuple object, and returns the size of that
   tuple.
@@ -1808,14 +1796,6 @@ format.
   Empties an existing dictionary of all key-value pairs.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{int}{PyDict_Contains}{PyObject *p, PyObject *key}
-  Determine if dictionary \var{p} contains \var{key}.  If an item
-  in \var{p} is matches \var{key}, return \code{1}, otherwise return
-  \code{0}.  On error, return \code{-1}.  This is equivalent to the
-  Python expression \samp{\var{key} in \var{p}}.
-  \versionadded{2.4}			 
-\end{cfuncdesc}
-
 \begin{cfuncdesc}{PyObject*}{PyDict_Copy}{PyObject *p}
   Returns a new dictionary that contains the same key-value pairs as
   \var{p}.
@@ -1896,9 +1876,7 @@ format.
   parameters \var{pkey} and \var{pvalue} should either point to
   \ctype{PyObject*} variables that will be filled in with each key and
   value, respectively, or may be \NULL.  Any references returned through
-  them are borrowed.  \var{ppos} should not be altered during iteration.
-  Its value represents offsets within the internal dictionary structure,
-  and since the structure is sparse, the offsets are not consecutive.
+  them are borrowed.
 
   For example:
 
@@ -2495,38 +2473,32 @@ information on using these objects.
 \end{ctypedesc}
 
 \begin{cfuncdesc}{int}{PyCObject_Check}{PyObject *p}
-  Return true if its argument is a \ctype{PyCObject}.
+  Returns true if its argument is a \ctype{PyCObject}.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyCObject_FromVoidPtr}{void* cobj,
                                                     void (*destr)(void *)}
-  Create a \ctype{PyCObject} from the \code{void *}\var{cobj}.  The
+  Creates a \ctype{PyCObject} from the \code{void *}\var{cobj}.  The
   \var{destr} function will be called when the object is reclaimed,
   unless it is \NULL.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyCObject_FromVoidPtrAndDesc}{void* cobj,
 	                          void* desc, void (*destr)(void *, void *)}
-  Create a \ctype{PyCObject} from the \ctype{void *}\var{cobj}.  The
+  Creates a \ctype{PyCObject} from the \ctype{void *}\var{cobj}.  The
   \var{destr} function will be called when the object is reclaimed.
   The \var{desc} argument can be used to pass extra callback data for
   the destructor function.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{void*}{PyCObject_AsVoidPtr}{PyObject* self}
-  Return the object \ctype{void *} that the \ctype{PyCObject}
+  Returns the object \ctype{void *} that the \ctype{PyCObject}
   \var{self} was created with.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{void*}{PyCObject_GetDesc}{PyObject* self}
-  Return the description \ctype{void *} that the \ctype{PyCObject}
+  Returns the description \ctype{void *} that the \ctype{PyCObject}
   \var{self} was created with.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{int}{PyCObject_SetVoidPtr}{PyObject* self, void* cobj}
-  Set the void pointer inside \var{self} to \var{cobj}. 
-  The \ctype{PyCObject} must not have an associated destructor.
-  Return true on success, false on failure.
 \end{cfuncdesc}
 
 

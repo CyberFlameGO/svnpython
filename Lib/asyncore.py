@@ -125,6 +125,30 @@ def poll(timeout=0.0, map=None):
             write(obj)
 
 def poll2(timeout=0.0, map=None):
+    import poll
+    if map is None:
+        map = socket_map
+    if timeout is not None:
+        # timeout is in milliseconds
+        timeout = int(timeout*1000)
+    if map:
+        l = []
+        for fd, obj in map.items():
+            flags = 0
+            if obj.readable():
+                flags = poll.POLLIN
+            if obj.writable():
+                flags = flags | poll.POLLOUT
+            if flags:
+                l.append((fd, flags))
+        r = poll.poll(l, timeout)
+        for fd, flags in r:
+            obj = map.get(fd)
+            if obj is None:
+                continue
+            readwrite(obj, flags)
+
+def poll3(timeout=0.0, map=None):
     # Use the poll() support added to the select module in Python 2.0
     if map is None:
         map = socket_map
@@ -153,14 +177,15 @@ def poll2(timeout=0.0, map=None):
                 continue
             readwrite(obj, flags)
 
-poll3 = poll2                           # Alias for backward compatibility
-
 def loop(timeout=30.0, use_poll=0, map=None):
     if map is None:
         map = socket_map
 
-    if use_poll and hasattr(select, 'poll'):
-        poll_fun = poll2
+    if use_poll:
+        if hasattr(select, 'poll'):
+            poll_fun = poll3
+        else:
+            poll_fun = poll2
     else:
         poll_fun = poll
 
@@ -176,11 +201,6 @@ class dispatcher:
     addr = None
 
     def __init__(self, sock=None, map=None):
-        if map is None:
-            self._map = socket_map
-        else:
-            self._map = map
-
         if sock:
             self.set_socket(sock, map)
             # I think it should inherit this anyway
@@ -207,18 +227,21 @@ class dispatcher:
                 status.append('%s:%d' % self.addr)
             except TypeError:
                 status.append(repr(self.addr))
-        return '<%s at %#x>' % (' '.join(status), id(self))
+        # On some systems (RH10) id() can be a negative number. 
+        # work around this.
+        MAX = 2L*sys.maxint+1
+        return '<%s at %#x>' % (' '.join(status), id(self)&MAX)
 
     def add_channel(self, map=None):
         #self.log_info('adding channel %s' % self)
         if map is None:
-            map = self._map
+            map = socket_map
         map[self._fileno] = self
 
     def del_channel(self, map=None):
         fd = self._fileno
         if map is None:
-            map = self._map
+            map = socket_map
         if map.has_key(fd):
             #self.log_info('closing channel %d:%s' % (fd, self))
             del map[fd]

@@ -440,17 +440,6 @@ class C:
   and is known to vary.}
 \end{funcdesc}
 
-\begin{funcdesc}{frozenset}{\optional{iterable}}
-  Return a frozenset object whose elements are taken from \var{iterable}.
-  Frozensets are sets that have no update methods but can be hashed and
-  used as members of other sets or as dictionary keys.  The elements of
-  a frozenset must be immutable themselves.  To represent sets of sets,
-  the inner sets should also be \class{frozenset} objects.  If
-  \var{iterable} is not specified, returns a new empty set,
-  \code{frozenset([])}.
-  \versionadded{2.4}  
-\end{funcdesc}
-
 \begin{funcdesc}{getattr}{object, name\optional{, default}}
   Return the value of the named attributed of \var{object}.  \var{name}
   must be a string.  If the string is the name of one of the object's
@@ -839,14 +828,6 @@ class C(object):
   when passed to \function{eval()}.
 \end{funcdesc}
 
-\begin{funcdesc}{reversed}{seq}
-  Return a reverse iterator.  \var{seq} must be an object which
-  supports the sequence protocol (the __len__() method and the
-  \method{__getitem__()} method with integer arguments starting at
-  \code{0}).
-  \versionadded{2.4}
-\end{funcdesc}
-
 \begin{funcdesc}{round}{x\optional{, n}}
   Return the floating point value \var{x} rounded to \var{n} digits
   after the decimal point.  If \var{n} is omitted, it defaults to zero.
@@ -854,14 +835,6 @@ class C(object):
   closest multiple of 10 to the power minus \var{n}; if two multiples
   are equally close, rounding is done away from 0 (so. for example,
   \code{round(0.5)} is \code{1.0} and \code{round(-0.5)} is \code{-1.0}).
-\end{funcdesc}
-
-\begin{funcdesc}{set}{\optional{iterable}}
-  Return a set whose elements are taken from \var{iterable}.  The elements
-  must be immutable.  To represent sets of sets, the inner sets should
-  be \class{frozenset} objects.  If \var{iterable} is not specified,
-  returns a new empty set, \code{set([])}.
-  \versionadded{2.4}  
 \end{funcdesc}
 
 \begin{funcdesc}{setattr}{object, name, value}
@@ -884,15 +857,6 @@ class C(object):
   party extensions.  Slice objects are also generated when extended
   indexing syntax is used.  For example: \samp{a[start:stop:step]} or
   \samp{a[start:stop, i]}.
-\end{funcdesc}
-
-\begin{funcdesc}{sorted(\var{iterable}\optional{, \var{cmp}=None
-                                      \optional{, \var{key}=None
-                                      \optional{, \var{reverse}=False}}})}
-  Return a new sorted list from the items in \var{iterable}.
-  The optional arguments \var{cmp}, \var{key}, and \var{reverse}
-  have the same meaning as those for the \method{list.sort()} method.
-  \versionadded{2.4}    
 \end{funcdesc}
 
 \begin{funcdesc}{staticmethod}{function}
@@ -1058,20 +1022,16 @@ It's a function
   when the loop is usually terminated with \keyword{break}).
 \end{funcdesc}
 
-\begin{funcdesc}{zip}{\optional{seq1, \moreargs}}
+\begin{funcdesc}{zip}{seq1, \moreargs}
   This function returns a list of tuples, where the \var{i}-th tuple contains
-  the \var{i}-th element from each of the argument sequences.
-  The returned list is truncated in length to the length of
+  the \var{i}-th element from each of the argument sequences.  At
+  least one sequence is required, otherwise a \exception{TypeError} is
+  raised.  The returned list is truncated in length to the length of
   the shortest argument sequence.  When there are multiple argument
   sequences which are all of the same length, \function{zip()} is
   similar to \function{map()} with an initial argument of \code{None}.
   With a single sequence argument, it returns a list of 1-tuples.
-  With no arguments, it returns an empty list.
   \versionadded{2.0}
-
-  \versionchanged[Formerly, \function{zip()} required at least one argument
-  and \code{zip()} raised a \exception{TypeError} instead of returning
-  an empty list.]{2.4} 
 \end{funcdesc}
 
 

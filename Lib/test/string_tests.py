@@ -189,26 +189,6 @@ class CommonTest(unittest.TestCase):
 
         self.checkraises(TypeError, 'hello', 'split', 42, 42, 42)
 
-    def test_rsplit(self):
-        self.checkequal(['this', 'is', 'the', 'rsplit', 'function'],
-                         'this is the rsplit function', 'rsplit')
-        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|')
-        self.checkequal(['a|b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|', 2)
-        self.checkequal(['a b c', 'd'], 'a b c d', 'rsplit', None, 1)
-        self.checkequal(['a b', 'c', 'd'], 'a b c d', 'rsplit', None, 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 4)
-        self.checkequal(['a b c d'], 'a b c d', 'rsplit', None, 0)
-        self.checkequal(['a, b, c', 'd'], 'a, b, c, d', 'rsplit', ', ', 1)
-        self.checkequal(['a, b', 'c', 'd'], 'a, b, c, d', 'rsplit', ', ', 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a, b, c, d', 'rsplit', ', ', 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a, b, c, d', 'rsplit', ', ', 4)
-        self.checkequal(['a, b, c, d'], 'a, b, c, d', 'rsplit', ', ', 0)
-        self.checkequal(['a  b', 'c', 'd'], 'a  b  c  d', 'rsplit', None, 2)
-        self.checkequal(['a\x00b', 'c'], 'a\x00b\x00c', 'rsplit', '\x00', 1)
-        self.checkequal(['', ''], 'abcd', 'rsplit', 'abcd')
-        self.checkequal([u'a b', u'c', u'd'], 'a b c d', 'rsplit', u' ', 2)
-
     def test_strip(self):
         self.checkequal('hello', '   hello   ', 'strip')
         self.checkequal('hello   ', '   hello   ', 'lstrip')
@@ -247,7 +227,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal('abc   ', 'abc', 'ljust', 6)
         self.checkequal('abc', 'abc', 'ljust', 3)
         self.checkequal('abc', 'abc', 'ljust', 2)
-        self.checkequal('abc*******', 'abc', 'ljust', 10, '*')
+
         self.checkraises(TypeError, 'abc', 'ljust')
 
     def test_rjust(self):
@@ -255,7 +235,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal('   abc', 'abc', 'rjust', 6)
         self.checkequal('abc', 'abc', 'rjust', 3)
         self.checkequal('abc', 'abc', 'rjust', 2)
-        self.checkequal('*******abc', 'abc', 'rjust', 10, '*')
+
         self.checkraises(TypeError, 'abc', 'rjust')
 
     def test_center(self):
@@ -263,7 +243,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal(' abc  ', 'abc', 'center', 6)
         self.checkequal('abc', 'abc', 'center', 3)
         self.checkequal('abc', 'abc', 'center', 2)
-        self.checkequal('***abc****', 'abc', 'center', 10, '*')
+
         self.checkraises(TypeError, 'abc', 'center')
 
     def test_swapcase(self):

@@ -1,4 +1,4 @@
-r"""File-like objects that read from or write to a string buffer.
+"""File-like objects that read from or write to a string buffer.
 
 This implements (nearly) all stdio methods.
 
@@ -35,10 +35,6 @@ except ImportError:
 
 __all__ = ["StringIO"]
 
-def _complain_ifclosed(closed):
-    if closed:
-        raise ValueError, "I/O operation on closed file"
-
 class StringIO:
     """class StringIO([buffer])
 
@@ -59,7 +55,7 @@ class StringIO:
         self.len = len(buf)
         self.buflist = []
         self.pos = 0
-        self.closed = False
+        self.closed = 0
         self.softspace = 0
 
     def __iter__(self):
@@ -77,15 +73,17 @@ class StringIO:
         """Free the memory buffer.
         """
         if not self.closed:
-            self.closed = True
+            self.closed = 1
             del self.buf, self.pos
 
     def isatty(self):
-        _complain_ifclosed(self.closed)
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
         return False
 
     def seek(self, pos, mode = 0):
-        _complain_ifclosed(self.closed)
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
         if self.buflist:
             self.buf += ''.join(self.buflist)
             self.buflist = []
@@ -96,11 +94,13 @@ class StringIO:
         self.pos = max(0, pos)
 
     def tell(self):
-        _complain_ifclosed(self.closed)
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
         return self.pos
 
     def read(self, n = -1):
-        _complain_ifclosed(self.closed)
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
         if self.buflist:
             self.buf += ''.join(self.buflist)
             self.buflist = []
@@ -113,7 +113,8 @@ class StringIO:
         return r
 
     def readline(self, length=None):
-        _complain_ifclosed(self.closed)
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
         if self.buflist:
             self.buf += ''.join(self.buflist)
             self.buflist = []
@@ -142,7 +143,8 @@ class StringIO:
         return lines
 
     def truncate(self, size=None):
-        _complain_ifclosed(self.closed) 
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
         if size is None:
             size = self.pos
         elif size < 0:
@@ -152,7 +154,8 @@ class StringIO:
         self.buf = self.getvalue()[:size]
 
     def write(self, s):
-        _complain_ifclosed(self.closed)
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
         if not s: return
         # Force s to be a string or unicode
         if not isinstance(s, basestring):
@@ -182,7 +185,8 @@ class StringIO:
         self.write(''.join(list))
 
     def flush(self):
-        _complain_ifclosed(self.closed)
+        if self.closed:
+            raise ValueError, "I/O operation on closed file"
 
     def getvalue(self):
         """

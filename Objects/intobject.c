@@ -278,6 +278,7 @@ PyInt_FromString(char *s, char **pend, int base)
 	char *end;
 	long x;
 	char buffer[256]; /* For errors */
+	int warn = 0;
 
 	if ((base != 0 && base < 2) || base > 36) {
 		PyErr_SetString(PyExc_ValueError,
@@ -291,7 +292,7 @@ PyInt_FromString(char *s, char **pend, int base)
 	if (base == 0 && s[0] == '0') {
 		x = (long) PyOS_strtoul(s, &end, base);
 		if (x < 0)
-			return PyLong_FromString(s, pend, base);
+			warn = 1;
 	}
 	else
 		x = PyOS_strtol(s, &end, base);
@@ -310,6 +311,11 @@ PyInt_FromString(char *s, char **pend, int base)
 		if (err_ovf("string/unicode conversion"))
 			return NULL;
 		return PyLong_FromString(s, pend, base);
+	}
+	if (warn) {
+		if (PyErr_Warn(PyExc_FutureWarning,
+			"int('0...', 0): sign will change in Python 2.4") < 0)
+			return NULL;
 	}
 	if (pend)
 		*pend = end;
@@ -760,13 +766,18 @@ int_lshift(PyIntObject *v, PyIntObject *w)
 	if (a == 0 || b == 0)
 		return int_pos(v);
 	if (b >= LONG_BIT) {
-		return PyNumber_Lshift(PyLong_FromLong(PyInt_AS_LONG(v)),
-				       PyLong_FromLong(PyInt_AS_LONG(w)));
+		if (PyErr_Warn(PyExc_FutureWarning,
+			       "x<<y losing bits or changing sign "
+			       "will return a long in Python 2.4 and up") < 0)
+			return NULL;
+		return PyInt_FromLong(0L);
 	}
 	c = a << b;
 	if (a != Py_ARITHMETIC_RIGHT_SHIFT(long, c, b)) {
-		return PyNumber_Lshift(PyLong_FromLong(PyInt_AS_LONG(v)),
-				       PyLong_FromLong(PyInt_AS_LONG(w)));
+		if (PyErr_Warn(PyExc_FutureWarning,
+			       "x<<y losing bits or changing sign "
+			       "will return a long in Python 2.4 and up") < 0)
+			return NULL;
 	}
 	return PyInt_FromLong(c);
 }
@@ -857,9 +868,13 @@ int_oct(PyIntObject *v)
 {
 	char buf[100];
 	long x = v -> ob_ival;
-	if (x < 0)
-		PyOS_snprintf(buf, sizeof(buf), "-0%lo", -x);
-	else if (x == 0)
+	if (x < 0) {
+		if (PyErr_Warn(PyExc_FutureWarning,
+			       "hex()/oct() of negative int will return "
+			       "a signed string in Python 2.4 and up") < 0)
+			return NULL;
+	}
+	if (x == 0)
 		strcpy(buf, "0");
 	else
 		PyOS_snprintf(buf, sizeof(buf), "0%lo", x);
@@ -871,10 +886,13 @@ int_hex(PyIntObject *v)
 {
 	char buf[100];
 	long x = v -> ob_ival;
-	if (x < 0)
-		PyOS_snprintf(buf, sizeof(buf), "-0x%lx", -x);
-	else
-		PyOS_snprintf(buf, sizeof(buf), "0x%lx", x);
+	if (x < 0) {
+		if (PyErr_Warn(PyExc_FutureWarning,
+			       "hex()/oct() of negative int will return "
+			       "a signed string in Python 2.4 and up") < 0)
+			return NULL;
+	}
+	PyOS_snprintf(buf, sizeof(buf), "0x%lx", x);
 	return PyString_FromString(buf);
 }
 
@@ -929,14 +947,12 @@ int_subtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		if (!PyLong_Check(tmp)) {
 			PyErr_SetString(PyExc_ValueError,
 					"value must convertable to an int");
-			Py_DECREF(tmp);
 			return NULL;
 		}
 		ival = PyLong_AsLong(tmp);
-		if (ival == -1 && PyErr_Occurred()) {
-			Py_DECREF(tmp);
+		if (ival == -1 && PyErr_Occurred())
 			return NULL;
-		}
+
 	} else {
 		ival = ((PyIntObject *)tmp)->ob_ival;
 	}

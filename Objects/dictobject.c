@@ -1735,11 +1735,6 @@ dict_iteritems(dictobject *dict)
 PyDoc_STRVAR(has_key__doc__,
 "D.has_key(k) -> True if D has a key k, else False");
 
-PyDoc_STRVAR(contains__doc__,
-"D.__contains__(k) -> True if D has a key k, else False");
-
-PyDoc_STRVAR(getitem__doc__, "x.__getitem__(y) <==> x[y]");
-
 PyDoc_STRVAR(get__doc__,
 "D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None.");
 
@@ -1786,10 +1781,6 @@ PyDoc_STRVAR(iteritems__doc__,
 "D.iteritems() -> an iterator over the (key, value) items of D");
 
 static PyMethodDef mapp_methods[] = {
-	{"__contains__",(PyCFunction)dict_has_key,      METH_O | METH_COEXIST,
-	 contains__doc__},
-	{"__getitem__", (PyCFunction)dict_subscript,	METH_O | METH_COEXIST,
-	 getitem__doc__},
 	{"has_key",	(PyCFunction)dict_has_key,      METH_O,
 	 has_key__doc__},
 	{"get",         (PyCFunction)dict_get,          METH_VARARGS,
@@ -1823,11 +1814,10 @@ static PyMethodDef mapp_methods[] = {
 	{NULL,		NULL}	/* sentinel */
 };
 
-int
-PyDict_Contains(PyObject *op, PyObject *key)
+static int
+dict_contains(dictobject *mp, PyObject *key)
 {
 	long hash;
-	dictobject *mp = (dictobject *)op;
 
 	if (!PyString_CheckExact(key) ||
 	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
@@ -1847,7 +1837,7 @@ static PySequenceMethods dict_as_sequence = {
 	0,					/* sq_slice */
 	0,					/* sq_ass_item */
 	0,					/* sq_ass_slice */
-	(objobjproc)PyDict_Contains,		/* sq_contains */
+	(objobjproc)dict_contains,		/* sq_contains */
 	0,					/* sq_inplace_concat */
 	0,					/* sq_inplace_repeat */
 };

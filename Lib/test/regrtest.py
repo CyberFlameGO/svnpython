@@ -75,6 +75,7 @@ import traceback
 import random
 import cStringIO
 import warnings
+from sets import Set
 
 # I see no other way to suppress these warnings;
 # putting them in test_grammar.py has no effect:
@@ -305,7 +306,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
         e = _ExpectedSkips()
         plat = sys.platform
         if e.isvalid():
-            surprise = set(skipped) - e.getexpected() - set(resource_denieds)
+            surprise = Set(skipped) - e.getexpected() - Set(resource_denieds)
             if surprise:
                 print count(len(surprise), "skip"), \
                       "unexpected on", plat + ":"
@@ -553,8 +554,6 @@ def printlist(x, width=70, indent=4):
 _expectations = {
     'win32':
         """
-        test__locale
-        test_applesingle
         test_al
         test_bsddb185
         test_bsddb3
@@ -592,7 +591,6 @@ _expectations = {
     'linux2':
         """
         test_al
-        test_applesingle
         test_bsddb185
         test_cd
         test_cl
@@ -655,7 +653,6 @@ _expectations = {
     'unixware7':
         """
         test_al
-        test_applesingle
         test_bsddb
         test_bsddb185
         test_cd
@@ -677,7 +674,6 @@ _expectations = {
     'openunix8':
         """
         test_al
-        test_applesingle
         test_bsddb
         test_bsddb185
         test_cd
@@ -699,7 +695,6 @@ _expectations = {
     'sco_sv3':
         """
         test_al
-        test_applesingle
         test_asynchat
         test_bsddb
         test_bsddb185
@@ -730,7 +725,6 @@ _expectations = {
     'riscos':
         """
         test_al
-        test_applesingle
         test_asynchat
         test_atexit
         test_bsddb
@@ -770,7 +764,6 @@ _expectations = {
         """,
     'darwin':
         """
-        test__locale
         test_al
         test_bsddb
         test_bsddb3
@@ -796,7 +789,6 @@ _expectations = {
     'sunos5':
         """
         test_al
-        test_applesingle
         test_bsddb
         test_bsddb185
         test_cd
@@ -817,7 +809,6 @@ _expectations = {
     'hp-ux11':
         """
         test_al
-        test_applesingle
         test_bsddb
         test_bsddb185
         test_cd
@@ -844,7 +835,6 @@ _expectations = {
     'atheos':
         """
         test_al
-        test_applesingle
         test_bsddb185
         test_cd
         test_cl
@@ -869,7 +859,6 @@ _expectations = {
     'cygwin':
         """
         test_al
-        test_applesingle
         test_bsddb185
         test_bsddb3
         test_cd
@@ -892,7 +881,6 @@ _expectations = {
     'os2emx':
         """
         test_al
-        test_applesingle
         test_audioop
         test_bsddb185
         test_bsddb3
@@ -916,36 +904,35 @@ _expectations = {
         test_signal
         test_sunaudiodev
         """,
-    'freebsd4':
-        """
-        test_aepack
-        test_al
-        test_applesingle
-        test_bsddb
-        test_bsddb3
-        test_cd
-        test_cl
-        test_email_codecs
-        test_gl
-        test_imgfile
-        test_linuxaudiodev
-        test_locale
-        test_macfs
-        test_macostools
-        test_nis
-        test_normalization
-        test_ossaudiodev
-        test_pep277
-        test_plistlib
-        test_scriptpackages
-        test_socket_ssl
-        test_socketserver
-        test_sunaudiodev
-        test_timeout
-        test_unicode_file
-        test_urllibnet
-        test_winreg
-        test_winsound
+     'freebsd4':
+         """
+       test_aepack
+       test_al
+       test_bsddb
+       test_bsddb3
+       test_cd
+       test_cl
+       test_email_codecs
+       test_gl
+       test_imgfile
+       test_linuxaudiodev
+       test_locale
+       test_macfs
+       test_macostools
+       test_nis
+       test_normalization
+       test_ossaudiodev
+       test_pep277
+       test_plistlib
+       test_scriptpackages
+       test_socket_ssl
+       test_socketserver
+       test_sunaudiodev
+       test_timeout
+       test_unicode_file
+       test_urllibnet
+       test_winreg
+       test_winsound
         """,
 }
 
@@ -959,7 +946,7 @@ class _ExpectedSkips:
         self.valid = False
         if sys.platform in _expectations:
             s = _expectations[sys.platform]
-            self.expected = set(s.split())
+            self.expected = Set(s.split())
 
             if not os.path.supports_unicode_filenames:
                 self.expected.add('test_pep277')

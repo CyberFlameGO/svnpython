@@ -94,8 +94,8 @@ TEXINPUTS=$(PWD)/commontex:
 # using the second version.  The standard documentation is typically
 # built using the second flavor, where the preferred version is from
 # the Python CVS trunk.
-MKHOWTO=   TEXINPUTS=$(TEXINPUTS) $(PYTHON) $(PWD)/tools/mkhowto
-#MKHOWTO=   TEXINPUTS=$(TEXINPUTS) mkhowto
+#MKHOWTO=   TEXINPUTS=$(TEXINPUTS) $(PYTHON) $(PWD)/tools/mkhowto
+MKHOWTO=   TEXINPUTS=$(TEXINPUTS) mkhowto
 
 MKDVI=	   $(MKHOWTO) --paper=$(PAPER) --dvi
 MKHTML=	   $(MKHOWTO) --html --about html/stdabout.dat \
@@ -121,7 +121,7 @@ EMACS=     emacs
 
 # The end of this should reflect the major/minor version numbers of
 # the release:
-WHATSNEW=whatsnew24
+WHATSNEW=whatsnew23
 
 # what's what
 MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \

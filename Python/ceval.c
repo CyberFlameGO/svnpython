@@ -14,6 +14,10 @@
 #include "opcode.h"
 #include "structmember.h"
 
+#ifdef macintosh
+#include "macglue.h"
+#endif
+
 #include <ctype.h>
 
 /* Turn this on if your compiler chokes on the big switch: */
@@ -493,7 +497,6 @@ Py_MakePendingCalls(void)
 /* The interpreter's recursion limit */
 
 static int recursion_limit = 1000;
-int _Py_CheckRecursionLimit = 1000;
 
 int
 Py_GetRecursionLimit(void)
@@ -505,37 +508,7 @@ void
 Py_SetRecursionLimit(int new_limit)
 {
 	recursion_limit = new_limit;
-        _Py_CheckRecursionLimit = recursion_limit;
 }
-
-/* the macro Py_EnterRecursiveCall() only calls _Py_CheckRecursiveCall()
-   if the recursion_depth reaches _Py_CheckRecursionLimit.
-   If USE_STACKCHECK, the macro decrements _Py_CheckRecursionLimit
-   to guarantee that _Py_CheckRecursiveCall() is regularly called.
-   Without USE_STACKCHECK, there is no need for this. */
-int
-_Py_CheckRecursiveCall(char *where)
-{
-	PyThreadState *tstate = PyThreadState_GET();
-
-#ifdef USE_STACKCHECK
-	if (PyOS_CheckStack()) {
-		--tstate->recursion_depth;
-		PyErr_SetString(PyExc_MemoryError, "Stack overflow");
-		return -1;
-	}
-#endif
-	if (tstate->recursion_depth > recursion_limit) {
-		--tstate->recursion_depth;
-		PyErr_Format(PyExc_RuntimeError,
-			     "maximum recursion depth exceeded%s",
-			     where);
-		return -1;
-	}
-        _Py_CheckRecursionLimit = recursion_limit;
-	return 0;
-}
-
 
 /* Status code for main loop (reason for stack unwind) */
 
@@ -701,9 +674,21 @@ eval_frame(PyFrameObject *f)
 	if (f == NULL)
 		return NULL;
 
-	/* push frame */
-	if (Py_EnterRecursiveCall(""))
+#ifdef USE_STACKCHECK
+	if (tstate->recursion_depth%10 == 0 && PyOS_CheckStack()) {
+		PyErr_SetString(PyExc_MemoryError, "Stack overflow");
 		return NULL;
+	}
+#endif
+
+	/* push frame */
+	if (++tstate->recursion_depth > recursion_limit) {
+		--tstate->recursion_depth;
+		PyErr_SetString(PyExc_RuntimeError,
+				"maximum recursion depth exceeded");
+		tstate->frame = f->f_back;
+		return NULL;
+	}
 
 	tstate->frame = f;
 
@@ -725,7 +710,9 @@ eval_frame(PyFrameObject *f)
 			if (call_trace(tstate->c_tracefunc, tstate->c_traceobj,
 				       f, PyTrace_CALL, Py_None)) {
 				/* Trace function raised an error */
-				goto exit_eval_frame;
+				--tstate->recursion_depth;
+				tstate->frame = f->f_back;
+				return NULL;
 			}
 		}
 		if (tstate->c_profilefunc != NULL) {
@@ -735,7 +722,9 @@ eval_frame(PyFrameObject *f)
 				       tstate->c_profileobj,
 				       f, PyTrace_CALL, Py_None)) {
 				/* Profile function raised an error */
-				goto exit_eval_frame;
+				--tstate->recursion_depth;
+				tstate->frame = f->f_back;
+				return NULL;
 			}
 		}
 	}
@@ -797,7 +786,7 @@ eval_frame(PyFrameObject *f)
 					goto on_error;
 				}
 			}
-#if !defined(HAVE_SIGNAL_H)
+#if !defined(HAVE_SIGNAL_H) || defined(macintosh)
 			/* If we have true signals, the signal handler
 			   will call Py_AddPendingCall() so we don't
 			   have to call PyErr_CheckSignals().  On the 
@@ -1484,7 +1473,7 @@ eval_frame(PyFrameObject *f)
 				x = NULL;
 			}
 			if (err == 0) {
-				x = PyTuple_Pack(1, v);
+				x = Py_BuildValue("(O)", v);
 				if (x == NULL)
 					err = -1;
 			}
@@ -1992,7 +1981,7 @@ eval_frame(PyFrameObject *f)
 				break;
 			}
 			u = TOP();
-			w = PyTuple_Pack(4,
+			w = Py_BuildValue("(OOOO)",
 				    w,
 				    f->f_globals,
 				    f->f_locals == NULL ?
@@ -2302,10 +2291,10 @@ eval_frame(PyFrameObject *f)
 		else {
 			/* This check is expensive! */
 			if (PyErr_Occurred()) {
-				char buf[1024];
-				sprintf(buf, "Stack unwind with exception "
-					"set and why=%d", why);
-				Py_FatalError(buf);
+				fprintf(stderr,
+					"XXX undetected error (why=%d)\n",
+					why);
+				why = WHY_EXCEPTION;
 			}
 		}
 #endif
@@ -2439,8 +2428,7 @@ eval_frame(PyFrameObject *f)
 	reset_exc_info(tstate);
 
 	/* pop frame */
-    exit_eval_frame:
-	Py_LeaveRecursiveCall();
+	--tstate->recursion_depth;
 	tstate->frame = f->f_back;
 
 	return retval;
@@ -3011,7 +2999,7 @@ call_exc_trace(Py_tracefunc func, PyObject *self, PyFrameObject *f)
 		value = Py_None;
 		Py_INCREF(value);
 	}
-	arg = PyTuple_Pack(3, type, value, traceback);
+	arg = Py_BuildValue("(OOO)", type, value, traceback);
 	if (arg == NULL) {
 		PyErr_Restore(type, value, traceback);
 		return;

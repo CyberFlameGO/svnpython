@@ -6,12 +6,9 @@ if sys.platform == 'darwin':
     raise TestSkipped("Locale support on MacOSX is minimal and cannot be tested")
 oldlocale = locale.setlocale(locale.LC_NUMERIC)
 
-if sys.platform.startswith("win"):
+tloc = "en_US"
+if sys.platform[:3] == "win":
     tloc = "en"
-elif sys.platform.startswith("freebsd"):
-    tloc = "en_US.US-ASCII"
-else:
-    tloc = "en_US"
 
 try:
     locale.setlocale(locale.LC_NUMERIC, tloc)

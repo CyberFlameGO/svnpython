@@ -4,6 +4,7 @@ import UserList
 import weakref
 
 from test import test_support
+from sets import Set
 
 
 class C:
@@ -249,10 +250,6 @@ class ReferencesTestCase(TestBase):
         self.assert_(weakref.getweakrefcount(o) == 4,
                      "got wrong number of weak reference objects")
 
-        # assumes ints do not support weakrefs
-        self.assert_(weakref.getweakrefcount(1) == 0,
-                     "got wrong number of weak reference objects for int")
-
     def test_getweakrefs(self):
         o = C()
         ref1 = weakref.ref(o, self.callback)
@@ -267,10 +264,6 @@ class ReferencesTestCase(TestBase):
         del ref2
         self.assert_(weakref.getweakrefs(o) == [ref1],
                      "list of refs does not match")
-
-        # assumes ints do not support weakrefs
-        self.assert_(weakref.getweakrefs(1) == [],
-                     "list of refs does not match for int")
 
     def test_newstyle_number_ops(self):
         class F(float):
@@ -604,7 +597,7 @@ class MappingTestCase(TestBase):
                          "wrong object returned by weak dict!")
         items1 = dict.items()
         items2 = dict.copy().items()
-        self.assert_(set(items1) == set(items2),
+        self.assert_(Set(items1) == Set(items2),
                      "cloning of weak-keyed dictionary did not work!")
         del items1, items2
         self.assert_(len(dict) == self.COUNT)

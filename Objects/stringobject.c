@@ -1407,129 +1407,6 @@ string_split(PyStringObject *self, PyObject *args)
 	return NULL;
 }
 
-static PyObject *
-rsplit_whitespace(const char *s, int len, int maxsplit)
-{
-	int i, j, err;
-	PyObject* item;
-	PyObject *list = PyList_New(0);
-
-	if (list == NULL)
-		return NULL;
-
-	for (i = j = len - 1; i >= 0; ) {
-		while (i >= 0 && isspace(Py_CHARMASK(s[i])))
-			i--;
-		j = i;
-		while (i >= 0 && !isspace(Py_CHARMASK(s[i])))
-			i--;
-		if (j > i) {
-			if (maxsplit-- <= 0)
-				break;
-			item = PyString_FromStringAndSize(s+i+1, (int)(j-i));
-			if (item == NULL)
-				goto finally;
-			err = PyList_Insert(list, 0, item);
-			Py_DECREF(item);
-			if (err < 0)
-				goto finally;
-			while (i >= 0 && isspace(Py_CHARMASK(s[i])))
-				i--;
-			j = i;
-		}
-	}
-	if (j >= 0) {
-		item = PyString_FromStringAndSize(s, (int)(j + 1));
-		if (item == NULL)
-			goto finally;
-		err = PyList_Insert(list, 0, item);
-		Py_DECREF(item);
-		if (err < 0)
-			goto finally;
-	}
-	return list;
-  finally:
-	Py_DECREF(list);
-	return NULL;
-}
-
-
-PyDoc_STRVAR(rsplit__doc__,
-"S.rsplit([sep [,maxsplit]]) -> list of strings\n\
-\n\
-Return a list of the words in the string S, using sep as the\n\
-delimiter string, starting at the end of the string and working\n\
-to the front.  If maxsplit is given, at most maxsplit splits are\n\
-done. If sep is not specified or is None, any whitespace string\n\
-is a separator.");
-
-static PyObject *
-string_rsplit(PyStringObject *self, PyObject *args)
-{
-	int len = PyString_GET_SIZE(self), n, i, j, err;
-	int maxsplit = -1;
-	const char *s = PyString_AS_STRING(self), *sub;
-	PyObject *list, *item, *subobj = Py_None;
-
-	if (!PyArg_ParseTuple(args, "|Oi:rsplit", &subobj, &maxsplit))
-		return NULL;
-	if (maxsplit < 0)
-		maxsplit = INT_MAX;
-	if (subobj == Py_None)
-		return rsplit_whitespace(s, len, maxsplit);
-	if (PyString_Check(subobj)) {
-		sub = PyString_AS_STRING(subobj);
-		n = PyString_GET_SIZE(subobj);
-	}
-#ifdef Py_USING_UNICODE
-	else if (PyUnicode_Check(subobj))
-		return PyUnicode_RSplit((PyObject *)self, subobj, maxsplit);
-#endif
-	else if (PyObject_AsCharBuffer(subobj, &sub, &n))
-		return NULL;
-	if (n == 0) {
-		PyErr_SetString(PyExc_ValueError, "empty separator");
-		return NULL;
-	}
-
-	list = PyList_New(0);
-	if (list == NULL)
-		return NULL;
-
-	j = len;
-	i = j - n;
-	while (i >= 0) {
-		if (s[i] == sub[0] && memcmp(s+i, sub, n) == 0) {
-			if (maxsplit-- <= 0)
-				break;
-			item = PyString_FromStringAndSize(s+i+n, (int)(j-i-n));
-			if (item == NULL)
-				goto fail;
-			err = PyList_Insert(list, 0, item);
-			Py_DECREF(item);
-			if (err < 0)
-				goto fail;
-			j = i;
-			i -= n;
-		}
-		else
-			i--;
-	}
-	item = PyString_FromStringAndSize(s, j);
-	if (item == NULL)
-		goto fail;
-	err = PyList_Insert(list, 0, item);
-	Py_DECREF(item);
-	if (err < 0)
-		goto fail;
-
-	return list;
-
- fail:
-	Py_DECREF(list);
-	return NULL;
-}
-
 
 PyDoc_STRVAR(join__doc__,
 "S.join(sequence) -> string\n\
@@ -2740,18 +2617,16 @@ pad(PyStringObject *self, int left, int right, char fill)
 }
 
 PyDoc_STRVAR(ljust__doc__,
-"S.ljust(width[, fillchar]) -> string\n"
+"S.ljust(width) -> string\n"
 "\n"
 "Return S left justified in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space).");
+"done using spaces.");
 
 static PyObject *
 string_ljust(PyStringObject *self, PyObject *args)
 {
     int width;
-    char fillchar = ' ';
-
-    if (!PyArg_ParseTuple(args, "i|c:ljust", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:ljust", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2759,23 +2634,21 @@ string_ljust(PyStringObject *self, PyObject *args)
         return (PyObject*) self;
     }
 
-    return pad(self, 0, width - PyString_GET_SIZE(self), fillchar);
+    return pad(self, 0, width - PyString_GET_SIZE(self), ' ');
 }
 
 
 PyDoc_STRVAR(rjust__doc__,
-"S.rjust(width[, fillchar]) -> string\n"
+"S.rjust(width) -> string\n"
 "\n"
 "Return S right justified in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space)");
+"done using spaces.");
 
 static PyObject *
 string_rjust(PyStringObject *self, PyObject *args)
 {
     int width;
-    char fillchar = ' ';
-
-    if (!PyArg_ParseTuple(args, "i|c:rjust", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:rjust", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2783,24 +2656,23 @@ string_rjust(PyStringObject *self, PyObject *args)
         return (PyObject*) self;
     }
 
-    return pad(self, width - PyString_GET_SIZE(self), 0, fillchar);
+    return pad(self, width - PyString_GET_SIZE(self), 0, ' ');
 }
 
 
 PyDoc_STRVAR(center__doc__,
-"S.center(width[, fillchar]) -> string\n"
+"S.center(width) -> string\n"
 "\n"
-"Return S centered in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space)");
+"Return S centered in a string of length width. Padding is done\n"
+"using spaces.");
 
 static PyObject *
 string_center(PyStringObject *self, PyObject *args)
 {
     int marg, left;
     int width;
-    char fillchar = ' ';
 
-    if (!PyArg_ParseTuple(args, "i|c:center", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:center", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2811,7 +2683,7 @@ string_center(PyStringObject *self, PyObject *args)
     marg = width - PyString_GET_SIZE(self);
     left = marg / 2 + (marg & width & 1);
 
-    return pad(self, left, marg - left, fillchar);
+    return pad(self, left, marg - left, ' ');
 }
 
 PyDoc_STRVAR(zfill__doc__,
@@ -3187,7 +3059,6 @@ string_methods[] = {
 	   string.maketrans(). */
 	{"join", (PyCFunction)string_join, METH_O, join__doc__},
 	{"split", (PyCFunction)string_split, METH_VARARGS, split__doc__},
-	{"rsplit", (PyCFunction)string_rsplit, METH_VARARGS, rsplit__doc__},
 	{"lower", (PyCFunction)string_lower, METH_NOARGS, lower__doc__},
 	{"upper", (PyCFunction)string_upper, METH_NOARGS, upper__doc__},
 	{"islower", (PyCFunction)string_islower, METH_NOARGS, islower__doc__},
@@ -3689,7 +3560,6 @@ formatint(char *buf, size_t buflen, int flags,
 	   worst case length = 3 + 19 (worst len of INT_MAX on 64-bit machine)
 	   + 1 + 1 = 24 */
 	char fmt[64];	/* plenty big enough! */
-	char *sign;
 	long x;
 
 	x = PyInt_AsLong(v);
@@ -3697,13 +3567,12 @@ formatint(char *buf, size_t buflen, int flags,
 		PyErr_SetString(PyExc_TypeError, "int argument required");
 		return -1;
 	}
-	if (x < 0 && type == 'u') {
-		type = 'd';
+	if (x < 0 && type != 'd' && type != 'i') {
+		if (PyErr_Warn(PyExc_FutureWarning,
+			       "%u/%o/%x/%X of negative int will return "
+			       "a signed string in Python 2.4 and up") < 0)
+			return -1;
 	}
-	if (x < 0 && (type == 'x' || type == 'X' || type == 'o'))
-		sign = "-";
-	else
-		sign = "";
 	if (prec < 0)
 		prec = 1;
 
@@ -3729,27 +3598,24 @@ formatint(char *buf, size_t buflen, int flags,
 		 * Note that this is the same approach as used in
 		 * formatint() in unicodeobject.c
 		 */
-		PyOS_snprintf(fmt, sizeof(fmt), "%s0%c%%.%dl%c",
-			      sign, type, prec, type);
+		PyOS_snprintf(fmt, sizeof(fmt), "0%c%%.%dl%c",
+			      type, prec, type);
 	}
 	else {
-		PyOS_snprintf(fmt, sizeof(fmt), "%s%%%s.%dl%c",
-			      sign, (flags&F_ALT) ? "#" : "",
+		PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%dl%c",
+			      (flags&F_ALT) ? "#" : "",
 			      prec, type);
 	}
 
-	/* buf = '+'/'-'/'' + '0'/'0x'/'' + '[0-9]'*max(prec, len(x in octal))
-	 * worst case buf = '-0x' + [0-9]*prec, where prec >= 11
+	/* buf = '+'/'-'/'0'/'0x' + '[0-9]'*max(prec, len(x in octal))
+	 * worst case buf = '0x' + [0-9]*prec, where prec >= 11
 	 */
-	if (buflen <= 14 || buflen <= (size_t)3 + (size_t)prec) {
+	if (buflen <= 13 || buflen <= (size_t)2 + (size_t)prec) {
 		PyErr_SetString(PyExc_OverflowError,
 		    "formatted integer is too long (precision too large?)");
 		return -1;
 	}
-	if (sign[0])
-		PyOS_snprintf(buf, buflen, fmt, -x);
-	else
-		PyOS_snprintf(buf, buflen, fmt, x);
+	PyOS_snprintf(buf, buflen, fmt, x);
 	return strlen(buf);
 }
 
@@ -4036,6 +3902,8 @@ PyString_Format(PyObject *format, PyObject *args)
 						prec, c, &pbuf, &len);
 					if (!temp)
 						goto error;
+					/* unbounded ints can always produce
+					   a sign character! */
 					sign = 1;
 				}
 				else {
@@ -4045,7 +3913,8 @@ PyString_Format(PyObject *format, PyObject *args)
 							flags, prec, c, v);
 					if (len < 0)
 						goto error;
-					sign = 1;
+					/* only d conversion is signed */
+					sign = c == 'd';
 				}
 				if (flags & F_ZERO)
 					fill = '0';
