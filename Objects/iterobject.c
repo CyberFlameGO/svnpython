@@ -45,6 +45,7 @@ iter_getiter(PyObject *it)
 	return it;
 }
 
+/* Return (value, 0) if OK; (NULL, 0) at end; (NULL, -1) if exception */
 static PyObject *
 iter_iternext(PyObject *iterator)
 {
@@ -87,12 +88,6 @@ static PyMethodDef iter_methods[] = {
 	{NULL,		NULL}		/* sentinel */
 };
 
-static PyObject *
-iter_getattr(seqiterobject *it, char *name)
-{
-	return Py_FindMethod(iter_methods, (PyObject *)it, name);
-}
-
 PyTypeObject PySeqIter_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
@@ -102,7 +97,7 @@ PyTypeObject PySeqIter_Type = {
 	/* methods */
 	(destructor)iter_dealloc, 		/* tp_dealloc */
 	0,					/* tp_print */
-	(getattrfunc)iter_getattr,		/* tp_getattr */
+	0,					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */
 	0,					/* tp_repr */
@@ -112,7 +107,7 @@ PyTypeObject PySeqIter_Type = {
 	0,					/* tp_hash */
 	0,					/* tp_call */
 	0,					/* tp_str */
-	0,					/* tp_getattro */
+	PyGeneric_GetAttr,			/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT,			/* tp_flags */
@@ -123,6 +118,13 @@ PyTypeObject PySeqIter_Type = {
 	0,					/* tp_weaklistoffset */
 	(getiterfunc)iter_getiter,		/* tp_iter */
 	(iternextfunc)iter_iternext,		/* tp_iternext */
+	iter_methods,				/* tp_methods */
+	0,					/* tp_members */
+	0,					/* tp_getset */
+	0,					/* tp_base */
+	0,					/* tp_dict */
+	0,					/* tp_descr_get */
+	0,					/* tp_descr_set */
 };
 
 /* -------------------------------------- */
@@ -175,12 +177,6 @@ static PyMethodDef calliter_methods[] = {
 };
 
 static PyObject *
-calliter_getattr(calliterobject *it, char *name)
-{
-	return Py_FindMethod(calliter_methods, (PyObject *)it, name);
-}
-
-static PyObject *
 calliter_iternext(calliterobject *it)
 {
 	PyObject *result = PyObject_CallObject(it->it_callable, NULL);
@@ -205,7 +201,7 @@ PyTypeObject PyCallIter_Type = {
 	/* methods */
 	(destructor)calliter_dealloc, 		/* tp_dealloc */
 	0,					/* tp_print */
-	(getattrfunc)calliter_getattr,		/* tp_getattr */
+	0,					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */
 	0,					/* tp_repr */
@@ -215,7 +211,7 @@ PyTypeObject PyCallIter_Type = {
 	0,					/* tp_hash */
 	0,					/* tp_call */
 	0,					/* tp_str */
-	0,					/* tp_getattro */
+	PyGeneric_GetAttr,			/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT,			/* tp_flags */
@@ -226,4 +222,11 @@ PyTypeObject PyCallIter_Type = {
 	0,					/* tp_weaklistoffset */
 	(getiterfunc)iter_getiter,		/* tp_iter */
 	(iternextfunc)calliter_iternext,	/* tp_iternext */
+	calliter_methods,			/* tp_methods */
+	0,					/* tp_members */
+	0,					/* tp_getset */
+	0,					/* tp_base */
+	0,					/* tp_dict */
+	0,					/* tp_descr_get */
+	0,					/* tp_descr_set */
 };

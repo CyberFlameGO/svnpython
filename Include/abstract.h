@@ -294,6 +294,17 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        */
 
 
+
+     DL_IMPORT(PyObject *) PyObject_Call(PyObject *callable_object,
+					 PyObject *args, PyObject *kw);
+
+       /*
+
+	 Call a callable Python object, callable_object, with
+	 arguments and keywords arguments.  The 'args' argument can not be
+	 NULL, but the 'kw' argument can be NULL.
+
+       */
      
      DL_IMPORT(PyObject *) PyObject_CallObject(PyObject *callable_object,
                                                PyObject *args);
@@ -484,8 +495,9 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
      DL_IMPORT(PyObject *) PyIter_Next(PyObject *);
      /* Takes an iterator object and calls its tp_iternext slot,
 	returning the next value.  If the iterator is exhausted,
-	this returns NULL without setting an exception.
-	NULL with an exception means an error occurred. */
+	this can return NULL without setting an exception, *or*
+	NULL with a StopIteration exception.
+	NULL with any other exception  means an error occurred. */
 
 /*  Number Protocol:*/
 
@@ -911,7 +923,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
          tuple or list.  Use PySequence_Fast_GET_ITEM to access the
          members of this list.
 
-         Returns NULL on failure.  If the object does not support iteration,
+         Returns NULL on failure.  If the object is not a sequence,
          raises a TypeError exception with m as the message text.
        */
 
