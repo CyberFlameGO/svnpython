@@ -2,23 +2,11 @@
 
 # Sanity checker for time.strftime
 
-import time, calendar, sys, os, re
+import time, calendar, sys, string, os, re
 from test_support import verbose
 
 def main():
     global verbose
-    # For C Python, these tests expect C locale, so we try to set that
-    # explicitly.  For Jython, Finn says we need to be in the US locale; my
-    # understanding is that this is the closest Java gets to C's "C" locale.
-    # Jython ought to supply an _locale module which Does The Right Thing, but
-    # this is the best we can do given today's state of affairs.
-    try:
-        import java
-        java.util.Locale.setDefault(java.util.Locale.US)
-    except ImportError:
-        # Can't do this first because it will succeed, even in Jython
-        import locale
-        locale.setlocale(locale.LC_TIME, 'C')
     now = time.time()
     strftest(now)
     verbose = 0
@@ -102,7 +90,7 @@ def strftest(now):
 
     if verbose:
         print "Strftime test, platform: %s, Python version: %s" % \
-              (sys.platform, sys.version.split()[0])
+              (sys.platform, string.split(sys.version)[0])
 
     for e in expectations:
         try:

@@ -445,6 +445,7 @@ PyToken_ThreeChars(int c1, int c2, int c3)
 			switch (c3) {
 			case '=':
 				return LEFTSHIFTEQUAL;
+				break;
 			}
 			break;
 		}
@@ -455,6 +456,7 @@ PyToken_ThreeChars(int c1, int c2, int c3)
 			switch (c3) {
 			case '=':
 				return RIGHTSHIFTEQUAL;
+				break;
 			}
 			break;
 		}
@@ -465,6 +467,7 @@ PyToken_ThreeChars(int c1, int c2, int c3)
 			switch (c3) {
 			case '=':
 				return DOUBLESTAREQUAL;
+				break;
 			}
 			break;
 		}

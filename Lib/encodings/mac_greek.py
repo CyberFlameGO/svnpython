@@ -1,9 +1,9 @@
-""" Python Character Mapping Codec generated from 'GREEK.TXT' with gencodec.py.
+""" Python Character Mapping Codec generated from 'GREEK.TXT'.
+
 
 Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 (c) Copyright CNRI, All Rights Reserved. NO WARRANTY.
-(c) Copyright 2000 Guido van Rossum.
 
 """#"
 
@@ -35,8 +35,8 @@ def getregentry():
 
 ### Decoding Map
 
-decoding_map = codecs.make_identity_dict(range(256))
-decoding_map.update({
+decoding_map = {
+
 	0x0080: 0x00c4,	# LATIN CAPITAL LETTER A WITH DIAERESIS
 	0x0081: 0x00b9,	# SUPERSCRIPT ONE
 	0x0082: 0x00b2,	# SUPERSCRIPT TWO
@@ -163,8 +163,10 @@ decoding_map.update({
 	0x00fd: 0x0390,	# GREEK SMALL LETTER IOTA WITH DIALYTIKA AND TONOS
 	0x00fe: 0x03b0,	# GREEK SMALL LETTER UPSILON WITH DIALYTIKA AND TONOS
 	0x00ff: None,	# UNDEFINED
-})
+}
 
 ### Encoding Map
 
-encoding_map = codecs.make_encoding_map(decoding_map)
+encoding_map = {}
+for k,v in decoding_map.items():
+    encoding_map[v] = k

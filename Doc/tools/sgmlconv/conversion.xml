@@ -41,27 +41,14 @@
   <macro name="rfc">
     <attribute name="num"/>
     </macro>
-  <macro name="sectionauthor" outputname="author">
+  <macro name="sectionauthor">
     <attribute name="name"/>
     <attribute name="email"/>
     </macro>
-  <macro name="author">
-    <attribute name="name"/>
-    </macro>
-  <macro name="authoraddress">
-    <content/>
-    </macro>
-  <macro name="shortversion"/>
   <macro name="versionadded">
-    <attribute name="info" optional="yes"/>
     <attribute name="version"/>
     </macro>
-  <!-- This is broken:  we need to re-order the optional and required
-       parameters, making the optional parameter the content for the
-       element.  The processor is not powerful enough to handle this.
-    -->
   <macro name="versionchanged">
-    <attribute name="info" optional="yes"/>
     <attribute name="version"/>
     </macro>
 
@@ -80,7 +67,6 @@
     <child name="args"/>
     </environment>
   <environment name="ctypedesc">
-    <attribute name="tag" optional="yes"/>
     <attribute name="name"/>
     </environment>
   <environment name="cvardesc">
@@ -92,8 +78,6 @@
   <macro name="optional">
     <content/>
     </macro>
-  <macro name="unspecified"/>
-  <macro name="moreargs"/>
   <environment name="classdesc">
     <attribute name="name"/>
     <child name="args"/>
@@ -101,9 +85,6 @@
   <environment name="datadesc">
     <attribute name="name"/>
     </environment>
-  <macro name="dataline">
-    <attribute name="name"/>
-    </macro>
   <environment name="excdesc">
     <attribute name="name"/>
     </environment>
@@ -136,9 +117,6 @@
     <attribute name="class" optional="yes"/>
     <attribute name="name"/>
     </environment>
-  <macro name="memberline">
-    <attribute name="name"/>
-    </macro>
 
   <environment name="methoddesc">
     <attribute name="class" optional="yes"/>
@@ -172,29 +150,10 @@
   <macro name="seemodule">
     <attribute name="ref" optional="yes"/>
     <attribute name="name"/>
-    <child name="description"/>
-    </macro>
-  <macro name="seepep">
-    <attribute name="number"/>
-    <child name="title"/>
-    <child name="description"/>
-    </macro>
-  <macro name="seerfc">
-    <attribute name="number"/>
-    <child name="title"/>
-    <child name="description"/>
+    <content/>
     </macro>
   <macro name="seetext">
-    <child name="description"/>
-    </macro>
-  <macro name="seetitle">
-    <attribute name="href" optional="yes"/>
-    <child name="title"/>
-    <child name="description"/>
-    </macro>
-  <macro name="seeurl">
-    <attribute name="href"/>
-    <child name="description"/>
+    <content/>
     </macro>
 
   <!-- Index-generating markup. -->
@@ -275,11 +234,6 @@
   <!-- Large-scale document structure. -->
   <macro name="documentclass">
     <attribute name="classname"/>
-    </macro>
-
-  <macro name="usepackage">
-    <attribute name="options" optional="yes"/>
-    <attribute name="pkg"/>
     </macro>
 
   <environment name="document"
@@ -437,7 +391,6 @@
     <child name="definition" implied="yes"/>
     </macro>
 
-  <environment name="alltt" outputname="verbatim"/>
   <environment name="comment" verbatim="yes"/>
   <environment name="verbatim" verbatim="yes"/>
   <environment name="verbatim*" verbatim="yes">
@@ -448,15 +401,6 @@
   <!-- Table markup. -->
   <macro name="hline"/>
   <environment name="tableii" outputname="table">
-    <attribute name="cols">2</attribute>
-    <attribute name="colspec"/>
-    <attribute name="style"/>
-    <child name="entry"/>
-    <text>
-         </text>
-    <child name="entry"/>
-    </environment>
-  <environment name="longtableii" outputname="table">
     <attribute name="cols">2</attribute>
     <attribute name="colspec"/>
     <attribute name="style"/>
@@ -484,18 +428,6 @@
          </text>
     <child name="entry"/>
     </environment>
-  <environment name="longtableiii" outputname="table">
-    <attribute name="cols">3</attribute>
-    <attribute name="colspec"/>
-    <attribute name="style"/>
-    <child name="entry"/>
-    <text>
-         </text>
-    <child name="entry"/>
-    <text>
-         </text>
-    <child name="entry"/>
-    </environment>
   <macro name="lineiii" outputname="row">
     <child name="entry"/>
     <text>
@@ -507,21 +439,6 @@
     </macro>
 
   <environment name="tableiv" outputname="table">
-    <attribute name="cols">4</attribute>
-    <attribute name="colspec"/>
-    <attribute name="style"/>
-    <child name="entry"/>
-    <text>
-         </text>
-    <child name="entry"/>
-    <text>
-         </text>
-    <child name="entry"/>
-    <text>
-         </text>
-    <child name="entry"/>
-    </environment>
-  <environment name="longtableiv" outputname="table">
     <attribute name="cols">4</attribute>
     <attribute name="colspec"/>
     <attribute name="style"/>
@@ -569,20 +486,6 @@
     <text>TeX</text>
     </macro>
   <macro name="version"/>
-
-  <!-- Distutils things. -->
-  <macro name="command">
-    <content/>
-    </macro>
-  <macro name="option">
-    <content/>
-    </macro>
-  <macro name="filevar" outputname="var">
-    <content/>
-    </macro>
-  <macro name="XXX" outputname="editorial-comment">
-    <content/>
-    </macro>
 
   <!-- Misc. -->
   <macro name="emph">
@@ -667,9 +570,6 @@
   <macro name="programopt" outputname="option">
     <content/>
     </macro>
-  <macro name="longprogramopt" outputname="longoption">
-    <content/>
-    </macro>
   <macro name="regexp">
     <content/>
     </macro>
@@ -731,9 +631,6 @@
     </macro>
   <macro name="UNIX" outputname="">
     <text>Unix</text>
-    </macro>
-  <macro name="textasciitilde" outputname="">
-    <text>~</text>
     </macro>
 
   <!-- These will end up disappearing as well! -->

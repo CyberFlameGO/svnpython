@@ -12,16 +12,13 @@ PS: In the standard Python distribution this file is encoded in Latin-1.
 
 Jim Ahlstrom
 Jyrki Alakuijala
-Billy G. Allie
 Mark Anacker
 Anders Andersen
 Oliver Andrich
 Ross Andrus
 Jason Asbahr
 David Ascher
-Donovan Baarda
 Stig Bakken
-Greg Ball
 Des Barry
 Ulf Bartelt
 Jeff Bauer
@@ -32,7 +29,6 @@ David Beazley
 Neal Becker
 Reimer Behrends
 Thomas Bellman
-Juan M. Bello Rivas
 Andy Bensky
 Eric Beser
 Stephen Bevan
@@ -55,15 +51,11 @@ Stan Bubrouski
 Erik de Bueger
 Jan-Hein B"uhrman
 Dick Bulterman
-Bill Bumgarner
 Tommy Burnette
 Roger Burnham
-Alastair Burt
 Lee Busby
 Ralph Butler
-Daniel Calvelo
 Mike Carlton
-Luke Kenneth Casson Leighton
 Donn Cave
 Per Cederqvist
 Jeffrey Chang
@@ -71,17 +63,11 @@ Brad Chapman
 Mitch Chapman
 David Chaum
 Nicolas Chauvat
-Michael Chermside
 Albert Chin-A-Young
 Tom Christiansen
 Vadim Chugunov
-Mike Clarkson
 Steve Clift
-Dave Cole
-Benjamin Collar
-Jeffery Collins
 Matt Conway
-David M. Cooke
 Scott Cotton
 Greg Couch
 Steve Cousins
@@ -96,7 +82,6 @@ John DeGood
 Roger Dev
 Toby Dickenson
 Daniel Dittmar
-Walter Dörwald
 Jaromir Dolecek
 Fred Drake
 John DuBois
@@ -106,7 +91,6 @@ Andy Dustman
 Gary Duzan
 Eugene Dvurechenski
 Hans Eckardt
-Grant Edwards
 Lance Ellinghaus
 David Ely
 Jeff Epler
@@ -126,9 +110,8 @@ Mark Favas
 Niels Ferguson
 Sebastian Fernandez
 Nils Fischbeck
-Doug Fort
 Robin Friedrich
-Ivan Frohne
+Ivan Frohe
 Jim Fulton
 Geoff Furnish
 Tadayoshi Funaba
@@ -154,7 +137,6 @@ Jun Hamano
 Mark Hammond
 Manus Hand
 Milton L. Hankins
-Stephen Hansen
 Barry Hantman
 Lynda Hardman
 Jason Harper
@@ -188,14 +170,12 @@ Nadav Horesh
 Ken Howard
 Brad Howes
 Chih-Hao Huang
-Lawrence Hudson
 Michael Hudson
 Jim Hugunin
 Greg Humphreys
 Jeremy Hylton
 John Interrante
 Ben Jackson
-Paul Jackson
 Jack Jansen
 Bill Janssen
 Drew Jenkins
@@ -208,7 +188,6 @@ Andreas Jung
 Bob Kahn
 Tamito Kajiyama
 Lou Kates
-Randall Kern
 Magnus Kessler
 Lawrence Kesteloot
 Vivek Khera
@@ -231,7 +210,6 @@ Detlef Lannert
 Soren Larsen
 Piers Lauder
 Chris Lawrence
-Christopher Lee
 Kip Lehman
 Marc-Andre Lemburg
 William Lewis
@@ -259,12 +237,10 @@ Vladimir Marangozov
 Doug Marien
 Anthony Martin
 Roger Masse
-Nick Mathewson
 Graham Matthews
 Dieter Maurer
 Greg McFarlane
 Michael McLay
-Gordon McMillan
 Caolan McNamara
 Craig McPheeters
 Lambert Meertens
@@ -287,19 +263,16 @@ Oscar Nierstrasz
 Hrvoje Niksic
 Bill Noon
 Stefan Norberg
-Neal Norwitz
 Jeffrey Ollie
 Nigel O'Brian
 Tim O'Malley
 Denis S. Otkidach
 Piet van Oostrum
 Jason Orendorff
-Douglas Orr
 Todd R. Palmer
 Harri Pasanen
 Randy Pausch
 Marcel van der Peijl
-Samuele Pedroni
 Steven Pemberton
 Tim Peters
 Chris Petrilli
@@ -320,12 +293,10 @@ Michael P. Reilly
 Bernhard Reiter
 Steven Reiz
 Jan Pieter Riegel
-Armin Rigo
 Nicholas Riley
 Jean-Claude Rimbault
 Andy Robinson
 Jim Robinson
-Kevin Rodgers
 Mike Romberg
 Case Roole
 Timothy Roscoe
@@ -343,26 +314,22 @@ Kevin Samborn
 Ty Sarna
 Ben Sayer
 Michael Scharf
+Peter Schneider-Kamp
+Sam Schulenburg
 Neil Schemenauer
 David Scherer
 Gregor Schmid
-Peter Schneider-Kamp
-Sam Schulenburg
-Dietmar Schwertberger
 Barry Scott
 Nick Seidenman
 Fred Sells
 Denis Severson
 Bruce Sherwood
-Pete Shinners
 Michael Shiplett
 John W. Shipman
 Joel Shprentz
-Itamar Shtull-Trauring
 Eric Siegerman
 Paul Sijben
 Nathan Paul Simons
-Janne Sinkkonen
 George Sipe
 Kragen Sitaker
 Rafal Smotrzyk
@@ -383,14 +350,11 @@ Richard Stoakley
 Casper Stoel
 Peter Stoehr
 Ken Stox
-William Tanksley
 Christian Tanzer
 Amy Taylor
 Tobias Thelen
-Robin Thomas
 Eric Tiedemann
 Tracy Tims
-Jason Tishler
 Christian Tismer
 R Lindsay Todd
 Bennett Todd

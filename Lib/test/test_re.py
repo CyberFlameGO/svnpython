@@ -1,9 +1,9 @@
 import sys
 sys.path = ['.'] + sys.path
 
-from test_support import verify, verbose, TestFailed
+from test_support import verbose, TestFailed
 import re
-import sys, os, traceback
+import sys, os, string, traceback
 
 # Misc tests from Tim Peters' re.doc
 
@@ -11,20 +11,20 @@ if verbose:
     print 'Running tests on re.search and re.match'
 
 try:
-    verify(re.search('x*', 'axx').span(0) == (0, 0))
-    verify(re.search('x*', 'axx').span() == (0, 0))
-    verify(re.search('x+', 'axx').span(0) == (1, 3))
-    verify(re.search('x+', 'axx').span() == (1, 3))
-    verify(re.search('x', 'aaa') is None)
+    assert re.search('x*', 'axx').span(0) == (0, 0)
+    assert re.search('x*', 'axx').span() == (0, 0)
+    assert re.search('x+', 'axx').span(0) == (1, 3)
+    assert re.search('x+', 'axx').span() == (1, 3)
+    assert re.search('x', 'aaa') == None
 except:
     raise TestFailed, "re.search"
 
 try:
-    verify(re.match('a*', 'xxx').span(0) == (0, 0))
-    verify(re.match('a*', 'xxx').span() == (0, 0))
-    verify(re.match('x*', 'xxxa').span(0) == (0, 3))
-    verify(re.match('x*', 'xxxa').span() == (0, 3))
-    verify(re.match('a+', 'xxx') is None)
+    assert re.match('a*', 'xxx').span(0) == (0, 0)
+    assert re.match('a*', 'xxx').span() == (0, 0)
+    assert re.match('x*', 'xxxa').span(0) == (0, 3)
+    assert re.match('x*', 'xxxa').span() == (0, 3)
+    assert re.match('a+', 'xxx') == None
 except:
     raise TestFailed, "re.search"
 
@@ -32,40 +32,40 @@ if verbose:
     print 'Running tests on re.sub'
 
 try:
-    verify(re.sub("(?i)b+", "x", "bbbb BBBB") == 'x x')
+    assert re.sub("(?i)b+", "x", "bbbb BBBB") == 'x x'
 
     def bump_num(matchobj):
         int_value = int(matchobj.group(0))
         return str(int_value + 1)
 
-    verify(re.sub(r'\d+', bump_num, '08.2 -2 23x99y') == '9.3 -3 24x100y')
-    verify(re.sub(r'\d+', bump_num, '08.2 -2 23x99y', 3) == '9.3 -3 23x99y')
+    assert re.sub(r'\d+', bump_num, '08.2 -2 23x99y') == '9.3 -3 24x100y'
+    assert re.sub(r'\d+', bump_num, '08.2 -2 23x99y', 3) == '9.3 -3 23x99y'
 
-    verify(re.sub('.', lambda m: r"\n", 'x') == '\\n')
-    verify(re.sub('.', r"\n", 'x') == '\n')
+    assert re.sub('.', lambda m: r"\n", 'x') == '\\n'
+    assert re.sub('.', r"\n", 'x') == '\n'
 
     s = r"\1\1"
-    verify(re.sub('(.)', s, 'x') == 'xx')
-    verify(re.sub('(.)', re.escape(s), 'x') == s)
-    verify(re.sub('(.)', lambda m: s, 'x') == s)
+    assert re.sub('(.)', s, 'x') == 'xx'
+    assert re.sub('(.)', re.escape(s), 'x') == s
+    assert re.sub('(.)', lambda m: s, 'x') == s
 
-    verify(re.sub('(?P<a>x)', '\g<a>\g<a>', 'xx') == 'xxxx')
-    verify(re.sub('(?P<a>x)', '\g<a>\g<1>', 'xx') == 'xxxx')
-    verify(re.sub('(?P<unk>x)', '\g<unk>\g<unk>', 'xx') == 'xxxx')
-    verify(re.sub('(?P<unk>x)', '\g<1>\g<1>', 'xx') == 'xxxx')
+    assert re.sub('(?P<a>x)', '\g<a>\g<a>', 'xx') == 'xxxx'
+    assert re.sub('(?P<a>x)', '\g<a>\g<1>', 'xx') == 'xxxx'
+    assert re.sub('(?P<unk>x)', '\g<unk>\g<unk>', 'xx') == 'xxxx'
+    assert re.sub('(?P<unk>x)', '\g<1>\g<1>', 'xx') == 'xxxx'
 
-    verify(re.sub('a', r'\t\n\v\r\f\a\b\B\Z\a\A\w\W\s\S\d\D', 'a') == '\t\n\v\r\f\a\b\\B\\Z\a\\A\\w\\W\\s\\S\\d\\D')
-    verify(re.sub('a', '\t\n\v\r\f\a', 'a') == '\t\n\v\r\f\a')
-    verify(re.sub('a', '\t\n\v\r\f\a', 'a') == (chr(9)+chr(10)+chr(11)+chr(13)+chr(12)+chr(7)))
+    assert re.sub('a', r'\t\n\v\r\f\a\b\B\Z\a\A\w\W\s\S\d\D', 'a') == '\t\n\v\r\f\a\b\\B\\Z\a\\A\\w\\W\\s\\S\\d\\D'
+    assert re.sub('a', '\t\n\v\r\f\a', 'a') == '\t\n\v\r\f\a'
+    assert re.sub('a', '\t\n\v\r\f\a', 'a') == (chr(9)+chr(10)+chr(11)+chr(13)+chr(12)+chr(7))
 
-    verify(re.sub('^\s*', 'X', 'test') == 'Xtest')
+    assert re.sub('^\s*', 'X', 'test') == 'Xtest'
 except AssertionError:
     raise TestFailed, "re.sub"
 
 
 try:
-    verify(re.sub('a', 'b', 'aaaaa') == 'bbbbb')
-    verify(re.sub('a', 'b', 'aaaaa', 1) == 'baaaa')
+    assert re.sub('a', 'b', 'aaaaa') == 'bbbbb'
+    assert re.sub('a', 'b', 'aaaaa', 1) == 'baaaa'
 except AssertionError:
     raise TestFailed, "qualified re.sub"
 
@@ -132,11 +132,11 @@ if verbose:
     print 'Running tests on re.subn'
 
 try:
-    verify(re.subn("(?i)b+", "x", "bbbb BBBB") == ('x x', 2))
-    verify(re.subn("b+", "x", "bbbb BBBB") == ('x BBBB', 1))
-    verify(re.subn("b+", "x", "xyz") == ('xyz', 0))
-    verify(re.subn("b*", "x", "xyz") == ('xxxyxzx', 4))
-    verify(re.subn("b*", "x", "xyz", 2) == ('xxxyz', 2))
+    assert re.subn("(?i)b+", "x", "bbbb BBBB") == ('x x', 2)
+    assert re.subn("b+", "x", "bbbb BBBB") == ('x BBBB', 1)
+    assert re.subn("b+", "x", "xyz") == ('xyz', 0)
+    assert re.subn("b*", "x", "xyz") == ('xxxyxzx', 4)
+    assert re.subn("b*", "x", "xyz", 2) == ('xxxyz', 2)
 except AssertionError:
     raise TestFailed, "re.subn"
 
@@ -144,24 +144,24 @@ if verbose:
     print 'Running tests on re.split'
 
 try:
-    verify(re.split(":", ":a:b::c") == ['', 'a', 'b', '', 'c'])
-    verify(re.split(":*", ":a:b::c") == ['', 'a', 'b', 'c'])
-    verify(re.split("(:*)", ":a:b::c") == ['', ':', 'a', ':', 'b', '::', 'c'])
-    verify(re.split("(?::*)", ":a:b::c") == ['', 'a', 'b', 'c'])
-    verify(re.split("(:)*", ":a:b::c") == ['', ':', 'a', ':', 'b', ':', 'c'])
-    verify(re.split("([b:]+)", ":a:b::c") == ['', ':', 'a', ':b::', 'c'])
-    verify(re.split("(b)|(:+)", ":a:b::c") == \
-           ['', None, ':', 'a', None, ':', '', 'b', None, '', None, '::', 'c'] )
-    verify(re.split("(?:b)|(?::+)", ":a:b::c") == ['', 'a', '', '', 'c'])
+    assert re.split(":", ":a:b::c") == ['', 'a', 'b', '', 'c']
+    assert re.split(":*", ":a:b::c") == ['', 'a', 'b', 'c']
+    assert re.split("(:*)", ":a:b::c") == ['', ':', 'a', ':', 'b', '::', 'c']
+    assert re.split("(?::*)", ":a:b::c") == ['', 'a', 'b', 'c']
+    assert re.split("(:)*", ":a:b::c") == ['', ':', 'a', ':', 'b', ':', 'c']
+    assert re.split("([b:]+)", ":a:b::c") == ['', ':', 'a', ':b::', 'c']
+    assert re.split("(b)|(:+)", ":a:b::c") == \
+           ['', None, ':', 'a', None, ':', '', 'b', None, '', None, '::', 'c']
+    assert re.split("(?:b)|(?::+)", ":a:b::c") == ['', 'a', '', '', 'c']
 except AssertionError:
     raise TestFailed, "re.split"
 
 try:
-    verify(re.split(":", ":a:b::c", 2) == ['', 'a', 'b::c'])
-    verify(re.split(':', 'a:b:c:d', 2) == ['a', 'b', 'c:d'])
+    assert re.split(":", ":a:b::c", 2) == ['', 'a', 'b::c']
+    assert re.split(':', 'a:b:c:d', 2) == ['a', 'b', 'c:d']
 
-    verify(re.split("(:)", ":a:b::c", 2) == ['', ':', 'a', ':', 'b::c'])
-    verify(re.split("(:*)", ":a:b::c", 2) == ['', ':', 'a', ':', 'b::c'])
+    assert re.split("(:)", ":a:b::c", 2) == ['', ':', 'a', ':', 'b::c']
+    assert re.split("(:*)", ":a:b::c", 2) == ['', ':', 'a', ':', 'b::c']
 except AssertionError:
     raise TestFailed, "qualified re.split"
 
@@ -169,12 +169,12 @@ if verbose:
     print "Running tests on re.findall"
 
 try:
-    verify(re.findall(":+", "abc") == [])
-    verify(re.findall(":+", "a:b::c:::d") == [":", "::", ":::"])
-    verify(re.findall("(:+)", "a:b::c:::d") == [":", "::", ":::"])
-    verify(re.findall("(:)(:*)", "a:b::c:::d") == [(":", ""),
+    assert re.findall(":+", "abc") == []
+    assert re.findall(":+", "a:b::c:::d") == [":", "::", ":::"]
+    assert re.findall("(:+)", "a:b::c:::d") == [":", "::", ":::"]
+    assert re.findall("(:)(:*)", "a:b::c:::d") == [(":", ""),
                                                    (":", ":"),
-                                                   (":", "::")] )
+                                                   (":", "::")]
 except AssertionError:
     raise TestFailed, "re.findall"
 
@@ -183,31 +183,29 @@ if verbose:
 
 try:
     # No groups at all
-    m = re.match('a', 'a') ; verify(m.groups() == ())
+    m = re.match('a', 'a') ; assert m.groups() == ()
     # A single group
-    m = re.match('(a)', 'a') ; verify(m.groups() == ('a',))
+    m = re.match('(a)', 'a') ; assert m.groups() == ('a',)
 
     pat = re.compile('((a)|(b))(c)?')
-    verify(pat.match('a').groups() == ('a', 'a', None, None))
-    verify(pat.match('b').groups() == ('b', None, 'b', None))
-    verify(pat.match('ac').groups() == ('a', 'a', None, 'c'))
-    verify(pat.match('bc').groups() == ('b', None, 'b', 'c'))
-    verify(pat.match('bc').groups("") == ('b', "", 'b', 'c'))
+    assert pat.match('a').groups() == ('a', 'a', None, None)
+    assert pat.match('b').groups() == ('b', None, 'b', None)
+    assert pat.match('ac').groups() == ('a', 'a', None, 'c')
+    assert pat.match('bc').groups() == ('b', None, 'b', 'c')
+    assert pat.match('bc').groups("") == ('b', "", 'b', 'c')
 except AssertionError:
     raise TestFailed, "match .groups() method"
 
 try:
     # A single group
     m = re.match('(a)', 'a')
-    verify(m.group(0) == 'a')
-    verify(m.group(0) == 'a')
-    verify(m.group(1) == 'a')
-    verify(m.group(1, 1) == ('a', 'a'))
+    assert m.group(0) == 'a' ; assert m.group(0) == 'a'
+    assert m.group(1) == 'a' ; assert m.group(1, 1) == ('a', 'a')
 
     pat = re.compile('(?:(?P<a1>a)|(?P<b2>b))(?P<c3>c)?')
-    verify(pat.match('a').group(1, 2, 3) == ('a', None, None))
-    verify(pat.match('b').group('a1', 'b2', 'c3') == (None, 'b', None))
-    verify(pat.match('ac').group(1, 'b2', 3) == ('a', None, 'c'))
+    assert pat.match('a').group(1, 2, 3) == ('a', None, None)
+    assert pat.match('b').group('a1', 'b2', 'c3') == (None, 'b', None)
+    assert pat.match('ac').group(1, 'b2', 3) == ('a', None, 'c')
 except AssertionError:
     raise TestFailed, "match .group() method"
 
@@ -218,12 +216,12 @@ try:
     p=""
     for i in range(0, 256):
         p = p + chr(i)
-        verify(re.match(re.escape(chr(i)), chr(i)) is not None)
-        verify(re.match(re.escape(chr(i)), chr(i)).span() == (0,1))
+        assert re.match(re.escape(chr(i)), chr(i)) != None
+        assert re.match(re.escape(chr(i)), chr(i)).span() == (0,1)
 
     pat=re.compile( re.escape(p) )
-    verify(pat.match(p) is not None)
-    verify(pat.match(p).span() == (0,256))
+    assert pat.match(p) != None
+    assert pat.match(p).span() == (0,256)
 except AssertionError:
     raise TestFailed, "re.escape"
 
@@ -237,11 +235,11 @@ s = pickle.dumps(pat)
 pat = pickle.loads(s)
 
 try:
-    verify(re.I == re.IGNORECASE)
-    verify(re.L == re.LOCALE)
-    verify(re.M == re.MULTILINE)
-    verify(re.S == re.DOTALL)
-    verify(re.X == re.VERBOSE)
+    assert re.I == re.IGNORECASE
+    assert re.L == re.LOCALE
+    assert re.M == re.MULTILINE
+    assert re.S == re.DOTALL
+    assert re.X == re.VERBOSE
 except AssertionError:
     raise TestFailed, 're module constants'
 
@@ -257,7 +255,7 @@ if verbose:
 # Try nasty case that overflows the straightforward recursive
 # implementation of repeated groups.
 try:
-    verify(re.match('(x)*', 50000*'x').span() == (0, 50000))
+    assert re.match('(x)*', 50000*'x').span() == (0, 50000)
 except RuntimeError, v:
     print v
 
@@ -336,20 +334,15 @@ for t in tests:
 
             # Try the match on a unicode string, and check that it
             # still succeeds.
-            try:
-                result = obj.search(unicode(s, "latin-1"))
-                if result is None:
-                    print '=== Fails on unicode match', t
-            except NameError:
-                continue # 1.5.2
-            except TypeError:
-                continue # unicode test case
+            result = obj.search(unicode(s, "latin-1"))
+            if result == None:
+                print '=== Fails on unicode match', t
 
             # Try the match on a unicode pattern, and check that it
             # still succeeds.
             obj=re.compile(unicode(pattern, "latin-1"))
             result = obj.search(s)
-            if result is None:
+            if result == None:
                 print '=== Fails on unicode pattern match', t
 
             # Try the match with the search area limited to the extent
@@ -358,29 +351,29 @@ for t in tests:
             # string), so we'll ignore patterns that feature it.
 
             if pattern[:2] != '\\B' and pattern[-2:] != '\\B' \
-                           and result is not None:
+			   and result != None:
                 obj = re.compile(pattern)
                 result = obj.search(s, result.start(0), result.end(0) + 1)
-                if result is None:
+                if result == None:
                     print '=== Failed on range-limited match', t
 
             # Try the match with IGNORECASE enabled, and check that it
             # still succeeds.
             obj = re.compile(pattern, re.IGNORECASE)
             result = obj.search(s)
-            if result is None:
+            if result == None:
                 print '=== Fails on case-insensitive match', t
 
             # Try the match with LOCALE enabled, and check that it
             # still succeeds.
             obj = re.compile(pattern, re.LOCALE)
             result = obj.search(s)
-            if result is None:
+            if result == None:
                 print '=== Fails on locale-sensitive match', t
 
             # Try the match with UNICODE locale enabled, and check
             # that it still succeeds.
             obj = re.compile(pattern, re.UNICODE)
             result = obj.search(s)
-            if result is None:
+            if result == None:
                 print '=== Fails on unicode-sensitive match', t

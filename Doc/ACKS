@@ -15,7 +15,6 @@ In the official sources, this file is encoded in ISO-8859-1 (Latin-1).
   -Fred
 
 
-Aahz
 Jim Ahlstrom
 A. Amoroso
 Pehr Anderson
@@ -23,30 +22,25 @@ Oliver Andrich
 Daniel Barclay
 Chris Barker
 Don Bashford
-Anthony Baxter
 Bennett Benson
 Jonathan Black
 Robin Boerdijk
 Michal Bozon
 Aaron Brancotti
 Keith Briggs
-Lee Busby
 Lorenzo M. Catucci
 Mauro Cicognini
-Gilles Civario
 Steve Clift
 Andrew Dalke
 Ben Darnell
 Robert Donohue
 Fred L. Drake, Jr.
-Jeff Epler
 Michael Ernst
 Blame Andy Eskilsson
 Martijn Faassen
 Carl Feynman
 Hernan Martinez Foffani
 Stefan Franke
-Jim Fulton
 Peter Funk
 Lele Gaifax
 Matthew Gallagher
@@ -58,14 +52,10 @@ Anders Hammarquist
 Mark Hammond
 Manus Hand
 Travis B. Hartwell
-Janko Hauser
 Bernhard Herzog
 Magnus L. Hetland
-Konrad Hinsen
 Stefan Hoffmeister
 Albert Hofkamp
-Gregor Hoffleit
-Steve Holden
 Gerrit Holl
 Rob Hooft
 Brian Hooper
@@ -90,7 +80,7 @@ Erno Kuusela
 Detlef Lannert
 Piers Lauder
 Glyph Lefkowitz
-Marc-André Lemburg
+Marc-Andre Lemburg
 Ulf A. Lindgren
 Everett Lipman
 Mirko Liss
@@ -101,38 +91,34 @@ John Machin
 Andrew MacIntyre
 Vladimir Marangozov
 Vincent Marchetti
-Laura Matson
-Daniel May
+Aahz Maruch
 Doug Mennella
 Paolo Milani
 Skip Montanaro
 Ross Moore
 Sjoerd Mullender
 Dale Nagata
-Ng Pheng Siong
 Koray Oner
 Denis S. Otkidach
 William Park
 Tim Peters
 Christopher Petrilli
 Justin D. Pettit
-Chris Phoenix
 François Pinard
 Paul Prescod
 Eric S. Raymond
 Edward K. Ream
 Sean Reifschneider
 Bernhard Reiter
+Bernhard Reiter
 Wes Rishel
 Jim Roskind
 Guido van Rossum
 Donald Wallace Rouse II
 Nick Russo
-Chris Ryland
 Constantina S.
 Hugh Sasse
 Bob Savage
-Scott Schram
 Neil Schemenauer
 Barry Scott
 Joakim Sernbrant
@@ -148,15 +134,12 @@ Anthony Starks
 Greg Stein
 Peter Stoehr
 Mark Summerfield
-Reuben Sumner
-Jim Tittsler
 Martijn Vries
 Charles G. Waldman
 Greg Ward
 Barry Warsaw
 Corran Webster
 Glyn Webster
-Bob Weiner
 Eddy Welbourne
 Gerry Wiener
 Timothy Wild

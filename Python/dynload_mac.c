@@ -10,7 +10,6 @@
 #include "TFileSpec.h"		/* for Path2FSSpec() */
 #endif
 #include <Files.h>
-#include <TextUtils.h>
 #include "macdefs.h"
 #include "macglue.h"
 
@@ -20,11 +19,7 @@ const struct filedescr _PyImport_DynLoadFiletab[] = {
 #ifdef __CFM68K__
 	{".CFM68K.slb", "rb", C_EXTENSION},
 #else
-#if TARGET_API_MAC_CARBON
-	{".carbon.slb", "rb", C_EXTENSION},
-#else
 	{".ppc.slb", "rb", C_EXTENSION},
-#endif
 #endif
 	{0, 0}
 };
@@ -61,12 +56,12 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 #ifdef USE_GUSI1
 	err = Path2FSSpec(pathname, &libspec);
 #else
-	c2pstrcpy((unsigned char *)buf, pathname);
-	(void)FSMakeFSSpec(0, 0, (unsigned char *)buf, &libspec);
+	(void)FSMakeFSSpec(0, 0, Pstring(pathname), &libspec);
 	err = ResolveAliasFile(&libspec, 1, &isfolder, &didsomething);
 #endif
 	if ( err ) {
-		sprintf(buf, "%.200s: %.200s", pathname, PyMac_StrError(err));
+		sprintf(buf, "%.255s: %.200s",
+			pathname, PyMac_StrError(err));
 		PyErr_SetString(PyExc_ImportError, buf);
 		return NULL;
 	}

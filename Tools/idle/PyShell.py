@@ -5,7 +5,6 @@ import sys
 import string
 import getopt
 import re
-import warnings
 
 import linecache
 from code import InteractiveInterpreter
@@ -125,7 +124,7 @@ class ModifiedColorDelegator(ColorDelegator):
         "stderr": cconf.getcolor("stderr"),
         "console": cconf.getcolor("console"),
         "ERROR": cconf.getcolor("ERROR"),
-        None: cconf.getcolor("normal"),
+	None: cconf.getcolor("normal"),
     })
 
 
@@ -157,7 +156,6 @@ class ModifiedInterpreter(InteractiveInterpreter):
         self.tkconsole = tkconsole
         locals = sys.modules['__main__'].__dict__
         InteractiveInterpreter.__init__(self, locals=locals)
-        self.save_warnings_filters = None
 
     gid = 0
 
@@ -182,14 +180,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         # Extend base class to stuff the source in the line cache first
         filename = self.stuffsource(source)
         self.more = 0
-        self.save_warnings_filters = warnings.filters[:]
-        warnings.filterwarnings(action="error", category=SyntaxWarning)
-        try:
-            return InteractiveInterpreter.runsource(self, source, filename)
-        finally:
-            if self.save_warnings_filters is not None:
-                warnings.filters[:] = self.save_warnings_filters
-                self.save_warnings_filters = None
+        return InteractiveInterpreter.runsource(self, source, filename)
 
     def stuffsource(self, source):
         # Stuff source in the filename cache
@@ -258,9 +249,6 @@ class ModifiedInterpreter(InteractiveInterpreter):
 
     def runcode(self, code):
         # Override base class method
-        if self.save_warnings_filters is not None:
-            warnings.filters[:] = self.save_warnings_filters
-            self.save_warnings_filters = None
         debugger = self.debugger
         try:
             self.tkconsole.beginexecuting()

@@ -24,7 +24,6 @@ DL_IMPORT(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 /* Predefined exceptions */
 
 extern DL_IMPORT(PyObject *) PyExc_Exception;
-extern DL_IMPORT(PyObject *) PyExc_StopIteration;
 extern DL_IMPORT(PyObject *) PyExc_StandardError;
 extern DL_IMPORT(PyObject *) PyExc_ArithmeticError;
 extern DL_IMPORT(PyObject *) PyExc_LookupError;
@@ -61,13 +60,6 @@ extern DL_IMPORT(PyObject *) PyExc_WindowsError;
 
 extern DL_IMPORT(PyObject *) PyExc_MemoryErrorInst;
 
-/* Predefined warning categories */
-extern DL_IMPORT(PyObject *) PyExc_Warning;
-extern DL_IMPORT(PyObject *) PyExc_UserWarning;
-extern DL_IMPORT(PyObject *) PyExc_DeprecationWarning;
-extern DL_IMPORT(PyObject *) PyExc_SyntaxWarning;
-extern DL_IMPORT(PyObject *) PyExc_RuntimeWarning;
-
 
 /* Convenience functions */
 
@@ -93,18 +85,9 @@ DL_IMPORT(PyObject *) PyErr_NewException(char *name, PyObject *base,
                                          PyObject *dict);
 extern DL_IMPORT(void) PyErr_WriteUnraisable(PyObject *);
 
-/* Issue a warning or exception */
-extern DL_IMPORT(int) PyErr_Warn(PyObject *, char *);
-extern DL_IMPORT(int) PyErr_WarnExplicit(PyObject *, char *,
-					 char *, int, char *, PyObject *);
-
 /* In sigcheck.c or signalmodule.c */
 extern DL_IMPORT(int) PyErr_CheckSignals(void);
 extern DL_IMPORT(void) PyErr_SetInterrupt(void);
-
-/* Support for adding program text to SyntaxErrors */
-extern DL_IMPORT(void) PyErr_SyntaxLocation(char *, int);
-extern DL_IMPORT(PyObject *) PyErr_ProgramText(char *, int);
 	
 
 #ifdef __cplusplus

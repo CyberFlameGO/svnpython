@@ -19,19 +19,6 @@ from errors import DistutilsPlatformError
 PREFIX = os.path.normpath(sys.prefix)
 EXEC_PREFIX = os.path.normpath(sys.exec_prefix)
 
-# Boolean; if it's true, we're still building Python, so
-# we use different (hard-wired) directories.
-
-python_build = 0
-
-def set_python_build():
-    """Set the python_build flag to true; this means that we're
-    building Python itself.  Only called from the setup.py script
-    shipped with Python.
-    """
-    
-    global python_build
-    python_build = 1
 
 def get_python_inc(plat_specific=0, prefix=None):
     """Return the directory containing installed Python header files.
@@ -47,8 +34,6 @@ def get_python_inc(plat_specific=0, prefix=None):
     if prefix is None:
         prefix = (plat_specific and EXEC_PREFIX or PREFIX)
     if os.name == "posix":
-        if python_build:
-            return "Include/"
         return os.path.join(prefix, "include", "python" + sys.version[:3])
     elif os.name == "nt":
         return os.path.join(prefix, "Include") # include or Include?
@@ -134,15 +119,12 @@ def customize_compiler (compiler):
 
 def get_config_h_filename():
     """Return full pathname of installed config.h file."""
-    if python_build: inc_dir = '.'
-    else:            inc_dir = get_python_inc(plat_specific=1)
+    inc_dir = get_python_inc(plat_specific=1)
     return os.path.join(inc_dir, "config.h")
 
 
 def get_makefile_filename():
     """Return full pathname of installed Makefile from the Python build."""
-    if python_build:
-        return './Makefile'
     lib_dir = get_python_lib(plat_specific=1, standard_lib=1)
     return os.path.join(lib_dir, "config", "Makefile")
 
@@ -222,15 +204,13 @@ def parse_makefile(fn, g=None):
                 n = m.group(1)
                 if done.has_key(n):
                     after = value[m.end():]
-                    value = value[:m.start()] + str(done[n]) + after
+                    value = value[:m.start()] + done[n] + after
                     if "$" in after:
                         notdone[name] = value
                     else:
                         try: value = string.atoi(value)
-                        except ValueError:
-                            done[name] = string.strip(value)
-                        else:
-                            done[name] = value
+                        except ValueError: pass
+                        done[name] = string.strip(value)
                         del notdone[name]
                 elif notdone.has_key(n):
                     # get it on a subsequent round
@@ -243,10 +223,8 @@ def parse_makefile(fn, g=None):
                         notdone[name] = value
                     else:
                         try: value = string.atoi(value)
-                        except ValueError:
-                            done[name] = string.strip(value)
-                        else:
-                            done[name] = value
+                        except ValueError: pass
+                        done[name] = string.strip(value)
                         del notdone[name]
             else:
                 # bogus variable reference; just drop it since we can't deal
@@ -305,8 +283,31 @@ def _init_posix():
     # On AIX, there are wrong paths to the linker scripts in the Makefile
     # -- these paths are relative to the Python source, but when installed
     # the scripts are in another directory.
-    if python_build:
-        g['LDSHARED'] = g['BLDSHARED']
+    if sys.platform == 'aix4':          # what about AIX 3.x ?
+        # Linker script is in the config directory, not in Modules as the
+        # Makefile says.
+        python_lib = get_python_lib(standard_lib=1)
+        ld_so_aix = os.path.join(python_lib, 'config', 'ld_so_aix')
+        python_exp = os.path.join(python_lib, 'config', 'python.exp')
+
+        g['LDSHARED'] = "%s %s -bI:%s" % (ld_so_aix, g['CC'], python_exp)
+
+    elif sys.platform == 'beos':
+
+        # Linker script is in the config directory.  In the Makefile it is
+        # relative to the srcdir, which after installation no longer makes
+        # sense.
+        python_lib = get_python_lib(standard_lib=1)
+        linkerscript_name = os.path.basename(string.split(g['LDSHARED'])[0])
+        linkerscript = os.path.join(python_lib, 'config', linkerscript_name)
+
+        # XXX this isn't the right place to do this: adding the Python
+        # library to the link, if needed, should be in the "build_ext"
+        # command.  (It's also needed for non-MS compilers on Windows, and
+        # it's taken care of for them by the 'build_ext.get_libraries()'
+        # method.)
+        g['LDSHARED'] = ("%s -L%s/lib -lpython%s" %
+                         (linkerscript, PREFIX, sys.version[0:3]))
 
     global _config_vars
     _config_vars = g
@@ -339,11 +340,7 @@ def _init_mac():
     # XXX hmmm.. a normal install puts include files here
     g['INCLUDEPY'] = get_python_inc(plat_specific=0)
 
-    import MacOS
-    if not hasattr(MacOS, 'runtimemodel'):
-        g['SO'] = '.ppc.slb'
-    else:
-        g['SO'] = '.%s.slb' % MacOS.runtimemodel
+    g['SO'] = '.ppc.slb'
 
     # XXX are these used anywhere?
     g['install_lib'] = os.path.join(EXEC_PREFIX, "Lib")
@@ -365,6 +362,7 @@ def get_config_vars(*args):
     """
     global _config_vars
     if _config_vars is None:
+        from pprint import pprint
         func = globals().get("_init_" + os.name)
         if func:
             func()

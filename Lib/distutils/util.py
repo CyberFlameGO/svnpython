@@ -41,12 +41,7 @@ def get_platform ():
     # Try to distinguish various flavours of Unix
 
     (osname, host, release, version, machine) = os.uname()
-
-    # Convert the OS name to lowercase and remove '/' characters
-    # (to accommodate BSD/OS)
-    osname = string.lower(osname) 
-    osname = string.replace(osname, '/', '')
-    
+    osname = string.lower(osname)
     if osname[:5] == "linux":
         # At least on Linux/Intel, 'machine' is the processor --
         # i386, etc.
@@ -59,13 +54,6 @@ def get_platform ():
         # fall through to standard osname-release-machine representation
     elif osname[:4] == "irix":              # could be "irix64"!
         return "%s-%s" % (osname, release)
-    elif osname[:3] == "aix":              
-        return "%s-%s.%s" % (osname, version, release)
-    elif osname[:6] == "cygwin":
-        rel_re = re.compile (r'[\d.]+')
-        m = rel_re.match(release)
-        if m:
-            release = m.group()
             
     return "%s-%s-%s" % (osname, release, machine)
 
@@ -89,10 +77,6 @@ def convert_path (pathname):
         raise ValueError, "path '%s' cannot end with '/'" % pathname
 
     paths = string.split(pathname, '/')
-    while '.' in paths:
-        paths.remove('.')
-    if not paths:
-        return os.curdir
     return apply(os.path.join, paths)
 
 # convert_path ()
@@ -153,7 +137,7 @@ def check_environ ():
     _environ_checked = 1
 
 
-def subst_vars (s, local_vars):
+def subst_vars (str, local_vars):
     """Perform shell/Perl-style variable substitution on 'string'.  Every
     occurrence of '$' followed by a name is considered a variable, and
     variable is substituted by the value found in the 'local_vars'
@@ -171,7 +155,7 @@ def subst_vars (s, local_vars):
             return os.environ[var_name]
 
     try:
-        return re.sub(r'\$([a-zA-Z_][a-zA-Z_0-9]*)', _subst, s)
+        return re.sub(r'\$([a-zA-Z_][a-zA-Z_0-9]*)', _subst, str)
     except KeyError, var:
         raise ValueError, "invalid variable '$%s'" % var
 
@@ -443,14 +427,3 @@ byte_compile(files, optimize=%s, force=%s,
                               (file, cfile_base)
 
 # byte_compile ()
-
-def rfc822_escape (header):
-    """Return a version of the string escaped for inclusion in an
-    RFC-822 header, by ensuring there are 8 spaces space after each newline.
-    """
-    lines = string.split(header, '\n')
-    lines = map(string.strip, lines)
-    header = string.join(lines, '\n' + 8*' ')
-    return header
-
-

@@ -8,7 +8,7 @@
 
 
 The \module{Cookie} module defines classes for abstracting the concept of 
-cookies, an HTTP state management mechanism. It supports both simple
+cookies, an HTTP state management mechanism. It supports both simplistic
 string-only cookies, and provides an abstraction for having any serializable
 data-type as cookie value.
 
@@ -173,21 +173,19 @@ The meaning for \var{attrs} is the same as in \method{output()}.
 
 \subsection{Example \label{cookie-example}}
 
-The following example demonstrates how to use the \module{Cookie} module.
+The following example demonstrates how to open a can of spam using the
+\module{spam} module.
 
 \begin{verbatim}
 >>> import Cookie
 >>> C = Cookie.SimpleCookie()
 >>> C = Cookie.SerialCookie()
 >>> C = Cookie.SmartCookie()
->>> C = Cookie.Cookie() # backwards-compatible alias for SmartCookie
+>>> C = Cookie.Cookie() # backwards compatible alias for SmartCookie
 >>> C = Cookie.SmartCookie()
 >>> C["fig"] = "newton"
 >>> C["sugar"] = "wafer"
->>> print C # generate HTTP headers
-Set-Cookie: sugar=wafer;
-Set-Cookie: fig=newton;
->>> print C.output() # same thing
+>>> C # generate HTTP headers
 Set-Cookie: sugar=wafer;
 Set-Cookie: fig=newton;
 >>> C = Cookie.SmartCookie()
@@ -199,18 +197,18 @@ Cookie: rocky=road; Path=/cookie;
 Cookie: rocky=road;
 >>> C = Cookie.SmartCookie()
 >>> C.load("chips=ahoy; vienna=finger") # load from a string (HTTP header)
->>> print C
+>>> C
 Set-Cookie: vienna=finger;
 Set-Cookie: chips=ahoy;
 >>> C = Cookie.SmartCookie()
->>> C.load('keebler="E=everybody; L=\\"Loves\\"; fudge=\\012;";')
->>> print C
+>>> C.load('keebler="E=everybody; L=\"Loves\"; fudge=\012;";')
+>>> C
 Set-Cookie: keebler="E=everybody; L=\"Loves\"; fudge=\012;";
 >>> C = Cookie.SmartCookie()
 >>> C["oreo"] = "doublestuff"
 >>> C["oreo"]["path"] = "/"
->>> print C
-Set-Cookie: oreo=doublestuff; Path=/;
+>>> C
+Set-Cookie: oreo="doublestuff"; Path=/;
 >>> C = Cookie.SmartCookie()
 >>> C["twix"] = "none for you"
 >>> C["twix"].value
@@ -222,7 +220,7 @@ Set-Cookie: oreo=doublestuff; Path=/;
 '7'
 >>> C["string"].value
 'seven'
->>> print C
+>>> C
 Set-Cookie: number=7;
 Set-Cookie: string=seven;
 >>> C = Cookie.SerialCookie()
@@ -232,7 +230,7 @@ Set-Cookie: string=seven;
 7
 >>> C["string"].value
 'seven'
->>> print C
+>>> C
 Set-Cookie: number="I7\012.";
 Set-Cookie: string="S'seven'\012p1\012.";
 >>> C = Cookie.SmartCookie()
@@ -242,7 +240,7 @@ Set-Cookie: string="S'seven'\012p1\012.";
 7
 >>> C["string"].value
 'seven'
->>> print C
+>>> C
 Set-Cookie: number="I7\012.";
 Set-Cookie: string=seven;
 \end{verbatim}

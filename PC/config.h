@@ -36,7 +36,6 @@ compiler specific".  Therefore, these should be very rare.
 
 #include <io.h>
 #define HAVE_LIMITS_H
-#define HAVE_SYS_UTIME_H
 #define HAVE_HYPOT
 #define DONT_HAVE_SIG_ALARM
 #define DONT_HAVE_SIG_PAUSE
@@ -129,6 +128,97 @@ typedef int pid_t;
 #define LONG_LONG __int64
 #endif /* _MSC_VER && > 850 */
 
+#if defined(_MSC_VER) && _MSC_VER <= 850 /* presume this implies Win16 */
+/* Start of defines for 16-bit Windows using VC++ 1.5 */
+#define COMPILER "[MSC 16-bit]"
+#define PYTHONPATH ".;.\\lib;.\\lib\\plat-win;.\\lib\\dos-8x3"
+#define IMPORT_8x3_NAMES
+typedef int pid_t;
+#define WORD_BIT 16
+#define SIZEOF_INT 2
+#define SIZEOF_LONG 4
+#define SIZEOF_VOID_P 4
+#pragma warning(disable:4113)
+#define memcpy memmove	/* memcpy dangerous pointer wrap in Win 3.1 */
+#define hypot _hypot
+#define SIGINT	2
+#include <stdio.h>
+/* Windows 3.1 will not tolerate any console io in a dll */
+#ifdef _USRDLL
+#include <time.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+#define stdin	((FILE *)0)
+#define stdout	((FILE *)1)
+#define stderr	((FILE *)2)
+#define fflush	Py_fflush
+int Py_fflush(FILE *);
+#define fgets	Py_fgets
+char *Py_fgets(char *, int, FILE *);
+#define fileno	Py_fileno
+int Py_fileno(FILE *);
+#define fprintf	Py_fprintf
+int Py_fprintf(FILE *, const char *, ...);
+#define	printf	Py_printf
+int Py_printf(const char *, ...);
+#define sscanf	Py_sscanf
+int Py_sscanf(const char *, const char *, ...);
+clock_t clock();
+void _exit(int);
+void exit(int);
+int sscanf(const char *, const char *, ...);
+#ifdef __cplusplus
+}
+#endif
+#endif /* _USRDLL */
+#ifndef NETSCAPE_PI
+/* use sockets, but not in a Netscape dll */
+#define USE_SOCKET
+#endif
+#endif /* MS_WIN16 */
+
+/* The Watcom compiler defines __WATCOMC__ */
+#ifdef __WATCOMC__
+#define COMPILER "[Watcom]"
+#define PYTHONPATH ".;.\\lib;.\\lib\\plat-win;.\\lib\\dos-8x3"
+#define IMPORT_8x3_NAMES
+#include <ctype.h>
+#include <direct.h>
+typedef int mode_t;
+typedef int uid_t;
+typedef int gid_t;
+typedef int pid_t;
+#if defined(__NT__)
+#define NT	/* NT is obsolete - please use MS_WIN32 instead */
+#define MS_WIN32
+#define MS_WINDOWS
+#define NT_THREADS
+#define USE_SOCKET
+#define WITH_THREAD
+#elif defined(__WINDOWS__)
+#define MS_WIN16
+#define MS_WINDOWS
+#endif
+#ifdef M_I386
+#define WORD_BIT 32
+#define SIZEOF_INT 4
+#define SIZEOF_LONG 4
+#define SIZEOF_VOID_P 4
+#else
+#define WORD_BIT 16
+#define SIZEOF_INT 2
+#define SIZEOF_LONG 4
+#define SIZEOF_VOID_P 4
+#endif
+#define VA_LIST_IS_ARRAY
+#define HAVE_CLOCK
+#define HAVE_STRFTIME
+#ifdef USE_DL_EXPORT
+#define DL_IMPORT(RTYPE) RTYPE __export
+#endif
+#endif /* __WATCOMC__ */
+
 /* The Borland compiler defines __BORLANDC__ */
 /* XXX These defines are likely incomplete, but should be easy to fix. */
 #ifdef __BORLANDC__
@@ -177,14 +267,15 @@ typedef int pid_t;
 #define HAVE_LONG_LONG 1
 #define LONG_LONG __int64
 
-#undef HAVE_HYPOT
-#undef HAVE_SYS_UTIME_H
-#define HAVE_UTIME_H
-#define HAVE_DIRENT_H
-#define HAVE_CLOCK
-
 #else /* !_WIN32 */
-#error "Only Win32 and later are supported"
+/* XXX These defines are likely incomplete, but should be easy to fix. */
+
+#define PYTHONPATH ".;.\\lib;.\\lib\\plat-win;.\\lib\\dos-8x3"
+#define IMPORT_8x3_NAMES
+#ifdef USE_DL_IMPORT
+#define DL_IMPORT(RTYPE)  RTYPE __import
+#endif
+
 #endif /* !_WIN32 */
 
 #endif /* BORLANDC */
@@ -324,6 +415,10 @@ typedef unsigned long uintptr_t;
 #		define SIZEOF_FPOS_T 8
 #		define SIZEOF_HKEY 4
 #	endif
+#elif defined(MS_WIN16)
+#	define PLATFORM "win16"
+#else
+#	define PLATFORM "dos"
 #endif
 
 
@@ -334,9 +429,9 @@ typedef unsigned long uintptr_t;
    more (other compilers will still need to do so, but that's taken care
    of by the Distutils, so it's not a problem). */
 #ifdef _DEBUG
-#pragma comment(lib,"python22_d.lib")
+#pragma comment(lib,"python20_d.lib")
 #else
-#pragma comment(lib,"python22.lib")
+#pragma comment(lib,"python20.lib")
 #endif
 #endif /* USE_DL_EXPORT */
 
@@ -348,6 +443,13 @@ typedef unsigned long uintptr_t;
 #define SIZEOF_LONG 4
 #define SIZEOF_LONG_LONG 8
 
+/* EXPERIMENTAL FEATURE: When CHECK_IMPORT_CASE is defined, check case of
+   imported modules against case of file; this causes "import String" to fail
+   with a NameError exception when it finds "string.py".  Normally, you set
+   the environment variable PYTHONCASEOK (to anything) to disable this
+   feature; to permanently disable it, #undef it here.  This only works on
+   case-preserving filesystems; otherwise you definitely want it off. */
+#define CHECK_IMPORT_CASE
 #endif
 
 /* Fairly standard from here! */
@@ -598,7 +700,7 @@ typedef unsigned long uintptr_t;
 /* #define HAVE_SYS_UN_H 1 */
 
 /* Define if you have the <sys/utime.h> header file.  */
-/* #define HAVE_SYS_UTIME_H 1 */
+#define HAVE_SYS_UTIME_H 1
 
 /* Define if you have the <sys/utsname.h> header file.  */
 /* #define HAVE_SYS_UTSNAME_H 1 */

@@ -6,16 +6,18 @@
 import rfc822
 import os
 
-__all__ = ["UnixMailbox","MmdfMailbox","MHMailbox","Maildir","BabylMailbox"]
-
 class _Mailbox:
-    def __init__(self, fp, factory=rfc822.Message):
+    def __init__(self, fp):
         self.fp = fp
         self.seekp = 0
-        self.factory = factory
 
-    def __iter__(self):
-        return self
+    def seek(self, pos, whence=0):
+        if whence==1:           # Relative to current position
+            self.pos = self.pos + pos
+        if whence==2:           # Relative to file's end
+            self.pos = self.stop + pos
+        else:                   # Default - absolute position
+            self.pos = self.start + pos
 
     def next(self):
         while 1:
@@ -28,9 +30,9 @@ class _Mailbox:
             start = self.fp.tell()
             self._search_end()
             self.seekp = stop = self.fp.tell()
-            if start != stop:
+            if start <> stop:
                 break
-        return self.factory(_Subfile(self.fp, start, stop))
+        return rfc822.Message(_Subfile(self.fp, start, stop))
 
 
 class _Subfile:
@@ -113,49 +115,21 @@ class UnixMailbox(_Mailbox):
                 self.fp.seek(pos)
                 return
 
-    # An overridable mechanism to test for From-line-ness.  You can either
-    # specify a different regular expression or define a whole new
-    # _isrealfromline() method.  Note that this only gets called for lines
-    # starting with the 5 characters "From ".
-    #
-    # BAW: According to
-    #http://home.netscape.com/eng/mozilla/2.0/relnotes/demo/content-length.html
-    # the only portable, reliable way to find message delimiters in a BSD (i.e
-    # Unix mailbox) style folder is to search for "\n\nFrom .*\n", or at the
-    # beginning of the file, "^From .*\n".  While _fromlinepattern below seems
-    # like a good idea, in practice, there are too many variations for more
-    # strict parsing of the line to be completely accurate.
-    #
-    # _strict_isrealfromline() is the old version which tries to do stricter
-    # parsing of the From_ line.  _portable_isrealfromline() simply returns
-    # true, since it's never called if the line doesn't already start with
-    # "From ".
-    #
-    # This algorithm, and the way it interacts with _search_start() and
-    # _search_end() may not be completely correct, because it doesn't check
-    # that the two characters preceding "From " are \n\n or the beginning of
-    # the file.  Fixing this would require a more extensive rewrite than is
-    # necessary.  For convenience, we've added a StrictUnixMailbox class which
-    # uses the older, more strict _fromlinepattern regular expression.
+    # An overridable mechanism to test for From-line-ness.
+    # You can either specify a different regular expression
+    # or define a whole new _isrealfromline() method.
+    # Note that this only gets called for lines starting with
+    # the 5 characters "From ".
 
     _fromlinepattern = r"From \s*[^\s]+\s+\w\w\w\s+\w\w\w\s+\d?\d\s+" \
                        r"\d?\d:\d\d(:\d\d)?(\s+[^\s]+)?\s+\d\d\d\d\s*$"
     _regexp = None
 
-    def _strict_isrealfromline(self, line):
+    def _isrealfromline(self, line):
         if not self._regexp:
             import re
             self._regexp = re.compile(self._fromlinepattern)
         return self._regexp.match(line)
-
-    def _portable_isrealfromline(self, line):
-        return 1
-
-    _isrealfromline = _strict_isrealfromline
-
-
-class PortableUnixMailbox(UnixMailbox):
-    _isrealfromline = UnixMailbox._portable_isrealfromline
 
 
 class MmdfMailbox(_Mailbox):
@@ -179,7 +153,7 @@ class MmdfMailbox(_Mailbox):
 
 
 class MHMailbox:
-    def __init__(self, dirname, factory=rfc822.Message):
+    def __init__(self, dirname):
         import re
         pat = re.compile('^[1-9][0-9]*$')
         self.dirname = dirname
@@ -192,10 +166,6 @@ class MHMailbox:
         # This only works in Python 1.6 or later;
         # before that str() added 'L':
         self.boxes = map(str, list)
-        self.factory = factory
-
-    def __iter__(self):
-        return self
 
     def next(self):
         if not self.boxes:
@@ -203,15 +173,14 @@ class MHMailbox:
         fn = self.boxes[0]
         del self.boxes[0]
         fp = open(os.path.join(self.dirname, fn))
-        return self.factory(fp)
+        return rfc822.Message(fp)
 
 
 class Maildir:
     # Qmail directory mailbox
 
-    def __init__(self, dirname, factory=rfc822.Message):
+    def __init__(self, dirname):
         self.dirname = dirname
-        self.factory = factory
 
         # check for new mail
         newdir = os.path.join(self.dirname, 'new')
@@ -225,16 +194,13 @@ class Maildir:
 
         self.boxes = boxes
 
-    def __iter__(self):
-        return self
-
     def next(self):
         if not self.boxes:
             return None
         fn = self.boxes[0]
         del self.boxes[0]
         fp = open(fn)
-        return self.factory(fp)
+        return rfc822.Message(fp)
 
 
 class BabylMailbox(_Mailbox):

@@ -103,7 +103,7 @@ def handle_write(self):
   indicating that by default, all channels will be interested.
 \end{methoddesc}
 
-\begin{methoddesc}{writable}{}
+\begin{methoddesc}{writeable}{}
   Each time through the \method{select()} loop, the set of sockets 
   is scanned, and this method is called to see if there is any 
   interest in writing.  The default method simply returns \code{1}, 
@@ -136,7 +136,7 @@ identical to their socket partners.
   Read at most \var{buffer_size} bytes from the socket.
 \end{methoddesc}
 
-\begin{methoddesc}{listen}{backlog}
+\begin{methoddesc}{listen}{\optional{backlog}}
   Listen for connections made to the socket.  The \var{backlog}
   argument specifies the maximum number of queued connections
   and should be at least 1; the maximum value is
@@ -178,7 +178,7 @@ class http_client(asyncore.dispatcher):
         self.path = path
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connect( (host, 80) )
-        self.buffer = 'GET %s HTTP/1.0\r\n\r\n' % self.path
+        self.buffer = 'GET %s HTTP/1.0\r\b\r\n' % self.path
         
     def handle_connect(self):
         pass
@@ -187,7 +187,7 @@ class http_client(asyncore.dispatcher):
         data = self.recv(8192)
         print data
         
-    def writable(self):
+    def writeable(self):
         return (len(self.buffer) > 0)
     
     def handle_write(self):

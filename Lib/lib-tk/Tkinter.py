@@ -37,13 +37,14 @@ tkinter = _tkinter # b/w compat for export
 TclError = _tkinter.TclError
 from types import *
 from Tkconstants import *
+import string; _string = string; del string
 try:
     import MacOS; _MacOS = MacOS; del MacOS
 except ImportError:
     _MacOS = None
 
-TkVersion = float(_tkinter.TK_VERSION)
-TclVersion = float(_tkinter.TCL_VERSION)
+TkVersion = _string.atof(_tkinter.TK_VERSION)
+TclVersion = _string.atof(_tkinter.TCL_VERSION)
 
 READABLE = _tkinter.READABLE
 WRITABLE = _tkinter.WRITABLE
@@ -338,7 +339,7 @@ class Misc:
         """Wait until a WIDGET is destroyed.
 
         If no parameter is given self is used."""
-        if window is None:
+        if window == None:
             window = self
         self.tk.call('tkwait', 'window', window._w)
     def wait_visibility(self, window=None):
@@ -346,7 +347,7 @@ class Misc:
         (e.g. it appears).
 
         If no parameter is given self is used."""
-        if window is None:
+        if window == None:
             window = self
         self.tk.call('tkwait', 'visibility', window._w)
     def setvar(self, name='PY_VAR', value='1'):
@@ -781,7 +782,7 @@ class Misc:
         return t[:1] + tuple(map(self.__winfo_getint, t[1:]))
     def __winfo_getint(self, x):
         """Internal function."""
-        return int(x, 0)
+        return _string.atoi(x, 0)
     def winfo_vrootheight(self):
         """Return the height of the virtual root window associated with this
         widget in pixels. If there is no virtual root window return the
@@ -849,7 +850,7 @@ class Misc:
                    %
                    (add and '+' or '',
                 funcid,
-                " ".join(self._subst_format)))
+                _string.join(self._subst_format)))
             self.tk.call(what + (sequence, cmd))
             return funcid
         elif sequence:
@@ -971,8 +972,9 @@ class Misc:
         if name[0] == '.':
             w = w._root()
             name = name[1:]
+        find = _string.find
         while name:
-            i = name.find('.')
+            i = find(name, '.')
             if i >= 0:
                 name, tail = name[:i], name[i+1:]
             else:
@@ -3084,3 +3086,4 @@ def _test():
 
 if __name__ == '__main__':
     _test()
+

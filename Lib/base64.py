@@ -6,8 +6,6 @@
 
 import binascii
 
-__all__ = ["encode","decode","encodestring","decodestring"]
-
 MAXLINESIZE = 76 # Excluding the CRLF
 MAXBINSIZE = (MAXLINESIZE/4)*3
 
@@ -33,15 +31,19 @@ def decode(input, output):
 
 def encodestring(s):
     """Encode a string."""
-    pieces = []
-    for i in range(0, len(s), MAXBINSIZE):
-        chunk = s[i : i + MAXBINSIZE]
-        pieces.append(binascii.b2a_base64(chunk))
-    return "".join(pieces)
+    import StringIO
+    f = StringIO.StringIO(s)
+    g = StringIO.StringIO()
+    encode(f, g)
+    return g.getvalue()
 
 def decodestring(s):
     """Decode a string."""
-    return binascii.a2b_base64(s)
+    import StringIO
+    f = StringIO.StringIO(s)
+    g = StringIO.StringIO()
+    decode(f, g)
+    return g.getvalue()
 
 def test():
     """Small test program"""

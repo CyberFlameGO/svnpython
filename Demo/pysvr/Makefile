@@ -13,7 +13,7 @@ OPT=-g
 
 # Where Python is installed, and which version
 INST=/usr/local
-VER=2.0
+VER=1.5
 
 # Expressions using the above definitions -- no need to change
 PYVER=python$(VER)
@@ -28,11 +28,10 @@ PYLIBS=$(PYC)/lib$(PYVER).a
 # Libraries to link with -- very installation dependent
 # (See LIBS= in Modules/Makefile in build tree)
 RLLIBS=-lreadline -ltermcap
-OTHERLIBS=-lnsl -lpthread -ldl -lm -ldb -lutil
+OTHERLIBS=-lsocket -lnsl -lpthread -ldl -lm
 
 # Compilation and link flags -- no need to change normally
-CFLAGS=$(OPT)
-CPPFLAGS=$(PYINCL)
+CFLAGS=$(PYINCL) $(OPT)
 LIBS=$(PYLIBS) $(RLLIBS) $(OTHERLIBS)
 
 # Default port for the pysvr application

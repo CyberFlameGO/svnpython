@@ -35,9 +35,7 @@ These interpreters use raw_input; thus, if the readline module is loaded,
 they automatically support Emacs-like command history and editing features.
 """
 
-import string, sys
-
-__all__ = ["Cmd"]
+import string
 
 PROMPT = '(Cmd) '
 IDENTCHARS = string.letters + string.digits + '_'
@@ -54,13 +52,12 @@ class Cmd:
     misc_header = "Miscellaneous help topics:"
     undoc_header = "Undocumented commands:"
     nohelp = "*** No help on %s"
-    use_rawinput = 1
 
     def __init__(self): pass
 
     def cmdloop(self, intro=None):
         self.preloop()
-        if intro is not None:
+        if intro != None:
             self.intro = intro
         if self.intro:
             print self.intro
@@ -70,18 +67,10 @@ class Cmd:
                 line = self.cmdqueue[0]
                 del self.cmdqueue[0]
             else:
-                if self.use_rawinput:
-                    try:
-                        line = raw_input(self.prompt)
-                    except EOFError:
-                        line = 'EOF'
-                else:
-                    sys.stdout.write(self.prompt)
-                    line = sys.stdin.readline()
-                    if not len(line):
-                        line = 'EOF'
-                    else:
-                        line = line[:-1] # chop \n
+                try:
+                    line = raw_input(self.prompt)
+                except EOFError:
+                    line = 'EOF'
             line = self.precmd(line)
             stop = self.onecmd(line)
             stop = self.postcmd(stop, line)
@@ -100,7 +89,7 @@ class Cmd:
         pass
 
     def onecmd(self, line):
-        line = line.strip()
+        line = string.strip(line)
         if not line:
             return self.emptyline()
         elif line[0] == '?':
@@ -113,7 +102,7 @@ class Cmd:
         self.lastcmd = line
         i, n = 0, len(line)
         while i < n and line[i] in self.identchars: i = i+1
-        cmd, arg = line[:i], line[i:].strip()
+        cmd, arg = line[:i], string.strip(line[i:])
         if cmd == '':
             return self.default(line)
         else:
@@ -186,7 +175,7 @@ class Cmd:
 
     def print_topics(self, header, cmds, cmdlen, maxcol):
         if cmds:
-            print header
+            print header;
             if self.ruler:
                 print self.ruler * len(header)
             (cmds_per_line,junk)=divmod(maxcol,cmdlen)

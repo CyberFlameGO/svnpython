@@ -119,14 +119,6 @@ typedef int (*visitproc)(PyObject *, void *);
 typedef int (*traverseproc)(PyObject *, visitproc, void *);
 
 typedef struct {
-	/* For numbers without flag bit Py_TPFLAGS_CHECKTYPES set, all
-	   arguments are guaranteed to be of the object's type (modulo
-	   coercion hacks that is -- i.e. if the type's coercion function
-	   returns other types, then these are allowed as well).  Numbers that
-	   have the Py_TPFLAGS_CHECKTYPES flag bit set should check *both*
-	   arguments for proper type and implement the necessary conversions
-	   in the slot functions themselves. */
-
 	binaryfunc nb_add;
 	binaryfunc nb_subtract;
 	binaryfunc nb_multiply;
@@ -199,9 +191,6 @@ typedef int (*setattrofunc)(PyObject *, PyObject *, PyObject *);
 typedef int (*cmpfunc)(PyObject *, PyObject *);
 typedef PyObject *(*reprfunc)(PyObject *);
 typedef long (*hashfunc)(PyObject *);
-typedef PyObject *(*richcmpfunc) (PyObject *, PyObject *, int);
-typedef PyObject *(*getiterfunc) (PyObject *);
-typedef PyObject *(*iternextfunc) (PyObject *);
 
 typedef struct _typeobject {
 	PyObject_VAR_HEAD
@@ -245,18 +234,12 @@ typedef struct _typeobject {
 	/* delete references to contained objects */
 	inquiry tp_clear;
 
-	/* rich comparisons */
-	richcmpfunc tp_richcompare;
-
-	/* weak reference enabler */
-	long tp_weaklistoffset;
-
-	/* Iterators */
-	getiterfunc tp_iter;
-	iternextfunc tp_iternext;
+	/* More spares */
+	long tp_xxx7;
+	long tp_xxx8;
 
 #ifdef COUNT_ALLOCS
-	/* these must be last and never explicitly initialized */
+	/* these must be last */
 	int tp_alloc;
 	int tp_free;
 	int tp_maxalloc;
@@ -270,13 +253,9 @@ extern DL_IMPORT(PyTypeObject) PyType_Type; /* The type of type objects */
 
 /* Generic operations on objects */
 extern DL_IMPORT(int) PyObject_Print(PyObject *, FILE *, int);
-extern DL_IMPORT(void) _PyObject_Dump(PyObject *);
 extern DL_IMPORT(PyObject *) PyObject_Repr(PyObject *);
 extern DL_IMPORT(PyObject *) PyObject_Str(PyObject *);
-extern DL_IMPORT(PyObject *) PyObject_Unicode(PyObject *);
 extern DL_IMPORT(int) PyObject_Compare(PyObject *, PyObject *);
-extern DL_IMPORT(PyObject *) PyObject_RichCompare(PyObject *, PyObject *, int);
-extern DL_IMPORT(int) PyObject_RichCompareBool(PyObject *, PyObject *, int);
 extern DL_IMPORT(PyObject *) PyObject_GetAttrString(PyObject *, char *);
 extern DL_IMPORT(int) PyObject_SetAttrString(PyObject *, char *, PyObject *);
 extern DL_IMPORT(int) PyObject_HasAttrString(PyObject *, char *);
@@ -290,18 +269,16 @@ extern DL_IMPORT(int) PyCallable_Check(PyObject *);
 extern DL_IMPORT(int) PyNumber_Coerce(PyObject **, PyObject **);
 extern DL_IMPORT(int) PyNumber_CoerceEx(PyObject **, PyObject **);
 
-extern DL_IMPORT(void) (*PyObject_ClearWeakRefs)(PyObject *);
-
 /* Helpers for printing recursive container types */
 extern DL_IMPORT(int) Py_ReprEnter(PyObject *);
 extern DL_IMPORT(void) Py_ReprLeave(PyObject *);
 
+/* tstate dict key for PyObject_Compare helper */
+extern PyObject *_PyCompareState_Key;
+
 /* Helpers for hash functions */
 extern DL_IMPORT(long) _Py_HashDouble(double);
 extern DL_IMPORT(long) _Py_HashPointer(void*);
-
-/* Helper for passing objects to printf and the like */
-#define PyObject_REPR(obj) PyString_AS_STRING(PyObject_Repr(obj))
 
 /* Flag bits for printing: */
 #define Py_PRINT_RAW	1	/* No string quotes etc. */
@@ -345,26 +322,9 @@ given type object has a specified feature.
 /* PySequenceMethods and PyNumberMethods contain in-place operators */
 #define Py_TPFLAGS_HAVE_INPLACEOPS (1L<<3)
 
-/* PyNumberMethods do their own coercion */
-#define Py_TPFLAGS_CHECKTYPES (1L<<4)
-
-/* tp_richcompare is defined */
-#define Py_TPFLAGS_HAVE_RICHCOMPARE (1L<<5)
-
-/* Objects which are weakly referencable if their tp_weaklistoffset is >0 */
-#define Py_TPFLAGS_HAVE_WEAKREFS (1L<<6)
-
-/* tp_iter is defined */
-#define Py_TPFLAGS_HAVE_ITER (1L<<7)
-
-#define Py_TPFLAGS_DEFAULT  ( \
-                             Py_TPFLAGS_HAVE_GETCHARBUFFER | \
+#define Py_TPFLAGS_DEFAULT  (Py_TPFLAGS_HAVE_GETCHARBUFFER | \
                              Py_TPFLAGS_HAVE_SEQUENCE_IN | \
-                             Py_TPFLAGS_HAVE_INPLACEOPS | \
-                             Py_TPFLAGS_HAVE_RICHCOMPARE | \
-                             Py_TPFLAGS_HAVE_WEAKREFS | \
-                             Py_TPFLAGS_HAVE_ITER | \
-                            0)
+                             Py_TPFLAGS_HAVE_INPLACEOPS)
 
 #define PyType_HasFeature(t,f)  (((t)->tp_flags & (f)) != 0)
 
@@ -438,7 +398,7 @@ extern DL_IMPORT(long) _Py_RefTotal;
 
 #define Py_INCREF(op) (_Py_RefTotal++, (op)->ob_refcnt++)
 #define Py_DECREF(op) \
-	if (--_Py_RefTotal, (--((op)->ob_refcnt) != 0)) \
+	if (--_Py_RefTotal, --(op)->ob_refcnt != 0) \
 		; \
 	else \
 		_Py_Dealloc((PyObject *)(op))
@@ -474,22 +434,6 @@ extern DL_IMPORT(PyObject) _Py_NoneStruct; /* Don't use this directly */
 
 #define Py_None (&_Py_NoneStruct)
 
-/*
-Py_NotImplemented is a singleton used to signal that an operation is
-not implemented for a given type combination.
-*/
-
-extern DL_IMPORT(PyObject) _Py_NotImplementedStruct; /* Don't use this directly */
-
-#define Py_NotImplemented (&_Py_NotImplementedStruct)
-
-/* Rich comparison opcodes */
-#define Py_LT 0
-#define Py_LE 1
-#define Py_EQ 2
-#define Py_NE 3
-#define Py_GT 4
-#define Py_GE 5
 
 /*
 A common programming style in Python requires the forward declaration

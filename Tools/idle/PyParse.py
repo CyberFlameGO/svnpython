@@ -29,7 +29,6 @@ _synchre = re.compile(r"""
     |   except
     |   raise
     |   import
-    |   yield
     )
     \b
 """, re.VERBOSE | re.MULTILINE).search
@@ -106,11 +105,6 @@ for ch in "\"'\\\n#":
 _tran = string.join(_tran, '')
 del ch
 
-try:
-    UnicodeType = type(unicode(""))
-except NameError:
-    UnicodeType = None
-
 class Parser:
 
     def __init__(self, indentwidth, tabwidth):
@@ -119,7 +113,7 @@ class Parser:
 
     def set_str(self, str):
         assert len(str) == 0 or str[-1] == '\n'
-        if type(str) is UnicodeType:
+        if type(str) == type(u""):
             # The parse functions have no idea what to do with Unicode, so
             # replace all Unicode characters with "x".  This is "safe"
             # so long as the only characters germane to parsing the structure

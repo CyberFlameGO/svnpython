@@ -1,3 +1,4 @@
+
 /* select - Module containing unix select(2) call.
    Under Unix, the file descriptors are small integers.
    Under Win32, select only exists for sockets, and sockets may
@@ -7,16 +8,6 @@
 */
 
 #include "Python.h"
-
-/* Windows #defines FD_SETSIZE to 64 if FD_SETSIZE isn't already defined.
-   64 is too small (too many people have bumped into that limit).
-   Here we boost it.
-   Users who want even more than the boosted limit should #define
-   FD_SETSIZE higher before this; e.g., via compiler /D switch.
-*/
-#if defined(MS_WINDOWS) && !defined(FD_SETSIZE)
-#define FD_SETSIZE 512
-#endif 
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -49,15 +40,6 @@ extern void bzero(void *, int);
 #define SOCKET int
 #endif
 #endif
-
-#ifdef RISCOS
-#define NO_DUP
-#undef off_t
-#undef uid_t
-#undef gid_t
-#undef errno
-#include "socklib.h"
-#endif /* RISCOS */
 
 static PyObject *SelectError;
 
@@ -362,7 +344,7 @@ poll_register(pollObject *self, PyObject *args)
 	PyObject *o, *key, *value;
 	int fd, events = POLLIN | POLLPRI | POLLOUT;
 
-	if (!PyArg_ParseTuple(args, "O|i:register", &o, &events)) {
+	if (!PyArg_ParseTuple(args, "O|i", &o, &events)) {
 		return NULL;
 	}
   
@@ -392,7 +374,7 @@ poll_unregister(pollObject *self, PyObject *args)
 	PyObject *o, *key;
 	int fd;
 
-	if (!PyArg_ParseTuple(args, "O:unregister", &o)) {
+	if (!PyArg_ParseTuple(args, "O", &o)) {
 		return NULL;
 	}
   
@@ -431,7 +413,7 @@ poll_poll(pollObject *self, PyObject *args)
 	int timeout = 0, poll_result, i, j;
 	PyObject *value = NULL, *num = NULL;
 
-	if (!PyArg_ParseTuple(args, "|O:poll", &tout)) {
+	if (!PyArg_ParseTuple(args, "|O", &tout)) {
 		return NULL;
 	}
 

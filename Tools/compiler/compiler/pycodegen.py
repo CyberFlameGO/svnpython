@@ -9,10 +9,8 @@ import types
 from cStringIO import StringIO
 
 from compiler import ast, parse, walk
-from compiler import pyassem, misc, future, symbols
-from compiler.consts import SC_LOCAL, SC_GLOBAL, SC_FREE, SC_CELL
-from compiler.pyassem import CO_VARARGS, CO_VARKEYWORDS, CO_NEWLOCALS,\
-     CO_NESTED, TupleArg
+from compiler import pyassem, misc
+from compiler.pyassem import CO_VARARGS, CO_VARKEYWORDS, CO_NEWLOCALS, TupleArg
 
 # Do we have Python 1.x or Python 2.x?
 try:
@@ -45,16 +43,13 @@ class Module:
         self.code = None
 
     def compile(self, display=0):
-        tree = parse(self.source)
+        ast = parse(self.source)
         root, filename = os.path.split(self.filename)
-        if "nested_scopes" in future.find_futures(tree):
-            gen = NestedScopeModuleCodeGenerator(filename)
-        else:
-            gen = ModuleCodeGenerator(filename)
-        walk(tree, gen, 1)
+        gen = ModuleCodeGenerator(filename)
+        walk(ast, gen, 1)
         if display:
             import pprint
-            print pprint.pprint(tree)
+            print pprint.pprint(ast)
         self.code = gen.getCode()
 
     def dump(self, f):
@@ -72,71 +67,14 @@ class Module:
         mtime = struct.pack('i', mtime)
         return self.MAGIC + mtime
 
-class LocalNameFinder:
-    """Find local names in scope"""
-    def __init__(self, names=()):
-        self.names = misc.Set()
-        self.globals = misc.Set()
-        for name in names:
-            self.names.add(name)
-
-    # XXX list comprehensions and for loops
-
-    def getLocals(self):
-        for elt in self.globals.elements():
-            if self.names.has_elt(elt):
-                self.names.remove(elt)
-        return self.names
-
-    def visitDict(self, node):
-        pass
-
-    def visitGlobal(self, node):
-        for name in node.names:
-            self.globals.add(name)
-
-    def visitFunction(self, node):
-        self.names.add(node.name)
-
-    def visitLambda(self, node):
-        pass
-
-    def visitImport(self, node):
-        for name, alias in node.names:
-            self.names.add(alias or name)
-
-    def visitFrom(self, node):
-        for name, alias in node.names:
-            self.names.add(alias or name)
-
-    def visitClass(self, node):
-        self.names.add(node.name)
-
-    def visitAssName(self, node):
-        self.names.add(node.name)
-
 class CodeGenerator:
-    """Defines basic code generator for Python bytecode
-
-    This class is an abstract base class.  Concrete subclasses must
-    define an __init__() that defines self.graph and then calls the
-    __init__() defined in this class.
-
-    The concrete class must also define the class attributes
-    NameFinder, FunctionGen, and ClassGen.  These attributes can be
-    defined in the initClass() method, which is a hook for
-    initializing these methods after all the classes have been
-    defined. 
-    """
 
     optimized = 0 # is namespace access optimized?
-    __initialized = None
 
     def __init__(self, filename):
-        if self.__initialized is None:
-            self.initClass()
-            self.__class__.__initialized = 1
-        self.checkClass()
+## Subclasses must define a constructor that intializes self.graph
+## before calling this init function, e.g.
+##         self.graph = pyassem.PyFlowGraph()
         self.filename = filename
         self.locals = misc.Stack()
         self.loops = misc.Stack()
@@ -144,20 +82,6 @@ class CodeGenerator:
         self.maxStack = 0
         self.last_lineno = None
         self._setupGraphDelegation()
-
-    def initClass(self):
-        """This method is called once for each class"""
-
-    def checkClass(self):
-        """Verify that class is constructed correctly"""
-        try:
-            assert hasattr(self, 'graph')
-            assert getattr(self, 'NameFinder')
-            assert getattr(self, 'FunctionGen')
-            assert getattr(self, 'ClassGen')
-        except AssertionError, msg:
-            intro = "Bad class construction for %s" % self.__class__.__name__
-            raise AssertionError, intro
 
     def _setupGraphDelegation(self):
         self.emit = self.graph.emit
@@ -193,19 +117,7 @@ class CodeGenerator:
         else:
             self.emit(prefix + '_GLOBAL', name)
 
-    def _implicitNameOp(self, prefix, name):
-        """Emit name ops for names generated implicitly by for loops
-
-        The interpreter generates names that start with a period or
-        dollar sign.  The symbol table ignores these names because
-        they aren't present in the program text.
-        """
-        if self.optimized:
-            self.emit(prefix + '_FAST', name)
-        else:
-            self.emit(prefix + '_NAME', name)
-
-    def set_lineno(self, node, force=0):
+    def set_lineno(self, node):
         """Emit SET_LINENO if node has lineno attribute and it is 
         different than the last lineno emitted.
 
@@ -217,54 +129,42 @@ class CodeGenerator:
         then, this method works around missing line numbers.
         """
         lineno = getattr(node, 'lineno', None)
-        if lineno is not None and (lineno != self.last_lineno
-                                   or force):
+        if lineno is not None and lineno != self.last_lineno:
             self.emit('SET_LINENO', lineno)
             self.last_lineno = lineno
             return 1
         return 0
 
     # The first few visitor methods handle nodes that generator new
-    # code objects.  They use class attributes to determine what
-    # specialized code generators to use.
-
-    NameFinder = LocalNameFinder
-    FunctionGen = None
-    ClassGen = None
+    # code objects 
 
     def visitModule(self, node):
-        self.emit('SET_LINENO', 0)
-        lnf = walk(node.node, self.NameFinder(), 0)
+        lnf = walk(node.node, LocalNameFinder(), 0)
         self.locals.push(lnf.getLocals())
-        if node.doc:
-            self.fixDocstring(node.node)
+        self.setDocstring(node.doc)
         self.visit(node.node)
         self.emit('LOAD_CONST', None)
         self.emit('RETURN_VALUE')
 
     def visitFunction(self, node):
         self._visitFuncOrLambda(node, isLambda=0)
-        if node.doc:
-            self.setDocstring(node.doc)
         self.storeName(node.name)
 
     def visitLambda(self, node):
         self._visitFuncOrLambda(node, isLambda=1)
 
-    def _visitFuncOrLambda(self, node, isLambda=0):
-        gen = self.FunctionGen(node, self.filename, self.scopes, isLambda)
+    def _visitFuncOrLambda(self, node, isLambda):
+        gen = FunctionCodeGenerator(node, self.filename, isLambda)
         walk(node.code, gen)
         gen.finish()
         self.set_lineno(node)
         for default in node.defaults:
             self.visit(default)
-        self.emit('LOAD_CONST', gen)
+        self.emit('LOAD_CONST', gen.getCode())
         self.emit('MAKE_FUNCTION', len(node.defaults))
 
     def visitClass(self, node):
-        gen = self.ClassGen(node, self.filename, self.scopes)
-        if node.doc:
-            self.fixDocstring(node.code)
+        gen = ClassCodeGenerator(node, self.filename)
         walk(node.code, gen)
         gen.finish()
         self.set_lineno(node)
@@ -272,25 +172,12 @@ class CodeGenerator:
         for base in node.bases:
             self.visit(base)
         self.emit('BUILD_TUPLE', len(node.bases))
-        self.emit('LOAD_CONST', gen)
+        self.emit('LOAD_CONST', gen.getCode())
         self.emit('MAKE_FUNCTION', 0)
         self.emit('CALL_FUNCTION', 0)
         self.emit('BUILD_CLASS')
         self.storeName(node.name)
 
-    def fixDocstring(self, node):
-        """Rewrite the ast for a class with a docstring.
-
-        The AST includes a Discard(Const(docstring)) node.  Replace
-        this with an Assign([AssName('__doc__', ...])
-        """
-        assert isinstance(node, ast.Stmt)
-        stmts = node.nodes
-        discard = stmts[0]
-        assert isinstance(discard, ast.Discard)
-        stmts[0] = ast.Assign([ast.AssName('__doc__', 'OP_ASSIGN')],
-                              discard.expr)
-        stmts[0].lineno = discard.lineno
     # The rest are standard visitor methods
 
     # The next few implement control-flow statements
@@ -308,7 +195,7 @@ class CodeGenerator:
             self.emit('POP_TOP')
             self.visit(suite)
             self.emit('JUMP_FORWARD', end)
-            self.startBlock(nextTest)
+            self.nextBlock(nextTest)
             self.emit('POP_TOP')
         if node.else_:
             self.visit(node.else_)
@@ -326,7 +213,7 @@ class CodeGenerator:
         self.nextBlock(loop)
         self.loops.push(loop)
 
-        self.set_lineno(node, force=1)
+        self.set_lineno(node)
         self.visit(node.test)
         self.emit('JUMP_IF_FALSE', else_ or after)
 
@@ -338,9 +225,9 @@ class CodeGenerator:
         self.startBlock(else_) # or just the POPs if not else clause
         self.emit('POP_TOP')
         self.emit('POP_BLOCK')
-        self.loops.pop()
         if node.else_:
             self.visit(node.else_)
+        self.loops.pop()
         self.nextBlock(after)
 
     def visitFor(self, node):
@@ -354,17 +241,16 @@ class CodeGenerator:
         self.visit(node.list)
         self.visit(ast.Const(0))
         self.nextBlock(start)
-        self.set_lineno(node, force=1)
+        self.set_lineno(node)
         self.emit('FOR_LOOP', anchor)
-        self.nextBlock()
         self.visit(node.assign)
         self.visit(node.body)
         self.emit('JUMP_ABSOLUTE', start)
-        self.startBlock(anchor)
+        self.nextBlock(anchor)
         self.emit('POP_BLOCK')
-        self.loops.pop()
         if node.else_:
             self.visit(node.else_)
+        self.loops.pop()
         self.nextBlock(after)
 
     def visitBreak(self, node):
@@ -418,7 +304,7 @@ class CodeGenerator:
         if len(node.ops) > 1:
             end = self.newBlock()
             self.emit('JUMP_FORWARD', end)
-            self.startBlock(cleanup)
+            self.nextBlock(cleanup)
             self.emit('ROT_TWO')
             self.emit('POP_TOP')
             self.nextBlock(end)
@@ -427,6 +313,9 @@ class CodeGenerator:
     __list_count = 0
     
     def visitListComp(self, node):
+        # XXX would it be easier to transform the AST into the form it
+        # would have if the list comp were expressed as a series of
+        # for and if stmts and an explicit append?
         self.set_lineno(node)
         # setup list
         append = "$append%d" % self.__list_count
@@ -434,10 +323,10 @@ class CodeGenerator:
         self.emit('BUILD_LIST', 0)
         self.emit('DUP_TOP')
         self.emit('LOAD_ATTR', 'append')
-        self._implicitNameOp('STORE', append)
-        
+        self.storeName(append)
+        l = len(node.quals)
         stack = []
-        for i, for_ in zip(range(len(node.quals)), node.quals):
+        for i, for_ in zip(range(l), node.quals):
             start, anchor = self.visit(for_)
             cont = None
             for if_ in for_.ifs:
@@ -445,8 +334,8 @@ class CodeGenerator:
                     cont = self.newBlock()
                 self.visit(if_, cont)
             stack.insert(0, (start, cont, anchor))
-
-        self._implicitNameOp('LOAD', append)
+            
+        self.loadName(append)
         self.visit(node.expr)
         self.emit('CALL_FUNCTION', 1)
         self.emit('POP_TOP')
@@ -455,30 +344,30 @@ class CodeGenerator:
             if cont:
                 skip_one = self.newBlock()
                 self.emit('JUMP_FORWARD', skip_one)
-                self.startBlock(cont)
+                self.nextBlock(cont)
                 self.emit('POP_TOP')
                 self.nextBlock(skip_one)
             self.emit('JUMP_ABSOLUTE', start)
-            self.startBlock(anchor)
-        self._implicitNameOp('DELETE', append)
+            self.nextBlock(anchor)
+        self.delName(append)
         
         self.__list_count = self.__list_count - 1
 
     def visitListCompFor(self, node):
+        self.set_lineno(node)
         start = self.newBlock()
         anchor = self.newBlock()
 
         self.visit(node.list)
         self.visit(ast.Const(0))
-        self.nextBlock(start)
         self.emit('SET_LINENO', node.lineno)
+        self.nextBlock(start)
         self.emit('FOR_LOOP', anchor)
-        self.nextBlock()
         self.visit(node.assign)
         return start, anchor
 
     def visitListCompIf(self, node, branch):
-        self.set_lineno(node, force=1)
+        self.set_lineno(node)
         self.visit(node.test)
         self.emit('JUMP_IF_FALSE', branch)
         self.newBlock()
@@ -501,13 +390,9 @@ class CodeGenerator:
         self.visit(node.test)
         self.emit('JUMP_IF_TRUE', end)
         self.nextBlock()
-        self.emit('POP_TOP')
         self.emit('LOAD_GLOBAL', 'AssertionError')
-        if node.fail:
-            self.visit(node.fail)
-            self.emit('RAISE_VARARGS', 2)
-        else:
-            self.emit('RAISE_VARARGS', 1)
+        self.visit(node.fail)
+        self.emit('RAISE_VARARGS', 2)
         self.nextBlock(end)
         self.emit('POP_TOP')
 
@@ -534,11 +419,10 @@ class CodeGenerator:
             lElse = end
         self.set_lineno(node)
         self.emit('SETUP_EXCEPT', handlers)
-        self.nextBlock()
         self.visit(node.body)
         self.emit('POP_BLOCK')
         self.emit('JUMP_FORWARD', lElse)
-        self.startBlock(handlers)
+        self.nextBlock(handlers)
         
         last = len(node.handlers) - 1
         for i in range(len(node.handlers)):
@@ -562,8 +446,6 @@ class CodeGenerator:
             self.emit('JUMP_FORWARD', end)
             if expr:
                 self.nextBlock(next)
-            else:
-                self.nextBlock()
             self.emit('POP_TOP')
         self.emit('END_FINALLY')
         if node.else_:
@@ -575,7 +457,6 @@ class CodeGenerator:
         final = self.newBlock()
         self.set_lineno(node)
         self.emit('SETUP_FINALLY', final)
-        self.nextBlock()
         self.visit(node.body)
         self.emit('POP_BLOCK')
         self.emit('LOAD_CONST', None)
@@ -586,7 +467,6 @@ class CodeGenerator:
     # misc
 
     def visitDiscard(self, node):
-        self.set_lineno(node)
         self.visit(node.expr)
         self.emit('POP_TOP')
 
@@ -971,114 +851,21 @@ class CodeGenerator:
             self.visit(k)
             self.emit('STORE_SUBSCR')
 
-class NestedScopeCodeGenerator(CodeGenerator):
-    __super_visitModule = CodeGenerator.visitModule
-    __super_visitClass = CodeGenerator.visitClass
-    __super__visitFuncOrLambda = CodeGenerator._visitFuncOrLambda
-
-    def parseSymbols(self, tree):
-        s = symbols.SymbolVisitor()
-        walk(tree, s)
-        return s.scopes
-
-    def visitModule(self, node):
-        self.scopes = self.parseSymbols(node)
-        self.scope = self.scopes[node]
-        self.__super_visitModule(node)
-
-    def _nameOp(self, prefix, name):
-        scope = self.scope.check_name(name)
-        if scope == SC_LOCAL:
-            if not self.optimized:
-                self.emit(prefix + '_NAME', name)
-            else:
-                self.emit(prefix + '_FAST', name)
-        elif scope == SC_GLOBAL:
-            self.emit(prefix + '_GLOBAL', name)
-        elif scope == SC_FREE or scope == SC_CELL:
-            self.emit(prefix + '_DEREF', name)
-        else:
-            raise RuntimeError, "unsupported scope for var %s: %d" % \
-                  (name, scope)
-
-    def _visitFuncOrLambda(self, node, isLambda=0):
-        gen = self.FunctionGen(node, self.filename, self.scopes, isLambda)
-        walk(node.code, gen)
-        gen.finish()
-        self.set_lineno(node)
-        for default in node.defaults:
-            self.visit(default)
-        frees = gen.scope.get_free_vars()
-        if frees:
-            for name in frees:
-                self.emit('LOAD_CLOSURE', name)
-            self.emit('LOAD_CONST', gen)
-            self.emit('MAKE_CLOSURE', len(node.defaults))
-        else:
-            self.emit('LOAD_CONST', gen)
-            self.emit('MAKE_FUNCTION', len(node.defaults))
-
-    def visitClass(self, node):
-        gen = self.ClassGen(node, self.filename, self.scopes)
-        if node.doc:
-            self.fixDocstring(node.code)
-        walk(node.code, gen)
-        gen.finish()
-        self.set_lineno(node)
-        self.emit('LOAD_CONST', node.name)
-        for base in node.bases:
-            self.visit(base)
-        self.emit('BUILD_TUPLE', len(node.bases))
-        frees = gen.scope.get_free_vars()
-        for name in frees:
-            self.emit('LOAD_CLOSURE', name)
-        self.emit('LOAD_CONST', gen)
-        if frees:
-            self.emit('MAKE_CLOSURE', 0)
-        else:
-            self.emit('MAKE_FUNCTION', 0)
-        self.emit('CALL_FUNCTION', 0)
-        self.emit('BUILD_CLASS')
-        self.storeName(node.name)
-        
-
-class LGBScopeMixin:
-    """Defines initClass() for Python 2.1-compatible scoping"""
-    def initClass(self):
-        self.__class__.NameFinder = LocalNameFinder
-        self.__class__.FunctionGen = FunctionCodeGenerator
-        self.__class__.ClassGen = ClassCodeGenerator
-
-class NestedScopeMixin:
-    """Defines initClass() for nested scoping (Python 2.2-compatible)"""
-    def initClass(self):
-        self.__class__.NameFinder = LocalNameFinder
-        self.__class__.FunctionGen = NestedFunctionCodeGenerator
-        self.__class__.ClassGen = NestedClassCodeGenerator
-
-class ModuleCodeGenerator(LGBScopeMixin, CodeGenerator):
-    __super_init = CodeGenerator.__init__
-
-    scopes = None
+class ModuleCodeGenerator(CodeGenerator):
+    super_init = CodeGenerator.__init__
     
     def __init__(self, filename):
+        # XXX <module> is ? in compile.c
         self.graph = pyassem.PyFlowGraph("<module>", filename)
-        self.__super_init(filename)
+        self.super_init(filename)
 
-class NestedScopeModuleCodeGenerator(NestedScopeMixin,
-                                     NestedScopeCodeGenerator):
-    __super_init = CodeGenerator.__init__
-    
-    def __init__(self, filename):
-        self.graph = pyassem.PyFlowGraph("<module>", filename)
-        self.__super_init(filename)
-        self.graph.setFlag(CO_NESTED)
+class FunctionCodeGenerator(CodeGenerator):
+    super_init = CodeGenerator.__init__
 
-class AbstractFunctionCode:
     optimized = 1
     lambdaCount = 0
 
-    def __init__(self, func, filename, scopes, isLambda):
+    def __init__(self, func, filename, isLambda=0):
         if isLambda:
             klass = FunctionCodeGenerator
             name = "<lambda.%d>" % klass.lambdaCount
@@ -1087,14 +874,11 @@ class AbstractFunctionCode:
             name = func.name
         args, hasTupleArg = generateArgList(func.argnames)
         self.graph = pyassem.PyFlowGraph(name, filename, args, 
-                                         optimized=1) 
+                                           optimized=1) 
         self.isLambda = isLambda
         self.super_init(filename)
 
-        if not isLambda and func.doc:
-            self.setDocstring(func.doc)
-
-        lnf = walk(func.code, self.NameFinder(args), 0)
+        lnf = walk(func.code, LocalNameFinder(args), 0)
         self.locals.push(lnf.getLocals())
         if func.varargs:
             self.graph.setFlag(CO_VARARGS)
@@ -1111,10 +895,11 @@ class AbstractFunctionCode:
         self.emit('RETURN_VALUE')
 
     def generateArgUnpack(self, args):
-        for i in range(len(args)):
-            arg = args[i]
+        count = 0
+        for arg in args:
             if type(arg) == types.TupleType:
-                self.emit('LOAD_FAST', '.%d' % (i * 2))
+                self.emit('LOAD_FAST', '.nested%d' % count)
+                count = count + 1
                 self.unpackSequence(arg)
                         
     def unpackSequence(self, tup):
@@ -1126,84 +911,82 @@ class AbstractFunctionCode:
             if type(elt) == types.TupleType:
                 self.unpackSequence(elt)
             else:
-                self._nameOp('STORE', elt)
+                self.emit('STORE_FAST', elt)
 
     unpackTuple = unpackSequence
 
-class FunctionCodeGenerator(LGBScopeMixin, AbstractFunctionCode,
-                            CodeGenerator): 
-    super_init = CodeGenerator.__init__ # call be other init
-    scopes = None
+class ClassCodeGenerator(CodeGenerator):
+    super_init = CodeGenerator.__init__
 
-class NestedFunctionCodeGenerator(AbstractFunctionCode,
-                                  NestedScopeMixin,
-                                  NestedScopeCodeGenerator):
-    super_init = NestedScopeCodeGenerator.__init__ # call be other init
-    __super_init = AbstractFunctionCode.__init__
-
-    def __init__(self, func, filename, scopes, isLambda):
-        self.scopes = scopes
-        self.scope = scopes[func]
-        self.__super_init(func, filename, scopes, isLambda)
-        self.graph.setFreeVars(self.scope.get_free_vars())
-        self.graph.setCellVars(self.scope.get_cell_vars())
-        self.graph.setFlag(CO_NESTED)
-
-class AbstractClassCode:
-
-    def __init__(self, klass, filename, scopes):
+    def __init__(self, klass, filename):
         self.graph = pyassem.PyFlowGraph(klass.name, filename,
                                            optimized=0)
         self.super_init(filename)
-        lnf = walk(klass.code, self.NameFinder(), 0)
+        lnf = walk(klass.code, LocalNameFinder(), 0)
         self.locals.push(lnf.getLocals())
         self.graph.setFlag(CO_NEWLOCALS)
-        if klass.doc:
-            self.setDocstring(klass.doc)
-
-    def _nameOp(self, prefix, name):
-        # Class namespaces are always unoptimized
-        self.emit(prefix + '_NAME', name)
 
     def finish(self):
         self.graph.startExitBlock()
         self.emit('LOAD_LOCALS')
         self.emit('RETURN_VALUE')
 
-class ClassCodeGenerator(LGBScopeMixin, AbstractClassCode, CodeGenerator):
-    super_init = CodeGenerator.__init__
-    scopes = None
-
-class NestedClassCodeGenerator(AbstractClassCode,
-                               NestedScopeMixin,
-                               NestedScopeCodeGenerator):
-    super_init = NestedScopeCodeGenerator.__init__ # call be other init
-    __super_init = AbstractClassCode.__init__
-
-    def __init__(self, klass, filename, scopes):
-        self.scopes = scopes
-        self.scope = scopes[klass]
-        self.__super_init(klass, filename, scopes)
-        self.graph.setFreeVars(self.scope.get_free_vars())
-        self.graph.setCellVars(self.scope.get_cell_vars())
-        self.graph.setFlag(CO_NESTED)
-
 def generateArgList(arglist):
     """Generate an arg list marking TupleArgs"""
     args = []
     extra = []
     count = 0
-    for i in range(len(arglist)):
-        elt = arglist[i]
+    for elt in arglist:
         if type(elt) == types.StringType:
             args.append(elt)
         elif type(elt) == types.TupleType:
-            args.append(TupleArg(i * 2, elt))
-            extra.extend(misc.flatten(elt))
+            args.append(TupleArg(count, elt))
             count = count + 1
+            extra.extend(misc.flatten(elt))
         else:
             raise ValueError, "unexpect argument type:", elt
     return args + extra, count
+
+class LocalNameFinder:
+    """Find local names in scope"""
+    def __init__(self, names=()):
+        self.names = misc.Set()
+        self.globals = misc.Set()
+        for name in names:
+            self.names.add(name)
+
+    def getLocals(self):
+        for elt in self.globals.elements():
+            if self.names.has_elt(elt):
+                self.names.remove(elt)
+        return self.names
+
+    def visitDict(self, node):
+        pass
+
+    def visitGlobal(self, node):
+        for name in node.names:
+            self.globals.add(name)
+
+    def visitFunction(self, node):
+        self.names.add(node.name)
+
+    def visitLambda(self, node):
+        pass
+
+    def visitImport(self, node):
+        for name, alias in node.names:
+            self.names.add(alias or name)
+
+    def visitFrom(self, node):
+        for name, alias in node.names:
+            self.names.add(alias or name)
+
+    def visitClass(self, node):
+        self.names.add(node.name)
+
+    def visitAssName(self, node):
+        self.names.add(node.name)
 
 def findOp(node):
     """Find the op (DELETE, LOAD, STORE) in an AssTuple tree"""
@@ -1219,7 +1002,6 @@ class OpFinder:
             self.op = node.flags
         elif self.op != node.flags:
             raise ValueError, "mixed ops in stmt"
-    visitAssAttr = visitAssName
 
 class Delegator:
     """Base class to support delegation for augmented assignment nodes

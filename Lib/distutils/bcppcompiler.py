@@ -14,7 +14,7 @@ for the Borland C++ compiler.
 __revision__ = "$Id$"
 
 
-import sys, os
+import sys, os, string
 from distutils.errors import \
      DistutilsExecError, DistutilsPlatformError, \
      CompileError, LibError, LinkError

@@ -338,7 +338,7 @@ regobj_getattr(regexobject *re, char *name)
 }
 
 static PyTypeObject Regextype = {
-	PyObject_HEAD_INIT(NULL)
+	PyObject_HEAD_INIT(&PyType_Type)
 	0,				     /*ob_size*/
 	"regex",			     /*tp_name*/
 	sizeof(regexobject),		     /*tp_size*/
@@ -654,14 +654,8 @@ initregex(void)
 	int i;
 	char *s;
 	
-	/* Initialize object type */
-	Regextype.ob_type = &PyType_Type;
-
 	m = Py_InitModule("regex", regex_global_methods);
 	d = PyModule_GetDict(m);
-
-	PyErr_Warn(PyExc_DeprecationWarning,
-		"the regex module is deprecated; please use the re module");
 	
 	/* Initialize regex.error exception */
 	v = RegexError = PyErr_NewException("regex.error", NULL, NULL);

@@ -20,7 +20,7 @@ parameter.  Message relies only on the input object having a
 \method{readline()} method; in particular, ordinary file objects
 qualify.  Instantiation reads headers from the input object up to a
 delimiter line (normally a blank line) and stores them in the
-instance.  The message body, following the headers, is not consumed.
+instance.
 
 This class can work with any input object that supports a
 \method{readline()} method.  If the input object has seek and tell
@@ -211,22 +211,13 @@ there is no header matching \var{name}, or it is unparsable, return
 \code{None}. 
 \end{methoddesc}
 
-\class{Message} instances also support a limited mapping interface.
+\class{Message} instances also support a read-only mapping interface.
 In particular: \code{\var{m}[name]} is like
 \code{\var{m}.getheader(name)} but raises \exception{KeyError} if
 there is no matching header; and \code{len(\var{m})},
-\code{\var{m}.get(name\optional{, deafult})},
 \code{\var{m}.has_key(name)}, \code{\var{m}.keys()},
-\code{\var{m}.values()} \code{\var{m}.items()}, and
-\code{\var{m}.setdefault(name\optional{, default})} act as expected,
-with the one difference that \method{get()} and \method{setdefault()}
-use an empty string as the default value.  \class{Message} instances
-also support the mapping writable interface \code{\var{m}[name] =
-value} and \code{del \var{m}[name]}.  \class{Message} objects do not
-support the \method{clear()}, \method{copy()}, \method{popitem()}, or
-\method{update()} methods of the mapping interface.  (Support for
-\method{.get()} and \method{.setdefault()} was only added in Python
-2.2.)
+\code{\var{m}.values()} and \code{\var{m}.items()} act as expected
+(and consistently).
 
 Finally, \class{Message} instances have two public instance variables:
 
@@ -247,36 +238,24 @@ be used to read the message content.
 
 An \class{AddressList} instance has the following methods:
 
-\begin{methoddesc}{__len__}{}
+\begin{methoddesc}{__len__}{name}
 Return the number of addresses in the address list.
 \end{methoddesc}
 
-\begin{methoddesc}{__str__}{}
+\begin{methoddesc}{__str__}{name}
 Return a canonicalized string representation of the address list.
 Addresses are rendered in "name" <host@domain> form, comma-separated.
 \end{methoddesc}
 
-\begin{methoddesc}{__add__}{alist}
-Return a new \class{AddressList} instance that contains all addresses
-in both \class{AddressList} operands, with duplicates removed (set
-union).
+\begin{methoddesc}{__add__}{name}
+Return an \class{AddressList} instance that contains all addresses in
+both \class{AddressList} operands, with duplicates removed (set union).
 \end{methoddesc}
 
-\begin{methoddesc}{__iadd__}{alist}
-In-place version of \method{__add__()}; turns this \class{AddressList}
-instance into the union of itself and the right-hand instance,
-\var{alist}.
-\end{methoddesc}
-
-\begin{methoddesc}{__sub__}{alist}
-Return a new \class{AddressList} instance that contains every address
-in the left-hand \class{AddressList} operand that is not present in
-the right-hand address operand (set difference).
-\end{methoddesc}
-
-\begin{methoddesc}{__isub__}{alist}
-In-place version of \method{__sub__()}, removing addresses in this
-list which are also in \var{alist}.
+\begin{methoddesc}{__sub__}{name}
+Return an \class{AddressList} instance that contains every address in the
+left-hand \class{AddressList} operand that is not present in the right-hand
+address operand (set difference).
 \end{methoddesc}
 
 
@@ -284,7 +263,6 @@ Finally, \class{AddressList} instances have one public instance variable:
 
 \begin{memberdesc}{addresslist}
 A list of tuple string pairs, one per address.  In each member, the
-first is the canonicalized name part, the second is the
-actual route-address (\character{@}-separated username-host.domain
-pair).
+first is the canonicalized name part of the address, the second is the
+route-address (@-separated host-domain pair).
 \end{memberdesc}

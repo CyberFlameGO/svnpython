@@ -10,10 +10,8 @@ import sys, os, re
 from distutils.core import Command
 from distutils.dep_util import newer
 
-# check if Python is called on the first line with this expression.
-# This expression will leave lines using /usr/bin/env alone; presumably
-# the script author knew what they were doing...)
-first_line_re = re.compile(r'^#!(?!\s*/usr/bin/env\b).*python(\s+.*)?')
+# check if Python is called on the first line with this expression
+first_line_re = re.compile(r'^#!.*python(\s+.*)?')
 
 class build_scripts (Command):
 
@@ -45,7 +43,7 @@ class build_scripts (Command):
             return
         self.copy_scripts()
 
-
+        
     def copy_scripts (self):
         """Copy each script listed in 'self.scripts'; if it's marked as a
         Python script in the Unix way (first line matches 'first_line_re',
@@ -59,7 +57,7 @@ class build_scripts (Command):
             outfile = os.path.join(self.build_dir, os.path.basename(script))
 
             if not self.force and not newer(script, outfile):
-                self.announce("not copying %s (up-to-date)" % script)
+                self.announce("not copying %s (output up-to-date)" % script)
                 continue
 
             # Always open the file, but ignore failures in dry-run mode --

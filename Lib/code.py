@@ -6,23 +6,10 @@
 
 
 import sys
+import string
 import traceback
 from codeop import compile_command
 
-__all__ = ["InteractiveInterpreter","InteractiveConsole","interact",
-           "compile_command"]
-
-def softspace(file, newvalue):
-    oldvalue = 0
-    try:
-        oldvalue = file.softspace
-    except AttributeError:
-        pass
-    try:
-        file.softspace = newvalue
-    except TypeError: # "attribute-less object" or "read-only attributes"
-        pass
-    return oldvalue
 
 class InteractiveInterpreter:
     """Base class for InteractiveConsole.
@@ -72,7 +59,7 @@ class InteractiveInterpreter:
         """
         try:
             code = compile_command(source, filename, symbol)
-        except (OverflowError, SyntaxError, ValueError):
+        except (OverflowError, SyntaxError):
             # Case 1
             self.showsyntaxerror(filename)
             return 0
@@ -103,9 +90,6 @@ class InteractiveInterpreter:
             raise
         except:
             self.showtraceback()
-        else:
-            if softspace(sys.stdout, 0):
-                print
 
     def showsyntaxerror(self, filename=None):
         """Display the syntax error that just occurred.
@@ -137,7 +121,6 @@ class InteractiveInterpreter:
                 except:
                     # If that failed, assume SyntaxError is a string
                     value = msg, (filename, lineno, offset, line)
-                sys.last_value = value
         list = traceback.format_exception_only(type, value)
         map(self.write, list)
 
@@ -158,7 +141,7 @@ class InteractiveInterpreter:
             del tblist[:1]
             list = traceback.format_list(tblist)
             if list:
-                list.insert(0, "Traceback (most recent call last):\n")
+                list.insert(0, "Traceback (innermost last):\n")
             list[len(list):] = traceback.format_exception_only(type, value)
         finally:
             tblist = tb = None
@@ -219,10 +202,9 @@ class InteractiveConsole(InteractiveInterpreter):
             sys.ps2
         except AttributeError:
             sys.ps2 = "... "
-        cprt = 'Type "copyright", "credits" or "license" for more information.'
         if banner is None:
             self.write("Python %s on %s\n%s\n(%s)\n" %
-                       (sys.version, sys.platform, cprt,
+                       (sys.version, sys.platform, sys.copyright,
                         self.__class__.__name__))
         else:
             self.write("%s\n" % str(banner))
@@ -260,7 +242,7 @@ class InteractiveConsole(InteractiveInterpreter):
 
         """
         self.buffer.append(line)
-        source = "\n".join(self.buffer)
+        source = string.join(self.buffer, "\n")
         more = self.runsource(source, self.filename)
         if not more:
             self.resetbuffer()

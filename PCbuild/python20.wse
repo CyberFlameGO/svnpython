@@ -1,14 +1,14 @@
 Document Type: WSE
 item: Global
   Version=5.0
-  Title=Python 2.2 pre-alpha
+  Title=Python 2.0.1
   Flags=00010100
   Languages=65 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
   Japanese Font Name=MS Gothic
   Japanese Font Size=10
   Start Gradient=0 0 255
   End Gradient=0 0 0
-  Windows Flags=00000100000011010010110100001000
+  Windows Flags=00000100000000010010110100001000
   Log Pathname=%MAINDIR%\INSTALL.LOG
   Message Font=MS Sans Serif
   Font Size=8
@@ -17,11 +17,9 @@ item: Global
   Patch Threshold=85
   Patch Memory=4000
   Variable Name1=_SYS_
-  Variable Description1=System directory (where to find MSVCRT.DLL)
+  Variable Description1=System directory
   Variable Default1=C:\Windows\System
-  Variable Values1=C:\Windows\System
-  Variable Values1=C:\WINNT\System32
-  Variable Flags1=00000010
+  Variable Flags1=00001001
   Variable Name2=_WISE_
   Variable Description2=WISE root directory
   Variable Default2=C:\Wise
@@ -66,22 +64,19 @@ item: End Block
 end
 item: Set Variable
   Variable=APPTITLE
-  Value=Python 2.2 pre-alpha
+  Value=Python 2.0.1
 end
 item: Set Variable
   Variable=GROUP
-  Value=Python 2.2
-end
-item: Remark
-  Text=PY_VERSION should be major.minor only; used to create the registry key; must match MS_DLL_ID in python_nt.rc
+  Value=Python 2.0
 end
 item: Set Variable
   Variable=PY_VERSION
-  Value=2.2
+  Value=2.0
 end
 item: Set Variable
   Variable=MAINDIR
-  Value=Python22
+  Value=Python20
 end
 item: Get Registry Key Value
   Variable=PROGRAM_FILES
@@ -633,6 +628,10 @@ end
 item: Remark
   Text=Where system DLLs are installed (choose one of the following):
 end
+remarked item: Set Variable
+  Variable=DLLDEST
+  Value=%MAINDIR%
+end
 item: Set Variable
   Variable=DLLDEST
   Value=%SYS32%
@@ -693,16 +692,6 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=%_SRC_%\PCbuild\_symtable.pyd
-  Destination=%MAINDIR%\DLLs\_symtable.pyd
-  Flags=0000000000000010
-end
-item: Install File
-  Source=%_SRC_%\PCbuild\_testcapi.pyd
-  Destination=%MAINDIR%\DLLs\_testcapi.pyd
-  Flags=0000000000000010
-end
-item: Install File
   Source=%_SRC_%\PCbuild\_tkinter.pyd
   Destination=%MAINDIR%\DLLs\_tkinter.pyd
   Flags=0000000000000010
@@ -738,6 +727,11 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
+  Source=%_SRC_%\PCbuild\ucnhash.pyd
+  Destination=%MAINDIR%\DLLs\ucnhash.pyd
+  Flags=0000000000000010
+end
+item: Install File
   Source=%_SRC_%\PCbuild\unicodedata.pyd
   Destination=%MAINDIR%\DLLs\unicodedata.pyd
   Flags=0000000000000010
@@ -764,16 +758,6 @@ end
 item: Install File
   Source=%_SRC_%\PCbuild\_sre.lib
   Destination=%MAINDIR%\libs\_sre.lib
-  Flags=0000000000000010
-end
-item: Install File
-  Source=%_SRC_%\PCbuild\_symtable.lib
-  Destination=%MAINDIR%\libs\_symtable.lib
-  Flags=0000000000000010
-end
-item: Install File
-  Source=%_SRC_%\PCbuild\_testcapi.lib
-  Destination=%MAINDIR%\libs\_testcapi.lib
   Flags=0000000000000010
 end
 item: Install File
@@ -813,6 +797,11 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
+  Source=%_SRC_%\PCbuild\ucnhash.lib
+  Destination=%MAINDIR%\libs\ucnhash.lib
+  Flags=0000000000000010
+end
+item: Install File
   Source=%_SRC_%\PCbuild\unicodedata.lib
   Destination=%MAINDIR%\libs\unicodedata.lib
   Flags=0000000000000010
@@ -828,8 +817,8 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=%_SRC_%\PCbuild\python22.lib
-  Destination=%MAINDIR%\libs\python22.lib
+  Source=%_SRC_%\PCbuild\python20.lib
+  Destination=%MAINDIR%\libs\python20.lib
   Flags=0000000000000010
 end
 item: Remark
@@ -851,8 +840,8 @@ item: Remark
   Text=*** Main Python DLL ***
 end
 item: Install File
-  Source=%_SRC_%\pcbuild\python22.dll
-  Destination=%DLLDEST%\python22.dll
+  Source=%_SRC_%\pcbuild\python20.dll
+  Destination=%DLLDEST%\python20.dll
   Flags=0000000000000010
 end
 item: Install File
@@ -953,12 +942,6 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=%_SRC_%\Tools\scripts\*.pyw
-  Destination=%MAINDIR%\Tools\Scripts
-  Description=Utility Scripts
-  Flags=0000000000000010
-end
-item: Install File
   Source=%_SRC_%\Tools\scripts\*.doc
   Destination=%MAINDIR%\Tools\Scripts
   Description=Utility Scripts
@@ -1016,24 +999,6 @@ item: Install File
   Source=%_SRC_%\Tools\idle\idle.pyw
   Destination=%MAINDIR%\Tools\idle\idle.pyw
   Description=IDLE bootstrap script
-  Flags=0000000000000010
-end
-item: Install File
-  Source=%_SRC_%\Tools\compiler\*.py
-  Destination=%MAINDIR%\Tools\compiler
-  Description=Python compiler written in Python
-  Flags=0000000000000010
-end
-item: Install File
-  Source=%_SRC_%\Tools\compiler\compiler\*.py
-  Destination=%MAINDIR%\Tools\compiler\compiler
-  Description=Python compiler written in Python
-  Flags=0000000000000010
-end
-item: Install File
-  Source=%_SRC_%\Tools\compiler\compiler\*.txt
-  Destination=%MAINDIR%\Tools\compiler\compiler
-  Description=Python compiler written in Python
   Flags=0000000000000010
 end
 item: Install File
@@ -1355,14 +1320,6 @@ item: Create Shortcut
   Source=%MAINDIR%\pythonw.exe
   Destination=%GROUP%\IDLE (Python GUI).lnk
   Command Options=%MAINDIR%\Tools\idle\idle.pyw
-  Working Directory=%MAINDIR%
-  Key Type=1536
-  Flags=00000001
-end
-item: Create Shortcut
-  Source=%MAINDIR%\pythonw.exe
-  Destination=%GROUP%\Module Docs.lnk
-  Command Options=%MAINDIR%\Tools\Scripts\pydoc.pyw
   Working Directory=%MAINDIR%
   Key Type=1536
   Flags=00000001

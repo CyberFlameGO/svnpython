@@ -231,7 +231,6 @@ PyMember_Set(char *addr, struct memberlist *mlist, char *name, PyObject *v)
 					PyErr_BadArgument();
 					return -1;
 				}
-				break;
 			default:
 				PyErr_SetString(PyExc_SystemError,
 						"bad memberlist type");

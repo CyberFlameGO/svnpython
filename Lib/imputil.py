@@ -5,7 +5,7 @@
 ### docco needed here and in Docs/ ...
 
 # note: avoid importing non-builtin modules
-import imp                      ### not available in JPython?
+import imp			### not available in JPython?
 import sys
 import strop
 import __builtin__
@@ -14,10 +14,8 @@ import __builtin__
 import struct
 import marshal
 
-__all__ = ["ImportManager","Importer","BuiltinImporter"]
-
 _StringType = type('')
-_ModuleType = type(sys)         ### doesn't work in JPython...
+_ModuleType = type(sys)		### doesn't work in JPython...
 
 class ImportManager:
     "Manage the import process."
@@ -28,19 +26,11 @@ class ImportManager:
         if isinstance(namespace, _ModuleType):
             namespace = vars(namespace)
 
-        # Note: we have no notion of "chaining"
+        ### Note that we have no notion of "uninstall" or "chaining"
 
-        # Record the previous import hook, then install our own.
-        self.previous_importer = namespace['__import__']
-        self.namespace = namespace
         namespace['__import__'] = self._import_hook
-
         ### fix this
         #namespace['reload'] = self._reload_hook
-
-    def uninstall(self):
-        "Restore the previous import mechanism."
-        self.namespace['__import__'] = self.previous_importer
 
     def add_suffix(self, suffix, importFunc):
         assert callable(importFunc)
@@ -290,8 +280,7 @@ class Importer:
         if not is_module:
             exec code in module.__dict__
 
-        # fetch from sys.modules instead of returning module directly.
-        return sys.modules[fqname]
+        return module
 
     def _load_tail(self, m, parts):
         """Import the rest of the modules, down from the top-level module.
@@ -445,7 +434,7 @@ def _os_bootstrap():
             path = s
             if ':' not in a:
                 a = ':' + a
-            if a[-1:] != ':':
+            if a[-1:] <> ':':
                 a = a + ':'
             return a + b
     else:
@@ -654,7 +643,7 @@ def _test_revamp():
 # from Guido:
 #   need to change sys.* references for rexec environs
 #   need hook for MAL's walk-me-up import strategy, or Tim's absolute strategy
-#   watch out for sys.modules[...] is None
+#   watch out for sys.modules[...] == None
 #   flag to force absolute imports? (speeds _determine_import_context and
 #       checking for a relative module)
 #   insert names of archives into sys.path  (see quote below)
@@ -674,7 +663,7 @@ def _test_revamp():
 #
 #
 # Guido's comments on sys.path caching:
-#
+# 
 # We could cache this in a dictionary: the ImportManager can have a
 # cache dict mapping pathnames to importer objects, and a separate
 # method for coming up with an importer given a pathname that's not yet
@@ -690,16 +679,16 @@ def _test_revamp():
 # My/Guido's comments on factoring ImportManager and Importer:
 #
 # > However, we still have a tension occurring here:
-# >
+# > 
 # > 1) implementing policy in ImportManager assists in single-point policy
 # >    changes for app/rexec situations
 # > 2) implementing policy in Importer assists in package-private policy
 # >    changes for normal, operating conditions
-# >
+# > 
 # > I'll see if I can sort out a way to do this. Maybe the Importer class will
 # > implement the methods (which can be overridden to change policy) by
 # > delegating to ImportManager.
-#
+# 
 # Maybe also think about what kind of policies an Importer would be
 # likely to want to change.  I have a feeling that a lot of the code
 # there is actually not so much policy but a *necessity* to get things

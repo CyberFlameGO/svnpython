@@ -9,24 +9,24 @@ ending (row, column) coordinates of the token, and the original line.  It is
 designed to match the working of the Python tokenizer exactly, except that
 it produces COMMENT tokens for comments and gives type OP for all operators."""
 
-__author__ = 'Ka-Ping Yee <ping@lfw.org>'
-__credits__ = \
-    'GvR, ESR, Tim Peters, Thomas Wouters, Fred Drake, Skip Montanaro'
+__version__ = "Ka-Ping Yee, 26 October 1997; patched, GvR 3/30/98"
 
 import string, re
 from token import *
-
-import token
-__all__ = [x for x in dir(token) if x[0] != '_'] + ["COMMENT", "tokenize", "NL"]
-del token
 
 COMMENT = N_TOKENS
 tok_name[COMMENT] = 'COMMENT'
 NL = N_TOKENS + 1
 tok_name[NL] = 'NL'
-N_TOKENS += 2
 
-def group(*choices): return '(' + '|'.join(choices) + ')'
+
+# Changes from 1.3:
+#     Ignore now accepts \f as whitespace.  Operator now includes '**'.
+#     Ignore and Special now accept \n or \r\n at the end of a line.
+#     Imagnumber is new.  Expfloat is corrected to reject '0e4'.
+# Note: to quote a backslash in a regex, it must be doubled in a r'aw' string.
+
+def group(*choices): return '(' + string.join(choices, '|') + ')'
 def any(*choices): return apply(group, choices) + '*'
 def maybe(*choices): return apply(group, choices) + '?'
 
@@ -54,10 +54,10 @@ Double = r'[^"\\]*(?:\\.[^"\\]*)*"'
 Single3 = r"[^'\\]*(?:(?:\\.|'(?!''))[^'\\]*)*'''"
 # Tail end of """ string.
 Double3 = r'[^"\\]*(?:(?:\\.|"(?!""))[^"\\]*)*"""'
-Triple = group("[uU]?[rR]?'''", '[uU]?[rR]?"""')
+Triple = group("[rR]?'''", '[rR]?"""')
 # Single-line ' or " string.
-String = group(r"[uU]?[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*'",
-               r'[uU]?[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*"')
+String = group(r"[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*'",
+               r'[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*"')
 
 # Because of leftmost-then-longest match semantics, be sure to put the
 # longest operators first (e.g., if = came before ==, == would get
@@ -74,10 +74,8 @@ PlainToken = group(Number, Funny, String, Name)
 Token = Ignore + PlainToken
 
 # First (or only) line of ' or " string.
-ContStr = group(r"[uU]?[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*" +
-                group("'", r'\\\r?\n'),
-                r'[uU]?[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*' +
-                group('"', r'\\\r?\n'))
+ContStr = group(r"[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*" + group("'", r'\\\r?\n'),
+                r'[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*' + group('"', r'\\\r?\n'))
 PseudoExtras = group(r'\\\r?\n', Comment, Triple)
 PseudoToken = Whitespace + group(PseudoExtras, Number, Funny, ContStr, Name)
 
@@ -86,37 +84,18 @@ tokenprog, pseudoprog, single3prog, double3prog = map(
 endprogs = {"'": re.compile(Single), '"': re.compile(Double),
             "'''": single3prog, '"""': double3prog,
             "r'''": single3prog, 'r"""': double3prog,
-            "u'''": single3prog, 'u"""': double3prog,
-            "ur'''": single3prog, 'ur"""': double3prog,
-            "R'''": single3prog, 'R"""': double3prog,
-            "U'''": single3prog, 'U"""': double3prog,
-            "uR'''": single3prog, 'uR"""': double3prog,
-            "Ur'''": single3prog, 'Ur"""': double3prog,
-            "UR'''": single3prog, 'UR"""': double3prog,
-            'r': None, 'R': None, 'u': None, 'U': None}
+            "R'''": single3prog, 'R"""': double3prog, 'r': None, 'R': None}
 
 tabsize = 8
 
-class TokenError(Exception): pass
-
-class StopTokenizing(Exception): pass
+class TokenError(Exception):
+    pass
 
 def printtoken(type, token, (srow, scol), (erow, ecol), line): # for testing
     print "%d,%d-%d,%d:\t%s\t%s" % \
         (srow, scol, erow, ecol, tok_name[type], repr(token))
 
 def tokenize(readline, tokeneater=printtoken):
-    try:
-        tokenize_loop(readline, tokeneater)
-    except StopTokenizing:
-        pass
-
-# backwards compatible interface, probably not used
-def tokenize_loop(readline, tokeneater):
-    for token_info in generate_tokens(readline):
-        apply(tokeneater, token_info)
-
-def generate_tokens(readline):
     lnum = parenlev = continued = 0
     namechars, numchars = string.letters + '_', string.digits
     contstr, needcont = '', 0
@@ -134,12 +113,12 @@ def generate_tokens(readline):
             endmatch = endprog.match(line)
             if endmatch:
                 pos = end = endmatch.end(0)
-                yield (STRING, contstr + line[:end],
+                tokeneater(STRING, contstr + line[:end],
                            strstart, (lnum, end), contline + line)
                 contstr, needcont = '', 0
                 contline = None
             elif needcont and line[-2:] != '\\\n' and line[-3:] != '\\\r\n':
-                yield (ERRORTOKEN, contstr + line,
+                tokeneater(ERRORTOKEN, contstr + line,
                            strstart, (lnum, len(line)), contline)
                 contstr = ''
                 contline = None
@@ -161,16 +140,16 @@ def generate_tokens(readline):
             if pos == max: break
 
             if line[pos] in '#\r\n':           # skip comments or blank lines
-                yield ((NL, COMMENT)[line[pos] == '#'], line[pos:],
+                tokeneater((NL, COMMENT)[line[pos] == '#'], line[pos:],
                            (lnum, pos), (lnum, len(line)), line)
                 continue
 
             if column > indents[-1]:           # count indents or dedents
                 indents.append(column)
-                yield (INDENT, line[:pos], (lnum, 0), (lnum, pos), line)
+                tokeneater(INDENT, line[:pos], (lnum, 0), (lnum, pos), line)
             while column < indents[-1]:
                 indents = indents[:-1]
-                yield (DEDENT, '', (lnum, pos), (lnum, pos), line)
+                tokeneater(DEDENT, '', (lnum, pos), (lnum, pos), line)
 
         else:                                  # continued statement
             if not line:
@@ -184,62 +163,56 @@ def generate_tokens(readline):
                 spos, epos, pos = (lnum, start), (lnum, end), end
                 token, initial = line[start:end], line[start]
 
-                if initial in numchars or \
-                   (initial == '.' and token != '.'):      # ordinary number
-                    yield (NUMBER, token, spos, epos, line)
+                if initial in numchars \
+                    or (initial == '.' and token != '.'):  # ordinary number
+                    tokeneater(NUMBER, token, spos, epos, line)
                 elif initial in '\r\n':
-                    yield (parenlev > 0 and NL or NEWLINE,
+                    tokeneater(parenlev > 0 and NL or NEWLINE,
                                token, spos, epos, line)
                 elif initial == '#':
-                    yield (COMMENT, token, spos, epos, line)
+                    tokeneater(COMMENT, token, spos, epos, line)
                 elif token in ("'''", '"""',               # triple-quoted
-                               "r'''", 'r"""', "R'''", 'R"""',
-                               "u'''", 'u"""', "U'''", 'U"""',
-                               "ur'''", 'ur"""', "Ur'''", 'Ur"""',
-                               "uR'''", 'uR"""', "UR'''", 'UR"""'):
+                               "r'''", 'r"""', "R'''", 'R"""'):
                     endprog = endprogs[token]
                     endmatch = endprog.match(line, pos)
                     if endmatch:                           # all on one line
                         pos = endmatch.end(0)
                         token = line[start:pos]
-                        yield (STRING, token, spos, (lnum, pos), line)
+                        tokeneater(STRING, token, spos, (lnum, pos), line)
                     else:
                         strstart = (lnum, start)           # multiple lines
                         contstr = line[start:]
                         contline = line
                         break
                 elif initial in ("'", '"') or \
-                    token[:2] in ("r'", 'r"', "R'", 'R"',
-                                  "u'", 'u"', "U'", 'U"') or \
-                    token[:3] in ("ur'", 'ur"', "Ur'", 'Ur"',
-                                  "uR'", 'uR"', "UR'", 'UR"' ):
+                    token[:2] in ("r'", 'r"', "R'", 'R"'):
                     if token[-1] == '\n':                  # continued string
                         strstart = (lnum, start)
-                        endprog = (endprogs[initial] or endprogs[token[1]] or
-                                   endprogs[token[2]])
+                        endprog = endprogs[initial] or endprogs[token[1]]
                         contstr, needcont = line[start:], 1
                         contline = line
                         break
                     else:                                  # ordinary string
-                        yield (STRING, token, spos, epos, line)
+                        tokeneater(STRING, token, spos, epos, line)
                 elif initial in namechars:                 # ordinary name
-                    yield (NAME, token, spos, epos, line)
+                    tokeneater(NAME, token, spos, epos, line)
                 elif initial == '\\':                      # continued stmt
                     continued = 1
                 else:
                     if initial in '([{': parenlev = parenlev + 1
                     elif initial in ')]}': parenlev = parenlev - 1
-                    yield (OP, token, spos, epos, line)
+                    tokeneater(OP, token, spos, epos, line)
             else:
-                yield (ERRORTOKEN, line[pos],
+                tokeneater(ERRORTOKEN, line[pos],
                            (lnum, pos), (lnum, pos+1), line)
                 pos = pos + 1
 
     for indent in indents[1:]:                 # pop remaining indent levels
-        yield (DEDENT, '', (lnum, 0), (lnum, 0), '')
-    yield (ENDMARKER, '', (lnum, 0), (lnum, 0), '')
+        tokeneater(DEDENT, '', (lnum, 0), (lnum, 0), '')
+    tokeneater(ENDMARKER, '', (lnum, 0), (lnum, 0), '')
 
 if __name__ == '__main__':                     # testing
     import sys
     if len(sys.argv) > 1: tokenize(open(sys.argv[1]).readline)
     else: tokenize(sys.stdin.readline)
+

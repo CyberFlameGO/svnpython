@@ -47,12 +47,12 @@ if verbose:
     print 'Running tests on character literals'
 
 for i in [0, 8, 16, 32, 64, 127, 128, 255]:
-    test(r"""sre.match(r"\%03o" % i, chr(i)) is not None""", 1)
-    test(r"""sre.match(r"\%03o0" % i, chr(i)+"0") is not None""", 1)
-    test(r"""sre.match(r"\%03o8" % i, chr(i)+"8") is not None""", 1)
-    test(r"""sre.match(r"\x%02x" % i, chr(i)) is not None""", 1)
-    test(r"""sre.match(r"\x%02x0" % i, chr(i)+"0") is not None""", 1)
-    test(r"""sre.match(r"\x%02xz" % i, chr(i)+"z") is not None""", 1)
+    test(r"""sre.match(r"\%03o" % i, chr(i)) != None""", 1)
+    test(r"""sre.match(r"\%03o0" % i, chr(i)+"0") != None""", 1)
+    test(r"""sre.match(r"\%03o8" % i, chr(i)+"8") != None""", 1)
+    test(r"""sre.match(r"\x%02x" % i, chr(i)) != None""", 1)
+    test(r"""sre.match(r"\x%02x0" % i, chr(i)+"0") != None""", 1)
+    test(r"""sre.match(r"\x%02xz" % i, chr(i)+"z") != None""", 1)
 test(r"""sre.match("\911", "")""", None, sre.error)
 
 #
@@ -167,9 +167,6 @@ test(r"""sre.findall(r"(:)(:*)", "a:b::c:::d")""",
      [(":", ""), (":", ":"), (":", "::")])
 test(r"""sre.findall(r"(a)|(b)", "abc")""", [("a", ""), ("", "b")])
 
-# bug 117612
-test(r"""sre.findall(r"(a|(b))", "aba")""", [("a", ""),("b", "b"),("a", "")])
-
 if verbose:
     print "Running tests on sre.match"
 
@@ -197,11 +194,11 @@ if verbose:
 p = ""
 for i in range(0, 256):
     p = p + chr(i)
-    test(r"""sre.match(sre.escape(chr(i)), chr(i)) is not None""", 1)
+    test(r"""sre.match(sre.escape(chr(i)), chr(i)) != None""", 1)
     test(r"""sre.match(sre.escape(chr(i)), chr(i)).span()""", (0,1))
 
 pat = sre.compile(sre.escape(p))
-test(r"""pat.match(p) is not None""", 1)
+test(r"""pat.match(p) != None""", 1)
 test(r"""pat.match(p).span()""", (0,256))
 
 if verbose:
@@ -243,9 +240,12 @@ if verbose:
 
 # Try nasty case that overflows the straightforward recursive
 # implementation of repeated groups.
-test("sre.match('(x)*', 50000*'x').span()", (0, 50000), RuntimeError)
-test("sre.match(r'(x)*y', 50000*'x'+'y').span()", (0, 50001), RuntimeError)
-test("sre.match(r'(x)*?y', 50000*'x'+'y').span()", (0, 50001), RuntimeError)
+test(r"""sre.match(r'(x)*', 50000*'x').span()""",
+     (0, 50000), RuntimeError)
+test(r"""sre.match(r'(x)*y', 50000*'x'+'y').span()""",
+     (0, 50001), RuntimeError)
+test(r"""sre.match(r'(x)*?y', 50000*'x'+'y').span()""",
+     (0, 50001), RuntimeError)
 
 from re_tests import *
 
@@ -322,28 +322,16 @@ for t in tests:
 
             # Try the match on a unicode string, and check that it
             # still succeeds.
-            try:
-                u = unicode(s, "latin-1")
-            except NameError:
-                pass
-            except TypeError:
-                continue # skip unicode test strings
-            else:
-                result=obj.search(u)
-                if result==None:
-                    print '=== Fails on unicode match', t
+            result=obj.search(unicode(s, "latin-1"))
+            if result==None:
+                print '=== Fails on unicode match', t
 
             # Try the match on a unicode pattern, and check that it
             # still succeeds.
-            try:
-                u = unicode(pattern, "latin-1")
-            except NameError:
-                pass
-            else:
-                obj=sre.compile(u)
-                result=obj.search(s)
-                if result==None:
-                    print '=== Fails on unicode pattern match', t
+            obj=sre.compile(unicode(pattern, "latin-1"))
+            result=obj.search(s)
+            if result==None:
+                print '=== Fails on unicode pattern match', t
 
             # Try the match with the search area limited to the extent
             # of the match and see if it still succeeds.  \B will

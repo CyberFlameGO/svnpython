@@ -4,6 +4,8 @@
  * 
  * Author          : Peter Bosch
  * Created On      : Thu Mar  2 21:10:33 2000
+ * Last Modified By: Peter Bosch
+ * Last Modified On: Fri Mar 24 11:27:00 2000
  * Status          : Unknown, Use with caution!
  * 
  * Unless other notices are present in any part of this file
@@ -61,15 +63,15 @@ static struct {
     uint32_t	a_fmt;
     char       *a_name;
 } audio_types[] = {
-    {  8, 	AFMT_MU_LAW, "logarithmic mu-law 8-bit audio" },
-    {  8, 	AFMT_A_LAW,  "logarithmic A-law 8-bit audio" },
-    {  8,	AFMT_U8,     "linear unsigned 8-bit audio" },
-    {  8, 	AFMT_S8,     "linear signed 8-bit audio" },
-    { 16, 	AFMT_U16_BE, "linear unsigned 16-bit big-endian audio" },
-    { 16, 	AFMT_U16_LE, "linear unsigned 16-bit little-endian audio" },
-    { 16, 	AFMT_S16_BE, "linear signed 16-bit big-endian audio" },
-    { 16, 	AFMT_S16_LE, "linear signed 16-bit little-endian audio" },
-    { 16, 	AFMT_S16_NE, "linear signed 16-bit native-endian audio" },
+    {  8, 	AFMT_MU_LAW, "Logarithmic mu-law audio" },
+    {  8, 	AFMT_A_LAW,  "Logarithmic A-law audio" },
+    {  8,	AFMT_U8,     "Standard unsigned 8-bit audio" },
+    {  8, 	AFMT_S8,     "Standard signed 8-bit audio" },
+    { 16, 	AFMT_U16_BE, "Big-endian 16-bit unsigned audio" },
+    { 16, 	AFMT_U16_LE, "Little-endian 16-bit unsigned audio" },
+    { 16, 	AFMT_S16_BE, "Big-endian 16-bit signed audio" },
+    { 16, 	AFMT_S16_LE, "Little-endian 16-bit signed audio" },
+    { 16, 	AFMT_S16_NE, "Native-endian 16-bit signed audio" },
 };
 
 static int n_audio_types = sizeof(audio_types) / sizeof(audio_types[0]);
@@ -93,7 +95,7 @@ newladobject(PyObject *arg)
     else if (strcmp(mode, "w") == 0)
         imode = O_WRONLY;
     else {
-        PyErr_SetString(LinuxAudioError, "mode should be 'r' or 'w'");
+        PyErr_SetString(LinuxAudioError, "Mode should be one of 'r', or 'w'");
         return NULL;
     }
 
@@ -172,40 +174,18 @@ lad_write(lad_t *self, PyObject *args)
 {
     char *cp;
     int rv, size;
-    fd_set write_set_fds;
-    struct timeval tv;
-    int select_retval;
-    
+	
     if (!PyArg_ParseTuple(args, "s#:write", &cp, &size)) 
 	return NULL;
 
-    /* use select to wait for audio device to be available */
-    FD_ZERO(&write_set_fds);
-    FD_SET(self->x_fd, &write_set_fds);
-    tv.tv_sec = 4; /* timeout values */
-    tv.tv_usec = 0; 
-
     while (size > 0) {
-      select_retval = select(self->x_fd+1, NULL, &write_set_fds, NULL, &tv);
-      tv.tv_sec = 1; tv.tv_usec = 0; /* willing to wait this long next time*/
-      if (select_retval) {
         if ((rv = write(self->x_fd, cp, size)) == -1) {
-	  if (errno != EAGAIN) {
-	    PyErr_SetFromErrno(LinuxAudioError);
-	    return NULL;
-	  } else {
-	    errno = 0; /* EAGAIN: buffer is full, try again */
-	  }
-        } else {
-	  self->x_ocount += rv;
-	  size -= rv;
-	  cp += rv;
-	}
-      } else {
-	/* printf("Not able to write to linux audio device within %ld seconds\n", tv.tv_sec); */
-	PyErr_SetFromErrno(LinuxAudioError);
-	return NULL;
-      }
+            PyErr_SetFromErrno(LinuxAudioError);
+            return NULL;
+        }
+        self->x_ocount += rv;
+        size -= rv;
+        cp += rv;
     }
     Py_INCREF(Py_None);
     return Py_None;
@@ -276,15 +256,15 @@ lad_setparameters(lad_t *self, PyObject *args)
     }
     if (audio_types[n].a_bps != ssize) {
 	PyErr_Format(PyExc_ValueError, 
-		     "for %s, expected sample size %d, not %d",
-		     audio_types[n].a_name, audio_types[n].a_bps, ssize);
+		     "sample size %d expected for %s: %d received",
+		     audio_types[n].a_bps, audio_types[n].a_name, ssize);
 	return NULL;
     }
 
     if (emulate == 0) {
 	if ((self->x_afmts & audio_types[n].a_fmt) == 0) {
 	    PyErr_Format(PyExc_ValueError, 
-			 "%s format not supported by device",
+			 "format not supported by device: %s",
 			 audio_types[n].a_name);
 	    return NULL;
 	}

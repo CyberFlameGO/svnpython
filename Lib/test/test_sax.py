@@ -1,3 +1,4 @@
+
 # regression test for SAX 2.0
 # $Id$
 
@@ -12,7 +13,7 @@ from xml.sax.saxutils import XMLGenerator, escape, XMLFilterBase
 from xml.sax.expatreader import create_parser
 from xml.sax.xmlreader import InputSource, AttributesImpl, AttributesNSImpl
 from cStringIO import StringIO
-from test_support import verify, verbose, TestFailed, findfile
+from test_support import verbose, TestFailed, findfile
 
 # ===== Utilities
 
@@ -28,29 +29,6 @@ def confirm(outcome, name):
     else:
         print "Failed", name
         fails = fails + 1
-
-def test_make_parser2():
-    try:
-        # Creating parsers several times in a row should succeed.
-        # Testing this because there have been failures of this kind
-        # before.
-        from xml.sax import make_parser
-        p = make_parser()
-        from xml.sax import make_parser
-        p = make_parser()
-        from xml.sax import make_parser
-        p = make_parser()
-        from xml.sax import make_parser
-        p = make_parser()
-        from xml.sax import make_parser
-        p = make_parser()
-        from xml.sax import make_parser
-        p = make_parser()
-    except:
-        return 0
-    else:
-        return p
-
 
 # ===========================================================================
 #
@@ -97,7 +75,7 @@ def test_xmlgen_basic():
 def test_xmlgen_content():
     result = StringIO()
     gen = XMLGenerator(result)
-
+    
     gen.startDocument()
     gen.startElement("doc", {})
     gen.characters("huhei")
@@ -109,7 +87,7 @@ def test_xmlgen_content():
 def test_xmlgen_pi():
     result = StringIO()
     gen = XMLGenerator(result)
-
+    
     gen.startDocument()
     gen.processingInstruction("test", "data")
     gen.startElement("doc", {})
@@ -121,7 +99,7 @@ def test_xmlgen_pi():
 def test_xmlgen_content_escape():
     result = StringIO()
     gen = XMLGenerator(result)
-
+    
     gen.startDocument()
     gen.startElement("doc", {})
     gen.characters("<huhei&")
@@ -133,7 +111,7 @@ def test_xmlgen_content_escape():
 def test_xmlgen_ignorable():
     result = StringIO()
     gen = XMLGenerator(result)
-
+    
     gen.startDocument()
     gen.startElement("doc", {})
     gen.ignorableWhitespace(" ")
@@ -147,7 +125,7 @@ ns_uri = "http://www.python.org/xml-ns/saxtest/"
 def test_xmlgen_ns():
     result = StringIO()
     gen = XMLGenerator(result)
-
+    
     gen.startDocument()
     gen.startPrefixMapping("ns1", ns_uri)
     gen.startElementNS((ns_uri, "doc"), "ns1:doc", {})
@@ -169,7 +147,7 @@ def test_filter_basic():
     gen = XMLGenerator(result)
     filter = XMLFilterBase()
     filter.setContentHandler(gen)
-
+    
     filter.startDocument()
     filter.startElement("doc", {})
     filter.characters("content")
@@ -185,18 +163,6 @@ def test_filter_basic():
 #
 # ===========================================================================
 
-# ===== XMLReader support
-
-def test_expat_file():
-    parser = create_parser()
-    result = StringIO()
-    xmlgen = XMLGenerator(result)
-
-    parser.setContentHandler(xmlgen)
-    parser.parse(open(findfile("test.xml")))
-
-    return result.getvalue() == xml_test_out
-
 # ===== DTDHandler support
 
 class TestDTDHandler:
@@ -204,7 +170,7 @@ class TestDTDHandler:
     def __init__(self):
         self._notations = []
         self._entities  = []
-
+    
     def notationDecl(self, name, publicId, systemId):
         self._notations.append((name, publicId, systemId))
 
@@ -248,7 +214,7 @@ def test_expat_entityresolver():
     parser.close()
 
     return result.getvalue() == start + "<doc><entity></entity></doc>"
-
+    
 # ===== Attributes support
 
 class AttrGatherer(ContentHandler):
@@ -258,7 +224,7 @@ class AttrGatherer(ContentHandler):
 
     def startElementNS(self, name, qname, attrs):
         self._attrs = attrs
-
+        
 def test_expat_attrs_empty():
     parser = create_parser()
     gather = AttrGatherer()
@@ -298,7 +264,7 @@ def test_expat_nsattrs_wattr():
     parser.close()
 
     attrs = gather._attrs
-
+    
     return attrs.getLength() == 1 and \
            attrs.getNames() == [(ns_uri, "attr")] and \
            attrs.getQNames() == [] and \
@@ -347,67 +313,6 @@ def test_expat_inpsource_stream():
     parser.parse(inpsrc)
 
     return result.getvalue() == xml_test_out
-
-# ===== IncrementalParser support
-
-def test_expat_incremental():
-    result = StringIO()
-    xmlgen = XMLGenerator(result)
-    parser = create_parser()
-    parser.setContentHandler(xmlgen)
-
-    parser.feed("<doc>")
-    parser.feed("</doc>")
-    parser.close()
-
-    return result.getvalue() == start + "<doc></doc>"
-
-def test_expat_incremental_reset():
-    result = StringIO()
-    xmlgen = XMLGenerator(result)
-    parser = create_parser()
-    parser.setContentHandler(xmlgen)
-
-    parser.feed("<doc>")
-    parser.feed("text")
-
-    result = StringIO()
-    xmlgen = XMLGenerator(result)
-    parser.setContentHandler(xmlgen)
-    parser.reset()
-
-    parser.feed("<doc>")
-    parser.feed("text")
-    parser.feed("</doc>")
-    parser.close()
-
-    return result.getvalue() == start + "<doc>text</doc>"
-
-# ===== Locator support
-
-def test_expat_locator_noinfo():
-    result = StringIO()
-    xmlgen = XMLGenerator(result)
-    parser = create_parser()
-    parser.setContentHandler(xmlgen)
-
-    parser.feed("<doc>")
-    parser.feed("</doc>")
-    parser.close()
-
-    return parser.getSystemId() is None and \
-           parser.getPublicId() is None and \
-           parser.getLineNumber() == 1
-
-def test_expat_locator_withinfo():
-    result = StringIO()
-    xmlgen = XMLGenerator(result)
-    parser = create_parser()
-    parser.setContentHandler(xmlgen)
-    parser.parse(findfile("test.xml"))
-
-    return parser.getSystemId() == findfile("test.xml") and \
-           parser.getPublicId() is None
 
 
 # ===========================================================================
@@ -471,20 +376,20 @@ def verify_empty_attrs(attrs):
         gqnk = 0
     except KeyError:
         gqnk = 1
-
+        
     try:
         attrs["attr"]
         gik = 0
     except KeyError:
         gik = 1
-
+        
     return attrs.getLength() == 0 and \
            attrs.getNames() == [] and \
            attrs.getQNames() == [] and \
            len(attrs) == 0 and \
            not attrs.has_key("attr") and \
            attrs.keys() == [] and \
-           attrs.get("attrs") is None and \
+           attrs.get("attrs") == None and \
            attrs.get("attrs", 25) == 25 and \
            attrs.items() == [] and \
            attrs.values() == [] and \
@@ -539,20 +444,20 @@ def verify_empty_nsattrs(attrs):
         gqnk = 0
     except KeyError:
         gqnk = 1
-
+        
     try:
         attrs[(ns_uri, "attr")]
         gik = 0
     except KeyError:
         gik = 1
-
+        
     return attrs.getLength() == 0 and \
            attrs.getNames() == [] and \
            attrs.getQNames() == [] and \
            len(attrs) == 0 and \
            not attrs.has_key((ns_uri, "attr")) and \
            attrs.keys() == [] and \
-           attrs.get((ns_uri, "attr")) is None and \
+           attrs.get((ns_uri, "attr")) == None and \
            attrs.get((ns_uri, "attr"), 25) == 25 and \
            attrs.items() == [] and \
            attrs.values() == [] and \
@@ -564,7 +469,7 @@ def test_nsattrs_empty():
 def test_nsattrs_wattr():
     attrs = AttributesNSImpl({(ns_uri, "attr") : "val"},
                              {(ns_uri, "attr") : "ns:attr"})
-
+    
     return attrs.getLength() == 1 and \
            attrs.getNames() == [(ns_uri, "attr")] and \
            attrs.getQNames() == ["ns:attr"] and \
@@ -580,7 +485,7 @@ def test_nsattrs_wattr():
            attrs.getNameByQName("ns:attr") == (ns_uri, "attr") and \
            attrs[(ns_uri, "attr")] == "val" and \
            attrs.getQNameByName((ns_uri, "attr")) == "ns:attr"
-
+        
 
 # ===== Main program
 

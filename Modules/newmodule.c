@@ -5,29 +5,27 @@
 #include "compile.h"
 
 static char new_instance_doc[] =
-"Create an instance object from (CLASS [, DICT]) without calling its\n\
-__init__() method.  DICT must be a dictionary or None.";
+"Create an instance object from (CLASS, DICT) without calling its __init__().";
 
 static PyObject *
 new_instance(PyObject* unused, PyObject* args)
 {
-	PyObject *klass;
-	PyObject *dict = NULL;
-
-	if (!PyArg_ParseTuple(args, "O!|O:instance",
-			      &PyClass_Type, &klass, &dict))
+	PyObject* klass;
+	PyObject *dict;
+	PyInstanceObject *inst;
+	if (!PyArg_ParseTuple(args, "O!O!:instance",
+			      &PyClass_Type, &klass,
+			      &PyDict_Type, &dict))
 		return NULL;
-
-	if (dict == Py_None)
-		dict = NULL;
-	else if (dict == NULL)
-		/* do nothing */;
-	else if (!PyDict_Check(dict)) {
-		PyErr_SetString(PyExc_TypeError,
-		      "new.instance() second arg must be dictionary or None");
+	inst = PyObject_New(PyInstanceObject, &PyInstance_Type);
+	if (inst == NULL)
 		return NULL;
-	}
-	return PyInstance_NewRaw(klass, dict);
+	Py_INCREF(klass);
+	Py_INCREF(dict);
+	inst->in_class = (PyClassObject *)klass;
+	inst->in_dict = dict;
+	PyObject_GC_Init(inst);
+	return (PyObject *)inst;
 }
 
 static char new_im_doc[] =
@@ -72,17 +70,12 @@ new_function(PyObject* unused, PyObject* args)
 	PyObject* defaults = Py_None;
 	PyFunctionObject* newfunc;
 
-	if (!PyArg_ParseTuple(args, "O!O!|OO!:function",
+	if (!PyArg_ParseTuple(args, "O!O!|SO!:function",
 			      &PyCode_Type, &code,
 			      &PyDict_Type, &globals,
 			      &name,
 			      &PyTuple_Type, &defaults))
 		return NULL;
-	if (name != Py_None && !PyString_Check(name)) {
-		PyErr_SetString(PyExc_TypeError,
-				"arg 3 (name) must be None or string");
-		return NULL;
-	}
 
 	newfunc = (PyFunctionObject *)PyFunction_New(code, globals);
 	if (newfunc == NULL)
@@ -103,9 +96,7 @@ new_function(PyObject* unused, PyObject* args)
 }
 
 static char new_code_doc[] =
-"Create a code object from (ARGCOUNT, NLOCALS, STACKSIZE, FLAGS, CODESTRING,\n"
-"CONSTANTS, NAMES, VARNAMES, FILENAME, NAME, FIRSTLINENO, LNOTAB, FREEVARS,\n"
-"CELLVARS).";
+"Create a code object from (ARGCOUNT, NLOCALS, STACKSIZE, FLAGS, CODESTRING, CONSTANTS, NAMES, VARNAMES, FILENAME, NAME, FIRSTLINENO, LNOTAB).";
 
 static PyObject *
 new_code(PyObject* unused, PyObject* args)
@@ -118,40 +109,21 @@ new_code(PyObject* unused, PyObject* args)
 	PyObject* consts;
 	PyObject* names;
 	PyObject* varnames;
-	PyObject* freevars = NULL;
-	PyObject* cellvars = NULL;
 	PyObject* filename;
 	PyObject* name;
 	int firstlineno;
 	PyObject* lnotab;
 	PyBufferProcs *pb;
 
-	if (!PyArg_ParseTuple(args, "iiiiSO!O!O!SSiS|O!O!:code",
+	if (!PyArg_ParseTuple(args, "iiiiOO!O!O!SSiS:code",
 			      &argcount, &nlocals, &stacksize, &flags,
 			      &code,
 			      &PyTuple_Type, &consts,
 			      &PyTuple_Type, &names,
 			      &PyTuple_Type, &varnames,
 			      &filename, &name,
-			      &firstlineno, &lnotab,
-			      &PyTuple_Type, &freevars,
-			      &PyTuple_Type, &cellvars))
+			      &firstlineno, &lnotab))
 		return NULL;
-
-	if (freevars == NULL || cellvars == NULL) {
-		PyObject *empty = PyTuple_New(0);
-		if (empty == NULL)
-		    return NULL;
-		if (freevars == NULL) {
-		    freevars = empty;
-		    Py_INCREF(freevars);
-		}
-		if (cellvars == NULL) {
-		    cellvars = empty;
-		    Py_INCREF(cellvars);
-		}
-		Py_DECREF(empty);
-	}
 
 	pb = code->ob_type->tp_as_buffer;
 	if (pb == NULL ||
@@ -166,8 +138,7 @@ new_code(PyObject* unused, PyObject* args)
 
 	return (PyObject *)PyCode_New(argcount, nlocals, stacksize, flags,
 				      code, consts, names, varnames,
-				      freevars, cellvars, filename, name,
-				      firstlineno, lnotab); 
+				      filename, name, firstlineno, lnotab);
 }
 
 static char new_module_doc[] =

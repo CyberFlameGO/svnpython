@@ -4,7 +4,7 @@
 """\
 This module provides socket operations and some related functions.
 On Unix, it supports IP (Internet Protocol) and Unix domain sockets.
-On other systems, it only supports IP. Functions specific for a
+On other systems, it only supports IP. Functions specific for a 
 socket are available as methods of the socket object.
 
 Functions:
@@ -42,28 +42,17 @@ from _socket import *
 
 import os, sys
 
-__all__ = ["getfqdn"]
-import _socket
-__all__.extend(os._get_exports_list(_socket))
-
 if (sys.platform.lower().startswith("win")
-    or (hasattr(os, 'uname') and os.uname()[0] == "BeOS")
-    or (sys.platform=="RISCOS")):
+    or (hasattr(os, 'uname') and os.uname()[0] == "BeOS")):
 
-    _realsocketcall = _socket.socket
+    # be sure this happens only once, even in the face of reload():
+    try:
+        _realsocketcall
+    except NameError:
+        _realsocketcall = socket
 
     def socket(family, type, proto=0):
         return _socketobject(_realsocketcall(family, type, proto))
-
-    try:
-        _realsslcall = _socket.ssl
-    except AttributeError:
-        pass # No ssl
-    else:
-        def ssl(sock, keyfile=None, certfile=None):
-            if hasattr(sock, "_sock"):
-                sock = sock._sock
-            return _realsslcall(sock, keyfile, certfile)
 
 
 # WSA error codes
@@ -84,7 +73,6 @@ if sys.platform.lower().startswith("win"):
     errorTab[10063] = "The name is too long."
     errorTab[10064] = "The host is down."
     errorTab[10065] = "The host is unreachable."
-    __all__.append("errorTab")
 del os, sys
 
 

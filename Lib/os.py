@@ -1,9 +1,9 @@
-r"""OS routines for Mac, DOS, NT, or Posix depending on what system we're on.
+"""OS routines for Mac, DOS, NT, or Posix depending on what system we're on.
 
 This exports:
   - all functions from posix, nt, dos, os2, mac, or ce, e.g. unlink, stat, etc.
   - os.path is one of the modules posixpath, ntpath, macpath, or dospath
-  - os.name is 'posix', 'nt', 'dos', 'os2', 'mac', 'ce' or 'riscos'
+  - os.name is 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
   - os.curdir is a string representing the current directory ('.' or ':')
   - os.pardir is a string representing the parent directory ('..' or '::')
   - os.sep is the (or a most common) pathname separator ('/' or ':' or '\\')
@@ -19,22 +19,11 @@ and opendir), and leave all pathname manipulation to os.path
 (e.g., split and join).
 """
 
-#'
-
 import sys
 
 _names = sys.builtin_module_names
 
 altsep = None
-
-__all__ = ["altsep", "curdir", "pardir", "sep", "pathsep", "linesep",
-           "defpath", "name"]
-
-def _get_exports_list(module):
-    try:
-        return list(module.__all__)
-    except AttributeError:
-        return [n for n in dir(module) if n[0] != '_']
 
 if 'posix' in _names:
     name = 'posix'
@@ -49,11 +38,6 @@ if 'posix' in _names:
     import posixpath
     path = posixpath
     del posixpath
-
-    import posix
-    __all__.extend(_get_exports_list(posix))
-    del posix
-
 elif 'nt' in _names:
     name = 'nt'
     linesep = '\r\n'
@@ -68,11 +52,6 @@ elif 'nt' in _names:
     import ntpath
     path = ntpath
     del ntpath
-
-    import nt
-    __all__.extend(_get_exports_list(nt))
-    del nt
-
 elif 'dos' in _names:
     name = 'dos'
     linesep = '\r\n'
@@ -86,11 +65,6 @@ elif 'dos' in _names:
     import dospath
     path = dospath
     del dospath
-
-    import dos
-    __all__.extend(_get_exports_list(dos))
-    del dos
-
 elif 'os2' in _names:
     name = 'os2'
     linesep = '\r\n'
@@ -104,11 +78,6 @@ elif 'os2' in _names:
     import ntpath
     path = ntpath
     del ntpath
-
-    import os2
-    __all__.extend(_get_exports_list(os2))
-    del os2
-
 elif 'mac' in _names:
     name = 'mac'
     linesep = '\r'
@@ -122,11 +91,6 @@ elif 'mac' in _names:
     import macpath
     path = macpath
     del macpath
-
-    import mac
-    __all__.extend(_get_exports_list(mac))
-    del mac
-
 elif 'ce' in _names:
     name = 'ce'
     linesep = '\r\n'
@@ -142,39 +106,12 @@ elif 'ce' in _names:
     import ntpath
     path = ntpath
     del ntpath
-
-    import ce
-    __all__.extend(_get_exports_list(ce))
-    del ce
-
-elif 'riscos' in _names:
-    name = 'riscos'
-    linesep = '\n'
-    curdir = '@'; pardir = '^'; sep = '.'; pathsep = ','
-    defpath = '<Run$Dir>'
-    from riscos import *
-    try:
-        from riscos import _exit
-    except ImportError:
-        pass
-    import riscospath
-    path = riscospath
-    del riscospath
-
-    import riscos
-    __all__.extend(_get_exports_list(riscos))
-    del riscos
-
 else:
     raise ImportError, 'no os specific module found'
-
-__all__.append("path")
 
 del _names
 
 sys.modules['os.path'] = path
-
-#'
 
 # Super directory utilities.
 # (Inspired by Eric Raymond; the doc strings are mostly his)
@@ -243,8 +180,6 @@ def renames(old, new):
         except error:
             pass
 
-__all__.extend(["makedirs", "removedirs", "renames"])
-
 # Make sure os.environ exists, at least
 try:
     environ
@@ -278,7 +213,7 @@ def execlpe(file, *args):
 
     Execute the executable file (which is searched for along $PATH)
     with argument list args and environment env, replacing the current
-    process. """
+    process. """    
     env = args[-1]
     execvpe(file, args[:-1], env)
 
@@ -296,10 +231,8 @@ def execvpe(file, args, env):
     Execute the executable file (which is searched for along $PATH)
     with argument list args and environment env , replacing the
     current process.
-    args may be a list or tuple of strings. """
+    args may be a list or tuple of strings. """    
     _execvpe(file, args, env)
-
-__all__.extend(["execl","execle","execlp","execlpe","execvp","execvpe"])
 
 _notfound = None
 def _execvpe(file, args, env=None):
@@ -321,19 +254,10 @@ def _execvpe(file, args, env=None):
         envpath = defpath
     PATH = envpath.split(pathsep)
     if not _notfound:
-        if sys.platform[:4] == 'beos':
-            #  Process handling (fork, wait) under BeOS (up to 5.0)
-            #  doesn't interoperate reliably with the thread interlocking
-            #  that happens during an import.  The actual error we need
-            #  is the same on BeOS for posix.open() et al., ENOENT.
-            try: unlink('/_#.# ## #.#')
-            except error, _notfound: pass
-        else:
-            import tempfile
-            t = tempfile.mktemp()
-            # Exec a file that is guaranteed not to exist
-            try: execv(t, ('blah',))
-            except error, _notfound: pass
+        import tempfile
+        # Exec a file that is guaranteed not to exist
+        try: execv(tempfile.mktemp(), ('blah',))
+        except error, _notfound: pass
     exc, arg = error, _notfound
     for dir in PATH:
         fullname = path.join(dir, file)
@@ -344,7 +268,6 @@ def _execvpe(file, args, env=None):
                 exc, arg = error, (errno, msg)
     raise exc, arg
 
-
 # Change environ to automatically call putenv() if it exists
 try:
     # This will fail if there's no putenv
@@ -354,10 +277,7 @@ except NameError:
 else:
     import UserDict
 
-    if name == "riscos":
-        # On RISC OS, all env access goes through getenv and putenv
-        from riscosenviron import _Environ
-    elif name in ('os2', 'nt', 'dos'):  # Where Env Var Names Must Be UPPERCASE
+    if name in ('os2', 'nt', 'dos'):  # Where Env Var Names Must Be UPPERCASE
         # But we store them as upper case
         class _Environ(UserDict.UserDict):
             def __init__(self, environ):
@@ -394,11 +314,11 @@ else:
 
     environ = _Environ(environ)
 
-    def getenv(key, default=None):
-        """Get an environment variable, return None if it doesn't exist.
-        The optional second argument can specify an alternate default."""
-        return environ.get(key, default)
-    __all__.append("getenv")
+def getenv(key, default=None):
+    """Get an environment variable, return None if it doesn't exist.
+
+    The optional second argument can specify an alternate default."""
+    return environ.get(key, default)
 
 def _exists(name):
     try:
@@ -450,7 +370,7 @@ if _exists("fork") and not _exists("spawnv") and _exists("execv"):
 Execute file with arguments from args in a subprocess.
 If mode == P_NOWAIT return the pid of the process.
 If mode == P_WAIT return the process's exit code if it exits normally;
-otherwise return -SIG, where SIG is the signal that killed it. """
+otherwise return -SIG, where SIG is the signal that killed it. """   
         return _spawnvef(mode, file, args, None, execv)
 
     def spawnve(mode, file, args, env):
@@ -534,10 +454,6 @@ otherwise return -SIG, where SIG is the signal that killed it. """
         return spawnvpe(mode, file, args[:-1], env)
 
 
-    __all__.extend(["spawnlp","spawnlpe","spawnv", "spawnve","spawnvp",
-                    "spawnvpe","spawnl","spawnle",])
-
-
 # Supply popen2 etc. (for Unix)
 if _exists("fork"):
     if not _exists("popen2"):
@@ -545,18 +461,15 @@ if _exists("fork"):
             import popen2
             stdout, stdin = popen2.popen2(cmd, bufsize)
             return stdin, stdout
-        __all__.append("popen2")
 
     if not _exists("popen3"):
         def popen3(cmd, mode="t", bufsize=-1):
             import popen2
             stdout, stdin, stderr = popen2.popen3(cmd, bufsize)
             return stdin, stdout, stderr
-        __all__.append("popen3")
 
     if not _exists("popen4"):
         def popen4(cmd, mode="t", bufsize=-1):
             import popen2
             stdout, stdin = popen2.popen4(cmd, bufsize)
             return stdin, stdout
-        __all__.append("popen4")

@@ -57,10 +57,6 @@ Options:
               (For debugging only -- on a win32 platform, win32 behavior
               is automatic.)
 
--r prefix=f:  Replace path prefix.
-              Replace prefix with f in the source path references 
-              contained in the resulting binary.
-
 Arguments:
 
 script:       The Python script to be executed by the resulting binary.
@@ -113,7 +109,6 @@ def main():
     debug = 1
     odir = ''
     win = sys.platform[:3] == 'win'
-    replace_paths = []                  # settable with -r option
 
     # default the exclude list for each platform
     if win: exclude = exclude + [
@@ -144,7 +139,7 @@ def main():
 
     # Now parse the command line with the extras inserted.
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'r:a:de:hmo:p:P:qs:wx:l:')
+        opts, args = getopt.getopt(sys.argv[1:], 'a:de:hmo:p:P:qs:wx:l:')
     except getopt.error, msg:
         usage('getopt error: ' + str(msg))
 
@@ -179,9 +174,6 @@ def main():
             addn_link.append(a)
         if o == '-a':
             apply(modulefinder.AddPackagePath, tuple(string.split(a,"=", 2)))
-        if o == '-r':
-            f,r = string.split(a,"=", 2)
-            replace_paths.append( (f,r) )
 
     # default prefix and exec_prefix
     if not exec_prefix:
@@ -318,7 +310,7 @@ def main():
     # collect all modules of the program
     dir = os.path.dirname(scriptfile)
     path[0] = dir
-    mf = modulefinder.ModuleFinder(path, debug, exclude, replace_paths)
+    mf = modulefinder.ModuleFinder(path, debug, exclude)
     
     if win and subsystem=='service':
         # If a Windows service, then add the "built-in" module.
@@ -424,8 +416,7 @@ def main():
         outfp.close()
     infp.close()
 
-    cflags = ['$(OPT)']
-    cppflags = defines + includes
+    cflags = defines + includes + ['$(OPT)']
     libs = [os.path.join(binlib, 'libpython$(VERSION).a')]
 
     somevars = {}
@@ -435,7 +426,6 @@ def main():
         somevars[key] = makevars[key]
 
     somevars['CFLAGS'] = string.join(cflags) # override
-    somevars['CPPFLAGS'] = string.join(cppflags) # override
     files = ['$(OPT)', '$(LDFLAGS)', base_config_c, base_frozen_c] + \
             files + supp_sources +  addfiles + libs + \
             ['$(MODLIBS)', '$(LIBS)', '$(SYSLIBS)']

@@ -25,15 +25,15 @@ The available attributes of this module are:
   The error raised for bad ZIP files.
 \end{excdesc}
 
-\begin{classdesc*}{ZipFile}
+\begin{classdesc}{ZipFile}{\unspecified}
   The class for reading and writing ZIP files.  See
   ``\citetitle{ZipFile Objects}'' (section \ref{zipfile-objects}) for
   constructor details.
-\end{classdesc*}
+\end{classdesc}
 
-\begin{classdesc*}{PyZipFile}
+\begin{classdesc}{PyZipFile}{\unspecified}
   Class for creating ZIP archives containing Python libraries.
-\end{classdesc*}
+\end{classdesc}
 
 \begin{classdesc}{ZipInfo}{\optional{filename\optional{, date_time}}}
   Class used the represent infomation about a member of an archive.
@@ -77,14 +77,13 @@ The available attributes of this module are:
 
 \subsection{ZipFile Objects \label{zipfile-objects}}
 
-\begin{classdesc}{ZipFile}{file\optional{, mode\optional{, compression}}} 
-  Open a ZIP file, where \var{file} can be either a path to a file
-  (i.e. a string) or a file-like object.  The \var{mode} parameter
+\begin{classdesc}{ZipFile}{filename\optional{, mode\optional{, compression}}} 
+  Open a ZIP file named \var{filename}.  The \var{mode} parameter
   should be \code{'r'} to read an existing file, \code{'w'} to
   truncate and write a new file, or \code{'a'} to append to an
-  existing file.  For \var{mode} is \code{'a'} and \var{file}
+  existing file.  For \var{mode} is \code{'a'} and \var{filename}
   refers to an existing ZIP file, then additional files are added to
-  it.  If \var{file} does not refer to a ZIP file, then a new ZIP
+  it.  If \var{filename} does not refer to a ZIP file, then a new ZIP
   archive is appended to the file.  This is meant for adding a ZIP
   archive to another file, such as \file{python.exe}.  Using
 

@@ -8,7 +8,7 @@
 #ifdef macintosh
 #include <time.h>
 #include <OSUtils.h>
-#ifdef USE_GUSI211
+#ifdef USE_GUSI2
 /* GUSI, the I/O library which has the time() function and such uses the
 ** Mac epoch of 1904. MSL, the C library which has localtime() and so uses
 ** the ANSI epoch of 1900.
@@ -16,9 +16,7 @@
 #define GUSI_TO_MSL_EPOCH (4*365*24*60*60)
 #endif /* USE_GUSI2 */
 #else
-#ifndef RISCOS
 #include <sys/types.h>
-#endif /* RISCOS */
 #endif
 
 #ifdef QUICKWIN
@@ -41,19 +39,17 @@ extern int ftime(struct timeb *);
 #else
 #ifdef MS_WINDOWS
 #include <windows.h>
-#if defined(MS_WIN16) || defined(__BORLANDC__)
+#ifdef MS_WIN16
 /* These overrides not needed for Win32 */
 #define timezone _timezone
 #define tzname _tzname
 #define daylight _daylight
-#endif /* MS_WIN16 || __BORLANDC__ */
-#ifdef MS_WIN16
 #define altzone _altzone
 #endif /* MS_WIN16 */
 #endif /* MS_WINDOWS */
 #endif /* !__WATCOMC__ || __QNX__ */
 
-#if defined(MS_WIN32) && !defined(MS_WIN64) && !defined(__BORLANDC__)
+#if defined(MS_WIN32) && !defined(MS_WIN64)
 /* Win32 has better clock replacement
    XXX Win64 does not yet, but might when the platform matures. */
 #include <largeint.h>
@@ -113,7 +109,7 @@ static PyObject *
 time_time(PyObject *self, PyObject *args)
 {
 	double secs;
-	if (!PyArg_ParseTuple(args, ":time"))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 	secs = floattime();
 	if (secs == 0.0) {
@@ -142,13 +138,13 @@ Fractions of a second may be present if the system clock provides them.";
 static PyObject *
 time_clock(PyObject *self, PyObject *args)
 {
-	if (!PyArg_ParseTuple(args, ":clock"))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 	return PyFloat_FromDouble(((double)clock()) / CLOCKS_PER_SEC);
 }
 #endif /* HAVE_CLOCK */
 
-#if defined(MS_WIN32) && !defined(MS_WIN64) && !defined(__BORLANDC__)
+#if defined(MS_WIN32) && !defined(MS_WIN64)
 /* Due to Mark Hammond */
 static PyObject *
 time_clock(PyObject *self, PyObject *args)
@@ -157,7 +153,7 @@ time_clock(PyObject *self, PyObject *args)
 	static LARGE_INTEGER divisor = {0,0};
 	LARGE_INTEGER now, diff, rem;
 
-	if (!PyArg_ParseTuple(args, ":clock"))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 
 	if (LargeIntegerEqualToZero(divisor)) {
@@ -196,7 +192,7 @@ static PyObject *
 time_sleep(PyObject *self, PyObject *args)
 {
 	double secs;
-	if (!PyArg_ParseTuple(args, "d:sleep", &secs))
+	if (!PyArg_Parse(args, "d", &secs))
 		return NULL;
 	if (floatsleep(secs) != 0)
 		return NULL;
@@ -248,34 +244,28 @@ static PyObject *
 time_gmtime(PyObject *self, PyObject *args)
 {
 	double when;
-	if (PyTuple_Size(args) == 0)
-		when = floattime();
-	if (!PyArg_ParseTuple(args, "|d:gmtime", &when))
+	if (!PyArg_Parse(args, "d", &when))
 		return NULL;
 	return time_convert((time_t)when, gmtime);
 }
 
 static char gmtime_doc[] =
-"gmtime([seconds]) -> tuple\n\
+"gmtime(seconds) -> tuple\n\
 \n\
-Convert seconds since the Epoch to a time tuple expressing UTC (a.k.a.\n\
-GMT).  When 'seconds' is not passed in, convert the current time instead.";
+Convert seconds since the Epoch to a time tuple expressing UTC (a.k.a. GMT).";
 
 static PyObject *
 time_localtime(PyObject *self, PyObject *args)
 {
 	double when;
-	if (PyTuple_Size(args) == 0)
-		when = floattime();
-	if (!PyArg_ParseTuple(args, "|d:localtime", &when))
+	if (!PyArg_Parse(args, "d", &when))
 		return NULL;
 	return time_convert((time_t)when, localtime);
 }
 
 static char localtime_doc[] =
-"localtime([seconds]) -> tuple\n\
-Convert seconds since the Epoch to a time tuple expressing local time.\n\
-When 'seconds' is not passed in, convert the current time instead.";
+"localtime(seconds) -> tuple\n\
+Convert seconds since the Epoch to a time tuple expressing local time.";
 
 static int
 gettmarg(PyObject *args, struct tm *p)
@@ -324,7 +314,7 @@ gettmarg(PyObject *args, struct tm *p)
 static PyObject *
 time_strftime(PyObject *self, PyObject *args)
 {
-	PyObject *tup = NULL;
+	PyObject *tup;
 	struct tm buf;
 	const char *fmt;
 	size_t fmtlen, buflen;
@@ -333,15 +323,9 @@ time_strftime(PyObject *self, PyObject *args)
 
 	memset((void *) &buf, '\0', sizeof(buf));
 
-	if (!PyArg_ParseTuple(args, "s|O:strftime", &fmt, &tup))
+	if (!PyArg_ParseTuple(args, "sO:strftime", &fmt, &tup) 
+	    || !gettmarg(tup, &buf))
 		return NULL;
-
-	if (tup == NULL) {
-		time_t tt = time(NULL);
-		buf = *localtime(&tt);
-	} else if (!gettmarg(tup, &buf))
-		return NULL;
-	
 	fmtlen = strlen(fmt);
 
 	/* I hate these functions that presume you know how big the output
@@ -369,11 +353,10 @@ time_strftime(PyObject *self, PyObject *args)
 }
 
 static char strftime_doc[] =
-"strftime(format[, tuple]) -> string\n\
+"strftime(format, tuple) -> string\n\
 \n\
 Convert a time tuple to a string according to a format specification.\n\
-See the library reference manual for formatting codes. When the time tuple\n\
-is not present, current time as returned by localtime() is used.";
+See the library reference manual for formatting codes.";
 #endif /* HAVE_STRFTIME */
 
 #ifdef HAVE_STRPTIME
@@ -418,15 +401,12 @@ See the library reference manual for formatting codes (same as strftime()).";
 static PyObject *
 time_asctime(PyObject *self, PyObject *args)
 {
-	PyObject *tup = NULL;
+	PyObject *tup;
 	struct tm buf;
 	char *p;
-	if (!PyArg_ParseTuple(args, "|O:asctime", &tup))
+	if (!PyArg_ParseTuple(args, "O:asctime", &tup))
 		return NULL;
-	if (tup == NULL) {
-		time_t tt = time(NULL);
-		buf = *localtime(&tt);
-	} else if (!gettmarg(tup, &buf))
+	if (!gettmarg(tup, &buf))
 		return NULL;
 	p = asctime(&buf);
 	if (p[24] == '\n')
@@ -435,11 +415,9 @@ time_asctime(PyObject *self, PyObject *args)
 }
 
 static char asctime_doc[] =
-"asctime([tuple]) -> string\n\
+"asctime(tuple) -> string\n\
 \n\
-Convert a time tuple to a string, e.g. 'Sat Jun 06 16:26:11 1998'.\n\
-When the time tuple is not present, current time as returned by localtime()\n\
-is used.";
+Convert a time tuple to a string, e.g. 'Sat Jun 06 16:26:11 1998'.";
 
 static PyObject *
 time_ctime(PyObject *self, PyObject *args)
@@ -447,14 +425,9 @@ time_ctime(PyObject *self, PyObject *args)
 	double dt;
 	time_t tt;
 	char *p;
-	
-	if (PyTuple_Size(args) == 0)
-		tt = time(NULL);
-	else {
-		if (!PyArg_ParseTuple(args, "|d:ctime", &dt))
-			return NULL;
-		tt = (time_t)dt;
-	}
+	if (!PyArg_Parse(args, "d", &dt))
+		return NULL;
+	tt = (time_t)dt;
 #if defined(macintosh) && defined(USE_GUSI204)
 	tt = tt + GUSI_TO_MSL_EPOCH;
 #endif
@@ -472,8 +445,7 @@ static char ctime_doc[] =
 "ctime(seconds) -> string\n\
 \n\
 Convert a time in seconds since the Epoch to a string in local time.\n\
-This is equivalent to asctime(localtime(seconds)). When the time tuple is\n\
-not present, current time as returned by localtime() is used.";
+This is equivalent to asctime(localtime(seconds)).";
 
 #ifdef HAVE_MKTIME
 static PyObject *
@@ -494,7 +466,7 @@ time_mktime(PyObject *self, PyObject *args)
                                 "mktime argument out of range");
 		return NULL;
 	}
-#if defined(macintosh) && defined(USE_GUSI211)
+#if defined(macintosh) && defined(USE_GUSI2)
 	tt = tt - GUSI_TO_MSL_EPOCH;
 #endif
 	return PyFloat_FromDouble((double)tt);
@@ -507,15 +479,15 @@ Convert a time tuple in local time to seconds since the Epoch.";
 #endif /* HAVE_MKTIME */
 
 static PyMethodDef time_methods[] = {
-	{"time",	time_time, METH_VARARGS, time_doc},
+	{"time",	time_time, METH_OLDARGS, time_doc},
 #ifdef HAVE_CLOCK
-	{"clock",	time_clock, METH_VARARGS, clock_doc},
+	{"clock",	time_clock, METH_OLDARGS, clock_doc},
 #endif
-	{"sleep",	time_sleep, METH_VARARGS, sleep_doc},
-	{"gmtime",	time_gmtime, METH_VARARGS, gmtime_doc},
-	{"localtime",	time_localtime, METH_VARARGS, localtime_doc},
+	{"sleep",	time_sleep, METH_OLDARGS, sleep_doc},
+	{"gmtime",	time_gmtime, METH_OLDARGS, gmtime_doc},
+	{"localtime",	time_localtime, METH_OLDARGS, localtime_doc},
 	{"asctime",	time_asctime, METH_VARARGS, asctime_doc},
-	{"ctime",	time_ctime, METH_VARARGS, ctime_doc},
+	{"ctime",	time_ctime, METH_OLDARGS, ctime_doc},
 #ifdef HAVE_MKTIME
 	{"mktime",	time_mktime, METH_VARARGS, mktime_doc},
 #endif
@@ -666,13 +638,6 @@ inittime(void)
 	ins(d, "tzname", Py_BuildValue("(zz)", "", ""));
 #endif /* macintosh */
 #endif /* HAVE_TM_ZONE */
-#ifdef __CYGWIN__
-	tzset();
-	ins(d, "timezone", PyInt_FromLong(_timezone));
-	ins(d, "altzone", PyInt_FromLong(_timezone));
-	ins(d, "daylight", PyInt_FromLong(_daylight));
-	ins(d, "tzname", Py_BuildValue("(zz)", _tzname[0], _tzname[1]));
-#endif /* __CYGWIN__ */
 #endif /* !HAVE_TZNAME || __GLIBC__ */
 }
 
@@ -831,20 +796,10 @@ floatsleep(double secs)
 		Py_END_ALLOW_THREADS
 	}
 #else /* !__BEOS__ */
-#ifdef RISCOS
-	if (secs <= 0.0)
-		return 0;
-	Py_BEGIN_ALLOW_THREADS
-	/* This sleep *CAN BE* interrupted. */
-	if ( sleep(secs) )
-		return -1;
-	Py_END_ALLOW_THREADS
-#else /* !RISCOS */
 	/* XXX Can't interrupt this sleep */
 	Py_BEGIN_ALLOW_THREADS
 	sleep((int)secs);
 	Py_END_ALLOW_THREADS
-#endif /* !RISCOS */
 #endif /* !__BEOS__ */
 #endif /* !PYOS_OS2 */
 #endif /* !MS_WIN32 */

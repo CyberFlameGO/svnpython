@@ -1,4 +1,6 @@
 \documentclass{howto}
+\usepackage{ltxmarkup}
+\usepackage{times}
 \usepackage{distutils}
 
 % $Id$
@@ -22,13 +24,7 @@
   build/release/install mechanics.
 \end{abstract}
 
-% The ugly "%begin{latexonly}" pseudo-environment supresses the table
-% of contents for HTML generation.
-%
-%begin{latexonly}
 \tableofcontents
-%end{latexonly}
-
 
 \section{Introduction}
 \label{intro}
@@ -59,7 +55,7 @@ Modules} manual.
 
 Using the Distutils is quite simple, both for module developers and for
 users/administrators installing third-party modules.  As a developer,
-your responsibilities (apart from writing solid, well-documented and
+your responsibilites (apart from writing solid, well-documented and
 well-tested code, of course!) are:
 \begin{itemize}
 \item write a setup script (\file{setup.py} by convention)
@@ -94,12 +90,11 @@ it.\footnote{But be careful about putting arbitrarily expensive
 all you want to do is distribute a module called \module{foo}, contained
 in a file \file{foo.py}, then your setup script can be as little as
 this:
-
 \begin{verbatim}
 from distutils.core import setup
-setup(name="foo",
-      version="1.0",
-      py_modules=["foo"])
+setup (name = "foo",
+       version = "1.0",
+       py_modules = ["foo"])
 \end{verbatim}
 
 Some observations:
@@ -118,12 +113,10 @@ Some observations:
 
 To create a source distribution for this module, you would create a
 setup script, \file{setup.py}, containing the above code, and run:
-
 \begin{verbatim}
 python setup.py sdist
 \end{verbatim}
-
-which will create an archive file (e.g., tarball on \UNIX, ZIP file on
+which will create an archive file (e.g., tarball on Unix, zip file on
 Windows) containing your setup script, \file{setup.py}, and your module,
 \file{foo.py}.  The archive file will be named \file{Foo-1.0.tar.gz} (or
 \file{.zip}), and will unpack into a directory \file{Foo-1.0}.
@@ -131,11 +124,9 @@ Windows) containing your setup script, \file{setup.py}, and your module,
 If an end-user wishes to install your \module{foo} module, all she has
 to do is download \file{Foo-1.0.tar.gz} (or \file{.zip}), unpack it,
 and---from the \file{Foo-1.0} directory---run
-
 \begin{verbatim}
 python setup.py install
 \end{verbatim}
-
 which will ultimately copy \file{foo.py} to the appropriate directory
 for third-party modules in their Python installation.
 
@@ -153,29 +144,36 @@ running on a Windows machine, and want to make things easy for other
 Windows users, you can create an executable installer (the most
 appropriate type of built distribution for this platform) with the
 \command{bdist\_wininst} command.  For example:
-
 \begin{verbatim}
 python setup.py bdist_wininst
 \end{verbatim}
-
 will create an executable installer, \file{Foo-1.0.win32.exe}, in the
 current directory.
 
-Currently (Distutils 0.9.2), the only other useful built
+\XXX{not implemented yet}
+(Another way to create executable installers for Windows is with the
+\command{bdist\_wise} command, which uses Wise---the commercial
+installer-generator used to create Python's own installer---to create
+the installer.  Wise-based installers are more appropriate for large,
+industrial-strength applications that need the full capabilities of a
+``real'' installer.  \command{bdist\_wininst} creates a self-extracting
+zip file with a minimal user interface, which is enough for small- to
+medium-sized module collections.  You'll need to have version XXX of
+Wise installed on your system for the \command{bdist\_wise} command to
+work; it's available from \url{http://foo/bar/baz}.)
+
+Currently (Distutils 0.9.2), the are only other useful built
 distribution format is RPM, implemented by the \command{bdist\_rpm}
 command.  For example, the following command will create an RPM file
 called \file{Foo-1.0.noarch.rpm}:
-
 \begin{verbatim}
 python setup.py bdist_rpm
 \end{verbatim}
-
 (This uses the \command{rpm} command, so has to be run on an RPM-based
 system such as Red Hat Linux, SuSE Linux, or Mandrake Linux.)
 
 You can find out what distribution formats are available at any time by
 running
-
 \begin{verbatim}
 python setup.py bdist --help-formats
 \end{verbatim}
@@ -196,12 +194,12 @@ following glossary of common Python terms:
   single \file{.py} file (and possibly associated \file{.pyc} and/or
   \file{.pyo} files).  Sometimes referred to as a ``pure module.''
 \item[extension module] a module written in the low-level language of
-  the Python implementation: C/C++ for Python, Java for JPython.
+  the Python implemention: C/C++ for CPython, Java for JPython.
   Typically contained in a single dynamically loadable pre-compiled
-  file, e.g. a shared object (\file{.so}) file for Python extensions on
-  \UNIX, a DLL (given the \file{.pyd} extension) for Python extensions
+  file, e.g. a shared object (\file{.so}) file for CPython extensions on
+  Unix, a DLL (given the \file{.pyd} extension) for CPython extensions
   on Windows, or a Java class file for JPython extensions.  (Note that
-  currently, the Distutils only handles C/C++ extensions for Python.)
+  currently, the Distutils only handles C/C++ extensions for CPython.)
 \item[package] a module that contains other modules; typically contained
   in a directory in the filesystem and distinguished from other
   directories by the presence of a file \file{\_\_init\_\_.py}.
@@ -265,16 +263,16 @@ shown here, is used to install the package into Python 1.5.2.)
 
 from distutils.core import setup
 
-setup(name="Distutils",
-      version="1.0",
-      description="Python Distribution Utilities",
-      author="Greg Ward",
-      author_email="gward@python.net",
-      url="http://www.python.org/sigs/distutils-sig/",
-      packages=['distutils', 'distutils.command'],
-     )
-\end{verbatim}
+setup (name = "Distutils",
+       version = "1.0",
+       description = "Python Distribution Utilities",
+       author = "Greg Ward",
+       author_email = "gward@python.net",
+       url = "http://www.python.org/sigs/distutils-sig/",
 
+       packages = ['distutils', 'distutils.command'],
+      )
+\end{verbatim}
 There are only two differences between this and the trivial one-file
 distribution presented in section~\ref{simple-example}: more
 meta-data, and the specification of pure Python modules by package,
@@ -284,25 +282,16 @@ list of every module would be tedious to generate and difficult to
 maintain.
 
 Note that any pathnames (files or directories) supplied in the setup
-script should be written using the \UNIX{} convention, i.e.
+script should be written using the Unix convention, i.e.
 slash-separated.  The Distutils will take care of converting this
 platform-neutral representation into whatever is appropriate on your
 current platform before actually using the pathname.  This makes your
 setup script portable across operating systems, which of course is one
 of the major goals of the Distutils.  In this spirit, all pathnames in
-this document are slash-separated (MacOS programmers should keep in
+this document are slash-separated (Mac OS programmers should keep in
 mind that the \emph{absence} of a leading slash indicates a relative
-path, the opposite of the MacOS convention with colons).
+path, the opposite of the Mac OS convention with colons).
 
-This, of course, only applies to pathnames given to Distutils functions.
-If you, for example, use standard python functions such as glob.glob
-or os.listdir to specify files, you should be careful to write portable
-code instead of hardcoding path separators:
-
-\begin{verbatim}
-    glob.glob(os.path.join('mydir', 'subdir', '*.html'))
-    os.listdir(os.path.join('mydir', 'subdir'))
-\end{verbatim}
 
 \subsection{Listing whole packages}
 \label{listing-packages}
@@ -328,11 +317,9 @@ you keep all Python source under \file{lib}, so that modules in the
 ``root package'' (i.e., not in any package at all) are right in
 \file{lib}, modules in the \module{foo} package are in \file{lib/foo},
 and so forth.  Then you would put
-
 \begin{verbatim}
 package_dir = {'': 'lib'}
 \end{verbatim}
-
 in your setup script.  (The keys to this dictionary are package names,
 and an empty package name stands for the root package.  The values are
 directory names relative to your distribution root.)  In this case, when
@@ -342,11 +329,9 @@ you say \code{packages = ['foo']}, you are promising that the file
 Another possible convention is to put the \module{foo} package right in 
 \file{lib}, the \module{foo.bar} package in \file{lib/bar}, etc.  This
 would be written in the setup script as
-
 \begin{verbatim}
 package_dir = {'foo': 'lib'}
 \end{verbatim}
-
 A \code{\var{package}: \var{dir}} entry in the \option{package\_dir}
 dictionary implicitly applies to all packages below \var{package}, so
 the \module{foo.bar} case is automatically handled here.  In this
@@ -367,11 +352,9 @@ rather than listing packages---especially the case of a single module
 that goes in the ``root package'' (i.e., no package at all).  This
 simplest case was shown in section~\ref{simple-example}; here is a
 slightly more involved example:
-
 \begin{verbatim}
 py_modules = ['mod1', 'pkg.mod2']
 \end{verbatim}
-
 This describes two modules, one of them in the ``root'' package, the
 other in the \module{pkg} package.  Again, the default package/directory
 layout implies that these two modules can be found in \file{mod1.py} and
@@ -398,24 +381,21 @@ single extension module.  Suppose your distribution includes a single
 extension, called \module{foo} and implemented by \file{foo.c}.  If no
 additional instructions to the compiler/linker are needed, describing
 this extension is quite simple:
-
 \begin{verbatim}
 Extension("foo", ["foo.c"])
 \end{verbatim}
-
 The \class{Extension} class can be imported from
 \module{distutils.core}, along with \function{setup()}.  Thus, the setup
 script for a module distribution that contains only this one extension
 and nothing else might be:
-
 \begin{verbatim}
 from distutils.core import setup, Extension
-setup(name="foo", version="1.0",
-      ext_modules=[Extension("foo", ["foo.c"])])
+setup(name = "foo", version = "1.0",
+      ext_modules = [Extension("foo", ["foo.c"])])
 \end{verbatim}
 
 The \class{Extension} class (actually, the underlying extension-building
-machinery implemented by the \command{build\_ext} command) supports a
+machinery implemented by the \command{built\_ext} command) supports a
 great deal of flexibility in describing Python extensions, which is
 explained in the following sections.  
 
@@ -424,17 +404,13 @@ explained in the following sections.
 
 The first argument to the \class{Extension} constructor is always the
 name of the extension, including any package names.  For example,
-
 \begin{verbatim}
 Extension("foo", ["src/foo1.c", "src/foo2.c"])
 \end{verbatim}
-
 describes an extension that lives in the root package, while
-
 \begin{verbatim}
 Extension("pkg.foo", ["src/foo1.c", "src/foo2.c"])
 \end{verbatim}
-
 describes the same extension in the \module{pkg} package.  The source
 files and resulting object code are identical in both cases; the only
 difference is where in the filesystem (and therefore where in Python's
@@ -443,15 +419,13 @@ namespace hierarchy) the resulting extension lives.
 If you have a number of extensions all in the same package (or all under
 the same base package), use the \option{ext\_package} keyword argument
 to \function{setup()}.  For example,
-
 \begin{verbatim}
 setup(...
-      ext_package="pkg",
-      ext_modules=[Extension("foo", ["foo.c"]),
-                   Extension("subpkg.bar", ["bar.c"])]
+      ext_package = "pkg",
+      ext_modules = [Extension("foo", ["foo.c"]),
+                     Extension("subpkg.bar", ["bar.c"])]
      )
 \end{verbatim}
-
 will compile \file{foo.c} to the extension \module{pkg.foo}, and
 \file{bar.c} to \module{pkg.subpkg.bar}.
 
@@ -462,7 +436,7 @@ The second argument to the \class{Extension} constructor is a list of
 source files.  Since the Distutils currently only support C/C++
 extensions, these are normally C/C++ source files.  (Be sure to use
 appropriate extensions to distinguish C++ source files: \file{.cc} and
-\file{.cpp} seem to be recognized by both \UNIX{} and Windows compilers.)
+\file{.cpp} seem to be recognized by both Unix and Windows compilers.)
 
 However, you can also include SWIG interface (\file{.i}) files in the
 list; the \command{build\_ext} command knows how to deal with SWIG
@@ -475,9 +449,8 @@ resulting C/C++ file into your extension.
 
 On some platforms, you can include non-source files that are processed
 by the compiler and included in your extension.  Currently, this just
-means Windows message text (\file{.mc}) files and resource definition
-(\file{.rc}) files for Visual C++. These will be compiled to binary resource
-(\file{.res}) files and linked into the executable.
+means Windows resource files for Visual C++.  \XXX{get more detail on
+  this feature from Thomas Heller!}
 
 
 \subsubsection{Preprocessor options}
@@ -490,19 +463,16 @@ define/undefine: \code{include\_dirs}, \code{define\_macros}, and
 For example, if your extension requires header files in the
 \file{include} directory under your distribution root, use the
 \code{include\_dirs} option:
-
 \begin{verbatim}
 Extension("foo", ["foo.c"], include_dirs=["include"])
 \end{verbatim}
 
 You can specify absolute directories there; if you know that your
-extension will only be built on \UNIX{} systems with X11R6 installed to
+extension will only be built on Unix systems with X11R6 installed to
 \file{/usr}, you can get away with
-
 \begin{verbatim}
 Extension("foo", ["foo.c"], include_dirs=["/usr/include/X11"])
 \end{verbatim}
-
 You should avoid this sort of non-portable usage if you plan to
 distribute your code: it's probably better to write your code to include
 (e.g.) \code{<X11/Xlib.h>}.
@@ -510,7 +480,7 @@ distribute your code: it's probably better to write your code to include
 If you need to include header files from some other Python extension,
 you can take advantage of the fact that the Distutils install extension
 header files in a consistent way.  For example, the Numerical Python
-header files are installed (on a standard \UNIX{} installation) to
+header files are installed (on a standard Unix installation) to
 \file{/usr/local/include/python1.5/Numerical}.  (The exact location will
 differ according to your platform and Python installation.)  Since the
 Python include directory---\file{/usr/local/include/python1.5} in this
@@ -520,14 +490,12 @@ extensions, the best approach is to include (e.g.)
 \file{Numerical} include directory right into your header search path,
 though, you can find that directory using the Distutils
 \module{sysconfig} module:
-
 \begin{verbatim}
 from distutils.sysconfig import get_python_inc
 incdir = os.path.join(get_python_inc(plat_specific=1), "Numerical")
 setup(...,
       Extension(..., include_dirs=[incdir]))
 \end{verbatim}
-
 Even though this is quite portable---it will work on any Python
 installation, regardless of platform---it's probably easier to just
 write your C code in the sensible way.
@@ -543,16 +511,13 @@ macro \code{FOO} to \code{None} is the equivalent of a bare
 a list of macros to undefine.
 
 For example:
-
 \begin{verbatim}
 Extension(...,
           define_macros=[('NDEBUG', '1')],
                          ('HAVE_STRFTIME', None),
           undef_macros=['HAVE_FOO', 'HAVE_BAR'])
 \end{verbatim}
-
 is the equivalent of having this at the top of every C source file:
-
 \begin{verbatim}
 #define NDEBUG 1
 #define HAVE_STRFTIME
@@ -572,7 +537,6 @@ search for shared (dynamically loaded) libraries at run-time.
 
 For example, if you need to link against libraries known to be in the
 standard library search path on target systems
-
 \begin{verbatim}
 Extension(...,
           libraries=["gdbm", "readline"])
@@ -580,75 +544,17 @@ Extension(...,
 
 If you need to link with libraries in a non-standard location, you'll
 have to include the location in \code{library\_dirs}:
-
 \begin{verbatim}
 Extension(...,
           library_dirs=["/usr/X11R6/lib"],
           libraries=["X11", "Xt"])
 \end{verbatim}
-
 (Again, this sort of non-portable construct should be avoided if you
 intend to distribute your code.)
 
-\XXX{Should mention clib libraries here or somewhere else!}
-
-\subsubsection{Other options}
-
-There are still some other options which can be used to handle special
-cases.
-
-The \option{extra\_objects} option is a list of object files to be passed
-to the linker. These files must not have extensions, as the default
-extension for the compiler is used.
-
-\option{extra\_compile\_args} and \option{extra\_link\_args} can be used
-to specify additional command line options for the compiler resp.
-the linker command line.
-
-\option{export\_symbols} is only useful on windows, it can contain a list
-of symbols (functions or variables) to be exported. This option
-is not needed when building compiled extensions: the \code{initmodule}
-function will automatically be added to the exported symbols list
-by Distutils.
-
-\subsection{Listing scripts}
-So far we have been dealing with pure and non-pure Python modules,
-which are usually not run by themselves but imported by scripts.
-
-Scripts are files containing Python source code, indended to be started
-from the command line.
-Distutils doesn't provide much functionality for the scripts: the only
-support Distutils gives is to adjust the first line of the script
-if it starts with \code{\#!} and contains the word ``python'' to refer
-to the current interpreter location.
-
-The \option{scripts} option simply is a list of files to be handled
-in this way.
-
-
-\subsection{Listing additional files}
-
-The \option{data\_files} option can be used to specify additional
-files needed by the module distribution: configuration files,
-data files, anything which does not fit in the previous categories.
-
-\option{data\_files} specify a sequence of \code{(directory, files)}
-pairs in the following way:
-
-\begin{verbatim}
-setup(...
-      data_files=[('bitmaps', ['bm/b1.gif', 'bm/b2.gif']),
-                  ('config', ['cfg/data.cfg'])])
-\end{verbatim}
-
-Note that you can specify the directory names where the data files
-will be installed, but you cannot rename the data files themselves.
-
-You can specify the \option{data\_files} options as a simple sequence
-of files without specifying a target directory, but this is not recommended,
-and the \command{install} command will print a warning in this case.
-To install data files directly in the target directory, an empty
-string should be given as the directory.
+\XXX{still undocumented: extra\_objects, extra\_compile\_args,
+  extra\_link\_args, export\_symbols---none of which are frequently
+  needed, some of which might be completely unnecessary!}
 
 
 \section{Writing the Setup Configuration File}
@@ -670,6 +576,9 @@ then you need the Distutils ``auto-configuration'' facility.  This
 started to appear in Distutils 0.9 but, as of this writing, isn't mature 
 or stable enough yet for real-world use.)
 
+\XXX{should reference description of distutils config files in
+  ``Installing'' manual here}
+
 The setup configuration file is a useful middle-ground between the setup
 script---which, ideally, would be opaque to installers\footnote{This
   ideal probably won't be achieved until auto-configuration is fully
@@ -689,24 +598,21 @@ several useful consequences:
 \end{itemize}
 
 The basic syntax of the configuration file is simple:
-
 \begin{verbatim}
 [command]
 option=value
 ...
 \end{verbatim}
-
 where \var{command} is one of the Distutils commands (e.g.
 \command{build\_py}, \command{install}), and \var{option} is one of the
 options that command supports.  Any number of options can be supplied
 for each command, and any number of command sections can be included in
-the file.  Blank lines are ignored, as are comments (from a
-\character{\#} character to end-of-line).  Long option values can be
-split across multiple lines simply by indenting the continuation lines.
+the file.  Blank lines are ignored, as are comments (from a \verb+#+
+character to end-of-line).  Long option values can be split across
+multiple lines simply by indenting the continuation lines.
 
 You can find out the list of options supported by a particular command
 with the universal \longprogramopt{help} option, e.g.
-
 \begin{verbatim}
 > python setup.py --help build_ext
 [...]
@@ -720,7 +626,6 @@ Options for 'build_ext' command:
   --undef (-U)         C preprocessor macros to undefine
 [...]
 \end{verbatim}
-
 Or consult section \ref{reference} of this document (the command
 reference).
 
@@ -729,25 +634,21 @@ is spelled \option{foo\_bar} in configuration files.
 
 For example, say you want your extensions to be built
 ``in-place''---that is, you have an extension \module{pkg.ext}, and you
-want the compiled extension file (\file{ext.so} on \UNIX, say) to be put
+want the compiled extension file (\file{ext.so} on Unix, say) to be put
 in the same source directory as your pure Python modules
 \module{pkg.mod1} and \module{pkg.mod2}.  You can always use the
 \longprogramopt{inplace} option on the command-line to ensure this:
-
 \begin{verbatim}
 python setup.py build_ext --inplace
 \end{verbatim}
-
 But this requires that you always specify the \command{build\_ext}
 command explicitly, and remember to provide \longprogramopt{inplace}.
 An easier way is to ``set and forget'' this option, by encoding it in
 \file{setup.cfg}, the configuration file for this distribution:
-
 \begin{verbatim}
 [build_ext]
 inplace=1
 \end{verbatim}
-
 This will affect all builds of this module distribution, whether or not
 you explcitly specify \command{build\_ext}.  If you include
 \file{setup.cfg} in your source distribution, it will also affect
@@ -767,7 +668,6 @@ files installed).  But some of it has to be supplied as options to
 \command{bdist\_rpm}, which would be very tedious to do on the
 command-line for every run.  Hence, here is a snippet from the
 Distutils' own \file{setup.cfg}:
-
 \begin{verbatim}
 [bdist_rpm]
 release = 1
@@ -778,16 +678,8 @@ doc_files = CHANGES.txt
             doc/
             examples/
 \end{verbatim}
-
 Note that the \option{doc\_files} option is simply a
 whitespace-separated string split across multiple lines for readability.
-
-
-\begin{seealso}
-  \seetitle[../inst/config-syntax.html]{Installing Python
-            Modules}{More information on the configuration files is
-            available in the manual for system administrators.}
-\end{seealso}
 
 
 \section{Creating a Source Distribution}
@@ -796,24 +688,20 @@ whitespace-separated string split across multiple lines for readability.
 As shown in section~\ref{simple-example}, you use the
 \command{sdist} command to create a source distribution.  In the
 simplest case,
-
 \begin{verbatim}
 python setup.py sdist
 \end{verbatim}
-
 (assuming you haven't specified any \command{sdist} options in the setup
 script or config file), \command{sdist} creates the archive of the
 default format for the current platform.  The default format is gzip'ed
-tar file (\file{.tar.gz}) on \UNIX, and ZIP file on Windows.
-\XXX{no MacOS support here}
+tar file (\file{.tar.gz}) on Unix, and ZIP file on Windows. \XXX{no Mac
+  OS support here}
 
 You can specify as many formats as you like using the
 \longprogramopt{formats} option, for example:
-
 \begin{verbatim}
 python setup.py sdist --formats=gztar,zip
 \end{verbatim}
-
 to create a gzipped tarball and a zip file.  The available formats are:
 \begin{tableiii}{l|l|c}{code}%
   {Format}{Description}{Notes}
@@ -827,7 +715,7 @@ to create a gzipped tarball and a zip file.  The available formats are:
 \noindent Notes:
 \begin{description}
 \item[(1)] default on Windows
-\item[(2)] default on \UNIX
+\item[(2)] default on Unix
 \item[(3)] requires either external \program{zip} utility or
   \module{zipfile} module (not part of the standard Python library)
 \item[(4)] requires external utilities: \program{tar} and possibly one
@@ -873,13 +761,11 @@ The manifest template has one command per line, where each command
 specifies a set of files to include or exclude from the source
 distribution.  For an example, again we turn to the Distutils' own
 manifest template:
-
 \begin{verbatim}
 include *.txt
 recursive-include examples *.txt *.py
 prune examples/sample?/build
 \end{verbatim}
-
 The meanings should be fairly clear: include all files in the
 distribution root matching \code{*.txt}, all files anywhere under the
 \file{examples} directory matching \code{*.txt} or \code{*.py}, and
@@ -970,18 +856,15 @@ Second, you might want to force the manifest to be regenerated---for
 example, if you have added or removed files or directories that match an
 existing pattern in the manifest template, you should regenerate the
 manifest:
-
 \begin{verbatim}
 python setup.py sdist --force-manifest
 \end{verbatim}
 
 Or, you might just want to (re)generate the manifest, but not create a
 source distribution:
-
 \begin{verbatim}
 python setup.py sdist --manifest-only
 \end{verbatim}
-
 \longprogramopt{manifest-only} implies \longprogramopt{force-manifest}.
 \programopt{-o} is a shortcut for \longprogramopt{manifest-only}, and
 \programopt{-f} for \longprogramopt{force-manifest}.
@@ -1021,20 +904,18 @@ distributions.
 
 As a simple example, if I run the following command in the Distutils
 source tree:
-
 \begin{verbatim}
 python setup.py bdist
 \end{verbatim}
-
 then the Distutils builds my module distribution (the Distutils itself
 in this case), does a ``fake'' installation (also in the \file{build}
 directory), and creates the default type of built distribution for my
 platform.  The default format for built distributions is a ``dumb'' tar
-file on \UNIX, and an simple executable installer on Windows.  (That tar
+file on Unix, and an simple executable installer on Windows.  (That tar
 file is considered ``dumb'' because it has to be unpacked in a specific
 location to work.)
 
-Thus, the above command on a \UNIX{} system creates
+Thus, the above command on a Unix system creates
 \file{Distutils-0.9.1.\filevar{plat}.tar.gz}; unpacking this tarball
 from the right place installs the Distutils just as though you had
 downloaded the source distribution and run \code{python setup.py
@@ -1053,12 +934,10 @@ win for users even if your distribution doesn't include any extensions.
 The \command{bdist} command has a \longprogramopt{formats} option,
 similar to the \command{sdist} command, which you can use to select the
 types of built distribution to generate: for example,
-
 \begin{verbatim}
 python setup.py bdist --format=zip
 \end{verbatim}
-
-would, when run on a \UNIX{} system, create
+would, when run on a Unix system, create
 \file{Distutils-0.8.\filevar{plat}.zip}---again, this archive would be
 unpacked from the root directory to install the Distutils.
 
@@ -1071,12 +950,13 @@ The available formats for built distributions are:
   \lineiii{zip}{zip file (\file{.zip})}{(4)}
   \lineiii{rpm}{RPM}{(5)}
   \lineiii{srpm}{source RPM}{(5) \XXX{to do!}}
-  \lineiii{wininst}{self-extracting ZIP file for Windows}{(2),(4)}
+  \lineiii{wininst}{self-extracting ZIP file for Windows}{(2),(6)}
+  %\lineiii{wise}{Wise installer for Windows}{(3)}
 \end{tableiii}
 
 \noindent Notes:
 \begin{description}
-\item[(1)] default on \UNIX
+\item[(1)] default on Unix
 \item[(2)] default on Windows \XXX{to-do!}
 \item[(3)] requires external utilities: \program{tar} and possibly one
   of \program{gzip}, \program{bzip2}, or \program{compress}
@@ -1084,6 +964,8 @@ The available formats for built distributions are:
   \module{zipfile} module (not part of the standard Python library)
 \item[(5)] requires external \program{rpm} utility, version 3.0.4 or
   better (use \code{rpm --version} to find out which version you have)
+\item[(6)] \XXX{requirements for \command{bdist\_wininst}?}
+%\item[(3)] not implemented yet
 \end{description}
 
 You don't have to use the \command{bdist} command with the
@@ -1100,6 +982,7 @@ each, are:
   \lineii{bdist\_dumb}{tar, ztar, gztar, zip}
   \lineii{bdist\_rpm}{rpm, srpm}
   \lineii{bdist\_wininst}{wininst}
+  %\lineii{bdist\_wise}{wise}
 \end{tableii}
 
 The following sections give details on the individual \command{bdist\_*}
@@ -1126,22 +1009,17 @@ work on different RPM-based distributions.
 
 The usual way to create an RPM of your module distribution is to run the 
 \command{bdist\_rpm} command:
-
 \begin{verbatim}
 python setup.py bdist_rpm
 \end{verbatim}
-
 or the \command{bdist} command with the \longprogramopt{format} option:
-
 \begin{verbatim}
 python setup.py bdist --formats=rpm
 \end{verbatim}
-
 The former allows you to specify RPM-specific options; the latter allows 
 you to easily specify multiple formats in one run.  If you need to do
 both, you can explicitly specify multiple \command{bdist\_*} commands
 and their options:
-
 \begin{verbatim}
 python setup.py bdist_rpm --packager="John Doe <jdoe@python.net>" \
                 bdist_wininst --target_version="2.0"
@@ -1152,7 +1030,7 @@ the Distutils is driven by the setup script.  To make your life easier,
 the \command{bdist\_rpm} command normally creates a \file{.spec} file
 based on the information you supply in the setup script, on the command
 line, and in any Distutils configuration files.  Various options and
-sections in the \file{.spec} file are derived from options in the setup
+section in the \file{.spec} file are derived from options in the setup
 script as follows:
 \begin{tableii}{l|l}{textrm}%
   {RPM \file{.spec} file option or section}{Distutils setup script option}
@@ -1176,11 +1054,11 @@ through options to the \command{bdist\_rpm} command as follows:
   \lineiii{Release}{\option{release}}{``1''}
   \lineiii{Group}{\option{group}}{``Development/Libraries''}
   \lineiii{Vendor}{\option{vendor}}{(see above)}
-  \lineiii{Packager}{\option{packager}}{(none)}
-  \lineiii{Provides}{\option{provides}}{(none)}
-  \lineiii{Requires}{\option{requires}}{(none)}
-  \lineiii{Conflicts}{\option{conflicts}}{(none)}
-  \lineiii{Obsoletes}{\option{obsoletes}}{(none)}
+  \lineiii{Packager}{packager}{(none)}
+  \lineiii{Provides}{provides}{(none)}
+  \lineiii{Requires}{requires}{(none)}
+  \lineiii{Conflicts}{conflicts}{(none)}
+  \lineiii{Obsoletes}{obsoletes}{(none)}
   \lineiii{Distribution}{\option{distribution\_name}}{(none)}
   \lineiii{BuildRequires}{\option{build\_requires}}{(none)}
   \lineiii{Icon}{\option{icon}}{(none)}
@@ -1217,16 +1095,14 @@ tree,'' in a temporary directory created by \command{bdist\_rpm}.)
 
 \XXX{this isn't implemented yet---is it needed?!}
 You can also specify a custom \file{.spec} file with the
-\longprogramopt{spec-file} option; used in conjunction with
+\longprogramopt{spec-file} option; used in conjunctin with
 \longprogramopt{spec-only}, this gives you an opportunity to customize
 the \file{.spec} file manually:
-
 \begin{verbatim}
 > python setup.py bdist_rpm --spec-only
 # ...edit dist/FooBar-1.0.spec
 > python setup.py bdist_rpm --spec-file=dist/FooBar-1.0.spec
 \end{verbatim}
-
 (Although a better way to do this is probably to override the standard
 \command{bdist\_rpm} command with one that writes whatever else you want
 to the \file{.spec} file; see section~\ref{extending} for information on
@@ -1236,78 +1112,42 @@ extending the Distutils.)
 \subsection{Creating Windows installers}
 \label{creating-wininst}
 
-Executable Windows installers are the natural format for binary
-distributions on Windows. They display a nice GUI interface, display
-some information of the module distribution to be installed, taken
-from the meta-dada in the setup script, let the user select a few
-(currently maybe too few) options, and start or cancel the installation.
-
-Since the meta-data is taken from the setup script, creating
-Windows installers is usually as easy as running:
-
-\begin{verbatim}
-python setup.py bdist_wininst
-\end{verbatim}
-
-or the \command{bdist} command with the \longprogramopt{format} option:
-
-\begin{verbatim}
-python setup.py bdist --formats=wininst
-\end{verbatim}
-
-If you have a pure module distribution (only containing pure
-Python modules and packages), the resulting installer will be
-version independent and have a name like \file{Foo-1.0.win32.exe}.
-These installers can even be created on \UNIX{} or MacOS platforms.
-
-If you have a non-pure distribution, the extensions can only be
-created on a Windows platform, and will be Python version dependend.
-The installer filename will reflect this and now has the form
-\file{Foo-1.0.win32-py2.0.exe}. You have to create a separate installer
-for every Python version you want to support.
-
-The installer will try to compile pure modules into bytecode after
-installation on the target system in normal and optimizing mode.
-If you don't want this to happen for some reason, you can run
-the bdist_wininst command with the \longprogramopt{no-target-compile} and/or
-the \longprogramopt{no-target-optimize} option.
-
-%\section{Examples}
-%\label{examples}
 
 
-%\subsection{Pure Python distribution (by module)}
-%\label{pure-mod}
+\section{Examples}
+\label{examples}
 
 
-%\subsection{Pure Python distribution (by package)}
-%\label{pure-pkg}
+\subsection{Pure Python distribution (by module)}
+\label{pure-mod}
 
 
-%\subsection{Single extension module}
-%\label{single-ext}
+\subsection{Pure Python distribution (by package)}
+\label{pure-pkg}
 
 
-%\subsection{Multiple extension modules}
-%\label{multiple-ext}
+\subsection{Single extension module}
+\label{single-ext}
 
 
-%\subsection{Putting it all together}
+\subsection{Multiple extension modules}
+\label{multiple-ext}
+
+
+\subsection{Putting it all together}
 
 
 
-%\section{Extending the Distutils}
-%\label{extending}
+\section{Extending the Distutils}
+\label{extending}
 
 
-%\subsection{Extending existing commands}
-%\label{extend-existing}
+\subsection{Extending existing commands}
+\label{extend-existing}
 
 
-%\subsection{Writing new commands}
-%\label{new-commands}
-
-%\XXX{Would an uninstall command be a good example here?}
+\subsection{Writing new commands}
+\label{new-commands}
 
 
 
@@ -1315,20 +1155,20 @@ the \longprogramopt{no-target-optimize} option.
 \label{reference}
 
 
-%\subsection{Building modules: the \protect\command{build} command family}
-%\label{build-cmds}
+\subsection{Building modules: the \protect\command{build} command family}
+\label{build-cmds}
 
-%\subsubsection{\protect\command{build}}
-%\label{build-cmd}
+\subsubsection{\protect\command{build}}
+\label{build-cmd}
 
-%\subsubsection{\protect\command{build\_py}}
-%\label{build-py-cmd}
+\subsubsection{\protect\command{build\_py}}
+\label{build-py-cmd}
 
-%\subsubsection{\protect\command{build\_ext}}
-%\label{build-ext-cmd}
+\subsubsection{\protect\command{build\_ext}}
+\label{build-ext-cmd}
 
-%\subsubsection{\protect\command{build\_clib}}
-%\label{build-clib-cmd}
+\subsubsection{\protect\command{build\_clib}}
+\label{build-clib-cmd}
 
 
 \subsection{Installing modules: the \protect\command{install} command family}
@@ -1339,8 +1179,8 @@ runs the subcommands \command{install\_lib},
 \command{install\_data} and
 \command{install\_scripts}.
 
-%\subsubsection{\protect\command{install\_lib}}
-%\label{install-lib-cmd}
+\subsubsection{\protect\command{install\_lib}}
+\label{install-lib-cmd}
 
 \subsubsection{\protect\command{install\_data}}
 \label{install-data-cmd}
@@ -1351,12 +1191,11 @@ This command installs all data files provided with the distribution.
 This command installs all (Python) scripts in the distribution.
 
 
-%\subsection{Cleaning up: the \protect\command{clean} command}
-%\label{clean-cmd}
+\subsection{Cleaning up: the \protect\command{clean} command}
+\label{clean-cmd}
 
 
-\subsection{Creating a source distribution: the
-            \protect\command{sdist} command}
+\subsection{Creating a source distribution: the \protect\command{sdist} command}
 \label{sdist-cmd}
 
 
@@ -1381,29 +1220,35 @@ The manifest template commands are:
   \lineii{prune \var{dir}}{exclude all files under \var{dir}}
   \lineii{graft \var{dir}}{include all files under \var{dir}}
 \end{tableii}
-The patterns here are \UNIX-style ``glob'' patterns: \code{*} matches any
+The patterns here are Unix-style ``glob'' patterns: \code{*} matches any
 sequence of regular filename characters, \code{?} matches any single
 regular filename character, and \code{[\var{range}]} matches any of the
 characters in \var{range} (e.g., \code{a-z}, \code{a-zA-Z},
 \code{a-f0-9\_.}).  The definition of ``regular filename character'' is
-platform-specific: on \UNIX{} it is anything except slash; on Windows
-anything except backslash or colon; on MacOS anything except colon.
+platform-specific: on Unix it is anything except slash; on Windows
+anything except backslash or colon; on Mac OS anything except colon.
 
-\XXX{Windows and MacOS support not there yet}
-
-
-%\subsection{Creating a built distribution: the
-%  \protect\command{bdist} command family}
-%\label{bdist-cmds}
+\XXX{Windows and Mac OS support not there yet}
 
 
-%\subsubsection{\protect\command{blib}}
+\subsection{Creating a ``built'' distribution: the
+  \protect\command{bdist} command family}
+\label{bdist-cmds}
 
-%\subsubsection{\protect\command{blib\_dumb}}
 
-%\subsubsection{\protect\command{blib\_rpm}}
+\subsubsection{\protect\command{blib}}
 
-%\subsubsection{\protect\command{blib\_wise}}
+\subsubsection{\protect\command{blib\_dumb}}
+
+\subsubsection{\protect\command{blib\_rpm}}
+
+\subsubsection{\protect\command{blib\_wise}}
+
+
+
+
+
+
 
 
 \end{document}

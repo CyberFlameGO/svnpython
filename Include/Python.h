@@ -81,8 +81,6 @@
 #include "cobject.h"
 #include "traceback.h"
 #include "sliceobject.h"
-#include "cellobject.h"
-#include "iterobject.h"
 
 #include "codecs.h"
 #include "pyerrors.h"

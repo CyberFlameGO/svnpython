@@ -26,7 +26,7 @@
  * compile-time literal concatenation.
  */
 static char
-module__doc__[] =
+module__doc__[] = 
 "Python's standard exception class hierarchy.\n\
 \n\
 Before Python 1.5, the standard exceptions were all simple string objects.\n\
@@ -52,60 +52,52 @@ recommended that user defined class based exceptions be derived from the\n\
 Exception\n\
  |\n\
  +-- SystemExit\n\
- +-- StopIteration\n\
  +-- StandardError\n\
- |    |\n\
- |    +-- KeyboardInterrupt\n\
- |    +-- ImportError\n\
- |    +-- EnvironmentError\n\
- |    |    |\n\
- |    |    +-- IOError\n\
- |    |    +-- OSError\n\
- |    |         |\n\
- |    |         +-- WindowsError\n\
- |    |\n\
- |    +-- EOFError\n\
- |    +-- RuntimeError\n\
- |    |    |\n\
- |    |    +-- NotImplementedError\n\
- |    |\n\
- |    +-- NameError\n\
- |    |    |\n\
- |    |    +-- UnboundLocalError\n\
- |    |\n\
- |    +-- AttributeError\n\
- |    +-- SyntaxError\n\
- |    |    |\n\
- |    |    +-- IndentationError\n\
- |    |         |\n\
- |    |         +-- TabError\n\
- |    |\n\
- |    +-- TypeError\n\
- |    +-- AssertionError\n\
- |    +-- LookupError\n\
- |    |    |\n\
- |    |    +-- IndexError\n\
- |    |    +-- KeyError\n\
- |    |\n\
- |    +-- ArithmeticError\n\
- |    |    |\n\
- |    |    +-- OverflowError\n\
- |    |    +-- ZeroDivisionError\n\
- |    |    +-- FloatingPointError\n\
- |    |\n\
- |    +-- ValueError\n\
- |    |    |\n\
- |    |    +-- UnicodeError\n\
- |    |\n\
- |    +-- SystemError\n\
- |    +-- MemoryError\n\
- |\n\
- +---Warning\n\
       |\n\
-      +-- UserWarning\n\
-      +-- DeprecationWarning\n\
-      +-- SyntaxWarning\n\
-      +-- RuntimeWarning";
+      +-- KeyboardInterrupt\n\
+      +-- ImportError\n\
+      +-- EnvironmentError\n\
+      |    |\n\
+      |    +-- IOError\n\
+      |    +-- OSError\n\
+      |         |\n\
+      |         +-- WindowsError\n\
+      |\n\
+      +-- EOFError\n\
+      +-- RuntimeError\n\
+      |    |\n\
+      |    +-- NotImplementedError\n\
+      |\n\
+      +-- NameError\n\
+      |    |\n\
+      |    +-- UnboundLocalError\n\
+      |\n\
+      +-- AttributeError\n\
+      +-- SyntaxError\n\
+      |    |\n\
+      |    +-- IndentationError\n\
+      |         |\n\
+      |         +-- TabError\n\
+      |\n\
+      +-- TypeError\n\
+      +-- AssertionError\n\
+      +-- LookupError\n\
+      |    |\n\
+      |    +-- IndexError\n\
+      |    +-- KeyError\n\
+      |\n\
+      +-- ArithmeticError\n\
+      |    |\n\
+      |    +-- OverflowError\n\
+      |    +-- ZeroDivisionError\n\
+      |    +-- FloatingPointError\n\
+      |\n\
+      +-- ValueError\n\
+      |    |\n\
+      |    +-- UnicodeError\n\
+      |\n\
+      +-- SystemError\n\
+      +-- MemoryError";
 
 
 /* Helper function for populating a dictionary with method wrappers. */
@@ -129,7 +121,7 @@ populate_methods(PyObject *klass, PyObject *dict, PyMethodDef *methods)
 	    Py_DECREF(func);
 	    return -1;
 	}
-
+	
 	/* add method to dictionary */
 	status = PyDict_SetItemString(dict, methods->ml_name, meth);
 	Py_DECREF(meth);
@@ -144,7 +136,7 @@ populate_methods(PyObject *klass, PyObject *dict, PyMethodDef *methods)
     return 0;
 }
 
-
+	
 
 /* This function is used to create all subsequent exception classes. */
 static int
@@ -197,7 +189,7 @@ get_self(PyObject *args)
 	/* Watch out for being called to early in the bootstrapping process */
 	if (PyExc_TypeError) {
 	    PyErr_SetString(PyExc_TypeError,
-	     "unbound method must be called with instance as first argument");
+	     "unbound method must be called with class instance 1st argument");
 	}
         return NULL;
     }
@@ -342,7 +334,7 @@ make_Exception(char *modulename)
 
     if (!(name = PyString_FromString("Exception")))
 	goto finally;
-
+    
     if (!(PyExc_Exception = PyClass_New(NULL, dict, name)))
 	goto finally;
 
@@ -370,9 +362,6 @@ StandardError__doc__[] = "Base class for all standard Python exceptions.";
 static char
 TypeError__doc__[] = "Inappropriate argument type.";
 
-static char
-StopIteration__doc__[] = "Signal the end from iterator.next().";
-
 
 
 static char
@@ -391,7 +380,7 @@ SystemExit__init__(PyObject *self, PyObject *args)
     /* Set args attribute. */
     if (!(args = PySequence_GetSlice(args, 1, PySequence_Size(args))))
         return NULL;
-
+    
     status = PyObject_SetAttrString(self, "args", args);
     if (status < 0) {
 	Py_DECREF(args);
@@ -424,7 +413,7 @@ SystemExit__init__(PyObject *self, PyObject *args)
 }
 
 
-static PyMethodDef SystemExit_methods[] = {
+PyMethodDef SystemExit_methods[] = {
     { "__init__", SystemExit__init__, METH_VARARGS},
     {NULL, NULL}
 };
@@ -473,9 +462,9 @@ EnvironmentError__init__(PyObject *self, PyObject *args)
 	 * of the os module functions, PyErr_SetFromErrnoWithFilename() is
 	 * called, giving a third argument which is the filename.  But, so
 	 * that old code using in-place unpacking doesn't break, e.g.:
-	 *
+	 * 
 	 * except IOError, (errno, strerror):
-	 *
+	 * 
 	 * we hack args so that it only contains two items.  This also
 	 * means we need our own __str__() which prints out the filename
 	 * when it was supplied.
@@ -485,7 +474,7 @@ EnvironmentError__init__(PyObject *self, PyObject *args)
 	item2 = PySequence_GetItem(args, 2);
 	if (!item0 || !item1 || !item2)
 	    goto finally;
-
+	
 	if (PyObject_SetAttrString(self, "errno", item0) ||
 	    PyObject_SetAttrString(self, "strerror", item1) ||
 	    PyObject_SetAttrString(self, "filename", item2))
@@ -506,7 +495,7 @@ EnvironmentError__init__(PyObject *self, PyObject *args)
 	item1 = PySequence_GetItem(args, 1);
 	if (!item0 || !item1)
 	    goto finally;
-
+	
 	if (PyObject_SetAttrString(self, "errno", item0) ||
 	    PyObject_SetAttrString(self, "strerror", item1))
 	{
@@ -539,7 +528,7 @@ EnvironmentError__str__(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "O:__str__", &self))
 	return NULL;
-
+    
     filename = PyObject_GetAttrString(self, "filename");
     serrno = PyObject_GetAttrString(self, "errno");
     strerror = PyObject_GetAttrString(self, "strerror");
@@ -582,7 +571,7 @@ EnvironmentError__str__(PyObject *self, PyObject *args)
 
 	PyTuple_SET_ITEM(tuple, 0, serrno);
 	PyTuple_SET_ITEM(tuple, 1, strerror);
-
+	
 	rtnval = PyString_Format(fmt, tuple);
 
 	Py_DECREF(fmt);
@@ -706,35 +695,29 @@ SyntaxError__init__(PyObject *self, PyObject *args)
     }
     if (lenargs == 2) {
 	PyObject *info = PySequence_GetItem(args, 1);
-	PyObject *filename = NULL, *lineno = NULL;
-	PyObject *offset = NULL, *text = NULL;
+	PyObject *filename, *lineno, *offset, *text;
 	int status = 1;
 
 	if (!info)
 	    goto finally;
 
 	filename = PySequence_GetItem(info, 0);
-	if (filename != NULL) {
-	    lineno = PySequence_GetItem(info, 1);
-	    if (lineno != NULL) {
-		offset = PySequence_GetItem(info, 2);
-		if (offset != NULL) {
-		    text = PySequence_GetItem(info, 3);
-		    if (text != NULL) {
-			status =
-			    PyObject_SetAttrString(self, "filename", filename)
-			    || PyObject_SetAttrString(self, "lineno", lineno)
-			    || PyObject_SetAttrString(self, "offset", offset)
-			    || PyObject_SetAttrString(self, "text", text);
-			Py_DECREF(text);
-		    }
-		    Py_DECREF(offset);
-		}
-		Py_DECREF(lineno);
-	    }
-	    Py_DECREF(filename);
-	}
+	lineno = PySequence_GetItem(info, 1);
+	offset = PySequence_GetItem(info, 2);
+	text = PySequence_GetItem(info, 3);
+
 	Py_DECREF(info);
+
+	if (filename && lineno && offset && text) {
+	    status = PyObject_SetAttrString(self, "filename", filename) ||
+		PyObject_SetAttrString(self, "lineno", lineno) ||
+		PyObject_SetAttrString(self, "offset", offset) ||
+		PyObject_SetAttrString(self, "text", text);
+	}
+	Py_XDECREF(filename);
+	Py_XDECREF(lineno);
+	Py_XDECREF(offset);
+	Py_XDECREF(text);
 
 	if (status)
 	    goto finally;
@@ -840,7 +823,7 @@ SyntaxError__str__(PyObject *self, PyObject *args)
 }
 
 
-static PyMethodDef SyntaxError_methods[] = {
+PyMethodDef SyntaxError_methods[] = {
     {"__init__", SyntaxError__init__, METH_VARARGS},
     {"__str__",  SyntaxError__str__, METH_VARARGS},
     {NULL, NULL}
@@ -848,8 +831,6 @@ static PyMethodDef SyntaxError_methods[] = {
 
 
 
-/* Exception doc strings */
-
 static char
 AssertionError__doc__[] = "Assertion failed.";
 
@@ -896,25 +877,6 @@ IndentationError__doc__[] = "Improper indentation.";
 static char
 TabError__doc__[] = "Improper mixture of spaces and tabs.";
 
-/* Warning category docstrings */
-
-static char
-Warning__doc__[] = "Base class for warning categories.";
-
-static char
-UserWarning__doc__[] = "Base class for warnings generated by user code.";
-
-static char
-DeprecationWarning__doc__[] =
-"Base class for warnings about deprecated features.";
-
-static char
-SyntaxWarning__doc__[] = "Base class for warnings about dubious syntax.";
-
-static char
-RuntimeWarning__doc__[] =
-"Base class for warnings about dubious runtime behavior.";
-
 
 
 /* module global functions */
@@ -928,7 +890,6 @@ static PyMethodDef functions[] = {
 /* Global C API defined exceptions */
 
 PyObject *PyExc_Exception;
-PyObject *PyExc_StopIteration;
 PyObject *PyExc_StandardError;
 PyObject *PyExc_ArithmeticError;
 PyObject *PyExc_LookupError;
@@ -968,13 +929,6 @@ PyObject *PyExc_WindowsError;
  */
 PyObject *PyExc_MemoryErrorInst;
 
-/* Predefined warning categories */
-PyObject *PyExc_Warning;
-PyObject *PyExc_UserWarning;
-PyObject *PyExc_DeprecationWarning;
-PyObject *PyExc_SyntaxWarning;
-PyObject *PyExc_RuntimeWarning;
-
 
 
 /* mapping between exception names and their PyObject ** */
@@ -990,8 +944,6 @@ static struct {
   * The first three classes MUST appear in exactly this order
   */
  {"Exception", &PyExc_Exception},
- {"StopIteration", &PyExc_StopIteration, &PyExc_Exception,
-  StopIteration__doc__},
  {"StandardError", &PyExc_StandardError, &PyExc_Exception,
   StandardError__doc__},
  {"TypeError", &PyExc_TypeError, 0, TypeError__doc__},
@@ -1041,21 +993,16 @@ static struct {
  {"UnicodeError", &PyExc_UnicodeError, &PyExc_ValueError, UnicodeError__doc__},
  {"SystemError",  &PyExc_SystemError, 0, SystemError__doc__},
  {"MemoryError",  &PyExc_MemoryError, 0, MemoryError__doc__},
- /* Warning categories */
- {"Warning", &PyExc_Warning, &PyExc_Exception, Warning__doc__},
- {"UserWarning", &PyExc_UserWarning, &PyExc_Warning, UserWarning__doc__},
- {"DeprecationWarning", &PyExc_DeprecationWarning, &PyExc_Warning,
-  DeprecationWarning__doc__},
- {"SyntaxWarning", &PyExc_SyntaxWarning, &PyExc_Warning, SyntaxWarning__doc__},
- {"RuntimeWarning", &PyExc_RuntimeWarning, &PyExc_Warning,
-  RuntimeWarning__doc__},
  /* Sentinel */
  {NULL}
 };
 
 
 
-DL_EXPORT(void)
+void
+#ifdef WIN32
+__declspec(dllexport)
+#endif /* WIN32 */
 init_exceptions(void)
 {
     char *modulename = "exceptions";
@@ -1081,7 +1028,7 @@ init_exceptions(void)
     {
 	Py_FatalError("Base class `Exception' could not be created.");
     }
-
+    
     /* Now we can programmatically create all the remaining exceptions.
      * Remember to start the loop at 1 to skip Exceptions.
      */
@@ -1138,7 +1085,10 @@ init_exceptions(void)
 }
 
 
-DL_EXPORT(void)
+void
+#ifdef WIN32
+__declspec(dllexport)
+#endif /* WIN32 */
 fini_exceptions(void)
 {
     int i;

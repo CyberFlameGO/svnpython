@@ -19,6 +19,22 @@
 #include <unistd.h>
 #endif
 
+/* We expect that stat exists on most systems.
+   It's confirmed on Unix, Mac and Windows.
+   If you don't have it, add #define DONT_HAVE_STAT to your config.h. */
+#ifndef DONT_HAVE_STAT
+#define HAVE_STAT
+
+#ifndef DONT_HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
+#ifndef DONT_HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#elif defined(HAVE_STAT_H)
+#include <stat.h>
+#endif
+
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -32,6 +48,9 @@
 #define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
 #endif
 
+#endif
+
+
 extern time_t PyOS_GetLastModificationTime(char *, FILE *);
 						/* In getmtime.c */
 
@@ -43,7 +62,7 @@ extern time_t PyOS_GetLastModificationTime(char *, FILE *);
 /* XXX Perhaps the magic number should be frozen and a version field
    added to the .pyc file header? */
 /* New way to come up with the magic number: (YEAR-1995), MONTH, DAY */
-#define MAGIC (60420 | ((long)'\r'<<16) | ((long)'\n'<<24))
+#define MAGIC (50823 | ((long)'\r'<<16) | ((long)'\n'<<24))
 
 /* Magic word as global; note that _PyImport_Init() can change the
    value of this global to accommodate for alterations of how the
@@ -60,20 +79,11 @@ struct _inittab *PyImport_Inittab = _PyImport_Inittab;
 
 /* these tables define the module suffixes that Python recognizes */
 struct filedescr * _PyImport_Filetab = NULL;
-
-#ifdef RISCOS
-static const struct filedescr _PyImport_StandardFiletab[] = {
-	{"/py", "r", PY_SOURCE},
-	{"/pyc", "rb", PY_COMPILED},
-	{0, 0}
-};
-#else
 static const struct filedescr _PyImport_StandardFiletab[] = {
 	{".py", "r", PY_SOURCE},
 	{".pyc", "rb", PY_COMPILED},
 	{0, 0}
 };
-#endif
 
 /* Initialize things */
 
@@ -104,13 +114,8 @@ _PyImport_Init(void)
 	if (Py_OptimizeFlag) {
 		/* Replace ".pyc" with ".pyo" in _PyImport_Filetab */
 		for (; filetab->suffix != NULL; filetab++) {
-#ifndef RISCOS
 			if (strcmp(filetab->suffix, ".pyc") == 0)
 				filetab->suffix = ".pyo";
-#else
-			if (strcmp(filetab->suffix, "/pyc") == 0)
-				filetab->suffix = "/pyo";
-#endif
 		}
 	}
 
@@ -569,7 +574,7 @@ read_compiled_module(char *cpathname, FILE *fp)
 {
 	PyObject *co;
 
-	co = PyMarshal_ReadLastObjectFromFile(fp);
+	co = PyMarshal_ReadObjectFromFile(fp);
 	/* Ugly: rd_object() may return NULL with or without error */
 	if (co == NULL || !PyCode_Check(co)) {
 		if (!PyErr_Occurred())
@@ -647,7 +652,7 @@ open_exclusive(char *filename)
 #ifdef O_BINARY
 				|O_BINARY   /* necessary for Windows */
 #endif
-
+		
 			, 0666);
 	if (fd < 0)
 		return NULL;
@@ -716,7 +721,7 @@ load_source_module(char *name, char *pathname, FILE *fp)
 	PyObject *m;
 
 	mtime = PyOS_GetLastModificationTime(pathname, fp);
-	if (mtime == (time_t)(-1))
+	if (mtime == -1)
 		return NULL;
 #if SIZEOF_TIME_T > 4
 	/* Python's .pyc timestamp handling presumes that the timestamp fits
@@ -725,12 +730,11 @@ load_source_module(char *name, char *pathname, FILE *fp)
 	 */
 	if (mtime >> 32) {
 		PyErr_SetString(PyExc_OverflowError,
-			"modification time overflows a 4 byte field");
+			"modification time overflows a 4 bytes");
 		return NULL;
 	}
 #endif
-	cpathname = make_compiled_pathname(pathname, buf, 
-					   (size_t)MAXPATHLEN + 1);
+	cpathname = make_compiled_pathname(pathname, buf, (size_t)MAXPATHLEN+1);
 	if (cpathname != NULL &&
 	    (fpc = check_compiled_module(pathname, mtime, cpathname))) {
 		co = read_compiled_module(cpathname, fpc);
@@ -845,7 +849,10 @@ extern FILE *PyWin_FindRegisteredModule(const char *, struct filedescr **,
 					char *, int);
 #endif
 
-static int case_ok(char *, int, int, char *);
+#ifdef CHECK_IMPORT_CASE
+static int check_case(char *, int, int, char *);
+#endif
+
 static int find_init_module(char *); /* Forward */
 
 static struct filedescr *
@@ -857,9 +864,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 	struct _frozen *f;
 	struct filedescr *fdp = NULL;
 	FILE *fp = NULL;
-#ifndef RISCOS
 	struct stat statbuf;
-#endif
 	static struct filedescr fd_frozen = {"", "", PY_FROZEN};
 	static struct filedescr fd_builtin = {"", "", C_BUILTIN};
 	static struct filedescr fd_package = {"", "", PKG_DIRECTORY};
@@ -924,11 +929,11 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 			continue; /* v contains '\0' */
 #ifdef macintosh
 #ifdef INTERN_STRINGS
-		/*
+		/* 
 		** Speedup: each sys.path item is interned, and
 		** FindResourceModule remembers which items refer to
 		** folders (so we don't have to bother trying to look
-		** into them for resources).
+		** into them for resources). 
 		*/
 		PyString_InternInPlace(&PyList_GET_ITEM(path, i));
 		v = PyList_GET_ITEM(path, i);
@@ -936,13 +941,13 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		if (PyMac_FindResourceModule((PyStringObject *)v, name, buf)) {
 			static struct filedescr resfiledescr =
 				{"", "", PY_RESOURCE};
-
+			
 			return &resfiledescr;
 		}
 		if (PyMac_FindCodeResourceModule((PyStringObject *)v, name, buf)) {
 			static struct filedescr resfiledescr =
 				{"", "", PY_CODERESOURCE};
-
+			
 			return &resfiledescr;
 		}
 #endif
@@ -952,48 +957,53 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 #endif
 		    )
 			buf[len++] = SEP;
-		strcpy(buf+len, name);
-		len += namelen;
-
-		/* Check for package import (buf holds a directory name,
-		   and there's an __init__ module in that directory */
-#ifdef HAVE_STAT
-		if (stat(buf, &statbuf) == 0 &&       /* it exists */
-		    S_ISDIR(statbuf.st_mode) &&       /* it's a directory */
-		    find_init_module(buf) &&          /* it has __init__.py */
-		    case_ok(buf, len, namelen, name)) /* and case matches */
-			return &fd_package;
-#else
-		/* XXX How are you going to test for directories? */
-#ifdef RISCOS
+#ifdef IMPORT_8x3_NAMES
+		/* see if we are searching in directory dos-8x3 */
+		if (len > 7 && !strncmp(buf + len - 8, "dos-8x3", 7)){
+			int j;
+			char ch;  /* limit name to 8 lower-case characters */
+			for (j = 0; (ch = name[j]) && j < 8; j++)
+				if (isupper(ch))
+					buf[len++] = tolower(ch);
+				else
+					buf[len++] = ch;
+		}
+		else /* Not in dos-8x3, use the full name */
+#endif
 		{
-			static struct filedescr fd = {"", "", PKG_DIRECTORY};
-			if (isdir(buf)) {
-				if (find_init_module(buf))
-					return &fd;
+			strcpy(buf+len, name);
+			len += namelen;
+		}
+#ifdef HAVE_STAT
+		if (stat(buf, &statbuf) == 0) {
+			if (S_ISDIR(statbuf.st_mode)) {
+				if (find_init_module(buf)) {
+#ifdef CHECK_IMPORT_CASE
+					if (!check_case(buf, len, namelen,
+							name))
+						return NULL;
+#endif
+					return &fd_package;
+				}
 			}
 		}
-#endif
+#else
+		/* XXX How are you going to test for directories? */
 #endif
 #ifdef macintosh
 		fdp = PyMac_FindModuleExtension(buf, &len, name);
-		if (fdp) {
+		if (fdp)
+			fp = fopen(buf, fdp->mode);
 #else
 		for (fdp = _PyImport_Filetab; fdp->suffix != NULL; fdp++) {
 			strcpy(buf+len, fdp->suffix);
 			if (Py_VerboseFlag > 1)
 				PySys_WriteStderr("# trying %s\n", buf);
-#endif /* !macintosh */
 			fp = fopen(buf, fdp->mode);
-			if (fp != NULL) {
-				if (case_ok(buf, len, namelen, name))
-					break;
-				else {	 /* continue search */
-					fclose(fp);
-					fp = NULL;
-				}
-			}
+			if (fp != NULL)
+				break;
 		}
+#endif /* !macintosh */
 		if (fp != NULL)
 			break;
 	}
@@ -1002,82 +1012,56 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 			     "No module named %.200s", name);
 		return NULL;
 	}
+#ifdef CHECK_IMPORT_CASE
+	if (!check_case(buf, len, namelen, name)) {
+		fclose(fp);
+		return NULL;
+	}
+#endif
+
 	*p_fp = fp;
 	return fdp;
 }
 
-/* case_ok(char* buf, int len, int namelen, char* name)
- * The arguments here are tricky, best shown by example:
- *    /a/b/c/d/e/f/g/h/i/j/k/some_long_module_name.py\0
- *    ^                      ^                   ^    ^
- *    |--------------------- buf ---------------------|
- *    |------------------- len ------------------|
- *                           |------ name -------|
- *                           |----- namelen -----|
- * buf is the full path, but len only counts up to (& exclusive of) the
- * extension.  name is the module name, also exclusive of extension.
- *
- * We've already done a successful stat() or fopen() on buf, so know that
- * there's some match, possibly case-insensitive.
- *
- * case_ok() is to return 1 if there's a case-sensitive match for
- * name, else 0.  case_ok() is also to return 1 if envar PYTHONCASEOK
- * exists.
- *
- * case_ok() is used to implement case-sensitive import semantics even
- * on platforms with case-insensitive filesystems.  It's trivial to implement
- * for case-sensitive filesystems.  It's pretty much a cross-platform
- * nightmare for systems with case-insensitive filesystems.
- */
+#ifdef CHECK_IMPORT_CASE
 
-/* First we may need a pile of platform-specific header files; the sequence
- * of #if's here should match the sequence in the body of case_ok().
- */
-#if defined(MS_WIN32) || defined(__CYGWIN__)
+#ifdef MS_WIN32
 #include <windows.h>
-#ifdef __CYGWIN__
-#include <sys/cygwin.h>
-#endif
-
-#elif defined(DJGPP)
-#include <dir.h>
-
-#elif defined(macintosh)
-#include <TextUtils.h>
-#ifdef USE_GUSI1
-#include "TFileSpec.h"		/* for Path2FSSpec() */
-#endif
-
-#elif defined(__MACH__) && defined(__APPLE__) && defined(HAVE_DIRENT_H)
-#include <sys/types.h>
-#include <dirent.h>
-
-#endif
+#include <ctype.h>
 
 static int
-case_ok(char *buf, int len, int namelen, char *name)
+allcaps8x3(char *s)
 {
-/* Pick a platform-specific implementation; the sequence of #if's here should
- * match the sequence just above.
- */
+	/* Return 1 if s is an 8.3 filename in ALLCAPS */
+	char c;
+	char *dot = strchr(s, '.');
+	char *end = strchr(s, '\0');
+	if (dot != NULL) {
+		if (dot-s > 8)
+			return 0; /* More than 8 before '.' */
+		if (end-dot > 4)
+			return 0; /* More than 3 after '.' */
+		end = strchr(dot+1, '.');
+		if (end != NULL)
+			return 0; /* More than one dot  */
+	}
+	else if (end-s > 8)
+		return 0; /* More than 8 and no dot */
+	while ((c = *s++)) {
+		if (islower(c))
+			return 0;
+	}
+	return 1;
+}
 
-/* MS_WIN32 || __CYGWIN__ */
-#if defined(MS_WIN32) || defined(__CYGWIN__)
+static int
+check_case(char *buf, int len, int namelen, char *name)
+{
 	WIN32_FIND_DATA data;
 	HANDLE h;
-#ifdef __CYGWIN__
-	char tempbuf[MAX_PATH];
-#endif
-
 	if (getenv("PYTHONCASEOK") != NULL)
 		return 1;
-
-#ifdef __CYGWIN__
-	cygwin32_conv_to_win32_path(buf, tempbuf);
-	h = FindFirstFile(tempbuf, &data);
-#else
 	h = FindFirstFile(buf, &data);
-#endif
 	if (h == INVALID_HANDLE_VALUE) {
 		PyErr_Format(PyExc_NameError,
 		  "Can't find file for module %.100s\n(filename %.300s)",
@@ -1085,33 +1069,35 @@ case_ok(char *buf, int len, int namelen, char *name)
 		return 0;
 	}
 	FindClose(h);
-	return strncmp(data.cFileName, name, namelen) == 0;
-
-/* DJGPP */
-#elif defined(DJGPP)
-	struct ffblk ffblk;
-	int done;
-
-	if (getenv("PYTHONCASEOK") != NULL)
+	if (allcaps8x3(data.cFileName)) {
+		/* Skip the test if the filename is ALL.CAPS.  This can
+		   happen in certain circumstances beyond our control,
+		   e.g. when software is installed under NT on a FAT
+		   filesystem and then the same FAT filesystem is used
+		   under Windows 95. */
 		return 1;
-
-	done = findfirst(buf, &ffblk, FA_ARCH|FA_RDONLY|FA_HIDDEN|FA_DIREC);
-	if (done) {
+	}
+	if (strncmp(data.cFileName, name, namelen) != 0) {
+		strcpy(buf+len-namelen, data.cFileName);
 		PyErr_Format(PyExc_NameError,
-		  "Can't find file for module %.100s\n(filename %.300s)",
+		  "Case mismatch for module name %.100s\n(filename %.300s)",
 		  name, buf);
 		return 0;
 	}
-	return strncmp(ffblk.ff_name, name, namelen) == 0;
+	return 1;
+}
+#endif /* MS_WIN32 */
 
-/* macintosh */
-#elif defined(macintosh)
+#ifdef macintosh
+#include <TextUtils.h>
+#ifdef USE_GUSI1
+#include "TFileSpec.h"		/* for Path2FSSpec() */
+#endif
+static int
+check_case(char *buf, int len, int namelen, char *name)
+{
 	FSSpec fss;
 	OSErr err;
-
-	if (getenv("PYTHONCASEOK") != NULL)
-		return 1;
-
 #ifndef USE_GUSI1
 	err = FSMakeFSSpec(0, 0, Pstring(buf), &fss);
 #else
@@ -1137,57 +1123,47 @@ case_ok(char *buf, int len, int namelen, char *name)
 		     name, buf);
 		return 0;
 	}
-	return fss.name[0] >= namelen &&
-	       strncmp(name, (char *)fss.name+1, namelen) == 0;
+	if ( namelen > fss.name[0] || strncmp(name, (char *)fss.name+1, namelen) != 0 ) {
+		PyErr_Format(PyExc_NameError,
+		     "Case mismatch for module name %.100s\n(filename %.300s)",
+		     name, fss.name);
+		return 0;
+	}
+	return 1;
+}
+#endif /* macintosh */
 
-/* new-fangled macintosh (macosx) */
-#elif defined(__MACH__) && defined(__APPLE__) && defined(HAVE_DIRENT_H)
-	DIR *dirp;
-	struct dirent *dp;
-	char dirname[MAXPATHLEN + 1];
-	const int dirlen = len - namelen - 1; /* don't want trailing SEP */
+#ifdef DJGPP
+#include <dir.h>
+
+static int
+check_case(char *buf, int len, int namelen, char *name)
+{
+	struct ffblk ffblk;
+	int done;
 
 	if (getenv("PYTHONCASEOK") != NULL)
 		return 1;
+	done = findfirst(buf, &ffblk, FA_ARCH|FA_RDONLY|FA_HIDDEN|FA_DIREC);
+	if (done) {
+		PyErr_Format(PyExc_NameError,
+		  "Can't find file for module %.100s\n(filename %.300s)",
+		  name, buf);
+		return 0;
+	}
 
-	/* Copy the dir component into dirname; substitute "." if empty */
-	if (dirlen <= 0) {
-		dirname[0] = '.';
-		dirname[1] = '\0';
+	if (strncmp(ffblk.ff_name, name, namelen) != 0) {
+		strcpy(buf+len-namelen, ffblk.ff_name);
+		PyErr_Format(PyExc_NameError,
+		  "Case mismatch for module name %.100s\n(filename %.300s)",
+		  name, buf);
+		return 0;
 	}
-	else {
-		assert(dirlen <= MAXPATHLEN);
-		memcpy(dirname, buf, dirlen);
-		dirname[dirlen] = '\0';
-	}
-	/* Open the directory and search the entries for an exact match. */
-	dirp = opendir(dirname);
-	if (dirp) {
-		char *nameWithExt = buf + len - namelen;
-		while ((dp = readdir(dirp)) != NULL) {
-			const int thislen =
-#ifdef _DIRENT_HAVE_D_NAMELEN
-						dp->d_namlen;
-#else
-						strlen(dp->d_name);
-#endif
-			if (thislen >= namelen &&
-			    strcmp(dp->d_name, nameWithExt) == 0) {
-				(void)closedir(dirp);
-				return 1; /* Found */
-			}
-		}
-		(void)closedir(dirp);
-	}
-	return 0 ; /* Not found */
-
-/* assuming it's a case-sensitive filesystem, so there's nothing to do! */
-#else
 	return 1;
-
-#endif
 }
+#endif
 
+#endif /* CHECK_IMPORT_CASE */
 
 #ifdef HAVE_STAT
 /* Helper to look for __init__.py or __init__.py[co] in potential package */
@@ -1218,39 +1194,6 @@ find_init_module(char *buf)
 	buf[save_len] = '\0';
 	return 0;
 }
-
-#else
-
-#ifdef RISCOS
-static int
-find_init_module(buf)
-	char *buf;
-{
-	int save_len = strlen(buf);
-	int i = save_len;
-
-	if (save_len + 13 >= MAXPATHLEN)
-		return 0;
-	buf[i++] = SEP;
-	strcpy(buf+i, "__init__/py");
-	if (isfile(buf)) {
-		buf[save_len] = '\0';
-		return 1;
-	}
-
-	if (Py_OptimizeFlag)
-		strcpy(buf+i, "o");
-	else
-		strcpy(buf+i, "c");
-	if (isfile(buf)) {
-		buf[save_len] = '\0';
-		return 1;
-	}
-	buf[save_len] = '\0';
-	return 0;
-}
-#endif /*RISCOS*/
-
 #endif /* HAVE_STAT */
 
 
@@ -1484,13 +1427,13 @@ PyImport_ImportFrozenModule(char *name)
 PyObject *
 PyImport_ImportModule(char *name)
 {
-	PyObject *pname;
-	PyObject *result;
-
-	pname = PyString_FromString(name);
-	result = PyImport_Import(pname);
-	Py_DECREF(pname);
-	return result;
+	static PyObject *fromlist = NULL;
+	if (fromlist == NULL && strchr(name, '.') != NULL) {
+		fromlist = Py_BuildValue("(s)", "*");
+		if (fromlist == NULL)
+			return NULL;
+	}
+	return PyImport_ImportModuleEx(name, NULL, NULL, fromlist);
 }
 
 /* Forward declarations for helper routines */
@@ -1779,7 +1722,7 @@ import_submodule(PyObject *mod, char *subname, char *fullname)
 	   else: mod.__name__ + "." + subname == fullname
 	*/
 
-	if ((m = PyDict_GetItemString(modules, fullname)) != NULL) {
+	if ((m = PyDict_GetItemString(modules, fullname)) != NULL) { 
 		Py_INCREF(m);
 	}
 	else {
@@ -1919,7 +1862,7 @@ PyImport_Import(PyObject *module_name)
 
 	/* Get the builtins from current globals */
 	globals = PyEval_GetGlobals();
-	if (globals != NULL) {
+	if(globals != NULL) {
 	        Py_INCREF(globals);
 		builtins = PyObject_GetItem(globals, builtins_str);
 		if (builtins == NULL)
@@ -1930,7 +1873,7 @@ PyImport_Import(PyObject *module_name)
 		PyErr_Clear();
 
 		builtins = PyImport_ImportModuleEx("__builtin__",
-						   NULL, NULL, NULL);
+		                                   NULL, NULL, NULL);
 		if (builtins == NULL)
 			return NULL;
 		globals = Py_BuildValue("{OO}", builtins_str, builtins);
@@ -1940,9 +1883,9 @@ PyImport_Import(PyObject *module_name)
 
 	/* Get the __import__ function from the builtins */
 	if (PyDict_Check(builtins))
-		import = PyObject_GetItem(builtins, import_str);
+		import=PyObject_GetItem(builtins, import_str);
 	else
-		import = PyObject_GetAttr(builtins, import_str);
+		import=PyObject_GetAttr(builtins, import_str);
 	if (import == NULL)
 		goto err;
 
@@ -1954,7 +1897,7 @@ PyImport_Import(PyObject *module_name)
 	Py_XDECREF(globals);
 	Py_XDECREF(builtins);
 	Py_XDECREF(import);
-
+ 
 	return r;
 }
 
@@ -2031,7 +1974,7 @@ call_find_module(char *name, PyObject *path)
 	else {
 		fob = Py_None;
 		Py_INCREF(fob);
-	}
+	}		
 	ret = Py_BuildValue("Os(ssi)",
 		      fob, pathname, fdp->suffix, fdp->mode, fdp->type);
 	Py_DECREF(fob);

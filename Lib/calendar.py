@@ -8,11 +8,7 @@ set the first day of the week (0=Monday, 6=Sunday)."""
 # Revision 2: uses functions from built-in time module
 
 # Import functions and variables from time module
-from time import localtime, mktime, strftime
-
-__all__ = ["error","setfirstweekday","firstweekday","isleap",
-           "leapdays","weekday","monthrange","monthcalendar",
-           "prmonth","month","prcal","calendar","timegm"]
+from time import localtime, mktime
 
 # Exception raised for bad input (with string parameter for details)
 error = ValueError
@@ -24,19 +20,17 @@ February = 2
 # Number of days per month (except for February in leap years)
 mdays = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
-class _localized_name:
-    def __init__(self, format):
-        self.format = format
-    def __getitem__(self, item):
-        return strftime(self.format, (item,)*9).capitalize()
-
 # Full and abbreviated names of weekdays
-day_name = _localized_name('%A')
-day_abbr = _localized_name('%a')
+day_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday',
+            'Friday', 'Saturday', 'Sunday']
+day_abbr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 # Full and abbreviated names of months (1-based arrays!!!)
-month_name = _localized_name('%B')
-month_abbr = _localized_name('%b')
+month_name = ['', 'January', 'February', 'March', 'April',
+              'May', 'June', 'July', 'August',
+              'September', 'October',  'November', 'December']
+month_abbr = ['   ', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 # Constants for weekdays
 (MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY) = range(7)
@@ -56,7 +50,7 @@ def setfirstweekday(weekday):
 
 def isleap(year):
     """Return 1 for leap years, 0 for non-leap years."""
-    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+    return year % 4 == 0 and (year % 100 <> 0 or year % 400 == 0)
 
 def leapdays(y1, y2):
     """Return number of leap years in range [y1, y2).
@@ -137,7 +131,7 @@ def month(theyear, themonth, w=0, l=0):
     """Return a month's calendar string (multi-line)."""
     w = max(2, w)
     l = max(1, l)
-    s = (_center(month_name[themonth] + ' ' + `theyear`,
+    s = (_center(month_name[themonth] + ' ' + `theyear`, 
                  7 * (w + 1) - 1).rstrip() +
          '\n' * l + weekheader(w).rstrip() + '\n' * l)
     for aweek in monthcalendar(theyear, themonth):
@@ -173,7 +167,7 @@ def calendar(year, w=0, l=0, c=_spacing):
     for q in range(January, January+12, 3):
         s = (s + '\n' * l +
              format3cstring(month_name[q], month_name[q+1], month_name[q+2],
-                            colwidth, c).rstrip() +
+                            colwidth, c).rstrip() + 
              '\n' * l + header + '\n' * l)
         data = []
         height = 0
@@ -189,7 +183,7 @@ def calendar(year, w=0, l=0, c=_spacing):
                     weeks.append('')
                 else:
                     weeks.append(week(cal[i], w))
-            s = s + format3cstring(weeks[0], weeks[1], weeks[2],
+            s = s + format3cstring(weeks[0], weeks[1], weeks[2], 
                                    colwidth, c).rstrip() + '\n' * l
     return s[:-l] + '\n'
 

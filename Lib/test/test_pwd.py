@@ -1,5 +1,6 @@
 from test_support import verbose
 import pwd
+import string
 
 print 'pwd.getpwall()'
 entries = pwd.getpwall()
@@ -11,11 +12,11 @@ for e in entries:
         print name, uid
     print 'pwd.getpwuid()'
     dbuid = pwd.getpwuid(uid)
-    if dbuid[0] != name:
+    if dbuid[0] <> name:
         print 'Mismatch in pwd.getpwuid()'
     print 'pwd.getpwnam()'
     dbname = pwd.getpwnam(name)
-    if dbname[2] != uid:
+    if dbname[2] <> uid:
         print 'Mismatch in pwd.getpwnam()'
     else:
         print 'name matches uid'
@@ -49,8 +50,8 @@ while bynames.has_key(fakename):
         except IndexError:
             # should never happen... if so, just forget it
             break
-    fakename = ''.join(map(None, chars))
-
+    fakename = string.join(map(None, chars), '')
+    
 try:
     pwd.getpwnam(fakename)
 except KeyError:

@@ -25,6 +25,7 @@ $TOP_NAVIGATION = 1;
 $BOTTOM_NAVIGATION = 1;
 $AUTO_NAVIGATION = 0;
 
+# these exactly match the python.org colors
 $BODYTEXT = '';
 $CHILDLINE = "\n<p><hr>\n";
 $VERBOSITY = 0;
@@ -107,46 +108,39 @@ sub make_nav_sectref {
     return '';
 }
 
-@my_icon_tags = ();
-$my_icon_tags{'next'} = 'Next Page';
-$my_icon_tags{'next_page'} = 'Next Page';
-$my_icon_tags{'previous'} = 'Previous Page';
-$my_icon_tags{'previous_page'} = 'Previous Page';
-$my_icon_tags{'up'} = 'Up One Level';
-$my_icon_tags{'contents'} = 'Contents';
-$my_icon_tags{'index'} = 'Index';
-$my_icon_tags{'modules'} = 'Module Index';
-
-@my_icon_names = ();
-$my_icon_names{'previous_page'} = 'previous';
-$my_icon_names{'next_page'} = 'next';
-
-sub get_my_icon {
-    my $name = @_[0];
-    my $text = $my_icon_tags{$name};
-    if ($my_icon_names{$name}) {
-        $name = $my_icon_names{$name};
-    }
-    if ($text eq '') {
-        $name = 'blank';
-    }
+sub make_my_icon {
+    my($name, $text) = @_;
     my $iconserver = ($ICONSERVER eq '.') ? '' : "$ICONSERVER/";
-    return "<img src=\"$iconserver$name.$IMAGE_TYPE\"\n  border=\"0\""
+    return "<img src=\"$iconserver$name.$IMAGE_TYPE\" border=\"0\""
            . " height=\"32\"\n  alt=\"$text\" width=\"32\">";
 }
 
+$BLANK_ICON = make_my_icon('blank', '');
+
+@my_icons = ();
+$my_icons{'next_page_inactive'} = $BLANK_ICON;
+$my_icons{'previous_page_inactive'} = $BLANK_ICON;
+$my_icons{'up_page_inactive'} = $BLANK_ICON;
+$x = make_my_icon('next', 'Next Page');
+$my_icons{'next_page'} = $x;
+$my_icons{'next'} = $x;
+$x = make_my_icon('previous', 'Previous Page');
+$my_icons{'previous_page'} = $x;
+$my_icons{'previous'} = $x;
+$my_icons{'up'} = make_my_icon('up', 'Up One Level');
+$my_icons{'contents'} = make_my_icon('contents', 'Contents');
+$my_icons{'index'} = make_my_icon('index', 'Index');
+$my_icons{'modules'} = make_my_icon('modules', 'Module Index');
+
+
 sub use_my_icon {
     my $s = @_[0];
-    if ($s =~ /\<tex2html_([a-z_]+)_visible_mark\>/) {
-        my $r = get_my_icon($1);
-        $s =~ s/\<tex2html_[a-z_]+_visible_mark\>/$r/;
-    }
+    $s =~ s/\<tex2html_([a-z_]+)_visible_mark\>/$my_icons{$1}/;
     return $s;
 }
 
 sub make_nav_panel {
     my $s;
-    my $BLANK_ICON = get_my_icon('blank');
     $NEXT = $NEXT_TITLE ? use_my_icon("$NEXT") : $BLANK_ICON;
     $UP = $UP_TITLE ? use_my_icon("$UP") : $BLANK_ICON;
     $PREVIOUS = $PREVIOUS_TITLE ? use_my_icon("$PREVIOUS") : $BLANK_ICON;
@@ -178,36 +172,15 @@ sub make_nav_panel {
     return $s;
 }
 
-sub get_version_text {
-    if ($PACKAGE_VERSION ne '' && $t_date) {
-        return ("<span class=\"release-info\">"
-                . "Release $PACKAGE_VERSION$RELEASE_INFO,"
-                . " documentation updated on $t_date.</span>");
-    }
-    if ($PACKAGE_VERSION ne '') {
-        return ("<span class=\"release-info\">"
-                . "Release $PACKAGE_VERSION$RELEASE_INFO.</span>");
-    }
-    if ($t_date) {
-        return ("<span class=\"release-info\">Documentation released on "
-                . "$t_date.</span>");
-    }
-    return '';
-}
-
 
 sub top_navigation_panel {
-    return "\n"
-           . make_nav_panel()
-           . "<br><hr>\n";
+    return make_nav_panel()
+           . '<br><hr>';
 }
 
 sub bot_navigation_panel {
-    return "\n<p><hr>\n"
-           . make_nav_panel()
-           . "<hr>\n"
-           . get_version_text()
-           . "\n";
+    return "<p><hr>"
+           . make_nav_panel();
 }
 
 sub add_link {
@@ -215,25 +188,22 @@ sub add_link {
     my($icon, $current_file, @link) = @_;
     my($dummy, $file, $title) = split($delim,
 				      $section_info{join(' ',@link)});
-    if ($icon =~ /\<tex2html_([_a-z]+)_visible_mark\>/) {
-        my $r = get_my_icon($1);
-        $icon =~ s/\<tex2html_[_a-z]+_visible_mark\>/$r/;
-    }
+    $icon =~ s/\<tex2html_([_a-z]+)_visible_mark\>/$my_icons{$1}/;
     if ($title && ($file ne $current_file)) {
         $title = purify($title);
 	$title = get_first_words($title, $WORDS_IN_NAVIGATION_PANEL_TITLES);
 	return (make_href($file, $icon), make_href($file, "$title"))
 	}
-    elsif ($icon eq get_my_icon('up') && $EXTERNAL_UP_LINK) {
+    elsif ($icon eq $my_icons{"up"} && $EXTERNAL_UP_LINK) {
  	return (make_href($EXTERNAL_UP_LINK, $icon),
 		make_href($EXTERNAL_UP_LINK, "$EXTERNAL_UP_TITLE"))
 	}
-    elsif ($icon eq get_my_icon('previous')
+    elsif ($icon eq $my_icons{"previous"}
 	   && $EXTERNAL_PREV_LINK && $EXTERNAL_PREV_TITLE) {
 	return (make_href($EXTERNAL_PREV_LINK, $icon),
 		make_href($EXTERNAL_PREV_LINK, "$EXTERNAL_PREV_TITLE"))
 	}
-    elsif ($icon eq get_my_icon('next')
+    elsif ($icon eq $my_icons{"next"}
 	   && $EXTERNAL_DOWN_LINK && $EXTERNAL_DOWN_TITLE) {
 	return (make_href($EXTERNAL_DOWN_LINK, $icon),
 		make_href($EXTERNAL_DOWN_LINK, "$EXTERNAL_DOWN_TITLE"))
@@ -243,10 +213,7 @@ sub add_link {
 
 sub add_special_link {
     my($icon, $file, $current_file) = @_;
-    if ($icon =~ /\<tex2html_([_a-z]+)_visible_mark\>/) {
-        my $r = get_my_icon($1);
-        $icon =~ s/\<tex2html_[_a-z]+_visible_mark\>/$r/;
-    }
+    $icon =~ s/\<tex2html_([_a-z]+)_visible_mark\>/$my_icons{$1}/;
     return (($file && ($file ne $current_file))
             ? make_href($file, $icon)
             : undef)
@@ -325,25 +292,16 @@ sub add_module_idx {
 	my $plat = '';
 	$key =~ s/<tt>([a-zA-Z0-9._]*)<\/tt>/\1/;
 	if ($ModulePlatforms{$key} && !$allthesame) {
-	    $plat = (" <em>(<span class=\"platform\">$ModulePlatforms{$key}"
+	    $plat = (" <em>(<span class='platform'>$ModulePlatforms{$key}"
 		     . '</span>)</em>');
 	}
 	print MODIDXFILE $moditem . $IDXFILE_FIELD_SEP
-              . "<tt class=\"module\">$key</tt>$plat###\n";
+              . "<tt class='module'>$key</tt>$plat###\n";
     }
     close(MODIDXFILE);
-
-    if ($GLOBAL_MODULE_INDEX) {
-        $prefix = <<MODULE_INDEX_PREFIX;
-
-<p> This index only lists modules documented in this manual.
-  The <em class="citetitle"><a href="$GLOBAL_MODULE_INDEX">Global Module
-     Index</a></em> lists all modules that are documented in this set
-  of manuals.</p>
-MODULE_INDEX_PREFIX
-    }
     if (!$allthesame) {
-	$prefix .= <<PLAT_DISCUSS;
+	$prefix = <<PLAT_DISCUSS;
+
 
 <p> Some module names are followed by an annotation indicating what
 platform they are available on.</p>
@@ -414,8 +372,8 @@ sub do_cmd_textohtmlinfopage {
     my $the_version = '';				# and the rest is
     if ($t_date) {					# mostly ours
 	$the_version = ",\n$t_date";
-	if ($PACKAGE_VERSION) {
-	    $the_version .= ", Release $PACKAGE_VERSION$RELEASE_INFO";
+	if ($PYTHON_VERSION) {
+	    $the_version .= ", Release $PYTHON_VERSION";
 	}
     }
     $_ = (($INFO == 1)
@@ -484,11 +442,11 @@ sub add_bbl_and_idx_dummy_commands {
         s/$rx/\\textohtmlmoduleindex \1 \\textohtmlindex \2/o;
         # Add a button to the navigation areas:
         $CUSTOM_BUTTONS .= ('<a href="modindex.html" title="Module Index">'
-                            . get_my_icon('modules')
+                            . $my_icons{'modules'}
                             . '</a>');
     }
     else {
-        $CUSTOM_BUTTONS .= get_my_icon('blank');
+        $CUSTOM_BUTTONS .= $BLANK_ICON;
         $global{'max_id'} = $id; # not sure why....
         s/([\\]begin\s*$O\d+$C\s*theindex)/\\textohtmlindex $1/o;
 	    s/[\\]printindex/\\textohtmlindex /o;

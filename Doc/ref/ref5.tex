@@ -65,12 +65,7 @@ block (even in unreachable code), and is not mentioned in a
 name throughout that code block.  When it is not assigned to anywhere
 in the block, or when it is assigned to but also explicitly listed in
 a \keyword{global} statement, it refers to a global name if one exists,
-else to a built-in name (and this binding may dynamically
-change).\footnote{The Python interpreter provides a useful set of
-  predefined built-in functions.  It is not recommended to reuse
-  (hide) these names with self defined objects.  See the
-  \citetitle[../lib/built-in-funcs.html]{Python Library Reference} for
-  the descriptions of built-in functions and methods.}
+else to a built-in name (and this binding may dynamically change).
 \indexii{name}{binding}
 \index{code block}
 \stindex{global}
@@ -269,9 +264,9 @@ attributeref:   primary "." identifier
 \end{verbatim}
 
 The primary must evaluate to an object of a type that supports
-attribute references, e.g., a module, list, or an instance.  This
-object is then asked to produce the attribute whose name is the
-identifier.  If this attribute is not available, the exception
+attribute references, e.g., a module or a list.  This object is then
+asked to produce the attribute whose name is the identifier.  If this
+attribute is not available, the exception
 \exception{AttributeError}\exindex{AttributeError} is raised.
 Otherwise, the type and value of the object produced is determined by
 the object.  Multiple evaluations of the same attribute reference may
@@ -573,9 +568,9 @@ a_expr:         m_expr | aexpr "+" m_expr | aexpr "-" m_expr
 
 The \code{*} (multiplication) operator yields the product of its
 arguments.  The arguments must either both be numbers, or one argument
-must be an integer (plain or long) and the other must be a sequence.
-In the former case, the numbers are converted to a common type and
-then multiplied together.  In the latter case, sequence repetition is
+must be a plain integer and the other must be a sequence.  In the
+former case, the numbers are converted to a common type and then
+multiplied together.  In the latter case, sequence repetition is
 performed; a negative repetition factor yields an empty sequence.
 \index{multiplication}
 
@@ -762,19 +757,14 @@ execution of a program.
 \end{itemize}
 
 The operators \keyword{in} and \keyword{not in} test for set
-membership.  \code{\var{x} in \var{s}} evaluates to true if \var{x}
-is a member of the set \var{s}, and false otherwise.  \code{\var{x}
-not in \var{s}} returns the negation of \code{\var{x} in \var{s}}.
-The set membership test has traditionally been bound to sequences; an
-object is a member of a set if the set is a sequence and contains an
-element equal to that object.  However, it is possible for an object
-to support membership tests without being a sequence.  In particular,
-dictionaries support memership testing as a nicer way of spelling
-\code{\var{key} in \var{dict}}; other mapping types may follow suit.
+membership: every type can define membership in whatever way is
+appropriate.  Traditionally, this interface has been tightly bound
+the sequence interface, which is related in that presence in a sequence
+can be usefully interpreted as membership in a set.
 
-For the list and tuple types, \code{\var{x} in \var{y}} is true if and
-only if there exists an index \var{i} such that
-\code{\var{x} == \var{y}[\var{i}]} is true.
+For the list, tuple types, \code{\var{x} in \var{y}} is true if and only
+if there exists such an index \var{i} such that
+\code{var{x} == \var{y}[\var{i}]} is true.
 
 For the Unicode and string types, \code{\var{x} in \var{y}} is true if
 and only if there exists an index \var{i} such that \code{\var{x} ==
@@ -869,30 +859,16 @@ that functions created with lambda forms cannot contain statements.
 \indexii{lambda}{form}
 \indexii{anonmymous}{function}
 
-\strong{Programmer's note:} Prior to Python 2.1, a lambda form defined
-inside a function has no access to names defined in the function's
-namespace.  This is because Python had only two scopes: local and
-global.  A common work-around was to use default argument values to
-pass selected variables into the lambda's namespace, e.g.:
+\strong{Programmer's note:} a lambda form defined inside a function
+has no access to names defined in the function's namespace.  This is
+because Python has only two scopes: local and global.  A common
+work-around is to use default argument values to pass selected
+variables into the lambda's namespace, e.g.:
 
 \begin{verbatim}
 def make_incrementor(increment):
     return lambda x, n=increment: x+n
 \end{verbatim}
-
-As of Python 2.1, nested scopes were introduced, and this work-around
-has not been necessary.  Python 2.1 supports nested scopes in modules
-which include the statement \samp{from __future__ import
-nested_scopes}, and more recent versions of Python enable nested
-scopes by default.  This version works starting with Python 2.1:
-
-\begin{verbatim}
-from __future__ import nested_scopes
-
-def make_incrementor(increment):
-    return lambda x: x+increment
-\end{verbatim}
-
 
 \section{Expression lists\label{exprlists}}
 \indexii{expression}{list}
@@ -923,8 +899,7 @@ precedence (least binding) to highest precedence (most binding).
 Operators in the same box have the same precedence.  Unless the syntax
 is explicitly given, operators are binary.  Operators in the same box
 group left to right (except for comparisons, which chain from left to
-right --- see above, and exponentiation, which groups from right to
-left).
+right --- see above).
 
 \begin{tableii}{c|l}{textrm}{Operator}{Description}
     \lineii{\keyword{lambda}}			{Lambda expression}
@@ -947,17 +922,17 @@ left).
   \hline
     \lineii{\code{\&}}				{Bitwise AND}
   \hline
-    \lineii{\code{<}\code{<}, \code{>}\code{>}}	{Shifts}
+    \lineii{\code{<<}, \code{>>}}		{Shifts}
   \hline
     \lineii{\code{+}, \code{-}}{Addition and subtraction}
   \hline
     \lineii{\code{*}, \code{/}, \code{\%}}
            {Multiplication, division, remainder}
   \hline
+    \lineii{\code{**}}				{Exponentiation}
+  \hline
     \lineii{\code{+\var{x}}, \code{-\var{x}}}	{Positive, negative}
     \lineii{\code{\~\var{x}}}			{Bitwise not}
-  \hline
-    \lineii{\code{**}}				{Exponentiation}
   \hline
     \lineii{\code{\var{x}.\var{attribute}}}	{Attribute reference}
     \lineii{\code{\var{x}[\var{index}]}}	{Subscription}

@@ -10,7 +10,7 @@ from IdleConf import idleconf
 #$ win <Control-slash>
 #$ unix <Control-slash>
 
-DEBUG = 0
+__debug__ = 0
 
 
 def any(name, list):
@@ -28,7 +28,6 @@ def make_pat():
 
 prog = re.compile(make_pat(), re.S)
 idprog = re.compile(r"\s+(\w+)", re.S)
-asprog = re.compile(r".*?\b(as)\b", re.S)
 
 class ColorDelegator(Delegator):
 
@@ -36,7 +35,6 @@ class ColorDelegator(Delegator):
         Delegator.__init__(self)
         self.prog = prog
         self.idprog = idprog
-        self.asprog = asprog
 
     def setdelegate(self, delegate):
         if self.delegate is not None:
@@ -84,13 +82,13 @@ class ColorDelegator(Delegator):
     def notify_range(self, index1, index2=None):
         self.tag_add("TODO", index1, index2)
         if self.after_id:
-            if DEBUG: print "colorizing already scheduled"
+            if __debug__: print "colorizing already scheduled"
             return
         if self.colorizing:
             self.stop_colorizing = 1
-            if DEBUG: print "stop colorizing"
+            if __debug__: print "stop colorizing"
         if self.allow_colorizing:
-            if DEBUG: print "schedule colorizing"
+            if __debug__: print "schedule colorizing"
             self.after_id = self.after(1, self.recolorize)
 
     close_when_done = None # Window to be closed when done colorizing
@@ -99,7 +97,7 @@ class ColorDelegator(Delegator):
         if self.after_id:
             after_id = self.after_id
             self.after_id = None
-            if DEBUG: print "cancel scheduled recolorizer"
+            if __debug__: print "cancel scheduled recolorizer"
             self.after_cancel(after_id)
         self.allow_colorizing = 0
         self.stop_colorizing = 1
@@ -113,41 +111,41 @@ class ColorDelegator(Delegator):
         if self.after_id:
             after_id = self.after_id
             self.after_id = None
-            if DEBUG: print "cancel scheduled recolorizer"
+            if __debug__: print "cancel scheduled recolorizer"
             self.after_cancel(after_id)
         if self.allow_colorizing and self.colorizing:
-            if DEBUG: print "stop colorizing"
+            if __debug__: print "stop colorizing"
             self.stop_colorizing = 1
         self.allow_colorizing = not self.allow_colorizing
         if self.allow_colorizing and not self.colorizing:
             self.after_id = self.after(1, self.recolorize)
-        if DEBUG:
+        if __debug__:
             print "auto colorizing turned", self.allow_colorizing and "on" or "off"
         return "break"
 
     def recolorize(self):
         self.after_id = None
         if not self.delegate:
-            if DEBUG: print "no delegate"
+            if __debug__: print "no delegate"
             return
         if not self.allow_colorizing:
-            if DEBUG: print "auto colorizing is off"
+            if __debug__: print "auto colorizing is off"
             return
         if self.colorizing:
-            if DEBUG: print "already colorizing"
+            if __debug__: print "already colorizing"
             return
         try:
             self.stop_colorizing = 0
             self.colorizing = 1
-            if DEBUG: print "colorizing..."
+            if __debug__: print "colorizing..."
             t0 = time.clock()
             self.recolorize_main()
             t1 = time.clock()
-            if DEBUG: print "%.3f seconds" % (t1-t0)
+            if __debug__: print "%.3f seconds" % (t1-t0)
         finally:
             self.colorizing = 0
         if self.allow_colorizing and self.tag_nextrange("TODO", "1.0"):
-            if DEBUG: print "reschedule colorizing"
+            if __debug__: print "reschedule colorizing"
             self.after_id = self.after(1, self.recolorize)
         if self.close_when_done:
             top = self.close_when_done
@@ -200,17 +198,6 @@ class ColorDelegator(Delegator):
                                     self.tag_add("DEFINITION",
                                                  head + "+%dc" % a,
                                                  head + "+%dc" % b)
-                            elif value == "import":
-                                # color all the "as" words on same line;
-                                # cheap approximation to the truth
-                                while 1:
-                                    m1 = self.asprog.match(chars, b)
-                                    if not m1:
-                                        break
-                                    a, b = m1.span(1)
-                                    self.tag_add("KEYWORD",
-                                                 head + "+%dc" % a,
-                                                 head + "+%dc" % b)
                     m = self.prog.search(chars, m.end())
                 if "SYNC" in self.tag_names(next + "-1c"):
                     head = next
@@ -227,7 +214,7 @@ class ColorDelegator(Delegator):
                     self.tag_add("TODO", next)
                 self.update()
                 if self.stop_colorizing:
-                    if DEBUG: print "colorizing stopped"
+                    if __debug__: print "colorizing stopped"
                     return
 
 

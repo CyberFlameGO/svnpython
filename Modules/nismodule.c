@@ -299,7 +299,7 @@ nis_maplist (void)
 {
 	nisresp_maplist *list;
 	char *dom;
-	CLIENT *cl;
+	CLIENT *cl, *clnt_create();
 	char *server = NULL;
 	int mapi = 0;
         int err;

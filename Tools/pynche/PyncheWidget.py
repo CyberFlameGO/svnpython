@@ -203,7 +203,7 @@ Unrecognized color file type in file:
 
 class Helpwin:
     def __init__(self, master, quitfunc):
-        from Main import docstring
+        from Main import __version__, docstring
         self.__root = root = Toplevel(master, class_='Pynche')
         root.protocol('WM_DELETE_WINDOW', self.__withdraw)
         root.title('Pynche Help Window')

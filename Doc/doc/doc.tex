@@ -10,8 +10,8 @@
 
 \author{Fred L. Drake, Jr.}
 \authoraddress{
-	PythonLabs \\
-	E-mail: \email{fdrake@acm.org}
+	BeOpen PythonLabs \\
+	E-mail: \email{fdrake@beopen.com}
 }
 
 
@@ -191,197 +191,10 @@ distribution, to create or maintain whole documents or sections.
   because it would cause output.
 
   The document body follows the preamble.  This contains all the
-  printed components of the document marked up structurally.  Generic
-  \LaTeX{} structures include hierarchical sections, numbered and
-  bulleted lists, and special structures for the document abstract and
-  indexes.
+  printed components of the document marked up structurally.  
 
-  \subsection{Syntax}
-
-    There are some things that an author of Python documentation needs
-    to know about \LaTeX{} syntax.
-
-    A \dfn{comment} is started by the ``percent'' character
-    (\character{\%}) and continues through the end of the line and all
-    leading whitespace on the following line.  This is a little
-    different from any programming language I know of, so an example
-    is in order:
-
-\begin{verbatim}
-This is text.% comment
-    This is more text.  % another comment
-Still more text.
-\end{verbatim}
-
-    The first non-comment character following the first comment is the
-    letter \character{T} on the second line; the leading whitespace on
-    that line is consumed as part of the first comment.  This means
-    that there is no space between the first and second sentences, so
-    the period and letter \character{T} will be directly adjacent in
-    the typeset document.
-
-    Note also that though the first non-comment character after the
-    second comment is the letter \character{S}, there is whitespace
-    preceding the comment, so the two sentences are separated as
-    expected.
-
-    A \dfn{group} is an enclosure for a collection of text and
-    commands which encloses the formatting context and constrains the
-    scope of any changes to that context made by commands within the
-    group.  Groups can be nested hierarchically.  The formatting
-    context includes the font and the definition of additional macros
-    (or overrides of macros defined in outer groups).  Syntactically,
-    groups are enclosed in braces:
-
-\begin{verbatim}
-{text in a group}
-\end{verbatim}
-
-    An alternate syntax for a group using brackets, \code{[...]}, is
-    used by macros and environment constructors which take optional
-    parameters; brackets do not normally hold syntactic significance.
-    A degenerate group, containing only one atomic bit of content,
-    does not need to have an explicit group, unless it is required to
-    avoid ambiguity.  Since Python tends toward the explicit, groups
-    are also made explicit in the documentation markup.
-
-    Groups are used only sparingly in the Python documentation, except
-    for their use in marking parameters to macros and environments.
-
-    A \dfn{macro} is usually a simple construct which is identified by
-    name and can take some number of parameters.  In normal \LaTeX{}
-    usage, one of these can be optional.  The markup is introduced
-    using the backslash character (\character{\e}), and the name is
-    given by alphabetic characters (no digits, hyphens, or
-    underscores).  Required parameters should be marked as a group,
-    and optional parameters should be marked using the alternate
-    syntax for a group.
-
-    For example, a macro named ``foo'' which takes a single parameter
-    would appear like this:
-
-\begin{verbatim}
-\name{parameter}
-\end{verbatim}
-
-    A macro which takes an optional parameter would be typed like this
-    when the optional paramter is given:
-
-\begin{verbatim}
-\name[optional]
-\end{verbatim}
-
-    If both optional and required parameters are to be required, it
-    looks like this:
-
-\begin{verbatim}
-\name[optional]{required}
-\end{verbatim}
-
-    A macro name may be followed by a space or newline; a space
-    between the macro name and any parameters will be consumed, but
-    this usage is not practiced in the Python documentation.  Such a
-    space is still consumed if there are no parameters to the macro,
-    in which case inserting an empty group (\code{\{\}}) or explicit
-    word space (\samp{\e\ }) immediately after the macro name helps to
-    avoid running the expansion of the macro into the following text.
-    Macros which take no parameters but which should not be followed
-    by a word space do not need special treatment if the following
-    character in the document source if not a name character (such as
-    punctuation).
-
-    Each line of this example shows an appropriate way to write text
-    which includes a macro which takes no parameters:
-
-\begin{verbatim}
-This \UNIX{} is followed by a space.
-This \UNIX\ is also followed by a space.
-\UNIX, followed by a comma, needs no additional markup.
-\end{verbatim}
-
-    An \dfn{environment} is a larger construct than a macro, and can
-    be used for things with more content than would conveniently fit
-    in a macro parameter.  They are primarily used when formatting
-    parameters need to be changed before and after a large chunk of
-    content, but the content itself needs to be highly flexible.  Code
-    samples are presented using an environment, and descriptions of
-    functions, methods, and classes are also marked using environments.
-
-    Since the content of an environment is free-form and can consist
-    of several paragraphs, they are actually marked using a pair of
-    macros: \macro{begin} and \macro{end}.  These macros both take the
-    name of the environment as a parameter.  An example is the
-    environment used to mark the abstract of a document:
-
-\begin{verbatim}
-\begin{abstract}
-  This is the text of the abstract.  It concisely explains what
-  information is found in the document.
-
-  It can consist of multiple paragraphs.
-\end{abstract}
-\end{verbatim}
-
-    An environment can also have required and optional parameters of
-    its own.  These follow the parameter of the \macro{begin} macro.
-    This example shows an environment which takes a single required
-    parameter:
-
-\begin{verbatim}
-\begin{datadesc}{controlnames}
-  A 33-element string array that contains the \ASCII{} mnemonics for
-  the thirty-two \ASCII{} control characters from 0 (NUL) to 0x1f
-  (US), in order, plus the mnemonic \samp{SP} for the space character.
-\end{datadesc}
-\end{verbatim}
-
-    There are a number of less-used marks in \LaTeX{} which are used
-    to enter non-\ASCII{} characters, especially those used in
-    European names.  Given that these are often used adjacent to other
-    characters, the markup required to produce the proper character
-    may need to be followed by a space or an empty group, or the
-    markup can be enclosed in a group.  Some which are found in Python
-    documentation are:
-
-\begin{tableii}{c|l}{textrm}{Character}{Markup}
-  \lineii{\c c}{\code{\e c c}}
-  \lineii{\"o}{\code{\e"o}}
-  \lineii{\o}{\code{\e o}}
-\end{tableii}
-
-
-  \subsection{Hierarchical Structure}
-
-    \LaTeX{} expects documents to be arranged in a conventional,
-    hierarchical way, with chapters, sections, sub-sections,
-    appendixes, and the like.  These are marked using macros rather
-    than environments, probably because the end of a section can be
-    safely inferred when a section of equal or higher level starts.
-
-    There are six ``levels'' of sectioning in the document classes
-    used for Python documentation, and the deepest two
-    levels\footnote{The deepest levels have the highest numbers in the
-      table.} are not used.  The levels are:
-
-      \begin{tableiii}{c|l|c}{textrm}{Level}{Macro Name}{Notes}
-        \lineiii{1}{\macro{chapter}}{(1)}
-        \lineiii{2}{\macro{section}}{}
-        \lineiii{3}{\macro{subsection}}{}
-        \lineiii{4}{\macro{subsubsection}}{}
-        \lineiii{5}{\macro{paragraph}}{(2)}
-        \lineiii{6}{\macro{subparagraph}}{}
-      \end{tableiii}
-
-    \noindent
-    Notes:
-
-    \begin{description}
-      \item[(1)]
-      Only used for the \code{manual} documents, as described in
-      section \ref{classes}, ``Document Classes.''
-      \item[(2)]
-      Not the same as a paragraph of text; nobody seems to use this.
-    \end{description}
+  XXX This section will discuss what the markup looks like, and
+   explain the difference between an environment and a macro.
 
 
 \section{Document Classes \label{classes}}
@@ -519,19 +332,9 @@ This \UNIX\ is also followed by a space.
       Like \env{datadesc}, but without creating any index entries.
     \end{envdesc}
 
-    \begin{envdesc}{excclassdesc}{\p{name}\p{constructor parameters}}
-      Descibe an exception defined by a class.  \var{constructor
-      parameters} should not include the \var{self} parameter or
-      the parentheses used in the call syntax.  To describe an
-      exception class without describing the parameters to its
-      constructor, use the \env{excdesc} environment.
-    \end{envdesc}
-
     \begin{envdesc}{excdesc}{\p{name}}
       Describe an exception.  This may be either a string exception or
-      a class exception.  In the case of class exceptions, the
-      constructor parameters are not described; use \env{excclassdesc}
-      to describe an exception class and its constructor.
+      a class exception.
     \end{envdesc}
 
     \begin{envdesc}{funcdesc}{\p{name}\p{parameters}}
@@ -555,13 +358,6 @@ This \UNIX\ is also followed by a space.
       Describe a class and its constructor.  \var{constructor
       parameters} should not include the \var{self} parameter or
       the parentheses used in the call syntax.
-    \end{envdesc}
-
-    \begin{envdesc}{classdesc*}{\p{name}}
-      Describe a class without describing the constructor.  This can
-      be used to describe classes that are merely containers for
-      attributes or which should never be instantiated or subclassed
-      by user code.
     \end{envdesc}
 
     \begin{envdesc}{memberdesc}{\op{type name}\p{name}}
@@ -594,37 +390,13 @@ This \UNIX\ is also followed by a space.
 
     Representing an interactive session requires including the prompts
     and output along with the Python code.  No special markup is
-    required for interactive sessions.  After the last line of input
-    or output presented, there should not be an ``unused'' primary
-    prompt; this is an example of what \emph{not} to do:
-
-\begin{verbatim}
->>> 1 + 1
-2
->>> 
-\end{verbatim}
+    required for interactive sessions.
 
     Within the \env{verbatim} environment, characters special to
     \LaTeX{} do not need to be specially marked in any way.  The entire
     example will be presented in a monospaced font; no attempt at
     ``pretty-printing'' is made, as the environment must work for
-    non-Python code and non-code displays.  There should be no blank
-    lines at the top or bottom of any \env{verbatim} display.
-
-    Longer displays of verbatim text may be included by storing the
-    example text in an external file containing only plain text.  The
-    file may be included using the standard \macro{verbatiminput}
-    macro; this macro takes a single argument naming the file
-    containing the text.  For example, to include the Python source
-    file \file{example.py}, use:
-
-\begin{verbatim}
-\verbatiminput{example.py}
-\end{verbatim}
-
-    Use of \macro{verbatiminput} allows easier use of special editing
-    modes for the included file.  The file should be placed in the
-    same directory as the \LaTeX{} files for the document.
+    non-Python code and non-code displays.
 
     The Python Documentation Special Interest Group has discussed a
     number of approaches to creating pretty-printed code displays and
@@ -872,22 +644,19 @@ This \UNIX\ is also followed by a space.
       \macro{shortversion} macro.
     \end{macrodesc}
 
-    \begin{macrodesc}{versionadded}{\op{explanation}\p{version}}
+    \begin{macrodesc}{versionadded}{\p{version}}
       The version of Python which added the described feature to the
-      library or C API.  \var{explanation} should be a \emph{brief}
-      explanation of the change consisting of a capitalized sentence
-      fragment; a period will be appended by the formatting process.
-      This is typically added to the end of the first paragraph of the
-      description before any availability notes.  The location should
-      be selected so the explanation makes sense and may vary as
-      needed.
+      library or C API.  This is typically added to the end of the
+      first paragraph of the description before any availability
+      notes.  The location should be selected so the explanation makes
+      sense and may vary as needed.
     \end{macrodesc}
 
     \begin{macrodesc}{versionchanged}{\op{explanation}\p{version}}
       The version of Python in which the named feature was changed in
       some way (new parameters, changed side effects, etc.).
       \var{explanation} should be a \emph{brief} explanation of the
-      change consisting of a capitalized sentence fragment; a
+      change consisting of a non-capitalized sentence fragment; a
       period will be appended by the formatting process.
       This is typically added to the end of the first paragraph of the
       description before any availability notes and after

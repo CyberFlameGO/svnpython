@@ -14,20 +14,17 @@
 #   inst -- Installing Python Modules
 #   dist -- Distributing Python Modules
 #
-# The LaTeX sources for each of these documents are in subdirectories
+# The latex sources for each of these documents are in subdirectories
 # with the three-letter designations above as the directory names.
 #
-# The main target creates HTML for each of the documents.  You can
-# also do "make lib" (etc.) to create the HTML versions of individual
-# documents.
+# The main target creates DVI and PostScript for the main each of the
+# documents.  You can also do "make lib" (etc.) to create the DVI and
+# PostScript versions of individual documents.
 #
 # The document classes and styles are in the texinputs/ directory.
 # These define a number of macros that are similar in name and intent
 # as macros in Texinfo (e.g. \code{...} and \emph{...}), as well as a
 # number of environments for formatting function and data definitions.
-# Documentation for the macros is included in "Documenting Python"; see
-# http://www.python.org/doc/current/doc/doc.html, or the sources for
-# this document in the doc/ directory.
 #
 # Everything is processed by LaTeX.  See the file `README' for more
 # information on the tools needed for processing.
@@ -40,8 +37,8 @@
 # various other formats.  These are generally site specific because
 # the tools used are all but universal.  These targets are:
 #
-#   ps  -- convert all documents from LaTeX to PostScript
-#   pdf -- convert all documents from LaTeX to the
+#   html -- convert all documents from LaTeX to HTML
+#   pdf  -- convert all documents from LaTeX to the
 #		Portable Document Format
 #
 # See the README file for more information on these targets.
@@ -54,9 +51,9 @@
 # This Makefile only includes information on how to perform builds; for
 # dependency information, see Makefile.deps.
 
-# Customization -- you *may* have to edit this
+# Customizations -- you *may* have to edit these
 
-# You could set this to a4:
+# you could set this to a4
 PAPER=letter
 
 # Ideally, you shouldn't need to edit beyond this point
@@ -67,150 +64,114 @@ TOOLSDIR=	tools
 
 # This is the *documentation* release, and is used to construct the file
 # names of the downloadable tarballs.
-RELEASE=2.2a0
+RELEASE=2.0.1
 
-PYTHON=	   python
-DVIPS=	   dvips -N0 -t $(PAPER)
-
-MKDVI=	   ../tools/mkhowto --paper=$(PAPER) --dvi
-MKHTML=	   tools/mkhowto --html --about html/stdabout.dat \
-		--address $(PYTHONDOCS) --up-link ../index.html \
-		--up-title "Python Documentation Index" \
-		--global-module-index "../modindex.html"
-MKPDF=	   ../tools/mkhowto --paper=$(PAPER) --pdf
-MKPS=	   ../tools/mkhowto --paper=$(PAPER) --ps
-
-BUILDINDEX=$(TOOLSDIR)/buildindex.py
-
-PYTHONDOCS='See <i><a href="about.html">About this document...</a></i> for information on suggesting changes.'
-HTMLBASE=  file:`pwd`
-
-# what's what
-MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \
-		paper-$(PAPER)/lib.dvi paper-$(PAPER)/mac.dvi \
-		paper-$(PAPER)/ref.dvi paper-$(PAPER)/tut.dvi
-HOWTODVIFILES=	paper-$(PAPER)/doc.dvi paper-$(PAPER)/inst.dvi \
-		paper-$(PAPER)/dist.dvi
-
-MANPDFFILES=	paper-$(PAPER)/api.pdf paper-$(PAPER)/ext.pdf \
-		paper-$(PAPER)/lib.pdf paper-$(PAPER)/mac.pdf \
-		paper-$(PAPER)/ref.pdf paper-$(PAPER)/tut.pdf
-HOWTOPDFFILES=	paper-$(PAPER)/doc.pdf paper-$(PAPER)/inst.pdf \
-		paper-$(PAPER)/dist.pdf
-
-MANPSFILES=	paper-$(PAPER)/api.ps paper-$(PAPER)/ext.ps \
-		paper-$(PAPER)/lib.ps paper-$(PAPER)/mac.ps \
-		paper-$(PAPER)/ref.ps paper-$(PAPER)/tut.ps
-HOWTOPSFILES=	paper-$(PAPER)/doc.ps paper-$(PAPER)/inst.ps \
-		paper-$(PAPER)/dist.ps
-
-DVIFILES=	$(MANDVIFILES) $(HOWTODVIFILES)
-PDFFILES=	$(MANPDFFILES) $(HOWTOPDFFILES)
-PSFILES=	$(MANPSFILES) $(HOWTOPSFILES)
-
-INDEXFILES=html/api/api.html \
-	html/doc/doc.html \
-	html/ext/ext.html \
-	html/lib/lib.html \
-	html/mac/mac.html \
-	html/ref/ref.html \
-	html/tut/tut.html \
-	html/inst/inst.html \
-	html/dist/dist.html
-
-COMMONPERL= perl/manual.perl perl/python.perl perl/l2hinit.perl
-
-include Makefile.deps
 
 # These must be declared phony since there
 # are directories with matching names:
 .PHONY: api doc ext lib mac ref tut inst dist
-.PHONY: html info
+.PHONY: html info longhtml
 
 
 # Main target
-all:	html
+all:	ps
 
-dvi:	$(DVIFILES)
-pdf:	$(PDFFILES)
-ps:	$(PSFILES)
+dvi:
+	(cd paper-$(PAPER); $(MAKE) dvi)
 
-world:	ps pdf html distfiles
+pdf:
+	(cd paper-$(PAPER); $(MAKE) pdf)
 
+ps:
+	(cd paper-$(PAPER); $(MAKE) ps)
 
-# Rules to build PostScript and PDF formats
-.SUFFIXES: .dvi .ps
-
-.dvi.ps:
-	$(DVIPS) -o $@ $<
+world:	ps pdf html tarballs
 
 
 # Targets for each document:
-# Python/C API Reference Manual
-paper-$(PAPER)/api.dvi: paper-$(PAPER)/api.tex $(APIFILES)
-	(cd paper-$(PAPER); $(MKDVI) api.tex)
+api api.ps:
+	(cd paper-$(PAPER); $(MAKE) api.ps)
 
-paper-$(PAPER)/api.pdf: paper-$(PAPER)/api.tex $(APIFILES)
-	(cd paper-$(PAPER); $(MKPDF) api.tex)
+doc doc.ps:
+	(cd paper-$(PAPER); $(MAKE) doc.ps)
 
-paper-$(PAPER)/api.tex: api/api.tex api/refcounts.dat tools/anno-api.py
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/api.tex
+ext ext.ps:
+	(cd paper-$(PAPER); $(MAKE) ext.ps)
 
-# Distributing Python Modules
-paper-$(PAPER)/dist.dvi: $(DISTFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../dist/dist.tex)
+lib lib.ps:
+	(cd paper-$(PAPER); $(MAKE) lib.ps)
 
-paper-$(PAPER)/dist.pdf: $(DISTFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../dist/dist.tex)
+mac mac.ps:
+	(cd paper-$(PAPER); $(MAKE) mac.ps)
 
-# Documenting Python
-paper-$(PAPER)/doc.dvi: $(DOCFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../doc/doc.tex)
+ref ref.ps:
+	(cd paper-$(PAPER); $(MAKE) ref.ps)
 
-paper-$(PAPER)/doc.pdf: $(DOCFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../doc/doc.tex)
+tut tut.ps:
+	(cd paper-$(PAPER); $(MAKE) tut.ps)
 
-# Extending and Embedding the Python Interpreter
-paper-$(PAPER)/ext.dvi: $(EXTFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../ext/ext.tex)
+inst inst.ps:
+	(cd paper-$(PAPER); $(MAKE) inst.ps)
 
-paper-$(PAPER)/ext.pdf: $(EXTFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../ext/ext.tex)
+dist dist.ps:
+	(cd paper-$(PAPER); $(MAKE) dist.ps)
 
-# Installing Python Modules
-paper-$(PAPER)/inst.dvi: $(INSTFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../inst/inst.tex)
 
-paper-$(PAPER)/inst.pdf: $(INSTFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../inst/inst.tex)
+api.dvi:
+	(cd paper-$(PAPER); $(MAKE) api.dvi)
 
-# Python Library Reference
-paper-$(PAPER)/lib.dvi: $(LIBFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../lib/lib.tex)
+doc.dvi:
+	(cd paper-$(PAPER); $(MAKE) doc.dvi)
 
-paper-$(PAPER)/lib.pdf: $(LIBFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../lib/lib.tex)
+ext.dvi:
+	(cd paper-$(PAPER); $(MAKE) ext.dvi)
 
-# Macintosh Library Modules
-paper-$(PAPER)/mac.dvi: $(MACFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../mac/mac.tex)
+lib.dvi:
+	(cd paper-$(PAPER); $(MAKE) lib.dvi)
 
-paper-$(PAPER)/mac.pdf: $(MACFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../mac/mac.tex)
+mac.dvi:
+	(cd paper-$(PAPER); $(MAKE) mac.dvi)
 
-# Python Reference Manual
-paper-$(PAPER)/ref.dvi: $(REFFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../ref/ref.tex)
+ref.dvi:
+	(cd paper-$(PAPER); $(MAKE) ref.dvi)
 
-paper-$(PAPER)/ref.pdf: $(REFFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../ref/ref.tex)
+tut.dvi:
+	(cd paper-$(PAPER); $(MAKE) tut.dvi)
 
-# Python Tutorial
-paper-$(PAPER)/tut.dvi: $(TUTFILES)
-	(cd paper-$(PAPER); $(MKDVI) ../tut/tut.tex)
+inst.dvi:
+	(cd paper-$(PAPER); $(MAKE) inst.dvi)
 
-paper-$(PAPER)/tut.pdf: $(TUTFILES)
-	(cd paper-$(PAPER); $(MKPDF) ../tut/tut.tex)
+dist.dvi:
+	(cd paper-$(PAPER); $(MAKE) dist.dvi)
+
+
+api.pdf:
+	(cd paper-$(PAPER); $(MAKE) api.pdf)
+
+doc.pdf:
+	(cd paper-$(PAPER); $(MAKE) doc.pdf)
+
+ext.pdf:
+	(cd paper-$(PAPER); $(MAKE) ext.pdf)
+
+lib.pdf:
+	(cd paper-$(PAPER); $(MAKE) lib.pdf)
+
+mac.pdf:
+	(cd paper-$(PAPER); $(MAKE) mac.pdf)
+
+ref.pdf:
+	(cd paper-$(PAPER); $(MAKE) ref.pdf)
+
+tut.pdf:
+	(cd paper-$(PAPER); $(MAKE) tut.pdf)
+
+inst.pdf:
+	(cd paper-$(PAPER); $(MAKE) inst.pdf)
+
+dist.pdf:
+	(cd paper-$(PAPER); $(MAKE) dist.pdf)
+
 
 # The remaining part of the Makefile is concerned with various
 # conversions, as described above.  See also the README file.
@@ -234,80 +195,46 @@ info:
 # instead.  The standard set does *not* include all the icons used in the
 # Python documentation.
 
-$(INDEXFILES): $(COMMONPERL) html/about.dat tools/node2label.pl
+html:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile)
 
-html/acks.html: ACKS $(TOOLSDIR)/support.py $(TOOLSDIR)/mkackshtml
-	$(TOOLSDIR)/mkackshtml --address $(PYTHONDOCS) \
-		--output html/acks.html <ACKS
+htmlapi:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile api)
 
-html/modindex.html: $(TOOLSDIR)/support.py $(TOOLSDIR)/mkmodindex
-html/modindex.html: html/lib/lib.html html/mac/mac.html
-	(cd html; \
-	 ../$(TOOLSDIR)/mkmodindex --columns 4 --output modindex.html \
-		--address $(PYTHONDOCS) \
-		lib/modindex.html mac/modindex.html)
+htmldoc:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile doc)
 
-html:	$(INDEXFILES) html/index.html html/modindex.html html/acks.html
+htmlext:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile ext)
 
-api html/api/api.html: $(APIFILES)
-	$(MKHTML) --dir html/api api/api.tex
+htmllib:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile lib)
 
-doc html/doc/doc.html: $(DOCFILES)
-	$(MKHTML) --dir html/doc doc/doc.tex
+htmlmac:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile mac)
 
-ext html/ext/ext.html: $(EXTFILES)
-	$(MKHTML) --dir html/ext ext/ext.tex
+htmlref:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile ref)
 
-lib html/lib/lib.html: $(LIBFILES)
-	$(MKHTML) --dir html/lib lib/lib.tex
+htmltut:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile tut)
 
-mac html/mac/mac.html: $(MACFILES)
-	$(MKHTML) --dir html/mac mac/mac.tex
+htmlinst:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile inst)
 
-ref html/ref/ref.html: $(REFFILES)
-	$(MKHTML) --dir html/ref ref/ref.tex
+htmldist:
+	(cd $(HTMLDIR); $(MAKE) PAPER=$(PAPER) -f ../html/Makefile dist)
 
-tut html/tut/tut.html: $(TUTFILES)
-	$(MKHTML) --dir html/tut --numeric --split 3 tut/tut.tex
-
-inst html/inst/inst.html: $(INSTFILES) perl/distutils.perl
-	$(MKHTML) --dir html/inst --split 4 inst/inst.tex
-
-dist html/dist/dist.html: $(DISTFILES) perl/distutils.perl
-	$(MKHTML) --dir html/dist --split 4 dist/dist.tex
+longhtml:
+	(cd longhtml; $(MAKE) PAPER=$(PAPER))
 
 
 # webchecker needs an extra flag to process the huge index from the libref
-WEBCHECKER=$(PYTHON) ../Tools/webchecker/webchecker.py
-HTMLBASE=  file:`pwd`/html
-
-webcheck: html
-	$(WEBCHECKER) $(HTMLBASE)/api/
-	$(WEBCHECKER) $(HTMLBASE)/doc/
-	$(WEBCHECKER) $(HTMLBASE)/ext/
-	$(WEBCHECKER) -m290000 $(HTMLBASE)/lib/
-	$(WEBCHECKER) $(HTMLBASE)/mac/
-	$(WEBCHECKER) $(HTMLBASE)/ref/
-	$(WEBCHECKER) $(HTMLBASE)/tut/
-	$(WEBCHECKER) $(HTMLBASE)/dist/
-	$(WEBCHECKER) $(HTMLBASE)/inst/
-
-fastwebcheck: html
-	$(WEBCHECKER) -x $(HTMLBASE)/api/
-	$(WEBCHECKER) -x $(HTMLBASE)/doc/
-	$(WEBCHECKER) -x $(HTMLBASE)/ext/
-	$(WEBCHECKER) -x -m290000 $(HTMLBASE)/lib/
-	$(WEBCHECKER) -x $(HTMLBASE)/mac/
-	$(WEBCHECKER) -x $(HTMLBASE)/ref/
-	$(WEBCHECKER) -x $(HTMLBASE)/tut/
-	$(WEBCHECKER) -x $(HTMLBASE)/dist/
-	$(WEBCHECKER) -x $(HTMLBASE)/inst/
+webcheck:
+	(cd $(HTMLDIR); $(MAKE) -f ../html/Makefile webcheck)
 
 
 # Release packaging targets:
-
-paper-$(PAPER)/README: ps $(TOOLSDIR)/getpagecounts
-	(cd paper-$(PAPER); ../$(TOOLSDIR)/getpagecounts >../$@)
 
 info-$(RELEASE).tgz: info
 	(cd $(INFODIR); tar cf - README python.dir python-???.info*) \
@@ -337,13 +264,16 @@ pdf-$(PAPER)-$(RELEASE).zip: pdf
 	rm -f $@
 	(cd paper-$(PAPER); zip -q -9 ../$@ *.pdf)
 
-postscript-$(PAPER)-$(RELEASE).tar.bz2: ps paper-$(PAPER)/README
+postscript-$(PAPER)-$(RELEASE).tar.bz2: ps
+	(cd paper-$(PAPER); $(MAKE) README)
 	(cd paper-$(PAPER); tar cf - *.ps README) | bzip2 -9 >$@
 
-postscript-$(PAPER)-$(RELEASE).tgz: ps paper-$(PAPER)/README
+postscript-$(PAPER)-$(RELEASE).tgz: ps
+	(cd paper-$(PAPER); $(MAKE) README)
 	(cd paper-$(PAPER); tar cf - *.ps README) | gzip -9 >$@
 
-postscript-$(PAPER)-$(RELEASE).zip: ps paper-$(PAPER)/README
+postscript-$(PAPER)-$(RELEASE).zip: ps
+	(cd paper-$(PAPER); $(MAKE) README)
 	rm -f $@
 	(cd paper-$(PAPER); zip -q -9 ../$@ *.ps README)
 
@@ -362,6 +292,11 @@ html-$(RELEASE).zip:	html
 	(cd $(HTMLDIR); \
 		zip -q -9 ../$@ *.html */*.css */*.html */*.gif)
 
+longhtml-$(RELEASE).zip:	longhtml
+	rm -f $@
+	(cd longhtml; \
+		zip -q -9 ../$@ */*.css */*.html */*.gif)
+
 # convenience targets:
 
 tarhtml:	html-$(RELEASE).tgz
@@ -373,10 +308,15 @@ tarlatex:	latex-$(RELEASE).tgz
 tarballs:	tarpdf tarps tarhtml
 
 ziphtml:	html-$(RELEASE).zip
+ziplonghtml:	longhtml-$(RELEASE).zip
 zipps:		postscript-$(PAPER)-$(RELEASE).zip
 zippdf:		pdf-$(PAPER)-$(RELEASE).zip
 ziplatex:	latex-$(RELEASE).zip
 
+# Only build the longhtml version for final releases; use the second
+# version of this for pre-release versions.
+#
+#zips:		zippdf zipps ziphtml ziplonghtml
 zips:		zippdf zipps ziphtml
 
 bziphtml:	html-$(RELEASE).tar.bz2
@@ -386,12 +326,6 @@ bzippdf:	pdf-$(PAPER)-$(RELEASE).tar.bz2
 bziplatex:	latex-$(RELEASE).tar.bz2
 
 bzips:		bzippdf bzipps bziphtml
-
-disthtml:	tarhtml bziphtml ziphtml
-distinfo:	tarinfo bzipinfo
-distps:		tarps bzipps zipps
-distpdf:	tarpdf bzippdf zippdf
-distlatex:	tarlatex bziplatex ziplatex
 
 distfiles:	tarballs zips bzips
 	$(TOOLSDIR)/mksourcepkg --all $(RELEASE)
@@ -404,32 +338,24 @@ distfiles:	tarballs zips bzips
 # - useful results: .dvi, .pdf, .ps, .texi, .info
 clean:
 	(cd paper-$(PAPER); $(MAKE) clean)
+	(cd longhtml; $(MAKE) clean)
+	(cd $(HTMLDIR); $(MAKE) clean)
 	(cd $(INFODIR); $(MAKE) clean)
+
+l2hclean:
+	(cd $(HTMLDIR); $(MAKE) clean)
 
 # Remove temporaries as well as final products
 clobber:
+	(cd $(HTMLDIR); $(MAKE) clobber)
 	rm -f html-$(RELEASE).tgz info-$(RELEASE).tgz
 	rm -f pdf-$(RELEASE).tgz postscript-$(RELEASE).tgz
 	rm -f latex-$(RELEASE).tgz html-$(RELEASE).zip
 	rm -f pdf-$(RELEASE).zip postscript-$(RELEASE).zip
-	rm -f $(DVIFILES) $(PSFILES) $(PDFFILES)
+	(cd paper-$(PAPER); $(MAKE) clobber)
+	(cd longhtml; $(MAKE) clobber)
+	(cd $(HTMLDIR); $(MAKE) clobber)
 	(cd $(INFODIR); $(MAKE) clobber)
-	rm -rf html/index.html html/modindex.html html/acks.html
-	rm -rf html/api/ html/doc/ html/ext/ html/lib/ html/mac/
-	rm -rf html/ref/ html/tut/ html/inst/ html/dist/
 
-realclean distclean:  clobber
-
-
-# html/index.html is dependent on $(INDEXFILES) since we want the date
-# on the front index to be updated whenever any of the child documents
-# are updated and boilerplate.tex uses \today as the date.
-
-# It's at the end of the file since it wedges font-lock in XEmacs.
-
-BOILERPLATE=texinputs/boilerplate.tex
-html/index.html: html/index.html.in $(BOILERPLATE) $(INDEXFILES)
-	DATE=`grep '\\date{' $(BOILERPLATE) | sed 's/.*\\date{\(.*\)}.*$$/\1/'` ; \
-	if [ "$$DATE" = '\today' ] ; then DATE=`date '+%B %e, %Y'`;fi;\
-	sed -e "s/@DATE@/$$DATE/g" -e "s/@RELEASE@/$(RELEASE)/g" \
-		$< >$@
+realclean:  clobber
+distclean:  clobber

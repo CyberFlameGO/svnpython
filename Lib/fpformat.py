@@ -13,8 +13,6 @@ digits_behind: number of digits behind the decimal point
 
 import re
 
-__all__ = ["fix","sci","NotANumber"]
-
 # Compiled regular expression to "decode" a number
 decoder = re.compile(r'^([-+]?)0*(\d*)((?:\.\d*)?)(([eE][-+]?\d+)?)$')
 # \0 the whole thing
@@ -140,3 +138,4 @@ def test():
             print x, fix(x, digs), sci(x, digs)
     except (EOFError, KeyboardInterrupt):
         pass
+

@@ -4,7 +4,6 @@ klmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 
 2
 'abcuvwxyz!'
-'abc'
 'abcdefghij'
 'abcde'
 Caught expected ValueError writing to closed StringIO:
@@ -14,7 +13,6 @@ klmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 
 2
 'abcuvwxyz!'
-'abc'
 'abcdefghij'
 'abcde'
 Caught expected ValueError writing to closed StringIO:

@@ -6,14 +6,7 @@ The annotate() routine appends slashes to directories."""
 
 import os
 
-__all__ = ["listdir", "opendir", "annotate", "reset"]
-
 cache = {}
-
-def reset():
-    """Reset the cache completely."""
-    global cache
-    cache = {}
 
 def listdir(path):
     """List directory contents, using cache."""
@@ -26,7 +19,7 @@ def listdir(path):
         mtime = os.stat(path)[8]
     except os.error:
         return []
-    if mtime != cached_mtime:
+    if mtime <> cached_mtime:
         try:
             list = os.listdir(path)
         except os.error:

@@ -86,8 +86,6 @@ is requested at compile time.  Note that it is unnecessary to include
 the source code for the expression that failed in the error message;
 it will be displayed as part of the stack trace.
 
-Assignments to \code{__debug__} are illegal.  The value for the
-built-in variable is determined when the interpreter starts.
 
 \section{Assignment statements \label{assignment}}
 
@@ -378,7 +376,7 @@ exception is raised.
 print_stmt: "print" ">>" expression [ ("," expression)+ [","] ]
 \end{verbatim}
 
-In this form, the first expression after the \code{>}\code{>} must
+In this form, the first expression after the \keyword{>>} must
 evaluate to a ``file-like'' object, specifically an object that has a
 \method{write()} method as described above.  With this extended form,
 the subsequent expressions are printed to this file object.  If the
@@ -550,14 +548,13 @@ this execution terminate step (1).
 When step (1) finishes without raising an exception, step (2) can
 begin.
 
-The first form of \keyword{import} statement binds the module name in
-the local namespace to the module object, and then goes on to import
-the next identifier, if any.  If the module name is followed by
-\keyword{as}, the name following \keyword{as} is used as the local
-name for the module. To avoid confusion, you cannot import modules
-with dotted names \keyword{as} a different local name. So \code{import
-module as m} is legal, but \code{import module.submod as s} is not.
-The latter should be written as \code{from module import submod as s};
+The first form of \keyword{import} statement binds the module name in the
+local namespace to the module object, and then goes on to import the
+next identifier, if any.  If the module name is followed by \keyword{as},
+the name following \keyword{as} is used as the local name for the module. To
+avoid confusion, you cannot import sub-modules 'as' a different
+local name. So 'import module as m' is legal, but 'import module.submod as
+s' is not. The latter should be written as 'from module import submod as s',
 see below.
 
 The \keyword{from} form does not bind the module name: it goes through the
@@ -578,6 +575,11 @@ Names bound by \keyword{import} statements may not occur in
 The \keyword{from} form with \samp{*} may only occur in a module scope.
 \kwindex{from}
 \stindex{from}
+
+(The current implementation does not enforce the latter two
+restrictions, but programs should not abuse this freedom, as future
+implementations may enforce them or silently change the meaning of the
+program.)
 
 \strong{Hierarchical module names:}\indexiii{hierarchical}{module}{names}
 when the module names contains one or more dots, the module search

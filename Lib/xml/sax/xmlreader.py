@@ -9,7 +9,7 @@ from _exceptions import SAXNotSupportedException, SAXNotRecognizedException
 # ===== XMLREADER =====
 
 class XMLReader:
-    """Interface for reading an XML document using callbacks.
+    """Interface for reading an XML document using callbacks. 
 
     XMLReader is the interface that an XML parser's SAX2 driver must
     implement. This interface allows an application to set and query
@@ -20,7 +20,7 @@ class XMLReader:
     methods must not return until parsing is complete, and readers
     must wait for an event-handler callback to return before reporting
     the next event."""
-
+    
     def __init__(self):
         self._cont_handler = handler.ContentHandler()
         self._dtd_handler = handler.DTDHandler()
@@ -38,11 +38,11 @@ class XMLReader:
     def setContentHandler(self, handler):
         "Registers a new object to receive document content events."
         self._cont_handler = handler
-
+        
     def getDTDHandler(self):
         "Returns the current DTD handler."
         return self._dtd_handler
-
+        
     def setDTDHandler(self, handler):
         "Register an object to receive basic DTD-related events."
         self._dtd_handler = handler
@@ -50,7 +50,7 @@ class XMLReader:
     def getEntityResolver(self):
         "Returns the current EntityResolver."
         return self._ent_handler
-
+        
     def setEntityResolver(self, resolver):
         "Register an object to resolve external entities."
         self._ent_handler = resolver
@@ -58,20 +58,20 @@ class XMLReader:
     def getErrorHandler(self):
         "Returns the current ErrorHandler."
         return self._err_handler
-
+        
     def setErrorHandler(self, handler):
         "Register an object to receive error-message events."
         self._err_handler = handler
 
     def setLocale(self, locale):
-        """Allow an application to set the locale for errors and warnings.
-
+        """Allow an application to set the locale for errors and warnings. 
+   
         SAX parsers are not required to provide localization for errors
         and warnings; if they cannot support the requested locale,
         however, they must throw a SAX exception. Applications may
         request a locale change in the middle of a parse."""
         raise SAXNotSupportedException("Locale support not implemented")
-
+    
     def getFeature(self, name):
         "Looks up and returns the state of a SAX2 feature."
         raise SAXNotRecognizedException("Feature '%s' not recognized" % name)
@@ -115,7 +115,7 @@ class IncrementalParser(XMLReader):
     def parse(self, source):
         import saxutils
         source = saxutils.prepare_input_source(source)
-
+            
         self.prepareParser(source)
         file = source.getByteStream()
         buffer = file.read(self._bufsize)
@@ -124,7 +124,7 @@ class IncrementalParser(XMLReader):
             buffer = file.read(self._bufsize)
         self.close()
 
-    def feed(self, data):
+    def feed(self, data):        
         """This method gives the raw XML data in the data parameter to
         the parser and makes it parse the data, emitting the
         corresponding events. It is allowed for XML constructs to be
@@ -241,7 +241,7 @@ class InputSource:
         """Set the byte stream (a Python file-like object which does
         not perform byte-to-character conversion) for this input
         source.
-
+        
         The SAX parser will ignore this if there is also a character
         stream specified, but it will use a byte stream in preference
         to opening a URI connection itself.
@@ -252,16 +252,16 @@ class InputSource:
 
     def getByteStream(self):
         """Get the byte stream for this input source.
-
+        
         The getEncoding method will return the character encoding for
-        this byte stream, or None if unknown."""
+        this byte stream, or None if unknown."""        
         return self.__bytefile
-
+        
     def setCharacterStream(self, charfile):
         """Set the character stream for this input source. (The stream
-        must be a Python 2.0 Unicode-wrapped file-like that performs
+        must be a Python 1.6 Unicode-wrapped file-like that performs
         conversion to Unicode strings.)
-
+        
         If there is a character stream specified, the SAX parser will
         ignore any byte stream and will not attempt to open a URI
         connection to the system identifier."""
@@ -270,11 +270,11 @@ class InputSource:
     def getCharacterStream(self):
         "Get the character stream for this input source."
         return self.__charfile
-
+    
 # ===== ATTRIBUTESIMPL =====
 
 class AttributesImpl:
-
+    
     def __init__(self, attrs):
         """Non-NS-aware implementation.
 
@@ -295,19 +295,19 @@ class AttributesImpl:
 
     def getNameByQName(self, name):
         if not self._attrs.has_key(name):
-            raise KeyError, name
+            raise KeyError
         return name
 
     def getQNameByName(self, name):
         if not self._attrs.has_key(name):
-            raise KeyError, name
-        return name
-
+            raise KeyError
+        return name        
+    
     def getNames(self):
         return self._attrs.keys()
 
     def getQNames(self):
-        return self._attrs.keys()
+        return self._attrs.keys()    
 
     def __len__(self):
         return len(self._attrs)
@@ -336,7 +336,7 @@ class AttributesImpl:
 # ===== ATTRIBUTESNSIMPL =====
 
 class AttributesNSImpl(AttributesImpl):
-
+    
     def __init__(self, attrs, qnames):
         """NS-aware implementation.
 
@@ -349,25 +349,25 @@ class AttributesNSImpl(AttributesImpl):
         for (nsname, qname) in self._qnames.items():
             if qname == name:
                 return self._attrs[nsname]
-
-        raise KeyError, name
+            
+        raise KeyError
 
     def getNameByQName(self, name):
         for (nsname, qname) in self._qnames.items():
             if qname == name:
                 return nsname
-
-        raise KeyError, name
+            
+        raise KeyError
 
     def getQNameByName(self, name):
         return self._qnames[name]
-
+    
     def getQNames(self):
         return self._qnames.values()
 
     def copy(self):
         return self.__class__(self._attrs, self._qnames)
-
+    
 
 def _test():
     XMLReader()

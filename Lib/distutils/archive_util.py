@@ -100,7 +100,7 @@ def make_zipfile (base_name, base_dir, verbose=0, dry_run=0):
                     z.write(path, path)
 
         if not dry_run:
-            z = zipfile.ZipFile(zip_filename, "w",
+            z = zipfile.ZipFile(zip_filename, "wb",
                                 compression=zipfile.ZIP_DEFLATED)
 
             os.path.walk(base_dir, visit, z)

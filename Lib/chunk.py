@@ -18,7 +18,7 @@ The size field (a 32-bit value, encoded using big-endian byte order)
 gives the size of the whole chunk, including the 8-byte header.
 
 Usually an IFF-type file consists of one or more chunks.  The proposed
-usage of the Chunk class defined here is to instantiate an instance at
+usage of the Chunk class defined here is to instantiate an instance at 
 the start of each chunk and read from the instance until it reaches
 the end, after which a new instance can be instantiated.  At the end
 of the file, creating a new instance will fail with a EOFError
@@ -44,7 +44,7 @@ getname() (returns the name (ID) of the chunk)
 
 The __init__ method has one required argument, a file-like object
 (including a chunk instance), and one optional argument, a flag which
-specifies whether or not chunks are aligned on 2-byte boundaries.  The
+specifies whether or not chunks are aligned on 2-byte boundaries.  The 
 default is 1, i.e. aligned.
 """
 
@@ -52,7 +52,7 @@ class Chunk:
     def __init__(self, file, align = 1, bigendian = 1, inclheader = 0):
         import struct
         self.closed = 0
-        self.align = align      # whether to align to word (2-byte) boundaries
+        self.align = align	# whether to align to word (2-byte) boundaries
         if bigendian:
             strflag = '>'
         else:
@@ -70,7 +70,7 @@ class Chunk:
         self.size_read = 0
         try:
             self.offset = self.file.tell()
-        except (AttributeError, IOError):
+        except:
             self.seekable = 0
         else:
             self.seekable = 1
@@ -97,7 +97,7 @@ class Chunk:
         """Seek to specified position into the chunk.
         Default position is 0 (start of chunk).
         If the file is not seekable, this will result in an error.
-        """
+	"""
 
         if self.closed:
             raise ValueError, "I/O operation on closed file"
@@ -106,7 +106,7 @@ class Chunk:
         if whence == 1:
             pos = pos + self.size_read
         elif whence == 2:
-            pos = pos + self.chunksize
+            pos = pos + self.chunk_size
         if pos < 0 or pos > self.chunksize:
             raise RuntimeError
         self.file.seek(self.offset + pos, 0)
@@ -121,7 +121,7 @@ class Chunk:
         """Read at most size bytes from the chunk.
         If size is omitted or negative, read until the end
         of the chunk.
-        """
+	"""
 
         if self.closed:
             raise ValueError, "I/O operation on closed file"
@@ -130,7 +130,7 @@ class Chunk:
         if size < 0:
             size = self.chunksize - self.size_read
         if size > self.chunksize - self.size_read:
-            size = self.chunksize - self.size_read
+             size = self.chunksize - self.size_read
         data = self.file.read(size)
         self.size_read = self.size_read + len(data)
         if self.size_read == self.chunksize and \
@@ -145,7 +145,7 @@ class Chunk:
         If you are not interested in the contents of the chunk,
         this method should be called so that the file points to
         the start of the next chunk.
-        """
+	"""
 
         if self.closed:
             raise ValueError, "I/O operation on closed file"
@@ -158,10 +158,11 @@ class Chunk:
                 self.file.seek(n, 1)
                 self.size_read = self.size_read + n
                 return
-            except IOError:
+            except:
                 pass
         while self.size_read < self.chunksize:
             n = min(8192, self.chunksize - self.size_read)
             dummy = self.read(n)
             if not dummy:
                 raise EOFError
+

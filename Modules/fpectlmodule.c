@@ -140,12 +140,6 @@ static void fpe_reset(Sigfunc *handler)
        ld -G -o fpectlmodule.so -L/opt/SUNWspro/lib fpectlmodule.o -lsunmath -lm
      */
 #include <math.h>
-#ifndef _SUNMATH_H
-    extern void nonstandard_arithmetic(void);
-    extern int ieee_flags(const char*, const char*, const char*, char **);
-    extern long ieee_handler(const char*, const char*, sigfpe_handler_type);
-#endif
-
     char *mode="exception", *in="all", *out;
     (void) nonstandard_arithmetic();
     (void) ieee_flags("clearall",mode,in,&out);
@@ -201,14 +195,7 @@ static void fpe_reset(Sigfunc *handler)
 #else
 #include <i386/fpu_control.h>
 #endif
-#ifdef _FPU_SETCW
-    {
-        fpu_control_t cw = 0x1372;
-        _FPU_SETCW(cw);
-    }
-#else
     __setfpucw(0x1372);
-#endif
     PyOS_setsig(SIGFPE, handler);
 
 /*-- NeXT -----------------------------------------------------------------*/

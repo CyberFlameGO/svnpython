@@ -25,19 +25,19 @@ request. This diagram details these state transitions:
       v
     Unread-response   [Response-headers-read]
       |\____________________
-      |                     |
-      | response.read()     | putrequest()
-      v                     v
-    Idle                  Req-started-unread-response
-                     ______/|
-                   /        |
-   response.read() |        | ( putheader() )*  endheaders()
-                   v        v
-       Request-started    Req-sent-unread-response
-                            |
-                            | response.read()
-                            v
-                          Request-sent
+      |                     \
+      | response.read()      | putrequest()
+      v                      v
+    Idle                   Req-started-unread-response
+                     _______/|
+                    /        |
+   response.read() |         | ( putheader() )*  endheaders()
+                   v         v
+       Request-started     Req-sent-unread-response
+                             |
+                             | response.read()
+                             v
+                           Request-sent
 
 This diagram presents the following rules:
   -- a second request may not be started until {response-headers-read}
@@ -67,19 +67,13 @@ Req-sent-unread-response       _CS_REQ_SENT       <response_class>
 """
 
 import socket
+import string
 import mimetools
 
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-
-__all__ = ["HTTP", "HTTPResponse", "HTTPConnection", "HTTPSConnection",
-           "HTTPException", "NotConnected", "UnknownProtocol",
-           "UnknownTransferEncoding", "IllegalKeywordArgument",
-           "UnimplementedFileMode", "IncompleteRead",
-           "ImproperConnectionState", "CannotSendRequest", "CannotSendHeader",
-           "ResponseNotReady", "BadStatusLine", "error"]
 
 HTTP_PORT = 80
 HTTPS_PORT = 443
@@ -100,14 +94,14 @@ class HTTPResponse:
         self.msg = None
 
         # from the Status-Line of the response
-        self.version = _UNKNOWN # HTTP-Version
-        self.status = _UNKNOWN  # Status-Code
-        self.reason = _UNKNOWN  # Reason-Phrase
+        self.version = _UNKNOWN	# HTTP-Version
+        self.status = _UNKNOWN	# Status-Code
+        self.reason = _UNKNOWN	# Reason-Phrase
 
-        self.chunked = _UNKNOWN         # is "chunked" being used?
-        self.chunk_left = _UNKNOWN      # bytes left to read in current chunk
-        self.length = _UNKNOWN          # number of bytes left in response
-        self.will_close = _UNKNOWN      # conn will close at end of response
+        self.chunked = _UNKNOWN		# is "chunked" being used?
+        self.chunk_left = _UNKNOWN	# bytes left to read in current chunk
+        self.length = _UNKNOWN		# number of bytes left in response
+        self.will_close = _UNKNOWN	# conn will close at end of response
 
     def begin(self):
         if self.msg is not None:
@@ -118,10 +112,10 @@ class HTTPResponse:
         if self.debuglevel > 0:
             print "reply:", repr(line)
         try:
-            [version, status, reason] = line.split(None, 2)
+            [version, status, reason] = string.split(line, None, 2)
         except ValueError:
             try:
-                [version, status] = line.split(None, 1)
+                [version, status] = string.split(line, None, 1)
                 reason = ""
             except ValueError:
                 version = "HTTP/0.9"
@@ -131,19 +125,13 @@ class HTTPResponse:
             self.close()
             raise BadStatusLine(line)
 
-        # The status code is a three-digit number
-        try:
-            self.status = status = int(status)
-            if status < 100 or status > 999:
-                raise BadStatusLine(line)
-        except ValueError:
-            raise BadStatusLine(line)
-        self.reason = reason.strip()
+        self.status = status = int(status)
+        self.reason = string.strip(reason)
 
         if version == 'HTTP/1.0':
             self.version = 10
         elif version.startswith('HTTP/1.'):
-            self.version = 11   # use HTTP/1.1 code for HTTP/1.x where x>=1
+            self.version = 11	# use HTTP/1.1 code for HTTP/1.x where x>=1
         elif version == 'HTTP/0.9':
             self.version = 9
         else:
@@ -164,7 +152,7 @@ class HTTPResponse:
         # are we using the chunked-style of transfer encoding?
         tr_enc = self.msg.getheader('transfer-encoding')
         if tr_enc:
-            if tr_enc.lower() != 'chunked':
+            if string.lower(tr_enc) != 'chunked':
                 raise UnknownTransferEncoding()
             self.chunked = 1
             self.chunk_left = None
@@ -174,11 +162,11 @@ class HTTPResponse:
         # will the connection close at the end of the response?
         conn = self.msg.getheader('connection')
         if conn:
-            conn = conn.lower()
+            conn = string.lower(conn)
             # a "Connection: close" will always close the connection. if we
             # don't see that and this is not HTTP/1.1, then the connection will
             # close unless we see a Keep-Alive header.
-            self.will_close = conn.find('close') != -1 or \
+            self.will_close = string.find(conn, 'close') != -1 or \
                               ( self.version != 11 and \
                                 not self.msg.getheader('keep-alive') )
         else:
@@ -199,9 +187,9 @@ class HTTPResponse:
             self.length = None
 
         # does the body have a fixed length? (of zero)
-        if (status == 204 or            # No Content
-            status == 304 or            # Not Modified
-            100 <= status < 200):       # 1xx codes
+        if (status == 204 or		# No Content
+            status == 304 or		# Not Modified
+            100 <= status < 200):	# 1xx codes
             self.length = 0
 
         # if the connection remains open, and we aren't using chunked, and
@@ -236,10 +224,10 @@ class HTTPResponse:
             while 1:
                 if chunk_left is None:
                     line = self.fp.readline()
-                    i = line.find(';')
+                    i = string.find(line, ';')
                     if i >= 0:
-                        line = line[:i] # strip chunk-extensions
-                    chunk_left = int(line, 16)
+                        line = line[:i]	# strip chunk-extensions
+                    chunk_left = string.atoi(line, 16)
                     if chunk_left == 0:
                         break
                 if amt is None:
@@ -250,7 +238,7 @@ class HTTPResponse:
                     return value
                 elif amt == chunk_left:
                     value = value + self._safe_read(amt)
-                    self._safe_read(2)  # toss the CRLF at the end of the chunk
+                    self._safe_read(2)	# toss the CRLF at the end of the chunk
                     self.chunk_left = None
                     return value
                 else:
@@ -258,7 +246,7 @@ class HTTPResponse:
                     amt = amt - chunk_left
 
                 # we read the whole chunk, get another
-                self._safe_read(2)      # toss the CRLF at the end of the chunk
+                self._safe_read(2)	# toss the CRLF at the end of the chunk
                 chunk_left = None
 
             # read and discard trailer up to the CRLF terminator
@@ -279,7 +267,7 @@ class HTTPResponse:
                 s = self.fp.read()
             else:
                 s = self._safe_read(self.length)
-            self.close()        # we read everything
+            self.close()	# we read everything
             return s
 
         if self.length is not None:
@@ -343,7 +331,7 @@ class HTTPConnection:
 
     def _set_hostport(self, host, port):
         if port is None:
-            i = host.find(':')
+            i = string.find(host, ':')
             if i >= 0:
                 port = int(host[i+1:])
                 host = host[:i]
@@ -365,7 +353,7 @@ class HTTPConnection:
     def close(self):
         """Close the connection to the HTTP server."""
         if self.sock:
-            self.sock.close()   # close it manually... there may be other refs
+            self.sock.close()	# close it manually... there may be other refs
             self.sock = None
         if self.__response:
             self.__response.close()
@@ -390,7 +378,7 @@ class HTTPConnection:
         try:
             self.sock.send(str)
         except socket.error, v:
-            if v[0] == 32:      # Broken pipe
+            if v[0] == 32:	# Broken pipe
                 self.close()
             raise
 
@@ -451,12 +439,7 @@ class HTTPConnection:
             # be using HTTP/1.0 and those clients may be issuing this header
             # themselves. we should NOT issue it twice; some web servers (such
             # as Apache) barf when they see two Host: headers
-
-            # if we need a non-standard port,include it in the header
-            if self.port == HTTP_PORT:
-                self.putheader('Host', self.host)
-            else:
-                self.putheader('Host', "%s:%s" % (self.host, self.port))
+            self.putheader('Host', self.host)
 
             # note: we are assuming that clients will not attempt to set these
             #       headers since *this* library must deal with the
@@ -581,21 +564,18 @@ class FakeSocket:
         interface of a real socket.  It only supports modes 'r' and
         'rb' and the bufsize argument is ignored.
 
-        The returned object contains *all* of the file data
+        The returned object contains *all* of the file data 
         """
         if mode != 'r' and mode != 'rb':
             raise UnimplementedFileMode()
 
-        msgbuf = []
+        msgbuf = ""
         while 1:
             try:
-                buf = self.__ssl.read()
+                msgbuf = msgbuf + self.__ssl.read()
             except socket.sslerror, msg:
                 break
-            if buf == '':
-                break
-            msgbuf.append(buf)
-        return StringIO("".join(msgbuf))
+        return StringIO(msgbuf)
 
     def send(self, stuff, flags = 0):
         return self.__ssl.write(stuff)
@@ -691,7 +671,8 @@ class HTTP:
 
     def putheader(self, header, *values):
         "The superclass allows only one value argument."
-        self._conn.putheader(header, '\r\n\t'.join(values))
+        self._conn.putheader(header,
+                             string.joinfields(values, '\r\n\t'))
 
     def getreply(self):
         """Compat definition since superclass does not define it.
@@ -737,11 +718,11 @@ if hasattr(socket, 'ssl'):
 
         Python 1.5.2 did not have an HTTPS class, but it defined an
         interface for sending http requests that is also useful for
-        https.
+        https. 
         """
 
         _connection_class = HTTPSConnection
-
+        
 
 class HTTPException(Exception):
     pass
@@ -817,13 +798,12 @@ def test():
     print 'reason =', reason
     print
     if headers:
-        for header in headers.headers: print header.strip()
+        for header in headers.headers: print string.strip(header)
     print
     print h.getfile().read()
 
     if hasattr(socket, 'ssl'):
         host = 'sourceforge.net'
-        selector = '/projects/python'
         hs = HTTPS()
         hs.connect(host)
         hs.putrequest('GET', selector)
@@ -833,7 +813,7 @@ def test():
         print 'reason =', reason
         print
         if headers:
-            for header in headers.headers: print header.strip()
+            for header in headers.headers: print string.strip(header)
         print
         print hs.getfile().read()
 

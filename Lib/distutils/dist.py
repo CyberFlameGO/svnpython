@@ -15,7 +15,7 @@ from copy import copy
 from distutils.errors import *
 from distutils import sysconfig
 from distutils.fancy_getopt import FancyGetopt, translate_longopt
-from distutils.util import check_environ, strtobool, rfc822_escape
+from distutils.util import check_environ, strtobool
 
 
 # Regex to define acceptable Distutils command names.  This is not *quite*
@@ -85,10 +85,6 @@ class Distribution:
          "print the package description"),
         ('long-description', None,
          "print the long package description"),
-        ('platforms', None,
-         "print the list of platforms"),
-        ('keywords', None,
-         "print the list of keywords"),
         ]
     display_option_names = map(lambda x: translate_longopt(x[0]),
                                display_options)
@@ -210,8 +206,6 @@ class Distribution:
                     raise DistutilsSetupError, \
                           "invalid distribution option '%s'" % key
 
-        self.finalize_options()
-        
     # __init__ ()
 
 
@@ -375,16 +369,6 @@ class Distribution:
         execute commands (currently, this only happens if user asks for
         help).
         """
-        #
-        # We now have enough information to show the Macintosh dialog that allows
-        # the user to interactively specify the "command line".
-        #
-        if sys.platform == 'mac':
-            import EasyDialogs
-            cmdlist = self.get_command_list()
-            self.script_args = EasyDialogs.GetArgv(
-                self.global_options + self.display_options, cmdlist)
- 
         # We have to parse the command line a bit at a time -- global
         # options, then the first command, then its options, and so on --
         # because each command will be handled by a different class, and
@@ -528,24 +512,6 @@ class Distribution:
     # _parse_command_opts ()
 
 
-    def finalize_options (self):
-        """Set final values for all the options on the Distribution
-        instance, analogous to the .finalize_options() method of Command
-        objects.
-        """
-
-        keywords = self.metadata.keywords
-        if keywords is not None:
-            if type(keywords) is StringType:
-                keywordlist = string.split(keywords, ',')
-                self.metadata.keywords = map(string.strip, keywordlist)
-
-        platforms = self.metadata.platforms
-        if platforms is not None:
-            if type(platforms) is StringType:
-                platformlist = string.split(platforms, ',')
-                self.metadata.platforms = map(string.strip, platformlist)
-
     def _show_help (self,
                     parser,
                     global_options=1,
@@ -627,11 +593,7 @@ class Distribution:
         for (opt, val) in option_order:
             if val and is_display_option.get(opt):
                 opt = translate_longopt(opt)
-                value = getattr(self.metadata, "get_"+opt)()
-                if opt in ['keywords', 'platforms']:
-                    print string.join(value, ',')
-                else:
-                    print value
+                print getattr(self.metadata, "get_"+opt)()
                 any_display_options = 1
 
         return any_display_options
@@ -695,38 +657,6 @@ class Distribution:
 
     # print_commands ()
 
-    def get_command_list (self):
-        """Get a list of (command, description) tuples.
-        The list is divided into "standard commands" (listed in
-        distutils.command.__all__) and "extra commands" (mentioned in
-        self.cmdclass, but not a standard command).  The descriptions come
-        from the command class attribute 'description'.
-        """
-        # Currently this is only used on Mac OS, for the Mac-only GUI
-        # Distutils interface (by Jack Jansen)
-
-        import distutils.command
-        std_commands = distutils.command.__all__
-        is_std = {}
-        for cmd in std_commands:
-            is_std[cmd] = 1
-
-        extra_commands = []
-        for cmd in self.cmdclass.keys():
-            if not is_std.get(cmd):
-                extra_commands.append(cmd)
-
-        rv = []
-        for cmd in (std_commands + extra_commands):
-            klass = self.cmdclass.get(cmd)
-            if not klass:
-                klass = self.get_command_class(cmd)
-            try:
-                description = klass.description
-            except AttributeError:
-                description = "(no description available)"
-            rv.append((cmd, description))
-        return rv
 
     # -- Command class/object methods ----------------------------------
 
@@ -974,38 +904,7 @@ class DistributionMetadata:
         self.licence = None
         self.description = None
         self.long_description = None
-        self.keywords = None
-        self.platforms = None
         
-    def write_pkg_info (self, base_dir):
-        """Write the PKG-INFO file into the release tree.
-        """
-
-        pkg_info = open( os.path.join(base_dir, 'PKG-INFO'), 'w')
-
-        pkg_info.write('Metadata-Version: 1.0\n')
-        pkg_info.write('Name: %s\n' % self.get_name() )
-        pkg_info.write('Version: %s\n' % self.get_version() )
-        pkg_info.write('Summary: %s\n' % self.get_description() )
-        pkg_info.write('Home-page: %s\n' % self.get_url() )
-        pkg_info.write('Author: %s\n' % self.get_contact() )
-        pkg_info.write('Author-email: %s\n' % self.get_contact_email() )
-        pkg_info.write('License: %s\n' % self.get_licence() )
-
-        long_desc = rfc822_escape( self.get_long_description() )
-        pkg_info.write('Description: %s\n' % long_desc)
-
-        keywords = string.join( self.get_keywords(), ',')
-        if keywords:
-            pkg_info.write('Keywords: %s\n' % keywords )
-
-        for platform in self.get_platforms():
-            pkg_info.write('Platform: %s\n' % platform )
-
-        pkg_info.close()
-        
-    # write_pkg_info ()
-    
     # -- Metadata query methods ----------------------------------------
 
     def get_name (self):
@@ -1050,12 +949,6 @@ class DistributionMetadata:
 
     def get_long_description(self):
         return self.long_description or "UNKNOWN"
-
-    def get_keywords(self):
-        return self.keywords or []
-
-    def get_platforms(self):
-        return self.platforms or ["UNKNOWN"]
 
 # class DistributionMetadata
 

@@ -6,17 +6,16 @@
 CC=	 	gcc
 
 # XXX Top of the build tree and source tree
-blddir=		../..
+blddir=		../../linux
 srcdir=		../..
 
 # Python version
-VERSION=	2.1
+VERSION=	2.0
 
 # Compiler flags
 OPT=		-g
 INCLUDES=	-I$(srcdir)/Include -I$(blddir)
-CFLAGS=		$(OPT)
-CPPFLAGS=	$(INCLUDES)
+CFLAGS=		$(OPT) $(INCLUDES)
 
 # The Python library
 LIBPYTHON=	$(blddir)/libpython$(VERSION).a
@@ -29,29 +28,17 @@ MODLIBS=
 ALLLIBS=	$(LIBPYTHON) $(MODLIBS) $(LIBS) $(SYSLIBS)
 
 # Build the demo application
-all:		demo loop importexc
+all:		demo
 demo:		demo.o
 		$(CC) $(LDFLAGS) demo.o $(ALLLIBS) -o demo
-
-loop:		loop.o
-		$(CC) $(LDFLAGS) loop.o $(ALLLIBS) -o loop
-
-importexc:	importexc.o
-		$(CC) $(LDFLAGS) importexc.o $(ALLLIBS) -o importexc
 
 # Administrative targets
 
 test:		demo
 		./demo
 
-COMMAND="print 'hello world'"
-looptest:	loop
-		./loop $(COMMAND)
-
 clean:
 		-rm -f *.o core
 
 clobber:	clean
-		-rm -f *~ @* '#'* demo loop importexc
-
-realclean:	clobber
+		-rm -f *~ @* '#'* demo

@@ -1,9 +1,9 @@
-""" Python Character Mapping Codec generated from '8859-7.TXT' with gencodec.py.
+""" Python Character Mapping Codec generated from '8859-7.TXT'.
+
 
 Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 (c) Copyright CNRI, All Rights Reserved. NO WARRANTY.
-(c) Copyright 2000 Guido van Rossum.
 
 """#"
 
@@ -35,14 +35,10 @@ def getregentry():
 
 ### Decoding Map
 
-decoding_map = codecs.make_identity_dict(range(256))
-decoding_map.update({
+decoding_map = {
+
 	0x00a1: 0x2018,	# 	LEFT SINGLE QUOTATION MARK
 	0x00a2: 0x2019,	# 	RIGHT SINGLE QUOTATION MARK
-	0x00a4: None,
-	0x00a5: None,
-	0x00aa: None,
-	0x00ae: None,
 	0x00af: 0x2015,	# 	HORIZONTAL BAR
 	0x00b4: 0x0384,	# 	GREEK TONOS
 	0x00b5: 0x0385,	# 	GREEK DIALYTIKA TONOS
@@ -71,7 +67,6 @@ decoding_map.update({
 	0x00cf: 0x039f,	# 	GREEK CAPITAL LETTER OMICRON
 	0x00d0: 0x03a0,	# 	GREEK CAPITAL LETTER PI
 	0x00d1: 0x03a1,	# 	GREEK CAPITAL LETTER RHO
-	0x00d2: None,
 	0x00d3: 0x03a3,	# 	GREEK CAPITAL LETTER SIGMA
 	0x00d4: 0x03a4,	# 	GREEK CAPITAL LETTER TAU
 	0x00d5: 0x03a5,	# 	GREEK CAPITAL LETTER UPSILON
@@ -116,9 +111,10 @@ decoding_map.update({
 	0x00fc: 0x03cc,	# 	GREEK SMALL LETTER OMICRON WITH TONOS
 	0x00fd: 0x03cd,	# 	GREEK SMALL LETTER UPSILON WITH TONOS
 	0x00fe: 0x03ce,	# 	GREEK SMALL LETTER OMEGA WITH TONOS
-	0x00ff: None,
-})
+}
 
 ### Encoding Map
 
-encoding_map = codecs.make_encoding_map(decoding_map)
+encoding_map = {}
+for k,v in decoding_map.items():
+    encoding_map[v] = k

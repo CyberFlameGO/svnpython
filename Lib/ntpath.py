@@ -1,5 +1,5 @@
 # Module 'ntpath' -- common operations on WinNT/Win95 pathnames
-"""Common pathname manipulations, WindowsNT/95 version.
+"""Common pathname manipulations, WindowsNT/95 version. 
 
 Instead of importing this module directly, import os and refer to this
 module as os.path.
@@ -8,10 +8,6 @@ module as os.path.
 import os
 import stat
 
-__all__ = ["normcase","isabs","join","splitdrive","split","splitext",
-           "basename","dirname","commonprefix","getsize","getmtime",
-           "getatime","islink","exists","isdir","isfile","ismount",
-           "walk","expanduser","expandvars","normpath","abspath","splitunc"]
 
 # Normalize the case of a pathname and map slashes to backslashes.
 # Other normalizations (such as optimizing '../' away) are not done
@@ -164,7 +160,7 @@ def commonprefix(m):
     prefix = m[0]
     for item in m:
         for i in range(len(prefix)):
-            if prefix[:i+1] != item[:i+1]:
+            if prefix[:i+1] <> item[:i+1]:
                 prefix = prefix[:i]
                 if i == 0: return ''
                 break
@@ -258,7 +254,7 @@ def ismount(path):
 def walk(top, func, arg):
     """Directory tree walk whth callback function.
 
-    walk(top, func, arg) calls func(arg, d, files) for each directory d
+    walk(top, func, arg) calls func(arg, d, files) for each directory d 
     in the tree rooted at top (including top itself); files is a list
     of all the files and subdirs in directory d."""
     try:
@@ -287,7 +283,7 @@ def expanduser(path):
     """Expand ~ and ~user constructs.
 
     If user or $HOME is unknown, do nothing."""
-    if path[:1] != '~':
+    if path[:1] <> '~':
         return path
     i, n = 1, len(path)
     while i < n and path[i] not in '/\\':
@@ -317,7 +313,7 @@ def expanduser(path):
 # XXX With COMMAND.COM you can use any characters in a variable name,
 # XXX except '^|<>='.
 
-def expandvars(path):
+def expandvars(path):  
     """Expand shell variables of form $var and ${var}.
 
     Unknown variables are left unchanged."""
@@ -391,7 +387,7 @@ def normpath(path):
         elif comps[i] == '..' and i > 0 and comps[i-1] not in ('', '..'):
             del comps[i-1:i+1]
             i = i - 1
-        elif comps[i] == '' and i > 0 and comps[i-1] != '':
+        elif comps[i] == '' and i > 0 and comps[i-1] <> '':
             del comps[i]
         else:
             i = i + 1
@@ -404,11 +400,20 @@ def normpath(path):
 # Return an absolute path.
 def abspath(path):
     """Return the absolute version of a path"""
+    try:
+        import win32api
+    except ImportError:
+        global abspath
+        def _abspath(path):
+            if not isabs(path):
+                path = join(os.getcwd(), path)
+            return normpath(path)
+        abspath = _abspath
+        return _abspath(path)
     if path: # Empty path must return current working directory.
-        from nt import _getfullpathname
         try:
-            path = _getfullpathname(path)
-        except WindowsError:
+            path = win32api.GetFullPathName(path)
+        except win32api.error:
             pass # Bad path - return unchanged.
     else:
         path = os.getcwd()

@@ -11,11 +11,6 @@ GNU msgfmt program, however, it is a simpler implementation.
 Usage: msgfmt.py [OPTIONS] filename.po
 
 Options:
-    -o file
-    --output-file=file
-        Specify the output file to write to.  If omitted, output will go to a
-        file named filename.mo (based off the input file name).
-
     -h
     --help
         Print this message and exit.
@@ -23,15 +18,15 @@ Options:
     -V
     --version
         Display version information and exit.
+
 """
 
 import sys
-import os
 import getopt
 import struct
 import array
 
-__version__ = "1.1"
+__version__ = "1.0"
 
 MESSAGES = {}
 
@@ -96,18 +91,17 @@ def generate():
 
 
 
-def make(filename, outfile):
+def make(filename):
     ID = 1
     STR = 2
 
-    # Compute .mo name from .po name and arguments
+    # Compute .mo name from .po name
     if filename.endswith('.po'):
         infile = filename
+        outfile = filename[:-2] + 'mo'
     else:
         infile = filename + '.po'
-    if outfile is None:
-        outfile = os.path.splitext(infile)[0] + '.mo'
-
+        outfile = filename + '.mo'
     try:
         lines = open(infile).readlines()
     except IOError, msg:
@@ -165,6 +159,7 @@ def make(filename, outfile):
     # Compute output
     output = generate()
 
+    # Save output
     try:
         open(outfile,"wb").write(output)
     except IOError,msg:
@@ -174,12 +169,10 @@ def make(filename, outfile):
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hVo:',
-                                   ['help', 'version', 'output-file='])
+        opts, args = getopt.getopt(sys.argv[1:], 'hV', ['help','version'])
     except getopt.error, msg:
         usage(1, msg)
 
-    outfile = None
     # parse options
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -187,8 +180,6 @@ def main():
         elif opt in ('-V', '--version'):
             print >> sys.stderr, "msgfmt.py", __version__
             sys.exit(0)
-        elif opt in ('-o', '--output-file'):
-            outfile = arg
     # do it
     if not args:
         print >> sys.stderr, 'No input file given'
@@ -196,7 +187,7 @@ def main():
         return
 
     for filename in args:
-        make(filename, outfile)
+        make(filename)
 
 
 if __name__ == '__main__':

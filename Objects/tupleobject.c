@@ -184,56 +184,34 @@ tupleprint(PyTupleObject *op, FILE *fp, int flags)
 static PyObject *
 tuplerepr(PyTupleObject *v)
 {
-	int i, n;
-	PyObject *s, *temp;
-	PyObject *pieces, *result = NULL;
-
-	n = v->ob_size;
-	if (n == 0)
-		return PyString_FromString("()");
-
-	pieces = PyTuple_New(n);
-	if (pieces == NULL)
-		return NULL;
-
-	/* Do repr() on each element. */
-	for (i = 0; i < n; ++i) {
-		s = PyObject_Repr(v->ob_item[i]);
-		if (s == NULL)
-			goto Done;
-		PyTuple_SET_ITEM(pieces, i, s);
-	}
-
-	/* Add "()" decorations to the first and last items. */
-	assert(n > 0);
+	PyObject *s, *comma;
+	int i;
 	s = PyString_FromString("(");
-	if (s == NULL)
-		goto Done;
-	temp = PyTuple_GET_ITEM(pieces, 0);
-	PyString_ConcatAndDel(&s, temp);
-	PyTuple_SET_ITEM(pieces, 0, s);
-	if (s == NULL)
-		goto Done;
+	comma = PyString_FromString(", ");
+	for (i = 0; i < v->ob_size && s != NULL; i++) {
+		if (i > 0)
+			PyString_Concat(&s, comma);
+		PyString_ConcatAndDel(&s, PyObject_Repr(v->ob_item[i]));
+	}
+	Py_DECREF(comma);
+	if (v->ob_size == 1)
+		PyString_ConcatAndDel(&s, PyString_FromString(","));
+	PyString_ConcatAndDel(&s, PyString_FromString(")"));
+	return s;
+}
 
-	s = PyString_FromString(n == 1 ? ",)" : ")");
-	if (s == NULL)
-		goto Done;
-	temp = PyTuple_GET_ITEM(pieces, n-1);
-	PyString_ConcatAndDel(&temp, s);
-	PyTuple_SET_ITEM(pieces, n-1, temp);
-	if (temp == NULL)
-		goto Done;
-
-	/* Paste them all together with ", " between. */
-	s = PyString_FromString(", ");
-	if (s == NULL)
-		goto Done;
-	result = _PyString_Join(s, pieces);
-	Py_DECREF(s);	
-
-Done:
-	Py_DECREF(pieces);
-	return result;
+static int
+tuplecompare(register PyTupleObject *v, register PyTupleObject *w)
+{
+	register int len =
+		(v->ob_size < w->ob_size) ? v->ob_size : w->ob_size;
+	register int i;
+	for (i = 0; i < len; i++) {
+		int cmp = PyObject_Compare(v->ob_item[i], w->ob_item[i]);
+		if (cmp != 0)
+			return cmp;
+	}
+	return v->ob_size - w->ob_size;
 }
 
 static long
@@ -268,11 +246,10 @@ tuplecontains(PyTupleObject *a, PyObject *el)
 	int i, cmp;
 
 	for (i = 0; i < a->ob_size; ++i) {
-		cmp = PyObject_RichCompareBool(el, PyTuple_GET_ITEM(a, i),
-					       Py_EQ);
-		if (cmp > 0)
+		cmp = PyObject_Compare(el, PyTuple_GET_ITEM(a, i));
+		if (cmp == 0)
 			return 1;
-		else if (cmp < 0)
+		if (PyErr_Occurred())
 			return -1;
 	}
 	return 0;
@@ -407,88 +384,15 @@ tupletraverse(PyTupleObject *o, visitproc visit, void *arg)
 	return 0;
 }
 
-static PyObject *
-tuplerichcompare(PyObject *v, PyObject *w, int op)
-{
-	PyTupleObject *vt, *wt;
-	int i;
-	int vlen, wlen;
-
-	if (!PyTuple_Check(v) || !PyTuple_Check(w)) {
-		Py_INCREF(Py_NotImplemented);
-		return Py_NotImplemented;
-	}
-
-	vt = (PyTupleObject *)v;
-	wt = (PyTupleObject *)w;
-
-	vlen = vt->ob_size;
-	wlen = wt->ob_size;
-
-	/* Note:  the corresponding code for lists has an "early out" test
-	 * here when op is EQ or NE and the lengths differ.  That pays there,
-	 * but Tim was unable to find any real code where EQ/NE tuple
-	 * compares don't have the same length, so testing for it here would
-	 * have cost without benefit.
-	 */
-
-	/* Search for the first index where items are different.
-	 * Note that because tuples are immutable, it's safe to reuse
-	 * vlen and wlen across the comparison calls.
-	 */
-	for (i = 0; i < vlen && i < wlen; i++) {
-		int k = PyObject_RichCompareBool(vt->ob_item[i],
-						 wt->ob_item[i], Py_EQ);
-		if (k < 0)
-			return NULL;
-		if (!k)
-			break;
-	}
-
-	if (i >= vlen || i >= wlen) {
-		/* No more items to compare -- compare sizes */
-		int cmp;
-		PyObject *res;
-		switch (op) {
-		case Py_LT: cmp = vlen <  wlen; break;
-		case Py_LE: cmp = vlen <= wlen; break;
-		case Py_EQ: cmp = vlen == wlen; break;
-		case Py_NE: cmp = vlen != wlen; break;
-		case Py_GT: cmp = vlen >  wlen; break;
-		case Py_GE: cmp = vlen >= wlen; break;
-		default: return NULL; /* cannot happen */
-		}
-		if (cmp)
-			res = Py_True;
-		else
-			res = Py_False;
-		Py_INCREF(res);
-		return res;
-	}
-
-	/* We have an item that differs -- shortcuts for EQ/NE */
-	if (op == Py_EQ) {
-		Py_INCREF(Py_False);
-		return Py_False;
-	}
-	if (op == Py_NE) {
-		Py_INCREF(Py_True);
-		return Py_True;
-	}
-
-	/* Compare the final item again using the proper operator */
-	return PyObject_RichCompare(vt->ob_item[i], wt->ob_item[i], op);
-}
-
 static PySequenceMethods tuple_as_sequence = {
-	(inquiry)tuplelength,			/* sq_length */
-	(binaryfunc)tupleconcat,		/* sq_concat */
-	(intargfunc)tuplerepeat,		/* sq_repeat */
-	(intargfunc)tupleitem,			/* sq_item */
-	(intintargfunc)tupleslice,		/* sq_slice */
-	0,					/* sq_ass_item */
-	0,					/* sq_ass_slice */
-	(objobjproc)tuplecontains,		/* sq_contains */
+	(inquiry)tuplelength, /*sq_length*/
+	(binaryfunc)tupleconcat, /*sq_concat*/
+	(intargfunc)tuplerepeat, /*sq_repeat*/
+	(intargfunc)tupleitem, /*sq_item*/
+	(intintargfunc)tupleslice, /*sq_slice*/
+	0,		/*sq_ass_item*/
+	0,		/*sq_ass_slice*/
+	(objobjproc)tuplecontains, /*sq_contains*/
 };
 
 PyTypeObject PyTuple_Type = {
@@ -497,26 +401,24 @@ PyTypeObject PyTuple_Type = {
 	"tuple",
 	sizeof(PyTupleObject) - sizeof(PyObject *) + PyGC_HEAD_SIZE,
 	sizeof(PyObject *),
-	(destructor)tupledealloc,		/* tp_dealloc */
-	(printfunc)tupleprint,			/* tp_print */
-	0,					/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	(reprfunc)tuplerepr,			/* tp_repr */
-	0,					/* tp_as_number */
-	&tuple_as_sequence,			/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	(hashfunc)tuplehash,			/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	0,					/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
-	0,             				/* tp_doc */
- 	(traverseproc)tupletraverse,		/* tp_traverse */
-	0,					/* tp_clear */
-	tuplerichcompare,			/* tp_richcompare */
+	(destructor)tupledealloc, /*tp_dealloc*/
+	(printfunc)tupleprint, /*tp_print*/
+	0,		/*tp_getattr*/
+	0,		/*tp_setattr*/
+	(cmpfunc)tuplecompare, /*tp_compare*/
+	(reprfunc)tuplerepr, /*tp_repr*/
+	0,		/*tp_as_number*/
+	&tuple_as_sequence,	/*tp_as_sequence*/
+	0,		/*tp_as_mapping*/
+	(hashfunc)tuplehash, /*tp_hash*/
+	0,		/*tp_call*/
+	0,		/*tp_str*/
+	0,		/*tp_getattro*/
+	0,		/*tp_setattro*/
+	0,		/*tp_as_buffer*/
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC, /*tp_flags*/
+	0,              /*tp_doc*/
+ 	(traverseproc)tupletraverse,	/* tp_traverse */
 };
 
 /* The following function breaks the notion that tuples are immutable:
@@ -524,10 +426,11 @@ PyTypeObject PyTuple_Type = {
    is only one module referencing the object.  You can also think of it
    as creating a new tuple object and destroying the old one, only more
    efficiently.  In any case, don't use this if the tuple may already be
-   known to some other part of the code. */
+   known to some other part of the code.  The last_is_sticky is not used
+   and must always be false. */
 
 int
-_PyTuple_Resize(PyObject **pv, int newsize)
+_PyTuple_Resize(PyObject **pv, int newsize, int last_is_sticky)
 {
 	register PyTupleObject *v;
 	register PyTupleObject *sv;
@@ -535,8 +438,8 @@ _PyTuple_Resize(PyObject **pv, int newsize)
 	int sizediff;
 
 	v = (PyTupleObject *) *pv;
-	if (v == NULL || !PyTuple_Check(v) ||
-	    (v->ob_size != 0 && v->ob_refcnt != 1)) {
+	if (v == NULL || !PyTuple_Check(v) || v->ob_refcnt != 1 ||
+             last_is_sticky) {
 		*pv = 0;
 		Py_XDECREF(v);
 		PyErr_BadInternalCall();
@@ -545,15 +448,6 @@ _PyTuple_Resize(PyObject **pv, int newsize)
 	sizediff = newsize - v->ob_size;
 	if (sizediff == 0)
 		return 0;
-
-	if (v->ob_size == 0) {
-		/* Empty tuples are often shared, so we should never 
-		   resize them in-place even if we do own the only
-		   (current) reference */
-		Py_DECREF(v);
-		*pv = PyTuple_New(newsize);
-		return *pv == NULL ? -1 : 0;
-	}
 
 	/* XXX UNREF/NEWREF interface should be more symmetrical */
 #ifdef Py_REF_DEBUG

@@ -1,9 +1,9 @@
-""" Python Character Mapping Codec generated from 'CP1258.TXT' with gencodec.py.
+""" Python Character Mapping Codec generated from 'CP1258.TXT'.
+
 
 Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 (c) Copyright CNRI, All Rights Reserved. NO WARRANTY.
-(c) Copyright 2000 Guido van Rossum.
 
 """#"
 
@@ -35,8 +35,8 @@ def getregentry():
 
 ### Decoding Map
 
-decoding_map = codecs.make_identity_dict(range(256))
-decoding_map.update({
+decoding_map = {
+
 	0x0080: 0x20ac,	# EURO SIGN
 	0x0081: None,	# UNDEFINED
 	0x0082: 0x201a,	# SINGLE LOW-9 QUOTATION MARK
@@ -83,8 +83,10 @@ decoding_map.update({
 	0x00f5: 0x01a1,	# LATIN SMALL LETTER O WITH HORN
 	0x00fd: 0x01b0,	# LATIN SMALL LETTER U WITH HORN
 	0x00fe: 0x20ab,	# DONG SIGN
-})
+}
 
 ### Encoding Map
 
-encoding_map = codecs.make_encoding_map(decoding_map)
+encoding_map = {}
+for k,v in decoding_map.items():
+    encoding_map[v] = k
