@@ -1,0 +1,13 @@
+*.ind
+*.log
+*.aux
+*.dvi
+*.toc
+*.ps
+*.idx
+*.ilg
+*.pdf
+*.bkm
+*.tar.gz
+*.syn
+README
