@@ -192,7 +192,7 @@ There is no \cfunction{PyNone_Check()} function for the same reason.
   header files).
 \end{cfuncdesc}
 
-\subsection{Boolean Objects \label{boolObjects}}
+\subsubsection{Boolean Objects \label{boolObjects}}
 
 Booleans in Python are implemented as a subclass of integers.  There
 are only two booleans, \constant{Py_False} and \constant{Py_True}.  As
@@ -894,6 +894,11 @@ functions depending on the Python configuration.
   character.
 \end{cfuncdesc}
 
+\begin{cfuncdesc}{int}{Py_UNICODE_ISWIDE}{Py_UNICODE ch}
+  Returns 1/0 depending on whether \var{ch} is a wide or full-width
+  character.
+\end{cfuncdesc}
+
 These APIs can be used for fast direct character conversions:
 
 \begin{cfuncdesc}{Py_UNICODE}{Py_UNICODE_TOLOWER}{Py_UNICODE ch}
@@ -950,6 +955,10 @@ use these APIs:
 
 \begin{cfuncdesc}{int}{PyUnicode_GetSize}{PyObject *unicode}
   Return the length of the Unicode object.
+\end{cfuncdesc}
+
+\begin{cfuncdesc}{int}{PyUnicode_GetWidth}{PyObject *unicode}
+  Return the fixed-width representation length of the Unicode object.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyUnicode_FromEncodedObject}{PyObject *obj,
@@ -2816,7 +2825,7 @@ instance of \cdata{PyDateTime_DateTime}, including subclasses.
 The argument must not be \NULL{}, and the type is not checked:
 
 \begin{cfuncdesc}{int}{PyDateTime_DATE_GET_HOUR}{PyDateTime_DateTime *o}
-  Return the hour, as an int from 0 through 23.
+  Return the hour, an int from 0 though 23.
   \versionadded{2.4}
 \end{cfuncdesc}
 
@@ -2840,7 +2849,7 @@ instance of \cdata{PyDateTime_Time}, including subclasses.
 The argument must not be \NULL{}, and the type is not checked:
 
 \begin{cfuncdesc}{int}{PyDateTime_TIME_GET_HOUR}{PyDateTime_Time *o}
-  Return the hour, as an int from 0 through 23.
+  Return the hour, as an int from 0 though 23.
   \versionadded{2.4}
 \end{cfuncdesc}
 

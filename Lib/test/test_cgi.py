@@ -193,6 +193,7 @@ def main():
     verify(norm(expect.values()) == norm(d.values()))
 
     print "Testing log"
+    cgi.initlog()
     cgi.log("Testing")
     cgi.logfp = sys.stdout
     cgi.initlog("%s", "Testing initlog 1")

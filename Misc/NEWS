@@ -64,12 +64,6 @@ Core and builtins
 
 - Implemented bind_textdomain_codeset() in locale module.
 
-- Added a workaround for proper string operations in BSDs.  str.split
-  and str.is* methods can now work correctly with UTF-8 locales.
-
-- unicode.iswide() and unicode.width() is dropped and the East Asian
-  Width support is moved to unicodedata extension module.
-
 Extension modules
 -----------------
 
@@ -77,18 +71,6 @@ Extension modules
 
 Library
 -------
-
-- Tkinter now supports the wish -sync and -use options.
-
-- The following methods in time support passing of None: ctime(), gmtime(),
-  and localtime().  If None is provided, the current time is used (the
-  same as when the argument is omitted).
-  [SF bug 658254, patch 663482]
-
-- nntplib does now allow to ignore a .netrc file.
-
-- urllib2 now recognizes Basic authentication even if other authentication
-  schemes are offered.
 
 - Bug #1001053.  wave.open() now accepts unicode filenames.
 

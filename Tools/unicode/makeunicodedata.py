@@ -43,8 +43,6 @@ BIDIRECTIONAL_NAMES = [ "", "L", "LRE", "LRO", "R", "AL", "RLE", "RLO",
     "PDF", "EN", "ES", "ET", "AN", "CS", "NSM", "BN", "B", "S", "WS",
     "ON" ]
 
-EASTASIANWIDTH_NAMES = [ "F", "H", "W", "Na", "A", "N" ]
-
 # note: should match definitions in Objects/unicodectype.c
 ALPHA_MASK = 0x01
 DECIMAL_MASK = 0x02
@@ -54,6 +52,7 @@ LINEBREAK_MASK = 0x10
 SPACE_MASK = 0x20
 TITLE_MASK = 0x40
 UPPER_MASK = 0x80
+WIDE_MASK = 0x100
 
 def maketables(trace=0):
 
@@ -73,7 +72,7 @@ def maketables(trace=0):
 
 def makeunicodedata(unicode, trace):
 
-    dummy = (0, 0, 0, 0, 0)
+    dummy = (0, 0, 0, 0)
     table = [dummy]
     cache = {0: dummy}
     index = [0] * len(unicode.chars)
@@ -92,9 +91,8 @@ def makeunicodedata(unicode, trace):
             combining = int(record[3])
             bidirectional = BIDIRECTIONAL_NAMES.index(record[4])
             mirrored = record[9] == "Y"
-            eastasianwidth = EASTASIANWIDTH_NAMES.index(record[15])
             item = (
-                category, combining, bidirectional, mirrored, eastasianwidth
+                category, combining, bidirectional, mirrored
                 )
             # add entry to index and item tables
             i = cache.get(item)
@@ -206,7 +204,7 @@ def makeunicodedata(unicode, trace):
     print >>fp, \
           "const _PyUnicode_DatabaseRecord _PyUnicode_Database_Records[] = {"
     for item in table:
-        print >>fp, "    {%d, %d, %d, %d, %d}," % item
+        print >>fp, "    {%d, %d, %d, %d}," % item
     print >>fp, "};"
     print >>fp
 
@@ -237,12 +235,6 @@ def makeunicodedata(unicode, trace):
 
     print >>fp, "const char *_PyUnicode_BidirectionalNames[] = {"
     for name in BIDIRECTIONAL_NAMES:
-        print >>fp, "    \"%s\"," % name
-    print >>fp, "    NULL"
-    print >>fp, "};"
-
-    print >>fp, "const char *_PyUnicode_EastAsianWidthNames[] = {"
-    for name in EASTASIANWIDTH_NAMES:
         print >>fp, "    \"%s\"," % name
     print >>fp, "    NULL"
     print >>fp, "};"
@@ -342,6 +334,8 @@ def makeunicodetype(unicode, trace):
             if record[7]:
                 flags |= DIGIT_MASK
                 digit = int(record[7])
+            if record[15] in ('W', 'F'): # Wide or Full width
+                flags |= WIDE_MASK
             item = (
                 upper, lower, title, decimal, digit, flags
                 )

@@ -9,9 +9,7 @@ from distutils.core import Distribution
 from distutils.tests import support
 
 
-class BuildScriptsTestCase(support.TempdirManager,
-                           support.LoggingSilencer,
-                           unittest.TestCase):
+class BuildScriptsTestCase(support.TempdirManager, unittest.TestCase):
 
     def test_default_settings(self):
         cmd = self.get_build_scripts_cmd("/foo/bar", [])

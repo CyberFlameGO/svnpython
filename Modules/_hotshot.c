@@ -347,11 +347,9 @@ unpack_add_info(LogReaderObject *self)
                     goto finally;
                 }
                 if (PyDict_SetItem(self->info, key, list)) {
-                    Py_DECREF(list);
                     err = ERR_EXCEPTION;
                     goto finally;
                 }
-                Py_DECREF(list);
             }
             if (PyList_Append(list, value))
                 err = ERR_EXCEPTION;
@@ -521,7 +519,6 @@ logreader_dealloc(LogReaderObject *self)
         fclose(self->logfp);
         self->logfp = NULL;
     }
-    Py_XDECREF(self->info);
     PyObject_Del(self);
 }
 
@@ -798,16 +795,11 @@ get_fileno(ProfilerObject *self, PyCodeObject *fcode)
         PyObject *name = PyDict_GetItem(dict, obj);
         if (name == NULL) {
             if (pack_define_func(self, fileno, fcode->co_firstlineno,
-                                 PyString_AS_STRING(fcode->co_name)) < 0) {
-                Py_DECREF(obj);
+                                 PyString_AS_STRING(fcode->co_name)) < 0)
                 return -1;
-            }
-            if (PyDict_SetItem(dict, obj, fcode->co_name)) {
-                Py_DECREF(obj);
+            if (PyDict_SetItem(dict, obj, fcode->co_name))
                 return -1;
-            }
         }
-        Py_DECREF(obj);
     }
     return fileno;
 }
