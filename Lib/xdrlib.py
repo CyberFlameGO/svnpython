@@ -157,9 +157,7 @@ class Unpacker:
         return struct.unpack('>l', data)[0]
 
     unpack_enum = unpack_int
-
-    def unpack_bool(self):
-        return bool(self.unpack_int())
+    unpack_bool = unpack_int
 
     def unpack_uhyper(self):
         hi = self.unpack_uint()
@@ -234,8 +232,8 @@ def _test():
     p = Packer()
     packtest = [
         (p.pack_uint,    (9,)),
-        (p.pack_bool,    (True,)),
-        (p.pack_bool,    (False,)),
+        (p.pack_bool,    (None,)),
+        (p.pack_bool,    ('hello',)),
         (p.pack_uhyper,  (45L,)),
         (p.pack_float,   (1.9,)),
         (p.pack_double,  (1.9,)),
@@ -259,8 +257,8 @@ def _test():
     up = Unpacker(data)
     unpacktest = [
         (up.unpack_uint,   (), lambda x: x == 9),
-        (up.unpack_bool,   (), lambda x: x is True),
-        (up.unpack_bool,   (), lambda x: x is False),
+        (up.unpack_bool,   (), lambda x: not x),
+        (up.unpack_bool,   (), lambda x: x),
         (up.unpack_uhyper, (), lambda x: x == 45L),
         (up.unpack_float,  (), lambda x: 1.89 < x < 1.91),
         (up.unpack_double, (), lambda x: 1.89 < x < 1.91),

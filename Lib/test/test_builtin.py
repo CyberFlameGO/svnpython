@@ -1,18 +1,13 @@
 # Python test set -- built-in functions
 
 import test.test_support, unittest
-from test.test_support import fcmp, have_unicode, TESTFN, unlink, run_unittest
-from operator import neg
+from test.test_support import fcmp, have_unicode, TESTFN, unlink
 
 import sys, warnings, cStringIO, random, UserDict
 warnings.filterwarnings("ignore", "hex../oct.. of negative int",
                         FutureWarning, __name__)
 warnings.filterwarnings("ignore", "integer argument expected",
                         DeprecationWarning, "unittest")
-
-# count the number of test runs.
-# used to skip running test_execfile() multiple times
-numruns = 0
 
 class Squares:
 
@@ -92,14 +87,6 @@ if have_unicode:
         (unichr(0x200), ValueError),
 ]
 
-class TestFailingBool:
-    def __nonzero__(self):
-        raise RuntimeError
-
-class TestFailingIter:
-    def __iter__(self):
-        raise RuntimeError
-
 class BuiltinTest(unittest.TestCase):
 
     def test_import(self):
@@ -124,34 +111,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(abs(-1234L), 1234L)
         # str
         self.assertRaises(TypeError, abs, 'a')
-
-    def test_all(self):
-        self.assertEqual(all([2, 4, 6]), True)
-        self.assertEqual(all([2, None, 6]), False)
-        self.assertRaises(RuntimeError, all, [2, TestFailingBool(), 6])
-        self.assertRaises(RuntimeError, all, TestFailingIter())
-        self.assertRaises(TypeError, all, 10)               # Non-iterable
-        self.assertRaises(TypeError, all)                   # No args
-        self.assertRaises(TypeError, all, [2, 4, 6], [])    # Too many args
-        self.assertEqual(all([]), True)                     # Empty iterator
-        S = [50, 60]
-        self.assertEqual(all(x > 42 for x in S), True)
-        S = [50, 40, 60]
-        self.assertEqual(all(x > 42 for x in S), False)
-
-    def test_any(self):
-        self.assertEqual(any([None, None, None]), False)
-        self.assertEqual(any([None, 4, None]), True)
-        self.assertRaises(RuntimeError, any, [None, TestFailingBool(), 6])
-        self.assertRaises(RuntimeError, all, TestFailingIter())
-        self.assertRaises(TypeError, any, 10)               # Non-iterable
-        self.assertRaises(TypeError, any)                   # No args
-        self.assertRaises(TypeError, any, [2, 4, 6], [])    # Too many args
-        self.assertEqual(any([]), False)                    # Empty iterator
-        S = [40, 60, 30]
-        self.assertEqual(any(x > 42 for x in S), True)
-        S = [10, 20, 30]
-        self.assertEqual(any(x > 42 for x in S), False)
 
     def test_apply(self):
         def f0(*args):
@@ -384,11 +343,6 @@ class BuiltinTest(unittest.TestCase):
     execfile(TESTFN)
 
     def test_execfile(self):
-        global numruns
-        if numruns:
-            return
-        numruns += 1
-
         globals = {'a': 1, 'b': 2}
         locals = {'b': 200, 'c': 300}
 
@@ -891,30 +845,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(max(1L, 2.0, 3), 3)
         self.assertEqual(max(1.0, 2, 3L), 3L)
 
-        for stmt in (
-            "max(key=int)",                 # no args
-            "max(1, key=int)",              # single arg not iterable
-            "max(1, 2, keystone=int)",      # wrong keyword
-            "max(1, 2, key=int, abc=int)",  # two many keywords
-            "max(1, 2, key=1)",             # keyfunc is not callable
-            ):
-            try:
-                exec(stmt) in globals()
-            except TypeError:
-                pass
-            else:
-                self.fail(stmt)
-
-        self.assertEqual(max((1,), key=neg), 1)     # one elem iterable
-        self.assertEqual(max((1,2), key=neg), 1)    # two elem iterable
-        self.assertEqual(max(1, 2, key=neg), 1)     # two elems
-
-        data = [random.randrange(200) for i in range(100)]
-        keys = dict((elem, random.randrange(50)) for elem in data)
-        f = keys.__getitem__
-        self.assertEqual(max(data, key=f),
-                         sorted(reversed(data), key=f)[-1])
-
     def test_min(self):
         self.assertEqual(min('123123'), '1')
         self.assertEqual(min(1, 2, 3), 1)
@@ -936,30 +866,6 @@ class BuiltinTest(unittest.TestCase):
             def __cmp__(self, other):
                 raise ValueError
         self.assertRaises(ValueError, min, (42, BadNumber()))
-
-        for stmt in (
-            "min(key=int)",                 # no args
-            "min(1, key=int)",              # single arg not iterable
-            "min(1, 2, keystone=int)",      # wrong keyword
-            "min(1, 2, key=int, abc=int)",  # two many keywords
-            "min(1, 2, key=1)",             # keyfunc is not callable
-            ):
-            try:
-                exec(stmt) in globals()
-            except TypeError:
-                pass
-            else:
-                self.fail(stmt)
-
-        self.assertEqual(min((1,), key=neg), 1)     # one elem iterable
-        self.assertEqual(min((1,2), key=neg), 2)    # two elem iterable
-        self.assertEqual(min(1, 2, key=neg), 2)     # two elems
-
-        data = [random.randrange(200) for i in range(100)]
-        keys = dict((elem, random.randrange(50)) for elem in data)
-        f = keys.__getitem__
-        self.assertEqual(min(data, key=f),
-                         sorted(data, key=f)[0])
 
     def test_oct(self):
         self.assertEqual(oct(100), '0144')
@@ -1310,18 +1216,17 @@ class BuiltinTest(unittest.TestCase):
             self.assertRaises(ValueError, unichr, sys.maxunicode+1)
             self.assertRaises(TypeError, unichr)
 
-    # We don't want self in vars(), so these are static methods
-
-    @staticmethod
     def get_vars_f0():
         return vars()
+    # we don't want self in vars(), so use staticmethod
+    get_vars_f0 = staticmethod(get_vars_f0)
 
-    @staticmethod
     def get_vars_f2():
         BuiltinTest.get_vars_f0()
         a = 1
         b = 2
         return vars()
+    get_vars_f2 = staticmethod(get_vars_f2)
 
     def test_vars(self):
         self.assertEqual(set(vars()), set(dir()))
@@ -1408,21 +1313,8 @@ class TestSorted(unittest.TestCase):
         data = 'The quick Brown fox Jumped over The lazy Dog'.split()
         self.assertRaises(TypeError, sorted, data, None, lambda x,y: 0)
 
-def test_main(verbose=None):
-    test_classes = (BuiltinTest, TestSorted)
-
-    run_unittest(*test_classes)
-
-    # verify reference counting
-    if verbose and hasattr(sys, "gettotalrefcount"):
-        import gc
-        counts = [None] * 5
-        for i in xrange(len(counts)):
-            run_unittest(*test_classes)
-            gc.collect()
-            counts[i] = sys.gettotalrefcount()
-        print counts
-
+def test_main():
+    test.test_support.run_unittest(BuiltinTest, TestSorted)
 
 if __name__ == "__main__":
-    test_main(verbose=True)
+    test_main()

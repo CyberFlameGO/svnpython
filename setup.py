@@ -3,7 +3,7 @@
 
 __version__ = "$Revision$"
 
-import sys, os, imp, re, optparse
+import sys, os, getopt, imp, re
 
 from distutils import log
 from distutils import sysconfig
@@ -242,37 +242,14 @@ class PyBuildExt(build_ext):
         add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
         add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
 
-        # Add paths specified in the environment variables LDFLAGS and
-        # CPPFLAGS for header and library files.
-        # We must get the values from the Makefile and not the environment
-        # directly since an inconsistently reproducible issue comes up where
-        # the environment variable is not set even though the value were passed
-        # into configure and stored in the Makefile (issue found on OS X 10.3).
-        for env_var, arg_name, dir_list in (
-                ('LDFLAGS', '-L', self.compiler.library_dirs),
-                ('CPPFLAGS', '-I', self.compiler.include_dirs)):
-            env_val = sysconfig.get_config_var(env_var)
-            if env_val:
-                # To prevent optparse from raising an exception about any
-                # options in env_val that is doesn't know about we strip out
-                # all double dashes and any dashes followed by a character
-                # that is not for the option we are dealing with.
-                #
-                # Please note that order of the regex is important!  We must
-                # strip out double-dashes first so that we don't end up with
-                # substituting "--Long" to "-Long" and thus lead to "ong" being
-                # used for a library directory.
-                env_val = re.sub(r'(^|\s+)-(-|(?!%s))' % arg_name[1], '', env_val)
-                parser = optparse.OptionParser()
-                # Make sure that allowing args interspersed with options is
-                # allowed
-                parser.allow_interspersed_args = True
-                parser.error = lambda msg: None
-                parser.add_option(arg_name, dest="dirs", action="append")
-                options = parser.parse_args(env_val.split())[0]
-                if options.dirs:
-                    for directory in options.dirs:
-                        add_dir_to_list(dir_list, directory)
+        # Add paths to popular package managers on OS X/darwin
+        if sys.platform == "darwin":
+            # Fink installs into /sw by default
+            add_dir_to_list(self.compiler.library_dirs, '/sw/lib')
+            add_dir_to_list(self.compiler.include_dirs, '/sw/include')
+            # DarwinPorts installs into /opt/local by default
+            add_dir_to_list(self.compiler.library_dirs, '/opt/local/lib')
+            add_dir_to_list(self.compiler.include_dirs, '/opt/local/include')
 
         if os.path.normpath(sys.prefix) != '/usr':
             add_dir_to_list(self.compiler.library_dirs,
@@ -355,8 +332,6 @@ class PyBuildExt(build_ext):
         exts.append( Extension("_heapq", ["_heapqmodule.c"]) )
         # operator.add() and similar goodies
         exts.append( Extension('operator', ['operator.c']) )
-        # functional
-        exts.append( Extension("functional", ["functionalmodule.c"]) )
         # Python C API test module
         exts.append( Extension('_testcapi', ['_testcapimodule.c']) )
         # static Unicode character database
@@ -386,14 +361,10 @@ class PyBuildExt(build_ext):
         # fcntl(2) and ioctl(2)
         exts.append( Extension('fcntl', ['fcntlmodule.c']) )
         if platform not in ['mac']:
-            # pwd(3)
+                # pwd(3)
             exts.append( Extension('pwd', ['pwdmodule.c']) )
             # grp(3)
             exts.append( Extension('grp', ['grpmodule.c']) )
-            # spwd, shadow passwords
-            if (sysconfig.get_config_var('HAVE_GETSPNAM') or
-                    sysconfig.get_config_var('HAVE_GETSPENT')):
-                exts.append( Extension('spwd', ['spwdmodule.c']) )
         # select(2); not on ancient System V
         exts.append( Extension('select', ['selectmodule.c']) )
 

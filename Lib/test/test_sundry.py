@@ -3,6 +3,8 @@
 import warnings
 warnings.filterwarnings('ignore', r".*posixfile module",
                         DeprecationWarning, 'posixfile$')
+warnings.filterwarnings('ignore', r".*statcache module",
+                        DeprecationWarning, 'statcache$')
 
 from test.test_support import verbose
 
@@ -78,6 +80,7 @@ import shlex
 import shutil
 import smtplib
 import sndhdr
+import statcache
 import statvfs
 import stringold
 import sunau
@@ -87,10 +90,12 @@ import tabnanny
 import telnetlib
 import test
 import toaiff
+#import tzparse
 import urllib2
 # Can't test the "user" module -- if the user has a ~/.pythonrc.py, it
 # can screw up all sorts of things (esp. if it prints!).
 #import user
 import webbrowser
 import whichdb
+import xdrlib
 import xml

@@ -410,11 +410,7 @@ class URLopener:
 
     def open_local_file(self, url):
         """Use local file."""
-        import mimetypes, mimetools, email.Utils
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        import mimetypes, mimetools, email.Utils, StringIO
         host, file = splithost(url)
         localname = url2pathname(file)
         try:
@@ -424,7 +420,7 @@ class URLopener:
         size = stats.st_size
         modified = email.Utils.formatdate(stats.st_mtime, usegmt=True)
         mtype = mimetypes.guess_type(url)[0]
-        headers = mimetools.Message(StringIO(
+        headers = mimetools.Message(StringIO.StringIO(
             'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
             (mtype or 'text/plain', size, modified)))
         if not host:
@@ -445,11 +441,7 @@ class URLopener:
 
     def open_ftp(self, url):
         """Use FTP protocol."""
-        import mimetypes, mimetools
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        import mimetypes, mimetools, StringIO
         host, path = splithost(url)
         if not host: raise IOError, ('ftp error', 'no host given')
         host, port = splitport(host)
@@ -498,7 +490,7 @@ class URLopener:
                 headers += "Content-Type: %s\n" % mtype
             if retrlen is not None and retrlen >= 0:
                 headers += "Content-Length: %d\n" % retrlen
-            headers = mimetools.Message(StringIO(headers))
+            headers = mimetools.Message(StringIO.StringIO(headers))
             return addinfourl(fp, headers, "ftp:" + url)
         except ftperrors(), msg:
             raise IOError, ('ftp error', msg), sys.exc_info()[2]
@@ -512,11 +504,7 @@ class URLopener:
         # mediatype := [ type "/" subtype ] *( ";" parameter )
         # data      := *urlchar
         # parameter := attribute "=" value
-        import mimetools
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        import StringIO, mimetools
         try:
             [type, data] = url.split(',', 1)
         except ValueError:
@@ -542,7 +530,7 @@ class URLopener:
         msg.append('')
         msg.append(data)
         msg = '\n'.join(msg)
-        f = StringIO(msg)
+        f = StringIO.StringIO(msg)
         headers = mimetools.Message(f, 0)
         f.fileno = None     # needed for addinfourl
         return addinfourl(f, headers, url)
@@ -709,11 +697,8 @@ def noheaders():
     global _noheaders
     if _noheaders is None:
         import mimetools
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
-        _noheaders = mimetools.Message(StringIO(), 0)
+        import StringIO
+        _noheaders = mimetools.Message(StringIO.StringIO(), 0)
         _noheaders.fp.close()   # Recycle file descriptor
     return _noheaders
 

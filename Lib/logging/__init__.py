@@ -1,4 +1,4 @@
-# Copyright 2001-2005 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2004 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -26,12 +26,7 @@ Copyright (C) 2001-2004 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging' and log away!
 """
 
-import sys, os, types, time, string, cStringIO, traceback
-
-try:
-    import codecs
-except ImportError:
-    codecs = None
+import sys, os, types, time, string, cStringIO
 
 try:
     import thread
@@ -42,14 +37,14 @@ except ImportError:
 __author__  = "Vinay Sajip <vinay_sajip@red-dove.com>"
 __status__  = "beta"
 __version__ = "0.4.9.6"
-__date__    = "12 March 2005"
+__date__    = "20 October 2004"
 
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
 #---------------------------------------------------------------------------
 
 #
-# _srcfile is used when walking the stack to check when we've got the first
+#_srcfile is used when walking the stack to check when we've got the first
 # caller stack frame.
 #
 if string.lower(__file__[-4:]) in ['.pyc', '.pyo']:
@@ -58,23 +53,12 @@ else:
     _srcfile = __file__
 _srcfile = os.path.normcase(_srcfile)
 
-# next bit filched from 1.5.2's inspect.py
-def currentframe():
-    """Return the frame object for the caller's stack frame."""
-    try:
-        raise 'catch me'
-    except:
-        return sys.exc_traceback.tb_frame.f_back
-
-if hasattr(sys, '_getframe'): currentframe = sys._getframe
-# done filching
-
 # _srcfile is only used in conjunction with sys._getframe().
 # To provide compatibility with older versions of Python, set _srcfile
 # to None if _getframe() is not available; this value will prevent
 # findCaller() from being called.
-#if not hasattr(sys, "_getframe"):
-#    _srcfile = None
+if not hasattr(sys, "_getframe"):
+    _srcfile = None
 
 #
 #_startTime is used as the base when calculating the relative time of events
@@ -97,7 +81,6 @@ raiseExceptions = 1
 # loggers are initialized with NOTSET so that they will log all messages, even
 # at user-defined levels.
 #
-
 CRITICAL = 50
 FATAL = CRITICAL
 ERROR = 40
@@ -374,6 +357,7 @@ class Formatter:
         This default implementation just uses
         traceback.print_exception()
         """
+        import traceback
         sio = cStringIO.StringIO()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sio)
         s = sio.getvalue()
@@ -679,6 +663,7 @@ class Handler(Filterer):
         The record which was being processed is passed in to this method.
         """
         if raiseExceptions:
+            import traceback
             ei = sys.exc_info()
             traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
             del ei
@@ -735,17 +720,11 @@ class FileHandler(StreamHandler):
     """
     A handler class which writes formatted logging records to disk files.
     """
-    def __init__(self, filename, mode='a', encoding=None):
+    def __init__(self, filename, mode="a"):
         """
         Open the specified file and use it as the stream for logging.
         """
-        if codecs is None:
-            encoding = None
-        if encoding is None:
-            stream = open(filename, mode)
-        else:
-            stream = codecs.open(filename, mode, encoding)
-        StreamHandler.__init__(self, stream)
+        StreamHandler.__init__(self, open(filename, mode))
         #keep the absolute path, otherwise derived classes which use this
         #may come a cropper when the current directory changes
         self.baseFilename = os.path.abspath(filename)
@@ -1026,16 +1005,16 @@ class Logger(Filterer):
     def findCaller(self):
         """
         Find the stack frame of the caller so that we can note the source
-        file name, line number and function name.
+        file name and line number.
         """
-        f = currentframe().f_back
+        f = sys._getframe(1)
         while 1:
             co = f.f_code
             filename = os.path.normcase(co.co_filename)
             if filename == _srcfile:
                 f = f.f_back
                 continue
-            return filename, f.f_lineno, co.co_name
+            return filename, f.f_lineno
 
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info):
         """
@@ -1050,9 +1029,9 @@ class Logger(Filterer):
         all the handlers of this logger to handle the record.
         """
         if _srcfile:
-            fn, lno, func = self.findCaller()
+            fn, lno = self.findCaller()
         else:
-            fn, lno, func = "(unknown file)", 0, "(unknown function)"
+            fn, lno = "<unknown file>", 0
         if exc_info:
             if type(exc_info) != types.TupleType:
                 exc_info = sys.exc_info()
@@ -1174,7 +1153,7 @@ def basicConfig(**kwargs):
     filename  Specifies that a FileHandler be created, using the specified
               filename, rather than a StreamHandler.
     filemode  Specifies the mode to open the file, if filename is specified
-              (if filemode is unspecified, it defaults to 'a').
+              (if filemode is unspecified, it defaults to "a").
     format    Use the specified format string for the handler.
     datefmt   Use the specified date/time format.
     level     Set the root logger level to the specified level.
@@ -1191,7 +1170,7 @@ def basicConfig(**kwargs):
     if len(root.handlers) == 0:
         filename = kwargs.get("filename")
         if filename:
-            mode = kwargs.get("filemode", 'a')
+            mode = kwargs.get("filemode", "a")
             hdlr = FileHandler(filename, mode)
         else:
             stream = kwargs.get("stream")
