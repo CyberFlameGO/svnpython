@@ -25,7 +25,7 @@ class Options:
     outputfile = "-"
     columns = 1
     letters = 0
-    uplink = "index.html"
+    uplink = "./"
     uptitle = "Python Documentation Index"
 
     def __init__(self):
