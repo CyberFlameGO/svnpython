@@ -100,7 +100,7 @@ class TimeoutTestCase(unittest.TestCase):
 
     def setUp(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.addr_remote = ('www.python.org', 80)
+        self.addr_remote = ('www.google.com', 80)
         self.addr_local  = ('127.0.0.1', 25339)
 
     def tearDown(self):
@@ -118,7 +118,7 @@ class TimeoutTestCase(unittest.TestCase):
 
         _delta = abs(_t1 - _t2)
         self.assert_(_delta < _timeout + self.fuzz,
-                     "timeout (%g) is more than %g seconds more than expected (%g)"
+                     "timeout (%g) is %g seconds more than expected (%g)"
                      %(_delta, self.fuzz, _timeout))
 
     def testRecvTimeout(self):

@@ -10,7 +10,6 @@ socket are available as methods of the socket object.
 Functions:
 
 socket() -- create a new socket object
-socketpair() -- create a pair of new socket objects [*]
 fromfd() -- create a socket object from an open file descriptor [*]
 gethostname() -- return the current hostname
 gethostbyname() -- map a hostname to its IP number
@@ -148,8 +147,7 @@ class _socketobject(object):
 
     __doc__ = _realsocket.__doc__
 
-    __slots__ = ["_sock", "send", "recv", "sendto", "recvfrom",
-                 "__weakref__"]
+    __slots__ = ["_sock", "send", "recv", "sendto", "recvfrom"]
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
         if _sock is None:
@@ -219,7 +217,7 @@ class _fileobject(object):
         self._wbuf = [] # A list of strings
 
     def _getclosed(self):
-        return self._sock is None
+        return self._sock is not None
     closed = property(_getclosed, doc="True if the file is closed")
 
     def close(self):

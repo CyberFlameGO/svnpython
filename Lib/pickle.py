@@ -33,6 +33,7 @@ import marshal
 import sys
 import struct
 import re
+import warnings
 
 __all__ = ["PickleError", "PicklingError", "UnpicklingError", "Pickler",
            "Unpickler", "dump", "dumps", "load", "loads"]
@@ -170,7 +171,7 @@ del x
 
 class Pickler:
 
-    def __init__(self, file, protocol=None):
+    def __init__(self, file, protocol=None, bin=None):
         """This takes a file-like object for writing a pickle data stream.
 
         The optional protocol argument tells the pickler to use the
@@ -194,6 +195,12 @@ class Pickler:
         object, or any other custom object that meets this interface.
 
         """
+        if protocol is not None and bin is not None:
+            raise ValueError, "can't specify both 'protocol' and 'bin'"
+        if bin is not None:
+            warnings.warn("The 'bin' argument to Pickler() is deprecated",
+                          PendingDeprecationWarning)
+            protocol = bin
         if protocol is None:
             protocol = 0
         if protocol < 0:
@@ -254,7 +261,7 @@ class Pickler:
             else:
                 return LONG_BINPUT + pack("<i", i)
 
-        return PUT + repr(i) + '\n'
+        return PUT + `i` + '\n'
 
     # Return a GET (BINGET, LONG_BINGET) opcode string, with argument i.
     def get(self, i, pack=struct.pack):
@@ -264,7 +271,7 @@ class Pickler:
             else:
                 return LONG_BINGET + pack("<i", i)
 
-        return GET + repr(i) + '\n'
+        return GET + `i` + '\n'
 
     def save(self, obj):
         # Check for persistent id (defined by a subclass)
@@ -348,7 +355,14 @@ class Pickler:
 
         # Assert that args is a tuple or None
         if not isinstance(args, TupleType):
-            raise PicklingError("args from reduce() should be a tuple")
+            if args is None:
+                # A hack for Jim Fulton's ExtensionClass, now deprecated.
+                # See load_reduce()
+                warnings.warn("__basicnew__ special case is deprecated",
+                              DeprecationWarning)
+            else:
+                raise PicklingError(
+                    "args from reduce() should be a tuple")
 
         # Assert that func is callable
         if not callable(func):
@@ -455,7 +469,7 @@ class Pickler:
                 self.write(BININT + pack("<i", obj))
                 return
         # Text pickle, or int too big to fit in signed 4-byte format.
-        self.write(INT + repr(obj) + '\n')
+        self.write(INT + `obj` + '\n')
     dispatch[IntType] = save_int
 
     def save_long(self, obj, pack=struct.pack):
@@ -467,14 +481,14 @@ class Pickler:
             else:
                 self.write(LONG4 + pack("<i", n) + bytes)
             return
-        self.write(LONG + repr(obj) + '\n')
+        self.write(LONG + `obj` + '\n')
     dispatch[LongType] = save_long
 
     def save_float(self, obj, pack=struct.pack):
         if self.bin:
             self.write(BINFLOAT + pack('>d', obj))
         else:
-            self.write(FLOAT + repr(obj) + '\n')
+            self.write(FLOAT + `obj` + '\n')
     dispatch[FloatType] = save_float
 
     def save_string(self, obj, pack=struct.pack):
@@ -485,7 +499,7 @@ class Pickler:
             else:
                 self.write(BINSTRING + pack("<i", n) + obj)
         else:
-            self.write(STRING + repr(obj) + '\n')
+            self.write(STRING + `obj` + '\n')
         self.memoize(obj)
     dispatch[StringType] = save_string
 
@@ -525,7 +539,7 @@ class Pickler:
                     obj = obj.encode('raw-unicode-escape')
                     self.write(UNICODE + obj + '\n')
                 else:
-                    self.write(STRING + repr(obj) + '\n')
+                    self.write(STRING + `obj` + '\n')
             self.memoize(obj)
         dispatch[StringType] = save_string
 
@@ -1130,7 +1144,13 @@ class Unpickler:
         stack = self.stack
         args = stack.pop()
         func = stack[-1]
-        value = func(*args)
+        if args is None:
+            # A hack for Jim Fulton's ExtensionClass, now deprecated
+            warnings.warn("__basicnew__ special case is deprecated",
+                          DeprecationWarning)
+            value = func.__basicnew__()
+        else:
+            value = func(*args)
         stack[-1] = value
     dispatch[REDUCE] = load_reduce
 
@@ -1153,12 +1173,12 @@ class Unpickler:
 
     def load_binget(self):
         i = ord(self.read(1))
-        self.append(self.memo[repr(i)])
+        self.append(self.memo[`i`])
     dispatch[BINGET] = load_binget
 
     def load_long_binget(self):
         i = mloads('i' + self.read(4))
-        self.append(self.memo[repr(i)])
+        self.append(self.memo[`i`])
     dispatch[LONG_BINGET] = load_long_binget
 
     def load_put(self):
@@ -1167,12 +1187,12 @@ class Unpickler:
 
     def load_binput(self):
         i = ord(self.read(1))
-        self.memo[repr(i)] = self.stack[-1]
+        self.memo[`i`] = self.stack[-1]
     dispatch[BINPUT] = load_binput
 
     def load_long_binput(self):
         i = mloads('i' + self.read(4))
-        self.memo[repr(i)] = self.stack[-1]
+        self.memo[`i`] = self.stack[-1]
     dispatch[LONG_BINPUT] = load_long_binput
 
     def load_append(self):
@@ -1358,12 +1378,12 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-def dump(obj, file, protocol=None):
-    Pickler(file, protocol).dump(obj)
+def dump(obj, file, protocol=None, bin=None):
+    Pickler(file, protocol, bin).dump(obj)
 
-def dumps(obj, protocol=None):
+def dumps(obj, protocol=None, bin=None):
     file = StringIO()
-    Pickler(file, protocol).dump(obj)
+    Pickler(file, protocol, bin).dump(obj)
     return file.getvalue()
 
 def load(file):

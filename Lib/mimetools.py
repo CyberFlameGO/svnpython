@@ -129,11 +129,11 @@ def choose_boundary():
         import socket
         hostid = socket.gethostbyname(socket.gethostname())
         try:
-            uid = repr(os.getuid())
+            uid = `os.getuid()`
         except AttributeError:
             uid = '1'
         try:
-            pid = repr(os.getpid())
+            pid = `os.getpid()`
         except AttributeError:
             pid = '1'
         _prefix = hostid + '.' + uid + '.' + pid

@@ -13,7 +13,7 @@ __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "getatime","getctime", "islink","exists","isdir","isfile","ismount",
            "walk","expanduser","expandvars","normpath","abspath","splitunc",
            "curdir","pardir","sep","pathsep","defpath","altsep","extsep",
-           "devnull","realpath","supports_unicode_filenames"]
+           "realpath","supports_unicode_filenames"]
 
 # strings representing various path-related bits and pieces
 curdir = '.'
@@ -23,7 +23,6 @@ sep = '/'
 altsep = '\\'
 pathsep = ';'
 defpath = '.;C:\\bin'
-devnull = 'nul'
 
 # Normalize the case of a pathname and map slashes to backslashes.
 # Other normalizations (such as optimizing '../' away) are not done
@@ -219,8 +218,6 @@ def exists(path):
     except os.error:
         return False
     return True
-
-lexists = exists
 
 
 # Is a path a directory?

@@ -306,21 +306,6 @@ may be set for any given method.
   \versionadded{2.3}
 \end{datadesc}
 
-One other constant controls whether a method is loaded in place of
-another definition with the same method name.
-
-\begin{datadesc}{METH_COEXIST}
-  The method will be loaded in place of existing definitions.  Without
-  \var{METH_COEXIST}, the default is to skip repeated definitions.  Since
-  slot wrappers are loaded before the method table, the existence of a
-  \var{sq_contains} slot, for example, would generate a wrapped method
-  named \method{__contains__()} and preclude the loading of a
-  corresponding PyCFunction with the same name.  With the flag defined,
-  the PyCFunction will be loaded in place of the wrapper object and will
-  co-exist with the slot.  This is helpful because calls to PyCFunctions
-  are optimized more than wrapper object calls.
-  \versionadded{2.4}
-\end{datadesc}
 
 \begin{cfuncdesc}{PyObject*}{Py_FindMethod}{PyMethodDef table[],
                                             PyObject *ob, char *name}
@@ -1130,7 +1115,7 @@ typedef struct PyGetSetDef {
 
   If the value of this field is greater than zero, it specifies the
   offset from the start of the instance structure.  If the value is
-  less than zero, it specifies the offset from the \emph{end} of the
+  less than zero, it specifies the offset from the *end* of the
   instance structure.  A negative offset is more expensive to use, and
   should only be used when the instance structure contains a
   variable-length part.  This is used for example to add an instance
@@ -1389,16 +1374,6 @@ inherited by subtypes.
   field.
 \end{cmemberdesc}
 
-Also, note that, in a garbage collected Python, tp_dealloc may be
-called from any Python thread, not just the thread which created the
-object (if the object becomes part of a refcount cycle, that cycle
-might be collected by a garbage collection on any thread).  This is
-not a problem for Python API calls, since the thread on which
-tp_dealloc is called will own the Global Interpreter Lock (GIL).
-However, if the object being destroyed in turn destroys objects from
-some other C or \Cpp{} library, care should be taken to ensure that
-destroying those objects on the thread which called tp_dealloc will
-not violate any assumptions of the library.
 
 \section{Mapping Object Structures \label{mapping-structs}}
 
@@ -1645,9 +1620,7 @@ type:
   Type of the visitor function passed to the \member{tp_traverse}
   handler.  The function should be called with an object to traverse
   as \var{object} and the third parameter to the \member{tp_traverse}
-  handler as \var{arg}.  The Python core uses several visitor functions
-  to implement cyclic garbage detection; it's not expected that users will
-  need to write their own visitor functions.
+  handler as \var{arg}.
 \end{ctypedesc}
 
 The \member{tp_traverse} handler must have the following type:
@@ -1657,35 +1630,10 @@ The \member{tp_traverse} handler must have the following type:
   Traversal function for a container object.  Implementations must
   call the \var{visit} function for each object directly contained by
   \var{self}, with the parameters to \var{visit} being the contained
-  object and the \var{arg} value passed to the handler.  The \var{visit}
-  function must not be called with a \NULL{} object argument.  If
-  \var{visit} returns a non-zero value
+  object and the \var{arg} value passed to the handler.  If
+  \var{visit} returns a non-zero value then an error has occurred and
   that value should be returned immediately.
 \end{ctypedesc}
-
-To simplify writing \member{tp_traverse} handlers, a
-\cfunction{Py_VISIT()} macro is provided.  In order to use this macro,
-the \member{tp_traverse} implementation must name its arguments
-exactly \var{visit} and \var{arg}:
-
-\begin{cfuncdesc}{void}{Py_VISIT}{PyObject *o}
-  Call the \var{visit} callback, with arguments \var{o} and \var{arg}.
-  If \var{visit} returns a non-zero value, then return it.  Using this
-  macro, \member{tp_traverse} handlers look like:
-
-\begin{verbatim}
-static int
-my_traverse(Noddy *self, visitproc visit, void *arg)
-{
-    Py_VISIT(self->foo);
-    Py_VISIT(self->bar);
-    return 0;
-}
-\end{verbatim}
-
-\versionadded{2.4}
-\end{cfuncdesc}
-
 
 The \member{tp_clear} handler must be of the \ctype{inquiry} type, or
 \NULL{} if the object is immutable.

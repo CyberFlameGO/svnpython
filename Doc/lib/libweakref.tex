@@ -48,27 +48,12 @@ by the \module{weakref} module for the benefit of advanced uses.
 
 Not all objects can be weakly referenced; those objects which can
 include class instances, functions written in Python (but not in C),
-methods (both bound and unbound), sets, frozensets, file objects,
-generators, type objects, DBcursor objects from the \module{bsddb} module,
-sockets, arrays, deques, and regular expression pattern objects.
-\versionchanged[Added support for files, sockets, arrays, and patterns]{2.4}
-
-Several builtin types such as \class{list} and \class{dict} do not
-directly support weak references but can add support through subclassing:
-
-\begin{verbatim}
-class Dict(dict):
-    pass
-
-obj = Dict(red=1, green=2, blue=3)   # this object is weak referencable
-\end{verbatim}
-
-Extension types can easily be made to support weak references; see section
-\ref{weakref-extension}, ``Weak References in Extension Types,'' for more
-information.
+and methods (both bound and unbound).  Extension types can easily
+be made to support weak references; see section \ref{weakref-extension},
+``Weak References in Extension Types,'' for more information.
 
 
-\begin{classdesc}{ref}{object\optional{, callback}}
+\begin{funcdesc}{ref}{object\optional{, callback}}
   Return a weak reference to \var{object}.  The original object can be
   retrieved by calling the reference object if the referent is still
   alive; if the referent is no longer alive, calling the reference
@@ -100,11 +85,7 @@ information.
   \var{callback}).  If either referent has been deleted, the
   references are equal only if the reference objects are the same
   object.
-
-  \versionchanged[This is now a subclassable type rather than a
-                  factory function; it derives from \class{object}]
-                  {2.4}
-\end{classdesc}
+\end{funcdesc}
 
 \begin{funcdesc}{proxy}{object\optional{, callback}}
   Return a proxy to \var{object} which uses a weak reference.  This
@@ -240,41 +221,6 @@ become invalidated before the weak reference is called; the
 idiom shown above is safe in threaded applications as well as
 single-threaded applications.
 
-Specialized versions of \class{ref} objects can be created through
-subclassing.  This is used in the implementation of the
-\class{WeakValueDictionary} to reduce the memory overhead for each
-entry in the mapping.  This may be most useful to associate additional
-information with a reference, but could also be used to insert
-additional processing on calls to retrieve the referent.
-
-This example shows how a subclass of \class{ref} can be used to store
-additional information about an object and affect the value that's
-returned when the referent is accessed:
-
-\begin{verbatim}
-import weakref
-
-class ExtendedRef(weakref.ref):
-    def __new__(cls, ob, callback=None, **annotations):
-        weakref.ref.__new__(cls, ob, callback)
-        self.__counter = 0
-
-    def __init__(self, ob, callback=None, **annotations):
-        super(ExtendedRef, self).__init__(ob, callback)
-        for k, v in annotations:
-            setattr(self, k, v)
-
-    def __call__(self):
-        """Return a pair containing the referent and the number of
-        times the reference has been called.
-        """
-        ob = super(ExtendedRef, self)()
-        if ob is not None:
-            self.__counter += 1
-            ob = (ob, self.__counter)
-        return ob
-\end{verbatim}
-
 
 \subsection{Example \label{weakref-example}}
 
@@ -284,7 +230,7 @@ then be used in other data structures without forcing the objects to
 remain alive, but the objects can still be retrieved by ID if they
 do.
 
-% Example contributed by Tim Peters.
+% Example contributed by Tim Peters <tim_one@msn.com>.
 \begin{verbatim}
 import weakref
 
@@ -346,7 +292,7 @@ PyTypeObject PyInstance_Type = {
 \end{verbatim}
 
 The type constructor is responsible for initializing the weak reference
-list to \NULL:
+list to \NULL{}:
 
 \begin{verbatim}
 static PyObject *
@@ -362,7 +308,7 @@ instance_new() {
 The only further addition is that the destructor needs to call the
 weak reference manager to clear any weak references.  This should be
 done before any other parts of the destruction have occurred, but is
-only required if the weak reference list is non-\NULL:
+only required if the weak reference list is non-\NULL{}:
 
 \begin{verbatim}
 static void

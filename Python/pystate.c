@@ -70,9 +70,6 @@ PyInterpreterState_New(void)
 		interp->dlopenflags = RTLD_LAZY;
 #endif
 #endif
-#ifdef WITH_TSC
-		interp->tscdump = 0;
-#endif
 
 		HEAD_LOCK();
 		interp->next = interp_head;
@@ -320,7 +317,7 @@ PyThreadState_GetDict(void)
 
 /* Asynchronously raise an exception in a thread.
    Requested by Just van Rossum and Alex Martelli.
-   To prevent naive misuse, you must write your own extension
+   To prevent naive misuse, you must write your own exception
    to call this.  Must be called with the GIL held.
    Returns the number of tstates modified; if it returns a number
    greater than one, you're in trouble, and you should call it again
@@ -332,7 +329,6 @@ PyThreadState_SetAsyncExc(long id, PyObject *exc) {
 	PyInterpreterState *interp = tstate->interp;
 	PyThreadState *p;
 	int count = 0;
-	HEAD_LOCK();
 	for (p = interp->tstate_head; p != NULL; p = p->next) {
 		if (p->thread_id != id)
 			continue;
@@ -341,7 +337,6 @@ PyThreadState_SetAsyncExc(long id, PyObject *exc) {
 		p->async_exc = exc;
 		count += 1;
 	}
-	HEAD_UNLOCK();
 	return count;
 }
 

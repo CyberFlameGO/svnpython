@@ -388,7 +388,7 @@ class CodecCallbackTest(unittest.TestCase):
            codecs.replace_errors,
            UnicodeError("ouch")
         )
-        # With the correct exception, "replace" returns an "?" or u"\ufffd" replacement
+        # With the correct exception, "ignore" returns an empty replacement
         self.assertEquals(
             codecs.replace_errors(UnicodeEncodeError("ascii", u"\u3042", 0, 1, "ouch")),
             (u"?", 1)
@@ -605,7 +605,7 @@ class CodecCallbackTest(unittest.TestCase):
         handler.pos = 1
         self.assertEquals("\xff0".decode("ascii", "test.posreturn"), u"<?>0")
 
-        # Largest valid positive position (one beyond end of input)
+        # Largest valid positive position (one beyond end of input
         handler.pos = 2
         self.assertEquals("\xff0".decode("ascii", "test.posreturn"), u"<?>")
 
@@ -697,7 +697,7 @@ class CodecCallbackTest(unittest.TestCase):
             ord(">"): u"&gt;",
             ord('"'): u"&quot;",
         }
-
+        
         for n in (1, 10, 100, 1000):
             text = u'abc<def>ghi'*n
             text.translate(charmap)

@@ -17,15 +17,15 @@ def main():
             silent = 1
     MAGIC = imp.get_magic()
     if not silent:
-        print 'Using MAGIC word', repr(MAGIC)
+        print 'Using MAGIC word', `MAGIC`
     for dirname in sys.path:
         try:
             names = os.listdir(dirname)
         except os.error:
-            print 'Cannot list directory', repr(dirname)
+            print 'Cannot list directory', `dirname`
             continue
         if not silent:
-            print 'Checking ', repr(dirname), '...'
+            print 'Checking', `dirname`, '...'
         names.sort()
         for name in names:
             if name[-3:] == '.py':
@@ -33,34 +33,33 @@ def main():
                 try:
                     st = os.stat(name)
                 except os.error:
-                    print 'Cannot stat', repr(name)
+                    print 'Cannot stat', `name`
                     continue
                 if verbose:
-                    print 'Check', repr(name), '...'
+                    print 'Check', `name`, '...'
                 name_c = name + 'c'
                 try:
                     f = open(name_c, 'r')
                 except IOError:
-                    print 'Cannot open', repr(name_c)
+                    print 'Cannot open', `name_c`
                     continue
                 magic_str = f.read(4)
                 mtime_str = f.read(4)
                 f.close()
                 if magic_str <> MAGIC:
                     print 'Bad MAGIC word in ".pyc" file',
-                    print repr(name_c)
+                    print `name_c`
                     continue
                 mtime = get_long(mtime_str)
                 if mtime == 0 or mtime == -1:
-                    print 'Bad ".pyc" file', repr(name_c)
+                    print 'Bad ".pyc" file', `name_c`
                 elif mtime <> st[ST_MTIME]:
                     print 'Out-of-date ".pyc" file',
-                    print repr(name_c)
+                    print `name_c`
 
 def get_long(s):
     if len(s) <> 4:
         return -1
     return ord(s[0]) + (ord(s[1])<<8) + (ord(s[2])<<16) + (ord(s[3])<<24)
 
-if __name__ == '__main__':
-    main()
+main()

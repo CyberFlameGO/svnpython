@@ -7,7 +7,7 @@
 @interface PreferencesWindowController : NSWindowController <FileSettingsSource>
 {
     IBOutlet NSPopUpButton *filetype;
-    IBOutlet NSComboBox *interpreter;
+    IBOutlet NSTextField *interpreter;
     IBOutlet NSButton *honourhashbang;
     IBOutlet NSButton *debug;
     IBOutlet NSButton *verbose;

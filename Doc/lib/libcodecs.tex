@@ -212,6 +212,15 @@ The others represent the BOM in UTF-8 and UTF-32 encodings.
 \end{datadesc}
 
 
+\begin{seealso}
+  \seeurl{http://sourceforge.net/projects/python-codecs/}{A
+          SourceForge project working on additional support for Asian
+          codecs for use with Python.  They are in the early stages of
+          development at the time of this writing --- look in their
+          FTP area for downloadable files.}
+\end{seealso}
+
+
 \subsection{Codec Base Classes}
 
 The \module{codecs} defines a set of base classes which define the
@@ -394,13 +403,8 @@ order to be compatible to the Python codec registry.
   be extended with \function{register_error()}.
 \end{classdesc}
 
-\begin{methoddesc}{read}{\optional{size\optional{, chars}}}
+\begin{methoddesc}{read}{\optional{size}}
   Decodes data from the stream and returns the resulting object.
-
-  \var{chars} indicates the number of characters to read from the
-  stream. \function{read()} will never return more than \var{chars}
-  characters, but it might return less, if there are not enough
-  characters available.
 
   \var{size} indicates the approximate maximum number of bytes to read
   from the stream for decoding purposes. The decoder can modify this
@@ -412,29 +416,29 @@ order to be compatible to the Python codec registry.
   read as much data as is allowed within the definition of the encoding
   and the given size, e.g.  if optional encoding endings or state
   markers are available on the stream, these should be read too.
-
-  \versionchanged[\var{chars} argument added]{2.4}
 \end{methoddesc}
 
-\begin{methoddesc}{readline}{\optional{size\optional{, keepends}}}
+\begin{methoddesc}{readline}{[size]}
   Read one line from the input stream and return the
   decoded data.
 
+  Unlike the \method{readlines()} method, this method inherits
+  the line breaking knowledge from the underlying stream's
+  \method{readline()} method -- there is currently no support for line
+  breaking using the codec decoder due to lack of line buffering.
+  Sublcasses should however, if possible, try to implement this method
+  using their own knowledge of line breaking.
+
   \var{size}, if given, is passed as size argument to the stream's
   \method{readline()} method.
-
-  If \var{keepends} is false lineends will be stripped from the
-  lines returned.
-
-  \versionchanged[\var{keepends} argument added]{2.4}
 \end{methoddesc}
 
-\begin{methoddesc}{readlines}{\optional{sizehint\optional{, keepends}}}
+\begin{methoddesc}{readlines}{[sizehint]}
   Read all lines available on the input stream and return them as list
   of lines.
 
   Line breaks are implemented using the codec's decoder method and are
-  included in the list entries if \var{keepends} is true.
+  included in the list entries.
 
   \var{sizehint}, if given, is passed as \var{size} argument to the
   stream's \method{read()} method.
@@ -518,7 +522,7 @@ the \function{lookup()} function to construct the instance.
 \class{StreamReader} and \class{StreamWriter} classes. They inherit
 all other methods and attribute from the underlying stream.
 
-\subsection{Standard Encodings\label{standard-encodings}}
+\subsection{Standard Encodings}
 
 Python comes with a number of codecs builtin, either implemented as C
 functions, or with dictionaries as mapping tables. The following table
@@ -548,14 +552,6 @@ exist:
 \lineiii{ascii}
         {646, us-ascii}
         {English}
-
-\lineiii{big5}
-        {big5-tw, csbig5}
-        {Traditional Chinese}
-
-\lineiii{big5hkscs}
-        {big5-hkscs, hkscs}
-        {Traditional Chinese}
 
 \lineiii{cp037}
         {IBM037, IBM039}
@@ -625,10 +621,6 @@ exist:
         {865, IBM865}
         {Danish, Norwegian}
 
-\lineiii{cp866}
-        {866, IBM866}
-        {Russian}
-
 \lineiii{cp869}
         {869, CP-GR, IBM869}
         {Greek}
@@ -640,18 +632,6 @@ exist:
 \lineiii{cp875}
         {}
         {Greek}
-
-\lineiii{cp932}
-        {932, ms932, mskanji, ms-kanji}
-        {Japanese}
-
-\lineiii{cp949}
-        {949, ms949, uhc}
-        {Korean}
-
-\lineiii{cp950}
-        {950, ms950}
-        {Traditional Chinese}
 
 \lineiii{cp1006}
         {}
@@ -700,67 +680,6 @@ exist:
 \lineiii{cp1258}
         {windows-1258}
         {Vietnamese}
-
-\lineiii{euc_jp}
-        {eucjp, ujis, u-jis}
-        {Japanese}
-
-\lineiii{euc_jis_2004}
-        {jisx0213, eucjis2004}
-        {Japanese}
-
-\lineiii{euc_jisx0213}
-        {eucjisx0213}
-        {Japanese}
-
-\lineiii{euc_kr}
-        {euckr, korean, ksc5601, ks_c-5601, ks_c-5601-1987, ksx1001, ks_x-1001}
-        {Korean}
-
-\lineiii{gb2312}
-        {chinese, csiso58gb231280, euc-cn, euccn, eucgb2312-cn, gb2312-1980,
-         gb2312-80, iso-ir-58}
-        {Simplified Chinese}
-
-\lineiii{gbk}
-        {936, cp936, ms936}
-        {Unified Chinese}
-
-\lineiii{gb18030}
-        {gb18030-2000}
-        {Unified Chinese}
-
-\lineiii{hz}
-        {hzgb, hz-gb, hz-gb-2312}
-        {Simplified Chinese}
-
-\lineiii{iso2022_jp}
-        {csiso2022jp, iso2022jp, iso-2022-jp}
-        {Japanese}
-
-\lineiii{iso2022_jp_1}
-        {iso2022jp-1, iso-2022-jp-1}
-        {Japanese}
-
-\lineiii{iso2022_jp_2}
-        {iso2022jp-2, iso-2022-jp-2}
-        {Japanese, Korean, Simplified Chinese, Western Europe, Greek}
-
-\lineiii{iso2022_jp_2004}
-        {iso2022jp-2004, iso-2022-jp-2004}
-        {Japanese}
-
-\lineiii{iso2022_jp_3}
-        {iso2022jp-3, iso-2022-jp-3}
-        {Japanese}
-
-\lineiii{iso2022_jp_ext}
-        {iso2022jp-ext, iso-2022-jp-ext}
-        {Japanese}
-
-\lineiii{iso2022_kr}
-        {csiso2022kr, iso2022kr, iso-2022-kr}
-        {Korean}
 
 \lineiii{latin_1}
         {iso-8859-1, iso8859-1, 8859, cp819, latin, latin1, L1}
@@ -814,10 +733,6 @@ exist:
         {iso-8859-15}
         {Western Europe}
 
-\lineiii{johab}
-        {cp1361, ms1361}
-        {Korean}
-
 \lineiii{koi8_r}
         {}
         {Russian}
@@ -849,22 +764,6 @@ exist:
 \lineiii{mac_turkish}
         {macturkish}
         {Turkish}
-
-\lineiii{ptcp154}
-        {csptcp154, pt154, cp154, cyrillic-asian}
-        {Kazakh}
-
-\lineiii{shift_jis}
-        {csshiftjis, shiftjis, sjis, s_jis}
-        {Japanese}
-
-\lineiii{shift_jis_2004}
-        {shiftjis2004, sjis_2004, sjis2004}
-        {Japanese}
-
-\lineiii{shift_jisx0213}
-        {shiftjisx0213, sjisx0213, s_jisx0213}
-        {Japanese}
 
 \lineiii{utf_16}
         {U16, utf16}
@@ -904,11 +803,6 @@ listed as operand type in the table.
          {base64, base-64}
          {byte string}
          {Convert operand to MIME base64}
-
-\lineiv{bz2_codec}
-         {bz2}
-         {byte string}
-         {Compress the operand using bz2}
 
 \lineiv{hex_codec}
          {hex}
@@ -977,7 +871,7 @@ listed as operand type in the table.
 \lineiv{unicode_internal}
          {}
          {Unicode string}
-         {Return the internal representation of the operand}
+         {Return the internal represenation of the operand}
 
 \lineiv{uu_codec}
          {uu}

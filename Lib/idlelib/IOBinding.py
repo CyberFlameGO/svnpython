@@ -540,7 +540,7 @@ class IOBinding:
 
     def updaterecentfileslist(self,filename):
         "Update recent file list on all editor windows"
-        self.editwin.update_recent_files_list(filename)
+        self.editwin.UpdateRecentFilesList(filename)
 
 def test():
     root = Tk()

@@ -248,7 +248,7 @@ is not     negated object identity   (2)
 Notes :
     Comparison behavior can be overridden for a given class by defining special
 method __cmp__.
-    The above comparisons return True or False which are of type bool
+    The above comparisions return True or False which are of type bool
 (a subclass of int) and behave exactly as 1 or 0 except for their type and
 that they print as True or False instead of 1 or 0.
     (1) X < Y < Z < W has expected meaning, unlike C
@@ -1962,7 +1962,7 @@ repr             Redo repr() but with limits on most sizes.
 rexec            Restricted execution facilities ("safe" exec, eval, etc).
 rfc822           RFC-822 message manipulation class.
 rlcompleter      Word completion for GNU readline 2.0.
-robotparser      Parse robots.txt files, useful for web spiders.
+robotparser      Parse robot.txt files, useful for web spiders.
 sched            A generally useful event scheduler class.
 sets             Module for a set datatype.
 sgmllib          A parser for SGML.
@@ -2073,7 +2073,8 @@ zipfile          Read & write PK zipped files.
 * Cryptographic Extensions *
 
             md5         Interface to RSA's MD5 message digest algorithm
-            sha         Interface to the SHA message digest algorithm
+            mpz         Interface to int part of GNU multiple precision library
+            rotor       Implementation of a rotor-based encryption algorithm
             HMAC        Keyed-Hashing for Message Authentication -- RFC 2104.
 
 * Stdwin * Standard Window System

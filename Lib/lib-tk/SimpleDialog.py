@@ -87,12 +87,10 @@ class SimpleDialog:
         self.root.quit()
 
 
-if __name__ == '__main__':
-
-    def test():
-        root = Tk()
-        def doit(root=root):
-            d = SimpleDialog(root,
+def test():
+    root = Tk()
+    def doit(root=root):
+        d = SimpleDialog(root,
                          text="This is a test dialog.  "
                               "Would this have been an actual dialog, "
                               "the buttons below would have been glowing "
@@ -102,11 +100,13 @@ if __name__ == '__main__':
                          default=0,
                          cancel=2,
                          title="Test Dialog")
-            print d.go()
-        t = Button(root, text='Test', command=doit)
-        t.pack()
-        q = Button(root, text='Quit', command=t.quit)
-        q.pack()
-        t.mainloop()
+        print d.go()
+    t = Button(root, text='Test', command=doit)
+    t.pack()
+    q = Button(root, text='Quit', command=t.quit)
+    q.pack()
+    t.mainloop()
 
+
+if __name__ == '__main__':
     test()

@@ -1,8 +1,8 @@
 # Copyright (C) 2002-2004 Python Software Foundation
-# Author: Barry Warsaw
-# Contact: email-sig@python.org
+# Author: barry@python.org (Barry Warsaw)
 
-"""Base class for MIME multipart/* type messages."""
+"""Base class for MIME multipart/* type messages.
+"""
 
 from email import MIMEBase
 

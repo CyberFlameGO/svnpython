@@ -39,8 +39,6 @@ class DBEnv:
         return apply(self._cobj.open, args, kwargs)
     def remove(self, *args, **kwargs):
         return apply(self._cobj.remove, args, kwargs)
-    def set_shm_key(self, *args, **kwargs):
-        return apply(self._cobj.set_shm_key, args, kwargs)
     def set_cachesize(self, *args, **kwargs):
         return apply(self._cobj.set_cachesize, args, kwargs)
     def set_data_dir(self, *args, **kwargs):
@@ -134,8 +132,6 @@ class DB(DictMixin):
         return apply(self._cobj.fd, args, kwargs)
     def get(self, *args, **kwargs):
         return apply(self._cobj.get, args, kwargs)
-    def pget(self, *args, **kwargs):
-        return apply(self._cobj.pget, args, kwargs)
     def get_both(self, *args, **kwargs):
         return apply(self._cobj.get_both, args, kwargs)
     def get_byteswapped(self, *args, **kwargs):

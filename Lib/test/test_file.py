@@ -1,24 +1,9 @@
 import sys
 import os
 from array import array
-from weakref import proxy
 
 from test.test_support import verify, TESTFN, TestFailed
 from UserList import UserList
-
-# verify weak references
-f = file(TESTFN, 'w')
-p = proxy(f)
-p.write('teststring')
-verify(f.tell(), p.tell())
-f.close()
-f = None
-try:
-    p.tell()
-except ReferenceError:
-    pass
-else:
-    raise TestFailed('file proxy still exists when the file is gone')
 
 # verify expected attributes exist
 f = file(TESTFN, 'w')
@@ -164,31 +149,3 @@ else:
     raise TestFailed, 'file.writelines([]) on a closed file should raise a ValueError'
 
 os.unlink(TESTFN)
-
-def bug801631():
-    # SF bug <http://www.python.org/sf/801631>
-    # "file.truncate fault on windows"
-    f = file(TESTFN, 'wb')
-    f.write('12345678901')   # 11 bytes
-    f.close()
-
-    f = file(TESTFN,'rb+')
-    data = f.read(5)
-    if data != '12345':
-        raise TestFailed("Read on file opened for update failed %r" % data)
-    if f.tell() != 5:
-        raise TestFailed("File pos after read wrong %d" % f.tell())
-
-    f.truncate()
-    if f.tell() != 5:
-        raise TestFailed("File pos after ftruncate wrong %d" % f.tell())
-
-    f.close()
-    size = os.path.getsize(TESTFN)
-    if size != 5:
-        raise TestFailed("File size after ftruncate wrong %d" % size)
-
-try:
-    bug801631()
-finally:
-    os.unlink(TESTFN)

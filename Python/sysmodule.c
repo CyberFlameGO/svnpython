@@ -48,7 +48,7 @@ extern const char *PyWin_DLLVersionString;
 PyObject *
 PySys_GetObject(char *name)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
 	if (sd == NULL)
 		return NULL;
@@ -70,7 +70,7 @@ PySys_GetFile(char *name, FILE *def)
 int
 PySys_SetObject(char *name, PyObject *v)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
 	if (v == NULL) {
 		if (PyDict_GetItemString(sd, name) == NULL)
@@ -86,7 +86,7 @@ static PyObject *
 sys_displayhook(PyObject *self, PyObject *o)
 {
 	PyObject *outf;
-	PyInterpreterState *interp = PyThreadState_GET()->interp;
+	PyInterpreterState *interp = PyThreadState_Get()->interp;
 	PyObject *modules = interp->modules;
 	PyObject *builtins = PyDict_GetItemString(modules, "__builtin__");
 
@@ -149,7 +149,7 @@ static PyObject *
 sys_exc_info(PyObject *self, PyObject *noargs)
 {
 	PyThreadState *tstate;
-	tstate = PyThreadState_GET();
+	tstate = PyThreadState_Get();
 	return Py_BuildValue(
 		"(OOO)",
 		tstate->exc_type != NULL ? tstate->exc_type : Py_None,
@@ -168,7 +168,7 @@ clause in the current stack frame or in an older stack frame."
 static PyObject *
 sys_exc_clear(PyObject *self, PyObject *noargs)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *tmp_type, *tmp_value, *tmp_tb;
 	tmp_type = tstate->exc_type;
 	tmp_value = tstate->exc_value;
@@ -272,16 +272,15 @@ operating system filenames."
  * Cached interned string objects used for calling the profile and
  * trace functions.  Initialized by trace_init().
  */
-static PyObject *whatstrings[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static PyObject *whatstrings[4] = {NULL, NULL, NULL, NULL};
 
 static int
 trace_init(void)
 {
-	static char *whatnames[7] = {"call", "exception", "line", "return",
-					"c_call", "c_exception", "c_return"};
+	static char *whatnames[4] = {"call", "exception", "line", "return"};
 	PyObject *name;
 	int i;
-	for (i = 0; i < 7; ++i) {
+	for (i = 0; i < 4; ++i) {
 		if (whatstrings[i] == NULL) {
 			name = PyString_InternFromString(whatnames[i]);
 			if (name == NULL)
@@ -442,33 +441,6 @@ PyDoc_STRVAR(getcheckinterval_doc,
 "getcheckinterval() -> current check interval; see setcheckinterval()."
 );
 
-#ifdef WITH_TSC
-static PyObject *
-sys_settscdump(PyObject *self, PyObject *args)
-{
-	int bool;
-	PyThreadState *tstate = PyThreadState_Get();
-
-	if (!PyArg_ParseTuple(args, "i:settscdump", &bool))
-		return NULL;
-	if (bool)
-		tstate->interp->tscdump = 1;
-	else
-		tstate->interp->tscdump = 0;
-	Py_INCREF(Py_None);
-	return Py_None;
-	
-}
-
-PyDoc_STRVAR(settscdump_doc, 
-"settscdump(bool)\n\
-\n\
-If true, tell the Python interpreter to dump VM measurements to\n\
-stderr.  If false, turn off dump.  The measurements are based on the\n\
-processor's time-stamp counter."
-); 
-#endif /* TSC */
-
 static PyObject *
 sys_setrecursionlimit(PyObject *self, PyObject *args)
 {
@@ -541,7 +513,7 @@ static PyObject *
 sys_setdlopenflags(PyObject *self, PyObject *args)
 {
 	int new_val;
-        PyThreadState *tstate = PyThreadState_GET();
+        PyThreadState *tstate = PyThreadState_Get();
 	if (!PyArg_ParseTuple(args, "i:setdlopenflags", &new_val))
 		return NULL;
         if (!tstate)
@@ -564,7 +536,7 @@ sys.setdlopenflags(dl.RTLD_NOW|dl.RTLD_GLOBAL)"
 static PyObject *
 sys_getdlopenflags(PyObject *self, PyObject *args)
 {
-        PyThreadState *tstate = PyThreadState_GET();
+        PyThreadState *tstate = PyThreadState_Get();
         if (!tstate)
 		return NULL;
         return PyInt_FromLong(tstate->interp->dlopenflags);
@@ -642,7 +614,7 @@ purposes only."
 static PyObject *
 sys_getframe(PyObject *self, PyObject *args)
 {
-	PyFrameObject *f = PyThreadState_GET()->frame;
+	PyFrameObject *f = PyThreadState_Get()->frame;
 	int depth = -1;
 
 	if (!PyArg_ParseTuple(args, "|i:_getframe", &depth))
@@ -770,9 +742,6 @@ static PyMethodDef sys_methods[] = {
 	{"setprofile",	sys_setprofile, METH_O, setprofile_doc},
 	{"setrecursionlimit", sys_setrecursionlimit, METH_VARARGS,
 	 setrecursionlimit_doc},
-#ifdef WITH_TSC
-	{"settscdump", sys_settscdump, METH_VARARGS, settscdump_doc},
-#endif
 	{"settrace",	sys_settrace, METH_O, settrace_doc},
 	{"call_tracing", sys_call_tracing, METH_VARARGS, call_tracing_doc},
 	{NULL,		NULL}		/* sentinel */

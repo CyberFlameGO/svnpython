@@ -157,14 +157,11 @@ The resolution is typically better than one microsecond.
 
 \begin{funcdesc}{ctime}{\optional{secs}}
 Convert a time expressed in seconds since the epoch to a string
-representing local time. If \var{secs} is not provided or
-\constant{None}, the current time as returned by \function{time()} is
-used.  \code{ctime(\var{secs})} is equivalent to
-\code{asctime(localtime(\var{secs}))}.
+representing local time. If \var{secs} is not provided, the current time
+as returned by \function{time()} is used.  \code{ctime(\var{secs})}
+is equivalent to \code{asctime(localtime(\var{secs}))}.
 Locale information is not used by \function{ctime()}.
 \versionchanged[Allowed \var{secs} to be omitted]{2.1}
-\versionchanged[If \var{secs} is \constant{None}, the current time is
-                used]{2.4}
 \end{funcdesc}
 
 \begin{datadesc}{daylight}
@@ -174,23 +171,16 @@ Nonzero if a DST timezone is defined.
 \begin{funcdesc}{gmtime}{\optional{secs}}
 Convert a time expressed in seconds since the epoch to a \class{struct_time}
 in UTC in which the dst flag is always zero.  If \var{secs} is not
-provided or \constant{None}, the current time as returned by
-\function{time()} is used.  Fractions of a second are ignored.  See
-above for a description of the \class{struct_time} object. See
-\function{calendar.timegm()} for the inverse of this function.
+provided, the current time as returned by \function{time()} is used.
+Fractions of a second are ignored.  See above for a description of the
+\class{struct_time} object.
 \versionchanged[Allowed \var{secs} to be omitted]{2.1}
-\versionchanged[If \var{secs} is \constant{None}, the current time is
-                used]{2.4}
 \end{funcdesc}
 
 \begin{funcdesc}{localtime}{\optional{secs}}
-Like \function{gmtime()} but converts to local time.  If \var{secs} is
-not provided or \constant{None}, the current time as returned by
-\function{time()} is used.  The dst flag is set to \code{1} when DST
-applies to the given time.
+Like \function{gmtime()} but converts to local time.  The dst flag is
+set to \code{1} when DST applies to the given time.
 \versionchanged[Allowed \var{secs} to be omitted]{2.1}
-\versionchanged[If \var{secs} is \constant{None}, the current time is
-                used]{2.4}
 \end{funcdesc}
 
 \begin{funcdesc}{mktime}{t}
@@ -221,11 +211,8 @@ Convert a tuple or \class{struct_time} representing a time as returned
 by \function{gmtime()} or \function{localtime()} to a string as
 specified by the \var{format} argument.  If \var{t} is not
 provided, the current time as returned by \function{localtime()} is
-used.  \var{format} must be a string.  \exception{ValueError} is raised
-if any field in \var{t} is outside of the allowed range.
+used.  \var{format} must be a string.
 \versionchanged[Allowed \var{t} to be omitted]{2.1}
-\versionchanged[\exception{ValueError} raised if a field in \var{t} is
-out of range.]{2.4}
 
 The following directives can be embedded in the \var{format} string.
 They are shown without the optional field width and precision
@@ -244,15 +231,15 @@ specification, and are replaced by the indicated characters in the
   \lineiii{\%j}{Day of the year as a decimal number [001,366].}{}
   \lineiii{\%m}{Month as a decimal number [01,12].}{}
   \lineiii{\%M}{Minute as a decimal number [00,59].}{}
-  \lineiii{\%p}{Locale's equivalent of either AM or PM.}{(1)}
-  \lineiii{\%S}{Second as a decimal number [00,61].}{(2)}
+  \lineiii{\%p}{Locale's equivalent of either AM or PM.}{}
+  \lineiii{\%S}{Second as a decimal number [00,61].}{(1)}
   \lineiii{\%U}{Week number of the year (Sunday as the first day of the
                 week) as a decimal number [00,53].  All days in a new year
-                preceding the first Sunday are considered to be in week 0.}{(3)}
+                preceding the first Sunday are considered to be in week 0.}{(2)}
   \lineiii{\%w}{Weekday as a decimal number [0(Sunday),6].}{}
   \lineiii{\%W}{Week number of the year (Monday as the first day of the
                 week) as a decimal number [00,53].  All days in a new year
-                preceding the first Monday are considered to be in week 0.}{(3)}
+                preceding the first Monday are considered to be in week 0.}{(2)}
   \lineiii{\%x}{Locale's appropriate date representation.}{}
   \lineiii{\%X}{Locale's appropriate time representation.}{}
   \lineiii{\%y}{Year without century as a decimal number [00,99].}{}
@@ -266,13 +253,9 @@ Notes:
 
 \begin{description}
   \item[(1)]
-    When used with the \function{strptime()} function, the \code{\%p}
-    directive only affects the output hour field if the \code{\%I} directive
-    is used to parse the hour.
-  \item[(2)]
     The range really is \code{0} to \code{61}; this accounts for leap
     seconds and the (very rare) double leap seconds.
-  \item[(3)]
+  \item[(2)]
     When used with the \function{strptime()} function, \code{\%U} and \code{\%W}
     are only used in calculations when the day of the week and the year are
     specified.
@@ -313,7 +296,7 @@ returned by \function{ctime()}.  If \var{string} cannot be parsed
 according to \var{format}, \exception{ValueError} is raised.  If the
 string to be parsed has excess data after parsing,
 \exception{ValueError} is raised.  The default values used to fill in
-any missing data are \code{(1900, 1, 1, 0, 0, 0, 0, 1, -1)} .
+any missing data is \code{(1900, 1, 1, 0, 0, 0, 0, 1, -1)} .
 
 Support for the \code{\%Z} directive is based on the values contained in
 \code{tzname} and whether \code{daylight} is true.  Because of this,
@@ -375,14 +358,14 @@ Where:
 \begin{itemize}
   \item[std and dst]
     Three or more alphanumerics giving the timezone abbreviations.
-    These will be propagated into time.tzname
+    These will be propogated into time.tzname
 
   \item[offset]
     The offset has the form: \plusminus{} hh[:mm[:ss]].
     This indicates the value added the local time to arrive at UTC. 
     If preceded by a '-', the timezone is east of the Prime 
     Meridian; otherwise, it is west. If no offset follows
-    dst, summer time is assumed to be one hour ahead of standard time.
+    dst, summmer time is assumed to be one hour ahead of standard time.
 
   \item[start[/time],end[/time]]
     Indicates when to change to and back from DST. The format of the
@@ -447,7 +430,6 @@ usually located at \file{/usr/share/zoneinfo}. For example,
 
 
 \begin{seealso}
-  \seemodule{datetime}{More object-oriented interface to dates and times.}
   \seemodule{locale}{Internationalization services.  The locale
                      settings can affect the return values for some of 
                      the functions in the \module{time} module.}

@@ -46,7 +46,7 @@ Noddy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 Noddy_init(Noddy *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *first=NULL, *last=NULL, *tmp;
+    PyObject *first=NULL, *last=NULL;
 
     static char *kwlist[] = {"first", "last", "number", NULL};
 
@@ -56,17 +56,15 @@ Noddy_init(Noddy *self, PyObject *args, PyObject *kwds)
         return -1; 
 
     if (first) {
-        tmp = self->first;
+        Py_XDECREF(self->first);
         Py_INCREF(first);
         self->first = first;
-        Py_XDECREF(tmp);
     }
 
     if (last) {
-        tmp = self->last;
+        Py_XDECREF(self->last);
         Py_INCREF(last);
         self->last = last;
-        Py_XDECREF(tmp);
     }
 
     return 0;

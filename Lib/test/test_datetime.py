@@ -446,9 +446,9 @@ class TestTimeDelta(HarmlessMixedComparison):
     def test_subclass_timedelta(self):
 
         class T(timedelta):
-            @staticmethod
             def from_td(td):
                 return T(td.days, td.seconds, td.microseconds)
+            from_td = staticmethod(from_td)
 
             def as_hours(self):
                 sum = (self.days * 24 +
@@ -729,15 +729,6 @@ class TestDate(HarmlessMixedComparison):
         self.assertEqual(d.year, year)
         self.assertEqual(d.month, month)
         self.assertEqual(d.day, day)
-
-    def test_insane_fromtimestamp(self):
-        # It's possible that some platform maps time_t to double,
-        # and that this test will fail there.  This test should
-        # exempt such platforms (provided they return reasonable
-        # results!).
-        for insane in -1e200, 1e200:
-            self.assertRaises(ValueError, self.theclass.fromtimestamp,
-                              insane)
 
     def test_today(self):
         import time
@@ -1042,7 +1033,6 @@ class TestDate(HarmlessMixedComparison):
         self.assertEqual(dt2.newmeth(-7), dt1.year + dt1.month - 7)
 
     def test_pickling_subclass_date(self):
-
         args = 6, 7, 23
         orig = SubclassDate(*args)
         for pickler, unpickler, proto in pickle_choices:
@@ -1050,26 +1040,6 @@ class TestDate(HarmlessMixedComparison):
             derived = unpickler.loads(green)
             self.assertEqual(orig, derived)
 
-    def test_backdoor_resistance(self):
-        # For fast unpickling, the constructor accepts a pickle string.
-        # This is a low-overhead backdoor.  A user can (by intent or
-        # mistake) pass a string directly, which (if it's the right length)
-        # will get treated like a pickle, and bypass the normal sanity
-        # checks in the constructor.  This can create insane objects.
-        # The constructor doesn't want to burn the time to validate all
-        # fields, but does check the month field.  This stops, e.g.,
-        # datetime.datetime('1995-03-25') from yielding an insane object.
-        base = '1995-03-25'
-        if not issubclass(self.theclass, datetime):
-            base = base[:4]
-        for month_byte in '9', chr(0), chr(13), '\xff':
-            self.assertRaises(TypeError, self.theclass,
-                                         base[:2] + month_byte + base[3:])
-        for ord_byte in range(1, 13):
-            # This shouldn't blow up because of the month byte alone.  If
-            # the implementation changes to do more-careful checking, it may
-            # blow up because other fields are insane.
-            self.theclass(base[:2] + chr(ord_byte) + base[3:])
 
 #############################################################################
 # datetime tests
@@ -1389,24 +1359,6 @@ class TestDateTime(TestDate):
         got = self.theclass.utcfromtimestamp(ts)
         self.verify_field_equality(expected, got)
 
-    def test_insane_fromtimestamp(self):
-        # It's possible that some platform maps time_t to double,
-        # and that this test will fail there.  This test should
-        # exempt such platforms (provided they return reasonable
-        # results!).
-        for insane in -1e200, 1e200:
-            self.assertRaises(ValueError, self.theclass.fromtimestamp,
-                              insane)
-
-    def test_insane_utcfromtimestamp(self):
-        # It's possible that some platform maps time_t to double,
-        # and that this test will fail there.  This test should
-        # exempt such platforms (provided they return reasonable
-        # results!).
-        for insane in -1e200, 1e200:
-            self.assertRaises(ValueError, self.theclass.utcfromtimestamp,
-                              insane)
-
     def test_utcnow(self):
         import time
 
@@ -1420,15 +1372,6 @@ class TestDateTime(TestDate):
                 break
             # Else try again a few times.
         self.failUnless(abs(from_timestamp - from_now) <= tolerance)
-
-    def test_strptime(self):
-        import time
-
-        string = '2004-12-01 13:02:47'
-        format = '%Y-%m-%d %H:%M:%S'
-        expected = self.theclass(*(time.strptime(string, format)[0:6]))
-        got = self.theclass.strptime(string, format)
-        self.assertEqual(expected, got)
 
     def test_more_timetuple(self):
         # This tests fields beyond those tested by the TestDate.test_timetuple.
@@ -3160,48 +3103,6 @@ class TestTimezoneConversions(unittest.TestCase):
             fstart += HOUR
 
 
-#############################################################################
-# oddballs
-
-class Oddballs(unittest.TestCase):
-
-    def test_bug_1028306(self):
-        # Trying to compare a date to a datetime should act like a mixed-
-        # type comparison, despite that datetime is a subclass of date.
-        as_date = date.today()
-        as_datetime = datetime.combine(as_date, time())
-        self.assert_(as_date != as_datetime)
-        self.assert_(as_datetime != as_date)
-        self.assert_(not as_date == as_datetime)
-        self.assert_(not as_datetime == as_date)
-        self.assertRaises(TypeError, lambda: as_date < as_datetime)
-        self.assertRaises(TypeError, lambda: as_datetime < as_date)
-        self.assertRaises(TypeError, lambda: as_date <= as_datetime)
-        self.assertRaises(TypeError, lambda: as_datetime <= as_date)
-        self.assertRaises(TypeError, lambda: as_date > as_datetime)
-        self.assertRaises(TypeError, lambda: as_datetime > as_date)
-        self.assertRaises(TypeError, lambda: as_date >= as_datetime)
-        self.assertRaises(TypeError, lambda: as_datetime >= as_date)
-
-        # Neverthelss, comparison should work with the base-class (date)
-        # projection if use of a date method is forced.
-        self.assert_(as_date.__eq__(as_datetime))
-        different_day = (as_date.day + 1) % 20 + 1
-        self.assert_(not as_date.__eq__(as_datetime.replace(day=
-                                                     different_day)))
-
-        # And date should compare with other subclasses of date.  If a
-        # subclass wants to stop this, it's up to the subclass to do so.
-        date_sc = SubclassDate(as_date.year, as_date.month, as_date.day)
-        self.assertEqual(as_date, date_sc)
-        self.assertEqual(date_sc, as_date)
-
-        # Ditto for datetimes.
-        datetime_sc = SubclassDatetime(as_datetime.year, as_datetime.month,
-                                       as_date.day, 0, 0, 0)
-        self.assertEqual(as_datetime, datetime_sc)
-        self.assertEqual(datetime_sc, as_datetime)
-
 def test_suite():
     allsuites = [unittest.makeSuite(klass, 'test')
                  for klass in (TestModule,
@@ -3214,7 +3115,6 @@ def test_suite():
                                TestTimeTZ,
                                TestDateTimeTZ,
                                TestTimezoneConversions,
-                               Oddballs,
                               )
                 ]
     return unittest.TestSuite(allsuites)

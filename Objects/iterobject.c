@@ -71,27 +71,6 @@ iter_iternext(PyObject *iterator)
 	return NULL;
 }
 
-static int
-iter_len(seqiterobject *it)
-{
-	int seqsize, len;
-
-	if (it->it_seq) {
-		seqsize = PySequence_Size(it->it_seq);
-		if (seqsize == -1)
-			return -1;
-		len = seqsize - it->it_index;
-		if (len >= 0)
-			return len;
-	}
-	return 0;
-}
-
-static PySequenceMethods iter_as_sequence = {
-	(inquiry)iter_len,		/* sq_length */
-	0,				/* sq_concat */
-};
-
 PyTypeObject PySeqIter_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
@@ -106,7 +85,7 @@ PyTypeObject PySeqIter_Type = {
 	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
-	&iter_as_sequence,			/* tp_as_sequence */
+	0,					/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	0,					/* tp_hash */
 	0,					/* tp_call */
@@ -192,14 +171,18 @@ calliter_iternext(calliterobject *it)
 				return result; /* Common case, fast path */
 			Py_DECREF(result);
 			if (ok > 0) {
-				Py_CLEAR(it->it_callable);
-				Py_CLEAR(it->it_sentinel);
+				Py_DECREF(it->it_callable);
+				it->it_callable = NULL;
+				Py_DECREF(it->it_sentinel);
+				it->it_sentinel = NULL;
 			}
 		}
 		else if (PyErr_ExceptionMatches(PyExc_StopIteration)) {
 			PyErr_Clear();
-			Py_CLEAR(it->it_callable);
-			Py_CLEAR(it->it_sentinel);
+			Py_DECREF(it->it_callable);
+			it->it_callable = NULL;
+			Py_DECREF(it->it_sentinel);
+			it->it_sentinel = NULL;
 		}
 	}
 	return NULL;

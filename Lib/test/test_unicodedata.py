@@ -170,21 +170,9 @@ class UnicodeFunctionsTest(UnicodeDatabaseTest):
     def test_normalize(self):
         self.assertRaises(TypeError, self.db.normalize)
         self.assertRaises(ValueError, self.db.normalize, 'unknown', u'xx')
-        self.assertEqual(self.db.normalize('NFKC', u''), u'')
         # The rest can be found in test_normalization.py
         # which requires an external file.
 
-    def test_east_asian_width(self):
-        eaw = self.db.east_asian_width
-        self.assertRaises(TypeError, eaw, 'a')
-        self.assertRaises(TypeError, eaw, u'')
-        self.assertRaises(TypeError, eaw, u'ra')
-        self.assertEqual(eaw(u'\x1e'), 'N')
-        self.assertEqual(eaw(u'\x20'), 'Na')
-        self.assertEqual(eaw(u'\uC894'), 'W')
-        self.assertEqual(eaw(u'\uFF66'), 'H')
-        self.assertEqual(eaw(u'\uFF1F'), 'F')
-        self.assertEqual(eaw(u'\u2010'), 'A')
 
 class UnicodeMiscTest(UnicodeDatabaseTest):
 

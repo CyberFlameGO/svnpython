@@ -1,5 +1,4 @@
-# Copyright (C) 2002-2004 Python Software Foundation
-# Contact: email-sig@python.org
+# Copyright (C) 2002 Python Software Foundation
 
 """Email address parsing code.
 
@@ -7,6 +6,13 @@ Lifted directly from rfc822.py.  This should eventually be rewritten.
 """
 
 import time
+from types import TupleType
+
+try:
+    True, False
+except NameError:
+    True = 1
+    False = 0
 
 SPACE = ' '
 EMPTYSTRING = ''
@@ -116,15 +122,15 @@ def parsedate_tz(data):
             tzoffset = -tzoffset
         else:
             tzsign = 1
-        tzoffset = tzsign * ( (tzoffset//100)*3600 + (tzoffset % 100)*60)
-    tuple = (yy, mm, dd, thh, tmm, tss, 0, 1, 0, tzoffset)
+        tzoffset = tzsign * ( (tzoffset/100)*3600 + (tzoffset % 100)*60)
+    tuple = (yy, mm, dd, thh, tmm, tss, 0, 0, 0, tzoffset)
     return tuple
 
 
 def parsedate(data):
     """Convert a time string to a time tuple."""
     t = parsedate_tz(data)
-    if isinstance(t, tuple):
+    if isinstance(t, TupleType):
         return t[:9]
     else:
         return t

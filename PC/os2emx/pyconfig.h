@@ -53,6 +53,9 @@
 /* enable the GC module */
 #define WITH_CYCLE_GC	1
 
+/* Define if you want to read files with foreign newlines. */
+#define WITH_UNIVERSAL_NEWLINES 1
+
 /* Define if you want documentation strings in extension modules */
 #define WITH_DOC_STRINGS 1
 
@@ -227,11 +230,17 @@ typedef long intptr_t;
 /* Define if you have the sigaction function. */
 #define HAVE_SIGACTION 1
 
+/* Define if you have the strdup function. */
+#define HAVE_STRDUP 1
+
 /* Define if you have the strerror function. */
 #define HAVE_STRERROR 1
 
 /* Define if you have the strftime function. */
 #define HAVE_STRFTIME 1
+
+/* Define if you have the strptime function. */
+#define HAVE_STRPTIME 1
 
 /* Define if you have the tcgetpgrp function. */
 #define HAVE_TCGETPGRP 1
@@ -260,8 +269,26 @@ typedef long intptr_t;
 /* Define if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
 
+/* Define if you have the <limits.h> header file. */
+#define HAVE_LIMITS_H 1
+
+/* Define if you have the <locale.h> header file. */
+#define HAVE_LOCALE_H 1
+
 /* Define if you have the <ncurses.h> header file. */
 #define HAVE_NCURSES_H 1
+
+/* Define if you have the <signal.h> header file. */
+#define HAVE_SIGNAL_H 1
+
+/* Define if you have the <stdarg.h> header file. */
+#define HAVE_STDARG_H 1
+
+/* Define if you have the <stddef.h> header file. */
+#define HAVE_STDDEF_H 1
+
+/* Define if you have the <stdlib.h> header file. */
+#define HAVE_STDLIB_H 1
 
 /* Define if you have the <sys/file.h> header file. */
 #define HAVE_SYS_FILE_H 1

@@ -312,7 +312,7 @@ def zfill(x, width):
 
     """
     if type(x) == type(''): s = x
-    else: s = repr(x)
+    else: s = `x`
     n = len(s)
     if n >= width: return s
     sign = ''
@@ -363,6 +363,7 @@ def capitalize(s):
     return s.capitalize()
 
 # Capitalize the words in a string, e.g. " aBc  dEf " -> "Abc Def".
+# See also regsub.capwords().
 def capwords(s, sep=None):
     """capwords(s, [sep]) -> string
 

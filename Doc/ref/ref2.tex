@@ -73,11 +73,9 @@ Comments are ignored by the syntax; they are not tokens.
 
 
 \subsection{Encoding declarations\label{encodings}}
-\index{source character set}
-\index{encodings}
 
 If a comment in the first or second line of the Python script matches
-the regular expression \regexp{coding[=:]\e s*([-\e w.]+)}, this comment is
+the regular expression \regexp{coding[=:]\e s*([\e w-_.]+)}, this comment is
 processed as an encoding declaration; the first group of this
 expression names the encoding of the source code file. The recommended
 forms of this expression are
@@ -387,18 +385,16 @@ String literals are described by the following lexical definitions:
   \production{longstringitem}
              {\token{longstringchar} | \token{escapeseq}}
   \production{shortstringchar}
-             {<any source character except "\e" or newline or the quote>}
+             {<any ASCII character except "\e" or newline or the quote>}
   \production{longstringchar}
-             {<any source character except "\e">}
+             {<any ASCII character except "\e">}
   \production{escapeseq}
              {"\e" <any ASCII character>}
 \end{productionlist}
 
 One syntactic restriction not indicated by these productions is that
 whitespace is not allowed between the \grammartoken{stringprefix} and
-the rest of the string literal. The source character set is defined
-by the encoding declaration; it is \ASCII{} if no encoding declaration
-is given in the source file; see section~\ref{encodings}.
+the rest of the string literal.
 
 \index{triple-quoted string}
 \index{Unicode Consortium}
@@ -451,8 +447,8 @@ to those used by Standard C.  The recognized escape sequences are:
 \lineiii{\e U\var{xxxxxxxx}}
         {Character with 32-bit hex value \var{xxxxxxxx} (Unicode only)}{(2)}
 \lineiii{\e v}	{\ASCII{} Vertical Tab (VT)}{}
-\lineiii{\e\var{ooo}} {Character with octal value \var{ooo}}{(3,5)}
-\lineiii{\e x\var{hh}} {Character with hex value \var{hh}}{(4,5)}
+\lineiii{\e\var{ooo}} {\ASCII{} character with octal value \var{ooo}}{(3)}
+\lineiii{\e x\var{hh}} {\ASCII{} character with hex value \var{hh}}{(4)}
 \end{tableiii}
 \index{ASCII@\ASCII}
 
@@ -473,12 +469,6 @@ Notes:
   As in Standard C, up to three octal digits are accepted.
 \item[(4)]
   Unlike in Standard C, at most two hex digits are accepted.
-\item[(5)]
-  In a string literal, hexadecimal and octal escapes denote the
-  byte with the given value; it is not necessary that the byte
-  encodes a character in the source character set. In a Unicode
-  literal, these escapes denote a Unicode character with the given
-  value.
 \end{itemize}
 
 
@@ -590,23 +580,25 @@ allowed as suffix for long integers, it is strongly recommended to always
 use \character{L}, since the letter \character{l} looks too much like the
 digit \character{1}.
 
-Plain integer literals that are above the largest representable plain
-integer (e.g., 2147483647 when using 32-bit arithmetic) are accepted
-as if they were long integers instead.\footnote{In versions of Python
-prior to 2.4, octal and hexadecimal literals in the range just above
-the largest representable plain integer but below the largest unsigned
-32-bit number (on a machine using 32-bit arithmetic), 4294967296, were
-taken as the negative plain integer obtained by subtracting 4294967296
-from their unsigned value.}  There is no limit for long integer
-literals apart from what can be stored in available memory.
+Plain integer decimal literals that are above the largest representable
+plain integer (e.g., 2147483647 when using 32-bit arithmetic) are accepted
+as if they were long integers instead.  Octal and hexadecimal literals
+behave similarly, but when in the range just above the largest representable
+plain integer but below the largest unsigned 32-bit number (on a machine
+using 32-bit arithmetic), 4294967296, they are taken as the negative plain
+integer obtained by subtracting 4294967296 from their unsigned value.  There
+is no limit for long integer literals apart from what can be stored in
+available memory.  For example, 0xdeadbeef is taken, on a 32-bit machine,
+as the value -559038737, while 0xdeadbeeffeed is taken as the value
+244837814107885L.
 
 Some examples of plain integer literals (first row) and long integer
 literals (second and third rows):
 
 \begin{verbatim}
-7     2147483647                        0177
+7     2147483647                        0177    0x80000000
 3L    79228162514264337593543950336L    0377L   0x100000000L
-      79228162514264337593543950336             0xdeadbeef						    
+      79228162514264337593543950336             0xdeadbeeffeed						    
 \end{verbatim}
 
 
@@ -689,7 +681,7 @@ The following tokens serve as delimiters in the grammar:
 \index{delimiters}
 
 \begin{verbatim}
-(       )       [       ]       {       }      @
+(       )       [       ]       {       }
 ,       :       .       `       =       ;
 +=      -=      *=      /=      //=     %=
 &=      |=      ^=      >>=     <<=     **=
@@ -713,5 +705,5 @@ error:
 \index{ASCII@\ASCII}
 
 \begin{verbatim}
-$       ?
+@       $       ?
 \end{verbatim}

@@ -5,12 +5,13 @@
 
 import unittest
 from test.test_support import run_unittest, TESTFN
-import dircache, os, time, sys, tempfile
+import dircache, os, time, sys
 
 
 class DircacheTests(unittest.TestCase):
     def setUp(self):
-        self.tempdir = tempfile.mkdtemp()
+        self.tempdir = TESTFN+"_dir"
+        os.mkdir(self.tempdir)
 
     def tearDown(self):
         for fname in os.listdir(self.tempdir):
@@ -55,7 +56,7 @@ class DircacheTests(unittest.TestCase):
             self.assert_(dircache.listdir(self.tempdir) is entries)
 
         ## UNSUCCESSFUL CASES
-        self.assertRaises(OSError, dircache.listdir, self.tempdir+"_nonexistent")
+        self.assertEquals(dircache.listdir(self.tempdir+"_nonexistent"), [])
 
     def test_annotate(self):
         self.writeTemp("test2")

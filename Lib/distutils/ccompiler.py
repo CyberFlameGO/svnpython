@@ -3,7 +3,7 @@
 Contains CCompiler, an abstract base class that defines the interface
 for the Distutils compiler abstraction model."""
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -685,17 +685,13 @@ class CCompiler:
 
         # A concrete compiler class can either override this method
         # entirely or implement _compile().
-
+        
         macros, objects, extra_postargs, pp_opts, build = \
                 self._setup_compile(output_dir, macros, include_dirs, sources,
                                     depends, extra_postargs)
         cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
 
-        for obj in objects:
-            try:
-                src, ext = build[obj]
-            except KeyError:
-                continue
+        for obj, (src, ext) in build.items():
             self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
 
         # Return *all* object filenames, not just the ones we just built.
@@ -703,7 +699,7 @@ class CCompiler:
 
     def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
         """Compile 'src' to product 'obj'."""
-
+        
         # A concrete compiler class that does not override compile()
         # should implement _compile().
         pass

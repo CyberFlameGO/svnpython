@@ -55,8 +55,7 @@ categorized syntactically as atoms.  The syntax for atoms is:
              {\token{identifier} | \token{literal} | \token{enclosure}}
   \production{enclosure}
              {\token{parenth_form} | \token{list_display}}
-  \productioncont{| \token{generator_expression} | \token{dict_display}}
-  \productioncont{| \token{string_conversion}}
+  \productioncont{| \token{dict_display} | \token{string_conversion}}
 \end{productionlist}
 
 
@@ -64,18 +63,18 @@ categorized syntactically as atoms.  The syntax for atoms is:
 \index{name}
 \index{identifier}
 
-An identifier occurring as an atom is a name.  See
-section~\ref{naming} for documentation of naming and binding.
+An identifier occurring as an atom is a name.  See Section 4.1 for
+documentation of naming and binding.
 
 When the name is bound to an object, evaluation of the atom yields
 that object.  When a name is not bound, an attempt to evaluate it
 raises a \exception{NameError} exception.
 \exindex{NameError}
 
-\strong{Private name mangling:}
+\strong{Private name mangling:}%
 \indexii{name}{mangling}%
 \indexii{private}{names}%
-When an identifier that textually occurs in a class definition begins
+when an identifier that textually occurs in a class definition begins
 with two or more underscore characters and does not end in two or more
 underscores, it is considered a \dfn{private name} of that class.
 Private names are transformed to a longer form before code is
@@ -185,55 +184,9 @@ case, the elements of the new list are those that would be produced
 by considering each of the \keyword{for} or \keyword{if} clauses a block,
 nesting from
 left to right, and evaluating the expression to produce a list element
-each time the innermost block is reached\footnote{In Python 2.3, a
-list comprehension "leaks" the control variables of each
-\samp{for} it contains into the containing scope.  However, this
-behavior is deprecated, and relying on it will not work once this
-bug is fixed in a future release}.
+each time the innermost block is reached.
 \obindex{list}
 \indexii{empty}{list}
-
-
-\subsection{Generator expressions\label{genexpr}}
-\indexii{generator}{expression}
-
-A generator expression is a compact generator notation in parentheses:
-
-\begin{productionlist}
-  \production{generator_expression}
-             {"(" \token{test} \token{genexpr_for} ")"}
-  \production{genexpr_for}
-             {"for" \token{expression_list} "in" \token{test}
-              [\token{genexpr_iter}]}
-  \production{genexpr_iter}
-             {\token{genexpr_for} | \token{genexpr_if}}
-  \production{genexpr_if}
-             {"if" \token{test} [\token{genexpr_iter}]}
-\end{productionlist}
-
-A generator expression yields a new generator object.
-\obindex{generator}
-\obindex{generator expression}
-It consists of a single expression followed by at least one
-\keyword{for} clause and zero or more \keyword{for} or \keyword{if}
-clauses.  The iterating values of the new generator are those that
-would be produced by considering each of the \keyword{for} or
-\keyword{if} clauses a block, nesting from left to right, and
-evaluating the expression to yield a value that is reached the
-innermost block for each iteration.
-
-Variables used in the generator expression are evaluated lazily
-when the \method{next()} method is called for generator object
-(in the same fashion as normal generators). However, the leftmost
-\keyword{for} clause is immediately evaluated so that error produced
-by it can be seen before any other possible error in the code that
-handles the generator expression.
-Subsequent \keyword{for} clauses cannot be evaluated immediately since
-they may depend on the previous \keyword{for} loop.
-For example: \samp{(x*y for x in range(10) for y in bar(x))}.
-
-The parentheses can be omitted on calls with only one argument.
-See section \ref{calls} for the detail.
 
 
 \subsection{Dictionary displays\label{dict}}
@@ -262,7 +215,7 @@ entries of the dictionary: each key object is used as a key into the
 dictionary to store the corresponding datum.
 
 Restrictions on the types of the key values are listed earlier in
-section \ref{types}.  (To summarize, the key type should be hashable,
+section \ref{types}.  (To summarize,the key type should be hashable,
 which excludes all mutable objects.)  Clashes between duplicate keys
 are not detected; the last datum (textually rightmost in the display)
 stored for a given key value prevails.
@@ -475,8 +428,6 @@ series of arguments:
 \begin{productionlist}
   \production{call}
              {\token{primary} "(" [\token{argument_list} [","]] ")"}
-             {\token{primary} "(" [\token{argument_list} [","] |
-	      \token{test} \token{genexpr_for} ] ")"}                                                   
   \production{argument_list}
              {\token{positional_arguments} ["," \token{keyword_arguments}]}
   \productioncont{                     ["," "*" \token{expression}]}
@@ -1017,6 +968,8 @@ Boolean operations have the lowest priority of all Python operations:
              {\token{not_test} | \token{and_test} "and" \token{not_test}}
   \production{not_test}
              {\token{comparison} | "not" \token{not_test}}
+  \production{lambda_form}
+             {"lambda" [\token{parameter_list}]: \token{expression}}
 \end{productionlist}
 
 In the context of Boolean operations, and also when expressions are
@@ -1053,11 +1006,6 @@ not \code{''}.)
 \indexii{lambda}{expression}
 \indexii{lambda}{form}
 \indexii{anonymous}{function}
-
-\begin{productionlist}
-  \production{lambda_form}
-             {"lambda" [\token{parameter_list}]: \token{expression}}
-\end{productionlist}
 
 Lambda forms (lambda expressions) have the same syntactic position as
 expressions.  They are a shorthand to create anonymous functions; the

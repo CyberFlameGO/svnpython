@@ -1,25 +1,45 @@
-# Copyright (C) 2001-2004 Python Software Foundation
-# Author: Barry Warsaw
-# Contact: email-sig@python.org
+# Copyright (C) 2001,2002 Python Software Foundation
+# Author: barry@zope.com (Barry Warsaw)
 
-"""Classes to generate plain text from a message object tree."""
+"""Classes to generate plain text from a message object tree.
+"""
 
 import re
 import sys
 import time
+import locale
 import random
-import warnings
+
+from types import ListType, StringType
 from cStringIO import StringIO
 
 from email.Header import Header
+from email.Parser import NLCRE
 
+try:
+    from email._compat22 import _isstring
+except SyntaxError:
+    from email._compat21 import _isstring
+
+try:
+    True, False
+except NameError:
+    True = 1
+    False = 0
+
+EMPTYSTRING = ''
+SEMISPACE = '; '
+BAR = '|'
 UNDERSCORE = '_'
 NL = '\n'
+NLTAB = '\n\t'
+SEMINLTAB = ';\n\t'
+SPACE8 = ' ' * 8
 
 fcre = re.compile(r'^From ', re.MULTILINE)
 
 def _is8bitstring(s):
-    if isinstance(s, str):
+    if isinstance(s, StringType):
         try:
             unicode(s, 'us-ascii')
         except UnicodeError:
@@ -57,7 +77,7 @@ class Generator:
         """
         self._fp = outfp
         self._mangle_from_ = mangle_from_
-        self._maxheaderlen = maxheaderlen
+        self.__maxheaderlen = maxheaderlen
 
     def write(self, s):
         # Just delegate to the file object
@@ -82,14 +102,11 @@ class Generator:
         self._write(msg)
 
     # For backwards compatibility, but this is slower
-    def __call__(self, msg, unixfrom=False):
-        warnings.warn('__call__() deprecated; use flatten()',
-                      DeprecationWarning, 2)
-        self.flatten(msg, unixfrom)
+    __call__ = flatten
 
     def clone(self, fp):
         """Clone this generator with the exact same options."""
-        return self.__class__(fp, self._mangle_from_, self._maxheaderlen)
+        return self.__class__(fp, self._mangle_from_, self.__maxheaderlen)
 
     #
     # Protected interface - undocumented ;/
@@ -145,7 +162,7 @@ class Generator:
     def _write_headers(self, msg):
         for h, v in msg.items():
             print >> self._fp, '%s:' % h,
-            if self._maxheaderlen == 0:
+            if self.__maxheaderlen == 0:
                 # Explicit no-wrapping
                 print >> self._fp, v
             elif isinstance(v, Header):
@@ -162,7 +179,7 @@ class Generator:
             else:
                 # Header's got lots of smarts, so use it.
                 print >> self._fp, Header(
-                    v, maxlinelen=self._maxheaderlen,
+                    v, maxlinelen=self.__maxheaderlen,
                     header_name=h, continuation_ws='\t').encode()
         # A blank line always separates headers from body
         print >> self._fp
@@ -178,8 +195,8 @@ class Generator:
         cset = msg.get_charset()
         if cset is not None:
             payload = cset.body_encode(payload)
-        if not isinstance(payload, basestring):
-            raise TypeError('string payload expected: %s' % type(payload))
+        if not _isstring(payload):
+            raise TypeError, 'string payload expected: %s' % type(payload)
         if self._mangle_from_:
             payload = fcre.sub('>From ', payload)
         self._fp.write(payload)
@@ -194,12 +211,17 @@ class Generator:
         msgtexts = []
         subparts = msg.get_payload()
         if subparts is None:
-            subparts = []
-        elif isinstance(subparts, basestring):
+            # Nothing has ever been attached
+            boundary = msg.get_boundary(failobj=_make_boundary())
+            print >> self._fp, '--' + boundary
+            print >> self._fp, '\n'
+            print >> self._fp, '--' + boundary + '--'
+            return
+        elif _isstring(subparts):
             # e.g. a non-strict parse of a message with no starting boundary.
             self._fp.write(subparts)
             return
-        elif not isinstance(subparts, list):
+        elif not isinstance(subparts, ListType):
             # Scalar payload
             subparts = [subparts]
         for part in subparts:
@@ -220,26 +242,28 @@ class Generator:
         # suite.
         if msg.get_boundary() <> boundary:
             msg.set_boundary(boundary)
-        # If there's a preamble, write it out, with a trailing CRLF
+        # Write out any preamble
         if msg.preamble is not None:
-            print >> self._fp, msg.preamble
-        # dash-boundary transport-padding CRLF
+            self._fp.write(msg.preamble)
+            # If preamble is the empty string, the length of the split will be
+            # 1, but the last element will be the empty string.  If it's
+            # anything else but does not end in a line separator, the length
+            # will be > 1 and not end in an empty string.  We need to
+            # guarantee a newline after the preamble, but don't add too many.
+            plines = NLCRE.split(msg.preamble)
+            if plines <> [''] and plines[-1] <> '':
+                self._fp.write('\n')
+        # First boundary is a bit different; it doesn't have a leading extra
+        # newline.
         print >> self._fp, '--' + boundary
-        # body-part
-        if msgtexts:
-            self._fp.write(msgtexts.pop(0))
-        # *encapsulation
-        # --> delimiter transport-padding
-        # --> CRLF body-part
-        for body_part in msgtexts:
-            # delimiter transport-padding CRLF
-            print >> self._fp, '\n--' + boundary
-            # body-part
-            self._fp.write(body_part)
-        # close-delimiter transport-padding
-        self._fp.write('\n--' + boundary + '--')
+        # Join and write the individual parts
+        joiner = '\n--' + boundary + '\n'
+        self._fp.write(joiner.join(msgtexts))
+        print >> self._fp, '\n--' + boundary + '--',
+        # Write out any epilogue
         if msg.epilogue is not None:
-            print >> self._fp
+            if not msg.epilogue.startswith('\n'):
+                print >> self._fp
             self._fp.write(msg.epilogue)
 
     def _handle_message_delivery_status(self, msg):
@@ -275,8 +299,6 @@ class Generator:
 
 
 
-_FMT = '[Non-text (%(type)s) part of message omitted, filename %(filename)s]'
-
 class DecodedGenerator(Generator):
     """Generator a text representation of a message.
 
@@ -307,13 +329,13 @@ class DecodedGenerator(Generator):
         """
         Generator.__init__(self, outfp, mangle_from_, maxheaderlen)
         if fmt is None:
-            self._fmt = _FMT
-        else:
-            self._fmt = fmt
+            fmt = ('[Non-text (%(type)s) part of message omitted, '
+                   'filename %(filename)s]')
+        self._fmt = fmt
 
     def _dispatch(self, msg):
         for part in msg.walk():
-            maintype = part.get_content_maintype()
+            maintype = part.get_main_type('text')
             if maintype == 'text':
                 print >> self, part.get_payload(decode=True)
             elif maintype == 'multipart':
@@ -321,9 +343,9 @@ class DecodedGenerator(Generator):
                 pass
             else:
                 print >> self, self._fmt % {
-                    'type'       : part.get_content_type(),
-                    'maintype'   : part.get_content_maintype(),
-                    'subtype'    : part.get_content_subtype(),
+                    'type'       : part.get_type('[no MIME type]'),
+                    'maintype'   : part.get_main_type('[no main MIME type]'),
+                    'subtype'    : part.get_subtype('[no sub-MIME type]'),
                     'filename'   : part.get_filename('[no filename]'),
                     'description': part.get('Content-Description',
                                             '[no description]'),

@@ -120,8 +120,7 @@ text contributions are more than welcome as well.
           \lineii{doc/}
             {\citetitle[../doc/doc.html]{Documenting Python}}
           \lineii{ext/}
-            {\citetitle[../ext/ext.html]
-                       {Extending and Embedding the Python Interpreter}}
+            {\citetitle[../ext/ext.html]{Extending and Embedding the Python Interpreter}}
           \lineii{inst/}
             {\citetitle[../inst/inst.html]{Installing Python Modules}}
           \lineii{lib/}
@@ -132,9 +131,6 @@ text contributions are more than welcome as well.
             {\citetitle[../ref/ref.html]{Python Reference Manual}}
           \lineii{tut/}
             {\citetitle[../tut/tut.html]{Python Tutorial}}
-          \lineii{whatsnew/}
-            {\citetitle[../whatsnew/whatsnew24.html]
-                       {What's New in Python \shortversion}}
         \end{tableii}
 
     \term{Format-Specific Output}
@@ -204,7 +200,7 @@ text contributions are more than welcome as well.
     For ``central processing unit.''  Many style guides say this
     should be spelled out on the first use (and if you must use it,
     do so!).  For the Python documentation, this abbreviation should
-    be avoided since there's no reasonable way to predict which occurrence
+    be avoided since there's no reasonable way to predict which occurance
     will be the first seen by the reader.  It is better to use the
     word ``processor'' instead.
 
@@ -232,11 +228,7 @@ text contributions are more than welcome as well.
 
   This section is a brief introduction to \LaTeX{} concepts and
   syntax, to provide authors enough information to author documents
-  productively without having to become ``\TeX{}nicians.''  This does
-  not teach everything needed to know about writing \LaTeX{} for
-  Python documentation; many of the standard ``environments'' are not
-  described here (though you will learn how to mark something as an
-  environment).
+  productively without having to become ``\TeX{}nicians.''
 
   Perhaps the most important concept to keep in mind while marking up
   Python documentation is that while \TeX{} is unstructured, \LaTeX{} was
@@ -336,7 +328,7 @@ Still more text.
     and optional parameters should be marked using the alternate
     syntax for a group.
 
-    For example, a macro which takes a single parameter
+    For example, a macro named ``foo'' which takes a single parameter
     would appear like this:
 
 \begin{verbatim}
@@ -467,34 +459,6 @@ This \UNIX\ is also followed by a space.
     \end{description}
 
 
-  \subsection{Common Environments \label{latex-environments}}
-
-    \LaTeX{} provides a variety of environments even without the
-    additional markup provided by the Python-specific document classes
-    introduced in the next section.  The following environments are
-    provided as part of standard \LaTeX{} and are being used in the
-    standard Python documentation; descriptions will be added here as
-    time allows.
-
-\begin{verbatim}
-abstract
-alltt
-description
-displaymath
-document
-enumerate
-figure
-flushleft
-itemize
-list
-math
-quotation
-quote
-sloppypar
-verbatim
-\end{verbatim}
-
-
 \section{Document Classes \label{classes}}
 
   Two \LaTeX{} document classes are defined specifically for use with
@@ -530,8 +494,7 @@ verbatim
 
   The Python document classes define a lot of new environments and
   macros.  This section contains the reference material for these
-  facilities.  Documentation for ``standard'' \LaTeX{} constructs is
-  not included here, though they are used in the Python documentation.
+  facilities.
 
   \subsection{Markup for the Preamble \label{preamble-info}}
 
@@ -651,7 +614,7 @@ verbatim
     \end{envdesc}
 
     \begin{envdesc}{excclassdesc}{\p{name}\p{constructor parameters}}
-      Describe an exception defined by a class.  \var{constructor
+      Descibe an exception defined by a class.  \var{constructor
       parameters} should not include the \var{self} parameter or
       the parentheses used in the call syntax.  To describe an
       exception class without describing the parameters to its
@@ -830,7 +793,7 @@ verbatim
       with release \var{version}.  The text given as \var{what to do}
       should recommend something to use instead.  It should be
       complete sentences.  The entire deprecation notice will be
-      presented as a separate paragraph; it should either precede or
+      presented as a separate paragraph; it should either preceed or
       succeed the description of the deprecated feature.
     \end{macrodesc}
 
@@ -840,12 +803,10 @@ verbatim
     \end{macrodesc}
 
     \begin{macrodesc}{e}{}
-      Produces a backslash.  This is convenient in \macro{code},
-      \macro{file}, and similar macros, and the \env{alltt}
-      environment, and is only defined there.  To
-      create a backslash in ordinary text (such as the contents of the
-      \macro{citetitle} macro), use the standard \macro{textbackslash}
-      macro.
+      Produces a backslash.  This is convenient in \macro{code} and
+      similar macros, and is only defined there.  To create a
+      backslash in ordinary text (such as the contents of the
+      \macro{file} macro), use the standard \macro{textbackslash} macro.
     \end{macrodesc}
 
     \begin{macrodesc}{email}{\p{address}}
@@ -1069,6 +1030,29 @@ verbatim
       \macro{shortversion} macro.
     \end{macrodesc}
 
+    \begin{macrodesc}{versionadded}{\op{explanation}\p{version}}
+      The version of Python which added the described feature to the
+      library or C API.  \var{explanation} should be a \emph{brief}
+      explanation of the change consisting of a capitalized sentence
+      fragment; a period will be appended by the formatting process.
+      This is typically added to the end of the first paragraph of the
+      description before any availability notes.  The location should
+      be selected so the explanation makes sense and may vary as
+      needed.
+    \end{macrodesc}
+
+    \begin{macrodesc}{versionchanged}{\op{explanation}\p{version}}
+      The version of Python in which the named feature was changed in
+      some way (new parameters, changed side effects, etc.).
+      \var{explanation} should be a \emph{brief} explanation of the
+      change consisting of a capitalized sentence fragment; a
+      period will be appended by the formatting process.
+      This is typically added to the end of the first paragraph of the
+      description before any availability notes and after
+      \macro{versionadded}.  The location should be selected so the
+      explanation makes sense and may vary as needed.
+    \end{macrodesc}
+
     \begin{macrodesc}{warning}{\p{text}}
       An important bit of information about an API that a user should
       be very aware of when using whatever bit of API the warning
@@ -1078,37 +1062,6 @@ verbatim
       and include all appropriate punctuation.  This differs from
       \macro{note} in that it is recommended over \macro{note} for
       information regarding security.
-    \end{macrodesc}
-
-    The following two macros are used to describe information that's
-    associated with changes from one release to another.  For features
-    which are described by a single paragraph, these are typically
-    added as separate source lines at the end of the paragraph.  When
-    adding these to features described by multiple paragraphs, they
-    are usually collected in a single separate paragraph after the
-    description.  When both \macro{versionadded} and
-    \macro{versionchanged} are used, \macro{versionadded} should come
-    first; the versions should be listed in chronological order.  Both
-    of these should come before availability statements.  The location
-    should be selected so the explanation makes sense and may vary as
-    needed.
-
-    \begin{macrodesc}{versionadded}{\op{explanation}\p{version}}
-      The version of Python which added the described feature to the
-      library or C API.  \var{explanation} should be a \emph{brief}
-      explanation of the change consisting of a capitalized sentence
-      fragment; a period will be appended by the formatting process.
-      When this applies to an entire module, it should be placed at
-      the top of the module section before any prose.
-    \end{macrodesc}
-
-    \begin{macrodesc}{versionchanged}{\op{explanation}\p{version}}
-      The version of Python in which the named feature was changed in
-      some way (new parameters, changed side effects, etc.).
-      \var{explanation} should be a \emph{brief} explanation of the
-      change consisting of a capitalized sentence fragment; a
-      period will be appended by the formatting process.  This should
-      not generally be applied to modules.
     \end{macrodesc}
 
 
@@ -1122,7 +1075,7 @@ verbatim
 
   \begin{envdesc}{notice}{\op{type}}
     Label some paragraphs as being worthy of additional attention from
-    the reader.  What sort of attention is warranted can be indicated
+    the reader.  What sort of attention is warrented can be indicated
     by specifying the \var{type} of the notice.  The only values
     defined for \var{type} are \code{note} and \code{warning}; these
     are equivalent in intent to the inline markup of the same name.
@@ -1456,7 +1409,7 @@ verbatim
     For each of the following macros, \var{why} should be one or more
     complete sentences, starting with a capital letter (unless it
     starts with an identifier, which should not be modified), and
-    ending with the appropriate punctuation.
+    ending with the apropriate punctuation.
 
     These macros are only defined within the content of the
     \env{seealso} and \env{seealso*} environments.
@@ -1660,7 +1613,7 @@ verbatim
     \begin{envdesc}{productionlist}{\op{language}}
       This environment is used to enclose a group of productions.  The
       two macros are only defined within this environment.  If a
-      document describes more than one language, the optional parameter
+      document descibes more than one language, the optional parameter
       \var{language} should be used to distinguish productions between
       languages.  The value of the parameter should be a short name
       that can be used as part of a filename; colons or other
@@ -1715,23 +1668,13 @@ verbatim
   The components of graphical interfaces will be assigned markup, but
   most of the specifics have not been determined.
 
-  \begin{macrodesc}{guilabel}{\p{label}}
-    Labels presented as part of an interactive user interface should
-    be marked using \macro{guilabel}.  This includes labels from
-    text-based interfaces such as those created using \code{curses} or
-    other text-based libraries.  Any label used in the interface
-    should be marked with this macro, including button labels, window
-    titles, field names, menu and menu selection names, and even
-    values in selection lists.
-  \end{macrodesc}
-
   \begin{macrodesc}{menuselection}{\p{menupath}}
     Menu selections should be marked using a combination of
     \macro{menuselection} and \macro{sub}.  This macro is used to mark
     a complete sequence of menu selections, including selecting
     submenus and choosing a specific operation, or any subsequence of
     such a sequence.  The names of individual selections should be
-    separated by occurrences of \macro{sub}.
+    separated by occurances of \macro{sub}.
 
     For example, to mark the selection ``\menuselection{Start \sub
     Programs}'', use this markup:
@@ -1744,10 +1687,6 @@ verbatim
     such as the ellipsis some operating systems use to indicate that
     the command opens a dialog, the indicator should be omitted from
     the selection name.
-
-    Individual selection names within the \macro{menuselection} should
-    not be marked using \macro{guilabel} since that's implied by using
-    \macro{menuselection}.
   \end{macrodesc}
 
   \begin{macrodesc}{sub}{}
@@ -1856,20 +1795,15 @@ verbatim
         right.''  The proper way to use this script is to make a
         symbolic link to it or run it in place; the actual script file
         must be stored as part of the documentation source tree,
-        though it may be used to format documents outside the tree.
-        Use \program{mkhowto} \longprogramopt{help} for a list of
+        though it may be used to format documents outside the
+        tree.  Use \program{mkhowto} \longprogramopt{help}
+        for a list of
         command line options.
 
         \program{mkhowto} can be used for both \code{howto} and
         \code{manual} class documents.  It is usually a good idea to
         always use the latest version of this tool rather than a
-        version from an older source release of Python.  It can be
-        used to generate DVI, HTML, PDF, PostScript, and plain text
-        documents.  The GNU info and iSilo formats will be supported
-        by this script in some future version.
-
-        Use the \longprogramopt{help} option on this script's command
-        line to get a summary of options for this script.
+        version from an older source release of Python.
 
         XXX  Need more here.
     \end{description}
@@ -1908,101 +1842,8 @@ verbatim
 % ./configure && make install
 \end{verbatim}
 
-    You should now be able to build at least the DVI, HTML, PDF, and
+    You should now be able to build at least the HTML, PDF, and
     PostScript versions of the formatted documentation.
-
-
-\section{Including Graphics \label{graphics}}
-
-  The standard documentation included with Python makes no use of
-  diagrams or images; this is intentional.  The outside tools used to
-  format the documentation have not always been suited to working with
-  graphics.  As the tools have evolved and been improved by their
-  maintainers, support for graphics has improved.
-
-  The internal tools, starting with the \program{mkhowto} script, do
-  not provide any direct support for graphics.  However,
-  \program{mkhowto} will not interfere with graphics support in the
-  external tools.
-
-  Experience using graphics together with these tools and the
-  \code{howto} and \code{manual} document classes is not extensive,
-  but has been known to work.  The basic approach is this:
-
-  \begin{enumerate}
-    \item Create the image or graphic using your favorite
-          application.
-
-    \item Convert the image to a format supported by the conversion to
-          your desired output format.  If you want to generate HTML or
-          PostScript, you can convert the image or graphic to
-          encapsulated PostScript (a \file{.eps} file); \LaTeX2HTML
-          can convert that to a \file{.gif} file; it may be possible
-          to provide a \file{.gif} file directly.  If you want to
-          generate PDF, you need to provide an ``encapsulated'' PDF
-          file.  This can be generated from encapsulated PostScript
-          using the \program{epstopdf} tool provided with the te\TeX{}
-          distribution on Linux and \UNIX.
-
-    \item In your document, add this line to ``import'' the general
-          graphics support package \code{graphicx}:
-
-\begin{verbatim}
-\usepackage{graphicx}
-\end{verbatim}
-
-    \item Where you want to include your graphic or image, include
-          markup similar to this:
-
-\begin{verbatim}
-\begin{figure}
-  \centering
-  \includegraphics[width=5in]{myimage}
-  \caption{Description of my image}
-\end{figure}
-\end{verbatim}
-
-          In particular, note for the \macro{includegraphics} macro
-          that no file extension is provided.  If you're only
-          interested in one target format, you can include the
-          extension of the appropriate input file, but to allow
-          support for multiple formats, omitting the extension makes
-          life easier.
-
-    \item Run \program{mkhowto} normally.
-  \end{enumerate}
-
-  If you're working on systems which support some sort of
-  \program{make} facility, you can use that to ensure the intermediate
-  graphic formats are kept up to date.  This example shows a
-  \file{Makefile} used to format a document containing a diagram
-  created using the \program{dia} application:
-
-\begin{verbatim}
-default: pdf
-all:     html pdf ps
-
-html:   mydoc/mydoc.html
-pdf:    mydoc.pdf
-ps:     mydoc.ps
-
-mydoc/mydoc.html:  mydoc.tex mygraphic.eps
-        mkhowto --html $<
-
-mydoc.pdf:  mydoc.tex mygraphic.pdf
-        mkhowto --pdf $<
-
-mydoc.ps:   mydoc.tex mygraphic.eps
-        mkhowto --postscript $<
-
-.SUFFIXES: .dia .eps .pdf
-
-.dia.eps:
-        dia --nosplash --export $@ $<
-
-.eps.pdf:
-        epstopdf $<
-\end{verbatim} % $ <-- bow to font-lock
 
 
 \section{Future Directions \label{futures}}
@@ -2080,7 +1921,7 @@ mydoc.ps:   mydoc.tex mygraphic.eps
     fairly rough.
 
     The timeframe for the conversion is not clear since there doesn't
-    seem to be much time available to work on this, but the apparent
+    seem to be much time available to work on this, but the appearant
     benefits are growing more substantial at a moderately rapid pace.
 
 

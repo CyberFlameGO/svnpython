@@ -8,14 +8,7 @@
 
 #include <time.h>
 
-#include "timefuncs.h"
-
-/* Differentiate between building the core module and building extension
- * modules.
- */
-#define Py_BUILD_CORE
 #include "datetime.h"
-#undef Py_BUILD_CORE
 
 /* We require that C int be at least 32 bits, and use int virtually
  * everywhere.  In just a few cases we use a temp long, where a Python
@@ -86,12 +79,6 @@
  * p->hastzinfo.
  */
 #define HASTZINFO(p)		(((_PyDateTime_BaseTZInfo *)(p))->hastzinfo)
-
-/* M is a char or int claiming to be a valid month.  The macro is equivalent
- * to the two-sided Python test
- *	1 <= M <= 12
- */
-#define MONTH_IS_SANE(M) ((unsigned int)(M) - 1 < 12)
 
 /* Forward declarations. */
 static PyTypeObject PyDateTime_DateType;
@@ -2208,8 +2195,7 @@ date_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	/* Check for invocation from pickle with __getstate__ state */
 	if (PyTuple_GET_SIZE(args) == 1 &&
 	    PyString_Check(state = PyTuple_GET_ITEM(args, 0)) &&
-	    PyString_GET_SIZE(state) == _PyDateTime_DATE_DATASIZE &&
-	    MONTH_IS_SANE(PyString_AS_STRING(state)[2]))
+	    PyString_GET_SIZE(state) == _PyDateTime_DATE_DATASIZE)
 	{
 	    	PyDateTime_Date *me;
 
@@ -2233,15 +2219,11 @@ date_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 
 /* Return new date from localtime(t). */
 static PyObject *
-date_local_from_time_t(PyObject *cls, double ts)
+date_local_from_time_t(PyObject *cls, time_t t)
 {
 	struct tm *tm;
-	time_t t;
 	PyObject *result = NULL;
 
-	t = _PyTime_DoubleToTimet(ts);
-	if (t == (time_t)-1 && PyErr_Occurred())
-		return NULL;
 	tm = localtime(&t);
 	if (tm)
 		result = PyObject_CallFunction(cls, "iii",
@@ -2289,7 +2271,7 @@ date_fromtimestamp(PyObject *cls, PyObject *args)
 	PyObject *result = NULL;
 
 	if (PyArg_ParseTuple(args, "d:fromtimestamp", &timestamp))
-		result = date_local_from_time_t(cls, timestamp);
+		result = date_local_from_time_t(cls, (time_t)timestamp);
 	return result;
 }
 
@@ -2659,7 +2641,7 @@ static PyMethodDef date_methods[] = {
 };
 
 static char date_doc[] =
-PyDoc_STR("date(year, month, day) --> date object");
+PyDoc_STR("Basic date type.");
 
 static PyNumberMethods date_as_number = {
 	date_add,					/* nb_add */
@@ -3206,11 +3188,11 @@ time_strftime(PyDateTime_Time *self, PyObject *args, PyObject *kw)
 	 * 1900 to worm around that.
 	 */
 	tuple = Py_BuildValue("iiiiiiiii",
-		              1900, 1, 1, /* year, month, day */
+		              1900, 0, 0, /* year, month, day */
 			      TIME_GET_HOUR(self),
 			      TIME_GET_MINUTE(self),
 			      TIME_GET_SECOND(self),
-			      0, 1, -1); /* weekday, daynum, dst */
+			      0, 0, -1); /* weekday, daynum, dst */
 	if (tuple == NULL)
 		return NULL;
 	assert(PyTuple_Size(tuple) == 9);
@@ -3389,9 +3371,9 @@ time_getstate(PyDateTime_Time *self)
 						_PyDateTime_TIME_DATASIZE);
 	if (basestate != NULL) {
 		if (! HASTZINFO(self) || self->tzinfo == Py_None)
-			result = PyTuple_Pack(1, basestate);
+			result = Py_BuildValue("(O)", basestate);
 		else
-			result = PyTuple_Pack(2, basestate, self->tzinfo);
+			result = Py_BuildValue("OO", basestate, self->tzinfo);
 		Py_DECREF(basestate);
 	}
 	return result;
@@ -3431,10 +3413,7 @@ static PyMethodDef time_methods[] = {
 };
 
 static char time_doc[] =
-PyDoc_STR("time([hour[, minute[, second[, microsecond[, tzinfo]]]]]) --> a time object\n\
-\n\
-All arguments are optional. tzinfo may be None, or an instance of\n\
-a tzinfo subclass. The remaining arguments may be ints or longs.\n");
+PyDoc_STR("Time type.");
 
 static PyNumberMethods time_as_number = {
 	0,					/* nb_add */
@@ -3570,8 +3549,7 @@ datetime_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	if (PyTuple_GET_SIZE(args) >= 1 &&
 	    PyTuple_GET_SIZE(args) <= 2 &&
 	    PyString_Check(state = PyTuple_GET_ITEM(args, 0)) &&
-	    PyString_GET_SIZE(state) == _PyDateTime_DATETIME_DATASIZE &&
-	    MONTH_IS_SANE(PyString_AS_STRING(state)[2]))
+	    PyString_GET_SIZE(state) == _PyDateTime_DATETIME_DATASIZE)
 	{
 		PyDateTime_DateTime *me;
 		char aware;
@@ -3668,15 +3646,10 @@ static PyObject *
 datetime_from_timestamp(PyObject *cls, TM_FUNC f, double timestamp,
 			PyObject *tzinfo)
 {
-	time_t timet;
-	double fraction;
-	int us;
+	time_t timet = (time_t)timestamp;
+	double fraction = timestamp - (double)timet;
+	int us = (int)round_to_long(fraction * 1e6);
 
-	timet = _PyTime_DoubleToTimet(timestamp);
-	if (timet == (time_t)-1 && PyErr_Occurred())
-		return NULL;
-	fraction = timestamp - (double)timet;
-	us = (int)round_to_long(fraction * 1e6);
 	return datetime_from_timet_and_us(cls, f, timet, us, tzinfo);
 }
 
@@ -3795,46 +3768,6 @@ datetime_utcfromtimestamp(PyObject *cls, PyObject *args)
 	if (PyArg_ParseTuple(args, "d:utcfromtimestamp", &timestamp))
 		result = datetime_from_timestamp(cls, gmtime, timestamp,
 						 Py_None);
-	return result;
-}
-
-/* Return new datetime from time.strptime(). */
-static PyObject *
-datetime_strptime(PyObject *cls, PyObject *args)
-{
-	PyObject *result = NULL, *obj, *module;
-	const char *string, *format;
-
-	if (!PyArg_ParseTuple(args, "ss:strptime", &string, &format))
-		return NULL;
-
-	if ((module = PyImport_ImportModule("time")) == NULL)
-		return NULL;
-	obj = PyObject_CallMethod(module, "strptime", "ss", string, format);
-	Py_DECREF(module);
-
-	if (obj != NULL) {
-		int i, good_timetuple = 1;
-		long int ia[6];
-		if (PySequence_Check(obj) && PySequence_Size(obj) >= 6)
-			for (i=0; i < 6; i++) {
-				PyObject *p = PySequence_GetItem(obj, i);
-				if (PyInt_Check(p))
-					ia[i] = PyInt_AsLong(p);
-				else
-					good_timetuple = 0;
-				Py_DECREF(p);
-			}
-		else
-			good_timetuple = 0;
-		if (good_timetuple)
-			result = PyObject_CallFunction(cls, "iiiiii",
-				ia[0], ia[1], ia[2], ia[3], ia[4], ia[5]);
-		else
-			PyErr_SetString(PyExc_ValueError,
-				"unexpected value from time.strptime");
-		Py_DECREF(obj);
-	}
 	return result;
 }
 
@@ -4118,17 +4051,7 @@ datetime_richcompare(PyDateTime_DateTime *self, PyObject *other, int op)
 	int offset1, offset2;
 
 	if (! PyDateTime_Check(other)) {
-		/* If other has a "timetuple" attr, that's an advertised
-		 * hook for other classes to ask to get comparison control.
-		 * However, date instances have a timetuple attr, and we
-		 * don't want to allow that comparison.  Because datetime
-		 * is a subclass of date, when mixing date and datetime
-		 * in a comparison, Python gives datetime the first shot
-		 * (it's the more specific subtype).  So we can stop that
-		 * combination here reliably.
-		 */
-		if (PyObject_HasAttrString(other, "timetuple") &&
-		    ! PyDate_Check(other)) {
+		if (PyObject_HasAttrString(other, "timetuple")) {
 			/* A hook for other kinds of datetime objects. */
 			Py_INCREF(Py_NotImplemented);
 			return Py_NotImplemented;
@@ -4424,9 +4347,9 @@ datetime_getstate(PyDateTime_DateTime *self)
 					  _PyDateTime_DATETIME_DATASIZE);
 	if (basestate != NULL) {
 		if (! HASTZINFO(self) || self->tzinfo == Py_None)
-			result = PyTuple_Pack(1, basestate);
+			result = Py_BuildValue("(O)", basestate);
 		else
-			result = PyTuple_Pack(2, basestate, self->tzinfo);
+			result = Py_BuildValue("OO", basestate, self->tzinfo);
 		Py_DECREF(basestate);
 	}
 	return result;
@@ -4458,11 +4381,6 @@ static PyMethodDef datetime_methods[] = {
 	 METH_VARARGS | METH_CLASS,
 	 PyDoc_STR("timestamp -> UTC datetime from a POSIX timestamp "
 	 	   "(like time.time()).")},
-
-	{"strptime", (PyCFunction)datetime_strptime,
-	 METH_VARARGS | METH_CLASS,
-	 PyDoc_STR("string, format -> new datetime parsed from a string "
-	 	   "(like time.strptime()).")},
 
 	{"combine", (PyCFunction)datetime_combine,
 	 METH_VARARGS | METH_KEYWORDS | METH_CLASS,
@@ -4516,10 +4434,7 @@ static PyMethodDef datetime_methods[] = {
 };
 
 static char datetime_doc[] =
-PyDoc_STR("datetime(year, month, day[, hour[, minute[, second[, microsecond[,tzinfo]]]]])\n\
-\n\
-The year, month and day arguments are required. tzinfo may be None, or an\n\
-instance of a tzinfo subclass. The remaining arguments may be ints or longs.\n");
+PyDoc_STR("date/time type.");
 
 static PyNumberMethods datetime_as_number = {
 	datetime_add,				/* nb_add */
@@ -4586,24 +4501,6 @@ statichere PyTypeObject PyDateTime_DateTimeType = {
 static PyMethodDef module_methods[] = {
 	{NULL, NULL}
 };
-
-/* C API.  Clients get at this via PyDateTime_IMPORT, defined in
- * datetime.h.
- */
-static PyDateTime_CAPI CAPI = {
-        &PyDateTime_DateType,
-        &PyDateTime_DateTimeType,
-        &PyDateTime_TimeType,
-        &PyDateTime_DeltaType,
-        &PyDateTime_TZInfoType,
-        new_date_ex,
-        new_datetime_ex,
-        new_time_ex,
-        new_delta_ex,
-        datetime_fromtimestamp,
-        date_fromtimestamp
-};
-
 
 PyMODINIT_FUNC
 initdatetime(void)
@@ -4717,12 +4614,6 @@ initdatetime(void)
 
 	Py_INCREF(&PyDateTime_TZInfoType);
 	PyModule_AddObject(m, "tzinfo", (PyObject *) &PyDateTime_TZInfoType);
-
-        x = PyCObject_FromVoidPtrAndDesc(&CAPI, (void*) DATETIME_API_MAGIC,
-                NULL);
-        if (x == NULL)
-            return;
-        PyModule_AddObject(m, "datetime_CAPI", x);
 
 	/* A 4-year cycle has an extra leap day over what we'd get from
 	 * pasting together 4 single years.

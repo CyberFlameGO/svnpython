@@ -56,7 +56,7 @@ was provided.  The output is divided in the following columns:
 
 \begin{enumerate}
 \item the line number, for the first instruction of each line
-\item the current instruction, indicated as \samp{-->},
+\item the current instruction, indicated as \samp{-\code{-}>},
 \item a labelled instruction, indicated with \samp{>\code{>}},
 \item the address of the instruction,
 \item the operation code name,
@@ -76,10 +76,6 @@ for compatibility with earlier Python releases.
 
 \begin{datadesc}{opname}
 Sequence of operation names, indexable using the byte code.
-\end{datadesc}
-
-\begin{datadesc}{opmap}
-Dictionary mapping byte codes to operation names.
 \end{datadesc}
 
 \begin{datadesc}{cmp_op}
@@ -691,10 +687,4 @@ Calls a function. \var{argc} is interpreted as in
 \code{CALL_FUNCTION}.  The top element on the stack contains the
 keyword arguments dictionary, followed by the variable-arguments
 tuple, followed by explicit keyword and positional arguments.
-\end{opcodedesc}
-
-\begin{opcodedesc}{HAVE_ARGUMENT}{}
-This is not really an opcode.  It identifies the dividing line between
-opcodes which don't take arguments \code{< HAVE_ARGUMENT} and those which do
-\code{>= HAVE_ARGUMENT}.
 \end{opcodedesc}

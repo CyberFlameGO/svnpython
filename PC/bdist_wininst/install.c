@@ -1,9 +1,8 @@
 /*
-  IMPORTANT NOTE: IF THIS FILE IS CHANGED, WININST-6.EXE MUST BE RECOMPILED
-  WITH THE MSVC6 WININST.DSW WORKSPACE FILE MANUALLY, AND WININST-7.1.EXE MUST
-  BE RECOMPILED WITH THE MSVC 2003.NET WININST-7.1.VCPROJ FILE MANUALLY.
+  IMPORTANT NOTE: IF THIS FILE IS CHANGED, WININST.EXE MUST BE RECOMPILED WITH
+  THE MSVC6 WININST.DSW WORKSPACE FILE MANUALLY.
 
-  IF CHANGES TO THIS FILE ARE CHECKED INTO PYTHON CVS, THE RECOMPILED BINARIES
+  IF CHANGES TO THIS FILE ARE CHECKED INTO PYTHON CVS, THE RECOMPILED BINARY
   MUST BE CHECKED IN AS WELL!
 */
 
@@ -131,7 +130,6 @@ char build_info[80];		/* [Setup] build_info=, distutils version
 char meta_name[80];		/* package name without version like
 				   'Distutils' */
 char install_script[MAX_PATH];
-char *pre_install_script; /* run before we install a single file */
 
 
 int py_major, py_minor;		/* Python version selected for installation */
@@ -142,12 +140,8 @@ int exe_size;			/* number of bytes for exe-file portion */
 char python_dir[MAX_PATH];
 char pythondll[MAX_PATH];
 BOOL pyc_compile, pyo_compile;
-/* Either HKLM or HKCU, depending on where Python itself is registered, and
-   the permissions of the current user. */
-HKEY hkey_root = (HKEY)-1;
 
 BOOL success;			/* Installation successfull? */
-char *failure_reason = NULL;
 
 HANDLE hBitmap;
 char *bitmap_bytes;
@@ -222,20 +216,6 @@ static struct tagFile {
 	char *path;
 	struct tagFile *next;
 } *file_list = NULL;
-
-static void set_failure_reason(char *reason)
-{
-    if (failure_reason)
-	free(failure_reason);
-    failure_reason = strdup(reason);
-    success = FALSE;
-}
-static char *get_failure_reason()
-{
-    if (!failure_reason)
-	return "Installation failed.";
-    return failure_reason;
-}
 
 static void add_to_filelist(char *path)
 {
@@ -563,7 +543,7 @@ static PyObject *CreateShortcut(PyObject *self, PyObject *args)
 	hr = pPf->lpVtbl->Save(pPf, wszFilename, TRUE);
 	if (FAILED(hr)) {
 		g_PyErr_Format(g_PyExc_OSError,
-			       "Failed to create shortcut '%s' - error 0x%x", filename, hr);
+			       "Save() failed, error 0x%x", hr);
 		goto error;
 	}
     
@@ -584,92 +564,14 @@ static PyObject *CreateShortcut(PyObject *self, PyObject *args)
 	return NULL;
 }
 
-static PyObject *PyMessageBox(PyObject *self, PyObject *args)
-{
-	int rc;
-	char *text, *caption;
-	int flags;
-	if (!g_PyArg_ParseTuple(args, "ssi", &text, &caption, &flags))
-		return NULL;
-	rc = MessageBox(GetFocus(), text, caption, flags);
-	return g_Py_BuildValue("i", rc);
-}
-
-static PyObject *GetRootHKey(PyObject *self)
-{
-	return g_Py_BuildValue("l", hkey_root);
-}
-
 #define METH_VARARGS 0x0001
-#define METH_NOARGS   0x0004
-typedef PyObject *(*PyCFunction)(PyObject *, PyObject *);
 
 PyMethodDef meth[] = {
 	{"create_shortcut", CreateShortcut, METH_VARARGS, NULL},
 	{"get_special_folder_path", GetSpecialFolderPath, METH_VARARGS, NULL},
-	{"get_root_hkey", (PyCFunction)GetRootHKey, METH_NOARGS, NULL},
 	{"file_created", FileCreated, METH_VARARGS, NULL},
 	{"directory_created", DirectoryCreated, METH_VARARGS, NULL},
-	{"message_box", PyMessageBox, METH_VARARGS, NULL},
 };
-
-static HINSTANCE LoadPythonDll(char *fname)
-{
-	char fullpath[_MAX_PATH];
-	LONG size = sizeof(fullpath);
-	char subkey_name[80];
-	char buffer[260 + 12];
-	HINSTANCE h;
-
-	/* make sure PYTHONHOME is set, to that sys.path is initialized correctly */
-	wsprintf(buffer, "PYTHONHOME=%s", python_dir);
-	_putenv(buffer);
-	h = LoadLibrary(fname);
-	if (h)
-		return h;
-	wsprintf(subkey_name,
-		 "SOFTWARE\\Python\\PythonCore\\%d.%d\\InstallPath",
-		 py_major, py_minor);
-	if (ERROR_SUCCESS != RegQueryValue(HKEY_CURRENT_USER, subkey_name,
-					   fullpath, &size))
-		return NULL;
-	strcat(fullpath, "\\");
-	strcat(fullpath, fname);
-	return LoadLibrary(fullpath);
-}
-
-static int prepare_script_environment(HINSTANCE hPython)
-{
-	PyObject *mod;
-	DECLPROC(hPython, PyObject *, PyImport_ImportModule, (char *));
-	DECLPROC(hPython, int, PyObject_SetAttrString, (PyObject *, char *, PyObject *));
-	DECLPROC(hPython, PyObject *, PyObject_GetAttrString, (PyObject *, char *));
-	DECLPROC(hPython, PyObject *, PyCFunction_New, (PyMethodDef *, PyObject *));
-	DECLPROC(hPython, PyObject *, Py_BuildValue, (char *, ...));
-	DECLPROC(hPython, int, PyArg_ParseTuple, (PyObject *, char *, ...));
-	DECLPROC(hPython, PyObject *, PyErr_Format, (PyObject *, char *));
-	if (!PyImport_ImportModule || !PyObject_GetAttrString || 
-	    !PyObject_SetAttrString || !PyCFunction_New)
-		return 1;
-	if (!Py_BuildValue || !PyArg_ParseTuple || !PyErr_Format)
-		return 1;
-
-	mod = PyImport_ImportModule("__builtin__");
-	if (mod) {
-		int i;
-		g_PyExc_ValueError = PyObject_GetAttrString(mod, "ValueError");
-		g_PyExc_OSError = PyObject_GetAttrString(mod, "OSError");
-		for (i = 0; i < DIM(meth); ++i) {
-			PyObject_SetAttrString(mod, meth[i].ml_name,
-					       PyCFunction_New(&meth[i], NULL));
-		}
-	}
-	g_Py_BuildValue = Py_BuildValue;
-	g_PyArg_ParseTuple = PyArg_ParseTuple;
-	g_PyErr_Format = PyErr_Format;
-
-	return 0;
-}
 
 /*
  * This function returns one of the following error codes:
@@ -688,11 +590,18 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 	DECLPROC(hPython, int, PySys_SetArgv, (int, char **));
 	DECLPROC(hPython, int, PyRun_SimpleString, (char *));
 	DECLPROC(hPython, void, Py_Finalize, (void));
+	DECLPROC(hPython, PyObject *, PyImport_ImportModule, (char *));
+	DECLPROC(hPython, int, PyObject_SetAttrString,
+		 (PyObject *, char *, PyObject *));
+	DECLPROC(hPython, PyObject *, PyObject_GetAttrString,
+		 (PyObject *, char *));
 	DECLPROC(hPython, PyObject *, Py_BuildValue, (char *, ...));
 	DECLPROC(hPython, PyObject *, PyCFunction_New,
 		 (PyMethodDef *, PyObject *));
 	DECLPROC(hPython, int, PyArg_ParseTuple, (PyObject *, char *, ...));
 	DECLPROC(hPython, PyObject *, PyErr_Format, (PyObject *, char *));
+
+	PyObject *mod;
 
 	int result = 0;
 	int fh;
@@ -701,11 +610,19 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 	    || !PyRun_SimpleString || !Py_Finalize)
 		return 1;
 	
-	if (!Py_BuildValue || !PyArg_ParseTuple || !PyErr_Format)
+	if (!PyImport_ImportModule || !PyObject_SetAttrString
+	    || !Py_BuildValue)
 		return 1;
 
 	if (!PyCFunction_New || !PyArg_ParseTuple || !PyErr_Format)
 		return 1;
+
+	if (!PyObject_GetAttrString)
+		return 1;
+
+	g_Py_BuildValue = Py_BuildValue;
+	g_PyArg_ParseTuple = PyArg_ParseTuple;
+	g_PyErr_Format = PyErr_Format;
 
 	if (pathname == NULL || pathname[0] == '\0')
 		return 2;
@@ -716,12 +633,23 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 			pathname);
 		return 3;
 	}
-
 	SetDlgItemText(hDialog, IDC_INFO, "Running Script...");
 		
 	Py_Initialize();
 
-	prepare_script_environment(hPython);
+	mod = PyImport_ImportModule("__builtin__");
+	if (mod) {
+		int i;
+
+		g_PyExc_ValueError = PyObject_GetAttrString(mod,
+							    "ValueError");
+		g_PyExc_OSError = PyObject_GetAttrString(mod, "OSError");
+		for (i = 0; i < DIM(meth); ++i) {
+			PyObject_SetAttrString(mod, meth[i].ml_name,
+					       PyCFunction_New(&meth[i], NULL));
+		}
+	}
+
 	PySys_SetArgv(argc, argv);
 	result = 3;
 	{
@@ -742,79 +670,6 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 
 	return result;
 }
-
-static int do_run_simple_script(HINSTANCE hPython, char *script)
-{
-	int rc;
-	DECLPROC(hPython, void, Py_Initialize, (void));
-	DECLPROC(hPython, void, Py_SetProgramName, (char *));
-	DECLPROC(hPython, void, Py_Finalize, (void));
-	DECLPROC(hPython, int, PyRun_SimpleString, (char *));
-	DECLPROC(hPython, void, PyErr_Print, (void));
-
-	if (!Py_Initialize || !Py_SetProgramName || !Py_Finalize || 
-	    !PyRun_SimpleString || !PyErr_Print)
-		return -1;
-
-	Py_SetProgramName(modulename);
-	Py_Initialize();
-	prepare_script_environment(hPython);
-	rc = PyRun_SimpleString(script);
-	if (rc)
-		PyErr_Print();
-	Py_Finalize();
-	return rc;
-}
-
-static int run_simple_script(char *script)
-{
-	int rc;
-	char *tempname;
-	HINSTANCE hPython;
-	tempname = tempnam(NULL, NULL);
-	freopen(tempname, "a", stderr);
-	freopen(tempname, "a", stdout);
-
-	hPython = LoadPythonDll(pythondll);
-	if (!hPython) {
-		set_failure_reason("Can't load Python for pre-install script");
-		return -1;
-	}
-	rc = do_run_simple_script(hPython, script);
-	FreeLibrary(hPython);
-	fflush(stderr);
-	fclose(stderr);
-	fflush(stdout);
-	fclose(stdout);
-	/* We only care about the output when we fail.  If the script works
-	   OK, then we discard it
-	*/
-	if (rc) {
-		int err_buf_size;
-		char *err_buf;
-		const char *prefix = "Running the pre-installation script failed\r\n";
-		int prefix_len = strlen(prefix);
-		FILE *fp = fopen(tempname, "rb");
-		fseek(fp, 0, SEEK_END);
-		err_buf_size = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-		err_buf = malloc(prefix_len + err_buf_size + 1);
-		if (err_buf) {
-			int n;
-			strcpy(err_buf, prefix);
-			n = fread(err_buf+prefix_len, 1, err_buf_size, fp);
-			err_buf[prefix_len+n] = '\0';
-			fclose(fp);
-			set_failure_reason(err_buf);
-			free(err_buf);
-		} else {
-			set_failure_reason("Out of memory!");
-		}
-	}
-	remove(tempname);
-	return rc;
-}
-
 
 static BOOL SystemError(int error, char *msg)
 {
@@ -955,11 +810,7 @@ static void create_bitmap(HWND hwnd)
 	ReleaseDC(hwnd, hdc);
 }
 
-/* Extract everything we need to begin the installation.  Currently this
-   is the INI filename with install data, and the raw pre-install script
-*/
-static BOOL ExtractInstallData(char *data, DWORD size, int *pexe_size,
-			       char **out_ini_file, char **out_preinstall_script)
+static char *ExtractIniFile(char *data, DWORD size, int *pexe_size)
 {
 	/* read the end of central directory record */
 	struct eof_cdir *pe = (struct eof_cdir *)&data[size - sizeof
@@ -976,19 +827,12 @@ static BOOL ExtractInstallData(char *data, DWORD size, int *pexe_size,
 	char *ini_file;
 	char tempdir[MAX_PATH];
 
-	/* ensure that if we fail, we don't have garbage out pointers */
-	*out_ini_file = *out_preinstall_script = NULL;
-
 	if (pe->tag != 0x06054b50) {
-		return FALSE;
+		return NULL;
 	}
 
-	if (pmd->tag != 0x1234567B) {
-		return SystemError(0,
-			   "Invalid cfgdata magic number (see bdist_wininst.py)");
-	}
-	if (ofs < 0) {
-		return FALSE;
+	if (pmd->tag != 0x1234567A || ofs < 0) {
+		return NULL;
 	}
 
 	if (pmd->bitmap_size) {
@@ -1001,26 +845,21 @@ static BOOL ExtractInstallData(char *data, DWORD size, int *pexe_size,
 	src = ((char *)pmd) - pmd->uncomp_size;
 	ini_file = malloc(MAX_PATH); /* will be returned, so do not free it */
 	if (!ini_file)
-		return FALSE;
+		return NULL;
 	if (!GetTempPath(sizeof(tempdir), tempdir)
 	    || !GetTempFileName(tempdir, "~du", 0, ini_file)) {
 		SystemError(GetLastError(),
 			     "Could not create temporary file");
-		return FALSE;
+		return NULL;
 	}
     
 	dst = map_new_file(CREATE_ALWAYS, ini_file, NULL, pmd->uncomp_size,
 			    0, 0, NULL/*notify*/);
 	if (!dst)
-		return FALSE;
-	/* Up to the first \0 is the INI file data. */
-	strncpy(dst, src, pmd->uncomp_size);
-	src += strlen(dst) + 1;
-	/* Up to next \0 is the pre-install script */
-	*out_preinstall_script = strdup(src);
-	*out_ini_file = ini_file;
+		return NULL;
+	memcpy(dst, src, pmd->uncomp_size);
 	UnmapViewOfFile(dst);
-	return TRUE;
+	return ini_file;
 }
 
 static void PumpMessages(void)
@@ -1347,11 +1186,6 @@ static BOOL GetOtherPythonVersion(HWND hwnd, LPSTR version)
 }
 #endif /* USE_OTHER_PYTHON_VERSIONS */
 
-typedef struct _InstalledVersionInfo {
-    char prefix[MAX_PATH+1]; // sys.prefix directory.
-    HKEY hkey; // Is this Python in HKCU or HKLM?
-} InstalledVersionInfo;
-
 
 /*
  * Fill the listbox specified by hwnd with all python versions found
@@ -1374,7 +1208,7 @@ static BOOL GetPythonVersions(HWND hwnd, HKEY hkRoot, LPSTR version)
 	while (ERROR_SUCCESS == RegEnumKeyEx(hKey, index,
 					      core_version, &bufsize, NULL,
 					      NULL, NULL, NULL)) {
-		char subkey_name[80], vers_name[80];
+		char subkey_name[80], vers_name[80], prefix_buf[MAX_PATH+1];
 		int itemindex;
 		DWORD value_size;
 		HKEY hk;
@@ -1389,68 +1223,20 @@ static BOOL GetPythonVersions(HWND hwnd, HKEY hkRoot, LPSTR version)
 		wsprintf(subkey_name,
 			  "Software\\Python\\PythonCore\\%s\\InstallPath",
 			  core_version);
+		value_size = sizeof(subkey_name);
 		if (ERROR_SUCCESS == RegOpenKeyEx(hkRoot, subkey_name, 0, KEY_READ, &hk)) {
-			InstalledVersionInfo *ivi = 
-			      (InstalledVersionInfo *)malloc(sizeof(InstalledVersionInfo));
-			value_size = sizeof(ivi->prefix);
-			if (ivi && 
-			    ERROR_SUCCESS == RegQueryValueEx(hk, NULL, NULL, NULL,
-			                                     ivi->prefix, &value_size)) {
+			if (ERROR_SUCCESS == RegQueryValueEx(hk, NULL, NULL, NULL, prefix_buf,
+							     &value_size)) {
 				itemindex = SendMessage(hwnd, LB_ADDSTRING, 0,
-				                        (LPARAM)(LPSTR)vers_name);
-				ivi->hkey = hkRoot;
+							(LPARAM)(LPSTR)vers_name);
 				SendMessage(hwnd, LB_SETITEMDATA, itemindex,
-				            (LPARAM)(LPSTR)ivi);
+					     (LPARAM)(LPSTR)strdup(prefix_buf));
 			}
 			RegCloseKey(hk);
 		}
 	}
 	RegCloseKey(hKey);
 	return result;
-}
-
-/* Determine if the current user can write to HKEY_LOCAL_MACHINE */
-BOOL HasLocalMachinePrivs()
-{
-		HKEY hKey;
-		DWORD result;
-		static char KeyName[] = 
-			"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
-
-		result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-					  KeyName,
-					  0,
-					  KEY_CREATE_SUB_KEY,
-					  &hKey);
-		if (result==0)
-			RegCloseKey(hKey);
-		return result==0;
-}
-
-// Check the root registry key to use - either HKLM or HKCU.
-// If Python is installed in HKCU, then our extension also must be installed
-// in HKCU - as Python won't be available for other users, we shouldn't either
-// (and will fail if we are!)
-// If Python is installed in HKLM, then we will also prefer to use HKLM, but
-// this may not be possible - so we silently fall back to HKCU.
-//
-// We assume hkey_root is already set to where Python itself is installed.
-void CheckRootKey(HWND hwnd)
-{
-	if (hkey_root==HKEY_CURRENT_USER) {
-		; // as above, always install ourself in HKCU too.
-	} else if (hkey_root==HKEY_LOCAL_MACHINE) {
-		// Python in HKLM, but we may or may not have permissions there.
-		// Open the uninstall key with 'create' permissions - if this fails,
-		// we don't have permission.
-		if (!HasLocalMachinePrivs())
-			hkey_root = HKEY_CURRENT_USER;
-	} else {
-		MessageBox(hwnd, "Don't know Python's installation type",
-				   "Strange", MB_OK | MB_ICONSTOP);
-		/* Default to wherever they can, but preferring HKLM */
-		hkey_root = HasLocalMachinePrivs() ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER;
-	}
 }
 
 /* Return the installation scheme depending on Python version number */
@@ -1527,6 +1313,7 @@ SelectPythonDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case IDC_VERSIONS_LIST:
 			switch (HIWORD(wParam)) {
 				int id;
+				char *cp;
 			case LBN_SELCHANGE:
 			  UpdateInstallDir:
 				PropSheet_SetWizButtons(GetParent(hwnd),
@@ -1543,18 +1330,15 @@ SelectPythonDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				} else {
 					char *pbuf;
 					int result;
-					InstalledVersionInfo *ivi;
 					PropSheet_SetWizButtons(GetParent(hwnd),
 								PSWIZB_BACK | PSWIZB_NEXT);
 					/* Get the python directory */
-                    ivi = (InstalledVersionInfo *)
-                                SendDlgItemMessage(hwnd,
+					cp = (LPSTR)SendDlgItemMessage(hwnd,
 									IDC_VERSIONS_LIST,
 									LB_GETITEMDATA,
 									id,
 									0);
-                    hkey_root = ivi->hkey;
-					strcpy(python_dir, ivi->prefix);
+					strcpy(python_dir, cp);
 					SetDlgItemText(hwnd, IDC_PATH, python_dir);
 					/* retrieve the python version and pythondll to use */
 					result = SendDlgItemMessage(hwnd, IDC_VERSIONS_LIST,
@@ -1637,28 +1421,15 @@ static BOOL OpenLogfile(char *dir)
 	char subkey_name[256];
 	static char KeyName[] = 
 		"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
-	const char *root_name = (hkey_root==HKEY_LOCAL_MACHINE ?
-	                        "HKEY_LOCAL_MACHINE" : "HKEY_CURRENT_USER");
 	DWORD disposition;
 
-	/* Use Create, as the Uninstall subkey may not exist under HKCU.
-	   Use CreateKeyEx, so we can specify a SAM specifying write access
-	*/
-		result = RegCreateKeyEx(hkey_root,
+	result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
 			      KeyName,
-			      0, /* reserved */
-			      NULL, /* class */
-			      0, /* options */
-			      KEY_CREATE_SUB_KEY, /* sam */
-			      NULL, /* security */
-			      &hKey, /* result key */
-			      NULL); /* disposition */
+			      0,
+			      KEY_CREATE_SUB_KEY,
+			      &hKey);
 	if (result != ERROR_SUCCESS) {
 		if (result == ERROR_ACCESS_DENIED) {
-			/* This should no longer be able to happen - we have already
-			   checked if they have permissions in HKLM, and all users
-			   should have write access to HKCU.
-			*/
 			MessageBox(GetFocus(),
 				   "You do not seem to have sufficient access rights\n"
 				   "on this machine to install this software",
@@ -1679,9 +1450,6 @@ static BOOL OpenLogfile(char *dir)
 		 localtime(&ltime));
 	fprintf(logfile, buffer);
 	fprintf(logfile, "Source: %s\n", modulename);
-
-	/* Root key must be first entry processed by uninstaller. */
-	fprintf(logfile, "999 Root Key: %s\n", root_name);
 
 	sprintf(subkey_name, "%s-py%d.%d", meta_name, py_major, py_minor);
 
@@ -1755,6 +1523,31 @@ static void CloseLogfile(void)
 		fclose(logfile);
 }
 
+static HINSTANCE LoadPythonDll(char *fname)
+{
+	char fullpath[_MAX_PATH];
+	char subkey_name[80];
+	char buffer[260 + 12];
+	LONG size = sizeof(fullpath);
+	HINSTANCE h;
+
+	/* make sure PYTHONHOME is set, to that sys.path is initialized correctly */
+	wsprintf(buffer, "PYTHONHOME=%s", python_dir);
+	_putenv(buffer);
+	h = LoadLibrary(fname);
+	if (h)
+		return h;
+	wsprintf(subkey_name,
+		 "SOFTWARE\\Python\\PythonCore\\%d.%d\\InstallPath",
+		 py_major, py_minor);
+	if (ERROR_SUCCESS != RegQueryValue(HKEY_CURRENT_USER, subkey_name,
+					   fullpath, &size))
+		return NULL;
+	strcat(fullpath, "\\");
+	strcat(fullpath, fname);
+	return LoadLibrary(fullpath);
+}
+
 BOOL CALLBACK
 InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -1774,7 +1567,6 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			  "Click Cancel to exit the wizard.",
 			  meta_name);
 		SetDlgItemText(hwnd, IDC_TITLE, Buffer);
-		SetDlgItemText(hwnd, IDC_INFO, "Ready to install");
 		break;
 
 	case WM_NUMFILES:
@@ -1804,7 +1596,6 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case PSN_WIZNEXT:
 			/* Handle a Next button click here */
 			hDialog = hwnd;
-			success = TRUE;
 
 			/* Disable the buttons while we work.  Sending CANCELTOCLOSE has
 			  the effect of disabling the cancel button, which is a) as we
@@ -1820,8 +1611,6 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				strcat(python_dir, "\\");
 			/* Strip the trailing backslash again */
 			python_dir[strlen(python_dir)-1] = '\0';
-            
-			CheckRootKey(hwnd);
 	    
 			if (!OpenLogfile(python_dir))
 				break;
@@ -1846,23 +1635,14 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
  }
 */
 			scheme = GetScheme(py_major, py_minor);
-			/* Run the pre-install script. */
-			if (pre_install_script && *pre_install_script) {
-				SetDlgItemText (hwnd, IDC_TITLE,
-						"Running pre-installation script");
-				run_simple_script(pre_install_script);
-			}
-			if (!success) {
-				break;
-			}
+
 			/* Extract all files from the archive */
 			SetDlgItemText(hwnd, IDC_TITLE, "Installing files...");
-			if (!unzip_archive (scheme,
-					    python_dir, arc_data,
-					    arc_size, notify))
-				set_failure_reason("Failed to unzip installation files");
+			success = unzip_archive(scheme,
+						 python_dir, arc_data,
+						 arc_size, notify);
 			/* Compile the py-files */
-			if (success && pyc_compile) {
+			if (pyc_compile) {
 				int errors;
 				HINSTANCE hPython;
 				SetDlgItemText(hwnd, IDC_TITLE,
@@ -1881,7 +1661,7 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				 * confuse the user.
 				 */
 			}
-			if (success && pyo_compile) {
+			if (pyo_compile) {
 				int errors;
 				HINSTANCE hPython;
 				SetDlgItemText(hwnd, IDC_TITLE,
@@ -1921,7 +1701,7 @@ FinishedDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			SendDlgItemMessage(hwnd, IDC_BITMAP, STM_SETIMAGE,
 					   IMAGE_BITMAP, (LPARAM)hBitmap);
 		if (!success)
-			SetDlgItemText(hwnd, IDC_INFO, get_failure_reason());
+			SetDlgItemText(hwnd, IDC_INFO, "Installation failed.");
 
 		/* async delay: will show the dialog box completely before
 		   the install_script is started */
@@ -1930,7 +1710,7 @@ FinishedDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_USER:
 
-		if (success && install_script && install_script[0]) {
+		if (install_script && install_script[0]) {
 			char fname[MAX_PATH];
 			char *tempname;
 			FILE *fp;
@@ -2202,7 +1982,7 @@ void DeleteRegistryKey(char *string)
 	if (delim)
 		*delim = '\0';
 
-	result = RegOpenKeyEx(hkey_root,
+	result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
 			      keyname,
 			      0,
 			      KEY_WRITE,
@@ -2245,7 +2025,7 @@ void DeleteRegistryValue(char *string)
 
 	*value++ = '\0';
 
-	result = RegOpenKeyEx(hkey_root,
+	result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
 			      keyname,
 			      0,
 			      KEY_WRITE,
@@ -2372,6 +2152,28 @@ int DoUninstall(int argc, char **argv)
 		return 1; /* Error */
 	}
 
+	{
+		DWORD result;
+		HKEY hKey;
+		static char KeyName[] = 
+			"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+
+		result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+				      KeyName,
+				      0,
+				      KEY_CREATE_SUB_KEY,
+				      &hKey);
+		if (result == ERROR_ACCESS_DENIED) {
+			MessageBox(GetFocus(),
+				   "You do not seem to have sufficient access rights\n"
+				   "on this machine to uninstall this software",
+				   NULL,
+				   MB_OK | MB_ICONSTOP);
+			return 1; /* Error */
+		}
+		RegCloseKey(hKey);
+	}
+
 	logfile = fopen(argv[2], "r");
 	if (!logfile) {
 		MessageBox(NULL,
@@ -2414,7 +2216,6 @@ int DoUninstall(int argc, char **argv)
 				MB_YESNO | MB_ICONQUESTION))
 		return 0;
 
-	hkey_root = HKEY_LOCAL_MACHINE;
 	cp = "";
 	for (i = 0; i < nLines; ++i) {
 		/* Ignore duplicate lines */
@@ -2422,21 +2223,7 @@ int DoUninstall(int argc, char **argv)
 			int ign;
 			cp = lines[i];
 			/* Parse the lines */
-			if (2 == sscanf(cp, "%d Root Key: %s", &ign, &buffer)) {
-				if (strcmp(buffer, "HKEY_CURRENT_USER")==0)
-					hkey_root = HKEY_CURRENT_USER;
-				else {
-					// HKLM - check they have permissions.
-					if (!HasLocalMachinePrivs()) {
-						MessageBox(GetFocus(),
-							   "You do not seem to have sufficient access rights\n"
-							   "on this machine to uninstall this software",
-							   NULL,
-							   MB_OK | MB_ICONSTOP);
-						return 1; /* Error */
-					}
-				}
-			} else if (2 == sscanf(cp, "%d Made Dir: %s", &ign, &buffer)) {
+			if (2 == sscanf(cp, "%d Made Dir: %s", &ign, &buffer)) {
 				if (MyRemoveDirectory(cp))
 					++nDirs;
 				else {
@@ -2521,8 +2308,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,
 	 */
 
 	/* Try to extract the configuration data into a temporary file */
-	if (ExtractInstallData(arc_data, arc_size, &exe_size,
-			       &ini_file, &pre_install_script))
+	ini_file = ExtractIniFile(arc_data, arc_size, &exe_size);
+
+	if (ini_file)
 		return DoInstall();
 
 	if (!ini_file && __argc > 1) {

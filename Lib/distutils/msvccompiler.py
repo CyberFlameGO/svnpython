@@ -8,7 +8,7 @@ for the Microsoft Visual Studio.
 # hacked by Robin Becker and Thomas Heller to do a better job of
 #   finding DevStudio (through the registry)
 
-# This module should be kept compatible with Python 2.1.
+# This module should be kept compatible with Python 1.5.2.
 
 __revision__ = "$Id$"
 
@@ -117,22 +117,17 @@ class MacroExpander:
             if d:
                 self.macros["$(%s)" % macro] = d[key]
                 break
-
+              
     def load_macros(self, version):
         vsbase = r"Software\Microsoft\VisualStudio\%0.1f" % version
         self.set_macro("VCInstallDir", vsbase + r"\Setup\VC", "productdir")
         self.set_macro("VSInstallDir", vsbase + r"\Setup\VS", "productdir")
         net = r"Software\Microsoft\.NETFramework"
         self.set_macro("FrameworkDir", net, "installroot")
-        try:
-            if version > 7.0:
-                self.set_macro("FrameworkSDKDir", net, "sdkinstallrootv1.1")
-            else:
-                self.set_macro("FrameworkSDKDir", net, "sdkinstallroot")
-        except KeyError, exc: #
-            raise DistutilsPlatformError, \
-                  ("The .NET Framework SDK needs to be installed before "
-                   "building extensions for Python.")
+        if version > 7.0:
+            self.set_macro("FrameworkSDKDir", net, "sdkinstallrootv1.1")
+        else:
+            self.set_macro("FrameworkSDKDir", net, "sdkinstallroot")
 
         p = r"Software\Microsoft\NET Framework Setup\Product"
         for base in HKEYS:
@@ -171,7 +166,7 @@ def get_build_version():
         return majorVersion + minorVersion
     # else we don't know what version of the compiler this is
     return None
-
+    
 
 class MSVCCompiler (CCompiler) :
     """Concrete class that implements an interface to Microsoft Visual C++,
@@ -242,14 +237,9 @@ class MSVCCompiler (CCompiler) :
                                       '/Z7', '/D_DEBUG']
 
         self.ldflags_shared = ['/DLL', '/nologo', '/INCREMENTAL:NO']
-        if self.__version >= 7:
-            self.ldflags_shared_debug = [
-                '/DLL', '/nologo', '/INCREMENTAL:no', '/DEBUG'
-                ]
-        else:
-            self.ldflags_shared_debug = [
-                '/DLL', '/nologo', '/INCREMENTAL:no', '/pdb:None', '/DEBUG'
-                ]
+        self.ldflags_shared_debug = [
+            '/DLL', '/nologo', '/INCREMENTAL:no', '/pdb:None', '/DEBUG'
+            ]
         self.ldflags_static = [ '/nologo']
 
 
@@ -301,11 +291,7 @@ class MSVCCompiler (CCompiler) :
         else:
             compile_opts.extend(self.compile_options)
 
-        for obj in objects:
-            try:
-                src, ext = build[obj]
-            except KeyError:
-                continue
+        for obj, (src, ext) in build.items():
             if debug:
                 # pass the full pathname to MSVC in debug mode,
                 # this allows the debugger to find the source file
@@ -535,7 +521,7 @@ class MSVCCompiler (CCompiler) :
                 return fn
 
         return exe
-
+    
     def get_msvc_paths(self, path, platform='x86'):
         """Get a list of devstudio directories (include, lib or path).
 
@@ -586,3 +572,4 @@ class MSVCCompiler (CCompiler) :
             p = self.get_msvc_paths(name)
         if p:
             os.environ[name] = string.join(p, ';')
+

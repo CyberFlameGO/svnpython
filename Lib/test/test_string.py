@@ -52,7 +52,6 @@ class StringTest(
         self.checkraises(TypeError, string_tests.BadSeq1(), 'join', ' ')
         self.checkequal('a b c', string_tests.BadSeq2(), 'join', ' ')
 
-
 class ModuleTest(unittest.TestCase):
 
     def test_attrs(self):

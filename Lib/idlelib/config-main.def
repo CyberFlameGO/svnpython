@@ -18,8 +18,8 @@
 #     ~/.idlerc/config-highlight.cfg       the user highlighting config file
 #     ~/.idlerc/config-keys.cfg            the user keybinding config file
 #
-# On Windows2000 and Windows XP the .idlerc directory is at
-#     Documents and Settings\<username>\.idlerc
+# On Windows2000 and Windows XP the .idlerc directory is at 
+#	Documents and Settings\<username>\.idlerc	
 #
 # On Windows98 it is at c:\.idlerc
 #
@@ -58,9 +58,6 @@ font-size= 10
 font-bold= 0
 encoding= none
 
-[FormatParagraph]
-paragraph=70
-
 [Indent]
 use-spaces= 1
 num-spaces= 4
@@ -72,8 +69,5 @@ name= IDLE Classic
 [Keys]
 default= 1
 name= IDLE Classic Windows
-
-[History]
-cyclic=1
 
 [HelpFiles]

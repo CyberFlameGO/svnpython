@@ -26,7 +26,7 @@ typedef __int64 hs_time;
 #ifndef HAVE_GETTIMEOFDAY
 #error "This module requires gettimeofday() on non-Windows platforms!"
 #endif
-#if (defined(PYOS_OS2) && defined(PYCC_GCC))
+#if defined(macintosh) || (defined(PYOS_OS2) && defined(PYCC_GCC))
 #include <sys/time.h>
 #else
 #include <sys/resource.h>
@@ -46,6 +46,10 @@ typedef struct timeval hs_time;
 #endif
 
 #define BUFFERSIZE 10240
+
+#ifdef macintosh
+#define PATH_MAX 254
+#endif
 
 #if defined(PYOS_OS2) && defined(PYCC_GCC)
 #define PATH_MAX 260
@@ -828,14 +832,12 @@ get_tdelta(ProfilerObject *self)
 
     GETTIMEOFDAY(&tv);
 
-    tdelta = tv.tv_usec - self->prev_timeofday.tv_usec;
-    if (tv.tv_sec != self->prev_timeofday.tv_sec)
-        tdelta += (tv.tv_sec - self->prev_timeofday.tv_sec) * 1000000;
+    if (tv.tv_sec == self->prev_timeofday.tv_sec)
+        tdelta = tv.tv_usec - self->prev_timeofday.tv_usec;
+    else
+        tdelta = ((tv.tv_sec - self->prev_timeofday.tv_sec) * 1000000
+                  + tv.tv_usec);
 #endif
-    /* time can go backwards on some multiprocessor systems or by NTP */
-    if (tdelta < 0)
-        return 0;
-
     self->prev_timeofday = tv;
     return tdelta;
 }
@@ -946,7 +948,7 @@ calibrate(void)
         }
 #endif
     }
-#if defined(MS_WINDOWS) || defined(PYOS_OS2) || \
+#if defined(MS_WINDOWS) || defined(macintosh) || defined(PYOS_OS2) || \
     defined(__VMS)
     rusage_diff = -1;
 #else

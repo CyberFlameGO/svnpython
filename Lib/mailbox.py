@@ -43,23 +43,28 @@ class _Subfile:
         self.stop = stop
         self.pos = self.start
 
-
-    def _read(self, length, read_function):
+    def read(self, length = None):
         if self.pos >= self.stop:
             return ''
         remaining = self.stop - self.pos
-        if length is None or length < 0 or length > remaining:
+        if length is None or length < 0:
+            length = remaining
+        elif length > remaining:
             length = remaining
         self.fp.seek(self.pos)
-        data = read_function(length)
+        data = self.fp.read(length)
         self.pos = self.fp.tell()
         return data
 
-    def read(self, length = None):
-        return self._read(length, self.fp.read)
-
     def readline(self, length = None):
-        return self._read(length, self.fp.readline)
+        if self.pos >= self.stop:
+            return ''
+        if length is None:
+            length = self.stop - self.pos
+        self.fp.seek(self.pos)
+        data = self.fp.readline(length)
+        self.pos = self.fp.tell()
+        return data
 
     def readlines(self, sizehint = -1):
         lines = []
@@ -194,7 +199,6 @@ class MHMailbox:
         # This only works in Python 1.6 or later;
         # before that str() added 'L':
         self.boxes = map(str, list)
-        self.boxes.reverse()
         self.factory = factory
 
     def __iter__(self):
@@ -203,7 +207,7 @@ class MHMailbox:
     def next(self):
         if not self.boxes:
             return None
-        fn = self.boxes.pop()
+        fn = self.boxes.pop(0)
         fp = open(os.path.join(self.dirname, fn))
         msg = self.factory(fp)
         try:
@@ -229,7 +233,7 @@ class Maildir:
         curdir = os.path.join(self.dirname, 'cur')
         boxes += [os.path.join(curdir, f)
                   for f in os.listdir(curdir) if f[0] != '.']
-        boxes.reverse()
+
         self.boxes = boxes
 
     def __iter__(self):
@@ -238,7 +242,7 @@ class Maildir:
     def next(self):
         if not self.boxes:
             return None
-        fn = self.boxes.pop()
+        fn = self.boxes.pop(0)
         fp = open(fn)
         return self.factory(fp)
 
@@ -259,7 +263,7 @@ class BabylMailbox(_Mailbox):
             line = self.fp.readline()
             if not line:
                 return
-            if line == '\037\014\n' or line == '\037':
+            if line == '\037\014\n':
                 self.fp.seek(pos)
                 return
 

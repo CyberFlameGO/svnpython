@@ -1,5 +1,7 @@
-This package will install MacPython 2.5a0 for Mac OS X
-10.3.
+This package will install MacPython 2.3.5 for Mac OS X
+10.2. Installation on the Panther (10.3) works but may
+interfere with operation of Apple-installed Python.
+Installation on 10.1 or earlier will not work.
 
 Installation requires approximately 20 MB of disk
 space, ignore the message that it will take zero bytes.
@@ -16,7 +18,7 @@ a set of pre-built extension modules that open up
 specific Macintosh technologies to Python programs
 (Carbon, AppleScript, Quicktime, more).
 
-The installer puts the applications in MacPython-2.5 in
+The installer puts the applications in MacPython-2.3 in
 your Applications folder, command-line tools in
 /usr/local/bin and the underlying machinery in
 /Library/Frameworks/Python.framework.
@@ -26,6 +28,6 @@ you started quickly with MacPython and contains
 references to other documentation.
 
 More information on MacPython can be found at
-http://www.cwi.nl/~jack/macpython, more
+http://www.cwi.nl/~jack/macpython.html, more
 information on Python in general at
 http://www.python.org.

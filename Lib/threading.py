@@ -8,14 +8,14 @@ except ImportError:
     del _sys.modules[__name__]
     raise
 
+from StringIO import StringIO as _StringIO
 from time import time as _time, sleep as _sleep
-from traceback import format_exc as _format_exc
-from collections import deque
+from traceback import print_exc as _print_exc
 
 # Rename some stuff so "from threading import *" is safe
 __all__ = ['activeCount', 'Condition', 'currentThread', 'enumerate', 'Event',
            'Lock', 'RLock', 'Semaphore', 'BoundedSemaphore', 'Thread',
-           'Timer', 'setprofile', 'settrace', 'local']
+           'Timer', 'setprofile', 'settrace']
 
 _start_new_thread = thread.start_new_thread
 _allocate_lock = thread.allocate_lock
@@ -358,7 +358,7 @@ def _newname(template="Thread-%d"):
 
 # Active thread administration
 _active_limbo_lock = _allocate_lock()
-_active = {}    # maps thread id to Thread object
+_active = {}
 _limbo = {}
 
 
@@ -368,7 +368,7 @@ class Thread(_Verbose):
 
     __initialized = False
     # Need to store a reference to sys.exc_info for printing
-    # out exceptions when a thread tries to use a global var. during interp.
+    # out exceptions when a thread tries to accept a global during interp.
     # shutdown and thus raises an exception about trying to perform some
     # operation on/with a NoneType
     __exc_info = _sys.exc_info
@@ -387,7 +387,7 @@ class Thread(_Verbose):
         self.__block = Condition(Lock())
         self.__initialized = True
         # sys.stderr is not stored in the class like
-        # sys.exc_info since it can be changed between instances
+        # sys.exc_info since it can be changed during execution
         self.__stderr = _sys.stderr
 
     def _set_daemon(self):
@@ -448,15 +448,14 @@ class Thread(_Verbose):
                     self._note("%s.__bootstrap(): unhandled exception", self)
                 # If sys.stderr is no more (most likely from interpreter
                 # shutdown) use self.__stderr.  Otherwise still use sys (as in
-                # _sys) in case sys.stderr was redefined since the creation of
-                # self.
+                # _sys) in case sys.stderr was redefined.
                 if _sys:
-                    _sys.stderr.write("Exception in thread %s:\n%s\n" %
-                                      (self.getName(), _format_exc()))
+                    _sys.stderr.write("Exception in thread %s:" %
+                            self.getName())
+                    _print_exc(file=_sys.stderr)
                 else:
                     # Do the best job possible w/o a huge amt. of code to
-                    # approximate a traceback (code ideas from
-                    # Lib/traceback.py)
+                    # approx. a traceback stack trace
                     exc_type, exc_value, exc_tb = self.__exc_info()
                     try:
                         print>>self.__stderr, (
@@ -643,9 +642,8 @@ def _pickSomeNonDaemonThread():
 
 
 # Dummy thread class to represent threads not started here.
-# These aren't garbage collected when they die, nor can they be waited for.
-# If they invoke anything in threading.py that calls currentThread(), they
-# leave an entry in the _active dict forever after.
+# These aren't garbage collected when they die,
+# nor can they be waited for.
 # Their purpose is to return *something* from currentThread().
 # They are marked as daemon threads so we won't wait for them
 # when we exit (conform previous semantics).
@@ -654,12 +652,6 @@ class _DummyThread(Thread):
 
     def __init__(self):
         Thread.__init__(self, name=_newname("Dummy-%d"))
-
-        # Thread.__block consumes an OS-level locking primitive, which
-        # can never be used by a _DummyThread.  Since a _DummyThread
-        # instance is immortal, that's bad, so release this resource.
-        del self._Thread__block
-
         self._Thread__started = True
         _active_limbo_lock.acquire()
         _active[_get_ident()] = self
@@ -697,14 +689,6 @@ def enumerate():
 
 _MainThread()
 
-# get thread-local implementation, either from the thread
-# module, or from the python fallback
-
-try:
-    from thread import _local as local
-except ImportError:
-    from _threading_local import local
-
 
 # Self-test code
 
@@ -718,7 +702,7 @@ def _test():
             self.rc = Condition(self.mon)
             self.wc = Condition(self.mon)
             self.limit = limit
-            self.queue = deque()
+            self.queue = []
 
         def put(self, item):
             self.mon.acquire()
@@ -736,7 +720,7 @@ def _test():
             while not self.queue:
                 self._note("get(): queue empty")
                 self.rc.wait()
-            item = self.queue.popleft()
+            item = self.queue.pop(0)
             self._note("get(): got %s, %d left", item, len(self.queue))
             self.wc.notify()
             self.mon.release()

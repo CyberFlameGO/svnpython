@@ -31,11 +31,11 @@ import unittest
 from test_all import verbose
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, dbtables
-except ImportError:
     # For Python 2.3
     from bsddb import db, dbtables
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db, dbtables
 
 
 
@@ -109,7 +109,7 @@ class TableDBTestCase(unittest.TestCase):
             assert values[1]['Species'] == 'Penguin'
         else :
             if verbose:
-                print "values= %r" % (values,)
+                print "values=", `values`
             raise "Wrong values returned!"
 
     def test03(self):

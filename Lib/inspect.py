@@ -346,7 +346,7 @@ def getmodulename(path):
 def getsourcefile(object):
     """Return the Python source file an object was defined in, if it exists."""
     filename = getfile(object)
-    if string.lower(filename[-4:]) in ('.pyc', '.pyo'):
+    if string.lower(filename[-4:]) in ['.pyc', '.pyo']:
         filename = filename[:-4] + '.py'
     for suffix, mode, kind in imp.get_suffixes():
         if 'b' in mode and string.lower(filename[-len(suffix):]) == suffix:
@@ -369,7 +369,7 @@ def getmodule(object):
     """Return the module an object was defined in, or None if not found."""
     if ismodule(object):
         return object
-    if hasattr(object, '__module__'):
+    if isclass(object):
         return sys.modules.get(object.__module__)
     try:
         file = getabsfile(object)
@@ -379,9 +379,7 @@ def getmodule(object):
         return sys.modules.get(modulesbyfile[file])
     for module in sys.modules.values():
         if hasattr(module, '__file__'):
-            modulesbyfile[
-                os.path.realpath(
-                        getabsfile(module))] = module.__name__
+            modulesbyfile[getabsfile(module)] = module.__name__
     if file in modulesbyfile:
         return sys.modules.get(modulesbyfile[file])
     main = sys.modules['__main__']
@@ -432,7 +430,7 @@ def findsource(object):
         if not hasattr(object, 'co_firstlineno'):
             raise IOError('could not find function definition')
         lnum = object.co_firstlineno - 1
-        pat = re.compile(r'^(\s*def\s)|(.*(?<!\w)lambda(:|\s))|^(\s*@)')
+        pat = re.compile(r'^(\s*def\s)|(.*\slambda(:|\s))')
         while lnum > 0:
             if pat.match(lines[lnum]): break
             lnum = lnum - 1
@@ -453,7 +451,7 @@ def getcomments(object):
         # Look for a comment block at the top of the file.
         start = 0
         if lines and lines[0][:2] == '#!': start = 1
-        while start < len(lines) and string.strip(lines[start]) in ('', '#'):
+        while start < len(lines) and string.strip(lines[start]) in ['', '#']:
             start = start + 1
         if start < len(lines) and lines[start][:1] == '#':
             comments = []
@@ -503,28 +501,16 @@ class BlockFinder:
     """Provide a tokeneater() method to detect the end of a code block."""
     def __init__(self):
         self.indent = 0
-        self.started = False
-        self.passline = False
+        self.started = 0
         self.last = 0
 
     def tokeneater(self, type, token, (srow, scol), (erow, ecol), line):
         if not self.started:
-            if token in ("def", "class", "lambda"):
-                lastcolon = line.rfind(":")
-                if lastcolon:
-                    oneline = re.search(r"\w", line[lastcolon:])
-                    if oneline and line[-2:] != "\\\n":
-                        raise EndOfBlock, srow
-                self.started = True
-            self.passline = True
+            if type == tokenize.NAME: self.started = 1
         elif type == tokenize.NEWLINE:
-            self.passline = False
             self.last = srow
-        elif self.passline:
-            pass
         elif type == tokenize.INDENT:
             self.indent = self.indent + 1
-            self.passline = True
         elif type == tokenize.DEDENT:
             self.indent = self.indent - 1
             if self.indent == 0:
@@ -567,7 +553,7 @@ def getsource(object):
 def walktree(classes, children, parent):
     """Recursive helper function for getclasstree()."""
     results = []
-    classes.sort(key=lambda c: (c.__module__, c.__name__))
+    classes.sort(lambda a, b: cmp(a.__name__, b.__name__))
     for c in classes:
         results.append((c, c.__bases__))
         if c in children:
@@ -621,7 +607,7 @@ def getargs(co):
 
     # The following acrobatics are for anonymous (tuple) arguments.
     for i in range(nargs):
-        if args[i][:1] in ('', '.'):
+        if args[i][:1] in ['', '.']:
             stack, remain, count = [], [], []
             while step < len(code):
                 op = ord(code[step])
@@ -630,7 +616,7 @@ def getargs(co):
                     opname = dis.opname[op]
                     value = ord(code[step]) + ord(code[step+1])*256
                     step = step + 2
-                    if opname in ('UNPACK_TUPLE', 'UNPACK_SEQUENCE'):
+                    if opname in ['UNPACK_TUPLE', 'UNPACK_SEQUENCE']:
                         remain.append(value)
                         count.append(value)
                     elif opname == 'STORE_FAST':
@@ -696,7 +682,7 @@ def joinseq(seq):
 
 def strseq(object, convert, join=joinseq):
     """Recursively walk a sequence, stringifying each element."""
-    if type(object) in (list, tuple):
+    if type(object) in [types.ListType, types.TupleType]:
         return join(map(lambda o, c=convert, j=join: strseq(o, c, j), object))
     else:
         return convert(object)
@@ -777,7 +763,7 @@ def getframeinfo(frame, context=1):
             lines = index = None
         else:
             start = max(start, 1)
-            start = max(0, min(start, len(lines) - context))
+            start = min(start, len(lines) - context)
             lines = lines[start:start+context]
             index = lineno - 1 - start
     else:

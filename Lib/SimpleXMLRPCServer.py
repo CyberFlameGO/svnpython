@@ -104,6 +104,7 @@ from xmlrpclib import Fault
 import SocketServer
 import BaseHTTPServer
 import sys
+import types
 import os
 
 def resolve_dotted_attribute(obj, attr, allow_dotted_names=True):

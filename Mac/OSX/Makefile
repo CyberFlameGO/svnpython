@@ -2,13 +2,14 @@
 # main Makefile. The next couple of variables are overridden on the 
 # commandline in that case.
 
-VERSION=2.5
+VERSION=2.3
 builddir = ../..
 srcdir = ../..
 prefix=/Library/Frameworks/Python.framework/Versions/$(VERSION)
 LIBDEST=$(prefix)/lib/python$(VERSION)
 BUILDPYTHON=$(builddir)/python.exe
 DESTDIR=
+
 # Test whether to use xcodebuild (preferred) or pbxbuild:
 ifeq ($(shell ls /usr/bin/xcodebuild),/usr/bin/xcodebuild)
 PBXBUILD=xcodebuild
@@ -143,6 +144,7 @@ install_PackageManager:
 			--resource $(srcdir)/Mac/Tools/IDE/PythonIDE.rsrc \
 			--mainprogram $(srcdir)/Mac/Tools/IDE/PackageManager.py \
 			--iconfile $(srcdir)/Mac/Tools/IDE/PackageManager.icns \
+			--plist $(srcdir)/Mac/Tools/IDE/PackageManager.plist \
 			--creator Pimp build; \
 		$(BUILDPYTHON) $(bundlebuilder) \
 			--builddir $(DESTDIR)$(PYTHONAPPSDIR)/ \
@@ -151,6 +153,7 @@ install_PackageManager:
 			--resource $(srcdir)/Mac/Tools/IDE/PythonIDE.rsrc \
 			--mainprogram $(srcdir)/Mac/Tools/IDE/PackageManager.py \
 			--iconfile $(srcdir)/Mac/Tools/IDE/PackageManager.icns \
+			--plist $(srcdir)/Mac/Tools/IDE/PackageManager.plist \
 			--creator Pimp build; \
 	fi
 
@@ -164,13 +167,13 @@ install_IDLE:
 		    --destroot "$(DESTDIR)" \
 			--output $(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app \
 			--extra $(srcdir)/Lib/idlelib \
-			$(srcdir)/Tools/scripts/idle ; \
+			$(srcdir)/Lib/idlelib/idle ; \
 		$(BUILDPYTHON) $(srcdir)/Mac/scripts/BuildApplet.py \
 			--python $(INSTALLED_PYTHONW) \
-		    --destroot "$(DESTDIR)" \
+			--destroot "$(DESTDIR)" \
 			--output $(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app \
 			--extra $(srcdir)/Lib/idlelib:Contents/Resources/idlelib \
-			$(srcdir)/Tools/scripts/idle ; \
+			$(srcdir)/Lib/idlelib/idle ; \
 	fi
 
 

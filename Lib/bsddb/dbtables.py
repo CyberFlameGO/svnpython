@@ -21,16 +21,16 @@ import re
 import sys
 import copy
 import xdrlib
-import random
+import whrandom
 from types import ListType, StringType
 import cPickle as pickle
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3.db import *
-except ImportError:
     # For Python 2.3
     from bsddb.db import *
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3.db import *
 
 
 class TableDBError(StandardError):
@@ -206,7 +206,7 @@ class bsdTableDB :
         try:
             key, data = cur.first()
             while 1:
-                print repr({key: data})
+                print `{key: data}`
                 next = cur.next()
                 if next:
                     key, data = next
@@ -341,9 +341,9 @@ class bsdTableDB :
         try:
             tcolpickles = self.db.get(_columns_key(table))
         except DBNotFoundError:
-            raise TableDBError, "unknown table: %r" % (table,)
+            raise TableDBError, "unknown table: " + `table`
         if not tcolpickles:
-            raise TableDBError, "unknown table: %r" % (table,)
+            raise TableDBError, "unknown table: " + `table`
         self.__tablecolumns[table] = pickle.loads(tcolpickles)
 
     def __new_rowid(self, table, txn) :
@@ -354,8 +354,8 @@ class bsdTableDB :
             # (note: this code has <64 bits of randomness
             # but it's plenty for our database id needs!)
             p = xdrlib.Packer()
-            p.pack_int(int(random.random()*2147483647))
-            p.pack_int(int(random.random()*2147483647))
+            p.pack_int(int(whrandom.random()*2147483647))
+            p.pack_int(int(whrandom.random()*2147483647))
             newid = p.get_buffer()
 
             # Guarantee uniqueness by adding this key to the database
@@ -384,7 +384,7 @@ class bsdTableDB :
                 self.__load_column_info(table)
             for column in rowdict.keys() :
                 if not self.__tablecolumns[table].count(column):
-                    raise TableDBError, "unknown column: %r" % (column,)
+                    raise TableDBError, "unknown column: "+`column`
 
             # get a unique row identifier for this row
             txn = self.env.txn_begin()
@@ -535,7 +535,7 @@ class bsdTableDB :
             columns = self.tablecolumns[table]
         for column in (columns + conditions.keys()):
             if not self.__tablecolumns[table].count(column):
-                raise TableDBError, "unknown column: %r" % (column,)
+                raise TableDBError, "unknown column: "+`column`
 
         # keyed on rows that match so far, containings dicts keyed on
         # column names containing the data for that row and column.

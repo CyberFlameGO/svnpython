@@ -11,18 +11,10 @@ typedef struct {
 static int
 Noddy_traverse(Noddy *self, visitproc visit, void *arg)
 {
-    int vret;
-
-    if (self->first) {
-        vret = visit(self->first, arg);
-        if (vret != 0)
-            return vret;
-    }
-    if (self->last) {
-        vret = visit(self->last, arg);
-        if (vret != 0)
-            return vret;
-    }
+    if (self->first && visit(self->first, arg) < 0)
+        return -1;
+    if (self->last && visit(self->last, arg) < 0)
+        return -1;
 
     return 0;
 }
@@ -30,15 +22,10 @@ Noddy_traverse(Noddy *self, visitproc visit, void *arg)
 static int 
 Noddy_clear(Noddy *self)
 {
-    PyObject *tmp;
-
-    tmp = self->first;
+    Py_XDECREF(self->first);
     self->first = NULL;
-    Py_XDECREF(tmp);
-
-    tmp = self->last;
+    Py_XDECREF(self->last);
     self->last = NULL;
-    Py_XDECREF(tmp);
 
     return 0;
 }
@@ -80,7 +67,7 @@ Noddy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 Noddy_init(Noddy *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *first=NULL, *last=NULL, *tmp;
+    PyObject *first=NULL, *last=NULL;
 
     static char *kwlist[] = {"first", "last", "number", NULL};
 
@@ -90,17 +77,15 @@ Noddy_init(Noddy *self, PyObject *args, PyObject *kwds)
         return -1; 
 
     if (first) {
-        tmp = self->first;
+        Py_XDECREF(self->first);
         Py_INCREF(first);
         self->first = first;
-        Py_XDECREF(tmp);
     }
 
     if (last) {
-        tmp = self->last;
+        Py_XDECREF(self->last);
         Py_INCREF(last);
         self->last = last;
-        Py_XDECREF(tmp);
     }
 
     return 0;

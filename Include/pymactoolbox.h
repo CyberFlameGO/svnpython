@@ -7,19 +7,37 @@
 	extern "C" {
 #endif
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Memory.h>
+#include <Dialogs.h>
+#include <Menus.h>
+#include <Controls.h>
+#include <Components.h>
+#include <Lists.h>
+#include <Movies.h>
+#include <Errors.h>
+#include <CFBase.h>
+#include <CFArray.h>
+#include <CFData.h>
+#include <CFDictionary.h>
+#include <CFString.h>
+#include <CFURL.h>
+#else
 #include <Carbon/Carbon.h>
 #include <QuickTime/QuickTime.h>
+#endif
 
 /*
 ** Helper routines for error codes and such.
 */
-char *PyMac_StrError(int);			/* strerror with mac errors */
-extern PyObject *PyMac_OSErrException;		/* Exception for OSErr */
-PyObject *PyMac_GetOSErrException(void);	/* Initialize & return it */
+char *PyMac_getscript(void);				/* Get the default encoding for our 8bit character set */
+char *PyMac_StrError(int);					/* strerror with mac errors */
 PyObject *PyErr_Mac(PyObject *, int);		/* Exception with a mac error */
-PyObject *PyMac_Error(OSErr);			/* Uses PyMac_GetOSErrException */
-extern OSErr PyMac_GetFullPathname(FSSpec *, char *, int); /* convert
-							      fsspec->path */
+PyObject *PyMac_Error(OSErr);				/* Uses PyMac_GetOSErrException */
+extern OSErr PyMac_GetFullPathname(FSSpec *, char *, int); /* convert fsspec->path */
+#ifdef WITH_NEXT_FRAMEWORK
+extern char *PyMac_GetAppletScriptFile(void);	/* Return applet script file or NULL */
+#endif
 /*
 ** These conversion routines are defined in mactoolboxglue.c itself.
 */
@@ -30,24 +48,21 @@ PyObject *PyMac_BuildNumVersion(NumVersion);/* Convert NumVersion to PyObject */
 
 int PyMac_GetStr255(PyObject *, Str255);	/* argument parser for Str255 */
 PyObject *PyMac_BuildStr255(Str255);		/* Convert Str255 to PyObject */
-PyObject *PyMac_BuildOptStr255(Str255);		/* Convert Str255 to PyObject,
-						   NULL to None */
+PyObject *PyMac_BuildOptStr255(Str255);		/* Convert Str255 to PyObject, NULL to None */
 
 int PyMac_GetRect(PyObject *, Rect *);		/* argument parser for Rect */
-PyObject *PyMac_BuildRect(Rect *);		/* Convert Rect to PyObject */
+PyObject *PyMac_BuildRect(Rect *);			/* Convert Rect to PyObject */
 
 int PyMac_GetPoint(PyObject *, Point *);	/* argument parser for Point */
-PyObject *PyMac_BuildPoint(Point);		/* Convert Point to PyObject */
+PyObject *PyMac_BuildPoint(Point);			/* Convert Point to PyObject */
 
-int PyMac_GetEventRecord(PyObject *, EventRecord *); /* argument parser for
-							EventRecord */
-PyObject *PyMac_BuildEventRecord(EventRecord *); /* Convert EventRecord to
-						    PyObject */
+int PyMac_GetEventRecord(PyObject *, EventRecord *); /* argument parser for EventRecord */
+PyObject *PyMac_BuildEventRecord(EventRecord *); /* Convert EventRecord to PyObject */
 
 int PyMac_GetFixed(PyObject *, Fixed *);	/* argument parser for Fixed */
-PyObject *PyMac_BuildFixed(Fixed);		/* Convert Fixed to PyObject */
+PyObject *PyMac_BuildFixed(Fixed);			/* Convert Fixed to PyObject */
 int PyMac_Getwide(PyObject *, wide *);		/* argument parser for wide */
-PyObject *PyMac_Buildwide(wide *);		/* Convert wide to PyObject */
+PyObject *PyMac_Buildwide(wide *);			/* Convert wide to PyObject */
 
 /*
 ** The rest of the routines are implemented by extension modules. If they are

@@ -3,19 +3,19 @@
 package main;
 
 sub do_cmd_command {
-    return use_wrappers(@_[0], '<code class="du-command">', '</code>');
+    return use_wrappers(@_[0], '<code>', '</code>');
 }
 
 sub do_cmd_option {
-    return use_wrappers(@_[0], '<span class="du-option">', '</span>');
+    return use_wrappers(@_[0], '<font face="sans-serif">', '</font>');
 }
 
 sub do_cmd_filevar {
-    return use_wrappers(@_[0], '<span class="du-filevar">', '</span>');
+    return use_wrappers(@_[0], '<font face="sans-serif"><i>', '</i></font>');
 }
 
 sub do_cmd_XXX {
-    return use_wrappers(@_[0], '<b class="du-xxx">', '</b>');
+    return use_wrappers(@_[0], '<b>** ', ' **</b>');
 }
 
-1;  # Bad Perl.
+1;

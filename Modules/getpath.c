@@ -190,14 +190,10 @@ isdir(char *filename)                   /* Is directory */
 }
 
 
-/* Add a path component, by appending stuff to buffer.
-   buffer must have at least MAXPATHLEN + 1 bytes allocated, and contain a
-   NUL-terminated string with no more than MAXPATHLEN characters (not counting
-   the trailing NUL).  It's a fatal error if it contains a string longer than
-   that (callers must be careful!).  If these requirements are met, it's
-   guaranteed that buffer will still be a NUL-terminated string with no more
-   than MAXPATHLEN characters at exit.  If stuff is too long, only as much of
-   stuff as fits will be appended.
+/* joinpath requires that any buffer argument passed to it has at
+   least MAXPATHLEN + 1 bytes allocated.  If this requirement is met,
+   it guarantees that it will never overflow the buffer.  If stuff
+   is too long, buffer will contain a truncated copy of stuff.
 */
 static void
 joinpath(char *buffer, char *stuff)
@@ -210,8 +206,6 @@ joinpath(char *buffer, char *stuff)
         if (n > 0 && buffer[n-1] != SEP && n < MAXPATHLEN)
             buffer[n++] = SEP;
     }
-    if (n > MAXPATHLEN)
-    	Py_FatalError("buffer overflow in getpath.c's joinpath()");
     k = strlen(stuff);
     if (n + k > MAXPATHLEN)
         k = MAXPATHLEN - n;
@@ -404,7 +398,7 @@ calculate_path(void)
       */
      else if(0 == _NSGetExecutablePath(progpath, &nsexeclength) && progpath[0] == SEP)
        ;
-#endif /* __APPLE__ */
+#endif // __APPLE__
 	else if (path) {
 		while (1) {
 			char *delim = strchr(path, DELIM);

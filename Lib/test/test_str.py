@@ -5,8 +5,7 @@ from test import test_support, string_tests
 class StrTest(
     string_tests.CommonTest,
     string_tests.MixinStrUnicodeUserStringTest,
-    string_tests.MixinStrUserStringTest,
-    string_tests.MixinStrUnicodeTest,
+    string_tests.MixinStrUserStringTest
     ):
 
     type2test = str

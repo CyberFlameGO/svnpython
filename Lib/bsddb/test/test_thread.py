@@ -8,7 +8,7 @@ import errno
 import shutil
 import tempfile
 from pprint import pprint
-from random import random
+from whrandom import random
 
 try:
     True, False
@@ -28,11 +28,11 @@ import unittest
 from test_all import verbose
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, dbutils
-except ImportError:
     # For Python 2.3
     from bsddb import db, dbutils
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db, dbutils
 
 
 #----------------------------------------------------------------------

@@ -4,6 +4,8 @@ class UserDict:
     def __init__(self, dict=None, **kwargs):
         self.data = {}
         if dict is not None:
+            if not hasattr(dict,'keys'):
+                dict = type({})(dict)   # make mapping from a sequence
             self.update(dict)
         if len(kwargs):
             self.update(kwargs)
@@ -20,7 +22,7 @@ class UserDict:
     def clear(self): self.data.clear()
     def copy(self):
         if self.__class__ is UserDict:
-            return UserDict(self.data.copy())
+            return UserDict(self.data)
         import copy
         data = self.data
         try:
@@ -37,18 +39,14 @@ class UserDict:
     def itervalues(self): return self.data.itervalues()
     def values(self): return self.data.values()
     def has_key(self, key): return self.data.has_key(key)
-    def update(self, dict=None, **kwargs):
-        if dict is None:
-            pass
-        elif isinstance(dict, UserDict):
+    def update(self, dict):
+        if isinstance(dict, UserDict):
             self.data.update(dict.data)
-        elif isinstance(dict, type({})) or not hasattr(dict, 'items'):
+        elif isinstance(dict, type(self.data)):
             self.data.update(dict)
         else:
             for k, v in dict.items():
                 self[k] = v
-        if len(kwargs):
-            self.data.update(kwargs)
     def get(self, key, failobj=None):
         if not self.has_key(key):
             return failobj
@@ -63,12 +61,12 @@ class UserDict:
         return self.data.popitem()
     def __contains__(self, key):
         return key in self.data
-    @classmethod
     def fromkeys(cls, iterable, value=None):
         d = cls()
         for key in iterable:
             d[key] = value
         return d
+    fromkeys = classmethod(fromkeys)
 
 class IterableUserDict(UserDict):
     def __iter__(self):
@@ -113,7 +111,7 @@ class DictMixin:
     def clear(self):
         for key in self.keys():
             del self[key]
-    def setdefault(self, key, default=None):
+    def setdefault(self, key, default):
         try:
             return self[key]
         except KeyError:
@@ -138,21 +136,17 @@ class DictMixin:
             raise KeyError, 'container is empty'
         del self[k]
         return (k, v)
-    def update(self, other=None, **kwargs):
+    def update(self, other):
         # Make progressively weaker assumptions about "other"
-        if other is None:
-            pass
-        elif hasattr(other, 'iteritems'):  # iteritems saves memory and lookups
+        if hasattr(other, 'iteritems'):  # iteritems saves memory and lookups
             for k, v in other.iteritems():
                 self[k] = v
-        elif hasattr(other, 'keys'):
-            for k in other.keys():
+        elif hasattr(other, '__iter__'): # iter saves memory
+            for k in other:
                 self[k] = other[k]
         else:
-            for k, v in other:
-                self[k] = v
-        if kwargs:
-            self.update(kwargs)
+            for k in other.keys():
+                self[k] = other[k]
     def get(self, key, default=None):
         try:
             return self[key]

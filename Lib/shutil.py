@@ -24,25 +24,16 @@ def copyfileobj(fsrc, fdst, length=16*1024):
             break
         fdst.write(buf)
 
-def _samefile(src, dst):
-    # Macintosh, Unix.
-    if hasattr(os.path,'samefile'):
-        try:
-            return os.path.samefile(src, dst)
-        except OSError:
-            return False
-
-    # All other platforms: check for same pathname.
-    return (os.path.normcase(os.path.abspath(src)) ==
-            os.path.normcase(os.path.abspath(dst)))
 
 def copyfile(src, dst):
     """Copy data from src to dst"""
-    if _samefile(src, dst):
-        raise Error, "`%s` and `%s` are the same file" % (src, dst)
-
     fsrc = None
     fdst = None
+    # check for same pathname; all platforms
+    _src = os.path.normcase(os.path.abspath(src))
+    _dst = os.path.normcase(os.path.abspath(dst))
+    if _src == _dst:
+        return
     try:
         fsrc = open(src, 'rb')
         fdst = open(dst, 'wb')
@@ -108,7 +99,7 @@ def copytree(src, dst, symlinks=False):
 
     """
     names = os.listdir(src)
-    os.makedirs(dst)
+    os.mkdir(dst)
     errors = []
     for name in names:
         srcname = os.path.join(src, name)
@@ -124,49 +115,42 @@ def copytree(src, dst, symlinks=False):
             # XXX What about devices, sockets etc.?
         except (IOError, os.error), why:
             errors.append((srcname, dstname, why))
-    copystat(src, dst)
     if errors:
         raise Error, errors
 
 def rmtree(path, ignore_errors=False, onerror=None):
     """Recursively delete a directory tree.
 
-    If ignore_errors is set, errors are ignored; otherwise, if onerror
-    is set, it is called to handle the error with arguments (func,
-    path, exc_info) where func is os.listdir, os.remove, or os.rmdir;
-    path is the argument to that function that caused it to fail; and
-    exc_info is a tuple returned by sys.exc_info().  If ignore_errors
-    is false and onerror is None, an exception is raised.
-
+    If ignore_errors is set, errors are ignored; otherwise, if
+    onerror is set, it is called to handle the error; otherwise, an
+    exception is raised.
     """
-    if ignore_errors:
-        def onerror(*args):
+    cmdtuples = []
+    arg = path
+    try:
+        func = os.listdir # Make sure it isn't unset
+        _build_cmdtuple(path, cmdtuples)
+        for func, arg in cmdtuples:
+            func(arg)
+    except OSError:
+        exc = sys.exc_info()
+        if ignore_errors:
             pass
-    elif onerror is None:
-        def onerror(*args):
-            raise
-    names = []
-    try:
-        names = os.listdir(path)
-    except os.error, err:
-        onerror(os.listdir, path, sys.exc_info())
-    for name in names:
-        fullname = os.path.join(path, name)
-        try:
-            mode = os.lstat(fullname).st_mode
-        except os.error:
-            mode = 0
-        if stat.S_ISDIR(mode):
-            rmtree(fullname, ignore_errors, onerror)
+        elif onerror is not None:
+            onerror(func, arg, exc)
         else:
-            try:
-                os.remove(fullname)
-            except os.error, err:
-                onerror(os.remove, fullname, sys.exc_info())
-    try:
-        os.rmdir(path)
-    except os.error:
-        onerror(os.rmdir, path, sys.exc_info())
+            raise exc[0], (exc[1][0], exc[1][1] + ' removing '+arg)
+
+# Helper for rmtree()
+def _build_cmdtuple(path, cmdtuples):
+    for f in os.listdir(path):
+        real_f = os.path.join(path,f)
+        if os.path.isdir(real_f) and not os.path.islink(real_f):
+            _build_cmdtuple(real_f, cmdtuples)
+        else:
+            cmdtuples.append((os.remove, real_f))
+    cmdtuples.append((os.rmdir, path))
+
 
 def move(src, dst):
     """Recursively move a file or directory to another location.

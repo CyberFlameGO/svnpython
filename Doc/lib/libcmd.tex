@@ -21,7 +21,7 @@ interpreter class you define yourself in order to inherit
 
 The optional argument \var{completekey} is the \refmodule{readline} name
 of a completion key; it defaults to \kbd{Tab}. If \var{completekey} is
-not \constant{None} and \refmodule{readline} is available, command completion
+not \code{None} and \refmodule{readline} is available, command completion
 is done automatically.
 
 The optional arguments \var{stdin} and \var{stdout} specify the 
@@ -193,6 +193,6 @@ A flag, defaulting to true.  If true, \method{cmdloop()} uses
 if false, \method{sys.stdout.write()} and
 \method{sys.stdin.readline()} are used. (This means that by
 importing \refmodule{readline}, on systems that support it, the
-interpreter will automatically support \program{Emacs}-like line editing 
+interpreter will automatically support Emacs-like line editing 
 and command-history keystrokes.)
 \end{memberdesc}

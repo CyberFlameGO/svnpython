@@ -121,3 +121,4 @@ f = Function(OSStatus, 'RemoveMenuCommandProperty',
     (OSType, 'inPropertyTag', InMode),
 )
 functions.append(f)
+

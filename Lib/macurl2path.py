@@ -80,7 +80,7 @@ def test():
                 "/foo/bar/index.html",
                 "/foo/bar/",
                 "/"]:
-        print '%r -> %r' % (url, url2pathname(url))
+        print `url`, '->', `url2pathname(url)`
     for path in ["drive:",
                  "drive:dir:",
                  "drive:dir:file",
@@ -89,7 +89,7 @@ def test():
                  ":file",
                  ":dir:",
                  ":dir:file"]:
-        print '%r -> %r' % (path, pathname2url(path))
+        print `path`, '->', `pathname2url(path)`
 
 if __name__ == '__main__':
     test()

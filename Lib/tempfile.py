@@ -38,15 +38,17 @@ if _os.name == 'mac':
 
 try:
     import fcntl as _fcntl
-except ImportError:
+    # If PYTHONCASEOK is set on Windows, stinking FCNTL.py gets
+    # imported, and we don't get an ImportError then.  Provoke
+    # an AttributeError instead in that case.
+    _fcntl.fcntl
+except (ImportError, AttributeError):
     def _set_cloexec(fd):
         pass
 else:
     def _set_cloexec(fd):
-        try:
-            flags = _fcntl.fcntl(fd, _fcntl.F_GETFD, 0)
-        except IOError:
-            pass
+        try: flags = _fcntl.fcntl(fd, _fcntl.F_GETFD, 0)
+        except IOError: pass
         else:
             # flags read successfully, modify
             flags |= _fcntl.FD_CLOEXEC
@@ -81,28 +83,6 @@ tempdir = None
 # Internal routines.
 
 _once_lock = _allocate_lock()
-
-if hasattr(_os, "lstat"):
-    _stat = _os.lstat
-elif hasattr(_os, "stat"):
-    _stat = _os.stat
-else:
-    # Fallback.  All we need is something that raises os.error if the
-    # file doesn't exist.
-    def _stat(fn):
-        try:
-            f = open(fn)
-        except IOError:
-            raise _os.error
-        f.close()
-
-def _exists(fn):
-    try:
-        _stat(fn)
-    except _os.error:
-        return False
-    else:
-        return True
 
 class _RandomNameSequence:
     """An instance of _RandomNameSequence generates an endless
@@ -235,7 +215,7 @@ def _mkstemp_inner(dir, pre, suf, flags):
         try:
             fd = _os.open(file, flags, 0600)
             _set_cloexec(fd)
-            return (fd, _os.path.abspath(file))
+            return (fd, file)
         except OSError, e:
             if e.errno == _errno.EEXIST:
                 continue # try again
@@ -359,7 +339,7 @@ def mktemp(suffix="", prefix=template, dir=None):
     for seq in xrange(TMP_MAX):
         name = names.next()
         file = _os.path.join(dir, prefix + name + suffix)
-        if not _exists(file):
+        if not _os.path.exists(file):
             return file
 
     raise IOError, (_errno.EEXIST, "No usable temporary filename found")
@@ -414,9 +394,9 @@ def NamedTemporaryFile(mode='w+b', bufsize=-1, suffix="",
     'bufsize' -- the buffer size argument to os.fdopen (default -1).
     The file is created as mkstemp() would do it.
 
-    Returns an object with a file-like interface; the name of the file
-    is accessible as file.name.  The file will be automatically deleted
-    when it is closed.
+    Returns a file object; the name of the file is accessible as
+    file.name.  The file will be automatically deleted when it is
+    closed.
     """
 
     if dir is None:
@@ -451,8 +431,8 @@ else:
         'bufsize' -- the buffer size argument to os.fdopen (default -1).
         The file is created as mkstemp() would do it.
 
-        Returns an object with a file-like interface.  The file has no
-        name, and will cease to exist when it is closed.
+        Returns a file object.  The file has no name, and will cease to
+        exist when it is closed.
         """
 
         if dir is None:
