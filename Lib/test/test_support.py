@@ -233,12 +233,6 @@ def run_unittest(testclass):
     """Run tests from a unittest.TestCase-derived class."""
     run_suite(unittest.makeSuite(testclass), testclass)
 
-def run_classtests(*classnames):
-    suite = unittest.TestSuite()
-    for cls in classnames:
-        suite.addTest(unittest.makeSuite(cls))
-    run_suite(suite)
-
 
 #=======================================================================
 # doctest driver.

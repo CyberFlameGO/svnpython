@@ -46,10 +46,6 @@ ZC1CeTogbWFudWFsbHkKAMKkeXoA
 LOCALEDIR = os.path.join('xx', 'LC_MESSAGES')
 MOFILE = os.path.join(LOCALEDIR, 'gettext.mo')
 UMOFILE = os.path.join(LOCALEDIR, 'ugettext.mo')
-try:
-    LANG = os.environ['LANGUAGE']
-except:
-    LANG = 'en'
 
 
 class GettextBaseTest(unittest.TestCase):
@@ -64,8 +60,8 @@ class GettextBaseTest(unittest.TestCase):
         os.environ['LANGUAGE'] = 'xx'
 
     def tearDown(self):
-        os.environ['LANGUAGE'] = LANG
-        shutil.rmtree(os.path.split(LOCALEDIR)[0])
+        os.environ['LANGUAGE'] = 'en'
+        shutil.rmtree(LOCALEDIR)
 
 
 class GettextTestCase1(GettextBaseTest):
@@ -74,9 +70,6 @@ class GettextTestCase1(GettextBaseTest):
         self.localedir = os.curdir
         self.mofile = MOFILE
         gettext.install('gettext', self.localedir)
-
-    def tearDown(self):
-        GettextBaseTest.tearDown(self)
 
     def test_some_translations(self):
         eq = self.assertEqual
@@ -144,9 +137,6 @@ class GettextTestCase2(GettextBaseTest):
         # For convenience
         self._ = gettext.gettext
 
-    def tearDown(self):
-        GettextBaseTest.tearDown(self)
-
     def test_bindtextdomain(self):
         self.assertEqual(gettext.bindtextdomain('gettext'), self.localedir)
 
@@ -200,9 +190,6 @@ class PluralFormsTestCase(GettextBaseTest):
     def setUp(self):
         GettextBaseTest.setUp(self)
         self.mofile = MOFILE
-
-    def tearDown(self):
-        GettextBaseTest.tearDown(self)
 
     def test_plural_forms1(self):
         eq = self.assertEqual
@@ -291,9 +278,6 @@ class UnicodeTranslationsTest(GettextBaseTest):
         finally:
             fp.close()
         self._ = self.t.ugettext
-
-    def tearDown(self):
-        GettextBaseTest.tearDown(self)
 
     def test_unicode_msgid(self):
         unless = self.failUnless

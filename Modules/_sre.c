@@ -72,16 +72,7 @@ static char copyright[] =
 /* FIXME: maybe the limit should be 40000 / sizeof(void*) ? */
 #define USE_RECURSION_LIMIT 7500
 #else
-#if defined(__GNUC__) && (__GNUC__ > 2) && \
-    (defined(__FreeBSD__) || defined(PYOS_OS2))
-/* gcc 3.x, on FreeBSD and OS/2+EMX and at optimisation levels of
- * -O3 (autoconf default) and -O2 (EMX port default), generates code
- * for _sre that fails for the default recursion limit.
- */
-#define USE_RECURSION_LIMIT 7500
-#else
 #define USE_RECURSION_LIMIT 10000
-#endif
 #endif
 #endif
 
@@ -279,7 +270,7 @@ mark_fini(SRE_STATE* state)
 }
 
 static int
-mark_save(SRE_STATE* state, int lo, int hi, int *mark_stack_base)
+mark_save(SRE_STATE* state, int lo, int hi)
 {
     void* stack;
     int size;
@@ -323,13 +314,11 @@ mark_save(SRE_STATE* state, int lo, int hi, int *mark_stack_base)
 
     state->mark_stack_base += size;
 
-    *mark_stack_base = state->mark_stack_base;
-
     return 0;
 }
 
 static int
-mark_restore(SRE_STATE* state, int lo, int hi, int *mark_stack_base)
+mark_restore(SRE_STATE* state, int lo, int hi)
 {
     int size;
 
@@ -338,7 +327,7 @@ mark_restore(SRE_STATE* state, int lo, int hi, int *mark_stack_base)
 
     size = (hi - lo) + 1;
 
-    state->mark_stack_base = *mark_stack_base - size;
+    state->mark_stack_base -= size;
 
     TRACE(("copy %d:%d from %d\n", lo, hi, state->mark_stack_base));
 
@@ -688,34 +677,7 @@ SRE_INFO(SRE_STATE* state, SRE_CODE* pattern)
 }
 #endif
 
-/* The macros below should be used to protect recursive SRE_MATCH()
- * calls that *failed* and do *not* return immediately (IOW, those
- * that will backtrack). Explaining:
- *
- * - Recursive SRE_MATCH() returned true: that's usually a success
- *   (besides atypical cases like ASSERT_NOT), therefore there's no
- *   reason to restore lastmark;
- *
- * - Recursive SRE_MATCH() returned false but the current SRE_MATCH()
- *   is returning to the caller: If the current SRE_MATCH() is the
- *   top function of the recursion, returning false will be a matching
- *   failure, and it doesn't matter where lastmark is pointing to.
- *   If it's *not* the top function, it will be a recursive SRE_MATCH()
- *   failure by itself, and the calling SRE_MATCH() will have to deal
- *   with the failure by the same rules explained here (it will restore
- *   lastmark by itself if necessary);
- *
- * - Recursive SRE_MATCH() returned false, and will continue the
- *   outside 'for' loop: must be protected when breaking, since the next
- *   OP could potentially depend on lastmark;
- *   
- * - Recursive SRE_MATCH() returned false, and will be called again
- *   inside a local for/while loop: must be protected between each
- *   loop iteration, since the recursive SRE_MATCH() could do anything,
- *   and could potentially depend on lastmark.
- *
- * For more information, check the discussion at SF patch #712900.
- */
+/* macros to preserve lastmark in case of backtracking */
 #define LASTMARK_SAVE()     \
     do { \
         lastmark = state->lastmark; \
@@ -741,7 +703,7 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
     SRE_CHAR* ptr = state->ptr;
     int i, count;
     SRE_REPEAT* rp;
-    int lastmark, lastindex, mark_stack_base;
+    int lastmark, lastindex;
     SRE_CODE chr;
 
     SRE_REPEAT rep; /* FIXME: <fl> allocate in STATE instead */
@@ -969,11 +931,6 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
             /* <BRANCH> <0=skip> code <JUMP> ... <NULL> */
             TRACE(("|%p|%p|BRANCH\n", pattern, ptr));
             LASTMARK_SAVE();
-            if (state->repeat) {
-                i = mark_save(state, 0, lastmark, &mark_stack_base);
-                if (i < 0)
-                    return i;
-            }
             for (; pattern[0]; pattern += pattern[0]) {
                 if (pattern[1] == SRE_OP_LITERAL &&
                     (ptr >= end || (SRE_CODE) *ptr != pattern[2]))
@@ -985,11 +942,6 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                 i = SRE_MATCH(state, pattern + 1, level + 1);
                 if (i)
                     return i;
-                if (state->repeat) {
-                    i = mark_restore(state, 0, lastmark, &mark_stack_base);
-                    if (i < 0)
-                        return i;
-                }
                 LASTMARK_RESTORE();
             }
             return 0;
@@ -1119,12 +1071,12 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                     c = SRE_COUNT(state, pattern+3, 1, level+1);
                     if (c < 0)
                         return c;
+                    LASTMARK_RESTORE();
                     if (c == 0)
                         break;
                     assert(c == 1);
                     ptr++;
                     count++;
-                    LASTMARK_RESTORE();
                 }
             }
             return 0;
@@ -1167,6 +1119,8 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
 
             TRACE(("|%p|%p|MAX_UNTIL %d\n", pattern, ptr, count));
 
+            LASTMARK_SAVE();
+
             if (count < rp->pattern[1]) {
                 /* not enough matches */
                 rp->count = count;
@@ -1176,6 +1130,7 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                     return i;
                 rp->count = count - 1;
                 state->ptr = ptr;
+                LASTMARK_RESTORE();
                 return 0;
             }
 
@@ -1183,18 +1138,17 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                 /* we may have enough matches, but if we can
                    match another item, do so */
                 rp->count = count;
-                LASTMARK_SAVE();
-                i = mark_save(state, 0, lastmark, &mark_stack_base);
+                i = mark_save(state, 0, lastmark);
                 if (i < 0)
                     return i;
                 /* RECURSIVE */
                 i = SRE_MATCH(state, rp->pattern + 3, level + 1);
                 if (i)
                     return i;
-                i = mark_restore(state, 0, lastmark, &mark_stack_base);
+                i = mark_restore(state, 0, lastmark);
+                LASTMARK_RESTORE();
                 if (i < 0)
                     return i;
-                LASTMARK_RESTORE();
                 rp->count = count - 1;
                 state->ptr = ptr;
             }
@@ -1207,6 +1161,7 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                 return i;
             state->repeat = rp;
             state->ptr = ptr;
+            LASTMARK_RESTORE();
             return 0;
 
         case SRE_OP_MIN_UNTIL:
@@ -1224,6 +1179,8 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
             TRACE(("|%p|%p|MIN_UNTIL %d %p\n", pattern, ptr, count,
                    rp->pattern));
 
+            LASTMARK_SAVE();
+
             if (count < rp->pattern[1]) {
                 /* not enough matches */
                 rp->count = count;
@@ -1233,10 +1190,9 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                     return i;
                 rp->count = count-1;
                 state->ptr = ptr;
+                LASTMARK_RESTORE();
                 return 0;
             }
-
-            LASTMARK_SAVE();
 
             /* see if the tail matches */
             state->repeat = rp->prev;
@@ -1247,10 +1203,9 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
             state->ptr = ptr;
             state->repeat = rp;
 
+            LASTMARK_RESTORE();
             if (count >= rp->pattern[2] && rp->pattern[2] != 65535)
                 return 0;
-
-            LASTMARK_RESTORE();
 
             rp->count = count;
             /* RECURSIVE */
@@ -1259,7 +1214,7 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                 return i;
             rp->count = count - 1;
             state->ptr = ptr;
-
+            LASTMARK_RESTORE();
             return 0;
 
         default:

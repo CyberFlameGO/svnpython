@@ -420,7 +420,7 @@ optimize_code(PyObject *code, PyObject* consts)
 			goto exitUnchanged;
 		}
 	}
-	code = PyString_FromStringAndSize(codestr, codelen);
+	code = PyString_FromStringAndSize((char *)codestr, codelen);
 	PyMem_Free(codestr);
 	return code;
 
@@ -3366,7 +3366,7 @@ com_for_stmt(struct compiling *c, node *n)
 	com_node(c, CHILD(n, 3));
 	com_addbyte(c, GET_ITER);
 	c->c_begin = c->c_nexti;
-	com_set_lineno(c, c->c_last_line);
+	com_set_lineno(c, n->n_lineno);
 	com_addfwref(c, FOR_ITER, &anchor);
 	com_push(c, 1);
 	com_assign(c, CHILD(n, 1), OP_ASSIGN, NULL);

@@ -179,28 +179,20 @@ t_bootstrap(void *boot_raw)
 	PyEval_AcquireThread(tstate);
 	res = PyEval_CallObjectWithKeywords(
 		boot->func, boot->args, boot->keyw);
+	Py_DECREF(boot->func);
+	Py_DECREF(boot->args);
+	Py_XDECREF(boot->keyw);
+	PyMem_DEL(boot_raw);
 	if (res == NULL) {
 		if (PyErr_ExceptionMatches(PyExc_SystemExit))
 			PyErr_Clear();
 		else {
-			PyObject *file;
-			PySys_WriteStderr(
-				"Unhandled exception in thread started by ");
-			file = PySys_GetObject("stderr");
-			if (file)
-				PyFile_WriteObject(boot->func, file, 0);
-			else
-				PyObject_Print(boot->func, stderr, 0);
-			PySys_WriteStderr("\n");
+			PySys_WriteStderr("Unhandled exception in thread:\n");
 			PyErr_PrintEx(0);
 		}
 	}
 	else
 		Py_DECREF(res);
-	Py_DECREF(boot->func);
-	Py_DECREF(boot->args);
-	Py_XDECREF(boot->keyw);
-	PyMem_DEL(boot_raw);
 	PyThreadState_Clear(tstate);
 	PyThreadState_DeleteCurrent();
 	PyThread_exit_thread();

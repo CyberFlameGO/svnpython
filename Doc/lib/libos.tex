@@ -1025,11 +1025,7 @@ paths returned by \function{tmpnam()}; no automatic cleanup is
 provided.
 \warning{Use of \function{tmpnam()} is vulnerable to symlink attacks;
 consider using \function{tmpfile()} instead.}
-Availability: \UNIX, Windows.  This function probably shouldn't be used
-on Windows, though:  Microsoft's implementation of \function{tmpnam()}
-always creates a name in the root directory of the current drive, and
-that's generally a poor location for a temp file (depending on
-privileges, you may not even be able to open a file using this name).
+Availability: \UNIX, Windows.
 \end{funcdesc}
 
 \begin{datadesc}{TMP_MAX}
@@ -1057,8 +1053,7 @@ Availability: Macintosh, \UNIX, Windows.
 \begin{funcdesc}{walk}{top\optional{, topdown\code{=True}}}
 \index{directory!walking}
 \index{directory!traversal}
-\function{walk()} generates the file names in a directory tree, by
-walking the tree either top down or bottom up.
+\function{walk()} generates the file names in a directory tree.
 For each directory in the tree rooted at directory \var{top} (including
 \var{top} itself), it yields a 3-tuple
 \code{(\var{dirpath}, \var{dirnames}, \var{filenames})}.
@@ -1117,24 +1112,6 @@ for root, dirs, files in os.walk('python/Lib/email'):
     if 'CVS' in dirs:
         dirs.remove('CVS')  # don't visit CVS directories
 \end{verbatim}
-
-In the next example, walking the tree bottom up is essential:
-\function{rmdir()} doesn't allow deleting a directory before the
-directory is empty:
-
-\begin{verbatim}
-import os
-from os.path import join
-# Delete everything reachable from the directory named in 'top'.
-# CAUTION:  This is dangerous!  For example, if top == '/', it
-# could delete all your disk files.
-for root, dirs, files in os.walk(top, topdown=False):
-    for name in files:
-        os.remove(join(root, name))
-    for name in dirs:
-        os.rmdir(join(root, name))
-\end{verbatim}
-
 \versionadded{2.3}
 \end{funcdesc}
 
