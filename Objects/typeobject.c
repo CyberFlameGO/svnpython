@@ -1618,15 +1618,12 @@ type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)
 
 	/* Calculate best base, and check that all bases are type objects */
 	base = best_base(bases);
-	if (base == NULL) {
-		Py_DECREF(bases);
+	if (base == NULL)
 		return NULL;
-	}
 	if (!PyType_HasFeature(base, Py_TPFLAGS_BASETYPE)) {
 		PyErr_Format(PyExc_TypeError,
 			     "type '%.100s' is not an acceptable base type",
 			     base->tp_name);
-		Py_DECREF(bases);
 		return NULL;
 	}
 
@@ -1653,10 +1650,8 @@ type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)
 			slots = Py_BuildValue("(O)", slots);
 		else
 			slots = PySequence_Tuple(slots);
-		if (slots == NULL) {
-			Py_DECREF(bases);
+		if (slots == NULL)
 			return NULL;
-		}
 		assert(PyTuple_Check(slots));
 
 		/* Are slots allowed? */
@@ -1667,7 +1662,6 @@ type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)
 				     "not supported for subtype of '%s'",
 				     base->tp_name);
 		  bad_slots:
-			Py_DECREF(bases);
 			Py_DECREF(slots);
 			return NULL;
 		}
@@ -1779,7 +1773,6 @@ type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)
 	type = (PyTypeObject *)metatype->tp_alloc(metatype, nslots);
 	if (type == NULL) {
 		Py_XDECREF(slots);
-		Py_DECREF(bases);
 		return NULL;
 	}
 
@@ -2010,7 +2003,6 @@ type_getattro(PyTypeObject *type, PyObject *name)
 			return meta_get(meta_attribute, (PyObject *)type,
 					(PyObject *)metatype);
 		}
-		Py_INCREF(meta_attribute);
 	}
 
 	/* No data descriptor found on metatype. Look in tp_dict of this
@@ -2019,9 +2011,6 @@ type_getattro(PyTypeObject *type, PyObject *name)
 	if (attribute != NULL) {
 		/* Implement descriptor functionality, if any */
 		descrgetfunc local_get = attribute->ob_type->tp_descr_get;
-
-		Py_XDECREF(meta_attribute);
-
 		if (local_get != NULL) {
 			/* NULL 2nd argument indicates the descriptor was
 			 * found on the target object itself (or a base)  */
@@ -2035,16 +2024,13 @@ type_getattro(PyTypeObject *type, PyObject *name)
 
 	/* No attribute found in local __dict__ (or bases): use the
 	 * descriptor from the metatype, if any */
-	if (meta_get != NULL) {
-		PyObject *res;
-		res = meta_get(meta_attribute, (PyObject *)type,
-			       (PyObject *)metatype);
-		Py_DECREF(meta_attribute);
-		return res;
-	}
+	if (meta_get != NULL)
+		return meta_get(meta_attribute, (PyObject *)type,
+				(PyObject *)metatype);
 
 	/* If an ordinary attribute was found on the metatype, return it now */
 	if (meta_attribute != NULL) {
+		Py_INCREF(meta_attribute);
 		return meta_attribute;
 	}
 

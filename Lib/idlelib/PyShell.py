@@ -331,7 +331,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
             command = "__import__('idlelib.run').run.main(" + `del_exitf` +")"
         else:
             command = "__import__('run').main(" + `del_exitf` + ")"
-        if sys.platform[:3] == 'win' and ' ' in sys.executable:
+        if sys.platform == 'win32' and ' ' in sys.executable:
             # handle embedded space in path by quoting the argument
             decorated_exec = '"%s"' % sys.executable
         else:

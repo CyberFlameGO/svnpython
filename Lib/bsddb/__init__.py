@@ -37,14 +37,7 @@
 """
 
 try:
-    if __name__ == 'bsddb3':
-        # import _pybsddb binary as it should be the more recent version from
-        # a standalone pybsddb addon package than the version included with
-        # python as bsddb._bsddb.
-        import _pybsddb
-        _bsddb = _pybsddb
-    else:
-        import _bsddb
+    import _bsddb
 except ImportError:
     # Remove ourselves from sys.modules
     import sys

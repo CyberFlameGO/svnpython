@@ -24,14 +24,6 @@ and also pops up a little window for controlling it.
 
 Run "pydoc -w <name>" to write out the HTML documentation for a module
 to a file named "<name>.html".
-
-Module docs for core modules are assumed to be in
-
-    http://www.python.org/doc/current/lib/
-
-This can be overridden by setting the PYTHONDOCS environment variable
-to a different URL or to a local directory containing the Library
-Reference Manual pages.
 """
 
 __author__ = "Ka-Ping Yee <ping@lfw.org>"
@@ -303,33 +295,6 @@ class Doc:
 
     docmodule = docclass = docroutine = docother = fail
 
-    def getdocloc(self, object):
-        """Return the location of module docs or None"""
-
-        try:
-            file = inspect.getabsfile(object)
-        except TypeError:
-            file = '(built-in)'
-
-        docloc = os.environ.get("PYTHONDOCS",
-                                "http://www.python.org/doc/current/lib")
-        basedir = os.path.join(sys.exec_prefix, "lib",
-                               "python"+sys.version[0:3])
-        if (isinstance(object, type(os)) and
-            (object.__name__ in ('errno', 'exceptions', 'gc', 'imp',
-                                 'marshal', 'posix', 'signal', 'sys',
-                                 'thread', 'zipimport') or
-             (file.startswith(basedir) and
-              not file.startswith(os.path.join(basedir, 'site-packages'))))):
-            if docloc.startswith("http://"):
-                docloc = (docloc.rstrip("/") +
-                          "/module-%s.html" % object.__name__)
-            else:
-                docloc = os.path.join(docloc, "module-%s.html" % name)
-        else:
-            docloc = None
-        return docloc
-
 # -------------------------------------------- HTML documentation generator
 
 class HTMLRepr(Repr):
@@ -570,14 +535,8 @@ class HTMLDoc(Doc):
             info.append(self.escape(str(object.__date__)))
         if info:
             head = head + ' (%s)' % join(info, ', ')
-        docloc = self.getdocloc(object)
-        if docloc is not None:
-            docloc = '<br><a href="%(docloc)s">Module Docs</a>' % locals()
-        else:
-            docloc = ''
         result = self.heading(
-            head, '#ffffff', '#7799ee',
-            '<a href=".">index</a><br>' + filelink + docloc)
+            head, '#ffffff', '#7799ee', '<a href=".">index</a><br>' + filelink)
 
         modules = inspect.getmembers(object, inspect.ismodule)
 
@@ -991,11 +950,6 @@ class TextDoc(Doc):
         except TypeError:
             file = '(built-in)'
         result = result + self.section('FILE', file)
-
-        docloc = self.getdocloc(object)
-        if docloc is not None:
-            result = result + self.section('MODULE DOCS', docloc)
-
         if desc:
             result = result + self.section('DESCRIPTION', desc)
 

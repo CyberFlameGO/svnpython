@@ -882,9 +882,6 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	    ((i != NULL) && (nbi == NULL || nbi->nb_float == NULL))) {
 		PyErr_SetString(PyExc_TypeError,
 			   "complex() argument must be a string or a number");
-		if (own_r) {
-			Py_DECREF(r);
-		}
 		return NULL;
 	}
 	if (PyComplex_Check(r)) {

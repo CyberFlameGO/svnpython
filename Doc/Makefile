@@ -66,7 +66,7 @@ TOOLSDIR=	tools
 
 # This is the *documentation* release, and is used to construct the file
 # names of the downloadable tarballs.
-RELEASE=2.4a0
+RELEASE=2.3.1
 
 PYTHON=	   python
 DVIPS=	   dvips -N0 -t $(PAPER)
@@ -95,7 +95,7 @@ EMACS=     emacs
 
 # The end of this should reflect the major/minor version numbers of
 # the release:
-WHATSNEW=whatsnew24
+WHATSNEW=whatsnew23
 
 # what's what
 MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \
