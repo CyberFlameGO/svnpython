@@ -1,19 +1,37 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Module support implementation */
 
 #include "Python.h"
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
 
 #ifdef MPW /* MPW pushes 'extended' for float and double types with varargs */
 typedef extended va_double;
@@ -42,8 +60,12 @@ static char api_version_warning[] =
   This Python has API version %d, module %s has version %d.\n";
 
 PyObject *
-Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
-	       PyObject *passthrough, int module_api_version)
+Py_InitModule4(name, methods, doc, passthrough, module_api_version)
+	char *name;
+	PyMethodDef *methods;
+	char *doc;
+	PyObject *passthrough;
+	int module_api_version;
 {
 	PyObject *m, *d, *v;
 	PyMethodDef *ml;
@@ -80,7 +102,10 @@ Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 
 /* Helper for mkvalue() to scan the length of a format */
 
-static int countformat(char *format, int endchar)
+static int countformat Py_PROTO((char *format, int endchar));
+static int countformat(format, endchar)
+	char *format;
+	int endchar;
 {
 	int count = 0;
 	int level = 0;
@@ -123,14 +148,18 @@ static int countformat(char *format, int endchar)
 /* Generic function to create a value -- the inverse of getargs() */
 /* After an original idea and first implementation by Steven Miale */
 
-static PyObject *do_mktuple(char**, va_list *, int, int);
-static PyObject *do_mklist(char**, va_list *, int, int);
-static PyObject *do_mkdict(char**, va_list *, int, int);
-static PyObject *do_mkvalue(char**, va_list *);
+static PyObject *do_mktuple Py_PROTO((char**, va_list *, int, int));
+static PyObject *do_mklist Py_PROTO((char**, va_list *, int, int));
+static PyObject *do_mkdict Py_PROTO((char**, va_list *, int, int));
+static PyObject *do_mkvalue Py_PROTO((char**, va_list *));
 
 
 static PyObject *
-do_mkdict(char **p_format, va_list *p_va, int endchar, int n)
+do_mkdict(p_format, p_va, endchar, n)
+	char **p_format;
+	va_list *p_va;
+	int endchar;
+	int n;
 {
 	PyObject *d;
 	int i;
@@ -172,7 +201,11 @@ do_mkdict(char **p_format, va_list *p_va, int endchar, int n)
 }
 
 static PyObject *
-do_mklist(char **p_format, va_list *p_va, int endchar, int n)
+do_mklist(p_format, p_va, endchar, n)
+	char **p_format;
+	va_list *p_va;
+	int endchar;
+	int n;
 {
 	PyObject *v;
 	int i;
@@ -209,7 +242,11 @@ _ustrlen(Py_UNICODE *u)
 }
 
 static PyObject *
-do_mktuple(char **p_format, va_list *p_va, int endchar, int n)
+do_mktuple(p_format, p_va, endchar, n)
+	char **p_format;
+	va_list *p_va;
+	int endchar;
+	int n;
 {
 	PyObject *v;
 	int i;
@@ -237,7 +274,9 @@ do_mktuple(char **p_format, va_list *p_va, int endchar, int n)
 }
 
 static PyObject *
-do_mkvalue(char **p_format, va_list *p_va)
+do_mkvalue(p_format, p_va)
+	char **p_format;
+	va_list *p_va;
 {
 	for (;;) {
 		switch (*(*p_format)++) {
@@ -257,9 +296,6 @@ do_mkvalue(char **p_format, va_list *p_va)
 		case 'h':
 		case 'i':
 			return PyInt_FromLong((long)va_arg(*p_va, int));
-			
-		case 'H':
-			return PyInt_FromLong((long)va_arg(*p_va, unsigned int));
 
 		case 'l':
 			return PyInt_FromLong((long)va_arg(*p_va, long));
@@ -319,15 +355,8 @@ do_mkvalue(char **p_format, va_list *p_va)
 				Py_INCREF(v);
 			}
 			else {
-				if (n < 0) {
-					size_t m = strlen(str);
-					if (m > INT_MAX) {
-						PyErr_SetString(PyExc_OverflowError,
-							"string too long for Python string");
-						return NULL;
-					}
-					n = (int)m;
-				}
+				if (n < 0)
+					n = strlen(str);
 				v = PyString_FromStringAndSize(str, n);
 			}
 			return v;
@@ -337,7 +366,7 @@ do_mkvalue(char **p_format, va_list *p_va)
 		case 'S':
 		case 'O':
 		if (**p_format == '&') {
-			typedef PyObject *(*converter)(void *);
+			typedef PyObject *(*converter) Py_PROTO((void *));
 			converter func = va_arg(*p_va, converter);
 			void *arg = va_arg(*p_va, void *);
 			++*p_format;
@@ -380,18 +409,32 @@ do_mkvalue(char **p_format, va_list *p_va)
 }
 
 
+#ifdef HAVE_STDARG_PROTOTYPES
+/* VARARGS 2 */
 PyObject *Py_BuildValue(char *format, ...)
+#else
+/* VARARGS */
+PyObject *Py_BuildValue(va_alist) va_dcl
+#endif
 {
 	va_list va;
 	PyObject* retval;
+#ifdef HAVE_STDARG_PROTOTYPES
 	va_start(va, format);
+#else
+	char *format;
+	va_start(va);
+	format = va_arg(va, char *);
+#endif
 	retval = Py_VaBuildValue(format, va);
 	va_end(va);
 	return retval;
 }
 
 PyObject *
-Py_VaBuildValue(char *format, va_list va)
+Py_VaBuildValue(format, va)
+	char *format;
+	va_list va;
 {
 	char *f = format;
 	int n = countformat(f, '\0');
@@ -415,14 +458,26 @@ Py_VaBuildValue(char *format, va_list va)
 }
 
 
+#ifdef HAVE_STDARG_PROTOTYPES
 PyObject *
 PyEval_CallFunction(PyObject *obj, char *format, ...)
+#else
+PyObject *
+PyEval_CallFunction(obj, format, va_alist)
+	PyObject *obj;
+	char *format;
+	va_dcl
+#endif
 {
 	va_list vargs;
 	PyObject *args;
 	PyObject *res;
 
+#ifdef HAVE_STDARG_PROTOTYPES
 	va_start(vargs, format);
+#else
+	va_start(vargs);
+#endif
 
 	args = Py_VaBuildValue(format, vargs);
 	va_end(vargs);
@@ -437,8 +492,17 @@ PyEval_CallFunction(PyObject *obj, char *format, ...)
 }
 
 
+#ifdef HAVE_STDARG_PROTOTYPES
 PyObject *
 PyEval_CallMethod(PyObject *obj, char *methodname, char *format, ...)
+#else
+PyObject *
+PyEval_CallMethod(obj, methodname, format, va_alist)
+	PyObject *obj;
+	char *methodname;
+	char *format;
+	va_dcl
+#endif
 {
 	va_list vargs;
 	PyObject *meth;
@@ -449,7 +513,11 @@ PyEval_CallMethod(PyObject *obj, char *methodname, char *format, ...)
 	if (meth == NULL)
 		return NULL;
 
+#ifdef HAVE_STDARG_PROTOTYPES
 	va_start(vargs, format);
+#else
+	va_start(vargs);
+#endif
 
 	args = Py_VaBuildValue(format, vargs);
 	va_end(vargs);

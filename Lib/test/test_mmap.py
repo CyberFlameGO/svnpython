@@ -58,62 +58,7 @@ def test_both():
         
         assert start == PAGESIZE
         assert end == PAGESIZE + 6
-
-    # test seeking around (try to overflow the seek implementation)
-    m.seek(0,0)
-    print '  Seek to zeroth byte'
-    assert m.tell() == 0
-    m.seek(42,1)
-    print '  Seek to 42nd byte'
-    assert m.tell() == 42
-    m.seek(0,2)
-    print '  Seek to last byte'
-    assert m.tell() == len(m)
-
-    print '  Try to seek to negative position...'
-    try:
-        m.seek(-1)
-    except ValueError:
-        pass
-    else:
-        assert 0, 'expected a ValueError but did not get it'
-
-    print '  Try to seek beyond end of mmap...'
-    try:
-        m.seek(1,2)
-    except ValueError:
-        pass
-    else:
-        assert 0, 'expected a ValueError but did not get it'
-
-    print '  Try to seek to negative position...'
-    try:
-        m.seek(-len(m)-1,2)
-    except ValueError:
-        pass
-    else:
-        assert 0, 'expected a ValueError but did not get it'
-
-    # Try resizing map
-    print '  Attempting resize()'
-    try:
-        m.resize( 512 )
-    except SystemError:
-        # resize() not supported
-        # No messages are printed, since the output of this test suite
-        # would then be different across platforms.
-        pass
-    else:
-        # resize() is supported
-        assert len(m) == 512, "len(m) is %d, but expecting 512" % (len(m),)
-        # Check that we can no longer seek beyond the new size.
-        try:
-            m.seek(513,0)
-        except ValueError:
-            pass
-        else:
-            assert 0, 'Could seek beyond the new size'
-    
+        
     m.close()
     os.unlink("foo")
     print ' Test passed'

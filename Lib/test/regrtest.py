@@ -13,7 +13,6 @@ Command line options:
 -g: generate -- write the output file for a test instead of comparing it
 -x: exclude  -- arguments are tests to *exclude*
 -s: single   -- run only a single test (see below)
--r: random   -- randomize test execution order
 
 If non-option arguments are present, they are names for tests to run,
 unless -x is given, in which case they are names for tests not to run.
@@ -34,15 +33,13 @@ import string
 import os
 import getopt
 import traceback
-import random
 
 import test_support
 
-def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
-         exclude=0, single=0, randomize=0):
+def main(tests=None, testdir=None):
     """Execute a test suite.
 
-    This also parses command-line options and modifies its behavior
+    This also parses command-line options and modifies its behaviour
     accordingly. 
 
     tests -- a list of strings containing test names (optional)
@@ -55,26 +52,26 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
     If the tests argument is omitted, the tests listed on the
     command-line will be used.  If that's empty, too, then all *.py
     files beginning with test_ will be used.
-
-    The other six default arguments (verbose, quiet, generate, exclude,
-    single, and randomize) allow programmers calling main() directly to
-    set the values that would normally be set by flags on the command
-    line.
+    
     """
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'vgqxsr')
+        opts, args = getopt.getopt(sys.argv[1:], 'vgqxs')
     except getopt.error, msg:
         print msg
         print __doc__
         return 2
+    verbose = 0
+    quiet = 0
+    generate = 0
+    exclude = 0
+    single = 0
     for o, a in opts:
         if o == '-v': verbose = verbose+1
         if o == '-q': quiet = 1; verbose = 0
         if o == '-g': generate = 1
         if o == '-x': exclude = 1
         if o == '-s': single = 1
-        if o == '-r': randomize = 1
     if generate and verbose:
         print "-g and -v don't go together!"
         return 2
@@ -107,8 +104,6 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
     tests = tests or args or findtests(testdir, stdtests, nottests)
     if single:
         tests = tests[:1]
-    if randomize:
-        random.shuffle(tests)
     test_support.verbose = verbose      # Tell tests to be moderately quiet
     save_modules = sys.modules.keys()
     for test in tests:
@@ -212,8 +207,6 @@ def runtest(test, generate, verbose, testdir = None):
                 sys.stdout = cfp
                 print test              # Output file starts with test name
             __import__(test, globals(), locals(), [])
-            if cfp and not (generate or verbose):
-                cfp.close()
         finally:
             sys.stdout = save_stdout
     except ImportError, msg:

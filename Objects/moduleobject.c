@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Module object implementation */
@@ -18,7 +39,8 @@ typedef struct {
 } PyModuleObject;
 
 PyObject *
-PyModule_New(char *name)
+PyModule_New(name)
+	char *name;
 {
 	PyModuleObject *m;
 	PyObject *nameobj;
@@ -43,7 +65,8 @@ PyModule_New(char *name)
 }
 
 PyObject *
-PyModule_GetDict(PyObject *m)
+PyModule_GetDict(m)
+	PyObject *m;
 {
 	if (!PyModule_Check(m)) {
 		PyErr_BadInternalCall();
@@ -53,7 +76,8 @@ PyModule_GetDict(PyObject *m)
 }
 
 char *
-PyModule_GetName(PyObject *m)
+PyModule_GetName(m)
+	PyObject *m;
 {
 	PyObject *nameobj;
 	if (!PyModule_Check(m)) {
@@ -70,7 +94,8 @@ PyModule_GetName(PyObject *m)
 }
 
 char *
-PyModule_GetFilename(PyObject *m)
+PyModule_GetFilename(m)
+        PyObject *m;
 {
 	PyObject *fileobj;
 	if (!PyModule_Check(m)) {
@@ -87,7 +112,8 @@ PyModule_GetFilename(PyObject *m)
 }
 
 void
-_PyModule_Clear(PyObject *m)
+_PyModule_Clear(m)
+	PyObject *m;
 {
 	/* To make the execution order of destructors for global
 	   objects a bit more predictable, we first zap all objects
@@ -137,7 +163,8 @@ _PyModule_Clear(PyObject *m)
 /* Methods */
 
 static void
-module_dealloc(PyModuleObject *m)
+module_dealloc(m)
+	PyModuleObject *m;
 {
 	if (m->md_dict != NULL) {
 		_PyModule_Clear((PyObject *)m);
@@ -147,7 +174,8 @@ module_dealloc(PyModuleObject *m)
 }
 
 static PyObject *
-module_repr(PyModuleObject *m)
+module_repr(m)
+	PyModuleObject *m;
 {
 	char buf[400];
 	char *name;
@@ -169,7 +197,9 @@ module_repr(PyModuleObject *m)
 }
 
 static PyObject *
-module_getattr(PyModuleObject *m, char *name)
+module_getattr(m, name)
+	PyModuleObject *m;
+	char *name;
 {
 	PyObject *res;
 	if (strcmp(name, "__dict__") == 0) {
@@ -185,7 +215,10 @@ module_getattr(PyModuleObject *m, char *name)
 }
 
 static int
-module_setattr(PyModuleObject *m, char *name, PyObject *v)
+module_setattr(m, name, v)
+	PyModuleObject *m;
+	char *name;
+	PyObject *v;
 {
 	if (name[0] == '_' && strcmp(name, "__dict__") == 0) {
 		PyErr_SetString(PyExc_TypeError,

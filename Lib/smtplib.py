@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-'''SMTP/ESMTP client class.
+"""SMTP/ESMTP client class.
 
 This should follow RFC 821 (SMTP) and RFC 1869 (ESMTP).
 
@@ -29,7 +29,7 @@ Example:
   >>> s.getreply()
   (250, "Somebody OverHere <somebody@here.my.org>")
   >>> s.quit()
-'''
+"""
 
 # Author: The Dragon De Monsyne <dragondm@integral.org>
 # ESMTP support, test code and doc fixes added by
@@ -88,7 +88,7 @@ class SMTPSenderRefused(SMTPResponseException):
 
 class SMTPRecipientsRefused(SMTPException):
     """All recipient addresses refused.
-    The errors for each recipient are accessible through the attribute
+    The errors for each recipient are accessable thru the attribute
     'recipients', which is a dictionary of exactly the same sort as 
     SMTP.sendmail() returns.  
     """
@@ -323,7 +323,7 @@ class SMTP:
         if code<>250:
             return (code,msg)
         self.does_esmtp=1
-        #parse the ehlo response -ddm
+        #parse the ehlo responce -ddm
         resp=string.split(self.ehlo_resp,'\n')
         del resp[0]
         for each in resp:

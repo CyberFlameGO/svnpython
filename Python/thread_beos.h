@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 BeOS thread support by Chris Herborth (chrish@qnx.com)
 ******************************************************************/
 
@@ -241,7 +262,7 @@ PyThread_type_lock PyThread_allocate_lock( void )
 		return (PyThread_type_lock)NULL;
 	}
 
-	dprintf(("PyThread_allocate_lock() -> %p\n", lock));
+	dprintf(("PyThread_allocate_lock() -> %lx\n", (long)lock));
 	return (PyThread_type_lock) lock;
 }
 
@@ -249,7 +270,7 @@ void PyThread_free_lock( PyThread_type_lock lock )
 {
 	status_t retval;
 
-	dprintf(("PyThread_free_lock(%p) called\n", lock));
+	dprintf(("PyThread_free_lock(%lx) called\n", (long)lock));
 	
 	retval = benaphore_destroy( (benaphore_t *)lock );
 	if( retval != EOK ) {
@@ -263,7 +284,7 @@ int PyThread_acquire_lock( PyThread_type_lock lock, int waitflag )
 	int success;
 	status_t retval;
 
-	dprintf(("PyThread_acquire_lock(%p, %d) called\n", lock, waitflag));
+	dprintf(("PyThread_acquire_lock(%lx, %d) called\n", (long)lock, waitflag));
 
 	if( waitflag ) {
 		retval = benaphore_lock( (benaphore_t *)lock );
@@ -279,7 +300,7 @@ int PyThread_acquire_lock( PyThread_type_lock lock, int waitflag )
 		/* TODO: that's bad, raise an exception */
 	}
 
-	dprintf(("PyThread_acquire_lock(%p, %d) -> %d\n", lock, waitflag, success));
+	dprintf(("PyThread_acquire_lock(%lx, %d) -> %d\n", (long)lock, waitflag, success));
 	return success;
 }
 
@@ -287,7 +308,7 @@ void PyThread_release_lock( PyThread_type_lock lock )
 {
 	status_t retval;
 	
-	dprintf(("PyThread_release_lock(%p) called\n", lock));
+	dprintf(("PyThread_release_lock(%lx) called\n", (long)lock));
 	
 	retval = benaphore_unlock( (benaphore_t *)lock );
 	if( retval != EOK ) {
@@ -315,7 +336,7 @@ PyThread_type_sema PyThread_allocate_sema( int value )
 		return 0;
 	}
 
-	dprintf(("PyThread_allocate_sema() -> %p\n", sema));
+	dprintf(("PyThread_allocate_sema() -> %lx\n", (long) sema));
 	return (PyThread_type_sema) sema;
 }
 
@@ -323,7 +344,7 @@ void PyThread_free_sema( PyThread_type_sema sema )
 {
 	status_t retval;
 	
-	dprintf(("PyThread_free_sema(%p) called\n", sema));
+	dprintf(("PyThread_free_sema(%lx) called\n", (long) sema));
 	
 	retval = delete_sem( (sem_id)sema );
 	if( retval != B_NO_ERROR ) {
@@ -336,7 +357,7 @@ int PyThread_down_sema( PyThread_type_sema sema, int waitflag )
 {
 	status_t retval;
 
-	dprintf(("PyThread_down_sema(%p, %d) called\n", sema, waitflag));
+	dprintf(("PyThread_down_sema(%lx, %d) called\n", (long) sema, waitflag));
 
 	if( waitflag ) {
 		retval = acquire_sem( (sem_id)sema );
@@ -349,7 +370,7 @@ int PyThread_down_sema( PyThread_type_sema sema, int waitflag )
 		return 0;
 	}
 
-	dprintf(("PyThread_down_sema(%p) return\n", sema));
+	dprintf(("PyThread_down_sema(%lx) return\n", (long) sema));
 	return -1;
 }
 
@@ -357,7 +378,7 @@ void PyThread_up_sema( PyThread_type_sema sema )
 {
 	status_t retval;
 	
-	dprintf(("PyThread_up_sema(%p)\n", sema));
+	dprintf(("PyThread_up_sema(%lx)\n", (long) sema));
 	
 	retval = release_sem( (sem_id)sema );
 	if( retval != B_NO_ERROR ) {

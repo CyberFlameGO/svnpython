@@ -1,11 +1,32 @@
 /**********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* CD module -- interface to Mark Callow's and Roger Chickering's */
@@ -25,7 +46,9 @@ typedef struct {
 static PyObject *CdError;		/* exception cd.error */
 
 static PyObject *
-CD_allowremoval(cdplayerobject *self, PyObject *args)
+CD_allowremoval(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ":allowremoval"))
 		return NULL;
@@ -37,7 +60,9 @@ CD_allowremoval(cdplayerobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_preventremoval(cdplayerobject *self, PyObject *args)
+CD_preventremoval(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ":preventremoval"))
 		return NULL;
@@ -49,7 +74,9 @@ CD_preventremoval(cdplayerobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_bestreadsize(cdplayerobject *self, PyObject *args)
+CD_bestreadsize(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ":bestreadsize"))
 		return NULL;
@@ -58,7 +85,9 @@ CD_bestreadsize(cdplayerobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_close(cdplayerobject *self, PyObject *args)
+CD_close(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ":close"))
 		return NULL;
@@ -74,7 +103,9 @@ CD_close(cdplayerobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_eject(cdplayerobject *self, PyObject *args)
+CD_eject(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	CDSTATUS status;
 
@@ -95,7 +126,9 @@ CD_eject(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_getstatus(cdplayerobject *self, PyObject *args)
+CD_getstatus(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	CDSTATUS status;
 
@@ -116,7 +149,9 @@ CD_getstatus(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_gettrackinfo(cdplayerobject *self, PyObject *args)
+CD_gettrackinfo(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int track;
 	CDTRACKINFO info;
@@ -140,7 +175,9 @@ CD_gettrackinfo(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_msftoblock(cdplayerobject *self, PyObject *args)
+CD_msftoblock(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int min, sec, frame;
 
@@ -152,7 +189,9 @@ CD_msftoblock(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_play(cdplayerobject *self, PyObject *args)
+CD_play(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int start, play;
 	CDSTATUS status;
@@ -174,7 +213,9 @@ CD_play(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_playabs(cdplayerobject *self, PyObject *args)
+CD_playabs(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int min, sec, frame, play;
 	CDSTATUS status;
@@ -196,7 +237,9 @@ CD_playabs(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_playtrack(cdplayerobject *self, PyObject *args)
+CD_playtrack(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int start, play;
 	CDSTATUS status;
@@ -218,7 +261,9 @@ CD_playtrack(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_playtrackabs(cdplayerobject *self, PyObject *args)
+CD_playtrackabs(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int track, min, sec, frame, play;
 	CDSTATUS status;
@@ -241,7 +286,9 @@ CD_playtrackabs(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_readda(cdplayerobject *self, PyObject *args)
+CD_readda(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int numframes, n;
 	PyObject *result;
@@ -268,7 +315,9 @@ CD_readda(cdplayerobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_seek(cdplayerobject *self, PyObject *args)
+CD_seek(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int min, sec, frame;
 	long PyTryBlock;
@@ -286,7 +335,9 @@ CD_seek(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_seektrack(cdplayerobject *self, PyObject *args)
+CD_seektrack(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	int track;
 	long PyTryBlock;
@@ -304,7 +355,9 @@ CD_seektrack(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_seekblock(cdplayerobject *self, PyObject *args)
+CD_seekblock(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	unsigned long PyTryBlock;
 
@@ -321,7 +374,9 @@ CD_seekblock(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_stop(cdplayerobject *self, PyObject *args)
+CD_stop(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	CDSTATUS status;
 
@@ -342,7 +397,9 @@ CD_stop(cdplayerobject *self, PyObject *args)
 }
 	
 static PyObject *
-CD_togglepause(cdplayerobject *self, PyObject *args)
+CD_togglepause(self, args)
+	cdplayerobject *self;
+	PyObject *args;
 {
 	CDSTATUS status;
 
@@ -385,7 +442,8 @@ static PyMethodDef cdplayer_methods[] = {
 };
 
 static void
-cdplayer_dealloc(cdplayerobject *self)
+cdplayer_dealloc(self)
+	cdplayerobject *self;
 {
 	if (self->ob_cdplayer != NULL)
 		CDclose(self->ob_cdplayer);
@@ -393,7 +451,9 @@ cdplayer_dealloc(cdplayerobject *self)
 }
 
 static PyObject *
-cdplayer_getattr(cdplayerobject *self, char *name)
+cdplayer_getattr(self, name)
+	cdplayerobject *self;
+	char *name;
 {
 	if (self->ob_cdplayer == NULL) {
 		PyErr_SetString(PyExc_RuntimeError, "no player active");
@@ -418,7 +478,8 @@ PyTypeObject CdPlayertype = {
 };
 
 static PyObject *
-newcdplayerobject(CDPLAYER *cdp)
+newcdplayerobject(cdp)
+	CDPLAYER *cdp;
 {
 	cdplayerobject *p;
 
@@ -430,7 +491,8 @@ newcdplayerobject(CDPLAYER *cdp)
 }
 
 static PyObject *
-CD_open(PyObject *self, PyObject *args)
+CD_open(self, args)
+	PyObject *self, *args;
 {
 	char *dev, *direction;
 	CDPLAYER *cdp;
@@ -463,7 +525,10 @@ typedef struct {
 } cdparserobject;
 
 static void
-CD_callback(void *arg, CDDATATYPES type, void *data)
+CD_callback(arg, type, data)
+	void *arg;
+	CDDATATYPES type;
+	void *data;
 {
 	PyObject *result, *args, *v = NULL;
 	char *p;
@@ -534,7 +599,9 @@ CD_callback(void *arg, CDDATATYPES type, void *data)
 }
 
 static PyObject *
-CD_deleteparser(cdparserobject *self, PyObject *args)
+CD_deleteparser(self, args)
+	cdparserobject *self;
+	PyObject *args;
 {
 	int i;
 
@@ -557,7 +624,9 @@ CD_deleteparser(cdparserobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_parseframe(cdparserobject *self, PyObject *args)
+CD_parseframe(self, args)
+	cdparserobject *self;
+	PyObject *args;
 {
 	char *cdfp;
 	int length;
@@ -585,7 +654,9 @@ CD_parseframe(cdparserobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_removecallback(cdparserobject *self, PyObject *args)
+CD_removecallback(self, args)
+	cdparserobject *self;
+	PyObject *args;
 {
 	int type;
 
@@ -610,7 +681,9 @@ CD_removecallback(cdparserobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_resetparser(cdparserobject *self, PyObject *args)
+CD_resetparser(self, args)
+	cdparserobject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ":resetparser"))
 		return NULL;
@@ -622,7 +695,9 @@ CD_resetparser(cdparserobject *self, PyObject *args)
 }
 
 static PyObject *
-CD_addcallback(cdparserobject *self, PyObject *args)
+CD_addcallback(self, args)
+	cdparserobject *self;
+	PyObject *args;
 {
 	int type;
 	PyObject *func, *funcarg;
@@ -674,7 +749,8 @@ static PyMethodDef cdparser_methods[] = {
 };
 
 static void
-cdparser_dealloc(cdparserobject *self)
+cdparser_dealloc(self)
+	cdparserobject *self;
 {
 	int i;
 
@@ -689,7 +765,9 @@ cdparser_dealloc(cdparserobject *self)
 }
 
 static PyObject *
-cdparser_getattr(cdparserobject *self, char *name)
+cdparser_getattr(self, name)
+	cdparserobject *self;
+	char *name;
 {
 	if (self->ob_cdparser == NULL) {
 		PyErr_SetString(PyExc_RuntimeError, "no parser active");
@@ -715,7 +793,8 @@ PyTypeObject CdParsertype = {
 };
 
 static PyObject *
-newcdparserobject(CDPARSER *cdp)
+newcdparserobject(cdp)
+	CDPARSER *cdp;
 {
 	cdparserobject *p;
 	int i;
@@ -732,7 +811,8 @@ newcdparserobject(CDPARSER *cdp)
 }
 
 static PyObject *
-CD_createparser(PyObject *self, PyObject *args)
+CD_createparser(self, args)
+	PyObject *self, *args;
 {
 	CDPARSER *cdp;
 
@@ -748,7 +828,8 @@ CD_createparser(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-CD_msftoframe(PyObject *self, PyObject *args)
+CD_msftoframe(self, args)
+	PyObject *self, *args;
 {
 	int min, sec, frame;
 
@@ -766,7 +847,7 @@ static PyMethodDef CD_methods[] = {
 };
 
 void
-initcd(void)
+initcd()
 {
 	PyObject *m, *d;
 

@@ -27,7 +27,7 @@ newline = re.compile('\n')
 attrfind = re.compile(
     _S + '(?P<name>' + _Name + ')'
     '(' + _opS + '=' + _opS +
-    '(?P<value>'+_QStr+'|[-a-zA-Z0-9.:+*%?!\(\)_#=~]+))?')
+    '(?P<value>'+_QStr+'|[-a-zA-Z0-9.:+*%?!()_#=~]+))?')
 starttagopen = re.compile('<' + _Name)
 starttagend = re.compile(_opS + '(?P<slash>/?)>')
 starttagmatch = re.compile('<(?P<tagname>'+_Name+')'
@@ -43,8 +43,8 @@ cdataclose = re.compile(r'\]\]>')
 # SYSTEM SystemLiteral
 # PUBLIC PubidLiteral SystemLiteral
 _SystemLiteral = '(?P<%s>'+_QStr+')'
-_PublicLiteral = '(?P<%s>"[-\'\(\)+,./:=?;!*#@$_%% \n\ra-zA-Z0-9]*"|' \
-                        "'[-\(\)+,./:=?;!*#@$_%% \n\ra-zA-Z0-9]*')"
+_PublicLiteral = '(?P<%s>"[-\'()+,./:=?;!*#@$_%% \n\ra-zA-Z0-9]*"|' \
+                        "'[-()+,./:=?;!*#@$_%% \n\ra-zA-Z0-9]*')"
 _ExternalId = '(?:SYSTEM|' \
                  'PUBLIC'+_S+_PublicLiteral%'pubid'+ \
               ')'+_S+_SystemLiteral%'syslit'
@@ -79,7 +79,7 @@ xmlns = re.compile('xmlns(?::(?P<ncname>'+_NCName+'))?$')
 # special names to handle tags: start_foo and end_foo to handle <foo>
 # and </foo>, respectively.  The data between tags is passed to the
 # parser by calling self.handle_data() with some data as argument (the
-# data may be split up in arbitrary chunks).
+# data may be split up in arbutrary chunks).
 
 class XMLParser:
     attributes = {}                     # default, to be overridden
@@ -90,7 +90,6 @@ class XMLParser:
     __accept_missing_endtag_name = 0
     __map_case = 0
     __accept_utf8 = 0
-    __translate_attribute_references = 1
 
     # Interface -- initialize and reset this instance
     def __init__(self, **kw):
@@ -103,8 +102,6 @@ class XMLParser:
             self.__map_case = kw['map_case']
         if kw.has_key('accept_utf8'):
             self.__accept_utf8 = kw['accept_utf8']
-        if kw.has_key('translate_attribute_references'):
-            self.__translate_attribute_references = kw['translate_attribute_references']
         self.reset()
 
     def __fixelements(self):
@@ -143,7 +140,7 @@ class XMLParser:
         self.__seen_starttag = 0
         self.__use_namespaces = 0
         self.__namespaces = {'xml':None}   # xml is implicitly declared
-        # backward compatibility hack: if elements not overridden,
+        # backward compatipibility hack: if elements not overridden,
         # fill it in ourselves
         if self.elements is XMLParser.elements:
             self.__fixelements()
@@ -174,53 +171,42 @@ class XMLParser:
 
     # Interface -- translate references
     def translate_references(self, data, all = 1):
-        if not self.__translate_attribute_references:
-            return data
         i = 0
         while 1:
             res = amp.search(data, i)
             if res is None:
                 return data
-            s = res.start(0)
-            res = ref.match(data, s)
+            res = ref.match(data, res.start(0))
             if res is None:
                 self.syntax_error("bogus `&'")
-                i = s+1
+                i =i+1
                 continue
             i = res.end(0)
+            if data[i - 1] != ';':
+                self.syntax_error("`;' missing after entity/char reference")
+                i = i-1
             str = res.group(1)
-            rescan = 0
+            pre = data[:res.start(0)]
+            post = data[i:]
             if str[0] == '#':
                 if str[1] == 'x':
                     str = chr(string.atoi(str[2:], 16))
                 else:
                     str = chr(string.atoi(str[1:]))
-                if data[i - 1] != ';':
-                    self.syntax_error("`;' missing after char reference")
-                    i = i-1
+                data = pre + str + post
+                i = res.start(0)+len(str)
             elif all:
                 if self.entitydefs.has_key(str):
-                    str = self.entitydefs[str]
-                    rescan = 1
-                elif data[i - 1] != ';':
-                    self.syntax_error("bogus `&'")
-                    i = s + 1 # just past the &
-                    continue
+                    data = pre + self.entitydefs[str] + post
+                    i = res.start(0)    # rescan substituted text
                 else:
                     self.syntax_error("reference to unknown entity `&%s;'" % str)
-                    str = '&' + str + ';'
-            elif data[i - 1] != ';':
-                self.syntax_error("bogus `&'")
-                i = s + 1 # just past the &
-                continue
-
-            # when we get here, str contains the translated text and i points
-            # to the end of the string that is to be replaced
-            data = data[:s] + str + data[i:]
-            if rescan:
-                i = s
+                    # can't do it, so keep the entity ref in
+                    data = pre + '&' + str + ';' + post
+                    i = res.start(0) + len(str) + 2
             else:
-                i = s + len(str)
+                # just translating character references
+                pass                    # i is already postioned correctly
 
     # Internal -- handle data as far as reasonable.  May leave state
     # and data to be processed by a subsequent call.  If 'end' is
@@ -291,7 +277,7 @@ class XMLParser:
                 if cdataopen.match(rawdata, i):
                     k = self.parse_cdata(i)
                     if k < 0: break
-                    self.lineno = self.lineno + string.count(rawdata[i:k], '\n')
+                    self.lineno = self.lineno + string.count(rawdata[i:i], '\n')
                     i = k
                     continue
                 res = xmldecl.match(rawdata, i)
@@ -666,7 +652,7 @@ class XMLParser:
                 return i+1
             if not self.__accept_missing_endtag_name:
                 self.syntax_error('no name specified in end tag')
-            tag = self.stack[-1][0]
+                tag = self.stack[-1][0]
             k = i+2
         else:
             tag = res.group(0)
@@ -705,6 +691,11 @@ class XMLParser:
                     found = i
             if found == -1:
                 self.syntax_error('unopened end tag')
+                method = self.elements.get(tag, (None, None))[1]
+                if method is not None:
+                    self.handle_endtag(tag, method)
+                else:
+                    self.unknown_endtag(tag)
                 return
         while len(self.stack) > found:
             if found < len(self.stack) - 1:

@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Parser generator */
@@ -45,17 +66,18 @@ typedef struct _nfa {
 } nfa;
 
 /* Forward */
-static void compile_rhs(labellist *ll,
-			nfa *nf, node *n, int *pa, int *pb);
-static void compile_alt(labellist *ll,
-			nfa *nf, node *n, int *pa, int *pb);
-static void compile_item(labellist *ll,
-			 nfa *nf, node *n, int *pa, int *pb);
-static void compile_atom(labellist *ll,
-			 nfa *nf, node *n, int *pa, int *pb);
+static void compile_rhs Py_PROTO((labellist *ll,
+			       nfa *nf, node *n, int *pa, int *pb));
+static void compile_alt Py_PROTO((labellist *ll,
+			       nfa *nf, node *n, int *pa, int *pb));
+static void compile_item Py_PROTO((labellist *ll,
+				nfa *nf, node *n, int *pa, int *pb));
+static void compile_atom Py_PROTO((labellist *ll,
+				nfa *nf, node *n, int *pa, int *pb));
 
 static int
-addnfastate(nfa *nf)
+addnfastate(nf)
+	nfa *nf;
 {
 	nfastate *st;
 	
@@ -69,7 +91,9 @@ addnfastate(nfa *nf)
 }
 
 static void
-addnfaarc(nfa *nf, int from, int to, int lbl)
+addnfaarc(nf, from, to, lbl)
+	nfa *nf;
+	int from, to, lbl;
 {
 	nfastate *st;
 	nfaarc *ar;
@@ -84,7 +108,8 @@ addnfaarc(nfa *nf, int from, int to, int lbl)
 }
 
 static nfa *
-newnfa(char *name)
+newnfa(name)
+	char *name;
 {
 	nfa *nf;
 	static int type = NT_OFFSET; /* All types will be disjunct */
@@ -107,10 +132,10 @@ typedef struct _nfagrammar {
 } nfagrammar;
 
 /* Forward */
-static void compile_rule(nfagrammar *gr, node *n);
+static void compile_rule Py_PROTO((nfagrammar *gr, node *n));
 
 static nfagrammar *
-newnfagrammar(void)
+newnfagrammar()
 {
 	nfagrammar *gr;
 	
@@ -126,7 +151,9 @@ newnfagrammar(void)
 }
 
 static nfa *
-addnfa(nfagrammar *gr, char *name)
+addnfa(gr, name)
+	nfagrammar *gr;
+	char *name;
 {
 	nfa *nf;
 	
@@ -154,7 +181,8 @@ static char REQNFMT[] = "metacompile: less than %d children\n";
 #endif
 
 static nfagrammar *
-metacompile(node *n)
+metacompile(n)
+	node *n;
 {
 	nfagrammar *gr;
 	int i;
@@ -172,7 +200,9 @@ metacompile(node *n)
 }
 
 static void
-compile_rule(nfagrammar *gr, node *n)
+compile_rule(gr, n)
+	nfagrammar *gr;
+	node *n;
 {
 	nfa *nf;
 	
@@ -191,7 +221,11 @@ compile_rule(nfagrammar *gr, node *n)
 }
 
 static void
-compile_rhs(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
+compile_rhs(ll, nf, n, pa, pb)
+	labellist *ll;
+	nfa *nf;
+	node *n;
+	int *pa, *pb;
 {
 	int i;
 	int a, b;
@@ -224,7 +258,11 @@ compile_rhs(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 }
 
 static void
-compile_alt(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
+compile_alt(ll, nf, n, pa, pb)
+	labellist *ll;
+	nfa *nf;
+	node *n;
+	int *pa, *pb;
 {
 	int i;
 	int a, b;
@@ -251,7 +289,11 @@ compile_alt(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 }
 
 static void
-compile_item(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
+compile_item(ll, nf, n, pa, pb)
+	labellist *ll;
+	nfa *nf;
+	node *n;
+	int *pa, *pb;
 {
 	int i;
 	int a, b;
@@ -288,7 +330,11 @@ compile_item(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 }
 
 static void
-compile_atom(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
+compile_atom(ll, nf, n, pa, pb)
+	labellist *ll;
+	nfa *nf;
+	node *n;
+	int *pa, *pb;
 {
 	int i;
 	
@@ -314,7 +360,10 @@ compile_atom(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 }
 
 static void
-dumpstate(labellist *ll, nfa *nf, int istate)
+dumpstate(ll, nf, istate)
+	labellist *ll;
+	nfa *nf;
+	int istate;
 {
 	nfastate *st;
 	int i;
@@ -337,7 +386,9 @@ dumpstate(labellist *ll, nfa *nf, int istate)
 }
 
 static void
-dumpnfa(labellist *ll, nfa *nf)
+dumpnfa(ll, nf)
+	labellist *ll;
+	nfa *nf;
 {
 	int i;
 	
@@ -351,7 +402,10 @@ dumpnfa(labellist *ll, nfa *nf)
 /* PART TWO -- CONSTRUCT DFA -- Algorithm 3.1 from [Aho&Ullman 77] */
 
 static void
-addclosure(bitset ss, nfa *nf, int istate)
+addclosure(ss, nf, istate)
+	bitset ss;
+	nfa *nf;
+	int istate;
 {
 	if (addbit(ss, istate)) {
 		nfastate *st = &nf->nf_state[istate];
@@ -387,13 +441,16 @@ typedef struct _ss_dfa {
 } ss_dfa;
 
 /* Forward */
-static void printssdfa(int xx_nstates, ss_state *xx_state, int nbits,
-		       labellist *ll, char *msg);
-static void simplify(int xx_nstates, ss_state *xx_state);
-static void convert(dfa *d, int xx_nstates, ss_state *xx_state);
+static void printssdfa Py_PROTO((int xx_nstates, ss_state *xx_state, int nbits,
+			      labellist *ll, char *msg));
+static void simplify Py_PROTO((int xx_nstates, ss_state *xx_state));
+static void convert Py_PROTO((dfa *d, int xx_nstates, ss_state *xx_state));
 
 static void
-makedfa(nfagrammar *gr, nfa *nf, dfa *d)
+makedfa(gr, nf, d)
+	nfagrammar *gr;
+	nfa *nf;
+	dfa *d;
 {
 	int nbits = nf->nf_nstates;
 	bitset ss;
@@ -497,8 +554,12 @@ makedfa(nfagrammar *gr, nfa *nf, dfa *d)
 }
 
 static void
-printssdfa(int xx_nstates, ss_state *xx_state, int nbits,
-	   labellist *ll, char *msg)
+printssdfa(xx_nstates, xx_state, nbits, ll, msg)
+	int xx_nstates;
+	ss_state *xx_state;
+	int nbits;
+	labellist *ll;
+	char *msg;
 {
 	int i, ibit, iarc;
 	ss_state *yy;
@@ -535,11 +596,12 @@ printssdfa(int xx_nstates, ss_state *xx_state, int nbits,
    equivalent to another oner.  This is NOT Algorithm 3.3 from
    [Aho&Ullman 77].  It does not always finds the minimal DFA,
    but it does usually make a much smaller one...  (For an example
-   of sub-optimal behavior, try S: x a b+ | y a b+.)
+   of sub-optimal behaviour, try S: x a b+ | y a b+.)
 */
 
 static int
-samestate(ss_state *s1, ss_state *s2)
+samestate(s1, s2)
+	ss_state *s1, *s2;
 {
 	int i;
 	
@@ -554,7 +616,10 @@ samestate(ss_state *s1, ss_state *s2)
 }
 
 static void
-renamestates(int xx_nstates, ss_state *xx_state, int from, int to)
+renamestates(xx_nstates, xx_state, from, to)
+	int xx_nstates;
+	ss_state *xx_state;
+	int from, to;
 {
 	int i, j;
 	
@@ -571,7 +636,9 @@ renamestates(int xx_nstates, ss_state *xx_state, int from, int to)
 }
 
 static void
-simplify(int xx_nstates, ss_state *xx_state)
+simplify(xx_nstates, xx_state)
+	int xx_nstates;
+	ss_state *xx_state;
 {
 	int changes;
 	int i, j;
@@ -602,7 +669,10 @@ simplify(int xx_nstates, ss_state *xx_state)
 /* Convert the DFA into a grammar that can be used by our parser */
 
 static void
-convert(dfa *d, int xx_nstates, ss_state *xx_state)
+convert(d, xx_nstates, xx_state)
+	dfa *d;
+	int xx_nstates;
+	ss_state *xx_state;
 {
 	int i, j;
 	ss_state *yy;
@@ -636,7 +706,8 @@ convert(dfa *d, int xx_nstates, ss_state *xx_state)
 /* PART FIVE -- GLUE IT ALL TOGETHER */
 
 static grammar *
-maketables(nfagrammar *gr)
+maketables(gr)
+	nfagrammar *gr;
 {
 	int i;
 	nfa *nf;
@@ -664,7 +735,8 @@ maketables(nfagrammar *gr)
 }
 
 grammar *
-pgen(node *n)
+pgen(n)
+	node *n;
 {
 	nfagrammar *gr;
 	grammar *g;

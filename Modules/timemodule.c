@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Time module */
@@ -49,7 +70,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #ifdef HAVE_FTIME
 #include <sys/timeb.h>
 #if !defined(MS_WINDOWS) && !defined(PYOS_OS2)
-extern int ftime(struct timeb *);
+extern int ftime();
 #endif /* MS_WINDOWS */
 #endif /* HAVE_FTIME */
 
@@ -68,12 +89,11 @@ extern int ftime(struct timeb *);
 #endif /* MS_WINDOWS */
 #endif /* !__WATCOMC__ || __QNX__ */
 
-#if defined(MS_WIN32) && !defined(MS_WIN64)
-/* Win32 has better clock replacement
-   XXX Win64 does not yet, but might when the platform matures. */
+#ifdef MS_WIN32
+/* Win32 has better clock replacement */
 #include <largeint.h>
 #undef HAVE_CLOCK /* We have our own version down below */
-#endif /* MS_WIN32 && !MS_WIN64 */
+#endif /* MS_WIN32 */
 
 #if defined(PYCC_VACPP)
 #include <sys/time.h>
@@ -90,8 +110,8 @@ extern int ftime(struct timeb *);
 #endif
 
 /* Forward declarations */
-static int floatsleep(double);
-static double floattime(void);
+static int floatsleep Py_PROTO((double));
+static double floattime Py_PROTO(());
 
 /* For Y2K check */
 static PyObject *moddict;
@@ -107,7 +127,7 @@ static PyObject *moddict;
 static long timezone;
 
 static void 
-initmactimezone(void)
+initmactimezone()
 {
 	MachineLocation	loc;
 	long		delta;
@@ -128,7 +148,9 @@ initmactimezone(void)
 
 
 static PyObject *
-time_time(PyObject *self, PyObject *args)
+time_time(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double secs;
 	if (!PyArg_NoArgs(args))
@@ -158,7 +180,9 @@ Fractions of a second may be present if the system clock provides them.";
 #endif
 
 static PyObject *
-time_clock(PyObject *self, PyObject *args)
+time_clock(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -166,10 +190,12 @@ time_clock(PyObject *self, PyObject *args)
 }
 #endif /* HAVE_CLOCK */
 
-#if defined(MS_WIN32) && !defined(MS_WIN64)
+#ifdef MS_WIN32
 /* Due to Mark Hammond */
 static PyObject *
-time_clock(PyObject *self, PyObject *args)
+time_clock(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	static LARGE_INTEGER ctrStart;
 	static LARGE_INTEGER divisor = {0,0};
@@ -200,7 +226,7 @@ time_clock(PyObject *self, PyObject *args)
 }
 
 #define HAVE_CLOCK /* So it gets included in the methods */
-#endif /* MS_WIN32 && !MS_WIN64 */
+#endif /* MS_WIN32 */
 
 #ifdef HAVE_CLOCK
 static char clock_doc[] =
@@ -211,7 +237,9 @@ the first call to clock().  This has as much precision as the system records.";
 #endif
 
 static PyObject *
-time_sleep(PyObject *self, PyObject *args)
+time_sleep(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double secs;
 	if (!PyArg_Parse(args, "d", &secs))
@@ -229,7 +257,8 @@ Delay execution for a given number of seconds.  The argument may be\n\
 a floating point number for subsecond precision.";
 
 static PyObject *
-tmtotuple(struct tm *p)
+tmtotuple(p)
+	struct tm *p;
 {
 	return Py_BuildValue("(iiiiiiiii)",
 			     p->tm_year + 1900,
@@ -244,11 +273,13 @@ tmtotuple(struct tm *p)
 }
 
 static PyObject *
-time_convert(time_t when, struct tm * (*function)(const time_t *))
+time_convert(when, function)
+	time_t when;
+	struct tm * (*function) Py_PROTO((const time_t *));
 {
 	struct tm *p;
 	errno = 0;
-#if defined(macintosh) && defined(USE_GUSI204)
+#if defined(macintosh) && defined(USE_GUSI2)
 	when = when + GUSI_TO_MSL_EPOCH;
 #endif
 	p = function(&when);
@@ -263,7 +294,9 @@ time_convert(time_t when, struct tm * (*function)(const time_t *))
 }
 
 static PyObject *
-time_gmtime(PyObject *self, PyObject *args)
+time_gmtime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double when;
 	if (!PyArg_Parse(args, "d", &when))
@@ -277,7 +310,9 @@ static char gmtime_doc[] =
 Convert seconds since the Epoch to a time tuple expressing UTC (a.k.a. GMT).";
 
 static PyObject *
-time_localtime(PyObject *self, PyObject *args)
+time_localtime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double when;
 	if (!PyArg_Parse(args, "d", &when))
@@ -290,10 +325,12 @@ static char localtime_doc[] =
 Convert seconds since the Epoch to a time tuple expressing local time.";
 
 static int
-gettmarg(PyObject *args, struct tm *p)
+gettmarg(args, p)
+	PyObject *args;
+	struct tm *p;
 {
 	int y;
-	memset((void *) p, '\0', sizeof(struct tm));
+	memset((ANY *) p, '\0', sizeof(struct tm));
 
 	if (!PyArg_Parse(args, "(iiiiiiiii)",
 			 &y,
@@ -334,16 +371,18 @@ gettmarg(PyObject *args, struct tm *p)
 
 #ifdef HAVE_STRFTIME
 static PyObject *
-time_strftime(PyObject *self, PyObject *args)
+time_strftime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *tup;
 	struct tm buf;
 	const char *fmt;
-	size_t fmtlen, buflen;
+	int fmtlen, buflen;
 	char *outbuf = 0;
-	size_t i;
+	int i;
 
-	memset((void *) &buf, '\0', sizeof(buf));
+	memset((ANY *) &buf, '\0', sizeof(buf));
 
 	if (!PyArg_ParseTuple(args, "sO:strftime", &fmt, &tup) 
 	    || !gettmarg(tup, &buf))
@@ -384,12 +423,13 @@ See the library reference manual for formatting codes.";
 #ifdef HAVE_STRPTIME
 
 #if 0
-/* Enable this if it's not declared in <time.h> */
-extern char *strptime(const char *, const char *, struct tm *);
+extern char *strptime(); /* Enable this if it's not declared in <time.h> */
 #endif
 
 static PyObject *
-time_strptime(PyObject *self, PyObject *args)
+time_strptime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	struct tm tm;
 	char *fmt = "%a %b %d %H:%M:%S %Y";
@@ -398,7 +438,7 @@ time_strptime(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "s|s:strptime", &buf, &fmt))
 	        return NULL;
-	memset((void *) &tm, '\0', sizeof(tm));
+	memset((ANY *) &tm, '\0', sizeof(tm));
 	s = strptime(buf, fmt, &tm);
 	if (s == NULL) {
 		PyErr_SetString(PyExc_ValueError, "format mismatch");
@@ -421,7 +461,9 @@ See the library reference manual for formatting codes (same as strftime()).";
 #endif /* HAVE_STRPTIME */
 
 static PyObject *
-time_asctime(PyObject *self, PyObject *args)
+time_asctime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *tup;
 	struct tm buf;
@@ -442,7 +484,9 @@ static char asctime_doc[] =
 Convert a time tuple to a string, e.g. 'Sat Jun 06 16:26:11 1998'.";
 
 static PyObject *
-time_ctime(PyObject *self, PyObject *args)
+time_ctime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double dt;
 	time_t tt;
@@ -450,7 +494,7 @@ time_ctime(PyObject *self, PyObject *args)
 	if (!PyArg_Parse(args, "d", &dt))
 		return NULL;
 	tt = (time_t)dt;
-#if defined(macintosh) && defined(USE_GUSI204)
+#if defined(macintosh) && defined(USE_GUSI2)
 	tt = tt + GUSI_TO_MSL_EPOCH;
 #endif
 	p = ctime(&tt);
@@ -471,7 +515,9 @@ This is equivalent to asctime(localtime(seconds)).";
 
 #ifdef HAVE_MKTIME
 static PyObject *
-time_mktime(PyObject *self, PyObject *args)
+time_mktime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *tup;
 	struct tm buf;
@@ -523,7 +569,10 @@ static PyMethodDef time_methods[] = {
 };
 
 static void
-ins(PyObject *d, char *name, PyObject *v)
+ins(d, name, v)
+	PyObject *d;
+	char *name;
+	PyObject *v;
 {
 	if (v == NULL)
 		Py_FatalError("Can't initialize time module -- NULL value");
@@ -580,7 +629,7 @@ strptime() -- parse string to time tuple according to format specification\n\
   
 
 DL_EXPORT(void)
-inittime(void)
+inittime()
 {
 	PyObject *m, *d;
 	char *p;
@@ -668,7 +717,7 @@ inittime(void)
 /* Implement floattime() for various platforms */
 
 static double
-floattime(void)
+floattime()
 {
 	/* There are three ways to get the time:
 	  (1) gettimeofday() -- resolution in microseconds
@@ -709,7 +758,12 @@ floattime(void)
    set an exception; else return 0. */
 
 static int
+#ifdef MPW
 floatsleep(double secs)
+#else
+	floatsleep(secs)
+	double secs;
+#endif /* MPW */
 {
 /* XXX Should test for MS_WIN32 first! */
 #if defined(HAVE_SELECT) && !defined(__BEOS__)
@@ -752,8 +806,8 @@ floatsleep(double secs)
 #ifdef MSDOS
 	struct timeb t1, t2;
 	double frac;
-	extern double fmod(double, double);
-	extern double floor(double);
+	extern double fmod Py_PROTO((double, double));
+	extern double floor Py_PROTO((double));
 	if (secs <= 0.0)
 		return;
 	frac = fmod(secs, 1.0);
@@ -780,17 +834,10 @@ floatsleep(double secs)
 	}
 #else /* !MSDOS */
 #ifdef MS_WIN32
-	{
-		double millisecs = secs * 1000.0;
-		if (millisecs > (double)ULONG_MAX) {
-			PyErr_SetString(PyExc_OverflowError, "sleep length is too large");
-			return -1;
-		}
-		/* XXX Can't interrupt this sleep */
-		Py_BEGIN_ALLOW_THREADS
-		Sleep((unsigned long)millisecs);
-		Py_END_ALLOW_THREADS
-	}
+	/* XXX Can't interrupt this sleep */
+	Py_BEGIN_ALLOW_THREADS
+	Sleep((int)(secs*1000));
+	Py_END_ALLOW_THREADS
 #else /* !MS_WIN32 */
 #ifdef PYOS_OS2
 	/* This Sleep *IS* Interruptable by Exceptions */

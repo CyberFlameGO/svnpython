@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Readline interface for tokenizer.c and [raw_]input() in bltinmodule.c.
@@ -19,17 +40,17 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 */
 
 #include "Python.h"
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
 
-int (*PyOS_InputHook)(void) = NULL;
+int (*PyOS_InputHook)() = NULL;
 
 /* This function restarts a fgets() after an EINTR error occurred
    except if PyOS_InterruptOccurred() returns true. */
 
 static int
-my_fgets(char *buf, int len, FILE *fp)
+my_fgets(buf, len, fp)
+	char *buf;
+	int len;
+	FILE *fp;
 {
 	char *p;
 	for (;;) {
@@ -62,9 +83,10 @@ my_fgets(char *buf, int len, FILE *fp)
 /* Readline implementation using fgets() */
 
 char *
-PyOS_StdioReadline(char *prompt)
+PyOS_StdioReadline(prompt)
+	char *prompt;
 {
-	size_t n;
+	int n;
 	char *p;
 	n = 100;
 	if ((p = PyMem_MALLOC(n)) == NULL)
@@ -73,7 +95,7 @@ PyOS_StdioReadline(char *prompt)
 	if (prompt)
 		fprintf(stderr, "%s", prompt);
 	fflush(stderr);
-	switch (my_fgets(p, (int)n, stdin)) {
+	switch (my_fgets(p, n, stdin)) {
 	case 0: /* Normal case */
 		break;
 	case 1: /* Interrupt */
@@ -94,14 +116,11 @@ PyOS_StdioReadline(char *prompt)
 #endif
 	n = strlen(p);
 	while (n > 0 && p[n-1] != '\n') {
-		size_t incr = n+2;
+		int incr = n+2;
 		p = PyMem_REALLOC(p, n + incr);
 		if (p == NULL)
 			return NULL;
-		if (incr > INT_MAX) {
-			PyErr_SetString(PyExc_OverflowError, "input line too long");
-		}
-		if (my_fgets(p+n, (int)incr, stdin) != 0)
+		if (my_fgets(p+n, incr, stdin) != 0)
 			break;
 		n += strlen(p+n);
 	}
@@ -114,13 +133,14 @@ PyOS_StdioReadline(char *prompt)
 
    Note: Python expects in return a buffer allocated with PyMem_Malloc. */
 
-char *(*PyOS_ReadlineFunctionPointer)(char *);
+char *(*PyOS_ReadlineFunctionPointer) Py_PROTO((char *));
 
 
 /* Interface used by tokenizer.c and bltinmodule.c */
 
 char *
-PyOS_Readline(char *prompt)
+PyOS_Readline(prompt)
+	char *prompt;
 {
 	char *rv;
 	if (PyOS_ReadlineFunctionPointer == NULL) {

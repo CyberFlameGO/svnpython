@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Function object implementation */
@@ -15,7 +36,9 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #include "structmember.h"
 
 PyObject *
-PyFunction_New(PyObject *code, PyObject *globals)
+PyFunction_New(code, globals)
+	PyObject *code;
+	PyObject *globals;
 {
 	PyFunctionObject *op = PyObject_NEW(PyFunctionObject,
 					    &PyFunction_Type);
@@ -40,12 +63,12 @@ PyFunction_New(PyObject *code, PyObject *globals)
 		Py_INCREF(doc);
 		op->func_doc = doc;
 	}
-	PyObject_GC_Init(op);
 	return (PyObject *)op;
 }
 
 PyObject *
-PyFunction_GetCode(PyObject *op)
+PyFunction_GetCode(op)
+	PyObject *op;
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -55,7 +78,8 @@ PyFunction_GetCode(PyObject *op)
 }
 
 PyObject *
-PyFunction_GetGlobals(PyObject *op)
+PyFunction_GetGlobals(op)
+	PyObject *op;
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -65,7 +89,8 @@ PyFunction_GetGlobals(PyObject *op)
 }
 
 PyObject *
-PyFunction_GetDefaults(PyObject *op)
+PyFunction_GetDefaults(op)
+	PyObject *op;
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -75,7 +100,9 @@ PyFunction_GetDefaults(PyObject *op)
 }
 
 int
-PyFunction_SetDefaults(PyObject *op, PyObject *defaults)
+PyFunction_SetDefaults(op, defaults)
+	PyObject *op;
+	PyObject *defaults;
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -111,7 +138,9 @@ static struct memberlist func_memberlist[] = {
 };
 
 static PyObject *
-func_getattr(PyFunctionObject *op, char *name)
+func_getattr(op, name)
+	PyFunctionObject *op;
+	char *name;
 {
 	if (name[0] != '_' && PyEval_GetRestricted()) {
 		PyErr_SetString(PyExc_RuntimeError,
@@ -122,7 +151,10 @@ func_getattr(PyFunctionObject *op, char *name)
 }
 
 static int
-func_setattr(PyFunctionObject *op, char *name, PyObject *value)
+func_setattr(op, name, value)
+	PyFunctionObject *op;
+	char *name;
+	PyObject *value;
 {
 	if (PyEval_GetRestricted()) {
 		PyErr_SetString(PyExc_RuntimeError,
@@ -151,33 +183,34 @@ func_setattr(PyFunctionObject *op, char *name, PyObject *value)
 }
 
 static void
-func_dealloc(PyFunctionObject *op)
+func_dealloc(op)
+	PyFunctionObject *op;
 {
-	PyObject_GC_Fini(op);
 	Py_DECREF(op->func_code);
 	Py_DECREF(op->func_globals);
 	Py_DECREF(op->func_name);
 	Py_XDECREF(op->func_defaults);
 	Py_XDECREF(op->func_doc);
-	op = (PyFunctionObject *) PyObject_AS_GC(op);
 	PyObject_DEL(op);
 }
 
 static PyObject*
-func_repr(PyFunctionObject *op)
+func_repr(op)
+	PyFunctionObject *op;
 {
 	char buf[140];
 	if (op->func_name == Py_None)
-		sprintf(buf, "<anonymous function at %p>", op);
+		sprintf(buf, "<anonymous function at %lx>", (long)op);
 	else
-		sprintf(buf, "<function %.100s at %p>",
+		sprintf(buf, "<function %.100s at %lx>",
 			PyString_AsString(op->func_name),
-			op);
+			(long)op);
 	return PyString_FromString(buf);
 }
 
 static int
-func_compare(PyFunctionObject *f, PyFunctionObject *g)
+func_compare(f, g)
+	PyFunctionObject *f, *g;
 {
 	int c;
 	if (f->func_globals != g->func_globals)
@@ -195,55 +228,22 @@ func_compare(PyFunctionObject *f, PyFunctionObject *g)
 }
 
 static long
-func_hash(PyFunctionObject *f)
+func_hash(f)
+	PyFunctionObject *f;
 {
-	long h,x;
+	long h;
 	h = PyObject_Hash(f->func_code);
 	if (h == -1) return h;
-	x = _Py_HashPointer(f->func_globals);
-	if (x == -1) return x;
-	h ^= x;
+	h = h ^ (long)f->func_globals;
 	if (h == -1) h = -2;
 	return h;
-}
-
-static int
-func_traverse(PyFunctionObject *f, visitproc visit, void *arg)
-{
-	int err;
-	if (f->func_code) {
-		err = visit(f->func_code, arg);
-		if (err)
-			return err;
-	}
-	if (f->func_globals) {
-		err = visit(f->func_globals, arg);
-		if (err)
-			return err;
-	}
-	if (f->func_defaults) {
-		err = visit(f->func_defaults, arg);
-		if (err)
-			return err;
-	}
-	if (f->func_doc) {
-		err = visit(f->func_doc, arg);
-		if (err)
-			return err;
-	}
-	if (f->func_name) {
-		err = visit(f->func_name, arg);
-		if (err)
-			return err;
-	}
-	return 0;
 }
 
 PyTypeObject PyFunction_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"function",
-	sizeof(PyFunctionObject) + PyGC_HEAD_SIZE,
+	sizeof(PyFunctionObject),
 	0,
 	(destructor)func_dealloc, /*tp_dealloc*/
 	0,		/*tp_print*/
@@ -255,12 +255,4 @@ PyTypeObject PyFunction_Type = {
 	0,		/*tp_as_sequence*/
 	0,		/*tp_as_mapping*/
 	(hashfunc)func_hash, /*tp_hash*/
-	0,		/*tp_call*/
-	0,		/*tp_str*/
-	0,		/*tp_getattro*/
-	0,		/*tp_setattro*/
-	0,		/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC, /*tp_flags*/
-	0,		/* tp_doc */
-	(traverseproc)func_traverse,	/* tp_traverse */
 };

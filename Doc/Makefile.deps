@@ -48,7 +48,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libfuncs.tex \
 	../lib/libpython.tex \
 	../lib/libsys.tex \
-	../lib/libgc.tex \
 	../lib/libtypes.tex \
 	../lib/libtraceback.tex \
 	../lib/libpickle.tex \
@@ -62,7 +61,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libstrings.tex \
 	../lib/libstring.tex \
 	../lib/libcodecs.tex \
-	../lib/libunicodedata.tex \
 	../lib/libregex.tex \
 	../lib/libregsub.tex \
 	../lib/libstruct.tex \
@@ -167,7 +165,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libuserdict.tex \
 	../lib/libdis.tex \
 	../lib/libxmllib.tex \
-	../lib/libpyexpat.tex \
 	../lib/libqueue.tex \
 	../lib/liblocale.tex \
 	../lib/libbasehttp.tex \
@@ -187,10 +184,8 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libcmd.tex \
 	../lib/libmultifile.tex \
 	../lib/libthreading.tex \
-	../lib/libwebbrowser.tex \
 	../lib/internet.tex \
 	../lib/netdata.tex \
-	../lib/markup.tex \
 	../lib/libpycompile.tex \
 	../lib/libcompileall.tex \
 	../lib/libshlex.tex \
@@ -200,7 +195,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libshutil.tex \
 	../lib/librepr.tex \
 	../lib/libmsvcrt.tex \
-	../lib/libwinreg.tex \
 	../lib/libwinsound.tex \
 	../lib/windows.tex \
 	../lib/libpyclbr.tex \
@@ -222,19 +216,16 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libchunk.tex \
 	../lib/libcodeop.tex \
 	../lib/libcurses.tex \
-	../lib/libascii.tex \
 	../lib/libdl.tex \
 	../lib/libmutex.tex \
 	../lib/libnis.tex \
 	../lib/libpipes.tex \
 	../lib/libpty.tex \
-	../lib/libreadline.tex \
 	../lib/librlcompleter.tex \
 	../lib/libsched.tex \
 	../lib/libstatvfs.tex \
 	../lib/libtty.tex \
 	../lib/libasyncore.tex \
-	../lib/libatexit.tex \
 	../lib/libcfgparser.tex
 
 # LaTeX source files for Macintosh Library Modules.

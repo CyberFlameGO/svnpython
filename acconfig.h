@@ -59,6 +59,9 @@
 /* Define this if you have the type long long */
 #undef HAVE_LONG_LONG
 
+/* Define this if you have a K&R style C preprocessor */
+#undef HAVE_OLD_CPP
+
 /* Define if your compiler supports function prototypes */
 #undef HAVE_PROTOTYPES
 
@@ -141,18 +144,12 @@
 /* Define if you want to compile in rudimentary thread support */
 #undef WITH_THREAD
 
-/* Define if you want to compile in cycle garbage collection */
-#undef WITH_CYCLE_GC
-
 /* Define if you want to produce an OpenStep/Rhapsody framework
    (shared library plus accessory files). */
 #undef WITH_NEXT_FRAMEWORK
 
 /* The number of bytes in an off_t. */
 #undef SIZEOF_OFF_T
-
-/* The number of bytes in a time_t. */
-#undef SIZEOF_TIME_T
 
 /* Defined to enable large file support when an off_t is bigger than a long
    and long long is available and at least as big as an off_t. You may need
@@ -165,11 +162,6 @@
 
 /* Defined when any dynamic module loading is enabled */
 #undef HAVE_DYNAMIC_LOADING
-
-/* Define if i>>j for signed int i does not extend the sign bit
-   when i < 0
-*/
-#undef SIGNED_RIGHT_SHIFT_ZERO_FILLS
 
 
 /* Leave that blank line there-- autoheader needs it! */

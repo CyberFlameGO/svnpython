@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 #include <stdlib.h>
@@ -19,7 +40,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 /*
  * Initialization.
  */
-static void PyThread__init_thread(void)
+static void PyThread__init_thread _P0()
 {
 }
 
@@ -27,14 +48,13 @@ static void PyThread__init_thread(void)
  * Thread support.
  */
 struct func_arg {
-	void (*func)(void *);
+	void (*func) _P((void *));
 	void *arg;
 };
 
-static void *
-new_func(void *funcarg)
+static void *new_func _P1(funcarg, void *funcarg)
 {
-	void (*func)(void *);
+	void (*func) _P((void *));
 	void *arg;
 
 	func = ((struct func_arg *) funcarg)->func;
@@ -45,8 +65,7 @@ new_func(void *funcarg)
 }
 
 
-int 
-PyThread_start_new_thread(void (*func)(void *), void *arg)
+int PyThread_start_new_thread _P2(func, void (*func) _P((void *)), arg, void *arg)
 {
 	struct func_arg *funcarg;
 	int success = 0;	/* init not needed when SOLARIS_THREADS and */
@@ -67,16 +86,14 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 	return success < 0 ? 0 : 1;
 }
 
-long
-PyThread_get_thread_ident(void)
+long PyThread_get_thread_ident _P0()
 {
 	if (!initialized)
 		PyThread_init_thread();
 	return thr_self();
 }
 
-static void 
-do_PyThread_exit_thread(int no_cleanup)
+static void do_PyThread_exit_thread _P1(no_cleanup, int no_cleanup)
 {
 	dprintf(("PyThread_exit_thread called\n"));
 	if (!initialized)
@@ -87,21 +104,18 @@ do_PyThread_exit_thread(int no_cleanup)
 	thr_exit(0);
 }
 
-void 
-PyThread_exit_thread(void)
+void PyThread_exit_thread _P0()
 {
 	do_PyThread_exit_thread(0);
 }
 
-void 
-PyThread__exit_thread(void)
+void PyThread__exit_thread _P0()
 {
 	do_PyThread_exit_thread(1);
 }
 
 #ifndef NO_EXIT_PROG
-static void 
-do_PyThread_exit_prog(int status, int no_cleanup)
+static void do_PyThread_exit_prog _P2(status, int status, no_cleanup, int no_cleanup)
 {
 	dprintf(("PyThread_exit_prog(%d) called\n", status));
 	if (!initialized)
@@ -115,14 +129,12 @@ do_PyThread_exit_prog(int status, int no_cleanup)
 		exit(status);
 }
 
-void 
-PyThread_exit_prog(int status)
+void PyThread_exit_prog _P1(status, int status)
 {
 	do_PyThread_exit_prog(status, 0);
 }
 
-void 
-PyThread__exit_prog(int status)
+void PyThread__exit_prog _P1(status, int status)
 {
 	do_PyThread_exit_prog(status, 1);
 }
@@ -131,8 +143,7 @@ PyThread__exit_prog(int status)
 /*
  * Lock support.
  */
-PyThread_type_lock 
-PyThread_allocate_lock(void)
+PyThread_type_lock PyThread_allocate_lock _P0()
 {
 	mutex_t *lock;
 
@@ -146,24 +157,22 @@ PyThread_allocate_lock(void)
 		free((void *) lock);
 		lock = 0;
 	}
-	dprintf(("PyThread_allocate_lock() -> %p\n", lock));
+	dprintf(("PyThread_allocate_lock() -> %lx\n", (long)lock));
 	return (PyThread_type_lock) lock;
 }
 
-void 
-PyThread_free_lock(PyThread_type_lock lock)
+void PyThread_free_lock _P1(lock, PyThread_type_lock lock)
 {
-	dprintf(("PyThread_free_lock(%p) called\n", lock));
+	dprintf(("PyThread_free_lock(%lx) called\n", (long)lock));
 	mutex_destroy((mutex_t *) lock);
 	free((void *) lock);
 }
 
-int 
-PyThread_acquire_lock(PyThread_type_lock lock, int waitflag)
+int PyThread_acquire_lock _P2(lock, PyThread_type_lock lock, waitflag, int waitflag)
 {
 	int success;
 
-	dprintf(("PyThread_acquire_lock(%p, %d) called\n", lock, waitflag));
+	dprintf(("PyThread_acquire_lock(%lx, %d) called\n", (long)lock, waitflag));
 	if (waitflag)
 		success = mutex_lock((mutex_t *) lock);
 	else
@@ -172,14 +181,13 @@ PyThread_acquire_lock(PyThread_type_lock lock, int waitflag)
 		perror(waitflag ? "mutex_lock" : "mutex_trylock");
 	else
 		success = !success; /* solaris does it the other way round */
-	dprintf(("PyThread_acquire_lock(%p, %d) -> %d\n", lock, waitflag, success));
+	dprintf(("PyThread_acquire_lock(%lx, %d) -> %d\n", (long)lock, waitflag, success));
 	return success;
 }
 
-void 
-PyThread_release_lock(PyThread_type_lock lock)
+void PyThread_release_lock _P1(lock, PyThread_type_lock lock)
 {
-	dprintf(("PyThread_release_lock(%p) called\n", lock));
+	dprintf(("PyThread_release_lock(%lx) called\n", (long)lock));
 	if (mutex_unlock((mutex_t *) lock))
 		perror("mutex_unlock");
 }
@@ -187,8 +195,7 @@ PyThread_release_lock(PyThread_type_lock lock)
 /*
  * Semaphore support.
  */
-PyThread_type_sema 
-PyThread_allocate_sema(int value)
+PyThread_type_sema PyThread_allocate_sema _P1(value, int value)
 {
 	sema_t *sema;
 	dprintf(("PyThread_allocate_sema called\n"));
@@ -201,25 +208,23 @@ PyThread_allocate_sema(int value)
 		free((void *) sema);
 		sema = 0;
 	}
-	dprintf(("PyThread_allocate_sema() -> %p\n",  sema));
+	dprintf(("PyThread_allocate_sema() -> %lx\n", (long) sema));
 	return (PyThread_type_sema) sema;
 }
 
-void 
-PyThread_free_sema(PyThread_type_sema sema)
+void PyThread_free_sema _P1(sema, PyThread_type_sema sema)
 {
-	dprintf(("PyThread_free_sema(%p) called\n",  sema));
+	dprintf(("PyThread_free_sema(%lx) called\n", (long) sema));
 	if (sema_destroy((sema_t *) sema))
 		perror("sema_destroy");
 	free((void *) sema);
 }
 
-int 
-PyThread_down_sema(PyThread_type_sema sema, int waitflag)
+int PyThread_down_sema _P2(sema, PyThread_type_sema sema, waitflag, int waitflag)
 {
 	int success;
 
-	dprintf(("PyThread_down_sema(%p) called\n",  sema));
+	dprintf(("PyThread_down_sema(%lx) called\n", (long) sema));
 	if (waitflag)
 		success = sema_wait((sema_t *) sema);
 	else
@@ -232,14 +237,13 @@ PyThread_down_sema(PyThread_type_sema sema, int waitflag)
 	}
 	else
 		success = !success;
-	dprintf(("PyThread_down_sema(%p) return %d\n",  sema, success));
+	dprintf(("PyThread_down_sema(%lx) return %d\n", (long) sema, success));
 	return success;
 }
 
-void 
-PyThread_up_sema(PyThread_type_sema sema)
+void PyThread_up_sema _P1(sema, PyThread_type_sema sema)
 {
-	dprintf(("PyThread_up_sema(%p)\n",  sema));
+	dprintf(("PyThread_up_sema(%lx)\n", (long) sema));
 	if (sema_post((sema_t *) sema))
 		perror("sema_post");
 }

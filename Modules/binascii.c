@@ -4,13 +4,28 @@ Amsterdam, The Netherlands.
 
                         All Rights Reserved
 
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
 
 ******************************************************************/
 
@@ -187,7 +202,9 @@ static unsigned short crctab_hqx[256] = {
 static char doc_a2b_uu[] = "(ascii) -> bin. Decode a line of uuencoded data";
 
 static PyObject *
-binascii_a2b_uu(PyObject *self, PyObject *args)
+binascii_a2b_uu(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *ascii_data, *bin_data;
 	int leftbits = 0;
@@ -262,7 +279,9 @@ binascii_a2b_uu(PyObject *self, PyObject *args)
 static char doc_b2a_uu[] = "(bin) -> ascii. Uuencode line of data";
 	
 static PyObject *
-binascii_b2a_uu(PyObject *self, PyObject *args)
+binascii_b2a_uu(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *ascii_data, *bin_data;
 	int leftbits = 0;
@@ -311,7 +330,10 @@ binascii_b2a_uu(PyObject *self, PyObject *args)
 
 
 static int
-binascii_find_valid(unsigned char *s, int slen, int num)
+binascii_find_valid(s, slen, num)
+	char *s;
+	int slen;
+	int num;
 {
 	/* Finds & returns the (num+1)th 
 	** valid character for base64, or -1 if none.
@@ -338,7 +360,9 @@ binascii_find_valid(unsigned char *s, int slen, int num)
 static char doc_a2b_base64[] = "(ascii) -> bin. Decode a line of base64 data";
 
 static PyObject *
-binascii_a2b_base64(PyObject *self, PyObject *args)
+binascii_a2b_base64(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *ascii_data, *bin_data;
 	int leftbits = 0;
@@ -421,7 +445,9 @@ binascii_a2b_base64(PyObject *self, PyObject *args)
 static char doc_b2a_base64[] = "(bin) -> ascii. Base64-code line of data";
 	
 static PyObject *
-binascii_b2a_base64(PyObject *self, PyObject *args)
+binascii_b2a_base64(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *ascii_data, *bin_data;
 	int leftbits = 0;
@@ -472,7 +498,9 @@ binascii_b2a_base64(PyObject *self, PyObject *args)
 static char doc_a2b_hqx[] = "ascii -> bin, done. Decode .hqx coding";
 
 static PyObject *
-binascii_a2b_hqx(PyObject *self, PyObject *args)
+binascii_a2b_hqx(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *ascii_data, *bin_data;
 	int leftbits = 0;
@@ -536,7 +564,9 @@ binascii_a2b_hqx(PyObject *self, PyObject *args)
 static char doc_rlecode_hqx[] = "Binhex RLE-code binary data";
 
 static PyObject *
-binascii_rlecode_hqx(PyObject *self, PyObject *args)
+binascii_rlecode_hqx(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	unsigned char *in_data, *out_data;
 	PyObject *rv;
@@ -583,7 +613,9 @@ binascii_rlecode_hqx(PyObject *self, PyObject *args)
 static char doc_b2a_hqx[] = "Encode .hqx data";
 	
 static PyObject *
-binascii_b2a_hqx(PyObject *self, PyObject *args)
+binascii_b2a_hqx(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *ascii_data, *bin_data;
 	int leftbits = 0;
@@ -623,7 +655,9 @@ binascii_b2a_hqx(PyObject *self, PyObject *args)
 static char doc_rledecode_hqx[] = "Decode hexbin RLE-coded string";
 	
 static PyObject *
-binascii_rledecode_hqx(PyObject *self, PyObject *args)
+binascii_rledecode_hqx(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *in_data, *out_data;
 	unsigned char in_byte, in_repeat;
@@ -720,7 +754,9 @@ static char doc_crc_hqx[] =
 "(data, oldcrc) -> newcrc. Compute hqx CRC incrementally";
 
 static PyObject *
-binascii_crc_hqx(PyObject *self, PyObject *args)
+binascii_crc_hqx(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	unsigned char *bin_data;
 	unsigned int crc;
@@ -858,7 +894,9 @@ static unsigned long crc_32_tab[256] = {
 };
 
 static PyObject *
-binascii_crc32(PyObject *self, PyObject *args)
+binascii_crc32(self, args)
+	PyObject *self;
+	PyObject *args;
 { /* By Jim Ahlstrom; All rights transferred to CNRI */
 	unsigned char *bin_data;
 	unsigned long crc = 0UL;	/* initial value of CRC */
@@ -899,7 +937,7 @@ static struct PyMethodDef binascii_module_methods[] = {
 static char doc_binascii[] = "Conversion between binary data and ASCII";
 
 DL_EXPORT(void)
-initbinascii(void)
+initbinascii()
 {
 	PyObject *m, *d, *x;
 

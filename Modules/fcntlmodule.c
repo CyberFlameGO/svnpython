@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* fcntl module */
@@ -27,7 +48,9 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 /* fcntl(fd, opt, [arg]) */
 
 static PyObject *
-fcntl_fcntl(PyObject *self, PyObject *args)
+fcntl_fcntl(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd;
 	int code;
@@ -85,7 +108,9 @@ is optional, and defaults to 0; it may be an int or a string.";
 /* ioctl(fd, opt, [arg]) */
 
 static PyObject *
-fcntl_ioctl(PyObject *self, PyObject *args)
+fcntl_ioctl(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd;
 	int code;
@@ -142,7 +167,9 @@ is optional, and defaults to 0; it may be an int or a string.";
 /* flock(fd, operation) */
 
 static PyObject *
-fcntl_flock(PyObject *self, PyObject *args)
+fcntl_flock(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd;
 	int code;
@@ -200,7 +227,9 @@ emulated using fcntl().)";
 
 /* lockf(fd, operation) */
 static PyObject *
-fcntl_lockf(PyObject *self, PyObject *args)
+fcntl_lockf(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd, code, ret, whence = 0;
 	PyObject *lenobj = NULL, *startobj = NULL;
@@ -291,7 +320,10 @@ a file or socket object.";
 /* Module initialisation */
 
 static int
-ins(PyObject* d, char* symbol, long value)
+ins(d, symbol, value)
+        PyObject* d;
+        char* symbol;
+        long value;
 {
         PyObject* v = PyInt_FromLong(value);
         if (!v || PyDict_SetItemString(d, symbol, v) < 0)
@@ -302,7 +334,8 @@ ins(PyObject* d, char* symbol, long value)
 }
 
 static int
-all_ins(PyObject* d)
+all_ins(d)
+        PyObject* d;
 {
         if (ins(d, "LOCK_SH", (long)LOCK_SH)) return -1;
         if (ins(d, "LOCK_EX", (long)LOCK_EX)) return -1;
@@ -312,7 +345,7 @@ all_ins(PyObject* d)
 }
 
 DL_EXPORT(void)
-initfcntl(void)
+initfcntl()
 {
 	PyObject *m, *d;
 

@@ -423,7 +423,7 @@ PyHKEY_hashFunc(PyObject *ob)
 	/* Just use the address.
 	   XXX - should we use the handle value?
 	*/
-	return _Py_HashPointer(ob);
+	return (long)ob;
 }
 
 
@@ -592,6 +592,7 @@ PyHKEY_AsHKEY(PyObject *ob, HKEY *pHANDLE, BOOL bNoneOK)
 		*pHANDLE = (HKEY)PyLong_AsVoidPtr(ob);
 		if (PyErr_Occurred())
 			return FALSE;
+		*pHANDLE = (HKEY)PyInt_AsLong(ob);
 	}
 	else {
 		PyErr_SetString(
@@ -627,21 +628,12 @@ PyWinObject_CloseHKEY(PyObject *obHandle)
 	if (PyHKEY_Check(obHandle)) {
 		ok = PyHKEY_Close(obHandle);
 	}
-#if SIZEOF_LONG >= SIZEOF_HKEY
 	else if (PyInt_Check(obHandle)) {
 		long rc = RegCloseKey((HKEY)PyInt_AsLong(obHandle));
 		ok = (rc == ERROR_SUCCESS);
 		if (!ok)
 			PyErr_SetFromWindowsErrWithFunction(rc, "RegCloseKey");
 	}
-#else
-	else if (PyLong_Check(obHandle)) {
-		long rc = RegCloseKey((HKEY)PyLong_AsVoidPtr(obHandle));
-		ok = (rc == ERROR_SUCCESS);
-		if (!ok)
-			PyErr_SetFromWindowsErrWithFunction(rc, "RegCloseKey");
-	}
-#endif
 	else {
 		PyErr_SetString(
 			PyExc_TypeError,
@@ -658,7 +650,7 @@ PyWinObject_CloseHKEY(PyObject *obHandle)
 ** Note that fixupMultiSZ and countString have both had changes
 ** made to support "incorrect strings".  The registry specification
 ** calls for strings to be terminated with 2 null bytes.  It seems
-** some commercial packages install strings which dont conform,
+** some commercial packages install strings whcich dont conform,
 ** causing this code to fail - however, "regedit" etc still work
 ** with these strings (ie only we dont!).
 */
@@ -830,23 +822,19 @@ Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 			if (value == Py_None)
 				*retDataSize = 0;
 			else {
-				void *src_buf;
-				PyBufferProcs *pb = value->ob_type->tp_as_buffer;
-				if (pb==NULL) {
-					PyErr_Format(PyExc_TypeError, 
-						"Objects of type '%s' can not "
-						"be used as binary registry values", 
-						value->ob_type->tp_name);
-					return FALSE;
-				}
-				*retDataSize = (*pb->bf_getreadbuffer)(value, 0, &src_buf);
+				if (!PyString_Check(value))
+					return 0;
+				*retDataSize = PyString_Size(value);
 				*retDataBuf = (BYTE *)PyMem_NEW(char,
 								*retDataSize);
 				if (*retDataBuf==NULL){
 					PyErr_NoMemory();
 					return FALSE;
 				}
-				memcpy(*retDataBuf, src_buf, *retDataSize);
+				memcpy(*retDataBuf,
+				       PyString_AS_STRING(
+				       		(PyStringObject *)value),
+				       *retDataSize);
 			}
 			break;
 	}
@@ -892,22 +880,13 @@ Reg2Py(char *retDataBuf, DWORD retDataSize, DWORD typ)
 
 				fixupMultiSZ(str, retDataBuf, retDataSize);
 				obData = PyList_New(s);
-				if (obData == NULL)
-					return NULL;
 				for (index = 0; index < s; index++)
 				{
-					size_t len = _mbstrlen(str[index]);
-					if (len > INT_MAX) {
-						PyErr_SetString(PyExc_OverflowError,
-							"registry string is too long for a Python string");
-						Py_DECREF(obData);
-						return NULL;
-					}
 					PyList_SetItem(obData,
 						       index,
 						       PyUnicode_DecodeMBCS(
 						            (const char *)str[index],
-							   (int)len,
+							    _mbstrlen(str[index]),
 							    NULL)
 						       );
 				}

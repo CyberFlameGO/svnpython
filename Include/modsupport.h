@@ -1,37 +1,71 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 #ifndef Py_MODSUPPORT_H
 #define Py_MODSUPPORT_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/***********************************************************
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
+
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+******************************************************************/
+
 /* Module support interface */
+
+#ifdef HAVE_STDARG_PROTOTYPES
 
 #include <stdarg.h>
 
-extern DL_IMPORT(int) PyArg_Parse(PyObject *, char *, ...);
-extern DL_IMPORT(int) PyArg_ParseTuple(PyObject *, char *, ...);
-extern DL_IMPORT(int) PyArg_ParseTupleAndKeywords(PyObject *, PyObject *,
-                                                  char *, char **, ...);
-extern DL_IMPORT(PyObject *) Py_BuildValue(char *, ...);
+extern DL_IMPORT(int) PyArg_Parse Py_PROTO((PyObject *, char *, ...));
+extern DL_IMPORT(int) PyArg_ParseTuple Py_PROTO((PyObject *, char *, ...));
+extern DL_IMPORT(int) PyArg_ParseTupleAndKeywords Py_PROTO((PyObject *, PyObject *,
+						 char *, char **, ...));
+extern DL_IMPORT(PyObject *) Py_BuildValue Py_PROTO((char *, ...));
 
-extern DL_IMPORT(int) PyArg_VaParse(PyObject *, char *, va_list);
-extern DL_IMPORT(PyObject *) Py_VaBuildValue(char *, va_list);
+#else
+
+#include <varargs.h>
+
+/* Better to have no prototypes at all for varargs functions in this case */
+extern DL_IMPORT(int) PyArg_Parse();
+extern DL_IMPORT(int) PyArg_ParseTuple();
+extern DL_IMPORT(PyObject *) Py_BuildValue();
+
+#endif
+
+extern DL_IMPORT(int) PyArg_VaParse Py_PROTO((PyObject *, char *, va_list));
+extern DL_IMPORT(PyObject *) Py_VaBuildValue Py_PROTO((char *, va_list));
 
 #define PYTHON_API_VERSION 1009
 #define PYTHON_API_STRING "1009"
 /* The API version is maintained (independently from the Python version)
    so we can detect mismatches between the interpreter and dynamically
-   loaded modules.  These are diagnosed by an error message but
+   loaded modules.  These are diagnosticised by an error message but
    the module is still loaded (because the mismatch can only be tested
    after loading the module).  The error message is intended to
    explain the core dump a few seconds later.
@@ -77,10 +111,8 @@ extern DL_IMPORT(PyObject *) Py_VaBuildValue(char *, va_list);
 #define Py_InitModule4 Py_InitModule4TraceRefs
 #endif
 
-extern DL_IMPORT(PyObject *) Py_InitModule4(char *name, PyMethodDef *methods,
-                                            char *doc, PyObject *self,
-                                            int apiver);
-
+extern DL_IMPORT(PyObject *) Py_InitModule4 Py_PROTO((char *, PyMethodDef *,
+					  char *, PyObject *, int));
 #define Py_InitModule(name, methods) \
 	Py_InitModule4(name, methods, (char *)NULL, (PyObject *)NULL, \
 		       PYTHON_API_VERSION)

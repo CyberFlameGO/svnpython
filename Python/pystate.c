@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Thread and interpreter state structures and their interfaces */
@@ -37,7 +58,7 @@ PyThreadState *_PyThreadState_Current = NULL;
 
 
 PyInterpreterState *
-PyInterpreterState_New(void)
+PyInterpreterState_New()
 {
 	PyInterpreterState *interp = PyMem_NEW(PyInterpreterState, 1);
 
@@ -58,7 +79,8 @@ PyInterpreterState_New(void)
 
 
 void
-PyInterpreterState_Clear(PyInterpreterState *interp)
+PyInterpreterState_Clear(interp)
+	PyInterpreterState *interp;
 {
 	PyThreadState *p;
 	HEAD_LOCK();
@@ -72,7 +94,8 @@ PyInterpreterState_Clear(PyInterpreterState *interp)
 
 
 static void
-zapthreads(PyInterpreterState *interp)
+zapthreads(interp)
+	PyInterpreterState *interp;
 {
 	PyThreadState *p;
 	/* No need to lock the mutex here because this should only happen
@@ -84,7 +107,8 @@ zapthreads(PyInterpreterState *interp)
 
 
 void
-PyInterpreterState_Delete(PyInterpreterState *interp)
+PyInterpreterState_Delete(interp)
+	PyInterpreterState *interp;
 {
 	PyInterpreterState **p;
 	zapthreads(interp);
@@ -103,7 +127,8 @@ PyInterpreterState_Delete(PyInterpreterState *interp)
 
 
 PyThreadState *
-PyThreadState_New(PyInterpreterState *interp)
+PyThreadState_New(interp)
+	PyInterpreterState *interp;
 {
 	PyThreadState *tstate = PyMem_NEW(PyThreadState, 1);
 
@@ -139,7 +164,8 @@ PyThreadState_New(PyInterpreterState *interp)
 
 
 void
-PyThreadState_Clear(PyThreadState *tstate)
+PyThreadState_Clear(tstate)
+	PyThreadState *tstate;
 {
 	if (Py_VerboseFlag && tstate->frame != NULL)
 		fprintf(stderr,
@@ -163,7 +189,8 @@ PyThreadState_Clear(PyThreadState *tstate)
 
 
 void
-PyThreadState_Delete(PyThreadState *tstate)
+PyThreadState_Delete(tstate)
+	PyThreadState *tstate;
 {
 	PyInterpreterState *interp;
 	PyThreadState **p;
@@ -189,7 +216,7 @@ PyThreadState_Delete(PyThreadState *tstate)
 
 
 PyThreadState *
-PyThreadState_Get(void)
+PyThreadState_Get()
 {
 	if (_PyThreadState_Current == NULL)
 		Py_FatalError("PyThreadState_Get: no current thread");
@@ -199,7 +226,8 @@ PyThreadState_Get(void)
 
 
 PyThreadState *
-PyThreadState_Swap(PyThreadState *new)
+PyThreadState_Swap(new)
+	PyThreadState *new;
 {
 	PyThreadState *old = _PyThreadState_Current;
 
@@ -215,7 +243,7 @@ PyThreadState_Swap(PyThreadState *new)
    likely MemoryError) and the caller should pass on the exception. */
 
 PyObject *
-PyThreadState_GetDict(void)
+PyThreadState_GetDict()
 {
 	if (_PyThreadState_Current == NULL)
 		Py_FatalError("PyThreadState_GetDict: no current thread");

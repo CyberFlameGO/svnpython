@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* audioopmodule - Module to detect peak values in arrays */
@@ -26,6 +47,7 @@ typedef unsigned long Py_UInt32;
 
 #if defined(__CHAR_UNSIGNED__)
 #if defined(signed)
+!ERROR!; READ THE SOURCE FILE!;
 /* This module currently does not work on systems where only unsigned
    characters are available.  Take it out of Setup.  Sorry. */
 #endif
@@ -94,7 +116,8 @@ static int ulaw_table[256] = {
 #define CLIP 32635
 
 static unsigned char
-st_linear_to_ulaw(int sample)
+st_linear_to_ulaw( sample )
+	int sample;
 {
 	static int exp_lut[256] = {0,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,
 				   4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
@@ -160,7 +183,9 @@ static int stepsizeTable[89] = {
 static PyObject *AudioopError;
 
 static PyObject *
-audioop_getsample(PyObject *self, PyObject *args)
+audioop_getsample(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0;
@@ -183,7 +208,9 @@ audioop_getsample(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_max(PyObject *self, PyObject *args)
+audioop_max(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0;
@@ -207,7 +234,9 @@ audioop_max(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_minmax(PyObject *self, PyObject *args)
+audioop_minmax(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0;
@@ -231,7 +260,9 @@ audioop_minmax(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_avg(PyObject *self, PyObject *args)
+audioop_avg(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0;
@@ -258,7 +289,9 @@ audioop_avg(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_rms(PyObject *self, PyObject *args)
+audioop_rms(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0;
@@ -284,7 +317,10 @@ audioop_rms(PyObject *self, PyObject *args)
 	return PyInt_FromLong(val);
 }
 
-static double _sum2(short *a, short *b, int len)
+static double _sum2(a, b, len)
+	short *a;
+        short *b;
+        int len;
 {
 	int i;
 	double sum = 0.0;
@@ -328,7 +364,9 @@ static double _sum2(short *a, short *b, int len)
 ** is completely recalculated each step.
 */
 static PyObject *
-audioop_findfit(PyObject *self, PyObject *args)
+audioop_findfit(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	short *cp1, *cp2;
 	int len1, len2;
@@ -386,7 +424,9 @@ audioop_findfit(PyObject *self, PyObject *args)
 ** See the comment for findfit for details.
 */
 static PyObject *
-audioop_findfactor(PyObject *self, PyObject *args)
+audioop_findfactor(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	short *cp1, *cp2;
 	int len1, len2;
@@ -416,7 +456,9 @@ audioop_findfactor(PyObject *self, PyObject *args)
 ** that contains the most energy.
 */
 static PyObject *
-audioop_findmax(PyObject *self, PyObject *args)
+audioop_findmax(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	short *cp1;
 	int len1, len2;
@@ -460,7 +502,9 @@ audioop_findmax(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_avgpp(PyObject *self, PyObject *args)
+audioop_avgpp(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0, prevval = 0, prevextremevalid = 0,
@@ -517,7 +561,9 @@ audioop_avgpp(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_maxpp(PyObject *self, PyObject *args)
+audioop_maxpp(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0, prevval = 0, prevextremevalid = 0,
@@ -570,7 +616,9 @@ audioop_maxpp(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_cross(PyObject *self, PyObject *args)
+audioop_cross(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	int len, size, val = 0;
@@ -597,7 +645,9 @@ audioop_cross(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_mul(PyObject *self, PyObject *args)
+audioop_mul(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp, *ncp;
 	int len, size, val = 0;
@@ -638,7 +688,9 @@ audioop_mul(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_tomono(PyObject *self, PyObject *args)
+audioop_tomono(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp, *ncp;
 	int len, size, val1 = 0, val2 = 0;
@@ -682,7 +734,9 @@ audioop_tomono(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_tostereo(PyObject *self, PyObject *args)
+audioop_tostereo(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp, *ncp;
 	int len, size, val1, val2, val = 0;
@@ -734,7 +788,9 @@ audioop_tostereo(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_add(PyObject *self, PyObject *args)
+audioop_add(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp1, *cp2, *ncp;
 	int len1, len2, size, val1 = 0, val2 = 0, maxval, newval;
@@ -787,7 +843,9 @@ audioop_add(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_bias(PyObject *self, PyObject *args)
+audioop_bias(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp, *ncp;
 	int len, size, val = 0;
@@ -823,7 +881,9 @@ audioop_bias(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_reverse(PyObject *self, PyObject *args)
+audioop_reverse(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	unsigned char *ncp;
@@ -860,7 +920,9 @@ audioop_reverse(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_lin2lin(PyObject *self, PyObject *args)
+audioop_lin2lin(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	unsigned char *ncp;
@@ -896,7 +958,8 @@ audioop_lin2lin(PyObject *self, PyObject *args)
 }
 
 static int
-gcd(int a, int b)
+gcd(a, b)
+	int a, b;
 {
 	while (b > 0) {
 		int tmp = a % b;
@@ -907,7 +970,9 @@ gcd(int a, int b)
 }
 
 static PyObject *
-audioop_ratecv(PyObject *self, PyObject *args)
+audioop_ratecv(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	char *cp, *ncp;
 	int len, size, nchannels, inrate, outrate, weightA, weightB;
@@ -1046,7 +1111,9 @@ audioop_ratecv(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_lin2ulaw(PyObject *self, PyObject *args)
+audioop_lin2ulaw(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	unsigned char *ncp;
@@ -1079,7 +1146,9 @@ audioop_lin2ulaw(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_ulaw2lin(PyObject *self, PyObject *args)
+audioop_ulaw2lin(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	unsigned char *cp;
 	unsigned char cval;
@@ -1114,7 +1183,9 @@ audioop_ulaw2lin(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_lin2adpcm(PyObject *self, PyObject *args)
+audioop_lin2adpcm(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	signed char *ncp;
@@ -1223,7 +1294,9 @@ audioop_lin2adpcm(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-audioop_adpcm2lin(PyObject *self, PyObject *args)
+audioop_adpcm2lin(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	signed char *cp;
 	signed char *ncp;
@@ -1340,7 +1413,7 @@ static PyMethodDef audioop_methods[] = {
 };
 
 DL_EXPORT(void)
-initaudioop(void)
+initaudioop()
 {
 	PyObject *m, *d;
 	m = Py_InitModule("audioop", audioop_methods);

@@ -46,7 +46,9 @@ indexing in the cc array must be done using the symbolic constants defined\n\
 in the TERMIOS module.";
 
 static PyObject *
-termios_tcgetattr(PyObject *self, PyObject *args)
+termios_tcgetattr(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int fd;
 	struct termios mode;
@@ -124,7 +126,9 @@ queued output, or TERMIOS.TCSAFLUSH to change after transmitting all\n\
 queued output and discarding all queued input. ";
 
 static PyObject *
-termios_tcsetattr(PyObject *self, PyObject *args)
+termios_tcsetattr(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int fd, when;
 	struct termios mode;
@@ -191,7 +195,9 @@ A zero duration sends a break for 0.25-0.5 seconds; a nonzero duration \n\
 has a system dependent meaning. ";
 
 static PyObject *
-termios_tcsendbreak(PyObject *self, PyObject *args)
+termios_tcsendbreak(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int fd, duration;
 
@@ -213,7 +219,9 @@ tcdrain(fd) -> None\n\
 Wait until all output written to file descriptor fd has been transmitted. ";
 
 static PyObject *
-termios_tcdrain(PyObject *self, PyObject *args)
+termios_tcdrain(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int fd;
 
@@ -238,7 +246,9 @@ queue, TERMIOS.TCOFLUSH for the output queue, or TERMIOS.TCIOFLUSH for\n\
 both queues. ";
 
 static PyObject *
-termios_tcflush(PyObject *self, PyObject *args)
+termios_tcflush(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int fd, queue;
 
@@ -263,7 +273,9 @@ TERMIOS.TCOON to restart output, TERMIOS.TCIOFF to suspend input,\n\
 or TERMIOS.TCION to restart input. ";
 
 static PyObject *
-termios_tcflow(PyObject *self, PyObject *args)
+termios_tcflow(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int fd, action;
 
@@ -288,7 +300,7 @@ static PyMethodDef termios_methods[] =
 };
 
 DL_EXPORT(void)
-PyInit_termios(void)
+PyInit_termios()
 {
 	PyObject *m, *d;
 

@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Parser implementation */
@@ -33,18 +54,24 @@ extern int Py_DebugFlag;
 
 /* STACK DATA TYPE */
 
-static void s_reset(stack *);
+static void s_reset Py_PROTO((stack *));
 
 static void
-s_reset(stack *s)
+s_reset(s)
+	stack *s;
 {
 	s->s_top = &s->s_base[MAXSTACK];
 }
 
 #define s_empty(s) ((s)->s_top == &(s)->s_base[MAXSTACK])
 
+static int s_push Py_PROTO((stack *, dfa *, node *));
+
 static int
-s_push(register stack *s, dfa *d, node *parent)
+s_push(s, d, parent)
+	register stack *s;
+	dfa *d;
+	node *parent;
 {
 	register stackentry *top;
 	if (s->s_top == s->s_base) {
@@ -60,8 +87,11 @@ s_push(register stack *s, dfa *d, node *parent)
 
 #ifdef Py_DEBUG
 
+static void s_pop Py_PROTO((stack *));
+
 static void
-s_pop(register stack *s)
+s_pop(s)
+	register stack *s;
 {
 	if (s_empty(s))
 		Py_FatalError("s_pop: parser stack underflow -- FATAL");
@@ -78,7 +108,9 @@ s_pop(register stack *s)
 /* PARSER CREATION */
 
 parser_state *
-PyParser_New(grammar *g, int start)
+PyParser_New(g, start)
+	grammar *g;
+	int start;
 {
 	parser_state *ps;
 	
@@ -99,7 +131,8 @@ PyParser_New(grammar *g, int start)
 }
 
 void
-PyParser_Delete(parser_state *ps)
+PyParser_Delete(ps)
+	parser_state *ps;
 {
 	/* NB If you want to save the parse tree,
 	   you must set p_tree to NULL before calling delparser! */
@@ -110,28 +143,42 @@ PyParser_Delete(parser_state *ps)
 
 /* PARSER STACK OPERATIONS */
 
+static int shift Py_PROTO((stack *, int, char *, int, int));
+
 static int
-shift(register stack *s, int type, char *str, int newstate, int lineno)
+shift(s, type, str, newstate, lineno)
+	register stack *s;
+	int type;
+	char *str;
+	int newstate;
+	int lineno;
 {
-	int err;
 	assert(!s_empty(s));
-	err = PyNode_AddChild(s->s_top->s_parent, type, str, lineno);
-	if (err)
-		return err;
+	if (PyNode_AddChild(s->s_top->s_parent, type, str, lineno) == NULL) {
+		fprintf(stderr, "shift: no mem in addchild\n");
+		return -1;
+	}
 	s->s_top->s_state = newstate;
 	return 0;
 }
 
+static int push Py_PROTO((stack *, int, dfa *, int, int));
+
 static int
-push(register stack *s, int type, dfa *d, int newstate, int lineno)
+push(s, type, d, newstate, lineno)
+	register stack *s;
+	int type;
+	dfa *d;
+	int newstate;
+	int lineno;
 {
-	int err;
 	register node *n;
 	n = s->s_top->s_parent;
 	assert(!s_empty(s));
-	err = PyNode_AddChild(n, type, (char *)NULL, lineno);
-	if (err)
-		return err;
+	if (PyNode_AddChild(n, type, (char *)NULL, lineno) == NULL) {
+		fprintf(stderr, "push: no mem in addchild\n");
+		return -1;
+	}
 	s->s_top->s_state = newstate;
 	return s_push(s, d, CHILD(n, NCH(n)-1));
 }
@@ -139,8 +186,13 @@ push(register stack *s, int type, dfa *d, int newstate, int lineno)
 
 /* PARSER PROPER */
 
+static int classify Py_PROTO((grammar *, int, char *));
+
 static int
-classify(grammar *g, int type, char *str)
+classify(g, type, str)
+	grammar *g;
+	register int type;
+	char *str;
 {
 	register int n = g->g_ll.ll_nlabels;
 	
@@ -174,11 +226,13 @@ classify(grammar *g, int type, char *str)
 }
 
 int
-PyParser_AddToken(register parser_state *ps, register int type, char *str,
-	          int lineno, int *expected_ret)
+PyParser_AddToken(ps, type, str, lineno)
+	register parser_state *ps;
+	register int type;
+	char *str;
+	int lineno;
 {
 	register int ilabel;
-	int err;
 	
 	D(printf("Token %s/'%s' ... ", _PyParser_TokenNames[type], str));
 	
@@ -206,20 +260,20 @@ PyParser_AddToken(register parser_state *ps, register int type, char *str,
 					int arrow = x & ((1<<7)-1);
 					dfa *d1 = PyGrammar_FindDFA(
 						ps->p_grammar, nt);
-					if ((err = push(&ps->p_stack, nt, d1,
-						arrow, lineno)) > 0) {
+					if (push(&ps->p_stack, nt, d1,
+						arrow, lineno) < 0) {
 						D(printf(" MemError: push\n"));
-						return err;
+						return E_NOMEM;
 					}
 					D(printf(" Push ...\n"));
 					continue;
 				}
 				
 				/* Shift the token */
-				if ((err = shift(&ps->p_stack, type, str,
-						x, lineno)) > 0) {
+				if (shift(&ps->p_stack, type, str,
+						x, lineno) < 0) {
 					D(printf(" MemError: shift.\n"));
-					return err;
+					return E_NOMEM;
 				}
 				D(printf(" Shift.\n"));
 				/* Pop while we are in an accept-only state */
@@ -251,15 +305,6 @@ PyParser_AddToken(register parser_state *ps, register int type, char *str,
 		
 		/* Stuck, report syntax error */
 		D(printf(" Error.\n"));
-		if (expected_ret) {
-			if (s->s_lower == s->s_upper - 1) {
-				/* Only one possible expected token */
-				*expected_ret = ps->p_grammar->
-				    g_ll.ll_label[s->s_lower].lb_type;
-			}
-			else 
-		        	*expected_ret = -1;
-		}
 		return E_SYNTAX;
 	}
 }
@@ -270,7 +315,9 @@ PyParser_AddToken(register parser_state *ps, register int type, char *str,
 /* DEBUG OUTPUT */
 
 void
-dumptree(grammar *g, node *n)
+dumptree(g, n)
+	grammar *g;
+	node *n;
 {
 	int i;
 	
@@ -294,7 +341,9 @@ dumptree(grammar *g, node *n)
 }
 
 void
-showtree(grammar *g, node *n)
+showtree(g, n)
+	grammar *g;
+	node *n;
 {
 	int i;
 	
@@ -315,7 +364,8 @@ showtree(grammar *g, node *n)
 }
 
 void
-printtree(parser_state *ps)
+printtree(ps)
+	parser_state *ps;
 {
 	if (Py_DebugFlag) {
 		printf("Parse tree:\n");

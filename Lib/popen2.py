@@ -89,55 +89,21 @@ class Popen3:
             _active.remove(self)
         return self.sts
 
-if hasattr(os, "popen2"):
-    def popen2(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin) are returned."""
-        w, r = os.popen2(cmd, mode, bufsize)
-        return r, w
-else:
-    def popen2(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin) are returned."""
-        if type(mode) is type(0) and bufsize == -1:
-            bufsize = mode
-            mode = 't'
-        assert mode in ('t', 'b')
-        _cleanup()
-        inst = Popen3(cmd, 0, bufsize)
-        return inst.fromchild, inst.tochild
+def popen2(cmd, bufsize=-1):
+    """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
+    specified, it sets the buffer size for the I/O pipes.  The file objects
+    (child_stdout, child_stdin) are returned."""
+    _cleanup()
+    inst = Popen3(cmd, 0, bufsize)
+    return inst.fromchild, inst.tochild
 
-if hasattr(os, "popen3"):
-    def popen3(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin, child_stderr) are returned."""
-        w, r, e = os.popen3(cmd, mode, bufsize)
-        return r, w, e
-else:
-    def popen3(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin, child_stderr) are returned."""
-        if type(mode) is type(0) and bufsize == -1:
-            bufsize = mode
-            mode = 't'
-        assert mode in ('t', 'b')
-        _cleanup()
-        inst = Popen3(cmd, 1, bufsize)
-        return inst.fromchild, inst.tochild, inst.childerr
-
-if hasattr(os, "popen4"):
-    def popen4(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout_stderr, child_stdin) are returned."""
-        w, r = os.popen4(cmd, mode, bufsize)
-        return r, w
-else:
-    pass # not yet on unix
+def popen3(cmd, bufsize=-1):
+    """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
+    specified, it sets the buffer size for the I/O pipes.  The file objects
+    (child_stdout, child_stdin, child_stderr) are returned."""
+    _cleanup()
+    inst = Popen3(cmd, 1, bufsize)
+    return inst.fromchild, inst.tochild, inst.childerr
 
 def _test():
     teststr = "abc\n"
@@ -147,10 +113,7 @@ def _test():
     w.close()
     assert r.read() == teststr
     print "testing popen3..."
-    try:
-        r, w, e = popen3(['cat'])
-    except:
-        r, w, e = popen3('cat')
+    r, w, e = popen3(['cat'])
     w.write(teststr)
     w.close()
     assert r.read() == teststr

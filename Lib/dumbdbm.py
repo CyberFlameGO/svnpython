@@ -120,6 +120,7 @@ class _Database:
 			else:
 				pos, siz = self._addval(val)
 				self._index[key] = pos, siz
+			self._addkey(key, (pos, siz))
 	
 	def __delitem__(self, key):
 		del self._index[key]

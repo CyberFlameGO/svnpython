@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* System module */
@@ -38,7 +59,8 @@ extern const char *PyWin_DLLVersionString;
 #endif
 
 PyObject *
-PySys_GetObject(char *name)
+PySys_GetObject(name)
+	char *name;
 {
 	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
@@ -48,7 +70,9 @@ PySys_GetObject(char *name)
 }
 
 FILE *
-PySys_GetFile(char *name, FILE *def)
+PySys_GetFile(name, def)
+	char *name;
+	FILE *def;
 {
 	FILE *fp = NULL;
 	PyObject *v = PySys_GetObject(name);
@@ -60,7 +84,9 @@ PySys_GetFile(char *name, FILE *def)
 }
 
 int
-PySys_SetObject(char *name, PyObject *v)
+PySys_SetObject(name, v)
+	char *name;
+	PyObject *v;
 {
 	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
@@ -75,7 +101,9 @@ PySys_SetObject(char *name, PyObject *v)
 }
 
 static PyObject *
-sys_exc_info(PyObject *self, PyObject *args)
+sys_exc_info(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyThreadState *tstate;
 	if (!PyArg_ParseTuple(args, ":exc_info"))
@@ -96,7 +124,9 @@ Return information about the exception that is currently being handled.\n\
 This should be called from inside an except clause only.";
 
 static PyObject *
-sys_exit(PyObject *self, PyObject *args)
+sys_exit(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	/* Raise SystemExit so callers may catch it or clean up. */
 	PyErr_SetObject(PyExc_SystemExit, args);
@@ -113,24 +143,28 @@ If it is another kind of object, it will be printed and the system\n\
 exit status will be one (i.e., failure).";
 
 static PyObject *
-sys_getdefaultencoding(PyObject *self, PyObject *args)
+sys_get_string_encoding(self, args)
+	PyObject *self;
+	PyObject *args;
 {
-	if (!PyArg_ParseTuple(args, ":getdefaultencoding"))
+	if (!PyArg_ParseTuple(args, ":get_string_encoding"))
 		return NULL;
 	return PyString_FromString(PyUnicode_GetDefaultEncoding());
 }
 
-static char getdefaultencoding_doc[] =
-"getdefaultencoding() -> string\n\
+static char get_string_encoding_doc[] =
+"get_string_encoding() -> string\n\
 \n\
 Return the current default string encoding used by the Unicode \n\
 implementation.";
 
 static PyObject *
-sys_setdefaultencoding(PyObject *self, PyObject *args)
+sys_set_string_encoding(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	char *encoding;
-	if (!PyArg_ParseTuple(args, "s:setdefaultencoding", &encoding))
+	if (!PyArg_ParseTuple(args, "s:set_string_encoding", &encoding))
 		return NULL;
 	if (PyUnicode_SetDefaultEncoding(encoding))
 	    	return NULL;
@@ -138,13 +172,15 @@ sys_setdefaultencoding(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
-static char setdefaultencoding_doc[] =
-"setdefaultencoding(encoding)\n\
+static char set_string_encoding_doc[] =
+"set_string_encoding(encoding)\n\
 \n\
 Set the current default string encoding used by the Unicode implementation.";
 
 static PyObject *
-sys_settrace(PyObject *self, PyObject *args)
+sys_settrace(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyThreadState *tstate = PyThreadState_Get();
 	if (args == Py_None)
@@ -164,7 +200,9 @@ Set the global debug tracing function.  It will be called on each\n\
 function call.  See the debugger chapter in the library manual.";
 
 static PyObject *
-sys_setprofile(PyObject *self, PyObject *args)
+sys_setprofile(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyThreadState *tstate = PyThreadState_Get();
 	if (args == Py_None)
@@ -184,7 +222,9 @@ Set the profiling function.  It will be called on each function call\n\
 and return.  See the profiler chapter in the library manual.";
 
 static PyObject *
-sys_setcheckinterval(PyObject *self, PyObject *args)
+sys_setcheckinterval(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyThreadState *tstate = PyThreadState_Get();
 	if (!PyArg_ParseTuple(args, "i:setcheckinterval", &tstate->interp->checkinterval))
@@ -204,7 +244,9 @@ n instructions.  This also affects how often thread switches occur.";
 #include <malloc.h>
 
 static PyObject *
-sys_mdebug(PyObject *self, PyObject *args)
+sys_mdebug(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int flag;
 	if (!PyArg_ParseTuple(args, "i:mdebug", &flag))
@@ -216,25 +258,15 @@ sys_mdebug(PyObject *self, PyObject *args)
 #endif /* USE_MALLOPT */
 
 static PyObject *
-sys_getrefcount(PyObject *self, PyObject *args)
+sys_getrefcount(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *arg;
 	if (!PyArg_ParseTuple(args, "O:getrefcount", &arg))
 		return NULL;
-	return PyInt_FromLong(arg->ob_refcnt);
+	return PyInt_FromLong((long) arg->ob_refcnt);
 }
-
-#ifdef Py_TRACE_REFS
-static PyObject *
-sys_gettotalrefcount(PyObject *self, PyObject *args)
-{
-	extern long _Py_RefTotal;
-	if (!PyArg_ParseTuple(args, ":gettotalrefcount"))
-		return NULL;
-	return PyInt_FromLong(_Py_RefTotal);
-}
-
-#endif /* Py_TRACE_REFS */
 
 static char getrefcount_doc[] =
 "getrefcount(object) -> integer\n\
@@ -244,9 +276,10 @@ temporary reference in the argument list, so it is at least 2.";
 
 #ifdef COUNT_ALLOCS
 static PyObject *
-sys_getcounts(PyObject *self, PyObject *args)
+sys_getcounts(self, args)
+	PyObject *self, *args;
 {
-	extern PyObject *get_counts(void);
+	extern PyObject *get_counts Py_PROTO((void));
 
 	if (!PyArg_ParseTuple(args, ":getcounts"))
 		return NULL;
@@ -256,19 +289,19 @@ sys_getcounts(PyObject *self, PyObject *args)
 
 #ifdef Py_TRACE_REFS
 /* Defined in objects.c because it uses static globals if that file */
-extern PyObject *_Py_GetObjects(PyObject *, PyObject *);
+extern PyObject *_Py_GetObjects Py_PROTO((PyObject *, PyObject *));
 #endif
 
 #ifdef DYNAMIC_EXECUTION_PROFILE
 /* Defined in ceval.c because it uses static globals if that file */
-extern PyObject *_Py_GetDXProfile(PyObject *,  PyObject *);
+extern PyObject *_Py_GetDXProfile Py_PROTO((PyObject *,  PyObject *));
 #endif
 
 static PyMethodDef sys_methods[] = {
 	/* Might as well keep this in alphabetic order */
 	{"exc_info",	sys_exc_info, 1, exc_info_doc},
 	{"exit",	sys_exit, 0, exit_doc},
-	{"getdefaultencoding", sys_getdefaultencoding, 1, getdefaultencoding_doc},
+	{"get_string_encoding", sys_get_string_encoding, 1, get_string_encoding_doc},
 #ifdef COUNT_ALLOCS
 	{"getcounts",	sys_getcounts, 1},
 #endif
@@ -277,13 +310,12 @@ static PyMethodDef sys_methods[] = {
 #endif
 #ifdef Py_TRACE_REFS
 	{"getobjects",	_Py_GetObjects, 1},
-	{"gettotalrefcount", sys_gettotalrefcount, 1},
 #endif
 	{"getrefcount",	sys_getrefcount, 1, getrefcount_doc},
 #ifdef USE_MALLOPT
 	{"mdebug",	sys_mdebug, 1},
 #endif
-	{"setdefaultencoding", sys_setdefaultencoding, 1, setdefaultencoding_doc},
+	{"set_string_encoding", sys_set_string_encoding, 1, set_string_encoding_doc},
 	{"setcheckinterval",	sys_setcheckinterval, 1, setcheckinterval_doc},
 	{"setprofile",	sys_setprofile, 0, setprofile_doc},
 	{"settrace",	sys_settrace, 0, settrace_doc},
@@ -291,7 +323,7 @@ static PyMethodDef sys_methods[] = {
 };
 
 static PyObject *
-list_builtin_module_names(void)
+list_builtin_module_names()
 {
 	PyObject *list = PyList_New(0);
 	int i;
@@ -383,8 +415,9 @@ settrace() -- set the global debug tracing function\n\
 #endif
 
 PyObject *
-_PySys_Init(void)
+_PySys_Init()
 {
+	extern int fclose Py_PROTO((FILE *));
 	PyObject *m, *v, *sysdict;
 	PyObject *sysin, *sysout, *syserr;
 	char *s;
@@ -458,7 +491,7 @@ _PySys_Init(void)
 	Py_XDECREF(v);
 #ifdef MS_COREDLL
 	PyDict_SetItemString(sysdict, "dllhandle",
-			     v = PyLong_FromVoidPtr(PyWin_DLLhModule));
+			     v = PyInt_FromLong((int)PyWin_DLLhModule));
 	Py_XDECREF(v);
 	PyDict_SetItemString(sysdict, "winver",
 			     v = PyString_FromString(PyWin_DLLVersionString));
@@ -470,7 +503,9 @@ _PySys_Init(void)
 }
 
 static PyObject *
-makepathobject(char *path, int delim)
+makepathobject(path, delim)
+	char *path;
+	int delim;
 {
 	int i, n;
 	char *p;
@@ -503,7 +538,8 @@ makepathobject(char *path, int delim)
 }
 
 void
-PySys_SetPath(char *path)
+PySys_SetPath(path)
+	char *path;
 {
 	PyObject *v;
 	if ((v = makepathobject(path, DELIM)) == NULL)
@@ -514,7 +550,9 @@ PySys_SetPath(char *path)
 }
 
 static PyObject *
-makeargvobject(int argc, char **argv)
+makeargvobject(argc, argv)
+	int argc;
+	char **argv;
 {
 	PyObject *av;
 	if (argc <= 0 || argv == NULL) {
@@ -540,7 +578,9 @@ makeargvobject(int argc, char **argv)
 }
 
 void
-PySys_SetArgv(int argc, char **argv)
+PySys_SetArgv(argc, argv)
+	int argc;
+	char **argv;
 {
 	PyObject *av = makeargvobject(argc, argv);
 	PyObject *path = PySys_GetObject("path");
@@ -642,7 +682,11 @@ PySys_SetArgv(int argc, char **argv)
  */
 
 static void
-mywrite(char *name, FILE *fp, const char *format, va_list va)
+mywrite(name, fp, format, va)
+	char *name;
+	FILE *fp;
+	const char *format;
+	va_list va;
 {
 	PyObject *file;
 	PyObject *error_type, *error_value, *error_traceback;
@@ -664,21 +708,43 @@ mywrite(char *name, FILE *fp, const char *format, va_list va)
 }
 
 void
+#ifdef HAVE_STDARG_PROTOTYPES
 PySys_WriteStdout(const char *format, ...)
+#else
+PySys_WriteStdout(va_alist)
+	va_dcl
+#endif
 {
 	va_list va;
 
+#ifdef HAVE_STDARG_PROTOTYPES
 	va_start(va, format);
+#else
+	char *format;
+	va_start(va);
+	format = va_arg(va, char *);
+#endif
 	mywrite("stdout", stdout, format, va);
 	va_end(va);
 }
 
 void
+#ifdef HAVE_STDARG_PROTOTYPES
 PySys_WriteStderr(const char *format, ...)
+#else
+PySys_WriteStderr(va_alist)
+	va_dcl
+#endif
 {
 	va_list va;
 
+#ifdef HAVE_STDARG_PROTOTYPES
 	va_start(va, format);
+#else
+	char *format;
+	va_start(va);
+	format = va_arg(va, char *);
+#endif
 	mywrite("stderr", stderr, format, va);
 	va_end(va);
 }

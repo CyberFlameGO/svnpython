@@ -230,12 +230,6 @@ This is a Python type object that represents the socket object type.
 It is the same as \code{type(socket(...))}.
 \end{datadesc}
 
-
-\begin{seealso}
-  \seemodule{SocketServer}{Classes that simplify writing network servers.}
-\end{seealso}
-
-
 \subsection{Socket Objects \label{socket-objects}}
 
 Socket objects have the following methods.  Except for
@@ -378,7 +372,7 @@ block until they can proceed.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{setsockopt}{level, optname, value}
-Set the value of the given socket option (see the \UNIX{} manual page
+Set the value of the given socket option (see the \UNIX{} man page
 \manpage{setsockopt}{2}).  The needed symbolic constants are defined in
 the \module{socket} module (\code{SO_*} etc.).  The value can be an
 integer or a string representing a buffer.  In the latter case it is
@@ -399,8 +393,8 @@ Note that there are no methods \method{read()} or \method{write()};
 use \method{recv()} and \method{send()} without \var{flags} argument
 instead.
 
-
-\subsection{Example \label{socket-example}}
+\subsection{Example}
+\nodename{Socket Example}
 
 Here are two minimal example programs using the TCP/IP protocol:\ a
 server that echoes all data that it receives back (servicing only one
@@ -442,3 +436,7 @@ data = s.recv(1024)
 s.close()
 print 'Received', `data`
 \end{verbatim}
+
+\begin{seealso}
+  \seemodule{SocketServer}{classes that simplify writing network servers}
+\end{seealso}

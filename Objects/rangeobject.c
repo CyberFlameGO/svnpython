@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Range object implementation */
@@ -22,7 +43,9 @@ typedef struct {
 
 
 PyObject *
-PyRange_New(long start, long len, long step, int reps)
+PyRange_New(start, len, step, reps)
+	long start, len, step;
+	int reps;
 {
 	rangeobject *obj = PyObject_NEW(rangeobject, &PyRange_Type);
 
@@ -35,13 +58,16 @@ PyRange_New(long start, long len, long step, int reps)
 }
 
 static void
-range_dealloc(rangeobject *r)
+range_dealloc(r)
+	rangeobject *r;
 {
 	PyObject_DEL(r);
 }
 
 static PyObject *
-range_item(rangeobject *r, int i)
+range_item(r, i)
+	rangeobject *r;
+	int i;
 {
 	if (i < 0 || i >= r->len * r->reps) {
 		PyErr_SetString(PyExc_IndexError,
@@ -53,13 +79,17 @@ range_item(rangeobject *r, int i)
 }
 
 static int
-range_length(rangeobject *r)
+range_length(r)
+	rangeobject *r;
 {
 	return r->len * r->reps;
 }
 
 static int
-range_print(rangeobject *r, FILE *fp, int flags)
+range_print(r, fp, flags)
+	rangeobject *r;
+	FILE *fp;
+	int flags;
 {
 	int i, j;
 
@@ -79,7 +109,8 @@ range_print(rangeobject *r, FILE *fp, int flags)
 }
 
 static PyObject *
-range_repr(rangeobject *r)
+range_repr(r)
+	rangeobject *r;
 {
 	char buf[80];
 	sprintf(buf, "(xrange(%ld, %ld, %ld) * %d)",
@@ -91,14 +122,18 @@ range_repr(rangeobject *r)
 }
 
 static PyObject *
-range_concat(rangeobject *r, PyObject *obj)
+range_concat(r, obj)
+	rangeobject *r;
+	PyObject *obj;
 {
 	PyErr_SetString(PyExc_TypeError, "cannot concatenate xrange objects");
 	return NULL;
 }
 
 static PyObject *
-range_repeat(rangeobject *r, int n)
+range_repeat(r, n)
+	rangeobject *r;
+	int n;
 {
 	if (n < 0)
 		return (PyObject *) PyRange_New(0, 0, 1, 1);
@@ -117,7 +152,8 @@ range_repeat(rangeobject *r, int n)
 }
 
 static int
-range_compare(rangeobject *r1, rangeobject *r2)
+range_compare(r1, r2)
+	rangeobject *r1, *r2;
 {
 	if (r1->start != r2->start)
 		return r1->start - r2->start;
@@ -133,7 +169,9 @@ range_compare(rangeobject *r1, rangeobject *r2)
 }
 
 static PyObject *
-range_slice(rangeobject *r, int low, int high)
+range_slice(r, low, high)
+	rangeobject *r;
+	int low, high;
 {
 	if (r->reps != 1) {
 		PyErr_SetString(PyExc_TypeError,
@@ -164,7 +202,9 @@ range_slice(rangeobject *r, int low, int high)
 }
 
 static PyObject *
-range_tolist(rangeobject *self, PyObject *args)
+range_tolist(self, args)
+rangeobject *self;
+PyObject *args;
 {
 	PyObject *thelist;
 	int j;
@@ -185,7 +225,9 @@ range_tolist(rangeobject *self, PyObject *args)
 }
 
 static PyObject *
-range_getattr(rangeobject *r, char *name)
+range_getattr(r, name)
+	rangeobject *r;
+	char *name;
 {
 	static PyMethodDef range_methods[] = {
 		{"tolist",	(PyCFunction)range_tolist},
@@ -193,21 +235,6 @@ range_getattr(rangeobject *r, char *name)
 	};
 
 	return Py_FindMethod(range_methods, (PyObject *) r, name);
-}
-
-static int
-range_contains(rangeobject *r, PyObject *obj)
-{
-	long num = PyInt_AsLong(obj);
-	
-	if (num < 0 && PyErr_Occurred())
-		return -1;
-	
-	if (num < r->start || (num - r->start) % r->step)
-		return 0;
-	if (num > (r->start + (r->len * r->step)))
-		return 0;
-	return 1;
 }
 
 static PySequenceMethods range_as_sequence = {
@@ -218,7 +245,6 @@ static PySequenceMethods range_as_sequence = {
 	(intintargfunc)range_slice, /*sq_slice*/
 	0,		/*sq_ass_item*/
 	0,		/*sq_ass_slice*/
-	(objobjproc)range_contains, /*sq_contains*/
 };
 
 PyTypeObject PyRange_Type = {
@@ -236,11 +262,4 @@ PyTypeObject PyRange_Type = {
 	0,			/*tp_as_number*/
 	&range_as_sequence,	/*tp_as_sequence*/
 	0,			/*tp_as_mapping*/
-	0,			/*tp_hash*/
-	0,			/*tp_call*/
-	0,			/*tp_str*/
-	0,			/*tp_getattro*/
-	0,			/*tp_setattro*/
-	0,			/*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT,	/*tp_flags*/
 };

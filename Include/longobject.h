@@ -5,13 +5,34 @@ extern "C" {
 #endif
 
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Long (arbitrary precision) integer object interface */
@@ -22,14 +43,14 @@ extern DL_IMPORT(PyTypeObject) PyLong_Type;
 
 #define PyLong_Check(op) ((op)->ob_type == &PyLong_Type)
 
-extern DL_IMPORT(PyObject *) PyLong_FromLong(long);
-extern DL_IMPORT(PyObject *) PyLong_FromUnsignedLong(unsigned long);
-extern DL_IMPORT(PyObject *) PyLong_FromDouble(double);
-extern DL_IMPORT(long) PyLong_AsLong(PyObject *);
-extern DL_IMPORT(unsigned long) PyLong_AsUnsignedLong(PyObject *);
-extern DL_IMPORT(double) PyLong_AsDouble(PyObject *);
-extern DL_IMPORT(PyObject *) PyLong_FromVoidPtr(void *);
-extern DL_IMPORT(void *) PyLong_AsVoidPtr(PyObject *);
+extern DL_IMPORT(PyObject *) PyLong_FromLong Py_PROTO((long));
+extern DL_IMPORT(PyObject *) PyLong_FromUnsignedLong Py_PROTO((unsigned long));
+extern DL_IMPORT(PyObject *) PyLong_FromDouble Py_PROTO((double));
+extern DL_IMPORT(long) PyLong_AsLong Py_PROTO((PyObject *));
+extern DL_IMPORT(unsigned long) PyLong_AsUnsignedLong Py_PROTO((PyObject *));
+extern DL_IMPORT(double) PyLong_AsDouble Py_PROTO((PyObject *));
+extern DL_IMPORT(PyObject *) PyLong_FromVoidPtr Py_PROTO((void *));
+extern DL_IMPORT(void *) PyLong_AsVoidPtr Py_PROTO((PyObject *));
 
 #ifdef HAVE_LONG_LONG
 
@@ -54,14 +75,14 @@ extern DL_IMPORT(void *) PyLong_AsVoidPtr(PyObject *);
 #define LONG_LONG long long
 #endif
 
-extern DL_IMPORT(PyObject *) PyLong_FromLongLong(LONG_LONG);
-extern DL_IMPORT(PyObject *) PyLong_FromUnsignedLongLong(unsigned LONG_LONG);
-extern DL_IMPORT(LONG_LONG) PyLong_AsLongLong(PyObject *);
-extern DL_IMPORT(unsigned LONG_LONG) PyLong_AsUnsignedLongLong(PyObject *);
+extern DL_IMPORT(PyObject *) PyLong_FromLongLong Py_PROTO((LONG_LONG));
+extern DL_IMPORT(PyObject *) PyLong_FromUnsignedLongLong Py_PROTO((unsigned LONG_LONG));
+extern DL_IMPORT(LONG_LONG) PyLong_AsLongLong Py_PROTO((PyObject *));
+extern DL_IMPORT(unsigned LONG_LONG) PyLong_AsUnsignedLongLong Py_PROTO((PyObject *));
 #endif /* HAVE_LONG_LONG */
 
-DL_IMPORT(PyObject *) PyLong_FromString(char *, char **, int);
-DL_IMPORT(PyObject *) PyLong_FromUnicode(Py_UNICODE*, int, int);
+DL_IMPORT(PyObject *) PyLong_FromString Py_PROTO((char *, char **, int));
+DL_IMPORT(PyObject *) PyLong_FromUnicode Py_PROTO((Py_UNICODE*, int, int));
 
 #ifdef __cplusplus
 }

@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* MD5 module */
@@ -31,7 +52,7 @@ staticforward PyTypeObject MD5type;
 #define is_md5object(v)		((v)->ob_type == &MD5type)
 
 static md5object *
-newmd5object(void)
+newmd5object()
 {
 	md5object *md5p;
 
@@ -47,7 +68,8 @@ newmd5object(void)
 /* MD5 methods */
 
 static void
-md5_dealloc(md5object *md5p)
+md5_dealloc(md5p)
+	md5object *md5p;
 {
 	PyObject_Del(md5p);
 }
@@ -56,7 +78,9 @@ md5_dealloc(md5object *md5p)
 /* MD5 methods-as-attributes */
 
 static PyObject *
-md5_update(md5object *self, PyObject *args)
+md5_update(self, args)
+	md5object *self;
+	PyObject *args;
 {
 	unsigned char *cp;
 	int len;
@@ -79,7 +103,9 @@ arguments.";
 
 
 static PyObject *
-md5_digest(md5object *self, PyObject *args)
+md5_digest(self, args)
+	md5object *self;
+	PyObject *args;
 {
 
 	MD5_CTX mdContext;
@@ -104,7 +130,9 @@ including null bytes.";
 
 
 static PyObject *
-md5_copy(md5object *self, PyObject *args)
+md5_copy(self, args)
+	md5object *self;
+	PyObject *args;
 {
 	md5object *md5p;
 
@@ -133,7 +161,9 @@ static PyMethodDef md5_methods[] = {
 };
 
 static PyObject *
-md5_getattr(md5object *self, char *name)
+md5_getattr(self, name)
+	md5object *self;
+	char *name;
 {
 	return Py_FindMethod(md5_methods, (PyObject *)self, name);
 }
@@ -145,7 +175,7 @@ algorithm (see also Internet RFC 1321). Its use is quite\n\
 straightforward: use the new() to create an md5 object. You can now\n\
 feed this object with arbitrary strings using the update() method, and\n\
 at any point you can ask it for the digest (a strong kind of 128-bit\n\
-checksum, a.k.a. ``fingerprint'') of the concatenation of the strings\n\
+checksum, a.k.a. ``fingerprint'') of the contatenation of the strings\n\
 fed to it so far using the digest() method.\n\
 \n\
 Functions:\n\
@@ -199,7 +229,9 @@ statichere PyTypeObject MD5type = {
 /* MD5 functions */
 
 static PyObject *
-MD5_new(PyObject *self, PyObject *args)
+MD5_new(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	md5object *md5p;
 	unsigned char *cp = NULL;
@@ -236,7 +268,7 @@ static PyMethodDef md5_functions[] = {
 /* Initialize this module. */
 
 DL_EXPORT(void)
-initmd5(void)
+initmd5()
 {
 	PyObject *m, *d;
 

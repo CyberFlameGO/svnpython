@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Check for interrupts */
@@ -18,10 +39,11 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #endif
 
 #include "myproto.h"
+#include "mymalloc.h" /* For ANY */
 #include "intrcheck.h"
 
 /* Copied here from ceval.h -- can't include that file. */
-int Py_AddPendingCall(int (*func)(void *), void *arg);
+int Py_AddPendingCall Py_PROTO((int (*func) Py_PROTO((ANY *)), ANY *arg));
 
 
 #ifdef QUICKWIN
@@ -29,17 +51,17 @@ int Py_AddPendingCall(int (*func)(void *), void *arg);
 #include <io.h>
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	_wyield();
 }
@@ -65,18 +87,18 @@ PyOS_InterruptOccurred(void)
 #include <go32.h>
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 	_go32_want_ctrl_break(1 /* TRUE */);
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	return _go32_was_ctrl_break_hit();
 }
@@ -86,17 +108,17 @@ PyOS_InterruptOccurred(void)
 /* This might work for MS-DOS (untested though): */
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	int interrupted = 0;
 	while (kbhit()) {
@@ -135,23 +157,23 @@ PyOS_InterruptOccurred(void)
 static int interrupted;
 
 void
-PyErr_SetInterrupt(void)
+PyErr_SetInterrupt()
 {
 	interrupted = 1;
 }
 
-extern int PyErr_CheckSignals(void);
+extern int PyErr_CheckSignals();
 
-static int
-checksignals_witharg(void * arg)
+/* ARGSUSED */
+static RETSIGTYPE
+#if defined(_M_IX86) && !defined(__QNX__)
+intcatcher(int sig)	/* So the C compiler shuts up */
+#else /* _M_IX86 */
+intcatcher(sig)
+	int sig; /* Not used by required by interface */
+#endif /* _M_IX86 */
 {
-	return PyErr_CheckSignals();
-}
-
-static void
-intcatcher(int sig)
-{
-	extern void Py_Exit(int);
+	extern void Py_Exit Py_PROTO((int));
 	static char message[] =
 "python: to interrupt a truly hanging Python program, interrupt once more.\n";
 	switch (interrupted++) {
@@ -166,13 +188,13 @@ intcatcher(int sig)
 		break;
 	}
 	signal(SIGINT, intcatcher);
-	Py_AddPendingCall(checksignals_witharg, NULL);
+	Py_AddPendingCall(PyErr_CheckSignals, NULL);
 }
 
-static void (*old_siginthandler)(int) = SIG_DFL;
+static RETSIGTYPE (*old_siginthandler)() = SIG_DFL;
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 	if ((old_siginthandler = signal(SIGINT, SIG_IGN)) != SIG_IGN)
 		signal(SIGINT, intcatcher);
@@ -188,13 +210,13 @@ PyOS_InitInterrupts(void)
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 	signal(SIGINT, old_siginthandler);
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	if (!interrupted)
 		return 0;
@@ -205,6 +227,6 @@ PyOS_InterruptOccurred(void)
 #endif /* !OK */
 
 void
-PyOS_AfterFork(void)
+PyOS_AfterFork()
 {
 }

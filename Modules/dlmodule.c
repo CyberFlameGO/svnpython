@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* dl module */
@@ -18,7 +39,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #define RTLD_LAZY 1
 #endif
 
-typedef void *PyUnivPtr;
+typedef ANY *PyUnivPtr;
 typedef struct {
 	PyObject_HEAD
 	PyUnivPtr *dl_handle;
@@ -29,7 +50,8 @@ staticforward PyTypeObject Dltype;
 static PyObject *Dlerror;
 
 static PyObject *
-newdlobject(PyUnivPtr *handle)
+newdlobject(handle)
+	PyUnivPtr *handle;
 {
 	dlobject *xp;
 	xp = PyObject_New(dlobject, &Dltype);
@@ -40,7 +62,8 @@ newdlobject(PyUnivPtr *handle)
 }
 
 static void
-dl_dealloc(dlobject *xp)
+dl_dealloc(xp)
+	dlobject *xp;
 {
 	if (xp->dl_handle != NULL)
 		dlclose(xp->dl_handle);
@@ -48,7 +71,9 @@ dl_dealloc(dlobject *xp)
 }
 
 static PyObject *
-dl_close(dlobject *xp, PyObject *args)
+dl_close(xp, args)
+	dlobject *xp;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -61,7 +86,9 @@ dl_close(dlobject *xp, PyObject *args)
 }
 
 static PyObject *
-dl_sym(dlobject *xp, PyObject *args)
+dl_sym(xp, args)
+	dlobject *xp;
+	PyObject *args;
 {
 	char *name;
 	PyUnivPtr *func;
@@ -76,7 +103,9 @@ dl_sym(dlobject *xp, PyObject *args)
 }
 
 static PyObject *
-dl_call(dlobject *xp, PyObject *args)
+dl_call(xp, args)
+	dlobject *xp;
+	PyObject *args; /* (varargs) */
 {
 	PyObject *name;
 	long (*func)();
@@ -133,7 +162,9 @@ static PyMethodDef dlobject_methods[] = {
 };
 
 static PyObject *
-dl_getattr(dlobject *xp, char *name)
+dl_getattr(xp, name)
+	dlobject *xp;
+	char *name;
 {
 	return Py_FindMethod(dlobject_methods, (PyObject *)xp, name);
 }
@@ -159,7 +190,9 @@ static PyTypeObject Dltype = {
 };
 
 static PyObject *
-dl_open(PyObject *self, PyObject *args)
+dl_open(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	char *name;
 	int mode;
@@ -191,7 +224,7 @@ static PyMethodDef dl_methods[] = {
 };
 
 void
-initdl(void)
+initdl()
 {
 	PyObject *m, *d, *x;
 

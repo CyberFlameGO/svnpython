@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Module new -- create new objects of various types */
@@ -17,7 +38,9 @@ static char new_instance_doc[] =
 "Create an instance object from (CLASS, DICT) without calling its __init__().";
 
 static PyObject *
-new_instance(PyObject* unused, PyObject* args)
+new_instance(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* klass;
 	PyObject *dict;
@@ -33,7 +56,6 @@ new_instance(PyObject* unused, PyObject* args)
 	Py_INCREF(dict);
 	inst->in_class = (PyClassObject *)klass;
 	inst->in_dict = dict;
-	PyObject_GC_Init(inst);
 	return (PyObject *)inst;
 }
 
@@ -41,7 +63,9 @@ static char new_im_doc[] =
 "Create a instance method object from (FUNCTION, INSTANCE, CLASS).";
 
 static PyObject *
-new_instancemethod(PyObject* unused, PyObject* args)
+new_instancemethod(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* func;
 	PyObject* self;
@@ -71,7 +95,9 @@ static char new_function_doc[] =
 "Create a function object from (CODE, GLOBALS, [NAME, ARGDEFS]).";
 
 static PyObject *
-new_function(PyObject* unused, PyObject* args)
+new_function(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* code;
 	PyObject* globals;
@@ -108,7 +134,9 @@ static char new_code_doc[] =
 "Create a code object from (ARGCOUNT, NLOCALS, STACKSIZE, FLAGS, CODESTRING, CONSTANTS, NAMES, VARNAMES, FILENAME, NAME, FIRSTLINENO, LNOTAB).";
 
 static PyObject *
-new_code(PyObject* unused, PyObject* args)
+new_code(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	int argcount;
 	int nlocals;
@@ -154,7 +182,9 @@ static char new_module_doc[] =
 "Create a module object from (NAME).";
 
 static PyObject *
-new_module(PyObject* unused, PyObject* args)
+new_module(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	char *name;
   
@@ -167,7 +197,9 @@ static char new_class_doc[] =
 "Create a class object from (NAME, BASE_CLASSES, DICT).";
 
 static PyObject *
-new_class(PyObject* unused, PyObject* args)
+new_class(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject * name;
 	PyObject * classes;
@@ -195,7 +227,7 @@ char new_doc[] =
 You need to know a great deal about the interpreter to use this!";
 
 DL_EXPORT(void)
-initnew(void)
+initnew()
 {
 	Py_InitModule4("new", new_methods, new_doc, (PyObject *)NULL,
 		       PYTHON_API_VERSION);

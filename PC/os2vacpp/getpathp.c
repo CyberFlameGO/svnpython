@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Return the initial module search path. */
@@ -16,7 +37,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 #ifdef MS_WIN32
 #include <windows.h>
-extern BOOL PyWin_IsWin32s(void);
+extern BOOL PyWin_IsWin32s();
 #endif
 
 #include <sys/types.h>
@@ -47,14 +68,14 @@ extern BOOL PyWin_IsWin32s(void);
  *
  * Otherwise, if there is a PYTHONPATH environment variable, we return that.
  *
- * Otherwise we try to find $progpath/lib/os.py, and if found, then
+ * Otherwise we try to find $progpath/lib/string.py, and if found, then
  * root is $progpath/lib, and we return Python path as compiled PYTHONPATH
  * with all "./lib" replaced by $root (as above).
  *
  */
 
 #ifndef LANDMARK
-#define LANDMARK "lib\\os.py"
+#define LANDMARK "lib\\string.py"
 #endif
 
 static char prefix[MAXPATHLEN+1];
@@ -64,7 +85,8 @@ static char *module_search_path = NULL;
 
 
 static int
-is_sep(char ch)	/* determine if "ch" is a separator character */
+is_sep(ch)	/* determine if "ch" is a separator character */
+	char ch;
 {
 #ifdef ALTSEP
 	return ch == SEP || ch == ALTSEP;
@@ -75,7 +97,8 @@ is_sep(char ch)	/* determine if "ch" is a separator character */
 
 
 static void
-reduce(char *dir)
+reduce(dir)
+	char *dir;
 {
 	int i = strlen(dir);
 	while (i > 0 && !is_sep(dir[i]))
@@ -85,7 +108,8 @@ reduce(char *dir)
 	
 
 static int
-exists(char *filename)
+exists(filename)
+	char *filename;
 {
 	struct stat buf;
 	return stat(filename, &buf) == 0;
@@ -93,7 +117,9 @@ exists(char *filename)
 
 
 static void
-join(char *buffer, char *stuff)
+join(buffer, stuff)
+	char *buffer;
+	char *stuff;
 {
 	int n, k;
 	if (is_sep(stuff[0]))
@@ -112,7 +138,9 @@ join(char *buffer, char *stuff)
 
 
 static int
-search_for_prefix(char *argv0_path, char *landmark)
+search_for_prefix(argv0_path, landmark)
+	char *argv0_path;
+	char *landmark;
 {
 	int n;
 
@@ -240,9 +268,9 @@ getpythonregpath(HKEY keyBase, BOOL bWin32s)
 #endif /* MS_WIN32 */
 
 static void
-get_progpath(void)
+get_progpath()
 {
-	extern char *Py_GetProgramName(void);
+	extern char *Py_GetProgramName();
 	char *path = getenv("PATH");
 	char *prog = Py_GetProgramName();
 
@@ -292,7 +320,7 @@ get_progpath(void)
 }
 
 static void
-calculate_path(void)
+calculate_path()
 {
 	char argv0_path[MAXPATHLEN+1];
 	char *buf;
@@ -444,7 +472,7 @@ calculate_path(void)
 /* External interface */
 
 char *
-Py_GetPath(void)
+Py_GetPath()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -453,7 +481,7 @@ Py_GetPath(void)
 }
 
 char *
-Py_GetPrefix(void)
+Py_GetPrefix()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -462,7 +490,7 @@ Py_GetPrefix(void)
 }
 
 char *
-Py_GetExecPrefix(void)
+Py_GetExecPrefix()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -471,7 +499,7 @@ Py_GetExecPrefix(void)
 }
 
 char *
-Py_GetProgramFullPath(void)
+Py_GetProgramFullPath()
 {
 	if (!module_search_path)
 		calculate_path();

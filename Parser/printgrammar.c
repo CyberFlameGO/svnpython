@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Print a bunch of C initializers that represent a grammar */
@@ -14,13 +35,15 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #include "grammar.h"
 
 /* Forward */
-static void printarcs(int, dfa *, FILE *);
-static void printstates(grammar *, FILE *);
-static void printdfas(grammar *, FILE *);
-static void printlabels(grammar *, FILE *);
+static void printarcs Py_PROTO((int, dfa *, FILE *));
+static void printstates Py_PROTO((grammar *, FILE *));
+static void printdfas Py_PROTO((grammar *, FILE *));
+static void printlabels Py_PROTO((grammar *, FILE *));
 
 void
-printgrammar(grammar *g, FILE *fp)
+printgrammar(g, fp)
+	grammar *g;
+	FILE *fp;
 {
 	fprintf(fp, "#include \"pgenheaders.h\"\n");
 	fprintf(fp, "#include \"grammar.h\"\n");
@@ -35,7 +58,9 @@ printgrammar(grammar *g, FILE *fp)
 }
 
 void
-printnonterminals(grammar *g, FILE *fp)
+printnonterminals(g, fp)
+	grammar *g;
+	FILE *fp;
 {
 	dfa *d;
 	int i;
@@ -46,7 +71,10 @@ printnonterminals(grammar *g, FILE *fp)
 }
 
 static void
-printarcs(int i, dfa *d, FILE *fp)
+printarcs(i, d, fp)
+	int i;
+	dfa *d;
+	FILE *fp;
 {
 	arc *a;
 	state *s;
@@ -64,7 +92,9 @@ printarcs(int i, dfa *d, FILE *fp)
 }
 
 static void
-printstates(grammar *g, FILE *fp)
+printstates(g, fp)
+	grammar *g;
+	FILE *fp;
 {
 	state *s;
 	dfa *d;
@@ -84,7 +114,9 @@ printstates(grammar *g, FILE *fp)
 }
 
 static void
-printdfas(grammar *g, FILE *fp)
+printdfas(g, fp)
+	grammar *g;
+	FILE *fp;
 {
 	dfa *d;
 	int i, j;
@@ -104,7 +136,9 @@ printdfas(grammar *g, FILE *fp)
 }
 
 static void
-printlabels(grammar *g, FILE *fp)
+printlabels(g, fp)
+	grammar *g;
+	FILE *fp;
 {
 	label *l;
 	int i;

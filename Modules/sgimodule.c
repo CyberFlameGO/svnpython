@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* SGI module -- random SGI-specific things */
@@ -18,7 +39,9 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #include <fcntl.h>
 
 static PyObject *
-sgi_nap(PyObject *self, PyObject *args)
+sgi_nap(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long ticks;
 	if (!PyArg_Parse(args, "l", &ticks))
@@ -33,7 +56,9 @@ sgi_nap(PyObject *self, PyObject *args)
 extern char *_getpty(int *, int, mode_t, int);
 
 static PyObject *
-sgi__getpty(PyObject *self, PyObject *args)
+sgi__getpty(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int oflag;
 	int mode;
@@ -59,7 +84,7 @@ static PyMethodDef sgi_methods[] = {
 
 
 void
-initsgi(void)
+initsgi()
 {
 	Py_InitModule("sgi", sgi_methods);
 }

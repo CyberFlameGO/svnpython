@@ -5,13 +5,34 @@ extern "C" {
 #endif
 
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Object and type object interface */
@@ -51,7 +72,7 @@ and the type pointer.  The actual memory allocated for an object
 contains other data that can only be accessed after casting the pointer
 to a pointer to a longer structure type.  This longer type must start
 with the reference count and type fields; the macro PyObject_HEAD should be
-used for this (to accommodate for future changes).  The implementation
+used for this (to accomodate for future changes).  The implementation
 of a particular object type can cast the object pointer to the proper
 type and back.
 
@@ -109,23 +130,21 @@ NB: the methods for certain type groups are now contained in separate
 method blocks.
 */
 
-typedef PyObject * (*unaryfunc)(PyObject *);
-typedef PyObject * (*binaryfunc)(PyObject *, PyObject *);
-typedef PyObject * (*ternaryfunc)(PyObject *, PyObject *, PyObject *);
-typedef int (*inquiry)(PyObject *);
-typedef int (*coercion)(PyObject **, PyObject **);
-typedef PyObject *(*intargfunc)(PyObject *, int);
-typedef PyObject *(*intintargfunc)(PyObject *, int, int);
-typedef int(*intobjargproc)(PyObject *, int, PyObject *);
-typedef int(*intintobjargproc)(PyObject *, int, int, PyObject *);
-typedef int(*objobjargproc)(PyObject *, PyObject *, PyObject *);
-typedef int (*getreadbufferproc)(PyObject *, int, void **);
-typedef int (*getwritebufferproc)(PyObject *, int, void **);
-typedef int (*getsegcountproc)(PyObject *, int *);
-typedef int (*getcharbufferproc)(PyObject *, int, const char **);
-typedef int (*objobjproc)(PyObject *, PyObject *);
-typedef int (*visitproc)(PyObject *, void *);
-typedef int (*traverseproc)(PyObject *, visitproc, void *);
+typedef PyObject * (*unaryfunc) Py_PROTO((PyObject *));
+typedef PyObject * (*binaryfunc) Py_PROTO((PyObject *, PyObject *));
+typedef PyObject * (*ternaryfunc) Py_PROTO((PyObject *, PyObject *, PyObject *));
+typedef int (*inquiry) Py_PROTO((PyObject *));
+typedef int (*coercion) Py_PROTO((PyObject **, PyObject **));
+typedef PyObject *(*intargfunc) Py_PROTO((PyObject *, int));
+typedef PyObject *(*intintargfunc) Py_PROTO((PyObject *, int, int));
+typedef int(*intobjargproc) Py_PROTO((PyObject *, int, PyObject *));
+typedef int(*intintobjargproc) Py_PROTO((PyObject *, int, int, PyObject *));
+typedef int(*objobjargproc) Py_PROTO((PyObject *, PyObject *, PyObject *));
+typedef int (*getreadbufferproc) Py_PROTO((PyObject *, int, void **));
+typedef int (*getwritebufferproc) Py_PROTO((PyObject *, int, void **));
+typedef int (*getsegcountproc) Py_PROTO((PyObject *, int *));
+typedef int (*getcharbufferproc) Py_PROTO((PyObject *, int, const char **));
+typedef int (*objobjproc) Py_PROTO((PyObject *, PyObject *));
 
 typedef struct {
 	binaryfunc nb_add;
@@ -178,15 +197,15 @@ typedef struct {
 } PyBufferProcs;
 	
 
-typedef void (*destructor)(PyObject *);
-typedef int (*printfunc)(PyObject *, FILE *, int);
-typedef PyObject *(*getattrfunc)(PyObject *, char *);
-typedef PyObject *(*getattrofunc)(PyObject *, PyObject *);
-typedef int (*setattrfunc)(PyObject *, char *, PyObject *);
-typedef int (*setattrofunc)(PyObject *, PyObject *, PyObject *);
-typedef int (*cmpfunc)(PyObject *, PyObject *);
-typedef PyObject *(*reprfunc)(PyObject *);
-typedef long (*hashfunc)(PyObject *);
+typedef void (*destructor) Py_PROTO((PyObject *));
+typedef int (*printfunc) Py_PROTO((PyObject *, FILE *, int));
+typedef PyObject *(*getattrfunc) Py_PROTO((PyObject *, char *));
+typedef PyObject *(*getattrofunc) Py_PROTO((PyObject *, PyObject *));
+typedef int (*setattrfunc) Py_PROTO((PyObject *, char *, PyObject *));
+typedef int (*setattrofunc) Py_PROTO((PyObject *, PyObject *, PyObject *));
+typedef int (*cmpfunc) Py_PROTO((PyObject *, PyObject *));
+typedef PyObject *(*reprfunc) Py_PROTO((PyObject *));
+typedef long (*hashfunc) Py_PROTO((PyObject *));
 
 typedef struct _typeobject {
 	PyObject_VAR_HEAD
@@ -224,13 +243,9 @@ typedef struct _typeobject {
 
 	char *tp_doc; /* Documentation string */
 
-	/* call function for all accessible objects */
-	traverseproc tp_traverse;
-	
-	/* delete references to contained objects */
-	inquiry tp_clear;
-
 	/* More spares */
+	long tp_xxx5;
+	long tp_xxx6;
 	long tp_xxx7;
 	long tp_xxx8;
 
@@ -248,33 +263,29 @@ extern DL_IMPORT(PyTypeObject) PyType_Type; /* The type of type objects */
 #define PyType_Check(op) ((op)->ob_type == &PyType_Type)
 
 /* Generic operations on objects */
-extern DL_IMPORT(int) PyObject_Print(PyObject *, FILE *, int);
-extern DL_IMPORT(PyObject *) PyObject_Repr(PyObject *);
-extern DL_IMPORT(PyObject *) PyObject_Str(PyObject *);
-extern DL_IMPORT(int) PyObject_Compare(PyObject *, PyObject *);
-extern DL_IMPORT(PyObject *) PyObject_GetAttrString(PyObject *, char *);
-extern DL_IMPORT(int) PyObject_SetAttrString(PyObject *, char *, PyObject *);
-extern DL_IMPORT(int) PyObject_HasAttrString(PyObject *, char *);
-extern DL_IMPORT(PyObject *) PyObject_GetAttr(PyObject *, PyObject *);
-extern DL_IMPORT(int) PyObject_SetAttr(PyObject *, PyObject *, PyObject *);
-extern DL_IMPORT(int) PyObject_HasAttr(PyObject *, PyObject *);
-extern DL_IMPORT(long) PyObject_Hash(PyObject *);
-extern DL_IMPORT(int) PyObject_IsTrue(PyObject *);
-extern DL_IMPORT(int) PyObject_Not(PyObject *);
-extern DL_IMPORT(int) PyCallable_Check(PyObject *);
-extern DL_IMPORT(int) PyNumber_Coerce(PyObject **, PyObject **);
-extern DL_IMPORT(int) PyNumber_CoerceEx(PyObject **, PyObject **);
+extern DL_IMPORT(int) PyObject_Print Py_PROTO((PyObject *, FILE *, int));
+extern DL_IMPORT(PyObject *) PyObject_Repr Py_PROTO((PyObject *));
+extern DL_IMPORT(PyObject *) PyObject_Str Py_PROTO((PyObject *));
+extern DL_IMPORT(int) PyObject_Compare Py_PROTO((PyObject *, PyObject *));
+extern DL_IMPORT(PyObject *) PyObject_GetAttrString Py_PROTO((PyObject *, char *));
+extern DL_IMPORT(int) PyObject_SetAttrString Py_PROTO((PyObject *, char *, PyObject *));
+extern DL_IMPORT(int) PyObject_HasAttrString Py_PROTO((PyObject *, char *));
+extern DL_IMPORT(PyObject *) PyObject_GetAttr Py_PROTO((PyObject *, PyObject *));
+extern DL_IMPORT(int) PyObject_SetAttr Py_PROTO((PyObject *, PyObject *, PyObject *));
+extern DL_IMPORT(int) PyObject_HasAttr Py_PROTO((PyObject *, PyObject *));
+extern DL_IMPORT(long) PyObject_Hash Py_PROTO((PyObject *));
+extern DL_IMPORT(int) PyObject_IsTrue Py_PROTO((PyObject *));
+extern DL_IMPORT(int) PyObject_Not Py_PROTO((PyObject *));
+extern DL_IMPORT(int) PyCallable_Check Py_PROTO((PyObject *));
+extern DL_IMPORT(int) PyNumber_Coerce Py_PROTO((PyObject **, PyObject **));
+extern DL_IMPORT(int) PyNumber_CoerceEx Py_PROTO((PyObject **, PyObject **));
 
 /* Helpers for printing recursive container types */
-extern DL_IMPORT(int) Py_ReprEnter(PyObject *);
-extern DL_IMPORT(void) Py_ReprLeave(PyObject *);
+extern DL_IMPORT(int) Py_ReprEnter Py_PROTO((PyObject *));
+extern DL_IMPORT(void) Py_ReprLeave Py_PROTO((PyObject *));
 
 /* tstate dict key for PyObject_Compare helper */
 extern PyObject *_PyCompareState_Key;
-
-/* Helpers for hash functions */
-extern DL_IMPORT(long) _Py_HashDouble(double);
-extern DL_IMPORT(long) _Py_HashPointer(void*);
 
 /* Flag bits for printing: */
 #define Py_PRINT_RAW	1	/* No string quotes etc. */
@@ -308,13 +319,6 @@ given type object has a specified feature.
 /* PySequenceMethods contains sq_contains */
 #define Py_TPFLAGS_HAVE_SEQUENCE_IN (1L<<1)
 
-/* Objects which participate in garbage collection (see objimp.h) */
-#ifdef WITH_CYCLE_GC
-#define Py_TPFLAGS_GC (1L<<2)
-#else
-#define Py_TPFLAGS_GC 0
-#endif
-
 #define Py_TPFLAGS_DEFAULT  (Py_TPFLAGS_HAVE_GETCHARBUFFER | \
                              Py_TPFLAGS_HAVE_SEQUENCE_IN)
 
@@ -326,7 +330,7 @@ The macros Py_INCREF(op) and Py_DECREF(op) are used to increment or decrement
 reference counts.  Py_DECREF calls the object's deallocator function; for
 objects that don't contain references to other objects or heap memory
 this can be the standard function free().  Both macros can be used
-wherever a void expression is allowed.  The argument shouldn't be a
+whereever a void expression is allowed.  The argument shouldn't be a
 NIL pointer.  The macro _Py_NewReference(op) is used only to initialize
 reference counts to 1; it is defined here for convenience.
 
@@ -355,11 +359,11 @@ environment the global variable trick is not safe.)
 #endif
 
 #ifdef Py_TRACE_REFS
-extern DL_IMPORT(void) _Py_Dealloc(PyObject *);
-extern DL_IMPORT(void) _Py_NewReference(PyObject *);
-extern DL_IMPORT(void) _Py_ForgetReference(PyObject *);
-extern DL_IMPORT(void) _Py_PrintReferences(FILE *);
-extern DL_IMPORT(void) _Py_ResetReferences(void);
+extern DL_IMPORT(void) _Py_Dealloc Py_PROTO((PyObject *));
+extern DL_IMPORT(void) _Py_NewReference Py_PROTO((PyObject *));
+extern DL_IMPORT(void) _Py_ForgetReference Py_PROTO((PyObject *));
+extern DL_IMPORT(void) _Py_PrintReferences Py_PROTO((FILE *));
+extern DL_IMPORT(void) _Py_ResetReferences Py_PROTO((void));
 #endif
 
 #ifndef Py_TRACE_REFS
@@ -373,7 +377,7 @@ extern DL_IMPORT(void) _Py_ResetReferences(void);
 #endif /* !Py_TRACE_REFS */
 
 #ifdef COUNT_ALLOCS
-extern DL_IMPORT(void) inc_count(PyTypeObject *);
+extern DL_IMPORT(void) inc_count Py_PROTO((PyTypeObject *));
 #endif
 
 #ifdef Py_REF_DEBUG
@@ -452,7 +456,11 @@ object, so I can't just put extern in all cases. :-( )
 
 #ifdef BAD_STATIC_FORWARD
 #define staticforward extern
+#ifdef __SC__
+#define statichere
+#else
 #define statichere static
+#endif /* __SC__ */
 #else /* !BAD_STATIC_FORWARD */
 #define staticforward static
 #define statichere static
@@ -518,7 +526,7 @@ times.
   redefinition for better locality and less overhead.
 
   Objects that want to be recursion safe need to use
-  the macro's 
+  the macroes 
 		Py_TRASHCAN_SAFE_BEGIN(name)
   and
 		Py_TRASHCAN_SAFE_END(name)
@@ -551,8 +559,8 @@ times.
 			_PyTrash_destroy_chain(); \
 	} \
 
-extern DL_IMPORT(void) _PyTrash_deposit_object(PyObject*);
-extern DL_IMPORT(void) _PyTrash_destroy_chain(void);
+extern DL_IMPORT(void) _PyTrash_deposit_object Py_PROTO((PyObject*));
+extern DL_IMPORT(void) _PyTrash_destroy_chain Py_PROTO(());
 
 extern DL_IMPORT(int) _PyTrash_delete_nesting;
 extern DL_IMPORT(PyObject *) _PyTrash_delete_later;

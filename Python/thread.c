@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Thread package.
@@ -29,7 +50,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #include <stdlib.h>
 #else
 #ifdef Py_DEBUG
-extern char *getenv(const char *);
+extern char *getenv();
 #endif
 #endif
 
@@ -73,6 +94,17 @@ extern char *getenv(const char *);
 
 #endif /* _POSIX_THREADS */
 
+#ifdef __STDC__
+#define _P(args)		args
+#define _P0()			(void)
+#define _P1(v,t)		(t)
+#define _P2(v1,t1,v2,t2)	(t1,t2)
+#else
+#define _P(args)		()
+#define _P0()			()
+#define _P1(v,t)		(v) t;
+#define _P2(v1,t1,v2,t2)	(v1,v2) t1; t2;
+#endif /* __STDC__ */
 
 #ifdef Py_DEBUG
 static int thread_debug = 0;
@@ -85,9 +117,9 @@ static int thread_debug = 0;
 
 static int initialized;
 
-static void PyThread__init_thread(void); /* Forward */
+static void PyThread__init_thread(); /* Forward */
 
-void PyThread_init_thread(void)
+void PyThread_init_thread _P0()
 {
 #ifdef Py_DEBUG
 	char *p = getenv("THREADDEBUG");

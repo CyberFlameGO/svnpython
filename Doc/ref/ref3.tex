@@ -217,7 +217,7 @@ and \code{z.imag}.
 These represent finite ordered sets indexed by natural numbers.
 The built-in function \function{len()}\bifuncindex{len} returns the
 number of items of a sequence.
-When the length of a sequence is \var{n}, the
+When the lenth of a sequence is \var{n}, the
 index set contains the numbers 0, 1, \ldots, \var{n}-1.  Item
 \var{i} of sequence \var{a} is selected by \code{\var{a}[\var{i}]}.
 \obindex{sequence}
@@ -310,7 +310,7 @@ parentheses.
 Mutable sequences can be changed after they are created.  The
 subscription and slicing notations can be used as the target of
 assignment and \keyword{del} (delete) statements.
-\obindex{mutable sequence}
+\obindex{mutable sequece}
 \obindex{mutable}
 \indexii{assignment}{statement}
 \index{delete}
@@ -438,12 +438,11 @@ base class of the class of which \member{im_self} is an instance);
 
 User-defined method objects are created in two ways: when getting an
 attribute of a class that is a user-defined function object, or when
-getting an attribute of a class instance that is a user-defined
-function object defined by the class of the instance.  In the former
-case (class attribute), the \member{im_self} attribute is \code{None},
-and the method object is said to be unbound; in the latter case
-(instance attribute), \method{im_self} is the instance, and the method
-object is said to be bound.  For
+getting an attributes of a class instance that is a user-defined
+function object.  In the former case (class attribute), the
+\member{im_self} attribute is \code{None}, and the method object is said
+to be unbound; in the latter case (instance attribute), \method{im_self}
+is the instance, and the method object is said to be bound.  For
 instance, when \class{C} is a class which contains a definition for a
 function \method{f()}, \code{C.f} does not yield the function object
 \code{f}; rather, it yields an unbound method object \code{m} where
@@ -453,7 +452,9 @@ instance, \code{x.f} yields a bound method object \code{m} where
 \code{m.im_class} is \code{C}, \code{m.im_func} is \method{f()}, and
 \code{m.im_self} is \code{x}.
 \withsubitem{(method attribute)}{
-  \ttindex{im_class}\ttindex{im_func}\ttindex{im_self}}
+  \ttindex{im_class}
+  \ttindex{im_func}
+  \ttindex{im_self}}
 
 When an unbound user-defined method object is called, the underlying
 function (\member{im_func}) is called, with the restriction that the
@@ -473,10 +474,7 @@ the class or instance.  In some cases, a fruitful optimization is to
 assign the attribute to a local variable and call that local variable.
 Also notice that this transformation only happens for user-defined
 functions; other callable objects (and all non-callable objects) are
-retrieved without transformation.  It is also important to note that
-user-defined functions which are attributes of a class instance are
-not converted to bound methods; this \emph{only} happens when the
-function is an attribute of the class.
+retrieved without transformation.
 
 \item[Built-in functions]
 A built-in function object is a wrapper around a \C{} function.  Examples
@@ -700,7 +698,7 @@ bytecode; \member{co_names} is a tuple containing the names used by
 the bytecode; \member{co_filename} is the filename from which the code
 was compiled; \member{co_firstlineno} is the first line number of the
 function; \member{co_lnotab} is a string encoding the mapping from
-byte code offsets to line numbers (for details see the source code of
+byte code offsets to line numbers (for detais see the source code of
 the interpreter); \member{co_stacksize} is the required stack size
 (including local variables); \member{co_flags} is an integer encoding
 a number of flags for the interpreter.
@@ -815,8 +813,8 @@ or ellipses separated by commas, e.g., \code{a[i:j:step]}, \code{a[i:j,
 k:l]}, or \code{a[..., i:j])}.  They are also created by the built-in
 \function{slice()}\bifuncindex{slice} function.
 
-Special read-only attributes: \member{start} is the lower bound;
-\member{stop} is the upper bound; \member{step} is the step value; each is
+Special read-only attributes: \member{start} is the lowerbound;
+\member{stop} is the upperbound; \member{step} is the step value; each is
 \code{None} if omitted. These attributes can have any type.
 \withsubitem{(slice object attribute)}{
   \ttindex{start}
@@ -927,17 +925,6 @@ instead.
 \begin{methoddesc}[object]{__cmp__}{self, other}
 Called by all comparison operations.  Should return a negative integer if
 \code{self < other},  zero if \code{self == other}, a positive integer if
-\code{self > other}.  If no \method{__cmp__()} operation is defined, class
-instances are compared by object identity (``address'').
-(Note: the restriction that exceptions are not propagated by
-\method{__cmp__()} has been removed in Python 1.5.)
-\bifuncindex{cmp}
-\index{comparisons}
-\end{methoddesc}
-
-\begin{methoddesc}[object]{__rcmp__}{self, other}
-Called by all comparison operations.  Should return a negative integer if
-\code{self < other}, zero if \code{self == other}, a positive integer if
 \code{self > other}.  If no \method{__cmp__()} operation is defined, class
 instances are compared by object identity (``address'').
 (Note: the restriction that exceptions are not propagated by
@@ -1091,16 +1078,9 @@ returns zero is considered to be false in a Boolean context.
 
 \begin{methoddesc}[mapping object]{__getitem__}{self, key}
 Called to implement evaluation of \code{\var{self}[\var{key}]}.
-For a sequence types, the accepted keys should be integers.  Note that
-the special interpretation of negative indices (if the class wishes to
+For a sequence types, the accepted keys should be integers.  Note that the
+special interpretation of negative indices (if the class wishes to
 emulate a sequence type) is up to the \method{__getitem__()} method.
-If \var{key} is of an inappropriate type, \exception{TypeError} may be
-raised; if of a value outside the set of indexes for the sequence
-(after any special interpretation of negative values),
-\exception{IndexError} should be raised.
-\strong{Note:}  \keyword{for} loops expect that an
-\exception{IndexError} will be raised for illegal indexes to allow
-proper detection of the end of the sequence.
 \end{methoddesc}
 
 \begin{methoddesc}[mapping object]{__setitem__}{self, key, value}
@@ -1108,17 +1088,14 @@ Called to implement assignment to \code{\var{self}[\var{key}]}.  Same
 note as for \method{__getitem__()}.  This should only be implemented
 for mappings if the objects support changes to the values for keys, or
 if new keys can be added, or for sequences if elements can be
-replaced.  The same exceptions should be raised for improper
-\var{key} values as for the \method{__getitem__()} method.
+replaced.
 \end{methoddesc}
 
 \begin{methoddesc}[mapping object]{__delitem__}{self, key}
 Called to implement deletion of \code{\var{self}[\var{key}]}.  Same
 note as for \method{__getitem__()}.  This should only be implemented
 for mappings if the objects support removal of keys, or for sequences
-if elements can be removed from the sequence.  The same exceptions
-should be raised for improper \var{key} values as for the
-\method{__getitem__()} method.
+if elements can be removed from the sequence.
 \end{methoddesc}
 
 
@@ -1224,7 +1201,7 @@ complicated).
 \methodline[numeric object]{__abs__}{self}
 \methodline[numeric object]{__invert__}{self}
 Called to implement the unary arithmetic operations (\code{-}, \code{+},
-\function{abs()}\bifuncindex{abs} and \code{\~{}}).
+\function{abs()}\bifuncindex{abs} and \code{~}).
 \end{methoddesc}
 
 \begin{methoddesc}[numeric object]{__complex__}{self}

@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Functions used by cgen output */
@@ -20,7 +41,10 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
    one argument. */
 
 int
-PyArg_GetObject(register PyObject *args, int nargs, int i, PyObject **p_arg)
+PyArg_GetObject(args, nargs, i, p_arg)
+	register PyObject *args;
+	int nargs, i;
+	PyObject **p_arg;
 {
 	if (nargs != 1) {
 		if (args == NULL || !PyTuple_Check(args) ||
@@ -40,7 +64,10 @@ PyArg_GetObject(register PyObject *args, int nargs, int i, PyObject **p_arg)
 }
 
 int
-PyArg_GetLong(register PyObject *args, int nargs, int i, long *p_arg)
+PyArg_GetLong(args, nargs, i, p_arg)
+	register PyObject *args;
+	int nargs, i;
+	long *p_arg;
 {
 	if (nargs != 1) {
 		if (args == NULL || !PyTuple_Check(args) ||
@@ -58,7 +85,10 @@ PyArg_GetLong(register PyObject *args, int nargs, int i, long *p_arg)
 }
 
 int
-PyArg_GetShort(register PyObject *args, int nargs, int i, short *p_arg)
+PyArg_GetShort(args, nargs, i, p_arg)
+	register PyObject *args;
+	int nargs, i;
+	short *p_arg;
 {
 	long x;
 	if (!PyArg_GetLong(args, nargs, i, &x))
@@ -68,7 +98,9 @@ PyArg_GetShort(register PyObject *args, int nargs, int i, short *p_arg)
 }
 
 static int
-extractdouble(register PyObject *v, double *p_arg)
+extractdouble(v, p_arg)
+	register PyObject *v;
+	double *p_arg;
 {
 	if (v == NULL) {
 		/* Fall through to error return at end of function */
@@ -89,7 +121,9 @@ extractdouble(register PyObject *v, double *p_arg)
 }
 
 static int
-extractfloat(register PyObject *v, float *p_arg)
+extractfloat(v, p_arg)
+	register PyObject *v;
+	float *p_arg;
 {
 	if (v == NULL) {
 		/* Fall through to error return at end of function */
@@ -110,7 +144,10 @@ extractfloat(register PyObject *v, float *p_arg)
 }
 
 int
-PyArg_GetFloat(register PyObject *args, int nargs, int i, float *p_arg)
+PyArg_GetFloat(args, nargs, i, p_arg)
+	register PyObject *args;
+	int nargs, i;
+	float *p_arg;
 {
 	PyObject *v;
 	float x;
@@ -123,7 +160,10 @@ PyArg_GetFloat(register PyObject *args, int nargs, int i, float *p_arg)
 }
 
 int
-PyArg_GetString(PyObject *args, int nargs, int i, string *p_arg)
+PyArg_GetString(args, nargs, i, p_arg)
+	PyObject *args;
+	int nargs, i;
+	string *p_arg;
 {
 	PyObject *v;
 	if (!PyArg_GetObject(args, nargs, i, &v))
@@ -136,7 +176,10 @@ PyArg_GetString(PyObject *args, int nargs, int i, string *p_arg)
 }
 
 int
-PyArg_GetChar(PyObject *args, int nargs, int i, char *p_arg)
+PyArg_GetChar(args, nargs, i, p_arg)
+	PyObject *args;
+	int nargs, i;
+	char *p_arg;
 {
 	string x;
 	if (!PyArg_GetString(args, nargs, i, &x))
@@ -150,7 +193,10 @@ PyArg_GetChar(PyObject *args, int nargs, int i, char *p_arg)
 }
 
 int
-PyArg_GetLongArraySize(PyObject *args, int nargs, int i, long *p_arg)
+PyArg_GetLongArraySize(args, nargs, i, p_arg)
+	PyObject *args;
+	int nargs, i;
+	long *p_arg;
 {
 	PyObject *v;
 	if (!PyArg_GetObject(args, nargs, i, &v))
@@ -167,7 +213,10 @@ PyArg_GetLongArraySize(PyObject *args, int nargs, int i, long *p_arg)
 }
 
 int
-PyArg_GetShortArraySize(PyObject *args, int nargs, int i, short *p_arg)
+PyArg_GetShortArraySize(args, nargs, i, p_arg)
+	PyObject *args;
+	int nargs, i;
+	short *p_arg;
 {
 	long x;
 	if (!PyArg_GetLongArraySize(args, nargs, i, &x))
@@ -179,7 +228,11 @@ PyArg_GetShortArraySize(PyObject *args, int nargs, int i, short *p_arg)
 /* XXX The following four are too similar.  Should share more code. */
 
 int
-PyArg_GetLongArray(PyObject *args, int nargs, int i, int n, long *p_arg)
+PyArg_GetLongArray(args, nargs, i, n, p_arg)
+	PyObject *args;
+	int nargs, i;
+	int n;
+	long *p_arg; /* [n] */
 {
 	PyObject *v, *w;
 	if (!PyArg_GetObject(args, nargs, i, &v))
@@ -216,7 +269,11 @@ PyArg_GetLongArray(PyObject *args, int nargs, int i, int n, long *p_arg)
 }
 
 int
-PyArg_GetShortArray(PyObject *args, int nargs, int i, int n, short *p_arg)
+PyArg_GetShortArray(args, nargs, i, n, p_arg)
+	PyObject *args;
+	int nargs, i;
+	int n;
+	short *p_arg; /* [n] */
 {
 	PyObject *v, *w;
 	if (!PyArg_GetObject(args, nargs, i, &v))
@@ -253,7 +310,11 @@ PyArg_GetShortArray(PyObject *args, int nargs, int i, int n, short *p_arg)
 }
 
 int
-PyArg_GetDoubleArray(PyObject *args, int nargs, int i, int n, double *p_arg)
+PyArg_GetDoubleArray(args, nargs, i, n, p_arg)
+	PyObject *args;
+	int nargs, i;
+	int n;
+	double *p_arg; /* [n] */
 {
 	PyObject *v, *w;
 	if (!PyArg_GetObject(args, nargs, i, &v))
@@ -286,7 +347,11 @@ PyArg_GetDoubleArray(PyObject *args, int nargs, int i, int n, double *p_arg)
 }
 
 int
-PyArg_GetFloatArray(PyObject *args, int nargs, int i, int n, float *p_arg)
+PyArg_GetFloatArray(args, nargs, i, n, p_arg)
+	PyObject *args;
+	int nargs, i;
+	int n;
+	float *p_arg; /* [n] */
 {
 	PyObject *v, *w;
 	if (!PyArg_GetObject(args, nargs, i, &v))

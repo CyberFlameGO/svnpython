@@ -4,13 +4,34 @@ XXX support mstop parameter on search
 */
 
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Regular expression objects */
@@ -40,10 +61,11 @@ typedef struct {
 /* Regex object methods */
 
 static void
-reg_dealloc(regexobject *re)
+reg_dealloc(re)
+	regexobject *re;
 {
 	if (re->re_patbuf.buffer)
-		free(re->re_patbuf.buffer);
+		PyMem_DEL(re->re_patbuf.buffer);
 	Py_XDECREF(re->re_translate);
 	Py_XDECREF(re->re_lastok);
 	Py_XDECREF(re->re_groupindex);
@@ -53,7 +75,8 @@ reg_dealloc(regexobject *re)
 }
 
 static PyObject *
-makeresult(struct re_registers *regs)
+makeresult(regs)
+	struct re_registers *regs;
 {
 	PyObject *v;
 	int i;
@@ -87,7 +110,9 @@ makeresult(struct re_registers *regs)
 }
 
 static PyObject *
-regobj_match(regexobject *re, PyObject *args)
+regobj_match(re, args)
+	regexobject *re;
+	PyObject *args;
 {
 	PyObject *argstring;
 	char *buffer;
@@ -123,7 +148,9 @@ regobj_match(regexobject *re, PyObject *args)
 }
 
 static PyObject *
-regobj_search(regexobject *re, PyObject *args)
+regobj_search(re, args)
+	regexobject *re;
+	PyObject *args;
 {
 	PyObject *argstring;
 	char *buffer;
@@ -168,7 +195,9 @@ regobj_search(regexobject *re, PyObject *args)
    an integer index [0 .. 99]
  */
 static PyObject*
-group_from_index(regexobject *re, PyObject *index)
+group_from_index(re, index)
+	regexobject *re;
+	PyObject *index;
 {
 	int i, a, b;
 	char *v;
@@ -210,7 +239,9 @@ group_from_index(regexobject *re, PyObject *index)
 
 
 static PyObject *
-regobj_group(regexobject *re, PyObject *args)
+regobj_group(re, args)
+	regexobject *re;
+	PyObject *args;
 {
 	int n = PyTuple_Size(args);
 	int i;
@@ -271,7 +302,9 @@ static char* members[] = {
 
 
 static PyObject *
-regobj_getattr(regexobject *re, char *name)
+regobj_getattr(re, name)
+	regexobject *re;
+	char *name;
 {
 	if (strcmp(name, "regs") == 0) {
 		if (re->re_lastok == NULL) {
@@ -368,7 +401,11 @@ static PyTypeObject Regextype = {
    groupindex: transferred
 */
 static PyObject *
-newregexobject(PyObject *pattern, PyObject *translate, PyObject *givenpat, PyObject *groupindex)
+newregexobject(pattern, translate, givenpat, groupindex)
+	PyObject *pattern;
+	PyObject *translate;
+	PyObject *givenpat;
+	PyObject *groupindex;
 {
 	regexobject *re;
 	char *pat;
@@ -416,7 +453,9 @@ newregexobject(PyObject *pattern, PyObject *translate, PyObject *givenpat, PyObj
 }
 
 static PyObject *
-regex_compile(PyObject *self, PyObject *args)
+regex_compile(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *pat = NULL;
 	PyObject *tran = NULL;
@@ -427,7 +466,9 @@ regex_compile(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-symcomp(PyObject *pattern, PyObject *gdict)
+symcomp(pattern, gdict)
+	PyObject *pattern;
+	PyObject *gdict;
 {
 	char *opat, *oend, *o, *n, *g, *v;
 	int group_count = 0;
@@ -534,7 +575,9 @@ symcomp(PyObject *pattern, PyObject *gdict)
 }
 
 static PyObject *
-regex_symcomp(PyObject *self, PyObject *args)
+regex_symcomp(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *pattern;
 	PyObject *tran = NULL;
@@ -561,7 +604,8 @@ static PyObject *cache_pat;
 static PyObject *cache_prog;
 
 static int
-update_cache(PyObject *pat)
+update_cache(pat)
+	PyObject *pat;
 {
 	PyObject *tuple = Py_BuildValue("(O)", pat);
 	int status = 0;
@@ -587,7 +631,9 @@ update_cache(PyObject *pat)
 }
 
 static PyObject *
-regex_match(PyObject *self, PyObject *args)
+regex_match(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *pat, *string;
 	PyObject *tuple, *v;
@@ -605,7 +651,9 @@ regex_match(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-regex_search(PyObject *self, PyObject *args)
+regex_search(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *pat, *string;
 	PyObject *tuple, *v;
@@ -623,7 +671,9 @@ regex_search(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-regex_set_syntax(PyObject *self, PyObject *args)
+regex_set_syntax(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int syntax;
 	if (!PyArg_Parse(args, "i", &syntax))
@@ -638,7 +688,9 @@ regex_set_syntax(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-regex_get_syntax(PyObject *self, PyObject *args)
+regex_get_syntax(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -657,7 +709,7 @@ static struct PyMethodDef regex_global_methods[] = {
 };
 
 DL_EXPORT(void)
-initregex(void)
+initregex()
 {
 	PyObject *m, *d, *v;
 	int i;

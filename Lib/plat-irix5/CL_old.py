@@ -200,7 +200,7 @@ TOP_DOWN = 0
 BOTTOM_UP = 1
 
 #
-# SGI Proprietary Algorithm Header Start Code
+# SGI Proprietaty Algorithm Header Start Code
 #
 HEADER_START_CODE = 0xc1C0DEC
 

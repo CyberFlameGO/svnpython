@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Signal module -- many thanks to Lance Ellinghaus */
@@ -26,7 +47,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #include <signal.h>
 
 #ifndef SIG_ERR
-#define SIG_ERR ((void (*)(int))-1)
+#define SIG_ERR ((RETSIGTYPE (*)())-1)
 #endif
 
 #if defined(PYOS_OS2)
@@ -35,15 +56,11 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #endif
 
 #ifndef NSIG
-# if defined(_NSIG)
-#  define NSIG _NSIG		/* For BSD/SysV */
-# elif defined(_SIGMAX)
-#  define NSIG (_SIGMAX + 1)	/* For QNX */
-# elif defined(SIGMAX)
-#  define NSIG (SIGMAX + 1)	/* For djgpp */
-# else
-#  define NSIG 64		/* Use a reasonable default value */
-# endif
+#ifdef _SIGMAX
+#define NSIG (_SIGMAX + 1)	/* For QNX */
+#else
+#define NSIG (SIGMAX + 1)	/* for djgpp */
+#endif
 #endif
 
 
@@ -92,12 +109,14 @@ static PyObject *DefaultHandler;
 static PyObject *IgnoreHandler;
 static PyObject *IntHandler;
 
-static void (*old_siginthandler)(int) = SIG_DFL;
+static RETSIGTYPE (*old_siginthandler)() = SIG_DFL;
 
 
 
 static PyObject *
-signal_default_int_handler(PyObject *self, PyObject *args)
+signal_default_int_handler(self, arg)
+	PyObject *self;
+	PyObject *arg;
 {
 	PyErr_SetNone(PyExc_KeyboardInterrupt);
 	return NULL;
@@ -110,15 +129,9 @@ The default handler for SIGINT instated by Python.\n\
 It raises KeyboardInterrupt.";
 
 
-
-static int
-checksignals_witharg(void * unused)
-{
-	return PyErr_CheckSignals();
-}
-
-static void
-signal_handler(int sig_num)
+static RETSIGTYPE
+signal_handler(sig_num)
+	int sig_num;
 {
 #ifdef WITH_THREAD
 	/* See NOTES section above */
@@ -126,7 +139,8 @@ signal_handler(int sig_num)
 #endif
 		is_tripped++;
 		Handlers[sig_num].tripped = 1;
-		Py_AddPendingCall(checksignals_witharg, NULL);
+		Py_AddPendingCall(
+			(int (*) Py_PROTO((ANY *)))PyErr_CheckSignals, NULL);
 #ifdef WITH_THREAD
 	}
 #endif
@@ -142,14 +156,16 @@ signal_handler(int sig_num)
 #ifdef HAVE_SIGINTERRUPT
 	siginterrupt(sig_num, 1);
 #endif
-	signal(sig_num, signal_handler);
+	(void)signal(sig_num, &signal_handler);
 }
 
 
 
 #ifdef HAVE_ALARM
 static PyObject *
-signal_alarm(PyObject *self, PyObject *args)
+signal_alarm(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int t;
 	if (!PyArg_Parse(args, "i", &t))
@@ -166,7 +182,9 @@ Arrange for SIGALRM to arrive after the given number of seconds.";
 
 #ifdef HAVE_PAUSE
 static PyObject *
-signal_pause(PyObject *self, PyObject *args)
+signal_pause(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -192,12 +210,14 @@ Wait until a signal arrives.";
 
 
 static PyObject *
-signal_signal(PyObject *self, PyObject *args)
+signal_signal(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	PyObject *obj;
 	int sig_num;
 	PyObject *old_handler;
-	void (*func)(int);
+	RETSIGTYPE (*func)();
 	if (!PyArg_Parse(args, "(iO)", &sig_num, &obj))
 		return NULL;
 #ifdef WITH_THREAD
@@ -250,7 +270,9 @@ the first is the signal number, the second is the interrupted stack frame.";
 
 
 static PyObject *
-signal_getsignal(PyObject *self, PyObject *args)
+signal_getsignal(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int sig_num;
 	PyObject *old_handler;
@@ -318,7 +340,7 @@ A signal handler function is called with two arguments:\n\
 the first is the signal number, the second is the interrupted stack frame.";
 
 DL_EXPORT(void)
-initsignal(void)
+initsignal()
 {
 	PyObject *m, *d, *x;
 	int i;
@@ -334,11 +356,11 @@ initsignal(void)
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
 
-	x = DefaultHandler = PyLong_FromVoidPtr((void *)SIG_DFL);
+	x = DefaultHandler = PyInt_FromLong((long)SIG_DFL);
         if (!x || PyDict_SetItemString(d, "SIG_DFL", x) < 0)
                 goto finally;
 
-	x = IgnoreHandler = PyLong_FromVoidPtr((void *)SIG_IGN);
+	x = IgnoreHandler = PyInt_FromLong((long)SIG_IGN);
         if (!x || PyDict_SetItemString(d, "SIG_IGN", x) < 0)
                 goto finally;
 
@@ -354,7 +376,7 @@ initsignal(void)
 
 	Handlers[0].tripped = 0;
 	for (i = 1; i < NSIG; i++) {
-		void (*t)(int);
+		RETSIGTYPE (*t)();
 #ifdef HAVE_SIGACTION
 		struct sigaction act;
 		sigaction(i,  0, &act);
@@ -559,7 +581,7 @@ initsignal(void)
 }
 
 static void
-finisignal(void)
+finisignal()
 {
 	int i;
 	PyObject *func;
@@ -589,7 +611,7 @@ finisignal(void)
 
 /* Declared in pyerrors.h */
 int
-PyErr_CheckSignals(void)
+PyErr_CheckSignals()
 {
 	int i;
 	PyObject *f;
@@ -629,28 +651,28 @@ PyErr_CheckSignals(void)
  * Declared in pyerrors.h
  */
 void
-PyErr_SetInterrupt(void)
+PyErr_SetInterrupt()
 {
 	is_tripped++;
 	Handlers[SIGINT].tripped = 1;
-	Py_AddPendingCall((int (*)(void *))PyErr_CheckSignals, NULL);
+	Py_AddPendingCall((int (*) Py_PROTO((ANY *)))PyErr_CheckSignals, NULL);
 }
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 	initsignal();
 	_PyImport_FixupExtension("signal", "signal");
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 	finisignal();
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	if (Handlers[SIGINT].tripped) {
 #ifdef WITH_THREAD
@@ -664,7 +686,7 @@ PyOS_InterruptOccurred(void)
 }
 
 void
-PyOS_AfterFork(void)
+PyOS_AfterFork()
 {
 #ifdef WITH_THREAD
 	main_thread = PyThread_get_thread_ident();

@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* strop module */
@@ -38,7 +59,10 @@ this module directly.";
 
 
 static PyObject *
-split_whitespace(char *s, int len, int maxsplit)
+split_whitespace(s, len, maxsplit)
+	char *s;
+	int len;
+	int maxsplit;
 {
 	int i = 0, j, err;
 	int countsplit = 0;
@@ -104,7 +128,9 @@ is a separator.  Maxsplit defaults to 0.\n\
 (split and splitfields are synonymous)";
 
 static PyObject *
-strop_splitfields(PyObject *self, PyObject *args)
+strop_splitfields(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int len, n, i, j, err;
 	int splitcount, maxsplit;
@@ -167,13 +193,15 @@ static char joinfields__doc__[] =
 joinfields(list [,sep]) -> string\n\
 \n\
 Return a string composed of the words in list, with\n\
-intervening occurrences of sep.  Sep defaults to a single\n\
+intervening occurences of sep.  Sep defaults to a single\n\
 space.\n\
 \n\
 (join and joinfields are synonymous)";
 
 static PyObject *
-strop_joinfields(PyObject *self, PyObject *args)
+strop_joinfields(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	PyObject *seq;
 	char *sep = NULL;
@@ -190,7 +218,7 @@ strop_joinfields(PyObject *self, PyObject *args)
 		seplen = 1;
 	}
 
-	seqlen = PySequence_Size(seq);
+	seqlen = PySequence_Length(seq);
 	if (seqlen < 0 && PyErr_Occurred())
 		return NULL;
 
@@ -303,7 +331,9 @@ arguments start and end are interpreted as in slice notation.\n\
 Return -1 on failure.";
 
 static PyObject *
-strop_find(PyObject *self, PyObject *args)
+strop_find(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *sub;
 	int len, n, i = 0, last = INT_MAX;
@@ -345,7 +375,9 @@ arguments start and end are interpreted as in slice notation.\n\
 Return -1 on failure.";
 
 static PyObject *
-strop_rfind(PyObject *self, PyObject *args)
+strop_rfind(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *sub;
 	int len, n, j;
@@ -378,7 +410,9 @@ strop_rfind(PyObject *self, PyObject *args)
 
 
 static PyObject *
-do_strip(PyObject *args, int striptype)
+do_strip(args, striptype)
+	PyObject *args;
+	int striptype;
 {
 	char *s;
 	int len, i, j;
@@ -418,7 +452,9 @@ Return a copy of the string s with leading and trailing\n\
 whitespace removed.";
 
 static PyObject *
-strop_strip(PyObject *self, PyObject *args)
+strop_strip(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	return do_strip(args, BOTHSTRIP);
 }
@@ -430,7 +466,9 @@ static char lstrip__doc__[] =
 Return a copy of the string s with leading whitespace removed.";
 
 static PyObject *
-strop_lstrip(PyObject *self, PyObject *args)
+strop_lstrip(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	return do_strip(args, LEFTSTRIP);
 }
@@ -442,7 +480,9 @@ static char rstrip__doc__[] =
 Return a copy of the string s with trailing whitespace removed.";
 
 static PyObject *
-strop_rstrip(PyObject *self, PyObject *args)
+strop_rstrip(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	return do_strip(args, RIGHTSTRIP);
 }
@@ -454,7 +494,9 @@ static char lower__doc__[] =
 Return a copy of the string s converted to lowercase.";
 
 static PyObject *
-strop_lower(PyObject *self, PyObject *args)
+strop_lower(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *s_new;
 	int i, n;
@@ -492,7 +534,9 @@ static char upper__doc__[] =
 Return a copy of the string s converted to uppercase.";
 
 static PyObject *
-strop_upper(PyObject *self, PyObject *args)
+strop_upper(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *s_new;
 	int i, n;
@@ -531,7 +575,9 @@ Return a copy of the string s with only its first character\n\
 capitalized.";
 
 static PyObject *
-strop_capitalize(PyObject *self, PyObject *args)
+strop_capitalize(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *s_new;
 	int i, n;
@@ -581,7 +627,9 @@ The column number is reset to zero after each newline occurring in the\n\
 string.  This doesn't understand other non-printing characters.";
 
 static PyObject *
-strop_expandtabs(PyObject *self, PyObject *args)
+strop_expandtabs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	/* Original by Fredrik Lundh */
 	char* e;
@@ -651,7 +699,9 @@ s[start:end].  Optional arguments start and end are\n\
 interpreted as in slice notation.";
 
 static PyObject *
-strop_count(PyObject *self, PyObject *args)
+strop_count(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 	char *s, *sub;
 	int len, n;
@@ -694,7 +744,9 @@ Return a copy of the string s with upper case characters\n\
 converted to lowercase and vice versa.";
 
 static PyObject *
-strop_swapcase(PyObject *self, PyObject *args)
+strop_swapcase(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *s_new;
 	int i, n;
@@ -742,7 +794,9 @@ is chosen from the leading characters of s, 0 for octal, 0x or\n\
 accepted.";
 
 static PyObject *
-strop_atoi(PyObject *self, PyObject *args)
+strop_atoi(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *end;
 	int base = 10;
@@ -795,7 +849,9 @@ octal, 0x or 0X for hexadecimal.  If base is 16, a preceding\n\
 unless base is 0.";
 
 static PyObject *
-strop_atol(PyObject *self, PyObject *args)
+strop_atol(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	char *s, *end;
 	int base = 10;
@@ -839,9 +895,11 @@ static char atof__doc__[] =
 Return the floating point number represented by the string s.";
 
 static PyObject *
-strop_atof(PyObject *self, PyObject *args)
+strop_atof(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
-	extern double strtod(const char *, char **);
+	extern double strtod Py_PROTO((const char *, char **));
 	char *s, *end;
 	double x;
 	char buffer[256]; /* For errors */
@@ -882,7 +940,9 @@ suitable for use in string.translate.  The strings frm and to\n\
 must be of the same length.";
 
 static PyObject *
-strop_maketrans(PyObject *self, PyObject *args)
+strop_maketrans(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	unsigned char *c, *from=NULL, *to=NULL;
 	int i, fromlen=0, tolen=0;
@@ -919,7 +979,9 @@ remaining characters have been mapped through the given\n\
 translation table, which must be a string of length 256.";
 
 static PyObject *
-strop_translate(PyObject *self, PyObject *args)
+strop_translate(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	register char *input, *table, *output;
 	register int i, c, changed = 0;
@@ -997,7 +1059,11 @@ strop_translate(PyObject *self, PyObject *args)
   found, or -1 if not found.  If len of PAT is greater than length of
   MEM, the function returns -1.
 */
-static int mymemfind(char *mem, int len, char *pat, int pat_len)
+static int mymemfind(mem, len, pat, pat_len)
+	char *mem;
+	int len;
+	char *pat;
+	int pat_len;
 {
 	register int ii;
 
@@ -1021,7 +1087,11 @@ static int mymemfind(char *mem, int len, char *pat, int pat_len)
    meaning mem=1111 and pat==11 returns 2.
            mem=11111 and pat==11 also return 2.
  */
-static int mymemcnt(char *mem, int len, char *pat, int pat_len)
+static int mymemcnt(mem, len, pat, pat_len)
+	char *mem;
+	int len;
+	char *pat;
+	int pat_len;
 {
 	register int offset = 0;
 	int nfound = 0;
@@ -1040,10 +1110,10 @@ static int mymemcnt(char *mem, int len, char *pat, int pat_len)
 /*
    mymemreplace
 
-   Return a string in which all occurrences of PAT in memory STR are
+   Return a string in which all occurences of PAT in memory STR are
    replaced with SUB.
 
-   If length of PAT is less than length of STR or there are no occurrences
+   If length of PAT is less than length of STR or there are no occurences
    of PAT in STR, then the original string is returned. Otherwise, a new
    string is allocated here and returned.
 
@@ -1056,7 +1126,16 @@ static int mymemcnt(char *mem, int len, char *pat, int pat_len)
        the new string allocated locally, or
        NULL if an error occurred.
 */
-static char *mymemreplace(char *str, int len, char *pat, int pat_len, char *sub, int sub_len, int count, int *out_len)
+static char *mymemreplace(str, len, pat, pat_len, sub, sub_len, count, out_len)
+	char *str;
+	int len;     /* input string  */
+	char *pat;
+	int pat_len; /* pattern string to find */
+	char *sub;
+	int sub_len; /* substitution string */
+	int count;   /* number of replacements, 0 == all */
+	int *out_len;
+
 {
 	char *out_s;
 	char *new_s;
@@ -1117,7 +1196,9 @@ old replaced by new. If the optional argument maxsplit is\n\
 given, only the first maxsplit occurrences are replaced.";
 
 static PyObject *
-strop_replace(PyObject *self, PyObject *args)
+strop_replace(self, args)
+	PyObject *self;	/* Not used */
+	PyObject *args;
 {
 	char *str, *pat,*sub,*new_s;
 	int len,pat_len,sub_len,out_len;
@@ -1180,7 +1261,7 @@ strop_methods[] = {
 
 
 DL_EXPORT(void)
-initstrop(void)
+initstrop()
 {
 	PyObject *m, *d, *s;
 	char buf[256];

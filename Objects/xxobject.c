@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Use this file as a template to start implementing a new object type.
@@ -32,7 +53,8 @@ staticforward PyTypeObject Xxtype;
 #define is_xxobject(v)		((v)->ob_type == &Xxtype)
 
 static xxobject *
-newxxobject(PyObject *arg)
+newxxobject(arg)
+	PyObject *arg;
 {
 	xxobject *xp;
 	xp = PyObject_NEW(xxobject, &Xxtype);
@@ -45,28 +67,33 @@ newxxobject(PyObject *arg)
 /* Xx methods */
 
 static void
-xx_dealloc(xxobject *xp)
+xx_dealloc(xp)
+	xxobject *xp;
 {
 	Py_XDECREF(xp->x_attr);
 	PyObject_DEL(xp);
 }
 
 static PyObject *
-xx_demo(xxobject *self, PyObject *args)
+xx_demo(self, args)
+	xxobject *self;
+	PyObject *args;
 {
-	if (!PyArg_ParseTuple(args, ":demo"))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
 static PyMethodDef xx_methods[] = {
-	{"demo",	(PyCFunction)xx_demo,	METH_VARARGS},
+	{"demo",	(PyCFunction)xx_demo},
 	{NULL,		NULL}		/* sentinel */
 };
 
 static PyObject *
-xx_getattr(xxobject *xp, char *name)
+xx_getattr(xp, name)
+	xxobject *xp;
+	char *name;
 {
 	if (xp->x_attr != NULL) {
 		PyObject *v = PyDict_GetItemString(xp->x_attr, name);
@@ -79,7 +106,10 @@ xx_getattr(xxobject *xp, char *name)
 }
 
 static int
-xx_setattr(xxobject *xp, char *name, PyObject *v)
+xx_setattr(xp, name, v)
+	xxobject *xp;
+	char *name;
+	PyObject *v;
 {
 	if (xp->x_attr == NULL) {
 		xp->x_attr = PyDict_New();
@@ -90,7 +120,7 @@ xx_setattr(xxobject *xp, char *name, PyObject *v)
 		int rv = PyDict_DelItemString(xp->x_attr, name);
 		if (rv < 0)
 			PyErr_SetString(PyExc_AttributeError,
-                                        "delete non-existing xx attribute");
+			        "delete non-existing xx attribute");
 		return rv;
 	}
 	else

@@ -3,29 +3,35 @@
 /* Since this is a "meta-include" file, no #ifdef __cplusplus / extern "C" { */
 
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
-
-/* Enable compiler features; switching on C lib defines doesn't work
-   here, because the symbols haven't necessarily been defined yet. */
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE	1
-#endif
-
-/* Forcing SUSv2 compatibility still produces problems on some
-   platforms, True64 and SGI IRIX begin two of them, so for now the
-   define is switched off. */
-#if 0
-#ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE	500
-#endif
-#endif
 
 /* Include nearly all Python header files */
 
@@ -40,6 +46,10 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #define DL_EXPORT(RTYPE) RTYPE
 #endif
 
+#ifdef SYMANTEC__CFM68K__
+#define UsingSharedLibs
+#endif
+
 #if defined(__sgi) && defined(WITH_THREAD) && !defined(_SGI_MP_SOURCE)
 #define _SGI_MP_SOURCE
 #endif
@@ -50,11 +60,12 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#include <assert.h>
-
-#include "pyport.h"
 
 #include "myproto.h"
+
+#ifdef SYMANTEC__CFM68K__
+#pragma lib_export on
+#endif
 
 #include "object.h"
 #include "objimpl.h"
@@ -111,7 +122,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 #include "pyfpe.h"
 
-/* These definitions must match corresponding definitions in graminit.h.
+/* These definitions much match corresponding definitions in graminit.h.
    There's code in compile.c that checks that they are the same. */
 #define Py_single_input 256
 #define Py_file_input 257

@@ -9,10 +9,11 @@
 /* Module crypt */
 
 
-static PyObject *crypt_crypt(PyObject *self, PyObject *args)
+static PyObject *crypt_crypt(self, args)
+	PyObject *self, *args;
 {
 	char *word, *salt; 
-	extern char * crypt(const char *, const char *);
+	extern char * crypt();
 
 	if (!PyArg_Parse(args, "(ss)", &word, &salt)) {
 		return NULL;
@@ -36,7 +37,7 @@ static PyMethodDef crypt_methods[] = {
 };
 
 DL_EXPORT(void)
-initcrypt(void)
+initcrypt()
 {
 	Py_InitModule("crypt", crypt_methods);
 }

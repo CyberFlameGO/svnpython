@@ -1,11 +1,32 @@
 /***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
 
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
 ******************************************************************/
 
 /* Font Manager module */
@@ -29,7 +50,8 @@ staticforward PyTypeObject Fhtype;
 #define is_fhobject(v)		((v)->ob_type == &Fhtype)
 
 static PyObject *
-newfhobject(fmfonthandle fh)
+newfhobject(fh)
+	fmfonthandle fh;
 {
 	fhobject *fhp;
 	if (fh == NULL) {
@@ -47,7 +69,9 @@ newfhobject(fmfonthandle fh)
 /* Font Handle methods */
 
 static PyObject *
-fh_scalefont(fhobject *self, PyObject *args)
+fh_scalefont(self, args)
+	fhobject *self;
+PyObject *args;
 {
 	double size;
 	if (!PyArg_Parse(args, "d", &size))
@@ -58,7 +82,9 @@ fh_scalefont(fhobject *self, PyObject *args)
 /* XXX fmmakefont */
 
 static PyObject *
-fh_setfont(fhobject *self, PyObject *args)
+fh_setfont(self, args)
+	fhobject *self;
+PyObject *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -68,7 +94,9 @@ fh_setfont(fhobject *self, PyObject *args)
 }
 
 static PyObject *
-fh_getfontname(fhobject *self, PyObject *args)
+fh_getfontname(self, args)
+	fhobject *self;
+PyObject *args;
 {
 	char fontname[256];
 	int len;
@@ -83,7 +111,9 @@ fh_getfontname(fhobject *self, PyObject *args)
 }
 
 static PyObject *
-fh_getcomment(fhobject *self, PyObject *args)
+fh_getcomment(self, args)
+	fhobject *self;
+PyObject *args;
 {
 	char comment[256];
 	int len;
@@ -98,7 +128,9 @@ fh_getcomment(fhobject *self, PyObject *args)
 }
 
 static PyObject *
-fh_getfontinfo(fhobject *self, PyObject *args)
+fh_getfontinfo(self, args)
+	fhobject *self;
+PyObject *args;
 {
 	fmfontinfo info;
 	if (!PyArg_NoArgs(args))
@@ -120,13 +152,17 @@ fh_getfontinfo(fhobject *self, PyObject *args)
 
 #if 0
 static PyObject *
-fh_getwholemetrics(fhobject *self, PyObject *args)
+fh_getwholemetrics(self, args)
+	fhobject *self;
+PyObject *args;
 {
 }
 #endif
 
 static PyObject *
-fh_getstrwidth(fhobject *self, PyObject *args)
+fh_getstrwidth(self, args)
+	fhobject *self;
+PyObject *args;
 {
 	char *str;
 	if (!PyArg_Parse(args, "s", &str))
@@ -148,13 +184,16 @@ static PyMethodDef fh_methods[] = {
 };
 
 static PyObject *
-fh_getattr(fhobject *fhp, char *name)
+fh_getattr(fhp, name)
+	fhobject *fhp;
+char *name;
 {
 	return Py_FindMethod(fh_methods, (PyObject *)fhp, name);
 }
 
 static void
-fh_dealloc(fhobject *fhp)
+fh_dealloc(fhp)
+	fhobject *fhp;
 {
 	fmfreefont(fhp->fh_fh);
 	PyObject_Del(fhp);
@@ -179,7 +218,8 @@ static PyTypeObject Fhtype = {
 /* Font Manager functions */
 
 static PyObject *
-fm_init(PyObject *self, PyObject *args)
+fm_init(self, args)
+	PyObject *self, *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -189,7 +229,8 @@ fm_init(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-fm_findfont(PyObject *self, PyObject *args)
+fm_findfont(self, args)
+	PyObject *self, *args;
 {
 	char *str;
 	if (!PyArg_Parse(args, "s", &str))
@@ -198,7 +239,8 @@ fm_findfont(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-fm_prstr(PyObject *self, PyObject *args)
+fm_prstr(self, args)
+	PyObject *self, *args;
 {
 	char *str;
 	if (!PyArg_Parse(args, "s", &str))
@@ -213,7 +255,8 @@ fm_prstr(PyObject *self, PyObject *args)
 static PyObject *fontlist;
 
 static void
-clientproc(char *fontname)
+clientproc(fontname)
+	char *fontname;
 {
 	int err;
 	PyObject *v;
@@ -233,7 +276,8 @@ clientproc(char *fontname)
 }
 
 static PyObject *
-fm_enumerate(PyObject *self, PyObject *args)
+fm_enumerate(self, args)
+	PyObject *self, *args;
 {
 	PyObject *res;
 	if (!PyArg_NoArgs(args))
@@ -248,7 +292,8 @@ fm_enumerate(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-fm_setpath(PyObject *self, PyObject *args)
+fm_setpath(self, args)
+	PyObject *self, *args;
 {
 	char *str;
 	if (!PyArg_Parse(args, "s", &str))
@@ -259,7 +304,8 @@ fm_setpath(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-fm_fontpath(PyObject *self, PyObject *args)
+fm_fontpath(self, args)
+	PyObject *self, *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -278,7 +324,7 @@ static PyMethodDef fm_methods[] = {
 
 
 void
-initfm(void)
+initfm()
 {
 	Py_InitModule("fm", fm_methods);
 	fminit();

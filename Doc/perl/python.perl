@@ -52,11 +52,6 @@ sub do_cmd_let{
 }
 
 
-# the older version of LaTeX2HTML we use doesn't support this, but we use it:
-
-sub do_cmd_textasciitilde{ '~' . @_[0]; }
-
-
 # words typeset in a special way (not in HTML though)
 
 sub do_cmd_ABC{ 'ABC' . @_[0]; }
@@ -942,9 +937,6 @@ sub fix_font{
     }
     elsif ($font eq 'member') {
         $font = 'tt class="member"';
-    }
-    elsif ($font eq 'constant') {
-        $font = 'tt class="constant"';
     }
     return $font;
 }
