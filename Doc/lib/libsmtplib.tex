@@ -146,9 +146,8 @@ will be implicitly called by \method{sendmail()} when necessary.
 \end{methoddesc}
 
 \begin{methoddesc}{has_extn}{name}
-Return \constant{True} if \var{name} is in the set of SMTP service
-extensions returned by the server, \constant{False} otherwise.
-Case is ignored.
+Return \code{1} if \var{name} is in the set of SMTP service extensions
+returned by the server, \code{0} otherwise.  Case is ignored.
 \end{methoddesc}
 
 \begin{methoddesc}{verify}{address}

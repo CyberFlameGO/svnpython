@@ -17,11 +17,11 @@ import unittest
 from test_all import verbose
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, dbshelve
-except ImportError:
     # For Python 2.3
     from bsddb import db, dbshelve
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db, dbshelve
 
 
 #----------------------------------------------------------------------
@@ -200,7 +200,7 @@ class AssociateTestCase(unittest.TestCase):
     def getGenre(self, priKey, priData):
         assert type(priData) == type("")
         if verbose:
-            print 'getGenre key: %r data: %r' % (priKey, priData)
+            print 'getGenre key:', `priKey`, 'data:', `priData`
         genre = string.split(priData, '|')[2]
         if genre == 'Blues':
             return db.DB_DONOTINDEX
@@ -242,7 +242,7 @@ class ShelveAssociateTestCase(AssociateTestCase):
     def getGenre(self, priKey, priData):
         assert type(priData) == type(())
         if verbose:
-            print 'getGenre key: %r data: %r' % (priKey, priData)
+            print 'getGenre key:', `priKey`, 'data:', `priData`
         genre = priData[2]
         if genre == 'Blues':
             return db.DB_DONOTINDEX

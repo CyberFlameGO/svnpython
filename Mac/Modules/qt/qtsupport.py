@@ -24,7 +24,12 @@ from macsupport import *
 # Create the type objects
 
 includestuff = includestuff + """
+#ifdef WITHOUT_FRAMEWORKS
+#include <Movies.h>
+#else
+/* #include <Carbon/Carbon.h> */
 #include <QuickTime/QuickTime.h>
+#endif
 
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
@@ -88,16 +93,6 @@ QtTimeRecord_Convert(PyObject *v, TimeRecord *p_itself)
 	return 1;
 }
 
-static int
-QtMusicMIDIPacket_Convert(PyObject *v, MusicMIDIPacket *p_itself)
-{
-	int dummy;
-	
-	if( !PyArg_ParseTuple(v, "hls#", &p_itself->length, &p_itself->reserved, p_itself->data, dummy) )
-		return 0;
-	return 1;
-}
-
 
 
 """
@@ -125,42 +120,15 @@ Media = OpaqueByValueType('Media', 'MediaObj')
 UserData = OpaqueByValueType('UserData', 'UserDataObj')
 TimeBase = OpaqueByValueType('TimeBase', 'TimeBaseObj')
 MovieController = OpaqueByValueType('MovieController', 'MovieCtlObj')
-IdleManager = OpaqueByValueType('IdleManager', 'IdleManagerObj')
-SGOutput = OpaqueByValueType('SGOutput', 'SGOutputObj')
 
 # Other opaque objects
 Component = OpaqueByValueType('Component', 'CmpObj')
 MediaHandlerComponent = OpaqueByValueType('MediaHandlerComponent', 'CmpObj')
 DataHandlerComponent = OpaqueByValueType('DataHandlerComponent', 'CmpObj')
-CompressorComponent = OpaqueByValueType('CompressorComponent', 'CmpObj')
-DecompressorComponent = OpaqueByValueType('DecompressorComponent', 'CmpObj')
-CodecComponent = OpaqueByValueType('CodecComponent', 'CmpObj')
-GraphicsImportComponent = OpaqueByValueType('GraphicsImportComponent', 'CmpObj')
-GraphicsExportComponent = OpaqueByValueType('GraphicsExportComponent', 'CmpObj')
-ImageTranscoderComponent = OpaqueByValueType('ImageTranscoderComponent', 'CmpObj')
-DataCodecComponent = OpaqueByValueType('DataCodecComponent', 'CmpObj')
-GraphicImageMovieImportComponent = OpaqueByValueType('GraphicImageMovieImportComponent', 'CmpObj')
-MovieExportComponent = OpaqueByValueType('MovieExportComponent', 'CmpObj')
-MovieImportComponent = OpaqueByValueType('MovieImportComponent', 'CmpObj')
-QTVideoOutputComponent = OpaqueByValueType('QTVideoOutputComponent', 'CmpObj')
-SeqGrabComponent = OpaqueByValueType('SeqGrabComponent', 'CmpObj')
-TextExportComponent = OpaqueByValueType('TextExportComponent', 'CmpObj')
-TweenerComponent = OpaqueByValueType('TweenerComponent', 'CmpObj')
-pnotComponent = OpaqueByValueType('pnotComponent', 'CmpObj')
-VideoDigitizerComponent = OpaqueByValueType('VideoDigitizerComponent', 'CmpObj')
 
 ComponentInstance = OpaqueByValueType('ComponentInstance', 'CmpInstObj')
 MediaHandler = OpaqueByValueType('MediaHandler', 'CmpInstObj')
 DataHandler = OpaqueByValueType('DataHandler', 'CmpInstObj')
-SGChannel = OpaqueByValueType('SGChannel', 'CmpInstObj')
-TunePlayer = OpaqueByValueType('TunePlayer', 'CmpInstObj')
-MusicComponent = OpaqueByValueType('MusicComponent', 'CmpInstObj')
-NoteAllocator = OpaqueByValueType('NoteAllocator', 'CmpInstObj')
-QTMIDIComponent = OpaqueByValueType('QTMIDIComponent', 'CmpInstObj')
-
-ConstFSSpecPtr = FSSpec_ptr
-GrafPtr = OpaqueByValueType("GrafPtr", "GrafObj")
-Byte = Boolean # XXXX For GetPaused and SetPaused
 
 RgnHandle = OpaqueByValueType("RgnHandle", "ResObj")
 PicHandle = OpaqueByValueType("PicHandle", "ResObj")
@@ -174,13 +142,6 @@ CGrafPtr = OpaqueByValueType("CGrafPtr", "GrafObj")
 GDHandle = OpaqueByValueType("GDHandle", "OptResObj")
 AliasHandle = OpaqueByValueType("AliasHandle", "ResObj")
 SoundDescriptionHandle = OpaqueByValueType("SoundDescriptionHandle", "ResObj")
-VdigBufferRecListHandle = OpaqueByValueType("VdigBufferRecListHandle", "ResObj")
-VDCompressionListHandle = OpaqueByValueType("VDCompressionListHandle", "ResObj")
-TimeCodeDescriptionHandle = OpaqueByValueType("TimeCodeDescriptionHandle", "ResObj")
-DataHFileTypeOrderingHandle = OpaqueByValueType("DataHFileTypeOrderingHandle", "ResObj")
-QTMIDIPortListHandle = OpaqueByValueType("QTMIDIPortListHandle", "ResObj")
-GenericKnobDescriptionListHandle =  OpaqueByValueType("GenericKnobDescriptionListHandle", "ResObj")
-InstrumentInfoListHandle = OpaqueByValueType("InstrumentInfoListHandle", "ResObj")
 # Silly Apple, passing an OStype by reference...
 OSType_ptr = OpaqueType("OSType", "PyMac_BuildOSType", "PyMac_GetOSType")
 # And even sillier: passing floats by address
@@ -190,8 +151,6 @@ RGBColor = OpaqueType("RGBColor", "QdRGB")
 RGBColor_ptr = RGBColor
 TimeRecord = OpaqueType("TimeRecord", "QtTimeRecord")
 TimeRecord_ptr = TimeRecord
-MusicMIDIPacket = OpaqueType("MusicMIDIPacket", "QtMusicMIDIPacket")
-MusicMIDIPacket_ptr = MusicMIDIPacket
 
 # Non-opaque types, mostly integer-ish
 TimeValue = Type("TimeValue", "l")
@@ -207,11 +166,9 @@ dataRefAttributesFlags = Type("dataRefAttributesFlags", "l")
 playHintsEnum = Type("playHintsEnum", "l")
 mediaHandlerFlagsEnum = Type("mediaHandlerFlagsEnum", "l")
 ComponentResult = Type("ComponentResult", "l")
-VideoDigitizerError = Type("ComponentResult", "l")
 HandlerError = Type("HandlerError", "l")
 Ptr = InputOnlyType("Ptr", "s")
 StringPtr = Type("StringPtr", "s")
-UnsignedLongPtr = Type("unsigned long *", "s")
 mcactionparams = InputOnlyType("void *", "s")
 QTParameterDialog = Type("QTParameterDialog", "l")
 QTAtomID = Type("QTAtomID", "l")
@@ -219,70 +176,64 @@ MCInterfaceElement = Type("MCInterfaceElement", "l")
 CodecType = OSTypeType("CodecType")
 GWorldPtr = OpaqueByValueType("GWorldPtr", "GWorldObj")
 QTFloatSingle = Type("QTFloatSingle", "f")
-CodecQ = Type("CodecQ", "l")
-MusicController = Type("MusicController", "l")
 
 # Could-not-be-bothered-types (NewMovieFromFile)
 dummyshortptr = FakeType('(short *)0')
 dummyStringPtr = FakeType('(StringPtr)0')
 
-# Not-quite-sure-this-is-okay types
-AtomicInstrument = OpaqueByValueType("AtomicInstrument", "ResObj")
-AtomicInstrumentPtr = InputOnlyType("AtomicInstrumentPtr", "s")
-
-# XXXX Need to override output_tp_newBody() to allow for None initializer.
-class QtGlobalObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+class MovieObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
 	def outputCheckNewArg(self):
-		# We don't allow NULL pointers to be returned by QuickTime API calls,
-		# in stead we raise an exception
 		Output("""if (itself == NULL) {
-					PyErr_SetString(Qt_Error,"Cannot create %s from NULL pointer");
+					PyErr_SetString(Qt_Error,"Cannot create null Movie");
 					return NULL;
-				}""", self.name)
-	
-	def outputCheckConvertArg(self):
-		# But what we do allow is passing None whereever a quicktime object is
-		# expected, and pass this as NULL to the API routines. Note you can
-		# call methods too by creating an object with None as the initializer.
-		Output("if (v == Py_None)")
-		OutLbrace()
-		Output("*p_itself = NULL;")
-		Output("return 1;")
-		OutRbrace()
-	
-class MovieObjectDefinition(QtGlobalObjectDefinition):
+				}""")
 	def outputFreeIt(self, itselfname):
-		Output("if (%s) DisposeMovie(%s);", itselfname, itselfname)
+		Output("DisposeMovie(%s);", itselfname)
 
-class TrackObjectDefinition(QtGlobalObjectDefinition):
+class TrackObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+	def outputCheckNewArg(self):
+		Output("""if (itself == NULL) {
+					PyErr_SetString(Qt_Error,"Cannot create null Track");
+					return NULL;
+				}""")
 	def outputFreeIt(self, itselfname):
-		Output("if (%s) DisposeMovieTrack(%s);", itselfname, itselfname)
+		Output("DisposeMovieTrack(%s);", itselfname)
 
-class MediaObjectDefinition(QtGlobalObjectDefinition):
+class MediaObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+	def outputCheckNewArg(self):
+		Output("""if (itself == NULL) {
+					PyErr_SetString(Qt_Error,"Cannot create null Media");
+					return NULL;
+				}""")
 	def outputFreeIt(self, itselfname):
-		Output("if (%s) DisposeTrackMedia(%s);", itselfname, itselfname)
+		Output("DisposeTrackMedia(%s);", itselfname)
 
-class UserDataObjectDefinition(QtGlobalObjectDefinition):
+class UserDataObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+	def outputCheckNewArg(self):
+		Output("""if (itself == NULL) {
+					PyErr_SetString(Qt_Error,"Cannot create null UserData");
+					return NULL;
+				}""")
 	def outputFreeIt(self, itselfname):
-		Output("if (%s) DisposeUserData(%s);", itselfname, itselfname)
+		Output("DisposeUserData(%s);", itselfname)
 
-class TimeBaseObjectDefinition(QtGlobalObjectDefinition):
-	pass
-	
-class MovieCtlObjectDefinition(QtGlobalObjectDefinition):
+class TimeBaseObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+	def outputCheckNewArg(self):
+		Output("""if (itself == NULL) {
+					PyErr_SetString(Qt_Error,"Cannot create null TimeBase");
+					return NULL;
+				}""")
+##	def outputFreeIt(self, itselfname):
+##		Output("DisposeTimeBase(%s);", itselfname)
+
+class MovieCtlObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+	def outputCheckNewArg(self):
+		Output("""if (itself == NULL) {
+					PyErr_SetString(Qt_Error,"Cannot create null MovieController");
+					return NULL;
+				}""")
 	def outputFreeIt(self, itselfname):
-		Output("if (%s) DisposeMovieController(%s);", itselfname, itselfname)
-
-class IdleManagerObjectDefinition(QtGlobalObjectDefinition):
-	pass
-	
-class SGOutputObjectDefinition(QtGlobalObjectDefinition):
-	# XXXX I'm not sure I fully understand how SGOutput works. It seems it's always tied
-	# to a specific SeqGrabComponent, but I'm not 100% sure. Also, I'm not sure all the
-	# routines that return an SGOutput actually return a *new* SGOutput. Need to read up on
-	# this.
-	pass
-
+		Output("DisposeMovieController(%s);", itselfname)
 
 # From here on it's basically all boiler plate...
 
@@ -294,20 +245,13 @@ Media_object = MediaObjectDefinition('Media', 'MediaObj', 'Media')
 UserData_object = UserDataObjectDefinition('UserData', 'UserDataObj', 'UserData')
 TimeBase_object = TimeBaseObjectDefinition('TimeBase', 'TimeBaseObj', 'TimeBase')
 MovieController_object = MovieCtlObjectDefinition('MovieController', 'MovieCtlObj', 'MovieController')
-IdleManager_object = IdleManagerObjectDefinition('IdleManager', 'IdleManagerObj', 'IdleManager')
-SGOutput_object = SGOutputObjectDefinition('SGOutput', 'SGOutputObj', 'SGOutput')
 
-module.addobject(IdleManager_object)
 module.addobject(MovieController_object)
 module.addobject(TimeBase_object)
 module.addobject(UserData_object)
 module.addobject(Media_object)
 module.addobject(Track_object)
 module.addobject(Movie_object)
-module.addobject(SGOutput_object)
-
-# Test which types we are still missing.
-execfile(string.lower(MODPREFIX) + 'typetest.py')
 
 # Create the generator classes used to populate the lists
 Function = OSErrWeakLinkFunctionGenerator
@@ -315,14 +259,12 @@ Method = OSErrWeakLinkMethodGenerator
 
 # Create and populate the lists
 functions = []
-IdleManager_methods = []
 MovieController_methods = []
 TimeBase_methods = []
 UserData_methods = []
 Media_methods = []
 Track_methods = []
 Movie_methods = []
-SGOutput_methods = []
 execfile(INPUTFILE)
 
 #

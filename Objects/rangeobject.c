@@ -171,15 +171,6 @@ static PySequenceMethods range_as_sequence = {
 };
 
 static PyObject * range_iter(PyObject *seq);
-static PyObject * range_reverse(PyObject *seq);
-
-PyDoc_STRVAR(reverse_doc,
-"Returns a reverse iterator.");
-
-static PyMethodDef range_methods[] = {
-	{"__reversed__",	(PyCFunction)range_reverse, METH_NOARGS, reverse_doc},
- 	{NULL,		NULL}		/* sentinel */
-};
 
 PyTypeObject PyRange_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
@@ -210,7 +201,7 @@ PyTypeObject PyRange_Type = {
 	0,				/* tp_weaklistoffset */
 	(getiterfunc)range_iter,	/* tp_iter */
 	0,				/* tp_iternext */
-	range_methods,			/* tp_methods */	
+	0,				/* tp_methods */	
 	0,				/* tp_members */
 	0,				/* tp_getset */
 	0,				/* tp_base */
@@ -255,50 +246,12 @@ range_iter(PyObject *seq)
 }
 
 static PyObject *
-range_reverse(PyObject *seq)
-{
-	rangeiterobject *it;
-	long start, step, len;
-
-	if (!PyRange_Check(seq)) {
-		PyErr_BadInternalCall();
-		return NULL;
-	}
-	it = PyObject_New(rangeiterobject, &Pyrangeiter_Type);
-	if (it == NULL)
-		return NULL;
-
-	start = ((rangeobject *)seq)->start;
-	step = ((rangeobject *)seq)->step;
-	len = ((rangeobject *)seq)->len;
-
-	it->index = 0;
-	it->start = start + (len-1) * step;
-	it->step = -step;
-	it->len = len;
-
-	return (PyObject *)it;
-}
-
-static PyObject *
 rangeiter_next(rangeiterobject *r)
 {
 	if (r->index < r->len) 
 		return PyInt_FromLong(r->start + (r->index++) * r->step);
 	return NULL;
 }
-
-static int
-rangeiter_len(rangeiterobject *r)
-{
-	return r->len - r->index;
-}
-
-static PySequenceMethods rangeiter_as_sequence = {
-	(inquiry)rangeiter_len,		/* sq_length */
-	0,				/* sq_concat */
-};
-
 
 static PyTypeObject Pyrangeiter_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
@@ -314,7 +267,7 @@ static PyTypeObject Pyrangeiter_Type = {
 	0,                                      /* tp_compare */
 	0,                                      /* tp_repr */
 	0,                                      /* tp_as_number */
-	&rangeiter_as_sequence,			/* tp_as_sequence */
+	0,                                      /* tp_as_sequence */
 	0,                                      /* tp_as_mapping */
 	0,                                      /* tp_hash */
 	0,                                      /* tp_call */

@@ -278,8 +278,8 @@ class PyBuildExt(build_ext):
             inc_dirs += ['/system/include', '/atheos/autolnk/include']
             inc_dirs += os.getenv('C_INCLUDE_PATH', '').split(os.pathsep)
 
-        # OSF/1 and Unixware have some stuff in /usr/ccs/lib (like -ldb)
-        if platform in ['osf1', 'unixware7', 'openunix8']:
+        # OSF/1 has some stuff in /usr/ccs/lib (like -ldb)
+        if platform == 'osf1':
             lib_dirs += ['/usr/ccs/lib']
 
         # Check for MacOS X, which doesn't need libm.a at all
@@ -322,12 +322,6 @@ class PyBuildExt(build_ext):
         exts.append( Extension("_random", ["_randommodule.c"]) )
         # fast iterator tools implemented in C
         exts.append( Extension("itertools", ["itertoolsmodule.c"]) )
-        # high-performance collections
-        exts.append( Extension("collections", ["collectionsmodule.c"]) )
-        # bisect
-        exts.append( Extension("_bisect", ["_bisectmodule.c"]) )
-        # heapq
-        exts.append( Extension("_heapq", ["_heapqmodule.c"]) )
         # operator.add() and similar goodies
         exts.append( Extension('operator', ['operator.c']) )
         # Python C API test module
@@ -426,7 +420,7 @@ class PyBuildExt(build_ext):
                                    library_dirs=['/usr/lib/termcap'],
                                    libraries=readline_libs) )
         if platform not in ['mac']:
-            # crypt module.
+                # crypt module.
 
             if self.compiler.find_library_file(lib_dirs, 'crypt'):
                 libs = ['crypt']
@@ -474,10 +468,14 @@ class PyBuildExt(build_ext):
         # Sleepycat Berkeley DB interface.  http://www.sleepycat.com
         #
         # This requires the Sleepycat DB code. The earliest supported version
-        # of that library is 3.2, the latest supported version is 4.2.  A list
+        # of that library is 3.1, the latest supported version is 4.2.  A list
         # of available releases can be found at
         #
         # http://www.sleepycat.com/update/index.html
+        #
+        # NOTE: 3.1 is only partially supported; expect the extended bsddb module
+        # test suite to show failures due to some missing methods and behaviours
+        # in BerkeleyDB 3.1.
 
         # when sorted in reverse order, keys for this dict must appear in the
         # order you wish to search - e.g., search for db4 before db3
@@ -500,15 +498,17 @@ class PyBuildExt(build_ext):
                                 '/sw/include/db4',
                                 '/usr/include/db4',
                                 )},
-            'db3': {'libs': ('db-3.3', 'db-3.2', 'db3',),
+            'db3': {'libs': ('db-3.3', 'db-3.2', 'db-3.1', 'db3',),
                     'libdirs': ('/usr/local/BerkeleyDB.3.3/lib',
                                 '/usr/local/BerkeleyDB.3.2/lib',
+                                '/usr/local/BerkeleyDB.3.1/lib',
                                 '/usr/local/lib',
                                 '/opt/sfw/lib',
                                 '/sw/lib',
                                 ),
                     'incdirs': ('/usr/local/BerkeleyDB.3.3/include',
                                 '/usr/local/BerkeleyDB.3.2/include',
+                                '/usr/local/BerkeleyDB.3.1/include',
                                 '/usr/local/include/db3',
                                 '/opt/sfw/include/db3',
                                 '/sw/include/db3',
@@ -655,8 +655,12 @@ class PyBuildExt(build_ext):
                 exts.append( Extension('nis', ['nismodule.c'],
                                        libraries = libs) )
 
-        # Curses support, requiring the System V version of curses, often
+        # Curses support, requring the System V version of curses, often
         # provided by the ncurses library.
+        if platform == 'sunos4':
+            inc_dirs += ['/usr/5include']
+            lib_dirs += ['/usr/5lib']
+
         if (self.compiler.find_library_file(lib_dirs, 'ncurses')):
             curses_libs = ['ncurses']
             exts.append( Extension('_curses', ['_cursesmodule.c'],
@@ -722,8 +726,8 @@ class PyBuildExt(build_ext):
         # Expat was written by James Clark and is now maintained by a
         # group of developers on SourceForge; see www.libexpat.org for
         # more information.  The pyexpat module was written by Paul
-        # Prescod after a prototype by Jack Jansen.  The Expat source
-        # is included in Modules/expat/.  Usage of a system
+        # Prescod after a prototype by Jack Jansen.  Source of Expat
+        # 1.95.2 is included in Modules/expat/.  Usage of a system
         # shared libexpat.so/expat.dll is not advised.
         #
         # More information on Expat can be found at www.libexpat.org.
@@ -753,19 +757,6 @@ class PyBuildExt(build_ext):
                                          'expat/xmltok.c',
                                          ],
                               ))
-
-        # Hye-Shik Chang's CJKCodecs modules.
-        exts.append(Extension('_multibytecodec',
-                              ['cjkcodecs/multibytecodec.c']))
-        for loc in ('ja_JP', 'ko_KR', 'zh_CN', 'zh_TW'):
-            exts.append(Extension('_codecs_mapdata_' + loc,
-                                  ['cjkcodecs/mapdata_%s.c' % loc]))
-        for enc in ('shift_jis', 'cp932', 'euc_jp', 'iso2022_jp',
-                    'iso2022_jp_1', 'iso2022_jp_2', 'iso2022_jp_3',
-                    'iso2022_jp_ext', 'shift_jisx0213', 'euc_jisx0213',
-                    'euc_kr', 'cp949', 'johab', 'iso2022_kr', 'gb2312',
-                    'gbk', 'gb18030', 'hz', 'big5', 'cp950'):
-            exts.append(Extension('_codecs_' + enc, ['cjkcodecs/_%s.c' % enc]))
 
         # Dynamic loading module
         if sys.maxint == 0x7fffffff:
@@ -841,15 +832,11 @@ class PyBuildExt(build_ext):
                     extra_link_args=['-framework', 'Carbon']) )
             exts.append( Extension('_IBCarbon', ['ibcarbon/_IBCarbon.c'],
                     extra_link_args=['-framework', 'Carbon']) )
-            exts.append( Extension('_Launch', ['launch/_Launchmodule.c'],
-                    extra_link_args=['-framework', 'ApplicationServices']) )
             exts.append( Extension('_List', ['list/_Listmodule.c'],
                     extra_link_args=['-framework', 'Carbon']) )
             exts.append( Extension('_Menu', ['menu/_Menumodule.c'],
                     extra_link_args=['-framework', 'Carbon']) )
             exts.append( Extension('_Mlte', ['mlte/_Mltemodule.c'],
-                    extra_link_args=['-framework', 'Carbon']) )
-            exts.append( Extension('_OSA', ['osa/_OSAmodule.c'],
                     extra_link_args=['-framework', 'Carbon']) )
             exts.append( Extension('_Qd', ['qd/_Qdmodule.c'],
                     extra_link_args=['-framework', 'Carbon']) )
@@ -963,7 +950,7 @@ class PyBuildExt(build_ext):
         # The versions with dots are used on Unix, and the versions without
         # dots on Windows, for detection by cygwin.
         tcllib = tklib = tcl_includes = tk_includes = None
-        for version in ['8.5', '85', '8.4', '84', '8.3', '83', '8.2',
+        for version in ['8.4', '84', '8.3', '83', '8.2',
                         '82', '8.1', '81', '8.0', '80']:
             tklib = self.compiler.find_library_file(lib_dirs, 'tk' + version)
             tcllib = self.compiler.find_library_file(lib_dirs, 'tcl' + version)
@@ -973,25 +960,17 @@ class PyBuildExt(build_ext):
 
         # Now check for the header files
         if tklib and tcllib:
-            # Check for the include files on Debian and {Free,Open}BSD, where
+            # Check for the include files on Debian, where
             # they're put in /usr/include/{tcl,tk}X.Y
-            dotversion = version
-            if '.' not in dotversion and "bsd" in sys.platform.lower():
-                # OpenBSD and FreeBSD use Tcl/Tk library names like libtcl83.a,
-                # but the include subdirs are named like .../include/tcl8.3.
-                dotversion = dotversion[:-1] + '.' + dotversion[-1]
-            tcl_include_sub = []
-            tk_include_sub = []
-            for dir in inc_dirs:
-                tcl_include_sub += [dir + os.sep + "tcl" + dotversion]
-                tk_include_sub += [dir + os.sep + "tk" + dotversion]
-            tk_include_sub += tcl_include_sub
-            tcl_includes = find_file('tcl.h', inc_dirs, tcl_include_sub)
-            tk_includes = find_file('tk.h', inc_dirs, tk_include_sub)
+            debian_tcl_include = [ '/usr/include/tcl' + version ]
+            debian_tk_include =  [ '/usr/include/tk'  + version ] + \
+                                 debian_tcl_include
+            tcl_includes = find_file('tcl.h', inc_dirs, debian_tcl_include)
+            tk_includes = find_file('tk.h', inc_dirs, debian_tk_include)
 
         if (tcllib is None or tklib is None or
             tcl_includes is None or tk_includes is None):
-            self.announce("INFO: Can't locate Tcl/Tk libs and/or headers", 2)
+            # Something's missing, so give up
             return
 
         # OK... everything seems to be present for Tcl/Tk.

@@ -500,15 +500,15 @@ def complexes():
         __str__ = __repr__
 
     a = Number(3.14, prec=6)
-    vereq(repr(a), "3.14")
+    vereq(`a`, "3.14")
     vereq(a.prec, 6)
 
     a = Number(a, prec=2)
-    vereq(repr(a), "3.1")
+    vereq(`a`, "3.1")
     vereq(a.prec, 2)
 
     a = Number(234.5)
-    vereq(repr(a), "234.5")
+    vereq(`a`, "234.5")
     vereq(a.prec, 12)
 
 def spamlists():
@@ -2815,8 +2815,8 @@ def pickles():
             vereq(sorteditems(x.__dict__), sorteditems(a.__dict__))
             vereq(y.__class__, b.__class__)
             vereq(sorteditems(y.__dict__), sorteditems(b.__dict__))
-            vereq(repr(x), repr(a))
-            vereq(repr(y), repr(b))
+            vereq(`x`, `a`)
+            vereq(`y`, `b`)
             if verbose:
                 print "a = x =", a
                 print "b = y =", b
@@ -2849,8 +2849,8 @@ def pickles():
     vereq(sorteditems(x.__dict__), sorteditems(a.__dict__))
     vereq(y.__class__, b.__class__)
     vereq(sorteditems(y.__dict__), sorteditems(b.__dict__))
-    vereq(repr(x), repr(a))
-    vereq(repr(y), repr(b))
+    vereq(`x`, `a`)
+    vereq(`y`, `b`)
     if verbose:
         print "a = x =", a
         print "b = y =", b
@@ -2982,13 +2982,13 @@ def binopoverride():
             else:
                 return I(pow(int(other), int(self), int(mod)))
 
-    vereq(repr(I(1) + I(2)), "I(3)")
-    vereq(repr(I(1) + 2), "I(3)")
-    vereq(repr(1 + I(2)), "I(3)")
-    vereq(repr(I(2) ** I(3)), "I(8)")
-    vereq(repr(2 ** I(3)), "I(8)")
-    vereq(repr(I(2) ** 3), "I(8)")
-    vereq(repr(pow(I(2), I(3), I(5))), "I(3)")
+    vereq(`I(1) + I(2)`, "I(3)")
+    vereq(`I(1) + 2`, "I(3)")
+    vereq(`1 + I(2)`, "I(3)")
+    vereq(`I(2) ** I(3)`, "I(8)")
+    vereq(`2 ** I(3)`, "I(8)")
+    vereq(`I(2) ** 3`, "I(8)")
+    vereq(`pow(I(2), I(3), I(5))`, "I(3)")
     class S(str):
         def __eq__(self, other):
             return self.lower() == other.lower()
@@ -3952,36 +3952,6 @@ def filefault():
     except RuntimeError:
         pass
 
-def vicious_descriptor_nonsense():
-    # A potential segfault spotted by Thomas Wouters in mail to
-    # python-dev 2003-04-17, turned into an example & fixed by Michael
-    # Hudson just less than four months later...
-    if verbose:
-        print "Testing vicious_descriptor_nonsense..."
-
-    class Evil(object):
-        def __hash__(self):
-            return hash('attr')
-        def __eq__(self, other):
-            del C.attr
-            return 0
-
-    class Descr(object):
-        def __get__(self, ob, type=None):
-            return 1
-
-    class C(object):
-        attr = Descr()
-
-    c = C()
-    c.__dict__[Evil()] = 0
-
-    vereq(c.attr, 1)
-    # this makes a crash more likely:
-    import gc; gc.collect()
-    vereq(hasattr(c, 'attr'), False)
-
-
 def test_main():
     weakref_segfault() # Must be first, somehow
     do_this_first()
@@ -4073,7 +4043,6 @@ def test_main():
     proxysuper()
     carloverre()
     filefault()
-    vicious_descriptor_nonsense()
 
     if verbose: print "All OK"
 

@@ -251,9 +251,7 @@ class PyShellFileList(FileList):
             self.pyshell.wakeup()
         else:
             self.pyshell = PyShell(self)
-            if self.pyshell:
-                if not self.pyshell.begin():
-                    return None
+            self.pyshell.begin()
         return self.pyshell
 
 
@@ -335,10 +333,10 @@ class ModifiedInterpreter(InteractiveInterpreter):
         del_exitf = idleConf.GetOption('main', 'General', 'delete-exitfunc',
                                        default=False, type='bool')
         if __name__ == 'idlelib.PyShell':
-            command = "__import__('idlelib.run').run.main(%r)" % (del_exitf,)
+            command = "__import__('idlelib.run').run.main(" + `del_exitf` +")"
         else:
-            command = "__import__('run').main(%r)" % (del_exitf,)
-        if sys.platform[:3] == 'win' and ' ' in sys.executable:
+            command = "__import__('run').main(" + `del_exitf` + ")"
+        if sys.platform == 'win32' and ' ' in sys.executable:
             # handle embedded space in path by quoting the argument
             decorated_exec = '"%s"' % sys.executable
         else:
@@ -346,9 +344,6 @@ class ModifiedInterpreter(InteractiveInterpreter):
         return [decorated_exec] + w + ["-c", command, str(self.port)]
 
     def start_subprocess(self):
-        # spawning first avoids passing a listening socket to the subprocess
-        self.spawn_subprocess()
-        #time.sleep(20) # test to simulate GUI not accepting connection
         addr = (LOCALHOST, self.port)
         # Idle starts listening for connection on localhost
         for i in range(3):
@@ -357,17 +352,14 @@ class ModifiedInterpreter(InteractiveInterpreter):
                 self.rpcclt = MyRPCClient(addr)
                 break
             except socket.error, err:
-                pass
+                print>>sys.__stderr__,"IDLE socket error: " + err[1]\
+                                                    + ", retrying..."
         else:
-            self.display_port_binding_error()
-            return None
+            display_port_binding_error()
+            sys.exit()
+        self.spawn_subprocess()
         # Accept the connection from the Python execution server
-        self.rpcclt.listening_sock.settimeout(10)
-        try:
-            self.rpcclt.accept()
-        except socket.timeout, err:
-            self.display_no_subprocess_error()
-            return None
+        self.rpcclt.accept()
         self.rpcclt.register("stdin", self.tkconsole)
         self.rpcclt.register("stdout", self.tkconsole.stdout)
         self.rpcclt.register("stderr", self.tkconsole.stderr)
@@ -376,11 +368,10 @@ class ModifiedInterpreter(InteractiveInterpreter):
         self.rpcclt.register("interp", self)
         self.transfer_path()
         self.poll_subprocess()
-        return self.rpcclt
 
     def restart_subprocess(self):
         if self.restarting:
-            return self.rpcclt
+            return
         self.restarting = True
         # close only the subprocess debugger
         debug = self.getdebugger()
@@ -397,11 +388,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         was_executing = console.executing
         console.executing = False
         self.spawn_subprocess()
-        try:
-            self.rpcclt.accept()
-        except socket.timeout, err:
-            self.display_no_subprocess_error()
-            return None
+        self.rpcclt.accept()
         self.transfer_path()
         # annotate restart in shell window and mark it
         console.text.delete("iomark", "end-1c")
@@ -420,7 +407,6 @@ class ModifiedInterpreter(InteractiveInterpreter):
             # reload remote debugger breakpoints for all PyShellEditWindows
             debug.load_breakpoints()
         self.restarting = False
-        return self.rpcclt
 
     def __request_interrupt(self):
         self.rpcclt.remotecall("exec", "interrupt_the_server", (), {})
@@ -429,10 +415,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         threading.Thread(target=self.__request_interrupt).start()
 
     def kill_subprocess(self):
-        try:
-            self.rpcclt.close()
-        except AttributeError:  # no socket
-            pass
+        self.rpcclt.close()
         self.unix_terminate()
         self.tkconsole.executing = False
         self.rpcclt = None
@@ -454,12 +437,12 @@ class ModifiedInterpreter(InteractiveInterpreter):
     def transfer_path(self):
         self.runcommand("""if 1:
         import sys as _sys
-        _sys.path = %r
+        _sys.path = %s
         del _sys
         _msg = 'Use File/Exit or your end-of-file key to quit IDLE'
         __builtins__.quit = __builtins__.exit = _msg
         del _msg
-        \n""" % (sys.path,))
+        \n""" % `sys.path`)
 
     active_seq = None
 
@@ -483,7 +466,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
             console = self.tkconsole.console
             if how == "OK":
                 if what is not None:
-                    print >>console, repr(what)
+                    print >>console, `what`
             elif how == "EXCEPTION":
                 if self.tkconsole.getvar("<<toggle-jit-stack-viewer>>"):
                     self.remote_stack_viewer()
@@ -528,9 +511,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         item = RemoteObjectBrowser.StubObjectTreeItem(self.rpcclt, oid)
         from TreeWidget import ScrolledCanvas, TreeNode
         top = Toplevel(self.tkconsole.root)
-        theme = idleConf.GetOption('main','Theme','name')
-        background = idleConf.GetHighlight(theme, 'normal')['background']
-        sc = ScrolledCanvas(top, bg=background, highlightthickness=0)
+        sc = ScrolledCanvas(top, bg="white", highlightthickness=0)
         sc.frame.pack(expand=1, fill="both")
         node = TreeNode(sc.canvas, None, item)
         node.expand()
@@ -591,14 +572,14 @@ class ModifiedInterpreter(InteractiveInterpreter):
     def prepend_syspath(self, filename):
         "Prepend sys.path with file's directory if not already included"
         self.runcommand("""if 1:
-            _filename = %r
+            _filename = %s
             import sys as _sys
             from os.path import dirname as _dirname
             _dir = _dirname(_filename)
             if not _dir in _sys.path:
                 _sys.path.insert(0, _dir)
             del _filename, _sys, _dirname, _dir
-            \n""" % (filename,))
+            \n""" % `filename`)
 
     def showsyntaxerror(self, filename=None):
         """Extend base class method: Add Colorizing
@@ -657,6 +638,13 @@ class ModifiedInterpreter(InteractiveInterpreter):
             if key[:1] + key[-1:] != "<>":
                 del c[key]
 
+    def display_executing_dialog(self):
+        tkMessageBox.showerror(
+            "Already executing",
+            "The Python Shell window is already executing a command; "
+            "please wait until it is finished.",
+            master=self.tkconsole.text)
+
     def runcommand(self, code):
         "Run the code without invoking the debugger"
         # The code better not raise an exception!
@@ -706,34 +694,6 @@ class ModifiedInterpreter(InteractiveInterpreter):
     def write(self, s):
         "Override base class method"
         self.tkconsole.stderr.write(s)
-
-    def display_port_binding_error(self):
-        tkMessageBox.showerror(
-            "Port Binding Error",
-            "IDLE can't bind TCP/IP port 8833, which is necessary to "
-            "communicate with its Python execution server.  Either "
-            "no networking is installed on this computer or another "
-            "process (another IDLE?) is using the port.  Run IDLE with the -n "
-            "command line switch to start without a subprocess and refer to "
-            "Help/IDLE Help 'Running without a subprocess' for further "
-            "details.",
-            master=self.tkconsole.text)
-
-    def display_no_subprocess_error(self):
-        tkMessageBox.showerror(
-            "Subprocess Startup Error",
-            "IDLE's subprocess didn't make connection.  Either IDLE can't "
-            "start a subprocess or personal firewall software is blocking "
-            "the connection.",
-            master=self.tkconsole.text)
-
-    def display_executing_dialog(self):
-        tkMessageBox.showerror(
-            "Already executing",
-            "The Python Shell window is already executing a command; "
-            "please wait until it is finished.",
-            master=self.tkconsole.text)
-
 
 class PyShell(OutputWindow):
 
@@ -805,6 +765,8 @@ class PyShell(OutputWindow):
         self.history = self.History(self.text)
         #
         self.pollinterval = 50  # millisec
+        if use_subprocess:
+            self.interp.start_subprocess()
 
     reading = False
     executing = False
@@ -925,10 +887,6 @@ class PyShell(OutputWindow):
         self.resetoutput()
         if use_subprocess:
             nosub = ''
-            client = self.interp.start_subprocess()
-            if not client:
-                self.close()
-                return False
         else:
             nosub = "==== No Subprocess ===="
         self.write("Python %s on %s\n%s\n%s\nIDLE %s      %s\n" %
@@ -936,8 +894,11 @@ class PyShell(OutputWindow):
                     self.firewallmessage, idlever.IDLE_VERSION, nosub))
         self.showprompt()
         import Tkinter
-        Tkinter._default_root = None # 03Jan04 KBK What's this?
-        return True
+        Tkinter._default_root = None
+
+    def interact(self):
+        self.begin()
+        self.top.mainloop()
 
     def readline(self):
         save = self.reading
@@ -1320,9 +1281,11 @@ def main():
                 flist.open(filename)
             if not args:
                 flist.new()
-    if enable_shell:
-        if not flist.open_shell():
-            return # couldn't open shell
+        if enable_shell:
+            flist.open_shell()
+    elif enable_shell:
+        flist.pyshell = PyShell(flist)
+        flist.pyshell.begin()
     shell = flist.pyshell
     # handle remaining options:
     if debug:
@@ -1332,12 +1295,12 @@ def main():
                    os.environ.get("PYTHONSTARTUP")
         if filename and os.path.isfile(filename):
             shell.interp.execfile(filename)
-    if shell and cmd or script:
+    if cmd or script:
         shell.interp.runcommand("""if 1:
             import sys as _sys
-            _sys.argv = %r
+            _sys.argv = %s
             del _sys
-            \n""" % (sys.argv,))
+            \n""" % `sys.argv`)
         if cmd:
             shell.interp.execsource(cmd)
         elif script:
@@ -1345,6 +1308,24 @@ def main():
             shell.interp.execfile(script)
     root.mainloop()
     root.destroy()
+
+
+def display_port_binding_error():
+    print """\
+\nIDLE cannot run.
+
+IDLE needs to use a specific TCP/IP port (8833) in order to communicate with
+its Python execution server.  IDLE is unable to bind to this port, and so
+cannot start. Here are some possible causes of this problem:
+
+  1. TCP/IP networking is not installed or not working on this computer
+  2. Another program (another IDLE?) is running that uses this port
+  3. Personal firewall software is preventing IDLE from using this port
+
+Run IDLE with the -n command line switch to start without a subprocess
+and refer to Help/IDLE Help "Running without a subprocess" for further
+details.
+"""
 
 if __name__ == "__main__":
     sys.modules['PyShell'] = sys.modules['__main__']

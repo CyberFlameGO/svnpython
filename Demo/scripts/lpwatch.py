@@ -83,24 +83,24 @@ def makestatus(name, thisuser):
 				lines.append(line)
 	#
 	if totaljobs:
-		line = '%d K' % ((totalbytes+1023)/1024)
+		line = `(totalbytes+1023)/1024` + ' K'
 		if totaljobs <> len(users):
-			line = line + ' (%d jobs)' % totaljobs
+			line = line + ' (' + `totaljobs` + ' jobs)'
 		if len(users) == 1:
-			line = line + ' for %s' % (users.keys()[0],)
+			line = line + ' for ' + users.keys()[0]
 		else:
-			line = line + ' for %d users' % len(users)
+			line = line + ' for ' + `len(users)` + ' users'
 			if userseen:
 				if aheadjobs == 0:
-					line =  line + ' (%s first)' % thisuser
+				  line =  line + ' (' + thisuser + ' first)'
 				else:
-					line = line + ' (%d K before %s)' % (
-					               (aheadbytes+1023)/1024, thisuser)
+				  line = line + ' (' + `(aheadbytes+1023)/1024`
+				  line = line + ' K before ' + thisuser + ')'
 		lines.append(line)
 	#
 	sts = pipe.close()
 	if sts:
-		lines.append('lpq exit status %r' % (sts,))
+		lines.append('lpq exit status ' + `sts`)
 	return string.joinfields(lines, ': ')
 
 try:

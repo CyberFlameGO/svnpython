@@ -625,13 +625,6 @@ PyAPI_FUNC(void) _Py_AddToAllObjects(PyObject *, int force);
 #define Py_XDECREF(op) if ((op) == NULL) ; else Py_DECREF(op)
 
 /*
-These are provided as conveniences to Python runtime embedders, so that
-they can have object code that is not dependent on Python compilation flags.
-*/
-PyAPI_FUNC(void) Py_IncRef(PyObject *);
-PyAPI_FUNC(void) Py_DecRef(PyObject *);
-
-/*
 _Py_NoneStruct is an object of undefined type which can be used in contexts
 where NULL (nil) is not suitable (since NULL often means 'error').
 
@@ -639,9 +632,6 @@ Don't forget to apply Py_INCREF() when returning this value!!!
 */
 PyAPI_DATA(PyObject) _Py_NoneStruct; /* Don't use this directly */
 #define Py_None (&_Py_NoneStruct)
-
-/* Macro for returning Py_None from a function */
-#define Py_RETURN_NONE do {Py_INCREF(Py_None); return Py_None;} while (0)
 
 /*
 Py_NotImplemented is a singleton used to signal that an operation is

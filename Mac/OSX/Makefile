@@ -2,13 +2,14 @@
 # main Makefile. The next couple of variables are overridden on the 
 # commandline in that case.
 
-VERSION=2.4
+VERSION=2.3
 builddir = ../..
 srcdir = ../..
 prefix=/Library/Frameworks/Python.framework/Versions/$(VERSION)
 LIBDEST=$(prefix)/lib/python$(VERSION)
 BUILDPYTHON=$(builddir)/python.exe
 DESTDIR=
+
 # For 10.2:
 #PBXBUILD=pbxbuild
 # For 10.3:
@@ -138,6 +139,7 @@ install_PackageManager:
 			--resource $(srcdir)/Mac/Tools/IDE/PythonIDE.rsrc \
 			--mainprogram $(srcdir)/Mac/Tools/IDE/PackageManager.py \
 			--iconfile $(srcdir)/Mac/Tools/IDE/PackageManager.icns \
+			--plist $(srcdir)/Mac/Tools/IDE/PackageManager.plist \
 			--creator Pimp build; \
 		$(BUILDPYTHON) $(bundlebuilder) \
 			--builddir $(DESTDIR)$(PYTHONAPPSDIR)/ \
@@ -145,6 +147,7 @@ install_PackageManager:
 			--resource $(srcdir)/Mac/Tools/IDE/PythonIDE.rsrc \
 			--mainprogram $(srcdir)/Mac/Tools/IDE/PackageManager.py \
 			--iconfile $(srcdir)/Mac/Tools/IDE/PackageManager.icns \
+			--plist $(srcdir)/Mac/Tools/IDE/PackageManager.plist \
 			--creator Pimp build; \
 	fi
 
@@ -157,12 +160,12 @@ install_IDLE:
 			--python $(INSTALLED_PYTHONW) \
 			--output $(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app \
 			--extra $(srcdir)/Lib/idlelib \
-			$(srcdir)/Tools/scripts/idle ; \
+			$(srcdir)/Lib/idlelib/idle ; \
 		$(BUILDPYTHON) $(srcdir)/Mac/scripts/BuildApplet.py \
 			--python $(INSTALLED_PYTHONW) \
 			--output $(DESTDIR)$(PYTHONAPPSDIR)/IDLE.app \
 			--extra $(srcdir)/Lib/idlelib:Contents/Resources/idlelib \
-			$(srcdir)/Tools/scripts/idle ; \
+			$(srcdir)/Lib/idlelib/idle ; \
 	fi
 
 

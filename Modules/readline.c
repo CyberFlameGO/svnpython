@@ -12,7 +12,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#if defined(HAVE_SETLOCALE)
+#if defined(HAVE_LOCALE_H) && defined(HAVE_SETLOCALE)
 /* GNU readline() mistakenly sets the LC_CTYPE locale.
  * This is evil.  Only the user or the app's main() should do this!
  * We must save and restore the locale around the rl_initialize() call.
@@ -178,7 +178,7 @@ set_hook(const char *funcname, PyObject **hook_var,
 		Py_INCREF(function);
 		*hook_var = function;
 		Py_XDECREF(tmp);
-		*tstate = PyThreadState_GET();
+		*tstate = PyThreadState_Get();
 	}
 	else {
 		PyOS_snprintf(buf, sizeof(buf),
@@ -412,24 +412,6 @@ PyDoc_STRVAR(doc_get_line_buffer,
 return the current contents of the line buffer.");
 
 
-#ifdef HAVE_RL_COMPLETION_APPEND_CHARACTER
-
-/* Exported function to clear the current history */
-
-static PyObject *
-py_clear_history(PyObject *self, PyObject *noarg)
-{
-	clear_history();
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-PyDoc_STRVAR(doc_clear_history,
-"clear_history() -> None\n\
-Clear the current readline history.");
-#endif
-
-
 /* Exported function to insert text into the line buffer */
 
 static PyObject *
@@ -501,9 +483,6 @@ static struct PyMethodDef readline_methods[] =
 #ifdef HAVE_RL_PRE_INPUT_HOOK
 	{"set_pre_input_hook", set_pre_input_hook,
 	 METH_VARARGS, doc_set_pre_input_hook},
-#endif
-#ifdef HAVE_RL_COMPLETION_APPEND_CHARACTER
-	{"clear_history", py_clear_history, METH_NOARGS, doc_clear_history},
 #endif
 	{0, 0}
 };

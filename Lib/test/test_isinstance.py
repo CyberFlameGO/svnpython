@@ -252,7 +252,7 @@ class TestIsInstanceIsSubclass(unittest.TestCase):
 
     def test_isinstance_recursion_limit(self):
         # make sure that issubclass raises RuntimeError before the C stack is
-        # blown 
+        # blown
         self.assertRaises(RuntimeError, blowstack, isinstance, '', str)
 
 def blowstack(fxn, arg, compare_to):
@@ -262,6 +262,8 @@ def blowstack(fxn, arg, compare_to):
     for cnt in xrange(sys.getrecursionlimit()+5):
         tuple_arg = (tuple_arg,)
         fxn(arg, tuple_arg)
+
+
 
 
 def test_main():

@@ -313,7 +313,7 @@ PyThreadState_GetDict(void)
 
 int
 PyThreadState_SetAsyncExc(long id, PyObject *exc) {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyInterpreterState *interp = tstate->interp;
 	PyThreadState *p;
 	int count = 0;

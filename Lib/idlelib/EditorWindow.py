@@ -2,7 +2,6 @@ import sys
 import os
 import re
 import imp
-from itertools import count
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
@@ -46,6 +45,7 @@ class EditorWindow:
     from Tkinter import Toplevel
     from MultiStatusBar import MultiStatusBar
 
+    vars = {}
     help_url = None
 
     def __init__(self, flist=None, filename=None, key=None, root=None):
@@ -61,10 +61,11 @@ class EditorWindow:
                     dochome = os.path.join(basepath, pyver,
                                            'Doc', 'index.html')
             elif sys.platform.count('win') or sys.platform.count('nt'):
-                chmfile = os.path.join(sys.prefix, "Python%d%d.chm" % sys.version_info[:2])
-                if os.path.isfile(chmfile):
-                    dochome = chmfile
-                    print "dochome =", dochome
+                # Try the HTMLHelp file
+                chmpath = os.path.join(sys.prefix, 'Doc',
+                                       'Python%d%d.chm' % sys.version_info[:2])
+                if os.path.isfile(chmpath):
+                    dochome = chmpath
             dochome = os.path.normpath(dochome)
             if os.path.isfile(dochome):
                 EditorWindow.help_url = dochome
@@ -77,14 +78,11 @@ class EditorWindow:
         self.menubar = Menu(root)
         self.top = top = self.Toplevel(root, menu=self.menubar)
         if flist:
-            self.tkinter_vars = flist.vars
-            #self.top.instance_dict makes flist.inversedict avalable to
+            self.vars = flist.vars
+            #self.top.instanceDict makes flist.inversedict avalable to
             #configDialog.py so it can access all EditorWindow instaces
-            self.top.instance_dict=flist.inversedict
-        else:
-            self.tkinter_vars = {}  # keys: Tkinter event names
-                                    # values: Tkinter variable instances
-        self.recent_files_path=os.path.join(idleConf.GetUserCfgDir(),
+            self.top.instanceDict=flist.inversedict
+        self.recentFilesPath=os.path.join(idleConf.GetUserCfgDir(),
                 'recent-files.lst')
         self.vbar = vbar = Scrollbar(top, name='vbar')
         self.text_frame = text_frame = Frame(top)
@@ -181,12 +179,11 @@ class EditorWindow:
         self.io = io = self.IOBinding(self)
         io.set_filename_change_hook(self.filename_change_hook)
 
-        # Create the recent files submenu
-        self.recent_files_menu = Menu(self.menubar)
-        self.menudict['file'].insert_cascade(3, label='Recent Files',
-                                             underline=0,
-                                             menu=self.recent_files_menu)
-        self.update_recent_files_list()
+        #create the Recent Files submenu
+        self.menuRecentFiles=Menu(self.menubar)
+        self.menudict['file'].insert_cascade(3,label='Recent Files',
+                underline=0,menu=self.menuRecentFiles)
+        self.UpdateRecentFilesList()
 
         if filename:
             if os.path.exists(filename) and not os.path.isdir(filename):
@@ -514,8 +511,6 @@ class EditorWindow:
         if self.color:
             self.color = self.ColorDelegator()
             self.per.insertfilter(self.color)
-        theme = idleConf.GetOption('main','Theme','name')
-        self.text.config(idleConf.GetHighlight(theme, "normal"))
 
     def ResetFont(self):
         "Update the text widgets' font if it is changed"
@@ -555,8 +550,10 @@ class EditorWindow:
                             if menuEventDict[menubarItem].has_key(itemName):
                                 event=menuEventDict[menubarItem][itemName]
                         if event:
+                            #print 'accel was:',accel
                             accel=get_accelerator(keydefs, event)
                             menu.entryconfig(index,accelerator=accel)
+                            #print 'accel now:',accel,'\n'
 
     def reset_help_menu_entries(self):
         "Update the additional help entries on the Help menu"
@@ -581,48 +578,66 @@ class EditorWindow:
             self.display_docs(helpfile)
         return display_extra_help
 
-    def update_recent_files_list(self, new_file=None):
-        "Load and update the recent files list and menus"
-        rf_list = []
-        if os.path.exists(self.recent_files_path):
-            rf_list_file = open(self.recent_files_path,'r')
+    def UpdateRecentFilesList(self,newFile=None):
+        "Load or update the recent files list, and menu if required"
+        rfList=[]
+        if os.path.exists(self.recentFilesPath):
+            RFfile=open(self.recentFilesPath,'r')
             try:
-                rf_list = rf_list_file.readlines()
+                rfList=RFfile.readlines()
             finally:
-                rf_list_file.close()
-        if new_file:
-            new_file = os.path.abspath(new_file) + '\n'
-            if new_file in rf_list:
-                rf_list.remove(new_file)  # move to top
-            rf_list.insert(0, new_file)
-        # clean and save the recent files list
-        bad_paths = []
-        for path in rf_list:
-            if '\0' in path or not os.path.exists(path[0:-1]):
-                bad_paths.append(path)
-        rf_list = [path for path in rf_list if path not in bad_paths]
-        ulchars = "1234567890ABCDEFGHIJK"
-        rf_list = rf_list[0:len(ulchars)]
-        rf_file = open(self.recent_files_path, 'w')
-        try:
-            rf_file.writelines(rf_list)
-        finally:
-            rf_file.close()
-        # for each edit window instance, construct the recent files menu
-        for instance in self.top.instance_dict.keys():
-            menu = instance.recent_files_menu
-            menu.delete(1, END)  # clear, and rebuild:
-            for i, file in zip(count(), rf_list):
-                file_name = file[0:-1]  # zap \n
-                callback = instance.__recent_file_callback(file_name)
-                menu.add_command(label=ulchars[i] + " " + file_name,
-                                 command=callback,
-                                 underline=0)
+                RFfile.close()
+        if newFile:
+            newFile=os.path.abspath(newFile)+'\n'
+            if newFile in rfList:
+                rfList.remove(newFile)
+            rfList.insert(0,newFile)
+        rfList=self.__CleanRecentFiles(rfList)
+        #print self.flist.inversedict
+        #print self.top.instanceDict
+        #print self
+        ullist = "1234567890ABCDEFGHIJ"
+        if rfList:
+            for instance in self.top.instanceDict.keys():
+                menu = instance.menuRecentFiles
+                menu.delete(1,END)
+                i = 0 ; ul = 0; ullen = len(ullist)
+                for file in rfList:
+                    fileName=file[0:-1]
+                    callback = instance.__RecentFileCallback(fileName)
+                    if i > ullen: # don't underline menuitems
+                        ul=None
+                    menu.add_command(label=ullist[i] + " " + fileName,
+                                     command=callback,
+                                     underline=ul)
+                    i += 1
 
-    def __recent_file_callback(self, file_name):
-        def open_recent_file(fn_closure=file_name):
-            self.io.open(editFile=fn_closure)
-        return open_recent_file
+    def __CleanRecentFiles(self,rfList):
+        origRfList=rfList[:]
+        count=0
+        nonFiles=[]
+        for path in rfList:
+            if not os.path.exists(path[0:-1]):
+                nonFiles.append(count)
+            count=count+1
+        if nonFiles:
+            nonFiles.reverse()
+            for index in nonFiles:
+                del(rfList[index])
+        if len(rfList)>19:
+            rfList=rfList[0:19]
+        #if rfList != origRfList:
+        RFfile=open(self.recentFilesPath,'w')
+        try:
+            RFfile.writelines(rfList)
+        finally:
+            RFfile.close()
+        return rfList
+
+    def __RecentFileCallback(self,fileName):
+        def OpenRecentFile(fileName=fileName):
+            self.io.open(editFile=fileName)
+        return OpenRecentFile
 
     def saved_change_hook(self):
         short = self.short_title()
@@ -711,8 +726,9 @@ class EditorWindow:
         return reply
 
     def _close(self):
+        #print self.io.filename
         if self.io.filename:
-            self.update_recent_files_list(new_file=self.io.filename)
+            self.UpdateRecentFilesList(newFile=self.io.filename)
         WindowList.unregister_callback(self.postwindowsmenu)
         if self.close_hook:
             self.close_hook()
@@ -726,7 +742,7 @@ class EditorWindow:
             doh = colorizing and self.top
             self.color.close(doh) # Cancel colorization
         self.text = None
-        self.tkinter_vars = None
+        self.vars = None
         self.per.close(); self.per = None
         if not colorizing:
             self.top.destroy()
@@ -746,7 +762,7 @@ class EditorWindow:
             try:
                 self.load_extension(name)
             except:
-                print "Failed to load extension", repr(name)
+                print "Failed to load extension", `name`
                 import traceback
                 traceback.print_exc()
 
@@ -783,35 +799,35 @@ class EditorWindow:
             if keylist:
                 text.event_add(event, *keylist)
 
-    def fill_menus(self, menudefs=None, keydefs=None):
+    def fill_menus(self, defs=None, keydefs=None):
         """Add appropriate entries to the menus and submenus
 
         Menus that are absent or None in self.menudict are ignored.
         """
-        if menudefs is None:
-            menudefs = self.Bindings.menudefs
+        if defs is None:
+            defs = self.Bindings.menudefs
         if keydefs is None:
             keydefs = self.Bindings.default_keydefs
         menudict = self.menudict
         text = self.text
-        for mname, entrylist in menudefs:
+        for mname, itemlist in defs:
             menu = menudict.get(mname)
             if not menu:
                 continue
-            for entry in entrylist:
-                if not entry:
+            for item in itemlist:
+                if not item:
                     menu.add_separator()
                 else:
-                    label, eventname = entry
+                    label, event = item
                     checkbutton = (label[:1] == '!')
                     if checkbutton:
                         label = label[1:]
                     underline, label = prepstr(label)
-                    accelerator = get_accelerator(keydefs, eventname)
-                    def command(text=text, eventname=eventname):
-                        text.event_generate(eventname)
+                    accelerator = get_accelerator(keydefs, event)
+                    def command(text=text, event=event):
+                        text.event_generate(event)
                     if checkbutton:
-                        var = self.get_var_obj(eventname, BooleanVar)
+                        var = self.getrawvar(event, BooleanVar)
                         menu.add_checkbutton(label=label, underline=underline,
                             command=command, accelerator=accelerator,
                             variable=var)
@@ -821,25 +837,19 @@ class EditorWindow:
                                          accelerator=accelerator)
 
     def getvar(self, name):
-        var = self.get_var_obj(name)
+        var = self.getrawvar(name)
         if var:
-            value = var.get()
-            return value
-        else:
-            raise NameError, name
+            return var.get()
 
     def setvar(self, name, value, vartype=None):
-        var = self.get_var_obj(name, vartype)
+        var = self.getrawvar(name, vartype)
         if var:
             var.set(value)
-        else:
-            raise NameError, name
 
-    def get_var_obj(self, name, vartype=None):
-        var = self.tkinter_vars.get(name)
+    def getrawvar(self, name, vartype=None):
+        var = self.vars.get(name)
         if not var and vartype:
-            # create a Tkinter variable object with self.text as master:
-            self.tkinter_vars[name] = var = vartype(self.text)
+            self.vars[name] = var = vartype(self.text)
         return var
 
     # Tk implementations of "virtual text methods" -- each platform
@@ -928,7 +938,7 @@ class EditorWindow:
             elif key == 'context_use_ps1':
                 self.context_use_ps1 = value
             else:
-                raise KeyError, "bad option name: %r" % (key,)
+                raise KeyError, "bad option name: %s" % `key`
 
     # If ispythonsource and guess are true, guess a good value for
     # indentwidth based on file content (if possible), and if
@@ -1062,7 +1072,7 @@ class EditorWindow:
             y = PyParse.Parser(self.indentwidth, self.tabwidth)
             for context in self.num_context_lines:
                 startat = max(lno - context, 1)
-                startatindex = repr(startat) + ".0"
+                startatindex = `startat` + ".0"
                 rawtext = text.get(startatindex, "insert")
                 y.set_str(rawtext)
                 bod = y.find_good_parse_start(
@@ -1094,7 +1104,7 @@ class EditorWindow:
                     else:
                         self.reindent_to(y.compute_backslash_indent())
                 else:
-                    assert 0, "bogus continuation type %r" % (c,)
+                    assert 0, "bogus continuation type " + `c`
                 return "break"
 
             # This line starts a brand new stmt; indent relative to
@@ -1324,7 +1334,7 @@ class IndentSearcher:
         if self.finished:
             return ""
         i = self.i = self.i + 1
-        mark = repr(i) + ".0"
+        mark = `i` + ".0"
         if self.text.compare(mark, ">=", "end"):
             return ""
         return self.text.get(mark, mark + " lineend+1c")
@@ -1372,8 +1382,8 @@ keynames = {
  'slash': '/',
 }
 
-def get_accelerator(keydefs, eventname):
-    keylist = keydefs.get(eventname)
+def get_accelerator(keydefs, event):
+    keylist = keydefs.get(event)
     if not keylist:
         return ""
     s = keylist[0]

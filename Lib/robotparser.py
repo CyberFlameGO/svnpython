@@ -214,7 +214,7 @@ class Entry:
                 # we have the catch-all agent
                 return True
             agent = agent.lower()
-            if agent in useragent:
+            if useragent.find(agent) != -1:
                 return True
         return False
 

@@ -52,7 +52,7 @@ class ICONbrowse(FrameWork.Application):
 	def showICON(self, resid):
 		w = ICONwindow(self)
 		w.open(resid)
-		#EasyDialogs.Message('Show ICON %r' % (resid,))
+		#EasyDialogs.Message('Show ICON '+`resid`)
 		
 	def findICONresources(self):
 		num = Res.CountResources('ICON')
@@ -70,7 +70,7 @@ class ICONbrowse(FrameWork.Application):
 class ICONwindow(FrameWork.Window):
 	def open(self, (resid, resname)):
 		if not resname:
-			resname = '#%r' % (resid,)
+			resname = '#'+`resid`
 		self.resid = resid
 		self.picture = Icn.GetIcon(self.resid)
 		l, t, r, b = 0, 0, 32, 32
@@ -127,7 +127,7 @@ class MyDialog(FrameWork.DialogWindow):
 		if self.contents:
 			self.list.LAddRow(len(self.contents), 0)
 			for i in range(len(self.contents)):
-				v = repr(self.contents[i][0])
+				v = `self.contents[i][0]`
 				if self.contents[i][1]:
 					v = v + '"' + self.contents[i][1] + '"'
 				self.list.LSetCell(v, (0, i))

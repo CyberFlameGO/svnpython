@@ -80,12 +80,6 @@
  */
 #define HASTZINFO(p)		(((_PyDateTime_BaseTZInfo *)(p))->hastzinfo)
 
-/* M is a char or int claiming to be a valid month.  The macro is equivalent
- * to the two-sided Python test
- *	1 <= M <= 12
- */
-#define MONTH_IS_SANE(M) ((unsigned int)(M) - 1 < 12)
-
 /* Forward declarations. */
 static PyTypeObject PyDateTime_DateType;
 static PyTypeObject PyDateTime_DateTimeType;
@@ -2201,8 +2195,7 @@ date_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	/* Check for invocation from pickle with __getstate__ state */
 	if (PyTuple_GET_SIZE(args) == 1 &&
 	    PyString_Check(state = PyTuple_GET_ITEM(args, 0)) &&
-	    PyString_GET_SIZE(state) == _PyDateTime_DATE_DATASIZE &&
-	    MONTH_IS_SANE(PyString_AS_STRING(state)[2]))
+	    PyString_GET_SIZE(state) == _PyDateTime_DATE_DATASIZE)
 	{
 	    	PyDateTime_Date *me;
 
@@ -3196,11 +3189,11 @@ time_strftime(PyDateTime_Time *self, PyObject *args, PyObject *kw)
 	 * 1900 to worm around that.
 	 */
 	tuple = Py_BuildValue("iiiiiiiii",
-		              1900, 1, 1, /* year, month, day */
+		              1900, 0, 0, /* year, month, day */
 			      TIME_GET_HOUR(self),
 			      TIME_GET_MINUTE(self),
 			      TIME_GET_SECOND(self),
-			      0, 1, -1); /* weekday, daynum, dst */
+			      0, 0, -1); /* weekday, daynum, dst */
 	if (tuple == NULL)
 		return NULL;
 	assert(PyTuple_Size(tuple) == 9);
@@ -3379,9 +3372,9 @@ time_getstate(PyDateTime_Time *self)
 						_PyDateTime_TIME_DATASIZE);
 	if (basestate != NULL) {
 		if (! HASTZINFO(self) || self->tzinfo == Py_None)
-			result = PyTuple_Pack(1, basestate);
+			result = Py_BuildValue("(O)", basestate);
 		else
-			result = PyTuple_Pack(2, basestate, self->tzinfo);
+			result = Py_BuildValue("OO", basestate, self->tzinfo);
 		Py_DECREF(basestate);
 	}
 	return result;
@@ -3557,8 +3550,7 @@ datetime_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	if (PyTuple_GET_SIZE(args) >= 1 &&
 	    PyTuple_GET_SIZE(args) <= 2 &&
 	    PyString_Check(state = PyTuple_GET_ITEM(args, 0)) &&
-	    PyString_GET_SIZE(state) == _PyDateTime_DATETIME_DATASIZE &&
-	    MONTH_IS_SANE(PyString_AS_STRING(state)[2]))
+	    PyString_GET_SIZE(state) == _PyDateTime_DATETIME_DATASIZE)
 	{
 		PyDateTime_DateTime *me;
 		char aware;
@@ -4358,9 +4350,9 @@ datetime_getstate(PyDateTime_DateTime *self)
 					  _PyDateTime_DATETIME_DATASIZE);
 	if (basestate != NULL) {
 		if (! HASTZINFO(self) || self->tzinfo == Py_None)
-			result = PyTuple_Pack(1, basestate);
+			result = Py_BuildValue("(O)", basestate);
 		else
-			result = PyTuple_Pack(2, basestate, self->tzinfo);
+			result = Py_BuildValue("OO", basestate, self->tzinfo);
 		Py_DECREF(basestate);
 	}
 	return result;

@@ -15,3 +15,4 @@ class TestSFbugs(unittest.TestCase):
 Doctests = doctest.DocTestSuite(difflib)
 
 test_support.run_unittest(TestSFbugs, Doctests)
+

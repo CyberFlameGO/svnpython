@@ -53,7 +53,9 @@ corresponding Unix manual entries for more information on calls.");
 #include <sys/wait.h>		/* For WNOHANG */
 #endif
 
+#ifdef HAVE_SIGNAL_H
 #include <signal.h>
+#endif
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -120,9 +122,7 @@ corresponding Unix manual entries for more information on calls.");
 #define HAVE_KILL       1
 #define HAVE_OPENDIR    1
 #define HAVE_PIPE       1
-#ifndef __rtems__
 #define HAVE_POPEN      1
-#endif
 #define HAVE_SYSTEM	1
 #define HAVE_WAIT       1
 #define HAVE_TTYNAME	1
@@ -133,6 +133,16 @@ corresponding Unix manual entries for more information on calls.");
 #endif /* ! __IBMC__ */
 
 #ifndef _MSC_VER
+
+#if defined(sun) && !defined(__SVR4)
+/* SunOS 4.1.4 doesn't have prototypes for these: */
+extern int rename(const char *, const char *);
+extern int pclose(FILE *);
+extern int fclose(FILE *);
+extern int fsync(int);
+extern int lstat(const char *, struct stat *);
+extern int symlink(const char *, const char *);
+#endif
 
 #if defined(__sgi)&&_COMPILER_VERSION>=700
 /* declare ctermid_r if compiling with MIPSPro 7.x in ANSI C mode
@@ -1017,22 +1027,6 @@ posix_access(PyObject *self, PyObject *args)
 	int mode;
 	int res;
 
-#ifdef Py_WIN_WIDE_FILENAMES
-	if (unicode_file_names()) {
-		PyUnicodeObject *po;
-		if (PyArg_ParseTuple(args, "Ui:access", &po, &mode)) {
-			Py_BEGIN_ALLOW_THREADS
-			/* PyUnicode_AS_UNICODE OK without thread lock as
-			   it is a simple dereference. */
-			res = _waccess(PyUnicode_AS_UNICODE(po), mode);
-			Py_END_ALLOW_THREADS
-			return(PyBool_FromLong(res == 0));
-		}
-		/* Drop the argument parsing error as narrow strings
-		   are also valid. */
-		PyErr_Clear();
-	}
-#endif
 	if (!PyArg_ParseTuple(args, "si:access", &path, &mode))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
@@ -1956,8 +1950,7 @@ posix_utime(PyObject *self, PyObject *args)
 #endif /* Py_WIN_WIDE_FILENAMES */
 
 	if (!have_unicode_filename && \
-		!PyArg_ParseTuple(args, "etO:utime",
-				  Py_FileSystemDefaultEncoding, &path, &arg))
+		!PyArg_ParseTuple(args, "sO:utime", &path, &arg))
 		return NULL;
 	if (arg == Py_None) {
 		/* optional time values not given */
@@ -2110,7 +2103,11 @@ posix_execv(PyObject *self, PyObject *args)
 	}
 	argvlist[argc] = NULL;
 
+#ifdef BAD_EXEC_PROTOTYPES
+	execv(path, (const char **) argvlist);
+#else /* BAD_EXEC_PROTOTYPES */
 	execv(path, argvlist);
+#endif /* BAD_EXEC_PROTOTYPES */
 
 	/* If we get here it's definitely an error */
 
@@ -2249,7 +2246,12 @@ posix_execve(PyObject *self, PyObject *args)
 	}
 	envlist[envc] = 0;
 
+
+#ifdef BAD_EXEC_PROTOTYPES
+	execve(path, (const char **)argvlist, envlist);
+#else /* BAD_EXEC_PROTOTYPES */
 	execve(path, argvlist, envlist);
+#endif /* BAD_EXEC_PROTOTYPES */
 
 	/* If we get here it's definitely an error */
 
@@ -3633,10 +3635,10 @@ _PyPopen(char *cmdstring, int mode, int n, int bufsize)
 	{
 		if ((p_f[2] = PyFile_FromFile(p_s[2], cmdstring, rd_mode, _PyPclose)) != NULL)
 			PyFile_SetBufSize(p_f[0], bufsize);
-		f = PyTuple_Pack(3, p_f[0], p_f[1], p_f[2]);
+		f = Py_BuildValue("OOO", p_f[0], p_f[1], p_f[2]);
 	}
 	else
-		f = PyTuple_Pack(2, p_f[0], p_f[1]);
+		f = Py_BuildValue("OO", p_f[0], p_f[1]);
 
 	/*
 	 * Insert the files we've created into the process dictionary
@@ -4326,7 +4328,7 @@ _PyPopen(char *cmdstring, int mode, int n)
 		 if (n != 4)
 			 CloseHandle(hChildStderrRdDup);
 
-		 f = PyTuple_Pack(2,p1,p2);
+		 f = Py_BuildValue("OO",p1,p2);
 		 Py_XDECREF(p1);
 		 Py_XDECREF(p2);
 		 file_count = 2;
@@ -4358,7 +4360,7 @@ _PyPopen(char *cmdstring, int mode, int n)
 		 PyFile_SetBufSize(p1, 0);
 		 PyFile_SetBufSize(p2, 0);
 		 PyFile_SetBufSize(p3, 0);
-		 f = PyTuple_Pack(3,p1,p2,p3);
+		 f = Py_BuildValue("OOO",p1,p2,p3);
 		 Py_XDECREF(p1);
 		 Py_XDECREF(p2);
 		 Py_XDECREF(p3);
@@ -5012,25 +5014,6 @@ Return a tuple of floating point numbers indicating process times.");
 #endif
 
 
-#ifdef HAVE_GETSID
-PyDoc_STRVAR(posix_getsid__doc__,
-"getsid(pid) -> sid\n\n\
-Call the system call getsid().");
-
-static PyObject *
-posix_getsid(PyObject *self, PyObject *args)
-{
-	int pid, sid;
-	if (!PyArg_ParseTuple(args, "i:getsid", &pid))
-		return NULL;
-	sid = getsid(pid);
-	if (sid < 0)
-		return posix_error();
-	return PyInt_FromLong((long)sid);
-}
-#endif /* HAVE_GETSID */
-
-
 #ifdef HAVE_SETSID
 PyDoc_STRVAR(posix_setsid__doc__,
 "setsid()\n\n\
@@ -5190,7 +5173,7 @@ posix_dup(PyObject *self, PyObject *args)
 
 
 PyDoc_STRVAR(posix_dup2__doc__,
-"dup2(old_fd, new_fd)\n\n\
+"dup2(fd, fd2)\n\n\
 Duplicate file descriptor.");
 
 static PyObject *
@@ -7300,9 +7283,6 @@ static PyMethodDef posix_methods[] = {
 #if defined(HAVE_WAITPID) || defined(HAVE_CWAIT)
 	{"waitpid",	posix_waitpid, METH_VARARGS, posix_waitpid__doc__},
 #endif /* HAVE_WAITPID */
-#ifdef HAVE_GETSID
-	{"getsid",	posix_getsid, METH_VARARGS, posix_getsid__doc__},
-#endif /* HAVE_GETSID */
 #ifdef HAVE_SETSID
 	{"setsid",	posix_setsid, METH_NOARGS, posix_setsid__doc__},
 #endif /* HAVE_SETSID */

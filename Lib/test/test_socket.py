@@ -273,19 +273,22 @@ class GeneralModuleTests(unittest.TestCase):
     def testGetServByName(self):
         # Testing getservbyname()
         # try a few protocols - not everyone has telnet enabled
+        found = 0
         for proto in ("telnet", "ssh", "www", "ftp"):
             try:
                 socket.getservbyname(proto, 'tcp')
+                found = 1
                 break
             except socket.error:
                 pass
             try:
                 socket.getservbyname(proto, 'udp')
+                found = 1
                 break
             except socket.error:
                 pass
-        else:
-            raise socket.error
+            if not found:
+                raise socket.error
 
     def testDefaultTimeout(self):
         # Testing default timeout
@@ -590,7 +593,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
 
     def tearDown(self):
         self.serv_file.close()
-        self.assert_(self.serv_file.closed)
         self.serv_file = None
         SocketConnectedTest.tearDown(self)
 
@@ -600,7 +602,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
 
     def clientTearDown(self):
         self.cli_file.close()
-        self.assert_(self.cli_file.closed)
         self.cli_file = None
         SocketConnectedTest.clientTearDown(self)
 
@@ -646,12 +647,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
     def _testReadline(self):
         self.cli_file.write(MSG)
         self.cli_file.flush()
-
-    def testClosedAttr(self):
-        self.assert_(not self.serv_file.closed)
-
-    def _testClosedAttr(self):
-        self.assert_(not self.cli_file.closed)
 
 class UnbufferedFileObjectClassTestCase(FileObjectClassTestCase):
 

@@ -13,11 +13,11 @@ from pprint import pprint
 import unittest
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db
-except ImportError:
     # For Python 2.3
     from bsddb import db
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db
 
 from test_all import verbose
 
@@ -48,8 +48,6 @@ class BasicTestCase(unittest.TestCase):
     useEnv       = 0
     envflags     = 0
     envsetflags  = 0
-
-    _numKeys      = 1002    # PRIVATE.  NOTE: must be an even value
 
     def setUp(self):
         if self.useEnv:
@@ -108,23 +106,17 @@ class BasicTestCase(unittest.TestCase):
 
 
 
-    def populateDB(self, _txn=None):
+    def populateDB(self):
         d = self.d
-
-        for x in range(self._numKeys/2):
-            key = '%04d' % (self._numKeys - x)  # insert keys in reverse order
+        for x in range(500):
+            key = '%04d' % (1000 - x)  # insert keys in reverse order
             data = self.makeData(key)
-            d.put(key, data, _txn)
+            d.put(key, data)
 
-        d.put('empty value', '', _txn)
-
-        for x in range(self._numKeys/2-1):
+        for x in range(500):
             key = '%04d' % x  # and now some in forward order
             data = self.makeData(key)
-            d.put(key, data, _txn)
-
-        if _txn:
-            _txn.commit()
+            d.put(key, data)
 
         num = len(d)
         if verbose:
@@ -244,20 +236,20 @@ class BasicTestCase(unittest.TestCase):
             if verbose:
                 print data
 
-        assert len(d) == self._numKeys
+        assert len(d) == 1000
         keys = d.keys()
-        assert len(keys) == self._numKeys
+        assert len(keys) == 1000
         assert type(keys) == type([])
 
         d['new record'] = 'a new record'
-        assert len(d) == self._numKeys+1
+        assert len(d) == 1001
         keys = d.keys()
-        assert len(keys) == self._numKeys+1
+        assert len(keys) == 1001
 
         d['new record'] = 'a replacement record'
-        assert len(d) == self._numKeys+1
+        assert len(d) == 1001
         keys = d.keys()
-        assert len(keys) == self._numKeys+1
+        assert len(keys) == 1001
 
         if verbose:
             print "the first 10 keys are:"
@@ -269,7 +261,7 @@ class BasicTestCase(unittest.TestCase):
         assert d.has_key('spam') == 0
 
         items = d.items()
-        assert len(items) == self._numKeys+1
+        assert len(items) == 1001
         assert type(items) == type([])
         assert type(items[0]) == type(())
         assert len(items[0]) == 2
@@ -279,7 +271,7 @@ class BasicTestCase(unittest.TestCase):
             pprint(items[:10])
 
         values = d.values()
-        assert len(values) == self._numKeys+1
+        assert len(values) == 1001
         assert type(values) == type([])
 
         if verbose:
@@ -290,7 +282,7 @@ class BasicTestCase(unittest.TestCase):
 
     #----------------------------------------
 
-    def test03_SimpleCursorStuff(self, get_raises_error=0, set_raises_error=0):
+    def test03_SimpleCursorStuff(self, get_raises_error=0, set_raises_error=1):
         if verbose:
             print '\n', '-=' * 30
             print "Running %s.test03_SimpleCursorStuff (get_error %s, set_error %s)..." % \
@@ -301,7 +293,7 @@ class BasicTestCase(unittest.TestCase):
         else:
             txn = None
         c = self.d.cursor(txn=txn)
-        
+
         rec = c.first()
         count = 0
         while rec is not None:
@@ -317,9 +309,8 @@ class BasicTestCase(unittest.TestCase):
                     rec = None
                 else:
                     self.fail("unexpected DBNotFoundError")
-            assert c.get_current_size() == len(c.current()[1]), "%s != len(%r)" % (c.get_current_size(), c.current()[1])
-        
-        assert count == self._numKeys
+
+        assert count == 1000
 
 
         rec = c.last()
@@ -338,20 +329,14 @@ class BasicTestCase(unittest.TestCase):
                 else:
                     self.fail("unexpected DBNotFoundError")
 
-        assert count == self._numKeys
+        assert count == 1000
 
         rec = c.set('0505')
         rec2 = c.current()
         assert rec == rec2
         assert rec[0] == '0505'
         assert rec[1] == self.makeData('0505')
-        assert c.get_current_size() == len(rec[1])
 
-        # make sure we get empty values properly
-        rec = c.set('empty value')
-        assert rec[1] == ''
-        assert c.get_current_size() == 0
-        
         try:
             n = c.set('bad key')
         except db.DBNotFoundError, val:
@@ -361,7 +346,7 @@ class BasicTestCase(unittest.TestCase):
             if set_raises_error:
                 self.fail("expected exception")
             if n != None:
-                self.fail("expected None: %r" % (n,))
+                self.fail("expected None: "+`n`)
 
         rec = c.get_both('0404', self.makeData('0404'))
         assert rec == ('0404', self.makeData('0404'))
@@ -375,7 +360,7 @@ class BasicTestCase(unittest.TestCase):
             if get_raises_error:
                 self.fail("expected exception")
             if n != None:
-                self.fail("expected None: %r" % (n,))
+                self.fail("expected None: "+`n`)
 
         if self.d.get_type() == db.DB_BTREE:
             rec = c.set_range('011')
@@ -386,11 +371,6 @@ class BasicTestCase(unittest.TestCase):
             if verbose:
                 print "searched (partial) for '011', found: ", rec
             if rec[1] != '': self.fail('expected empty data portion')
-
-            ev = c.set_range('empty value')
-            if verbose:
-                print "search for 'empty value' returned", ev
-            if ev[1] != '': self.fail('empty value lookup failed')
 
         c.set('0499')
         c.delete()
@@ -464,19 +444,8 @@ class BasicTestCase(unittest.TestCase):
                   self.__class__.__name__
 
         old = self.d.set_get_returns_none(0)
-        assert old == 2
+        assert old == 1
         self.test03_SimpleCursorStuff(get_raises_error=1, set_raises_error=1)
-
-    def test03b_SimpleCursorWithGetReturnsNone1(self):
-        # same test but raise exceptions instead of returning None
-        if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test03b_SimpleCursorStuffWithoutGetReturnsNone..." % \
-                  self.__class__.__name__
-
-        old = self.d.set_get_returns_none(1)
-        self.test03_SimpleCursorStuff(get_raises_error=0, set_raises_error=1)
-
 
     def test03c_SimpleCursorGetReturnsNone2(self):
         # same test but raise exceptions instead of returning None
@@ -485,10 +454,10 @@ class BasicTestCase(unittest.TestCase):
             print "Running %s.test03c_SimpleCursorStuffWithoutSetReturnsNone..." % \
                   self.__class__.__name__
 
-        old = self.d.set_get_returns_none(1)
-        assert old == 2
         old = self.d.set_get_returns_none(2)
         assert old == 1
+        old = self.d.set_get_returns_none(2)
+        assert old == 2
         self.test03_SimpleCursorStuff(get_raises_error=0, set_raises_error=0)
 
     #----------------------------------------
@@ -553,7 +522,7 @@ class BasicTestCase(unittest.TestCase):
         num = d.truncate()
         assert num >= 1, "truncate returned <= 0 on non-empty database"
         num = d.truncate()
-        assert num == 0, "truncate on empty DB returned nonzero (%r)" % (num,)
+        assert num == 0, "truncate on empty DB returned nonzero (%s)" % `num`
 
 #----------------------------------------------------------------------
 
@@ -606,8 +575,23 @@ class BasicTransactionTestCase(BasicTestCase):
 
 
     def populateDB(self):
+        d = self.d
         txn = self.env.txn_begin()
-        BasicTestCase.populateDB(self, _txn=txn)
+        for x in range(500):
+            key = '%04d' % (1000 - x)  # insert keys in reverse order
+            data = self.makeData(key)
+            d.put(key, data, txn)
+
+        for x in range(500):
+            key = '%04d' % x  # and now some in forward order
+            data = self.makeData(key)
+            d.put(key, data, txn)
+
+        txn.commit()
+
+        num = len(d)
+        if verbose:
+            print "created %d records" % num
 
         self.txn = self.env.txn_begin()
 
@@ -642,7 +626,7 @@ class BasicTransactionTestCase(BasicTestCase):
             if verbose and count % 100 == 0:
                 print rec
             rec = c.next()
-        assert count == self._numKeys+1
+        assert count == 1001
 
         c.close()                # Cursors *MUST* be closed before commit!
         self.txn.commit()
@@ -679,7 +663,7 @@ class BasicTransactionTestCase(BasicTestCase):
         num = d.truncate(txn)
         assert num >= 1, "truncate returned <= 0 on non-empty database"
         num = d.truncate(txn)
-        assert num == 0, "truncate on empty DB returned nonzero (%r)" % (num,)
+        assert num == 0, "truncate on empty DB returned nonzero (%s)" % `num`
         txn.commit()
 
     #----------------------------------------
@@ -871,7 +855,7 @@ class BasicMultiDBTestCase(BasicTestCase):
             if verbose and (count % 50) == 0:
                 print rec
             rec = c1.next()
-        assert count == self._numKeys
+        assert count == 1000
 
         count = 0
         rec = c2.first()

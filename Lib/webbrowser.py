@@ -22,7 +22,7 @@ def get(using=None):
     else:
         alternatives = _tryorder
     for browser in alternatives:
-        if '%s' in browser:
+        if browser.find('%s') > -1:
             # User gave us a command line, don't mess with it.
             return GenericBrowser(browser)
         else:

@@ -30,9 +30,9 @@
 #################################
 
 %define name python
-%define version 2.3.3
+%define version 2.3.4
 %define libvers 2.3
-%define release 3pydotorg
+%define release 1pydotorg
 %define __prefix /usr
 
 #  kludge to get around rpm <percent>define weirdness

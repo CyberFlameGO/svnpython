@@ -39,7 +39,12 @@ FMFontStyle = Type("FMFontStyle", "h")
 UniChar = Type("UniChar", "h")
 
 includestuff = includestuff + """
+#ifdef WITHOUT_FRAMEWORKS
+#include <Devices.h> /* Defines OpenDeskAcc in universal headers */
+#include <Menus.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
@@ -49,6 +54,16 @@ extern int _MenuObj_Convert(PyObject *, MenuHandle *);
 
 #define MenuObj_New _MenuObj_New
 #define MenuObj_Convert _MenuObj_Convert 
+#endif
+
+#if !ACCESSOR_CALLS_ARE_FUNCTIONS
+#define GetMenuID(menu) ((*(menu))->menuID)
+#define GetMenuWidth(menu) ((*(menu))->menuWidth)
+#define GetMenuHeight(menu) ((*(menu))->menuHeight)
+
+#define SetMenuID(menu, id) ((*(menu))->menuID = (id))
+#define SetMenuWidth(menu, width) ((*(menu))->menuWidth = (width))
+#define SetMenuHeight(menu, height) ((*(menu))->menuHeight = (height))
 #endif
 
 #define as_Menu(h) ((MenuHandle)h)

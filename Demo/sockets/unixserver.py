@@ -1,6 +1,5 @@
 # Echo server demo using Unix sockets (handles one connection only)
 # Piet van Oostrum
-import os
 from socket import *
 FILE = 'blabla'             
 s = socket(AF_UNIX, SOCK_STREAM)
@@ -14,4 +13,3 @@ while 1:
     if not data: break
     conn.send(data)
 conn.close()
-os.unlink(FILE)

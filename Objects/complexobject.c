@@ -439,7 +439,7 @@ complex_divmod(PyComplexObject *v, PyComplexObject *w)
 	mod = c_diff(v->cval, c_prod(w->cval, div));
 	d = PyComplex_FromCComplex(div);
 	m = PyComplex_FromCComplex(mod);
-	z = PyTuple_Pack(2, d, m);
+	z = Py_BuildValue("(OO)", d, m);
 	Py_XDECREF(d);
 	Py_XDECREF(m);
 	return z;
@@ -865,7 +865,7 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	if (f == NULL)
 		PyErr_Clear();
 	else {
-		PyObject *args = PyTuple_New(0);
+		PyObject *args = Py_BuildValue("()");
 		if (args == NULL)
 			return NULL;
 		r = PyEval_CallObject(f, args);
@@ -882,9 +882,6 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	    ((i != NULL) && (nbi == NULL || nbi->nb_float == NULL))) {
 		PyErr_SetString(PyExc_TypeError,
 			   "complex() argument must be a string or a number");
-		if (own_r) {
-			Py_DECREF(r);
-		}
 		return NULL;
 	}
 	if (PyComplex_Check(r)) {

@@ -21,7 +21,7 @@ hasfree = []
 
 opmap = {}
 opname = [''] * 256
-for op in range(256): opname[op] = '<%r>' % (op,)
+for op in range(256): opname[op] = '<' + `op` + '>'
 del op
 
 def def_op(name, op):
@@ -56,7 +56,6 @@ def_op('UNARY_CONVERT', 13)
 
 def_op('UNARY_INVERT', 15)
 
-def_op('LIST_APPEND', 18)
 def_op('BINARY_POWER', 19)
 
 def_op('BINARY_MULTIPLY', 20)

@@ -3,6 +3,11 @@
 
 #include "Python.h"
 
+/* Mac with GUSI has more errors than those in errno.h */
+#ifdef USE_GUSI
+#include <sys/errno.h>
+#endif
+
 /* Windows socket errors (WSA*)  */
 #ifdef MS_WINDOWS
 #include <winsock.h>

@@ -213,23 +213,6 @@ The functions defined in this module are:
   and the remainder of the string is returned as the final element of
   the list (thus, the list will have at most \code{\var{maxsplit}+1}
   elements).
-
-  The behavior of split on an empty string depends on the value of \var{sep}.
-  If \var{sep} is not specified, or specified as \code{None}, the result will
-  be an empty list.  If \var{sep} is specified as any string, the result will
-  be a list containing one element which is an empty string.
-\end{funcdesc}
-
-\begin{funcdesc}{rsplit}{s\optional{, sep\optional{, maxsplit}}}
-  Return a list of the words of the string \var{s}, scanning \var{s}
-  from the end.  To all intents and purposes, the resulting list of
-  words is the same as returned by \function{split()}, except when the
-  optional third argument \var{maxsplit} is explicitly specified and
-  nonzero.  When \var{maxsplit} is nonzero, at most \var{maxsplit}
-  number of splits -- the \emph{rightmost} ones -- occur, and the remainder
-  of the string is returned as the first element of the list (thus, the
-  list will have at most \code{\var{maxsplit}+1} elements).
-  \versionadded{2.4}
 \end{funcdesc}
 
 \begin{funcdesc}{splitfields}{s\optional{, sep\optional{, maxsplit}}}

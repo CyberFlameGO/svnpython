@@ -24,14 +24,6 @@ and also pops up a little window for controlling it.
 
 Run "pydoc -w <name>" to write out the HTML documentation for a module
 to a file named "<name>.html".
-
-Module docs for core modules are assumed to be in
-
-    http://www.python.org/doc/current/lib/
-
-This can be overridden by setting the PYTHONDOCS environment variable
-to a different URL or to a local directory containing the Library
-Reference Manual pages.
 """
 
 __author__ = "Ka-Ping Yee <ping@lfw.org>"
@@ -55,7 +47,6 @@ Mynd you, møøse bites Kan be pretty nasti..."""
 import sys, imp, os, re, types, inspect, __builtin__
 from repr import Repr
 from string import expandtabs, find, join, lower, split, strip, rfind, rstrip
-from collections import deque
 
 # --------------------------------------------------------- common routines
 
@@ -304,33 +295,6 @@ class Doc:
 
     docmodule = docclass = docroutine = docother = fail
 
-    def getdocloc(self, object):
-        """Return the location of module docs or None"""
-
-        try:
-            file = inspect.getabsfile(object)
-        except TypeError:
-            file = '(built-in)'
-
-        docloc = os.environ.get("PYTHONDOCS",
-                                "http://www.python.org/doc/current/lib")
-        basedir = os.path.join(sys.exec_prefix, "lib",
-                               "python"+sys.version[0:3])
-        if (isinstance(object, type(os)) and
-            (object.__name__ in ('errno', 'exceptions', 'gc', 'imp',
-                                 'marshal', 'posix', 'signal', 'sys',
-                                 'thread', 'zipimport') or
-             (file.startswith(basedir) and
-              not file.startswith(os.path.join(basedir, 'site-packages'))))):
-            if docloc.startswith("http://"):
-                docloc = (docloc.rstrip("/") +
-                          "/module-%s.html" % object.__name__)
-            else:
-                docloc = os.path.join(docloc, "module-%s.html" % name)
-        else:
-            docloc = None
-        return docloc
-
 # -------------------------------------------- HTML documentation generator
 
 class HTMLRepr(Repr):
@@ -571,14 +535,8 @@ class HTMLDoc(Doc):
             info.append(self.escape(str(object.__date__)))
         if info:
             head = head + ' (%s)' % join(info, ', ')
-        docloc = self.getdocloc(object)
-        if docloc is not None:
-            docloc = '<br><a href="%(docloc)s">Module Docs</a>' % locals()
-        else:
-            docloc = ''
         result = self.heading(
-            head, '#ffffff', '#7799ee',
-            '<a href=".">index</a><br>' + filelink + docloc)
+            head, '#ffffff', '#7799ee', '<a href=".">index</a><br>' + filelink)
 
         modules = inspect.getmembers(object, inspect.ismodule)
 
@@ -686,7 +644,7 @@ class HTMLDoc(Doc):
         hr = HorizontalRule()
 
         # List the mro, if non-trivial.
-        mro = deque(inspect.getmro(object))
+        mro = list(inspect.getmro(object))
         if len(mro) > 2:
             hr.maybe()
             push('<dl><dt>Method resolution order:</dt>\n')
@@ -764,7 +722,7 @@ class HTMLDoc(Doc):
 
         while attrs:
             if mro:
-                thisclass = mro.popleft()
+                thisclass = mro.pop(0)
             else:
                 thisclass = attrs[0][2]
             attrs, inherited = _split_list(attrs, lambda t: t[2] is thisclass)
@@ -780,7 +738,7 @@ class HTMLDoc(Doc):
             tag += ':<br>\n'
 
             # Sort attrs by name.
-            attrs.sort(key=lambda t: t[0])
+            attrs.sort(lambda t1, t2: cmp(t1[0], t2[0]))
 
             # Pump out the attrs, segregated by kind.
             attrs = spill('Methods %s' % tag, attrs,
@@ -992,11 +950,6 @@ class TextDoc(Doc):
         except TypeError:
             file = '(built-in)'
         result = result + self.section('FILE', file)
-
-        docloc = self.getdocloc(object)
-        if docloc is not None:
-            result = result + self.section('MODULE DOCS', docloc)
-
         if desc:
             result = result + self.section('DESCRIPTION', desc)
 
@@ -1084,7 +1037,7 @@ class TextDoc(Doc):
         push = contents.append
 
         # List the mro, if non-trivial.
-        mro = deque(inspect.getmro(object))
+        mro = list(inspect.getmro(object))
         if len(mro) > 2:
             push("Method resolution order:")
             for base in mro:
@@ -1153,7 +1106,7 @@ class TextDoc(Doc):
                        inspect.classify_class_attrs(object))
         while attrs:
             if mro:
-                thisclass = mro.popleft()
+                thisclass = mro.pop(0)
             else:
                 thisclass = attrs[0][2]
             attrs, inherited = _split_list(attrs, lambda t: t[2] is thisclass)

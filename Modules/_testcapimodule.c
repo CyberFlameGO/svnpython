@@ -544,7 +544,6 @@ raise_exception(PyObject *self, PyObject *args)
 		PyTuple_SET_ITEM(exc_args, i, v);
 	}
 	PyErr_SetObject(exc, exc_args);
-	Py_DECREF(exc_args);
 	return NULL;
 }
 

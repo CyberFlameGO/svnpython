@@ -421,7 +421,8 @@ class Message:
                 hit = 0
             if hit:
                 list.append(i)
-        for i in reversed(list):
+        list.reverse()
+        for i in list:
             del self.headers[i]
 
     def setdefault(self, name, default=""):
@@ -460,7 +461,10 @@ class Message:
         return self.dict.items()
 
     def __str__(self):
-        return ''.join(self.headers)
+        str = ''
+        for hdr in self.headers:
+            str = str + hdr
+        return str
 
 
 # Utility functions

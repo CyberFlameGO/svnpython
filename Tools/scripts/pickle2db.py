@@ -1,27 +1,18 @@
 #!/usr/bin/env python
 
 """
-Synopsis: %(prog)s [-h|-b|-g|-r|-a|-d] [ picklefile ] dbfile
+Synopsis: %(prog)s [-h|-b|-r|-a|-d] dbfile [ picklefile ]
 
 Read the given picklefile as a series of key/value pairs and write to a new
 database.  If the database already exists, any contents are deleted.  The
-optional flags indicate the type of the output database:
+optional flags indicate the type of the database (bsddb hash, bsddb btree,
+bsddb recno, anydbm, dbm).  The default is hash.  If a pickle file is named
+it is opened for read access.  If no pickle file is named, the pickle input
+is read from standard input.
 
-    -a - open using anydbm
-    -b - open as bsddb btree file
-    -d - open as dbm file
-    -g - open as gdbm file
-    -h - open as bsddb hash file
-    -r - open as bsddb recno file
-
-The default is hash.  If a pickle file is named it is opened for read
-access.  If no pickle file is named, the pickle input is read from standard
-input.
-
-Note that recno databases can only contain integer keys, so you can't dump a
+Note that recno databases can only contain numeric keys, so you can't dump a
 hash or btree database using db2pickle.py and reconstitute it to a recno
-database with %(prog)s unless your keys are integers.
-
+database with %(prog)s.
 """
 
 import getopt
@@ -33,10 +24,6 @@ try:
     import dbm
 except ImportError:
     dbm = None
-try:
-    import gdbm
-except ImportError:
-    gdbm = None
 try:
     import anydbm
 except ImportError:
@@ -54,9 +41,8 @@ def usage():
 
 def main(args):
     try:
-        opts, args = getopt.getopt(args, "hbrdag",
-                                   ["hash", "btree", "recno", "dbm", "anydbm",
-                                    "gdbm"])
+        opts, args = getopt.getopt(args, "hbrda",
+                                   ["hash", "btree", "recno", "dbm", "anydbm"])
     except getopt.error:
         usage()
         return 1
@@ -65,15 +51,15 @@ def main(args):
         usage()
         return 1
     elif len(args) == 1:
-        pfile = sys.stdin
         dbfile = args[0]
+        pfile = sys.stdin
     else:
+        dbfile = args[0]
         try:
-            pfile = open(args[0], 'rb')
+            pfile = open(args[1], 'rb')
         except IOError:
-            sys.stderr.write("Unable to open %s\n" % args[0])
+            sys.stderr.write("Unable to open %s\n" % args[1])
             return 1
-        dbfile = args[1]
 
     dbopen = None
     for opt, arg in opts:
@@ -100,12 +86,6 @@ def main(args):
                 dbopen = anydbm.open
             except AttributeError:
                 sys.stderr.write("anydbm module unavailable.\n")
-                return 1
-        elif opt in ("-g", "--gdbm"):
-            try:
-                dbopen = gdbm.open
-            except AttributeError:
-                sys.stderr.write("gdbm module unavailable.\n")
                 return 1
         elif opt in ("-d", "--dbm"):
             try:

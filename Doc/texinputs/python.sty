@@ -236,7 +236,6 @@
   % Calculate the text width for the minipage:
   \setlength{\py@codewidth}{\linewidth}%
   \addtolength{\py@codewidth}{-\parindent}%
-  \let\e=\textbackslash%
   %
   \par\indent%
   \begin{minipage}[t]{\py@codewidth}%
@@ -822,11 +821,8 @@
 \newcommand{\NULL}{\constant{NULL}}
 \newcommand{\infinity}{\ensuremath{\infty}}
 \newcommand{\plusminus}{\ensuremath{\pm}}
-
-% \guilabel{Start}
-\newcommand{\guilabel}[1]{\textsf{#1}}
 % \menuselection{Start \sub Programs \sub Python}
-\newcommand{\menuselection}[1]{\guilabel{{\def\sub{ \ensuremath{>} }#1}}}
+\newcommand{\menuselection}[1]{\textsf{\def\sub{ \ensuremath{>} }#1}}
 
 % Also for consistency: spell Python "Python", not "python"!
 
@@ -850,7 +846,7 @@
 \newcommand{\strong}[1]{{\bf #1}}
 % let's experiment with a new font:
 \newcommand{\file}[1]{`\filenq{#1}'}
-\newcommand{\filenq}[1]{{\py@smallsize\textsf{\let\e=\textbackslash#1}}}
+\newcommand{\filenq}[1]{{\py@smallsize\textsf{#1}}}
 
 % Use this def/redef approach for \url{} since hyperref defined this already,
 % but only if we actually used hyperref:
@@ -934,7 +930,6 @@
 \ifpdf
   % The \noindent here is a hack -- we're forcing pdfTeX into
   % horizontal mode since \pdfstartlink requires that.
-  % For PDF, we *should* only generate a link when the URL is absolute.
   \newcommand{\ulink}[2]{\noindent{%
     \pdfstartlink attr{/Border [0 0 0]} user{/S /URI /URI (#2)}%
     \py@LinkColor%                              color of the link text
@@ -979,39 +974,11 @@
   \end{tabular}
 }
 
-\newlength{\py@noticelength}
-
-\newcommand{\py@heavybox}{
-  \setlength{\fboxrule}{2pt}
-  \setlength{\fboxsep}{7pt}
-  \setlength{\py@noticelength}{\linewidth}
-  \addtolength{\py@noticelength}{-2\fboxsep}
-  \addtolength{\py@noticelength}{-2\fboxrule}
-  \setlength{\shadowsize}{3pt}
-  \Sbox
-  \minipage{\py@noticelength}
-}
-\newcommand{\py@endheavybox}{
-  \endminipage
-  \endSbox
-  \fbox{\TheSbox}
-}
-
-% a 'note' is as plain as it gets:
 \newcommand{\py@noticelabel@note}{Note:}
-\newcommand{\py@noticestart@note}{}
-\newcommand{\py@noticeend@note}{}
-
-% a 'warning' gets more visible distinction:
 \newcommand{\py@noticelabel@warning}{Warning:}
-\newcommand{\py@noticestart@warning}{\py@heavybox}
-\newcommand{\py@noticeend@warning}{\py@endheavybox}
-
 \newenvironment{notice}[1][note]{
-  \def\py@noticetype{#1}
-  \csname py@noticestart@#1\endcsname
   \par\strong{\csname py@noticelabel@#1\endcsname}
-}{\csname py@noticeend@\py@noticetype\endcsname}
+}{}
 \newcommand{\note}[1]{\strong{\py@noticelabel@note} #1}
 \newcommand{\warning}[1]{\strong{\py@noticelabel@warning} #1}
 

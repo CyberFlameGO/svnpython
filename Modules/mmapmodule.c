@@ -39,6 +39,11 @@ my_getpagesize(void)
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#ifndef MS_SYNC
+/* This is missing e.g. on SunOS 4.1.4 */
+#define MS_SYNC 0
+#endif
+
 #if defined(HAVE_SYSCONF) && defined(_SC_PAGESIZE)
 static int
 my_getpagesize(void)
@@ -912,7 +917,6 @@ new_mmap_object(PyObject *self, PyObject *args, PyObject *kwdict)
 			   prot, flags,
 			   fd, 0);
 	if (m_obj->data == (char *)-1) {
-	        m_obj->data = NULL;
 		Py_DECREF(m_obj);
 		PyErr_SetFromErrno(mmap_module_error);
 		return NULL;

@@ -6,7 +6,12 @@
 
 #include <ctype.h>
 
+#ifdef macintosh
+#include <time.h>
+#include <OSUtils.h>
+#else
 #include <sys/types.h>
+#endif
 
 #ifdef QUICKWIN
 #include <io.h>
@@ -83,6 +88,37 @@ static double floattime(void);
 
 /* For Y2K check */
 static PyObject *moddict;
+
+#ifdef macintosh
+/* Our own timezone. We have enough information to deduce whether
+** DST is on currently, but unfortunately we cannot put it to good
+** use because we don't know the rules (and that is needed to have
+** localtime() return correct tm_isdst values for times other than
+** the current time. So, we cop out and only tell the user the current
+** timezone.
+*/
+static long timezone;
+
+static void
+initmactimezone(void)
+{
+	MachineLocation	loc;
+	long		delta;
+
+	ReadLocation(&loc);
+
+	if (loc.latitude == 0 && loc.longitude == 0 && loc.u.gmtDelta == 0)
+		return;
+
+	delta = loc.u.gmtDelta & 0x00FFFFFF;
+
+	if (delta & 0x00800000)
+		delta |= 0xFF000000;
+
+	timezone = -delta;
+}
+#endif /* macintosh */
+
 
 static PyObject *
 time_time(PyObject *self, PyObject *args)
@@ -346,48 +382,6 @@ time_strftime(PyObject *self, PyObject *args)
 	} else if (!gettmarg(tup, &buf))
 		return NULL;
 
-        /* Checks added to make sure strftime() does not crash Python by
-            indexing blindly into some array for a textual representation
-            by some bad index (fixes bug #897625).
-        
-            No check for year since handled in gettmarg().
-        */
-        if (buf.tm_mon < 0 || buf.tm_mon > 11) {
-            PyErr_SetString(PyExc_ValueError, "month out of range");
-                        return NULL;
-        }
-        if (buf.tm_mday < 1 || buf.tm_mday > 31) {
-            PyErr_SetString(PyExc_ValueError, "day of month out of range");
-                        return NULL;
-        }
-        if (buf.tm_hour < 0 || buf.tm_hour > 23) {
-            PyErr_SetString(PyExc_ValueError, "hour out of range");
-            return NULL;
-        }
-        if (buf.tm_min < 0 || buf.tm_min > 59) {
-            PyErr_SetString(PyExc_ValueError, "minute out of range");
-            return NULL;
-        }
-        if (buf.tm_sec < 0 || buf.tm_sec > 61) {
-            PyErr_SetString(PyExc_ValueError, "seconds out of range");
-            return NULL;
-        }
-        /* tm_wday does not need checking of its upper-bound since taking
-        ``% 7`` in gettmarg() automatically restricts the range. */
-        if (buf.tm_wday < 0) {
-            PyErr_SetString(PyExc_ValueError, "day of week out of range");
-            return NULL;
-        }
-        if (buf.tm_yday < 0 || buf.tm_yday > 365) {
-            PyErr_SetString(PyExc_ValueError, "day of year out of range");
-            return NULL;
-        }
-        if (buf.tm_isdst < -1 || buf.tm_isdst > 1) {
-            PyErr_SetString(PyExc_ValueError,
-                            "daylight savings flag out of range");
-            return NULL;
-        }
-
 	fmtlen = strlen(fmt);
 
 	/* I hate these functions that presume you know how big the output
@@ -642,6 +636,17 @@ void inittimezone(PyObject *m) {
 		}
 	}
 #else
+#ifdef macintosh
+	/* The only thing we can obtain is the current timezone
+	** (and whether dst is currently _active_, but that is not what
+	** we're looking for:-( )
+	*/
+	initmactimezone();
+	PyModule_AddIntConstant(m, "timezone", timezone);
+	PyModule_AddIntConstant(m, "altzone", timezone);
+	PyModule_AddIntConstant(m, "daylight", 0);
+	PyModule_AddObject(m, "tzname", Py_BuildValue("(zz)", "", ""));
+#endif /* macintosh */
 #endif /* HAVE_STRUCT_TM_TM_ZONE */
 #ifdef __CYGWIN__
 	tzset();
@@ -824,6 +829,15 @@ floatsleep(double secs)
 		}
 	}
 	Py_END_ALLOW_THREADS
+#elif defined(macintosh)
+#define MacTicks	(* (long *)0x16A)
+	long deadline;
+	deadline = MacTicks + (long)(secs * 60.0);
+	while (MacTicks < deadline) {
+		/* XXX Should call some yielding function here */
+		if (PyErr_CheckSignals())
+			return -1;
+	}
 #elif defined(__WATCOMC__) && !defined(__QNX__)
 	/* XXX Can't interrupt this sleep */
 	Py_BEGIN_ALLOW_THREADS

@@ -127,7 +127,7 @@ def assign_members(target, attrlist, exclist, prefix):
 				ok = 0
 			if ok:
 				lhs = 'target.' + prefix + name
-				stmt = lhs + '=' + repr(value)
+				stmt = lhs + '=' + `value`
 				if debug: print 'exec', stmt
 				try:
 					exec stmt + '\n'

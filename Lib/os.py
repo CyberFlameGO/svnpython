@@ -76,7 +76,6 @@ elif 'os2' in _names:
         import ntpath as path
     else:
         import os2emxpath as path
-        from _emx_link import link
 
     import os2
     __all__.extend(_get_exports_list(os2))
@@ -152,8 +151,6 @@ def makedirs(name, mode=0777):
         head, tail = path.split(head)
     if head and tail and not path.exists(head):
         makedirs(head, mode)
-        if tail == curdir:           # xxx/newdir/. exists if xxx/newdir exists
-            return
     mkdir(name, mode)
 
 def removedirs(name):
@@ -433,6 +430,9 @@ else:
                 return key.upper() in self.data
             def get(self, key, failobj=None):
                 return self.data.get(key.upper(), failobj)
+            def update(self, dict):
+                for k, v in dict.items():
+                    self[k] = v
             def copy(self):
                 return dict(self)
 
@@ -444,6 +444,9 @@ else:
             def __setitem__(self, key, item):
                 putenv(key, item)
                 self.data[key] = item
+            def update(self, dict):
+                for k, v in dict.items():
+                    self[k] = v
             try:
                 unsetenv
             except NameError:

@@ -61,10 +61,6 @@ Local naming conventions:
 
 */
 
-#if defined(__sgi) && _COMPILER_VERSION>700 && !_SGIAPI
-#define _BSD_TYPES
-#endif
-
 #include "Python.h"
 
 #undef MAX
@@ -196,17 +192,7 @@ shutdown(how) -- shut down traffic in one or both directions\n\
 
 /* XXX Using _SGIAPI is the wrong thing, 
    but I don't know what the right thing is. */
-#undef _SGIAPI /* to avoid warning */
 #define _SGIAPI 1
-
-#undef _XOPEN_SOURCE
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#ifdef _SS_ALIGNSIZE
-#define HAVE_GETADDRINFO 1
-#define HAVE_GETNAMEINFO 1
-#endif
 
 #define HAVE_INET_PTON
 #include <netdb.h>
@@ -261,7 +247,9 @@ int h_errno; /* not used */
 
 #endif
 
-#include <stddef.h>
+#ifdef HAVE_STDDEF_H
+# include <stddef.h>
+#endif
 
 #ifndef offsetof
 # define offsetof(type, member)	((size_t)(&((type *)0)->member))
@@ -271,12 +259,7 @@ int h_errno; /* not used */
 # define O_NONBLOCK O_NDELAY
 #endif
 
-#if defined(__sgi) && _COMPILER_VERSION>700 \
- && !defined(_SS_ALIGNSIZE) /* defined in sys/socket.h            */
-                            /* by some newer versions of IRIX     */
-                            /* (e.g. not by 6.5.10 but by 6.5.21) */
 #include "addrinfo.h"
-#endif
 
 #ifndef HAVE_INET_PTON
 int inet_pton(int af, const char *src, void *dst);
@@ -337,24 +320,6 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 #ifdef __VMS
 /* TCP/IP Services for VMS uses a maximum send/revc buffer length of 65535 */
 #define SEGMENT_SIZE 65535
-#endif
-
-#if defined(HAVE_BLUETOOTH_H) || defined(HAVE_BLUETOOTH_BLUETOOTH_H)
-#define USE_BLUETOOTH 1
-#if defined(__FreeBSD__)
-#define BTPROTO_L2CAP BLUETOOTH_PROTO_L2CAP
-#define BTPROTO_RFCOMM BLUETOOTH_PROTO_RFCOMM
-#define sockaddr_l2 sockaddr_l2cap
-#define sockaddr_rc sockaddr_rfcomm
-#define _BT_SOCKADDR_MEMB(s, proto) &((s)->sock_addr)
-#define _BT_L2_MEMB(sa, memb) ((sa)->l2cap_##memb)
-#define _BT_RC_MEMB(sa, memb) ((sa)->rfcomm_##memb)
-#else
-#define _BT_SOCKADDR_MEMB(s, proto) (&((s)->sock_addr).bt_##proto)
-#define _BT_L2_MEMB(sa, memb) ((sa)->l2_##memb)
-#define _BT_RC_MEMB(sa, memb) ((sa)->rc_##memb)
-#define _BT_SCO_MEMB(sa, memb) ((sa)->sco_##memb)
-#endif
 #endif
 
 /*
@@ -1051,70 +1016,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
 	}
 #endif
 
-#ifdef USE_BLUETOOTH
-	case AF_BLUETOOTH:
-	{
-		switch( s->sock_proto )
-		{
-			case BTPROTO_L2CAP:
-			{
-				struct sockaddr_l2* addr = (struct sockaddr_l2*)_BT_SOCKADDR_MEMB(s, l2);
-				bdaddr_t* bdaddr = &_BT_L2_MEMB(addr, bdaddr);
-
-				_BT_L2_MEMB(addr, family) = AF_BLUETOOTH;
-				if( !PyArg_ParseTuple(args, "(iiiiii)i", &bdaddr->b[0], &bdaddr->b[1], &bdaddr->b[2], &bdaddr->b[3], &bdaddr->b[4], &bdaddr->b[5], &_BT_L2_MEMB(addr, psm)) )
-				{
-					PyErr_SetString(socket_error, "getsockaddrarg: wrong format");
-					return 0;
-				}
-
-				*addr_ret = (struct sockaddr *) addr;
-				*len_ret = sizeof *addr;
-				return 1;
-			}
-			case BTPROTO_RFCOMM:
-			{
-				struct sockaddr_rc* addr = (struct sockaddr_rc*)_BT_SOCKADDR_MEMB(s, rc);
-				bdaddr_t* bdaddr = &_BT_RC_MEMB(addr, bdaddr);
-
-				_BT_RC_MEMB(addr, family) = AF_BLUETOOTH;
-				if( !PyArg_ParseTuple(args, "(iiiiii)i", &bdaddr->b[0], &bdaddr->b[1], &bdaddr->b[2], &bdaddr->b[3], &bdaddr->b[4], &bdaddr->b[5], &_BT_RC_MEMB(addr, channel)) )
-				{
-					PyErr_SetString(socket_error, "getsockaddrarg: wrong format");
-					return 0;
-				}
-
-				*addr_ret = (struct sockaddr *) addr;
-				*len_ret = sizeof *addr;
-				return 1;
-			}
-#if !defined(__FreeBSD__)
-			case BTPROTO_SCO:
-			{
-				struct sockaddr_sco* addr = (struct sockaddr_sco*)_BT_SOCKADDR_MEMB(s, sco);
-				bdaddr_t* bdaddr = &_BT_SCO_MEMB(addr, bdaddr);
-
-				_BT_SCO_MEMB(addr, family) = AF_BLUETOOTH;
-				if( !PyArg_ParseTuple(args, "iiiiii", &bdaddr->b[0], &bdaddr->b[1], &bdaddr->b[2], &bdaddr->b[3], &bdaddr->b[4], &bdaddr->b[5]) )
-				{
-					PyErr_SetString(socket_error, "getsockaddrarg: wrong format");
-					return 0;
-				}
-
-				*addr_ret = (struct sockaddr *) addr;
-				*len_ret = sizeof *addr;
-				return 1;
-			}
-#endif
-			default:
-			{
-				PyErr_SetString(socket_error, "getsockaddrarg: unknown Bluetooth protocol");
-				return 0;
-			}
-		}
-	}
-#endif
-
 #ifdef HAVE_NETPACKET_PACKET_H
 	case AF_PACKET:
 	{
@@ -1185,37 +1086,6 @@ getsockaddrlen(PySocketSockObject *s, socklen_t *len_ret)
 	{
 		*len_ret = sizeof (struct sockaddr_in6);
 		return 1;
-	}
-#endif
-
-#ifdef USE_BLUETOOTH
-	case AF_BLUETOOTH:
-	{
-		switch(s->sock_proto)
-		{
-			case BTPROTO_L2CAP:
-			{
-				*len_ret = sizeof (struct sockaddr_l2);
-				return 1;
-			}
-			case BTPROTO_RFCOMM:
-			{
-				*len_ret = sizeof (struct sockaddr_rc);
-				return 1;
-			}
-#if !defined(__FreeBSD__)
-			case BTPROTO_SCO:
-			{
-				*len_ret = sizeof (struct sockaddr_sco);
-				return 1;
-			}
-#endif
-			default:
-			{
-				PyErr_SetString(socket_error, "getsockaddrlen: unknown BT protocol");
-				return 0;
-			}
-		}
 	}
 #endif
 
@@ -1295,7 +1165,7 @@ sock_accept(PySocketSockObject *s)
 	if (addr == NULL)
 		goto finally;
 
-	res = PyTuple_Pack(2, sock, addr);
+	res = Py_BuildValue("OO", sock, addr);
 
 finally:
 	Py_XDECREF(sock);
@@ -1873,6 +1743,11 @@ sock_makefile(PySocketSockObject *s, PyObject *args)
 			SOCKETCLOSE(fd);
 		return s->errorhandler();
 	}
+#ifdef USE_GUSI2
+	/* Workaround for bug in Metrowerks MSL vs. GUSI I/O library */
+	if (strchr(mode, 'b') != NULL)
+		bufsize = 0;
+#endif
 	f = PyFile_FromFile(fp, "<socket>", mode, fclose);
 	if (f != NULL)
 		PyFile_SetBufSize(f, bufsize);
@@ -2040,7 +1915,7 @@ sock_recvfrom(PySocketSockObject *s, PyObject *args)
 				  addrlen)))
 		goto finally;
 
-	ret = PyTuple_Pack(2, buf, addr);
+	ret = Py_BuildValue("OO", buf, addr);
 
 finally:
 	Py_XDECREF(addr);
@@ -2231,8 +2106,8 @@ sock_shutdown(PySocketSockObject *s, PyObject *arg)
 PyDoc_STRVAR(shutdown_doc,
 "shutdown(flag)\n\
 \n\
-Shut down the reading side of the socket (flag == SHUT_RD), the writing side\n\
-of the socket (flag == SHUT_WR), or both ends (flag == SHUT_RDWR).");
+Shut down the reading side of the socket (flag == 0), the writing side\n\
+of the socket (flag == 1), or both ends (flag == 2).");
 
 
 /* List of methods for socket objects */
@@ -2947,7 +2822,7 @@ Convert a 32-bit integer from network to host byte order.");
 static PyObject *
 socket_htons(PyObject *self, PyObject *args)
 {
-	int x1, x2;
+	unsigned long x1, x2;
 
 	if (!PyArg_ParseTuple(args, "i:htons", &x1)) {
 		return NULL;
@@ -3582,7 +3457,6 @@ static
 PySocketModule_APIObject PySocketModuleAPI =
 {
 	&sock_type,
-        NULL
 };
 
 
@@ -3620,7 +3494,6 @@ init_socket(void)
 	socket_error = PyErr_NewException("socket.error", NULL, NULL);
 	if (socket_error == NULL)
 		return;
-        PySocketModuleAPI.error = socket_error;
 	Py_INCREF(socket_error);
 	PyModule_AddObject(m, "error", socket_error);
 	socket_herror = PyErr_NewException("socket.herror",
@@ -3709,18 +3582,6 @@ init_socket(void)
 	/* Amateur Radio X.25 PLP */
 	PyModule_AddIntConstant(m, "AF_ROSE", AF_ROSE);
 #endif
-
-#ifdef USE_BLUETOOTH
-	PyModule_AddIntConstant(m, "AF_BLUETOOTH", AF_BLUETOOTH);
-	PyModule_AddIntConstant(m, "BTPROTO_L2CAP", BTPROTO_L2CAP);
-#if !defined(__FreeBSD__)
-	PyModule_AddIntConstant(m, "BTPROTO_SCO", BTPROTO_SCO);
-#endif
-	PyModule_AddIntConstant(m, "BTPROTO_RFCOMM", BTPROTO_RFCOMM);
-	PyModule_AddObject(m, "BDADDR_ANY", Py_BuildValue( "iiiiii", 0,0,0,0,0,0 ) );
-	PyModule_AddObject(m, "BDADDR_LOCAL", Py_BuildValue( "iiiiii", 0,0,0,0xff,0xff,0xff ) );
-#endif
-
 #ifdef HAVE_NETPACKET_PACKET_H
 	PyModule_AddIntConstant(m, "AF_PACKET", AF_PACKET);
 	PyModule_AddIntConstant(m, "PF_PACKET", PF_PACKET);
@@ -4112,71 +3973,6 @@ init_socket(void)
 #ifdef	IPV6_UNICAST_HOPS
 	PyModule_AddIntConstant(m, "IPV6_UNICAST_HOPS", IPV6_UNICAST_HOPS);
 #endif
-        /* Additional IPV6 socket options, defined in RFC 3493 */
-#ifdef IPV6_V6ONLY
-	PyModule_AddIntConstant(m, "IPV6_V6ONLY", IPV6_V6ONLY);
-#endif
-	/* Advanced IPV6 socket options, from RFC 3542 */
-#ifdef IPV6_CHECKSUM
-	PyModule_AddIntConstant(m, "IPV6_CHECKSUM", IPV6_CHECKSUM);
-#endif
-#ifdef IPV6_DONTFRAG
-	PyModule_AddIntConstant(m, "IPV6_DONTFRAG", IPV6_DONTFRAG);
-#endif
-#ifdef IPV6_DSTOPTS
-	PyModule_AddIntConstant(m, "IPV6_DSTOPTS", IPV6_DSTOPTS);
-#endif
-#ifdef IPV6_HOPLIMIT
-	PyModule_AddIntConstant(m, "IPV6_HOPLIMIT", IPV6_HOPLIMIT);
-#endif
-#ifdef IPV6_HOPOPTS
-	PyModule_AddIntConstant(m, "IPV6_HOPOPTS", IPV6_HOPOPTS);
-#endif
-#ifdef IPV6_NEXTHOP
-	PyModule_AddIntConstant(m, "IPV6_NEXTHOP", IPV6_NEXTHOP);
-#endif
-#ifdef IPV6_PATHMTU
-	PyModule_AddIntConstant(m, "IPV6_PATHMTU", IPV6_PATHMTU);
-#endif
-#ifdef IPV6_PKTINFO
-	PyModule_AddIntConstant(m, "IPV6_PKTINFO", IPV6_PKTINFO);
-#endif
-#ifdef IPV6_RECVDSTOPTS
-	PyModule_AddIntConstant(m, "IPV6_RECVDSTOPTS", IPV6_RECVDSTOPTS);
-#endif
-#ifdef IPV6_RECVHOPLIMIT
-	PyModule_AddIntConstant(m, "IPV6_RECVHOPLIMIT", IPV6_RECVHOPLIMIT);
-#endif
-#ifdef IPV6_RECVHOPOPTS
-	PyModule_AddIntConstant(m, "IPV6_RECVHOPOPTS", IPV6_RECVHOPOPTS);
-#endif
-#ifdef IPV6_RECVPKTINFO
-	PyModule_AddIntConstant(m, "IPV6_RECVPKTINFO", IPV6_RECVPKTINFO);
-#endif
-#ifdef IPV6_RECVRTHDR
-	PyModule_AddIntConstant(m, "IPV6_RECVRTHDR", IPV6_RECVRTHDR);
-#endif
-#ifdef IPV6_RECVTCLASS
-	PyModule_AddIntConstant(m, "IPV6_RECVTCLASS", IPV6_RECVTCLASS);
-#endif
-#ifdef IPV6_RTHDR
-	PyModule_AddIntConstant(m, "IPV6_RTHDR", IPV6_RTHDR);
-#endif
-#ifdef IPV6_RTHDRDSTOPTS
-	PyModule_AddIntConstant(m, "IPV6_RTHDRDSTOPTS", IPV6_RTHDRDSTOPTS);
-#endif
-#ifdef IPV6_RTHDR_TYPE_0
-	PyModule_AddIntConstant(m, "IPV6_RTHDR_TYPE_0", IPV6_RTHDR_TYPE_0);
-#endif
-#ifdef IPV6_RECVPATHMTU
-	PyModule_AddIntConstant(m, "IPV6_RECVPATHMTU", IPV6_RECVPATHMTU);
-#endif
-#ifdef IPV6_TCLASS
-	PyModule_AddIntConstant(m, "IPV6_TCLASS", IPV6_TCLASS);
-#endif
-#ifdef IPV6_USE_MIN_MTU
-	PyModule_AddIntConstant(m, "IPV6_USE_MIN_MTU", IPV6_USE_MIN_MTU);
-#endif
 
 	/* TCP options */
 #ifdef	TCP_NODELAY
@@ -4247,9 +4043,6 @@ init_socket(void)
 #ifdef EAI_NONAME
 	PyModule_AddIntConstant(m, "EAI_NONAME", EAI_NONAME);
 #endif
-#ifdef EAI_OVERFLOW
-	PyModule_AddIntConstant(m, "EAI_OVERFLOW", EAI_OVERFLOW);
-#endif
 #ifdef EAI_SERVICE
 	PyModule_AddIntConstant(m, "EAI_SERVICE", EAI_SERVICE);
 #endif
@@ -4276,9 +4069,6 @@ init_socket(void)
 #endif
 #ifdef AI_NUMERICHOST
 	PyModule_AddIntConstant(m, "AI_NUMERICHOST", AI_NUMERICHOST);
-#endif
-#ifdef AI_NUMERICSERV
-	PyModule_AddIntConstant(m, "AI_NUMERICSERV", AI_NUMERICSERV);
 #endif
 #ifdef AI_MASK
 	PyModule_AddIntConstant(m, "AI_MASK", AI_MASK);
@@ -4318,29 +4108,6 @@ init_socket(void)
 #endif
 #ifdef NI_DGRAM
 	PyModule_AddIntConstant(m, "NI_DGRAM", NI_DGRAM);
-#endif
-
-	/* shutdown() parameters */
-#ifdef SHUT_RD
-	PyModule_AddIntConstant(m, "SHUT_RD", SHUT_RD);
-#elif defined(SD_RECEIVE)
-	PyModule_AddIntConstant(m, "SHUT_RD", SD_RECEIVE);
-#else
-	PyModule_AddIntConstant(m, "SHUT_RD", 0);
-#endif
-#ifdef SHUT_WR
-	PyModule_AddIntConstant(m, "SHUT_WR", SHUT_WR);
-#elif defined(SD_SEND)
-	PyModule_AddIntConstant(m, "SHUT_WR", SD_SEND);
-#else
-	PyModule_AddIntConstant(m, "SHUT_WR", 1);
-#endif
-#ifdef SHUT_RDWR
-	PyModule_AddIntConstant(m, "SHUT_RDWR", SHUT_RDWR);
-#elif defined(SD_BOTH)
-	PyModule_AddIntConstant(m, "SHUT_RDWR", SD_BOTH);
-#else
-	PyModule_AddIntConstant(m, "SHUT_RDWR", 2);
 #endif
 
 	/* Initialize gethostbyname lock */

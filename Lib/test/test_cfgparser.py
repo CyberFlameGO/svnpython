@@ -211,58 +211,6 @@ class TestCaseBase(unittest.TestCase):
             "\n"
             )
 
-    def test_set_string_types(self):
-        cf = self.fromstring("[sect]\n"
-                             "option1=foo\n")
-        # Check that we don't get an exception when setting values in
-        # an existing section using strings:
-        class mystr(str):
-            pass
-        cf.set("sect", "option1", "splat")
-        cf.set("sect", "option1", mystr("splat"))
-        cf.set("sect", "option2", "splat")
-        cf.set("sect", "option2", mystr("splat"))
-        try:
-            unicode
-        except NameError:
-            pass
-        else:
-            cf.set("sect", "option1", unicode("splat"))
-            cf.set("sect", "option2", unicode("splat"))
-
-    def test_set_nonstring_types(self):
-        cf = self.fromstring("[sect]\n"
-                             "option1=foo\n")
-        # Check that we get a TypeError when setting non-string values
-        # in an existing section:
-        self.assertRaises(TypeError, cf.set, "sect", "option1", 1)
-        self.assertRaises(TypeError, cf.set, "sect", "option1", 1.0)
-        self.assertRaises(TypeError, cf.set, "sect", "option1", object())
-        self.assertRaises(TypeError, cf.set, "sect", "option2", 1)
-        self.assertRaises(TypeError, cf.set, "sect", "option2", 1.0)
-        self.assertRaises(TypeError, cf.set, "sect", "option2", object())
-
-    def test_read_returns_file_list(self):
-        file1 = test_support.findfile("cfgparser.1")
-        # check when we pass a mix of readable and non-readable files:
-        cf = self.newconfig()
-        parsed_files = cf.read([file1, "nonexistant-file"])
-        self.assertEqual(parsed_files, [file1])
-        self.assertEqual(cf.get("Foo Bar", "foo"), "newbar")
-        # check when we pass only a filename:
-        cf = self.newconfig()
-        parsed_files = cf.read(file1)
-        self.assertEqual(parsed_files, [file1])
-        self.assertEqual(cf.get("Foo Bar", "foo"), "newbar")
-        # check when we pass only missing files:
-        cf = self.newconfig()
-        parsed_files = cf.read(["nonexistant-file"])
-        self.assertEqual(parsed_files, [])
-        # check when we pass no files:
-        cf = self.newconfig()
-        parsed_files = cf.read([])
-        self.assertEqual(parsed_files, [])
-
     # shared by subclasses
     def get_interpolation_config(self):
         return self.fromstring(
@@ -274,11 +222,11 @@ class TestCaseBase(unittest.TestCase):
             "with11=%(with10)s\n"
             "with10=%(with9)s\n"
             "with9=%(with8)s\n"
-            "with8=%(With7)s\n"
-            "with7=%(WITH6)s\n"
+            "with8=%(with7)s\n"
+            "with7=%(with6)s\n"
             "with6=%(with5)s\n"
-            "With5=%(with4)s\n"
-            "WITH4=%(with3)s\n"
+            "with5=%(with4)s\n"
+            "with4=%(with3)s\n"
             "with3=%(with2)s\n"
             "with2=%(with1)s\n"
             "with1=with\n"

@@ -8,9 +8,19 @@
 
 #include <ctype.h>
 
-#if !defined(__STDC__)
+#if !defined(__STDC__) && !defined(macintosh)
 extern double fmod(double, double);
 extern double pow(double, double);
+#endif
+
+#if defined(sun) && !defined(__SVR4)
+/* On SunOS4.1 only libm.a exists. Make sure that references to all
+   needed math functions exist in the executable, so that dynamic
+   loading of mathmodule does not fail. */
+double (*_Py_math_funcs_hack[])() = {
+	acos, asin, atan, atan2, ceil, cos, cosh, exp, fabs, floor,
+	fmod, log, log10, pow, sin, sinh, sqrt, tan, tanh
+};
 #endif
 
 /* Special free list -- see comments for same code in intobject.c. */
@@ -352,38 +362,12 @@ float_str(PyFloatObject *v)
 	return PyString_FromString(buf);
 }
 
-static PyObject*
-float_richcompare(PyObject *v, PyObject *w, int op)
+static int
+float_compare(PyFloatObject *v, PyFloatObject *w)
 {
-	double i, j;
-	int r = 0;
-
-	CONVERT_TO_DOUBLE(v, i);
-	CONVERT_TO_DOUBLE(w, j);
-
-	PyFPE_START_PROTECT("richcompare", return NULL)
-	switch (op) {
-	case Py_EQ:
-		r = i==j;
-		break;
-	case Py_NE:
-		r = i!=j;
-		break;
-	case Py_LE:
-		r = i<=j;
-		break;
-	case Py_GE:
-		r = i>=j;
-		break;
-	case Py_LT:
-		r = i<j;
-		break;
-	case Py_GT:
-		r = i>j;
-		break;
-	}
-	PyFPE_END_PROTECT(r)
-	return PyBool_FromLong(r);
+	double i = v->ob_fval;
+	double j = w->ob_fval;
+	return (i < j) ? -1 : (i > j) ? 1 : 0;
 }
 
 static long
@@ -844,7 +828,7 @@ PyTypeObject PyFloat_Type = {
 	(printfunc)float_print, 		/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	0,			 		/* tp_compare */
+	(cmpfunc)float_compare, 		/* tp_compare */
 	(reprfunc)float_repr,			/* tp_repr */
 	&float_as_number,			/* tp_as_number */
 	0,					/* tp_as_sequence */
@@ -860,7 +844,7 @@ PyTypeObject PyFloat_Type = {
 	float_doc,				/* tp_doc */
  	0,					/* tp_traverse */
 	0,					/* tp_clear */
-	(richcmpfunc)float_richcompare,		/* tp_richcompare */
+	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */

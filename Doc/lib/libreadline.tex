@@ -42,12 +42,6 @@ Save a readline history file.
 The default filename is \file{\~{}/.history}.
 \end{funcdesc}
 
-\begin{funcdesc}{clear_history}{}
-Clear the current history.  (Note: this function is not available if
-the installed version of GNU readline doesn't support it.)
-\versionadded{2.4}
-\end{funcdesc}
-
 \begin{funcdesc}{get_history_length}{}
 Return the desired length of the history file.  Negative values imply
 unlimited history file size.
@@ -153,32 +147,4 @@ except IOError:
 import atexit
 atexit.register(readline.write_history_file, histfile)
 del os, histfile
-\end{verbatim}
-
-The following example extends the \class{code.InteractiveConsole} class to
-support history save/restore.
-
-\begin{verbatim}
-import code
-import readline
-import atexit
-import os
-
-class HistoryConsole(code.InteractiveConsole):
-    def __init__(self, locals=None, filename="<console>",
-                 histfile=os.path.expanduser("~/.console-history")):
-        code.InteractiveConsole.__init__(self)
-        self.init_history(histfile)
-
-    def init_history(self, histfile):
-        readline.parse_and_bind("tab: complete")
-        if hasattr(readline, "read_history_file"):
-            try:
-                readline.read_history_file(histfile)
-            except IOError:
-                pass
-            atexit.register(self.save_history, histfile)
-
-    def save_history(self, histfile):
-        readline.write_history_file(histfile)
 \end{verbatim}

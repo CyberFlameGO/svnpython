@@ -117,32 +117,27 @@ Return the names of all registered dialects.
 
 The \module{csv} module defines the following classes:
 
-\begin{classdesc}{DictReader}{csvfile\optional{,
-			      fieldnames=\constant{None},\optional{,
+\begin{classdesc}{DictReader}{csvfile, fieldnames\optional{,
                               restkey=\constant{None}\optional{,
 			      restval=\constant{None}\optional{,
                               dialect=\code{'excel'}\optional{,
-			      *args, **kwds}}}}}}
+			      fmtparam}}}}}
 Create an object which operates like a regular reader but maps the
-information read into a dict whose keys are given by the optional
-{} \var{fieldnames}
-parameter.  If the \var{fieldnames} parameter is omitted, the values in
-the first row of the \var{csvfile} will be used as the fieldnames.
-If the row read has fewer fields than the fieldnames sequence,
+information read into a dict whose keys are given by the \var{fieldnames}
+parameter.  If the row read has fewer fields than the fieldnames sequence,
 the value of \var{restval} will be used as the default value.  If the row
 read has more fields than the fieldnames sequence, the remaining data is
 added as a sequence keyed by the value of \var{restkey}.  If the row read
 has fewer fields than the fieldnames sequence, the remaining keys take the
-value of the optional \var{restval} parameter.  Any other optional or
-keyword arguments are passed to the underlying \class{reader} instance.
+value of the optional \var{restval} parameter.  All other parameters are
+interpreted as for \class{reader} objects.
 \end{classdesc}
 
 
 \begin{classdesc}{DictWriter}{csvfile, fieldnames\optional{,
                               restval=""\optional{,
                               extrasaction=\code{'raise'}\optional{,
-                              dialect=\code{'excel'}\optional{,
-			      *args, **kwds}}}}}
+                              dialect=\code{'excel'}\optional{, fmtparam}}}}}
 Create an object which operates like a regular writer but maps dictionaries
 onto output rows.  The \var{fieldnames} parameter identifies the order in
 which values in the dictionary passed to the \method{writerow()} method are
@@ -152,16 +147,8 @@ specifies the value to be written if the dictionary is missing a key in
 method contains a key not found in \var{fieldnames}, the optional
 \var{extrasaction} parameter indicates what action to take.  If it is set
 to \code{'raise'} a \exception{ValueError} is raised.  If it is set to
-\code{'ignore'}, extra values in the dictionary are ignored.  Any other
-optional or keyword arguments are passed to the underlying \class{writer}
-instance.
-
-Note that unlike the \class{DictReader} class, the \var{fieldnames}
-parameter of the \class{DictWriter} is not optional.  Since Python's
-\class{dict} objects are not ordered, there is not enough information
-available to deduce the order in which the row should be written to the
-\var{csvfile}.
-
+\code{'ignore'}, extra values in the dictionary are ignored.  All other
+parameters are interpreted as for \class{writer} objects.
 \end{classdesc}
 
 \begin{classdesc*}{Dialect}{}
@@ -314,7 +301,7 @@ The ``Hello, world'' of csv reading is
 
 \begin{verbatim}
 import csv
-reader = csv.reader(file("some.csv", "rb"))
+reader = csv.reader(file("some.csv"))
 for row in reader:
     print row
 \end{verbatim}
@@ -323,7 +310,7 @@ The corresponding simplest possible writing example is
 
 \begin{verbatim}
 import csv
-writer = csv.writer(file("some.csv", "wb"))
+writer = csv.writer(file("some.csv", "w"))
 for row in someiterable:
     writer.writerow(row)
 \end{verbatim}
