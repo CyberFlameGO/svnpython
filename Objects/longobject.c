@@ -101,28 +101,7 @@ newlongobject(ival)
 			v->ob_size = -(v->ob_size);
   		}
 		for (i = 0; i < 5; i++) {
-			v->ob_digit[i] = (digit) (t & MASK);
-			t >>= SHIFT;
-		}
-		v = long_normalize(v);
-	}
-	return (object *)v;
-}
-
-/* Create a new long int object from a C unsigned long int */
-
-object *
-PyLong_FromUnsignedLong(ival)
-	unsigned long ival;
-{
-	/* Assume a C long fits in at most 5 'digits' */
-	/* Works on both 32- and 64-bit machines */
-	longobject *v = alloclongobject(5);
-	if (v != NULL) {
-		unsigned long t = ival;
-		int i;
-		for (i = 0; i < 5; i++) {
-			v->ob_digit[i] = (digit) (t & MASK);
+			v->ob_digit[i] = t & MASK; 
 			t >>= SHIFT;
 		}
 		v = long_normalize(v);
@@ -158,7 +137,7 @@ dnewlongobject(dval)
 	frac = ldexp(frac, (expo-1) % SHIFT + 1);
 	for (i = ndig; --i >= 0; ) {
 		long bits = (long)frac;
-		v->ob_digit[i] = (digit) bits;
+		v->ob_digit[i] = bits;
 		frac = frac - (double)bits;
 		frac = ldexp(frac, SHIFT);
 	}
@@ -202,42 +181,7 @@ getlongvalue(vv)
 	return x * sign;
 }
 
-/* Get a C long int from a long int object.
-   Returns -1 and sets an error condition if overflow occurs. */
-
-unsigned long
-PyLong_AsUnsignedLong(vv)
-	object *vv;
-{
-	register longobject *v;
-	unsigned long x, prev;
-	int i;
-	
-	if (vv == NULL || !is_longobject(vv)) {
-		err_badcall();
-		return (unsigned long) -1;
-	}
-	v = (longobject *)vv;
-	i = v->ob_size;
-	x = 0;
-	if (i < 0) {
-		err_setstr(OverflowError,
-			   "can't convert negative value to unsigned long");
-		return (unsigned long) -1;
-	}
-	while (--i >= 0) {
-		prev = x;
-		x = (x << SHIFT) + v->ob_digit[i];
-		if ((x >> SHIFT) != prev) {
-			err_setstr(OverflowError,
-				"long int too long to convert");
-			return (unsigned long) -1;
-		}
-	}
-	return x;
-}
-
-/* Get a C double from a long int object. */
+/* Get a C double from a long int object.  No overflow check. */
 
 double
 dgetlongvalue(vv)
@@ -293,10 +237,10 @@ muladd1(a, n, extra)
 		return NULL;
 	for (i = 0; i < size_a; ++i) {
 		carry += (twodigits)a->ob_digit[i] * n;
-		z->ob_digit[i] = (digit) (carry & MASK);
+		z->ob_digit[i] = carry & MASK;
 		carry >>= SHIFT;
 	}
-	z->ob_digit[i] = (digit) carry;
+	z->ob_digit[i] = carry;
 	return long_normalize(z);
 }
 
@@ -321,10 +265,10 @@ divrem1(a, n, prem)
 		return NULL;
 	for (i = size; --i >= 0; ) {
 		rem = (rem << SHIFT) + a->ob_digit[i];
-		z->ob_digit[i] = (digit) (rem/n);
+		z->ob_digit[i] = rem/n;
 		rem %= n;
 	}
-	*prem = (digit) rem;
+	*prem = rem;
 	return long_normalize(z);
 }
 
@@ -383,7 +327,7 @@ long_format(aa, base)
 		else
 			rem += 'A'-10;
 		assert(p > GETSTRINGVALUE(str));
-		*--p = (char) rem;
+		*--p = rem;
 		DECREF(a);
 		a = temp;
 		SIGCHECK({
@@ -552,7 +496,7 @@ x_divrem(v1, w1, prem)
 	longobject **prem;
 {
 	int size_v = ABS(v1->ob_size), size_w = ABS(w1->ob_size);
-	digit d = (digit) ((twodigits)BASE / (w1->ob_digit[size_w-1] + 1));
+	digit d = (twodigits)BASE / (w1->ob_digit[size_w-1] + 1);
 	longobject *v = mul1(v1, d);
 	longobject *w = mul1(w1, d);
 	longobject *a;
@@ -599,7 +543,7 @@ x_divrem(v1, w1, prem)
 		
 		for (i = 0; i < size_w && i+k < size_v; ++i) {
 			twodigits z = w->ob_digit[i] * q;
-			digit zz = (digit) (z >> SHIFT);
+			digit zz = z >> SHIFT;
 			carry += v->ob_digit[i+k] - z + ((twodigits)zz << SHIFT);
 			v->ob_digit[i+k] = carry & MASK;
 			carry = (carry >> SHIFT) - zz;
@@ -611,10 +555,10 @@ x_divrem(v1, w1, prem)
 		}
 		
 		if (carry == 0)
-			a->ob_digit[k] = (digit) q;
+			a->ob_digit[k] = q;
 		else {
 			assert(carry == -1);
-			a->ob_digit[k] = (digit) q-1;
+			a->ob_digit[k] = q-1;
 			carry = 0;
 			for (i = 0; i < size_w && i+k < size_v; ++i) {
 				carry += v->ob_digit[i+k] + w->ob_digit[i];
@@ -903,13 +847,13 @@ long_mul(a, b)
 		})
 		for (j = 0; j < size_b; ++j) {
 			carry += z->ob_digit[i+j] + b->ob_digit[j] * f;
-			z->ob_digit[i+j] = (digit) (carry & MASK);
+			z->ob_digit[i+j] = carry & MASK;
 			carry >>= SHIFT;
 		}
 		for (; carry != 0; ++j) {
 			assert(i+j < z->ob_size);
 			carry += z->ob_digit[i+j];
-			z->ob_digit[i+j] = (digit) (carry & MASK);
+			z->ob_digit[i+j] = carry & MASK;
 			carry >>= SHIFT;
 		}
 	}
@@ -1214,11 +1158,10 @@ long_lshift(a, b)
 	longobject *a;
 	longobject *b;
 {
-	/* This version due to Tim Peters */
 	longobject *z;
 	long shiftby;
-	int oldsize, newsize, wordshift, remshift, i, j;
-	twodigits accum;
+	int newsize, wordshift, loshift, hishift, i, j;
+	digit lomask, himask;
 	
 	shiftby = getlongvalue((object *)b);
 	if (shiftby == -1L && err_occurred())
@@ -1227,18 +1170,26 @@ long_lshift(a, b)
 		err_setstr(ValueError, "negative shift count");
 		return NULL;
 	}
-	if ((long)(int)shiftby != shiftby) {
+	if (shiftby > MASK) {
 		err_setstr(ValueError, "outrageous left shift count");
 		return NULL;
 	}
-	/* wordshift, remshift = divmod(shiftby, SHIFT) */
-	wordshift = (int)shiftby / SHIFT;
-	remshift  = (int)shiftby - wordshift * SHIFT;
-
-	oldsize = ABS(a->ob_size);
-	newsize = oldsize + wordshift;
-	if (remshift)
-		++newsize;
+	if (shiftby % SHIFT == 0) {
+		wordshift = shiftby / SHIFT;
+		loshift = 0;
+		hishift = SHIFT;
+		newsize = ABS(a->ob_size) + wordshift;
+		lomask = MASK;
+		himask = 0;
+	}
+	else {
+		wordshift = shiftby / SHIFT + 1;
+		loshift = SHIFT - shiftby%SHIFT;
+		hishift = shiftby % SHIFT;
+		newsize = ABS(a->ob_size) + wordshift;
+		lomask = ((digit)1 << hishift) - 1;
+		himask = MASK ^ lomask;
+	}
 	z = alloclongobject(newsize);
 	if (z == NULL)
 		return NULL;
@@ -1246,16 +1197,13 @@ long_lshift(a, b)
 		z->ob_size = -(z->ob_size);
 	for (i = 0; i < wordshift; i++)
 		z->ob_digit[i] = 0;
-	accum = 0;	
-	for (i = wordshift, j = 0; j < oldsize; i++, j++) {
-		accum |= a->ob_digit[j] << remshift;
-		z->ob_digit[i] = (digit)(accum & MASK);
-		accum >>= SHIFT;
+	for (i = wordshift, j = 0; i < newsize; i++, j++) {
+		if (i > 0)
+			z->ob_digit[i-1] |=
+				(a->ob_digit[j] << hishift) & himask;
+		z->ob_digit[i] =
+			(a->ob_digit[j] >> loshift) & lomask;
 	}
-	if (remshift)
-		z->ob_digit[newsize-1] = (digit)accum;
-	else	
-		assert(!accum);
 	return (object *) long_normalize(z);
 }
 
@@ -1414,11 +1362,7 @@ static object *
 long_float(v)
 	object *v;
 {
-	double result;
-	PyFPE_START_PROTECT("long_float", return 0)
-	result = dgetlongvalue(v);
-	PyFPE_END_PROTECT(result)
-	return newfloatobject(result);
+	return newfloatobject(dgetlongvalue(v));
 }
 
 static object *

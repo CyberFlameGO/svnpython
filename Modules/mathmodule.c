@@ -31,16 +31,21 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /* Math module -- standard C math library functions, pi and e */
 
-#include "Python.h"
+#include "allobjects.h"
+
+#include <errno.h>
+
+#define getdoublearg(v, a) getargs(v, "d", a)
+#define get2doublearg(v, a, b) getargs(v, "(dd)", a, b)
 
 #include "mymath.h"
 
 #ifndef _MSC_VER
 #ifndef __STDC__
-extern double fmod Py_PROTO((double, double));
-extern double frexp Py_PROTO((double, int *));
-extern double ldexp Py_PROTO((double, int));
-extern double modf Py_PROTO((double, double *));
+extern double fmod PROTO((double, double));
+extern double frexp PROTO((double, int *));
+extern double ldexp PROTO((double, int));
+extern double modf PROTO((double, double *));
 #endif /* __STDC__ */
 #endif /* _MSC_VER */
 
@@ -58,64 +63,59 @@ extern double modf Py_PROTO((double, double *));
 #define CHECK(x) /* Don't know how to check */
 #endif
 
-static PyObject *
+static object *
 math_error()
 {
 	if (errno == EDOM)
-		PyErr_SetString(PyExc_ValueError, "math domain error");
+		err_setstr(ValueError, "math domain error");
 	else if (errno == ERANGE)
-		PyErr_SetString(PyExc_OverflowError, "math range error");
+		err_setstr(OverflowError, "math range error");
 	else
-                /* Unexpected math error */
-		PyErr_SetFromErrno(PyExc_ValueError);
+		err_errno(ValueError); /* Unexpected math error */
 	return NULL;
 }
 
-static PyObject *
+static object *
 math_1(args, func)
-	PyObject *args;
-	double (*func) Py_FPROTO((double));
+	object *args;
+	double (*func) FPROTO((double));
 {
 	double x;
-	if (!  PyArg_Parse(args, "d", &x))
+	if (!getdoublearg(args, &x))
 		return NULL;
 	errno = 0;
-	PyFPE_START_PROTECT("in math_1", return 0)
 	x = (*func)(x);
-	PyFPE_END_PROTECT(x)
 	CHECK(x);
 	if (errno != 0)
 		return math_error();
 	else
-		return PyFloat_FromDouble(x);
+		return newfloatobject(x);
 }
 
-static PyObject *
+static object *
 math_2(args, func)
-	PyObject *args;
-	double (*func) Py_FPROTO((double, double));
+	object *args;
+	double (*func) FPROTO((double, double));
 {
 	double x, y;
-	if (! PyArg_Parse(args, "(dd)", &x, &y))
+	if (!get2doublearg(args, &x, &y))
 		return NULL;
 	errno = 0;
-	PyFPE_START_PROTECT("in math_2", return 0)
 	x = (*func)(x, y);
-	PyFPE_END_PROTECT(x)
 	CHECK(x);
 	if (errno != 0)
 		return math_error();
 	else
-		return PyFloat_FromDouble(x);
+		return newfloatobject(x);
 }
 
 #define FUNC1(stubname, func) \
-	static PyObject * stubname(self, args) PyObject *self, *args; { \
+	static object * stubname(self, args) object *self, *args; { \
 		return math_1(args, func); \
 	}
 
 #define FUNC2(stubname, func) \
-	static PyObject * stubname(self, args) PyObject *self, *args; { \
+	static object * stubname(self, args) object *self, *args; { \
 		return math_2(args, func); \
 	}
 
@@ -150,50 +150,48 @@ FUNC1(math_tan, tan)
 FUNC1(math_tanh, tanh)
 
 
-static PyObject *
+static object *
 math_frexp(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	double x;
 	int i;
-	if (! PyArg_Parse(args, "d", &x))
+	if (!getdoublearg(args, &x))
 		return NULL;
 	errno = 0;
 	x = frexp(x, &i);
 	CHECK(x);
 	if (errno != 0)
 		return math_error();
-	return Py_BuildValue("(di)", x, i);
+	return mkvalue("(di)", x, i);
 }
 
-static PyObject *
+static object *
 math_ldexp(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	double x, y;
 	/* Cheat -- allow float as second argument */
-        if (! PyArg_Parse(args, "(dd)", &x, &y))
+	if (!get2doublearg(args, &x, &y))
 		return NULL;
 	errno = 0;
-	PyFPE_START_PROTECT("ldexp", return 0)
 	x = ldexp(x, (int)y);
-	PyFPE_END_PROTECT(x)
 	CHECK(x);
 	if (errno != 0)
 		return math_error();
 	else
-		return PyFloat_FromDouble(x);
+		return newfloatobject(x);
 }
 
-static PyObject *
+static object *
 math_modf(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	double x, y;
-	if (! PyArg_Parse(args, "d", &x))
+	if (!getdoublearg(args, &x))
 		return NULL;
 	errno = 0;
 #ifdef MPW /* MPW C modf expects pointer to extended as second argument */
@@ -208,10 +206,10 @@ math_modf(self, args)
 	CHECK(x);
 	if (errno != 0)
 		return math_error();
-	return Py_BuildValue("(dd)", x, y);
+	return mkvalue("(dd)", x, y);
 }
 
-static PyMethodDef math_methods[] = {
+static struct methodlist math_methods[] = {
 	{"acos", math_acos},
 	{"asin", math_asin},
 	{"atan", math_atan},
@@ -241,24 +239,12 @@ static PyMethodDef math_methods[] = {
 void
 initmath()
 {
-	PyObject *m, *d, *v;
+	object *m, *d, *v;
 	
-	m = Py_InitModule("math", math_methods);
-	d = PyModule_GetDict(m);
-
-        if (!(v = PyFloat_FromDouble(atan(1.0) * 4.0)))
-                goto finally;
-	if (PyDict_SetItemString(d, "pi", v) < 0)
-                goto finally;
-	Py_DECREF(v);
-
-        if (!(v = PyFloat_FromDouble(exp(1.0))))
-                goto finally;
-	if (PyDict_SetItemString(d, "e", v) < 0)
-                goto finally;
-	Py_DECREF(v);
-	return;
-
-  finally:
-        Py_FatalError("can't initialize math module");
+	m = initmodule("math", math_methods);
+	d = getmoduledict(m);
+	dictinsert(d, "pi", v = newfloatobject(atan(1.0) * 4.0));
+	DECREF(v);
+	dictinsert(d, "e", v = newfloatobject(exp(1.0)));
+	DECREF(v);
 }

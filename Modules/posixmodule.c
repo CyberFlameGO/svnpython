@@ -40,8 +40,12 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /* See also ../Dos/dosmodule.c */
 
-#include "Python.h"
+#include "allobjects.h"
+#include "modsupport.h"
+#include "ceval.h"
 
+#include <string.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef HAVE_SYS_WAIT_H
@@ -134,26 +138,26 @@ extern int lstat();
 extern int symlink();
 #else /* !HAVE_UNISTD_H */
 #if defined(__WATCOMC__) || defined(_MSC_VER)
-extern int mkdir Py_PROTO((const char *));
+extern int mkdir PROTO((const char *));
 #else
-extern int mkdir Py_PROTO((const char *, mode_t));
+extern int mkdir PROTO((const char *, mode_t));
 #endif
-extern int chdir Py_PROTO((const char *));
-extern int rmdir Py_PROTO((const char *));
-extern int chmod Py_PROTO((const char *, mode_t));
-extern int chown Py_PROTO((const char *, uid_t, gid_t));
-extern char *getcwd Py_PROTO((char *, int));
-extern char *strerror Py_PROTO((int));
-extern int link Py_PROTO((const char *, const char *));
-extern int rename Py_PROTO((const char *, const char *));
-extern int stat Py_PROTO((const char *, struct stat *));
-extern int unlink Py_PROTO((const char *));
-extern int pclose Py_PROTO((FILE *));
+extern int chdir PROTO((const char *));
+extern int rmdir PROTO((const char *));
+extern int chmod PROTO((const char *, mode_t));
+extern int chown PROTO((const char *, uid_t, gid_t));
+extern char *getcwd PROTO((char *, int));
+extern char *strerror PROTO((int));
+extern int link PROTO((const char *, const char *));
+extern int rename PROTO((const char *, const char *));
+extern int stat PROTO((const char *, struct stat *));
+extern int unlink PROTO((const char *));
+extern int pclose PROTO((FILE *));
 #ifdef HAVE_SYMLINK
-extern int symlink Py_PROTO((const char *, const char *));
+extern int symlink PROTO((const char *, const char *));
 #endif /* HAVE_SYMLINK */
 #ifdef HAVE_LSTAT
-extern int lstat Py_PROTO((const char *, struct stat *));
+extern int lstat PROTO((const char *, struct stat *));
 #endif /* HAVE_LSTAT */
 #endif /* !HAVE_UNISTD_H */
 
@@ -230,137 +234,137 @@ extern int lstat Py_PROTO((const char *, struct stat *));
 extern char **environ;
 #endif /* !_MSC_VER */
 
-static PyObject *
+static object *
 convertenviron()
 {
-	PyObject *d;
+	object *d;
 	char **e;
-	d = PyDict_New();
+	d = newdictobject();
 	if (d == NULL)
 		return NULL;
 	if (environ == NULL)
 		return d;
 	/* XXX This part ignores errors */
 	for (e = environ; *e != NULL; e++) {
-		PyObject *v;
+		object *v;
 		char *p = strchr(*e, '=');
 		if (p == NULL)
 			continue;
-		v = PyString_FromString(p+1);
+		v = newstringobject(p+1);
 		if (v == NULL)
 			continue;
 		*p = '\0';
-		(void) PyDict_SetItemString(d, *e, v);
+		(void) dictinsert(d, *e, v);
 		*p = '=';
-		Py_DECREF(v);
+		DECREF(v);
 	}
 	return d;
 }
 
 
-static PyObject *PosixError; /* Exception posix.error */
+static object *PosixError; /* Exception posix.error */
 
 /* Set a POSIX-specific error from errno, and return NULL */
 
-static PyObject * posix_error()
+static object * posix_error()
 {
-	return PyErr_SetFromErrno(PosixError);
+	return err_errno(PosixError);
 }
 
 
 /* POSIX generic methods */
 
-static PyObject *
+static object *
 posix_1str(args, func)
-	PyObject *args;
-	int (*func) Py_FPROTO((const char *));
+	object *args;
+	int (*func) FPROTO((const char *));
 {
 	char *path1;
 	int res;
-	if (!PyArg_Parse(args, "s", &path1))
+	if (!getargs(args, "s", &path1))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = (*func)(path1);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 posix_2str(args, func)
-	PyObject *args;
-	int (*func) Py_FPROTO((const char *, const char *));
+	object *args;
+	int (*func) FPROTO((const char *, const char *));
 {
 	char *path1, *path2;
 	int res;
-	if (!PyArg_Parse(args, "(ss)", &path1, &path2))
+	if (!getargs(args, "(ss)", &path1, &path2))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = (*func)(path1, path2);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 posix_strint(args, func)
-	PyObject *args;
-	int (*func) Py_FPROTO((const char *, int));
+	object *args;
+	int (*func) FPROTO((const char *, int));
 {
 	char *path;
 	int i;
 	int res;
-	if (!PyArg_Parse(args, "(si)", &path, &i))
+	if (!getargs(args, "(si)", &path, &i))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = (*func)(path, i);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 posix_strintint(args, func)
-	PyObject *args;
-	int (*func) Py_FPROTO((const char *, int, int));
+	object *args;
+	int (*func) FPROTO((const char *, int, int));
 {
 	char *path;
 	int i,i2;
 	int res;
-	if (!PyArg_Parse(args, "(sii)", &path, &i, &i2))
+	if (!getargs(args, "(sii)", &path, &i, &i2))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = (*func)(path, i, i2);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 posix_do_stat(self, args, statfunc)
-	PyObject *self;
-	PyObject *args;
-	int (*statfunc) Py_FPROTO((const char *, struct stat *));
+	object *self;
+	object *args;
+	int (*statfunc) FPROTO((const char *, struct stat *));
 {
 	struct stat st;
 	char *path;
 	int res;
-	if (!PyArg_Parse(args, "s", &path))
+	if (!getargs(args, "s", &path))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = (*statfunc)(path, &st);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res != 0)
 		return posix_error();
-	return Py_BuildValue("(llllllllll)",
+	return mkvalue("(llllllllll)",
 		    (long)st.st_mode,
 		    (long)st.st_ino,
 		    (long)st.st_dev,
@@ -376,79 +380,79 @@ posix_do_stat(self, args, statfunc)
 
 /* POSIX methods */
 
-static PyObject *
+static object *
 posix_chdir(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_1str(args, chdir);
 }
 
-static PyObject *
+static object *
 posix_chmod(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_strint(args, chmod);
 }
 
 #ifdef HAVE_CHOWN
-static PyObject *
+static object *
 posix_chown(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_strintint(args, chown);
 }
 #endif /* HAVE_CHOWN */
 
 #ifdef HAVE_GETCWD
-static PyObject *
+static object *
 posix_getcwd(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char buf[1026];
 	char *res;
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = getcwd(buf, sizeof buf);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res == NULL)
 		return posix_error();
-	return PyString_FromString(buf);
+	return newstringobject(buf);
 }
 #endif
 
 #ifdef HAVE_LINK
-static PyObject *
+static object *
 posix_link(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_2str(args, link);
 }
 #endif /* HAVE_LINK */
 
-static PyObject *
+static object *
 posix_listdir(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 #if defined(MS_WIN32) && !defined(HAVE_OPENDIR)
 
 	char *name;
 	int len;
-	PyObject *d, *v;
+	object *d, *v;
 	HANDLE hFindFile;
 	WIN32_FIND_DATA FileData;
 	char namebuf[MAX_PATH+5];
 
-	if (!PyArg_Parse(args, "s#", &name, &len))
+	if (!getargs(args, "s#", &name, &len))
 		return NULL;
 	if (len >= MAX_PATH) {
-		PyErr_SetString(PyExc_ValueError, "path too long");
+		err_setstr(ValueError, "path too long");
 		return NULL;
 	}
 	strcpy(namebuf, name);
@@ -456,7 +460,7 @@ posix_listdir(self, args)
 		namebuf[len++] = '/';
 	strcpy(namebuf + len, "*.*");
 
-	if ((d = PyList_New(0)) == NULL)
+	if ((d = newlistobject(0)) == NULL)
 		return NULL;
 
 	hFindFile = FindFirstFile(namebuf, &FileData);
@@ -470,19 +474,19 @@ posix_listdir(self, args)
 		     FileData.cFileName[1] == '.' &&
 		     FileData.cFileName[2] == '\0'))
 			continue;
-		v = PyString_FromString(FileData.cFileName);
+		v = newstringobject(FileData.cFileName);
 		if (v == NULL) {
-			Py_DECREF(d);
+			DECREF(d);
 			d = NULL;
 			break;
 		}
-		if (PyList_Append(d, v) != 0) {
-			Py_DECREF(v);
-			Py_DECREF(d);
+		if (addlistitem(d, v) != 0) {
+			DECREF(v);
+			DECREF(d);
 			d = NULL;
 			break;
 		}
-		Py_DECREF(v);
+		DECREF(v);
 	} while (FindNextFile(hFindFile, &FileData) == TRUE);
 
 	if (FindClose(hFindFile) == FALSE) {
@@ -500,14 +504,14 @@ posix_listdir(self, args)
 #endif
 	char *name, *pt;
 	int len;
-	PyObject *d, *v;
+	object *d, *v;
 	char namebuf[MAX_PATH+5];
 	struct _find_t ep;
 
-	if (!PyArg_Parse(args, "s#", &name, &len))
+	if (!getargs(args, "s#", &name, &len))
 		return NULL;
 	if (len >= MAX_PATH) {
-		PyErr_SetString(PyExc_ValueError, "path too long");
+		err_setstr(ValueError, "path too long");
 		return NULL;
 	}
 	strcpy(namebuf, name);
@@ -518,12 +522,11 @@ posix_listdir(self, args)
 		namebuf[len++] = '\\';
 	strcpy(namebuf + len, "*.*");
 
-	if ((d = PyList_New(0)) == NULL)
+	if ((d = newlistobject(0)) == NULL)
 		return NULL;
 
 	if (_dos_findfirst(namebuf, _A_RDONLY |
-			   _A_HIDDEN | _A_SYSTEM | _A_SUBDIR, &ep) != 0)
-        {
+			_A_HIDDEN | _A_SYSTEM | _A_SUBDIR, &ep) != 0){
 		errno = ENOENT;
 		return posix_error();
 	}
@@ -537,19 +540,19 @@ posix_listdir(self, args)
 		for (pt = namebuf; *pt; pt++)
 			if (isupper(*pt))
 				*pt = tolower(*pt);
-		v = PyString_FromString(namebuf);
+		v = newstringobject(namebuf);
 		if (v == NULL) {
-			Py_DECREF(d);
+			DECREF(d);
 			d = NULL;
 			break;
 		}
-		if (PyList_Append(d, v) != 0) {
-			Py_DECREF(v);
-			Py_DECREF(d);
+		if (addlistitem(d, v) != 0) {
+			DECREF(v);
+			DECREF(d);
 			d = NULL;
 			break;
 		}
-		Py_DECREF(v);
+		DECREF(v);
 	} while (_dos_findnext(&ep) == 0);
 
 	return d;
@@ -557,19 +560,19 @@ posix_listdir(self, args)
 #else
 
 	char *name;
-	PyObject *d, *v;
+	object *d, *v;
 	DIR *dirp;
 	struct dirent *ep;
-	if (!PyArg_Parse(args, "s", &name))
+	if (!getargs(args, "s", &name))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	if ((dirp = opendir(name)) == NULL) {
-		Py_BLOCK_THREADS
+		RET_SAVE
 		return posix_error();
 	}
-	if ((d = PyList_New(0)) == NULL) {
+	if ((d = newlistobject(0)) == NULL) {
 		closedir(dirp);
-		Py_BLOCK_THREADS
+		RET_SAVE
 		return NULL;
 	}
 	while ((ep = readdir(dirp)) != NULL) {
@@ -577,22 +580,22 @@ posix_listdir(self, args)
 		    (NAMLEN(ep) == 1 ||
 		     (ep->d_name[1] == '.' && NAMLEN(ep) == 2)))
 			continue;
-		v = PyString_FromStringAndSize(ep->d_name, NAMLEN(ep));
+		v = newsizedstringobject(ep->d_name, NAMLEN(ep));
 		if (v == NULL) {
-			Py_DECREF(d);
+			DECREF(d);
 			d = NULL;
 			break;
 		}
-		if (PyList_Append(d, v) != 0) {
-			Py_DECREF(v);
-			Py_DECREF(d);
+		if (addlistitem(d, v) != 0) {
+			DECREF(v);
+			DECREF(d);
 			d = NULL;
 			break;
 		}
-		Py_DECREF(v);
+		DECREF(v);
 	}
 	closedir(dirp);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 
 	return d;
 
@@ -600,137 +603,137 @@ posix_listdir(self, args)
 #endif /* !MS_WIN32 */
 }
 
-static PyObject *
+static object *
 posix_mkdir(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int res;
 	char *path;
 	int mode = 0777;
-	if (!PyArg_ParseTuple(args, "s|i", &path, &mode))
+	if (!newgetargs(args, "s|i", &path, &mode))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 #if defined(__WATCOMC__) || defined(_MSC_VER)
 	res = mkdir(path);
 #else
 	res = mkdir(path, mode);
 #endif
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
 #ifdef HAVE_NICE
-static PyObject *
+static object *
 posix_nice(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int increment, value;
 
-	if (!PyArg_Parse(args, "i", &increment))
+	if (!getargs(args, "i", &increment))
 		return NULL;
 	value = nice(increment);
 	if (value == -1)
 		return posix_error();
-	return PyInt_FromLong((long) value);
+	return newintobject((long) value);
 }
 #endif /* HAVE_NICE */
 
-static PyObject *
+static object *
 posix_rename(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_2str(args, rename);
 }
 
-static PyObject *
+static object *
 posix_rmdir(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_1str(args, rmdir);
 }
 
-static PyObject *
+static object *
 posix_stat(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_do_stat(self, args, stat);
 }
 
 #ifdef HAVE_SYSTEM
-static PyObject *
+static object *
 posix_system(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char *command;
 	long sts;
-	if (!PyArg_Parse(args, "s", &command))
+	if (!getargs(args, "s", &command))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	sts = system(command);
-	Py_END_ALLOW_THREADS
-	return PyInt_FromLong(sts);
+	END_SAVE
+	return newintobject(sts);
 }
 #endif
 
-static PyObject *
+static object *
 posix_umask(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int i;
-	if (!PyArg_Parse(args, "i", &i))
+	if (!getintarg(args, &i))
 		return NULL;
 	i = umask(i);
 	if (i < 0)
 		return posix_error();
-	return PyInt_FromLong((long)i);
+	return newintobject((long)i);
 }
 
-static PyObject *
+static object *
 posix_unlink(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_1str(args, unlink);
 }
 
 #ifdef HAVE_UNAME
-static PyObject *
+static object *
 posix_uname(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	struct utsname u;
 	int res;
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = uname(&u);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	return Py_BuildValue("(sssss)",
-			     u.sysname,
-			     u.nodename,
-			     u.release,
-			     u.version,
-			     u.machine);
+	return mkvalue("(sssss)",
+		       u.sysname,
+		       u.nodename,
+		       u.release,
+		       u.version,
+		       u.machine);
 }
 #endif /* HAVE_UNAME */
 
-static PyObject *
+static object *
 posix_utime(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char *path;
 	long atime, mtime;
@@ -748,17 +751,17 @@ posix_utime(self, args)
 #define UTIME_ARG buf
 #endif /* HAVE_UTIME_H */
 
-	if (!PyArg_Parse(args, "(s(ll))", &path, &atime, &mtime))
+	if (!getargs(args, "(s(ll))", &path, &atime, &mtime))
 		return NULL;
 	ATIME = atime;
 	MTIME = mtime;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = utime(path, UTIME_ARG);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 #undef UTIME_ARG
 #undef ATIME
 #undef MTIME
@@ -767,55 +770,55 @@ posix_utime(self, args)
 
 /* Process operations */
 
-static PyObject *
+static object *
 posix__exit(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int sts;
-	if (!PyArg_Parse(args, "i", &sts))
+	if (!getintarg(args, &sts))
 		return NULL;
 	_exit(sts);
 	return NULL; /* Make gcc -Wall happy */
 }
 
 #ifdef HAVE_EXECV
-static PyObject *
+static object *
 posix_execv(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char *path;
-	PyObject *argv;
+	object *argv;
 	char **argvlist;
 	int i, argc;
-	PyObject *(*getitem) Py_PROTO((PyObject *, int));
+	object *(*getitem) PROTO((object *, int));
 
 	/* execv has two arguments: (path, argv), where
 	   argv is a list or tuple of strings. */
 
-	if (!PyArg_Parse(args, "(sO)", &path, &argv))
+	if (!getargs(args, "(sO)", &path, &argv))
 		return NULL;
-	if (PyList_Check(argv)) {
-		argc = PyList_Size(argv);
-		getitem = PyList_GetItem;
+	if (is_listobject(argv)) {
+		argc = getlistsize(argv);
+		getitem = getlistitem;
 	}
-	else if (PyTuple_Check(argv)) {
-		argc = PyTuple_Size(argv);
-		getitem = PyTuple_GetItem;
+	else if (is_tupleobject(argv)) {
+		argc = gettuplesize(argv);
+		getitem = gettupleitem;
 	}
 	else {
  badarg:
-		PyErr_BadArgument();
+		err_badarg();
 		return NULL;
 	}
 
-	argvlist = PyMem_NEW(char *, argc+1);
+	argvlist = NEW(char *, argc+1);
 	if (argvlist == NULL)
 		return NULL;
 	for (i = 0; i < argc; i++) {
-		if (!PyArg_Parse((*getitem)(argv, i), "s", &argvlist[i])) {
-			PyMem_DEL(argvlist);
+		if (!getargs((*getitem)(argv, i), "s", &argvlist[i])) {
+			DEL(argvlist);
 			goto badarg;
 		}
 	}
@@ -829,89 +832,77 @@ posix_execv(self, args)
 
 	/* If we get here it's definitely an error */
 
-	PyMem_DEL(argvlist);
+	DEL(argvlist);
 	return posix_error();
 }
 
-static PyObject *
+static object *
 posix_execve(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char *path;
-	PyObject *argv, *env;
+	object *argv, *env;
 	char **argvlist;
 	char **envlist;
-	PyObject *key, *val, *keys=NULL, *vals=NULL;
+	object *key, *val;
 	int i, pos, argc, envc;
-	PyObject *(*getitem) Py_PROTO((PyObject *, int));
+	object *(*getitem) PROTO((object *, int));
 
 	/* execve has three arguments: (path, argv, env), where
 	   argv is a list or tuple of strings and env is a dictionary
 	   like posix.environ. */
 
-	if (!PyArg_Parse(args, "(sOO)", &path, &argv, &env))
+	if (!getargs(args, "(sOO)", &path, &argv, &env))
 		return NULL;
-	if (PyList_Check(argv)) {
-		argc = PyList_Size(argv);
-		getitem = PyList_GetItem;
+	if (is_listobject(argv)) {
+		argc = getlistsize(argv);
+		getitem = getlistitem;
 	}
-	else if (PyTuple_Check(argv)) {
-		argc = PyTuple_Size(argv);
-		getitem = PyTuple_GetItem;
+	else if (is_tupleobject(argv)) {
+		argc = gettuplesize(argv);
+		getitem = gettupleitem;
 	}
 	else {
-		PyErr_SetString(PyExc_TypeError, "argv must be tuple or list");
+		err_setstr(TypeError, "argv must be tuple or list");
 		return NULL;
 	}
-	if (!PyMapping_Check(env)) {
-		PyErr_SetString(PyExc_TypeError, "env must be mapping object");
+	if (!is_dictobject(env)) {
+		err_setstr(TypeError, "env must be dictionary");
 		return NULL;
 	}
 
-	argvlist = PyMem_NEW(char *, argc+1);
+	argvlist = NEW(char *, argc+1);
 	if (argvlist == NULL) {
-		PyErr_NoMemory();
+		err_nomem();
 		return NULL;
 	}
 	for (i = 0; i < argc; i++) {
-		if (!PyArg_Parse((*getitem)(argv, i),
-				 "s;argv must be list of strings",
-				 &argvlist[i]))
-		{
+		if (!getargs((*getitem)(argv, i),
+			     "s;argv must be list of strings",
+			     &argvlist[i])) {
 			goto fail_1;
 		}
 	}
 	argvlist[argc] = NULL;
 
-	i = PyMapping_Length(env);
-	envlist = PyMem_NEW(char *, i + 1);
+	i = getmappingsize(env);
+	envlist = NEW(char *, i + 1);
 	if (envlist == NULL) {
-		PyErr_NoMemory();
+		err_nomem();
 		goto fail_1;
 	}
+	pos = 0;
 	envc = 0;
-	keys = PyMapping_Keys(env);
-	vals = PyMapping_Values(env);
-	if (!keys || !vals)
-		goto fail_2;
-	
-	for (pos = 0; pos < i; pos++) {
+	while (mappinggetnext(env, &pos, &key, &val)) {
 		char *p, *k, *v;
-
-		key = PyList_GetItem(keys, pos);
-		val = PyList_GetItem(vals, pos);
-		if (!key || !val)
-			goto fail_2;
-		
-		if (!PyArg_Parse(key, "s;non-string key in env", &k) ||
-		    !PyArg_Parse(val, "s;non-string value in env", &v))
-		{
+		if (!getargs(key, "s;non-string key in env", &k) ||
+		    !getargs(val, "s;non-string value in env", &v)) {
 			goto fail_2;
 		}
-		p = PyMem_NEW(char, PyString_Size(key)+PyString_Size(val) + 2);
+		p = NEW(char, getstringsize(key) + getstringsize(val) + 2);
 		if (p == NULL) {
-			PyErr_NoMemory();
+			err_nomem();
 			goto fail_2;
 		}
 		sprintf(p, "%s=%s", k, v);
@@ -932,101 +923,100 @@ posix_execve(self, args)
 
  fail_2:
 	while (--envc >= 0)
-		PyMem_DEL(envlist[envc]);
-	PyMem_DEL(envlist);
+		DEL(envlist[envc]);
+	DEL(envlist);
  fail_1:
-	PyMem_DEL(argvlist);
-	Py_XDECREF(vals);
-	Py_XDECREF(keys);
+	DEL(argvlist);
+
 	return NULL;
 }
 #endif /* HAVE_EXECV */
 
 #ifdef HAVE_FORK
-static PyObject *
+static object *
 posix_fork(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int pid;
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 	pid = fork();
 	if (pid == -1)
 		return posix_error();
-	return PyInt_FromLong((long)pid);
+	return newintobject((long)pid);
 }
 #endif
 
 #ifdef HAVE_GETEGID
-static PyObject *
+static object *
 posix_getegid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	return PyInt_FromLong((long)getegid());
+	return newintobject((long)getegid());
 }
 #endif
 
 #ifdef HAVE_GETEUID
-static PyObject *
+static object *
 posix_geteuid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	return PyInt_FromLong((long)geteuid());
+	return newintobject((long)geteuid());
 }
 #endif
 
 #ifdef HAVE_GETGID
-static PyObject *
+static object *
 posix_getgid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	return PyInt_FromLong((long)getgid());
+	return newintobject((long)getgid());
 }
 #endif
 
-static PyObject *
+static object *
 posix_getpid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	return PyInt_FromLong((long)getpid());
+	return newintobject((long)getpid());
 }
 
 #ifdef HAVE_GETPGRP
-static PyObject *
+static object *
 posix_getpgrp(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 #ifdef GETPGRP_HAVE_ARG
-	return PyInt_FromLong((long)getpgrp(0));
+	return newintobject((long)getpgrp(0));
 #else /* GETPGRP_HAVE_ARG */
-	return PyInt_FromLong((long)getpgrp());
+	return newintobject((long)getpgrp());
 #endif /* GETPGRP_HAVE_ARG */
 }
 #endif /* HAVE_GETPGRP */
 
 #ifdef HAVE_SETPGRP
-static PyObject *
+static object *
 posix_setpgrp(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 #ifdef SETPGRP_HAVE_ARG
 	if (setpgrp(0, 0) < 0)
@@ -1034,49 +1024,49 @@ posix_setpgrp(self, args)
 	if (setpgrp() < 0)
 #endif /* SETPGRP_HAVE_ARG */
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
 #endif /* HAVE_SETPGRP */
 
 #ifdef HAVE_GETPPID
-static PyObject *
+static object *
 posix_getppid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	return PyInt_FromLong((long)getppid());
+	return newintobject((long)getppid());
 }
 #endif
 
 #ifdef HAVE_GETUID
-static PyObject *
+static object *
 posix_getuid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	return PyInt_FromLong((long)getuid());
+	return newintobject((long)getuid());
 }
 #endif
 
 #ifdef HAVE_KILL
-static PyObject *
+static object *
 posix_kill(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int pid, sig;
-	if (!PyArg_Parse(args, "(ii)", &pid, &sig))
+	if (!getargs(args, "(ii)", &pid, &sig))
 		return NULL;
 	if (kill(pid, sig) == -1)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif
 
@@ -1086,118 +1076,118 @@ posix_kill(self, args)
 #include <sys/lock.h>
 #endif
 
-static PyObject *
+static object *
 posix_plock(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int op;
-	if (!PyArg_Parse(args, "i", &op))
+	if (!getargs(args, "i", &op))
 		return NULL;
 	if (plock(op) == -1)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif
 
 #ifdef HAVE_POPEN
-static PyObject *
+static object *
 posix_popen(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char *name;
 	char *mode = "r";
 	int bufsize = -1;
 	FILE *fp;
-	PyObject *f;
-	if (!PyArg_ParseTuple(args, "s|si", &name, &mode, &bufsize))
+	object *f;
+	if (!newgetargs(args, "s|si", &name, &mode, &bufsize))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	fp = popen(name, mode);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (fp == NULL)
 		return posix_error();
-	f = PyFile_FromFile(fp, name, mode, pclose);
+	f = newopenfileobject(fp, name, mode, pclose);
 	if (f != NULL)
-		PyFile_SetBufSize(f, bufsize);
+		setfilebufsize(f, bufsize);
 	return f;
 }
 #endif /* HAVE_POPEN */
 
 #ifdef HAVE_SETUID
-static PyObject *
+static object *
 posix_setuid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int uid;
-	if (!PyArg_Parse(args, "i", &uid))
+	if (!getargs(args, "i", &uid))
 		return NULL;
 	if (setuid(uid) < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif /* HAVE_SETUID */
 
 #ifdef HAVE_SETGID
-static PyObject *
+static object *
 posix_setgid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int gid;
-	if (!PyArg_Parse(args, "i", &gid))
+	if (!getargs(args, "i", &gid))
 		return NULL;
 	if (setgid(gid) < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif /* HAVE_SETGID */
 
 #ifdef HAVE_WAITPID
-static PyObject *
+static object *
 posix_waitpid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int pid, options, sts = 0;
-	if (!PyArg_Parse(args, "(ii)", &pid, &options))
+	if (!getargs(args, "(ii)", &pid, &options))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	pid = waitpid(pid, &sts, options);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (pid == -1)
 		return posix_error();
 	else
-		return Py_BuildValue("ii", pid, sts);
+		return mkvalue("ii", pid, sts);
 }
 #endif /* HAVE_WAITPID */
 
 #ifdef HAVE_WAIT
-static PyObject *
+static object *
 posix_wait(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int pid, sts;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	pid = wait(&sts);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (pid == -1)
 		return posix_error();
 	else
-		return Py_BuildValue("ii", pid, sts);
+		return mkvalue("ii", pid, sts);
 }
 #endif
 
-static PyObject *
+static object *
 posix_lstat(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 #ifdef HAVE_LSTAT
 	return posix_do_stat(self, args, lstat);
@@ -1207,30 +1197,30 @@ posix_lstat(self, args)
 }
 
 #ifdef HAVE_READLINK
-static PyObject *
+static object *
 posix_readlink(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char buf[MAXPATHLEN];
 	char *path;
 	int n;
-	if (!PyArg_Parse(args, "s", &path))
+	if (!getargs(args, "s", &path))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	n = readlink(path, buf, (int) sizeof buf);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (n < 0)
 		return posix_error();
-	return PyString_FromStringAndSize(buf, n);
+	return newsizedstringobject(buf, n);
 }
 #endif /* HAVE_READLINK */
 
 #ifdef HAVE_SYMLINK
-static PyObject *
+static object *
 posix_symlink(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	return posix_2str(args, symlink);
 }
@@ -1240,193 +1230,194 @@ posix_symlink(self, args)
 #ifndef HZ
 #define HZ 60 /* Universal constant :-) */
 #endif /* HZ */
-static PyObject *
+static object *
 posix_times(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	struct tms t;
 	clock_t c;
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 	errno = 0;
 	c = times(&t);
 	if (c == (clock_t) -1)
 		return posix_error();
-	return Py_BuildValue("ddddd",
-			     (double)t.tms_utime / HZ,
-			     (double)t.tms_stime / HZ,
-			     (double)t.tms_cutime / HZ,
-			     (double)t.tms_cstime / HZ,
-			     (double)c / HZ);
+	return mkvalue("ddddd",
+		       (double)t.tms_utime / HZ,
+		       (double)t.tms_stime / HZ,
+		       (double)t.tms_cutime / HZ,
+		       (double)t.tms_cstime / HZ,
+		       (double)c / HZ);
 }
 #endif /* HAVE_TIMES */
 #ifdef MS_WIN32
 #define HAVE_TIMES	/* so the method table will pick it up */
-static PyObject *
+static object *
 posix_times(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	FILETIME create, exit, kernel, user;
 	HANDLE hProc;
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 	hProc = GetCurrentProcess();
 	GetProcessTimes(hProc,&create, &exit, &kernel, &user);
-	return Py_BuildValue(
-		"ddddd",
-		(double)(kernel.dwHighDateTime*2E32+kernel.dwLowDateTime)/2E6,
-		(double)(user.dwHighDateTime*2E32+user.dwLowDateTime) / 2E6,
-		(double)0,
-		(double)0,
-		(double)0);
+	return mkvalue("ddddd",
+		       (double)(kernel.dwHighDateTime*2E32+kernel.dwLowDateTime) / 2E6,
+		       (double)(user.dwHighDateTime*2E32+user.dwLowDateTime) / 2E6,
+		       (double)0,
+		       (double)0,
+		       (double)0);
 }
 #endif /* MS_WIN32 */
 
 #ifdef HAVE_SETSID
-static PyObject *
+static object *
 posix_setsid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 	if (setsid() < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif /* HAVE_SETSID */
 
 #ifdef HAVE_SETPGID
-static PyObject *
+static object *
 posix_setpgid(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int pid, pgrp;
-	if (!PyArg_Parse(args, "(ii)", &pid, &pgrp))
+	if (!getargs(args, "(ii)", &pid, &pgrp))
 		return NULL;
 	if (setpgid(pid, pgrp) < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif /* HAVE_SETPGID */
 
 #ifdef HAVE_TCGETPGRP
-static PyObject *
+static object *
 posix_tcgetpgrp(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd, pgid;
-	if (!PyArg_Parse(args, "i", &fd))
+	if (!getargs(args, "i", &fd))
 		return NULL;
 	pgid = tcgetpgrp(fd);
 	if (pgid < 0)
 		return posix_error();
-	return PyInt_FromLong((long)pgid);
+	return newintobject((long)pgid);
 }
 #endif /* HAVE_TCGETPGRP */
 
 #ifdef HAVE_TCSETPGRP
-static PyObject *
+static object *
 posix_tcsetpgrp(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd, pgid;
-	if (!PyArg_Parse(args, "(ii)", &fd, &pgid))
+	if (!getargs(args, "(ii)", &fd, &pgid))
 		return NULL;
 	if (tcsetpgrp(fd, pgid) < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+       INCREF(None);
+	return None;
 }
 #endif /* HAVE_TCSETPGRP */
 
 /* Functions acting on file descriptors */
 
-static PyObject *
+static object *
 posix_open(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char *file;
 	int flag;
 	int mode = 0777;
 	int fd;
-	if (!PyArg_ParseTuple(args, "si|i", &file, &flag, &mode))
-		return NULL;
-
-	Py_BEGIN_ALLOW_THREADS
+	if (!getargs(args, "(si)", &file, &flag)) {
+		err_clear();
+		if (!getargs(args, "(sii)", &file, &flag, &mode))
+			return NULL;
+	}
+	BGN_SAVE
 	fd = open(file, flag, mode);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (fd < 0)
 		return posix_error();
-	return PyInt_FromLong((long)fd);
+	return newintobject((long)fd);
 }
 
-static PyObject *
+static object *
 posix_close(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd, res;
-	if (!PyArg_Parse(args, "i", &fd))
+	if (!getargs(args, "i", &fd))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = close(fd);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 posix_dup(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd;
-	if (!PyArg_Parse(args, "i", &fd))
+	if (!getargs(args, "i", &fd))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	fd = dup(fd);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (fd < 0)
 		return posix_error();
-	return PyInt_FromLong((long)fd);
+	return newintobject((long)fd);
 }
 
-static PyObject *
+static object *
 posix_dup2(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd, fd2, res;
-	if (!PyArg_Parse(args, "(ii)", &fd, &fd2))
+	if (!getargs(args, "(ii)", &fd, &fd2))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = dup2(fd, fd2);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 posix_lseek(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd, how;
 	long pos, res;
-	if (!PyArg_Parse(args, "(ili)", &fd, &pos, &how))
+	if (!getargs(args, "(ili)", &fd, &pos, &how))
 		return NULL;
 #ifdef SEEK_SET
 	/* Turn 0, 1, 2 into SEEK_{SET,CUR,END} */
@@ -1436,211 +1427,210 @@ posix_lseek(self, args)
 	case 2: how = SEEK_END; break;
 	}
 #endif /* SEEK_END */
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = lseek(fd, pos, how);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	return PyInt_FromLong(res);
+	return newintobject(res);
 }
 
-static PyObject *
+static object *
 posix_read(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd, size, n;
-	PyObject *buffer;
-	if (!PyArg_Parse(args, "(ii)", &fd, &size))
+	object *buffer;
+	if (!getargs(args, "(ii)", &fd, &size))
 		return NULL;
-	buffer = PyString_FromStringAndSize((char *)NULL, size);
+	buffer = newsizedstringobject((char *)NULL, size);
 	if (buffer == NULL)
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
-	n = read(fd, PyString_AsString(buffer), size);
-	Py_END_ALLOW_THREADS
+	BGN_SAVE
+	n = read(fd, getstringvalue(buffer), size);
+	END_SAVE
 	if (n < 0) {
-		Py_DECREF(buffer);
+		DECREF(buffer);
 		return posix_error();
 	}
 	if (n != size)
-		_PyString_Resize(&buffer, n);
+		resizestring(&buffer, n);
 	return buffer;
 }
 
-static PyObject *
+static object *
 posix_write(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd, size;
 	char *buffer;
-	if (!PyArg_Parse(args, "(is#)", &fd, &buffer, &size))
+	if (!getargs(args, "(is#)", &fd, &buffer, &size))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	size = write(fd, buffer, size);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (size < 0)
 		return posix_error();
-	return PyInt_FromLong((long)size);
+	return newintobject((long)size);
 }
 
-static PyObject *
+static object *
 posix_fstat(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	int fd;
 	struct stat st;
 	int res;
-	if (!PyArg_Parse(args, "i", &fd))
+	if (!getargs(args, "i", &fd))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = fstat(fd, &st);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res != 0)
 		return posix_error();
-	return Py_BuildValue("(llllllllll)",
-			     (long)st.st_mode,
-			     (long)st.st_ino,
-			     (long)st.st_dev,
-			     (long)st.st_nlink,
-			     (long)st.st_uid,
-			     (long)st.st_gid,
-			     (long)st.st_size,
-			     (long)st.st_atime,
-			     (long)st.st_mtime,
-			     (long)st.st_ctime);
+	return mkvalue("(llllllllll)",
+		    (long)st.st_mode,
+		    (long)st.st_ino,
+		    (long)st.st_dev,
+		    (long)st.st_nlink,
+		    (long)st.st_uid,
+		    (long)st.st_gid,
+		    (long)st.st_size,
+		    (long)st.st_atime,
+		    (long)st.st_mtime,
+		    (long)st.st_ctime);
 }
 
-static PyObject *
+static object *
 posix_fdopen(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
-	extern int fclose Py_PROTO((FILE *));
+	extern int fclose PROTO((FILE *));
 	int fd;
 	char *mode = "r";
 	int bufsize = -1;
 	FILE *fp;
-	PyObject *f;
-	if (!PyArg_ParseTuple(args, "i|si", &fd, &mode, &bufsize))
+	object *f;
+	if (!newgetargs(args, "i|si", &fd, &mode, &bufsize))
 		return NULL;
-
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	fp = fdopen(fd, mode);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (fp == NULL)
 		return posix_error();
-	f = PyFile_FromFile(fp, "(fdopen)", mode, fclose);
+	f = newopenfileobject(fp, "(fdopen)", mode, fclose);
 	if (f != NULL)
-		PyFile_SetBufSize(f, bufsize);
+		setfilebufsize(f, bufsize);
 	return f;
 }
 
 #ifdef HAVE_PIPE
-static PyObject *
+static object *
 posix_pipe(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 #if !defined(MS_WIN32)
 	int fds[2];
 	int res;
-	if (!PyArg_Parse(args, ""))
+	if (!getargs(args, ""))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = pipe(fds);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res != 0)
 		return posix_error();
-	return Py_BuildValue("(ii)", fds[0], fds[1]);
+	return mkvalue("(ii)", fds[0], fds[1]);
 #else /* MS_WIN32 */
 	HANDLE read, write;
 	BOOL ok;
-	if (!PyArg_Parse(args, ""))
+	if (!getargs(args, ""))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	ok = CreatePipe( &read, &write, NULL, 0);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (!ok)
 		return posix_error();
-	return Py_BuildValue("(ii)", read, write);
+	return mkvalue("(ii)", read, write);
 #endif /* MS_WIN32 */
 }
 #endif  /* HAVE_PIPE */
 
 #ifdef HAVE_MKFIFO
-static PyObject *
+static object *
 posix_mkfifo(self, args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
 	char *file;
 	int mode = 0666;
 	int res;
-	if (!PyArg_ParseTuple(args, "s|i", &file, &mode))
+	if (!newgetargs(args, "s|i", &file, &mode))
 		return NULL;
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = mkfifo(file, mode);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0)
 		return posix_error();
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif
 
 #ifdef HAVE_FTRUNCATE
-static PyObject *
+static object *
 posix_ftruncate(self, args)
-	PyObject *self; /* Not used */
-	PyObject *args;
+	object *self; /* Not used */
+	object *args;
 {
 	int fd;
 	long length;
 	int res;
 
-	if (!PyArg_Parse(args, "(il)", &fd, &length))
+	if (!getargs(args, "(il)", &fd, &length))
 		return NULL;
 
-	Py_BEGIN_ALLOW_THREADS
+	BGN_SAVE
 	res = ftruncate(fd, length);
-	Py_END_ALLOW_THREADS
+	END_SAVE
 	if (res < 0) {
-		PyErr_SetFromErrno(PyExc_IOError);
+		err_errno(IOError);
 		return NULL;
 	}
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 #endif
 
 #ifdef HAVE_PUTENV
-static PyObject * 
+static object * 
 posix_putenv(self,args)
-	PyObject *self;
-	PyObject *args;
+	object *self;
+	object *args;
 {
         char *s1, *s2;
         char *new;
 
-	if (!PyArg_ParseTuple(args, "ss", &s1, &s2))
+	if (!newgetargs(args, "ss", &s1, &s2))
 		return NULL;
 	/* XXX This leaks memory -- not easy to fix :-( */
 	if ((new = malloc(strlen(s1) + strlen(s2) + 2)) == NULL)
-                return PyErr_NoMemory();
+                return err_nomem();
 	(void) sprintf(new, "%s=%s", s1, s2);
 	if (putenv(new)) {
                 posix_error();
                 return NULL;
 	}
-	Py_INCREF(Py_None);
-        return Py_None;
+	INCREF(None);
+        return None;
 }
 #endif
 
-static PyMethodDef posix_methods[] = {
+static struct methodlist posix_methods[] = {
 	{"chdir",	posix_chdir},
 	{"chmod",	posix_chmod},
 #ifdef HAVE_CHOWN
@@ -1743,7 +1733,7 @@ static PyMethodDef posix_methods[] = {
 #ifdef HAVE_TCSETPGRP
 	{"tcsetpgrp",	posix_tcsetpgrp},
 #endif /* HAVE_TCSETPGRP */
-	{"open",	posix_open, 1},
+	{"open",	posix_open},
 	{"close",	posix_close},
 	{"dup",		posix_dup},
 	{"dup2",	posix_dup2},
@@ -1768,126 +1758,52 @@ static PyMethodDef posix_methods[] = {
 };
 
 
-static int
-ins(d, symbol, value)
-        PyObject* d;
-        char* symbol;
-        long value;
-{
-        PyObject* v = PyInt_FromLong(value);
-        if (!v || PyDict_SetItemString(d, symbol, v) < 0)
-                return -1;                   /* triggers fatal error */
-
-        Py_DECREF(v);
-        return 0;
-}
-
-static int
-all_ins(d)
-        PyObject* d;
-{
-#ifdef WNOHANG
-        if (ins(d, "WNOHANG", (long)WNOHANG)) return -1;
-#endif        
-#ifdef O_RDONLY
-        if (ins(d, "O_RDONLY", (long)O_RDONLY)) return -1;
-#endif
-#ifdef O_WRONLY
-        if (ins(d, "O_WRONLY", (long)O_WRONLY)) return -1;
-#endif
-#ifdef O_RDWR
-        if (ins(d, "O_RDWR", (long)O_RDWR)) return -1;
-#endif
-#ifdef O_NDELAY
-        if (ins(d, "O_NDELAY", (long)O_NDELAY)) return -1;
-#endif
-#ifdef O_NONBLOCK
-        if (ins(d, "O_NONBLOCK", (long)O_NONBLOCK)) return -1;
-#endif
-#ifdef O_APPEND
-        if (ins(d, "O_APPEND", (long)O_APPEND)) return -1;
-#endif
-#ifdef O_DSYNC
-        if (ins(d, "O_DSYNC", (long)O_DSYNC)) return -1;
-#endif
-#ifdef O_RSYNC
-        if (ins(d, "O_RSYNC", (long)O_RSYNC)) return -1;
-#endif
-#ifdef O_SYNC
-        if (ins(d, "O_SYNC", (long)O_SYNC)) return -1;
-#endif
-#ifdef O_NOCTTY
-        if (ins(d, "O_NOCTTY", (long)O_NOCTTY)) return -1;
-#endif
-#ifdef O_CREAT
-        if (ins(d, "O_CREAT", (long)O_CREAT)) return -1;
-#endif
-#ifdef O_EXCL
-        if (ins(d, "O_EXCL", (long)O_EXCL)) return -1;
-#endif
-#ifdef O_TRUNC
-        if (ins(d, "O_TRUNC", (long)O_TRUNC)) return -1;
-#endif
-        return 0;
-}
-
-
-
-
 #if defined(_MSC_VER) || defined(__WATCOMC__)
 void
 initnt()
 {
-	PyObject *m, *d, *v;
+	object *m, *d, *v;
 	
-	m = Py_InitModule("nt", posix_methods);
-	d = PyModule_GetDict(m);
+	m = initmodule("nt", posix_methods);
+	d = getmoduledict(m);
 	
 	/* Initialize nt.environ dictionary */
 	v = convertenviron();
-	if (v == NULL || PyDict_SetItemString(d, "environ", v) != 0)
-		goto finally;
-	Py_DECREF(v);
+	if (v == NULL || dictinsert(d, "environ", v) != 0)
+		fatal("can't define nt.environ");
+	DECREF(v);
 	
-        if (all_ins(d))
-                goto finally;
-
 	/* Initialize nt.error exception */
-	PosixError = PyString_FromString("nt.error");
-	PyDict_SetItemString(d, "error", PosixError);
-
-        if (!PyErr_Occurred())
-                return;
-
-  finally:
-        Py_FatalError("can't initialize NT posixmodule");
+	PosixError = newstringobject("nt.error");
+	if (PosixError == NULL || dictinsert(d, "error", PosixError) != 0)
+		fatal("can't define nt.error");
 }
 #else /* not a PC port */
 void
 initposix()
 {
-	PyObject *m, *d, *v;
+	object *m, *d, *v;
 	
-	m = Py_InitModule("posix", posix_methods);
-	d = PyModule_GetDict(m);
+	m = initmodule("posix", posix_methods);
+	d = getmoduledict(m);
 	
 	/* Initialize posix.environ dictionary */
 	v = convertenviron();
-	if (v == NULL || PyDict_SetItemString(d, "environ", v) != 0)
-                goto finally;
-	Py_DECREF(v);
+	if (v == NULL || dictinsert(d, "environ", v) != 0)
+		fatal("can't define posix.environ");
+	DECREF(v);
 	
-        if (all_ins(d))
-                goto finally;
-
+#ifdef WNOHANG
+	/* Export WNOHANG symbol */
+	v = newintobject((long)WNOHANG);
+	if (v == NULL || dictinsert(d, "WNOHANG", v) != 0)
+		fatal("can't define posix.WNOHANG");
+	DECREF(v);
+#endif
+	
 	/* Initialize posix.error exception */
-	PosixError = PyString_FromString("posix.error");
-	PyDict_SetItemString(d, "error", PosixError);
-
-        if (!PyErr_Occurred())
-                return;
-
-  finally:
-        Py_FatalError("can't initialize posix module");
+	PosixError = newstringobject("posix.error");
+	if (PosixError == NULL || dictinsert(d, "error", PosixError) != 0)
+		fatal("can't define posix.error");
 }
 #endif /* !_MSC_VER */

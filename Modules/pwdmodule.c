@@ -31,90 +31,82 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /* UNIX password file access module */
 
-#include "Python.h"
+#include "allobjects.h"
+#include "modsupport.h"
 
 #include <sys/types.h>
 #include <pwd.h>
 
-static PyObject *
-mkpwent(p)
+static object *mkpwent(p)
 	struct passwd *p;
 {
-	return Py_BuildValue(
-		"(ssllsss)",
-		p->pw_name,
-		p->pw_passwd,
+	return mkvalue("(ssllsss)",
+		       p->pw_name,
+		       p->pw_passwd,
 #if defined(NeXT) && defined(_POSIX_SOURCE) && defined(__LITTLE_ENDIAN__)
 /* Correct a bug present on Intel machines in NextStep 3.2 and 3.3;
    for later versions you may have to remove this */
-		(long)p->pw_short_pad1,	     /* ugh-NeXT broke the padding */
-		(long)p->pw_short_pad2,
+		       (long)p->pw_short_pad1, /* ugh-NeXT broke the padding */
+		       (long)p->pw_short_pad2,
 #else
-		(long)p->pw_uid,
-		(long)p->pw_gid,
+		       (long)p->pw_uid,
+		       (long)p->pw_gid,
 #endif
-		p->pw_gecos,
-		p->pw_dir,
-		p->pw_shell);
+		       p->pw_gecos,
+		       p->pw_dir,
+		       p->pw_shell);
 }
 
-static PyObject *
-pwd_getpwuid(self, args)
-	PyObject *self;
-	PyObject *args;
+static object *pwd_getpwuid(self, args)
+	object *self, *args;
 {
 	int uid;
 	struct passwd *p;
-	if (!PyArg_Parse(args, "i", &uid))
+	if (!getintarg(args, &uid))
 		return NULL;
 	if ((p = getpwuid(uid)) == NULL) {
-		PyErr_SetString(PyExc_KeyError, "getpwuid(): uid not found");
+		err_setstr(KeyError, "getpwuid(): uid not found");
 		return NULL;
 	}
 	return mkpwent(p);
 }
 
-static PyObject *
-pwd_getpwnam(self, args)
-	PyObject *self;
-	PyObject *args;
+static object *pwd_getpwnam(self, args)
+	object *self, *args;
 {
 	char *name;
 	struct passwd *p;
-	if (!PyArg_Parse(args, "s", &name))
+	if (!getstrarg(args, &name))
 		return NULL;
 	if ((p = getpwnam(name)) == NULL) {
-		PyErr_SetString(PyExc_KeyError, "getpwnam(): name not found");
+		err_setstr(KeyError, "getpwnam(): name not found");
 		return NULL;
 	}
 	return mkpwent(p);
 }
 
-static PyObject *
-pwd_getpwall(self, args)
-	PyObject *self;
-	PyObject *args;
+static object *pwd_getpwall(self, args)
+	object *self, *args;
 {
-	PyObject *d;
+	object *d;
 	struct passwd *p;
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
-	if ((d = PyList_New(0)) == NULL)
+	if ((d = newlistobject(0)) == NULL)
 		return NULL;
 	setpwent();
 	while ((p = getpwent()) != NULL) {
-		PyObject *v = mkpwent(p);
-		if (v == NULL || PyList_Append(d, v) != 0) {
-			Py_XDECREF(v);
-			Py_DECREF(d);
+		object *v = mkpwent(p);
+		if (v == NULL || addlistitem(d, v) != 0) {
+			XDECREF(v);
+			DECREF(d);
 			return NULL;
 		}
-		Py_DECREF(v);
 	}
 	return d;
 }
 
-static PyMethodDef pwd_methods[] = {
+static struct methodlist pwd_methods[] = {
 	{"getpwuid",	pwd_getpwuid},
 	{"getpwnam",	pwd_getpwnam},
 	{"getpwall",	pwd_getpwall},
@@ -124,5 +116,5 @@ static PyMethodDef pwd_methods[] = {
 void
 initpwd()
 {
-	Py_InitModule("pwd", pwd_methods);
+	initmodule("pwd", pwd_methods);
 }

@@ -1,7 +1,7 @@
 /* cryptmodule.c - by Steve Majewski
  */
 
-#include "Python.h"
+#include "allobjects.h"
 
 #include <sys/types.h>
 
@@ -9,20 +9,20 @@
 /* Module crypt */
 
 
-static PyObject *crypt_crypt(self, args)
-	PyObject *self, *args;
+static object *crypt_crypt(self, args)
+	object *self, *args;
 {
 	char *word, *salt; 
 	extern char * crypt();
 
-	if (!PyArg_Parse(args, "(ss)", &word, &salt)) {
+	if (!getargs(args, "(ss)", &word, &salt)) {
 		return NULL;
 	}
-	return PyString_FromString( crypt( word, salt ) );
+	return newstringobject( crypt( word, salt ) );
 
 }
 
-static PyMethodDef crypt_methods[] = {
+static struct methodlist crypt_methods[] = {
 	{"crypt",	crypt_crypt},
 	{NULL,		NULL}		/* sentinel */
 };
@@ -30,5 +30,5 @@ static PyMethodDef crypt_methods[] = {
 void
 initcrypt()
 {
-	Py_InitModule("crypt", crypt_methods);
+	initmodule("crypt", crypt_methods);
 }

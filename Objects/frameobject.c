@@ -47,6 +47,10 @@ static struct memberlist frame_memberlist[] = {
 	{"f_builtins",	T_OBJECT,	OFF(f_builtins),RO},
 	{"f_globals",	T_OBJECT,	OFF(f_globals),	RO},
 	{"f_locals",	T_OBJECT,	OFF(f_locals),	RO},
+	{"f_owner",	T_OBJECT,	OFF(f_owner),	RO},
+#if 0
+	{"f_fastlocals",T_OBJECT,	OFF(f_fastlocals),RO}, /* XXX Unsafe */
+#endif
 	{"f_lasti",	T_INT,		OFF(f_lasti),	RO},
 	{"f_lineno",	T_INT,		OFF(f_lineno),	RO},
 	{"f_restricted",T_INT,		OFF(f_restricted),RO},
@@ -80,8 +84,10 @@ frame_setattr(f, name, value)
    is on the free list, only the following members have a meaning:
 	ob_type		== &Frametype
 	f_back		next item on free list, or NULL
-	f_nlocals	number of locals
-	f_stacksize	size of value stack
+	f_nvalues	size of f_valuestack
+	f_valuestack	array of (f_nvalues+1) object pointers, or NULL
+	f_nblocks	size of f_blockstack
+	f_blockstack	array of (f_nblocks+1) blocks, or NULL
    Note that the value and block stacks are preserved -- this can save
    another malloc() call or two (and two free() calls as well!).
    Also note that, unlike for integers, each frame object is a
@@ -98,20 +104,13 @@ static void
 frame_dealloc(f)
 	frameobject *f;
 {
-	int i;
-	PyObject **fastlocals;
-
-	/* Kill all local variables */
-	fastlocals = f->f_localsplus;
-	for (i = f->f_nlocals; --i >= 0; ++fastlocals) {
-		XDECREF(*fastlocals);
-	}
-
 	XDECREF(f->f_back);
 	XDECREF(f->f_code);
 	XDECREF(f->f_builtins);
 	XDECREF(f->f_globals);
 	XDECREF(f->f_locals);
+	XDECREF(f->f_owner);
+	XDECREF(f->f_fastlocals);
 	XDECREF(f->f_trace);
 	f->f_back = free_list;
 	free_list = f;
@@ -135,26 +134,28 @@ typeobject Frametype = {
 };
 
 frameobject *
-newframeobject(back, code, globals, locals)
+newframeobject(back, code, globals, locals, owner, nvalues, nblocks)
 	frameobject *back;
 	codeobject *code;
 	object *globals;
 	object *locals;
+	object *owner;
+	int nvalues;
+	int nblocks;
 {
 	static object *builtin_object;
 	frameobject *f;
 	object *builtins;
-	int extras = code->co_stacksize + code->co_nlocals;
-
 	if (builtin_object == NULL) {
-		builtin_object = PyString_InternFromString("__builtins__");
+		builtin_object = newstringobject("__builtins__");
 		if (builtin_object == NULL)
 			return NULL;
 	}
 	if ((back != NULL && !is_frameobject(back)) ||
-	    code == NULL || !is_codeobject(code) ||
-	    globals == NULL || !is_dictobject(globals) ||
-	    (locals != NULL && !is_dictobject(locals))) {
+		code == NULL || !is_codeobject(code) ||
+		globals == NULL || !is_dictobject(globals) ||
+		(locals != NULL && !is_dictobject(locals)) ||
+		nvalues < 0 || nblocks < 0) {
 		err_badcall();
 		return NULL;
 	}
@@ -166,24 +167,16 @@ newframeobject(back, code, globals, locals)
 		return NULL;
 	}
 	if (free_list == NULL) {
-		f = (frameobject *)
-			malloc(sizeof(frameobject) + extras*sizeof(object *));
+		f = NEWOBJ(frameobject, &Frametype);
 		if (f == NULL)
-			return (PyFrameObject *)err_nomem();
-		f->ob_type = &Frametype;
-		NEWREF(f);
+			return NULL;
+		f->f_nvalues = f->f_nblocks = 0;
+		f->f_valuestack = NULL;
+		f->f_blockstack = NULL;
 	}
 	else {
 		f = free_list;
 		free_list = free_list->f_back;
-		if (f->f_nlocals + f->f_stacksize < extras) {
-			f = realloc(f, sizeof(frameobject) +
-				       extras*sizeof(object *));
-			if (f == NULL)
-				return (PyFrameObject *)err_nomem();
-		}
-		else
-			extras = f->f_nlocals + f->f_stacksize;
 		f->ob_type = &Frametype;
 		NEWREF(f);
 	}
@@ -212,21 +205,54 @@ newframeobject(back, code, globals, locals)
 		INCREF(locals);
 	}
 	f->f_locals = locals;
-	f->f_trace = NULL;
-
-	f->f_lasti = 0;
-	f->f_lineno = code->co_firstlineno;
-	f->f_restricted = (builtins != getbuiltindict());
+	XINCREF(owner);
+	f->f_owner = owner;
+	f->f_fastlocals = NULL;
+	if (code->co_nlocals > 0) {
+		f->f_fastlocals = newlistobject(code->co_nlocals);
+		if (f->f_fastlocals == NULL) {
+			DECREF(f);
+			return NULL;
+		}
+	}
+	if (nvalues > f->f_nvalues || f->f_valuestack == NULL) {
+		XDEL(f->f_valuestack);
+		f->f_valuestack = NEW(object *, nvalues+1);
+		f->f_nvalues = nvalues;
+	}
+	if (nblocks > f->f_nblocks || f->f_blockstack == NULL) {
+		XDEL(f->f_blockstack);
+		f->f_blockstack = NEW(block, nblocks+1);
+		f->f_nblocks = nblocks;
+	}
 	f->f_iblock = 0;
-	f->f_nlocals = code->co_nlocals;
-	f->f_stacksize = extras - code->co_nlocals;
-
-	while (--extras >= 0)
-		f->f_localsplus[extras] = NULL;
-
-	f->f_valuestack = f->f_localsplus + f->f_nlocals;
-
+	f->f_lasti = 0;
+	f->f_lineno = -1;
+	f->f_restricted = (builtins != getbuiltindict());
+	f->f_trace = NULL;
+	if (f->f_valuestack == NULL || f->f_blockstack == NULL) {
+		err_nomem();
+		DECREF(f);
+		return NULL;
+	}
 	return f;
+}
+
+object **
+extend_stack(f, level, incr)
+	frameobject *f;
+	int level;
+	int incr;
+{
+	f->f_nvalues = level + incr + 10;
+	f->f_valuestack =
+		(object **) realloc((ANY *)f->f_valuestack,
+				    sizeof(object *) * (f->f_nvalues + 1));
+	if (f->f_valuestack == NULL) {
+		err_nomem();
+		return NULL;
+	}
+	return f->f_valuestack + level;
 }
 
 /* Block management */
@@ -239,7 +265,7 @@ setup_block(f, type, handler, level)
 	int level;
 {
 	block *b;
-	if (f->f_iblock >= CO_MAXBLOCKS)
+	if (f->f_iblock >= f->f_nblocks)
 		fatal("XXX block stack overflow");
 	b = &f->f_blockstack[f->f_iblock++];
 	b->b_type = type;
@@ -264,9 +290,8 @@ void
 fast_2_locals(f)
 	frameobject *f;
 {
-	/* Merge fast locals into f->f_locals */
-	object *locals, *map;
-	object **fast;
+	/* Merge f->f_fastlocals into f->f_locals */
+	object *locals, *fast, *map;
 	object *error_type, *error_value, *error_traceback;
 	int j;
 	if (f == NULL)
@@ -279,19 +304,17 @@ fast_2_locals(f)
 			return;
 		}
 	}
-	if (f->f_nlocals == 0)
+	fast = f->f_fastlocals;
+	if (fast == NULL || f->f_code->co_nlocals == 0)
 		return;
 	map = f->f_code->co_varnames;
-	if (!is_dictobject(locals) || !is_tupleobject(map))
+	if (!is_dictobject(locals) || !is_listobject(fast) ||
+	    !is_tupleobject(map))
 		return;
 	err_fetch(&error_type, &error_value, &error_traceback);
-	fast = f->f_localsplus;
-	j = gettuplesize(map);
-	if (j > f->f_nlocals)
-		j = f->f_nlocals;
-	for (; --j >= 0; ) {
+	for (j = gettuplesize(map); --j >= 0; ) {
 		object *key = gettupleitem(map, j);
-		object *value = fast[j];
+		object *value = getlistitem(fast, j);
 		if (value == NULL) {
 			err_clear();
 			if (dict2remove(locals, key) != 0)
@@ -310,35 +333,31 @@ locals_2_fast(f, clear)
 	frameobject *f;
 	int clear;
 {
-	/* Merge f->f_locals into fast locals */
-	object *locals, *map;
-	object **fast;
+	/* Merge f->f_locals into f->f_fastlocals */
+	object *locals, *fast, *map;
 	object *error_type, *error_value, *error_traceback;
 	int j;
 	if (f == NULL)
 		return;
 	locals = f->f_locals;
+	fast = f->f_fastlocals;
 	map = f->f_code->co_varnames;
-	if (locals == NULL || f->f_code->co_nlocals == 0)
+	if (locals == NULL || fast == NULL || f->f_code->co_nlocals == 0)
 		return;
-	if (!is_dictobject(locals) || !is_tupleobject(map))
+	if (!is_dictobject(locals) || !is_listobject(fast) ||
+	    !is_tupleobject(map))
 		return;
 	err_fetch(&error_type, &error_value, &error_traceback);
-	fast = f->f_localsplus;
-	j = gettuplesize(map);
-	if (j > f->f_nlocals)
-		j = f->f_nlocals;
-	for (; --j >= 0; ) {
+	for (j = gettuplesize(map); --j >= 0; ) {
 		object *key = gettupleitem(map, j);
 		object *value = dict2lookup(locals, key);
 		if (value == NULL)
 			err_clear();
 		else
 			INCREF(value);
-		if (value != NULL || clear) {
-			XDECREF(fast[j]);
-			fast[j] = value;
-		}
+		if (value != NULL || clear)
+			if (setlistitem(fast, j, value) != 0)
+				err_clear();
 	}
 	err_restore(error_type, error_value, error_traceback);
 }

@@ -671,7 +671,7 @@ PySequence_GetItem(s, i)
 
   if(i < 0)
     {
-      if(! m->sq_length || 0 > (l=m->sq_length(s))) return NULL;
+      if(0 > (l=m->sq_length(s))) return NULL;
       i += l;
     }
       
@@ -689,17 +689,13 @@ PySequence_GetSlice(s, i1, i2)
 
   if(! s) return Py_ReturnNullError();
 
-  if(! ((m=s->ob_type->tp_as_sequence) && m->sq_slice))
+  if(! ((m=s->ob_type->tp_as_sequence) && m->sq_length && m->sq_slice))
     return Py_ReturnMethodError("__getslice__");  
 
-  if(i1 < 0 || i2 < 0)
-    {
+  if(0 > (l=m->sq_length(s))) return NULL;
 
-      if(! m->sq_length || 0 > (l=m->sq_length(s))) return NULL;
-
-      if(i1 < 0) i1 += l;
-      if(i2 < 0) i2 += l;
-    }
+  if(i1 < 0) i1 += l;
+  if(i2 < 0) i2 += l;
       
   return m->sq_slice(s,i1,i2);
 }
@@ -806,8 +802,16 @@ PySequence_Tuple(s)
 
   for(i=0; i < l; i++)
     {
-      if(((item=PySequence_GetItem(s,i))) ||
-	 PyTuple_SetItem(t,i,item) == -1)
+      if((item=PySequence_GetItem(s,i)))
+	{
+	  if(PyTuple_SetItem(t,i,item) == -1)
+	    {
+	      Py_DECREF(item);
+	      Py_DECREF(t);
+	      return NULL;
+	    }
+	}
+      else
 	{
 	  Py_DECREF(t);
 	  return NULL;
@@ -822,20 +826,25 @@ PySequence_List(s)
 {
   int l, i;
   PyObject *t, *item;
-
   if(! s) return Py_ReturnNullError();
-
   Py_TRY((l=PySequence_Length(s)) != -1);
   Py_TRY(t=PyList_New(l));
-
   for(i=0; i < l; i++)
     {
-      if((item=PySequence_GetItem(s,i)) ||
-	 PyList_SetItem(t,i,item) == -1)
-	{
-	  Py_DECREF(t);
-	  return NULL;
-	}
+      if((item=PySequence_GetItem(s,i)))
+      {
+        if(PyList_SetItem(t,i,item) == -1)
+          {
+            Py_DECREF(item);
+            Py_DECREF(t);
+            return NULL;
+          }
+      }
+      else
+      {
+        Py_DECREF(t);
+        return NULL;
+      }
     }
   return t;
 }
@@ -903,7 +912,6 @@ PySequence_Index(s, o)
       if(err) return -1;
       if(! not_equal) return i;
     }
-  PyErr_SetString(PyExc_ValueError, "list.index(x): x not in list");
   return -1;
 }
 
@@ -937,10 +945,7 @@ PyMapping_HasKeyString(o, key)
   PyObject *v;
 
   v=PyMapping_GetItemString(o,key);
-  if(v) {
-    Py_DECREF(v);
-    return 1;
-  }
+  if(v) return 1;
   PyErr_Clear();
   return 0;
 }
@@ -953,10 +958,7 @@ PyMapping_HasKey(o, key)
   PyObject *v;
 
   v=PyObject_GetItem(o,key);
-  if(v) {
-    Py_DECREF(v);
-    return 1;
-  }
+  if(v) return 1;
   PyErr_Clear();
   return 0;
 }

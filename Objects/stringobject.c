@@ -98,9 +98,6 @@ newsizedstringobject(str, size)
 #ifdef CACHE_HASH
 	op->ob_shash = -1;
 #endif
-#ifdef INTERN_STRINGS
-	op->ob_sinterned = NULL;
-#endif
 	NEWREF(op);
 	if (str != NULL)
 		memcpy(op->ob_sval, str, size);
@@ -147,9 +144,6 @@ newstringobject(str)
 	op->ob_size = size;
 #ifdef CACHE_HASH
 	op->ob_shash = -1;
-#endif
-#ifdef INTERN_STRINGS
-	op->ob_sinterned = NULL;
 #endif
 	NEWREF(op);
 	strcpy(op->ob_sval, str);
@@ -310,9 +304,6 @@ string_concat(a, bb)
 #ifdef CACHE_HASH
 	op->ob_shash = -1;
 #endif
-#ifdef INTERN_STRINGS
-	op->ob_sinterned = NULL;
-#endif
 	NEWREF(op);
 	memcpy(op->ob_sval, a->ob_sval, (int) a->ob_size);
 	memcpy(op->ob_sval + a->ob_size, b->ob_sval, (int) b->ob_size);
@@ -327,7 +318,7 @@ string_repeat(a, n)
 	register int n;
 {
 	register int i;
-	register int size;
+	register unsigned int size;
 	register stringobject *op;
 	if (n < 0)
 		n = 0;
@@ -344,9 +335,6 @@ string_repeat(a, n)
 	op->ob_size = size;
 #ifdef CACHE_HASH
 	op->ob_shash = -1;
-#endif
-#ifdef INTERN_STRINGS
-	op->ob_sinterned = NULL;
 #endif
 	NEWREF(op);
 	for (i = 0; i < size; i += a->ob_size)
@@ -433,11 +421,6 @@ string_hash(a)
 #ifdef CACHE_HASH
 	if (a->ob_shash != -1)
 		return a->ob_shash;
-#ifdef INTERN_STRINGS
-	if (a->ob_sinterned != NULL)
-		return (a->ob_shash =
-			((stringobject *)(a->ob_sinterned))->ob_shash);
-#endif
 #endif
 	len = a->ob_size;
 	p = (unsigned char *) a->ob_sval;
@@ -479,13 +462,6 @@ typeobject Stringtype = {
 	&string_as_sequence,	/*tp_as_sequence*/
 	0,		/*tp_as_mapping*/
 	(hashfunc)string_hash, /*tp_hash*/
-	0,		/*tp_call*/
-	0,		/*tp_str*/
-	0,		/*tp_getattro*/
-	0,		/*tp_setattro*/
-	0,		/*tp_xxx3*/
-	0,		/*tp_xxx4*/
-	0,		/*tp_doc*/
 };
 
 void
@@ -585,18 +561,18 @@ getnextarg(args, arglen, p_argidx)
 
 extern double fabs PROTO((double));
 
-static int
-formatfloat(buf, flags, prec, type, v)
-	char *buf;
+static char *
+formatfloat(flags, prec, type, v)
 	int flags;
 	int prec;
 	int type;
 	object *v;
 {
 	char fmt[20];
+	static char buf[120];
 	double x;
 	if (!getargs(v, "d;float argument required", &x))
-		return -1;
+		return NULL;
 	if (prec < 0)
 		prec = 6;
 	if (prec > 50)
@@ -605,43 +581,43 @@ formatfloat(buf, flags, prec, type, v)
 		type = 'g';
 	sprintf(fmt, "%%%s.%d%c", (flags&F_ALT) ? "#" : "", prec, type);
 	sprintf(buf, fmt, x);
-	return strlen(buf);
+	return buf;
 }
 
-static int
-formatint(buf, flags, prec, type, v)
-	char *buf;
+static char *
+formatint(flags, prec, type, v)
 	int flags;
 	int prec;
 	int type;
 	object *v;
 {
 	char fmt[20];
+	static char buf[50];
 	long x;
 	if (!getargs(v, "l;int argument required", &x))
-		return -1;
+		return NULL;
 	if (prec < 0)
 		prec = 1;
 	sprintf(fmt, "%%%s.%dl%c", (flags&F_ALT) ? "#" : "", prec, type);
 	sprintf(buf, fmt, x);
-	return strlen(buf);
+	return buf;
 }
 
-static int
-formatchar(buf, v)
-	char *buf;
+static char *
+formatchar(v)
 	object *v;
 {
+	static char buf[2];
 	if (is_stringobject(v)) {
 		if (!getargs(v, "c;%c requires int or char", &buf[0]))
-			return -1;
+			return NULL;
 	}
 	else {
 		if (!getargs(v, "b;%c requires int or char", &buf[0]))
-			return -1;
+			return NULL;
 	}
 	buf[1] = '\0';
-	return 1;
+	return buf;
 }
 
 
@@ -703,7 +679,6 @@ formatstring(format, args)
 			char *buf;
 			int sign;
 			int len;
-			char tmpbuf[120]; /* For format{float,int,char}() */
 			fmt++;
 			if (*fmt == '(') {
 				char *keystart;
@@ -855,44 +830,32 @@ formatstring(format, args)
 			case 'X':
 				if (c == 'i')
 					c = 'd';
-				buf = tmpbuf;
-				len = formatint(buf, flags, prec, c, v);
-				if (len < 0)
+				buf = formatint(flags, prec, c, v);
+				if (buf == NULL)
 					goto error;
+				len = strlen(buf);
 				sign = (c == 'd');
-				if (flags&F_ZERO) {
+				if (flags&F_ZERO)
 					fill = '0';
-					if ((flags&F_ALT) &&
-					    (c == 'x' || c == 'X') &&
-					    buf[0] == '0' && buf[1] == c) {
-						*res++ = *buf++;
-						*res++ = *buf++;
-						rescnt -= 2;
-						len -= 2;
-						width -= 2;
-						if (width < 0)
-							width = 0;
-					}
-				}
 				break;
 			case 'e':
 			case 'E':
 			case 'f':
 			case 'g':
 			case 'G':
-				buf = tmpbuf;
-				len = formatfloat(buf, flags, prec, c, v);
-				if (len < 0)
+				buf = formatfloat(flags, prec, c, v);
+				if (buf == NULL)
 					goto error;
+				len = strlen(buf);
 				sign = 1;
 				if (flags&F_ZERO)
 					fill = '0';
 				break;
 			case 'c':
-				buf = tmpbuf;
-				len = formatchar(buf, v);
-				if (len < 0)
+				buf = formatchar(v);
+				if (buf == NULL)
 					goto error;
+				len = 1;
 				break;
 			default:
 				err_setstr(ValueError,
@@ -965,59 +928,3 @@ formatstring(format, args)
 		DECREF(args);
 	return NULL;
 }
-
-
-#ifdef INTERN_STRINGS
-
-static PyObject *interned;
-
-void
-PyString_InternInPlace(p)
-	PyObject **p;
-{
-	register PyStringObject *s = (PyStringObject *)(*p);
-	PyObject *t;
-	if (s == NULL || !PyString_Check(s))
-		Py_FatalError("PyString_InternInPlace: strings only please!");
-	if ((t = s->ob_sinterned) != NULL) {
-		if (t == (PyObject *)s)
-			return;
-		Py_INCREF(t);
-		*p = t;
-		Py_DECREF(s);
-		return;
-	}
-	if (interned == NULL) {
-		interned = PyDict_New();
-		if (interned == NULL)
-			return;
-		/* Force slow lookups: */
-		PyDict_SetItem(interned, Py_None, Py_None);
-	}
-	if ((t = PyDict_GetItem(interned, (PyObject *)s)) != NULL) {
-		Py_INCREF(t);
-		*p = s->ob_sinterned = t;
-		Py_DECREF(s);
-		return;
-	}
-	t = (PyObject *)s;
-	if (PyDict_SetItem(interned, t, t) == 0) {
-		s->ob_sinterned = t;
-		return;
-	}
-	PyErr_Clear();
-}
-
-
-PyObject *
-PyString_InternFromString(cp)
-	const char *cp;
-{
-	PyObject *s = PyString_FromString(cp);
-	if (s == NULL)
-		return NULL;
-	PyString_InternInPlace(&s);
-	return s;
-}
-
-#endif

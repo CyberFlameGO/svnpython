@@ -34,113 +34,117 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #include <sys/types.h>
 #include <cdaudio.h>
-#include "Python.h"
+/* #include <sigfpe.h> */
+#include "allobjects.h"
+#include "import.h"
+#include "modsupport.h"
+#include "ceval.h"
 
 #define NCALLBACKS	8
 
 typedef struct {
-	PyObject_HEAD
+	OB_HEAD
 	CDPLAYER *ob_cdplayer;
 } cdplayerobject;
 
-static PyObject *CdError;		/* exception cd.error */
+static object *CdError;		/* exception cd.error */
 
-static PyObject *
+static object *
 CD_allowremoval(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	CDallowremoval(self->ob_cdplayer);
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 CD_preventremoval(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	CDpreventremoval(self->ob_cdplayer);
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 CD_bestreadsize(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
-	return PyInt_FromLong((long) CDbestreadsize(self->ob_cdplayer));
+	return newintobject((long) CDbestreadsize(self->ob_cdplayer));
 }
 
-static PyObject *
+static object *
 CD_close(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	if (!CDclose(self->ob_cdplayer)) {
-		PyErr_SetFromErrno(CdError); /* XXX - ??? */
+		err_errno(CdError); /* XXX - ??? */
 		return NULL;
 	}
 	self->ob_cdplayer = NULL;
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 CD_eject(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	if (!CDeject(self->ob_cdplayer)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "eject failed");
+			err_setstr(CdError, "eject failed");
 		return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 	
-static PyObject *
+static object *
 CD_getstatus(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	if (!CDgetstatus(self->ob_cdplayer, &status)) {
-		PyErr_SetFromErrno(CdError); /* XXX - ??? */
+		err_errno(CdError); /* XXX - ??? */
 		return NULL;
 	}
 
-	return Py_BuildValue("(ii(iii)(iii)(iii)iiii)", status.state,
+	return mkvalue("(ii(iii)(iii)(iii)iiii)", status.state,
 		       status.track, status.min, status.sec, status.frame,
 		       status.abs_min, status.abs_sec, status.abs_frame,
 		       status.total_min, status.total_sec, status.total_frame,
@@ -148,296 +152,294 @@ CD_getstatus(self, args)
 		       status.cur_block);
 }
 	
-static PyObject *
+static object *
 CD_gettrackinfo(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int track;
 	CDTRACKINFO info;
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, "i", &track))
+	if (!newgetargs(args, "i", &track))
 		return NULL;
 
 	if (!CDgettrackinfo(self->ob_cdplayer, track, &info)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "gettrackinfo failed");
+			err_setstr(CdError, "gettrackinfo failed");
 		return NULL;
 	}
 
-	return Py_BuildValue("((iii)(iii))",
+	return mkvalue("((iii)(iii))",
 		       info.start_min, info.start_sec, info.start_frame,
 		       info.total_min, info.total_sec, info.total_frame);
 }
 	
-static PyObject *
+static object *
 CD_msftoblock(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int min, sec, frame;
 
-	if (!PyArg_ParseTuple(args, "iii", &min, &sec, &frame))
+	if (!newgetargs(args, "iii", &min, &sec, &frame))
 		return NULL;
 
-	return PyInt_FromLong((long) CDmsftoblock(self->ob_cdplayer,
+	return newintobject((long) CDmsftoblock(self->ob_cdplayer,
 						min, sec, frame));
 }
 	
-static PyObject *
+static object *
 CD_play(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int start, play;
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, "ii", &start, &play))
+	if (!newgetargs(args, "ii", &start, &play))
 		return NULL;
 
 	if (!CDplay(self->ob_cdplayer, start, play)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "play failed");
+			err_setstr(CdError, "play failed");
 		return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 	
-static PyObject *
+static object *
 CD_playabs(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int min, sec, frame, play;
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, "iiii", &min, &sec, &frame, &play))
+	if (!newgetargs(args, "iiii", &min, &sec, &frame, &play))
 		return NULL;
 
 	if (!CDplayabs(self->ob_cdplayer, min, sec, frame, play)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "playabs failed");
+			err_setstr(CdError, "playabs failed");
 		return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 	
-static PyObject *
+static object *
 CD_playtrack(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int start, play;
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, "ii", &start, &play))
+	if (!newgetargs(args, "ii", &start, &play))
 		return NULL;
 
 	if (!CDplaytrack(self->ob_cdplayer, start, play)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "playtrack failed");
+			err_setstr(CdError, "playtrack failed");
 		return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 	
-static PyObject *
+static object *
 CD_playtrackabs(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int track, min, sec, frame, play;
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, "iiiii", &track, &min, &sec,
-			      &frame, &play))
+	if (!newgetargs(args, "iiiii", &track, &min, &sec, &frame, &play))
 		return NULL;
 
 	if (!CDplaytrackabs(self->ob_cdplayer, track, min, sec, frame, play)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "playtrackabs failed");
+			err_setstr(CdError, "playtrackabs failed");
 		return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 	
-static PyObject *
+static object *
 CD_readda(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int numframes, n;
-	PyObject *result;
+	object *result;
 
-	if (!PyArg_ParseTuple(args, "i", &numframes))
+	if (!newgetargs(args, "i", &numframes))
 		return NULL;
 
-	result = PyString_FromStringAndSize(NULL, numframes * sizeof(CDFRAME));
+	result = newsizedstringobject(NULL, numframes * sizeof(CDFRAME));
 	if (result == NULL)
 		return NULL;
 
-	n = CDreadda(self->ob_cdplayer,
-		       (CDFRAME *) PyString_AsString(result), numframes);
+	n = CDreadda(self->ob_cdplayer, (CDFRAME *) getstringvalue(result), numframes);
 	if (n == -1) {
-		Py_DECREF(result);
-		PyErr_SetFromErrno(CdError);
+		DECREF(result);
+		err_errno(CdError);
 		return NULL;
 	}
 	if (n < numframes)
-		if (_PyString_Resize(&result, n * sizeof(CDFRAME)))
+		if (resizestring(&result, n * sizeof(CDFRAME)))
 			return NULL;
 
 	return result;
 }
 
-static PyObject *
+static object *
 CD_seek(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int min, sec, frame;
-	long PyTryBlock;
+	long block;
 
-	if (!PyArg_ParseTuple(args, "iii", &min, &sec, &frame))
+	if (!newgetargs(args, "iii", &min, &sec, &frame))
 		return NULL;
 
-	PyTryBlock = CDseek(self->ob_cdplayer, min, sec, frame);
-	if (PyTryBlock == -1) {
-		PyErr_SetFromErrno(CdError);
+	block = CDseek(self->ob_cdplayer, min, sec, frame);
+	if (block == -1) {
+		err_errno(CdError);
 		return NULL;
 	}
 
-	return PyInt_FromLong(PyTryBlock);
+	return newintobject(block);
 }
 	
-static PyObject *
+static object *
 CD_seektrack(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	int track;
-	long PyTryBlock;
+	long block;
 
-	if (!PyArg_ParseTuple(args, "i", &track))
+	if (!newgetargs(args, "i", &track))
 		return NULL;
 
-	PyTryBlock = CDseektrack(self->ob_cdplayer, track);
-	if (PyTryBlock == -1) {
-		PyErr_SetFromErrno(CdError);
+	block = CDseektrack(self->ob_cdplayer, track);
+	if (block == -1) {
+		err_errno(CdError);
 		return NULL;
 	}
 
-	return PyInt_FromLong(PyTryBlock);
+	return newintobject(block);
 }
 	
-static PyObject *
+static object *
 CD_seekblock(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
-	unsigned long PyTryBlock;
+	unsigned long block;
 
-	if (!PyArg_ParseTuple(args, "l", &PyTryBlock))
+	if (!newgetargs(args, "l", &block))
 		return NULL;
 
-	PyTryBlock = CDseekblock(self->ob_cdplayer, PyTryBlock);
-	if (PyTryBlock == (unsigned long) -1) {
-		PyErr_SetFromErrno(CdError);
+	block = CDseekblock(self->ob_cdplayer, block);
+	if (block == (unsigned long) -1) {
+		err_errno(CdError);
 		return NULL;
 	}
 
-	return PyInt_FromLong(PyTryBlock);
+	return newintobject(block);
 }
 	
-static PyObject *
+static object *
 CD_stop(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	if (!CDstop(self->ob_cdplayer)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "stop failed");
+			err_setstr(CdError, "stop failed");
 		return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 	
-static PyObject *
+static object *
 CD_togglepause(self, args)
 	cdplayerobject *self;
-	PyObject *args;
+	object *args;
 {
 	CDSTATUS status;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	if (!CDtogglepause(self->ob_cdplayer)) {
 		if (CDgetstatus(self->ob_cdplayer, &status) &&
 		    status.state == CD_NODISC)
-			PyErr_SetString(CdError, "no disc in player");
+			err_setstr(CdError, "no disc in player");
 		else
-			PyErr_SetString(CdError, "togglepause failed");
+			err_setstr(CdError, "togglepause failed");
 		return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 	
-static PyMethodDef cdplayer_methods[] = {
-	{"allowremoval",	(PyCFunction)CD_allowremoval,	1},
-	{"bestreadsize",	(PyCFunction)CD_bestreadsize,	1},
-	{"close",		(PyCFunction)CD_close,		1},
-	{"eject",		(PyCFunction)CD_eject,		1},
-	{"getstatus",		(PyCFunction)CD_getstatus,		1},
-	{"gettrackinfo",	(PyCFunction)CD_gettrackinfo,	1},
-	{"msftoblock",		(PyCFunction)CD_msftoblock,		1},
-	{"play",		(PyCFunction)CD_play,		1},
-	{"playabs",		(PyCFunction)CD_playabs,		1},
-	{"playtrack",		(PyCFunction)CD_playtrack,		1},
-	{"playtrackabs",	(PyCFunction)CD_playtrackabs,	1},
-	{"preventremoval",	(PyCFunction)CD_preventremoval,	1},
-	{"readda",		(PyCFunction)CD_readda,		1},
-	{"seek",		(PyCFunction)CD_seek,		1},
-	{"seekblock",		(PyCFunction)CD_seekblock,		1},
-	{"seektrack",		(PyCFunction)CD_seektrack,		1},
-	{"stop",		(PyCFunction)CD_stop,		1},
-	{"togglepause",		(PyCFunction)CD_togglepause,   	1},
+static struct methodlist cdplayer_methods[] = {
+	{"allowremoval",	(method)CD_allowremoval,	1},
+	{"bestreadsize",	(method)CD_bestreadsize,	1},
+	{"close",		(method)CD_close,		1},
+	{"eject",		(method)CD_eject,		1},
+	{"getstatus",		(method)CD_getstatus,		1},
+	{"gettrackinfo",	(method)CD_gettrackinfo,	1},
+	{"msftoblock",		(method)CD_msftoblock,		1},
+	{"play",		(method)CD_play,		1},
+	{"playabs",		(method)CD_playabs,		1},
+	{"playtrack",		(method)CD_playtrack,		1},
+	{"playtrackabs",	(method)CD_playtrackabs,	1},
+	{"preventremoval",	(method)CD_preventremoval,	1},
+	{"readda",		(method)CD_readda,		1},
+	{"seek",		(method)CD_seek,		1},
+	{"seekblock",		(method)CD_seekblock,		1},
+	{"seektrack",		(method)CD_seektrack,		1},
+	{"stop",		(method)CD_stop,		1},
+	{"togglepause",		(method)CD_togglepause,		1},
 	{NULL,			NULL} 		/* sentinel */
 };
 
@@ -447,23 +449,23 @@ cdplayer_dealloc(self)
 {
 	if (self->ob_cdplayer != NULL)
 		CDclose(self->ob_cdplayer);
-	PyMem_DEL(self);
+	DEL(self);
 }
 
-static PyObject *
+static object *
 cdplayer_getattr(self, name)
 	cdplayerobject *self;
 	char *name;
 {
 	if (self->ob_cdplayer == NULL) {
-		PyErr_SetString(PyExc_RuntimeError, "no player active");
+		err_setstr(RuntimeError, "no player active");
 		return NULL;
 	}
-	return Py_FindMethod(cdplayer_methods, (PyObject *)self, name);
+	return findmethod(cdplayer_methods, (object *)self, name);
 }
 
-PyTypeObject CdPlayertype = {
-	PyObject_HEAD_INIT(&PyType_Type)
+typeobject CdPlayertype = {
+	OB_HEAD_INIT(&Typetype)
 	0,			/*ob_size*/
 	"cdplayer",		/*tp_name*/
 	sizeof(cdplayerobject),	/*tp_size*/
@@ -477,22 +479,22 @@ PyTypeObject CdPlayertype = {
 	0,			/*tp_repr*/
 };
 
-static PyObject *
+static object *
 newcdplayerobject(cdp)
 	CDPLAYER *cdp;
 {
 	cdplayerobject *p;
 
-	p = PyObject_NEW(cdplayerobject, &CdPlayertype);
+	p = NEWOBJ(cdplayerobject, &CdPlayertype);
 	if (p == NULL)
 		return NULL;
 	p->ob_cdplayer = cdp;
-	return (PyObject *) p;
+	return (object *) p;
 }
 
-static PyObject *
+static object *
 CD_open(self, args)
-	PyObject *self, *args;
+	object *self, *args;
 {
 	char *dev, *direction;
 	CDPLAYER *cdp;
@@ -503,12 +505,12 @@ CD_open(self, args)
 	 */
 	dev = NULL;
 	direction = "r";
-	if (!PyArg_ParseTuple(args, "|zs", &dev, &direction))
+	if (!newgetargs(args, "|zs", &dev, &direction))
 		return NULL;
 
 	cdp = CDopen(dev, direction);
 	if (cdp == NULL) {
-		PyErr_SetFromErrno(CdError);
+		err_errno(CdError);
 		return NULL;
 	}
 
@@ -516,11 +518,11 @@ CD_open(self, args)
 }
 
 typedef struct {
-	PyObject_HEAD
+	OB_HEAD
 	CDPARSER *ob_cdparser;
 	struct {
-		PyObject *ob_cdcallback;
-		PyObject *ob_cdcallbackarg;
+		object *ob_cdcallback;
+		object *ob_cdcallbackarg;
 	} ob_cdcallbacks[NCALLBACKS];
 } cdparserobject;
 
@@ -530,45 +532,45 @@ CD_callback(arg, type, data)
 	CDDATATYPES type;
 	void *data;
 {
-	PyObject *result, *args, *v = NULL;
+	object *result, *args, *v = NULL;
 	char *p;
 	int i;
 	cdparserobject *self;
 
 	self = (cdparserobject *) arg;
-	args = PyTuple_New(3);
+	args = newtupleobject(3);
 	if (args == NULL)
 		return;
-	Py_INCREF(self->ob_cdcallbacks[type].ob_cdcallbackarg);
-	PyTuple_SetItem(args, 0, self->ob_cdcallbacks[type].ob_cdcallbackarg);
-	PyTuple_SetItem(args, 1, PyInt_FromLong((long) type));
+	INCREF(self->ob_cdcallbacks[type].ob_cdcallbackarg);
+	settupleitem(args, 0, self->ob_cdcallbacks[type].ob_cdcallbackarg);
+	settupleitem(args, 1, newintobject((long) type));
 	switch (type) {
 	case cd_audio:
-		v = PyString_FromStringAndSize(data, CDDA_DATASIZE);
+		v = newsizedstringobject(data, CDDA_DATASIZE);
 		break;
 	case cd_pnum:
 	case cd_index:
-		v = PyInt_FromLong(((CDPROGNUM *) data)->value);
+		v = newintobject(((CDPROGNUM *) data)->value);
 		break;
 	case cd_ptime:
 	case cd_atime:
 #define ptr ((struct cdtimecode *) data)
-		v = Py_BuildValue("(iii)",
+		v = mkvalue("(iii)",
 			    ptr->mhi * 10 + ptr->mlo,
 			    ptr->shi * 10 + ptr->slo,
 			    ptr->fhi * 10 + ptr->flo);
 #undef ptr
 		break;
 	case cd_catalog:
-		v = PyString_FromStringAndSize(NULL, 13);
-		p = PyString_AsString(v);
+		v = newsizedstringobject(NULL, 13);
+		p = getstringvalue(v);
 		for (i = 0; i < 13; i++)
 			*p++ = ((char *) data)[i] + '0';
 		break;
 	case cd_ident:
 #define ptr ((struct cdident *) data)
-		v = PyString_FromStringAndSize(NULL, 12);
-		p = PyString_AsString(v);
+		v = newsizedstringobject(NULL, 12);
+		p = getstringvalue(v);
 		CDsbtoa(p, ptr->country, 2);
 		p += 2;
 		CDsbtoa(p, ptr->owner, 3);
@@ -583,29 +585,28 @@ CD_callback(arg, type, data)
 #undef ptr
 		break;
 	case cd_control:
-		v = PyInt_FromLong((long) *((unchar *) data));
+		v = newintobject((long) *((unchar *) data));
 		break;
 	}
-	PyTuple_SetItem(args, 2, v);
-	if (PyErr_Occurred()) {
-		Py_DECREF(args);
+	settupleitem(args, 2, v);
+	if (err_occurred()) {
+		DECREF(args);
 		return;
 	}
 	
-	result = PyEval_CallObject(self->ob_cdcallbacks[type].ob_cdcallback,
-				   args);
-	Py_DECREF(args);
-	Py_XDECREF(result);
+	result = call_object(self->ob_cdcallbacks[type].ob_cdcallback, args);
+	DECREF(args);
+	XDECREF(result);
 }
 
-static PyObject *
+static object *
 CD_deleteparser(self, args)
 	cdparserobject *self;
-	PyObject *args;
+	object *args;
 {
 	int i;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	CDdeleteparser(self->ob_cdparser);
@@ -613,30 +614,30 @@ CD_deleteparser(self, args)
 
 	/* no sense in keeping the callbacks, so remove them */
 	for (i = 0; i < NCALLBACKS; i++) {
-		Py_XDECREF(self->ob_cdcallbacks[i].ob_cdcallback);
+		XDECREF(self->ob_cdcallbacks[i].ob_cdcallback);
 		self->ob_cdcallbacks[i].ob_cdcallback = NULL;
-		Py_XDECREF(self->ob_cdcallbacks[i].ob_cdcallbackarg);
+		XDECREF(self->ob_cdcallbacks[i].ob_cdcallbackarg);
 		self->ob_cdcallbacks[i].ob_cdcallbackarg = NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 CD_parseframe(self, args)
 	cdparserobject *self;
-	PyObject *args;
+	object *args;
 {
 	char *cdfp;
 	int length;
 	CDFRAME *p;
 
-	if (!PyArg_ParseTuple(args, "s#", &cdfp, &length))
+	if (!newgetargs(args, "s#", &cdfp, &length))
 		return NULL;
 
 	if (length % sizeof(CDFRAME) != 0) {
-		PyErr_SetString(PyExc_TypeError, "bad length");
+		err_setstr(TypeError, "bad length");
 		return NULL;
 	}
 
@@ -645,106 +646,102 @@ CD_parseframe(self, args)
 		CDparseframe(self->ob_cdparser, p);
 		length -= sizeof(CDFRAME);
 		p++;
-		if (PyErr_Occurred())
+		if (err_occurred())
 			return NULL;
 	}
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 CD_removecallback(self, args)
 	cdparserobject *self;
-	PyObject *args;
+	object *args;
 {
 	int type;
 
-	if (!PyArg_ParseTuple(args, "i", &type))
+	if (!newgetargs(args, "i", &type))
 		return NULL;
 
 	if (type < 0 || type >= NCALLBACKS) {
-		PyErr_SetString(PyExc_TypeError, "bad type");
+		err_setstr(TypeError, "bad type");
 		return NULL;
 	}
 
 	CDremovecallback(self->ob_cdparser, (CDDATATYPES) type);
 
-	Py_XDECREF(self->ob_cdcallbacks[type].ob_cdcallback);
+	XDECREF(self->ob_cdcallbacks[type].ob_cdcallback);
 	self->ob_cdcallbacks[type].ob_cdcallback = NULL;
 
-	Py_XDECREF(self->ob_cdcallbacks[type].ob_cdcallbackarg);
+	XDECREF(self->ob_cdcallbacks[type].ob_cdcallbackarg);
 	self->ob_cdcallbacks[type].ob_cdcallbackarg = NULL;
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 CD_resetparser(self, args)
 	cdparserobject *self;
-	PyObject *args;
+	object *args;
 {
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 
 	CDresetparser(self->ob_cdparser);
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 CD_addcallback(self, args)
 	cdparserobject *self;
-	PyObject *args;
+	object *args;
 {
 	int type;
-	PyObject *func, *funcarg;
+	object *func, *funcarg;
 
 	/* XXX - more work here */
-	if (!PyArg_ParseTuple(args, "iOO", &type, &func, &funcarg))
+	if (!newgetargs(args, "iOO", &type, &func, &funcarg))
 		return NULL;
 
 	if (type < 0 || type >= NCALLBACKS) {
-		PyErr_SetString(PyExc_TypeError, "argument out of range");
+		err_setstr(TypeError, "argument out of range");
 		return NULL;
 	}
 
 #ifdef CDsetcallback
-	CDaddcallback(self->ob_cdparser, (CDDATATYPES) type, CD_callback,
-		      (void *) self);
+	CDaddcallback(self->ob_cdparser, (CDDATATYPES) type, CD_callback, (void *) self);
 #else
-	CDsetcallback(self->ob_cdparser, (CDDATATYPES) type, CD_callback,
-		      (void *) self);
+	CDsetcallback(self->ob_cdparser, (CDDATATYPES) type, CD_callback, (void *) self);
 #endif
-	Py_XDECREF(self->ob_cdcallbacks[type].ob_cdcallback);
-	Py_INCREF(func);
+	XDECREF(self->ob_cdcallbacks[type].ob_cdcallback);
+	INCREF(func);
 	self->ob_cdcallbacks[type].ob_cdcallback = func;
-	Py_XDECREF(self->ob_cdcallbacks[type].ob_cdcallbackarg);
-	Py_INCREF(funcarg);
+	XDECREF(self->ob_cdcallbacks[type].ob_cdcallbackarg);
+	INCREF(funcarg);
 	self->ob_cdcallbacks[type].ob_cdcallbackarg = funcarg;
 
 /*
 	if (type == cd_audio) {
 		sigfpe_[_UNDERFL].repls = _ZERO;
-		handle_sigfpes(_ON, _EN_UNDERFL, NULL,
-		                        _ABORT_ON_ERROR, NULL);
+		handle_sigfpes(_ON, _EN_UNDERFL, NULL, _ABORT_ON_ERROR, NULL);
 	}
 */
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyMethodDef cdparser_methods[] = {
-	{"addcallback",		(PyCFunction)CD_addcallback,   	1},
-	{"deleteparser",	(PyCFunction)CD_deleteparser,	1},
-	{"parseframe",		(PyCFunction)CD_parseframe,	1},
-	{"removecallback",	(PyCFunction)CD_removecallback,	1},
-	{"resetparser",		(PyCFunction)CD_resetparser,	1},
-		                                /* backward compatibility */
-	{"setcallback",		(PyCFunction)CD_addcallback,   	1},
+static struct methodlist cdparser_methods[] = {
+	{"addcallback",		(method)CD_addcallback,		1},
+	{"deleteparser",	(method)CD_deleteparser,	1},
+	{"parseframe",		(method)CD_parseframe,		1},
+	{"removecallback",	(method)CD_removecallback,	1},
+	{"resetparser",		(method)CD_resetparser,		1},
+	{"setcallback",		(method)CD_addcallback,		1}, /* backward compatibility */
 	{NULL,			NULL} 		/* sentinel */
 };
 
@@ -755,30 +752,30 @@ cdparser_dealloc(self)
 	int i;
 
 	for (i = 0; i < NCALLBACKS; i++) {
-		Py_XDECREF(self->ob_cdcallbacks[i].ob_cdcallback);
+		XDECREF(self->ob_cdcallbacks[i].ob_cdcallback);
 		self->ob_cdcallbacks[i].ob_cdcallback = NULL;
-		Py_XDECREF(self->ob_cdcallbacks[i].ob_cdcallbackarg);
+		XDECREF(self->ob_cdcallbacks[i].ob_cdcallbackarg);
 		self->ob_cdcallbacks[i].ob_cdcallbackarg = NULL;
 	}
 	CDdeleteparser(self->ob_cdparser);
-	PyMem_DEL(self);
+	DEL(self);
 }
 
-static PyObject *
+static object *
 cdparser_getattr(self, name)
 	cdparserobject *self;
 	char *name;
 {
 	if (self->ob_cdparser == NULL) {
-		PyErr_SetString(PyExc_RuntimeError, "no parser active");
+		err_setstr(RuntimeError, "no parser active");
 		return NULL;
 	}
 
-	return Py_FindMethod(cdparser_methods, (PyObject *)self, name);
+	return findmethod(cdparser_methods, (object *)self, name);
 }
 
-PyTypeObject CdParsertype = {
-	PyObject_HEAD_INIT(&PyType_Type)
+typeobject CdParsertype = {
+	OB_HEAD_INIT(&Typetype)
 	0,			/*ob_size*/
 	"cdparser",		/*tp_name*/
 	sizeof(cdparserobject),	/*tp_size*/
@@ -792,14 +789,14 @@ PyTypeObject CdParsertype = {
 	0,			/*tp_repr*/
 };
 
-static PyObject *
+static object *
 newcdparserobject(cdp)
 	CDPARSER *cdp;
 {
 	cdparserobject *p;
 	int i;
 
-	p = PyObject_NEW(cdparserobject, &CdParsertype);
+	p = NEWOBJ(cdparserobject, &CdParsertype);
 	if (p == NULL)
 		return NULL;
 	p->ob_cdparser = cdp;
@@ -807,83 +804,81 @@ newcdparserobject(cdp)
 		p->ob_cdcallbacks[i].ob_cdcallback = NULL;
 		p->ob_cdcallbacks[i].ob_cdcallbackarg = NULL;
 	}
-	return (PyObject *) p;
+	return (object *) p;
 }
 
-static PyObject *
+static object *
 CD_createparser(self, args)
-	PyObject *self, *args;
+	object *self, *args;
 {
 	CDPARSER *cdp;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!newgetargs(args, ""))
 		return NULL;
 	cdp = CDcreateparser();
 	if (cdp == NULL) {
-		PyErr_SetString(CdError, "createparser failed");
+		err_setstr(CdError, "createparser failed");
 		return NULL;
 	}
 
 	return newcdparserobject(cdp);
 }
 
-static PyObject *
+static object *
 CD_msftoframe(self, args)
-	PyObject *self, *args;
+	object *self, *args;
 {
 	int min, sec, frame;
 
-	if (!PyArg_ParseTuple(args, "iii", &min, &sec, &frame))
+	if (!newgetargs(args, "iii", &min, &sec, &frame))
 		return NULL;
 
-	return PyInt_FromLong((long) CDmsftoframe(min, sec, frame));
+	return newintobject((long) CDmsftoframe(min, sec, frame));
 }
 	
-static PyMethodDef CD_methods[] = {
-	{"open",		(PyCFunction)CD_open,		1},
-	{"createparser",	(PyCFunction)CD_createparser,	1},
-	{"msftoframe",		(PyCFunction)CD_msftoframe,	1},
+static struct methodlist CD_methods[] = {
+	{"open",		(method)CD_open,		1},
+	{"createparser",	(method)CD_createparser,	1},
+	{"msftoframe",		(method)CD_msftoframe,		1},
 	{NULL,		NULL}	/* Sentinel */
 };
 
 void
 initcd()
 {
-	PyObject *m, *d;
+	object *m, *d;
 
-	m = Py_InitModule("cd", CD_methods);
-	d = PyModule_GetDict(m);
+	m = initmodule("cd", CD_methods);
+	d = getmoduledict(m);
 
-	CdError = PyString_FromString("cd.error");
-	PyDict_SetItemString(d, "error", CdError);
+	CdError = newstringobject("cd.error");
+	dictinsert(d, "error", CdError);
 
 	/* Identifiers for the different types of callbacks from the parser */
-	PyDict_SetItemString(d, "audio", PyInt_FromLong((long) cd_audio));
-	PyDict_SetItemString(d, "pnum", PyInt_FromLong((long) cd_pnum));
-	PyDict_SetItemString(d, "index", PyInt_FromLong((long) cd_index));
-	PyDict_SetItemString(d, "ptime", PyInt_FromLong((long) cd_ptime));
-	PyDict_SetItemString(d, "atime", PyInt_FromLong((long) cd_atime));
-	PyDict_SetItemString(d, "catalog", PyInt_FromLong((long) cd_catalog));
-	PyDict_SetItemString(d, "ident", PyInt_FromLong((long) cd_ident));
-	PyDict_SetItemString(d, "control", PyInt_FromLong((long) cd_control));
+	dictinsert(d, "audio", newintobject((long) cd_audio));
+	dictinsert(d, "pnum", newintobject((long) cd_pnum));
+	dictinsert(d, "index", newintobject((long) cd_index));
+	dictinsert(d, "ptime", newintobject((long) cd_ptime));
+	dictinsert(d, "atime", newintobject((long) cd_atime));
+	dictinsert(d, "catalog", newintobject((long) cd_catalog));
+	dictinsert(d, "ident", newintobject((long) cd_ident));
+	dictinsert(d, "control", newintobject((long) cd_control));
 
 	/* Block size information for digital audio data */
-	PyDict_SetItemString(d, "DATASIZE",
-			   PyInt_FromLong((long) CDDA_DATASIZE));
-	PyDict_SetItemString(d, "BLOCKSIZE",
-			   PyInt_FromLong((long) CDDA_BLOCKSIZE));
+	dictinsert(d, "DATASIZE", newintobject((long) CDDA_DATASIZE));
+	dictinsert(d, "BLOCKSIZE", newintobject((long) CDDA_BLOCKSIZE));
 
 	/* Possible states for the cd player */
-	PyDict_SetItemString(d, "ERROR", PyInt_FromLong((long) CD_ERROR));
-	PyDict_SetItemString(d, "NODISC", PyInt_FromLong((long) CD_NODISC));
-	PyDict_SetItemString(d, "READY", PyInt_FromLong((long) CD_READY));
-	PyDict_SetItemString(d, "PLAYING", PyInt_FromLong((long) CD_PLAYING));
-	PyDict_SetItemString(d, "PAUSED", PyInt_FromLong((long) CD_PAUSED));
-	PyDict_SetItemString(d, "STILL", PyInt_FromLong((long) CD_STILL));
+	dictinsert(d, "ERROR", newintobject((long) CD_ERROR));
+	dictinsert(d, "NODISC", newintobject((long) CD_NODISC));
+	dictinsert(d, "READY", newintobject((long) CD_READY));
+	dictinsert(d, "PLAYING", newintobject((long) CD_PLAYING));
+	dictinsert(d, "PAUSED", newintobject((long) CD_PAUSED));
+	dictinsert(d, "STILL", newintobject((long) CD_STILL));
 #ifdef CD_CDROM			/* only newer versions of the library */
-	PyDict_SetItemString(d, "CDROM", PyInt_FromLong((long) CD_CDROM));
+	dictinsert(d, "CDROM", newintobject((long) CD_CDROM));
 #endif
 
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module cd");
+	if (err_occurred())
+		fatal("can't initialize module cd");
 }

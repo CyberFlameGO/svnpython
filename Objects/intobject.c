@@ -237,8 +237,6 @@ static long
 int_hash(v)
 	intobject *v;
 {
-	/* XXX If this is changed, you also need to change the way
-	   Python's long, float and complex types are hashed. */
 	long x = v -> ob_ival;
 	if (x == -1)
 		x = -2;
@@ -387,13 +385,13 @@ int_mul(v, w)
 			(NB b == bl in this case, and we make a = al) */
 
 	y = ah*b;
-	if (y >= (1L << (LONG_BIT/2 - 1)))
+	if (y >= (1L << (LONG_BIT/2)))
 		goto bad;
 	a &= (1L << (LONG_BIT/2)) - 1;
 	x = a*b;
 	if (x < 0)
 		goto bad;
-	x += y << (LONG_BIT/2);
+	x += y << LONG_BIT/2;
 	if (x < 0)
 		goto bad;
  ok:
@@ -721,12 +719,14 @@ static object *
 int_oct(v)
 	intobject *v;
 {
-	char buf[100];
+	char buf[20];
 	long x = v -> ob_ival;
 	if (x == 0)
 		strcpy(buf, "0");
-	else
+	else if (x > 0)
 		sprintf(buf, "0%lo", x);
+	else
+		sprintf(buf, "-0%lo", -x);
 	return newstringobject(buf);
 }
 
@@ -734,9 +734,12 @@ static object *
 int_hex(v)
 	intobject *v;
 {
-	char buf[100];
+	char buf[20];
 	long x = v -> ob_ival;
-	sprintf(buf, "0x%lx", x);
+	if (x >= 0)
+		sprintf(buf, "0x%lx", x);
+	else
+		sprintf(buf, "-0x%lx", -x);
 	return newstringobject(buf);
 }
 

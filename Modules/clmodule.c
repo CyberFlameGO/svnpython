@@ -36,17 +36,19 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #include <stdarg.h>
 #include <cl.h>
-#include "Python.h"
+#include "allobjects.h"
+#include "modsupport.h"		/* For getargs() etc. */
+#include "ceval.h"		/* For call_object() */
 
 typedef struct {
-	PyObject_HEAD
+	OB_HEAD
 	int ob_isCompressor;	/* Compressor or Decompressor */
 	CL_Handle ob_compressorHdl;
 	int *ob_paramtypes;
 	int ob_nparams;
 } clobject;
 
-static PyObject *ClError;		/* exception cl.error */
+static object *ClError;		/* exception cl.error */
 
 static int error_handler_called = 0;
 
@@ -69,7 +71,7 @@ cl_ErrorHandler(CL_Handle handle, int code, const char *fmt, ...)
 	char errbuf[BUFSIZ];	/* hopefully big enough */
 	char *p;
 
-	if (PyErr_Occurred())	/* don't change existing error */
+	if (err_occurred())	/* don't change existing error */
 		return;
 	error_handler_called = 1;
 	va_start(ap, fmt);
@@ -78,7 +80,7 @@ cl_ErrorHandler(CL_Handle handle, int code, const char *fmt, ...)
 	p = &errbuf[strlen(errbuf) - 1]; /* swat the line feed */
 	if (*p == '\n')
 		*p = 0;
-	PyErr_SetString(ClError, errbuf);
+	err_setstr(ClError, errbuf);
 }
 
 /*
@@ -95,15 +97,14 @@ param_type_is_float(clobject *self, int param)
 		if (error_handler_called)
 			return -1;
 
-		self->ob_paramtypes = PyMem_NEW(int, bufferlength);
+		self->ob_paramtypes = NEW(int, bufferlength);
 		if (self->ob_paramtypes == NULL)
 			return -1;
 		self->ob_nparams = bufferlength / 2;
 
-		(void) clQueryParams(self->ob_compressorHdl,
-				     self->ob_paramtypes, bufferlength);
+		(void) clQueryParams(self->ob_compressorHdl, self->ob_paramtypes, bufferlength);
 		if (error_handler_called) {
-			PyMem_DEL(self->ob_paramtypes);
+			DEL(self->ob_paramtypes);
 			self->ob_paramtypes = NULL;
 			return -1;
 		}
@@ -122,23 +123,22 @@ param_type_is_float(clobject *self, int param)
 /********************************************************************
 	       Single image compression/decompression.
 ********************************************************************/
-static PyObject *
-cl_CompressImage(PyObject *self, PyObject *args)
+static object *
+cl_CompressImage(object *self, object *args)
 {
 	int compressionScheme, width, height, originalFormat;
 	float compressionRatio;
 	int frameBufferSize, compressedBufferSize;
 	char *frameBuffer;
-	PyObject *compressedBuffer;
+	object *compressedBuffer;
 
-	if (!PyArg_Parse(args, "(iiiifs#)", &compressionScheme,
-			 &width, &height,
-			 &originalFormat, &compressionRatio, &frameBuffer,
-			 &frameBufferSize))
+	if (!getargs(args, "(iiiifs#)", &compressionScheme, &width, &height,
+		     &originalFormat, &compressionRatio, &frameBuffer,
+		     &frameBufferSize))
 		return NULL;
 
-  retry:
-	compressedBuffer = PyString_FromStringAndSize(NULL, frameBufferSize);
+ retry:
+	compressedBuffer = newsizedstringobject(NULL, frameBufferSize);
 	if (compressedBuffer == NULL)
 		return NULL;
 
@@ -147,54 +147,53 @@ cl_CompressImage(PyObject *self, PyObject *args)
 	if (clCompressImage(compressionScheme, width, height, originalFormat,
 			    compressionRatio, (void *) frameBuffer,
 			    &compressedBufferSize,
-			    (void *) PyString_AsString(compressedBuffer))
+			    (void *) getstringvalue(compressedBuffer))
 	    == FAILURE) {
-		Py_DECREF(compressedBuffer);
+		DECREF(compressedBuffer);
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "clCompressImage failed");
+			err_setstr(ClError, "clCompressImage failed");
 		return NULL;
 	}
 
 	if (compressedBufferSize > frameBufferSize) {
 		frameBufferSize = compressedBufferSize;
-		Py_DECREF(compressedBuffer);
+		DECREF(compressedBuffer);
 		goto retry;
 	}
 
 	if (compressedBufferSize < frameBufferSize)
-		if (_PyString_Resize(&compressedBuffer, compressedBufferSize))
+		if (resizestring(&compressedBuffer, compressedBufferSize))
 			return NULL;
 
 	return compressedBuffer;
 }
 
-static PyObject *
-cl_DecompressImage(PyObject *self, PyObject *args)
+static object *
+cl_DecompressImage(object *self, object *args)
 {
 	int compressionScheme, width, height, originalFormat;
 	char *compressedBuffer;
 	int compressedBufferSize, frameBufferSize;
-	PyObject *frameBuffer;
+	object *frameBuffer;
 
-	if (!PyArg_Parse(args, "(iiiis#)", &compressionScheme, &width, &height,
-			 &originalFormat, &compressedBuffer,
-			 &compressedBufferSize))
+	if (!getargs(args, "(iiiis#)", &compressionScheme, &width, &height,
+		     &originalFormat, &compressedBuffer,
+		     &compressedBufferSize))
 		return NULL;
 
 	frameBufferSize = width * height * CL_BytesPerPixel(originalFormat);
 
-	frameBuffer = PyString_FromStringAndSize(NULL, frameBufferSize);
+	frameBuffer = newsizedstringobject(NULL, frameBufferSize);
 	if (frameBuffer == NULL)
 		return NULL;
 
 	error_handler_called = 0;
 	if (clDecompressImage(compressionScheme, width, height, originalFormat,
 			      compressedBufferSize, compressedBuffer,
-			      (void *) PyString_AsString(frameBuffer))
-	    == FAILURE) {
-		Py_DECREF(frameBuffer);
+			      (void *) getstringvalue(frameBuffer)) == FAILURE) {
+		DECREF(frameBuffer);
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "clDecompressImage failed");
+			err_setstr(ClError, "clDecompressImage failed");
 		return NULL;
 	}
 
@@ -205,59 +204,58 @@ cl_DecompressImage(PyObject *self, PyObject *args)
 		Sequential compression/decompression.
 ********************************************************************/
 #define CheckCompressor(self)	if ((self)->ob_compressorHdl == NULL) { \
-	PyErr_SetString(PyExc_RuntimeError, "(de)compressor not active"); \
-	return NULL; \
-}
+					err_setstr(RuntimeError, "(de)compressor not active"); \
+					return NULL; \
+				}
 
-static PyObject *
-doClose(clobject *self, PyObject *args, int (*close_func)(CL_Handle))
+static object *
+doClose(clobject *self, object *args, int (*close_func)(CL_Handle))
 {
 	CheckCompressor(self);
 
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 
 	error_handler_called = 0;
 	if ((*close_func)(self->ob_compressorHdl) == FAILURE) {
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "close failed");
+			err_setstr(ClError, "close failed");
 		return NULL;
 	}
 
 	self->ob_compressorHdl = NULL;
 
 	if (self->ob_paramtypes)
-		PyMem_DEL(self->ob_paramtypes);
+		DEL(self->ob_paramtypes);
 	self->ob_paramtypes = NULL;
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
-clm_CloseCompressor(PyObject *self, PyObject *args)
+static object *
+clm_CloseCompressor(object *self, object *args)
 {
 	return doClose(SELF, args, clCloseCompressor);
 }
 
-static PyObject *
-clm_CloseDecompressor(PyObject *self, PyObject *args)
+static object *
+clm_CloseDecompressor(object *self, object *args)
 {
 	return doClose(SELF, args, clCloseDecompressor);
 }
 
-static PyObject *
-clm_Compress(PyObject *self, PyObject *args)
+static object *
+clm_Compress(object *self, object *args)
 {
 	int numberOfFrames;
 	int frameBufferSize, compressedBufferSize, size;
 	char *frameBuffer;
-	PyObject *data;
+	object *data;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_Parse(args, "(is#)", &numberOfFrames,
-			 &frameBuffer, &frameBufferSize))
+	if (!getargs(args, "(is#)", &numberOfFrames, &frameBuffer, &frameBufferSize))
 		return NULL;
 
 	error_handler_called = 0;
@@ -266,47 +264,46 @@ clm_Compress(PyObject *self, PyObject *args)
 	if (error_handler_called)
 		return NULL;
 
-	data = PyString_FromStringAndSize(NULL, size);
+	data = newsizedstringobject(NULL, size);
 	if (data == NULL)
 		return NULL;
 
 	error_handler_called = 0;
 	if (clCompress(SELF->ob_compressorHdl, numberOfFrames,
 		       (void *) frameBuffer, &compressedBufferSize,
-		       (void *) PyString_AsString(data)) == FAILURE) {
-		Py_DECREF(data);
+		       (void *) getstringvalue(data)) == FAILURE) {
+		DECREF(data);
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "compress failed");
+			err_setstr(ClError, "compress failed");
 		return NULL;
 	}
 
 	if (compressedBufferSize < size)
-		if (_PyString_Resize(&data, compressedBufferSize))
+		if (resizestring(&data, compressedBufferSize))
 			return NULL;
 
 	if (compressedBufferSize > size) {
 		/* we didn't get all "compressed" data */
-		Py_DECREF(data);
-		PyErr_SetString(ClError,
-				"compressed data is more than fitted");
+		DECREF(data);
+		err_setstr(ClError, "compressed data is more than fitted");
 		return NULL;
 	}
 
 	return data;
 }
 
-static PyObject *
-clm_Decompress(PyObject *self, PyObject *args)
+static object *
+clm_Decompress(object *self, object *args)
 {
-	PyObject *data;
+	object *data;
 	int numberOfFrames;
 	char *compressedData;
 	int compressedDataSize, dataSize;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_Parse(args, "(is#)", &numberOfFrames, &compressedData,
-			 &compressedDataSize))
+	if (!getargs(args, "(is#)", &numberOfFrames, &compressedData,
+		     &compressedDataSize))
 		return NULL;
 
 	error_handler_called = 0;
@@ -314,28 +311,28 @@ clm_Decompress(PyObject *self, PyObject *args)
 	if (error_handler_called)
 		return NULL;
 
-	data = PyString_FromStringAndSize(NULL, dataSize);
+	data = newsizedstringobject(NULL, dataSize);
 	if (data == NULL)
 		return NULL;
 
 	error_handler_called = 0;
 	if (clDecompress(SELF->ob_compressorHdl, numberOfFrames,
 			 compressedDataSize, (void *) compressedData,
-			 (void *) PyString_AsString(data)) == FAILURE) {
-		Py_DECREF(data);
+			 (void *) getstringvalue(data)) == FAILURE) {
+		DECREF(data);
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "decompress failed");
+			err_setstr(ClError, "decompress failed");
 		return NULL;
 	}
 
 	return data;
 }
 
-static PyObject *
-doParams(clobject *self, PyObject *args, int (*func)(CL_Handle, int *, int),
+static object *
+doParams(clobject *self, object *args, int (*func)(CL_Handle, int *, int),
 	 int modified)
 {
-	PyObject *list, *v;
+	object *list, *v;
 	int *PVbuffer;
 	int length;
 	int i;
@@ -343,31 +340,31 @@ doParams(clobject *self, PyObject *args, int (*func)(CL_Handle, int *, int),
 	
 	CheckCompressor(self);
 
-	if (!PyArg_Parse(args, "O", &list))
+	if (!getargs(args, "O", &list))
 		return NULL;
-	if (!PyList_Check(list)) {
-		PyErr_BadArgument();
+	if (!is_listobject(list)) {
+		err_badarg();
 		return NULL;
 	}
-	length = PyList_Size(list);
-	PVbuffer = PyMem_NEW(int, length);
+	length = getlistsize(list);
+	PVbuffer = NEW(int, length);
 	if (PVbuffer == NULL)
-		return PyErr_NoMemory();
+		return err_nomem();
 	for (i = 0; i < length; i++) {
-		v = PyList_GetItem(list, i);
-		if (PyFloat_Check(v)) {
-			number = PyFloat_AsDouble(v);
+		v = getlistitem(list, i);
+		if (is_floatobject(v)) {
+			number = getfloatvalue(v);
 			PVbuffer[i] = CL_TypeIsInt(number);
-		} else if (PyInt_Check(v)) {
-			PVbuffer[i] = PyInt_AsLong(v);
+		} else if (is_intobject(v)) {
+			PVbuffer[i] = getintvalue(v);
 			if ((i & 1) &&
 			    param_type_is_float(self, PVbuffer[i-1]) > 0) {
 				number = PVbuffer[i];
 				PVbuffer[i] = CL_TypeIsInt(number);
 			}
 		} else {
-			PyMem_DEL(PVbuffer);
-			PyErr_BadArgument();
+			DEL(PVbuffer);
+			err_badarg();
 			return NULL;
 		}
 	}
@@ -375,7 +372,7 @@ doParams(clobject *self, PyObject *args, int (*func)(CL_Handle, int *, int),
 	error_handler_called = 0;
 	(*func)(self->ob_compressorHdl, PVbuffer, length);
 	if (error_handler_called) {
-		PyMem_DEL(PVbuffer);
+		DEL(PVbuffer);
 		return NULL;
 	}
 
@@ -384,40 +381,40 @@ doParams(clobject *self, PyObject *args, int (*func)(CL_Handle, int *, int),
 			if ((i & 1) &&
 			    param_type_is_float(self, PVbuffer[i-1]) > 0) {
 				number = CL_TypeIsFloat(PVbuffer[i]);
-				v = PyFloat_FromDouble(number);
+				v = newfloatobject(number);
 			} else
-				v = PyInt_FromLong(PVbuffer[i]);
-			PyList_SetItem(list, i, v);
+				v = newintobject(PVbuffer[i]);
+			setlistitem(list, i, v);
 		}
 	}
 
-	PyMem_DEL(PVbuffer);
+	DEL(PVbuffer);
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
-clm_GetParams(PyObject *self, PyObject *args)
+static object *
+clm_GetParams(object *self, object *args)
 {
 	return doParams(SELF, args, clGetParams, 1);
 }
 
-static PyObject *
-clm_SetParams(PyObject *self, PyObject *args)
+static object *
+clm_SetParams(object *self, object *args)
 {
 	return doParams(SELF, args, clSetParams, 0);
 }
 
-static PyObject *
-do_get(clobject *self, PyObject *args, int (*func)(CL_Handle, int))
+static object *
+do_get(clobject *self, object *args, int (*func)(CL_Handle, int))
 {
 	int paramID, value;
 	float fvalue;
 
 	CheckCompressor(self);
 
-	if (!PyArg_Parse(args, "i", &paramID))
+	if (!getargs(args, "i", &paramID))
 		return NULL;
 
 	error_handler_called = 0;
@@ -427,38 +424,37 @@ do_get(clobject *self, PyObject *args, int (*func)(CL_Handle, int))
 
 	if (param_type_is_float(self, paramID) > 0) {
 		fvalue = CL_TypeIsFloat(value);
-		return PyFloat_FromDouble(fvalue);
+		return newfloatobject(fvalue);
 	}
 
-	return PyInt_FromLong(value);
+	return newintobject(value);
 }
 
-static PyObject *
-clm_GetParam(PyObject *self, PyObject *args)
+static object *
+clm_GetParam(object *self, object *args)
 {
 	return do_get(SELF, args, clGetParam);
 }
 
-static PyObject *
-clm_GetDefault(PyObject *self, PyObject *args)
+static object *
+clm_GetDefault(object *self, object *args)
 {
 	return do_get(SELF, args, clGetDefault);
 }
 
-static PyObject *
-clm_SetParam(PyObject *self, PyObject *args)
+static object *
+clm_SetParam(object *self, object *args)
 {
 	int paramID, value;
 	float fvalue;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_Parse(args, "(ii)", &paramID, &value)) {
-		PyErr_Clear();
-		if (!PyArg_Parse(args, "(if)", &paramID, &fvalue)) {
-			PyErr_Clear();
-			PyErr_SetString(PyExc_TypeError,
-			       "bad argument list (format '(ii)' or '(if)')");
+	if (!getargs(args, "(ii)", &paramID, &value)) {
+		err_clear();
+		if (!getargs(args, "(if)", &paramID, &fvalue)) {
+			err_clear();
+			err_setstr(TypeError, "bad argument list (format '(ii)' or '(if)')");
 			return NULL;
 		}
 		value = CL_TypeIsInt(fvalue);
@@ -475,44 +471,44 @@ clm_SetParam(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (param_type_is_float(SELF, paramID) > 0)
-		return PyFloat_FromDouble(CL_TypeIsFloat(value));
+		return newfloatobject(CL_TypeIsFloat(value));
 	else
-		return PyInt_FromLong(value);
+		return newintobject(value);
 }
 
-static PyObject *
-clm_GetParamID(PyObject *self, PyObject *args)
+static object *
+clm_GetParamID(object *self, object *args)
 {
 	char *name;
 	int value;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_Parse(args, "s", &name))
+	if (!getargs(args, "s", &name))
 		return NULL;
 
 	error_handler_called = 0;
 	value = clGetParamID(SELF->ob_compressorHdl, name);
 	if (value == FAILURE) {
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "getparamid failed");
+			err_setstr(ClError, "getparamid failed");
 		return NULL;
 	}
 
-	return PyInt_FromLong(value);
+	return newintobject(value);
 }
 
-static PyObject *
-clm_QueryParams(PyObject *self, PyObject *args)
+static object *
+clm_QueryParams(object *self, object *args)
 {
 	int bufferlength;
 	int *PVbuffer;
-	PyObject *list;
+	object *list;
 	int i;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 
 	error_handler_called = 0;
@@ -520,48 +516,47 @@ clm_QueryParams(PyObject *self, PyObject *args)
 	if (error_handler_called)
 		return NULL;
 
-	PVbuffer = PyMem_NEW(int, bufferlength);
+	PVbuffer = NEW(int, bufferlength);
 	if (PVbuffer == NULL)
-		return PyErr_NoMemory();
+		return err_nomem();
 
 	bufferlength = clQueryParams(SELF->ob_compressorHdl, PVbuffer,
 				     bufferlength);
 	if (error_handler_called) {
-		PyMem_DEL(PVbuffer);
+		DEL(PVbuffer);
 		return NULL;
 	}
 
-	list = PyList_New(bufferlength);
+	list = newlistobject(bufferlength);
 	if (list == NULL) {
-		PyMem_DEL(PVbuffer);
+		DEL(PVbuffer);
 		return NULL;
 	}
 
 	for (i = 0; i < bufferlength; i++) {
 		if (i & 1)
-			PyList_SetItem(list, i, PyInt_FromLong(PVbuffer[i]));
+			setlistitem(list, i, newintobject(PVbuffer[i]));
 		else if (PVbuffer[i] == 0) {
-			Py_INCREF(Py_None);
-			PyList_SetItem(list, i, Py_None);
+			INCREF(None);
+			setlistitem(list, i, None);
 		} else
-			PyList_SetItem(list, i,
-				   PyString_FromString((char *) PVbuffer[i]));
+			setlistitem(list, i, newstringobject((char *) PVbuffer[i]));
 	}
 
-	PyMem_DEL(PVbuffer);
+	DEL(PVbuffer);
 
 	return list;
 }
 
-static PyObject *
-clm_GetMinMax(PyObject *self, PyObject *args)
+static object *
+clm_GetMinMax(object *self, object *args)
 {
 	int param, min, max;
 	float fmin, fmax;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_Parse(args, "i", &param))
+	if (!getargs(args, "i", &param))
 		return NULL;
 
 	clGetMinMax(SELF->ob_compressorHdl, param, &min, &max);
@@ -569,61 +564,61 @@ clm_GetMinMax(PyObject *self, PyObject *args)
 	if (param_type_is_float(SELF, param) > 0) {
 		fmin = CL_TypeIsFloat(min);
 		fmax = CL_TypeIsFloat(max);
-		return Py_BuildValue("(ff)", fmin, fmax);
+		return mkvalue("(ff)", fmin, fmax);
 	}
 
-	return Py_BuildValue("(ii)", min, max);
+	return mkvalue("(ii)", min, max);
 }
 
-static PyObject *
-clm_GetName(PyObject *self, PyObject *args)
+static object *
+clm_GetName(object *self, object *args)
 {
 	int param;
 	char *name;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_Parse(args, "i", &param))
+	if (!getargs(args, "i", &param))
 		return NULL;
 
 	error_handler_called = 0;
 	name = clGetName(SELF->ob_compressorHdl, param);
 	if (name == NULL || error_handler_called) {
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "getname failed");
+			err_setstr(ClError, "getname failed");
 		return NULL;
 	}
 
-	return PyString_FromString(name);
+	return newstringobject(name);
 }
 
-static PyObject *
-clm_QuerySchemeFromHandle(PyObject *self, PyObject *args)
+static object *
+clm_QuerySchemeFromHandle(object *self, object *args)
 {
 	CheckCompressor(SELF);
 
-	if (!PyArg_NoArgs(args))
+	if (!getnoarg(args))
 		return NULL;
 
-	return PyInt_FromLong(clQuerySchemeFromHandle(SELF->ob_compressorHdl));
+	return newintobject(clQuerySchemeFromHandle(SELF->ob_compressorHdl));
 }
 
-static PyObject *
-clm_ReadHeader(PyObject *self, PyObject *args)
+static object *
+clm_ReadHeader(object *self, object *args)
 {
 	char *header;
 	int headerSize;
 
 	CheckCompressor(SELF);
 
-	if (!PyArg_Parse(args, "s#", &header, &headerSize))
+	if (!getargs(args, "s#", &header, &headerSize))
 		return NULL;
 
-	return PyInt_FromLong(clReadHeader(SELF->ob_compressorHdl,
-					   headerSize, header));
+	return newintobject(clReadHeader(SELF->ob_compressorHdl,
+					 headerSize, header));
 }
 
-static PyMethodDef compressor_methods[] = {
+static struct methodlist compressor_methods[] = {
 	{"close",		clm_CloseCompressor}, /* alias */
 	{"CloseCompressor",	clm_CloseCompressor},
 	{"Compress",		clm_Compress},
@@ -640,7 +635,7 @@ static PyMethodDef compressor_methods[] = {
 	{NULL,			NULL}		/* sentinel */
 };
 
-static PyMethodDef decompressor_methods[] = {
+static struct methodlist decompressor_methods[] = {
 	{"close",		clm_CloseDecompressor},	/* alias */
 	{"CloseDecompressor",	clm_CloseDecompressor},
 	{"Decompress",		clm_Decompress},
@@ -659,7 +654,7 @@ static PyMethodDef decompressor_methods[] = {
 };
 
 static void
-cl_dealloc(PyObject *self)
+cl_dealloc(object *self)
 {
 	if (SELF->ob_compressorHdl) {
 		if (SELF->ob_isCompressor)
@@ -667,20 +662,20 @@ cl_dealloc(PyObject *self)
 		else
 			clCloseDecompressor(SELF->ob_compressorHdl);
 	}
-	PyMem_DEL(self);
+	DEL(self);
 }
 
-static PyObject *
-cl_getattr(PyObject *self, char *name)
+static object *
+cl_getattr(object *self, char *name)
 {
 	if (SELF->ob_isCompressor)
-		return Py_FindMethod(compressor_methods, self, name);
+		return findmethod(compressor_methods, self, name);
 	else
-		return Py_FindMethod(decompressor_methods, self, name);
+		return findmethod(decompressor_methods, self, name);
 }
 
-static PyTypeObject Cltype = {
-	PyObject_HEAD_INIT(&PyType_Type)
+static typeobject Cltype = {
+	OB_HEAD_INIT(&Typetype)
 	0,			/*ob_size*/
 	"cl",			/*tp_name*/
 	sizeof(clobject),	/*tp_size*/
@@ -697,17 +692,17 @@ static PyTypeObject Cltype = {
 	0,			/*tp_as_mapping*/
 };
 
-static PyObject *
-doOpen(PyObject *self, PyObject *args, int (*open_func)(int, CL_Handle *),
+static object *
+doOpen(object *self, object *args, int (*open_func)(int, CL_Handle *),
        int iscompressor)
 {
 	int scheme;
 	clobject *new;
 
-	if (!PyArg_Parse(args, "i", &scheme))
+	if (!getargs(args, "i", &scheme))
 		return NULL;
 
-	new = PyObject_NEW(clobject, &Cltype);
+	new = NEWOBJ(clobject, &Cltype);
 	if (new == NULL)
 		return NULL;
 
@@ -717,66 +712,66 @@ doOpen(PyObject *self, PyObject *args, int (*open_func)(int, CL_Handle *),
 
 	error_handler_called = 0;
 	if ((*open_func)(scheme, &new->ob_compressorHdl) == FAILURE) {
-		Py_DECREF(new);
+		DECREF(new);
 		if (!error_handler_called)
-			PyErr_SetString(ClError, "Open(De)Compressor failed");
+			err_setstr(ClError, "Open(De)Compressor failed");
 		return NULL;
 	}
-	return (PyObject *)new;
+	return (object *)new;
 }
 
-static PyObject *
-cl_OpenCompressor(PyObject *self, PyObject *args)
+static object *
+cl_OpenCompressor(object *self, object *args)
 {
 	return doOpen(self, args, clOpenCompressor, 1);
 }
 
-static PyObject *
-cl_OpenDecompressor(PyObject *self, PyObject *args)
+static object *
+cl_OpenDecompressor(object *self, object *args)
 {
 	return doOpen(self, args, clOpenDecompressor, 0);
 }
 
-static PyObject *
-cl_QueryScheme(PyObject *self, PyObject *args)
+static object *
+cl_QueryScheme(object *self, object *args)
 {
 	char *header;
 	int headerlen;
 	int scheme;
 
-	if (!PyArg_Parse(args, "s#", &header, &headerlen))
+	if (!getargs(args, "s#", &header, &headerlen))
 		return NULL;
 
 	scheme = clQueryScheme(header);
 	if (scheme < 0) {
-		PyErr_SetString(ClError, "unknown compression scheme");
+		err_setstr(ClError, "unknown compression scheme");
 		return NULL;
 	}
 
-	return PyInt_FromLong(scheme);
+	return newintobject(scheme);
 }
 
-static PyObject *
-cl_QueryMaxHeaderSize(PyObject *self, PyObject *args)
+static object *
+cl_QueryMaxHeaderSize(object *self, object *args)
 {
 	int scheme;
 
-	if (!PyArg_Parse(args, "i", &scheme))
+	if (!getargs(args, "i", &scheme))
 		return NULL;
 
-	return PyInt_FromLong(clQueryMaxHeaderSize(scheme));
+	return newintobject(clQueryMaxHeaderSize(scheme));
 }
 
-static PyObject *
-cl_QueryAlgorithms(PyObject *self, PyObject *args)
+static object *
+cl_QueryAlgorithms(object *self, object *args)
 {
 	int algorithmMediaType;
 	int bufferlength;
 	int *PVbuffer;
-	PyObject *list;
+	object *list;
 	int i;
 
-	if (!PyArg_Parse(args, "i", &algorithmMediaType))
+	if (!getargs(args, "i", &algorithmMediaType))
 		return NULL;
 
 	error_handler_called = 0;
@@ -784,90 +779,88 @@ cl_QueryAlgorithms(PyObject *self, PyObject *args)
 	if (error_handler_called)
 		return NULL;
 
-	PVbuffer = PyMem_NEW(int, bufferlength);
+	PVbuffer = NEW(int, bufferlength);
 	if (PVbuffer == NULL)
-		return PyErr_NoMemory();
+		return err_nomem();
 
 	bufferlength = clQueryAlgorithms(algorithmMediaType, PVbuffer,
-					 bufferlength);
+				     bufferlength);
 	if (error_handler_called) {
-		PyMem_DEL(PVbuffer);
+		DEL(PVbuffer);
 		return NULL;
 	}
 
-	list = PyList_New(bufferlength);
+	list = newlistobject(bufferlength);
 	if (list == NULL) {
-		PyMem_DEL(PVbuffer);
+		DEL(PVbuffer);
 		return NULL;
 	}
 
 	for (i = 0; i < bufferlength; i++) {
 		if (i & 1)
-			PyList_SetItem(list, i, PyInt_FromLong(PVbuffer[i]));
+			setlistitem(list, i, newintobject(PVbuffer[i]));
 		else if (PVbuffer[i] == 0) {
-			Py_INCREF(Py_None);
-			PyList_SetItem(list, i, Py_None);
+			INCREF(None);
+			setlistitem(list, i, None);
 		} else
-			PyList_SetItem(list, i,
-				   PyString_FromString((char *) PVbuffer[i]));
+			setlistitem(list, i, newstringobject((char *) PVbuffer[i]));
 	}
 
-	PyMem_DEL(PVbuffer);
+	DEL(PVbuffer);
 
 	return list;
 }
 
-static PyObject *
-cl_QuerySchemeFromName(PyObject *self, PyObject *args)
+static object *
+cl_QuerySchemeFromName(object *self, object *args)
 {
 	int algorithmMediaType;
 	char *name;
 	int scheme;
 
-	if (!PyArg_Parse(args, "(is)", &algorithmMediaType, &name))
+	if (!getargs(args, "(is)", &algorithmMediaType, &name))
 		return NULL;
 
 	error_handler_called = 0;
 	scheme = clQuerySchemeFromName(algorithmMediaType, name);
 	if (error_handler_called) {
-		PyErr_SetString(ClError, "unknown compression scheme");
+		err_setstr(ClError, "unknown compression scheme");
 		return NULL;
 	}
 
-	return PyInt_FromLong(scheme);
+	return newintobject(scheme);
 }
 
-static PyObject *
-cl_GetAlgorithmName(PyObject *self, PyObject *args)
+static object *
+cl_GetAlgorithmName(object *self, object *args)
 {
 	int scheme;
 	char *name;
 
-	if (!PyArg_Parse(args, "i", &scheme))
+	if (!getargs(args, "i", &scheme))
 		return NULL;
 
 	name = clGetAlgorithmName(scheme);
 	if (name == 0) {
-		PyErr_SetString(ClError, "unknown compression scheme");
+		err_setstr(ClError, "unknown compression scheme");
 		return NULL;
 	}
 
-	return PyString_FromString(name);
+	return newstringobject(name);
 }
 
-static PyObject *
-do_set(PyObject *self, PyObject *args, int (*func)(int, int, int))
+static object *
+do_set(object *self, object *args, int (*func)(int, int, int))
 {
 	int scheme, paramID, value;
 	float fvalue;
 	int is_float = 0;
 
-	if (!PyArg_Parse(args, "(iii)", &scheme, &paramID, &value)) {
-		PyErr_Clear();
-		if (!PyArg_Parse(args, "(iif)", &scheme, &paramID, &fvalue)) {
-			PyErr_Clear();
-			PyErr_SetString(PyExc_TypeError,
-			     "bad argument list (format '(iii)' or '(iif)')");
+	if (!getargs(args, "(iii)", &scheme, &paramID, &value)) {
+		err_clear();
+		if (!getargs(args, "(iif)", &scheme, &paramID, &fvalue)) {
+			err_clear();
+			err_setstr(TypeError, "bad argument list (format '(iii)' or '(iif)')");
 			return NULL;
 		}
 		value = CL_TypeIsInt(fvalue);
@@ -890,75 +883,75 @@ do_set(PyObject *self, PyObject *args, int (*func)(int, int, int))
 		return NULL;
 
 	if (is_float)
-		return PyFloat_FromDouble(CL_TypeIsFloat(value));
+		return newfloatobject(CL_TypeIsFloat(value));
 	else
-		return PyInt_FromLong(value);
+		return newintobject(value);
 }
 
-static PyObject *
-cl_SetDefault(PyObject *self, PyObject *args)
+static object *
+cl_SetDefault(object *self, object *args)
 {
 	return do_set(self, args, clSetDefault);
 }
 
-static PyObject *
-cl_SetMin(PyObject *self, PyObject *args)
+static object *
+cl_SetMin(object *self, object *args)
 {
 	return do_set(self, args, clSetMin);
 }
 
-static PyObject *
-cl_SetMax(PyObject *self, PyObject *args)
+static object *
+cl_SetMax(object *self, object *args)
 {
 	return do_set(self, args, clSetMax);
 }
 
-#define func(name, handler)	\
-static PyObject *cl_##name(PyObject *self, PyObject *args) \
-{ \
-	  int x; \
-	  if (!PyArg_Parse(args, "i", &x)) return NULL; \
-	  return Py##handler(CL_##name(x)); \
-}
+#define func(name, type)	\
+		static object *cl_##name(object *self, object *args) \
+		{ \
+			int x; \
+			if (!getargs(args, "i", &x)) return NULL; \
+			return new##type##object(CL_##name(x)); \
+		}
 
-#define func2(name, handler)	\
-static PyObject *cl_##name(PyObject *self, PyObject *args) \
-{ \
-	  int a1, a2; \
-	  if (!PyArg_Parse(args, "(ii)", &a1, &a2)) return NULL; \
-	  return Py##handler(CL_##name(a1, a2)); \
-}
+#define func2(name, type)	\
+		static object *cl_##name(object *self, object *args) \
+		{ \
+			int a1, a2; \
+			if (!getargs(args, "(ii)", &a1, &a2)) return NULL; \
+			return new##type##object(CL_##name(a1, a2)); \
+		}
 
-func(BytesPerSample, Int_FromLong)
-func(BytesPerPixel, Int_FromLong)
-func(AudioFormatName, String_FromString)
-func(VideoFormatName, String_FromString)
-func(AlgorithmNumber, Int_FromLong)
-func(AlgorithmType, Int_FromLong)
-func2(Algorithm, Int_FromLong)
-func(ParamNumber, Int_FromLong)
-func(ParamType, Int_FromLong)
-func2(ParamID, Int_FromLong)
+func(BytesPerSample,int)
+func(BytesPerPixel,int)
+func(AudioFormatName,string)
+func(VideoFormatName,string)
+func(AlgorithmNumber,int)
+func(AlgorithmType,int)
+func2(Algorithm,int)
+func(ParamNumber,int)
+func(ParamType,int)
+func2(ParamID,int)
 
 #ifdef CLDEBUG
-	static PyObject *
-cvt_type(PyObject *self, PyObject *args)
+static object *
+cvt_type(object *self, object *args)
 {
 	int number;
 	float fnumber;
 
-	if (PyArg_Parse(args, "i", &number))
-		return PyFloat_FromDouble(CL_TypeIsFloat(number));
+	if (getargs(args, "i", &number))
+		return newfloatobject(CL_TypeIsFloat(number));
 	else {
-		PyErr_Clear();
-		if (PyArg_Parse(args, "f", &fnumber))
-			return PyInt_FromLong(CL_TypeIsInt(fnumber));
+		err_clear();
+		if (getargs(args, "f", &fnumber))
+			return newintobject(CL_TypeIsInt(fnumber));
 		return NULL;
 	}
 }
 #endif
 
-static PyMethodDef cl_methods[] = {
+static struct methodlist cl_methods[] = {
 	{"CompressImage",	cl_CompressImage},
 	{"DecompressImage",	cl_DecompressImage},
 	{"GetAlgorithmName",	cl_GetAlgorithmName},
@@ -994,349 +987,302 @@ static PyMethodDef cl_methods[] = {
 void
 initcl()
 {
-	PyObject *m, *d;
+	object *m, *d;
 
-	m = Py_InitModule("cl", cl_methods);
-	d = PyModule_GetDict(m);
+	m = initmodule("cl", cl_methods);
+	d = getmoduledict(m);
 
-	ClError = PyString_FromString("cl.error");
-	(void) PyDict_SetItemString(d, "error", ClError);
+	ClError = newstringobject("cl.error");
+	(void) dictinsert(d, "error", ClError);
 
-	(void) PyDict_SetItemString(d, "MAX_NUMBER_OF_ORIGINAL_FORMATS",
-			   PyInt_FromLong(CL_MAX_NUMBER_OF_ORIGINAL_FORMATS));
-	(void) PyDict_SetItemString(d, "MONO", PyInt_FromLong(CL_MONO));
-	(void) PyDict_SetItemString(d, "STEREO_INTERLEAVED",
-				    PyInt_FromLong(CL_STEREO_INTERLEAVED));
-	(void) PyDict_SetItemString(d, "RGB", PyInt_FromLong(CL_RGB));
-	(void) PyDict_SetItemString(d, "RGBX", PyInt_FromLong(CL_RGBX));
-	(void) PyDict_SetItemString(d, "RGBA", PyInt_FromLong(CL_RGBA));
-	(void) PyDict_SetItemString(d, "RGB332", PyInt_FromLong(CL_RGB332));
-	(void) PyDict_SetItemString(d, "GRAYSCALE",
-				    PyInt_FromLong(CL_GRAYSCALE));
-	(void) PyDict_SetItemString(d, "Y", PyInt_FromLong(CL_Y));
-	(void) PyDict_SetItemString(d, "YUV", PyInt_FromLong(CL_YUV));
-	(void) PyDict_SetItemString(d, "YCbCr", PyInt_FromLong(CL_YCbCr));
-	(void) PyDict_SetItemString(d, "YUV422", PyInt_FromLong(CL_YUV422));
-	(void) PyDict_SetItemString(d, "YCbCr422",
-				    PyInt_FromLong(CL_YCbCr422));
-	(void) PyDict_SetItemString(d, "YUV422HC",
-				    PyInt_FromLong(CL_YUV422HC));
-	(void) PyDict_SetItemString(d, "YCbCr422HC",
-				    PyInt_FromLong(CL_YCbCr422HC));
-	(void) PyDict_SetItemString(d, "YUV422DC",
-				    PyInt_FromLong(CL_YUV422DC));
-	(void) PyDict_SetItemString(d, "YCbCr422DC",
-				    PyInt_FromLong(CL_YCbCr422DC));
-	(void) PyDict_SetItemString(d, "RGB8", PyInt_FromLong(CL_RGB8));
-	(void) PyDict_SetItemString(d, "BEST_FIT",
-				    PyInt_FromLong(CL_BEST_FIT));
-	(void) PyDict_SetItemString(d, "MAX_NUMBER_OF_AUDIO_ALGORITHMS",
-			   PyInt_FromLong(CL_MAX_NUMBER_OF_AUDIO_ALGORITHMS));
-	(void) PyDict_SetItemString(d, "MAX_NUMBER_OF_VIDEO_ALGORITHMS",
-			   PyInt_FromLong(CL_MAX_NUMBER_OF_VIDEO_ALGORITHMS));
-	(void) PyDict_SetItemString(d, "AUDIO", PyInt_FromLong(CL_AUDIO));
-	(void) PyDict_SetItemString(d, "VIDEO", PyInt_FromLong(CL_VIDEO));
-	(void) PyDict_SetItemString(d, "UNKNOWN_SCHEME",
-				    PyInt_FromLong(CL_UNKNOWN_SCHEME));
-	(void) PyDict_SetItemString(d, "UNCOMPRESSED_AUDIO",
-				    PyInt_FromLong(CL_UNCOMPRESSED_AUDIO));
-	(void) PyDict_SetItemString(d, "G711_ULAW",
-				    PyInt_FromLong(CL_G711_ULAW));
-	(void) PyDict_SetItemString(d, "ULAW", PyInt_FromLong(CL_ULAW));
-	(void) PyDict_SetItemString(d, "G711_ALAW",
-				    PyInt_FromLong(CL_G711_ALAW));
-	(void) PyDict_SetItemString(d, "ALAW", PyInt_FromLong(CL_ALAW));
-	(void) PyDict_SetItemString(d, "AWARE_MPEG_AUDIO",
-				    PyInt_FromLong(CL_AWARE_MPEG_AUDIO));
-	(void) PyDict_SetItemString(d, "AWARE_MULTIRATE",
-				    PyInt_FromLong(CL_AWARE_MULTIRATE));
-	(void) PyDict_SetItemString(d, "UNCOMPRESSED",
-				    PyInt_FromLong(CL_UNCOMPRESSED));
-	(void) PyDict_SetItemString(d, "UNCOMPRESSED_VIDEO",
-				    PyInt_FromLong(CL_UNCOMPRESSED_VIDEO));
-	(void) PyDict_SetItemString(d, "RLE", PyInt_FromLong(CL_RLE));
-	(void) PyDict_SetItemString(d, "JPEG", PyInt_FromLong(CL_JPEG));
+	(void) dictinsert(d, "MAX_NUMBER_OF_ORIGINAL_FORMATS",
+			  newintobject(CL_MAX_NUMBER_OF_ORIGINAL_FORMATS));
+	(void) dictinsert(d, "MONO", newintobject(CL_MONO));
+	(void) dictinsert(d, "STEREO_INTERLEAVED",
+			  newintobject(CL_STEREO_INTERLEAVED));
+	(void) dictinsert(d, "RGB", newintobject(CL_RGB));
+	(void) dictinsert(d, "RGBX", newintobject(CL_RGBX));
+	(void) dictinsert(d, "RGBA", newintobject(CL_RGBA));
+	(void) dictinsert(d, "RGB332", newintobject(CL_RGB332));
+	(void) dictinsert(d, "GRAYSCALE", newintobject(CL_GRAYSCALE));
+	(void) dictinsert(d, "Y", newintobject(CL_Y));
+	(void) dictinsert(d, "YUV", newintobject(CL_YUV));
+	(void) dictinsert(d, "YCbCr", newintobject(CL_YCbCr));
+	(void) dictinsert(d, "YUV422", newintobject(CL_YUV422));
+	(void) dictinsert(d, "YCbCr422", newintobject(CL_YCbCr422));
+	(void) dictinsert(d, "YUV422HC", newintobject(CL_YUV422HC));
+	(void) dictinsert(d, "YCbCr422HC", newintobject(CL_YCbCr422HC));
+	(void) dictinsert(d, "YUV422DC", newintobject(CL_YUV422DC));
+	(void) dictinsert(d, "YCbCr422DC", newintobject(CL_YCbCr422DC));
+	(void) dictinsert(d, "RGB8", newintobject(CL_RGB8));
+	(void) dictinsert(d, "BEST_FIT", newintobject(CL_BEST_FIT));
+	(void) dictinsert(d, "MAX_NUMBER_OF_AUDIO_ALGORITHMS",
+			  newintobject(CL_MAX_NUMBER_OF_AUDIO_ALGORITHMS));
+	(void) dictinsert(d, "MAX_NUMBER_OF_VIDEO_ALGORITHMS",
+			  newintobject(CL_MAX_NUMBER_OF_VIDEO_ALGORITHMS));
+	(void) dictinsert(d, "AUDIO", newintobject(CL_AUDIO));
+	(void) dictinsert(d, "VIDEO", newintobject(CL_VIDEO));
+	(void) dictinsert(d, "UNKNOWN_SCHEME",
+			  newintobject(CL_UNKNOWN_SCHEME));
+	(void) dictinsert(d, "UNCOMPRESSED_AUDIO",
+			  newintobject(CL_UNCOMPRESSED_AUDIO));
+	(void) dictinsert(d, "G711_ULAW", newintobject(CL_G711_ULAW));
+	(void) dictinsert(d, "ULAW", newintobject(CL_ULAW));
+	(void) dictinsert(d, "G711_ALAW", newintobject(CL_G711_ALAW));
+	(void) dictinsert(d, "ALAW", newintobject(CL_ALAW));
+	(void) dictinsert(d, "AWARE_MPEG_AUDIO",
+			  newintobject(CL_AWARE_MPEG_AUDIO));
+	(void) dictinsert(d, "AWARE_MULTIRATE",
+			  newintobject(CL_AWARE_MULTIRATE));
+	(void) dictinsert(d, "UNCOMPRESSED", newintobject(CL_UNCOMPRESSED));
+	(void) dictinsert(d, "UNCOMPRESSED_VIDEO",
+			  newintobject(CL_UNCOMPRESSED_VIDEO));
+	(void) dictinsert(d, "RLE", newintobject(CL_RLE));
+	(void) dictinsert(d, "JPEG", newintobject(CL_JPEG));
 #ifdef IRIX_5_3_LIBRARY
-	(void) PyDict_SetItemString(d, "JPEG_SOFTWARE",
-				    PyInt_FromLong(CL_JPEG_SOFTWARE));
+	(void) dictinsert(d, "JPEG_SOFTWARE", newintobject(CL_JPEG_SOFTWARE));
 #endif
-	(void) PyDict_SetItemString(d, "MPEG_VIDEO",
-				    PyInt_FromLong(CL_MPEG_VIDEO));
-	(void) PyDict_SetItemString(d, "MVC1", PyInt_FromLong(CL_MVC1));
-	(void) PyDict_SetItemString(d, "RTR", PyInt_FromLong(CL_RTR));
-	(void) PyDict_SetItemString(d, "RTR1", PyInt_FromLong(CL_RTR1));
-	(void) PyDict_SetItemString(d, "HDCC", PyInt_FromLong(CL_HDCC));
-	(void) PyDict_SetItemString(d, "MVC2", PyInt_FromLong(CL_MVC2));
-	(void) PyDict_SetItemString(d, "RLE24", PyInt_FromLong(CL_RLE24));
-	(void) PyDict_SetItemString(d, "MAX_NUMBER_OF_PARAMS",
-				    PyInt_FromLong(CL_MAX_NUMBER_OF_PARAMS));
-	(void) PyDict_SetItemString(d, "IMAGE_WIDTH",
-				    PyInt_FromLong(CL_IMAGE_WIDTH));
-	(void) PyDict_SetItemString(d, "IMAGE_HEIGHT",
-				    PyInt_FromLong(CL_IMAGE_HEIGHT));
-	(void) PyDict_SetItemString(d, "ORIGINAL_FORMAT",
-				    PyInt_FromLong(CL_ORIGINAL_FORMAT));
-	(void) PyDict_SetItemString(d, "INTERNAL_FORMAT",
-				    PyInt_FromLong(CL_INTERNAL_FORMAT));
-	(void) PyDict_SetItemString(d, "COMPONENTS",
-				    PyInt_FromLong(CL_COMPONENTS));
-	(void) PyDict_SetItemString(d, "BITS_PER_COMPONENT",
-				    PyInt_FromLong(CL_BITS_PER_COMPONENT));
-	(void) PyDict_SetItemString(d, "FRAME_RATE",
-				    PyInt_FromLong(CL_FRAME_RATE));
-	(void) PyDict_SetItemString(d, "COMPRESSION_RATIO",
-				    PyInt_FromLong(CL_COMPRESSION_RATIO));
-	(void) PyDict_SetItemString(d, "EXACT_COMPRESSION_RATIO",
-				  PyInt_FromLong(CL_EXACT_COMPRESSION_RATIO));
-	(void) PyDict_SetItemString(d, "FRAME_BUFFER_SIZE",
-				    PyInt_FromLong(CL_FRAME_BUFFER_SIZE));
-	(void) PyDict_SetItemString(d, "COMPRESSED_BUFFER_SIZE",
-				    PyInt_FromLong(CL_COMPRESSED_BUFFER_SIZE));
-	(void) PyDict_SetItemString(d, "BLOCK_SIZE",
-				    PyInt_FromLong(CL_BLOCK_SIZE));
-	(void) PyDict_SetItemString(d, "PREROLL", PyInt_FromLong(CL_PREROLL));
-	(void) PyDict_SetItemString(d, "FRAME_TYPE",
-				    PyInt_FromLong(CL_FRAME_TYPE));
-	(void) PyDict_SetItemString(d, "ALGORITHM_ID",
-				    PyInt_FromLong(CL_ALGORITHM_ID));
-	(void) PyDict_SetItemString(d, "ALGORITHM_VERSION",
-				    PyInt_FromLong(CL_ALGORITHM_VERSION));
-	(void) PyDict_SetItemString(d, "ORIENTATION",
-				    PyInt_FromLong(CL_ORIENTATION));
-	(void) PyDict_SetItemString(d, "NUMBER_OF_FRAMES",
-				    PyInt_FromLong(CL_NUMBER_OF_FRAMES));
-	(void) PyDict_SetItemString(d, "SPEED", PyInt_FromLong(CL_SPEED));
-	(void) PyDict_SetItemString(d, "LAST_FRAME_INDEX",
-				    PyInt_FromLong(CL_LAST_FRAME_INDEX));
+	(void) dictinsert(d, "MPEG_VIDEO", newintobject(CL_MPEG_VIDEO));
+	(void) dictinsert(d, "MVC1", newintobject(CL_MVC1));
+	(void) dictinsert(d, "RTR", newintobject(CL_RTR));
+	(void) dictinsert(d, "RTR1", newintobject(CL_RTR1));
+	(void) dictinsert(d, "HDCC", newintobject(CL_HDCC));
+	(void) dictinsert(d, "MVC2", newintobject(CL_MVC2));
+	(void) dictinsert(d, "RLE24", newintobject(CL_RLE24));
+	(void) dictinsert(d, "MAX_NUMBER_OF_PARAMS",
+			  newintobject(CL_MAX_NUMBER_OF_PARAMS));
+	(void) dictinsert(d, "IMAGE_WIDTH", newintobject(CL_IMAGE_WIDTH));
+	(void) dictinsert(d, "IMAGE_HEIGHT", newintobject(CL_IMAGE_HEIGHT));
+	(void) dictinsert(d, "ORIGINAL_FORMAT",
+			  newintobject(CL_ORIGINAL_FORMAT));
+	(void) dictinsert(d, "INTERNAL_FORMAT",
+			  newintobject(CL_INTERNAL_FORMAT));
+	(void) dictinsert(d, "COMPONENTS", newintobject(CL_COMPONENTS));
+	(void) dictinsert(d, "BITS_PER_COMPONENT",
+			  newintobject(CL_BITS_PER_COMPONENT));
+	(void) dictinsert(d, "FRAME_RATE", newintobject(CL_FRAME_RATE));
+	(void) dictinsert(d, "COMPRESSION_RATIO",
+			  newintobject(CL_COMPRESSION_RATIO));
+	(void) dictinsert(d, "EXACT_COMPRESSION_RATIO",
+			  newintobject(CL_EXACT_COMPRESSION_RATIO));
+	(void) dictinsert(d, "FRAME_BUFFER_SIZE",
+			  newintobject(CL_FRAME_BUFFER_SIZE));
+	(void) dictinsert(d, "COMPRESSED_BUFFER_SIZE",
+			  newintobject(CL_COMPRESSED_BUFFER_SIZE));
+	(void) dictinsert(d, "BLOCK_SIZE", newintobject(CL_BLOCK_SIZE));
+	(void) dictinsert(d, "PREROLL", newintobject(CL_PREROLL));
+	(void) dictinsert(d, "FRAME_TYPE", newintobject(CL_FRAME_TYPE));
+	(void) dictinsert(d, "ALGORITHM_ID", newintobject(CL_ALGORITHM_ID));
+	(void) dictinsert(d, "ALGORITHM_VERSION",
+			  newintobject(CL_ALGORITHM_VERSION));
+	(void) dictinsert(d, "ORIENTATION", newintobject(CL_ORIENTATION));
+	(void) dictinsert(d, "NUMBER_OF_FRAMES",
+			  newintobject(CL_NUMBER_OF_FRAMES));
+	(void) dictinsert(d, "SPEED", newintobject(CL_SPEED));
+	(void) dictinsert(d, "LAST_FRAME_INDEX",
+			  newintobject(CL_LAST_FRAME_INDEX));
 #ifdef IRIX_5_3_LIBRARY
-	(void) PyDict_SetItemString(d, "ENABLE_IMAGEINFO",
-				    PyInt_FromLong(CL_ENABLE_IMAGEINFO));
-	(void) PyDict_SetItemString(d, "INTERNAL_IMAGE_WIDTH",
-				    PyInt_FromLong(CL_INTERNAL_IMAGE_WIDTH));
-	(void) PyDict_SetItemString(d, "INTERNAL_IMAGE_HEIGHT",
-				    PyInt_FromLong(CL_INTERNAL_IMAGE_HEIGHT));
+	(void) dictinsert(d, "ENABLE_IMAGEINFO",
+			  newintobject(CL_ENABLE_IMAGEINFO));
+	(void) dictinsert(d, "INTERNAL_IMAGE_WIDTH",
+			  newintobject(CL_INTERNAL_IMAGE_WIDTH));
+	(void) dictinsert(d, "INTERNAL_IMAGE_HEIGHT",
+			  newintobject(CL_INTERNAL_IMAGE_HEIGHT));
 #endif
-	(void) PyDict_SetItemString(d, "NUMBER_OF_PARAMS",
-				    PyInt_FromLong(CL_NUMBER_OF_PARAMS));
+	(void) dictinsert(d, "NUMBER_OF_PARAMS",
+			  newintobject(CL_NUMBER_OF_PARAMS));
 #ifdef IRIX_5_3_LIBRARY
-	(void) PyDict_SetItemString(d, "MVC2_LUMA_THRESHOLD",
-				    PyInt_FromLong(CL_MVC2_LUMA_THRESHOLD));
-	(void) PyDict_SetItemString(d, "MVC2_CHROMA_THRESHOLD",
-				    PyInt_FromLong(CL_MVC2_CHROMA_THRESHOLD));
-	(void) PyDict_SetItemString(d, "MVC2_EDGE_THRESHOLD",
-				    PyInt_FromLong(CL_MVC2_EDGE_THRESHOLD));
-	(void) PyDict_SetItemString(d, "MVC2_BLENDING",
-				    PyInt_FromLong(CL_MVC2_BLENDING));
-	(void) PyDict_SetItemString(d, "MVC2_BLENDING_OFF",
-				    PyInt_FromLong(CL_MVC2_BLENDING_OFF));
-	(void) PyDict_SetItemString(d, "MVC2_BLENDING_ON",
-				    PyInt_FromLong(CL_MVC2_BLENDING_ON));
-	(void) PyDict_SetItemString(d, "JPEG_QUALITY_FACTOR",
-				    PyInt_FromLong(CL_JPEG_QUALITY_FACTOR));
-	(void) PyDict_SetItemString(d, "JPEG_STREAM_HEADERS",
-				    PyInt_FromLong(CL_JPEG_STREAM_HEADERS));
-	(void) PyDict_SetItemString(d, "JPEG_QUANTIZATION_TABLES",
-				 PyInt_FromLong(CL_JPEG_QUANTIZATION_TABLES));
-	(void) PyDict_SetItemString(d, "JPEG_NUM_PARAMS",
-				    PyInt_FromLong(CL_JPEG_NUM_PARAMS));
-	(void) PyDict_SetItemString(d, "RTR_QUALITY_LEVEL",
-				    PyInt_FromLong(CL_RTR_QUALITY_LEVEL));
-	(void) PyDict_SetItemString(d, "HDCC_TILE_THRESHOLD",
-				    PyInt_FromLong(CL_HDCC_TILE_THRESHOLD));
-	(void) PyDict_SetItemString(d, "HDCC_SAMPLES_PER_TILE",
-				    PyInt_FromLong(CL_HDCC_SAMPLES_PER_TILE));
+	(void) dictinsert(d, "MVC2_LUMA_THRESHOLD",
+			  newintobject(CL_MVC2_LUMA_THRESHOLD));
+	(void) dictinsert(d, "MVC2_CHROMA_THRESHOLD",
+			  newintobject(CL_MVC2_CHROMA_THRESHOLD));
+	(void) dictinsert(d, "MVC2_EDGE_THRESHOLD",
+			  newintobject(CL_MVC2_EDGE_THRESHOLD));
+	(void) dictinsert(d, "MVC2_BLENDING", newintobject(CL_MVC2_BLENDING));
+	(void) dictinsert(d, "MVC2_BLENDING_OFF",
+			  newintobject(CL_MVC2_BLENDING_OFF));
+	(void) dictinsert(d, "MVC2_BLENDING_ON",
+			  newintobject(CL_MVC2_BLENDING_ON));
+	(void) dictinsert(d, "JPEG_QUALITY_FACTOR",
+			  newintobject(CL_JPEG_QUALITY_FACTOR));
+	(void) dictinsert(d, "JPEG_STREAM_HEADERS",
+			  newintobject(CL_JPEG_STREAM_HEADERS));
+	(void) dictinsert(d, "JPEG_QUANTIZATION_TABLES",
+			  newintobject(CL_JPEG_QUANTIZATION_TABLES));
+	(void) dictinsert(d, "JPEG_NUM_PARAMS",
+			  newintobject(CL_JPEG_NUM_PARAMS));
+	(void) dictinsert(d, "RTR_QUALITY_LEVEL",
+			  newintobject(CL_RTR_QUALITY_LEVEL));
+	(void) dictinsert(d, "HDCC_TILE_THRESHOLD",
+			  newintobject(CL_HDCC_TILE_THRESHOLD));
+	(void) dictinsert(d, "HDCC_SAMPLES_PER_TILE",
+			  newintobject(CL_HDCC_SAMPLES_PER_TILE));
 #endif
-	(void) PyDict_SetItemString(d, "END_OF_SEQUENCE",
-				    PyInt_FromLong(CL_END_OF_SEQUENCE));
-	(void) PyDict_SetItemString(d, "CHANNEL_POLICY",
-				    PyInt_FromLong(CL_CHANNEL_POLICY));
-	(void) PyDict_SetItemString(d, "NOISE_MARGIN",
-				    PyInt_FromLong(CL_NOISE_MARGIN));
-	(void) PyDict_SetItemString(d, "BITRATE_POLICY",
-				    PyInt_FromLong(CL_BITRATE_POLICY));
-	(void) PyDict_SetItemString(d, "BITRATE_TARGET",
-				    PyInt_FromLong(CL_BITRATE_TARGET));
-	(void) PyDict_SetItemString(d, "LAYER", PyInt_FromLong(CL_LAYER));
-	(void) PyDict_SetItemString(d, "ENUM_VALUE",
-				    PyInt_FromLong(CL_ENUM_VALUE));
-	(void) PyDict_SetItemString(d, "RANGE_VALUE",
-				    PyInt_FromLong(CL_RANGE_VALUE));
-	(void) PyDict_SetItemString(d, "FLOATING_ENUM_VALUE",
-				    PyInt_FromLong(CL_FLOATING_ENUM_VALUE));
-	(void) PyDict_SetItemString(d, "FLOATING_RANGE_VALUE",
-				    PyInt_FromLong(CL_FLOATING_RANGE_VALUE));
-	(void) PyDict_SetItemString(d, "DECOMPRESSOR",
-				    PyInt_FromLong(CL_DECOMPRESSOR));
-	(void) PyDict_SetItemString(d, "COMPRESSOR",
-				    PyInt_FromLong(CL_COMPRESSOR));
-	(void) PyDict_SetItemString(d, "CODEC", PyInt_FromLong(CL_CODEC));
-	(void) PyDict_SetItemString(d, "NONE", PyInt_FromLong(CL_NONE));
+	(void) dictinsert(d, "END_OF_SEQUENCE",
+			  newintobject(CL_END_OF_SEQUENCE));
+	(void) dictinsert(d, "CHANNEL_POLICY",
+			  newintobject(CL_CHANNEL_POLICY));
+	(void) dictinsert(d, "NOISE_MARGIN", newintobject(CL_NOISE_MARGIN));
+	(void) dictinsert(d, "BITRATE_POLICY",
+			  newintobject(CL_BITRATE_POLICY));
+	(void) dictinsert(d, "BITRATE_TARGET",
+			  newintobject(CL_BITRATE_TARGET));
+	(void) dictinsert(d, "LAYER", newintobject(CL_LAYER));
+	(void) dictinsert(d, "ENUM_VALUE", newintobject(CL_ENUM_VALUE));
+	(void) dictinsert(d, "RANGE_VALUE", newintobject(CL_RANGE_VALUE));
+	(void) dictinsert(d, "FLOATING_ENUM_VALUE",
+			  newintobject(CL_FLOATING_ENUM_VALUE));
+	(void) dictinsert(d, "FLOATING_RANGE_VALUE",
+			  newintobject(CL_FLOATING_RANGE_VALUE));
+	(void) dictinsert(d, "DECOMPRESSOR", newintobject(CL_DECOMPRESSOR));
+	(void) dictinsert(d, "COMPRESSOR", newintobject(CL_COMPRESSOR));
+	(void) dictinsert(d, "CODEC", newintobject(CL_CODEC));
+	(void) dictinsert(d, "NONE", newintobject(CL_NONE));
 #ifdef IRIX_5_3_LIBRARY
-	(void) PyDict_SetItemString(d, "BUF_FRAME",
-				    PyInt_FromLong(CL_BUF_FRAME));
-	(void) PyDict_SetItemString(d, "BUF_DATA",
-				    PyInt_FromLong(CL_BUF_DATA));
+	(void) dictinsert(d, "BUF_FRAME", newintobject(CL_BUF_FRAME));
+	(void) dictinsert(d, "BUF_DATA", newintobject(CL_BUF_DATA));
 #endif
 #ifdef CL_FRAME
-	(void) PyDict_SetItemString(d, "FRAME", PyInt_FromLong(CL_FRAME));
-	(void) PyDict_SetItemString(d, "DATA", PyInt_FromLong(CL_DATA));
+	(void) dictinsert(d, "FRAME", newintobject(CL_FRAME));
+	(void) dictinsert(d, "DATA", newintobject(CL_DATA));
 #endif
-	(void) PyDict_SetItemString(d, "NONE", PyInt_FromLong(CL_NONE));
-	(void) PyDict_SetItemString(d, "KEYFRAME",
-				    PyInt_FromLong(CL_KEYFRAME));
-	(void) PyDict_SetItemString(d, "INTRA", PyInt_FromLong(CL_INTRA));
-	(void) PyDict_SetItemString(d, "PREDICTED",
-				    PyInt_FromLong(CL_PREDICTED));
-	(void) PyDict_SetItemString(d, "BIDIRECTIONAL",
-				    PyInt_FromLong(CL_BIDIRECTIONAL));
-	(void) PyDict_SetItemString(d, "TOP_DOWN",
-				    PyInt_FromLong(CL_TOP_DOWN));
-	(void) PyDict_SetItemString(d, "BOTTOM_UP",
-				    PyInt_FromLong(CL_BOTTOM_UP));
+	(void) dictinsert(d, "NONE", newintobject(CL_NONE));
+	(void) dictinsert(d, "KEYFRAME", newintobject(CL_KEYFRAME));
+	(void) dictinsert(d, "INTRA", newintobject(CL_INTRA));
+	(void) dictinsert(d, "PREDICTED", newintobject(CL_PREDICTED));
+	(void) dictinsert(d, "BIDIRECTIONAL", newintobject(CL_BIDIRECTIONAL));
+	(void) dictinsert(d, "TOP_DOWN", newintobject(CL_TOP_DOWN));
+	(void) dictinsert(d, "BOTTOM_UP", newintobject(CL_BOTTOM_UP));
 #ifdef IRIX_5_3_LIBRARY
-	(void) PyDict_SetItemString(d, "CONTINUOUS_BLOCK",
-				    PyInt_FromLong(CL_CONTINUOUS_BLOCK));
-	(void) PyDict_SetItemString(d, "CONTINUOUS_NONBLOCK",
-				    PyInt_FromLong(CL_CONTINUOUS_NONBLOCK));
-	(void) PyDict_SetItemString(d, "EXTERNAL_DEVICE",
-				    PyInt_FromLong((long)CL_EXTERNAL_DEVICE));
+	(void) dictinsert(d, "CONTINUOUS_BLOCK",
+			  newintobject(CL_CONTINUOUS_BLOCK));
+	(void) dictinsert(d, "CONTINUOUS_NONBLOCK",
+			  newintobject(CL_CONTINUOUS_NONBLOCK));
+	(void) dictinsert(d, "EXTERNAL_DEVICE",
+			  newintobject((long)CL_EXTERNAL_DEVICE));
 #endif
-	(void) PyDict_SetItemString(d, "AWCMP_STEREO",
-				    PyInt_FromLong(AWCMP_STEREO));
-	(void) PyDict_SetItemString(d, "AWCMP_JOINT_STEREO",
-				    PyInt_FromLong(AWCMP_JOINT_STEREO));
-	(void) PyDict_SetItemString(d, "AWCMP_INDEPENDENT",
-				    PyInt_FromLong(AWCMP_INDEPENDENT));
-	(void) PyDict_SetItemString(d, "AWCMP_FIXED_RATE",
-				    PyInt_FromLong(AWCMP_FIXED_RATE));
-	(void) PyDict_SetItemString(d, "AWCMP_CONST_QUAL",
-				    PyInt_FromLong(AWCMP_CONST_QUAL));
-	(void) PyDict_SetItemString(d, "AWCMP_LOSSLESS",
-				    PyInt_FromLong(AWCMP_LOSSLESS));
-	(void) PyDict_SetItemString(d, "AWCMP_MPEG_LAYER_I",
-				    PyInt_FromLong(AWCMP_MPEG_LAYER_I));
-	(void) PyDict_SetItemString(d, "AWCMP_MPEG_LAYER_II",
-				    PyInt_FromLong(AWCMP_MPEG_LAYER_II));
-	(void) PyDict_SetItemString(d, "HEADER_START_CODE",
-				    PyInt_FromLong(CL_HEADER_START_CODE));
-	(void) PyDict_SetItemString(d, "BAD_NO_BUFFERSPACE",
-				    PyInt_FromLong(CL_BAD_NO_BUFFERSPACE));
-	(void) PyDict_SetItemString(d, "BAD_PVBUFFER",
-				    PyInt_FromLong(CL_BAD_PVBUFFER));
-	(void) PyDict_SetItemString(d, "BAD_BUFFERLENGTH_NEG",
-				    PyInt_FromLong(CL_BAD_BUFFERLENGTH_NEG));
-	(void) PyDict_SetItemString(d, "BAD_BUFFERLENGTH_ODD",
-				    PyInt_FromLong(CL_BAD_BUFFERLENGTH_ODD));
-	(void) PyDict_SetItemString(d, "BAD_PARAM",
-				    PyInt_FromLong(CL_BAD_PARAM));
-	(void) PyDict_SetItemString(d, "BAD_COMPRESSION_SCHEME",
-				    PyInt_FromLong(CL_BAD_COMPRESSION_SCHEME));
-	(void) PyDict_SetItemString(d, "BAD_COMPRESSOR_HANDLE",
-				    PyInt_FromLong(CL_BAD_COMPRESSOR_HANDLE));
-	(void) PyDict_SetItemString(d, "BAD_COMPRESSOR_HANDLE_POINTER",
-			    PyInt_FromLong(CL_BAD_COMPRESSOR_HANDLE_POINTER));
-	(void) PyDict_SetItemString(d, "BAD_BUFFER_HANDLE",
-				    PyInt_FromLong(CL_BAD_BUFFER_HANDLE));
-	(void) PyDict_SetItemString(d, "BAD_BUFFER_QUERY_SIZE",
-				    PyInt_FromLong(CL_BAD_BUFFER_QUERY_SIZE));
-	(void) PyDict_SetItemString(d, "JPEG_ERROR",
-				    PyInt_FromLong(CL_JPEG_ERROR));
-	(void) PyDict_SetItemString(d, "BAD_FRAME_SIZE",
-				    PyInt_FromLong(CL_BAD_FRAME_SIZE));
-	(void) PyDict_SetItemString(d, "PARAM_OUT_OF_RANGE",
-				    PyInt_FromLong(CL_PARAM_OUT_OF_RANGE));
-	(void) PyDict_SetItemString(d, "ADDED_ALGORITHM_ERROR",
-				    PyInt_FromLong(CL_ADDED_ALGORITHM_ERROR));
-	(void) PyDict_SetItemString(d, "BAD_ALGORITHM_TYPE",
-				    PyInt_FromLong(CL_BAD_ALGORITHM_TYPE));
-	(void) PyDict_SetItemString(d, "BAD_ALGORITHM_NAME",
-				    PyInt_FromLong(CL_BAD_ALGORITHM_NAME));
-	(void) PyDict_SetItemString(d, "BAD_BUFFERING",
-				    PyInt_FromLong(CL_BAD_BUFFERING));
-	(void) PyDict_SetItemString(d, "BUFFER_NOT_CREATED",
-				    PyInt_FromLong(CL_BUFFER_NOT_CREATED));
-	(void) PyDict_SetItemString(d, "BAD_BUFFER_EXISTS",
-				    PyInt_FromLong(CL_BAD_BUFFER_EXISTS));
-	(void) PyDict_SetItemString(d, "BAD_INTERNAL_FORMAT",
-				    PyInt_FromLong(CL_BAD_INTERNAL_FORMAT));
-	(void) PyDict_SetItemString(d, "BAD_BUFFER_POINTER",
-				    PyInt_FromLong(CL_BAD_BUFFER_POINTER));
-	(void) PyDict_SetItemString(d, "FRAME_BUFFER_SIZE_ZERO",
-				    PyInt_FromLong(CL_FRAME_BUFFER_SIZE_ZERO));
-	(void) PyDict_SetItemString(d, "BAD_STREAM_HEADER",
-				    PyInt_FromLong(CL_BAD_STREAM_HEADER));
-	(void) PyDict_SetItemString(d, "BAD_LICENSE",
-				    PyInt_FromLong(CL_BAD_LICENSE));
-	(void) PyDict_SetItemString(d, "AWARE_ERROR",
-				    PyInt_FromLong(CL_AWARE_ERROR));
-	(void) PyDict_SetItemString(d, "BAD_BUFFER_SIZE_POINTER",
-				 PyInt_FromLong(CL_BAD_BUFFER_SIZE_POINTER));
-	(void) PyDict_SetItemString(d, "BAD_BUFFER_SIZE",
-				    PyInt_FromLong(CL_BAD_BUFFER_SIZE));
-	(void) PyDict_SetItemString(d, "BAD_BUFFER_TYPE",
-				    PyInt_FromLong(CL_BAD_BUFFER_TYPE));
-	(void) PyDict_SetItemString(d, "BAD_HEADER_SIZE",
-				    PyInt_FromLong(CL_BAD_HEADER_SIZE));
-	(void) PyDict_SetItemString(d, "BAD_FUNCTION_POINTER",
-				    PyInt_FromLong(CL_BAD_FUNCTION_POINTER));
-	(void) PyDict_SetItemString(d, "BAD_SCHEME_POINTER",
-				    PyInt_FromLong(CL_BAD_SCHEME_POINTER));
-	(void) PyDict_SetItemString(d, "BAD_STRING_POINTER",
-				    PyInt_FromLong(CL_BAD_STRING_POINTER));
-	(void) PyDict_SetItemString(d, "BAD_MIN_GT_MAX",
-				    PyInt_FromLong(CL_BAD_MIN_GT_MAX));
-	(void) PyDict_SetItemString(d, "BAD_INITIAL_VALUE",
-				    PyInt_FromLong(CL_BAD_INITIAL_VALUE));
-	(void) PyDict_SetItemString(d, "BAD_PARAM_ID_POINTER",
-				    PyInt_FromLong(CL_BAD_PARAM_ID_POINTER));
-	(void) PyDict_SetItemString(d, "BAD_PARAM_TYPE",
-				    PyInt_FromLong(CL_BAD_PARAM_TYPE));
-	(void) PyDict_SetItemString(d, "BAD_TEXT_STRING_PTR",
-				    PyInt_FromLong(CL_BAD_TEXT_STRING_PTR));
-	(void) PyDict_SetItemString(d, "BAD_FUNCTIONALITY",
-				    PyInt_FromLong(CL_BAD_FUNCTIONALITY));
-	(void) PyDict_SetItemString(d, "BAD_NUMBER_OF_BLOCKS",
-				    PyInt_FromLong(CL_BAD_NUMBER_OF_BLOCKS));
-	(void) PyDict_SetItemString(d, "BAD_BLOCK_SIZE",
-				    PyInt_FromLong(CL_BAD_BLOCK_SIZE));
-	(void) PyDict_SetItemString(d, "BAD_POINTER",
-				    PyInt_FromLong(CL_BAD_POINTER));
-	(void) PyDict_SetItemString(d, "BAD_BOARD",
-				    PyInt_FromLong(CL_BAD_BOARD));
-	(void) PyDict_SetItemString(d, "MVC2_ERROR",
-				    PyInt_FromLong(CL_MVC2_ERROR));
+	(void) dictinsert(d, "AWCMP_STEREO", newintobject(AWCMP_STEREO));
+	(void) dictinsert(d, "AWCMP_JOINT_STEREO",
+			  newintobject(AWCMP_JOINT_STEREO));
+	(void) dictinsert(d, "AWCMP_INDEPENDENT",
+			  newintobject(AWCMP_INDEPENDENT));
+	(void) dictinsert(d, "AWCMP_FIXED_RATE",
+			  newintobject(AWCMP_FIXED_RATE));
+	(void) dictinsert(d, "AWCMP_CONST_QUAL",
+			  newintobject(AWCMP_CONST_QUAL));
+	(void) dictinsert(d, "AWCMP_LOSSLESS", newintobject(AWCMP_LOSSLESS));
+	(void) dictinsert(d, "AWCMP_MPEG_LAYER_I",
+			  newintobject(AWCMP_MPEG_LAYER_I));
+	(void) dictinsert(d, "AWCMP_MPEG_LAYER_II",
+			  newintobject(AWCMP_MPEG_LAYER_II));
+	(void) dictinsert(d, "HEADER_START_CODE",
+			  newintobject(CL_HEADER_START_CODE));
+	(void) dictinsert(d, "BAD_NO_BUFFERSPACE",
+			  newintobject(CL_BAD_NO_BUFFERSPACE));
+	(void) dictinsert(d, "BAD_PVBUFFER", newintobject(CL_BAD_PVBUFFER));
+	(void) dictinsert(d, "BAD_BUFFERLENGTH_NEG",
+			  newintobject(CL_BAD_BUFFERLENGTH_NEG));
+	(void) dictinsert(d, "BAD_BUFFERLENGTH_ODD",
+			  newintobject(CL_BAD_BUFFERLENGTH_ODD));
+	(void) dictinsert(d, "BAD_PARAM", newintobject(CL_BAD_PARAM));
+	(void) dictinsert(d, "BAD_COMPRESSION_SCHEME",
+			  newintobject(CL_BAD_COMPRESSION_SCHEME));
+	(void) dictinsert(d, "BAD_COMPRESSOR_HANDLE",
+			  newintobject(CL_BAD_COMPRESSOR_HANDLE));
+	(void) dictinsert(d, "BAD_COMPRESSOR_HANDLE_POINTER",
+			  newintobject(CL_BAD_COMPRESSOR_HANDLE_POINTER));
+	(void) dictinsert(d, "BAD_BUFFER_HANDLE",
+			  newintobject(CL_BAD_BUFFER_HANDLE));
+	(void) dictinsert(d, "BAD_BUFFER_QUERY_SIZE",
+			  newintobject(CL_BAD_BUFFER_QUERY_SIZE));
+	(void) dictinsert(d, "JPEG_ERROR", newintobject(CL_JPEG_ERROR));
+	(void) dictinsert(d, "BAD_FRAME_SIZE",
+			  newintobject(CL_BAD_FRAME_SIZE));
+	(void) dictinsert(d, "PARAM_OUT_OF_RANGE",
+			  newintobject(CL_PARAM_OUT_OF_RANGE));
+	(void) dictinsert(d, "ADDED_ALGORITHM_ERROR",
+			  newintobject(CL_ADDED_ALGORITHM_ERROR));
+	(void) dictinsert(d, "BAD_ALGORITHM_TYPE",
+			  newintobject(CL_BAD_ALGORITHM_TYPE));
+	(void) dictinsert(d, "BAD_ALGORITHM_NAME",
+			  newintobject(CL_BAD_ALGORITHM_NAME));
+	(void) dictinsert(d, "BAD_BUFFERING", newintobject(CL_BAD_BUFFERING));
+	(void) dictinsert(d, "BUFFER_NOT_CREATED",
+			  newintobject(CL_BUFFER_NOT_CREATED));
+	(void) dictinsert(d, "BAD_BUFFER_EXISTS",
+			  newintobject(CL_BAD_BUFFER_EXISTS));
+	(void) dictinsert(d, "BAD_INTERNAL_FORMAT",
+			  newintobject(CL_BAD_INTERNAL_FORMAT));
+	(void) dictinsert(d, "BAD_BUFFER_POINTER",
+			  newintobject(CL_BAD_BUFFER_POINTER));
+	(void) dictinsert(d, "FRAME_BUFFER_SIZE_ZERO",
+			  newintobject(CL_FRAME_BUFFER_SIZE_ZERO));
+	(void) dictinsert(d, "BAD_STREAM_HEADER",
+			  newintobject(CL_BAD_STREAM_HEADER));
+	(void) dictinsert(d, "BAD_LICENSE", newintobject(CL_BAD_LICENSE));
+	(void) dictinsert(d, "AWARE_ERROR", newintobject(CL_AWARE_ERROR));
+	(void) dictinsert(d, "BAD_BUFFER_SIZE_POINTER",
+			  newintobject(CL_BAD_BUFFER_SIZE_POINTER));
+	(void) dictinsert(d, "BAD_BUFFER_SIZE",
+			  newintobject(CL_BAD_BUFFER_SIZE));
+	(void) dictinsert(d, "BAD_BUFFER_TYPE",
+			  newintobject(CL_BAD_BUFFER_TYPE));
+	(void) dictinsert(d, "BAD_HEADER_SIZE",
+			  newintobject(CL_BAD_HEADER_SIZE));
+	(void) dictinsert(d, "BAD_FUNCTION_POINTER",
+			  newintobject(CL_BAD_FUNCTION_POINTER));
+	(void) dictinsert(d, "BAD_SCHEME_POINTER",
+			  newintobject(CL_BAD_SCHEME_POINTER));
+	(void) dictinsert(d, "BAD_STRING_POINTER",
+			  newintobject(CL_BAD_STRING_POINTER));
+	(void) dictinsert(d, "BAD_MIN_GT_MAX",
+			  newintobject(CL_BAD_MIN_GT_MAX));
+	(void) dictinsert(d, "BAD_INITIAL_VALUE",
+			  newintobject(CL_BAD_INITIAL_VALUE));
+	(void) dictinsert(d, "BAD_PARAM_ID_POINTER",
+			  newintobject(CL_BAD_PARAM_ID_POINTER));
+	(void) dictinsert(d, "BAD_PARAM_TYPE",
+			  newintobject(CL_BAD_PARAM_TYPE));
+	(void) dictinsert(d, "BAD_TEXT_STRING_PTR",
+			  newintobject(CL_BAD_TEXT_STRING_PTR));
+	(void) dictinsert(d, "BAD_FUNCTIONALITY",
+			  newintobject(CL_BAD_FUNCTIONALITY));
+	(void) dictinsert(d, "BAD_NUMBER_OF_BLOCKS",
+			  newintobject(CL_BAD_NUMBER_OF_BLOCKS));
+	(void) dictinsert(d, "BAD_BLOCK_SIZE",
+			  newintobject(CL_BAD_BLOCK_SIZE));
+	(void) dictinsert(d, "BAD_POINTER", newintobject(CL_BAD_POINTER));
+	(void) dictinsert(d, "BAD_BOARD", newintobject(CL_BAD_BOARD));
+	(void) dictinsert(d, "MVC2_ERROR", newintobject(CL_MVC2_ERROR));
 #ifdef IRIX_5_3_LIBRARY
-	(void) PyDict_SetItemString(d, "NEXT_NOT_AVAILABLE",
-				    PyInt_FromLong(CL_NEXT_NOT_AVAILABLE));
-	(void) PyDict_SetItemString(d, "SCHEME_BUSY",
-				    PyInt_FromLong(CL_SCHEME_BUSY));
-	(void) PyDict_SetItemString(d, "SCHEME_NOT_AVAILABLE",
-				    PyInt_FromLong(CL_SCHEME_NOT_AVAILABLE));
+	(void) dictinsert(d, "NEXT_NOT_AVAILABLE",
+			  newintobject(CL_NEXT_NOT_AVAILABLE));
+	(void) dictinsert(d, "SCHEME_BUSY", newintobject(CL_SCHEME_BUSY));
+	(void) dictinsert(d, "SCHEME_NOT_AVAILABLE",
+			  newintobject(CL_SCHEME_NOT_AVAILABLE));
 #endif
 #ifdef CL_LUMA_THRESHOLD
 	/* backward compatibility */
-	(void) PyDict_SetItemString(d, "LUMA_THRESHOLD",
-				    PyInt_FromLong(CL_LUMA_THRESHOLD));
-	(void) PyDict_SetItemString(d, "CHROMA_THRESHOLD",
-				    PyInt_FromLong(CL_CHROMA_THRESHOLD));
-	(void) PyDict_SetItemString(d, "EDGE_THRESHOLD",
-				    PyInt_FromLong(CL_EDGE_THRESHOLD));
-	(void) PyDict_SetItemString(d, "BLENDING",
-				    PyInt_FromLong(CL_BLENDING));
-	(void) PyDict_SetItemString(d, "QUALITY_FACTOR",
-				    PyInt_FromLong(CL_QUALITY_FACTOR));
-	(void) PyDict_SetItemString(d, "STREAM_HEADERS",
-				    PyInt_FromLong(CL_STREAM_HEADERS));
-	(void) PyDict_SetItemString(d, "QUALITY_LEVEL",
-				    PyInt_FromLong(CL_QUALITY_LEVEL));
-	(void) PyDict_SetItemString(d, "TILE_THRESHOLD",
-				    PyInt_FromLong(CL_TILE_THRESHOLD));
-	(void) PyDict_SetItemString(d, "SAMPLES_PER_TILE",
-				    PyInt_FromLong(CL_SAMPLES_PER_TILE));
+	(void) dictinsert(d, "LUMA_THRESHOLD",
+			  newintobject(CL_LUMA_THRESHOLD));
+	(void) dictinsert(d, "CHROMA_THRESHOLD",
+			  newintobject(CL_CHROMA_THRESHOLD));
+	(void) dictinsert(d, "EDGE_THRESHOLD",
+			  newintobject(CL_EDGE_THRESHOLD));
+	(void) dictinsert(d, "BLENDING", newintobject(CL_BLENDING));
+	(void) dictinsert(d, "QUALITY_FACTOR",
+			  newintobject(CL_QUALITY_FACTOR));
+	(void) dictinsert(d, "STREAM_HEADERS",
+			  newintobject(CL_STREAM_HEADERS));
+	(void) dictinsert(d, "QUALITY_LEVEL", newintobject(CL_QUALITY_LEVEL));
+	(void) dictinsert(d, "TILE_THRESHOLD",
+			  newintobject(CL_TILE_THRESHOLD));
+	(void) dictinsert(d, "SAMPLES_PER_TILE",
+			  newintobject(CL_SAMPLES_PER_TILE));
 #endif
 
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module cl");
+	if (err_occurred())
+		fatal("can't initialize module cl");
 
 	(void) clSetErrorHandler(cl_ErrorHandler);
 }

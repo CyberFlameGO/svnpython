@@ -294,7 +294,7 @@ complex_hash(v)
 {
 	double intpart, fractpart;
 	int expo;
-	long hipart, x;
+	long x;
 	/* This is designed so that Python numbers with the same
 	   value hash to the same value, otherwise comparisons
 	   of mapping keys will turn out weird */
@@ -309,7 +309,7 @@ complex_hash(v)
 	fractpart = modf(v->cval.real, &intpart);
 #endif
 
-	if (fractpart == 0.0 && v->cval.imag == 0.0) {
+	if (fractpart == 0.0) {
 		if (intpart > 0x7fffffffL || -intpart > 0x7fffffffL) {
 			/* Convert to long int and use its hash... */
 			object *w = dnewlongobject(v->cval.real);
@@ -323,36 +323,8 @@ complex_hash(v)
 	}
 	else {
 		fractpart = frexp(fractpart, &expo);
-		fractpart = fractpart * 2147483648.0; /* 2**31 */
-		hipart = (long)fractpart; /* Take the top 32 bits */
-		fractpart = (fractpart - (double)hipart) * 2147483648.0;
-						/* Get the next 32 bits */
-		x = hipart + (long)fractpart + (long)intpart + (expo << 15);
-						/* Combine everything */
-
-		if (v->cval.imag != 0.0) { /* Hash the imaginary part */
-			/* XXX Note that this hashes complex(x, y)
-			   to the same value as complex(y, x).
-			   Still better than it used to be :-) */
-#ifdef MPW
-			{
-				extended e;
-				fractpart = modf(v->cval.imag, &e);
-				intpart = e;
-			}
-#else
-			fractpart = modf(v->cval.imag, &intpart);
-#endif
-			fractpart = frexp(fractpart, &expo);
-			fractpart = fractpart * 2147483648.0; /* 2**31 */
-			hipart = (long)fractpart; /* Take the top 32 bits */
-			fractpart =
-				(fractpart - (double)hipart) * 2147483648.0;
-						/* Get the next 32 bits */
-			x ^= hipart + (long)fractpart +
-				(long)intpart + (expo << 15);
-						/* Combine everything */
-		}
+		fractpart = fractpart*2147483648.0; /* 2**31 */
+		x = (long) (intpart + fractpart) ^ expo; /* Rather arbitrary */
 	}
 	if (x == -1)
 		x = -2;
@@ -364,11 +336,7 @@ complex_add(v, w)
 	complexobject *v;
 	complexobject *w;
 {
-	Py_complex result;
-	PyFPE_START_PROTECT("complex_add", return 0)
-	result = c_sum(v->cval,w->cval);
-	PyFPE_END_PROTECT(result)
-	return newcomplexobject(result);
+	return newcomplexobject(c_sum(v->cval,w->cval));
 }
 
 static object *
@@ -376,11 +344,7 @@ complex_sub(v, w)
 	complexobject *v;
 	complexobject *w;
 {
-	Py_complex result;
-	PyFPE_START_PROTECT("complex_sub", return 0)
-	result = c_diff(v->cval,w->cval);
-	PyFPE_END_PROTECT(result)
-	return newcomplexobject(result);
+	return newcomplexobject(c_diff(v->cval,w->cval));
 }
 
 static object *
@@ -388,11 +352,7 @@ complex_mul(v, w)
 	complexobject *v;
 	complexobject *w;
 {
-	Py_complex result;
-	PyFPE_START_PROTECT("complex_mul", return 0)
-	result = c_prod(v->cval,w->cval);
-	PyFPE_END_PROTECT(result)
-	return newcomplexobject(result);
+	return newcomplexobject(c_prod(v->cval,w->cval));
 }
 
 static object *
@@ -401,10 +361,8 @@ complex_div(v, w)
 	complexobject *w;
 {
 	Py_complex quot;
-	PyFPE_START_PROTECT("complex_div", return 0)
 	c_error = 0;
 	quot = c_quot(v->cval,w->cval);
-	PyFPE_END_PROTECT(quot)
 	if (c_error == 1) {
 		err_setstr(ZeroDivisionError, "complex division");
 		return NULL;
@@ -471,7 +429,6 @@ complex_pow(v, w, z)
 		return NULL;
 	}
 
-	PyFPE_START_PROTECT("complex_pow", return 0)
 	c_error = 0;
 	exponent = ((complexobject*)w)->cval;
 	int_exponent = (long)exponent.real;
@@ -480,7 +437,6 @@ complex_pow(v, w, z)
 	else
 		p = c_pow(v->cval,exponent);
 
-	PyFPE_END_PROTECT(p)
 	if (c_error == 2) {
 		err_setstr(ValueError, "0.0 to a negative or complex power");
 		return NULL;
@@ -511,11 +467,7 @@ static object *
 complex_abs(v)
 	complexobject *v;
 {
-	double result;
-	PyFPE_START_PROTECT("complex_abs", return 0)
-	result = hypot(v->cval.real,v->cval.imag);
-	PyFPE_END_PROTECT(result)
-	return newfloatobject(result);
+	return newfloatobject(hypot(v->cval.real,v->cval.imag));
 }
 
 static int
@@ -601,12 +553,16 @@ complex_getattr(self, name)
 	complexobject *self;
 	char *name;
 {
+	Py_complex cval;
 	if (strcmp(name, "real") == 0)
 		return (object *)newfloatobject(self->cval.real);
 	else if (strcmp(name, "imag") == 0)
 		return (object *)newfloatobject(self->cval.imag);
-	else if (strcmp(name, "__members__") == 0)
-		return mkvalue("[ss]", "imag", "real");
+	else if (strcmp(name, "conj") == 0) {
+		cval.real = self->cval.real;
+		cval.imag = -self->cval.imag;
+		return (object *)newcomplexobject(cval);
+	}
 	return findmethod(complex_methods, (object *)self, name);
 }
 

@@ -65,22 +65,18 @@
 DESTLIB=$(LIBDEST)
 MACHDESTLIB=$(BINLIBDEST)
 
-# NOTE: all the paths are now relative to the prefix that is computed
-# at run time!
-
 # Standard path -- don't edit.
-# No leading colon since this is the first entry.
-# Empty since this is now just the runtime prefix.
-DESTPATH=
+# No leading colon since this is the first entry
+DESTPATH=$(DESTLIB)
 
 # Site specific path components -- should begin with : if non-empty
 SITEPATH=
 
 # Standard path components for test modules
-TESTPATH=:test
+TESTPATH=:$(DESTLIB)/test
 
 # Path components for machine- or system-dependent modules and shared libraries
-MACHDEPPATH=:$(MACHDEP):sharedmodules
+MACHDEPPATH=:$(DESTLIB)/$(MACHDEP):$(MACHDESTLIB)/sharedmodules
 
 COREPYTHONPATH=$(DESTPATH)$(SITEPATH)$(TESTPATH)$(MACHDEPPATH)$(STDWINPATH)$(TKPATH)
 PYTHONPATH=$(COREPYTHONPATH)
@@ -104,13 +100,6 @@ signal signalmodule.c		# signal(2)
 # --with-thread option passed to the configure script for this to work:
 
 #thread threadmodule.c
-
-# Pure module.  Cannot be linked dynamically.
-# -DWITH_QUANTIFY, -DWITH_PURIFY, or -DWITH_ALL_PURE
-#WHICH_PURE_PRODUCTS=-DWITH_ALL_PURE
-#PURE_INCLS=-I/usr/local/include
-#PURE_STUBLIBS=-L/usr/local/lib -lpurify_stubs -lquantify_stubs
-#pure puremodule.c $(WHICH_PURE_PRODUCTS) $(PURE_INCLS) $(PURE_STUBLIBS)
 
 # Uncommenting the following line tells makesetup that all following
 # modules are to be built as shared libraries (see above for more
@@ -150,7 +139,7 @@ errno errnomodule.c	# posix (UNIX) errno values
 #dbm dbmmodule.c 	# dbm(3) may require -lndbm or similar
 #nis nismodule.c 	# Sun yellow pages -- not everywhere
 #termios termios.c	# Steen Lumholt's termios module
-#resource resource.c	# Jeremy Hylton's rlimit interface
+#_xdr _xdrmodule.c # -lnsl # Helper for xdrlib.py
 
 
 # Multimedia modules -- on by default.
@@ -171,7 +160,7 @@ rgbimg rgbimgmodule.c   # Read SGI RGB image files (but coded portably)
 #STDWIN=/ufs/guido/src/stdwin
 
 # Uncomment these lines:
-#STDWINPATH=:stdwin
+#STDWINPATH=:$(DESTLIB)/stdwin
 #LIBTEXTEDIT=$(STDWIN)/$(MACHDEP)/Packs/textedit/libtextedit.a
 #LIBX11STDWIN=$(STDWIN)/$(MACHDEP)/Ports/x11/libstdwin.a
 #stdwin stdwinmodule.c -I$(STDWIN)/H $(LIBTEXTEDIT) $(LIBX11STDWIN) -lX11
@@ -256,7 +245,7 @@ md5 md5module.c md5c.c
 # Change the -l arguments to use Tcl 7.4 and Tk 4.0!
 
 # *** ALWAYS enable this line:
-#TKPATH=:tkinter
+#TKPATH=:$(DESTLIB)/tkinter
 
 # *** Enable *one* of the following lines:
 # For Solaris:
@@ -309,7 +298,7 @@ rotor rotormodule.c		# enigma-inspired encryption
 
 #DB=/depot/sundry/src/berkeley-db/db.1.85
 #DBPORT=$(DB)/PORT/irix.5.3
-#bsddb bsddbmodule.c -I$(DBPORT)/include $(DBPORT)/libdb.a
+#bsddb bsddbmodule.o -I$(DBPORT)/include $(DBPORT)/libdb.a
 
 
 
@@ -321,28 +310,6 @@ binascii binascii.c
 
 # Fred Drake's interface to the Python parser
 parser parsermodule.c
-
-# Digital Creations' cStringIO and cPickle
-cStringIO cStringIO.c
-cPickle cPickle.c
-
-
-# Lee Busby's SIGFPE modules.
-# The library to link fpectl with is platform specific.
-# Choose *one* of the options below for fpectl:
-
-# For SGI IRIX (tested on 5.3):
-#fpectl fpectlmodule.c -lfpe
-
-# For Solaris with SunPro compiler (tested on Solaris 2.5 with SunPro C 4.2):
-# (Without the compiler you don't have -lsunmath.)
-#fpectl fpectlmodule.c -R/opt/SUNWspro/lib -lsunmath -lm
-
-# For other systems: see instructions in fpectlmodule.c.
-#fpectl fpectlmodule.c ...
-
-# Test module for fpectl.  No extra libraries needed.
-#fpetest fpetestmodule.c
 
 
 # Example -- included for reference only:

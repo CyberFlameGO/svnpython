@@ -31,7 +31,8 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /* Sad objects */
 
-#include "Python.h"
+#include "allobjects.h"
+#include "modsupport.h"
 #include "structmember.h"
 
 #ifdef HAVE_SYS_AUDIOIO_H
@@ -57,7 +58,7 @@ PERFORMANCE OF THIS SOFTWARE.
 /* #define offsetof(str,mem) ((int)(((str *)0)->mem)) */
 
 typedef struct {
-	PyObject_HEAD
+	OB_HEAD
 	int	x_fd;		/* The open file */
 	int	x_icount;	/* # samples read */
 	int	x_ocount;	/* # samples written */
@@ -66,22 +67,22 @@ typedef struct {
 } sadobject;
 
 typedef struct {
-	PyObject_HEAD
+	OB_HEAD
 	audio_info_t ai;
 } sadstatusobject;
 
-staticforward PyTypeObject Sadtype;
-staticforward PyTypeObject Sadstatustype;
+staticforward typeobject Sadtype;
+staticforward typeobject Sadstatustype;
 static sadstatusobject *sads_alloc();	/* Forward */
 
-static PyObject *SunAudioError;
+static object *SunAudioError;
 
 #define is_sadobject(v)		((v)->ob_type == &Sadtype)
 #define is_sadstatusobject(v)	((v)->ob_type == &Sadstatustype)
 
 static sadobject *
 newsadobject(arg)
-	PyObject *arg;
+	object *arg;
 {
 	sadobject *xp;
 	int fd;
@@ -89,39 +90,36 @@ newsadobject(arg)
 	int imode;
 
 	/* Check arg for r/w/rw */
-	if (!PyArg_Parse(arg, "s", &mode))
-		return NULL;
-	if (strcmp(mode, "r") == 0)
-		imode = 0;
-	else if (strcmp(mode, "w") == 0)
-		imode = 1;
-	else if (strcmp(mode, "rw") == 0)
-		imode = 2;
-	else if (strcmp(mode, "control") == 0)
-		imode = -1;
+	if ( !getargs(arg, "s", &mode) )
+	  return 0;
+	if ( strcmp(mode, "r") == 0 )
+	  imode = 0;
+	else if ( strcmp(mode, "w") == 0 )
+	  imode = 1;
+	else if ( strcmp(mode, "rw") == 0 )
+	  imode = 2;
+	else if ( strcmp(mode, "control") == 0 )
+	  imode = -1;
 	else {
-		PyErr_SetString(SunAudioError,
-			  "Mode should be one of 'r', 'w', 'rw' or 'control'");
-		return NULL;
+	    err_setstr(SunAudioError,
+		       "Mode should be one of 'r', 'w', 'rw' or 'control'");
+	    return 0;
 	}
 	
 	/* Open the correct device */
-	if (imode < 0)
-		/* XXXX Check that this works */
-		fd = open("/dev/audioctl", 2);
+	if ( imode < 0 )
+	  fd = open("/dev/audioctl", 2); /* XXXX Chaeck that this works */
 	else
-		fd = open("/dev/audio", imode);
-	if (fd < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		return NULL;
+	  fd = open("/dev/audio", imode);
+	if ( fd < 0 ) {
+	    err_errno(SunAudioError);
+	    return NULL;
 	}
 
 	/* Create and initialize the object */
-	xp = PyObject_NEW(sadobject, &Sadtype);
-	if (xp == NULL) {
-		close(fd);
+	xp = NEWOBJ(sadobject, &Sadtype);
+	if (xp == NULL)
 		return NULL;
-	}
 	xp->x_fd = fd;
 	xp->x_icount = xp->x_ocount = 0;
 	xp->x_isctl = (imode < 0);
@@ -136,255 +134,242 @@ sad_dealloc(xp)
 	sadobject *xp;
 {
         close(xp->x_fd);
-	PyMem_DEL(xp);
+	DEL(xp);
 }
 
-static PyObject *
+static object *
 sad_read(self, args)
         sadobject *self;
-        PyObject *args;
+        object *args;
 {
         int size, count;
 	char *cp;
-	PyObject *rv;
+	object *rv;
 	
-        if (!PyArg_Parse(args, "i", &size))
-		return NULL;
-	rv = PyString_FromStringAndSize(NULL, size);
-	if (rv == NULL)
-		return NULL;
+        if ( !getargs(args, "i", &size) )
+	  return 0;
+	rv = newsizedstringobject(NULL, size);
+	if ( rv == NULL )
+	  return 0;
 
-	if (!(cp = PyString_AsString(rv)))
-		goto finally;
+	cp = getstringvalue(rv);
 
 	count = read(self->x_fd, cp, size);
-	if (count < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		goto finally;
+	if ( count < 0 ) {
+	    DECREF(rv);
+	    err_errno(SunAudioError);
+	    return NULL;
 	}
-#if 0
-	/* TBD: why print this message if you can handle the condition?
-	 * assume it's debugging info which we can just as well get rid
-	 * of.  in any case this message should *not* be using printf!
-	 */
-	if (count != size)
-		printf("sunaudio: funny read rv %d wtd %d\n", count, size);
-#endif
+	if ( count != size )
+	  printf("sunaudio: funny read rv %d wtd %d\n", count, size);
 	self->x_icount += count;
 	return rv;
-
-  finally:
-	Py_DECREF(rv);
-	return NULL;
 }
 
-static PyObject *
+static object *
 sad_write(self, args)
         sadobject *self;
-        PyObject *args;
+        object *args;
 {
         char *cp;
 	int count, size;
 	
-        if (!PyArg_Parse(args, "s#", &cp, &size))
-		return NULL;
+        if ( !getargs(args, "s#", &cp, &size) )
+	  return 0;
 
 	count = write(self->x_fd, cp, size);
-	if (count < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		return NULL;
+	if ( count < 0 ) {
+	    err_errno(SunAudioError);
+	    return NULL;
 	}
-#if 0
-	if (count != size)
-		printf("sunaudio: funny write rv %d wanted %d\n", count, size);
-#endif
+	if ( count != size )
+	  printf("sunaudio: funny write rv %d wanted %d\n", count, size);
 	self->x_ocount += count;
 	
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 sad_getinfo(self, args)
-	sadobject *self;
-	PyObject *args;
+    sadobject *self;
+    object *args;
 {
 	sadstatusobject *rv;
 
-	if (!PyArg_Parse(args, ""))
-		return NULL;
-	if (!(rv = sads_alloc()))
-		return NULL;
-
-	if (ioctl(self->x_fd, AUDIO_GETINFO, &rv->ai) < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		Py_DECREF(rv);
+	if ( !getargs(args, "") )
+	  return NULL;
+	rv = sads_alloc();
+	if ( ioctl(self->x_fd, AUDIO_GETINFO, &rv->ai) < 0 ) {
+		err_errno(SunAudioError);
+		DECREF(rv);
 		return NULL;
 	}
-	return (PyObject *)rv;
+	return (object *)rv;
 }
 
-static PyObject *
+static object *
 sad_setinfo(self, arg)
-	sadobject *self;
-	sadstatusobject *arg;
+    sadobject *self;
+    sadstatusobject *arg;
 {
-	if (!is_sadstatusobject(arg)) {
-		PyErr_SetString(PyExc_TypeError,
-				"Must be sun audio status object");
+	if ( !is_sadstatusobject(arg) ) {
+		err_setstr(TypeError, "Must be sun audio status object");
 		return NULL;
 	}
-	if (ioctl(self->x_fd, AUDIO_SETINFO, &arg->ai) < 0) {
-		PyErr_SetFromErrno(SunAudioError);
+	if ( ioctl(self->x_fd, AUDIO_SETINFO, &arg->ai) < 0 ) {
+		err_errno(SunAudioError);
 		return NULL;
 	}
-	Py_INCREF(Py_None);
-	return Py_None;
+	INCREF(None);
+	return None;
 }
 
-static PyObject *
+static object *
 sad_ibufcount(self, args)
-	sadobject *self;
-	PyObject *args;
+    sadobject *self;
+    object *args;
 {
-	audio_info_t ai;
+    audio_info_t ai;
+    object *rv;
     
-	if (!PyArg_Parse(args, ""))
-		return NULL;
-	if (ioctl(self->x_fd, AUDIO_GETINFO, &ai) < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		return NULL;
-	}
-	return PyInt_FromLong(ai.record.samples - self->x_icount);
+    if ( !getargs(args, "") )
+      return 0;
+    if ( ioctl(self->x_fd, AUDIO_GETINFO, &ai) < 0 ) {
+	err_errno(SunAudioError);
+	return NULL;
+    }
+    rv = newintobject(ai.record.samples - self->x_icount);
+    return rv;
 }
 
-static PyObject *
+static object *
 sad_obufcount(self, args)
-	sadobject *self;
-	PyObject *args;
+    sadobject *self;
+    object *args;
 {
-	audio_info_t ai;
+    audio_info_t ai;
+    object *rv;
     
-	if (!PyArg_Parse(args, ""))
-		return NULL;
-	if (ioctl(self->x_fd, AUDIO_GETINFO, &ai) < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		return NULL;
-	}
-	/* x_ocount is in bytes, wheras play.samples is in frames */
-	/* we want frames */
-	return PyInt_FromLong(self->x_ocount / (ai.play.channels *
-						ai.play.precision / 8) -
-			      ai.play.samples);
+    if ( !getargs(args, "") )
+      return 0;
+    if ( ioctl(self->x_fd, AUDIO_GETINFO, &ai) < 0 ) {
+	err_errno(SunAudioError);
+	return NULL;
+    }
+    rv = newintobject(self->x_ocount - ai.play.samples);
+    return rv;
 }
 
-static PyObject *
+static object *
 sad_drain(self, args)
-	sadobject *self;
-	PyObject *args;
+    sadobject *self;
+    object *args;
 {
     
-	if (!PyArg_Parse(args, ""))
-		return NULL;
-	if (ioctl(self->x_fd, AUDIO_DRAIN, 0) < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		return NULL;
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
+    if ( !getargs(args, "") )
+      return 0;
+    if ( ioctl(self->x_fd, AUDIO_DRAIN, 0) < 0 ) {
+	err_errno(SunAudioError);
+	return NULL;
+    }
+    INCREF(None);
+    return None;
 }
 
 #ifdef SOLARIS
-static PyObject *
+static object *
 sad_getdev(self, args)
-	sadobject *self;
-	PyObject *args;
+    sadobject *self;
+    object *args;
 {
-	struct audio_device ad;
+    struct audio_device ad;
 
-	if (!PyArg_Parse(args, ""))
-		return NULL;
-	if (ioctl(self->x_fd, AUDIO_GETDEV, &ad) < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		return NULL;
-	}
-	return Py_BuildValue("(sss)", ad.name, ad.version, ad.config);
+    if ( !getargs(args, "") )
+	return 0;
+    if ( ioctl(self->x_fd, AUDIO_GETDEV, &ad) < 0 ) {
+	err_errno(SunAudioError);
+	return NULL;
+    }
+    return mkvalue("(sss)", ad.name, ad.version, ad.config);
 }
 #endif
 
-static PyObject *
+static object *
 sad_flush(self, args)
-	sadobject *self;
-	PyObject *args;
+    sadobject *self;
+    object *args;
 {
     
-	if (!PyArg_Parse(args, ""))
-		return NULL;
-	if (ioctl(self->x_fd, I_FLUSH, FLUSHW) < 0) {
-		PyErr_SetFromErrno(SunAudioError);
-		return NULL;
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
+    if ( !getargs(args, "") )
+      return 0;
+    if ( ioctl(self->x_fd, I_FLUSH, FLUSHW) < 0 ) {
+	err_errno(SunAudioError);
+	return NULL;
+    }
+    INCREF(None);
+    return None;
 }
 
-static PyObject *
+static object *
 sad_close(self, args)
-	sadobject *self;
-	PyObject *args;
+    sadobject *self;
+    object *args;
 {
     
-	if (!PyArg_Parse(args, ""))
-		return NULL;
-	if (self->x_fd >= 0) {
-		close(self->x_fd);
-		self->x_fd = -1;
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
+    if ( !getargs(args, "") )
+      return 0;
+    if ( self->x_fd >= 0 ) {
+	close(self->x_fd);
+	self->x_fd = -1;
+    }
+    INCREF(None);
+    return None;
 }
 
-static PyMethodDef sad_methods[] = {
-        { "read",	(PyCFunction)sad_read },
-        { "write",	(PyCFunction)sad_write },
-        { "ibufcount",	(PyCFunction)sad_ibufcount },
-        { "obufcount",	(PyCFunction)sad_obufcount },
+static struct methodlist sad_methods[] = {
+        { "read",	(method)sad_read },
+        { "write",	(method)sad_write },
+        { "ibufcount",	(method)sad_ibufcount },
+        { "obufcount",	(method)sad_obufcount },
 #define CTL_METHODS 4
-        { "getinfo",	(PyCFunction)sad_getinfo },
-        { "setinfo",	(PyCFunction)sad_setinfo },
-        { "drain",	(PyCFunction)sad_drain },
-        { "flush",	(PyCFunction)sad_flush },
+        { "getinfo",	(method)sad_getinfo },
+        { "setinfo",	(method)sad_setinfo },
+        { "drain",	(method)sad_drain },
+        { "flush",	(method)sad_flush },
 #ifdef SOLARIS
-	{ "getdev",	(PyCFunction)sad_getdev },
+	{ "getdev",	(method)sad_getdev },
 #endif
-        { "close",	(PyCFunction)sad_close },
+        { "close",	(method)sad_close },
 	{NULL,		NULL}		/* sentinel */
 };
 
-static PyObject *
+static object *
 sad_getattr(xp, name)
 	sadobject *xp;
 	char *name;
 {
-	if (xp->x_isctl)
-		return Py_FindMethod(sad_methods+CTL_METHODS,
-				     (PyObject *)xp, name);
+	if ( xp->x_isctl )
+	  return findmethod(sad_methods+CTL_METHODS, (object *)xp, name);
 	else
-		return Py_FindMethod(sad_methods, (PyObject *)xp, name);
+	  return findmethod(sad_methods, (object *)xp, name);
 }
 
 /* ----------------------------------------------------------------- */
 
 static sadstatusobject *
 sads_alloc() {
-	return PyObject_NEW(sadstatusobject, &Sadstatustype);
+	sadstatusobject *rv;
+
+	rv = NEWOBJ(sadstatusobject, &Sadstatustype);
+	return rv;
 }
 
 static void
 sads_dealloc(xp)
-	sadstatusobject *xp;
+    sadstatusobject *xp;
 {
-	PyMem_DEL(xp);
+	DEL(xp);
 }
 
 #define OFF(x) offsetof(audio_info_t,x)
@@ -431,34 +416,34 @@ static struct memberlist sads_ml[] = {
         { NULL,                 0,              0},
 };
 
-static PyObject *
+static object *
 sads_getattr(xp, name)
-	sadstatusobject *xp;
-	char *name;
+    sadstatusobject *xp;
+    char *name;
 {
-	return PyMember_Get((char *)&xp->ai, sads_ml, name);
+	return getmember((char *)&xp->ai, sads_ml, name);
 }
 
 static int
 sads_setattr(xp, name, v)
-	sadstatusobject *xp;
-	char *name;
-	PyObject *v;
+    sadstatusobject *xp;
+    char *name;
+    object *v;
 {
 
 	if (v == NULL) {
-		PyErr_SetString(PyExc_TypeError,
-				"can't delete sun audio status attributes");
+		err_setstr(TypeError,
+			   "can't delete sun audio status attributes");
 		return -1;
 	}
-	return PyMember_Set((char *)&xp->ai, sads_ml, name, v);
+	return setmember((char *)&xp->ai, sads_ml, name, v);
 }
 
 /* ------------------------------------------------------------------- */
 
 
-static PyTypeObject Sadtype = {
-	PyObject_HEAD_INIT(&PyType_Type)
+static typeobject Sadtype = {
+	OB_HEAD_INIT(&Typetype)
 	0,				/*ob_size*/
 	"sun_audio_device",		/*tp_name*/
 	sizeof(sadobject),		/*tp_size*/
@@ -472,8 +457,8 @@ static PyTypeObject Sadtype = {
 	0,				/*tp_repr*/
 };
 
-static PyTypeObject Sadstatustype = {
-	PyObject_HEAD_INIT(&PyType_Type)
+static typeobject Sadstatustype = {
+	OB_HEAD_INIT(&Typetype)
 	0,				/*ob_size*/
 	"sun_audio_device_status",	/*tp_name*/
 	sizeof(sadstatusobject),	/*tp_size*/
@@ -488,29 +473,29 @@ static PyTypeObject Sadstatustype = {
 };
 /* ------------------------------------------------------------------- */
 
-static PyObject *
+static object *
 sadopen(self, args)
-	PyObject *self;
-	PyObject *args;
+    object *self;
+    object *args;
 {
-	return (PyObject *)newsadobject(args);
+    object *rv;
+    
+    rv = (object *)newsadobject(args);
+    return rv;
 }
     
-static PyMethodDef sunaudiodev_methods[] = {
+static struct methodlist sunaudiodev_methods[] = {
     { "open", sadopen },
     { 0, 0 },
 };
 
 void
-initsunaudiodev()
-{
-	PyObject *m, *d;
+initsunaudiodev() {
+    object *m, *d;
 
-	m = Py_InitModule("sunaudiodev", sunaudiodev_methods);
-	d = PyModule_GetDict(m);
-	SunAudioError = PyString_FromString("sunaudiodev.error");
-	if (SunAudioError)
-		PyDict_SetItemString(d, "error", SunAudioError);
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize sunaudiodev module");
+    m = initmodule("sunaudiodev", sunaudiodev_methods);
+    d = getmoduledict(m);
+    SunAudioError = newstringobject("sunaudiodev.error");
+    if ( SunAudioError == NULL || dictinsert(d, "error", SunAudioError) )
+      fatal("can't define sunaudiodev.error");
 }

@@ -2,7 +2,10 @@
 
 /* much code borrowed from mathmodule.c */
 
-#include "Python.h"
+#include "allobjects.h"
+#include "complexobject.h"
+
+#include <errno.h>
 
 #include "mymath.h"
 
@@ -226,40 +229,38 @@ static Py_complex c_tanh(x)
 
 /* And now the glue to make them available from Python: */
 
-static PyObject *
+static object *
 math_error()
 {
 	if (errno == EDOM)
-		PyErr_SetString(PyExc_ValueError, "math domain error");
+		err_setstr(ValueError, "math domain error");
 	else if (errno == ERANGE)
-		PyErr_SetString(PyExc_OverflowError, "math range error");
-	else    /* Unexpected math error */
-		PyErr_SetFromErrno(PyExc_ValueError); 
+		err_setstr(OverflowError, "math range error");
+	else
+		err_errno(ValueError); /* Unexpected math error */
 	return NULL;
 }
 
-static PyObject *
+static object *
 math_1(args, func)
-	PyObject *args;
-	Py_complex (*func) Py_FPROTO((Py_complex));
+	object *args;
+	Py_complex (*func) FPROTO((Py_complex));
 {
 	Py_complex x;
 	if (!PyArg_ParseTuple(args, "D", &x))
 		return NULL;
 	errno = 0;
-	PyFPE_START_PROTECT("complex function", return 0)
 	x = (*func)(x);
-	PyFPE_END_PROTECT(x)
 	CHECK(x.real);
 	CHECK(x.imag);
 	if (errno != 0)
 		return math_error();
 	else
-		return PyComplex_FromCComplex(x);
+		return newcomplexobject(x);
 }
 
 #define FUNC1(stubname, func) \
-	static PyObject * stubname(self, args) PyObject *self, *args; { \
+	static object * stubname(self, args) object *self, *args; { \
 		return math_1(args, func); \
 	}
 
@@ -281,7 +282,7 @@ FUNC1(cmath_tan, c_tan)
 FUNC1(cmath_tanh, c_tanh)
 
 
-static PyMethodDef cmath_methods[] = {
+static struct methodlist cmath_methods[] = {
 	{"acos", cmath_acos, 1},
 	{"acosh", cmath_acosh, 1},
 	{"asin", cmath_asin, 1},
@@ -304,13 +305,12 @@ static PyMethodDef cmath_methods[] = {
 void
 initcmath()
 {
-	PyObject *m, *d, *v;
+	object *m, *d, *v;
 	
 	m = Py_InitModule("cmath", cmath_methods);
-	d = PyModule_GetDict(m);
-	PyDict_SetItemString(d, "pi",
-			     v = PyFloat_FromDouble(atan(1.0) * 4.0));
-	Py_DECREF(v);
-	PyDict_SetItemString(d, "e", v = PyFloat_FromDouble(exp(1.0)));
-	Py_DECREF(v);
+	d = getmoduledict(m);
+	dictinsert(d, "pi", v = newfloatobject(atan(1.0) * 4.0));
+	DECREF(v);
+	dictinsert(d, "e", v = newfloatobject(exp(1.0)));
+	DECREF(v);
 }

@@ -31,162 +31,155 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /* Module new -- create new objects of various types */
 
-#include "Python.h"
+#include "allobjects.h"
 #include "compile.h"
 
 static char new_instance_doc[] =
 "Create an instance object from (CLASS, DICT) without calling its __init__().";
 
-static PyObject *
+static object *
 new_instance(unused, args)
-	PyObject* unused;
-	PyObject* args;
+	object* unused;
+	object* args;
 {
-	PyObject* klass;
-	PyObject *dict;
-	PyInstanceObject *inst;
-	if (!PyArg_ParseTuple(args, "O!O!",
-			      &PyClass_Type, &klass,
-			      &PyDict_Type, &dict))
+	object* klass;
+	object *dict;
+	instanceobject *inst;
+	if (!newgetargs(args, "O!O!",
+			&Classtype, &klass,
+			&Dicttype, &dict))
 		return NULL;
-	inst = PyObject_NEW(PyInstanceObject, &PyInstance_Type);
+	inst = NEWOBJ(instanceobject, &Instancetype);
 	if (inst == NULL)
 		return NULL;
-	Py_INCREF(klass);
-	Py_INCREF(dict);
-	inst->in_class = (PyClassObject *)klass;
+	INCREF(klass);
+	INCREF(dict);
+	inst->in_class = (classobject *)klass;
 	inst->in_dict = dict;
-	return (PyObject *)inst;
+	return (object *)inst;
 }
 
 static char new_im_doc[] =
 "Create a instance method object from (FUNCTION, INSTANCE, CLASS).";
 
-static PyObject *
+static object *
 new_instancemethod(unused, args)
-	PyObject* unused;
-	PyObject* args;
+	object* unused;
+	object* args;
 {
-	PyObject* func;
-	PyObject* self;
-	PyObject* classObj;
+	object* func;
+	object* self;
+	object* classObj;
 
-	if (!PyArg_ParseTuple(args, "O!O!O!",
-			      &PyFunction_Type, &func,
-			      &PyInstance_Type, &self,
-			      &PyClass_Type, &classObj))
+	if (!newgetargs(args, "O!O!O!",
+			&Functype, &func,
+			&Instancetype, &self,
+			&Classtype, &classObj))
 		return NULL;
-	return PyMethod_New(func, self, classObj);
+	return newinstancemethodobject(func, self, classObj);
 }
 
 static char new_function_doc[] =
 "Create a function object from (CODE, GLOBALS, [NAME, ARGDEFS]).";
 
-static PyObject *
+static object *
 new_function(unused, args)
-	PyObject* unused;
-	PyObject* args;
+	object* unused;
+	object* args;
 {
-	PyObject* code;
-	PyObject* globals;
-	PyObject* name = Py_None;
-	PyObject* defaults = Py_None;
-	PyFunctionObject* newfunc;
+	object* code;
+	object* globals;
+	object* name = None;
+	object* defaults = None;
+	funcobject* newfunc;
 
-	if (!PyArg_ParseTuple(args, "O!O!|SO!",
-			      &PyCode_Type, &code,
-			      &PyDict_Type, &globals,
-			      &name,
-			      &PyTuple_Type, &defaults))
+	if (!newgetargs(args, "O!O!|SO!",
+			&Codetype, &code,
+			&Mappingtype, &globals,
+			&name,
+			&Tupletype, &defaults))
 		return NULL;
 
-	newfunc = (PyFunctionObject *)PyFunction_New(code, globals);
+	newfunc = (funcobject *)newfuncobject(code, globals);
 	if (newfunc == NULL)
 		return NULL;
 
-	if (name != Py_None) {
-		Py_XINCREF(name);
-		Py_XDECREF(newfunc->func_name);
+	if (name != None) {
+		XINCREF(name);
+		XDECREF(newfunc->func_name);
 		newfunc->func_name = name;
 	}
 	if (defaults != NULL) {
-		Py_XINCREF(defaults);
-		Py_XDECREF(newfunc->func_defaults);
+		XINCREF(defaults);
+		XDECREF(newfunc->func_defaults);
 		newfunc->func_defaults  = defaults;
 	}
 
-	return (PyObject *)newfunc;
+	return (object *)newfunc;
 }
 
 static char new_code_doc[] =
-"Create a code object from (ARGCOUNT, NLOCALS, STACKSIZE, FLAGS, CODESTRING, CONSTANTS, NAMES, VARNAMES, FILENAME, NAME, FIRSTLINENO, LNOTAB).";
+"Create a code object from (ARGCOUNT, NLOCALS, FLAGS, CODESTRING, CONSTANTS, NAMES, VARNAMES, FILENAME, NAME).";
 
-static PyObject *
+static object *
 new_code(unused, args)
-	PyObject* unused;
-	PyObject* args;
+	object* unused;
+	object* args;
 {
 	int argcount;
 	int nlocals;
-	int stacksize;
 	int flags;
-	PyObject* code;
-	PyObject* consts;
-	PyObject* names;
-	PyObject* varnames;
-	PyObject* filename;
-	PyObject* name;
-	int firstlineno;
-	PyObject* lnotab;
+	object* code;
+	object* consts;
+	object* names;
+	object* varnames;
+	object* filename;
+	object* name;
   
-	if (!PyArg_ParseTuple(args, "iiiiSO!O!O!SSiS",
-			      &argcount, &nlocals, &stacksize, &flags,
-			      &code,
-			      &PyTuple_Type, &consts,
-			      &PyTuple_Type, &names,
-			      &PyTuple_Type, &varnames,
-			      &filename, &name,
-			      &firstlineno, &lnotab))
+	if (!newgetargs(args, "iiiSO!O!O!SS",
+			&argcount, &nlocals, &flags,	/* These are new */
+			&code, &Tupletype, &consts, &Tupletype, &names,
+			&Tupletype, &varnames,		/* These are new */
+			&filename, &name))
 		return NULL;
-	return (PyObject *)PyCode_New(argcount, nlocals, stacksize, flags,
-				      code, consts, names, varnames,
-				      filename, name, firstlineno, lnotab);
+	return (object *)newcodeobject(argcount, nlocals, flags,
+		code, consts, names, varnames, filename, name);
 }
 
 static char new_module_doc[] =
 "Create a module object from (NAME).";
 
-static PyObject *
+static object *
 new_module(unused, args)
-	PyObject* unused;
-	PyObject* args;
+	object* unused;
+	object* args;
 {
 	char *name;
   
-	if (!PyArg_ParseTuple(args, "s", &name))
+	if (!newgetargs(args, "s", &name))
 		return NULL;
-	return PyModule_New(name);
+	return newmoduleobject(name);
 }
 
 static char new_class_doc[] =
 "Create a class object from (NAME, BASE_CLASSES, DICT).";
 
-static PyObject *
+static object *
 new_class(unused, args)
-	PyObject* unused;
-	PyObject* args;
+	object* unused;
+	object* args;
 {
-	PyObject * name;
-	PyObject * classes;
-	PyObject * dict;
+	object * name;
+	object * classes;
+	object * dict;
   
-	if (!PyArg_ParseTuple(args, "SO!O!", &name, &PyTuple_Type, &classes,
-			      &PyDict_Type, &dict))
+	if (!newgetargs(args, "SO!O!", &name, &Tupletype, &classes,
+			&Mappingtype, &dict))
 		return NULL;
-	return PyClass_New(classes, dict, name);
+	return newclassobject(classes, dict, name);
 }
 
-static PyMethodDef new_methods[] = {
+static struct methodlist new_methods[] = {
 	{"instance",		new_instance,		1, new_instance_doc},
 	{"instancemethod",	new_instancemethod,	1, new_im_doc},
 	{"function",		new_function,		1, new_function_doc},
@@ -204,6 +197,6 @@ You need to know a great deal about the interpreter to use this!";
 void
 initnew()
 {
-	Py_InitModule4("new", new_methods, new_doc, (PyObject *)NULL,
-		       PYTHON_API_VERSION);
+	initmodule4("new", new_methods, new_doc, (object *)NULL,
+		    PYTHON_API_VERSION);
 }
