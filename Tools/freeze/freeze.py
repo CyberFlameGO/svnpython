@@ -54,7 +54,7 @@ Options:
               'console' (default), 'windows', 'service' or 'com_dll'
               
 -w:           Toggle Windows (NT or 95) behavior.
-              (For debugging only -- on a win32 platform, win32 behavior
+              (For debugging only -- on a win32 platform, win32 behaviour
               is automatic.)
 
 Arguments:
@@ -112,7 +112,7 @@ def main():
 
     # default the exclude list for each platform
     if win: exclude = exclude + [
-        'dos', 'dospath', 'mac', 'macpath', 'macfs', 'MACFS', 'posix', 'os2', 'ce']
+        'dos', 'dospath', 'mac', 'macpath', 'macfs', 'MACFS', 'posix', 'os2']
 
     # modules that are imported by the Python runtime
     implicits = ["site", "exceptions"]
@@ -376,7 +376,7 @@ def main():
             # Get a list of CExtension instances, each describing a module 
             # (including its source files)
             frozen_extensions = checkextensions_win32.checkextensions(
-                unknown, extensions, prefix)
+                unknown, extensions)
             for mod in frozen_extensions:
                 unknown.remove(mod.name)
 

@@ -197,7 +197,7 @@ class ConfigParser:
         configuration files in the list will be read.  A single
         filename may also be given.
         """
-        if type(filenames) in [type(''), type(u'')]:
+        if type(filenames) is type(''):
             filenames = [filenames]
         for filename in filenames:
             try:

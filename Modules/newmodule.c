@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Module new -- create new objects of various types */
 
 #include "Python.h"
@@ -17,7 +7,9 @@ static char new_instance_doc[] =
 "Create an instance object from (CLASS, DICT) without calling its __init__().";
 
 static PyObject *
-new_instance(PyObject* unused, PyObject* args)
+new_instance(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* klass;
 	PyObject *dict;
@@ -33,7 +25,6 @@ new_instance(PyObject* unused, PyObject* args)
 	Py_INCREF(dict);
 	inst->in_class = (PyClassObject *)klass;
 	inst->in_dict = dict;
-	PyObject_GC_Init(inst);
 	return (PyObject *)inst;
 }
 
@@ -41,7 +32,9 @@ static char new_im_doc[] =
 "Create a instance method object from (FUNCTION, INSTANCE, CLASS).";
 
 static PyObject *
-new_instancemethod(PyObject* unused, PyObject* args)
+new_instancemethod(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* func;
 	PyObject* self;
@@ -71,7 +64,9 @@ static char new_function_doc[] =
 "Create a function object from (CODE, GLOBALS, [NAME, ARGDEFS]).";
 
 static PyObject *
-new_function(PyObject* unused, PyObject* args)
+new_function(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* code;
 	PyObject* globals;
@@ -108,7 +103,9 @@ static char new_code_doc[] =
 "Create a code object from (ARGCOUNT, NLOCALS, STACKSIZE, FLAGS, CODESTRING, CONSTANTS, NAMES, VARNAMES, FILENAME, NAME, FIRSTLINENO, LNOTAB).";
 
 static PyObject *
-new_code(PyObject* unused, PyObject* args)
+new_code(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	int argcount;
 	int nlocals;
@@ -154,7 +151,9 @@ static char new_module_doc[] =
 "Create a module object from (NAME).";
 
 static PyObject *
-new_module(PyObject* unused, PyObject* args)
+new_module(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	char *name;
   
@@ -167,7 +166,9 @@ static char new_class_doc[] =
 "Create a class object from (NAME, BASE_CLASSES, DICT).";
 
 static PyObject *
-new_class(PyObject* unused, PyObject* args)
+new_class(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject * name;
 	PyObject * classes;
@@ -180,18 +181,12 @@ new_class(PyObject* unused, PyObject* args)
 }
 
 static PyMethodDef new_methods[] = {
-	{"instance",		new_instance,		
-	 METH_VARARGS, new_instance_doc},
-	{"instancemethod",	new_instancemethod,	
-	 METH_VARARGS, new_im_doc},
-	{"function",		new_function,		
-	 METH_VARARGS, new_function_doc},
-	{"code",		new_code,		
-	 METH_VARARGS, new_code_doc},
-	{"module",		new_module,		
-	 METH_VARARGS, new_module_doc},
-	{"classobj",		new_class,		
-	 METH_VARARGS, new_class_doc},
+	{"instance",		new_instance,		1, new_instance_doc},
+	{"instancemethod",	new_instancemethod,	1, new_im_doc},
+	{"function",		new_function,		1, new_function_doc},
+	{"code",		new_code,		1, new_code_doc},
+	{"module",		new_module,		1, new_module_doc},
+	{"classobj",		new_class,		1, new_class_doc},
 	{NULL,			NULL}		/* sentinel */
 };
 
@@ -201,7 +196,7 @@ char new_doc[] =
 You need to know a great deal about the interpreter to use this!";
 
 DL_EXPORT(void)
-initnew(void)
+initnew()
 {
 	Py_InitModule4("new", new_methods, new_doc, (PyObject *)NULL,
 		       PYTHON_API_VERSION);

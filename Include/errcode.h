@@ -4,16 +4,6 @@
 extern "C" {
 #endif
 
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Error codes passed around between file input, tokenizer, parser and
    interpreter.  This is necessary so we can turn them into Python
    exceptions at a higher level.  Note that some errors have a
@@ -30,10 +20,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #define E_NOMEM		15	/* Ran out of memory */
 #define E_DONE		16	/* Parsing complete */
 #define E_ERROR		17	/* Execution error */
-#define E_TABSPACE	18	/* Inconsistent mixing of tabs and spaces */
-#define E_OVERFLOW      19	/* Node had too many children */
-#define E_TOODEEP	20	/* Too many indentation levels */
-#define E_DEDENT	21	/* No matching outer block for dedent */
+#define E_INDENT	18	/* Invalid indentation detected */
 
 #ifdef __cplusplus
 }

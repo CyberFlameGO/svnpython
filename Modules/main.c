@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Python interpreter main program */
 
 #include "Python.h"
@@ -24,7 +14,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#define PYTHONHOMEHELP "<prefix>/python2.0"
+#define PYTHONHOMEHELP "<prefix>/python1.5"
 #endif
 
 /* Interface to getopt(): */
@@ -75,7 +65,9 @@ PYTHONHOME   : alternate <prefix> directory (or <prefix>%c<exec_prefix>).\n\
 /* Main program */
 
 DL_EXPORT(int)
-Py_Main(int argc, char **argv)
+Py_Main(argc, argv)
+	int argc;
+	char **argv;
 {
 	int c;
 	int sts;
@@ -288,7 +280,9 @@ Py_Main(int argc, char **argv)
    This is rare, but it is needed by the secureware extension. */
 
 void
-Py_GetArgcArgv(int *argc, char ***argv)
+Py_GetArgcArgv(argc, argv)
+	int *argc;
+	char ***argv;
 {
 	*argc = orig_argc;
 	*argv = orig_argv;

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* UNIX password file access module */
 
 #include "Python.h"
@@ -27,7 +17,8 @@ exception is raised if the entry asked for cannot be found.";
 
       
 static PyObject *
-mkpwent(struct passwd *p)
+mkpwent(p)
+	struct passwd *p;
 {
 #ifdef __BEOS__
 	/* For faking the GECOS field. - [cjh] */
@@ -65,7 +56,9 @@ Return the password database entry for the given numeric user ID.\n\
 See pwd.__doc__ for more on password database entries.";
 
 static PyObject *
-pwd_getpwuid(PyObject *self, PyObject *args)
+pwd_getpwuid(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int uid;
 	struct passwd *p;
@@ -84,7 +77,9 @@ Return the password database entry for the given user name.\n\
 See pwd.__doc__ for more on password database entries.";
 
 static PyObject *
-pwd_getpwnam(PyObject *self, PyObject *args)
+pwd_getpwnam(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	char *name;
 	struct passwd *p;
@@ -105,7 +100,9 @@ in arbitrary order.\n\
 See pwd.__doc__ for more on password database entries.";
 
 static PyObject *
-pwd_getpwall(PyObject *self, PyObject *args)
+pwd_getpwall(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *d;
 	struct passwd *p;
@@ -128,16 +125,16 @@ pwd_getpwall(PyObject *self, PyObject *args)
 #endif
 
 static PyMethodDef pwd_methods[] = {
-	{"getpwuid",	pwd_getpwuid, METH_OLDARGS, pwd_getpwuid__doc__},
-	{"getpwnam",	pwd_getpwnam, METH_OLDARGS, pwd_getpwnam__doc__},
+	{"getpwuid",	pwd_getpwuid, 0, pwd_getpwuid__doc__},
+	{"getpwnam",	pwd_getpwnam, 0, pwd_getpwnam__doc__},
 #ifdef HAVE_GETPWENT
-	{"getpwall",	pwd_getpwall, METH_OLDARGS, pwd_getpwall__doc__},
+	{"getpwall",	pwd_getpwall, 0, pwd_getpwall__doc__},
 #endif
 	{NULL,		NULL}		/* sentinel */
 };
 
 DL_EXPORT(void)
-initpwd(void)
+initpwd()
 {
 	Py_InitModule4("pwd", pwd_methods, pwd__doc__,
                        (PyObject *)NULL, PYTHON_API_VERSION);

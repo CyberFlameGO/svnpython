@@ -86,7 +86,7 @@ is a tuple of 9 integers:
   \lineiii{3}{hour}{range [0,23]}
   \lineiii{4}{minute}{range [0,59]}
   \lineiii{5}{second}{range [0,61]; see \strong{(1)} in \function{strftime()} description}
-  \lineiii{6}{weekday}{range [0,6], Monday is 0}
+  \lineiii{6}{weekday}{range [0,6], monday is 0}
   \lineiii{7}{Julian day}{range [1,366]}
   \lineiii{8}{daylight savings flag}{0, 1 or -1; see below}
 \end{tableiii}
@@ -111,8 +111,8 @@ string.  It may also be modified at run time.
 
 \begin{datadesc}{altzone}
 The offset of the local DST timezone, in seconds west of UTC, if one
-is defined.  This is negative if the local DST timezone is east of UTC
-(as in Western Europe, including the UK).  Only use this if
+is defined.  Negative if the local DST timezone is east of the 0th
+meridian (as in Western Europe, including the UK).  Only use this if
 \code{daylight} is nonzero.
 \end{datadesc}
 
@@ -125,7 +125,7 @@ the same name, there is no trailing newline.
 
 \begin{funcdesc}{clock}{}
 Return the current CPU time as a floating point number expressed in
-seconds.  The precision, and in fact the very definition of the meaning
+seconds.  The precision, and in fact the very definiton of the meaning
 of ``CPU time''\index{CPU time}, depends on that of the C function
 of the same name, but in any case, this is the function to use for
 benchmarking\index{benchmarking} Python or timing algorithms.
@@ -154,8 +154,8 @@ set to \code{1} when DST applies to the given time.
 
 \begin{funcdesc}{mktime}{tuple}
 This is the inverse function of \function{localtime()}.  Its argument
-is the full 9-tuple (since the dst flag is needed; use \code{-1} as
-the dst flag if it is unknown) which expresses the time in
+is the full 9-tuple (since the dst flag is needed --- pass \code{-1}
+as the dst flag if it is unknown) which expresses the time in
 \emph{local} time, not UTC.  It returns a floating point number, for
 compatibility with \function{time()}.  If the input value cannot be
 represented as a valid time, \exception{OverflowError} is raised.

@@ -1,18 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
-/***************************************
-THIS FILE IS OBSOLETE
-USE "pyport.h" INSTEAD
-***************************************/
-
 /* On the 68K Mac, when using CFM (Code Fragment Manager),
    <math.h> requires special treatment -- we need to surround it with
    #pragma lib_export off / on...
@@ -20,8 +5,12 @@ USE "pyport.h" INSTEAD
    symbols doesn't quite work...
    XXX Not sure now...  Seems to be something else going on as well... */
 
+#ifdef SYMANTEC__CFM68K__
+#pragma lib_export off
+#endif
+
 #ifndef HAVE_HYPOT
-extern double hypot(double, double);
+extern double hypot Py_PROTO((double, double));
 #ifdef MWERKS_BEFORE_PRO4
 #define hypot we_dont_want_faulty_hypot_decl
 #endif
@@ -33,6 +22,10 @@ extern double hypot(double, double);
 #ifdef __MWERKS__
 #undef hypot
 #endif
+#endif
+
+#ifdef SYMANTEC__CFM68K__
+#pragma lib_export on
 #endif
 
 #if defined(USE_MSL) && defined(__MC68K__)

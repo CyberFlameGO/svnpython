@@ -54,6 +54,7 @@ static char cPickle_module_documentation[] =
 
 #include "Python.h"
 #include "cStringIO.h"
+#include "mymath.h"
 
 #ifndef Py_eval_input
 #include <graminit.h>
@@ -133,6 +134,9 @@ static PyObject *__class___str, *__getinitargs___str, *__dict___str,
   *read_str, *readline_str, *__main___str, *__basicnew___str,
   *copy_reg_str, *dispatch_table_str, *safe_constructors_str, *empty_str;
 
+static int save();
+static int put2();
+
 #ifndef PyList_SET_ITEM
 #define PyList_SET_ITEM(op, i, v) (((PyListObject *)(op))->ob_item[i] = (v))
 #endif
@@ -179,7 +183,7 @@ static PyTypeObject PdataType = {
 #define Pdata_Check(O) ((O)->ob_type == &PdataType)
 
 static PyObject *
-Pdata_New(void) {
+Pdata_New() {
     Pdata *self;
 
     UNLESS (self = PyObject_New(Pdata, &PdataType)) return NULL;
@@ -192,7 +196,7 @@ Pdata_New(void) {
 }
 
 static int 
-stackUnderflow(void) {
+stackUnderflow() {
     PyErr_SetString(UnpicklingError, "unpickling stack underflow");
     return -1;
 }
@@ -306,7 +310,7 @@ Pdata_popList(Pdata *self, int start) {
     }                                               \
   }
 
-typedef struct Picklerobject {
+typedef struct {
      PyObject_HEAD
      FILE *fp;
      PyObject *write;
@@ -317,7 +321,7 @@ typedef struct Picklerobject {
      PyObject *inst_pers_func;
      int bin;
      int fast; /* Fast mode doesn't save in memo, don't use if circ ref */
-     int (*write_func)(struct Picklerobject *, char *, int);
+     int (*write_func)();
      char *write_buf;
      int buf_size;
      PyObject *dispatch_table;
@@ -325,7 +329,7 @@ typedef struct Picklerobject {
 
 staticforward PyTypeObject Picklertype;
 
-typedef struct Unpicklerobject {
+typedef struct {
      PyObject_HEAD
      FILE *fp;
      PyObject *file;
@@ -340,8 +344,8 @@ typedef struct Unpicklerobject {
      int *marks;
      int num_marks;
      int marks_size;
-     int (*read_func)(struct Unpicklerobject *, char **, int);
-     int (*readline_func)(struct Unpicklerobject *, char **);
+     int (*read_func)();
+     int (*readline_func)();
      int buf_size;
      char *buf;
      PyObject *safe_constructors;
@@ -349,10 +353,6 @@ typedef struct Unpicklerobject {
 } Unpicklerobject;
  
 staticforward PyTypeObject Unpicklertype;
-
-/* Forward decls that need the above structs */
-static int save(Picklerobject *, PyObject *, int);
-static int put2(Picklerobject *, PyObject *);
 
 int 
 cPickle_PyMapping_HasKey(PyObject *o, PyObject *key) {
@@ -369,11 +369,25 @@ cPickle_PyMapping_HasKey(PyObject *o, PyObject *key) {
 
 static
 PyObject *
-cPickle_ErrFormat(PyObject *ErrType, char *stringformat, char *format, ...)
-{
+#ifdef HAVE_STDARG_PROTOTYPES
+/* VARARGS 2 */
+cPickle_ErrFormat(PyObject *ErrType, char *stringformat, char *format, ...) {
+#else
+/* VARARGS */
+cPickle_ErrFormat(va_alist) va_dcl {
+#endif
   va_list va;
   PyObject *args=0, *retval=0;
+#ifdef HAVE_STDARG_PROTOTYPES
   va_start(va, format);
+#else
+  PyObject *ErrType;
+  char *stringformat, *format;
+  va_start(va);
+  ErrType = va_arg(va, PyObject *);
+  stringformat   = va_arg(va, char *);
+  format   = va_arg(va, char *);
+#endif
   
   if (format) args = Py_VaBuildValue(format, va);
   va_end(va);
@@ -642,7 +656,7 @@ get(Picklerobject *self, PyObject *id) {
     PyObject *value, *mv;
     long c_value;
     char s[30];
-    size_t len;
+    int len;
 
     UNLESS (mv = PyDict_GetItem(self->memo, id)) {
         PyErr_SetObject(PyExc_KeyError, id);
@@ -703,9 +717,7 @@ put(Picklerobject *self, PyObject *ob) {
 static int
 put2(Picklerobject *self, PyObject *ob) {
     char c_str[30];
-    int p;
-    size_t len;
-    int res = -1;
+    int p, len, res = -1;
     PyObject *py_ob_id = 0, *memo_len = 0, *t = 0;
 
     if (self->fast) return 0;
@@ -715,7 +727,7 @@ put2(Picklerobject *self, PyObject *ob) {
 
     p++;  /* Make sure memo keys are positive! */
 
-    UNLESS (py_ob_id = PyLong_FromVoidPtr(ob))
+    UNLESS (py_ob_id = PyInt_FromLong((long)ob))
         goto finally;
 
     UNLESS (memo_len = PyInt_FromLong(p))
@@ -1243,7 +1255,7 @@ save_tuple(Picklerobject *self, PyObject *args) {
             goto finally;
     }
 
-    UNLESS (py_tuple_id = PyLong_FromVoidPtr(args))
+    UNLESS (py_tuple_id = PyInt_FromLong((long)args))
         goto finally;
 
     if (len) {
@@ -1452,7 +1464,7 @@ save_inst(Picklerobject *self, PyObject *args) {
             PyObject_CallObject(getinitargs_func, empty_tuple))
             goto finally;
 
-        if ((len = PyObject_Size(class_args)) < 0)  
+        if ((len = PyObject_Length(class_args)) < 0)  
             goto finally;
 
         for (i = 0; i < len; i++) {
@@ -1763,9 +1775,12 @@ save(Picklerobject *self, PyObject *args, int  pers_save) {
     }
 
     if (args->ob_refcnt > 1) {
+        long ob_id;
         int  has_key;
 
-        UNLESS (py_ob_id = PyLong_FromVoidPtr(args))
+        ob_id = (long)args;
+
+        UNLESS (py_ob_id = PyInt_FromLong(ob_id))
             goto finally;
 
         if ((has_key = cPickle_PyMapping_HasKey(self->memo, py_ob_id)) < 0)
@@ -2417,7 +2432,7 @@ load_none(Unpicklerobject *self) {
 }
 
 static int
-bad_readline(void) {
+bad_readline() {
     PyErr_SetString(UnpicklingError, "pickle data was truncated");
     return -1;
 }
@@ -2860,7 +2875,7 @@ Instance_New(PyObject *cls, PyObject *args) {
   if (PyClass_Check(cls)) {
       int l;
       
-      if ((l=PyObject_Size(args)) < 0) goto err;
+      if ((l=PyObject_Length(args)) < 0) goto err;
       UNLESS (l) {
           PyObject *__getinitargs__;
 
@@ -2878,7 +2893,7 @@ Instance_New(PyObject *cls, PyObject *args) {
                 Py_DECREF(inst);
                 goto err;
               }
-              PyObject_GC_Init(inst);
+
               return (PyObject *)inst;
             }
           Py_DECREF(__getinitargs__);
@@ -3189,8 +3204,7 @@ load_binget(Unpicklerobject *self) {
 static int
 load_long_binget(Unpicklerobject *self) {
     PyObject *py_key = 0, *value = 0;
-    unsigned char c;
-    char *s;
+    unsigned char c, *s;
     long key;
     int rc;
 
@@ -3241,8 +3255,7 @@ load_put(Unpicklerobject *self) {
 static int
 load_binput(Unpicklerobject *self) {
     PyObject *py_key = 0, *value = 0;
-    unsigned char key;
-    char *s;
+    unsigned char key, *s;
     int len;
 
     if ((*self->read_func)(self, &s, 1) < 0) return -1;
@@ -3262,8 +3275,7 @@ static int
 load_long_binput(Unpicklerobject *self) {
     PyObject *py_key = 0, *value = 0;
     long key;
-    unsigned char c;
-    char *s;
+    unsigned char c, *s;
     int len;
 
     if ((*self->read_func)(self, &s, 4) < 0) return -1;
@@ -4515,7 +4527,7 @@ init_stuff(PyObject *module, PyObject *module_dict) {
 #define DL_EXPORT(RTYPE) RTYPE
 #endif
 DL_EXPORT(void)
-initcPickle(void) {
+initcPickle() {
     PyObject *m, *d, *v;
     char *rev="1.71";
     PyObject *format_version;

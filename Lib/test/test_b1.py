@@ -72,8 +72,6 @@ if cmp(a, b) != 0: raise TestFailed, "cmp(%s, %s)" % (a, b)
 if cmp(b, c) != 0: raise TestFailed, "cmp(%s, %s)" % (b, c)
 if cmp(c, a) != 0: raise TestFailed, "cmp(%s, %s)" % (c, a)
 if cmp(a, c) != 0: raise TestFailed, "cmp(%s, %s)" % (a, c)
-# okay, now break the cycles
-a.pop(); b.pop(); c.pop()
 
 print 'coerce'
 if fcmp(coerce(1, 1.1), (1.0, 1.1)): raise TestFailed, 'coerce(1, 1.1)'
@@ -272,7 +270,7 @@ if int(-3.5) <> -3: raise TestFailed, 'int(-3.5)'
 # Different base:
 if int("10",16) <> 16L: raise TestFailed, 'int("10",16)'
 if int(u"10",16) <> 16L: raise TestFailed, 'int(u"10",16)'
-# Test conversion from strings and various anomalies
+# Test conversion fron strings and various anomalies
 L = [
         ('0', 0),
         ('1', 1),

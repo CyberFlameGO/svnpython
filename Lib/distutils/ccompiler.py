@@ -15,7 +15,7 @@ from distutils.spawn import spawn
 from distutils.file_util import move_file
 from distutils.dir_util import mkpath
 from distutils.dep_util import newer_pairwise, newer_group
-from distutils.util import split_quoted, execute
+from distutils.util import split_quoted
 
 
 class CCompiler:
@@ -304,7 +304,7 @@ class CCompiler:
 
     def add_link_object (self, object):
         """Add 'object' to the list of object files (or analogues, such as
-        explicitly named library files or the output of "resource
+        explictly named library files or the output of "resource
         compilers") to be included in every link driven by this compiler
         object.
         """
@@ -682,12 +682,10 @@ class CCompiler:
         """
         raise NotImplementedError
 
-    def find_library_file (self, dirs, lib, debug=0):
+    def find_library_file (self, dirs, lib):
         """Search the specified list of directories for a static or shared
-        library file 'lib' and return the full path to that file.  If
-        'debug' true, look for a debugging version (if that makes sense on
-        the current platform).  Return None if 'lib' wasn't found in any of
-        the specified directories.
+        library file 'lib' and return the full path to that file. Return
+        None if it wasn't found in any of the specified directories.
         """
         raise NotImplementedError
 
@@ -783,16 +781,8 @@ class CCompiler:
         if self.verbose >= level:
             print msg
 
-    def debug_print (self, msg):
-        from distutils.core import DEBUG
-        if DEBUG:
-            print msg
-
     def warn (self, msg):
         sys.stderr.write ("warning: %s\n" % msg)
-
-    def execute (self, func, args, msg=None, level=1):
-        execute(func, args, msg, self.verbose >= level, self.dry_run)
 
     def spawn (self, cmd):
         spawn (cmd, verbose=self.verbose, dry_run=self.dry_run)
@@ -838,7 +828,7 @@ def show_compilers():
     from distutils.fancy_getopt import FancyGetopt 
     compilers = []
     for compiler in compiler_class.keys():
-        compilers.append(("compiler="+compiler, None,
+	compilers.append(("compiler="+compiler, None,
                           compiler_class[compiler][2]))
     compilers.sort()
     pretty_printer = FancyGetopt(compilers)

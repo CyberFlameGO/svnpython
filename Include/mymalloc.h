@@ -1,24 +1,26 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
-/***************************************
-THIS FILE IS OBSOLETE
-USE "pyport.h" INSTEAD
-***************************************/
-
 #ifndef Py_MYMALLOC_H
 #define Py_MYMALLOC_H
-
 /* Lowest-level memory allocation interface */
 
-#define ANY void /* For API compatibility only. Obsolete, do not use. */
+#ifdef macintosh
+#define ANY void
+#endif
+
+#ifdef __STDC__
+#define ANY void
+#endif
+
+#ifdef __TURBOC__
+#define ANY void
+#endif
+
+#ifdef __GNUC__
+#define ANY void
+#endif
+
+#ifndef ANY
+#define ANY char
+#endif
 
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -32,12 +34,16 @@ USE "pyport.h" INSTEAD
 extern "C" {
 #endif
 
+#ifdef SYMANTEC__CFM68K__
+#pragma lib_export on
+#endif
+
 #ifndef DL_IMPORT       /* declarations for DLL import */
 #define DL_IMPORT(RTYPE) RTYPE
 #endif
 
 #ifndef NULL
-#define NULL ((void *)0)
+#define NULL ((ANY *)0)
 #endif
 
 #ifdef MALLOC_ZERO_RETURNS_NULL
@@ -74,14 +80,14 @@ extern "C" {
 #ifndef PyCore_MALLOC_PROTO
 #undef PyCore_REALLOC_PROTO
 #undef PyCore_FREE_PROTO
-#define PyCore_MALLOC_PROTO    (size_t)
-#define PyCore_REALLOC_PROTO   (void *, size_t)
-#define PyCore_FREE_PROTO      (void *)
+#define PyCore_MALLOC_PROTO     Py_PROTO((size_t))
+#define PyCore_REALLOC_PROTO    Py_PROTO((ANY *, size_t))
+#define PyCore_FREE_PROTO       Py_PROTO((ANY *))
 #endif
 
 #ifdef NEED_TO_DECLARE_MALLOC_AND_FRIEND
-extern void *PyCore_MALLOC_FUNC PyCore_MALLOC_PROTO;
-extern void *PyCore_REALLOC_FUNC PyCore_REALLOC_PROTO;
+extern ANY *PyCore_MALLOC_FUNC PyCore_MALLOC_PROTO;
+extern ANY *PyCore_REALLOC_FUNC PyCore_REALLOC_PROTO;
 extern void PyCore_FREE_FUNC PyCore_FREE_PROTO;
 #endif
 
@@ -122,17 +128,17 @@ extern void PyCore_FREE_FUNC PyCore_FREE_PROTO;
    returns a non-NULL pointer, even if the underlying malloc
    doesn't. Returned pointers must be checked for NULL explicitly.
    No action is performed on failure. */
-extern DL_IMPORT(void *) PyMem_Malloc(size_t);
-extern DL_IMPORT(void *) PyMem_Realloc(void *, size_t);
-extern DL_IMPORT(void) PyMem_Free(void *);
+extern DL_IMPORT(ANY *) PyMem_Malloc Py_PROTO((size_t));
+extern DL_IMPORT(ANY *) PyMem_Realloc Py_PROTO((ANY *, size_t));
+extern DL_IMPORT(void) PyMem_Free Py_PROTO((ANY *));
 
 /* Starting from Python 1.6, the wrappers Py_{Malloc,Realloc,Free} are
    no longer supported. They used to call PyErr_NoMemory() on failure. */
 
 /* Macros */
 #define PyMem_MALLOC(n)         PyCore_MALLOC(n)
-#define PyMem_REALLOC(p, n)     PyCore_REALLOC((void *)(p), (n))
-#define PyMem_FREE(p)           PyCore_FREE((void *)(p))
+#define PyMem_REALLOC(p, n)     PyCore_REALLOC((ANY *)(p), (n))
+#define PyMem_FREE(p)           PyCore_FREE((ANY *)(p))
 
 /*
  * Type-oriented memory interface
@@ -182,7 +188,7 @@ extern DL_IMPORT(void) PyMem_Free(void *);
 
    #define PyCore_MALLOC_FUNC      d_malloc
    ...
-   #define PyCore_MALLOC_PROTO	(size_t, char *, unsigned long)
+   #define PyCore_MALLOC_PROTO	Py_PROTO((size_t, char *, unsigned long))
    ...
    #define NEED_TO_DECLARE_MALLOC_AND_FRIEND
 

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Type object implementation */
 
 #include "Python.h"
@@ -15,7 +5,9 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 /* Type object implementation */
 
 static PyObject *
-type_getattr(PyTypeObject *t, char *name)
+type_getattr(t, name)
+	PyTypeObject *t;
+	char *name;
 {
 	if (strcmp(name, "__name__") == 0)
 		return PyString_FromString(t->tp_name);
@@ -33,7 +25,8 @@ type_getattr(PyTypeObject *t, char *name)
 }
 
 static PyObject *
-type_repr(PyTypeObject *v)
+type_repr(v)
+	PyTypeObject *v;
 {
 	char buf[100];
 	sprintf(buf, "<type '%.80s'>", v->tp_name);

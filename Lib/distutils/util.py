@@ -18,6 +18,16 @@ from distutils.dep_util import *
 from distutils.archive_util import *
 
 
+# Need to define 'abspath()', because it was new with Python 1.5.2
+if hasattr (os.path, 'abspath'):
+    abspath = os.path.abspath
+else:
+    def abspath(path):
+        if not os.path.isabs(path):
+            path = os.path.join(os.getcwd(), path)
+        return os.path.normpath(path)
+
+
 # More backwards compatibility hacks
 def extend (list, new_list):
     """Appends the list 'new_list' to 'list', just like the 'extend()'
@@ -95,7 +105,7 @@ def check_environ ():
        guarantee that users can use in config files, command-line
        options, etc.  Currently this includes:
          HOME - user's home directory (Unix only)
-         PLAT - description of the current platform, including hardware
+         PLAT - desription of the current platform, including hardware
                 and OS (see 'get_platform()')
     """
 
@@ -115,7 +125,7 @@ def check_environ ():
 
 def subst_vars (str, local_vars):
     """Perform shell/Perl-style variable substitution on 'string'.
-       Every occurrence of '$' followed by a name, or a name enclosed in
+       Every occurence of '$' followed by a name, or a name enclosed in
        braces, is considered a variable.  Every variable is substituted by
        the value found in the 'local_vars' dictionary, or in 'os.environ'
        if it's not in 'local_vars'.  'os.environ' is first checked/
@@ -223,29 +233,3 @@ def split_quoted (s):
     return words
 
 # split_quoted ()
-
-
-def execute (func, args, msg=None, verbose=0, dry_run=0):
-    """Perform some action that affects the outside world (eg.  by writing
-    to the filesystem).  Such actions are special because they are disabled
-    by the 'dry_run' flag, and announce themselves if 'verbose' is true.
-    This method takes care of all that bureaucracy for you; all you have to
-    do is supply the function to call and an argument tuple for it (to
-    embody the "external action" being performed), and an optional message
-    to print.
-    """
-    # Generate a message if we weren't passed one
-    if msg is None:
-        msg = "%s%s" % (func.__name__, `args`)
-        if msg[-2:] == ',)':        # correct for singleton tuple 
-            msg = msg[0:-2] + ')'
-
-    # Print it if verbosity level is high enough
-    if verbose:
-        print msg
-
-    # And do it, as long as we're not in dry-run mode
-    if not dry_run:
-        apply(func, args)
-
-# execute()

@@ -77,7 +77,7 @@ static jmp_buf PyFPE_jbuf;
 static int PyFPE_counter = 0;
 #endif
 
-typedef void Sigfunc(int);
+typedef RETSIGTYPE Sigfunc(int);
 static Sigfunc sigfpe_handler;
 static void fpe_reset(Sigfunc *);
 

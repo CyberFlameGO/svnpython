@@ -20,7 +20,10 @@ from distutils.ccompiler import \
 
 _can_read_reg = 0
 try:
-    import _winreg
+    try:
+        import _winreg
+    except ImportError:
+        import winreg                   # for pre-2000/06/29 CVS Python
 
     _can_read_reg = 1
     hkey_mod = _winreg
@@ -380,23 +383,14 @@ class MSVCCompiler (CCompiler) :
             ld_args = (ldflags + lib_opts + export_opts + 
                        objects + ['/OUT:' + output_filename])
 
-            # The MSVC linker generates .lib and .exp files, which cannot be
-            # suppressed by any linker switches. The .lib files may even be
-            # needed! Make sure they are generated in the temporary build
-            # directory. Since they have different names for debug and release
-            # builds, they can go into the same directory.
-            (dll_name, dll_ext) = os.path.splitext(
-                os.path.basename(output_filename))
-            implib_file = os.path.join(
-                os.path.dirname(objects[0]),
-                self.library_filename(dll_name))
-            ld_args.append ('/IMPLIB:' + implib_file)
-
             if extra_preargs:
                 ld_args[:0] = extra_preargs
             if extra_postargs:
-                ld_args.extend(extra_postargs)
+                ld_args.extend (extra_postargs)
 
+            print "link_shared_object():"
+            print "  output_filename =", output_filename
+            print "  mkpath'ing:", os.path.dirname (output_filename)
             self.mkpath (os.path.dirname (output_filename))
             try:
                 self.spawn ([self.link] + ld_args)
@@ -474,18 +468,13 @@ class MSVCCompiler (CCompiler) :
         return self.library_filename (lib)
 
 
-    def find_library_file (self, dirs, lib, debug=0):
-        # Prefer a debugging library if found (and requested), but deal
-        # with it if we don't have one.
-        if debug:
-            try_names = [lib + "_d", lib]
-        else:
-            try_names = [lib]
+    def find_library_file (self, dirs, lib):
+
         for dir in dirs:
-            for name in try_names:
-                libfile = os.path.join(dir, self.library_filename (name))
-                if os.path.exists(libfile):
-                    return libfile
+            libfile = os.path.join (dir, self.library_filename (lib))
+            if os.path.exists (libfile):
+                return libfile
+
         else:
             # Oops, didn't find it in *any* of 'dirs'
             return None

@@ -76,7 +76,7 @@ class Completer:
                      __builtin__.__dict__.keys(),
                      __main__.__dict__.keys()]:
             for word in list:
-                if word[:n] == text and word != "__builtins__":
+                if word[:n] == text:
                     matches.append(word)
         return matches
 
@@ -84,7 +84,7 @@ class Completer:
         """Compute matches when text contains a dot.
 
         Assuming the text is of the form NAME.NAME....[NAME], and is
-        evaluatable in the globals of __main__, it will be evaluated
+        evaluabable in the globals of __main__, it will be evaluated
         and its attributes (as revealed by dir()) are used as possible
         completions.  (For class instances, class members are are also
         considered.)
@@ -106,7 +106,7 @@ class Completer:
         matches = []
         n = len(attr)
         for word in words:
-            if word[:n] == attr and word != "__builtins__":
+            if word[:n] == attr:
                 matches.append("%s.%s" % (expr, word))
         return matches
 

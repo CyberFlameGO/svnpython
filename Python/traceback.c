@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Traceback implementation */
 
 #include "Python.h"
@@ -36,13 +26,16 @@ static struct memberlist tb_memberlist[] = {
 };
 
 static PyObject *
-tb_getattr(tracebackobject *tb, char *name)
+tb_getattr(tb, name)
+	tracebackobject *tb;
+	char *name;
 {
 	return PyMember_Get((char *)tb, tb_memberlist, name);
 }
 
 static void
-tb_dealloc(tracebackobject *tb)
+tb_dealloc(tb)
+	tracebackobject *tb;
 {
 	Py_TRASHCAN_SAFE_BEGIN(tb)
 	Py_XDECREF(tb->tb_next);
@@ -72,8 +65,10 @@ PyTypeObject Tracebacktype = {
 };
 
 static tracebackobject *
-newtracebackobject(tracebackobject *next, PyFrameObject *frame, int lasti,
-		   int lineno)
+newtracebackobject(next, frame, lasti, lineno)
+	tracebackobject *next;
+	PyFrameObject *frame;
+	int lasti, lineno;
 {
 	tracebackobject *tb;
 	if ((next != NULL && !is_tracebackobject(next)) ||
@@ -94,7 +89,8 @@ newtracebackobject(tracebackobject *next, PyFrameObject *frame, int lasti,
 }
 
 int
-PyTraceBack_Here(PyFrameObject *frame)
+PyTraceBack_Here(frame)
+	PyFrameObject *frame;
 {
 	PyThreadState *tstate = frame->f_tstate;
 	tracebackobject *oldtb = (tracebackobject *) tstate->curexc_traceback;
@@ -108,7 +104,11 @@ PyTraceBack_Here(PyFrameObject *frame)
 }
 
 static int
-tb_displayline(PyObject *f, char *filename, int lineno, char *name)
+tb_displayline(f, filename, lineno, name)
+	PyObject *f;
+	char *filename;
+	int lineno;
+	char *name;
 {
 	int err = 0;
 	FILE *xfp;
@@ -135,7 +135,7 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 		path = PySys_GetObject("path");
 		if (path != NULL && PyList_Check(path)) {
 			int npath = PyList_Size(path);
-			size_t taillen = strlen(tail);
+			int taillen = strlen(tail);
 			char namebuf[MAXPATHLEN+1];
 			for (i = 0; i < npath; i++) {
 				PyObject *v = PyList_GetItem(path, i);
@@ -144,12 +144,12 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 					break;
 				}
 				if (PyString_Check(v)) {
-					size_t len;
+					int len;
 					len = PyString_Size(v);
 					if (len + 1 + taillen >= MAXPATHLEN)
 						continue; /* Too long */
 					strcpy(namebuf, PyString_AsString(v));
-					if (strlen(namebuf) != len)
+					if ((int)strlen(namebuf) != len)
 						continue; /* v contains '\0' */
 					if (len > 0 && namebuf[len-1] != SEP)
 						namebuf[len++] = SEP;
@@ -196,7 +196,10 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 }
 
 static int
-tb_printinternal(tracebackobject *tb, PyObject *f, int limit)
+tb_printinternal(tb, f, limit)
+	tracebackobject *tb;
+	PyObject *f;
+	int limit;
 {
 	int err = 0;
 	int depth = 0;
@@ -225,7 +228,9 @@ tb_printinternal(tracebackobject *tb, PyObject *f, int limit)
 }
 
 int
-PyTraceBack_Print(PyObject *v, PyObject *f)
+PyTraceBack_Print(v, f)
+	PyObject *v;
+	PyObject *f;
 {
 	int err;
 	PyObject *limitv;

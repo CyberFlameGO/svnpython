@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Just in case you haven't got an atof() around...
    This one doesn't check for bad syntax or overflow,
    and is slow and inaccurate.
@@ -17,7 +7,8 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 #include <ctype.h>
 
-double atof(char *s)
+double atof(s)
+	char *s;
 {
 	double a = 0.0;
 	int e = 0;

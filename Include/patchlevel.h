@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Newfangled version identification scheme.
 
    This scheme was added in Python 1.5.2b2; before that time, only PATCHLEVEL
@@ -28,17 +18,17 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 					/* Higher for patch releases */
 
 /* Version parsed out into numeric values */
-#define PY_MAJOR_VERSION	2
-#define PY_MINOR_VERSION	0
+#define PY_MAJOR_VERSION	1
+#define PY_MINOR_VERSION	6
 #define PY_MICRO_VERSION	0
 #define PY_RELEASE_LEVEL	PY_RELEASE_LEVEL_BETA
 #define PY_RELEASE_SERIAL	1
 
 /* Version as a string */
-#define PY_VERSION		"2.0b1"
+#define PY_VERSION		"1.6b1"
 
 /* Historic */
-#define PATCHLEVEL		"2.0b1"
+#define PATCHLEVEL		"1.6b1"
 
 /* Version as a single 4-byte hex number, e.g. 0x010502B2 == 1.5.2b2.
    Use this for numeric comparisons, e.g. #if PY_VERSION_HEX >= ... */

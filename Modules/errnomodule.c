@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Errno module */
 
 #include "Python.h"
@@ -33,7 +23,11 @@ static PyMethodDef errno_methods[] = {
 /* Helper function doing the dictionary inserting */
 
 static void
-_inscode(PyObject *d, PyObject *de, char *name, int code)
+_inscode(d, de, name, code)
+	PyObject *d;
+	PyObject *de;
+	char *name;
+	int code;
 {
 	PyObject *u;
 	PyObject *v;
@@ -70,7 +64,7 @@ To map error codes to error messages, use the function os.strerror(),\n\
 e.g. os.strerror(2) could return 'No such file or directory'.";
 
 DL_EXPORT(void)
-initerrno(void)
+initerrno()
 {
 	PyObject *m, *d, *de;
 	m = Py_InitModule3("errno", errno_methods, errno__doc__);

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* DBM module using dictionary interface */
 
 
@@ -34,7 +24,10 @@ staticforward PyTypeObject Dbmtype;
 static PyObject *DbmError;
 
 static PyObject *
-newdbmobject(char *file, int flags, int mode)
+newdbmobject(file, flags, mode)
+	char *file;
+int flags;
+int mode;
 {
         dbmobject *dp;
 
@@ -53,7 +46,8 @@ newdbmobject(char *file, int flags, int mode)
 /* Methods */
 
 static void
-dbm_dealloc(register dbmobject *dp)
+dbm_dealloc(dp)
+	register dbmobject *dp;
 {
         if ( dp->di_dbm )
 		dbm_close(dp->di_dbm);
@@ -61,7 +55,8 @@ dbm_dealloc(register dbmobject *dp)
 }
 
 static int
-dbm_length(dbmobject *dp)
+dbm_length(dp)
+	dbmobject *dp;
 {
         if (dp->di_dbm == NULL) {
                  PyErr_SetString(DbmError, "DBM object has already been closed"); 
@@ -81,7 +76,9 @@ dbm_length(dbmobject *dp)
 }
 
 static PyObject *
-dbm_subscript(dbmobject *dp, register PyObject *key)
+dbm_subscript(dp, key)
+	dbmobject *dp;
+register PyObject *key;
 {
 	datum drec, krec;
 	
@@ -104,7 +101,9 @@ dbm_subscript(dbmobject *dp, register PyObject *key)
 }
 
 static int
-dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
+dbm_ass_sub(dp, v, w)
+	dbmobject *dp;
+PyObject *v, *w;
 {
         datum krec, drec;
 	
@@ -153,7 +152,9 @@ static PyMappingMethods dbm_as_mapping = {
 };
 
 static PyObject *
-dbm__close(register dbmobject *dp, PyObject *args)
+dbm__close(dp, args)
+	register dbmobject *dp;
+PyObject *args;
 {
 	if ( !PyArg_NoArgs(args) )
 		return NULL;
@@ -165,7 +166,9 @@ dbm__close(register dbmobject *dp, PyObject *args)
 }
 
 static PyObject *
-dbm_keys(register dbmobject *dp, PyObject *args)
+dbm_keys(dp, args)
+	register dbmobject *dp;
+PyObject *args;
 {
 	register PyObject *v, *item;
 	datum key;
@@ -195,7 +198,9 @@ dbm_keys(register dbmobject *dp, PyObject *args)
 }
 
 static PyObject *
-dbm_has_key(register dbmobject *dp, PyObject *args)
+dbm_has_key(dp, args)
+	register dbmobject *dp;
+PyObject *args;
 {
 	datum key, val;
 	
@@ -214,7 +219,9 @@ static PyMethodDef dbm_methods[] = {
 };
 
 static PyObject *
-dbm_getattr(dbmobject *dp, char *name)
+dbm_getattr(dp, name)
+	dbmobject *dp;
+char *name;
 {
 	return Py_FindMethod(dbm_methods, (PyObject *)dp, name);
 }
@@ -239,7 +246,9 @@ static PyTypeObject Dbmtype = {
 /* ----------------------------------------------------------------- */
 
 static PyObject *
-dbmopen(PyObject *self, PyObject *args)
+dbmopen(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	char *name;
 	char *flags = "r";
@@ -272,7 +281,7 @@ static PyMethodDef dbmmodule_methods[] = {
 };
 
 DL_EXPORT(void)
-initdbm(void) {
+initdbm() {
 	PyObject *m, *d;
 
 	m = Py_InitModule("dbm", dbmmodule_methods);

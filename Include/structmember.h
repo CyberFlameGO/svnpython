@@ -4,16 +4,6 @@
 extern "C" {
 #endif
 
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Interface to map C struct members to Python object attributes */
 
 #ifdef HAVE_STDDEF_H
@@ -71,8 +61,8 @@ struct memberlist {
 #define READONLY	1
 #define RO		READONLY		/* Shorthand */
 
-DL_IMPORT(PyObject *) PyMember_Get(char *, struct memberlist *, char *);
-DL_IMPORT(int) PyMember_Set(char *, struct memberlist *, char *, PyObject *);
+DL_IMPORT(PyObject *) PyMember_Get Py_PROTO((char *, struct memberlist *, char *));
+DL_IMPORT(int) PyMember_Set Py_PROTO((char *, struct memberlist *, char *, PyObject *));
 
 #ifdef __cplusplus
 }

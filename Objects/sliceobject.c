@@ -16,7 +16,8 @@ this type and there is exactly one in existence.
 #include "Python.h"
 
 static PyObject *
-ellipsis_repr(PyObject *op)
+ellipsis_repr(op)
+	PyObject *op;
 {
 	return PyString_FromString("Ellipsis");
 }
@@ -51,7 +52,10 @@ PyObject _Py_EllipsisObject = {
 */
 
 PyObject *
-PySlice_New(PyObject *start, PyObject *stop, PyObject *step)
+PySlice_New(start, stop, step)
+	PyObject *start;
+	PyObject *stop;
+	PyObject *step;
 {
 	PySliceObject *obj = PyObject_NEW(PySliceObject, &PySlice_Type);
 
@@ -70,8 +74,12 @@ PySlice_New(PyObject *start, PyObject *stop, PyObject *step)
 }
 
 int
-PySlice_GetIndices(PySliceObject *r, int length,
-                   int *start, int *stop, int *step)
+PySlice_GetIndices(r, length, start, stop, step)
+	PySliceObject *r;
+	int length;
+	int *start;
+	int *stop;
+	int *step;
 {
 	if (r->step == Py_None) {
 		*step = 1;
@@ -100,7 +108,8 @@ PySlice_GetIndices(PySliceObject *r, int length,
 }
 
 static void
-slice_dealloc(PySliceObject *r)
+slice_dealloc(r)
+	PySliceObject *r;
 {
 	Py_DECREF(r->step);
 	Py_DECREF(r->start);
@@ -109,7 +118,8 @@ slice_dealloc(PySliceObject *r)
 }
 
 static PyObject *
-slice_repr(PySliceObject *r)
+slice_repr(r)
+	PySliceObject *r;
 {
 	PyObject *s, *comma;
 
@@ -126,7 +136,9 @@ slice_repr(PySliceObject *r)
 }
 
 
-static PyObject *slice_getattr(PySliceObject *self, char *name)
+static PyObject *slice_getattr(self, name)
+	PySliceObject *self;
+	char *name;
 {
 	PyObject *ret;
   

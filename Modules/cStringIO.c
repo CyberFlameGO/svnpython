@@ -56,8 +56,8 @@ static char cStringIO_module_documentation[] =
 "\n"
 "This module provides a simple useful replacement for\n"
 "the StringIO module that is written in C.  It does not provide the\n"
-"full generality of StringIO, but it provides enough for most\n"
-"applications and is especially useful in conjunction with the\n"
+"full generality if StringIO, but it provides enough for most\n"
+"applications and is especially useful in conjuction with the\n"
 "pickle module.\n"
 "\n"
 "Usage:\n"
@@ -367,7 +367,7 @@ O_writelines(Oobject *self, PyObject *args) {
     Py_DECREF(string_module);
   }
 
-  if (PyObject_Size(args) == -1) {
+  if (PyObject_Length(args) == -1) {
     return NULL;
   }
 
@@ -617,8 +617,7 @@ IO_StringIO(PyObject *self, PyObject *args) {
 /* List of methods defined in the module */
 
 static struct PyMethodDef IO_methods[] = {
-  {"StringIO",	(PyCFunction)IO_StringIO,	
-   METH_VARARGS,	IO_StringIO__doc__},
+  {"StringIO",	(PyCFunction)IO_StringIO,	1,	IO_StringIO__doc__},
   {NULL,		NULL}		/* sentinel */
 };
 
@@ -640,7 +639,7 @@ static struct PycStringIO_CAPI CAPI = {
 #define DL_EXPORT(RTYPE) RTYPE
 #endif
 DL_EXPORT(void)
-initcStringIO(void) {
+initcStringIO() {
   PyObject *m, *d, *v;
 
 

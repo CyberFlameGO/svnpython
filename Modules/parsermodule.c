@@ -66,7 +66,7 @@ typedef int (*SeqInserter) (PyObject* sequence,
                             int index,
                             PyObject* element);
 
-/*  The function below is copyrighted by Stichting Mathematisch Centrum.  The
+/*  The function below is copyrigthed by Stichting Mathematisch Centrum.  The
  *  original copyright statement is included below, and continues to apply
  *  in full to the function immediately following.  All other material is
  *  original, copyrighted by Fred L. Drake, Jr. and Virginia Polytechnic
@@ -74,16 +74,6 @@ typedef int (*SeqInserter) (PyObject* sequence,
  *  new naming conventions.  Added arguments to provide support for creating
  *  lists as well as tuples, and optionally including the line numbers.
  */
-
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
 
 static PyObject*
 node2tuple(node *n,                     /* node to convert               */
@@ -477,7 +467,9 @@ parser_methods[] = {
 
 
 static PyObject*
-parser_getattr(PyObject *self, char *name)
+parser_getattr(self, name)
+     PyObject *self;
+     char *name;
 {
     return (Py_FindMethod(parser_methods, self, name));
 }
@@ -489,7 +481,8 @@ parser_getattr(PyObject *self, char *name)
  *
  */
 static void
-err_string(char *message)
+err_string(message)
+     char *message;
 {
     PyErr_SetString(parser_error, message);
 }
@@ -610,7 +603,7 @@ parser_tuple2ast(PyAST_Object *self, PyObject *args, PyObject *kw)
      *  so we can DECREF it after the check.  But we really should accept
      *  lists as well as tuples at the very least.
      */
-    ok = PyObject_Size(tuple) >= 2;
+    ok = PyObject_Length(tuple) >= 2;
     if (ok) {
         temp = PySequence_GetItem(tuple, 0);
         ok = (temp != NULL) && PyInt_Check(temp);
@@ -626,7 +619,7 @@ parser_tuple2ast(PyAST_Object *self, PyObject *args, PyObject *kw)
     }
     if (ok) {
         temp = PySequence_GetItem(tuple, 1);
-        ok = (temp != NULL) && PyObject_Size(temp) >= 2;
+        ok = (temp != NULL) && PyObject_Length(temp) >= 2;
         if (ok) {
             PyObject *temp2 = PySequence_GetItem(temp, 0);
             if (temp2 != NULL) {
@@ -693,7 +686,7 @@ parser_tuple2ast(PyAST_Object *self, PyObject *args, PyObject *kw)
 static int
 check_terminal_tuple(PyObject *elem)
 {
-    int   len = PyObject_Size(elem);
+    int   len = PyObject_Length(elem);
     int   res = 1;
     char* str = "Illegal terminal symbol; bad node length.";
 
@@ -731,7 +724,7 @@ check_terminal_tuple(PyObject *elem)
 static node*
 build_node_children(PyObject *tuple, node *root, int *line_num)
 {
-    int len = PyObject_Size(tuple);
+    int len = PyObject_Length(tuple);
     int i;
 
     for (i = 1; i < len; ++i) {
@@ -771,7 +764,7 @@ build_node_children(PyObject *tuple, node *root, int *line_num)
                     (void) strcpy(strn, PyString_AS_STRING(temp));
                 Py_DECREF(temp);
 
-                if (PyObject_Size(elem) == 3) {
+                if (PyObject_Length(elem) == 3) {
                     PyObject* temp = PySequence_GetItem(elem, 2);
                     *line_num = PyInt_AsLong(temp);
                     Py_DECREF(temp);
@@ -855,7 +848,11 @@ build_node_tree(PyObject *tuple)
 }
 
 
+#ifdef HAVE_OLD_CPP
+#define VALIDATER(n)    static int validate_/**/n(node *tree)
+#else
 #define VALIDATER(n)    static int validate_##n(node *tree)
+#endif
 
 
 /*
@@ -963,7 +960,7 @@ validate_terminal(node *terminal, int type, char *string)
 /*  X (',' X) [',']
  */
 static int
-validate_repeating_list(node *tree, int ntype, int (*vfunc)(node *),
+validate_repeating_list(node *tree, int ntype, int (*vfunc)(),
                         const char *const name)
 {
     int nch = NCH(tree);
@@ -1629,7 +1626,8 @@ validate_for(node *tree)
  *
  */
 static int
-validate_try(node *tree)
+validate_try(tree)
+    node *tree;
 {
     int nch = NCH(tree);
     int pos = 3;
@@ -1643,7 +1641,7 @@ validate_try(node *tree)
                && validate_colon(CHILD(tree, nch - 2))
                && validate_suite(CHILD(tree, nch - 1)));
     else {
-        const char* name = "except";
+        const char* name = "execpt";
         char buffer[60];
         if (TYPE(CHILD(tree, nch - 3)) != except_clause)
             name = STR(CHILD(tree, nch - 3));
@@ -1878,7 +1876,11 @@ validate_and_expr(node *tree)
 
 
 static int
-validate_chain_two_ops(node *tree, int (*termvalid)(node *), int op1, int op2)
+validate_chain_two_ops(tree, termvalid, op1, op2)
+     node *tree;
+     int (*termvalid)();
+     int op1;
+     int op2;
  {
     int pos = 1;
     int nch = NCH(tree);
@@ -2074,7 +2076,7 @@ static int
 validate_arglist(node *tree)
 {
     int nch = NCH(tree);
-    int i, ok = 1;
+    int i, ok;
     node *last;
 
     if (nch <= 0)
@@ -2403,7 +2405,7 @@ validate_node(node *tree)
             res = validate_compound_stmt(tree);
             break;
             /*
-             *  Fundamental statements.
+             *  Fundemental statements.
              */
           case expr_stmt:
             res = validate_expr_stmt(tree);
@@ -2552,7 +2554,7 @@ validate_file_input(node *tree)
         else
             res = validate_newline(CHILD(tree, j));
     }
-    /*  This stays in to prevent any internal failures from getting to the
+    /*  This stays in to prevent any internal failues from getting to the
      *  user.  Hopefully, this won't be needed.  If a user reports getting
      *  this, we have some debugging to do.
      */
@@ -2633,7 +2635,7 @@ static PyMethodDef parser_functions[] =  {
 
 
 DL_EXPORT(void)
-initparser(void)
+initparser()
  {
     PyObject* module;
     PyObject* dict;

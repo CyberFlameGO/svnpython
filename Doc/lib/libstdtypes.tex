@@ -496,7 +496,7 @@ Notes:
 \begin{description}
 \item[(1)] The C implementation of Python has historically accepted
   multiple parameters and implicitly joined them into a tuple; this
-  no longer works in Python 2.0.  Use of this misfeature has been
+  will no longer work in Python 1.6.  Use of this misfeature has been
   deprecated since Python 1.4.
 
 \item[(2)] Raises an exception when \var{x} is not a list object.  The 
@@ -506,9 +506,10 @@ Notes:
 \item[(3)] Raises \exception{ValueError} when \var{x} is not found in
   \var{s}.
 
-\item[(4)] The \method{pop()} method is only supported by the list and
-  array types.  The optional argument \var{i} defaults to \code{-1},
-  so that by default the last item is removed and returned.
+\item[(4)] The \method{pop()} method is experimental and not supported 
+  by other mutable sequence types than lists.  The optional argument
+  \var{i} defaults to \code{-1}, so that by default the last item is
+  removed and returned.
 
 \item[(5)] The \method{sort()} and \method{reverse()} methods modify the
   list in place for economy of space when sorting or reversing a large
@@ -568,8 +569,8 @@ arbitrary objects):
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
   \lineiii{len(\var{a})}{the number of items in \var{a}}{}
   \lineiii{\var{a}[\var{k}]}{the item of \var{a} with key \var{k}}{(1)}
-  \lineiii{\var{a}[\var{k}] = \var{v}}
-          {set \code{\var{a}[\var{k}]} to \var{v}}
+  \lineiii{\var{a}[\var{k}] = \var{x}}
+          {set \code{\var{a}[\var{k}]} to \var{x}}
           {}
   \lineiii{del \var{a}[\var{k}]}
           {remove \code{\var{a}[\var{k}]} from \var{a}}
@@ -584,7 +585,7 @@ arbitrary objects):
           {(2)}
   \lineiii{\var{a}.keys()}{a copy of \var{a}'s list of keys}{(2)}
   \lineiii{\var{a}.update(\var{b})}
-          {\code{for k in \var{b}.keys(): \var{a}[k] = \var{b}[k]}}
+          {\code{for k, v in \var{b}.items(): \var{a}[k] = v}}
           {(3)}
   \lineiii{\var{a}.values()}{a copy of \var{a}'s list of values}{(2)}
   \lineiii{\var{a}.get(\var{k}\optional{, \var{x}})}

@@ -1,13 +1,3 @@
-########################################################################
-# Copyright (c) 2000, BeOpen.com.
-# Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-# Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-# All rights reserved.
-# 
-# See the file "Misc/COPYRIGHT" for information on usage and
-# redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-########################################################################
-
 # Top-level Makefile for Python
 # 
 # As distributed, this file is called Makefile.in; it is processed
@@ -212,7 +202,7 @@ Modules:	Parser Python Objects
 			prefix="$(prefix)" exec_prefix="$(exec_prefix)" all
 
 # Test the interpreter (twice, once without .pyc files, once with)
-TESTOPTS=	-l
+TESTOPTS=	
 TESTPROG=	$(srcdir)/Lib/test/regrtest.py
 TESTPYTHON=	./python$(EXE) -tt
 test:		all
@@ -269,9 +259,8 @@ maninstall:
 # Install the library
 PLATDIR=	plat-$(MACHDEP)
 MACHDEPS=	$(PLATDIR)
-XMLLIBSUBDIRS=  xml xml/dom xml/parser xml/sax
 LIBSUBDIRS=	lib-old lib-tk site-packages test test/output encodings \
-		distutils distutils/command $(XMLLIBSUBDIRS) curses $(MACHDEPS)
+		distutils distutils/command $(MACHDEPS)
 libinstall:	python $(srcdir)/Lib/$(PLATDIR)
 		@for i in $(SCRIPTDIR) $(LIBDEST); \
 		do \
@@ -328,7 +317,7 @@ libinstall:	python $(srcdir)/Lib/$(PLATDIR)
 			done; \
 		done
 		PYTHONPATH=$(LIBDEST) \
-			./python$(EXE) -tt $(LIBDEST)/compileall.py $(LIBDEST)
+			./python$(EXE) -t $(LIBDEST)/compileall.py $(LIBDEST)
 		PYTHONPATH=$(LIBDEST) \
 			./python$(EXE) -O $(LIBDEST)/compileall.py $(LIBDEST)
 
@@ -382,7 +371,7 @@ libainstall:	all
 		$(INSTALL_DATA) Modules/Makefile $(LIBPL)/Makefile
 		$(INSTALL_DATA) Modules/Setup $(LIBPL)/Setup
 		$(INSTALL_DATA) Modules/Setup.local $(LIBPL)/Setup.local
-		$(INSTALL_DATA) Modules/Setup.config $(LIBPL)/Setup.config
+		$(INSTALL_DATA) Modules/Setup.thread $(LIBPL)/Setup.thread
 		$(INSTALL_PROGRAM) $(srcdir)/Modules/makesetup $(LIBPL)/makesetup
 		$(INSTALL_PROGRAM) $(srcdir)/install-sh $(LIBPL)/install-sh
 		$(INSTALL_DATA) $(srcdir)/Misc/Makefile.pre.in $(LIBPL)/Makefile.pre.in
@@ -460,16 +449,13 @@ autoconf:
 
 # Create a tags file for vi
 tags::
-		cd $(srcdir); \
-		ctags -w -t Include/*.h; \
-		for i in $(SUBDIRS); do ctags -w -t -a $$i/*.[ch]; \
-		done; \
+		ctags -w -t Include/*.h
+		for i in $(SUBDIRS); do ctags -w -t -a $$i/*.[ch]; done
 		sort tags -o tags
 
 # Create a tags file for GNU Emacs
 TAGS::
-		cd $(srcdir); \
-		etags Include/*.h; \
+		etags Include/*.h
 		for i in $(SUBDIRS); do etags -a $$i/*.[ch]; done
 
 # Add dependencies to sub-Makefiles

@@ -77,7 +77,7 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
             return prefix
 
     elif os.name == "mac":
-        if plat_specific:
+        if platform_specific:
             if standard_lib:
                 return os.path.join(EXEC_PREFIX, "Mac", "Plugins")
             else:
@@ -267,8 +267,24 @@ def _init_nt():
     g['INCLUDEPY'] = get_python_inc(plat_specific=0)
 
     g['SO'] = '.pyd'
-    g['EXE'] = ".exe"
     g['exec_prefix'] = EXEC_PREFIX
+
+    # These are needed for the CygwinCCompiler and Mingw32CCompiler
+    # classes, which are just UnixCCompiler classes that happen to work on
+    # Windows.  UnixCCompiler expects to find these values in sysconfig, so
+    # here they are.  The fact that other Windows compilers don't need
+    # these values is pure luck (hmmm).
+
+    # XXX I think these are now unnecessary...
+
+    g['CC'] = "cc"                      # not gcc?
+    g['RANLIB'] = "ranlib"
+    g['AR'] = "ar"
+    g['OPT'] = "-O2"
+    g['SO'] = ".pyd"
+    g['LDSHARED'] = "ld"
+    g['CCSHARED'] = ""
+    g['EXE'] = ".exe"
 
 
 def _init_mac():

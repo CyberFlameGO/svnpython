@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Integer object implementation */
 
 #include "Python.h"
@@ -34,7 +24,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #endif
 
 long
-PyInt_GetMax(void)
+PyInt_GetMax()
 {
 	return LONG_MAX;	/* To initialize sys.maxint */
 }
@@ -52,7 +42,8 @@ PyIntObject _Py_TrueStruct = {
 };
 
 static PyObject *
-err_ovf(char *msg)
+err_ovf(msg)
+	char *msg;
 {
 	PyErr_SetString(PyExc_OverflowError, msg);
 	return NULL;
@@ -83,7 +74,7 @@ static PyIntBlock *block_list = NULL;
 static PyIntObject *free_list = NULL;
 
 static PyIntObject *
-fill_free_list(void)
+fill_free_list()
 {
 	PyIntObject *p, *q;
 	/* XXX Int blocks escape the object heap. Use PyObject_MALLOC ??? */
@@ -119,7 +110,8 @@ int quick_int_allocs, quick_neg_int_allocs;
 #endif
 
 PyObject *
-PyInt_FromLong(long ival)
+PyInt_FromLong(ival)
+	long ival;
 {
 	register PyIntObject *v;
 #if NSMALLNEGINTS + NSMALLPOSINTS > 0
@@ -155,14 +147,16 @@ PyInt_FromLong(long ival)
 }
 
 static void
-int_dealloc(PyIntObject *v)
+int_dealloc(v)
+	PyIntObject *v;
 {
 	v->ob_type = (struct _typeobject *)free_list;
 	free_list = v;
 }
 
 long
-PyInt_AsLong(register PyObject *op)
+PyInt_AsLong(op)
+	register PyObject *op;
 {
 	PyNumberMethods *nb;
 	PyIntObject *io;
@@ -193,7 +187,10 @@ PyInt_AsLong(register PyObject *op)
 }
 
 PyObject *
-PyInt_FromString(char *s, char **pend, int base)
+PyInt_FromString(s, pend, base)
+	char *s;
+	char **pend;
+	int base;
 {
 	char *end;
 	long x;
@@ -232,7 +229,10 @@ PyInt_FromString(char *s, char **pend, int base)
 }
 
 PyObject *
-PyInt_FromUnicode(Py_UNICODE *s, int length, int base)
+PyInt_FromUnicode(s, length, base)
+	Py_UNICODE *s;
+	int length;
+	int base;
 {
 	char buffer[256];
 	
@@ -250,15 +250,18 @@ PyInt_FromUnicode(Py_UNICODE *s, int length, int base)
 
 /* ARGSUSED */
 static int
-int_print(PyIntObject *v, FILE *fp, int flags)
-     /* flags -- not used but required by interface */
+int_print(v, fp, flags)
+	PyIntObject *v;
+	FILE *fp;
+	int flags; /* Not used but required by interface */
 {
 	fprintf(fp, "%ld", v->ob_ival);
 	return 0;
 }
 
 static PyObject *
-int_repr(PyIntObject *v)
+int_repr(v)
+	PyIntObject *v;
 {
 	char buf[20];
 	sprintf(buf, "%ld", v->ob_ival);
@@ -266,7 +269,8 @@ int_repr(PyIntObject *v)
 }
 
 static int
-int_compare(PyIntObject *v, PyIntObject *w)
+int_compare(v, w)
+	PyIntObject *v, *w;
 {
 	register long i = v->ob_ival;
 	register long j = w->ob_ival;
@@ -274,7 +278,8 @@ int_compare(PyIntObject *v, PyIntObject *w)
 }
 
 static long
-int_hash(PyIntObject *v)
+int_hash(v)
+	PyIntObject *v;
 {
 	/* XXX If this is changed, you also need to change the way
 	   Python's long, float and complex types are hashed. */
@@ -285,7 +290,9 @@ int_hash(PyIntObject *v)
 }
 
 static PyObject *
-int_add(PyIntObject *v, PyIntObject *w)
+int_add(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	register long a, b, x;
 	a = v->ob_ival;
@@ -297,7 +304,9 @@ int_add(PyIntObject *v, PyIntObject *w)
 }
 
 static PyObject *
-int_sub(PyIntObject *v, PyIntObject *w)
+int_sub(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	register long a, b, x;
 	a = v->ob_ival;
@@ -311,7 +320,7 @@ int_sub(PyIntObject *v, PyIntObject *w)
 /*
 Integer overflow checking used to be done using a double, but on 64
 bit machines (where both long and double are 64 bit) this fails
-because the double doesn't have enough precision.  John Tromp suggests
+because the double doesn't have enouvg precision.  John Tromp suggests
 the following algorithm:
 
 Suppose again we normalize a and b to be nonnegative.
@@ -338,7 +347,9 @@ guess the above is the preferred solution.
 */
 
 static PyObject *
-int_mul(PyIntObject *v, PyIntObject *w)
+int_mul(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	long a, b, ah, bh, x, y;
 	int s = 1;
@@ -437,8 +448,9 @@ int_mul(PyIntObject *v, PyIntObject *w)
 }
 
 static int
-i_divmod(register PyIntObject *x, register PyIntObject *y,
-         long *p_xdivy, long *p_xmody)
+i_divmod(x, y, p_xdivy, p_xmody)
+	register PyIntObject *x, *y;
+	long *p_xdivy, *p_xmody;
 {
 	long xi = x->ob_ival;
 	long yi = y->ob_ival;
@@ -478,7 +490,9 @@ i_divmod(register PyIntObject *x, register PyIntObject *y,
 }
 
 static PyObject *
-int_div(PyIntObject *x, PyIntObject *y)
+int_div(x, y)
+	PyIntObject *x;
+	PyIntObject *y;
 {
 	long d, m;
 	if (i_divmod(x, y, &d, &m) < 0)
@@ -487,7 +501,9 @@ int_div(PyIntObject *x, PyIntObject *y)
 }
 
 static PyObject *
-int_mod(PyIntObject *x, PyIntObject *y)
+int_mod(x, y)
+	PyIntObject *x;
+	PyIntObject *y;
 {
 	long d, m;
 	if (i_divmod(x, y, &d, &m) < 0)
@@ -496,7 +512,9 @@ int_mod(PyIntObject *x, PyIntObject *y)
 }
 
 static PyObject *
-int_divmod(PyIntObject *x, PyIntObject *y)
+int_divmod(x, y)
+	PyIntObject *x;
+	PyIntObject *y;
 {
 	long d, m;
 	if (i_divmod(x, y, &d, &m) < 0)
@@ -505,7 +523,10 @@ int_divmod(PyIntObject *x, PyIntObject *y)
 }
 
 static PyObject *
-int_pow(PyIntObject *v, PyIntObject *w, PyIntObject *z)
+int_pow(v, w, z)
+	PyIntObject *v;
+	PyIntObject *w;
+	PyIntObject *z;
 {
 #if 1
 	register long iv, iw, iz=0, ix, temp, prev;
@@ -601,7 +622,8 @@ int_pow(PyIntObject *v, PyIntObject *w, PyIntObject *z)
 }				
 
 static PyObject *
-int_neg(PyIntObject *v)
+int_neg(v)
+	PyIntObject *v;
 {
 	register long a, x;
 	a = v->ob_ival;
@@ -612,14 +634,16 @@ int_neg(PyIntObject *v)
 }
 
 static PyObject *
-int_pos(PyIntObject *v)
+int_pos(v)
+	PyIntObject *v;
 {
 	Py_INCREF(v);
 	return (PyObject *)v;
 }
 
 static PyObject *
-int_abs(PyIntObject *v)
+int_abs(v)
+	PyIntObject *v;
 {
 	if (v->ob_ival >= 0)
 		return int_pos(v);
@@ -628,19 +652,23 @@ int_abs(PyIntObject *v)
 }
 
 static int
-int_nonzero(PyIntObject *v)
+int_nonzero(v)
+	PyIntObject *v;
 {
 	return v->ob_ival != 0;
 }
 
 static PyObject *
-int_invert(PyIntObject *v)
+int_invert(v)
+	PyIntObject *v;
 {
 	return PyInt_FromLong(~v->ob_ival);
 }
 
 static PyObject *
-int_lshift(PyIntObject *v, PyIntObject *w)
+int_lshift(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	register long a, b;
 	a = v->ob_ival;
@@ -661,7 +689,9 @@ int_lshift(PyIntObject *v, PyIntObject *w)
 }
 
 static PyObject *
-int_rshift(PyIntObject *v, PyIntObject *w)
+int_rshift(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	register long a, b;
 	a = v->ob_ival;
@@ -681,13 +711,18 @@ int_rshift(PyIntObject *v, PyIntObject *w)
 			a = 0;
 	}
 	else {
-		a = Py_ARITHMETIC_RIGHT_SHIFT(long, a, b);
+		if (a < 0)
+			a = ~( ~(unsigned long)a >> b );
+		else
+			a = (unsigned long)a >> b;
 	}
 	return PyInt_FromLong(a);
 }
 
 static PyObject *
-int_and(PyIntObject *v, PyIntObject *w)
+int_and(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	register long a, b;
 	a = v->ob_ival;
@@ -696,7 +731,9 @@ int_and(PyIntObject *v, PyIntObject *w)
 }
 
 static PyObject *
-int_xor(PyIntObject *v, PyIntObject *w)
+int_xor(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	register long a, b;
 	a = v->ob_ival;
@@ -705,7 +742,9 @@ int_xor(PyIntObject *v, PyIntObject *w)
 }
 
 static PyObject *
-int_or(PyIntObject *v, PyIntObject *w)
+int_or(v, w)
+	PyIntObject *v;
+	PyIntObject *w;
 {
 	register long a, b;
 	a = v->ob_ival;
@@ -714,26 +753,30 @@ int_or(PyIntObject *v, PyIntObject *w)
 }
 
 static PyObject *
-int_int(PyIntObject *v)
+int_int(v)
+	PyIntObject *v;
 {
 	Py_INCREF(v);
 	return (PyObject *)v;
 }
 
 static PyObject *
-int_long(PyIntObject *v)
+int_long(v)
+	PyIntObject *v;
 {
 	return PyLong_FromLong((v -> ob_ival));
 }
 
 static PyObject *
-int_float(PyIntObject *v)
+int_float(v)
+	PyIntObject *v;
 {
 	return PyFloat_FromDouble((double)(v -> ob_ival));
 }
 
 static PyObject *
-int_oct(PyIntObject *v)
+int_oct(v)
+	PyIntObject *v;
 {
 	char buf[100];
 	long x = v -> ob_ival;
@@ -745,7 +788,8 @@ int_oct(PyIntObject *v)
 }
 
 static PyObject *
-int_hex(PyIntObject *v)
+int_hex(v)
+	PyIntObject *v;
 {
 	char buf[100];
 	long x = v -> ob_ival;
@@ -798,7 +842,7 @@ PyTypeObject PyInt_Type = {
 };
 
 void
-PyInt_Fini(void)
+PyInt_Fini()
 {
 	PyIntObject *p;
 	PyIntBlock *list, *next;
@@ -882,8 +926,8 @@ PyInt_Fini(void)
 			     i++, p++) {
 				if (PyInt_Check(p) && p->ob_refcnt != 0)
 					fprintf(stderr,
-				"#   <int at %p, refcnt=%d, val=%ld>\n",
-						p, p->ob_refcnt, p->ob_ival);
+				"#   <int at %lx, refcnt=%d, val=%ld>\n",
+					  (long)p, p->ob_refcnt, p->ob_ival);
 			}
 			list = list->next;
 		}

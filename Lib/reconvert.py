@@ -1,6 +1,6 @@
 #! /usr/bin/env python1.5
 
-r"""Convert old ("regex") regular expressions to new syntax ("re").
+"""Convert old ("regex") regular expressions to new syntax ("re").
 
 When imported as a module, there are two functions, with their own
 strings:

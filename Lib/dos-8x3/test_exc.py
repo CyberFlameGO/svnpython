@@ -6,19 +6,7 @@ from types import ClassType
 print '5. Built-in exceptions'
 # XXX This is not really enough, each *operation* should be tested!
 
-def test_raise_catch(exc):
-    try:
-        raise exc, "spam"
-    except exc, err:
-        buf = str(err)
-    try:
-        raise exc("spam")
-    except exc, err:
-        buf = str(err)
-    print buf
-
 def r(thing):
-    test_raise_catch(thing)
     if type(thing) == ClassType:
         print thing.__name__
     else:
@@ -105,9 +93,5 @@ except ValueError: pass
 r(ZeroDivisionError)
 try: x = 1/0
 except ZeroDivisionError: pass
-
-r(Exception)
-try: x = 1/0
-except Exception, e: pass
 
 unlink(TESTFN)

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Support for dynamic loading of extension modules */
 
 #include <ctype.h>	/*  for isdigit()	  */
@@ -28,7 +18,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #endif
 
 
-extern char *Py_GetProgramName(void);
+extern char *Py_GetProgramName();
 
 typedef struct Module {
 	struct Module *next;
@@ -42,7 +32,8 @@ const struct filedescr _PyImport_DynLoadFiletab[] = {
 };
 
 static int
-aix_getoldmodules(void **modlistptr)
+aix_getoldmodules(modlistptr)
+	void **modlistptr;
 {
 	register ModulePtr       modptr, prevmodptr;
 	register struct ld_info  *ldiptr;
@@ -114,7 +105,9 @@ aix_getoldmodules(void **modlistptr)
 }
 
 static int
-aix_bindnewmodule(void *newmoduleptr, void *modlistptr)
+aix_bindnewmodule(newmoduleptr, modlistptr)
+	void *newmoduleptr;
+	void *modlistptr;        
 {
 	register ModulePtr modptr;
 
@@ -128,7 +121,8 @@ aix_bindnewmodule(void *newmoduleptr, void *modlistptr)
 }
 
 static void
-aix_loaderror(char *pathname)
+aix_loaderror(pathname)
+	char *pathname;
 {
 
 	char *message[1024], errbuf[1024];
@@ -185,7 +179,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	/*
 	-- Invoke load() with L_NOAUTODEFER leaving the imported symbols
 	-- of the shared module unresolved. Thus we have to resolve them
-	-- explicitly with loadbind. The new module is loaded, then we
+	-- explicitely with loadbind. The new module is loaded, then we
 	-- resolve its symbols using the list of already loaded modules
 	-- (only those that belong to the python executable). Get these
 	-- with loadquery(L_GETINFO).

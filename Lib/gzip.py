@@ -5,8 +5,10 @@ but random access is not allowed."""
 
 # based on Andrew Kuchling's minigzip.py distributed with the zlib module
 
-import string, struct, sys, time
+import time
+import string
 import zlib
+import struct
 import __builtin__
 
 FTEXT, FHCRC, FEXTRA, FNAME, FCOMMENT = 1, 2, 4, 8, 16
@@ -173,8 +175,7 @@ class GzipFile:
         if self.fileobj is None: raise EOFError, "Reached EOF"
  	
         if self._new_member:
-            # If the _new_member flag is set, we have to
-            # jump to the next member, if there is one.
+            # If the _new_member flag is set, we have to 
             # 
             # First, check if we're at the end of the file;
             # if so, it's time to stop; no more members to read.
@@ -272,46 +273,27 @@ class GzipFile:
     def isatty(self):
         return 0
 
-    def readline(self, size=-1):
-        if size < 0: size = sys.maxint
+    def readline(self):
         bufs = []
-        orig_size = size
-        readsize = min(100, size)    # Read from the file in small chunks
+        readsize = 100
         while 1:
-            if size == 0:
-                return string.join(bufs, '') # Return resulting line
-
             c = self.read(readsize)
             i = string.find(c, '\n')
-            if size is not None:
-                # We set i=size to break out of the loop under two
-                # conditions: 1) there's no newline, and the chunk is 
-                # larger than size, or 2) there is a newline, but the
-                # resulting line would be longer than 'size'.
-                if i==-1 and len(c) > size: i=size-1
-                elif size <= i: i = size -1
-
             if i >= 0 or c == '':
-                bufs.append(c[:i+1])    # Add portion of last chunk
-                self._unread(c[i+1:])   # Push back rest of chunk
-                return string.join(bufs, '') # Return resulting line
-
-            # Append chunk to list, decrease 'size',
+                bufs.append(c[:i+1])
+                self._unread(c[i+1:])
+                return string.join(bufs, '')
             bufs.append(c)
-            size = size - len(c)
-            readsize = min(size, readsize * 2)
-            
-    def readlines(self, sizehint=0):
-        # Negative numbers result in reading all the lines
-        if sizehint <= 0: sizehint = sys.maxint
-        L = []
-        while sizehint > 0:
-            line = self.readline()
-            if line == "": break
-            L.append( line )
-            sizehint = sizehint - len(line)
+            readsize = readsize * 2
 
-        return L
+    def readlines(self, ignored=None):
+        buf = self.read()
+        lines = string.split(buf, '\n')
+        for i in range(len(lines)-1):
+            lines[i] = lines[i] + '\n'
+        if lines and not lines[-1]:
+            del lines[-1]
+        return lines
 
     def writelines(self, L):
         for line in L:

@@ -302,11 +302,11 @@ module from which it is called).
 \end{funcdesc}
 
 \begin{funcdesc}{id}{object}
-  Return the `identity' of an object.  This is an integer (or long
-  integer) which is guaranteed to be unique and constant for this
-  object during its lifetime.  Two objects whose lifetimes are
-  disjunct may have the same \function{id()} value.  (Implementation
-  note: this is the address of the object.)
+  Return the `identity' of an object.  This is an integer which is
+  guaranteed to be unique and constant for this object during its
+  lifetime.  (Two objects whose lifetimes are disjunct may have the
+  same \function{id()} value.)  (Implementation note: this is the
+  address of the object.)
 \end{funcdesc}
 
 \begin{funcdesc}{input}{\optional{prompt}}
@@ -319,7 +319,7 @@ module from which it is called).
   representable as a Python integer, possibly embedded in whitespace;
   this behaves identical to \code{string.atoi(\var{x}\optional{,
   \var{radix}})}.  The \var{radix} parameter gives the base for the
-  conversion and may be any integer in the range [2, 36].  If
+  conversion and may be any integer in the range $[2, 36]$.  If
   \var{radix} is specified and \var{x} is not a string,
   \exception{TypeError} is raised.
   Otherwise, the argument may be a plain or
@@ -669,7 +669,7 @@ integer \var{i}, e.g., \code{unichr(97)} returns the string
 \code{u'a'}.  This is the inverse of \function{ord()} for Unicode
 strings.  The argument must be in the range [0..65535], inclusive.
 \exception{ValueError} is raised otherwise.
-\versionadded{2.0}
+\versionadded{1.6}
 \end{funcdesc}
 
 \begin{funcdesc}{unicode}{string\optional{, encoding='utf-8'\optional{, errors='strict'}}}
@@ -677,7 +677,7 @@ Decodes \var{string} using the codec for \var{encoding}.  Error
 handling is done according to \var{errors}.  The default behavior is
 to decode UTF-8 in strict mode, meaning that encoding errors raise
 \exception{ValueError}.
-\versionadded{2.0}
+\versionadded{1.6}
 \end{funcdesc}
 
 \begin{funcdesc}{vars}{\optional{object}}
@@ -702,14 +702,4 @@ actually storing them all simultaneously.  The advantage of
 them) except when a very large range is used on a memory-starved
 machine (e.g. MS-DOS) or when all of the range's elements are never
 used (e.g. when the loop is usually terminated with \keyword{break}).
-\end{funcdesc}
-
-\begin{funcdesc}{zip}{seq1, \moreargs}
-This function returns a list of tuples, where each tuple contains the
-\var{i}-th element from each of the argument sequences.  At least one
-sequence is required, otherwise a \exception{TypeError} is raised.
-The returned list is truncated in length to the length of the shortest
-argument sequence.  When the argument sequences are all of the same
-length, \function{zip()} is similar to \function{map()} with an
-initial argument of \code{None}.
 \end{funcdesc}

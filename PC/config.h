@@ -26,14 +26,6 @@ compiler specific".  Therefore, these should be very rare.
 
 */
 
-/* Suggested by Rene Liebscher <R.Liebscher@gmx.de> to avoid a GCC 2.91.*
-   bug that requires structure imports.  More recent versions of the
-   compiler don't exhibit this bug.
-*/
-#if (__GNUC__==2) && (__GNUC_MINOR__<=91)
-#warning "Please use an up-to-date version of gcc! (>2.91 recommended)"
-#endif
-
 /*
  Some systems require special declarations for data items imported
  or exported from dynamic link libraries.  Note that the definition
@@ -241,47 +233,23 @@ typedef int pid_t;
 
 /* End of compilers - finish up */
 
-/* define the ANSI intptr_t type for portable use of a pointer sized
-   integer */
-#if _MSC_VER >= 1200 /* This file only exists in VC 6.0 or higher */
-#include <basetsd.h>
-#endif
-#if defined(MS_WINDOWS) && !defined(MS_WIN64)
-typedef long intptr_t;
-#endif
-
 #if defined(MS_WIN64)
 /* maintain "win32" sys.platform for backward compatibility of Python code,
    the Win64 API should be close enough to the Win32 API to make this
    preferable */
-#	define PLATFORM "win32"
-#	define SIZEOF_VOID_P 8
-#	define SIZEOF_TIME_T 8
-#	define SIZEOF_OFF_T 4
-#	define SIZEOF_FPOS_T 8
-#	define SIZEOF_HKEY 8
-/* configure.in defines HAVE_LARGEFILE_SUPPORT iff HAVE_LONG_LONG,
-   sizeof(off_t) > sizeof(long), and sizeof(LONG_LONG) >= sizeof(off_t).
-   On Win64 the second condition is not true, but if fpos_t replaces off_t
-   then this is true. The uses of HAVE_LARGEFILE_SUPPORT imply that Win64
-   should define this. */
-#	define HAVE_LARGEFILE_SUPPORT
+#define PLATFORM "win32"
+#define SIZEOF_VOID_P 8
 #elif defined(MS_WIN32)
-#	define PLATFORM "win32"
-#	ifdef _M_ALPHA
-#		define SIZEOF_VOID_P 8
-#		define SIZEOF_TIME_T 8
-#	else
-#		define SIZEOF_VOID_P 4
-#		define SIZEOF_TIME_T 4
-#		define SIZEOF_OFF_T 4
-#		define SIZEOF_FPOS_T 8
-#		define SIZEOF_HKEY 4
-#	endif
-#elif defined(MS_WIN16)
-#	define PLATFORM "win16"
+#define PLATFORM "win32"
+#ifdef _M_ALPHA
+#define SIZEOF_VOID_P 8
 #else
-#	define PLATFORM "dos"
+#define SIZEOF_VOID_P 4
+#endif
+#elif defined(MS_WIN16)
+#define PLATFORM "win16"
+#else
+#define PLATFORM "dos"
 #endif
 
 
@@ -290,9 +258,9 @@ typedef long intptr_t;
 #ifndef USE_DL_EXPORT
 /* So nobody needs to specify the .lib in their Makefile any more */
 #ifdef _DEBUG
-#pragma comment(lib,"python20_d.lib")
+#pragma comment(lib,"python16_d.lib")
 #else
-#pragma comment(lib,"python20.lib")
+#pragma comment(lib,"python16.lib")
 #endif
 #endif /* USE_DL_EXPORT */
 
@@ -452,9 +420,6 @@ typedef long intptr_t;
 
 /* Define if you want to use the GNU readline library */
 /* #define WITH_READLINE 1 */
-
-/* Define if you want cycle garbage collection */
-#define WITH_CYCLE_GC 1
 
 /* Define if you have clock.  */
 /* #define HAVE_CLOCK */

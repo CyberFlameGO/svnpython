@@ -1,12 +1,10 @@
 #! /usr/bin/env python
 
-# This file contains a class and a main program that perform three
+# This file contains a class and a main program that perform two
 # related (though complimentary) formatting operations on Python
-# programs.  When called as "pindent -c", it takes a valid Python
+# programs.  When called as "pindend -c", it takes a valid Python
 # program as input and outputs a version augmented with block-closing
-# comments.  When called as "pindent -d", it assumes its input is a
-# Python program with block-closing comments and outputs a commentless
-# version.   When called as "pindent -r" it assumes its input is a
+# comments.  When called as "pindent -r" it assumes its input is a
 # Python program with block-closing comments but with its indentation
 # messed up, and outputs a properly indented version.
 
@@ -36,17 +34,15 @@
 # that indentation is not significant when interpreting block-closing
 # comments).
 
-# The operations are idempotent (i.e. applied to their own output
+# Both operations are idempotent (i.e. applied to their own output
 # they yield an identical result).  Running first "pindent -c" and
 # then "pindent -r" on a valid Python program produces a program that
 # is semantically identical to the input (though its indentation may
-# be different). Running "pindent -e" on that output produces a
-# program that only differs from the original in indentation.
+# be different).
 
 # Other options:
 # -s stepsize: set the indentation step size (default 8)
 # -t tabsize : set the number of spaces a tab character is worth (default 8)
-# -e         : expand TABs into spaces
 # file ...   : input file(s) (default standard input)
 # The results always go to standard output
 
@@ -79,7 +75,6 @@
 # Defaults
 STEPSIZE = 8
 TABSIZE = 8
-EXPANDTABS = 0
 
 import os
 import re
@@ -98,14 +93,13 @@ start = 'if', 'while', 'for', 'try', 'def', 'class'
 class PythonIndenter:
 
 	def __init__(self, fpi = sys.stdin, fpo = sys.stdout,
-		     indentsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
+		     indentsize = STEPSIZE, tabsize = TABSIZE):
 		self.fpi = fpi
 		self.fpo = fpo
 		self.indentsize = indentsize
 		self.tabsize = tabsize
 		self.lineno = 0
-		self.expandtabs = expandtabs
-		self._write = fpo.write
+		self.write = fpo.write
 		self.kwprog = re.compile(
 			r'^\s*(?P<kw>[a-z]+)'
 			r'(\s+(?P<id>[a-zA-Z_]\w*))?'
@@ -116,14 +110,6 @@ class PythonIndenter:
 			r'[^\w]')
 		self.wsprog = re.compile(r'^[ \t]*')
 	# end def __init__
-
-	def write(self, line):
-		if self.expandtabs:
-			self._write(string.expandtabs(line, self.tabsize))
-		else:
-			self._write(line)
-		# end if
-	# end def write
 
 	def readline(self):
 		line = self.fpi.readline()
@@ -207,34 +193,6 @@ class PythonIndenter:
 		# end if
 	# end def reformat
 
-	def delete(self):
-		begin_counter = 0
-		end_counter = 0
-		while 1:
-			line = self.getline()
-			if not line: break	# EOF
-			# end if
-			m = self.endprog.match(line)
-			if m:
-				end_counter = end_counter + 1
-				continue
-			# end if
-			m = self.kwprog.match(line)
-			if m:
-				kw = m.group('kw')
-				if kw in start:
-					begin_counter = begin_counter + 1
-				# end if
-			# end if
-			self.putline(line)
-		# end while
-		if begin_counter - end_counter < 0:
-			sys.stderr.write('Warning: input contained more end tags than expected\n')
-		elif begin_counter - end_counter > 0:
-			sys.stderr.write('Warning: input contained less end tags than expected\n')
-		# end if
-	# end def delete
-	
 	def complete(self):
 		self.indentsize = 1
 		stack = []
@@ -335,23 +293,17 @@ class PythonIndenter:
 # - xxx_string(s): take and return string object
 # - xxx_file(filename): process file in place, return true iff changed
 
-def complete_filter(input = sys.stdin, output = sys.stdout,
-		    stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
-	pi = PythonIndenter(input, output, stepsize, tabsize, expandtabs)
+def complete_filter(input= sys.stdin, output = sys.stdout,
+		    stepsize = STEPSIZE, tabsize = TABSIZE):
+	pi = PythonIndenter(input, output, stepsize, tabsize)
 	pi.complete()
 # end def complete_filter
 
-def delete_filter(input= sys.stdin, output = sys.stdout,
-		    	stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
-	pi = PythonIndenter(input, output, stepsize, tabsize, expandtabs)
-	pi.delete()
-# end def delete_filter
-
 def reformat_filter(input = sys.stdin, output = sys.stdout,
-		    stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
-	pi = PythonIndenter(input, output, stepsize, tabsize, expandtabs)
+		    stepsize = STEPSIZE, tabsize = TABSIZE):
+	pi = PythonIndenter(input, output, stepsize, tabsize)
 	pi.reformat()
-# end def reformat_filter
+# end def reformat
 
 class StringReader:
 	def __init__(self, buf):
@@ -397,33 +349,25 @@ class StringWriter:
 	# end def getvalue
 # end class StringWriter
 
-def complete_string(source, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
+def complete_string(source, stepsize = STEPSIZE, tabsize = TABSIZE):
 	input = StringReader(source)
 	output = StringWriter()
-	pi = PythonIndenter(input, output, stepsize, tabsize, expandtabs)
+	pi = PythonIndenter(input, output, stepsize, tabsize)
 	pi.complete()
 	return output.getvalue()
 # end def complete_string
 
-def delete_string(source, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
+def reformat_string(source, stepsize = STEPSIZE, tabsize = TABSIZE):
 	input = StringReader(source)
 	output = StringWriter()
-	pi = PythonIndenter(input, output, stepsize, tabsize, expandtabs)
-	pi.delete()
-	return output.getvalue()
-# end def delete_string
-
-def reformat_string(source, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
-	input = StringReader(source)
-	output = StringWriter()
-	pi = PythonIndenter(input, output, stepsize, tabsize, expandtabs)
+	pi = PythonIndenter(input, output, stepsize, tabsize)
 	pi.reformat()
 	return output.getvalue()
 # end def reformat_string
 
-def complete_file(filename, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
+def complete_file(filename, stepsize = STEPSIZE, tabsize = TABSIZE):
 	source = open(filename, 'r').read()
-	result = complete_string(source, stepsize, tabsize, expandtabs)
+	result = complete_string(source, stepsize, tabsize)
 	if source == result: return 0
 	# end if
 	import os
@@ -436,30 +380,13 @@ def complete_file(filename, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs =
 	return 1
 # end def complete_file
 
-def delete_file(filename, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
+def reformat_file(filename, stepsize = STEPSIZE, tabsize = TABSIZE):
 	source = open(filename, 'r').read()
-	result = delete_string(source, stepsize, tabsize, expandtabs)
+	result = reformat_string(source, stepsize, tabsize)
 	if source == result: return 0
 	# end if
 	import os
-	try: os.rename(filename, filename + '~')
-	except os.error: pass
-	# end try
-	f = open(filename, 'w')
-	f.write(result)
-	f.close()
-	return 1
-# end def delete_file
-
-def reformat_file(filename, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs = EXPANDTABS):
-	source = open(filename, 'r').read()
-	result = reformat_string(source, stepsize, tabsize, expandtabs)
-	if source == result: return 0
-	# end if
-	import os
-	try: os.rename(filename, filename + '~')
-	except os.error: pass
-	# end try
+	os.rename(filename, filename + '~')
 	f = open(filename, 'w')
 	f.write(result)
 	f.close()
@@ -469,28 +396,20 @@ def reformat_file(filename, stepsize = STEPSIZE, tabsize = TABSIZE, expandtabs =
 # Test program when called as a script
 
 usage = """
-usage: pindent (-c|-d|-r) [-s stepsize] [-t tabsize] [-e] [file] ...
+usage: pindent (-c|-r) [-s stepsize] [-t tabsize] [file] ...
 -c         : complete a correctly indented program (add #end directives)
--d         : delete #end directives
 -r         : reformat a completed program (use #end directives)
 -s stepsize: indentation step (default %(STEPSIZE)d)
 -t tabsize : the worth in spaces of a tab (default %(TABSIZE)d)
--e         : expand TABs into spaces (defailt OFF)
 [file] ... : files are changed in place, with backups in file~
 If no files are specified or a single - is given,
 the program acts as a filter (reads stdin, writes stdout).
 """ % vars()
 
-def error_both(op1, op2):
-	sys.stderr.write('Error: You can not specify both '+op1+' and -'+op2[0]+' at the same time\n')
-	sys.stderr.write(usage)
-	sys.exit(2)
-# end def error_both
-
 def test():
 	import getopt
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], 'cdrs:t:e')
+		opts, args = getopt.getopt(sys.argv[1:], 'crs:t:')
 	except getopt.error, msg:
 		sys.stderr.write('Error: %s\n' % msg)
 		sys.stderr.write(usage)
@@ -499,41 +418,30 @@ def test():
 	action = None
 	stepsize = STEPSIZE
 	tabsize = TABSIZE
-	expandtabs = EXPANDTABS
 	for o, a in opts:
 		if o == '-c':
-			if action: error_both(o, action)
-			# end if
 			action = 'complete'
-		elif o == '-d':
-			if action: error_both(o, action)
-			# end if
-			action = 'delete'
 		elif o == '-r':
-			if action: error_both(o, action)
-			# end if
 			action = 'reformat'
 		elif o == '-s':
 			stepsize = string.atoi(a)
 		elif o == '-t':
 			tabsize = string.atoi(a)
-		elif o == '-e':
-			expandtabs = 1
 		# end if
 	# end for
 	if not action:
 		sys.stderr.write(
-			'You must specify -c(omplete), -d(elete) or -r(eformat)\n')
+			'You must specify -c(omplete) or -r(eformat)\n')
 		sys.stderr.write(usage)
 		sys.exit(2)
 	# end if
 	if not args or args == ['-']:
 		action = eval(action + '_filter')
-		action(sys.stdin, sys.stdout, stepsize, tabsize, expandtabs)
+		action(sys.stdin, sys.stdout, stepsize, tabsize)
 	else:
 		action = eval(action + '_file')
 		for file in args:
-			action(file, stepsize, tabsize, expandtabs)
+			action(file, stepsize, tabsize)
 		# end for
 	# end if
 # end def test

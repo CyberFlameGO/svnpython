@@ -1,14 +1,5 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 #include "Python.h"
+#include "mytime.h" /* needed for SunOS4.1 */
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -21,13 +12,19 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
    but we can't declare the prototype, to avoid errors
    when the header files declare it different.
    Worse, on some Linuxes, getpagesize() returns a size_t... */
+#ifndef linux
+int getrusage();
+int getpagesize();
+#endif
 
 #define doubletime(TV) ((double)(TV).tv_sec + (TV).tv_usec * 0.000001)
 
 static PyObject *ResourceError;
 
 static PyObject *
-resource_getrusage(PyObject *self, PyObject *args)
+resource_getrusage(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int who;
 	struct rusage ru;
@@ -65,14 +62,16 @@ resource_getrusage(PyObject *self, PyObject *args)
 		ru.ru_msgsnd,		     /* messages sent */
 		ru.ru_msgrcv,		     /* messages received */
 		ru.ru_nsignals,		     /* signals received */
-		ru.ru_nvcsw,		     /* voluntary context switches */
-		ru.ru_nivcsw		     /* involuntary context switches */
+		ru.ru_nvcsw,		     /* voluntary context switchs */
+		ru.ru_nivcsw		     /* involuntary context switchs */
 		);
 }
 
 
 static PyObject *
-resource_getrlimit(PyObject *self, PyObject *args)
+resource_getrlimit(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	struct rlimit rl;
 	int resource;
@@ -102,7 +101,9 @@ resource_getrlimit(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-resource_setrlimit(PyObject *self, PyObject *args)
+resource_setrlimit(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	struct rlimit rl;
 	int resource;
@@ -146,7 +147,9 @@ resource_setrlimit(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-resource_getpagesize(PyObject *self, PyObject *args)
+resource_getpagesize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ":getpagesize"))
 		return NULL;
@@ -178,7 +181,7 @@ ins(PyObject *dict, char *name, int value)
 	/* errors will be checked by initresource() */
 }
 
-void initresource(void)
+void initresource()
 {
 	PyObject *m, *d;
 

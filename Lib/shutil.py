@@ -9,15 +9,6 @@ import sys
 import stat
 
 
-def copyfileobj(fsrc, fdst, length=16*1024):
-    """copy data from file-like object fsrc to file-like object fdst"""
-    while 1:
-        buf = fsrc.read(length)
-        if not buf:
-            break
-        fdst.write(buf)
-
-	
 def copyfile(src, dst):
     """Copy data from src to dst"""
     fsrc = None
@@ -25,7 +16,11 @@ def copyfile(src, dst):
     try:
         fsrc = open(src, 'rb')
         fdst = open(dst, 'wb')
-        copyfileobj(fsrc, fdst)
+        while 1:
+            buf = fsrc.read(16*1024)
+            if not buf:
+                break
+            fdst.write(buf)
     finally:
         if fdst:
             fdst.close()

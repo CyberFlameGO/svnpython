@@ -6,16 +6,16 @@ Implements the Distutils 'sdist' command (create a source distribution)."""
 
 __revision__ = "$Id$"
 
-import sys, os, string
+import sys, os, string, re
+import fnmatch
 from types import *
 from glob import glob
 from distutils.core import Command
 from distutils.util import \
-     create_tree, remove_tree, newer, write_file, \
+     convert_path, create_tree, remove_tree, newer, write_file, \
      check_archive_formats
 from distutils.text_file import TextFile
-from distutils.errors import *
-from distutils.filelist import FileList
+from distutils.errors import DistutilsExecError, DistutilsOptionError
 
 
 def show_formats ():
@@ -64,9 +64,6 @@ class sdist (Command):
         ('keep-tree', 'k',
          "keep the distribution tree around after creating " +
          "archive file(s)"),
-        ('dist-dir=', 'd',
-         "directory to put the source distribution archive(s) in "
-         "[default: dist]"),
         ]
 
 
@@ -97,7 +94,6 @@ class sdist (Command):
 
         self.formats = None
         self.keep_tree = 0
-        self.dist_dir = None
 
         self.archive_files = None
 
@@ -122,15 +118,11 @@ class sdist (Command):
             raise DistutilsOptionError, \
                   "unknown archive format '%s'" % bad_format
 
-        if self.dist_dir is None:
-            self.dist_dir = "dist"
-
 
     def run (self):
 
-        # 'filelist' contains the list of files that will make up the
-        # manifest
-        self.filelist = FileList()
+        # 'files' is the list of files that will make up the manifest
+        self.files = []
         
         # Ensure that all required meta-data is given; warn if not (but
         # don't die, it's not *that* serious!)
@@ -138,7 +130,7 @@ class sdist (Command):
 
         # Do whatever it takes to get the list of files to process
         # (process the manifest template, read an existing manifest,
-        # whatever).  File list is accumulated in 'self.filelist'.
+        # whatever).  File list is put into 'self.files'.
         self.get_file_list ()
 
         # If user just wanted us to regenerate the manifest, stop now.
@@ -185,7 +177,7 @@ class sdist (Command):
 
     def get_file_list (self):
         """Figure out the list of files to include in the source
-        distribution, and put it in 'self.filelist'.  This might involve
+        distribution, and put it in 'self.files'.  This might involve
         reading the manifest template (and writing the manifest), or just
         reading the manifest, or just using the default file set -- it all
         depends on the user's options and the state of the filesystem.
@@ -193,9 +185,9 @@ class sdist (Command):
 
         # If we have a manifest template, see if it's newer than the
         # manifest; if so, we'll regenerate the manifest.
-        template_exists = os.path.isfile(self.template)
+        template_exists = os.path.isfile (self.template)
         if template_exists:
-            template_newer = newer(self.template, self.manifest)
+            template_newer = newer (self.template, self.manifest)
 
         # The contents of the manifest file almost certainly depend on the
         # setup script as well as the manifest template -- so if the setup
@@ -223,19 +215,17 @@ class sdist (Command):
             self.force_manifest or self.manifest_only):
 
             if not template_exists:
-                self.warn(("manifest template '%s' does not exist " +
-                           "(using default file list)") %
-                          self.template)
-
-            self.filelist.findall()
+                self.warn (("manifest template '%s' does not exist " +
+                            "(using default file list)") %
+                           self.template)
 
             # Add default file set to 'files'
             if self.use_defaults:
-                self.add_defaults()
+                self.add_defaults ()
 
             # Read manifest template if it exists
             if template_exists:
-                self.read_template()
+                self.read_template ()
 
             # Prune away any directories that don't belong in the source
             # distribution
@@ -244,24 +234,30 @@ class sdist (Command):
 
             # File list now complete -- sort it so that higher-level files
             # come first
-            self.filelist.sort()
+            sortable_files = map (os.path.split, self.files)
+            sortable_files.sort ()
+            self.files = []
+            for sort_tuple in sortable_files:
+                self.files.append (apply (os.path.join, sort_tuple))
 
             # Remove duplicates from the file list
-            self.filelist.remove_duplicates()
+            for i in range (len(self.files)-1, 0, -1):
+                if self.files[i] == self.files[i-1]:
+                    del self.files[i]
 
             # And write complete file list (including default file set) to
             # the manifest.
-            self.write_manifest()
+            self.write_manifest ()
 
         # Don't regenerate the manifest, just read it in.
         else:
-            self.read_manifest()
+            self.read_manifest ()
 
     # get_file_list ()
 
 
     def add_defaults (self):
-        """Add all the default files to self.filelist:
+        """Add all the default files to self.files:
           - README or README.txt
           - setup.py
           - test/test*.py
@@ -283,7 +279,7 @@ class sdist (Command):
                 for fn in alts:
                     if os.path.exists (fn):
                         got_it = 1
-                        self.filelist.append (fn)
+                        self.files.append (fn)
                         break
 
                 if not got_it:
@@ -291,7 +287,7 @@ class sdist (Command):
                                string.join (alts, ', '))
             else:
                 if os.path.exists (fn):
-                    self.filelist.append (fn)
+                    self.files.append (fn)
                 else:
                     self.warn ("standard file '%s' not found" % fn)
 
@@ -299,31 +295,72 @@ class sdist (Command):
         for pattern in optional:
             files = filter (os.path.isfile, glob (pattern))
             if files:
-                self.filelist.extend (files)
+                self.files.extend (files)
 
         if self.distribution.has_pure_modules():
             build_py = self.get_finalized_command ('build_py')
-            self.filelist.extend (build_py.get_source_files ())
+            self.files.extend (build_py.get_source_files ())
 
         if self.distribution.has_ext_modules():
             build_ext = self.get_finalized_command ('build_ext')
-            self.filelist.extend (build_ext.get_source_files ())
+            self.files.extend (build_ext.get_source_files ())
 
         if self.distribution.has_c_libraries():
             build_clib = self.get_finalized_command ('build_clib')
-            self.filelist.extend (build_clib.get_source_files ())
+            self.files.extend (build_clib.get_source_files ())
 
     # add_defaults ()
     
 
-    def read_template (self):
-
-        """Read and parse the manifest template file named by
-        'self.template' (usually "MANIFEST.in").  The parsing and
-        processing is done by 'self.filelist', which updates itself
-        accordingly.
+    def search_dir (self, dir, pattern=None):
+        """Recursively find files under 'dir' matching 'pattern' (a string
+        containing a Unix-style glob pattern).  If 'pattern' is None, find
+        all files under 'dir'.  Return the list of found filenames.
         """
+        allfiles = findall (dir)
+        if pattern is None:
+            return allfiles
+
+        pattern_re = translate_pattern (pattern)
+        files = []
+        for file in allfiles:
+            if pattern_re.match (os.path.basename (file)):
+                files.append (file)
+
+        return files
+
+    # search_dir ()
+
+
+    def recursive_exclude_pattern (self, dir, pattern=None):
+        """Remove filenames from 'self.files' that are under 'dir' and
+        whose basenames match 'pattern'.
+        """
+        self.debug_print("recursive_exclude_pattern: dir=%s, pattern=%s" %
+                         (dir, pattern))
+        if pattern is None:
+            pattern_re = None
+        else:
+            pattern_re = translate_pattern (pattern)
+
+        for i in range (len (self.files)-1, -1, -1):
+            (cur_dir, cur_base) = os.path.split (self.files[i])
+            if (cur_dir == dir and
+                (pattern_re is None or pattern_re.match (cur_base))):
+                self.debug_print("removing %s" % self.files[i])
+                del self.files[i]
+
+
+    def read_template (self):
+        """Read and parse the manifest template file named by
+        'self.template' (usually "MANIFEST.in").  Process all file
+        specifications (include and exclude) in the manifest template and
+        update 'self.files' accordingly (filenames may be added to
+        or removed from 'self.files' based on the manifest template).
+        """
+        assert self.files is not None and type (self.files) is ListType
         self.announce("reading manifest template '%s'" % self.template)
+
         template = TextFile (self.template,
                              strip_comments=1,
                              skip_blanks=1,
@@ -332,17 +369,152 @@ class sdist (Command):
                              rstrip_ws=1,
                              collapse_ws=1)
 
+        all_files = findall ()
+
         while 1:
+
             line = template.readline()
             if line is None:            # end of file
                 break
 
-            try:
-                self.filelist.process_template_line(line)
-            except DistutilsTemplateError, msg:
-                self.warn("%s, line %d: %s" % (template.filename,
-                                               template.current_line,
-                                               msg))
+            words = string.split (line)
+            action = words[0]
+
+            # First, check that the right number of words are present
+            # for the given action (which is the first word)
+            if action in ('include','exclude',
+                          'global-include','global-exclude'):
+                if len (words) < 2:
+                    template.warn \
+                        ("invalid manifest template line: " +
+                         "'%s' expects <pattern1> <pattern2> ..." %
+                         action)
+                    continue
+
+                pattern_list = map(convert_path, words[1:])
+
+            elif action in ('recursive-include','recursive-exclude'):
+                if len (words) < 3:
+                    template.warn \
+                        ("invalid manifest template line: " +
+                         "'%s' expects <dir> <pattern1> <pattern2> ..." %
+                         action)
+                    continue
+
+                dir = convert_path(words[1])
+                pattern_list = map (convert_path, words[2:])
+
+            elif action in ('graft','prune'):
+                if len (words) != 2:
+                    template.warn \
+                        ("invalid manifest template line: " +
+                         "'%s' expects a single <dir_pattern>" %
+                         action)
+                    continue
+
+                dir_pattern = convert_path (words[1])
+
+            else:
+                template.warn ("invalid manifest template line: " +
+                               "unknown action '%s'" % action)
+                continue
+
+            # OK, now we know that the action is valid and we have the
+            # right number of words on the line for that action -- so we
+            # can proceed with minimal error-checking.  Also, we have
+            # defined either (pattern), (dir and pattern), or
+            # (dir_pattern) -- so we don't have to spend any time
+            # digging stuff up out of 'words'.
+
+            if action == 'include':
+                self.debug_print("include " + string.join(pattern_list))
+                for pattern in pattern_list:
+                    files = self.select_pattern (all_files, pattern, anchor=1)
+                    if not files:
+                        template.warn ("no files found matching '%s'" %
+                                       pattern)
+                    else:
+                        self.files.extend (files)
+
+            elif action == 'exclude':
+                self.debug_print("exclude " + string.join(pattern_list))
+                for pattern in pattern_list:
+                    num = self.exclude_pattern (self.files, pattern, anchor=1)
+                    if num == 0:
+                        template.warn (
+                            "no previously-included files found matching '%s'"%
+                            pattern)
+
+            elif action == 'global-include':
+                self.debug_print("global-include " + string.join(pattern_list))
+                for pattern in pattern_list:
+                    files = self.select_pattern (all_files, pattern, anchor=0)
+                    if not files:
+                        template.warn (("no files found matching '%s' " +
+                                        "anywhere in distribution") %
+                                       pattern)
+                    else:
+                        self.files.extend (files)
+
+            elif action == 'global-exclude':
+                self.debug_print("global-exclude " + string.join(pattern_list))
+                for pattern in pattern_list:
+                    num = self.exclude_pattern (self.files, pattern, anchor=0)
+                    if num == 0:
+                        template.warn \
+                            (("no previously-included files matching '%s' " +
+                              "found anywhere in distribution") %
+                             pattern)
+
+            elif action == 'recursive-include':
+                self.debug_print("recursive-include %s %s" %
+                                 (dir, string.join(pattern_list)))
+                for pattern in pattern_list:
+                    files = self.select_pattern (
+                        all_files, pattern, prefix=dir)
+                    if not files:
+                        template.warn (("no files found matching '%s' " +
+                                        "under directory '%s'") %
+                                       (pattern, dir))
+                    else:
+                        self.files.extend (files)
+
+            elif action == 'recursive-exclude':
+                self.debug_print("recursive-exclude %s %s" %
+                                 (dir, string.join(pattern_list)))
+                for pattern in pattern_list:
+                    num = self.exclude_pattern(
+                        self.files, pattern, prefix=dir)
+                    if num == 0:
+                        template.warn \
+                            (("no previously-included files matching '%s' " +
+                              "found under directory '%s'") %
+                             (pattern, dir))
+
+            elif action == 'graft':
+                self.debug_print("graft " + dir_pattern)
+                files = self.select_pattern(
+                    all_files, None, prefix=dir_pattern)
+                if not files:
+                    template.warn ("no directories found matching '%s'" %
+                                   dir_pattern)
+                else:
+                    self.files.extend (files)
+
+            elif action == 'prune':
+                self.debug_print("prune " + dir_pattern)
+                num = self.exclude_pattern(
+                    self.files, None, prefix=dir_pattern)
+                if num == 0:
+                    template.warn \
+                        (("no previously-included directories found " +
+                          "matching '%s'") %
+                         dir_pattern)
+            else:
+                raise RuntimeError, \
+                      "this cannot happen: invalid action '%s'" % action
+
+        # while loop over lines of template file
 
     # read_template ()
 
@@ -357,19 +529,74 @@ class sdist (Command):
         """
         build = self.get_finalized_command('build')
         base_dir = self.distribution.get_fullname()
+        self.exclude_pattern (self.files, None, prefix=build.build_base)
+        self.exclude_pattern (self.files, None, prefix=base_dir)
+        self.exclude_pattern (self.files, r'/(RCS|CVS)/.*', is_regex=1)
 
-        self.filelist.exclude_pattern(None, prefix=build.build_base)
-        self.filelist.exclude_pattern(None, prefix=base_dir)
-        self.filelist.exclude_pattern(r'/(RCS|CVS)/.*', is_regex=1)
+
+    def select_pattern (self, files, pattern,
+                        anchor=1, prefix=None, is_regex=0):
+        """Select strings (presumably filenames) from 'files' that match
+        'pattern', a Unix-style wildcard (glob) pattern.  Patterns are not
+        quite the same as implemented by the 'fnmatch' module: '*' and '?'
+        match non-special characters, where "special" is platform-dependent:
+        slash on Unix, colon, slash, and backslash on DOS/Windows, and colon on
+        Mac OS.
+
+        If 'anchor' is true (the default), then the pattern match is more
+        stringent: "*.py" will match "foo.py" but not "foo/bar.py".  If
+        'anchor' is false, both of these will match.
+
+        If 'prefix' is supplied, then only filenames starting with 'prefix'
+        (itself a pattern) and ending with 'pattern', with anything in between
+        them, will match.  'anchor' is ignored in this case.
+
+        If 'is_regex' is true, 'anchor' and 'prefix' are ignored, and
+        'pattern' is assumed to be either a string containing a regex or a
+        regex object -- no translation is done, the regex is just compiled
+        and used as-is.
+
+        Return the list of matching strings, possibly empty.
+        """
+        matches = []
+        pattern_re = translate_pattern (pattern, anchor, prefix, is_regex)
+        self.debug_print("select_pattern: applying regex r'%s'" %
+                         pattern_re.pattern)
+        for name in files:
+            if pattern_re.search (name):
+                matches.append (name)
+                self.debug_print(" adding " + name)
+
+        return matches
+
+    # select_pattern ()
+
+
+    def exclude_pattern (self, files, pattern,
+                         anchor=1, prefix=None, is_regex=0):
+        """Remove strings (presumably filenames) from 'files' that match
+        'pattern'.  Other parameters are the same as for
+        'select_pattern()', above.  The list 'files' is modified in place.
+        """
+
+        pattern_re = translate_pattern (pattern, anchor, prefix, is_regex)
+        self.debug_print("exclude_pattern: applying regex r'%s'" %
+                         pattern_re.pattern)
+        for i in range (len(files)-1, -1, -1):
+            if pattern_re.search (files[i]):
+                self.debug_print(" removing " + files[i])
+                del files[i]
+
+    # exclude_pattern ()
 
 
     def write_manifest (self):
-        """Write the file list in 'self.filelist' (presumably as filled in
-        by 'add_defaults()' and 'read_template()') to the manifest file
-        named by 'self.manifest'.
+        """Write the file list in 'self.files' (presumably as filled in by
+        'add_defaults()' and 'read_template()') to the manifest file named
+        by 'self.manifest'.
         """
         self.execute(write_file,
-                     (self.manifest, self.filelist.files),
+                     (self.manifest, self.files),
                      "writing manifest file '%s'" % self.manifest)
 
     # write_manifest ()
@@ -377,7 +604,7 @@ class sdist (Command):
 
     def read_manifest (self):
         """Read the manifest file (named by 'self.manifest') and use it to
-        fill in 'self.filelist', the list of files to include in the source
+        fill in 'self.files', the list of files to include in the source
         distribution.
         """
         self.announce("reading manifest file '%s'" % self.manifest)
@@ -388,7 +615,7 @@ class sdist (Command):
                 break
             if line[-1] == '\n':
                 line = line[0:-1]
-            self.filelist.append (line)
+            self.files.append (line)
 
     # read_manifest ()
             
@@ -440,14 +667,11 @@ class sdist (Command):
         # Don't warn about missing meta-data here -- should be (and is!)
         # done elsewhere.
         base_dir = self.distribution.get_fullname()
-        base_name = os.path.join(self.dist_dir, base_dir)
 
-        self.make_release_tree (base_dir, self.filelist.files)
+        self.make_release_tree (base_dir, self.files)
         archive_files = []              # remember names of files we create
-        if self.dist_dir:
-            self.mkpath(self.dist_dir)
         for fmt in self.formats:
-            file = self.make_archive (base_name, fmt, base_dir=base_dir)
+            file = self.make_archive (base_dir, fmt, base_dir=base_dir)
             archive_files.append(file)
 
         self.archive_files = archive_files
@@ -462,3 +686,88 @@ class sdist (Command):
         return self.archive_files
 
 # class sdist
+
+
+# ----------------------------------------------------------------------
+# Utility functions
+
+def findall (dir = os.curdir):
+    """Find all files under 'dir' and return the list of full filenames
+    (relative to 'dir').
+    """
+    from stat import ST_MODE, S_ISREG, S_ISDIR, S_ISLNK
+
+    list = []
+    stack = [dir]
+    pop = stack.pop
+    push = stack.append
+
+    while stack:
+        dir = pop()
+        names = os.listdir (dir)
+
+        for name in names:
+            if dir != os.curdir:        # avoid the dreaded "./" syndrome
+                fullname = os.path.join (dir, name)
+            else:
+                fullname = name
+
+            # Avoid excess stat calls -- just one will do, thank you!
+            stat = os.stat(fullname)
+            mode = stat[ST_MODE]
+            if S_ISREG(mode):
+                list.append (fullname)
+            elif S_ISDIR(mode) and not S_ISLNK(mode):
+                push (fullname)
+
+    return list
+
+
+def glob_to_re (pattern):
+    """Translate a shell-like glob pattern to a regular expression; return
+    a string containing the regex.  Differs from 'fnmatch.translate()' in
+    that '*' does not match "special characters" (which are
+    platform-specific).
+    """
+    pattern_re = fnmatch.translate (pattern)
+
+    # '?' and '*' in the glob pattern become '.' and '.*' in the RE, which
+    # IMHO is wrong -- '?' and '*' aren't supposed to match slash in Unix,
+    # and by extension they shouldn't match such "special characters" under
+    # any OS.  So change all non-escaped dots in the RE to match any
+    # character except the special characters.
+    # XXX currently the "special characters" are just slash -- i.e. this is
+    # Unix-only.
+    pattern_re = re.sub (r'(^|[^\\])\.', r'\1[^/]', pattern_re)
+    return pattern_re
+
+# glob_to_re ()
+
+
+def translate_pattern (pattern, anchor=1, prefix=None, is_regex=0):
+    """Translate a shell-like wildcard pattern to a compiled regular
+    expression.  Return the compiled regex.  If 'is_regex' true,
+    then 'pattern' is directly compiled to a regex (if it's a string)
+    or just returned as-is (assumes it's a regex object).
+    """
+    if is_regex:
+        if type(pattern) is StringType:
+            return re.compile(pattern)
+        else:
+            return pattern
+
+    if pattern:
+        pattern_re = glob_to_re (pattern)
+    else:
+        pattern_re = ''
+        
+    if prefix is not None:
+        prefix_re = (glob_to_re (prefix))[0:-1] # ditch trailing $
+        pattern_re = "^" + os.path.join (prefix_re, ".*" + pattern_re)
+    else:                               # no prefix -- respect anchor flag
+        if anchor:
+            pattern_re = "^" + pattern_re
+        
+    return re.compile (pattern_re)
+
+# translate_pattern ()

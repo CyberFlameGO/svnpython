@@ -1,26 +1,20 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Error handling */
 
 #include "Python.h"
 
+#ifdef SYMANTEC__CFM68K__
+#pragma lib_export on
+#endif
+
 #ifdef macintosh
-extern char *PyMac_StrError(int);
+extern char *PyMac_StrError Py_PROTO((int));
 #undef strerror
 #define strerror PyMac_StrError
 #endif /* macintosh */
 
 #ifndef __STDC__
 #ifndef MS_WINDOWS
-extern char *strerror(int);
+extern char *strerror Py_PROTO((int));
 #endif
 #endif
 
@@ -30,7 +24,10 @@ extern char *strerror(int);
 #endif
 
 void
-PyErr_Restore(PyObject *type, PyObject *value, PyObject *traceback)
+PyErr_Restore(type, value, traceback)
+	PyObject *type;
+	PyObject *value;
+	PyObject *traceback;
 {
 	PyThreadState *tstate = PyThreadState_GET();
 	PyObject *oldtype, *oldvalue, *oldtraceback;
@@ -57,7 +54,9 @@ PyErr_Restore(PyObject *type, PyObject *value, PyObject *traceback)
 }
 
 void
-PyErr_SetObject(PyObject *exception, PyObject *value)
+PyErr_SetObject(exception, value)
+	PyObject *exception;
+	PyObject *value;
 {
 	Py_XINCREF(exception);
 	Py_XINCREF(value);
@@ -65,13 +64,16 @@ PyErr_SetObject(PyObject *exception, PyObject *value)
 }
 
 void
-PyErr_SetNone(PyObject *exception)
+PyErr_SetNone(exception)
+	PyObject *exception;
 {
 	PyErr_SetObject(exception, (PyObject *)NULL);
 }
 
 void
-PyErr_SetString(PyObject *exception, const char *string)
+PyErr_SetString(exception, string)
+	PyObject *exception;
+	const char *string;
 {
 	PyObject *value = PyString_FromString(string);
 	PyErr_SetObject(exception, value);
@@ -80,7 +82,7 @@ PyErr_SetString(PyObject *exception, const char *string)
 
 
 PyObject *
-PyErr_Occurred(void)
+PyErr_Occurred()
 {
 	PyThreadState *tstate = PyThreadState_Get();
 
@@ -89,7 +91,8 @@ PyErr_Occurred(void)
 
 
 int
-PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)
+PyErr_GivenExceptionMatches(err, exc)
+     PyObject *err, *exc;
 {
 	if (err == NULL || exc == NULL) {
 		/* maybe caused by "import exceptions" that failed early on */
@@ -120,7 +123,8 @@ PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)
 
 
 int
-PyErr_ExceptionMatches(PyObject *exc)
+PyErr_ExceptionMatches(exc)
+     PyObject *exc;
 {
 	return PyErr_GivenExceptionMatches(PyErr_Occurred(), exc);
 }
@@ -130,7 +134,10 @@ PyErr_ExceptionMatches(PyObject *exc)
    eval_code2(), do_raise(), and PyErr_Print()
 */
 void
-PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)
+PyErr_NormalizeException(exc, val, tb)
+     PyObject **exc;
+     PyObject **val;
+     PyObject **tb;
 {
 	PyObject *type = *exc;
 	PyObject *value = *val;
@@ -200,7 +207,10 @@ finally:
 
 
 void
-PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)
+PyErr_Fetch(p_type, p_value, p_traceback)
+	PyObject **p_type;
+	PyObject **p_value;
+	PyObject **p_traceback;
 {
 	PyThreadState *tstate = PyThreadState_Get();
 
@@ -214,7 +224,7 @@ PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)
 }
 
 void
-PyErr_Clear(void)
+PyErr_Clear()
 {
 	PyErr_Restore(NULL, NULL, NULL);
 }
@@ -222,7 +232,7 @@ PyErr_Clear(void)
 /* Convenience functions to set a type error exception and return 0 */
 
 int
-PyErr_BadArgument(void)
+PyErr_BadArgument()
 {
 	PyErr_SetString(PyExc_TypeError,
 			"illegal argument type for built-in operation");
@@ -230,7 +240,7 @@ PyErr_BadArgument(void)
 }
 
 PyObject *
-PyErr_NoMemory(void)
+PyErr_NoMemory()
 {
 	/* raise the pre-allocated instance if it still exists */
 	if (PyExc_MemoryErrorInst)
@@ -245,7 +255,9 @@ PyErr_NoMemory(void)
 }
 
 PyObject *
-PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
+PyErr_SetFromErrnoWithFilename(exc, filename)
+	PyObject *exc;
+	char *filename;
 {
 	PyObject *v;
 	char *s;
@@ -308,7 +320,8 @@ PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
 
 
 PyObject *
-PyErr_SetFromErrno(PyObject *exc)
+PyErr_SetFromErrno(exc)
+	PyObject *exc;
 {
 	return PyErr_SetFromErrnoWithFilename(exc, NULL);
 }
@@ -316,7 +329,7 @@ PyErr_SetFromErrno(PyObject *exc)
 #ifdef MS_WINDOWS 
 /* Windows specific error code handling */
 PyObject *PyErr_SetFromWindowsErrWithFilename(
-	int ierr,
+	int ierr, 
 	const char *filename)
 {
 	int len;
@@ -359,20 +372,32 @@ PyObject *PyErr_SetFromWindowsErr(int ierr)
 #endif /* MS_WINDOWS */
 
 void
-PyErr_BadInternalCall(void)
+PyErr_BadInternalCall()
 {
 	PyErr_SetString(PyExc_SystemError,
 			"bad argument to internal function");
 }
 
 
+#ifdef HAVE_STDARG_PROTOTYPES
 PyObject *
 PyErr_Format(PyObject *exception, const char *format, ...)
+#else
+PyObject *
+PyErr_Format(exception, format, va_alist)
+	PyObject *exception;
+	const char *format;
+	va_dcl
+#endif
 {
 	va_list vargs;
 	char buffer[500]; /* Caller is responsible for limiting the format */
 
+#ifdef HAVE_STDARG_PROTOTYPES
 	va_start(vargs, format);
+#else
+	va_start(vargs);
+#endif
 
 	vsprintf(buffer, format, vargs);
 	PyErr_SetString(exception, buffer);
@@ -381,7 +406,10 @@ PyErr_Format(PyObject *exception, const char *format, ...)
 
 
 PyObject *
-PyErr_NewException(char *name, PyObject *base, PyObject *dict)
+PyErr_NewException(name, base, dict)
+	char *name; /* modulename.classname */
+	PyObject *base;
+	PyObject *dict;
 {
 	char *dot;
 	PyObject *modulename = NULL;

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Use this file as a template to start implementing a module that
    also declares objects types. All occurrences of 'Xxo' should be changed
    to something reasonable for your objects. After that, all other
@@ -37,7 +27,8 @@ staticforward PyTypeObject Xxo_Type;
 #define XxoObject_Check(v)	((v)->ob_type == &Xxo_Type)
 
 static XxoObject *
-newXxoObject(PyObject *arg)
+newXxoObject(arg)
+	PyObject *arg;
 {
 	XxoObject *self;
 	self = PyObject_New(XxoObject, &Xxo_Type);
@@ -50,14 +41,17 @@ newXxoObject(PyObject *arg)
 /* Xxo methods */
 
 static void
-Xxo_dealloc(XxoObject *self)
+Xxo_dealloc(self)
+	XxoObject *self;
 {
 	Py_XDECREF(self->x_attr);
 	PyObject_Del(self);
 }
 
 static PyObject *
-Xxo_demo(XxoObject *self, PyObject *args)
+Xxo_demo(self, args)
+	XxoObject *self;
+	PyObject *args;
 {
 	if (!PyArg_ParseTuple(args, ":demo"))
 		return NULL;
@@ -71,7 +65,9 @@ static PyMethodDef Xxo_methods[] = {
 };
 
 static PyObject *
-Xxo_getattr(XxoObject *self, char *name)
+Xxo_getattr(self, name)
+	XxoObject *self;
+	char *name;
 {
 	if (self->x_attr != NULL) {
 		PyObject *v = PyDict_GetItemString(self->x_attr, name);
@@ -84,7 +80,10 @@ Xxo_getattr(XxoObject *self, char *name)
 }
 
 static int
-Xxo_setattr(XxoObject *self, char *name, PyObject *v)
+Xxo_setattr(self, name, v)
+	XxoObject *self;
+	char *name;
+	PyObject *v;
 {
 	if (self->x_attr == NULL) {
 		self->x_attr = PyDict_New();
@@ -127,7 +126,9 @@ statichere PyTypeObject Xxo_Type = {
 /* Function of two integers returning integer */
 
 static PyObject *
-xx_foo(PyObject *self, PyObject *args)
+xx_foo(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	long i, j;
 	long res;
@@ -141,7 +142,9 @@ xx_foo(PyObject *self, PyObject *args)
 /* Function of no arguments returning new Xxo object */
 
 static PyObject *
-xx_new(PyObject *self, PyObject *args)
+xx_new(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	XxoObject *rv;
 	
@@ -156,7 +159,9 @@ xx_new(PyObject *self, PyObject *args)
 /* Example with subtle bug from extensions manual ("Thin Ice"). */
 
 static PyObject *
-xx_bug(PyObject *self, PyObject *args)
+xx_bug(self, args)
+    PyObject *self;
+    PyObject *args;
 {
 	PyObject *list, *item;
 	
@@ -177,7 +182,9 @@ xx_bug(PyObject *self, PyObject *args)
 /* Test bad format character */
 
 static PyObject *
-xx_roj(PyObject *self, PyObject *args)
+xx_roj(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	PyObject *a;
 	long b;
@@ -202,7 +209,7 @@ static PyMethodDef xx_methods[] = {
 /* Initialization function for the module (*must* be called initxx) */
 
 DL_EXPORT(void)
-initxx(void)
+initxx()
 {
 	PyObject *m, *d;
 

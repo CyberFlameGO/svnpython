@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Computation of FIRST stets */
 
 #include "pgenheaders.h"
@@ -17,10 +7,11 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 extern int Py_DebugFlag;
 
 /* Forward */
-static void calcfirstset(grammar *, dfa *);
+static void calcfirstset Py_PROTO((grammar *, dfa *));
 
 void
-addfirstsets(grammar *g)
+addfirstsets(g)
+	grammar *g;
 {
 	int i;
 	dfa *d;
@@ -34,7 +25,9 @@ addfirstsets(grammar *g)
 }
 
 static void
-calcfirstset(grammar *g, dfa *d)
+calcfirstset(g, d)
+	grammar *g;
+	dfa *d;
 {
 	int i, j;
 	state *s;

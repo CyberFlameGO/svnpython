@@ -34,9 +34,6 @@ class bdist (Command):
                      "temporary directory for creating built distributions"),
                     ('formats=', None,
                      "formats for distribution (comma-separated list)"),
-                    ('dist-dir=', 'd',
-                     "directory to put final built distributions in "
-                     "[default: dist]"),
                    ]
 
     help_options = [
@@ -52,26 +49,22 @@ class bdist (Command):
     default_format = { 'posix': 'gztar',
                        'nt': 'zip', }
 
-    # Establish the preferred order (for the --help-formats option).
-    format_commands = ['rpm', 'gztar', 'bztar', 'ztar', 'tar',
-                       'wininst', 'zip']
-
-    # And the real information.
     format_command = { 'rpm':   ('bdist_rpm',  "RPM distribution"),
                        'gztar': ('bdist_dumb', "gzip'ed tar file"),
                        'bztar': ('bdist_dumb', "bzip2'ed tar file"),
                        'ztar':  ('bdist_dumb', "compressed tar file"),
                        'tar':   ('bdist_dumb', "tar file"),
+                       'zip':   ('bdist_dumb', "ZIP file"),
                        'wininst': ('bdist_wininst',
                                    "Windows executable installer"),
-                       'zip':   ('bdist_dumb', "ZIP file"),
                      }
+    # establish the preferred order
+    format_commands = ['rpm', 'gztar', 'bztar', 'ztar', 'tar', 'zip']
 
 
     def initialize_options (self):
         self.bdist_base = None
         self.formats = None
-        self.dist_dir = None
 
     # initialize_options()
 
@@ -93,9 +86,6 @@ class bdist (Command):
                 raise DistutilsPlatformError, \
                       "don't know how to create built distributions " + \
                       "on platform %s" % os.name
-
-        if self.dist_dir is None:
-            self.dist_dir = "dist"
             
     # finalize_options()
 

@@ -116,7 +116,7 @@ def join(words, sep = ' '):
     """join(list [,sep]) -> string
 
     Return a string composed of the words in list, with
-    intervening occurrences of sep.  The default separator is a
+    intervening occurences of sep.  The default separator is a
     single space.
 
     (joinfields and join are synonymous)
@@ -125,6 +125,9 @@ def join(words, sep = ' '):
     return sep.join(words)
 joinfields = join
 
+# for a little bit of speed
+_apply = apply
+
 # Find substring, raise exception if not found
 def index(s, *args):
     """index(s, sub [,start [,end]]) -> int
@@ -132,7 +135,7 @@ def index(s, *args):
     Like find but raises ValueError when the substring is not found.
 
     """
-    return s.index(*args)
+    return _apply(s.index, args)
 
 # Find last substring, raise exception if not found
 def rindex(s, *args):
@@ -141,7 +144,7 @@ def rindex(s, *args):
     Like rfind but raises ValueError when the substring is not found.
 
     """
-    return s.rindex(*args)
+    return _apply(s.rindex, args)
 
 # Count non-overlapping occurrences of substring
 def count(s, *args):
@@ -152,7 +155,7 @@ def count(s, *args):
     interpreted as in slice notation.
 
     """
-    return s.count(*args)
+    return _apply(s.count, args)
 
 # Find substring, return -1 if not found
 def find(s, *args):
@@ -165,7 +168,7 @@ def find(s, *args):
     Return -1 on failure.
 
     """
-    return s.find(*args)
+    return _apply(s.find, args)
 
 # Find last substring, return -1 if not found
 def rfind(s, *args):
@@ -178,7 +181,7 @@ def rfind(s, *args):
     Return -1 on failure.
 
     """
-    return s.rfind(*args)
+    return _apply(s.rfind, args)
 
 # for a bit of speed
 _float = float
@@ -236,7 +239,9 @@ def ljust(s, width):
     never truncated.
 
     """
-    return s.ljust(width)
+    n = width - len(s)
+    if n <= 0: return s
+    return s + ' '*n
 
 # Right-justify a string
 def rjust(s, width):
@@ -247,7 +252,9 @@ def rjust(s, width):
     never truncated.
 
     """
-    return s.rjust(width)
+    n = width - len(s)
+    if n <= 0: return s
+    return ' '*n + s
 
 # Center a string
 def center(s, width):
@@ -258,7 +265,13 @@ def center(s, width):
     truncated.
 
     """
-    return s.center(width)
+    n = width - len(s)
+    if n <= 0: return s
+    half = n/2
+    if n%2 and width%2:
+        # This ensures that center(center(s, i), j) = center(s, j)
+        half = half+1
+    return ' '*half +  s + ' '*(n-half)
 
 # Zero-fill a number, e.g., (12, 3) --> '012' and (-3, 3) --> '-03'
 # Decadent feature: the argument may be a string or a number
@@ -289,7 +302,15 @@ def expandtabs(s, tabsize=8):
     column, and the tabsize (default 8).
 
     """
-    return s.expandtabs(tabsize)
+    res = line = ''
+    for c in s:
+        if c == '\t':
+            c = ' '*(tabsize - len(line) % tabsize)
+        line = line + c
+        if c == '\n':
+            res = res + line
+            line = ''
+    return res + line
 
 # Character translation through look-up table.
 def translate(s, table, deletions=""):
@@ -358,6 +379,16 @@ def replace(s, old, new, maxsplit=-1):
     """
     return s.replace(old, new, maxsplit)
 
+
+# XXX: transitional
+#
+# If string objects do not have methods, then we need to use the old string.py
+# library, which uses strop for many more things than just the few outlined
+# below.
+try:
+    ''.upper
+except AttributeError:
+    from stringold import *
 
 # Try importing optional built-in module "strop" -- if it exists,
 # it redefines some string operations that are 100-1000 times faster.

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Method object implementation */
 
 #include "Python.h"
@@ -17,7 +7,9 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 static PyCFunctionObject *free_list = NULL;
 
 PyObject *
-PyCFunction_New(PyMethodDef *ml, PyObject *self)
+PyCFunction_New(ml, self)
+	PyMethodDef *ml;
+	PyObject *self;
 {
 	PyCFunctionObject *op;
 	op = free_list;
@@ -37,7 +29,8 @@ PyCFunction_New(PyMethodDef *ml, PyObject *self)
 }
 
 PyCFunction
-PyCFunction_GetFunction(PyObject *op)
+PyCFunction_GetFunction(op)
+	PyObject *op;
 {
 	if (!PyCFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -47,7 +40,8 @@ PyCFunction_GetFunction(PyObject *op)
 }
 
 PyObject *
-PyCFunction_GetSelf(PyObject *op)
+PyCFunction_GetSelf(op)
+	PyObject *op;
 {
 	if (!PyCFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -57,7 +51,8 @@ PyCFunction_GetSelf(PyObject *op)
 }
 
 int
-PyCFunction_GetFlags(PyObject *op)
+PyCFunction_GetFlags(op)
+	PyObject *op;
 {
 	if (!PyCFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -69,7 +64,8 @@ PyCFunction_GetFlags(PyObject *op)
 /* Methods (the standard built-in methods, that is) */
 
 static void
-meth_dealloc(PyCFunctionObject *m)
+meth_dealloc(m)
+	PyCFunctionObject *m;
 {
 	Py_XDECREF(m->m_self);
 	m->m_self = (PyObject *)free_list;
@@ -77,7 +73,9 @@ meth_dealloc(PyCFunctionObject *m)
 }
 
 static PyObject *
-meth_getattr(PyCFunctionObject *m, char *name)
+meth_getattr(m, name)
+	PyCFunctionObject *m;
+	char *name;
 {
 	if (strcmp(name, "__name__") == 0) {
 		return PyString_FromString(m->m_ml->ml_name);
@@ -111,21 +109,23 @@ meth_getattr(PyCFunctionObject *m, char *name)
 }
 
 static PyObject *
-meth_repr(PyCFunctionObject *m)
+meth_repr(m)
+	PyCFunctionObject *m;
 {
 	char buf[200];
 	if (m->m_self == NULL)
 		sprintf(buf, "<built-in function %.80s>", m->m_ml->ml_name);
 	else
 		sprintf(buf,
-			"<built-in method %.80s of %.80s object at %p>",
+			"<built-in method %.80s of %.80s object at %lx>",
 			m->m_ml->ml_name, m->m_self->ob_type->tp_name,
-			m->m_self);
+			(long)m->m_self);
 	return PyString_FromString(buf);
 }
 
 static int
-meth_compare(PyCFunctionObject *a, PyCFunctionObject *b)
+meth_compare(a, b)
+	PyCFunctionObject *a, *b;
 {
 	if (a->m_self != b->m_self)
 		return (a->m_self < b->m_self) ? -1 : 1;
@@ -138,9 +138,10 @@ meth_compare(PyCFunctionObject *a, PyCFunctionObject *b)
 }
 
 static long
-meth_hash(PyCFunctionObject *a)
+meth_hash(a)
+	PyCFunctionObject *a;
 {
-	long x,y;
+	long x;
 	if (a->m_self == NULL)
 		x = 0;
 	else {
@@ -148,13 +149,7 @@ meth_hash(PyCFunctionObject *a)
 		if (x == -1)
 			return -1;
 	}
-	y = _Py_HashPointer((void*)(a->m_ml->ml_meth));
-	if (y == -1)
-		return -1;
-	x ^= y;
-	if (x == -1)
-		x = -2;
-	return x;
+	return x ^ (long) a->m_ml->ml_meth;
 }
 
 PyTypeObject PyCFunction_Type = {
@@ -178,7 +173,8 @@ PyTypeObject PyCFunction_Type = {
 /* List all methods in a chain -- helper for findmethodinchain */
 
 static PyObject *
-listmethodchain(PyMethodChain *chain)
+listmethodchain(chain)
+	PyMethodChain *chain;
 {
 	PyMethodChain *c;
 	PyMethodDef *ml;
@@ -211,7 +207,10 @@ listmethodchain(PyMethodChain *chain)
 /* Find a method in a method chain */
 
 PyObject *
-Py_FindMethodInChain(PyMethodChain *chain, PyObject *self, char *name)
+Py_FindMethodInChain(chain, self, name)
+	PyMethodChain *chain;
+	PyObject *self;
+	char *name;
 {
 	if (name[0] == '_' && name[1] == '_') {
 		if (strcmp(name, "__methods__") == 0)
@@ -238,7 +237,10 @@ Py_FindMethodInChain(PyMethodChain *chain, PyObject *self, char *name)
 /* Find a method in a single method list */
 
 PyObject *
-Py_FindMethod(PyMethodDef *methods, PyObject *self, char *name)
+Py_FindMethod(methods, self, name)
+	PyMethodDef *methods;
+	PyObject *self;
+	char *name;
 {
 	PyMethodChain chain;
 	chain.methods = methods;
@@ -249,7 +251,7 @@ Py_FindMethod(PyMethodDef *methods, PyObject *self, char *name)
 /* Clear out the free list */
 
 void
-PyCFunction_Fini(void)
+PyCFunction_Fini()
 {
 	while (free_list) {
 		PyCFunctionObject *v = free_list;

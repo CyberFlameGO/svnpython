@@ -45,6 +45,7 @@ def test():
                 if verbose:
                         print 'timeout =', tout
                 rfd, wfd, xfd = select.select([p], [], [], tout)
+##              print rfd, wfd, xfd
                 if (rfd, wfd, xfd) == ([], [], []):
                         continue
                 if (rfd, wfd, xfd) == ([p], [], []):
@@ -56,7 +57,7 @@ def test():
                                         print 'EOF'
                                 break
                         continue
-                print 'Unexpected return values from select():', rfd, wfd, xfd
+                print 'Heh?'
         p.close()
 
 test()

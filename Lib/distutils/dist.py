@@ -167,7 +167,7 @@ class Distribution:
         # It's only safe to query 'have_run' for a command class that has
         # been instantiated -- a false value will be inserted when the
         # command object is created, and replaced with a true value when
-        # the command is successfully run.  Thus it's probably best to use
+        # the command is succesfully run.  Thus it's probably best to use
         # '.get()' rather than a straight lookup.
         self.have_run = {}
 
@@ -275,13 +275,13 @@ class Distribution:
 
         # What to call the per-user config file
         if os.name == 'posix':
-            user_filename = ".pydistutils.cfg"
-        else:
-            user_filename = "pydistutils.cfg"
+	    user_filename = ".pydistutils.cfg"
+	else:
+	    user_filename = "pydistutils.cfg"
 	
         # And look for the user config file
-        if os.environ.has_key('HOME'):
-            user_file = os.path.join(os.environ.get('HOME'), user_filename)
+	if os.environ.has_key('HOME'):
+    	    user_file = os.path.join(os.environ.get('HOME'), user_filename)
             if os.path.isfile(user_file):
                 files.append(user_file)
 
@@ -439,7 +439,7 @@ class Distribution:
 
 	# Check for help_options in command class.  They have a different
 	# format (tuple of four) so we need to preprocess them here.
-        if (hasattr(cmd_class, 'help_options') and
+	if (hasattr(cmd_class, 'help_options') and
             type (cmd_class.help_options) is ListType):
             help_options = fix_help_options(cmd_class.help_options)
         else:
@@ -457,17 +457,17 @@ class Distribution:
             self._show_help(parser, display_options=0, commands=[cmd_class])
             return
 
-        if (hasattr(cmd_class, 'help_options') and
+	if (hasattr(cmd_class, 'help_options') and
             type (cmd_class.help_options) is ListType):
-            help_option_found=0
-            for (help_option, short, desc, func) in cmd_class.help_options:
-                if hasattr(opts, parser.get_attr_name(help_option)):
-                    help_option_found=1
+	    help_option_found=0
+	    for (help_option, short, desc, func) in cmd_class.help_options:
+		if hasattr(opts, parser.get_attr_name(help_option)):
+		    help_option_found=1
 		    #print "showing help for option %s of command %s" % \
                     #      (help_option[0],cmd_class)
 
                     if callable(func):
-                        func()
+			func()
                     else:
                         raise DistutilsClassError, \
                             ("invalid help function %s for help option '%s': "
@@ -475,7 +475,7 @@ class Distribution:
                             (`func`, help_option)
 
             if help_option_found: 
-                return
+		return
 
         # Put the options from the command-line into their official
         # holding pen, the 'command_options' dictionary.
@@ -526,12 +526,12 @@ class Distribution:
                 klass = command
             else:
                 klass = self.get_command_class (command)
-            if (hasattr(klass, 'help_options') and
+	    if (hasattr(klass, 'help_options') and
                 type (klass.help_options) is ListType):
-                parser.set_option_table (klass.user_options +
+		parser.set_option_table (klass.user_options +
                                          fix_help_options(klass.help_options))
-            else:
-                parser.set_option_table (klass.user_options)
+	    else:
+        	parser.set_option_table (klass.user_options)
             parser.print_help ("Options for '%s' command:" % klass.__name__)
             print
 
@@ -677,7 +677,7 @@ class Distribution:
 
     def get_command_obj (self, command, create=1):
         """Return the command object for 'command'.  Normally this object
-        is cached on a previous call to 'get_command_obj()'; if no command
+        is cached on a previous call to 'get_command_obj()'; if no comand
         object for 'command' is in the cache, then we either create and
         return it (if 'create' is true) or return None.
         """

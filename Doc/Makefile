@@ -61,7 +61,7 @@ TOOLSDIR=	tools
 
 # This is the *documentation* release, and is used to construct the file
 # names of the downloadable tarballs.
-RELEASE=2.0b1
+RELEASE=1.6b1
 
 
 # These must be declared phony since there
@@ -310,11 +310,7 @@ zipps:		postscript-$(PAPER)-$(RELEASE).zip
 zippdf:		pdf-$(PAPER)-$(RELEASE).zip
 ziplatex:	latex-$(RELEASE).zip
 
-# Only build the longhtml version for final releases; use the second
-# version of this for pre-release versions.
-#
-#zips:		zippdf zipps ziphtml ziplonghtml
-zips:		zippdf zipps ziphtml
+zips:		zippdf zipps ziphtml ziplonghtml
 
 bziphtml:	html-$(RELEASE).tar.bz2
 bzipinfo:	info-$(RELEASE).tar.bz2

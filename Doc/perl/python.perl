@@ -52,11 +52,6 @@ sub do_cmd_let{
 }
 
 
-# the older version of LaTeX2HTML we use doesn't support this, but we use it:
-
-sub do_cmd_textasciitilde{ '~' . @_[0]; }
-
-
 # words typeset in a special way (not in HTML though)
 
 sub do_cmd_ABC{ 'ABC' . @_[0]; }
@@ -122,8 +117,7 @@ sub do_cmd_optional{
 # \file and \samp are at the end of this file since they screw up fontlock.
 
 sub do_cmd_pytype{ return @_[0]; }
-sub do_cmd_makevar{
-    return use_wrappers(@_[0], '<span class="makevar">', '</span>'); }
+sub do_cmd_makevar{ return @_[0]; }
 sub do_cmd_code{
     return use_wrappers(@_[0], '<code>', '</code>'); }
 sub do_cmd_module{
@@ -170,7 +164,9 @@ sub do_cmd_dfn{
 sub do_cmd_emph{
     return use_italics(@_); }
 sub do_cmd_file{
-    return use_wrappers(@_[0], '<span class="file">', '</span>'); }
+    return use_wrappers(@_[0],
+                        '<font class="file" face="sans-serif">',
+                        '</font>'); }
 sub do_cmd_filenq{
     return do_cmd_file(@_[0]); }
 sub do_cmd_samp{
@@ -183,11 +179,6 @@ sub do_cmd_textbf{
     return use_wrappers(@_[0], '<b>', '</b>'); }
 sub do_cmd_textit{
     return use_wrappers(@_[0], '<i>', '</i>'); }
-
-sub do_cmd_moreargs{
-    return '...' . @_[0]; }
-sub do_cmd_unspecified{
-    return '...' . @_[0]; }
 
 
 sub do_cmd_refmodule{
@@ -946,9 +937,6 @@ sub fix_font{
     }
     elsif ($font eq 'member') {
         $font = 'tt class="member"';
-    }
-    elsif ($font eq 'constant') {
-        $font = 'tt class="constant"';
     }
     return $font;
 }

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 #include "Python.h"
 
 #if defined(__sgi) && defined(WITH_THREAD) && !defined(_SGI_MP_SOURCE)
@@ -44,7 +34,10 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #endif
 
 unsigned long
-PyOS_strtoul(register char *str, char **ptr, int base)
+PyOS_strtoul(str, ptr, base)
+register char *	str;
+char **		ptr;
+int		base;
 {
     register unsigned long	result;	/* return value of the function */
     register int		c;	/* current input character */
@@ -134,7 +127,10 @@ PyOS_strtoul(register char *str, char **ptr, int base)
 }
 
 long
-PyOS_strtol(char *str, char **ptr, int base)
+PyOS_strtol(str, ptr, base)
+char *	str;
+char ** ptr;
+int	base;
 {
 	long result;
 	char sign;

@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Frame object implementation */
 
 #include "Python.h"
@@ -36,7 +26,9 @@ static struct memberlist frame_memberlist[] = {
 };
 
 static PyObject *
-frame_getattr(PyFrameObject *f, char *name)
+frame_getattr(f, name)
+	PyFrameObject *f;
+	char *name;
 {
 	if (strcmp(name, "f_locals") == 0)
 		PyFrame_FastToLocals(f);
@@ -44,7 +36,10 @@ frame_getattr(PyFrameObject *f, char *name)
 }
 
 static int
-frame_setattr(PyFrameObject *f, char *name, PyObject *value)
+frame_setattr(f, name, value)
+	PyFrameObject *f;
+	char *name;
+	PyObject *value;
 {
 	return PyMember_Set((char *)f, frame_memberlist, name, value);
 }
@@ -71,7 +66,8 @@ frame_setattr(PyFrameObject *f, char *name, PyObject *value)
 static PyFrameObject *free_list = NULL;
 
 static void
-frame_dealloc(PyFrameObject *f)
+frame_dealloc(f)
+	PyFrameObject *f;
 {
 	int i;
 	PyObject **fastlocals;
@@ -115,8 +111,11 @@ PyTypeObject PyFrame_Type = {
 };
 
 PyFrameObject *
-PyFrame_New(PyThreadState *tstate, PyCodeObject *code,
-            PyObject *globals, PyObject *locals)
+PyFrame_New(tstate, code, globals, locals)
+	PyThreadState *tstate;
+	PyCodeObject *code;
+	PyObject *globals;
+	PyObject *locals;
 {
 	PyFrameObject *back = tstate->frame;
 	static PyObject *builtin_object;
@@ -229,7 +228,11 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code,
 /* Block management */
 
 void
-PyFrame_BlockSetup(PyFrameObject *f, int type, int handler, int level)
+PyFrame_BlockSetup(f, type, handler, level)
+	PyFrameObject *f;
+	int type;
+	int handler;
+	int level;
 {
 	PyTryBlock *b;
 	if (f->f_iblock >= CO_MAXBLOCKS)
@@ -241,7 +244,8 @@ PyFrame_BlockSetup(PyFrameObject *f, int type, int handler, int level)
 }
 
 PyTryBlock *
-PyFrame_BlockPop(PyFrameObject *f)
+PyFrame_BlockPop(f)
+	PyFrameObject *f;
 {
 	PyTryBlock *b;
 	if (f->f_iblock <= 0)
@@ -253,7 +257,8 @@ PyFrame_BlockPop(PyFrameObject *f)
 /* Convert between "fast" version of locals and dictionary version */
 
 void
-PyFrame_FastToLocals(PyFrameObject *f)
+PyFrame_FastToLocals(f)
+	PyFrameObject *f;
 {
 	/* Merge fast locals into f->f_locals */
 	PyObject *locals, *map;
@@ -297,7 +302,9 @@ PyFrame_FastToLocals(PyFrameObject *f)
 }
 
 void
-PyFrame_LocalsToFast(PyFrameObject *f, int clear)
+PyFrame_LocalsToFast(f, clear)
+	PyFrameObject *f;
+	int clear;
 {
 	/* Merge f->f_locals into fast locals */
 	PyObject *locals, *map;
@@ -332,7 +339,7 @@ PyFrame_LocalsToFast(PyFrameObject *f, int clear)
 /* Clear out the free list */
 
 void
-PyFrame_Fini(void)
+PyFrame_Fini()
 {
 	while (free_list != NULL) {
 		PyFrameObject *f = free_list;

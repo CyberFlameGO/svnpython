@@ -73,9 +73,6 @@ class DistutilsInternalError (DistutilsError):
     should never be seen if the code is working!)."""
     pass
 
-class DistutilsTemplateError (DistutilsError):
-    """Syntax error in a file list template."""
-
 
 # Exception classes used by the CCompiler implementation classes
 class CCompilerError (Exception):

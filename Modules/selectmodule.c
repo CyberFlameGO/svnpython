@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* select - Module containing unix select(2) call.
    Under Unix, the file descriptors are small integers.
    Under Win32, select only exists for sockets, and sockets may
@@ -21,13 +11,10 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
 
 #ifdef __sgi
 /* This is missing from unistd.h */
-extern void bzero(void *, int);
+extern void bzero();
 #endif
 
 #ifndef DONT_HAVE_SYS_TYPES_H
@@ -46,6 +33,7 @@ extern void bzero(void *, int);
 #include <net/socket.h>
 #define SOCKET int
 #else
+#include "myselect.h" /* Also includes mytime.h */
 #define SOCKET int
 #endif
 #endif
@@ -60,7 +48,8 @@ typedef struct {
 } pylist;
 
 static void
-reap_obj(pylist fd2obj[FD_SETSIZE + 3])
+reap_obj(fd2obj)
+	pylist fd2obj[FD_SETSIZE + 3];
 {
 	int i;
 	for (i = 0; i < FD_SETSIZE + 3 && fd2obj[i].sentinel >= 0; i++) {
@@ -75,7 +64,10 @@ reap_obj(pylist fd2obj[FD_SETSIZE + 3])
    returns a number >= 0
 */
 static int
-list2set(PyObject *list, fd_set *set, pylist fd2obj[FD_SETSIZE + 3])
+list2set(list, set, fd2obj)
+	PyObject *list;
+	fd_set *set;
+	pylist fd2obj[FD_SETSIZE + 3];
 {
 	int i;
 	int max = -1;
@@ -87,6 +79,7 @@ list2set(PyObject *list, fd_set *set, pylist fd2obj[FD_SETSIZE + 3])
 	FD_ZERO(set);
 
 	for (i = 0; i < len; i++)  {
+		PyObject *meth;
 		SOCKET v;
 
 		/* any intervening fileno() calls could decr this refcnt */
@@ -94,9 +87,31 @@ list2set(PyObject *list, fd_set *set, pylist fd2obj[FD_SETSIZE + 3])
                     return -1;
 
 		Py_INCREF(o);
-		v = PyObject_AsFileDescriptor( o );
-		if (v == -1) goto finally;
 
+		if (PyInt_Check(o)) {
+			v = PyInt_AsLong(o);
+		}
+		else if ((meth = PyObject_GetAttrString(o, "fileno")) != NULL)
+		{
+			PyObject *fno = PyEval_CallObject(meth, NULL);
+			Py_DECREF(meth);
+			if (fno == NULL)
+				goto finally;
+
+                        if (!PyInt_Check(fno)) {
+				PyErr_SetString(PyExc_TypeError,
+                                       "fileno method returned a non-integer");
+				Py_DECREF(fno);
+				goto finally;
+                        }
+                        v = PyInt_AsLong(fno);
+			Py_DECREF(fno);
+		}
+		else {
+			PyErr_SetString(PyExc_TypeError,
+			"argument must be an int, or have a fileno() method.");
+			goto finally;
+		}
 #if defined(_MSC_VER)
 		max = 0;		     /* not used for Win32 */
 #else  /* !_MSC_VER */
@@ -130,7 +145,9 @@ list2set(PyObject *list, fd_set *set, pylist fd2obj[FD_SETSIZE + 3])
 
 /* returns NULL and sets the Python exception if an error occurred */
 static PyObject *
-set2list(fd_set *set, pylist fd2obj[FD_SETSIZE + 3])
+set2list(set, fd2obj)
+	fd_set *set;
+	pylist fd2obj[FD_SETSIZE + 3];
 {
 	int i, j, count=0;
 	PyObject *list, *o;
@@ -172,7 +189,9 @@ set2list(fd_set *set, pylist fd2obj[FD_SETSIZE + 3])
 
     
 static PyObject *
-select_select(PyObject *self, PyObject *args)
+select_select(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 #ifdef MS_WINDOWS
 	/* This would be an awful lot of stack space on Windows! */
@@ -188,7 +207,7 @@ select_select(PyObject *self, PyObject *args)
 	fd_set ifdset, ofdset, efdset;
 	double timeout;
 	struct timeval tv, *tvp;
-	long seconds;
+	int seconds;
 	int imax, omax, emax, max;
 	int n;
 
@@ -205,14 +224,10 @@ select_select(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	else {
-		if (timeout > (double)LONG_MAX) {
-			PyErr_SetString(PyExc_OverflowError, "timeout period too long");
-			return NULL;
-		}
-		seconds = (long)timeout;
+		seconds = (int)timeout;
 		timeout = timeout - (double)seconds;
 		tv.tv_sec = seconds;
-		tv.tv_usec = (long)(timeout*1000000.0);
+		tv.tv_usec = (int)(timeout*1000000.0);
 		tvp = &tv;
 	}
 
@@ -335,7 +350,7 @@ static char module_doc[] =
 On Windows, only sockets are supported; on Unix, all file descriptors.";
 
 DL_EXPORT(void)
-initselect(void)
+initselect()
 {
 	PyObject *m, *d;
 	m = Py_InitModule3("select", select_methods, module_doc);

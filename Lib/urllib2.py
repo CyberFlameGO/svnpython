@@ -141,7 +141,7 @@ def install_opener(opener):
     _opener = opener
 
 # do these error classes make sense?
-# make sure all of the IOError stuff is overridden.  we just want to be 
+# make sure all of the IOError stuff is overriden.  we just want to be 
  # subtypes.
 
 class URLError(IOError):
@@ -456,7 +456,7 @@ class HTTPRedirectHandler(BaseHandler):
     http_error_301 = http_error_302
 
     inf_msg = "The HTTP server returned a redirect error that would" \
-              "lead to an infinite loop.\n" \
+              "lead to an inifinte loop.\n" \
               "The last 302 error message was:\n"
 
 class ProxyHandler(BaseHandler):

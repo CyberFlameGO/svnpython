@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Parser accelerator module */
 
 /* The parser as originally conceived had disappointing performance.
@@ -26,11 +16,12 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #include "parser.h"
 
 /* Forward references */
-static void fixdfa(grammar *, dfa *);
-static void fixstate(grammar *, state *);
+static void fixdfa Py_PROTO((grammar *, dfa *));
+static void fixstate Py_PROTO((grammar *, state *));
 
 void
-PyGrammar_AddAccelerators(grammar *g)
+PyGrammar_AddAccelerators(g)
+	grammar *g;
 {
 	dfa *d;
 	int i;
@@ -47,7 +38,8 @@ PyGrammar_AddAccelerators(grammar *g)
 }
 
 void
-PyGrammar_RemoveAccelerators(grammar *g)
+PyGrammar_RemoveAccelerators(g)
+	grammar *g;
 {
 	dfa *d;
 	int i;
@@ -66,7 +58,9 @@ PyGrammar_RemoveAccelerators(grammar *g)
 }
 
 static void
-fixdfa(grammar *g, dfa *d)
+fixdfa(g, d)
+	grammar *g;
+	dfa *d;
 {
 	state *s;
 	int j;
@@ -76,7 +70,9 @@ fixdfa(grammar *g, dfa *d)
 }
 
 static void
-fixstate(grammar *g, state *s)
+fixstate(g, s)
+	grammar *g;
+	state *s;
 {
 	arc *a;
 	int k;

@@ -2,31 +2,6 @@
 #define Py_PYTHON_H
 /* Since this is a "meta-include" file, no #ifdef __cplusplus / extern "C" { */
 
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
-/* Enable compiler features; switching on C lib defines doesn't work
-   here, because the symbols haven't necessarily been defined yet. */
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE	1
-#endif
-
-/* Forcing SUSv2 compatibility still produces problems on some
-   platforms, True64 and SGI IRIX begin two of them, so for now the
-   define is switched off. */
-#if 0
-#ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE	500
-#endif
-#endif
-
 /* Include nearly all Python header files */
 
 #include "patchlevel.h"
@@ -40,6 +15,10 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #define DL_EXPORT(RTYPE) RTYPE
 #endif
 
+#ifdef SYMANTEC__CFM68K__
+#define UsingSharedLibs
+#endif
+
 #if defined(__sgi) && defined(WITH_THREAD) && !defined(_SGI_MP_SOURCE)
 #define _SGI_MP_SOURCE
 #endif
@@ -50,11 +29,12 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#include <assert.h>
 
-#include "pyport.h"
+#include "myproto.h"
 
-#include "pymem.h"
+#ifdef SYMANTEC__CFM68K__
+#pragma lib_export on
+#endif
 
 #include "object.h"
 #include "objimpl.h"
@@ -85,6 +65,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 #include "codecs.h"
 #include "pyerrors.h"
+#include "mymalloc.h"
 
 #include "pystate.h"
 
@@ -110,7 +91,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 #include "pyfpe.h"
 
-/* These definitions must match corresponding definitions in graminit.h.
+/* These definitions much match corresponding definitions in graminit.h.
    There's code in compile.c that checks that they are the same. */
 #define Py_single_input 256
 #define Py_file_input 257

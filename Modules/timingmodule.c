@@ -8,7 +8,9 @@
 #include "timing.h"
 
 static PyObject *
-start_timing(PyObject *self, PyObject *args)
+start_timing(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -19,7 +21,9 @@ start_timing(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-finish_timing(PyObject *self, PyObject *args)
+finish_timing(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -30,7 +34,9 @@ finish_timing(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-seconds(PyObject *self, PyObject *args)
+seconds(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -40,7 +46,9 @@ seconds(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-milli(PyObject *self, PyObject *args)
+milli(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -49,7 +57,9 @@ milli(PyObject *self, PyObject *args)
 
 }
 static PyObject *
-micro(PyObject *self, PyObject *args)
+micro(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -69,7 +79,7 @@ static PyMethodDef timing_methods[] = {
 };
 
 
-DL_EXPORT(void) inittiming(void)
+DL_EXPORT(void) inittiming()
 {
 	(void)Py_InitModule("timing", timing_methods);
 	if (PyErr_Occurred())

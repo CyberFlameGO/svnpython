@@ -1,20 +1,10 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
-/* Token types */
-
 #ifndef Py_TOKEN_H
 #define Py_TOKEN_H
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Token types */
 
 #define ENDMARKER	0
 #define NAME		1
@@ -68,8 +58,8 @@ extern "C" {
 
 
 extern DL_IMPORT(char *) _PyParser_TokenNames[]; /* Token names */
-extern DL_IMPORT(int) PyToken_OneChar(int);
-extern DL_IMPORT(int) PyToken_TwoChars(int, int);
+extern DL_IMPORT(int) PyToken_OneChar Py_PROTO((int));
+extern DL_IMPORT(int) PyToken_TwoChars Py_PROTO((int, int));
 
 #ifdef __cplusplus
 }

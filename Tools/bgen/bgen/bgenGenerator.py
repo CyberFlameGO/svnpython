@@ -14,26 +14,20 @@ INOUT = IN_OUT = "in-out"
 
 class BaseFunctionGenerator:
 
-	def __init__(self, name, condition=None):
+	def __init__(self, name):
 		print "<--", name
 		self.name = name
 		self.prefix = name
 		self.objecttype = "PyObject" # Type of _self argument to function
-		self.condition = condition
 
 	def setprefix(self, prefix):
 		self.prefix = prefix
 
 	def generate(self):
 		print "-->", self.name
-		if self.condition:
-			Output()
-			Output(self.condition)
 		self.functionheader()
 		self.functionbody()
 		self.functiontrailer()
-		if self.condition:
-			Output("#endif")
 
 	def functionheader(self):
 		Output()
@@ -56,13 +50,8 @@ class BaseFunctionGenerator:
 		if name is None:
 			name = self.name
 		docstring = self.docstring()
-		if self.condition:
-			Output()
-			Output(self.condition)		
 		Output("{\"%s\", (PyCFunction)%s_%s, 1,", name, self.prefix, self.name)
 		Output(" %s},", stringify(docstring))
-		if self.condition:
-			Output("#endif")
 
 	def docstring(self):
 		return None
@@ -84,8 +73,8 @@ def stringify(str):
 
 class ManualGenerator(BaseFunctionGenerator):
 
-	def __init__(self, name, body, condition=None):
-		BaseFunctionGenerator.__init__(self, name, condition=condition)
+	def __init__(self, name, body):
+		BaseFunctionGenerator.__init__(self, name)
 		self.body = body
 
 	def functionbody(self):
@@ -98,8 +87,8 @@ class ManualGenerator(BaseFunctionGenerator):
 
 class FunctionGenerator(BaseFunctionGenerator):
 
-	def __init__(self, returntype, name, *argumentList, **conditionlist):
-		BaseFunctionGenerator.__init__(self, name, **conditionlist)
+	def __init__(self, returntype, name, *argumentList):
+		BaseFunctionGenerator.__init__(self, name)
 		self.returntype = returntype
 		self.argumentList = []
 		self.setreturnvar()

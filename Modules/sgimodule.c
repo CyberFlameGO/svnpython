@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* SGI module -- random SGI-specific things */
 
 #include "Python.h"
@@ -18,7 +8,9 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #include <fcntl.h>
 
 static PyObject *
-sgi_nap(PyObject *self, PyObject *args)
+sgi_nap(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long ticks;
 	if (!PyArg_Parse(args, "l", &ticks))
@@ -33,7 +25,9 @@ sgi_nap(PyObject *self, PyObject *args)
 extern char *_getpty(int *, int, mode_t, int);
 
 static PyObject *
-sgi__getpty(PyObject *self, PyObject *args)
+sgi__getpty(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	int oflag;
 	int mode;
@@ -59,7 +53,7 @@ static PyMethodDef sgi_methods[] = {
 
 
 void
-initsgi(void)
+initsgi()
 {
 	Py_InitModule("sgi", sgi_methods);
 }

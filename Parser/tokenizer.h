@@ -4,16 +4,6 @@
 extern "C" {
 #endif
 
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Tokenizer interface */
 
 #include "token.h"	/* For token types */
@@ -49,10 +39,11 @@ struct tok_state {
 	int altindstack[MAXINDENT];	/* Stack of alternate indents */
 };
 
-extern struct tok_state *PyTokenizer_FromString(char *);
-extern struct tok_state *PyTokenizer_FromFile(FILE *, char *, char *);
-extern void PyTokenizer_Free(struct tok_state *);
-extern int PyTokenizer_Get(struct tok_state *, char **, char **);
+extern struct tok_state *PyTokenizer_FromString Py_PROTO((char *));
+extern struct tok_state *PyTokenizer_FromFile
+	Py_PROTO((FILE *, char *, char *));
+extern void PyTokenizer_Free Py_PROTO((struct tok_state *));
+extern int PyTokenizer_Get Py_PROTO((struct tok_state *, char **, char **));
 
 #ifdef __cplusplus
 }

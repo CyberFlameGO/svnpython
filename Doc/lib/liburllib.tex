@@ -128,7 +128,7 @@ Letters, digits, and the characters \character{_,.-} are never quoted.
 The optional \var{safe} parameter specifies additional characters
 that should not be quoted --- its default value is \code{'/'}.
 
-Example: \code{quote('/\~{}connolly/')} yields \code{'/\%7econnolly/'}.
+Example: \code{quote('/\~connolly/')} yields \code{'/\%7econnolly/'}.
 \end{funcdesc}
 
 \begin{funcdesc}{quote_plus}{string\optional{, safe}}
@@ -140,7 +140,7 @@ string are escaped unless they are included in \var{safe}.
 \begin{funcdesc}{unquote}{string}
 Replace \samp{\%xx} escapes by their single-character equivalent.
 
-Example: \code{unquote('/\%7Econnolly/')} yields \code{'/\~{}connolly/'}.
+Example: \code{unquote('/\%7Econnolly/')} yields \code{'/\~connolly/'}.
 \end{funcdesc}
 
 \begin{funcdesc}{unquote_plus}{string}
@@ -173,7 +173,7 @@ class AppURLopener(urllib.FancyURLopener):
         apply(urllib.FancyURLopener.__init__, (self,) + args)
         self.version = "App/1.7"
 
-urllib._urlopener = AppURLopener()
+urllib._urlopener = AppURLopener
 \end{verbatim}
 
 \begin{classdesc}{URLopener}{\optional{proxies\optional{, **x509}}}
@@ -261,7 +261,7 @@ manipulation is in module \refmodule{urlparse}\refstmodindex{urlparse}.
 \sectionauthor{Skip Montanaro}{skip@mojam.com}
 
 \class{URLopener} and \class{FancyURLopener} objects have the
-following methods.
+following methodsL
 
 \begin{methoddesc}{open}{fullurl\optional{, data}}
 Open \var{fullurl} using the appropriate protocol.  This method sets 

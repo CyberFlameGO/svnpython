@@ -1,13 +1,3 @@
-/***********************************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
 /* Thread and interpreter state structures and their interfaces */
 
 #include "Python.h"
@@ -22,7 +12,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #ifdef WITH_THREAD
 #include "pythread.h"
 static PyThread_type_lock head_mutex = NULL; /* Protects interp->tstate_head */
-#define HEAD_INIT() (void)(head_mutex || (head_mutex = PyThread_allocate_lock()))
+#define HEAD_INIT() (head_mutex || (head_mutex = PyThread_allocate_lock()))
 #define HEAD_LOCK() PyThread_acquire_lock(head_mutex, WAIT_LOCK)
 #define HEAD_UNLOCK() PyThread_release_lock(head_mutex)
 #else
@@ -37,7 +27,7 @@ PyThreadState *_PyThreadState_Current = NULL;
 
 
 PyInterpreterState *
-PyInterpreterState_New(void)
+PyInterpreterState_New()
 {
 	PyInterpreterState *interp = PyMem_NEW(PyInterpreterState, 1);
 
@@ -58,7 +48,8 @@ PyInterpreterState_New(void)
 
 
 void
-PyInterpreterState_Clear(PyInterpreterState *interp)
+PyInterpreterState_Clear(interp)
+	PyInterpreterState *interp;
 {
 	PyThreadState *p;
 	HEAD_LOCK();
@@ -72,7 +63,8 @@ PyInterpreterState_Clear(PyInterpreterState *interp)
 
 
 static void
-zapthreads(PyInterpreterState *interp)
+zapthreads(interp)
+	PyInterpreterState *interp;
 {
 	PyThreadState *p;
 	/* No need to lock the mutex here because this should only happen
@@ -84,7 +76,8 @@ zapthreads(PyInterpreterState *interp)
 
 
 void
-PyInterpreterState_Delete(PyInterpreterState *interp)
+PyInterpreterState_Delete(interp)
+	PyInterpreterState *interp;
 {
 	PyInterpreterState **p;
 	zapthreads(interp);
@@ -103,7 +96,8 @@ PyInterpreterState_Delete(PyInterpreterState *interp)
 
 
 PyThreadState *
-PyThreadState_New(PyInterpreterState *interp)
+PyThreadState_New(interp)
+	PyInterpreterState *interp;
 {
 	PyThreadState *tstate = PyMem_NEW(PyThreadState, 1);
 
@@ -139,7 +133,8 @@ PyThreadState_New(PyInterpreterState *interp)
 
 
 void
-PyThreadState_Clear(PyThreadState *tstate)
+PyThreadState_Clear(tstate)
+	PyThreadState *tstate;
 {
 	if (Py_VerboseFlag && tstate->frame != NULL)
 		fprintf(stderr,
@@ -163,7 +158,8 @@ PyThreadState_Clear(PyThreadState *tstate)
 
 
 void
-PyThreadState_Delete(PyThreadState *tstate)
+PyThreadState_Delete(tstate)
+	PyThreadState *tstate;
 {
 	PyInterpreterState *interp;
 	PyThreadState **p;
@@ -189,7 +185,7 @@ PyThreadState_Delete(PyThreadState *tstate)
 
 
 PyThreadState *
-PyThreadState_Get(void)
+PyThreadState_Get()
 {
 	if (_PyThreadState_Current == NULL)
 		Py_FatalError("PyThreadState_Get: no current thread");
@@ -199,7 +195,8 @@ PyThreadState_Get(void)
 
 
 PyThreadState *
-PyThreadState_Swap(PyThreadState *new)
+PyThreadState_Swap(new)
+	PyThreadState *new;
 {
 	PyThreadState *old = _PyThreadState_Current;
 
@@ -215,7 +212,7 @@ PyThreadState_Swap(PyThreadState *new)
    likely MemoryError) and the caller should pass on the exception. */
 
 PyObject *
-PyThreadState_GetDict(void)
+PyThreadState_GetDict()
 {
 	if (_PyThreadState_Current == NULL)
 		Py_FatalError("PyThreadState_GetDict: no current thread");
