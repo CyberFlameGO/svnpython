@@ -21,11 +21,8 @@ class NetrcParseError(Exception):
 
 class netrc:
     def __init__(self, file=None):
-        if file is None:
-            try:
-                file = os.path.join(os.environ['HOME'], ".netrc")
-            except KeyError:
-                raise IOError("Could not find .netrc: $HOME is not set")
+        if not file:
+            file = os.path.join(os.environ['HOME'], ".netrc")
         fp = open(file)
         self.hosts = {}
         self.macros = {}
@@ -84,9 +81,9 @@ class netrc:
 
     def authenticators(self, host):
         """Return a (user, account, password) tuple for given host."""
-        if host in self.hosts:
+        if self.hosts.has_key(host):
             return self.hosts[host]
-        elif 'default' in self.hosts:
+        elif self.hosts.has_key('default'):
             return self.hosts['default']
         else:
             return None

@@ -150,7 +150,7 @@ class Profile:
             bias = self.bias
         self.bias = bias     # Materialize in local dict for lookup speed.
 
-        if timer is None:
+        if not timer:
             if os.name == 'mac':
                 self.timer = MacOS.GetTicks
                 self.dispatcher = self.trace_dispatch_mac
@@ -268,7 +268,7 @@ class Profile:
         fn = (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
         self.cur = (t, 0, 0, fn, frame, self.cur)
         timings = self.timings
-        if fn in timings:
+        if timings.has_key(fn):
             cc, ns, tt, ct, callers = timings[fn]
             timings[fn] = cc, ns + 1, tt, ct, callers
         else:
@@ -300,7 +300,7 @@ class Profile:
             ct = ct + frame_total
             cc = cc + 1
 
-        if pfn in callers:
+        if callers.has_key(pfn):
             callers[pfn] = callers[pfn] + 1  # hack: gather more
             # stats such as the amount of time added to ct courtesy
             # of this specific call, and the contribution to cc
@@ -386,11 +386,12 @@ class Profile:
 
     def snapshot_stats(self):
         self.stats = {}
-        for func, (cc, ns, tt, ct, callers) in self.timings.iteritems():
+        for func in self.timings.keys():
+            cc, ns, tt, ct, callers = self.timings[func]
             callers = callers.copy()
             nc = 0
-            for callcnt in callers.itervalues():
-                nc += callcnt
+            for func_caller in callers.keys():
+                nc = nc + callers[func_caller]
             self.stats[func] = cc, nc, tt, ct, callers
 
 
@@ -416,7 +417,7 @@ class Profile:
         self.set_cmd(`func`)
         sys.setprofile(self.dispatcher)
         try:
-            return func(*args, **kw)
+            return apply(func, args, kw)
         finally:
             sys.setprofile(None)
 

@@ -1,3 +1,4 @@
+import string
 import re
 import sys
 
@@ -6,7 +7,7 @@ C_NONE, C_BACKSLASH, C_STRING, C_BRACKET = range(4)
 
 if 0:   # for throwaway debugging output
     def dump(*stuff):
-        sys.__stdout__.write(" ".join(map(str, stuff)) + "\n")
+        sys.__stdout__.write(string.join(map(str, stuff), " ") + "\n")
 
 # Find what looks like the start of a popular stmt.
 
@@ -102,7 +103,7 @@ for ch in ")}]":
     _tran[ord(ch)] = ')'
 for ch in "\"'\\\n#":
     _tran[ord(ch)] = ch
-_tran = ''.join(_tran)
+_tran = string.join(_tran, '')
 del ch
 
 try:
@@ -152,12 +153,13 @@ class Parser:
     # Python 1.5.2 (#0, Apr 13 1999, ...
 
     def find_good_parse_start(self, use_ps1, is_char_in_string=None,
+                              _rfind=string.rfind,
                               _synchre=_synchre):
         str, pos = self.str, None
         if use_ps1:
             # shell window
             ps1 = '\n' + sys.ps1
-            i = str.rfind(ps1)
+            i = _rfind(str, ps1)
             if i >= 0:
                 pos = i + len(ps1)
                 # make it look like there's a newline instead
@@ -176,10 +178,10 @@ class Parser:
         # bumped to a legitimate synch point.
         limit = len(str)
         for tries in range(5):
-            i = str.rfind(":\n", 0, limit)
+            i = _rfind(str, ":\n", 0, limit)
             if i < 0:
                 break
-            i = str.rfind('\n', 0, i) + 1  # start of colon line
+            i = _rfind(str, '\n', 0, i) + 1  # start of colon line
             m = _synchre(str, i, limit)
             if m and not is_char_in_string(m.start()):
                 pos = m.start()
@@ -224,7 +226,7 @@ class Parser:
     # based) of the non-continuation lines.
     # Creates self.{goodlines, continuation}.
 
-    def _study1(self):
+    def _study1(self, _replace=string.replace, _find=string.find):
         if self.study_level >= 1:
             return
         self.study_level = 1
@@ -234,12 +236,12 @@ class Parser:
         # uninteresting characters.  This can cut the number of chars
         # by a factor of 10-40, and so greatly speed the following loop.
         str = self.str
-        str = str.translate(_tran)
-        str = str.replace('xxxxxxxx', 'x')
-        str = str.replace('xxxx', 'x')
-        str = str.replace('xx', 'x')
-        str = str.replace('xx', 'x')
-        str = str.replace('\nx', '\n')
+        str = string.translate(str, _tran)
+        str = _replace(str, 'xxxxxxxx', 'x')
+        str = _replace(str, 'xxxx', 'x')
+        str = _replace(str, 'xx', 'x')
+        str = _replace(str, 'xx', 'x')
+        str = _replace(str, '\nx', '\n')
         # note that replacing x\n with \n would be incorrect, because
         # x may be preceded by a backslash
 
@@ -320,7 +322,7 @@ class Parser:
 
             if ch == '#':
                 # consume the comment
-                i = str.find('\n', i)
+                i = _find(str, '\n', i)
                 assert i >= 0
                 continue
 
@@ -361,7 +363,8 @@ class Parser:
     #     self.lastopenbracketpos
     #         if continuation is C_BRACKET, index of last open bracket
 
-    def _study2(self):
+    def _study2(self, _rfind=string.rfind, _find=string.find,
+                      _ws=string.whitespace):
         if self.study_level >= 2:
             return
         self._study1()
@@ -378,7 +381,7 @@ class Parser:
             q = p
             for nothing in range(goodlines[i-1], goodlines[i]):
                 # tricky: sets p to 0 if no preceding newline
-                p = str.rfind('\n', 0, p-1) + 1
+                p = _rfind(str, '\n', 0, p-1) + 1
             # The stmt str[p:q] isn't a continuation, but may be blank
             # or a non-indenting comment line.
             if  _junkre(str, p):
@@ -441,7 +444,7 @@ class Parser:
 
             if ch == '#':
                 # consume comment and trailing newline
-                p = str.find('\n', p, q) + 1
+                p = _find(str, '\n', p, q) + 1
                 assert p > 0
                 continue
 
@@ -462,13 +465,13 @@ class Parser:
     # Assuming continuation is C_BRACKET, return the number
     # of spaces the next line should be indented.
 
-    def compute_bracket_indent(self):
+    def compute_bracket_indent(self, _find=string.find):
         self._study2()
         assert self.continuation == C_BRACKET
         j = self.lastopenbracketpos
         str = self.str
         n = len(str)
-        origi = i = str.rfind('\n', 0, j) + 1
+        origi = i = string.rfind(str, '\n', 0, j) + 1
         j = j+1     # one beyond open bracket
         # find first list item; set i to start of its line
         while j < n:
@@ -479,7 +482,7 @@ class Parser:
                 break
             else:
                 # this line is junk; advance to next line
-                i = j = str.find('\n', j) + 1
+                i = j = _find(str, '\n', j) + 1
         else:
             # nothing interesting follows the bracket;
             # reproduce the bracket line's indentation + a level
@@ -487,7 +490,8 @@ class Parser:
             while str[j] in " \t":
                 j = j+1
             extra = self.indentwidth
-        return len(str[i:j].expandtabs(self.tabwidth)) + extra
+        return len(string.expandtabs(str[i:j],
+                                     self.tabwidth)) + extra
 
     # Return number of physical lines in last stmt (whether or not
     # it's an interesting stmt!  this is intended to be called when
@@ -513,7 +517,7 @@ class Parser:
 
         # See whether the initial line starts an assignment stmt; i.e.,
         # look for an = operator
-        endpos = str.find('\n', startpos) + 1
+        endpos = string.find(str, '\n', startpos) + 1
         found = level = 0
         while i < endpos:
             ch = str[i]
@@ -549,7 +553,8 @@ class Parser:
             while str[i] not in " \t\n":
                 i = i+1
 
-        return len(str[self.stmt_start:i].expandtabs(\
+        return len(string.expandtabs(str[self.stmt_start :
+                                         i],
                                      self.tabwidth)) + 1
 
     # Return the leading whitespace on the initial line of the last

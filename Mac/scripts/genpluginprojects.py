@@ -36,15 +36,25 @@ def genpluginproject(architecture, module,
 		sources=[], sourcedirs=[],
 		libraries=[], extradirs=[],
 		extraexportsymbols=[], outputdir=":::Lib:lib-dynload",
-		libraryflags=None, stdlibraryflags=None, prefixname=None,
-		initialize=None):
-	if architecture != "carbon":
-		raise 'Unsupported architecture: %s'%architecture
+		libraryflags=None, stdlibraryflags=None, prefixname=None):
+	if architecture == "all":
+		# For the time being we generate two project files. Not as nice as
+		# a single multitarget project, but easier to implement for now.
+		genpluginproject("ppc", module, project, projectdir, sources, sourcedirs,
+				libraries, extradirs, extraexportsymbols, outputdir, libraryflags,
+				stdlibraryflags, prefixname)
+		genpluginproject("carbon", module, project, projectdir, sources, sourcedirs,
+				libraries, extradirs, extraexportsymbols, outputdir, libraryflags,
+				stdlibraryflags, prefixname)
+		return
 	templatename = "template-%s" % architecture
 	targetname = "%s.%s" % (module, architecture)
 	dllname = "%s.%s.slb" % (module, architecture)
 	if not project:
-		project = "%s.%s.mcp"%(module, architecture)
+		if architecture != "ppc":
+			project = "%s.%s.mcp"%(module, architecture)
+		else:
+			project = "%s.mcp"%module
 	if not projectdir:
 		projectdir = PROJECTDIR
 	if not sources:
@@ -71,7 +81,7 @@ def genpluginproject(architecture, module,
 	if prefixname:
 		pass
 	elif architecture == "carbon":
-		prefixname = "mwerks_shcarbon_pch"
+		prefixname = "mwerks_carbonplugin_config.h"
 	else:
 		prefixname = "mwerks_plugin_config.h"
 	dict = {
@@ -89,8 +99,6 @@ def genpluginproject(architecture, module,
 		dict['libraryflags'] = libraryflags
 	if stdlibraryflags:
 		dict['stdlibraryflags'] = stdlibraryflags
-	if initialize:
-		dict['initialize'] = initialize
 	mkcwproject.mkproject(os.path.join(projectdir, project), module, dict, 
 			force=FORCEREBUILD, templatename=templatename)
 
@@ -98,69 +106,127 @@ def	genallprojects(force=0):
 	global FORCEREBUILD
 	FORCEREBUILD = force
 	# Standard Python modules
-	genpluginproject("carbon", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_pyexpat_config.h"
-		)
-	genpluginproject("carbon", "zlib", 
+	genpluginproject("all", "pyexpat", 
+		sources=["pyexpat.c"], 
+		libraries=["libexpat.ppc.lib"], 
+		extradirs=["::::expat:*"])
+	genpluginproject("all", "zlib", 
 		libraries=["zlib.ppc.Lib"], 
 		extradirs=["::::imglibs:zlib:mac", "::::imglibs:zlib"])
-	genpluginproject("carbon", "gdbm", 
+	genpluginproject("all", "gdbm", 
 		libraries=["gdbm.ppc.gusi.lib"], 
 		extradirs=["::::gdbm:mac", "::::gdbm"])
-	genpluginproject("carbon", "_csv", sources=["_csv.c"])
-	genpluginproject("carbon", "_weakref", sources=["_weakref.c"])
-	genpluginproject("carbon", "_symtable", sources=["symtablemodule.c"])
+	genpluginproject("all", "_weakref", sources=["_weakref.c"])
+	genpluginproject("all", "_symtable", sources=["symtablemodule.c"])
 	# Example/test modules
-	genpluginproject("carbon", "_testcapi")
-	genpluginproject("carbon", "xx")
-	genpluginproject("carbon", "datetime")
-	genpluginproject("carbon", "xxsubtype", sources=["xxsubtype.c"])
-	genpluginproject("carbon", "_hotshot", sources=["_hotshot.c"])
+	genpluginproject("all", "_testcapi")
+	genpluginproject("all", "xx")
+	genpluginproject("all", "xxsubtype", sources=["xxsubtype.c"])
+	genpluginproject("all", "_hotshot", sources=["_hotshot.c"])
 	
 	# bgen-generated Toolbox modules
-	genpluginproject("carbon", "_AE")
-	genpluginproject("carbon", "_AH")
-	genpluginproject("carbon", "_App")
-	genpluginproject("carbon", "_Cm")
-	genpluginproject("carbon", "_Ctl")
-	genpluginproject("carbon", "_Dlg")
-	genpluginproject("carbon", "_Drag")
-	genpluginproject("carbon", "_Evt", 
-			stdlibraryflags="Debug, WeakImport")
-	genpluginproject("carbon", "_File", 
-			stdlibraryflags="Debug, WeakImport")
-	genpluginproject("carbon", "_Fm", 
-			stdlibraryflags="Debug, WeakImport")
-	genpluginproject("carbon", "_Folder", 
-			stdlibraryflags="Debug, WeakImport")
-	genpluginproject("carbon", "_Help")
-	genpluginproject("carbon", "_IBCarbon", sources=[":ibcarbon:_IBCarbon.c"])
-	genpluginproject("carbon", "_Icn")
-	genpluginproject("carbon", "_List")
-	genpluginproject("carbon", "_Menu")
-	genpluginproject("carbon", "_Qd", 
-			stdlibraryflags="Debug, WeakImport")
+	genpluginproject("carbon", "_AE", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_AE", libraries=["ObjectSupportLib"], 
+			stdlibraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_App", libraries=["CarbonAccessors.o", "AppearanceLib"],
+			libraryflags="Debug, WeakImport", outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_App", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Cm", libraries=["QuickTimeLib"], 
+			stdlibraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Cm", outputdir="::Lib:Carbon")
+	# XXX can't work properly because we need to set a custom fragment initializer
+	#genpluginproject("carbon", "_CG", 
+	#		sources=["_CGModule.c", "CFMLateImport.c"],
+	#		libraries=["CGStubLib"],
+	#		outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Ctl", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Ctl", libraries=["CarbonAccessors.o", "ControlsLib", "AppearanceLib"], 
+			libraryflags="Debug, WeakImport", outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Dlg", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Dlg", libraries=["CarbonAccessors.o", "DialogsLib", "AppearanceLib"],
+			libraryflags="Debug, WeakImport", outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Drag", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Drag", libraries=["DragLib"], 
+			libraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("all", "_Evt", 
+			stdlibraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("all", "_Fm", 
+			stdlibraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Help", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Icn", libraries=["IconServicesLib"], 
+			libraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Icn", outputdir="::Lib:Carbon")
+	genpluginproject("all", "_List", outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Menu", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Menu", libraries=["CarbonAccessors.o", "MenusLib", "ContextualMenu", "AppearanceLib"],
+			libraryflags="Debug, WeakImport", outputdir="::Lib:Carbon")
+	genpluginproject("all", "_Qd", 
+			stdlibraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Qt", libraries=["QuickTimeLib"], 
+			libraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
 	genpluginproject("carbon", "_Qt", 
-			libraryflags="Debug, WeakImport")
-	genpluginproject("carbon", "_Qdoffs", 
-			stdlibraryflags="Debug, WeakImport")
-	genpluginproject("carbon", "_Res", 
-			stdlibraryflags="Debug, WeakImport")
-	genpluginproject("carbon", "_Scrap")
-	genpluginproject("carbon", "_Snd")
-	genpluginproject("carbon", "_Sndihooks", sources=[":snd:_Sndihooks.c"])
-	genpluginproject("carbon", "_TE")
-	genpluginproject("carbon", "_Mlte")
-	genpluginproject("carbon", "_Win")
-	genpluginproject("carbon", "_CF", sources=["_CFmodule.c", "pycfbridge.c"])
-	genpluginproject("carbon", "_CarbonEvt")
+			libraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("all", "_Qdoffs", 
+			stdlibraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("all", "_Res", 
+			stdlibraryflags="Debug, WeakImport", outputdir="::Lib:Carbon")
+	genpluginproject("all", "_Scrap", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Snd", libraries=["CarbonAccessors.o", "SoundLib"], outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Snd", outputdir="::Lib:Carbon")
+	genpluginproject("all", "_Sndihooks", sources=[":snd:_Sndihooks.c"], outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_TE", libraries=["CarbonAccessors.o", "DragLib"], 
+			stdlibraryflags="Debug, WeakImport", 
+			libraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_TE", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Mlte", libraries=["Textension"], 
+			libraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Mlte", outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_Win", outputdir="::Lib:Carbon")
+	genpluginproject("ppc", "_Win", libraries=["CarbonAccessors.o", "WindowsLib", "AppearanceLib"],
+			libraryflags="Debug, WeakImport", outputdir="::Lib:Carbon")
+	# Carbon Only?
+	genpluginproject("carbon", "_CF", outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_CarbonEvt", outputdir="::Lib:Carbon")
 	genpluginproject("carbon", "hfsplus")
 	
 	# Other Mac modules
-	genpluginproject("carbon", "calldll", sources=["calldll.c"])
-	genpluginproject("carbon", "ColorPicker")
+	genpluginproject("all", "calldll", sources=["calldll.c"])
+	genpluginproject("all", "ColorPicker")
+	genpluginproject("ppc", "Printing")
+##	genpluginproject("ppc", "waste",
+##		sources=[
+##			"wastemodule.c",
+##			'WEAccessors.c', 'WEBirthDeath.c', 'WEDebug.c',
+##			'WEDrawing.c', 'WEFontTables.c', 'WEHighLevelEditing.c',
+##			'WEICGlue.c', 'WEInlineInput.c', 'WELineLayout.c', 'WELongCoords.c',
+##			'WELowLevelEditing.c', 'WEMouse.c', 'WEObjects.c', 'WEScraps.c',
+##			'WESelecting.c', 'WESelectors.c', 'WEUserSelectors.c', 'WEUtilities.c',
+##			'WEObjectHandlers.c',
+##			'WETabs.c',
+##			'WETabHooks.c'],
+##		libraries=['DragLib'],
+##		extradirs=[
+##			'::::Waste 1.3 Distribution:*',
+##			'::::ICProgKit1.4:APIs']
+##		)
+	# This is a hack, combining parts of Waste 2.0 with parts of 1.3
+	genpluginproject("ppc", "waste",
+		sources=[
+			"wastemodule.c",
+			"WEObjectHandlers.c",
+			"WETabs.c", "WETabHooks.c"],
+		libraries=[
+			"WASTE.PPC.lib",
+			"TextCommon",
+			"UnicodeConverter",
+			"DragLib",
+			],
+		extradirs=[
+			'{Compiler}:MacOS Support:(Third Party Support):Waste 2.0 Distribution:C_C++ Headers',
+			'{Compiler}:MacOS Support:(Third Party Support):Waste 2.0 Distribution:Static Libraries',
+			'::wastemods',
+			]
+		)
 	genpluginproject("carbon", "waste",
 		sources=[
 			"wastemodule.c",
@@ -173,7 +239,13 @@ def	genallprojects(force=0):
 			'::wastemods',
 			]
 		)
+##			'::::Waste 1.3 Distribution:Extras:Sample Object Handlers',
+##			'::::Waste 1.3 Distribution:Extras:Waste Tabs 1.3.2']
+	genpluginproject("ppc", "ctb")
+	genpluginproject("ppc", "icglue", sources=["icgluemodule.c"], 
+		libraries=["InternetConfigLib"])
 	genpluginproject("carbon", "icglue", sources=["icgluemodule.c"])
+	genpluginproject("ppc", "macspeech", libraries=["SpeechLib"])
 
 if __name__ == '__main__':
 	genallprojects()

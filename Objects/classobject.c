@@ -149,12 +149,6 @@ PyMethod_Class(PyObject *im)
 	return ((PyMethodObject *)im)->im_class;
 }
 
-PyDoc_STRVAR(class_doc,
-"classobj(name, bases, dict)\n\
-\n\
-Create a class object.  The name must be a string; the second argument\n\
-a tuple of classes, and the third a dictionary.");
-
 static PyObject *
 class_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
@@ -441,7 +435,7 @@ class_traverse(PyClassObject *o, visitproc visit, void *arg)
 PyTypeObject PyClass_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
-	"classobj",
+	"class",
 	sizeof(PyClassObject),
 	0,
 	(destructor)class_dealloc,		/* tp_dealloc */
@@ -460,7 +454,7 @@ PyTypeObject PyClass_Type = {
 	(setattrofunc)class_setattr,		/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
-	class_doc,				/* tp_doc */
+	0,					/* tp_doc */
 	(traverseproc)class_traverse,		/* tp_traverse */
  	0,					/* tp_clear */
 	0,					/* tp_richcompare */
@@ -487,14 +481,6 @@ PyClass_IsSubclass(PyObject *class, PyObject *base)
 	PyClassObject *cp;
 	if (class == base)
 		return 1;
-	if (PyTuple_Check(base)) {
-		n = PyTuple_GET_SIZE(base);
-		for (i = 0; i < n; i++) {
-			if (PyClass_IsSubclass(class, PyTuple_GET_ITEM(base, i)))
-				return 1;
-		}
-		return 0;
-	}
 	if (class == NULL || !PyClass_Check(class))
 		return 0;
 	cp = (PyClassObject *)class;
@@ -593,49 +579,37 @@ PyInstance_New(PyObject *klass, PyObject *arg, PyObject *kw)
 
 /* Instance methods */
 
-PyDoc_STRVAR(instance_doc,
-"instance(class[, dict])\n\
-\n\
-Create an instance without calling its __init__() method.\n\
-The class must be a classic class.\n\
-If present, dict must be a dictionary or None.");
-
-static PyObject *
-instance_new(PyTypeObject* type, PyObject* args, PyObject *kw)
-{
-	PyObject *klass;
-	PyObject *dict = Py_None;
-
-	if (!PyArg_ParseTuple(args, "O!|O:instance",
-			      &PyClass_Type, &klass, &dict))
-		return NULL;
-
-	if (dict == Py_None)
-		dict = NULL;
-	else if (!PyDict_Check(dict)) {
-		PyErr_SetString(PyExc_TypeError,
-		      "instance() second arg must be dictionary or None");
-		return NULL;
-	}
-	return PyInstance_NewRaw(klass, dict);
-}
-
-
 static void
 instance_dealloc(register PyInstanceObject *inst)
 {
 	PyObject *error_type, *error_value, *error_traceback;
 	PyObject *del;
 	static PyObject *delstr;
-
+#ifdef Py_REF_DEBUG
+	extern long _Py_RefTotal;
+#endif
 	_PyObject_GC_UNTRACK(inst);
 	if (inst->in_weakreflist != NULL)
 		PyObject_ClearWeakRefs((PyObject *) inst);
 
 	/* Temporarily resurrect the object. */
-	assert(inst->ob_type == &PyInstance_Type);
-	assert(inst->ob_refcnt == 0);
-	inst->ob_refcnt = 1;
+#ifdef Py_TRACE_REFS
+#ifndef Py_REF_DEBUG
+#   error "Py_TRACE_REFS defined but Py_REF_DEBUG not."
+#endif
+	/* much too complicated if Py_TRACE_REFS defined */
+	inst->ob_type = &PyInstance_Type;
+	_Py_NewReference((PyObject *)inst);
+#ifdef COUNT_ALLOCS
+	/* compensate for boost in _Py_NewReference; note that
+	 * _Py_RefTotal was also boosted; we'll knock that down later.
+	 */
+	inst->ob_type->tp_allocs--;
+#endif
+#else /* !Py_TRACE_REFS */
+	/* Py_INCREF boosts _Py_RefTotal if Py_REF_DEBUG is defined */
+	Py_INCREF(inst);
+#endif /* !Py_TRACE_REFS */
 
 	/* Save the current exception, if any. */
 	PyErr_Fetch(&error_type, &error_value, &error_traceback);
@@ -652,37 +626,35 @@ instance_dealloc(register PyInstanceObject *inst)
 	}
 	/* Restore the saved exception. */
 	PyErr_Restore(error_type, error_value, error_traceback);
-
 	/* Undo the temporary resurrection; can't use DECREF here, it would
 	 * cause a recursive call.
 	 */
-	assert(inst->ob_refcnt > 0);
-	if (--inst->ob_refcnt == 0) {
-		Py_DECREF(inst->in_class);
-		Py_XDECREF(inst->in_dict);
-		PyObject_GC_Del(inst);
-	}
-	else {
-		int refcnt = inst->ob_refcnt;
-		/* __del__ resurrected it!  Make it look like the original
-		 * Py_DECREF never happened.
-		 */
-		_Py_NewReference((PyObject *)inst);
-		inst->ob_refcnt = refcnt;
-		_PyObject_GC_TRACK(inst);
-		/* If Py_REF_DEBUG, the original decref dropped _Py_RefTotal,
-		 * but _Py_NewReference bumped it again, so that's a wash.
-		 * If Py_TRACE_REFS, _Py_NewReference re-added self to the
-		 * object chain, so no more to do there either.
-		 * If COUNT_ALLOCS, the original decref bumped tp_frees, and
-		 * _Py_NewReference bumped tp_allocs:  both of those need to
-		 * be undone.
-		 */
-#ifdef COUNT_ALLOCS
-		--inst->ob_type->tp_frees;
-		--inst->ob_type->tp_allocs;
+#ifdef Py_REF_DEBUG
+	/* _Py_RefTotal was boosted either by _Py_NewReference or
+	 * Py_INCREF above.
+	 */
+	_Py_RefTotal--;
 #endif
+	if (--inst->ob_refcnt > 0) {
+#ifdef COUNT_ALLOCS
+		inst->ob_type->tp_frees--;
+#endif
+		_PyObject_GC_TRACK(inst);
+		return; /* __del__ added a reference; don't delete now */
 	}
+#ifdef Py_TRACE_REFS
+	_Py_ForgetReference((PyObject *)inst);
+#ifdef COUNT_ALLOCS
+	/* compensate for increment in _Py_ForgetReference */
+	inst->ob_type->tp_frees--;
+#endif
+#ifndef WITH_CYCLE_GC
+	inst->ob_type = NULL;
+#endif
+#endif
+	Py_DECREF(inst->in_class);
+	Py_XDECREF(inst->in_dict);
+	PyObject_GC_Del(inst);
 }
 
 static PyObject *
@@ -747,8 +719,6 @@ instance_getattr(register PyInstanceObject *inst, PyObject *name)
 	res = instance_getattr1(inst, name);
 	if (res == NULL && (func = inst->in_class->cl_getattr) != NULL) {
 		PyObject *args;
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
 		PyErr_Clear();
 		args = Py_BuildValue("(OO)", inst, name);
 		if (args == NULL)
@@ -871,18 +841,15 @@ instance_repr(PyInstanceObject *inst)
 		reprstr = PyString_InternFromString("__repr__");
 	func = instance_getattr(inst, reprstr);
 	if (func == NULL) {
-		PyObject *classname, *mod;
+		PyObject *classname = inst->in_class->cl_name;
+		PyObject *mod = PyDict_GetItemString(
+			inst->in_class->cl_dict, "__module__");
 		char *cname;
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
-		PyErr_Clear();
-		classname = inst->in_class->cl_name;
-		mod = PyDict_GetItemString(inst->in_class->cl_dict,
-					   "__module__");
 		if (classname != NULL && PyString_Check(classname))
 			cname = PyString_AsString(classname);
 		else
 			cname = "?";
+		PyErr_Clear();
 		if (mod == NULL || !PyString_Check(mod))
 			return PyString_FromFormat("<?.%s instance at %p>",
 						   cname, inst);
@@ -907,8 +874,6 @@ instance_str(PyInstanceObject *inst)
 		strstr = PyString_InternFromString("__str__");
 	func = instance_getattr(inst, strstr);
 	if (func == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
 		PyErr_Clear();
 		return instance_repr(inst);
 	}
@@ -929,26 +894,19 @@ instance_hash(PyInstanceObject *inst)
 		hashstr = PyString_InternFromString("__hash__");
 	func = instance_getattr(inst, hashstr);
 	if (func == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return -1;
-		PyErr_Clear();
 		/* If there is no __eq__ and no __cmp__ method, we hash on the
 		   address.  If an __eq__ or __cmp__ method exists, there must
 		   be a __hash__. */
+		PyErr_Clear();
 		if (eqstr == NULL)
 			eqstr = PyString_InternFromString("__eq__");
 		func = instance_getattr(inst, eqstr);
 		if (func == NULL) {
-			if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-				return -1;
 			PyErr_Clear();
 			if (cmpstr == NULL)
 				cmpstr = PyString_InternFromString("__cmp__");
 			func = instance_getattr(inst, cmpstr);
 			if (func == NULL) {
-				if (!PyErr_ExceptionMatches(
-					PyExc_AttributeError))
-					return -1;
 				PyErr_Clear();
 				return _Py_HashPointer(inst);
 			}
@@ -1143,8 +1101,6 @@ instance_slice(PyInstanceObject *inst, int i, int j)
 	func = instance_getattr(inst, getslicestr);
 
 	if (func == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
 		PyErr_Clear();
 
 		if (getitemstr == NULL)
@@ -1212,8 +1168,6 @@ instance_ass_slice(PyInstanceObject *inst, int i, int j, PyObject *value)
 				PyString_InternFromString("__delslice__");
 		func = instance_getattr(inst, delslicestr);
 		if (func == NULL) {
-			if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-				return -1;
 			PyErr_Clear();
 			if (delitemstr == NULL)
 				delitemstr =
@@ -1233,8 +1187,6 @@ instance_ass_slice(PyInstanceObject *inst, int i, int j, PyObject *value)
 				PyString_InternFromString("__setslice__");
 		func = instance_getattr(inst, setslicestr);
 		if (func == NULL) {
-			if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-				return -1;
 			PyErr_Clear();
 			if (setitemstr == NULL)
 				setitemstr =
@@ -1382,8 +1334,6 @@ half_binop(PyObject *v, PyObject *w, char *opname, binaryfunc thisfunc,
 	}
 	coercefunc = PyObject_GetAttr(v, coerce_obj);
 	if (coercefunc == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
 		PyErr_Clear();
 		return generic_binary_op(v, w, opname);
 	}
@@ -1467,8 +1417,6 @@ instance_coerce(PyObject **pv, PyObject **pw)
 	coercefunc = PyObject_GetAttr(v, coerce_obj);
 	if (coercefunc == NULL) {
 		/* No __coerce__ method */
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return -1;
 		PyErr_Clear();
 		return 1;
 	}
@@ -1580,8 +1528,6 @@ half_cmp(PyObject *v, PyObject *w)
 
 	cmp_func = PyObject_GetAttr(v, cmp_obj);
 	if (cmp_func == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return -2;
 		PyErr_Clear();
 		return 2;
 	}
@@ -1683,14 +1629,10 @@ instance_nonzero(PyInstanceObject *self)
 	if (nonzerostr == NULL)
 		nonzerostr = PyString_InternFromString("__nonzero__");
 	if ((func = instance_getattr(self, nonzerostr)) == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return -1;
 		PyErr_Clear();
 		if (lenstr == NULL)
 			lenstr = PyString_InternFromString("__len__");
 		if ((func = instance_getattr(self, lenstr)) == NULL) {
-			if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-				return -1;
 			PyErr_Clear();
 			/* Fall back to the default behavior:
 			   all instances are nonzero */
@@ -1904,16 +1846,10 @@ instance_getiter(PyInstanceObject *self)
 {
 	PyObject *func;
 
-	if (iterstr == NULL) {
+	if (iterstr == NULL)
 		iterstr = PyString_InternFromString("__iter__");
-		if (iterstr == NULL)
-			return NULL;
-	}
-	if (getitemstr == NULL) {
+	if (getitemstr == NULL)
 		getitemstr = PyString_InternFromString("__getitem__");
-		if (getitemstr == NULL)
-			return NULL;
-	}
 
 	if ((func = instance_getattr(self, iterstr)) != NULL) {
 		PyObject *res = PyEval_CallObject(func, (PyObject *)NULL);
@@ -1928,12 +1864,9 @@ instance_getiter(PyInstanceObject *self)
 		}
 		return res;
 	}
-	if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-		return NULL;
 	PyErr_Clear();
 	if ((func = instance_getattr(self, getitemstr)) == NULL) {
-		PyErr_SetString(PyExc_TypeError,
-				"iteration over non-sequence");
+		PyErr_SetString(PyExc_TypeError, "iteration over non-sequence");
 		return NULL;
 	}
 	Py_DECREF(func);
@@ -1973,8 +1906,6 @@ instance_call(PyObject *func, PyObject *arg, PyObject *kw)
 	PyObject *res, *call = PyObject_GetAttrString(func, "__call__");
 	if (call == NULL) {
 		PyInstanceObject *inst = (PyInstanceObject*) func;
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
 		PyErr_Clear();
 		PyErr_Format(PyExc_AttributeError,
 			     "%.200s instance has no __call__ method",
@@ -2065,24 +1996,13 @@ PyTypeObject PyInstance_Type = {
 	(setattrofunc)instance_setattr,		/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_CHECKTYPES,/*tp_flags*/
-	instance_doc,				/* tp_doc */
+	0,					/* tp_doc */
 	(traverseproc)instance_traverse,	/* tp_traverse */
 	0,					/* tp_clear */
 	instance_richcompare,			/* tp_richcompare */
  	offsetof(PyInstanceObject, in_weakreflist), /* tp_weaklistoffset */
 	(getiterfunc)instance_getiter,		/* tp_iter */
 	(iternextfunc)instance_iternext,	/* tp_iternext */
-	0,					/* tp_methods */
-	0,					/* tp_members */
-	0,					/* tp_getset */
-	0,					/* tp_base */
-	0,					/* tp_dict */
-	0,					/* tp_descr_get */
-	0,					/* tp_descr_set */
-	0,					/* tp_dictoffset */
-	0,					/* tp_init */
-	0,					/* tp_alloc */
-	instance_new,				/* tp_new */
 };
 
 
@@ -2187,31 +2107,6 @@ instancemethod_getattro(PyObject *obj, PyObject *name)
 	return NULL;
 }
 
-PyDoc_STRVAR(instancemethod_doc,
-"instancemethod(function, instance, class)\n\
-\n\
-Create an instance method object.");
-
-static PyObject *
-instancemethod_new(PyTypeObject* type, PyObject* args, PyObject *kw)
-{
-	PyObject *func;
-	PyObject *self;
-	PyObject *classObj = NULL;
-
-	if (!PyArg_UnpackTuple(args, "instancemethod", 2, 3,
-			      &func, &self, &classObj))
-		return NULL;
-	if (!PyCallable_Check(func)) {
-		PyErr_SetString(PyExc_TypeError,
-				"first argument must be callable");
-		return NULL;
-	}
-	if (self == Py_None)
-		self = NULL;
-	return PyMethod_New(func, self, classObj);
-}
-
 static void
 instancemethod_dealloc(register PyMethodObject *im)
 {
@@ -2243,11 +2138,8 @@ instancemethod_repr(PyMethodObject *a)
 	char *sfuncname = "?", *sklassname = "?";
 
 	funcname = PyObject_GetAttrString(func, "__name__");
-	if (funcname == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return NULL;
+	if (funcname == NULL)
 		PyErr_Clear();
-	}
 	else if (!PyString_Check(funcname)) {
 		Py_DECREF(funcname);
 		funcname = NULL;
@@ -2258,11 +2150,8 @@ instancemethod_repr(PyMethodObject *a)
 		klassname = NULL;
 	else {
 		klassname = PyObject_GetAttrString(klass, "__name__");
-		if (klassname == NULL) {
-			if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-				return NULL;
+		if (klassname == NULL)
 			PyErr_Clear();
-		}
 		else if (!PyString_Check(klassname)) {
 			Py_DECREF(klassname);
 			klassname = NULL;
@@ -2331,48 +2220,46 @@ instancemethod_traverse(PyMethodObject *im, visitproc visit, void *arg)
 	return 0;
 }
 
-static void
-getclassname(PyObject *class, char *buf, int bufsize)
+static char *
+getclassname(PyObject *class)
 {
 	PyObject *name;
 
-	assert(bufsize > 1);
-	strcpy(buf, "?"); /* Default outcome */
 	if (class == NULL)
-		return;
-	name = PyObject_GetAttrString(class, "__name__");
+		name = NULL;
+	else
+		name = PyObject_GetAttrString(class, "__name__");
 	if (name == NULL) {
-		/* This function cannot return an exception */
 		PyErr_Clear();
-		return;
+		return "?";
 	}
-	if (PyString_Check(name)) {
-		strncpy(buf, PyString_AS_STRING(name), bufsize);
-		buf[bufsize-1] = '\0';
+	if (!PyString_Check(name)) {
+		Py_DECREF(name);
+		return "?";
 	}
+	PyString_InternInPlace(&name);
 	Py_DECREF(name);
+	return PyString_AS_STRING(name);
 }
 
-static void
-getinstclassname(PyObject *inst, char *buf, int bufsize)
+static char *
+getinstclassname(PyObject *inst)
 {
 	PyObject *class;
+	char *name;
 
-	if (inst == NULL) {
-		assert(bufsize > 0 && (size_t)bufsize > strlen("nothing"));
-		strcpy(buf, "nothing");
-		return;
-	}
+	if (inst == NULL)
+		return "nothing";
 
 	class = PyObject_GetAttrString(inst, "__class__");
 	if (class == NULL) {
-		/* This function cannot return an exception */
 		PyErr_Clear();
 		class = (PyObject *)(inst->ob_type);
 		Py_INCREF(class);
 	}
-	getclassname(class, buf, bufsize);
+	name = getclassname(class);
 	Py_XDECREF(class);
+	return name;
 }
 
 static PyObject *
@@ -2397,18 +2284,14 @@ instancemethod_call(PyObject *func, PyObject *arg, PyObject *kw)
 				return NULL;
 		}
 		if (!ok) {
-			char clsbuf[256];
-			char instbuf[256];
-			getclassname(class, clsbuf, sizeof(clsbuf));
-			getinstclassname(self, instbuf, sizeof(instbuf));
 			PyErr_Format(PyExc_TypeError,
 				     "unbound method %s%s must be called with "
 				     "%s instance as first argument "
 				     "(got %s%s instead)",
 				     PyEval_GetFuncName(func),
 				     PyEval_GetFuncDesc(func),
-				     clsbuf,
-				     instbuf,
+				     getclassname(class),
+				     getinstclassname(self),
 				     self == NULL ? "" : " instance");
 			return NULL;
 		}
@@ -2435,35 +2318,25 @@ instancemethod_call(PyObject *func, PyObject *arg, PyObject *kw)
 }
 
 static PyObject *
-instancemethod_descr_get(PyObject *meth, PyObject *obj, PyObject *cls)
+instancemethod_descr_get(PyObject *meth, PyObject *obj, PyObject *class)
 {
 	/* Don't rebind an already bound method, or an unbound method
-	   of a class that's not a base class of cls. */
-
-	if (PyMethod_GET_SELF(meth) != NULL) {
-		/* Already bound */
+	   of a class that's not a base class of class */
+	if (PyMethod_GET_SELF(meth) != NULL ||
+	    (PyMethod_GET_CLASS(meth) != NULL &&
+	     !PyObject_IsSubclass(class,  PyMethod_GET_CLASS(meth)))) {
 		Py_INCREF(meth);
 		return meth;
 	}
-	/* No, it is an unbound method */
-	if (PyMethod_GET_CLASS(meth) != NULL && cls != NULL) {
-		/* Do subclass test.  If it fails, return meth unchanged. */
-		int ok = PyObject_IsSubclass(cls, PyMethod_GET_CLASS(meth));
-		if (ok < 0)
-			return NULL;
-		if (!ok) {
-			Py_INCREF(meth);
-			return meth;
-		}
-	}
-	/* Bind it to obj */
-	return PyMethod_New(PyMethod_GET_FUNCTION(meth), obj, cls);
+	if (obj == Py_None)
+		obj = NULL;
+	return PyMethod_New(PyMethod_GET_FUNCTION(meth), obj, class);
 }
 
 PyTypeObject PyMethod_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
-	"instancemethod",
+	"instance method",
 	sizeof(PyMethodObject),
 	0,
 	(destructor)instancemethod_dealloc,	/* tp_dealloc */
@@ -2482,7 +2355,7 @@ PyTypeObject PyMethod_Type = {
 	PyObject_GenericSetAttr,		/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
-	instancemethod_doc,			/* tp_doc */
+	0,					/* tp_doc */
 	(traverseproc)instancemethod_traverse,	/* tp_traverse */
 	0,					/* tp_clear */
 	0,					/* tp_richcompare */
@@ -2497,9 +2370,6 @@ PyTypeObject PyMethod_Type = {
 	instancemethod_descr_get,		/* tp_descr_get */
 	0,					/* tp_descr_set */
 	0,					/* tp_dictoffset */
-	0,					/* tp_init */
-	0,					/* tp_alloc */
-	instancemethod_new,			/* tp_new */
 };
 
 /* Clear out the free list */

@@ -36,6 +36,7 @@ python ftplib.py -d localhost -l -p -l
 
 import os
 import sys
+import string
 
 # Import SOCKS module if it exists, else standard socket module socket
 try:
@@ -265,7 +266,7 @@ class FTP:
         if af == 0:
             raise error_proto, 'unsupported address family'
         fields = ['', `af`, host, `port`, '']
-        cmd = 'EPRT ' + '|'.join(fields)
+        cmd = 'EPRT ' + string.joinfields(fields, '|')
         return self.voidcmd(cmd)
 
     def makeport(self):
@@ -350,13 +351,13 @@ class FTP:
         if not passwd: passwd = ''
         if not acct: acct = ''
         if user == 'anonymous' and passwd in ('', '-'):
-            # If there is no anonymous ftp password specified
-            # then we'll just use anonymous@
-            # We don't send any other thing because:
-            # - We want to remain anonymous
-            # - We want to stop SPAM
-            # - We don't want to let ftp sites to discriminate by the user,
-            #   host or country.
+	    # If there is no anonymous ftp password specified
+	    # then we'll just use anonymous@
+	    # We don't send any other thing because:
+	    # - We want to remain anonymous
+	    # - We want to stop SPAM
+	    # - We don't want to let ftp sites to discriminate by the user,
+	    #   host or country.
             passwd = passwd + 'anonymous@'
         resp = self.sendcmd('USER ' + user)
         if resp[0] == '3': resp = self.sendcmd('PASS ' + passwd)
@@ -391,7 +392,7 @@ class FTP:
         The callback function (2nd argument) is called for each line,
         with trailing CRLF stripped.  This creates a new port for you.
         print_line() is the default callback.'''
-        if callback is None: callback = print_line
+        if not callback: callback = print_line
         resp = self.sendcmd('TYPE A')
         conn = self.transfercmd(cmd)
         fp = conn.makefile('rb')
@@ -584,18 +585,18 @@ def parse229(resp, peer):
 
     if resp[:3] <> '229':
         raise error_reply, resp
-    left = resp.find('(')
+    left = string.find(resp, '(')
     if left < 0: raise error_proto, resp
-    right = resp.find(')', left + 1)
+    right = string.find(resp, ')', left + 1)
     if right < 0:
         raise error_proto, resp # should contain '(|||port|)'
     if resp[left + 1] <> resp[right - 1]:
         raise error_proto, resp
-    parts = resp[left + 1:right].split(resp[left+1])
+    parts = string.split(resp[left + 1:right], resp[left+1])
     if len(parts) <> 5:
         raise error_proto, resp
     host = peer[0]
-    port = int(parts[3])
+    port = string.atoi(parts[3])
     return host, port
 
 
@@ -659,8 +660,8 @@ class Netrc:
     __defacct = None
 
     def __init__(self, filename=None):
-        if filename is None:
-            if "HOME" in os.environ:
+        if not filename:
+            if os.environ.has_key("HOME"):
                 filename = os.path.join(os.environ["HOME"],
                                         ".netrc")
             else:
@@ -714,7 +715,7 @@ class Netrc:
                 self.__defpasswd = passwd or self.__defpasswd
                 self.__defacct = acct or self.__defacct
             if host:
-                if host in self.__hosts:
+                if self.__hosts.has_key(host):
                     ouser, opasswd, oacct = \
                            self.__hosts[host]
                     user = user or ouser
@@ -736,7 +737,7 @@ class Netrc:
         """
         host = host.lower()
         user = passwd = acct = None
-        if host in self.__hosts:
+        if self.__hosts.has_key(host):
             user, passwd, acct = self.__hosts[host]
         user = user or self.__defuser
         passwd = passwd or self.__defpasswd

@@ -13,13 +13,10 @@ testdoc = """\
 <greeting>Hello, world!</greeting>
 """
 
-import warnings
-warnings.filterwarnings("ignore", ".* xmllib .* obsolete.*",
-                        DeprecationWarning, r'xmllib$')
-
-from test import test_support
+import test_support
 import unittest
 import xmllib
+
 
 class XMLParserTestCase(unittest.TestCase):
 
@@ -32,6 +29,7 @@ class XMLParserTestCase(unittest.TestCase):
 
 def test_main():
     test_support.run_unittest(XMLParserTestCase)
+
 
 if __name__ == "__main__":
     test_main()

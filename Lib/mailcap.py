@@ -24,21 +24,21 @@ def getcaps():
             continue
         morecaps = readmailcapfile(fp)
         fp.close()
-        for key, value in morecaps.iteritems():
-            if not key in caps:
-                caps[key] = value
+        for key in morecaps.keys():
+            if not caps.has_key(key):
+                caps[key] = morecaps[key]
             else:
-                caps[key] = caps[key] + value
+                caps[key] = caps[key] + morecaps[key]
     return caps
 
 def listmailcapfiles():
     """Return a list of all mailcap files found on the system."""
     # XXX Actually, this is Unix-specific
-    if 'MAILCAPS' in os.environ:
+    if os.environ.has_key('MAILCAPS'):
         str = os.environ['MAILCAPS']
         mailcaps = str.split(':')
     else:
-        if 'HOME' in os.environ:
+        if os.environ.has_key('HOME'):
             home = os.environ['HOME']
         else:
             # Don't bother with getpwuid()
@@ -82,7 +82,7 @@ def readmailcapfile(fp):
             types[j] = types[j].strip()
         key = '/'.join(types).lower()
         # Update the database
-        if key in caps:
+        if caps.has_key(key):
             caps[key].append(fields)
         else:
             caps[key] = [fields]
@@ -112,7 +112,7 @@ def parseline(line):
         else:
             fkey = field[:i].strip()
             fvalue = field[i+1:].strip()
-        if fkey in fields:
+        if fields.has_key(fkey):
             # Ignore it
             pass
         else:
@@ -147,7 +147,7 @@ def findmatch(caps, MIMEtype, key='view', filename="/dev/null", plist=[]):
     entries = lookup(caps, MIMEtype, key)
     # XXX This code should somehow check for the needsterminal flag.
     for e in entries:
-        if 'test' in e:
+        if e.has_key('test'):
             test = subst(e['test'], filename, plist)
             if test and os.system(test) != 0:
                 continue
@@ -157,14 +157,14 @@ def findmatch(caps, MIMEtype, key='view', filename="/dev/null", plist=[]):
 
 def lookup(caps, MIMEtype, key=None):
     entries = []
-    if MIMEtype in caps:
+    if caps.has_key(MIMEtype):
         entries = entries + caps[MIMEtype]
     MIMEtypes = MIMEtype.split('/')
     MIMEtype = MIMEtypes[0] + '/*'
-    if MIMEtype in caps:
+    if caps.has_key(MIMEtype):
         entries = entries + caps[MIMEtype]
     if key is not None:
-        entries = filter(lambda e, key=key: key in e, entries)
+        entries = filter(lambda e, key=key: e.has_key(key), entries)
     return entries
 
 def subst(field, MIMEtype, filename, plist=[]):

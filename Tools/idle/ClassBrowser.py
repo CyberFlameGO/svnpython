@@ -12,7 +12,16 @@ XXX TO DO:
 
 import os
 import sys
+import string
 import pyclbr
+
+# XXX Patch pyclbr with dummies if it's vintage Python 1.5.2:
+if not hasattr(pyclbr, "readmodule_ex"):
+    pyclbr.readmodule_ex = pyclbr.readmodule
+if not hasattr(pyclbr, "Function"):
+    class Function(pyclbr.Class):
+        pass
+    pyclbr.Function = Function
 
 import PyShell
 from WindowList import ListedToplevel
@@ -98,7 +107,7 @@ class ModuleBrowserTreeItem(TreeItem):
         for key, cl in dict.items():
             if cl.module == name:
                 s = key
-                if hasattr(cl, "super") and cl.super:
+                if cl.super:
                     supers = []
                     for sup in cl.super:
                         if type(sup) is type(''):
@@ -108,7 +117,7 @@ class ModuleBrowserTreeItem(TreeItem):
                             if sup.module != cl.module:
                                 sname = "%s.%s" % (sup.module, sname)
                         supers.append(sname)
-                    s = s + "(%s)" % ", ".join(supers)
+                    s = s + "(%s)" % string.join(supers, ", ")
                 items.append((cl.lineno, s))
                 self.classes[s] = cl
         items.sort()
@@ -142,10 +151,8 @@ class ClassBrowserTreeItem(TreeItem):
             return "folder"
 
     def IsExpandable(self):
-        try:
-            return bool(self.cl.methods)
-        except AttributeError:
-            return False
+        if self.cl:
+            return not not self.cl.methods
 
     def GetSubList(self):
         if not self.cl:

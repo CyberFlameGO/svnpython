@@ -14,9 +14,9 @@
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
@@ -34,6 +34,13 @@ extern int _DlgObj_Convert(PyObject *, DialogRef *);
 #define DlgObj_New _DlgObj_New
 #define DlgObj_WhichDialog _DlgObj_WhichDialog
 #define DlgObj_Convert _DlgObj_Convert
+#endif
+
+#if !ACCESSOR_CALLS_ARE_FUNCTIONS && UNIVERSAL_INTERFACES_VERSION < 0x340
+#define GetDialogTextEditHandle(dlg) (((DialogPeek)(dlg))->textH)
+#define SetPortDialogPort(dlg) SetPort(dlg)
+#define GetDialogPort(dlg) ((CGrafPtr)(dlg))
+#define GetDialogFromWindow(win) ((DialogRef)(win))
 #endif
 
 /* XXX Shouldn't this be a stack? */
@@ -138,7 +145,7 @@ static PyObject *Dlg_Error;
 
 PyTypeObject Dialog_Type;
 
-#define DlgObj_Check(x) ((x)->ob_type == &Dialog_Type || PyObject_TypeCheck((x), &Dialog_Type))
+#define DlgObj_Check(x) ((x)->ob_type == &Dialog_Type)
 
 typedef struct DialogObject {
 	PyObject_HEAD
@@ -172,7 +179,7 @@ int DlgObj_Convert(PyObject *v, DialogPtr *p_itself)
 static void DlgObj_dealloc(DialogObject *self)
 {
 	DisposeDialog(self->ob_itself);
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *DlgObj_DrawDialog(DialogObject *_self, PyObject *_args)
@@ -440,6 +447,8 @@ static PyObject *DlgObj_ShortenDITL(DialogObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_CARBON
+
 static PyObject *DlgObj_InsertDialogItem(DialogObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -467,6 +476,9 @@ static PyObject *DlgObj_InsertDialogItem(DialogObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *DlgObj_RemoveDialogItems(DialogObject *_self, PyObject *_args)
 {
@@ -492,6 +504,7 @@ static PyObject *DlgObj_RemoveDialogItems(DialogObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
 
 static PyObject *DlgObj_StdFilterProc(DialogObject *_self, PyObject *_args)
 {
@@ -502,9 +515,7 @@ static PyObject *DlgObj_StdFilterProc(DialogObject *_self, PyObject *_args)
 #ifndef StdFilterProc
 	PyMac_PRECHECK(StdFilterProc);
 #endif
-	if (!PyArg_ParseTuple(_args, "O&h",
-	                      PyMac_GetEventRecord, &event,
-	                      &itemHit))
+	if (!PyArg_ParseTuple(_args, ""))
 		return NULL;
 	_rv = StdFilterProc(_self->ob_itself,
 	                    &event,
@@ -871,84 +882,96 @@ static PyObject *DlgObj_GetDialogPort(DialogObject *_self, PyObject *_args)
 
 static PyMethodDef DlgObj_methods[] = {
 	{"DrawDialog", (PyCFunction)DlgObj_DrawDialog, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"UpdateDialog", (PyCFunction)DlgObj_UpdateDialog, 1,
-	 PyDoc_STR("(RgnHandle updateRgn) -> None")},
+	 "(RgnHandle updateRgn) -> None"},
 	{"HideDialogItem", (PyCFunction)DlgObj_HideDialogItem, 1,
-	 PyDoc_STR("(DialogItemIndex itemNo) -> None")},
+	 "(DialogItemIndex itemNo) -> None"},
 	{"ShowDialogItem", (PyCFunction)DlgObj_ShowDialogItem, 1,
-	 PyDoc_STR("(DialogItemIndex itemNo) -> None")},
+	 "(DialogItemIndex itemNo) -> None"},
 	{"FindDialogItem", (PyCFunction)DlgObj_FindDialogItem, 1,
-	 PyDoc_STR("(Point thePt) -> (DialogItemIndexZeroBased _rv)")},
+	 "(Point thePt) -> (DialogItemIndexZeroBased _rv)"},
 	{"DialogCut", (PyCFunction)DlgObj_DialogCut, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"DialogPaste", (PyCFunction)DlgObj_DialogPaste, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"DialogCopy", (PyCFunction)DlgObj_DialogCopy, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"DialogDelete", (PyCFunction)DlgObj_DialogDelete, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetDialogItem", (PyCFunction)DlgObj_GetDialogItem, 1,
-	 PyDoc_STR("(DialogItemIndex itemNo) -> (DialogItemType itemType, Handle item, Rect box)")},
+	 "(DialogItemIndex itemNo) -> (DialogItemType itemType, Handle item, Rect box)"},
 	{"SetDialogItem", (PyCFunction)DlgObj_SetDialogItem, 1,
-	 PyDoc_STR("(DialogItemIndex itemNo, DialogItemType itemType, Handle item, Rect box) -> None")},
+	 "(DialogItemIndex itemNo, DialogItemType itemType, Handle item, Rect box) -> None"},
 	{"SelectDialogItemText", (PyCFunction)DlgObj_SelectDialogItemText, 1,
-	 PyDoc_STR("(DialogItemIndex itemNo, SInt16 strtSel, SInt16 endSel) -> None")},
+	 "(DialogItemIndex itemNo, SInt16 strtSel, SInt16 endSel) -> None"},
 	{"AppendDITL", (PyCFunction)DlgObj_AppendDITL, 1,
-	 PyDoc_STR("(Handle theHandle, DITLMethod method) -> None")},
+	 "(Handle theHandle, DITLMethod method) -> None"},
 	{"CountDITL", (PyCFunction)DlgObj_CountDITL, 1,
-	 PyDoc_STR("() -> (DialogItemIndex _rv)")},
+	 "() -> (DialogItemIndex _rv)"},
 	{"ShortenDITL", (PyCFunction)DlgObj_ShortenDITL, 1,
-	 PyDoc_STR("(DialogItemIndex numberItems) -> None")},
+	 "(DialogItemIndex numberItems) -> None"},
+
+#if TARGET_API_MAC_CARBON
 	{"InsertDialogItem", (PyCFunction)DlgObj_InsertDialogItem, 1,
-	 PyDoc_STR("(DialogItemIndex afterItem, DialogItemType itemType, Handle itemHandle, Rect box) -> None")},
+	 "(DialogItemIndex afterItem, DialogItemType itemType, Handle itemHandle, Rect box) -> None"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"RemoveDialogItems", (PyCFunction)DlgObj_RemoveDialogItems, 1,
-	 PyDoc_STR("(DialogItemIndex itemNo, DialogItemIndex amountToRemove, Boolean disposeItemData) -> None")},
+	 "(DialogItemIndex itemNo, DialogItemIndex amountToRemove, Boolean disposeItemData) -> None"},
+#endif
 	{"StdFilterProc", (PyCFunction)DlgObj_StdFilterProc, 1,
-	 PyDoc_STR("(EventRecord event, DialogItemIndex itemHit) -> (Boolean _rv, EventRecord event, DialogItemIndex itemHit)")},
+	 "() -> (Boolean _rv, EventRecord event, DialogItemIndex itemHit)"},
 	{"SetDialogDefaultItem", (PyCFunction)DlgObj_SetDialogDefaultItem, 1,
-	 PyDoc_STR("(DialogItemIndex newItem) -> None")},
+	 "(DialogItemIndex newItem) -> None"},
 	{"SetDialogCancelItem", (PyCFunction)DlgObj_SetDialogCancelItem, 1,
-	 PyDoc_STR("(DialogItemIndex newItem) -> None")},
+	 "(DialogItemIndex newItem) -> None"},
 	{"SetDialogTracksCursor", (PyCFunction)DlgObj_SetDialogTracksCursor, 1,
-	 PyDoc_STR("(Boolean tracks) -> None")},
+	 "(Boolean tracks) -> None"},
 	{"AutoSizeDialog", (PyCFunction)DlgObj_AutoSizeDialog, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetDialogItemAsControl", (PyCFunction)DlgObj_GetDialogItemAsControl, 1,
-	 PyDoc_STR("(SInt16 inItemNo) -> (ControlHandle outControl)")},
+	 "(SInt16 inItemNo) -> (ControlHandle outControl)"},
 	{"MoveDialogItem", (PyCFunction)DlgObj_MoveDialogItem, 1,
-	 PyDoc_STR("(SInt16 inItemNo, SInt16 inHoriz, SInt16 inVert) -> None")},
+	 "(SInt16 inItemNo, SInt16 inHoriz, SInt16 inVert) -> None"},
 	{"SizeDialogItem", (PyCFunction)DlgObj_SizeDialogItem, 1,
-	 PyDoc_STR("(SInt16 inItemNo, SInt16 inWidth, SInt16 inHeight) -> None")},
+	 "(SInt16 inItemNo, SInt16 inWidth, SInt16 inHeight) -> None"},
 	{"AppendDialogItemList", (PyCFunction)DlgObj_AppendDialogItemList, 1,
-	 PyDoc_STR("(SInt16 ditlID, DITLMethod method) -> None")},
+	 "(SInt16 ditlID, DITLMethod method) -> None"},
 	{"SetDialogTimeout", (PyCFunction)DlgObj_SetDialogTimeout, 1,
-	 PyDoc_STR("(SInt16 inButtonToPress, UInt32 inSecondsToWait) -> None")},
+	 "(SInt16 inButtonToPress, UInt32 inSecondsToWait) -> None"},
 	{"GetDialogTimeout", (PyCFunction)DlgObj_GetDialogTimeout, 1,
-	 PyDoc_STR("() -> (SInt16 outButtonToPress, UInt32 outSecondsToWait, UInt32 outSecondsRemaining)")},
+	 "() -> (SInt16 outButtonToPress, UInt32 outSecondsToWait, UInt32 outSecondsRemaining)"},
 	{"SetModalDialogEventMask", (PyCFunction)DlgObj_SetModalDialogEventMask, 1,
-	 PyDoc_STR("(EventMask inMask) -> None")},
+	 "(EventMask inMask) -> None"},
 	{"GetModalDialogEventMask", (PyCFunction)DlgObj_GetModalDialogEventMask, 1,
-	 PyDoc_STR("() -> (EventMask outMask)")},
+	 "() -> (EventMask outMask)"},
 	{"GetDialogWindow", (PyCFunction)DlgObj_GetDialogWindow, 1,
-	 PyDoc_STR("() -> (WindowPtr _rv)")},
+	 "() -> (WindowPtr _rv)"},
 	{"GetDialogTextEditHandle", (PyCFunction)DlgObj_GetDialogTextEditHandle, 1,
-	 PyDoc_STR("() -> (TEHandle _rv)")},
+	 "() -> (TEHandle _rv)"},
 	{"GetDialogDefaultItem", (PyCFunction)DlgObj_GetDialogDefaultItem, 1,
-	 PyDoc_STR("() -> (SInt16 _rv)")},
+	 "() -> (SInt16 _rv)"},
 	{"GetDialogCancelItem", (PyCFunction)DlgObj_GetDialogCancelItem, 1,
-	 PyDoc_STR("() -> (SInt16 _rv)")},
+	 "() -> (SInt16 _rv)"},
 	{"GetDialogKeyboardFocusItem", (PyCFunction)DlgObj_GetDialogKeyboardFocusItem, 1,
-	 PyDoc_STR("() -> (SInt16 _rv)")},
+	 "() -> (SInt16 _rv)"},
 	{"SetPortDialogPort", (PyCFunction)DlgObj_SetPortDialogPort, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetDialogPort", (PyCFunction)DlgObj_GetDialogPort, 1,
-	 PyDoc_STR("() -> (CGrafPtr _rv)")},
+	 "() -> (CGrafPtr _rv)"},
 	{NULL, NULL, 0}
 };
 
-#define DlgObj_getsetlist NULL
+PyMethodChain DlgObj_chain = { DlgObj_methods, NULL };
 
+static PyObject *DlgObj_getattr(DialogObject *self, char *name)
+{
+	return Py_FindMethodInChain(&DlgObj_chain, (PyObject *)self, name);
+}
+
+#define DlgObj_setattr NULL
 
 static int DlgObj_compare(DialogObject *self, DialogObject *other)
 {
@@ -963,24 +986,6 @@ static int DlgObj_hash(DialogObject *self)
 {
 	return (int)self->ob_itself;
 }
-#define DlgObj_tp_init 0
-
-#define DlgObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *DlgObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	DialogPtr itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, DlgObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((DialogObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define DlgObj_tp_free PyObject_Del
-
 
 PyTypeObject Dialog_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -991,39 +996,14 @@ PyTypeObject Dialog_Type = {
 	/* methods */
 	(destructor) DlgObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) DlgObj_getattr, /*tp_getattr*/
+	(setattrfunc) DlgObj_setattr, /*tp_setattr*/
 	(cmpfunc) DlgObj_compare, /*tp_compare*/
 	(reprfunc) DlgObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) DlgObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	DlgObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	DlgObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	DlgObj_tp_init, /* tp_init */
-	DlgObj_tp_alloc, /* tp_alloc */
-	DlgObj_tp_new, /* tp_new */
-	DlgObj_tp_free, /* tp_free */
 };
 
 /* --------------------- End object type Dialog --------------------- */
@@ -1373,6 +1353,8 @@ static PyObject *Dlg_ResetAlertStage(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_CARBON
+
 static PyObject *Dlg_GetParamText(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1397,6 +1379,7 @@ static PyObject *Dlg_GetParamText(PyObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
 
 static PyObject *Dlg_NewFeaturesDialog(PyObject *_self, PyObject *_args)
 {
@@ -1488,45 +1471,48 @@ static PyObject *Dlg_SetUserItemHandler(PyObject *_self, PyObject *_args)
 
 static PyMethodDef Dlg_methods[] = {
 	{"NewDialog", (PyCFunction)Dlg_NewDialog, 1,
-	 PyDoc_STR("(Rect boundsRect, Str255 title, Boolean visible, SInt16 procID, WindowPtr behind, Boolean goAwayFlag, SInt32 refCon, Handle items) -> (DialogPtr _rv)")},
+	 "(Rect boundsRect, Str255 title, Boolean visible, SInt16 procID, WindowPtr behind, Boolean goAwayFlag, SInt32 refCon, Handle items) -> (DialogPtr _rv)"},
 	{"GetNewDialog", (PyCFunction)Dlg_GetNewDialog, 1,
-	 PyDoc_STR("(SInt16 dialogID, WindowPtr behind) -> (DialogPtr _rv)")},
+	 "(SInt16 dialogID, WindowPtr behind) -> (DialogPtr _rv)"},
 	{"NewColorDialog", (PyCFunction)Dlg_NewColorDialog, 1,
-	 PyDoc_STR("(Rect boundsRect, Str255 title, Boolean visible, SInt16 procID, WindowPtr behind, Boolean goAwayFlag, SInt32 refCon, Handle items) -> (DialogPtr _rv)")},
+	 "(Rect boundsRect, Str255 title, Boolean visible, SInt16 procID, WindowPtr behind, Boolean goAwayFlag, SInt32 refCon, Handle items) -> (DialogPtr _rv)"},
 	{"ModalDialog", (PyCFunction)Dlg_ModalDialog, 1,
-	 PyDoc_STR("(PyObject* modalFilter) -> (DialogItemIndex itemHit)")},
+	 "(PyObject* modalFilter) -> (DialogItemIndex itemHit)"},
 	{"IsDialogEvent", (PyCFunction)Dlg_IsDialogEvent, 1,
-	 PyDoc_STR("(EventRecord theEvent) -> (Boolean _rv)")},
+	 "(EventRecord theEvent) -> (Boolean _rv)"},
 	{"DialogSelect", (PyCFunction)Dlg_DialogSelect, 1,
-	 PyDoc_STR("(EventRecord theEvent) -> (Boolean _rv, DialogPtr theDialog, DialogItemIndex itemHit)")},
+	 "(EventRecord theEvent) -> (Boolean _rv, DialogPtr theDialog, DialogItemIndex itemHit)"},
 	{"Alert", (PyCFunction)Dlg_Alert, 1,
-	 PyDoc_STR("(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)")},
+	 "(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)"},
 	{"StopAlert", (PyCFunction)Dlg_StopAlert, 1,
-	 PyDoc_STR("(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)")},
+	 "(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)"},
 	{"NoteAlert", (PyCFunction)Dlg_NoteAlert, 1,
-	 PyDoc_STR("(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)")},
+	 "(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)"},
 	{"CautionAlert", (PyCFunction)Dlg_CautionAlert, 1,
-	 PyDoc_STR("(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)")},
+	 "(SInt16 alertID, PyObject* modalFilter) -> (DialogItemIndex _rv)"},
 	{"ParamText", (PyCFunction)Dlg_ParamText, 1,
-	 PyDoc_STR("(Str255 param0, Str255 param1, Str255 param2, Str255 param3) -> None")},
+	 "(Str255 param0, Str255 param1, Str255 param2, Str255 param3) -> None"},
 	{"GetDialogItemText", (PyCFunction)Dlg_GetDialogItemText, 1,
-	 PyDoc_STR("(Handle item) -> (Str255 text)")},
+	 "(Handle item) -> (Str255 text)"},
 	{"SetDialogItemText", (PyCFunction)Dlg_SetDialogItemText, 1,
-	 PyDoc_STR("(Handle item, Str255 text) -> None")},
+	 "(Handle item, Str255 text) -> None"},
 	{"GetAlertStage", (PyCFunction)Dlg_GetAlertStage, 1,
-	 PyDoc_STR("() -> (SInt16 _rv)")},
+	 "() -> (SInt16 _rv)"},
 	{"SetDialogFont", (PyCFunction)Dlg_SetDialogFont, 1,
-	 PyDoc_STR("(SInt16 fontNum) -> None")},
+	 "(SInt16 fontNum) -> None"},
 	{"ResetAlertStage", (PyCFunction)Dlg_ResetAlertStage, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
+
+#if TARGET_API_MAC_CARBON
 	{"GetParamText", (PyCFunction)Dlg_GetParamText, 1,
-	 PyDoc_STR("(Str255 param0, Str255 param1, Str255 param2, Str255 param3) -> None")},
+	 "(Str255 param0, Str255 param1, Str255 param2, Str255 param3) -> None"},
+#endif
 	{"NewFeaturesDialog", (PyCFunction)Dlg_NewFeaturesDialog, 1,
-	 PyDoc_STR("(Rect inBoundsRect, Str255 inTitle, Boolean inIsVisible, SInt16 inProcID, WindowPtr inBehind, Boolean inGoAwayFlag, SInt32 inRefCon, Handle inItemListHandle, UInt32 inFlags) -> (DialogPtr _rv)")},
+	 "(Rect inBoundsRect, Str255 inTitle, Boolean inIsVisible, SInt16 inProcID, WindowPtr inBehind, Boolean inGoAwayFlag, SInt32 inRefCon, Handle inItemListHandle, UInt32 inFlags) -> (DialogPtr _rv)"},
 	{"GetDialogFromWindow", (PyCFunction)Dlg_GetDialogFromWindow, 1,
-	 PyDoc_STR("(WindowPtr window) -> (DialogPtr _rv)")},
+	 "(WindowPtr window) -> (DialogPtr _rv)"},
 	{"SetUserItemHandler", (PyCFunction)Dlg_SetUserItemHandler, 1,
-	 PyDoc_STR(NULL)},
+	 NULL},
 	{NULL, NULL, 0}
 };
 
@@ -1592,12 +1578,9 @@ void init_Dlg(void)
 	    PyDict_SetItemString(d, "Error", Dlg_Error) != 0)
 		return;
 	Dialog_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&Dialog_Type) < 0) return;
 	Py_INCREF(&Dialog_Type);
-	PyModule_AddObject(m, "Dialog", (PyObject *)&Dialog_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&Dialog_Type);
-	PyModule_AddObject(m, "DialogType", (PyObject *)&Dialog_Type);
+	if (PyDict_SetItemString(d, "DialogType", (PyObject *)&Dialog_Type) != 0)
+		Py_FatalError("can't initialize DialogType");
 }
 
 /* ======================== End module _Dlg ========================= */

@@ -12,6 +12,8 @@
 import http_server
 import xmlrpclib
 
+import regex
+import string
 import sys
 
 class xmlrpc_handler:
@@ -41,7 +43,7 @@ class xmlrpc_handler:
             except:
                 # report exception back to server
                 response = xmlrpclib.dumps (
-                    xmlrpclib.Fault (1, "%s:%s" % sys.exc_info()[:2])
+                    xmlrpclib.Fault (1, "%s:%s" % (sys.exc_type, sys.exc_value))
                     )
             else:
                 response = xmlrpclib.dumps (response, methodresponse=1)
@@ -74,7 +76,7 @@ class collector:
         if not cl:
             request.error (411)
         else:
-            cl = int (cl)
+            cl = string.atoi (cl)
             # using a 'numeric' terminator
             self.request.channel.set_terminator (cl)
 

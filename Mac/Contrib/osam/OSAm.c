@@ -49,30 +49,25 @@ OSAm_RunCompiledScript (self, args)
       char *line;
       DescType typeCode;
       long dataSize = 0;
-      OSErr err;
 
-      dataSize = AEGetDescDataSize (&temp);
+      HLock (temp.dataHandle);
+
+      dataSize = GetHandleSize (temp.dataHandle);
 
       if (dataSize > 0)
 	{
-	  PyObject *result = PyString_FromStringAndSize (NULL, 
+	  PyObject *result = PyString_FromStringAndSize ((*temp.dataHandle), 
 							 dataSize);
-	
+
+	  AEDisposeDesc (&temp);
 
 	  if (!result)
 	    {
 	      printf ("OSAm.error Out of memory.\n");
 	      Py_INCREF (Py_None);
-		  AEDisposeDesc (&temp);
 	      return Py_None;
 	    }
-	  if ( (err=AEGetDescData(&temp, PyString_AS_STRING(result), dataSize)) < 0 )
-	    {
-			AEDisposeDesc(&temp);
-			return PyMac_Error(err);
-		}	
 
-	  AEDisposeDesc(&temp);
 	  return result;
 	}
     }
@@ -115,32 +110,28 @@ OSAm_CompileAndSave (self, args)
       char *line;
       DescType typeCode;
       long dataSize = 0;
-      OSErr err;
 
-      dataSize = AEGetDescDataSize (&temp);
+      HLock (temp.dataHandle);
+
+      dataSize = GetHandleSize (temp.dataHandle);
 
       if (dataSize > 0)
 	{
-	  PyObject *result = PyString_FromStringAndSize (NULL, 
+	  PyObject *result = PyString_FromStringAndSize ((*temp.dataHandle), 
 							 dataSize);
-	
+
+	  AEDisposeDesc (&temp);
 
 	  if (!result)
 	    {
 	      printf ("OSAm.error Out of memory.\n");
 	      Py_INCREF (Py_None);
-		  AEDisposeDesc (&temp);
 	      return Py_None;
 	    }
-	  if ( (err=AEGetDescData(&temp, PyString_AS_STRING(result), dataSize)) < 0 )
-	    {
-			AEDisposeDesc(&temp);
-			return PyMac_Error(err);
-		}	
 
-	  AEDisposeDesc(&temp);
 	  return result;
 	}
+
     }
 
   if (myErr != noErr)
@@ -179,30 +170,25 @@ OSAm_CompileAndExecute (self, args)
       char *line;
       DescType typeCode;
       long dataSize = 0;
-      OSErr err;
 
-      dataSize = AEGetDescDataSize (&temp);
+      HLock (temp.dataHandle);
+
+      dataSize = GetHandleSize (temp.dataHandle);
 
       if (dataSize > 0)
 	{
-	  PyObject *result = PyString_FromStringAndSize (NULL, 
+	  PyObject *result = PyString_FromStringAndSize ((*temp.dataHandle), 
 							 dataSize);
-	
+
+	  AEDisposeDesc (&temp);
 
 	  if (!result)
 	    {
 	      printf ("OSAm.error Out of memory.\n");
 	      Py_INCREF (Py_None);
-		  AEDisposeDesc (&temp);
 	      return Py_None;
 	    }
-	  if ( (err=AEGetDescData(&temp, PyString_AS_STRING(result), dataSize)) < 0 )
-	    {
-			AEDisposeDesc(&temp);
-			return PyMac_Error(err);
-		}	
 
-	  AEDisposeDesc(&temp);
 	  return result;
 	}
     }
@@ -230,7 +216,7 @@ static struct PyMethodDef OSAm_methods[] =
    (PyCFunction) OSAm_CompileAndExecute,
    METH_VARARGS,
    OSAm_DoCommand__doc__},
-#if 0
+
   {"CompileAndSave", 
    (PyCFunction) OSAm_CompileAndSave,
    METH_VARARGS, 
@@ -240,7 +226,6 @@ static struct PyMethodDef OSAm_methods[] =
    (PyCFunction) OSAm_RunCompiledScript, 
    METH_VARARGS,
    OSAm_DoCommand__doc__},
-#endif
 
   {NULL, (PyCFunction) NULL, 0, NULL}
 };

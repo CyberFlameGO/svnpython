@@ -1,6 +1,5 @@
 import W
 from Carbon import Evt
-import EasyDialogs
 
 import sys
 import StringIO
@@ -83,9 +82,10 @@ def main():
 		stats = pstats.Stats(i)
 		browser = ProfileBrowser(stats)
 	else:
-		filename = EasyDialogs.AskFileForOpen(message='Profiler data')
-		if not filename: sys.exit(0)
-		stats = pstats.Stats(filename)
+		import macfs
+		fss, ok = macfs.PromptGetFile('Profiler data')
+		if not ok: sys.exit(0)
+		stats = pstats.Stats(fss.as_pathname())
 		browser = ProfileBrowser(stats)
 
 if __name__ == '__main__':

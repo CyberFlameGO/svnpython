@@ -7,7 +7,7 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 """#"
 
-import __builtin__, sys
+import struct, __builtin__
 
 ### Registry and builtin stateless codec functions
 
@@ -18,57 +18,29 @@ except ImportError, why:
           'Failed to load the builtin codecs: %s' % why
 
 __all__ = ["register", "lookup", "open", "EncodedFile", "BOM", "BOM_BE",
-           "BOM_LE", "BOM32_BE", "BOM32_LE", "BOM64_BE", "BOM64_LE",
-           "BOM_UTF8", "BOM_UTF16", "BOM_UTF16_LE", "BOM_UTF16_BE",
-           "BOM_UTF32", "BOM_UTF32_LE", "BOM_UTF32_BE",
-           "strict_errors", "ignore_errors", "replace_errors",
-           "xmlcharrefreplace_errors",
-           "register_error", "lookup_error"]
+           "BOM_LE", "BOM32_BE", "BOM32_LE", "BOM64_BE", "BOM64_LE"]
 
 ### Constants
 
 #
-# Byte Order Mark (BOM = ZERO WIDTH NO-BREAK SPACE = U+FEFF)
-# and its possible byte string values
-# for UTF8/UTF16/UTF32 output and little/big endian machines
+# Byte Order Mark (BOM) and its possible values (BOM_BE, BOM_LE)
 #
+BOM = struct.pack('=H', 0xFEFF)
+#
+BOM_BE = BOM32_BE = '\376\377'
+#       corresponds to Unicode U+FEFF in UTF-16 on big endian
+#       platforms == ZERO WIDTH NO-BREAK SPACE
+BOM_LE = BOM32_LE = '\377\376'
+#       corresponds to Unicode U+FFFE in UTF-16 on little endian
+#       platforms == defined as being an illegal Unicode character
 
-# UTF-8
-BOM_UTF8 = '\xef\xbb\xbf'
-
-# UTF-16, little endian
-BOM_LE = BOM_UTF16_LE = '\xff\xfe'
-
-# UTF-16, big endian
-BOM_BE = BOM_UTF16_BE = '\xfe\xff'
-
-# UTF-32, little endian
-BOM_UTF32_LE = '\xff\xfe\x00\x00'
-
-# UTF-32, big endian
-BOM_UTF32_BE = '\x00\x00\xfe\xff'
-
-if sys.byteorder == 'little':
-
-    # UTF-16, native endianness
-    BOM = BOM_UTF16 = BOM_UTF16_LE
-
-    # UTF-32, native endianness
-    BOM_UTF32 = BOM_UTF32_LE
-
-else:
-
-    # UTF-16, native endianness
-    BOM = BOM_UTF16 = BOM_UTF16_BE
-
-    # UTF-32, native endianness
-    BOM_UTF32 = BOM_UTF32_BE
-
-# Old broken names (don't use in new code)
-BOM32_LE = BOM_UTF16_LE
-BOM32_BE = BOM_UTF16_BE
-BOM64_LE = BOM_UTF32_LE
-BOM64_BE = BOM_UTF32_BE
+#
+# 64-bit Byte Order Marks
+#
+BOM64_BE = '\000\000\376\377'
+#       corresponds to Unicode U+0000FEFF in UCS-4
+BOM64_LE = '\377\376\000\000'
+#       corresponds to Unicode U+0000FFFE in UCS-4
 
 
 ### Codec base classes (defining the API)
@@ -77,22 +49,15 @@ class Codec:
 
     """ Defines the interface for stateless encoders/decoders.
 
-        The .encode()/.decode() methods may use different error
+        The .encode()/.decode() methods may implement different error
         handling schemes by providing the errors argument. These
-        string values are predefined:
+        string values are defined:
 
          'strict' - raise a ValueError error (or a subclass)
          'ignore' - ignore the character and continue with the next
          'replace' - replace with a suitable replacement character;
                     Python will use the official U+FFFD REPLACEMENT
-                    CHARACTER for the builtin Unicode codecs on
-                    decoding and '?' on encoding.
-         'xmlcharrefreplace' - Replace with the appropriate XML
-                               character reference (only for encoding).
-         'backslashreplace'  - Replace with backslashed escape sequences
-                               (only for encoding).
-
-        The set of allowed values can be extended via register_error.
+                    CHARACTER for the builtin Unicode codecs.
 
     """
     def encode(self, input, errors='strict'):
@@ -153,20 +118,14 @@ class StreamWriter(Codec):
             stream must be a file-like object open for writing
             (binary) data.
 
-            The StreamWriter may use different error handling
+            The StreamWriter may implement different error handling
             schemes by providing the errors keyword argument. These
-            parameters are predefined:
+            parameters are defined:
 
              'strict' - raise a ValueError (or a subclass)
              'ignore' - ignore the character and continue with the next
              'replace'- replace with a suitable replacement character
-             'xmlcharrefreplace' - Replace with the appropriate XML
-                                   character reference.
-             'backslashreplace'  - Replace with backslashed escape
-                                   sequences (only for encoding).
 
-            The set of allowed parameter values can be extended via
-            register_error.
         """
         self.stream = stream
         self.errors = errors
@@ -215,16 +174,14 @@ class StreamReader(Codec):
             stream must be a file-like object open for reading
             (binary) data.
 
-            The StreamReader may use different error handling
+            The StreamReader may implement different error handling
             schemes by providing the errors keyword argument. These
-            parameters are predefined:
+            parameters are defined:
 
              'strict' - raise a ValueError (or a subclass)
              'ignore' - ignore the character and continue with the next
              'replace'- replace with a suitable replacement character;
 
-            The set of allowed parameter values can be extended via
-            register_error.
         """
         self.stream = stream
         self.errors = errors
@@ -280,7 +237,7 @@ class StreamReader(Codec):
             the line breaking knowledge from the underlying stream's
             .readline() method -- there is currently no support for
             line breaking using the codec decoder due to lack of line
-            buffering. Subclasses should however, if possible, try to
+            buffering. Sublcasses should however, if possible, try to
             implement this method using their own knowledge of line
             breaking.
 
@@ -323,17 +280,6 @@ class StreamReader(Codec):
 
         """
         pass
-
-    def next(self):
-
-        """ Return the next decoded line from the input stream."""
-        line = self.readline()
-        if line:
-            return line
-        raise StopIteration
-
-    def __iter__(self):
-        return self
 
     def __getattr__(self, name,
                     getattr=getattr):
@@ -386,14 +332,6 @@ class StreamReaderWriter:
     def readlines(self, sizehint=None):
 
         return self.reader.readlines(sizehint)
-
-    def next(self):
-
-        """ Return the next decoded line from the input stream."""
-        return self.reader.next()
-
-    def __iter__(self):
-        return self
 
     def write(self, data):
 
@@ -495,14 +433,6 @@ class StreamRecoder:
         data, bytesencoded = self.encode(data, self.errors)
         return data.splitlines(1)
 
-    def next(self):
-
-        """ Return the next decoded line from the input stream."""
-        return self.reader.next()
-
-    def __iter__(self):
-        return self
-
     def write(self, data):
 
         data, bytesdecoded = self.decode(data, self.errors)
@@ -539,12 +469,12 @@ def open(filename, mode='rb', encoding=None, errors='strict', buffering=1):
         Unicode as well.
 
         Files are always opened in binary mode, even if no binary mode
-        was specified. This is done to avoid data loss due to encodings
+        was specified. Thisis done to avoid data loss due to encodings
         using 8-bit values. The default file mode is 'rb' meaning to
         open the file in binary read mode.
 
         encoding specifies the encoding which is to be used for the
-        file.
+        the file.
 
         errors may be given to define the error handling. It defaults
         to 'strict' which causes ValueErrors to be raised in case an
@@ -670,7 +600,7 @@ def make_encoding_map(decoding_map):
 
     """ Creates an encoding map from a decoding map.
 
-        If a target mapping in the decoding map occurs multiple
+        If a target mapping in the decoding map occurrs multiple
         times, then that target is mapped to None (undefined mapping),
         causing an exception when encountered by the charmap codec
         during translation.
@@ -681,19 +611,11 @@ def make_encoding_map(decoding_map):
     """
     m = {}
     for k,v in decoding_map.items():
-        if not v in m:
+        if not m.has_key(v):
             m[v] = k
         else:
             m[v] = None
     return m
-
-### error handlers
-
-strict_errors = lookup_error("strict")
-ignore_errors = lookup_error("ignore")
-replace_errors = lookup_error("replace")
-xmlcharrefreplace_errors = lookup_error("xmlcharrefreplace")
-backslashreplace_errors = lookup_error("backslashreplace")
 
 # Tell modulefinder that using codecs probably needs the encodings
 # package
@@ -704,6 +626,8 @@ if _false:
 ### Tests
 
 if __name__ == '__main__':
+
+    import sys
 
     # Make stdout translate Latin-1 output into UTF-8 output
     sys.stdout = EncodedFile(sys.stdout, 'latin-1', 'utf-8')

@@ -5,13 +5,10 @@ Python scripts."""
 
 # contributed by Bastian Kleineidam
 
-# This module should be kept compatible with Python 1.5.2.
-
 __revision__ = "$Id$"
 
 import os
 from distutils.core import Command
-from distutils import log
 from stat import ST_MODE
 
 class install_scripts (Command):
@@ -51,10 +48,10 @@ class install_scripts (Command):
             # all the scripts we just installed.
             for file in self.get_outputs():
                 if self.dry_run:
-                    log.info("changing mode of %s", file)
+                    self.announce("changing mode of %s" % file)
                 else:
-                    mode = ((os.stat(file)[ST_MODE]) | 0555) & 07777
-                    log.info("changing mode of %s to %o", file, mode)
+                    mode = ((os.stat(file)[ST_MODE]) | 0111) & 07777
+                    self.announce("changing mode of %s to %o" % (file, mode))
                     os.chmod(file, mode)
 
     def get_inputs (self):

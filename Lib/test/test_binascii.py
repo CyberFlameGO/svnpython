@@ -1,6 +1,6 @@
 """Test the binascii C module."""
 
-from test.test_support import verify, verbose, have_unicode
+from test_support import verify, verbose
 import binascii
 
 # Show module doc string
@@ -70,7 +70,7 @@ for line in map(addnoise, lines):
 verify(res == testdata)
 
 # Test base64 with just invalid characters, which should return
-# empty strings. TBD: shouldn't it raise an exception instead ?
+# empty strings.
 verify(binascii.a2b_base64(fillers) == '')
 
 # Test uu
@@ -116,14 +116,4 @@ else:
     print 'expected TypeError not raised'
 
 # Verify the treatment of Unicode strings
-if have_unicode:
-    verify(binascii.hexlify(unicode('a', 'ascii')) == '61',
-           "hexlify failed for Unicode")
-
-# A test for SF bug 534347 (segfaults without the proper fix)
-try:
-    binascii.a2b_qp("", **{1:1})
-except TypeError:
-    pass
-else:
-    raise TestFailed, "binascii..a2b_qp(**{1:1}) didn't raise TypeError"
+verify(binascii.hexlify(u'a') == '61', "hexlify failed for Unicode")

@@ -4,7 +4,8 @@ Implements the Distutils 'build_clib' command, to build a C/C++ library
 that is included in the module distribution and needed by an extension
 module."""
 
-# This module should be kept compatible with Python 1.5.2.
+# created (an empty husk) 1999/12/18, Greg Ward
+# fleshed out 2000/02/03-04
 
 __revision__ = "$Id$"
 
@@ -23,7 +24,7 @@ from types import *
 from distutils.core import Command
 from distutils.errors import *
 from distutils.sysconfig import customize_compiler
-from distutils import log
+
 
 def show_compilers ():
     from distutils.ccompiler import show_compilers
@@ -110,6 +111,7 @@ class build_clib (Command):
         # Yech -- this is cut 'n pasted from build_ext.py!
         from distutils.ccompiler import new_compiler
         self.compiler = new_compiler(compiler=self.compiler,
+                                     verbose=self.verbose,
                                      dry_run=self.dry_run,
                                      force=self.force)
         customize_compiler(self.compiler)
@@ -211,7 +213,7 @@ class build_clib (Command):
                        "a list of source filenames") % lib_name
             sources = list(sources)
 
-            log.info("building '%s' library", lib_name)
+            self.announce("building '%s' library" % lib_name)
 
             # First, compile the source code to object files in the library
             # directory.  (This should probably change to putting object

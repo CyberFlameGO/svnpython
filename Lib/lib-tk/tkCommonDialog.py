@@ -13,6 +13,7 @@
 #
 
 from Tkinter import *
+import os
 
 class Dialog:
 
@@ -49,7 +50,7 @@ class Dialog:
 
         try:
 
-            s = w.tk.call(self.command, *w._options(self.options))
+            s = apply(w.tk.call, (self.command,) + w._options(self.options))
 
             s = self._fixresult(w, s)
 

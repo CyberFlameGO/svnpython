@@ -5,6 +5,7 @@ import string
 import types
 import re
 from Carbon import Qd, Icn, Fm, QuickDraw
+from Carbon.List import GetListPort
 from Carbon.QuickDraw import hilitetransfermode
 
 
@@ -91,7 +92,7 @@ def truncString(s, maxwid):
 def drawTextCell(text, cellRect, ascent, theList):
 	l, t, r, b = cellRect
 	cellwidth = r - l
-	Qd.MoveTo(int(l + 2), int(t + ascent))
+	Qd.MoveTo(l + 2, t + ascent)
 	condense, text = truncString(text, cellwidth - 3)
 	if condense:
 		Qd.TextFace(QuickDraw.condense)
@@ -210,7 +211,7 @@ class BrowserWidget(W.CustomList):
 				Qd.PaintRect(rect)
 				lastpoint = (x, y)
 		Qd.PaintRect(rect)
-		Qd.PenPat(Qd.GetQDGlobalsBlack())
+		Qd.PenPat(Qd.qd.black)
 		Qd.PenNormal()
 		if newcol > 0 and newcol <> abscol:
 			self.setcolumn(newcol - l)
@@ -322,7 +323,9 @@ class BrowserWidget(W.CustomList):
 					editor.select()
 					return
 				elif os.path.exists(value) and os.path.isfile(value):
-					if MacOS.GetCreatorAndType(value)[1] in ('TEXT', '\0\0\0\0'):
+					import macfs
+					fss = macfs.FSSpec(value)
+					if fss.GetCreatorType()[1] == 'TEXT':
 						W.getapplication().openscript(value)
 	
 	def itemrepr(self, (key, value, arrow, indent), str = str, double_repr = double_repr, 
@@ -366,7 +369,7 @@ class BrowserWidget(W.CustomList):
 	def myDrawCell(self, onlyHilite, selected, cellRect, theCell, 
 			dataOffset, dataLen, theList):
 		savedPort = Qd.GetPort()
-		Qd.SetPort(theList.GetListPort())
+		Qd.SetPort(GetListPort(theList))
 		savedClip = Qd.NewRgn()
 		Qd.GetClip(savedClip)
 		Qd.ClipRect(cellRect)
@@ -384,26 +387,14 @@ class BrowserWidget(W.CustomList):
 			if dataLen >= 6:
 				data = theList.LGetCell(dataLen, theCell)
 				iconId, indent, tab = struct.unpack("hhh", data[:6])
-				try:
-					key, value = data[6:].split("\t", 1)
-				except ValueError:
-					# bogus data, at least don't crash.
-					indent = 0
-					tab = 0
-					iconId = 0
-					key = ""
-					value = data[6:]
+				key, value = data[6:].split("\t", 1)
 				
 				if iconId:
-					try:
-						theIcon = Icn.GetCIcon(iconId)
-					except Icn.Error:
-						pass
-					else:
-						rect = (0, 0, 16, 16)
-						rect = Qd.OffsetRect(rect, l, t)
-						rect = Qd.OffsetRect(rect, 0, (theList.cellSize[1] - (rect[3] - rect[1])) / 2)
-						Icn.PlotCIcon(rect, theIcon)
+					theIcon = Icn.GetCIcon(iconId)
+					rect = (0, 0, 16, 16)
+					rect = Qd.OffsetRect(rect, l, t)
+					rect = Qd.OffsetRect(rect, 0, (theList.cellSize[1] - (rect[3] - rect[1])) / 2)
+					Icn.PlotCIcon(rect, theIcon)
 				
 				if len(key) >= 0:
 					cl, ct, cr, cb = cellRect
@@ -420,8 +411,6 @@ class BrowserWidget(W.CustomList):
 						drawTextCell(value, (cl, ct, cr, cb), ascent, theList)
 			#elif dataLen != 0:
 			#	drawTextCell("???", 3, cellRect, ascent, theList)
-			else:
-				return  # we have bogus data
 			
 			# draw nice dotted line
 			l, t, r, b = cellRect
@@ -500,60 +489,42 @@ class Browser:
 
 
 SIMPLE_TYPES = (
-	type(None),
-	int,
-	long,
-	float,
-	complex,
-	str,
-	unicode,
+	types.NoneType,
+	types.IntType,
+	types.LongType,
+	types.FloatType,
+	types.ComplexType,
+	types.StringType
 )
 
-def get_ivars(obj):
-	"""Return a list the names of all (potential) instance variables."""
-	# __mro__ recipe from Guido
-	slots = {}
-	# old-style C objects
-	if hasattr(obj, "__members__"):
-		for name in obj.__members__:
-			slots[name] = None
-	if hasattr(obj, "__methods__"):
-		for name in obj.__methods__:
-			slots[name] = None
-	# generic type
-	if hasattr(obj, "__dict__"):
-		slots.update(obj.__dict__)
-	cls = type(obj)
-	if hasattr(cls, "__mro__"):
-		# new-style class, use descriptors
-		for base in cls.__mro__:
-			for name, value in base.__dict__.items():
-				# XXX using callable() is a heuristic which isn't 100%
-				# foolproof.
-				if hasattr(value, "__get__") and not callable(value):
-					slots[name] = None
-	if "__dict__" in slots:
-		del slots["__dict__"]
-	slots = slots.keys()
-	slots.sort()
-	return slots
+INDEXING_TYPES = (
+	types.TupleType,
+	types.ListType,
+	types.DictionaryType
+)
 
 def unpack_object(object, indent = 0):
 	tp = type(object)
-	if isinstance(object, SIMPLE_TYPES) and object is not None:
+	if tp in SIMPLE_TYPES and tp is not types.NoneType:
 		raise TypeError, "can't browse simple type: %s" % tp.__name__
-	elif isinstance(object, dict):
+	elif tp == types.DictionaryType:
 		return unpack_dict(object, indent)
-	elif isinstance(object, (tuple, list)):
+	elif tp in (types.TupleType, types.ListType):
 		return unpack_sequence(object, indent)
-	elif isinstance(object, types.ModuleType):
+	elif tp == types.InstanceType:
+		return unpack_instance(object, indent)
+	elif tp == types.ClassType:
+		return unpack_class(object, indent)
+	elif tp == types.ModuleType:
 		return unpack_dict(object.__dict__, indent)
 	else:
 		return unpack_other(object, indent)
 
 def unpack_sequence(seq, indent = 0):
-	return [(i, v, not isinstance(v, SIMPLE_TYPES), indent)
-	         for i, v in enumerate(seq)]
+	items = map(None, range(len(seq)), seq)
+	items = map(lambda (k, v), type = type, simp = SIMPLE_TYPES, indent = indent: 
+				(k, v, not type(v) in simp, indent), items)
+	return items
 
 def unpack_dict(dict, indent = 0):
 	items = dict.items()
@@ -571,20 +542,29 @@ def unpack_class(clss, indent = 0):
 	return pack_items(items, indent)
 
 def unpack_other(object, indent = 0):
-	attrs = get_ivars(object)
+	attrs = []
+	if hasattr(object, '__members__'):
+		attrs = attrs + object.__members__
+	if hasattr(object, '__methods__'):
+		attrs = attrs + object.__methods__
+	if hasattr(object, '__dict__'):
+		attrs = attrs + object.__dict__.keys()
+	if hasattr(object, '__slots__'):
+		# XXX??
+		attrs = attrs + object.__slots__
+	if hasattr(object, "__class__") and "__class__" not in attrs:
+		attrs.append("__class__")
+	if hasattr(object, "__doc__") and "__doc__" not in attrs:
+		attrs.append("__doc__")
 	items = []
 	for attr in attrs:
-		try:
-			value = getattr(object, attr)
-		except:
-			pass
-		else:
-			items.append((attr, value))
+		items.append((attr, getattr(object, attr)))
 	return pack_items(items, indent)
 
 def pack_items(items, indent = 0):
-	items = [(k, v, not isinstance(v, SIMPLE_TYPES), indent)
-	         for k, v in items]
+	items = map(lambda (k, v), type = type, simp = SIMPLE_TYPES, indent = indent: 
+				(k, v, not type(v) in simp, indent), 
+			items)
 	return tuple_caselesssort(items)
 
 def caselesssort(alist):

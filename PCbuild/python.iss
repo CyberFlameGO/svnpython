@@ -65,7 +65,7 @@ SourceDir=..
 OutputDir=PCBuild
 OutputBaseFilename=Python-2.2a1
 
-AppPublisher=PythonLabs at Zope Corporation
+AppPublisher=PythonLabs at Digital Creations
 AppPublisherURL=http://www.python.org
 AppSupportURL=http://www.python.org
 AppUpdatesURL=http://www.python.org

@@ -145,7 +145,8 @@ class MultiFile:
         self.level = max(0, self.level - 1)
         del self.stack[0]
         if self.seekable:
-            self.start = self.posstack.pop(0)
+            self.start = self.posstack[0]
+            del self.posstack[0]
             if self.level > 0:
                 self.lastpos = abslastpos - self.start
 

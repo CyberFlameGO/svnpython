@@ -49,20 +49,11 @@ includestuff = includestuff + """
 #include <CFDictionary.h>
 #include <CFString.h>
 #include <CFURL.h>
-#include <CFPropertyList.h>
-#include <CFPreferences.h>
 #else
 #include <CoreServices/CoreServices.h>
 #endif
 
-#include "pycfbridge.h"
-
 #ifdef USE_TOOLBOX_OBJECT_GLUE
-extern PyObject *_CFObj_New(CFTypeRef);
-extern int _CFObj_Convert(PyObject *, CFTypeRef *);
-#define CFObj_New _CFObj_New
-#define CFObj_Convert _CFObj_Convert
-
 extern PyObject *_CFTypeRefObj_New(CFTypeRef);
 extern int _CFTypeRefObj_Convert(PyObject *, CFTypeRef *);
 #define CFTypeRefObj_New _CFTypeRefObj_New
@@ -147,50 +138,7 @@ OptionalCFURLRefObj_Convert(PyObject *v, CFURLRef *p_itself)
     }
     return CFURLRefObj_Convert(v, p_itself);
 }
-"""
 
-finalstuff = finalstuff + """
-
-/* Routines to convert any CF type to/from the corresponding CFxxxObj */
-PyObject *CFObj_New(CFTypeRef itself)
-{
-	if (itself == NULL)
-	{
-		PyErr_SetString(PyExc_RuntimeError, "cannot wrap NULL");
-		return NULL;
-	}
-	if (CFGetTypeID(itself) == CFArrayGetTypeID()) return CFArrayRefObj_New((CFArrayRef)itself);
-	if (CFGetTypeID(itself) == CFDictionaryGetTypeID()) return CFDictionaryRefObj_New((CFDictionaryRef)itself);
-	if (CFGetTypeID(itself) == CFDataGetTypeID()) return CFDataRefObj_New((CFDataRef)itself);
-	if (CFGetTypeID(itself) == CFStringGetTypeID()) return CFStringRefObj_New((CFStringRef)itself);
-	if (CFGetTypeID(itself) == CFURLGetTypeID()) return CFURLRefObj_New((CFURLRef)itself);
-	/* XXXX Or should we use PyCF_CF2Python here?? */
-	return CFTypeRefObj_New(itself);
-}
-int CFObj_Convert(PyObject *v, CFTypeRef *p_itself)
-{
-
-	if (v == Py_None) { *p_itself = NULL; return 1; }
-	/* Check for other CF objects here */
-
-	if (!CFTypeRefObj_Check(v) &&
-		!CFArrayRefObj_Check(v) &&
-		!CFMutableArrayRefObj_Check(v) &&
-		!CFDictionaryRefObj_Check(v) &&
-		!CFMutableDictionaryRefObj_Check(v) &&
-		!CFDataRefObj_Check(v) &&
-		!CFMutableDataRefObj_Check(v) &&
-		!CFStringRefObj_Check(v) &&
-		!CFMutableStringRefObj_Check(v) &&
-		!CFURLRefObj_Check(v) )
-	{
-		/* XXXX Or should we use PyCF_Python2CF here?? */
-		PyErr_SetString(PyExc_TypeError, "CF object required");
-		return 0;
-	}
-	*p_itself = ((CFTypeRefObject *)v)->ob_itself;
-	return 1;
-}
 """
 
 initstuff = initstuff + """
@@ -212,17 +160,6 @@ PyMac_INIT_TOOLBOX_OBJECT_CONVERT(CFMutableDictionaryRef, CFMutableDictionaryRef
 PyMac_INIT_TOOLBOX_OBJECT_NEW(CFURLRef, CFURLRefObj_New);
 PyMac_INIT_TOOLBOX_OBJECT_CONVERT(CFURLRef, CFURLRefObj_Convert);
 PyMac_INIT_TOOLBOX_OBJECT_CONVERT(CFURLRef, CFURLRefObj_Convert);
-"""
-
-variablestuff="""
-#define _STRINGCONST(name) PyModule_AddObject(m, #name, CFStringRefObj_New(name))
-_STRINGCONST(kCFPreferencesAnyApplication);
-_STRINGCONST(kCFPreferencesCurrentApplication);
-_STRINGCONST(kCFPreferencesAnyHost);
-_STRINGCONST(kCFPreferencesCurrentHost);
-_STRINGCONST(kCFPreferencesAnyUser);
-_STRINGCONST(kCFPreferencesCurrentUser);
-
 """
 
 Boolean = Type("Boolean", "l")
@@ -256,18 +193,13 @@ CFStringRef = OpaqueByValueType("CFStringRef", "CFStringRefObj")
 CFMutableStringRef = OpaqueByValueType("CFMutableStringRef", "CFMutableStringRefObj")
 CFURLRef = OpaqueByValueType("CFURLRef", "CFURLRefObj")
 OptionalCFURLRef  = OpaqueByValueType("CFURLRef", "OptionalCFURLRefObj")
-##CFPropertyListRef = OpaqueByValueType("CFPropertyListRef", "CFTypeRefObj")
 # ADD object type here
 
 # Our (opaque) objects
 
 class MyGlobalObjectDefinition(GlobalObjectDefinition):
 	def outputCheckNewArg(self):
-		Output('if (itself == NULL)')
-		OutLbrace()
-		Output('PyErr_SetString(PyExc_RuntimeError, "cannot wrap NULL");')
-		Output('return NULL;')
-		OutRbrace()
+		Output("if (itself == NULL) return PyMac_Error(resNotFound);")
 	def outputStructMembers(self):
 		GlobalObjectDefinition.outputStructMembers(self)
 		Output("void (*ob_freeit)(CFTypeRef ptr);")
@@ -309,7 +241,7 @@ class MyGlobalObjectDefinition(GlobalObjectDefinition):
 		Output("static PyObject * %s_repr(%s *self)", self.prefix, self.objecttype)
 		OutLbrace()
 		Output("char buf[100];")
-		Output("""sprintf(buf, "<CFTypeRef type-%%d object at 0x%%8.8x for 0x%%8.8x>", (int)CFGetTypeID(self->ob_itself), (unsigned)self, (unsigned)self->ob_itself);""")
+		Output("""sprintf(buf, "<CFTypeRef type-%%d object at 0x%%8.8x for 0x%%8.8x>", CFGetTypeID(self->ob_itself), (unsigned)self, (unsigned)self->ob_itself);""")
 		Output("return PyString_FromString(buf);")
 		OutRbrace()
 
@@ -367,18 +299,6 @@ class CFMutableDictionaryRefObjectDefinition(MyGlobalObjectDefinition):
 class CFDataRefObjectDefinition(MyGlobalObjectDefinition):
 	basechain = "&CFTypeRefObj_chain"
 	
-	def outputCheckConvertArg(self):
-		Out("""
-		if (v == Py_None) { *p_itself = NULL; return 1; }
-		if (PyString_Check(v)) {
-		    char *cStr;
-		    int cLen;
-		    if( PyString_AsStringAndSize(v, &cStr, &cLen) < 0 ) return 0;
-		    *p_itself = CFDataCreate((CFAllocatorRef)NULL, (unsigned char *)cStr, cLen);
-		    return 1;
-		}
-		""")
-
 	def outputRepr(self):
 		Output()
 		Output("static PyObject * %s_repr(%s *self)", self.prefix, self.objecttype)
@@ -407,10 +327,8 @@ class CFStringRefObjectDefinition(MyGlobalObjectDefinition):
 		Out("""
 		if (v == Py_None) { *p_itself = NULL; return 1; }
 		if (PyString_Check(v)) {
-		    char *cStr;
-		    if (!PyArg_Parse(v, "es", "ascii", &cStr))
-		    	return NULL;
-			*p_itself = CFStringCreateWithCString((CFAllocatorRef)NULL, cStr, kCFStringEncodingASCII);
+		    char *cStr = PyString_AsString(v);
+			*p_itself = CFStringCreateWithCString((CFAllocatorRef)NULL, cStr, 0);
 			return 1;
 		}
 		if (PyUnicode_Check(v)) {
@@ -467,7 +385,7 @@ class CFURLRefObjectDefinition(MyGlobalObjectDefinition):
 # From here on it's basically all boiler plate...
 
 # Create the generator groups and link them
-module = MacModule(MODNAME, MODPREFIX, includestuff, finalstuff, initstuff, variablestuff)
+module = MacModule(MODNAME, MODPREFIX, includestuff, finalstuff, initstuff)
 CFTypeRef_object = CFTypeRefObjectDefinition('CFTypeRef', 'CFTypeRefObj', 'CFTypeRef')
 CFArrayRef_object = CFArrayRefObjectDefinition('CFArrayRef', 'CFArrayRefObj', 'CFArrayRef')
 CFMutableArrayRef_object = CFMutableArrayRefObjectDefinition('CFMutableArrayRef', 'CFMutableArrayRefObj', 'CFMutableArrayRef')
@@ -566,79 +484,6 @@ return _res;
 f = ManualGenerator("CFStringGetUnicode", getasunicode_body);
 f.docstring = lambda: "() -> (unicode _rv)"
 CFStringRef_object.add(f)
-
-# Get data from CFDataRef
-getasdata_body = """
-int size = CFDataGetLength(_self->ob_itself);
-char *data = (char *)CFDataGetBytePtr(_self->ob_itself);
-
-_res = (PyObject *)PyString_FromStringAndSize(data, size);
-return _res;
-"""
-
-f = ManualGenerator("CFDataGetData", getasdata_body);
-f.docstring = lambda: "() -> (string _rv)"
-CFDataRef_object.add(f)
-
-# Manual generator for CFPropertyListCreateFromXMLData because of funny error return
-fromxml_body = """
-CFTypeRef _rv;
-CFOptionFlags mutabilityOption;
-CFStringRef errorString;
-if (!PyArg_ParseTuple(_args, "l",
-                      &mutabilityOption))
-	return NULL;
-_rv = CFPropertyListCreateFromXMLData((CFAllocatorRef)NULL,
-                                      _self->ob_itself,
-                                      mutabilityOption,
-                                      &errorString);
-if (errorString)
-	CFRelease(errorString);
-if (_rv == NULL) {
-	PyErr_SetString(PyExc_RuntimeError, "Parse error in XML data");
-	return NULL;
-}
-_res = Py_BuildValue("O&",
-                     CFTypeRefObj_New, _rv);
-return _res;
-"""
-f = ManualGenerator("CFPropertyListCreateFromXMLData", fromxml_body)
-f.docstring = lambda: "(CFOptionFlags mutabilityOption) -> (CFTypeRefObj)"
-CFTypeRef_object.add(f)
-
-# Convert CF objects to Python objects
-toPython_body = """
-_res = PyCF_CF2Python(_self->ob_itself);
-return _res;
-"""
-
-f = ManualGenerator("toPython", toPython_body);
-f.docstring = lambda: "() -> (python_object)"
-CFTypeRef_object.add(f)
-
-toCF_body = """
-CFTypeRef rv;
-CFTypeID typeid;
-
-if (!PyArg_ParseTuple(_args, "O&", PyCF_Python2CF, &rv))
-	return NULL;
-typeid = CFGetTypeID(rv);
-
-if (typeid == CFStringGetTypeID())
-	return Py_BuildValue("O&", CFStringRefObj_New, rv);
-if (typeid == CFArrayGetTypeID())
-	return Py_BuildValue("O&", CFArrayRefObj_New, rv);
-if (typeid == CFDictionaryGetTypeID())
-	return Py_BuildValue("O&", CFDictionaryRefObj_New, rv);
-if (typeid == CFURLGetTypeID())
-	return Py_BuildValue("O&", CFURLRefObj_New, rv);
-
-_res = Py_BuildValue("O&", CFTypeRefObj_New, rv);
-return _res;
-"""
-f = ManualGenerator("toCF", toCF_body);
-f.docstring = lambda: "(python_object) -> (CF_object)"
-module.add(f)
 
 # ADD add forloop here
 

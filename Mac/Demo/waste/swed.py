@@ -14,6 +14,7 @@ import WASTEconst
 from Carbon import Scrap
 import os
 import macfs
+import MACFS
 
 UNDOLABELS = [ # Indexed by WEGetUndoInfo() value
 	None, "", "typing", "Cut", "Paste", "Clear", "Drag", "Style"]
@@ -82,7 +83,7 @@ class WasteWindow(ScrolledWindow):
 		self.ted.WEIdle()	
 		if self.ted.WEAdjustCursor(where, BIGREGION):
 			return
-		Qd.SetCursor(Qd.GetQDGlobalsArrow())
+		Qd.SetCursor(Qd.qd.arrow)
 		
 	def getscrollbarvalues(self):
 		dr = self.ted.WEGetDestRect()
@@ -212,7 +213,7 @@ class WasteWindow(ScrolledWindow):
 		try:
 			rf = Res.FSpOpenResFile(self.path, 3)
 		except Res.Error:
-			Res.FSpCreateResFile(self.path, '????', 'TEXT', macfs.smAllScripts)
+			Res.FSpCreateResFile(self.path, '????', 'TEXT', MACFS.smAllScripts)
 			rf = Res.FSpOpenResFile(self.path, 3)
 		styles = Res.Resource('')
 		soup = Res.Resource('')
@@ -225,28 +226,23 @@ class WasteWindow(ScrolledWindow):
 		self.ted.WEResetModCount()
 		
 	def menu_save_as(self):
-		path = EasyDialogs.AskFileForSave(message='Save as:')
-		if not path: return
-		self.path = path
+		fss, ok = macfs.StandardPutFile('Save as:')
+		if not ok: return
+		self.path = fss.as_pathname()
 		self.name = os.path.split(self.path)[-1]
 		self.wid.SetWTitle(self.name)
 		self.menu_save()
 		
 	def menu_cut(self):
 		self.ted.WESelView()
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		self.ted.WECut()
+		Scrap.ZeroScrap()
 		self.ted.WECut()
 		self.updatescrollbars()
 		self.parent.updatemenubar()
 		
 	def menu_copy(self):
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		self.ted.WECopy()
 		self.updatescrollbars()
 		self.parent.updatemenubar()
@@ -520,9 +516,10 @@ class Wed(Application):
 
 	def _open(self, askfile):
 		if askfile:
-			path = EasyDialogs.AskFileForOpen(typeList=('TEXT',))
-			if not path:
+			fss, ok = macfs.StandardGetFile('TEXT')
+			if not ok:
 				return
+			path = fss.as_pathname()
 			name = os.path.split(path)[-1]
 			try:
 				fp = open(path, 'rb') # NOTE binary, we need cr as end-of-line
@@ -607,7 +604,7 @@ class Wed(Application):
 		if self.active:
 			self.active.do_idle(event)
 		else:
-			Qd.SetCursor(Qd.GetQDGlobalsArrow())
+			Qd.SetCursor(Qd.qd.arrow)
 			
 def getfontnames():
 	names = []

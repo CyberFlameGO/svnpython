@@ -3,19 +3,17 @@
 Implements the Distutils 'bdist_rpm' command (create RPM source and binary
 distributions)."""
 
-# This module should be kept compatible with Python 1.5.2.
+# created 2000/04/25, by Harry Henry Gebel
 
 __revision__ = "$Id$"
 
 import sys, os, string
 import glob
 from types import *
-from distutils.core import Command
-from distutils.debug import DEBUG
+from distutils.core import Command, DEBUG
 from distutils.util import get_platform
 from distutils.file_util import write_file
 from distutils.errors import *
-from distutils import log
 
 class bdist_rpm (Command):
 
@@ -129,7 +127,6 @@ class bdist_rpm (Command):
         self.build_script = None
         self.install_script = None
         self.clean_script = None
-        self.verify_script = None
         self.pre_install = None
         self.post_install = None
         self.pre_uninstall = None
@@ -209,7 +206,6 @@ class bdist_rpm (Command):
         self.ensure_filename('build_script')
         self.ensure_filename('install_script')
         self.ensure_filename('clean_script')
-        self.ensure_filename('verify_script')
         self.ensure_filename('pre_install')
         self.ensure_filename('post_install')
         self.ensure_filename('pre_uninstall')
@@ -282,7 +278,7 @@ class bdist_rpm (Command):
 
 
         # build package
-        log.info("building RPMs")
+        self.announce('building RPMs')
         rpm_cmd = ['rpm']
         if os.path.exists('/usr/bin/rpmbuild') or \
            os.path.exists('/bin/rpmbuild'):
@@ -354,7 +350,7 @@ class bdist_rpm (Command):
             spec_file.append('Source0: %{name}-%{version}.tar.gz')
 
         spec_file.extend([
-            'License: ' + self.distribution.get_license(),
+            'Copyright: ' + self.distribution.get_license(),
             'Group: ' + self.group,
             'BuildRoot: %{_tmppath}/%{name}-buildroot',
             'Prefix: %{_prefix}', ])
@@ -426,7 +422,6 @@ class bdist_rpm (Command):
               "--root=$RPM_BUILD_ROOT "
               "--record=INSTALLED_FILES") % self.python),
             ('clean', 'clean_script', "rm -rf $RPM_BUILD_ROOT"),
-            ('verifyscript', 'verify_script', None),
             ('pre', 'pre_install', None),
             ('post', 'post_install', None),
             ('preun', 'pre_uninstall', None),
@@ -434,7 +429,7 @@ class bdist_rpm (Command):
         ]
 
         for (rpm_opt, attr, default) in script_options:
-            # Insert contents of file referred to, if no file is referred to
+            # Insert contents of file referred to, if no file is refered to
             # use 'default' as contents of script
             val = getattr(self, attr)
             if val or default:

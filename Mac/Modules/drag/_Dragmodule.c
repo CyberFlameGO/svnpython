@@ -49,7 +49,7 @@ static PyObject *Drag_Error;
 
 PyTypeObject DragObj_Type;
 
-#define DragObj_Check(x) ((x)->ob_type == &DragObj_Type || PyObject_TypeCheck((x), &DragObj_Type))
+#define DragObj_Check(x) ((x)->ob_type == &DragObj_Type)
 
 typedef struct DragObjObject {
 	PyObject_HEAD
@@ -84,7 +84,7 @@ int DragObj_Convert(PyObject *v, DragRef *p_itself)
 static void DragObj_dealloc(DragObjObject *self)
 {
 	Py_XDECREF(self->sendproc);
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *DragObj_DisposeDrag(DragObjObject *_self, PyObject *_args)
@@ -684,88 +684,76 @@ static PyObject *DragObj_UpdateDragHilite(DragObjObject *_self, PyObject *_args)
 
 static PyMethodDef DragObj_methods[] = {
 	{"DisposeDrag", (PyCFunction)DragObj_DisposeDrag, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"AddDragItemFlavor", (PyCFunction)DragObj_AddDragItemFlavor, 1,
-	 PyDoc_STR("(ItemReference theItemRef, FlavorType theType, Buffer dataPtr, FlavorFlags theFlags) -> None")},
+	 "(ItemReference theItemRef, FlavorType theType, Buffer dataPtr, FlavorFlags theFlags) -> None"},
 	{"SetDragItemFlavorData", (PyCFunction)DragObj_SetDragItemFlavorData, 1,
-	 PyDoc_STR("(ItemReference theItemRef, FlavorType theType, Buffer dataPtr, UInt32 dataOffset) -> None")},
+	 "(ItemReference theItemRef, FlavorType theType, Buffer dataPtr, UInt32 dataOffset) -> None"},
 	{"SetDragImage", (PyCFunction)DragObj_SetDragImage, 1,
-	 PyDoc_STR("(PixMapHandle imagePixMap, RgnHandle imageRgn, Point imageOffsetPt, DragImageFlags theImageFlags) -> None")},
+	 "(PixMapHandle imagePixMap, RgnHandle imageRgn, Point imageOffsetPt, DragImageFlags theImageFlags) -> None"},
 	{"ChangeDragBehaviors", (PyCFunction)DragObj_ChangeDragBehaviors, 1,
-	 PyDoc_STR("(DragBehaviors inBehaviorsToSet, DragBehaviors inBehaviorsToClear) -> None")},
+	 "(DragBehaviors inBehaviorsToSet, DragBehaviors inBehaviorsToClear) -> None"},
 	{"TrackDrag", (PyCFunction)DragObj_TrackDrag, 1,
-	 PyDoc_STR("(EventRecord theEvent, RgnHandle theRegion) -> None")},
+	 "(EventRecord theEvent, RgnHandle theRegion) -> None"},
 	{"CountDragItems", (PyCFunction)DragObj_CountDragItems, 1,
-	 PyDoc_STR("() -> (UInt16 numItems)")},
+	 "() -> (UInt16 numItems)"},
 	{"GetDragItemReferenceNumber", (PyCFunction)DragObj_GetDragItemReferenceNumber, 1,
-	 PyDoc_STR("(UInt16 index) -> (ItemReference theItemRef)")},
+	 "(UInt16 index) -> (ItemReference theItemRef)"},
 	{"CountDragItemFlavors", (PyCFunction)DragObj_CountDragItemFlavors, 1,
-	 PyDoc_STR("(ItemReference theItemRef) -> (UInt16 numFlavors)")},
+	 "(ItemReference theItemRef) -> (UInt16 numFlavors)"},
 	{"GetFlavorType", (PyCFunction)DragObj_GetFlavorType, 1,
-	 PyDoc_STR("(ItemReference theItemRef, UInt16 index) -> (FlavorType theType)")},
+	 "(ItemReference theItemRef, UInt16 index) -> (FlavorType theType)"},
 	{"GetFlavorFlags", (PyCFunction)DragObj_GetFlavorFlags, 1,
-	 PyDoc_STR("(ItemReference theItemRef, FlavorType theType) -> (FlavorFlags theFlags)")},
+	 "(ItemReference theItemRef, FlavorType theType) -> (FlavorFlags theFlags)"},
 	{"GetFlavorDataSize", (PyCFunction)DragObj_GetFlavorDataSize, 1,
-	 PyDoc_STR("(ItemReference theItemRef, FlavorType theType) -> (Size dataSize)")},
+	 "(ItemReference theItemRef, FlavorType theType) -> (Size dataSize)"},
 	{"GetFlavorData", (PyCFunction)DragObj_GetFlavorData, 1,
-	 PyDoc_STR("(ItemReference theItemRef, FlavorType theType, Buffer dataPtr, UInt32 dataOffset) -> (Buffer dataPtr)")},
+	 "(ItemReference theItemRef, FlavorType theType, Buffer dataPtr, UInt32 dataOffset) -> (Buffer dataPtr)"},
 	{"GetDragItemBounds", (PyCFunction)DragObj_GetDragItemBounds, 1,
-	 PyDoc_STR("(ItemReference theItemRef) -> (Rect itemBounds)")},
+	 "(ItemReference theItemRef) -> (Rect itemBounds)"},
 	{"SetDragItemBounds", (PyCFunction)DragObj_SetDragItemBounds, 1,
-	 PyDoc_STR("(ItemReference theItemRef, Rect itemBounds) -> None")},
+	 "(ItemReference theItemRef, Rect itemBounds) -> None"},
 	{"GetDropLocation", (PyCFunction)DragObj_GetDropLocation, 1,
-	 PyDoc_STR("() -> (AEDesc dropLocation)")},
+	 "() -> (AEDesc dropLocation)"},
 	{"SetDropLocation", (PyCFunction)DragObj_SetDropLocation, 1,
-	 PyDoc_STR("(AEDesc dropLocation) -> None")},
+	 "(AEDesc dropLocation) -> None"},
 	{"GetDragAttributes", (PyCFunction)DragObj_GetDragAttributes, 1,
-	 PyDoc_STR("() -> (DragAttributes flags)")},
+	 "() -> (DragAttributes flags)"},
 	{"GetDragMouse", (PyCFunction)DragObj_GetDragMouse, 1,
-	 PyDoc_STR("() -> (Point mouse, Point globalPinnedMouse)")},
+	 "() -> (Point mouse, Point globalPinnedMouse)"},
 	{"SetDragMouse", (PyCFunction)DragObj_SetDragMouse, 1,
-	 PyDoc_STR("(Point globalPinnedMouse) -> None")},
+	 "(Point globalPinnedMouse) -> None"},
 	{"GetDragOrigin", (PyCFunction)DragObj_GetDragOrigin, 1,
-	 PyDoc_STR("() -> (Point globalInitialMouse)")},
+	 "() -> (Point globalInitialMouse)"},
 	{"GetDragModifiers", (PyCFunction)DragObj_GetDragModifiers, 1,
-	 PyDoc_STR("() -> (SInt16 modifiers, SInt16 mouseDownModifiers, SInt16 mouseUpModifiers)")},
+	 "() -> (SInt16 modifiers, SInt16 mouseDownModifiers, SInt16 mouseUpModifiers)"},
 	{"ShowDragHilite", (PyCFunction)DragObj_ShowDragHilite, 1,
-	 PyDoc_STR("(RgnHandle hiliteFrame, Boolean inside) -> None")},
+	 "(RgnHandle hiliteFrame, Boolean inside) -> None"},
 	{"HideDragHilite", (PyCFunction)DragObj_HideDragHilite, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"DragPreScroll", (PyCFunction)DragObj_DragPreScroll, 1,
-	 PyDoc_STR("(SInt16 dH, SInt16 dV) -> None")},
+	 "(SInt16 dH, SInt16 dV) -> None"},
 	{"DragPostScroll", (PyCFunction)DragObj_DragPostScroll, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"UpdateDragHilite", (PyCFunction)DragObj_UpdateDragHilite, 1,
-	 PyDoc_STR("(RgnHandle updateRgn) -> None")},
+	 "(RgnHandle updateRgn) -> None"},
 	{NULL, NULL, 0}
 };
 
-#define DragObj_getsetlist NULL
+PyMethodChain DragObj_chain = { DragObj_methods, NULL };
 
+static PyObject *DragObj_getattr(DragObjObject *self, char *name)
+{
+	return Py_FindMethodInChain(&DragObj_chain, (PyObject *)self, name);
+}
+
+#define DragObj_setattr NULL
 
 #define DragObj_compare NULL
 
 #define DragObj_repr NULL
 
 #define DragObj_hash NULL
-#define DragObj_tp_init 0
-
-#define DragObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *DragObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	DragRef itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, DragObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((DragObjObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define DragObj_tp_free PyObject_Del
-
 
 PyTypeObject DragObj_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -776,39 +764,14 @@ PyTypeObject DragObj_Type = {
 	/* methods */
 	(destructor) DragObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) DragObj_getattr, /*tp_getattr*/
+	(setattrfunc) DragObj_setattr, /*tp_setattr*/
 	(cmpfunc) DragObj_compare, /*tp_compare*/
 	(reprfunc) DragObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) DragObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	DragObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	DragObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	DragObj_tp_init, /* tp_init */
-	DragObj_tp_alloc, /* tp_alloc */
-	DragObj_tp_new, /* tp_new */
-	DragObj_tp_free, /* tp_free */
 };
 
 /* -------------------- End object type DragObj --------------------- */
@@ -996,23 +959,23 @@ static PyObject *Drag_RemoveReceiveHandler(PyObject *_self, PyObject *_args)
 
 static PyMethodDef Drag_methods[] = {
 	{"NewDrag", (PyCFunction)Drag_NewDrag, 1,
-	 PyDoc_STR("() -> (DragRef theDrag)")},
+	 "() -> (DragRef theDrag)"},
 	{"GetDragHiliteColor", (PyCFunction)Drag_GetDragHiliteColor, 1,
-	 PyDoc_STR("(WindowPtr window) -> (RGBColor color)")},
+	 "(WindowPtr window) -> (RGBColor color)"},
 	{"WaitMouseMoved", (PyCFunction)Drag_WaitMouseMoved, 1,
-	 PyDoc_STR("(Point initialMouse) -> (Boolean _rv)")},
+	 "(Point initialMouse) -> (Boolean _rv)"},
 	{"ZoomRects", (PyCFunction)Drag_ZoomRects, 1,
-	 PyDoc_STR("(Rect fromRect, Rect toRect, SInt16 zoomSteps, ZoomAcceleration acceleration) -> None")},
+	 "(Rect fromRect, Rect toRect, SInt16 zoomSteps, ZoomAcceleration acceleration) -> None"},
 	{"ZoomRegion", (PyCFunction)Drag_ZoomRegion, 1,
-	 PyDoc_STR("(RgnHandle region, Point zoomDistance, SInt16 zoomSteps, ZoomAcceleration acceleration) -> None")},
+	 "(RgnHandle region, Point zoomDistance, SInt16 zoomSteps, ZoomAcceleration acceleration) -> None"},
 	{"InstallTrackingHandler", (PyCFunction)Drag_InstallTrackingHandler, 1,
-	 PyDoc_STR(NULL)},
+	 NULL},
 	{"InstallReceiveHandler", (PyCFunction)Drag_InstallReceiveHandler, 1,
-	 PyDoc_STR(NULL)},
+	 NULL},
 	{"RemoveTrackingHandler", (PyCFunction)Drag_RemoveTrackingHandler, 1,
-	 PyDoc_STR(NULL)},
+	 NULL},
 	{"RemoveReceiveHandler", (PyCFunction)Drag_RemoveReceiveHandler, 1,
-	 PyDoc_STR(NULL)},
+	 NULL},
 	{NULL, NULL, 0}
 };
 
@@ -1135,12 +1098,9 @@ void init_Drag(void)
 	    PyDict_SetItemString(d, "Error", Drag_Error) != 0)
 		return;
 	DragObj_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&DragObj_Type) < 0) return;
 	Py_INCREF(&DragObj_Type);
-	PyModule_AddObject(m, "DragObj", (PyObject *)&DragObj_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&DragObj_Type);
-	PyModule_AddObject(m, "DragObjType", (PyObject *)&DragObj_Type);
+	if (PyDict_SetItemString(d, "DragObjType", (PyObject *)&DragObj_Type) != 0)
+		Py_FatalError("can't initialize DragObjType");
 
 	dragglue_TrackingHandlerUPP = NewDragTrackingHandlerUPP(dragglue_TrackingHandler);
 	dragglue_ReceiveHandlerUPP = NewDragReceiveHandlerUPP(dragglue_ReceiveHandler);

@@ -16,10 +16,7 @@ from sre_constants import *
 
 assert _sre.MAGIC == MAGIC, "SRE module mismatch"
 
-if _sre.CODESIZE == 2:
-    MAXCODE = 65535
-else:
-    MAXCODE = 0xFFFFFFFFL
+MAXCODE = 65535
 
 def _compile(code, pattern, flags):
     # internal: compile a (sub)pattern
@@ -58,11 +55,8 @@ def _compile(code, pattern, flags):
                 _compile(code, av[2], flags)
                 emit(OPCODES[SUCCESS])
                 code[skip] = len(code) - skip
-            elif _simple(av) and op != REPEAT:
-                if op == MAX_REPEAT:
-                    emit(OPCODES[REPEAT_ONE])
-                else:
-                    emit(OPCODES[MIN_REPEAT_ONE])
+            elif _simple(av) and op == MAX_REPEAT:
+                emit(OPCODES[REPEAT_ONE])
                 skip = len(code); emit(0)
                 emit(av[0])
                 emit(av[1])
@@ -151,7 +145,7 @@ def _compile(code, pattern, flags):
 def _compile_charset(charset, flags, code, fixup=None):
     # compile charset subprogram
     emit = code.append
-    if fixup is None:
+    if not fixup:
         fixup = lambda x: x
     for op, av in _optimize_charset(charset, fixup):
         emit(OPCODES[op])
@@ -194,6 +188,9 @@ def _optimize_charset(charset, fixup):
                 # XXX: could append to charmap tail
                 return charset # cannot compress
     except IndexError:
+        if sys.maxunicode != 65535:
+            # XXX: big charsets don't work in UCS-4 builds
+            return charset
         # character set contains unicode characters
         return _optimize_unicode(charset, fixup)
     # compress character map
@@ -228,18 +225,14 @@ def _optimize_charset(charset, fixup):
 
 def _mk_bitmap(bits):
     data = []
-    if _sre.CODESIZE == 2:
-        start = (1, 0)
-    else:
-        start = (1L, 0L)
-    m, v = start
+    m = 1; v = 0
     for c in bits:
         if c:
             v = v + m
         m = m << 1
         if m > MAXCODE:
             data.append(v)
-            m, v = start
+            m = 1; v = 0
     return data
 
 # To represent a big charset, first a bitmap of all characters in the
@@ -262,38 +255,21 @@ def _mk_bitmap(bits):
 # less significant byte is a bit index in the chunk (just like the
 # CHARSET matching).
 
-# In UCS-4 mode, the BIGCHARSET opcode still supports only subsets
-# of the basic multilingual plane; an efficient representation
-# for all of UTF-16 has not yet been developed. This means,
-# in particular, that negated charsets cannot be represented as
-# bigcharsets.
-
 def _optimize_unicode(charset, fixup):
-    try:
-        import array
-    except ImportError:
-        return charset
     charmap = [0]*65536
     negate = 0
-    try:
-        for op, av in charset:
-            if op is NEGATE:
-                negate = 1
-            elif op is LITERAL:
-                charmap[fixup(av)] = 1
-            elif op is RANGE:
-                for i in range(fixup(av[0]), fixup(av[1])+1):
-                    charmap[i] = 1
-            elif op is CATEGORY:
-                # XXX: could expand category
-                return charset # cannot compress
-    except IndexError:
-        # non-BMP characters
-        return charset
+    for op, av in charset:
+        if op is NEGATE:
+            negate = 1
+        elif op is LITERAL:
+            charmap[fixup(av)] = 1
+        elif op is RANGE:
+            for i in range(fixup(av[0]), fixup(av[1])+1):
+                charmap[i] = 1
+        elif op is CATEGORY:
+            # XXX: could expand category
+            return charset # cannot compress
     if negate:
-        if sys.maxunicode != 65535:
-            # XXX: negation does not work with big charsets
-            return charset
         for i in range(65536):
             charmap[i] = not charmap[i]
     comps = {}
@@ -308,14 +284,12 @@ def _optimize_unicode(charset, fixup):
             block = block + 1
             data = data + _mk_bitmap(chunk)
     header = [block]
-    if MAXCODE == 65535:
-        code = 'H'
-    else:
-        code = 'L'
-    # Convert block indices to byte array of 256 bytes
-    mapping = array.array('b', mapping).tostring()
-    # Convert byte array to word array
-    header = header + array.array(code, mapping).tolist()
+    assert MAXCODE == 65535
+    for i in range(128):
+        if sys.byteorder == 'big':
+            header.append(256*mapping[2*i]+mapping[2*i+1])
+        else:
+            header.append(mapping[2*i]+256*mapping[2*i+1])
     data[0:0] = header
     return [(BIGCHARSET, data)]
 

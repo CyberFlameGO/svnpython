@@ -36,6 +36,7 @@
 
 import sys
 import regex
+import string
 import os
 from stat import *
 import getopt
@@ -212,11 +213,11 @@ Number = Floatnumber + '\|' + Intnumber
 # Anything else is an operator -- don't list this explicitly because of '/*'
 
 OutsideComment = (Identifier, Number, String, Char, CommentStart)
-OutsideCommentPattern = '\(' + '\|'.join(OutsideComment) + '\)'
+OutsideCommentPattern = '\(' + string.joinfields(OutsideComment, '\|') + '\)'
 OutsideCommentProgram = regex.compile(OutsideCommentPattern)
 
 InsideComment = (Identifier, Number, CommentEnd)
-InsideCommentPattern = '\(' + '\|'.join(InsideComment) + '\)'
+InsideCommentPattern = '\(' + string.joinfields(InsideComment, '\|') + '\)'
 InsideCommentProgram = regex.compile(InsideCommentPattern)
 
 def initfixline():
@@ -285,10 +286,10 @@ def addsubst(substfile):
         if not line: break
         lineno = lineno + 1
         try:
-            i = line.index('#')
-        except ValueError:
+            i = string.index(line, '#')
+        except string.index_error:
             i = -1          # Happens to delete trailing \n
-        words = line[:i].split()
+        words = string.split(line[:i])
         if not words: continue
         if len(words) == 3 and words[0] == 'struct':
             words[:2] = [words[0] + ' ' + words[1]]

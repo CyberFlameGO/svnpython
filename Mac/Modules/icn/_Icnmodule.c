@@ -606,6 +606,23 @@ static PyObject *Icn_PlotCIconHandle(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Icn_IconServicesTerminate(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+#ifndef IconServicesTerminate
+	PyMac_PRECHECK(IconServicesTerminate);
+#endif
+	if (!PyArg_ParseTuple(_args, ""))
+		return NULL;
+	IconServicesTerminate();
+	Py_INCREF(Py_None);
+	_res = Py_None;
+	return _res;
+}
+#endif
+
 static PyObject *Icn_IconRefToIconFamily(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1321,6 +1338,8 @@ static PyObject *Icn_IsIconRefMaskEmpty(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_CARBON
+
 static PyObject *Icn_GetIconRefVariant(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1343,6 +1362,9 @@ static PyObject *Icn_GetIconRefVariant(PyObject *_self, PyObject *_args)
 	                     outTransform);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Icn_RegisterIconRefFromIconFile(PyObject *_self, PyObject *_args)
 {
@@ -1369,6 +1391,9 @@ static PyObject *Icn_RegisterIconRefFromIconFile(PyObject *_self, PyObject *_arg
 	                     ResObj_New, theIconRef);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Icn_ReadIconFile(PyObject *_self, PyObject *_args)
 {
@@ -1389,6 +1414,9 @@ static PyObject *Icn_ReadIconFile(PyObject *_self, PyObject *_args)
 	                     ResObj_New, iconFamily);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Icn_WriteIconFile(PyObject *_self, PyObject *_args)
 {
@@ -1410,128 +1438,146 @@ static PyObject *Icn_WriteIconFile(PyObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
 
 static PyMethodDef Icn_methods[] = {
 	{"GetCIcon", (PyCFunction)Icn_GetCIcon, 1,
-	 PyDoc_STR("(SInt16 iconID) -> (CIconHandle _rv)")},
+	 "(SInt16 iconID) -> (CIconHandle _rv)"},
 	{"PlotCIcon", (PyCFunction)Icn_PlotCIcon, 1,
-	 PyDoc_STR("(Rect theRect, CIconHandle theIcon) -> None")},
+	 "(Rect theRect, CIconHandle theIcon) -> None"},
 	{"DisposeCIcon", (PyCFunction)Icn_DisposeCIcon, 1,
-	 PyDoc_STR("(CIconHandle theIcon) -> None")},
+	 "(CIconHandle theIcon) -> None"},
 	{"GetIcon", (PyCFunction)Icn_GetIcon, 1,
-	 PyDoc_STR("(SInt16 iconID) -> (Handle _rv)")},
+	 "(SInt16 iconID) -> (Handle _rv)"},
 	{"PlotIcon", (PyCFunction)Icn_PlotIcon, 1,
-	 PyDoc_STR("(Rect theRect, Handle theIcon) -> None")},
+	 "(Rect theRect, Handle theIcon) -> None"},
 	{"PlotIconID", (PyCFunction)Icn_PlotIconID, 1,
-	 PyDoc_STR("(Rect theRect, IconAlignmentType align, IconTransformType transform, SInt16 theResID) -> None")},
+	 "(Rect theRect, IconAlignmentType align, IconTransformType transform, SInt16 theResID) -> None"},
 	{"NewIconSuite", (PyCFunction)Icn_NewIconSuite, 1,
-	 PyDoc_STR("() -> (IconSuiteRef theIconSuite)")},
+	 "() -> (IconSuiteRef theIconSuite)"},
 	{"AddIconToSuite", (PyCFunction)Icn_AddIconToSuite, 1,
-	 PyDoc_STR("(Handle theIconData, IconSuiteRef theSuite, ResType theType) -> None")},
+	 "(Handle theIconData, IconSuiteRef theSuite, ResType theType) -> None"},
 	{"GetIconFromSuite", (PyCFunction)Icn_GetIconFromSuite, 1,
-	 PyDoc_STR("(IconSuiteRef theSuite, ResType theType) -> (Handle theIconData)")},
+	 "(IconSuiteRef theSuite, ResType theType) -> (Handle theIconData)"},
 	{"GetIconSuite", (PyCFunction)Icn_GetIconSuite, 1,
-	 PyDoc_STR("(SInt16 theResID, IconSelectorValue selector) -> (IconSuiteRef theIconSuite)")},
+	 "(SInt16 theResID, IconSelectorValue selector) -> (IconSuiteRef theIconSuite)"},
 	{"DisposeIconSuite", (PyCFunction)Icn_DisposeIconSuite, 1,
-	 PyDoc_STR("(IconSuiteRef theIconSuite, Boolean disposeData) -> None")},
+	 "(IconSuiteRef theIconSuite, Boolean disposeData) -> None"},
 	{"PlotIconSuite", (PyCFunction)Icn_PlotIconSuite, 1,
-	 PyDoc_STR("(Rect theRect, IconAlignmentType align, IconTransformType transform, IconSuiteRef theIconSuite) -> None")},
+	 "(Rect theRect, IconAlignmentType align, IconTransformType transform, IconSuiteRef theIconSuite) -> None"},
 	{"LoadIconCache", (PyCFunction)Icn_LoadIconCache, 1,
-	 PyDoc_STR("(Rect theRect, IconAlignmentType align, IconTransformType transform, IconCacheRef theIconCache) -> None")},
+	 "(Rect theRect, IconAlignmentType align, IconTransformType transform, IconCacheRef theIconCache) -> None"},
 	{"GetLabel", (PyCFunction)Icn_GetLabel, 1,
-	 PyDoc_STR("(SInt16 labelNumber, Str255 labelString) -> (RGBColor labelColor)")},
+	 "(SInt16 labelNumber, Str255 labelString) -> (RGBColor labelColor)"},
 	{"PtInIconID", (PyCFunction)Icn_PtInIconID, 1,
-	 PyDoc_STR("(Point testPt, Rect iconRect, IconAlignmentType align, SInt16 iconID) -> (Boolean _rv)")},
+	 "(Point testPt, Rect iconRect, IconAlignmentType align, SInt16 iconID) -> (Boolean _rv)"},
 	{"PtInIconSuite", (PyCFunction)Icn_PtInIconSuite, 1,
-	 PyDoc_STR("(Point testPt, Rect iconRect, IconAlignmentType align, IconSuiteRef theIconSuite) -> (Boolean _rv)")},
+	 "(Point testPt, Rect iconRect, IconAlignmentType align, IconSuiteRef theIconSuite) -> (Boolean _rv)"},
 	{"RectInIconID", (PyCFunction)Icn_RectInIconID, 1,
-	 PyDoc_STR("(Rect testRect, Rect iconRect, IconAlignmentType align, SInt16 iconID) -> (Boolean _rv)")},
+	 "(Rect testRect, Rect iconRect, IconAlignmentType align, SInt16 iconID) -> (Boolean _rv)"},
 	{"RectInIconSuite", (PyCFunction)Icn_RectInIconSuite, 1,
-	 PyDoc_STR("(Rect testRect, Rect iconRect, IconAlignmentType align, IconSuiteRef theIconSuite) -> (Boolean _rv)")},
+	 "(Rect testRect, Rect iconRect, IconAlignmentType align, IconSuiteRef theIconSuite) -> (Boolean _rv)"},
 	{"IconIDToRgn", (PyCFunction)Icn_IconIDToRgn, 1,
-	 PyDoc_STR("(RgnHandle theRgn, Rect iconRect, IconAlignmentType align, SInt16 iconID) -> None")},
+	 "(RgnHandle theRgn, Rect iconRect, IconAlignmentType align, SInt16 iconID) -> None"},
 	{"IconSuiteToRgn", (PyCFunction)Icn_IconSuiteToRgn, 1,
-	 PyDoc_STR("(RgnHandle theRgn, Rect iconRect, IconAlignmentType align, IconSuiteRef theIconSuite) -> None")},
+	 "(RgnHandle theRgn, Rect iconRect, IconAlignmentType align, IconSuiteRef theIconSuite) -> None"},
 	{"SetSuiteLabel", (PyCFunction)Icn_SetSuiteLabel, 1,
-	 PyDoc_STR("(IconSuiteRef theSuite, SInt16 theLabel) -> None")},
+	 "(IconSuiteRef theSuite, SInt16 theLabel) -> None"},
 	{"GetSuiteLabel", (PyCFunction)Icn_GetSuiteLabel, 1,
-	 PyDoc_STR("(IconSuiteRef theSuite) -> (SInt16 _rv)")},
+	 "(IconSuiteRef theSuite) -> (SInt16 _rv)"},
 	{"PlotIconHandle", (PyCFunction)Icn_PlotIconHandle, 1,
-	 PyDoc_STR("(Rect theRect, IconAlignmentType align, IconTransformType transform, Handle theIcon) -> None")},
+	 "(Rect theRect, IconAlignmentType align, IconTransformType transform, Handle theIcon) -> None"},
 	{"PlotSICNHandle", (PyCFunction)Icn_PlotSICNHandle, 1,
-	 PyDoc_STR("(Rect theRect, IconAlignmentType align, IconTransformType transform, Handle theSICN) -> None")},
+	 "(Rect theRect, IconAlignmentType align, IconTransformType transform, Handle theSICN) -> None"},
 	{"PlotCIconHandle", (PyCFunction)Icn_PlotCIconHandle, 1,
-	 PyDoc_STR("(Rect theRect, IconAlignmentType align, IconTransformType transform, CIconHandle theCIcon) -> None")},
+	 "(Rect theRect, IconAlignmentType align, IconTransformType transform, CIconHandle theCIcon) -> None"},
+
+#if !TARGET_API_MAC_CARBON
+	{"IconServicesTerminate", (PyCFunction)Icn_IconServicesTerminate, 1,
+	 "() -> None"},
+#endif
 	{"IconRefToIconFamily", (PyCFunction)Icn_IconRefToIconFamily, 1,
-	 PyDoc_STR("(IconRef theIconRef, IconSelectorValue whichIcons) -> (IconFamilyHandle iconFamily)")},
+	 "(IconRef theIconRef, IconSelectorValue whichIcons) -> (IconFamilyHandle iconFamily)"},
 	{"IconFamilyToIconSuite", (PyCFunction)Icn_IconFamilyToIconSuite, 1,
-	 PyDoc_STR("(IconFamilyHandle iconFamily, IconSelectorValue whichIcons) -> (IconSuiteRef iconSuite)")},
+	 "(IconFamilyHandle iconFamily, IconSelectorValue whichIcons) -> (IconSuiteRef iconSuite)"},
 	{"IconSuiteToIconFamily", (PyCFunction)Icn_IconSuiteToIconFamily, 1,
-	 PyDoc_STR("(IconSuiteRef iconSuite, IconSelectorValue whichIcons) -> (IconFamilyHandle iconFamily)")},
+	 "(IconSuiteRef iconSuite, IconSelectorValue whichIcons) -> (IconFamilyHandle iconFamily)"},
 	{"SetIconFamilyData", (PyCFunction)Icn_SetIconFamilyData, 1,
-	 PyDoc_STR("(IconFamilyHandle iconFamily, OSType iconType, Handle h) -> None")},
+	 "(IconFamilyHandle iconFamily, OSType iconType, Handle h) -> None"},
 	{"GetIconFamilyData", (PyCFunction)Icn_GetIconFamilyData, 1,
-	 PyDoc_STR("(IconFamilyHandle iconFamily, OSType iconType, Handle h) -> None")},
+	 "(IconFamilyHandle iconFamily, OSType iconType, Handle h) -> None"},
 	{"GetIconRefOwners", (PyCFunction)Icn_GetIconRefOwners, 1,
-	 PyDoc_STR("(IconRef theIconRef) -> (UInt16 owners)")},
+	 "(IconRef theIconRef) -> (UInt16 owners)"},
 	{"AcquireIconRef", (PyCFunction)Icn_AcquireIconRef, 1,
-	 PyDoc_STR("(IconRef theIconRef) -> None")},
+	 "(IconRef theIconRef) -> None"},
 	{"ReleaseIconRef", (PyCFunction)Icn_ReleaseIconRef, 1,
-	 PyDoc_STR("(IconRef theIconRef) -> None")},
+	 "(IconRef theIconRef) -> None"},
 	{"GetIconRefFromFile", (PyCFunction)Icn_GetIconRefFromFile, 1,
-	 PyDoc_STR("(FSSpec theFile) -> (IconRef theIconRef, SInt16 theLabel)")},
+	 "(FSSpec theFile) -> (IconRef theIconRef, SInt16 theLabel)"},
 	{"GetIconRef", (PyCFunction)Icn_GetIconRef, 1,
-	 PyDoc_STR("(SInt16 vRefNum, OSType creator, OSType iconType) -> (IconRef theIconRef)")},
+	 "(SInt16 vRefNum, OSType creator, OSType iconType) -> (IconRef theIconRef)"},
 	{"GetIconRefFromFolder", (PyCFunction)Icn_GetIconRefFromFolder, 1,
-	 PyDoc_STR("(SInt16 vRefNum, SInt32 parentFolderID, SInt32 folderID, SInt8 attributes, SInt8 accessPrivileges) -> (IconRef theIconRef)")},
+	 "(SInt16 vRefNum, SInt32 parentFolderID, SInt32 folderID, SInt8 attributes, SInt8 accessPrivileges) -> (IconRef theIconRef)"},
 	{"RegisterIconRefFromIconFamily", (PyCFunction)Icn_RegisterIconRefFromIconFamily, 1,
-	 PyDoc_STR("(OSType creator, OSType iconType, IconFamilyHandle iconFamily) -> (IconRef theIconRef)")},
+	 "(OSType creator, OSType iconType, IconFamilyHandle iconFamily) -> (IconRef theIconRef)"},
 	{"RegisterIconRefFromResource", (PyCFunction)Icn_RegisterIconRefFromResource, 1,
-	 PyDoc_STR("(OSType creator, OSType iconType, FSSpec resourceFile, SInt16 resourceID) -> (IconRef theIconRef)")},
+	 "(OSType creator, OSType iconType, FSSpec resourceFile, SInt16 resourceID) -> (IconRef theIconRef)"},
 	{"UnregisterIconRef", (PyCFunction)Icn_UnregisterIconRef, 1,
-	 PyDoc_STR("(OSType creator, OSType iconType) -> None")},
+	 "(OSType creator, OSType iconType) -> None"},
 	{"UpdateIconRef", (PyCFunction)Icn_UpdateIconRef, 1,
-	 PyDoc_STR("(IconRef theIconRef) -> None")},
+	 "(IconRef theIconRef) -> None"},
 	{"OverrideIconRefFromResource", (PyCFunction)Icn_OverrideIconRefFromResource, 1,
-	 PyDoc_STR("(IconRef theIconRef, FSSpec resourceFile, SInt16 resourceID) -> None")},
+	 "(IconRef theIconRef, FSSpec resourceFile, SInt16 resourceID) -> None"},
 	{"OverrideIconRef", (PyCFunction)Icn_OverrideIconRef, 1,
-	 PyDoc_STR("(IconRef oldIconRef, IconRef newIconRef) -> None")},
+	 "(IconRef oldIconRef, IconRef newIconRef) -> None"},
 	{"RemoveIconRefOverride", (PyCFunction)Icn_RemoveIconRefOverride, 1,
-	 PyDoc_STR("(IconRef theIconRef) -> None")},
+	 "(IconRef theIconRef) -> None"},
 	{"CompositeIconRef", (PyCFunction)Icn_CompositeIconRef, 1,
-	 PyDoc_STR("(IconRef backgroundIconRef, IconRef foregroundIconRef) -> (IconRef compositeIconRef)")},
+	 "(IconRef backgroundIconRef, IconRef foregroundIconRef) -> (IconRef compositeIconRef)"},
 	{"IsIconRefComposite", (PyCFunction)Icn_IsIconRefComposite, 1,
-	 PyDoc_STR("(IconRef compositeIconRef) -> (IconRef backgroundIconRef, IconRef foregroundIconRef)")},
+	 "(IconRef compositeIconRef) -> (IconRef backgroundIconRef, IconRef foregroundIconRef)"},
 	{"IsValidIconRef", (PyCFunction)Icn_IsValidIconRef, 1,
-	 PyDoc_STR("(IconRef theIconRef) -> (Boolean _rv)")},
+	 "(IconRef theIconRef) -> (Boolean _rv)"},
 	{"PlotIconRef", (PyCFunction)Icn_PlotIconRef, 1,
-	 PyDoc_STR("(Rect theRect, IconAlignmentType align, IconTransformType transform, IconServicesUsageFlags theIconServicesUsageFlags, IconRef theIconRef) -> None")},
+	 "(Rect theRect, IconAlignmentType align, IconTransformType transform, IconServicesUsageFlags theIconServicesUsageFlags, IconRef theIconRef) -> None"},
 	{"PtInIconRef", (PyCFunction)Icn_PtInIconRef, 1,
-	 PyDoc_STR("(Point testPt, Rect iconRect, IconAlignmentType align, IconServicesUsageFlags theIconServicesUsageFlags, IconRef theIconRef) -> (Boolean _rv)")},
+	 "(Point testPt, Rect iconRect, IconAlignmentType align, IconServicesUsageFlags theIconServicesUsageFlags, IconRef theIconRef) -> (Boolean _rv)"},
 	{"RectInIconRef", (PyCFunction)Icn_RectInIconRef, 1,
-	 PyDoc_STR("(Rect testRect, Rect iconRect, IconAlignmentType align, IconServicesUsageFlags iconServicesUsageFlags, IconRef theIconRef) -> (Boolean _rv)")},
+	 "(Rect testRect, Rect iconRect, IconAlignmentType align, IconServicesUsageFlags iconServicesUsageFlags, IconRef theIconRef) -> (Boolean _rv)"},
 	{"IconRefToRgn", (PyCFunction)Icn_IconRefToRgn, 1,
-	 PyDoc_STR("(RgnHandle theRgn, Rect iconRect, IconAlignmentType align, IconServicesUsageFlags iconServicesUsageFlags, IconRef theIconRef) -> None")},
+	 "(RgnHandle theRgn, Rect iconRect, IconAlignmentType align, IconServicesUsageFlags iconServicesUsageFlags, IconRef theIconRef) -> None"},
 	{"GetIconSizesFromIconRef", (PyCFunction)Icn_GetIconSizesFromIconRef, 1,
-	 PyDoc_STR("(IconSelectorValue iconSelectorInput, IconServicesUsageFlags iconServicesUsageFlags, IconRef theIconRef) -> (IconSelectorValue iconSelectorOutputPtr)")},
+	 "(IconSelectorValue iconSelectorInput, IconServicesUsageFlags iconServicesUsageFlags, IconRef theIconRef) -> (IconSelectorValue iconSelectorOutputPtr)"},
 	{"FlushIconRefs", (PyCFunction)Icn_FlushIconRefs, 1,
-	 PyDoc_STR("(OSType creator, OSType iconType) -> None")},
+	 "(OSType creator, OSType iconType) -> None"},
 	{"FlushIconRefsByVolume", (PyCFunction)Icn_FlushIconRefsByVolume, 1,
-	 PyDoc_STR("(SInt16 vRefNum) -> None")},
+	 "(SInt16 vRefNum) -> None"},
 	{"SetCustomIconsEnabled", (PyCFunction)Icn_SetCustomIconsEnabled, 1,
-	 PyDoc_STR("(SInt16 vRefNum, Boolean enableCustomIcons) -> None")},
+	 "(SInt16 vRefNum, Boolean enableCustomIcons) -> None"},
 	{"GetCustomIconsEnabled", (PyCFunction)Icn_GetCustomIconsEnabled, 1,
-	 PyDoc_STR("(SInt16 vRefNum) -> (Boolean customIconsEnabled)")},
+	 "(SInt16 vRefNum) -> (Boolean customIconsEnabled)"},
 	{"IsIconRefMaskEmpty", (PyCFunction)Icn_IsIconRefMaskEmpty, 1,
-	 PyDoc_STR("(IconRef iconRef) -> (Boolean _rv)")},
+	 "(IconRef iconRef) -> (Boolean _rv)"},
+
+#if TARGET_API_MAC_CARBON
 	{"GetIconRefVariant", (PyCFunction)Icn_GetIconRefVariant, 1,
-	 PyDoc_STR("(IconRef inIconRef, OSType inVariant) -> (IconRef _rv, IconTransformType outTransform)")},
+	 "(IconRef inIconRef, OSType inVariant) -> (IconRef _rv, IconTransformType outTransform)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"RegisterIconRefFromIconFile", (PyCFunction)Icn_RegisterIconRefFromIconFile, 1,
-	 PyDoc_STR("(OSType creator, OSType iconType, FSSpec iconFile) -> (IconRef theIconRef)")},
+	 "(OSType creator, OSType iconType, FSSpec iconFile) -> (IconRef theIconRef)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"ReadIconFile", (PyCFunction)Icn_ReadIconFile, 1,
-	 PyDoc_STR("(FSSpec iconFile) -> (IconFamilyHandle iconFamily)")},
+	 "(FSSpec iconFile) -> (IconFamilyHandle iconFamily)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"WriteIconFile", (PyCFunction)Icn_WriteIconFile, 1,
-	 PyDoc_STR("(IconFamilyHandle iconFamily, FSSpec iconFile) -> None")},
+	 "(IconFamilyHandle iconFamily, FSSpec iconFile) -> None"},
+#endif
 	{NULL, NULL, 0}
 };
 

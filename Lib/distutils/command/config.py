@@ -9,7 +9,7 @@ configure-like tasks: "try to compile this C code", or "figure out where
 this header file lives".
 """
 
-# This module should be kept compatible with Python 1.5.2.
+# created 2000/05/29, Greg Ward
 
 __revision__ = "$Id$"
 
@@ -17,8 +17,7 @@ import sys, os, string, re
 from types import *
 from distutils.core import Command
 from distutils.errors import DistutilsExecError
-from distutils.sysconfig import customize_compiler
-from distutils import log
+
 
 LANG_EXT = {'c': '.c',
             'c++': '.cxx'}
@@ -104,8 +103,9 @@ class config (Command):
         from distutils.ccompiler import CCompiler, new_compiler
         if not isinstance(self.compiler, CCompiler):
             self.compiler = new_compiler(compiler=self.compiler,
-                                         dry_run=self.dry_run, force=1)
-            customize_compiler(self.compiler)
+                                         verbose=self.noisy,
+                                         dry_run=self.dry_run,
+                                         force=1)
             if self.include_dirs:
                 self.compiler.set_include_dirs(self.include_dirs)
             if self.libraries:
@@ -150,11 +150,9 @@ class config (Command):
         prog = os.path.splitext(os.path.basename(src))[0]
         self.compiler.link_executable([obj], prog,
                                       libraries=libraries,
-                                      library_dirs=library_dirs,
-                                      target_lang=lang)
+                                      library_dirs=library_dirs)
 
-        if self.compiler.exe_extension is not None:
-            prog = prog + self.compiler.exe_extension
+        prog = prog + self.compiler.exe_extension
         self.temp_files.append(prog)
 
         return (src, obj, prog)
@@ -163,7 +161,7 @@ class config (Command):
         if not filenames:
             filenames = self.temp_files
             self.temp_files = []
-        log.info("removing: %s", string.join(filenames))
+        self.announce("removing: " + string.join(filenames))
         for filename in filenames:
             try:
                 os.remove(filename)
@@ -241,7 +239,7 @@ class config (Command):
         except CompileError:
             ok = 0
 
-        log.info(ok and "success!" or "failure.")
+        self.announce(ok and "success!" or "failure.")
         self._clean()
         return ok
 
@@ -262,7 +260,7 @@ class config (Command):
         except (CompileError, LinkError):
             ok = 0
 
-        log.info(ok and "success!" or "failure.")
+        self.announce(ok and "success!" or "failure.")
         self._clean()
         return ok
 
@@ -284,7 +282,7 @@ class config (Command):
         except (CompileError, LinkError, DistutilsExecError):
             ok = 0
 
-        log.info(ok and "success!" or "failure.")
+        self.announce(ok and "success!" or "failure.")
         self._clean()
         return ok
 

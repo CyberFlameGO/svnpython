@@ -3,8 +3,7 @@ import unittest
 import UserList
 import weakref
 
-from test import test_support
-from sets import Set
+import test_support
 
 
 class C:
@@ -47,15 +46,6 @@ class ReferencesTestCase(TestBase):
         self.check_basic_ref(create_bound_method)
         self.check_basic_ref(create_unbound_method)
 
-        # Just make sure the tp_repr handler doesn't raise an exception.
-        # Live reference:
-        o = C()
-        wr = weakref.ref(o)
-        `wr`
-        # Dead reference:
-        del o
-        `wr`
-
     def test_basic_callback(self):
         self.check_basic_callback(C)
         self.check_basic_callback(create_function)
@@ -75,7 +65,8 @@ class ReferencesTestCase(TestBase):
                      "callback not called the right number of times")
 
     def test_multiple_selfref_callbacks(self):
-        # Make sure all references are invalidated before callbacks are called
+        """Make sure all references are invalidated before callbacks
+        are called."""
         #
         # What's important here is that we're using the first
         # reference in the callback invoked on the second reference
@@ -175,13 +166,6 @@ class ReferencesTestCase(TestBase):
         L2 = UserList.UserList(L)
         p2 = weakref.proxy(L2)
         self.assertEqual(p, p2)
-        ## self.assertEqual(`L2`, `p2`)
-        L3 = UserList.UserList(range(10))
-        p3 = weakref.proxy(L3)
-        self.assertEqual(L3[:], p3[:])
-        self.assertEqual(L3[5:], p3[5:])
-        self.assertEqual(L3[:5], p3[:5])
-        self.assertEqual(L3[2:5], p3[2:5])
 
     def test_callable_proxy(self):
         o = Callable()
@@ -262,7 +246,7 @@ class ReferencesTestCase(TestBase):
         self.assert_(1.0 + p == 3.0)  # this used to SEGV
 
     def test_callbacks_protected(self):
-        # Callbacks protected from already-set exceptions?
+        """Callbacks protected from already-set exceptions?"""
         # Regression test for SF bug #478534.
         class BogusError(Exception):
             pass
@@ -341,7 +325,9 @@ class MappingTestCase(TestBase):
                          "wrong object returned by weak dict!")
         items1 = dict.items()
         items2 = dict.copy().items()
-        self.assert_(Set(items1) == Set(items2),
+        items1.sort()
+        items2.sort()
+        self.assert_(items1 == items2,
                      "cloning of weak-keyed dictionary did not work!")
         del items1, items2
         self.assert_(len(dict) == self.COUNT)
@@ -575,29 +561,12 @@ class MappingTestCase(TestBase):
         self.assertEqual(len(d), 0)
         self.assertEqual(count, 2)
 
-from test_userdict import TestMappingProtocol
-
-class WeakValueDictionaryTestCase(TestMappingProtocol):
-    """Check that WeakValueDictionary class conforms to the mapping protocol"""
-    __ref = {"key1":Object(1), "key2":Object(2), "key3":Object(3)}
-    _tested_class = weakref.WeakValueDictionary
-    def _reference(self):
-        return self.__ref.copy()
-
-class WeakKeyDictionaryTestCase(TestMappingProtocol):
-    """Check that WeakKeyDictionary class conforms to the mapping protocol"""
-    __ref = {Object("key1"):1, Object("key2"):2, Object("key3"):3}
-    _tested_class = weakref.WeakKeyDictionary
-    def _reference(self):
-        return self.__ref.copy()
-
 def test_main():
-    test_support.run_unittest(
-        ReferencesTestCase,
-        MappingTestCase,
-        WeakValueDictionaryTestCase,
-        WeakKeyDictionaryTestCase
-    )
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+    suite.addTest(loader.loadTestsFromTestCase(ReferencesTestCase))
+    suite.addTest(loader.loadTestsFromTestCase(MappingTestCase))
+    test_support.run_suite(suite)
 
 
 if __name__ == "__main__":

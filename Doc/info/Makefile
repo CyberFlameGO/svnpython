@@ -34,34 +34,34 @@ check-emacs-version:
 	fi
 
 python$(VERSION)-api.info:	../api/api.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 python$(VERSION)-ext.info:	../ext/ext.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 python$(VERSION)-lib.info:	../lib/lib.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 # Not built by default; the conversion doesn't really handle it well.
 python$(VERSION)-mac.info:	../mac/mac.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 python$(VERSION)-ref.info:	../ref/ref.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 python$(VERSION)-tut.info:	../tut/tut.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 # Not built by default; the conversion doesn't handle it at all.
 python$(VERSION)-doc.info:	../doc/doc.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 python$(VERSION)-dist.info:	../dist/dist.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 # Not built by default; the conversion chokes on two @end multitable's
 python$(VERSION)-inst.info:	../inst/inst.tex $(SCRIPTS)
-	EMACS=$(EMACS) $(MKINFO) $< $*.texi $@
+	EMACS=$(EMACS) $(MKINFO) $< $@
 
 clean:
 	rm -f *.texi~ *.texi

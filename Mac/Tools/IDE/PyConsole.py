@@ -10,7 +10,6 @@ import traceback
 import MacOS
 import MacPrefs
 from Carbon import Qd
-import EasyDialogs
 import PyInteractive
 
 if not hasattr(sys, 'ps1'):
@@ -78,45 +77,21 @@ class ConsoleTextWidget(W.EditText):
 				text = string.join(string.split(text, "\r"), "\n")
 				if hasattr(MacOS, 'EnableAppswitch'):
 					saveyield = MacOS.EnableAppswitch(0)
-				self._scriptDone = False
-				if sys.platform == "darwin":
-					# see identical construct in PyEdit.py
-					from threading import Thread
-					t = Thread(target=self._userCancelledMonitor,
-							name="UserCancelledMonitor")
-					t.start()
-				try:
-					self.pyinteractive.executeline(text, self, self._namespace)
-				finally:
-					self._scriptDone = True
+				self.pyinteractive.executeline(text, self, self._namespace)
 				if hasattr(MacOS, 'EnableAppswitch'):
 					MacOS.EnableAppswitch(saveyield)
 				selstart, selend = self.getselection()
 				self._inputstart = selstart
 	
-	def _userCancelledMonitor(self):
-		# XXX duplicate code from PyEdit.py
-		import time, os
-		from signal import SIGINT
-		from Carbon import Evt
-		while not self._scriptDone:
-			if Evt.CheckEventQueueForUserCancel():
-				# Send a SIGINT signal to ourselves.
-				# This gets delivered to the main thread,
-				# cancelling the running script.
-				os.kill(os.getpid(), SIGINT)
-				break
-			time.sleep(0.25)
-	
 	def domenu_save_as(self, *args):
-		filename = EasyDialogs.AskFileForSave(message='Save console text as:', 
-			savedFileName='console.txt')
-		if not filename:
+		import macfs
+		fss, ok = macfs.StandardPutFile('Save console text as:', 'console.txt')
+		if not ok:
 			return
-		f = open(filename, 'wb')
+		f = open(fss.as_pathname(), 'wb')
 		f.write(self.get())
 		f.close()
-		MacOS.SetCreatorAndType(filename, W._signature, 'TEXT')
+		fss.SetCreatorType(W._signature, 'TEXT')
 	
 	def write(self, text):
 		self._buf = self._buf + text
@@ -133,8 +108,8 @@ class ConsoleTextWidget(W.EditText):
 		self._buf = ""
 		self.ted.WEClearUndo()
 		self.updatescrollbars()
-		if self._parentwindow.wid.GetWindowPort().QDIsPortBuffered():
-			self._parentwindow.wid.GetWindowPort().QDFlushPortBuffer(None)
+		if Qd.QDIsPortBuffered(self._parentwindow.wid):
+			Qd.QDFlushPortBuffer(self._parentwindow.wid, None)
 	
 	def selection_ok(self):
 		selstart, selend = self.getselection()
@@ -260,28 +235,20 @@ class PyConsole(W.Window):
 		prefs.console.tabsettings = self.consoletext.gettabsettings()
 		prefs.save()
 
-	def getselectedtext(self):
-		return self.consoletext.getselectedtext()
-	
+
 class OutputTextWidget(W.EditText):
 	
 	def domenu_save_as(self, *args):
 		title = self._parentwindow.gettitle()
-		filename = EasyDialogs.AskFileForSave(message='Save %s text as:' % title, 
-			savedFileName=title + '.txt')
-		if not filename:
+		import macfs
+		fss, ok = macfs.StandardPutFile('Save %s text as:' % title, title + '.txt')
+		if not ok:
 			return
-		f = open(filename, 'wb')
+		f = open(fss.as_pathname(), 'wb')
 		f.write(self.get())
 		f.close()
-		MacOS.SetCreatorAndType(filename, W._signature, 'TEXT')
+		fss.SetCreatorType(W._signature, 'TEXT')
 	
-	def domenu_cut(self, *args):
-		self.domenu_copy(*args)
-	
-	def domenu_clear(self, *args):
-		self.set('')
-
 
 class PyOutput:
 	
@@ -333,8 +300,8 @@ class PyOutput:
 		self._buf = ""
 		self.w.outputtext.updatescrollbars()
 		self.w.outputtext.ted.WEFeatureFlag(WASTEconst.weFReadOnly, 1)
-		if self.w.wid.GetWindowPort().QDIsPortBuffered():
-			self.w.wid.GetWindowPort().QDFlushPortBuffer(None)
+		if Qd.QDIsPortBuffered(self.w.wid):
+			Qd.QDFlushPortBuffer(self.w.wid, None)
 	
 	def show(self):
 		if self.closed:

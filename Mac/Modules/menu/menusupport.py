@@ -36,6 +36,7 @@ MenuItemAttributes = Type("MenuItemAttributes", "l")
 unsigned_char = Type('unsigned char', 'b')
 FMFontFamily = Type("FMFontFamily", "h")
 FMFontStyle = Type("FMFontStyle", "h")
+CFStringRef = OpaqueByValueType("CFStringRef", "CFStringRefObj")
 UniChar = Type("UniChar", "h")
 
 includestuff = includestuff + """
@@ -83,6 +84,8 @@ PyObject *OptMenuObj_New(MenuRef itself)
 /* Alternative version of MenuObj_Convert, which returns NULL for a None argument */
 int OptMenuObj_Convert(PyObject *v, MenuRef *p_itself)
 {
+	PyObject *tmp;
+	
 	if ( v == Py_None ) {
 		*p_itself = NULL;
 		return 1;
@@ -96,7 +99,7 @@ initstuff = initstuff + """
 	PyMac_INIT_TOOLBOX_OBJECT_CONVERT(MenuHandle, MenuObj_Convert);
 """
 
-class MyObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+class MyObjectDefinition(GlobalObjectDefinition):
 	pass
 
 # Create the generator groups and link them

@@ -25,8 +25,8 @@ class FileDialog:
     Usage:
 
         d = FileDialog(master)
-        fname = d.go(dir_or_file, pattern, default, key)
-        if fname is None: ...canceled...
+        file = d.go(dir_or_file, pattern, default, key)
+        if file is None: ...canceled...
         else: ...open file...
 
     All arguments to go() are optional.

@@ -1,4 +1,4 @@
-# regression test for SAX 2.0            -*- coding: iso-8859-1 -*-
+# regression test for SAX 2.0
 # $Id$
 
 from xml.sax import make_parser, ContentHandler, \
@@ -8,28 +8,27 @@ try:
 except SAXReaderNotAvailable:
     # don't try to test this module if we cannot create a parser
     raise ImportError("no XML parsers available")
-from xml.sax.saxutils import XMLGenerator, escape, unescape, quoteattr, \
-                             XMLFilterBase
+from xml.sax.saxutils import XMLGenerator, escape, quoteattr, XMLFilterBase
 from xml.sax.expatreader import create_parser
 from xml.sax.xmlreader import InputSource, AttributesImpl, AttributesNSImpl
 from cStringIO import StringIO
-from test.test_support import verify, verbose, TestFailed, findfile
+from test_support import verify, verbose, TestFailed, findfile
 import os
 
 # ===== Utilities
 
 tests = 0
-failures = []
+fails = 0
 
 def confirm(outcome, name):
-    global tests
+    global tests, fails
 
     tests = tests + 1
     if outcome:
-        if verbose:
-            print "Failed", name
+        print "Passed", name
     else:
-        failures.append(name)
+        print "Failed", name
+        fails = fails + 1
 
 def test_make_parser2():
     try:
@@ -70,20 +69,6 @@ def test_escape_all():
 
 def test_escape_extra():
     return escape("Hei på deg", {"å" : "&aring;"}) == "Hei p&aring; deg"
-
-# ===== unescape
-
-def test_unescape_basic():
-    return unescape("Donald Duck &amp; Co") == "Donald Duck & Co"
-
-def test_unescape_all():
-    return unescape("&lt;Donald Duck &amp; Co&gt;") == "<Donald Duck & Co>"
-
-def test_unescape_extra():
-    return unescape("Hei på deg", {"å" : "&aring;"}) == "Hei p&aring; deg"
-
-def test_unescape_amp_extra():
-    return unescape("&amp;foo;", {"&foo;": "splat"}) == "&foo;"
 
 # ===== quoteattr
 
@@ -352,7 +337,7 @@ def test_expat_nsattrs_wattr():
 
     return attrs.getLength() == 1 and \
            attrs.getNames() == [(ns_uri, "attr")] and \
-           (attrs.getQNames() == [] or attrs.getQNames() == ["ns:attr"]) and \
+           attrs.getQNames() == ["ns:attr"] and \
            len(attrs) == 1 and \
            attrs.has_key((ns_uri, "attr")) and \
            attrs.keys() == [(ns_uri, "attr")] and \
@@ -362,6 +347,70 @@ def test_expat_nsattrs_wattr():
            attrs.values() == ["val"] and \
            attrs.getValue((ns_uri, "attr")) == "val" and \
            attrs[(ns_uri, "attr")] == "val"
+
+class ElemGatherer(ContentHandler):
+    def __init__(self):
+        self.events = []
+    def startElementNS(self, pair, qname, attrs):
+        self.events.append(('start', pair, qname))
+    def endElementNS(self, pair, qname):
+        self.events.append(('end', pair, qname))
+
+def check_expat_nsdecl(text, expected):
+    parser = create_parser(1)
+    handler = ElemGatherer()
+    parser.setContentHandler(handler)
+    parser.feed(text)
+    parser.close()
+    if verbose and handler.events != expected:
+        from pprint import pprint
+        print "Expected:"
+        pprint(expected)
+        print "Received:"
+        pprint(handler.events)
+    return handler.events == expected
+
+def test_expat_nsdecl_single():
+    return check_expat_nsdecl(
+        "<abc xmlns='http://xml.python.org/'></abc>", [
+            ("start", ("http://xml.python.org/", "abc"), "abc"),
+            ("end", ("http://xml.python.org/", "abc"), "abc"),
+            ])
+
+def test_expat_nsdecl_pair_same():
+    # XXX This shows where xml.sax.expatreader can use the wrong
+    # prefix when more than one is in scope for a particular URI.
+    # We still want to exercise this code since previous versions got
+    # the namespace handling wrong in more severe ways (exceptions
+    # that should not have happened).
+    return check_expat_nsdecl(
+        "<abc xmlns='http://xml.python.org/'"
+        "     xmlns:foo='http://xml.python.org/'>"
+        "<foo:def/>"
+        "<ghi/>"
+        "</abc>", [
+            ("start", ("http://xml.python.org/", "abc"), "foo:abc"),
+            ("start", ("http://xml.python.org/", "def"), "foo:def"),
+            ("end", ("http://xml.python.org/", "def"), "foo:def"),
+            ("start", ("http://xml.python.org/", "ghi"), "foo:ghi"),
+            ("end", ("http://xml.python.org/", "ghi"), "foo:ghi"),
+            ("end", ("http://xml.python.org/", "abc"), "foo:abc"),
+            ])
+
+def test_expat_nsdecl_pair_diff():
+    return check_expat_nsdecl(
+        "<abc xmlns='http://xml.python.org/1'"
+        "     xmlns:foo='http://xml.python.org/2'>"
+        "<foo:def/>"
+        "<ghi/>"
+        "</abc>", [
+            ("start", ("http://xml.python.org/1", "abc"), "abc"),
+            ("start", ("http://xml.python.org/2", "def"), "foo:def"),
+            ("end", ("http://xml.python.org/2", "def"), "foo:def"),
+            ("start", ("http://xml.python.org/1", "ghi"), "ghi"),
+            ("end", ("http://xml.python.org/1", "ghi"), "ghi"),
+            ("end", ("http://xml.python.org/1", "abc"), "abc"),
+            ])
 
 # ===== InputSource support
 
@@ -653,8 +702,6 @@ for (name, value) in items:
     if name[ : 5] == "test_":
         confirm(value(), name)
 
-if verbose:
-    print "%d tests, %d failures" % (tests, len(failures))
-if failures:
-    raise TestFailed("%d of %d tests failed: %s"
-                     % (len(failures), tests, ", ".join(failures)))
+print "%d tests, %d failures" % (tests, fails)
+if fails != 0:
+    raise TestFailed, "%d of %d tests failed" % (fails, tests)

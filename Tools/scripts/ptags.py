@@ -16,8 +16,7 @@ tags = []    # Modified global variable!
 
 def main():
     args = sys.argv[1:]
-    for filename in args:
-        treat_file(filename)
+    for file in args: treat_file(file)
     if tags:
         fp = open('tags', 'w')
         tags.sort()
@@ -27,16 +26,16 @@ def main():
 expr = '^[ \t]*(def|class)[ \t]+([a-zA-Z0-9_]+)[ \t]*[:\(]'
 matcher = re.compile(expr)
 
-def treat_file(filename):
+def treat_file(file):
     try:
-        fp = open(filename, 'r')
+        fp = open(file, 'r')
     except:
-        sys.stderr.write('Cannot open %s\n' % filename)
+        sys.stderr.write('Cannot open %s\n' % file)
         return
-    base = os.path.basename(filename)
+    base = os.path.basename(file)
     if base[-3:] == '.py':
         base = base[:-3]
-    s = base + '\t' + filename + '\t' + '1\n'
+    s = base + '\t' + file + '\t' + '1\n'
     tags.append(s)
     while 1:
         line = fp.readline()
@@ -46,7 +45,7 @@ def treat_file(filename):
         if m:
             content = m.group(0)
             name = m.group(2)
-            s = name + '\t' + filename + '\t/^' + content + '/\n'
+            s = name + '\t' + file + '\t/^' + content + '/\n'
             tags.append(s)
 
 main()

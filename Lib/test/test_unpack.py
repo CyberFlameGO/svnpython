@@ -1,4 +1,4 @@
-from test.test_support import TestFailed, verbose
+from test_support import *
 
 t = (1, 2, 3)
 l = [4, 5, 6]

@@ -3,7 +3,7 @@
 
 #include "Python.h"
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 extern void PyWinFreeze_ExeInit(void);
 extern void PyWinFreeze_ExeTerm(void);
 extern int PyInitFrozenExtensions(void);
@@ -32,12 +32,12 @@ Py_FrozenMain(int argc, char **argv)
 		setbuf(stderr, (char *)NULL);
 	}
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	PyInitFrozenExtensions();
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 	Py_SetProgramName(argv[0]);
 	Py_Initialize();
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	PyWinFreeze_ExeInit();
 #endif
 
@@ -60,7 +60,7 @@ Py_FrozenMain(int argc, char **argv)
 	if (inspect && isatty((int)fileno(stdin)))
 		sts = PyRun_AnyFile(stdin, "<stdin>") != 0;
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	PyWinFreeze_ExeTerm();
 #endif
 	Py_Finalize();

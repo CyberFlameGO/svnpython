@@ -11,10 +11,8 @@ from Carbon import Evt
 from Carbon import Events
 from Carbon import Win
 from Carbon import Windows
-from Carbon import File
-import EasyDialogs
+import macfs
 import sys
-import os
 
 
 def main():
@@ -23,20 +21,17 @@ def main():
 	Qt.EnterMovies()
 	
 	# Get the movie file
-	if len(sys.argv) > 1:
-		filename = sys.argv[1]
-	else:
-		filename = EasyDialogs.AskFileForOpen() # Was: QuickTime.MovieFileType
-	if not filename:
+	fss, ok = macfs.StandardGetFile() # Was: QuickTime.MovieFileType
+	if not ok:
 		sys.exit(0)
 		
 	# Open the window
 	bounds = (175, 75, 175+160, 75+120)
-	theWindow = Win.NewCWindow(bounds, os.path.split(filename)[1], 1, 0, -1, 0, 0)
+	theWindow = Win.NewCWindow(bounds, fss.as_tuple()[2], 1, 0, -1, 0, 0)
 	Qd.SetPort(theWindow)
 	# XXXX Needed? SetGWorld((CGrafPtr)theWindow, nil)
 	
-	playMovieInWindow(theWindow, filename, theWindow.GetWindowPort().GetPortBounds())
+	playMovieInWindow(theWindow, fss, theWindow.GetWindowPort().portRect)
 	
 def playMovieInWindow(theWindow, theFile, movieBox):
 	"""Play a movie in a window"""

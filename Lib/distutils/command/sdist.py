@@ -2,7 +2,7 @@
 
 Implements the Distutils 'sdist' command (create a source distribution)."""
 
-# This module should be kept compatible with Python 1.5.2.
+# created 1999/09/22, Greg Ward
 
 __revision__ = "$Id$"
 
@@ -14,7 +14,6 @@ from distutils import dir_util, dep_util, file_util, archive_util
 from distutils.text_file import TextFile
 from distutils.errors import *
 from distutils.filelist import FileList
-from distutils import log
 
 
 def show_formats ():
@@ -234,17 +233,31 @@ class sdist (Command):
                 self.warn(("manifest template '%s' does not exist " +
                            "(using default file list)") %
                           self.template)
+
             self.filelist.findall()
 
+            # Add default file set to 'files'
             if self.use_defaults:
                 self.add_defaults()
+
+            # Read manifest template if it exists
             if template_exists:
                 self.read_template()
+
+            # Prune away any directories that don't belong in the source
+            # distribution
             if self.prune:
                 self.prune_file_list()
 
+            # File list now complete -- sort it so that higher-level files
+            # come first
             self.filelist.sort()
+
+            # Remove duplicates from the file list
             self.filelist.remove_duplicates()
+
+            # And write complete file list (including default file set) to
+            # the manifest.
             self.write_manifest()
 
         # Don't regenerate the manifest, just read it in.
@@ -308,12 +321,13 @@ class sdist (Command):
 
 
     def read_template (self):
-        """Read and parse manifest template file named by self.template.
 
-        (usually "MANIFEST.in") The parsing and processing is done by
-        'self.filelist', which updates itself accordingly.
+        """Read and parse the manifest template file named by
+        'self.template' (usually "MANIFEST.in").  The parsing and
+        processing is done by 'self.filelist', which updates itself
+        accordingly.
         """
-        log.info("reading manifest template '%s'", self.template)
+        self.announce("reading manifest template '%s'" % self.template)
         template = TextFile(self.template,
                             strip_comments=1,
                             skip_blanks=1,
@@ -370,7 +384,7 @@ class sdist (Command):
         fill in 'self.filelist', the list of files to include in the source
         distribution.
         """
-        log.info("reading manifest file '%s'", self.manifest)
+        self.announce("reading manifest file '%s'" % self.manifest)
         manifest = open(self.manifest)
         while 1:
             line = manifest.readline()
@@ -396,7 +410,8 @@ class sdist (Command):
         # put 'files' there; the 'mkpath()' is just so we don't die
         # if the manifest happens to be empty.
         self.mkpath(base_dir)
-        dir_util.create_tree(base_dir, files, dry_run=self.dry_run)
+        dir_util.create_tree(base_dir, files,
+                             verbose=self.verbose, dry_run=self.dry_run)
 
         # And walk over the list of files, either making a hard link (if
         # os.link exists) to each one that doesn't already exist in its
@@ -413,12 +428,12 @@ class sdist (Command):
             msg = "copying files to %s..." % base_dir
 
         if not files:
-            log.warn("no files to distribute -- empty manifest?")
+            self.warn("no files to distribute -- empty manifest?")
         else:
-            log.info(msg)
+            self.announce(msg)
         for file in files:
             if not os.path.isfile(file):
-                log.warn("'%s' not a regular file -- skipping" % file)
+                self.warn("'%s' not a regular file -- skipping" % file)
             else:
                 dest = os.path.join(base_dir, file)
                 self.copy_file(file, dest, link=link)
@@ -449,7 +464,7 @@ class sdist (Command):
         self.archive_files = archive_files
 
         if not self.keep_temp:
-            dir_util.remove_tree(base_dir, dry_run=self.dry_run)
+            dir_util.remove_tree(base_dir, self.verbose, self.dry_run)
 
     def get_archive_files (self):
         """Return the list of archive files created when the command

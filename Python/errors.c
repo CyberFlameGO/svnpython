@@ -15,7 +15,7 @@ extern char *strerror(int);
 #endif
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 #include "windows.h"
 #include "winbase.h"
 #endif
@@ -258,30 +258,22 @@ PyErr_NoMemory(void)
 }
 
 PyObject *
-PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
+PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
 {
 	PyObject *v;
 	char *s;
 	int i = errno;
-#ifdef PLAN9
-	char errbuf[ERRMAX];
-#endif
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	char *s_buf = NULL;
-	char s_small_buf[28]; /* Room for "Windows Error 0xFFFFFFFF" */
 #endif
 #ifdef EINTR
 	if (i == EINTR && PyErr_CheckSignals())
 		return NULL;
 #endif
-#ifdef PLAN9
-	rerrstr(errbuf, sizeof errbuf);
-	s = errbuf;
-#else
 	if (i == 0)
 		s = "Error"; /* Sometimes errno didn't get set */
 	else
-#ifndef MS_WINDOWS
+#ifndef MS_WIN32
 		s = strerror(i);
 #else
 	{
@@ -306,31 +298,22 @@ PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
 				(LPTSTR) &s_buf,
 				0,	/* size not used */
 				NULL);	/* no args */
-			if (len==0) {
-				/* Only ever seen this in out-of-mem 
-				   situations */
-				sprintf(s_small_buf, "Windows Error 0x%X", i);
-				s = s_small_buf;
-				s_buf = NULL;
-			} else {
-				s = s_buf;
-				/* remove trailing cr/lf and dots */
-				while (len > 0 && (s[len-1] <= ' ' || s[len-1] == '.'))
-					s[--len] = '\0';
-			}
+			s = s_buf;
+			/* remove trailing cr/lf and dots */
+			while (len > 0 && (s[len-1] <= ' ' || s[len-1] == '.'))
+				s[--len] = '\0';
 		}
 	}
-#endif /* Unix/Windows */
-#endif /* PLAN 9*/
-	if (filenameObject != NULL)
-		v = Py_BuildValue("(isO)", i, s, filenameObject);
+#endif
+	if (filename != NULL)
+		v = Py_BuildValue("(iss)", i, s, filename);
 	else
 		v = Py_BuildValue("(is)", i, s);
 	if (v != NULL) {
 		PyErr_SetObject(exc, v);
 		Py_DECREF(v);
 	}
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	LocalFree(s_buf);
 #endif
 	return NULL;
@@ -338,44 +321,19 @@ PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
 
 
 PyObject *
-PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
-{
-	PyObject *name = filename ? PyString_FromString(filename) : NULL;
-	PyObject *result = PyErr_SetFromErrnoWithFilenameObject(exc, name);
-	Py_XDECREF(name);
-	return result;
-}
-
-#ifdef Py_WIN_WIDE_FILENAMES
-PyObject *
-PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, Py_UNICODE *filename)
-{
-	PyObject *name = filename ? 
-	                 PyUnicode_FromUnicode(filename, wcslen(filename)) : 
-	                 NULL;
-	PyObject *result = PyErr_SetFromErrnoWithFilenameObject(exc, name);
-	Py_XDECREF(name);
-	return result;
-}
-#endif /* Py_WIN_WIDE_FILENAMES */
-
-PyObject *
 PyErr_SetFromErrno(PyObject *exc)
 {
-	return PyErr_SetFromErrnoWithFilenameObject(exc, NULL);
+	return PyErr_SetFromErrnoWithFilename(exc, NULL);
 }
 
 #ifdef MS_WINDOWS 
 /* Windows specific error code handling */
-PyObject *PyErr_SetExcFromWindowsErrWithFilenameObject(
-	PyObject *exc,
+PyObject *PyErr_SetFromWindowsErrWithFilename(
 	int ierr,
-	PyObject *filenameObject)
+	const char *filename)
 {
 	int len;
 	char *s;
-	char *s_buf = NULL; /* Free via LocalFree */
-	char s_small_buf[28]; /* Room for "Windows Error 0xFFFFFFFF" */
 	PyObject *v;
 	DWORD err = (DWORD)ierr;
 	if (err==0) err = GetLastError();
@@ -388,99 +346,28 @@ PyObject *PyErr_SetExcFromWindowsErrWithFilenameObject(
 		err,
 		MAKELANGID(LANG_NEUTRAL,
 		SUBLANG_DEFAULT), /* Default language */
-		(LPTSTR) &s_buf,
+		(LPTSTR) &s,
 		0,	/* size not used */
 		NULL);	/* no args */
-	if (len==0) {
-		/* Only seen this in out of mem situations */
-		sprintf(s_small_buf, "Windows Error 0x%X", err);
-		s = s_small_buf;
-		s_buf = NULL;
-	} else {
-		s = s_buf;
-		/* remove trailing cr/lf and dots */
-		while (len > 0 && (s[len-1] <= ' ' || s[len-1] == '.'))
-			s[--len] = '\0';
-	}
-	if (filenameObject != NULL)
-		v = Py_BuildValue("(isO)", err, s, filenameObject);
+	/* remove trailing cr/lf and dots */
+	while (len > 0 && (s[len-1] <= ' ' || s[len-1] == '.'))
+		s[--len] = '\0';
+	if (filename != NULL)
+		v = Py_BuildValue("(iss)", err, s, filename);
 	else
 		v = Py_BuildValue("(is)", err, s);
 	if (v != NULL) {
-		PyErr_SetObject(exc, v);
+		PyErr_SetObject(PyExc_WindowsError, v);
 		Py_DECREF(v);
 	}
-	LocalFree(s_buf);
+	LocalFree(s);
 	return NULL;
-}
-
-PyObject *PyErr_SetExcFromWindowsErrWithFilename(
-	PyObject *exc,
-	int ierr,
-	const char *filename)
-{
-	PyObject *name = filename ? PyString_FromString(filename) : NULL;
-	PyObject *ret = PyErr_SetExcFromWindowsErrWithFilenameObject(exc, 
-	                                                             ierr, 
-	                                                             name);
-	Py_XDECREF(name);
-	return ret;
-}
-
-#ifdef Py_WIN_WIDE_FILENAMES
-PyObject *PyErr_SetExcFromWindowsErrWithUnicodeFilename(
-	PyObject *exc,
-	int ierr,
-	const Py_UNICODE *filename)
-{
-	PyObject *name = filename ? 
-	                 PyUnicode_FromUnicode(filename, wcslen(filename)) : 
-	                 NULL;
-	PyObject *ret = PyErr_SetExcFromWindowsErrWithFilenameObject(exc, 
-	                                                             ierr, 
-	                                                             name);
-	Py_XDECREF(name);
-	return ret;
-}
-#endif /* Py_WIN_WIDE_FILENAMES */
-
-PyObject *PyErr_SetExcFromWindowsErr(PyObject *exc, int ierr)
-{
-	return PyErr_SetExcFromWindowsErrWithFilename(exc, ierr, NULL);
 }
 
 PyObject *PyErr_SetFromWindowsErr(int ierr)
 {
-	return PyErr_SetExcFromWindowsErrWithFilename(PyExc_WindowsError,
-						      ierr, NULL);
+	return PyErr_SetFromWindowsErrWithFilename(ierr, NULL);
 }
-PyObject *PyErr_SetFromWindowsErrWithFilename(
-	int ierr,
-	const char *filename)
-{
-	PyObject *name = filename ? PyString_FromString(filename) : NULL;
-	PyObject *result = PyErr_SetExcFromWindowsErrWithFilenameObject(
-						      PyExc_WindowsError,
-						      ierr, name);
-	Py_XDECREF(name);
-	return result;
-}
-
-#ifdef Py_WIN_WIDE_FILENAMES
-PyObject *PyErr_SetFromWindowsErrWithUnicodeFilename(
-	int ierr,
-	const Py_UNICODE *filename)
-{
-	PyObject *name = filename ? 
-	                 PyUnicode_FromUnicode(filename, wcslen(filename)) : 
-	                 NULL;
-	PyObject *result = PyErr_SetExcFromWindowsErrWithFilenameObject(
-						      PyExc_WindowsError,
-						      ierr, name);
-	Py_XDECREF(name);
-	return result;
-}
-#endif /* Py_WIN_WIDE_FILENAMES */
 #endif /* MS_WINDOWS */
 
 void
@@ -599,17 +486,18 @@ PyErr_WriteUnraisable(PyObject *obj)
 	Py_XDECREF(tb);
 }
 
-extern PyObject *PyModule_WarningsModule;
 
 /* Function to issue a warning message; may raise an exception. */
 int
 PyErr_Warn(PyObject *category, char *message)
 {
-	PyObject *dict, *func = NULL;
+	PyObject *mod, *dict, *func = NULL;
 
-	if (PyModule_WarningsModule != NULL) {
-		dict = PyModule_GetDict(PyModule_WarningsModule);
+	mod = PyImport_ImportModule("warnings");
+	if (mod != NULL) {
+		dict = PyModule_GetDict(mod);
 		func = PyDict_GetItemString(dict, "warn");
+		Py_DECREF(mod);
 	}
 	if (func == NULL) {
 		PySys_WriteStderr("warning: %s\n", message);
@@ -635,9 +523,9 @@ PyErr_Warn(PyObject *category, char *message)
 
 /* Warning with explicit origin */
 int
-PyErr_WarnExplicit(PyObject *category, const char *message,
-		   const char *filename, int lineno,
-		   const char *module, PyObject *registry)
+PyErr_WarnExplicit(PyObject *category, char *message,
+		   char *filename, int lineno,
+		   char *module, PyObject *registry)
 {
 	PyObject *mod, *dict, *func = NULL;
 
@@ -677,7 +565,7 @@ PyErr_WarnExplicit(PyObject *category, const char *message,
    to make printing of exceptions believe it is a syntax error. */
 
 void
-PyErr_SyntaxLocation(const char *filename, int lineno)
+PyErr_SyntaxLocation(char *filename, int lineno)
 {
 	PyObject *exc, *v, *tb, *tmp;
 
@@ -741,7 +629,7 @@ PyErr_SyntaxLocation(const char *filename, int lineno)
 */
 
 PyObject *
-PyErr_ProgramText(const char *filename, int lineno)
+PyErr_ProgramText(char *filename, int lineno)
 {
 	FILE *fp;
 	int i;
@@ -749,14 +637,14 @@ PyErr_ProgramText(const char *filename, int lineno)
 
 	if (filename == NULL || lineno <= 0)
 		return NULL;
-	fp = fopen(filename, "r" PY_STDIOTEXTMODE);
+	fp = fopen(filename, "r");
 	if (fp == NULL)
 		return NULL;
 	for (i = 0; i < lineno; i++) {
 		char *pLastChar = &linebuf[sizeof(linebuf) - 2];
 		do {
 			*pLastChar = '\0';
-			if (Py_UniversalNewlineFgets(linebuf, sizeof linebuf, fp, NULL) == NULL)
+			if (fgets(linebuf, sizeof linebuf, fp) == NULL)
 				break;
 			/* fgets read *something*; if it didn't get as
 			   far as pLastChar, it must have found a newline

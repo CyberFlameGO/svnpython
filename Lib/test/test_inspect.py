@@ -61,9 +61,8 @@ class FesteringGob(MalodorousPervert, ParrotDroppings):
 # isbuiltin, isroutine, getmembers, getdoc, getfile, getmodule,
 # getsourcefile, getcomments, getsource, getclasstree, getargspec,
 # getargvalues, formatargspec, formatargvalues, currentframe, stack, trace
-# isdatadescriptor
 
-from test.test_support import TestFailed, TESTFN
+from test_support import TestFailed, TESTFN
 import sys, imp, os, string
 
 def test(assertion, message, *args):
@@ -105,9 +104,6 @@ istest(inspect.ismethod, 'mod.StupidGit.abuse')
 istest(inspect.ismethod, 'git.argue')
 istest(inspect.ismodule, 'mod')
 istest(inspect.istraceback, 'tb')
-import __builtin__
-istest(inspect.isdatadescriptor, '__builtin__.file.closed')
-istest(inspect.isdatadescriptor, '__builtin__.file.softspace')
 test(inspect.isroutine(mod.spam), 'isroutine(mod.spam)')
 test(inspect.isroutine([].count), 'isroutine([].count)')
 
@@ -148,7 +144,7 @@ test(inspect.getsource(mod.StupidGit) == sourcerange(21, 46),
 test(inspect.getdoc(mod.StupidGit) ==
      'A longer,\n\nindented\n\ndocstring.', 'getdoc(mod.StupidGit)')
 test(inspect.getdoc(git.abuse) ==
-     'Another\n\ndocstring\n\ncontaining\n\ntabs', 'getdoc(git.abuse)')
+     'Another\n\ndocstring\n\ncontaining\n\ntabs\n\n', 'getdoc(git.abuse)')
 test(inspect.getcomments(mod.StupidGit) == '# line 20\n',
      'getcomments(mod.StupidGit)')
 

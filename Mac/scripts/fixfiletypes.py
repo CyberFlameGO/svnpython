@@ -8,10 +8,9 @@
 # Jack Jansen, CWI, 1995.
 #
 import os
-import EasyDialogs
+import macfs
 import sys
 import macostools
-import MacOS
 
 list = [
 	('.py', 'Pyth', 'TEXT'),
@@ -30,10 +29,11 @@ def walktree(name, change):
 	if os.path.isfile(name):
 		for ext, cr, tp in list:
 			if name[-len(ext):] == ext:
-				curcrtp = MacOS.GetCreatorAndType(name)
+				fs = macfs.FSSpec(name)
+				curcrtp = fs.GetCreatorType()
 				if curcrtp <> (cr, tp):
 					if change:
-						MacOS.SetCreatorAndType(name, cr, tp)
+						fs.SetCreatorType(cr, tp)
 						macostools.touched(fs)
 						print 'Fixed ', name
 					else:
@@ -45,12 +45,12 @@ def walktree(name, change):
 			walktree(os.path.join(name, f), change)
 			
 def run(change):
-	pathname = EasyDialogs.AskFolder(message='Folder to search:')
-	if not pathname:
+	fss, ok = macfs.GetDirectory('Folder to search:')
+	if not ok:
 		sys.exit(0)
-	walktree(pathname, change)
+	walktree(fss.as_pathname(), change)
 	
 if __name__ == '__main__':
-	run(0)
+	run(1)
 	
 	

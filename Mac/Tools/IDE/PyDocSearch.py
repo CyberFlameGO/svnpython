@@ -1,11 +1,11 @@
 import re
 import W
+import macfs
 import os
 import MacPrefs
 import MacOS
 import string
 import webbrowser
-import EasyDialogs
 
 
 app = W.getapplication()
@@ -223,8 +223,9 @@ class PyDocSearch:
 			MacOS.SysBeep(0)
 	
 	def setdocpath(self):
-		docpath = EasyDialogs.AskFolder()
-		if docpath:
+		fss, ok = macfs.GetDirectory()
+		if ok:
+			docpath = fss.as_pathname()
 			if not verifydocpath(docpath):
 				W.Message("This does not seem to be a Python documentation folder...")
 			else:

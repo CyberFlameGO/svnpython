@@ -108,7 +108,7 @@ class _Database:
     def __setitem__(self, key, val):
         if not type(key) == type('') == type(val):
             raise TypeError, "keys and values must be strings"
-        if not key in self._index:
+        if not self._index.has_key(key):
             (pos, siz) = self._addval(val)
             self._addkey(key, (pos, siz))
         else:
@@ -130,10 +130,10 @@ class _Database:
         return self._index.keys()
 
     def has_key(self, key):
-        return key in self._index
+        return self._index.has_key(key)
 
     def __contains__(self, key):
-        return key in self._index
+        return self._index.has_key(key)
 
     def iterkeys(self):
         return self._index.iterkeys()
@@ -166,5 +166,5 @@ def open(file, flag=None, mode=0666):
     will be modified by the prevailing umask).
 
     """
-    # flag argument is currently ignored
+    # flag, mode arguments are currently ignored
     return _Database(file, mode)

@@ -21,7 +21,7 @@ class TEWindow(ScrolledWindow):
 		r = windowbounds(400, 400)
 		w = Win.NewWindow(r, name, 1, 0, -1, 1, 0)
 		self.wid = w
-		x0, y0, x1, y1 = self.wid.GetWindowPort().GetPortBounds()
+		x0, y0, x1, y1 = self.wid.GetWindowPort().portRect
 		x0 = x0 + 4
 		y0 = y0 + 4
 		x1 = x1 - 20
@@ -87,8 +87,8 @@ class TEWindow(ScrolledWindow):
 			self.ted.TEDeactivate()
 
 	def do_update(self, wid, event):
-		Qd.EraseRect(wid.GetWindowPort().GetPortBounds())
-		self.ted.TEUpdate(wid.GetWindowPort().GetPortBounds())
+		Qd.EraseRect(wid.GetWindowPort().portRect)
+		self.ted.TEUpdate(wid.GetWindowPort().portRect)
 		self.updatescrollbars()
 		
 	def do_contentclick(self, local, modifiers, evt):
@@ -131,9 +131,9 @@ class TEWindow(ScrolledWindow):
 		self.changed = 0
 		
 	def menu_save_as(self):
-		path = EasyDialogs.AskFileForSave(message='Save as:')
-		if not path: return
-		self.path = path
+		fss, ok = macfs.StandardPutFile('Save as:')
+		if not ok: return
+		self.path = fss.as_pathname()
 		self.name = os.path.split(self.path)[-1]
 		self.wid.SetWTitle(self.name)
 		self.menu_save()
@@ -141,10 +141,7 @@ class TEWindow(ScrolledWindow):
 	def menu_cut(self):
 		self.ted.TESelView()
 		self.ted.TECut()
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		TE.TEToScrap()
 		self.updatescrollbars()
 		self.parent.updatemenubar()
@@ -152,10 +149,7 @@ class TEWindow(ScrolledWindow):
 		
 	def menu_copy(self):
 		self.ted.TECopy()
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		TE.TEToScrap()
 		self.updatescrollbars()
 		self.parent.updatemenubar()
@@ -232,13 +226,8 @@ class Ped(Application):
 			if hasattr(Scrap, 'InfoScrap'):
 				on = (Scrap.InfoScrap()[0] <> 0)
 			else:
-				flavors = Scrap.GetCurrentScrap().GetScrapFlavorInfoList()
-				for tp, info in flavors:
-					if tp == 'TEXT':
-						on = 1
-						break
-				else:
-					on = 0
+				# Not there yet on Carbon, simply always enable
+				on = 1
 			if on <> self.pastegroup_on:
 				self.pasteitem.enable(on)
 				self.pastegroup_on = on
@@ -265,9 +254,10 @@ class Ped(Application):
 
 	def _open(self, askfile):
 		if askfile:
-			path = EasyDialogs.AskFileForOpen(typeList=('TEXT',))
-			if not path:
+			fss, ok = macfs.StandardGetFile('TEXT')
+			if not ok:
 				return
+			path = fss.as_pathname()
 			name = os.path.split(path)[-1]
 			try:
 				fp = open(path, 'rb') # NOTE binary, we need cr as end-of-line
@@ -349,7 +339,7 @@ class Ped(Application):
 		if self.active:
 			self.active.do_idle()
 		else:
-			Qd.SetCursor(Qd.GetQDGlobalsArrow())
+			Qd.SetCursor(Qd.qd.arrow)
 
 def main():
 	App = Ped()

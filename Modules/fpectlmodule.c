@@ -86,13 +86,13 @@ static Sigfunc sigfpe_handler;
 static void fpe_reset(Sigfunc *);
 
 static PyObject *fpe_error;
-PyMODINIT_FUNC initfpectl(void);
+DL_EXPORT(void) initfpectl(void);
 static PyObject *turnon_sigfpe            (PyObject *self,PyObject *args);
 static PyObject *turnoff_sigfpe           (PyObject *self,PyObject *args);
 
 static PyMethodDef fpectl_methods[] = {
-    {"turnon_sigfpe",		 (PyCFunction) turnon_sigfpe,		 METH_VARARGS},
-    {"turnoff_sigfpe",		 (PyCFunction) turnoff_sigfpe, 	         METH_VARARGS},
+    {"turnon_sigfpe",		 (PyCFunction) turnon_sigfpe,		 1},
+    {"turnoff_sigfpe",		 (PyCFunction) turnoff_sigfpe, 	         1},
     {0,0}
 };
 
@@ -188,10 +188,6 @@ static void fpe_reset(Sigfunc *handler)
     ieee_set_fp_control(fp_control);
     PyOS_setsig(SIGFPE, handler);
 
-/*-- DEC ALPHA VMS --------------------------------------------------------*/
-#elif defined(__ALPHA) && defined(__VMS)
-    PyOS_setsig(SIGFPE, handler);
-
 /*-- Cray Unicos ----------------------------------------------------------*/
 #elif defined(cray)
     /* UNICOS delivers SIGFPE by default, but no matherr */
@@ -221,6 +217,12 @@ static void fpe_reset(Sigfunc *handler)
 #else
     __setfpucw(0x1372);
 #endif
+    PyOS_setsig(SIGFPE, handler);
+
+/*-- NeXT -----------------------------------------------------------------*/
+#elif defined(NeXT) && defined(m68k) && defined(__GNUC__)
+    /* NeXT needs explicit csr set to generate SIGFPE */
+    asm("fmovel     #0x1400,fpcr");   /* set OVFL and ZD bits */
     PyOS_setsig(SIGFPE, handler);
 
 /*-- Microsoft Windows, NT ------------------------------------------------*/
@@ -261,7 +263,7 @@ static void sigfpe_handler(int signo)
     }
 }
 
-PyMODINIT_FUNC initfpectl(void)
+DL_EXPORT(void) initfpectl(void)
 {
     PyObject *m, *d;
     m = Py_InitModule("fpectl", fpectl_methods);

@@ -1,7 +1,8 @@
+import macfs
 import marshal
 import types
-from Carbon import Folder
-from Carbon import Folders
+
+from MACFS import kOnSystemDisk
 
 class PrefObject:
 	
@@ -69,10 +70,8 @@ class PrefFile(PrefObject):
 			else:
 				prefdict[key] = value
 		marshal.dump(prefdict, open(self.__path, 'wb'))
-		try:
-			MacOS.SetCreatorAndType(self.__path, self.__creator, 'pref')
-		except:
-			pass
+		fss = macfs.FSSpec(self.__path)
+		fss.SetCreatorType(self.__creator, 'pref')
 	
 	def __getattr__(self, attr):
 		if attr == '__members__':
@@ -96,8 +95,9 @@ def GetPrefs(prefname, creator = 'Pyth'):
 	if _prefscache.has_key(prefname):
 		return _prefscache[prefname]
 	# Find the preferences folder and our prefs file, create if needed.
-	fsr = Folder.FSFindFolder(Folders.kOnSystemDisk, 'pref', 1)
-	prefsfolder = fsr.as_pathname()
+	vrefnum, dirid = macfs.FindFolder(kOnSystemDisk, 'pref', 0)
+	prefsfolder_fss = macfs.FSSpec((vrefnum, dirid, ''))
+	prefsfolder = prefsfolder_fss.as_pathname()
 	path = os.path.join(prefsfolder, prefname)
 	head, tail = os.path.split(path)
 	# make sure the folder(s) exist

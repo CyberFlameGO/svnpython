@@ -7,11 +7,11 @@
 #include "Python.h"
 
 
-int riscos_sleep(double delay)
+int sleep(double delay)
 {
 	os_t starttime, endtime, time; /* monotonic times (centiseconds) */
 	int *pollword, ret;
-	osbool claimed;
+	bool claimed;
 
         /* calculate end time */
 	starttime = os_read_monotonic_time();

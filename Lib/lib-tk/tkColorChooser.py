@@ -63,7 +63,7 @@ def askcolor(color = None, **options):
         options = options.copy()
         options["initialcolor"] = color
 
-    return Chooser(**options).show()
+    return apply(Chooser, (), options).show()
 
 
 # --------------------------------------------------------------------

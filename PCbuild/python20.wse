@@ -1,7 +1,7 @@
 Document Type: WSE
 item: Global
   Version=8.14
-  Title=Python 2.3 beta 1
+  Title=Python 2.2.3
   Flags=00010100
   Languages=65 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
   Japanese Font Name=MS Gothic
@@ -18,11 +18,11 @@ item: Global
   Patch Flags=0000000000001001
   Patch Threshold=85
   Patch Memory=4000
-  EXE Filename=Python-2.3b1.exe
+  EXE Filename=Python-2.2.3.exe
   Dialogs Version=8
-  Version File=2.3b1
+  Version File=2.2.3
   Version Description=Python Programming Language
-  Version Copyright=©2001-2003 Python Software Foundation
+  Version Copyright=©2003 Python Software Foundation
   Version Company=PythonLabs at Zope Corporation
   Crystal Format=10111100101100000010001001001001
   Step View=&All
@@ -30,11 +30,9 @@ item: Global
   Variable Description1=WISE root directory
   Variable Default1=C:\PROGRAM FILES\WISE INSTALLMASTER 8.1
   Variable Flags1=00001000
-  Variable Name2=_TCLDIR_
-  Variable Description2=The directory in which the Tcl/Tk installation
-  Variable Description2=lives.  This must be a sibling of the Python
-  Variable Description2=directory.
-  Variable Default2=tcl84
+  Variable Name2=_TCLMINOR_
+  Variable Description2=Tcl/Tk Minor Version (e.g. the "3" in "8.3.1")
+  Variable Default2=3
   Variable Flags2=00001000
   Variable Name3=_DOC_
   Variable Description3=The unpacked HTML doc directory.
@@ -52,7 +50,7 @@ item: Global
   Variable Flags5=00001000
   Variable Name6=_PYMINOR_
   Variable Description6=Python minor version number; the 3 in 2.3
-  Variable Default6=3
+  Variable Default6=2
   Variable Flags6=00001000
   Variable Name7=_DOADMIN_
   Variable Description7=The initial value for %DOADMIN%.
@@ -66,7 +64,7 @@ item: Global
 end
 item: Set Variable
   Variable=PYVER_STRING
-  Value=2.3b1
+  Value=2.2.3
 end
 item: Remark
 end
@@ -93,14 +91,6 @@ item: Remark
 end
 item: Remark
   Text=        Be sure to select Steps->All or you may not see these!
-end
-item: Remark
-end
-item: Remark
-  Text=When the version of Tcl/Tk changes, the compiler vrbl
-end
-item: Remark
-  Text=_TCLDIR_ may also need to be changed.
 end
 item: Remark
 end
@@ -203,20 +193,11 @@ end
 item: End Block
 end
 item: Remark
-  Text=Note from Tim:  The Wizard hardcod "C:" at the start of the replacement text for MAINDIR.
-end
-item: Remark
-  Text=That's not appropriate if the system drive doesn't happen to be C:.
-end
-item: Remark
-  Text=I removed the "C:", and that did the right thing for two people who tested it on non-C: machines,
-end
-item: Remark
-  Text=but it's unclear whether it will always do the right thing.
+  Text=Note from Tim:  doesn't seem to be a way to get the true boot drive, the Wizard hardcodes "C".
 end
 item: Set Variable
   Variable=MAINDIR
-  Value=\%MAINDIR%
+  Value=C:\%MAINDIR%
   Flags=00001100
 end
 item: Remark
@@ -1572,11 +1553,6 @@ item: Set Variable
   Value=%GROUP%
 end
 item: If/While Statement
-  Variable=TASKS
-  Value=B
-  Flags=00000010
-end
-item: If/While Statement
   Variable=DOADMIN
   Value=1
 end
@@ -1589,8 +1565,6 @@ end
 item: Set Variable
   Variable=GROUP
   Value=%GROUPDIR%\%GROUP%
-end
-item: End Block
 end
 item: End Block
 end
@@ -1709,18 +1683,8 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=.\_csv.pyd
-  Destination=%MAINDIR%\DLLs\_csv.pyd
-  Flags=0000000000000010
-end
-item: Install File
   Source=.\_sre.pyd
   Destination=%MAINDIR%\DLLs\_sre.pyd
-  Flags=0000000000000010
-end
-item: Install File
-  Source=.\_ssl.pyd
-  Destination=%MAINDIR%\DLLs\_ssl.pyd
   Flags=0000000000000010
 end
 item: Install File
@@ -1744,18 +1708,8 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=.\_bsddb.pyd
-  Destination=%MAINDIR%\DLLs\_bsddb.pyd
-  Flags=0000000000000010
-end
-item: Install File
-  Source=.\bz2.pyd
-  Destination=%MAINDIR%\DLLs\bz2.pyd
-  Flags=0000000000000010
-end
-item: Install File
-  Source=.\datetime.pyd
-  Destination=%MAINDIR%\DLLs\datetime.pyd
+  Source=.\bsddb.pyd
+  Destination=%MAINDIR%\DLLs\bsddb.pyd
   Flags=0000000000000010
 end
 item: Install File
@@ -1805,18 +1759,8 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=.\_csv.lib
-  Destination=%MAINDIR%\libs\_csv.lib
-  Flags=0000000000000010
-end
-item: Install File
   Source=.\_sre.lib
   Destination=%MAINDIR%\libs\_sre.lib
-  Flags=0000000000000010
-end
-item: Install File
-  Source=.\_ssl.lib
-  Destination=%MAINDIR%\libs\_ssl.lib
   Flags=0000000000000010
 end
 item: Install File
@@ -1841,18 +1785,8 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=.\_bsddb.lib
-  Destination=%MAINDIR%\libs\_bsddb.lib
-  Flags=0000000000000010
-end
-item: Install File
-  Source=.\bz2.lib
-  Destination=%MAINDIR%\libs\bz2.lib
-  Flags=0000000000000010
-end
-item: Install File
-  Source=.\datetime.lib
-  Destination=%MAINDIR%\libs\datetime.lib
+  Source=.\bsddb.lib
+  Destination=%MAINDIR%\libs\bsddb.lib
   Flags=0000000000000010
 end
 item: Install File
@@ -1900,6 +1834,17 @@ end
 item: Remark
 end
 item: Remark
+  Text=More DLLs
+end
+item: Install File
+  Source=..\..\expat\libs\expat.dll
+  Destination=%MAINDIR%\DLLs\expat.dll
+  Description=Expat library
+  Flags=0000000000000010
+end
+item: Remark
+end
+item: Remark
   Text=Main Python DLL
 end
 item: Remark
@@ -1930,14 +1875,6 @@ end
 item: Remark
 end
 item: Install File
-  Source=..\lib\bsddb\*.py
-  Destination=%MAINDIR%\Lib\bsddb
-  Description=Berkeley database package
-  Flags=0000000100000010
-end
-item: Remark
-end
-item: Install File
   Source=..\lib\compiler\*.py
   Destination=%MAINDIR%\Lib\compiler
   Description=Python compiler written in Python
@@ -1959,11 +1896,6 @@ end
 item: Install File
   Source=..\lib\distutils\command\*.py
   Destination=%MAINDIR%\Lib\distutils\command
-  Flags=0000000000000010
-end
-item: Install File
-  Source=..\lib\distutils\command\wininst.exe
-  Destination=%MAINDIR%\Lib\distutils\command\wininst.exe
   Flags=0000000000000010
 end
 item: Install File
@@ -2033,14 +1965,6 @@ item: Install File
   Source=..\lib\lib-tk\*.py
   Destination=%MAINDIR%\Lib\lib-tk
   Description=Tkinter related library modules
-  Flags=0000000000000010
-end
-item: Remark
-end
-item: Install File
-  Source=..\lib\logging\*.py
-  Destination=%MAINDIR%\Lib\logging
-  Description=Logging package
   Flags=0000000000000010
 end
 item: Remark
@@ -2124,13 +2048,19 @@ item: Remark
   Text=Tcl/Tk
 end
 item: Install File
-  Source=..\..\%_tcldir_%\bin\*.dll
-  Destination=%MAINDIR%\DLLs
+  Source=..\..\tcl\bin\tcl8%_tclminor_%.dll
+  Destination=%MAINDIR%\DLLs\tcl8%_TCLMINOR_%.dll
   Description=Tcl/Tk binaries and libraries
   Flags=0000000000000010
 end
 item: Install File
-  Source=..\..\%_tcldir_%\lib\*.*
+  Source=..\..\tcl\bin\tk8%_tclminor_%.dll
+  Destination=%MAINDIR%\DLLs\tk8%_TCLMINOR_%.dll
+  Description=Tcl/Tk binaries and libraries
+  Flags=0000000000000010
+end
+item: Install File
+  Source=..\..\tcl\lib\*.*
   Destination=%MAINDIR%\tcl
   Description=Tcl/Tk binaries and libraries
   Flags=0000000100000010
@@ -2289,14 +2219,6 @@ item: Install File
   Description=pynche color editor - noconsole main
   Flags=0000000100000010
 end
-item: Remark
-end
-item: Install File
-  Source=..\tools\i18n\*.py
-  Destination=%MAINDIR%\Tools\i18n
-  Description=Internationalization helpers
-  Flags=0000000000000010
-end
 item: End Block
 end
 item: Remark
@@ -2339,27 +2261,11 @@ item: Install File
   Description=Python Test files
   Flags=0000000000000010
 end
-item: Install File
-  Source=..\lib\test\*.bz2
-  Destination=%MAINDIR%\Lib\test
-  Description=Python Test files
-  Flags=0000000000000010
+item: Remark
 end
 item: Install File
-  Source=..\lib\test\*.tar
-  Destination=%MAINDIR%\Lib\test
-  Description=Python Test files
-  Flags=0000000000000010
-end
-item: Install File
-  Source=..\lib\test\*.gz
-  Destination=%MAINDIR%\Lib\test
-  Description=Python Test files
-  Flags=0000000000000010
-end
-item: Install File
-  Source=..\lib\test\*.txt
-  Destination=%MAINDIR%\Lib\test
+  Source=..\lib\test\data\*.*
+  Destination=%MAINDIR%\Lib\test\data
   Description=Python Test files
   Flags=0000000000000010
 end

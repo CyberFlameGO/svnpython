@@ -89,15 +89,16 @@ if it does, the resulting binary is not self-contained.
 
 # Import standard modules
 
-import modulefinder
 import getopt
 import os
+import string
 import sys
 
 
 # Import the freeze-private modules
 
 import checkextensions
+import modulefinder
 import makeconfig
 import makefreeze
 import makemakefile
@@ -130,6 +131,9 @@ def main():
 
     fail_import = exclude[:]
 
+    # modules that are imported by the Python runtime
+    implicits = ["site", "exceptions"]
+
     # output files
     frozen_c = 'frozen.c'
     config_c = 'config.c'
@@ -144,7 +148,7 @@ def main():
         # last option can not be "-i", so this ensures "pos+1" is in range!
         if sys.argv[pos] == '-i':
             try:
-                options = open(sys.argv[pos+1]).read().split()
+                options = string.split(open(sys.argv[pos+1]).read())
             except IOError, why:
                 usage("File name '%s' specified with the -i option "
                       "can not be read - %s" % (sys.argv[pos+1], why) )
@@ -194,16 +198,10 @@ def main():
         if o == '-l':
             addn_link.append(a)
         if o == '-a':
-            apply(modulefinder.AddPackagePath, tuple(a.split("=", 2)))
+            apply(modulefinder.AddPackagePath, tuple(string.split(a,"=", 2)))
         if o == '-r':
-            f,r = a.split("=", 2)
+            f,r = string.split(a,"=", 2)
             replace_paths.append( (f,r) )
-
-    # modules that are imported by the Python runtime
-    implicits = []
-    for module in ('site', 'warnings',):
-        if module not in exclude:
-            implicits.append(module)
 
     # default prefix and exec_prefix
     if not exec_prefix:
@@ -421,7 +419,7 @@ def main():
     # report unknown modules
     if unknown:
         sys.stderr.write('Warning: unknown modules remain: %s\n' %
-                         ' '.join(unknown))
+                         string.join(unknown))
 
     # windows gets different treatment
     if win:
@@ -464,9 +462,9 @@ def main():
     for key in makevars.keys():
         somevars[key] = makevars[key]
 
-    somevars['CFLAGS'] = ' '.join(cflags) # override
-    somevars['CPPFLAGS'] = ' '.join(cppflags) # override
-    files = [base_config_c, base_frozen_c] + \
+    somevars['CFLAGS'] = string.join(cflags) # override
+    somevars['CPPFLAGS'] = string.join(cppflags) # override
+    files = ['$(OPT)', '$(LDFLAGS)', base_config_c, base_frozen_c] + \
             files + supp_sources +  addfiles + libs + \
             ['$(MODLIBS)', '$(LIBS)', '$(SYSLIBS)']
 

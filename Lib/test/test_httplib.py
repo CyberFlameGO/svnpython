@@ -1,4 +1,4 @@
-from test.test_support import verify,verbose
+from test_support import verify,verbose
 import httplib
 import StringIO
 
@@ -11,84 +11,48 @@ class FakeSocket:
             raise httplib.UnimplementedFileMode()
         return StringIO.StringIO(self.text)
 
-# Collect output to a buffer so that we don't have to cope with line-ending
-# issues across platforms.  Specifically, the headers will have \r\n pairs
-# and some platforms will strip them from the output file.
+# Test HTTP status lines
 
-import sys
+body = "HTTP/1.1 200 Ok\n\nText"
+sock = FakeSocket(body)
+resp = httplib.HTTPResponse(sock, 1)
+resp.begin()
+print resp.read()
+resp.close()
 
-def test():
-    buf = StringIO.StringIO()
-    _stdout = sys.stdout
-    try:
-        sys.stdout = buf
-        _test()
-    finally:
-        sys.stdout = _stdout
-
-    # print individual lines with endings stripped
-    s = buf.getvalue()
-    for line in s.split("\n"):
-        print line.strip()
-
-def _test():
-    # Test HTTP status lines
-
-    body = "HTTP/1.1 200 Ok\r\n\r\nText"
-    sock = FakeSocket(body)
-    resp = httplib.HTTPResponse(sock, 1)
+body = "HTTP/1.1 400.100 Not Ok\n\nText"
+sock = FakeSocket(body)
+resp = httplib.HTTPResponse(sock, 1)
+try:
     resp.begin()
-    print resp.read()
-    resp.close()
+except httplib.BadStatusLine:
+    print "BadStatusLine raised as expected"
+else:
+    print "Expect BadStatusLine"
 
-    body = "HTTP/1.1 400.100 Not Ok\r\n\r\nText"
-    sock = FakeSocket(body)
-    resp = httplib.HTTPResponse(sock, 1)
+# Check invalid host_port
+
+for hp in ("www.python.org:abc", "www.python.org:"):
     try:
-        resp.begin()
-    except httplib.BadStatusLine:
-        print "BadStatusLine raised as expected"
+        h = httplib.HTTP(hp)
+    except httplib.InvalidURL:
+        print "InvalidURL raised as expected"
     else:
-        print "Expect BadStatusLine"
+        print "Expect InvalidURL"
 
-    # Check invalid host_port
-
-    for hp in ("www.python.org:abc", "www.python.org:"):
-        try:
-            h = httplib.HTTP(hp)
-        except httplib.InvalidURL:
-            print "InvalidURL raised as expected"
-        else:
-            print "Expect InvalidURL"
-
-    # test response with multiple message headers with the same field name.
-    text = ('HTTP/1.1 200 OK\r\n'
-            'Set-Cookie: Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"\r\n'
-            'Set-Cookie: Part_Number="Rocket_Launcher_0001"; Version="1";'
-            ' Path="/acme"\r\n'
-            '\r\n'
-            'No body\r\n')
-    hdr = ('Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"'
-           ', '
-           'Part_Number="Rocket_Launcher_0001"; Version="1"; Path="/acme"')
-    s = FakeSocket(text)
-    r = httplib.HTTPResponse(s, 1)
-    r.begin()
-    cookies = r.getheader("Set-Cookie")
-    if cookies != hdr:
-        raise AssertionError, "multiple headers not combined properly"
-
-    # test that the library doesn't attempt to read any data
-    # from a head request
-    conn = httplib.HTTPConnection("www.python.org")
-    conn.connect()
-    conn.request("HEAD", "/", headers={"Connection" : "keep-alive"})
-    resp = conn.getresponse()
-    if resp.status != 200:
-        raise AssertionError, "Expected status 200, got %d" % resp.status
-    if resp.read() != "":
-        raise AssertionError, "Did not expect response from HEAD request"
-    resp.close()
-    conn.close()
-
-test()
+# test response with multiple message headers with the same field name.
+text = ('HTTP/1.1 200 OK\n'
+        'Set-Cookie: Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"\n'
+        'Set-Cookie: Part_Number="Rocket_Launcher_0001"; Version="1";'
+        ' Path="/acme"\n'
+        '\n'
+        'No body\n')
+hdr = ('Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"'
+       ', '
+       'Part_Number="Rocket_Launcher_0001"; Version="1"; Path="/acme"')
+s = FakeSocket(text)
+r = httplib.HTTPResponse(s, 1)
+r.begin()
+cookies = r.getheader("Set-Cookie")
+if cookies != hdr:
+    raise AssertionError, "multiple headers not combined properly"

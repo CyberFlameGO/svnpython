@@ -2,7 +2,7 @@ import cwxmlgen
 import cwtalker
 import os
 from Carbon import AppleEvents
-import Carbon.File
+import macfs
 
 def mkproject(outputfile, modulename, settings, force=0, templatename=None):
 	#
@@ -58,15 +58,14 @@ def mkproject(outputfile, modulename, settings, force=0, templatename=None):
 def makeproject(xmlfile, projectfile):
 	cw = cwtalker.MyCodeWarrior(start=1)
 	cw.send_timeout = AppleEvents.kNoTimeOut
-	xmlfss = Carbon.File.FSSpec(xmlfile)
-	prjfss = Carbon.File.FSSpec(projectfile)
+	xmlfss = macfs.FSSpec(xmlfile)
+	prjfss = macfs.FSSpec(projectfile)
 	cw.my_mkproject(prjfss, xmlfss)
-	cw.Close_Project()
 	
 def buildproject(projectfile):
 	cw = cwtalker.MyCodeWarrior(start=1)
 	cw.send_timeout = AppleEvents.kNoTimeOut
-	prjfss = Carbon.File.FSSpec(projectfile)
+	prjfss = macfs.FSSpec(projectfile)
 	cw.open(prjfss)
 	cw.Make_Project()	# XXX Should set target
 	cw.Close_Project()
@@ -74,7 +73,7 @@ def buildproject(projectfile):
 def cleanproject(projectfile):
 	cw = cwtalker.MyCodeWarrior(start=1)
 	cw.send_timeout = AppleEvents.kNoTimeOut
-	prjfss = Carbon.File.FSSpec(projectfile)
+	prjfss = macfs.FSSpec(projectfile)
 	cw.open(prjfss)
 	cw.Remove_Binaries()
 		

@@ -44,7 +44,7 @@ static c2pstr(const char *cc)
 
 OSAError LoadScriptingComponent (ComponentInstance * scriptingComponent);
 
-#if 0
+
 /*
  * store the script as a compile script so that OSA 
  * components may load and execute the script easily
@@ -143,7 +143,6 @@ CleanUp:
 
   return err2;
 }
-#endif
 
 
 OSAError 
@@ -195,7 +194,7 @@ CleanUp:
   return err2;
 }
 
-#if 0
+
 /*
  * This routine reads in a saved script file and executes 
  * the script contained within (from a 'scpt' resource.)
@@ -292,7 +291,6 @@ done:
 
   return err2;
 }
-#endif
 
 
 OSAError 

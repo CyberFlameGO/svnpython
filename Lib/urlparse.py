@@ -8,22 +8,26 @@ __all__ = ["urlparse", "urlunparse", "urljoin", "urldefrag",
            "urlsplit", "urlunsplit"]
 
 # A classification of schemes ('' means apply by default)
-uses_relative = ['ftp', 'http', 'gopher', 'nntp', 'imap',
-                               'wais', 'file', 'https', 'shttp', 'mms',
-                               'prospero', 'rtsp', 'rtspu', '']
-uses_netloc = ['ftp', 'http', 'gopher', 'nntp', 'telnet',
-                             'imap', 'wais', 'file', 'mms', 'https', 'shttp',
-                             'snews', 'prospero', 'rtsp', 'rtspu', '']
-non_hierarchical = ['gopher', 'hdl', 'mailto', 'news',
-                                  'telnet', 'wais', 'imap', 'snews', 'sip']
-uses_params = ['ftp', 'hdl', 'prospero', 'http', 'imap',
-                             'https', 'shttp', 'rtsp', 'rtspu', 'sip',
-                             'mms', '']
-uses_query = ['http', 'wais', 'imap', 'https', 'shttp', 'mms',
-                            'gopher', 'rtsp', 'rtspu', 'sip', '']
-uses_fragment = ['ftp', 'hdl', 'http', 'gopher', 'news',
-                               'nntp', 'wais', 'https', 'shttp', 'snews',
-                               'file', 'prospero', '']
+uses_relative = ['ftp', 'http', 'gopher', 'nntp', 'wais', 'file',
+                 'https', 'shttp',
+                 'prospero', 'rtsp', 'rtspu', '']
+uses_netloc = ['ftp', 'http', 'gopher', 'nntp', 'telnet', 'wais',
+               'file',
+               'https', 'shttp', 'snews',
+               'prospero', 'rtsp', 'rtspu', '']
+non_hierarchical = ['gopher', 'hdl', 'mailto', 'news', 'telnet', 'wais',
+                    'snews', 'sip',
+                    ]
+uses_params = ['ftp', 'hdl', 'prospero', 'http',
+               'https', 'shttp', 'rtsp', 'rtspu', 'sip',
+               '']
+uses_query = ['http', 'wais',
+              'https', 'shttp',
+              'gopher', 'rtsp', 'rtspu', 'sip',
+              '']
+uses_fragment = ['ftp', 'hdl', 'http', 'gopher', 'news', 'nntp', 'wais',
+                 'https', 'shttp', 'snews',
+                 'file', 'prospero', '']
 
 # Characters valid in scheme names
 scheme_chars = ('abcdefghijklmnopqrstuvwxyz'
@@ -236,6 +240,7 @@ test_input = """
       http:g?y        = <URL:http://a/b/c/g?y>
       http:g?y/./x    = <URL:http://a/b/c/g?y/./x>
 """
+# XXX The result for //g is actually http://g/; is this a problem?
 
 def test():
     import sys

@@ -15,10 +15,10 @@ typedef struct _node {
     struct _node	*n_child;
 } node;
 
-PyAPI_FUNC(node *) PyNode_New(int type);
-PyAPI_FUNC(int) PyNode_AddChild(node *n, int type,
+extern DL_IMPORT(node *) PyNode_New(int type);
+extern DL_IMPORT(int) PyNode_AddChild(node *n, int type,
                                       char *str, int lineno);
-PyAPI_FUNC(void) PyNode_Free(node *n);
+extern DL_IMPORT(void) PyNode_Free(node *n);
 
 /* Node access functions */
 #define NCH(n)		((n)->n_nchildren)
@@ -29,7 +29,7 @@ PyAPI_FUNC(void) PyNode_Free(node *n);
 /* Assert that the type of a node is what we expect */
 #define REQ(n, type) assert(TYPE(n) == (type))
 
-PyAPI_FUNC(void) PyNode_ListTree(node *);
+extern DL_IMPORT(void) PyNode_ListTree(node *);
 
 #ifdef __cplusplus
 }

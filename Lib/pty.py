@@ -86,17 +86,7 @@ def slave_open(tty_name):
     opened filedescriptor.
     Deprecated, use openpty() instead."""
 
-    result = os.open(tty_name, os.O_RDWR)
-    try:
-        from fcntl import ioctl, I_PUSH
-    except ImportError:
-        return result
-    try:
-        ioctl(result, I_PUSH, "ptem")
-        ioctl(result, I_PUSH, "ldterm")
-    except IOError:
-        pass
-    return result
+    return os.open(tty_name, os.O_RDWR)
 
 def fork():
     """fork() -> (pid, master_fd)
@@ -163,7 +153,7 @@ def spawn(argv, master_read=_read, stdin_read=_read):
         argv = (argv,)
     pid, master_fd = fork()
     if pid == CHILD:
-        os.execlp(argv[0], *argv)
+        apply(os.execlp, (argv[0],) + argv)
     try:
         mode = tty.tcgetattr(STDIN_FILENO)
         tty.setraw(STDIN_FILENO)

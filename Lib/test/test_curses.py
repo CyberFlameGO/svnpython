@@ -14,7 +14,7 @@ import curses, sys, tempfile
 # 'curses' resource be given on the regrtest command line using the -u
 # option.  If not available, nothing after this line will be executed.
 
-from test import test_support
+import test_support
 test_support.requires('curses')
 
 def window_funcs(stdscr):
@@ -26,7 +26,7 @@ def window_funcs(stdscr):
     for meth in [stdscr.addch, stdscr.addstr]:
         for args in [('a'), ('a', curses.A_BOLD),
                      (4,4, 'a'), (5,5, 'a', curses.A_BOLD)]:
-            meth(*args)
+            apply(meth, args)
 
     for meth in [stdscr.box, stdscr.clear, stdscr.clrtobot,
                  stdscr.clrtoeol, stdscr.cursyncup, stdscr.delch,

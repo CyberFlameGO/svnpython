@@ -79,14 +79,14 @@ ComponentResult = Type("ComponentResult", "l")
 
 ComponentResourceHandle = OpaqueByValueType("ComponentResourceHandle", "ResObj")
 
-class MyCIObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+class MyCIObjectDefinition(GlobalObjectDefinition):
 	def outputCheckNewArg(self):
 		Output("""if (itself == NULL) {
 					PyErr_SetString(Cm_Error,"NULL ComponentInstance");
 					return NULL;
 				}""")
 
-class MyCObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+class MyCObjectDefinition(GlobalObjectDefinition):
 	def outputCheckNewArg(self):
 		Output("""if (itself == NULL) {
 					/* XXXX Or should we return None? */

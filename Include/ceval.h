@@ -7,53 +7,46 @@ extern "C" {
 
 /* Interface to random parts in ceval.c */
 
-PyAPI_FUNC(PyObject *) PyEval_CallObjectWithKeywords(
-	PyObject *, PyObject *, PyObject *);
+DL_IMPORT(PyObject *) PyEval_CallObjectWithKeywords
+	(PyObject *, PyObject *, PyObject *);
 
 /* DLL-level Backwards compatibility: */
 #undef PyEval_CallObject
-PyAPI_FUNC(PyObject *) PyEval_CallObject(PyObject *, PyObject *);
+DL_IMPORT(PyObject *) PyEval_CallObject(PyObject *, PyObject *);
 
 /* Inline this */
 #define PyEval_CallObject(func,arg) \
         PyEval_CallObjectWithKeywords(func, arg, (PyObject *)NULL)
 
-PyAPI_FUNC(PyObject *) PyEval_CallFunction(PyObject *obj, char *format, ...);
-PyAPI_FUNC(PyObject *) PyEval_CallMethod(PyObject *obj,
+DL_IMPORT(PyObject *) PyEval_CallFunction(PyObject *obj, char *format, ...);
+DL_IMPORT(PyObject *) PyEval_CallMethod(PyObject *obj,
                                         char *methodname, char *format, ...);
 
-PyAPI_FUNC(void) PyEval_SetProfile(Py_tracefunc, PyObject *);
-PyAPI_FUNC(void) PyEval_SetTrace(Py_tracefunc, PyObject *);
+DL_IMPORT(void) PyEval_SetProfile(Py_tracefunc, PyObject *);
+DL_IMPORT(void) PyEval_SetTrace(Py_tracefunc, PyObject *);
 
-struct _frame; /* Avoid including frameobject.h */
-
-PyAPI_FUNC(PyObject *) PyEval_GetBuiltins(void);
-PyAPI_FUNC(PyObject *) PyEval_GetGlobals(void);
-PyAPI_FUNC(PyObject *) PyEval_GetLocals(void);
-PyAPI_FUNC(struct _frame *) PyEval_GetFrame(void);
-PyAPI_FUNC(int) PyEval_GetRestricted(void);
+DL_IMPORT(PyObject *) PyEval_GetBuiltins(void);
+DL_IMPORT(PyObject *) PyEval_GetGlobals(void);
+DL_IMPORT(PyObject *) PyEval_GetLocals(void);
+DL_IMPORT(PyObject *) PyEval_GetOwner(void);
+DL_IMPORT(PyObject *) PyEval_GetFrame(void);
+DL_IMPORT(int) PyEval_GetRestricted(void);
 
 /* Look at the current frame's (if any) code's co_flags, and turn on
    the corresponding compiler flags in cf->cf_flags.  Return 1 if any
    flag was set, else return 0. */
-PyAPI_FUNC(int) PyEval_MergeCompilerFlags(PyCompilerFlags *cf);
+DL_IMPORT(int) PyEval_MergeCompilerFlags(PyCompilerFlags *cf);
 
-PyAPI_FUNC(int) Py_FlushLine(void);
+DL_IMPORT(int) Py_FlushLine(void);
 
-PyAPI_FUNC(int) Py_AddPendingCall(int (*func)(void *), void *arg);
-PyAPI_FUNC(int) Py_MakePendingCalls(void);
+DL_IMPORT(int) Py_AddPendingCall(int (*func)(void *), void *arg);
+DL_IMPORT(int) Py_MakePendingCalls(void);
 
-PyAPI_FUNC(void) Py_SetRecursionLimit(int);
-PyAPI_FUNC(int) Py_GetRecursionLimit(void);
+DL_IMPORT(void) Py_SetRecursionLimit(int);
+DL_IMPORT(int) Py_GetRecursionLimit(void);
 
-PyAPI_FUNC(char *) PyEval_GetFuncName(PyObject *);
-PyAPI_FUNC(char *) PyEval_GetFuncDesc(PyObject *);
-
-PyAPI_FUNC(PyObject *) PyEval_GetCallStats(PyObject *);
-
-/* this used to be handled on a per-thread basis - now just two globals */
-PyAPI_DATA(volatile int) _Py_Ticker;
-PyAPI_DATA(int) _Py_CheckInterval;
+DL_IMPORT(char *) PyEval_GetFuncName(PyObject *);
+DL_IMPORT(char *) PyEval_GetFuncDesc(PyObject *);
 
 /* Interface for threads.
 
@@ -100,17 +93,17 @@ PyAPI_DATA(int) _Py_CheckInterval;
    mechanism!
 */
 
-PyAPI_FUNC(PyThreadState *) PyEval_SaveThread(void);
-PyAPI_FUNC(void) PyEval_RestoreThread(PyThreadState *);
+extern DL_IMPORT(PyThreadState *) PyEval_SaveThread(void);
+extern DL_IMPORT(void) PyEval_RestoreThread(PyThreadState *);
 
 #ifdef WITH_THREAD
 
-PyAPI_FUNC(void) PyEval_InitThreads(void);
-PyAPI_FUNC(void) PyEval_AcquireLock(void);
-PyAPI_FUNC(void) PyEval_ReleaseLock(void);
-PyAPI_FUNC(void) PyEval_AcquireThread(PyThreadState *tstate);
-PyAPI_FUNC(void) PyEval_ReleaseThread(PyThreadState *tstate);
-PyAPI_FUNC(void) PyEval_ReInitThreads(void);
+extern DL_IMPORT(void) PyEval_InitThreads(void);
+extern DL_IMPORT(void) PyEval_AcquireLock(void);
+extern DL_IMPORT(void) PyEval_ReleaseLock(void);
+extern DL_IMPORT(void) PyEval_AcquireThread(PyThreadState *tstate);
+extern DL_IMPORT(void) PyEval_ReleaseThread(PyThreadState *tstate);
+extern DL_IMPORT(void) PyEval_ReInitThreads(void);
 
 #define Py_BEGIN_ALLOW_THREADS { \
 			PyThreadState *_save; \
@@ -129,7 +122,7 @@ PyAPI_FUNC(void) PyEval_ReInitThreads(void);
 
 #endif /* !WITH_THREAD */
 
-PyAPI_FUNC(int) _PyEval_SliceIndex(PyObject *, int *);
+extern DL_IMPORT(int) _PyEval_SliceIndex(PyObject *, int *);
 
 
 #ifdef __cplusplus

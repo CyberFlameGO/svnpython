@@ -29,8 +29,7 @@ __all__ = ["RExec"]
 class FileBase:
 
     ok_file_methods = ('fileno', 'flush', 'isatty', 'read', 'readline',
-            'readlines', 'seek', 'tell', 'write', 'writelines', 'xreadlines',
-            '__iter__')
+            'readlines', 'seek', 'tell', 'write', 'writelines')
 
 
 class FileWrapper(FileBase):
@@ -38,6 +37,7 @@ class FileWrapper(FileBase):
     # XXX This is just like a Bastion -- should use that!
 
     def __init__(self, f):
+        self.f = f
         for m in self.ok_file_methods:
             if not hasattr(self, m) and hasattr(f, m):
                 setattr(self, m, getattr(f, m))
@@ -48,7 +48,7 @@ class FileWrapper(FileBase):
 
 TEMPLATE = """
 def %s(self, *args):
-        return getattr(self.mod, self.name).%s(*args)
+        return apply(getattr(self.mod, self.name).%s, args)
 """
 
 class FileDelegate(FileBase):
@@ -137,8 +137,7 @@ class RExec(ihooks._Verbose):
                           'cmath', 'errno', 'imageop',
                           'marshal', 'math', 'md5', 'operator',
                           'parser', 'regex', 'pcre', 'rotor', 'select',
-                          'sha', '_sre', 'strop', 'struct', 'time',
-                          'xreadlines', '_weakref')
+                          'sha', '_sre', 'strop', 'struct', 'time')
 
     ok_posix_names = ('error', 'fstat', 'listdir', 'lstat', 'readlink',
                       'stat', 'times', 'uname', 'getpid', 'getppid',
@@ -211,7 +210,7 @@ class RExec(ihooks._Verbose):
     def load_dynamic(self, name, filename, file):
         if name not in self.ok_dynamic_modules:
             raise ImportError, "untrusted dynamic module: %s" % name
-        if name in sys.modules:
+        if sys.modules.has_key(name):
             src = sys.modules[name]
         else:
             src = imp.load_dynamic(name, filename, file)
@@ -407,11 +406,14 @@ class RExec(ihooks._Verbose):
         sys.stdout = self.save_stdout
         sys.stderr = self.save_stderr
 
-    def s_apply(self, func, args=(), kw={}):
+    def s_apply(self, func, args=(), kw=None):
         self.save_files()
         try:
             self.set_files()
-            r = func(*args, **kw)
+            if kw:
+                r = apply(func, args, kw)
+            else:
+                r = apply(func, args)
         finally:
             self.restore_files()
         return r
@@ -516,7 +518,6 @@ class RExec(ihooks._Verbose):
         used to change the policies enforced by a restricted environment.
 
         """
-        mode = str(mode)
         if mode not in ('r', 'rb'):
             raise IOError, "can't open files for writing in restricted mode"
         return open(file, mode, buf)
@@ -555,19 +556,25 @@ def test():
             print "%s: can't open file %s" % (sys.argv[0], `args[0]`)
             return 1
     if fp.isatty():
-        try:
-            import readline
-        except ImportError:
-            pass
-        import code
-        class RestrictedConsole(code.InteractiveConsole):
-            def runcode(self, co):
-                self.locals['__builtins__'] = r.modules['__builtin__']
-                r.s_apply(code.InteractiveConsole.runcode, (self, co))
-        try:
-            RestrictedConsole(r.modules['__main__'].__dict__).interact()
-        except SystemExit, n:
-            return n
+        print "*** RESTRICTED *** Python", sys.version
+        print 'Type "help", "copyright", "credits" or "license" ' \
+              'for more information.'
+
+        while 1:
+            try:
+                try:
+                    s = raw_input('>>> ')
+                except EOFError:
+                    print
+                    break
+                if s and s[0] != '#':
+                    s = s + '\n'
+                    c = compile(s, '<stdin>', 'single')
+                    r.s_exec(c)
+            except SystemExit, n:
+                return n
+            except:
+                traceback.print_exc()
     else:
         text = fp.read()
         fp.close()

@@ -9,21 +9,21 @@ import sys
 def main():
     files = sys.argv[1:]
     suffixes = {}
-    for filename in files:
-        suff = getsuffix(filename)
+    for file in files:
+        suff = getsuffix(file)
         if not suffixes.has_key(suff):
             suffixes[suff] = []
-        suffixes[suff].append(filename)
+        suffixes[suff].append(file)
     keys = suffixes.keys()
     keys.sort()
     for suff in keys:
         print `suff`, len(suffixes[suff])
 
-def getsuffix(filename):
+def getsuffix(file):
     suff = ''
-    for i in range(len(filename)):
-        if filename[i] == '.':
-            suff = filename[i:]
+    for i in range(len(file)):
+        if file[i] == '.':
+            suff = file[i:]
     return suff
 
 main()

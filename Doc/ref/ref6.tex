@@ -521,8 +521,9 @@ from __future__ import generators
 \end{productionlist}
 
 If no expressions are present, \keyword{raise} re-raises the last
-expression that was active in the current scope.  If no exception is
-active in the current scope, an exception is raised indicating this error.
+expression that was active in the current scope.  If no exception has
+been active in the current scope, an exception is raised that
+indicates indicates that this is the error.
 \index{exception}
 \indexii{raising}{exception}
 
@@ -543,6 +544,9 @@ the class constructor; if it is \code{None}, an empty argument list is
 used, and any other object is treated as a single argument to the
 constructor.  The instance so created by calling the constructor is
 used as the exception value.
+
+If the first object is a string, the string object is the exception
+type, and the second object becomes the exception value.
 
 If a third object is present and not \code{None}, it must be a
 traceback\obindex{traceback} object (see section~\ref{traceback}), and
@@ -680,7 +684,11 @@ The first form of \keyword{import} statement binds the module name in
 the local namespace to the module object, and then goes on to import
 the next identifier, if any.  If the module name is followed by
 \keyword{as}, the name following \keyword{as} is used as the local
-name for the module. 
+name for the module. To avoid confusion, you cannot import modules
+with dotted names \keyword{as} a different local name. So \code{import
+module as m} is legal, but \code{import module.submod as s} is not.
+The latter should be written as \code{from module import submod as s};
+see below.
 
 The \keyword{from} form does not bind the module name: it goes through the
 list of identifiers, looks each one of them up in the module found in step
@@ -700,10 +708,7 @@ imported by that module.  The names given in \code{__all__} are all
 considered public and are required to exist.  If \code{__all__} is not
 defined, the set of public names includes all names found in the
 module's namespace which do not begin with an underscore character
-(\character{_}).  \code{__all__} should contain the entire public API.
-It is intended to avoid accidentally exporting items that are not part
-of the API (such as library modules which were imported and used within
-the module).
+(\character{_}).
 \withsubitem{(optional module attribute)}{\ttindex{__all__}}
 
 The \keyword{from} form with \samp{*} may only occur in a module
@@ -734,84 +739,6 @@ Functions}{../lib/built-in-funcs.html} in the
 information.
 \bifuncindex{__import__}
 
-\subsection{Future statements \label{future}}
-
-A \dfn{future statement}\indexii{future}{statement} is a directive to
-the compiler that a particular module should be compiled using syntax
-or semantics that will be available in a specified future release of
-Python.  The future statement is intended to ease migration to future
-versions of Python that introduce incompatible changes to the
-language.  It allows use of the new features on a per-module basis
-before the release in which the feature becomes standard.
-
-\begin{productionlist}[*]
-  \production{future_statement}
-             {"from" "__future__" "import" feature ["as" name]}
-  \productioncont{("," feature ["as" name])*}
-  \production{feature}{identifier}
-  \production{name}{identifier}
-\end{productionlist}
-
-A future statement must appear near the top of the module.  The only
-lines that can appear before a future statement are:
-
-\begin{itemize}
-
-\item the module docstring (if any),
-\item comments,
-\item blank lines, and
-\item other future statements.
-
-\end{itemize}
-
-The features recognized by Python 2.3 are \samp{generators},
-\samp{division} and \samp{nested_scopes}.  \samp{generators} and
-\samp{nested_scopes} are redundant in 2.3 because they are always
-enabled. 
-
-A future statement is recognized and treated specially at compile
-time: Changes to the semantics of core constructs are often
-implemented by generating different code.  It may even be the case
-that a new feature introduces new incompatible syntax (such as a new
-reserved word), in which case the compiler may need to parse the
-module differently.  Such decisions cannot be pushed off until
-runtime.
-
-For any given release, the compiler knows which feature names have been
-defined, and raises a compile-time error if a future statement contains
-a feature not known to it.
-
-The direct runtime semantics are the same as for any import statement:
-there is a standard module \module{__future__}, described later, and
-it will be imported in the usual way at the time the future statement
-is executed.
-
-The interesting runtime semantics depend on the specific feature
-enabled by the future statement.
-
-Note that there is nothing special about the statement:
-
-\begin{verbatim}
-import __future__ [as name]
-\end{verbatim}
-
-That is not a future statement; it's an ordinary import statement with
-no special semantics or syntax restrictions.
-
-Code compiled by an exec statement or calls to the builtin functions
-\function{compile()} and \function{execfile()} that occur in a module
-\module{M} containing a future statement will, by default, use the new 
-syntax or semantics associated with the future statement.  This can,
-starting with Python 2.2 be controlled by optional arguments to
-\function{compile()} --- see the documentation of that function in the 
-library reference for details.
-
-A future statement typed at an interactive interpreter prompt will
-take effect for the rest of the interpreter session.  If an
-interpreter is started with the \programopt{-i} option, is passed a
-script name to execute, and the script includes a future statement, it
-will be in effect in the interactive session started after the script
-is executed.
 
 \section{The \keyword{global} statement \label{global}}
 \stindex{global}
