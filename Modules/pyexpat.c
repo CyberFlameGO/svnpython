@@ -109,7 +109,6 @@ set_error_attr(PyObject *err, char *name, int value)
         Py_DECREF(v);
         return 0;
     }
-    Py_DECREF(v);
     return 1;
 }
 
@@ -136,7 +135,6 @@ set_error(xmlparseobject *self, enum XML_Error code)
           && set_error_attr(err, "lineno", lineno)) {
         PyErr_SetObject(ErrorObject, err);
     }
-    Py_DECREF(err);
     return NULL;
 }
 
@@ -338,11 +336,7 @@ trace_frame_exc(PyThreadState *tstate, PyFrameObject *f)
 	value = Py_None;
 	Py_INCREF(value);
     }
-#if PY_VERSION_HEX < 0x02040000
     arg = Py_BuildValue("(OOO)", type, value, traceback);
-#else
-    arg = PyTuple_Pack(3, type, value, traceback);
-#endif
     if (arg == NULL) {
 	PyErr_Restore(type, value, traceback);
 	return 0;
@@ -361,8 +355,7 @@ trace_frame_exc(PyThreadState *tstate, PyFrameObject *f)
 #endif
 
 static PyObject*
-call_with_frame(PyCodeObject *c, PyObject* func, PyObject* args,
-                xmlparseobject *self)
+call_with_frame(PyCodeObject *c, PyObject* func, PyObject* args)
 {
     PyThreadState *tstate = PyThreadState_GET();
     PyFrameObject *f;
@@ -384,7 +377,6 @@ call_with_frame(PyCodeObject *c, PyObject* func, PyObject* args,
     if (res == NULL) {
 	if (tstate->curexc_traceback == NULL)
 	    PyTraceBack_Here(f);
-        XML_StopParser(self->itself, XML_FALSE);
 #ifdef FIX_TRACE
 	if (trace_frame_exc(tstate, f) < 0) {
 	    return NULL;
@@ -459,7 +451,7 @@ call_character_handler(xmlparseobject *self, const XML_Char *buffer, int len)
     /* temp is now a borrowed reference; consider it unused. */
     self->in_callback = 1;
     temp = call_with_frame(getcode(CharacterData, "CharacterData", __LINE__),
-                           self->handlers[CharacterData], args, self);
+                           self->handlers[CharacterData], args);
     /* temp is an owned reference again, or NULL */
     self->in_callback = 0;
     Py_DECREF(args);
@@ -580,7 +572,7 @@ my_StartElementHandler(void *userData,
         /* Container is now a borrowed reference; ignore it. */
         self->in_callback = 1;
         rv = call_with_frame(getcode(StartElement, "StartElement", __LINE__),
-                             self->handlers[StartElement], args, self);
+                             self->handlers[StartElement], args);
         self->in_callback = 0;
         Py_DECREF(args);
         if (rv == NULL) {
@@ -607,7 +599,7 @@ my_##NAME##Handler PARAMS {\
         if (!args) { flag_error(self); return RETURN;} \
         self->in_callback = 1; \
         rv = call_with_frame(getcode(NAME,#NAME,__LINE__), \
-                             self->handlers[NAME], args, self); \
+                             self->handlers[NAME], args); \
         self->in_callback = 0; \
         Py_DECREF(args); \
         if (rv == NULL) { \
@@ -756,7 +748,7 @@ my_ElementDeclHandler(void *userData,
             flag_error(self);
             goto finally;
         }
-        args = Py_BuildValue("NN", nameobj, modelobj);
+        args = Py_BuildValue("NN", string_intern(self, name), modelobj);
         if (args == NULL) {
             Py_DECREF(modelobj);
             flag_error(self);
@@ -764,7 +756,7 @@ my_ElementDeclHandler(void *userData,
         }
         self->in_callback = 1;
         rv = call_with_frame(getcode(ElementDecl, "ElementDecl", __LINE__),
-                             self->handlers[ElementDecl], args, self);
+                             self->handlers[ElementDecl], args);
         self->in_callback = 0;
         if (rv == NULL) {
             flag_error(self);
@@ -940,12 +932,7 @@ readinst(char *buf, int buf_size, PyObject *meth)
 
     PyTuple_SET_ITEM(arg, 0, bytes);
 
-#if PY_VERSION_HEX < 0x02020000
-    str = PyObject_CallObject(meth, arg);
-#else
-    str = PyObject_Call(meth, arg, NULL);
-#endif
-    if (str == NULL)
+    if ((str = PyObject_Call(meth, arg, NULL)) == NULL)
         goto finally;
 
     /* XXX what to do if it returns a Unicode string? */
@@ -1464,17 +1451,6 @@ xmlparse_getattr(xmlparseobject *self, char *name)
             return PyInt_FromLong((long)
                                   XML_GetErrorByteIndex(self->itself));
     }
-    if (name[0] == 'C') {
-        if (strcmp(name, "CurrentLineNumber") == 0)
-            return PyInt_FromLong((long)
-                                  XML_GetCurrentLineNumber(self->itself));
-        if (strcmp(name, "CurrentColumnNumber") == 0)
-            return PyInt_FromLong((long)
-                                  XML_GetCurrentColumnNumber(self->itself));
-        if (strcmp(name, "CurrentByteIndex") == 0)
-            return PyInt_FromLong((long)
-                                  XML_GetCurrentByteIndex(self->itself));
-    }
     if (name[0] == 'b') {
         if (strcmp(name, "buffer_size") == 0)
             return PyInt_FromLong((long) self->buffer_size);
@@ -1523,9 +1499,6 @@ xmlparse_getattr(xmlparseobject *self, char *name)
         APPEND(rc, "ErrorLineNumber");
         APPEND(rc, "ErrorColumnNumber");
         APPEND(rc, "ErrorByteIndex");
-        APPEND(rc, "CurrentLineNumber");
-        APPEND(rc, "CurrentColumnNumber");
-        APPEND(rc, "CurrentByteIndex");
         APPEND(rc, "buffer_size");
         APPEND(rc, "buffer_text");
         APPEND(rc, "buffer_used");
@@ -1962,23 +1935,6 @@ MODULE_INITFUNC(void)
     MYCONST(XML_ERROR_UNCLOSED_CDATA_SECTION);
     MYCONST(XML_ERROR_EXTERNAL_ENTITY_HANDLING);
     MYCONST(XML_ERROR_NOT_STANDALONE);
-    MYCONST(XML_ERROR_UNEXPECTED_STATE);
-    MYCONST(XML_ERROR_ENTITY_DECLARED_IN_PE);
-    MYCONST(XML_ERROR_FEATURE_REQUIRES_XML_DTD);
-    MYCONST(XML_ERROR_CANT_CHANGE_FEATURE_ONCE_PARSING);
-    /* Added in Expat 1.95.7. */
-    MYCONST(XML_ERROR_UNBOUND_PREFIX);
-    /* Added in Expat 1.95.8. */
-    MYCONST(XML_ERROR_UNDECLARING_PREFIX);
-    MYCONST(XML_ERROR_INCOMPLETE_PE);
-    MYCONST(XML_ERROR_XML_DECL);
-    MYCONST(XML_ERROR_TEXT_DECL);
-    MYCONST(XML_ERROR_PUBLICID);
-    MYCONST(XML_ERROR_SUSPENDED);
-    MYCONST(XML_ERROR_NOT_SUSPENDED);
-    MYCONST(XML_ERROR_ABORTED);
-    MYCONST(XML_ERROR_FINISHED);
-    MYCONST(XML_ERROR_SUSPEND_PE);
 
     PyModule_AddStringConstant(errors_module, "__doc__",
                                "Constants used to describe error conditions.");

@@ -24,14 +24,12 @@ class TestGenericStringIO(unittest.TestCase):
 
     def test_reads(self):
         eq = self.assertEqual
-        self.assertRaises(TypeError, self._fp.seek)
         eq(self._fp.read(10), self._line[:10])
         eq(self._fp.readline(), self._line[10:] + '\n')
         eq(len(self._fp.readlines(60)), 2)
 
     def test_writes(self):
         f = self.MODULE.StringIO()
-        self.assertRaises(TypeError, f.seek)
         f.write(self._line[:6])
         f.seek(3)
         f.write(self._line[20:26])
@@ -51,10 +49,9 @@ class TestGenericStringIO(unittest.TestCase):
         f.seek(10)
         f.truncate()
         eq(f.getvalue(), 'abcdefghij')
+        f.seek(0)
         f.truncate(5)
         eq(f.getvalue(), 'abcde')
-        f.write('xyz')
-        eq(f.getvalue(), 'abcdexyz')
         f.close()
         self.assertRaises(ValueError, f.write, 'frobnitz')
 

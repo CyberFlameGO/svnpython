@@ -35,17 +35,15 @@ class ConfigDialog(Toplevel):
         self.themeElements={'Normal Text':('normal','00'),
             'Python Keywords':('keyword','01'),
             'Python Definitions':('definition','02'),
-            'Python Builtins':('builtin', '03'),
-            'Python Comments':('comment','04'),
-            'Python Strings':('string','05'),
-            'Selected Text':('hilite','06'),
-            'Found Text':('hit','07'),
-            'Cursor':('cursor','08'),
-            'Error Text':('error','09'),
-            'Shell Normal Text':('console','10'),
-            'Shell Stdout Text':('stdout','11'),
-            'Shell Stderr Text':('stderr','12'),
-            }
+            'Python Comments':('comment','03'),
+            'Python Strings':('string','04'),
+            'Selected Text':('hilite','05'),
+            'Found Text':('hit','06'),
+            'Cursor':('cursor','07'),
+            'Error Text':('error','08'),
+            'Shell Normal Text':('console','09'),
+            'Shell Stdout Text':('stdout','10'),
+            'Shell Stderr Text':('stderr','11')}
         self.ResetChangedItems() #load initial values in changed items dict
         self.CreateWidgets()
         self.resizable(height=FALSE,width=FALSE)
@@ -199,9 +197,7 @@ class ConfigDialog(Toplevel):
             (' ','normal'),('func','definition'),('(param):','normal'),
             ('\n  ','normal'),('"""string"""','string'),('\n  var0 = ','normal'),
             ("'string'",'string'),('\n  var1 = ','normal'),("'selected'",'hilite'),
-            ('\n  var2 = ','normal'),("'found'",'hit'),
-            ('\n  var3 = ','normal'),('list', 'builtin'), ('(','normal'),
-            ('None', 'builtin'),(')\n\n','normal'),
+            ('\n  var2 = ','normal'),("'found'",'hit'),('\n\n','normal'),
             (' error ','error'),(' ','normal'),('cursor |','cursor'),
             ('\n ','normal'),('shell','console'),(' ','normal'),('stdout','stdout'),
             (' ','normal'),('stderr','stderr'),('\n','normal'))
@@ -337,7 +333,6 @@ class ConfigDialog(Toplevel):
         #tkVars
         self.winWidth=StringVar(self)
         self.winHeight=StringVar(self)
-        self.paraWidth=StringVar(self)
         self.startupEdit=IntVar(self)
         self.autoSave=IntVar(self)
         self.encoding=StringVar(self)
@@ -350,7 +345,6 @@ class ConfigDialog(Toplevel):
         frameRun=Frame(frame,borderwidth=2,relief=GROOVE)
         frameSave=Frame(frame,borderwidth=2,relief=GROOVE)
         frameWinSize=Frame(frame,borderwidth=2,relief=GROOVE)
-        frameParaSize=Frame(frame,borderwidth=2,relief=GROOVE)
         frameEncoding=Frame(frame,borderwidth=2,relief=GROOVE)
         frameHelp=Frame(frame,borderwidth=2,relief=GROOVE)
         #frameRun
@@ -375,11 +369,6 @@ class ConfigDialog(Toplevel):
                 width=3)
         labelWinHeightTitle=Label(frameWinSize,text='Height')
         entryWinHeight=Entry(frameWinSize,textvariable=self.winHeight,
-                width=3)
-        #paragraphFormatWidth
-        labelParaWidthTitle=Label(frameParaSize,text='Paragraph reformat'+
-                ' width (in characters)')
-        entryParaWidth=Entry(frameParaSize,textvariable=self.paraWidth,
                 width=3)
         #frameEncoding
         labelEncodingTitle=Label(frameEncoding,text="Default Source Encoding")
@@ -418,7 +407,6 @@ class ConfigDialog(Toplevel):
         frameRun.pack(side=TOP,padx=5,pady=5,fill=X)
         frameSave.pack(side=TOP,padx=5,pady=5,fill=X)
         frameWinSize.pack(side=TOP,padx=5,pady=5,fill=X)
-        frameParaSize.pack(side=TOP,padx=5,pady=5,fill=X)
         frameEncoding.pack(side=TOP,padx=5,pady=5,fill=X)
         frameHelp.pack(side=TOP,padx=5,pady=5,expand=TRUE,fill=BOTH)
         #frameRun
@@ -437,9 +425,6 @@ class ConfigDialog(Toplevel):
         labelWinHeightTitle.pack(side=RIGHT,anchor=E,pady=5)
         entryWinWidth.pack(side=RIGHT,anchor=E,padx=10,pady=5)
         labelWinWidthTitle.pack(side=RIGHT,anchor=E,pady=5)
-        #paragraphFormatWidth
-        labelParaWidthTitle.pack(side=LEFT,anchor=W,padx=5,pady=5)
-        entryParaWidth.pack(side=RIGHT,anchor=E,padx=10,pady=5)
         #frameEncoding
         labelEncodingTitle.pack(side=LEFT,anchor=W,padx=5,pady=5)
         radioEncNone.pack(side=RIGHT,anchor=E,pady=5)
@@ -477,7 +462,6 @@ class ConfigDialog(Toplevel):
         self.keysAreBuiltin.trace_variable('w',self.VarChanged_keysAreBuiltin)
         self.winWidth.trace_variable('w',self.VarChanged_winWidth)
         self.winHeight.trace_variable('w',self.VarChanged_winHeight)
-        self.paraWidth.trace_variable('w',self.VarChanged_paraWidth)
         self.startupEdit.trace_variable('w',self.VarChanged_startupEdit)
         self.autoSave.trace_variable('w',self.VarChanged_autoSave)
         self.encoding.trace_variable('w',self.VarChanged_encoding)
@@ -569,10 +553,6 @@ class ConfigDialog(Toplevel):
     def VarChanged_winHeight(self,*params):
         value=self.winHeight.get()
         self.AddChangedItem('main','EditorWindow','height',value)
-
-    def VarChanged_paraWidth(self,*params):
-        value=self.paraWidth.get()
-        self.AddChangedItem('main','FormatParagraph','paragraph',value)
 
     def VarChanged_startupEdit(self,*params):
         value=self.startupEdit.get()
@@ -738,7 +718,7 @@ class ConfigDialog(Toplevel):
     def DeleteCustomKeys(self):
         keySetName=self.customKeys.get()
         if not tkMessageBox.askyesno('Delete Key Set','Are you sure you wish '+
-                                     'to delete the key set %r ?' % (keySetName),
+                                     'to delete the key set '+`keySetName`+' ?',
                                      parent=self):
             return
         #remove key set from config
@@ -765,7 +745,7 @@ class ConfigDialog(Toplevel):
     def DeleteCustomTheme(self):
         themeName=self.customTheme.get()
         if not tkMessageBox.askyesno('Delete Theme','Are you sure you wish '+
-                                     'to delete the theme %r ?' % (themeName,),
+                                     'to delete the theme '+`themeName`+' ?',
                                      parent=self):
             return
         #remove theme from config
@@ -1086,8 +1066,6 @@ class ConfigDialog(Toplevel):
         #initial window size
         self.winWidth.set(idleConf.GetOption('main','EditorWindow','width'))
         self.winHeight.set(idleConf.GetOption('main','EditorWindow','height'))
-        #initial paragraph reformat size
-        self.paraWidth.set(idleConf.GetOption('main','FormatParagraph','paragraph'))
         # default source encoding
         self.encoding.set(idleConf.GetOption('main', 'EditorWindow',
                                              'encoding', default='none'))
@@ -1178,7 +1156,7 @@ class ConfigDialog(Toplevel):
         #update theme and repaint
         #update keybindings and re-bind
         #update user help sources menu
-        winInstances=self.parent.instance_dict.keys()
+        winInstances=self.parent.instanceDict.keys()
         for instance in winInstances:
             instance.ResetColorizer()
             instance.ResetFont()
@@ -1204,5 +1182,5 @@ if __name__ == '__main__':
     root=Tk()
     Button(root,text='Dialog',
             command=lambda:ConfigDialog(root,'Settings')).pack()
-    root.instance_dict={}
+    root.instanceDict={}
     root.mainloop()

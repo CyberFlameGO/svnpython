@@ -23,7 +23,9 @@ for data, dict in cases:
     C = Cookie.SimpleCookie() ; C.load(data)
     print repr(C)
     print str(C)
-    for k, v in sorted(dict.iteritems()):
+    items = dict.items()
+    items.sort()
+    for k, v in items:
         print ' ', k, repr( C[k].value ), repr(v)
         verify(C[k].value == v)
         print C[k]

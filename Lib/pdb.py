@@ -12,7 +12,7 @@ from repr import Repr
 import os
 import re
 import pprint
-import traceback
+
 # Create a custom safe Repr instance and increase its maxstring.
 # The default of 30 truncates error messages too easily.
 _repr = Repr()
@@ -57,8 +57,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         cmd.Cmd.__init__(self)
         self.prompt = '(Pdb) '
         self.aliases = {}
-        self.mainpyfile = ''
-        self._wait_for_mainpyfile = 0
         # Try to load readline if it exists
         try:
             import readline
@@ -119,19 +117,12 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def user_call(self, frame, argument_list):
         """This method is called when there is the remote possibility
         that we ever need to stop in this function."""
-        if self._wait_for_mainpyfile:
-            return
         if self.stop_here(frame):
             print '--Call--'
             self.interaction(frame, None)
 
     def user_line(self, frame):
         """This function is called when we stop or break at this line."""
-        if self._wait_for_mainpyfile:
-            if (self.mainpyfile != self.canonic(frame.f_code.co_filename)
-                or frame.f_lineno<= 0):
-                return
-            self._wait_for_mainpyfile = 0
         self.interaction(frame, None)
 
     def user_return(self, frame, return_value):
@@ -224,12 +215,11 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             arg = arg[:comma].rstrip()
         # parse stuff before comma: [filename:]lineno | function
         colon = arg.rfind(':')
-        funcname = None
         if colon >= 0:
             filename = arg[:colon].rstrip()
             f = self.lookupmodule(filename)
             if not f:
-                print '*** ', repr(filename),
+                print '*** ', `filename`,
                 print 'not found from sys.path'
                 return
             else:
@@ -255,9 +245,6 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                     if hasattr(func, 'im_func'):
                         func = func.im_func
                     code = func.func_code
-                    #use co_name to identify the bkpt (function names
-                    #could be aliased, but co_name is invariant)
-                    funcname = code.co_name
                     lineno = code.co_firstlineno
                     filename = code.co_filename
                 except:
@@ -265,12 +252,11 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                     (ok, filename, ln) = self.lineinfo(arg)
                     if not ok:
                         print '*** The specified object',
-                        print repr(arg),
+                        print `arg`,
                         print 'is not a function'
                         print ('or was not found '
                                'along sys.path.')
                         return
-                    funcname = ok # ok contains a function name
                     lineno = int(ln)
         if not filename:
             filename = self.defaultFile()
@@ -278,7 +264,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         line = self.checkline(filename, lineno)
         if line:
             # now set the break point
-            err = self.set_break(filename, line, temporary, cond, funcname)
+            err = self.set_break(filename, line, temporary, cond)
             if err: print '***', err
             else:
                 bp = self.get_breaks(filename, line)[-1]
@@ -290,8 +276,8 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def defaultFile(self):
         """Produce a reasonable default."""
         filename = self.curframe.f_code.co_filename
-        if filename == '<string>' and self.mainpyfile:
-            filename = self.mainpyfile
+        if filename == '<string>' and mainpyfile:
+            filename = mainpyfile
         return filename
 
     do_b = do_break
@@ -333,11 +319,13 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         return answer or failed
 
     def checkline(self, filename, lineno):
-        """Check whether specified line seems to be executable.
+        """Return line number of first line at or after input
+        argument such that if the input points to a 'def', the
+        returned line number is the first
+        non-blank/non-comment line to follow.  If the input
+        points to a blank or comment line, return 0.  At end
+        of file, also return 0."""
 
-        Return `lineno` if it is, 0 if not (e.g. a docstring, comment, blank
-        line or EOF). Warning: testing is not comprehensive.
-        """
         line = linecache.getline(filename, lineno)
         if not line:
             print 'End of file'
@@ -348,6 +336,40 @@ class Pdb(bdb.Bdb, cmd.Cmd):
              (line[:3] == '"""') or line[:3] == "'''"):
             print '*** Blank or comment'
             return 0
+        # When a file is read in and a breakpoint is at
+        # the 'def' statement, the system stops there at
+        # code parse time.  We don't want that, so all breakpoints
+        # set at 'def' statements are moved one line onward
+        if line[:3] == 'def':
+            instr = ''
+            brackets = 0
+            while 1:
+                skipone = 0
+                for c in line:
+                    if instr:
+                        if skipone:
+                            skipone = 0
+                        elif c == '\\':
+                            skipone = 1
+                        elif c == instr:
+                            instr = ''
+                    elif c == '#':
+                        break
+                    elif c in ('"',"'"):
+                        instr = c
+                    elif c in ('(','{','['):
+                        brackets = brackets + 1
+                    elif c in (')','}',']'):
+                        brackets = brackets - 1
+                lineno = lineno+1
+                line = linecache.getline(filename, lineno)
+                if not line:
+                    print 'end of file'
+                    return 0
+                line = line.strip()
+                if not line: continue   # Blank line
+                if brackets <= 0 and line[0] not in ('#','"',"'"):
+                    break
         return lineno
 
     def do_enable(self, arg):
@@ -534,16 +556,13 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         self.lastcmd = p.lastcmd
 
     def do_quit(self, arg):
-        self._user_requested_quit = 1
         self.set_quit()
         return 1
-
     do_q = do_quit
     do_exit = do_quit
 
     def do_EOF(self, arg):
         print
-        self._user_requested_quit = 1
         self.set_quit()
         return 1
 
@@ -577,7 +596,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             if isinstance(t, str):
                 exc_type_name = t
             else: exc_type_name = t.__name__
-            print '***', exc_type_name + ':', repr(v)
+            print '***', exc_type_name + ':', `v`
             raise
 
     def do_p(self, arg):
@@ -608,7 +627,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                 else:
                     first = max(1, int(x) - 5)
             except:
-                print '*** Error in argument:', repr(arg)
+                print '*** Error in argument:', `arg`
                 return
         elif self.lineno is None:
             first = max(1, self.curframe.f_lineno - 5)
@@ -625,7 +644,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                     print '[EOF]'
                     break
                 else:
-                    s = repr(lineno).rjust(3)
+                    s = `lineno`.rjust(3)
                     if len(s) < 4: s = s + ' '
                     if lineno in breaklist: s = s + 'B'
                     else: s = s + ' '
@@ -646,7 +665,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             if type(t) == type(''):
                 exc_type_name = t
             else: exc_type_name = t.__name__
-            print '***', exc_type_name + ':', repr(v)
+            print '***', exc_type_name + ':', `v`
             return
         code = None
         # Is it a function?
@@ -736,7 +755,7 @@ context of most commands.  'bt' is an alias for this command."""
     def help_d(self):
         print """d(own)
 Move the current frame one level down in the stack trace
-(to a newer frame)."""
+(to an older frame)."""
 
     def help_up(self):
         self.help_u()
@@ -744,7 +763,7 @@ Move the current frame one level down in the stack trace
     def help_u(self):
         print """u(p)
 Move the current frame one level up in the stack trace
-(to an older frame)."""
+(to a newer frame)."""
 
     def help_break(self):
         self.help_b()
@@ -940,16 +959,7 @@ Deletes the specified alias."""
         help()
 
     def lookupmodule(self, filename):
-        """Helper function for break/clear parsing -- may be overridden.
-
-        lookupmodule() translates (possibly incomplete) file or module name
-        into an absolute file name.
-        """
-        if os.path.isabs(filename) and  os.path.exists(filename):
-            return filename
-        f = os.path.join(sys.path[0], filename)
-        if  os.path.exists(f) and self.canonic(f) == self.mainpyfile:
-            return f
+        """Helper function for break/clear parsing -- may be overridden."""
         root, ext = os.path.splitext(filename)
         if ext == '':
             filename = filename + '.py'
@@ -963,24 +973,6 @@ Deletes the specified alias."""
                 return fullname
         return None
 
-    def _runscript(self, filename):
-        # Start with fresh empty copy of globals and locals and tell the script
-        # that it's being run as __main__ to avoid scripts being able to access
-        # the pdb.py namespace.
-        globals_ = {"__name__" : "__main__"}
-        locals_ = globals_
-
-        # When bdb sets tracing, a number of call and line events happens
-        # BEFORE debugger even reaches user's code (and the exact sequence of
-        # events depends on python version). So we take special measures to
-        # avoid stopping before we reach the main script (see user_line and
-        # user_call for details).
-        self._wait_for_mainpyfile = 1
-        self.mainpyfile = self.canonic(filename)
-        self._user_requested_quit = 0
-        statement = 'execfile( "%s")' % filename
-        self.run(statement, globals=globals_, locals=locals_)
-
 # Simplified interface
 
 def run(statement, globals=None, locals=None):
@@ -993,11 +985,11 @@ def runctx(statement, globals, locals):
     # B/W compatibility
     run(statement, globals, locals)
 
-def runcall(*args, **kwds):
-    return Pdb().runcall(*args, **kwds)
+def runcall(*args):
+    return Pdb().runcall(*args)
 
 def set_trace():
-    Pdb().set_trace(sys._getframe().f_back)
+    Pdb().set_trace()
 
 # Post-Mortem interface
 
@@ -1031,48 +1023,23 @@ def help():
         print 'Sorry, can\'t find the help file "pdb.doc"',
         print 'along the Python search path'
 
-def main():
+mainmodule = ''
+mainpyfile = ''
+
+# When invoked as main program, invoke the debugger on a script
+if __name__=='__main__':
     if not sys.argv[1:]:
         print "usage: pdb.py scriptfile [arg] ..."
         sys.exit(2)
 
-    mainpyfile =  sys.argv[1]     # Get script filename
-    if not os.path.exists(mainpyfile):
-        print 'Error:', mainpyfile, 'does not exist'
+    mainpyfile = filename = sys.argv[1]     # Get script filename
+    if not os.path.exists(filename):
+        print 'Error:', `filename`, 'does not exist'
         sys.exit(1)
-
+    mainmodule = os.path.basename(filename)
     del sys.argv[0]         # Hide "pdb.py" from argument list
 
-    # Replace pdb's dir with script's dir in front of module search path.
-    sys.path[0] = os.path.dirname(mainpyfile)
+    # Insert script directory in front of module search path
+    sys.path.insert(0, os.path.dirname(filename))
 
-    # Note on saving/restoring sys.argv: it's a good idea when sys.argv was
-    # modified by the script being debugged. It's a bad idea when it was
-    # changed by the user from the command line. The best approach would be to
-    # have a "restart" command which would allow explicit specification of
-    # command line arguments.
-    pdb = Pdb()
-    while 1:
-        try:
-            pdb._runscript(mainpyfile)
-            if pdb._user_requested_quit:
-                break
-            print "The program finished and will be restarted"
-        except SystemExit:
-            # In most cases SystemExit does not warrant a post-mortem session.
-            print "The program exited via sys.exit(). Exit status: ",
-            print sys.exc_info()[1]
-        except:
-            traceback.print_exc()
-            print "Uncaught exception. Entering post mortem debugging"
-            print "Running 'cont' or 'step' will restart the program"
-            t = sys.exc_info()[2]
-            while t.tb_next is not None:
-                t = t.tb_next
-            pdb.interaction(t.tb_frame,t)
-            print "Post mortem debugger finished. The "+mainpyfile+" will be restarted"
-
-
-# When invoked as main program, invoke the debugger on a script
-if __name__=='__main__':
-    main()
+    run('execfile(' + `filename` + ')')

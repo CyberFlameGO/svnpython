@@ -82,9 +82,6 @@ class ScriptBinding:
         return True
 
     def checksyntax(self, filename):
-        self.shell = shell = self.flist.open_shell()
-        saved_stream = shell.get_warning_stream()
-        shell.set_warning_stream(shell.stderr)
         f = open(filename, 'r')
         source = f.read()
         f.close()
@@ -95,23 +92,20 @@ class ScriptBinding:
         text = self.editwin.text
         text.tag_remove("ERROR", "1.0", "end")
         try:
+            # If successful, return the compiled code
+            return compile(source, filename, "exec")
+        except (SyntaxError, OverflowError), err:
             try:
-                # If successful, return the compiled code
-                return compile(source, filename, "exec")
-            except (SyntaxError, OverflowError), err:
-                try:
-                    msg, (errorfilename, lineno, offset, line) = err
-                    if not errorfilename:
-                        err.args = msg, (filename, lineno, offset, line)
-                        err.filename = filename
-                    self.colorize_syntax_error(msg, lineno, offset)
-                except:
-                    msg = "*** " + str(err)
-                self.errorbox("Syntax error",
-                              "There's an error in your program:\n" + msg)
-                return False
-        finally:
-            shell.set_warning_stream(saved_stream)
+                msg, (errorfilename, lineno, offset, line) = err
+                if not errorfilename:
+                    err.args = msg, (filename, lineno, offset, line)
+                    err.filename = filename
+                self.colorize_syntax_error(msg, lineno, offset)
+            except:
+                msg = "*** " + str(err)
+            self.errorbox("Syntax error",
+                          "There's an error in your program:\n" + msg)
+            return False
 
     def colorize_syntax_error(self, msg, lineno, offset):
         text = self.editwin.text
@@ -138,32 +132,30 @@ class ScriptBinding:
         filename = self.getfilename()
         if not filename:
             return
-        if not self.tabnanny(filename):
-            return
         code = self.checksyntax(filename)
         if not code:
             return
-        shell = self.shell
+        flist = self.editwin.flist
+        shell = flist.open_shell()
+        if not shell:
+            return  # couldn't open the shell
         interp = shell.interp
         if PyShell.use_subprocess:
             shell.restart_shell()
         dirname = os.path.dirname(filename)
         # XXX Too often this discards arguments the user just set...
         interp.runcommand("""if 1:
-            _filename = %r
+            _filename = %s
             import sys as _sys
             from os.path import basename as _basename
             if (not _sys.argv or
                 _basename(_sys.argv[0]) != _basename(_filename)):
                 _sys.argv = [_filename]
             import os as _os
-            _os.chdir(%r)
+            _os.chdir(%s)
             del _filename, _sys, _basename, _os
-            \n""" % (filename, dirname))
+            \n""" % (`filename`, `dirname`))
         interp.prepend_syspath(filename)
-        # XXX KBK 03Jul04 When run w/o subprocess, runtime warnings still
-        #         go to __stderr__.  With subprocess, they go to the shell.
-        #         Need to change streams in PyShell.ModifiedInterpreter.
         interp.runcode(code)
 
     def getfilename(self):

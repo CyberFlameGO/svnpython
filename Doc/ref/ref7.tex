@@ -317,12 +317,8 @@ section~\ref{types}):
 
 \begin{productionlist}
   \production{funcdef}
-             {[\token{decorators}] "def" \token{funcname} "(" [\token{parameter_list}] ")"
+             {"def" \token{funcname} "(" [\token{parameter_list}] ")"
               ":" \token{suite}}
-  \production{decorators}
-             {\token{decorator}+}
-  \production{decorator}
-             {"@" \token{dotted_name} ["(" [\token{argument_list} [","]] ")"] NEWLINE}
   \production{parameter_list}
                  {(\token{defparameter} ",")*}
   \productioncont{(~~"*" \token{identifier} [, "**" \token{identifier}]}
@@ -348,27 +344,6 @@ as the global namespace to be used when the function is called.
 
 The function definition does not execute the function body; this gets
 executed only when the function is called.
-
-A function definition may be wrapped by one or more decorator expressions.
-Decorator expressions are evaluated when the function is defined, in the scope
-that contains the function definition.  The result must be a callable,
-which is invoked with the function object as the only argument.
-The returned value is bound to the function name instead of the function
-object.  Multiple decorators are applied in nested fashion.
-For example, the following code:
-
-\begin{verbatim}
-@f1(arg)
-@f2
-def func(): pass
-\end{verbatim}
-
-is equivalent to:
-
-\begin{verbatim}
-def func(): pass
-func = f1(arg)(f2(func))
-\end{verbatim}
 
 When one or more top-level parameters have the form \var{parameter}
 \code{=} \var{expression}, the function is said to have ``default
@@ -446,8 +421,7 @@ A class definition defines a class object (see section~\ref{types}):
 
 A class definition is an executable statement.  It first evaluates the
 inheritance list, if present.  Each item in the inheritance list
-should evaluate to a class object or class type which allows
-subclassing.  The class's suite is then executed
+should evaluate to a class object.  The class's suite is then executed
 in a new execution frame (see section~\ref{naming}), using a newly
 created local namespace and the original global namespace.
 (Usually, the suite contains only function definitions.)  When the
@@ -461,7 +435,7 @@ class object in the original local namespace.
 \indexii{name}{binding}
 \indexii{execution}{frame}
 
-\strong{Programmer's note:} Variables defined in the class definition
+\strong{Programmer's note:} variables defined in the class definition
 are class variables; they are shared by all instances.  To define
 instance variables, they must be given a value in the
 \method{__init__()} method or in another method.  Both class and
@@ -469,5 +443,3 @@ instance variables are accessible through the notation
 ``\code{self.name}'', and an instance variable hides a class variable
 with the same name when accessed in this way.  Class variables with
 immutable values can be used as defaults for instance variables.
-For new-style classes, descriptors can be used to create instance
-variables with different implementation details.

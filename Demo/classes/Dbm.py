@@ -13,7 +13,7 @@ class Dbm:
     def __repr__(self):
         s = ''
         for key in self.keys():
-            t = repr(key) + ': ' + repr(self[key])
+            t = `key` + ': ' + `self[key]`
             if s: t = ', ' + t
             s = s + t
         return '{' + s + '}'
@@ -22,13 +22,13 @@ class Dbm:
         return len(self.db)
 
     def __getitem__(self, key):
-        return eval(self.db[repr(key)])
+        return eval(self.db[`key`])
 
     def __setitem__(self, key, value):
-        self.db[repr(key)] = repr(value)
+        self.db[`key`] = `value`
 
     def __delitem__(self, key):
-        del self.db[repr(key)]
+        del self.db[`key`]
 
     def keys(self):
         res = []
@@ -37,7 +37,7 @@ class Dbm:
         return res
 
     def has_key(self, key):
-        return self.db.has_key(repr(key))
+        return self.db.has_key(`key`)
 
 
 def test():

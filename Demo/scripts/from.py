@@ -31,5 +31,5 @@ while 1:
             if not line or line == '\n':
                 break
             if line.startswith('Subject: '):
-                print repr(line[9:-1]),
+                print `line[9:-1]`,
         print

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2001-2004 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2002 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -411,7 +411,7 @@ def test_main_inner():
     #Set up a handler such that all events are sent via a socket to the log
     #receiver (logrecv).
     #The handler will only be added to the rootLogger for some of the tests
-    shdlr = logging.handlers.SocketHandler('localhost',
+    hdlr = logging.handlers.SocketHandler('localhost',
                                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
 
     #Configure the logger for logrecv so events do not propagate beyond it.
@@ -437,10 +437,10 @@ def test_main_inner():
     try:
         banner("log_test0", "begin")
 
-        rootLogger.addHandler(shdlr)
+        rootLogger.addHandler(hdlr)
         test0()
-        shdlr.close()
-        rootLogger.removeHandler(shdlr)
+        hdlr.close()
+        rootLogger.removeHandler(hdlr)
 
         banner("log_test0", "end")
 
@@ -464,15 +464,8 @@ def test_main_inner():
         banner("logrecv output", "begin")
         sys.stdout.write(sockOut.getvalue())
         sockOut.close()
-        sockLogger.removeHandler(sockhdlr)
-        sockhdlr.close()
         banner("logrecv output", "end")
         sys.stdout.flush()
-        try:
-            hdlr.close()
-        except:
-            pass
-        rootLogger.removeHandler(hdlr)
 
 def test_main():
     import locale

@@ -37,23 +37,9 @@ Content-Type: text/html
 </table> </table> </table> </table> </table> </font> </font> </font>'''
 
 __UNDEF__ = []                          # a special sentinel object
-def small(text):
-    if text:
-        return '<small>' + text + '</small>'
-    else:
-        return ''
-
-def strong(text):
-    if text:
-        return '<strong>' + text + '</strong>'
-    else:
-        return ''
-
-def grey(text):
-    if text:
-        return '<font color="#909090">' + text + '</font>'
-    else:
-        return ''
+def small(text): return '<small>' + text + '</small>'
+def strong(text): return '<strong>' + text + '</strong>'
+def grey(text): return '<font color="#909090">' + text + '</font>'
 
 def lookup(name, frame, locals):
     """Find the value for a given name in the given environment."""
@@ -102,11 +88,10 @@ def html((etype, evalue, etb), context=5):
     pyver = 'Python ' + sys.version.split()[0] + ': ' + sys.executable
     date = time.ctime(time.time())
     head = '<body bgcolor="#f0f0f8">' + pydoc.html.heading(
-        '<big><big>%s</big></big>' %
-        strong(pydoc.html.escape(str(etype))),
+        '<big><big><strong>%s</strong></big></big>' % str(etype),
         '#ffffff', '#6622aa', pyver + '<br>' + date) + '''
 <p>A problem occurred in a Python script.  Here is the sequence of
-function calls leading up to the error, in the order they occurred.</p>'''
+function calls leading up to the error, in the order they occurred.'''
 
     indent = '<tt>' + small('&nbsp;' * 5) + '&nbsp;</tt>'
     frames = []
@@ -157,12 +142,11 @@ function calls leading up to the error, in the order they occurred.</p>'''
                 dump.append(name + ' <em>undefined</em>')
 
         rows.append('<tr><td>%s</td></tr>' % small(grey(', '.join(dump))))
-        frames.append('''
+        frames.append('''<p>
 <table width="100%%" cellspacing=0 cellpadding=0 border=0>
 %s</table>''' % '\n'.join(rows))
 
-    exception = ['<p>%s: %s' % (strong(pydoc.html.escape(str(etype))),
-                                pydoc.html.escape(str(evalue)))]
+    exception = ['<p>%s: %s' % (strong(str(etype)), str(evalue))]
     if type(evalue) is types.InstanceType:
         for name in dir(evalue):
             if name[:1] == '_': continue
@@ -226,7 +210,8 @@ function calls leading up to the error, in the order they occurred.
             done[name] = 1
             if value is not __UNDEF__:
                 if where == 'global': name = 'global ' + name
-                elif where != 'local': name = where + name.split('.')[-1]
+                elif where == 'local': name = name
+                else: name = where + name.split('.')[-1]
                 dump.append('%s = %s' % (name, pydoc.text.repr(value)))
             else:
                 dump.append(name + ' undefined')

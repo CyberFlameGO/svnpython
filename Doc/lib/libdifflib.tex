@@ -3,8 +3,8 @@
 
 \declaremodule{standard}{difflib}
 \modulesynopsis{Helpers for computing differences between objects.}
-\moduleauthor{Tim Peters}{tim_one@users.sourceforge.net}
-\sectionauthor{Tim Peters}{tim_one@users.sourceforge.net}
+\moduleauthor{Tim Peters}{tim.one@home.com}
+\sectionauthor{Tim Peters}{tim.one@home.com}
 % LaTeXification by Fred L. Drake, Jr. <fdrake@acm.org>.
 
 \versionadded{2.1}
@@ -52,82 +52,14 @@
   characters.
 \end{classdesc*}
 
-\begin{classdesc*}{HtmlDiff}
+\begin{funcdesc}{context_diff}{a, b\optional{, fromfile\optional{, tofile
+	\optional{, fromfiledate\optional{, tofiledate\optional{, n
+	\optional{, lineterm}}}}}}}
 
-  This class can be used to create an HTML table (or a complete HTML file
-  containing the table) showing a side by side, line by line comparison
-  of text with inter-line and intra-line change highlights.  The table can
-  be generated in either full or contextual difference mode.
-
-  The constructor for this class is:
-
-  \begin{funcdesc}{__init__}{\optional{tabsize}\optional{,
-    wrapcolumn}\optional{, linejunk}\optional{, charjunk}}
-
-    Initializes instance of \class{HtmlDiff}.
-
-    \var{tabsize} is an optional keyword argument to specify tab stop spacing
-    and defaults to \code{8}.
-
-    \var{wrapcolumn} is an optional keyword to specify column number where
-    lines are broken and wrapped, defaults to \code{None} where lines are not
-    wrapped.
-
-    \var{linejunk} and \var{charjunk} are optional keyword arguments passed
-    into \code{ndiff()} (used by \class{HtmlDiff} to generate the
-    side by side HTML differences).  See \code{ndiff()} documentation for
-    argument default values and descriptions.
-
-  \end{funcdesc}
-
-  The following methods are public:
-
-  \begin{funcdesc}{make_file}{fromlines, tolines
-    \optional{, fromdesc}\optional{, todesc}\optional{, context}\optional{,
-    numlines}}
-    Compares \var{fromlines} and \var{tolines} (lists of strings) and returns
-    a string which is a complete HTML file containing a table showing line by
-    line differences with inter-line and intra-line changes highlighted.
-
-    \var{fromdesc} and \var{todesc} are optional keyword arguments to specify
-    from/to file column header strings (both default to an empty string).
-
-    \var{context} and \var{numlines} are both optional keyword arguments.
-    Set \var{context} to \code{True} when contextual differences are to be
-    shown, else the default is \code{False} to show the full files.
-    \var{numlines} defaults to \code{5}.  When \var{context} is \code{True}
-    \var{numlines} controls the number of context lines which surround the
-    difference highlights.  When \var{context} is \code{False} \var{numlines}
-    controls the number of lines which are shown before a difference
-    highlight when using the "next" hyperlinks (setting to zero would cause
-    the "next" hyperlinks to place the next difference highlight at the top of
-    the browser without any leading context).
-  \end{funcdesc}
-
-  \begin{funcdesc}{make_table}{fromlines, tolines
-    \optional{, fromdesc}\optional{, todesc}\optional{, context}\optional{,
-    numlines}}
-    Compares \var{fromlines} and \var{tolines} (lists of strings) and returns
-    a string which is a complete HTML table showing line by line differences
-    with inter-line and intra-line changes highlighted.
-
-    The arguments for this method are the same as those for the
-    \method{make_file()} method.
-  \end{funcdesc}
-
-  \file{Tools/scripts/diff.py} is a command-line front-end to this class
-  and contains a good example of its use.
-
-  \versionadded{2.4}
-\end{classdesc*}
-
-\begin{funcdesc}{context_diff}{a, b\optional{, fromfile}\optional{,
-    tofile}\optional{, fromfiledate}\optional{, tofiledate}\optional{,
-    n}\optional{, lineterm}}
   Compare \var{a} and \var{b} (lists of strings); return a
   delta (a generator generating the delta lines) in context diff
   format.
-
+  
   Context diffs are a compact way of showing just the lines that have
   changed plus a few lines of context.  The changes are shown in a
   before/after style.  The number of context lines is set by \var{n}
@@ -152,10 +84,10 @@
   function.
 
   \versionadded{2.3}
-\end{funcdesc}
+\end{funcdesc}  
 
 \begin{funcdesc}{get_close_matches}{word, possibilities\optional{,
-                 n}\optional{, cutoff}}
+                 n\optional{, cutoff}}}
   Return a list of the best ``good enough'' matches.  \var{word} is a
   sequence for which close matches are desired (typically a string),
   and \var{possibilities} is a list of sequences against which to
@@ -184,7 +116,8 @@
 \end{verbatim}
 \end{funcdesc}
 
-\begin{funcdesc}{ndiff}{a, b\optional{, linejunk}\optional{, charjunk}}
+\begin{funcdesc}{ndiff}{a, b\optional{, linejunk\optional{,
+                 charjunk}}}
   Compare \var{a} and \var{b} (lists of strings); return a
   \class{Differ}-style delta (a generator generating the delta lines).
 
@@ -252,13 +185,14 @@ emu
 
 \end{funcdesc}
 
-\begin{funcdesc}{unified_diff}{a, b\optional{, fromfile}\optional{,
-    tofile}\optional{, fromfiledate}\optional{, tofiledate}\optional{,
-    n}\optional{, lineterm}}
+\begin{funcdesc}{unified_diff}{a, b\optional{, fromfile\optional{, tofile
+	\optional{, fromfiledate\optional{, tofiledate\optional{, n
+	\optional{, lineterm}}}}}}}
+
   Compare \var{a} and \var{b} (lists of strings); return a
   delta (a generator generating the delta lines) in unified diff
   format.
-
+  
   Unified diffs are a compact way of showing just the lines that have
   changed plus a few lines of context.  The changes are shown in a
   inline style (instead of separate before/after blocks).  The number
@@ -282,8 +216,8 @@ emu
   \file{Tools/scripts/diff.py} is a command-line front-end for this
   function.
 
-  \versionadded{2.3}
-\end{funcdesc}
+  \versionadded{2.3}  
+\end{funcdesc} 
 
 \begin{funcdesc}{IS_LINE_JUNK}{line}
   Return true for ignorable lines.  The line \var{line} is ignorable
@@ -320,7 +254,7 @@ The \class{SequenceMatcher} class has this constructor:
   Optional argument \var{isjunk} must be \code{None} (the default) or
   a one-argument function that takes a sequence element and returns
   true if and only if the element is ``junk'' and should be ignored.
-  Passing \code{None} for \var{isjunk} is equivalent to passing
+  Passing \code{None} for \var{b} is equivalent to passing
   \code{lambda x: 0}; in other words, no elements are ignored.  For
   example, pass:
 
@@ -431,7 +365,7 @@ of the other sequences.
   Each tuple is of the form \code{(\var{tag}, \var{i1}, \var{i2},
   \var{j1}, \var{j2})}.  The first tuple has \code{\var{i1} ==
   \var{j1} == 0}, and remaining tuples have \var{i1} equal to the
-  \var{i2} from the preceding tuple, and, likewise, \var{j1} equal to
+  \var{i2} from the preceeding tuple, and, likewise, \var{j1} equal to
   the previous \var{j2}.
 
   The \var{tag} values are strings, with these meanings:
@@ -476,7 +410,7 @@ replace a[3:4] (x) b[2:3] (y)
   intervening ranges which have no changes.
 
   The groups are returned in the same format as \method{get_opcodes()}.
-  \versionadded{2.3}
+  \versionadded{2.3}			    
 \end{methoddesc}
 
 \begin{methoddesc}{ratio}{}

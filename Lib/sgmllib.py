@@ -12,7 +12,7 @@
 import markupbase
 import re
 
-__all__ = ["SGMLParser", "SGMLParseError"]
+__all__ = ["SGMLParser"]
 
 # Regular expressions used for parsing
 
@@ -423,18 +423,18 @@ class TestSGMLParser(SGMLParser):
 
     def handle_data(self, data):
         self.testdata = self.testdata + data
-        if len(repr(self.testdata)) >= 70:
+        if len(`self.testdata`) >= 70:
             self.flush()
 
     def flush(self):
         data = self.testdata
         if data:
             self.testdata = ""
-            print 'data:', repr(data)
+            print 'data:', `data`
 
     def handle_comment(self, data):
         self.flush()
-        r = repr(data)
+        r = `data`
         if len(r) > 68:
             r = r[:32] + '...' + r[-32:]
         print 'comment:', r

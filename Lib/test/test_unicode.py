@@ -11,8 +11,7 @@ from test import test_support, string_tests
 
 class UnicodeTest(
     string_tests.CommonTest,
-    string_tests.MixinStrUnicodeUserStringTest,
-    string_tests.MixinStrUnicodeTest,
+    string_tests.MixinStrUnicodeUserStringTest
     ):
     type2test = unicode
 
@@ -33,13 +32,6 @@ class UnicodeTest(
             realresult = method(*args)
             self.assertEqual(realresult, result)
             self.assert_(object is not realresult)
-
-    def test_literals(self):
-        self.assertEqual(u'\xff', u'\u00ff')
-        self.assertEqual(u'\uffff', u'\U0000ffff')
-        self.assertRaises(UnicodeError, eval, 'u\'\\Ufffffffe\'')
-        self.assertRaises(UnicodeError, eval, 'u\'\\Uffffffff\'')
-        self.assertRaises(UnicodeError, eval, 'u\'\\U%08x\'' % 0x110000)
 
     def test_repr(self):
         if not sys.platform.startswith('java'):
@@ -437,14 +429,6 @@ class UnicodeTest(
         o = StringCompat('unicode(obj) is compatible to str()')
         self.assertEqual(unicode(o), u'unicode(obj) is compatible to str()')
         self.assertEqual(str(o), 'unicode(obj) is compatible to str()')
-
-        # %-formatting and .__unicode__()
-        self.assertEqual(u'%s' %
-                         UnicodeCompat(u"u'%s' % obj uses obj.__unicode__()"),
-                         u"u'%s' % obj uses obj.__unicode__()")
-        self.assertEqual(u'%s' %
-                         UnicodeCompat(u"u'%s' % obj falls back to obj.__str__()"),
-                         u"u'%s' % obj falls back to obj.__str__()")
 
         for obj in (123, 123.45, 123L):
             self.assertEqual(unicode(obj), unicode(str(obj)))

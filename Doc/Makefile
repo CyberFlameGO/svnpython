@@ -83,8 +83,6 @@ DVIPS=	   dvips -N0 -t $(PAPER)
 # $(shell) function here to work around that restriction by
 # identifying mkhowto and the commontex/ directory using absolute paths.
 #
-# If your doc build fails immediately, you may need to switch to GNU make.
-# (e.g. OpenBSD needs package gmake installed; use gmake instead of make)
 PWD=$(shell pwd)
 
 # (The trailing colon in the value is needed; TeX places it's default
@@ -96,11 +94,12 @@ TEXINPUTS=$(PWD)/commontex:
 # using the second version.  The standard documentation is typically
 # built using the second flavor, where the preferred version is from
 # the Python CVS trunk.
-MKHOWTO=   TEXINPUTS=$(TEXINPUTS) $(PYTHON) $(PWD)/tools/mkhowto
+#MKHOWTO=   TEXINPUTS=$(TEXINPUTS) $(PYTHON) $(PWD)/tools/mkhowto
+MKHOWTO=   TEXINPUTS=$(TEXINPUTS) mkhowto
 
 MKDVI=	   $(MKHOWTO) --paper=$(PAPER) --dvi
 MKHTML=	   $(MKHOWTO) --html --about html/stdabout.dat \
-		--iconserver ../icons --favicon ../icons/pyfav.png \
+		--iconserver ../icons --favicon ../icons/pyfav.gif \
 		--address $(PYTHONDOCS) --up-link ../index.html \
 		--up-title "Python Documentation Index" \
 		--global-module-index "../modindex.html" --dvips-safe
@@ -122,7 +121,7 @@ EMACS=     emacs
 
 # The end of this should reflect the major/minor version numbers of
 # the release:
-WHATSNEW=whatsnew25
+WHATSNEW=whatsnew23
 
 # what's what
 MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \
@@ -345,7 +344,7 @@ $(INDEXFILES): $(COMMONPERL) html/stdabout.dat tools/node2label.pl
 
 html/acks.html: ACKS $(TOOLSDIR)/support.py $(TOOLSDIR)/mkackshtml
 	$(PYTHON) $(TOOLSDIR)/mkackshtml --address $(PYTHONDOCS) \
-		--favicon icons/pyfav.png \
+		--favicon icons/pyfav.gif \
 		--output html/acks.html <ACKS
 
 
@@ -362,13 +361,11 @@ html/index.html: html/index.html.in $(BOILERPLATE) tools/rewrite.py
 		<$< >$@
 
 html/modindex.html: $(TOOLSDIR)/support.py $(TOOLSDIR)/mkmodindex
-html/modindex.html: html/dist/dist.html
 html/modindex.html: html/lib/lib.html html/mac/mac.html
 	cd html && \
-	 $(PYTHON) ../$(TOOLSDIR)/mkmodindex --columns 3 \
+	 $(PYTHON) ../$(TOOLSDIR)/mkmodindex --columns 4 \
 		--output modindex.html --address $(PYTHONDOCS) \
-		--favicon icons/pyfav.png \
-		dist/modindex.html \
+		--favicon icons/pyfav.gif \
 		lib/modindex.html mac/modindex.html
 
 html:	$(ALLHTMLFILES) $(HTMLCSSFILES)
@@ -619,7 +616,6 @@ HTMLPKGFILES=*.html */*.css */*.html */*.gif */*.png */*.txt
 
 html-$(RELEASE).tar:	$(ALLHTMLFILES) $(HTMLCSSFILES)
 	mkdir Python-Docs-$(RELEASE)
-	-find html -name '*.gif' -size 0 | xargs rm -f
 	cd html && tar cf ../temp.tar $(HTMLPKGFILES)
 	cd Python-Docs-$(RELEASE) && tar xf ../temp.tar
 	rm temp.tar
@@ -675,11 +671,11 @@ bziplatex:	latex-$(RELEASE).tar.bz2
 
 bzips:		bzippdf bzipps bziphtml
 
-disthtml:	bziphtml ziphtml
-distinfo:	bzipinfo
-distps:		bzipps zipps
-distpdf:	bzippdf zippdf
-distlatex:	bziplatex ziplatex
+disthtml:	tarhtml bziphtml ziphtml
+distinfo:	tarinfo bzipinfo
+distps:		tarps bzipps zipps
+distpdf:	tarpdf bzippdf zippdf
+distlatex:	tarlatex bziplatex ziplatex
 
 # We use the "pkglist" target at the end of these to ensure the
 # package list is updated after building either of these; this seems a
@@ -700,7 +696,7 @@ pkglist:
 	$(TOOLSDIR)/mkpkglist >pkglist.html
 
 distfiles:	paperdist edist
-	$(TOOLSDIR)/mksourcepkg --bzip2 --zip $(RELEASE)
+	$(TOOLSDIR)/mksourcepkg --all $(RELEASE)
 	$(TOOLSDIR)/mkpkglist >pkglist.html
 
 

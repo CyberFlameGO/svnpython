@@ -537,15 +537,6 @@ a window (in which case default behavior would be to use the window
 size if \envvar{LINES} and \envvar{COLUMNS} are not set).
 \end{funcdesc}
 
-\begin{funcdesc}{use_default_colors}{}
-Allow use of default values for colors on terminals supporting this
-feature. Use this to support transparency in your
-application.  The default color is assigned to the color number -1.
-After calling this function, 
-\code{init_pair(x, curses.COLOR_RED, -1)} initializes, for instance,
-color pair \var{x} to a red foreground color on the default background.
-\end{funcdesc}
-
 \subsection{Window Objects \label{curses-window-objects}}
 
 Window objects, as returned by \function{initscr()} and
@@ -1173,7 +1164,7 @@ there are normally at least four function keys (\constant{KEY_F1},
 \constant{KEY_F2}, \constant{KEY_F3}, \constant{KEY_F4}) available,
 and the arrow keys mapped to \constant{KEY_UP}, \constant{KEY_DOWN},
 \constant{KEY_LEFT} and \constant{KEY_RIGHT} in the obvious way.  If
-your machine has a PC keyboard, it is safe to expect arrow keys and
+your machine has a PC keybboard, it is safe to expect arrow keys and
 twelve function keys (older PC keyboards may have only ten function
 keys); also, the following keypad mappings are standard:
 

@@ -14,6 +14,7 @@ only exists as a base for the \refmodule{htmllib} module.  Another
 HTML parser which supports XHTML and offers a somewhat different
 interface is available in the \refmodule{HTMLParser} module.
 
+
 \begin{classdesc}{SGMLParser}{}
 The \class{SGMLParser} class is instantiated without arguments.
 The parser is hardcoded to recognize the following
@@ -39,16 +40,7 @@ spaces, tabs, and newlines are allowed between the trailing
 \end{itemize}
 \end{classdesc}
 
-A single exception is defined as well:
-
-\begin{excdesc}{SGMLParseError}
-Exception raised by the \class{SGMLParser} class when it encounters an
-error while parsing.
-\versionadded{2.1}
-\end{excdesc}
-
-
-\class{SGMLParser} instances have the following methods:
+\class{SGMLParser} instances have the following interface methods:
 
 
 \begin{methoddesc}{reset}{}
@@ -58,7 +50,7 @@ implicitly at instantiation time.
 
 \begin{methoddesc}{setnomoretags}{}
 Stop processing tags.  Treat all following input as literal input
-(CDATA).  (This is only provided so the HTML tag
+(CDATA).  (This is only provided so the archaic HTML tag
 \code{<PLAINTEXT>} can be implemented.)
 \end{methoddesc}
 

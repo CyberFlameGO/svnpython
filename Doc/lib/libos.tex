@@ -90,21 +90,12 @@ A mapping object representing the string environment. For example,
 \code{environ['HOME']} is the pathname of your home directory (on some
 platforms), and is equivalent to \code{getenv("HOME")} in C.
 
-This mapping is captured the first time the \module{os} module is
-imported, typically during Python startup as part of processing
-\file{site.py}.  Changes to the environment made after this time are
-not reflected in \code{os.environ}, except for changes made by modifying
-\code{os.environ} directly.
-
 If the platform supports the \function{putenv()} function, this
 mapping may be used to modify the environment as well as query the
 environment.  \function{putenv()} will be called automatically when
-the mapping is modified.
-\note{Calling \function{putenv()} directly does not change
-\code{os.environ}, so it's better to modify \code{os.environ}.}
-\note{On some platforms, including FreeBSD and Mac OS X, setting
-\code{environ} may cause memory leaks.  Refer to the system documentation
-for \cfunction{putenv()}.}
+the mapping is modified.  \note{On some platforms, including
+FreeBSD and Mac OS X, setting \code{environ} may cause memory leaks.
+Refer to the system documentation for putenv.}
 
 If \function{putenv()} is not provided, this mapping may be passed to
 the appropriate process-creation functions to cause child processes to
@@ -263,12 +254,6 @@ Set the current process's real and effective group ids.
 Availability: \UNIX.
 \end{funcdesc}
 
-\begin{funcdesc}{getsid}{pid}
-Calls the system call \cfunction{getsid()}.  See the \UNIX{} manual
-for the semantics.
-Availability: \UNIX. \versionadded{2.4}
-\end{funcdesc}
-
 \begin{funcdesc}{setsid}{}
 Calls the system call \cfunction{setsid()}.  See the \UNIX{} manual
 for the semantics.
@@ -281,7 +266,7 @@ Set the current process' user id.
 Availability: \UNIX.
 \end{funcdesc}
 
-% placed in this section since it relates to errno.... a little weak
+% placed in this section since it relates to errno.... a little weak ;-(
 \begin{funcdesc}{strerror}{code}
 Return the error message corresponding to the error code in
 \var{code}.
@@ -361,11 +346,6 @@ specified, it specifies the buffer size for the I/O pipes.
 objects should be opened in binary or text mode.  The default value
 for \var{mode} is \code{'t'}.
 
-Also, for each of these variants, on \UNIX, \var{cmd} may be a sequence, in
-which case arguments will be passed directly to the program without shell
-intervention (as with \function{os.spawnv()}). If \var{cmd} is a string it will
-be passed to the shell (as with \function{os.system()}).
-
 These methods do not make it possible to retrieve the return code from
 the child processes.  The only way to control the input and output
 streams and also retrieve the return codes is to use the
@@ -398,10 +378,6 @@ Availability: \UNIX, Windows.
 \versionadded{2.0}
 \end{funcdesc}
 
-(Note that \code{\var{child_stdin}, \var{child_stdout}, and
-\var{child_stderr}} are named from the point of view of the child
-process, i.e. \var{child_stdin} is the child's standard input.)
-
 This functionality is also available in the \refmodule{popen2} module
 using functions of the same names, but the return values of those
 functions have a different order.
@@ -417,13 +393,11 @@ using file descriptors.
 Close file descriptor \var{fd}.
 Availability: Macintosh, \UNIX, Windows.
 
-\begin{notice}
-This function is intended for low-level I/O and must be applied
+Note: this function is intended for low-level I/O and must be applied
 to a file descriptor as returned by \function{open()} or
 \function{pipe()}.  To close a ``file object'' returned by the
 built-in function \function{open()} or by \function{popen()} or
 \function{fdopen()}, use its \method{close()} method.
-\end{notice}
 \end{funcdesc}
 
 \begin{funcdesc}{dup}{fd}
@@ -518,12 +492,10 @@ For a description of the flag and mode values, see the C run-time
 documentation; flag constants (like \constant{O_RDONLY} and
 \constant{O_WRONLY}) are defined in this module too (see below).
 
-\begin{notice}
-This function is intended for low-level I/O.  For normal usage,
+Note: this function is intended for low-level I/O.  For normal usage,
 use the built-in function \function{open()}, which returns a ``file
 object'' with \method{read()} and \method{write()} methods (and many
 more).
-\end{notice}
 \end{funcdesc}
 
 \begin{funcdesc}{openpty}{}
@@ -547,14 +519,12 @@ referred to by \var{fd} has been reached, an empty string is
 returned.
 Availability: Macintosh, \UNIX, Windows.
 
-\begin{notice}
-This function is intended for low-level I/O and must be applied
+Note: this function is intended for low-level I/O and must be applied
 to a file descriptor as returned by \function{open()} or
 \function{pipe()}.  To read a ``file object'' returned by the
 built-in function \function{open()} or by \function{popen()} or
 \function{fdopen()}, or \code{sys.stdin}, use its
 \method{read()} or \method{readline()} methods.
-\end{notice}
 \end{funcdesc}
 
 \begin{funcdesc}{tcgetpgrp}{fd}
@@ -582,14 +552,12 @@ Write the string \var{str} to file descriptor \var{fd}.
 Return the number of bytes actually written.
 Availability: Macintosh, \UNIX, Windows.
 
-\begin{notice}
-This function is intended for low-level I/O and must be applied
+Note: this function is intended for low-level I/O and must be applied
 to a file descriptor as returned by \function{open()} or
 \function{pipe()}.  To write a ``file object'' returned by the
 built-in function \function{open()} or by \function{popen()} or
 \function{fdopen()}, or \code{sys.stdout} or \code{sys.stderr}, use
 its \method{write()} method.
-\end{notice}
 \end{funcdesc}
 
 
@@ -599,23 +567,20 @@ The following data items are available for use in constructing the
 \begin{datadesc}{O_RDONLY}
 \dataline{O_WRONLY}
 \dataline{O_RDWR}
+\dataline{O_NDELAY}
+\dataline{O_NONBLOCK}
 \dataline{O_APPEND}
+\dataline{O_DSYNC}
+\dataline{O_RSYNC}
+\dataline{O_SYNC}
+\dataline{O_NOCTTY}
 \dataline{O_CREAT}
 \dataline{O_EXCL}
 \dataline{O_TRUNC}
 Options for the \var{flag} argument to the \function{open()} function.
 These can be bit-wise OR'd together.
 Availability: Macintosh, \UNIX, Windows.
-\end{datadesc}
-
-\begin{datadesc}{O_DSYNC}
-\dataline{O_RSYNC}
-\dataline{O_SYNC}
-\dataline{O_NDELAY}
-\dataline{O_NONBLOCK}
-\dataline{O_NOCTTY}
-More options for the \var{flag} argument to the \function{open()} function.
-Availability: Macintosh, \UNIX.
+% XXX O_NDELAY, O_NONBLOCK, O_DSYNC, O_RSYNC, O_SYNC, O_NOCTTY are not on Windows.
 \end{datadesc}
 
 \begin{datadesc}{O_BINARY}
@@ -636,15 +601,6 @@ These can be bit-wise OR'd together.
 Availability: Windows.
 \end{datadesc}
 
-\begin{datadesc}{SEEK_SET}
-\dataline{SEEK_CUR}
-\dataline{SEEK_END}
-Parameters to the \function{lseek()} function.
-Their values are 0, 1, and 2, respectively.
-Availability: Windows, Macintosh, \UNIX.
-\versionadded{2.5}
-\end{datadesc}
-
 \subsection{Files and Directories \label{os-file-dir}}
 
 \begin{funcdesc}{access}{path, mode}
@@ -654,8 +610,7 @@ be used in a suid/sgid environment to test if the invoking user has the
 specified access to \var{path}.  \var{mode} should be \constant{F_OK}
 to test the existence of \var{path}, or it can be the inclusive OR of
 one or more of \constant{R_OK}, \constant{W_OK}, and \constant{X_OK} to
-test permissions.  Return \constant{True} if access is allowed,
-\constant{False} if not.
+test permissions.  Return \code{1} if access is allowed, \code{0} if not.
 See the \UNIX{} man page \manpage{access}{2} for more information.
 Availability: \UNIX, Windows.
 \end{funcdesc}
@@ -912,12 +867,10 @@ Works like \function{rename()}, except creation of any intermediate
 directories needed to make the new pathname good is attempted first.
 After the rename, directories corresponding to rightmost path segments
 of the old name will be pruned away using \function{removedirs()}.
-\versionadded{1.5.2}
 
-\begin{notice}
-This function can fail with the new directory structure made if
+Note: this function can fail with the new directory structure made if
 you lack permissions needed to remove the leaf directory or file.
-\end{notice}
+\versionadded{1.5.2}
 \end{funcdesc}
 
 \begin{funcdesc}{rmdir}{path}
@@ -940,17 +893,7 @@ the \ctype{stat} structure, namely:
 \member{st_mtime} (time of most recent content modification),
 \member{st_ctime}
 (platform dependent; time of most recent metadata change on \UNIX, or
-the time of creation on Windows):
-
-\begin{verbatim}
->>> import os
->>> statinfo = os.stat('somefile.txt')
->>> statinfo
-(33188, 422511L, 769L, 1, 1032, 100, 926L, 1105022698,1105022732, 1105022732)
->>> statinfo.st_size
-926L
->>>
-\end{verbatim}
+the time of creation on Windows).
 
 \versionchanged [If \function{stat_float_times} returns true, the time
 values are floats, measuring seconds. Fractions of a second may be
@@ -992,14 +935,6 @@ The standard module \refmodule{stat}\refstmodindex{stat} defines
 functions and constants that are useful for extracting information
 from a \ctype{stat} structure.
 (On Windows, some items are filled with dummy values.)
-
-\note{The exact meaning and resolution of the \member{st_atime},
- \member{st_mtime}, and \member{st_ctime} members depends on the
- operating system and the file system.  For example, on Windows systems
- using the FAT or FAT32 file systems, \member{st_mtime} has 2-second
- resolution, and \member{st_atime} has only 1-day resolution.  See
- your operating system documentation for details.}
-
 Availability: Macintosh, \UNIX, Windows.
 
 \versionchanged
@@ -1013,15 +948,16 @@ it is False, future calls return ints.  If newval is omitted, return
 the current setting.
 
 For compatibility with older Python versions, accessing
-\class{stat_result} as a tuple always returns integers.
+\class{stat_result} as a tuple always returns integers. For
+compatibility with Python 2.2, accessing the time stamps by field name
+also returns integers. Applications that want to determine the
+fractions of a second in a time stamp can use this function to have
+time stamps represented as floats. Whether they will actually observe
+non-zero fractions depends on the system.
 
-\versionchanged[Python now returns float values by default. Applications
-which do not work correctly with floating point time stamps can use
-this function to restore the old behaviour]{2.5}
-
-The resolution of the timestamps (i.e. the smallest possible fraction)
-depends on the system. Some systems only support second resolution;
-on these systems, the fraction will always be zero.
+Future Python releases will change the default of this setting;
+applications that cannot deal with floating point time stamps can then
+use this function to turn the feature off.
 
 It is recommended that this setting is only changed at program startup
 time in the \var{__main__} module; libraries should never change this
@@ -1116,12 +1052,6 @@ If \var{times} is \code{None}, then the file's access and modified
 times are set to the current time.  Otherwise, \var{times} must be a
 2-tuple of numbers, of the form \code{(\var{atime}, \var{mtime})}
 which is used to set the access and modified times, respectively.
-Whether a directory can be given for \var{path} depends on whether the
-operating system implements directories as files (for example, Windows
-does not).  Note that the exact times you set here may not be returned
-by a subsequent \function{stat()} call, depending on the resolution
-with which your operating system records access and modification times;
-see \function{stat()}.
 \versionchanged[Added support for \code{None} for \var{times}]{2.0}
 Availability: Macintosh, \UNIX, Windows.
 \end{funcdesc}
@@ -1192,7 +1122,7 @@ import os
 from os.path import join, getsize
 for root, dirs, files in os.walk('python/Lib/email'):
     print root, "consumes",
-    print sum(getsize(join(root, name)) for name in files),
+    print sum([getsize(join(root, name)) for name in files]),
     print "bytes in", len(files), "non-directory files"
     if 'CVS' in dirs:
         dirs.remove('CVS')  # don't visit CVS directories
@@ -1203,16 +1133,16 @@ In the next example, walking the tree bottom up is essential:
 directory is empty:
 
 \begin{verbatim}
-# Delete everything reachable from the directory named in 'top',
-# assuming there are no symbolic links.
+import os
+from os.path import join
+# Delete everything reachable from the directory named in 'top'.
 # CAUTION:  This is dangerous!  For example, if top == '/', it
 # could delete all your disk files.
-import os
 for root, dirs, files in os.walk(top, topdown=False):
     for name in files:
-        os.remove(os.path.join(root, name))
+        os.remove(join(root, name))
     for name in dirs:
-        os.rmdir(os.path.join(root, name))
+        os.rmdir(join(root, name))
 \end{verbatim}
 
 \versionadded{2.3}
@@ -1262,8 +1192,8 @@ the individual parameters simply become additional parameters to the
 \function{execl*()} functions.  The \character{v} variants are good
 when the number of parameters is variable, with the arguments being
 passed in a list or tuple as the \var{args} parameter.  In either
-case, the arguments to the child process should start with the name of
-the command being run, but this is not enforced.
+case, the arguments to the child process must start with the name of
+the command being run.
 
 The variants which include a \character{p} near the end
 (\function{execlp()}, \function{execlpe()}, \function{execvp()},
@@ -1292,11 +1222,9 @@ Exit to the system with status \var{n}, without calling cleanup
 handlers, flushing stdio buffers, etc.
 Availability: \UNIX, Windows.
 
-\begin{notice}
-The standard way to exit is \code{sys.exit(\var{n})}.
+Note: the standard way to exit is \code{sys.exit(\var{n})}.
 \function{_exit()} should normally only be used in the child process
 after a \function{fork()}.
-\end{notice}
 \end{funcdesc}
 
 The following exit codes are a defined, and can be used with
@@ -1838,7 +1766,7 @@ Also available via \module{os.path}.
 
 \begin{datadesc}{pathsep}
 The character conventionally used by the operating system to separate
-search path components (as in \envvar{PATH}), such as \character{:} for
+search patch components (as in \envvar{PATH}), such as \character{:} for
 \POSIX{} or \character{;} for Windows.
 Also available via \module{os.path}.
 \end{datadesc}
@@ -1856,30 +1784,3 @@ current platform.  This may be a single character, such as \code{'\e
 n'} for \POSIX{} or \code{'\e r'} for Mac OS, or multiple characters,
 for example, \code{'\e r\e n'} for Windows.
 \end{datadesc}
-
-\begin{datadesc}{devnull}
-The file path of the null device.
-For example: \code{'/dev/null'} for \POSIX{} or \code{'Dev:Nul'} for the
-Macintosh.
-Also available via \module{os.path}.
-\versionadded{2.4}
-\end{datadesc}
-
-
-\subsection{Miscellaneous Functions \label{os-miscfunc}}
-
-\begin{funcdesc}{urandom}{n}
-Return a string of \var{n} random bytes suitable for cryptographic use.
-
-This function returns random bytes from an OS-specific
-randomness source.  The returned data should be unpredictable enough for
-cryptographic applications, though its exact quality depends on the OS
-implementation.  On a UNIX-like system this will query /dev/urandom, and
-on Windows it will use CryptGenRandom.  If a randomness source is not
-found, \exception{NotImplementedError} will be raised.
-\versionadded{2.4}
-\end{funcdesc}
-
-
-
-

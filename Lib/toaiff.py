@@ -92,12 +92,13 @@ def _toaiff(filename, temps):
                 type(msg[0]) == type(0) and type(msg[1]) == type(''):
             msg = msg[1]
         if type(msg) != type(''):
-            msg = repr(msg)
+            msg = `msg`
         raise error, filename + ': ' + msg
     if ftype == 'aiff':
         return fname
     if ftype is None or not ftype in table:
-        raise error, '%s: unsupported audio file type %r' % (filename, ftype)
+        raise error, \
+                filename + ': unsupported audio file type ' + `ftype`
     (fd, temp) = tempfile.mkstemp()
     os.close(fd)
     temps.append(temp)

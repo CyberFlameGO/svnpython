@@ -160,8 +160,7 @@ def printresults(table):
 
 
 # Call main and honor exit status
-if __name__ == '__main__':
-    try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        sys.exit(1)
+try:
+    sys.exit(main())
+except KeyboardInterrupt:
+    sys.exit(1)

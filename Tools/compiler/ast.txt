@@ -8,8 +8,7 @@
 #  = ... a default value for the node constructor (optional args)
 Module: doc*, node
 Stmt: nodes!
-Decorators: nodes!
-Function: decorators&, name*, argnames*, defaults!, flags*, doc*, code
+Function: name*, argnames*, defaults!, flags*, doc*, code
 Lambda: argnames*, defaults!, flags*, code
 Class: name*, bases!, doc*, code
 Pass: 
@@ -39,10 +38,6 @@ AssAttr: expr, attrname*, flags*
 ListComp: expr, quals!
 ListCompFor: assign, list, ifs!
 ListCompIf: test
-GenExpr: code 
-GenExprInner: expr, quals!
-GenExprFor: assign, iter, ifs!
-GenExprIf: test
 List: nodes!
 Dict: items!
 Not: expr
@@ -90,10 +85,3 @@ init(Lambda):
         self.varargs = 1
     if flags & CO_VARKEYWORDS:
         self.kwargs = 1
-
-init(GenExpr):
-    self.argnames = ['[outmost-iterable]']
-    self.varargs = self.kwargs = None
-
-init(GenExprFor):
-    self.is_outmost = False

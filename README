@@ -1,5 +1,5 @@
-This is Python version 2.5 alpha 0
-==================================
+This is Python version 2.3.5
+============================
 
 Copyright (c) 2001, 2002, 2003, 2004, 2005 Python Software Foundation.
 All rights reserved.
@@ -34,6 +34,7 @@ What's new in this release?
 ---------------------------
 
 See the file "Misc/NEWS".
+
 
 If you don't read instructions
 ------------------------------
@@ -217,12 +218,13 @@ are probably experiencing compiler bugs, usually related to
 optimization.  This is a common problem with some versions of gcc, and
 some vendor-supplied compilers, which can sometimes be worked around
 by turning off optimization.  Consider switching to stable versions
-(gcc 2.95.2, gcc 3.x, or contact your vendor.)
+(gcc 2.95.2, or contact your vendor.)
 
 From Python 2.0 onward, all Python C code is ANSI C.  Compiling using
 old K&R-C-only compilers is no longer possible.  ANSI C compilers are
 available for all modern systems, either in the form of updated
 compilers from the vendor, or one of the free compilers (gcc).
+
 
 Unsupported systems
 -------------------
@@ -246,6 +248,7 @@ longer:
   or PY_PTHREAD_D7 in thread_pthread.h
 - Systems using --with-dl-dld
 - Systems using --without-universal-newlines
+
 
 Platform specific notes
 -----------------------
@@ -363,18 +366,17 @@ AIX:	A complete overhaul of the shared library support is now in
 	like "cc_r".  For full C++ module support, set CC="xlC_r" (or
 	CC="xlC" without thread support).
 
-HP-UX:  When using threading, you may have to add -D_REENTRANT to the
+HP-UX:	When using threading, you may have to add -D_REENTRANT to the
 	OPT variable in the top-level Makefile; reported by Pat Knight,
 	this seems to make a difference (at least for HP-UX 10.20)
 	even though pyconfig.h defines it. This seems unnecessary when
-	using HP/UX 11 and later - threading seems to work "out of the 
-	box".
+	using HP/UX 11 and later - threading works "out of the box".
 
 HP-UX ia64: When building on the ia64 (Itanium) platform using HP's 
-	compiler, some experience has shown that the compiler's 
-	optimiser produces a completely broken version of python 
-	(see http://www.python.org/sf/814976). To work around this, 
-	edit the Makefile and remove -O from the OPT line.
+        compiler, some experience has shown that the compiler's
+        optimiser produces a completely broken version of python
+        (see http://www.python.org/sf/814976). To work around this,
+        edit the Makefile and remove -O from the OPT line.
 
 HP PA-RISC 2.0: A recent bug report (http://www.python.org/sf/546117)
 	suggests that the C compiler in this 64-bit system has bugs
@@ -665,6 +667,7 @@ AtheOS: From Octavian Cerna <tavy at ylabs.com>:
 	    - select: poll is available in the C library, but does not
 	      work (It does not return POLLNVAL for bad fds and
 	      hangs).
+              (Believed fixed, unverified - autoconf check for broken poll)
 	    - posix: statvfs and fstatvfs always return ENOSYS.
 	    - disabled modules:
 		- mmap: not yet implemented in AtheOS
@@ -1026,7 +1029,6 @@ Modules/getpath.o.
 	in files. Python code can open a file with open(file, 'U') to
 	read it in universal newline mode. THIS OPTION IS UNSUPPORTED.
 
---with-tsc: Profile using the Pentium timestamping counter (TSC).
 
 Building for multiple architectures (using the VPATH feature)
 -------------------------------------------------------------
@@ -1069,11 +1071,11 @@ however this assumes that you only need to add modules.)
 Building on non-UNIX systems
 ----------------------------
 
-For Windows (2000/NT/ME/98/95), assuming you have MS VC++ 7.1, the
+For Windows (2000/NT/ME/98/95), assuming you have MS VC++ 6.0, the
 project files are in PCbuild, the workspace is pcbuild.dsw.  See
 PCbuild\readme.txt for detailed instructions.
 
-For other non-Unix Windows compilers, in particular MS VC++ 6.0 and
+For other non-Unix Windows compilers, in particular Windows 3.1 and
 for OS/2, enter the directory "PC" and read the file "readme.txt".
 
 For the Mac, a separate source distribution will be made available,

@@ -99,7 +99,7 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	int ret;
 	char *str;
 	int len;
-	int mutate_arg = 1;
+	int mutate_arg = 0;
 	char buf[1024];
 
 	if (PyArg_ParseTuple(args, "O&iw#|i:ioctl",
@@ -107,6 +107,10 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 			     &str, &len, &mutate_arg)) {
 		char *arg;
 
+		if (PyTuple_Size(args) == 3) {
+			/* warning goes here in 2.4 */
+			mutate_arg = 0;
+		}
 	       	if (mutate_arg) {
 			if (len <= sizeof buf) {
 				memcpy(buf, str, len);

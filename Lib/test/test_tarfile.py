@@ -177,8 +177,7 @@ class WriteTest(BaseTest):
     def setUp(self):
         mode = self.mode + self.sep + self.comp
         self.src = tarfile.open(tarname(self.comp), 'r')
-        self.dstname = tmpname()
-        self.dst = tarfile.open(self.dstname, mode)
+        self.dst = tarfile.open(tmpname(), mode)
 
     def tearDown(self):
         self.src.close()
@@ -191,11 +190,6 @@ class WriteTest(BaseTest):
     def test_nonposix(self):
         self.dst.posix = 0
         self._test()
-
-    def test_small(self):
-        self.dst.add(os.path.join(os.path.dirname(__file__),"cfgparser.1"))
-        self.dst.close()
-        self.assertNotEqual(os.stat(self.dstname).st_size, 0)
 
     def _test(self):
         for tarinfo in self.src:
@@ -211,112 +205,6 @@ class WriteTest(BaseTest):
 class WriteStreamTest(WriteTest):
     sep = '|'
 
-class WriteGNULongTest(unittest.TestCase):
-    """This testcase checks for correct creation of GNU Longname
-       and Longlink extensions.
-
-       It creates a tarfile and adds empty members with either
-       long names, long linknames or both and compares the size
-       of the tarfile with the expected size.
-
-       It checks for SF bug #812325 in TarFile._create_gnulong().
-
-       While I was writing this testcase, I noticed a second bug
-       in the same method:
-       Long{names,links} weren't null-terminated which lead to
-       bad tarfiles when their length was a multiple of 512. This
-       is tested as well.
-    """
-
-    def setUp(self):
-        self.tar = tarfile.open(tmpname(), "w")
-        self.tar.posix = False
-
-    def tearDown(self):
-        self.tar.close()
-
-    def _length(self, s):
-        blocks, remainder = divmod(len(s) + 1, 512)
-        if remainder:
-            blocks += 1
-        return blocks * 512
-
-    def _calc_size(self, name, link=None):
-        # initial tar header
-        count = 512
-
-        if len(name) > tarfile.LENGTH_NAME:
-            # gnu longname extended header + longname
-            count += 512
-            count += self._length(name)
-
-        if link is not None and len(link) > tarfile.LENGTH_LINK:
-            # gnu longlink extended header + longlink
-            count += 512
-            count += self._length(link)
-
-        return count
-
-    def _test(self, name, link=None):
-        tarinfo = tarfile.TarInfo(name)
-        if link:
-            tarinfo.linkname = link
-            tarinfo.type = tarfile.LNKTYPE
-
-        self.tar.addfile(tarinfo)
-
-        v1 = self._calc_size(name, link)
-        v2 = self.tar.offset
-        self.assertEqual(v1, v2, "GNU longname/longlink creation failed")
-
-    def test_longname_1023(self):
-        self._test(("longnam/" * 127) + "longnam")
-
-    def test_longname_1024(self):
-        self._test(("longnam/" * 127) + "longname")
-
-    def test_longname_1025(self):
-        self._test(("longnam/" * 127) + "longname_")
-
-    def test_longlink_1023(self):
-        self._test("name", ("longlnk/" * 127) + "longlnk")
-
-    def test_longlink_1024(self):
-        self._test("name", ("longlnk/" * 127) + "longlink")
-
-    def test_longlink_1025(self):
-        self._test("name", ("longlnk/" * 127) + "longlink_")
-
-    def test_longnamelink_1023(self):
-        self._test(("longnam/" * 127) + "longnam",
-                   ("longlnk/" * 127) + "longlnk")
-
-    def test_longnamelink_1024(self):
-        self._test(("longnam/" * 127) + "longname",
-                   ("longlnk/" * 127) + "longlink")
-
-    def test_longnamelink_1025(self):
-        self._test(("longnam/" * 127) + "longname_",
-                   ("longlnk/" * 127) + "longlink_")
-
-class ExtractHardlinkTest(BaseTest):
-
-    def test_hardlink(self):
-        """Test hardlink extraction (bug #857297)
-        """
-        # Prevent errors from being caught
-        self.tar.errorlevel = 1
-
-        self.tar.extract("0-REGTYPE", dirname())
-        try:
-            # Extract 1-LNKTYPE which is a hardlink to 0-REGTYPE
-            self.tar.extract("1-LNKTYPE", dirname())
-        except EnvironmentError, e:
-            import errno
-            if e.errno == errno.ENOENT:
-                self.fail("hardlink not extracted properly")
-
-
 # Gzip TestCases
 class ReadTestGzip(ReadTest):
     comp = "gz"
@@ -326,14 +214,6 @@ class WriteTestGzip(WriteTest):
     comp = "gz"
 class WriteStreamTestGzip(WriteStreamTest):
     comp = "gz"
-
-# Filemode test cases
-
-class FileModeTest(unittest.TestCase):
-    def test_modes(self):
-        self.assertEqual(tarfile.filemode(0755), '-rwxr-xr-x')
-        self.assertEqual(tarfile.filemode(07111), '---s--s--t')
-
 
 if bz2:
     # Bzip2 TestCases
@@ -362,16 +242,11 @@ def test_main():
         bz2.BZ2File(tarname("bz2"), "wb").write(file(tarname(), "rb").read())
 
     tests = [
-        FileModeTest,
         ReadTest,
         ReadStreamTest,
         WriteTest,
-        WriteStreamTest,
-        WriteGNULongTest,
+        WriteStreamTest
     ]
-
-    if hasattr(os, "link"):
-        tests.append(ExtractHardlinkTest)
 
     if gzip:
         tests.extend([

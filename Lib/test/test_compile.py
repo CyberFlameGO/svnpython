@@ -44,63 +44,6 @@ class TestSpecifics(unittest.TestCase):
         except SyntaxError:
             pass
 
-    def test_exec_with_general_mapping_for_locals(self):
-
-        class M:
-            "Test mapping interface versus possible calls from eval()."
-            def __getitem__(self, key):
-                if key == 'a':
-                    return 12
-                raise KeyError
-            def __setitem__(self, key, value):
-                self.results = (key, value)
-            def keys(self):
-                return list('xyz')
-
-        m = M()
-        g = globals()
-        exec 'z = a' in g, m
-        self.assertEqual(m.results, ('z', 12))
-        try:
-            exec 'z = b' in g, m
-        except NameError:
-            pass
-        else:
-            self.fail('Did not detect a KeyError')
-        exec 'z = dir()' in g, m
-        self.assertEqual(m.results, ('z', list('xyz')))
-        exec 'z = globals()' in g, m
-        self.assertEqual(m.results, ('z', g))
-        exec 'z = locals()' in g, m
-        self.assertEqual(m.results, ('z', m))
-        try:
-            exec 'z = b' in m
-        except TypeError:
-            pass
-        else:
-            self.fail('Did not validate globals as a real dict')
-
-        class A:
-            "Non-mapping"
-            pass
-        m = A()
-        try:
-            exec 'z = a' in g, m
-        except TypeError:
-            pass
-        else:
-            self.fail('Did not validate locals as a mapping')
-
-        # Verify that dict subclasses work as well
-        class D(dict):
-            def __getitem__(self, key):
-                if key == 'a':
-                    return 12
-                return dict.__getitem__(self, key)
-        d = D()
-        exec 'z = a' in g, d
-        self.assertEqual(d['z'], 12)
-
     def test_complex_args(self):
 
         def comp_args((a, b)):
@@ -176,18 +119,15 @@ if 1:
 
     def test_unary_minus(self):
         # Verify treatment of unary minus on negative numbers SF bug #660455
-        if sys.maxint == 2147483647:
-            # 32-bit machine
-            all_one_bits = '0xffffffff'
-            self.assertEqual(eval(all_one_bits), 4294967295L)
-            self.assertEqual(eval("-" + all_one_bits), -4294967295L)
-        elif sys.maxint == 9223372036854775807:
-            # 64-bit machine
+        warnings.filterwarnings("ignore", "hex/oct constants", FutureWarning)
+        warnings.filterwarnings("ignore", "hex.* of negative int", FutureWarning)
+        # XXX Of course the following test will have to be changed in Python 2.4
+        # This test is in a <string> so the filterwarnings() can affect it
+        all_one_bits = '0xffffffff'
+        if sys.maxint != 2147483647:
             all_one_bits = '0xffffffffffffffff'
-            self.assertEqual(eval(all_one_bits), 18446744073709551615L)
-            self.assertEqual(eval("-" + all_one_bits), -18446744073709551615L)
-        else:
-            self.fail("How many bits *does* this machine have???")
+        self.assertEqual(eval(all_one_bits), -1)
+        self.assertEqual(eval("-" + all_one_bits), 1)
 
     def test_sequence_unpacking_error(self):
         # Verify sequence packing/unpacking with "or".  SF bug #757818
@@ -195,71 +135,6 @@ if 1:
         self.assertEqual(i, 1)
         self.assertEqual(j, -1)
 
-    def test_none_assignment(self):
-        stmts = [
-            'None = 0',
-            'None += 0',
-            '__builtins__.None = 0',
-            'def None(): pass',
-            'class None: pass',
-            '(a, None) = 0, 0',
-            'for None in range(10): pass',
-            'def f(None): pass',
-        ]
-        for stmt in stmts:
-            stmt += "\n"
-            self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'single')
-            self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'exec')
-
-    def test_import(self):
-        succeed = [
-            'import sys',
-            'import os, sys',
-            'from __future__ import nested_scopes, generators',
-            'from __future__ import (nested_scopes,\ngenerators)',
-            'from __future__ import (nested_scopes,\ngenerators,)',
-            'from sys import stdin, stderr, stdout',
-            'from sys import (stdin, stderr,\nstdout)',
-            'from sys import (stdin, stderr,\nstdout,)',
-            'from sys import (stdin\n, stderr, stdout)',
-            'from sys import (stdin\n, stderr, stdout,)',
-            'from sys import stdin as si, stdout as so, stderr as se',
-            'from sys import (stdin as si, stdout as so, stderr as se)',
-            'from sys import (stdin as si, stdout as so, stderr as se,)',
-            ]
-        fail = [
-            'import (os, sys)',
-            'import (os), (sys)',
-            'import ((os), (sys))',
-            'import (sys',
-            'import sys)',
-            'import (os,)',
-            'from (sys) import stdin',
-            'from __future__ import (nested_scopes',
-            'from __future__ import nested_scopes)',
-            'from __future__ import nested_scopes,\ngenerators',
-            'from sys import (stdin',
-            'from sys import stdin)',
-            'from sys import stdin, stdout,\nstderr',
-            'from sys import stdin si',
-            'from sys import stdin,'
-            'from sys import (*)',
-            'from sys import (stdin,, stdout, stderr)',
-            'from sys import (stdin, stdout),',
-            ]
-        for stmt in succeed:
-            compile(stmt, 'tmp', 'exec')
-        for stmt in fail:
-            self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'exec')
-
-    def test_for_distinct_code_objects(self):
-        # SF bug 1048870
-        def f():
-            f1 = lambda x=1: x
-            f2 = lambda x=2: x
-            return f1, f2
-        f1, f2 = f()
-        self.assertNotEqual(id(f1.func_code), id(f2.func_code))
 
 def test_main():
     test_support.run_unittest(TestSpecifics)

@@ -289,7 +289,6 @@ IO_truncate(IOobject *self, PyObject *args) {
         if (pos < 0) pos = self->pos;
 
         if (self->string_size > pos) self->string_size = pos;
-        self->pos = self->string_size;
 
         Py_INCREF(Py_None);
         return Py_None;
@@ -337,8 +336,8 @@ O_seek(Oobject *self, PyObject *args) {
         if (position > self->buf_size) {
                   self->buf_size*=2;
                   if (self->buf_size <= position) self->buf_size=position+1;
-                  UNLESS (self->buf = (char*)
-                          realloc(self->buf,self->buf_size)) {
+                  UNLESS (self->buf=(char*)
+                          realloc(self->buf,self->buf_size*sizeof(char))) {
                       self->buf_size=self->pos=0;
                       return PyErr_NoMemory();
                     }
@@ -372,7 +371,8 @@ O_cwrite(PyObject *self, char *c, int  l) {
             if (oself->buf_size <= newl) 
                     oself->buf_size = newl+1;
             UNLESS (oself->buf = 
-                    (char*)realloc(oself->buf, oself->buf_size)) {
+                    (char*)realloc(oself->buf,
+                                   (oself->buf_size) * sizeof(char))) {
                     PyErr_SetString(PyExc_MemoryError,"out of memory");
                     oself->buf_size = oself->pos = 0;
                     return -1;
@@ -416,35 +416,36 @@ O_close(Oobject *self, PyObject *unused) {
         return Py_None;
 }
 
+
 PyDoc_STRVAR(O_writelines__doc__,
-"writelines(sequence_of_strings) -> None.  Write the strings to the file.\n"
-"\n"
-"Note that newlines are not added.  The sequence can be any iterable object\n"
-"producing strings. This is equivalent to calling write() for each string.");
+"writelines(sequence_of_strings): write each string");
 static PyObject *
 O_writelines(Oobject *self, PyObject *args) {
-	PyObject *it, *s;
-	
-	it = PyObject_GetIter(args);
-	if (it == NULL)
-		return NULL;
-	while ((s = PyIter_Next(it)) != NULL) {
-		int n;
-		char *c;
-		if (PyString_AsStringAndSize(s, &c, &n) == -1) {
-			Py_DECREF(it);
-			Py_DECREF(s);
+        PyObject *tmp = 0;
+	static PyObject *joiner = NULL;
+
+	if (!joiner) {
+		PyObject *empty_string = PyString_FromString("");
+		if (empty_string == NULL)
 			return NULL;
-		}
-		if (O_cwrite((PyObject *)self, c, n) == -1) {
-			Py_DECREF(it);
-			Py_DECREF(s);
+		joiner = PyObject_GetAttrString(empty_string, "join");
+		Py_DECREF(empty_string);
+		if (joiner == NULL)
 			return NULL;
-		}
-		Py_DECREF(s);
 	}
-	Py_DECREF(it);
-	Py_RETURN_NONE;
+
+        if (PyObject_Size(args) < 0) return NULL;
+
+        tmp = PyObject_CallFunction(joiner, "O", args);
+        UNLESS (tmp) return NULL;
+
+        args = Py_BuildValue("(O)", tmp);
+        Py_DECREF(tmp);
+        UNLESS (args) return NULL;
+
+        tmp = O_write(self, args);
+        Py_DECREF(args);
+        return tmp;
 }
 
 static struct PyMethodDef O_methods[] = {
@@ -529,7 +530,7 @@ newOobject(int  size) {
         self->string_size = 0;
         self->softspace = 0;
 
-        UNLESS (self->buf = (char *)malloc(size)) {
+        UNLESS (self->buf=malloc(size*sizeof(char))) {
                   PyErr_SetString(PyExc_MemoryError,"out of memory");
                   self->buf_size = 0;
                   return NULL;

@@ -1,4 +1,4 @@
-# Copyright 2001-2004 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2002 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -15,14 +15,13 @@
 # OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 """
-Configuration functions for the logging package for Python. The core package
-is based on PEP 282 and comments thereto in comp.lang.python, and influenced
-by Apache's log4j system.
+Logging package for Python. Based on PEP 282 and comments thereto in
+comp.lang.python, and influenced by Apache's log4j system.
 
 Should work under Python versions >= 1.5.2, except that source line
-information is not available unless 'sys._getframe()' is.
+information is not available unless 'inspect' is.
 
-Copyright (C) 2001-2004 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
@@ -33,7 +32,6 @@ from SocketServer import ThreadingTCPServer, StreamRequestHandler
 
 
 DEFAULT_LOGGING_CONFIG_PORT = 9030
-
 if sys.platform == "win32":
     RESET_ERROR = 10054   #WSAECONNRESET
 else:
@@ -98,34 +96,31 @@ def fileConfig(fname, defaults=None):
                 handlers = {}
                 fixups = [] #for inter-handler references
                 for hand in hlist:
-                    try:
-                        sectname = "handler_%s" % hand
-                        klass = cp.get(sectname, "class")
-                        opts = cp.options(sectname)
-                        if "formatter" in opts:
-                            fmt = cp.get(sectname, "formatter")
+                    sectname = "handler_%s" % hand
+                    klass = cp.get(sectname, "class")
+                    opts = cp.options(sectname)
+                    if "formatter" in opts:
+                        fmt = cp.get(sectname, "formatter")
+                    else:
+                        fmt = ""
+                    klass = eval(klass, vars(logging))
+                    args = cp.get(sectname, "args")
+                    args = eval(args, vars(logging))
+                    h = apply(klass, args)
+                    if "level" in opts:
+                        level = cp.get(sectname, "level")
+                        h.setLevel(logging._levelNames[level])
+                    if len(fmt):
+                        h.setFormatter(formatters[fmt])
+                    #temporary hack for FileHandler and MemoryHandler.
+                    if klass == logging.handlers.MemoryHandler:
+                        if "target" in opts:
+                            target = cp.get(sectname,"target")
                         else:
-                            fmt = ""
-                        klass = eval(klass, vars(logging))
-                        args = cp.get(sectname, "args")
-                        args = eval(args, vars(logging))
-                        h = apply(klass, args)
-                        if "level" in opts:
-                            level = cp.get(sectname, "level")
-                            h.setLevel(logging._levelNames[level])
-                        if len(fmt):
-                            h.setFormatter(formatters[fmt])
-                        #temporary hack for FileHandler and MemoryHandler.
-                        if klass == logging.handlers.MemoryHandler:
-                            if "target" in opts:
-                                target = cp.get(sectname,"target")
-                            else:
-                                target = ""
-                            if len(target): #the target handler may not be loaded yet, so keep for later...
-                                fixups.append((h, target))
-                        handlers[hand] = h
-                    except:     #if an error occurs when instantiating a handler, too bad
-                        pass    #this could happen e.g. because of lack of privileges
+                            target = ""
+                        if len(target): #the target handler may not be loaded yet, so keep for later...
+                            fixups.append((h, target))
+                    handlers[hand] = h
                 #now all handlers are loaded, fixup inter-handler references...
                 for fixup in fixups:
                     h = fixup[0]

@@ -85,7 +85,9 @@ typedef PY_LONG_LONG		Py_intptr_t;
 #   error "Python needs a typedef for Py_uintptr_t in pyport.h."
 #endif /* HAVE_UINTPTR_T */
 
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
 
 #include <math.h> /* Moved here from the math section, before extern "C" */
 
@@ -219,29 +221,14 @@ extern "C" {
 #define Py_SAFE_DOWNCAST(VALUE, WIDE, NARROW) (NARROW)(VALUE)
 #endif
 
-/* Py_IS_NAN(X)
- * Return 1 if float or double arg is a NaN, else 0.
- * Caution:
- *     X is evaluated more than once.
- *     This may not work on all platforms.  Each platform has *some*
- *     way to spell this, though -- override in pyconfig.h if you have
- *     a platform where it doesn't work.
- */
-#ifndef Py_IS_NAN
-#define Py_IS_NAN(X) ((X) != (X))
-#endif
-
 /* Py_IS_INFINITY(X)
  * Return 1 if float or double arg is an infinity, else 0.
  * Caution:
  *    X is evaluated more than once.
  *    This implementation may set the underflow flag if |X| is very small;
  *    it really can't be implemented correctly (& easily) before C99.
- *    Override in pyconfig.h if you have a better spelling on your platform.
  */
-#ifndef Py_IS_INFINITY
 #define Py_IS_INFINITY(X) ((X) && (X)*0.5 == (X))
-#endif
 
 /* HUGE_VAL is supposed to expand to a positive double infinity.  Python
  * uses Py_HUGE_VAL instead because some platforms are broken in this
@@ -272,12 +259,12 @@ extern "C" {
  * Some platforms have better way to spell this, so expect some #ifdef'ery.
  *
  * OpenBSD uses 'isinf()' because a compiler bug on that platform causes
- * the longer macro version to be mis-compiled. This isn't optimal, and
+ * the longer macro version to be mis-compiled. This isn't optimal, and 
  * should be removed once a newer compiler is available on that platform.
  * The system that had the failure was running OpenBSD 3.2 on Intel, with
  * gcc 2.95.3.
  *
- * According to Tim's checkin, the FreeBSD systems use isinf() to work
+ * According to Tim's checkin, the FreeBSD systems use isinf() to work 
  * around a FPE bug on that platform.
  */
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
@@ -288,33 +275,20 @@ extern "C" {
 					 (X) == -Py_HUGE_VAL))
 #endif
 
-/* Py_SET_ERRNO_ON_MATH_ERROR(x)
+/* Py_SET_ERANGE_ON_OVERFLOW(x)
  * If a libm function did not set errno, but it looks like the result
- * overflowed or not-a-number, set errno to ERANGE or EDOM.  Set errno
- * to 0 before calling a libm function, and invoke this macro after,
- * passing the function result.
+ * overflowed, set errno to ERANGE.  Set errno to 0 before calling a libm
+ * function, and invoke this macro after, passing the function result.
  * Caution:
  *    This isn't reliable.  See Py_OVERFLOWED comments.
  *    X is evaluated more than once.
  */
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
-#define _Py_SET_EDOM_FOR_NAN(X) if (isnan(X)) errno = EDOM;
-#else
-#define _Py_SET_EDOM_FOR_NAN(X) ;
-#endif
-#define Py_SET_ERRNO_ON_MATH_ERROR(X) \
+#define Py_SET_ERANGE_IF_OVERFLOW(X) \
 	do { \
-		if (errno == 0) { \
-			if ((X) == Py_HUGE_VAL || (X) == -Py_HUGE_VAL) \
-				errno = ERANGE; \
-			else _Py_SET_EDOM_FOR_NAN(X) \
-		} \
+		if (errno == 0 && ((X) == Py_HUGE_VAL ||  \
+				   (X) == -Py_HUGE_VAL))  \
+			errno = ERANGE; \
 	} while(0)
-
-/* Py_SET_ERANGE_ON_OVERFLOW(x)
- * An alias of Py_SET_ERRNO_ON_MATH_ERROR for backward-compatibility.
- */
-#define Py_SET_ERANGE_IF_OVERFLOW(X) Py_SET_ERRNO_ON_MATH_ERROR(X)
 
 /* Py_ADJUST_ERANGE1(x)
  * Py_ADJUST_ERANGE2(x, y)
@@ -415,6 +389,13 @@ extern int fclose(FILE *);
 
 /* From Modules/posixmodule.c */
 extern int fdatasync(int);
+/* XXX These are supposedly for SunOS4.1.3 but "shouldn't hurt elsewhere" */
+extern int rename(const char *, const char *);
+extern int pclose(FILE *);
+extern int lstat(const char *, struct stat *);
+extern int symlink(const char *, const char *);
+extern int fsync(int fd);
+
 #endif /* 0 */
 
 
@@ -425,39 +406,6 @@ extern int fdatasync(int);
 #ifndef HAVE_HYPOT
 extern double hypot(double, double);
 #endif
-
-
-/*******************************************************************
-On 4.4BSD-descendants, ctype functions serves the whole range of
-wchar_t character set rather than single byte code points only.
-This characteristic can break some operations of string object
-including str.upper() and str.split() on UTF-8 locales.  This
-workaround was provided by Tim Robbins of FreeBSD project.  He said
-the incompatibility will be fixed in FreeBSD 6.
-********************************************************************/
-
-#ifdef __FreeBSD__
-#include <osreldate.h>
-#if __FreeBSD_version > 500039
-#include <ctype.h>
-#include <wctype.h>
-#undef isalnum
-#define isalnum(c) iswalnum(btowc(c))
-#undef isalpha
-#define isalpha(c) iswalpha(btowc(c))
-#undef islower
-#define islower(c) iswlower(btowc(c))
-#undef isspace
-#define isspace(c) iswspace(btowc(c))
-#undef isupper
-#define isupper(c) iswupper(btowc(c))
-#undef tolower
-#define tolower(c) towlower(btowc(c))
-#undef toupper
-#define toupper(c) towupper(btowc(c))
-#endif
-#endif
-
 
 /* Declarations for symbol visibility.
 
@@ -482,19 +430,13 @@ the incompatibility will be fixed in FreeBSD 6.
 #	define HAVE_DECLSPEC_DLL
 #endif
 
-/* only get special linkage if built as shared or platform is Cygwin */
-#if defined(Py_ENABLE_SHARED) || defined(__CYGWIN__)
+#if defined(Py_ENABLE_SHARED) /* only get special linkage if built as shared */
 #	if defined(HAVE_DECLSPEC_DLL)
 #		ifdef Py_BUILD_CORE
 #			define PyAPI_FUNC(RTYPE) __declspec(dllexport) RTYPE
 #			define PyAPI_DATA(RTYPE) extern __declspec(dllexport) RTYPE
 			/* module init functions inside the core need no external linkage */
-			/* except for Cygwin to handle embedding (FIXME: BeOS too?) */
-#			if defined(__CYGWIN__)
-#				define PyMODINIT_FUNC __declspec(dllexport) void
-#			else /* __CYGWIN__ */
-#				define PyMODINIT_FUNC void
-#			endif /* __CYGWIN__ */
+#			define PyMODINIT_FUNC void
 #		else /* Py_BUILD_CORE */
 			/* Building an extension module, or an embedded situation */
 			/* public Python functions and data are imported */
@@ -625,13 +567,6 @@ typedef	struct fd_set {
 #define Py_GCC_ATTRIBUTE(x)
 #else
 #define Py_GCC_ATTRIBUTE(x) __attribute__(x)
-#endif
-
-/* Eliminate end-of-loop code not reached warnings from SunPro C
- * when using do{...}while(0) macros
- */
-#ifdef __SUNPRO_C
-#pragma error_messages (off,E_END_OF_LOOP_CODE_NOT_REACHED)
 #endif
 
 #endif /* Py_PYPORT_H */

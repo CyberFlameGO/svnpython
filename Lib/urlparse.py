@@ -63,15 +63,6 @@ def _splitparams(url):
         i = url.find(';')
     return url[:i], url[i+1:]
 
-def _splitnetloc(url, start=0):
-    for c in '/?#': # the order is important!
-        delim = url.find(c, start)
-        if delim >= 0:
-            break
-    else:
-        delim = len(url)
-    return url[start:delim], url[delim:]
-
 def urlsplit(url, scheme='', allow_fragments=1):
     """Parse a URL into 5 components:
     <scheme>://<netloc>/<path>?<query>#<fragment>
@@ -91,7 +82,13 @@ def urlsplit(url, scheme='', allow_fragments=1):
             scheme = url[:i].lower()
             url = url[i+1:]
             if url[:2] == '//':
-                netloc, url = _splitnetloc(url, 2)
+                i = url.find('/', 2)
+                if i < 0:
+                    i = url.find('#')
+                    if i < 0:
+                        i = len(url)
+                netloc = url[2:i]
+                url = url[i:]
             if allow_fragments and '#' in url:
                 url, fragment = url.split('#', 1)
             if '?' in url:
@@ -104,8 +101,12 @@ def urlsplit(url, scheme='', allow_fragments=1):
                 break
         else:
             scheme, url = url[:i].lower(), url[i+1:]
-    if scheme in uses_netloc and url[:2] == '//':
-        netloc, url = _splitnetloc(url, 2)
+    if scheme in uses_netloc:
+        if url[:2] == '//':
+            i = url.find('/', 2)
+            if i < 0:
+                i = len(url)
+            netloc, url = url[2:i], url[i:]
     if allow_fragments and scheme in uses_fragment and '#' in url:
         url, fragment = url.split('#', 1)
     if scheme in uses_query and '?' in url:
@@ -156,9 +157,13 @@ def urljoin(base, url, allow_fragments = 1):
     if path[:1] == '/':
         return urlunparse((scheme, netloc, path,
                            params, query, fragment))
-    if not (path or params or query):
+    if not path:
+        if not params:
+            params = bparams
+            if not query:
+                query = bquery
         return urlunparse((scheme, netloc, bpath,
-                           bparams, bquery, fragment))
+                           params, query, fragment))
     segments = bpath.split('/')[:-1] + path.split('/')
     # XXX The stuff below is bogus in various ways...
     if segments[-1] == '.':
@@ -242,11 +247,8 @@ def test():
         else:
             fp = open(fn)
     else:
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
-        fp = StringIO(test_input)
+        import StringIO
+        fp = StringIO.StringIO(test_input)
     while 1:
         line = fp.readline()
         if not line: break

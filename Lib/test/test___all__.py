@@ -2,6 +2,7 @@ import unittest
 from test import test_support
 
 from test.test_support import verify, verbose
+from sets import Set
 import sys
 import warnings
 
@@ -9,6 +10,8 @@ warnings.filterwarnings("ignore", ".* 'pre' .*", DeprecationWarning,
                         r'pre$')
 warnings.filterwarnings("ignore", ".* regsub .*", DeprecationWarning,
                         r'^regsub$')
+warnings.filterwarnings("ignore", ".* statcache .*", DeprecationWarning,
+                        r'statcache$')
 
 class AllTest(unittest.TestCase):
 
@@ -19,6 +22,20 @@ class AllTest(unittest.TestCase):
         except ImportError:
             # Silent fail here seems the best route since some modules
             # may not be available in all environments.
+            # Since an ImportError may leave a partial module object in
+            # sys.modules, get rid of that first.  Here's what happens if
+            # you don't:  importing pty fails on Windows because pty tries to
+            # import FCNTL, which doesn't exist.  That raises an ImportError,
+            # caught here.  It also leaves a partial pty module in sys.modules.
+            # So when test_pty is called later, the import of pty succeeds,
+            # but shouldn't.  As a result, test_pty crashes with an
+            # AttributeError instead of an ImportError, and regrtest interprets
+            # the latter as a test failure (ImportError is treated as "test
+            # skipped" -- which is what test_pty should say on Windows).
+            try:
+                del sys.modules[modname]
+            except KeyError:
+                pass
             return
         verify(hasattr(sys.modules[modname], "__all__"),
                "%s has no __all__ attribute" % modname)
@@ -26,8 +43,8 @@ class AllTest(unittest.TestCase):
         exec "from %s import *" % modname in names
         if names.has_key("__builtins__"):
             del names["__builtins__"]
-        keys = set(names)
-        all = set(sys.modules[modname].__all__)
+        keys = Set(names)
+        all = Set(sys.modules[modname].__all__)
         verify(keys==all, "%s != %s" % (keys, all))
 
     def test_all(self):
@@ -66,7 +83,6 @@ class AllTest(unittest.TestCase):
         self.check_all("copy_reg")
         self.check_all("csv")
         self.check_all("dbhash")
-        self.check_all("decimal")
         self.check_all("difflib")
         self.check_all("dircache")
         self.check_all("dis")
@@ -112,7 +128,6 @@ class AllTest(unittest.TestCase):
         self.check_all("os2emxpath")
         self.check_all("pdb")
         self.check_all("pickle")
-        self.check_all("pickletools")
         self.check_all("pipes")
         self.check_all("popen2")
         self.check_all("poplib")
@@ -146,6 +161,7 @@ class AllTest(unittest.TestCase):
         self.check_all("socket")
         self.check_all("sre")
         self.check_all("_strptime")
+        self.check_all("statcache")
         self.check_all("symtable")
         self.check_all("tabnanny")
         self.check_all("tarfile")

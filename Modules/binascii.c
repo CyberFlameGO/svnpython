@@ -204,8 +204,7 @@ binascii_a2b_uu(PyObject *self, PyObject *args)
 	bin_data = (unsigned char *)PyString_AsString(rv);
 
 	for( ; bin_len > 0 ; ascii_len--, ascii_data++ ) {
-		/* XXX is it really best to add NULs if there's no more data */
-		this_ch = (ascii_len > 0) ? *ascii_data : 0;
+		this_ch = *ascii_data;
 		if ( this_ch == '\n' || this_ch == '\r' || ascii_len <= 0) {
 			/*
 			** Whitespace. Assume some spaces got eaten at
@@ -276,7 +275,7 @@ binascii_b2a_uu(PyObject *self, PyObject *args)
 	}
 
 	/* We're lazy and allocate to much (fixed up later) */
-	if ( (rv=PyString_FromStringAndSize(NULL, bin_len*2+2)) == NULL )
+	if ( (rv=PyString_FromStringAndSize(NULL, bin_len*2)) == NULL )
 		return NULL;
 	ascii_data = (unsigned char *)PyString_AsString(rv);
 
@@ -491,10 +490,8 @@ binascii_a2b_hqx(PyObject *self, PyObject *args)
 	if ( !PyArg_ParseTuple(args, "t#:a2b_hqx", &ascii_data, &len) )
 		return NULL;
 
-	/* Allocate a string that is too big (fixed later) 
-	   Add two to the initial length to prevent interning which
-	   would preclude subsequent resizing.  */
-	if ( (rv=PyString_FromStringAndSize(NULL, len+2)) == NULL )
+	/* Allocate a string that is too big (fixed later) */
+	if ( (rv=PyString_FromStringAndSize(NULL, len)) == NULL )
 		return NULL;
 	bin_data = (unsigned char *)PyString_AsString(rv);
 
@@ -555,7 +552,7 @@ binascii_rlecode_hqx(PyObject *self, PyObject *args)
 		return NULL;
 
 	/* Worst case: output is twice as big as input (fixed later) */
-	if ( (rv=PyString_FromStringAndSize(NULL, len*2+2)) == NULL )
+	if ( (rv=PyString_FromStringAndSize(NULL, len*2)) == NULL )
 		return NULL;
 	out_data = (unsigned char *)PyString_AsString(rv);
 
@@ -604,7 +601,7 @@ binascii_b2a_hqx(PyObject *self, PyObject *args)
 		return NULL;
 
 	/* Allocate a buffer that is at least large enough */
-	if ( (rv=PyString_FromStringAndSize(NULL, len*2+2)) == NULL )
+	if ( (rv=PyString_FromStringAndSize(NULL, len*2)) == NULL )
 		return NULL;
 	ascii_data = (unsigned char *)PyString_AsString(rv);
 
@@ -1048,7 +1045,7 @@ binascii_a2b_qp(PyObject *self, PyObject *args, PyObject *kwargs)
 		PyErr_NoMemory();
 		return NULL;
 	}
-	memset(odata, 0, datalen);
+	memset(odata, datalen, 0);
 
 	in = out = 0;
 	while (in < datalen) {
@@ -1222,7 +1219,7 @@ binascii_b2a_qp (PyObject *self, PyObject *args, PyObject *kwargs)
 		PyErr_NoMemory();
 		return NULL;
 	}
-	memset(odata, 0, odatalen);
+	memset(odata, odatalen, 0);
 
 	in = out = linelen = 0;
 	while (in < datalen) {

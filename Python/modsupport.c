@@ -3,7 +3,11 @@
 
 #include "Python.h"
 
+#ifdef MPW /* MPW pushes 'extended' for float and double types with varargs */
+typedef extended va_double;
+#else
 typedef double va_double;
+#endif
 
 /* Package context -- the full module name for package imports */
 char *_Py_PackageContext = NULL;
@@ -152,32 +156,28 @@ do_mkdict(char **p_format, va_list *p_va, int endchar, int n)
 {
 	PyObject *d;
 	int i;
-	int itemfailed = 0;
 	if (n < 0)
 		return NULL;
 	if ((d = PyDict_New()) == NULL)
 		return NULL;
-	/* Note that we can't bail immediately on error as this will leak
-	   refcounts on any 'N' arguments. */
 	for (i = 0; i < n; i+= 2) {
 		PyObject *k, *v;
 		int err;
 		k = do_mkvalue(p_format, p_va);
 		if (k == NULL) {
-			itemfailed = 1;
-			Py_INCREF(Py_None);
-			k = Py_None;
+			Py_DECREF(d);
+			return NULL;
 		}
 		v = do_mkvalue(p_format, p_va);
 		if (v == NULL) {
-			itemfailed = 1;
-			Py_INCREF(Py_None);
-			v = Py_None;
+			Py_DECREF(k);
+			Py_DECREF(d);
+			return NULL;
 		}
 		err = PyDict_SetItem(d, k, v);
 		Py_DECREF(k);
 		Py_DECREF(v);
-		if (err < 0 || itemfailed) {
+		if (err < 0) {
 			Py_DECREF(d);
 			return NULL;
 		}
@@ -198,19 +198,15 @@ do_mklist(char **p_format, va_list *p_va, int endchar, int n)
 {
 	PyObject *v;
 	int i;
-	int itemfailed = 0;
 	if (n < 0)
 		return NULL;
 	if ((v = PyList_New(n)) == NULL)
 		return NULL;
-	/* Note that we can't bail immediately on error as this will leak
-	   refcounts on any 'N' arguments. */
 	for (i = 0; i < n; i++) {
 		PyObject *w = do_mkvalue(p_format, p_va);
 		if (w == NULL) {
-			itemfailed = 1;
-			Py_INCREF(Py_None);
-			w = Py_None;
+			Py_DECREF(v);
+			return NULL;
 		}
 		PyList_SetItem(v, i, w);
 	}
@@ -222,10 +218,6 @@ do_mklist(char **p_format, va_list *p_va, int endchar, int n)
 	}
 	else if (endchar)
 		++*p_format;
-	if (itemfailed) {
-		Py_DECREF(v);
-		v = NULL;
-	}
 	return v;
 }
 
@@ -245,19 +237,15 @@ do_mktuple(char **p_format, va_list *p_va, int endchar, int n)
 {
 	PyObject *v;
 	int i;
-	int itemfailed = 0;
 	if (n < 0)
 		return NULL;
 	if ((v = PyTuple_New(n)) == NULL)
 		return NULL;
-	/* Note that we can't bail immediately on error as this will leak
-	   refcounts on any 'N' arguments. */
 	for (i = 0; i < n; i++) {
 		PyObject *w = do_mkvalue(p_format, p_va);
 		if (w == NULL) {
-			itemfailed = 1;
-			Py_INCREF(Py_None);
-			w = Py_None;
+			Py_DECREF(v);
+			return NULL;
 		}
 		PyTuple_SetItem(v, i, w);
 	}
@@ -269,10 +257,6 @@ do_mktuple(char **p_format, va_list *p_va, int endchar, int n)
 	}
 	else if (endchar)
 		++*p_format;
-	if (itemfailed) {
-		Py_DECREF(v);
-		v = NULL;
-	}
 	return v;
 }
 
@@ -536,9 +520,8 @@ PyModule_AddObject(PyObject *m, char *name, PyObject *o)
 		return -1;
 	}
 	if (!o) {
-		if (!PyErr_Occurred())
-			PyErr_SetString(PyExc_TypeError,
-					"PyModule_AddObject() needs non-NULL value");
+		PyErr_SetString(PyExc_TypeError,
+				"PyModule_AddObject() needs non-NULL value");
 		return -1;
 	}
 

@@ -13,7 +13,9 @@
 #include "eval.h"
 #include "marshal.h"
 
+#ifdef HAVE_SIGNAL_H
 #include <signal.h>
+#endif
 
 #ifdef HAVE_LANGINFO_H
 #include <locale.h>
@@ -25,6 +27,9 @@
 #include "windows.h"
 #endif
 
+#ifdef macintosh
+#include "macglue.h"
+#endif
 extern char *Py_GetPath(void);
 
 extern grammar _PyParser_Grammar; /* From graminit.c */
@@ -131,7 +136,7 @@ add_flag(int flag, const char *envs)
 }
 
 void
-Py_InitializeEx(int install_sigs)
+Py_Initialize(void)
 {
 	PyInterpreterState *interp;
 	PyThreadState *tstate;
@@ -208,8 +213,7 @@ Py_InitializeEx(int install_sigs)
 
 	_PyImportHooks_Init();
 
-	if (install_sigs)
-		initsigs(); /* Signal handling stuff, including initintr() */
+	initsigs(); /* Signal handling stuff, including initintr() */
 
 	initmain(); /* Module __main__ */
 	if (!Py_NoSiteFlag)
@@ -277,13 +281,6 @@ Py_InitializeEx(int install_sigs)
 #endif
 }
 
-void
-Py_Initialize(void)
-{
-	Py_InitializeEx(1);
-}
-
-
 #ifdef COUNT_ALLOCS
 extern void dump_counts(void);
 #endif
@@ -324,7 +321,7 @@ Py_Finalize(void)
 	initialized = 0;
 
 	/* Get current thread state and interpreter pointer */
-	tstate = PyThreadState_GET();
+	tstate = PyThreadState_Get();
 	interp = tstate->interp;
 
 	/* Disable signal handling */
@@ -416,7 +413,6 @@ Py_Finalize(void)
 	PyFrame_Fini();
 	PyCFunction_Fini();
 	PyTuple_Fini();
-	PyList_Fini();
 	PyString_Fini();
 	PyInt_Fini();
 	PyFloat_Fini();
@@ -538,7 +534,7 @@ Py_EndInterpreter(PyThreadState *tstate)
 {
 	PyInterpreterState *interp = tstate->interp;
 
-	if (tstate != PyThreadState_GET())
+	if (tstate != PyThreadState_Get())
 		Py_FatalError("Py_EndInterpreter: thread is not current");
 	if (tstate->frame != NULL)
 		Py_FatalError("Py_EndInterpreter: thread still has a frame");
@@ -783,6 +779,13 @@ maybe_pyc_file(FILE *fp, const char* filename, const char* ext, int closeit)
 {
 	if (strcmp(ext, ".pyc") == 0 || strcmp(ext, ".pyo") == 0)
 		return 1;
+
+#ifdef macintosh
+	/* On a mac, we also assume a pyc file for types 'PYC ' and 'APPL' */
+	if (PyMac_getfiletype((char *)filename) == 'PYC '
+	    || PyMac_getfiletype((char *)filename) == 'APPL')
+		return 1;
+#endif /* macintosh */
 
 	/* Only look into the file if we are allowed to close it, since
 	   it then should also be seekable. */
@@ -1060,7 +1063,7 @@ PyErr_PrintEx(int set_sys_last_vars)
 	}
 	hook = PySys_GetObject("excepthook");
 	if (hook) {
-		PyObject *args = PyTuple_Pack(3,
+		PyObject *args = Py_BuildValue("(OOO)",
                     exception, v ? v : Py_None, tb ? tb : Py_None);
 		PyObject *result = PyEval_CallObject(hook, args);
 		if (result == NULL) {
@@ -1444,8 +1447,7 @@ err_input(perrdetail *err)
 		msg = "EOL while scanning single-quoted string";
 		break;
 	case E_INTR:
-		if (!PyErr_Occurred())
-			PyErr_SetNone(PyExc_KeyboardInterrupt);
+		PyErr_SetNone(PyExc_KeyboardInterrupt);
 		Py_XDECREF(v);
 		return;
 	case E_NOMEM:
@@ -1471,7 +1473,7 @@ err_input(perrdetail *err)
 		msg = "too many levels of indentation";
 		break;
 	case E_DECODE: {	/* XXX */
-		PyThreadState* tstate = PyThreadState_GET();
+		PyThreadState* tstate = PyThreadState_Get();
 		PyObject* value = tstate->curexc_value;
 		if (value != NULL) {
 			u = PyObject_Repr(value);
@@ -1517,6 +1519,7 @@ Py_FatalError(const char *msg)
 
 #ifdef WITH_THREAD
 #include "pythread.h"
+int _PyThread_Started = 0; /* Set by threadmodule.c and maybe others */
 #endif
 
 #define NEXITFUNCS 32
@@ -1569,24 +1572,42 @@ Py_Exit(int sts)
 {
 	Py_Finalize();
 
+#ifdef macintosh
+	PyMac_Exit(sts);
+#else
 	exit(sts);
+#endif
 }
 
 static void
 initsigs(void)
 {
+#ifdef HAVE_SIGNAL_H
 #ifdef SIGPIPE
-	PyOS_setsig(SIGPIPE, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
 #endif
 #ifdef SIGXFZ
-	PyOS_setsig(SIGXFZ, SIG_IGN);
+	signal(SIGXFZ, SIG_IGN);
 #endif
 #ifdef SIGXFSZ
-	PyOS_setsig(SIGXFSZ, SIG_IGN);
+	signal(SIGXFSZ, SIG_IGN);
 #endif
+#endif /* HAVE_SIGNAL_H */
 	PyOS_InitInterrupts(); /* May imply initsignal() */
 }
 
+#ifdef MPW
+
+/* Check for file descriptor connected to interactive device.
+   Pretend that stdin is always interactive, other files never. */
+
+int
+isatty(int fd)
+{
+	return fd == fileno(stdin);
+}
+
+#endif
 
 /*
  * The file descriptor fd is considered ``interactive'' if either
@@ -1646,14 +1667,18 @@ PyOS_getsig(int sig)
 {
 #ifdef HAVE_SIGACTION
 	struct sigaction context;
-	if (sigaction(sig, NULL, &context) == -1)
-		return SIG_ERR;
+	/* Initialize context.sa_handler to SIG_ERR which makes about as
+	 * much sense as anything else.  It should get overwritten if
+	 * sigaction actually succeeds and otherwise we avoid an
+	 * uninitialized memory read.
+	 */
+	context.sa_handler = SIG_ERR;
+	sigaction(sig, NULL, &context);
 	return context.sa_handler;
 #else
 	PyOS_sighandler_t handler;
 	handler = signal(sig, SIG_IGN);
-	if (handler != SIG_ERR)
-		signal(sig, handler);
+	signal(sig, handler);
 	return handler;
 #endif
 }
@@ -1662,19 +1687,20 @@ PyOS_sighandler_t
 PyOS_setsig(int sig, PyOS_sighandler_t handler)
 {
 #ifdef HAVE_SIGACTION
-	struct sigaction context, ocontext;
-	context.sa_handler = handler;
-	sigemptyset(&context.sa_mask);
-	context.sa_flags = 0;
-	if (sigaction(sig, &context, &ocontext) == -1)
-		return SIG_ERR;
-	return ocontext.sa_handler;
-#else
+	struct sigaction context;
 	PyOS_sighandler_t oldhandler;
-	oldhandler = signal(sig, handler);
-#ifdef HAVE_SIGINTERRUPT
-	siginterrupt(sig, 1);
-#endif
+	/* Initialize context.sa_handler to SIG_ERR which makes about as
+	 * much sense as anything else.  It should get overwritten if
+	 * sigaction actually succeeds and otherwise we avoid an
+	 * uninitialized memory read.
+	 */
+	context.sa_handler = SIG_ERR;
+	sigaction(sig, NULL, &context);
+	oldhandler = context.sa_handler;
+	context.sa_handler = handler;
+	sigaction(sig, &context, NULL);
 	return oldhandler;
+#else
+	return signal(sig, handler);
 #endif
 }

@@ -1,16 +1,16 @@
 #####################==================----------------
 #
-# Top-Level Makefile for Building Python 2.4 for OS/2 using GCC/EMX
+# Top-Level Makefile for Building Python 2.3 for OS/2 using GCC/EMX
 # Originally written by Andrew Zabolotny, <bit@eltech.ru> for Python 1.5.2
-# Modified by Andrew MacIntyre, <andymac@pcug.org.au> for Python 2.4
+# Modified by Andrew MacIntyre, <andymac@pcug.org.au> for Python 2.3
 #
 # This makefile was developed for use with [P]GCC/EMX compiler any
 # version and GNU Make.
 #
-# The output of the build is a largish Python24.DLL containing the
+# The output of the build is a largish Python23.DLL containing the
 # essential modules of Python and a small Python.exe program to start
 # the interpreter. When embedding Python within another program, only
-# Python24.DLL is needed. We also build python_s.a static library (which
+# Python23.DLL is needed. We also build python_s.a static library (which
 # can be converted into OMF (.lib) format using emxomf tool) and both
 # python.a and python.lib import libraries.  Then the optional 
 # extension modules, which are OS/2 DLLs renamed with a PYD file extension.
@@ -40,6 +40,8 @@ HAVE_ZLIB=	no
 HAVE_UFC=	no
 # Do you have the Tcl/Tk library installed?
 HAVE_TCLTK=	no
+# Do you have the GNU multiprecision library installed?
+HAVE_GMPZ=	no
 # Do you have the GNU readline library installed?
 # NOTE: I'm using a modified version of Kai Uwe Rommel's port that 
 #       - is compiled with multithreading enabled
@@ -62,7 +64,7 @@ HAVE_BZ2=	no
 
 # === install locations ===
 # default value of PYTHONHOME
-LIB_DIR=C:/Python24
+LIB_DIR=C:/Python23
 # default is to have everything in or under PYTHONHOME
 EXE_DIR=$(LIB_DIR)
 DLL_DIR=$(EXE_DIR)
@@ -234,8 +236,8 @@ $(OUT)%$O: %.c
 	@echo STACKSIZE 2097152 >>$@
 
 # Output file names
-PYTHON_VER=	2.4
-PYTHON_LIB=	python24
+PYTHON_VER=	2.3
+PYTHON_LIB=	python23
 PYTHON.LIB=	$(PYTHON_LIB)_s$A
 PYTHON.IMPLIB=	$(PYTHON_LIB)$A
 ifeq ($(EXEOMF),yes)
@@ -265,6 +267,7 @@ DESCRIPTION.$(PGEN.EXE)=	Python object-oriented programming language parser gene
 DESCRIPTION.zlib$(MODULE.EXT)=		Python Extension DLL for accessing the InfoZip compression library
 DESCRIPTION.crypt$(MODULE.EXT)=		Python Extension DLL implementing the crypt$(BRO)$(BRC) function
 DESCRIPTION._tkinter$(MODULE.EXT)=	Python Extension DLL for access to Tcl/Tk Environment
+DESCRIPTION.mpz$(MODULE.EXT)=		Python Extension DLL for access to GNU multi-precision library
 DESCRIPTION.readline$(MODULE.EXT)=	Python Extension DLL for access to GNU ReadLine library
 DESCRIPTION.bsddb185$(MODULE.EXT)=	Python Extension DLL for access to BSD DB (v1.85) library
 DESCRIPTION._curses$(MODLIB.EXT)=	Python Extension DLL for access to ncurses library
@@ -285,7 +288,6 @@ SRC.MODULES=	$(addprefix $(TOP), \
 		Modules/binascii.c \
 		Modules/cmathmodule.c \
 		Modules/_codecsmodule.c \
-		Modules/collectionsmodule.c \
 		Modules/cPickle.c \
 		Modules/cStringIO.c \
 		Modules/_csv.c \
@@ -293,7 +295,6 @@ SRC.MODULES=	$(addprefix $(TOP), \
 		Modules/dlmodule.c \
 		Modules/errnomodule.c \
 		Modules/fcntlmodule.c \
-		Modules/_heapqmodule.c \
 		Modules/imageop.c \
 		Modules/itertoolsmodule.c \
 		Modules/_localemodule.c \
@@ -301,6 +302,8 @@ SRC.MODULES=	$(addprefix $(TOP), \
 		Modules/md5c.c \
 		Modules/md5module.c \
 		Modules/operator.c \
+		Modules/pcremodule.c \
+		Modules/pypcre.c \
 		Modules/_randommodule.c \
 		Modules/regexmodule.c \
 		Modules/regexpr.c \
@@ -314,6 +317,7 @@ SRC.MODULES=	$(addprefix $(TOP), \
 		Modules/timemodule.c \
 		Modules/timingmodule.c \
 		Modules/_weakref.c \
+		Modules/xreadlinesmodule.c \
 		Modules/xxsubtype.c \
 		Modules/zipimport.c)
 SRC.PARSE1=	$(addprefix $(TOP), \
@@ -355,7 +359,6 @@ SRC.PYTHON=	$(addprefix $(TOP), \
 		Python/mystrtoul.c \
 		Python/pyfpe.c \
 		Python/pystate.c \
-		Python/pystrtod.c \
 		Python/pythonrun.c \
 		Python/structmember.c \
 		Python/symtable.c \
@@ -379,7 +382,6 @@ SRC.OBJECT=	$(addprefix $(TOP), \
 		Objects/floatobject.c \
 		Objects/frameobject.c \
 		Objects/funcobject.c \
-		Objects/genobject.c \
 		Objects/intobject.c \
 		Objects/iterobject.c \
 		Objects/listobject.c \
@@ -389,7 +391,6 @@ SRC.OBJECT=	$(addprefix $(TOP), \
 		Objects/object.c \
 		Objects/obmalloc.c \
 		Objects/rangeobject.c \
-		Objects/setobject.c \
 		Objects/sliceobject.c \
 		Objects/stringobject.c \
 		Objects/structseq.c \
@@ -434,6 +435,7 @@ EASYEXTMODULES=	fpectl \
 		fpetest \
 		parser \
 		pwd \
+		rotor \
 		select 
 
 # Python modules to be dynamically loaded that need explicit build rules
@@ -459,6 +461,9 @@ ifeq ($(HAVE_TCLTK),yes)
   HARDEXTMODULES+=	_tkinter
   CFLAGS+=		-DHAS_DIRENT -I/TclTk80/include
   TK_LIBS+=		-L/TclTk80/lib -ltcl80 -ltk80
+endif
+ifeq ($(HAVE_GMPZ),yes)
+  HARDEXTMODULES+=	mpz
 endif
 ifeq ($(HAVE_GREADLINE),yes)
   HARDEXTMODULES+=	readline
@@ -502,7 +507,7 @@ python_noncore:
 clean:
 	rm -f $(OUT)*
 	rm -f $(PYTHON.LIB) $(PYTHON.IMPLIB) $(PYTHON.EXEIMP) $(PYTHON.DLL) \
-	  $(PYTHON.EXE) $(PYTHONPM.EXE) $(PGEN.EXE) *$(MODULE.EXT) *.dll
+	  $(PYTHON.EXE) $(PYTHONPM.EXE) $(PGEN.EXE) *$(MODULE.EXT)
 	find ../../Lib -name "*.py[co]" -exec rm {} ";"
 
 lx:
@@ -643,6 +648,8 @@ dbm$(MODULE.EXT): $(OUT)dbmmodule$O $(OUT)dbm_m.def $(PYTHON.IMPLIB)
 gdbm$(MODULE.EXT): $(OUT)gdbmmodule$O $(OUT)gdbm_m.def $(PYTHON.IMPLIB)
 	$(LD) $(LDFLAGS.DLL) -o $@ $(^^) $(L^) $(LIBS) -lgdbm
 
+mpz$(MODULE.EXT): $(OUT)mpzmodule$O $(OUT)mpz_m.def $(PYTHON.IMPLIB)
+	$(LD) $(LDFLAGS.DLL) -o $@ $(^^) $(L^) $(LIBS) -lgmp
 
 # Expat is now distributed with Python, so use the included version
 $(OUT)pyexpat$O:	../../Modules/pyexpat.c

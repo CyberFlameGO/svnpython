@@ -4,12 +4,10 @@
 '''
 from test.test_support import run_unittest
 import unittest, sys
-from types import ClassType, FunctionType, MethodType, BuiltinFunctionType
+from types import ClassType, FunctionType, MethodType
 import pyclbr
 from unittest import TestCase
-
-StaticMethodType = type(staticmethod(lambda: None))
-ClassMethodType = type(classmethod(lambda c: None))
+from sets import Set
 
 # This next line triggers an error on old versions of pyclbr.
 
@@ -26,7 +24,7 @@ class PyclbrTest(TestCase):
 
     def assertListEq(self, l1, l2, ignore):
         ''' succeed iff {l1} - {ignore} == {l2} - {ignore} '''
-        missing = (set(l1) ^ set(l2)) - set(ignore)
+        missing = (Set(l1) ^ Set(l2)) - Set(ignore)
         if missing:
             print >>sys.stderr, "l1=%r\nl2=%r\nignore=%r" % (l1, l2, ignore)
             self.fail("%r missing" % missing.pop())
@@ -46,10 +44,11 @@ class PyclbrTest(TestCase):
             print >>sys.stderr, "***",key
         self.failUnless(obj.has_key(key))
 
-    def assertEqualsOrIgnored(self, a, b, ignore):
+    def assertEquals(self, a, b, ignore=None):
         ''' succeed iff a == b or a in ignore or b in ignore '''
-        if a not in ignore and b not in ignore:
-            self.assertEquals(a, b)
+        if (ignore == None) or (a in ignore) or (b in ignore): return
+
+        unittest.TestCase.assertEquals(self, a, b)
 
     def checkModule(self, moduleName, module=None, ignore=()):
         ''' succeed iff pyclbr.readmodule_ex(modulename) corresponds
@@ -64,22 +63,11 @@ class PyclbrTest(TestCase):
 
         dict = pyclbr.readmodule_ex(moduleName)
 
-        def ismethod(oclass, obj, name):
-            classdict = oclass.__dict__
-            if isinstance(obj, FunctionType):
-                if not isinstance(classdict[name], StaticMethodType):
-                    return False
-            else:
-                if not  isinstance(obj, MethodType):
-                    return False
-                if obj.im_self is not None:
-                    if (not isinstance(classdict[name], ClassMethodType) or
-                        obj.im_self is not oclass):
-                        return False
-                else:
-                    if not isinstance(classdict[name], FunctionType):
-                        return False
-
+        def ismethod(obj, name):
+            if not  isinstance(obj, MethodType):
+                return False
+            if obj.im_self is not None:
+                return False
             objname = obj.__name__
             if objname.startswith("__") and not objname.endswith("__"):
                 objname = "_%s%s" % (obj.im_class.__name__, objname)
@@ -92,9 +80,9 @@ class PyclbrTest(TestCase):
             self.assertHasattr(module, name, ignore)
             py_item = getattr(module, name)
             if isinstance(value, pyclbr.Function):
-                self.assert_(isinstance(py_item, (FunctionType, BuiltinFunctionType)))
+                self.assertEquals(type(py_item), FunctionType)
             else:
-                self.failUnless(isinstance(py_item, (ClassType, type)))
+                self.assertEquals(type(py_item), ClassType)
                 real_bases = [base.__name__ for base in py_item.__bases__]
                 pyclbr_bases = [ getattr(base, 'name', base)
                                  for base in value.super ]
@@ -107,7 +95,7 @@ class PyclbrTest(TestCase):
 
                 actualMethods = []
                 for m in py_item.__dict__.keys():
-                    if ismethod(py_item, getattr(py_item, m), m):
+                    if ismethod(getattr(py_item, m), m):
                         actualMethods.append(m)
                 foundMethods = []
                 for m in value.methods.keys():
@@ -120,8 +108,7 @@ class PyclbrTest(TestCase):
                     self.assertListEq(foundMethods, actualMethods, ignore)
                     self.assertEquals(py_item.__module__, value.module)
 
-                    self.assertEqualsOrIgnored(py_item.__name__, value.name,
-                                               ignore)
+                    self.assertEquals(py_item.__name__, value.name, ignore)
                     # can't check file or lineno
                 except:
                     print >>sys.stderr, "class=%s" % py_item
@@ -146,12 +133,6 @@ class PyclbrTest(TestCase):
         self.checkModule('rfc822')
         self.checkModule('difflib')
 
-    def test_decorators(self):
-        # XXX: See comment in pyclbr_input.py for a test that would fail
-        #      if it were not commented out.
-        #
-        self.checkModule('test.pyclbr_input')
-
     def test_others(self):
         cm = self.checkModule
 
@@ -160,9 +141,8 @@ class PyclbrTest(TestCase):
         cm('cgi', ignore=('log',))      # set with = in module
         cm('mhlib')
         cm('urllib', ignore=('getproxies_registry',
-                             'open_https',
-                             'getproxies_internetconfig',)) # not on all platforms
-        cm('pickle')
+                             'open_https')) # not on all platforms
+        cm('pickle', ignore=('g',))     # from types import *
         cm('aifc', ignore=('openfp',))  # set with = in module
         cm('Cookie')
         cm('sre_parse', ignore=('dump',)) # from sre_constants import *

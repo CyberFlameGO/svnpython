@@ -11,11 +11,11 @@ import unittest
 from test_all import verbose
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db
-except ImportError:
     # For Python 2.3
     from bsddb import db
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db
 
 letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -135,10 +135,12 @@ class SimpleRecnoTestCase(unittest.TestCase):
 
         # test that non-existant key lookups work (and that
         # DBC_set_range doesn't have a memleak under valgrind)
+        old_grn = d.set_get_returns_none(2)
         rec = c.set_range(999999)
         assert rec == None
         if verbose:
             print rec
+        d.set_get_returns_none(old_grn)
 
         c.close()
         d.close()

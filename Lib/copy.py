@@ -62,6 +62,15 @@ except ImportError:
 
 __all__ = ["Error", "copy", "deepcopy"]
 
+def _getspecial(cls, name):
+    for basecls in cls.__mro__:
+        try:
+            return basecls.__dict__[name]
+        except:
+            pass
+    else:
+        return None
+
 def copy(x):
     """Shallow copy operation on arbitrary Python objects.
 
@@ -74,7 +83,7 @@ def copy(x):
     if copier:
         return copier(x)
 
-    copier = getattr(cls, "__copy__", None)
+    copier = _getspecial(cls, "__copy__")
     if copier:
         return copier(x)
 
@@ -90,6 +99,9 @@ def copy(x):
             if reductor:
                 rv = reductor()
             else:
+                copier = getattr(x, "__copy__", None)
+                if copier:
+                    return copier()
                 raise Error("un(shallow)copyable object of type %s" % cls)
 
     return _reconstruct(x, rv, 0)
@@ -97,26 +109,44 @@ def copy(x):
 
 _copy_dispatch = d = {}
 
-def _copy_immutable(x):
+def _copy_atomic(x):
     return x
-for t in (types.NoneType, int, long, float, bool, str, tuple,
-          frozenset, type, xrange, types.ClassType,
-          types.BuiltinFunctionType):
-    d[t] = _copy_immutable
-for name in ("ComplexType", "UnicodeType", "CodeType"):
-    t = getattr(types, name, None)
-    if t is not None:
-        d[t] = _copy_immutable
+d[types.NoneType] = _copy_atomic
+d[types.IntType] = _copy_atomic
+d[types.LongType] = _copy_atomic
+d[types.FloatType] = _copy_atomic
+d[types.BooleanType] = _copy_atomic
+try:
+    d[types.ComplexType] = _copy_atomic
+except AttributeError:
+    pass
+d[types.StringType] = _copy_atomic
+try:
+    d[types.UnicodeType] = _copy_atomic
+except AttributeError:
+    pass
+try:
+    d[types.CodeType] = _copy_atomic
+except AttributeError:
+    pass
+d[types.TypeType] = _copy_atomic
+d[types.XRangeType] = _copy_atomic
+d[types.ClassType] = _copy_atomic
+d[types.BuiltinFunctionType] = _copy_atomic
 
-def _copy_with_constructor(x):
-    return type(x)(x)
-for t in (list, dict, set):
-    d[t] = _copy_with_constructor
+def _copy_list(x):
+    return x[:]
+d[types.ListType] = _copy_list
 
-def _copy_with_copy_method(x):
+def _copy_tuple(x):
+    return x[:]
+d[types.TupleType] = _copy_tuple
+
+def _copy_dict(x):
     return x.copy()
+d[types.DictionaryType] = _copy_dict
 if PyStringMap is not None:
-    d[PyStringMap] = _copy_with_copy_method
+    d[PyStringMap] = _copy_dict
 
 def _copy_inst(x):
     if hasattr(x, '__copy__'):
@@ -167,9 +197,9 @@ def deepcopy(x, memo=None, _nil=[]):
         if issc:
             y = _deepcopy_atomic(x, memo)
         else:
-            copier = getattr(x, "__deepcopy__", None)
+            copier = _getspecial(cls, "__deepcopy__")
             if copier:
-                y = copier(memo)
+                y = copier(x, memo)
             else:
                 reductor = dispatch_table.get(cls)
                 if reductor:
@@ -183,6 +213,9 @@ def deepcopy(x, memo=None, _nil=[]):
                         if reductor:
                             rv = reductor()
                         else:
+                            copier = getattr(x, "__deepcopy__", None)
+                            if copier:
+                                return copier(memo)
                             raise Error(
                                 "un(deep)copyable object of type %s" % cls)
                 y = _reconstruct(x, rv, 1, memo)

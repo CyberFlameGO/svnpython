@@ -218,8 +218,6 @@ def exists(p):
     except swi.error:
         return 0
 
-lexists = exists
-
 
 def isdir(p):
     """

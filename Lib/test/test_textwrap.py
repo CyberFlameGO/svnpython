@@ -23,7 +23,7 @@ class BaseTestCase(unittest.TestCase):
             for i in range(len(textin)):
                 result.append("  %d: %r" % (i, textin[i]))
             result = '\n'.join(result)
-        elif isinstance(textin, basestring):
+        elif isinstance(textin, (str, unicode)):
             result = "  %s\n" % repr(textin)
         return result
 
@@ -128,7 +128,7 @@ What a mess!
         wrapper.width = 60
         expect = ['And she said, "Go to hell!"  Can you believe that?']
         self.check(wrapper.wrap(text), expect)
-
+        
     def test_wrap_short(self):
         # Wrapping to make short lines longer
 

@@ -35,11 +35,12 @@ def main():
                 print filename
             try:
                 if PROFILE:
-                    profile.run('compileFile(%r, %r)' % (filename, DISPLAY),
+                    profile.run('compileFile(%s, %s)' % (`filename`,
+                                                         `DISPLAY`),
                                 filename + ".prof")
                 else:
                     compileFile(filename, DISPLAY)
-
+                    
             except SyntaxError, err:
                 print err
                 if err.lineno is not None:

@@ -1,4 +1,4 @@
-# Copyright 2001-2004 by Vinay Sajip. All Rights Reserved.
+# Copyright 2001-2002 by Vinay Sajip. All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted,
@@ -21,7 +21,7 @@ comp.lang.python, and influenced by Apache's log4j system.
 Should work under Python versions >= 1.5.2, except that source line
 information is not available unless 'sys._getframe()' is.
 
-Copyright (C) 2001-2004 Vinay Sajip. All Rights Reserved.
+Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 
 To use, simply 'import logging' and log away!
 """
@@ -36,8 +36,8 @@ except ImportError:
 
 __author__  = "Vinay Sajip <vinay_sajip@red-dove.com>"
 __status__  = "beta"
-__version__ = "0.4.9.6"
-__date__    = "20 October 2004"
+__version__ = "0.4.8.1"
+__date__    = "26 June 2003"
 
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
@@ -113,12 +113,8 @@ def getLevelName(level):
     If the level is one of the predefined levels (CRITICAL, ERROR, WARNING,
     INFO, DEBUG) then you get the corresponding string. If you have
     associated levels with names using addLevelName then the name you have
-    associated with 'level' is returned.
-
-    If a numeric value corresponding to one of the defined levels is passed
-    in, the corresponding string representation is returned.
-
-    Otherwise, the string "Level %s" % level is returned.
+    associated with 'level' is returned. Otherwise, the string
+    "Level %s" % level is returned.
     """
     return _levelNames.get(level, ("Level %s" % level))
 
@@ -191,21 +187,6 @@ class LogRecord:
         ct = time.time()
         self.name = name
         self.msg = msg
-        #
-        # The following statement allows passing of a dictionary as a sole
-        # argument, so that you can do something like
-        #  logging.debug("a %(a)d b %(b)s", {'a':1, 'b':2})
-        # Suggested by Stefan Behnel.
-        # Note that without the test for args[0], we get a problem because
-        # during formatting, we test to see if the arg is present using
-        # 'if self.args:'. If the event being logged is e.g. 'Value is %d'
-        # and if the passed arg fails 'if self.args:' then no formatting
-        # is done. For example, logger.warn('Value is %d', 0) would log
-        # 'Value is %d' instead of 'Value is 0'.
-        # For the use case of passing a dictionary, this should not be a
-        # problem.
-        if args and (len(args) == 1) and args[0] and (type(args[0]) == types.DictType):
-            args = args[0]
         self.args = args
         self.levelname = getLevelName(level)
         self.levelno = level
@@ -217,7 +198,6 @@ class LogRecord:
             self.filename = pathname
             self.module = "Unknown module"
         self.exc_info = exc_info
-        self.exc_text = None      # used to cache the traceback text
         self.lineno = lineno
         self.created = ct
         self.msecs = (ct - long(ct)) * 1000
@@ -384,14 +364,9 @@ class Formatter:
             record.asctime = self.formatTime(record, self.datefmt)
         s = self._fmt % record.__dict__
         if record.exc_info:
-            # Cache the traceback text to avoid converting it multiple times
-            # (it's constant anyway)
-            if not record.exc_text:
-                record.exc_text = self.formatException(record.exc_info)
-        if record.exc_text:
             if s[-1] != "\n":
                 s = s + "\n"
-            s = s + record.exc_text
+            s = s + self.formatException(record.exc_info)
         return s
 
 #
@@ -638,17 +613,10 @@ class Handler(Filterer):
         """
         Tidy up any resources used by the handler.
 
-        This version does removes the handler from an internal list
-        of handlers which is closed when shutdown() is called. Subclasses
-        should ensure that this gets called from overridden close()
-        methods.
+        This version does nothing and is intended to be implemented by
+        subclasses.
         """
-        #get the module data lock, as we're updating a shared structure.
-        _acquireLock()
-        try:    #unlikely to raise an exception, but you never know...
-            del _handlers[self]
-        finally:
-            _releaseLock()
+        pass
 
     def handleError(self, record):
         """
@@ -704,14 +672,13 @@ class StreamHandler(Handler):
         """
         try:
             msg = self.format(record)
-            fs = "%s\n"
             if not hasattr(types, "UnicodeType"): #if no unicode support...
-                self.stream.write(fs % msg)
+                self.stream.write("%s\n" % msg)
             else:
                 try:
-                    self.stream.write(fs % msg)
+                    self.stream.write("%s\n" % msg)
                 except UnicodeError:
-                    self.stream.write(fs % msg.encode("UTF-8"))
+                    self.stream.write("%s\n" % msg.encode("UTF-8"))
             self.flush()
         except:
             self.handleError(record)
@@ -725,18 +692,14 @@ class FileHandler(StreamHandler):
         Open the specified file and use it as the stream for logging.
         """
         StreamHandler.__init__(self, open(filename, mode))
-        #keep the absolute path, otherwise derived classes which use this
-        #may come a cropper when the current directory changes
-        self.baseFilename = os.path.abspath(filename)
+        self.baseFilename = filename
         self.mode = mode
 
     def close(self):
         """
         Closes the stream.
         """
-        self.flush()
         self.stream.close()
-        StreamHandler.close(self)
 
 #---------------------------------------------------------------------------
 #   Manager classes and functions
@@ -745,8 +708,8 @@ class FileHandler(StreamHandler):
 class PlaceHolder:
     """
     PlaceHolder instances are used in the Manager logger hierarchy to take
-    the place of nodes for which no loggers have been defined. This class is
-    intended for internal use only and not as part of the public API.
+    the place of nodes for which no loggers have been defined [FIXME add
+    example].
     """
     def __init__(self, alogger):
         """
@@ -779,13 +742,6 @@ def setLoggerClass(klass):
     global _loggerClass
     _loggerClass = klass
 
-def getLoggerClass():
-    """
-    Return the class to be used when instantiating a logger.
-    """
-
-    return _loggerClass
-
 class Manager:
     """
     There is [under normal circumstances] just one Manager instance, which
@@ -803,8 +759,7 @@ class Manager:
     def getLogger(self, name):
         """
         Get a logger with the specified name (channel name), creating it
-        if it doesn't yet exist. This name is a dot-separated hierarchical
-        name, such as "a", "a.b", "a.b.c" or similar.
+        if it doesn't yet exist.
 
         If a PlaceHolder existed for the specified name [i.e. the logger
         didn't exist but a child of it did], replace it with the created
@@ -903,6 +858,12 @@ class Logger(Filterer):
         """
         self.level = level
 
+#   def getRoot(self):
+#       """
+#       Get the root of the logger hierarchy.
+#       """
+#       return Logger.root
+
     def debug(self, msg, *args, **kwargs):
         """
         Log 'msg % args' with severity 'DEBUG'.
@@ -985,18 +946,13 @@ class Logger(Filterer):
 
     def log(self, level, msg, *args, **kwargs):
         """
-        Log 'msg % args' with the integer severity 'level'.
+        Log 'msg % args' with the severity 'level'.
 
         To pass exception information, use the keyword argument exc_info with
         a true value, e.g.
 
         logger.log(level, "We have a %s", "mysterious problem", exc_info=1)
         """
-        if type(level) != types.IntType:
-            if raiseExceptions:
-                raise TypeError, "level must be an integer"
-            else:
-                return
         if self.manager.disable >= level:
             return
         if self.isEnabledFor(level):
@@ -1033,8 +989,7 @@ class Logger(Filterer):
         else:
             fn, lno = "<unknown file>", 0
         if exc_info:
-            if type(exc_info) != types.TupleType:
-                exc_info = sys.exc_info()
+            exc_info = sys.exc_info()
         record = self.makeRecord(self.name, level, fn, lno, msg, args, exc_info)
         self.handle(record)
 
@@ -1135,54 +1090,17 @@ Logger.manager = Manager(Logger.root)
 
 BASIC_FORMAT = "%(levelname)s:%(name)s:%(message)s"
 
-def basicConfig(**kwargs):
+def basicConfig():
     """
-    Do basic configuration for the logging system.
-
-    This function does nothing if the root logger already has handlers
-    configured. It is a convenience method intended for use by simple scripts
-    to do one-shot configuration of the logging package.
-
-    The default behaviour is to create a StreamHandler which writes to
-    sys.stderr, set a formatter using the BASIC_FORMAT format string, and
-    add the handler to the root logger.
-
-    A number of optional keyword arguments may be specified, which can alter
-    the default behaviour.
-
-    filename  Specifies that a FileHandler be created, using the specified
-              filename, rather than a StreamHandler.
-    filemode  Specifies the mode to open the file, if filename is specified
-              (if filemode is unspecified, it defaults to "a").
-    format    Use the specified format string for the handler.
-    datefmt   Use the specified date/time format.
-    level     Set the root logger level to the specified level.
-    stream    Use the specified stream to initialize the StreamHandler. Note
-              that this argument is incompatible with 'filename' - if both
-              are present, 'stream' is ignored.
-
-    Note that you could specify a stream created using open(filename, mode)
-    rather than passing the filename and mode in. However, it should be
-    remembered that StreamHandler does not close its stream (since it may be
-    using sys.stdout or sys.stderr), whereas FileHandler closes its stream
-    when the handler is closed.
+    Do basic configuration for the logging system by creating a
+    StreamHandler with a default Formatter and adding it to the
+    root logger.
     """
     if len(root.handlers) == 0:
-        filename = kwargs.get("filename")
-        if filename:
-            mode = kwargs.get("filemode", "a")
-            hdlr = FileHandler(filename, mode)
-        else:
-            stream = kwargs.get("stream")
-            hdlr = StreamHandler(stream)
-        fs = kwargs.get("format", BASIC_FORMAT)
-        dfs = kwargs.get("datefmt", None)
-        fmt = Formatter(fs, dfs)
+        hdlr = StreamHandler()
+        fmt = Formatter(BASIC_FORMAT)
         hdlr.setFormatter(fmt)
         root.addHandler(hdlr)
-        level = kwargs.get("level")
-        if level:
-            root.setLevel(level)
 
 #---------------------------------------------------------------------------
 # Utility functions at module level.
@@ -1260,14 +1178,6 @@ def debug(msg, *args, **kwargs):
         basicConfig()
     apply(root.debug, (msg,)+args, kwargs)
 
-def log(level, msg, *args, **kwargs):
-    """
-    Log 'msg % args' with the integer severity 'level' on the root logger.
-    """
-    if len(root.handlers) == 0:
-        basicConfig()
-    apply(root.log, (level, msg)+args, kwargs)
-
 def disable(level):
     """
     Disable all logging calls less severe than 'level'.
@@ -1282,23 +1192,5 @@ def shutdown():
     Should be called at application exit.
     """
     for h in _handlers.keys():
-        #errors might occur, for example, if files are locked
-        #we just ignore them
-        try:
-            h.flush()
-            h.close()
-        except:
-            pass
-
-#Let's try and shutdown automatically on application exit...
-try:
-    import atexit
-    atexit.register(shutdown)
-except ImportError: # for Python versions < 2.0
-    def exithook(status, old_exit=sys.exit):
-        try:
-            shutdown()
-        finally:
-            old_exit(status)
-
-    sys.exit = exithook
+        h.flush()
+        h.close()

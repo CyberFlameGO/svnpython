@@ -10,6 +10,7 @@ Some of this can actually be useful on non-Posix systems too, e.g.
 for manipulation of the pathname component of URLs.
 """
 
+import sys
 import os
 import stat
 
@@ -19,7 +20,7 @@ __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "walk","expanduser","expandvars","normpath","abspath",
            "samefile","sameopenfile","samestat",
            "curdir","pardir","sep","pathsep","defpath","altsep","extsep",
-           "devnull","realpath","supports_unicode_filenames"]
+           "realpath","supports_unicode_filenames"]
 
 # strings representing various path-related bits and pieces
 curdir = '.'
@@ -29,7 +30,6 @@ sep = '/'
 pathsep = ':'
 defpath = ':/bin:/usr/bin'
 altsep = None
-devnull = '/dev/null'
 
 # Normalize the case of a pathname.  Trivial in Posix, string.lower on Mac.
 # On MS-DOS this may also turn slashes into backslashes; however, other
@@ -124,13 +124,16 @@ def dirname(p):
 def commonprefix(m):
     "Given a list of pathnames, returns the longest common leading component"
     if not m: return ''
-    s1 = min(m)
-    s2 = max(m)
-    n = min(len(s1), len(s2))
-    for i in xrange(n):
-        if s1[i] != s2[i]:
-            return s1[:i]
-    return s1[:n]
+    prefix = m[0]
+    for item in m:
+        for i in range(len(prefix)):
+            if prefix[:i+1] != item[:i+1]:
+                prefix = prefix[:i]
+                if i == 0:
+                    return ''
+                break
+    return prefix
+
 
 # Get size, mtime, atime of files.
 
@@ -169,17 +172,6 @@ def exists(path):
     """Test whether a path exists.  Returns False for broken symbolic links"""
     try:
         st = os.stat(path)
-    except os.error:
-        return False
-    return True
-
-
-# Being true for dangling symbolic links is also useful.
-
-def lexists(path):
-    """Test whether a path exists.  Returns True for broken symbolic links"""
-    try:
-        st = os.lstat(path)
     except os.error:
         return False
     return True
@@ -411,11 +403,9 @@ def abspath(path):
 def realpath(filename):
     """Return the canonical path of the specified filename, eliminating any
 symbolic links encountered in the path."""
-    if isabs(filename):
-        bits = ['/'] + filename.split('/')[1:]
-    else:
-        bits = filename.split('/')
+    filename = abspath(filename)
 
+    bits = ['/'] + filename.split('/')[1:]
     for i in range(2, len(bits)+1):
         component = join(*bits[0:i])
         # Resolve symbolic links.
@@ -423,17 +413,17 @@ symbolic links encountered in the path."""
             resolved = _resolve_link(component)
             if resolved is None:
                 # Infinite loop -- return original component + rest of the path
-                return abspath(join(*([component] + bits[i:])))
+                return join(*([component] + bits[i:]))
             else:
                 newpath = join(*([resolved] + bits[i:]))
                 return realpath(newpath)
 
-    return abspath(filename)
+    return filename
 
 
 def _resolve_link(path):
     """Internal helper function.  Takes a path and follows symlinks
-    until we either arrive at something that isn't a symlink, or
+    until we either arrive at something that isn't a symlink, or 
     encounter a path we've seen before (meaning that there's a loop).
     """
     paths_seen = []

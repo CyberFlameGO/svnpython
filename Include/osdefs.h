@@ -7,6 +7,13 @@ extern "C" {
 
 /* Operating system dependencies */
 
+#ifdef macintosh
+#define SEP ':'
+#define MAXPATHLEN 256
+/* Mod by Jack: newline is less likely to occur in filenames than space */
+#define DELIM '\n'
+#endif
+
 /* Mod by chrish: QNX has WATCOM, but isn't DOS */
 #if !defined(__QNX__)
 #if defined(MS_WINDOWS) || defined(__BORLANDC__) || defined(__WATCOMC__) || defined(__DJGPP__) || defined(PYOS_OS2)

@@ -5,10 +5,7 @@
 \title{What's New in Python 2.0}
 \release{1.02}
 \author{A.M. Kuchling and Moshe Zadka}
-\authoraddress{
-	\strong{Python Software Foundation}\\
-	Email: \email{amk@amk.ca}, \email{moshez@twistedmatrix.com}
-}
+\authoraddress{\email{amk@amk.ca}, \email{moshez@twistedmatrix.com} }
 \begin{document}
 \maketitle\tableofcontents
 
@@ -529,8 +526,8 @@ tricky and depends crucially on how often the program creates and
 destroys objects.  The detection of cycles can be disabled when Python
 is compiled, if you can't afford even a tiny speed penalty or suspect
 that the cycle collection is buggy, by specifying the
-\longprogramopt{without-cycle-gc} switch when running the
-\program{configure} script.
+\samp{--without-cycle-gc} switch when running the \file{configure}
+script.
 
 Several people tackled this problem and contributed to a solution.  An
 early implementation of the cycle detection approach was written by
@@ -642,7 +639,7 @@ PythonWin also supports Windows CE; see the Python CE page at
 \url{http://starship.python.net/crew/mhammond/ce/} for more
 information.
 
-Another new platform is Darwin/MacOS X; initial support for it is in
+Another new platform is Darwin/MacOS X; inital support for it is in
 Python 2.0.  Dynamic loading works, if you specify ``configure
 --with-dyld --with-suffix=.x''.  Consult the README in the Python
 source distribution for more instructions.
@@ -908,8 +905,8 @@ had to go through an arduous ritual of editing Makefiles and
 configuration files, which only really work on Unix and leave Windows
 and MacOS unsupported.  Python users faced wildly differing
 installation instructions which varied between different extension
-packages, which made administering a Python installation something of 
-a chore.
+packages, which made adminstering a Python installation something of a
+chore.
 
 The SIG for distribution utilities, shepherded by Greg Ward, has
 created the Distutils, a system to make package installation much

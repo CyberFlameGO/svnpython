@@ -283,11 +283,10 @@ def prepare_input_source(source, base = ""):
 
     if source.getByteStream() is None:
         sysid = source.getSystemId()
-        basehead = os.path.dirname(os.path.normpath(base))
-        sysidfilename = os.path.join(basehead, sysid)
-        if os.path.isfile(sysidfilename):
-            source.setSystemId(sysidfilename)
-            f = open(sysidfilename, "rb")
+        if os.path.isfile(sysid):
+            basehead = os.path.split(os.path.normpath(base))[0]
+            source.setSystemId(os.path.join(basehead, sysid))
+            f = open(sysid, "rb")
         else:
             source.setSystemId(urlparse.urljoin(base, sysid))
             f = urllib.urlopen(source.getSystemId())

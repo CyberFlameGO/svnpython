@@ -193,7 +193,7 @@ class ZipFile:
         self.NameToInfo = {}    # Find file info given name
         self.filelist = []      # List of ZipInfo instances for archive
         self.compression = compression  # Method of compression
-        self.mode = key = mode[0].replace('b', '')
+        self.mode = key = mode[0]
 
         # Check if we were passed a file-like object
         if isinstance(file, basestring):
@@ -396,7 +396,7 @@ class ZipFile:
             zinfo = ZipInfo(filename, date_time)
         else:
             zinfo = ZipInfo(arcname, date_time)
-        zinfo.external_attr = (st[0] & 0xFFFF) << 16L      # Unix attributes
+        zinfo.external_attr = st[0] << 16L      # Unix attributes
         if compress_type is None:
             zinfo.compress_type = self.compression
         else:

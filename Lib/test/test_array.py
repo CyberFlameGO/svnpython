@@ -5,12 +5,7 @@
 
 import unittest
 from test import test_support
-from weakref import proxy
 import array, cStringIO, math
-from cPickle import loads, dumps
-
-class ArraySubclass(array.array):
-    pass
 
 tests = [] # list to accumulate all tests
 typecodes = "cubBhHiIlLfd"
@@ -77,28 +72,6 @@ class BaseTest(unittest.TestCase):
                 self.assertNotEqual(a, b)
             b.byteswap()
             self.assertEqual(a, b)
-
-    def test_copy(self):
-        import copy
-        a = array.array(self.typecode, self.example)
-        b = copy.copy(a)
-        self.assertNotEqual(id(a), id(b))
-        self.assertEqual(a, b)
-
-    def test_pickle(self):
-        for protocol in (0, 1, 2):
-            a = array.array(self.typecode, self.example)
-            b = loads(dumps(a, protocol))
-            self.assertNotEqual(id(a), id(b))
-            self.assertEqual(a, b)
-
-            a = ArraySubclass(self.typecode, self.example)
-            a.x = 10
-            b = loads(dumps(a, protocol))
-            self.assertNotEqual(id(a), id(b))
-            self.assertEqual(a, b)
-            self.assertEqual(a.x, b.x)
-            self.assertEqual(type(a), type(b))
 
     def test_insert(self):
         a = array.array(self.typecode, self.example)
@@ -428,11 +401,6 @@ class BaseTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            a[2:1],
-            array.array(self.typecode)
-        )
-
-        self.assertEqual(
             a[1000:],
             array.array(self.typecode)
         )
@@ -617,33 +585,6 @@ class BaseTest(unittest.TestCase):
         b = array.array(self.badtypecode())
         self.assertRaises(TypeError, a.extend, b)
 
-        a = array.array(self.typecode, self.example)
-        a.extend(self.example[::-1])
-        self.assertEqual(
-            a,
-            array.array(self.typecode, self.example+self.example[::-1])
-        )
-
-    def test_constructor_with_iterable_argument(self):
-        a = array.array(self.typecode, iter(self.example))
-        b = array.array(self.typecode, self.example)
-        self.assertEqual(a, b)
-
-        # non-iterable argument
-        self.assertRaises(TypeError, array.array, self.typecode, 10)
-
-        # pass through errors raised in __iter__
-        class A:
-            def __iter__(self):
-                raise UnicodeError
-        self.assertRaises(UnicodeError, array.array, self.typecode, A())
-
-        # pass through errors raised in next()
-        def B():
-            raise UnicodeError
-            yield None
-        self.assertRaises(UnicodeError, array.array, self.typecode, B())
-
     def test_coveritertraverse(self):
         try:
             import gc
@@ -658,25 +599,6 @@ class BaseTest(unittest.TestCase):
         a = array.array(self.typecode, self.example)
         b = buffer(a)
         self.assertEqual(b[0], a.tostring()[0])
-
-    def test_weakref(self):
-        s = array.array(self.typecode, self.example)
-        p = proxy(s)
-        self.assertEqual(p.tostring(), s.tostring())
-        s = None
-        self.assertRaises(ReferenceError, len, p)
-
-    def test_bug_782369(self):
-        import sys
-        if hasattr(sys, "getrefcount"):
-            for i in range(10):
-                b = array.array('B', range(64))
-            rc = sys.getrefcount(10)
-            for i in range(10):
-                b = array.array('B', range(64))
-            self.assertEqual(rc, sys.getrefcount(10))
-
-
 
 class StringTest(BaseTest):
 
@@ -948,20 +870,8 @@ class DoubleTest(FPTest):
     minitemsize = 8
 tests.append(DoubleTest)
 
-def test_main(verbose=None):
-    import sys
-
+def test_main():
     test_support.run_unittest(*tests)
 
-    # verify reference counting
-    if verbose and hasattr(sys, "gettotalrefcount"):
-        import gc
-        counts = [None] * 5
-        for i in xrange(len(counts)):
-            test_support.run_unittest(*tests)
-            gc.collect()
-            counts[i] = sys.gettotalrefcount()
-        print counts
-
-if __name__ == "__main__":
-    test_main(verbose=True)
+if __name__=="__main__":
+    test_main()

@@ -48,9 +48,10 @@ except RuntimeError:
     # Execution in restricted environment
     pass
 
-def _g():
+def g():
     yield 1
-GeneratorType = type(_g())
+GeneratorType = type(g())
+del g
 
 class _C:
     def _m(self): pass
@@ -86,4 +87,4 @@ EllipsisType = type(Ellipsis)
 DictProxyType = type(TypeType.__dict__)
 NotImplementedType = type(NotImplemented)
 
-del sys, _f, _g, _C, _x                  # Not for export
+del sys, _f, _C, _x                  # Not for export

@@ -9,7 +9,6 @@ import time
 import thread, threading
 import Queue
 import sys
-from weakref import proxy
 
 PORT = 50007
 HOST = 'localhost'
@@ -187,45 +186,10 @@ class SocketConnectedTest(ThreadedTCPSocketTest):
         self.serv_conn = None
         ThreadedTCPSocketTest.clientTearDown(self)
 
-class SocketPairTest(unittest.TestCase, ThreadableTest):
-
-    def __init__(self, methodName='runTest'):
-        unittest.TestCase.__init__(self, methodName=methodName)
-        ThreadableTest.__init__(self)
-
-    def setUp(self):
-        self.serv, self.cli = socket.socketpair()
-
-    def tearDown(self):
-        self.serv.close()
-        self.serv = None
-
-    def clientSetUp(self):
-        pass
-
-    def clientTearDown(self):
-        self.cli.close()
-        self.cli = None
-        ThreadableTest.clientTearDown(self)
-
-
 #######################################################################
 ## Begin Tests
 
 class GeneralModuleTests(unittest.TestCase):
-
-    def test_weakref(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        p = proxy(s)
-        self.assertEqual(p.fileno(), s.fileno())
-        s.close()
-        s = None
-        try:
-            p.fileno()
-        except ReferenceError:
-            pass
-        else:
-            self.fail('Socket proxy still exists')
 
     def testSocketError(self):
         # Testing socket module exceptions
@@ -306,41 +270,25 @@ class GeneralModuleTests(unittest.TestCase):
             self.assertEqual(swapped & mask, mask)
             self.assertRaises(OverflowError, func, 1L<<34)
 
-    def testGetServBy(self):
-        eq = self.assertEqual
-        # Find one service that exists, then check all the related interfaces.
-        # I've ordered this by protocols that have both a tcp and udp
-        # protocol, at least for modern Linuxes.
-        if sys.platform in ('linux2', 'freebsd4', 'freebsd5', 'freebsd6',
-                            'darwin'):
-            # avoid the 'echo' service on this platform, as there is an
-            # assumption breaking non-standard port/protocol entry
-            services = ('daytime', 'qotd', 'domain')
-        else:
-            services = ('echo', 'daytime', 'domain')
-        for service in services:
+    def testGetServByName(self):
+        # Testing getservbyname()
+        # try a few protocols - not everyone has telnet enabled
+        found = 0
+        for proto in ("telnet", "ssh", "www", "ftp"):
             try:
-                port = socket.getservbyname(service, 'tcp')
+                socket.getservbyname(proto, 'tcp')
+                found = 1
                 break
             except socket.error:
                 pass
-        else:
-            raise socket.error
-        # Try same call with optional protocol omitted
-        port2 = socket.getservbyname(service)
-        eq(port, port2)
-        # Try udp, but don't barf it it doesn't exist
-        try:
-            udpport = socket.getservbyname(service, 'udp')
-        except socket.error:
-            udpport = None
-        else:
-            eq(udpport, port)
-        # Now make sure the lookup by port returns the same service name
-        eq(socket.getservbyport(port2), service)
-        eq(socket.getservbyport(port, 'tcp'), service)
-        if udpport is not None:
-            eq(socket.getservbyport(udpport, 'udp'), service)
+            try:
+                socket.getservbyname(proto, 'udp')
+                found = 1
+                break
+            except socket.error:
+                pass
+            if not found:
+                raise socket.error
 
     def testDefaultTimeout(self):
         # Testing default timeout
@@ -564,25 +512,6 @@ class BasicUDPTest(ThreadedUDPSocketTest):
     def _testRecvFrom(self):
         self.cli.sendto(MSG, 0, (HOST, PORT))
 
-class BasicSocketPairTest(SocketPairTest):
-
-    def __init__(self, methodName='runTest'):
-        SocketPairTest.__init__(self, methodName=methodName)
-
-    def testRecv(self):
-        msg = self.serv.recv(1024)
-        self.assertEqual(msg, MSG)
-
-    def _testRecv(self):
-        self.cli.send(MSG)
-
-    def testSend(self):
-        self.serv.send(MSG)
-
-    def _testSend(self):
-        msg = self.cli.recv(1024)
-        self.assertEqual(msg, MSG)
-
 class NonBlockingTCPTests(ThreadedTCPSocketTest):
 
     def __init__(self, methodName='runTest'):
@@ -664,7 +593,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
 
     def tearDown(self):
         self.serv_file.close()
-        self.assert_(self.serv_file.closed)
         self.serv_file = None
         SocketConnectedTest.tearDown(self)
 
@@ -674,7 +602,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
 
     def clientTearDown(self):
         self.cli_file.close()
-        self.assert_(self.cli_file.closed)
         self.cli_file = None
         SocketConnectedTest.clientTearDown(self)
 
@@ -720,12 +647,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
     def _testReadline(self):
         self.cli_file.write(MSG)
         self.cli_file.flush()
-
-    def testClosedAttr(self):
-        self.assert_(not self.serv_file.closed)
-
-    def _testClosedAttr(self):
-        self.assert_(not self.cli_file.closed)
 
 class UnbufferedFileObjectClassTestCase(FileObjectClassTestCase):
 
@@ -828,8 +749,6 @@ def test_main():
         LineBufferedFileObjectClassTestCase,
         SmallBufferedFileObjectClassTestCase
     ])
-    if hasattr(socket, "socketpair"):
-        tests.append(BasicSocketPairTest)
     test_support.run_unittest(*tests)
 
 if __name__ == "__main__":

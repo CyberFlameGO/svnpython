@@ -540,11 +540,11 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	PyFrameObject *back = tstate->frame;
 	PyFrameObject *f;
 	PyObject *builtins;
-	int extras, ncells, nfrees, i;
+	int extras, ncells, nfrees;
 
 #ifdef Py_DEBUG
 	if (code == NULL || globals == NULL || !PyDict_Check(globals) ||
-	    (locals != NULL && !PyMapping_Check(locals))) {
+	    (locals != NULL && !PyDict_Check(locals))) {
 		PyErr_BadInternalCall();
 		return NULL;
 	}
@@ -584,10 +584,8 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	}
 	if (free_list == NULL) {
 		f = PyObject_GC_NewVar(PyFrameObject, &PyFrame_Type, extras);
-		if (f == NULL) {
-			Py_DECREF(builtins);
+		if (f == NULL)
 			return NULL;
-		}
 	}
 	else {
 		assert(numfree > 0);
@@ -596,10 +594,8 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 		free_list = free_list->f_back;
 		if (f->ob_size < extras) {
 			f = PyObject_GC_Resize(PyFrameObject, f, extras);
-			if (f == NULL) {
-				Py_DECREF(builtins);
+			if (f == NULL)
 				return NULL;
-			}
 		}
 		_Py_NewReference((PyObject *)f);
 	}
@@ -613,7 +609,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	/* Most functions have CO_NEWLOCALS and CO_OPTIMIZED set. */
 	if ((code->co_flags & (CO_NEWLOCALS | CO_OPTIMIZED)) == 
 		(CO_NEWLOCALS | CO_OPTIMIZED))
-		locals = NULL; /* PyFrame_FastToLocals() will set. */
+		locals = NULL; /* PyFrame_Fast2Locals() will set. */
 	else if (code->co_flags & CO_NEWLOCALS) {
 		locals = PyDict_New();
 		if (locals == NULL) {
@@ -641,9 +637,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	f->f_nfreevars = nfrees;
 
 	extras = f->f_nlocals + ncells + nfrees;
-	/* Tim said it's ok to replace memset */
-	for (i=0; i<extras; i++)
-		f->f_localsplus[i] = NULL;
+	memset(f->f_localsplus, 0, extras * sizeof(f->f_localsplus[0]));
 
 	f->f_valuestack = f->f_localsplus + extras;
 	f->f_stacktop = f->f_valuestack;
@@ -688,11 +682,11 @@ map_to_dict(PyObject *map, int nmap, PyObject *dict, PyObject **values,
 		if (deref)
 			value = PyCell_GET(value);
 		if (value == NULL) {
-			if (PyObject_DelItem(dict, key) != 0)
+			if (PyDict_DelItem(dict, key) != 0)
 				PyErr_Clear();
 		}
 		else {
-			if (PyObject_SetItem(dict, key, value) != 0)
+			if (PyDict_SetItem(dict, key, value) != 0)
 				PyErr_Clear();
 		}
 	}
@@ -705,9 +699,7 @@ dict_to_map(PyObject *map, int nmap, PyObject *dict, PyObject **values,
 	int j;
 	for (j = nmap; --j >= 0; ) {
 		PyObject *key = PyTuple_GET_ITEM(map, j);
-		PyObject *value = PyObject_GetItem(dict, key);
-		if (value == NULL)
-			PyErr_Clear();
+		PyObject *value = PyDict_GetItem(dict, key);
 		if (deref) {
 			if (value || clear) {
 				if (PyCell_GET(values[j]) != value) {
@@ -722,7 +714,6 @@ dict_to_map(PyObject *map, int nmap, PyObject *dict, PyObject **values,
 				values[j] = value;
 			}
 		}
-		Py_XDECREF(value);
 	}
 }
 
@@ -745,7 +736,7 @@ PyFrame_FastToLocals(PyFrameObject *f)
 		}
 	}
 	map = f->f_code->co_varnames;
-	if (!PyTuple_Check(map))
+	if (!PyDict_Check(locals) || !PyTuple_Check(map))
 		return;
 	PyErr_Fetch(&error_type, &error_value, &error_traceback);
 	fast = f->f_localsplus;
@@ -783,7 +774,7 @@ PyFrame_LocalsToFast(PyFrameObject *f, int clear)
 	map = f->f_code->co_varnames;
 	if (locals == NULL)
 		return;
-	if (!PyTuple_Check(map))
+	if (!PyDict_Check(locals) || !PyTuple_Check(map))
 		return;
 	PyErr_Fetch(&error_type, &error_value, &error_traceback);
 	fast = f->f_localsplus;

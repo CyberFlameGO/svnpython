@@ -12,9 +12,6 @@ int PyArg_VaParse(PyObject *, char *, va_list);
 
 int PyArg_ParseTupleAndKeywords(PyObject *, PyObject *,
 				char *, char **, ...);
-int PyArg_VaParseTupleAndKeywords(PyObject *, PyObject *,
-				char *, char **, va_list);
-
 
 /* Forward */
 static int vgetargs1(PyObject *, char *, va_list *, int);
@@ -472,7 +469,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		char *p = va_arg(*p_va, char *);
 		long ival;
 		if (float_argument_error(arg))
-			return converterr("integer<b>", arg, msgbuf, bufsize);
+			return NULL;
 		ival = PyInt_AsLong(arg);
 		if (ival == -1 && PyErr_Occurred())
 			return converterr("integer<b>", arg, msgbuf, bufsize);
@@ -496,7 +493,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		char *p = va_arg(*p_va, char *);
 		long ival;
 		if (float_argument_error(arg))
-			return converterr("integer<B>", arg, msgbuf, bufsize);
+			return NULL;
 		ival = PyInt_AsUnsignedLongMask(arg);
 		if (ival == -1 && PyErr_Occurred())
 			return converterr("integer<B>", arg, msgbuf, bufsize);
@@ -509,7 +506,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		short *p = va_arg(*p_va, short *);
 		long ival;
 		if (float_argument_error(arg))
-			return converterr("integer<h>", arg, msgbuf, bufsize);
+			return NULL;
 		ival = PyInt_AsLong(arg);
 		if (ival == -1 && PyErr_Occurred())
 			return converterr("integer<h>", arg, msgbuf, bufsize);
@@ -533,7 +530,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		unsigned short *p = va_arg(*p_va, unsigned short *);
 		long ival;
 		if (float_argument_error(arg))
-			return converterr("integer<H>", arg, msgbuf, bufsize);
+			return NULL;
 		ival = PyInt_AsUnsignedLongMask(arg);
 		if (ival == -1 && PyErr_Occurred())
 			return converterr("integer<H>", arg, msgbuf, bufsize);
@@ -546,7 +543,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		int *p = va_arg(*p_va, int *);
 		long ival;
 		if (float_argument_error(arg))
-			return converterr("integer<i>", arg, msgbuf, bufsize);
+			return NULL;
 		ival = PyInt_AsLong(arg);
 		if (ival == -1 && PyErr_Occurred())
 			return converterr("integer<i>", arg, msgbuf, bufsize);
@@ -570,7 +567,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		unsigned int *p = va_arg(*p_va, unsigned int *);
 		unsigned int ival;
 		if (float_argument_error(arg))
-			return converterr("integer<I>", arg, msgbuf, bufsize);
+			return NULL;
 		ival = PyInt_AsUnsignedLongMask(arg);
 		if (ival == -1 && PyErr_Occurred())
 			return converterr("integer<I>", arg, msgbuf, bufsize);
@@ -583,7 +580,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		long *p = va_arg(*p_va, long *);
 		long ival;
 		if (float_argument_error(arg))
-			return converterr("integer<l>", arg, msgbuf, bufsize);
+			return NULL;
 		ival = PyInt_AsLong(arg);
 		if (ival == -1 && PyErr_Occurred())
 			return converterr("integer<l>", arg, msgbuf, bufsize);
@@ -620,6 +617,8 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 	case 'K': { /* long long sized bitfield */
 		unsigned PY_LONG_LONG *p = va_arg(*p_va, unsigned PY_LONG_LONG *);
 		unsigned PY_LONG_LONG ival;
+		if (float_argument_error(arg))
+			return NULL;
 		if (PyInt_Check(arg))
 			ival = PyInt_AsUnsignedLongMask(arg);
 		else if (PyLong_Check(arg))
@@ -1150,39 +1149,6 @@ PyArg_ParseTupleAndKeywords(PyObject *args,
 	va_start(va, kwlist);
 	retval = vgetargskeywords(args, keywords, format, kwlist, &va);	
 	va_end(va);
-	return retval;
-}
-
-
-int
-PyArg_VaParseTupleAndKeywords(PyObject *args,
-			    PyObject *keywords,
-			    char *format, 
-			    char **kwlist, va_list va)
-{
-	int retval;
-	va_list lva;
-
-	if ((args == NULL || !PyTuple_Check(args)) ||
-	    (keywords != NULL && !PyDict_Check(keywords)) ||
-	    format == NULL ||
-	    kwlist == NULL)
-	{
-		PyErr_BadInternalCall();
-		return 0;
-	}
-
-#ifdef VA_LIST_IS_ARRAY
-	memcpy(lva, va, sizeof(va_list));
-#else
-#ifdef __va_copy
-	__va_copy(lva, va);
-#else
-	lva = va;
-#endif
-#endif
-
-	retval = vgetargskeywords(args, keywords, format, kwlist, &lva);	
 	return retval;
 }
 

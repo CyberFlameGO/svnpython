@@ -141,7 +141,6 @@ typedef PY_UNICODE_TYPE Py_UNICODE;
 
 # define PyUnicode_AsASCIIString PyUnicodeUCS2_AsASCIIString
 # define PyUnicode_AsCharmapString PyUnicodeUCS2_AsCharmapString
-# define PyUnicode_AsEncodedObject PyUnicodeUCS2_AsEncodedObject
 # define PyUnicode_AsEncodedString PyUnicodeUCS2_AsEncodedString
 # define PyUnicode_AsLatin1String PyUnicodeUCS2_AsLatin1String
 # define PyUnicode_AsRawUnicodeEscapeString PyUnicodeUCS2_AsRawUnicodeEscapeString
@@ -160,9 +159,7 @@ typedef PY_UNICODE_TYPE Py_UNICODE;
 # define PyUnicode_DecodeLatin1 PyUnicodeUCS2_DecodeLatin1
 # define PyUnicode_DecodeRawUnicodeEscape PyUnicodeUCS2_DecodeRawUnicodeEscape
 # define PyUnicode_DecodeUTF16 PyUnicodeUCS2_DecodeUTF16
-# define PyUnicode_DecodeUTF16Stateful PyUnicodeUCS2_DecodeUTF16Stateful
 # define PyUnicode_DecodeUTF8 PyUnicodeUCS2_DecodeUTF8
-# define PyUnicode_DecodeUTF8Stateful PyUnicodeUCS2_DecodeUTF8Stateful
 # define PyUnicode_DecodeUnicodeEscape PyUnicodeUCS2_DecodeUnicodeEscape
 # define PyUnicode_Encode PyUnicodeUCS2_Encode
 # define PyUnicode_EncodeASCII PyUnicodeUCS2_EncodeASCII
@@ -188,7 +185,6 @@ typedef PY_UNICODE_TYPE Py_UNICODE;
 # define PyUnicode_Resize PyUnicodeUCS2_Resize
 # define PyUnicode_SetDefaultEncoding PyUnicodeUCS2_SetDefaultEncoding
 # define PyUnicode_Split PyUnicodeUCS2_Split
-# define PyUnicode_RSplit PyUnicodeUCS2_RSplit
 # define PyUnicode_Splitlines PyUnicodeUCS2_Splitlines
 # define PyUnicode_Tailmatch PyUnicodeUCS2_Tailmatch
 # define PyUnicode_Translate PyUnicodeUCS2_Translate
@@ -216,7 +212,6 @@ typedef PY_UNICODE_TYPE Py_UNICODE;
 
 # define PyUnicode_AsASCIIString PyUnicodeUCS4_AsASCIIString
 # define PyUnicode_AsCharmapString PyUnicodeUCS4_AsCharmapString
-# define PyUnicode_AsEncodedObject PyUnicodeUCS4_AsEncodedObject
 # define PyUnicode_AsEncodedString PyUnicodeUCS4_AsEncodedString
 # define PyUnicode_AsLatin1String PyUnicodeUCS4_AsLatin1String
 # define PyUnicode_AsRawUnicodeEscapeString PyUnicodeUCS4_AsRawUnicodeEscapeString
@@ -235,9 +230,7 @@ typedef PY_UNICODE_TYPE Py_UNICODE;
 # define PyUnicode_DecodeLatin1 PyUnicodeUCS4_DecodeLatin1
 # define PyUnicode_DecodeRawUnicodeEscape PyUnicodeUCS4_DecodeRawUnicodeEscape
 # define PyUnicode_DecodeUTF16 PyUnicodeUCS4_DecodeUTF16
-# define PyUnicode_DecodeUTF16Stateful PyUnicodeUCS4_DecodeUTF16Stateful
 # define PyUnicode_DecodeUTF8 PyUnicodeUCS4_DecodeUTF8
-# define PyUnicode_DecodeUTF8Stateful PyUnicodeUCS4_DecodeUTF8Stateful
 # define PyUnicode_DecodeUnicodeEscape PyUnicodeUCS4_DecodeUnicodeEscape
 # define PyUnicode_Encode PyUnicodeUCS4_Encode
 # define PyUnicode_EncodeASCII PyUnicodeUCS4_EncodeASCII
@@ -293,7 +286,7 @@ typedef PY_UNICODE_TYPE Py_UNICODE;
 
 /* If you want Python to use the compiler's wctype.h functions instead
    of the ones supplied with Python, define WANT_WCTYPE_FUNCTIONS or
-   configure Python using --with-wctype-functions.  This reduces the
+   configure Python using --with-ctype-functions.  This reduces the
    interpreter's code size. */
 
 #if defined(HAVE_USABLE_WCHAR_T) && defined(WANT_WCTYPE_FUNCTIONS)
@@ -512,16 +505,10 @@ PyAPI_FUNC(PyObject*) PyUnicode_FromWideChar(
     int size                    /* size of buffer */
     );
 
-/* Copies the Unicode Object contents into the wchar_t buffer w.  At
+/* Copies the Unicode Object contents into the whcar_t buffer w.  At
    most size wchar_t characters are copied.
 
-   Note that the resulting wchar_t string may or may not be
-   0-terminated.  It is the responsibility of the caller to make sure
-   that the wchar_t string is 0-terminated in case this is required by
-   the application.
-
-   Returns the number of wchar_t characters copied (excluding a
-   possibly trailing 0-termination character) or -1 in case of an
+   Returns the number of wchar_t characters copied or -1 in case of an
    error. */
 
 PyAPI_FUNC(int) PyUnicode_AsWideChar(
@@ -624,15 +611,6 @@ PyAPI_FUNC(PyObject*) PyUnicode_Encode(
     const char *errors          /* error handling */
     );
 
-/* Encodes a Unicode object and returns the result as Python
-   object. */
-
-PyAPI_FUNC(PyObject*) PyUnicode_AsEncodedObject(
-    PyObject *unicode,	 	/* Unicode object */
-    const char *encoding,	/* encoding */
-    const char *errors		/* error handling */
-    );
-
 /* Encodes a Unicode object and returns the result as Python string
    object. */
 
@@ -666,13 +644,6 @@ PyAPI_FUNC(PyObject*) PyUnicode_DecodeUTF8(
     const char *string, 	/* UTF-8 encoded string */
     int length,	 		/* size of string */
     const char *errors		/* error handling */
-    );
-
-PyAPI_FUNC(PyObject*) PyUnicode_DecodeUTF8Stateful(
-    const char *string, 	/* UTF-8 encoded string */
-    int length,	 		/* size of string */
-    const char *errors,		/* error handling */
-    int *consumed		/* bytes consumed */
     );
 
 PyAPI_FUNC(PyObject*) PyUnicode_AsUTF8String(
@@ -717,16 +688,6 @@ PyAPI_FUNC(PyObject*) PyUnicode_DecodeUTF16(
     int *byteorder		/* pointer to byteorder to use
 				   0=native;-1=LE,1=BE; updated on
 				   exit */
-    );
-
-PyAPI_FUNC(PyObject*) PyUnicode_DecodeUTF16Stateful(
-    const char *string, 	/* UTF-16 encoded string */
-    int length,	 		/* size of string */
-    const char *errors,		/* error handling */
-    int *byteorder,		/* pointer to byteorder to use
-				   0=native;-1=LE,1=BE; updated on
-				   exit */
-    int *consumed		/* bytes consumed */
     );
 
 /* Returns a Python string using the UTF-16 encoding in native byte
@@ -996,25 +957,6 @@ PyAPI_FUNC(PyObject*) PyUnicode_Split(
 PyAPI_FUNC(PyObject*) PyUnicode_Splitlines(
     PyObject *s,		/* String to split */
     int keepends		/* If true, line end markers are included */
-    );		
-
-/* Split a string giving a list of Unicode strings.
-
-   If sep is NULL, splitting will be done at all whitespace
-   substrings. Otherwise, splits occur at the given separator.
-
-   At most maxsplit splits will be done. But unlike PyUnicode_Split
-   PyUnicode_RSplit splits from the end of the string. If negative,
-   no limit is set.
-
-   Separators are not included in the resulting list.
-
-*/
-
-PyAPI_FUNC(PyObject*) PyUnicode_RSplit(
-    PyObject *s,		/* String to split */
-    PyObject *sep,		/* String separator */
-    int maxsplit		/* Maxsplit count */
     );		
 
 /* Translate a string by applying a character mapping table to it and

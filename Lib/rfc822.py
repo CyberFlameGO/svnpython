@@ -421,7 +421,8 @@ class Message:
                 hit = 0
             if hit:
                 list.append(i)
-        for i in reversed(list):
+        list.reverse()
+        for i in list:
             del self.headers[i]
 
     def setdefault(self, name, default=""):
@@ -444,9 +445,6 @@ class Message:
         """Determine whether a message contains the named header."""
         return name.lower() in self.dict
 
-    def __iter__(self):
-        return iter(self.dict)
-
     def keys(self):
         """Get all of a message's header field names."""
         return self.dict.keys()
@@ -463,7 +461,10 @@ class Message:
         return self.dict.items()
 
     def __str__(self):
-        return ''.join(self.headers)
+        str = ''
+        for hdr in self.headers:
+            str = str + hdr
+        return str
 
 
 # Utility functions
@@ -930,7 +931,7 @@ def parsedate_tz(data):
         else:
             tzsign = 1
         tzoffset = tzsign * ( (tzoffset//100)*3600 + (tzoffset % 100)*60)
-    tuple = (yy, mm, dd, thh, tmm, tss, 0, 1, 0, tzoffset)
+    tuple = (yy, mm, dd, thh, tmm, tss, 0, 0, 0, tzoffset)
     return tuple
 
 

@@ -3,6 +3,12 @@
 
 #include "Python.h"
 
+#ifdef macintosh
+extern char *PyMac_StrError(int);
+#undef strerror
+#define strerror PyMac_StrError
+#endif /* macintosh */
+
 #ifndef __STDC__
 #ifndef MS_WINDOWS
 extern char *strerror(int);
@@ -153,13 +159,13 @@ PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)
 			PyObject *args, *res;
 
 			if (value == Py_None)
-				args = PyTuple_New(0);
+				args = Py_BuildValue("()");
 			else if (PyTuple_Check(value)) {
 				Py_INCREF(value);
 				args = value;
 			}
 			else
-				args = PyTuple_Pack(1, value);
+				args = Py_BuildValue("(O)", value);
 
 			if (args == NULL)
 				goto finally;
@@ -205,7 +211,7 @@ finally:
 void
 PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 
 	*p_type = tstate->curexc_type;
 	*p_value = tstate->curexc_value;
@@ -535,6 +541,10 @@ PyErr_NewException(char *name, PyObject *base, PyObject *dict)
 	}
 	if (base == NULL)
 		base = PyExc_Exception;
+	if (!PyClass_Check(base)) {
+		/* Must be using string-based standard exceptions (-X) */
+		return PyString_FromString(name);
+	}
 	if (dict == NULL) {
 		dict = mydict = PyDict_New();
 		if (dict == NULL)
@@ -550,7 +560,7 @@ PyErr_NewException(char *name, PyObject *base, PyObject *dict)
 	classname = PyString_FromString(dot+1);
 	if (classname == NULL)
 		goto failure;
-	bases = PyTuple_Pack(1, base);
+	bases = Py_BuildValue("(O)", base);
 	if (bases == NULL)
 		goto failure;
 	result = PyClass_New(bases, dict, classname);
@@ -589,7 +599,7 @@ PyErr_WriteUnraisable(PyObject *obj)
 	Py_XDECREF(tb);
 }
 
-extern PyObject *PyModule_GetWarningsModule(void);
+extern PyObject *PyModule_GetWarningsModule();
 
 /* Function to issue a warning message; may raise an exception. */
 int

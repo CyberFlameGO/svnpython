@@ -1,12 +1,10 @@
 """Regresssion tests for urllib"""
 
 import urllib
-import httplib
 import unittest
 from test import test_support
 import os
 import mimetools
-import StringIO
 
 def hexescape(char):
     """Escape char as RFC 2396 specifies"""
@@ -19,7 +17,7 @@ class urlopen_FileTests(unittest.TestCase):
     """Test urlopen() opening a temporary file.
 
     Try to test as much functionality as possible so as to cut down on reliance
-    on connecting to the Net for testing.
+    on connect to the Net for testing.
 
     """
 
@@ -90,37 +88,6 @@ class urlopen_FileTests(unittest.TestCase):
         for line in self.returned_obj.__iter__():
             self.assertEqual(line, self.text)
 
-class urlopen_HttpTests(unittest.TestCase):
-    """Test urlopen() opening a fake http connection."""
-
-    def fakehttp(self, fakedata):
-        class FakeSocket(StringIO.StringIO):
-            def sendall(self, str): pass
-            def makefile(self, mode, name): return self
-            def read(self, amt=None):
-                if self.closed: return ''
-                return StringIO.StringIO.read(self, amt)
-            def readline(self, length=None):
-                if self.closed: return ''
-                return StringIO.StringIO.readline(self, length)
-        class FakeHTTPConnection(httplib.HTTPConnection):
-            def connect(self):
-                self.sock = FakeSocket(fakedata)
-        assert httplib.HTTP._connection_class == httplib.HTTPConnection
-        httplib.HTTP._connection_class = FakeHTTPConnection
-
-    def unfakehttp(self):
-        httplib.HTTP._connection_class = httplib.HTTPConnection
-
-    def test_read(self):
-        self.fakehttp('Hello!')
-        try:
-            fp = urllib.urlopen("http://python.org/")
-            self.assertEqual(fp.readline(), 'Hello!')
-            self.assertEqual(fp.readline(), '')
-        finally:
-            self.unfakehttp()
-
 class urlretrieve_FileTests(unittest.TestCase):
     """Test urllib.urlretrieve() on local files"""
 
@@ -139,7 +106,8 @@ class urlretrieve_FileTests(unittest.TestCase):
         # Make sure that a local file just gets its own location returned and
         # a headers value is returned.
         result = urllib.urlretrieve("file:%s" % test_support.TESTFN)
-        self.assertEqual(result[0], test_support.TESTFN)
+        self.assertEqual(os.path.normpath(result[0]), 
+                         os.path.normpath(test_support.TESTFN))
         self.assert_(isinstance(result[1], mimetools.Message),
                      "did not get a mimetools.Message instance as second "
                      "returned value")
@@ -443,7 +411,6 @@ class Pathname_Tests(unittest.TestCase):
 def test_main():
     test_support.run_unittest(
         urlopen_FileTests,
-        urlopen_HttpTests,
         urlretrieve_FileTests,
         QuotingTests,
         UnquotingTests,

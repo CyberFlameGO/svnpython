@@ -12,6 +12,10 @@ information must be exchanged safely between multiple threads.  The
 semantics.  It depends on the availability of thread support in
 Python.
 
+\begin{seealso}
+    \seemodule{bisect}{PriorityQueue example using the Queue class}
+\end{seealso}
+
 The \module{Queue} module defines the following class and exception:
 
 
@@ -26,13 +30,13 @@ zero, the queue size is infinite.
 \begin{excdesc}{Empty}
 Exception raised when non-blocking \method{get()} (or
 \method{get_nowait()}) is called on a \class{Queue} object which is
-empty.
+empty or locked.
 \end{excdesc}
 
 \begin{excdesc}{Full}
 Exception raised when non-blocking \method{put()} (or
 \method{put_nowait()}) is called on a \class{Queue} object which is
-full.
+full or locked.
 \end{excdesc}
 
 \subsection{Queue Objects}
@@ -51,7 +55,7 @@ semantics, this number is not reliable.
 
 \begin{methoddesc}{empty}{}
 Return \code{True} if the queue is empty, \code{False} otherwise.
-Because of multithreading semantics, this is not reliable.
+Becauseof multithreading semantics, this is not reliable.
 \end{methoddesc}
 
 \begin{methoddesc}{full}{}

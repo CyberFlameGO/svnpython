@@ -620,25 +620,9 @@ PyAPI_FUNC(void) _Py_AddToAllObjects(PyObject *, int force);
 	else						\
 		_Py_Dealloc((PyObject *)(op))
 
-#define Py_CLEAR(op)				\
-        do {                            	\
-                if (op) {			\
-                        PyObject *tmp = (PyObject *)(op);	\
-                        (op) = NULL;		\
-                        Py_DECREF(tmp);		\
-                }				\
-        } while (0)
-
 /* Macros to use in case the object pointer may be NULL: */
 #define Py_XINCREF(op) if ((op) == NULL) ; else Py_INCREF(op)
 #define Py_XDECREF(op) if ((op) == NULL) ; else Py_DECREF(op)
-
-/*
-These are provided as conveniences to Python runtime embedders, so that
-they can have object code that is not dependent on Python compilation flags.
-*/
-PyAPI_FUNC(void) Py_IncRef(PyObject *);
-PyAPI_FUNC(void) Py_DecRef(PyObject *);
 
 /*
 _Py_NoneStruct is an object of undefined type which can be used in contexts
@@ -648,9 +632,6 @@ Don't forget to apply Py_INCREF() when returning this value!!!
 */
 PyAPI_DATA(PyObject) _Py_NoneStruct; /* Don't use this directly */
 #define Py_None (&_Py_NoneStruct)
-
-/* Macro for returning Py_None from a function */
-#define Py_RETURN_NONE return Py_INCREF(Py_None), Py_None
 
 /*
 Py_NotImplemented is a singleton used to signal that an operation is
@@ -666,11 +647,6 @@ PyAPI_DATA(PyObject) _Py_NotImplementedStruct; /* Don't use this directly */
 #define Py_NE 3
 #define Py_GT 4
 #define Py_GE 5
-
-/* Maps Py_LT to Py_GT, ..., Py_GE to Py_LE.
- * Defined in object.c.
- */
-PyAPI_DATA(int) _Py_SwappedOp[];
 
 /*
 Define staticforward and statichere for source compatibility with old

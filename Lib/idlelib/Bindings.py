@@ -70,7 +70,6 @@ menudefs = [
    ]),
  ('options', [
    ('_Configure IDLE...', '<<open-config-dialog>>'),
-   None,
    ]),
  ('help', [
    ('_About IDLE', '<<about-idle>>'),

@@ -66,8 +66,7 @@ except:
 
 class GettextBaseTest(unittest.TestCase):
     def setUp(self):
-        if not os.path.isdir(LOCALEDIR):
-            os.makedirs(LOCALEDIR)
+        os.makedirs(LOCALEDIR)
         fp = open(MOFILE, 'wb')
         fp.write(base64.decodestring(GNU_MO_DATA))
         fp.close()

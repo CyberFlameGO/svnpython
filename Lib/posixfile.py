@@ -53,6 +53,12 @@ f.lock(mode [, len [, start [, whence]]])
               query only
 """
 
+import warnings
+warnings.warn(
+    "The posixfile module is obsolete and will disappear in the future",
+    DeprecationWarning)
+del warnings
+
 
 class _posixfile_:
     """File wrapper class that provides extra POSIX file routines."""
@@ -77,7 +83,7 @@ class _posixfile_:
 
     def fileopen(self, file):
         import types
-        if repr(type(file)) != "<type 'file'>":
+        if `type(file)` != "<type 'file'>":
             raise TypeError, 'posixfile.fileopen() arg must be file object'
         self._file_  = file
         # Copy basic file methods
@@ -179,7 +185,7 @@ class _posixfile_:
         if sys.platform in ('netbsd1',
                             'openbsd2',
                             'freebsd2', 'freebsd3', 'freebsd4', 'freebsd5',
-                            'freebsd6', 'bsdos2', 'bsdos3', 'bsdos4'):
+                            'bsdos2', 'bsdos3', 'bsdos4'):
             flock = struct.pack('lxxxxlxxxxlhh', \
                   l_start, l_len, os.getpid(), l_type, l_whence)
         elif sys.platform in ['aix3', 'aix4']:

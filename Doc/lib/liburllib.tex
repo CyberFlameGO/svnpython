@@ -329,23 +329,6 @@ returned data is HTML, you can use the module
 \refmodule{htmllib}\refstmodindex{htmllib} to parse it.
 
 \item
-The code handling the FTP\index{FTP} protocol cannot differentiate
-between a file and a directory.  This can lead to unexpected behavior
-when attempting to read a URL that points to a file that is not
-accessible.  If the URL ends in a \code{/}, it is assumed to refer to
-a directory and will be handled accordingly.  But if an attempt to
-read a file leads to a 550 error (meaning the URL cannot be found or
-is not accessible, often for permission reasons), then the path is
-treated as a directory in order to handle the case when a directory is
-specified by a URL but the trailing \code{/} has been left off.  This can
-cause misleading results when you try to fetch a file whose read
-permissions make it inaccessible; the FTP code will try to read it,
-fail with a 550 error, and then perform a directory listing for the
-unreadable file. If fine-grained control is needed, consider using the
-\module{ftplib} module, subclassing \class{FancyURLOpener}, or changing
-\var{_urlopener} to meet your needs.
-
-\item
 This module does not support the use of proxies which require
 authentication.  This may be implemented in the future.
 

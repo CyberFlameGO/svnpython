@@ -111,11 +111,7 @@ class StatAttributeTests(unittest.TestCase):
         for name in dir(stat):
             if name[:3] == 'ST_':
                 attr = name.lower()
-                if name.endswith("TIME"):
-                    def trunc(x): return int(x)
-                else:
-                    def trunc(x): return x
-                self.assertEquals(trunc(getattr(result, attr)),
+                self.assertEquals(getattr(result, attr),
                                   result[getattr(stat, name)])
                 self.assert_(attr in members)
 
@@ -209,11 +205,11 @@ class StatAttributeTests(unittest.TestCase):
         except TypeError:
             pass
 
-from test import mapping_tests
+from test_userdict import TestMappingProtocol
 
-class EnvironTests(mapping_tests.BasicTestMappingProtocol):
+class EnvironTests(TestMappingProtocol):
     """check that os.environ object conform to mapping protocol"""
-    type2test = None
+    _tested_class = None
     def _reference(self):
         return {"KEY1":"VALUE1", "KEY2":"VALUE2", "KEY3":"VALUE3"}
     def _empty_mapping(self):
@@ -305,67 +301,12 @@ class WalkTests(unittest.TestCase):
                 os.rmdir(join(root, name))
         os.rmdir(test_support.TESTFN)
 
-class MakedirTests (unittest.TestCase):
-    def setUp(self):
-        os.mkdir(test_support.TESTFN)
-
-    def test_makedir(self):
-        base = test_support.TESTFN
-        path = os.path.join(base, 'dir1', 'dir2', 'dir3')
-        os.makedirs(path)             # Should work
-        path = os.path.join(base, 'dir1', 'dir2', 'dir3', 'dir4')
-        os.makedirs(path)
-
-        # Try paths with a '.' in them
-        self.failUnlessRaises(OSError, os.makedirs, os.curdir)
-        path = os.path.join(base, 'dir1', 'dir2', 'dir3', 'dir4', 'dir5', os.curdir)
-        os.makedirs(path)
-        path = os.path.join(base, 'dir1', os.curdir, 'dir2', 'dir3', 'dir4',
-                            'dir5', 'dir6')
-        os.makedirs(path)
-
-
-
-
-    def tearDown(self):
-        path = os.path.join(test_support.TESTFN, 'dir1', 'dir2', 'dir3',
-                            'dir4', 'dir5', 'dir6')
-        # If the tests failed, the bottom-most directory ('../dir6')
-        # may not have been created, so we look for the outermost directory
-        # that exists.
-        while not os.path.exists(path) and path != test_support.TESTFN:
-            path = os.path.dirname(path)
-
-        os.removedirs(path)
-
-class DevNullTests (unittest.TestCase):
-    def test_devnull(self):
-        f = file(os.devnull, 'w')
-        f.write('hello')
-        f.close()
-        f = file(os.devnull, 'r')
-        self.assertEqual(f.read(), '')
-        f.close()
-
-class URandomTests (unittest.TestCase):
-    def test_urandom(self):
-        try:
-            self.assertEqual(len(os.urandom(1)), 1)
-            self.assertEqual(len(os.urandom(10)), 10)
-            self.assertEqual(len(os.urandom(100)), 100)
-            self.assertEqual(len(os.urandom(1000)), 1000)
-        except NotImplementedError:
-            pass
-
 def test_main():
     test_support.run_unittest(
         TemporaryFileTests,
         StatAttributeTests,
         EnvironTests,
-        WalkTests,
-        MakedirTests,
-        DevNullTests,
-        URandomTests
+        WalkTests
     )
 
 if __name__ == "__main__":

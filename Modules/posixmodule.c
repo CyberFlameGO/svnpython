@@ -53,7 +53,9 @@ corresponding Unix manual entries for more information on calls.");
 #include <sys/wait.h>		/* For WNOHANG */
 #endif
 
+#ifdef HAVE_SIGNAL_H
 #include <signal.h>
+#endif
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -66,10 +68,6 @@ corresponding Unix manual entries for more information on calls.");
 #ifdef HAVE_SYSEXITS_H
 #include <sysexits.h>
 #endif /* HAVE_SYSEXITS_H */
-
-#ifdef HAVE_SYS_LOADAVG_H
-#include <sys/loadavg.h>
-#endif
 
 /* Various compilers have only certain posix functions */
 /* XXX Gosh I wish these were all moved into pyconfig.h */
@@ -124,9 +122,7 @@ corresponding Unix manual entries for more information on calls.");
 #define HAVE_KILL       1
 #define HAVE_OPENDIR    1
 #define HAVE_PIPE       1
-#ifndef __rtems__
 #define HAVE_POPEN      1
-#endif
 #define HAVE_SYSTEM	1
 #define HAVE_WAIT       1
 #define HAVE_TTYNAME	1
@@ -137,6 +133,16 @@ corresponding Unix manual entries for more information on calls.");
 #endif /* ! __IBMC__ */
 
 #ifndef _MSC_VER
+
+#if defined(sun) && !defined(__SVR4)
+/* SunOS 4.1.4 doesn't have prototypes for these: */
+extern int rename(const char *, const char *);
+extern int pclose(FILE *);
+extern int fclose(FILE *);
+extern int fsync(int);
+extern int lstat(const char *, struct stat *);
+extern int symlink(const char *, const char *);
+#endif
 
 #if defined(__sgi)&&_COMPILER_VERSION>=700
 /* declare ctermid_r if compiling with MIPSPro 7.x in ANSI C mode
@@ -232,7 +238,7 @@ extern int lstat(const char *, struct stat *);
 #include <io.h>
 #include <process.h>
 #include "osdefs.h"
-#define _WIN32_WINNT 0x0400	  /* Needed for CryptoAPI on some systems */
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <shellapi.h>	/* for ShellExecute() */
 #define popen	_popen
@@ -789,7 +795,7 @@ statresult_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 
 
 /* If true, st_?time is float. */
-static int _stat_float_times = 1;
+static int _stat_float_times = 0;
 
 PyDoc_STRVAR(stat_float_times__doc__,
 "stat_float_times([newval]) -> oldval\n\n\
@@ -907,7 +913,7 @@ _pystat_fromstructstat(STRUCT_STAT st)
 #define ISSLASHW(c) ((c) == L'\\' || (c) == L'/')
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(a[0]))
 
-static BOOL
+static BOOL 
 IsUNCRootA(char *path, int pathlen)
 {
 	#define ISSLASH ISSLASHA
@@ -931,7 +937,7 @@ IsUNCRootA(char *path, int pathlen)
 }
 
 #ifdef Py_WIN_WIDE_FILENAMES
-static BOOL
+static BOOL 
 IsUNCRootW(Py_UNICODE *path, int pathlen)
 {
 	#define ISSLASH ISSLASHW
@@ -998,7 +1004,7 @@ posix_do_stat(PyObject *self, PyObject *args,
 			if (pathlen > 0) {
 				if (ISSLASHW(wpath[pathlen-1])) {
 	    				/* It does end with a slash -- exempt the root drive cases. */
-					if (pathlen == 1 || (pathlen == 3 && wpath[1] == L':') ||
+					if (pathlen == 1 || (pathlen == 3 && wpath[1] == L':') || 
 						IsUNCRootW(wpath, pathlen))
 	    					/* leave it alone */;
 					else {
@@ -1006,7 +1012,7 @@ posix_do_stat(PyObject *self, PyObject *args,
 						wpath[pathlen-1] = L'\0';
 					}
 				}
-				else if (ISSLASHW(wpath[1]) && pathlen < ARRAYSIZE(wpath)-1 &&
+				else if (ISSLASHW(wpath[1]) && pathlen < ARRAYSIZE(wpath)-1 && 
 					IsUNCRootW(wpath, pathlen)) {
 					/* UNC root w/o trailing slash: add one when there's room */
 					wpath[pathlen++] = L'\\';
@@ -1048,7 +1054,7 @@ posix_do_stat(PyObject *self, PyObject *args,
 	if (pathlen > 0) {
 		if (ISSLASHA(path[pathlen-1])) {
 			/* It does end with a slash -- exempt the root drive cases. */
-			if (pathlen == 1 || (pathlen == 3 && path[1] == ':') ||
+			if (pathlen == 1 || (pathlen == 3 && path[1] == ':') || 
 				IsUNCRootA(path, pathlen))
 	    			/* leave it alone */;
 			else {
@@ -1058,7 +1064,7 @@ posix_do_stat(PyObject *self, PyObject *args,
 				path = pathcopy;
 			}
 		}
-		else if (ISSLASHA(path[1]) && pathlen < ARRAYSIZE(pathcopy)-1 &&
+		else if (ISSLASHA(path[1]) && pathlen < ARRAYSIZE(pathcopy)-1 && 
 			IsUNCRootA(path, pathlen)) {
 			/* UNC root w/o trailing slash: add one when there's room */
 			strncpy(pathcopy, path, pathlen);
@@ -1097,22 +1103,6 @@ posix_access(PyObject *self, PyObject *args)
 	int mode;
 	int res;
 
-#ifdef Py_WIN_WIDE_FILENAMES
-	if (unicode_file_names()) {
-		PyUnicodeObject *po;
-		if (PyArg_ParseTuple(args, "Ui:access", &po, &mode)) {
-			Py_BEGIN_ALLOW_THREADS
-			/* PyUnicode_AS_UNICODE OK without thread lock as
-			   it is a simple dereference. */
-			res = _waccess(PyUnicode_AS_UNICODE(po), mode);
-			Py_END_ALLOW_THREADS
-			return(PyBool_FromLong(res == 0));
-		}
-		/* Drop the argument parsing error as narrow strings
-		   are also valid. */
-		PyErr_Clear();
-	}
-#endif
 	if (!PyArg_ParseTuple(args, "si:access", &path, &mode))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
@@ -1740,10 +1730,6 @@ posix__getfullpathname(PyObject *self, PyObject *args)
 	if (!GetFullPathName(inbuf, sizeof(outbuf)/sizeof(outbuf[0]),
 	                     outbuf, &temp))
 		return win32_error("GetFullPathName", inbuf);
-	if (PyUnicode_Check(PyTuple_GetItem(args, 0))) {
-		return PyUnicode_Decode(outbuf, strlen(outbuf),
-			Py_FileSystemDefaultEncoding, NULL);
-	}
 	return PyString_FromString(outbuf);
 } /* end of posix__getfullpathname */
 #endif /* MS_WINDOWS */
@@ -2002,7 +1988,7 @@ second form is used, set the access and modified times to the current time.");
 static PyObject *
 posix_utime(PyObject *self, PyObject *args)
 {
-	char *path = NULL;
+	char *path;
 	long atime, mtime, ausec, musec;
 	int res;
 	PyObject* arg;
@@ -2040,8 +2026,7 @@ posix_utime(PyObject *self, PyObject *args)
 #endif /* Py_WIN_WIDE_FILENAMES */
 
 	if (!have_unicode_filename && \
-		!PyArg_ParseTuple(args, "etO:utime",
-				  Py_FileSystemDefaultEncoding, &path, &arg))
+		!PyArg_ParseTuple(args, "sO:utime", &path, &arg))
 		return NULL;
 	if (arg == Py_None) {
 		/* optional time values not given */
@@ -2057,20 +2042,15 @@ posix_utime(PyObject *self, PyObject *args)
 	else if (!PyTuple_Check(arg) || PyTuple_Size(arg) != 2) {
 		PyErr_SetString(PyExc_TypeError,
 				"utime() arg 2 must be a tuple (atime, mtime)");
-		PyMem_Free(path);
 		return NULL;
 	}
 	else {
 		if (extract_time(PyTuple_GET_ITEM(arg, 0),
-				 &atime, &ausec) == -1) {
-			PyMem_Free(path);
+				 &atime, &ausec) == -1)
 			return NULL;
-		}
 		if (extract_time(PyTuple_GET_ITEM(arg, 1),
-				 &mtime, &musec) == -1) {
-			PyMem_Free(path);
+				 &mtime, &musec) == -1)
 			return NULL;
-		}
 		ATIME = atime;
 		MTIME = mtime;
 #ifdef HAVE_UTIMES
@@ -2083,8 +2063,8 @@ posix_utime(PyObject *self, PyObject *args)
 		Py_BEGIN_ALLOW_THREADS
 #ifdef Py_WIN_WIDE_FILENAMES
 		if (have_unicode_filename)
-			/* utime is OK with utimbuf, but _wutime insists
-			   on _utimbuf (the msvc headers assert the
+			/* utime is OK with utimbuf, but _wutime insists 
+			   on _utimbuf (the msvc headers assert the 
 			   underscore version is ansi) */
 			res = _wutime(wpath, (struct _utimbuf *)UTIME_ARG);
 		else
@@ -2098,9 +2078,8 @@ posix_utime(PyObject *self, PyObject *args)
 		if (have_unicode_filename)
 			return posix_error_with_unicode_filename(wpath);
 #endif /* Py_WIN_WIDE_FILENAMES */
-		return posix_error_with_allocated_filename(path);
+		return posix_error_with_filename(path);
 	}
-	PyMem_Free(path);
 	Py_INCREF(Py_None);
 	return Py_None;
 #undef UTIME_ARG
@@ -2175,6 +2154,12 @@ posix_execv(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	if (argc == 0) {
+		PyErr_SetString(PyExc_ValueError, "execv() arg 2 must not be empty");
+                PyMem_Free(path);
+		return NULL;
+	}
+
 	argvlist = PyMem_NEW(char *, argc+1);
 	if (argvlist == NULL) {
 		PyMem_Free(path);
@@ -2194,7 +2179,11 @@ posix_execv(PyObject *self, PyObject *args)
 	}
 	argvlist[argc] = NULL;
 
+#ifdef BAD_EXEC_PROTOTYPES
+	execv(path, (const char **) argvlist);
+#else /* BAD_EXEC_PROTOTYPES */
 	execv(path, argvlist);
+#endif /* BAD_EXEC_PROTOTYPES */
 
 	/* If we get here it's definitely an error */
 
@@ -2248,6 +2237,12 @@ posix_execve(PyObject *self, PyObject *args)
 	if (!PyMapping_Check(env)) {
 		PyErr_SetString(PyExc_TypeError,
 				"execve() arg 3 must be a mapping object");
+		goto fail_0;
+	}
+
+	if (argc == 0) {
+		PyErr_SetString(PyExc_ValueError,
+				"execve() arg 2 must not be empty");
 		goto fail_0;
 	}
 
@@ -2327,7 +2322,12 @@ posix_execve(PyObject *self, PyObject *args)
 	}
 	envlist[envc] = 0;
 
+
+#ifdef BAD_EXEC_PROTOTYPES
+	execve(path, (const char **)argvlist, envlist);
+#else /* BAD_EXEC_PROTOTYPES */
 	execve(path, argvlist, envlist);
+#endif /* BAD_EXEC_PROTOTYPES */
 
 	/* If we get here it's definitely an error */
 
@@ -2907,18 +2907,18 @@ posix_openpty(PyObject *self, PyObject *noargs)
 	master_fd = open(DEV_PTY_FILE, O_RDWR | O_NOCTTY); /* open master */
 	if (master_fd < 0)
 		return posix_error();
-	sig_saved = PyOS_setsig(SIGCHLD, SIG_DFL);
+	sig_saved = signal(SIGCHLD, SIG_DFL);
 	/* change permission of slave */
 	if (grantpt(master_fd) < 0) {
-		PyOS_setsig(SIGCHLD, sig_saved);
+		signal(SIGCHLD, sig_saved);
 		return posix_error();
 	}
 	/* unlock slave */
 	if (unlockpt(master_fd) < 0) {
-		PyOS_setsig(SIGCHLD, sig_saved);
+		signal(SIGCHLD, sig_saved);
 		return posix_error();
 	}
-	PyOS_setsig(SIGCHLD, sig_saved);
+	signal(SIGCHLD, sig_saved);
 	slave_name = ptsname(master_fd); /* get name of slave */
 	if (slave_name == NULL)
 		return posix_error();
@@ -3710,10 +3710,10 @@ _PyPopen(char *cmdstring, int mode, int n, int bufsize)
 	{
 		if ((p_f[2] = PyFile_FromFile(p_s[2], cmdstring, rd_mode, _PyPclose)) != NULL)
 			PyFile_SetBufSize(p_f[0], bufsize);
-		f = PyTuple_Pack(3, p_f[0], p_f[1], p_f[2]);
+		f = Py_BuildValue("OOO", p_f[0], p_f[1], p_f[2]);
 	}
 	else
-		f = PyTuple_Pack(2, p_f[0], p_f[1]);
+		f = Py_BuildValue("OO", p_f[0], p_f[1]);
 
 	/*
 	 * Insert the files we've created into the process dictionary
@@ -4403,7 +4403,7 @@ _PyPopen(char *cmdstring, int mode, int n)
 		 if (n != 4)
 			 CloseHandle(hChildStderrRdDup);
 
-		 f = PyTuple_Pack(2,p1,p2);
+		 f = Py_BuildValue("OO",p1,p2);
 		 Py_XDECREF(p1);
 		 Py_XDECREF(p2);
 		 file_count = 2;
@@ -4435,7 +4435,7 @@ _PyPopen(char *cmdstring, int mode, int n)
 		 PyFile_SetBufSize(p1, 0);
 		 PyFile_SetBufSize(p2, 0);
 		 PyFile_SetBufSize(p3, 0);
-		 f = PyTuple_Pack(3,p1,p2,p3);
+		 f = Py_BuildValue("OOO",p1,p2,p3);
 		 Py_XDECREF(p1);
 		 Py_XDECREF(p2);
 		 Py_XDECREF(p3);
@@ -5089,25 +5089,6 @@ Return a tuple of floating point numbers indicating process times.");
 #endif
 
 
-#ifdef HAVE_GETSID
-PyDoc_STRVAR(posix_getsid__doc__,
-"getsid(pid) -> sid\n\n\
-Call the system call getsid().");
-
-static PyObject *
-posix_getsid(PyObject *self, PyObject *args)
-{
-	int pid, sid;
-	if (!PyArg_ParseTuple(args, "i:getsid", &pid))
-		return NULL;
-	sid = getsid(pid);
-	if (sid < 0)
-		return posix_error();
-	return PyInt_FromLong((long)sid);
-}
-#endif /* HAVE_GETSID */
-
-
 #ifdef HAVE_SETSID
 PyDoc_STRVAR(posix_setsid__doc__,
 "setsid()\n\n\
@@ -5267,7 +5248,7 @@ posix_dup(PyObject *self, PyObject *args)
 
 
 PyDoc_STRVAR(posix_dup2__doc__,
-"dup2(old_fd, new_fd)\n\n\
+"dup2(fd, fd2)\n\n\
 Duplicate file descriptor.");
 
 static PyObject *
@@ -7212,78 +7193,6 @@ posix_getloadavg(PyObject *self, PyObject *noargs)
 }
 #endif
 
-#ifdef MS_WINDOWS
-
-PyDoc_STRVAR(win32_urandom__doc__,
-"urandom(n) -> str\n\n\
-Return a string of n random bytes suitable for cryptographic use.");
-
-typedef BOOL (WINAPI *CRYPTACQUIRECONTEXTA)(HCRYPTPROV *phProv,\
-              LPCSTR pszContainer, LPCSTR pszProvider, DWORD dwProvType,\
-              DWORD dwFlags );
-typedef BOOL (WINAPI *CRYPTGENRANDOM)(HCRYPTPROV hProv, DWORD dwLen,\
-              BYTE *pbBuffer );
-
-static CRYPTGENRANDOM pCryptGenRandom = NULL;
-static HCRYPTPROV hCryptProv = 0;
-
-static PyObject*
-win32_urandom(PyObject *self, PyObject *args)
-{
-	int howMany;
-	PyObject* result;
-
-	/* Read arguments */
-	if (! PyArg_ParseTuple(args, "i:urandom", &howMany))
-		return NULL;
-	if (howMany < 0)
-		return PyErr_Format(PyExc_ValueError,
-				    "negative argument not allowed");
-
-	if (hCryptProv == 0) {
-		HINSTANCE hAdvAPI32 = NULL;
-		CRYPTACQUIRECONTEXTA pCryptAcquireContext = NULL;
-
-		/* Obtain handle to the DLL containing CryptoAPI
-		   This should not fail	*/
-		hAdvAPI32 = GetModuleHandle("advapi32.dll");
-		if(hAdvAPI32 == NULL)
-			return win32_error("GetModuleHandle", NULL);
-
-		/* Obtain pointers to the CryptoAPI functions
-		   This will fail on some early versions of Win95 */
-		pCryptAcquireContext = (CRYPTACQUIRECONTEXTA)GetProcAddress(
-						hAdvAPI32,
-						"CryptAcquireContextA");
-		if (pCryptAcquireContext == NULL)
-			return PyErr_Format(PyExc_NotImplementedError,
-					    "CryptAcquireContextA not found");
-
-		pCryptGenRandom = (CRYPTGENRANDOM)GetProcAddress(
-						hAdvAPI32, "CryptGenRandom");
-		if (pCryptAcquireContext == NULL)
-			return PyErr_Format(PyExc_NotImplementedError,
-					    "CryptGenRandom not found");
-
-		/* Acquire context */
-		if (! pCryptAcquireContext(&hCryptProv, NULL, NULL,
-					   PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
-			return win32_error("CryptAcquireContext", NULL);
-	}
-
-	/* Allocate bytes */
-	result = PyString_FromStringAndSize(NULL, howMany);
-	if (result != NULL) {
-		/* Get random data */
-		if (! pCryptGenRandom(hCryptProv, howMany, (unsigned char*)
-				      PyString_AS_STRING(result))) {
-			Py_DECREF(result);
-			return win32_error("CryptGenRandom", NULL);
-		}
-	}
-	return result;
-}
-#endif
 
 static PyMethodDef posix_methods[] = {
 	{"access",	posix_access, METH_VARARGS, posix_access__doc__},
@@ -7449,9 +7358,6 @@ static PyMethodDef posix_methods[] = {
 #if defined(HAVE_WAITPID) || defined(HAVE_CWAIT)
 	{"waitpid",	posix_waitpid, METH_VARARGS, posix_waitpid__doc__},
 #endif /* HAVE_WAITPID */
-#ifdef HAVE_GETSID
-	{"getsid",	posix_getsid, METH_VARARGS, posix_getsid__doc__},
-#endif /* HAVE_GETSID */
 #ifdef HAVE_SETSID
 	{"setsid",	posix_setsid, METH_NOARGS, posix_setsid__doc__},
 #endif /* HAVE_SETSID */
@@ -7569,9 +7475,6 @@ static PyMethodDef posix_methods[] = {
 #ifdef HAVE_GETLOADAVG
 	{"getloadavg",	posix_getloadavg, METH_NOARGS, posix_getloadavg__doc__},
 #endif
- #ifdef MS_WINDOWS
- 	{"urandom", win32_urandom, METH_VARARGS, win32_urandom__doc__},
- #endif
 	{NULL,		NULL}		 /* Sentinel */
 };
 
