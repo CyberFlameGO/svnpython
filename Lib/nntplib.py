@@ -31,41 +31,39 @@ are strings, not numbers, since they are rarely used for calculations.
 # Imports
 import re
 import socket
+import string
 
-__all__ = ["NNTP","NNTPReplyError","NNTPTemporaryError",
-           "NNTPPermanentError","NNTPProtocolError","NNTPDataError",
-           "error_reply","error_temp","error_perm","error_proto",
-           "error_data",]
 
+
 # Exceptions raised when an error or invalid response is received
 class NNTPError(Exception):
-    """Base class for all nntplib exceptions"""
-    def __init__(self, *args):
-        apply(Exception.__init__, (self,)+args)
-        try:
-            self.response = args[0]
-        except IndexError:
-            self.response = 'No response given'
+	"""Base class for all nntplib exceptions"""
+	def __init__(self, *args):
+		apply(Exception.__init__, (self,)+args)
+		try:
+			self.response = args[0]
+		except IndexError:
+			self.response = 'No response given'
 
 class NNTPReplyError(NNTPError):
-    """Unexpected [123]xx reply"""
-    pass
+	"""Unexpected [123]xx reply"""
+	pass
 
 class NNTPTemporaryError(NNTPError):
-    """4xx errors"""
-    pass
+	"""4xx errors"""
+	pass
 
 class NNTPPermanentError(NNTPError):
-    """5xx errors"""
-    pass
+	"""5xx errors"""
+	pass
 
 class NNTPProtocolError(NNTPError):
-    """Response does not begin with [1-5]"""
-    pass
+	"""Response does not begin with [1-5]"""
+	pass
 
 class NNTPDataError(NNTPError):
-    """Error in response data"""
-    pass
+	"""Error in response data"""
+	pass
 
 # for backwards compatibility
 error_reply = NNTPReplyError
@@ -75,7 +73,7 @@ error_proto = NNTPProtocolError
 error_data = NNTPDataError
 
 
-
+
 # Standard port used by NNTP servers
 NNTP_PORT = 119
 
@@ -88,470 +86,450 @@ LONGRESP = ['100', '215', '220', '221', '222', '224', '230', '231', '282']
 CRLF = '\r\n'
 
 
-
+
 # The class itself
 class NNTP:
-    def __init__(self, host, port=NNTP_PORT, user=None, password=None,
-                 readermode=None):
-        """Initialize an instance.  Arguments:
-        - host: hostname to connect to
-        - port: port to connect to (default the standard NNTP port)
-        - user: username to authenticate with
-        - password: password to use with username
-        - readermode: if true, send 'mode reader' command after
-                      connecting.
+	def __init__(self, host, port=NNTP_PORT, user=None, password=None,
+		     readermode=None):
+		"""Initialize an instance.  Arguments:
+		- host: hostname to connect to
+		- port: port to connect to (default the standard NNTP port)
+		- user: username to authenticate with
+		- password: password to use with username
+		- readermode: if true, send 'mode reader' command after
+		              connecting.
 
-        readermode is sometimes necessary if you are connecting to an
-        NNTP server on the local machine and intend to call
-        reader-specific comamnds, such as `group'.  If you get
-        unexpected NNTPPermanentErrors, you might need to set
-        readermode.
-        """
-        self.host = host
-        self.port = port
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
-        self.file = self.sock.makefile('rb')
-        self.debugging = 0
-        self.welcome = self.getresp()
+	        readermode is sometimes necessary if you are connecting to an
+	        NNTP server on the local machine and intend to call
+	        reader-specific comamnds, such as `group'.  If you get
+	        unexpected NNTPPermanentErrors, you might need to set
+	        readermode.
+		"""
+		self.host = host
+		self.port = port
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.sock.connect((self.host, self.port))
+		self.file = self.sock.makefile('rb')
+		self.debugging = 0
+		self.welcome = self.getresp()
+		if readermode:
+			try:
+				self.welcome = self.shortcmd('mode reader')
+			except NNTPPermanentError:
+				# error 500, probably 'not implemented'
+				pass
+		if user:
+			resp = self.shortcmd('authinfo user '+user)
+			if resp[:3] == '381':
+				if not password:
+					raise NNTPReplyError(resp)
+				else:
+					resp = self.shortcmd(
+						'authinfo pass '+password)
+					if resp[:3] != '281':
+						raise NNTPPermanentError(resp)
 
-        # 'mode reader' is sometimes necessary to enable 'reader' mode.
-        # However, the order in which 'mode reader' and 'authinfo' need to
-        # arrive differs between some NNTP servers. Try to send
-        # 'mode reader', and if it fails with an authorization failed
-        # error, try again after sending authinfo.
-        readermode_afterauth = 0
-        if readermode:
-            try:
-                self.welcome = self.shortcmd('mode reader')
-            except NNTPPermanentError:
-                # error 500, probably 'not implemented'
-                pass
-            except NNTPTemporaryError, e:
-                if user and e.response[:3] == '480':
-                    # Need authorization before 'mode reader'
-                    readermode_afterauth = 1
-                else:
-                    raise
-        if user:
-            resp = self.shortcmd('authinfo user '+user)
-            if resp[:3] == '381':
-                if not password:
-                    raise NNTPReplyError(resp)
-                else:
-                    resp = self.shortcmd(
-                            'authinfo pass '+password)
-                    if resp[:3] != '281':
-                        raise NNTPPermanentError(resp)
-            if readermode_afterauth:
-                try:
-                    self.welcome = self.shortcmd('mode reader')
-                except NNTPPermanentError:
-                    # error 500, probably 'not implemented'
-                    pass
+	# Get the welcome message from the server
+	# (this is read and squirreled away by __init__()).
+	# If the response code is 200, posting is allowed;
+	# if it 201, posting is not allowed
 
+	def getwelcome(self):
+		"""Get the welcome message from the server
+		(this is read and squirreled away by __init__()).
+		If the response code is 200, posting is allowed;
+		if it 201, posting is not allowed."""
 
-    # Get the welcome message from the server
-    # (this is read and squirreled away by __init__()).
-    # If the response code is 200, posting is allowed;
-    # if it 201, posting is not allowed
+		if self.debugging: print '*welcome*', `self.welcome`
+		return self.welcome
 
-    def getwelcome(self):
-        """Get the welcome message from the server
-        (this is read and squirreled away by __init__()).
-        If the response code is 200, posting is allowed;
-        if it 201, posting is not allowed."""
+	def set_debuglevel(self, level):
+		"""Set the debugging level.  Argument 'level' means:
+		0: no debugging output (default)
+		1: print commands and responses but not body text etc.
+		2: also print raw lines read and sent before stripping CR/LF"""
 
-        if self.debugging: print '*welcome*', `self.welcome`
-        return self.welcome
+		self.debugging = level
+	debug = set_debuglevel
 
-    def set_debuglevel(self, level):
-        """Set the debugging level.  Argument 'level' means:
-        0: no debugging output (default)
-        1: print commands and responses but not body text etc.
-        2: also print raw lines read and sent before stripping CR/LF"""
+	def putline(self, line):
+		"""Internal: send one line to the server, appending CRLF."""
+		line = line + CRLF
+		if self.debugging > 1: print '*put*', `line`
+		self.sock.send(line)
 
-        self.debugging = level
-    debug = set_debuglevel
+	def putcmd(self, line):
+		"""Internal: send one command to the server (through putline())."""
+		if self.debugging: print '*cmd*', `line`
+		self.putline(line)
 
-    def putline(self, line):
-        """Internal: send one line to the server, appending CRLF."""
-        line = line + CRLF
-        if self.debugging > 1: print '*put*', `line`
-        self.sock.send(line)
+	def getline(self):
+		"""Internal: return one line from the server, stripping CRLF.
+		Raise EOFError if the connection is closed."""
+		line = self.file.readline()
+		if self.debugging > 1:
+			print '*get*', `line`
+		if not line: raise EOFError
+		if line[-2:] == CRLF: line = line[:-2]
+		elif line[-1:] in CRLF: line = line[:-1]
+		return line
 
-    def putcmd(self, line):
-        """Internal: send one command to the server (through putline())."""
-        if self.debugging: print '*cmd*', `line`
-        self.putline(line)
+	def getresp(self):
+		"""Internal: get a response from the server.
+		Raise various errors if the response indicates an error."""
+		resp = self.getline()
+		if self.debugging: print '*resp*', `resp`
+		c = resp[:1]
+		if c == '4':
+			raise NNTPTemporaryError(resp)
+		if c == '5':
+			raise NNTPPermanentError(resp)
+		if c not in '123':
+			raise NNTPProtocolError(resp)
+		return resp
 
-    def getline(self):
-        """Internal: return one line from the server, stripping CRLF.
-        Raise EOFError if the connection is closed."""
-        line = self.file.readline()
-        if self.debugging > 1:
-            print '*get*', `line`
-        if not line: raise EOFError
-        if line[-2:] == CRLF: line = line[:-2]
-        elif line[-1:] in CRLF: line = line[:-1]
-        return line
+	def getlongresp(self):
+		"""Internal: get a response plus following text from the server.
+		Raise various errors if the response indicates an error."""
+		resp = self.getresp()
+		if resp[:3] not in LONGRESP:
+			raise NNTPReplyError(resp)
+		list = []
+		while 1:
+			line = self.getline()
+			if line == '.':
+				break
+			if line[:2] == '..':
+				line = line[1:]
+			list.append(line)
+		return resp, list
 
-    def getresp(self):
-        """Internal: get a response from the server.
-        Raise various errors if the response indicates an error."""
-        resp = self.getline()
-        if self.debugging: print '*resp*', `resp`
-        c = resp[:1]
-        if c == '4':
-            raise NNTPTemporaryError(resp)
-        if c == '5':
-            raise NNTPPermanentError(resp)
-        if c not in '123':
-            raise NNTPProtocolError(resp)
-        return resp
+	def shortcmd(self, line):
+		"""Internal: send a command and get the response."""
+		self.putcmd(line)
+		return self.getresp()
 
-    def getlongresp(self):
-        """Internal: get a response plus following text from the server.
-        Raise various errors if the response indicates an error."""
-        resp = self.getresp()
-        if resp[:3] not in LONGRESP:
-            raise NNTPReplyError(resp)
-        list = []
-        while 1:
-            line = self.getline()
-            if line == '.':
-                break
-            if line[:2] == '..':
-                line = line[1:]
-            list.append(line)
-        return resp, list
+	def longcmd(self, line):
+		"""Internal: send a command and get the response plus following text."""
+		self.putcmd(line)
+		return self.getlongresp()
 
-    def shortcmd(self, line):
-        """Internal: send a command and get the response."""
-        self.putcmd(line)
-        return self.getresp()
+	def newgroups(self, date, time):
+		"""Process a NEWGROUPS command.  Arguments:
+		- date: string 'yymmdd' indicating the date
+		- time: string 'hhmmss' indicating the time
+		Return:
+		- resp: server response if successful
+		- list: list of newsgroup names"""
 
-    def longcmd(self, line):
-        """Internal: send a command and get the response plus following text."""
-        self.putcmd(line)
-        return self.getlongresp()
+		return self.longcmd('NEWGROUPS ' + date + ' ' + time)
 
-    def newgroups(self, date, time):
-        """Process a NEWGROUPS command.  Arguments:
-        - date: string 'yymmdd' indicating the date
-        - time: string 'hhmmss' indicating the time
-        Return:
-        - resp: server response if successful
-        - list: list of newsgroup names"""
+	def newnews(self, group, date, time):
+		"""Process a NEWNEWS command.  Arguments:
+		- group: group name or '*'
+		- date: string 'yymmdd' indicating the date
+		- time: string 'hhmmss' indicating the time
+		Return:
+		- resp: server response if successful
+		- list: list of article ids"""
 
-        return self.longcmd('NEWGROUPS ' + date + ' ' + time)
+		cmd = 'NEWNEWS ' + group + ' ' + date + ' ' + time
+		return self.longcmd(cmd)
 
-    def newnews(self, group, date, time):
-        """Process a NEWNEWS command.  Arguments:
-        - group: group name or '*'
-        - date: string 'yymmdd' indicating the date
-        - time: string 'hhmmss' indicating the time
-        Return:
-        - resp: server response if successful
-        - list: list of article ids"""
+	def list(self):
+		"""Process a LIST command.  Return:
+		- resp: server response if successful
+		- list: list of (group, last, first, flag) (strings)"""
 
-        cmd = 'NEWNEWS ' + group + ' ' + date + ' ' + time
-        return self.longcmd(cmd)
+		resp, list = self.longcmd('LIST')
+		for i in range(len(list)):
+			# Parse lines into "group last first flag"
+			list[i] = tuple(string.split(list[i]))
+		return resp, list
 
-    def list(self):
-        """Process a LIST command.  Return:
-        - resp: server response if successful
-        - list: list of (group, last, first, flag) (strings)"""
+	def group(self, name):
+		"""Process a GROUP command.  Argument:
+		- group: the group name
+		Returns:
+		- resp: server response if successful
+		- count: number of articles (string)
+		- first: first article number (string)
+		- last: last article number (string)
+		- name: the group name"""
 
-        resp, list = self.longcmd('LIST')
-        for i in range(len(list)):
-            # Parse lines into "group last first flag"
-            list[i] = tuple(list[i].split())
-        return resp, list
+		resp = self.shortcmd('GROUP ' + name)
+		if resp[:3] <> '211':
+			raise NNTPReplyError(resp)
+		words = string.split(resp)
+		count = first = last = 0
+		n = len(words)
+		if n > 1:
+			count = words[1]
+			if n > 2:
+				first = words[2]
+				if n > 3:
+					last = words[3]
+					if n > 4:
+						name = string.lower(words[4])
+		return resp, count, first, last, name
 
-    def group(self, name):
-        """Process a GROUP command.  Argument:
-        - group: the group name
-        Returns:
-        - resp: server response if successful
-        - count: number of articles (string)
-        - first: first article number (string)
-        - last: last article number (string)
-        - name: the group name"""
+	def help(self):
+		"""Process a HELP command.  Returns:
+		- resp: server response if successful
+		- list: list of strings"""
 
-        resp = self.shortcmd('GROUP ' + name)
-        if resp[:3] != '211':
-            raise NNTPReplyError(resp)
-        words = resp.split()
-        count = first = last = 0
-        n = len(words)
-        if n > 1:
-            count = words[1]
-            if n > 2:
-                first = words[2]
-                if n > 3:
-                    last = words[3]
-                    if n > 4:
-                        name = words[4].lower()
-        return resp, count, first, last, name
+		return self.longcmd('HELP')
 
-    def help(self):
-        """Process a HELP command.  Returns:
-        - resp: server response if successful
-        - list: list of strings"""
+	def statparse(self, resp):
+		"""Internal: parse the response of a STAT, NEXT or LAST command."""
+		if resp[:2] <> '22':
+			raise NNTPReplyError(resp)
+		words = string.split(resp)
+		nr = 0
+		id = ''
+		n = len(words)
+		if n > 1:
+			nr = words[1]
+			if n > 2:
+				id = words[2]
+		return resp, nr, id
 
-        return self.longcmd('HELP')
+	def statcmd(self, line):
+		"""Internal: process a STAT, NEXT or LAST command."""
+		resp = self.shortcmd(line)
+		return self.statparse(resp)
 
-    def statparse(self, resp):
-        """Internal: parse the response of a STAT, NEXT or LAST command."""
-        if resp[:2] != '22':
-            raise NNTPReplyError(resp)
-        words = resp.split()
-        nr = 0
-        id = ''
-        n = len(words)
-        if n > 1:
-            nr = words[1]
-            if n > 2:
-                id = words[2]
-        return resp, nr, id
+	def stat(self, id):
+		"""Process a STAT command.  Argument:
+		- id: article number or message id
+		Returns:
+		- resp: server response if successful
+		- nr:   the article number
+		- id:   the article id"""
 
-    def statcmd(self, line):
-        """Internal: process a STAT, NEXT or LAST command."""
-        resp = self.shortcmd(line)
-        return self.statparse(resp)
+		return self.statcmd('STAT ' + id)
 
-    def stat(self, id):
-        """Process a STAT command.  Argument:
-        - id: article number or message id
-        Returns:
-        - resp: server response if successful
-        - nr:   the article number
-        - id:   the article id"""
+	def next(self):
+		"""Process a NEXT command.  No arguments.  Return as for STAT."""
+		return self.statcmd('NEXT')
 
-        return self.statcmd('STAT ' + id)
+	def last(self):
+		"""Process a LAST command.  No arguments.  Return as for STAT."""
+		return self.statcmd('LAST')
 
-    def next(self):
-        """Process a NEXT command.  No arguments.  Return as for STAT."""
-        return self.statcmd('NEXT')
+	def artcmd(self, line):
+		"""Internal: process a HEAD, BODY or ARTICLE command."""
+		resp, list = self.longcmd(line)
+		resp, nr, id = self.statparse(resp)
+		return resp, nr, id, list
 
-    def last(self):
-        """Process a LAST command.  No arguments.  Return as for STAT."""
-        return self.statcmd('LAST')
+	def head(self, id):
+		"""Process a HEAD command.  Argument:
+		- id: article number or message id
+		Returns:
+		- resp: server response if successful
+		- nr: article number
+		- id: message id
+		- list: the lines of the article's header"""
 
-    def artcmd(self, line):
-        """Internal: process a HEAD, BODY or ARTICLE command."""
-        resp, list = self.longcmd(line)
-        resp, nr, id = self.statparse(resp)
-        return resp, nr, id, list
+		return self.artcmd('HEAD ' + id)
 
-    def head(self, id):
-        """Process a HEAD command.  Argument:
-        - id: article number or message id
-        Returns:
-        - resp: server response if successful
-        - nr: article number
-        - id: message id
-        - list: the lines of the article's header"""
+	def body(self, id):
+		"""Process a BODY command.  Argument:
+		- id: article number or message id
+		Returns:
+		- resp: server response if successful
+		- nr: article number
+		- id: message id
+		- list: the lines of the article's body"""
 
-        return self.artcmd('HEAD ' + id)
+		return self.artcmd('BODY ' + id)
 
-    def body(self, id):
-        """Process a BODY command.  Argument:
-        - id: article number or message id
-        Returns:
-        - resp: server response if successful
-        - nr: article number
-        - id: message id
-        - list: the lines of the article's body"""
+	def article(self, id):
+		"""Process an ARTICLE command.  Argument:
+		- id: article number or message id
+		Returns:
+		- resp: server response if successful
+		- nr: article number
+		- id: message id
+		- list: the lines of the article"""
 
-        return self.artcmd('BODY ' + id)
+		return self.artcmd('ARTICLE ' + id)
 
-    def article(self, id):
-        """Process an ARTICLE command.  Argument:
-        - id: article number or message id
-        Returns:
-        - resp: server response if successful
-        - nr: article number
-        - id: message id
-        - list: the lines of the article"""
+	def slave(self):
+		"""Process a SLAVE command.  Returns:
+		- resp: server response if successful"""
 
-        return self.artcmd('ARTICLE ' + id)
+		return self.shortcmd('SLAVE')
 
-    def slave(self):
-        """Process a SLAVE command.  Returns:
-        - resp: server response if successful"""
+	def xhdr(self, hdr, str):
+		"""Process an XHDR command (optional server extension).  Arguments:
+		- hdr: the header type (e.g. 'subject')
+		- str: an article nr, a message id, or a range nr1-nr2
+		Returns:
+		- resp: server response if successful
+		- list: list of (nr, value) strings"""
 
-        return self.shortcmd('SLAVE')
+		pat = re.compile('^([0-9]+) ?(.*)\n?')
+		resp, lines = self.longcmd('XHDR ' + hdr + ' ' + str)
+		for i in range(len(lines)):
+			line = lines[i]
+			m = pat.match(line)
+			if m:
+				lines[i] = m.group(1, 2)
+		return resp, lines
 
-    def xhdr(self, hdr, str):
-        """Process an XHDR command (optional server extension).  Arguments:
-        - hdr: the header type (e.g. 'subject')
-        - str: an article nr, a message id, or a range nr1-nr2
-        Returns:
-        - resp: server response if successful
-        - list: list of (nr, value) strings"""
+	def xover(self,start,end):
+		"""Process an XOVER command (optional server extension) Arguments:
+		- start: start of range
+		- end: end of range
+		Returns:
+		- resp: server response if successful
+		- list: list of (art-nr, subject, poster, date,
+		                 id, references, size, lines)"""
 
-        pat = re.compile('^([0-9]+) ?(.*)\n?')
-        resp, lines = self.longcmd('XHDR ' + hdr + ' ' + str)
-        for i in range(len(lines)):
-            line = lines[i]
-            m = pat.match(line)
-            if m:
-                lines[i] = m.group(1, 2)
-        return resp, lines
+		resp, lines = self.longcmd('XOVER ' + start + '-' + end)
+		xover_lines = []
+		for line in lines:
+			elem = string.splitfields(line,"\t")
+			try:
+				xover_lines.append((elem[0],
+						    elem[1],
+						    elem[2],
+						    elem[3],
+						    elem[4],
+						    string.split(elem[5]),
+						    elem[6],
+						    elem[7]))
+			except IndexError:
+				raise NNTPDataError(line)
+		return resp,xover_lines
 
-    def xover(self,start,end):
-        """Process an XOVER command (optional server extension) Arguments:
-        - start: start of range
-        - end: end of range
-        Returns:
-        - resp: server response if successful
-        - list: list of (art-nr, subject, poster, date,
-                         id, references, size, lines)"""
+	def xgtitle(self, group):
+		"""Process an XGTITLE command (optional server extension) Arguments:
+		- group: group name wildcard (i.e. news.*)
+		Returns:
+		- resp: server response if successful
+		- list: list of (name,title) strings"""
 
-        resp, lines = self.longcmd('XOVER ' + start + '-' + end)
-        xover_lines = []
-        for line in lines:
-            elem = line.split("\t")
-            try:
-                xover_lines.append((elem[0],
-                                    elem[1],
-                                    elem[2],
-                                    elem[3],
-                                    elem[4],
-                                    elem[5].split(),
-                                    elem[6],
-                                    elem[7]))
-            except IndexError:
-                raise NNTPDataError(line)
-        return resp,xover_lines
+		line_pat = re.compile("^([^ \t]+)[ \t]+(.*)$")
+		resp, raw_lines = self.longcmd('XGTITLE ' + group)
+		lines = []
+		for raw_line in raw_lines:
+			match = line_pat.search(string.strip(raw_line))
+			if match:
+				lines.append(match.group(1, 2))
+		return resp, lines
 
-    def xgtitle(self, group):
-        """Process an XGTITLE command (optional server extension) Arguments:
-        - group: group name wildcard (i.e. news.*)
-        Returns:
-        - resp: server response if successful
-        - list: list of (name,title) strings"""
+	def xpath(self,id):
+		"""Process an XPATH command (optional server extension) Arguments:
+		- id: Message id of article
+		Returns:
+		resp: server response if successful
+		path: directory path to article"""
 
-        line_pat = re.compile("^([^ \t]+)[ \t]+(.*)$")
-        resp, raw_lines = self.longcmd('XGTITLE ' + group)
-        lines = []
-        for raw_line in raw_lines:
-            match = line_pat.search(raw_line.strip())
-            if match:
-                lines.append(match.group(1, 2))
-        return resp, lines
+		resp = self.shortcmd("XPATH " + id)
+		if resp[:3] <> '223':
+			raise NNTPReplyError(resp)
+		try:
+			[resp_num, path] = string.split(resp)
+		except ValueError:
+			raise NNTPReplyError(resp)
+		else:
+			return resp, path
 
-    def xpath(self,id):
-        """Process an XPATH command (optional server extension) Arguments:
-        - id: Message id of article
-        Returns:
-        resp: server response if successful
-        path: directory path to article"""
+	def date (self):
+		"""Process the DATE command. Arguments:
+		None
+		Returns:
+		resp: server response if successful
+		date: Date suitable for newnews/newgroups commands etc.
+		time: Time suitable for newnews/newgroups commands etc."""
 
-        resp = self.shortcmd("XPATH " + id)
-        if resp[:3] != '223':
-            raise NNTPReplyError(resp)
-        try:
-            [resp_num, path] = resp.split()
-        except ValueError:
-            raise NNTPReplyError(resp)
-        else:
-            return resp, path
-
-    def date (self):
-        """Process the DATE command. Arguments:
-        None
-        Returns:
-        resp: server response if successful
-        date: Date suitable for newnews/newgroups commands etc.
-        time: Time suitable for newnews/newgroups commands etc."""
-
-        resp = self.shortcmd("DATE")
-        if resp[:3] != '111':
-            raise NNTPReplyError(resp)
-        elem = resp.split()
-        if len(elem) != 2:
-            raise NNTPDataError(resp)
-        date = elem[1][2:8]
-        time = elem[1][-6:]
-        if len(date) != 6 or len(time) != 6:
-            raise NNTPDataError(resp)
-        return resp, date, time
+		resp = self.shortcmd("DATE")
+		if resp[:3] <> '111':
+			raise NNTPReplyError(resp)
+		elem = string.split(resp)
+		if len(elem) != 2:
+			raise NNTPDataError(resp)
+		date = elem[1][2:8]
+		time = elem[1][-6:]
+		if len(date) != 6 or len(time) != 6:
+			raise NNTPDataError(resp)
+		return resp, date, time
 
 
-    def post(self, f):
-        """Process a POST command.  Arguments:
-        - f: file containing the article
-        Returns:
-        - resp: server response if successful"""
+	def post(self, f):
+		"""Process a POST command.  Arguments:
+		- f: file containing the article
+		Returns:
+		- resp: server response if successful"""
 
-        resp = self.shortcmd('POST')
-        # Raises error_??? if posting is not allowed
-        if resp[0] != '3':
-            raise NNTPReplyError(resp)
-        while 1:
-            line = f.readline()
-            if not line:
-                break
-            if line[-1] == '\n':
-                line = line[:-1]
-            if line[:1] == '.':
-                line = '.' + line
-            self.putline(line)
-        self.putline('.')
-        return self.getresp()
+		resp = self.shortcmd('POST')
+		# Raises error_??? if posting is not allowed
+		if resp[0] <> '3':
+			raise NNTPReplyError(resp)
+		while 1:
+			line = f.readline()
+			if not line:
+				break
+			if line[-1] == '\n':
+				line = line[:-1]
+			if line[:1] == '.':
+				line = '.' + line
+			self.putline(line)
+		self.putline('.')
+		return self.getresp()
 
-    def ihave(self, id, f):
-        """Process an IHAVE command.  Arguments:
-        - id: message-id of the article
-        - f:  file containing the article
-        Returns:
-        - resp: server response if successful
-        Note that if the server refuses the article an exception is raised."""
+	def ihave(self, id, f):
+		"""Process an IHAVE command.  Arguments:
+		- id: message-id of the article
+		- f:  file containing the article
+		Returns:
+		- resp: server response if successful
+		Note that if the server refuses the article an exception is raised."""
 
-        resp = self.shortcmd('IHAVE ' + id)
-        # Raises error_??? if the server already has it
-        if resp[0] != '3':
-            raise NNTPReplyError(resp)
-        while 1:
-            line = f.readline()
-            if not line:
-                break
-            if line[-1] == '\n':
-                line = line[:-1]
-            if line[:1] == '.':
-                line = '.' + line
-            self.putline(line)
-        self.putline('.')
-        return self.getresp()
+		resp = self.shortcmd('IHAVE ' + id)
+		# Raises error_??? if the server already has it
+		if resp[0] <> '3':
+			raise NNTPReplyError(resp)
+		while 1:
+			line = f.readline()
+			if not line:
+				break
+			if line[-1] == '\n':
+				line = line[:-1]
+			if line[:1] == '.':
+				line = '.' + line
+			self.putline(line)
+		self.putline('.')
+		return self.getresp()
 
-    def quit(self):
-        """Process a QUIT command and close the socket.  Returns:
-        - resp: server response if successful"""
+	def quit(self):
+		"""Process a QUIT command and close the socket.  Returns:
+		- resp: server response if successful"""
 
-        resp = self.shortcmd('QUIT')
-        self.file.close()
-        self.sock.close()
-        del self.file, self.sock
-        return resp
+		resp = self.shortcmd('QUIT')
+		self.file.close()
+		self.sock.close()
+		del self.file, self.sock
+		return resp
 
 
 def _test():
-    """Minimal test function."""
-    s = NNTP('news', readermode='reader')
-    resp, count, first, last, name = s.group('comp.lang.python')
-    print resp
-    print 'Group', name, 'has', count, 'articles, range', first, 'to', last
-    resp, subs = s.xhdr('subject', first + '-' + last)
-    print resp
-    for item in subs:
-        print "%7s %s" % item
-    resp = s.quit()
-    print resp
+	"""Minimal test function."""
+	s = NNTP('news', readermode='reader')
+	resp, count, first, last, name = s.group('comp.lang.python')
+	print resp
+	print 'Group', name, 'has', count, 'articles, range', first, 'to', last
+	resp, subs = s.xhdr('subject', first + '-' + last)
+	print resp
+	for item in subs:
+		print "%7s %s" % item
+	resp = s.quit()
+	print resp
 
 
 # Run the test when run as a script
 if __name__ == '__main__':
-    _test()
+	_test()

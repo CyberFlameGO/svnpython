@@ -14,30 +14,21 @@
 #if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#define PYTHONHOMEHELP "<prefix>/pythonX.X"
+#define PYTHONHOMEHELP "<prefix>/python2.0"
 #endif
-
-#include "pygetopt.h"
 
 #define COPYRIGHT \
     "Type \"copyright\", \"credits\" or \"license\" for more information."
 
+/* Interface to getopt(): */
+extern int optind;
+extern char *optarg;
+extern int getopt(); /* PROTO((int, char **, char *)); -- not standardized */
+
+
 /* For Py_GetArgcArgv(); set by main() */
 static char **orig_argv;
 static int  orig_argc;
-
-/* command line options */
-#define BASE_OPTS "c:diOStuUvxXhVW:"
-
-#ifndef RISCOS
-#define PROGRAM_OPTS BASE_OPTS
-#else /*RISCOS*/
-/* extra option saying that we are running under a special task window
-   frontend; especially my_readline will behave different */
-#define PROGRAM_OPTS BASE_OPTS "w"
-/* corresponding flag */
-extern int Py_RISCOSWimpFlag;
-#endif /*RISCOS*/
 
 /* Short usage message (with %s for argv0) */
 static char *usage_line =
@@ -61,7 +52,6 @@ static char *usage_mid = "\
 -x     : skip first line of source, allowing use of non-Unix forms of #!cmd\n\
 -h     : print this help message and exit\n\
 -V     : print the Python version number and exit\n\
--W arg : warning control (arg is action:message:category:module:lineno)\n\
 -c cmd : program passed in as string (terminates option list)\n\
 file   : program read from script file\n\
 -      : program read from stdin (default; interactive mode if a tty)\n\
@@ -74,7 +64,6 @@ PYTHONPATH   : '%c'-separated list of directories prefixed to the\n\
                default module search path.  The result is sys.path.\n\
 PYTHONHOME   : alternate <prefix> directory (or <prefix>%c<exec_prefix>).\n\
                The default module search path uses %s.\n\
-PYTHONCASEOK : ignore case in 'import' statements (Windows).\n\
 ";
 
 
@@ -107,32 +96,25 @@ Py_Main(int argc, char **argv)
 	int stdin_is_interactive = 0;
 	int help = 0;
 	int version = 0;
-	PyCompilerFlags cf;
 
 	orig_argc = argc;	/* For Py_GetArgcArgv() */
 	orig_argv = argv;
-
-#ifdef RISCOS
-	Py_RISCOSWimpFlag = 0;
-#endif
 
 	if ((p = getenv("PYTHONINSPECT")) && *p != '\0')
 		inspect = 1;
 	if ((p = getenv("PYTHONUNBUFFERED")) && *p != '\0')
 		unbuffered = 1;
 
-	PySys_ResetWarnOptions();
-
-	while ((c = _PyOS_GetOpt(argc, argv, PROGRAM_OPTS)) != EOF) {
+	while ((c = getopt(argc, argv, "c:diOStuUvxXhV")) != EOF) {
 		if (c == 'c') {
 			/* -c is the last option; following arguments
 			   that look like options are left for the
 			   the command to interpret. */
-			command = malloc(strlen(_PyOS_optarg) + 2);
+			command = malloc(strlen(optarg) + 2);
 			if (command == NULL)
 				Py_FatalError(
 				   "not enough memory to copy -c argument");
-			strcpy(command, _PyOS_optarg);
+			strcpy(command, optarg);
 			strcat(command, "\n");
 			break;
 		}
@@ -168,12 +150,6 @@ Py_Main(int argc, char **argv)
 			Py_VerboseFlag++;
 			break;
 
-#ifdef RISCOS
-		case 'w':
-			Py_RISCOSWimpFlag = 1;
-			break;
-#endif
-
 		case 'x':
 			skipfirstline = 1;
 			break;
@@ -186,10 +162,6 @@ Py_Main(int argc, char **argv)
 			break;
 		case 'V':
 			version++;
-			break;
-
-		case 'W':
-			PySys_AddWarnOption(_PyOS_optarg);
 			break;
 
 		/* This space reserved for other options */
@@ -209,10 +181,10 @@ Py_Main(int argc, char **argv)
 		exit(0);
 	}
 
-	if (command == NULL && _PyOS_optind < argc &&
-	    strcmp(argv[_PyOS_optind], "-") != 0)
+	if (command == NULL && optind < argc &&
+	    strcmp(argv[optind], "-") != 0)
 	{
-		filename = argv[_PyOS_optind];
+		filename = argv[optind];
 		if (filename != NULL) {
 			if ((fp = fopen(filename, "r")) == NULL) {
 				fprintf(stderr, "%s: can't open file '%s'\n",
@@ -281,12 +253,12 @@ Py_Main(int argc, char **argv)
 	
 	
 	if (command != NULL) {
-		/* Backup _PyOS_optind and force sys.argv[0] = '-c' */
-		_PyOS_optind--;
-		argv[_PyOS_optind] = "-c";
+		/* Backup optind and force sys.argv[0] = '-c' */
+		optind--;
+		argv[optind] = "-c";
 	}
 
-	PySys_SetArgv(argc-_PyOS_optind, argv+_PyOS_optind);
+	PySys_SetArgv(argc-optind, argv+optind);
 
 	if ((inspect || (command == NULL && filename == NULL)) &&
 	    isatty(fileno(stdin))) {
@@ -297,8 +269,6 @@ Py_Main(int argc, char **argv)
 		else
 			Py_DECREF(v);
 	}
-
-	cf.cf_nested_scopes = 0;
 
 	if (command) {
 		sts = PyRun_SimpleString(command) != 0;
@@ -316,37 +286,17 @@ Py_Main(int argc, char **argv)
 				}
 			}
 		}
-		/* XXX */
-		sts = PyRun_AnyFileExFlags(
+		sts = PyRun_AnyFileEx(
 			fp,
 			filename == NULL ? "<stdin>" : filename,
-			filename != NULL, &cf) != 0;
+			filename != NULL) != 0;
 	}
 
 	if (inspect && stdin_is_interactive &&
 	    (filename != NULL || command != NULL))
-		/* XXX */
-		sts = PyRun_AnyFileFlags(stdin, "<stdin>", &cf) != 0;
+		sts = PyRun_AnyFile(stdin, "<stdin>") != 0;
 
 	Py_Finalize();
-#ifdef RISCOS
-	if(Py_RISCOSWimpFlag)
-                fprintf(stderr, "\x0cq\x0c"); /* make frontend quit */
-#endif
-
-#ifdef __INSURE__
-	/* Insure++ is a memory analysis tool that aids in discovering
-	 * memory leaks and other memory problems.  On Python exit, the
-	 * interned string dictionary is flagged as being in use at exit
-	 * (which it is).  Under normal circumstances, this is fine because
-	 * the memory will be automatically reclaimed by the system.  Under
-	 * memory debugging, it's a huge source of useless noise, so we
-	 * trade off slower shutdown for less distraction in the memory
-	 * reports.  -baw
-	 */
-	_Py_ReleaseInternedStrings();
-#endif /* __INSURE__ */
-
 	return sts;
 }
 

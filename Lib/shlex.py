@@ -1,16 +1,14 @@
 """A lexical analyzer class for simple shell-like syntaxes."""
 
-# Module and documentation by Eric S. Raymond, 21 Dec 1998
+# Module and documentation by Eric S. Raymond, 21 Dec 1998 
 # Input stacking and error message cleanup added by ESR, March 2000
-# push_source() and pop_source() made explicit by ESR, January 2001.
 
 import os.path
 import sys
 
-__all__ = ["shlex"]
 
 class shlex:
-    "A lexical analyzer class for simple shell-like syntaxes."
+    "A lexical analyzer class for simple shell-like syntaxes." 
     def __init__(self, instream=None, infile=None):
         if instream:
             self.instream = instream
@@ -24,7 +22,7 @@ class shlex:
         self.whitespace = ' \t\r\n'
         self.quotes = '\'"'
         self.state = ' '
-        self.pushback = []
+        self.pushback = [];
         self.lineno = 1
         self.debug = 0
         self.token = ''
@@ -38,29 +36,7 @@ class shlex:
         "Push a token onto the stack popped by the get_token method"
         if self.debug >= 1:
             print "shlex: pushing token " + `tok`
-        self.pushback = [tok] + self.pushback
-
-    def push_source(self, newstream, newfile=None):
-        "Push an input source onto the lexer's input source stack."
-        self.filestack.insert(0, (self.infile, self.instream, self.lineno))
-        self.infile = newfile
-        self.instream = newstream
-        self.lineno = 1
-        if self.debug:
-            if newfile:
-                print 'shlex: pushing to file %s' % (self.infile,)
-            else:
-                print 'shlex: pushing to stream %s' % (self.instream,)
-
-    def pop_source(self):
-        "Pop the input source stack."
-        self.instream.close()
-        (self.infile, self.instream, self.lineno) = self.filestack[0]
-        self.filestack = self.filestack[1:]
-        if self.debug:
-            print 'shlex: popping to %s, line %d' \
-                  % (self.instream, self.lineno)
-        self.state = ' '
+        self.pushback = [tok] + self.pushback;
 
     def get_token(self):
         "Get a token from the input stream (or from stack if it's nonempty)"
@@ -74,17 +50,26 @@ class shlex:
         raw = self.read_token()
         # Handle inclusions
         while raw == self.source:
-            spec = self.sourcehook(self.read_token())
-            if spec:
-                (newfile, newstream) = spec
-                self.push_source(newstream, newfile)
+            (newfile, newstream) = self.sourcehook(self.read_token())
+            self.filestack.insert(0, (self.infile, self.instream, self.lineno))
+            self.infile = newfile
+            self.instream = newstream
+            self.lineno = 1
+            if self.debug:
+                print 'shlex: pushing to file %s' % (self.infile,)
             raw = self.get_token()
         # Maybe we got EOF instead?
         while raw == "":
             if len(self.filestack) == 0:
                 return ""
             else:
-                self.pop_source()
+                self.instream.close()
+                (self.infile, self.instream, self.lineno) = self.filestack[0]
+                self.filestack = self.filestack[1:]
+                if self.debug:
+                    print 'shlex: popping to %s, line %d' \
+                          % (self.instream, self.lineno)
+                self.state = ' '
                 raw = self.get_token()
          # Neither inclusion nor EOF
         if self.debug >= 1:
@@ -96,19 +81,20 @@ class shlex:
 
     def read_token(self):
         "Read a token from the input stream (no pushback or inclusions)"
+        tok = ''
         while 1:
-            nextchar = self.instream.read(1)
+            nextchar = self.instream.read(1);
             if nextchar == '\n':
                 self.lineno = self.lineno + 1
             if self.debug >= 3:
                 print "shlex: in state", repr(self.state), \
-                      "I see character:", repr(nextchar)
+                      "I see character:", repr(nextchar) 
             if self.state is None:
-                self.token = ''        # past end of file
+                self.token = '';        # past end of file
                 break
             elif self.state == ' ':
                 if not nextchar:
-                    self.state = None  # end of file
+                    self.state = None;  # end of file
                     break
                 elif nextchar in self.whitespace:
                     if self.debug >= 2:
@@ -144,7 +130,7 @@ class shlex:
                     raise ValueError, "No closing quotation"
             elif self.state == 'a':
                 if not nextchar:
-                    self.state = None   # end of file
+                    self.state = None;  # end of file
                     break
                 elif nextchar in self.whitespace:
                     if self.debug >= 2:
@@ -195,7 +181,7 @@ class shlex:
         return "\"%s\", line %d: " % (infile, lineno)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': 
     if len(sys.argv) == 1:
         lexer = shlex()
     else:

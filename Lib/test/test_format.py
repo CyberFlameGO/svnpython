@@ -1,5 +1,5 @@
 from test_support import verbose
-import sys
+import string, sys
 
 # test string formatting operator (I am not sure if this is being tested
 # elsewhere but, surely, some of the given cases are *not* tested because
@@ -62,6 +62,11 @@ testboth("%o", 10L, "12")
 testboth("%o", 100000000000L, "1351035564000")
 testboth("%d", 10L, "10")
 testboth("%d", 100000000000L, "100000000000")
+
+# Make sure big is too big to fit in a 64-bit int, else the unbounded
+# int formatting will be sidestepped on some machines.  That's vital,
+# because bitwise (x, X, o) formats of regular Python ints never
+# produce a sign ("+" or "-").
 
 big = 123456789012345678901234567890L
 testboth("%d", big, "123456789012345678901234567890")
@@ -158,59 +163,3 @@ testboth("%#.32o", big, "012345670123456701234567012345670")
 testboth("%034.33o", big, "0012345670123456701234567012345670")
 # base marker shouldn't change that
 testboth("%0#34.33o", big, "0012345670123456701234567012345670")
-
-# Some small ints, in both Python int and long flavors).
-testboth("%d", 42, "42")
-testboth("%d", -42, "-42")
-testboth("%d", 42L, "42")
-testboth("%d", -42L, "-42")
-testboth("%#x", 1, "0x1")
-testboth("%#x", 1L, "0x1")
-testboth("%#X", 1, "0X1")
-testboth("%#X", 1L, "0X1")
-testboth("%#o", 1, "01")
-testboth("%#o", 1L, "01")
-testboth("%#o", 0, "0")
-testboth("%#o", 0L, "0")
-testboth("%o", 0, "0")
-testboth("%o", 0L, "0")
-testboth("%d", 0, "0")
-testboth("%d", 0L, "0")
-testboth("%#x", 0, "0x0")
-testboth("%#x", 0L, "0x0")
-testboth("%#X", 0, "0X0")
-testboth("%#X", 0L, "0X0")
-
-testboth("%x", 0x42, "42")
-# testboth("%x", -0x42, "ffffffbe") # Alas, that's specific to 32-bit machines
-testboth("%x", 0x42L, "42")
-testboth("%x", -0x42L, "-42")
-
-testboth("%o", 042, "42")
-# testboth("%o", -042, "37777777736") # Alas, that's specific to 32-bit machines
-testboth("%o", 042L, "42")
-testboth("%o", -042L, "-42")
-
-# Test exception for unknown format characters
-if verbose:
-    print 'Testing exceptions'
-
-def test_exc(formatstr, args, exception, excmsg):
-    try:
-        testformat(formatstr, args)
-    except exception, exc:
-        if str(exc) == excmsg:
-            if verbose:
-                print "yes"
-        else:
-            if verbose: print 'no'
-            print 'Unexpected ', exception, ':', repr(str(exc))
-    except:
-        if verbose: print 'no'
-        print 'Unexpected exception'
-        raise
-
-test_exc('abc %a', 1, ValueError,
-         "unsupported format character 'a' (0x61) at index 5")
-test_exc(u'abc %\u3000', 1, ValueError,
-         "unsupported format character '?' (0x3000) at index 5")

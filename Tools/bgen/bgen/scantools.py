@@ -251,7 +251,7 @@ if missing: raise "Missing Types"
 		self.asplit_pat = "^\(<type>.*[^a-zA-Z0-9_]\)\(<name>[a-zA-Z0-9_]+\)$"
 		self.comment1_pat = "\(<rest>.*\)//.*"
 		# note that the next pattern only removes comments that are wholly within one line
-		self.comment2_pat = "\(<rest1>.*\)/\*.*\*/\(<rest2>.*\)"
+		self.comment2_pat = "\(<rest>.*\)/\*.*\*/"
 
 	def compilepatterns(self):
 		for name in dir(self):
@@ -328,16 +328,6 @@ if missing: raise "Missing Types"
 		return file
 
 	def setinput(self, scan = sys.stdin):
-		if not type(scan) in (TupleType, ListType):
-			scan = [scan]
-		self.allscaninputs = scan
-		self._nextinput()
-		
-	def _nextinput(self):
-		if not self.allscaninputs:
-			return 0
-		scan = self.allscaninputs[0]
-		self.allscaninputs = self.allscaninputs[1:]
 		self.closescan()
 		if scan:
 			if type(scan) == StringType:
@@ -349,7 +339,6 @@ if missing: raise "Missing Types"
 			self.scanfile = file
 			self.scanmine = mine
 		self.lineno = 0
-		return 1
 
 	def openinput(self, filename):
 		if not os.path.isabs(filename):
@@ -371,8 +360,6 @@ if missing: raise "Missing Types"
 			raise Error, "input file not set"
 		self.line = self.scanfile.readline()
 		if not self.line:
-			if self._nextinput():
-				return self.getline()
 			raise EOFError
 		self.lineno = self.lineno + 1
 		return self.line
@@ -392,7 +379,7 @@ if missing: raise "Missing Types"
 			self.report("(No symbol definitions will be written)")
 		else:
 			self.report("defsfile = %s", `self.defsfile.name`)
-			self.defsfile.write("# Generated from %s\n\n" % `os.path.split(inputname)[1]`)
+			self.defsfile.write("# Generated from %s\n\n" % `inputname`)
 			self.writeinitialdefs()
 		self.alreadydone = []
 		try:
@@ -401,8 +388,8 @@ if missing: raise "Missing Types"
 				except EOFError: break
 				if self.comment1.match(line) >= 0:
 					line = self.comment1.group('rest')
-				while self.comment2.match(line) >= 0:
-					line = self.comment2.group('rest1')+self.comment2.group('rest2')
+				if self.comment2.match(line) >= 0:
+					line = self.comment2.group('rest')
 				if self.defsfile and self.sym.match(line) >= 0:
 					self.dosymdef()
 					continue
@@ -425,10 +412,6 @@ if missing: raise "Missing Types"
 		raw = self.line
 		while self.tail.search(raw) < 0:
 			line = self.getline()
-			if self.comment1.match(line) >= 0:
-				line = self.comment1.group('rest')
-			while self.comment2.match(line) >= 0:
-				line = self.comment2.group('rest1')+self.comment2.group('rest2')
 			raw = raw + line
 		self.processrawspec(raw)
 

@@ -76,13 +76,6 @@ recommended to use PyObject_{New, NewVar, Del}. */
    memory management purposes exclusively. Both the core and extension
    modules should use the PyObject_* API. */
 
-#ifdef WITH_PYMALLOC
-#define PyCore_OBJECT_MALLOC_FUNC    _PyCore_ObjectMalloc
-#define PyCore_OBJECT_REALLOC_FUNC   _PyCore_ObjectRealloc
-#define PyCore_OBJECT_FREE_FUNC      _PyCore_ObjectFree
-#define NEED_TO_DECLARE_OBJECT_MALLOC_AND_FRIEND
-#endif /* !WITH_PYMALLOC */
-
 #ifndef PyCore_OBJECT_MALLOC_FUNC
 #undef PyCore_OBJECT_REALLOC_FUNC
 #undef PyCore_OBJECT_FREE_FUNC
@@ -221,10 +214,10 @@ extern DL_IMPORT(void) _PyObject_Del(PyObject *);
 
 /* To make a new object participate in garbage collection use
    PyObject_{New, VarNew, Del} to manage the memory.  Set the type flag
-   Py_TPFLAGS_GC and define the type method tp_traverse.  You should also
+   Py_TPFLAGS_GC and define the type method tp_recurse.  You should also
    add the method tp_clear if your object is mutable.  Include
    PyGC_HEAD_SIZE in the calculation of tp_basicsize.  Call
-   PyObject_GC_Init after the pointers followed by tp_traverse become
+   PyObject_GC_Init after the pointers followed by tp_recurse become
    valid (usually just before returning the object from the allocation
    method.  Call PyObject_GC_Fini before those pointers become invalid
    (usually at the top of the deallocation method).  */
@@ -269,17 +262,7 @@ typedef struct _gc_head {
 /* Get the object given the PyGC_Head */
 #define PyObject_FROM_GC(g) ((PyObject *)(((PyGC_Head *)g)+1))
 
-extern DL_IMPORT(void) _PyGC_Dump(PyGC_Head *);
-
 #endif /* WITH_CYCLE_GC */
-
-/* Test if a type supports weak references */
-#define PyType_SUPPORTS_WEAKREFS(t) \
-        (PyType_HasFeature((t), Py_TPFLAGS_HAVE_WEAKREFS) \
-         && ((t)->tp_weaklistoffset > 0))
-
-#define PyObject_GET_WEAKREFS_LISTPTR(o) \
-	((PyObject **) (((char *) (o)) + (o)->ob_type->tp_weaklistoffset))
 
 #ifdef __cplusplus
 }

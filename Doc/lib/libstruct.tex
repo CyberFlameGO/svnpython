@@ -53,11 +53,9 @@ C and Python values should be obvious given their types:
   \lineiv{h}{\ctype{short}}{integer}{}
   \lineiv{H}{\ctype{unsigned short}}{integer}{}
   \lineiv{i}{\ctype{int}}{integer}{}
-  \lineiv{I}{\ctype{unsigned int}}{long}{}
+  \lineiv{I}{\ctype{unsigned int}}{long}{(1)}
   \lineiv{l}{\ctype{long}}{integer}{}
   \lineiv{L}{\ctype{unsigned long}}{long}{}
-  \lineiv{q}{\ctype{long long}}{long}{(1)}
-  \lineiv{Q}{\ctype{unsigned long long}}{long}{(1)}
   \lineiv{f}{\ctype{float}}{float}{}
   \lineiv{d}{\ctype{double}}{float}{}
   \lineiv{s}{\ctype{char[]}}{string}{}
@@ -70,10 +68,10 @@ Notes:
 
 \begin{description}
 \item[(1)]
-  The \character{q} and \character{Q} conversion codes are available in
-  native mode only if the platform C compiler supports C \ctype{long long},
-  or, on Windows, \ctype{__int64}.  They're always available in standard
-  modes.
+  The \character{I} conversion code will convert to a Python long if
+  the C \ctype{int} is the same size as a C \ctype{long}, which is
+  typical on most modern systems.  If a C \ctype{int} is smaller than
+  a C \ctype{long}, an Python integer will be created instead.
 \end{description}
 
 
@@ -101,8 +99,8 @@ passed in to \function{pack()} is too long, the stored representation
 is truncated.  If the string is too short, padding is used to ensure
 that exactly enough bytes are used to satisfy the count.
 
-For the \character{I}, \character{L}, \character{q} and \character{Q}
-format characters, the return value is a Python long integer.
+For the \character{I} and \character{L} format characters, the return
+value is a Python long integer.
 
 For the \character{P} format character, the return value is a Python
 integer or long integer, depending on the size needed to hold a
@@ -140,12 +138,10 @@ Native size and alignment are determined using the C compiler's
 order.
 
 Standard size and alignment are as follows: no alignment is required
-for any type (so you have to use pad bytes);
-\ctype{short} is 2 bytes;
-\ctype{int} and \ctype{long} are 4 bytes;
-\ctype{long long} (\ctype{__int64} on Windows) is 8 bytes;
-\ctype{float} and \ctype{double} are 32-bit and 64-bit
-IEEE floating point numbers, respectively.
+for any type (so you have to use pad bytes); \ctype{short} is 2 bytes;
+\ctype{int} and \ctype{long} are 4 bytes.  \ctype{float} and
+\ctype{double} are 32-bit and 64-bit IEEE floating point numbers,
+respectively.
 
 Note the difference between \character{@} and \character{=}: both use
 native byte order, but the size and alignment of the latter is
@@ -172,8 +168,8 @@ big-endian machine):
 \begin{verbatim}
 >>> from struct import *
 >>> pack('hhl', 1, 2, 3)
-'\x00\x01\x00\x02\x00\x00\x00\x03'
->>> unpack('hhl', '\x00\x01\x00\x02\x00\x00\x00\x03')
+'\000\001\000\002\000\000\000\003'
+>>> unpack('hhl', '\000\001\000\002\000\000\000\003')
 (1, 2, 3)
 >>> calcsize('hhl')
 8

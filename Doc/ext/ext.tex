@@ -19,6 +19,16 @@
 
 \input{copyright}
 
+%begin{latexonly}
+\vspace{1in}
+%end{latexonly}
+\strong{\large Acknowledgements}
+
+% XXX This needs to be checked and updated manually before each
+% release.
+
+The following people have contributed sections to this document:  Jim
+Fulton, Konrad Hinsen, Chris Phoenix, and Neil Schemenauer.
 
 \begin{abstract}
 
@@ -277,18 +287,13 @@ initspam()
 
 Note that the Python name for the exception object is
 \exception{spam.error}.  The \cfunction{PyErr_NewException()} function
-may create a class with the base class being \exception{Exception}
-(unless another class is passed in instead of \NULL), described in the
+may create either a string or class, depending on whether the
+\programopt{-X} flag was passed to the interpreter.  If
+\programopt{-X} was used, \cdata{SpamError} will be a string object,
+otherwise it will be a class object with the base class being
+\exception{Exception}, described in the
 \citetitle[../lib/lib.html]{Python Library Reference} under ``Built-in
 Exceptions.''
-
-Note also that the \cdata{SpamError} variable retains a reference to
-the newly created exception class; this is intentional!  Since the
-exception could be removed from the module by external code, an owned
-reference to the class is needed to ensure that it will not be
-discarded, causing \cdata{SpamError} to become a dangling pointer.
-Should it become a dangling pointer, C code which raises the exception
-could cause a core dump or other unintended side effects.
 
 
 \section{Back to the Example
@@ -636,7 +641,7 @@ code is not complete: \cfunction{Py_BuildValue()} may run out of
 memory, and this should be checked.
 
 
-\section{Extracting Parameters in Extension Functions
+\section{Format Strings for \cfunction{PyArg_ParseTuple()}
          \label{parseTuple}}
 
 The \cfunction{PyArg_ParseTuple()} function is declared as follows:
@@ -723,9 +728,10 @@ convertible to Unicode into a character buffer. It only works for
 encoded data without embedded \NULL{} bytes.
 
 The variant reads one C variable and stores into two C variables, the
-first one a pointer to an encoding name string (\var{encoding}), and the
+first one a pointer to an encoding name string (\var{encoding}), the
 second a pointer to a pointer to a character buffer (\var{**buffer},
-the buffer used for storing the encoded data).
+the buffer used for storing the encoded data) and the third one a
+pointer to an integer (\var{*buffer_length}, the buffer length).
 
 The encoding name must map to a registered codec. If set to \NULL{},
 the default encoding is used.
@@ -736,17 +742,11 @@ buffer and adjust \var{*buffer} to reference the newly allocated
 storage. The caller is responsible for calling
 \cfunction{PyMem_Free()} to free the allocated buffer after usage.
 
-\item[\samp{et} (string, Unicode object or character buffer compatible
-object) {[const char *encoding, char **buffer]}]
-Same as \samp{es} except that string objects are passed through without
-recoding them. Instead, the implementation assumes that the string
-object uses the encoding passed in as parameter.
-
 \item[\samp{es\#} (string, Unicode object or character buffer compatible
 object) {[const char *encoding, char **buffer, int *buffer_length]}]
 This variant on \samp{s\#} is used for encoding Unicode and objects
 convertible to Unicode into a character buffer. It reads one C
-variable and stores into three C variables, the first one a pointer to
+variable and stores into two C variables, the first one a pointer to
 an encoding name string (\var{encoding}), the second a pointer to a
 pointer to a character buffer (\var{**buffer}, the buffer used for
 storing the encoded data) and the third one a pointer to an integer
@@ -772,12 +772,6 @@ overflow is signalled with an exception.
 
 In both cases, \var{*buffer_length} is set to the length of the
 encoded data without the trailing 0-byte.
-
-\item[\samp{et\#} (string, Unicode object or character buffer compatible
-object) {[const char *encoding, char **buffer]}]
-Same as \samp{es\#} except that string objects are passed through without
-recoding them. Instead, the implementation assumes that the string
-object uses the encoding passed in as parameter.
 
 \item[\samp{b} (integer) {[char]}]
 Convert a Python integer to a tiny int, stored in a C \ctype{char}.
@@ -903,8 +897,8 @@ as the function name in error messages (the ``associated value'' of
 the exception that \cfunction{PyArg_ParseTuple()} raises).
 
 \item[\samp{;}]
-The list of format units ends here; the string after the semicolon is
-used as the error message \emph{instead} of the default error message.
+The list of format units ends here; the string after the colon is used
+as the error message \emph{instead} of the default error message.
 Clearly, \samp{:} and \samp{;} mutually exclude each other.
 
 \end{description}
@@ -973,7 +967,7 @@ Some example calls:
 \end{verbatim}
 
 
-\section{Keyword Parameters for Extension Functions
+\section{Keyword Parsing with \cfunction{PyArg_ParseTupleAndKeywords()}
          \label{parseTupleAndKeywords}}
 
 The \cfunction{PyArg_ParseTupleAndKeywords()} function is declared as
@@ -1047,7 +1041,7 @@ initkeywdarg()
 \end{verbatim}
 
 
-\section{Building Arbitrary Values
+\section{The \cfunction{Py_BuildValue()} Function
          \label{buildValue}}
 
 This function is the counterpart to \cfunction{PyArg_ParseTuple()}.  It is
@@ -1118,6 +1112,15 @@ Convert a Unicode (UCS-2) data buffer and its length to a Python
 Unicode object.   If the Unicode buffer pointer is \NULL, the length
 is ignored and \code{None} is returned.
 
+\item[\samp{u} (Unicode string) {[Py_UNICODE *]}]
+Convert a null-terminated buffer of Unicode (UCS-2) data to a Python Unicode 
+object. If the Unicode buffer pointer is \NULL{}, \code{None} is returned.
+
+\item[\samp{u\#} (Unicode string) {[Py_UNICODE *, int]}]
+Convert a Unicode (UCS-2) data buffer and its length to a Python Unicode 
+object. If the Unicode buffer pointer is \NULL{}, the length is ignored and 
+\code{None} is returned.
+
 \item[\samp{i} (integer) {[int]}]
 Convert a plain C \ctype{int} to a Python integer object.
 
@@ -1139,9 +1142,6 @@ Convert a C \ctype{double} to a Python floating point number.
 
 \item[\samp{f} (float) {[float]}]
 Same as \samp{d}.
-
-\item[\samp{D} (complex) {[Py_complex *]}]
-Convert a C \ctype{Py_complex} structure to a Python complex number.
 
 \item[\samp{O} (object) {[PyObject *]}]
 Pass a Python object untouched (except for its reference count, which
@@ -1634,10 +1634,9 @@ the C API pointer array:
 void
 initspam()
 {
-    PyObject *m;
+    PyObject *m, *d;
     static void *PySpam_API[PySpam_API_pointers];
     PyObject *c_api_object;
-
     m = Py_InitModule("spam", SpamMethods);
 
     /* Initialize the C API pointer array */
@@ -1646,13 +1645,9 @@ initspam()
     /* Create a CObject containing the API pointer array's address */
     c_api_object = PyCObject_FromVoidPtr((void *)PySpam_API, NULL);
 
-    if (c_api_object != NULL) {
-        /* Create a name for this object in the module's namespace */
-        PyObject *d = PyModule_GetDict(m);
-
-        PyDict_SetItemString(d, "_C_API", c_api_object);
-        Py_DECREF(c_api_object);
-    }
+    /* Create a name for this object in the module's namespace */
+    d = PyModule_GetDict(m);
+    PyDict_SetItemString(d, "_C_API", c_api_object);
 }
 \end{verbatim}
 
@@ -1744,429 +1739,8 @@ implementation of CObjects (files \file{Include/cobject.h} and
 \file{Objects/cobject.c} in the Python source code distribution).
 
 
-\chapter{Defining New Types
-        \label{defining-new-types}}
-\sectionauthor{Michael Hudson}{mwh21@cam.ac.uk}
-
-As mentioned in the last chapter, Python allows the writer of an
-extension module to define new types that can be manipulated from
-Python code, much like strings and lists in core Python.
-
-This is not hard; the code for all extension types follows a pattern,
-but there are some details that you need to understand before you can
-get started.
-
-\section{The Basics
-    \label{dnt-basics}}
-
-The Python runtime sees all Python objects as variables of type
-\ctype{PyObject*}.  A \ctype{PyObject} is not a very magnificent
-object - it just contains the refcount and a pointer to the object's
-``type object''.  This is where the action is; the type object
-determines which (C) functions get called when, for instance, an
-attribute gets looked up on an object or it is multiplied by another
-object.  I call these C functions ``type methods'' to distinguish them
-from things like \code{[].append} (which I will call ``object
-methods'' when I get around to them).
-
-So, if you want to define a new object type, you need to create a new
-type object.
-
-This sort of thing can only be explained by example, so here's a
-minimal, but complete, module that defines a new type:
-
-\begin{verbatim}
-#include <Python.h>
-
-staticforward PyTypeObject noddy_NoddyType;
-
-typedef struct {
-    PyObject_HEAD
-} noddy_NoddyObject;
-
-static PyObject*
-noddy_new_noddy(PyObject* self, PyObject* args)
-{
-    noddy_NoddyObject* noddy;
-
-    if (!PyArg_ParseTuple(args,":new_noddy")) 
-        return NULL;
-
-    noddy = PyObject_New(noddy_NoddyObject, &noddy_NoddyType);
-
-    return (PyObject*)noddy;
-}
-
-static void
-noddy_noddy_dealloc(PyObject* self)
-{
-    PyObject_Del(self);
-}
-
-static PyTypeObject noddy_NoddyType = {
-    PyObject_HEAD_INIT(NULL)
-    0,
-    "Noddy",
-    sizeof(noddy_NoddyObject),
-    0,
-    noddy_noddy_dealloc, /*tp_dealloc*/
-    0,          /*tp_print*/
-    0,          /*tp_getattr*/
-    0,          /*tp_setattr*/
-    0,          /*tp_compare*/
-    0,          /*tp_repr*/
-    0,          /*tp_as_number*/
-    0,          /*tp_as_sequence*/
-    0,          /*tp_as_mapping*/
-    0,          /*tp_hash */
-};
-
-static PyMethodDef noddy_methods[] = {
-    { "new_noddy", noddy_new_noddy, METH_VARARGS },
-    {NULL, NULL}
-};
-
-DL_EXPORT(void)
-initnoddy(void) 
-{
-    noddy_NoddyType.ob_type = &PyType_Type;
-
-    Py_InitModule("noddy", noddy_methods);
-}
-\end{verbatim}
-
-Now that's quite a bit to take in at once, but hopefully bits will
-seem familiar from the last chapter.
-
-The first bit that will be new is:
-
-\begin{verbatim}
-staticforward PyTypeObject noddy_NoddyType;
-\end{verbatim}
-
-This names the type object that will be defining further down in the
-file.  It can't be defined here because its definition has to refer to
-functions that have no yet been defined, but we need to be able to
-refer to it, hence the declaration.
-
-The \code{staticforward} is required to placate various brain dead
-compilers.
-
-\begin{verbatim}
-typedef struct {
-    PyObject_HEAD
-} noddy_NoddyObject;
-\end{verbatim}
-
-This is what a Noddy object will contain.  In this case nothing more
-than every Python object contains - a refcount and a pointer to a type
-object.  These are the fields the \code{PyObject_HEAD} macro brings
-in.  The reason for the macro is to standardize the layout and to
-enable special debugging fields to be brought in debug builds.
-
-For contrast
-
-\begin{verbatim}
-typedef struct {
-    PyObject_HEAD
-    long ob_ival;
-} PyIntObject;
-\end{verbatim}
-
-is the corresponding definition for standard Python integers.
-
-Next up is:
-
-\begin{verbatim}
-static PyObject*
-noddy_new_noddy(PyObject* self, PyObject* args)
-{
-    noddy_NoddyObject* noddy;
-
-    if (!PyArg_ParseTuple(args,":new_noddy")) 
-        return NULL;
-
-    noddy = PyObject_New(noddy_NoddyObject, &noddy_NoddyType);
-
-    return (PyObject*)noddy;
-}
-\end{verbatim}
-
-This is in fact just a regular module function, as described in the
-last chapter.  The reason it gets special mention is that this is
-where we create our Noddy object.  Defining PyTypeObject structures is
-all very well, but if there's no way to actually \emph{create} one
-of the wretched things it is not going to do anyone much good.
-
-Almost always, you create objects with a call of the form:
-
-\begin{verbatim}
-PyObject_New(<type>, &<type object>);
-\end{verbatim}
-
-This allocates the memory and then initializes the object (i.e.\ sets
-the reference count to one, makes the \cdata{ob_type} pointer point at
-the right place and maybe some other stuff, depending on build options).
-You \emph{can} do these steps separately if you have some reason to
---- but at this level we don't bother.
-
-We cast the return value to a \ctype{PyObject*} because that's what
-the Python runtime expects.  This is safe because of guarantees about
-the layout of structures in the C standard, and is a fairly common C
-programming trick.  One could declare \cfunction{noddy_new_noddy} to
-return a \ctype{noddy_NoddyObject*} and then put a cast in the
-definition of \cdata{noddy_methods} further down the file --- it
-doesn't make much difference.
-
-Now a Noddy object doesn't do very much and so doesn't need to
-implement many type methods.  One you can't avoid is handling
-deallocation, so we find
-
-\begin{verbatim}
-static void
-noddy_noddy_dealloc(PyObject* self)
-{
-    PyObject_Del(self);
-}
-\end{verbatim}
-
-This is so short as to be self explanatory.  This function will be
-called when the reference count on a Noddy object reaches \code{0} (or
-it is found as part of an unreachable cycle by the cyclic garbage
-collector).  \cfunction{PyObject_Del()} is what you call when you want
-an object to go away.  If a Noddy object held references to other
-Python objects, one would decref them here.
-
-Moving on, we come to the crunch --- the type object.
-
-\begin{verbatim}
-static PyTypeObject noddy_NoddyType = {
-    PyObject_HEAD_INIT(NULL)
-    0,
-    "Noddy",
-    sizeof(noddy_NoddyObject),
-    0,
-    noddy_noddy_dealloc, /*tp_dealloc*/
-    0,                   /*tp_print*/
-    0,                   /*tp_getattr*/
-    0,                   /*tp_setattr*/
-    0,                   /*tp_compare*/
-    0,                   /*tp_repr*/
-    0,                   /*tp_as_number*/
-    0,                   /*tp_as_sequence*/
-    0,                   /*tp_as_mapping*/
-    0,                   /*tp_hash */
-};
-\end{verbatim}
-
-Now if you go and look up the definition of \ctype{PyTypeObject} in
-\file{object.h} you'll see that it has many, many more fields that the
-definition above.  The remaining fields will be filled with zeros by
-the C compiler, and it's common practice to not specify them
-explicitly unless you need them.  
-
-This is so important that I'm going to pick the top of it apart still
-further:
-
-\begin{verbatim}
-    PyObject_HEAD_INIT(NULL)
-\end{verbatim}
-
-This line is a bit of a wart; what we'd like to write is:
-
-\begin{verbatim}
-    PyObject_HEAD_INIT(&PyType_Type)
-\end{verbatim}
-
-as the type of a type object is ``type'', but this isn't strictly
-conforming C and some compilers complain.  So instead we fill in the
-\cdata{ob_type} field of \cdata{noddy_NoddyType} at the earliest
-oppourtunity --- in \cfunction{initnoddy()}.
-
-\begin{verbatim}
-    0,
-\end{verbatim}
-
-XXX why does the type info struct start PyObject_*VAR*_HEAD??
-
-\begin{verbatim}
-    "Noddy",
-\end{verbatim}
-
-The name of our type.  This will appear in the default textual
-representation of our objects and in some error messages, for example:
-
-\begin{verbatim}
->>> "" + noddy.new_noddy()
-Traceback (most recent call last):
-  File "<stdin>", line 1, in ?
-TypeError: cannot add type "Noddy" to string
-\end{verbatim}
-
-\begin{verbatim}
-    sizeof(noddy_NoddyObject),
-\end{verbatim}
-
-This is so that Python knows how much memory to allocate when you call
-\cfunction{PyObject_New}.
-
-\begin{verbatim}
-    0,
-\end{verbatim}
-
-This has to do with variable length objects like lists and strings.
-Ignore for now...
-
-Now we get into the type methods, the things that make your objects
-different from the others.  Of course, the Noddy object doesn't
-implement many of these, but as mentioned above you have to implement
-the deallocation function.
-
-\begin{verbatim}
-    noddy_noddy_dealloc, /*tp_dealloc*/
-\end{verbatim}
-
-From here, all the type methods are nil so I won't go over them yet -
-that's for the next section!
-
-Everything else in the file should be familiar, except for this line
-in \cfunction{initnoddy}:
-
-\begin{verbatim}
-    noddy_NoddyType.ob_type = &PyType_Type;
-\end{verbatim}
-
-This was alluded to above --- the \cdata{noddy_NoddyType} object should
-have type ``type'', but \code{\&PyType_Type} is not constant and so
-can't be used in its initializer.  To work around this, we patch it up
-in the module initialization.
-
-That's it!  All that remains is to build it; put the above code in a
-file called \file{noddymodule.c} and
-
-\begin{verbatim}
-from distutils.core import setup, Extension
-setup(name = "noddy", version = "1.0",
-    ext_modules = [Extension("noddy", ["noddymodule.c"])])
-\end{verbatim}
-
-in a file called \file{setup.py}; then typing
-
-\begin{verbatim}
-$ python setup.py build%$
-\end{verbatim}
-
-at a shell should produce a file \file{noddy.so} in a subdirectory;
-move to that directory and fire up Python --- you should be able to
-\code{import noddy} and play around with Noddy objects.
-
-That wasn't so hard, was it?
-
-\section{Type Methods
-         \label{dnt-type-methods}}
-
-This section aims to give a quick fly-by on the various type methods
-you can implement and what they do.
-
-Here is the definition of \ctype{PyTypeObject}, with some fields only
-used in debug builds omitted:
-
-\begin{verbatim}
-typedef struct _typeobject {
-    PyObject_VAR_HEAD
-    char *tp_name; /* For printing */
-    int tp_basicsize, tp_itemsize; /* For allocation */
-
-    /* Methods to implement standard operations */
-
-    destructor tp_dealloc;
-    printfunc tp_print;
-    getattrfunc tp_getattr;
-    setattrfunc tp_setattr;
-    cmpfunc tp_compare;
-    reprfunc tp_repr;
-
-    /* Method suites for standard classes */
-
-    PyNumberMethods *tp_as_number;
-    PySequenceMethods *tp_as_sequence;
-    PyMappingMethods *tp_as_mapping;
-
-    /* More standard operations (here for binary compatibility) */
-
-    hashfunc tp_hash;
-    ternaryfunc tp_call;
-    reprfunc tp_str;
-    getattrofunc tp_getattro;
-    setattrofunc tp_setattro;
-
-    /* Functions to access object as input/output buffer */
-    PyBufferProcs *tp_as_buffer;
-
-    /* Flags to define presence of optional/expanded features */
-    long tp_flags;
-
-    char *tp_doc; /* Documentation string */
-
-    /* call function for all accessible objects */
-    traverseproc tp_traverse;
-
-    /* delete references to contained objects */
-    inquiry tp_clear;
-
-    /* rich comparisons */
-    richcmpfunc tp_richcompare;
-
-    /* weak reference enabler */
-    long tp_weaklistoffset;
-
-} PyTypeObject;
-\end{verbatim}
-
-Now that's a \emph{lot} of methods.  Don't worry too much though - if
-you have a type you want to define, the chances are very good that you
-will only implement a handful of these.
-
-As you probably expect by now, I'm going to go over this line-by-line,
-saying a word about each field as we get to it.
-
-\begin{verbatim}
-    char *tp_name; /* For printing */
-\end{verbatim}
-
-The name of the type - as mentioned in the last section, this will
-appear in various places, almost entirely for diagnostic purposes.
-Try to choose something that will be helpful in such a situation!
-
-\begin{verbatim}
-    int tp_basicsize, tp_itemsize; /* For allocation */
-\end{verbatim}
-
-These fields tell the runtime how much memory to allocate when new
-objects of this typed are created.  Python has some builtin support
-for variable length structures (think: strings, lists) which is where
-the \cdata{tp_itemsize} field comes in.  This will be dealt with
-later.
-
-Now we come to the basic type methods - the ones most extension types
-will implement.
-
-\begin{verbatim}
-    destructor tp_dealloc;
-    printfunc tp_print;
-    getattrfunc tp_getattr;
-    setattrfunc tp_setattr;
-    cmpfunc tp_compare;
-    reprfunc tp_repr;
-\end{verbatim}
-
-
-%\section{Attributes \& Methods
-%    \label{dnt-attrs-and-meths}}
-
-
 \chapter{Building C and \Cpp{} Extensions on \UNIX{}
-     \label{building-on-unix}}
+         \label{building-on-unix}}
 
 \sectionauthor{Jim Fulton}{jim@Digicool.com}
 
@@ -2190,7 +1764,7 @@ source.
 
 The make file make file, \file{Makefile.pre.in} uses metadata
 provided in a file named \file{Setup}.  The format of the \file{Setup}
-file is the same as the \file{Setup} (or \file{Setup.dist}) file
+file is the same as the \file{Setup} (or \file{Setup.in}) file
 provided in the \file{Modules/} directory of the Python source
 distribution.  The \file{Setup} file contains variable definitions:
 
@@ -2277,17 +1851,17 @@ The make file built by \file{Makefile.pre.in} can be run with the
 make static
 \end{verbatim}
 
-Any modules defined in the \file{Setup} file before the
-\samp{*shared*} line will be statically linked into the interpreter.
-Typically, a \samp{*shared*} line is omitted from the
-\file{Setup} file when a custom interpreter is desired.
+Any modules defined in the Setup file before the \samp{*shared*} line
+will be statically linked into the interpreter.  Typically, a
+\samp{*shared*} line is omitted from the Setup file when a custom
+interpreter is desired.
 
 
 \section{Module Definition Options \label{module-defn-options}}
 
 Several compiler options are supported:
 
-\begin{tableii}{l|l}{programopt}{Option}{Meaning}
+\begin{tableii}{l|l}{}{Option}{Meaning}
   \lineii{-C}{Tell the C pre-processor not to discard comments}
   \lineii{-D\var{name}=\var{value}}{Define a macro}
   \lineii{-I\var{dir}}{Specify an include directory, \var{dir}}
@@ -2309,7 +1883,7 @@ and \file{.so} extensions.
 
 \section{Example \label{module-defn-example}}
 
-Here is a more complicated example from \file{Modules/Setup.dist}:
+Here is a more complicated example from \file{Modules/Setup.in}:
 
 \begin{verbatim}
 GMP=/ufs/guido/src/gmp
@@ -2324,25 +1898,12 @@ mpz mpzmodule.c -I$(GMP) -L$(GMP) -lgmp
 
 
 \section{Distributing your extension modules
-     \label{distributing}}
-
-There are two ways to distribute extension modules for others to use.
-The way that allows the easiest cross-platform support is to use the
-\module{distutils}\refstmodindex{distutils} package.  The manual
-\citetitle[../dist/dist.html]{Distributing Python Modules} contains
-information on this approach.  It is recommended that all new
-extensions be distributed using this approach to allow easy building
-and installation across platforms.  Older extensions should migrate to
-this approach as well.
-
-What follows describes the older approach; there are still many
-extensions which use this.
+         \label{distributing}}
 
 When distributing your extension modules in source form, make sure to
 include a \file{Setup} file.  The \file{Setup} file should be named
 \file{Setup.in} in the distribution.  The make file make file,
-\file{Makefile.pre.in}, will copy \file{Setup.in} to \file{Setup} if
-the person installing the extension doesn't do so manually.
+\file{Makefile.pre.in}, will copy \file{Setup.in} to \file{Setup}.
 Distributing a \file{Setup.in} file makes it easy for people to
 customize the \file{Setup} file while keeping the original in
 \file{Setup.in}.
@@ -2355,9 +1916,16 @@ should use \file{Makefile.pre.in} to build their own make file.  A
 \file{README} file included in the package should provide simple
 instructions to perform the build.
 
+Work is being done to make building and installing Python extensions
+easier for all platforms; this work in likely to supplant the current
+approach at some point in the future.  For more information or to
+participate in the effort, refer to
+\url{http://www.python.org/sigs/distutils-sig/} on the Python Web
+site.
+
 
 \chapter{Building C and \Cpp{} Extensions on Windows
-     \label{building-on-windows}}
+         \label{building-on-windows}}
 
 
 This chapter briefly explains how to create a Windows extension module
@@ -2410,13 +1978,13 @@ and add the following to the module initialization function:
     MyObject_Type.ob_type = &PyType_Type;
 \end{verbatim}
 
-Refer to section 3 of the
-\citetitle[http://www.python.org/doc/FAQ.html]{Python FAQ} for details
-on why you must do this.
+Refer to section 3 of the Python FAQ
+(\url{http://www.python.org/doc/FAQ.html}) for details on why you must
+do this.
 
 
 \section{Differences Between \UNIX{} and Windows
-     \label{dynamic-linking}}
+         \label{dynamic-linking}}
 \sectionauthor{Chris Phoenix}{cphoenix@best.com}
 
 
@@ -2510,7 +2078,7 @@ them, use the Project Settings dialog, Link tab, to specify
 
 
 \chapter{Embedding Python in Another Application
-     \label{embedding}}
+         \label{embedding}}
 
 Embedding Python is similar to extending it, but not quite.  The
 difference is that when you extend Python, the main program of the
@@ -2540,7 +2108,7 @@ A simple demo of embedding Python can be found in the directory
 
 
 \section{Embedding Python in \Cpp{}
-     \label{embeddingInCplusplus}}
+         \label{embeddingInCplusplus}}
 
 It is also possible to embed Python in a \Cpp{} program; precisely how this
 is done will depend on the details of the \Cpp{} system used; in general you
@@ -2574,7 +2142,7 @@ start an interactive interpreter and have a short session like this:
 
 \begin{verbatim}
 >>> import distutils.sysconfig
->>> distutils.sysconfig.get_config_var('LINKFORSHARED')
+>>> distutils.sysconfig.LINKFORSHARED 
 '-Xlinker -export-dynamic'
 \end{verbatim}
 \refstmodindex{distutils.sysconfig}

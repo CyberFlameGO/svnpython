@@ -1,6 +1,6 @@
 # Parse Makefiles and Python Setup(.in) files.
 
-import re
+import regex
 import string
 
 
@@ -8,26 +8,19 @@ import string
 # Return a dictionary mapping names to values.
 # May raise IOError.
 
-makevardef = re.compile('^([a-zA-Z0-9_]+)[ \t]*=(.*)')
+makevardef = regex.compile('^\([a-zA-Z0-9_]+\)[ \t]*=\(.*\)')
 
 def getmakevars(filename):
 	variables = {}
 	fp = open(filename)
-	pendingline = ""
 	try:
 		while 1:
 			line = fp.readline()
-			if pendingline:
-				line = pendingline + line
-				pendingline = ""
 			if not line:
 				break
-			if line.endswith('\\\n'):
-				pendingline = line[:-2]
-			matchobj = makevardef.match(line)
-			if not matchobj:
+			if makevardef.match(line) < 0:
 				continue
-			(name, value) = matchobj.group(1, 2)
+			name, value = makevardef.group(1, 2)
 			# Strip trailing comment
 			i = string.find(value, '#')
 			if i >= 0:
@@ -44,31 +37,23 @@ def getmakevars(filename):
 # definitions, the second mapping variable names to their values.
 # May raise IOError.
 
-setupvardef = re.compile('^([a-zA-Z0-9_]+)=(.*)')
+setupvardef = regex.compile('^\([a-zA-Z0-9_]+\)=\(.*\)')
 
 def getsetupinfo(filename):
 	modules = {}
 	variables = {}
 	fp = open(filename)
-	pendingline = ""
 	try:
 		while 1:
 			line = fp.readline()
-			if pendingline:
-				line = pendingline + line
-				pendingline = ""
 			if not line:
 				break
 			# Strip comments
 			i = string.find(line, '#')
 			if i >= 0:
 				line = line[:i]
-			if line.endswith('\\\n'):
-				pendingline = line[:-2]
-				continue
-			matchobj = setupvardef.match(line)
-			if matchobj:
-				(name, value) = matchobj.group(1, 2)
+			if setupvardef.match(line) >= 0:
+				name, value = setupvardef.group(1, 2)
 				variables[name] = string.strip(value)
 			else:
 				words = string.split(line)

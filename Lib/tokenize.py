@@ -9,24 +9,24 @@ ending (row, column) coordinates of the token, and the original line.  It is
 designed to match the working of the Python tokenizer exactly, except that
 it produces COMMENT tokens for comments and gives type OP for all operators."""
 
-__author__ = 'Ka-Ping Yee <ping@lfw.org>'
-__credits__ = \
-    'GvR, ESR, Tim Peters, Thomas Wouters, Fred Drake, Skip Montanaro'
+__version__ = "Ka-Ping Yee, 26 October 1997; patched, GvR 3/30/98"
 
 import string, re
 from token import *
-
-import token
-__all__ = [x for x in dir(token) if x[0] != '_'] + ["COMMENT", "tokenize", "NL"]
-del token
 
 COMMENT = N_TOKENS
 tok_name[COMMENT] = 'COMMENT'
 NL = N_TOKENS + 1
 tok_name[NL] = 'NL'
-N_TOKENS += 2
 
-def group(*choices): return '(' + '|'.join(choices) + ')'
+
+# Changes from 1.3:
+#     Ignore now accepts \f as whitespace.  Operator now includes '**'.
+#     Ignore and Special now accept \n or \r\n at the end of a line.
+#     Imagnumber is new.  Expfloat is corrected to reject '0e4'.
+# Note: to quote a backslash in a regex, it must be doubled in a r'aw' string.
+
+def group(*choices): return '(' + string.join(choices, '|') + ')'
 def any(*choices): return apply(group, choices) + '*'
 def maybe(*choices): return apply(group, choices) + '?'
 
@@ -54,10 +54,10 @@ Double = r'[^"\\]*(?:\\.[^"\\]*)*"'
 Single3 = r"[^'\\]*(?:(?:\\.|'(?!''))[^'\\]*)*'''"
 # Tail end of """ string.
 Double3 = r'[^"\\]*(?:(?:\\.|"(?!""))[^"\\]*)*"""'
-Triple = group("[uU]?[rR]?'''", '[uU]?[rR]?"""')
+Triple = group("[rR]?'''", '[rR]?"""')
 # Single-line ' or " string.
-String = group(r"[uU]?[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*'",
-               r'[uU]?[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*"')
+String = group(r"[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*'",
+               r'[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*"')
 
 # Because of leftmost-then-longest match semantics, be sure to put the
 # longest operators first (e.g., if = came before ==, == would get
@@ -74,10 +74,8 @@ PlainToken = group(Number, Funny, String, Name)
 Token = Ignore + PlainToken
 
 # First (or only) line of ' or " string.
-ContStr = group(r"[uU]?[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*" +
-                group("'", r'\\\r?\n'),
-                r'[uU]?[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*' +
-                group('"', r'\\\r?\n'))
+ContStr = group(r"[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*" + group("'", r'\\\r?\n'),
+                r'[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*' + group('"', r'\\\r?\n'))
 PseudoExtras = group(r'\\\r?\n', Comment, Triple)
 PseudoToken = Whitespace + group(PseudoExtras, Number, Funny, ContStr, Name)
 
@@ -86,32 +84,18 @@ tokenprog, pseudoprog, single3prog, double3prog = map(
 endprogs = {"'": re.compile(Single), '"': re.compile(Double),
             "'''": single3prog, '"""': double3prog,
             "r'''": single3prog, 'r"""': double3prog,
-            "u'''": single3prog, 'u"""': double3prog,
-            "ur'''": single3prog, 'ur"""': double3prog,
-            "R'''": single3prog, 'R"""': double3prog,
-            "U'''": single3prog, 'U"""': double3prog,
-            "uR'''": single3prog, 'uR"""': double3prog,
-            "Ur'''": single3prog, 'Ur"""': double3prog,
-            "UR'''": single3prog, 'UR"""': double3prog,
-            'r': None, 'R': None, 'u': None, 'U': None}
+            "R'''": single3prog, 'R"""': double3prog, 'r': None, 'R': None}
 
 tabsize = 8
 
-class TokenError(Exception): pass
-
-class StopTokenizing(Exception): pass
+class TokenError(Exception):
+    pass
 
 def printtoken(type, token, (srow, scol), (erow, ecol), line): # for testing
     print "%d,%d-%d,%d:\t%s\t%s" % \
         (srow, scol, erow, ecol, tok_name[type], repr(token))
 
 def tokenize(readline, tokeneater=printtoken):
-    try:
-        tokenize_loop(readline, tokeneater)
-    except StopTokenizing:
-        pass
-
-def tokenize_loop(readline, tokeneater):
     lnum = parenlev = continued = 0
     namechars, numchars = string.letters + '_', string.digits
     contstr, needcont = '', 0
@@ -179,8 +163,8 @@ def tokenize_loop(readline, tokeneater):
                 spos, epos, pos = (lnum, start), (lnum, end), end
                 token, initial = line[start:end], line[start]
 
-                if initial in numchars or \
-                   (initial == '.' and token != '.'):      # ordinary number
+                if initial in numchars \
+                    or (initial == '.' and token != '.'):  # ordinary number
                     tokeneater(NUMBER, token, spos, epos, line)
                 elif initial in '\r\n':
                     tokeneater(parenlev > 0 and NL or NEWLINE,
@@ -188,10 +172,7 @@ def tokenize_loop(readline, tokeneater):
                 elif initial == '#':
                     tokeneater(COMMENT, token, spos, epos, line)
                 elif token in ("'''", '"""',               # triple-quoted
-                               "r'''", 'r"""', "R'''", 'R"""',
-                               "u'''", 'u"""', "U'''", 'U"""',
-                               "ur'''", 'ur"""', "Ur'''", 'Ur"""',
-                               "uR'''", 'uR"""', "UR'''", 'UR"""'):
+                               "r'''", 'r"""', "R'''", 'R"""'):
                     endprog = endprogs[token]
                     endmatch = endprog.match(line, pos)
                     if endmatch:                           # all on one line
@@ -204,14 +185,10 @@ def tokenize_loop(readline, tokeneater):
                         contline = line
                         break
                 elif initial in ("'", '"') or \
-                    token[:2] in ("r'", 'r"', "R'", 'R"',
-                                  "u'", 'u"', "U'", 'U"') or \
-                    token[:3] in ("ur'", 'ur"', "Ur'", 'Ur"',
-                                  "uR'", 'uR"', "UR'", 'UR"' ):
+                    token[:2] in ("r'", 'r"', "R'", 'R"'):
                     if token[-1] == '\n':                  # continued string
                         strstart = (lnum, start)
-                        endprog = (endprogs[initial] or endprogs[token[1]] or
-                                   endprogs[token[2]])
+                        endprog = endprogs[initial] or endprogs[token[1]]
                         contstr, needcont = line[start:], 1
                         contline = line
                         break
@@ -238,3 +215,4 @@ if __name__ == '__main__':                     # testing
     import sys
     if len(sys.argv) > 1: tokenize(open(sys.argv[1]).readline)
     else: tokenize(sys.stdin.readline)
+

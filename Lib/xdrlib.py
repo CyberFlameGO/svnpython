@@ -6,8 +6,6 @@ See: RFC 1014
 
 import struct
 
-__all__ = ["Error", "Packer", "Unpacker", "ConversionError"]
-
 # exceptions
 class Error:
     """Exception class for this module. Use:
@@ -31,7 +29,7 @@ class ConversionError(Error):
     pass
 
 
-
+
 class Packer:
     """Pack various data representations into a buffer."""
 
@@ -97,7 +95,7 @@ class Packer:
         self.pack_uint(0)
 
     def pack_farray(self, n, list, pack_item):
-        if len(list) != n:
+        if len(list) <> n:
             raise ValueError, 'wrong array size'
         for item in list:
             pack_item(item)
@@ -108,7 +106,7 @@ class Packer:
         self.pack_farray(n, list, pack_item)
 
 
-
+
 class Unpacker:
     """Unpacks various data representations from the given buffer."""
 
@@ -206,7 +204,7 @@ class Unpacker:
         while 1:
             x = self.unpack_uint()
             if x == 0: break
-            if x != 1:
+            if x <> 1:
                 raise ConversionError, '0 or 1 expected, got ' + `x`
             item = unpack_item()
             list.append(item)
@@ -222,7 +220,7 @@ class Unpacker:
         n = self.unpack_uint()
         return self.unpack_farray(n, unpack_item)
 
-
+
 # test suite
 def _test():
     p = Packer()
@@ -276,6 +274,6 @@ def _test():
             print 'ConversionError:', var.msg
         count = count + 1
 
-
+
 if __name__ == '__main__':
     _test()

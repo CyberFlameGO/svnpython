@@ -8,7 +8,6 @@
 %Even though I put it into LaTeX, I cannot really claim that I wrote
 %it since I just stole most of it from the poplib.py source code and
 %the imaplib ``chapter''.
-%Revised by ESR, January 2000
 
 \indexii{POP3}{protocol}
 
@@ -16,12 +15,6 @@ This module defines a class, \class{POP3}, which encapsulates a
 connection to an POP3 server and implements protocol as defined in
 \rfc{1725}.  The \class{POP3} class supports both the minimal and
 optional command sets.
-
-Note that POP3, though widely supported, is obsolescent.  The
-implementation quality of POP3 servers varies widely, and too many are
-quite poor. If your mailserver supports IMAP, you would be better off
-using the \code{\refmodule{imaplib}.\class{IMAP4}} class, as IMAP
-servers tend to be better implemented.
 
 A single class is provided by the \module{poplib} module:
 
@@ -37,14 +30,6 @@ One exception is defined as an attribute of the \module{poplib} module:
 Exception raised on any errors.  The reason for the exception is
 passed to the constructor as a string.
 \end{excdesc}
-
-\begin{seealso}
-  \seemodule{imaplib}{The standard Python IMAP module.}
-  \seetitle{http://www.tuxedo.org/~esr/fetchail/fetchmail-FAQ.html}{
-	The FAQ for the fetchmail POP/IMAP client collects information
-	on POP3 server variations and RFC noncompliance that may be
-	useful if you need to write an application based on poplib.} 
-\end{seealso}
 
 
 \subsection{POP3 Objects \label{pop3-objects}}
@@ -90,15 +75,12 @@ set, it is the message to list.
 \end{methoddesc}
 
 \begin{methoddesc}{retr}{which}
-Retrieve whole message number \var{which}, and set its seen flag.
-Result is in form  \code{(\var{response}, ['line', ...], \var{octets})}.
+Retrieve whole message number \var{which}.  Result is in form 
+\code{(\var{response}, ['line', ...], \var{octets})}.
 \end{methoddesc}
 
 \begin{methoddesc}{dele}{which}
-Flag message number \var{which} for deletion.  On most servers
-deletions are not actually performed until QUIT (the major exception is
-Eudora QPOP, which deliberately violates the RFCs by doing pending 
-deletes on any disconnect).
+Delete message number \var{which}.
 \end{methoddesc}
 
 \begin{methoddesc}{rset}{}
@@ -117,12 +99,6 @@ Signoff:  commit changes, unlock mailbox, drop connection.
 Retrieves the message header plus \var{howmuch} lines of the message
 after the header of message number \var{which}. Result is in form 
 \code{(\var{response}, ['line', ...], \var{octets})}.
-
-The POP3 TOP command this method uses, unlike the RETR command,
-doesn't set the message's seen flag; unfortunately, TOP is poorly
-specified in the RFCs and is frequently broken in off-brand servers.
-Test this method by hand against the POP3 servers you will use before
-trusting it.
 \end{methoddesc}
 
 \begin{methoddesc}{uidl}{\optional{which}}

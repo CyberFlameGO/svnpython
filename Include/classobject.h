@@ -24,7 +24,6 @@ typedef struct {
     PyObject_HEAD
     PyClassObject *in_class;	/* The class object */
     PyObject	  *in_dict;	/* A dictionary */
-    PyObject	  *in_weakreflist; /* List of weak references */
 } PyInstanceObject;
 
 typedef struct {
@@ -32,7 +31,6 @@ typedef struct {
     PyObject *im_func;   /* The callable object implementing the method */
     PyObject *im_self;   /* The instance it is bound to, or NULL */
     PyObject *im_class;  /* The class that defined the method */
-    PyObject *im_weakreflist; /* List of weak references */
 } PyMethodObject;
 
 extern DL_IMPORT(PyTypeObject) PyClass_Type, PyInstance_Type, PyMethod_Type;
@@ -44,7 +42,6 @@ extern DL_IMPORT(PyTypeObject) PyClass_Type, PyInstance_Type, PyMethod_Type;
 extern DL_IMPORT(PyObject *) PyClass_New(PyObject *, PyObject *, PyObject *);
 extern DL_IMPORT(PyObject *) PyInstance_New(PyObject *, PyObject *,
                                             PyObject *);
-extern DL_IMPORT(PyObject *) PyInstance_NewRaw(PyObject *, PyObject *);
 extern DL_IMPORT(PyObject *) PyMethod_New(PyObject *, PyObject *, PyObject *);
 
 extern DL_IMPORT(PyObject *) PyMethod_Function(PyObject *);
@@ -62,6 +59,14 @@ extern DL_IMPORT(PyObject *) PyMethod_Class(PyObject *);
 
 extern DL_IMPORT(int) PyClass_IsSubclass(PyObject *, PyObject *);
 
+extern DL_IMPORT(PyObject *) PyInstance_DoBinOp(PyObject *, PyObject *,
+                                                char *, char *,
+                                                PyObject * (*)(PyObject *,
+                                                               PyObject *));
+
+extern DL_IMPORT(int)
+PyInstance_HalfBinOp(PyObject *, PyObject *, char *, PyObject **,
+			PyObject * (*)(PyObject *, PyObject *), int);
 
 #ifdef __cplusplus
 }

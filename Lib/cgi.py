@@ -1,14 +1,5 @@
 #! /usr/local/bin/python
 
-# NOTE: the above "/usr/local/bin/python" is NOT a mistake.  It is
-# intentionally NOT "/usr/bin/env python".  On many systems
-# (e.g. Solaris), /usr/local/bin is not in $PATH as passed to CGI
-# scripts, and /usr/local/bin is the default directory where Python is
-# installed, so /usr/bin/env would be unable to find python.  Granted,
-# binary installations by Linux vendors often install Python in
-# /usr/bin.  So let those vendors patch cgi.py to match their choice
-# of installation.
-
 """Support module for CGI (Common Gateway Interface) scripts.
 
 This module defines a number of utilities for use by CGI scripts
@@ -20,20 +11,21 @@ written in Python.
 
 # History
 # -------
-#
+# 
 # Michael McLay started this module.  Steve Majewski changed the
 # interface to SvFormContentDict and FormContentDict.  The multipart
 # parsing was inspired by code submitted by Andreas Paepcke.  Guido van
 # Rossum rewrote, reformatted and documented the module and is currently
 # responsible for its maintenance.
-#
+# 
 
-__version__ = "2.5"
+__version__ = "2.4"
 
 
 # Imports
 # =======
 
+import string
 import sys
 import os
 import urllib
@@ -42,12 +34,6 @@ import rfc822
 import UserDict
 from StringIO import StringIO
 
-__all__ = ["MiniFieldStorage", "FieldStorage", "FormContentDict",
-           "SvFormContentDict", "InterpFormContentDict", "FormContent",
-           "parse", "parse_qs", "parse_qsl", "parse_multipart",
-           "parse_header", "print_exception", "print_environ",
-           "print_form", "print_directory", "print_arguments",
-           "print_environ_usage", "escape"]
 
 # Logging support
 # ===============
@@ -118,8 +104,8 @@ def parse(fp=None, environ=os.environ, keep_blank_values=0, strict_parsing=0):
         environ         : environment dictionary; default: os.environ
 
         keep_blank_values: flag indicating whether blank values in
-            URL encoded forms should be treated as blank strings.
-            A true value indicates that blanks should be retained as
+            URL encoded forms should be treated as blank strings.  
+            A true value indicates that blanks should be retained as 
             blank strings.  The default false value indicates that
             blank values are to be ignored and treated as if they were
             not included.
@@ -137,16 +123,16 @@ def parse(fp=None, environ=os.environ, keep_blank_values=0, strict_parsing=0):
         if ctype == 'multipart/form-data':
             return parse_multipart(fp, pdict)
         elif ctype == 'application/x-www-form-urlencoded':
-            clength = int(environ['CONTENT_LENGTH'])
+            clength = string.atoi(environ['CONTENT_LENGTH'])
             if maxlen and clength > maxlen:
                 raise ValueError, 'Maximum content length exceeded'
             qs = fp.read(clength)
         else:
             qs = ''                     # Unknown content-type
-        if environ.has_key('QUERY_STRING'):
+        if environ.has_key('QUERY_STRING'): 
             if qs: qs = qs + '&'
             qs = qs + environ['QUERY_STRING']
-        elif sys.argv[1:]:
+        elif sys.argv[1:]: 
             if qs: qs = qs + '&'
             qs = qs + sys.argv[1]
         environ['QUERY_STRING'] = qs    # XXX Shouldn't, really
@@ -169,8 +155,8 @@ def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
         qs: URL-encoded query string to be parsed
 
         keep_blank_values: flag indicating whether blank values in
-            URL encoded queries should be treated as blank strings.
-            A true value indicates that blanks should be retained as
+            URL encoded queries should be treated as blank strings.  
+            A true value indicates that blanks should be retained as 
             blank strings.  The default false value indicates that
             blank values are to be ignored and treated as if they were
             not included.
@@ -202,7 +188,7 @@ def parse_qsl(qs, keep_blank_values=0, strict_parsing=0):
 
     strict_parsing: flag indicating what to do with parsing errors. If
         false (the default), errors are silently ignored. If true,
-        errors raise a ValueError exception.
+        errors raise a ValueError exception. 
 
     Returns a list, as G-d intended.
     """
@@ -215,8 +201,8 @@ def parse_qsl(qs, keep_blank_values=0, strict_parsing=0):
                 raise ValueError, "bad query field: %s" % `name_value`
             continue
         if len(nv[1]) or keep_blank_values:
-            name = urllib.unquote(nv[0].replace('+', ' '))
-            value = urllib.unquote(nv[1].replace('+', ' '))
+            name = urllib.unquote(string.replace(nv[0], '+', ' '))
+            value = urllib.unquote(string.replace(nv[1], '+', ' '))
             r.append((name, value))
 
     return r
@@ -229,17 +215,17 @@ def parse_multipart(fp, pdict):
     fp   : input file
     pdict: dictionary containing other parameters of conten-type header
 
-    Returns a dictionary just like parse_qs(): keys are the field names, each
-    value is a list of values for that field.  This is easy to use but not
-    much good if you are expecting megabytes to be uploaded -- in that case,
-    use the FieldStorage class instead which is much more flexible.  Note
-    that content-type is the raw, unparsed contents of the content-type
+    Returns a dictionary just like parse_qs(): keys are the field names, each 
+    value is a list of values for that field.  This is easy to use but not 
+    much good if you are expecting megabytes to be uploaded -- in that case, 
+    use the FieldStorage class instead which is much more flexible.  Note 
+    that content-type is the raw, unparsed contents of the content-type 
     header.
-
-    XXX This does not parse nested multipart parts -- use FieldStorage for
+    
+    XXX This does not parse nested multipart parts -- use FieldStorage for 
     that.
-
-    XXX This should really be subsumed by FieldStorage altogether -- no
+    
+    XXX This should really be subsumed by FieldStorage altogether -- no 
     point in having two implementations of the same parsing algorithm.
 
     """
@@ -261,8 +247,8 @@ def parse_multipart(fp, pdict):
             clength = headers.getheader('content-length')
             if clength:
                 try:
-                    bytes = int(clength)
-                except ValueError:
+                    bytes = string.atoi(clength)
+                except string.atoi_error:
                     pass
             if bytes > 0:
                 if maxlen and bytes > maxlen:
@@ -278,7 +264,7 @@ def parse_multipart(fp, pdict):
                 terminator = lastpart # End outer loop
                 break
             if line[:2] == "--":
-                terminator = line.strip()
+                terminator = string.strip(line)
                 if terminator in (nextpart, lastpart):
                     break
             lines.append(line)
@@ -294,7 +280,7 @@ def parse_multipart(fp, pdict):
                 elif line[-1:] == "\n":
                     line = line[:-1]
                 lines[-1] = line
-                data = "".join(lines)
+                data = string.joinfields(lines, "")
         line = headers['content-disposition']
         if not line:
             continue
@@ -319,15 +305,15 @@ def parse_header(line):
     Return the main content-type and a dictionary of options.
 
     """
-    plist = map(lambda x: x.strip(), line.split(';'))
-    key = plist[0].lower()
+    plist = map(string.strip, string.splitfields(line, ';'))
+    key = string.lower(plist[0])
     del plist[0]
     pdict = {}
     for p in plist:
-        i = p.find('=')
+        i = string.find(p, '=')
         if i >= 0:
-            name = p[:i].strip().lower()
-            value = p[i+1:].strip()
+            name = string.lower(string.strip(p[:i]))
+            value = string.strip(p[i+1:])
             if len(value) >= 2 and value[0] == value[-1] == '"':
                 value = value[1:-1]
             pdict[name] = value
@@ -423,8 +409,8 @@ class FieldStorage:
         environ         : environment dictionary; default: os.environ
 
         keep_blank_values: flag indicating whether blank values in
-            URL encoded forms should be treated as blank strings.
-            A true value indicates that blanks should be retained as
+            URL encoded forms should be treated as blank strings.  
+            A true value indicates that blanks should be retained as 
             blank strings.  The default false value indicates that
             blank values are to be ignored and treated as if they were
             not included.
@@ -438,7 +424,7 @@ class FieldStorage:
         self.keep_blank_values = keep_blank_values
         self.strict_parsing = strict_parsing
         if environ.has_key('REQUEST_METHOD'):
-            method = environ['REQUEST_METHOD'].upper()
+            method = string.upper(environ['REQUEST_METHOD'])
         if method == 'GET' or method == 'HEAD':
             if environ.has_key('QUERY_STRING'):
                 qs = environ['QUERY_STRING']
@@ -502,7 +488,7 @@ class FieldStorage:
         clen = -1
         if self.headers.has_key('content-length'):
             try:
-                clen = int(self.headers['content-length'])
+                clen = string.atoi(self.headers['content-length'])
             except:
                 pass
             if maxlen and clen > maxlen:
@@ -511,6 +497,7 @@ class FieldStorage:
 
         self.list = self.file = None
         self.done = 0
+        self.lines = []
         if ctype == 'application/x-www-form-urlencoded':
             self.read_urlencoded()
         elif ctype[:10] == 'multipart/':
@@ -646,6 +633,7 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             self.file.write(line)
 
     def read_lines_to_outerboundary(self):
@@ -658,8 +646,9 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             if line[:2] == "--":
-                strippedline = line.strip()
+                strippedline = string.strip(line)
                 if strippedline == next:
                     break
                 if strippedline == last:
@@ -687,8 +676,9 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             if line[:2] == "--":
-                strippedline = line.strip()
+                strippedline = string.strip(line)
                 if strippedline == next:
                     break
                 if strippedline == last:
@@ -721,7 +711,7 @@ class FieldStorage:
         """
         import tempfile
         return tempfile.TemporaryFile("w+b")
-
+        
 
 
 # Backwards Compatibility Classes
@@ -758,8 +748,8 @@ class SvFormContentDict(FormContentDict):
 
     """
     def __getitem__(self, key):
-        if len(self.dict[key]) > 1:
-            raise IndexError, 'expecting a single value'
+        if len(self.dict[key]) > 1: 
+            raise IndexError, 'expecting a single value' 
         return self.dict[key][0]
     def getlist(self, key):
         return self.dict[key]
@@ -780,15 +770,15 @@ class SvFormContentDict(FormContentDict):
 
 
 class InterpFormContentDict(SvFormContentDict):
-    """This class is present for backwards compatibility only."""
+    """This class is present for backwards compatibility only.""" 
     def __getitem__(self, key):
         v = SvFormContentDict.__getitem__(self, key)
-        if v[0] in '0123456789+-.':
-            try: return int(v)
+        if v[0] in string.digits + '+-.':
+            try: return string.atoi(v)
             except ValueError:
-                try: return float(v)
+                try: return string.atof(v)
                 except ValueError: pass
-        return v.strip()
+        return string.strip(v)
     def values(self):
         result = []
         for key in self.keys():
@@ -808,7 +798,7 @@ class InterpFormContentDict(SvFormContentDict):
 
 
 class FormContent(FormContentDict):
-    """This class is present for backwards compatibility only."""
+    """This class is present for backwards compatibility only.""" 
     def values(self, key):
         if self.dict.has_key(key) :return self.dict[key]
         else: return None
@@ -824,7 +814,7 @@ class FormContent(FormContentDict):
     def length(self, key):
         return len(self.dict[key])
     def stripped(self, key):
-        if self.dict.has_key(key): return self.dict[key][0].strip()
+        if self.dict.has_key(key): return string.strip(self.dict[key][0])
         else: return None
     def pars(self):
         return self.dict
@@ -878,11 +868,11 @@ def print_exception(type=None, value=None, tb=None, limit=None):
         type, value, tb = sys.exc_info()
     import traceback
     print
-    print "<H3>Traceback (most recent call last):</H3>"
+    print "<H3>Traceback (innermost last):</H3>"
     list = traceback.format_tb(tb, limit) + \
            traceback.format_exception_only(type, value)
     print "<PRE>%s<B>%s</B></PRE>" % (
-        escape("".join(list[:-1])),
+        escape(string.join(list[:-1], "")),
         escape(list[-1]),
         )
     del tb
@@ -896,7 +886,7 @@ def print_environ(environ=os.environ):
     print "<DL>"
     for key in keys:
         print "<DT>", escape(key), "<DD>", escape(environ[key])
-    print "</DL>"
+    print "</DL>" 
     print
 
 def print_form(form):
@@ -984,11 +974,11 @@ environment as well.  Here are some common variable names:
 
 def escape(s, quote=None):
     """Replace special characters '&', '<' and '>' by SGML entities."""
-    s = s.replace("&", "&amp;") # Must be done first!
-    s = s.replace("<", "&lt;")
-    s = s.replace(">", "&gt;")
+    s = string.replace(s, "&", "&amp;") # Must be done first!
+    s = string.replace(s, "<", "&lt;")
+    s = string.replace(s, ">", "&gt;",)
     if quote:
-        s = s.replace('"', "&quot;")
+        s = string.replace(s, '"', "&quot;")
     return s
 
 
@@ -996,5 +986,5 @@ def escape(s, quote=None):
 # ===============
 
 # Call test() when this file is run as a script (not imported as a module)
-if __name__ == '__main__':
+if __name__ == '__main__': 
     test()

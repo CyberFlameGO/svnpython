@@ -481,9 +481,8 @@ class Checker:
         if self.name_table.has_key(url):
             return self.name_table[url]
 
-        scheme = urllib.splittype(url)
-        if scheme in ('mailto', 'news', 'javascript', 'telnet'):
-            self.note(1, " Not checking %s URL" % scheme)
+        if url[:7] == 'mailto:' or url[:5] == 'news:':
+            self.note(1, " Not checking mailto/news URL")
             return None
         isint = self.inroots(url)
 
@@ -793,44 +792,11 @@ class MyHTMLParser(sgmllib.SGMLParser):
     def do_area(self, attributes):
         self.link_attr(attributes, 'href')
 
-    def do_body(self, attributes):
-        self.link_attr(attributes, 'background', 'bgsound')
-
     def do_img(self, attributes):
         self.link_attr(attributes, 'src', 'lowsrc')
 
     def do_frame(self, attributes):
-        self.link_attr(attributes, 'src', 'longdesc')
-
-    def do_iframe(self, attributes):
-        self.link_attr(attributes, 'src', 'longdesc')
-
-    def do_link(self, attributes):
-        for name, value in attributes:
-            if name == "rel":
-                parts = string.split(string.lower(value))
-                if (  parts == ["stylesheet"]
-                      or parts == ["alternate", "stylesheet"]):
-                    self.link_attr(attributes, "href")
-                    break
-
-    def do_object(self, attributes):
-        self.link_attr(attributes, 'data', 'usemap')
-
-    def do_script(self, attributes):
         self.link_attr(attributes, 'src')
-
-    def do_table(self, attributes):
-        self.link_attr(attributes, 'background')
-
-    def do_td(self, attributes):
-        self.link_attr(attributes, 'background')
-
-    def do_th(self, attributes):
-        self.link_attr(attributes, 'background')
-
-    def do_tr(self, attributes):
-        self.link_attr(attributes, 'background')
 
     def link_attr(self, attributes, *args):
         for name, value in attributes:

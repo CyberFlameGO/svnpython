@@ -62,13 +62,10 @@ These are the Boolean operations, ordered by ascending priority:
 \indexii{Boolean}{operations}
 
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
-  \lineiii{\var{x} or \var{y}}
-          {if \var{x} is false, then \var{y}, else \var{x}}{(1)}
-  \lineiii{\var{x} and \var{y}}
-          {if \var{x} is false, then \var{x}, else \var{y}}{(1)}
+  \lineiii{\var{x} or \var{y}}{if \var{x} is false, then \var{y}, else \var{x}}{(1)}
+  \lineiii{\var{x} and \var{y}}{if \var{x} is false, then \var{x}, else \var{y}}{(1)}
   \hline
-  \lineiii{not \var{x}}
-          {if \var{x} is false, then \code{1}, else \code{0}}{(2)}
+  \lineiii{not \var{x}}{if \var{x} is false, then \code{1}, else \code{0}}{(2)}
 \end{tableiii}
 \opindex{and}
 \opindex{or}
@@ -313,57 +310,6 @@ division by \code{pow(2, \var{n})} without overflow check.
 \end{description}
 
 
-\subsection{Iterator Types \label{typeiter}}
-
-\versionadded{2.2}
-\index{iterator protocol}
-\index{protocol!iterator}
-\index{sequence!iteration}
-\index{container!iteration over}
-
-Python supports a concept of iteration over containers.  This is
-implemented using two distinct methods; these are used to allow
-user-defined classes to support iteration.  Sequences, described below
-in more detail, always support the iteration methods.
-
-One method needs to be defined for container objects to provide
-iteration support:
-
-\begin{methoddesc}[container]{__iter__}{}
-  Return an interator object.  The object is required to support the
-  iterator protocol described below.  If a container supports
-  different types of iteration, additional methods can be provided to
-  specifically request iterators for those iteration types.  (An
-  example of an object supporting multiple forms of iteration would be
-  a tree structure which supports both breadth-first and depth-first
-  traversal.)  This method corresponds to the \member{tp_iter} slot of
-  the type structure for Python objects in the Python/C API.
-\end{methoddesc}
-
-The iterator objects themselves are required to support the following
-two methods, which together form the \dfn{iterator protocol}:
-
-\begin{methoddesc}[iterator]{__iter__}{}
-  Return the iterator object itself.  This is required to allow both
-  containers and iterators to be used with the \keyword{for} and
-  \keyword{in} statements.  This method corresponds to the
-  \member{tp_iter} slot of the type structure for Python objects in
-  the Python/C API.
-\end{methoddesc}
-
-\begin{methoddesc}[iterator]{next}{}
-  Return the next item from the container.  If there are no further
-  items, raise the \exception{StopIteration} exception.  This method
-  corresponds to the \member{tp_iternext} slot of the type structure
-  for Python objects in the Python/C API.
-\end{methoddesc}
-
-Python defines several iterator objects to support iteration over
-general and specific sequence types, dictionaries, and other more
-specialized forms.  The specific types are not important beyond their
-implementation of the iterator protocol.
-
-
 \subsection{Sequence Types \label{typesseq}}
 
 There are six sequence types: strings, Unicode strings, lists,
@@ -479,7 +425,6 @@ error handling scheme.  The default for \var{errors} is
 \code{'strict'}, meaning that encoding errors raise a
 \exception{ValueError}.  Other possible values are \code{'ignore'} and
 \code{'replace'}.
-\versionadded{2.0}
 \end{methoddesc}
 
 \begin{methoddesc}[string]{endswith}{suffix\optional{, start\optional{, end}}}
@@ -645,51 +590,43 @@ Return a copy of the string converted to uppercase.
 \index{printf-style formatting}
 \index{sprintf-style formatting}
 
-String and Unicode objects have one unique built-in operation: the
-\code{\%} operator (modulo).  Given \code{\var{format} \%
-\var{values}} (where \var{format} is a string or Unicode object),
-\code{\%} conversion specifications in \var{format} are replaced with
-zero or more elements of \var{values}.  The effect is similar to the
-using \cfunction{sprintf()} in the C language.  If \var{format} is a
-Unicode object, or if any of the objects being converted using the
-\code{\%s} conversion are Unicode objects, the result will be a
-Unicode object as well.
+String objects have one unique built-in operation: the \code{\%}
+operator (modulo) with a string left argument interprets this string
+as a C \cfunction{sprintf()} format string to be applied to the
+right argument, and returns the string resulting from this formatting
+operation.
 
-If \var{format} requires a single argument, \var{values} may be a
-single non-tuple object. \footnote{A tuple object in this case should
-  be a singleton.}  Otherwise, \var{values} must be a tuple with
-exactly the number of items specified by the format string, or a
-single mapping object (for example, a dictionary).
+The right argument should be a tuple with one item for each argument
+required by the format string; if the string requires a single
+argument, the right argument may also be a single non-tuple
+object.\footnote{A tuple object in this case should be a singleton.
+}  The following format characters are understood:
+\code{\%}, \code{c}, \code{s}, \code{i}, \code{d}, \code{u}, \code{o},
+\code{x}, \code{X}, \code{e}, \code{E}, \code{f}, \code{g}, \code{G}. 
+Width and precision may be a \code{*} to specify that an integer argument
+specifies the actual width or precision.  The flag characters
+\code{-}, \code{+}, blank, \code{\#} and \code{0} are understood.  The 
+size specifiers \code{h}, \code{l} or \code{L} may be present but are
+ignored.  The \code{\%s} conversion takes any Python object and
+converts it to a string using \code{str()} before formatting it.  The
+ANSI features \code{\%p} and \code{\%n} are not supported.  Since
+Python strings have an explicit length, \code{\%s} conversions don't
+assume that \code{'\e0'} is the end of the string.
 
-A conversion specifier contains two or more characters and has the
-following components, which must occur in this order:
-
-\begin{enumerate}
-  \item  The \character{\%} character, which marks the start of the
-         specifier.
-  \item  Mapping key value (optional), consisting of an identifier in
-         parentheses (for example, \code{(somename)}).
-  \item  Conversion flags (optional), which affect the result of some
-         conversion types.
-  \item  Minimum field width (optional).  If specified as an
-         \character{*} (asterisk), the actual width is read from the
-         next element of the tuple in \var{values}, and the object to
-         convert comes after the minimum field width and optional
-         precision.
-  \item  Precision (optional), given as a \character{.} (dot) followed
-         by the precision.  If specified as \character{*} (an
-         asterisk), the actual width is read from the next element of
-         the tuple in \var{values}, and the value to convert comes after
-         the precision.
-  \item  Length modifier (optional).
-  \item  Conversion type.
-\end{enumerate}
+For safety reasons, floating point precisions are clipped to 50;
+\code{\%f} conversions for numbers whose absolute value is over 1e25
+are replaced by \code{\%g} conversions.\footnote{
+  These numbers are fairly arbitrary.  They are intended to
+  avoid printing endless strings of meaningless digits without hampering
+  correct use and without having to know the exact precision of floating
+  point values on a particular machine.
+}  All other errors raise exceptions.
 
 If the right argument is a dictionary (or any kind of mapping), then
-the formats in the string \emph{must} have a parenthesized key into
-that dictionary inserted immediately after the \character{\%}
-character, and each format formats the corresponding entry from the
-mapping.  For example:
+the formats in the string must have a parenthesized key into that
+dictionary inserted immediately after the \character{\%} character,
+and each format formats the corresponding entry from the mapping.
+For example:
 
 \begin{verbatim}
 >>> count = 2
@@ -700,66 +637,6 @@ Python has 002 quote types.
 
 In this case no \code{*} specifiers may occur in a format (since they
 require a sequential parameter list).
-
-The conversion flag characters are:
-
-\begin{tableii}{c|l}{character}{Flag}{Meaning}
-  \lineii{\#}{The value conversion will use the ``alternate form''
-              (where defined below).}
-  \lineii{0}{The conversion will be zero padded.}
-  \lineii{-}{The converted value is left adjusted (overrides
-             \character{-}).}
-  \lineii{{~}}{(a space) A blank should be left before a positive number
-             (or empty string) produced by a signed conversion.}
-  \lineii{+}{A sign character (\character{+} or \character{-}) will
-             precede the conversion (overrides a "space" flag).}
-\end{tableii}
-
-The length modifier may be \code{h}, \code{l}, and \code{L} may be
-present, but are ignored as they are not necessary for Python.
-
-The conversion types are:
-
-\begin{tableii}{c|l}{character}{Conversion}{Meaning}
-  \lineii{d}{Signed integer decimal.}
-  \lineii{i}{Signed integer decimal.}
-  \lineii{o}{Unsigned octal.}
-  \lineii{u}{Unsigned decimal.}
-  \lineii{x}{Unsigned hexidecimal (lowercase).}
-  \lineii{X}{Unsigned hexidecimal (uppercase).}
-  \lineii{e}{Floating point exponential format (lowercase).}
-  \lineii{E}{Floating point exponential format (uppercase).}
-  \lineii{f}{Floating point decimal format.}
-  \lineii{F}{Floating point decimal format.}
-  \lineii{g}{Same as \character{e} if exponent is greater than -4 or
-             less than precision, \character{f} otherwise.}
-  \lineii{G}{Same as \character{E} if exponent is greater than -4 or
-             less than precision, \character{F} otherwise.}
-  \lineii{c}{Single character (accepts integer or single character
-             string).}
-  \lineii{r}{String (converts any python object using
-             \function{repr()}).}
-  \lineii{s}{String (converts any python object using
-             \function{str()}).}
-  \lineii{\%}{No argument is converted, results in a \character{\%}
-              character in the result.  (The complete specification is
-              \code{\%\%}.)}
-\end{tableii}
-
-% XXX Examples?
-
-
-Since Python strings have an explicit length, \code{\%s} conversions
-do not assume that \code{'\e0'} is the end of the string.
-
-For safety reasons, floating point precisions are clipped to 50;
-\code{\%f} conversions for numbers whose absolute value is over 1e25
-are replaced by \code{\%g} conversions.\footnote{
-  These numbers are fairly arbitrary.  They are intended to
-  avoid printing endless strings of meaningless digits without hampering
-  correct use and without having to know the exact precision of floating
-  point values on a particular machine.
-}  All other errors raise exceptions.
 
 Additional string operations are defined in standard module
 \refmodule{string} and in built-in module \refmodule{re}.
@@ -921,40 +798,22 @@ arbitrary objects):
   \lineiii{\var{a}.has_key(\var{k})}
           {\code{1} if \var{a} has a key \var{k}, else \code{0}}
           {}
-  \lineiii{\var{k} \code{in} \var{a}}
-          {Equivalent to \var{a}.has_key(\var{k})}
-          {(2)}
-  \lineiii{\var{k} not in \var{a}}
-          {Equivalent to \code{not} \var{a}.has_key(\var{k})}
-          {(2)}
   \lineiii{\var{a}.items()}
           {a copy of \var{a}'s list of (\var{key}, \var{value}) pairs}
-          {(3)}
-  \lineiii{\var{a}.keys()}{a copy of \var{a}'s list of keys}{(3)}
+          {(2)}
+  \lineiii{\var{a}.keys()}{a copy of \var{a}'s list of keys}{(2)}
   \lineiii{\var{a}.update(\var{b})}
           {\code{for k in \var{b}.keys(): \var{a}[k] = \var{b}[k]}}
-          {(4)}
-  \lineiii{\var{a}.values()}{a copy of \var{a}'s list of values}{(3)}
+          {(3)}
+  \lineiii{\var{a}.values()}{a copy of \var{a}'s list of values}{(2)}
   \lineiii{\var{a}.get(\var{k}\optional{, \var{x}})}
-          {\code{\var{a}[\var{k}]} if \code{\var{k} in \var{a}},
+          {\code{\var{a}[\var{k}]} if \code{\var{a}.has_key(\var{k})},
            else \var{x}}
-          {(5)}
+          {(4)}
   \lineiii{\var{a}.setdefault(\var{k}\optional{, \var{x}})}
-          {\code{\var{a}[\var{k}]} if \code{\var{k} in \var{a}},
+          {\code{\var{a}[\var{k}]} if \code{\var{a}.has_key(\var{k})},
            else \var{x} (also setting it)}
-          {(6)}
-  \lineiii{\var{a}.popitem()}
-          {remove and return an arbitrary (\var{key}, \var{value}) pair}
-          {(7)}
-  \lineiii{\var{a}.iteritems()}
-          {return an iterator over (\var{key}, \var{value}) pairs}
-          {(2)}
-  \lineiii{\var{a}.iterkeys()}
-          {return an iterator over the mapping's keys}
-          {(2)}
-  \lineiii{\var{a}.itervalues()}
-          {return an iterator over the mapping's values}
-          {(2)}
+          {(5)}
 \end{tableiii}
 
 \noindent
@@ -963,27 +822,22 @@ Notes:
 \item[(1)] Raises a \exception{KeyError} exception if \var{k} is not
 in the map.
 
-\item[(2)] \versionadded{2.2}
-
-\item[(3)] Keys and values are listed in random order.  If
+\item[(2)] Keys and values are listed in random order.  If
 \method{keys()} and \method{values()} are called with no intervening
 modifications to the dictionary, the two lists will directly
 correspond.  This allows the creation of \code{(\var{value},
-\var{key})} pairs using \function{zip()}: \samp{pairs =
-zip(\var{a}.values(), \var{a}.keys())}.
+\var{key})} pairs using \function{map()}: \samp{pairs = map(None,
+\var{a}.values(), \var{a}.keys())}.
 
-\item[(4)] \var{b} must be of the same type as \var{a}.
+\item[(3)] \var{b} must be of the same type as \var{a}.
 
-\item[(5)] Never raises an exception if \var{k} is not in the map,
+\item[(4)] Never raises an exception if \var{k} is not in the map,
 instead it returns \var{x}.  \var{x} is optional; when \var{x} is not
 provided and \var{k} is not in the map, \code{None} is returned.
 
-\item[(6)] \function{setdefault()} is like \function{get()}, except
+\item[(5)] \function{setdefault()} is like \function{get()}, except
 that if \var{k} is missing, \var{x} is both returned and inserted into
 the dictionary as the value of \var{k}.
-
-\item[(7)] \function{popitem()} is useful to destructively iterate
-over a dictionary, as often used in set algorithms.
 \end{description}
 
 
@@ -1043,23 +897,6 @@ the dictionary used as the function's global namespace (this is the
 same as \code{\var{m}.__dict__} where \var{m} is the module in which
 the function \var{f} was defined).
 
-Function objects also support getting and setting arbitrary
-attributes, which can be used to, e.g. attach metadata to functions.
-Regular attribute dot-notation is used to get and set such
-attributes. \emph{Note that the current implementation only supports
-function attributes on functions written in Python.  Function
-attributes on built-ins may be supported in the future.}
-
-Functions have another special attribute \code{\var{f}.__dict__}
-(a.k.a. \code{\var{f}.func_dict}) which contains the namespace used to
-support function attributes.  \code{__dict__} can be accessed
-directly, set to a dictionary object, or \code{None}.  It can also be
-deleted (but the following two lines are equivalent):
-
-\begin{verbatim}
-del func.__dict__
-func.__dict__ = None
-\end{verbatim}
 
 \subsubsection{Methods \label{typesmethods}}
 \obindex{method}
@@ -1076,31 +913,6 @@ implementing the method.  Calling \code{\var{m}(\var{arg-1},
 \var{arg-2}, \textrm{\ldots}, \var{arg-n})} is completely equivalent to
 calling \code{\var{m}.im_func(\var{m}.im_self, \var{arg-1},
 \var{arg-2}, \textrm{\ldots}, \var{arg-n})}.
-
-Class instance methods are either \emph{bound} or \emph{unbound},
-referring to whether the method was accessed through an instance or a
-class, respectively.  When a method is unbound, its \code{im_self}
-attribute will be \code{None} and if called, an explicit \code{self}
-object must be passed as the first argument.  In this case,
-\code{self} must be an instance of the unbound method's class (or a
-subclass of that class), otherwise a \code{TypeError} is raised.
-
-Like function objects, methods objects support getting
-arbitrary attributes.  However, since method attributes are actually
-stored on the underlying function object (i.e. \code{meth.im_func}),
-setting method attributes on either bound or unbound methods is
-disallowed.  Attempting to set a method attribute results in a
-\code{TypeError} being raised.  In order to set a method attribute,
-you need to explicitly set it on the underlying function object:
-
-\begin{verbatim}
-class C:
-    def method(self):
-        pass
-
-c = C()
-c.method.im_func.whoami = 'my name is c'
-\end{verbatim}
 
 See the \citetitle[../ref/ref.html]{Python Reference Manual} for more
 information.
@@ -1159,7 +971,6 @@ special operations.  There is exactly one ellipsis object, named
 
 It is written as \code{Ellipsis}.
 
-
 \subsubsection{File Objects\obindex{file}
                \label{bltin-file-objects}}
 
@@ -1183,8 +994,8 @@ Files have the following methods:
 
 \begin{methoddesc}[file]{close}{}
   Close the file.  A closed file cannot be read or written anymore.
-  Any operation which requires that the file be open will raise a
-  \exception{ValueError} after the file has been closed.  Calling
+  Any operation which requires that the file be open will raise an
+  \exception{IOError} after the file has been closed.  Calling
   \method{close()} more than once is allowed.
 \end{methoddesc}
 
@@ -1253,24 +1064,12 @@ Files have the following methods:
   implemented, or cannot be implemented efficiently.
 \end{methoddesc}
 
-\begin{methoddesc}[file]{xreadlines}{}
-  Equivalent to
-  \function{xreadlines.xreadlines(\var{file})}.\refstmodindex{xreadlines}
-  (See the \refmodule{xreadlines} module for more information.)
-  \versionadded{2.1}
-\end{methoddesc}
-
 \begin{methoddesc}[file]{seek}{offset\optional{, whence}}
   Set the file's current position, like \code{stdio}'s \cfunction{fseek()}.
   The \var{whence} argument is optional and defaults to \code{0}
   (absolute file positioning); other values are \code{1} (seek
   relative to the current position) and \code{2} (seek relative to the
-  file's end).  There is no return value.  Note that if the file is
-  opened for appending (mode \code{'a'} or \code{'a+'}), any
-  \method{seek()} operations will be undone at the next write.  If the
-  file is only opened for writing in append mode (mode \code{'a'}),
-  this method is essentially a no-op, but it remains useful for files
-  opened in append mode with reading enabled (mode \code{'a+'}).
+  file's end).  There is no return value.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{tell}{}
@@ -1287,15 +1086,15 @@ Files have the following methods:
 \end{methoddesc}
 
 \begin{methoddesc}[file]{write}{str}
-  Write a string to the file.  There is no return value.  Note: Due to
-  buffering, the string may not actually show up in the file until
-  the \method{flush()} or \method{close()} method is called.
+Write a string to the file.  There is no return value.  Note: Due to
+buffering, the string may not actually show up in the file until
+the \method{flush()} or \method{close()} method is called.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{writelines}{list}
-  Write a list of strings to the file.  There is no return value.
-  (The name is intended to match \method{readlines()};
-  \method{writelines()} does not add line separators.)
+Write a list of strings to the file.  There is no return value.
+(The name is intended to match \method{readlines()};
+\method{writelines()} does not add line separators.)
 \end{methoddesc}
 
 
@@ -1337,7 +1136,6 @@ implemented in C will have to provide a writable
 \keyword{print} to keep track of its internal state.
 \end{memberdesc}
 
-
 \subsubsection{Internal Objects \label{typesinternal}}
 
 See the \citetitle[../ref/ref.html]{Python Reference Manual} for this
@@ -1350,28 +1148,26 @@ slice objects.
 The implementation adds a few special read-only attributes to several
 object types, where they are relevant:
 
-\begin{memberdesc}[object]{__dict__}
-A dictionary or other mapping object used to store an
+\begin{memberdescni}{__dict__}
+A dictionary of some sort used to store an
 object's (writable) attributes.
-\end{memberdesc}
+\end{memberdescni}
 
-\begin{memberdesc}[object]{__methods__}
+\begin{memberdescni}{__methods__}
 List of the methods of many built-in object types,
 e.g., \code{[].__methods__} yields
 \code{['append', 'count', 'index', 'insert', 'pop', 'remove',
-'reverse', 'sort']}.  This usually does not need to be explicitly
-provided by the object.
-\end{memberdesc}
+'reverse', 'sort']}.
+\end{memberdescni}
 
-\begin{memberdesc}[object]{__members__}
-Similar to \member{__methods__}, but lists data attributes.  This
-usually does not need to be explicitly provided by the object.
-\end{memberdesc}
+\begin{memberdescni}{__members__}
+Similar to \member{__methods__}, but lists data attributes.
+\end{memberdescni}
 
-\begin{memberdesc}[instance]{__class__}
+\begin{memberdescni}{__class__}
 The class to which a class instance belongs.
-\end{memberdesc}
+\end{memberdescni}
 
-\begin{memberdesc}[class]{__bases__}
+\begin{memberdescni}{__bases__}
 The tuple of base classes of a class object.
-\end{memberdesc}
+\end{memberdescni}

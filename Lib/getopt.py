@@ -17,15 +17,16 @@ option involved with the exception.
 # Gerrit Holl <gerrit@nl.linux.org> moved the string-based exceptions
 # to class-based exceptions.
 
-__all__ = ["GetoptError","error","getopt"]
-
 class GetoptError(Exception):
     opt = ''
     msg = ''
-    def __init__(self, msg, opt):
-        self.msg = msg
-        self.opt = opt
-        Exception.__init__(self, msg, opt)
+    def __init__(self, *args):
+        self.args = args
+        if len(args) == 1:
+            self.msg = args[0]
+        elif len(args) == 2:
+            self.msg = args[0]
+            self.opt = args[1]
 
     def __str__(self):
         return self.msg

@@ -7,7 +7,7 @@ This code is intended to be read, not executed.  However, it does work
 
 """
 
-import sys, imp, __builtin__
+import sys, imp, __builtin__, string
 
 
 # Replacement for __import__()
@@ -30,7 +30,7 @@ def determine_parent(globals):
         assert globals is parent.__dict__
         return parent
     if '.' in pname:
-        i = pname.rfind('.')
+        i = string.rfind(pname, '.')
         pname = pname[:i]
         parent = sys.modules[pname]
         assert parent.__name__ == pname
@@ -39,7 +39,7 @@ def determine_parent(globals):
 
 def find_head_package(parent, name):
     if '.' in name:
-        i = name.find('.')
+        i = string.find(name, '.')
         head = name[:i]
         tail = name[i+1:]
     else:
@@ -61,7 +61,7 @@ def find_head_package(parent, name):
 def load_tail(q, tail):
     m = q
     while tail:
-        i = tail.find('.')
+        i = string.find(tail, '.')
         if i < 0: i = len(tail)
         head, tail = tail[:i], tail[i+1:]
         mname = "%s.%s" % (m.__name__, head)
@@ -111,7 +111,7 @@ def reload_hook(module):
     name = module.__name__
     if '.' not in name:
         return import_module(name, name, None)
-    i = name.rfind('.')
+    i = string.rfind(name, '.')
     pname = name[:i]
     parent = sys.modules[pname]
     return import_module(name[i+1:], name, parent)

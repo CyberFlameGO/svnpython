@@ -17,7 +17,7 @@
 # only withs with Python 1.5, alpha 3 or newer.)
 
 # Create a file Setup.in for your extension.  This file follows the
-# format of the Modules/Setup.dist file; see the instructions there.
+# format of the Modules/Setup.in file; see the instructions there.
 # For a simple module called "spam" on file "spammodule.c", it can
 # contain a single line:
 #   spam spammodule.c
@@ -95,8 +95,7 @@ TARGET=		python
 PYTHON=		python
 
 # Add more -I and -D options here
-CFLAGS=		$(OPT)
-CPPFLAGS=	-I$(INCLUDEPY) -I$(EXECINCLUDEPY) $(DEFS)
+CFLAGS=		$(OPT) -I$(INCLUDEPY) -I$(EXECINCLUDEPY) $(DEFS)
 
 # These two variables can be set in Setup to merge extensions.
 # See example[23].
@@ -129,7 +128,7 @@ SO=		@SO@
 LDSHARED=	@LDSHARED@
 CCSHARED=	@CCSHARED@
 LINKFORSHARED=	@LINKFORSHARED@
-CXX=		@CXX@
+#@SET_CCC@
 
 # Install prefix for architecture-independent files
 prefix=		/usr/local
@@ -229,7 +228,7 @@ do-it-again:
 
 # Make config.o from the config.c created by makesetup
 config.o:	config.c
-		$(CC) $(CFLAGS) $(CPPFLAGS) -c config.c
+		$(CC) $(CFLAGS) -c config.c
 
 # Setup is copied from Setup.in *only* if it doesn't yet exist
 Setup:
@@ -252,7 +251,7 @@ sedscript:	$(MAKEFILE)
 	 -e '2s%.*%# $H%p' \
 	 -e '/^VERSION=/s/^VERSION=[ 	]*\(.*\)/s%@VERSION[@]%\1%/p' \
 	 -e '/^CC=/s/^CC=[ 	]*\(.*\)/s%@CC[@]%\1%/p' \
-	 -e '/^CXX=/s/^CXX=[ 	]*\(.*\)/s%@CXX[@]%\1%/p' \
+	 -e '/^CCC=/s/^CCC=[ 	]*\(.*\)/s%#@SET_CCC[@]%CCC=\1%/p' \
 	 -e '/^LINKCC=/s/^LINKCC=[ 	]*\(.*\)/s%@LINKCC[@]%\1%/p' \
 	 -e '/^OPT=/s/^OPT=[ 	]*\(.*\)/s%@OPT[@]%\1%/p' \
 	 -e '/^LDFLAGS=/s/^LDFLAGS=[ 	]*\(.*\)/s%@LDFLAGS[@]%\1%/p' \
@@ -271,6 +270,7 @@ sedscript:	$(MAKEFILE)
 	 -e '/^$P=/s/^$P=\(.*\)/s%^$P=.*%$P=\1%/p' \
 	 -e '/^$E=/s/^$E=\(.*\)/s%^$E=.*%$E=\1%/p' \
 	 $(MAKEFILE) >sedscript
+	echo "/^#@SET_CCC@/d" >>sedscript
 	echo "/^installdir=/s%=.*%=	$(installdir)%" >>sedscript
 	echo "/^exec_installdir=/s%=.*%=$(exec_installdir)%" >>sedscript
 	echo "/^srcdir=/s%=.*%=		$(srcdir)%" >>sedscript

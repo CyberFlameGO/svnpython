@@ -19,11 +19,12 @@ this, see the standard library modules
 operations out of which you can build your own
 \function{__import__()} function.
 
-For example, the statement \samp{import spam} results in the
+For example, the statement `\code{import} \code{spam}' results in the
 following call:
 \code{__import__('spam',} \code{globals(),} \code{locals(), [])};
-the statement \samp{from spam.ham import eggs} results
-in \samp{__import__('spam.ham', globals(), locals(), ['eggs'])}.
+the statement \code{from} \code{spam.ham import} \code{eggs} results
+in \code{__import__('spam.ham',} \code{globals(),} \code{locals(),}
+\code{['eggs'])}.
 Note that even though \code{locals()} and \code{['eggs']} are passed
 in as arguments, the \function{__import__()} function does not set the
 local variable named \code{eggs}; this is done by subsequent code that
@@ -234,13 +235,12 @@ class instances are callable if they have a \method{__call__()} method.
 \end{funcdesc}
 
 \begin{funcdesc}{filter}{function, list}
-  Construct a list from those elements of \var{list} for which
-  \var{function} returns true.  \var{list} may be either a sequence, a
-  container which supports iteration, or an iterator,  If \var{list}
-  is a string or a tuple, the result also has that type; otherwise it
-  is always a list.  If \var{function} is \code{None}, the identity
-  function is assumed, i.e.\ all elements of \var{list} that are false
-  (zero or empty) are removed.
+Construct a list from those elements of \var{list} for which
+\var{function} returns true.  If \var{list} is a string or a tuple,
+the result also has that type; otherwise it is always a list.  If
+\var{function} is \code{None}, the identity function is assumed,
+i.e.\ all elements of \var{list} that are false (zero or empty) are
+removed.
 \end{funcdesc}
 
 \begin{funcdesc}{float}{x}
@@ -331,10 +331,8 @@ module from which it is called).
   representable as a Python integer, possibly embedded in whitespace;
   this behaves identical to \code{string.atoi(\var{x}\optional{,
   \var{radix}})}.  The \var{radix} parameter gives the base for the
-  conversion and may be any integer in the range [2, 36], or zero.  If
-  \var{radix} is zero, the proper radix is guessed based on the
-  contents of string; the interpretation is the same as for integer
-  literals.  If \var{radix} is specified and \var{x} is not a string,
+  conversion and may be any integer in the range [2, 36].  If
+  \var{radix} is specified and \var{x} is not a string,
   \exception{TypeError} is raised.
   Otherwise, the argument may be a plain or
   long integer or a floating point number.  Conversion of floating
@@ -379,13 +377,12 @@ raised.
 \end{funcdesc}
 
 \begin{funcdesc}{list}{sequence}
-  Return a list whose items are the same and in the same order as
-  \var{sequence}'s items.  \var{sequence} may be either a sequence, a
-  container that supports iteration, or an iterator object.  If
-  \var{sequence} is already a list, a copy is made and returned,
-  similar to \code{\var{sequence}[:]}.  For instance,
-  \code{list('abc')} returns \code{['a', 'b', 'c']} and \code{list(
-  (1, 2, 3) )} returns \code{[1, 2, 3]}.
+Return a list whose items are the same and in the same order as
+\var{sequence}'s items.  If \var{sequence} is already a list,
+a copy is made and returned, similar to \code{\var{sequence}[:]}.  
+For instance, \code{list('abc')} returns
+returns \code{['a', 'b', 'c']} and \code{list( (1, 2, 3) )} returns
+\code{[1, 2, 3]}.
 \end{funcdesc}
 
 \begin{funcdesc}{locals}{}
@@ -395,13 +392,11 @@ modified; changes may not affect the values of local variables used by
 the interpreter.
 \end{funcdesc}
 
-\begin{funcdesc}{long}{x\optional{, radix}}
+\begin{funcdesc}{long}{x}
   Convert a string or number to a long integer.  If the argument is a
-  string, it must contain a possibly signed number of
+  string, it must contain a possibly signed decimal number of
   arbitrary size, possibly embedded in whitespace;
-  this behaves identical to \code{string.atol(\var{x})}.  The
-  \var{radix} argument is interpreted in the same way as for
-  \function{int()}, and may only be given when \var{x} is a string.
+  this behaves identical to \code{string.atol(\var{x})}.
   Otherwise, the argument may be a plain or
   long integer or a floating point number, and a long integer with
   the same value is returned.    Conversion of floating
@@ -688,18 +683,10 @@ strings.  The argument must be in the range [0..65535], inclusive.
 \end{funcdesc}
 
 \begin{funcdesc}{unicode}{string\optional{, encoding\optional{, errors}}}
-Create a Unicode string from an 8-bit string \var{string} using the
-codec for \var{encoding}.  The \var{encoding} parameter is a string
-giving the name of an encoding.  Error handling is done according to
-\var{errors}; this specifies the treatment of characters which are
-invalid in the input encoding.  If \var{errors} is \code{'strict'}
-(the default), a \exception{ValueError} is raised on errors, while a
-value of \code{'ignore'} causes errors to be silently ignored, and a
-value of \code{'replace'} causes the official Unicode replacement
-character, \code{U+FFFD}, to be used to replace input characters which
-cannot be decoded.  The default behavior is to decode UTF-8 in strict
-mode, meaning that encoding errors raise \exception{ValueError}.  See
-also the \refmodule{codecs} module.
+Decodes \var{string} using the codec for \var{encoding}.  Error
+handling is done according to \var{errors}.  The default behavior is
+to decode UTF-8 in strict mode, meaning that encoding errors raise
+\exception{ValueError}.  See also the \refmodule{codecs} module.
 \versionadded{2.0}
 \end{funcdesc}
 

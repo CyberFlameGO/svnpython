@@ -9,40 +9,17 @@
 #include <sys/types.h>		/* For size_t */
 #endif
 
+#define ROUNDUP(n, PyTryBlock) \
+	((((n)+(PyTryBlock)-1)/(PyTryBlock))*(PyTryBlock))
+
 static int
 roundupsize(int n)
 {
-	unsigned int nbits = 0;
-	unsigned int n2 = (unsigned int)n >> 5;
-
-	/* Round up: 
-	 * If n <       256, to a multiple of        8.
-	 * If n <      2048, to a multiple of       64.
-	 * If n <     16384, to a multiple of      512.
-	 * If n <    131072, to a multiple of     4096.
-	 * If n <   1048576, to a multiple of    32768.
-	 * If n <   8388608, to a multiple of   262144.
-	 * If n <  67108864, to a multiple of  2097152.
-	 * If n < 536870912, to a multiple of 16777216.
-	 * ...
-	 * If n < 2**(5+3*i), to a multiple of 2**(3*i).
-	 *
-	 * This over-allocates proportional to the list size, making room
-	 * for additional growth.  The over-allocation is mild, but is
-	 * enough to give linear-time amortized behavior over a long
-	 * sequence of appends() in the presence of a poorly-performing
-	 * system realloc() (which is a reality, e.g., across all flavors
-	 * of Windows, with Win9x behavior being particularly bad -- and
-	 * we've still got address space fragmentation problems on Win9x
-	 * even with this scheme, although it requires much longer lists to
-	 * provoke them than it used to).
-	 */
-	do {
-		n2 >>= 3;
-		nbits += 3;
-	} while (n2);
-	return ((n >> nbits) + 1) << nbits;
- }
+	if (n < 500)
+		return ROUNDUP(n, 10);
+	else
+		return ROUNDUP(n, 100);
+}
 
 #define NRESIZE(var, type, nitems) PyMem_RESIZE(var, type, roundupsize(nitems))
 
@@ -269,6 +246,19 @@ list_repr(PyListObject *v)
 }
 
 static int
+list_compare(PyListObject *v, PyListObject *w)
+{
+	int i;
+	
+	for (i = 0; i < v->ob_size && i < w->ob_size; i++) {
+		int cmp = PyObject_Compare(v->ob_item[i], w->ob_item[i]);
+		if (cmp != 0)
+			return cmp;
+	}
+	return v->ob_size - w->ob_size;
+}
+
+static int
 list_length(PyListObject *a)
 {
 	return a->ob_size;
@@ -279,14 +269,13 @@ list_length(PyListObject *a)
 static int
 list_contains(PyListObject *a, PyObject *el)
 {
-	int i;
+	int i, cmp;
 
 	for (i = 0; i < a->ob_size; ++i) {
-		int cmp = PyObject_RichCompareBool(el, PyList_GET_ITEM(a, i),
-						   Py_EQ);
-		if (cmp > 0)
+		cmp = PyObject_Compare(el, PyList_GET_ITEM(a, i));
+		if (cmp == 0)
 			return 1;
-		else if (cmp < 0)
+		if (PyErr_Occurred())
 			return -1;
 	}
 	return 0;
@@ -576,11 +565,25 @@ listinsert(PyListObject *self, PyObject *args)
 	return ins(self, i, v);
 }
 
+/* Define NO_STRICT_LIST_APPEND to enable multi-argument append() */
+
+#ifndef NO_STRICT_LIST_APPEND
+#define PyArg_ParseTuple_Compat1 PyArg_ParseTuple
+#else
+#define PyArg_ParseTuple_Compat1(args, format, ret) \
+( \
+	PyTuple_GET_SIZE(args) > 1 ? (*ret = args, 1) : \
+	PyTuple_GET_SIZE(args) == 1 ? (*ret = PyTuple_GET_ITEM(args, 0), 1) : \
+	PyArg_ParseTuple(args, format, ret) \
+)
+#endif
+
+
 static PyObject *
 listappend(PyListObject *self, PyObject *args)
 {
 	PyObject *v;
-	if (!PyArg_ParseTuple(args, "O:append", &v))
+	if (!PyArg_ParseTuple_Compat1(args, "O:append", &v))
 		return NULL;
 	return ins(self, (int) self->ob_size, v);
 }
@@ -593,11 +596,9 @@ listextend_internal(PyListObject *self, PyObject *b)
 	int blen;
 	register int i;
 
-	if (PyObject_Size(b) == 0) {
+	if (PyObject_Size(b) == 0)
 		/* short circuit when b is empty */
-		Py_DECREF(b);
 		return 0;
-	}
 
 	if (self == (PyListObject*)b) {
 		/* as in list_ass_slice() we must special case the
@@ -644,7 +645,7 @@ listextend_internal(PyListObject *self, PyObject *b)
 static PyObject *
 list_inplace_concat(PyListObject *self, PyObject *other)
 {
-	other = PySequence_Fast(other, "argument to += must be iterable");
+	other = PySequence_Fast(other, "argument to += must be a sequence");
 	if (!other)
 		return NULL;
 
@@ -664,7 +665,7 @@ listextend(PyListObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O:extend", &b))
 		return NULL;
 
-	b = PySequence_Fast(b, "list.extend() argument must be iterable");
+	b = PySequence_Fast(b, "list.extend() argument must be a sequence");
 	if (!b)
 		return NULL;
 
@@ -722,16 +723,10 @@ docompare(PyObject *x, PyObject *y, PyObject *compare)
 	int i;
 
 	if (compare == NULL) {
-		/* NOTE: we rely on the fact here that the sorting algorithm
-		   only ever checks whether k<0, i.e., whether x<y.  So we
-		   invoke the rich comparison function with Py_LT ('<'), and
-		   return -1 when it returns true and 0 when it returns
-		   false. */
-		i = PyObject_RichCompareBool(x, y, Py_LT);
-		if (i < 0)
-			return CMPERROR;
-		else
-			return -i;
+		i = PyObject_Compare(x, y);
+		if (i && PyErr_Occurred())
+			i = CMPERROR;
+		return i;
 	}
 
 	args = Py_BuildValue("(OO)", x, y);
@@ -1347,13 +1342,12 @@ listindex(PyListObject *self, PyObject *args)
 	int i;
 	PyObject *v;
 
-	if (!PyArg_ParseTuple(args, "O:index", &v))
+	if (!PyArg_ParseTuple_Compat1(args, "O:index", &v))
 		return NULL;
 	for (i = 0; i < self->ob_size; i++) {
-		int cmp = PyObject_RichCompareBool(self->ob_item[i], v, Py_EQ);
-		if (cmp > 0)
+		if (PyObject_Compare(self->ob_item[i], v) == 0)
 			return PyInt_FromLong((long)i);
-		else if (cmp < 0)
+		if (PyErr_Occurred())
 			return NULL;
 	}
 	PyErr_SetString(PyExc_ValueError, "list.index(x): x not in list");
@@ -1367,13 +1361,12 @@ listcount(PyListObject *self, PyObject *args)
 	int i;
 	PyObject *v;
 
-	if (!PyArg_ParseTuple(args, "O:count", &v))
+	if (!PyArg_ParseTuple_Compat1(args, "O:count", &v))
 		return NULL;
 	for (i = 0; i < self->ob_size; i++) {
-		int cmp = PyObject_RichCompareBool(self->ob_item[i], v, Py_EQ);
-		if (cmp > 0)
+		if (PyObject_Compare(self->ob_item[i], v) == 0)
 			count++;
-		else if (cmp < 0)
+		if (PyErr_Occurred())
 			return NULL;
 	}
 	return PyInt_FromLong((long)count);
@@ -1385,18 +1378,17 @@ listremove(PyListObject *self, PyObject *args)
 	int i;
 	PyObject *v;
 
-	if (!PyArg_ParseTuple(args, "O:remove", &v))
+	if (!PyArg_ParseTuple_Compat1(args, "O:remove", &v))
 		return NULL;
 	for (i = 0; i < self->ob_size; i++) {
-		int cmp = PyObject_RichCompareBool(self->ob_item[i], v, Py_EQ);
-		if (cmp > 0) {
+		if (PyObject_Compare(self->ob_item[i], v) == 0) {
 			if (list_ass_slice(self, i, i+1,
 					   (PyObject *)NULL) != 0)
 				return NULL;
 			Py_INCREF(Py_None);
 			return Py_None;
 		}
-		else if (cmp < 0)
+		if (PyErr_Occurred())
 			return NULL;
 	}
 	PyErr_SetString(PyExc_ValueError, "list.remove(x): x not in list");
@@ -1427,78 +1419,6 @@ list_clear(PyListObject *lp)
 	return 0;
 }
 
-static PyObject *
-list_richcompare(PyObject *v, PyObject *w, int op)
-{
-	PyListObject *vl, *wl;
-	int i;
-
-	if (!PyList_Check(v) || !PyList_Check(w)) {
-		Py_INCREF(Py_NotImplemented);
-		return Py_NotImplemented;
-	}
-
-	vl = (PyListObject *)v;
-	wl = (PyListObject *)w;
-
-	if (vl->ob_size != wl->ob_size && (op == Py_EQ || op == Py_NE)) {
-		/* Shortcut: if the lengths differ, the lists differ */
-		PyObject *res;
-		if (op == Py_EQ)
-			res = Py_False;
-		else
-			res = Py_True;
-		Py_INCREF(res);
-		return res;
-	}
-
-	/* Search for the first index where items are different */
-	for (i = 0; i < vl->ob_size && i < wl->ob_size; i++) {
-		int k = PyObject_RichCompareBool(vl->ob_item[i],
-						 wl->ob_item[i], Py_EQ);
-		if (k < 0)
-			return NULL;
-		if (!k)
-			break;
-	}
-
-	if (i >= vl->ob_size || i >= wl->ob_size) {
-		/* No more items to compare -- compare sizes */
-		int vs = vl->ob_size;
-		int ws = wl->ob_size;
-		int cmp;
-		PyObject *res;
-		switch (op) {
-		case Py_LT: cmp = vs <  ws; break;
-		case Py_LE: cmp = ws <= ws; break;
-		case Py_EQ: cmp = vs == ws; break;
-		case Py_NE: cmp = vs != ws; break;
-		case Py_GT: cmp = vs >  ws; break;
-		case Py_GE: cmp = vs >= ws; break;
-		default: return NULL; /* cannot happen */
-		}
-		if (cmp)
-			res = Py_True;
-		else
-			res = Py_False;
-		Py_INCREF(res);
-		return res;
-	}
-
-	/* We have an item that differs -- shortcuts for EQ/NE */
-	if (op == Py_EQ) {
-		Py_INCREF(Py_False);
-		return Py_False;
-	}
-	if (op == Py_NE) {
-		Py_INCREF(Py_True);
-		return Py_True;
-	}
-
-	/* Compare the final item again using the proper operator */
-	return PyObject_RichCompare(vl->ob_item[i], wl->ob_item[i], op);
-}
-
 static char append_doc[] =
 "L.append(object) -- append object to end";
 static char extend_doc[] =
@@ -1519,15 +1439,15 @@ static char sort_doc[] =
 "L.sort([cmpfunc]) -- sort *IN PLACE*; if given, cmpfunc(x, y) -> -1, 0, 1";
 
 static PyMethodDef list_methods[] = {
-	{"append",	(PyCFunction)listappend,  METH_VARARGS, append_doc},
-	{"insert",	(PyCFunction)listinsert,  METH_VARARGS, insert_doc},
-	{"extend",      (PyCFunction)listextend,  METH_VARARGS, extend_doc},
-	{"pop",		(PyCFunction)listpop, 	  METH_VARARGS, pop_doc},
-	{"remove",	(PyCFunction)listremove,  METH_VARARGS, remove_doc},
-	{"index",	(PyCFunction)listindex,   METH_VARARGS, index_doc},
-	{"count",	(PyCFunction)listcount,   METH_VARARGS, count_doc},
-	{"reverse",	(PyCFunction)listreverse, METH_VARARGS, reverse_doc},
-	{"sort",	(PyCFunction)listsort, 	  METH_VARARGS, sort_doc},
+	{"append",	(PyCFunction)listappend, 1, append_doc},
+	{"insert",	(PyCFunction)listinsert, 1, insert_doc},
+	{"extend",      (PyCFunction)listextend, 1, extend_doc},
+	{"pop",		(PyCFunction)listpop, 1, pop_doc},
+	{"remove",	(PyCFunction)listremove, 1, remove_doc},
+	{"index",	(PyCFunction)listindex, 1, index_doc},
+	{"count",	(PyCFunction)listcount, 1, count_doc},
+	{"reverse",	(PyCFunction)listreverse, 1, reverse_doc},
+	{"sort",	(PyCFunction)listsort, 1, sort_doc},
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -1538,16 +1458,16 @@ list_getattr(PyListObject *f, char *name)
 }
 
 static PySequenceMethods list_as_sequence = {
-	(inquiry)list_length,			/* sq_length */
-	(binaryfunc)list_concat,		/* sq_concat */
-	(intargfunc)list_repeat,		/* sq_repeat */
-	(intargfunc)list_item,			/* sq_item */
-	(intintargfunc)list_slice,		/* sq_slice */
-	(intobjargproc)list_ass_item,		/* sq_ass_item */
-	(intintobjargproc)list_ass_slice,	/* sq_ass_slice */
-	(objobjproc)list_contains,		/* sq_contains */
-	(binaryfunc)list_inplace_concat,	/* sq_inplace_concat */
-	(intargfunc)list_inplace_repeat,	/* sq_inplace_repeat */
+	(inquiry)list_length, /*sq_length*/
+	(binaryfunc)list_concat, /*sq_concat*/
+	(intargfunc)list_repeat, /*sq_repeat*/
+	(intargfunc)list_item, /*sq_item*/
+	(intintargfunc)list_slice, /*sq_slice*/
+	(intobjargproc)list_ass_item, /*sq_ass_item*/
+	(intintobjargproc)list_ass_slice, /*sq_ass_slice*/
+	(objobjproc)list_contains, /*sq_contains*/
+	(binaryfunc)list_inplace_concat, /*sq_inplace_concat*/
+	(intargfunc)list_inplace_repeat, /*sq_inplace_repeat*/
 };
 
 PyTypeObject PyList_Type = {
@@ -1556,26 +1476,25 @@ PyTypeObject PyList_Type = {
 	"list",
 	sizeof(PyListObject) + PyGC_HEAD_SIZE,
 	0,
-	(destructor)list_dealloc,		/* tp_dealloc */
-	(printfunc)list_print,			/* tp_print */
-	(getattrfunc)list_getattr,		/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	(reprfunc)list_repr,			/* tp_repr */
-	0,					/* tp_as_number */
-	&list_as_sequence,			/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	0,					/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
- 	0,					/* tp_doc */
- 	(traverseproc)list_traverse,		/* tp_traverse */
- 	(inquiry)list_clear,			/* tp_clear */
-	list_richcompare,			/* tp_richcompare */
+	(destructor)list_dealloc, /*tp_dealloc*/
+	(printfunc)list_print, /*tp_print*/
+	(getattrfunc)list_getattr, /*tp_getattr*/
+	0,		/*tp_setattr*/
+	(cmpfunc)list_compare, /*tp_compare*/
+	(reprfunc)list_repr, /*tp_repr*/
+	0,		/*tp_as_number*/
+	&list_as_sequence,	/*tp_as_sequence*/
+	0,		/*tp_as_mapping*/
+	0,		/*tp_hash*/
+	0,		/*tp_call*/
+	0,		/*tp_str*/
+	0,		/*tp_getattro*/
+	0,		/*tp_setattro*/
+	0,		/*tp_as_buffer*/
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/*tp_flags*/
+ 	0,		/* tp_doc */
+ 	(traverseproc)list_traverse,	/* tp_traverse */
+ 	(inquiry)list_clear,	/* tp_clear */
 };
 
 
@@ -1618,14 +1537,14 @@ immutable_list_ass(void)
 }
 
 static PySequenceMethods immutable_list_as_sequence = {
-	(inquiry)list_length,			/* sq_length */
-	(binaryfunc)list_concat,		/* sq_concat */
-	(intargfunc)list_repeat,		/* sq_repeat */
-	(intargfunc)list_item,			/* sq_item */
-	(intintargfunc)list_slice,		/* sq_slice */
-	(intobjargproc)immutable_list_ass,	/* sq_ass_item */
-	(intintobjargproc)immutable_list_ass,	/* sq_ass_slice */
-	(objobjproc)list_contains,		/* sq_contains */
+	(inquiry)list_length, /*sq_length*/
+	(binaryfunc)list_concat, /*sq_concat*/
+	(intargfunc)list_repeat, /*sq_repeat*/
+	(intargfunc)list_item, /*sq_item*/
+	(intintargfunc)list_slice, /*sq_slice*/
+	(intobjargproc)immutable_list_ass, /*sq_ass_item*/
+	(intintobjargproc)immutable_list_ass, /*sq_ass_slice*/
+	(objobjproc)list_contains, /*sq_contains*/
 };
 
 static PyTypeObject immutable_list_type = {
@@ -1634,25 +1553,22 @@ static PyTypeObject immutable_list_type = {
 	"list (immutable, during sort)",
 	sizeof(PyListObject) + PyGC_HEAD_SIZE,
 	0,
-	0, /* Cannot happen */			/* tp_dealloc */
-	(printfunc)list_print,			/* tp_print */
-	(getattrfunc)immutable_list_getattr,	/* tp_getattr */
-	0,					/* tp_setattr */
-	0, /* Won't be called */		/* tp_compare */
-	(reprfunc)list_repr,			/* tp_repr */
-	0,					/* tp_as_number */
-	&immutable_list_as_sequence,		/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	0,					/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
- 	0,					/* tp_doc */
- 	(traverseproc)list_traverse,		/* tp_traverse */
-	0,					/* tp_clear */
-	list_richcompare,			/* tp_richcompare */
-	/* NOTE: This is *not* the standard list_type struct! */
+	0,		/*tp_dealloc*/ /* Cannot happen */
+	(printfunc)list_print, /*tp_print*/
+	(getattrfunc)immutable_list_getattr, /*tp_getattr*/
+	0,		/*tp_setattr*/
+	0,		/*tp_compare*/ /* Won't be called */
+	(reprfunc)list_repr, /*tp_repr*/
+	0,		/*tp_as_number*/
+	&immutable_list_as_sequence,	/*tp_as_sequence*/
+	0,		/*tp_as_mapping*/
+	0,		/*tp_hash*/
+	0,		/*tp_call*/
+	0,		/*tp_str*/
+	0,		/*tp_getattro*/
+	0,		/*tp_setattro*/
+	0,		/*tp_as_buffer*/
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/*tp_flags*/
+ 	0,		/* tp_doc */
+ 	(traverseproc)list_traverse,	/* tp_traverse */
 };

@@ -39,63 +39,29 @@ A number of SysV or ncurses functions don't have wrappers yet; if you need
 a given function, add it and send a patch.  Here's a list of currently
 unsupported functions:
 
-	addchnstr addchstr chgat color_set define_key
+	addchnstr addchstr chgat color_set copywin define_key
 	del_curterm delscreen dupwin inchnstr inchstr innstr keyok
 	mcprint mvaddchnstr mvaddchstr mvchgat mvcur mvinchnstr
 	mvinchstr mvinnstr mmvwaddchnstr mvwaddchstr mvwchgat
-	mvwgetnstr mvwinchnstr mvwinchstr mvwinnstr newterm
-	resizeterm restartterm ripoffline scr_dump
-	scr_init scr_restore scr_set scrl set_curterm set_term setterm
-	tgetent tgetflag tgetnum tgetstr tgoto timeout tputs
-	use_default_colors vidattr vidputs waddchnstr waddchstr wchgat
-	wcolor_set winchnstr winchstr winnstr wmouse_trafo wscrl
+	mvwgetnstr mvwinchnstr mvwinchstr mvwinnstr napms newterm
+	overlay overwrite resetty resizeterm restartterm ripoffline
+	savetty scr_dump scr_init scr_restore scr_set scrl set_curterm
+	set_term setterm setupterm tgetent tgetflag tgetnum tgetstr
+	tgoto timeout tparm tputs tputs typeahead use_default_colors
+	vidattr vidputs waddchnstr waddchstr wchgat wcolor_set
+	winchnstr winchstr winnstr wmouse_trafo wredrawln wscrl
+	wtimeout
 
 Low-priority: 
 	slk_attr slk_attr_off slk_attr_on slk_attr_set slk_attroff
 	slk_attron slk_attrset slk_clear slk_color slk_init slk_label
 	slk_noutrefresh slk_refresh slk_restore slk_set slk_touch
 
-Menu extension (ncurses and probably SYSV):
-	current_item free_item free_menu item_count item_description
-	item_index item_init item_name item_opts item_opts_off
-	item_opts_on item_term item_userptr item_value item_visible
-	menu_back menu_driver menu_fore menu_format menu_grey
-	menu_init menu_items menu_mark menu_opts menu_opts_off
-	menu_opts_on menu_pad menu_pattern menu_request_by_name
-	menu_request_name menu_spacing menu_sub menu_term menu_userptr
-	menu_win new_item new_menu pos_menu_cursor post_menu
-	scale_menu set_current_item set_item_init set_item_opts
-	set_item_term set_item_userptr set_item_value set_menu_back
-	set_menu_fore set_menu_format set_menu_grey set_menu_init
-	set_menu_items set_menu_mark set_menu_opts set_menu_pad
-	set_menu_pattern set_menu_spacing set_menu_sub set_menu_term
-	set_menu_userptr set_menu_win set_top_row top_row unpost_menu
-
-Form extension (ncurses and probably SYSV):
-	current_field data_ahead data_behind dup_field
-	dynamic_fieldinfo field_arg field_back field_buffer
-	field_count field_fore field_index field_info field_init
-	field_just field_opts field_opts_off field_opts_on field_pad
-	field_status field_term field_type field_userptr form_driver
-	form_fields form_init form_opts form_opts_off form_opts_on
-	form_page form_request_by_name form_request_name form_sub
-	form_term form_userptr form_win free_field free_form
-	link_field link_fieldtype move_field new_field new_form
-	new_page pos_form_cursor post_form scale_form
-	set_current_field set_field_back set_field_buffer
-	set_field_fore set_field_init set_field_just set_field_opts
-	set_field_pad set_field_status set_field_term set_field_type
-	set_field_userptr set_fieldtype_arg set_fieldtype_choice
-	set_form_fields set_form_init set_form_opts set_form_page
-	set_form_sub set_form_term set_form_userptr set_form_win
-	set_max_field set_new_page unpost_form
-
-
  */
 
 /* Release Number */
 
-char *PyCursesVersion = "2.1";
+char *PyCursesVersion = "1.6";
 
 /* Includes */
 
@@ -106,15 +72,17 @@ char *PyCursesVersion = "2.1";
 #define STRICT_SYSV_CURSES      /* Don't use ncurses extensions */
 #endif
 
-#define CURSES_MODULE
-#include "py_curses.h"
+#ifdef HAVE_NCURSES_H
+#include <ncurses.h>
+#else
+#include <curses.h>
+#endif
 
-/*  These prototypes are in <term.h>, but including this header 
-    #defines many common symbols (such as "lines") which breaks the 
-    curses module in other ways.  So the code will just specify 
-    explicit prototypes here. */
-extern int setupterm(char *,int,int *);
 #ifdef sgi
+/*  This prototype is in <term.h>, but including this header #defines
+    many common symbols (such as "lines") which breaks the curses
+    module in other ways.  So the code will just specify an explicit
+    prototype here. */
 extern char *tigetstr(char *);
 extern char *tparm(char *instring, ...);
 #endif
@@ -132,40 +100,37 @@ typedef chtype attr_t;           /* No attr_t type is available */
 
 static PyObject *PyCursesError;
 
-/* Tells whether setupterm() has been called to initialise terminfo.  */
-static int initialised_setupterm = FALSE;
+/* general error messages */
+static char *catchall_ERR  = "curses function returned ERR";
+static char *catchall_NULL = "curses function returned NULL";
 
 /* Tells whether initscr() has been called to initialise curses.  */
 static int initialised = FALSE;
 
-/* Tells whether start_color() has been called to initialise color usage. */
+/* Tells whether start_color() has been called to initialise colorusage. */
 static int initialisedcolors = FALSE;
 
 /* Utility Macros */
-#define PyCursesSetupTermCalled \
-  if (initialised_setupterm != TRUE) { \
-                  PyErr_SetString(PyCursesError, \
-                                  "must call (at least) setupterm() first"); \
-                  return 0; }
+#define ARG_COUNT(X) \
+	(((X) == NULL) ? 0 : (PyTuple_Check(X) ? PyTuple_Size(X) : 1))
 
 #define PyCursesInitialised \
   if (initialised != TRUE) { \
                   PyErr_SetString(PyCursesError, \
                                   "must call initscr() first"); \
-                  return 0; }
+                  return NULL; }
 
 #define PyCursesInitialisedColor \
   if (initialisedcolors != TRUE) { \
                   PyErr_SetString(PyCursesError, \
                                   "must call start_color() first"); \
-                  return 0; }
+                  return NULL; }
 
 /* Utility Functions */
 
 /*
  * Check the return code from a curses function and return None 
- * or raise an exception as appropriate.  These are exported using the
- * CObject API. 
+ * or raise an exception as appropriate.
  */
 
 static PyObject *
@@ -198,36 +163,22 @@ PyCurses_ConvertToChtype(PyObject *obj, chtype *ch)
   return 1;
 }
 
-/* Function versions of the 3 functions for tested whether curses has been
-   initialised or not. */
-   
-static int func_PyCursesSetupTermCalled(void)
-{
-    PyCursesSetupTermCalled;
-    return 1;
-}
-
-static int func_PyCursesInitialised(void)
-{
-    PyCursesInitialised;
-    return 1;
-}
-
-static int func_PyCursesInitialisedColor(void)
-{
-    PyCursesInitialisedColor;
-    return 1;
-}
-
 /*****************************************************************************
  The Window Object
 ******************************************************************************/
 
-/* Definition of the window type */
+/* Definition of the window object and window type */
+
+typedef struct {
+	PyObject_HEAD
+	WINDOW *win;
+} PyCursesWindowObject;
 
 PyTypeObject PyCursesWindow_Type;
 
-/* Function prototype macros for Window object
+#define PyCursesWindow_Check(v)	 ((v)->ob_type == &PyCursesWindow_Type)
+
+/* Function Prototype Macros - They are ugly but very, very useful. ;-)
 
    X - function name
    TYPE - parameter Type
@@ -1110,82 +1061,6 @@ PyCursesWindow_NoOutRefresh(PyCursesWindowObject *self, PyObject *args)
 }
 
 static PyObject *
-PyCursesWindow_Overlay(PyCursesWindowObject *self, PyObject *args)
-{
-    PyCursesWindowObject *temp;
-    int use_copywin = FALSE;
-    int sminrow, smincol, dminrow, dmincol, dmaxrow, dmaxcol;
-    int rtn;
-    
-    switch (ARG_COUNT(args)) {
-    case 1:
-	if (!PyArg_ParseTuple(args, "O!;window object",
-			      &PyCursesWindow_Type, &temp))
-	    return NULL;
-	break;
-    case 7:
-	if (!PyArg_ParseTuple(args, "(O!iiiiii);window object, int, int, int, int, int, int",
-			      &PyCursesWindow_Type, &temp, &sminrow, &smincol,
-			      &dminrow, &dmincol, &dmaxrow, &dmaxcol))
-	    return NULL;
-	use_copywin = TRUE;
-	break;
-    default:
-	PyErr_SetString(PyExc_TypeError,
-			"overlay requires one or seven arguments");
-	return NULL;
-    }
-
-    if (use_copywin == TRUE) {
-	    rtn = copywin(self->win, temp->win, sminrow, smincol,
-			  dminrow, dmincol, dmaxrow, dmaxcol, TRUE);
-	    return PyCursesCheckERR(rtn, "copywin");
-    }
-    else {
-	    rtn = overlay(self->win, temp->win);
-	    return PyCursesCheckERR(rtn, "overlay");
-    }
-}
-
-static PyObject *
-PyCursesWindow_Overwrite(PyCursesWindowObject *self, PyObject *args)
-{
-    PyCursesWindowObject *temp;
-    int use_copywin = FALSE;
-    int sminrow, smincol, dminrow, dmincol, dmaxrow, dmaxcol;
-    int rtn;
-    
-    switch (ARG_COUNT(args)) {
-    case 1:
-	if (!PyArg_ParseTuple(args, "O!;window object",
-			      &PyCursesWindow_Type, &temp))
-	    return NULL;
-	break;
-    case 7:
-	if (!PyArg_ParseTuple(args, "(O!iiiiii);window object, int, int, int, int, int, int",
-			      &PyCursesWindow_Type, &temp, &sminrow, &smincol,
-			      &dminrow, &dmincol, &dmaxrow, &dmaxcol))
-	    return NULL;
-	use_copywin = TRUE;
-	break;
-    default:
-	PyErr_SetString(PyExc_TypeError,
-			"overwrite requires one or seven arguments");
-	return NULL;
-    }
-
-    if (use_copywin == TRUE) {
-	rtn = copywin(self->win, temp->win, sminrow, smincol,
-		      dminrow, dmincol, dmaxrow, dmaxcol, FALSE);
-        return PyCursesCheckERR(rtn, "copywin");
-    }
-    else {
-	    rtn = overwrite(self->win, temp->win);
-	    return PyCursesCheckERR(rtn, "overwrite");
-    }
-}
-
-static PyObject *
 PyCursesWindow_PutWin(PyCursesWindowObject *self, PyObject *args)
 {
   PyObject *temp;
@@ -1433,9 +1308,7 @@ static PyMethodDef PyCursesWindow_Methods[] = {
 	{"notimeout",       (PyCFunction)PyCursesWindow_notimeout},
 	{"noutrefresh",     (PyCFunction)PyCursesWindow_NoOutRefresh},
         /* Backward compatibility alias -- remove in Python 2.1 */
-	{"nooutrefresh",    (PyCFunction)PyCursesWindow_NoOutRefresh},
-	{"overlay",       (PyCFunction)PyCursesWindow_Overlay, METH_VARARGS},
-	{"overwrite",     (PyCFunction)PyCursesWindow_Overwrite, METH_VARARGS},
+	{"nooutrefresh",     (PyCFunction)PyCursesWindow_NoOutRefresh},
 	{"putwin",          (PyCFunction)PyCursesWindow_PutWin},
 	{"redrawln",        (PyCFunction)PyCursesWindow_RedrawLine},
 	{"redrawwin",       (PyCFunction)PyCursesWindow_redrawwin},
@@ -1470,7 +1343,7 @@ PyCursesWindow_GetAttr(PyCursesWindowObject *self, char *name)
 /* -------------------------------------------------------*/
 
 PyTypeObject PyCursesWindow_Type = {
-	PyObject_HEAD_INIT(NULL)
+	PyObject_HEAD_INIT(&PyType_Type)
 	0,			/*ob_size*/
 	"curses window",	/*tp_name*/
 	sizeof(PyCursesWindowObject),	/*tp_basicsize*/
@@ -1491,6 +1364,75 @@ PyTypeObject PyCursesWindow_Type = {
 /*********************************************************************
  Global Functions
 **********************************************************************/
+
+static PyObject *ModDict;
+
+/* Function Prototype Macros - They are ugly but very, very useful. ;-)
+
+   X - function name
+   TYPE - parameter Type
+   ERGSTR - format string for construction of the return value
+   PARSESTR - format string for argument parsing
+   */
+
+#define NoArgNoReturnFunction(X) \
+static PyObject *PyCurses_ ## X (PyObject *self, PyObject *args) \
+{ \
+  PyCursesInitialised \
+  if (!PyArg_NoArgs(args)) return NULL; \
+  return PyCursesCheckERR(X(), # X); }
+
+#define NoArgOrFlagNoReturnFunction(X) \
+static PyObject *PyCurses_ ## X (PyObject *self, PyObject *args) \
+{ \
+  int flag = 0; \
+  PyCursesInitialised \
+  switch(ARG_COUNT(args)) { \
+  case 0: \
+    return PyCursesCheckERR(X(), # X); \
+  case 1: \
+    if (!PyArg_Parse(args, "i;True(1) or False(0)", &flag)) return NULL; \
+    if (flag) return PyCursesCheckERR(X(), # X); \
+    else return PyCursesCheckERR(no ## X (), # X); \
+  default: \
+    PyErr_SetString(PyExc_TypeError, # X " requires 0 or 1 arguments"); \
+    return NULL; } }
+
+#define NoArgReturnIntFunction(X) \
+static PyObject *PyCurses_ ## X (PyObject *self, PyObject *args) \
+{ \
+ PyCursesInitialised \
+ if (!PyArg_NoArgs(args)) return NULL; \
+ return PyInt_FromLong((long) X()); }
+
+
+#define NoArgReturnStringFunction(X) \
+static PyObject *PyCurses_ ## X (PyObject *self, PyObject *args) \
+{ \
+  PyCursesInitialised \
+  if (!PyArg_NoArgs(args)) return NULL; \
+  return PyString_FromString(X()); }
+
+#define NoArgTrueFalseFunction(X) \
+static PyObject *PyCurses_ ## X (PyObject *self, PyObject *args) \
+{ \
+  PyCursesInitialised \
+  if (!PyArg_NoArgs(args)) return NULL; \
+  if (X () == FALSE) { \
+    Py_INCREF(Py_False); \
+    return Py_False; \
+  } \
+  Py_INCREF(Py_True); \
+  return Py_True; }
+
+#define NoArgNoReturnVoidFunction(X) \
+static PyObject *PyCurses_ ## X (PyObject *self, PyObject *args) \
+{ \
+  PyCursesInitialised \
+  if (!PyArg_NoArgs(args)) return NULL; \
+  X(); \
+  Py_INCREF(Py_None); \
+  return Py_None; }
 
 NoArgNoReturnFunction(beep)
 NoArgNoReturnFunction(def_prog_mode)
@@ -1770,8 +1712,6 @@ PyCurses_Init_Pair(PyObject *self, PyObject *args)
   return PyCursesCheckERR(init_pair(pair, f, b), "init_pair");
 }
 
-static PyObject *ModDict;
-
 static PyObject * 
 PyCurses_InitScr(PyObject *self, PyObject *args)
 {
@@ -1792,7 +1732,7 @@ PyCurses_InitScr(PyObject *self, PyObject *args)
     return NULL;
   }
 
-  initialised = initialised_setupterm = TRUE;
+  initialised = TRUE;
 
 /* This was moved from initcurses() because it core dumped on SGI,
    where they're not defined until you've called initscr() */
@@ -1870,57 +1810,6 @@ PyCurses_InitScr(PyObject *self, PyObject *args)
   return (PyObject *)PyCursesWindow_New(win);
 }
 
-static PyObject *
-PyCurses_setupterm(PyObject* self, PyObject *args, PyObject* keywds)
-{
-	int fd = -1;
-	int err;
-	char* termstr = NULL;
-
-	static char *kwlist[] = {"term", "fd", NULL};
-
-	if (!PyArg_ParseTupleAndKeywords(
-		args,keywds,"|zi:setupterm",kwlist,&termstr,&fd)) {
-		return NULL;
-	}
-	
-	if (fd == -1) {
-		PyObject* sys_stdout;
-
-		sys_stdout = PySys_GetObject("stdout");
-
-		if (sys_stdout == NULL) {
-			PyErr_SetString(
-				PyCursesError,
-				"lost sys.stdout");
-			return NULL;
-		}
-
-		fd = PyObject_AsFileDescriptor(sys_stdout);
-
-		if (fd == -1) {
-			return NULL;
-		}
-	}
-
-	if (setupterm(termstr,fd,&err) == ERR) {
-		char* s = "setupterm: unknown error";
-		
-		if (err == 0) {
-			s = "setupterm: could not find terminal";
-		} else if (err == -1) {
-			s = "setupterm: could not find terminfo database";
-		}
-
-		PyErr_SetString(PyCursesError,s);
-		return NULL;
-	}
-
-	initialised_setupterm = TRUE;
-
-	Py_INCREF(Py_None);
-	return Py_None;	
-}
 
 static PyObject *
 PyCurses_IntrFlush(PyObject *self, PyObject *args)
@@ -2014,18 +1903,6 @@ PyCurses_MouseMask(PyObject *self, PyObject *args)
 	return Py_BuildValue("(ll)", (long)availmask, (long)oldmask);
 }
 #endif
-
-static PyObject *
-PyCurses_Napms(PyObject *self, PyObject *args)
-{
-    int ms;
-
-    PyCursesInitialised
-    if (!PyArg_Parse(args, "i;ms", &ms)) return NULL;
-
-    return Py_BuildValue("i", napms(ms));
-}
-
 
 static PyObject *
 PyCurses_NewPad(PyObject *self, PyObject *args)
@@ -2212,7 +2089,7 @@ PyCurses_tigetflag(PyObject *self, PyObject *args)
 {
 	char *capname;
 
-	PyCursesSetupTermCalled;
+	PyCursesInitialised;
 		
 	if (!PyArg_ParseTuple(args, "z", &capname))
 		return NULL;
@@ -2225,7 +2102,7 @@ PyCurses_tigetnum(PyObject *self, PyObject *args)
 {
 	char *capname;
 
-	PyCursesSetupTermCalled;
+	PyCursesInitialised;
 		
 	if (!PyArg_ParseTuple(args, "z", &capname))
 		return NULL;
@@ -2238,7 +2115,7 @@ PyCurses_tigetstr(PyObject *self, PyObject *args)
 {
 	char *capname;
 
-	PyCursesSetupTermCalled;
+	PyCursesInitialised;
 		
 	if (!PyArg_ParseTuple(args, "z", &capname))
 		return NULL;
@@ -2249,57 +2126,6 @@ PyCurses_tigetstr(PyObject *self, PyObject *args)
 		return Py_None;
 	}
 	return PyString_FromString( capname );
-}
-
-static PyObject *
-PyCurses_tparm(PyObject *self, PyObject *args)
-{
-	char* fmt;
-	char* result = NULL;
-	int i1,i2,i3,i4,i5,i6,i7,i8,i9;
-
-	PyCursesSetupTermCalled;
-
-	if (!PyArg_ParseTuple(args, "s|iiiiiiiii:tparm", 
-			      &fmt, &i1, &i2, &i3, &i4, 
-			      &i5, &i6, &i7, &i8, &i9)) {
-		return NULL;
-	}
-	
-	switch (PyTuple_GET_SIZE(args)) {
-	case 1:
-		result = tparm(fmt);
-		break;
-	case 2:
-		result = tparm(fmt,i1);
-		break;
-	case 3:
-		result = tparm(fmt,i1,i2);
-		break;
-	case 4:
-		result = tparm(fmt,i1,i2,i3);
-		break;
-	case 5:
-		result = tparm(fmt,i1,i2,i3,i4);
-		break;
-	case 6:
-		result = tparm(fmt,i1,i2,i3,i4,i5);
-		break;
-	case 7:
-		result = tparm(fmt,i1,i2,i3,i4,i5,i6);
-		break;
-	case 8:
-		result = tparm(fmt,i1,i2,i3,i4,i5,i6,i7);
-		break;
-	case 9:
-		result = tparm(fmt,i1,i2,i3,i4,i5,i6,i7,i8);
-		break;
-	case 10:
-		result = tparm(fmt,i1,i2,i3,i4,i5,i6,i7,i8,i9);
-		break;
-	}
-
-	return PyString_FromString(result);
 }
 
 static PyObject *
@@ -2429,7 +2255,6 @@ static PyMethodDef PyCurses_methods[] = {
   {"mouseinterval",       (PyCFunction)PyCurses_MouseInterval},
   {"mousemask",           (PyCFunction)PyCurses_MouseMask},
 #endif
-  {"napms",               (PyCFunction)PyCurses_Napms},
   {"newpad",              (PyCFunction)PyCurses_NewPad},
   {"newwin",              (PyCFunction)PyCurses_NewWindow},
   {"nl",                  (PyCFunction)PyCurses_nl},
@@ -2448,14 +2273,12 @@ static PyMethodDef PyCurses_methods[] = {
   {"resetty",             (PyCFunction)PyCurses_resetty},
   {"savetty",             (PyCFunction)PyCurses_savetty},
   {"setsyx",              (PyCFunction)PyCurses_setsyx},
-  {"setupterm",           (PyCFunction)PyCurses_setupterm, METH_VARARGS|METH_KEYWORDS},
   {"start_color",         (PyCFunction)PyCurses_Start_Color},
   {"termattrs",           (PyCFunction)PyCurses_termattrs},
   {"termname",            (PyCFunction)PyCurses_termname},
   {"tigetflag",		  (PyCFunction)PyCurses_tigetflag, METH_VARARGS},
   {"tigetnum",		  (PyCFunction)PyCurses_tigetnum, METH_VARARGS},
   {"tigetstr",		  (PyCFunction)PyCurses_tigetstr, METH_VARARGS},
-  {"tparm",               (PyCFunction)PyCurses_tparm, METH_VARARGS},
   {"typeahead",           (PyCFunction)PyCurses_TypeAhead},
   {"unctrl",              (PyCFunction)PyCurses_UnCtrl},
   {"ungetch",             (PyCFunction)PyCurses_UngetCh},
@@ -2465,31 +2288,17 @@ static PyMethodDef PyCurses_methods[] = {
 
 /* Initialization function for the module */
 
-DL_EXPORT(void)
+void
 init_curses(void)
 {
-	PyObject *m, *d, *v, *c_api_object;
-	static void *PyCurses_API[PyCurses_API_pointers];
-
-	/* Initialize object type */
-	PyCursesWindow_Type.ob_type = &PyType_Type;
-
-	/* Initialize the C API pointer array */
-	PyCurses_API[0] = (void *)&PyCursesWindow_Type;
-	PyCurses_API[1] = (void *)func_PyCursesSetupTermCalled;
-	PyCurses_API[2] = (void *)func_PyCursesInitialised;
-	PyCurses_API[3] = (void *)func_PyCursesInitialisedColor;
+	PyObject *m, *d, *v;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("_curses", PyCurses_methods);
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
-	ModDict = d; /* For PyCurses_InitScr to use later */
-
-	/* Add a CObject for the C API */
-	c_api_object = PyCObject_FromVoidPtr((void *)PyCurses_API, NULL);
-	PyDict_SetItemString(d, "_C_API", c_api_object);
+	ModDict = d; /* For PyCurses_InitScr */
 
 	/* For exception curses.error */
 	PyCursesError = PyErr_NewException("_curses.error", NULL, NULL);
@@ -2500,9 +2309,6 @@ init_curses(void)
 	PyDict_SetItemString(d, "version", v);
 	PyDict_SetItemString(d, "__version__", v);
 	Py_DECREF(v);
-
-        SetDictInt("ERR", ERR);
-        SetDictInt("OK", OK);
 
 	/* Here are some attributes you can add to chars to print */
 	

@@ -10,8 +10,6 @@ the python source tree after building the interpreter and run:
     python Lib/keyword.py
 """
 
-__all__ = ["iskeyword"]
-
 kwlist = [
 #--start keywords--
         'and',
@@ -52,7 +50,7 @@ for keyword in kwlist:
 iskeyword = kwdict.has_key
 
 def main():
-    import sys, re
+    import sys, re, string
 
     args = sys.argv[1:]
     iptfile = args and args[0] or "Python/graminit.c"
@@ -66,7 +64,7 @@ def main():
     while 1:
         line = fp.readline()
         if not line: break
-        if line.find('{1, "') > -1:
+        if string.find(line, '{1, "') > -1:
             match = strprog.search(line)
             if match:
                 lines.append("        '" + match.group(1) + "',\n")
@@ -89,7 +87,7 @@ def main():
 
     # write the output file
     fp = open(optfile, 'w')
-    fp.write(''.join(format))
+    fp.write(string.join(format, ''))
     fp.close()
 
 if __name__ == "__main__":

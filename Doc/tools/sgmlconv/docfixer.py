@@ -3,6 +3,7 @@
 """Perform massive transformations on a document tree created from the LaTeX
 of the Python documentation, and dump the ESIS data for the transformed tree.
 """
+__version__ = '$Revision$'
 
 
 import errno
@@ -10,12 +11,12 @@ import esistools
 import re
 import string
 import sys
-import xml.dom
-import xml.dom.minidom
+import xml.dom.core
 
-ELEMENT = xml.dom.Node.ELEMENT_NODE
-ENTITY_REFERENCE = xml.dom.Node.ENTITY_REFERENCE_NODE
-TEXT = xml.dom.Node.TEXT_NODE
+from xml.dom.core import \
+     ELEMENT, \
+     ENTITY_REFERENCE, \
+     TEXT
 
 
 class ConversionError(Exception):
@@ -48,9 +49,32 @@ else:
         pass
 
 
+# Workaround to deal with invalid documents (multiple root elements).  This
+# does not indicate a bug in the DOM implementation.
+#
+def get_documentElement(doc):
+    docelem = None
+    for n in doc.childNodes:
+        if n.nodeType == ELEMENT:
+            docelem = n
+    return docelem
+
+xml.dom.core.Document.get_documentElement = get_documentElement
+
+
+# Replace get_childNodes for the Document class; without this, children
+# accessed from the Document object via .childNodes (no matter how many
+# levels of access are used) will be given an ownerDocument of None.
+#
+def get_childNodes(doc):
+    return xml.dom.core.NodeList(doc._node.children, doc._node)
+
+xml.dom.core.Document.get_childNodes = get_childNodes
+
+
 def get_first_element(doc, gi):
     for n in doc.childNodes:
-        if n.nodeName == gi:
+        if n.get_nodeName() == gi:
             return n
 
 def extract_first_element(doc, gi):
@@ -60,25 +84,13 @@ def extract_first_element(doc, gi):
     return node
 
 
-def get_documentElement(node):
-    result = None
-    for child in node.childNodes:
-        if child.nodeType == ELEMENT:
-            result = child
-    return result
-
-
-def set_tagName(elem, gi):
-    elem.nodeName = elem.tagName = gi
-
-
 def find_all_elements(doc, gi):
     nodes = []
-    if doc.nodeName == gi:
+    if doc.get_nodeName() == gi:
         nodes.append(doc)
     for child in doc.childNodes:
         if child.nodeType == ELEMENT:
-            if child.tagName == gi:
+            if child.get_tagName() == gi:
                 nodes.append(child)
             for node in child.getElementsByTagName(gi):
                 nodes.append(node)
@@ -87,19 +99,18 @@ def find_all_elements(doc, gi):
 def find_all_child_elements(doc, gi):
     nodes = []
     for child in doc.childNodes:
-        if child.nodeName == gi:
+        if child.get_nodeName() == gi:
             nodes.append(child)
     return nodes
-
 
 def find_all_elements_from_set(doc, gi_set):
     return __find_all_elements_from_set(doc, gi_set, [])
 
 def __find_all_elements_from_set(doc, gi_set, nodes):
-    if doc.nodeName in gi_set:
+    if doc.get_nodeName() in gi_set:
         nodes.append(doc)
     for child in doc.childNodes:
-        if child.nodeType == ELEMENT:
+        if child.get_nodeType() == ELEMENT:
             __find_all_elements_from_set(child, gi_set, nodes)
     return nodes
 
@@ -118,7 +129,7 @@ def simplify(doc, fragment):
     # update the name of the root element
     node = get_first_element(fragment, "document")
     if node is not None:
-        set_tagName(node, documentclass)
+        node._node.name = documentclass
     while 1:
         node = extract_first_element(fragment, "input")
         if node is None:
@@ -132,7 +143,7 @@ def simplify(doc, fragment):
             docelem.insertBefore(text, docelem.firstChild)
             docelem.insertBefore(node, text)
         docelem.insertBefore(doc.createTextNode("\n"), docelem.firstChild)
-    while fragment.firstChild and fragment.firstChild.nodeType == TEXT:
+    while fragment.firstChild and fragment.firstChild.get_nodeType() == TEXT:
         fragment.removeChild(fragment.firstChild)
 
 
@@ -142,9 +153,9 @@ def cleanup_root_text(doc):
     for n in doc.childNodes:
         prevskip = skip
         skip = 0
-        if n.nodeType == TEXT and not prevskip:
+        if n.get_nodeType() == TEXT and not prevskip:
             discards.append(n)
-        elif n.nodeName == "COMMENT":
+        elif n.get_nodeName() == "COMMENT":
             skip = 1
     for node in discards:
         doc.removeChild(node)
@@ -166,8 +177,8 @@ def fixup_descriptors(doc, fragment):
 def find_and_fix_descriptors(doc, container):
     children = container.childNodes
     for child in children:
-        if child.nodeType == ELEMENT:
-            tagName = child.tagName
+        if child.get_nodeType() == ELEMENT:
+            tagName = child.get_tagName()
             if tagName in DESCRIPTOR_ELEMENTS:
                 rewrite_descriptor(doc, child)
             elif tagName == "subsection":
@@ -189,12 +200,12 @@ def rewrite_descriptor(doc, descriptor):
     #   6. Put it back together.
     #
     # 1.
-    descname = descriptor.tagName
+    descname = descriptor.get_tagName()
     index = 1
     if descname[-2:] == "ni":
         descname = descname[:-2]
         descriptor.setAttribute("index", "no")
-        set_tagName(descriptor, descname)
+        descriptor._node.name = descname
         index = 0
     desctype = descname[:-4] # remove 'desc'
     linename = desctype + "line"
@@ -208,7 +219,7 @@ def rewrite_descriptor(doc, descriptor):
     name.appendChild(doc.createTextNode(descriptor.getAttribute("name")))
     descriptor.removeAttribute("name")
     # 2a.
-    if descriptor.hasAttribute("var"):
+    if descriptor.attributes.has_key("var"):
         if descname != "opcodedesc":
             raise RuntimeError, \
                   "got 'var' attribute on descriptor other than opcodedesc"
@@ -234,15 +245,10 @@ def rewrite_descriptor(doc, descriptor):
     # 3, 4.
     pos = skip_leading_nodes(children, pos)
     while pos < len(children) \
-          and children[pos].nodeName in (linename, "versionadded"):
-        if children[pos].tagName == linename:
+          and children[pos].get_nodeName() in (linename, "versionadded"):
+        if children[pos].get_tagName() == linename:
             # this is really a supplemental signature, create <signature>
-            oldchild = children[pos].cloneNode(1)
-            try:
-                sig = methodline_to_signature(doc, children[pos])
-            except KeyError:
-                print oldchild.toxml()
-                raise
+            sig = methodline_to_signature(doc, children[pos])
             newchildren.append(sig)
         else:
             # <versionadded added=...>
@@ -295,7 +301,7 @@ def move_children(origin, dest, start=0):
 def handle_appendix(doc, fragment):
     # must be called after simplfy() if document is multi-rooted to begin with
     docelem = get_documentElement(fragment)
-    toplevel = docelem.tagName == "manual" and "chapter" or "section"
+    toplevel = docelem.get_tagName() == "manual" and "chapter" or "section"
     appendices = 0
     nodes = []
     for node in docelem.childNodes:
@@ -327,7 +333,7 @@ def handle_labels(doc, fragment):
         if not id:
             continue
         parent = label.parentNode
-        parentTagName = parent.tagName
+        parentTagName = parent.get_tagName()
         if parentTagName == "title":
             parent.parentNode.setAttribute("id", id)
         else:
@@ -346,8 +352,8 @@ def fixup_trailing_whitespace(doc, wsmap):
     while queue:
         node = queue[0]
         del queue[0]
-        if wsmap.has_key(node.nodeName):
-            ws = wsmap[node.tagName]
+        if wsmap.has_key(node.get_nodeName()):
+            ws = wsmap[node.get_tagName()]
             children = node.childNodes
             children.reverse()
             if children[0].nodeType == TEXT:
@@ -355,8 +361,8 @@ def fixup_trailing_whitespace(doc, wsmap):
                 children[0].data = data
             children.reverse()
             # hack to get the title in place:
-            if node.tagName == "title" \
-               and node.parentNode.firstChild.nodeType == ELEMENT:
+            if node.get_tagName() == "title" \
+               and node.parentNode.firstChild.get_nodeType() == ELEMENT:
                 node.parentNode.insertBefore(doc.createText("\n  "),
                                              node.parentNode.firstChild)
         for child in node.childNodes:
@@ -382,7 +388,7 @@ def cleanup_trailing_parens(doc, element_names):
     while queue:
         node = queue[0]
         del queue[0]
-        if rewrite_element(node.tagName):
+        if rewrite_element(node.get_tagName()):
             children = node.childNodes
             if len(children) == 1 \
                and children[0].nodeType == TEXT:
@@ -405,7 +411,7 @@ def contents_match(left, right):
         if nodeType != r.nodeType:
             return 0
         if nodeType == ELEMENT:
-            if l.tagName != r.tagName:
+            if l.get_tagName() != r.get_tagName():
                 return 0
             # should check attributes, but that's not a problem here
             if not contents_match(l, r):
@@ -424,19 +430,19 @@ def create_module_info(doc, section):
     node = extract_first_element(section, "modulesynopsis")
     if node is None:
         return
-    set_tagName(node, "synopsis")
+    node._node.name = "synopsis"
     lastchild = node.childNodes[-1]
     if lastchild.nodeType == TEXT \
        and lastchild.data[-1:] == ".":
         lastchild.data = lastchild.data[:-1]
     modauthor = extract_first_element(section, "moduleauthor")
     if modauthor:
-        set_tagName(modauthor, "author")
+        modauthor._node.name = "author"
         modauthor.appendChild(doc.createTextNode(
             modauthor.getAttribute("name")))
         modauthor.removeAttribute("name")
     platform = extract_first_element(section, "platform")
-    if section.tagName == "section":
+    if section.get_tagName() == "section":
         modinfo_pos = 2
         modinfo = doc.createElement("moduleinfo")
         moddecl = extract_first_element(section, "declaremodule")
@@ -461,13 +467,13 @@ def create_module_info(doc, section):
         if title:
             children = title.childNodes
             if len(children) >= 2 \
-               and children[0].nodeName == "module" \
+               and children[0].get_nodeName() == "module" \
                and children[0].childNodes[0].data == name:
                 # this is it; morph the <title> into <short-synopsis>
                 first_data = children[1]
                 if first_data.data[:4] == " ---":
                     first_data.data = string.lstrip(first_data.data[4:])
-                set_tagName(title, "short-synopsis")
+                title._node.name = "short-synopsis"
                 if children[-1].nodeType == TEXT \
                    and children[-1].data[-1:] == ".":
                     children[-1].data = children[-1].data[:-1]
@@ -505,7 +511,7 @@ def create_module_info(doc, section):
         children = section.childNodes
         for i in range(len(children)):
             node = children[i]
-            if node.nodeName == "moduleinfo":
+            if node.get_nodeName() == "moduleinfo":
                 nextnode = children[i+1]
                 if nextnode.nodeType == TEXT:
                     data = nextnode.data
@@ -538,7 +544,7 @@ def fixup_table(doc, table):
     children = table.childNodes
     for child in children:
         if child.nodeType == ELEMENT:
-            tagName = child.tagName
+            tagName = child.get_tagName()
             if tagName == "hline" and prev_row is not None:
                 prev_row.setAttribute("rowsep", "1")
             elif tagName == "row":
@@ -552,14 +558,13 @@ def fixup_table(doc, table):
         nodeType = child.nodeType
         if nodeType == TEXT:
             if string.strip(child.data):
-                raise ConversionError("unexpected free data in <%s>: %r"
-                                      % (table.tagName, child.data))
+                raise ConversionError("unexpected free data in table")
             table.removeChild(child)
             continue
         if nodeType == ELEMENT:
-            if child.tagName != "hline":
+            if child.get_tagName() != "hline":
                 raise ConversionError(
-                    "unexpected <%s> in table" % child.tagName)
+                    "unexpected <%s> in table" % child.get_tagName())
             table.removeChild(child)
             continue
         raise ConversionError(
@@ -588,7 +593,7 @@ def fixup_row(doc, row):
 def move_elements_by_name(doc, source, dest, name, sep=None):
     nodes = []
     for child in source.childNodes:
-        if child.nodeName == name:
+        if child.get_nodeName() == name:
             nodes.append(child)
     for node in nodes:
         source.removeChild(node)
@@ -619,7 +624,7 @@ PARA_LEVEL_ELEMENTS = (
     )
 
 PARA_LEVEL_PRECEEDERS = (
-    "setindexsubitem", "author",
+    "setindexsubitem",
     "stindex", "obindex", "COMMENT", "label", "input", "title",
     "versionadded", "versionchanged", "declaremodule", "modulesynopsis",
     "moduleauthor", "indexterm", "leader",
@@ -628,7 +633,7 @@ PARA_LEVEL_PRECEEDERS = (
 
 def fixup_paras(doc, fragment):
     for child in fragment.childNodes:
-        if child.nodeName in RECURSE_INTO_PARA_CONTAINERS:
+        if child.get_nodeName() in RECURSE_INTO_PARA_CONTAINERS:
             fixup_paras_helper(doc, child)
     descriptions = find_all_elements(fragment, "description")
     for description in descriptions:
@@ -640,7 +645,7 @@ def fixup_paras_helper(doc, container, depth=0):
     children = container.childNodes
     start = skip_leading_nodes(children)
     while len(children) > start:
-        if children[start].nodeName in RECURSE_INTO_PARA_CONTAINERS:
+        if children[start].get_nodeName() in RECURSE_INTO_PARA_CONTAINERS:
             # Something to recurse into:
             fixup_paras_helper(doc, children[start])
         else:
@@ -663,7 +668,7 @@ def build_para(doc, parent, start, i):
         child = children[j]
         nodeType = child.nodeType
         if nodeType == ELEMENT:
-            if child.tagName in BREAK_ELEMENTS:
+            if child.get_tagName() in BREAK_ELEMENTS:
                 after = j
                 break
         elif nodeType == TEXT:
@@ -737,7 +742,7 @@ def skip_leading_nodes(children, start=0):
                 return start
             # all whitespace, just skip
         elif nodeType == ELEMENT:
-            tagName = child.tagName
+            tagName = child.get_tagName()
             if tagName in RECURSE_INTO_PARA_CONTAINERS:
                 return start
             if tagName not in PARA_LEVEL_ELEMENTS + PARA_LEVEL_PRECEEDERS:
@@ -767,7 +772,7 @@ def fixup_signatures(doc, fragment):
 
 def fixup_args(doc, arglist):
     for child in arglist.childNodes:
-        if child.nodeName == "optional":
+        if child.get_nodeName() == "optional":
             # found it; fix and return
             arglist.insertBefore(doc.createTextNode("["), child)
             optkids = child.childNodes
@@ -784,13 +789,13 @@ def fixup_sectionauthors(doc, fragment):
     for sectauth in find_all_elements(fragment, "sectionauthor"):
         section = sectauth.parentNode
         section.removeChild(sectauth)
-        set_tagName(sectauth, "author")
+        sectauth._node.name = "author"
         sectauth.appendChild(doc.createTextNode(
             sectauth.getAttribute("name")))
         sectauth.removeAttribute("name")
         after = section.childNodes[2]
         title = section.childNodes[1]
-        if title.nodeName != "title":
+        if title.get_nodeName() != "title":
             after = section.childNodes[0]
         section.insertBefore(doc.createTextNode("\n  "), after)
         section.insertBefore(sectauth, after)
@@ -801,17 +806,17 @@ def fixup_verbatims(doc):
         child = verbatim.childNodes[0]
         if child.nodeType == TEXT \
            and string.lstrip(child.data)[:3] == ">>>":
-            set_tagName(verbatim, "interactive-session")
+            verbatim._node.name = "interactive-session"
 
 
 def add_node_ids(fragment, counter=0):
-    fragment.node_id = counter
+    fragment._node.node_id = counter
     for node in fragment.childNodes:
         counter = counter + 1
         if node.nodeType == ELEMENT:
             counter = add_node_ids(node, counter)
         else:
-            node.node_id = counter
+            node._node.node_id = counter
     return counter + 1
 
 
@@ -826,14 +831,14 @@ def fixup_refmodindexes(fragment):
     d = {}
     for node in nodes:
         parent = node.parentNode
-        d[parent.node_id] = parent
+        d[parent._node.node_id] = parent
     del nodes
     map(fixup_refmodindexes_chunk, d.values())
 
 
 def fixup_refmodindexes_chunk(container):
     # node is probably a <para>; let's see how often it isn't:
-    if container.tagName != PARA_ELEMENT:
+    if container.get_tagName() != PARA_ELEMENT:
         bwrite("--- fixup_refmodindexes_chunk(%s)\n" % container)
     module_entries = find_all_elements(container, "module")
     if not module_entries:
@@ -844,7 +849,7 @@ def fixup_refmodindexes_chunk(container):
         children = entry.childNodes
         if len(children) != 0:
             bwrite("--- unexpected number of children for %s node:\n"
-                   % entry.tagName)
+                   % entry.get_tagName())
             ewrite(entry.toxml() + "\n")
             continue
         found = 0
@@ -868,7 +873,7 @@ def fixup_bifuncindexes(fragment):
     # make sure that each parent is only processed once:
     for node in nodes:
         parent = node.parentNode
-        d[parent.node_id] = parent
+        d[parent._node.node_id] = parent
     del nodes
     map(fixup_bifuncindexes_chunk, d.values())
 
@@ -900,7 +905,7 @@ def join_adjacent_elements(container, gi):
     while queue:
         parent = queue.pop()
         i = 0
-        children = parent.childNodes
+        children = parent.get_childNodes()
         nchildren = len(children)
         while i < (nchildren - 1):
             child = children[i]
@@ -909,7 +914,7 @@ def join_adjacent_elements(container, gi):
                     ewrite("--- merging two <%s/> elements\n" % gi)
                     child = children[i]
                     nextchild = children[i+1]
-                    nextchildren = nextchild.childNodes
+                    nextchildren = nextchild.get_childNodes()
                     while len(nextchildren):
                         node = nextchildren[0]
                         nextchild.removeChild(node)
@@ -927,13 +932,14 @@ def write_esis(doc, ofp, knownempty):
     for node in doc.childNodes:
         nodeType = node.nodeType
         if nodeType == ELEMENT:
-            gi = node.tagName
+            gi = node.get_tagName()
             if knownempty(gi):
                 if node.hasChildNodes():
                     raise ValueError, \
                           "declared-empty node <%s> has children" % gi
                 ofp.write("e\n")
-            for k, value in node.attributes.items():
+            for k, v in node.attributes.items():
+                value = v.value
                 if _token_rx.match(value):
                     dtype = "TOKEN"
                 else:
@@ -945,17 +951,16 @@ def write_esis(doc, ofp, knownempty):
         elif nodeType == TEXT:
             ofp.write("-%s\n" % esistools.encode(node.data))
         elif nodeType == ENTITY_REFERENCE:
-            ofp.write("&%s\n" % node.nodeName)
+            ofp.write("&%s\n" % node.get_nodeName())
         else:
             raise RuntimeError, "unsupported node type: %s" % nodeType
 
 
 def convert(ifp, ofp):
-    events = esistools.parse(ifp)
-    toktype, doc = events.getEvent()
-    fragment = doc.createDocumentFragment()
-    events.expandNode(fragment)
-
+    p = esistools.ExtendedEsisBuilder()
+    p.feed(ifp.read())
+    doc = p.document
+    fragment = p.fragment
     normalize(fragment)
     simplify(doc, fragment)
     handle_labels(doc, fragment)
@@ -989,10 +994,8 @@ def convert(ifp, ofp):
     join_adjacent_elements(fragment, "option")
     #
     d = {}
-    for gi in events.parser.get_empties():
+    for gi in p.get_empties():
         d[gi] = gi
-    if d.has_key("author"):
-        del d["author"]
     if d.has_key("rfc"):
         del d["rfc"]
     knownempty = d.has_key
@@ -1016,17 +1019,11 @@ def main():
         ofp = sys.stdout
     elif len(sys.argv) == 3:
         ifp = open(sys.argv[1])
-        import StringIO
-        ofp = StringIO.StringIO()
+        ofp = open(sys.argv[2], "w")
     else:
         usage()
         sys.exit(2)
     convert(ifp, ofp)
-    if len(sys.argv) == 3:
-        fp = open(sys.argv[2], "w")
-        fp.write(ofp.getvalue())
-        fp.close()
-        ofp.close()
 
 
 if __name__ == "__main__":

@@ -116,10 +116,10 @@
 \sloppy
 \parindent = 0mm
 \parskip = 2mm
-\hbadness = 5000                % don't print trivial gripes
+\hbadness = 5000		% don't print trivial gripes
 
-\pagestyle{empty}               % start this way; change for
-\pagenumbering{roman}           % ToC & chapters
+\pagestyle{empty}		% start this way; change for
+\pagenumbering{roman}		% ToC & chapters
 
 % Use this to set the font family for headers and other decor:
 \newcommand{\py@HeaderFamily}{\sffamily}
@@ -185,27 +185,6 @@
   \end{minipage}%
 }
 
-% This does a similar thing for the {alltt} environment:
-\RequirePackage{alltt}
-\let\py@OldAllTT=\alltt
-\let\py@OldEndAllTT=\endalltt
-
-\renewcommand{\alltt}{%
-  \setlength{\parindent}{1cm}%
-  % Calculate the text width for the minipage:
-  \setlength{\py@codewidth}{\linewidth}%
-  \addtolength{\py@codewidth}{-\parindent}%
-  %
-  \par\indent%
-  \begin{minipage}[t]{\py@codewidth}%
-    \small%
-    \py@OldAllTT%
-}
-\renewcommand{\endalltt}{%
-    \py@OldEndAllTT%
-  \end{minipage}%
-}
-
 
 \newcommand{\py@modulebadkey}{{--just-some-junk--}}
 
@@ -241,8 +220,7 @@
 \newcommand{\opindex}[1]{\indexii{operator}{#1@{\py@idxcode{#1}}}}
 \newcommand{\exindex}[1]{\indexii{exception}{#1@{\py@idxcode{#1}}}}
 \newcommand{\obindex}[1]{\indexii{object}{#1}}
-\newcommand{\bifuncindex}[1]{%
-  \index{#1@{\py@idxcode{#1()}} (built-in function)}}
+\newcommand{\bifuncindex}[1]{\withsubitem{(built-in function)}{\ttindex{#1()}}}
 
 % Add an index entry for a module
 \newcommand{\py@refmodule}[2]{\index{#1@{\py@idxcode{#1}} (#2module)}}
@@ -314,8 +292,12 @@
 }
 \newcommand{\withsubitem}[2]{%
   \begingroup%
-    \def\ttindex##1{\index{##1@{\py@idxcode{##1}} #1}}%
-    #2%
+    \ifpy@usingsubitem%
+      \def\index@subitem{#1}#2%
+    \else%
+      \def\index@subitem{#1}#2%
+      \py@usingsubitemfalse%
+    \fi
   \endgroup%
 }
 
@@ -582,9 +564,9 @@
   \begin{fulllineitems}
     \item[\bfcode{#2}%
     \ifx#1\@undefined%
-      \index{#2@{\py@idxcode{#2}} (C type)}
+      \withsubitem{(C type)}{\ttindex{#2}}%
     \else%
-      \index{#2@{\py@idxcode{#1}} (C type)}
+      \withsubitem{(C type)}{\ttindex{#1}}%
     \fi]
 }{\end{fulllineitems}}
 
@@ -593,14 +575,12 @@
 % -- "simple" because it has no args; NOT for constant definitions!
 \newenvironment{csimplemacrodesc}[1]{
   \begin{fulllineitems}
-    \item[\bfcode{#1}\index{#1@{\py@idxcode{#1}} (macro)}]
+    \item[\bfcode{#1}\withsubitem{(macro)}{\ttindex{#1}}]
 }{\end{fulllineitems}}
 
 % simple functions (not methods) -----------------------------------------
 % \begin{funcdesc}{name}{args}
-\newcommand{\funcline}[2]{%
-  \funclineni{#1}{#2}%
-  \index{#1@{\py@idxcode{#1()}} (in module \py@thismodule)}}
+\newcommand{\funcline}[2]{\funclineni{#1}{#2}\ttindex{#1()}}
 \newenvironment{funcdesc}[2]{
   \begin{fulllineitems}
     \funcline{#1}{#2}
@@ -619,17 +599,8 @@
   % Using \renewcommand doesn't work for this, for unknown reasons:
   \global\def\py@thisclass{#1}
   \begin{fulllineitems}
-    \item[\strong{class }\code{\bfcode{#1}(\py@varvars{#2})}%
-      \index{#1@{\py@idxcode{#1}} (class in \py@thismodule)}]
-}{\end{fulllineitems}}
-
-% \begin{classdesc*}{name}
-\newenvironment{classdesc*}[1]{
-  % Using \renewcommand doesn't work for this, for unknown reasons:
-  \global\def\py@thisclass{#1}
-  \begin{fulllineitems}
-    \item[\strong{class }\code{\bfcode{#1}}%
-      \index{#1@{\py@idxcode{#1}} (class in \py@thismodule)}]
+    \item[\code{\bfcode{#1}(\py@varvars{#2})}%
+      \withsubitem{(class in \py@thismodule)}{\ttindex{#1}}]
 }{\end{fulllineitems}}
 
 % \begin{excclassdesc}{name}{constructor args}
@@ -638,33 +609,30 @@
   % Using \renewcommand doesn't work for this, for unknown reasons:
   \global\def\py@thisclass{#1}
   \begin{fulllineitems}
-    \item[\strong{exception }\code{\bfcode{#1}(\py@varvars{#2})}%
-      \index{#1@{\py@idxcode{#1}} (exception in \py@thismodule)}]
+    \item[\code{\bfcode{#1}(\py@varvars{#2})}%
+      \withsubitem{(exception in \py@thismodule)}{\ttindex{#1}}]
 }{\end{fulllineitems}}
-
-% There is no corresponding {excclassdesc*} environment.  To describe
-% a class exception without parameters, use the {excdesc} environment.
 
 
 \let\py@classbadkey=\@undefined
 
 % object method ----------------------------------------------------------
 % \begin{methoddesc}[classname]{methodname}{args}
-\newcommand{\methodline}[3][\@undefined]{
+\newcommand{\methodline}[3][\py@classbadkey]{
   \methodlineni{#2}{#3}
   \ifx#1\@undefined
-    \index{#2@{\py@idxcode{#2()}} (\py@thisclass\ method)}
+    \withsubitem{(\py@thisclass\ method)}{\ttindex{#2()}}
   \else
-    \index{#2@{\py@idxcode{#2()}} (#1 method)}
+    \withsubitem{(#1 method)}{\ttindex{#2()}}
   \fi
 }
-\newenvironment{methoddesc}[3][\@undefined]{
+\newenvironment{methoddesc}[3][\py@classbadkey]{
   \begin{fulllineitems}
     \ifx#1\@undefined
       \methodline{#2}{#3}
     \else
       \def\py@thisclass{#1}
-      \methodline{#2}{#3}
+      \methodline[#1]{#2}{#3}
     \fi
 }{\end{fulllineitems}}
 
@@ -682,10 +650,10 @@
 \newcommand{\memberline}[2][\py@classbadkey]{%
   \ifx#1\@undefined
     \memberlineni{#2}
-    \index{#2@{\py@idxcode{#2}} (\py@thisclass\ attribute)}
+    \withsubitem{(\py@thisclass\ attribute)}{\ttindex{#2}}
   \else
     \memberlineni{#2}
-    \index{#2@{\py@idxcode{#2}} (#1 attribute)}
+    \withsubitem{(#1 attribute)}{\ttindex{#2}}
   \fi
 }
 \newenvironment{memberdesc}[2][\py@classbadkey]{
@@ -694,7 +662,7 @@
       \memberline{#2}
     \else
       \def\py@thisclass{#1}
-      \memberline{#2}
+      \memberline[#1]{#2}
     \fi
 }{\end{fulllineitems}}
 
@@ -708,17 +676,15 @@
 
 % For exceptions: --------------------------------------------------------
 % \begin{excdesc}{name}
-%  -- for constructor information, use excclassdesc instead
+%  -- need support for constructor; maybe use optional parameter?
 \newenvironment{excdesc}[1]{
   \begin{fulllineitems}
-    \item[\strong{exception }\bfcode{#1}%
-          \index{#1@{\py@idxcode{#1}} (exception in \py@thismodule)}]
+    \item[\bfcode{#1}\ttindex{#1}]
 }{\end{fulllineitems}}
 
 % Module data or constants: ----------------------------------------------
 % \begin{datadesc}{name}
-\newcommand{\dataline}[1]{%
-  \datalineni{#1}\index{#1@{\py@idxcode{#1}} (data in \py@thismodule)}}
+\newcommand{\dataline}[1]{\datalineni{#1}\ttindex{#1}}
 \newenvironment{datadesc}[1]{
   \begin{fulllineitems}
     \dataline{#1}
@@ -786,11 +752,11 @@
 }{
   \newcommand{\py@url}[1]{{%
     \pdfannotlink attr{/Border [0 0 0]} user{/S /URI /URI (#1)}%
-    \py@LinkColor%                              color of the link text
+    \py@LinkColor%				color of the link text
     \mbox{\small\textsf{#1}}%
-    \py@NormalColor%                    Turn it back off; these are declarative
-    \pdfendlink}%                       and don't appear bound to the current
-  }%                                    formatting "box".
+    \py@NormalColor%			Turn it back off; these are declarative
+    \pdfendlink}%			and don't appear bound to the current
+  }%					formatting "box".
 }
 \let\url=\py@url
 \newcommand{\email}[1]{{\small\textsf{#1}}}
@@ -824,11 +790,11 @@
 \newcommand{\member}[1]{\texttt{#1}}
 \newcommand{\method}[1]{\texttt{#1}}
 
-\newcommand{\pytype}[1]{#1}             % built-in Python type
+\newcommand{\pytype}[1]{#1}		% built-in Python type
 
 \newcommand{\cfunction}[1]{\texttt{#1}}
-\newcommand{\ctype}[1]{\texttt{#1}}     % C struct or typedef name
-\newcommand{\cdata}[1]{\texttt{#1}}     % C variable, typically global
+\newcommand{\ctype}[1]{\texttt{#1}}	% C struct or typedef name
+\newcommand{\cdata}[1]{\texttt{#1}}	% C variable, typically global
 
 \newcommand{\mimetype}[1]{{\small\textsf{#1}}}
 % The \! is a "negative thin space" in math mode.
@@ -838,15 +804,15 @@
    $\!\rfloor\!$%
   }}
 \newcommand{\envvar}[1]{%
-  #1%
-  \index{#1@{#1}}%
-  \index{environment variables!{#1}}%
+  \$#1%                                 $ <-- bow to font-lock 3 times!
+  \index{#1@{\$#1}}%                    $
+  \index{environment variables!{\$#1}}% $
 }
-\newcommand{\makevar}[1]{#1}            % variable in a Makefile
+\newcommand{\makevar}[1]{#1}		% variable in a Makefile
 \newcommand{\character}[1]{\samp{#1}}
 
 % constants defined in Python modules or C headers, not language constants:
-\newcommand{\constant}[1]{\code{#1}}    % manifest constant, not syntactic
+\newcommand{\constant}[1]{\code{#1}}	% manifest constant, not syntactic
 
 \newcommand{\manpage}[2]{{\emph{#1}(#2)}}
 \newcommand{\pep}[1]{PEP #1\index{Python Enhancement Proposals!PEP #1}}
@@ -884,13 +850,8 @@
 %  \versionadded{1.5.2}
 %  \versionchanged[short explanation]{2.0}
 %
-\newcommand{\versionadded}[2][\py@badkey]{%
-  \ifx#1\@undefined%
-    {  New in version #2.  }%
-  \else%
-    {  New in version #2:\ #1.  }%
-  \fi%
-}
+\newcommand{\versionadded}[1]{%
+  {  New in version #1.  }}
 \newcommand{\versionchanged}[2][\py@badkey]{%
   \ifx#1\@undefined%
     {  Changed in version #2.  }%
@@ -905,7 +866,7 @@
 \newenvironment{tableii}[4]{%
   \begin{center}%
     \def\lineii##1##2{\csname#2\endcsname{##1}&##2\\}%
-    \begin{tabular}{#1}\strong{#3}&\strong{#4} \\* \hline%
+    \begin{tabular}{#1}\strong{#3}&\strong{#4} \\* \hline\hline%
 }{%
     \end{tabular}%
   \end{center}%
@@ -914,7 +875,7 @@
 \newenvironment{longtableii}[4]{%
   \begin{center}%
     \def\lineii##1##2{\csname#2\endcsname{##1}&##2\\}%
-    \begin{longtable}[c]{#1}\strong{#3}&\strong{#4} \\* \hline\endhead%
+    \begin{longtable}[c]{#1}\strong{#3}&\strong{#4} \\* \hline\hline\endhead%
 }{%
     \end{longtable}%
   \end{center}%
@@ -924,7 +885,7 @@
   \begin{center}%
     \def\lineiii##1##2##3{\csname#2\endcsname{##1}&##2&##3\\}%
     \begin{tabular}{#1}\strong{#3}&\strong{#4}&\strong{#5} \\%
-      \hline%
+      \hline\hline%
 }{%
     \end{tabular}%
   \end{center}%
@@ -934,7 +895,7 @@
   \begin{center}%
     \def\lineiii##1##2##3{\csname#2\endcsname{##1}&##2&##3\\}%
     \begin{longtable}[c]{#1}\strong{#3}&\strong{#4}&\strong{#5} \\%
-      \hline\endhead%
+      \hline\hline\endhead%
 }{%
     \end{longtable}%
   \end{center}%
@@ -944,7 +905,7 @@
   \begin{center}%
     \def\lineiv##1##2##3##4{\csname#2\endcsname{##1}&##2&##3&##4\\}%
     \begin{tabular}{#1}\strong{#3}&\strong{#4}&\strong{#5}&\strong{#6} \\%
-      \hline%
+      \hline\hline%
 }{%
     \end{tabular}%
   \end{center}%
@@ -955,7 +916,7 @@
     \def\lineiv##1##2##3##4{\csname#2\endcsname{##1}&##2&##3&##4\\}%
     \begin{longtable}[c]{#1}\strong{#3}&\strong{#4}&\strong{#5}&\strong{#6}%
       \\%
-      \hline\endhead%
+      \hline\hline\endhead%
 }{%
     \end{longtable}%
   \end{center}%

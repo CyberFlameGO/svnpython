@@ -59,7 +59,7 @@ redirected URL.
 If the \var{url} uses the \file{http:} scheme identifier, the optional
 \var{data} argument may be given to specify a \code{POST} request
 (normally the request type is \code{GET}).  The \var{data} argument
-must in standard \mimetype{application/x-www-form-urlencoded} format;
+must in standard \file{application/x-www-form-urlencoded} format;
 see the \function{urlencode()} function below.
 
 The \function{urlopen()} function works transparently with proxies
@@ -83,8 +83,7 @@ Proxies which require authentication for use are not currently
 supported; this is considered an implementation limitation.
 \end{funcdesc}
 
-\begin{funcdesc}{urlretrieve}{url\optional{, filename\optional{,
-                              reporthook\optional{, data}}}}
+\begin{funcdesc}{urlretrieve}{url\optional{, filename\optional{, hook}}}
 Copy a network object denoted by a URL to a local file, if necessary.
 If the URL points to a local file, or a valid cached copy of the
 object exists, the object is not copied.  Return a tuple
@@ -108,7 +107,7 @@ request.
 If the \var{url} uses the \file{http:} scheme identifier, the optional
 \var{data} argument may be given to specify a \code{POST} request
 (normally the request type is \code{GET}).  The \var{data} argument
-must in standard \mimetype{application/x-www-form-urlencoded} format;
+must in standard \file{application/x-www-form-urlencoded} format;
 see the \function{urlencode()} function below.
 \end{funcdesc}
 
@@ -143,21 +142,14 @@ Like \function{unquote()}, but also replaces plus signs by spaces, as
 required for unquoting HTML form values.
 \end{funcdesc}
 
-\begin{funcdesc}{urlencode}{query\optional{, doseq}}
-Convert a mapping object or a sequence of two-element tuples  to a
-``url-encoded'' string, suitable to pass to 
+\begin{funcdesc}{urlencode}{dict}
+Convert a dictionary to a ``url-encoded'' string, suitable to pass to
 \function{urlopen()} above as the optional \var{data} argument.  This
 is useful to pass a dictionary of form fields to a \code{POST}
 request.  The resulting string is a series of
 \code{\var{key}=\var{value}} pairs separated by \character{\&}
 characters, where both \var{key} and \var{value} are quoted using
-\function{quote_plus()} above.  If the optional parameter \var{doseq} is
-present and evaluates to true, individual \code{\var{key}=\var{value}} pairs
-are generated for each element of the sequence.
-When a sequence of two-element tuples is used as the \var{query} argument,
-the first element of each tuple is a key and the second is a value.  The
-order of parameters in the encoded string will match the order of parameter
-tuples in the sequence.
+\function{quote_plus()} above.
 \end{funcdesc}
 
 The public functions \function{urlopen()} and
@@ -205,19 +197,10 @@ actually retrieve a resource at an \file{https:} URL.
 handling for the following HTTP response codes: 301, 302 or 401.  For
 301 and 302 response codes, the \code{location} header is used to
 fetch the actual URL.  For 401 response codes (authentication
-required), basic HTTP authentication is performed.  For 301 and 302 response
-codes, recursion is bounded by the value of the \var{maxtries} attribute,
-which defaults 10.
+required), basic HTTP authentication is performed.
 
 The parameters to the constructor are the same as those for
 \class{URLopener}.
-
-\strong{Note:}  When performing basic authentication, a
-\class{FancyURLopener} instance calls its
-\method{prompt_user_passwd()} method.  The default implementation asks
-the users for the required information on the controlling terminal.  A
-subclass may override this method to support more appropriate behavior
-if needed.
 \end{classdesc}
 
 Restrictions:
@@ -311,7 +294,7 @@ local URLs.
 If the \var{url} uses the \file{http:} scheme identifier, the optional
 \var{data} argument may be given to specify a \code{POST} request
 (normally the request type is \code{GET}).  The \var{data} argument
-must in standard \mimetype{application/x-www-form-urlencoded} format;
+must in standard \file{application/x-www-form-urlencoded} format;
 see the \function{urlencode()} function below.
 \end{methoddesc}
 
@@ -321,20 +304,6 @@ Variable that specifies the user agent of the opener object.  To get
 set this in a subclass as a class variable or in the constructor
 before calling the base constructor.
 \end{memberdesc}
-
-The \class{FancyURLopener} class offers one additional method that
-should be overloaded to provide the appropriate behavior:
-
-\begin{methoddesc}[FancyURLopener]{prompt_user_passwd}{host, realm}
-Return information needed to authenticate the user at the given host
-in the specified security realm.  The return value should be a tuple,
-\code{(\var{user}, \var{password})}, which can be used for basic
-authentication.
-
-The implementation prompts for this information on the terminal; an
-application should override this method to use an appropriate
-interaction model in the local environment.
-\end{methoddesc}
 
 
 \subsection{Examples}

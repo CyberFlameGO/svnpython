@@ -94,7 +94,7 @@ def main():
     except IOError, err:
         sys.stdout.write("I/O error: %s\n" % str(err))
         sys.exit(1)
-    lines = fp.read().split("\n")
+    lines = string.splitfields(fp.read(), "\n")
     fp.close()
     prog = re.compile(
         "#define[ \t][ \t]*([A-Z][A-Z_]*)[ \t][ \t]*([0-9][0-9]*)",
@@ -104,7 +104,7 @@ def main():
         match = prog.match(line)
         if match:
             name, val = match.group(1, 2)
-            val = int(val)
+            val = string.atoi(val)
             tokens[val] = name          # reverse so we can sort them...
     keys = tokens.keys()
     keys.sort()
@@ -114,7 +114,7 @@ def main():
     except IOError, err:
         sys.stderr.write("I/O error: %s\n" % str(err))
         sys.exit(2)
-    format = fp.read().split("\n")
+    format = string.splitfields(fp.read(), "\n")
     fp.close()
     try:
         start = format.index("#--start constants--") + 1
@@ -131,7 +131,7 @@ def main():
     except IOError, err:
         sys.stderr.write("I/O error: %s\n" % str(err))
         sys.exit(4)
-    fp.write("\n".join(format))
+    fp.write(string.joinfields(format, "\n"))
     fp.close()
 
 

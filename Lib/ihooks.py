@@ -42,7 +42,7 @@ instantiated).
 The classes defined here should be used as base classes for extended
 functionality along those lines.
 
-If a module importer class supports dotted names, its import_module()
+If a module mporter class supports dotted names, its import_module()
 must return a different value depending on whether it is called on
 behalf of a "from ... import ..." statement or not.  (This is caused
 by the way the __import__ hook is used by the Python interpreter.)  It
@@ -55,9 +55,8 @@ import __builtin__
 import imp
 import os
 import sys
+import string
 
-__all__ = ["BasicModuleLoader","Hooks","ModuleLoader","FancyModuleLoader",
-           "BasicModuleImporter","ModuleImporter","install","uninstall"]
 
 VERBOSE = 0
 
@@ -110,7 +109,7 @@ class BasicModuleLoader(_Verbose):
     """
 
     def find_module(self, name, path = None):
-        if path is None:
+        if path is None: 
             path = [None] + self.default_path()
         for dir in path:
             stuff = self.find_module_in_dir(name, dir)
@@ -391,7 +390,7 @@ class BasicModuleImporter(_Verbose):
 class ModuleImporter(BasicModuleImporter):
 
     """A module importer that supports packages."""
-
+    
     def import_module(self, name, globals=None, locals=None, fromlist=None):
         parent = self.determine_parent(globals)
         q, tail = self.find_head_package(parent, name)
@@ -411,7 +410,7 @@ class ModuleImporter(BasicModuleImporter):
             assert globals is parent.__dict__
             return parent
         if '.' in pname:
-            i = pname.rfind('.')
+            i = string.rfind(pname, '.')
             pname = pname[:i]
             parent = self.modules[pname]
             assert parent.__name__ == pname
@@ -420,7 +419,7 @@ class ModuleImporter(BasicModuleImporter):
 
     def find_head_package(self, parent, name):
         if '.' in name:
-            i = name.find('.')
+            i = string.find(name, '.')
             head = name[:i]
             tail = name[i+1:]
         else:
@@ -442,7 +441,7 @@ class ModuleImporter(BasicModuleImporter):
     def load_tail(self, q, tail):
         m = q
         while tail:
-            i = tail.find('.')
+            i = string.find(tail, '.')
             if i < 0: i = len(tail)
             head, tail = tail[:i], tail[i+1:]
             mname = "%s.%s" % (m.__name__, head)
@@ -492,7 +491,7 @@ class ModuleImporter(BasicModuleImporter):
         name = module.__name__
         if '.' not in name:
             return self.import_it(name, name, None, force_load=1)
-        i = name.rfind('.')
+        i = string.rfind(name, '.')
         pname = name[:i]
         parent = self.modules[pname]
         return self.import_it(name[i+1:], name, parent, force_load=1)

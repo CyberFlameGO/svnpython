@@ -76,12 +76,12 @@ import os
 import sys
 from stat import ST_NLINK
 import re
+import string
 import mimetools
 import multifile
 import shutil
 from bisect import bisect
 
-__all__ = ["MH","Error","Folder","Message"]
 
 # Exported constants
 
@@ -215,7 +215,7 @@ class MH:
         """Create a new folder (or raise os.error if it cannot be created)."""
         protect = pickline(self.profile, 'Folder-Protect')
         if protect and isnumeric(protect):
-            mode = int(protect, 8)
+            mode = string.atoi(protect, 8)
         else:
             mode = FOLDER_PROTECT
         os.mkdir(os.path.join(self.getpath(), name), mode)
@@ -285,7 +285,7 @@ class Folder:
         for name in os.listdir(self.getfullname()):
             if match(name):
                 append(name)
-        messages = map(int, messages)
+        messages = map(string.atoi, messages)
         messages.sort()
         if messages:
             self.last = messages[-1]
@@ -304,12 +304,12 @@ class Folder:
         while 1:
             line = f.readline()
             if not line: break
-            fields = line.split(':')
-            if len(fields) != 2:
+            fields = string.splitfields(line, ':')
+            if len(fields) <> 2:
                 self.error('bad sequence in %s: %s' %
-                          (fullname, line.strip()))
-            key = fields[0].strip()
-            value = IntSet(fields[1].strip(), ' ').tolist()
+                          (fullname, string.strip(line)))
+            key = string.strip(fields[0])
+            value = IntSet(string.strip(fields[1]), ' ').tolist()
             sequences[key] = value
         return sequences
 
@@ -359,7 +359,7 @@ class Folder:
         if seq == 'all':
             return all
         # Test for X:Y before X-Y because 'seq:-n' matches both
-        i = seq.find(':')
+        i = string.find(seq, ':')
         if i >= 0:
             head, dir, tail = seq[:i], '', seq[i+1:]
             if tail[:1] in '-+':
@@ -367,7 +367,7 @@ class Folder:
             if not isnumeric(tail):
                 raise Error, "bad message list %s" % seq
             try:
-                count = int(tail)
+                count = string.atoi(tail)
             except (ValueError, OverflowError):
                 # Can't use sys.maxint because of i+count below
                 count = len(all)
@@ -397,7 +397,7 @@ class Folder:
                     i = bisect(all, anchor-1)
                     return all[i:i+count]
         # Test for X-Y next
-        i = seq.find('-')
+        i = string.find(seq, '-')
         if i >= 0:
             begin = self._parseindex(seq[:i], all)
             end = self._parseindex(seq[i+1:], all)
@@ -430,7 +430,7 @@ class Folder:
         """Internal: parse a message number (or cur, first, etc.)."""
         if isnumeric(seq):
             try:
-                return int(seq)
+                return string.atoi(seq)
             except (OverflowError, ValueError):
                 return sys.maxint
         if seq in ('cur', '.'):
@@ -680,16 +680,16 @@ class Message(mimetools.Message):
         decide which headers to return (its argument is the header
         name converted to lower case)."""
         if not pred:
-            return ''.join(self.headers)
+            return string.joinfields(self.headers, '')
         headers = []
         hit = 0
         for line in self.headers:
-            if not line[0].isspace():
-                i = line.find(':')
+            if line[0] not in string.whitespace:
+                i = string.find(line, ':')
                 if i > 0:
-                    hit = pred(line[:i].lower())
+                    hit = pred(string.lower(line[:i]))
             if hit: headers.append(line)
-        return ''.join(headers)
+        return string.joinfields(headers, '')
 
     def getbodytext(self, decode = 1):
         """Return the message's body text as string.  This undoes a
@@ -884,12 +884,13 @@ class IntSet:
         self.normalize()
 
     def fromstring(self, data):
+        import string
         new = []
-        for part in data.split(self.sep):
+        for part in string.splitfields(data, self.sep):
             list = []
-            for subp in part.split(self.rng):
-                s = subp.strip()
-                list.append(int(s))
+            for subp in string.splitfields(part, self.rng):
+                s = string.strip(subp)
+                list.append(string.atoi(s))
             if len(list) == 1:
                 new.append((list[0], list[0]))
             elif len(list) == 2 and list[0] <= list[1]:
@@ -916,10 +917,10 @@ def pickline(file, key, casefold = 1):
             text = line[len(key)+1:]
             while 1:
                 line = f.readline()
-                if not line or not line[0].isspace():
+                if not line or line[0] not in string.whitespace:
                     break
                 text = text + line
-            return text.strip()
+            return string.strip(text)
     return None
 
 def updateline(file, key, value, casefold = 1):
@@ -994,7 +995,7 @@ def test():
         except Error, msg:
             print "Error:", msg
         stuff = os.popen("pick %s 2>/dev/null" % `seq`).read()
-        list = map(int, stuff.split())
+        list = map(string.atoi, string.split(stuff))
         print list, "<-- pick"
     do('f.listmessages()')
 

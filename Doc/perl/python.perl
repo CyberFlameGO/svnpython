@@ -86,7 +86,6 @@ sub do_cmd_let{
 # the older version of LaTeX2HTML we use doesn't support this, but we use it:
 
 sub do_cmd_textasciitilde{ '~' . @_[0]; }
-sub do_cmd_textasciicircum{ '^' . @_[0]; }
 
 
 # words typeset in a special way (not in HTML though)
@@ -104,13 +103,13 @@ sub do_cmd_e{ '&#92;' . @_[0]; }
 
 $DEVELOPER_ADDRESS = '';
 $SHORT_VERSION = '';
-$PACKAGE_VERSION = '';
+$PYTHON_VERSION = '';
 
-sub do_cmd_version{ $PACKAGE_VERSION . @_[0]; }
+sub do_cmd_version{ $PYTHON_VERSION . @_[0]; }
 sub do_cmd_shortversion{ $SHORT_VERSION . @_[0]; }
 sub do_cmd_release{
     local($_) = @_;
-    $PACKAGE_VERSION = next_argument();
+    $PYTHON_VERSION = next_argument();
     return $_;
 }
 
@@ -244,8 +243,8 @@ sub do_cmd_newsgroup{
     local($_) = @_;
     my $newsgroup = next_argument();
     my $icon = get_link_icon("news:$newsgroup");
-    my $stuff = "<a class='newsgroup' href='news:$newsgroup'>"
-      . "$newsgroup$icon</a>";
+    my $stuff = "<span class='newsgroup'><a href='news:$newsgroup'>"
+      . "$newsgroup$icon</a></span>";
     return $stuff . $_;
 }
 
@@ -255,11 +254,11 @@ sub do_cmd_envvar{
     my($name,$aname,$ahref) = new_link_info();
     # The <tt> here is really to keep buildindex.py from making
     # the variable name case-insensitive.
-    add_index_entry("environment variables!$envvar@<tt>$envvar</tt>",
+    add_index_entry("environment variables!$envvar@<tt>\$$envvar</tt>",
 		    $ahref);
-    add_index_entry("$envvar (environment variable)", $ahref);
+    add_index_entry("$envvar@\$$envvar", $ahref);
     $aname =~ s/<a/<a class="envvar"/;
-    return "$aname$envvar</a>" . $_;
+    return "$aname\$$envvar</a>" . $_;
 }
 
 sub do_cmd_url{
@@ -279,22 +278,16 @@ sub do_cmd_manpage{
     return "<span class='manpage'><i>$page</i>($section)</span>" . $_;
 }
 
-$PEP_FORMAT = "http://python.sourceforge.net/peps/pep-XXXX.html";
-$RFC_FORMAT = "http://www.ietf.org/rfc/rfcXXXX.txt";
-
-sub get_rfc_url($$){
-    my($rfcnum, $format) = @_;
-    $rfcnum = sprintf("%04d", $rfcnum);
-    $format = "$format";
-    $format =~ s/XXXX/$rfcnum/;
-    return $format;
+sub get_pep_url{
+    my $rfcnum = sprintf("%04d", @_[0]);
+    return "http://python.sourceforge.net/peps/pep-$rfcnum.html";
 }
 
 sub do_cmd_pep{
     local($_) = @_;
     my $rfcnumber = next_argument();
     my $id = "rfcref-" . ++$global{'max_id'};
-    my $href = get_rfc_url($rfcnumber, $PEP_FORMAT);
+    my $href = get_pep_url($rfcnumber);
     my $icon = get_link_icon($href);
     # Save the reference
     my $nstr = gen_index_id("Python Enhancement Proposals!PEP $rfcnumber", '');
@@ -303,11 +296,16 @@ sub do_cmd_pep{
             . "$icon</a>" . $_);
 }
 
+sub get_rfc_url{
+    my $rfcnum = sprintf("%04d", @_[0]);
+    return "http://www.ietf.org/rfc/rfc$rfcnum.txt";
+}
+
 sub do_cmd_rfc{
     local($_) = @_;
     my $rfcnumber = next_argument();
     my $id = "rfcref-" . ++$global{'max_id'};
-    my $href = get_rfc_url($rfcnumber, $RFC_FORMAT);
+    my $href = get_rfc_url($rfcnumber);
     my $icon = get_link_icon($href);
     # Save the reference
     my $nstr = gen_index_id("RFC!RFC $rfcnumber", '');
@@ -339,31 +337,26 @@ sub do_cmd_deprecated{
     local($_) = @_;
     my $release = next_argument();
     my $reason = next_argument();
-    return ('<div class="versionnote">'
-            . "<b>Deprecated since release $release.</b>"
-            . "\n$reason</div><p>"
-            . $_);
-}
-
-sub versionnote{
-    # one or two parameters:  \versionnote[explanation]{version}
-    my $type = @_[0];
-    local $_ = @_[1];
-    my $explanation = next_optional_argument();
-    my $release = next_argument();
-    my $text = "$type in version $release.";
-    if ($explanation) {
-        $text = "$type in version $release:\n$explanation.";
-    }
-    return "\n<span class='versionnote'>$text</span>\n" . $_;
+    return "<b>Deprecated since release $release.</b>\n$reason<p>" . $_;
 }
 
 sub do_cmd_versionadded{
-    return versionnote('New', @_);
+    # one parameter:  \versionadded{version}
+    local($_) = @_;
+    my $release = next_argument();
+    return "\nNew in version $release.\n" . $_;
 }
 
 sub do_cmd_versionchanged{
-    return versionnote('Changed', @_);
+    # one parameter:  \versionchanged{version}
+    local($_) = @_;
+    my $explanation = next_optional_argument();
+    my $release = next_argument();
+    my $text = "\nChanged in version $release.\n";
+    if ($release) {
+        $text = "\nChanged in version $release:\n$explanation.\n";
+    }
+    return $text . $_;
 }
 
 #
@@ -506,9 +499,6 @@ sub process_index_macros{
 	    &$cmd($ahref);
 	}
     }
-    if (/^[ \t\r\n]/) {
-        $_ = substr($_, 1);
-    }
     return "$aname$anchor_invisible_mark</a>" . $_;
 }
 
@@ -599,7 +589,7 @@ sub make_mod_index_entry{
         my $nstr = $1;
 	$Modules{$nstr} .= $ahref;
     }
-    return "$aname$anchor_invisible_mark2</a>";
+    return "$aname$anchor_invisible_mark</a>";
 }
 
 
@@ -617,7 +607,7 @@ sub define_module{
     }
     $word = "$word " if $word;
     $THIS_MODULE = "$name";
-    $INDEX_SUBITEM = "(in module $name)";
+    $INDEX_SUBITEM = "(in $name)";
     print "[$name]";
     return make_mod_index_entry(
         "<tt class='module'>$name</tt> (${word}module)", 'DEF');
@@ -657,8 +647,7 @@ sub idx_cmd_refstmodindex{ return ref_module_index_helper('standard', @_); }
 sub do_cmd_nodename{ return do_cmd_label(@_); }
 
 sub init_myformat{
-    $anchor_invisible_mark = '&nbsp;';
-    $anchor_invisible_mark2 = '';
+    $anchor_invisible_mark = '';
     $anchor_mark = '';
     $icons{'anchor_mark'} = '';
 }
@@ -732,7 +721,7 @@ sub do_env_cfuncdesc{
                    . "\n  <span class=\"value\">$rcinfo.</span>"
                    . "\n</div>");
     }
-    return "<dl><dt>$return_type <b>$idx</b>(<var>$arg_list</var>)\n<dd>"
+    return "<dl><dt>$return_type <b>$idx</b> (<var>$arg_list</var>)\n<dd>"
            . $rcinfo
            . $_
            . '</dl>';
@@ -787,7 +776,7 @@ sub do_env_funcdesc{
 				   . get_indexsubitem());
     $idx =~ s/ \(.*\)//;
     $idx =~ s/\(\)<\/tt>/<\/tt>/;
-    return "<dl><dt><b>$idx</b>(<var>$arg_list</var>)\n<dd>" . $_ . '</dl>';
+    return "<dl><dt><b>$idx</b> (<var>$arg_list</var>)\n<dd>" . $_ . '</dl>';
 }
 
 sub do_env_funcdescni{
@@ -795,7 +784,7 @@ sub do_env_funcdescni{
     my $function_name = next_argument();
     my $arg_list = convert_args(next_argument());
     return "<dl><dt><b><tt class='function'>$function_name</tt></b>"
-      . "(<var>$arg_list</var>)\n"
+      . " (<var>$arg_list</var>)\n"
       . '<dd>'
       . $_
       . '</dl>';
@@ -809,7 +798,7 @@ sub do_cmd_funcline{
     my $idx = make_str_index_entry($prefix . get_indexsubitem());
     $prefix =~ s/\(\)//;
 
-    return "<dt><b>$prefix</b>(<var>$arg_list</var>)\n<dd>" . $_;
+    return "<dt><b>$prefix</b> (<var>$arg_list</var>)\n<dd>" . $_;
 }
 
 sub do_cmd_funclineni{
@@ -818,7 +807,7 @@ sub do_cmd_funclineni{
     my $arg_list = convert_args(next_argument());
     my $prefix = "<tt class='function'>$function_name</tt>";
 
-    return "<dt><b>$prefix</b>(<var>$arg_list</var>)\n<dd>" . $_;
+    return "<dt><b>$prefix</b> (<var>$arg_list</var>)\n<dd>" . $_;
 }
 
 # Change this flag to index the opcode entries.  I don't think it's very
@@ -884,7 +873,7 @@ sub do_env_excdesc{
     local($_) = @_;
     my $excname = next_argument();
     my $idx = make_str_index_entry("<tt class='exception'>$excname</tt>");
-    return "<dl><dt><b>exception $idx</b>\n<dd>" . $_ . '</dl>'
+    return "<dl><dt><b>$idx</b>\n<dd>" . $_ . '</dl>'
 }
 
 sub do_env_fulllineitems{ return do_env_itemize(@_); }
@@ -897,24 +886,11 @@ sub handle_classlike_descriptor{
     $idx = make_str_index_entry(
 		"<tt class='$what'>$THIS_CLASS</tt> ($what in $THIS_MODULE)" );
     $idx =~ s/ \(.*\)//;
-    return ("<dl><dt><b>$what $idx</b>(<var>$arg_list</var>)\n<dd>"
-            . $_
-            . '</dl>');
+    return "<dl><dt><b>$idx</b> (<var>$arg_list</var>)\n<dd>" . $_ . '</dl>';
 }
 
 sub do_env_classdesc{
     return handle_classlike_descriptor(@_[0], "class");
-}
-
-sub do_env_classdescstar{
-    local($_) = @_;
-    $THIS_CLASS = next_argument();
-    $idx = make_str_index_entry(
-		"<tt class='class'>$THIS_CLASS</tt> (class in $THIS_MODULE)" );
-    $idx =~ s/ \(.*\)//;
-    return ("<dl><dt><b>class $idx</b>\n<dd>"
-            . $_
-            . '</dl>');
 }
 
 sub do_env_excclassdesc{
@@ -936,7 +912,7 @@ sub do_env_methoddesc{
     my $idx = make_str_index_entry("<tt class='method'>$method()</tt>$extra");
     $idx =~ s/ \(.*\)//;
     $idx =~ s/\(\)//;
-    return "<dl><dt><b>$idx</b>(<var>$arg_list</var>)\n<dd>" . $_ . '</dl>';
+    return "<dl><dt><b>$idx</b> (<var>$arg_list</var>)\n<dd>" . $_ . '</dl>';
 }
 
 
@@ -954,7 +930,7 @@ sub do_cmd_methodline{
     my $idx = make_str_index_entry("<tt class='method'>$method()</tt>$extra");
     $idx =~ s/ \(.*\)//;
     $idx =~ s/\(\)//;
-    return "<dt><b>$idx</b>(<var>$arg_list</var>)\n<dd>"
+    return "<dt><b>$idx</b> (<var>$arg_list</var>)\n<dd>"
            . $_;
 }
 
@@ -964,7 +940,7 @@ sub do_cmd_methodlineni{
     next_optional_argument();
     my $method = next_argument();
     my $arg_list = convert_args(next_argument());
-    return "<dt><b>$method</b>(<var>$arg_list</var>)\n<dd>"
+    return "<dt><b>$method</b> (<var>$arg_list</var>)\n<dd>"
            . $_;
 }
 
@@ -973,7 +949,7 @@ sub do_env_methoddescni{
     next_optional_argument();
     my $method = next_argument();
     my $arg_list = convert_args(next_argument());
-    return "<dl><dt><b>$method</b>(<var>$arg_list</var>)\n<dd>"
+    return "<dl><dt><b>$method</b> (<var>$arg_list</var>)\n<dd>"
            . $_
 	   . '</dl>';
 }
@@ -1042,20 +1018,11 @@ sub fix_font{
     elsif ($font eq 'member') {
         $font = 'tt class="member"';
     }
-    elsif ($font eq 'class') {
-        $font = 'tt class="class"';
-    }
     elsif ($font eq 'constant') {
         $font = 'tt class="constant"';
     }
     elsif ($font eq 'kbd') {
         $font = 'kbd';
-    }
-    elsif ($font eq 'programopt') {
-        $font = 'b';
-    }
-    elsif ($font eq 'exception') {
-        $font = 'tt class="exception"';
     }
     return $font;
 }
@@ -1098,7 +1065,7 @@ sub get_table_col1_fonts{
         $efont = "</$font>";
         $efont =~ s/ .*>/>/;
     }
-    return ($sfont, $efont);
+    return ($font, $sfont, $efont);
 }
 
 sub do_env_tableii{
@@ -1113,14 +1080,13 @@ sub do_env_tableii{
     my $a2 = $col_aligns[1];
     s/\\lineii</\\lineii[$a1|$a2]</g;
     return '<table border align="center" style="border-collapse: collapse">'
-	   . "\n  <thead>"
-	   . "\n    <tr class=\"tableheader\">"
+           . "\n  <thead>"
+           . "\n    <tr class=\"tableheader\">"
 	   . "\n      $th1<b>$h1</b>\&nbsp;</th>"
 	   . "\n      $th2<b>$h2</b>\&nbsp;</th>"
-	   . "\n      </tr>"
 	   . "\n    </thead>"
 	   . "\n  <tbody valign='baseline'>"
-	   . $_
+           . $_
 	   . "\n    </tbody>"
 	   . "\n</table>";
 }
@@ -1135,11 +1101,11 @@ sub do_cmd_lineii{
     my $c1 = next_argument();
     my $c2 = next_argument();
     s/[\s\n]+//;
-    my($sfont,$efont) = get_table_col1_fonts();
+    my($font,$sfont,$efont) = get_table_col1_fonts();
     $c2 = '&nbsp;' if ($c2 eq '');
     my($c1align,$c2align) = split('\|', $aligns);
     my $padding = '';
-    if ($c1align =~ /align="right"/ || $c1 eq '') {
+    if ($c1align =~ /align="right"/) {
         $padding = '&nbsp;';
     }
     return "\n    <tr>$c1align$sfont$c1$efont$padding</td>\n"
@@ -1161,12 +1127,11 @@ sub do_env_tableiii{
     my $a3 = $col_aligns[2];
     s/\\lineiii</\\lineiii[$a1|$a2|$a3]</g;
     return '<table border align="center" style="border-collapse: collapse">'
-	   . "\n  <thead>"
-	   . "\n    <tr class=\"tableheader\">"
+           . "\n  <thead>"
+           . "\n    <tr$TABLE_HEADER_BGCOLOR>"
 	   . "\n      $th1<b>$h1</b>\&nbsp;</th>"
 	   . "\n      $th2<b>$h2</b>\&nbsp;</th>"
 	   . "\n      $th3<b>$h3</b>\&nbsp;</th>"
-	   . "\n      </tr>"
 	   . "\n    </thead>"
 	   . "\n  <tbody valign='baseline'>"
 	   . $_
@@ -1185,11 +1150,11 @@ sub do_cmd_lineiii{
     my $c2 = next_argument(); 
     my $c3 = next_argument();
     s/[\s\n]+//;
-    my($sfont,$efont) = get_table_col1_fonts();
+    my($font,$sfont,$efont) = get_table_col1_fonts();
     $c3 = '&nbsp;' if ($c3 eq '');
     my($c1align,$c2align,$c3align) = split('\|', $aligns);
     my $padding = '';
-    if ($c1align =~ /align="right"/ || $c1 eq '') {
+    if ($c1align =~ /align="right"/) {
         $padding = '&nbsp;';
     }
     return "\n    <tr>$c1align$sfont$c1$efont$padding</td>\n"
@@ -1214,13 +1179,12 @@ sub do_env_tableiv{
     my $a4 = $col_aligns[3];
     s/\\lineiv</\\lineiv[$a1|$a2|$a3|$a4]</g;
     return '<table border align="center" style="border-collapse: collapse">'
-	   . "\n  <thead>"
-	   . "\n    <tr class=\"tableheader\">"
+           . "\n  <thead>"
+           . "\n    <tr$TABLE_HEADER_BGCOLOR>"
 	   . "\n      $th1<b>$h1</b>\&nbsp;</th>"
 	   . "\n      $th2<b>$h2</b>\&nbsp;</th>"
 	   . "\n      $th3<b>$h3</b>\&nbsp;</th>"
 	   . "\n      $th4<b>$h4</b>\&nbsp;</th>"
-	   . "\n      </tr>"
 	   . "\n    </thead>"
 	   . "\n  <tbody valign='baseline'>"
 	   . $_
@@ -1240,11 +1204,11 @@ sub do_cmd_lineiv{
     my $c3 = next_argument();
     my $c4 = next_argument();
     s/[\s\n]+//;
-    my($sfont,$efont) = get_table_col1_fonts();
+    my($font,$sfont,$efont) = get_table_col1_fonts();
     $c4 = '&nbsp;' if ($c4 eq '');
     my($c1align,$c2align,$c3align,$c4align) = split('\|', $aligns);
     my $padding = '';
-    if ($c1align =~ /align="right"/ || $c1 eq '') {
+    if ($c1align =~ /align="right"/) {
         $padding = '&nbsp;';
     }
     return "\n    <tr>$c1align$sfont$c1$efont$padding</td>\n"
@@ -1305,11 +1269,11 @@ sub make_my_titlepage() {
 	$the_title .= "\n<p><i>$t_affil</i></p>";
     }
     if ($t_date) {
-	$the_title .= "\n<p>";
-	if ($PACKAGE_VERSION) {
-	    $the_title .= "<strong>Release $PACKAGE_VERSION</strong><br>\n";
+	$the_title .= "\n<p><strong>$t_date</strong>";
+	if ($PYTHON_VERSION) {
+	    $the_title .= "<br><strong>Release $PYTHON_VERSION</strong>";
         }
-	$the_title .= "<strong>$t_date</strong></p>"
+	$the_title .= "</p>"
     }
     if ($t_address) {
 	$the_title .= "\n<p>$t_address</p>";
@@ -1510,36 +1474,27 @@ sub do_cmd_seemodule{
       . $_;
 }
 
-sub strip_html_markup($){
-    my $str = @_[0];
-    my $s = "$str";
-    $s =~ s/<[a-zA-Z0-9]+(\s+[a-zA-Z0-9]+(\s*=\s*(\'[^\']*\'|\"[^\"]*\"|[a-zA-Z0-9]+))?)*\s*>//g;
-    $s =~ s/<\/[a-zA-Z0-9]+>//g;
-    return $s;
-}
-
 sub handle_rfclike_reference{
-    local($_, $what, $format) = @_;
+    local($_, $what) = @_;
     my $rfcnum = next_argument();
     my $title = next_argument();
     my $text = next_argument();
-    my $url = get_rfc_url($rfcnum, $format);
+    my $url = get_rfc_url($rfcnum);
     my $icon = get_link_icon($url);
-    my $attrtitle = strip_html_markup($title);
     return '<dl compact class="seerfc">'
       . "\n    <dt><a href=\"$url\""
-      . "\n        title=\"$attrtitle\""
+      . "\n        title=\"$title\""
       . "\n        >$what $rfcnum, <em>$title</em>$icon</a>"
       . "\n    <dd>$text\n  </dl>"
       . $_;
 }
 
 sub do_cmd_seepep{
-    return handle_rfclike_reference(@_[0], "PEP", $PEP_FORMAT);
+    return handle_rfclike_reference(@_[0], "PEP");
 }
 
 sub do_cmd_seerfc{
-    return handle_rfclike_reference(@_[0], "RFC", $RFC_FORMAT);
+    return handle_rfclike_reference(@_[0], "RFC");
 }
 
 sub do_cmd_seetitle{
@@ -1613,52 +1568,6 @@ samp # {}
 setindexsubitem # {}
 withsubitem # {} # {}
 _RAW_ARG_DEFERRED_CMDS_
-
-
-$alltt_start = '<dl><dd><pre class="verbatim">';
-$alltt_end = '</pre></dl>';
-
-sub do_env_alltt {
-    local ($_) = @_;
-    local($closures,$reopens,@open_block_tags);
-
-    # get the tag-strings for all open tags
-    local(@keep_open_tags) = @$open_tags_R;
-    ($closures,$reopens) = &preserve_open_tags() if (@$open_tags_R);
-
-    # get the tags for text-level tags only
-    $open_tags_R = [ @keep_open_tags ];
-    local($local_closures, $local_reopens);
-    ($local_closures, $local_reopens,@open_block_tags)
-      = &preserve_open_block_tags
-	if (@$open_tags_R);
-
-    $open_tags_R = [ @open_block_tags ];
-
-    do {
-	local($open_tags_R) = [ @open_block_tags ];
-	local(@save_open_tags) = ();
-
-	local($cnt) = ++$global{'max_id'};
-	$_ = join('',"$O$cnt$C\\tt$O", ++$global{'max_id'}, $C
-		, $_ , $O, $global{'max_id'}, "$C$O$cnt$C");
-
-	$_ = &translate_environments($_);
-	$_ = &translate_commands($_) if (/\\/);
-
-	# preserve space-runs, using &nbsp;
-	while (s/(\S) ( +)/$1$2;SPMnbsp;/g){};
-	s/(<BR>) /$1;SPMnbsp;/g;
-
-	$_ = join('', $closures, $alltt_start, $local_reopens
-		, $_
-		, &balance_tags() #, $local_closures
-		, $alltt_end, $reopens);
-	undef $open_tags_R; undef @save_open_tags;
-    };
-    $open_tags_R = [ @keep_open_tags ];
-    $_;
-}
 
 
 1;				# This must be the last line

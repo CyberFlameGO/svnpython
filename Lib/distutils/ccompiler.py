@@ -7,7 +7,7 @@ for the Distutils compiler abstraction model."""
 
 __revision__ = "$Id$"
 
-import sys, os, re
+import sys, os
 from types import *
 from copy import copy
 from distutils.errors import *
@@ -366,7 +366,6 @@ class CCompiler:
         """
         # Get the list of expected output (object) files 
         objects = self.object_filenames (sources,
-                                         strip_dir=1,
                                          output_dir=output_dir)
 
         if self.force:
@@ -835,47 +834,11 @@ class CCompiler:
 # class CCompiler
 
 
-# Map a sys.platform/os.name ('posix', 'nt') to the default compiler
-# type for that platform. Keys are interpreted as re match
-# patterns. Order is important; platform mappings are preferred over
-# OS names.
-_default_compilers = (
-
-    # Platform string mappings
-
-    # on a cygwin built python we can use gcc like an ordinary UNIXish
-    # compiler
-    ('cygwin.*', 'unix'),
-    
-    # OS name mappings
-    ('posix', 'unix'),
-    ('nt', 'msvc'),
-    ('mac', 'mwerks'),
-    
-    )
-
-def get_default_compiler(osname=None, platform=None):
-
-    """ Determine the default compiler to use for the given platform.
-
-        osname should be one of the standard Python OS names (i.e. the
-        ones returned by os.name) and platform the common value
-        returned by sys.platform for the platform in question.
-
-        The default values are os.name and sys.platform in case the
-        parameters are not given.
-
-    """
-    if osname is None:
-        osname = os.name
-    if platform is None:
-        platform = sys.platform
-    for pattern, compiler in _default_compilers:
-        if re.match(pattern, platform) is not None or \
-           re.match(pattern, osname) is not None:
-            return compiler
-    # Default to Unix compiler
-    return 'unix'
+# Map a platform ('posix', 'nt') to the default compiler type for
+# that platform.
+default_compiler = { 'posix': 'unix',
+                     'nt': 'msvc',
+                   }
 
 # Map compiler types to (module_name, class_name) pairs -- ie. where to
 # find the code that implements an interface to this compiler.  (The module
@@ -890,8 +853,6 @@ compiler_class = { 'unix':    ('unixccompiler', 'UnixCCompiler',
                                "Mingw32 port of GNU C Compiler for Win32"),
                    'bcpp':    ('bcppcompiler', 'BCPPCompiler',
                                "Borland C++ Compiler"),
-                   'mwerks':  ('mwerkscompiler', 'MWerksCompiler',
-                               "MetroWerks CodeWarrior"),
                  }
 
 def show_compilers():
@@ -931,7 +892,7 @@ def new_compiler (plat=None,
 
     try:
         if compiler is None:
-            compiler = get_default_compiler(plat)
+            compiler = default_compiler[plat]
         
         (module_name, class_name, long_description) = compiler_class[compiler]
     except KeyError:

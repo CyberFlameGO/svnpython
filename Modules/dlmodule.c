@@ -86,9 +86,7 @@ dl_call(dlobject *xp, PyObject *args)
 				"function name must be a string");
 		return NULL;
 	}
-	func = (long (*)(long, long, long, long, long, 
-                         long, long, long, long, long)) 
-          dlsym(xp->dl_handle, PyString_AsString(name));
+	func = dlsym(xp->dl_handle, PyString_AsString(name));
 	if (func == NULL) {
 		PyErr_SetString(PyExc_ValueError, dlerror());
 		return NULL;
@@ -134,7 +132,7 @@ dl_getattr(dlobject *xp, char *name)
 
 
 static PyTypeObject Dltype = {
-	PyObject_HEAD_INIT(NULL)
+	PyObject_HEAD_INIT(&PyType_Type)
 	0,			/*ob_size*/
 	"dl",			/*tp_name*/
 	sizeof(dlobject),	/*tp_basicsize*/
@@ -199,7 +197,7 @@ insint(PyObject *d, char *name, int value)
 	Py_XDECREF(v);
 }
 
-DL_EXPORT(void)
+void
 initdl(void)
 {
 	PyObject *m, *d, *x;
@@ -210,9 +208,6 @@ initdl(void)
  "module dl requires sizeof(int) == sizeof(long) == sizeof(char*)");
 		return;
 	}
-
-	/* Initialize object type */
-	Dltype.ob_type = &PyType_Type;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("dl", dl_methods);

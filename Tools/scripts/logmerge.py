@@ -116,7 +116,7 @@ def digest_chunk(chunk):
             text.insert(0, revline)
         records.append((date, working_file, rev, author, text))
     return records
-
+        
 def format_output(database):
     prevtext = None
     prev = []
@@ -126,7 +126,7 @@ def format_output(database):
             if prev:
                 print sep2,
                 for (p_date, p_working_file, p_rev, p_author) in prev:
-                    print p_date, p_author, p_working_file, p_rev
+                    print p_date, p_author, p_working_file
                 sys.stdout.writelines(prevtext)
             prev = []
         prev.append((date, working_file, rev, author))

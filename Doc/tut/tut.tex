@@ -1,5 +1,4 @@
 \documentclass{manual}
-\usepackage[T1]{fontenc}
 
 % Things to do:
 % Add a section on file I/O
@@ -175,7 +174,7 @@ lives is an installation option, other places are possible; check with
 your local Python guru or system administrator.  (E.g.,
 \file{/usr/local/python} is a popular alternative location.)
 
-Typing an end-of-file character (\kbd{Control-D} on \UNIX,
+Typing an \EOF{} character (\kbd{Control-D} on \UNIX,
 \kbd{Control-Z} on DOS or Windows) at the primary prompt causes the
 interpreter to exit with a zero exit status.  If that doesn't work,
 you can exit the interpreter by typing the following commands:
@@ -211,9 +210,9 @@ Note that there is a difference between \samp{python file} and
 program, such as calls to \code{input()} and \code{raw_input()}, are
 satisfied from \emph{file}.  Since this file has already been read
 until the end by the parser before the program starts executing, the
-program will encounter end-of-file immediately.  In the former case
-(which is usually what you want) they are satisfied from whatever file
-or device is connected to standard input of the Python interpreter.
+program will encounter EOF immediately.  In the former case (which is
+usually what you want) they are satisfied from whatever file or device
+is connected to standard input of the Python interpreter.
 
 When a script file is used, it is sometimes useful to be able to run
 the script and enter interactive mode afterwards.  This can be done by
@@ -426,8 +425,8 @@ There is full support for floating point; operators with mixed type
 operands convert the integer operand to floating point:
 
 \begin{verbatim}
->>> 3 * 3.75 / 1.5
-7.5
+>>> 4 * 2.5 / 3.3
+3.0303030303030303
 >>> 7.0 / 2
 3.5
 \end{verbatim}
@@ -469,18 +468,15 @@ complex number to a real number.  Use \code{abs(\var{z})} to get its
 magnitude (as a float) or \code{z.real} to get its real part.
 
 \begin{verbatim}
->>> a=3.0+4.0j
+>>> a=1.5+0.5j
 >>> float(a)
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: can't convert complex to float; use e.g. abs(z)
 >>> a.real
-3.0
->>> a.imag
-4.0
->>> abs(a)  # sqrt(a.real**2 + a.imag**2)
-5.0
->>>
+1.5
+>>> abs(a)
+1.5811388300841898
 \end{verbatim}
 
 In interactive mode, the last printed expression is assigned to the
@@ -489,15 +485,14 @@ desk calculator, it is somewhat easier to continue calculations, for
 example:
 
 \begin{verbatim}
->>> tax = 12.5 / 100
->>> price = 100.50
+>>> tax = 17.5 / 100
+>>> price = 3.50
 >>> price * tax
-12.5625
+0.61249999999999993
 >>> price + _
-113.0625
+4.1124999999999998
 >>> round(_, 2)
-113.06
->>>
+4.1100000000000003
 \end{verbatim}
 
 This variable should be treated as read-only by the user.  Don't
@@ -622,11 +617,11 @@ indexed position in the string results in an error:
 
 \begin{verbatim}
 >>> word[0] = 'x'
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: object doesn't support item assignment
->>> word[:1] = 'Splat'
-Traceback (most recent call last):
+>>> word[:-1] = 'Splat'
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: object doesn't support slice assignment
 \end{verbatim}
@@ -637,7 +632,7 @@ efficient:
 \begin{verbatim}
 >>> 'x' + word[1:]
 'xelpA'
->>> 'Splat' + word[4]
+>>> 'Splat' + word[-1:]
 'SplatA'
 \end{verbatim}
 
@@ -704,7 +699,7 @@ for single-element (non-slice) indices:
 >>> word[-100:]
 'HelpA'
 >>> word[-10]    # error
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 IndexError: string index out of range
 \end{verbatim}
@@ -772,24 +767,24 @@ special characters in the string, you can do so by using the Python
 \emph{Unicode-Escape} encoding. The following example shows how:
 
 \begin{verbatim}
->>> u'Hello\u0020World !'
+>>> u'Hello\\u0020World !'
 u'Hello World !'
 \end{verbatim}
 
-The escape sequence \code{\e u0020} indicates to insert the Unicode
-character with the ordinal value 0x0020 (the space character) at the
+The escape sequence \code{\\u0020} indicates to insert the Unicode
+character with the HEX ordinal 0x0020 (the space character) at the
 given position.
 
 Other characters are interpreted by using their respective ordinal
-values directly as Unicode ordinals.  If you have literal strings
-in the standard Latin-1 encoding that is used in many Western countries,
-you will find it convenient that the lower 256 characters
-of Unicode are the same as the 256 characters of Latin-1.
+value directly as Unicode ordinal. Due to the fact that the lower 256
+Unicode are the same as the standard Latin-1 encoding used in many
+western countries, the process of entering Unicode is greatly
+simplified.
 
-For experts, there is also a raw mode just like the one for normal
-strings. You have to prefix the opening quote with 'ur' to have
+For experts, there is also a raw mode just like for normal
+strings. You have to prepend the string with a small 'r' to have
 Python use the \emph{Raw-Unicode-Escape} encoding. It will only apply
-the above \code{\e uXXXX} conversion if there is an uneven number of
+the above \code{\\uXXXX} conversion if there is an uneven number of
 backslashes in front of the small 'u'.
 
 \begin{verbatim}
@@ -806,49 +801,39 @@ Apart from these standard encodings, Python provides a whole set of
 other ways of creating Unicode strings on the basis of a known
 encoding. 
 
-The built-in function \function{unicode()}\bifuncindex{unicode} provides
-access to all registered Unicode codecs (COders and DECoders). Some of
-the more well known encodings which these codecs can convert are
-\emph{Latin-1}, \emph{ASCII}, \emph{UTF-8}, and \emph{UTF-16}.
-The latter two are variable-length encodings that store each Unicode
-character in one or more bytes. The default encoding is
-normally set to ASCII, which passes through characters in the range
-0 to 127 and rejects any other characters with an error.
-When a Unicode string is printed, written to a file, or converted
-with \function{str()}, conversion takes place using this default encoding.
+The builtin \function{unicode()}\bifuncindex{unicode} provides access
+to all registered Unicode codecs (COders and DECoders). Some of the
+more well known encodings which these codecs can convert are
+\emph{Latin-1}, \emph{ASCII}, \emph{UTF-8} and \emph{UTF-16}. The latter two
+are variable length encodings which permit to store Unicode characters
+in 8 or 16 bits. Python uses UTF-8 as default encoding. This becomes
+noticeable when printing Unicode strings or writing them to files.
 
 \begin{verbatim}
->>> u"abc"
-u'abc'
->>> str(u"abc")
-'abc'
 >>> u"הצü"
-u'\xe4\xf6\xfc'
+u'\344\366\374'
 >>> str(u"הצü")
-Traceback (most recent call last):
-  File "<stdin>", line 1, in ?
-UnicodeError: ASCII encoding error: ordinal not in range(128)
-\end{verbatim}
-
-To convert a Unicode string into an 8-bit string using a specific
-encoding, Unicode objects provide an \function{encode()} method
-that takes one argument, the name of the encoding.  Lowercase names
-for encodings are preferred.
-
-\begin{verbatim}
->>> u"הצü".encode('utf-8')
-'\xc3\xa4\xc3\xb6\xc3\xbc'
+'\303\244\303\266\303\274'
 \end{verbatim}
 
 If you have data in a specific encoding and want to produce a
 corresponding Unicode string from it, you can use the
-\function{unicode()} function with the encoding name as the second
+\function{unicode()} builtin with the encoding name as second
 argument.
 
 \begin{verbatim}
->>> unicode('\xc3\xa4\xc3\xb6\xc3\xbc', 'utf-8')
-u'\xe4\xf6\xfc'
+>>> unicode('\303\244\303\266\303\274','UTF-8')
+u'\344\366\374'
 \end{verbatim}
+
+To convert the Unicode string back into a string using the original
+encoding, the objects provide an \method{encode()} method.
+
+\begin{verbatim}
+>>> u"הצü".encode('UTF-8')
+'\303\244\303\266\303\274'
+\end{verbatim}
+
 
 \subsection{Lists \label{lists}}
 
@@ -946,7 +931,7 @@ the same object!  We'll come back to \emph{object semantics} later.
 
 Of course, we can use Python for more complicated tasks than adding
 two and two together.  For instance, we can write an initial
-sub-sequence of the \emph{Fibonacci} series as follows:
+subsequence of the \emph{Fibonacci} series as follows:
 
 \begin{verbatim}
 >>> # Fibonacci series:
@@ -1061,8 +1046,8 @@ short for `else if', and is useful to avoid excessive indentation.  An
 \keyword{if} \ldots\ \keyword{elif} \ldots\ \keyword{elif} \ldots\ sequence
 %    Weird spacings happen here if the wrapping of the source text
 %    gets changed in the wrong way.
-is a substitute for the \keyword{switch} or
-\keyword{case} statements found in other languages.
+is a substitute for the  \emph{switch} or
+\emph{case} statements found in other languages.
 
 
 \section{\keyword{for} Statements \label{for}}
@@ -1170,7 +1155,6 @@ which searches for prime numbers:
 ...            print n, 'equals', x, '*', n/x
 ...            break
 ...     else:
-...          # loop fell through without finding a factor
 ...          print n, 'is a prime number'
 ... 
 2 is a prime number
@@ -1302,8 +1286,9 @@ This example, as usual, demonstrates some new Python features:
 
 \item
 The \keyword{return} statement returns with a value from a function.
-\keyword{return} without an expression argument returns \code{None}.
-Falling off the end of a procedure also returns \code{None}.
+\keyword{return} without an expression argument is used to return from 
+the middle of a procedure (falling off the end also returns from a
+procedure), in which case the \code{None} value is returned.
 
 \item
 The statement \code{result.append(b)} calls a \emph{method} of the list
@@ -1438,7 +1423,7 @@ Here's an example that fails due to this restriction:
 ...     pass
 ... 
 >>> function(0, a=0)
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: keyword parameter redefined
 \end{verbatim}
@@ -1512,15 +1497,8 @@ cannot reference variables from the containing scope, but this can be
 overcome through the judicious use of default argument values, e.g.
 
 \begin{verbatim}
->>> def make_incrementor(n):
-...     return lambda x, incr=n: x+incr
-...
->>> f = make_incrementor(42)
->>> f(0)
-42
->>> f(1)
-43
->>>
+def make_incrementor(n):
+    return lambda x, incr=n: x+incr
 \end{verbatim}
 
 
@@ -1651,7 +1629,7 @@ An example that uses most of the list methods:
 
 
 \subsection{Using Lists as Stacks \label{lists-as-stacks}}
-\sectionauthor{Ka-Ping Yee}{ping@lfw.org}
+\sectionauthor{Ka-Ping Yee}{ping@lfs.org}
 
 The list methods make it very easy to use a list as a stack, where the
 last element added is the first element retrieved (``last-in,
@@ -1679,7 +1657,7 @@ first-out'').  To add an item to the top of the stack, use
 
 
 \subsection{Using Lists as Queues \label{lists-as-queues}}
-\sectionauthor{Ka-Ping Yee}{ping@lfw.org}
+\sectionauthor{Ka-Ping Yee}{ping@lfs.org}
 
 You can also use a list conveniently as a queue, where the first
 element added is the first element retrieved (``first-in,
@@ -2037,8 +2015,8 @@ two items are compared, and so on, until either sequence is exhausted.
 If two items to be compared are themselves sequences of the same type,
 the lexicographical comparison is carried out recursively.  If all
 items of two sequences compare equal, the sequences are considered
-equal.  If one sequence is an initial sub-sequence of the other, the
-shorter sequence is the smaller one.  Lexicographical ordering for
+equal.  If one sequence is an initial subsequence of the other, the
+shorted sequence is the smaller one.  Lexicographical ordering for
 strings uses the \ASCII{} ordering for individual characters.  Some
 examples of comparisons between sequences with the same types:
 
@@ -2603,7 +2581,7 @@ lay-out you can imagine.  The standard module
 for padding strings to a given column width; these will be discussed
 shortly.  The second way is to use the \code{\%} operator with a
 string as the left argument.  The \code{\%} operator interprets the
-left argument much like a \cfunction{sprintf()}-style format
+left argument as a C much like a \cfunction{sprintf()}-style format
 string to be applied to the right argument, and returns the string
 resulting from this formatting operation.
 
@@ -2613,24 +2591,24 @@ the \function{repr()} function, or just write the value between
 reverse quotes (\code{``}).  Some examples:
 
 \begin{verbatim}
->>> x = 10 * 3.25
->>> y = 200 * 200
+>>> x = 10 * 3.14
+>>> y = 200*200
 >>> s = 'The value of x is ' + `x` + ', and y is ' + `y` + '...'
 >>> print s
-The value of x is 32.5, and y is 40000...
+The value of x is 31.4, and y is 40000...
 >>> # Reverse quotes work on other types besides numbers:
 ... p = [x, y]
 >>> ps = repr(p)
 >>> ps
-'[32.5, 40000]'
+'[31.4, 40000]'
 >>> # Converting a string adds string quotes and backslashes:
 ... hello = 'hello, world\n'
 >>> hellos = `hello`
 >>> print hellos
-'hello, world\n'
+'hello, world\012'
 >>> # The argument of reverse quotes may be a tuple:
 ... `x, y, ('spam', 'eggs')`
-"(32.5, 40000, ('spam', 'eggs'))"
+"(31.4, 40000, ('spam', 'eggs'))"
 \end{verbatim}
 
 Here are two ways to write a table of squares and cubes:
@@ -2788,7 +2766,7 @@ of the file has been reached, \code{f.read()} will return an empty
 string (\code {""}).
 \begin{verbatim}
 >>> f.read()
-'This is the entire file.\n'
+'This is the entire file.\012'
 >>> f.read()
 ''
 \end{verbatim}
@@ -2803,9 +2781,9 @@ string containing only a single newline.
 
 \begin{verbatim}
 >>> f.readline()
-'This is the first line of the file.\n'
+'This is the first line of the file.\012'
 >>> f.readline()
-'Second line of the file\n'
+'Second line of the file\012'
 >>> f.readline()
 ''
 \end{verbatim}
@@ -2819,7 +2797,7 @@ entire file in memory.  Only complete lines will be returned.
 
 \begin{verbatim}
 >>> f.readlines()
-['This is the first line of the file.\n', 'Second line of the file\n']
+['This is the first line of the file.\012', 'Second line of the file\012']
 \end{verbatim}
 
 \code{f.write(\var{string})} writes the contents of \var{string} to
@@ -2858,7 +2836,7 @@ free up any system resources taken up by the open file.  After calling
 \begin{verbatim}
 >>> f.close()
 >>> f.read()
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 ValueError: I/O operation on closed file
 \end{verbatim}
@@ -2956,15 +2934,15 @@ however, and result in error messages as shown here:
 
 \begin{verbatim}
 >>> 10 * (1/0)
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 ZeroDivisionError: integer division or modulo
 >>> 4 + spam*3
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 NameError: spam
 >>> '2' + 2
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 TypeError: illegal argument type for built-in operation
 \end{verbatim}
@@ -2989,8 +2967,8 @@ exception happened, in the form of a stack backtrace.
 In general it contains a stack backtrace listing source lines; however,
 it will not display lines read from standard input.
 
-The \citetitle[../lib/module-exceptions.html]{Python Library
-Reference} lists the built-in exceptions and their meanings.
+The \emph{Python Library Reference} lists the built-in exceptions and
+their meanings.
 
 
 \section{Handling Exceptions \label{handling}}
@@ -3139,7 +3117,7 @@ For example:
 
 \begin{verbatim}
 >>> raise NameError, 'HiThere'
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 NameError: HiThere
 \end{verbatim}
@@ -3168,7 +3146,7 @@ variable or creating a new exception class.  For example:
 ... 
 My exception occurred, value: 4
 >>> raise MyError, 1
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 __main__.MyError: 1
 \end{verbatim}
@@ -3193,7 +3171,7 @@ circumstances.  For example:
 ...     print 'Goodbye, world!'
 ... 
 Goodbye, world!
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 2
 KeyboardInterrupt
 \end{verbatim}
@@ -3481,7 +3459,7 @@ example,
 ...         self.r = realpart
 ...         self.i = imagpart
 ... 
->>> x = Complex(3.0, -4.5)
+>>> x = Complex(3.0,-4.5)
 >>> x.r, x.i
 (3.0, -4.5)
 \end{verbatim}
@@ -3915,12 +3893,10 @@ finally the instance converted to a string using the built-in function
 
 \chapter{What Now? \label{whatNow}}
 
-Reading this tutorial has probably reinforced your interest in using
-Python --- you should be eager to apply Python to solve your
-real-world problems.  Now what should you do?
+Hopefully reading this tutorial has reinforced your interest in using
+Python.  Now what should you do?
 
-You should read, or at least page through, the
-\citetitle[../lib/lib.html]{Python Library Reference},
+You should read, or at least page through, the Library Reference,
 which gives complete (though terse) reference material about types,
 functions, and modules that can save you a lot of time when writing
 Python programs.  The standard Python distribution includes a
@@ -4084,271 +4060,5 @@ mechanism might use the interpreter's symbol table.  A command to
 check (or even suggest) matching parentheses, quotes, etc., would also
 be useful.
 
-
-\chapter{Floating Point Arithmetic:  Issues and Limitations
-         \label{fp-issues}}
-\sectionauthor{Tim Peters}{tim.one@home.com}
-
-Floating-point numbers are represented in computer hardware as
-base 2 (binary) fractions.  For example, the decimal fraction
-
-\begin{verbatim}
-0.125
-\end{verbatim}
-
-has value 1/10 + 2/100 + 5/1000, and in the same way the binary fraction
-
-\begin{verbatim}
-0.001
-\end{verbatim}
-
-has value 0/2 + 0/4 + 1/8.  These two fractions have identical values,
-the only real difference being that the first is written in base 10
-fractional notation, and the second in base 2.
-
-Unfortunately, most decimal fractions cannot be represented exactly as
-binary fractions.  A consequence is that, in general, the decimal
-floating-point numbers you enter are only approximated by the binary
-floating-point numbers actually stored in the machine.
-
-The problem is easier to understand at first in base 10.  Consider the
-fraction 1/3.  You can approximate that as a base 10 fraction:
-
-\begin{verbatim}
-0.3
-\end{verbatim}
-
-or, better,
-
-\begin{verbatim}
-0.33
-\end{verbatim}
-
-or, better,
-
-\begin{verbatim}
-0.333
-\end{verbatim}
-
-and so on.  No matter how many digits you're willing to write down, the
-result will never be exactly 1/3, but will be an increasingly better
-approximation to 1/3.
-
-In the same way, no matter how many base 2 digits you're willing to
-use, the decimal value 0.1 cannot be represented exactly as a base 2
-fraction.  In base 2, 1/10 is the infinitely repeating fraction
-
-\begin{verbatim}
-0.0001100110011001100110011001100110011001100110011...
-\end{verbatim}
-
-Stop at any finite number of bits, and you get an approximation.  This
-is why you see things like:
-
-\begin{verbatim}
->>> 0.1
-0.10000000000000001
-\end{verbatim}
-
-On most machines today, that is what you'll see if you enter 0.1 at
-a Python prompt.  You may not, though, because the number of bits
-used by the hardware to store floating-point values can vary across
-machines, and Python only prints a decimal approximation to the true
-decimal value of the binary approximation stored by the machine.  On
-most machines, if Python were to print the true decimal value of
-the binary approximation stored for 0.1, it would have to display
-
-\begin{verbatim}
->>> 0.1
-0.1000000000000000055511151231257827021181583404541015625
-\end{verbatim}
-
-instead!  The Python prompt (implicitly) uses the builtin
-\function{repr()} function to obtain a string version of everything it
-displays.  For floats, \code{repr(\var{float})} rounds the true
-decimal value to 17 significant digits, giving
-
-\begin{verbatim}
-0.10000000000000001
-\end{verbatim}
-
-\code{repr(\var{float})} produces 17 significant digits because it
-turns out that's enough (on most machines) so that
-\code{eval(repr(\var{x})) == \var{x}} exactly for all finite floats
-\var{x}, but rounding to 16 digits is not enough to make that true.
-
-Note that this is in the very nature of binary floating-point: this is
-not a bug in Python, it is not a bug in your code either, and you'll
-see the same kind of thing in all languages that support your
-hardware's floating-point arithmetic.
-
-Python's builtin \function{str()} function produces only 12
-significant digits, and you may wish to use that instead.  It's
-unusual for \code{eval(str(\var{x}))} to reproduce \var{x}, but the
-output may be more pleasant to look at:
-
-\begin{verbatim}
->>> print str(0.1)
-0.1
-\end{verbatim}
-
-It's important to realize that this is, in a real sense, an illusion:
-the value in the machine is not exactly 1/10, you're simply rounding
-the \emph{display} of the true machine value.
-
-Other surprises follow from this one.  For example, after seeing
-
-\begin{verbatim}
->>> 0.1
-0.10000000000000001
-\end{verbatim}
-
-you may be tempted to use the \function{round()} function to chop it
-back to the single digit you expect.  But that makes no difference:
-
-\begin{verbatim}
->>> round(0.1, 1)
-0.10000000000000001
-\end{verbatim}
-
-The problem is that the binary floating-point value stored for "0.1"
-was already the best possible binary approximation to 1/10, so trying
-to round it again can't make it better:  it was already as good as it
-gets.
-
-Another consequence is that since 0.1 is not exactly 1/10, adding 0.1
-to itself 10 times may not yield exactly 1.0, either:
-
-\begin{verbatim}
->>> sum = 0.0
->>> for i in range(10):
-...     sum += 0.1
-...
->>> sum
-0.99999999999999989
-\end{verbatim}
-
-Binary floating-point arithmetic holds many surprises like this.  The
-problem with "0.1" is explained in precise detail below, in the
-"Representation Error" section.  See
-\citetitle[http://www.lahey.com/float.htm]{The Perils of Floating
-Point} for a more complete account of other common surprises.
-
-As that says near the end, ``there are no easy answers.''  Still,
-don't be unduly wary of floating-point!  The errors in Python float
-operations are inherited from the floating-point hardware, and on most
-machines are on the order of no more than 1 part in 2**53 per
-operation.  That's more than adequate for most tasks, but you do need
-to keep in mind that it's not decimal arithmetic, and that every float
-operation can suffer a new rounding error.
-
-While pathological cases do exist, for most casual use of
-floating-point arithmetic you'll see the result you expect in the end
-if you simply round the display of your final results to the number of
-decimal digits you expect.  \function{str()} usually suffices, and for
-finer control see the discussion of Pythons's \code{\%} format
-operator: the \code{\%g}, \code{\%f} and \code{\%e} format codes
-supply flexible and easy ways to round float results for display.
-
-
-\section{Representation Error
-         \label{fp-error}}
-
-This section explains the ``0.1'' example in detail, and shows how
-you can perform an exact analysis of cases like this yourself.  Basic
-familiarity with binary floating-point representation is assumed.
-
-\dfn{Representation error} refers to that some (most, actually)
-decimal fractions cannot be represented exactly as binary (base 2)
-fractions.  This is the chief reason why Python (or Perl, C, \Cpp,
-Java, Fortran, and many others) often won't display the exact decimal
-number you expect:
-
-\begin{verbatim}
->>> 0.1
-0.10000000000000001
-\end{verbatim}
-
-Why is that?  1/10 is not exactly representable as a binary fraction.
-Almost all machines today (November 2000) use IEEE-754 floating point
-arithmetic, and almost all platforms map Python floats to IEEE-754
-"double precision".  754 doubles contain 53 bits of precision, so on
-input the computer strives to convert 0.1 to the closest fraction it can
-of the form \var{J}/2**\var{N} where \var{J} is an integer containing
-exactly 53 bits.  Rewriting
-
-\begin{verbatim}
- 1 / 10 ~= J / (2**N)
-\end{verbatim}
-
-as
-
-\begin{verbatim}
-J ~= 2**N / 10
-\end{verbatim}
-
-and recalling that \var{J} has exactly 53 bits (is \code{>= 2**52} but
-\code{< 2**53}), the best value for \var{N} is 56:
-
-\begin{verbatim}
->>> 2L**52
-4503599627370496L
->>> 2L**53
-9007199254740992L
->>> 2L**56/10
-7205759403792793L
-\end{verbatim}
-
-That is, 56 is the only value for \var{N} that leaves \var{J} with
-exactly 53 bits.  The best possible value for \var{J} is then that
-quotient rounded:
-
-\begin{verbatim}
->>> q, r = divmod(2L**56, 10)
->>> r
-6L
-\end{verbatim}
-
-Since the remainder is more than half of 10, the best approximation is
-obtained by rounding up:
-
-\begin{verbatim}
->>> q+1
-7205759403792794L
-\end{verbatim}
-
-Therefore the best possible approximation to 1/10 in 754 double
-precision is that over 2**56, or
-
-\begin{verbatim}
-7205759403792794 / 72057594037927936
-\end{verbatim}
-
-Note that since we rounded up, this is actually a little bit larger than
-1/10; if we had not rounded up, the quotient would have been a little
-bit smaller than 1/10.  But in no case can it be *exactly* 1/10!
-
-So the computer never ``sees'' 1/10:  what it sees is the exact
-fraction given above, the best 754 double approximation it can get:
-
-\begin{verbatim}
->>> .1 * 2L**56
-7205759403792794.0
-\end{verbatim}
-
-If we multiply that fraction by 10**30, we can see the (truncated)
-value of its 30 most significant decimal digits:
-
-\begin{verbatim}
->>> 7205759403792794L * 10L**30 / 2L**56
-100000000000000005551115123125L
-\end{verbatim}
-
-meaning that the exact number stored in the computer is approximately
-equal to the decimal value 0.100000000000000005551115123125.  Rounding
-that to 17 significant digits gives the 0.10000000000000001 that Python
-displays (well, will display on any 754-conforming platform that does
-best-possible input and output conversions in its C library --- yours may
-not!).
 
 \end{document}

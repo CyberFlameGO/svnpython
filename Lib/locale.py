@@ -11,17 +11,12 @@
 
 """
 
-import sys
+import string, sys
 
 # Try importing the _locale module.
 #
 # If this fails, fall back on a basic 'C' locale emulation.
-
-# Yuck:  LC_MESSAGES is non-standard:  can't tell whether it exists before
-# trying the import.  So __all__ is also fiddled at the end of the file.
-__all__ = ["setlocale","Error","localeconv","strcoll","strxfrm",
-           "format","str","atof","atoi","LC_CTYPE","LC_COLLATE",
-           "LC_TIME","LC_MONETARY","LC_NUMERIC", "LC_ALL","CHAR_MAX"]
+#
 
 try:
 
@@ -69,7 +64,8 @@ except ImportError:
         """ setlocale(integer,string=None) -> string.
             Activates/queries locale processing.
         """
-        if value is not None and value != 'C':
+        if value is not None and \
+           value != 'C':
             raise Error, '_locale emulation only supports "C" locale'
         return 'C'
 
@@ -93,14 +89,8 @@ except ImportError:
 def _group(s):
     conv=localeconv()
     grouping=conv['grouping']
-    if not grouping:return (s, 0)
+    if not grouping:return s
     result=""
-    seps = 0
-    spaces = ""
-    if s[-1] == ' ':
-        sp = s.find(' ')
-        spaces = s[sp:]
-        s = s[:sp]
     while s and grouping:
         # if grouping is -1, we are done
         if grouping[0]==CHAR_MAX:
@@ -112,71 +102,52 @@ def _group(s):
             grouping=grouping[1:]
         if result:
             result=s[-group:]+conv['thousands_sep']+result
-            seps += 1
         else:
             result=s[-group:]
         s=s[:-group]
-        if s and s[-1] not in "0123456789":
-            # the leading string is only spaces and signs
-            return s+result+spaces,seps
     if not result:
-        return s+spaces,seps
+        return s
     if s:
         result=s+conv['thousands_sep']+result
-        seps += 1
-    return result+spaces,seps
+    return result
 
 def format(f,val,grouping=0):
     """Formats a value in the same way that the % formatting would use,
     but takes the current locale into account.
     Grouping is applied if the third parameter is true."""
     result = f % val
-    fields = result.split(".")
-    seps = 0
+    fields = string.split(result, ".")
     if grouping:
-        fields[0],seps=_group(fields[0])
+        fields[0]=_group(fields[0])
     if len(fields)==2:
-        result = fields[0]+localeconv()['decimal_point']+fields[1]
+        return fields[0]+localeconv()['decimal_point']+fields[1]
     elif len(fields)==1:
-        result = fields[0]
+        return fields[0]
     else:
         raise Error, "Too many decimal points in result string"
-
-    while seps:
-        # If the number was formatted for a specific width, then it
-        # might have been filled with spaces to the left or right. If
-        # so, kill as much spaces as there where separators.
-        # Leading zeroes as fillers are not yet dealt with, as it is
-        # not clear how they should interact with grouping.
-        sp = result.find(" ")
-        if sp==-1:break
-        result = result[:sp]+result[sp+1:]
-        seps -= 1
-
-    return result
 
 def str(val):
     """Convert float to integer, taking the locale into account."""
     return format("%.12g",val)
 
-def atof(str,func=float):
+def atof(str,func=string.atof):
     "Parses a string as a float according to the locale settings."
     #First, get rid of the grouping
     ts = localeconv()['thousands_sep']
     if ts:
-        s=str.split(ts)
-        str="".join(s)
+        s=string.split(str,ts)
+        str=string.join(s, "")
     #next, replace the decimal point with a dot
     dd = localeconv()['decimal_point']
     if dd:
-        s=str.split(dd)
-        str='.'.join(s)
+        s=string.split(str,dd)
+        str=string.join(s, '.')
     #finally, parse the string
     return func(str)
 
 def atoi(str):
     "Converts a string to an integer according to the locale settings."
-    return atof(str, int)
+    return atof(str,string.atoi)
 
 def _test():
     setlocale(LC_ALL, "")
@@ -213,12 +184,12 @@ def normalize(localename):
 
     """
     # Normalize the locale name and extract the encoding
-    fullname = localename.lower()
+    fullname = string.lower(localename)
     if ':' in fullname:
         # ':' is sometimes used as encoding delimiter.
-        fullname = fullname.replace(':', '.')
+        fullname = string.replace(fullname, ':', '.')
     if '.' in fullname:
-        langname, encoding = fullname.split('.')[:2]
+        langname, encoding = string.split(fullname, '.')[:2]
         fullname = langname + '.' + encoding
     else:
         langname = fullname
@@ -233,7 +204,7 @@ def normalize(localename):
     code = locale_alias.get(langname, None)
     if code is not None:
         if '.' in code:
-            langname, defenc = code.split('.')
+            langname, defenc = string.split(code, '.')
         else:
             langname = code
             defenc = ''
@@ -265,7 +236,7 @@ def _parse_localename(localename):
     """
     code = normalize(localename)
     if '.' in code:
-        return code.split('.')[:2]
+        return string.split(code, '.')[:2]
     elif code == 'C':
         return None, None
     else:
@@ -718,13 +689,6 @@ def _print_locale():
             print
 
 ###
-
-try:
-    LC_MESSAGES
-except:
-    pass
-else:
-    __all__.append("LC_MESSAGES")
 
 if __name__=='__main__':
     print 'Locale aliasing:'

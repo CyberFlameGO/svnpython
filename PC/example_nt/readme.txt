@@ -4,7 +4,7 @@ Example Python extension for Windows NT
 This directory contains everything needed (except for the Python
 distribution!) to build a Python extension module using Microsoft VC++
 ("Developer Studio") version 6.  It has been tested with VC++ 6.0 on Python
-2.1a1.  You can also use earlier versions of VC to build Python extensions,
+2.0b1.  You can also use earlier versions of VC to build Python extensions,
 but the sample VC project file (example.dsw in this directory) is in VC 6
 format.
 
@@ -22,9 +22,7 @@ OPEN THE PROJECT
 From VC 6.x, use the
     File -> Open Workspace...
 dialog (*not* the "File -> Open..." dialog!).  Navigate to and select the
-file "example.dsw", in the *copy* of the example_nt directory you made
-above.
-Click Open.
+file "example.dsw".  Click Open.
 
 BUILD THE EXAMPLE DLL
 ---------------------
@@ -54,13 +52,14 @@ debug output from Python may not match this screen dump exactly):
     C>..\..\PCbuild\python_d
     Adding parser accelerators ...
     Done.
-    Python 2.1a1 (#9, Jan 17 2001, 23:26:37) [MSC 32 bit (Intel)] on win32
-    Type "copyright", "credits" or "license" for more information.
+    Python 2.0b1 (#0, Jul  1 2000, 11:29:37) [MSC 32 bit (Intel)] on win32
+    Copyright 1991-1995 Stichting Mathematisch Centrum, Amsterdam
+    Copyright 1995-2000 Corporation for National Research Initiatives (CNRI)
     >>> import example
-    [4897 refs]
+    [8830 refs]
     >>> example.foo()
     Hello, world
-    [4903 refs]
+    [8830 refs]
     >>>
 
 TESTING THE RELEASE-MODE DLL
@@ -70,8 +69,9 @@ example_nt\Release.  You should now be able to repeat the following session
 ("C>" is the DOS prompt, ">>>" is the Python prompt):
 
     C>..\..\PCbuild\python
-    Python 2.1a1 (#9, Jan 17 2001, 23:26:37) [MSC 32 bit (Intel)] on win32
-    Type "copyright", "credits" or "license" for more information.
+    Python 2.0b1 (#0, Jul  1 2000, 11:28:35) [MSC 32 bit (Intel)] on win32
+    Copyright 1991-1995 Stichting Mathematisch Centrum, Amsterdam
+    Copyright 1995-2000 Corporation for National Research Initiatives (CNRI)
     >>> import example
     >>> example.foo()
     Hello, world
@@ -123,7 +123,7 @@ Use the
 dialog to create a new Project Workspace.  Select "Win32 Dynamic-Link
 Library", enter the name ("spam"), and make sure the "Location" is set to
 the spam directory you have created (which should be a direct subdirectory
-of the Python build tree, a sibling of Include and PC).  Select Win32 as the
+of the Python build tree, a sibling of Inclue and PC).  Select Win32 as the
 platform (in my version, this is the only choice).  Make sure the "Create
 new workspace" radio button is selected.  Click OK.
 
@@ -144,11 +144,11 @@ in the "Additional library path:" box.
 Now you need to add some mode-specific settings:
 
 Select "Win32 Release" in the "Settings for:" dropdown list.  Click the
-"Link" tab, choose the "Input" Category, and append "python21.lib" to the
+"Link" tab, choose the "Input" Category, and append "python20.lib" to the
 list in the "Object/library modules:" box.
 
 Select "Win32 Debug" in the "Settings for:" dropdown list, and append
-"python21_d.lib" to the list in the "Object/library modules:" box.  Then
+"python20_d.lib" to the list in the "Object/library modules:" box.  Then
 click on the C/C++ tab, select "Code Generation" from the "Category:"
 dropdown list, and select "Debug Multithreaded DLL" from the "Use run-time
 library:" dropdown list.

@@ -1,26 +1,26 @@
 /*
  * cPickle.c,v 1.71 1999/07/11 13:30:34 jim Exp
- *
- * Copyright (c) 1996-1998, Digital Creations, Fredericksburg, VA, USA.
+ * 
+ * Copyright (c) 1996-1998, Digital Creations, Fredericksburg, VA, USA.  
  * All rights reserved.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- *
+ * 
  *   o Redistributions of source code must retain the above copyright
  *     notice, this list of conditions, and the disclaimer that follows.
- *
+ * 
  *   o Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions, and the following disclaimer in
  *     the documentation and/or other materials provided with the
  *     distribution.
- *
+ * 
  *   o Neither the name of Digital Creations nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
- *
- *
+ * 
+ * 
  * THIS SOFTWARE IS PROVIDED BY DIGITAL CREATIONS AND CONTRIBUTORS *AS
  * IS* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
  * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
@@ -33,8 +33,8 @@
  * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
- #
+ * 
+ # 
  # If you have questions regarding this software, contact:
  #
  #   Digital Creations, L.C.
@@ -46,7 +46,7 @@
  #   (540) 371-6909
  */
 
-static char cPickle_module_documentation[] =
+static char cPickle_module_documentation[] = 
 "C implementation and optimization of the Python pickle module\n"
 "\n"
 "cPickle.c,v 1.71 1999/07/11 13:30:34 jim Exp\n"
@@ -68,20 +68,6 @@ static char cPickle_module_documentation[] =
 
 #define WRITE_BUF_SIZE 256
 
-/* --------------------------------------------------------------------------
-NOTES on format codes.
-XXX much more is needed here
-
-Integer types
-BININT1         8-bit unsigned integer; followed by 1 byte.
-BININT2         16-bit unsigned integer; followed by 2 bytes, little-endian.
-BININT          32-bit signed integer; followed by 4 bytes, little-endian.
-INT             Integer; natural decimal string conversion, then newline.
-                CAUTION:  INT-reading code can't assume that what follows
-                fits in a Python int, because the size of Python ints varies
-                across platforms.
-LONG            Long (unbounded) integer; repr(i), then newline.
--------------------------------------------------------------------------- */
 
 #define MARK        '('
 #define STOP        '.'
@@ -172,7 +158,7 @@ typedef struct {
      PyObject **data;
 } Pdata;
 
-static void
+static void 
 Pdata_dealloc(Pdata *self) {
     int i;
     PyObject **p;
@@ -205,7 +191,7 @@ Pdata_New(void) {
     return PyErr_NoMemory();
 }
 
-static int
+static int 
 stackUnderflow(void) {
     PyErr_SetString(UnpicklingError, "unpickling stack underflow");
     return -1;
@@ -227,21 +213,21 @@ Pdata_clear(Pdata *self, int clearto) {
 }
 
 
-static int
+static int 
 Pdata_grow(Pdata *self) {
   if (! self->size) {
       PyErr_NoMemory();
       return -1;
   }
-  self->size *= 2;
+  self->size *= 2;                          
   self->data = realloc(self->data, self->size*sizeof(PyObject*));
   if (! self->data) {
-    self->size = 0;
-    PyErr_NoMemory();
-    return -1;
+    self->size = 0;                       
+    PyErr_NoMemory();                              
+    return -1;                                     
   }
   return 0;
-}
+}                                                      
 
 #define PDATA_POP(D,V) {                                      \
     if ((D)->length) V=D->data[--((D)->length)];              \
@@ -361,14 +347,14 @@ typedef struct Unpicklerobject {
      PyObject *safe_constructors;
      PyObject *find_class;
 } Unpicklerobject;
-
+ 
 staticforward PyTypeObject Unpicklertype;
 
 /* Forward decls that need the above structs */
 static int save(Picklerobject *, PyObject *, int);
 static int put2(Picklerobject *, PyObject *);
 
-int
+int 
 cPickle_PyMapping_HasKey(PyObject *o, PyObject *key) {
     PyObject *v;
 
@@ -388,7 +374,7 @@ cPickle_ErrFormat(PyObject *ErrType, char *stringformat, char *format, ...)
   va_list va;
   PyObject *args=0, *retval=0;
   va_start(va, format);
-
+  
   if (format) args = Py_VaBuildValue(format, va);
   va_end(va);
   if (format && ! args) return NULL;
@@ -434,7 +420,7 @@ write_file(Picklerobject *self, char *s, int  n) {
     return n;
 }
 
-static int
+static int 
 write_cStringIO(Picklerobject *self, char *s, int  n) {
     if (s == NULL) {
         return 0;
@@ -447,19 +433,19 @@ write_cStringIO(Picklerobject *self, char *s, int  n) {
     return n;
 }
 
-static int
+static int 
 write_none(Picklerobject *self, char *s, int  n) {
     if (s == NULL) return 0;
     return n;
 }
 
-static int
+static int 
 write_other(Picklerobject *self, char *s, int  n) {
     PyObject *py_str = 0, *junk = 0;
 
     if (s == NULL) {
         UNLESS (self->buf_size) return 0;
-        UNLESS (py_str =
+        UNLESS (py_str = 
             PyString_FromStringAndSize(self->write_buf, self->buf_size))
             return -1;
     }
@@ -469,8 +455,8 @@ write_other(Picklerobject *self, char *s, int  n) {
                 return -1;
         }
 
-        if (n > WRITE_BUF_SIZE) {
-            UNLESS (py_str =
+        if (n > WRITE_BUF_SIZE) {    
+            UNLESS (py_str = 
                 PyString_FromStringAndSize(s, n))
                 return -1;
         }
@@ -542,7 +528,7 @@ read_file(Unpicklerobject *self, char **s, int  n) {
 }
 
 
-static int
+static int 
 readline_file(Unpicklerobject *self, char **s) {
     int i;
 
@@ -551,7 +537,7 @@ readline_file(Unpicklerobject *self, char **s) {
             PyErr_NoMemory();
             return -1;
         }
-
+   
         self->buf_size = 40;
     }
 
@@ -565,7 +551,7 @@ readline_file(Unpicklerobject *self, char **s) {
             }
         }
 
-        UNLESS (self->buf = (char *)realloc(self->buf,
+        UNLESS (self->buf = (char *)realloc(self->buf, 
             (self->buf_size * 2) * sizeof(char))) {
             PyErr_NoMemory();
             return -1;
@@ -574,10 +560,10 @@ readline_file(Unpicklerobject *self, char **s) {
         self->buf_size *= 2;
     }
 
-}
+}    
 
 
-static int
+static int 
 read_cStringIO(Unpicklerobject *self, char **s, int  n) {
     char *ptr;
 
@@ -592,7 +578,7 @@ read_cStringIO(Unpicklerobject *self, char **s, int  n) {
 }
 
 
-static int
+static int 
 readline_cStringIO(Unpicklerobject *self, char **s) {
     int n;
     char *ptr;
@@ -607,7 +593,7 @@ readline_cStringIO(Unpicklerobject *self, char **s) {
 }
 
 
-static int
+static int 
 read_other(Unpicklerobject *self, char **s, int  n) {
     PyObject *bytes, *str=0;
 
@@ -628,7 +614,7 @@ read_other(Unpicklerobject *self, char **s, int  n) {
 }
 
 
-static int
+static int 
 readline_other(Unpicklerobject *self, char **s) {
     PyObject *str;
     int str_size;
@@ -674,7 +660,7 @@ get(Picklerobject *self, PyObject *id) {
 
     UNLESS (value = PyTuple_GetItem(mv, 0))
         return -1;
-
+        
     UNLESS (PyInt_Check(value)) {
       PyErr_SetString(PicklingError, "no int where int expected in memo");
       return -1;
@@ -712,7 +698,7 @@ get(Picklerobject *self, PyObject *id) {
 
     return 0;
 }
-
+    
 
 static int
 put(Picklerobject *self, PyObject *ob) {
@@ -722,7 +708,7 @@ put(Picklerobject *self, PyObject *ob) {
     return put2(self, ob);
 }
 
-
+  
 static int
 put2(Picklerobject *self, PyObject *ob) {
     char c_str[30];
@@ -778,7 +764,7 @@ put2(Picklerobject *self, PyObject *ob) {
         else {
             c_str[0] = BINPUT;
             c_str[1] = p;
-            len = 2;
+            len = 2; 
         }
     }
 
@@ -823,7 +809,7 @@ PyImport_Import(PyObject *module_name) {
       UNLESS (standard_builtins ||
              (standard_builtins=PyImport_ImportModule("__builtin__")))
         return NULL;
-
+      
       __builtins__=standard_builtins;
       Py_INCREF(__builtins__);
       UNLESS (globals = Py_BuildValue("{sO}", "__builtins__", __builtins__))
@@ -844,7 +830,7 @@ PyImport_Import(PyObject *module_name) {
   Py_DECREF(globals);
   Py_DECREF(__builtins__);
   Py_DECREF(__import__);
-
+  
   return r;
 err:
   Py_XDECREF(globals);
@@ -870,7 +856,7 @@ whichmodule(PyObject *global, PyObject *global_name) {
     while ((j = PyDict_Next(modules_dict, &i, &name, &module))) {
 
         if (PyObject_Compare(name, __main___str)==0) continue;
-
+      
         UNLESS (global_name_attr = PyObject_GetAttr(module, global_name)) {
             PyErr_Clear();
             continue;
@@ -903,13 +889,13 @@ whichmodule(PyObject *global, PyObject *global_name) {
 static int
 save_none(Picklerobject *self, PyObject *args) {
     static char none = NONE;
-    if ((*self->write_func)(self, &none, 1) < 0)
+    if ((*self->write_func)(self, &none, 1) < 0)  
         return -1;
 
     return 0;
 }
 
-
+      
 static int
 save_int(Picklerobject *self, PyObject *args) {
     char c_str[32];
@@ -918,20 +904,18 @@ save_int(Picklerobject *self, PyObject *args) {
 
     if (!self->bin
 #if SIZEOF_LONG > 4
-        || l >  0x7fffffffL
-        || l < -0x80000000L
+        || (l >> 32)
 #endif
-       ) {
-        /* Text-mode pickle, or long too big to fit in the 4-byte
-         * signed BININT format:  store as a string.
-         */
+            ) {
+                /* Save extra-long ints in non-binary mode, so that
+                   we can use python long parsing code to restore,
+                   if necessary. */
         c_str[0] = INT;
         sprintf(c_str + 1, "%ld\n", l);
         if ((*self->write_func)(self, c_str, strlen(c_str)) < 0)
             return -1;
     }
     else {
-        /* Binary pickle and l fits in a signed 4-byte int. */
         c_str[1] = (int)( l        & 0xff);
         c_str[2] = (int)((l >> 8)  & 0xff);
         c_str[3] = (int)((l >> 16) & 0xff);
@@ -976,7 +960,7 @@ save_long(Picklerobject *self, PyObject *args) {
     if ((*self->write_func)(self, &l, 1) < 0)
         goto finally;
 
-    if ((*self->write_func)(self,
+    if ((*self->write_func)(self, 
         PyString_AS_STRING((PyStringObject *)repr), size) < 0)
         goto finally;
 
@@ -1156,7 +1140,7 @@ save_string(Picklerobject *self, PyObject *args, int doput) {
             PDATA_APPEND(self->file, args, -1);
           }
         else {
-          if ((*self->write_func)(self,
+          if ((*self->write_func)(self, 
               PyString_AS_STRING((PyStringObject *)args), size) < 0)
             return -1;
         }
@@ -1303,13 +1287,13 @@ save_tuple(Picklerobject *self, PyObject *args) {
     if ((*self->write_func)(self, &MARKv, 1) < 0)
         goto finally;
 
-    if ((len = PyTuple_Size(args)) < 0)
+    if ((len = PyTuple_Size(args)) < 0)  
         goto finally;
 
     for (i = 0; i < len; i++) {
-        UNLESS (element = PyTuple_GET_ITEM((PyTupleObject *)args, i))
+        UNLESS (element = PyTuple_GET_ITEM((PyTupleObject *)args, i))  
             goto finally;
-
+    
         if (save(self, element, 0) < 0)
             goto finally;
     }
@@ -1324,19 +1308,19 @@ save_tuple(Picklerobject *self, PyObject *args) {
         if (has_key) {
             if (self->bin) {
                 static char pop_mark = POP_MARK;
-
+  
                 if ((*self->write_func)(self, &pop_mark, 1) < 0)
                     goto finally;
             }
             else {
                 static char pop = POP;
-
+       
                 for (i = 0; i <= len; i++) {
                     if ((*self->write_func)(self, &pop, 1) < 0)
                         goto finally;
-                }
+                } 
             }
-
+        
             if (get(self, py_tuple_id) < 0)
                 goto finally;
 
@@ -1351,7 +1335,7 @@ save_tuple(Picklerobject *self, PyObject *args) {
 
     if (put(self, args) < 0)
         goto finally;
-
+ 
     res = 0;
 
 finally:
@@ -1379,7 +1363,7 @@ save_list(Picklerobject *self, PyObject *args) {
     if (self->bin) {
         s[0] = EMPTY_LIST;
         s_len = 1;
-    }
+    } 
     else {
         s[0] = MARK;
         s[1] = LIST;
@@ -1406,11 +1390,11 @@ save_list(Picklerobject *self, PyObject *args) {
             goto finally;
 
     for (i = 0; i < len; i++) {
-        UNLESS (element = PyList_GET_ITEM((PyListObject *)args, i))
+        UNLESS (element = PyList_GET_ITEM((PyListObject *)args, i))  
             goto finally;
 
-        if (save(self, element, 0) < 0)
-            goto finally;
+        if (save(self, element, 0) < 0)  
+            goto finally;       
 
         if (!using_appends) {
             if ((*self->write_func)(self, &append, 1) < 0)
@@ -1495,9 +1479,9 @@ finally:
 }
 
 
-static int
+static int  
 save_inst(Picklerobject *self, PyObject *args) {
-    PyObject *class = 0, *module = 0, *name = 0, *state = 0,
+    PyObject *class = 0, *module = 0, *name = 0, *state = 0, 
              *getinitargs_func = 0, *getstate_func = 0, *class_args = 0;
     char *module_str, *name_str;
     int module_size, name_size, res = -1;
@@ -1519,15 +1503,15 @@ save_inst(Picklerobject *self, PyObject *args) {
         PyObject *element = 0;
         int i, len;
 
-        UNLESS (class_args =
+        UNLESS (class_args = 
             PyObject_CallObject(getinitargs_func, empty_tuple))
             goto finally;
 
-        if ((len = PyObject_Size(class_args)) < 0)
+        if ((len = PyObject_Size(class_args)) < 0)  
             goto finally;
 
         for (i = 0; i < len; i++) {
-            UNLESS (element = PySequence_GetItem(class_args, i))
+            UNLESS (element = PySequence_GetItem(class_args, i)) 
                 goto finally;
 
             if (save(self, element, 0) < 0) {
@@ -1551,7 +1535,7 @@ save_inst(Picklerobject *self, PyObject *args) {
         UNLESS (module = whichmodule(class, name))
             goto finally;
 
-
+        
         if ((module_size = PyString_Size(module)) < 0 ||
            (name_size = PyString_Size(name)) < 0)
           goto finally;
@@ -1600,7 +1584,7 @@ save_inst(Picklerobject *self, PyObject *args) {
         if (put(self, args) < 0)
             goto finally;
     }
-
+  
     if (save(self, state, 0) < 0)
         goto finally;
 
@@ -1624,7 +1608,7 @@ finally:
 static int
 save_global(Picklerobject *self, PyObject *args, PyObject *name) {
     PyObject *global_name = 0, *module = 0;
-    char *name_str, *module_str;
+    char *name_str, *module_str; 
     int module_size, name_size, res = -1;
 
     static char global = GLOBAL;
@@ -1693,7 +1677,7 @@ save_pers(Picklerobject *self, PyObject *args, PyObject *f) {
     if (pid != Py_None) {
         if (!self->bin) {
             if (!PyString_Check(pid)) {
-                PyErr_SetString(PicklingError,
+                PyErr_SetString(PicklingError, 
                     "persistent id must be string");
                 goto finally;
             }
@@ -1704,13 +1688,13 @@ save_pers(Picklerobject *self, PyObject *args, PyObject *f) {
             if ((size = PyString_Size(pid)) < 0)
                 goto finally;
 
-            if ((*self->write_func)(self,
+            if ((*self->write_func)(self, 
                 PyString_AS_STRING((PyStringObject *)pid), size) < 0)
                 goto finally;
 
             if ((*self->write_func)(self, "\n", 1) < 0)
                 goto finally;
-
+     
             res = 1;
             goto finally;
         }
@@ -1721,7 +1705,7 @@ save_pers(Picklerobject *self, PyObject *args, PyObject *f) {
                 res = 1;
         }
 
-        goto finally;
+        goto finally;              
     }
 
     res = 0;
@@ -1733,7 +1717,7 @@ finally:
 }
 
 
-static int
+static int 
 save_reduce(Picklerobject *self, PyObject *callable,
             PyObject *tup, PyObject *state, PyObject *ob) {
     static char reduce = REDUCE, build = BUILD;
@@ -1757,7 +1741,7 @@ save_reduce(Picklerobject *self, PyObject *callable,
                 return -1;
         }
     }
-
+    
     if (state) {
         if (save(self, state, 0) < 0)
             return -1;
@@ -1883,7 +1867,7 @@ save(Picklerobject *self, PyObject *args, int  pers_save) {
         case 'd':
             if (type == &PyDict_Type) {
                 res = save_dict(self, args);
-                goto finally;
+                goto finally; 
             }
             break;
 
@@ -1932,7 +1916,7 @@ save(Picklerobject *self, PyObject *args, int  pers_save) {
             FREE_ARG_TUP(self);
         }
         if (! t) goto finally;
-    }
+    }        
     else {
         PyErr_Clear();
 
@@ -1950,7 +1934,7 @@ save(Picklerobject *self, PyObject *args, int  pers_save) {
             res = save_global(self, args, t);
             goto finally;
         }
-
+ 
         if (!PyTuple_Check(t)) {
             cPickle_ErrFormat(PicklingError, "Value returned by %s must "
                 "be a tuple", "O", __reduce__);
@@ -1958,13 +1942,13 @@ save(Picklerobject *self, PyObject *args, int  pers_save) {
         }
 
         size = PyTuple_Size(t);
-
+        
         if ((size != 3) && (size != 2)) {
-            cPickle_ErrFormat(PicklingError, "tuple returned by %s must "
+            cPickle_ErrFormat(PicklingError, "tuple returned by %s must "     
                 "contain only two or three elements", "O", __reduce__);
                 goto finally;
         }
-
+        
         callable = PyTuple_GET_ITEM(t, 0);
 
         arg_tup = PyTuple_GET_ITEM(t, 1);
@@ -1989,7 +1973,7 @@ finally:
     Py_XDECREF(py_ob_id);
     Py_XDECREF(__reduce__);
     Py_XDECREF(t);
-
+   
     return res;
 }
 
@@ -2044,13 +2028,13 @@ Pickle_getvalue(Picklerobject *self, PyObject *args) {
   /* set up an array to hold get/put status */
   if ((lm=PyDict_Size(self->memo)) < 0) return NULL;
   lm++;
-  if (! (have_get=malloc((lm)*sizeof(char)))) return PyErr_NoMemory();
+  if (! (have_get=malloc((lm)*sizeof(char)))) return PyErr_NoMemory();  
   memset(have_get,0,lm);
 
   /* Scan for gets. */
   for (rsize=0, i=l; --i >= 0; ) {
       k=data->data[i];
-
+      
       if (PyString_Check(k)) {
         rsize += PyString_GET_SIZE(k);
       }
@@ -2061,7 +2045,7 @@ Pickle_getvalue(Picklerobject *self, PyObject *args) {
           PyErr_SetString(PicklingError,
                           "Invalid get data");
           return NULL;
-        }
+        }      
         if (have_get[ik]) { /* with matching get */
           if (ik < 256) rsize += 2;
           else rsize+=5;
@@ -2083,7 +2067,7 @@ Pickle_getvalue(Picklerobject *self, PyObject *args) {
           PyErr_SetString(PicklingError,
                           "Invalid get data");
           return NULL;
-        }
+        }      
         have_get[ik]=1;
         if (ik < 256) rsize += 2;
         else rsize+=5;
@@ -2145,7 +2129,7 @@ Pickle_getvalue(Picklerobject *self, PyObject *args) {
     PyDict_Clear(self->memo);
     Pdata_clear(data,0);
   }
-
+    
   free(have_get);
   return r;
 err:
@@ -2207,11 +2191,11 @@ newPicklerobject(PyObject *file, int bin) {
       Py_INCREF(file);
     else
       file=Pdata_New();
-
-    UNLESS (self->file = file)
+    
+    UNLESS (self->file = file) 
       goto err;
 
-    UNLESS (self->memo = PyDict_New())
+    UNLESS (self->memo = PyDict_New()) 
        goto err;
 
     if (PyFile_Check(file)) {
@@ -2240,8 +2224,8 @@ newPicklerobject(PyObject *file, int bin) {
           }
         }
 
-        UNLESS (self->write_buf =
-            (char *)malloc(WRITE_BUF_SIZE * sizeof(char))) {
+        UNLESS (self->write_buf = 
+            (char *)malloc(WRITE_BUF_SIZE * sizeof(char))) { 
             PyErr_NoMemory();
             goto err;
         }
@@ -2295,7 +2279,7 @@ Pickler_dealloc(Picklerobject *self) {
     Py_XDECREF(self->inst_pers_func);
     Py_XDECREF(self->dispatch_table);
 
-    if (self->write_buf) {
+    if (self->write_buf) {    
         free(self->write_buf);
     }
 
@@ -2354,7 +2338,7 @@ Pickler_getattr(Picklerobject *self, char *name) {
 }
 
 
-int
+int 
 Pickler_setattr(Picklerobject *self, char *name, PyObject *value) {
 
     if (! value) {
@@ -2362,7 +2346,7 @@ Pickler_setattr(Picklerobject *self, char *name, PyObject *value) {
                         "attribute deletion is not supported");
         return -1;
     }
-
+  
     if (strcmp(name, "persistent_id") == 0) {
         Py_XDECREF(self->pers_func);
         self->pers_func = value;
@@ -2438,7 +2422,7 @@ find_class(PyObject *py_module_name, PyObject *py_global_name, PyObject *fc) {
 
     if (fc) {
       if (fc==Py_None) {
-	PyErr_SetString(UnpicklingError,
+	PyErr_SetString(UnpicklingError, 
 			"Global and instance pickles are not supported.");
 	return NULL;
       }
@@ -2463,7 +2447,7 @@ find_class(PyObject *py_module_name, PyObject *py_global_name, PyObject *fc) {
       char buf[256 + 37];
       sprintf(buf, "Failed to import class %.128s from module %.128s",
               PyString_AS_STRING((PyStringObject*)py_global_name),
-              PyString_AS_STRING((PyStringObject*)py_module_name));
+              PyString_AS_STRING((PyStringObject*)py_module_name));  
       PyErr_SetString(PyExc_SystemError, buf);
       return NULL;
     }
@@ -2480,7 +2464,7 @@ marker(Unpicklerobject *self) {
     return self->marks[--self->num_marks];
 }
 
-
+    
 static int
 load_none(Unpicklerobject *self) {
     PDATA_APPEND(self->stack, Py_None, -1);
@@ -2534,7 +2518,7 @@ finally:
 }
 
 
-static long
+static long 
 calc_binint(char *s, int  x) {
     unsigned char c;
     int i;
@@ -2544,14 +2528,7 @@ calc_binint(char *s, int  x) {
         c = (unsigned char)s[i];
         l |= (long)c << (i * 8);
     }
-#if SIZEOF_LONG > 4
-    /* Unlike BININT1 and BININT2, BININT (more accurately BININT4)
-     * is signed, so on a box with longs bigger than 4 bytes we need
-     * to extend a BININT's sign bit to the full width.
-     */
-    if (x == 4 && l & (1L << 31))
-        l |= (~0L) << 32;
-#endif
+
     return l;
 }
 
@@ -2602,7 +2579,7 @@ load_binint2(Unpicklerobject *self) {
 
     return load_binintx(self, s, 2);
 }
-
+    
 static int
 load_long(Unpicklerobject *self) {
     PyObject *l = 0;
@@ -2626,7 +2603,7 @@ finally:
     return res;
 }
 
-
+ 
 static int
 load_float(Unpicklerobject *self) {
     PyObject *py_float = 0;
@@ -2642,7 +2619,7 @@ load_float(Unpicklerobject *self) {
     d = strtod(s, &endptr);
 
     if (errno || (endptr[0] != '\n') || (endptr[1] != '\0')) {
-        PyErr_SetString(PyExc_ValueError,
+        PyErr_SetString(PyExc_ValueError, 
         "could not convert string to float");
         goto finally;
     }
@@ -2767,12 +2744,12 @@ finally:
     free(s);
 
     return res;
-
+    
 insecure:
     free(s);
     PyErr_SetString(PyExc_ValueError,"insecure string pickle");
     return -1;
-}
+} 
 
 
 static int
@@ -2799,7 +2776,7 @@ load_binstring(Unpicklerobject *self) {
 static int
 load_short_binstring(Unpicklerobject *self) {
     PyObject *py_string = 0;
-    unsigned char l;
+    unsigned char l;  
     char *s;
 
     if ((*self->read_func)(self, &s, 1) < 0)
@@ -2813,7 +2790,7 @@ load_short_binstring(Unpicklerobject *self) {
 
     PDATA_PUSH(self->stack, py_string, -1);
     return 0;
-}
+} 
 
 
 static int
@@ -2833,7 +2810,7 @@ load_unicode(Unpicklerobject *self) {
 
 finally:
     return res;
-}
+} 
 
 
 static int
@@ -2937,7 +2914,7 @@ Instance_New(PyObject *cls, PyObject *args) {
 
   if (PyClass_Check(cls)) {
       int l;
-
+      
       if ((l=PyObject_Size(args)) < 0) goto err;
       UNLESS (l) {
           PyObject *__getinitargs__;
@@ -2945,24 +2922,32 @@ Instance_New(PyObject *cls, PyObject *args) {
           UNLESS (__getinitargs__=PyObject_GetAttr(cls, __getinitargs___str)) {
               /* We have a class with no __getinitargs__, so bypass usual
                  construction  */
-              PyObject *inst;
+              PyInstanceObject *inst;
 
               PyErr_Clear();
-              UNLESS (inst=PyInstance_NewRaw(cls, NULL))
+              UNLESS (inst=PyObject_New(PyInstanceObject, &PyInstance_Type))
                 goto err;
-              return inst;
+              inst->in_class=(PyClassObject*)cls;
+              Py_INCREF(cls);
+              UNLESS (inst->in_dict=PyDict_New()) {
+                inst = (PyInstanceObject *) PyObject_AS_GC(inst);
+                PyObject_DEL(inst);
+                goto err;
+              }
+              PyObject_GC_Init(inst);
+              return (PyObject *)inst;
             }
           Py_DECREF(__getinitargs__);
         }
-
+      
       if ((r=PyInstance_New(cls, args, NULL))) return r;
       else goto err;
     }
-
-
+       
+  
   if ((has_key = cPickle_PyMapping_HasKey(safe_constructors, cls)) < 0)
     goto err;
-
+    
   if (!has_key)
     if (!(safe = PyObject_GetAttr(cls, __safe_for_unpickling___str)) ||
        !PyObject_IsTrue(safe)) {
@@ -2975,7 +2960,7 @@ Instance_New(PyObject *cls, PyObject *args) {
   if (args==Py_None) {
       /* Special case, call cls.__basicnew__() */
       PyObject *basicnew;
-
+      
       UNLESS (basicnew=PyObject_GetAttr(cls, __basicnew___str)) return NULL;
       r=PyObject_CallObject(basicnew, NULL);
       Py_DECREF(basicnew);
@@ -2997,7 +2982,7 @@ err:
   }
   return NULL;
 }
-
+  
 
 static int
 load_obj(Unpicklerobject *self) {
@@ -3041,7 +3026,7 @@ load_inst(Unpicklerobject *self) {
     Py_DECREF(module_name);
 
     if (! class) return -1;
-
+      
     if ((tup=Pdata_popTuple(self->stack, i))) {
         obj = Instance_New(class, tup);
         Py_DECREF(tup);
@@ -3089,7 +3074,7 @@ load_persid(Unpicklerobject *self) {
     if (self->pers_func) {
         if ((len = (*self->readline_func)(self, &s)) < 0) return -1;
 	if (len < 2) return bad_readline();
-
+  
         UNLESS (pid = PyString_FromStringAndSize(s, len - 1)) return -1;
 
         if (PyList_Check(self->pers_func)) {
@@ -3160,16 +3145,16 @@ load_pop(Unpicklerobject *self) {
 
     UNLESS ((len=self->stack->length) > 0) return stackUnderflow();
 
-    /* Note that we split the (pickle.py) stack into two stacks,
+    /* Note that we split the (pickle.py) stack into two stacks, 
        an object stack and a mark stack. We have to be clever and
        pop the right one. We do this by looking at the top of the
        mark stack.
     */
 
-    if ((self->num_marks > 0) &&
+    if ((self->num_marks > 0) && 
         (self->marks[self->num_marks - 1] == len))
         self->num_marks--;
-    else {
+    else { 
         len--;
         Py_DECREF(self->stack->data[len]);
 	self->stack->length=len;
@@ -3242,7 +3227,7 @@ load_binget(Unpicklerobject *self) {
 
     key = (unsigned char)s[0];
     UNLESS (py_key = PyInt_FromLong((long)key)) return -1;
-
+    
     value = PyDict_GetItem(self->memo, py_key);
     if (! value) {
         PyErr_SetObject(BadPickleGet, py_key);
@@ -3277,7 +3262,7 @@ load_long_binget(Unpicklerobject *self) {
     key |= (long)c << 24;
 
     UNLESS (py_key = PyInt_FromLong((long)key)) return -1;
-
+    
     value = PyDict_GetItem(self->memo, py_key);
     if (! value) {
         PyErr_SetObject(BadPickleGet, py_key);
@@ -3357,7 +3342,7 @@ load_long_binput(Unpicklerobject *self) {
 }
 
 
-static int
+static int 
 do_append(Unpicklerobject *self, int  x) {
     PyObject *value = 0, *list = 0, *append_method = 0;
     int len, i;
@@ -3370,7 +3355,7 @@ do_append(Unpicklerobject *self, int  x) {
     if (PyList_Check(list)) {
         PyObject *slice;
         int list_len;
-
+       
         slice=Pdata_popList(self->stack, x);
         list_len = PyList_GET_SIZE(list);
         i=PyList_SetSlice(list, list_len, list_len, slice);
@@ -3381,7 +3366,7 @@ do_append(Unpicklerobject *self, int  x) {
 
         UNLESS (append_method = PyObject_GetAttr(list, append_str))
             return -1;
-
+         
         for (i = x; i < len; i++) {
             PyObject *junk;
 
@@ -3407,7 +3392,7 @@ do_append(Unpicklerobject *self, int  x) {
     return 0;
 }
 
-
+    
 static int
 load_append(Unpicklerobject *self) {
     return do_append(self, self->stack->length - 1);
@@ -3458,7 +3443,7 @@ load_setitems(Unpicklerobject *self) {
 
 static int
 load_build(Unpicklerobject *self) {
-    PyObject *value = 0, *inst = 0, *instdict = 0, *d_key = 0, *d_value = 0,
+    PyObject *value = 0, *inst = 0, *instdict = 0, *d_key = 0, *d_value = 0, 
              *junk = 0, *__setstate__ = 0;
     int i, r = 0;
 
@@ -3493,7 +3478,7 @@ load_build(Unpicklerobject *self) {
     else r=-1;
 
     Py_XDECREF(value);
-
+  
     return r;
 }
 
@@ -3504,7 +3489,7 @@ load_mark(Unpicklerobject *self) {
 
     /* Note that we split the (pickle.py) stack into two stacks, an
        object stack and a mark stack. Here we push a mark onto the
-       mark stack.
+       mark stack.  
     */
 
     if ((self->num_marks + 1) >= self->marks_size) {
@@ -3540,11 +3525,11 @@ load_reduce(Unpicklerobject *self) {
     Py_DECREF(arg_tup);
 
     if (! ob) return -1;
-
+   
     PDATA_PUSH(self->stack, ob, -1);
     return 0;
 }
-
+    
 static PyObject *
 load(Unpicklerobject *self) {
     PyObject *err = 0, *val = 0;
@@ -3677,12 +3662,12 @@ load(Unpicklerobject *self) {
                 if (load_appends(self) < 0)
                     break;
                 continue;
-
+   
             case BUILD:
                 if (load_build(self) < 0)
                     break;
                 continue;
-
+  
             case DUP:
                 if (load_dup(self) < 0)
                     break;
@@ -3697,7 +3682,7 @@ load(Unpicklerobject *self) {
                 if (load_long_binget(self) < 0)
                     break;
                 continue;
-
+         
             case GET:
                 if (load_get(self) < 0)
                     break;
@@ -3717,7 +3702,7 @@ load(Unpicklerobject *self) {
                 if (load_long_binput(self) < 0)
                     break;
                 continue;
-
+         
             case PUT:
                 if (load_put(self) < 0)
                     break;
@@ -3761,8 +3746,8 @@ load(Unpicklerobject *self) {
                     break;
                 continue;
 
-            default:
-                cPickle_ErrFormat(UnpicklingError, "invalid load key, '%s'.",
+            default: 
+                cPickle_ErrFormat(UnpicklingError, "invalid load key, '%s'.", 
                     "c", s[0]);
                 return NULL;
         }
@@ -3773,14 +3758,14 @@ load(Unpicklerobject *self) {
     if ((err = PyErr_Occurred())) {
         if (err == PyExc_EOFError) {
             PyErr_SetNone(PyExc_EOFError);
-        }
+        }    
         return NULL;
     }
 
-    PDATA_POP(self->stack, val);
+    PDATA_POP(self->stack, val);    
     return val;
 }
-
+    
 
 /* No-load functions to support noload, which is used to
    find persistent references. */
@@ -3967,12 +3952,12 @@ noload(Unpicklerobject *self) {
                 if (load_appends(self) < 0)
                     break;
                 continue;
-
+   
             case BUILD:
                 if (noload_build(self) < 0)
                     break;
                 continue;
-
+  
             case DUP:
                 if (load_dup(self) < 0)
                     break;
@@ -3987,7 +3972,7 @@ noload(Unpicklerobject *self) {
                 if (load_long_binget(self) < 0)
                     break;
                 continue;
-
+         
             case GET:
                 if (load_get(self) < 0)
                     break;
@@ -4007,7 +3992,7 @@ noload(Unpicklerobject *self) {
                 if (load_long_binput(self) < 0)
                     break;
                 continue;
-
+         
             case PUT:
                 if (load_put(self) < 0)
                     break;
@@ -4051,8 +4036,8 @@ noload(Unpicklerobject *self) {
                     break;
                 continue;
 
-            default:
-                cPickle_ErrFormat(UnpicklingError, "invalid load key, '%s'.",
+            default: 
+                cPickle_ErrFormat(UnpicklingError, "invalid load key, '%s'.", 
                     "c", s[0]);
                 return NULL;
         }
@@ -4063,18 +4048,18 @@ noload(Unpicklerobject *self) {
     if ((err = PyErr_Occurred())) {
         if (err == PyExc_EOFError) {
             PyErr_SetNone(PyExc_EOFError);
-        }
+        }    
         return NULL;
     }
 
-    PDATA_POP(self->stack, val);
+    PDATA_POP(self->stack, val);    
     return val;
 }
-
+    
 
 static PyObject *
 Unpickler_load(Unpicklerobject *self, PyObject *args) {
-    UNLESS (PyArg_ParseTuple(args, ":load"))
+    UNLESS (PyArg_ParseTuple(args, ":load")) 
         return NULL;
 
     return load(self);
@@ -4082,7 +4067,7 @@ Unpickler_load(Unpicklerobject *self, PyObject *args) {
 
 static PyObject *
 Unpickler_noload(Unpicklerobject *self, PyObject *args) {
-    UNLESS (PyArg_ParseTuple(args, ":noload"))
+    UNLESS (PyArg_ParseTuple(args, ":noload")) 
         return NULL;
 
     return noload(self);
@@ -4126,7 +4111,7 @@ newUnpicklerobject(PyObject *f) {
     self->safe_constructors = NULL;
     self->find_class = NULL;
 
-    UNLESS (self->memo = PyDict_New())
+    UNLESS (self->memo = PyDict_New()) 
        goto err;
 
     Py_INCREF(f);
@@ -4187,7 +4172,7 @@ err:
 static PyObject *
 get_Unpickler(PyObject *self, PyObject *args) {
     PyObject *file;
-
+  
     UNLESS (PyArg_ParseTuple(args, "O:Unpickler", &file))
         return NULL;
     return (PyObject *)newUnpicklerobject(file);
@@ -4213,7 +4198,7 @@ Unpickler_dealloc(Unpicklerobject *self) {
     if (self->buf_size) {
         free(self->buf);
     }
-
+    
     PyObject_Del(self);
 }
 
@@ -4348,8 +4333,8 @@ finally:
     Py_XDECREF(file);
 
     return res;
-}
-
+}  
+  
 
 static PyObject *
 cpm_load(PyObject *self, PyObject *args) {
@@ -4381,7 +4366,7 @@ cpm_loads(PyObject *self, PyObject *args) {
 
     UNLESS (file = PycStringIO->NewInput(ob))
         goto finally;
-
+  
     UNLESS (unpickler = newUnpicklerobject(file))
         goto finally;
 
@@ -4395,7 +4380,7 @@ finally:
 }
 
 
-static char Unpicklertype__doc__[] =
+static char Unpicklertype__doc__[] = 
 "Objects that know how to unpickle";
 
 static PyTypeObject Unpicklertype = {
@@ -4527,9 +4512,9 @@ init_stuff(PyObject *module_dict) {
       return -1;
 
     Py_DECREF(t);
+    
 
-
-    UNLESS (PicklingError = PyErr_NewException("cPickle.PicklingError",
+    UNLESS (PicklingError = PyErr_NewException("cPickle.PicklingError", 
 					       PickleError, NULL))
       return -1;
 
@@ -4550,15 +4535,15 @@ init_stuff(PyObject *module_dict) {
 
     Py_DECREF(t);
 
-    UNLESS (UnpicklingError = PyErr_NewException("cPickle.UnpicklingError",
+    UNLESS (UnpicklingError = PyErr_NewException("cPickle.UnpicklingError", 
    					         PickleError, NULL))
       return -1;
 
-    if (PyDict_SetItemString(module_dict, "PickleError",
+    if (PyDict_SetItemString(module_dict, "PickleError", 
         PickleError) < 0)
         return -1;
 
-    if (PyDict_SetItemString(module_dict, "PicklingError",
+    if (PyDict_SetItemString(module_dict, "PicklingError", 
         PicklingError) < 0)
         return -1;
 
@@ -4578,7 +4563,7 @@ init_stuff(PyObject *module_dict) {
         return -1;
 
     PycString_IMPORT;
-
+ 
     return 0;
 }
 
@@ -4597,8 +4582,8 @@ initcPickle(void) {
     Unpicklertype.ob_type = &PyType_Type;
     PdataType.ob_type = &PyType_Type;
 
-    /* Initialize some pieces. We need to do this before module creation,
-       so we're forced to use a temporary dictionary. :(
+    /* Initialize some pieces. We need to do this before module creation, 
+       so we're forced to use a temporary dictionary. :( 
     */
     di=PyDict_New();
     if (!di) return;

@@ -149,9 +149,6 @@ class build_ext (Command):
             self.libraries = []
         if self.library_dirs is None:
             self.library_dirs = []
-        elif type(self.library_dirs) is StringType:
-            self.library_dirs = string.split(self.library_dirs, os.pathsep)
-
         if self.rpath is None:
             self.rpath = []
         elif type(self.rpath) is StringType:
@@ -167,21 +164,11 @@ class build_ext (Command):
             else:
                 self.build_temp = os.path.join(self.build_temp, "Release")
 
-        # for extensions under Cygwin Python's library directory must be
-        # appended to library_dirs
-        if sys.platform[:6] == 'cygwin':
-            if string.find(sys.executable, sys.exec_prefix) != -1:
-                # building third party extensions
-                self.library_dirs.append(os.path.join(sys.prefix, "lib", "python" + sys.version[:3], "config"))
-            else:
-                # building python standard extensions
-                self.library_dirs.append('.')
-
         # The argument parsing will result in self.define being a string, but
         # it has to be a list of 2-tuples.  All the preprocessor symbols
         # specified by the 'define' option will be set to '1'.  Multiple
         # symbols can be separated with commas.
-        
+
         if self.define:
             defines = string.split(self.define, ',')
             self.define = map(lambda symbol: (symbol, '1'), defines)
@@ -374,105 +361,104 @@ class build_ext (Command):
 
     # get_outputs ()
 
-    def build_extensions(self):
+
+    def build_extensions (self):
 
         # First, sanity-check the 'extensions' list
         self.check_extensions_list(self.extensions)
 
         for ext in self.extensions:
-            self.build_extension(ext)
+            sources = ext.sources
+            if sources is None or type(sources) not in (ListType, TupleType):
+                raise DistutilsSetupError, \
+                      ("in 'ext_modules' option (extension '%s'), " +
+                       "'sources' must be present and must be " +
+                       "a list of source filenames") % ext.name
+            sources = list(sources)
 
-    def build_extension(self, ext):
+            fullname = self.get_ext_fullname(ext.name)
+            if self.inplace:
+                # ignore build-lib -- put the compiled extension into
+                # the source tree along with pure Python modules
 
-        sources = ext.sources
-        if sources is None or type(sources) not in (ListType, TupleType):
-            raise DistutilsSetupError, \
-                  ("in 'ext_modules' option (extension '%s'), " +
-                   "'sources' must be present and must be " +
-                   "a list of source filenames") % ext.name
-        sources = list(sources)
+                modpath = string.split(fullname, '.')
+                package = string.join(modpath[0:-1], '.')
+                base = modpath[-1]
 
-        fullname = self.get_ext_fullname(ext.name)
-        if self.inplace:
-            # ignore build-lib -- put the compiled extension into
-            # the source tree along with pure Python modules
+                build_py = self.get_finalized_command('build_py')
+                package_dir = build_py.get_package_dir(package)
+                ext_filename = os.path.join(package_dir,
+                                            self.get_ext_filename(base))
+            else:
+                ext_filename = os.path.join(self.build_lib,
+                                            self.get_ext_filename(fullname))
 
-            modpath = string.split(fullname, '.')
-            package = string.join(modpath[0:-1], '.')
-            base = modpath[-1]
+            if not (self.force or newer_group(sources, ext_filename, 'newer')):
+                self.announce("skipping '%s' extension (up-to-date)" %
+                              ext.name)
+                continue # 'for' loop over all extensions
+            else:
+                self.announce("building '%s' extension" % ext.name)
 
-            build_py = self.get_finalized_command('build_py')
-            package_dir = build_py.get_package_dir(package)
-            ext_filename = os.path.join(package_dir,
-                                        self.get_ext_filename(base))
-        else:
-            ext_filename = os.path.join(self.build_lib,
-                                        self.get_ext_filename(fullname))
+            # First, scan the sources for SWIG definition files (.i), run
+            # SWIG on 'em to create .c files, and modify the sources list
+            # accordingly.
+            sources = self.swig_sources(sources)
 
-        if not (self.force or newer_group(sources, ext_filename, 'newer')):
-            self.announce("skipping '%s' extension (up-to-date)" %
-                          ext.name)
-            return
-        else:
-            self.announce("building '%s' extension" % ext.name)
+            # Next, compile the source code to object files.
 
-        # First, scan the sources for SWIG definition files (.i), run
-        # SWIG on 'em to create .c files, and modify the sources list
-        # accordingly.
-        sources = self.swig_sources(sources)
+            # XXX not honouring 'define_macros' or 'undef_macros' -- the
+            # CCompiler API needs to change to accommodate this, and I
+            # want to do one thing at a time!
 
-        # Next, compile the source code to object files.
+            # Two possible sources for extra compiler arguments:
+            #   - 'extra_compile_args' in Extension object
+            #   - CFLAGS environment variable (not particularly
+            #     elegant, but people seem to expect it and I
+            #     guess it's useful)
+            # The environment variable should take precedence, and
+            # any sensible compiler will give precedence to later
+            # command line args.  Hence we combine them in order:
+            extra_args = ext.extra_compile_args or []
 
-        # XXX not honouring 'define_macros' or 'undef_macros' -- the
-        # CCompiler API needs to change to accommodate this, and I
-        # want to do one thing at a time!
+            macros = ext.define_macros[:]
+            for undef in ext.undef_macros:
+                macros.append((undef,))
 
-        # Two possible sources for extra compiler arguments:
-        #   - 'extra_compile_args' in Extension object
-        #   - CFLAGS environment variable (not particularly
-        #     elegant, but people seem to expect it and I
-        #     guess it's useful)
-        # The environment variable should take precedence, and
-        # any sensible compiler will give precedence to later
-        # command line args.  Hence we combine them in order:
-        extra_args = ext.extra_compile_args or []
+            # XXX and if we support CFLAGS, why not CC (compiler
+            # executable), CPPFLAGS (pre-processor options), and LDFLAGS
+            # (linker options) too?
+            # XXX should we use shlex to properly parse CFLAGS?
 
-        macros = ext.define_macros[:]
-        for undef in ext.undef_macros:
-            macros.append((undef,))
+            if os.environ.has_key('CFLAGS'):
+                extra_args.extend(string.split(os.environ['CFLAGS']))
+                
+            objects = self.compiler.compile(sources,
+                                            output_dir=self.build_temp,
+                                            macros=macros,
+                                            include_dirs=ext.include_dirs,
+                                            debug=self.debug,
+                                            extra_postargs=extra_args)
 
-        # XXX and if we support CFLAGS, why not CC (compiler
-        # executable), CPPFLAGS (pre-processor options), and LDFLAGS
-        # (linker options) too?
-        # XXX should we use shlex to properly parse CFLAGS?
-
-        if os.environ.has_key('CFLAGS'):
-            extra_args.extend(string.split(os.environ['CFLAGS']))
-
-        objects = self.compiler.compile(sources,
-                                        output_dir=self.build_temp,
-                                        macros=macros,
-                                        include_dirs=ext.include_dirs,
-                                        debug=self.debug,
-                                        extra_postargs=extra_args)
-
-        # Now link the object files together into a "shared object" --
-        # of course, first we have to figure out all the other things
-        # that go into the mix.
-        if ext.extra_objects:
-            objects.extend(ext.extra_objects)
-        extra_args = ext.extra_link_args or []
+            # Now link the object files together into a "shared object" --
+            # of course, first we have to figure out all the other things
+            # that go into the mix.
+            if ext.extra_objects:
+                objects.extend(ext.extra_objects)
+            extra_args = ext.extra_link_args or []
 
 
-        self.compiler.link_shared_object(
-            objects, ext_filename, 
-            libraries=self.get_libraries(ext),
-            library_dirs=ext.library_dirs,
-            runtime_library_dirs=ext.runtime_library_dirs,
-            extra_postargs=extra_args,
-            export_symbols=self.get_export_symbols(ext), 
-            debug=self.debug,
-            build_temp=self.build_temp)
+            self.compiler.link_shared_object(
+                objects, ext_filename, 
+                libraries=self.get_libraries(ext),
+                library_dirs=ext.library_dirs,
+                runtime_library_dirs=ext.runtime_library_dirs,
+                extra_postargs=extra_args,
+                export_symbols=self.get_export_symbols(ext), 
+                debug=self.debug,
+                build_temp=self.build_temp)
+
+    # build_extensions ()
 
 
     def swig_sources (self, sources):
@@ -601,13 +587,6 @@ class build_ext (Command):
             template = "python%d%d"
             if self.debug:
                 template = template + '_d'
-            pythonlib = (template %
-                   (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
-            # don't extend ext.libraries, it may be shared with other
-            # extensions, it is a reference to the original list
-            return ext.libraries + [pythonlib]
-        elif sys.platform[:6] == "cygwin":
-            template = "python%d.%d"
             pythonlib = (template %
                    (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
             # don't extend ext.libraries, it may be shared with other

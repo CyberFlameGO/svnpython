@@ -175,7 +175,7 @@ PyObject_Print(PyObject *op, FILE *fp, int flags)
 		return -1;
 #ifdef USE_STACKCHECK
 	if (PyOS_CheckStack()) {
-		PyErr_SetString(PyExc_MemoryError, "stack overflow");
+		PyErr_SetString(PyExc_MemoryError, "Stack overflow");
 		return -1;
 	}
 #endif
@@ -188,17 +188,24 @@ PyObject_Print(PyObject *op, FILE *fp, int flags)
 			fprintf(fp, "<refcnt %u at %p>",
 				op->ob_refcnt, op);
 		else if (op->ob_type->tp_print == NULL) {
-			PyObject *s;
-			if (flags & Py_PRINT_RAW)
-				s = PyObject_Str(op);
-			else
-				s = PyObject_Repr(op);
-			if (s == NULL)
-				ret = -1;
-			else {
-				ret = PyObject_Print(s, fp, Py_PRINT_RAW);
+			if (op->ob_type->tp_repr == NULL) {
+				fprintf(fp, "<%s object at %p>",
+					op->ob_type->tp_name, op);
 			}
-			Py_XDECREF(s);
+			else {
+				PyObject *s;
+				if (flags & Py_PRINT_RAW)
+					s = PyObject_Str(op);
+				else
+					s = PyObject_Repr(op);
+				if (s == NULL)
+					ret = -1;
+				else {
+					ret = PyObject_Print(s, fp,
+							     Py_PRINT_RAW);
+				}
+				Py_XDECREF(s);
+			}
 		}
 		else
 			ret = (*op->ob_type->tp_print)(op, fp, flags);
@@ -213,25 +220,6 @@ PyObject_Print(PyObject *op, FILE *fp, int flags)
 	return ret;
 }
 
-/* For debugging convenience.  See Misc/gdbinit for some useful gdb hooks */
-void _PyObject_Dump(PyObject* op) 
-{
-	if (op == NULL)
-		fprintf(stderr, "NULL\n");
-	else {
-		(void)PyObject_Print(op, stderr, 0);
-		fprintf(stderr, "\nrefcounts: %d\n", op->ob_refcnt);
-		fprintf(stderr, "address    : %p\n", op);
-	}
-}
-
-#ifdef WITH_CYCLE_GC
-void _PyGC_Dump(PyGC_Head* op)
-{
-	_PyObject_Dump(PyObject_FROM_GC(op));
-}
-#endif /* WITH_CYCLE_GC */
-
 PyObject *
 PyObject_Repr(PyObject *v)
 {
@@ -239,7 +227,7 @@ PyObject_Repr(PyObject *v)
 		return NULL;
 #ifdef USE_STACKCHECK
 	if (PyOS_CheckStack()) {
-		PyErr_SetString(PyExc_MemoryError, "stack overflow");
+		PyErr_SetString(PyExc_MemoryError, "Stack overflow");
 		return NULL;
 	}
 #endif
@@ -283,14 +271,22 @@ PyObject_Str(PyObject *v)
 	
 	if (v == NULL)
 		return PyString_FromString("<NULL>");
-	if (PyString_Check(v)) {
+	else if (PyString_Check(v)) {
 		Py_INCREF(v);
 		return v;
 	}
-	if (v->ob_type->tp_str == NULL)
-		return PyObject_Repr(v);
-
-	res = (*v->ob_type->tp_str)(v);
+	else if (v->ob_type->tp_str != NULL)
+		res = (*v->ob_type->tp_str)(v);
+	else {
+		PyObject *func;
+		if (!PyInstance_Check(v) ||
+		    (func = PyObject_GetAttrString(v, "__str__")) == NULL) {
+			PyErr_Clear();
+			return PyObject_Repr(v);
+		}
+		res = PyEval_CallObject(func, (PyObject *)NULL);
+		Py_DECREF(func);
+	}
 	if (res == NULL)
 		return NULL;
 	if (PyUnicode_Check(res)) {
@@ -312,405 +308,85 @@ PyObject_Str(PyObject *v)
 	return res;
 }
 
-PyObject *
-PyObject_Unicode(PyObject *v)
-{
-	PyObject *res;
-	
-	if (v == NULL)
-		res = PyString_FromString("<NULL>");
-	else if (PyUnicode_Check(v)) {
-		Py_INCREF(v);
-		return v;
-	}
-	else if (PyString_Check(v)) {
-		Py_INCREF(v);
-	    	res = v;
-    	}
-	else if (v->ob_type->tp_str != NULL)
-		res = (*v->ob_type->tp_str)(v);
-	else {
-		PyObject *func;
-		static PyObject *strstr;
-		if (strstr == NULL) {
-			strstr= PyString_InternFromString("__str__");
-			if (strstr == NULL)
-				return NULL;
-		}
-		if (!PyInstance_Check(v) ||
-		    (func = PyObject_GetAttr(v, strstr)) == NULL) {
-			PyErr_Clear();
-			res = PyObject_Repr(v);
-		}
-		else {
-		    	res = PyEval_CallObject(func, (PyObject *)NULL);
-			Py_DECREF(func);
-		}
-	}
-	if (res == NULL)
-		return NULL;
-	if (!PyUnicode_Check(res)) {
-		PyObject* str;
-		str = PyUnicode_FromObject(res);
-		Py_DECREF(res);
-		if (str)
-			res = str;
-		else
-		    	return NULL;
-	}
-	return res;
-}
-
-
-/* Macro to get the tp_richcompare field of a type if defined */
-#define RICHCOMPARE(t) (PyType_HasFeature((t), Py_TPFLAGS_HAVE_RICHCOMPARE) \
-                         ? (t)->tp_richcompare : NULL)
-
-/* Map rich comparison operators to their swapped version, e.g. LT --> GT */
-static int swapped_op[] = {Py_GT, Py_GE, Py_EQ, Py_NE, Py_LT, Py_LE};
-
-/* Try a genuine rich comparison, returning an object.  Return:
-   NULL for exception;
-   NotImplemented if this particular rich comparison is not implemented or
-     undefined;
-   some object not equal to NotImplemented if it is implemented
-     (this latter object may not be a Boolean).
-*/
 static PyObject *
-try_rich_compare(PyObject *v, PyObject *w, int op)
-{
-	richcmpfunc f;
-	PyObject *res;
-
-	if ((f = RICHCOMPARE(v->ob_type)) != NULL) {
-		res = (*f)(v, w, op);
-		if (res != Py_NotImplemented)
-			return res;
-		Py_DECREF(res);
-	}
-	if ((f = RICHCOMPARE(w->ob_type)) != NULL) {
-		return (*f)(w, v, swapped_op[op]);
-	}
-	res = Py_NotImplemented;
-	Py_INCREF(res);
-	return res;
-}
-
-/* Try a genuine rich comparison, returning an int.  Return:
-   -1 for exception (including the case where try_rich_compare() returns an
-      object that's not a Boolean);
-   0 if the outcome is false;
-   1 if the outcome is true;
-   2 if this particular rich comparison is not implemented or undefined.
-*/
-static int
-try_rich_compare_bool(PyObject *v, PyObject *w, int op)
-{
-	PyObject *res;
-	int ok;
-
-	if (RICHCOMPARE(v->ob_type) == NULL && RICHCOMPARE(w->ob_type) == NULL)
-		return 2; /* Shortcut, avoid INCREF+DECREF */
-	res = try_rich_compare(v, w, op);
-	if (res == NULL)
-		return -1;
-	if (res == Py_NotImplemented) {
-		Py_DECREF(res);
-		return 2;
-	}
-	ok = PyObject_IsTrue(res);
-	Py_DECREF(res);
-	return ok;
-}
-
-/* Try rich comparisons to determine a 3-way comparison.  Return:
-   -2 for an exception;
-   -1 if v < w;
-   0 if v == w;
-   1 if v > w;
-   2 if this particular rich comparison is not implemented or undefined.
-*/
-static int
-try_rich_to_3way_compare(PyObject *v, PyObject *w)
-{
-	static struct { int op; int outcome; } tries[3] = {
-		/* Try this operator, and if it is true, use this outcome: */
-		{Py_EQ, 0},
-		{Py_LT, -1},
-		{Py_GT, 1},
-	};
-	int i;
-
-	if (RICHCOMPARE(v->ob_type) == NULL && RICHCOMPARE(w->ob_type) == NULL)
-		return 2; /* Shortcut */
-
-	for (i = 0; i < 3; i++) {
-		switch (try_rich_compare_bool(v, w, tries[i].op)) {
-		case -1:
-			return -2;
-		case 1:
-			return tries[i].outcome;
-		}
-	}
-
-	return 2;
-}
-
-/* Try a 3-way comparison, returning an int.  Return:
-   -2 for an exception;
-   -1 if v < w;
-   0 if v == w;
-   1 if v > w;
-   2 if this particular 3-way comparison is not implemented or undefined.
-*/
-static int
-try_3way_compare(PyObject *v, PyObject *w)
-{
-	int c;
-	cmpfunc f;
-
-	/* Comparisons involving instances are given to instance_compare,
-	   which has the same return conventions as this function. */
-
-	if (PyInstance_Check(v))
-		return (*v->ob_type->tp_compare)(v, w);
-	if (PyInstance_Check(w))
-		return (*w->ob_type->tp_compare)(v, w);
-
-	/* Try coercion; if it fails, give up */
-	c = PyNumber_CoerceEx(&v, &w);
-	if (c < 0)
-		return -2;
-	if (c > 0)
-		return 2;
-
-	/* Try v's comparison, if defined */
-	if ((f = v->ob_type->tp_compare) != NULL) {
-		c = (*f)(v, w);
-		Py_DECREF(v);
-		Py_DECREF(w);
-		if (c < 0 && PyErr_Occurred())
-			return -2;
-		return c < 0 ? -1 : c > 0 ? 1 : 0;
-	}
-
-	/* Try w's comparison, if defined */
-	if ((f = w->ob_type->tp_compare) != NULL) {
-		c = (*f)(w, v); /* swapped! */
-		Py_DECREF(v);
-		Py_DECREF(w);
-		if (c < 0 && PyErr_Occurred())
-			return -2;
-		return c < 0 ? 1 : c > 0 ? -1 : 0; /* negated! */
-	}
-
-	/* No comparison defined */
-	Py_DECREF(v);
-	Py_DECREF(w);
-	return 2;
-}
-
-/* Final fallback 3-way comparison, returning an int.  Return:
-   -2 if an error occurred;
-   -1 if v < w;
-   0 if v == w;
-   1 if v > w.
-*/
-static int
-default_3way_compare(PyObject *v, PyObject *w)
-{
-	int c;
-	char *vname, *wname;
-
-	if (v->ob_type == w->ob_type) {
-		/* When comparing these pointers, they must be cast to
-		 * integer types (i.e. Py_uintptr_t, our spelling of C9X's
-		 * uintptr_t).  ANSI specifies that pointer compares other
-		 * than == and != to non-related structures are undefined.
-		 */
-		Py_uintptr_t vv = (Py_uintptr_t)v;
-		Py_uintptr_t ww = (Py_uintptr_t)w;
-		return (vv < ww) ? -1 : (vv > ww) ? 1 : 0;
-	}
-
-	/* Special case for Unicode */
-	if (PyUnicode_Check(v) || PyUnicode_Check(w)) {
-		c = PyUnicode_Compare(v, w);
-		if (!PyErr_Occurred())
-			return c;
-		/* TypeErrors are ignored: if Unicode coercion fails due
-		   to one of the arguments not having the right type, we
-		   continue as defined by the coercion protocol (see
-		   above).  Luckily, decoding errors are reported as
-		   ValueErrors and are not masked by this technique. */
-		if (!PyErr_ExceptionMatches(PyExc_TypeError))
-			return -2;
-		PyErr_Clear();
-	}
-
-	/* None is smaller than anything */
-	if (v == Py_None)
-		return -1;
-	if (w == Py_None)
-		return 1;
-
-	/* different type: compare type names */
-	if (v->ob_type->tp_as_number)
-		vname = "";
-	else
-		vname = v->ob_type->tp_name;
-	if (w->ob_type->tp_as_number)
-		wname = "";
-	else
-		wname = w->ob_type->tp_name;
-	c = strcmp(vname, wname);
-	if (c < 0)
-		return -1;
-	if (c > 0)
-		return 1;
-	/* Same type name, or (more likely) incomparable numeric types */
-	return ((Py_uintptr_t)(v->ob_type) < (
-		Py_uintptr_t)(w->ob_type)) ? -1 : 1;
-}
-
-#define CHECK_TYPES(o) PyType_HasFeature((o)->ob_type, Py_TPFLAGS_CHECKTYPES)
-
-/* Do a 3-way comparison, by hook or by crook.  Return:
-   -2 for an exception;
-   -1 if v < w;
-    0 if v == w;
-    1 if v > w;
-   If the object implements a tp_compare function, it returns
-   whatever this function returns (whether with an exception or not).
-*/
-static int
 do_cmp(PyObject *v, PyObject *w)
 {
-	int c;
-	cmpfunc f;
-
-	if (v->ob_type == w->ob_type
-	    && (f = v->ob_type->tp_compare) != NULL)
-		return (*f)(v, w);
-	c = try_rich_to_3way_compare(v, w);
-	if (c < 2)
-		return c;
-	c = try_3way_compare(v, w);
-	if (c < 2)
-		return c;
-	return default_3way_compare(v, w);
+	long c;
+	/* __rcmp__ actually won't be called unless __cmp__ isn't defined,
+	   because the check in cmpobject() reverses the objects first.
+	   This is intentional -- it makes no sense to define cmp(x,y)
+	   different than -cmp(y,x). */
+	if (PyInstance_Check(v) || PyInstance_Check(w))
+		return PyInstance_DoBinOp(v, w, "__cmp__", "__rcmp__", do_cmp);
+	c = PyObject_Compare(v, w);
+	if (c && PyErr_Occurred())
+		return NULL;
+	return PyInt_FromLong(c);
 }
 
-/* compare_nesting is incremented before calling compare (for
+PyObject *_PyCompareState_Key;
+
+/* _PyCompareState_nesting is incremented before calling compare (for
    some types) and decremented on exit.  If the count exceeds the
    nesting limit, enable code to detect circular data structures.
-
-   This is a tunable parameter that should only affect the performance
-   of comparisons, nothing else.  Setting it high makes comparing deeply
-   nested non-cyclical data structures faster, but makes comparing cyclical
-   data structures slower.
 */
-#define NESTING_LIMIT 20
-
-static int compare_nesting = 0;
+#ifdef macintosh
+#define NESTING_LIMIT 60
+#else
+#define NESTING_LIMIT 500
+#endif
+int _PyCompareState_nesting = 0;
 
 static PyObject*
 get_inprogress_dict(void)
 {
-	static PyObject *key;
 	PyObject *tstate_dict, *inprogress;
-
-	if (key == NULL) {
-		key = PyString_InternFromString("cmp_state");
-		if (key == NULL)
-			return NULL;
-	}
 
 	tstate_dict = PyThreadState_GetDict();
 	if (tstate_dict == NULL) {
 		PyErr_BadInternalCall();
 		return NULL;
 	} 
-
-	inprogress = PyDict_GetItem(tstate_dict, key); 
+	inprogress = PyDict_GetItem(tstate_dict, _PyCompareState_Key); 
 	if (inprogress == NULL) {
 		inprogress = PyDict_New();
 		if (inprogress == NULL)
 			return NULL;
-		if (PyDict_SetItem(tstate_dict, key, inprogress) == -1) {
+		if (PyDict_SetItem(tstate_dict, _PyCompareState_Key,
+				   inprogress) == -1) {
 		    Py_DECREF(inprogress);
 		    return NULL;
 		}
 		Py_DECREF(inprogress);
 	}
-
 	return inprogress;
 }
 
 static PyObject *
-check_recursion(PyObject *v, PyObject *w, int op)
+make_pair(PyObject *v, PyObject *w)
 {
-	PyObject *inprogress;
-	PyObject *token;
+	PyObject *pair;
 	Py_uintptr_t iv = (Py_uintptr_t)v;
 	Py_uintptr_t iw = (Py_uintptr_t)w;
-	PyObject *x, *y, *z;
 
-	inprogress = get_inprogress_dict();
-	if (inprogress == NULL)
+	pair = PyTuple_New(2);
+	if (pair == NULL) {
 		return NULL;
-
-	token = PyTuple_New(3);
-	if (token == NULL)
-		return NULL;
-
+	}
 	if (iv <= iw) {
-		PyTuple_SET_ITEM(token, 0, x = PyLong_FromVoidPtr((void *)v));
-		PyTuple_SET_ITEM(token, 1, y = PyLong_FromVoidPtr((void *)w));
-		if (op >= 0)
-			op = swapped_op[op];
+		PyTuple_SET_ITEM(pair, 0, PyLong_FromVoidPtr((void *)v));
+		PyTuple_SET_ITEM(pair, 1, PyLong_FromVoidPtr((void *)w));
 	} else {
-		PyTuple_SET_ITEM(token, 0, x = PyLong_FromVoidPtr((void *)w));
-		PyTuple_SET_ITEM(token, 1, y = PyLong_FromVoidPtr((void *)v));
+		PyTuple_SET_ITEM(pair, 0, PyLong_FromVoidPtr((void *)w));
+		PyTuple_SET_ITEM(pair, 1, PyLong_FromVoidPtr((void *)v));
 	}
-	PyTuple_SET_ITEM(token, 2, z = PyInt_FromLong((long)op));
-	if (x == NULL || y == NULL || z == NULL) {
-		Py_DECREF(token);
-		return NULL;
-	}
-
-	if (PyDict_GetItem(inprogress, token) != NULL) {
-		Py_DECREF(token);
-		return Py_None; /* Without INCREF! */
-	}
-
-	if (PyDict_SetItem(inprogress, token, token) < 0) {
-		Py_DECREF(token);
-		return NULL;
-	}
-
-	return token;
-}
-
-static void
-delete_token(PyObject *token)
-{
-	PyObject *inprogress;
-
-	if (token == NULL || token == Py_None)
-		return;
-	inprogress = get_inprogress_dict();
-	if (inprogress == NULL)
-		PyErr_Clear();
-	else
-		PyDict_DelItem(inprogress, token);
-	Py_DECREF(token);
+	return pair;
 }
 
 int
 PyObject_Compare(PyObject *v, PyObject *w)
 {
-	PyTypeObject *vtp;
+	PyTypeObject *vtp, *wtp;
 	int result;
 
 #if defined(USE_STACKCHECK)
@@ -725,164 +401,132 @@ PyObject_Compare(PyObject *v, PyObject *w)
 	}
 	if (v == w)
 		return 0;
-	vtp = v->ob_type;
-	compare_nesting++;
-	if (compare_nesting > NESTING_LIMIT &&
-		(vtp->tp_as_mapping
-		 || (vtp->tp_as_sequence
-		     && !PyString_Check(v)
-		     && !PyTuple_Check(v)))) {
-		/* try to detect circular data structures */
-		PyObject *token = check_recursion(v, w, -1);
+	if (PyInstance_Check(v) || PyInstance_Check(w)) {
+		PyObject *res;
+		int c;
+		if (!PyInstance_Check(v))
+			return -PyObject_Compare(w, v);
+		_PyCompareState_nesting++;
+		if (_PyCompareState_nesting > NESTING_LIMIT) {
+			PyObject *inprogress, *pair;
 
-		if (token == NULL) {
-			result = -1;
+			inprogress = get_inprogress_dict();
+			if (inprogress == NULL) {
+				_PyCompareState_nesting--;
+				return -1;
+			}
+			pair = make_pair(v, w);
+			if (PyDict_GetItem(inprogress, pair)) {
+				/* already comparing these objects.  assume
+				   they're equal until shown otherwise */
+				Py_DECREF(pair);
+				_PyCompareState_nesting--;
+				return 0;
+			}
+			if (PyDict_SetItem(inprogress, pair, pair) == -1) {
+				_PyCompareState_nesting--;
+				return -1;
+			}
+			res = do_cmp(v, w);
+			/* XXX DelItem shouldn't fail */
+			PyDict_DelItem(inprogress, pair);
+			Py_DECREF(pair);
+		} else {
+			res = do_cmp(v, w);
 		}
-		else if (token == Py_None) {
+		_PyCompareState_nesting--;
+		if (res == NULL)
+			return -1;
+		if (!PyInt_Check(res)) {
+			Py_DECREF(res);
+			PyErr_SetString(PyExc_TypeError,
+					"comparison did not return an int");
+			return -1;
+		}
+		c = PyInt_AsLong(res);
+		Py_DECREF(res);
+		return (c < 0) ? -1 : (c > 0) ? 1 : 0;	
+	}
+	if ((vtp = v->ob_type) != (wtp = w->ob_type)) {
+		char *vname = vtp->tp_name;
+		char *wname = wtp->tp_name;
+		if (vtp->tp_as_number != NULL && wtp->tp_as_number != NULL) {
+			int err;
+			err = PyNumber_CoerceEx(&v, &w);
+			if (err < 0)
+				return -1;
+			else if (err == 0) {
+				int cmp;
+				vtp = v->ob_type;
+				if (vtp->tp_compare == NULL)
+					cmp = (v < w) ? -1 : 1;
+				else
+					cmp = (*vtp->tp_compare)(v, w);
+				Py_DECREF(v);
+				Py_DECREF(w);
+				return cmp;
+			}
+		}
+		else if (PyUnicode_Check(v) || PyUnicode_Check(w)) {
+			int result = PyUnicode_Compare(v, w);
+			if (result == -1 && PyErr_Occurred() && 
+			    PyErr_ExceptionMatches(PyExc_TypeError))
+				/* TypeErrors are ignored: if Unicode coercion
+				fails due to one of the arguments not
+			 	having the right type, we continue as
+				defined by the coercion protocol (see
+				above). Luckily, decoding errors are
+				reported as ValueErrors and are not masked
+				by this technique. */
+				PyErr_Clear();
+			else
+				return result;
+		}
+		else if (vtp->tp_as_number != NULL)
+			vname = "";
+		else if (wtp->tp_as_number != NULL)
+			wname = "";
+		/* Numerical types compare smaller than all other types */
+		return strcmp(vname, wname);
+	}
+	if (vtp->tp_compare == NULL) {
+		Py_uintptr_t iv = (Py_uintptr_t)v;
+		Py_uintptr_t iw = (Py_uintptr_t)w;
+		return (iv < iw) ? -1 : 1;
+	}
+	_PyCompareState_nesting++;
+	if (_PyCompareState_nesting > NESTING_LIMIT
+	    && (vtp->tp_as_mapping 
+		|| (vtp->tp_as_sequence && !PyString_Check(v)))) {
+		PyObject *inprogress, *pair;
+
+		inprogress = get_inprogress_dict();
+		if (inprogress == NULL) {
+			_PyCompareState_nesting--;
+			return -1;
+		}
+		pair = make_pair(v, w);
+		if (PyDict_GetItem(inprogress, pair)) {
 			/* already comparing these objects.  assume
 			   they're equal until shown otherwise */
-                        result = 0;
+			Py_DECREF(pair);
+			_PyCompareState_nesting--;
+			return 0;
 		}
-		else {
-			result = do_cmp(v, w);
-			delete_token(token);
+		if (PyDict_SetItem(inprogress, pair, pair) == -1) {
+			_PyCompareState_nesting--;
+			return -1;
 		}
+		result = (*vtp->tp_compare)(v, w);
+		PyDict_DelItem(inprogress, pair); /* XXX shouldn't fail */
+		Py_DECREF(pair);
+	} else {
+		result = (*vtp->tp_compare)(v, w);
 	}
-	else {
-		result = do_cmp(v, w);
-	}
-	compare_nesting--;
-	return result < 0 ? -1 : result;
-}
-
-static PyObject *
-convert_3way_to_object(int op, int c)
-{
-	PyObject *result;
-	switch (op) {
-	case Py_LT: c = c <  0; break;
-	case Py_LE: c = c <= 0; break;
-	case Py_EQ: c = c == 0; break;
-	case Py_NE: c = c != 0; break;
-	case Py_GT: c = c >  0; break;
-	case Py_GE: c = c >= 0; break;
-	}
-	result = c ? Py_True : Py_False;
-	Py_INCREF(result);
+	_PyCompareState_nesting--;
 	return result;
 }
-	
 
-static PyObject *
-try_3way_to_rich_compare(PyObject *v, PyObject *w, int op)
-{
-	int c;
-
-	c = try_3way_compare(v, w);
-	if (c >= 2)
-		c = default_3way_compare(v, w);
-	if (c <= -2)
-		return NULL;
-	return convert_3way_to_object(op, c);
-}
-
-static PyObject *
-do_richcmp(PyObject *v, PyObject *w, int op)
-{
-	PyObject *res;
-	cmpfunc f;
-
-	/* If the types are equal, don't bother with coercions etc. 
-	   Instances are special-cased in try_3way_compare, since
-	   a result of 2 does *not* mean one value being greater
-	   than the other. */
-	if (v->ob_type == w->ob_type
-	    && (f = v->ob_type->tp_compare) != NULL
-	    && !PyInstance_Check(v)) {
-		int c;
-		richcmpfunc f1;
-		if ((f1 = RICHCOMPARE(v->ob_type)) != NULL) {
-			/* If the type has richcmp, try it first.
-			   try_rich_compare would try it two-sided,
-			   which is not needed since we've a single
-			   type only. */
-			res = (*f1)(v, w, op);
-			if (res != Py_NotImplemented)
-				return res;
-			Py_DECREF(res);
-		}
-		c = (*f)(v, w);
-		if (c < 0 && PyErr_Occurred())
-			return NULL;
-		return convert_3way_to_object(op, c);
-	}
-
-	res = try_rich_compare(v, w, op);
-	if (res != Py_NotImplemented)
-		return res;
-	Py_DECREF(res);
-
-	return try_3way_to_rich_compare(v, w, op);
-}
-
-PyObject *
-PyObject_RichCompare(PyObject *v, PyObject *w, int op)
-{
-	PyObject *res;
-
-	assert(Py_LT <= op && op <= Py_GE);
-
-	compare_nesting++;
-	if (compare_nesting > NESTING_LIMIT &&
-		(v->ob_type->tp_as_mapping
-		 || (v->ob_type->tp_as_sequence
-		     && !PyString_Check(v)
-		     && !PyTuple_Check(v)))) {
-		/* try to detect circular data structures */
-		PyObject *token = check_recursion(v, w, op);
-
-		if (token == NULL) {
-			res = NULL;
-		}
-		else if (token == Py_None) {
-			/* already comparing these objects with this operator.
-			   assume they're equal until shown otherwise */
-			if (op == Py_EQ)
-				res = Py_True;
-			else if (op == Py_NE)
-				res = Py_False;
-			else {
-				PyErr_SetString(PyExc_ValueError,
-					"can't order recursive values");
-				res = NULL;
-			}
-			Py_XINCREF(res);
-		}
-		else {
-			res = do_richcmp(v, w, op);
-			delete_token(token);
-		}
-	}
-	else {
-		res = do_richcmp(v, w, op);
-	}
-	compare_nesting--;
-	return res;
-}
-
-/* Return -1 if error; 1 if v op w; 0 if not (v op w). */
-int
-PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)
-{
-	PyObject *res = PyObject_RichCompare(v, w, op);
-	int ok;
-
-	if (res == NULL)
-		return -1;
-	ok = PyObject_IsTrue(res);
-	Py_DECREF(res);
-	return ok;
-}
 
 /* Set of hash utility functions to help maintaining the invariant that
 	iff a==b then hash(a)==hash(b)
@@ -983,7 +627,7 @@ PyObject_Hash(PyObject *v)
 	PyTypeObject *tp = v->ob_type;
 	if (tp->tp_hash != NULL)
 		return (*tp->tp_hash)(v);
-	if (tp->tp_compare == NULL && RICHCOMPARE(tp) == NULL) {
+	if (tp->tp_compare == NULL) {
 		return _Py_HashPointer(v); /* Use address as hash value */
 	}
 	/* If there's a cmp but no hash defined, the object can't be hashed */
@@ -1081,7 +725,7 @@ PyObject_GetAttr(PyObject *v, PyObject *name)
 	if (v->ob_type->tp_getattro != NULL)
 		return (*v->ob_type->tp_getattro)(v, name);
 	else
-		return PyObject_GetAttrString(v, PyString_AS_STRING(name));
+	return PyObject_GetAttrString(v, PyString_AS_STRING(name));
 }
 
 int
@@ -1170,11 +814,10 @@ PyObject_Not(PyObject *v)
 
 /* Coerce two numeric types to the "larger" one.
    Increment the reference count on each argument.
-   Return value:
-   -1 if an error occurred;
-   0 if the coercion succeeded (and then the reference counts are increased);
-   1 if no coercion is possible (and no error is raised).
+   Return -1 and raise an exception if no coercion is possible
+   (and then no reference count is incremented).
 */
+
 int
 PyNumber_CoerceEx(PyObject **pv, PyObject **pw)
 {
@@ -1200,11 +843,6 @@ PyNumber_CoerceEx(PyObject **pv, PyObject **pw)
 	return 1;
 }
 
-/* Coerce two numeric types to the "larger" one.
-   Increment the reference count on each argument.
-   Return -1 and raise an exception if no coercion is possible
-   (and then no reference count is incremented).
-*/
 int
 PyNumber_Coerce(PyObject **pv, PyObject **pw)
 {
@@ -1257,24 +895,13 @@ none_repr(PyObject *op)
 	return PyString_FromString("None");
 }
 
-/* ARGUSED */
-static void
-none_dealloc(PyObject* ignore) 
-{
-	/* This should never get called, but we also don't want to SEGV if
-	 * we accidently decref None out of existance.
-	 */
-	abort();
-}
-
-
 static PyTypeObject PyNothing_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"None",
 	0,
 	0,
-	(destructor)none_dealloc,	     /*tp_dealloc*/ /*never called*/
+	0,		/*tp_dealloc*/ /*never called*/
 	0,		/*tp_print*/
 	0,		/*tp_getattr*/
 	0,		/*tp_setattr*/
@@ -1288,37 +915,6 @@ static PyTypeObject PyNothing_Type = {
 
 PyObject _Py_NoneStruct = {
 	PyObject_HEAD_INIT(&PyNothing_Type)
-};
-
-/* NotImplemented is an object that can be used to signal that an
-   operation is not implemented for the given type combination. */
-
-static PyObject *
-NotImplemented_repr(PyObject *op)
-{
-	return PyString_FromString("NotImplemented");
-}
-
-static PyTypeObject PyNotImplemented_Type = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,
-	"NotImplemented",
-	0,
-	0,
-	(destructor)none_dealloc,	     /*tp_dealloc*/ /*never called*/
-	0,		/*tp_print*/
-	0,		/*tp_getattr*/
-	0,		/*tp_setattr*/
-	0,		/*tp_compare*/
-	(reprfunc)NotImplemented_repr, /*tp_repr*/
-	0,		/*tp_as_number*/
-	0,		/*tp_as_sequence*/
-	0,		/*tp_as_mapping*/
-	0,		/*tp_hash */
-};
-
-PyObject _Py_NotImplementedStruct = {
-	PyObject_HEAD_INIT(&PyNotImplemented_Type)
 };
 
 
@@ -1485,21 +1081,6 @@ PyObject_Free(void *p)
 }
 
 
-/* Hook to clear up weak references only once the _weakref module is
-   imported.  We use a dummy implementation to simplify the code at each
-   call site instead of requiring a test for NULL.
-*/
-
-static void
-empty_clear_weak_refs(PyObject *o)
-{
-    return;
-}
-
-void (*PyObject_ClearWeakRefs)(PyObject *) = empty_clear_weak_refs;
-
-
-
 /* These methods are used to control infinite recursion in repr, str, print,
    etc.  Container objects that may recursively contain themselves,
    e.g. builtin dictionaries and lists, should used Py_ReprEnter() and
@@ -1656,7 +1237,3 @@ _PyTrash_destroy_chain(void)
 		--_PyTrash_delete_nesting;
 	}
 }
-
-#ifdef WITH_PYMALLOC
-#include "obmalloc.c"
-#endif

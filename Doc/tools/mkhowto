@@ -3,8 +3,8 @@
 """usage: %(program)s [options...] file ...
 
 Options specifying formats to build:
-    --html		HyperText Markup Language (default)
-    --pdf		Portable Document Format
+    --html		HyperText Markup Language
+    --pdf		Portable Document Format (default)
     --ps		PostScript
     --dvi		'DeVice Indepentent' format from TeX
     --text		ASCII text (requires lynx)
@@ -46,16 +46,6 @@ import sys
 import tempfile
 
 
-if not hasattr(os.path, "abspath"):
-    def abspath(path):
-        """Return an absolute path."""
-        if not os.path.isabs(path):
-            path = os.path.join(os.getcwd(), path)
-        return os.path.normpath(path)
-
-    os.path.abspath = abspath
-
-
 MYDIR = os.path.abspath(sys.path[0])
 TOPDIR = os.path.dirname(MYDIR)
 
@@ -89,7 +79,6 @@ class Options:
     program = os.path.basename(sys.argv[0])
     #
     address = ''
-    builddir = None
     debugging = 0
     discard_temps = 1
     have_temps = 0
@@ -102,13 +91,12 @@ class Options:
     quiet = 0
     runs = 0
     numeric = 0
-    global_module_index = None
     style_file = os.path.join(TOPDIR, "html", "style.css")
     about_file = os.path.join(TOPDIR, "html", "about.dat")
     up_link = None
     up_title = None
     #
-    DEFAULT_FORMATS = ("html",)
+    DEFAULT_FORMATS = ("pdf",)
     ALL_FORMATS = ("dvi", "html", "pdf", "ps", "text")
 
     def __init__(self):
@@ -128,9 +116,8 @@ class Options:
                                     "address=", "a4", "letter", "l2h-init=",
                                     "link=", "split=", "logging", "debugging",
                                     "keep", "quiet", "runs=", "image-type=",
-                                    "about=", "numeric", "style=", "paper=",
-                                    "up-link=", "up-title=", "dir=",
-                                    "global-module-index="]
+                                    "about=", "numeric", "style=",
+                                    "up-link=", "up-title="]
                                    + list(self.ALL_FORMATS))
         for opt, arg in opts:
             if opt == "--all":
@@ -176,12 +163,6 @@ class Options:
                 self.up_link = arg
             elif opt == "--up-title":
                 self.up_title = arg
-            elif opt == "--global-module-index":
-                self.global_module_index = arg
-            elif opt == "--dir":
-                self.builddir = arg
-            elif opt == "--paper":
-                self.paper = arg
             #
             # Format specifiers:
             #
@@ -243,7 +224,7 @@ class Job:
             self.build_ps()
         if "html" in formats:
             self.require_temps()
-            self.build_html(self.options.builddir or self.doc)
+            self.build_html(self.doc)
             if self.options.icon_server == ".":
                 pattern = os.path.join(TOPDIR, "html", "icons",
                                        "*." + self.options.image_type)
@@ -298,9 +279,7 @@ class Job:
         if self.latex_runs < 2:
             if os.path.isfile("mod%s.idx" % self.doc):
                 self.run("%s mod%s.idx" % (MAKEINDEX_BINARY, self.doc))
-            use_indfix = 0
             if os.path.isfile(self.doc + ".idx"):
-                use_indfix = 1
                 # call to Doc/tools/fix_hack omitted; doesn't appear necessary
                 self.run("%s %s.idx" % (MAKEINDEX_BINARY, self.doc))
                 import indfix
@@ -312,14 +291,13 @@ class Job:
             # let the doctype-specific handler do some intermediate work:
             #
             self.run("%s %s" % (binary, self.doc))
-            self.latex_runs = self.latex_runs + 1
+            self.latex_runs += 1
             if os.path.isfile("mod%s.idx" % self.doc):
                 self.run("%s -s %s mod%s.idx"
                          % (MAKEINDEX_BINARY, ISTFILE, self.doc))
-            if use_indfix:
+            if os.path.isfile(self.doc + ".idx"):
                 self.run("%s -s %s %s.idx"
                          % (MAKEINDEX_BINARY, ISTFILE, self.doc))
-                indfix.process(self.doc + ".ind")
             self.process_synopsis_files()
         #
         # and now finish it off:
@@ -334,7 +312,7 @@ class Job:
         if self.use_bibtex:
             self.run("%s %s" % (BIBTEX_BINARY, self.doc))
         self.run("%s %s" % (binary, self.doc))
-        self.latex_runs = self.latex_runs + 1
+        self.latex_runs += 1
 
     def process_synopsis_files(self):
         synopsis_files = glob.glob(self.doc + "*.syn")
@@ -378,30 +356,13 @@ class Job:
                         os.path.join(builddir, self.doc + ".css"))
         shutil.copyfile(os.path.join(builddir, self.doc + ".html"),
                         os.path.join(builddir, "index.html"))
-        if max_split_depth != 1:
-            label_file = os.path.join(builddir, "labels.pl")
-            fp = open(label_file)
-            about_node = None
-            target = " = q/about/;\n"
-            x = len(target)
-            while 1:
-                line = fp.readline()
-                if not line:
-                    break
-                if line[-x:] == target:
-                    line = fp.readline()
-                    m = re.search(r"\|(node\d+\.[a-z]+)\|", line)
-                    about_node = m.group(1)
-                    shutil.copyfile(os.path.join(builddir, about_node),
-                                    os.path.join(builddir, "about.html"))
-                    break
-            if not self.options.numeric:
-                pwd = os.getcwd()
-                try:
-                    os.chdir(builddir)
-                    self.run("%s %s *.html" % (PERL_BINARY, NODE2LABEL_SCRIPT))
-                finally:
-                    os.chdir(pwd)
+        if max_split_depth != 1 and not self.options.numeric:
+            pwd = os.getcwd()
+            try:
+                os.chdir(builddir)
+                self.run("%s %s *.html" % (PERL_BINARY, NODE2LABEL_SCRIPT))
+            finally:
+                os.chdir(pwd)
 
     def build_text(self, tempdir=None):
         if tempdir is None:
@@ -441,7 +402,6 @@ class Job:
         l2hoption(fp, "MAX_SPLIT_DEPTH", options.max_split_depth)
         l2hoption(fp, "EXTERNAL_UP_LINK", options.up_link)
         l2hoption(fp, "EXTERNAL_UP_TITLE", options.up_title)
-        l2hoption(fp, "GLOBAL_MODULE_INDEX", options.global_module_index)
         fp.write("1;\n")
         fp.close()
 
@@ -474,9 +434,6 @@ class Job:
             self.warning(
                 "Session transcript and error messages are in %s."
                 % self.log_filename)
-            sys.stderr.write("The relevant lines from the transcript are:\n")
-            sys.stderr.write("-" * 72 + "\n")
-            sys.stderr.writelines(get_run_transcript(self.log_filename))
             sys.exit(rc)
 
     def message(self, msg):
@@ -496,23 +453,7 @@ class Job:
         fp.close()
 
 
-def get_run_transcript(filename):
-    """Return lines from the transcript file for the most recent run() call."""
-    fp = open(filename)
-    lines = fp.readlines()
-    fp.close()
-    lines.reverse()
-    L = []
-    for line in lines:
-        L.append(line)
-        if line[:4] == "+++ ":
-            break
-    L.reverse()
-    return L
-
-
 def safe_unlink(path):
-    """Unlink a file without raising an error if it doesn't exist."""
     try:
         os.unlink(path)
     except os.error:

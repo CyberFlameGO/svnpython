@@ -197,14 +197,15 @@ t_bootstrap(void *boot_raw)
 		if (PyErr_ExceptionMatches(PyExc_SystemExit))
 			PyErr_Clear();
 		else {
-			PySys_WriteStderr("Unhandled exception in thread:\n");
+			fprintf(stderr, "Unhandled exception in thread:\n");
 			PyErr_PrintEx(0);
 		}
 	}
 	else
 		Py_DECREF(res);
 	PyThreadState_Clear(tstate);
-	PyThreadState_DeleteCurrent();
+	PyEval_ReleaseThread(tstate);
+	PyThreadState_Delete(tstate);
 	PyThread_exit_thread();
 }
 

@@ -9,8 +9,6 @@ and popen3(cmd) which return two or three pipes to the spawned command.
 import os
 import sys
 
-__all__ = ["popen2", "popen3", "popen4"]
-
 MAXFD = 256     # Max number of file descriptors (os.getdtablesize()???)
 
 _active = []
@@ -157,7 +155,6 @@ else:
         inst = Popen4(cmd, bufsize)
         return inst.fromchild, inst.tochild
 
-    __all__.extend(["Popen3", "Popen4"])
 
 def _test():
     cmd  = "cat"

@@ -98,7 +98,7 @@
  */
 
 #ifndef VERSION
-#define VERSION "2.1"
+#define VERSION "2.0"
 #endif
 
 #ifndef VPATH
@@ -114,6 +114,7 @@
 #endif
 
 #ifndef PYTHONPATH
+/* I know this isn't K&R C, but the Makefile specifies it anyway */
 #define PYTHONPATH PREFIX "/lib/python" VERSION ":" \
 	      EXEC_PREFIX "/lib/python" VERSION "/lib-dynload"
 #endif
@@ -223,7 +224,7 @@ joinpath(char *buffer, char *stuff)
     buffer[n+k] = '\0';
 }
 
-/* init_path_from_argv0 requires that path be allocated at least
+/* init_path_from_argv0 requirs that path be allocated at least
    MAXPATHLEN + 1 bytes and that argv0_path be no more than MAXPATHLEN
    bytes. 
 */
@@ -270,10 +271,21 @@ search_for_prefix(char *argv0_path, char *home)
     strcpy(prefix, argv0_path);
     joinpath(prefix, "Modules/Setup");
     if (isfile(prefix)) {
-        /* Check VPATH to see if argv0_path is in the build directory. */
+        /* Check VPATH to see if argv0_path is in the build directory.
+         * Complication: the VPATH passed in is relative to the
+         * Modules build directory and points to the Modules source
+         * directory; we need it relative to the build tree and
+         * pointing to the source tree.  Solution: chop off a leading
+         * ".." (but only if it's there -- it could be an absolute
+         * path) and chop off the final component (assuming it's
+         * "Modules").
+         */
         vpath = VPATH;
+        if (vpath[0] == '.' && vpath[1] == '.' && vpath[2] == '/')
+            vpath += 3;
         strcpy(prefix, argv0_path);
         joinpath(prefix, vpath);
+        reduce(prefix);
         joinpath(prefix, "Lib");
         joinpath(prefix, LANDMARK);
         if (ismodule(prefix))

@@ -45,7 +45,7 @@ others.
 \begin{classdesc}{ConfigParser}{\optional{defaults}}
 Return a new instance of the \class{ConfigParser} class.  When
 \var{defaults} is given, it is initialized into the dictionary of
-intrinsic defaults.  The keys must be strings, and the values must be 
+intrinsic defaults.  They keys must be strings, and the values must be 
 appropriate for the \samp{\%()s} string interpolation.  Note that
 \var{__name__} is an intrinsic default; its value is the section name,
 and will override any value provided in \var{defaults}.
@@ -96,7 +96,6 @@ allowed recursion depth.
                     minilanguages which can be used as an alternate format
                     for application configuration files.}
 \end{seealso}
-
 
 \subsection{ConfigParser Objects \label{ConfigParser-objects}}
 
@@ -190,12 +189,3 @@ Remove the specified \var{section} from the configuration.
 If the section in fact existed, return 1.  Otherwise return 0.
 \end{methoddesc}
 
-\begin{methoddesc}{optionxform}{option}
-Transforms the option name \var{option} as found in an input file or
-as passed in by  client code to the form that should be used in the
-internal structures.  The default implementation returns a lower-case
-version of \var{option}; subclasses may override this or client code
-can set an attribute of this name on instances to affect this
-behavior.  Setting this to \function{str()}, for example, would make
-option names case sensitive.
-\end{methoddesc}

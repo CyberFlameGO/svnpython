@@ -24,10 +24,9 @@ hexbin(inputfilename, outputfilename)
 import sys
 import os
 import struct
+import string
 import binascii
-
-__all__ = ["binhex","hexbin","Error"]
-
+    
 class Error(Exception):
     pass
 
@@ -52,10 +51,10 @@ if os.name == 'mac':
     except AttributeError:
         # Backward compatibility
         openrf = open
-
+    
     def FInfo():
         return macfs.FInfo()
-
+    
     def getfileinfo(name):
         finfo = macfs.FSSpec(name).GetFInfo()
         dir, file = os.path.split(name)
@@ -67,7 +66,7 @@ if os.name == 'mac':
         fp.seek(0, 2)
         rlen = fp.tell()
         return file, finfo, dlen, rlen
-
+    
     def openrsrc(name, *mode):
         if not mode:
             mode = '*rb'
@@ -79,7 +78,7 @@ else:
     #
     # Glue code for non-macintosh usage
     #
-
+    
     class FInfo:
         def __init__(self):
             self.Type = '????'
@@ -92,7 +91,8 @@ else:
         fp = open(name)
         data = open(name).read(256)
         for c in data:
-            if not c.isspace() and (c<' ' or ord(c) > 0177):
+            if not c in string.whitespace \
+                and (c<' ' or ord(c) > 0177):
                 break
         else:
             finfo.Type = 'TEXT'
@@ -100,25 +100,25 @@ else:
         dsize = fp.tell()
         fp.close()
         dir, file = os.path.split(name)
-        file = file.replace(':', '-', 1)
+        file = string.replace(file, ':', '-', 1)
         return file, finfo, dsize, 0
 
     class openrsrc:
         def __init__(self, *args):
             pass
-
+    
         def read(self, *args):
             return ''
-
+    
         def write(self, *args):
             pass
-
+            
         def close(self):
             pass
-
+    
 class _Hqxcoderengine:
     """Write data to the coder in 3-byte chunks"""
-
+    
     def __init__(self, ofp):
         self.ofp = ofp
         self.data = ''
@@ -189,7 +189,7 @@ class BinHex:
         hqxer = _Hqxcoderengine(ofp)
         self.ofp = _Rlecoderengine(hqxer)
         self.crc = 0
-        if finfo is None:
+        if finfo == None:
             finfo = FInfo()
         self.dlen = dlen
         self.rlen = rlen
@@ -228,7 +228,7 @@ class BinHex:
         self._write(data)
 
     def close_data(self):
-        if self.dlen != 0:
+        if self.dlen <> 0:
             raise Error, 'Incorrect data size, diff='+`self.rlen`
         self._writecrc()
         self.state = _DID_DATA
@@ -246,19 +246,19 @@ class BinHex:
             self.close_data()
         if self.state != _DID_DATA:
             raise Error, 'Close at the wrong time'
-        if self.rlen != 0:
+        if self.rlen <> 0:
             raise Error, \
                   "Incorrect resource-datasize, diff="+`self.rlen`
         self._writecrc()
         self.ofp.close()
         self.state = None
         del self.ofp
-
+    
 def binhex(inp, out):
     """(infilename, outfilename) - Create binhex-encoded copy of a file"""
     finfo = getfileinfo(inp)
     ofp = BinHex(finfo, out)
-
+    
     ifp = open(inp, 'rb')
     # XXXX Do textfile translation on non-mac systems
     while 1:
@@ -274,11 +274,11 @@ def binhex(inp, out):
         if not d: break
         ofp.write_rsrc(d)
     ofp.close()
-    ifp.close()
+    ifp.close() 
 
 class _Hqxdecoderengine:
     """Read data via the decoder in 4-byte chunks"""
-
+    
     def __init__(self, ifp):
         self.ifp = ifp
         self.eof = 0
@@ -288,7 +288,7 @@ class _Hqxdecoderengine:
         decdata = ''
         wtd = totalwtd
         #
-        # The loop here is convoluted, since we don't really now how
+        # The loop here is convoluted, since we don't really now how 
         # much to decode: there may be newlines in the incoming data.
         while wtd > 0:
             if self.eof: return decdata
@@ -343,7 +343,7 @@ class _Rledecoderengine:
                 binascii.rledecode_hqx(self.pre_buffer)
             self.pre_buffer = ''
             return
-
+            
         #
         # Obfuscated code ahead. We have to take care that we don't
         # end up with an orphaned RUNCHAR later on. So, we keep a couple
@@ -393,17 +393,17 @@ class HexBin:
                 break
             if ch != '\n':
                 dummy = ifp.readline()
-
+            
         hqxifp = _Hqxdecoderengine(ifp)
         self.ifp = _Rledecoderengine(hqxifp)
         self.crc = 0
         self._readheader()
-
+        
     def _read(self, len):
         data = self.ifp.read(len)
         self.crc = binascii.crc_hqx(data, self.crc)
         return data
-
+        
     def _checkcrc(self):
         filecrc = struct.unpack('>h', self.ifp.read(2))[0] & 0xffff
         #self.crc = binascii.crc_hqx('\0\0', self.crc)
@@ -419,21 +419,21 @@ class HexBin:
         fname = self._read(ord(len))
         rest = self._read(1+4+4+2+4+4)
         self._checkcrc()
-
+        
         type = rest[1:5]
         creator = rest[5:9]
         flags = struct.unpack('>h', rest[9:11])[0]
         self.dlen = struct.unpack('>l', rest[11:15])[0]
         self.rlen = struct.unpack('>l', rest[15:19])[0]
-
+        
         self.FName = fname
         self.FInfo = FInfo()
         self.FInfo.Creator = creator
         self.FInfo.Type = type
         self.FInfo.Flags = flags
-
+        
         self.state = _DID_HEADER
-
+        
     def read(self, *n):
         if self.state != _DID_HEADER:
             raise Error, 'Read data at wrong time'
@@ -447,7 +447,7 @@ class HexBin:
             rv = rv + self._read(n-len(rv))
         self.dlen = self.dlen - n
         return rv
-
+        
     def close_data(self):
         if self.state != _DID_HEADER:
             raise Error, 'close_data at wrong time'
@@ -455,7 +455,7 @@ class HexBin:
             dummy = self._read(self.dlen)
         self._checkcrc()
         self.state = _DID_DATA
-
+        
     def read_rsrc(self, *n):
         if self.state == _DID_HEADER:
             self.close_data()
@@ -468,14 +468,14 @@ class HexBin:
             n = self.rlen
         self.rlen = self.rlen - n
         return self._read(n)
-
+        
     def close(self):
         if self.rlen:
             dummy = self.read_rsrc(self.rlen)
         self._checkcrc()
         self.state = _DID_RSRC
         self.ifp.close()
-
+        
 def hexbin(inp, out):
     """(infilename, outfilename) - Decode binhexed file"""
     ifp = HexBin(inp)
@@ -494,7 +494,7 @@ def hexbin(inp, out):
         ofp.write(d)
     ofp.close()
     ifp.close_data()
-
+    
     d = ifp.read_rsrc(128000)
     if d:
         ofp = openrsrc(out, 'wb')
@@ -511,7 +511,7 @@ def hexbin(inp, out):
         nfinfo.Type = finfo.Type
         nfinfo.Flags = finfo.Flags
         ofss.SetFInfo(nfinfo)
-
+    
     ifp.close()
 
 def _test():
@@ -526,6 +526,6 @@ def _test():
     hexbin(fname+'.hqx', fname+'.viahqx')
     #hexbin(fname, fname+'.unpacked')
     sys.exit(1)
-
+    
 if __name__ == '__main__':
     _test()

@@ -1,12 +1,12 @@
 # -*- Mode: Python -*-
-#   Id: asyncore.py,v 2.51 2000/09/07 22:29:26 rushing Exp
+#   Id: asyncore.py,v 2.51 2000/09/07 22:29:26 rushing Exp 
 #   Author: Sam Rushing <rushing@nightmare.com>
 
 # ======================================================================
 # Copyright 1996 by Sam Rushing
-#
+# 
 #                         All Rights Reserved
-#
+# 
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby
 # granted, provided that the above copyright notice appear in all
@@ -15,7 +15,7 @@
 # Rushing not be used in advertising or publicity pertaining to
 # distribution of the software without specific, written prior
 # permission.
-#
+# 
 # SAM RUSHING DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
 # INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN
 # NO EVENT SHALL SAM RUSHING BE LIABLE FOR ANY SPECIAL, INDIRECT OR
@@ -28,29 +28,29 @@
 """Basic infrastructure for asynchronous socket service clients and servers.
 
 There are only two ways to have a program on a single processor do "more
-than one thing at a time".  Multi-threaded programming is the simplest and
+than one thing at a time".  Multi-threaded programming is the simplest and 
 most popular way to do it, but there is another very different technique,
 that lets you have nearly all the advantages of multi-threading, without
 actually using multiple threads. it's really only practical if your program
 is largely I/O bound. If your program is CPU bound, then pre-emptive
 scheduled threads are probably what you really need. Network servers are
-rarely CPU-bound, however.
+rarely CPU-bound, however. 
 
-If your operating system supports the select() system call in its I/O
+If your operating system supports the select() system call in its I/O 
 library (and nearly all do), then you can use it to juggle multiple
 communication channels at once; doing other work while your I/O is taking
 place in the "background."  Although this strategy can seem strange and
 complex, especially at first, it is in many ways easier to understand and
 control than multi-threaded programming. The module documented here solves
 many of the difficult problems for you, making the task of building
-sophisticated high-performance network servers and clients a snap.
+sophisticated high-performance network servers and clients a snap. 
 """
 
 import exceptions
 import select
 import socket
+import string
 import sys
-import types
 
 import os
 if os.name == 'nt':
@@ -145,51 +145,15 @@ def poll2 (timeout=0.0, map=None):
             except KeyError:
                 pass
 
-def poll3 (timeout=0.0, map=None):
-    # Use the poll() support added to the select module in Python 2.0
-    if map is None:
-        map=socket_map
-    # timeout is in milliseconds
-    timeout = int(timeout*1000)
-    pollster = select.poll()
-    if map:
-        l = []
-        for fd, obj in map.items():
-            flags = 0
-            if obj.readable():
-                flags = select.POLLIN
-            if obj.writable():
-                flags = flags | select.POLLOUT
-            if flags:
-                pollster.register(fd, flags)
-        r = pollster.poll (timeout)
-        for fd, flags in r:
-            try:
-                obj = map[fd]
-                try:
-                    if (flags  & select.POLLIN):
-                        obj.handle_read_event()
-                    if (flags & select.POLLOUT):
-                        obj.handle_write_event()
-                except ExitNow:
-                    raise ExitNow
-                except:
-                    obj.handle_error()
-            except KeyError:
-                pass
-
 def loop (timeout=30.0, use_poll=0, map=None):
 
-    if map is None:
-        map=socket_map
-
     if use_poll:
-        if hasattr (select, 'poll'):
-            poll_fun = poll3
-        else:
-            poll_fun = poll2
+        poll_fun = poll2
     else:
         poll_fun = poll
+
+        if map is None:
+            map=socket_map
 
     while map:
         poll_fun (timeout, map)
@@ -216,22 +180,19 @@ class dispatcher:
             elif self.connected:
                 status.append ('connected')
             if self.addr:
-                if self.addr == types.TupleType:
-                    status.append ('%s:%d' % self.addr)
-                else:
-                    status.append (self.addr)
-            return '<%s %s at %x>' % (self.__class__.__name__,
-                                      ' '.join (status), id (self))
+                status.append ('%s:%d' % self.addr)
+            return '<%s %s at %x>' % (
+                self.__class__.__name__,
+                string.join (status, ' '),
+                id(self)
+                )
         except:
-            pass
-
-        try:
-            ar = repr (self.addr)
-        except AttributeError:
-            ar = 'no self.addr!'
-
-        return '<__repr__() failed for %s instance at %x (addr=%s)>' % \
-               (self.__class__.__name__, id (self), ar)
+            try:
+                ar = repr(self.addr)
+            except:
+                ar = 'no self.addr!'
+                
+            return '<__repr__ (self) failed for object at %x (addr=%s)>' % (id(self),ar)
 
     def add_channel (self, map=None):
         #self.log_info ('adding channel %s' % self)
@@ -266,7 +227,7 @@ class dispatcher:
                 socket.SOL_SOCKET, socket.SO_REUSEADDR,
                 self.socket.getsockopt (socket.SOL_SOCKET, socket.SO_REUSEADDR) | 1
                 )
-        except socket.error:
+        except:
             pass
 
     # ==================================================
@@ -303,7 +264,6 @@ class dispatcher:
 
     def connect (self, address):
         self.connected = 0
-        # XXX why not use connect_ex?
         try:
             self.socket.connect (address)
         except socket.error, why:
@@ -364,7 +324,7 @@ class dispatcher:
 
     # log and log_info maybe overriden to provide more sophisitcated
     # logging and warning methods. In general, log is for 'hit' logging
-    # and 'log_info' is for informational, warning and error logging.
+    # and 'log_info' is for informational, warning and error logging. 
 
     def log (self, message):
         sys.stderr.write ('log: %s\n' % str(message))
@@ -473,7 +433,7 @@ def compact_traceback ():
     while 1:
         tbinfo.append ((
             tb.tb_frame.f_code.co_filename,
-            tb.tb_frame.f_code.co_name,
+            tb.tb_frame.f_code.co_name,             
             str(tb.tb_lineno)
             ))
         tb = tb.tb_next
@@ -484,7 +444,13 @@ def compact_traceback ():
     del tb
 
     file, function, line = tbinfo[-1]
-    info = '[' + '] ['.join(map(lambda x: '|'.join(x), tbinfo)) + ']'
+    info = '[' + string.join (
+        map (
+            lambda x: string.join (x, '|'),
+            tbinfo
+            ),
+        '] ['
+        ) + ']'
     return (file, function, line), t, v, info
 
 def close_all (map=None):
@@ -510,6 +476,7 @@ def close_all (map=None):
 import os
 if os.name == 'posix':
     import fcntl
+    import FCNTL
 
     class file_wrapper:
         # here we override just enough to make a file
@@ -537,9 +504,9 @@ if os.name == 'posix':
             dispatcher.__init__ (self)
             self.connected = 1
             # set it to non-blocking mode
-            flags = fcntl.fcntl (fd, fcntl.F_GETFL, 0)
-            flags = flags | os.O_NONBLOCK
-            fcntl.fcntl (fd, fcntl.F_SETFL, flags)
+            flags = fcntl.fcntl (fd, FCNTL.F_GETFL, 0)
+            flags = flags | FCNTL.O_NONBLOCK
+            fcntl.fcntl (fd, FCNTL.F_SETFL, flags)
             self.set_file (fd)
 
         def set_file (self, fd):

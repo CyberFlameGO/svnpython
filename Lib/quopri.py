@@ -4,8 +4,6 @@
 
 # (Dec 1991 version).
 
-__all__ = ["encode","decode"]
-
 ESCAPE = '='
 MAXLINESIZE = 76
 HEX = '0123456789ABCDEF'
@@ -28,7 +26,7 @@ def encode(input, output, quotetabs):
 
     'input' and 'output' are files with readline() and write() methods.
     The 'quotetabs' flag indicates whether tabs should be quoted.
-        """
+	"""
     while 1:
         line = input.readline()
         if not line:
@@ -71,7 +69,7 @@ def decode(input, output):
             partial = 1
         while i < n:
             c = line[i]
-            if c != ESCAPE:
+            if c <> ESCAPE:
                 new = new + c; i = i+1
             elif i+1 == n and not partial:
                 partial = 1; break

@@ -8,7 +8,7 @@
 #
 # FIXME: should add 'displayof' option where relevant (actual, families,
 #        measure, and metrics)
-#
+# 
 # Copyright (c) Secret Labs AB 1998.
 #
 # info@pythonware.com
@@ -18,6 +18,7 @@
 __version__ = "0.9"
 
 import Tkinter
+import string
 
 # weight/slant
 NORMAL = "normal"
@@ -51,10 +52,10 @@ class Font:
         return tuple(options)
 
     def _get(self, args):
-        options = []
-        for k in args:
-            options.append("-"+k)
-        return tuple(options)
+      options = []
+      for k in args:
+          options.append("-"+k)
+      return tuple(options)
 
     def _mkdict(self, args):
         options = {}
@@ -116,10 +117,10 @@ class Font:
                 )
 
     configure = config
-
+    
     def measure(self, text):
         "Return text width"
-        return int(self._call("font", "measure", self.name, text))
+        return string.atoi(self._call("font", "measure", self.name, text))
 
     def metrics(self, *options):
         """Return font metrics.
@@ -128,21 +129,21 @@ class Font:
         using this font before calling this method."""
 
         if options:
-            return int(
+            return string.atoi(
                 self._call("font", "metrics", self.name, self._get(options))
                 )
         else:
             res = self._split(self._call("font", "metrics", self.name))
             options = {}
             for i in range(0, len(res), 2):
-                options[res[i][1:]] = int(res[i+1])
+                options[res[i][1:]] = string.atoi(res[i+1])
             return options
 
 def families(root=None):
     "Get font families (as a tuple)"
     if not root:
         root = Tkinter._default_root
-    return root.tk.splitlist(root.tk.call("font", "families"))
+    return root.tk.splitlist(root.tk.call("font", "families"))     
 
 def names(root=None):
     "Get names of defined fonts (as a tuple)"
@@ -152,7 +153,7 @@ def names(root=None):
 
 # --------------------------------------------------------------------
 # test stuff
-
+    
 if __name__ == "__main__":
 
     root = Tkinter.Tk()
@@ -185,7 +186,7 @@ if __name__ == "__main__":
 
     fb = Font(font=w["font"]).copy()
     fb.config(weight=BOLD)
-
+    
     w.config(font=fb)
 
     Tkinter.mainloop()

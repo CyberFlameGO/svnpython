@@ -36,15 +36,9 @@ The scanner is exposed by a single function:
 
 
 All constants from the \refmodule{token} module are also exported from 
-\module{tokenize}, as are two additional token type values that might be 
+\module{tokenize}, as is one additional token type value that might be 
 passed to the \var{tokeneater} function by \function{tokenize()}:
 
 \begin{datadesc}{COMMENT}
   Token value used to indicate a comment.
-\end{datadesc}
-\begin{datadesc}{NL}
-  Token value used to indicate a non-terminating newline.  The NEWLINE
-  token indicates the end of a logical line of Python code; NL tokens
-  are generated when a logical line of code is continued over multiple
-  physical lines.
 \end{datadesc}

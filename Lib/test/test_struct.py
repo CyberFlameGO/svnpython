@@ -1,4 +1,4 @@
-from test_support import TestFailed, verbose, verify
+from test_support import TestFailed, verbose
 import struct
 ## import pdb
 
@@ -12,27 +12,17 @@ def simple_err(func, *args):
             func.__name__, args)
 ##      pdb.set_trace()
 
-def any_err(func, *args):
-    try:
-        apply(func, args)
-    except (struct.error, OverflowError, TypeError):
-        pass
-    else:
-        raise TestFailed, "%s%s did not raise error" % (
-            func.__name__, args)
-##      pdb.set_trace()
-
-simple_err(struct.calcsize, 'Z')
+simple_err(struct.calcsize, 'Q')
 
 sz = struct.calcsize('i')
-if sz * 3 != struct.calcsize('iii'):
+if sz * 3 <> struct.calcsize('iii'):
     raise TestFailed, 'inconsistent sizes'
 
 fmt = 'cbxxxxxxhhhhiillffd'
 fmt3 = '3c3b18x12h6i6l6f3d'
 sz = struct.calcsize(fmt)
 sz3 = struct.calcsize(fmt3)
-if sz * 3 != sz3:
+if sz * 3 <> sz3:
     raise TestFailed, 'inconsistent sizes (3*%s -> 3*%d = %d, %s -> %d)' % (
         `fmt`, sz, 3*sz, `fmt3`, sz3)
 
@@ -59,8 +49,8 @@ for prefix in ('', '@', '<', '>', '=', '!'):
             print "trying:", format
         s = struct.pack(format, c, b, h, i, l, f, d)
         cp, bp, hp, ip, lp, fp, dp = struct.unpack(format, s)
-        if (cp != c or bp != b or hp != h or ip != i or lp != l or
-            int(100 * fp) != int(100 * f) or int(100 * dp) != int(100 * d)):
+        if (cp <> c or bp <> b or hp <> h or ip <> i or lp <> l or
+            int(100 * fp) <> int(100 * f) or int(100 * dp) <> int(100 * d)):
             # ^^^ calculate only to two decimal places
             raise TestFailed, "unpack/pack not transitive (%s, %s)" % (
                 str(format), str((cp, bp, hp, ip, lp, fp, dp)))
@@ -103,7 +93,14 @@ tests = [
                '\000\000\000\000\000\000\000\300', 0),
 ]
 
-isbigendian = struct.pack('=i', 1)[0] == chr(0)
+def badpack(fmt, arg, got, exp):
+    return 
+
+def badunpack(fmt, arg, got, exp):
+    return "unpack(%s, %s) -> (%s,) # expected (%s,)" % (
+        `fmt`, `arg`, `got`, `exp`)
+
+isbigendian = struct.pack('=h', 1) == '\0\1'
 
 for fmt, arg, big, lil, asy in tests:
     if verbose:
@@ -122,202 +119,3 @@ for fmt, arg, big, lil, asy in tests:
         if rev != arg and not asy:
             raise TestFailed, "unpack(%s, %s) -> (%s,) # expected (%s,)" % (
                 `fmt`, `res`, `rev`, `arg`)
-
-###########################################################################
-# q/Q tests.
-
-has_native_qQ = 1
-try:
-    struct.pack("q", 5)
-except struct.error:
-    has_native_qQ = 0
-
-if verbose:
-    print "Platform has native q/Q?", has_native_qQ and "Yes." or "No."
-
-any_err(struct.pack, "Q", -1)   # can't pack -1 as unsigned regardless
-simple_err(struct.pack, "q", "a")  # can't pack string as 'q' regardless
-simple_err(struct.pack, "Q", "a")  # ditto, but 'Q'
-
-def string_reverse(s):
-    chars = list(s)
-    chars.reverse()
-    return "".join(chars)
-
-def bigendian_to_native(value):
-    if isbigendian:
-        return value
-    else:
-        return string_reverse(value)
-
-def test_native_qQ():
-    bytes = struct.calcsize('q')
-    # The expected values here are in big-endian format, primarily because
-    # I'm on a little-endian machine and so this is the clearest way (for
-    # me) to force the code to get exercised.
-    for format, input, expected in (
-            ('q', -1, '\xff' * bytes),
-            ('q', 0, '\x00' * bytes),
-            ('Q', 0, '\x00' * bytes),
-            ('q', 1L, '\x00' * (bytes-1) + '\x01'),
-            ('Q', (1L << (8*bytes))-1, '\xff' * bytes),
-            ('q', (1L << (8*bytes-1))-1, '\x7f' + '\xff' * (bytes - 1))):
-        got = struct.pack(format, input)
-        native_expected = bigendian_to_native(expected)
-        verify(got == native_expected,
-               "%r-pack of %r gave %r, not %r" %
-                    (format, input, got, native_expected))
-        retrieved = struct.unpack(format, got)[0]
-        verify(retrieved == input,
-               "%r-unpack of %r gave %r, not %r" %
-                    (format, got, retrieved, input))
-
-if has_native_qQ:
-    test_native_qQ()
-
-# Standard q/Q (8 bytes; should work on all platforms).
-
-MIN_Q, MAX_Q = 0, 2L**64 - 1
-MIN_q, MAX_q = -(2L**63), 2L**63 - 1
-
-import binascii
-def test_one_qQ(x, pack=struct.pack,
-                   unpack=struct.unpack,
-                   unhexlify=binascii.unhexlify):
-    if verbose:
-        print "trying std q/Q on", x, "==", hex(x)
-
-    # Try 'q'.
-    if MIN_q <= x <= MAX_q:
-        # Try '>q'.
-        expected = long(x)
-        if x < 0:
-            expected += 1L << 64
-            assert expected > 0
-        expected = hex(expected)[2:-1] # chop "0x" and trailing 'L'
-        if len(expected) & 1:
-            expected = "0" + expected
-        expected = unhexlify(expected)
-        expected = "\x00" * (8 - len(expected)) + expected
-
-        # >q pack work?
-        got = pack(">q", x)
-        verify(got == expected,
-               "'>q'-pack of %r gave %r, not %r" %
-                (x, got, expected))
-
-        # >q unpack work?
-        retrieved = unpack(">q", got)[0]
-        verify(x == retrieved,
-               "'>q'-unpack of %r gave %r, not %r" %
-                (got, retrieved, x))
-
-        # Adding any byte should cause a "too big" error.
-        any_err(unpack, ">q", '\x01' + got)
-
-        # Try '<q'.
-        expected = string_reverse(expected)
-
-        # <q pack work?
-        got = pack("<q", x)
-        verify(got == expected,
-               "'<q'-pack of %r gave %r, not %r" %
-                (x, got, expected))
-
-        # <q unpack work?
-        retrieved = unpack("<q", got)[0]
-        verify(x == retrieved,
-               "'<q'-unpack of %r gave %r, not %r" %
-                (got, retrieved, x))
-
-        # Adding any byte should cause a "too big" error.
-        any_err(unpack, "<q", '\x01' + got)
-
-    else:
-        # x is out of q's range -- verify pack realizes that.
-        any_err(pack, '>q', x)
-        any_err(pack, '<q', x)
-
-    # Much the same for 'Q'.
-    if MIN_Q <= x <= MAX_Q:
-        # Try '>Q'.
-        expected = long(x)
-        expected = hex(expected)[2:-1] # chop "0x" and trailing 'L'
-        if len(expected) & 1:
-            expected = "0" + expected
-        expected = unhexlify(expected)
-        expected = "\x00" * (8 - len(expected)) + expected
-
-        # >Q pack work?
-        got = pack(">Q", x)
-        verify(got == expected,
-               "'>Q'-pack of %r gave %r, not %r" %
-                (x, got, expected))
-
-        # >Q unpack work?
-        retrieved = unpack(">Q", got)[0]
-        verify(x == retrieved,
-               "'>Q'-unpack of %r gave %r, not %r" %
-                (got, retrieved, x))
-
-        # Adding any byte should cause a "too big" error.
-        any_err(unpack, ">Q", '\x01' + got)
-
-        # Try '<Q'.
-        expected = string_reverse(expected)
-
-        # <Q pack work?
-        got = pack("<Q", x)
-        verify(got == expected,
-               "'<Q'-pack of %r gave %r, not %r" %
-                (x, got, expected))
-
-        # <Q unpack work?
-        retrieved = unpack("<Q", got)[0]
-        verify(x == retrieved,
-               "'<Q'-unpack of %r gave %r, not %r" %
-                (got, retrieved, x))
-
-        # Adding any byte should cause a "too big" error.
-        any_err(unpack, "<Q", '\x01' + got)
-
-    else:
-        # x is out of Q's range -- verify pack realizes that.
-        any_err(pack, '>Q', x)
-        any_err(pack, '<Q', x)
-
-def test_std_qQ():
-    from random import randrange
-
-    # Create all interesting powers of 2.
-    values = []
-    for exp in range(70):
-        values.append(1L << exp)
-
-    # Add some random 64-bit values.
-    for i in range(50):
-        val = 0L
-        for j in range(8):
-            val = (val << 8) | randrange(256)
-        values.append(val)
-
-    # Try all those, and their negations, and +-1 from them.  Note
-    # that this tests all power-of-2 boundaries in range, and a few out
-    # of range, plus +-(2**n +- 1).
-    for base in values:
-        for val in -base, base:
-            for incr in -1, 0, 1:
-                x = val + incr
-                try:
-                    x = int(x)
-                except OverflowError:
-                    pass
-                test_one_qQ(x)
-
-    # Some error cases.
-    for direction in "<>":
-        for letter in "qQ":
-            for badobject in "a string", 3+42j, randrange:
-                any_err(struct.pack, direction + letter, badobject)
-    
-test_std_qQ()

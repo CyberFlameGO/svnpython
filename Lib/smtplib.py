@@ -36,23 +36,19 @@ Example:
 #     Eric S. Raymond <esr@thyrsus.com>
 # Better RFC 821 compliance (MAIL and RCPT, and CRLF in data)
 #     by Carey Evans <c.evans@clear.net.nz>, for picky mail servers.
-#
+#    
 # This was modified from the Python 1.5 library HTTP lib.
 
 import socket
+import string
 import re
 import rfc822
 import types
 
-__all__ = ["SMTPException","SMTPServerDisconnected","SMTPResponseException",
-           "SMTPSenderRefused","SMTPRecipientsRefused","SMTPDataError",
-           "SMTPConnectError","SMTPHeloError","quoteaddr","quotedata",
-           "SMTP"]
-
 SMTP_PORT = 25
 CRLF="\r\n"
 
-# Exception classes used by this module.
+# Exception classes used by this module. 
 class SMTPException(Exception):
     """Base class for all exceptions raised by this module."""
 
@@ -93,8 +89,8 @@ class SMTPSenderRefused(SMTPResponseException):
 class SMTPRecipientsRefused(SMTPException):
     """All recipient addresses refused.
     The errors for each recipient are accessible through the attribute
-    'recipients', which is a dictionary of exactly the same sort as
-    SMTP.sendmail() returns.
+    'recipients', which is a dictionary of exactly the same sort as 
+    SMTP.sendmail() returns.  
     """
 
     def __init__(self, recipients):
@@ -141,27 +137,27 @@ def quotedata(data):
 class SMTP:
     """This class manages a connection to an SMTP or ESMTP server.
     SMTP Objects:
-        SMTP objects have the following attributes:
-            helo_resp
-                This is the message given by the server in response to the
+        SMTP objects have the following attributes:    
+            helo_resp 
+                This is the message given by the server in response to the 
                 most recent HELO command.
-
+                
             ehlo_resp
-                This is the message given by the server in response to the
+                This is the message given by the server in response to the 
                 most recent EHLO command. This is usually multiline.
 
-            does_esmtp
+            does_esmtp 
                 This is a True value _after you do an EHLO command_, if the
                 server supports ESMTP.
 
-            esmtp_features
+            esmtp_features 
                 This is a dictionary, which, if the server supports ESMTP,
                 will _after you do an EHLO command_, contain the names of the
                 SMTP service extensions this server supports, and their
                 parameters (if any).
 
-                Note, all extension names are mapped to lower case in the
-                dictionary.
+                Note, all extension names are mapped to lower case in the 
+                dictionary. 
 
         See each method's docstrings for details.  In general, there is a
         method of the same name to perform each SMTP command.  There is also a
@@ -187,7 +183,7 @@ class SMTP:
             (code, msg) = self.connect(host, port)
             if code != 220:
                 raise SMTPConnectError(code, msg)
-
+    
     def set_debuglevel(self, debuglevel):
         """Set the debug output level.
 
@@ -209,11 +205,11 @@ class SMTP:
 
         """
         if not port:
-            i = host.find(':')
+            i = string.find(host, ':')
             if i >= 0:
                 host, port = host[:i], host[i+1:]
-                try: port = int(port)
-                except ValueError:
+                try: port = string.atoi(port)
+                except string.atoi_error:
                     raise socket.error, "nonnumeric port"
         if not port: port = SMTP_PORT
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -226,7 +222,7 @@ class SMTP:
         (code,msg)=self.getreply()
         if self.debuglevel >0 : print "connect:", msg
         return (code,msg)
-
+    
     def send(self, str):
         """Send `str' to the server."""
         if self.debuglevel > 0: print 'send:', `str`
@@ -239,7 +235,7 @@ class SMTP:
                 raise SMTPServerDisconnected('Server not connected')
         else:
             raise SMTPServerDisconnected('please run connect() first')
-
+ 
     def putcmd(self, cmd, args=""):
         """Send a command to the server."""
         if args == "":
@@ -247,10 +243,10 @@ class SMTP:
         else:
             str = '%s %s%s' % (cmd, args, CRLF)
         self.send(str)
-
+    
     def getreply(self):
         """Get a reply from the server.
-
+        
         Returns a tuple consisting of:
 
           - server response code (e.g. '250', or such, if all goes well)
@@ -270,12 +266,12 @@ class SMTP:
                 self.close()
                 raise SMTPServerDisconnected("Connection unexpectedly closed")
             if self.debuglevel > 0: print 'reply:', `line`
-            resp.append(line[4:].strip())
+            resp.append(string.strip(line[4:]))
             code=line[:3]
             # Check that the error code is syntactically correct.
             # Don't attempt to read a continuation line if it is broken.
             try:
-                errcode = int(code)
+                errcode = string.atoi(code)
             except ValueError:
                 errcode = -1
                 break
@@ -283,11 +279,11 @@ class SMTP:
             if line[3:4]!="-":
                 break
 
-        errmsg = "\n".join(resp)
-        if self.debuglevel > 0:
+        errmsg = string.join(resp,"\n")
+        if self.debuglevel > 0: 
             print 'reply: retcode (%s); Msg: %s' % (errcode,errmsg)
         return errcode, errmsg
-
+    
     def docmd(self, cmd, args=""):
         """Send a command, and return its response code."""
         self.putcmd(cmd,args)
@@ -317,29 +313,29 @@ class SMTP:
         else:
             self.putcmd("ehlo", socket.getfqdn())
         (code,msg)=self.getreply()
-        # According to RFC1869 some (badly written)
-        # MTA's will disconnect on an ehlo. Toss an exception if
+        # According to RFC1869 some (badly written) 
+        # MTA's will disconnect on an ehlo. Toss an exception if 
         # that happens -ddm
         if code == -1 and len(msg) == 0:
             raise SMTPServerDisconnected("Server not connected")
         self.ehlo_resp=msg
-        if code != 250:
+        if code<>250:
             return (code,msg)
         self.does_esmtp=1
         #parse the ehlo response -ddm
-        resp=self.ehlo_resp.split('\n')
+        resp=string.split(self.ehlo_resp,'\n')
         del resp[0]
         for each in resp:
             m=re.match(r'(?P<feature>[A-Za-z0-9][A-Za-z0-9\-]*)',each)
             if m:
-                feature=m.group("feature").lower()
-                params=m.string[m.end("feature"):].strip()
+                feature=string.lower(m.group("feature"))
+                params=string.strip(m.string[m.end("feature"):])
                 self.esmtp_features[feature]=params
         return (code,msg)
 
     def has_extn(self, opt):
         """Does the server support a given SMTP service extension?"""
-        return self.esmtp_features.has_key(opt.lower())
+        return self.esmtp_features.has_key(string.lower(opt))
 
     def help(self, args=''):
         """SMTP 'help' command.
@@ -359,7 +355,7 @@ class SMTP:
         """SMTP 'mail' command -- begins mail xfer session."""
         optionlist = ''
         if options and self.does_esmtp:
-            optionlist = ' ' + ' '.join(options)
+            optionlist = ' ' + string.join(options, ' ')
         self.putcmd("mail", "FROM:%s%s" % (quoteaddr(sender) ,optionlist))
         return self.getreply()
 
@@ -367,12 +363,12 @@ class SMTP:
         """SMTP 'rcpt' command -- indicates 1 recipient for this mail."""
         optionlist = ''
         if options and self.does_esmtp:
-            optionlist = ' ' + ' '.join(options)
+            optionlist = ' ' + string.join(options, ' ')
         self.putcmd("rcpt","TO:%s%s" % (quoteaddr(recip),optionlist))
         return self.getreply()
 
     def data(self,msg):
-        """SMTP 'DATA' command -- sends message data to server.
+        """SMTP 'DATA' command -- sends message data to server. 
 
         Automatically quotes lines beginning with a period per rfc821.
         Raises SMTPDataError if there is an unexpected reply to the
@@ -382,7 +378,7 @@ class SMTP:
         self.putcmd("data")
         (code,repl)=self.getreply()
         if self.debuglevel >0 : print "data:", (code,repl)
-        if code != 354:
+        if code <> 354:
             raise SMTPDataError(code,repl)
         else:
             q = quotedata(msg)
@@ -408,14 +404,14 @@ class SMTP:
 
     # some useful methods
     def sendmail(self, from_addr, to_addrs, msg, mail_options=[],
-                 rcpt_options=[]):
-        """This command performs an entire mail transaction.
+                 rcpt_options=[]): 
+        """This command performs an entire mail transaction. 
 
-        The arguments are:
+        The arguments are: 
             - from_addr    : The address sending this mail.
             - to_addrs     : A list of addresses to send this mail to.  A bare
                              string will be treated as a list with 1 address.
-            - msg          : The message to send.
+            - msg          : The message to send. 
             - mail_options : List of ESMTP options (such as 8bitmime) for the
                              mail command.
             - rcpt_options : List of ESMTP options (such as DSN commands) for
@@ -434,7 +430,7 @@ class SMTP:
         This method may raise the following exceptions:
 
          SMTPHeloError          The server didn't reply properly to
-                                the helo greeting.
+                                the helo greeting. 
          SMTPRecipientsRefused  The server rejected ALL recipients
                                 (no mail was sent).
          SMTPSenderRefused      The server didn't accept the from_addr.
@@ -445,7 +441,7 @@ class SMTP:
         Note: the connection will be open even after an exception is raised.
 
         Example:
-
+      
          >>> import smtplib
          >>> s=smtplib.SMTP("localhost")
          >>> tolist=["one@one.org","two@two.org","three@three.org","four@four.org"]
@@ -457,7 +453,7 @@ class SMTP:
          >>> s.sendmail("me@my.org",tolist,msg)
          { "three@three.org" : ( 550 ,"User unknown" ) }
          >>> s.quit()
-
+        
         In the above example, the message was accepted for delivery to three
         of the four addresses, and one was rejected, with the error code
         550.  If all addresses are accepted, then the method will return an
@@ -479,7 +475,7 @@ class SMTP:
                 esmtp_opts.append(option)
 
         (code,resp) = self.mail(from_addr, esmtp_opts)
-        if code != 250:
+        if code <> 250:
             self.rset()
             raise SMTPSenderRefused(code, resp, from_addr)
         senderrs={}
@@ -487,18 +483,18 @@ class SMTP:
             to_addrs = [to_addrs]
         for each in to_addrs:
             (code,resp)=self.rcpt(each, rcpt_options)
-            if (code != 250) and (code != 251):
+            if (code <> 250) and (code <> 251):
                 senderrs[each]=(code,resp)
         if len(senderrs)==len(to_addrs):
             # the server refused all our recipients
             self.rset()
             raise SMTPRecipientsRefused(senderrs)
-        (code,resp) = self.data(msg)
-        if code != 250:
+        (code,resp)=self.data(msg)
+        if code <> 250:
             self.rset()
             raise SMTPDataError(code, resp)
         #if we got here then somebody got our mail
-        return senderrs
+        return senderrs         
 
 
     def close(self):
@@ -524,10 +520,10 @@ if __name__ == '__main__':
 
     def prompt(prompt):
         sys.stdout.write(prompt + ": ")
-        return sys.stdin.readline().strip()
+        return string.strip(sys.stdin.readline())
 
     fromaddr = prompt("From")
-    toaddrs  = prompt("To").split(',')
+    toaddrs  = string.splitfields(prompt("To"), ',')
     print "Enter message, end with ^D:"
     msg = ''
     while 1:

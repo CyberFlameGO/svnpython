@@ -9,28 +9,12 @@
 
 #include "Python.h"
 
-/* Precisions used by repr() and str(), respectively.
-
-   The repr() precision (17 significant decimal digits) is the minimal number
-   that is guaranteed to have enough precision so that if the number is read
-   back in the exact same binary value is recreated.  This is true for IEEE
-   floating point by design, and also happens to work for all other modern
-   hardware.
-
-   The str() precision is chosen so that in most cases, the rounding noise
-   created by various operations is suppressed, while giving plenty of
-   precision for practical use.
-*/
-
-#define PREC_REPR	17
-#define PREC_STR	12
 
 /* elementary operations on complex numbers */
 
 static Py_complex c_1 = {1., 0.};
 
-Py_complex
-c_sum(Py_complex a, Py_complex b)
+Py_complex c_sum(Py_complex a, Py_complex b)
 {
 	Py_complex r;
 	r.real = a.real + b.real;
@@ -38,8 +22,7 @@ c_sum(Py_complex a, Py_complex b)
 	return r;
 }
 
-Py_complex
-c_diff(Py_complex a, Py_complex b)
+Py_complex c_diff(Py_complex a, Py_complex b)
 {
 	Py_complex r;
 	r.real = a.real - b.real;
@@ -47,8 +30,7 @@ c_diff(Py_complex a, Py_complex b)
 	return r;
 }
 
-Py_complex
-c_neg(Py_complex a)
+Py_complex c_neg(Py_complex a)
 {
 	Py_complex r;
 	r.real = -a.real;
@@ -56,8 +38,7 @@ c_neg(Py_complex a)
 	return r;
 }
 
-Py_complex
-c_prod(Py_complex a, Py_complex b)
+Py_complex c_prod(Py_complex a, Py_complex b)
 {
 	Py_complex r;
 	r.real = a.real*b.real - a.imag*b.imag;
@@ -65,16 +46,8 @@ c_prod(Py_complex a, Py_complex b)
 	return r;
 }
 
-Py_complex
-c_quot(Py_complex a, Py_complex b)
+Py_complex c_quot(Py_complex a, Py_complex b)
 {
-	/******************************************************************
-	This was the original algorithm.  It's grossly prone to spurious
-	overflow and underflow errors.  It also merrily divides by 0 despite
-	checking for that(!).  The code still serves a doc purpose here, as
-	the algorithm following is a simple by-cases transformation of this
-	one:
-
 	Py_complex r;
 	double d = b.real*b.real + b.imag*b.imag;
 	if (d == 0.)
@@ -82,45 +55,9 @@ c_quot(Py_complex a, Py_complex b)
 	r.real = (a.real*b.real + a.imag*b.imag)/d;
 	r.imag = (a.imag*b.real - a.real*b.imag)/d;
 	return r;
-	******************************************************************/
-
-	/* This algorithm is better, and is pretty obvious:  first divide the
-	 * numerators and denominator by whichever of {b.real, b.imag} has
-	 * larger magnitude.  The earliest reference I found was to CACM
-	 * Algorithm 116 (Complex Division, Robert L. Smith, Stanford
-	 * University).  As usual, though, we're still ignoring all IEEE
-	 * endcases.
-	 */
-	 Py_complex r;	/* the result */
- 	 const double abs_breal = b.real < 0 ? -b.real : b.real;
-	 const double abs_bimag = b.imag < 0 ? -b.imag : b.imag;
-
-	 if (abs_breal >= abs_bimag) {
- 		/* divide tops and bottom by b.real */
-	 	if (abs_breal == 0.0) {
-	 		errno = EDOM;
-	 		r.real = r.imag = 0.0;
-	 	}
-	 	else {
-	 		const double ratio = b.imag / b.real;
-	 		const double denom = b.real + b.imag * ratio;
-	 		r.real = (a.real + a.imag * ratio) / denom;
-	 		r.imag = (a.imag - a.real * ratio) / denom;
-	 	}
-	}
-	else {
-		/* divide tops and bottom by b.imag */
-		const double ratio = b.real / b.imag;
-		const double denom = b.real * ratio + b.imag;
-		assert(b.imag != 0.0);
-		r.real = (a.real * ratio + a.imag) / denom;
-		r.imag = (a.imag * ratio - a.real) / denom;
-	}
-	return r;
 }
 
-Py_complex
-c_pow(Py_complex a, Py_complex b)
+Py_complex c_pow(Py_complex a, Py_complex b)
 {
 	Py_complex r;
 	double vabs,len,at,phase;
@@ -149,8 +86,7 @@ c_pow(Py_complex a, Py_complex b)
 	return r;
 }
 
-static Py_complex
-c_powu(Py_complex x, long n)
+static Py_complex c_powu(Py_complex x, long n)
 {
 	Py_complex r, p;
 	long mask = 1;
@@ -165,8 +101,7 @@ c_powu(Py_complex x, long n)
 	return r;
 }
 
-static Py_complex
-c_powi(Py_complex x, long n)
+static Py_complex c_powi(Py_complex x, long n)
 {
 	Py_complex cn;
 
@@ -238,7 +173,7 @@ PyComplex_AsCComplex(PyObject *op)
 		cv.real = PyFloat_AsDouble(op);
 		cv.imag = 0.;
 		return cv;
-	}
+	}   
 }
 
 static void
@@ -249,21 +184,20 @@ complex_dealloc(PyObject *op)
 
 
 static void
-complex_to_buf(char *buf, PyComplexObject *v, int precision)
+complex_buf_repr(char *buf, PyComplexObject *v)
 {
 	if (v->cval.real == 0.)
-		sprintf(buf, "%.*gj", precision, v->cval.imag);
+		sprintf(buf, "%.12gj", v->cval.imag);
 	else
-		sprintf(buf, "(%.*g%+.*gj)", precision, v->cval.real,
-					     precision, v->cval.imag);
+		sprintf(buf, "(%.12g%+.12gj)", v->cval.real, v->cval.imag);
 }
 
 static int
 complex_print(PyComplexObject *v, FILE *fp, int flags)
+     /* flags -- not used but required by interface */
 {
 	char buf[100];
-	complex_to_buf(buf, v,
-		       (flags & Py_PRINT_RAW) ? PREC_STR : PREC_REPR);
+	complex_buf_repr(buf, v);
 	fputs(buf, fp);
 	return 0;
 }
@@ -272,16 +206,24 @@ static PyObject *
 complex_repr(PyComplexObject *v)
 {
 	char buf[100];
-	complex_to_buf(buf, v, PREC_REPR);
+	complex_buf_repr(buf, v);
 	return PyString_FromString(buf);
 }
 
-static PyObject *
-complex_str(PyComplexObject *v)
+static int
+complex_compare(PyComplexObject *v, PyComplexObject *w)
 {
-	char buf[100];
-	complex_to_buf(buf, v, PREC_STR);
-	return PyString_FromString(buf);
+	/* Note: "greater" and "smaller" have no meaning for complex numbers,
+	   but Python requires that they be defined nevertheless. */
+	Py_complex i, j;
+	i = v->cval;
+	j = w->cval;
+	if (i.real == j.real && i.imag == j.imag)
+		return 0;
+	else if (i.real != j.real)
+		return (i.real < j.real) ? -1 : 1;
+	else
+		return (i.imag < j.imag) ? -1 : 1;
 }
 
 static long
@@ -479,47 +421,6 @@ complex_coerce(PyObject **pv, PyObject **pw)
 }
 
 static PyObject *
-complex_richcompare(PyObject *v, PyObject *w, int op)
-{
-	int c;
-	Py_complex i, j;
-	PyObject *res;
-
-	if (op != Py_EQ && op != Py_NE) {
-		PyErr_SetString(PyExc_TypeError,
-			"cannot compare complex numbers using <, <=, >, >=");
-		return NULL;
-	}
-
-	c = PyNumber_CoerceEx(&v, &w);
-	if (c < 0)
-		return NULL;
-	if (c > 0) {
-		Py_INCREF(Py_NotImplemented);
-		return Py_NotImplemented;
-	}
-	if (!PyComplex_Check(v) || !PyComplex_Check(w)) {
-		Py_DECREF(v);
-		Py_DECREF(w);
-		Py_INCREF(Py_NotImplemented);
-		return Py_NotImplemented;
-	}
-
-	i = ((PyComplexObject *)v)->cval;
-	j = ((PyComplexObject *)w)->cval;
-	Py_DECREF(v);
-	Py_DECREF(w);
-
-	if ((i.real == j.real && i.imag == j.imag) == (op == Py_EQ))
-		res = Py_True;
-	else
-		res = Py_False;
-
-	Py_INCREF(res);
-	return res;
-}
-
-static PyObject *
 complex_int(PyObject *v)
 {
 	PyErr_SetString(PyExc_TypeError,
@@ -573,29 +474,29 @@ complex_getattr(PyComplexObject *self, char *name)
 }
 
 static PyNumberMethods complex_as_number = {
-	(binaryfunc)complex_add, 		/* nb_add */
-	(binaryfunc)complex_sub, 		/* nb_subtract */
-	(binaryfunc)complex_mul, 		/* nb_multiply */
-	(binaryfunc)complex_div, 		/* nb_divide */
-	(binaryfunc)complex_remainder,		/* nb_remainder */
-	(binaryfunc)complex_divmod,		/* nb_divmod */
-	(ternaryfunc)complex_pow,		/* nb_power */
-	(unaryfunc)complex_neg,			/* nb_negative */
-	(unaryfunc)complex_pos,			/* nb_positive */
-	(unaryfunc)complex_abs,			/* nb_absolute */
-	(inquiry)complex_nonzero,		/* nb_nonzero */
-	0,					/* nb_invert */
-	0,					/* nb_lshift */
-	0,					/* nb_rshift */
-	0,					/* nb_and */
-	0,					/* nb_xor */
-	0,					/* nb_or */
-	(coercion)complex_coerce,		/* nb_coerce */
-	(unaryfunc)complex_int,			/* nb_int */
-	(unaryfunc)complex_long,		/* nb_long */
-	(unaryfunc)complex_float,		/* nb_float */
-	0,					/* nb_oct */
-	0,					/* nb_hex */
+	(binaryfunc)complex_add, /*nb_add*/
+	(binaryfunc)complex_sub, /*nb_subtract*/
+	(binaryfunc)complex_mul, /*nb_multiply*/
+	(binaryfunc)complex_div, /*nb_divide*/
+	(binaryfunc)complex_remainder,	/*nb_remainder*/
+	(binaryfunc)complex_divmod,	/*nb_divmod*/
+	(ternaryfunc)complex_pow, /*nb_power*/
+	(unaryfunc)complex_neg, /*nb_negative*/
+	(unaryfunc)complex_pos, /*nb_positive*/
+	(unaryfunc)complex_abs, /*nb_absolute*/
+	(inquiry)complex_nonzero, /*nb_nonzero*/
+	0,		/*nb_invert*/
+	0,		/*nb_lshift*/
+	0,		/*nb_rshift*/
+	0,		/*nb_and*/
+	0,		/*nb_xor*/
+	0,		/*nb_or*/
+	(coercion)complex_coerce, /*nb_coerce*/
+	(unaryfunc)complex_int, /*nb_int*/
+	(unaryfunc)complex_long, /*nb_long*/
+	(unaryfunc)complex_float, /*nb_float*/
+	0,		/*nb_oct*/
+	0,		/*nb_hex*/
 };
 
 PyTypeObject PyComplex_Type = {
@@ -604,26 +505,16 @@ PyTypeObject PyComplex_Type = {
 	"complex",
 	sizeof(PyComplexObject),
 	0,
-	(destructor)complex_dealloc,		/* tp_dealloc */
-	(printfunc)complex_print,		/* tp_print */
-	(getattrfunc)complex_getattr,		/* tp_getattr */
-	0,					/* tp_setattr */
-	0,					/* tp_compare */
-	(reprfunc)complex_repr,			/* tp_repr */
-	&complex_as_number,    			/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	(hashfunc)complex_hash, 		/* tp_hash */
-	0,					/* tp_call */
-	(reprfunc)complex_str,			/* tp_str */
-	0,					/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,			/* tp_flags */
-	0,					/* tp_doc */
-	0,					/* tp_traverse */
-	0,					/* tp_clear */
-	complex_richcompare,			/* tp_richcompare */
+	(destructor)complex_dealloc,	/*tp_dealloc*/
+	(printfunc)complex_print,	/*tp_print*/
+	(getattrfunc)complex_getattr,	/*tp_getattr*/
+	0,				/*tp_setattr*/
+	(cmpfunc)complex_compare,	/*tp_compare*/
+	(reprfunc)complex_repr,		/*tp_repr*/
+	&complex_as_number,    		/*tp_as_number*/
+	0,				/*tp_as_sequence*/
+	0,				/*tp_as_mapping*/
+	(hashfunc)complex_hash, 	/*tp_hash*/
 };
 
 #endif

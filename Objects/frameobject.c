@@ -49,7 +49,6 @@ frame_setattr(PyFrameObject *f, char *name, PyObject *value)
 	f_back		next item on free list, or NULL
 	f_nlocals	number of locals
 	f_stacksize	size of value stack
-        f_size          size of localsplus
    Note that the value and block stacks are preserved -- this can save
    another malloc() call or two (and two free() calls as well!).
    Also note that, unlike for integers, each frame object is a
@@ -65,14 +64,13 @@ static PyFrameObject *free_list = NULL;
 static void
 frame_dealloc(PyFrameObject *f)
 {
-	int i, slots;
+	int i;
 	PyObject **fastlocals;
 
 	Py_TRASHCAN_SAFE_BEGIN(f)
 	/* Kill all local variables */
-	slots = f->f_nlocals + f->f_ncells + f->f_nfreevars;
 	fastlocals = f->f_localsplus;
-	for (i = slots; --i >= 0; ++fastlocals) {
+	for (i = f->f_nlocals; --i >= 0; ++fastlocals) {
 		Py_XDECREF(*fastlocals);
 	}
 
@@ -108,14 +106,14 @@ PyTypeObject PyFrame_Type = {
 };
 
 PyFrameObject *
-PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals, 
-	    PyObject *locals)
+PyFrame_New(PyThreadState *tstate, PyCodeObject *code,
+            PyObject *globals, PyObject *locals)
 {
 	PyFrameObject *back = tstate->frame;
 	static PyObject *builtin_object;
 	PyFrameObject *f;
 	PyObject *builtins;
-	int extras, ncells, nfrees;
+	int extras;
 
 	if (builtin_object == NULL) {
 		builtin_object = PyString_InternFromString("__builtins__");
@@ -129,9 +127,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 		PyErr_BadInternalCall();
 		return NULL;
 	}
-	ncells = PyTuple_GET_SIZE(code->co_cellvars);
-	nfrees = PyTuple_GET_SIZE(code->co_freevars);
-	extras = code->co_stacksize + code->co_nlocals + ncells + nfrees;
+	extras = code->co_stacksize + code->co_nlocals;
 	if (back == NULL || back->f_globals != globals) {
 		builtins = PyDict_GetItem(globals, builtin_object);
 		if (builtins != NULL && PyModule_Check(builtins))
@@ -152,21 +148,19 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 		if (f == NULL)
 			return (PyFrameObject *)PyErr_NoMemory();
 		PyObject_INIT(f, &PyFrame_Type);
-		f->f_size = extras;
 	}
 	else {
 		f = free_list;
 		free_list = free_list->f_back;
-		if (f->f_size < extras) {
+		if (f->f_nlocals + f->f_stacksize < extras) {
 			f = (PyFrameObject *)
 				PyObject_REALLOC(f, sizeof(PyFrameObject) +
 						 extras*sizeof(PyObject *));
 			if (f == NULL)
 				return (PyFrameObject *)PyErr_NoMemory();
-			f->f_size = extras;
 		}
 		else
-			extras = f->f_size;
+			extras = f->f_nlocals + f->f_stacksize;
 		PyObject_INIT(f, &PyFrame_Type);
 	}
 	if (builtins == NULL) {
@@ -213,14 +207,12 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	f->f_restricted = (builtins != tstate->interp->builtins);
 	f->f_iblock = 0;
 	f->f_nlocals = code->co_nlocals;
-	f->f_stacksize = code->co_stacksize;
-	f->f_ncells = ncells;
-	f->f_nfreevars = nfrees;
+	f->f_stacksize = extras - code->co_nlocals;
 
 	while (--extras >= 0)
 		f->f_localsplus[extras] = NULL;
 
-	f->f_valuestack = f->f_localsplus + (f->f_nlocals + ncells + nfrees);
+	f->f_valuestack = f->f_localsplus + f->f_nlocals;
 
 	return f;
 }
@@ -251,49 +243,6 @@ PyFrame_BlockPop(PyFrameObject *f)
 
 /* Convert between "fast" version of locals and dictionary version */
 
-static void
-map_to_dict(PyObject *map, int nmap, PyObject *dict, PyObject **values,
-	    int deref)
-{
-	int j;
-	for (j = nmap; --j >= 0; ) {
-		PyObject *key = PyTuple_GetItem(map, j);
-		PyObject *value = values[j];
-		if (deref)
-			value = PyCell_GET(value);
-		if (value == NULL) {
-			PyErr_Clear();
-			if (PyDict_DelItem(dict, key) != 0)
-				PyErr_Clear();
-		}
-		else {
-			if (PyDict_SetItem(dict, key, value) != 0)
-				PyErr_Clear();
-		}
-	}
-}
-
-static void
-dict_to_map(PyObject *map, int nmap, PyObject *dict, PyObject **values,
-	    int deref, int clear)
-{
-	int j;
-	for (j = nmap; --j >= 0; ) {
-		PyObject *key = PyTuple_GetItem(map, j);
-		PyObject *value = PyDict_GetItem(dict, key);
-		Py_XINCREF(value);
-		if (deref) {
-			if (value || clear) {
-				if (PyCell_Set(values[j], value) < 0)
-					PyErr_Clear();
-			}
-		} else if (value != NULL || clear) {
-			Py_XDECREF(values[j]);
-			values[j] = value;
-		}
-	}
-}
-
 void
 PyFrame_FastToLocals(PyFrameObject *f)
 {
@@ -322,19 +271,18 @@ PyFrame_FastToLocals(PyFrameObject *f)
 	j = PyTuple_Size(map);
 	if (j > f->f_nlocals)
 		j = f->f_nlocals;
-	map_to_dict(map, j, locals, fast, 0);
-	if (f->f_ncells || f->f_nfreevars) {
-		if (!(PyTuple_Check(f->f_code->co_cellvars)
-		      && PyTuple_Check(f->f_code->co_freevars))) {
-			Py_DECREF(locals);
-			return;
+	for (; --j >= 0; ) {
+		PyObject *key = PyTuple_GetItem(map, j);
+		PyObject *value = fast[j];
+		if (value == NULL) {
+			PyErr_Clear();
+			if (PyDict_DelItem(locals, key) != 0)
+				PyErr_Clear();
 		}
-		map_to_dict(f->f_code->co_cellvars, 
-			    PyTuple_GET_SIZE(f->f_code->co_cellvars),
-			    locals, fast + f->f_nlocals, 1);
-		map_to_dict(f->f_code->co_freevars, 
-			    PyTuple_GET_SIZE(f->f_code->co_freevars),
-			    locals, fast + f->f_nlocals + f->f_ncells, 1);
+		else {
+			if (PyDict_SetItem(locals, key, value) != 0)
+				PyErr_Clear();
+		}
 	}
 	PyErr_Restore(error_type, error_value, error_traceback);
 }
@@ -360,17 +308,14 @@ PyFrame_LocalsToFast(PyFrameObject *f, int clear)
 	j = PyTuple_Size(map);
 	if (j > f->f_nlocals)
 		j = f->f_nlocals;
-	dict_to_map(f->f_code->co_varnames, j, locals, fast, 0, clear);
-	if (f->f_ncells || f->f_nfreevars) {
-		if (!(PyTuple_Check(f->f_code->co_cellvars)
-		      && PyTuple_Check(f->f_code->co_freevars)))
-			return;
-		dict_to_map(f->f_code->co_cellvars, 
-			    PyTuple_GET_SIZE(f->f_code->co_cellvars),
-			    locals, fast + f->f_nlocals, 1, clear);
-		dict_to_map(f->f_code->co_freevars, 
-			    PyTuple_GET_SIZE(f->f_code->co_freevars),
-			    locals, fast + f->f_nlocals + f->f_ncells, 1, clear);
+	for (; --j >= 0; ) {
+		PyObject *key = PyTuple_GetItem(map, j);
+		PyObject *value = PyDict_GetItem(locals, key);
+		Py_XINCREF(value);
+		if (value != NULL || clear) {
+			Py_XDECREF(fast[j]);
+			fast[j] = value;
+		}
 	}
 	PyErr_Restore(error_type, error_value, error_traceback);
 }

@@ -27,7 +27,7 @@ letters = lowercase + uppercase
 digits = '0123456789'
 hexdigits = digits + 'abcdef' + 'ABCDEF'
 octdigits = '01234567'
-punctuation = """!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""
+punctuation = """!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~""" 
 printable = digits + letters + punctuation + whitespace
 
 # Case conversion helpers
@@ -100,6 +100,7 @@ def rstrip(s):
 
 
 # Split a string into a list of space/tab-separated words
+# NB: split(s) is NOT the same as splitfields(s, ' ')!
 def split(s, sep=None, maxsplit=-1):
     """split(s [,sep [,maxsplit]]) -> list of strings
 
@@ -296,22 +297,15 @@ def expandtabs(s, tabsize=8):
 
 # Character translation through look-up table.
 def translate(s, table, deletions=""):
-    """translate(s,table [,deletions]) -> string
+    """translate(s,table [,deletechars]) -> string
 
     Return a copy of the string s, where all characters occurring
-    in the optional argument deletions are removed, and the
+    in the optional argument deletechars are removed, and the
     remaining characters have been mapped through the given
-    translation table, which must be a string of length 256.  The
-    deletions argument is not allowed for Unicode strings.
+    translation table, which must be a string of length 256.
 
     """
-    if deletions:
-        return s.translate(table, deletions)
-    else:
-        # Add s[:0] so that if s is Unicode and table is an 8-bit string,
-        # table is converted to Unicode.  This means that table *cannot*
-        # be a dictionary -- for that feature, use u.translate() directly.
-        return s.translate(table + s[:0])
+    return s.translate(table, deletions)
 
 # Capitalize a string, e.g. "aBc  dEf" -> "Abc  def".
 def capitalize(s):
@@ -355,7 +349,7 @@ def maketrans(fromstr, tostr):
     fromstr = map(ord, fromstr)
     for i in range(len(fromstr)):
         L[fromstr[i]] = tostr[i]
-    return join(L, "")
+    return joinfields(L, "")
 
 # Substring replacement (global)
 def replace(s, old, new, maxsplit=-1):

@@ -14,25 +14,25 @@ The format of the table is largely undocumented; see the commented
 headers where the table is specified in main().  There is no provision 
 to load an alternate table from an external file.
 """
+__version__ = '$Revision$'
 
+import copy
 import errno
 import getopt
 import os
 import re
 import string
+import StringIO
 import sys
 import UserList
-import xml.sax.saxutils
 
+from esistools import encode
 from types import ListType, StringType, TupleType
 
 try:
     from xml.parsers.xmllib import XMLParser
 except ImportError:
     from xmllib import XMLParser
-
-
-from esistools import encode
 
 
 DEBUG = 0
@@ -55,7 +55,7 @@ _begin_env_rx = re.compile(r"[\\]begin{([^}]*)}")
 _end_env_rx = re.compile(r"[\\]end{([^}]*)}")
 _begin_macro_rx = re.compile(r"[\\]([a-zA-Z]+[*]?) ?({|\s*\n?)")
 _comment_rx = re.compile("%+ ?(.*)\n[ \t]*")
-_text_rx = re.compile(r"[^]~%\\{}]+")
+_text_rx = re.compile(r"[^]%\\{}]+")
 _optional_rx = re.compile(r"\s*[[]([^]]*)[]]")
 # _parameter_rx is this complicated to allow {...} inside a parameter;
 # this is useful to match tabular layout specifications like {c|p{24pt}}
@@ -84,18 +84,18 @@ class _Stack(UserList.UserList):
         if type(entry) is not StringType:
             raise LaTeXFormatError("cannot push non-string on stack: "
                                    + `entry`)
-        #dbgmsg("%s<%s>" % (" "*len(self.data), entry))
+        sys.stderr.write("%s<%s>\n" % (" "*len(self.data), entry))
         self.data.append(entry)
 
     def pop(self, index=-1):
         entry = self.data[index]
         del self.data[index]
-        #dbgmsg("%s</%s>" % (" "*len(self.data), entry))
+        sys.stderr.write("%s</%s>\n" % (" "*len(self.data), entry))
 
     def __delitem__(self, index):
         entry = self.data[index]
         del self.data[index]
-        #dbgmsg("%s</%s>" % (" "*len(self.data), entry))
+        sys.stderr.write("%s</%s>\n" % (" "*len(self.data), entry))
 
 
 def new_stack():
@@ -111,6 +111,10 @@ class Conversion:
         self.table = table
         self.line = string.join(map(string.rstrip, ifp.readlines()), "\n")
         self.preamble = 1
+
+    def err_write(self, msg):
+        if DEBUG:
+            sys.stderr.write(str(msg) + "\n")
 
     def convert(self):
         self.subconvert()
@@ -161,12 +165,6 @@ class Conversion:
             if m:
                 # start of macro
                 macroname = m.group(1)
-                if macroname == "c":
-                    # Ugh!  This is a combining character...
-                    endpos = m.end()
-                    self.combining_char("c", line[endpos])
-                    line = line[endpos + 1:]
-                    continue
                 entry = self.get_entry(macroname)
                 if entry.verbatim:
                     # magic case!
@@ -266,7 +264,7 @@ class Conversion:
                             opened = 1
                             stack.append(entry.name)
                             self.write("(%s\n" % entry.outputname)
-                        #dbgmsg("--- text: %s" % `pentry.text`)
+                        self.err_write("--- text: %s\n" % `pentry.text`)
                         self.write("-%s\n" % encode(pentry.text))
                     elif pentry.type == "entityref":
                         self.write("&%s\n" % pentry.name)
@@ -285,17 +283,12 @@ class Conversion:
                 # end of macro or group
                 macroname = stack[-1]
                 if macroname:
-                    conversion = self.table[macroname]
+                    conversion = self.table.get(macroname)
                     if conversion.outputname:
                         # otherwise, it was just a bare group
                         self.write(")%s\n" % conversion.outputname)
                 del stack[-1]
                 line = line[1:]
-                continue
-            if line[0] == "~":
-                # don't worry about the "tie" aspect of this command
-                line = line[1:]
-                self.write("- \n")
                 continue
             if line[0] == "{":
                 stack.append("")
@@ -308,14 +301,6 @@ class Conversion:
             if line[:2] == r"\\":
                 self.write("(BREAK\n)BREAK\n")
                 line = line[2:]
-                continue
-            if line[:2] == r"\_":
-                line = "_" + line[2:]
-                continue
-            if line[:2] in (r"\'", r'\"'):
-                # combining characters...
-                self.combining_char(line[1], line[2])
-                line = line[3:]
                 continue
             m = _text_rx.match(line)
             if m:
@@ -347,18 +332,6 @@ class Conversion:
                                    + string.join(stack, ", "))
         # otherwise we just ran out of input here...
 
-    # This is a really limited table of combinations, but it will have
-    # to do for now.
-    _combinations = {
-        ("c", "c"): 0x00E7,
-        ("'", "e"): 0x00E9,
-        ('"', "o"): 0x00F6,
-        }
-
-    def combining_char(self, prefix, char):
-        ordinal = self._combinations[(prefix, char)]
-        self.write("-\\%%%d;\n" % ordinal)
-
     def start_macro(self, name):
         conversion = self.get_entry(name)
         parameters = conversion.parameters
@@ -368,7 +341,8 @@ class Conversion:
     def get_entry(self, name):
         entry = self.table.get(name)
         if entry is None:
-            dbgmsg("get_entry(%s) failing; building default entry!" % `name`)
+            self.err_write("get_entry(%s) failing; building default entry!"
+                           % `name`)
             # not defined; build a default entry:
             entry = TableEntry(name)
             entry.has_content = 1

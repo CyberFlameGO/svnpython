@@ -15,8 +15,6 @@ Data members:
 */
 
 #include "Python.h"
-#include "compile.h"
-#include "frameobject.h"
 
 #include "osdefs.h"
 
@@ -66,66 +64,6 @@ PySys_SetObject(char *name, PyObject *v)
 	else
 		return PyDict_SetItemString(sd, name, v);
 }
-
-static PyObject *
-sys_displayhook(PyObject *self, PyObject *args)
-{
-	PyObject *o, *outf;
-	PyInterpreterState *interp = PyThreadState_Get()->interp;
-	PyObject *modules = interp->modules;
-	PyObject *builtins = PyDict_GetItemString(modules, "__builtin__");
-
-	/* parse arguments */
-	if (!PyArg_ParseTuple(args, "O:displayhook", &o))
-		return NULL;
-
-	/* Print value except if None */
-	/* After printing, also assign to '_' */
-	/* Before, set '_' to None to avoid recursion */
-	if (o == Py_None) {
-		Py_INCREF(Py_None);
-		return Py_None;
-	}
-	if (PyObject_SetAttrString(builtins, "_", Py_None) != 0)
-		return NULL;
-	if (Py_FlushLine() != 0)
-		return NULL;
-	outf = PySys_GetObject("stdout");
-	if (outf == NULL) {
-		PyErr_SetString(PyExc_RuntimeError, "lost sys.stdout");
-		return NULL;
-	}
-	if (PyFile_WriteObject(o, outf, 0) != 0)
-		return NULL;
-	PyFile_SoftSpace(outf, 1);
-	if (Py_FlushLine() != 0)
-		return NULL;
-	if (PyObject_SetAttrString(builtins, "_", o) != 0)
-		return NULL;
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-static char displayhook_doc[] =
-"displayhook(object) -> None\n"
-"\n"
-"Print an object to sys.stdout and also save it in __builtin__._\n";
-
-static PyObject *
-sys_excepthook(PyObject* self, PyObject* args)
-{
-	PyObject *exc, *value, *tb;
-	if (!PyArg_ParseTuple(args, "OOO:excepthook", &exc, &value, &tb))
-		return NULL;
-	PyErr_Display(exc, value, tb);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-static char excepthook_doc[] =
-"excepthook(exctype, value, traceback) -> None\n"
-"\n"
-"Handle an exception by displaying it with a traceback on sys.stderr.\n";
 
 static PyObject *
 sys_exc_info(PyObject *self, PyObject *args)
@@ -346,40 +284,6 @@ sys_getcounts(PyObject *self, PyObject *args)
 }
 #endif
 
-static char getframe_doc[] =
-"_getframe([depth]) -> frameobject\n\
-\n\
-Return a frame object from the call stack.  If optional integer depth is\n\
-given, return the frame object that many calls below the top of the stack.\n\
-If that is deeper than the call stack, ValueError is raised.  The default\n\
-for depth is zero, returning the frame at the top of the call stack.\n\
-\n\
-This function should be used for internal and specialized\n\
-purposes only.";
-
-static PyObject *
-sys_getframe(PyObject *self, PyObject *args)
-{
-	PyFrameObject *f = PyThreadState_Get()->frame;
-	int depth = -1;
-
-	if (!PyArg_ParseTuple(args, "|i:_getframe", &depth))
-		return NULL;
-
-	while (depth > 0 && f != NULL) {
-		f = f->f_back;
-		--depth;
-	}
-	if (f == NULL) {
-		PyErr_SetString(PyExc_ValueError,
-				"call stack is not deep enough");
-		return NULL;
-	}
-	Py_INCREF(f);
-	return (PyObject*)f;
-}
-
-
 #ifdef Py_TRACE_REFS
 /* Defined in objects.c because it uses static globals if that file */
 extern PyObject *_Py_GetObjects(PyObject *, PyObject *);
@@ -392,9 +296,7 @@ extern PyObject *_Py_GetDXProfile(PyObject *,  PyObject *);
 
 static PyMethodDef sys_methods[] = {
 	/* Might as well keep this in alphabetic order */
-	{"displayhook",	sys_displayhook, 1, displayhook_doc},
 	{"exc_info",	sys_exc_info, 1, exc_info_doc},
-	{"excepthook",	sys_excepthook, 1, excepthook_doc},
 	{"exit",	sys_exit, 0, exit_doc},
 	{"getdefaultencoding", sys_getdefaultencoding, 1,
 	 getdefaultencoding_doc}, 
@@ -411,7 +313,6 @@ static PyMethodDef sys_methods[] = {
 	{"getrefcount",	sys_getrefcount, 1, getrefcount_doc},
 	{"getrecursionlimit", sys_getrecursionlimit, 1,
 	 getrecursionlimit_doc},
-	{"_getframe", sys_getframe, 1, getframe_doc},
 #ifdef USE_MALLOPT
 	{"mdebug",	sys_mdebug, 1},
 #endif
@@ -453,34 +354,6 @@ list_builtin_module_names(void)
 	return list;
 }
 
-static PyObject *warnoptions = NULL;
-
-void
-PySys_ResetWarnOptions(void)
-{
-	if (warnoptions == NULL || !PyList_Check(warnoptions))
-		return;
-	PyList_SetSlice(warnoptions, 0, PyList_GET_SIZE(warnoptions), NULL);
-}
-
-void
-PySys_AddWarnOption(char *s)
-{
-	PyObject *str;
-
-	if (warnoptions == NULL || !PyList_Check(warnoptions)) {
-		Py_XDECREF(warnoptions);
-		warnoptions = PyList_New(0);
-		if (warnoptions == NULL)
-			return;
-	}
-	str = PyString_FromString(s);
-	if (str != NULL) {
-		PyList_Append(warnoptions, str);
-		Py_DECREF(str);
-	}
-}
-
 /* XXX This doc string is too long to be a single string literal in VC++ 5.0.
    Two literals concatenated works just fine.  If you have a K&R compiler
    or other abomination that however *does* understand longer strings,
@@ -494,20 +367,13 @@ Dynamic objects:\n\
 argv -- command line arguments; argv[0] is the script pathname if known\n\
 path -- module search path; path[0] is the script directory, else ''\n\
 modules -- dictionary of loaded modules\n\
-\n\
-displayhook -- called to show results in an interactive session\n\
-excepthook -- called to handle any uncaught exception other than SystemExit\n\
-  To customize printing in an interactive session or to install a custom\n\
-  top-level exception handler, assign other functions to replace these.\n\
-\n\
-exitfunc -- if sys.exitfunc exists, this routine is called when Python exits\n\
-  Assigning to sys.exitfunc is deprecated; use the atexit module instead.\n\
+exitfunc -- you may set this to a function to be called when Python exits\n\
 \n\
 stdin -- standard input file object; used by raw_input() and input()\n\
 stdout -- standard output file object; used by the print statement\n\
 stderr -- standard error object; used for error messages\n\
-  By assigning other file objects (or objects that behave like files)\n\
-  to these, it is possible to redirect all of the interpreter's I/O.\n\
+  By assigning another file object (or an object that behaves like a file)\n\
+  to one of these, it is possible to redirect all of the interpreter's I/O.\n\
 \n\
 last_type -- type of last uncaught exception\n\
 last_value -- value of last uncaught exception\n\
@@ -522,7 +388,7 @@ exc_traceback -- traceback of exception currently being handled\n\
   because it is thread-safe.\n\
 "
 #ifndef MS_WIN16
-/* concatenating string here */
+/* Concatenating string here */
 "\n\
 Static objects:\n\
 \n\
@@ -536,23 +402,14 @@ platform -- platform identifier\n\
 executable -- pathname of this Python interpreter\n\
 prefix -- prefix used to find the Python library\n\
 exec_prefix -- prefix used to find the machine-specific Python library\n\
-"
-#ifdef MS_WINDOWS
-/* concatenating string here */
-"dllhandle -- [Windows only] integer handle of the Python DLL\n\
+dllhandle -- [Windows only] integer handle of the Python DLL\n\
 winver -- [Windows only] version number of the Python DLL\n\
-"
-#endif /* MS_WINDOWS */
-"__stdin__ -- the original stdin; don't touch!\n\
-__stdout__ -- the original stdout; don't touch!\n\
-__stderr__ -- the original stderr; don't touch!\n\
-__displayhook__ -- the original displayhook; don't touch!\n\
-__excepthook__ -- the original excepthook; don't touch!\n\
+__stdin__ -- the original stdin; don't use!\n\
+__stdout__ -- the original stdout; don't use!\n\
+__stderr__ -- the original stderr; don't use!\n\
 \n\
 Functions:\n\
 \n\
-displayhook() -- print an object to the screen, and save it in __builtin__._\n\
-excepthook() -- print an exception and its traceback to sys.stderr\n\
 exc_info() -- return thread-safe information about the current exception\n\
 exit() -- exit the interpreter by raising SystemExit\n\
 getrefcount() -- return the reference count for an object (plus one :-)\n\
@@ -562,7 +419,7 @@ setprofile() -- set the global profiling function\n\
 setrecursionlimit() -- set the max recursion depth for the interpreter\n\
 settrace() -- set the global debug tracing function\n\
 "
-#endif /* MS_WIN16 */
+#endif
 /* end of sys_doc */ ;
 
 PyObject *
@@ -587,10 +444,6 @@ _PySys_Init(void)
 	PyDict_SetItemString(sysdict, "__stdin__", sysin);
 	PyDict_SetItemString(sysdict, "__stdout__", sysout);
 	PyDict_SetItemString(sysdict, "__stderr__", syserr);
-	PyDict_SetItemString(sysdict, "__displayhook__",
-                             PyDict_GetItemString(sysdict, "displayhook"));
-	PyDict_SetItemString(sysdict, "__excepthook__",
-                             PyDict_GetItemString(sysdict, "excepthook"));
 	Py_XDECREF(sysin);
 	Py_XDECREF(sysout);
 	Py_XDECREF(syserr);
@@ -663,16 +516,6 @@ _PySys_Init(void)
 			     v = PyString_FromString(PyWin_DLLVersionString));
 	Py_XDECREF(v);
 #endif
-	if (warnoptions == NULL) {
-		warnoptions = PyList_New(0);
-	}
-	else {
-		Py_INCREF(warnoptions);
-	}
-	if (warnoptions != NULL) {
-		PyDict_SetItemString(sysdict, "warnoptions", warnoptions);
-	}
-	
 	if (PyErr_Occurred())
 		return NULL;
 	return m;
@@ -808,11 +651,7 @@ PySys_SetArgv(int argc, char **argv)
 		if (argc > 0 && argv0 != NULL)
 			p = strrchr(argv0, SEP);
 		if (p != NULL) {
-#ifndef RISCOS
 			n = p + 1 - argv0;
-#else /* don't include trailing separator */
-			n = p - argv0;
-#endif /* RISCOS */
 #if SEP == '/' /* Special case for Unix filename syntax */
 			if (n > 1)
 				n--; /* Drop trailing separator */

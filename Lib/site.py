@@ -14,7 +14,7 @@ This will append site-specific paths to to the module search path.  On
 Unix, it starts with sys.prefix and sys.exec_prefix (if different) and
 appends lib/python<version>/site-packages as well as lib/site-python.
 On other platforms (mainly Mac and Windows), it uses just sys.prefix
-\(and sys.exec_prefix, if different, but this is unlikely).  The
+(and sys.exec_prefix, if different, but this is unlikely).  The
 resulting directories, if they exist, are appended to sys.path, and
 also inspected for path configuration files.
 
@@ -23,7 +23,7 @@ A path configuration file is a file whose name has the form
 to be added to sys.path.  Non-existing directories (or
 non-directories) are never added to sys.path; no directory is added to
 sys.path more than once.  Blank lines and lines beginning with
-\code{#} are skipped. Lines starting with \code{import} are executed.
+\code{#} are skipped.
 
 For example, suppose sys.prefix and sys.exec_prefix are set to
 /usr/local and there is a directory /usr/local/lib/python1.5/site-packages
@@ -59,19 +59,13 @@ ImportError exception, it is silently ignored.
 
 import sys, os
 
-if os.sep==".":
-    endsep = "/"
-else:
-    endsep = "."
-
-
 def makepath(*paths):
     dir = os.path.join(*paths)
     return os.path.normcase(os.path.abspath(dir))
 
 L = sys.modules.values()
 for m in L:
-    if hasattr(m, "__file__") and m.__file__:
+    if hasattr(m, "__file__"):
         m.__file__ = makepath(m.__file__)
 del m, L
 
@@ -85,15 +79,6 @@ for dir in sys.path:
 sys.path[:] = L
 del dir, L
 
-# Append ./build/lib.<platform> in case we're running in the build dir
-# (especially for Guido :-)
-if os.name == "posix" and os.path.basename(sys.path[-1]) == "Modules":
-    from distutils.util import get_platform
-    s = "build/lib.%s-%.3s" % (get_platform(), sys.version)
-    s = os.path.join(os.path.dirname(sys.path[-1]), s)
-    sys.path.append(s)
-    del get_platform, s
-
 def addsitedir(sitedir):
     sitedir = makepath(sitedir)
     if sitedir not in sys.path:
@@ -105,7 +90,7 @@ def addsitedir(sitedir):
     names = map(os.path.normcase, names)
     names.sort()
     for name in names:
-        if name[-4:] == endsep + "pth":
+        if name[-4:] == ".pth":
             addpackage(sitedir, name)
 
 def addpackage(sitedir, name):
@@ -119,9 +104,6 @@ def addpackage(sitedir, name):
         if not dir:
             break
         if dir[0] == '#':
-            continue
-        if dir.startswith("import"):
-            exec dir
             continue
         if dir[-1] == '\n':
             dir = dir[:-1]
@@ -221,33 +203,13 @@ class _Printer:
                     break
 
 __builtin__.copyright = _Printer("copyright", sys.copyright)
-if sys.platform[:4] == 'java':
-    __builtin__.credits = _Printer(
-        "credits",
-        "Jython is maintained by the Jython developers (www.jython.org).")
-else:
-    __builtin__.credits = _Printer("credits", """\
-Thanks to CWI, CNRI, BeOpen.com, Digital Creations and a cast of thousands
-for supporting Python development.  See www.python.org for more information.""")
+__builtin__.credits = _Printer("credits",
+    "Python development is led by BeOpen PythonLabs (www.pythonlabs.com).")
 here = os.path.dirname(os.__file__)
 __builtin__.license = _Printer(
     "license", "See http://www.pythonlabs.com/products/python2.0/license.html",
     ["LICENSE.txt", "LICENSE"],
-    [os.path.join(here, os.pardir), here, os.curdir])
-
-
-# Define new built-in 'help'.
-# This is a wrapper around pydoc.help (with a twist).
-
-class _Helper:
-    def __repr__(self):
-        return "Type help() for interactive help, " \
-               "or help(object) for help about object."
-    def __call__(self, *args, **kwds):
-        import pydoc
-        return pydoc.help(*args, **kwds)
-
-__builtin__.help = _Helper()
+    [here, os.path.join(here, os.pardir), os.curdir])
 
 
 # Set the string encoding used by the Unicode implementation.  The
@@ -282,7 +244,7 @@ except ImportError:
 #
 # Remove sys.setdefaultencoding() so that users cannot change the
 # encoding after initialization.  The test for presence is needed when
-# this module is run as a script, because this code is executed twice.
+# this module is run as a script, becuase this code is executed twice.
 #
 if hasattr(sys, "setdefaultencoding"):
     del sys.setdefaultencoding

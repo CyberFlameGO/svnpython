@@ -25,8 +25,8 @@ class Cdplayer:
 			t = []
 			for i in range(2, len(tracklist), 4):
 				t.append((None, \
-					  (int(tracklist[i:i+2]), \
-					   int(tracklist[i+2:i+4]))))
+					  (string.atoi(tracklist[i:i+2]), \
+					   string.atoi(tracklist[i+2:i+4]))))
 			tracklist = t
 		self.track = [None] + [''] * len(tracklist)
 		self.id = 'd' + string.zfill(len(tracklist), 2)
@@ -59,7 +59,7 @@ class Cdplayer:
 				elif name == 'artist':
 					self.artist = value
 				elif name[:5] == 'track':
-					trackno = int(name[6:])
+					trackno = string.atoi(name[6:])
 					self.track[trackno] = value
 		f.close()
 
@@ -77,7 +77,7 @@ class Cdplayer:
 			line = old.readline()
 			if line == '':
 				break
-			if line[:l] != s:
+			if line[:l] <> s:
 				new.write(line)
 		new.write(self.id + '.title:\t' + self.title + '\n')
 		new.write(self.id + '.artist:\t' + self.artist + '\n')

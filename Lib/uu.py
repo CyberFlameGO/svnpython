@@ -3,12 +3,12 @@
 # Copyright 1994 by Lance Ellinghouse
 # Cathedral City, California Republic, United States of America.
 #                        All Rights Reserved
-# Permission to use, copy, modify, and distribute this software and its
-# documentation for any purpose and without fee is hereby granted,
+# Permission to use, copy, modify, and distribute this software and its 
+# documentation for any purpose and without fee is hereby granted, 
 # provided that the above copyright notice appear in all copies and that
-# both that copyright notice and this permission notice appear in
+# both that copyright notice and this permission notice appear in 
 # supporting documentation, and that the name of Lance Ellinghouse
-# not be used in advertising or publicity pertaining to distribution
+# not be used in advertising or publicity pertaining to distribution 
 # of the software without specific, written prior permission.
 # LANCE ELLINGHOUSE DISCLAIMS ALL WARRANTIES WITH REGARD TO
 # THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
@@ -32,9 +32,8 @@ decode(in_file [, out_file, mode])
 
 import binascii
 import os
+import string
 import sys
-
-__all__ = ["Error", "encode", "decode"]
 
 class Error(Exception):
     pass
@@ -47,9 +46,9 @@ def encode(in_file, out_file, name=None, mode=None):
     if in_file == '-':
         in_file = sys.stdin
     elif type(in_file) == type(''):
-        if name is None:
+        if name == None:
             name = os.path.basename(in_file)
-        if mode is None:
+        if mode == None:
             try:
                 mode = os.stat(in_file)[0]
             except AttributeError:
@@ -65,9 +64,9 @@ def encode(in_file, out_file, name=None, mode=None):
     #
     # Set defaults for name and mode
     #
-    if name is None:
+    if name == None:
         name = '-'
-    if mode is None:
+    if mode == None:
         mode = 0666
     #
     # Write the data
@@ -98,17 +97,17 @@ def decode(in_file, out_file=None, mode=None):
             raise Error, 'No valid begin line found in input file'
         if hdr[:5] != 'begin':
             continue
-        hdrfields = hdr.split(" ", 2)
+        hdrfields = string.split(hdr)
         if len(hdrfields) == 3 and hdrfields[0] == 'begin':
             try:
-                int(hdrfields[1], 8)
+                string.atoi(hdrfields[1], 8)
                 break
             except ValueError:
                 pass
-    if out_file is None:
-        out_file = hdrfields[2].rstrip()
-    if mode is None:
-        mode = int(hdrfields[1], 8)
+    if out_file == None:
+        out_file = hdrfields[2]
+    if mode == None:
+        mode = string.atoi(hdrfields[1], 8)
     #
     # Open the output file
     #
@@ -156,7 +155,7 @@ def test():
         print ' -d: Decode (in stead of encode)'
         print ' -t: data is text, encoded format unix-compatible text'
         sys.exit(1)
-
+        
     for o, a in optlist:
         if o == '-d': dopt = 1
         if o == '-t': topt = 1

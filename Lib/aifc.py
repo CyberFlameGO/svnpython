@@ -137,8 +137,6 @@ writeframesraw.
 import struct
 import __builtin__
 
-__all__ = ["Error","open","openfp"]
-
 class Error(Exception):
     pass
 
@@ -704,7 +702,7 @@ class Aifc_write:
         if len(self._markers) == 0:
             return None
         return self._markers
-
+                
     def tell(self):
         return self._nframeswritten
 

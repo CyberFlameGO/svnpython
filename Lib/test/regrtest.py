@@ -23,21 +23,20 @@ If no test names are given, all tests are run.
 
 -v is incompatible with -g and does not compare test output files.
 
--s means to run only a single test and exit.  This is useful when doing memory
-analysis on the Python interpreter (which tend to consume to many resources to
-run the full regression test non-stop).  The file /tmp/pynexttest is read to
-find the next test to run.  If this file is missing, the first test_*.py file
-in testdir or on the command line is used.  (actually tempfile.gettempdir() is
-used instead of /tmp).
+-s means to run only a single test and exit.  This is useful when Purifying
+the Python interpreter.  The file /tmp/pynexttest is read to find the next
+test to run.  If this file is missing, the first test_*.py file in testdir or
+on the command line is used.  (actually tempfile.gettempdir() is used instead
+of /tmp).
 
 """
 
 import sys
+import string
 import os
 import getopt
 import traceback
 import random
-import StringIO
 
 import test_support
 
@@ -47,14 +46,14 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
     """Execute a test suite.
 
     This also parses command-line options and modifies its behavior
-    accordingly.
+    accordingly. 
 
     tests -- a list of strings containing test names (optional)
     testdir -- the directory in which to look for tests (optional)
 
     Users other than the Python test suite will certainly want to
     specify testdir; if it's omitted, the directory containing the
-    Python test suite is searched for.
+    Python test suite is searched for.  
 
     If the tests argument is omitted, the tests listed on the
     command-line will be used.  If that's empty, too, then all *.py
@@ -66,7 +65,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
     command line.
 
     """
-
+    
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'vgqxsrl', ['have-resources'])
     except getopt.error, msg:
@@ -107,7 +106,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
         filename = os.path.join(gettempdir(), 'pynexttest')
         try:
             fp = open(filename, 'r')
-            next = fp.read().strip()
+            next = string.strip(fp.read())
             tests = [next]
             fp.close()
         except IOError:
@@ -159,15 +158,12 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
         if not bad and not skipped and len(good) > 1:
             print "All",
         print count(len(good), "test"), "OK."
-        if verbose:
-            print "CAUTION:  stdout isn't compared in verbose mode:  a test"
-            print "that passes in verbose mode may fail without it."
     if bad:
         print count(len(bad), "test"), "failed:",
-        print " ".join(bad)
+        print string.join(bad)
     if skipped and not quiet:
         print count(len(skipped), "test"), "skipped:",
-        print " ".join(skipped)
+        print string.join(skipped)
 
     if single:
         alltests = findtests(testdir, stdtests, nottests)
@@ -198,8 +194,6 @@ NOTTESTS = [
     'test_support',
     'test_b1',
     'test_b2',
-    'test_future1',
-    'test_future2',
     ]
 
 def findtests(testdir=None, stdtests=STDTESTS, nottests=NOTTESTS):
@@ -230,7 +224,7 @@ def runtest(test, generate, verbose, quiet, testdir = None):
     outputfile = os.path.join(outputdir, test)
     try:
         if generate:
-            cfp = StringIO.StringIO()
+            cfp = open(outputfile, "w")
         elif verbose:
             cfp = sys.stdout
         else:
@@ -244,14 +238,7 @@ def runtest(test, generate, verbose, quiet, testdir = None):
             if cfp:
                 sys.stdout = cfp
                 print test              # Output file starts with test name
-            the_module = __import__(test, globals(), locals(), [])
-            # Most tests run to completion simply as a side-effect of
-            # being imported.  For the benefit of tests that can't run
-            # that way (like test_threaded_import), explicitly invoke
-            # their test_main() function (if it exists).
-            indirect_test = getattr(the_module, "test_main", None)
-            if indirect_test is not None:
-                indirect_test()
+            __import__(test, globals(), locals(), [])
             if cfp and not (generate or verbose):
                 cfp.close()
         finally:
@@ -273,24 +260,6 @@ def runtest(test, generate, verbose, quiet, testdir = None):
             traceback.print_exc(file=sys.stdout)
         return 0
     else:
-        if generate:
-            output = cfp.getvalue()
-            if output == test + "\n":
-                if os.path.exists(outputfile):
-                    # Write it since it already exists (and the contents
-                    # may have changed), but let the user know it isn't
-                    # needed:
-                    fp = open(outputfile, "w")
-                    fp.write(output)
-                    fp.close()
-                    print "output file", outputfile, \
-                          "is no longer needed; consider removing it"
-                # else:
-                #     We don't need it, so don't create it.
-            else:
-                fp = open(outputfile, "w")
-                fp.write(output)
-                fp.close()
         return 1
 
 def findtestdir():
@@ -310,39 +279,13 @@ def count(n, word):
 class Compare:
 
     def __init__(self, filename):
-        if os.path.exists(filename):
-            self.fp = open(filename, 'r')
-        else:
-            self.fp = StringIO.StringIO(
-                os.path.basename(filename) + "\n")
-        self.stuffthatmatched = []
+        self.fp = open(filename, 'r')
 
     def write(self, data):
         expected = self.fp.read(len(data))
-        if data == expected:
-            self.stuffthatmatched.append(expected)
-        else:
-            # This Compare instance is spoofing stdout, so we need to write
-            # to stderr instead.
-            from sys import stderr as e
-            print >> e, "The actual stdout doesn't match the expected stdout."
-            if self.stuffthatmatched:
-                print >> e, "This much did match (between asterisk lines):"
-                print >> e, "*" * 70
-                good = "".join(self.stuffthatmatched)
-                e.write(good)
-                if not good.endswith("\n"):
-                    e.write("\n")
-                print >> e, "*" * 70
-                print >> e, "Then ..."
-            else:
-                print >> e, "The first write to stdout clashed:"
-            # Note that the prompts are the same length in next two lines.
-            # This is so what we expected and what we got line up.
-            print >> e, "We expected (repr):", `expected`
-            print >> e, "But instead we got:", `data`
-            raise test_support.TestFailed('Writing: ' + `data`+
-                                          ', expected: ' + `expected`)
+        if data <> expected:
+            raise test_support.TestFailed, \
+                    'Writing: '+`data`+', expected: '+`expected`
 
     def writelines(self, listoflines):
         map(self.write, listoflines)
@@ -353,8 +296,7 @@ class Compare:
     def close(self):
         leftover = self.fp.read()
         if leftover:
-            raise test_support.TestFailed('Tail of expected stdout unseen: ' +
-                                          `leftover`)
+            raise test_support.TestFailed, 'Unread: '+`leftover`
         self.fp.close()
 
     def isatty(self):

@@ -3,10 +3,6 @@
 import os
 import stat
 
-__all__ = ["normcase","isabs","join","splitdrive","split","splitext",
-           "basename","dirname","commonprefix","getsize","getmtime",
-           "getatime","islink","exists","isdir","isfile","ismount",
-           "walk","expanduser","expandvars","normpath","abspath"]
 
 def normcase(s):
     """Normalize the case of a pathname.
@@ -14,8 +10,8 @@ def normcase(s):
     backslashes.
     Other normalizations (such as optimizing '../' away) are not allowed
     (this is done by normpath).
-    Previously, this version mapped invalid consecutive characters to a
-    single '_', but this has been removed.  This functionality should
+    Previously, this version mapped invalid consecutive characters to a 
+    single '_', but this has been removed.  This functionality should 
     possibly be added as a new function."""
 
     return s.replace("/", "\\").lower()
@@ -112,7 +108,7 @@ def commonprefix(m):
     prefix = m[0]
     for item in m:
         for i in range(len(prefix)):
-            if prefix[:i+1] != item[:i+1]:
+            if prefix[:i+1] <> item[:i+1]:
                 prefix = prefix[:i]
                 if i == 0: return ''
                 break
@@ -214,7 +210,7 @@ def expanduser(path):
     (A function should also be defined to do full *sh-style environment
     variable expansion.)"""
 
-    if path[:1] != '~':
+    if path[:1] <> '~':
         return path
     i, n = 1, len(path)
     while i < n and path[i] not in '/\\':
@@ -307,7 +303,7 @@ def normpath(path):
                       comps[i-1] not in ('', '..'):
             del comps[i-1:i+1]
             i = i - 1
-        elif comps[i] == '' and i > 0 and comps[i-1] != '':
+        elif comps[i] == '' and i > 0 and comps[i-1] <> '':
             del comps[i]
         elif '.' in comps[i]:
             comp = comps[i].split('.')

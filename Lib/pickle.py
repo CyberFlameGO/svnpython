@@ -27,13 +27,10 @@ __version__ = "$Revision$"       # Code version
 
 from types import *
 from copy_reg import dispatch_table, safe_constructors
+import string
 import marshal
 import sys
 import struct
-import re
-
-__all__ = ["PickleError", "PicklingError", "UnpicklingError", "Pickler",
-           "Unpickler", "dump", "dumps", "load", "loads"]
 
 format_version = "1.3"                     # File format version we write
 compatible_formats = ["1.0", "1.1", "1.2"] # Old format versions we can read
@@ -44,10 +41,6 @@ mloads = marshal.loads
 class PickleError(Exception): pass
 class PicklingError(PickleError): pass
 class UnpicklingError(PickleError): pass
-
-class _Stop(Exception):
-    def __init__(self, value):
-        self.value = value
 
 try:
     from org.python.core import PyStringMap
@@ -96,8 +89,6 @@ EMPTY_TUPLE     = ')'
 SETITEMS        = 'u'
 BINFLOAT        = 'G'
 
-__all__.extend([x for x in dir() if re.match("[A-Z][A-Z0-9_]+$",x)])
-
 class Pickler:
 
     def __init__(self, file, bin = 0):
@@ -110,9 +101,9 @@ class Pickler:
         self.write(STOP)
 
     def put(self, i):
-        if self.bin:
+        if (self.bin):
             s = mdumps(i)[1:]
-            if i < 256:
+            if (i < 256):
                 return BINPUT + s[0]
 
             return LONG_BINPUT + s
@@ -120,31 +111,31 @@ class Pickler:
         return PUT + `i` + '\n'
 
     def get(self, i):
-        if self.bin:
+        if (self.bin):
             s = mdumps(i)[1:]
 
-            if i < 256:
+            if (i < 256):
                 return BINGET + s[0]
 
             return LONG_BINGET + s
 
         return GET + `i` + '\n'
-
+        
     def save(self, object, pers_save = 0):
         memo = self.memo
 
-        if not pers_save:
+        if (not pers_save):
             pid = self.persistent_id(object)
-            if pid is not None:
+            if (pid is not None):
                 self.save_pers(pid)
                 return
 
         d = id(object)
-
+ 
         t = type(object)
 
-        if (t is TupleType) and (len(object) == 0):
-            if self.bin:
+        if ((t is TupleType) and (len(object) == 0)):
+            if (self.bin):
                 self.save_empty_tuple(object)
             else:
                 self.save_tuple(object)
@@ -180,20 +171,20 @@ class Pickler:
                 self.save_global(object, tup)
                 return
 
-            if type(tup) is not TupleType:
+            if (type(tup) is not TupleType):
                 raise PicklingError, "Value returned by %s must be a " \
                                      "tuple" % reduce
 
             l = len(tup)
-
-            if (l != 2) and (l != 3):
+   
+            if ((l != 2) and (l != 3)):
                 raise PicklingError, "tuple returned by %s must contain " \
                                      "only two or three elements" % reduce
 
             callable = tup[0]
             arg_tup  = tup[1]
-
-            if l > 2:
+          
+            if (l > 2):
                 state = tup[2]
             else:
                 state = None
@@ -202,7 +193,7 @@ class Pickler:
                 raise PicklingError, "Second element of tuple returned " \
                                      "by %s must be a tuple" % reduce
 
-            self.save_reduce(callable, arg_tup, state)
+            self.save_reduce(callable, arg_tup, state) 
             memo_len = len(memo)
             self.write(self.put(memo_len))
             memo[d] = (memo_len, object)
@@ -217,7 +208,7 @@ class Pickler:
         return None
 
     def save_pers(self, pid):
-        if not self.bin:
+        if (not self.bin):
             self.write(PERSID + str(pid) + '\n')
         else:
             self.save(pid, 1)
@@ -230,8 +221,8 @@ class Pickler:
         save(callable)
         save(arg_tup)
         write(REDUCE)
-
-        if state is not None:
+        
+        if (state is not None):
             save(state)
             write(BUILD)
 
@@ -242,26 +233,19 @@ class Pickler:
     dispatch[NoneType] = save_none
 
     def save_int(self, object):
-        if self.bin:
-            # If the int is small enough to fit in a signed 4-byte 2's-comp
-            # format, we can store it more efficiently than the general
-            # case.
-            high_bits = object >> 31  # note that Python shift sign-extends
-            if  high_bits == 0 or high_bits == -1:
-                # All high bits are copies of bit 2**31, so the value
-                # fits in a 4-byte signed int.
-                i = mdumps(object)[1:]
-                assert len(i) == 4
-                if i[-2:] == '\000\000':    # fits in 2-byte unsigned int
-                    if i[-3] == '\000':     # fits in 1-byte unsigned int
-                        self.write(BININT1 + i[0])
-                    else:
-                        self.write(BININT2 + i[:2])
-                else:
-                    self.write(BININT + i)
+        if (self.bin):
+            i = mdumps(object)[1:]
+            if (i[-2:] == '\000\000'):
+                if (i[-3] == '\000'):
+                    self.write(BININT1 + i[:-3])
+                    return
+
+                self.write(BININT2 + i[:-2])
                 return
-        # Text pickle, or int too big to fit in signed 4-byte format.
-        self.write(INT + `object` + '\n')
+
+            self.write(BININT + i)
+        else:
+            self.write(INT + `object` + '\n')
     dispatch[IntType] = save_int
 
     def save_long(self, object):
@@ -279,10 +263,10 @@ class Pickler:
         d = id(object)
         memo = self.memo
 
-        if self.bin:
+        if (self.bin):
             l = len(object)
             s = mdumps(l)[1:]
-            if l < 256:
+            if (l < 256):
                 self.write(SHORT_BINSTRING + s[0] + object)
             else:
                 self.write(BINSTRING + s + object)
@@ -298,7 +282,7 @@ class Pickler:
         d = id(object)
         memo = self.memo
 
-        if self.bin:
+        if (self.bin):
             encoding = object.encode('utf-8')
             l = len(encoding)
             s = mdumps(l)[1:]
@@ -313,39 +297,6 @@ class Pickler:
         memo[d] = (memo_len, object)
     dispatch[UnicodeType] = save_unicode
 
-    if StringType == UnicodeType:
-        # This is true for Jython
-        def save_string(self, object):
-            d = id(object)
-            memo = self.memo
-            unicode = object.isunicode()
-
-            if self.bin:
-                if unicode:
-                    object = object.encode("utf-8")
-                l = len(object)
-                s = mdumps(l)[1:]
-                if l < 256 and not unicode:
-                    self.write(SHORT_BINSTRING + s[0] + object)
-                else:
-                    if unicode:
-                        self.write(BINUNICODE + s + object)
-                    else:
-                        self.write(BINSTRING + s + object)
-            else:
-                if unicode:
-                    object = object.replace(u"\\", u"\\u005c")
-                    object = object.replace(u"\n", u"\\u000a")
-                    object = object.encode('raw-unicode-escape')
-                    self.write(UNICODE + object + '\n')
-                else:
-                    self.write(STRING + `object` + '\n')
-
-            memo_len = len(memo)
-            self.write(self.put(memo_len))
-            memo[d] = (memo_len, object)
-        dispatch[StringType] = save_string
-
     def save_tuple(self, object):
 
         write = self.write
@@ -359,11 +310,11 @@ class Pickler:
         for element in object:
             save(element)
 
-        if len(object) and memo.has_key(d):
-            if self.bin:
+        if (len(object) and memo.has_key(d)):
+            if (self.bin):
                 write(POP_MARK + self.get(memo[d][0]))
                 return
-
+           
             write(POP * (len(object) + 1) + self.get(memo[d][0]))
             return
 
@@ -382,7 +333,7 @@ class Pickler:
         save  = self.save
         memo  = self.memo
 
-        if self.bin:
+        if (self.bin):
             write(EMPTY_LIST)
         else:
             write(MARK + LIST)
@@ -393,16 +344,16 @@ class Pickler:
 
         using_appends = (self.bin and (len(object) > 1))
 
-        if using_appends:
+        if (using_appends):
             write(MARK)
 
         for element in object:
             save(element)
-
-            if not using_appends:
+  
+            if (not using_appends):
                 write(APPEND)
 
-        if using_appends:
+        if (using_appends):
             write(APPENDS)
     dispatch[ListType] = save_list
 
@@ -413,7 +364,7 @@ class Pickler:
         save  = self.save
         memo  = self.memo
 
-        if self.bin:
+        if (self.bin):
             write(EMPTY_DICT)
         else:
             write(MARK + DICT)
@@ -424,7 +375,7 @@ class Pickler:
 
         using_setitems = (self.bin and (len(object) > 1))
 
-        if using_setitems:
+        if (using_setitems):
             write(MARK)
 
         items = object.items()
@@ -432,10 +383,10 @@ class Pickler:
             save(key)
             save(value)
 
-            if not using_setitems:
+            if (not using_setitems):
                 write(SETITEM)
 
-        if using_setitems:
+        if (using_setitems):
             write(SETITEMS)
 
     dispatch[DictionaryType] = save_dict
@@ -459,14 +410,14 @@ class Pickler:
 
         write(MARK)
 
-        if self.bin:
+        if (self.bin):
             save(cls)
 
         for arg in args:
             save(arg)
 
         memo_len = len(memo)
-        if self.bin:
+        if (self.bin):
             write(OBJ + self.put(memo_len))
         else:
             write(INST + cls.__module__ + '\n' + cls.__name__ + '\n' +
@@ -489,7 +440,7 @@ class Pickler:
         write = self.write
         memo = self.memo
 
-        if name is None:
+        if (name is None):
             name = object.__name__
 
         try:
@@ -565,8 +516,8 @@ class Unpickler:
             while 1:
                 key = read(1)
                 dispatch[key](self)
-        except _Stop, stopinst:
-            return stopinst.value
+        except STOP, value:
+            return value
 
     def marker(self):
         stack = self.stack
@@ -588,7 +539,7 @@ class Unpickler:
 
     def load_binpersid(self):
         stack = self.stack
-
+         
         pid = stack[-1]
         del stack[-1]
 
@@ -600,7 +551,7 @@ class Unpickler:
     dispatch[NONE] = load_none
 
     def load_int(self):
-        self.append(int(self.readline()[:-1]))
+        self.append(string.atoi(self.readline()[:-1]))
     dispatch[INT] = load_int
 
     def load_binint(self):
@@ -614,13 +565,13 @@ class Unpickler:
     def load_binint2(self):
         self.append(mloads('i' + self.read(2) + '\000\000'))
     dispatch[BININT2] = load_binint2
-
+ 
     def load_long(self):
-        self.append(long(self.readline()[:-1], 0))
+        self.append(string.atol(self.readline()[:-1], 0))
     dispatch[LONG] = load_long
 
     def load_float(self):
-        self.append(float(self.readline()[:-1]))
+        self.append(string.atof(self.readline()[:-1]))
     dispatch[FLOAT] = load_float
 
     def load_binfloat(self, unpack=struct.unpack):
@@ -756,7 +707,7 @@ class Unpickler:
         k = self.marker()
         klass = stack[k + 1]
         del stack[k + 1]
-        args = tuple(stack[k + 1:])
+        args = tuple(stack[k + 1:]) 
         del stack[k:]
         instantiated = 0
         if (not args and type(klass) is ClassType and
@@ -772,7 +723,7 @@ class Unpickler:
         if not instantiated:
             value = apply(klass, args)
         self.append(value)
-    dispatch[OBJ] = load_obj
+    dispatch[OBJ] = load_obj                
 
     def load_global(self):
         module = self.readline()[:-1]
@@ -806,9 +757,9 @@ class Unpickler:
                 except AttributeError:
                     safe = None
 
-                if not safe:
-                    raise UnpicklingError, "%s is not safe for " \
-                                           "unpickling" % callable
+                if (not safe):
+                   raise UnpicklingError, "%s is not safe for " \
+                                          "unpickling" % callable
 
         if arg_tup is None:
             value = callable.__basicnew__()
@@ -875,7 +826,7 @@ class Unpickler:
 
         del stack[mark:]
     dispatch[APPENDS] = load_appends
-
+           
     def load_setitem(self):
         stack = self.stack
         value = stack[-1]
@@ -923,7 +874,7 @@ class Unpickler:
     def load_stop(self):
         value = self.stack[-1]
         del self.stack[-1]
-        raise _Stop(value)
+        raise STOP, value
     dispatch[STOP] = load_stop
 
 # Helper class for load_inst/load_obj

@@ -491,14 +491,15 @@ SHA_new(PyObject *self, PyObject *args, PyObject *kwdict)
     SHAobject *new;
     unsigned char *cp = NULL;
     int len;
+	
+    if ((new = newSHAobject()) == NULL)
+        return NULL;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#:new", kwlist,
                                      &cp, &len)) {
+        Py_DECREF(new);
         return NULL;
     }
-
-    if ((new = newSHAobject()) == NULL)
-        return NULL;
 
     sha_init(new);
 
@@ -528,7 +529,7 @@ static struct PyMethodDef SHA_functions[] = {
 	if (o!=NULL) PyDict_SetItemString(d,n,o); \
 	Py_XDECREF(o); }
 
-DL_EXPORT(void)
+void
 initsha(void)
 {
     PyObject *d, *m;

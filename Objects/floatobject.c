@@ -28,7 +28,7 @@ extern double fmod(double, double);
 extern double pow(double, double);
 #endif
 
-#if defined(sun) && !defined(__SVR4)
+#ifdef sun
 /* On SunOS4.1 only libm.a exists. Make sure that references to all
    needed math functions exist in the executable, so that dynamic
    loading of mathmodule does not fail. */
@@ -256,38 +256,6 @@ PyFloat_AsStringEx(char *buf, PyFloatObject *v, int precision)
 	}
 }
 
-/* Macro and helper that convert PyObject obj to a C double and store
-   the value in dbl; this replaces the functionality of the coercion
-   slot function */
-
-#define CONVERT_TO_DOUBLE(obj, dbl)			\
-	if (PyFloat_Check(obj))				\
-		dbl = PyFloat_AS_DOUBLE(obj);		\
-	else if (convert_to_double(&(obj), &(dbl)) < 0)	\
-		return obj;
-
-static int
-convert_to_double(PyObject **v,
-		  double *dbl)
-{
-	register PyObject *obj = *v;
-	
-	if (PyInt_Check(obj)) {
-		*dbl = (double)PyInt_AS_LONG(obj);
-	}
-	else if (PyLong_Check(obj)) {
-		PyFPE_START_PROTECT("convert_to_double", {*v=NULL;return -1;})
-		*dbl = PyLong_AsDouble(obj);
-		PyFPE_END_PROTECT(*dbl)
-	}
-	else {
-		Py_INCREF(Py_NotImplemented);
-		*v = Py_NotImplemented;
-		return -1;
-	}
-	return 0;
-}
-
 /* Precisions used by repr() and str(), respectively.
 
    The repr() precision (17 significant decimal digits) is the minimal number
@@ -311,15 +279,10 @@ PyFloat_AsString(char *buf, PyFloatObject *v)
 	PyFloat_AsStringEx(buf, v, PREC_STR);
 }
 
-void
-PyFloat_AsReprString(char *buf, PyFloatObject *v)
-{
-	PyFloat_AsStringEx(buf, v, PREC_REPR);
-}
-
 /* ARGSUSED */
 static int
 float_print(PyFloatObject *v, FILE *fp, int flags)
+     /* flags -- not used but required by interface */
 {
 	char buf[100];
 	PyFloat_AsStringEx(buf, v, flags&Py_PRINT_RAW ? PREC_STR : PREC_REPR);
@@ -351,6 +314,7 @@ float_compare(PyFloatObject *v, PyFloatObject *w)
 	return (i < j) ? -1 : (i > j) ? 1 : 0;
 }
 
+
 static long
 float_hash(PyFloatObject *v)
 {
@@ -358,69 +322,62 @@ float_hash(PyFloatObject *v)
 }
 
 static PyObject *
-float_add(PyObject *v, PyObject *w)
+float_add(PyFloatObject *v, PyFloatObject *w)
 {
-	double a,b;
-	CONVERT_TO_DOUBLE(v, a);
-	CONVERT_TO_DOUBLE(w, b);
+	double result;
 	PyFPE_START_PROTECT("add", return 0)
-	a = a + b;
-	PyFPE_END_PROTECT(a)
-	return PyFloat_FromDouble(a);
+	result = v->ob_fval + w->ob_fval;
+	PyFPE_END_PROTECT(result)
+	return PyFloat_FromDouble(result);
 }
 
 static PyObject *
-float_sub(PyObject *v, PyObject *w)
+float_sub(PyFloatObject *v, PyFloatObject *w)
 {
-	double a,b;
-	CONVERT_TO_DOUBLE(v, a);
-	CONVERT_TO_DOUBLE(w, b);
+	double result;
 	PyFPE_START_PROTECT("subtract", return 0)
-	a = a - b;
-	PyFPE_END_PROTECT(a)
-	return PyFloat_FromDouble(a);
+	result = v->ob_fval - w->ob_fval;
+	PyFPE_END_PROTECT(result)
+	return PyFloat_FromDouble(result);
 }
 
 static PyObject *
-float_mul(PyObject *v, PyObject *w)
+float_mul(PyFloatObject *v, PyFloatObject *w)
 {
-	double a,b;
-	CONVERT_TO_DOUBLE(v, a);
-	CONVERT_TO_DOUBLE(w, b);
+	double result;
+
 	PyFPE_START_PROTECT("multiply", return 0)
-	a = a * b;
-	PyFPE_END_PROTECT(a)
-	return PyFloat_FromDouble(a);
+	result = v->ob_fval * w->ob_fval;
+	PyFPE_END_PROTECT(result)
+	return PyFloat_FromDouble(result);
 }
 
 static PyObject *
-float_div(PyObject *v, PyObject *w)
+float_div(PyFloatObject *v, PyFloatObject *w)
 {
-	double a,b;
-	CONVERT_TO_DOUBLE(v, a);
-	CONVERT_TO_DOUBLE(w, b);
-	if (b == 0.0) {
+	double result;
+	if (w->ob_fval == 0) {
 		PyErr_SetString(PyExc_ZeroDivisionError, "float division");
 		return NULL;
 	}
 	PyFPE_START_PROTECT("divide", return 0)
-	a = a / b;
-	PyFPE_END_PROTECT(a)
-	return PyFloat_FromDouble(a);
+	result = v->ob_fval / w->ob_fval;
+	PyFPE_END_PROTECT(result)
+	return PyFloat_FromDouble(result);
 }
 
 static PyObject *
-float_rem(PyObject *v, PyObject *w)
+float_rem(PyFloatObject *v, PyFloatObject *w)
 {
 	double vx, wx;
 	double mod;
- 	CONVERT_TO_DOUBLE(v, vx);
- 	CONVERT_TO_DOUBLE(w, wx);
+	wx = w->ob_fval;
 	if (wx == 0.0) {
 		PyErr_SetString(PyExc_ZeroDivisionError, "float modulo");
 		return NULL;
 	}
 	PyFPE_START_PROTECT("modulo", return 0)
+	vx = v->ob_fval;
 	mod = fmod(vx, wx);
 	/* note: checking mod*wx < 0 is incorrect -- underflows to
 	   0 if wx < sqrt(smallest nonzero double) */
@@ -432,17 +389,17 @@ float_rem(PyObject *v, PyObject *w)
 }
 
 static PyObject *
-float_divmod(PyObject *v, PyObject *w)
+float_divmod(PyFloatObject *v, PyFloatObject *w)
 {
 	double vx, wx;
 	double div, mod, floordiv;
- 	CONVERT_TO_DOUBLE(v, vx);
- 	CONVERT_TO_DOUBLE(w, wx);
+	wx = w->ob_fval;
 	if (wx == 0.0) {
 		PyErr_SetString(PyExc_ZeroDivisionError, "float divmod()");
 		return NULL;
 	}
 	PyFPE_START_PROTECT("divmod", return 0)
+	vx = v->ob_fval;
 	mod = fmod(vx, wx);
 	/* fmod is typically exact, so vx-mod is *mathematically* an
 	   exact multiple of wx.  But this is fp arithmetic, and fp
@@ -480,7 +437,7 @@ static double powu(double x, long n)
 }
 
 static PyObject *
-float_pow(PyObject *v, PyObject *w, PyObject *z)
+float_pow(PyFloatObject *v, PyObject *w, PyFloatObject *z)
 {
 	double iv, iw, ix;
 	long intw;
@@ -489,18 +446,17 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
   * long integers.  Maybe something clever with logarithms could be done.
   * [AMK]
   */
-	CONVERT_TO_DOUBLE(v, iv);
-	CONVERT_TO_DOUBLE(w, iw);
+	iv = v->ob_fval;
+	iw = ((PyFloatObject *)w)->ob_fval;
 	intw = (long)iw;
 
 	/* Sort out special cases here instead of relying on pow() */
 	if (iw == 0) { 		/* x**0 is 1, even 0**0 */
 		PyFPE_START_PROTECT("pow", return NULL)
 		if ((PyObject *)z != Py_None) {
-			double iz;
-			CONVERT_TO_DOUBLE(z, iz);
-			ix=fmod(1.0, iz);
-			if (ix!=0 && iz<0) ix+=iz;
+			ix = fmod(1.0, z->ob_fval);
+			if (ix != 0 && z->ob_fval < 0)
+				ix += z->ob_fval;
 		}
 		else
 			ix = 1.0;
@@ -510,7 +466,7 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
 	if (iv == 0.0) {
 		if (iw < 0.0) {
 			PyErr_SetString(PyExc_ZeroDivisionError,
-					"0.0 cannot be raised to a negative power");
+				   "0.0 to a negative power");
 			return NULL;
 		}
 		return PyFloat_FromDouble(0.0);
@@ -530,7 +486,7 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
 		/* Sort out special cases here instead of relying on pow() */
 		if (iv < 0.0) {
 			PyErr_SetString(PyExc_ValueError,
-					"negative number cannot be raised to a fractional power");
+				   "negative number to a float power");
 			return NULL;
 		}
 		errno = 0;
@@ -545,14 +501,15 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
 		return NULL;
 	}
 	if ((PyObject *)z != Py_None) {
-		double iz;
-		CONVERT_TO_DOUBLE(z, iz);
-		PyFPE_START_PROTECT("pow", return 0)
-	 	ix=fmod(ix, iz);	/* XXX To Be Rewritten */
-	 	if (ix!=0 && ((iv<0 && iz>0) || (iv>0 && iz<0) )) {
-		     ix+=iz;
+		PyFPE_START_PROTECT("pow", return NULL)
+		ix = fmod(ix, z->ob_fval);	/* XXX To Be Rewritten */
+		if (ix != 0 &&
+		    ((iv < 0 && z->ob_fval > 0) ||
+		     (iv > 0 && z->ob_fval < 0)
+		    )) {
+		     ix += z->ob_fval;
 		}
-  		PyFPE_END_PROTECT(ix)
+		PyFPE_END_PROTECT(ix)
 	}
 	return PyFloat_FromDouble(ix);
 }
@@ -654,17 +611,6 @@ static PyNumberMethods float_as_number = {
 	(unaryfunc)float_float, /*nb_float*/
 	0,		/*nb_oct*/
 	0,		/*nb_hex*/
-	0,		/*nb_inplace_add*/
-	0,		/*nb_inplace_subtract*/
-	0,		/*nb_inplace_multiply*/
-	0,		/*nb_inplace_divide*/
-	0,		/*nb_inplace_remainder*/
-	0, 		/*nb_inplace_power*/
-	0,		/*nb_inplace_lshift*/
-	0,		/*nb_inplace_rshift*/
-	0,		/*nb_inplace_and*/
-	0,		/*nb_inplace_xor*/
-	0,		/*nb_inplace_or*/
 };
 
 PyTypeObject PyFloat_Type = {
@@ -685,10 +631,6 @@ PyTypeObject PyFloat_Type = {
 	(hashfunc)float_hash,	/*tp_hash*/
         0,			/*tp_call*/
         (reprfunc)float_str,	/*tp_str*/
-	0,			/*tp_getattro*/
-	0,			/*tp_setattro*/
-	0,			/*tp_as_buffer*/
-	Py_TPFLAGS_CHECKTYPES	/*tp_flags*/
 };
 
 void
