@@ -57,10 +57,9 @@ Copyright (C) 1994 Steen Lumholt.
 #include <tk.h>
 #endif
 
-/* For Tcl 8.2 and 8.3, CONST* is not defined (except on Cygwin). */
+/* For Tcl 8.2 and 8.3, CONST* is not defined. */
 #ifndef CONST84_RETURN
 #define CONST84_RETURN
-#undef CONST
 #define CONST
 #endif
 
@@ -753,7 +752,7 @@ statichere PyTypeObject PyTclObject_Type = {
 	0,			/*tp_hash*/
         0,                      /*tp_call*/
         (reprfunc)PyTclObject_str,        /*tp_str*/
-        0,                      /*tp_getattro*/
+        PyObject_GenericGetAttr,/*tp_getattro*/
         0,                      /*tp_setattro*/
         0,                      /*tp_as_buffer*/
         Py_TPFLAGS_DEFAULT,     /*tp_flags*/
@@ -2839,7 +2838,6 @@ init_tkinter(void)
 	PyDict_SetItemString(d, "TkttType", (PyObject *)&Tktt_Type);
 
 	PyTclObject_Type.ob_type = &PyType_Type;
-	PyTclObject_Type.tp_getattro = &PyObject_GenericGetAttr;
 	PyDict_SetItemString(d, "Tcl_Obj", (PyObject *)&PyTclObject_Type);
 
 #ifdef TK_AQUA
