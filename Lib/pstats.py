@@ -117,8 +117,9 @@ class Stats:
             self.stats = arg.stats
             arg.stats = {}
         if not self.stats:
-            raise TypeError,  "Cannot create or construct a %r object from '%r''" % (
-                              self.__class__, arg)
+            raise TypeError,  "Cannot create or construct a " \
+                      + `self.__class__` \
+                      + " object from '" + `arg` + "'"
         return
 
     def get_top_level_stats(self):
@@ -156,14 +157,6 @@ class Stats:
                 old_func_stat = (0, 0, 0, 0, {},)
             self.stats[func] = add_func_stats(old_func_stat, stat)
         return self
-
-    def dump_stats(self, filename):
-        """Write the profile data to a file we know how to load back."""
-        f = file(filename, 'wb')
-        try:
-            marshal.dump(self.stats, f)
-        finally:
-            f.close()
 
     # list the tuple indices and directions for sorting,
     # along with some printable description
@@ -299,8 +292,9 @@ class Stats:
                 count = sel
                 new_list = list[:count]
         if len(list) != len(new_list):
-            msg = msg + "   List reduced from %r to %r due to restriction <%r>\n" % (
-                         len(list), len(new_list), sel)
+            msg = msg + "   List reduced from " + `len(list)` \
+                      + " to " + `len(new_list)` + \
+                      " due to restriction <" + `sel` + ">\n"
 
         return new_list, msg
 
@@ -390,7 +384,8 @@ class Stats:
         indent = ""
         for func in clist:
             name = func_std_string(func)
-            print indent*name_size + name + '(%r)' % (call_dict[func],), \
+            print indent*name_size + name + '(' \
+                      + `call_dict[func]`+')', \
                       f8(self.stats[func][3])
             indent = " "
 
@@ -445,8 +440,8 @@ class TupleComp:
 # func_name is a triple (file:string, line:int, name:string)
 
 def func_strip_path(func_name):
-    filename, line, name = func_name
-    return os.path.basename(filename), line, name
+    file, line, name = func_name
+    return os.path.basename(file), line, name
 
 def func_get_function_name(func):
     return func[2]

@@ -8,9 +8,19 @@
 
 #include <ctype.h>
 
-#if !defined(__STDC__)
+#if !defined(__STDC__) && !defined(macintosh)
 extern double fmod(double, double);
 extern double pow(double, double);
+#endif
+
+#if defined(sun) && !defined(__SVR4)
+/* On SunOS4.1 only libm.a exists. Make sure that references to all
+   needed math functions exist in the executable, so that dynamic
+   loading of mathmodule does not fail. */
+double (*_Py_math_funcs_hack[])() = {
+	acos, asin, atan, atan2, ceil, cos, cosh, exp, fabs, floor,
+	fmod, log, log10, pow, sin, sinh, sqrt, tan, tanh
+};
 #endif
 
 /* Special free list -- see comments for same code in intobject.c. */
@@ -360,40 +370,6 @@ float_compare(PyFloatObject *v, PyFloatObject *w)
 	return (i < j) ? -1 : (i > j) ? 1 : 0;
 }
 
-static PyObject*
-float_richcompare(PyObject *v, PyObject *w, int op)
-{
-	double i, j;
-	int r = 0;
-
-	CONVERT_TO_DOUBLE(v, i);
-	CONVERT_TO_DOUBLE(w, j);
-
-	PyFPE_START_PROTECT("richcompare", return NULL)
-	switch (op) {
-	case Py_EQ:
-		r = i==j;
-		break;
-	case Py_NE:
-		r = i!=j;
-		break;
-	case Py_LE:
-		r = i<=j;
-		break;
-	case Py_GE:
-		r = i>=j;
-		break;
-	case Py_LT:
-		r = i<j;
-		break;
-	case Py_GT:
-		r = i>j;
-		break;
-	}
-	PyFPE_END_PROTECT(r)
-	return PyBool_FromLong(r);
-}
-
 static long
 float_hash(PyFloatObject *v)
 {
@@ -596,39 +572,10 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
 		}
 		return PyFloat_FromDouble(0.0);
 	}
-	if (iv < 0.0) {
-		/* Whether this is an error is a mess, and bumps into libm
-		 * bugs so we have to figure it out ourselves.
-		 */
-		if (iw != floor(iw)) {
-			PyErr_SetString(PyExc_ValueError, "negative number "
-				"cannot be raised to a fractional power");
-			return NULL;
-		}
-		/* iw is an exact integer, albeit perhaps a very large one.
-		 * -1 raised to an exact integer should never be exceptional.
-		 * Alas, some libms (chiefly glibc as of early 2003) return
-		 * NaN and set EDOM on pow(-1, large_int) if the int doesn't
-		 * happen to be representable in a *C* integer.  That's a
-		 * bug; we let that slide in math.pow() (which currently
-		 * reflects all platform accidents), but not for Python's **.
-		 */
-		 if (iv == -1.0 && !Py_IS_INFINITY(iw) && iw == iw) {
-		 	/* XXX the "iw == iw" was to weed out NaNs.  This
-		 	 * XXX doesn't actually work on all platforms.
-		 	 */
-		 	/* Return 1 if iw is even, -1 if iw is odd; there's
-		 	 * no guarantee that any C integral type is big
-		 	 * enough to hold iw, so we have to check this
-		 	 * indirectly.
-		 	 */
-		 	ix = floor(iw * 0.5) * 2.0;
-			return PyFloat_FromDouble(ix == iw ? 1.0 : -1.0);
-		}
-		/* Else iv != -1.0, and overflow or underflow are possible.
-		 * Unless we're to write pow() ourselves, we have to trust
-		 * the platform to do this correctly.
-		 */
+	if (iv < 0.0 && iw != floor(iw)) {
+		PyErr_SetString(PyExc_ValueError,
+				"negative number cannot be raised to a fractional power");
+		return NULL;
 	}
 	errno = 0;
 	PyFPE_START_PROTECT("pow", return NULL)
@@ -636,11 +583,8 @@ float_pow(PyObject *v, PyObject *w, PyObject *z)
 	PyFPE_END_PROTECT(ix)
 	Py_ADJUST_ERANGE1(ix);
 	if (errno != 0) {
-		/* We don't expect any errno value other than ERANGE, but
-		 * the range of libm bugs appears unbounded.
-		 */
-		PyErr_SetFromErrno(errno == ERANGE ? PyExc_OverflowError :
-						     PyExc_ValueError);
+		assert(errno == ERANGE);
+		PyErr_SetFromErrno(PyExc_OverflowError);
 		return NULL;
 	}
 	return PyFloat_FromDouble(ix);
@@ -775,10 +719,8 @@ float_subtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		return NULL;
 	assert(PyFloat_CheckExact(tmp));
 	new = type->tp_alloc(type, 0);
-	if (new == NULL) {
-		Py_DECREF(tmp);
+	if (new == NULL)
 		return NULL;
-	}
 	((PyFloatObject *)new)->ob_fval = ((PyFloatObject *)tmp)->ob_fval;
 	Py_DECREF(tmp);
 	return new;
@@ -868,7 +810,7 @@ PyTypeObject PyFloat_Type = {
 	float_doc,				/* tp_doc */
  	0,					/* tp_traverse */
 	0,					/* tp_clear */
-	(richcmpfunc)float_richcompare,		/* tp_richcompare */
+	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */

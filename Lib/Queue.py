@@ -1,9 +1,6 @@
 """A multi-producer, multi-consumer queue."""
 
 from time import time as _time, sleep as _sleep
-from collections import deque
-
-__all__ = ['Empty', 'Full', 'Queue']
 
 class Empty(Exception):
     "Exception raised by Queue.get(block=0)/get_nowait()."
@@ -185,7 +182,7 @@ class Queue:
     # Initialize the queue representation
     def _init(self, maxsize):
         self.maxsize = maxsize
-        self.queue = deque()
+        self.queue = []
 
     def _qsize(self):
         return len(self.queue)
@@ -204,4 +201,4 @@ class Queue:
 
     # Get an item from the queue
     def _get(self):
-        return self.queue.popleft()
+        return self.queue.pop(0)

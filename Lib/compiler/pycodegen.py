@@ -204,6 +204,8 @@ class CodeGenerator:
         self.checkClass()
         self.locals = misc.Stack()
         self.setups = misc.Stack()
+        self.curStack = 0
+        self.maxStack = 0
         self.last_lineno = None
         self._setupGraphDelegation()
         self._div_op = "BINARY_DIVIDE"
@@ -759,11 +761,7 @@ class CodeGenerator:
                 self.emit('LOAD_CONST', None)
             self.emit('IMPORT_NAME', name)
             mod = name.split(".")[0]
-            if alias:
-                self._resolveDots(name)
-                self.storeName(alias)
-            else:
-                self.storeName(mod)
+            self.storeName(alias or mod)
 
     def visitFrom(self, node):
         self.set_lineno(node)

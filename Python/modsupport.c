@@ -3,7 +3,11 @@
 
 #include "Python.h"
 
+#ifdef MPW /* MPW pushes 'extended' for float and double types with varargs */
+typedef extended va_double;
+#else
 typedef double va_double;
+#endif
 
 /* Package context -- the full module name for package imports */
 char *_Py_PackageContext = NULL;
@@ -510,18 +514,11 @@ int
 PyModule_AddObject(PyObject *m, char *name, PyObject *o)
 {
 	PyObject *dict;
-	if (!PyModule_Check(m)) {
+	if (!PyModule_Check(m) || o == NULL) {
 		PyErr_SetString(PyExc_TypeError,
 			    "PyModule_AddObject() needs module as first arg");
 		return -1;
 	}
-	if (!o) {
-		if (!PyErr_Occurred())
-			PyErr_SetString(PyExc_TypeError,
-					"PyModule_AddObject() needs non-NULL value");
-		return -1;
-	}
-
 	dict = PyModule_GetDict(m);
 	if (dict == NULL) {
 		/* Internal error -- modules must have a dict! */

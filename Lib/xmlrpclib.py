@@ -44,13 +44,6 @@
 # 2002-05-15 fl  Added error constants (from Andrew Kuchling)
 # 2002-06-27 fl  Merged with Python CVS version
 # 2002-10-22 fl  Added basic authentication (based on code from Phillip Eby)
-# 2003-01-22 sm  Add support for the bool type
-# 2003-02-27 gvr Remove apply calls
-# 2003-04-24 sm  Use cStringIO if available
-# 2003-04-25 ak  Add support for nil
-# 2003-06-15 gn  Add support for time.struct_time
-# 2003-07-12 gp  Correct marshalling of Faults
-# 2003-10-31 mvl Add multicall support
 #
 # Copyright (c) 1999-2002 by Secret Labs AB.
 # Copyright (c) 1999-2002 by Fredrik Lundh.
@@ -109,7 +102,6 @@ Exported classes:
 
   ServerProxy    Represents a logical connection to an XML-RPC server
 
-  MultiCall      Executor of boxcared xmlrpc requests
   Boolean        boolean wrapper to generate a "boolean" XML-RPC value
   DateTime       dateTime wrapper for an ISO 8601 string or time tuple or
                  localtime integer value to generate a "dateTime.iso8601"
@@ -351,7 +343,7 @@ class DateTime:
 
     def __init__(self, value=0):
         if not isinstance(value, StringType):
-            if not isinstance(value, (TupleType, time.struct_time)):
+            if not isinstance(value, TupleType):
                 if value == 0:
                     value = time.time()
                 value = time.localtime(value)
@@ -394,12 +386,6 @@ def _datetime(data):
 #
 # @param data An 8-bit string containing arbitrary data.
 
-import base64
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
 class Binary:
     """Wrapper for binary data."""
 
@@ -420,9 +406,11 @@ class Binary:
         return cmp(self.data, other)
 
     def decode(self, data):
+        import base64
         self.data = base64.decodestring(data)
 
     def encode(self, out):
+        import base64, StringIO
         out.write("<value><base64>\n")
         base64.encode(StringIO.StringIO(self.data), out)
         out.write("</base64></value>\n")
@@ -574,11 +562,10 @@ class Marshaller:
     # by the way, if you don't understand what's going on in here,
     # that's perfectly ok.
 
-    def __init__(self, encoding=None, allow_none=0):
+    def __init__(self, encoding=None):
         self.memo = {}
         self.data = None
         self.encoding = encoding
-        self.allow_none = allow_none
 
     dispatch = {}
 
@@ -589,9 +576,7 @@ class Marshaller:
         if isinstance(values, Fault):
             # fault instance
             write("<fault>\n")
-            dump({'faultCode': values.faultCode,
-                  'faultString': values.faultString},
-                 write)
+            dump(vars(values), write)
             write("</fault>\n")
         else:
             # parameter block
@@ -616,12 +601,6 @@ class Marshaller:
             raise TypeError, "cannot marshal %s objects" % type(value)
         else:
             f(self, value, write)
-
-    def dump_nil (self, value, write):
-        if not self.allow_none:
-            raise TypeError, "cannot marshal None unless allow_none is enabled"
-        write("<value><nil/></value>")
-    dispatch[NoneType] = dump_nil
 
     def dump_int(self, value, write):
         # in case ints are > 32 bits
@@ -790,11 +769,6 @@ class Unmarshaller:
 
     dispatch = {}
 
-    def end_nil (self, data):
-        self.append(None)
-        self._value = 0
-    dispatch["nil"] = end_nil
-
     def end_boolean(self, data):
         if data == "0":
             self.append(False)
@@ -877,68 +851,6 @@ class Unmarshaller:
         self._type = "methodName" # no params
     dispatch["methodName"] = end_methodName
 
-## Multicall support
-#
-
-class _MultiCallMethod:
-    # some lesser magic to store calls made to a MultiCall object
-    # for batch execution
-    def __init__(self, call_list, name):
-        self.__call_list = call_list
-        self.__name = name
-    def __getattr__(self, name):
-        return _MultiCallMethod(self.__call_list, "%s.%s" % (self.__name, name))
-    def __call__(self, *args):
-        self.__call_list.append((self.__name, args))
-
-def MultiCallIterator(results):
-    """Iterates over the results of a multicall. Exceptions are
-    thrown in response to xmlrpc faults."""
-
-    for i in results:
-        if type(i) == type({}):
-            raise Fault(i['faultCode'], i['faultString'])
-        elif type(i) == type([]):
-            yield i[0]
-        else:
-            raise ValueError,\
-                  "unexpected type in multicall result"
-
-class MultiCall:
-    """server -> a object used to boxcar method calls
-
-    server should be a ServerProxy object.
-
-    Methods can be added to the MultiCall using normal
-    method call syntax e.g.:
-
-    multicall = MultiCall(server_proxy)
-    multicall.add(2,3)
-    multicall.get_address("Guido")
-
-    To execute the multicall, call the MultiCall object e.g.:
-
-    add_result, address = multicall()
-    """
-
-    def __init__(self, server):
-        self.__server = server
-        self.__call_list = []
-
-    def __repr__(self):
-        return "<MultiCall at %x>" % id(self)
-
-    __str__ = __repr__
-
-    def __getattr__(self, name):
-        return _MultiCallMethod(self.__call_list, name)
-
-    def __call__(self):
-        marshalled_list = []
-        for name, args in self.__call_list:
-            marshalled_list.append({'methodName' : name, 'params' : args})
-
-        return MultiCallIterator(self.__server.system.multicall(marshalled_list))
 
 # --------------------------------------------------------------------
 # convenience functions
@@ -983,8 +895,7 @@ def getparser():
 # @keyparam encoding The packet encoding.
 # @return A string containing marshalled data.
 
-def dumps(params, methodname=None, methodresponse=None, encoding=None,
-          allow_none=0):
+def dumps(params, methodname=None, methodresponse=None, encoding=None):
     """data [,options] -> marshalled data
 
     Convert an argument tuple or a Fault instance to an XML-RPC
@@ -1020,7 +931,7 @@ def dumps(params, methodname=None, methodresponse=None, encoding=None,
     if FastMarshaller:
         m = FastMarshaller(encoding)
     else:
-        m = Marshaller(encoding, allow_none)
+        m = Marshaller(encoding)
 
     data = m.dumps(params)
 
@@ -1058,7 +969,7 @@ def dumps(params, methodname=None, methodresponse=None, encoding=None,
 # represents a fault condition, this function raises a Fault exception.
 #
 # @param data An XML-RPC packet, given as an 8-bit string.
-# @return A tuple containing the unpacked data, and the method name
+# @return A tuple containing the the unpacked data, and the method name
 #     (None if not present).
 # @see Fault
 
@@ -1071,6 +982,7 @@ def loads(data):
     If the XML-RPC packet represents a fault condition, this function
     raises a Fault exception.
     """
+    import sys
     p, u = getparser()
     p.feed(data)
     p.close()
@@ -1342,8 +1254,7 @@ class ServerProxy:
     the given encoding.
     """
 
-    def __init__(self, uri, transport=None, encoding=None, verbose=0,
-                 allow_none=0):
+    def __init__(self, uri, transport=None, encoding=None, verbose=0):
         # establish a "logical" server connection
 
         # get the url
@@ -1364,13 +1275,11 @@ class ServerProxy:
 
         self.__encoding = encoding
         self.__verbose = verbose
-        self.__allow_none = allow_none
 
     def __request(self, methodname, params):
         # call a method on the remote server
 
-        request = dumps(params, methodname, encoding=self.__encoding,
-                        allow_none=self.__allow_none)
+        request = dumps(params, methodname, encoding=self.__encoding)
 
         response = self.__transport.request(
             self.__host,

@@ -5,26 +5,6 @@ from array import array
 from test.test_support import verify, TESTFN, TestFailed
 from UserList import UserList
 
-# verify expected attributes exist
-f = file(TESTFN, 'w')
-softspace = f.softspace
-f.name     # merely shouldn't blow up
-f.mode     # ditto
-f.closed   # ditto
-
-# verify softspace is writable
-f.softspace = softspace    # merely shouldn't blow up
-
-# verify the others aren't
-for attr in 'name', 'mode', 'closed':
-    try:
-        setattr(f, attr, 'oops')
-    except TypeError:
-        pass
-    else:
-        raise TestFailed('expected TypeError setting file attr %r' % attr)
-f.close()
-
 # verify writelines with instance sequence
 l = UserList(['1', '2'])
 f = open(TESTFN, 'wb')
@@ -109,23 +89,6 @@ f.close()
 if not f.closed:
     raise TestFailed, 'file.closed should be true'
 
-# make sure that explicitly setting the buffer size doesn't cause
-# misbehaviour especially with repeated close() calls
-for s in (-1, 0, 1, 512):
-    try:
-        f = open(TESTFN, 'w', s)
-        f.write(str(s))
-        f.close()
-        f.close()
-        f = open(TESTFN, 'r', s)
-        d = int(f.read())
-        f.close()
-        f.close()
-    except IOError, msg:
-        raise TestFailed, 'error setting buffer size %d: %s' % (s, str(msg))
-    if d != s:
-        raise TestFailed, 'readback failure using buffer size %d'
-
 methods = ['fileno', 'flush', 'isatty', 'next', 'read', 'readinto',
            'readline', 'readlines', 'seek', 'tell', 'truncate', 'write',
            'xreadlines', '__iter__']
@@ -149,31 +112,3 @@ else:
     raise TestFailed, 'file.writelines([]) on a closed file should raise a ValueError'
 
 os.unlink(TESTFN)
-
-def bug801631():
-    # SF bug <http://www.python.org/sf/801631>
-    # "file.truncate fault on windows"
-    f = file(TESTFN, 'wb')
-    f.write('12345678901')   # 11 bytes
-    f.close()
-
-    f = file(TESTFN,'rb+')
-    data = f.read(5)
-    if data != '12345':
-        raise TestFailed("Read on file opened for update failed %r" % data)
-    if f.tell() != 5:
-        raise TestFailed("File pos after read wrong %d" % f.tell())
-
-    f.truncate()
-    if f.tell() != 5:
-        raise TestFailed("File pos after ftruncate wrong %d" % f.tell())
-
-    f.close()
-    size = os.path.getsize(TESTFN)
-    if size != 5:
-        raise TestFailed("File size after ftruncate wrong %d" % size)
-
-try:
-    bug801631()
-finally:
-    os.unlink(TESTFN)

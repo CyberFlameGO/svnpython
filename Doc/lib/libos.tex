@@ -254,12 +254,6 @@ Set the current process's real and effective group ids.
 Availability: \UNIX.
 \end{funcdesc}
 
-\begin{funcdesc}{getsid}{pid}
-Calls the system call \cfunction{getsid()}.  See the \UNIX{} manual
-for the semantics.
-Availability: \UNIX. \versionadded{2.4}
-\end{funcdesc}
-
 \begin{funcdesc}{setsid}{}
 Calls the system call \cfunction{setsid()}.  See the \UNIX{} manual
 for the semantics.
@@ -272,7 +266,7 @@ Set the current process' user id.
 Availability: \UNIX.
 \end{funcdesc}
 
-% placed in this section since it relates to errno.... a little weak
+% placed in this section since it relates to errno.... a little weak ;-(
 \begin{funcdesc}{strerror}{code}
 Return the error message corresponding to the error code in
 \var{code}.
@@ -399,13 +393,11 @@ using file descriptors.
 Close file descriptor \var{fd}.
 Availability: Macintosh, \UNIX, Windows.
 
-\begin{notice}
-This function is intended for low-level I/O and must be applied
+Note: this function is intended for low-level I/O and must be applied
 to a file descriptor as returned by \function{open()} or
 \function{pipe()}.  To close a ``file object'' returned by the
 built-in function \function{open()} or by \function{popen()} or
 \function{fdopen()}, use its \method{close()} method.
-\end{notice}
 \end{funcdesc}
 
 \begin{funcdesc}{dup}{fd}
@@ -500,12 +492,10 @@ For a description of the flag and mode values, see the C run-time
 documentation; flag constants (like \constant{O_RDONLY} and
 \constant{O_WRONLY}) are defined in this module too (see below).
 
-\begin{notice}
-This function is intended for low-level I/O.  For normal usage,
+Note: this function is intended for low-level I/O.  For normal usage,
 use the built-in function \function{open()}, which returns a ``file
 object'' with \method{read()} and \method{write()} methods (and many
 more).
-\end{notice}
 \end{funcdesc}
 
 \begin{funcdesc}{openpty}{}
@@ -529,14 +519,12 @@ referred to by \var{fd} has been reached, an empty string is
 returned.
 Availability: Macintosh, \UNIX, Windows.
 
-\begin{notice}
-This function is intended for low-level I/O and must be applied
+Note: this function is intended for low-level I/O and must be applied
 to a file descriptor as returned by \function{open()} or
 \function{pipe()}.  To read a ``file object'' returned by the
 built-in function \function{open()} or by \function{popen()} or
 \function{fdopen()}, or \code{sys.stdin}, use its
 \method{read()} or \method{readline()} methods.
-\end{notice}
 \end{funcdesc}
 
 \begin{funcdesc}{tcgetpgrp}{fd}
@@ -564,14 +552,12 @@ Write the string \var{str} to file descriptor \var{fd}.
 Return the number of bytes actually written.
 Availability: Macintosh, \UNIX, Windows.
 
-\begin{notice}
-This function is intended for low-level I/O and must be applied
+Note: this function is intended for low-level I/O and must be applied
 to a file descriptor as returned by \function{open()} or
 \function{pipe()}.  To write a ``file object'' returned by the
 built-in function \function{open()} or by \function{popen()} or
 \function{fdopen()}, or \code{sys.stdout} or \code{sys.stderr}, use
 its \method{write()} method.
-\end{notice}
 \end{funcdesc}
 
 
@@ -624,8 +610,7 @@ be used in a suid/sgid environment to test if the invoking user has the
 specified access to \var{path}.  \var{mode} should be \constant{F_OK}
 to test the existence of \var{path}, or it can be the inclusive OR of
 one or more of \constant{R_OK}, \constant{W_OK}, and \constant{X_OK} to
-test permissions.  Return \constant{True} if access is allowed,
-\constant{False} if not.
+test permissions.  Return \code{1} if access is allowed, \code{0} if not.
 See the \UNIX{} man page \manpage{access}{2} for more information.
 Availability: \UNIX, Windows.
 \end{funcdesc}
@@ -882,12 +867,10 @@ Works like \function{rename()}, except creation of any intermediate
 directories needed to make the new pathname good is attempted first.
 After the rename, directories corresponding to rightmost path segments
 of the old name will be pruned away using \function{removedirs()}.
-\versionadded{1.5.2}
 
-\begin{notice}
-This function can fail with the new directory structure made if
+Note: this function can fail with the new directory structure made if
 you lack permissions needed to remove the leaf directory or file.
-\end{notice}
+\versionadded{1.5.2}
 \end{funcdesc}
 
 \begin{funcdesc}{rmdir}{path}
@@ -1238,11 +1221,9 @@ Exit to the system with status \var{n}, without calling cleanup
 handlers, flushing stdio buffers, etc.
 Availability: \UNIX, Windows.
 
-\begin{notice}
-The standard way to exit is \code{sys.exit(\var{n})}.
+Note: the standard way to exit is \code{sys.exit(\var{n})}.
 \function{_exit()} should normally only be used in the child process
 after a \function{fork()}.
-\end{notice}
 \end{funcdesc}
 
 The following exit codes are a defined, and can be used with

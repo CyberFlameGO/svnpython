@@ -10,7 +10,7 @@ somewhere near the top of their code.  Because of the automatic
 import, this is no longer necessary (but code that does it still
 works).
 
-This will append site-specific paths to the module search path.  On
+This will append site-specific paths to to the module search path.  On
 Unix, it starts with sys.prefix and sys.exec_prefix (if different) and
 appends lib/python<version>/site-packages as well as lib/site-python.
 On other platforms (mainly Mac and Windows), it uses just sys.prefix
@@ -148,7 +148,8 @@ def addpackage(sitedir, name):
         if dir.startswith("import"):
             exec dir
             continue
-        dir = dir.rstrip()
+        if dir[-1] == '\n':
+            dir = dir[:-1]
         dir, dircase = makepath(sitedir, dir)
         if not dircase in _dirs_in_sys_path and os.path.exists(dir):
             sys.path.append(dir)
@@ -157,12 +158,11 @@ def addpackage(sitedir, name):
         _dirs_in_sys_path = None
 
 prefixes = [sys.prefix]
-sitedir = None # make sure sitedir is initialized because of later 'del'
 if sys.exec_prefix != sys.prefix:
     prefixes.append(sys.exec_prefix)
 for prefix in prefixes:
     if prefix:
-        if sys.platform in ('os2emx', 'riscos'):
+        if sys.platform == 'os2emx':
             sitedirs = [os.path.join(prefix, "Lib", "site-packages")]
         elif os.sep == '/':
             sitedirs = [os.path.join(prefix,
@@ -177,7 +177,7 @@ for prefix in prefixes:
             # locations. Currently only per-user, but /Library and
             # /Network/Library could be added too
             if 'Python.framework' in prefix:
-                home = os.environ.get('HOME')
+                home = os.environ['HOME']
                 if home:
                     sitedirs.append(
                         os.path.join(home,
@@ -191,21 +191,6 @@ for prefix in prefixes:
 del prefix, sitedir
 
 _dirs_in_sys_path = None
-
-
-# the OS/2 EMX port has optional extension modules that do double duty
-# as DLLs (and must use the .DLL file extension) for other extensions.
-# The library search path needs to be amended so these will be found
-# during module import.  Use BEGINLIBPATH so that these are at the start
-# of the library search path.
-if sys.platform == 'os2emx':
-    dllpath = os.path.join(sys.prefix, "Lib", "lib-dynload")
-    libpath = os.environ['BEGINLIBPATH'].split(';')
-    if libpath[-1]:
-        libpath.append(dllpath)
-    else:
-        libpath[-1] = dllpath
-    os.environ['BEGINLIBPATH'] = ';'.join(libpath)
 
 
 # Define new built-ins 'quit' and 'exit'.
@@ -310,9 +295,10 @@ class _Helper:
 __builtin__.help = _Helper()
 
 
-# On Windows, some default encodings are not provided by Python,
-# while they are always available as "mbcs" in each locale. Make
-# them usable by aliasing to "mbcs" in such a case.
+# On Windows, some default encodings are not provided
+# by Python (e.g. "cp932" in Japanese locale), while they
+# are always available as "mbcs" in each locale.
+# Make them usable by aliasing to "mbcs" in such a case.
 
 if sys.platform == 'win32':
     import locale, codecs
@@ -366,7 +352,7 @@ if hasattr(sys, "setdefaultencoding"):
 def _test():
     print "sys.path = ["
     for dir in sys.path:
-        print "    %r," % (dir,)
+        print "    %s," % `dir`
     print "]"
 
 if __name__ == '__main__':

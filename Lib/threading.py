@@ -8,14 +8,13 @@ except ImportError:
     del _sys.modules[__name__]
     raise
 
+from StringIO import StringIO as _StringIO
 from time import time as _time, sleep as _sleep
-from traceback import format_exc as _format_exc
-from collections import deque
+from traceback import print_exc as _print_exc
 
 # Rename some stuff so "from threading import *" is safe
 __all__ = ['activeCount', 'Condition', 'currentThread', 'enumerate', 'Event',
-           'Lock', 'RLock', 'Semaphore', 'BoundedSemaphore', 'Thread',
-           'Timer', 'setprofile', 'settrace']
+           'Lock', 'RLock', 'Semaphore', 'BoundedSemaphore', 'Thread', 'Timer']
 
 _start_new_thread = thread.start_new_thread
 _allocate_lock = thread.allocate_lock
@@ -24,17 +23,13 @@ ThreadError = thread.error
 del thread
 
 
-# Debug support (adapted from ihooks.py).
-# All the major classes here derive from _Verbose.  We force that to
-# be a new-style class so that all the major classes here are new-style.
-# This helps debugging (type(instance) is more revealing for instances
-# of new-style classes).
+# Debug support (adapted from ihooks.py)
 
-_VERBOSE = False
+_VERBOSE = 0 # XXX Bool or int?
 
 if __debug__:
 
-    class _Verbose(object):
+    class _Verbose:
 
         def __init__(self, verbose=None):
             if verbose is None:
@@ -50,24 +45,12 @@ if __debug__:
 
 else:
     # Disable this when using "python -O"
-    class _Verbose(object):
+    class _Verbose:
         def __init__(self, verbose=None):
             pass
         def _note(self, *args):
             pass
 
-# Support for profile and trace hooks
-
-_profile_hook = None
-_trace_hook = None
-
-def setprofile(func):
-    global _profile_hook
-    _profile_hook = func
-
-def settrace(func):
-    global _trace_hook
-    _trace_hook = func
 
 # Synchronization classes
 
@@ -193,6 +176,7 @@ class _Condition(_Verbose):
             return True
 
     def wait(self, timeout=None):
+        currentThread() # for side-effect
         assert self._is_owned(), "wait() of un-acquire()d lock"
         waiter = _allocate_lock()
         waiter.acquire()
@@ -234,6 +218,7 @@ class _Condition(_Verbose):
             self._acquire_restore(saved_state)
 
     def notify(self, n=1):
+        currentThread() # for side-effect
         assert self._is_owned(), "notify() of un-acquire()d lock"
         __waiters = self.__waiters
         waiters = __waiters[:n]
@@ -422,14 +407,6 @@ class Thread(_Verbose):
             _active_limbo_lock.release()
             if __debug__:
                 self._note("%s.__bootstrap(): thread started", self)
-
-            if _trace_hook:
-                self._note("%s.__bootstrap(): registering trace hook", self)
-                _sys.settrace(_trace_hook)
-            if _profile_hook:
-                self._note("%s.__bootstrap(): registering profile hook", self)
-                _sys.setprofile(_profile_hook)
-
             try:
                 self.run()
             except SystemExit:
@@ -438,8 +415,10 @@ class Thread(_Verbose):
             except:
                 if __debug__:
                     self._note("%s.__bootstrap(): unhandled exception", self)
+                s = _StringIO()
+                _print_exc(file=s)
                 _sys.stderr.write("Exception in thread %s:\n%s\n" %
-                                  (self.getName(), _format_exc()))
+                                 (self.getName(), s.getvalue()))
             else:
                 if __debug__:
                     self._note("%s.__bootstrap(): normal return", self)
@@ -621,6 +600,7 @@ def enumerate():
     _active_limbo_lock.release()
     return active
 
+
 # Create the main thread object
 
 _MainThread()
@@ -638,7 +618,7 @@ def _test():
             self.rc = Condition(self.mon)
             self.wc = Condition(self.mon)
             self.limit = limit
-            self.queue = deque()
+            self.queue = []
 
         def put(self, item):
             self.mon.acquire()
@@ -656,7 +636,7 @@ def _test():
             while not self.queue:
                 self._note("get(): queue empty")
                 self.rc.wait()
-            item = self.queue.popleft()
+            item = self.queue.pop(0)
             self._note("get(): got %s, %d left", item, len(self.queue))
             self.wc.notify()
             self.mon.release()

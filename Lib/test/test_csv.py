@@ -1,4 +1,3 @@
-# -*- coding: iso-8859-1 -*-
 # Copyright (C) 2001,2002 Python Software Foundation
 # csv package unit tests
 
@@ -7,7 +6,7 @@ import unittest
 from StringIO import StringIO
 import csv
 import gc
-from test import test_support
+from test.test_support import verbose
 
 class Test_Csv(unittest.TestCase):
     """
@@ -382,6 +381,7 @@ class TestQuotedEscapedExcel(TestCsvBase):
     def test_read_escape_fieldsep(self):
         self.readerAssertEqual('"abc\\,def"\r\n', [['abc,def']])
 
+# Disabled, pending support in csv.utils module
 class TestDictFields(unittest.TestCase):
     ### "long" means the row is longer than the number of fieldnames
     ### "short" means there are fewer elements in the row than fieldnames
@@ -400,10 +400,6 @@ class TestDictFields(unittest.TestCase):
                                 fieldnames=["f1", "f2", "f3"])
         self.assertEqual(reader.next(), {"f1": '1', "f2": '2', "f3": 'abc'})
 
-    def test_read_dict_no_fieldnames(self):
-        reader = csv.DictReader(StringIO("f1,f2,f3\r\n1,2,abc\r\n"))
-        self.assertEqual(reader.next(), {"f1": '1', "f2": '2', "f3": 'abc'})
-
     def test_read_long(self):
         reader = csv.DictReader(StringIO("1,2,abc,4,5,6\r\n"),
                                 fieldnames=["f1", "f2"])
@@ -413,12 +409,6 @@ class TestDictFields(unittest.TestCase):
     def test_read_long_with_rest(self):
         reader = csv.DictReader(StringIO("1,2,abc,4,5,6\r\n"),
                                 fieldnames=["f1", "f2"], restkey="_rest")
-        self.assertEqual(reader.next(), {"f1": '1', "f2": '2',
-                                         "_rest": ["abc", "4", "5", "6"]})
-
-    def test_read_long_with_rest_no_fieldnames(self):
-        reader = csv.DictReader(StringIO("f1,f2\r\n1,2,abc,4,5,6\r\n"),
-                                restkey="_rest")
         self.assertEqual(reader.next(), {"f1": '1', "f2": '2',
                                          "_rest": ["abc", "4", "5", "6"]})
 
@@ -432,34 +422,12 @@ class TestDictFields(unittest.TestCase):
                                          "4": 'DEFAULT', "5": 'DEFAULT',
                                          "6": 'DEFAULT'})
 
-    def test_read_multi(self):
-        sample = [
-            '2147483648,43.0e12,17,abc,def\r\n',
-            '147483648,43.0e2,17,abc,def\r\n',
-            '47483648,43.0,170,abc,def\r\n'
-            ]
-
-        reader = csv.DictReader(sample,
-                                fieldnames="i1 float i2 s1 s2".split())
-        self.assertEqual(reader.next(), {"i1": '2147483648',
-                                         "float": '43.0e12',
-                                         "i2": '17',
-                                         "s1": 'abc',
-                                         "s2": 'def'})
-
     def test_read_with_blanks(self):
         reader = csv.DictReader(["1,2,abc,4,5,6\r\n","\r\n",
                                  "1,2,abc,4,5,6\r\n"],
                                 fieldnames="1 2 3 4 5 6".split())
         self.assertEqual(reader.next(), {"1": '1', "2": '2', "3": 'abc',
                                          "4": '4', "5": '5', "6": '6'})
-        self.assertEqual(reader.next(), {"1": '1', "2": '2', "3": 'abc',
-                                         "4": '4', "5": '5', "6": '6'})
-
-    def test_read_semi_sep(self):
-        reader = csv.DictReader(["1;2;abc;4;5;6\r\n"],
-                                fieldnames="1 2 3 4 5 6".split(),
-                                delimiter=';')
         self.assertEqual(reader.next(), {"1": '1', "2": '2', "3": 'abc',
                                          "4": '4', "5": '5', "6": '6'})
 
@@ -565,65 +533,8 @@ class TestDialectValidity(unittest.TestCase):
         self.assertRaises(csv.Error, mydialect)
 
 
-class TestSniffer(unittest.TestCase):
-    sample1 = """\
-Harry's, Arlington Heights, IL, 2/1/03, Kimi Hayes
-Shark City, Glendale Heights, IL, 12/28/02, Prezence
-Tommy's Place, Blue Island, IL, 12/28/02, Blue Sunday/White Crow
-Stonecutters Seafood and Chop House, Lemont, IL, 12/19/02, Week Back
-"""
-    sample2 = """\
-'Harry''s':'Arlington Heights':'IL':'2/1/03':'Kimi Hayes'
-'Shark City':'Glendale Heights':'IL':'12/28/02':'Prezence'
-'Tommy''s Place':'Blue Island':'IL':'12/28/02':'Blue Sunday/White Crow'
-'Stonecutters Seafood and Chop House':'Lemont':'IL':'12/19/02':'Week Back'
-"""
-
-    header = '''\
-"venue","city","state","date","performers"
-'''
-    sample3 = '''\
-05/05/03?05/05/03?05/05/03?05/05/03?05/05/03?05/05/03
-05/05/03?05/05/03?05/05/03?05/05/03?05/05/03?05/05/03
-05/05/03?05/05/03?05/05/03?05/05/03?05/05/03?05/05/03
-'''
-
-    sample4 = '''\
-2147483648;43.0e12;17;abc;def
-147483648;43.0e2;17;abc;def
-47483648;43.0;170;abc;def
-'''
-
-    def test_has_header(self):
-        sniffer = csv.Sniffer()
-        self.assertEqual(sniffer.has_header(self.sample1), False)
-        self.assertEqual(sniffer.has_header(self.header+self.sample1), True)
-
-    def test_sniff(self):
-        sniffer = csv.Sniffer()
-        dialect = sniffer.sniff(self.sample1)
-        self.assertEqual(dialect.delimiter, ",")
-        self.assertEqual(dialect.quotechar, '"')
-        self.assertEqual(dialect.skipinitialspace, True)
-
-        dialect = sniffer.sniff(self.sample2)
-        self.assertEqual(dialect.delimiter, ":")
-        self.assertEqual(dialect.quotechar, "'")
-        self.assertEqual(dialect.skipinitialspace, False)
-
-    def test_delimiters(self):
-        sniffer = csv.Sniffer()
-        dialect = sniffer.sniff(self.sample3)
-        self.assertEqual(dialect.delimiter, "0")
-        dialect = sniffer.sniff(self.sample3, delimiters="?,")
-        self.assertEqual(dialect.delimiter, "?")
-        dialect = sniffer.sniff(self.sample3, delimiters="/,")
-        self.assertEqual(dialect.delimiter, "/")
-        dialect = sniffer.sniff(self.sample4)
-        self.assertEqual(dialect.delimiter, ";")
-
 if not hasattr(sys, "gettotalrefcount"):
-    if test_support.verbose: print "*** skipping leakage tests ***"
+    if verbose: print "*** skipping leakage tests ***"
 else:
     class NUL:
         def write(s, *args):
@@ -695,30 +606,15 @@ else:
             # if writer leaks during write, last delta should be 5 or more
             self.assertEqual(delta < 5, True)
 
-# commented out for now - csv module doesn't yet support Unicode
-if 0:
-    from StringIO import StringIO
-    import csv
-
-    class TestUnicode(unittest.TestCase):
-        def test_unicode_read(self):
-            import codecs
-            f = codecs.EncodedFile(StringIO("Martin von Löwis,"
-                                            "Marc André Lemburg,"
-                                            "Guido van Rossum,"
-                                            "François Pinard\r\n"),
-                                   data_encoding='iso-8859-1')
-            reader = csv.reader(f)
-            self.assertEqual(list(reader), [[u"Martin von Löwis",
-                                             u"Marc André Lemburg",
-                                             u"Guido van Rossum",
-                                             u"François Pinardn"]])
-
-def test_main():
+def _testclasses():
     mod = sys.modules[__name__]
-    test_support.run_unittest(
-        *[getattr(mod, name) for name in dir(mod) if name.startswith('Test')]
-    )
+    return [getattr(mod, name) for name in dir(mod) if name.startswith('Test')]
+
+def suite():
+    suite = unittest.TestSuite()
+    for testclass in _testclasses():
+        suite.addTest(unittest.makeSuite(testclass))
+    return suite
 
 if __name__ == '__main__':
-    test_main()
+    unittest.main(defaultTest='suite')

@@ -117,7 +117,6 @@ char build_info[80];		/* [Setup] build_info=, distutils version
 char meta_name[80];		/* package name without version like
 				   'Distutils' */
 char install_script[MAX_PATH];
-char *pre_install_script; /* run before we install a single file */
 
 
 int py_major, py_minor;		/* Python version selected for installation */
@@ -130,7 +129,6 @@ char pythondll[MAX_PATH];
 BOOL pyc_compile, pyo_compile;
 
 BOOL success;			/* Installation successfull? */
-char *failure_reason = NULL;
 
 HANDLE hBitmap;
 char *bitmap_bytes;
@@ -207,20 +205,6 @@ static struct tagFile {
 	char *path;
 	struct tagFile *next;
 } *file_list = NULL;
-
-static void set_failure_reason(char *reason)
-{
-    if (failure_reason)
-	free(failure_reason);
-    failure_reason = strdup(reason);
-    success = FALSE;
-}
-static char *get_failure_reason()
-{
-    if (!failure_reason)
-	return "Installation failed.";
-    return failure_reason;
-}
 
 static void add_to_filelist(char *path)
 {
@@ -548,7 +532,7 @@ static PyObject *CreateShortcut(PyObject *self, PyObject *args)
 	hr = pPf->lpVtbl->Save(pPf, wszFilename, TRUE);
 	if (FAILED(hr)) {
 		g_PyErr_Format(g_PyExc_OSError,
-			       "Failed to create shortcut '%s' - error 0x%x", filename, hr);
+			       "Save() failed, error 0x%x", hr);
 		goto error;
 	}
     
@@ -569,17 +553,6 @@ static PyObject *CreateShortcut(PyObject *self, PyObject *args)
 	return NULL;
 }
 
-static PyObject *PyMessageBox(PyObject *self, PyObject *args)
-{
-	int rc;
-	char *text, *caption;
-	int flags;
-	if (!g_PyArg_ParseTuple(args, "ssi", &text, &caption, &flags))
-		return NULL;
-	rc = MessageBox(GetFocus(), text, caption, flags);
-	return g_Py_BuildValue("i", rc);
-}
-
 #define METH_VARARGS 0x0001
 
 PyMethodDef meth[] = {
@@ -587,41 +560,7 @@ PyMethodDef meth[] = {
 	{"get_special_folder_path", GetSpecialFolderPath, METH_VARARGS, NULL},
 	{"file_created", FileCreated, METH_VARARGS, NULL},
 	{"directory_created", DirectoryCreated, METH_VARARGS, NULL},
-	{"message_box", PyMessageBox, METH_VARARGS, NULL},
 };
-
-static int prepare_script_environment(HINSTANCE hPython)
-{
-	PyObject *mod;
-	DECLPROC(hPython, PyObject *, PyImport_ImportModule, (char *));
-	DECLPROC(hPython, int, PyObject_SetAttrString, (PyObject *, char *, PyObject *));
-	DECLPROC(hPython, PyObject *, PyObject_GetAttrString, (PyObject *, char *));
-	DECLPROC(hPython, PyObject *, PyCFunction_New, (PyMethodDef *, PyObject *));
-	DECLPROC(hPython, PyObject *, Py_BuildValue, (char *, ...));
-	DECLPROC(hPython, int, PyArg_ParseTuple, (PyObject *, char *, ...));
-	DECLPROC(hPython, PyObject *, PyErr_Format, (PyObject *, char *));
-	if (!PyImport_ImportModule || !PyObject_GetAttrString || 
-	    !PyObject_SetAttrString || !PyCFunction_New)
-		return 1;
-	if (!Py_BuildValue || !PyArg_ParseTuple || !PyErr_Format)
-		return 1;
-
-	mod = PyImport_ImportModule("__builtin__");
-	if (mod) {
-		int i;
-		g_PyExc_ValueError = PyObject_GetAttrString(mod, "ValueError");
-		g_PyExc_OSError = PyObject_GetAttrString(mod, "OSError");
-		for (i = 0; i < DIM(meth); ++i) {
-			PyObject_SetAttrString(mod, meth[i].ml_name,
-					       PyCFunction_New(&meth[i], NULL));
-		}
-	}
-	g_Py_BuildValue = Py_BuildValue;
-	g_PyArg_ParseTuple = PyArg_ParseTuple;
-	g_PyErr_Format = PyErr_Format;
-
-	return 0;
-}
 
 /*
  * This function returns one of the following error codes:
@@ -640,11 +579,18 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 	DECLPROC(hPython, int, PySys_SetArgv, (int, char **));
 	DECLPROC(hPython, int, PyRun_SimpleFile, (FILE *, char *));
 	DECLPROC(hPython, void, Py_Finalize, (void));
+	DECLPROC(hPython, PyObject *, PyImport_ImportModule, (char *));
+	DECLPROC(hPython, int, PyObject_SetAttrString,
+		 (PyObject *, char *, PyObject *));
+	DECLPROC(hPython, PyObject *, PyObject_GetAttrString,
+		 (PyObject *, char *));
 	DECLPROC(hPython, PyObject *, Py_BuildValue, (char *, ...));
 	DECLPROC(hPython, PyObject *, PyCFunction_New,
 		 (PyMethodDef *, PyObject *));
 	DECLPROC(hPython, int, PyArg_ParseTuple, (PyObject *, char *, ...));
 	DECLPROC(hPython, PyObject *, PyErr_Format, (PyObject *, char *));
+
+	PyObject *mod;
 
 	int result = 0;
 	FILE *fp;
@@ -653,11 +599,19 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 	    || !PyRun_SimpleFile || !Py_Finalize)
 		return 1;
 	
-	if (!Py_BuildValue || !PyArg_ParseTuple || !PyErr_Format)
+	if (!PyImport_ImportModule || !PyObject_SetAttrString
+	    || !Py_BuildValue)
 		return 1;
 
 	if (!PyCFunction_New || !PyArg_ParseTuple || !PyErr_Format)
 		return 1;
+
+	if (!PyObject_GetAttrString)
+		return 1;
+
+	g_Py_BuildValue = Py_BuildValue;
+	g_PyArg_ParseTuple = PyArg_ParseTuple;
+	g_PyErr_Format = PyErr_Format;
 
 	if (pathname == NULL || pathname[0] == '\0')
 		return 2;
@@ -673,7 +627,19 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 		
 	Py_Initialize();
 
-	prepare_script_environment(hPython);
+	mod = PyImport_ImportModule("__builtin__");
+	if (mod) {
+		int i;
+
+		g_PyExc_ValueError = PyObject_GetAttrString(mod,
+							    "ValueError");
+		g_PyExc_OSError = PyObject_GetAttrString(mod, "OSError");
+		for (i = 0; i < DIM(meth); ++i) {
+			PyObject_SetAttrString(mod, meth[i].ml_name,
+					       PyCFunction_New(&meth[i], NULL));
+		}
+	}
+
 	PySys_SetArgv(argc, argv);
 	result = PyRun_SimpleFile(fp, pathname);
 	Py_Finalize();
@@ -682,77 +648,6 @@ run_installscript(HINSTANCE hPython, char *pathname, int argc, char **argv)
 
 	return result;
 }
-
-static int do_run_simple_script(HINSTANCE hPython, char *script)
-{
-	int rc;
-	DECLPROC(hPython, void, Py_Initialize, (void));
-	DECLPROC(hPython, void, Py_SetProgramName, (char *));
-	DECLPROC(hPython, void, Py_Finalize, (void));
-	DECLPROC(hPython, int, PyRun_SimpleString, (char *));
-	DECLPROC(hPython, void, PyErr_Print, (void));
-
-	if (!Py_Initialize || !Py_SetProgramName || !Py_Finalize || 
-	    !PyRun_SimpleString || !PyErr_Print)
-		return -1;
-
-	Py_SetProgramName(modulename);
-	Py_Initialize();
-	prepare_script_environment(hPython);
-	rc = PyRun_SimpleString(script);
-	if (rc)
-		PyErr_Print();
-	Py_Finalize();
-	return rc;
-}
-
-static int run_simple_script(char *script)
-{
-	int rc;
-	char *tempname;
-	HINSTANCE hPython;
-	tempname = tmpnam(NULL);
-	freopen(tempname, "a", stderr);
-	freopen(tempname, "a", stdout);
-
-	hPython = LoadLibrary (pythondll);
-	if (!hPython) {
-		set_failure_reason("Can't load Python for pre-install script");
-		return -1;
-	}
-	rc = do_run_simple_script(hPython, script);
-	FreeLibrary(hPython);
-	fflush(stderr);
-	fflush(stdout);
-	/* We only care about the output when we fail.  If the script works
-	   OK, then we discard it
-	*/
-	if (rc) {
-		int err_buf_size;
-		char *err_buf;
-		const char *prefix = "Running the pre-installation script failed\r\n";
-		int prefix_len = strlen(prefix);
-		FILE *fp = fopen(tempname, "rb");
-		fseek(fp, 0, SEEK_END);
-		err_buf_size = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-		err_buf = malloc(prefix_len + err_buf_size + 1);
-		if (err_buf) {
-			int n;
-			strcpy(err_buf, prefix);
-			n = fread(err_buf+prefix_len, 1, err_buf_size, fp);
-			err_buf[prefix_len+n] = '\0';
-			fclose(fp);
-			set_failure_reason(err_buf);
-			free(err_buf);
-		} else {
-			set_failure_reason("Out of memory!");
-		}
-	}
-	remove(tempname);
-	return rc;
-}
-
 
 static BOOL SystemError(int error, char *msg)
 {
@@ -916,11 +811,7 @@ static void create_bitmap(HWND hwnd)
 	ReleaseDC(hwnd, hdc);
 }
 
-/* Extract everything we need to begin the installation.  Currently this
-   is the INI filename with install data, and the raw pre-install script
-*/
-static BOOL ExtractInstallData(char *data, DWORD size, int *pexe_size,
-			       char **out_ini_file, char **out_preinstall_script)
+static char *ExtractIniFile(char *data, DWORD size, int *pexe_size)
 {
 	/* read the end of central directory record */
 	struct eof_cdir *pe = (struct eof_cdir *)&data[size - sizeof
@@ -937,15 +828,12 @@ static BOOL ExtractInstallData(char *data, DWORD size, int *pexe_size,
 	char *ini_file;
 	char tempdir[MAX_PATH];
 
-	/* ensure that if we fail, we don't have garbage out pointers */
-	*out_ini_file = *out_preinstall_script = NULL;
-
 	if (pe->tag != 0x06054b50) {
-		return FALSE;
+		return NULL;
 	}
 
 	if (pmd->tag != 0x1234567A || ofs < 0) {
-		return FALSE;
+		return NULL;
 	}
 
 	if (pmd->bitmap_size) {
@@ -958,26 +846,21 @@ static BOOL ExtractInstallData(char *data, DWORD size, int *pexe_size,
 	src = ((char *)pmd) - pmd->uncomp_size;
 	ini_file = malloc(MAX_PATH); /* will be returned, so do not free it */
 	if (!ini_file)
-		return FALSE;
+		return NULL;
 	if (!GetTempPath(sizeof(tempdir), tempdir)
 	    || !GetTempFileName(tempdir, "~du", 0, ini_file)) {
 		SystemError(GetLastError(),
 			     "Could not create temporary file");
-		return FALSE;
+		return NULL;
 	}
     
 	dst = map_new_file(CREATE_ALWAYS, ini_file, NULL, pmd->uncomp_size,
 			    0, 0, NULL/*notify*/);
 	if (!dst)
-		return FALSE;
-	/* Up to the first \0 is the INI file data. */
-	strncpy(dst, src, pmd->uncomp_size);
-	src += strlen(dst) + 1;
-	/* Up to next \0 is the pre-install script */
-	*out_preinstall_script = strdup(src);
-	*out_ini_file = ini_file;
+		return NULL;
+	memcpy(dst, src, pmd->uncomp_size);
 	UnmapViewOfFile(dst);
-	return TRUE;
+	return ini_file;
 }
 
 static void PumpMessages(void)
@@ -1469,15 +1352,14 @@ SelectPythonDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 								    (LPARAM)pbuf);
 						result = sscanf(pbuf, "Python Version %d.%d",
 								 &py_major, &py_minor);
-						if (result == 2) {
+						if (result == 2)
 #ifdef _DEBUG
-							wsprintf(pythondll, "python%d%d_d.dll",
-								 py_major, py_minor);
+							wsprintf(pythondll, "c:\\python22\\PCBuild\\python%d%d_d.dll",
+								  py_major, py_minor);
 #else
-							wsprintf(pythondll, "python%d%d.dll",
-								 py_major, py_minor);
+						wsprintf(pythondll, "python%d%d.dll",
+							  py_major, py_minor);
 #endif
-						}
 						free(pbuf);
 					} else
 						strcpy(pythondll, "");
@@ -1660,7 +1542,6 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			  "Click Cancel to exit the wizard.",
 			  meta_name);
 		SetDlgItemText(hwnd, IDC_TITLE, Buffer);
-		SetDlgItemText(hwnd, IDC_INFO, "Ready to install");
 		break;
 
 	case WM_NUMFILES:
@@ -1690,7 +1571,6 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case PSN_WIZNEXT:
 			/* Handle a Next button click here */
 			hDialog = hwnd;
-			success = TRUE;
 
 			/* Make sure the installation directory name ends in a */
 			/* backslash */
@@ -1722,23 +1602,14 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
  }
 */
 			scheme = GetScheme(py_major, py_minor);
-			/* Run the pre-install script. */
-			if (pre_install_script && *pre_install_script) {
-				SetDlgItemText (hwnd, IDC_TITLE,
-						"Running pre-installation script");
-				run_simple_script(pre_install_script);
-			}
-			if (!success) {
-				break;
-			}
+
 			/* Extract all files from the archive */
 			SetDlgItemText(hwnd, IDC_TITLE, "Installing files...");
-			if (!unzip_archive (scheme,
-					    python_dir, arc_data,
-					    arc_size, notify))
-				set_failure_reason("Failed to unzip installation files");
+			success = unzip_archive(scheme,
+						 python_dir, arc_data,
+						 arc_size, notify);
 			/* Compile the py-files */
-			if (success && pyc_compile) {
+			if (pyc_compile) {
 				int errors;
 				HINSTANCE hPython;
 				SetDlgItemText(hwnd, IDC_TITLE,
@@ -1757,7 +1628,7 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				 * confuse the user.
 				 */
 			}
-			if (success && pyo_compile) {
+			if (pyo_compile) {
 				int errors;
 				HINSTANCE hPython;
 				SetDlgItemText(hwnd, IDC_TITLE,
@@ -1797,7 +1668,7 @@ FinishedDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			SendDlgItemMessage(hwnd, IDC_BITMAP, STM_SETIMAGE,
 					   IMAGE_BITMAP, (LPARAM)hBitmap);
 		if (!success)
-			SetDlgItemText(hwnd, IDC_INFO, get_failure_reason());
+			SetDlgItemText(hwnd, IDC_INFO, "Installation failed.");
 
 		/* async delay: will show the dialog box completely before
 		   the install_script is started */
@@ -1806,7 +1677,7 @@ FinishedDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_USER:
 
-		if (success && install_script && install_script[0]) {
+		if (install_script && install_script[0]) {
 			char fname[MAX_PATH];
 			char *tempname;
 			FILE *fp;
@@ -2400,8 +2271,9 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst,
 	 */
 
 	/* Try to extract the configuration data into a temporary file */
-	if (ExtractInstallData(arc_data, arc_size, &exe_size,
-			       &ini_file, &pre_install_script))
+	ini_file = ExtractIniFile(arc_data, arc_size, &exe_size);
+
+	if (ini_file)
 		return DoInstall();
 
 	if (!ini_file && __argc > 1) {

@@ -88,22 +88,6 @@ IO__opencheck(IOobject *self) {
 }
 
 static PyObject *
-IO_get_closed(IOobject *self, void *closure)
-{
-	PyObject *result = Py_False;
-
-	if (self->buf == NULL)
-		result = Py_True;
-	Py_INCREF(result);
-	return result;
-}
-
-static PyGetSetDef file_getsetlist[] = {
-	{"closed", (getter)IO_get_closed, NULL, "True if the file is closed"},
-	{0},
-};
-
-static PyObject *
 IO_flush(IOobject *self, PyObject *unused) {
 
         UNLESS (IO__opencheck(self)) return NULL;
@@ -416,35 +400,36 @@ O_close(Oobject *self, PyObject *unused) {
         return Py_None;
 }
 
+
 PyDoc_STRVAR(O_writelines__doc__,
-"writelines(sequence_of_strings) -> None.  Write the strings to the file.\n"
-"\n"
-"Note that newlines are not added.  The sequence can be any iterable object\n"
-"producing strings. This is equivalent to calling write() for each string.");
+"writelines(sequence_of_strings): write each string");
 static PyObject *
 O_writelines(Oobject *self, PyObject *args) {
-	PyObject *it, *s;
-	
-	it = PyObject_GetIter(args);
-	if (it == NULL)
-		return NULL;
-	while ((s = PyIter_Next(it)) != NULL) {
-		int n;
-		char *c;
-		if (PyString_AsStringAndSize(s, &c, &n) == -1) {
-			Py_DECREF(it);
-			Py_DECREF(s);
+        PyObject *tmp = 0;
+	static PyObject *joiner = NULL;
+
+	if (!joiner) {
+		PyObject *empty_string = PyString_FromString("");
+		if (empty_string == NULL)
 			return NULL;
-		}
-		if (O_cwrite((PyObject *)self, c, n) == -1) {
-			Py_DECREF(it);
-			Py_DECREF(s);
+		joiner = PyObject_GetAttrString(empty_string, "join");
+		Py_DECREF(empty_string);
+		if (joiner == NULL)
 			return NULL;
-		}
-		Py_DECREF(s);
 	}
-	Py_DECREF(it);
-	Py_RETURN_NONE;
+
+        if (PyObject_Size(args) < 0) return NULL;
+
+        tmp = PyObject_CallFunction(joiner, "O", args);
+        UNLESS (tmp) return NULL;
+
+        args = Py_BuildValue("(O)", tmp);
+        Py_DECREF(tmp);
+        UNLESS (args) return NULL;
+
+        tmp = O_write(self, args);
+        Py_DECREF(args);
+        return tmp;
 }
 
 static struct PyMethodDef O_methods[] = {
@@ -470,7 +455,6 @@ static struct PyMethodDef O_methods[] = {
 static PyMemberDef O_memberlist[] = {
 	{"softspace",	T_INT,	offsetof(Oobject, softspace),	0,
 	 "flag indicating that a space needs to be printed; used by print"},
-	 /* getattr(f, "closed") is implemented without this table */
 	{NULL} /* Sentinel */
 };
 
@@ -514,8 +498,7 @@ static PyTypeObject Otype = {
   PyObject_SelfIter,		/*tp_iter */
   (iternextfunc)IO_iternext,	/*tp_iternext */
   O_methods,			/*tp_methods */
-  O_memberlist,			/*tp_members */
-  file_getsetlist,		/*tp_getset */
+  O_memberlist			/*tp_members */
 };
 
 static PyObject *
@@ -631,9 +614,7 @@ static PyTypeObject Itype = {
   0,					/* tp_weaklistoffset */
   PyObject_SelfIter,			/* tp_iter */
   (iternextfunc)IO_iternext,		/* tp_iternext */
-  I_methods,				/* tp_methods */
-  0,					/* tp_members */
-  file_getsetlist,			/* tp_getset */
+  I_methods				/* tp_methods */
 };
 
 static PyObject *

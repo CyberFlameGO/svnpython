@@ -9,12 +9,19 @@ IBCarbonFunction = OSErrFunctionGenerator
 IBCarbonMethod = OSErrMethodGenerator
 
 includestuff = """
+#ifdef WITHOUT_FRAMEWORKS
+#include <IBCarbonRuntime.h>
+#else
 #include <Carbon/Carbon.h>
-#include "pymactoolbox.h"
+#endif /* WITHOUT_FRAMEWORKS */
+#include "macglue.h"
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
 extern int _CFStringRefObj_Convert(PyObject *, CFStringRef *);
+//#define CFStringRefObj_Convert _CFStringRefObj_Convert
 #endif
+
+//extern int CFBundleRefObj_Convert(PyObject *, CFBundleRef *);  // need to wrap CFBundle
 
 """
 

@@ -4,23 +4,12 @@ import unittest
 import time
 import locale
 import re
-import sys
 from test import test_support
 
 import _strptime
 
-class getlang_Tests(unittest.TestCase):
-    """Test _getlang"""
-    def test_basic(self):
-        self.failUnlessEqual(_strptime._getlang(), locale.getlocale(locale.LC_TIME))
-
 class LocaleTime_Tests(unittest.TestCase):
-    """Tests for _strptime.LocaleTime.
-
-    All values are lower-cased when stored in LocaleTime, so make sure to
-    compare values after running ``lower`` on them.
-
-    """
+    """Tests for _strptime.LocaleTime."""
 
     def setUp(self):
         """Create time tuple based on current time."""
@@ -33,7 +22,7 @@ class LocaleTime_Tests(unittest.TestCase):
         tuple_position of time_tuple.  Uses error_msg as error message.
 
         """
-        strftime_output = time.strftime(directive, self.time_tuple).lower()
+        strftime_output = time.strftime(directive, self.time_tuple)
         comparison = testing[self.time_tuple[tuple_position]]
         self.failUnless(strftime_output in testing, "%s: not found in tuple" %
                                                     error_msg)
@@ -59,7 +48,7 @@ class LocaleTime_Tests(unittest.TestCase):
 
     def test_am_pm(self):
         # Make sure AM/PM representation done properly
-        strftime_output = time.strftime("%p", self.time_tuple).lower()
+        strftime_output = time.strftime("%p", self.time_tuple)
         self.failUnless(strftime_output in self.LT_ins.am_pm,
                         "AM/PM representation not in tuple")
         if self.time_tuple[3] < 12: position = 0
@@ -69,12 +58,9 @@ class LocaleTime_Tests(unittest.TestCase):
 
     def test_timezone(self):
         # Make sure timezone is correct
-        timezone = time.strftime("%Z", self.time_tuple).lower()
-        if timezone:
-            self.failUnless(timezone in self.LT_ins.timezone[0] or \
-                            timezone in self.LT_ins.timezone[1],
-                            "timezone %s not found in %s" %
-                            (timezone, self.LT_ins.timezone))
+        if time.strftime("%Z", self.time_tuple):
+            self.compare_against_time(self.LT_ins.timezone, '%Z', 8,
+                                      "Testing against timezone failed")
 
     def test_date_time(self):
         # Check that LC_date_time, LC_date, and LC_time are correct
@@ -96,16 +82,55 @@ class LocaleTime_Tests(unittest.TestCase):
         self.failUnless(strftime_output == time.strftime(self.LT_ins.LC_time,
                                                          magic_date),
                         "LC_time incorrect")
-        LT = _strptime.LocaleTime()
-        LT.am_pm = ('', '')
+        LT = _strptime.LocaleTime(am_pm=('',''))
         self.failUnless(LT.LC_time, "LocaleTime's LC directives cannot handle "
                                     "empty strings")
 
     def test_lang(self):
-        # Make sure lang is set to what _getlang() returns
-        # Assuming locale has not changed between now and when self.LT_ins was created
-        self.failUnlessEqual(self.LT_ins.lang, _strptime._getlang())
+        # Make sure lang is set
+        self.failUnless(self.LT_ins.lang in (locale.getdefaultlocale()[0],
+                                             locale.getlocale(locale.LC_TIME),
+                                             ''),
+                        "Setting of lang failed")
 
+    def test_by_hand_input(self):
+        # Test passed-in initialization value checks
+        self.failUnless(_strptime.LocaleTime(f_weekday=range(7)),
+                        "Argument size check for f_weekday failed")
+        self.assertRaises(TypeError, _strptime.LocaleTime, f_weekday=range(8))
+        self.assertRaises(TypeError, _strptime.LocaleTime, f_weekday=range(6))
+        self.failUnless(_strptime.LocaleTime(a_weekday=range(7)),
+                        "Argument size check for a_weekday failed")
+        self.assertRaises(TypeError, _strptime.LocaleTime, a_weekday=range(8))
+        self.assertRaises(TypeError, _strptime.LocaleTime, a_weekday=range(6))
+        self.failUnless(_strptime.LocaleTime(f_month=range(12)),
+                        "Argument size check for f_month failed")
+        self.assertRaises(TypeError, _strptime.LocaleTime, f_month=range(11))
+        self.assertRaises(TypeError, _strptime.LocaleTime, f_month=range(13))
+        self.failUnless(len(_strptime.LocaleTime(f_month=range(12)).f_month) == 13,
+                        "dummy value for f_month not added")
+        self.failUnless(_strptime.LocaleTime(a_month=range(12)),
+                        "Argument size check for a_month failed")
+        self.assertRaises(TypeError, _strptime.LocaleTime, a_month=range(11))
+        self.assertRaises(TypeError, _strptime.LocaleTime, a_month=range(13))
+        self.failUnless(len(_strptime.LocaleTime(a_month=range(12)).a_month) == 13,
+                        "dummy value for a_month not added")
+        self.failUnless(_strptime.LocaleTime(am_pm=range(2)),
+                        "Argument size check for am_pm failed")
+        self.assertRaises(TypeError, _strptime.LocaleTime, am_pm=range(1))
+        self.assertRaises(TypeError, _strptime.LocaleTime, am_pm=range(3))
+        self.failUnless(_strptime.LocaleTime(timezone=range(2)),
+                        "Argument size check for timezone failed")
+        self.assertRaises(TypeError, _strptime.LocaleTime, timezone=range(1))
+        self.assertRaises(TypeError, _strptime.LocaleTime, timezone=range(3))
+
+    def test_unknowntimezone(self):
+        # Handle timezone set to ('','') properly.
+        # Fixes bug #661354
+        locale_time = _strptime.LocaleTime(timezone=('',''))
+        self.failUnless("%Z" not in locale_time.LC_date,
+                        "when timezone == ('',''), string.replace('','%Z') is "
+                         "occuring")
 
 class TimeRETests(unittest.TestCase):
     """Tests for TimeRE."""
@@ -114,6 +139,21 @@ class TimeRETests(unittest.TestCase):
         """Construct generic TimeRE object."""
         self.time_re = _strptime.TimeRE()
         self.locale_time = _strptime.LocaleTime()
+
+    def test_getitem(self):
+        # Make sure that __getitem__ works properly
+        self.failUnless(self.time_re['m'],
+                        "Fetching 'm' directive (built-in) failed")
+        self.failUnless(self.time_re['b'],
+                        "Fetching 'b' directive (built w/ __tupleToRE) failed")
+        for name in self.locale_time.a_month:
+            self.failUnless(self.time_re['b'].find(name) != -1,
+                            "Not all abbreviated month names in regex")
+        self.failUnless(self.time_re['c'],
+                        "Fetching 'c' directive (built w/ format) failed")
+        self.failUnless(self.time_re['c'].find('%') == -1,
+                        "Conversion of 'c' directive failed; '%' found")
+        self.assertRaises(KeyError, self.time_re.__getitem__, '1')
 
     def test_pattern(self):
         # Test TimeRE.pattern
@@ -165,8 +205,7 @@ class TimeRETests(unittest.TestCase):
     def test_blankpattern(self):
         # Make sure when tuple or something has no values no regex is generated.
         # Fixes bug #661354
-        test_locale = _strptime.LocaleTime()
-        test_locale.timezone = (frozenset(), frozenset())
+        test_locale = _strptime.LocaleTime(timezone=('',''))
         self.failUnless(_strptime.TimeRE(test_locale).pattern("%Z") == '',
                         "with timezone == ('',''), TimeRE().pattern('%Z') != ''")
 
@@ -187,10 +226,6 @@ class StrptimeTests(unittest.TestCase):
         # Make sure ValueError is raised when match fails
         self.assertRaises(ValueError, _strptime.strptime, data_string="%d",
                           format="%A")
-
-    def test_unconverteddata(self):
-        # Check ValueError is raised when there is unconverted data
-        self.assertRaises(ValueError, _strptime.strptime, "10 12", "%m")
 
     def helper(self, directive, position):
         """Helper fxn in testing."""
@@ -254,42 +289,18 @@ class StrptimeTests(unittest.TestCase):
         # When gmtime() is used with %Z, entire result of strftime() is empty.
         # Check for equal timezone names deals with bad locale info when this
         # occurs; first found in FreeBSD 4.4.
-        strp_output = _strptime.strptime("UTC", "%Z")
-        self.failUnlessEqual(strp_output.tm_isdst, 0)
-        strp_output = _strptime.strptime("GMT", "%Z")
-        self.failUnlessEqual(strp_output.tm_isdst, 0)
-        if sys.platform == "mac":
-            # Timezones don't really work on MacOS9
-            return
         time_tuple = time.localtime()
         strf_output = time.strftime("%Z")  #UTC does not have a timezone
         strp_output = _strptime.strptime(strf_output, "%Z")
         locale_time = _strptime.LocaleTime()
-        if time.tzname[0] != time.tzname[1] or not time.daylight:
+        if locale_time.timezone[0] != locale_time.timezone[1]:
             self.failUnless(strp_output[8] == time_tuple[8],
                             "timezone check failed; '%s' -> %s != %s" %
                              (strf_output, strp_output[8], time_tuple[8]))
         else:
             self.failUnless(strp_output[8] == -1,
-                            "LocaleTime().timezone has duplicate values and "
-                             "time.daylight but timezone value not set to -1")
-
-    def test_bad_timezone(self):
-        # Explicitly test possibility of bad timezone;
-        # when time.tzname[0] == time.tzname[1] and time.daylight
-        if sys.platform == "mac":
-            return #MacOS9 has severely broken timezone support.
-        tz_name= time.tzname[0]
-        try:
-            original_tzname = time.tzname
-            original_daylight = time.daylight
-            time.tzname = (tz_name, tz_name)
-            time.daylight = 1
-            tz_value = _strptime.strptime(tz_name, "%Z")[8]
-            self.failUnlessEqual(tz_value, -1)
-        finally:
-            time.tzname = original_tzname
-            time.daylight = original_daylight
+                            "LocaleTime().timezone has duplicate values but "
+                             "timzone value not set to 0")
 
     def test_date_time(self):
         # Test %c directive
@@ -331,15 +342,6 @@ class StrptimeTests(unittest.TestCase):
         self.failUnless(strp_output == defaults,
                         "Default values for strptime() are incorrect;"
                         " %s != %s" % (strp_output, defaults))
-
-    def test_escaping(self):
-        # Make sure all characters that have regex significance are escaped.
-        # Parentheses are in a purposeful order; will cause an error of
-        # unbalanced parentheses when the regex is compiled if they are not
-        # escaped.
-        # Test instigated by bug #796149 .
-        need_escaping = ".^$*+?{}\[]|)("
-        self.failUnless(_strptime.strptime(need_escaping, need_escaping))
 
 class Strptime12AMPMTests(unittest.TestCase):
     """Test a _strptime regression in '%I %p' at 12 noon (12 PM)"""
@@ -399,53 +401,15 @@ class CalculationTests(unittest.TestCase):
                         "Calculation of day of the week failed;"
                          "%s != %s" % (result.tm_wday, self.time_tuple.tm_wday))
 
-
-class CacheTests(unittest.TestCase):
-    """Test that caching works properly."""
-
-    def test_time_re_recreation(self):
-        # Make sure cache is recreated when current locale does not match what
-        # cached object was created with.
-        _strptime.strptime("10", "%d")
-        _strptime._TimeRE_cache.locale_time.lang = "Ni"
-        original_time_re = id(_strptime._TimeRE_cache)
-        _strptime.strptime("10", "%d")
-        self.failIfEqual(original_time_re, id(_strptime._TimeRE_cache))
-
-    def test_regex_cleanup(self):
-        # Make sure cached regexes are discarded when cache becomes "full".
-        try:
-            del _strptime._regex_cache['%d']
-        except KeyError:
-            pass
-        bogus_key = 0
-        while len(_strptime._regex_cache) <= _strptime._CACHE_MAX_SIZE:
-            _strptime._regex_cache[bogus_key] = None
-            bogus_key += 1
-        _strptime.strptime("10", "%d")
-        self.failUnlessEqual(len(_strptime._regex_cache), 1)
-
-    def test_new_localetime(self):
-        # A new LocaleTime instance should be created when a new TimeRE object
-        # is created.
-        locale_time_id = id(_strptime._TimeRE_cache.locale_time)
-        _strptime._TimeRE_cache.locale_time.lang = "Ni"
-        _strptime.strptime("10", "%d")
-        self.failIfEqual(locale_time_id,
-                         id(_strptime._TimeRE_cache.locale_time))
-
-
 def test_main():
-    test_support.run_unittest(
-        getlang_Tests,
-        LocaleTime_Tests,
-        TimeRETests,
-        StrptimeTests,
-        Strptime12AMPMTests,
-        JulianTests,
-        CalculationTests,
-        CacheTests
-    )
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(LocaleTime_Tests))
+    suite.addTest(unittest.makeSuite(TimeRETests))
+    suite.addTest(unittest.makeSuite(StrptimeTests))
+    suite.addTest(unittest.makeSuite(Strptime12AMPMTests))
+    suite.addTest(unittest.makeSuite(JulianTests))
+    suite.addTest(unittest.makeSuite(CalculationTests))
+    test_support.run_suite(suite)
 
 
 if __name__ == '__main__':

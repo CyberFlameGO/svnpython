@@ -5,7 +5,6 @@
 """
 
 import re
-import sys
 import time
 import locale
 import random
@@ -70,10 +69,11 @@ class Generator:
 
         Optional maxheaderlen specifies the longest length for a non-continued
         header.  When a header line is longer (in characters, with tabs
-        expanded to 8 spaces) than maxheaderlen, the header will split as
-        defined in the Header class.  Set maxheaderlen to zero to disable
-        header wrapping.  The default is 78, as recommended (but not required)
-        by RFC 2822.
+        expanded to 8 spaces), than maxheaderlen, the header will be broken on
+        semicolons and continued as per RFC 2822.  If no semicolon is found,
+        then the header is left alone.  Set to zero to disable wrapping
+        headers.  Default is 78, as recommended (but not required by RFC
+        2822.
         """
         self._fp = outfp
         self._mangle_from_ = mangle_from_
@@ -356,14 +356,11 @@ class DecodedGenerator(Generator):
 
 
 # Helper
-_width = len(repr(sys.maxint-1))
-_fmt = '%%0%dd' % _width
-
 def _make_boundary(text=None):
     # Craft a random boundary.  If text is given, ensure that the chosen
     # boundary doesn't appear in the text.
-    token = random.randrange(sys.maxint)
-    boundary = ('=' * 15) + (_fmt % token) + '=='
+    dp = locale.localeconv().get('decimal_point', '.')
+    boundary = ('=' * 15) + repr(random.random()).split(dp)[1] + '=='
     if text is None:
         return boundary
     b = boundary

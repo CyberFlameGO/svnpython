@@ -1,6 +1,6 @@
 """Find modules used by a script, using introspection."""
 
-# This module should be kept compatible with Python 2.2, see PEP 291.
+# This module should be kept compatible with Python 1.5.2, see PEP 291.
 
 import dis
 import imp
@@ -62,11 +62,11 @@ class Module:
         self.starimports = {}
 
     def __repr__(self):
-        s = "Module(%r" % (self.__name__,)
+        s = "Module(%s" % `self.__name__`
         if self.__file__ is not None:
-            s = s + ", %r" % (self.__file__,)
+            s = s + ", %s" % `self.__file__`
         if self.__path__ is not None:
-            s = s + ", %r" % (self.__path__,)
+            s = s + ", %s" % `self.__path__`
         s = s + ")"
         return s
 
@@ -210,12 +210,7 @@ class ModuleFinder:
         if not m.__path__:
             return
         modules = {}
-        # 'suffixes' used to be a list hardcoded to [".py", ".pyc", ".pyo"].
-        # But we must also collect Python extension modules - although
-        # we cannot separate normal dlls from Python extensions.
-        suffixes = []
-        for triple in imp.get_suffixes():
-            suffixes.append(triple[0])
+        suffixes = [".py", ".pyc", ".pyo"]
         for dir in m.__path__:
             try:
                 names = os.listdir(dir)
@@ -564,7 +559,7 @@ def test():
     if debug > 1:
         print "path:"
         for item in path:
-            print "   ", repr(item)
+            print "   ", `item`
 
     # Create the module finder and turn its crank
     mf = ModuleFinder(path, debug, exclude)

@@ -92,6 +92,14 @@ PyOS_InterruptOccurred(void)
 #endif /* MSDOS && !QUICKWIN */
 
 
+#ifdef macintosh
+
+/* The Mac interrupt code has moved to macglue.c */
+#define OK
+
+#endif /* macintosh */
+
+
 #ifndef OK
 
 /* Default version -- for real operating systems and for Standard C */

@@ -96,6 +96,17 @@ class CompressTestCase(unittest.TestCase):
         x = zlib.compress(data)
         self.assertEqual(zlib.decompress(x), data)
 
+    def test_monotonic(self):
+        # higher compression levels should not expand compressed size
+        data = hamlet_scene * 8 * 16
+        last = length = len(zlib.compress(data, 0))
+        self.failUnless(last > len(data), "compress level 0 always expands")
+        for level in range(10):
+            length = len(zlib.compress(data, level))
+            self.failUnless(length <= last,
+                            'compress level %d more effective than %d!' % (
+                                            level-1, level))
+            last = length
 
 
 
@@ -468,24 +479,24 @@ LAERTES
 
 
 def test_main():
-    test_support.run_unittest(
-        ChecksumTestCase,
-        ExceptionTestCase,
-        CompressTestCase,
-        CompressObjectTestCase
-    )
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(ChecksumTestCase))
+    suite.addTest(unittest.makeSuite(ExceptionTestCase))
+    suite.addTest(unittest.makeSuite(CompressTestCase))
+    suite.addTest(unittest.makeSuite(CompressObjectTestCase))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()
 
 def test(tests=''):
     if not tests: tests = 'o'
-    testcases = []
-    if 'k' in tests: testcases.append(ChecksumTestCase)
-    if 'x' in tests: testcases.append(ExceptionTestCase)
-    if 'c' in tests: testcases.append(CompressTestCase)
-    if 'o' in tests: testcases.append(CompressObjectTestCase)
-    test_support.run_unittest(*testcases)
+    suite = unittest.TestSuite()
+    if 'k' in tests: suite.addTest(unittest.makeSuite(ChecksumTestCase))
+    if 'x' in tests: suite.addTest(unittest.makeSuite(ExceptionTestCase))
+    if 'c' in tests: suite.addTest(unittest.makeSuite(CompressTestCase))
+    if 'o' in tests: suite.addTest(unittest.makeSuite(CompressObjectTestCase))
+    test_support.run_suite(suite)
 
 if False:
     import sys

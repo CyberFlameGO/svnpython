@@ -85,12 +85,13 @@ def _torgb(filename, temps):
 			type(msg[0]) == type(0) and type(msg[1]) == type(''):
 			msg = msg[1]
 		if type(msg) is not type(''):
-			msg = repr(msg)
+			msg = `msg`
 		raise error, filename + ': ' + msg
 	if ftype == 'rgb':
 		return fname
 	if ftype is None or not table.has_key(ftype):
-		raise error, '%s: unsupported image file type %r' % (filename, ftype)
+		raise error, \
+			filename + ': unsupported image file type ' + `ftype`
 	(fd, temp) = tempfile.mkstemp()
 	os.close(fd)
 	sts = table[ftype].copy(fname, temp)

@@ -15,7 +15,7 @@ Data members:
 */
 
 #include "Python.h"
-#include "compile.h"
+#include "code.h"
 #include "frameobject.h"
 #include "eval.h"
 
@@ -32,23 +32,10 @@ extern void *PyWin_DLLhModule;
 extern const char *PyWin_DLLVersionString;
 #endif
 
-#ifdef __VMS
-#include <unixlib.h>
-#endif
-
-#ifdef MS_WINDOWS
-#include <windows.h>
-#endif
-
-#ifdef HAVE_LANGINFO_H
-#include <locale.h>
-#include <langinfo.h>
-#endif
-
 PyObject *
 PySys_GetObject(char *name)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
 	if (sd == NULL)
 		return NULL;
@@ -70,7 +57,7 @@ PySys_GetFile(char *name, FILE *def)
 int
 PySys_SetObject(char *name, PyObject *v)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
 	if (v == NULL) {
 		if (PyDict_GetItemString(sd, name) == NULL)
@@ -86,7 +73,7 @@ static PyObject *
 sys_displayhook(PyObject *self, PyObject *o)
 {
 	PyObject *outf;
-	PyInterpreterState *interp = PyThreadState_GET()->interp;
+	PyInterpreterState *interp = PyThreadState_Get()->interp;
 	PyObject *modules = interp->modules;
 	PyObject *builtins = PyDict_GetItemString(modules, "__builtin__");
 
@@ -149,7 +136,7 @@ static PyObject *
 sys_exc_info(PyObject *self, PyObject *noargs)
 {
 	PyThreadState *tstate;
-	tstate = PyThreadState_GET();
+	tstate = PyThreadState_Get();
 	return Py_BuildValue(
 		"(OOO)",
 		tstate->exc_type != NULL ? tstate->exc_type : Py_None,
@@ -168,7 +155,7 @@ clause in the current stack frame or in an older stack frame."
 static PyObject *
 sys_exc_clear(PyObject *self, PyObject *noargs)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *tmp_type, *tmp_value, *tmp_tb;
 	tmp_type = tstate->exc_type;
 	tmp_value = tstate->exc_value;
@@ -272,16 +259,15 @@ operating system filenames."
  * Cached interned string objects used for calling the profile and
  * trace functions.  Initialized by trace_init().
  */
-static PyObject *whatstrings[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static PyObject *whatstrings[4] = {NULL, NULL, NULL, NULL};
 
 static int
 trace_init(void)
 {
-	static char *whatnames[7] = {"call", "exception", "line", "return",
-					"c_call", "c_exception", "c_return"};
+	static char *whatnames[4] = {"call", "exception", "line", "return"};
 	PyObject *name;
 	int i;
-	for (i = 0; i < 7; ++i) {
+	for (i = 0; i < 4; ++i) {
 		if (whatstrings[i] == NULL) {
 			name = PyString_InternFromString(whatnames[i]);
 			if (name == NULL)
@@ -433,16 +419,6 @@ n instructions.  This also affects how often thread switches occur."
 );
 
 static PyObject *
-sys_getcheckinterval(PyObject *self, PyObject *args)
-{
-	return PyInt_FromLong(_Py_CheckInterval);
-}
-
-PyDoc_STRVAR(getcheckinterval_doc,
-"getcheckinterval() -> current check interval; see setcheckinterval()."
-);
-
-static PyObject *
 sys_setrecursionlimit(PyObject *self, PyObject *args)
 {
 	int new_limit;
@@ -514,7 +490,7 @@ static PyObject *
 sys_setdlopenflags(PyObject *self, PyObject *args)
 {
 	int new_val;
-        PyThreadState *tstate = PyThreadState_GET();
+        PyThreadState *tstate = PyThreadState_Get();
 	if (!PyArg_ParseTuple(args, "i:setdlopenflags", &new_val))
 		return NULL;
         if (!tstate)
@@ -537,7 +513,7 @@ sys.setdlopenflags(dl.RTLD_NOW|dl.RTLD_GLOBAL)"
 static PyObject *
 sys_getdlopenflags(PyObject *self, PyObject *args)
 {
-        PyThreadState *tstate = PyThreadState_GET();
+        PyThreadState *tstate = PyThreadState_Get();
         if (!tstate)
 		return NULL;
         return PyInt_FromLong(tstate->interp->dlopenflags);
@@ -615,7 +591,7 @@ purposes only."
 static PyObject *
 sys_getframe(PyObject *self, PyObject *args)
 {
-	PyFrameObject *f = PyThreadState_GET()->frame;
+	PyFrameObject *f = PyThreadState_Get()->frame;
 	int depth = -1;
 
 	if (!PyArg_ParseTuple(args, "|i:_getframe", &depth))
@@ -734,8 +710,6 @@ static PyMethodDef sys_methods[] = {
 #endif
 	{"setcheckinterval",	sys_setcheckinterval, METH_VARARGS,
 	 setcheckinterval_doc}, 
-	{"getcheckinterval",	sys_getcheckinterval, METH_NOARGS,
-	 getcheckinterval_doc}, 
 #ifdef HAVE_DLOPEN
 	{"setdlopenflags", sys_setdlopenflags, METH_VARARGS, 
 	 setdlopenflags_doc},
@@ -903,9 +877,6 @@ _PySys_Init(void)
 	PyObject *m, *v, *sysdict;
 	PyObject *sysin, *sysout, *syserr;
 	char *s;
-#ifdef MS_WINDOWS
-	char buf[10];
-#endif
 
 	m = Py_InitModule3("sys", sys_methods, sys_doc);
 	sysdict = PyModule_GetDict(m);
@@ -915,19 +886,6 @@ _PySys_Init(void)
 	syserr = PyFile_FromFile(stderr, "<stderr>", "w", NULL);
 	if (PyErr_Occurred())
 		return NULL;
-#ifdef MS_WINDOWS
-	if(isatty(_fileno(stdin))){
-		sprintf(buf, "cp%d", GetConsoleCP());
-		if (!PyFile_SetEncoding(sysin, buf))
-			return NULL;
-	}
-	if(isatty(_fileno(stdout))) {
-		sprintf(buf, "cp%d", GetConsoleOutputCP());
-		if (!PyFile_SetEncoding(sysout, buf))
-			return NULL;
-	}
-#endif
-
 	PyDict_SetItemString(sysdict, "stdin", sysin);
 	PyDict_SetItemString(sysdict, "stdout", sysout);
 	PyDict_SetItemString(sysdict, "stderr", syserr);
@@ -1092,22 +1050,7 @@ makeargvobject(int argc, char **argv)
 	if (av != NULL) {
 		int i;
 		for (i = 0; i < argc; i++) {
-#ifdef __VMS
-			PyObject *v;
-
-			/* argv[0] is the script pathname if known */
-			if (i == 0) {
-				char* fn = decc$translate_vms(argv[0]);
-				if ((fn == (char *)0) || fn == (char *)-1)
-					v = PyString_FromString(argv[0]);
-				else
-					v = PyString_FromString(
-						decc$translate_vms(argv[0]));
-			} else
-				v = PyString_FromString(argv[i]);
-#else
 			PyObject *v = PyString_FromString(argv[i]);
-#endif
 			if (v == NULL) {
 				Py_DECREF(av);
 				av = NULL;

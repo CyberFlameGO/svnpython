@@ -161,7 +161,7 @@ codecs.  Output is also codec-dependent and will usually be Unicode as
 well.}
 
 \var{encoding} specifies the encoding which is to be used for the
-file.
+the file.
 
 \var{errors} may be given to define the error handling. It defaults
 to \code{'strict'} which causes a \exception{ValueError} to be raised
@@ -210,6 +210,15 @@ used in the stream or file and in UTF-8 as a Unicode signature.
 for \constant{BOM_UTF16_LE} and \constant{BOM_BE} for \constant{BOM_UTF16_BE}.
 The others represent the BOM in UTF-8 and UTF-32 encodings.
 \end{datadesc}
+
+
+\begin{seealso}
+  \seeurl{http://sourceforge.net/projects/python-codecs/}{A
+          SourceForge project working on additional support for Asian
+          codecs for use with Python.  They are in the early stages of
+          development at the time of this writing --- look in their
+          FTP area for downloadable files.}
+\end{seealso}
 
 
 \subsection{Codec Base Classes}
@@ -496,7 +505,7 @@ the \function{lookup()} function to construct the instance.
 
   \var{encode}, \var{decode} must adhere to the \class{Codec}
   interface, \var{Reader}, \var{Writer} must be factory functions or
-  classes providing objects of the \class{StreamReader} and
+  classes providing objects of the the \class{StreamReader} and
   \class{StreamWriter} interface respectively.
 
   \var{encode} and \var{decode} are needed for the frontend
@@ -535,7 +544,7 @@ exist:
       a 8859 codeset, but replaces control characters with additional
       graphic characters
 \item an IBM EBCDIC code page
-\item an IBM PC code page, which is \ASCII{} compatible
+\item an IBM PC code page, which is ASCII compatible
 \end{itemize}
 
 \begin{longtableiii}{l|l|l}{textrm}{Codec}{Aliases}{Languages}
@@ -543,10 +552,6 @@ exist:
 \lineiii{ascii}
         {646, us-ascii}
         {English}
-
-\lineiii{big5}
-        {big5_tw, csbig5}
-        {Traditional Chinese}
 
 \lineiii{cp037}
         {IBM037, IBM039}
@@ -628,18 +633,6 @@ exist:
         {}
         {Greek}
 
-\lineiii{cp932}
-        {932, ms932, mskanji, ms_kanji}
-        {Japanese}
-
-\lineiii{cp949}
-        {949, ms949, uhc}
-        {Korean}
-
-\lineiii{cp950}
-        {950, ms950}
-        {Traditional Chinese}
-
 \lineiii{cp1006}
         {}
         {Urdu}
@@ -687,59 +680,6 @@ exist:
 \lineiii{cp1258}
         {windows-1258}
         {Vietnamese}
-
-\lineiii{euc_jp}
-        {eucjp, ujis, u_jis}
-        {Japanese}
-
-\lineiii{euc_jisx0213}
-        {jisx0213, eucjisx0213}
-        {Japanese}
-
-\lineiii{euc_kr}
-        {euckr, korean, ksc5601, ks_c_5601, ks_c_5601_1987, ksx1001, ks_x_1001}
-        {Korean}
-
-\lineiii{gb2312}
-        {chinese, csiso58gb231280, euc_cn, euccn, eucgb2312_cn, gb2312_1980,
-         gb2312_80, iso_ir_58}
-        {Simplified Chinese}
-
-\lineiii{gbk}
-        {936, cp936, ms936}
-        {Unified Chinese}
-
-\lineiii{gb18030}
-        {gb18030_2000}
-        {Unified Chinese}
-
-\lineiii{hz}
-        {hzgb, hz_gb, hz_gb_2312}
-        {Simplified Chinese}
-
-\lineiii{iso2022_jp}
-        {csiso2022jp, iso2022jp, iso_2022_jp}
-        {Japanese}
-
-\lineiii{iso2022_jp_1}
-        {iso2022jp_1, iso_2022_jp_1}
-        {Japanese}
-
-\lineiii{iso2022_jp_2}
-        {iso2022jp_2, iso_2022_jp_2}
-        {Japanese, Korean, Simplified Chinese, Western Europe, Greek}
-
-\lineiii{iso2022_jp_3}
-        {iso2022jp_3, iso_2022_jp_3}
-        {Japanese}
-
-\lineiii{iso2022_jp_ext}
-        {iso2022jp_ext, iso_2022_jp_ext}
-        {Japanese}
-
-\lineiii{iso2022_kr}
-        {csiso2022kr, iso2022kr, iso_2022_kr}
-        {Korean}
 
 \lineiii{latin_1}
         {iso-8859-1, iso8859-1, 8859, cp819, latin, latin1, L1}
@@ -793,10 +733,6 @@ exist:
         {iso-8859-15}
         {Western Europe}
 
-\lineiii{johab}
-        {cp1361, ms1361}
-        {Korean}
-
 \lineiii{koi8_r}
         {}
         {Russian}
@@ -828,18 +764,6 @@ exist:
 \lineiii{mac_turkish}
         {macturkish}
         {Turkish}
-
-\lineiii{ptcp154}
-        {csptcp154, pt154, cp154, cyrillic-asian}
-        {Kazakh}
-
-\lineiii{shift_jis}
-        {csshiftjis, shiftjis, sjis, s_jis}
-        {Japanese}
-
-\lineiii{shift_jisx0213}
-        {shiftjisx0213, sjisx0213, s_jisx0213}
-        {Japanese}
 
 \lineiii{utf_16}
         {U16, utf16}
@@ -880,23 +804,15 @@ listed as operand type in the table.
          {byte string}
          {Convert operand to MIME base64}
 
-\lineiv{bz2_codec}
-         {bz2}
-         {byte string}
-         {Compress the operand using bz2}
-
 \lineiv{hex_codec}
          {hex}
          {byte string}
-         {Convert operand to hexadecimal representation, with two
-          digits per byte}
+         {Convert operand to hexadecimal representation, with two digits per byte}
 
 \lineiv{idna}
          {}
          {Unicode string}
-         {Implements \rfc{3490}.
-          \versionadded{2.3}
-          See also \refmodule{encodings.idna}}
+         {Implements \rfc{3490}. \versionadded{2.3}. See also \module{encodings.idna}}
 
 \lineiv{mbcs}
          {dbcs}
@@ -911,8 +827,7 @@ listed as operand type in the table.
 \lineiv{punycode}
          {}
          {Unicode string}
-         {Implements \rfc{3492}.
-          \versionadded{2.3}}
+         {Implements \rfc{3492}. \versionadded{2.3}}
 
 \lineiv{quopri_codec}
          {quopri, quoted-printable, quotedprintable}
@@ -922,8 +837,7 @@ listed as operand type in the table.
 \lineiv{raw_unicode_escape}
          {}
          {Unicode string}
-         {Produce a string that is suitable as raw Unicode literal in
-          Python source code}
+         {Produce a string that is suitable as raw Unicode literal in Python source code}
 
 \lineiv{rot_13}
          {rot13}
@@ -933,21 +847,17 @@ listed as operand type in the table.
 \lineiv{string_escape}
          {}
          {byte string}
-         {Produce a string that is suitable as string literal in
-          Python source code}
+         {Produce a string that is suitable as string literal in Python source code}
 
 \lineiv{undefined}
          {}
          {any}
-         {Raise an exception for all conversion. Can be used as the
-          system encoding if no automatic coercion between byte and
-          Unicode strings is desired.} 
+         {Raise an exception for all conversion. Can be used as the system encoding if no automatic coercion between byte and Unicode strings is desired.}
 
 \lineiv{unicode_escape}
          {}
          {Unicode string}
-         {Produce a string that is suitable as Unicode literal in
-          Python source code}
+         {Produce a string that is suitable as Unicode literal in Python source code}
 
 \lineiv{unicode_internal}
          {}
@@ -971,24 +881,20 @@ listed as operand type in the table.
 
 \declaremodule{standard}{encodings.idna}
 \modulesynopsis{Internationalized Domain Names implementation}
-% XXX The next line triggers a formatting bug, so it's commented out
-% until that can be fixed.
-%\moduleauthor{Martin v. L\"owis}
-
-\versionadded{2.3}
+\moduleauthor{Martin v. L\"owis}
 
 This module implements \rfc{3490} (Internationalized Domain Names in
 Applications) and \rfc{3492} (Nameprep: A Stringprep Profile for
 Internationalized Domain Names (IDN)). It builds upon the
-\code{punycode} encoding and \refmodule{stringprep}.
+\code{punycode} encoding and \module{stringprep}. \versionadded{2.3}
 
-These RFCs together define a protocol to support non-\ASCII{} characters
-in domain names. A domain name containing non-\ASCII{} characters (such
-as ``www.Alliancefran\c caise.nu'') is converted into an
-\ASCII-compatible encoding (ACE, such as
+These RFCs together define a protocol to support non-ASCII characters
+in domain names. A domain name containing non-ASCII characters (such
+as ``www.Alliancefran\c{c}aise.nu'') is converted into an
+ASCII-compatible encoding (ACE, such as
 ``www.xn--alliancefranaise-npb.nu''). The ACE form of the domain name
 is then used in all places where arbitrary characters are not allowed
-by the protocol, such as DNS queries, HTTP \mailheader{Host} fields, and so
+by the protocol, such as DNS queries, HTTP \code{Host:} fields, and so
 on. This conversion is carried out in the application; if possible
 invisible to the user: The application should transparently convert
 Unicode domain labels to IDNA on the wire, and convert back ACE labels
@@ -996,13 +902,13 @@ to Unicode before presenting them to the user.
 
 Python supports this conversion in several ways: The \code{idna} codec
 allows to convert between Unicode and the ACE. Furthermore, the
-\refmodule{socket} module transparently converts Unicode host names to
+\module{socket} module transparently converts Unicode host names to
 ACE, so that applications need not be concerned about converting host
 names themselves when they pass them to the socket module. On top of
 that, modules that have host names as function parameters, such as
-\refmodule{httplib} and \refmodule{ftplib}, accept Unicode host names
-(\refmodule{httplib} then also transparently sends an IDNA hostname in
-the \mailheader{Host} field if it sends that field at all). 
+\module{httplib} and \module{ftplib}, accept Unicode host names
+(\module{httplib} then also transparently sends an IDNA hostname in
+the \code{Host:} field if it sends that field at all). 
 
 When receiving host names from the wire (such as in reverse name
 lookup), no automatic conversion to Unicode is performed: Applications
@@ -1021,8 +927,8 @@ currently assumes query strings, so \code{AllowUnassigned} is
 true.
 \end{funcdesc}
 
-\begin{funcdesc}{ToASCII}{label}
-Convert a label to \ASCII, as specified in \rfc{3490}.
+\begin{funcdesc}{ToASCCII}{label}
+Convert a label to ASCII, as specified in \rfc{3490}.
 \code{UseSTD3ASCIIRules} is assumed to be false.
 \end{funcdesc}
 

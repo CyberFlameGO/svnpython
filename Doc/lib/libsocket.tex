@@ -276,14 +276,12 @@ for that service.  The protocol name should be \code{'tcp'} or
 \code{'udp'}.
 \end{funcdesc}
 
-\begin{funcdesc}{socket}{\optional{family\optional{,
-                         type\optional{, proto}}}}
+\begin{funcdesc}{socket}{family, type\optional{, proto}}
 Create a new socket using the given address family, socket type and
-protocol number.  The address family should be \constant{AF_INET} (the
-default), \constant{AF_INET6} or \constant{AF_UNIX}.  The socket type
-should be \constant{SOCK_STREAM} (the default), \constant{SOCK_DGRAM}
-or perhaps one of the other \samp{SOCK_} constants.  The protocol
-number is usually zero and may be omitted in that case.
+protocol number.  The address family should be \constant{AF_INET}, \constant{AF_INET6} or
+\constant{AF_UNIX}.  The socket type should be \constant{SOCK_STREAM},
+\constant{SOCK_DGRAM} or perhaps one of the other \samp{SOCK_} constants.
+The protocol number is usually zero and may be omitted in that case.
 \end{funcdesc}
 
 \begin{funcdesc}{ssl}{sock\optional{, keyfile, certfile}}
@@ -482,10 +480,6 @@ This was never intentional and is no longer available in Python
 \begin{methoddesc}[socket]{fileno}{}
 Return the socket's file descriptor (a small integer).  This is useful
 with \function{select.select()}.
-
-Under Windows the small integer returned by this method cannot be used where
-a file descriptor can be used (such as \function{os.fdopen()}).  \UNIX{} does
-not have this limitation.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{getpeername}{}
@@ -627,10 +621,6 @@ method should only be used when the socket is in blocking mode; in
 timeout or non-blocking mode file operations that cannot be completed
 immediately will fail.
 
-Note that the \method{connect()} operation is subject to the timeout
-setting, and in general it is recommended to call
-\method{settimeout()} before calling \method{connect()}.
-
 \begin{methoddesc}[socket]{setsockopt}{level, optname, value}
 Set the value of the given socket option (see the \UNIX{} manual page
 \manpage{setsockopt}{2}).  The needed symbolic constants are defined in
@@ -644,8 +634,8 @@ structures as strings).
 
 \begin{methoddesc}[socket]{shutdown}{how}
 Shut down one or both halves of the connection.  If \var{how} is
-\constant{SHUT_RD}, further receives are disallowed.  If \var{how} is \constant{SHUT_WR},
-further sends are disallowed.  If \var{how} is \constant{SHUT_RDWR}, further sends
+\code{0}, further receives are disallowed.  If \var{how} is \code{1},
+further sends are disallowed.  If \var{how} is \code{2}, further sends
 and receives are disallowed.
 \end{methoddesc}
 

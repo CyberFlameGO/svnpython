@@ -1058,8 +1058,6 @@ PyNumber_Float(PyObject *o)
 int
 PySequence_Check(PyObject *s)
 {
-	if (PyInstance_Check(s))
-		return PyObject_HasAttrString(s, "__getitem__");
 	return s != NULL && s->ob_type->tp_as_sequence &&
 		s->ob_type->tp_as_sequence->sq_item != NULL;
 }
@@ -1254,7 +1252,7 @@ PySequence_SetItem(PyObject *s, int i, PyObject *o)
 		return m->sq_ass_item(s, i, o);
 	}
 
-	type_error("object does not support item assignment");
+	type_error("object doesn't support item assignment");
 	return -1;
 }
 
@@ -1382,7 +1380,7 @@ PySequence_Tuple(PyObject *v)
 		return NULL;
 
 	/* Guess result size and allocate space. */
-	n = PyObject_Size(v);
+	n = PySequence_Size(v);
 	if (n < 0) {
 		PyErr_Clear();
 		n = 10;  /* arbitrary */
@@ -1429,30 +1427,79 @@ Fail:
 PyObject *
 PySequence_List(PyObject *v)
 {
+	PyObject *it;      /* iter(v) */
 	PyObject *result;  /* result list */
-	PyObject *rv;      /* return value from PyList_Extend */
+	int n;		   /* guess for result list size */
+	int i;
 
 	if (v == NULL)
 		return null_error();
 
-	result = PyList_New(0);
-	if (result == NULL)
+	/* Special-case list(a_list), for speed. */
+	if (PyList_Check(v))
+		return PyList_GetSlice(v, 0, PyList_GET_SIZE(v));
+
+	/* Get iterator.  There may be some low-level efficiency to be gained
+	 * by caching the tp_iternext slot instead of using PyIter_Next()
+	 * later, but premature optimization is the root etc.
+	 */
+	it = PyObject_GetIter(v);
+	if (it == NULL)
 		return NULL;
 
-	rv = _PyList_Extend((PyListObject *)result, v);
-	if (rv == NULL) {
-		Py_DECREF(result);
+	/* Guess a result list size. */
+	n = -1;	 /* unknown */
+	if (PySequence_Check(v) &&
+	    v->ob_type->tp_as_sequence->sq_length) {
+		n = PySequence_Size(v);
+		if (n < 0)
+			PyErr_Clear();
+	}
+	if (n < 0)
+		n = 8;	/* arbitrary */
+	result = PyList_New(n);
+	if (result == NULL) {
+		Py_DECREF(it);
 		return NULL;
 	}
-	Py_DECREF(rv);
+
+	/* Run iterator to exhaustion. */
+	for (i = 0; ; i++) {
+		PyObject *item = PyIter_Next(it);
+		if (item == NULL) {
+			if (PyErr_Occurred()) {
+				Py_DECREF(result);
+				result = NULL;
+			}
+			break;
+		}
+		if (i < n)
+			PyList_SET_ITEM(result, i, item); /* steals ref */
+		else {
+			int status = PyList_Append(result, item);
+			Py_DECREF(item);  /* append creates a new ref */
+			if (status < 0) {
+				Py_DECREF(result);
+				result = NULL;
+				break;
+			}
+		}
+	}
+
+	/* Cut back result list if initial guess was too large. */
+	if (i < n && result != NULL) {
+		if (PyList_SetSlice(result, i, n, (PyObject *)NULL) != 0) {
+			Py_DECREF(result);
+			result = NULL;
+		}
+	}
+	Py_DECREF(it);
 	return result;
 }
 
 PyObject *
 PySequence_Fast(PyObject *v, const char *m)
 {
-	PyObject *it;
-
 	if (v == NULL)
 		return null_error();
 
@@ -1461,15 +1508,9 @@ PySequence_Fast(PyObject *v, const char *m)
 		return v;
 	}
 
- 	it = PyObject_GetIter(v);
-	if (it == NULL) {
-		if (PyErr_ExceptionMatches(PyExc_TypeError))
-			return type_error(m);
-		return NULL;
-	}
-
-	v = PySequence_Tuple(it);
-	Py_DECREF(it);
+	v = PySequence_Tuple(v);
+	if (v == NULL && PyErr_ExceptionMatches(PyExc_TypeError))
+		return type_error(m);
 
 	return v;
 }
@@ -1602,13 +1643,8 @@ PySequence_Index(PyObject *s, PyObject *o)
 int
 PyMapping_Check(PyObject *o)
 {
-	if (PyInstance_Check(o))
-		return PyObject_HasAttrString(o, "__getitem__");
-
-	return  o && o->ob_type->tp_as_mapping &&
-		o->ob_type->tp_as_mapping->mp_subscript &&
-		!(o->ob_type->tp_as_sequence && 
-		  o->ob_type->tp_as_sequence->sq_slice);
+	return o && o->ob_type->tp_as_mapping &&
+		o->ob_type->tp_as_mapping->mp_subscript;
 }
 
 int
@@ -1999,8 +2035,8 @@ check_class(PyObject *cls, const char *error)
 	return -1;
 }
 
-static int
-recursive_isinstance(PyObject *inst, PyObject *cls, int recursion_depth)
+int
+PyObject_IsInstance(PyObject *inst, PyObject *cls)
 {
 	PyObject *icls;
 	static PyObject *__class__ = NULL;
@@ -2035,20 +2071,14 @@ recursive_isinstance(PyObject *inst, PyObject *cls, int recursion_depth)
 		}
 	}
 	else if (PyTuple_Check(cls)) {
+		/* Not a general sequence -- that opens up the road to
+		   recursion and stack overflow. */
 		int i, n;
-
-                if (!recursion_depth) {
-                    PyErr_SetString(PyExc_RuntimeError,
-                                    "nest level of tuple too deep");
-                    return -1;
-                }
 
 		n = PyTuple_GET_SIZE(cls);
 		for (i = 0; i < n; i++) {
-			retval = recursive_isinstance(
-                                    inst,
-                                    PyTuple_GET_ITEM(cls, i),
-                                    recursion_depth-1);
+			retval = PyObject_IsInstance(
+				inst, PyTuple_GET_ITEM(cls, i));
 			if (retval != 0)
 				break;
 		}
@@ -2073,13 +2103,7 @@ recursive_isinstance(PyObject *inst, PyObject *cls, int recursion_depth)
 }
 
 int
-PyObject_IsInstance(PyObject *inst, PyObject *cls)
-{
-    return recursive_isinstance(inst, cls, Py_GetRecursionLimit());
-}
-
-static  int
-recursive_issubclass(PyObject *derived, PyObject *cls, int recursion_depth)
+PyObject_IsSubclass(PyObject *derived, PyObject *cls)
 {
 	int retval;
 
@@ -2091,17 +2115,9 @@ recursive_issubclass(PyObject *derived, PyObject *cls, int recursion_depth)
 		if (PyTuple_Check(cls)) {
 			int i;
 			int n = PyTuple_GET_SIZE(cls);
-
-                        if (!recursion_depth) {
-                            PyErr_SetString(PyExc_RuntimeError,
-                                            "nest level of tuple too deep");
-                            return -1;
-                        }
 			for (i = 0; i < n; ++i) {
-				retval = recursive_issubclass(
-                                            derived,
-                                            PyTuple_GET_ITEM(cls, i),
-                                            recursion_depth-1);
+				retval = PyObject_IsSubclass(
+					derived, PyTuple_GET_ITEM(cls, i));
 				if (retval != 0) {
 					/* either found it, or got an error */
 					return retval;
@@ -2126,13 +2142,6 @@ recursive_issubclass(PyObject *derived, PyObject *cls, int recursion_depth)
 
 	return retval;
 }
-
-int
-PyObject_IsSubclass(PyObject *derived, PyObject *cls)
-{
-    return recursive_issubclass(derived, cls, Py_GetRecursionLimit());
-}
-
 
 PyObject *
 PyObject_GetIter(PyObject *o)

@@ -9,10 +9,6 @@
 #include "token.h"
 #include "grammar.h"
 
-#ifdef RISCOS
-#include <unixlib.h>
-#endif
-
 extern int Py_DebugFlag;
 
 grammar *
@@ -104,7 +100,7 @@ addlabel(labellist *ll, int type, char *str)
 	lb->lb_type = type;
 	lb->lb_str = strdup(str);
 	if (Py_DebugFlag)
-		printf("Label @ %8p, %d: %s\n", ll, ll->ll_nlabels,
+		printf("Label @ %08x, %d: %s\n", (unsigned)ll, ll->ll_nlabels,
 		       PyGrammar_LabelRepr(lb));
 	return lb - ll->ll_label;
 }

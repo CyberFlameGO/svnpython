@@ -1,6 +1,7 @@
 # Check every path through every method of UserDict
 
 import test.test_support, unittest
+
 import UserDict
 
 class TestMappingProtocol(unittest.TestCase):
@@ -67,7 +68,10 @@ class TestMappingProtocol(unittest.TestCase):
             self.assert_(hasattr(iter, 'next'))
             self.assert_(hasattr(iter, '__iter__'))
             x = list(iter)
-            self.assert_(set(x)==set(lst)==set(ref))
+            x.sort()
+            lst.sort()
+            ref.sort()
+            self.assert_(x==lst==ref)
         check_iterandlist(d.iterkeys(), d.keys(), self.reference.keys())
         check_iterandlist(iter(d), d.keys(), self.reference.keys())
         check_iterandlist(d.itervalues(), d.values(), self.reference.values())
@@ -93,12 +97,8 @@ class TestMappingProtocol(unittest.TestCase):
         #update
         p.update(self.reference)
         self.assertEqual(dict(p), self.reference)
-        items = p.items()
-        p = self._empty_mapping()
-        p.update(items)
-        self.assertEqual(dict(p), self.reference)
         d = self._full_mapping(self.reference)
-        #setdefault
+        #setdefaullt
         key, value = d.iteritems().next()
         knownkey, knownvalue = self.other.iteritems().next()
         self.assertEqual(d.setdefault(key, knownvalue), value)
@@ -243,8 +243,10 @@ class UserDictTest(TestMappingProtocol):
         ikeys = []
         for k in u2:
             ikeys.append(k)
+        ikeys.sort()
         keys = u2.keys()
-        self.assertEqual(set(ikeys), set(keys))
+        keys.sort()
+        self.assertEqual(ikeys, keys)
 
         # Test setdefault
         t = UserDict.UserDict()
@@ -393,11 +395,11 @@ class UserDictMixinTest(TestMappingProtocol):
         self.assertEqual(s, t)
 
 def test_main():
-    test.test_support.run_unittest(
-        TestMappingProtocol,
-        UserDictTest,
-        UserDictMixinTest
-    )
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestMappingProtocol))
+    suite.addTest(unittest.makeSuite(UserDictTest))
+    suite.addTest(unittest.makeSuite(UserDictMixinTest))
+    test.test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

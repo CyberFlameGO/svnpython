@@ -101,7 +101,7 @@ dictionary, and also supports the standard dictionary methods
 \method{has_key()} and \method{keys()}.  The built-in \function{len()}
 is also supported.  Form fields containing empty strings are ignored
 and do not appear in the dictionary; to keep such values, provide
-a true value for the optional \var{keep_blank_values} keyword
+a true value for the the optional \var{keep_blank_values} keyword
 parameter when creating the \class{FieldStorage} instance.
 
 For instance, the following code (which assumes that the 
@@ -225,7 +225,7 @@ associated with this name.  So you write a script containing for
 example this code:
 
 \begin{verbatim}
-user = form.getvalue("user").upper()
+user = form.getvalue("user").toupper()
 \end{verbatim}
 
 The problem with the code is that you should never expect that a
@@ -272,7 +272,7 @@ Using these methods you can write nice compact code:
 \begin{verbatim}
 import cgi
 form = cgi.FieldStorage()
-user = form.getfirst("user", "").upper()    # This way it's safe.
+user = form.getfirst("user", "").toupper()    # This way it's safe.
 for item in form.getlist("item"):
     do_something(item)
 \end{verbatim}
@@ -331,10 +331,6 @@ The optional argument \var{strict_parsing} is a flag indicating what
 to do with parsing errors.  If false (the default), errors
 are silently ignored.  If true, errors raise a ValueError
 exception.
-
-Use the \function{\refmodule{urllib}.urlencode()} function to convert
-such dictionaries into query strings.
-
 \end{funcdesc}
 
 \begin{funcdesc}{parse_qsl}{qs\optional{, keep_blank_values\optional{,
@@ -356,7 +352,7 @@ to do with parsing errors.  If false (the default), errors
 are silently ignored.  If true, errors raise a ValueError
 exception.
 
-Use the \function{\refmodule{urllib}.urlencode()} function to convert
+Use the \function{\refmodule{cgi}.urlencode()} function to convert
 such lists of pairs into query strings.
 \end{funcdesc}
 
@@ -598,9 +594,7 @@ Usually, this means using absolute path names --- \envvar{PATH} is
 usually not set to a very useful value in a CGI script.
 
 \item When reading or writing external files, make sure they can be read
-or written by the userid under which your CGI script will be running:
-this is typically the userid under which the web server is running, or some
-explicitly specified userid for a web server's \samp{suexec} feature.
+or written by every user on the system.
 
 \item Don't try to give a CGI script a set-uid mode.  This doesn't work on
 most systems, and is a security liability as well.

@@ -99,6 +99,20 @@ class MyScanner(Scanner):
 			'SetControlColor',
 			]
 
+	def makegreylist(self):
+		return [
+			('#if TARGET_API_MAC_OSX', [
+				'CreateRoundButtonControl',
+				'CreateDisclosureButtonControl',
+				'CreateRelevanceBarControl',
+				'DisableControl',
+				'EnableControl',
+				'IsControlEnabled',
+				'CreateEditUnicodeTextControl',
+				'CopyDataBrowserEditText',
+			]),
+			]
+			
 	def makeblacklisttypes(self):
 		return [
 			'ProcPtr',
@@ -125,7 +139,6 @@ class MyScanner(Scanner):
 ##			'DataBrowserTableViewColumnDesc',
 ##			'DataBrowserListViewColumnDesc',
 			'CFDataRef',
-			'DataBrowserListViewHeaderDesc', # difficult struct
 			]
 
 	def makerepairinstructions(self):

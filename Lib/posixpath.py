@@ -45,7 +45,7 @@ def normcase(s):
 
 def isabs(s):
     """Test whether a path is absolute"""
-    return s.startswith('/')
+    return s[:1] == '/'
 
 
 # Join pathnames.
@@ -56,12 +56,12 @@ def join(a, *p):
     """Join two or more pathname components, inserting '/' as needed"""
     path = a
     for b in p:
-        if b.startswith('/'):
+        if b[:1] == '/':
             path = b
-        elif path == '' or path.endswith('/'):
-            path +=  b
+        elif path == '' or path[-1:] == '/':
+            path = path + b
         else:
-            path += '/' + b
+            path = path + '/' + b
     return path
 
 
@@ -76,7 +76,8 @@ def split(p):
     i = p.rfind('/') + 1
     head, tail = p[:i], p[i:]
     if head and head != '/'*len(head):
-        head = head.rstrip('/')
+        while head[-1] == '/':
+            head = head[:-1]
     return head, tail
 
 
@@ -123,13 +124,15 @@ def dirname(p):
 def commonprefix(m):
     "Given a list of pathnames, returns the longest common leading component"
     if not m: return ''
-    s1 = min(m)
-    s2 = max(m)
-    n = min(len(s1), len(s2))
-    for i in xrange(n):
-        if s1[i] != s2[i]:
-            return s1[:i]
-    return s1[:n]
+    prefix = m[0]
+    for item in m:
+        for i in range(len(prefix)):
+            if prefix[:i+1] != item[:i+1]:
+                prefix = prefix[:i]
+                if i == 0: return ''
+                break
+    return prefix
+
 
 # Get size, mtime, atime of files.
 
@@ -298,15 +301,15 @@ def walk(top, func, arg):
 def expanduser(path):
     """Expand ~ and ~user constructions.  If user or $HOME is unknown,
     do nothing."""
-    if not path.startswith('~'):
+    if path[:1] != '~':
         return path
-    i = path.find('/', 1)
-    if i < 0:
-        i = len(path)
+    i, n = 1, len(path)
+    while i < n and path[i] != '/':
+        i = i + 1
     if i == 1:
-        if 'HOME' not in os.environ:
+        if not 'HOME' in os.environ:
             import pwd
-            userhome = pwd.getpwuid(os.getuid()).pw_dir
+            userhome = pwd.getpwuid(os.getuid())[5]
         else:
             userhome = os.environ['HOME']
     else:
@@ -315,9 +318,8 @@ def expanduser(path):
             pwent = pwd.getpwnam(path[1:i])
         except KeyError:
             return path
-        userhome = pwent.pw_dir
-    if userhome.endswith('/'):
-        i += 1
+        userhome = pwent[5]
+    if userhome[-1:] == '/': i = i + 1
     return userhome + path[i:]
 
 
@@ -343,13 +345,13 @@ def expandvars(path):
             break
         i, j = m.span(0)
         name = m.group(1)
-        if name.startswith('{') and name.endswith('}'):
+        if name[:1] == '{' and name[-1:] == '}':
             name = name[1:-1]
         if name in os.environ:
             tail = path[j:]
             path = path[:i] + os.environ[name]
             i = len(path)
-            path += tail
+            path = path + tail
         else:
             i = j
     return path

@@ -13,9 +13,9 @@ __all__ = ["HTMLParser"]
 class HTMLParser(SGMLParser):
     """This is the basic HTML parser class.
 
-    It supports all entity names required by the XHTML 1.0 Recommendation.
-    It also defines handlers for all HTML 2.0 and many HTML 3.0 and 3.2
-    elements.
+    It supports all entity names required by the HTML 2.0 specification
+    RFC 1866.  It also defines handlers for all HTML 2.0 and many HTML 3.0
+    and 3.2 elements.
 
     """
 
@@ -30,9 +30,6 @@ class HTMLParser(SGMLParser):
         """
         SGMLParser.__init__(self, verbose)
         self.formatter = formatter
-
-    def reset(self):
-        SGMLParser.reset(self)
         self.savedata = None
         self.isindex = 0
         self.title = None

@@ -49,7 +49,7 @@
 # The formatted output is located in subdirectories.  For PDF and
 # PostScript, look in the paper-$(PAPER)/ directory.  For HTML, look in
 # the html/ directory.  If you want to fix the GNU info process, look
-# in the info/ directory; please send patches to docs@python.org.
+# in the info/ directory; please send patches to python-docs@python.org.
 
 # This Makefile only includes information on how to perform builds; for
 # dependency information, see Makefile.deps.
@@ -64,52 +64,26 @@ PAPER=letter
 INFODIR=	info
 TOOLSDIR=	tools
 
-# This is the *documentation* release, and is used to construct the
-# file names of the downloadable tarballs.  It is initialized by the
-# getversioninfo script to ensure that the right version number is
-# used; the script will also write commontex/patchlevel.tex if that
-# doesn't exist or needs to be changed.  Documents which depend on the
-# version number should use \input{patchlevel} and include
-# commontex/patchlevel.tex in their dependencies.
-RELEASE=$(shell $(PYTHON) tools/getversioninfo)
+# This is the *documentation* release, and is used to construct the file
+# names of the downloadable tarballs.
+RELEASE=2.3b1
 
 PYTHON=	   python
 DVIPS=	   dvips -N0 -t $(PAPER)
 
-# This is ugly!  The issue here is that there are two different levels
-# in the directory tree at which we execute mkhowto, so we can't
-# define it just once using a relative path (at least not with the
-# current implementation and Makefile structure).  We use the GNUish
-# $(shell) function here to work around that restriction by
-# identifying mkhowto and the commontex/ directory using absolute paths.
-#
-PWD=$(shell pwd)
-
-# (The trailing colon in the value is needed; TeX places it's default
-# set of paths at the location of the empty string in the path list.)
-TEXINPUTS=$(PWD)/commontex:
-
-# The mkhowto script can be run from the checkout using the first
-# version of this variable definition, or from a preferred version
-# using the second version.  The standard documentation is typically
-# built using the second flavor, where the preferred version is from
-# the Python CVS trunk.
-MKHOWTO=   TEXINPUTS=$(TEXINPUTS) $(PYTHON) $(PWD)/tools/mkhowto
-#MKHOWTO=   TEXINPUTS=$(TEXINPUTS) mkhowto
-
-MKDVI=	   $(MKHOWTO) --paper=$(PAPER) --dvi
-MKHTML=	   $(MKHOWTO) --html --about html/stdabout.dat \
+MKDVI=	   $(PYTHON) ../tools/mkhowto --paper=$(PAPER) --dvi
+MKHTML=	   $(PYTHON) tools/mkhowto --html --about html/stdabout.dat \
 		--iconserver ../icons --favicon ../icons/pyfav.gif \
 		--address $(PYTHONDOCS) --up-link ../index.html \
 		--up-title "Python Documentation Index" \
 		--global-module-index "../modindex.html" --dvips-safe
-MKISILOHTML=$(MKHOWTO) --html --about html/stdabout.dat \
+MKISILOHTML=$(PYTHON) tools/mkhowto --html --about html/stdabout.dat \
 		--iconserver ../icons \
 		--l2h-init perl/isilo.perl --numeric --split 1 \
 		--dvips-safe
 MKISILO=   iSilo386 -U -y -rCR -d0
-MKPDF=	   $(MKHOWTO) --paper=$(PAPER) --pdf
-MKPS=	   $(MKHOWTO) --paper=$(PAPER) --ps
+MKPDF=	   $(PYTHON) ../tools/mkhowto --paper=$(PAPER) --pdf
+MKPS=	   $(PYTHON) ../tools/mkhowto --paper=$(PAPER) --ps
 
 BUILDINDEX=$(TOOLSDIR)/buildindex.py
 
@@ -121,7 +95,7 @@ EMACS=     emacs
 
 # The end of this should reflect the major/minor version numbers of
 # the release:
-WHATSNEW=whatsnew24
+WHATSNEW=whatsnew23
 
 # what's what
 MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \
@@ -319,7 +293,7 @@ paper-$(PAPER)/$(WHATSNEW).pdf: whatsnew/$(WHATSNEW).tex
 # conversions, as described above.  See also the README file.
 
 info:
-	cd $(INFODIR) && $(MAKE) EMACS=$(EMACS) WHATSNEW=$(WHATSNEW)
+	cd $(INFODIR) && $(MAKE) EMACS=$(EMACS)
 
 # Targets to convert the manuals to HTML using Nikos Drakos' LaTeX to
 # HTML converter.  For more info on this program, see
@@ -340,7 +314,7 @@ info:
 $(ALLCSSFILES): html/style.css
 	cp $< $@
 
-$(INDEXFILES): $(COMMONPERL) html/stdabout.dat tools/node2label.pl
+$(INDEXFILES): $(COMMONPERL) html/about.dat tools/node2label.pl
 
 html/acks.html: ACKS $(TOOLSDIR)/support.py $(TOOLSDIR)/mkackshtml
 	$(PYTHON) $(TOOLSDIR)/mkackshtml --address $(PYTHONDOCS) \
@@ -353,7 +327,7 @@ html/acks.html: ACKS $(TOOLSDIR)/support.py $(TOOLSDIR)/mkackshtml
 # are updated and boilerplate.tex uses \today as the date.  The index
 # files are not used to actually generate content.
 
-BOILERPLATE=commontex/boilerplate.tex
+BOILERPLATE=texinputs/boilerplate.tex
 html/index.html: $(INDEXFILES)
 html/index.html: html/index.html.in $(BOILERPLATE) tools/rewrite.py
 	$(PYTHON) tools/rewrite.py $(BOILERPLATE) \
@@ -361,13 +335,11 @@ html/index.html: html/index.html.in $(BOILERPLATE) tools/rewrite.py
 		<$< >$@
 
 html/modindex.html: $(TOOLSDIR)/support.py $(TOOLSDIR)/mkmodindex
-html/modindex.html: html/dist/dist.html
 html/modindex.html: html/lib/lib.html html/mac/mac.html
 	cd html && \
-	 $(PYTHON) ../$(TOOLSDIR)/mkmodindex --columns 3 \
+	 $(PYTHON) ../$(TOOLSDIR)/mkmodindex --columns 4 \
 		--output modindex.html --address $(PYTHONDOCS) \
 		--favicon icons/pyfav.gif \
-		dist/modindex.html \
 		lib/modindex.html mac/modindex.html
 
 html:	$(ALLHTMLFILES) $(HTMLCSSFILES)
@@ -426,7 +398,7 @@ ISILOINDEXFILES=isilo/api/api.html \
 	isilo/dist/dist.html \
 	isilo/whatsnew/$(WHATSNEW).html
 
-$(ISILOINDEXFILES): $(COMMONPERL) html/stdabout.dat perl/isilo.perl
+$(ISILOINDEXFILES): $(COMMONPERL) html/about.dat perl/isilo.perl
 
 isilo:	isilo/python-api.pdb \
 	isilo/python-doc.pdb \
@@ -556,11 +528,11 @@ paper-$(PAPER)/README: $(PSFILES) $(TOOLSDIR)/getpagecounts
 
 info-$(RELEASE).tgz: info
 	cd $(INFODIR) && tar cf - README python.dir python-*.info* \
-		| gzip -9 >../$@
+		| gzip -9 >$@
 
 info-$(RELEASE).tar.bz2: info
 	cd $(INFODIR) && tar cf - README python.dir python-*.info* \
-		| bzip2 -9 >../$@
+		| bzip2 -9 >$@
 
 latex-$(RELEASE).tgz:
 	$(PYTHON) $(TOOLSDIR)/mksourcepkg --gzip $(RELEASE)
@@ -614,7 +586,7 @@ postscript-$(PAPER)-$(RELEASE).zip: $(PSFILES) paper-$(PAPER)/README
 	zip -q -r -9 $@ Python-Docs-$(RELEASE)
 	rm -r Python-Docs-$(RELEASE)
 
-HTMLPKGFILES=*.html */*.css */*.html */*.gif */*.png */*.txt
+HTMLPKGFILES=*.html */*.css */*.html */*.gif */*.txt
 
 html-$(RELEASE).tar:	$(ALLHTMLFILES) $(HTMLCSSFILES)
 	mkdir Python-Docs-$(RELEASE)
@@ -679,23 +651,8 @@ distps:		tarps bzipps zipps
 distpdf:	tarpdf bzippdf zippdf
 distlatex:	tarlatex bziplatex ziplatex
 
-# We use the "pkglist" target at the end of these to ensure the
-# package list is updated after building either of these; this seems a
-# reasonable compromise between only building it for distfiles or
-# having to build it manually.  Doing it here allows the packages for
-# distribution to be built using either of
-#     make distfiles && make PAPER=a4 paperdist
-#     make paperdist && make PAPER=a4 distfiles
-# The small amount of additional work is a small price to pay for not
-# having to remember which order to do it in. ;)
-paperdist:	distpdf distps pkglist
-edist:		disthtml distinfo zipisilo pkglist
-
-# The pkglist.html file is used as part of the download.html page on
-# python.org; it is not used as intermediate input here or as part of
-# the packages created.
-pkglist:
-	$(TOOLSDIR)/mkpkglist >pkglist.html
+paperdist:	distpdf distps
+edist:		disthtml zipisilo
 
 distfiles:	paperdist edist
 	$(TOOLSDIR)/mksourcepkg --all $(RELEASE)

@@ -2,7 +2,7 @@
 
 #include "Python.h"
 #include "osdefs.h"
-#include "compile.h" /* For CO_FUTURE_DIVISION */
+#include "code.h" /* For CO_FUTURE_DIVISION */
 
 #ifdef __VMS
 #include <unixlib.h>
@@ -117,19 +117,6 @@ usage(int exitcode, char* program)
 	/*NOTREACHED*/
 }
 
-static void RunStartupFile(PyCompilerFlags *cf)
-{
-	char *startup = Py_GETENV("PYTHONSTARTUP");
-	if (startup != NULL && startup[0] != '\0') {
-		FILE *fp = fopen(startup, "r");
-		if (fp != NULL) {
-			(void) PyRun_SimpleFileExFlags(fp, startup, 0, cf);
-			PyErr_Clear();
-			fclose(fp);
-		}
-	}
-}
-
 
 /* Main program */
 
@@ -167,7 +154,7 @@ Py_Main(int argc, char **argv)
 		if (c == 'c') {
 			/* -c is the last option; following arguments
 			   that look like options are left for the
-			   command to interpret. */
+			   the command to interpret. */
 			command = malloc(strlen(_PyOS_optarg) + 2);
 			if (command == NULL)
 				Py_FatalError(
@@ -327,6 +314,7 @@ Py_Main(int argc, char **argv)
 		_setmode(fileno(stdin), O_BINARY);
 		_setmode(fileno(stdout), O_BINARY);
 #endif
+#ifndef MPW
 #ifdef HAVE_SETVBUF
 		setvbuf(stdin,  (char *)NULL, _IONBF, BUFSIZ);
 		setvbuf(stdout, (char *)NULL, _IONBF, BUFSIZ);
@@ -336,6 +324,12 @@ Py_Main(int argc, char **argv)
 		setbuf(stdout, (char *)NULL);
 		setbuf(stderr, (char *)NULL);
 #endif /* !HAVE_SETVBUF */
+#else /* MPW */
+		/* On MPW (3.2) unbuffered seems to hang */
+		setvbuf(stdin,  (char *)NULL, _IOLBF, BUFSIZ);
+		setvbuf(stdout, (char *)NULL, _IOLBF, BUFSIZ);
+		setvbuf(stderr, (char *)NULL, _IOLBF, BUFSIZ);
+#endif /* MPW */
 	}
 	else if (Py_InteractiveFlag) {
 #ifdef MS_WINDOWS
@@ -407,22 +401,21 @@ Py_Main(int argc, char **argv)
 	}
 	else {
 		if (filename == NULL && stdin_is_interactive) {
-			RunStartupFile(&cf);
+			char *startup = Py_GETENV("PYTHONSTARTUP");
+			if (startup != NULL && startup[0] != '\0') {
+				FILE *fp = fopen(startup, "r");
+				if (fp != NULL) {
+					(void) PyRun_SimpleFile(fp, startup);
+					PyErr_Clear();
+					fclose(fp);
+				}
+			}
 		}
 		/* XXX */
 		sts = PyRun_AnyFileExFlags(
 			fp,
 			filename == NULL ? "<stdin>" : filename,
 			filename != NULL, &cf) != 0;
-	}
-
-	/* Check this environment variable at the end, to give programs the
-	 * opportunity to set it from Python.
-	 */
-	if (!saw_inspect_flag &&
-	    (p = Py_GETENV("PYTHONINSPECT")) && *p != '\0')
-	{
-		inspect = 1;
 	}
 
 	if (inspect && stdin_is_interactive &&
@@ -452,9 +445,6 @@ Py_Main(int argc, char **argv)
 	return sts;
 }
 
-/* this is gonna seem *real weird*, but if you put some other code between
-   Py_Main() and Py_GetArgcArgv() you will need to adjust the test in the
-   while statement in Misc/gdbinit:ppystack */
 
 /* Make the *original* argc/argv available to other modules.
    This is rare, but it is needed by the secureware extension. */

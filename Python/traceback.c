@@ -3,13 +3,20 @@
 
 #include "Python.h"
 
-#include "compile.h"
+#include "code.h"
 #include "frameobject.h"
 #include "structmember.h"
 #include "osdefs.h"
-#include "traceback.h"
 
-#define OFF(x) offsetof(PyTracebackObject, x)
+typedef struct _tracebackobject {
+	PyObject_HEAD
+	struct _tracebackobject *tb_next;
+	PyFrameObject *tb_frame;
+	int tb_lasti;
+	int tb_lineno;
+} tracebackobject;
+
+#define OFF(x) offsetof(tracebackobject, x)
 
 static struct memberlist tb_memberlist[] = {
 	{"tb_next",	T_OBJECT,	OFF(tb_next)},
@@ -20,13 +27,13 @@ static struct memberlist tb_memberlist[] = {
 };
 
 static PyObject *
-tb_getattr(PyTracebackObject *tb, char *name)
+tb_getattr(tracebackobject *tb, char *name)
 {
 	return PyMember_Get((char *)tb, tb_memberlist, name);
 }
 
 static void
-tb_dealloc(PyTracebackObject *tb)
+tb_dealloc(tracebackobject *tb)
 {
 	PyObject_GC_UnTrack(tb);
 	Py_TRASHCAN_SAFE_BEGIN(tb)
@@ -37,7 +44,7 @@ tb_dealloc(PyTracebackObject *tb)
 }
 
 static int
-tb_traverse(PyTracebackObject *tb, visitproc visit, void *arg)
+tb_traverse(tracebackobject *tb, visitproc visit, void *arg)
 {
 	int err = 0;
 	if (tb->tb_next) {
@@ -51,7 +58,7 @@ tb_traverse(PyTracebackObject *tb, visitproc visit, void *arg)
 }
 
 static void
-tb_clear(PyTracebackObject *tb)
+tb_clear(tracebackobject *tb)
 {
 	Py_XDECREF(tb->tb_next);
 	Py_XDECREF(tb->tb_frame);
@@ -63,7 +70,7 @@ PyTypeObject PyTraceBack_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"traceback",
-	sizeof(PyTracebackObject),
+	sizeof(tracebackobject),
 	0,
 	(destructor)tb_dealloc, /*tp_dealloc*/
 	0,		/*tp_print*/
@@ -95,16 +102,16 @@ PyTypeObject PyTraceBack_Type = {
 	0,					/* tp_dict */
 };
 
-static PyTracebackObject *
-newtracebackobject(PyTracebackObject *next, PyFrameObject *frame)
+static tracebackobject *
+newtracebackobject(tracebackobject *next, PyFrameObject *frame)
 {
-	PyTracebackObject *tb;
+	tracebackobject *tb;
 	if ((next != NULL && !PyTraceBack_Check(next)) ||
 			frame == NULL || !PyFrame_Check(frame)) {
 		PyErr_BadInternalCall();
 		return NULL;
 	}
-	tb = PyObject_GC_New(PyTracebackObject, &PyTraceBack_Type);
+	tb = PyObject_GC_New(tracebackobject, &PyTraceBack_Type);
 	if (tb != NULL) {
 		Py_XINCREF(next);
 		tb->tb_next = next;
@@ -122,8 +129,8 @@ int
 PyTraceBack_Here(PyFrameObject *frame)
 {
 	PyThreadState *tstate = frame->f_tstate;
-	PyTracebackObject *oldtb = (PyTracebackObject *) tstate->curexc_traceback;
-	PyTracebackObject *tb = newtracebackobject(oldtb, frame);
+	tracebackobject *oldtb = (tracebackobject *) tstate->curexc_traceback;
+	tracebackobject *tb = newtracebackobject(oldtb, frame);
 	if (tb == NULL)
 		return -1;
 	tstate->curexc_traceback = (PyObject *)tb;
@@ -140,8 +147,13 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 	int i;
 	if (filename == NULL || name == NULL)
 		return -1;
+#ifdef MPW
+	/* This is needed by MPW's File and Line commands */
+#define FMT "  File \"%.500s\"; line %d # in %.500s\n"
+#else
 	/* This is needed by Emacs' compile command */
 #define FMT "  File \"%.500s\", line %d, in %.500s\n"
+#endif
 	xfp = fopen(filename, "r" PY_STDIOTEXTMODE);
 	if (xfp == NULL) {
 		/* Search tail of filename in sys.path before giving up */
@@ -215,11 +227,11 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 }
 
 static int
-tb_printinternal(PyTracebackObject *tb, PyObject *f, int limit)
+tb_printinternal(tracebackobject *tb, PyObject *f, int limit)
 {
 	int err = 0;
 	int depth = 0;
-	PyTracebackObject *tb1 = tb;
+	tracebackobject *tb1 = tb;
 	while (tb1 != NULL) {
 		depth++;
 		tb1 = tb1->tb_next;
@@ -260,6 +272,6 @@ PyTraceBack_Print(PyObject *v, PyObject *f)
 	}
 	err = PyFile_WriteString("Traceback (most recent call last):\n", f);
 	if (!err)
-		err = tb_printinternal((PyTracebackObject *)v, f, limit);
+		err = tb_printinternal((tracebackobject *)v, f, limit);
 	return err;
 }

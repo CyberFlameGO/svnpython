@@ -1,5 +1,5 @@
 
-import netrc, os, unittest, sys
+import netrc, os, unittest
 from test import test_support
 
 TEST_NETRC = """
@@ -22,10 +22,7 @@ temp_filename = test_support.TESTFN
 class NetrcTestCase(unittest.TestCase):
 
     def setUp (self):
-        mode = 'w'
-        if sys.platform not in ['cygwin']:
-            mode += 't'
-        fp = open(temp_filename, mode)
+        fp = open(temp_filename, 'wt')
         fp.write(TEST_NETRC)
         fp.close()
         self.netrc = netrc.netrc(temp_filename)

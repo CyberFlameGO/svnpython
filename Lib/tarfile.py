@@ -353,12 +353,11 @@ class _Stream:
         if self.mode == "w" and self.buf:
             if self.type != "tar":
                 self.buf += self.cmp.flush()
-            self.__write("")            # Write remaining blocks to output
             self.fileobj.write(self.buf)
             self.buf = ""
             if self.type == "gz":
                 self.fileobj.write(struct.pack("<l", self.crc))
-                self.fileobj.write(struct.pack("<L", self.pos & 0xffffFFFFL))
+                self.fileobj.write(struct.pack("<L", self.pos))
 
         if not self._extfileobj:
             self.fileobj.close()

@@ -273,19 +273,22 @@ class GeneralModuleTests(unittest.TestCase):
     def testGetServByName(self):
         # Testing getservbyname()
         # try a few protocols - not everyone has telnet enabled
+        found = 0
         for proto in ("telnet", "ssh", "www", "ftp"):
             try:
                 socket.getservbyname(proto, 'tcp')
+                found = 1
                 break
             except socket.error:
                 pass
             try:
                 socket.getservbyname(proto, 'udp')
+                found = 1
                 break
             except socket.error:
                 pass
-        else:
-            raise socket.error
+            if not found:
+                raise socket.error
 
     def testDefaultTimeout(self):
         # Testing default timeout
@@ -314,73 +317,6 @@ class GeneralModuleTests(unittest.TestCase):
 
         # Check that setting it to an invalid type raises TypeError
         self.assertRaises(TypeError, socket.setdefaulttimeout, "spam")
-
-    def testIPv4toString(self):
-        if not hasattr(socket, 'inet_pton'):
-            return # No inet_pton() on this platform
-        from socket import inet_aton as f, inet_pton, AF_INET
-        g = lambda a: inet_pton(AF_INET, a)
-
-        self.assertEquals('\x00\x00\x00\x00', f('0.0.0.0'))
-        self.assertEquals('\xff\x00\xff\x00', f('255.0.255.0'))
-        self.assertEquals('\xaa\xaa\xaa\xaa', f('170.170.170.170'))
-        self.assertEquals('\x01\x02\x03\x04', f('1.2.3.4'))
-
-        self.assertEquals('\x00\x00\x00\x00', g('0.0.0.0'))
-        self.assertEquals('\xff\x00\xff\x00', g('255.0.255.0'))
-        self.assertEquals('\xaa\xaa\xaa\xaa', g('170.170.170.170'))
-
-    def testIPv6toString(self):
-        if not hasattr(socket, 'inet_pton'):
-            return # No inet_pton() on this platform
-        try:
-            from socket import inet_pton, AF_INET6, has_ipv6
-            if not has_ipv6:
-                return
-        except ImportError:
-            return
-        f = lambda a: inet_pton(AF_INET6, a)
-
-        self.assertEquals('\x00' * 16, f('::'))
-        self.assertEquals('\x00' * 16, f('0::0'))
-        self.assertEquals('\x00\x01' + '\x00' * 14, f('1::'))
-        self.assertEquals(
-            '\x45\xef\x76\xcb\x00\x1a\x56\xef\xaf\xeb\x0b\xac\x19\x24\xae\xae',
-            f('45ef:76cb:1a:56ef:afeb:bac:1924:aeae')
-        )
-
-    def testStringToIPv4(self):
-        if not hasattr(socket, 'inet_ntop'):
-            return # No inet_ntop() on this platform
-        from socket import inet_ntoa as f, inet_ntop, AF_INET
-        g = lambda a: inet_ntop(AF_INET, a)
-
-        self.assertEquals('1.0.1.0', f('\x01\x00\x01\x00'))
-        self.assertEquals('170.85.170.85', f('\xaa\x55\xaa\x55'))
-        self.assertEquals('255.255.255.255', f('\xff\xff\xff\xff'))
-        self.assertEquals('1.2.3.4', f('\x01\x02\x03\x04'))
-
-        self.assertEquals('1.0.1.0', g('\x01\x00\x01\x00'))
-        self.assertEquals('170.85.170.85', g('\xaa\x55\xaa\x55'))
-        self.assertEquals('255.255.255.255', g('\xff\xff\xff\xff'))
-
-    def testStringToIPv6(self):
-        if not hasattr(socket, 'inet_ntop'):
-            return # No inet_ntop() on this platform
-        try:
-            from socket import inet_ntop, AF_INET6, has_ipv6
-            if not has_ipv6:
-                return
-        except ImportError:
-            return
-        f = lambda a: inet_ntop(AF_INET6, a)
-
-        self.assertEquals('::', f('\x00' * 16))
-        self.assertEquals('::1', f('\x00' * 15 + '\x01'))
-        self.assertEquals(
-            'aef:b01:506:1001:ffff:9997:55:170',
-            f('\x0a\xef\x0b\x01\x05\x06\x10\x01\xff\xff\x99\x97\x00\x55\x01\x70')
-        )
 
     # XXX The following don't test module-level functionality...
 
@@ -590,7 +526,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
 
     def tearDown(self):
         self.serv_file.close()
-        self.assert_(self.serv_file.closed)
         self.serv_file = None
         SocketConnectedTest.tearDown(self)
 
@@ -600,7 +535,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
 
     def clientTearDown(self):
         self.cli_file.close()
-        self.assert_(self.cli_file.closed)
         self.cli_file = None
         SocketConnectedTest.clientTearDown(self)
 
@@ -647,12 +581,6 @@ class FileObjectClassTestCase(SocketConnectedTest):
         self.cli_file.write(MSG)
         self.cli_file.flush()
 
-    def testClosedAttr(self):
-        self.assert_(not self.serv_file.closed)
-
-    def _testClosedAttr(self):
-        self.assert_(not self.cli_file.closed)
-
 class UnbufferedFileObjectClassTestCase(FileObjectClassTestCase):
 
     """Repeat the tests from FileObjectClassTestCase with bufsize==0.
@@ -687,74 +615,18 @@ class SmallBufferedFileObjectClassTestCase(FileObjectClassTestCase):
 
     bufsize = 2 # Exercise the buffering code
 
-class TCPTimeoutTest(SocketTCPTest):
-
-    def testTCPTimeout(self):
-        def raise_timeout(*args, **kwargs):
-            self.serv.settimeout(1.0)
-            self.serv.accept()
-        self.failUnlessRaises(socket.timeout, raise_timeout,
-                              "Error generating a timeout exception (TCP)")
-
-    def testTimeoutZero(self):
-        ok = False
-        try:
-            self.serv.settimeout(0.0)
-            foo = self.serv.accept()
-        except socket.timeout:
-            self.fail("caught timeout instead of error (TCP)")
-        except socket.error:
-            ok = True
-        except:
-            self.fail("caught unexpected exception (TCP)")
-        if not ok:
-            self.fail("accept() returned success when we did not expect it")
-
-class UDPTimeoutTest(SocketTCPTest):
-
-    def testUDPTimeout(self):
-        def raise_timeout(*args, **kwargs):
-            self.serv.settimeout(1.0)
-            self.serv.recv(1024)
-        self.failUnlessRaises(socket.timeout, raise_timeout,
-                              "Error generating a timeout exception (UDP)")
-
-    def testTimeoutZero(self):
-        ok = False
-        try:
-            self.serv.settimeout(0.0)
-            foo = self.serv.recv(1024)
-        except socket.timeout:
-            self.fail("caught timeout instead of error (UDP)")
-        except socket.error:
-            ok = True
-        except:
-            self.fail("caught unexpected exception (UDP)")
-        if not ok:
-            self.fail("recv() returned success when we did not expect it")
-
-class TestExceptions(unittest.TestCase):
-
-    def testExceptionTree(self):
-        self.assert_(issubclass(socket.error, Exception))
-        self.assert_(issubclass(socket.herror, socket.error))
-        self.assert_(issubclass(socket.gaierror, socket.error))
-        self.assert_(issubclass(socket.timeout, socket.error))
-
-
 def test_main():
-    tests = [GeneralModuleTests, BasicTCPTest, TCPTimeoutTest, TestExceptions]
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(GeneralModuleTests))
+    suite.addTest(unittest.makeSuite(BasicTCPTest))
     if sys.platform != 'mac':
-        tests.extend([ BasicUDPTest, UDPTimeoutTest ])
-
-    tests.extend([
-        NonBlockingTCPTests,
-        FileObjectClassTestCase,
-        UnbufferedFileObjectClassTestCase,
-        LineBufferedFileObjectClassTestCase,
-        SmallBufferedFileObjectClassTestCase
-    ])
-    test_support.run_unittest(*tests)
+        suite.addTest(unittest.makeSuite(BasicUDPTest))
+    suite.addTest(unittest.makeSuite(NonBlockingTCPTests))
+    suite.addTest(unittest.makeSuite(FileObjectClassTestCase))
+    suite.addTest(unittest.makeSuite(UnbufferedFileObjectClassTestCase))
+    suite.addTest(unittest.makeSuite(LineBufferedFileObjectClassTestCase))
+    suite.addTest(unittest.makeSuite(SmallBufferedFileObjectClassTestCase))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

@@ -219,7 +219,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             filename = arg[:colon].rstrip()
             f = self.lookupmodule(filename)
             if not f:
-                print '*** ', repr(filename),
+                print '*** ', `filename`,
                 print 'not found from sys.path'
                 return
             else:
@@ -252,7 +252,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                     (ok, filename, ln) = self.lineinfo(arg)
                     if not ok:
                         print '*** The specified object',
-                        print repr(arg),
+                        print `arg`,
                         print 'is not a function'
                         print ('or was not found '
                                'along sys.path.')
@@ -375,34 +375,14 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def do_enable(self, arg):
         args = arg.split()
         for i in args:
-            try:
-                i = int(i)
-            except ValueError:
-                print 'Breakpoint index %r is not a number' % i
-                continue
-
-            if not (0 <= i < len(bdb.Breakpoint.bpbynumber)):
-                print 'No breakpoint numbered', i
-                continue
-
-            bp = bdb.Breakpoint.bpbynumber[i]
+            bp = bdb.Breakpoint.bpbynumber[int(i)]
             if bp:
                 bp.enable()
 
     def do_disable(self, arg):
         args = arg.split()
         for i in args:
-            try:
-                i = int(i)
-            except ValueError:
-                print 'Breakpoint index %r is not a number' % i
-                continue
-
-            if not (0 <= i < len(bdb.Breakpoint.bpbynumber)):
-                print 'No breakpoint numbered', i
-                continue
-
-            bp = bdb.Breakpoint.bpbynumber[i]
+            bp = bdb.Breakpoint.bpbynumber[int(i)]
             if bp:
                 bp.disable()
 
@@ -596,7 +576,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             if isinstance(t, str):
                 exc_type_name = t
             else: exc_type_name = t.__name__
-            print '***', exc_type_name + ':', repr(v)
+            print '***', exc_type_name + ':', `v`
             raise
 
     def do_p(self, arg):
@@ -627,7 +607,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                 else:
                     first = max(1, int(x) - 5)
             except:
-                print '*** Error in argument:', repr(arg)
+                print '*** Error in argument:', `arg`
                 return
         elif self.lineno is None:
             first = max(1, self.curframe.f_lineno - 5)
@@ -644,7 +624,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
                     print '[EOF]'
                     break
                 else:
-                    s = repr(lineno).rjust(3)
+                    s = `lineno`.rjust(3)
                     if len(s) < 4: s = s + ' '
                     if lineno in breaklist: s = s + 'B'
                     else: s = s + ' '
@@ -665,7 +645,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             if type(t) == type(''):
                 exc_type_name = t
             else: exc_type_name = t.__name__
-            print '***', exc_type_name + ':', repr(v)
+            print '***', exc_type_name + ':', `v`
             return
         code = None
         # Is it a function?
@@ -1034,7 +1014,7 @@ if __name__=='__main__':
 
     mainpyfile = filename = sys.argv[1]     # Get script filename
     if not os.path.exists(filename):
-        print 'Error:', repr(filename), 'does not exist'
+        print 'Error:', `filename`, 'does not exist'
         sys.exit(1)
     mainmodule = os.path.basename(filename)
     del sys.argv[0]         # Hide "pdb.py" from argument list
@@ -1042,4 +1022,4 @@ if __name__=='__main__':
     # Insert script directory in front of module search path
     sys.path.insert(0, os.path.dirname(filename))
 
-    run('execfile(%r)' % (filename,))
+    run('execfile(' + `filename` + ')')

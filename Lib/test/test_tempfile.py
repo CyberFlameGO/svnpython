@@ -49,8 +49,7 @@ class TC(unittest.TestCase):
         npre  = nbase[:len(pre)]
         nsuf  = nbase[len(nbase)-len(suf):]
 
-        # check for equality of the absolute paths!
-        self.assertEqual(os.path.abspath(ndir), os.path.abspath(dir),
+        self.assertEqual(ndir, dir,
                          "file '%s' not in directory '%s'" % (name, dir))
         self.assertEqual(npre, pre,
                          "file '%s' does not begin with '%s'" % (nbase, pre))
@@ -293,16 +292,8 @@ class test__mkstemp_inner(TC):
         tester = os.path.join(os.path.dirname(os.path.abspath(me)),
                               "tf_inherit_check.py")
 
-        # On Windows a spawn* /path/ with embedded spaces shouldn't be quoted,
-        # but an arg with embedded spaces should be decorated with double
-        # quotes on each end
-        if sys.platform in ('win32'):
-            decorated = '"%s"' % sys.executable
-            tester = '"%s"' % tester
-        else:
-            decorated = sys.executable
-
-        retval = os.spawnl(os.P_WAIT, sys.executable, decorated, tester, v, fd)
+        retval = os.spawnl(os.P_WAIT, sys.executable,
+                           sys.executable, tester, v, fd)
         self.failIf(retval < 0,
                     "child process caught fatal signal %d" % -retval)
         self.failIf(retval > 0, "child process reports failure")
@@ -393,10 +384,6 @@ class test_mkstemp(TC):
             dir = tempfile.gettempdir()
         try:
             (fd, name) = tempfile.mkstemp(dir=dir, prefix=pre, suffix=suf)
-            (ndir, nbase) = os.path.split(name)
-            adir = os.path.abspath(dir)
-            self.assertEqual(adir, ndir,
-                "Directory '%s' incorrectly returned as '%s'" % (adir, ndir))
         except:
             self.failOnException("mkstemp")
 
@@ -413,7 +400,6 @@ class test_mkstemp(TC):
         self.do_create(suf="b")
         self.do_create(pre="a", suf="b")
         self.do_create(pre="aa", suf=".txt")
-        self.do_create(dir=".")
 
     def test_choose_directory(self):
         # mkstemp can create directories in a user-selected directory
@@ -479,7 +465,6 @@ class test_mkdtemp(TC):
         dir = self.do_create()
         try:
             mode = stat.S_IMODE(os.stat(dir).st_mode)
-            mode &= 0777 # Mask off sticky bits inherited from /tmp
             expected = 0700
             if sys.platform in ('win32', 'os2emx', 'mac'):
                 # There's no distinction among 'user', 'group' and 'world';
@@ -660,7 +645,10 @@ if tempfile.NamedTemporaryFile is not tempfile.TemporaryFile:
     test_classes.append(test_TemporaryFile)
 
 def test_main():
-    test_support.run_unittest(*test_classes)
+    suite = unittest.TestSuite()
+    for c in test_classes:
+        suite.addTest(unittest.makeSuite(c))
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

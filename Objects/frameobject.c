@@ -3,6 +3,7 @@
 
 #include "Python.h"
 
+#include "code.h"
 #include "compile.h"
 #include "frameobject.h"
 #include "opcode.h"
@@ -540,7 +541,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	PyFrameObject *back = tstate->frame;
 	PyFrameObject *f;
 	PyObject *builtins;
-	int extras, ncells, nfrees, i;
+	int extras, ncells, nfrees;
 
 #ifdef Py_DEBUG
 	if (code == NULL || globals == NULL || !PyDict_Check(globals) ||
@@ -584,10 +585,8 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	}
 	if (free_list == NULL) {
 		f = PyObject_GC_NewVar(PyFrameObject, &PyFrame_Type, extras);
-		if (f == NULL) {
-			Py_DECREF(builtins);
+		if (f == NULL)
 			return NULL;
-		}
 	}
 	else {
 		assert(numfree > 0);
@@ -596,10 +595,8 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 		free_list = free_list->f_back;
 		if (f->ob_size < extras) {
 			f = PyObject_GC_Resize(PyFrameObject, f, extras);
-			if (f == NULL) {
-				Py_DECREF(builtins);
+			if (f == NULL)
 				return NULL;
-			}
 		}
 		_Py_NewReference((PyObject *)f);
 	}
@@ -613,7 +610,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	/* Most functions have CO_NEWLOCALS and CO_OPTIMIZED set. */
 	if ((code->co_flags & (CO_NEWLOCALS | CO_OPTIMIZED)) == 
 		(CO_NEWLOCALS | CO_OPTIMIZED))
-		locals = NULL; /* PyFrame_FastToLocals() will set. */
+		locals = NULL; /* PyFrame_Fast2Locals() will set. */
 	else if (code->co_flags & CO_NEWLOCALS) {
 		locals = PyDict_New();
 		if (locals == NULL) {
@@ -641,9 +638,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	f->f_nfreevars = nfrees;
 
 	extras = f->f_nlocals + ncells + nfrees;
-	/* Tim said it's ok to replace memset */
-	for (i=0; i<extras; i++)
-		f->f_localsplus[i] = NULL;
+	memset(f->f_localsplus, 0, extras * sizeof(f->f_localsplus[0]));
 
 	f->f_valuestack = f->f_localsplus + extras;
 	f->f_stacktop = f->f_valuestack;
@@ -750,10 +745,11 @@ PyFrame_FastToLocals(PyFrameObject *f)
 	if (j > f->f_nlocals)
 		j = f->f_nlocals;
 	if (f->f_nlocals)
-		map_to_dict(map, j, locals, fast, 0);
+	    map_to_dict(map, j, locals, fast, 0);
 	if (f->f_ncells || f->f_nfreevars) {
 		if (!(PyTuple_Check(f->f_code->co_cellvars)
 		      && PyTuple_Check(f->f_code->co_freevars))) {
+			Py_DECREF(locals);
 			return;
 		}
 		map_to_dict(f->f_code->co_cellvars, 

@@ -544,7 +544,7 @@ class MatchObject:
             try:
                 g = self.re.groupindex[g]
             except (KeyError, TypeError):
-                raise IndexError, 'group %r is undefined' % (g,)
+                raise IndexError, 'group %s is undefined' % `g`
         return self.regs[g][0]
 
     def end(self, g = 0):
@@ -560,7 +560,7 @@ class MatchObject:
             try:
                 g = self.re.groupindex[g]
             except (KeyError, TypeError):
-                raise IndexError, 'group %r is undefined' % (g,)
+                raise IndexError, 'group %s is undefined' % `g`
         return self.regs[g][1]
 
     def span(self, g = 0):
@@ -576,7 +576,7 @@ class MatchObject:
             try:
                 g = self.re.groupindex[g]
             except (KeyError, TypeError):
-                raise IndexError, 'group %r is undefined' % (g,)
+                raise IndexError, 'group %s is undefined' % `g`
         return self.regs[g]
 
     def groups(self, default=None):
@@ -607,7 +607,7 @@ class MatchObject:
         whole match is returned). If a groupN argument is zero, the
         corresponding return value is the entire matching string; if
         it is in the inclusive range [1..99], it is the string
-        matching the corresponding parenthesized group. If a group
+        matching the the corresponding parenthesized group. If a group
         number is negative or larger than the number of groups defined
         in the pattern, an IndexError exception is raised. If a group
         is contained in a part of the pattern that did not match, the
@@ -629,9 +629,9 @@ class MatchObject:
                 try:
                     g = self.re.groupindex[g]
                 except (KeyError, TypeError):
-                    raise IndexError, 'group %r is undefined' % (g,)
+                    raise IndexError, 'group %s is undefined' % `g`
             if g >= len(self.regs):
-                raise IndexError, 'group %r is undefined' % (g,)
+                raise IndexError, 'group %s is undefined' % `g`
             a, b = self.regs[g]
             if a == -1 or b == -1:
                 result.append(None)

@@ -150,16 +150,10 @@ class Codec(codecs.Codec):
             raise UnicodeError, "unsupported error handling "+errors
 
         result = []
-        labels = dots.split(input)
-        if labels and len(labels[-1])==0:
-            trailing_dot = '.'
-            del labels[-1]
-        else:
-            trailing_dot = ''
-        for label in labels:
+        for label in dots.split(input):
             result.append(ToASCII(label))
         # Join with U+002E
-        return ".".join(result)+trailing_dot, len(input)
+        return ".".join(result), len(input)
 
     def decode(self,input,errors='strict'):
 
@@ -171,21 +165,14 @@ class Codec(codecs.Codec):
             labels = dots.split(input)
         else:
             # Must be ASCII string
-            input = str(input)
             unicode(input, "ascii")
             labels = input.split(".")
-
-        if labels and len(labels[-1]) == 0:
-            trailing_dot = u'.'
-            del labels[-1]
-        else:
-            trailing_dot = u''
 
         result = []
         for label in labels:
             result.append(ToUnicode(label))
 
-        return u".".join(result)+trailing_dot, len(input)
+        return u".".join(result), len(input)
 
 class StreamWriter(Codec,codecs.StreamWriter):
     pass

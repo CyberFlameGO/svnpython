@@ -350,9 +350,10 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
 	 Call a callable Python object, callable_object, with a
 	 variable number of C arguments.  The C arguments are provided
-	 as PyObject * values, terminated by a NULL.  Returns the
-	 result of the call on success, or NULL on failure.  This is
-	 the equivalent of the Python expression: apply(o,args).
+	 as PyObject * values; 'n' specifies the number of arguments
+	 present.  Returns the result of the call on success, or NULL
+	 on failure.  This is the equivalent of the Python expression:
+	 apply(o,args).
        */
 
 
@@ -361,10 +362,10 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
        /*
 	 Call the method named m of object o with a variable number of
-	 C arguments.  The C arguments are provided as PyObject *
-	 values, terminated by NULL.  Returns the result of the call
-	 on success, or NULL on failure.  This is the equivalent of
-	 the Python expression: o.method(args).
+	 C arguments.  The C arguments are provided as PyObject * values;
+	 'n' specifies the number of arguments present.  Returns the
+	 result of the call on success, or NULL on failure.  This is the
+	 equivalent of the Python expression: o.method(args).
        */
 
 
@@ -872,7 +873,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceOr(PyObject *o1, PyObject *o2);
 
        /*
-	 Returns the result of bitwise or of o1 and o2, possibly in-place,
+	 Returns the result of bitwise or or o1 and o2, possibly in-place,
 	 or null on failure.  This is the equivalent of the Python
 	 expression: o1 |= o2.
 
@@ -1015,12 +1016,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /* Assume tp_as_sequence and sq_item exist and that i does not
 	  need to be corrected for a negative index
        */     
-
-#define PySequence_Fast_ITEMS(sf) \
-	(PyList_Check(sf) ? ((PyListObject *)(sf))->ob_item \
-			  : ((PyTupleObject *)(sf))->ob_item)
-	/* Return a pointer to the underlying item array for
-           an object retured by PySequence_Fast */
 
      PyAPI_FUNC(int) PySequence_Count(PyObject *o, PyObject *value);
 

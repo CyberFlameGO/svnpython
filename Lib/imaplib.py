@@ -69,7 +69,6 @@ Commands = {
         'STATUS':       ('AUTH', 'SELECTED'),
         'STORE':        ('SELECTED',),
         'SUBSCRIBE':    ('AUTH', 'SELECTED'),
-        'THREAD':       ('SELECTED',),
         'UID':          ('SELECTED',),
         'UNSUBSCRIBE':  ('AUTH', 'SELECTED'),
         }
@@ -84,7 +83,6 @@ InternalDate = re.compile(r'.*INTERNALDATE "'
         r' (?P<zonen>[-+])(?P<zoneh>[0-9][0-9])(?P<zonem>[0-9][0-9])'
         r'"')
 Literal = re.compile(r'.*{(?P<size>\d+)}$')
-MapCRLF = re.compile(r'\r\n|\r|\n')
 Response_code = re.compile(r'\[(?P<type>[A-Z-]+)( (?P<data>[^\]]*))?\]')
 Untagged_response = re.compile(r'\* (?P<type>[A-Z-]+)( (?P<data>.*))?')
 Untagged_status = re.compile(r'\* (?P<data>\d+) (?P<type>[A-Z-]+)( (?P<data2>.*))?')
@@ -192,7 +190,7 @@ class IMAP4:
 
         if __debug__:
             if self.debug >= 3:
-                self._mesg('CAPABILITIES: %r' % (self.capabilities,))
+                self._mesg('CAPABILITIES: %s' % `self.capabilities`)
 
         for version in AllowedVersions:
             if not version in self.capabilities:
@@ -310,7 +308,7 @@ class IMAP4:
             date_time = Time2Internaldate(date_time)
         else:
             date_time = None
-        self.literal = MapCRLF.sub(CRLF, message)
+        self.literal = message
         return self._simple_command(name, mailbox, flags, date_time)
 
 
@@ -331,8 +329,7 @@ class IMAP4:
         be sent instead.
         """
         mech = mechanism.upper()
-        # XXX: shouldn't this code be removed, not commented out?
-        #cap = 'AUTH=%s' % mech
+        cap = 'AUTH=%s' % mech
         #if not cap in self.capabilities:       # Let the server decide!
         #    raise self.error("Server doesn't allow %s authentication." % mech)
         self.literal = _Authenticator(authobject).process
@@ -621,7 +618,7 @@ class IMAP4:
     def setacl(self, mailbox, who, what):
         """Set a mailbox acl.
 
-        (typ, [data]) = <instance>.setacl(mailbox, who, what)
+        (typ, [data]) = <instance>.create(mailbox, who, what)
         """
         return self._simple_command('SETACL', mailbox, who, what)
 
@@ -678,16 +675,6 @@ class IMAP4:
         (typ, [data]) = <instance>.subscribe(mailbox)
         """
         return self._simple_command('SUBSCRIBE', mailbox)
-
-
-    def thread(self, threading_algorithm, charset, *search_criteria):
-        """IMAPrev1 extension THREAD command.
-
-        (type, [data]) = <instance>.thread(threading_alogrithm, charset, search_criteria, ...)
-        """
-        name = 'THREAD'
-        typ, dat = self._simple_command(name, threading_algorithm, charset, *search_criteria)
-        return self._untagged_response(typ, dat, name)
 
 
     def uid(self, command, *args):
@@ -972,7 +959,7 @@ class IMAP4:
         self.mo = cre.match(s)
         if __debug__:
             if self.mo is not None and self.debug >= 5:
-                self._mesg("\tmatched r'%s' => %r" % (cre.pattern, self.mo.groups()))
+                self._mesg("\tmatched r'%s' => %s" % (cre.pattern, `self.mo.groups()`))
         return self.mo is not None
 
 
@@ -1373,7 +1360,7 @@ if __name__ == '__main__':
     USER = getpass.getuser()
     PASSWD = getpass.getpass("IMAP password for %s on %s: " % (USER, host or "localhost"))
 
-    test_mesg = 'From: %(user)s@localhost%(lf)sSubject: IMAP4 test%(lf)s%(lf)sdata...%(lf)s' % {'user':USER, 'lf':'\n'}
+    test_mesg = 'From: %(user)s@localhost%(lf)sSubject: IMAP4 test%(lf)s%(lf)sdata...%(lf)s' % {'user':USER, 'lf':CRLF}
     test_seq1 = (
     ('login', (USER, PASSWD)),
     ('create', ('/tmp/xxx 1',)),
@@ -1416,7 +1403,7 @@ if __name__ == '__main__':
         if M.state == 'AUTH':
             test_seq1 = test_seq1[1:]   # Login not needed
         M._mesg('PROTOCOL_VERSION = %s' % M.PROTOCOL_VERSION)
-        M._mesg('CAPABILITIES = %r' % (M.capabilities,))
+        M._mesg('CAPABILITIES = %s' % `M.capabilities`)
 
         for cmd,args in test_seq1:
             run(cmd, args)

@@ -110,7 +110,7 @@ def main():
     except getopt.error, msg:
         print msg
         print "usage: python compileall.py [-l] [-f] [-q] [-d destdir] " \
-              "[-x regexp] [directory ...]"
+              "[-s regexp] [directory ...]"
         print "-l: don't recurse down"
         print "-f: force rebuild even if timestamps are up-to-date"
         print "-q: quiet operation"

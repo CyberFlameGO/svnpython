@@ -15,10 +15,6 @@
 #include "windows.h"
 #endif /* MS_WINDOWS */
 
-#ifdef __VMS
-extern char* vms__StdioReadline(FILE *sys_stdin, FILE *sys_stdout, char *prompt);
-#endif
-
 int (*PyOS_InputHook)(void) = NULL;
 
 #ifdef RISCOS
@@ -123,6 +119,13 @@ PyOS_StdioReadline(FILE *sys_stdin, FILE *sys_stdout, char *prompt)
 		*p = '\0';
 		break;
 	}
+#ifdef MPW
+	/* Hack for MPW C where the prompt comes right back in the input */
+	/* XXX (Actually this would be rather nice on most systems...) */
+	n = strlen(prompt);
+	if (strncmp(p, prompt, n) == 0)
+		memmove(p, p + n, strlen(p) - n + 1);
+#endif
 	n = strlen(p);
 	while (n > 0 && p[n-1] != '\n') {
 		size_t incr = n+2;
@@ -156,11 +159,7 @@ PyOS_Readline(FILE *sys_stdin, FILE *sys_stdout, char *prompt)
 	char *rv;
 
 	if (PyOS_ReadlineFunctionPointer == NULL) {
-#ifdef __VMS
-                PyOS_ReadlineFunctionPointer = vms__StdioReadline;
-#else
                 PyOS_ReadlineFunctionPointer = PyOS_StdioReadline;
-#endif
 	}
 
 	Py_BEGIN_ALLOW_THREADS

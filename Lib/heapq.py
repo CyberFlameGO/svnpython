@@ -165,7 +165,7 @@ def heapify(x):
     # or i < (n-1)/2.  If n is even = 2*j, this is (2*j-1)/2 = j-1/2 so
     # j-1 is the largest, which is n//2 - 1.  If n is odd = 2*j+1, this is
     # (2*j+1-1)/2 = j so j-1 is the largest, and that's again n//2-1.
-    for i in reversed(xrange(n//2)):
+    for i in xrange(n//2 - 1, -1, -1):
         _siftup(x, i)
 
 # 'heap' is a heap at all indices >= startpos, except possibly for pos.  pos
@@ -238,16 +238,10 @@ def _siftup(heap, pos):
         heap[pos] = heap[childpos]
         pos = childpos
         childpos = 2*pos + 1
-    # The leaf at pos is empty now.  Put newitem there, and bubble it up
+    # The leaf at pos is empty now.  Put newitem there, and and bubble it up
     # to its final resting place (by sifting its parents down).
     heap[pos] = newitem
     _siftdown(heap, startpos, pos)
-
-# If available, use C implementation
-try:
-    from _heapq import heappush, heappop, heapify, heapreplace
-except ImportError:
-    pass
 
 if __name__ == "__main__":
     # Simple sanity test

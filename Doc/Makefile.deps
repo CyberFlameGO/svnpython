@@ -5,10 +5,9 @@ COMMONSTYLES= texinputs/python.sty \
 
 INDEXSTYLES=texinputs/python.ist
 
-COMMONTEX=commontex/copyright.tex \
-	commontex/license.tex \
-	commontex/patchlevel.tex \
-	commontex/boilerplate.tex
+COMMONTEX= texinputs/copyright.tex \
+	texinputs/license.tex \
+	texinputs/boilerplate.tex
 
 MANSTYLES= texinputs/fncychap.sty \
 	texinputs/manual.cls \
@@ -30,8 +29,8 @@ APIFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	api/refcounting.tex \
 	api/utilities.tex \
 	api/veryhigh.tex \
-	commontex/typestruct.h \
-	commontex/reportingbugs.tex
+	texinputs/typestruct.h \
+	texinputs/reportingbugs.tex
 
 # These files are generated from those listed above, and are used to
 # generate the typeset versions of the manuals.  The list is defined
@@ -48,10 +47,10 @@ ANNOAPIFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) api/refcounts.dat \
 	paper-$(PAPER)/refcounting.tex \
 	paper-$(PAPER)/utilities.tex \
 	paper-$(PAPER)/veryhigh.tex \
-	commontex/reportingbugs.tex
+	texinputs/reportingbugs.tex
 
 DOCFILES= $(HOWTOSTYLES) \
-	commontex/boilerplate.tex \
+	texinputs/boilerplate.tex \
 	texinputs/ltxmarkup.sty \
 	doc/doc.tex
 
@@ -61,15 +60,13 @@ EXTFILES= ext/ext.tex $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	ext/building.tex \
 	ext/windows.tex \
 	ext/embedding.tex \
+	ext/cycle-gc.c \
 	ext/noddy.c \
-	ext/noddy2.c \
-	ext/noddy3.c \
-	ext/noddy4.c \
 	ext/run-func.c \
-	commontex/typestruct.h \
-	commontex/reportingbugs.tex
+	texinputs/typestruct.h \
+	texinputs/reportingbugs.tex
 
-TUTFILES= tut/tut.tex tut/glossary.tex $(MANSTYLES) $(COMMONTEX)
+TUTFILES= tut/tut.tex $(MANSTYLES) $(COMMONTEX)
 
 # LaTeX source files for the Python Reference Manual
 REFFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
@@ -81,11 +78,12 @@ REFFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	ref/ref5.tex \
 	ref/ref6.tex \
 	ref/ref7.tex \
-	ref/ref8.tex 
+	ref/ref8.tex \
+	ref/refa1.tex
 
 # LaTeX source files for the Python Library Reference
 LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
-	commontex/reportingbugs.tex \
+	texinputs/reportingbugs.tex \
 	lib/lib.tex \
 	lib/asttable.tex \
 	lib/compiler.tex \
@@ -106,7 +104,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libfuncs.tex \
 	lib/libpython.tex \
 	lib/libsys.tex \
-	lib/libplatform.tex \
 	lib/libfpectl.tex \
 	lib/libgc.tex \
 	lib/libsets.tex \
@@ -116,7 +113,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libdifflib.tex \
 	lib/libdoctest.tex \
 	lib/libunittest.tex \
-	lib/libtest.tex \
 	lib/libtypes.tex \
 	lib/libtraceback.tex \
 	lib/libpickle.tex \
@@ -129,7 +125,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libparser.tex \
 	lib/libbltin.tex \
 	lib/libmain.tex \
-	lib/libfuture.tex \
 	lib/libstrings.tex \
 	lib/libstring.tex \
 	lib/libtextwrap.tex \
@@ -233,7 +228,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libuser.tex \
 	lib/libanydbm.tex \
 	lib/libbsddb.tex \
-	lib/libdumbdbm.tex \
 	lib/libdbhash.tex \
 	lib/librandom.tex \
 	lib/libsite.tex \
@@ -284,7 +278,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libcalendar.tex \
 	lib/libpopen2.tex \
 	lib/libbisect.tex \
-	lib/libcollections.tex \
 	lib/libheapq.tex \
 	lib/libmimetypes.tex \
 	lib/libsmtplib.tex \
@@ -369,7 +362,6 @@ MACFILES= $(HOWTOSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	mac/libmacui.tex \
 	mac/libmacic.tex \
 	mac/libframework.tex \
-	mac/libautogil.tex \
 	mac/libminiae.tex \
 	mac/libscrap.tex
 

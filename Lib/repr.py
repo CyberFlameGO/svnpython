@@ -2,8 +2,6 @@
 
 __all__ = ["Repr","repr"]
 
-import __builtin__
-
 class Repr:
     def __init__(self):
         self.maxlevel = 6
@@ -24,7 +22,7 @@ class Repr:
         if hasattr(self, 'repr_' + typename):
             return getattr(self, 'repr_' + typename)(x, level)
         else:
-            s = __builtin__.repr(x)
+            s = `x`
             if len(s) > self.maxother:
                 i = max(0, (self.maxother-3)//2)
                 j = max(0, self.maxother-3-i)
@@ -83,15 +81,15 @@ class Repr:
         if n > self.maxdict: s = s + ', ...'
         return '{' + s + '}'
     def repr_str(self, x, level):
-        s = __builtin__.repr(x[:self.maxstring])
+        s = `x[:self.maxstring]`
         if len(s) > self.maxstring:
             i = max(0, (self.maxstring-3)//2)
             j = max(0, self.maxstring-3-i)
-            s = __builtin__.repr(x[:i] + x[len(x)-j:])
+            s = `x[:i] + x[len(x)-j:]`
             s = s[:i] + '...' + s[len(s)-j:]
         return s
     def repr_long(self, x, level):
-        s = __builtin__.repr(x) # XXX Hope this isn't too slow...
+        s = `x` # XXX Hope this isn't too slow...
         if len(s) > self.maxlong:
             i = max(0, (self.maxlong-3)//2)
             j = max(0, self.maxlong-3-i)
@@ -99,7 +97,7 @@ class Repr:
         return s
     def repr_instance(self, x, level):
         try:
-            s = __builtin__.repr(x)
+            s = `x`
             # Bugs in x.__repr__() can cause arbitrary
             # exceptions -- then make up something
         except:

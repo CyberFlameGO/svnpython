@@ -311,14 +311,12 @@ nfd_nfkd(PyObject *input, int k)
         stack[stackptr++] = *i++;
         while(stackptr) {
             Py_UNICODE code = stack[--stackptr];
-            /* Hangul Decomposition adds three characters in
-               a single step, so we need atleast that much room. */
-            if (space < 3) {
-                int newsize = PyString_GET_SIZE(result) + 10;
-                space += 10;
-                if (PyUnicode_Resize(&result, newsize) == -1)
+            if (!space) {
+                space = PyString_GET_SIZE(result) + 10;
+                if (PyUnicode_Resize(&result, space) == -1)
                     return NULL;
-                o = PyUnicode_AS_UNICODE(result) + newsize - space;
+                o = PyUnicode_AS_UNICODE(result) + space - 10;
+                space = 10;
             }
             /* Hangul Decomposition. */
             if (SBase <= code && code < (SBase+SCount)) {
@@ -514,13 +512,6 @@ unicodedata_normalize(PyObject *self, PyObject *args)
     if(!PyArg_ParseTuple(args, "sO!:normalized",
                          &form, &PyUnicode_Type, &input))
         return NULL;
-
-    if (PyUnicode_GetSize(input) == 0) {
-        /* Special case empty input strings, since resizing
-           them  later would cause internal errors. */
-        Py_INCREF(input);
-        return input;
-    }
 
     if (strcmp(form, "NFC") == 0)
         return nfc_nfkc(input, 0);

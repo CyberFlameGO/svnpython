@@ -63,18 +63,18 @@ categorized syntactically as atoms.  The syntax for atoms is:
 \index{name}
 \index{identifier}
 
-An identifier occurring as an atom is a name.  See
-section~\ref{naming} for documentation of naming and binding.
+An identifier occurring as an atom is a name.  See Section 4.1 for
+documentation of naming and binding.
 
 When the name is bound to an object, evaluation of the atom yields
 that object.  When a name is not bound, an attempt to evaluate it
 raises a \exception{NameError} exception.
 \exindex{NameError}
 
-\strong{Private name mangling:}
+\strong{Private name mangling:}%
 \indexii{name}{mangling}%
 \indexii{private}{names}%
-When an identifier that textually occurs in a class definition begins
+when an identifier that textually occurs in a class definition begins
 with two or more underscore characters and does not end in two or more
 underscores, it is considered a \dfn{private name} of that class.
 Private names are transformed to a longer form before code is
@@ -977,8 +977,8 @@ as false: \code{None}, numeric zero of all types, empty sequences
 (strings, tuples and lists), and empty mappings (dictionaries).  All
 other values are interpreted as true.
 
-The operator \keyword{not} yields \code{True} if its argument is false,
-\code{False} otherwise.
+The operator \keyword{not} yields \code{1} if its argument is false,
+\code{0} otherwise.
 \opindex{not}
 
 The expression \code{\var{x} and \var{y}} first evaluates \var{x}; if
@@ -992,13 +992,13 @@ evaluated and the resulting value is returned.
 \opindex{or}
 
 (Note that neither \keyword{and} nor \keyword{or} restrict the value
-and type they return to \code{False} and \code{True}, but rather return the
+and type they return to \code{0} and \code{1}, but rather return the
 last evaluated argument.
 This is sometimes useful, e.g., if \code{s} is a string that should be
 replaced by a default value if it is empty, the expression
 \code{s or 'foo'} yields the desired value.  Because \keyword{not} has to
 invent a value anyway, it does not bother to return a value of the
-same type as its argument, so e.g., \code{not 'foo'} yields \code{False},
+same type as its argument, so e.g., \code{not 'foo'} yields \code{0},
 not \code{''}.)
 
 \section{Lambdas\label{lambdas}}

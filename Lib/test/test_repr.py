@@ -25,12 +25,12 @@ class ReprTests(unittest.TestCase):
         eq(r("abcdefghijklmnop"),"'abcdefghijklmnop'")
 
         s = "a"*30+"b"*30
-        expected = repr(s)[:13] + "..." + repr(s)[-14:]
+        expected = `s`[:13] + "..." + `s`[-14:]
         eq(r(s), expected)
 
         eq(r("\"'"), repr("\"'"))
         s = "\""*30+"'"*100
-        expected = repr(s)[:13] + "..." + repr(s)[-14:]
+        expected = `s`[:13] + "..." + `s`[-14:]
         eq(r(s), expected)
 
     def test_container(self):
@@ -75,7 +75,7 @@ class ReprTests(unittest.TestCase):
         eq(r(1.0/3), repr(1.0/3))
 
         n = 10L**100
-        expected = repr(n)[:18] + "..." + repr(n)[-19:]
+        expected = `n`[:18] + "..." + `n`[-19:]
         eq(r(n), expected)
 
     def test_instance(self):
@@ -84,7 +84,7 @@ class ReprTests(unittest.TestCase):
         eq(r(i1), repr(i1))
 
         i2 = ClassWithRepr("x"*1000)
-        expected = repr(i2)[:13] + "..." + repr(i2)[-14:]
+        expected = `i2`[:13] + "..." + `i2`[-14:]
         eq(r(i2), expected)
 
         i3 = ClassWithFailingRepr()
@@ -105,7 +105,7 @@ class ReprTests(unittest.TestCase):
 
     def test_lambda(self):
         self.failUnless(repr(lambda x: x).startswith(
-            "<function <lambda"))
+            "<function lambda"))
         # XXX anonymous functions?  see func_repr
 
     def test_builtin_function(self):

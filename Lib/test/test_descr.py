@@ -500,15 +500,15 @@ def complexes():
         __str__ = __repr__
 
     a = Number(3.14, prec=6)
-    vereq(repr(a), "3.14")
+    vereq(`a`, "3.14")
     vereq(a.prec, 6)
 
     a = Number(a, prec=2)
-    vereq(repr(a), "3.1")
+    vereq(`a`, "3.1")
     vereq(a.prec, 2)
 
     a = Number(234.5)
-    vereq(repr(a), "234.5")
+    vereq(`a`, "234.5")
     vereq(a.prec, 12)
 
 def spamlists():
@@ -1267,22 +1267,6 @@ def slots():
         g==g
     new_objects = len(gc.get_objects())
     vereq(orig_objects, new_objects)
-    class H(object):
-        __slots__ = ['a', 'b']
-        def __init__(self):
-            self.a = 1
-            self.b = 2
-        def __del__(self):
-            assert self.a == 1
-            assert self.b == 2
-
-    save_stderr = sys.stderr
-    sys.stderr = sys.stdout
-    h = H()
-    try:
-        del h
-    finally:
-        sys.stderr = save_stderr
 
 def slotspecials():
     if verbose: print "Testing __dict__ and __weakref__ in __slots__..."
@@ -1484,14 +1468,6 @@ def classmethods():
     veris(super(D,d).goo.im_self, D)
     vereq(super(D,D).goo(), (D,))
     vereq(super(D,d).goo(), (D,))
-
-    # Verify that argument is checked for callability (SF bug 753451)
-    try:
-        classmethod(1).__get__(1)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "classmethod should check for callability"
 
 def classmethods_in_c():
     if verbose: print "Testing C-based class methods..."
@@ -2063,20 +2039,6 @@ def supers():
     dd = DDsub()
     vereq(dd.x, "hello")
     vereq(super(DDsub, dd).x, 42)
-
-    # Ensure that super() lookup of descriptor from classmethod
-    # works (SF ID# 743627)
-
-    class Base(object):
-        aProp = property(lambda self: "foo")
-
-    class Sub(Base):
-        def test(klass):
-            return super(Sub,klass).aProp
-        test = classmethod(test)
-
-    veris(Sub.test(), Base.aProp)
-
 
 def inherits():
     if verbose: print "Testing inheritance from basic types..."
@@ -2815,8 +2777,8 @@ def pickles():
             vereq(sorteditems(x.__dict__), sorteditems(a.__dict__))
             vereq(y.__class__, b.__class__)
             vereq(sorteditems(y.__dict__), sorteditems(b.__dict__))
-            vereq(repr(x), repr(a))
-            vereq(repr(y), repr(b))
+            vereq(`x`, `a`)
+            vereq(`y`, `b`)
             if verbose:
                 print "a = x =", a
                 print "b = y =", b
@@ -2849,8 +2811,8 @@ def pickles():
     vereq(sorteditems(x.__dict__), sorteditems(a.__dict__))
     vereq(y.__class__, b.__class__)
     vereq(sorteditems(y.__dict__), sorteditems(b.__dict__))
-    vereq(repr(x), repr(a))
-    vereq(repr(y), repr(b))
+    vereq(`x`, `a`)
+    vereq(`y`, `b`)
     if verbose:
         print "a = x =", a
         print "b = y =", b
@@ -2982,13 +2944,13 @@ def binopoverride():
             else:
                 return I(pow(int(other), int(self), int(mod)))
 
-    vereq(repr(I(1) + I(2)), "I(3)")
-    vereq(repr(I(1) + 2), "I(3)")
-    vereq(repr(1 + I(2)), "I(3)")
-    vereq(repr(I(2) ** I(3)), "I(8)")
-    vereq(repr(2 ** I(3)), "I(8)")
-    vereq(repr(I(2) ** 3), "I(8)")
-    vereq(repr(pow(I(2), I(3), I(5))), "I(3)")
+    vereq(`I(1) + I(2)`, "I(3)")
+    vereq(`I(1) + 2`, "I(3)")
+    vereq(`1 + I(2)`, "I(3)")
+    vereq(`I(2) ** I(3)`, "I(8)")
+    vereq(`2 ** I(3)`, "I(8)")
+    vereq(`I(2) ** 3`, "I(8)")
+    vereq(`pow(I(2), I(3), I(5))`, "I(3)")
     class S(str):
         def __eq__(self, other):
             return self.lower() == other.lower()
@@ -3600,13 +3562,6 @@ def test_mutable_bases():
         raise TestFailed, "shouldn't be able to create inheritance cycles"
 
     try:
-        D.__bases__ = (C, C)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "didn't detect repeated base classes"
-
-    try:
         D.__bases__ = (E,)
     except TypeError:
         pass
@@ -3916,74 +3871,8 @@ def carloverre():
     else:
         raise TestFailed, "Carlo Verre __delattr__ succeeded!"
 
-def weakref_segfault():
-    # SF 742911
-    if verbose:
-        print "Testing weakref segfault..."
-
-    import weakref
-
-    class Provoker:
-        def __init__(self, referrent):
-            self.ref = weakref.ref(referrent)
-
-        def __del__(self):
-            x = self.ref()
-
-    class Oops(object):
-        pass
-
-    o = Oops()
-    o.whatever = Provoker(o)
-    del o
-
-# Fix SF #762455, segfault when sys.stdout is changed in getattr
-def filefault():
-    if verbose:
-        print "Testing sys.stdout is changed in getattr..."
-    import sys
-    class StdoutGuard:
-        def __getattr__(self, attr):
-            sys.stdout = sys.__stdout__
-            raise RuntimeError("Premature access to sys.stdout.%s" % attr)
-    sys.stdout = StdoutGuard()
-    try:
-        print "Oops!"
-    except RuntimeError:
-        pass
-
-def vicious_descriptor_nonsense():
-    # A potential segfault spotted by Thomas Wouters in mail to
-    # python-dev 2003-04-17, turned into an example & fixed by Michael
-    # Hudson just less than four months later...
-    if verbose:
-        print "Testing vicious_descriptor_nonsense..."
-
-    class Evil(object):
-        def __hash__(self):
-            return hash('attr')
-        def __eq__(self, other):
-            del C.attr
-            return 0
-
-    class Descr(object):
-        def __get__(self, ob, type=None):
-            return 1
-
-    class C(object):
-        attr = Descr()
-
-    c = C()
-    c.__dict__[Evil()] = 0
-
-    vereq(c.attr, 1)
-    # this makes a crash more likely:
-    import gc; gc.collect()
-    vereq(hasattr(c, 'attr'), False)
-
 
 def test_main():
-    weakref_segfault() # Must be first, somehow
     do_this_first()
     class_docstrings()
     lists()
@@ -4072,8 +3961,6 @@ def test_main():
     isinst_isclass()
     proxysuper()
     carloverre()
-    filefault()
-    vicious_descriptor_nonsense()
 
     if verbose: print "All OK"
 

@@ -11,10 +11,7 @@ import sys
 
 __all__ = ["popen2", "popen3", "popen4"]
 
-try:
-    MAXFD = os.sysconf('SC_OPEN_MAX')
-except (AttributeError, ValueError):
-    MAXFD = 256
+MAXFD = 256     # Max number of file descriptors (os.getdtablesize()???)
 
 _active = []
 
@@ -28,7 +25,7 @@ class Popen3:
 
     sts = -1                    # Child not completed yet
 
-    def __init__(self, cmd, capturestderr=False, bufsize=-1):
+    def __init__(self, cmd, capturestderr=0, bufsize=-1):
         """The parameter 'cmd' is the shell command to execute in a
         sub-process.  The 'capturestderr' flag, if true, specifies that
         the object should capture standard error output of the child process.
@@ -86,11 +83,10 @@ class Popen3:
 
     def wait(self):
         """Wait for and return the exit status of the child process."""
-        if self.sts < 0:
-            pid, sts = os.waitpid(self.pid, 0)
-            if pid == self.pid:
-                self.sts = sts
-                _active.remove(self)
+        pid, sts = os.waitpid(self.pid, 0)
+        if pid == self.pid:
+            self.sts = sts
+            _active.remove(self)
         return self.sts
 
 
@@ -144,14 +140,14 @@ else:
         """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
         specified, it sets the buffer size for the I/O pipes.  The file objects
         (child_stdout, child_stdin) are returned."""
-        inst = Popen3(cmd, False, bufsize)
+        inst = Popen3(cmd, 0, bufsize)
         return inst.fromchild, inst.tochild
 
     def popen3(cmd, bufsize=-1, mode='t'):
         """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
         specified, it sets the buffer size for the I/O pipes.  The file objects
         (child_stdout, child_stdin, child_stderr) are returned."""
-        inst = Popen3(cmd, True, bufsize)
+        inst = Popen3(cmd, 1, bufsize)
         return inst.fromchild, inst.tochild, inst.childerr
 
     def popen4(cmd, bufsize=-1, mode='t'):
@@ -178,7 +174,7 @@ def _test():
     w.close()
     got = r.read()
     if got.strip() != expected:
-        raise ValueError("wrote %r read %r" % (teststr, got))
+        raise ValueError("wrote %s read %s" % (`teststr`, `got`))
     print "testing popen3..."
     try:
         r, w, e = popen3([cmd])
@@ -188,10 +184,10 @@ def _test():
     w.close()
     got = r.read()
     if got.strip() != expected:
-        raise ValueError("wrote %r read %r" % (teststr, got))
+        raise ValueError("wrote %s read %s" % (`teststr`, `got`))
     got = e.read()
     if got:
-        raise ValueError("unexected %r on stderr" % (got,))
+        raise ValueError("unexected %s on stderr" % `got`)
     for inst in _active[:]:
         inst.wait()
     if _active:

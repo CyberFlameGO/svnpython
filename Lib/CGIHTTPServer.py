@@ -117,21 +117,21 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         scriptname = dir + '/' + script
         scriptfile = self.translate_path(scriptname)
         if not os.path.exists(scriptfile):
-            self.send_error(404, "No such CGI script (%r)" % scriptname)
+            self.send_error(404, "No such CGI script (%s)" % `scriptname`)
             return
         if not os.path.isfile(scriptfile):
-            self.send_error(403, "CGI script is not a plain file (%r)" %
-                            scriptname)
+            self.send_error(403, "CGI script is not a plain file (%s)" %
+                            `scriptname`)
             return
         ispy = self.is_python(scriptname)
         if not ispy:
             if not (self.have_fork or self.have_popen2 or self.have_popen3):
-                self.send_error(403, "CGI script is not a Python script (%r)" %
-                                scriptname)
+                self.send_error(403, "CGI script is not a Python script (%s)" %
+                                `scriptname`)
                 return
             if not self.is_executable(scriptfile):
-                self.send_error(403, "CGI script is not executable (%r)" %
-                                scriptname)
+                self.send_error(403, "CGI script is not executable (%s)" %
+                                `scriptname`)
                 return
 
         # Reference: http://hoohoo.ncsa.uiuc.edu/cgi/env.html
@@ -177,11 +177,12 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         if co:
             env['HTTP_COOKIE'] = ', '.join(co)
         # XXX Other HTTP_* headers
-        # Since we're setting the env in the parent, provide empty
-        # values to override previously set values
-        for k in ('QUERY_STRING', 'REMOTE_HOST', 'CONTENT_LENGTH',
-                  'HTTP_USER_AGENT', 'HTTP_COOKIE'):
-            env.setdefault(k, "")
+        if not self.have_fork:
+            # Since we're setting the env in the parent, provide empty
+            # values to override previously set values
+            for k in ('QUERY_STRING', 'REMOTE_HOST', 'CONTENT_LENGTH',
+                      'HTTP_USER_AGENT', 'HTTP_COOKIE'):
+                env.setdefault(k, "")
         os.environ.update(env)
 
         self.send_response(200, "Script output follows")
@@ -201,8 +202,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 pid, sts = os.waitpid(pid, 0)
                 # throw away additional data [see bug #427345]
                 while select.select([self.rfile], [], [], 0)[0]:
-                    if not self.rfile.read(1):
-                        break
+                    waste = self.rfile.read(1)
                 if sts:
                     self.log_error("CGI script exit status %#x", sts)
                 return
@@ -214,7 +214,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     pass
                 os.dup2(self.rfile.fileno(), 0)
                 os.dup2(self.wfile.fileno(), 1)
-                os.execve(scriptfile, args, os.environ)
+                os.execve(scriptfile, args, env)
             except:
                 self.server.handle_error(self.request, self.client_address)
                 os._exit(127)
@@ -250,8 +250,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 fi.write(data)
             # throw away additional data [see bug #427345]
             while select.select([self.rfile._sock], [], [], 0)[0]:
-                if not self.rfile._sock.recv(1):
-                    break
+                waste = self.rfile._sock.recv(1)
             fi.close()
             shutil.copyfileobj(fo, self.wfile)
             if self.have_popen3:
@@ -272,7 +271,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             save_stdout = sys.stdout
             save_stderr = sys.stderr
             try:
-                save_cwd = os.getcwd()
                 try:
                     sys.argv = [scriptfile]
                     if '=' not in decoded_query:
@@ -285,7 +283,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     sys.stdin = save_stdin
                     sys.stdout = save_stdout
                     sys.stderr = save_stderr
-                    os.chdir(save_cwd)
             except SystemExit, sts:
                 self.log_error("CGI script exit status %s", str(sts))
             else:

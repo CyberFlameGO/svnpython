@@ -170,7 +170,6 @@ class UnicodeFunctionsTest(UnicodeDatabaseTest):
     def test_normalize(self):
         self.assertRaises(TypeError, self.db.normalize)
         self.assertRaises(ValueError, self.db.normalize, 'unknown', u'xx')
-        self.assertEqual(self.db.normalize('NFKC', u''), u'')
         # The rest can be found in test_normalization.py
         # which requires an external file.
 
@@ -204,11 +203,11 @@ class UnicodeMiscTest(UnicodeDatabaseTest):
         self.assert_(count >= 10) # should have tested at least the ASCII digits
 
 def test_main():
-    test.test_support.run_unittest(
-        UnicodeMiscTest,
-        UnicodeMethodsTest,
-        UnicodeFunctionsTest
-    )
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(UnicodeMiscTest))
+    suite.addTest(unittest.makeSuite(UnicodeMethodsTest))
+    suite.addTest(unittest.makeSuite(UnicodeFunctionsTest))
+    test.test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

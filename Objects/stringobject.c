@@ -8,6 +8,10 @@
 int null_strings, one_strings;
 #endif
 
+#if !defined(HAVE_LIMITS_H) && !defined(UCHAR_MAX)
+#define UCHAR_MAX 255
+#endif
+
 static PyStringObject *characters[UCHAR_MAX + 1];
 static PyStringObject *nullstring;
 
@@ -1282,35 +1286,12 @@ static const char *stripformat[] = {"|O:lstrip", "|O:rstrip", "|O:strip"};
 
 #define STRIPNAME(i) (stripformat[i]+3)
 
-#define SPLIT_APPEND(data, left, right)				\
-	str = PyString_FromStringAndSize((data) + (left),	\
-					 (right) - (left));	\
-	if (str == NULL)					\
-		goto onError;					\
-	if (PyList_Append(list, str)) {				\
-		Py_DECREF(str);					\
-		goto onError;					\
-	}							\
-	else							\
-		Py_DECREF(str);
-
-#define SPLIT_INSERT(data, left, right)			 	\
-	str = PyString_FromStringAndSize((data) + (left),	\
-					 (right) - (left));	\
-	if (str == NULL)					\
-		goto onError;					\
-	if (PyList_Insert(list, 0, str)) {			\
-		Py_DECREF(str);					\
-		goto onError;					\
-	}							\
-	else							\
-		Py_DECREF(str);
 
 static PyObject *
 split_whitespace(const char *s, int len, int maxsplit)
 {
-	int i, j;
-	PyObject *str;
+	int i, j, err;
+	PyObject* item;
 	PyObject *list = PyList_New(0);
 
 	if (list == NULL)
@@ -1325,49 +1306,33 @@ split_whitespace(const char *s, int len, int maxsplit)
 		if (j < i) {
 			if (maxsplit-- <= 0)
 				break;
-			SPLIT_APPEND(s, j, i);
+			item = PyString_FromStringAndSize(s+j, (int)(i-j));
+			if (item == NULL)
+				goto finally;
+			err = PyList_Append(list, item);
+			Py_DECREF(item);
+			if (err < 0)
+				goto finally;
 			while (i < len && isspace(Py_CHARMASK(s[i])))
 				i++;
 			j = i;
 		}
 	}
 	if (j < len) {
-		SPLIT_APPEND(s, j, len);
+		item = PyString_FromStringAndSize(s+j, (int)(len - j));
+		if (item == NULL)
+			goto finally;
+		err = PyList_Append(list, item);
+		Py_DECREF(item);
+		if (err < 0)
+			goto finally;
 	}
 	return list;
-  onError:
+  finally:
 	Py_DECREF(list);
 	return NULL;
 }
 
-static PyObject *
-split_char(const char *s, int len, char ch, int maxcount)
-{
-	register int i, j;
-	PyObject *str;
-	PyObject *list = PyList_New(0);
-
-	if (list == NULL)
-		return NULL;
-
-	for (i = j = 0; i < len; ) {
-		if (s[i] == ch) {
-			if (maxcount-- <= 0)
-				break;
-			SPLIT_APPEND(s, j, i);
-			i = j = i + 1;
-		} else
-			i++;
-	}
-	if (j <= len) {
-		SPLIT_APPEND(s, j, len);
-	}
-	return list;
-
-  onError:
-	Py_DECREF(list);
-	return NULL;
-}
 
 PyDoc_STRVAR(split__doc__,
 "S.split([sep [,maxsplit]]) -> list of strings\n\
@@ -1401,13 +1366,10 @@ string_split(PyStringObject *self, PyObject *args)
 #endif
 	else if (PyObject_AsCharBuffer(subobj, &sub, &n))
 		return NULL;
-
 	if (n == 0) {
 		PyErr_SetString(PyExc_ValueError, "empty separator");
 		return NULL;
 	}
-	else if (n == 1)
-		return split_char(s, len, sub[0], maxsplit);
 
 	list = PyList_New(0);
 	if (list == NULL)
@@ -1434,148 +1396,6 @@ string_split(PyStringObject *self, PyObject *args)
 	if (item == NULL)
 		goto fail;
 	err = PyList_Append(list, item);
-	Py_DECREF(item);
-	if (err < 0)
-		goto fail;
-
-	return list;
-
- fail:
-	Py_DECREF(list);
-	return NULL;
-}
-
-static PyObject *
-rsplit_whitespace(const char *s, int len, int maxsplit)
-{
-	int i, j;
-	PyObject *str;
-	PyObject *list = PyList_New(0);
-
-	if (list == NULL)
-		return NULL;
-
-	for (i = j = len - 1; i >= 0; ) {
-		while (i >= 0 && isspace(Py_CHARMASK(s[i])))
-			i--;
-		j = i;
-		while (i >= 0 && !isspace(Py_CHARMASK(s[i])))
-			i--;
-		if (j > i) {
-			if (maxsplit-- <= 0)
-				break;
-			SPLIT_INSERT(s, i + 1, j + 1);
-			while (i >= 0 && isspace(Py_CHARMASK(s[i])))
-				i--;
-			j = i;
-		}
-	}
-	if (j >= 0) {
-		SPLIT_INSERT(s, 0, j + 1);
-	}
-	return list;
-  onError:
-	Py_DECREF(list);
-	return NULL;
-}
-
-static PyObject *
-rsplit_char(const char *s, int len, char ch, int maxcount)
-{
-	register int i, j;
-	PyObject *str;
-	PyObject *list = PyList_New(0);
-
-	if (list == NULL)
-		return NULL;
-
-	for (i = j = len - 1; i >= 0; ) {
-		if (s[i] == ch) {
-			if (maxcount-- <= 0)
-				break;
-			SPLIT_INSERT(s, i + 1, j + 1);
-			j = i = i - 1;
-		} else
-			i--;
-	}
-	if (j >= -1) {
-		SPLIT_INSERT(s, 0, j + 1);
-	}
-	return list;
-
- onError:
-	Py_DECREF(list);
-	return NULL;
-}
-
-PyDoc_STRVAR(rsplit__doc__,
-"S.rsplit([sep [,maxsplit]]) -> list of strings\n\
-\n\
-Return a list of the words in the string S, using sep as the\n\
-delimiter string, starting at the end of the string and working\n\
-to the front.  If maxsplit is given, at most maxsplit splits are\n\
-done. If sep is not specified or is None, any whitespace string\n\
-is a separator.");
-
-static PyObject *
-string_rsplit(PyStringObject *self, PyObject *args)
-{
-	int len = PyString_GET_SIZE(self), n, i, j, err;
-	int maxsplit = -1;
-	const char *s = PyString_AS_STRING(self), *sub;
-	PyObject *list, *item, *subobj = Py_None;
-
-	if (!PyArg_ParseTuple(args, "|Oi:rsplit", &subobj, &maxsplit))
-		return NULL;
-	if (maxsplit < 0)
-		maxsplit = INT_MAX;
-	if (subobj == Py_None)
-		return rsplit_whitespace(s, len, maxsplit);
-	if (PyString_Check(subobj)) {
-		sub = PyString_AS_STRING(subobj);
-		n = PyString_GET_SIZE(subobj);
-	}
-#ifdef Py_USING_UNICODE
-	else if (PyUnicode_Check(subobj))
-		return PyUnicode_RSplit((PyObject *)self, subobj, maxsplit);
-#endif
-	else if (PyObject_AsCharBuffer(subobj, &sub, &n))
-		return NULL;
-
-	if (n == 0) {
-		PyErr_SetString(PyExc_ValueError, "empty separator");
-		return NULL;
-	}
-	else if (n == 1)
-		return rsplit_char(s, len, sub[0], maxsplit);
-
-	list = PyList_New(0);
-	if (list == NULL)
-		return NULL;
-
-	j = len;
-	i = j - n;
-	while (i >= 0) {
-		if (s[i] == sub[0] && memcmp(s+i, sub, n) == 0) {
-			if (maxsplit-- <= 0)
-				break;
-			item = PyString_FromStringAndSize(s+i+n, (int)(j-i-n));
-			if (item == NULL)
-				goto fail;
-			err = PyList_Insert(list, 0, item);
-			Py_DECREF(item);
-			if (err < 0)
-				goto fail;
-			j = i;
-			i -= n;
-		}
-		else
-			i--;
-	}
-	item = PyString_FromStringAndSize(s, j);
-	if (item == NULL)
-		goto fail;
-	err = PyList_Insert(list, 0, item);
 	Py_DECREF(item);
 	if (err < 0)
 		goto fail;
@@ -2488,11 +2308,11 @@ mymemreplace(const char *str, int len,		/* input string */
 
 
 PyDoc_STRVAR(replace__doc__,
-"S.replace (old, new[, count]) -> string\n\
+"S.replace (old, new[, maxsplit]) -> string\n\
 \n\
 Return a copy of string S with all occurrences of substring\n\
-old replaced by new.  If the optional argument count is\n\
-given, only the first count occurrences are replaced.");
+old replaced by new.  If the optional argument maxsplit is\n\
+given, only the first maxsplit occurrences are replaced.");
 
 static PyObject *
 string_replace(PyStringObject *self, PyObject *args)
@@ -2797,18 +2617,16 @@ pad(PyStringObject *self, int left, int right, char fill)
 }
 
 PyDoc_STRVAR(ljust__doc__,
-"S.ljust(width[, fillchar]) -> string\n"
+"S.ljust(width) -> string\n"
 "\n"
 "Return S left justified in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space).");
+"done using spaces.");
 
 static PyObject *
 string_ljust(PyStringObject *self, PyObject *args)
 {
     int width;
-    char fillchar = ' ';
-
-    if (!PyArg_ParseTuple(args, "i|c:ljust", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:ljust", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2816,23 +2634,21 @@ string_ljust(PyStringObject *self, PyObject *args)
         return (PyObject*) self;
     }
 
-    return pad(self, 0, width - PyString_GET_SIZE(self), fillchar);
+    return pad(self, 0, width - PyString_GET_SIZE(self), ' ');
 }
 
 
 PyDoc_STRVAR(rjust__doc__,
-"S.rjust(width[, fillchar]) -> string\n"
+"S.rjust(width) -> string\n"
 "\n"
 "Return S right justified in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space)");
+"done using spaces.");
 
 static PyObject *
 string_rjust(PyStringObject *self, PyObject *args)
 {
     int width;
-    char fillchar = ' ';
-
-    if (!PyArg_ParseTuple(args, "i|c:rjust", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:rjust", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2840,24 +2656,23 @@ string_rjust(PyStringObject *self, PyObject *args)
         return (PyObject*) self;
     }
 
-    return pad(self, width - PyString_GET_SIZE(self), 0, fillchar);
+    return pad(self, width - PyString_GET_SIZE(self), 0, ' ');
 }
 
 
 PyDoc_STRVAR(center__doc__,
-"S.center(width[, fillchar]) -> string\n"
+"S.center(width) -> string\n"
 "\n"
-"Return S centered in a string of length width. Padding is\n"
-"done using the specified fill character (default is a space)");
+"Return S centered in a string of length width. Padding is done\n"
+"using spaces.");
 
 static PyObject *
 string_center(PyStringObject *self, PyObject *args)
 {
     int marg, left;
     int width;
-    char fillchar = ' ';
 
-    if (!PyArg_ParseTuple(args, "i|c:center", &width, &fillchar))
+    if (!PyArg_ParseTuple(args, "i:center", &width))
         return NULL;
 
     if (PyString_GET_SIZE(self) >= width && PyString_CheckExact(self)) {
@@ -2868,7 +2683,7 @@ string_center(PyStringObject *self, PyObject *args)
     marg = width - PyString_GET_SIZE(self);
     left = marg / 2 + (marg & width & 1);
 
-    return pad(self, left, marg - left, fillchar);
+    return pad(self, left, marg - left, ' ');
 }
 
 PyDoc_STRVAR(zfill__doc__,
@@ -2918,10 +2733,10 @@ string_zfill(PyStringObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(isspace__doc__,
-"S.isspace() -> bool\n\
-\n\
-Return True if all characters in S are whitespace\n\
-and there is at least one character in S, False otherwise.");
+"S.isspace() -> bool\n"
+"\n"
+"Return True if there are only whitespace characters in S,\n"
+"False otherwise.");
 
 static PyObject*
 string_isspace(PyStringObject *self)
@@ -2951,7 +2766,7 @@ string_isspace(PyStringObject *self)
 PyDoc_STRVAR(isalpha__doc__,
 "S.isalpha() -> bool\n\
 \n\
-Return True if all characters in S are alphabetic\n\
+Return True if  all characters in S are alphabetic\n\
 and there is at least one character in S, False otherwise.");
 
 static PyObject*
@@ -2982,7 +2797,7 @@ string_isalpha(PyStringObject *self)
 PyDoc_STRVAR(isalnum__doc__,
 "S.isalnum() -> bool\n\
 \n\
-Return True if all characters in S are alphanumeric\n\
+Return True if  all characters in S are alphanumeric\n\
 and there is at least one character in S, False otherwise.");
 
 static PyObject*
@@ -3013,8 +2828,8 @@ string_isalnum(PyStringObject *self)
 PyDoc_STRVAR(isdigit__doc__,
 "S.isdigit() -> bool\n\
 \n\
-Return True if all characters in S are digits\n\
-and there is at least one character in S, False otherwise.");
+Return True if there are only digit characters in S,\n\
+False otherwise.");
 
 static PyObject*
 string_isdigit(PyStringObject *self)
@@ -3078,7 +2893,7 @@ string_islower(PyStringObject *self)
 PyDoc_STRVAR(isupper__doc__,
 "S.isupper() -> bool\n\
 \n\
-Return True if all cased characters in S are uppercase and there is\n\
+Return True if  all cased characters in S are uppercase and there is\n\
 at least one cased character in S, False otherwise.");
 
 static PyObject*
@@ -3112,10 +2927,9 @@ string_isupper(PyStringObject *self)
 PyDoc_STRVAR(istitle__doc__,
 "S.istitle() -> bool\n\
 \n\
-Return True if S is a titlecased string and there is at least one\n\
-character in S, i.e. uppercase characters may only follow uncased\n\
-characters and lowercase characters only cased ones. Return False\n\
-otherwise.");
+Return True if S is a titlecased string, i.e. uppercase characters\n\
+may only follow uncased characters and lowercase characters only cased\n\
+ones. Return False otherwise.");
 
 static PyObject*
 string_istitle(PyStringObject *self, PyObject *uncased)
@@ -3164,6 +2978,17 @@ PyDoc_STRVAR(splitlines__doc__,
 Return a list of the lines in S, breaking at line boundaries.\n\
 Line breaks are not included in the resulting list unless keepends\n\
 is given and true.");
+
+#define SPLIT_APPEND(data, left, right)					\
+	str = PyString_FromStringAndSize(data + left, right - left);	\
+	if (!str)							\
+	    goto onError;						\
+	if (PyList_Append(list, str)) {					\
+	    Py_DECREF(str);						\
+	    goto onError;						\
+	}								\
+        else								\
+            Py_DECREF(str);
 
 static PyObject*
 string_splitlines(PyStringObject *self, PyObject *args)
@@ -3233,7 +3058,6 @@ string_methods[] = {
 	   string.maketrans(). */
 	{"join", (PyCFunction)string_join, METH_O, join__doc__},
 	{"split", (PyCFunction)string_split, METH_VARARGS, split__doc__},
-	{"rsplit", (PyCFunction)string_rsplit, METH_VARARGS, rsplit__doc__},
 	{"lower", (PyCFunction)string_lower, METH_NOARGS, lower__doc__},
 	{"upper", (PyCFunction)string_upper, METH_NOARGS, upper__doc__},
 	{"islower", (PyCFunction)string_islower, METH_NOARGS, islower__doc__},
@@ -3735,7 +3559,6 @@ formatint(char *buf, size_t buflen, int flags,
 	   worst case length = 3 + 19 (worst len of INT_MAX on 64-bit machine)
 	   + 1 + 1 = 24 */
 	char fmt[64];	/* plenty big enough! */
-	char *sign;
 	long x;
 
 	x = PyInt_AsLong(v);
@@ -3743,13 +3566,12 @@ formatint(char *buf, size_t buflen, int flags,
 		PyErr_SetString(PyExc_TypeError, "int argument required");
 		return -1;
 	}
-	if (x < 0 && type == 'u') {
-		type = 'd';
+	if (x < 0 && type != 'd' && type != 'i') {
+		if (PyErr_Warn(PyExc_FutureWarning,
+			       "%u/%o/%x/%X of negative int will return "
+			       "a signed string in Python 2.4 and up") < 0)
+			return -1;
 	}
-	if (x < 0 && (type == 'x' || type == 'X' || type == 'o'))
-		sign = "-";
-	else
-		sign = "";
 	if (prec < 0)
 		prec = 1;
 
@@ -3775,27 +3597,24 @@ formatint(char *buf, size_t buflen, int flags,
 		 * Note that this is the same approach as used in
 		 * formatint() in unicodeobject.c
 		 */
-		PyOS_snprintf(fmt, sizeof(fmt), "%s0%c%%.%dl%c",
-			      sign, type, prec, type);
+		PyOS_snprintf(fmt, sizeof(fmt), "0%c%%.%dl%c",
+			      type, prec, type);
 	}
 	else {
-		PyOS_snprintf(fmt, sizeof(fmt), "%s%%%s.%dl%c",
-			      sign, (flags&F_ALT) ? "#" : "",
+		PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%dl%c",
+			      (flags&F_ALT) ? "#" : "",
 			      prec, type);
 	}
 
-	/* buf = '+'/'-'/'' + '0'/'0x'/'' + '[0-9]'*max(prec, len(x in octal))
-	 * worst case buf = '-0x' + [0-9]*prec, where prec >= 11
+	/* buf = '+'/'-'/'0'/'0x' + '[0-9]'*max(prec, len(x in octal))
+	 * worst case buf = '0x' + [0-9]*prec, where prec >= 11
 	 */
-	if (buflen <= 14 || buflen <= (size_t)3 + (size_t)prec) {
+	if (buflen <= 13 || buflen <= (size_t)2 + (size_t)prec) {
 		PyErr_SetString(PyExc_OverflowError,
 		    "formatted integer is too long (precision too large?)");
 		return -1;
 	}
-	if (sign[0])
-		PyOS_snprintf(buf, buflen, fmt, -x);
-	else
-		PyOS_snprintf(buf, buflen, fmt, x);
+	PyOS_snprintf(buf, buflen, fmt, x);
 	return strlen(buf);
 }
 
@@ -4048,7 +3867,7 @@ PyString_Format(PyObject *format, PyObject *args)
 				}
 #endif
 				/* Fall through */
-			case 'r':
+  			case 'r':
 				if (c == 's')
 					temp = PyObject_Str(v);
 				else
@@ -4082,6 +3901,8 @@ PyString_Format(PyObject *format, PyObject *args)
 						prec, c, &pbuf, &len);
 					if (!temp)
 						goto error;
+					/* unbounded ints can always produce
+					   a sign character! */
 					sign = 1;
 				}
 				else {
@@ -4091,7 +3912,8 @@ PyString_Format(PyObject *format, PyObject *args)
 							flags, prec, c, v);
 					if (len < 0)
 						goto error;
-					sign = 1;
+					/* only d conversion is signed */
+					sign = c == 'd';
 				}
 				if (flags & F_ZERO)
 					fill = '0';
@@ -4099,11 +3921,8 @@ PyString_Format(PyObject *format, PyObject *args)
 			case 'e':
 			case 'E':
 			case 'f':
-			case 'F':
 			case 'g':
 			case 'G':
-				if (c == 'F')
-					c = 'f';
 				pbuf = formatbuf;
 				len = formatfloat(pbuf, sizeof(formatbuf),
 						  flags, prec, c, v);

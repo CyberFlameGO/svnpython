@@ -280,7 +280,7 @@ def decode_rfc2231(s):
     import urllib
     parts = s.split("'", 2)
     if len(parts) == 1:
-        return None, None, urllib.unquote(s)
+        return None, None, s
     charset, language, s = parts
     return charset, language, urllib.unquote(s)
 

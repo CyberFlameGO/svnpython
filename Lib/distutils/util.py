@@ -209,12 +209,9 @@ def grok_environment_error (exc, prefix="error: "):
 
 
 # Needed by 'split_quoted()'
-_wordchars_re = _squote_re = _dquote_re = None
-def _init_regex():
-    global _wordchars_re, _squote_re, _dquote_re
-    _wordchars_re = re.compile(r'[^\\\'\"%s ]*' % string.whitespace)
-    _squote_re = re.compile(r"'(?:[^'\\]|\\.)*'")
-    _dquote_re = re.compile(r'"(?:[^"\\]|\\.)*"')
+_wordchars_re = re.compile(r'[^\\\'\"%s ]*' % string.whitespace)
+_squote_re = re.compile(r"'(?:[^'\\]|\\.)*'")
+_dquote_re = re.compile(r'"(?:[^"\\]|\\.)*"')
 
 def split_quoted (s):
     """Split a string up according to Unix shell-like rules for quotes and
@@ -230,7 +227,6 @@ def split_quoted (s):
     # This is a nice algorithm for splitting up a single string, since it
     # doesn't require character-by-character examination.  It was a little
     # bit of a brain-bender to get it working right, though...
-    if _wordchars_re is None: _init_regex()
 
     s = string.strip(s)
     words = []
@@ -289,7 +285,7 @@ def execute (func, args, msg=None, verbose=0, dry_run=0):
     print.
     """
     if msg is None:
-        msg = "%s%r" % (func.__name__, args)
+        msg = "%s%s" % (func.__name__, `args`)
         if msg[-2:] == ',)':        # correct for singleton tuple
             msg = msg[0:-2] + ')'
 
@@ -311,7 +307,7 @@ def strtobool (val):
     elif val in ('n', 'no', 'f', 'false', 'off', '0'):
         return 0
     else:
-        raise ValueError, "invalid truth value %r" % (val,)
+        raise ValueError, "invalid truth value %s" % `val`
 
 
 def byte_compile (py_files,
@@ -398,11 +394,11 @@ files = [
 
             script.write(string.join(map(repr, py_files), ",\n") + "]\n")
             script.write("""
-byte_compile(files, optimize=%r, force=%r,
-             prefix=%r, base_dir=%r,
-             verbose=%r, dry_run=0,
+byte_compile(files, optimize=%s, force=%s,
+             prefix=%s, base_dir=%s,
+             verbose=%s, dry_run=0,
              direct=1)
-""" % (optimize, force, prefix, base_dir, verbose))
+""" % (`optimize`, `force`, `prefix`, `base_dir`, `verbose`))
 
             script.close()
 
@@ -436,8 +432,8 @@ byte_compile(files, optimize=%r, force=%r,
             if prefix:
                 if file[:len(prefix)] != prefix:
                     raise ValueError, \
-                          ("invalid prefix: filename %r doesn't start with %r"
-                           % (file, prefix))
+                          ("invalid prefix: filename %s doesn't start with %s"
+                           % (`file`, `prefix`))
                 dfile = dfile[len(prefix):]
             if base_dir:
                 dfile = os.path.join(base_dir, dfile)

@@ -19,7 +19,7 @@ ConfigParser constructor as a dictionary.
 
 class:
 
-ConfigParser -- responsible for parsing a list of
+ConfigParser -- responsible for for parsing a list of
                 configuration files, and managing the parsed database.
 
     methods:
@@ -92,7 +92,7 @@ import re
 __all__ = ["NoSectionError", "DuplicateSectionError", "NoOptionError",
            "InterpolationError", "InterpolationDepthError",
            "InterpolationSyntaxError", "ParsingError",
-           "MissingSectionHeaderError", "ConfigParser", "SafeConfigParser",
+           "MissingSectionHeaderError", "ConfigParser",
            "DEFAULTSECT", "MAX_INTERPOLATION_DEPTH"]
 
 DEFAULTSECT = "DEFAULT"
@@ -118,7 +118,7 @@ class NoSectionError(Error):
     """Raised when no section matches a requested option."""
 
     def __init__(self, section):
-        Error.__init__(self, 'No section: %r' % (section,))
+        Error.__init__(self, 'No section: ' + `section`)
         self.section = section
 
 class DuplicateSectionError(Error):
@@ -191,7 +191,7 @@ class MissingSectionHeaderError(ParsingError):
     def __init__(self, filename, lineno, line):
         Error.__init__(
             self,
-            'File contains no section headers.\nfile: %s, line: %d\n%r' %
+            'File contains no section headers.\nfile: %s, line: %d\n%s' %
             (filename, lineno, line))
         self.filename = filename
         self.lineno = lineno
@@ -453,7 +453,7 @@ class RawConfigParser:
                     optname = None
                 # no section header in the file?
                 elif cursect is None:
-                    raise MissingSectionHeaderError(fpname, lineno, line)
+                    raise MissingSectionHeaderError(fpname, lineno, `line`)
                 # an option line?
                 else:
                     mo = self.OPTCRE.match(line)
@@ -478,7 +478,7 @@ class RawConfigParser:
                         # list of all bogus lines
                         if not e:
                             e = ParsingError(fpname)
-                        e.append(lineno, repr(line))
+                        e.append(lineno, `line`)
         # if any parsing errors occurred, raise an exception
         if e:
             raise e
@@ -542,11 +542,12 @@ class ConfigParser(RawConfigParser):
         if "__name__" in options:
             options.remove("__name__")
         if raw:
-            return [(option, d[option])
-                    for option in options]
+            for option in options:
+                yield (option, d[option])
         else:
-            return [(option, self._interpolate(section, option, d[option], d))
-                    for option in options]
+            for option in options:
+                yield (option,
+                       self._interpolate(section, option, d[option], d))
 
     def _interpolate(self, section, option, rawval, vars):
         # do the string interpolation
@@ -596,8 +597,8 @@ class SafeConfigParser(ConfigParser):
             elif c == "(":
                 m = self._interpvar_match(rest)
                 if m is None:
-                    raise InterpolationSyntaxError(option, section,
-                        "bad interpolation variable reference %r" % rest)
+                    raise InterpolationSyntaxError(
+                        "bad interpolation variable reference", rest)
                 var = m.group(1)
                 rest = rest[m.end():]
                 try:
@@ -612,5 +613,5 @@ class SafeConfigParser(ConfigParser):
                     accum.append(v)
             else:
                 raise InterpolationSyntaxError(
-                    option, section,
-                    "'%%' must be followed by '%%' or '(', found: %r" % (rest,))
+                    option, section, rest,
+                    "'%' must be followed by '%' or '(', found: " + `rest`)

@@ -1,5 +1,5 @@
 /***********************************************************
-Copyright (C) 1997, 2002, 2003 Martin von Loewis
+Copyright (C) 1997, 2002 Martin von Loewis
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted,
@@ -29,13 +29,13 @@ This software comes with no warranty. Use at your own risk.
 #include <wchar.h>
 #endif
 
-#if defined(__APPLE__)
-#include "pymactoolbox.h"
-#endif
-
 #if defined(MS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#endif
+
+#if defined(__APPLE__) || defined(__MWERKS__)
+#include "macglue.h"
 #endif
 
 #ifdef RISCOS
@@ -177,11 +177,11 @@ PyLocale_setlocale(PyObject* self, PyObject* args)
         result = setlocale(category, locale);
         if (!result) {
             /* operation failed, no setting was changed */
-            PyErr_SetString(Error, "unsupported locale setting");
+            PyErr_SetString(Error, "locale setting not supported");
             return NULL;
         }
         result_object = PyString_FromString(result);
-        if (!result_object)
+        if (!result)
             return NULL;
         /* record changes to LC_NUMERIC */
         if (category == LC_NUMERIC || category == LC_ALL) {
@@ -199,8 +199,6 @@ PyLocale_setlocale(PyObject* self, PyObject* args)
                 thousands_sep = PyString_FromString(lc->thousands_sep);
                 Py_XDECREF(decimal_point);
                 decimal_point = PyString_FromString(lc->decimal_point);
-                if (saved_numeric)
-                    free(saved_numeric);
                 saved_numeric = strdup(locale);
                 /* restore to "C" */
                 setlocale(LC_NUMERIC, "C");
@@ -579,25 +577,9 @@ PyLocale_nl_langinfo(PyObject* self, PyObject* args)
     /* Check whether this is a supported constant. GNU libc sometimes
        returns numeric values in the char* return value, which would
        crash PyString_FromString.  */
-#ifdef RADIXCHAR
-    if (saved_numeric) {
-	if(item == RADIXCHAR) {
-            Py_INCREF(decimal_point);
-            return decimal_point;
-        }
-        if(item == THOUSEP) {
-            Py_INCREF(thousands_sep);
-            return thousands_sep;
-        }
-    }
-#endif
     for (i = 0; langinfo_constants[i].name; i++)
-        if (langinfo_constants[i].value == item) {
-            /* Check NULL as a workaround for GNU libc's returning NULL
-               instead of an empty string for nl_langinfo(ERA).  */
-            const char *result = nl_langinfo(item);
-            return PyString_FromString(result != NULL ? result : "");
-        }
+	    if (langinfo_constants[i].value == item)
+		    return PyString_FromString(nl_langinfo(item));
     PyErr_SetString(PyExc_ValueError, "unsupported langinfo constant");
     return NULL;
 }

@@ -125,6 +125,6 @@ fp.write(program)
 fp.flush()
 if DFLAG:
 	import pdb
-	pdb.run('execfile(%r)' % (tfn,))
+	pdb.run('execfile(' + `tfn` + ')')
 else:
 	execfile(tfn)

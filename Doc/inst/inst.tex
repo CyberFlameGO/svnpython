@@ -16,13 +16,8 @@
 % Finally, it might be useful to include all the material from my "Care
 % and Feeding of a Python Installation" talk in here somewhere.  Yow!
 
-\input{boilerplate}
-
 \author{Greg Ward}
-\authoraddress{
-	\strong{Python Software Foundation}\\
-	Email: \email{distutils-sig@python.org}
-}
+\authoraddress{Email: \email{distutils-sig@python.org}}
 
 \makeindex
 
@@ -163,7 +158,7 @@ python setup.py install
 On Windows, you'd probably download \file{foo-1.0.zip}.  If you
 downloaded the archive file to \file{C:\textbackslash{}Temp}, then it
 would unpack into \file{C:\textbackslash{}Temp\textbackslash{}foo-1.0};
-you can use either a archive manipulator with a graphical user interface
+you can use either a archive manipulator with a grapical user interface
 (such as WinZip) or a command-line tool (such as \program{unzip} or
 \program{pkunzip}) to unpack the archive.  Then, open a command prompt
 window (``DOS box''), and run:
@@ -344,7 +339,7 @@ section~\ref{custom-install} on custom installations.
 % macro.  Uh-oh.
 
 \newcommand{\installscheme}[8]
-  {\begin{tableiii}{l|l|l}{textrm}
+  {\begin{tableiii}{lll}{textrm}
           {Type of file}
           {Installation Directory}
           {Override option}
@@ -704,7 +699,7 @@ Type ``help'', ``copyright'', ``credits'' or ``license'' for more information.
  '/usr/local/lib/python2.3/lib-tk', '/usr/local/lib/python2.3/lib-dynload', 
  '/usr/local/lib/python2.3/site-packages']
 >>>
-\end{verbatim} % $ <-- bow to font-lock
+\end{verbatim}
 
 The null string in \code{sys.path} represents the current working
 directory.   
@@ -815,7 +810,7 @@ And on Mac OS, they are:
   in the directory where the Distutils are installed; under Python 1.6
   and later on \UNIX, this is as shown. For Python 1.5.2, the Distutils
   will normally be installed to
-  \file{\filevar{prefix}/lib/python1.5/site-packages/distutils},
+  \file{\filevar{prefix}/lib/site-packages/python1.5/distutils},
   so the system configuration file should be put there under Python
   1.5.2.
 \item[(2)] On \UNIX, if the \envvar{HOME} environment variable is not
@@ -1007,7 +1002,7 @@ Compiler flags can also be supplied through setting the
 \subsection{Using non-Microsoft compilers on Windows \label{non-ms-compilers}}
 \sectionauthor{Rene Liebscher}{R.Liebscher@gmx.de}
 
-\subsubsection{Borland \Cpp}
+\subsubsection{Borland C++}
 
 This subsection describes the necessary steps to use Distutils with the 
 Borland \Cpp{} compiler version 5.5.
@@ -1061,7 +1056,7 @@ for Distutils (see section~\ref{config-files}.)
 
   \seetitle[http://www.cyberus.ca/\~{}g_will/pyExtenDL.shtml]
     {Creating Python Extensions Using Borland's Free Compiler}
-    {Document describing how to use Borland's free command-line \Cpp
+    {Document describing how to use Borland's free command-line C++
      compiler to build Python.}
 \end{seealso}
 

@@ -7,16 +7,31 @@
 	extern "C" {
 #endif
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Memory.h>
+#include <Dialogs.h>
+#include <Menus.h>
+#include <Controls.h>
+#include <Components.h>
+#include <Lists.h>
+#include <Movies.h>
+#include <Errors.h>
+#include <CFBase.h>
+#include <CFArray.h>
+#include <CFData.h>
+#include <CFDictionary.h>
+#include <CFString.h>
+#include <CFURL.h>
+#else
 #include <Carbon/Carbon.h>
 #include <QuickTime/QuickTime.h>
+#endif
 
 /*
 ** Helper routines for error codes and such.
 */
 char *PyMac_getscript(void);				/* Get the default encoding for our 8bit character set */
 char *PyMac_StrError(int);					/* strerror with mac errors */
-extern PyObject *PyMac_OSErrException;		/* Exception for OSErr */
-PyObject *PyMac_GetOSErrException(void);	/* Initialize & return it */
 PyObject *PyErr_Mac(PyObject *, int);		/* Exception with a mac error */
 PyObject *PyMac_Error(OSErr);				/* Uses PyMac_GetOSErrException */
 extern OSErr PyMac_GetFullPathname(FSSpec *, char *, int); /* convert fsspec->path */
@@ -163,8 +178,6 @@ extern int WinObj_Convert(PyObject *, WindowPtr *);
 extern PyObject *WinObj_WhichWindow(WindowPtr);
 
 /* CF exports */
-extern PyObject *CFObj_New(CFTypeRef);
-extern int CFObj_Convert(PyObject *, CFTypeRef *);
 extern PyObject *CFTypeRefObj_New(CFTypeRef);
 extern int CFTypeRefObj_Convert(PyObject *, CFTypeRef *);
 extern PyObject *CFStringRefObj_New(CFStringRef);

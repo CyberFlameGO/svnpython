@@ -3,6 +3,12 @@
 
 #include "Python.h"
 
+#ifdef macintosh
+extern char *PyMac_StrError(int);
+#undef strerror
+#define strerror PyMac_StrError
+#endif /* macintosh */
+
 #ifndef __STDC__
 #ifndef MS_WINDOWS
 extern char *strerror(int);
@@ -153,13 +159,13 @@ PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)
 			PyObject *args, *res;
 
 			if (value == Py_None)
-				args = PyTuple_New(0);
+				args = Py_BuildValue("()");
 			else if (PyTuple_Check(value)) {
 				Py_INCREF(value);
 				args = value;
 			}
 			else
-				args = PyTuple_Pack(1, value);
+				args = Py_BuildValue("(O)", value);
 
 			if (args == NULL)
 				goto finally;
@@ -205,7 +211,7 @@ finally:
 void
 PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 
 	*p_type = tstate->curexc_type;
 	*p_value = tstate->curexc_value;
@@ -554,7 +560,7 @@ PyErr_NewException(char *name, PyObject *base, PyObject *dict)
 	classname = PyString_FromString(dot+1);
 	if (classname == NULL)
 		goto failure;
-	bases = PyTuple_Pack(1, base);
+	bases = Py_BuildValue("(O)", base);
 	if (bases == NULL)
 		goto failure;
 	result = PyClass_New(bases, dict, classname);
@@ -593,17 +599,16 @@ PyErr_WriteUnraisable(PyObject *obj)
 	Py_XDECREF(tb);
 }
 
-extern PyObject *PyModule_GetWarningsModule(void);
+extern PyObject *PyModule_WarningsModule;
 
 /* Function to issue a warning message; may raise an exception. */
 int
 PyErr_Warn(PyObject *category, char *message)
 {
 	PyObject *dict, *func = NULL;
-	PyObject *warnings_module = PyModule_GetWarningsModule();
 
-	if (warnings_module != NULL) {
-		dict = PyModule_GetDict(warnings_module);
+	if (PyModule_WarningsModule != NULL) {
+		dict = PyModule_GetDict(PyModule_WarningsModule);
 		func = PyDict_GetItemString(dict, "warn");
 	}
 	if (func == NULL) {

@@ -87,40 +87,46 @@ f = urllib2.urlopen('http://www.python.org/')
 # gopher can return a socket.error
 # check digest against correct (i.e. non-apache) implementation
 
-import base64
-import ftplib
-import gopherlib
+import socket
 import httplib
 import inspect
+import re
+import base64
+import urlparse
 import md5
 import mimetypes
 import mimetools
-import os
-import posixpath
-import random
-import re
 import rfc822
-import sha
-import socket
+import ftplib
 import sys
 import time
-import urlparse
-import bisect
+import os
+import gopherlib
+import posixpath
 
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
 
+try:
+    import sha
+except ImportError:
+    # need 1.5.2 final
+    sha = None
+
 # not sure how many of these need to be gotten rid of
 from urllib import unwrap, unquote, splittype, splithost, \
      addinfourl, splitport, splitgophertype, splitquery, \
-     splitattr, ftpwrapper, noheaders, splituser, splitpasswd
+     splitattr, ftpwrapper, noheaders
 
-# support for FileHandler, proxies via environment variables
-from urllib import localhost, url2pathname, getproxies
+# support for proxies via environment variables
+from urllib import getproxies
 
-__version__ = "2.4"
+# support for FileHandler
+from urllib import localhost, url2pathname
+
+__version__ = "2.0a1"
 
 _opener = None
 def urlopen(url, data=None):
@@ -139,12 +145,8 @@ def install_opener(opener):
 
 class URLError(IOError):
     # URLError is a sub-type of IOError, but it doesn't share any of
-    # the implementation.  need to override __init__ and __str__.
-    # It sets self.args for compatibility with other EnvironmentError
-    # subclasses, but args doesn't have the typical format with errno in
-    # slot 0 and strerror in slot 1.  This may be better than nothing.
+    # the implementation.  need to override __init__ and __str__
     def __init__(self, reason):
-        self.args = reason,
         self.reason = reason
 
     def __str__(self):
@@ -170,6 +172,12 @@ class HTTPError(URLError, addinfourl):
     def __str__(self):
         return 'HTTP Error %s: %s' % (self.code, self.msg)
 
+    def __del__(self):
+        # XXX is this safe? what if user catches exception, then
+        # extracts fp and discards exception?
+        if self.fp:
+            self.fp.close()
+
 class GopherError(URLError):
     pass
 
@@ -185,9 +193,7 @@ class Request:
         self.port = None
         self.data = data
         self.headers = {}
-        for key, value in headers.items():
-            self.add_header(key, value)
-        self.unredirected_hdrs = {}
+        self.headers.update(headers)
 
     def __getattr__(self, attr):
         # XXX this is a fallback mechanism to guard against these
@@ -206,8 +212,6 @@ class Request:
             return "POST"
         else:
             return "GET"
-
-    # XXX these helper methods are lame
 
     def add_data(self, data):
         self.data = data
@@ -244,68 +248,56 @@ class Request:
 
     def add_header(self, key, val):
         # useful for something like authentication
-        self.headers[key.capitalize()] = val
-
-    def add_unredirected_header(self, key, val):
-        # will not be added to a redirected request
-        self.unredirected_hdrs[key.capitalize()] = val
-
-    def has_header(self, header_name):
-        return bool(header_name in self.headers or
-                    header_name in self.unredirected_hdrs)
-
+        self.headers[key] = val
 
 class OpenerDirector:
     def __init__(self):
         server_version = "Python-urllib/%s" % __version__
-        self.addheaders = [('User-agent', server_version)]
+        self.addheaders = [('User-Agent', server_version)]
         # manage the individual handlers
         self.handlers = []
         self.handle_open = {}
         self.handle_error = {}
-        self.process_response = {}
-        self.process_request = {}
 
     def add_handler(self, handler):
-        added = False
+        added = 0
         for meth in dir(handler):
-            i = meth.find("_")
-            protocol = meth[:i]
-            condition = meth[i+1:]
-
-            if condition.startswith("error"):
-                j = meth[i+1:].find("_") + i + 1
+            if meth[-5:] == '_open':
+                protocol = meth[:-5]
+                if protocol in self.handle_open:
+                    self.handle_open[protocol].append(handler)
+                else:
+                    self.handle_open[protocol] = [handler]
+                added = 1
+                continue
+            i = meth.find('_')
+            j = meth[i+1:].find('_') + i + 1
+            if j != -1 and meth[i+1:j] == 'error':
+                proto = meth[:i]
                 kind = meth[j+1:]
                 try:
                     kind = int(kind)
                 except ValueError:
                     pass
-                lookup = self.handle_error.get(protocol, {})
-                self.handle_error[protocol] = lookup
-            elif condition == "open":
-                kind = protocol
-                lookup = getattr(self, "handle_"+condition)
-            elif condition in ["response", "request"]:
-                kind = protocol
-                lookup = getattr(self, "process_"+condition)
-            else:
+                dict = self.handle_error.get(proto, {})
+                if kind in dict:
+                    dict[kind].append(handler)
+                else:
+                    dict[kind] = [handler]
+                self.handle_error[proto] = dict
+                added = 1
                 continue
-
-            handlers = lookup.setdefault(kind, [])
-            if handlers:
-                bisect.insort(handlers, handler)
-            else:
-                handlers.append(handler)
-            added = True
-
         if added:
-            # XXX why does self.handlers need to be sorted?
-            bisect.insort(self.handlers, handler)
+            self.handlers.append(handler)
             handler.add_parent(self)
 
+    def __del__(self):
+        self.close()
+
     def close(self):
-        # Only exists for backwards compatibility.
-        pass
+        for handler in self.handlers:
+            handler.close()
+        self.handlers = []
 
     def _call_chain(self, chain, kind, meth_name, *args):
         # XXX raise an exception if no one else should try to handle
@@ -326,33 +318,15 @@ class OpenerDirector:
             req = fullurl
             if data is not None:
                 req.add_data(data)
+        assert isinstance(req, Request) # really only care about interface
 
-        protocol = req.get_type()
-
-        # pre-process request
-        meth_name = protocol+"_request"
-        for processor in self.process_request.get(protocol, []):
-            meth = getattr(processor, meth_name)
-            req = meth(req)
-
-        response = self._open(req, data)
-
-        # post-process response
-        meth_name = protocol+"_response"
-        for processor in self.process_response.get(protocol, []):
-            meth = getattr(processor, meth_name)
-            response = meth(req, response)
-
-        return response
-
-    def _open(self, req, data=None):
         result = self._call_chain(self.handle_open, 'default',
                                   'default_open', req)
         if result:
             return result
 
-        protocol = req.get_type()
-        result = self._call_chain(self.handle_open, protocol, protocol +
+        type_ = req.get_type()
+        result = self._call_chain(self.handle_open, type_, type_ + \
                                   '_open', req)
         if result:
             return result
@@ -365,7 +339,7 @@ class OpenerDirector:
             # XXX http[s] protocols are special-cased
             dict = self.handle_error['http'] # https is not different than http
             proto = args[2]  # YUCK!
-            meth_name = 'http_error_%s' % proto
+            meth_name = 'http_error_%d' % proto
             http_err = 1
             orig_args = args
         else:
@@ -381,15 +355,17 @@ class OpenerDirector:
             args = (dict, 'default', 'http_error_default') + orig_args
             return self._call_chain(*args)
 
-# XXX probably also want an abstract factory that knows when it makes
-# sense to skip a superclass in favor of a subclass and when it might
-# make sense to include both
+# XXX probably also want an abstract factory that knows things like
+# the fact that a ProxyHandler needs to get inserted first.
+# would also know when it makes sense to skip a superclass in favor of
+# a subclass and when it might make sense to include both
 
 def build_opener(*handlers):
     """Create an opener object from a list of handlers.
 
     The opener will use several default handlers, including support
-    for HTTP and FTP.
+    for HTTP and FTP.  If there is a ProxyHandler, it must be at the
+    front of the list of handlers.  (Yuck.)
 
     If any of the handlers passed as arguments are subclasses of the
     default handlers, the default handlers will not be used.
@@ -398,7 +374,7 @@ def build_opener(*handlers):
     opener = OpenerDirector()
     default_classes = [ProxyHandler, UnknownHandler, HTTPHandler,
                        HTTPDefaultErrorHandler, HTTPRedirectHandler,
-                       FTPHandler, FileHandler, HTTPErrorProcessor]
+                       FTPHandler, FileHandler]
     if hasattr(httplib, 'HTTPS'):
         default_classes.append(HTTPSHandler)
     skip = []
@@ -422,68 +398,35 @@ def build_opener(*handlers):
     return opener
 
 class BaseHandler:
-    handler_order = 500
-
     def add_parent(self, parent):
         self.parent = parent
-
     def close(self):
-        # Only exists for backwards compatibility
-        pass
-
-    def __lt__(self, other):
-        if not hasattr(other, "handler_order"):
-            # Try to preserve the old behavior of having custom classes
-            # inserted after default ones (works only for custom user
-            # classes which are not aware of handler_order).
-            return True
-        return self.handler_order < other.handler_order
-
-
-class HTTPErrorProcessor(BaseHandler):
-    """Process HTTP error responses."""
-    handler_order = 1000  # after all other processing
-
-    def http_response(self, request, response):
-        code, msg, hdrs = response.code, response.msg, response.info()
-
-        if code != 200:
-            response = self.parent.error(
-                'http', request, response, code, msg, hdrs)
-
-        return response
-
-    https_response = http_response
+        self.parent = None
 
 class HTTPDefaultErrorHandler(BaseHandler):
     def http_error_default(self, req, fp, code, msg, hdrs):
         raise HTTPError(req.get_full_url(), code, msg, hdrs, fp)
 
 class HTTPRedirectHandler(BaseHandler):
-    # maximum number of redirections before assuming we're in a loop
-    max_redirections = 10
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
+    def redirect_request(self, req, fp, code, msg, headers):
         """Return a Request or None in response to a redirect.
 
-        This is called by the http_error_30x methods when a
-        redirection response is received.  If a redirection should
-        take place, return a new Request to allow http_error_30x to
-        perform the redirect.  Otherwise, raise HTTPError if no-one
-        else should try to handle this url.  Return None if you can't
-        but another Handler might.
+        This is called by the http_error_30x methods when a redirection
+        response is received.  If a redirection should take place, return a new
+        Request to allow http_error_30x to perform the redirect.  Otherwise,
+        raise HTTPError if no-one else should try to handle this url.  Return
+        None if you can't but another Handler might.
+
         """
-        m = req.get_method()
-        if (code in (301, 302, 303, 307) and m in ("GET", "HEAD")
-            or code in (301, 302, 303) and m == "POST"):
-            # Strictly (according to RFC 2616), 301 or 302 in response
-            # to a POST MUST NOT cause a redirection without confirmation
-            # from the user (of urllib2, in this case).  In practice,
-            # essentially all clients do redirect in this case, so we
-            # do the same.
+        if (code in (301, 302, 303, 307) and req.method() in ("GET", "HEAD") or
+            code in (302, 303) and req.method() == "POST"):
+            # Strictly (according to RFC 2616), 302 in response to a POST
+            # MUST NOT cause a redirection without confirmation from the user
+           # (of urllib2, in this case).  In practice, essentially all clients
+            # do redirect in this case, so we do the same.
             return Request(newurl, headers=req.headers)
         else:
-            raise HTTPError(req.get_full_url(), code, msg, headers, fp)
+            raise HTTPError(req.get_full_url(), code, msg, hdrs, fp)
 
     # Implementation note: To avoid the server sending us into an
     # infinite loop, the request object needs to track what URLs we
@@ -501,25 +444,19 @@ class HTTPRedirectHandler(BaseHandler):
         # XXX Probably want to forget about the state of the current
         # request, although that might interact poorly with other
         # handlers that also use handler-specific request attributes
-        new = self.redirect_request(req, fp, code, msg, headers, newurl)
+        new = self.redirect_request(req, fp, code, msg, headers)
         if new is None:
             return
 
         # loop detection
-        # .redirect_dict has a key (url, code) if url was previously
-        # visited as a result of a redirection with that code.  The
-        # code is needed in addition to the URL because visiting a URL
-        # twice isn't necessarily a loop: there is more than one way
-        # to redirect (301, 302, 303, 307, refresh).
-        key = (newurl, code)
-        if hasattr(req, 'redirect_dict'):
-            visited = new.redirect_dict = req.redirect_dict
-            if key in visited or len(visited) >= self.max_redirections:
+        new.error_302_dict = {}
+        if hasattr(req, 'error_302_dict'):
+            if len(req.error_302_dict)>10 or \
+               newurl in req.error_302_dict:
                 raise HTTPError(req.get_full_url(), code,
                                 self.inf_msg + msg, headers, fp)
-        else:
-            visited = new.redirect_dict = req.redirect_dict = {}
-        visited[key] = None
+            new.error_302_dict.update(req.error_302_dict)
+        new.error_302_dict[newurl] = newurl
 
         # Don't close the fp until we are sure that we won't use it
         # with HTTPError.
@@ -530,14 +467,11 @@ class HTTPRedirectHandler(BaseHandler):
 
     http_error_301 = http_error_303 = http_error_307 = http_error_302
 
-    inf_msg = "The HTTP server returned a redirect error that would " \
+    inf_msg = "The HTTP server returned a redirect error that would" \
               "lead to an infinite loop.\n" \
-              "The last 30x error message was:\n"
+              "The last 302 error message was:\n"
 
 class ProxyHandler(BaseHandler):
-    # Proxies must be in front
-    handler_order = 100
-
     def __init__(self, proxies=None):
         if proxies is None:
             proxies = getproxies()
@@ -558,7 +492,7 @@ class ProxyHandler(BaseHandler):
                 user, password = user_pass.split(':', 1)
                 user_pass = base64.encodestring('%s:%s' % (unquote(user),
                                                            unquote(password)))
-                req.add_header('Proxy-authorization', 'Basic ' + user_pass)
+                req.add_header('Proxy-Authorization', 'Basic ' + user_pass)
         host = unquote(host)
         req.set_proxy(host, type)
         if orig_type == type:
@@ -588,9 +522,6 @@ class CustomProxy:
         return self.addr
 
 class CustomProxyHandler(BaseHandler):
-    # Proxies must be in front
-    handler_order = 100
-
     def __init__(self, *proxies):
         self.proxies = {}
 
@@ -631,7 +562,7 @@ class HTTPPasswordMgr:
     def find_user_password(self, realm, authuri):
         domains = self.passwd.get(realm, {})
         authuri = self.reduce_uri(authuri)
-        for uris, authinfo in domains.iteritems():
+        for uris, authinfo in domains.items():
             for uri in uris:
                 if self.is_suburi(uri, authuri):
                     return authinfo
@@ -663,8 +594,7 @@ class HTTPPasswordMgr:
 class HTTPPasswordMgrWithDefaultRealm(HTTPPasswordMgr):
 
     def find_user_password(self, realm, authuri):
-        user, password = HTTPPasswordMgr.find_user_password(self, realm,
-                                                            authuri)
+        user, password = HTTPPasswordMgr.find_user_password(self,realm,authuri)
         if user is not None:
             return user, password
         return HTTPPasswordMgr.find_user_password(self, None, authuri)
@@ -718,7 +648,7 @@ class HTTPBasicAuthHandler(AbstractBasicAuthHandler, BaseHandler):
 
 class ProxyBasicAuthHandler(AbstractBasicAuthHandler, BaseHandler):
 
-    auth_header = 'Proxy-authorization'
+    auth_header = 'Proxy-Authorization'
 
     def http_error_407(self, req, fp, code, msg, headers):
         host = req.get_host()
@@ -726,61 +656,20 @@ class ProxyBasicAuthHandler(AbstractBasicAuthHandler, BaseHandler):
                                           host, req, headers)
 
 
-def randombytes(n):
-    """Return n random bytes."""
-    # Use /dev/urandom if it is available.  Fall back to random module
-    # if not.  It might be worthwhile to extend this function to use
-    # other platform-specific mechanisms for getting random bytes.
-    if os.path.exists("/dev/urandom"):
-        f = open("/dev/urandom")
-        s = f.read(n)
-        f.close()
-        return s
-    else:
-        L = [chr(random.randrange(0, 256)) for i in range(n)]
-        return "".join(L)
-
 class AbstractDigestAuthHandler:
-    # Digest authentication is specified in RFC 2617.
-
-    # XXX The client does not inspect the Authentication-Info header
-    # in a successful response.
-
-    # XXX It should be possible to test this implementation against
-    # a mock server that just generates a static set of challenges.
-
-    # XXX qop="auth-int" supports is shaky
 
     def __init__(self, passwd=None):
         if passwd is None:
             passwd = HTTPPasswordMgr()
         self.passwd = passwd
         self.add_password = self.passwd.add_password
-        self.retried = 0
-        self.nonce_count = 0
 
-    def reset_retry_count(self):
-        self.retried = 0
-
-    def http_error_auth_reqed(self, auth_header, host, req, headers):
-        authreq = headers.get(auth_header, None)
-        if self.retried > 5:
-            # Don't fail endlessly - if we failed once, we'll probably
-            # fail a second time. Hm. Unless the Password Manager is
-            # prompting for the information. Crap. This isn't great
-            # but it's better than the current 'repeat until recursion
-            # depth exceeded' approach <wink>
-            raise HTTPError(req.get_full_url(), 401, "digest auth failed",
-                            headers, None)
-        else:
-            self.retried += 1
+    def http_error_auth_reqed(self, authreq, host, req, headers):
+        authreq = headers.get(self.auth_header, None)
         if authreq:
-            scheme = authreq.split()[0]
-            if scheme.lower() == 'digest':
+            kind = authreq.split()[0]
+            if kind == 'Digest':
                 return self.retry_http_digest_auth(req, authreq)
-            else:
-                raise ValueError("AbstractDigestAuthHandler doesn't know "
-                                 "about %s"%(scheme))
 
     def retry_http_digest_auth(self, req, auth):
         token, challenge = auth.split(' ', 1)
@@ -794,21 +683,10 @@ class AbstractDigestAuthHandler:
             resp = self.parent.open(req)
             return resp
 
-    def get_cnonce(self, nonce):
-        # The cnonce-value is an opaque
-        # quoted string value provided by the client and used by both client
-        # and server to avoid chosen plaintext attacks, to provide mutual
-        # authentication, and to provide some message integrity protection.
-        # This isn't a fabulous effort, but it's probably Good Enough.
-        dig = sha.new("%s:%s:%s:%s" % (self.nonce_count, nonce, time.ctime(),
-                                       randombytes(8))).hexdigest()
-        return dig[:16]
-
     def get_authorization(self, req, chal):
         try:
             realm = chal['realm']
             nonce = chal['nonce']
-            qop = chal.get('qop')
             algorithm = chal.get('algorithm', 'MD5')
             # mod_digest doesn't send an opaque, even though it isn't
             # supposed to be optional
@@ -820,7 +698,8 @@ class AbstractDigestAuthHandler:
         if H is None:
             return None
 
-        user, pw = self.passwd.find_user_password(realm, req.get_full_url())
+        user, pw = self.passwd.find_user_password(realm,
+                                                  req.get_full_url())
         if user is None:
             return None
 
@@ -834,18 +713,7 @@ class AbstractDigestAuthHandler:
         A2 = "%s:%s" % (req.has_data() and 'POST' or 'GET',
                         # XXX selector: what about proxies and full urls
                         req.get_selector())
-        if qop == 'auth':
-            self.nonce_count += 1
-            ncvalue = '%08x' % self.nonce_count
-            cnonce = self.get_cnonce(nonce)
-            noncebit = "%s:%s:%s:%s:%s" % (nonce, ncvalue, cnonce, qop, H(A2))
-            respdig = KD(H(A1), noncebit)
-        elif qop is None:
-            respdig = KD(H(A1), "%s:%s" % (nonce, H(A2)))
-        else:
-            # XXX handle auth-int.
-            pass
-
+        respdig = KD(H(A1), "%s:%s" % (nonce, H(A2)))
         # XXX should the partial digests be encoded too?
 
         base = 'username="%s", realm="%s", nonce="%s", uri="%s", ' \
@@ -857,18 +725,16 @@ class AbstractDigestAuthHandler:
             base = base + ', digest="%s"' % entdig
         if algorithm != 'MD5':
             base = base + ', algorithm="%s"' % algorithm
-        if qop:
-            base = base + ', qop=auth, nc=%s, cnonce="%s"' % (ncvalue, cnonce)
         return base
 
     def get_algorithm_impls(self, algorithm):
         # lambdas assume digest modules are imported at the top level
         if algorithm == 'MD5':
-            H = lambda x: md5.new(x).hexdigest()
+            H = lambda x, e=encode_digest:e(md5.new(x).digest())
         elif algorithm == 'SHA':
-            H = lambda x: sha.new(x).hexdigest()
+            H = lambda x, e=encode_digest:e(sha.new(x).digest())
         # XXX MD5-sess
-        KD = lambda s, d: H("%s:%s" % (s, d))
+        KD = lambda s, d, H=H: H("%s:%s" % (s, d))
         return H, KD
 
     def get_entity_digest(self, data, chal):
@@ -883,119 +749,87 @@ class HTTPDigestAuthHandler(BaseHandler, AbstractDigestAuthHandler):
     does not transmit passwords in the clear.
     """
 
-    auth_header = 'Authorization'
+    header = 'Authorization'
 
     def http_error_401(self, req, fp, code, msg, headers):
         host = urlparse.urlparse(req.get_full_url())[1]
-        retry = self.http_error_auth_reqed('www-authenticate',
-                                           host, req, headers)
-        self.reset_retry_count()
-        return retry
+        self.http_error_auth_reqed('www-authenticate', host, req, headers)
 
 
 class ProxyDigestAuthHandler(BaseHandler, AbstractDigestAuthHandler):
 
-    auth_header = 'Proxy-Authorization'
+    header = 'Proxy-Authorization'
 
     def http_error_407(self, req, fp, code, msg, headers):
         host = req.get_host()
-        retry = self.http_error_auth_reqed('proxy-authenticate',
-                                           host, req, headers)
-        self.reset_retry_count()
-        return retry
+        self.http_error_auth_reqed('proxy-authenticate', host, req, headers)
+
+
+def encode_digest(digest):
+    hexrep = []
+    for c in digest:
+        n = (ord(c) >> 4) & 0xf
+        hexrep.append(hex(n)[-1])
+        n = ord(c) & 0xf
+        hexrep.append(hex(n)[-1])
+    return ''.join(hexrep)
+
 
 class AbstractHTTPHandler(BaseHandler):
 
-    def __init__(self, debuglevel=0):
-        self._debuglevel = debuglevel
-
-    def set_http_debuglevel(self, level):
-        self._debuglevel = level
-
-    def do_request(self, request):
-        host = request.get_host()
-        if not host:
-            raise URLError('no host given')
-
-        if request.has_data():  # POST
-            data = request.get_data()
-            if not request.has_header('Content-type'):
-                request.add_unredirected_header(
-                    'Content-type',
-                    'application/x-www-form-urlencoded')
-            if not request.has_header('Content-length'):
-                request.add_unredirected_header(
-                    'Content-length', '%d' % len(data))
-
-        scheme, sel = splittype(request.get_selector())
-        sel_host, sel_path = splithost(sel)
-        if not request.has_header('Host'):
-            request.add_unredirected_header('Host', sel_host or host)
-        for name, value in self.parent.addheaders:
-            name = name.capitalize()
-            if not request.has_header(name):
-                request.add_unredirected_header(name, value)
-
-        return request
-
     def do_open(self, http_class, req):
-        """Return an addinfourl object for the request, using http_class.
-
-        http_class must implement the HTTPConnection API from httplib.
-        The addinfourl return value is a file-like object.  It also
-        has methods and attributes including:
-            - info(): return a mimetools.Message object for the headers
-            - geturl(): return the original request URL
-            - code: HTTP status code
-        """
         host = req.get_host()
         if not host:
             raise URLError('no host given')
 
-        h = http_class(host) # will parse host:port
-        h.set_debuglevel(self._debuglevel)
-
-        headers = dict(req.headers)
-        headers.update(req.unredirected_hdrs)
-        # We want to make an HTTP/1.1 request, but the addinfourl
-        # class isn't prepared to deal with a persistent connection.
-        # It will try to read all remaining data from the socket,
-        # which will block while the server waits for the next request.
-        # So make sure the connection gets closed after the (only)
-        # request.
-        headers["Connection"] = "close"
         try:
-            h.request(req.get_method(), req.get_selector(), req.data, headers)
-            r = h.getresponse()
-        except socket.error, err: # XXX what error?
+            h = http_class(host) # will parse host:port
+            if req.has_data():
+                data = req.get_data()
+                h.putrequest('POST', req.get_selector())
+                if not 'Content-type' in req.headers:
+                    h.putheader('Content-type',
+                                'application/x-www-form-urlencoded')
+                if not 'Content-length' in req.headers:
+                    h.putheader('Content-length', '%d' % len(data))
+            else:
+                h.putrequest('GET', req.get_selector())
+        except socket.error, err:
             raise URLError(err)
 
-        if r.status == 200:
-            # Pick apart the HTTPResponse object to get the addinfourl
-            # object initialized properly
-            resp = addinfourl(r.fp, r.msg, req.get_full_url())
-            resp.code = r.status
-            resp.msg = r.reason
-            return resp
+        scheme, sel = splittype(req.get_selector())
+        sel_host, sel_path = splithost(sel)
+        h.putheader('Host', sel_host or host)
+        for args in self.parent.addheaders:
+            name, value = args
+            if name not in req.headers:
+                h.putheader(*args)
+        for k, v in req.headers.items():
+            h.putheader(k, v)
+        h.endheaders()
+        if req.has_data():
+            h.send(data)
+
+        code, msg, hdrs = h.getreply()
+        fp = h.getfile()
+        if code == 200:
+            return addinfourl(fp, hdrs, req.get_full_url())
         else:
-            return self.parent.error("http", req, r.fp, r.status, r.msg,
-                                     r.msg.dict)
+            return self.parent.error('http', req, fp, code, msg, hdrs)
 
 
 class HTTPHandler(AbstractHTTPHandler):
 
     def http_open(self, req):
-        return self.do_open(httplib.HTTPConnection, req)
+        return self.do_open(httplib.HTTP, req)
 
-    http_request = AbstractHTTPHandler.do_request
 
 if hasattr(httplib, 'HTTPS'):
     class HTTPSHandler(AbstractHTTPHandler):
 
         def https_open(self, req):
-            return self.do_open(httplib.HTTPSConnection, req)
+            return self.do_open(httplib.HTTPS, req)
 
-        https_request = AbstractHTTPHandler.do_request
 
 class UnknownHandler(BaseHandler):
     def unknown_open(self, req):
@@ -1015,7 +849,7 @@ def parse_keqv_list(l):
 def parse_http_list(s):
     """Parse lists as described by RFC 2068 Section 2.
 
-    In particular, parse comma-separated lists where the elements of
+    In particular, parse comman-separated lists where the elements of
     the list may include quoted-strings.  A quoted-string could
     contain a comma.
     """
@@ -1086,7 +920,7 @@ class FileHandler(BaseHandler):
         modified = rfc822.formatdate(stats.st_mtime)
         mtype = mimetypes.guess_type(file)[0]
         headers = mimetools.Message(StringIO(
-            'Content-type: %s\nContent-length: %d\nLast-modified: %s\n' %
+            'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
             (mtype or 'text/plain', size, modified)))
         if host:
             host, port = splitport(host)
@@ -1101,30 +935,21 @@ class FTPHandler(BaseHandler):
         host = req.get_host()
         if not host:
             raise IOError, ('ftp error', 'no host given')
-        host, port = splitport(host)
-        if port is None:
-            port = ftplib.FTP_PORT
-
-        # username/password handling
-        user, host = splituser(host)
-        if user:
-            user, passwd = splitpasswd(user)
-        else:
-            passwd = None
-        host = unquote(host)
-        user = unquote(user or '')
-        passwd = unquote(passwd or '')
-
+        # XXX handle custom username & password
         try:
             host = socket.gethostbyname(host)
         except socket.error, msg:
             raise URLError(msg)
+        host, port = splitport(host)
+        if port is None:
+            port = ftplib.FTP_PORT
         path, attrs = splitattr(req.get_selector())
+        path = unquote(path)
         dirs = path.split('/')
-        dirs = map(unquote, dirs)
         dirs, file = dirs[:-1], dirs[-1]
         if dirs and not dirs[0]:
             dirs = dirs[1:]
+        user = passwd = '' # XXX
         try:
             fw = self.connect_ftp(user, passwd, host, port, dirs)
             type = file and 'I' or 'D'
@@ -1137,9 +962,9 @@ class FTPHandler(BaseHandler):
             headers = ""
             mtype = mimetypes.guess_type(req.get_full_url())[0]
             if mtype:
-                headers += "Content-type: %s\n" % mtype
+                headers += "Content-Type: %s\n" % mtype
             if retrlen is not None and retrlen >= 0:
-                headers += "Content-length: %d\n" % retrlen
+                headers += "Content-Length: %d\n" % retrlen
             sf = StringIO(headers)
             headers = mimetools.Message(sf)
             return addinfourl(fp, headers, req.get_full_url())
@@ -1220,8 +1045,12 @@ class OpenerFactory:
     default_handlers = [UnknownHandler, HTTPHandler,
                         HTTPDefaultErrorHandler, HTTPRedirectHandler,
                         FTPHandler, FileHandler]
+    proxy_handlers = [ProxyHandler]
     handlers = []
     replacement_handlers = []
+
+    def add_proxy_handler(self, ph):
+        self.proxy_handlers = self.proxy_handlers + [ph]
 
     def add_handler(self, h):
         self.handlers = self.handlers + [h]
@@ -1231,7 +1060,7 @@ class OpenerFactory:
 
     def build_opener(self):
         opener = OpenerDirector()
-        for ph in self.default_handlers:
+        for ph in self.proxy_handlers:
             if inspect.isclass(ph):
                 ph = ph()
             opener.add_handler(ph)

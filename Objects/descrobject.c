@@ -690,7 +690,7 @@ static PyMappingMethods proxy_as_mapping = {
 static int
 proxy_contains(proxyobject *pp, PyObject *key)
 {
-	return PyDict_Contains(pp->dict, key);
+	return PySequence_Contains(pp->dict, key);
 }
 
 static PySequenceMethods proxy_as_sequence = {
@@ -709,10 +709,7 @@ static PySequenceMethods proxy_as_sequence = {
 static PyObject *
 proxy_has_key(proxyobject *pp, PyObject *key)
 {
-	int res = PyDict_Contains(pp->dict, key);
-	if (res < 0)
-		return NULL;
-	return PyBool_FromLong(res);
+	return PyInt_FromLong(PySequence_Contains(pp->dict, key));
 }
 
 static PyObject *
@@ -768,7 +765,7 @@ proxy_copy(proxyobject *pp)
 
 static PyMethodDef proxy_methods[] = {
 	{"has_key",   (PyCFunction)proxy_has_key,    METH_O,
-	 PyDoc_STR("D.has_key(k) -> True if D has a key k, else False")},
+	 PyDoc_STR("D.has_key(k) -> 1 if D has a key k, else 0")},
 	{"get",       (PyCFunction)proxy_get,        METH_VARARGS,
 	 PyDoc_STR("D.get(k[,d]) -> D[k] if D.has_key(k), else d."
 	 				"  d defaults to None.")},

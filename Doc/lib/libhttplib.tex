@@ -52,15 +52,9 @@ the server at the same host and port:
 \versionadded{2.0}
 \end{classdesc}
 
-\begin{classdesc}{HTTPSConnection}{host\optional{, port, key_file, cert_file}}
+\begin{classdesc}{HTTPSConnection}{host\optional{, port}}
 A subclass of \class{HTTPConnection} that uses SSL for communication with
 secure servers.  Default port is \code{443}.
-\var{key_file} is
-the name of a PEM formatted file that contains your private
-key. \var{cert_file} is a PEM formatted certificate chain file.
-
-\warning{This does not do any certificate verification!}
-
 \versionadded{2.0}
 \end{classdesc}
 
@@ -174,16 +168,11 @@ Send data to the server.  This should be used directly only after the
 \method{getreply()} has been called.
 \end{methoddesc}
 
-\begin{methoddesc}{putrequest}{request, selector\optional{,
-skip\_host\optional{, skip_accept_encoding}}}
+\begin{methoddesc}{putrequest}{request, selector}
 This should be the first call after the connection to the server has
 been made.  It sends a line to the server consisting of the
 \var{request} string, the \var{selector} string, and the HTTP version
-(\code{HTTP/1.1}).  To disable automatic sending of \code{Host:} or
-\code{Accept-Encoding:} headers (for example to accept additional
-content encodings), specify \var{skip_host} or \var{skip_accept_encoding}
-with non-False values.
-\versionchanged[\var{skip_accept_encoding} argument added]{2.4}
+(\code{HTTP/1.1}).
 \end{methoddesc}
 
 \begin{methoddesc}{putheader}{header, argument\optional{, ...}}
@@ -202,8 +191,8 @@ Send a blank line to the server, signalling the end of the headers.
 
 \class{HTTPResponse} instances have the following methods and attributes:
 
-\begin{methoddesc}{read}{\optional{amt}}
-Reads and returns the response body, or up to the next \var{amt} bytes.
+\begin{methoddesc}{read}{}
+Reads and returns the response body.
 \end{methoddesc}
 
 \begin{methoddesc}{getheader}{name\optional{, default}}

@@ -47,7 +47,7 @@ def type_to_name(gtype):
                 _type_to_name_map[eval(name)] = name[2:]
     if gtype in _type_to_name_map:
         return _type_to_name_map[gtype]
-    return 'TYPE=%r' % (gtype,)
+    return 'TYPE=' + `gtype`
 
 # Names for characters and strings
 CRLF = '\r\n'
@@ -95,7 +95,7 @@ def path_to_datatype_name(path):
 
 def get_directory(f):
     """Get a directory in the form of a list of entries."""
-    entries = []
+    list = []
     while 1:
         line = f.readline()
         if not line:
@@ -113,7 +113,7 @@ def get_directory(f):
         gtype = line[0]
         parts = line[1:].split(TAB)
         if len(parts) < 4:
-            print '(Bad line from server: %r)' % (line,)
+            print '(Bad line from server:', `line`, ')'
             continue
         if len(parts) > 4:
             if parts[4:] != ['+']:
@@ -122,14 +122,14 @@ def get_directory(f):
         else:
             parts.append('')
         parts.insert(0, gtype)
-        entries.append(parts)
-    return entries
+        list.append(parts)
+    return list
 
 def get_textfile(f):
     """Get a text file as a list of lines, with trailing CRLF stripped."""
-    lines = []
-    get_alt_textfile(f, lines.append)
-    return lines
+    list = []
+    get_alt_textfile(f, list.append)
+    return list
 
 def get_alt_textfile(f, func):
     """Get a text file and pass each line to a function, with trailing CRLF stripped."""
@@ -191,14 +191,14 @@ def test():
     else:
         f = send_selector(selector, host)
     if type == A_TEXT:
-        lines = get_textfile(f)
-        for item in lines: print item
+        list = get_textfile(f)
+        for item in list: print item
     elif type in (A_MENU, A_INDEX):
-        entries = get_directory(f)
-        for item in entries: print item
+        list = get_directory(f)
+        for item in list: print item
     else:
         data = get_binary(f)
-        print 'binary data:', len(data), 'bytes:', repr(data[:100])[:40]
+        print 'binary data:', len(data), 'bytes:', `data[:100]`[:40]
 
 # Run the test when run as script
 if __name__ == '__main__':

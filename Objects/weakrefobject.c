@@ -53,43 +53,17 @@ clear_weakref(PyWeakReference *self)
         if (*list == self)
             *list = self->wr_next;
         self->wr_object = Py_None;
+        self->wr_callback = NULL;
         if (self->wr_prev != NULL)
             self->wr_prev->wr_next = self->wr_next;
         if (self->wr_next != NULL)
             self->wr_next->wr_prev = self->wr_prev;
         self->wr_prev = NULL;
         self->wr_next = NULL;
-    }
-    if (callback != NULL) {
-        Py_DECREF(callback);
-        self->wr_callback = NULL;
+        Py_XDECREF(callback);
     }
 }
 
-/* Cyclic gc uses this to *just* clear the passed-in reference, leaving
- * the callback intact and uncalled.  It must be possible to call self's
- * tp_dealloc() after calling this, so self has to be left in a sane enough
- * state for that to work.  We expect tp_dealloc to decref the callback
- * then.  The reason for not letting clear_weakref() decref the callback
- * right now is that if the callback goes away, that may in turn trigger
- * another callback (if a weak reference to the callback exists) -- running
- * arbitrary Python code in the middle of gc is a disaster.  The convolution
- * here allows gc to delay triggering such callbacks until the world is in
- * a sane state again.
- */
-void
-_PyWeakref_ClearRef(PyWeakReference *self)
-{
-    PyObject *callback;
-
-    assert(self != NULL);
-    assert(PyWeakref_Check(self));
-    /* Preserve and restore the callback around clear_weakref. */
-    callback = self->wr_callback;
-    self->wr_callback = NULL;
-    clear_weakref(self);
-    self->wr_callback = callback;
-}
 
 static void
 weakref_dealloc(PyWeakReference *self)
@@ -143,7 +117,7 @@ weakref_hash(PyWeakReference *self)
     self->hash = PyObject_Hash(PyWeakref_GET_OBJECT(self));
     return self->hash;
 }
-
+    
 
 static PyObject *
 weakref_repr(PyWeakReference *self)
@@ -290,6 +264,14 @@ WRAP_BINARY(proxy_getattr, PyObject_GetAttr)
 WRAP_UNARY(proxy_str, PyObject_Str)
 WRAP_TERNARY(proxy_call, PyEval_CallObjectWithKeywords)
 
+static int
+proxy_print(PyWeakReference *proxy, FILE *fp, int flags)
+{
+    if (!proxy_checkref(proxy))
+        return -1;
+    return PyObject_Print(PyWeakref_GET_OBJECT(proxy), fp, flags);
+}
+
 static PyObject *
 proxy_repr(PyWeakReference *proxy)
 {
@@ -350,7 +332,7 @@ WRAP_BINARY(proxy_iand, PyNumber_InPlaceAnd)
 WRAP_BINARY(proxy_ixor, PyNumber_InPlaceXor)
 WRAP_BINARY(proxy_ior, PyNumber_InPlaceOr)
 
-static int
+static int 
 proxy_nonzero(PyWeakReference *proxy)
 {
     PyObject *o = PyWeakref_GET_OBJECT(proxy);
@@ -407,11 +389,7 @@ proxy_setitem(PyWeakReference *proxy, PyObject *key, PyObject *value)
 {
     if (!proxy_checkref(proxy))
         return -1;
-
-    if (value == NULL)
-        return PyObject_DelItem(PyWeakref_GET_OBJECT(proxy), key);
-    else
-        return PyObject_SetItem(PyWeakref_GET_OBJECT(proxy), key, value);
+    return PyObject_SetItem(PyWeakref_GET_OBJECT(proxy), key, value);
 }
 
 /* iterator slots */
@@ -497,7 +475,7 @@ _PyWeakref_ProxyType = {
     0,
     /* methods */
     (destructor)weakref_dealloc,        /* tp_dealloc */
-    0,				        /* tp_print */
+    (printfunc)proxy_print,             /* tp_print */
     0,				        /* tp_getattr */
     0, 				        /* tp_setattr */
     proxy_compare,		        /* tp_compare */
@@ -532,7 +510,7 @@ _PyWeakref_CallableProxyType = {
     0,
     /* methods */
     (destructor)weakref_dealloc,        /* tp_dealloc */
-    0,				        /* tp_print */
+    (printfunc)proxy_print,             /* tp_print */
     0,				        /* tp_getattr */
     0, 				        /* tp_setattr */
     proxy_compare,		        /* tp_compare */
@@ -624,29 +602,20 @@ PyWeakref_NewRef(PyObject *ob, PyObject *callback)
     }
     list = GET_WEAKREFS_LISTPTR(ob);
     get_basic_refs(*list, &ref, &proxy);
-    if (callback == Py_None)
-        callback = NULL;
-    if (callback == NULL)
+    if (callback == NULL || callback == Py_None)
         /* return existing weak reference if it exists */
         result = ref;
     if (result != NULL)
-        Py_INCREF(result);
+        Py_XINCREF(result);
     else {
-        /* Note: new_weakref() can trigger cyclic GC, so the weakref
-           list on ob can be mutated.  This means that the ref and
-           proxy pointers we got back earlier may have been collected,
-           so we need to compute these values again before we use
-           them. */
         result = new_weakref(ob, callback);
         if (result != NULL) {
             if (callback == NULL) {
                 insert_head(result, list);
             }
             else {
-                PyWeakReference *prev;
+                PyWeakReference *prev = (proxy == NULL) ? ref : proxy;
 
-                get_basic_refs(*list, &ref, &proxy);
-                prev = (proxy == NULL) ? ref : proxy;
                 if (prev == NULL)
                     insert_head(result, list);
                 else
@@ -673,19 +642,12 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
     }
     list = GET_WEAKREFS_LISTPTR(ob);
     get_basic_refs(*list, &ref, &proxy);
-    if (callback == Py_None)
-        callback = NULL;
     if (callback == NULL)
         /* attempt to return an existing weak reference if it exists */
         result = proxy;
     if (result != NULL)
-        Py_INCREF(result);
+        Py_XINCREF(result);
     else {
-        /* Note: new_weakref() can trigger cyclic GC, so the weakref
-           list on ob can be mutated.  This means that the ref and
-           proxy pointers we got back earlier may have been collected,
-           so we need to compute these values again before we use
-           them. */
         result = new_weakref(ob, callback);
         if (result != NULL) {
             PyWeakReference *prev;
@@ -694,7 +656,6 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
                 result->ob_type = &_PyWeakref_CallableProxyType;
             else
                 result->ob_type = &_PyWeakref_ProxyType;
-            get_basic_refs(*list, &ref, &proxy);
             if (callback == NULL)
                 prev = ref;
             else

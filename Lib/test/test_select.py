@@ -42,7 +42,7 @@ else:
 
 def test():
     import sys
-    if sys.platform[:3] in ('win', 'mac', 'os2', 'riscos'):
+    if sys.platform[:3] in ('win', 'mac', 'os2'):
         if verbose:
             print "Can't test select easily on", sys.platform
         return
@@ -57,7 +57,7 @@ def test():
         if (rfd, wfd, xfd) == ([p], [], []):
             line = p.readline()
             if verbose:
-                print repr(line)
+                print `line`
             if not line:
                 if verbose:
                     print 'EOF'

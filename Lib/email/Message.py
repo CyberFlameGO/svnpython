@@ -58,23 +58,6 @@ def _formatparam(param, value=None, quote=True):
     else:
         return param
 
-def _parseparam(s):
-    plist = []
-    while s[:1] == ';':
-        s = s[1:]
-        end = s.find(';')
-        while end > 0 and s.count('"', 0, end) % 2:
-            end = s.find(';', end + 1)
-        if end < 0:
-            end = len(s)
-        f = s[:end]
-        if '=' in f:
-            i = f.index('=')
-            f = f[:i].strip().lower() + '=' + f[i+1:].strip()
-        plist.append(f.strip())
-        s = s[end:]
-    return plist
-
 
 def _unquotevalue(value):
     if isinstance(value, TupleType):
@@ -203,7 +186,7 @@ class Message:
         if i is None:
             payload = self._payload
         elif not isinstance(self._payload, ListType):
-            raise TypeError, 'Expected list, got %s' % type(self._payload)
+            raise TypeError, i
         else:
             payload = self._payload[i]
         if decode:
@@ -542,7 +525,7 @@ class Message:
         if value is missing:
             return failobj
         params = []
-        for p in _parseparam(';' + value):
+        for p in paramre.split(value):
             try:
                 name, val = p.split('=', 1)
                 name = name.strip()
@@ -588,16 +571,13 @@ class Message:
         Parameter keys are always compared case insensitively.  The return
         value can either be a string, or a 3-tuple if the parameter was RFC
         2231 encoded.  When it's a 3-tuple, the elements of the value are of
-        the form (CHARSET, LANGUAGE, VALUE).  Note that both CHARSET and
-        LANGUAGE can be None, in which case you should consider VALUE to be
-        encoded in the us-ascii charset.  You can usually ignore LANGUAGE.
-
-        Your application should be prepared to deal with 3-tuple return
-        values, and can convert the parameter to a Unicode string like so:
+        the form (CHARSET, LANGUAGE, VALUE), where LANGUAGE may be the empty
+        string.  Your application should be prepared to deal with these, and
+        can convert the parameter to a Unicode string like so:
 
             param = msg.get_param('foo')
             if isinstance(param, tuple):
-                param = unicode(param[2], param[0] or 'us-ascii')
+                param = unicode(param[2], param[0])
 
         In any case, the parameter value (either the returned string, or the
         VALUE item in the 3-tuple) is always unquoted, unless unquote is set
@@ -728,7 +708,7 @@ class Message:
         if isinstance(filename, TupleType):
             # It's an RFC 2231 encoded parameter
             newvalue = _unquotevalue(filename)
-            return unicode(newvalue[2], newvalue[0] or 'us-ascii')
+            return unicode(newvalue[2], newvalue[0])
         else:
             newvalue = _unquotevalue(filename.strip())
             return newvalue
@@ -745,8 +725,7 @@ class Message:
             return failobj
         if isinstance(boundary, TupleType):
             # RFC 2231 encoded, so decode.  It better end up as ascii
-            charset = boundary[0] or 'us-ascii'
-            return unicode(boundary[2], charset).encode('us-ascii')
+            return unicode(boundary[2], boundary[0]).encode('us-ascii')
         return _unquotevalue(boundary.strip())
 
     def set_boundary(self, boundary):
@@ -775,7 +754,7 @@ class Message:
                 newparams.append((pk, pv))
         if not foundp:
             # The original Content-Type header had no boundary attribute.
-            # Tack one on the end.  BAW: should we raise an exception
+            # Tack one one the end.  BAW: should we raise an exception
             # instead???
             newparams.append(('boundary', '"%s"' % boundary))
         # Replace the existing Content-Type header with the new value
@@ -813,8 +792,7 @@ class Message:
             return failobj
         if isinstance(charset, TupleType):
             # RFC 2231 encoded, so decode it, and it better end up as ascii.
-            pcharset = charset[0] or 'us-ascii'
-            charset = unicode(charset[2], pcharset).encode('us-ascii')
+            charset = unicode(charset[2], charset[0]).encode('us-ascii')
         # RFC 2046, $4.1.2 says charsets are not case sensitive
         return charset.lower()
 

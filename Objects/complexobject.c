@@ -439,7 +439,7 @@ complex_divmod(PyComplexObject *v, PyComplexObject *w)
 	mod = c_diff(v->cval, c_prod(w->cval, div));
 	d = PyComplex_FromCComplex(div);
 	m = PyComplex_FromCComplex(mod);
-	z = PyTuple_Pack(2, d, m);
+	z = Py_BuildValue("(OO)", d, m);
 	Py_XDECREF(d);
 	Py_XDECREF(m);
 	return z;
@@ -610,7 +610,7 @@ static PyObject *
 complex_int(PyObject *v)
 {
 	PyErr_SetString(PyExc_TypeError,
-		   "can't convert complex to int; use int(abs(z))");
+		   "can't convert complex to int; use e.g. int(abs(z))");
 	return NULL;
 }
 
@@ -618,7 +618,7 @@ static PyObject *
 complex_long(PyObject *v)
 {
 	PyErr_SetString(PyExc_TypeError,
-		   "can't convert complex to long; use long(abs(z))");
+		   "can't convert complex to long; use e.g. long(abs(z))");
 	return NULL;
 }
 
@@ -626,7 +626,7 @@ static PyObject *
 complex_float(PyObject *v)
 {
 	PyErr_SetString(PyExc_TypeError,
-		   "can't convert complex to float; use abs(z)");
+		   "can't convert complex to float; use e.g. abs(z)");
 	return NULL;
 }
 
@@ -831,7 +831,7 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 					 &r, &i))
 		return NULL;
 
-	/* Special-case for single argument that is already complex */
+	/* Special-case for single argumet that is already complex */
 	if (PyComplex_CheckExact(r) && i == NULL &&
 	    type == &PyComplex_Type) {
 		/* Note that we can't know whether it's safe to return
@@ -865,7 +865,7 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	if (f == NULL)
 		PyErr_Clear();
 	else {
-		PyObject *args = PyTuple_New(0);
+		PyObject *args = Py_BuildValue("()");
 		if (args == NULL)
 			return NULL;
 		r = PyEval_CallObject(f, args);
@@ -882,9 +882,6 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	    ((i != NULL) && (nbi == NULL || nbi->nb_float == NULL))) {
 		PyErr_SetString(PyExc_TypeError,
 			   "complex() argument must be a string or a number");
-		if (own_r) {
-			Py_DECREF(r);
-		}
 		return NULL;
 	}
 	if (PyComplex_Check(r)) {

@@ -46,7 +46,7 @@ instantiate a \class{Generator} instance and use its
 from cStringIO import StringIO
 from email.Generator import Generator
 fp = StringIO()
-g = Generator(fp, mangle_from_=False, maxheaderlen=60)
+g = Generator(mangle_from_=False, maxheaderlen=60)
 g.flatten(msg)
 text = fp.getvalue()
 \end{verbatim}
@@ -354,18 +354,15 @@ instead of \mailheader{Content-Type}.
 Parameter keys are always compared case insensitively.  The return
 value can either be a string, or a 3-tuple if the parameter was
 \rfc{2231} encoded.  When it's a 3-tuple, the elements of the value are of
-the form \code{(CHARSET, LANGUAGE, VALUE)}.  Note that both \code{CHARSET} and
-\code{LANGUAGE} can be \code{None}, in which case you should consider
-\code{VALUE} to be encoded in the \code{us-ascii} charset.  You can
-usually ignore \code{LANGUAGE}.
-
-Your application should be prepared to deal with 3-tuple return
-values, and can convert the parameter to a Unicode string like so:
+the form \code{(CHARSET, LANGUAGE, VALUE)}, where \code{LANGUAGE} may
+be the empty string.  Your application should be prepared to deal with
+3-tuple return values, which it can convert to a Unicode string like
+so:
 
 \begin{verbatim}
 param = msg.get_param('foo')
 if isinstance(param, tuple):
-    param = unicode(param[2], param[0] or 'us-ascii')
+    param = unicode(param[2], param[0])
 \end{verbatim}
 
 In any case, the parameter value (either the returned string, or the
@@ -561,7 +558,7 @@ to calling this method, the object's payload was \code{None}
 will be the argument \var{payload}.
 
 If the object's payload was already a list
-(i.e. \method{is_multipart()} returns \code{True}), then \var{payload} is
+(i.e. \method{is_multipart()} returns 1), then \var{payload} is
 appended to the end of the existing payload list.
 
 For any other type of existing payload, \method{add_payload()} will

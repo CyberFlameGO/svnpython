@@ -102,7 +102,7 @@ for each thread.
   indicator is already set, it is cleared first.  If the objects are
   \NULL, the error indicator is cleared.  Do not pass a \NULL{} type
   and non-\NULL{} value or traceback.  The exception type should be a
-  class.  Do not pass an invalid exception type or value.
+  string or class.  Do not pass an invalid exception type or value.
   (Violating these rules will cause subtle problems later.)  This call
   takes away a reference to each object: you must own a reference to
   each object before the call and after the call you no longer own
@@ -129,8 +129,8 @@ for each thread.
 
 \begin{cfuncdesc}{PyObject*}{PyErr_Format}{PyObject *exception,
                                            const char *format, \moreargs}
-  This function sets the error indicator and returns \NULL.
-  \var{exception} should be a Python exception (class, not
+  This function sets the error indicator and returns \NULL..
+  \var{exception} should be a Python exception (string or class, not
   an instance).  \var{format} should be a string, containing format
   codes, similar to \cfunction{printf()}. The \code{width.precision}
   before a format code is parsed, but the width part is ignored.
@@ -299,14 +299,12 @@ for each thread.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{void}{PyErr_SetInterrupt}{}
-  It simulates the effect of a
+  This function is obsolete.  It simulates the effect of a
   \constant{SIGINT}\ttindex{SIGINT} signal arriving --- the next time
   \cfunction{PyErr_CheckSignals()} is called,
   \withsubitem{(built-in exception)}{\ttindex{KeyboardInterrupt}}
   \exception{KeyboardInterrupt} will be raised.  It may be called
   without holding the interpreter lock.
-  % XXX This was described as obsolete, but is used in
-  % thread.interrupt_main() (used from IDLE), so it's still needed.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyErr_NewException}{char *name,
@@ -333,8 +331,9 @@ for each thread.
   example, when an exception occurs in an \method{__del__()} method.
 
   The function is called with a single argument \var{obj} that
-  identifies the context in which the unraisable exception occurred.
-  The repr of \var{obj} will be printed in the warning message.
+  identifies where the context in which the unraisable exception
+  occurred.  The repr of \var{obj} will be printed in the warning
+  message.
 \end{cfuncdesc}
 
 \section{Standard Exceptions \label{standardExceptions}}

@@ -3,22 +3,14 @@
 # Note: function level imports should *not* be used
 # in this module as it may cause import lock deadlock.
 # See bug 683658.
-import sys, types
+import sys, re, types
 import linecache
 
 __all__ = ["warn", "showwarning", "formatwarning", "filterwarnings",
            "resetwarnings"]
 
-# filters contains a sequence of filter 5-tuples
-# The components of the 5-tuple are:
-# - an action: error, ignore, always, default, module, or once
-# - a compiled regex that must match the warning message
-# - a class representing the warning category
-# - a compiled regex that must match the module that is being warned
-# - a line number for the line being warning, or 0 to mean any line
-# If either if the compiled regexs are None, match anything.
-filters = []
 defaultaction = "default"
+filters = []
 onceregistry = {}
 
 def warn(message, category=None, stacklevel=1):
@@ -77,9 +69,9 @@ def warn_explicit(message, category, filename, lineno,
     # Search the filters
     for item in filters:
         action, msg, cat, mod, ln = item
-        if ((msg is None or msg.match(text)) and
+        if (msg.match(text) and
             issubclass(category, cat) and
-            (msg is None or mod.match(module)) and
+            mod.match(module) and
             (ln == 0 or lineno == ln)):
             break
     else:
@@ -110,8 +102,8 @@ def warn_explicit(message, category, filename, lineno,
     else:
         # Unrecognized actions are errors
         raise RuntimeError(
-              "Unrecognized action (%r) in warnings.filters:\n %s" %
-              (action, item))
+              "Unrecognized action (%s) in warnings.filters:\n %s" %
+              (`action`, str(item)))
     # Print message and context
     showwarning(message, category, filename, lineno)
 
@@ -137,9 +129,8 @@ def filterwarnings(action, message="", category=Warning, module="", lineno=0,
     """Insert an entry into the list of warnings filters (at the front).
 
     Use assertions to check that all arguments have the right type."""
-    import re
     assert action in ("error", "ignore", "always", "default", "module",
-                      "once"), "invalid action: %r" % (action,)
+                      "once"), "invalid action: %s" % `action`
     assert isinstance(message, basestring), "message must be a string"
     assert isinstance(category, types.ClassType), "category must be a class"
     assert issubclass(category, Warning), "category must be a Warning subclass"
@@ -148,21 +139,6 @@ def filterwarnings(action, message="", category=Warning, module="", lineno=0,
            "lineno must be an int >= 0"
     item = (action, re.compile(message, re.I), category,
             re.compile(module), lineno)
-    if append:
-        filters.append(item)
-    else:
-        filters.insert(0, item)
-
-def simplefilter(action, category=Warning, lineno=0, append=0):
-    """Insert a simple entry into the list of warnings filters (at the front).
-
-    A simple filter matches all modules and messages.
-    """
-    assert action in ("error", "ignore", "always", "default", "module",
-                      "once"), "invalid action: %r" % (action,)
-    assert isinstance(lineno, int) and lineno >= 0, \
-           "lineno must be an int >= 0"
-    item = (action, None, category, None, lineno)
     if append:
         filters.append(item)
     else:
@@ -186,10 +162,9 @@ def _processoptions(args):
 
 # Helper for _processoptions()
 def _setoption(arg):
-    import re
     parts = arg.split(':')
     if len(parts) > 5:
-        raise _OptionError("too many fields (max 5): %r" % (arg,))
+        raise _OptionError("too many fields (max 5): %s" % `arg`)
     while len(parts) < 5:
         parts.append('')
     action, message, category, module, lineno = [s.strip()
@@ -206,7 +181,7 @@ def _setoption(arg):
             if lineno < 0:
                 raise ValueError
         except (ValueError, OverflowError):
-            raise _OptionError("invalid lineno %r" % (lineno,))
+            raise _OptionError("invalid lineno %s" % `lineno`)
     else:
         lineno = 0
     filterwarnings(action, message, category, module, lineno)
@@ -219,18 +194,17 @@ def _getaction(action):
     for a in ['default', 'always', 'ignore', 'module', 'once', 'error']:
         if a.startswith(action):
             return a
-    raise _OptionError("invalid action: %r" % (action,))
+    raise _OptionError("invalid action: %s" % `action`)
 
 # Helper for _setoption()
 def _getcategory(category):
-    import re
     if not category:
         return Warning
     if re.match("^[a-zA-Z0-9_]+$", category):
         try:
             cat = eval(category)
         except NameError:
-            raise _OptionError("unknown warning category: %r" % (category,))
+            raise _OptionError("unknown warning category: %s" % `category`)
     else:
         i = category.rfind(".")
         module = category[:i]
@@ -238,17 +212,60 @@ def _getcategory(category):
         try:
             m = __import__(module, None, None, [klass])
         except ImportError:
-            raise _OptionError("invalid module name: %r" % (module,))
+            raise _OptionError("invalid module name: %s" % `module`)
         try:
             cat = getattr(m, klass)
         except AttributeError:
-            raise _OptionError("unknown warning category: %r" % (category,))
+            raise _OptionError("unknown warning category: %s" % `category`)
     if (not isinstance(cat, types.ClassType) or
         not issubclass(cat, Warning)):
-        raise _OptionError("invalid warning category: %r" % (category,))
+        raise _OptionError("invalid warning category: %s" % `category`)
     return cat
 
+# Self-test
+def _test():
+    import getopt
+    testoptions = []
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "W:")
+    except getopt.error, msg:
+        print >>sys.stderr, msg
+        return
+    for o, a in opts:
+        testoptions.append(a)
+    try:
+        _processoptions(testoptions)
+    except _OptionError, msg:
+        print >>sys.stderr, msg
+        return
+    for item in filters: print item
+    hello = "hello world"
+    warn(hello); warn(hello); warn(hello); warn(hello)
+    warn(hello, UserWarning)
+    warn(hello, DeprecationWarning)
+    for i in range(3):
+        warn(hello)
+    filterwarnings("error", "", Warning, "", 0)
+    try:
+        warn(hello)
+    except Exception, msg:
+        print "Caught", msg.__class__.__name__ + ":", msg
+    else:
+        print "No exception"
+    resetwarnings()
+    try:
+        filterwarnings("booh", "", Warning, "", 0)
+    except Exception, msg:
+        print "Caught", msg.__class__.__name__ + ":", msg
+    else:
+        print "No exception"
+
 # Module initialization
-_processoptions(sys.warnoptions)
-simplefilter("ignore", category=OverflowWarning, append=1)
-simplefilter("ignore", category=PendingDeprecationWarning, append=1)
+if __name__ == "__main__":
+    import __main__
+    sys.modules['warnings'] = __main__
+    _test()
+else:
+    _processoptions(sys.warnoptions)
+    filterwarnings("ignore", category=OverflowWarning, append=1)
+    filterwarnings("ignore", category=PendingDeprecationWarning, append=1)

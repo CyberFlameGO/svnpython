@@ -49,7 +49,7 @@ def askint(prompt, default):
 
 def compare(local, remote, mode):
 	print
-	print "PWD =", repr(os.getcwd())
+	print "PWD =", `os.getcwd()`
 	sums_id = remote._send('sumlist')
 	subdirs_id = remote._send('listsubdirs')
 	remote._flush()
@@ -64,13 +64,13 @@ def compare(local, remote, mode):
 	for name, rsum in sums:
 		rsumdict[name] = rsum
 		if not lsumdict.has_key(name):
-			print repr(name), "only remote"
+			print `name`, "only remote"
 			if 'r' in mode and 'c' in mode:
 				recvfile(local, remote, name)
 		else:
 			lsum = lsumdict[name]
 			if lsum != rsum:
-				print repr(name),
+				print `name`,
 				rmtime = remote.mtime(name)
 				lmtime = local.mtime(name)
 				if rmtime > lmtime:
@@ -86,7 +86,7 @@ def compare(local, remote, mode):
 				print
 	for name in lsumdict.keys():
 		if not rsumdict.keys():
-			print repr(name), "only locally",
+			print `name`, "only locally",
 			fl()
 			if 'w' in mode and 'c' in mode:
 				sendfile(local, remote, name)
@@ -160,7 +160,7 @@ def recvfile(local, remote, name):
 		return rv
 	finally:
 		if not ok:
-			print "*** recvfile of %r failed, deleting" % (name,)
+			print "*** recvfile of %s failed, deleting" % `name`
 			local.delete(name)
 
 def recvfile_real(local, remote, name):

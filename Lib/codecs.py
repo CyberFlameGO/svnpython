@@ -303,11 +303,14 @@ class StreamReader(Codec):
             Line breaks are implemented using the codec's decoder
             method and are included in the list entries.
 
-            sizehint, if given, is ignored since there is no efficient
-            way to finding the true end-of-line.
+            sizehint, if given, is passed as size argument to the
+            stream's .read() method.
 
         """
-        data = self.stream.read()
+        if sizehint is None:
+            data = self.stream.read()
+        else:
+            data = self.stream.read(sizehint)
         return self.decode(data, self.errors)[0].splitlines(1)
 
     def reset(self):
@@ -485,7 +488,10 @@ class StreamRecoder:
 
     def readlines(self, sizehint=None):
 
-        data = self.reader.read()
+        if sizehint is None:
+            data = self.reader.read()
+        else:
+            data = self.reader.read(sizehint)
         data, bytesencoded = self.encode(data, self.errors)
         return data.splitlines(1)
 

@@ -215,14 +215,13 @@ def _join(seq, sep):
 
 def _compile(*key):
     # internal: compile pattern
-    cachekey = (type(key[0]),) + key
-    p = _cache.get(cachekey)
+    p = _cache.get(key)
     if p is not None:
         return p
     pattern, flags = key
-    if isinstance(pattern, _pattern_type):
+    if type(pattern) is _pattern_type:
         return pattern
-    if not sre_compile.isstring(pattern):
+    if type(pattern) not in sre_compile.STRING_TYPES:
         raise TypeError, "first argument must be string or compiled pattern"
     try:
         p = sre_compile.compile(pattern, flags)
@@ -230,7 +229,7 @@ def _compile(*key):
         raise error, v # invalid expression
     if len(_cache) >= _MAXCACHE:
         _cache.clear()
-    _cache[cachekey] = p
+    _cache[key] = p
     return p
 
 def _compile_repl(*key):

@@ -44,7 +44,11 @@ FlavorFlags = Type("FlavorFlags", "l")
 DragTrackingMessage = Type("DragTrackingMessage", "h")
 
 includestuff = includestuff + """
+#ifdef WITHOUT_FRAMEWORKS
+#include <Drag.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 /* Callback glue routines */
 DragTrackingHandlerUPP dragglue_TrackingHandlerUPP;

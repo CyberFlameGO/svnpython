@@ -612,22 +612,6 @@ class TestVersion(BaseTest):
         self.assertStdoutEquals(["--version"], "bar 0.1\n")
         sys.argv[0] = oldargv
 
-    def test_version_with_prog_keyword(self):
-        oldargv = sys.argv[0]
-        sys.argv[0] = "./foo/bar"
-        self.parser = OptionParser(usage=SUPPRESS_USAGE, version="%prog 0.1",
-                                   prog="splat")
-        self.assertStdoutEquals(["--version"], "splat 0.1\n")
-        sys.argv[0] = oldargv
-
-    def test_version_with_prog_attribute(self):
-        oldargv = sys.argv[0]
-        sys.argv[0] = "./foo/bar"
-        self.parser = OptionParser(usage=SUPPRESS_USAGE, version="%prog 0.1")
-        self.parser.prog = "splat"
-        self.assertStdoutEquals(["--version"], "splat 0.1\n")
-        sys.argv[0] = oldargv
-
     def test_no_version(self):
         self.parser = OptionParser(usage=SUPPRESS_USAGE)
         self.assertParseFail(["--version"],
@@ -1209,11 +1193,18 @@ class TestMatchAbbrev(BaseTest):
                           "ambiguous option: --f (%s?)" % possibilities,
                           funcargs=[s, wordmap])
 
-def test_main():
+def _testclasses():
     mod = sys.modules[__name__]
-    test_support.run_unittest(
-        *[getattr(mod, name) for name in dir(mod) if name.startswith('Test')]
-    )
+    return [getattr(mod, name) for name in dir(mod) if name.startswith('Test')]
+
+def suite():
+    suite = unittest.TestSuite()
+    for testclass in _testclasses():
+        suite.addTest(unittest.makeSuite(testclass))
+    return suite
+
+def test_main():
+    test_support.run_suite(suite())
 
 if __name__ == '__main__':
     unittest.main()
