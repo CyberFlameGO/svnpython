@@ -1,0 +1,27 @@
+Changes in 2.2.2 since 2.2.1
+----------------------------
+
+These release notes refer to Mac-specific changes only. See NEWS (in the Misc folder)
+for machine-independent changes. 
+
+- The installer is now based on VISE 8.0, and should work fine on MacOSX.
+- A problem with Python randomly refusing to run on OSX, presenting only
+  a window with <<terminated>> in the title, has been solved.
+- A Jaguar problem with AppleEvent errors being ignored has been fixed.
+ 
+Known problems
+--------------
+
+This list is probably incomplete, more problems may be listed on the MacPython homepage,
+http://www.cwi.nl/~jack/macpython.html.
+
+- Tkinter does not work under Carbon.
+- The IDE and Tkinter do not work together. Run tkinter programs under PythonInterpreter.
+- Tkinter file events do not work, unless you have opened the file through Tcl (but then
+  you cannot access it from Python).
+- Aliases may not work in sys.path entries.
+- PythonInterpreter used interactively will eat a lot of processor cycles. You should use
+  PythonIDE for interactive work and PythonInterpreter for scripts only. This is especially
+  true under OSX.
+- AliasMenu 2.2 conflicts with the Carbon version of Python. This is most likely a problem
+  with AliasMenu (which is from 1999, and thus predates Carbon altogether).
