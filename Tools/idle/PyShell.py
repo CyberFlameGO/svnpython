@@ -439,7 +439,7 @@ class PyShell(OutputWindow):
 
     def ispythonsource(self, filename):
         # Override this so EditorWindow never removes the colorizer
-        return True
+        return 1
 
     def short_title(self):
         return self.shell_title
@@ -482,7 +482,7 @@ class PyShell(OutputWindow):
         return line
 
     def isatty(self):
-        return True
+        return 1
 
     def cancel_callback(self, event):
         try:
@@ -685,7 +685,7 @@ class PseudoFile:
         pass
 
     def isatty(self):
-        return True
+        return 1
 
 
 usage_msg = """\

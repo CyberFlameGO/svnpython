@@ -1,27 +1,27 @@
 # Microsoft Developer Studio Project File - Name="pyexpat" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
-# ** NICHT BEARBEITEN **
+# ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Dynamic-Link Library" 0x0102
 # TARGTYPE "Win32 (ALPHA) Dynamic-Link Library" 0x0602
 
 CFG=pyexpat - Win32 Alpha Debug
-!MESSAGE Dies ist kein gültiges Makefile. Zum Erstellen dieses Projekts mit NMAKE
-!MESSAGE verwenden Sie den Befehl "Makefile exportieren" und führen Sie den Befehl
+!MESSAGE This is not a valid makefile. To build this project using NMAKE,
+!MESSAGE use the Export Makefile command and run
 !MESSAGE 
 !MESSAGE NMAKE /f "pyexpat.mak".
 !MESSAGE 
-!MESSAGE Sie können beim Ausführen von NMAKE eine Konfiguration angeben
-!MESSAGE durch Definieren des Makros CFG in der Befehlszeile. Zum Beispiel:
+!MESSAGE You can specify a configuration when running NMAKE
+!MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
 !MESSAGE NMAKE /f "pyexpat.mak" CFG="pyexpat - Win32 Alpha Debug"
 !MESSAGE 
-!MESSAGE Für die Konfiguration stehen zur Auswahl:
+!MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "pyexpat - Win32 Release" (basierend auf  "Win32 (x86) Dynamic-Link Library")
-!MESSAGE "pyexpat - Win32 Debug" (basierend auf  "Win32 (x86) Dynamic-Link Library")
-!MESSAGE "pyexpat - Win32 Alpha Debug" (basierend auf  "Win32 (ALPHA) Dynamic-Link Library")
-!MESSAGE "pyexpat - Win32 Alpha Release" (basierend auf  "Win32 (ALPHA) Dynamic-Link Library")
+!MESSAGE "pyexpat - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "pyexpat - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "pyexpat - Win32 Alpha Debug" (based on "Win32 (ALPHA) Dynamic-Link Library")
+!MESSAGE "pyexpat - Win32 Alpha Release" (based on "Win32 (ALPHA) Dynamic-Link Library")
 !MESSAGE 
 
 # Begin Project
@@ -45,7 +45,7 @@ CFG=pyexpat - Win32 Alpha Debug
 F90=df.exe
 CPP=cl.exe
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /Zi /O2 /I "..\Include" /I "..\PC" /I "..\Modules\expat" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_EXPAT_H" /D "XML_NS" /D "XML_DTD" /D XML_BYTE_ORDER=12 /D XML_CONTEXT_BYTES=1024 /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /Zi /O2 /I "..\Include" /I "..\PC" /I "..\..\expat\Source\lib" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_EXPAT_H" /YX /FD /c
 MTL=midl.exe
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
@@ -76,7 +76,7 @@ LINK32=link.exe
 F90=df.exe
 CPP=cl.exe
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /I "..\Include" /I "..\PC" /I "..\Modules\expat" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_EXPAT_H" /D "XML_NS" /D "XML_DTD" /D XML_BYTE_ORDER=12 /D XML_CONTEXT_BYTES=1024 /YX /FD /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /Zi /Od /I "..\Include" /I "..\PC" /I "..\..\expat\Source\lib" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "HAVE_EXPAT_H" /YX /FD /c
 MTL=midl.exe
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
@@ -180,48 +180,7 @@ SOURCE=..\Modules\pyexpat.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\Modules\expat\xmlparse.c
-
-!IF  "$(CFG)" == "pyexpat - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Debug"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Release"
-
-!ENDIF 
-
-# End Source File
-# Begin Source File
-
-SOURCE=..\Modules\expat\xmlrole.c
-
-!IF  "$(CFG)" == "pyexpat - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Debug"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Release"
-
-!ENDIF 
-
-# End Source File
-# Begin Source File
-
-SOURCE=..\Modules\expat\xmltok.c
-
-!IF  "$(CFG)" == "pyexpat - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Debug"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Debug"
-
-!ELSEIF  "$(CFG)" == "pyexpat - Win32 Alpha Release"
-
-!ENDIF 
-
+SOURCE=..\..\expat\Libs\expat.lib
 # End Source File
 # End Target
 # End Project

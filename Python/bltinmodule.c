@@ -107,6 +107,26 @@ Note that classes are callable, as are instances with a __call__() method.";
 
 
 static PyObject *
+builtin_bool(PyObject *self, PyObject *x)
+{
+	long b = PyObject_IsTrue(x);
+	if (b < 0)
+		return NULL;
+	if (b)
+		x = Py_True;
+	else
+		x = Py_False;
+	Py_INCREF(x);
+	return x;
+}
+
+static char bool_doc[] =
+"bool(x) -> integer\n\
+\n\
+Normalize Boolean: return True (1) when x is true, False (0) otherwise.";
+
+
+static PyObject *
 builtin_buffer(PyObject *self, PyObject *args)
 {
 	PyObject *ob;
@@ -130,11 +150,11 @@ extend to the end of the target object (or with the specified size).";
 static PyObject *
 builtin_callable(PyObject *self, PyObject *v)
 {
-	return PyBool_FromLong((long)PyCallable_Check(v));
+	return PyInt_FromLong((long)PyCallable_Check(v));
 }
 
 static char callable_doc[] =
-"callable(object) -> bool\n\
+"callable(object) -> Boolean\n\
 \n\
 Return whether the object is callable (i.e., some kind of function).\n\
 Note that classes are callable, as are instances with a __call__() method.";
@@ -536,6 +556,9 @@ builtin_execfile(PyObject *self, PyObject *args)
 	FILE* fp = NULL;
 	PyCompilerFlags cf;
 	int exists;
+#ifndef RISCOS
+	struct stat s;
+#endif
 
 	if (!PyArg_ParseTuple(args, "s|O!O!:execfile",
 			&filename,
@@ -557,40 +580,25 @@ builtin_execfile(PyObject *self, PyObject *args)
 
 	exists = 0;
 	/* Test for existence or directory. */
-#if defined(PLAN9)
-	{
-		Dir *d;
-
-		if ((d = dirstat(filename))!=nil) {
-			if(d->mode & DMDIR)
-				werrstr("is a directory");
-			else
-				exists = 1;
-			free(d);
-		}
+#ifndef RISCOS
+	if (!stat(filename, &s)) {
+		if (S_ISDIR(s.st_mode))
+#if defined(PYOS_OS2) && defined(PYCC_VACPP)
+			errno = EOS2ERR;
+#else
+			errno = EISDIR;
+#endif
+		else
+			exists = 1;
 	}
-#elif defined(RISCOS)
+#else
 	if (object_exists(filename)) {
 		if (isdir(filename))
 			errno = EISDIR;
 		else
 			exists = 1;
 	}
-#else	/* standard Posix */
-	{
-		struct stat s;
-		if (stat(filename, &s) == 0) {
-			if (S_ISDIR(s.st_mode))
-#				if defined(PY_OS2) && defined(PYCC_VACPP)
-					errno = EOS2ERR;
-#				else
-					errno = EISDIR;
-#				endif
-			else
-				exists = 1;
-		}
-	}
-#endif
+#endif /* RISCOS */
 
         if (exists) {
 		Py_BEGIN_ALLOW_THREADS
@@ -713,7 +721,7 @@ builtin_hasattr(PyObject *self, PyObject *args)
 }
 
 static char hasattr_doc[] =
-"hasattr(object, name) -> bool\n\
+"hasattr(object, name) -> Boolean\n\
 \n\
 Return whether the object has an attribute with the given name.\n\
 (This is done by calling getattr(object, name) and catching exceptions.)";
@@ -1666,11 +1674,11 @@ builtin_isinstance(PyObject *self, PyObject *args)
 	retval = PyObject_IsInstance(inst, cls);
 	if (retval < 0)
 		return NULL;
-	return PyBool_FromLong(retval);
+	return PyInt_FromLong(retval);
 }
 
 static char isinstance_doc[] =
-"isinstance(object, class-or-type-or-tuple) -> bool\n\
+"isinstance(object, class-or-type-or-tuple) -> Boolean\n\
 \n\
 Return whether an object is an instance of a class or of a subclass thereof.\n\
 With a type as second argument, return whether that is the object's type.\n\
@@ -1691,11 +1699,11 @@ builtin_issubclass(PyObject *self, PyObject *args)
 	retval = PyObject_IsSubclass(derived, cls);
 	if (retval < 0)
 		return NULL;
-	return PyBool_FromLong(retval);
+	return PyInt_FromLong(retval);
 }
 
 static char issubclass_doc[] =
-"issubclass(C, B) -> bool\n\
+"issubclass(C, B) -> Boolean\n\
 \n\
 Return whether class C is a subclass (i.e., a derived class) of class B.";
 
@@ -1785,6 +1793,7 @@ static PyMethodDef builtin_methods[] = {
  	{"__import__",	builtin___import__, METH_VARARGS, import_doc},
  	{"abs",		builtin_abs,        METH_O, abs_doc},
  	{"apply",	builtin_apply,      METH_VARARGS, apply_doc},
+	{"bool",	builtin_bool, 	    METH_O, bool_doc},
  	{"buffer",	builtin_buffer,     METH_VARARGS, buffer_doc},
  	{"callable",	builtin_callable,   METH_O, callable_doc},
  	{"chr",		builtin_chr,        METH_VARARGS, chr_doc},
@@ -1856,9 +1865,8 @@ _PyBuiltin_Init(void)
 	SETBUILTIN("None",		Py_None);
 	SETBUILTIN("Ellipsis",		Py_Ellipsis);
 	SETBUILTIN("NotImplemented",	Py_NotImplemented);
-	SETBUILTIN("False",		Py_False);
 	SETBUILTIN("True",		Py_True);
-	SETBUILTIN("bool",		&PyBool_Type);
+	SETBUILTIN("False",		Py_False);
 	SETBUILTIN("classmethod",	&PyClassMethod_Type);
 #ifndef WITHOUT_COMPLEX
 	SETBUILTIN("complex",		&PyComplex_Type);
@@ -1882,7 +1890,7 @@ _PyBuiltin_Init(void)
 #ifdef Py_USING_UNICODE
 	SETBUILTIN("unicode",		&PyUnicode_Type);
 #endif
-	debug = PyBool_FromLong(Py_OptimizeFlag == 0);
+	debug = PyInt_FromLong(Py_OptimizeFlag == 0);
 	if (PyDict_SetItemString(dict, "__debug__", debug) < 0) {
 		Py_XDECREF(debug);
 		return NULL;

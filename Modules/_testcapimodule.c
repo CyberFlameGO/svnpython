@@ -44,8 +44,11 @@ sizeof_error(const char* fatname, const char* typename,
 }
 
 static PyObject*
-test_config(PyObject *self)
+test_config(PyObject *self, PyObject *args)
 {
+        if (!PyArg_ParseTuple(args, ":test_config"))
+                return NULL;
+
 #define CHECK_SIZEOF(FATNAME, TYPE) \
 	    if (FATNAME != sizeof(TYPE)) \
     	    	return sizeof_error(#FATNAME, #TYPE, FATNAME, sizeof(TYPE))
@@ -66,10 +69,12 @@ test_config(PyObject *self)
 }
 
 static PyObject*
-test_list_api(PyObject *self)
+test_list_api(PyObject *self, PyObject *args)
 {
 	PyObject* list;
 	int i;
+        if (!PyArg_ParseTuple(args, ":test_list_api"))
+                return NULL;
 
 	/* SF bug 132008:  PyList_Reverse segfaults */
 #define NLIST 30
@@ -152,9 +157,12 @@ test_dict_inner(int count)
 }
 
 static PyObject*
-test_dict_iteration(PyObject* self)
+test_dict_iteration(PyObject* self, PyObject* args)
 {
 	int i;
+
+        if (!PyArg_ParseTuple(args, ":test_dict_iteration"))
+                return NULL;
 
 	for (i = 0; i < 200; i++) {
 		if (test_dict_inner(i) < 0) {
@@ -200,8 +208,11 @@ raise_test_long_error(const char* msg)
 #include "testcapi_long.h"
 
 static PyObject *
-test_long_api(PyObject* self)
+test_long_api(PyObject* self, PyObject* args)
 {
+        if (!PyArg_ParseTuple(args, ":test_long_api"))
+                return NULL;
+
 	return TESTNAME(raise_test_long_error);
 }
 
@@ -230,8 +241,11 @@ raise_test_longlong_error(const char* msg)
 #include "testcapi_long.h"
 
 static PyObject *
-test_longlong_api(PyObject* self)
+test_longlong_api(PyObject* self, PyObject* args)
 {
+        if (!PyArg_ParseTuple(args, ":test_longlong_api"))
+                return NULL;
+
 	return TESTNAME(raise_test_longlong_error);
 }
 
@@ -247,10 +261,13 @@ test_longlong_api(PyObject* self)
    it fails.
 */
 static PyObject *
-test_L_code(PyObject *self)
+test_L_code(PyObject *self, PyObject *args)
 {
 	PyObject *tuple, *num;
 	LONG_LONG value;
+
+        if (!PyArg_ParseTuple(args, ":test_L_code"))
+                return NULL;
 
         tuple = PyTuple_New(1);
         if (tuple == NULL)
@@ -290,50 +307,6 @@ test_L_code(PyObject *self)
 
 #endif	/* ifdef HAVE_LONG_LONG */
 
-#ifdef Py_USING_UNICODE
-
-/* Test the u and u# codes for PyArg_ParseTuple. May leak memory in case
-   of an error.
-*/
-static PyObject *
-test_u_code(PyObject *self)
-{
-	PyObject *tuple, *obj;
-	Py_UNICODE *value;
-	int len;
-
-        tuple = PyTuple_New(1);
-        if (tuple == NULL)
-        	return NULL;
-
-        obj = PyUnicode_Decode("test", strlen("test"),
-			       "ascii", NULL);
-        if (obj == NULL)
-        	return NULL;
-
-        PyTuple_SET_ITEM(tuple, 0, obj);
-
-        value = 0;
-        if (PyArg_ParseTuple(tuple, "u:test_u_code", &value) < 0)
-        	return NULL;
-        if (value != PyUnicode_AS_UNICODE(obj))
-        	return raiseTestError("test_u_code",
-			"u code returned wrong value for u'test'");
-        value = 0;
-        if (PyArg_ParseTuple(tuple, "u#:test_u_code", &value, &len) < 0)
-        	return NULL;
-        if (value != PyUnicode_AS_UNICODE(obj) ||
-	    len != PyUnicode_GET_SIZE(obj))
-        	return raiseTestError("test_u_code",
-			"u# code returned wrong values for u'test'");
-	
-	Py_DECREF(tuple);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-#endif
-
 static PyObject *
 raise_exception(PyObject *self, PyObject *args)
 {
@@ -361,17 +334,14 @@ raise_exception(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef TestMethods[] = {
-	{"raise_exception",	raise_exception,		 METH_VARARGS},
-	{"test_config",		(PyCFunction)test_config,	 METH_NOARGS},
-	{"test_list_api",	(PyCFunction)test_list_api,	 METH_NOARGS},
-	{"test_dict_iteration",	(PyCFunction)test_dict_iteration,METH_NOARGS},
-	{"test_long_api",	(PyCFunction)test_long_api,	 METH_NOARGS},
+	{"raise_exception",	raise_exception,	METH_VARARGS},
+	{"test_config",		test_config,		METH_VARARGS},
+	{"test_list_api",	test_list_api,		METH_VARARGS},
+	{"test_dict_iteration",	test_dict_iteration,	METH_VARARGS},
+	{"test_long_api",	test_long_api,		METH_VARARGS},
 #ifdef HAVE_LONG_LONG
-	{"test_longlong_api",	(PyCFunction)test_longlong_api,	 METH_NOARGS},
-	{"test_L_code",		(PyCFunction)test_L_code,	 METH_NOARGS},
-#endif
-#ifdef Py_USING_UNICODE
-	{"test_u_code",		(PyCFunction)test_u_code,	 METH_NOARGS},
+	{"test_longlong_api",	test_longlong_api,	METH_VARARGS},
+	{"test_L_code",		test_L_code,		METH_VARARGS},
 #endif
 	{NULL, NULL} /* sentinel */
 };
@@ -379,11 +349,11 @@ static PyMethodDef TestMethods[] = {
 DL_EXPORT(void)
 init_testcapi(void)
 {
-	PyObject *m;
+	PyObject *m, *d;
 
 	m = Py_InitModule("_testcapi", TestMethods);
 
 	TestError = PyErr_NewException("_testcapi.error", NULL, NULL);
-	Py_INCREF(TestError);
-	PyModule_AddObject(m, "error", TestError);
+	d = PyModule_GetDict(m);
+	PyDict_SetItemString(d, "error", TestError);
 }

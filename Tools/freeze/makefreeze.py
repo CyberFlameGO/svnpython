@@ -18,7 +18,9 @@ trailer = """\
 # if __debug__ == 0 (i.e. -O option given), set Py_OptimizeFlag in frozen app.
 default_entry_point = """
 int
-main(int argc, char **argv)
+main(argc, argv)
+    int argc;
+    char **argv;
 {
 	extern int Py_FrozenMain(int, char **);
 """ + ((not __debug__ and """

@@ -221,11 +221,11 @@ def isdigit(char):
 def isname(name):
     # check that group name is a valid string
     if not isident(name[0]):
-        return False
+        return 0
     for char in name:
         if not isident(char) and not isdigit(char):
-            return False
-    return True
+            return 0
+    return 1
 
 def _group(escape, groups):
     # check if the escape string represents a valid group
@@ -289,6 +289,7 @@ def _escape(source, escape, state):
             return LITERAL, atoi(escape[1:], 8) & 0xff
         elif escape[1:2] in DIGITS:
             # octal escape *or* decimal group reference (sigh)
+            here = source.tell()
             if source.next in DIGITS:
                 escape = escape + source.get()
                 if (escape[1] in OCTDIGITS and escape[2] in OCTDIGITS and

@@ -148,8 +148,7 @@ def ispackage(path):
     if os.path.isdir(path):
         for ext in ['.py', '.pyc', '.pyo']:
             if os.path.isfile(os.path.join(path, '__init__' + ext)):
-                return True
-    return False
+                return 1
 
 def synopsis(filename, cache={}):
     """Get the one-line summary out of a module file."""
@@ -443,7 +442,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
                                 r'RFC[- ]?(\d+)|'
                                 r'PEP[- ]?(\d+)|'
                                 r'(self\.)?(\w+))')
-        while True:
+        while 1:
             match = pattern.search(text, here)
             if not match: break
             start, end = match.span()
@@ -1190,7 +1189,7 @@ def getpager():
             return lambda text: pipepager(plain(text), os.environ['PAGER'])
         else:
             return lambda text: pipepager(text, os.environ['PAGER'])
-    if sys.platform == 'win32' or sys.platform.startswith('os2'):
+    if sys.platform == 'win32':
         return lambda text: tempfilepager(plain(text), 'more <')
     if hasattr(os, 'system') and os.system('less 2>/dev/null') == 0:
         return lambda text: pipepager(text, 'less')
@@ -1521,7 +1520,7 @@ has the same effect as typing a particular string at the help> prompt.
 
     def interact(self):
         self.output.write('\n')
-        while True:
+        while 1:
             self.output.write('help> ')
             self.output.flush()
             try:
@@ -1710,11 +1709,10 @@ class ModuleScanner(Scanner):
         if not (os.path.islink(dir) and inode in self.inodes):
             self.inodes.append(inode) # detect circular symbolic links
             return ispackage(dir)
-        return False
 
     def run(self, callback, key=None, completer=None):
         if key: key = lower(key)
-        self.quit = False
+        self.quit = 0
         seen = {}
 
         for modname in sys.builtin_module_names:
@@ -1826,7 +1824,7 @@ pydoc</strong> by Ka-Ping Yee &lt;ping@lfw.org&gt;</font>'''
 
         def serve_until_quit(self):
             import select
-            self.quit = False
+            self.quit = 0
             while not self.quit:
                 rd, wr, ex = select.select([self.socket.fileno()], [], [], 1)
                 if rd: self.handle_request()

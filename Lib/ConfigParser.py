@@ -374,9 +374,9 @@ class ConfigParser:
         """Remove a file section."""
         if self.__sections.has_key(section):
             del self.__sections[section]
-            return True
+            return 1
         else:
-            return False
+            return 0
 
     #
     # Regular expressions for parsing section headers and options.  Note a

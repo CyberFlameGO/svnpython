@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+from __future__ import generators
+
 """
 Module difflib -- helpers for computing deltas between objects.
 
@@ -976,11 +978,11 @@ def IS_LINE_JUNK(line, pat=re.compile(r"\s*#?\s*$").match):
     Examples:
 
     >>> IS_LINE_JUNK('\n')
-    True
+    1
     >>> IS_LINE_JUNK('  #   \n')
-    True
+    1
     >>> IS_LINE_JUNK('hello\n')
-    False
+    0
     """
 
     return pat(line) is not None
@@ -992,13 +994,13 @@ def IS_CHARACTER_JUNK(ch, ws=" \t"):
     Examples:
 
     >>> IS_CHARACTER_JUNK(' ')
-    True
+    1
     >>> IS_CHARACTER_JUNK('\t')
-    True
+    1
     >>> IS_CHARACTER_JUNK('\n')
-    False
+    0
     >>> IS_CHARACTER_JUNK('x')
-    False
+    0
     """
 
     return ch in ws

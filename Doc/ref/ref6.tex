@@ -338,15 +338,11 @@ hints.
 Deletion of a target list recursively deletes each target, from left
 to right.
 
-Deletion of a name removes the binding of that name 
+Deletion of a name removes the binding of that name (which must exist)
 from the local or global namespace, depending on whether the name
-occurs in a \keyword{global} statement in the same code block.  If the
-name is unbound, a \exception{NameError} exception will be raised.
+occurs in a \keyword{global} statement in the same code block.
 \stindex{global}
 \indexii{unbinding}{name}
-
-It is illegal to delete a name from the local namespace if it occurs
-as a free variable\indexii{free}{varaible} in a nested block.
 
 Deletion of attribute references, subscriptions and slicings
 is passed to the primary object involved; deletion of a slicing
@@ -680,11 +676,11 @@ defined, the set of public names includes all names found in the
 module's namespace which do not begin with an underscore character
 (\character{_}).
 
-The \keyword{from} form with \samp{*} may only occur in a module
-scope.  If the wild card form of import --- \samp{import *} --- is
-used in a function and the function contains or is a nested block with
-free variables, the compiler will raise a \exception{SyntaxError}.
+Names bound by \keyword{import} statements may not occur in
+\keyword{global} statements in the same scope.
+\stindex{global}
 
+The \keyword{from} form with \samp{*} may only occur in a module scope.
 \kwindex{from}
 \stindex{from}
 
@@ -719,9 +715,9 @@ information.
 
 The \keyword{global} statement is a declaration which holds for the
 entire current code block.  It means that the listed identifiers are to be
-interpreted as globals.  It would be impossible to assign to a global
-variable without \keyword{global}, although free variables may refer
-to globals without being declared global.
+interpreted as globals.  While \emph{using} global names is automatic
+if they are not defined in the local scope, \emph{assigning} to global
+names would be impossible without \keyword{global}.
 \indexiii{global}{name}{binding}
 
 Names listed in a \keyword{global} statement must not be used in the same

@@ -476,8 +476,7 @@ PyMac_Initialize(void)
 #if TARGET_API_MAC_OSX /* Really: TARGET_API_MAC_CARBON */
 
 static int
-locateResourcePy(CFStringRef resourceType, char *resourceName, char *resourceURLCStr, int length)
-{
+locateResourcePy(char * resourceName, char * resourceURLCStr, int length) {
     CFBundleRef mainBundle = NULL;
     CFURLRef URL, absoluteURL;
     CFStringRef filenameString, filepathString, rsrcString;
@@ -501,7 +500,7 @@ locateResourcePy(CFStringRef resourceType, char *resourceName, char *resourceURL
 
 	    /* Look for py files in the main bundle by type */
 	    arrayRef = CFBundleCopyResourceURLsOfType( mainBundle, 
-	            resourceType, 
+	            CFSTR("py"), 
 	           NULL );
 
 	    /* See if there are any filename matches */
@@ -536,32 +535,34 @@ locateResourcePy(CFStringRef resourceType, char *resourceName, char *resourceURL
 int
 main(int argc, char **argv)
 {
+    int i;
     static char scriptpath[1024];
     char *script = NULL;
 
 	/* First we see whether we have __rawmain__.py and run that if it
 	** is there
 	*/
-	if (locateResourcePy(CFSTR("py"), "__rawmain__.py", scriptpath, 1024)) {
+	if (locateResourcePy("__rawmain__.py", scriptpath, 1024)) {
 		/* If we have a raw main we don't do AppleEvent processing.
 		** Notice that this also means we keep the -psn.... argv[1]
 		** value intact. Not sure whether that is important to someone,
 		** but you never know...
 		*/
 		script = scriptpath;
-	} else if (locateResourcePy(CFSTR("pyc"), "__rawmain__.pyc", scriptpath, 1024)) {
-		script = scriptpath;
 	} else {
 		/* Otherwise we look for __main__.py. Whether that is
 		** found or not we also process AppleEvent arguments.
 		*/
-		if (locateResourcePy(CFSTR("py"), "__main__.py", scriptpath, 1024))
-			script = scriptpath;
-		else if (locateResourcePy(CFSTR("pyc"), "__main__.pyc", scriptpath, 1024))
+		if (locateResourcePy("__main__.py", scriptpath, 1024))
 			script = scriptpath;
 			
+		printf("original argc=%d\n", argc);
+		for(i=0; i<argc; i++) printf("original argv[%d] = \"%s\"\n", i, argv[i]);
+
 		init_common(&argc, &argv, 0);
 
+		printf("modified argc=%d\n", argc);
+		for(i=0; i<argc; i++) printf("modified argv[%d] = \"%s\"\n", i, argv[i]);
 	}
 
 	Py_Main(argc, argv, script);
@@ -633,12 +634,7 @@ Py_Main(int argc, char **argv, char *filename)
 
 	if (Py_VerboseFlag ||
 	    (command == NULL && filename == NULL && isatty((int)fileno(fp))))
-		fprintf(stderr, "%s %s on %s\n%s\n",
-#if !TARGET_API_MAC_OSX
-			"Python",
-#else
-			"Pythonw",
-#endif
+		fprintf(stderr, "Python %s on %s\n%s\n",
 			Py_GetVersion(), Py_GetPlatform(), COPYRIGHT);
 	
 	if (filename != NULL) {

@@ -430,8 +430,6 @@ def _run_examples_inner(out, fakeout, examples, globs, verbose, name,
                          compileflags, 1) in globs
             got = fakeout.get()
             state = OK
-        except KeyboardInterrupt:
-            raise
         except:
             # See whether the exception was expected.
             if want.find("Traceback (innermost last):\n") == 0 or \
@@ -523,8 +521,6 @@ def run_docstring_examples(f, globs, verbose=0, name="NoName",
         # just in case CT invents a doc object that has to be forced
         # to look like a string <0.9 wink>
         doc = str(doc)
-    except KeyboardInterrupt:
-        raise
     except:
         return 0, 0
 
@@ -545,19 +541,19 @@ def is_private(prefix, base):
     does not both begin and end with (at least) two underscores.
 
     >>> is_private("a.b", "my_func")
-    False
+    0
     >>> is_private("____", "_my_func")
-    True
+    1
     >>> is_private("someclass", "__init__")
-    False
+    0
     >>> is_private("sometypo", "__init_")
-    True
+    1
     >>> is_private("x.y.z", "_")
-    True
+    1
     >>> is_private("_x.y.z", "__")
-    False
+    0
     >>> is_private("", "")  # senseless but consistent
-    False
+    0
     """
 
     return base[:1] == "_" and not base[:2] == "__" == base[-2:]

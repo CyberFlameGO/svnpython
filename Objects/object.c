@@ -1085,23 +1085,21 @@ PyObject_GetAttr(PyObject *v, PyObject *name)
 {
 	PyTypeObject *tp = v->ob_type;
 
-	if (!PyString_Check(name)) {
 #ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_getattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = _PyUnicode_AsDefaultEncodedString(name, NULL);
-			if (name == NULL)
-				return NULL;
-		}
-		else
-#endif
-		{
-			PyErr_SetString(PyExc_TypeError,
-					"attribute name must be string");
+	/* The Unicode to string conversion is done here because the
+	   existing tp_getattro slots expect a string object as name
+	   and we wouldn't want to break those. */
+	if (PyUnicode_Check(name)) {
+		name = _PyUnicode_AsDefaultEncodedString(name, NULL);
+		if (name == NULL)
 			return NULL;
-		}
+	}
+	else
+#endif
+	if (!PyString_Check(name)) {
+		PyErr_SetString(PyExc_TypeError,
+				"attribute name must be string");
+		return NULL;
 	}
 	if (tp->tp_getattro != NULL)
 		return (*tp->tp_getattro)(v, name);
@@ -1131,23 +1129,21 @@ PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)
 	PyTypeObject *tp = v->ob_type;
 	int err;
 
-	if (!PyString_Check(name)){
 #ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_setattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = PyUnicode_AsEncodedString(name, NULL, NULL);
-			if (name == NULL)
-				return -1;
-		}
-		else 
-#endif
-		{
-			PyErr_SetString(PyExc_TypeError,
-					"attribute name must be string");
+	/* The Unicode to string conversion is done here because the
+	   existing tp_setattro slots expect a string object as name
+	   and we wouldn't want to break those. */
+	if (PyUnicode_Check(name)) {
+		name = PyUnicode_AsEncodedString(name, NULL, NULL);
+		if (name == NULL)
 			return -1;
-		}
+	}
+	else 
+#endif
+	if (!PyString_Check(name)){
+		PyErr_SetString(PyExc_TypeError,
+				"attribute name must be string");
+		return -1;
 	}
 	else
 		Py_INCREF(name);
@@ -1221,23 +1217,21 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 	descrgetfunc f;
 	PyObject **dictptr;
 
-	if (!PyString_Check(name)){
 #ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_setattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = PyUnicode_AsEncodedString(name, NULL, NULL);
-			if (name == NULL)
-				return NULL;
-		}
-		else 
-#endif
-		{
-			PyErr_SetString(PyExc_TypeError,
-					"attribute name must be string");
+	/* The Unicode to string conversion is done here because the
+	   existing tp_setattro slots expect a string object as name
+	   and we wouldn't want to break those. */
+	if (PyUnicode_Check(name)) {
+		name = PyUnicode_AsEncodedString(name, NULL, NULL);
+		if (name == NULL)
 			return NULL;
-		}
+	}
+	else 
+#endif
+	if (!PyString_Check(name)){
+		PyErr_SetString(PyExc_TypeError,
+				"attribute name must be string");
+		return NULL;
 	}
 	else
 		Py_INCREF(name);
@@ -1297,23 +1291,21 @@ PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)
 	PyObject **dictptr;
 	int res = -1;
 
-	if (!PyString_Check(name)){
 #ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_setattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = PyUnicode_AsEncodedString(name, NULL, NULL);
-			if (name == NULL)
-				return -1;
-		}
-		else 
-#endif
-		{
-			PyErr_SetString(PyExc_TypeError,
-					"attribute name must be string");
+	/* The Unicode to string conversion is done here because the
+	   existing tp_setattro slots expect a string object as name
+	   and we wouldn't want to break those. */
+	if (PyUnicode_Check(name)) {
+		name = PyUnicode_AsEncodedString(name, NULL, NULL);
+		if (name == NULL)
 			return -1;
-		}
+	}
+	else 
+#endif
+	if (!PyString_Check(name)){
+		PyErr_SetString(PyExc_TypeError,
+				"attribute name must be string");
+		return -1;
 	}
 	else
 		Py_INCREF(name);
@@ -1763,9 +1755,6 @@ _Py_ReadyTypes(void)
 	if (PyType_Ready(&PyType_Type) < 0)
 		Py_FatalError("Can't initialize 'type'");
 
-	if (PyType_Ready(&PyBool_Type) < 0)
-		Py_FatalError("Can't initialize 'bool'");
-
 	if (PyType_Ready(&PyList_Type) < 0)
 		Py_FatalError("Can't initialize 'list'");
 
@@ -2040,7 +2029,6 @@ PyObject * _PyTrash_delete_later = NULL;
 void
 _PyTrash_deposit_object(PyObject *op)
 {
-#ifndef WITH_CYCLE_GC
 	int typecode;
 
 	if (PyTuple_Check(op))
@@ -2058,11 +2046,8 @@ _PyTrash_deposit_object(PyObject *op)
 		return; /* pacify compiler -- execution never here */
 	}
 	op->ob_refcnt = typecode;
+
 	op->ob_type = (PyTypeObject*)_PyTrash_delete_later;
-#else
-	assert (_Py_AS_GC(op)->gc.gc_next == NULL);
-	_Py_AS_GC(op)->gc.gc_prev = (PyGC_Head *)_PyTrash_delete_later;
-#endif
 	_PyTrash_delete_later = op;
 }
 
@@ -2071,8 +2056,6 @@ _PyTrash_destroy_chain(void)
 {
 	while (_PyTrash_delete_later) {
 		PyObject *shredder = _PyTrash_delete_later;
-
-#ifndef WITH_CYCLE_GC
 		_PyTrash_delete_later = (PyObject*) shredder->ob_type;
 
 		switch (shredder->ob_refcnt) {
@@ -2092,11 +2075,6 @@ _PyTrash_destroy_chain(void)
 			shredder->ob_type = &PyTraceBack_Type;
 			break;
 		}
-#else
-		_PyTrash_delete_later =
-			(PyObject*) _Py_AS_GC(shredder)->gc.gc_prev;
-#endif
-
 		_Py_NewReference(shredder);
 
 		++_PyTrash_delete_nesting;
@@ -2104,3 +2082,7 @@ _PyTrash_destroy_chain(void)
 		--_PyTrash_delete_nesting;
 	}
 }
+
+#ifdef WITH_PYMALLOC
+#include "obmalloc.c"
+#endif

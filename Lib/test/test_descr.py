@@ -785,7 +785,7 @@ def metaclass():
     c = C()
     try: c()
     except TypeError: pass
-    else: raise TestFailed, "calling object w/o call method should raise TypeError"
+    else: raise TestError, "calling object w/o call method should raise TypeError"
 
 def pymods():
     if verbose: print "Testing Python subclass of module..."
@@ -1222,20 +1222,6 @@ def classmethods():
     vereq(super(D,D).goo(), (D,))
     vereq(super(D,d).goo(), (D,))
 
-def classmethods_in_c():
-    if verbose: print "Testing C-based class methods..."
-    import xxsubtype as spam
-    a = (1, 2, 3)
-    d = {'abc': 123}
-    x, a1, d1 = spam.spamlist.classmeth(*a, **d)
-    veris(x, None)
-    vereq((spam.spamlist,) + a, a1)
-    vereq(d, d1)
-    x, a1, d1 = spam.spamlist().classmeth(*a, **d)
-    veris(x, None)
-    vereq((spam.spamlist,) + a, a1)
-    vereq(d, d1)
-
 def staticmethods():
     if verbose: print "Testing static methods..."
     class C(object):
@@ -1252,20 +1238,6 @@ def staticmethods():
     vereq(d.goo(1), (1,))
     vereq(d.foo(1), (d, 1))
     vereq(D.foo(d, 1), (d, 1))
-
-def staticmethods_in_c():
-    if verbose: print "Testing C-based static methods..."
-    import xxsubtype as spam
-    a = (1, 2, 3)
-    d = {"abc": 123}
-    x, a1, d1 = spam.spamlist.staticmeth(*a, **d)
-    veris(x, None)
-    vereq(a, a1)
-    vereq(d, d1)
-    x, a1, d2 = spam.spamlist().staticmeth(*a, **d)
-    veris(x, None)
-    vereq(a, a1)
-    vereq(d, d1)
 
 def classic():
     if verbose: print "Testing classic classes..."
@@ -2329,7 +2301,7 @@ def descrdoc():
     if verbose: print "Testing descriptor doc strings..."
     def check(descr, what):
         vereq(descr.__doc__, what)
-    check(file.closed, "True if the file is closed") # getset descriptor
+    check(file.closed, "flag set if the file is closed") # getset descriptor
     check(file.name, "file name") # member descriptor
 
 def setclass():
@@ -2871,53 +2843,6 @@ def modules():
     m.foo = 1
     vereq(m.__dict__, {"foo": 1})
 
-def dictproxyiterkeys():
-    class C(object):
-        def meth(self):
-            pass
-    if verbose: print "Testing dict-proxy iterkeys..."
-    keys = [ key for key in C.__dict__.iterkeys() ]
-    keys.sort()
-    vereq(keys, ['__dict__', '__doc__', '__module__', '__weakref__', 'meth'])
-
-def dictproxyitervalues():
-    class C(object):
-        def meth(self):
-            pass
-    if verbose: print "Testing dict-proxy itervalues..."
-    values = [ values for values in C.__dict__.itervalues() ]
-    vereq(len(values), 5)
-
-def dictproxyiteritems():
-    class C(object):
-        def meth(self):
-            pass
-    if verbose: print "Testing dict-proxy iteritems..."
-    keys = [ key for (key, value) in C.__dict__.iteritems() ]
-    keys.sort()
-    vereq(keys, ['__dict__', '__doc__', '__module__', '__weakref__', 'meth'])
-
-def funnynew():
-    if verbose: print "Testing __new__ returning something unexpected..."
-    class C(object):
-        def __new__(cls, arg):
-            if isinstance(arg, str): return [1, 2, 3]
-            elif isinstance(arg, int): return object.__new__(D)
-            else: return object.__new__(cls)
-    class D(C):
-        def __init__(self, arg):
-            self.foo = arg
-    vereq(C("1"), [1, 2, 3])
-    vereq(D("1"), [1, 2, 3])
-    d = D(None)
-    veris(d.foo, None)
-    d = C(1)
-    vereq(isinstance(d, D), True)
-    vereq(d.foo, 1)
-    d = D(1)
-    vereq(isinstance(d, D), True)
-    vereq(d.foo, 1)
-
 def test_main():
     class_docstrings()
     lists()
@@ -2941,9 +2866,7 @@ def test_main():
     dynamics()
     errors()
     classmethods()
-    classmethods_in_c()
     staticmethods()
-    staticmethods_in_c()
     classic()
     compattr()
     newslot()
@@ -2976,11 +2899,7 @@ def test_main():
     strops()
     deepcopyrecursive()
     modules()
-    dictproxyiterkeys()
-    dictproxyitervalues()
-    dictproxyiteritems()
     pickleslots()
-    funnynew()
     if verbose: print "All OK"
 
 if __name__ == "__main__":

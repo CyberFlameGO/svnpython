@@ -25,6 +25,7 @@ used to query various info about the object, if available.
 import string
 import socket
 import os
+import stat
 import time
 import sys
 import types
@@ -63,20 +64,15 @@ else:
 
 # Shortcut for basic usage
 _urlopener = None
-def urlopen(url, data=None, proxies=None):
+def urlopen(url, data=None):
     """urlopen(url [, data]) -> open file-like object"""
     global _urlopener
-    if proxies is not None:
-        opener = FancyURLopener(proxies=proxies)
-    elif not _urlopener:
-        opener = FancyURLopener()
-        _urlopener = opener
-    else:
-        opener = _urlopener
+    if not _urlopener:
+        _urlopener = FancyURLopener()
     if data is None:
-        return opener.open(url)
+        return _urlopener.open(url)
     else:
-        return opener.open(url, data)
+        return _urlopener.open(url, data)
 def urlretrieve(url, filename=None, reporthook=None, data=None):
     global _urlopener
     if not _urlopener:
@@ -414,8 +410,8 @@ class URLopener:
         host, file = splithost(url)
         localname = url2pathname(file)
         stats = os.stat(localname)
-        size = stats.st_size
-        modified = rfc822.formatdate(stats.st_mtime)
+        size = stats[stat.ST_SIZE]
+        modified = rfc822.formatdate(stats[stat.ST_MTIME])
         mtype = mimetypes.guess_type(url)[0]
         headers = mimetools.Message(StringIO.StringIO(
             'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
@@ -501,7 +497,7 @@ class URLopener:
         # mediatype := [ type "/" subtype ] *( ";" parameter )
         # data      := *urlchar
         # parameter := attribute "=" value
-        import StringIO, mimetools
+        import StringIO, mimetools, time
         try:
             [type, data] = url.split(',', 1)
         except ValueError:
@@ -1162,6 +1158,7 @@ def urlencode(query,doseq=0):
         # sequences...
         try:
             # non-sequence items should not work with len()
+            x = len(query)
             # non-empty strings will fail this
             if len(query) and type(query[0]) != types.TupleType:
                 raise TypeError
@@ -1316,6 +1313,7 @@ elif os.name == 'nt':
         try:
             import _winreg
             import re
+            import socket
         except ImportError:
             # Std modules, so should be around - but you never know!
             return 0
@@ -1373,6 +1371,7 @@ else:
 
 # Test and time quote() and unquote()
 def test1():
+    import time
     s = ''
     for i in range(256): s = s + chr(i)
     s = s*4

@@ -44,7 +44,7 @@ if list is type([]):
 else:
     def NodeList():
         return []
-
+    
 
 class Node(xml.dom.Node):
     allnodes = {}

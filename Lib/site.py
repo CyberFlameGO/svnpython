@@ -88,7 +88,7 @@ for dir in sys.path:
         L.append(dir)
         _dirs_in_sys_path[dircase] = 1
 sys.path[:] = L
-del dir, dircase, L
+del dir, L
 
 # Append ./build/lib.<platform> in case we're running in the build dir
 # (especially for Guido :-)
@@ -164,9 +164,7 @@ if sys.exec_prefix != sys.prefix:
     prefixes.append(sys.exec_prefix)
 for prefix in prefixes:
     if prefix:
-        if sys.platform == 'os2emx':
-            sitedirs = [os.path.join(prefix, "Lib", "site-packages")]
-        elif os.sep == '/':
+        if os.sep == '/':
             sitedirs = [os.path.join(prefix,
                                      "lib",
                                      "python" + sys.version[:3],
@@ -177,7 +175,6 @@ for prefix in prefixes:
         for sitedir in sitedirs:
             if os.path.isdir(sitedir):
                 addsitedir(sitedir)
-del prefix, sitedir
 
 _dirs_in_sys_path = None
 
@@ -261,7 +258,7 @@ if sys.platform[:4] == 'java':
         "Jython is maintained by the Jython developers (www.jython.org).")
 else:
     __builtin__.credits = _Printer("credits", """\
-Thanks to CWI, CNRI, BeOpen.com, Zope Corporation and a cast of thousands
+Thanks to CWI, CNRI, BeOpen.com, Digital Creations and a cast of thousands
 for supporting Python development.  See www.python.org for more information.""")
 here = os.path.dirname(os.__file__)
 __builtin__.license = _Printer(

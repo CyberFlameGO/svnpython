@@ -2938,8 +2938,6 @@ scanner_search(ScannerObject* self, PyObject* args)
 }
 
 static PyMethodDef scanner_methods[] = {
-    /* FIXME: use METH_OLDARGS instead of 0 or fix to use METH_VARARGS */
-    /*        METH_OLDARGS is not in Python 1.5.2 */
     {"match", (PyCFunction) scanner_match, 0},
     {"search", (PyCFunction) scanner_search, 0},
     {NULL, NULL}
@@ -2976,9 +2974,9 @@ statichere PyTypeObject Scanner_Type = {
 };
 
 static PyMethodDef _functions[] = {
-    {"compile", _compile, METH_VARARGS},
-    {"getcodesize", sre_codesize, METH_VARARGS},
-    {"getlower", sre_getlower, METH_VARARGS},
+    {"compile", _compile, 1},
+    {"getcodesize", sre_codesize, 1},
+    {"getlower", sre_getlower, 1},
     {NULL, NULL}
 };
 

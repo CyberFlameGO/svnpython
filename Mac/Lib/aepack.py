@@ -57,9 +57,11 @@ unpacker_coercions = {
 #
 # Some python types we need in the packer:
 #
-AEDescType = AE.AEDescType
-FSSType = macfs.FSSpecType
-AliasType = macfs.AliasType
+AEDescType = type(AE.AECreateDesc('TEXT', ''))
+_sample_fss = macfs.FSSpec(':')
+_sample_alias = _sample_fss.NewAliasMinimal()
+FSSType = type(_sample_fss)
+AliasType = type(_sample_alias)
 
 def pack(x, forcetype = None):
 	"""Pack a python object into an AE descriptor"""

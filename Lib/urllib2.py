@@ -102,6 +102,7 @@ import ftplib
 import sys
 import time
 import os
+import stat
 import gopherlib
 import posixpath
 
@@ -546,13 +547,13 @@ class HTTPPasswordMgr:
         Both args must be URIs in reduced form.
         """
         if base == test:
-            return True
+            return 1
         if base[0] != test[0]:
-            return False
+            return 0
         common = posixpath.commonprefix((base[1], test[1]))
         if len(common) == len(base[1]):
-            return True
-        return False
+            return 1
+        return 0
 
 
 class HTTPPasswordMgrWithDefaultRealm(HTTPPasswordMgr):
@@ -876,9 +877,10 @@ class FileHandler(BaseHandler):
         file = req.get_selector()
         localfile = url2pathname(file)
         stats = os.stat(localfile)
-        size = stats.st_size
-        modified = rfc822.formatdate(stats.st_mtime)
+        size = stats[stat.ST_SIZE]
+        modified = rfc822.formatdate(stats[stat.ST_MTIME])
         mtype = mimetypes.guess_type(file)[0]
+        stats = os.stat(localfile)
         headers = mimetools.Message(StringIO(
             'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
             (mtype or 'text/plain', size, modified)))

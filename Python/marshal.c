@@ -17,8 +17,6 @@
 
 #define TYPE_NULL	'0'
 #define TYPE_NONE	'N'
-#define TYPE_FALSE	'F'
-#define TYPE_TRUE	'T'
 #define TYPE_STOPITER	'S'
 #define TYPE_ELLIPSIS   '.'
 #define TYPE_INT	'i'
@@ -127,12 +125,6 @@ w_object(PyObject *v, WFILE *p)
 	}
 	else if (v == Py_Ellipsis) {
 	        w_byte(TYPE_ELLIPSIS, p);
-	}
-	else if (v == Py_False) {
-	        w_byte(TYPE_FALSE, p);
-	}
-	else if (v == Py_True) {
-	        w_byte(TYPE_TRUE, p);
 	}
 	else if (PyInt_Check(v)) {
 		long x = PyInt_AS_LONG((PyIntObject *)v);
@@ -405,14 +397,6 @@ r_object(RFILE *p)
 	case TYPE_ELLIPSIS:
 		Py_INCREF(Py_Ellipsis);
 		return Py_Ellipsis;
-
-	case TYPE_FALSE:
-		Py_INCREF(Py_False);
-		return Py_False;
-
-	case TYPE_TRUE:
-		Py_INCREF(Py_True);
-		return Py_True;
 
 	case TYPE_INT:
 		return PyInt_FromLong(r_long(p));
@@ -868,10 +852,10 @@ marshal_loads(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef marshal_methods[] = {
-	{"dump",	marshal_dump,	METH_VARARGS},
-	{"load",	marshal_load,	METH_VARARGS},
-	{"dumps",	marshal_dumps,	METH_VARARGS},
-	{"loads",	marshal_loads,	METH_VARARGS},
+	{"dump",	marshal_dump,	1},
+	{"load",	marshal_load,	1},
+	{"dumps",	marshal_dumps,	1},
+	{"loads",	marshal_loads,	1},
 	{NULL,		NULL}		/* sentinel */
 };
 

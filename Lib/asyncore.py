@@ -281,7 +281,7 @@ class dispatcher:
     # ==================================================
 
     def readable (self):
-        return True
+        return 1
 
     if os.name == 'mac':
         # The macintosh will select a listening socket for
@@ -290,7 +290,7 @@ class dispatcher:
             return not self.accepting
     else:
         def writable (self):
-            return True
+            return 1
 
     # ==================================================
     # socket object methods.
@@ -319,7 +319,6 @@ class dispatcher:
             raise socket.error, err
 
     def accept (self):
-        # XXX can return either an address pair or None
         try:
             conn, addr = self.socket.accept()
             return conn, addr
@@ -522,10 +521,10 @@ if os.name == 'posix':
             self.fd = fd
 
         def recv (self, *args):
-            return os.read(self.fd, *args)
+            return apply (os.read, (self.fd,)+args)
 
         def send (self, *args):
-            return os.write(self.fd, *args)
+            return apply (os.write, (self.fd,)+args)
 
         read = recv
         write = send

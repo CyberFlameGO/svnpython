@@ -375,16 +375,16 @@ class EditorWindow:
 
     def ispythonsource(self, filename):
         if not filename:
-            return True
+            return 1
         base, ext = os.path.splitext(os.path.basename(filename))
         if os.path.normcase(ext) in (".py", ".pyw"):
-            return True
+            return 1
         try:
             f = open(filename)
             line = f.readline()
             f.close()
         except IOError:
-            return False
+            return 0
         return line[:2] == '#!' and string.find(line, 'python') >= 0
 
     def close_hook(self):
@@ -465,7 +465,7 @@ class EditorWindow:
         top, bot = self.getwindowlines()
         lineno = self.getlineno(mark)
         height = bot - top
-        newtop = max(1, lineno - height//2)
+        newtop = max(1, lineno - height/2)
         text.yview(float(newtop))
 
     def getwindowlines(self):

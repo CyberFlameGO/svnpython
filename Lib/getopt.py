@@ -103,9 +103,9 @@ def long_has_args(opt, longopts):
         raise GetoptError('option --%s not recognized' % opt, opt)
     # Is there an exact match?
     if opt in possibilities:
-        return False, opt
+        return 0, opt
     elif opt + '=' in possibilities:
-        return True, opt
+        return 1, opt
     # No exact match, so better be unique.
     if len(possibilities) > 1:
         # XXX since possibilities contains all valid continuations, might be

@@ -14,27 +14,20 @@ import types
 import StringIO
 import macfs
 import keyword
-import macresource
 
 from Carbon.Res import *
 
-DEFAULT_PACKAGEFOLDER=os.path.join(sys.prefix, 'Mac', 'Lib', 'lib-scriptpackages')
-
 def main():
-	if len(sys.argv) > 1:
-		for filename in sys.argv[1:]:
-			processfile(filename)
-	else:
-		fss, ok = macfs.PromptGetFile('Select file with aeut/aete resource:')
-		if not ok:
-			sys.exit(0)
-		processfile(fss.as_pathname())
+	fss, ok = macfs.PromptGetFile('Select file with aeut/aete resource:')
+	if not ok:
+		sys.exit(0)
+	processfile(fss.as_pathname())
 
 def processfile(fullname):
 	"""Process all resources in a single file"""
 	cur = CurResFile()
-	print "Processing", fullname
-	rf = macresource.open_pathname(fullname)
+	print fullname
+	rf = OpenRFPerm(fullname, 0, 1)
 	try:
 		UseResFile(rf)
 		resources = []
@@ -232,15 +225,15 @@ def compileaete(aete, resinfo, fname):
 	major, minor = divmod(version, 256)
 	fss = macfs.FSSpec(fname)
 	creatorsignature, dummy = fss.GetCreatorType()
-	packagename = identify(os.path.splitext(os.path.basename(fname))[0])
+	packagename = identify(os.path.basename(fname))
 	if language:
 		packagename = packagename+'_lang%d'%language
 	if script:
 		packagename = packagename+'_script%d'%script
 	if len(packagename) > 27:
 		packagename = packagename[:27]
-	macfs.SetFolder(DEFAULT_PACKAGEFOLDER)
-	fss, ok = macfs.GetDirectory('Create and select package folder for %s'%packagename)
+	macfs.SetFolder(os.path.join(sys.prefix, ':Mac:Lib:lib-scriptpackages'))
+	fss, ok = macfs.GetDirectory('Package folder for %s'%packagename)
 	if not ok:
 		return
 	pathname = fss.as_pathname()
@@ -295,7 +288,7 @@ def compileaete(aete, resinfo, fname):
 		for code, modname in suitelist[1:]:
 			fp.write(",\n\t\t%s_Events"%modname)
 		fp.write(",\n\t\taetools.TalkTo):\n")
-		fp.write("\t_signature = %s\n\n"%`creatorsignature`)
+		fp.write("\t_signature = '%s'\n\n"%creatorsignature)
 	fp.close()
 	
 def precompilesuite(suite, basepackage=None):

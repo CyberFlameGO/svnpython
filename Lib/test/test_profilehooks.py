@@ -1,3 +1,5 @@
+from __future__ import generators
+
 from test_support import TestFailed
 
 import pprint

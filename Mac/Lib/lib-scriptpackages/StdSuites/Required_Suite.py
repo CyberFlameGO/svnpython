@@ -1,7 +1,7 @@
 """Suite Required Suite: Every application supports open, print, run, and quit
 Level 1, version 1
 
-Generated from Moes:Systeemmap:Extensies:AppleScript
+Generated from Macintosh HD:Systeemmap:Extensies:AppleScript
 AETE/AEUT resource version 1/0, language 0, script 0
 """
 
@@ -10,8 +10,7 @@ import MacOS
 
 _code = 'reqd'
 
-from _builtinSuites.builtin_Suite import *
-class Required_Suite_Events(builtin_Suite_Events):
+class Required_Suite_Events:
 
 	pass
 

@@ -181,27 +181,19 @@
 \newlength{\py@codewidth}
 
 \renewcommand{\verbatim}{%
-  \setlength{\parindent}{1cm}%
-  % Calculate the text width for the minipage:
-  \setlength{\py@codewidth}{\linewidth}%
-  \addtolength{\py@codewidth}{-\parindent}%
-  %
-  \par\indent%
-  \begin{minipage}[t]{\py@codewidth}%
-    \small%
+  \begingroup%
+  \small%
+  \begin{list}{}{\setlength{\leftmargin}{1cm}}
+    \item%
     \py@OldVerbatim%
 }
 \renewcommand{\endverbatim}{%
     \py@OldEndVerbatim%
-  \end{minipage}%
+  \end{list}%
+  \endgroup
 }
 \renewcommand{\verbatiminput}[1]{%
-  {\setlength{\parindent}{1cm}%
-   % Calculate the text width for the minipage:
-   \setlength{\py@codewidth}{\linewidth}%
-   \addtolength{\py@codewidth}{-\parindent}%
-   %
-   \small%
+  {\small%
    \begin{list}{}{\setlength{\leftmargin}{1cm}}
      \item%
      \py@OldVerbatimInput{#1}%

@@ -101,12 +101,8 @@ TUPLE           = 't'
 EMPTY_TUPLE     = ')'
 SETITEMS        = 'u'
 BINFLOAT        = 'G'
-TRUE            = 'I01\n'
-FALSE           = 'I00\n'
-
 
 __all__.extend([x for x in dir() if re.match("[A-Z][A-Z0-9_]+$",x)])
-del x
 
 class Pickler:
 
@@ -258,13 +254,6 @@ class Pickler:
     def save_none(self, object):
         self.write(NONE)
     dispatch[NoneType] = save_none
-
-    def save_bool(self, object):
-        if object:
-            self.write(TRUE)
-        else:
-            self.write(FALSE)
-    dispatch[bool] = save_bool
 
     def save_int(self, object):
         if self.bin:
@@ -641,16 +630,10 @@ class Unpickler:
 
     def load_int(self):
         data = self.readline()
-        if data == FALSE[1:]:
-            val = False
-        elif data == TRUE[1:]:
-            val = True
-        else:
-            try:
-                val = int(data)
-            except ValueError:
-                val = long(data)
-        self.append(val)
+        try:
+            self.append(int(data))
+        except ValueError:
+            self.append(long(data))
     dispatch[INT] = load_int
 
     def load_binint(self):

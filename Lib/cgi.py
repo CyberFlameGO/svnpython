@@ -506,7 +506,7 @@ class FieldStorage:
         if self.headers.has_key('content-length'):
             try:
                 clen = int(self.headers['content-length'])
-            except ValueError:
+            except:
                 pass
             if maxlen and clen > maxlen:
                 raise ValueError, 'Maximum content length exceeded'
@@ -600,8 +600,8 @@ class FieldStorage:
         if self.list is None:
             raise TypeError, "not indexable"
         for item in self.list:
-            if item.name == key: return True
-        return False
+            if item.name == key: return 1
+        return 0
 
     def __len__(self):
         """Dictionary style len(x) support."""
@@ -877,6 +877,7 @@ def test(environ=os.environ):
     the script in HTML form.
 
     """
+    import traceback
     print "Content-type: text/html"
     print
     sys.stderr = sys.stdout

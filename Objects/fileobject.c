@@ -10,10 +10,8 @@
 
 #ifdef MS_WIN32
 #define fileno _fileno
-/* can simulate truncate with Win32 API functions; see file_truncate */
+/* can (almost fully) duplicate with _chsize, see file_truncate */
 #define HAVE_FTRUNCATE
-#define WINDOWS_LEAN_AND_MEAN
-#include <windows.h>
 #endif
 
 #ifdef macintosh
@@ -27,16 +25,23 @@
 #define NO_FOPEN_ERRNO
 #endif
 
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-#include <io.h>
-#endif
-
 #define BUF(v) PyString_AS_STRING((PyStringObject *)v)
 
 #ifndef DONT_HAVE_ERRNO_H
 #include <errno.h>
 #endif
 
+
+typedef struct {
+	PyObject_HEAD
+	FILE *f_fp;
+	PyObject *f_name;
+	PyObject *f_mode;
+	int (*f_close)(FILE *);
+	int f_softspace; /* Flag used by 'print' command */
+	int f_binary; /* Flag which indicates whether the file is open
+			 open in binary (1) or test (0) mode */
+} PyFileObject;
 
 FILE *
 PyFile_AsFile(PyObject *f)
@@ -54,32 +59,6 @@ PyFile_Name(PyObject *f)
 		return NULL;
 	else
 		return ((PyFileObject *)f)->f_name;
-}
-
-/* On Unix, fopen will succeed for directories.
-   In Python, there should be no file objects referring to
-   directories, so we need a check.  */
-
-static PyFileObject*
-dircheck(PyFileObject* f)
-{
-#if defined(HAVE_FSTAT) && defined(S_IFDIR) && defined(EISDIR)
-	struct stat buf;
-	if (f->f_fp == NULL)
-		return f;
-	if (fstat(fileno(f->f_fp), &buf) == 0 &&
-	    S_ISDIR(buf.st_mode)) {
-#ifdef HAVE_STRERROR
-		char *msg = strerror(EISDIR);
-#else
-		char *msg = "Is a directory";
-#endif
-		PyObject *exc = PyObject_CallFunction(PyExc_IOError, "(is)", EISDIR, msg);
-		PyErr_SetObject(PyExc_IOError, exc);
-		return NULL;
-	}
-#endif
-	return f;
 }
 
 
@@ -103,7 +82,6 @@ fill_file_fields(PyFileObject *f, FILE *fp, char *name, char *mode,
 	if (f->f_name == NULL || f->f_mode == NULL)
 		return NULL;
 	f->f_fp = fp;
-        f = dircheck(f);
 	return (PyObject *) f;
 }
 
@@ -170,8 +148,6 @@ open_the_file(PyFileObject *f, char *name, char *mode)
 			PyErr_SetFromErrnoWithFilename(PyExc_IOError, name);
 		f = NULL;
 	}
-	if (f != NULL)
-		f = dircheck(f);
 	return (PyObject *)f;
 }
 
@@ -412,9 +388,6 @@ file_truncate(PyFileObject *f, PyObject *args)
 	newsizeobj = NULL;
 	if (!PyArg_ParseTuple(args, "|O:truncate", &newsizeobj))
 		return NULL;
-
-	/* Set newsize to current postion if newsizeobj NULL, else to the
-	   specified value. */
 	if (newsizeobj != NULL) {
 #if !defined(HAVE_LARGEFILE_SUPPORT)
 		newsize = PyInt_AsLong(newsizeobj);
@@ -425,80 +398,37 @@ file_truncate(PyFileObject *f, PyObject *args)
 #endif
 		if (PyErr_Occurred())
 			return NULL;
-	}
-	else {
-		/* Default to current position. */
+	} else {
+		/* Default to current position*/
 		Py_BEGIN_ALLOW_THREADS
 		errno = 0;
 		newsize = _portable_ftell(f->f_fp);
 		Py_END_ALLOW_THREADS
-		if (newsize == -1)
-			goto onioerror;
+		if (newsize == -1) {
+		        PyErr_SetFromErrno(PyExc_IOError);
+			clearerr(f->f_fp);
+			return NULL;
+		}
 	}
-
-	/* Flush the file. */
 	Py_BEGIN_ALLOW_THREADS
 	errno = 0;
 	ret = fflush(f->f_fp);
 	Py_END_ALLOW_THREADS
-	if (ret != 0)
-		goto onioerror;
+	if (ret != 0) goto onioerror;
 
 #ifdef MS_WIN32
-	/* MS _chsize doesn't work if newsize doesn't fit in 32 bits,
-	   so don't even try using it. */
-	{
-		Py_off_t current;	/* current file position */
-		HANDLE hFile;
-		int error;
-
-		/* current <- current file postion. */
-		if (newsizeobj == NULL)
-			current = newsize;
-		else {
-			Py_BEGIN_ALLOW_THREADS
-			errno = 0;
-			current = _portable_ftell(f->f_fp);
-			Py_END_ALLOW_THREADS
-			if (current == -1)
-				goto onioerror;
-		}
-
-		/* Move to newsize. */
-		if (current != newsize) {
-			Py_BEGIN_ALLOW_THREADS
-			errno = 0;
-			error = _portable_fseek(f->f_fp, newsize, SEEK_SET)
-				!= 0;
-			Py_END_ALLOW_THREADS
-			if (error)
-				goto onioerror;
-		}
-
-		/* Truncate.  Note that this may grow the file! */
+	/* can use _chsize; if, however, the newsize overflows 32-bits then
+	   _chsize is *not* adequate; in this case, an OverflowError is raised */
+	if (newsize > LONG_MAX) {
+		PyErr_SetString(PyExc_OverflowError,
+			"the new size is too long for _chsize (it is limited to 32-bit values)");
+		return NULL;
+	} else {
 		Py_BEGIN_ALLOW_THREADS
 		errno = 0;
-		hFile = (HANDLE)_get_osfhandle(fileno(f->f_fp));
-		error = hFile == (HANDLE)-1;
-		if (!error) {
-			error = SetEndOfFile(hFile) == 0;
-			if (error)
-				errno = EACCES;
-		}
+		ret = _chsize(fileno(f->f_fp), (long)newsize);
 		Py_END_ALLOW_THREADS
-		if (error)
-			goto onioerror;
-
-		/* Restore original file position. */
-		if (current != newsize) {
-			Py_BEGIN_ALLOW_THREADS
-			errno = 0;
-			error = _portable_fseek(f->f_fp, current, SEEK_SET)
-				!= 0;
-			Py_END_ALLOW_THREADS
-			if (error)
-				goto onioerror;
-		}
+		if (ret != 0) goto onioerror;
 	}
 #else
 	Py_BEGIN_ALLOW_THREADS
@@ -578,7 +508,7 @@ file_isatty(PyFileObject *f)
 	Py_BEGIN_ALLOW_THREADS
 	res = isatty((int)fileno(f->f_fp));
 	Py_END_ALLOW_THREADS
-	return PyBool_FromLong(res);
+	return PyInt_FromLong(res);
 }
 
 
@@ -699,7 +629,7 @@ file_readinto(PyFileObject *f, PyObject *args)
 
 	if (f->f_fp == NULL)
 		return err_closed();
-	if (!PyArg_ParseTuple(args, "w#", &ptr, &ntodo))
+	if (!PyArg_Parse(args, "w#", &ptr, &ntodo))
 		return NULL;
 	ndone = 0;
 	while (ntodo > 0) {
@@ -785,9 +715,13 @@ getline_via_fgets(FILE *fp)
  * cautions about boosting that.  300 was chosen because the worst real-life
  * text-crunching job reported on Python-Dev was a mail-log crawler where over
  * half the lines were 254 chars.
+ * INCBUFSIZE is the amount by which we grow the buffer, if MAXBUFSIZE isn't
+ * enough.  It doesn't much matter what this is set to: we only get here for
+ * absurdly long lines anyway.
  */
 #define INITBUFSIZE 100
 #define MAXBUFSIZE 300
+#define INCBUFSIZE 1000
 	char* p;	/* temp */
 	char buf[MAXBUFSIZE];
 	PyObject* v;	/* the string object result */
@@ -795,7 +729,6 @@ getline_via_fgets(FILE *fp)
 	char* pvend;    /* address one beyond last free slot */
 	size_t nfree;	/* # of free buffer slots; pvend-pvfree */
 	size_t total_v_size;  /* total # of slots in buffer */
-	size_t increment;	/* amount to increment the buffer */
 
 	/* Optimize for normal case:  avoid _PyString_Resize if at all
 	 * possible via first reading into stack buffer "buf".
@@ -863,7 +796,7 @@ getline_via_fgets(FILE *fp)
 	/* The stack buffer isn't big enough; malloc a string object and read
 	 * into its buffer.
 	 */
-	total_v_size = MAXBUFSIZE << 1;
+	total_v_size = MAXBUFSIZE + INCBUFSIZE;
 	v = PyString_FromStringAndSize((char*)NULL, (int)total_v_size);
 	if (v == NULL)
 		return v;
@@ -907,8 +840,7 @@ getline_via_fgets(FILE *fp)
 		}
 		/* expand buffer and try again */
 		assert(*(pvend-1) == '\0');
-		increment = total_v_size >> 2;	/* mild exponential growth */
-		total_v_size += increment;
+		total_v_size += INCBUFSIZE;
 		if (total_v_size > INT_MAX) {
 			PyErr_SetString(PyExc_OverflowError,
 			    "line is longer than a Python string can hold");
@@ -918,13 +850,14 @@ getline_via_fgets(FILE *fp)
 		if (_PyString_Resize(&v, (int)total_v_size) < 0)
 			return NULL;
 		/* overwrite the trailing null byte */
-		pvfree = BUF(v) + (total_v_size - increment - 1);
+		pvfree = BUF(v) + (total_v_size - INCBUFSIZE - 1);
 	}
 	if (BUF(v) + total_v_size != p)
 		_PyString_Resize(&v, p - BUF(v));
 	return v;
 #undef INITBUFSIZE
 #undef MAXBUFSIZE
+#undef INCBUFSIZE
 }
 #endif	/* ifdef USE_FGETS_IN_GETLINE */
 
@@ -950,21 +883,19 @@ get_line(PyFileObject *f, int n)
 	FILE *fp = f->f_fp;
 	int c;
 	char *buf, *end;
-	size_t total_v_size;	/* total # of slots in buffer */
-	size_t used_v_size;	/* # used slots in buffer */
-	size_t increment;       /* amount to increment the buffer */
+	size_t n1, n2;
 	PyObject *v;
 
 #ifdef USE_FGETS_IN_GETLINE
 	if (n <= 0)
 		return getline_via_fgets(fp);
 #endif
-	total_v_size = n > 0 ? n : 100;
-	v = PyString_FromStringAndSize((char *)NULL, total_v_size);
+	n2 = n > 0 ? n : 100;
+	v = PyString_FromStringAndSize((char *)NULL, n2);
 	if (v == NULL)
 		return NULL;
 	buf = BUF(v);
-	end = buf + total_v_size;
+	end = buf + n2;
 
 	for (;;) {
 		Py_BEGIN_ALLOW_THREADS
@@ -994,24 +925,23 @@ get_line(PyFileObject *f, int n)
 		/* Must be because buf == end */
 		if (n > 0)
 			break;
-		used_v_size = total_v_size;
-		increment = total_v_size >> 2; /* mild exponential growth */
-		total_v_size += increment;
-		if (total_v_size > INT_MAX) {
+		n1 = n2;
+		n2 += 1000;
+		if (n2 > INT_MAX) {
 			PyErr_SetString(PyExc_OverflowError,
 			    "line is longer than a Python string can hold");
 			Py_DECREF(v);
 			return NULL;
 		}
-		if (_PyString_Resize(&v, total_v_size) < 0)
+		if (_PyString_Resize(&v, n2) < 0)
 			return NULL;
-		buf = BUF(v) + used_v_size;
-		end = BUF(v) + total_v_size;
+		buf = BUF(v) + n1;
+		end = BUF(v) + n2;
 	}
 
-	used_v_size = buf - BUF(v);
-	if (used_v_size != total_v_size)
-		_PyString_Resize(&v, used_v_size);
+	n1 = buf - BUF(v);
+	if (n1 != n2)
+		_PyString_Resize(&v, n1);
 	return v;
 }
 
@@ -1104,8 +1034,6 @@ file_xreadlines(PyFileObject *f)
 {
 	static PyObject* xreadlines_function = NULL;
 
-	if (f->f_fp == NULL)
-		return err_closed();
 	if (!xreadlines_function) {
 		PyObject *xreadlines_module =
 			PyImport_ImportModule("xreadlines");
@@ -1457,7 +1385,7 @@ static char flush_doc[] =
 static char close_doc[] =
 "close() -> None or (perhaps) an integer.  Close the file.\n"
 "\n"
-"Sets data attribute .closed to True.  A closed file cannot be used for\n"
+"Sets data attribute .closed to true.  A closed file cannot be used for\n"
 "further I/O operations.  close() may be called more than once without\n"
 "error.  Some kinds of file objects (for example, opened by popen())\n"
 "may return an exit status upon closing.";
@@ -1475,7 +1403,7 @@ static PyMethodDef file_methods[] = {
 	{"truncate",	(PyCFunction)file_truncate,   METH_VARARGS, truncate_doc},
 #endif
 	{"tell",	(PyCFunction)file_tell,       METH_NOARGS,  tell_doc},
-	{"readinto",	(PyCFunction)file_readinto,   METH_VARARGS, readinto_doc},
+	{"readinto",	(PyCFunction)file_readinto,   METH_OLDARGS, readinto_doc},
 	{"readlines",	(PyCFunction)file_readlines,  METH_VARARGS, readlines_doc},
 	{"xreadlines",	(PyCFunction)file_xreadlines, METH_NOARGS,  xreadlines_doc},
 	{"writelines",	(PyCFunction)file_writelines, METH_O,	    writelines_doc},
@@ -1501,11 +1429,11 @@ static PyMemberDef file_memberlist[] = {
 static PyObject *
 get_closed(PyFileObject *f, void *closure)
 {
-	return PyBool_FromLong((long)(f->f_fp == 0));
+	return PyInt_FromLong((long)(f->f_fp == 0));
 }
 
 static PyGetSetDef file_getsetlist[] = {
-	{"closed", (getter)get_closed, NULL, "True if the file is closed"},
+	{"closed", (getter)get_closed, NULL, "flag set if the file is closed"},
 	{0},
 };
 

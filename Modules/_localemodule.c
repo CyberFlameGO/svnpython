@@ -21,10 +21,6 @@ This software comes with no warranty. Use at your own risk.
 #include <langinfo.h>
 #endif
 
-#ifdef HAVE_LIBINTL_H
-#include <libintl.h>
-#endif
-
 #if defined(MS_WIN32)
 #define WINDOWS_LEAN_AND_MEAN
 #include <windows.h>
@@ -249,11 +245,14 @@ static char localeconv__doc__[] =
 ;
 
 static PyObject*
-PyLocale_localeconv(PyObject* self)
+PyLocale_localeconv(PyObject* self, PyObject* args)
 {
     PyObject* result;
     struct lconv *l;
     PyObject *x;
+
+    if (!PyArg_NoArgs(args))
+        return NULL;
 
     result = PyDict_New();
     if (!result)
@@ -369,10 +368,13 @@ PyLocale_strxfrm(PyObject* self, PyObject* args)
 
 #if defined(MS_WIN32)
 static PyObject*
-PyLocale_getdefaultlocale(PyObject* self)
+PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
 {
     char encoding[100];
     char locale[100];
+
+    if (!PyArg_NoArgs(args))
+        return NULL;
 
     PyOS_snprintf(encoding, sizeof(encoding), "cp%d", GetACP());
 
@@ -406,7 +408,7 @@ PyLocale_getdefaultlocale(PyObject* self)
 
 #if defined(macintosh)
 static PyObject*
-PyLocale_getdefaultlocale(PyObject* self)
+PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
 {
     return Py_BuildValue("Os", Py_None, PyMac_getscript());
 }
@@ -525,115 +527,25 @@ PyLocale_nl_langinfo(PyObject* self, PyObject* args)
     return NULL;
 }
 #endif /* HAVE_LANGINFO_H */
-
-#ifdef HAVE_LIBINTL_H
-
-static char gettext__doc__[]=
-"gettext(msg) -> string\n"
-"Return translation of msg.";
-
-static PyObject*
-PyIntl_gettext(PyObject* self, PyObject *args)
-{
-	char *in;
-	if (!PyArg_ParseTuple(args, "z", &in))
-		return 0;
-	return PyString_FromString(gettext(in));
-}
-
-static char dgettext__doc__[]=
-"dgettext(domain, msg) -> string\n"
-"Return translation of msg in domain.";
-
-static PyObject*
-PyIntl_dgettext(PyObject* self, PyObject *args)
-{
-	char *domain, *in;
-	if (!PyArg_ParseTuple(args, "zz", &domain, &in))
-		return 0;
-	return PyString_FromString(dgettext(domain, in));
-}
-
-static char dcgettext__doc__[]=
-"dcgettext(domain, msg, category) -> string\n"
-"Return translation of msg in domain and category.";
-
-static PyObject*
-PyIntl_dcgettext(PyObject *self, PyObject *args)
-{
-	char *domain, *msgid;
-	int category;
-	if (!PyArg_ParseTuple(args, "zzi", &domain, &msgid, &category))
-		return 0;
-	return PyString_FromString(dcgettext(domain,msgid,category));
-}
-
-static char textdomain__doc__[]=
-"textdomain(domain) -> string\n"
-"Set the C library's textdmain to domain, returning the new domain.";
-
-static PyObject*
-PyIntl_textdomain(PyObject* self, PyObject* args)
-{
-	char *domain;
-	if (!PyArg_ParseTuple(args, "z", &domain))
-		return 0;
-	domain = textdomain(domain);
-	if (!domain) {
-		PyErr_SetFromErrno(PyExc_OSError);
-		return NULL;
-	}
-	return PyString_FromString(domain);
-}
-
-static char bindtextdomain__doc__[]=
-"bindtextdomain(domain, dir) -> string\n"
-"Bind the C library's domain to dir.";
-
-static PyObject*
-PyIntl_bindtextdomain(PyObject* self,PyObject*args)
-{
-	char *domain,*dirname;
-	if (!PyArg_ParseTuple(args, "zz", &domain, &dirname))
-		return 0;
-	dirname = bindtextdomain(domain, dirname);
-	if (!dirname) {
-		PyErr_SetFromErrno(PyExc_OSError);
-		return NULL;
-	}
-	return PyString_FromString(dirname);
-}
-
-#endif
+    
 
 static struct PyMethodDef PyLocale_Methods[] = {
   {"setlocale", (PyCFunction) PyLocale_setlocale, 
    METH_VARARGS, setlocale__doc__},
   {"localeconv", (PyCFunction) PyLocale_localeconv, 
-   METH_NOARGS, localeconv__doc__},
+   0, localeconv__doc__},
   {"strcoll", (PyCFunction) PyLocale_strcoll, 
    METH_VARARGS, strcoll__doc__},
   {"strxfrm", (PyCFunction) PyLocale_strxfrm, 
    METH_VARARGS, strxfrm__doc__},
 #if defined(MS_WIN32) || defined(macintosh)
-  {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, METH_NOARGS},
+  {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, 0},
 #endif
 #ifdef HAVE_LANGINFO_H
   {"nl_langinfo", (PyCFunction) PyLocale_nl_langinfo,
    METH_VARARGS, nl_langinfo__doc__},
 #endif
-#ifdef HAVE_LANGINFO_H
-  {"gettext",(PyCFunction)PyIntl_gettext,METH_VARARGS,
-    gettext__doc__},
-  {"dgettext",(PyCFunction)PyIntl_dgettext,METH_VARARGS,
-   dgettext__doc__},
-  {"dcgettext",(PyCFunction)PyIntl_dcgettext,METH_VARARGS,
-    dcgettext__doc__},
-  {"textdomain",(PyCFunction)PyIntl_textdomain,METH_VARARGS,
-   textdomain__doc__},
-  {"bindtextdomain",(PyCFunction)PyIntl_bindtextdomain,METH_VARARGS,
-   bindtextdomain__doc__},
-#endif  
+  
   {NULL, NULL}
 };
 

@@ -376,7 +376,7 @@ do_strip(PyObject *args, int striptype)
 	int len, i, j;
 
 
-	if (PyString_AsStringAndSize(args, &s, &len))
+	if (!PyArg_Parse(args, "t#", &s, &len))
 		return NULL;
 
 	i = 0;
@@ -457,7 +457,7 @@ strop_lower(PyObject *self, PyObject *args)
 	int changed;
 
 	WARN;
-	if (PyString_AsStringAndSize(args, &s, &n))
+	if (!PyArg_Parse(args, "t#", &s, &n))
 		return NULL;
 	new = PyString_FromStringAndSize(NULL, n);
 	if (new == NULL)
@@ -496,7 +496,7 @@ strop_upper(PyObject *self, PyObject *args)
 	int changed;
 
 	WARN;
-	if (PyString_AsStringAndSize(args, &s, &n))
+	if (!PyArg_Parse(args, "t#", &s, &n))
 		return NULL;
 	new = PyString_FromStringAndSize(NULL, n);
 	if (new == NULL)
@@ -536,7 +536,7 @@ strop_capitalize(PyObject *self, PyObject *args)
 	int changed;
 
 	WARN;
-	if (PyString_AsStringAndSize(args, &s, &n))
+	if (!PyArg_Parse(args, "t#", &s, &n))
 		return NULL;
 	new = PyString_FromStringAndSize(NULL, n);
 	if (new == NULL)
@@ -702,7 +702,7 @@ strop_swapcase(PyObject *self, PyObject *args)
 	int changed;
 
 	WARN;
-	if (PyString_AsStringAndSize(args, &s, &n))
+	if (!PyArg_Parse(args, "t#", &s, &n))
 		return NULL;
 	new = PyString_FromStringAndSize(NULL, n);
 	if (new == NULL)
@@ -766,7 +766,7 @@ strop_atoi(PyObject *self, PyObject *args)
 		x = (long) PyOS_strtoul(s, &end, base);
 	else
 		x = PyOS_strtol(s, &end, base);
-	if (end == s || !isalnum((int)end[-1]))
+	if (end == s || !isalnum(end[-1]))
 		goto bad;
 	while (*end && isspace(Py_CHARMASK(*end)))
 		end++;
@@ -1190,24 +1190,24 @@ strop_methods[] = {
 	{"atof",	strop_atof,	   METH_VARARGS, atof__doc__},
 	{"atoi",	strop_atoi,	   METH_VARARGS, atoi__doc__},
 	{"atol",	strop_atol,	   METH_VARARGS, atol__doc__},
-	{"capitalize",	strop_capitalize,  METH_O,       capitalize__doc__},
+	{"capitalize",	strop_capitalize,  METH_OLDARGS, capitalize__doc__},
 	{"count",	strop_count,	   METH_VARARGS, count__doc__},
 	{"expandtabs",	strop_expandtabs,  METH_VARARGS, expandtabs__doc__},
 	{"find",	strop_find,	   METH_VARARGS, find__doc__},
 	{"join",	strop_joinfields,  METH_VARARGS, joinfields__doc__},
 	{"joinfields",	strop_joinfields,  METH_VARARGS, joinfields__doc__},
-	{"lstrip",	strop_lstrip,	   METH_O,       lstrip__doc__},
-	{"lower",	strop_lower,	   METH_O,       lower__doc__},
+	{"lstrip",	strop_lstrip,	   METH_OLDARGS, lstrip__doc__},
+	{"lower",	strop_lower,	   METH_OLDARGS, lower__doc__},
 	{"maketrans",	strop_maketrans,   METH_VARARGS, maketrans__doc__},
 	{"replace",	strop_replace,	   METH_VARARGS, replace__doc__},
 	{"rfind",	strop_rfind,	   METH_VARARGS, rfind__doc__},
-	{"rstrip",	strop_rstrip,	   METH_O,       rstrip__doc__},
+	{"rstrip",	strop_rstrip,	   METH_OLDARGS, rstrip__doc__},
 	{"split",	strop_splitfields, METH_VARARGS, splitfields__doc__},
 	{"splitfields",	strop_splitfields, METH_VARARGS, splitfields__doc__},
-	{"strip",	strop_strip,	   METH_O,       strip__doc__},
-	{"swapcase",	strop_swapcase,    METH_O,       swapcase__doc__},
+	{"strip",	strop_strip,	   METH_OLDARGS, strip__doc__},
+	{"swapcase",	strop_swapcase,    METH_OLDARGS, swapcase__doc__},
 	{"translate",	strop_translate,   METH_VARARGS, translate__doc__},
-	{"upper",	strop_upper,	   METH_O,       upper__doc__},
+	{"upper",	strop_upper,	   METH_OLDARGS, upper__doc__},
 	{NULL,		NULL}	/* sentinel */
 };
 
@@ -1215,11 +1215,12 @@ strop_methods[] = {
 DL_EXPORT(void)
 initstrop(void)
 {
-	PyObject *m, *s;
+	PyObject *m, *d, *s;
 	char buf[256];
 	int c, n;
 	m = Py_InitModule4("strop", strop_methods, strop_module__doc__,
 			   (PyObject*)NULL, PYTHON_API_VERSION);
+	d = PyModule_GetDict(m);
 
 	/* Create 'whitespace' object */
 	n = 0;
@@ -1228,9 +1229,10 @@ initstrop(void)
 			buf[n++] = c;
 	}
 	s = PyString_FromStringAndSize(buf, n);
-	if (s)
-		PyModule_AddObject(m, "whitespace", s);
-
+	if (s) {
+		PyDict_SetItemString(d, "whitespace", s);
+		Py_DECREF(s);
+	}
 	/* Create 'lowercase' object */
 	n = 0;
 	for (c = 0; c < 256; c++) {
@@ -1238,8 +1240,10 @@ initstrop(void)
 			buf[n++] = c;
 	}
 	s = PyString_FromStringAndSize(buf, n);
-	if (s)
-		PyModule_AddObject(m, "lowercase", s);
+	if (s) {
+		PyDict_SetItemString(d, "lowercase", s);
+		Py_DECREF(s);
+	}
 
 	/* Create 'uppercase' object */
 	n = 0;
@@ -1248,6 +1252,8 @@ initstrop(void)
 			buf[n++] = c;
 	}
 	s = PyString_FromStringAndSize(buf, n);
-	if (s)
-		PyModule_AddObject(m, "uppercase", s);
+	if (s) {
+		PyDict_SetItemString(d, "uppercase", s);
+		Py_DECREF(s);
+	}
 }

@@ -8,6 +8,65 @@ used for special class methods; variants without leading and trailing\n\
 '__' are also provided for convenience.\n\
 ";
 
+/*
+
+     Copyright 
+
+       Copyright 1996 Digital Creations, L.C., 910 Princess Anne
+       Street, Suite 300, Fredericksburg, Virginia 22401 U.S.A. All
+       rights reserved.  Copyright in this software is owned by DCLC,
+       unless otherwise indicated. Permission to use, copy and
+       distribute this software is hereby granted, provided that the
+       above copyright notice appear in all copies and that both that
+       copyright notice and this permission notice appear. Note that
+       any product, process or technology described in this software
+       may be the subject of other Intellectual Property rights
+       reserved by Digital Creations, L.C. and are not licensed
+       hereunder.
+
+     Trademarks 
+
+       Digital Creations & DCLC, are trademarks of Digital Creations, L.C..
+       All other trademarks are owned by their respective companies. 
+
+     No Warranty 
+
+       The software is provided "as is" without warranty of any kind,
+       either express or implied, including, but not limited to, the
+       implied warranties of merchantability, fitness for a particular
+       purpose, or non-infringement. This software could include
+       technical inaccuracies or typographical errors. Changes are
+       periodically made to the software; these changes will be
+       incorporated in new editions of the software. DCLC may make
+       improvements and/or changes in this software at any time
+       without notice.
+
+     Limitation Of Liability 
+
+       In no event will DCLC be liable for direct, indirect, special,
+       incidental, economic, cover, or consequential damages arising
+       out of the use of or inability to use this software even if
+       advised of the possibility of such damages. Some states do not
+       allow the exclusion or limitation of implied warranties or
+       limitation of liability for incidental or consequential
+       damages, so the above limitation or exclusion may not apply to
+       you.
+
+
+    If you have questions regarding this software,
+    contact:
+   
+      Jim Fulton, jim@digicool.com
+      Digital Creations L.C.  
+   
+      (540) 371-6909
+
+    Modifications
+    
+      Renamed and slightly rearranged by Guido van Rossum
+
+*/
+
 #include "Python.h"
 
 #define spam1(OP,AOP) static PyObject *OP(PyObject *s, PyObject *a) { \
@@ -43,19 +102,13 @@ used for special class methods; variants without leading and trailing\n\
   PyObject *a1; long r; \
   if(! PyArg_ParseTuple(a,"O:" #OP,&a1)) return NULL; \
   if(-1 == (r=AOP(a1))) return NULL; \
-  return PyBool_FromLong(r); }
+  return PyInt_FromLong(r); }
 
 #define spami2(OP,AOP) static PyObject *OP(PyObject *s, PyObject *a) { \
   PyObject *a1, *a2; long r; \
   if(! PyArg_ParseTuple(a,"OO:" #OP,&a1,&a2)) return NULL; \
   if(-1 == (r=AOP(a1,a2))) return NULL; \
   return PyInt_FromLong(r); }
-
-#define spami2b(OP,AOP) static PyObject *OP(PyObject *s, PyObject *a) { \
-  PyObject *a1, *a2; long r; \
-  if(! PyArg_ParseTuple(a,"OO:" #OP,&a1,&a2)) return NULL; \
-  if(-1 == (r=AOP(a1,a2))) return NULL; \
-  return PyBool_FromLong(r); }
 
 #define spamrc(OP,A) static PyObject *OP(PyObject *s, PyObject *a) { \
   PyObject *a1, *a2; \
@@ -86,8 +139,8 @@ spam2(op_or_           , PyNumber_Or)
 spami(isSequenceType   , PySequence_Check)
 spam2(op_concat        , PySequence_Concat)
 spamoi(op_repeat       , PySequence_Repeat)
-spami2b(op_contains     , PySequence_Contains)
-spami2b(sequenceIncludes, PySequence_Contains)
+spami2(op_contains     , PySequence_Contains)
+spami2(sequenceIncludes, PySequence_Contains)
 spami2(indexOf         , PySequence_Index)
 spami2(countOf         , PySequence_Count)
 spami(isMappingType    , PyMapping_Check)
@@ -155,11 +208,11 @@ static struct PyMethodDef operator_methods[] = {
 spam1(isCallable,
  "isCallable(a) -- Same as callable(a).")
 spam1(isNumberType,
- "isNumberType(a) -- Return True if a has a numeric type, False otherwise.")
+ "isNumberType(a) -- Return 1 if a has a numeric type, and zero otherwise.")
 spam1(isSequenceType,
- "isSequenceType(a) -- Return True if a has a sequence type, False otherwise.")
+ "isSequenceType(a) -- Return 1 if a has a sequence type, and zero otherwise.")
 spam1(truth,
- "truth(a) -- Return True if a is true, False otherwise.")
+ "truth(a) -- Return 1 if a is true, and 0 otherwise.")
 spam2(contains,__contains__,
  "contains(a, b) -- Same as b in a (note reversed operands).")
 spam1(sequenceIncludes,
@@ -169,7 +222,7 @@ spam1(indexOf,
 spam1(countOf,
  "countOf(a, b) -- Return the number of times b occurs in a.")
 spam1(isMappingType,
- "isMappingType(a) -- Return True if a has a mapping type, False otherwise.")
+ "isMappingType(a) -- Return 1 if a has a mapping type, and zero otherwise.")
 
 spam2(add,__add__, "add(a, b) -- Same as a + b.")
 spam2(sub,__sub__, "sub(a, b) -- Same as a - b.")

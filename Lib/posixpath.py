@@ -158,7 +158,7 @@ def islink(path):
     try:
         st = os.lstat(path)
     except (os.error, AttributeError):
-        return False
+        return 0
     return stat.S_ISLNK(st[stat.ST_MODE])
 
 
@@ -166,12 +166,12 @@ def islink(path):
 # This is false for dangling symbolic links.
 
 def exists(path):
-    """Test whether a path exists.  Returns False for broken symbolic links"""
+    """Test whether a path exists.  Returns false for broken symbolic links"""
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 # Is a path a directory?
@@ -183,7 +183,7 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISDIR(st[stat.ST_MODE])
 
 
@@ -196,7 +196,7 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISREG(st[stat.ST_MODE])
 
 
@@ -237,16 +237,16 @@ def ismount(path):
         s1 = os.stat(path)
         s2 = os.stat(join(path, '..'))
     except os.error:
-        return False # It doesn't exist -- so not a mount point :-)
+        return 0 # It doesn't exist -- so not a mount point :-)
     dev1 = s1[stat.ST_DEV]
     dev2 = s2[stat.ST_DEV]
     if dev1 != dev2:
-        return True     # path/.. on a different device as path
+        return 1        # path/.. on a different device as path
     ino1 = s1[stat.ST_INO]
     ino2 = s2[stat.ST_INO]
     if ino1 == ino2:
-        return True     # path/.. is the same i-node as path
-    return False
+        return 1        # path/.. is the same i-node as path
+    return 0
 
 
 # Directory tree walk.
@@ -335,7 +335,7 @@ def expandvars(path):
         import re
         _varprog = re.compile(r'\$(\w+|\{[^}]*\})')
     i = 0
-    while True:
+    while 1:
         m = _varprog.search(path, i)
         if not m:
             break

@@ -6,7 +6,6 @@ import FrameWork
 import Wapplication
 import W
 import os
-import sys
 import macfs
 import MacOS
 
@@ -43,16 +42,9 @@ class PythonIDE(Wapplication.Application):
 				self.quitevent)
 		import PyConsole, PyEdit
 		Splash.wait()
-		# With -D option (OSX command line only) keep stderr, for debugging the IDE
-		# itself.
-		debug_stderr = None
-		if len(sys.argv) >= 2 and sys.argv[1] == '-D':
-			debug_stderr = sys.stderr
-			del sys.argv[1]
 		PyConsole.installoutput()
 		PyConsole.installconsole()
-		if debug_stderr:
-			sys.stderr = debug_stderr
+		import sys
 		for path in sys.argv[1:]:
 			self.opendoc(path)
 		try:
@@ -178,8 +170,6 @@ class PythonIDE(Wapplication.Application):
 	def opendoc(self, path):
 		fcreator, ftype = macfs.FSSpec(path).GetCreatorType()
 		if ftype == 'TEXT':
-			self.openscript(path)
-		elif ftype == '\0\0\0\0' and path[-3:] == '.py':
 			self.openscript(path)
 		else:
 			W.Message("Can't open file of type '%s'." % ftype)

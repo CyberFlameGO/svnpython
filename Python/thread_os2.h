@@ -7,12 +7,8 @@
 
 #include "process.h"
 
-#if defined(PYCC_GCC)
-#include <sys/builtin.h>
-#include <sys/fmutex.h>
-#else
 long PyThread_get_thread_ident(void);
-#endif
+
 
 /*
  * Initialization of the C package, should not be needed.
@@ -45,20 +41,14 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 long
 PyThread_get_thread_ident(void)
 {
-#if !defined(PYCC_GCC)
   PPIB pib;
   PTIB tib;
-#endif
 
   if (!initialized)
     PyThread_init_thread();
         
-#if defined(PYCC_GCC)
-  return _gettid();
-#else
   DosGetInfoBlocks(&tib,&pib);
   return tib->tib_ptib2->tib2_ultid;
-#endif
 }
 
 static void
@@ -113,7 +103,7 @@ PyThread__exit_prog(int status)
 /*
  * Lock support.  This is implemented with an event semaphore and critical
  * sections to make it behave more like a posix mutex than its OS/2 
- * counterparts.
+ # counterparts.
  */
 
 typedef struct os2_lock_t {
@@ -124,19 +114,6 @@ typedef struct os2_lock_t {
 PyThread_type_lock 
 PyThread_allocate_lock(void)
 {
-#if defined(PYCC_GCC)
-  _fmutex *sem = malloc(sizeof(_fmutex));
-  if (!initialized)
-    PyThread_init_thread();
-  dprintf(("%ld: PyThread_allocate_lock() -> %lx\n",
-    PyThread_get_thread_ident(),
-    (long)sem));
-  if (_fmutex_create(sem, 0)) {
-    free(sem);
-    sem = NULL;
-  }
-  return (PyThread_type_lock) sem;
-#else
   APIRET rc;
   type_os2_lock lock = (type_os2_lock)malloc(sizeof(struct os2_lock_t));
 
@@ -153,27 +130,16 @@ PyThread_allocate_lock(void)
            lock->changed));
 
   return (PyThread_type_lock) lock;
-#endif
 }
 
 void 
 PyThread_free_lock(PyThread_type_lock aLock)
 {
-#if !defined(PYCC_GCC)
   type_os2_lock lock = (type_os2_lock)aLock;
-#endif
-
   dprintf(("%ld: PyThread_free_lock(%p) called\n", PyThread_get_thread_ident(),aLock));
 
-#if defined(PYCC_GCC)
-  if (aLock) {
-    _fmutex_close((_fmutex *)aLock);
-    free((_fmutex *)aLock);
-  }
-#else
   DosCloseEventSem(lock->changed);
   free(aLock);
-#endif
 }
 
 /*
@@ -184,22 +150,15 @@ PyThread_free_lock(PyThread_type_lock aLock)
 int 
 PyThread_acquire_lock(PyThread_type_lock aLock, int waitflag)
 {
-#if !defined(PYCC_GCC)
   int   done = 0;
   ULONG count;
   PID   pid = 0;
   TID   tid = 0;
   type_os2_lock lock = (type_os2_lock)aLock;
-#endif
 
   dprintf(("%ld: PyThread_acquire_lock(%p, %d) called\n", PyThread_get_thread_ident(),
            aLock, waitflag));
 
-#if defined(PYCC_GCC)
-  /* always successful if the lock doesn't exist */
-  if (aLock && _fmutex_request((_fmutex *)aLock, waitflag ? 0 : _FMR_NOWAIT))
-      return 0;
-#else
   while (!done) {
     /* if the lock is currently set, we have to wait for the state to change */
     if (lock->is_set) {
@@ -223,23 +182,15 @@ PyThread_acquire_lock(PyThread_type_lock aLock, int waitflag)
 
     DosExitCritSec();
   }
-#endif
 
   return 1;
 }
 
 void PyThread_release_lock(PyThread_type_lock aLock)
 {
-#if defined(PYCC_GCC)
   type_os2_lock lock = (type_os2_lock)aLock;
-#endif
-
   dprintf(("%ld: PyThread_release_lock(%p) called\n", PyThread_get_thread_ident(),aLock));
 
-#if defined(PYCC_GCC)
-  if (aLock)
-    _fmutex_release((_fmutex *)aLock);
-#else
   if (!lock->is_set) {
     dprintf(("%ld: Could not PyThread_release_lock(%p) error: %l\n",
              PyThread_get_thread_ident(), aLock, GetLastError()));
@@ -257,5 +208,31 @@ void PyThread_release_lock(PyThread_type_lock aLock)
   DosPostEventSem(lock->changed);
   
   DosExitCritSec();
-#endif
+}
+
+/*
+ * Semaphore support.
+ */
+PyThread_type_sema 
+PyThread_allocate_sema(int value)
+{
+  return (PyThread_type_sema) 0;
+}
+
+void 
+PyThread_free_sema(PyThread_type_sema aSemaphore)
+{
+
+}
+
+int 
+PyThread_down_sema(PyThread_type_sema aSemaphore, int waitflag)
+{
+  return -1;
+}
+
+void 
+PyThread_up_sema(PyThread_type_sema aSemaphore)
+{
+  dprintf(("%ld: PyThread_up_sema(%p)\n", PyThread_get_thread_ident(), aSemaphore));
 }

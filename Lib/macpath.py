@@ -125,7 +125,7 @@ def islink(s):
     """Return true if the pathname refers to a symbolic link.
     Always false on the Mac, until we understand Aliases.)"""
 
-    return False
+    return 0
 
 
 def isfile(s):
@@ -134,18 +134,18 @@ def isfile(s):
     try:
         st = os.stat(s)
     except os.error:
-        return False
+        return 0
     return S_ISREG(st[ST_MODE])
 
 
 def exists(s):
-    """Return True if the pathname refers to an existing file or directory."""
+    """Return true if the pathname refers to an existing file or directory."""
 
     try:
         st = os.stat(s)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 # Return the longest prefix of all list elements.
 
@@ -170,8 +170,7 @@ def expanduser(path):
     """Dummy to retain interface-compatibility with other operating systems."""
     return path
 
-class norm_error(Exception):
-    """Path cannot be normalized"""
+norm_error = 'macpath.norm_error: path cannot be normalized'
 
 def normpath(s):
     """Normalize a pathname.  Will return the same result for

@@ -33,7 +33,7 @@ extern void bzero(void *, int);
 #include <sys/types.h>
 #endif
 
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
+#if defined(PYOS_OS2)
 #include <sys/time.h>
 #include <utils.h>
 #endif
@@ -657,35 +657,34 @@ insint(PyObject *d, char *name, int value)
 DL_EXPORT(void)
 initselect(void)
 {
-	PyObject *m;
+	PyObject *m, *d;
 	m = Py_InitModule3("select", select_methods, module_doc);
-
+	d = PyModule_GetDict(m);
 	SelectError = PyErr_NewException("select.error", NULL, NULL);
-	Py_INCREF(SelectError);
-	PyModule_AddObject(m, "error", SelectError);
+	PyDict_SetItemString(d, "error", SelectError);
 #ifdef HAVE_POLL
 	poll_Type.ob_type = &PyType_Type;
-	PyModule_AddIntConstant(m, "POLLIN", POLLIN);
-	PyModule_AddIntConstant(m, "POLLPRI", POLLPRI);
-	PyModule_AddIntConstant(m, "POLLOUT", POLLOUT);
-	PyModule_AddIntConstant(m, "POLLERR", POLLERR);
-	PyModule_AddIntConstant(m, "POLLHUP", POLLHUP);
-	PyModule_AddIntConstant(m, "POLLNVAL", POLLNVAL);
+	insint(d, "POLLIN", POLLIN);
+	insint(d, "POLLPRI", POLLPRI);
+	insint(d, "POLLOUT", POLLOUT);
+	insint(d, "POLLERR", POLLERR);
+	insint(d, "POLLHUP", POLLHUP);
+	insint(d, "POLLNVAL", POLLNVAL);
 
 #ifdef POLLRDNORM
-	PyModule_AddIntConstant(m, "POLLRDNORM", POLLRDNORM);
+	insint(d, "POLLRDNORM", POLLRDNORM);
 #endif
 #ifdef POLLRDBAND
-	PyModule_AddIntConstant(m, "POLLRDBAND", POLLRDBAND);
+	insint(d, "POLLRDBAND", POLLRDBAND);
 #endif
 #ifdef POLLWRNORM
-	PyModule_AddIntConstant(m, "POLLWRNORM", POLLWRNORM);
+	insint(d, "POLLWRNORM", POLLWRNORM);
 #endif
 #ifdef POLLWRBAND
-	PyModule_AddIntConstant(m, "POLLWRBAND", POLLWRBAND);
+	insint(d, "POLLWRBAND", POLLWRBAND);
 #endif
 #ifdef POLLMSG
-	PyModule_AddIntConstant(m, "POLLMSG", POLLMSG);
+	insint(d, "POLLMSG", POLLMSG);
 #endif
 #endif /* HAVE_POLL */
 }

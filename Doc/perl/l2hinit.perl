@@ -37,8 +37,6 @@ $HAVE_MODULE_INDEX = 0;
 $HAVE_GENERAL_INDEX = 0;
 $HAVE_TABLE_OF_CONTENTS = 0;
 
-$AESOP_META_TYPE = 'information';
-
 
 # A little painful, but lets us clean up the top level directory a little,
 # and not be tied to the current directory (as far as I can tell).  Testing
@@ -618,7 +616,7 @@ sub make_head_and_body {
                 . "charset=$CHARSET\">\n")
              : ''),
             ($BASE ? "<base href=\"$BASE\">\n" : ''),
-            "<link rel=\"STYLESHEET\" href=\"$STYLESHEET\" type='text/css'>\n",
+            "<link rel=\"STYLESHEET\" href=\"$STYLESHEET\">\n",
             "<link rel=\"first\" href=\"$FILE.html\">\n",
             ($HAVE_TABLE_OF_CONTENTS
              ? ('<link rel="contents" href="contents.html" title="Contents">'
@@ -641,8 +639,6 @@ sub make_head_and_body {
          , "<html>\n<head>\n<title>", $title, "</title>\n"
          , &meta_information($title)
          , $MY_PARTIAL_HEADER
-         , ($AESOP_META_TYPE eq '' ? ''
-            : "\n<meta name='aesop' content='$AESOP_META_TYPE'>")
          , "\n</head>\n<body$body>");
 }
 

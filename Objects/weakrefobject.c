@@ -5,6 +5,9 @@
 #define GET_WEAKREFS_LISTPTR(o) \
         ((PyWeakReference **) PyObject_GET_WEAKREFS_LISTPTR(o))
 
+static PyWeakReference *
+free_list = NULL;
+
 
 long
 _PyWeakref_GetWeakrefCount(PyWeakReference *head)
@@ -20,18 +23,21 @@ _PyWeakref_GetWeakrefCount(PyWeakReference *head)
 
 
 static PyWeakReference *
-new_weakref(PyObject *ob, PyObject *callback)
+new_weakref(void)
 {
     PyWeakReference *result;
 
-    result = PyObject_GC_New(PyWeakReference, &_PyWeakref_RefType);
-    if (result) {
-        result->hash = -1;
-        result->wr_object = ob;
-        Py_XINCREF(callback);
-        result->wr_callback = callback;
-        PyObject_GC_Track(result);
+    if (free_list != NULL) {
+        result = free_list;
+        free_list = result->wr_next;
+        result->ob_type = &_PyWeakref_RefType;
+        _Py_NewReference((PyObject *)result);
     }
+    else {
+        result = PyObject_GC_New(PyWeakReference, &_PyWeakref_RefType);
+    }
+    if (result)
+        result->hash = -1;
     return result;
 }
 
@@ -70,7 +76,8 @@ weakref_dealloc(PyWeakReference *self)
 {
     PyObject_GC_UnTrack((PyObject *)self);
     clear_weakref(self);
-    PyObject_GC_Del(self);
+    self->wr_next = free_list;
+    free_list = self;
 }
 
 
@@ -573,8 +580,11 @@ PyWeakref_NewRef(PyObject *ob, PyObject *callback)
     if (result != NULL)
         Py_XINCREF(result);
     else {
-        result = new_weakref(ob, callback);
+        result = new_weakref();
         if (result != NULL) {
+            Py_XINCREF(callback);
+            result->wr_callback = callback;
+            result->wr_object = ob;
             if (callback == NULL) {
                 insert_head(result, list);
             }
@@ -586,6 +596,7 @@ PyWeakref_NewRef(PyObject *ob, PyObject *callback)
                 else
                     insert_after(result, prev);
             }
+            PyObject_GC_Track(result);
         }
     }
     return (PyObject *) result;
@@ -613,7 +624,7 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
     if (result != NULL)
         Py_XINCREF(result);
     else {
-        result = new_weakref(ob, callback);
+        result = new_weakref();
         if (result != NULL) {
             PyWeakReference *prev;
 
@@ -621,6 +632,9 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
                 result->ob_type = &_PyWeakref_CallableProxyType;
             else
                 result->ob_type = &_PyWeakref_ProxyType;
+            result->wr_object = ob;
+            Py_XINCREF(callback);
+            result->wr_callback = callback;
             if (callback == NULL)
                 prev = ref;
             else
@@ -630,6 +644,7 @@ PyWeakref_NewProxy(PyObject *ob, PyObject *callback)
                 insert_head(result, list);
             else
                 insert_after(result, prev);
+            PyObject_GC_Track(result);
         }
     }
     return (PyObject *) result;

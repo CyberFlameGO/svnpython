@@ -12,21 +12,22 @@ PyObject *
 PySeqIter_New(PyObject *seq)
 {
 	seqiterobject *it;
-	it = PyObject_GC_New(seqiterobject, &PySeqIter_Type);
+	it = PyObject_NEW(seqiterobject, &PySeqIter_Type);
 	if (it == NULL)
 		return NULL;
 	it->it_index = 0;
 	Py_INCREF(seq);
 	it->it_seq = seq;
-	_PyObject_GC_TRACK(it);
+	PyObject_GC_Init(it);
 	return (PyObject *)it;
 }
 static void
 iter_dealloc(seqiterobject *it)
 {
-	_PyObject_GC_UNTRACK(it);
+	PyObject_GC_Fini(it);
 	Py_DECREF(it->it_seq);
-	PyObject_GC_Del(it);
+	it = (seqiterobject *) PyObject_AS_GC(it);
+	PyObject_DEL(it);
 }
 
 static int
@@ -99,7 +100,7 @@ PyTypeObject PySeqIter_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
 	"iterator",				/* tp_name */
-	sizeof(seqiterobject),			/* tp_basicsize */
+	sizeof(seqiterobject) + PyGC_HEAD_SIZE,	/* tp_basicsize */
 	0,					/* tp_itemsize */
 	/* methods */
 	(destructor)iter_dealloc, 		/* tp_dealloc */
@@ -117,7 +118,7 @@ PyTypeObject PySeqIter_Type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
  	0,					/* tp_doc */
  	(traverseproc)iter_traverse,		/* tp_traverse */
  	0,					/* tp_clear */
@@ -146,23 +147,24 @@ PyObject *
 PyCallIter_New(PyObject *callable, PyObject *sentinel)
 {
 	calliterobject *it;
-	it = PyObject_GC_New(calliterobject, &PyCallIter_Type);
+	it = PyObject_NEW(calliterobject, &PyCallIter_Type);
 	if (it == NULL)
 		return NULL;
 	Py_INCREF(callable);
 	it->it_callable = callable;
 	Py_INCREF(sentinel);
 	it->it_sentinel = sentinel;
-	_PyObject_GC_TRACK(it);
+	PyObject_GC_Init(it);
 	return (PyObject *)it;
 }
 static void
 calliter_dealloc(calliterobject *it)
 {
-	_PyObject_GC_UNTRACK(it);
+	PyObject_GC_Fini(it);
 	Py_DECREF(it->it_callable);
 	Py_DECREF(it->it_sentinel);
-	PyObject_GC_Del(it);
+	it = (calliterobject *) PyObject_AS_GC(it);
+	PyObject_DEL(it);
 }
 
 static int
@@ -216,7 +218,7 @@ PyTypeObject PyCallIter_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
 	"callable-iterator",			/* tp_name */
-	sizeof(calliterobject),			/* tp_basicsize */
+	sizeof(calliterobject) + PyGC_HEAD_SIZE,/* tp_basicsize */
 	0,					/* tp_itemsize */
 	/* methods */
 	(destructor)calliter_dealloc, 		/* tp_dealloc */
@@ -234,7 +236,7 @@ PyTypeObject PyCallIter_Type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
  	0,					/* tp_doc */
  	(traverseproc)calliter_traverse,	/* tp_traverse */
  	0,					/* tp_clear */

@@ -56,10 +56,10 @@ def getnum(s):
 # Function to check if a string is a number
 #
 def isnum(s):
-	if not s: return False
+	if not s: return 0
 	for c in s:
-		if not c in digits: return False
-	return True
+		if not c in digits: return 0
+	return 1
 
 
 # Allowed function return types

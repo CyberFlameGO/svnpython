@@ -141,7 +141,7 @@ def islink(path):
     """Is a path a symbolic link?
     This will always return false on systems where posix.lstat doesn't exist."""
 
-    return False
+    return 0
 
 
 def exists(path):
@@ -151,8 +151,8 @@ def exists(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 def isdir(path):
@@ -161,7 +161,7 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISDIR(st[stat.ST_MODE])
 
 
@@ -171,7 +171,7 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISREG(st[stat.ST_MODE])
 
 

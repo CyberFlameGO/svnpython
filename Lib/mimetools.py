@@ -112,14 +112,15 @@ def choose_boundary():
     import random
     if _prefix is None:
         import socket
+        import os
         hostid = socket.gethostbyname(socket.gethostname())
         try:
             uid = `os.getuid()`
-        except AttributeError:
+        except:
             uid = '1'
         try:
             pid = `os.getpid()`
-        except AttributeError:
+        except:
             pid = '1'
         _prefix = hostid + '.' + uid + '.' + pid
     timestamp = '%.3f' % time.time()

@@ -1,7 +1,7 @@
 # Test some Unicode file name semantics
 # We dont test many operations on files other than
 # that their names can be used with Unicode characters.
-import os, glob
+import os
 
 from test_support import verify, TestSkipped, TESTFN_UNICODE
 try:
@@ -55,17 +55,8 @@ if not os.path.isfile(TESTFN_UNICODE) or \
     print "File doesn't exist after creating it"
 
 path, base = os.path.split(os.path.abspath(TESTFN_ENCODED))
-# Until PEP 277 is adopted, this test is not portable
-#  if base not in os.listdir(path):
-#      print "Filename did not appear in os.listdir()"
-#  path, base = os.path.split(os.path.abspath(TESTFN_UNICODE))
-#  if base not in os.listdir(path):
-#      print "Unicode filename did not appear in os.listdir()"
-
-if os.path.abspath(TESTFN_ENCODED) != os.path.abspath(glob.glob(TESTFN_ENCODED)[0]):
-    print "Filename did not appear in glob.glob()"
-if os.path.abspath(TESTFN_UNICODE) != os.path.abspath(glob.glob(TESTFN_UNICODE)[0]):
-    print "Unicode filename did not appear in glob.glob()"
+if base not in os.listdir(path):
+    print "Filename did not appear in os.listdir()"
 
 f.close()
 os.unlink(TESTFN_UNICODE)

@@ -1,3 +1,4 @@
+
 /* Type object implementation */
 
 #include "Python.h"
@@ -168,10 +169,6 @@ type_call(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		    PyTuple_Check(args) && PyTuple_GET_SIZE(args) == 1 &&
 		    (kwds == NULL ||
 		     (PyDict_Check(kwds) && PyDict_Size(kwds) == 0)))
-			return obj;
-		/* If the returned object is not an instance of type,
-		   it won't be initialized. */
-		if (!PyType_IsSubtype(obj->ob_type, type))
 			return obj;
 		type = obj->ob_type;
 		if (type->tp_init != NULL &&
@@ -881,7 +878,7 @@ bozo_func(PyObject *self, PyObject *args)
 	return NULL;
 }
 
-static PyMethodDef bozo_ml = {"__getstate__", bozo_func, METH_VARARGS};
+static PyMethodDef bozo_ml = {"__getstate__", bozo_func};
 
 static PyObject *bozo_obj = NULL;
 
@@ -1240,8 +1237,8 @@ static PyObject *
 type_getattro(PyTypeObject *type, PyObject *name)
 {
 	PyTypeObject *metatype = type->ob_type;
-	PyObject *meta_attribute, *attribute;
-	descrgetfunc meta_get;
+	PyObject *descr, *res;
+	descrgetfunc f;
 
 	/* Initialize this type (we'll assume the metatype is initialized) */
 	if (type->tp_dict == NULL) {
@@ -1249,58 +1246,40 @@ type_getattro(PyTypeObject *type, PyObject *name)
 			return NULL;
 	}
 
-	/* No readable descriptor found yet */
-	meta_get = NULL;
-		
-	/* Look for the attribute in the metatype */
-	meta_attribute = _PyType_Lookup(metatype, name);
-
-	if (meta_attribute != NULL) {
-		meta_get = meta_attribute->ob_type->tp_descr_get;
-				
-		if (meta_get != NULL && PyDescr_IsData(meta_attribute)) {
-			/* Data descriptors implement tp_descr_set to intercept
-			 * writes. Assume the attribute is not overridden in
-			 * type's tp_dict (and bases): call the descriptor now.
-			 */
-			return meta_get(meta_attribute, (PyObject *)type,
-					(PyObject *)metatype);
-		}
+	/* Get a descriptor from the metatype */
+	descr = _PyType_Lookup(metatype, name);
+	f = NULL;
+	if (descr != NULL) {
+		f = descr->ob_type->tp_descr_get;
+		if (f != NULL && PyDescr_IsData(descr))
+			return f(descr,
+				 (PyObject *)type, (PyObject *)metatype);
 	}
 
-	/* No data descriptor found on metatype. Look in tp_dict of this
-	 * type and its bases */
-	attribute = _PyType_Lookup(type, name);
-	if (attribute != NULL) {
-		/* Implement descriptor functionality, if any */
-		descrgetfunc local_get = attribute->ob_type->tp_descr_get;
-		if (local_get != NULL) {
-			/* NULL 2nd argument indicates the descriptor was
-			 * found on the target object itself (or a base)  */
-			return local_get(attribute, (PyObject *)NULL,
-					 (PyObject *)type);
-		}
-		
-		Py_INCREF(attribute);
-		return attribute;
+	/* Look in tp_dict of this type and its bases */
+	res = _PyType_Lookup(type, name);
+	if (res != NULL) {
+		f = res->ob_type->tp_descr_get;
+		if (f != NULL)
+			return f(res, (PyObject *)NULL, (PyObject *)type);
+		Py_INCREF(res);
+		return res;
 	}
 
-	/* No attribute found in local __dict__ (or bases): use the
-	 * descriptor from the metatype, if any */
-	if (meta_get != NULL)
-		return meta_get(meta_attribute, (PyObject *)type,
-				(PyObject *)metatype);
-
-	/* If an ordinary attribute was found on the metatype, return it now */
-	if (meta_attribute != NULL) {
-		Py_INCREF(meta_attribute);
-		return meta_attribute;
+	/* Use the descriptor from the metatype */
+	if (f != NULL) {
+		res = f(descr, (PyObject *)type, (PyObject *)metatype);
+		return res;
+	}
+	if (descr != NULL) {
+		Py_INCREF(descr);
+		return descr;
 	}
 
 	/* Give up */
 	PyErr_Format(PyExc_AttributeError,
-			 "type object '%.50s' has no attribute '%.400s'",
-			 type->tp_name, PyString_AS_STRING(name));
+		     "type object '%.50s' has no attribute '%.400s'",
+		     type->tp_name, PyString_AS_STRING(name));
 	return NULL;
 }
 
@@ -1715,20 +1694,6 @@ PyTypeObject PyBaseObject_Type = {
 
 /* Initialize the __dict__ in a type object */
 
-static PyObject *
-create_specialmethod(PyMethodDef *meth, PyObject *(*func)(PyObject *))
-{
-	PyObject *cfunc;
-	PyObject *result;
-
-	cfunc = PyCFunction_New(meth, NULL);
-	if (cfunc == NULL)
-		return NULL;
-	result = func(cfunc);
-	Py_DECREF(cfunc);
-	return result;
-}
-
 static int
 add_methods(PyTypeObject *type, PyMethodDef *meth)
 {
@@ -1738,23 +1703,10 @@ add_methods(PyTypeObject *type, PyMethodDef *meth)
 		PyObject *descr;
 		if (PyDict_GetItemString(dict, meth->ml_name))
 			continue;
-		if (meth->ml_flags & METH_CLASS) {
-			if (meth->ml_flags & METH_STATIC) {
-				PyErr_SetString(PyExc_ValueError,
-				     "method cannot be both class and static");
-				return -1;
-			}
-			descr = create_specialmethod(meth, PyClassMethod_New);
-		}
-		else if (meth->ml_flags & METH_STATIC) {
-			descr = create_specialmethod(meth, PyStaticMethod_New);
-		}
-		else {
-			descr = PyDescr_NewMethod(type, meth);
-		}
+		descr = PyDescr_NewMethod(type, meth);
 		if (descr == NULL)
 			return -1;
-		if (PyDict_SetItemString(dict, meth->ml_name, descr) < 0)
+		if (PyDict_SetItemString(dict,meth->ml_name, descr) < 0)
 			return -1;
 		Py_DECREF(descr);
 	}
@@ -2133,8 +2085,7 @@ PyType_Ready(PyTypeObject *type)
 			PyDict_SetItemString(type->tp_dict, "__doc__", doc);
 			Py_DECREF(doc);
 		} else {
-			PyDict_SetItemString(type->tp_dict,
-					     "__doc__", Py_None);
+			PyDict_SetItemString(type->tp_dict, "__doc__", Py_None);
 		}
 	}
 
@@ -3244,9 +3195,9 @@ slot_tp_call(PyObject *self, PyObject *args, PyObject *kwds)
 
    - slot_tp_getattr_hook() is used when a __getattr__ hook is present.
 
-   The code in update_one_slot() always installs slot_tp_getattr_hook(); this
-   detects the absence of __getattr__ and then installs the simpler slot if
-   necessary. */
+   The code in update_slot() and fixup_slot_dispatchers() always installs
+   slot_tp_getattr_hook(); this detects the absence of __getattr__ and then
+   installs the simpler slot if necessary. */
 
 static PyObject *
 slot_tp_getattro(PyObject *self, PyObject *name)
@@ -3387,8 +3338,7 @@ slot_tp_iter(PyObject *self)
 	PyErr_Clear();
 	func = lookup_method(self, "__getitem__", &getitem_str);
 	if (func == NULL) {
-		PyErr_SetString(PyExc_TypeError,
-				"iteration over non-sequence");
+		PyErr_SetString(PyExc_TypeError, "iteration over non-sequence");
 		return NULL;
 	}
 	Py_DECREF(func);
@@ -3497,9 +3447,7 @@ slot_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
    incorporates the additional structures used for numbers, sequences and
    mappings.  Note that multiple names may map to the same slot (e.g. __eq__,
    __ne__ etc. all map to tp_richcompare) and one name may map to multiple
-   slots (e.g. __str__ affects tp_str as well as tp_repr). The table is
-   terminated with an all-zero entry.  (This table is further initialized and
-   sorted in init_slotdefs() below.) */
+   slots (e.g. __str__ affects tp_str as well as tp_repr). */
 
 typedef struct wrapperbase slotdef;
 
@@ -3720,11 +3668,6 @@ static slotdef slotdefs[] = {
 	{NULL}
 };
 
-/* Given a type pointer and an offset gotten from a slotdef entry, return a
-   pointer to the actual slot.  This is not quite the same as simply adding
-   the offset to the type pointer, since it takes care to indirect through the
-   proper indirection pointer (as_buffer, etc.); it returns NULL if the
-   indirection pointer is NULL. */
 static void **
 slotptr(PyTypeObject *type, int offset)
 {
@@ -3752,120 +3695,51 @@ slotptr(PyTypeObject *type, int offset)
 	return (void **)ptr;
 }
 
-/* Length of array of slotdef pointers used to store slots with the
-   same __name__.  There should be at most MAX_EQUIV-1 slotdef entries with
-   the same __name__, for any __name__. Since that's a static property, it is
-   appropriate to declare fixed-size arrays for this. */
-#define MAX_EQUIV 10
-
-/* Return a slot pointer for a given name, but ONLY if the attribute has
-   exactly one slot function.  The name must be an interned string. */
-static void **
-resolve_slotdups(PyTypeObject *type, PyObject *name)
-{
-	/* XXX Maybe this could be optimized more -- but is it worth it? */
-
-	/* pname and ptrs act as a little cache */
-	static PyObject *pname;
-	static slotdef *ptrs[MAX_EQUIV];
-	slotdef *p, **pp;
-	void **res, **ptr;
-
-	if (pname != name) {
-		/* Collect all slotdefs that match name into ptrs. */
-		pname = name;
-		pp = ptrs;
-		for (p = slotdefs; p->name_strobj; p++) {
-			if (p->name_strobj == name)
-				*pp++ = p;
-		}
-		*pp = NULL;
-	}
-
-	/* Look in all matching slots of the type; if exactly one of these has
-	   a filled-in slot, return its value.  Otherwise return NULL. */
-	res = NULL;
-	for (pp = ptrs; *pp; pp++) {
-		ptr = slotptr(type, (*pp)->offset);
-		if (ptr == NULL || *ptr == NULL)
-			continue;
-		if (res != NULL)
-			return NULL;
-		res = ptr;
-	}
-	return res;
-}
-
-/* Common code for update_these_slots() and fixup_slot_dispatchers().  This
-   does some incredibly complex thinking and then sticks something into the
-   slot.  (It sees if the adjacent slotdefs for the same slot have conflicting
-   interests, and then stores a generic wrapper or a specific function into
-   the slot.)  Return a pointer to the next slotdef with a different offset,
-   because that's convenient  for fixup_slot_dispatchers(). */
-static slotdef *
-update_one_slot(PyTypeObject *type, slotdef *p)
-{
-	PyObject *descr;
-	PyWrapperDescrObject *d;
-	void *generic = NULL, *specific = NULL;
-	int use_generic = 0;
-	int offset = p->offset;
-	void **ptr = slotptr(type, offset);
-
-	if (ptr == NULL) {
-		do {
-			++p;
-		} while (p->offset == offset);
-		return p;
-	}
-	do {
-		descr = _PyType_Lookup(type, p->name_strobj);
-		if (descr == NULL)
-			continue;
-		if (descr->ob_type == &PyWrapperDescr_Type) {
-			void **tptr = resolve_slotdups(type, p->name_strobj);
-			if (tptr == NULL || tptr == ptr)
-				generic = p->function;
-			d = (PyWrapperDescrObject *)descr;
-			if (d->d_base->wrapper == p->wrapper &&
-			    PyType_IsSubtype(type, d->d_type))
-			{
-				if (specific == NULL ||
-				    specific == d->d_wrapped)
-					specific = d->d_wrapped;
-				else
-					use_generic = 1;
-			}
-		}
-		else {
-			use_generic = 1;
-			generic = p->function;
-		}
-	} while ((++p)->offset == offset);
-	if (specific && !use_generic)
-		*ptr = specific;
-	else
-		*ptr = generic;
-	return p;
-}
-
 staticforward int recurse_down_subclasses(PyTypeObject *type,
 					  slotdef **pp, PyObject *name);
 
-/* In the type, update the slots whose slotdefs are gathered in the pp0 array,
-   and then do the same for all this type's subtypes. */
 static int
 update_these_slots(PyTypeObject *type, slotdef **pp0, PyObject *name)
 {
 	slotdef **pp;
 
-	for (pp = pp0; *pp; pp++)
-		update_one_slot(type, *pp);
+	for (pp = pp0; *pp; pp++) {
+		slotdef *p = *pp;
+		PyObject *descr;
+		PyWrapperDescrObject *d;
+		void *generic = NULL, *specific = NULL;
+		int use_generic = 0;
+		int offset = p->offset;
+		void **ptr = slotptr(type, offset);
+		if (ptr == NULL)
+			continue;
+		do {
+			descr = _PyType_Lookup(type, p->name_strobj);
+			if (descr == NULL)
+				continue;
+			generic = p->function;
+			if (descr->ob_type == &PyWrapperDescr_Type) {
+				d = (PyWrapperDescrObject *)descr;
+				if (d->d_base->wrapper == p->wrapper &&
+				    PyType_IsSubtype(type, d->d_type)) {
+					if (specific == NULL ||
+					    specific == d->d_wrapped)
+						specific = d->d_wrapped;
+					else
+						use_generic = 1;
+				}
+			}
+			else
+				use_generic = 1;
+		} while ((++p)->offset == offset);
+		if (specific && !use_generic)
+			*ptr = specific;
+		else
+			*ptr = generic;
+	}
 	return recurse_down_subclasses(type, pp0, name);
 }
 
-/* Update the slots whose slotdefs are gathered in the pp array in all (direct
-   or indirect) subclasses of type. */
 static int
 recurse_down_subclasses(PyTypeObject *type, slotdef **pp, PyObject *name)
 {
@@ -3896,8 +3770,6 @@ recurse_down_subclasses(PyTypeObject *type, slotdef **pp, PyObject *name)
 	return 0;
 }
 
-/* Comparison function for qsort() to compare slotdefs by their offset, and
-   for equal offset by their address (to force a stable sort). */
 static int
 slotdef_cmp(const void *aa, const void *bb)
 {
@@ -3909,8 +3781,6 @@ slotdef_cmp(const void *aa, const void *bb)
 		return a - b;
 }
 
-/* Initialize the slotdefs table by adding interned string objects for the
-   names and sorting the entries. */
 static void
 init_slotdefs(void)
 {
@@ -3922,18 +3792,17 @@ init_slotdefs(void)
 	for (p = slotdefs; p->name; p++) {
 		p->name_strobj = PyString_InternFromString(p->name);
 		if (!p->name_strobj)
-			Py_FatalError("Out of memory interning slotdef names");
+			Py_FatalError("XXX ouch");
 	}
 	qsort((void *)slotdefs, (size_t)(p-slotdefs), sizeof(slotdef),
 	      slotdef_cmp);
 	initialized = 1;
 }
 
-/* Update the slots after assignment to a class (type) attribute. */
 static int
 update_slot(PyTypeObject *type, PyObject *name)
 {
-	slotdef *ptrs[MAX_EQUIV];
+	slotdef *ptrs[10];
 	slotdef *p;
 	slotdef **pp;
 	int offset;
@@ -3953,22 +3822,74 @@ update_slot(PyTypeObject *type, PyObject *name)
 			--p;
 		*pp = p;
 	}
-	if (ptrs[0] == NULL)
-		return 0; /* Not an attribute that affects any slots */
 	return update_these_slots(type, ptrs, name);
 }
 
-/* Store the proper functions in the slot dispatches at class (type)
-   definition time, based upon which operations the class overrides in its
-   dict. */
 static void
 fixup_slot_dispatchers(PyTypeObject *type)
 {
 	slotdef *p;
+	PyObject *mro, *descr;
+	PyWrapperDescrObject *d;
+	int i, n, offset;
+	void **ptr;
+	void *generic, *specific;
+	int use_generic;
 
 	init_slotdefs();
-	for (p = slotdefs; p->name; )
-		p = update_one_slot(type, p);
+	mro = type->tp_mro;
+	assert(PyTuple_Check(mro));
+	n = PyTuple_GET_SIZE(mro);
+	for (p = slotdefs; p->name; ) {
+		offset = p->offset;
+		ptr = slotptr(type, offset);
+		if (!ptr) {
+			do {
+				++p;
+			} while (p->offset == offset);
+			continue;
+		}
+		generic = specific = NULL;
+		use_generic = 0;
+		do {
+			descr = NULL;
+			for (i = 0; i < n; i++) {
+				PyObject *b = PyTuple_GET_ITEM(mro, i);
+				PyObject *dict = NULL;
+				if (PyType_Check(b))
+					dict = ((PyTypeObject *)b)->tp_dict;
+				else if (PyClass_Check(b))
+					dict = ((PyClassObject *)b)->cl_dict;
+				if (dict != NULL) {
+					descr = PyDict_GetItem(
+						dict, p->name_strobj);
+					if (descr != NULL)
+						break;
+				}
+			}
+			if (descr == NULL)
+				continue;
+			generic = p->function;
+			if (descr->ob_type == &PyWrapperDescr_Type) {
+				d = (PyWrapperDescrObject *)descr;
+				if (d->d_base->wrapper == p->wrapper &&
+				    PyType_IsSubtype(type, d->d_type))
+				{
+					if (specific == NULL ||
+					    specific == d->d_wrapped)
+						specific = d->d_wrapped;
+					else
+						use_generic = 1;
+				}
+			}
+			else
+				use_generic = 1;
+		} while ((++p)->offset == offset);
+		if (specific && !use_generic)
+			*ptr = specific;
+		else
+			*ptr = generic;
+	}
 }
 
 /* This function is called by PyType_Ready() to populate the type's
@@ -4121,8 +4042,7 @@ super_getattro(PyObject *self, PyObject *name)
 				Py_INCREF(res);
 				f = res->ob_type->tp_descr_get;
 				if (f != NULL) {
-					tmp = f(res, su->obj,
-						(PyObject *)starttype);
+					tmp = f(res, su->obj, (PyObject *)starttype);
 					Py_DECREF(res);
 					res = tmp;
 				}

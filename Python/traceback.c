@@ -120,7 +120,7 @@ newtracebackobject(tracebackobject *next, PyFrameObject *frame, int lasti,
 		tb->tb_frame = frame;
 		tb->tb_lasti = lasti;
 		tb->tb_lineno = lineno;
-		PyObject_GC_Track(tb);
+		_PyObject_GC_TRACK(tb);
 	}
 	return tb;
 }

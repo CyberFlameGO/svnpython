@@ -235,7 +235,7 @@ def getatime(filename):
 
 def islink(path):
     """Test for symbolic link.  On WindowsNT/95 always returns false"""
-    return False
+    return 0
 
 
 # Does a path exist?
@@ -246,8 +246,8 @@ def exists(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 # Is a path a dos directory?
@@ -259,7 +259,7 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISDIR(st[stat.ST_MODE])
 
 
@@ -272,7 +272,7 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISREG(st[stat.ST_MODE])
 
 
@@ -457,18 +457,8 @@ def normpath(path):
 # Return an absolute path.
 def abspath(path):
     """Return the absolute version of a path"""
-    try:
-        from nt import _getfullpathname
-    except ImportError: # Not running on Windows - mock up something sensible.
-        global abspath
-        def _abspath(path):
-            if not isabs(path):
-                path = join(os.getcwd(), path)
-            return normpath(path)
-        abspath = _abspath
-        return _abspath(path)
-
     if path: # Empty path must return current working directory.
+        from nt import _getfullpathname
         try:
             path = _getfullpathname(path)
         except WindowsError:

@@ -25,7 +25,7 @@ If no test names are given, all tests are run.
 -v is incompatible with -g and does not compare test output files.
 
 -s means to run only a single test and exit.  This is useful when doing memory
-analysis on the Python interpreter (which tend to consume too many resources to
+analysis on the Python interpreter (which tend to consume to many resources to
 run the full regression test non-stop).  The file /tmp/pynexttest is read to
 find the next test to run.  If this file is missing, the first test_*.py file
 in testdir or on the command line is used.  (actually tempfile.gettempdir() is
@@ -466,9 +466,6 @@ class _Set:
             data.sort()
         return data
 
-# Map sys.platform to a string containing the basenames of tests
-# expected to be skipped on that platform.
-
 _expectations = {
     'win32':
         """
@@ -489,7 +486,6 @@ _expectations = {
         test_largefile
         test_linuxaudiodev
         test_mhlib
-        test_mpz
         test_nis
         test_openpty
         test_poll
@@ -646,42 +642,12 @@ _expectations = {
         test_winreg
         test_winsound
         """,
-    'hp-ux11':
-        """
-        test_al
-        test_bsddb
-        test_cd
-        test_cl
-        test_curses
-        test_dl
-        test_gdbm
-        test_gl
-        test_gzip
-        test_imgfile
-        test_largefile
-        test_linuxaudiodev
-        test_locale
-        test_minidom
-        test_nis
-        test_ntpath
-        test_openpty
-        test_pyexpat
-        test_sax
-        test_socket_ssl
-        test_socketserver
-        test_sunaudiodev
-        test_unicode_file
-        test_winreg
-        test_winsound
-        test_zipfile
-        test_zlib
-        """,
 }
 
 class _ExpectedSkips:
     def __init__(self):
         self.valid = 0
-        if sys.platform in _expectations:
+        if _expectations.has_key(sys.platform):
             s = _expectations[sys.platform]
             self.expected = _Set(s.split())
             self.valid = 1

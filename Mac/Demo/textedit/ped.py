@@ -141,10 +141,7 @@ class TEWindow(ScrolledWindow):
 	def menu_cut(self):
 		self.ted.TESelView()
 		self.ted.TECut()
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		TE.TEToScrap()
 		self.updatescrollbars()
 		self.parent.updatemenubar()
@@ -152,10 +149,7 @@ class TEWindow(ScrolledWindow):
 		
 	def menu_copy(self):
 		self.ted.TECopy()
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		TE.TEToScrap()
 		self.updatescrollbars()
 		self.parent.updatemenubar()
@@ -232,13 +226,8 @@ class Ped(Application):
 			if hasattr(Scrap, 'InfoScrap'):
 				on = (Scrap.InfoScrap()[0] <> 0)
 			else:
-				flavors = Scrap.GetCurrentScrap().GetScrapFlavorInfoList()
-				for tp, info in flavors:
-					if tp == 'TEXT':
-						on = 1
-						break
-				else:
-					on = 0
+				# Not there yet on Carbon, simply always enable
+				on = 1
 			if on <> self.pastegroup_on:
 				self.pasteitem.enable(on)
 				self.pastegroup_on = on

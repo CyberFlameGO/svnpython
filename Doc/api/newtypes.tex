@@ -1,8 +1,4 @@
-\chapter{Object Implementation Support \label{newTypes}}
-
-
-This chapter describes the functions, types, and macros used when
-defining new object types.
+\chapter{Defining New Object Types \label{newTypes}}
 
 
 \section{Allocating Objects on the Heap
@@ -156,12 +152,8 @@ a cast in the method table.  Even though \ctype{PyCFunction} defines
 the first parameter as \ctype{PyObject*}, it is common that the method
 implementation uses a the specific C type of the \var{self} object.
 
-The \member{ml_flags} field is a bitfield which can include the
-following flags.  The individual flags indicate either a calling
-convention or a binding convention.  Of the calling convention flags,
-only \constant{METH_VARARGS} and \constant{METH_KEYWORDS} can be
-combined.  Any of the calling convention flags can be combined with a
-binding flag.
+The flags can have the following values. Only \constant{METH_VARARGS}
+and \constant{METH_KEYWORDS} can be combined; the others can't.
 
 \begin{datadesc}{METH_VARARGS}
   This is the typical calling convention, where the methods have the
@@ -210,30 +202,6 @@ binding flag.
   call with multiple arguments and a call with a tuple as the only
   argument.
 \end{datadesc}
-
-These two constants are not used to indicate the calling convention
-but the binding when use with methods of classes.  These may not be
-used for functions defined for modules.  At most one of these flags
-may be set for any given method.
-
-\begin{datadesc}{METH_CLASS}
-  The method will be passed the type object as the first parameter
-  rather than an instance of the type.  This is used to create
-  \emph{class methods}, similar to what is created when using the
-  \function{classmethod()}\bifuncindex{classmethod} built-in
-  function.
-  \versionadded{2.3}
-\end{datadesc}
-
-\begin{datadesc}{METH_STATIC}
-  The method will be passed \NULL{} as the first parameter rather than
-  an instance of the type.  This is used to create \emph{static
-  methods}, similar to what is created when using the
-  \function{staticmethod()}\bifuncindex{staticmethod} built-in
-  function.
-  \versionadded{2.3}
-\end{datadesc}
-
 
 \begin{cfuncdesc}{PyObject*}{Py_FindMethod}{PyMethodDef table[],
                                             PyObject *ob, char *name}
@@ -392,12 +360,6 @@ which do not store references to other objects, or which only store
 references to atomic types (such as numbers or strings), do not need
 to provide any explicit support for garbage collection.
 
-An example showing the use of these interfaces can be found in
-``\ulink{Supporting the Cycle
-Collector}{../ext/example-cycle-support.html}'' in
-\citetitle[../ext/ext.html]{Extending and Embedding the Python
-Interpreter}.
-
 To create a container type, the \member{tp_flags} field of the type
 object must include the \constant{Py_TPFLAGS_HAVE_GC} and provide an
 implementation of the \member{tp_traverse} handler.  If instances of the
@@ -514,3 +476,103 @@ The \member{tp_clear} handler must be of the \ctype{inquiry} type, or
   this method if it detects that this object is involved in a
   reference cycle.
 \end{ctypedesc}
+
+
+\subsection{Example Cycle Collector Support
+            \label{example-cycle-support}}
+
+This example shows only enough of the implementation of an extension
+type to show how the garbage collector support needs to be added.  It
+shows the definition of the object structure, the
+\member{tp_traverse}, \member{tp_clear} and \member{tp_dealloc}
+implementations, the type structure, and a constructor --- the module
+initialization needed to export the constructor to Python is not shown
+as there are no special considerations there for the collector.  To
+make this interesting, assume that the module exposes ways for the
+\member{container} field of the object to be modified.  Note that
+since no checks are made on the type of the object used to initialize
+\member{container}, we have to assume that it may be a container.
+
+\begin{verbatim}
+#include "Python.h"
+
+typedef struct {
+    PyObject_HEAD
+    PyObject *container;
+} MyObject;
+
+static int
+my_traverse(MyObject *self, visitproc visit, void *arg)
+{
+    if (self->container != NULL)
+        return visit(self->container, arg);
+    else
+        return 0;
+}
+
+static int
+my_clear(MyObject *self)
+{
+    Py_XDECREF(self->container);
+    self->container = NULL;
+
+    return 0;
+}
+
+static void
+my_dealloc(MyObject *self)
+{
+    PyObject_GC_UnTrack((PyObject *) self);
+    Py_XDECREF(self->container);
+    PyObject_GC_Del(self);
+}
+\end{verbatim}
+
+\begin{verbatim}
+statichere PyTypeObject
+MyObject_Type = {
+    PyObject_HEAD_INIT(NULL)
+    0,
+    "MyObject",
+    sizeof(MyObject),
+    0,
+    (destructor)my_dealloc,     /* tp_dealloc */
+    0,                          /* tp_print */
+    0,                          /* tp_getattr */
+    0,                          /* tp_setattr */
+    0,                          /* tp_compare */
+    0,                          /* tp_repr */
+    0,                          /* tp_as_number */
+    0,                          /* tp_as_sequence */
+    0,                          /* tp_as_mapping */
+    0,                          /* tp_hash */
+    0,                          /* tp_call */
+    0,                          /* tp_str */
+    0,                          /* tp_getattro */
+    0,                          /* tp_setattro */
+    0,                          /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    0,                          /* tp_doc */
+    (traverseproc)my_traverse,  /* tp_traverse */
+    (inquiry)my_clear,          /* tp_clear */
+    0,                          /* tp_richcompare */
+    0,                          /* tp_weaklistoffset */
+};
+
+/* This constructor should be made accessible from Python. */
+static PyObject *
+new_object(PyObject *unused, PyObject *args)
+{
+    PyObject *container = NULL;
+    MyObject *result = NULL;
+
+    if (PyArg_ParseTuple(args, "|O:new_object", &container)) {
+        result = PyObject_GC_New(MyObject, &MyObject_Type);
+        if (result != NULL) {
+            result->container = container;
+            PyObject_GC_Track(result);
+        }
+    }
+    return (PyObject *) result;
+}
+\end{verbatim}

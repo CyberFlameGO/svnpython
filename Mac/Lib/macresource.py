@@ -61,38 +61,24 @@ def need(restype, resid, filename=None, modname=None):
 	else:
 		raise ResourceFileNotFoundError, filename
 	
-	refno = open_pathname(pathname)
+	try:
+		refno = Res.FSpOpenResFile(pathname, 1)
+	except Res.Error, arg:
+		if arg[0] in (-37, -39):
+			# No resource fork. We may be on OSX, try to decode
+			# the applesingle file.
+			pathname = _decode(pathname)
+			if pathname:
+				refno = Res.FSOpenResourceFile(pathname, u'', 1)
+			else:
+				raise
+				
 	
 	# And check that the resource exists now
 	if type(resid) is type(1):
 		h = Res.GetResource(restype, resid)
 	else:
 		h = Res.GetNamedResource(restype, resid)
-	return refno
-	
-def open_pathname(pathname):
-	"""Open a resource file given by pathname, possibly decoding an
-	AppleSingle file"""
-	try:
-		refno = Res.FSpOpenResFile(pathname, 1)
-	except Res.Error, arg:
-		if arg[0] in (-37, -39):
-			# No resource fork. We may be on OSX, and this may be either
-			# a data-fork based resource file or a AppleSingle file
-			# from the CVS repository.
-			try:
-				refno = Res.FSOpenResourceFile(pathname, u'', 1)
-			except Res.Error, arg:
-				if arg[0] != -199:
-					# -199 is "bad resource map"
-					raise
-			else:
-				return refno
-			# Finally try decoding an AppleSingle file
-			pathname = _decode(pathname)
-			refno = Res.FSOpenResourceFile(pathname, u'', 1)
-		else:
-			raise
 	return refno
 	
 def _decode(pathname):

@@ -106,16 +106,10 @@ def	genallprojects(force=0):
 	global FORCEREBUILD
 	FORCEREBUILD = force
 	# Standard Python modules
-	genpluginproject("ppc", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_pyexpat_config.h"
-		)
-	genpluginproject("carbon", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_carbonpyexpat_config.h"
-		)
+	genpluginproject("all", "pyexpat", 
+		sources=["pyexpat.c"], 
+		libraries=["libexpat.ppc.lib"], 
+		extradirs=["::::expat:*"])
 	genpluginproject("all", "zlib", 
 		libraries=["zlib.ppc.Lib"], 
 		extradirs=["::::imglibs:zlib:mac", "::::imglibs:zlib"])

@@ -463,7 +463,7 @@ rotorobj_encrypt(Rotorobj *self, PyObject *args)
 	PyObject *rtn = NULL;
 	char *tmp;
 
-	if (!PyArg_ParseTuple(args, "s#:encrypt", &string, &len))
+	if (!PyArg_Parse(args, "s#", &string, &len))
 		return NULL;
 	if (!(tmp = PyMem_NEW(char, len+5))) {
 		PyErr_NoMemory();
@@ -485,7 +485,7 @@ rotorobj_encrypt_more(Rotorobj *self, PyObject *args)
 	PyObject *rtn = NULL;
 	char *tmp;
 
-	if (!PyArg_ParseTuple(args, "s#:encrypt_more", &string, &len))
+	if (!PyArg_Parse(args, "s#", &string, &len))
 		return NULL;
 	if (!(tmp = PyMem_NEW(char, len+5))) {
 		PyErr_NoMemory();
@@ -507,7 +507,7 @@ rotorobj_decrypt(Rotorobj *self, PyObject *args)
 	PyObject *rtn = NULL;
 	char *tmp;
 
-	if (!PyArg_ParseTuple(args, "s#:decrypt", &string, &len))
+	if (!PyArg_Parse(args, "s#", &string, &len))
 		return NULL;
 	if (!(tmp = PyMem_NEW(char, len+5))) {
 		PyErr_NoMemory();
@@ -529,7 +529,7 @@ rotorobj_decrypt_more(Rotorobj *self, PyObject *args)
 	PyObject *rtn = NULL;
 	char *tmp;
 
-	if (!PyArg_ParseTuple(args, "s#:decrypt_more", &string, &len))
+	if (!PyArg_Parse(args, "s#", &string, &len))
 		return NULL;
 	if (!(tmp = PyMem_NEW(char, len+5))) {
 		PyErr_NoMemory();
@@ -558,11 +558,11 @@ rotorobj_setkey(Rotorobj *self, PyObject *args)
 
 static struct PyMethodDef
 rotorobj_methods[] = {
-	{"encrypt",	(PyCFunction)rotorobj_encrypt, METH_VARARGS},
-	{"encryptmore",	(PyCFunction)rotorobj_encrypt_more, METH_VARARGS},
-	{"decrypt",	(PyCFunction)rotorobj_decrypt, METH_VARARGS},
-	{"decryptmore",	(PyCFunction)rotorobj_decrypt_more, METH_VARARGS},
-	{"setkey",	(PyCFunction)rotorobj_setkey, METH_VARARGS},
+	{"encrypt",	(PyCFunction)rotorobj_encrypt},
+	{"encryptmore",	(PyCFunction)rotorobj_encrypt_more},
+	{"decrypt",	(PyCFunction)rotorobj_decrypt},
+	{"decryptmore",	(PyCFunction)rotorobj_decrypt_more},
+	{"setkey",	(PyCFunction)rotorobj_setkey, 1},
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -611,7 +611,7 @@ rotor_rotor(PyObject *self, PyObject *args)
 
 static struct PyMethodDef
 rotor_methods[] = {
-	{"newrotor",  rotor_rotor, METH_VARARGS},
+	{"newrotor",  rotor_rotor, 1},
 	{NULL,        NULL}		     /* sentinel */
 };
 

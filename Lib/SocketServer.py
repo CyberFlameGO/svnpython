@@ -226,10 +226,10 @@ class BaseServer:
     def verify_request(self, request, client_address):
         """Verify the request.  May be overridden.
 
-        Return True if we should proceed with this request.
+        Return true if we should proceed with this request.
 
         """
-        return True
+        return 1
 
     def process_request(self, request, client_address):
         """Call finish_request.

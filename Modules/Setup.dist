@@ -175,13 +175,13 @@ GLHACK=-Dclear=__GLclear
 # Dynamic readlines
 #xreadlines xreadlinesmodule.c
 
-# Socket module helper for socket(2)
+# for socket(2), without SSL support.
 #_socket socketmodule.c
 
-# Socket module helper for SSL support; you must comment out the other
+# Socket module compiled with SSL support; you must comment out the other
 # socket line above, and possibly edit the SSL variable:
 #SSL=/usr/local/ssl
-#_ssl _ssl.c \
+#_socket socketmodule.c \
 #	-DUSE_SSL -I$(SSL)/include -I$(SSL)/include/openssl \
 #	-L$(SSL)/lib -lssl -lcrypto
 
@@ -410,7 +410,7 @@ GLHACK=-Dclear=__GLclear
 # Fred Drake's interface to the Python parser
 #parser parsermodule.c
 
-# cStringIO and cPickle
+# Digital Creations' cStringIO and cPickle
 #cStringIO cStringIO.c
 #cPickle cPickle.c
 
