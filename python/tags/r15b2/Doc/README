@@ -1,0 +1,65 @@
+Python main documentation -- in Latex
+-------------------------------------
+
+This directory contains the Latex sources to the Python documentation.
+
+The Python Reference Manual is no longer maintained in Latex.  It is
+now a FrameMaker document.  The FrameMaker 5.0 files (ref.book,
+ref*.doc) as well as PostScript generated (ref.ps) from it are in the
+subdirectory ref/.  (See ftp://ftp.adobe.com/pub/adobe/framereader for
+a free reader for FrameMaker documents, for some platforms.)  Many
+thanks to Robin Friedrich for the conversion of the Reference Manual
+to FrameMaker and his work on its index.
+
+If you don't have Latex, you can ftp a tar file containing PostScript
+of all documents.  It should be in the same place where you fetched
+the main Python distribution (try http://www.python.org or
+ftp://ftp.python.org).
+
+The following are the Latex source files:
+
+	tut.tex				The tutorial
+	lib.tex, lib*.tex		The library reference
+	ext.tex				How to extend Python
+	api.tex				Reference for the Python/C API
+
+All use the style option file "myformat.sty".  This contains some
+macro definitions and sets some style parameters.
+
+You need the makeindex utility to produce the index for lib.tex.
+
+There's a Makefile to call Latex and the other utilities in the right
+order and the right number of times.  This will produce DVI files for
+each document made; to preview them, use xdvi.  PostScript is produced
+by the same Makefile target that produces the DVI files.  This uses
+the dvips tool.  Printing depends on local conventions; at my site, I
+use lp.  For example:
+
+	make lib			# create lib.dvi and lib.ps
+	xdvi lib			# preview lib.dvi
+	lp lib.ps			# print on default printer
+
+
+Using Times fonts
+-----------------
+
+As distributed, the Latex documents use the default Tex fonts (CMR).
+These qre quite ugly.  If you have the "PSfont" Latex add-on
+installed, you can produce versions using Times fonts (and Courier for
+fixed text) by inserting "times," in the list of options in the
+documentstyle macro in the first line of the files lib.tex, tut.tex,
+ext.tex, api.tex, e.g.
+
+	\documentstyle[twoside,times,myformat]{report}
+
+
+Making HTML files
+-----------------
+
+The Latex documents can be converted to HTML using Nikos Drakos'
+Latex2html converter.  See the Makefile; after some twiddling, "make
+l2h" should do the trick.
+
+For the reference manual, I use Harlequin's webmaker.  I'm not very
+happy with it and hope that eventually FrameMaker will be able to
+produce HTML without third party help.

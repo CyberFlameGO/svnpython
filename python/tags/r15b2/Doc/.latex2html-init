@@ -1,0 +1,210 @@
+#LaTeX2HTML Version 96.1 : dot.latex2html-init		-*- perl -*-
+#
+
+$INFO = 1;              # 0 = do not make a "About this document..." section
+$MAX_LINK_DEPTH = 3;
+
+# Python documentation uses section numbers to support references to match
+# in the printed and online versions.
+#
+$SHOW_SECTION_NUMBERS = 1;
+
+$HTML_VERSION = '3.0';
+$ICONSERVER = '../icons';
+
+# This replacement adds the "BORDER=0" attribute to the generated icon
+# markup.  This is done for no better reason than that it looks better.
+#
+sub img_tag {
+    local($icon) = @_;
+    ( ($icon =~ /(gif)/) ?
+     do {
+         $icon =~ /(up|next|previous|next_page|previous_page|change_begin|change_end|change_delete|contents|index)/;
+         join('','<IMG ',$iconsizes{$1},' ALIGN=BOTTOM ALT="',$1,
+	      '" SRC="',$ICONSERVER,"/$icon",'" BORDER=0>')
+         } :
+     $icon);
+}
+
+# This replacement for process_command() is needed to add the case for
+# "\,"; it is unfortunate we need to do it this way.
+#
+sub process_command {
+    local ($cmd_rx, *ref_contents) = @_;
+    local($ref_before, $cmd, $after);
+    local($cmd_sub, $cmd_msub, $cmd_trans, $mathentity);
+    local (@open_font_tags,@open_size_tags);
+    $ref_contents = &convert_iso_latin_chars($ref_contents);
+    for (;;) {	# Do NOT use the o option
+	last unless ($ref_contents =~ /$cmd_rx/ );
+	($ref_before, $cmd, $after) = ($`, $1, "$2$'");
+	print(".");
+#	$after =~ s/^[ ]+/ /o;	 Collapse all spaces that follow a command
+	if ($cmd =~ /[a-zA-Z]$/) { # Eat redundant spaces that follow a command
+	    $after =~ s/^[ \t]+//o; }
+	else {
+	    $after =~ s/^[ \t]+/ /o; }
+	if ( $cmd = &normalize($cmd) ) {
+	    ($cmd_sub, $cmd_msub, $cmd_trans, $mathentity) =
+		("do_cmd_$cmd", "do_math_cmd_$cmd",
+		 $declarations{$cmd}, $mathentities{$cmd});
+	    if (defined &$cmd_sub) {
+		# $ref_before may also be modified ...
+		if ($cmd =~ /$sizechange_rx/o) {
+		    $after = &$cmd_sub($after, @open_size_tags);
+		} else {
+		    $after = &$cmd_sub($after, @open_font_tags);
+		};
+	    }
+	    elsif (defined &$cmd_msub) {
+		# $ref_before may also be modified ...
+		$after = &$cmd_msub($after, @open_font_tags);
+		if ( !$math_mode ) {
+		    $after = "<math>" . $after . "</math>";
+		    ++$commands_outside_math{$cmd};
+		};
+	    }
+	    elsif ($cmd_trans) {	# One to one transform
+		$cmd_trans =~ m|</.*$|;
+		$after = $` . $after . $&;
+		push(@open_font_tags, $cmd) if ($cmd =~ /$fontchange_rx/o);
+		push(@open_size_tags, $cmd) if ($cmd =~ /$sizechange_rx/o);}
+	    elsif ($mathentity) {
+		if ( $math_mode ) {
+		    $after = "&$mathentity;" . $after;
+		} else {
+		    $after = "<math>&$mathentity;</math>" . $after;
+		    ++$commands_outside_math{$cmd};
+		}; }
+	    # Here's the hack:
+	    elsif ($cmd == ',' && ! $AUX_FILE) {
+		$ref_before = $ref_before . ",";
+	    }
+	    elsif ($ignore{$cmd}) { # Ignored command
+		print "."}
+	    elsif ($cmd =~ /^the(.+)$/) { # Counter
+		$counter = $1;
+		$after = &do_cmd_thecounter($after);}
+	    else {
+		# Do not add if reading an auxiliary file
+		++$unknown_commands{$cmd} unless $AUX_FILE;
+	    }
+	}
+	$ref_contents = join('', $ref_before, $after);
+    }
+    $ref_contents;
+}
+
+sub top_navigation_panel {
+
+    # Now add a few buttons with a space between them
+    "<DIV CLASS=navigation>\n" .
+    "$NEXT $UP $PREVIOUS $CONTENTS $INDEX $CUSTOM_BUTTONS" .
+
+    "<BR>\n" .		# Line break
+
+    # If ``next'' section exists, add its title to the navigation panel
+    ($NEXT_TITLE ? "<B> Next:</B> $NEXT_TITLE\n" : undef) .
+
+    # Similarly with the ``up'' title ...
+    ($UP_TITLE ? "<B>Up:</B> $UP_TITLE\n" : undef) .
+
+    # ... and the ``previous'' title
+    ($PREVIOUS_TITLE ? "<B> Previous:</B> $PREVIOUS_TITLE\n" : undef) .
+
+    #  Line Break, horizontal rule (3-d dividing line) and new paragraph
+    "<BR><HR><P></DIV>\n"
+}
+
+sub bot_navigation_panel {
+
+    #  Start with a horizontal rule (3-d dividing line)
+    "\n<div class=navigation><hr>".
+
+    # Now add a few buttons with a space between them
+    "$NEXT $UP $PREVIOUS $CONTENTS $INDEX $CUSTOM_BUTTONS" .
+
+    "<br>\n" .		# Line break
+
+    # If ``next'' section exists, add its title to the navigation panel
+    ($NEXT_TITLE ? "<b> Next:</b> $NEXT_TITLE\n" : undef) .
+
+    # Similarly with the ``up'' title ...
+    ($UP_TITLE ? "<b>Up:</b> $UP_TITLE\n" : undef) .
+
+    # ... and the ``previous'' title
+    ($PREVIOUS_TITLE ? "<b> Previous:</b> $PREVIOUS_TITLE\n" : undef) .
+
+    "</div>\n"
+}
+
+
+# similar to make_index_entry(), but includes the string in the result
+# instead of the dummy filler.
+#
+sub make_str_index_entry {
+    local($br_id,$str) = @_;
+    # If TITLE is not yet available (i.e the \index command is in the title
+    # of the current section), use $ref_before.
+    $TITLE = $ref_before unless $TITLE;
+    # Save the reference
+    local($nstr) = "$str###" . ++$global{'max_id'}; # Make unique
+    $index{$nstr} .= &make_half_href("$CURRENT_FILE#$br_id");
+    "<a name=\"$br_id\">$str<\/a>";
+}
+
+sub add_idx {
+    print "\nDoing the index ...";
+    local($key, $str, @keys, $index, $level, $count,
+	  @previous, @current);
+    @keys = keys %index;
+    @keys = sort keysort  @keys;
+    $level = 0;
+    foreach $key (@keys) {
+	@current = split(/!/, $key);
+	$count = 0;
+	while ($current[$count] eq $previous[$count]) {
+	    $count++;
+	}
+	while ($count > $level) {
+	    $index .= "<dl compact>\n";
+	    $level++;
+	}
+	while ($count < $level) {
+	    $index .= "</dl>\n";
+	    $level--;
+	}
+	foreach $term (@current[$count .. $#current-1]) {
+	    # need to "step in" a little
+	    $index .= "<dt>" . $term . "\n<dl compact>\n";
+	    $level++;
+	}
+	$str = $current[$#current];
+	$str =~ s/\#\#\#\d+$//o;  # Remove the unique id's
+	$index .= #$index{$key} .
+	    # If it's the same string don't start a new line
+	    (&index_key_eq(join('',@current), join('',@previous)) ?
+	     ", $index{$key}" . $cross_ref_visible_mark . "</a>\n" :
+	     "<dt>$index{$key}<strong>" . $str . "</strong></a>\n");
+	@previous = @current;
+    }
+    while ($count < $level) {
+	$index .= "</dl>\n";
+	$level--;
+    }
+    s/$idx_mark/<dl compact>$index<\/dl>/o;
+}
+
+
+# need to remove leading <...>
+sub clean_key {
+    local ($_) = @_;
+    tr/A-Z/a-z/;
+    s/\s//;
+    s/\#\#\#\d+$//o;  		# Remove the unique id
+    s/^<[a-z][-._a-z0-9]*>//;	# Remove leading <gi>
+    $_
+}
+
+
+1;	# This must be the last line
