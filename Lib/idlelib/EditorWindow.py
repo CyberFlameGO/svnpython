@@ -1,9 +1,3 @@
-# changes by dscherer@cmu.edu
-#   - created format and run menus
-#   - added silly advice dialog (apologies to Douglas Adams)
-#   - made Python Documentation work on Windows (requires win32api to
-#     do a ShellExecute(); other ways of starting a web browser are awkward)
-
 import sys
 import os
 import string
@@ -12,6 +6,12 @@ import imp
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
+try:
+    import webbrowser
+except ImportError:
+    import BrowserControl
+    webbrowser = BrowserControl
+    del BrowserControl
 import idlever
 import WindowList
 from IdleConf import idleconf
@@ -32,6 +32,7 @@ TK_TABWIDTH_DEFAULT = 8
 #$ event <<open-path-browser>>
 
 #$ event <<close-window>>
+
 #$ unix <Control-x><Control-0>
 #$ unix <Control-x><Key-0>
 #$ win <Alt-F4>
@@ -82,9 +83,6 @@ IDLE %s
 An Integrated DeveLopment Environment for Python
 
 by Guido van Rossum
-
-This version of IDLE has been modified by David Scherer
-  (dscherer@cmu.edu).  See readme.txt for details.
 """ % idlever.IDLE_VERSION
 
 class EditorWindow:
@@ -131,7 +129,6 @@ class EditorWindow:
         self.top.bind("<<close-window>>", self.close_event)
         text.bind("<<center-insert>>", self.center_insert_event)
         text.bind("<<help>>", self.help_dialog)
-        text.bind("<<good-advice>>", self.good_advice)
         text.bind("<<python-docs>>", self.python_docs)
         text.bind("<<about-idle>>", self.about_dialog)
         text.bind("<<open-module>>", self.open_module)
@@ -227,8 +224,6 @@ class EditorWindow:
     menu_specs = [
         ("file", "_File"),
         ("edit", "_Edit"),
-        ("format", "F_ormat"),
-        ("run", "_Run"),
         ("windows", "_Windows"),
         ("help", "_Help"),
     ]
@@ -290,9 +285,6 @@ class EditorWindow:
 
     helpfile = "help.txt"
 
-    def good_advice(self, event=None):
-        tkMessageBox.showinfo('Advice', "Don't Panic!", master=self.text)
-
     def help_dialog(self, event=None):
         try:
             helpfile = os.path.join(os.path.dirname(__file__), self.helpfile)
@@ -303,22 +295,17 @@ class EditorWindow:
         else:
             self.io.loadfile(helpfile)
 
-    help_viewer = "netscape -remote 'openurl(%(url)s)' 2>/dev/null || " \
-                  "netscape %(url)s &"
     help_url = "http://www.python.org/doc/current/"
+    if sys.platform[:3] == "win":
+        fn = os.path.dirname(__file__)
+        fn = os.path.join(fn, "../../Doc/index.html")
+        fn = os.path.normpath(fn)
+        if os.path.isfile(fn):
+            help_url = fn
+        del fn
 
     def python_docs(self, event=None):
-        if sys.platform=='win32':
-          try:
-            import win32api
-            import ExecBinding
-            doc = os.path.join( os.path.dirname( ExecBinding.pyth_exe ), "doc", "index.html" )
-            win32api.ShellExecute(0, None, doc, None, sys.path[0], 1)
-          except:
-            pass
-        else:
-          cmd = self.help_viewer % {"url": self.help_url}
-          os.system(cmd)
+        webbrowser.open(self.help_url)
 
     def select_all(self, event=None):
         self.text.tag_add("sel", "1.0", "end-1c")
@@ -688,7 +675,7 @@ class EditorWindow:
         if self.get_tabwidth() != newtabwidth:
             pixels = text.tk.call("font", "measure", text["font"],
                                   "-displayof", text.master,
-                                  "n" * newtabwith)
+                                  "n" * newtabwidth)
             text.configure(tabs=pixels)
 
 def prepstr(s):
@@ -714,7 +701,6 @@ def get_accelerator(keydefs, event):
     s = re.sub(r"-[a-z]\b", lambda m: string.upper(m.group()), s)
     s = re.sub(r"\b\w+\b", lambda m: keynames.get(m.group(), m.group()), s)
     s = re.sub("Key-", "", s)
-    s = re.sub("Cancel","Ctrl-Break",s)   # dscherer@cmu.edu
     s = re.sub("Control-", "Ctrl-", s)
     s = re.sub("-", "+", s)
     s = re.sub("><", " ", s)

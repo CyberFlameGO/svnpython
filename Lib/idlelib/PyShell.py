@@ -1,32 +1,11 @@
 #! /usr/bin/env python
 
-# changes by dscherer@cmu.edu
-
-#   the main() function has been replaced by a whole class, in order to
-#     address the constraint that only one process can sit on the port
-#     hard-coded into the loader.
-
-#     It attempts to load the RPC protocol server and publish itself.  If
-#     that fails, it assumes that some other copy of IDLE is already running
-#     on the port and attempts to contact it.  It then uses the RPC mechanism
-#     to ask that copy to do whatever it was instructed (via the command
-#     line) to do.  (Think netscape -remote).  The handling of command line
-#     arguments for remotes is still very incomplete.
-
-#   default behavior (no command line options) is to NOT start the Python
-#     Shell.  If files are specified, they are opened, otherwise a single
-#     blank editor window opens.
-
-#   If any command line -options are specified, a shell does appear.  This
-#     is necessary to make the current semantics of the options make sense.
-
 import os
-import spawn
 import sys
 import string
 import getopt
 import re
-import protocol
+import warnings
 
 import linecache
 from code import InteractiveInterpreter
@@ -38,7 +17,7 @@ from EditorWindow import EditorWindow, fixwordbreaks
 from FileList import FileList
 from ColorDelegator import ColorDelegator
 from UndoDelegator import UndoDelegator
-from OutputWindow import OutputWindow, OnDemandOutputWindow
+from OutputWindow import OutputWindow
 from IdleConf import idleconf
 import idlever
 
@@ -146,7 +125,7 @@ class ModifiedColorDelegator(ColorDelegator):
         "stderr": cconf.getcolor("stderr"),
         "console": cconf.getcolor("console"),
         "ERROR": cconf.getcolor("ERROR"),
-	None: cconf.getcolor("normal"),
+        None: cconf.getcolor("normal"),
     })
 
 
@@ -178,6 +157,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         self.tkconsole = tkconsole
         locals = sys.modules['__main__'].__dict__
         InteractiveInterpreter.__init__(self, locals=locals)
+        self.save_warnings_filters = None
 
     gid = 0
 
@@ -202,7 +182,14 @@ class ModifiedInterpreter(InteractiveInterpreter):
         # Extend base class to stuff the source in the line cache first
         filename = self.stuffsource(source)
         self.more = 0
-        return InteractiveInterpreter.runsource(self, source, filename)
+        self.save_warnings_filters = warnings.filters[:]
+        warnings.filterwarnings(action="error", category=SyntaxWarning)
+        try:
+            return InteractiveInterpreter.runsource(self, source, filename)
+        finally:
+            if self.save_warnings_filters is not None:
+                warnings.filters[:] = self.save_warnings_filters
+                self.save_warnings_filters = None
 
     def stuffsource(self, source):
         # Stuff source in the filename cache
@@ -271,6 +258,9 @@ class ModifiedInterpreter(InteractiveInterpreter):
 
     def runcode(self, code):
         # Override base class method
+        if self.save_warnings_filters is not None:
+            warnings.filters[:] = self.save_warnings_filters
+            self.save_warnings_filters = None
         debugger = self.debugger
         try:
             self.tkconsole.beginexecuting()
@@ -451,10 +441,13 @@ class PyShell(OutputWindow):
     def short_title(self):
         return self.shell_title
 
+    COPYRIGHT = \
+              'Type "copyright", "credits" or "license" for more information.'
+
     def begin(self):
         self.resetoutput()
         self.write("Python %s on %s\n%s\nIDLE %s -- press F1 for help\n" %
-                   (sys.version, sys.platform, sys.copyright,
+                   (sys.version, sys.platform, self.COPYRIGHT,
                     idlever.IDLE_VERSION))
         try:
             sys.ps1
@@ -691,6 +684,7 @@ class PseudoFile:
     def isatty(self):
         return 1
 
+
 usage_msg = """\
 usage: idle.py [-c command] [-d] [-e] [-s] [-t title] [arg] ...
 
@@ -705,155 +699,83 @@ argument is not '-', the first argument is run as a script.  Remaining
 arguments are arguments to the script or to the command run by -c.
 """
 
-class usageError:
-    def __init__(self, string): self.string = string
-    def __repr__(self): return self.string
+def main():
+    cmd = None
+    edit = 0
+    debug = 0
+    startup = 0
 
-class main:
-    def __init__(self):
-        try:
-            self.server = protocol.Server(connection_hook = self.address_ok)
-            protocol.publish( 'IDLE', self.connect )
-            self.main( sys.argv[1:] )
-            return
-        except protocol.connectionLost:
-            try:
-                client = protocol.Client()
-                IDLE = client.getobject('IDLE')
-                if IDLE:
-                    try:
-                        IDLE.remote( sys.argv[1:] )
-                    except usageError, msg:
-                        sys.stderr.write("Error: %s\n" % str(msg))
-                        sys.stderr.write(usage_msg)
-                    return
-            except protocol.connectionLost:
-                pass
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "c:deist:")
+    except getopt.error, msg:
+        sys.stderr.write("Error: %s\n" % str(msg))
+        sys.stderr.write(usage_msg)
+        sys.exit(2)
 
-        # xxx Should scream via Tk()
-        print "Something already has our socket, but it won't open a window for me!"
-        print "Unable to proceed."
+    for o, a in opts:
+        if o == '-c':
+            cmd = a
+        if o == '-d':
+            debug = 1
+        if o == '-e':
+            edit = 1
+        if o == '-s':
+            startup = 1
+        if o == '-t':
+            PyShell.shell_title = a
 
-    def idle(self):
-        spawn.kill_zombies()
-        self.server.rpc_loop()
-        root.after(25, self.idle)
+    for i in range(len(sys.path)):
+        sys.path[i] = os.path.abspath(sys.path[i])
 
-    # We permit connections from localhost only
-    def address_ok(self, addr):
-        return addr[0] == '127.0.0.1'
+    pathx = []
+    if edit:
+        for filename in args:
+            pathx.append(os.path.dirname(filename))
+    elif args and args[0] != "-":
+        pathx.append(os.path.dirname(args[0]))
+    else:
+        pathx.append(os.curdir)
+    for dir in pathx:
+        dir = os.path.abspath(dir)
+        if not dir in sys.path:
+            sys.path.insert(0, dir)
 
-    def connect(self, client, addr):
-        return self
+    global flist, root
+    root = Tk(className="Idle")
+    fixwordbreaks(root)
+    root.withdraw()
+    flist = PyShellFileList(root)
 
-    def remote( self, argv ):
-        # xxx Should make this behavior match the behavior in main, or redo
-        #     command line options entirely.
-
-        try:
-            opts, args = getopt.getopt(argv, "c:deist:")
-        except getopt.error, msg:
-            raise usageError(msg)
-
+    if edit:
         for filename in args:
             flist.open(filename)
-        if not args:
-            flist.new()
-
-    def main( self, argv ):
-        cmd = None
-        edit = 0
-        noshell = 1
-    
-        debug = 0
-        startup = 0
-    
-        try:
-            opts, args = getopt.getopt(argv, "c:deist:")
-        except getopt.error, msg:
-            sys.stderr.write("Error: %s\n" % str(msg))
-            sys.stderr.write(usage_msg)
-            sys.exit(2)
-    
-        for o, a in opts:
-            noshell = 0
-            if o == '-c':
-                cmd = a
-            if o == '-d':
-                debug = 1
-            if o == '-e':
-                edit = 1
-            if o == '-s':
-                startup = 1
-            if o == '-t':
-                PyShell.shell_title = a
-    
-        if noshell: edit=1
-    
-        if not edit:
-            if cmd:
-                sys.argv = ["-c"] + args
-            else:
-                sys.argv = args or [""]
-    
-        for i in range(len(sys.path)):
-            sys.path[i] = os.path.abspath(sys.path[i])
-    
-        pathx = []
-        if edit:
-            for filename in args:
-                pathx.append(os.path.dirname(filename))
-        elif args and args[0] != "-":
-            pathx.append(os.path.dirname(args[0]))
+    else:
+        if cmd:
+            sys.argv = ["-c"] + args
         else:
-            pathx.append(os.curdir)
-        for dir in pathx:
-            dir = os.path.abspath(dir)
-            if not dir in sys.path:
-                sys.path.insert(0, dir)
+            sys.argv = args or [""]
 
-        global flist, root
-        root = Tk()
-        fixwordbreaks(root)
-        root.withdraw()
-        flist = PyShellFileList(root)
-    
-        if edit:
-            for filename in args:
-                flist.open(filename)
-            if not args:
-                flist.new()
-    
-        #dbg=OnDemandOutputWindow(flist)
-        #dbg.set_title('Internal IDLE Problem')
-        #sys.stdout = PseudoFile(dbg,['stdout'])
-        #sys.stderr = PseudoFile(dbg,['stderr'])
-    
-        if noshell:
-          flist.pyshell = None
-        else:
-          shell = PyShell(flist)
-          interp = shell.interp
-          flist.pyshell = shell
-      
-          if startup:
-              filename = os.environ.get("IDLESTARTUP") or \
-                         os.environ.get("PYTHONSTARTUP")
-              if filename and os.path.isfile(filename):
-                  interp.execfile(filename)
-      
-          if debug:
-              shell.open_debugger()
-          if cmd:
-              interp.execsource(cmd)
-          elif not edit and args and args[0] != "-":
-              interp.execfile(args[0])
-      
-          shell.begin()
 
-        self.idle()
-        root.mainloop()
-        root.destroy()
+    shell = PyShell(flist)
+    interp = shell.interp
+    flist.pyshell = shell
+
+    if startup:
+        filename = os.environ.get("IDLESTARTUP") or \
+                   os.environ.get("PYTHONSTARTUP")
+        if filename and os.path.isfile(filename):
+            interp.execfile(filename)
+
+    if debug:
+        shell.open_debugger()
+    if cmd:
+        interp.execsource(cmd)
+    elif not edit and args and args[0] != "-":
+        interp.execfile(args[0])
+
+    shell.begin()
+    root.mainloop()
+    root.destroy()
 
 
 if __name__ == "__main__":
