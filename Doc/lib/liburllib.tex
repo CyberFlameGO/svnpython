@@ -1,5 +1,5 @@
 \section{\module{urllib} ---
-         Open arbitrary resources by URL}
+         Open an arbitrary resource by URL}
 
 \declaremodule{standard}{urllib}
 \modulesynopsis{Open an arbitrary network resource by URL (requires sockets).}
@@ -62,12 +62,11 @@ If the \var{url} uses the \file{http:} scheme identifier, the optional
 must in standard \file{application/x-www-form-urlencoded} format;
 see the \function{urlencode()} function below.
 
-The \function{urlopen()} function works transparently with proxies
-whicd do not require authentication.  In a \UNIX{} or Windows
-environment, set the \envvar{http_proxy}, \envvar{ftp_proxy} or
-\envvar{gopher_proxy} environment variables to a URL that identifies
-the proxy server before starting the Python interpreter.  For example
-(the \character{\%} is the command prompt):
+The \function{urlopen()} function works transparently with proxies.
+In a \UNIX{} or Windows environment, set the \envvar{http_proxy},
+\envvar{ftp_proxy} or \envvar{gopher_proxy} environment variables to a
+URL that identifies the proxy server before starting the Python
+interpreter.  For example (the \character{\%} is the command prompt):
 
 \begin{verbatim}
 % http_proxy="http://www.someproxy.com:3128"
@@ -78,9 +77,6 @@ the proxy server before starting the Python interpreter.  For example
 
 In a Macintosh environment, \function{urlopen()} will retrieve proxy
 information from Internet\index{Internet Config} Config.
-
-Proxies which require authentication for use are not currently
-supported; this is considered an implementation limitation.
 
 The \function{urlopen()} function works transparently with proxies.
 In a \UNIX{} or Windows environment, set the \envvar{http_proxy},
@@ -119,12 +115,6 @@ count of blocks transferred so far, a block size in bytes, and the
 total size of the file.  The third argument may be \code{-1} on older
 FTP servers which do not return a file size in response to a retrieval 
 request.
-
-If the \var{url} uses the \file{http:} scheme identifier, the optional
-\var{data} argument may be given to specify a \code{POST} request
-(normally the request type is \code{GET}).  The \var{data} argument
-must in standard \file{application/x-www-form-urlencoded} format;
-see the \function{urlencode()} function below.
 \end{funcdesc}
 
 \begin{funcdesc}{urlcleanup}{}
@@ -138,7 +128,7 @@ Letters, digits, and the characters \character{_,.-} are never quoted.
 The optional \var{safe} parameter specifies additional characters
 that should not be quoted --- its default value is \code{'/'}.
 
-Example: \code{quote('/\~{}connolly/')} yields \code{'/\%7econnolly/'}.
+Example: \code{quote('/\~connolly/')} yields \code{'/\%7econnolly/'}.
 \end{funcdesc}
 
 \begin{funcdesc}{quote_plus}{string\optional{, safe}}
@@ -150,7 +140,7 @@ string are escaped unless they are included in \var{safe}.
 \begin{funcdesc}{unquote}{string}
 Replace \samp{\%xx} escapes by their single-character equivalent.
 
-Example: \code{unquote('/\%7Econnolly/')} yields \code{'/\~{}connolly/'}.
+Example: \code{unquote('/\%7Econnolly/')} yields \code{'/\~connolly/'}.
 \end{funcdesc}
 
 \begin{funcdesc}{unquote_plus}{string}
@@ -168,24 +158,22 @@ characters, where both \var{key} and \var{value} are quoted using
 \function{quote_plus()} above.
 \end{funcdesc}
 
-The public functions \function{urlopen()} and
-\function{urlretrieve()} create an instance of the
-\class{FancyURLopener} class and use it to perform their requested
-actions.  To override this functionality, programmers can create a
-subclass of \class{URLopener} or \class{FancyURLopener}, then assign
-that an instance of that class to the
-\code{urllib._urlopener} variable before calling the desired function.
-For example, applications may want to specify a different
+The public functions \function{urlopen()} and \function{urlretrieve()}
+create an instance of the \class{FancyURLopener} class and use it to perform
+their requested actions.  To override this functionality, programmers can
+create a subclass of \class{URLopener} or \class{FancyURLopener}, then
+assign that class to the \var{urllib._urlopener} variable before calling the
+desired function.  For example, applications may want to specify a different
 \code{user-agent} header than \class{URLopener} defines.  This can be
 accomplished with the following code:
 
 \begin{verbatim}
 class AppURLopener(urllib.FancyURLopener):
     def __init__(self, *args):
-        self.version = "App/1.7"
         apply(urllib.FancyURLopener.__init__, (self,) + args)
+        self.version = "App/1.7"
 
-urllib._urlopener = AppURLopener()
+urllib._urlopener = AppURLopener
 \end{verbatim}
 
 \begin{classdesc}{URLopener}{\optional{proxies\optional{, **x509}}}
@@ -199,7 +187,7 @@ By default, the \class{URLopener} class sends a
 \var{VVV} is the \module{urllib} version number.  Applications can
 define their own \code{user-agent} header by subclassing
 \class{URLopener} or \class{FancyURLopener} and setting the instance
-attribute \member{version} to an appropriate string value before the
+attribute \var{version} to an appropriate string value before the
 \method{open()} method is called.
 
 Additional keyword parameters, collected in \var{x509}, are used for
@@ -273,9 +261,9 @@ manipulation is in module \refmodule{urlparse}\refstmodindex{urlparse}.
 \sectionauthor{Skip Montanaro}{skip@mojam.com}
 
 \class{URLopener} and \class{FancyURLopener} objects have the
-following attributes.
+following methodsL
 
-\begin{methoddesc}[URLopener]{open}{fullurl\optional{, data}}
+\begin{methoddesc}{open}{fullurl\optional{, data}}
 Open \var{fullurl} using the appropriate protocol.  This method sets 
 up cache and proxy information, then calls the appropriate open method with
 its input arguments.  If the scheme is not recognized,
@@ -283,13 +271,11 @@ its input arguments.  If the scheme is not recognized,
 has the same meaning as the \var{data} argument of \function{urlopen()}.
 \end{methoddesc}
 
-\begin{methoddesc}[URLopener]{open_unknown}{fullurl\optional{, data}}
+\begin{methoddesc}{open_unknown}{fullurl\optional{, data}}
 Overridable interface to open unknown URL types.
 \end{methoddesc}
 
-\begin{methoddesc}[URLopener]{retrieve}{url\optional{,
-                                        filename\optional{,
-                                        reporthook\optional{, data}}}}
+\begin{methoddesc}{retrieve}{url\optional{, filename\optional{, reporthook}}}
 Retrieves the contents of \var{url} and places it in \var{filename}.  The
 return value is a tuple consisting of a local filename and either a
 \class{mimetools.Message} object containing the response headers (for remote
@@ -302,20 +288,7 @@ path component of the input URL.  If \var{reporthook} is given, it must be
 a function accepting three numeric parameters.  It will be called after each
 chunk of data is read from the network.  \var{reporthook} is ignored for
 local URLs.
-
-If the \var{url} uses the \file{http:} scheme identifier, the optional
-\var{data} argument may be given to specify a \code{POST} request
-(normally the request type is \code{GET}).  The \var{data} argument
-must in standard \file{application/x-www-form-urlencoded} format;
-see the \function{urlencode()} function below.
 \end{methoddesc}
-
-\begin{memberdesc}[URLopener]{version}
-Variable that specifies the user agent of the opener object.  To get
-\refmodule{urllib} to tell servers that it is a particular user agent,
-set this in a subclass as a class variable or in the constructor
-before calling the base constructor.
-\end{memberdesc}
 
 
 \subsection{Examples}

@@ -30,7 +30,7 @@ This returns an instance of a class with the following public methods:
       tell()          -- return the current position
       close()         -- close the instance (make it unusable)
 The position returned by tell() and the position given to setpos()
-are compatible and have nothing to do with the actual position in the
+are compatible and have nothing to do with the actual postion in the
 file.
 The close() method is called automatically when the class instance
 is destroyed.
@@ -73,8 +73,7 @@ is destroyed.
 
 import __builtin__
 
-class Error(Exception):
-    pass
+Error = 'wave.Error'
 
 WAVE_FORMAT_PCM = 0x0001
 

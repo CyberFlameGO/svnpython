@@ -1,4 +1,3 @@
-
 /* Tokenizer implementation */
 
 #include "pgenheaders.h"
@@ -8,7 +7,7 @@
 #include "tokenizer.h"
 #include "errcode.h"
 
-extern char *PyOS_Readline(char *);
+extern char *PyOS_Readline Py_PROTO((char *));
 /* Return malloc'ed string including trailing \n;
    empty malloc'ed string for EOF;
    NULL if interrupted */
@@ -25,9 +24,9 @@ extern char *PyOS_Readline(char *);
 #endif
 
 /* Forward */
-static struct tok_state *tok_new(void);
-static int tok_nextc(struct tok_state *tok);
-static void tok_backup(struct tok_state *tok, int c);
+static struct tok_state *tok_new Py_PROTO((void));
+static int tok_nextc Py_PROTO((struct tok_state *tok));
+static void tok_backup Py_PROTO((struct tok_state *tok, int c));
 
 /* Token names */
 
@@ -69,17 +68,6 @@ char *_PyParser_TokenNames[] = {
 	"LEFTSHIFT",
 	"RIGHTSHIFT",
 	"DOUBLESTAR",
-	"PLUSEQUAL",
-	"MINEQUAL",
-	"STAREQUAL",
-	"SLASHEQUAL",
-	"PERCENTEQUAL",
-	"AMPEREQUAL",
-	"VBAREQUAL",
-	"CIRCUMFLEXEQUAL",
-	"LEFTSHIFTEQUAL",
-	"RIGHTSHIFTEQUAL",
-	"DOUBLESTAREQUAL",
 	/* This table must match the #defines in token.h! */
 	"OP",
 	"<ERRORTOKEN>",
@@ -90,7 +78,7 @@ char *_PyParser_TokenNames[] = {
 /* Create and initialize a new tok_state structure */
 
 static struct tok_state *
-tok_new(void)
+tok_new()
 {
 	struct tok_state *tok = PyMem_NEW(struct tok_state, 1);
 	if (tok == NULL)
@@ -118,7 +106,8 @@ tok_new(void)
 /* Set up tokenizer for string */
 
 struct tok_state *
-PyTokenizer_FromString(char *str)
+PyTokenizer_FromString(str)
+	char *str;
 {
 	struct tok_state *tok = tok_new();
 	if (tok == NULL)
@@ -131,7 +120,9 @@ PyTokenizer_FromString(char *str)
 /* Set up tokenizer for file */
 
 struct tok_state *
-PyTokenizer_FromFile(FILE *fp, char *ps1, char *ps2)
+PyTokenizer_FromFile(fp, ps1, ps2)
+	FILE *fp;
+	char *ps1, *ps2;
 {
 	struct tok_state *tok = tok_new();
 	if (tok == NULL)
@@ -152,7 +143,8 @@ PyTokenizer_FromFile(FILE *fp, char *ps1, char *ps2)
 /* Free a tok_state structure */
 
 void
-PyTokenizer_Free(struct tok_state *tok)
+PyTokenizer_Free(tok)
+	struct tok_state *tok;
 {
 	if (tok->fp != NULL && tok->buf != NULL)
 		PyMem_DEL(tok->buf);
@@ -163,7 +155,8 @@ PyTokenizer_Free(struct tok_state *tok)
 /* Get next char, updating state; error code goes into tok->done */
 
 static int
-tok_nextc(register struct tok_state *tok)
+tok_nextc(tok)
+	register struct tok_state *tok;
 {
 	for (;;) {
 		if (tok->cur != tok->inp) {
@@ -199,9 +192,9 @@ tok_nextc(register struct tok_state *tok)
 				tok->done = E_EOF;
 			}
 			else if (tok->start != NULL) {
-				size_t start = tok->start - tok->buf;
-				size_t oldlen = tok->cur - tok->buf;
-				size_t newlen = oldlen + strlen(new);
+				int start = tok->start - tok->buf;
+				int oldlen = tok->cur - tok->buf;
+				int newlen = oldlen + strlen(new);
 				char *buf = tok->buf;
 				PyMem_RESIZE(buf, char, newlen+1);
 				tok->lineno++;
@@ -318,7 +311,9 @@ tok_nextc(register struct tok_state *tok)
 /* Back-up one character */
 
 static void
-tok_backup(register struct tok_state *tok, register int c)
+tok_backup(tok, c)
+	register struct tok_state *tok;
+	register int c;
 {
 	if (c != EOF) {
 		if (--tok->cur < tok->buf)
@@ -332,7 +327,8 @@ tok_backup(register struct tok_state *tok, register int c)
 /* Return the token corresponding to a single character */
 
 int
-PyToken_OneChar(int c)
+PyToken_OneChar(c)
+	int c;
 {
 	switch (c) {
 	case '(':	return LPAR;
@@ -364,7 +360,8 @@ PyToken_OneChar(int c)
 
 
 int
-PyToken_TwoChars(int c1, int c2)
+PyToken_TwoChars(c1, c2)
+	int c1, c2;
 {
 	switch (c1) {
 	case '=':
@@ -390,103 +387,28 @@ PyToken_TwoChars(int c1, int c2)
 		case '>':	return RIGHTSHIFT;
 		}
 		break;
-	case '+':
-		switch (c2) {
-		case '=':	return PLUSEQUAL;
-		}
-		break;
-	case '-':
-		switch (c2) {
-		case '=':	return MINEQUAL;
-		}
-		break;
 	case '*':
 		switch (c2) {
 		case '*':	return DOUBLESTAR;
-		case '=':	return STAREQUAL;
-		}
-		break;
-	case '/':
-		switch (c2) {
-		case '=':	return SLASHEQUAL;
-		}
-		break;
-	case '|':
-		switch (c2) {
-		case '=':	return VBAREQUAL;
-		}
-		break;
-	case '%':
-		switch (c2) {
-		case '=':	return PERCENTEQUAL;
-		}
-		break;
-	case '&':
-		switch (c2) {
-		case '=':	return AMPEREQUAL;
-		}
-		break;
-	case '^':
-		switch (c2) {
-		case '=':	return CIRCUMFLEXEQUAL;
 		}
 		break;
 	}
 	return OP;
 }
 
-int
-PyToken_ThreeChars(int c1, int c2, int c3)
-{
-	switch (c1) {
-	case '<':
-		switch (c2) {
-		case '<':
-			switch (c3) {
-			case '=':
-				return LEFTSHIFTEQUAL;
-				break;
-			}
-			break;
-		}
-		break;
-	case '>':
-		switch (c2) {
-		case '>':
-			switch (c3) {
-			case '=':
-				return RIGHTSHIFTEQUAL;
-				break;
-			}
-			break;
-		}
-		break;
-	case '*':
-		switch (c2) {
-		case '*':
-			switch (c3) {
-			case '=':
-				return DOUBLESTAREQUAL;
-				break;
-			}
-			break;
-		}
-		break;
-	}
-	return OP;
-}
 
 static int
-indenterror(struct tok_state *tok)
+indenterror(tok)
+	struct tok_state *tok;
 {
 	if (tok->alterror) {
-		tok->done = E_TABSPACE;
+		tok->done = E_INDENT;
 		tok->cur = tok->inp;
 		return 1;
 	}
 	if (tok->altwarning) {
-		PySys_WriteStderr("%s: inconsistent use of tabs and spaces "
-                                  "in indentation\n", tok->filename);
+		PySys_WriteStderr("%s: inconsistent tab/space usage\n",
+			tok->filename);
 		tok->altwarning = 0;
 	}
 	return 0;
@@ -496,8 +418,9 @@ indenterror(struct tok_state *tok)
 /* Get next token, after space stripping etc. */
 
 int
-PyTokenizer_Get(register struct tok_state *tok, char **p_start,
-		char **p_end)
+PyTokenizer_Get(tok, p_start, p_end)
+	register struct tok_state *tok; /* In/out: tokenizer state */
+	char **p_start, **p_end; /* Out: point to start/end of token */
 {
 	register int c;
 	int blankline;
@@ -551,7 +474,9 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 			else if (col > tok->indstack[tok->indent]) {
 				/* Indent -- always one */
 				if (tok->indent+1 >= MAXINDENT) {
-					tok->done = E_TOODEEP;
+					PySys_WriteStderr(
+						"excessive indent\n");
+					tok->done = E_TOKEN;
 					tok->cur = tok->inp;
 					return ERRORTOKEN;
 				}
@@ -571,7 +496,9 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 					tok->indent--;
 				}
 				if (col != tok->indstack[tok->indent]) {
-					tok->done = E_DEDENT;
+					PySys_WriteStderr(
+						"inconsistent dedent\n");
+					tok->done = E_TOKEN;
 					tok->cur = tok->inp;
 					return ERRORTOKEN;
 				}
@@ -848,13 +775,6 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 		int c2 = tok_nextc(tok);
 		int token = PyToken_TwoChars(c, c2);
 		if (token != OP) {
-			int c3 = tok_nextc(tok);
-			int token3 = PyToken_ThreeChars(c, c2, c3);
-			if (token3 != OP) {
-				token = token3;
-			} else {
-				tok_backup(tok, c3);
-			}
 			*p_start = tok->start;
 			*p_end = tok->cur;
 			return token;
@@ -886,7 +806,9 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 #ifdef Py_DEBUG
 
 void
-tok_dump(int type, char *start, char *end)
+tok_dump(type, start, end)
+	int type;
+	char *start, *end;
 {
 	printf("%s", _PyParser_TokenNames[type]);
 	if (type == NAME || type == NUMBER || type == STRING || type == OP)

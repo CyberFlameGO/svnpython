@@ -1,6 +1,5 @@
 import ntpath
 import string
-import os
 
 errors = 0
 
@@ -34,15 +33,6 @@ tester('ntpath.isabs("c:\\")', 1)
 tester('ntpath.isabs("\\\\conky\\mountpoint\\")', 1)
 tester('ntpath.isabs("\\foo")', 1)
 tester('ntpath.isabs("\\foo\\bar")', 1)
-
-tester('ntpath.abspath("C:\\")', "C:\\")
-
-tester('ntpath.commonprefix(["/home/swenson/spam", "/home/swen/spam"])',
-       "/home/swen")
-tester('ntpath.commonprefix(["\\home\\swen\\spam", "\\home\\swen\\eggs"])',
-       "\\home\\swen\\")
-tester('ntpath.commonprefix(["/home/swen/spam", "/home/swen/spam"])',
-       "/home/swen/spam")
 
 if errors:
 	print str(errors) + " errors."

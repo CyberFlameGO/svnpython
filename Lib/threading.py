@@ -18,7 +18,6 @@ del time
 _start_new_thread = thread.start_new_thread
 _allocate_lock = thread.allocate_lock
 _get_ident = thread.get_ident
-ThreadError = thread.error
 del thread
 
 _print_exc = traceback.print_exc
@@ -462,8 +461,11 @@ class _MainThread(Thread):
         _active_limbo_lock.acquire()
         _active[_get_ident()] = self
         _active_limbo_lock.release()
-        import atexit
-        atexit.register(self.__exitfunc)
+        try:
+            self.__oldexitfunc = _sys.exitfunc
+        except AttributeError:
+            self.__oldexitfunc = None
+        _sys.exitfunc = self.__exitfunc
 
     def _set_daemon(self):
         return 0
@@ -477,6 +479,10 @@ class _MainThread(Thread):
         while t:
             t.join()
             t = _pickSomeNonDaemonThread()
+        if self.__oldexitfunc:
+            if __debug__:
+                self._note("%s: calling exit handler", self)
+            self.__oldexitfunc()
         if __debug__:
             self._note("%s: exiting", self)
         self._Thread__delete()

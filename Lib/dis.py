@@ -56,7 +56,6 @@ def disassemble(co, lasti=-1):
 	labels = findlabels(code)
 	n = len(code)
 	i = 0
-	extended_arg = 0
 	while i < n:
 		c = code[i]
 		op = ord(c)
@@ -69,11 +68,8 @@ def disassemble(co, lasti=-1):
 		print string.ljust(opname[op], 20),
 		i = i+1
 		if op >= HAVE_ARGUMENT:
-			oparg = ord(code[i]) + ord(code[i+1])*256 + extended_arg
-			extended_arg = 0
+			oparg = ord(code[i]) + ord(code[i+1])*256
 			i = i+2
-			if op == EXTENDED_ARG:
-				extended_arg = oparg*65536L
 			print string.rjust(`oparg`, 5),
 			if op in hasconst:
 				print '(' + `co.co_consts[oparg]` + ')',
@@ -150,7 +146,6 @@ def_op('POP_TOP', 1)
 def_op('ROT_TWO', 2)
 def_op('ROT_THREE', 3)
 def_op('DUP_TOP', 4)
-def_op('ROT_FOUR', 5)
 
 def_op('UNARY_POSITIVE', 10)
 def_op('UNARY_NEGATIVE', 11)
@@ -183,11 +178,6 @@ def_op('DELETE_SLICE+1', 51)
 def_op('DELETE_SLICE+2', 52)
 def_op('DELETE_SLICE+3', 53)
 
-def_op('INPLACE_ADD', 55)
-def_op('INPLACE_SUBTRACT', 56)
-def_op('INPLACE_MULTIPLY', 57)
-def_op('INPLACE_DIVIDE', 58)
-def_op('INPLACE_MODULO', 59)
 def_op('STORE_SUBSCR', 60)
 def_op('DELETE_SUBSCR', 61)
 
@@ -196,23 +186,16 @@ def_op('BINARY_RSHIFT', 63)
 def_op('BINARY_AND', 64)
 def_op('BINARY_XOR', 65)
 def_op('BINARY_OR', 66)
-def_op('INPLACE_POWER', 67)
 
 def_op('PRINT_EXPR', 70)
 def_op('PRINT_ITEM', 71)
 def_op('PRINT_NEWLINE', 72)
-def_op('PRINT_ITEM_TO', 73)
-def_op('PRINT_NEWLINE_TO', 74)
-def_op('INPLACE_LSHIFT', 75)
-def_op('INPLACE_RSHIFT', 76)
-def_op('INPLACE_AND', 77)
-def_op('INPLACE_XOR', 78)
-def_op('INPLACE_OR', 79)
+
 def_op('BREAK_LOOP', 80)
 
 def_op('LOAD_LOCALS', 82)
 def_op('RETURN_VALUE', 83)
-def_op('IMPORT_STAR', 84)
+
 def_op('EXEC_STMT', 85)
 
 def_op('POP_BLOCK', 87)
@@ -223,13 +206,13 @@ HAVE_ARGUMENT = 90		# Opcodes from here have an argument:
 
 name_op('STORE_NAME', 90)	# Index in name list 
 name_op('DELETE_NAME', 91)	# "" 
-def_op('UNPACK_SEQUENCE', 92)	# Number of tuple items 
-
+def_op('UNPACK_TUPLE', 92)	# Number of tuple items 
+def_op('UNPACK_LIST', 93)	# Number of list items 
 name_op('STORE_ATTR', 95)	# Index in name list 
 name_op('DELETE_ATTR', 96)	# ""
 name_op('STORE_GLOBAL', 97)	# ""
 name_op('DELETE_GLOBAL', 98)	# ""
-def_op('DUP_TOPX', 99)		# number of items to duplicate
+
 def_op('LOAD_CONST', 100)	# Index in const list 
 hasconst.append(100)
 name_op('LOAD_NAME', 101)	# Index in name list 
@@ -273,8 +256,6 @@ def_op('CALL_FUNCTION_VAR', 140)     # #args + (#kwargs << 8)
 def_op('CALL_FUNCTION_KW', 141)      # #args + (#kwargs << 8)
 def_op('CALL_FUNCTION_VAR_KW', 142)  # #args + (#kwargs << 8)
 
-def_op('EXTENDED_ARG', 143) 
-EXTENDED_ARG = 143
 
 def _test():
 	"""Simple test program to disassemble a file."""

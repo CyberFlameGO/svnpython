@@ -1,4 +1,3 @@
-
 /* Support for dynamic loading of extension modules */
 
 #include "dl.h"
@@ -7,7 +6,7 @@
 #include "importdl.h"
 
 
-extern char *Py_GetProgramName(void);
+extern char *Py_GetProgramName();
 
 const struct filedescr _PyImport_DynLoadFiletab[] = {
 	{".o", "rb", C_EXTENSION},

@@ -1,4 +1,3 @@
-
 /* This code implemented by Mark Hammond (MHammond@skippinet.com.au) */
 
 #include <windows.h>
@@ -90,7 +89,7 @@ void PyThread_exit_prog(int status)
 	do_PyThread_exit_prog(status, 0);
 }
 
-void PyThread__exit_prog(int status)
+void PyThread__exit_prog _P1(int status)
 {
 	do_PyThread_exit_prog(status, 1);
 }
@@ -114,14 +113,14 @@ PyThread_type_lock PyThread_allocate_lock(void)
 						1,              /* Is initially signalled  */
                         NULL);          /* Name of event            */
 
-    dprintf(("%ld: PyThread_allocate_lock() -> %p\n", PyThread_get_thread_ident(), aLock));
+    dprintf(("%ld: PyThread_allocate_lock() -> %lx\n", PyThread_get_thread_ident(), (long)aLock));
 
     return (PyThread_type_lock) aLock;
 }
 
 void PyThread_free_lock(PyThread_type_lock aLock)
 {
-    dprintf(("%ld: PyThread_free_lock(%p) called\n", PyThread_get_thread_ident(),aLock));
+    dprintf(("%ld: PyThread_free_lock(%lx) called\n", PyThread_get_thread_ident(),(long)aLock));
 
     CloseHandle(aLock);
 }
@@ -137,7 +136,7 @@ int PyThread_acquire_lock(PyThread_type_lock aLock, int waitflag)
     int success = 1;
     DWORD waitResult;
 
-    dprintf(("%ld: PyThread_acquire_lock(%p, %d) called\n", PyThread_get_thread_ident(),aLock, waitflag));
+    dprintf(("%ld: PyThread_acquire_lock(%lx, %d) called\n", PyThread_get_thread_ident(),(long)aLock, waitflag));
 
 #ifndef DEBUG
     waitResult = WaitForSingleObject(aLock, (waitflag == 1 ? INFINITE : 0));
@@ -155,17 +154,17 @@ int PyThread_acquire_lock(PyThread_type_lock aLock, int waitflag)
 		success = 0;    /* We failed */
     }
 
-	dprintf(("%ld: PyThread_acquire_lock(%p, %d) -> %d\n", PyThread_get_thread_ident(),aLock, waitflag, success));
+	dprintf(("%ld: PyThread_acquire_lock(%lx, %d) -> %d\n", PyThread_get_thread_ident(),(long)aLock, waitflag, success));
 
 	return success;
 }
 
 void PyThread_release_lock(PyThread_type_lock aLock)
 {
-    dprintf(("%ld: PyThread_release_lock(%p) called\n", PyThread_get_thread_ident(),aLock));
+    dprintf(("%ld: PyThread_release_lock(%lx) called\n", PyThread_get_thread_ident(),(long)aLock));
 
     if (!SetEvent(aLock))
-        dprintf(("%ld: Could not PyThread_release_lock(%p) error: %l\n", PyThread_get_thread_ident(), aLock, GetLastError()));
+        dprintf(("%ld: Could not PyThread_release_lock(%lx) error: %l\n", PyThread_get_thread_ident(), (long)aLock, GetLastError()));
 }
 
 

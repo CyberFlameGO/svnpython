@@ -4,8 +4,7 @@ import rgbimg, os, uu
 
 from test_support import verbose, unlink, findfile
 
-class error(Exception):
-        pass
+error = 'test_rgbimg.error'
 
 print 'RGBimg test suite:'
 

@@ -1,4 +1,3 @@
-
 /* Write Python objects to files and read them back.
    This is intended for writing and reading compiled Python code only;
    a true persistent storage facility would be much harder, since
@@ -8,12 +7,6 @@
 #include "longintrepr.h"
 #include "compile.h"
 #include "marshal.h"
-
-/* High water mark to determine when the marshalled object is dangerously deep
- * and risks coring the interpreter.  When the object stack gets this deep,
- * raise an exception instead of continuing.
- */
-#define MAX_MARSHAL_STACK_DEPTH 5000
 
 #define TYPE_NULL	'0'
 #define TYPE_NONE	'N'
@@ -34,7 +27,6 @@
 typedef struct {
 	FILE *fp;
 	int error;
-	int depth;
 	/* If fp == NULL, the following are valid: */
 	PyObject *str;
 	char *ptr;
@@ -46,7 +38,9 @@ typedef struct {
 			   else w_more(c, p)
 
 static void
-w_more(int c, WFILE *p)
+w_more(c, p)
+	char c;
+	WFILE *p;
 {
 	int size, newsize;
 	if (p->str == NULL)
@@ -60,12 +54,15 @@ w_more(int c, WFILE *p)
 		p->ptr = PyString_AS_STRING((PyStringObject *)p->str) + size;
 		p->end =
 			PyString_AS_STRING((PyStringObject *)p->str) + newsize;
-		*p->ptr++ = Py_SAFE_DOWNCAST(c, int, char);
+		*p->ptr++ = c;
 	}
 }
 
 static void
-w_string(char *s, int n, WFILE *p)
+w_string(s, n, p)
+	char *s;
+	int n;
+	WFILE *p;
 {
 	if (p->fp != NULL) {
 		fwrite(s, 1, n, p->fp);
@@ -79,14 +76,18 @@ w_string(char *s, int n, WFILE *p)
 }
 
 static void
-w_short(int x, WFILE *p)
+w_short(x, p)
+	int x;
+	WFILE *p;
 {
 	w_byte( x      & 0xff, p);
 	w_byte((x>> 8) & 0xff, p);
 }
 
 static void
-w_long(long x, WFILE *p)
+w_long(x, p)
+	long x;
+	WFILE *p;
 {
 	w_byte((int)( x      & 0xff), p);
 	w_byte((int)((x>> 8) & 0xff), p);
@@ -96,7 +97,9 @@ w_long(long x, WFILE *p)
 
 #if SIZEOF_LONG > 4
 static void
-w_long64(long x, WFILE *p)
+w_long64(x, p)
+	long x;
+	WFILE *p;
 {
 	w_long(x, p);
 	w_long(x>>32, p);
@@ -104,17 +107,14 @@ w_long64(long x, WFILE *p)
 #endif
 
 static void
-w_object(PyObject *v, WFILE *p)
+w_object(v, p)
+	PyObject *v;
+	WFILE *p;
 {
 	int i, n;
 	PyBufferProcs *pb;
-
-	p->depth++;
 	
-	if (p->depth > MAX_MARSHAL_STACK_DEPTH) {
-		p->error = 2;
-	} 
-	else if (v == NULL) {
+	if (v == NULL) {
 		w_byte(TYPE_NULL, p);
 	}
 	else if (v == Py_None) {
@@ -149,7 +149,8 @@ w_object(PyObject *v, WFILE *p)
 			w_short(ob->ob_digit[i], p);
 	}
 	else if (PyFloat_Check(v)) {
-		extern void PyFloat_AsString(char *, PyFloatObject *);
+		extern void PyFloat_AsString
+			Py_PROTO((char *, PyFloatObject *));
 		char buf[256]; /* Plenty to format any double */
 		PyFloat_AsString(buf, (PyFloatObject *)v);
 		n = strlen(buf);
@@ -159,7 +160,8 @@ w_object(PyObject *v, WFILE *p)
 	}
 #ifndef WITHOUT_COMPLEX
 	else if (PyComplex_Check(v)) {
-		extern void PyFloat_AsString(char *, PyFloatObject *);
+		extern void PyFloat_AsString
+			Py_PROTO((char *, PyFloatObject *));
 		char buf[256]; /* Plenty to format any double */
 		PyFloatObject *temp;
 		w_byte(TYPE_COMPLEX, p);
@@ -189,9 +191,8 @@ w_object(PyObject *v, WFILE *p)
 	        PyObject *utf8;
 		utf8 = PyUnicode_AsUTF8String(v);
 		if (utf8 == NULL) {
-			p->depth--;
-			p->error = 1;
-			return;
+		    p->error = 1;
+		    return;
 		}
 		w_byte(TYPE_UNICODE, p);
 		n = PyString_GET_SIZE(utf8);
@@ -259,27 +260,27 @@ w_object(PyObject *v, WFILE *p)
 		w_byte(TYPE_UNKNOWN, p);
 		p->error = 1;
 	}
-
-	p->depth--;
 }
 
 void
-PyMarshal_WriteLongToFile(long x, FILE *fp)
+PyMarshal_WriteLongToFile(x, fp)
+	long x;
+	FILE *fp;
 {
 	WFILE wf;
 	wf.fp = fp;
 	wf.error = 0;
-	wf.depth = 0;
 	w_long(x, &wf);
 }
 
 void
-PyMarshal_WriteObjectToFile(PyObject *x, FILE *fp)
+PyMarshal_WriteObjectToFile(x, fp)
+	PyObject *x;
+	FILE *fp;
 {
 	WFILE wf;
 	wf.fp = fp;
 	wf.error = 0;
-	wf.depth = 0;
 	w_object(x, &wf);
 }
 
@@ -290,7 +291,10 @@ typedef WFILE RFILE; /* Same struct with different invariants */
 #define r_byte(p) ((p)->fp ? getc((p)->fp) : rs_byte(p))
 
 static int
-r_string(char *s, int n, RFILE *p)
+r_string(s, n, p)
+	char *s;
+	int n;
+	RFILE *p;
 {
 	if (p->fp != NULL)
 		return fread(s, 1, n, p->fp);
@@ -302,7 +306,8 @@ r_string(char *s, int n, RFILE *p)
 }
 
 static int
-r_short(RFILE *p)
+r_short(p)
+	RFILE *p;
 {
 	register short x;
 	x = r_byte(p);
@@ -312,7 +317,8 @@ r_short(RFILE *p)
 }
 
 static long
-r_long(RFILE *p)
+r_long(p)
+	RFILE *p;
 {
 	register long x;
 	register FILE *fp = p->fp;
@@ -337,7 +343,8 @@ r_long(RFILE *p)
 }
 
 static long
-r_long64(RFILE *p)
+r_long64(p)
+	RFILE *p;
 {
 	register long x;
 	x = r_long(p);
@@ -356,7 +363,8 @@ r_long64(RFILE *p)
 }
 
 static PyObject *
-r_object(RFILE *p)
+r_object(p)
+	RFILE *p;
 {
 	PyObject *v, *v2;
 	long i, n;
@@ -403,7 +411,7 @@ r_object(RFILE *p)
 	
 	case TYPE_FLOAT:
 		{
-			extern double atof(const char *);
+			extern double atof Py_PROTO((const char *));
 			char buf[256];
 			double dx;
 			n = r_byte(p);
@@ -422,7 +430,7 @@ r_object(RFILE *p)
 #ifndef WITHOUT_COMPLEX
 	case TYPE_COMPLEX:
 		{
-			extern double atof(const char *);
+			extern double atof Py_PROTO((const char *));
 			char buf[256];
 			Py_complex c;
 			n = r_byte(p);
@@ -601,7 +609,8 @@ r_object(RFILE *p)
 }
 
 long
-PyMarshal_ReadLongFromFile(FILE *fp)
+PyMarshal_ReadLongFromFile(fp)
+	FILE *fp;
 {
 	RFILE rf;
 	rf.fp = fp;
@@ -609,7 +618,8 @@ PyMarshal_ReadLongFromFile(FILE *fp)
 }
 
 PyObject *
-PyMarshal_ReadObjectFromFile(FILE *fp)
+PyMarshal_ReadObjectFromFile(fp)
+	FILE *fp;
 {
 	RFILE rf;
 	if (PyErr_Occurred()) {
@@ -621,7 +631,9 @@ PyMarshal_ReadObjectFromFile(FILE *fp)
 }
 
 PyObject *
-PyMarshal_ReadObjectFromString(char *str, int len)
+PyMarshal_ReadObjectFromString(str, len)
+	char *str;
+	int len;
 {
 	RFILE rf;
 	if (PyErr_Occurred()) {
@@ -636,7 +648,8 @@ PyMarshal_ReadObjectFromString(char *str, int len)
 }
 
 PyObject *
-PyMarshal_WriteObjectToString(PyObject *x) /* wrs_object() */
+PyMarshal_WriteObjectToString(x) /* wrs_object() */
+	PyObject *x;
 {
 	WFILE wf;
 	wf.fp = NULL;
@@ -646,7 +659,6 @@ PyMarshal_WriteObjectToString(PyObject *x) /* wrs_object() */
 	wf.ptr = PyString_AS_STRING((PyStringObject *)wf.str);
 	wf.end = wf.ptr + PyString_Size(wf.str);
 	wf.error = 0;
-	wf.depth = 0;
 	w_object(x, &wf);
 	if (wf.str != NULL)
 		_PyString_Resize(&wf.str,
@@ -654,9 +666,7 @@ PyMarshal_WriteObjectToString(PyObject *x) /* wrs_object() */
 			   PyString_AS_STRING((PyStringObject *)wf.str)));
 	if (wf.error) {
 		Py_XDECREF(wf.str);
-		PyErr_SetString(PyExc_ValueError, 
-				(wf.error==1)?"unmarshallable object"
-				:"object too deeply nested to marshal");
+		PyErr_SetString(PyExc_ValueError, "unmarshallable object");
 		return NULL;
 	}
 	return wf.str;
@@ -665,7 +675,9 @@ PyMarshal_WriteObjectToString(PyObject *x) /* wrs_object() */
 /* And an interface for Python programs... */
 
 static PyObject *
-marshal_dump(PyObject *self, PyObject *args)
+marshal_dump(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	WFILE wf;
 	PyObject *x;
@@ -681,12 +693,9 @@ marshal_dump(PyObject *self, PyObject *args)
 	wf.str = NULL;
 	wf.ptr = wf.end = NULL;
 	wf.error = 0;
-	wf.depth = 0;
 	w_object(x, &wf);
 	if (wf.error) {
-		PyErr_SetString(PyExc_ValueError, 
-				(wf.error==1)?"unmarshallable object"
-				:"object too deeply nested to marshal");
+		PyErr_SetString(PyExc_ValueError, "unmarshallable object");
 		return NULL;
 	}
 	Py_INCREF(Py_None);
@@ -694,7 +703,9 @@ marshal_dump(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-marshal_load(PyObject *self, PyObject *args)
+marshal_load(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	RFILE rf;
 	PyObject *f;
@@ -719,7 +730,9 @@ marshal_load(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-marshal_dumps(PyObject *self, PyObject *args)
+marshal_dumps(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *x;
 	if (!PyArg_ParseTuple(args, "O:dumps", &x))
@@ -728,7 +741,9 @@ marshal_dumps(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-marshal_loads(PyObject *self, PyObject *args)
+marshal_loads(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	RFILE rf;
 	PyObject *v;
@@ -758,7 +773,7 @@ static PyMethodDef marshal_methods[] = {
 };
 
 void
-PyMarshal_Init(void)
+PyMarshal_Init()
 {
 	(void) Py_InitModule("marshal", marshal_methods);
 }

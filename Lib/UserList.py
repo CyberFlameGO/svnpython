@@ -4,7 +4,7 @@ class UserList:
     def __init__(self, initlist=None):
         self.data = []
         if initlist is not None:
-            # XXX should this accept an arbitrary sequence?
+            # XXX should this accept an arbitary sequence?
             if type(initlist) == type(self.data):
                 self.data[:] = initlist
             elif isinstance(initlist, UserList):
@@ -51,20 +51,9 @@ class UserList:
             return self.__class__(other + self.data)
         else:
             return self.__class__(list(other) + self.data)
-    def __iadd__(self, other):
-        if isinstance(other, UserList):
-            self.data += other.data
-        elif isinstance(other, type(self.data)):
-            self.data += other
-        else:
-            self.data += list(other)
-        return self
     def __mul__(self, n):
         return self.__class__(self.data*n)
     __rmul__ = __mul__
-    def __imul__(self, n):
-        self.data *= n
-        return self
     def append(self, item): self.data.append(item)
     def insert(self, i, item): self.data.insert(i, item)
     def pop(self, i=-1): return self.data.pop(i)

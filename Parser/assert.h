@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-
 #ifdef MPW /* This is for MPW's File command */
 
 #define assert(e) { if (!(e)) { printf("### Python: Assertion failed:\n\

@@ -193,7 +193,7 @@ class Message:
         
         You may override this method if your application wants
         to bend the rules, e.g. to strip trailing whitespace,
-        or to recognize MH template separators ('--------').
+        or to recognise MH template separators ('--------').
         For convenience (e.g. for code reading from sockets) a
         line consisting of \r\n also matches.                
         """
@@ -763,13 +763,6 @@ class AddressList(AddrlistClass):
                 newaddr.addresslist.append(x)
         return newaddr
 
-    def __iadd__(self, other):
-        # Set union, in-place
-        for x in other.addresslist:
-            if not x in self.addresslist:
-                self.addresslist.append(x)
-        return self
-
     def __sub__(self, other):
         # Set difference
         newaddr = AddressList(None)
@@ -777,13 +770,6 @@ class AddressList(AddrlistClass):
             if not x in other.addresslist:
                 newaddr.addresslist.append(x)
         return newaddr
-
-    def __isub__(self, other):
-        # Set difference, in-place
-        for x in other.addresslist:
-            if x in self.addresslist:
-                self.addresslist.remove(x)
-        return self
 
     def __getitem__(self, index):
         # Make indexing, slices, and 'in' work

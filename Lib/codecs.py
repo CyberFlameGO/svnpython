@@ -273,7 +273,7 @@ class StreamReader(Codec):
         """ Resets the codec buffers used for keeping state.
 
             Note that no stream repositioning should take place.
-            This method is primarily intended to be able to recover
+            This method is primarely intended to be able to recover
             from decoding errors.
 
         """
@@ -295,7 +295,7 @@ class StreamReaderWriter:
         work in both read and write modes.
 
         The design is such that one can use the factory functions
-        returned by the codec.lookup() function to construct the
+        returned by the codec.lookup() function to contruct the
         instance.
 
     """
@@ -458,7 +458,7 @@ class StreamRecoder:
 
 ### Shortcuts
 
-def open(filename, mode='rb', encoding=None, errors='strict', buffering=1):
+def open(filename, mode, encoding=None, errors='strict', buffering=1):
 
     """ Open an encoded file using the given mode and return
         a wrapped version providing transparent encoding/decoding.
@@ -467,11 +467,6 @@ def open(filename, mode='rb', encoding=None, errors='strict', buffering=1):
         defined by the codecs, i.e. Unicode objects for most builtin
         codecs. Output is also codec dependent and will usually by
         Unicode as well.
-
-        Files are always opened in binary mode, even if no binary mode
-        was specified. Thisis done to avoid data loss due to encodings
-        using 8-bit values. The default file mode is 'rb' meaning to
-        open the file in binary read mode.
 
         encoding specifies the encoding which is to be used for the
         the file.

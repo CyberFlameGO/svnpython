@@ -1,4 +1,3 @@
-
 /* Support for dynamic loading of extension modules */
 
 #include "Python.h"
@@ -6,6 +5,10 @@
 
 #include <Aliases.h>
 #include <CodeFragments.h>
+#ifdef SYMANTEC__CFM68K__ /* Really an older version of Universal Headers */
+#define CFragConnectionID ConnectionID
+#define kLoadCFrag 0x01
+#endif
 #ifdef USE_GUSI1
 #include "TFileSpec.h"		/* for Path2FSSpec() */
 #endif

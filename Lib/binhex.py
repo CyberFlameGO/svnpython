@@ -13,7 +13,7 @@ hexbin(inputfilename, outputfilename)
 # XXXX Note: currently, textfiles appear in mac-form on all platforms.
 # We seem to lack a simple character-translate in python.
 # (we should probably use ISO-Latin-1 on all but the mac platform).
-# XXXX The simple routines are too simple: they expect to hold the complete
+# XXXX The simeple routines are too simple: they expect to hold the complete
 # files in-core. Should be fixed.
 # XXXX It would be nice to handle AppleDouble format on unix
 # (for servers serving macs).
@@ -27,8 +27,7 @@ import struct
 import string
 import binascii
     
-class Error(Exception):
-    pass
+Error = 'binhex.Error'
 
 # States (what have we written)
 [_DID_HEADER, _DID_DATA, _DID_RSRC] = range(3)
@@ -49,7 +48,7 @@ if os.name == 'mac':
     try:
         openrf = MacOS.openrf
     except AttributeError:
-        # Backward compatibility
+        # Backward compatability
         openrf = open
     
     def FInfo():
@@ -76,7 +75,7 @@ if os.name == 'mac':
 
 else:
     #
-    # Glue code for non-macintosh usage
+    # Glue code for non-macintosh useage
     #
     
     class FInfo:

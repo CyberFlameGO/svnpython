@@ -28,7 +28,7 @@ import os
 import sys
 
 
-__version__ = '1.13'    # XXX This version is not always updated :-(
+__version__ = '1.12'    # XXX This version is not always updated :-(
 
 MAXFTPCACHE = 10        # Trim the ftp cache beyond this size
 
@@ -53,7 +53,6 @@ else:
 # Shortcut for basic usage
 _urlopener = None
 def urlopen(url, data=None):
-    """urlopen(url [, data]) -> open file-like object"""
     global _urlopener
     if not _urlopener:
         _urlopener = FancyURLopener()
@@ -61,11 +60,11 @@ def urlopen(url, data=None):
         return _urlopener.open(url)
     else:
         return _urlopener.open(url, data)
-def urlretrieve(url, filename=None, reporthook=None, data=None):
+def urlretrieve(url, filename=None, reporthook=None):
     global _urlopener
     if not _urlopener:
         _urlopener = FancyURLopener()
-    return _urlopener.retrieve(url, filename, reporthook, data)
+    return _urlopener.retrieve(url, filename, reporthook)
 def urlcleanup():
     if _urlopener:
         _urlopener.cleanup()
@@ -82,8 +81,6 @@ class URLopener:
 
     __tempfiles = None
 
-    version = "Python-urllib/%s" % __version__
-
     # Constructor
     def __init__(self, proxies=None, **x509):
         if proxies is None:
@@ -92,7 +89,8 @@ class URLopener:
         self.proxies = proxies
         self.key_file = x509.get('key_file')
         self.cert_file = x509.get('cert_file')
-        self.addheaders = [('User-agent', self.version)]
+        server_version = "Python-urllib/%s" % __version__
+        self.addheaders = [('User-agent', server_version)]
         self.__tempfiles = []
         self.__unlink = os.unlink # See cleanup()
         self.tempcache = None
@@ -172,7 +170,7 @@ class URLopener:
         raise IOError, ('url error', 'unknown url type', type)
 
     # External interface
-    def retrieve(self, url, filename=None, reporthook=None, data=None):
+    def retrieve(self, url, filename=None, reporthook=None):
         """retrieve(url) returns (filename, None) for a local object
         or (tempfilename, headers) for a remote object."""
         url = unwrap(url)
@@ -187,7 +185,7 @@ class URLopener:
                 return url2pathname(splithost(url1)[1]), hdrs
             except IOError, msg:
                 pass
-        fp = self.open(url, data)
+        fp = self.open(url)
         headers = fp.info()
         if not filename:
             import tempfile
@@ -304,27 +302,18 @@ class URLopener:
         def open_https(self, url, data=None):
             """Use HTTPS protocol."""
             import httplib
-            user_passwd = None
             if type(url) is type(""):
                 host, selector = splithost(url)
-                if host:
-                    user_passwd, host = splituser(host)
-                    host = unquote(host)
-                realhost = host
+                user_passwd, host = splituser(host)
             else:
                 host, selector = url
                 urltype, rest = splittype(selector)
-                url = rest
-                user_passwd = None
-                if string.lower(urltype) != 'https':
-                    realhost = None
-                else:
+                if string.lower(urltype) == 'https':
                     realhost, rest = splithost(rest)
-                    if realhost:
-                        user_passwd, realhost = splituser(realhost)
+                    user_passwd, realhost = splituser(realhost)
                     if user_passwd:
                         selector = "%s://%s%s" % (urltype, realhost, rest)
-                #print "proxy via https:", host, selector
+                print "proxy via https:", host, selector
             if not host: raise IOError, ('https error', 'no host given')
             if user_passwd:
                 import base64
@@ -342,7 +331,6 @@ class URLopener:
             else:
                 h.putrequest('GET', selector)
             if auth: h.putheader('Authorization: Basic %s' % auth)
-            if realhost: h.putheader('Host', realhost)
             for args in self.addheaders: apply(h.putheader, args)
             h.endheaders()
             if data is not None:
@@ -352,11 +340,8 @@ class URLopener:
             if errcode == 200:
                 return addinfourl(fp, headers, url)
             else:
-                if data is None:
-                    return self.http_error(url, fp, errcode, errmsg, headers)
-                else:
-                    return self.http_error(url, fp, errcode, errmsg, headers, data)
-
+                return self.http_error(url, fp, errcode, errmsg, headers)
+  
     def open_gopher(self, url):
         """Use Gopher protocol."""
         import gopherlib
@@ -741,11 +726,11 @@ class addclosehook(addbase):
         self.hookargs = hookargs
 
     def close(self):
-        addbase.close(self)
         if self.closehook:
             apply(self.closehook, self.hookargs)
             self.closehook = None
             self.hookargs = None
+        addbase.close(self)
 
 class addinfo(addbase):
     """class to add an info() method to an open file."""
@@ -788,7 +773,7 @@ def basejoin(base, url):
             # just return it
             return url
     host, basepath = splithost(basepath) # inherit host
-    basepath, basetag = splittag(basepath) # remove extraneous cruft
+    basepath, basetag = splittag(basepath) # remove extraneuous cruft
     basepath, basequery = splitquery(basepath) # idem
     if path[:1] != '/':
         # non-absolute path name
@@ -863,7 +848,7 @@ def splittype(url):
     match = _typeprog.match(url)
     if match:
         scheme = match.group(1)
-        return scheme.lower(), url[len(scheme) + 1:]
+        return scheme, url[len(scheme) + 1:]
     return None, url
 
 _hostprog = None
@@ -887,7 +872,7 @@ def splituser(host):
         _userprog = re.compile('^([^@]*)@(.*)$')
 
     match = _userprog.match(host)
-    if match: return map(unquote, match.group(1, 2))
+    if match: return match.group(1, 2)
     return None, host
 
 _passwdprog = None
@@ -1005,17 +990,14 @@ def unquote(s):
     return string.join(res, "")
 
 def unquote_plus(s):
-    """unquote('%7e/abc+def') -> '~/abc def'"""
     if '+' in s:
         # replace '+' with ' '
         s = string.join(string.split(s, '+'), ' ')
     return unquote(s)
 
-always_safe = ('ABCDEFGHIJKLMNOPQRSTUVWXYZ' 
-               'abcdefghijklmnopqrstuvwxyz'
-               '0123456789' '_,.-')
+always_safe = string.letters + string.digits + '_,.-'
 def quote(s, safe = '/'):
-    """quote('abc def') -> 'abc%20def'."""
+    """quote('abc def') -> 'abc%20def')."""
     # XXX Can speed this up an order of magnitude
     safe = always_safe + safe
     res = list(s)
@@ -1045,23 +1027,8 @@ def urlencode(dict):
         l.append(k + '=' + v)
     return string.join(l, '&')
 
+
 # Proxy handling
-def getproxies_environment():
-    """Return a dictionary of scheme -> proxy server URL mappings.
-
-    Scan the environment for variables named <scheme>_proxy;
-    this seems to be the standard convention.  If you need a
-    different way, you can pass a proxies dictionary to the
-    [Fancy]URLopener constructor.
-
-    """
-    proxies = {}
-    for name, value in os.environ.items():
-        name = string.lower(name)
-        if value and name[-6:] == '_proxy':
-            proxies[name[:-6]] = value
-    return proxies
-
 if os.name == 'mac':
     def getproxies():
         """Return a dictionary of scheme -> proxy server URL mappings.
@@ -1092,55 +1059,23 @@ if os.name == 'mac':
         # FTP: XXXX To be done.
         # Gopher: XXXX To be done.
         return proxies
-
-elif os.name == 'nt':
-    def getproxies_registry():
-        """Return a dictionary of scheme -> proxy server URL mappings.
-
-        Win32 uses the registry to store proxies.
-
-        """
-        proxies = {}
-        try:
-            import _winreg
-        except ImportError:
-            # Std module, so should be around - but you never know!
-            return proxies
-        try:
-            internetSettings = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 
-                'Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings')
-            proxyEnable = _winreg.QueryValueEx(internetSettings,
-                                               'ProxyEnable')[0]
-            if proxyEnable:
-                # Returned as Unicode but problems if not converted to ASCII
-                proxyServer = str(_winreg.QueryValueEx(internetSettings,
-                                                       'ProxyServer')[0])
-                if ';' in proxyServer:        # Per-protocol settings
-                    for p in proxyServer.split(';'):
-                        protocol, address = p.split('=')
-                        proxies[protocol] = '%s://%s' % (protocol, address)
-                else:        # Use one setting for all protocols
-                    proxies['http'] = 'http://%s' % proxyServer
-                    proxies['ftp'] = 'ftp://%s' % proxyServer
-            internetSettings.Close()
-        except (WindowsError, ValueError, TypeError):
-            # Either registry key not found etc, or the value in an
-            # unexpected format.
-            # proxies already set up to be empty so nothing to do
-            pass
-        return proxies
-
+                
+else:
     def getproxies():
         """Return a dictionary of scheme -> proxy server URL mappings.
-
-        Returns settings gathered from the environment, if specified,
-        or the registry.
-
+    
+        Scan the environment for variables named <scheme>_proxy;
+        this seems to be the standard convention.  If you need a
+        different way, you can pass a proxies dictionary to the
+        [Fancy]URLopener constructor.
+    
         """
-        return getproxies_environment() or getproxies_registry()
-else:
-    # By default use environment variables
-    getproxies = getproxies_environment
+        proxies = {}
+        for name, value in os.environ.items():
+            name = string.lower(name)
+            if value and name[-6:] == '_proxy':
+                proxies[name[:-6]] = value
+        return proxies
 
 
 # Test and time quote() and unquote()

@@ -109,6 +109,9 @@
 /* Define this if your time.h defines altzone */
 #undef HAVE_ALTZONE
 
+/* Define this if you have gethostbyname() */
+#undef HAVE_GETHOSTBYNAME
+
 /* Define this if you have some version of gethostbyname_r() */
 #undef HAVE_GETHOSTBYNAME_R
 
@@ -124,8 +127,8 @@
 /* Define this if you have the type long long */
 #undef HAVE_LONG_LONG
 
-/* Define this if you have the type uintptr_t */
-#undef HAVE_UINTPTR_T
+/* Define this if you have a K&R style C preprocessor */
+#undef HAVE_OLD_CPP
 
 /* Define if your compiler supports function prototypes */
 #undef HAVE_PROTOTYPES
@@ -203,27 +206,12 @@
 /* Define if you want to compile in rudimentary thread support */
 #undef WITH_THREAD
 
-/* Define if you want to compile in cycle garbage collection */
-#undef WITH_CYCLE_GC
-
 /* Define if you want to produce an OpenStep/Rhapsody framework
    (shared library plus accessory files). */
 #undef WITH_NEXT_FRAMEWORK
 
-/* Define if you want to use BSD db. */
-#undef WITH_LIBDB
-
-/* Define if you want to build an interpreter with many run-time checks  */
-#undef Py_DEBUG
-
 /* The number of bytes in an off_t. */
 #undef SIZEOF_OFF_T
-
-/* The number of bytes in a time_t. */
-#undef SIZEOF_TIME_T
-
-/* The number of bytes in a pthread_t. */
-#undef SIZEOF_PTHREAD_T
 
 /* Defined to enable large file support when an off_t is bigger than a long
    and long long is available and at least as big as an off_t. You may need
@@ -237,11 +225,6 @@
 /* Defined when any dynamic module loading is enabled */
 #undef HAVE_DYNAMIC_LOADING
 
-/* Define if i>>j for signed int i does not extend the sign bit
-   when i < 0
-*/
-#undef SIGNED_RIGHT_SHIFT_ZERO_FILLS
-
 /* The number of bytes in a char.  */
 #undef SIZEOF_CHAR
 
@@ -250,9 +233,6 @@
 
 /* The number of bytes in a float.  */
 #undef SIZEOF_FLOAT
-
-/* The number of bytes in a fpos_t.  */
-#undef SIZEOF_FPOS_T
 
 /* The number of bytes in a int.  */
 #undef SIZEOF_INT
@@ -266,14 +246,8 @@
 /* The number of bytes in a short.  */
 #undef SIZEOF_SHORT
 
-/* The number of bytes in a uintptr_t.  */
-#undef SIZEOF_UINTPTR_T
-
 /* The number of bytes in a void *.  */
 #undef SIZEOF_VOID_P
-
-/* Define if you have the _getpty function.  */
-#undef HAVE__GETPTY
 
 /* Define if you have the alarm function.  */
 #undef HAVE_ALARM
@@ -311,9 +285,6 @@
 /* Define if you have the fork function.  */
 #undef HAVE_FORK
 
-/* Define if you have the forkpty function.  */
-#undef HAVE_FORKPTY
-
 /* Define if you have the fpathconf function.  */
 #undef HAVE_FPATHCONF
 
@@ -346,9 +317,6 @@
 
 /* Define if you have the getgroups function.  */
 #undef HAVE_GETGROUPS
-
-/* Define if you have the gethostbyname function.  */
-#undef HAVE_GETHOSTBYNAME
 
 /* Define if you have the getlogin function.  */
 #undef HAVE_GETLOGIN
@@ -392,14 +360,8 @@
 /* Define if you have the mktime function.  */
 #undef HAVE_MKTIME
 
-/* Define if you have the mremap function.  */
-#undef HAVE_MREMAP
-
 /* Define if you have the nice function.  */
 #undef HAVE_NICE
-
-/* Define if you have the openpty function.  */
-#undef HAVE_OPENPTY
 
 /* Define if you have the pathconf function.  */
 #undef HAVE_PATHCONF
@@ -409,9 +371,6 @@
 
 /* Define if you have the plock function.  */
 #undef HAVE_PLOCK
-
-/* Define if you have the poll function.  */
-#undef HAVE_POLL
 
 /* Define if you have the pthread_init function.  */
 #undef HAVE_PTHREAD_INIT
@@ -425,12 +384,6 @@
 /* Define if you have the select function.  */
 #undef HAVE_SELECT
 
-/* Define if you have the setegid function.  */
-#undef HAVE_SETEGID
-
-/* Define if you have the seteuid function.  */
-#undef HAVE_SETEUID
-
 /* Define if you have the setgid function.  */
 #undef HAVE_SETGID
 
@@ -442,12 +395,6 @@
 
 /* Define if you have the setpgrp function.  */
 #undef HAVE_SETPGRP
-
-/* Define if you have the setregid function.  */
-#undef HAVE_SETREGID
-
-/* Define if you have the setreuid function.  */
-#undef HAVE_SETREUID
 
 /* Define if you have the setsid function.  */
 #undef HAVE_SETSID
@@ -521,12 +468,6 @@
 /* Define if you have the waitpid function.  */
 #undef HAVE_WAITPID
 
-/* Define if you have the <db.h> header file.  */
-#undef HAVE_DB_H
-
-/* Define if you have the <db_185.h> header file.  */
-#undef HAVE_DB_185_H
-
 /* Define if you have the <dirent.h> header file.  */
 #undef HAVE_DIRENT_H
 
@@ -535,9 +476,6 @@
 
 /* Define if you have the <fcntl.h> header file.  */
 #undef HAVE_FCNTL_H
-
-/* Define if you have the <libutil.h> header file.  */
-#undef HAVE_LIBUTIL_H
 
 /* Define if you have the <limits.h> header file.  */
 #undef HAVE_LIMITS_H
@@ -551,14 +489,8 @@
 /* Define if you have the <ndir.h> header file.  */
 #undef HAVE_NDIR_H
 
-/* Define if you have the <poll.h> header file.  */
-#undef HAVE_POLL_H
-
 /* Define if you have the <pthread.h> header file.  */
 #undef HAVE_PTHREAD_H
-
-/* Define if you have the <pty.h> header file.  */
-#undef HAVE_PTY_H
 
 /* Define if you have the <signal.h> header file.  */
 #undef HAVE_SIGNAL_H
@@ -592,9 +524,6 @@
 
 /* Define if you have the <sys/select.h> header file.  */
 #undef HAVE_SYS_SELECT_H
-
-/* Define if you have the <sys/socket.h> header file.  */
-#undef HAVE_SYS_SOCKET_H
 
 /* Define if you have the <sys/time.h> header file.  */
 #undef HAVE_SYS_TIME_H

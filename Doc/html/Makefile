@@ -1,6 +1,9 @@
-# Convenience Makefile for building HTML documentation.  You probably
-# need to set TEXINPUTS from the command line for this to be useful,
-# unless you actually build the .dvi files in the top level directory.
+# Convenience Makefile for building HTML documentation.  You probably need to
+# set TEXINPUTS from the command line for this to be useful, unless you
+# actually build the .dvi files in the top level directory.
+#
+# Note that the .dvi files must already be built and TEXINPUTS must include the
+# directory where latex's working files (esp. *.aux) are kept.
 
 PAPER=letter
 TOPDIR=..
@@ -12,12 +15,15 @@ TEXINPUTS=$(TOPDIR)/paper-$(PAPER):$(TOPDIR)/texinputs:
 # Where are the various programs?
 PYTHON=	   python
 WEBCHECKER=$(PYTHON) $(TOPDIR)/../Tools/webchecker/webchecker.py
-MKHOWTO=   $(TOOLSDIR)/mkhowto --about $(TOPDIR)/html/stdabout.dat \
-		--up-link ../index.html --up-title "Document Index" \
-		--address $(PYTHONDOCS)
-MKHTML=	   $(MKHOWTO) --html
+WCNEW=$(PYTHON) $(TOPDIR)/../Tools/webchecker/wcnew.py
+MKAUX=	   PAPER=$(PAPER) TEXINPUTS=$(TEXINPUTS) $(TOOLSDIR)/mkdvi.sh --aux
+MKHTML=	   PAPER=$(PAPER) $(TOOLSDIR)/mkhtml.sh
+KPSEWHICH= TEXINPUTS=$(TEXINPUTS) kpsewhich tex
 
 BUILDINDEX=$(TOOLSDIR)/buildindex.py
+
+# make it clear to l2h, since our support only generates HTML 4.0
+L2HARGS=   -html_version 4.0
 
 PYTHONDOCS='<hr>See <i><a href="about.html">About this document...</a></i> for information on suggesting changes.'
 HTMLBASE=  file:`pwd`
@@ -55,8 +61,6 @@ $(INDEXFILES): $(COMMONPERL) \
 	       $(TOPDIR)/html/about.dat \
 	       $(TOPDIR)/tools/node2label.pl
 
-include ../Makefile.deps
-
 # The index.html target is at the end since it screws up font-lock.
 
 modindex.html: lib/lib.html mac/mac.html $(TOOLSDIR)/mkmodindex
@@ -64,33 +68,56 @@ modindex.html: lib/lib.html mac/mac.html $(TOOLSDIR)/mkmodindex
 		--address $(PYTHONDOCS) \
 		lib/modindex.html mac/modindex.html
 
-api/api.html:  $(APIFILES) $(BUILDINDEX)
-	$(MKHTML) $(TOPDIR)/api/api.tex
+api/api.html:  $(PAPERDIR)/api.aux $(BUILDINDEX) $(TOOLSDIR)/mkhtml.sh
+	$(MKHTML) api $(L2HARGS) -split 5
 
-doc/doc.html:  $(DOCFILES) $(BUILDINDEX)
-	$(MKHTML) $(TOPDIR)/doc/doc.tex
+doc/doc.html:  $(DOCFILES) $(BUILDINDEX) $(TOPDIR)/perl/ltxmarkup.perl
+	$(TOOLSDIR)/mkhowto --about stdabout.dat --address $(PYTHONDOCS) \
+		--html $(TOPDIR)/doc/doc.tex
 
-ext/ext.html:  $(EXTFILES)
-	echo $(EXTFILES)
-	$(MKHTML) $(TOPDIR)/ext/ext.tex
+ext/ext.html:  $(PAPERDIR)/ext.aux $(TOOLSDIR)/mkhtml.sh
+	$(MKHTML) ext $(L2HARGS) -split 5
 
-lib/lib.html:  $(LIBFILES) $(BUILDINDEX)
-	$(MKHTML) $(TOPDIR)/lib/lib.tex
+lib/lib.html:  $(PAPERDIR)/lib.aux $(BUILDINDEX) $(TOOLSDIR)/mkhtml.sh
+	$(TOOLSDIR)/fix_libaux.sed <`$(KPSEWHICH) lib.aux` >lib1.aux
+	mv lib1.aux `$(KPSEWHICH) lib.aux`
+	$(MKHTML) lib $(L2HARGS) -split 5
 
 mac/mac.html:  $(MACFILES) $(BUILDINDEX)
-	$(MKHTML) $(TOPDIR)/mac/mac.tex
+	$(TOOLSDIR)/mkhowto --about stdabout.dat --address $(PYTHONDOCS) \
+		--html $(TOPDIR)/mac/mac.tex
 
-ref/ref.html:  $(REFFILES) $(BUILDINDEX)
-	$(MKHTML) $(TOPDIR)/ref/ref.tex
+ref/ref.html:  $(PAPERDIR)/ref.aux $(BUILDINDEX) $(TOOLSDIR)/mkhtml.sh
+	$(MKHTML) ref $(L2HARGS) -split 5
 
-tut/tut.html:  $(TUTFILES) $(TOOLSDIR)/mkhowto
-	$(MKHTML) --numeric --split 3 $(TOPDIR)/tut/tut.tex
+tut/tut.html:  $(PAPERDIR)/tut.aux $(TOOLSDIR)/mkhtml.sh
+	$(MKHTML) --numeric tut $(L2HARGS) -split 3
 
-inst/inst.html: $(INSTFILES) $(TOPDIR)/perl/distutils.perl
-	$(MKHTML) $(TOPDIR)/inst/inst.tex
+inst/inst.html:$(INSTFILES) $(TOPDIR)/perl/distutils.perl
+	$(TOOLSDIR)/mkhowto --about stdabout.dat --address $(PYTHONDOCS) \
+		--html $(TOPDIR)/inst/inst.tex
 
 dist/dist.html:$(DISTFILES) $(TOPDIR)/perl/distutils.perl
-	$(MKHTML) $(TOPDIR)/dist/dist.tex
+	$(TOOLSDIR)/mkhowto --about stdabout.dat --address $(PYTHONDOCS) \
+		--html $(TOPDIR)/dist/dist.tex
+
+include ../Makefile.deps
+
+$(PAPERDIR)/api.aux: $(APIFILES)
+	(cd $(PAPERDIR); $(MKAUX) api)
+
+$(PAPERDIR)/ext.aux: $(EXTFILES)
+	(cd $(PAPERDIR); $(MKAUX) ext)
+
+$(PAPERDIR)/lib.aux: $(LIBFILES)
+	(cd $(PAPERDIR); $(MKAUX) lib)
+
+$(PAPERDIR)/ref.aux: $(REFFILES)
+	(cd $(PAPERDIR); $(MKAUX) ref)
+
+$(PAPERDIR)/tut.aux: $(TUTFILES)
+	(cd $(PAPERDIR); $(MKAUX) tut)
+
 
 webcheck: all
 	$(WEBCHECKER) $(HTMLBASE)/api/
@@ -102,6 +129,16 @@ webcheck: all
 	$(WEBCHECKER) $(HTMLBASE)/tut/
 	$(WEBCHECKER) $(HTMLBASE)/dist/
 	$(WEBCHECKER) $(HTMLBASE)/inst/
+
+wcnew: all
+	$(WCNEW) $(HTMLBASE)/api/
+	$(WCNEW) $(HTMLBASE)/doc/
+	$(WCNEW) $(HTMLBASE)/ext/
+	$(WCNEW) -m290000 $(HTMLBASE)/lib/
+	$(WCNEW) $(HTMLBASE)/mac/
+	$(WCNEW) $(HTMLBASE)/ref/
+	$(WCNEW) $(HTMLBASE)/tut/
+
 
 clean:
 	rm -rf @webchecker.pickle
@@ -117,7 +154,7 @@ distclean realclean clobber: clean
 # It's at the end of the file since it wedges font-lock in XEmacs.
 
 BOILERPLATE=$(TOPDIR)/texinputs/boilerplate.tex
-index.html: $(TOPDIR)/html/index.html.in $(BOILERPLATE)
+index.html: index.html.in $(BOILERPLATE)
 	REL=`grep '\\release{' $(BOILERPLATE) | sed 's/.*\\release{\(.*\)}.*$$/\1/'`; \
 		REL=`echo "$$REL" | sed 's/[$$]//g'`; \
 		sed "s/@RELEASE@/$$REL/g" $< >TEMP
@@ -125,3 +162,4 @@ index.html: $(TOPDIR)/html/index.html.in $(BOILERPLATE)
 		if [ "$$DATE" = '\today' ] ; then DATE=`date '+%B %e, %Y'`;fi;\
 		sed "s/@DATE@/$$DATE/g" TEMP >$@
 	rm -f TEMP
+

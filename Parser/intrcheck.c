@@ -1,24 +1,36 @@
-
 /* Check for interrupts */
 
-#include "Python.h"
+#include "config.h"
+
+/* config.h may or may not define DL_IMPORT */
+#ifndef DL_IMPORT	/* declarations for DLL import/export */
+#define DL_IMPORT(RTYPE) RTYPE
+#endif
+
+#include "myproto.h"
+#include "mymalloc.h" /* For ANY */
+#include "intrcheck.h"
+
+/* Copied here from ceval.h -- can't include that file. */
+int Py_AddPendingCall Py_PROTO((int (*func) Py_PROTO((ANY *)), ANY *arg));
+
 
 #ifdef QUICKWIN
 
 #include <io.h>
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	_wyield();
 }
@@ -44,18 +56,18 @@ PyOS_InterruptOccurred(void)
 #include <go32.h>
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 	_go32_want_ctrl_break(1 /* TRUE */);
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	return _go32_was_ctrl_break_hit();
 }
@@ -65,17 +77,17 @@ PyOS_InterruptOccurred(void)
 /* This might work for MS-DOS (untested though): */
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	int interrupted = 0;
 	while (kbhit()) {
@@ -114,23 +126,23 @@ PyOS_InterruptOccurred(void)
 static int interrupted;
 
 void
-PyErr_SetInterrupt(void)
+PyErr_SetInterrupt()
 {
 	interrupted = 1;
 }
 
-extern int PyErr_CheckSignals(void);
+extern int PyErr_CheckSignals();
 
-static int
-checksignals_witharg(void * arg)
+/* ARGSUSED */
+static RETSIGTYPE
+#if defined(_M_IX86) && !defined(__QNX__)
+intcatcher(int sig)	/* So the C compiler shuts up */
+#else /* _M_IX86 */
+intcatcher(sig)
+	int sig; /* Not used by required by interface */
+#endif /* _M_IX86 */
 {
-	return PyErr_CheckSignals();
-}
-
-static void
-intcatcher(int sig)
-{
-	extern void Py_Exit(int);
+	extern void Py_Exit Py_PROTO((int));
 	static char message[] =
 "python: to interrupt a truly hanging Python program, interrupt once more.\n";
 	switch (interrupted++) {
@@ -145,13 +157,13 @@ intcatcher(int sig)
 		break;
 	}
 	signal(SIGINT, intcatcher);
-	Py_AddPendingCall(checksignals_witharg, NULL);
+	Py_AddPendingCall(PyErr_CheckSignals, NULL);
 }
 
-static void (*old_siginthandler)(int) = SIG_DFL;
+static RETSIGTYPE (*old_siginthandler)() = SIG_DFL;
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 	if ((old_siginthandler = signal(SIGINT, SIG_IGN)) != SIG_IGN)
 		signal(SIGINT, intcatcher);
@@ -167,13 +179,13 @@ PyOS_InitInterrupts(void)
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 	signal(SIGINT, old_siginthandler);
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	if (!interrupted)
 		return 0;
@@ -184,9 +196,6 @@ PyOS_InterruptOccurred(void)
 #endif /* !OK */
 
 void
-PyOS_AfterFork(void)
+PyOS_AfterFork()
 {
-#ifdef WITH_THREAD
-	PyEval_ReInitThreads();
-#endif
 }

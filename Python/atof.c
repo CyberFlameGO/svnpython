@@ -1,4 +1,3 @@
-
 /* Just in case you haven't got an atof() around...
    This one doesn't check for bad syntax or overflow,
    and is slow and inaccurate.
@@ -8,7 +7,8 @@
 
 #include <ctype.h>
 
-double atof(char *s)
+double atof(s)
+	char *s;
 {
 	double a = 0.0;
 	int e = 0;

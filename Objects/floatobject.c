@@ -1,4 +1,3 @@
-
 /* Float object implementation */
 
 /* XXX There should be overflow checks here, but it's hard to check
@@ -7,6 +6,7 @@
 #include "Python.h"
 
 #include <ctype.h>
+#include "mymath.h"
 
 #ifdef i860
 /* Cray APP has bogus definition of HUGE_VAL in <math.h> */
@@ -28,13 +28,7 @@
 #endif
 
 #ifndef LONG_MAX
-#if SIZEOF_LONG == 4
 #define LONG_MAX 0X7FFFFFFFL
-#elif SIZEOF_LONG == 8
-#define LONG_MAX 0X7FFFFFFFFFFFFFFFL
-#else
-#error "could not set LONG_MAX"
-#endif
 #endif
 
 #ifndef LONG_MIN
@@ -54,8 +48,8 @@
 #endif
 
 #if !defined(__STDC__) && !defined(macintosh)
-extern double fmod(double, double);
-extern double pow(double, double);
+extern double fmod Py_PROTO((double, double));
+extern double pow Py_PROTO((double, double));
 #endif
 
 #ifdef sun
@@ -84,7 +78,7 @@ static PyFloatBlock *block_list = NULL;
 static PyFloatObject *free_list = NULL;
 
 static PyFloatObject *
-fill_free_list(void)
+fill_free_list()
 {
 	PyFloatObject *p, *q;
 	/* XXX Float blocks escape the object heap. Use PyObject_MALLOC ??? */
@@ -102,7 +96,12 @@ fill_free_list(void)
 }
 
 PyObject *
+#ifdef __SC__
 PyFloat_FromDouble(double fval)
+#else
+PyFloat_FromDouble(fval)
+	double fval;
+#endif
 {
 	register PyFloatObject *op;
 	if (free_list == NULL) {
@@ -118,13 +117,14 @@ PyFloat_FromDouble(double fval)
 }
 
 PyObject *
-PyFloat_FromString(PyObject *v, char **pend)
+PyFloat_FromString(v, pend)
+	PyObject *v;
+	char **pend;
 {
-	extern double strtod(const char *, char **);
+	extern double strtod Py_PROTO((const char *, char **));
 	const char *s, *last, *end;
 	double x;
 	char buffer[256]; /* For errors */
-	char s_buffer[256];
 	int len;
 
 	if (PyString_Check(v)) {
@@ -132,6 +132,8 @@ PyFloat_FromString(PyObject *v, char **pend)
 		len = PyString_GET_SIZE(v);
 	}
 	else if (PyUnicode_Check(v)) {
+		char s_buffer[256];
+
 		if (PyUnicode_GET_SIZE(v) >= sizeof(s_buffer)) {
 			PyErr_SetString(PyExc_ValueError,
 				 "float() literal too large to convert");
@@ -143,7 +145,7 @@ PyFloat_FromString(PyObject *v, char **pend)
 					    NULL))
 			return NULL;
 		s = s_buffer;
-		len = (int)strlen(s);
+		len = strlen(s);
 	}
 	else if (PyObject_AsCharBuffer(v, &s, &len)) {
 		PyErr_SetString(PyExc_TypeError,
@@ -189,14 +191,16 @@ PyFloat_FromString(PyObject *v, char **pend)
 }
 
 static void
-float_dealloc(PyFloatObject *op)
+float_dealloc(op)
+	PyFloatObject *op;
 {
 	op->ob_type = (struct _typeobject *)free_list;
 	free_list = op;
 }
 
 double
-PyFloat_AsDouble(PyObject *op)
+PyFloat_AsDouble(op)
+	PyObject *op;
 {
 	PyNumberMethods *nb;
 	PyFloatObject *fo;
@@ -229,7 +233,10 @@ PyFloat_AsDouble(PyObject *op)
 /* Methods */
 
 void
-PyFloat_AsStringEx(char *buf, PyFloatObject *v, int precision)
+PyFloat_AsStringEx(buf, v, precision)
+	char *buf;
+	PyFloatObject *v;
+	int precision;
 {
 	register char *cp;
 	/* Subroutine for float_repr and float_print.
@@ -272,15 +279,19 @@ PyFloat_AsStringEx(char *buf, PyFloatObject *v, int precision)
 #define PREC_STR	12
 
 void
-PyFloat_AsString(char *buf, PyFloatObject *v)
+PyFloat_AsString(buf, v)
+	char *buf;
+	PyFloatObject *v;
 {
 	PyFloat_AsStringEx(buf, v, PREC_STR);
 }
 
 /* ARGSUSED */
 static int
-float_print(PyFloatObject *v, FILE *fp, int flags)
-     /* flags -- not used but required by interface */
+float_print(v, fp, flags)
+	PyFloatObject *v;
+	FILE *fp;
+	int flags; /* Not used but required by interface */
 {
 	char buf[100];
 	PyFloat_AsStringEx(buf, v, flags&Py_PRINT_RAW ? PREC_STR : PREC_REPR);
@@ -289,7 +300,8 @@ float_print(PyFloatObject *v, FILE *fp, int flags)
 }
 
 static PyObject *
-float_repr(PyFloatObject *v)
+float_repr(v)
+	PyFloatObject *v;
 {
 	char buf[100];
 	PyFloat_AsStringEx(buf, v, PREC_REPR);
@@ -297,7 +309,8 @@ float_repr(PyFloatObject *v)
 }
 
 static PyObject *
-float_str(PyFloatObject *v)
+float_str(v)
+	PyFloatObject *v;
 {
 	char buf[100];
 	PyFloat_AsStringEx(buf, v, PREC_STR);
@@ -305,22 +318,68 @@ float_str(PyFloatObject *v)
 }
 
 static int
-float_compare(PyFloatObject *v, PyFloatObject *w)
+float_compare(v, w)
+	PyFloatObject *v, *w;
 {
 	double i = v->ob_fval;
 	double j = w->ob_fval;
 	return (i < j) ? -1 : (i > j) ? 1 : 0;
 }
 
-
 static long
-float_hash(PyFloatObject *v)
+float_hash(v)
+	PyFloatObject *v;
 {
-	return _Py_HashDouble(v->ob_fval);
+	double intpart, fractpart;
+	int expo;
+	long x;
+	/* This is designed so that Python numbers with the same
+	   value hash to the same value, otherwise comparisons
+	   of mapping keys will turn out weird */
+
+#ifdef MPW /* MPW C modf expects pointer to extended as second argument */
+{
+	extended e;
+	fractpart = modf(v->ob_fval, &e);
+	intpart = e;
+}
+#else
+	fractpart = modf(v->ob_fval, &intpart);
+#endif
+
+	if (fractpart == 0.0) {
+		if (intpart > 0x7fffffffL || -intpart > 0x7fffffffL) {
+			/* Convert to long int and use its hash... */
+			PyObject *w = PyLong_FromDouble(v->ob_fval);
+			if (w == NULL)
+				return -1;
+			x = PyObject_Hash(w);
+			Py_DECREF(w);
+			return x;
+		}
+		x = (long)intpart;
+	}
+	else {
+		/* Note -- if you change this code, also change the copy
+		   in complexobject.c */
+		long hipart;
+		fractpart = frexp(fractpart, &expo);
+		fractpart = fractpart * 2147483648.0; /* 2**31 */
+		hipart = (long)fractpart; /* Take the top 32 bits */
+		fractpart = (fractpart - (double)hipart) * 2147483648.0;
+						/* Get the next 32 bits */
+		x = hipart + (long)fractpart + (long)intpart + (expo << 15);
+						/* Combine everything */
+	}
+	if (x == -1)
+		x = -2;
+	return x;
 }
 
 static PyObject *
-float_add(PyFloatObject *v, PyFloatObject *w)
+float_add(v, w)
+	PyFloatObject *v;
+	PyFloatObject *w;
 {
 	double result;
 	PyFPE_START_PROTECT("add", return 0)
@@ -330,7 +389,9 @@ float_add(PyFloatObject *v, PyFloatObject *w)
 }
 
 static PyObject *
-float_sub(PyFloatObject *v, PyFloatObject *w)
+float_sub(v, w)
+	PyFloatObject *v;
+	PyFloatObject *w;
 {
 	double result;
 	PyFPE_START_PROTECT("subtract", return 0)
@@ -340,7 +401,9 @@ float_sub(PyFloatObject *v, PyFloatObject *w)
 }
 
 static PyObject *
-float_mul(PyFloatObject *v, PyFloatObject *w)
+float_mul(v, w)
+	PyFloatObject *v;
+	PyFloatObject *w;
 {
 	double result;
 
@@ -351,7 +414,9 @@ float_mul(PyFloatObject *v, PyFloatObject *w)
 }
 
 static PyObject *
-float_div(PyFloatObject *v, PyFloatObject *w)
+float_div(v, w)
+	PyFloatObject *v;
+	PyFloatObject *w;
 {
 	double result;
 	if (w->ob_fval == 0) {
@@ -365,7 +430,9 @@ float_div(PyFloatObject *v, PyFloatObject *w)
 }
 
 static PyObject *
-float_rem(PyFloatObject *v, PyFloatObject *w)
+float_rem(v, w)
+	PyFloatObject *v;
+	PyFloatObject *w;
 {
 	double vx, wx;
 	double mod;
@@ -387,7 +454,9 @@ float_rem(PyFloatObject *v, PyFloatObject *w)
 }
 
 static PyObject *
-float_divmod(PyFloatObject *v, PyFloatObject *w)
+float_divmod(v, w)
+	PyFloatObject *v;
+	PyFloatObject *w;
 {
 	double vx, wx;
 	double div, mod, floordiv;
@@ -420,7 +489,9 @@ float_divmod(PyFloatObject *v, PyFloatObject *w)
 	return Py_BuildValue("(dd)", floordiv, mod);
 }
 
-static double powu(double x, long n)
+static double powu(x, n)
+	double x;
+	long n;
 {
 	double r = 1.;
 	double p = x;
@@ -435,7 +506,10 @@ static double powu(double x, long n)
 }
 
 static PyObject *
-float_pow(PyFloatObject *v, PyObject *w, PyFloatObject *z)
+float_pow(v, w, z)
+	PyFloatObject *v;
+	PyObject *w;
+	PyFloatObject *z;
 {
 	double iv, iw, ix;
 	long intw;
@@ -506,20 +580,23 @@ float_pow(PyFloatObject *v, PyObject *w, PyFloatObject *z)
 }
 
 static PyObject *
-float_neg(PyFloatObject *v)
+float_neg(v)
+	PyFloatObject *v;
 {
 	return PyFloat_FromDouble(-v->ob_fval);
 }
 
 static PyObject *
-float_pos(PyFloatObject *v)
+float_pos(v)
+	PyFloatObject *v;
 {
 	Py_INCREF(v);
 	return (PyObject *)v;
 }
 
 static PyObject *
-float_abs(PyFloatObject *v)
+float_abs(v)
+	PyFloatObject *v;
 {
 	if (v->ob_fval < 0)
 		return float_neg(v);
@@ -528,13 +605,16 @@ float_abs(PyFloatObject *v)
 }
 
 static int
-float_nonzero(PyFloatObject *v)
+float_nonzero(v)
+	PyFloatObject *v;
 {
 	return v->ob_fval != 0.0;
 }
 
 static int
-float_coerce(PyObject **pv, PyObject **pw)
+float_coerce(pv, pw)
+	PyObject **pv;
+	PyObject **pw;
 {
 	if (PyInt_Check(*pw)) {
 		long x = PyInt_AsLong(*pw);
@@ -551,7 +631,8 @@ float_coerce(PyObject **pv, PyObject **pw)
 }
 
 static PyObject *
-float_int(PyObject *v)
+float_int(v)
+	PyObject *v;
 {
 	double x = PyFloat_AsDouble(v);
 	if (x < 0 ? (x = ceil(x)) < (double)LONG_MIN
@@ -564,14 +645,16 @@ float_int(PyObject *v)
 }
 
 static PyObject *
-float_long(PyObject *v)
+float_long(v)
+	PyObject *v;
 {
 	double x = PyFloat_AsDouble(v);
 	return PyLong_FromDouble(x);
 }
 
 static PyObject *
-float_float(PyObject *v)
+float_float(v)
+	PyObject *v;
 {
 	Py_INCREF(v);
 	return v;
@@ -625,7 +708,7 @@ PyTypeObject PyFloat_Type = {
 };
 
 void
-PyFloat_Fini(void)
+PyFloat_Fini()
 {
 	PyFloatObject *p;
 	PyFloatBlock *list, *next;
@@ -691,8 +774,8 @@ PyFloat_Fini(void)
 					char buf[100];
 					PyFloat_AsString(buf, p);
 					fprintf(stderr,
-			     "#   <float at %p, refcnt=%d, val=%s>\n",
-						p, p->ob_refcnt, buf);
+			     "#   <float at %lx, refcnt=%d, val=%s>\n",
+						(long)p, p->ob_refcnt, buf);
 				}
 			}
 			list = list->next;

@@ -1,4 +1,3 @@
-
 /* Return the compiler identification, if possible. */
 
 #include "Python.h"
@@ -22,7 +21,7 @@
 #endif /* !COMPILER */
 
 const char *
-Py_GetCompiler(void)
+Py_GetCompiler()
 {
 	return COMPILER;
 }

@@ -52,11 +52,6 @@ sub do_cmd_let{
 }
 
 
-# the older version of LaTeX2HTML we use doesn't support this, but we use it:
-
-sub do_cmd_textasciitilde{ '~' . @_[0]; }
-
-
 # words typeset in a special way (not in HTML though)
 
 sub do_cmd_ABC{ 'ABC' . @_[0]; }
@@ -122,8 +117,7 @@ sub do_cmd_optional{
 # \file and \samp are at the end of this file since they screw up fontlock.
 
 sub do_cmd_pytype{ return @_[0]; }
-sub do_cmd_makevar{
-    return use_wrappers(@_[0], '<span class="makevar">', '</span>'); }
+sub do_cmd_makevar{ return @_[0]; }
 sub do_cmd_code{
     return use_wrappers(@_[0], '<code>', '</code>'); }
 sub do_cmd_module{
@@ -170,7 +164,9 @@ sub do_cmd_dfn{
 sub do_cmd_emph{
     return use_italics(@_); }
 sub do_cmd_file{
-    return use_wrappers(@_[0], '<span class="file">', '</span>'); }
+    return use_wrappers(@_[0],
+                        '<font class="file" face="sans-serif">',
+                        '</font>'); }
 sub do_cmd_filenq{
     return do_cmd_file(@_[0]); }
 sub do_cmd_samp{
@@ -183,11 +179,6 @@ sub do_cmd_textbf{
     return use_wrappers(@_[0], '<b>', '</b>'); }
 sub do_cmd_textit{
     return use_wrappers(@_[0], '<i>', '</i>'); }
-
-sub do_cmd_moreargs{
-    return '...' . @_[0]; }
-sub do_cmd_unspecified{
-    return '...' . @_[0]; }
 
 
 sub do_cmd_refmodule{
@@ -644,23 +635,23 @@ sub do_env_cfuncdesc{
     my $idx = make_str_index_entry(
         "<tt class='cfunction'>$function_name()</tt>" . get_indexsubitem());
     $idx =~ s/ \(.*\)//;
-    $idx =~ s/\(\)//;		# ???? - why both of these?
+    $idx =~ s/\(\)//;		# ????
     my $result_rc = get_refcount($function_name, '');
     my $rcinfo = '';
     if ($result_rc eq '+1') {
-        $rcinfo = 'New reference';
+        $rcinfo = '<span class="label">Return value:</span>'
+                  . "\n  <span class=\"value\">New reference.</span>";
     }
     elsif ($result_rc eq '0') {
-        $rcinfo = 'Borrowed reference';
+        $rcinfo = '<span class="label">Return value:</span>'
+                  . "\n  <span class=\"value\">Borrowed reference.</span>";
     }
     elsif ($result_rc eq 'null') {
-        $rcinfo = 'Always <tt class="constant">NULL</tt>';
+        $rcinfo = '<span class="label">Return value:</span>'
+                  . "\n  <span class=\"value\">Always NULL.</span>";
     }
     if ($rcinfo ne '') {
-        $rcinfo = (  "\n<div class=\"refcount-info\">"
-                   . "\n  <span class=\"label\">Return value:</span>"
-                   . "\n  <span class=\"value\">$rcinfo.</span>"
-                   . "\n</div>");
+        $rcinfo = "\n<div class=\"refcount-info\">\n  $rcinfo\n</div>";
     }
     return "<dl><dt>$return_type <b>$idx</b> (<var>$arg_list</var>)\n<dd>"
            . $rcinfo
@@ -932,6 +923,8 @@ sub do_cmd_memberlineni{
 
 @col_aligns = ('<td>', '<td>', '<td>', '<td>');
 
+$TABLE_HEADER_BGCOLOR = $NAV_BGCOLOR;
+
 sub fix_font{
     # do a little magic on a font name to get the right behavior in the first
     # column of the output table
@@ -944,12 +937,6 @@ sub fix_font{
     }
     elsif ($font eq 'member') {
         $font = 'tt class="member"';
-    }
-    elsif ($font eq 'constant') {
-        $font = 'tt class="constant"';
-    }
-    elsif ($font eq 'kbd') {
-        $font = 'kbd';
     }
     return $font;
 }
@@ -1008,7 +995,7 @@ sub do_env_tableii{
     s/\\lineii</\\lineii[$a1|$a2]</g;
     return '<table border align="center" style="border-collapse: collapse">'
            . "\n  <thead>"
-           . "\n    <tr class=\"tableheader\">"
+           . "\n    <tr$TABLE_HEADER_BGCOLOR>"
 	   . "\n      $th1<b>$h1</b>\&nbsp;</th>"
 	   . "\n      $th2<b>$h2</b>\&nbsp;</th>"
 	   . "\n    </thead>"
@@ -1133,124 +1120,40 @@ sub do_cmd_lineiv{
 	   . $_;
 }
 
-
-# These can be used to control the title page appearance;
-# they need a little bit of documentation.
-#
-# If $TITLE_PAGE_GRAPHIC is set, it should be the name of a file in the
-# $ICONSERVER directory, or include path information (other than "./").  The
-# default image type will be assumed if an extension is not provided.
-#
-# If specified, the "title page" will contain two colums: one containing the
-# title/author/etc., and the other containing the graphic.  Use the other
-# four variables listed here to control specific details of the layout; all
-# are optional.
-#
-# $TITLE_PAGE_GRAPHIC = "my-company-logo";
-# $TITLE_PAGE_GRAPHIC_COLWIDTH = "30%";
-# $TITLE_PAGE_GRAPHIC_WIDTH = 150;
-# $TITLE_PAGE_GRAPHIC_HEIGHT = 150;
-# $TITLE_PAGE_GRAPHIC_ON_RIGHT = 0;
-
-sub make_my_titlepage() {
-    my $the_title = "";
+sub do_cmd_maketitle {
+    local($_) = @_;
+    my $the_title = "\n<div class='titlepage'><center>";
     if ($t_title) {
 	$the_title .= "\n<h1>$t_title</h1>";
-    }
-    else {
-        write_warnings("\nThis document has no title.");
-    }
+    } else { write_warnings("\nThis document has no title."); }
     if ($t_author) {
 	if ($t_authorURL) {
 	    my $href = translate_commands($t_authorURL);
 	    $href = make_named_href('author', $href,
 				    "<b><font size='+2'>$t_author</font></b>");
 	    $the_title .= "\n<p>$href</p>";
-	}
-        else {
+	} else {
 	    $the_title .= ("\n<p><b><font size='+2'>$t_author</font></b></p>");
 	}
-    }
-    else {
-        write_warnings("\nThere is no author for this document.");
-    }
+    } else { write_warnings("\nThere is no author for this document."); }
     if ($t_institute) {
-        $the_title .= "\n<p>$t_institute</p>";
-    }
+        $the_title .= "\n<p>$t_institute</p>";}
     if ($DEVELOPER_ADDRESS) {
-        $the_title .= "\n<p>$DEVELOPER_ADDRESS</p>";
-    }
+        $the_title .= "\n<p>$DEVELOPER_ADDRESS</p>";}
     if ($t_affil) {
-	$the_title .= "\n<p><i>$t_affil</i></p>";
-    }
+	$the_title .= "\n<p><i>$t_affil</i></p>";}
     if ($t_date) {
 	$the_title .= "\n<p><strong>$t_date</strong>";
 	if ($PYTHON_VERSION) {
-	    $the_title .= "<br><strong>Release $PYTHON_VERSION</strong>";
-        }
+	    $the_title .= "<br><strong>Release $PYTHON_VERSION</strong>";}
 	$the_title .= "</p>"
     }
     if ($t_address) {
 	$the_title .= "\n<p>$t_address</p>";
-    }
-    else {
-        $the_title .= "\n<p>";
-    }
+    } else { $the_title .= "\n<p>"}
     if ($t_email) {
 	$the_title .= "\n<p>$t_email</p>";
-    }
-    return $the_title;
-}
-
-use File::Basename;
-
-sub make_my_titlegraphic() {
-    my($myname, $mydir, $myext) = fileparse($TITLE_PAGE_GRAPHIC, '\..*');
-    chop $mydir;
-    if ($mydir eq '.') {
-        $mydir = $ICONSERVER;
-    }
-    $myext = ".$IMAGE_TYPE"
-      unless $myext;
-    my $graphic = "<td class=\"titlegraphic\"";
-    $graphic .= " width=\"$TITLE_PAGE_GRAPHIC_COLWIDTH\""
-      if ($TITLE_PAGE_GRAPHIC_COLWIDTH);
-    $graphic .= "><img";
-    $graphic .= " width=\"$TITLE_PAGE_GRAPHIC_WIDTH\""
-      if ($TITLE_PAGE_GRAPHIC_WIDTH);
-    $graphic .= " height=\"$TITLE_PAGE_GRAPHIC_HEIGHT\""
-      if ($TITLE_PAGE_GRAPHIC_HEIGHT);
-    $graphic .= "\n  src=\"$mydir/$myname$myext\"></td>\n";
-    return $graphic;
-}
-
-sub do_cmd_maketitle {
-    local($_) = @_;
-    my $the_title = "\n<div class=\"titlepage\">";
-    if ($TITLE_PAGE_GRAPHIC) {
-        if ($TITLE_PAGE_GRAPHIC_ON_RIGHT) {
-            $the_title .= ("\n<table border=\"0\" width=\"100%\">"
-                           . "<tr align=\"right\">\n<td>"
-                           . make_my_titlepage()
-                           . "</td>\n"
-                           . make_my_titlegraphic()
-                           . "</tr>\n</table>");
-        }
-        else {
-            $the_title .= ("\n<table border=\"0\" width=\"100%\"><tr>\n"
-                           . make_my_titlegraphic()
-                           . "<td>"
-                           . make_my_titlepage()
-                           . "</td></tr>\n</table>");
-        }
-    }
-    else {
-        $the_title .= ("\n<center>"
-                       . make_my_titlepage()
-                       . "\n</center>");
-    }
-    $the_title .= "\n</div>";
-    return $the_title . $_;
+    }# else { $the_title .= "</p>" }
     $the_title .= "\n</center></div>";
     return $the_title . $_ ;
 }

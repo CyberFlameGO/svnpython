@@ -1,4 +1,3 @@
-
 #include "Python.h"
 
 #if defined(__sgi) && defined(WITH_THREAD) && !defined(_SGI_MP_SOURCE)
@@ -35,7 +34,10 @@
 #endif
 
 unsigned long
-PyOS_strtoul(register char *str, char **ptr, int base)
+PyOS_strtoul(str, ptr, base)
+register char *	str;
+char **		ptr;
+int		base;
 {
     register unsigned long	result;	/* return value of the function */
     register int		c;	/* current input character */
@@ -125,7 +127,10 @@ PyOS_strtoul(register char *str, char **ptr, int base)
 }
 
 long
-PyOS_strtol(char *str, char **ptr, int base)
+PyOS_strtol(str, ptr, base)
+char *	str;
+char ** ptr;
+int	base;
 {
 	long result;
 	char sign;

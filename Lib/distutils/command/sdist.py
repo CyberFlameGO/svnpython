@@ -202,10 +202,7 @@ class sdist (Command):
         # manifest, but there's no template -- which will happen if the
         # developer elects to generate a manifest some other way -- then we
         # can't regenerate the manifest, so we don't.)
-        self.debug_print("checking if %s newer than %s" %
-                         (self.distribution.script_name, self.manifest))
-        setup_newer = dep_util.newer(self.distribution.script_name,
-                                     self.manifest)
+        setup_newer = dep_util.newer(sys.argv[0], self.manifest)
 
         # cases:
         #   1) no manifest, template exists: generate manifest
@@ -445,6 +442,8 @@ class sdist (Command):
 
         self.make_release_tree (base_dir, self.filelist.files)
         archive_files = []              # remember names of files we create
+        if self.dist_dir:
+            self.mkpath(self.dist_dir)
         for fmt in self.formats:
             file = self.make_archive (base_name, fmt, base_dir=base_dir)
             archive_files.append(file)

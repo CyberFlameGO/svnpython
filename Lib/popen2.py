@@ -89,91 +89,38 @@ class Popen3:
             _active.remove(self)
         return self.sts
 
+def popen2(cmd, bufsize=-1):
+    """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
+    specified, it sets the buffer size for the I/O pipes.  The file objects
+    (child_stdout, child_stdin) are returned."""
+    _cleanup()
+    inst = Popen3(cmd, 0, bufsize)
+    return inst.fromchild, inst.tochild
 
-if sys.platform[:3] == "win":
-    def popen2(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin) are returned."""
-        w, r = os.popen2(cmd, mode, bufsize)
-        return r, w
-else:
-    def popen2(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin) are returned."""
-        if type(mode) is type(0) and bufsize == -1:
-            bufsize = mode
-            mode = 't'
-        assert mode in ('t', 'b')
-        _cleanup()
-        inst = Popen3(cmd, 0, bufsize)
-        return inst.fromchild, inst.tochild
-
-if sys.platform[:3] == "win":
-    def popen3(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin, child_stderr) are returned."""
-        w, r, e = os.popen3(cmd, mode, bufsize)
-        return r, w, e
-else:
-    def popen3(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout, child_stdin, child_stderr) are returned."""
-        if type(mode) is type(0) and bufsize == -1:
-            bufsize = mode
-            mode = 't'
-        assert mode in ('t', 'b')
-        _cleanup()
-        inst = Popen3(cmd, 1, bufsize)
-        return inst.fromchild, inst.tochild, inst.childerr
-
-if sys.platform[:3] == "win":
-    def popen4(cmd, mode='t', bufsize=-1):
-        """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
-        specified, it sets the buffer size for the I/O pipes.  The file objects
-        (child_stdout_stderr, child_stdin) are returned."""
-        w, r = os.popen4(cmd, mode, bufsize)
-        return r, w
-else:
-    pass # not yet on unix
-
+def popen3(cmd, bufsize=-1):
+    """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
+    specified, it sets the buffer size for the I/O pipes.  The file objects
+    (child_stdout, child_stdin, child_stderr) are returned."""
+    _cleanup()
+    inst = Popen3(cmd, 1, bufsize)
+    return inst.fromchild, inst.tochild, inst.childerr
 
 def _test():
-    cmd  = "cat"
-    teststr = "ab cd\n"
-    if os.name == "nt":
-        cmd = "more"
-    # "more" doesn't act the same way across Windows flavors,
-    # sometimes adding an extra newline at the start or the
-    # end.  So we strip whitespace off both ends for comparison.
-    expected = teststr.strip()
+    teststr = "abc\n"
     print "testing popen2..."
-    r, w = popen2(cmd)
+    r, w = popen2('cat')
     w.write(teststr)
     w.close()
-    got = r.read()
-    if got.strip() != expected:
-        raise ValueError("wrote %s read %s" % (`teststr`, `got`))
+    assert r.read() == teststr
     print "testing popen3..."
-    try:
-        r, w, e = popen3([cmd])
-    except:
-        r, w, e = popen3(cmd)
+    r, w, e = popen3(['cat'])
     w.write(teststr)
     w.close()
-    got = r.read()
-    if got.strip() != expected:
-        raise ValueError("wrote %s read %s" % (`teststr`, `got`))
-    got = e.read()
-    if got:
-        raise ValueError("unexected %s on stderr" % `got`)
+    assert r.read() == teststr
+    assert e.read() == ""
     for inst in _active[:]:
         inst.wait()
-    if _active:
-        raise ValueError("_active not empty")
+    assert not _active
     print "All OK"
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-
 /* Operating system dependencies */
 
 #ifdef macintosh

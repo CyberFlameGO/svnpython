@@ -100,8 +100,7 @@ except ValueError:
 
 # unpacking a sequence where the test for too long raises a different
 # kind of error
-class BozoError(Exception):
-    pass
+BozoError = 'BozoError'
 
 class BadSeq:
     def __getitem__(self, i):

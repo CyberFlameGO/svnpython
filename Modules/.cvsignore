@@ -1,7 +1,6 @@
 Setup
 Makefile.pre
 Setup.thread
-Setup.config
 Setup.local
 hassignal
 config.c

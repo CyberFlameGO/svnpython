@@ -181,16 +181,6 @@ calls to \function{putenv()} don't update \code{os.environ}, so it is
 actually preferable to assign to items of \code{os.environ}.  
 \end{funcdesc}
 
-\begin{funcdesc}{setegid}{egid}
-Set the current process's effective group id.
-Availability: \UNIX{}.
-\end{funcdesc}
-
-\begin{funcdesc}{seteuid}{euid}
-Set the current process's effective user id.
-Availability: \UNIX{}.
-\end{funcdesc}
-
 \begin{funcdesc}{setgid}{gid}
 Set the current process' group id.
 Availability: \UNIX{}.
@@ -206,16 +196,6 @@ Availability: \UNIX{}.
 \begin{funcdesc}{setpgid}{pid, pgrp}
 Calls the system call \cfunction{setpgid()}.  See the \UNIX{} manual
 for the semantics.
-Availability: \UNIX{}.
-\end{funcdesc}
-
-\begin{funcdesc}{setreuid}{ruid, euid}
-Set the current process's real and effective user ids.
-Availability: \UNIX{}.
-\end{funcdesc}
-
-\begin{funcdesc}{setregid}{rgid, egid}
-Set the current process's real and effective group ids.
 Availability: \UNIX{}.
 \end{funcdesc}
 
@@ -325,7 +305,7 @@ Availability: \UNIX{}, Windows.
 \end{funcdesc}
 
 \begin{funcdesc}{fpathconf}{fd, name}
-Return system configuration information relevant to an open file.
+Return system configration information relevant to an open file.
 \var{name} specifies the configuration value to retrieve; it may be a
 string which is the name of a defined system value; these names are
 specified in a number of standards (\POSIX.1, Unix95, Unix98, and
@@ -360,12 +340,6 @@ so that it is at most \var{length} bytes in size.
 Availability: \UNIX{}.
 \end{funcdesc}
 
-\begin{funcdesc}{isatty}{fd}
-Return \code{1} if the file descriptor \var{fd} is open and connected to a
-tty(-like) device, else \code{0}.
-Availability: \UNIX{}
-\end{funcdesc}
-
 \begin{funcdesc}{lseek}{fd, pos, how}
 Set the current position of file descriptor \var{fd} to position
 \var{pos}, modified by \var{how}: \code{0} to set the position
@@ -391,14 +365,6 @@ Note: this function is intended for low-level I/O.  For normal usage,
 use the built-in function \function{open()}, which returns a ``file
 object'' with \method{read()} and \method{write()} methods (and many
 more).
-\end{funcdesc}
-
-\begin{funcdesc}{openpty}{}
-Open a new pseudo-terminal pair. Return a pair of file descriptors
-\code{(\var{master}, \var{slave})} for the pty and the tty,
-respectively. For a (slightly) more portable approach, use the
-\refmodule{pty}\refstmodindex{pty} module.
-Availability: Some flavors of \UNIX{}
 \end{funcdesc}
 
 \begin{funcdesc}{pipe}{}
@@ -475,13 +441,6 @@ These can be bit-wise OR'd together.
 Availability: Macintosh, \UNIX{}, Windows.
 \end{datadesc}
 
-\begin{datadesc}{O_BINARY}
-Option for the \var{flag} argument to the \function{open()} function.
-This can be bit-wise OR'd together with those listed above.
-Availability: Macintosh, Windows.
-% XXX need to check on the availability of this one.
-\end{datadesc}
-
 
 \subsection{Files and Directories \label{os-file-dir}}
 
@@ -492,7 +451,7 @@ existence of \var{path}, or it can be the inclusive OR of one or more
 of \constant{R_OK}, \constant{W_OK}, and \constant{X_OK} to test
 permissions.  Return \code{1} if access is allowed, \code{0} if not.
 See the \UNIX{} man page \manpage{access}{2} for more information.
-Availability: \UNIX{}, Windows.
+Availability: \UNIX{}.
 \end{funcdesc}
 
 \begin{datadesc}{F_OK}
@@ -588,7 +547,7 @@ is \code{0777} (octal).
 \end{funcdesc}
 
 \begin{funcdesc}{pathconf}{path, name}
-Return system configuration information relevant to a named file.
+Return system configration information relevant to a named file.
 \var{name} specifies the configuration value to retrieve; it may be a
 string which is the name of a defined system value; these names are
 specified in a number of standards (\POSIX.1, Unix95, Unix98, and
@@ -749,7 +708,7 @@ If \var{times} is \code{None}, then the file's access and modified
 times are set to the current time.  Otherwise, \var{times} must be a
 2-tuple of numbers, of the form \code{(\var{atime}, \var{mtime})}
 which is used to set the access and modified times, respectively.
-\versionchanged[added support for \code{None} for \var{times}]{2.0}
+\versionchanged[added support for \code{None} for \var{times}]{1.6}
 Availability: Macintosh, \UNIX{}, Windows.
 \end{funcdesc}
 
@@ -830,16 +789,6 @@ after a \function{fork()}.
 Fork a child process.  Return \code{0} in the child, the child's
 process id in the parent.
 Availability: \UNIX{}.
-\end{funcdesc}
-
-\begin{funcdesc}{forkpty}{}
-Fork a child process, using a new pseudo-terminal as the child's
-controlling terminal. Return a pair of \code{(\var{pid}, \var{fd})},
-where \var{pid} is \code{0} in the child, the new child's process id
-in the parent, and \code{fd} is the file descriptor of the master end
-of the pseudo-terminal.  For a more portable approach, use the
-\refmodule{pty} module.
-Availability: Some flavors of \UNIX{}
 \end{funcdesc}
 
 \begin{funcdesc}{kill}{pid, sig}
@@ -996,7 +945,7 @@ Availability: \UNIX{}.
 \end{funcdesc}
 
 
-\subsection{Miscellaneous System Information \label{os-path}}
+\subsection{Miscellanenous System Information \label{os-path}}
 
 
 \begin{funcdesc}{confstr}{name}

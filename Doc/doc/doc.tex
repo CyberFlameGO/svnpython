@@ -10,8 +10,9 @@
 
 \author{Fred L. Drake, Jr.}
 \authoraddress{
-	BeOpen PythonLabs \\
-	E-mail: \email{fdrake@beopen.com}
+	Corporation for National Research Initiatives (CNRI) \\
+	1895 Preston White Drive, Reston, Va 20191, USA \\
+	E-mail: \email{fdrake@acm.org}
 }
 
 
@@ -98,10 +99,8 @@ distribution, to create or maintain whole documents or sections.
 
 	\begin{tableii}{p{.75in}|p{3in}}{filenq}{Directory}{Document Title}
 	  \lineii{api/}{\citetitle[../api/api.html]{The Python/C API}}
-	  \lineii{dist/}{\citetitle[../dist/dist.html]{Distributing Python Modules}}
 	  \lineii{doc/}{\citetitle[../doc/doc.html]{Documenting Python}}
 	  \lineii{ext/}{\citetitle[../ext/ext.html]{Extending and Embedding the Python Interpreter}}
-	  \lineii{inst/}{\citetitle[../inst/inst.html]{Installing Python Modules}}
 	  \lineii{lib/}{\citetitle[../lib/lib.html]{Python Library Reference}}
 	  \lineii{mac/}{\citetitle[../mac/mac.html]{Macintosh Module Reference}}
 	  \lineii{ref/}{\citetitle[../ref/ref.html]{Python Reference Manual}}
@@ -610,26 +609,6 @@ distribution, to create or maintain whole documents or sections.
 \moduleauthor{Jane Doe}{jane.doe@frobnitz.org}
 \end{verbatim}
 
-  Python packages\index{packages} --- collections of modules that can
-  be described as a unit --- are documented using the same markup as
-  modules.  The name for a module in a package should be typed in
-  ``fully qualified'' form (i.e., it should include the package name).
-  For example, a module ``foo'' in package ``bar'' should be marked as
-  \samp{\e module\{bar.foo\}}, and the beginning of the reference
-  section would appear as:
-
-\begin{verbatim}
-\section{\module{bar.foo} ---
-         Module from the \module{bar} package}
-
-\declaremodule{extension}{bar.foo}
-\modulesynopsis{Nifty module from the \module{bar} package.}
-\moduleauthor{Jane Doe}{jane.doe@frobnitz.org}
-\end{verbatim}
-
-  Note that the name of a package is also marked using
-  \macro{module}.
-
   \begin{macrodesc}{declaremodule}{\op{key}\p{type}\p{name}}
     Requires two parameters: module type (\samp{standard},
     \samp{builtin}, \samp{extension}, or \samp{}), and the module
@@ -773,20 +752,10 @@ distribution, to create or maintain whole documents or sections.
     additional macros to support creating reference entries in a
     reasonable manner.
 
-    The \env{seealso} environment is typically placed in a section
-    just before any sub-sections.  This is done to ensure that
-    reference links related to the section are not hidden in a
-    subsection in the hypertext renditions of the documentation.
-
     \begin{envdesc}{seealso}{}
       This environment creates a ``See also:'' heading and defines the
       markup used to describe individual references.
     \end{envdesc}
-
-    For each of the following macros, \var{why} should be a complete
-    sentence, start with a capital letter (unless it starts with an
-    identifier, which should not be modified), and end with the
-    apropriate punctuation.
 
     \begin{macrodesc}{seemodule}{\op{key}\p{name}\p{why}}
       Refer to another module.  \var{why} should be a brief
@@ -798,29 +767,10 @@ distribution, to create or maintain whole documents or sections.
       document (the corresponding \macro{declaremodule} is required).
     \end{macrodesc}
 
-    \begin{macrodesc}{seerfc}{\p{number}\p{title}\p{why}}
-      Refer to an IETF Request for Comments (RFC).  \var{number}
-      should be the official number assigned by the RFC Editor,
-      \var{title} should be the human-readable title of the RFC as
-      found in the official copy of the document, and \var{why} should
-      explain what's interesting about the RFC.  This should be used
-      to refer the reader to RFCs which specify protocols or data
-      formats relevant to the material in the annotated section of the
-      documentation.
-    \end{macrodesc}
-
     \begin{macrodesc}{seetext}{\p{text}}
       Add arbitrary text \var{text} to the ``See also:'' list.  This
       can be used to refer to off-line materials or on-line materials
-      using the \macro{url} macro.  This should consist of one or more
-      complete sentences.
-    \end{macrodesc}
-
-    \begin{macrodesc}{seeurl}{\p{url}\p{why}}
-      References to specific on-line resources should be given using
-      the \macro{seeurl} macro.  No title is associated with the
-      reference, but the \var{why} text may include a title marked
-      using the \macro{citetitle} macro.
+      using the \macro{url} macro.
     \end{macrodesc}
 
 

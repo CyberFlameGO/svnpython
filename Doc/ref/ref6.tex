@@ -330,19 +330,6 @@ exception is raised.
 \withsubitem{(in module sys)}{\ttindex{stdout}}
 \exindex{RuntimeError}
 
-\keyword{print} also has an extended form, defined as
-
-\begin{verbatim}
-print_stmt: '>>' expression [ (',' expression)+ [','] ] )
-\end{verbatim}
-
-In this form, the first expression after the \keyword{>>} must
-evaluate to a ``file-like'' object, specifically an object that has a
-\method{write()} method as described above.  With this extended form,
-the subsequent expressions are printed to this file object.  If the
-first expression evaluates to \code{None}, then \code{sys.stdout} is
-used as the file for output.
-
 \section{The \keyword{return} statement \label{return}}
 \stindex{return}
 
@@ -444,7 +431,7 @@ continue_stmt:  "continue"
 \keyword{while} loop, but not nested in a function or class definition or
 \keyword{try} statement within that loop.\footnote{It may
 occur within an \keyword{except} or \keyword{else} clause.  The
-restriction on occurring in the \keyword{try} clause is implementor's
+restriction on occurring in the \keyword{try} clause is implementer's
 laziness and will eventually be lifted.}
 It continues with the next cycle of the nearest enclosing loop.
 \stindex{for}
@@ -456,9 +443,8 @@ It continues with the next cycle of the nearest enclosing loop.
 \stindex{import}
 
 \begin{verbatim}
-import_stmt:    "import" module ["as" name] ("," module ["as" name] )* 
-              | "from" module "import" identifier ["as" name]
-                ("," identifier ["as" name] )*
+import_stmt:    "import" module ("," module)* 
+              | "from" module "import" identifier ("," identifier)*
               | "from" module "import" "*" 
 module:         (identifier ".")* identifier
 \end{verbatim}
@@ -475,7 +461,7 @@ identifier in the list.  The form with \keyword{from} performs step
 % XXX Need to define what ``initialize'' means here
 
 The system maintains a table of modules that have been initialized,
-indexed by module name.  This table is
+indexed by module name.  This table table
 accessible as \code{sys.modules}.  When a module name is found in
 this table, step (1) is finished.  If not, a search for a module
 definition is started.  When a module is found, it is loaded.  Details
@@ -510,21 +496,13 @@ begin.
 
 The first form of \keyword{import} statement binds the module name in the
 local namespace to the module object, and then goes on to import the
-next identifier, if any.  If the module name is followed by \keyword{as},
-the name following \keyword{as} is used as the local name for the module. To
-avoid confusion, you cannot import sub-modules 'as' a different
-local name. So 'import module as m' is legal, but 'import module.submod as
-s' is not. The latter should be written as 'from module import submod as s',
-see below.
-
-The \keyword{from} form does not bind the module name: it goes through the
-list of identifiers, looks each one of them up in the module found in step
-(1), and binds the name in the local namespace to the object thus found. 
-Like with the first form of \keyword{import}, an alternate local name can be
-supplied by specifying "\keyword{as} localname".  If a name is not found,
+next identifier, if any.  The \keyword{from} form does not bind the
+module name: it goes through the list of identifiers, looks each one
+of them up in the module found in step (1), and binds the name in the
+local namespace to the object thus found.  If a name is not found,
 \exception{ImportError} is raised.  If the list of identifiers is replaced
-by a star (\samp{*}), all names defined in the module are bound, except
-those beginning with an underscore (\character{_}).
+by a star (\samp{*}), all names defined in the module are bound,
+except those beginning with an underscore (\character{_}).
 \indexii{name}{binding}
 \exindex{ImportError}
 

@@ -24,7 +24,7 @@ def normcase(s):
     return s
 
 
-# Return whether a path is absolute.
+# Return wheter a path is absolute.
 # Trivial in Posix, harder on the Mac or MS-DOS.
 
 def isabs(s):
@@ -304,7 +304,7 @@ do nothing"""
 
 # Expand paths containing shell variable substitutions.
 # This expands the forms $variable and ${variable} only.
-# Non-existent variables are left unchanged.
+# Non-existant variables are left unchanged.
 
 _varprog = None
 
@@ -342,25 +342,30 @@ are left unchanged"""
 
 def normpath(path):
     """Normalize path, eliminating double slashes, etc."""
-    if path == '':
-        return '.'
     import string
-    initial_slash = (path[0] == '/')
-    comps = string.split(path, '/')
-    new_comps = []
-    for comp in comps:
-        if comp in ('', '.'):
-            continue
-        if (comp != '..' or (not initial_slash and not new_comps) or 
-             (new_comps and new_comps[-1] == '..')):
-            new_comps.append(comp)
-        elif new_comps:
-            new_comps.pop()
-    comps = new_comps
-    path = string.join(comps, '/')
-    if initial_slash:
-        path = '/' + path
-    return path or '.'
+    # Treat initial slashes specially
+    slashes = ''
+    while path[:1] == '/':
+        slashes = slashes + '/'
+        path = path[1:]
+    comps = string.splitfields(path, '/')
+    i = 0
+    while i < len(comps):
+        if comps[i] == '.':
+            del comps[i]
+            while i < len(comps) and comps[i] == '':
+                del comps[i]
+        elif comps[i] == '..' and i > 0 and comps[i-1] not in ('', '..'):
+            del comps[i-1:i+1]
+            i = i-1
+        elif comps[i] == '' and i > 0 and comps[i-1] <> '':
+            del comps[i]
+        else:
+            i = i+1
+    # If the path is now empty, substitute '.'
+    if not comps and not slashes:
+        comps.append('.')
+    return slashes + string.joinfields(comps, '/')
 
 
 def abspath(path):

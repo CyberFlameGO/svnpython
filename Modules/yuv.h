@@ -1,4 +1,3 @@
-
 #ifndef Py_YUV_H
 #define Py_YUV_H
 #ifdef __cplusplus

@@ -94,6 +94,7 @@ sub custom_driver_hook {
 
 
 $CUSTOM_BUTTONS = '';
+$NAV_BGCOLOR = " bgcolor=\"#99CCFF\"";
 
 sub make_nav_sectref {
     my($label,$title) = @_;
@@ -111,22 +112,22 @@ sub make_my_icon {
            . " height=\"32\"\n  alt=\"$text\" width=\"32\">";
 }
 
-$BLANK_ICON = make_my_icon('blank', '');
+$BLANK_ICON = make_my_icon("blank", "");
 
 @my_icons = ();
 $my_icons{'next_page_inactive'} = $BLANK_ICON;
 $my_icons{'previous_page_inactive'} = $BLANK_ICON;
 $my_icons{'up_page_inactive'} = $BLANK_ICON;
-$x = make_my_icon('next', 'Next Page');
+$x = make_my_icon("next", "Next Page");
 $my_icons{'next_page'} = $x;
 $my_icons{'next'} = $x;
-$x = make_my_icon('previous', 'Previous Page');
+$x = make_my_icon("previous", "Previous Page");
 $my_icons{'previous_page'} = $x;
 $my_icons{'previous'} = $x;
-$my_icons{'up'} = make_my_icon('up', 'Up One Level');
-$my_icons{'contents'} = make_my_icon('contents', 'Contents');
-$my_icons{'index'} = make_my_icon('index', 'Index');
-$my_icons{'modules'} = make_my_icon('modules', 'Module Index');
+$my_icons{'up'} = make_my_icon("up", "Up One Level");
+$my_icons{'contents'} = make_my_icon("contents", "Contents");
+$my_icons{'index'} = make_my_icon("index", "Index");
+$my_icons{'modules'} = make_my_icon("modules", "Module Index");
 
 
 sub use_my_icon {
@@ -137,9 +138,9 @@ sub use_my_icon {
 
 sub make_nav_panel {
     my $s;
-    $NEXT = $NEXT_TITLE ? use_my_icon("$NEXT") : $BLANK_ICON;
-    $UP = $UP_TITLE ? use_my_icon("$UP") : $BLANK_ICON;
-    $PREVIOUS = $PREVIOUS_TITLE ? use_my_icon("$PREVIOUS") : $BLANK_ICON;
+    $NEXT = use_my_icon("$NEXT");
+    $UP = use_my_icon("$UP");
+    $PREVIOUS = use_my_icon("$PREVIOUS");
     $CONTENTS = use_my_icon("$CONTENTS");
     $INDEX = $INDEX ? use_my_icon("$INDEX") : $BLANK_ICON;
     if (!$CUSTOM_BUTTONS) {
@@ -148,21 +149,21 @@ sub make_nav_panel {
     $s = ('<table align="center" width="100%" cellpadding="0" cellspacing="2">'
           . "\n<tr>"
           # left-hand side
-          . "\n<td>$PREVIOUS</td>"
-          . "\n<td>$UP</td>"
           . "\n<td>$NEXT</td>"
+          . "\n<td>$UP</td>"
+          . "\n<td>$PREVIOUS</td>"
           # title box
-          . "\n<td align=\"center\" width=\"100%\">$t_title</td>"
+          . "\n<td align=\"center\"$NAV_BGCOLOR width=\"100%\">"
+          . "\n <b class=\"title\">$t_title</b></td>"
           # right-hand side
           . "\n<td>$CONTENTS</td>"
           . "\n<td>$CUSTOM_BUTTONS</td>" # module index
           . "\n<td>$INDEX</td>"
           . "\n</tr></table>\n"
           # textual navigation
-          . make_nav_sectref("Previous", $PREVIOUS_TITLE)
-          . make_nav_sectref("Up", $UP_TITLE)
           . make_nav_sectref("Next", $NEXT_TITLE)
-          );
+          . make_nav_sectref("Up", $UP_TITLE)
+          . make_nav_sectref("Previous", $PREVIOUS_TITLE));
     # remove these; they are unnecessary and cause errors from validation
     $s =~ s/ NAME="tex2html\d+"\n */ /g;
     return $s;

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-'''SMTP/ESMTP client class.
+"""SMTP/ESMTP client class.
 
 This should follow RFC 821 (SMTP) and RFC 1869 (ESMTP).
 
@@ -29,7 +29,7 @@ Example:
   >>> s.getreply()
   (250, "Somebody OverHere <somebody@here.my.org>")
   >>> s.quit()
-'''
+"""
 
 # Author: The Dragon De Monsyne <dragondm@integral.org>
 # ESMTP support, test code and doc fixes added by
@@ -88,7 +88,7 @@ class SMTPSenderRefused(SMTPResponseException):
 
 class SMTPRecipientsRefused(SMTPException):
     """All recipient addresses refused.
-    The errors for each recipient are accessible through the attribute
+    The errors for each recipient are accessable thru the attribute
     'recipients', which is a dictionary of exactly the same sort as 
     SMTP.sendmail() returns.  
     """
@@ -96,6 +96,7 @@ class SMTPRecipientsRefused(SMTPException):
     def __init__(self, recipients):
         self.recipients = recipients
         self.args = ( recipients,)
+
 
 
 class SMTPDataError(SMTPResponseException):
@@ -106,7 +107,6 @@ class SMTPConnectError(SMTPResponseException):
 
 class SMTPHeloError(SMTPResponseException):
     """The server refused our HELO reply."""
-
 
 def quoteaddr(addr):
     """Quote a subset of the email addresses defined by RFC 821.
@@ -132,7 +132,6 @@ def quotedata(data):
     """
     return re.sub(r'(?m)^\.', '..',
         re.sub(r'(?:\r\n|\n|\r(?!\n))', CRLF, data))
-
 
 class SMTP:
     """This class manages a connection to an SMTP or ESMTP server.
@@ -224,9 +223,7 @@ class SMTP:
         if self.debuglevel > 0: print 'send:', `str`
         if self.sock:
             try:
-                sendptr = 0
-                while sendptr < len(str):
-                    sendptr = sendptr + self.sock.send(str[sendptr:])
+                self.sock.send(str)
             except socket.error:
                 raise SMTPServerDisconnected('Server not connected')
         else:
@@ -291,10 +288,14 @@ class SMTP:
         Hostname to send for this command defaults to the FQDN of the local
         host.
         """
-        if name:
-            self.putcmd("helo", name)
-        else:
-            self.putcmd("helo", socket.getfqdn())
+        name=string.strip(name)
+        if len(name)==0:
+            name = socket.gethostname()
+            try:
+                name = socket.gethostbyaddr(name)[0]
+            except socket.error:
+                pass
+        self.putcmd("helo",name)
         (code,msg)=self.getreply()
         self.helo_resp=msg
         return (code,msg)
@@ -304,10 +305,14 @@ class SMTP:
         Hostname to send for this command defaults to the FQDN of the local
         host.
         """
-        if name:
-            self.putcmd("ehlo", name)
-        else:
-            self.putcmd("ehlo", socket.getfqdn())
+        name=string.strip(name)
+        if len(name)==0:
+            name = socket.gethostname()
+            try:
+                name = socket.gethostbyaddr(name)[0]
+            except socket.error:
+                pass
+        self.putcmd("ehlo",name)
         (code,msg)=self.getreply()
         # According to RFC1869 some (badly written) 
         # MTA's will disconnect on an ehlo. Toss an exception if 
@@ -318,7 +323,7 @@ class SMTP:
         if code<>250:
             return (code,msg)
         self.does_esmtp=1
-        #parse the ehlo response -ddm
+        #parse the ehlo responce -ddm
         resp=string.split(self.ehlo_resp,'\n')
         del resp[0]
         for each in resp:

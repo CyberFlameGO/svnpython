@@ -37,7 +37,7 @@ tagfind = re.compile('[a-zA-Z][-.a-zA-Z0-9]*')
 attrfind = re.compile(
     '[%s]*([a-zA-Z_][-.a-zA-Z_0-9]*)' % string.whitespace
     + ('([%s]*=[%s]*' % (string.whitespace, string.whitespace))
-    + r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./:+*%?!&$\(\)_#=~]*))?')
+    + r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./:+*%?!\(\)_#=~]*))?')
 
 
 # SGML parser base class -- find tags and call handler functions.
@@ -47,7 +47,7 @@ attrfind = re.compile(
 # <foo> and </foo>, respectively, or do_foo to handle <foo> by itself.
 # (Tags are converted to lower case for this purpose.)  The data
 # between tags is passed to the parser by calling self.handle_data()
-# with some data as argument (the data may be split up in arbitrary
+# with some data as argument (the data may be split up in arbutrary
 # chunks).  Entity references are passed by calling
 # self.handle_entityref() with the entity reference as argument.
 
@@ -207,15 +207,9 @@ class SGMLParser:
         self.handle_pi(rawdata[i+2: j])
         j = match.end(0)
         return j-i
-
-    __starttag_text = None
-    def get_starttag_text(self):
-        return self.__starttag_text
     
     # Internal -- handle starttag, return length or -1 if not terminated
     def parse_starttag(self, i):
-        self.__starttag_text = None
-        start_pos = i
         rawdata = self.rawdata
         if shorttagopen.match(rawdata, i):
             # SGML shorthand: <tag/data/ == <tag>data</tag>
@@ -226,11 +220,9 @@ class SGMLParser:
             if not match:
                 return -1
             tag, data = match.group(1, 2)
-            self.__starttag_text = '<%s/' % tag
             tag = string.lower(tag)
-            k = match.end(0)
             self.finish_shorttag(tag, data)
-            self.__starttag_text = rawdata[start_pos:match.end(1) + 1]
+            k = match.end(0)
             return k
         # XXX The following should skip matching quotes (' or ")
         match = endbracket.search(rawdata, i+1)
@@ -263,7 +255,6 @@ class SGMLParser:
             k = match.end(0)
         if rawdata[j] == '>':
             j = j+1
-        self.__starttag_text = rawdata[start_pos:j]
         self.finish_starttag(tag, attrs)
         return j
 

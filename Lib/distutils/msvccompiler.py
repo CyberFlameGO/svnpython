@@ -177,7 +177,7 @@ class MSVCCompiler (CCompiler) :
 
     # Private class data (need to distinguish C from C++ source for compiler)
     _c_extensions = ['.c']
-    _cpp_extensions = ['.cc', '.cpp', '.cxx']
+    _cpp_extensions = ['.cc','.cpp']
 
     # Needed for the filename generation methods provided by the
     # base class, CCompiler.
@@ -219,9 +219,8 @@ class MSVCCompiler (CCompiler) :
             self.lib = "lib.exe"
 
         self.preprocess_options = None
-        self.compile_options = [ '/nologo', '/Ox', '/MD', '/W3', '/GX' ]
-        self.compile_options_debug = ['/nologo', '/Od', '/MDd', '/W3', '/GX',
-                                      '/Z7', '/D_DEBUG']
+        self.compile_options = [ '/nologo', '/Ox', '/MD', '/W3' ]
+        self.compile_options_debug = ['/nologo', '/Od', '/MDd', '/W3', '/Z7', '/D_DEBUG']
 
         self.ldflags_shared = ['/DLL', '/nologo', '/INCREMENTAL:NO']
         self.ldflags_shared_debug = [

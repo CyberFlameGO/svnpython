@@ -53,8 +53,7 @@ uncompress = pipes.Template()
 uncompress.append('uncompress', '--')
 
 
-class error(Exception):
-        pass
+error = 'toaiff.error' # Exception
 
 def toaiff(filename):
 	temps = []
@@ -77,7 +76,7 @@ def _toaiff(filename, temps):
 		temps.append(fname)
 		sts = uncompress.copy(filename, fname)
 		if sts:
-			raise error, filename + ': uncompress failed'
+			raise error, filename + ': uncomress failed'
 	else:
 		fname = filename
 	try:

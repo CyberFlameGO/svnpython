@@ -1,5 +1,4 @@
 
-
 /* Cl objects */
 
 #define CLDEBUG
@@ -969,7 +968,7 @@ static PyMethodDef cl_methods[] = {
 #endif
 
 void
-initcl(void)
+initcl()
 {
 	PyObject *m, *d, *x;
 

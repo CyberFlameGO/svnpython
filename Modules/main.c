@@ -1,4 +1,3 @@
-
 /* Python interpreter main program */
 
 #include "Python.h"
@@ -15,7 +14,7 @@
 #if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#define PYTHONHOMEHELP "<prefix>/python2.0"
+#define PYTHONHOMEHELP "<prefix>/python1.5"
 #endif
 
 /* Interface to getopt(): */
@@ -66,7 +65,9 @@ PYTHONHOME   : alternate <prefix> directory (or <prefix>%c<exec_prefix>).\n\
 /* Main program */
 
 DL_EXPORT(int)
-Py_Main(int argc, char **argv)
+Py_Main(argc, argv)
+	int argc;
+	char **argv;
 {
 	int c;
 	int sts;
@@ -259,10 +260,11 @@ Py_Main(int argc, char **argv)
 				}
 			}
 		}
-		sts = PyRun_AnyFileEx(
+		sts = PyRun_AnyFile(
 			fp,
-			filename == NULL ? "<stdin>" : filename,
-			filename != NULL) != 0;
+			filename == NULL ? "<stdin>" : filename) != 0;
+		if (filename != NULL)
+			fclose(fp);
 	}
 
 	if (inspect && stdin_is_interactive &&
@@ -278,7 +280,9 @@ Py_Main(int argc, char **argv)
    This is rare, but it is needed by the secureware extension. */
 
 void
-Py_GetArgcArgv(int *argc, char ***argv)
+Py_GetArgcArgv(argc, argv)
+	int *argc;
+	char ***argv;
 {
 	*argc = orig_argc;
 	*argv = orig_argv;

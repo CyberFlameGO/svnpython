@@ -1,4 +1,3 @@
-
 /* Return the full version string. */
 
 #include "Python.h"
@@ -6,7 +5,7 @@
 #include "patchlevel.h"
 
 const char *
-Py_GetVersion(void)
+Py_GetVersion()
 {
 	static char version[250];
 	sprintf(version, "%.80s (%.80s) %.80s", PY_VERSION,

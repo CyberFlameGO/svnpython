@@ -1,4 +1,3 @@
-
 /* Support for dynamic loading of extension modules */
 
 #include <windows.h>
@@ -74,7 +73,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 					"DLL load failed with error code %d",
 					errorCode);
 			} else {
-				size_t len;
+				int len;
 				/* For some reason a \r\n
 				   is appended to the text */
 				if (theLength >= 2 &&

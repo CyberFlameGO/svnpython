@@ -1,4 +1,3 @@
-
 #ifndef Py_PYDEBUG_H
 #define Py_PYDEBUG_H
 #ifdef __cplusplus
@@ -15,7 +14,7 @@ extern DL_IMPORT(int) Py_FrozenFlag;
 extern DL_IMPORT(int) Py_TabcheckFlag;
 extern DL_IMPORT(int) Py_UnicodeFlag;
 
-DL_IMPORT(void) Py_FatalError(char *message);
+DL_IMPORT(void) Py_FatalError	Py_PROTO((char *));
 
 #ifdef __cplusplus
 }

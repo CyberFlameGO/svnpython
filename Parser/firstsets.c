@@ -1,4 +1,3 @@
-
 /* Computation of FIRST stets */
 
 #include "pgenheaders.h"
@@ -8,10 +7,11 @@
 extern int Py_DebugFlag;
 
 /* Forward */
-static void calcfirstset(grammar *, dfa *);
+static void calcfirstset Py_PROTO((grammar *, dfa *));
 
 void
-addfirstsets(grammar *g)
+addfirstsets(g)
+	grammar *g;
 {
 	int i;
 	dfa *d;
@@ -25,7 +25,9 @@ addfirstsets(grammar *g)
 }
 
 static void
-calcfirstset(grammar *g, dfa *d)
+calcfirstset(g, d)
+	grammar *g;
+	dfa *d;
 {
 	int i, j;
 	state *s;

@@ -50,8 +50,7 @@ uncompress = pipes.Template()
 uncompress.append('uncompress', '--')
 
 
-class error(Exception):
-	pass
+error = 'torgb.error' # Exception
 
 def torgb(filename):
 	temps = []

@@ -1,13 +1,4 @@
-/* -*- C -*- ***********************************************
-Copyright (c) 2000, BeOpen.com.
-Copyright (c) 1995-2000, Corporation for National Research Initiatives.
-Copyright (c) 1990-1995, Stichting Mathematisch Centrum.
-All rights reserved.
-
-See the file "Misc/COPYRIGHT" for information on usage and
-redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
-******************************************************************/
-
+/* -*- C -*- */
 /* Module configuration */
 
 /* This file contains the table of built-in modules.
@@ -15,41 +6,41 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 #include "Python.h"
 
-extern void initarray(void);
-extern void initaudioop(void);
-extern void initbinascii(void);
-extern void initcmath(void);
-extern void initerrno(void);
-extern void initimageop(void);
-extern void initmath(void);
-extern void initmd5(void);
-extern void initnew(void);
-extern void initnt(void);
-extern void initos2(void);
-extern void initoperator(void);
-extern void initposix(void);
-extern void initregex(void);
-extern void initrgbimg(void);
-extern void initrotor(void);
-extern void initsignal(void);
-extern void initselect(void);
-extern void init_socket(void);
-extern void initsoundex(void);
-extern void initstrop(void);
-extern void initstruct(void);
-extern void inittime(void);
-extern void initthread(void);
-extern void initcStringIO(void);
-extern void initcPickle(void);
-extern void initpcre(void);
+extern void initarray();
+extern void initaudioop();
+extern void initbinascii();
+extern void initcmath();
+extern void initerrno();
+extern void initimageop();
+extern void initmath();
+extern void initmd5();
+extern void initnew();
+extern void initnt();
+extern void initos2();
+extern void initoperator();
+extern void initposix();
+extern void initregex();
+extern void initrgbimg();
+extern void initrotor();
+extern void initsignal();
+extern void initselect();
+extern void init_socket();
+extern void initsoundex();
+extern void initstrop();
+extern void initstruct();
+extern void inittime();
+extern void initthread();
+extern void initcStringIO();
+extern void initcPickle();
+extern void initpcre();
 #ifdef WIN32
-extern void initmsvcrt(void);
+extern void initmsvcrt();
 #endif
 
 /* -- ADDMODULE MARKER 1 -- */
 
-extern void PyMarshal_Init(void);
-extern void initimp(void);
+extern void PyMarshal_Init();
+extern void initimp();
 
 struct _inittab _PyImport_Inittab[] = {
 

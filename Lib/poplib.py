@@ -59,7 +59,7 @@ class POP3:
 		POP3(hostname, port=110)
 
 	NB:	the POP protocol locks the mailbox from user
-		authorization until QUIT, so be sure to get in, suck
+		authorisation until QUIT, so be sure to get in, suck
 		the messages, and quit, each time you access the
 		mailbox.
 

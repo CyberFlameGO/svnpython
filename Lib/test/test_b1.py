@@ -4,7 +4,7 @@ from test_support import *
 
 print '__import__'
 __import__('sys')
-__import__('time')
+__import__('strop')
 __import__('string')
 try: __import__('spamspam')
 except ImportError: pass
@@ -72,8 +72,6 @@ if cmp(a, b) != 0: raise TestFailed, "cmp(%s, %s)" % (a, b)
 if cmp(b, c) != 0: raise TestFailed, "cmp(%s, %s)" % (b, c)
 if cmp(c, a) != 0: raise TestFailed, "cmp(%s, %s)" % (c, a)
 if cmp(a, c) != 0: raise TestFailed, "cmp(%s, %s)" % (a, c)
-# okay, now break the cycles
-a.pop(); b.pop(); c.pop()
 
 print 'coerce'
 if fcmp(coerce(1, 1.1), (1.0, 1.1)): raise TestFailed, 'coerce(1, 1.1)'
@@ -153,14 +151,10 @@ if eval('1+1') <> 2: raise TestFailed, 'eval(\'1+1\')'
 if eval(' 1+1\n') <> 2: raise TestFailed, 'eval(\' 1+1\\n\')'
 globals = {'a': 1, 'b': 2}
 locals = {'b': 200, 'c': 300}
-if eval('a', globals) <> 1:
-    raise TestFailed, "eval(1) == %s" % eval('a', globals)
-if eval('a', globals, locals) <> 1:
-    raise TestFailed, "eval(2)"
-if eval('b', globals, locals) <> 200:
-    raise TestFailed, "eval(3)"
-if eval('c', globals, locals) <> 300:
-    raise TestFailed, "eval(4)"
+if eval('a', globals) <> 1: raise TestFailed, "eval(1)"
+if eval('a', globals, locals) <> 1: raise TestFailed, "eval(2)"
+if eval('b', globals, locals) <> 200: raise TestFailed, "eval(3)"
+if eval('c', globals, locals) <> 300: raise TestFailed, "eval(4)"
 
 print 'execfile'
 z = 0
@@ -276,7 +270,7 @@ if int(-3.5) <> -3: raise TestFailed, 'int(-3.5)'
 # Different base:
 if int("10",16) <> 16L: raise TestFailed, 'int("10",16)'
 if int(u"10",16) <> 16L: raise TestFailed, 'int(u"10",16)'
-# Test conversion from strings and various anomalies
+# Test conversion fron strings and various anomalies
 L = [
         ('0', 0),
         ('1', 1),

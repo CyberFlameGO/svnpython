@@ -26,7 +26,6 @@ compiler specific".  Therefore, these should be very rare.
 
 */
 
-
 /*
  Some systems require special declarations for data items imported
  or exported from dynamic link libraries.  Note that the definition
@@ -223,202 +222,34 @@ typedef int pid_t;
 /* XXX These defines are likely incomplete, but should be easy to fix. */
 #ifdef __BORLANDC__
 #define COMPILER "[Borland]"
-#define HAVE_CLOCK
-#define HAVE_STRFTIME
-
-#ifdef _WIN32
-
-/* tested with BCC 5.5 (__BORLANDC__ >= 0x0550)
- */
-#define NT	/* NT is obsolete - please use MS_WIN32 instead */
-#define MS_WIN32
-#define MS_WINDOWS
-
-/* For NT the Python core is in a DLL by default.  Test the
-standard macro MS_COREDLL to find out.  If you have an exception
-you must define MS_NO_COREDLL (do not test this macro) */
-#ifndef MS_NO_COREDLL
-#define MS_COREDLL	/* Python core is in a DLL */
-#ifndef USE_DL_EXPORT
-#define USE_DL_IMPORT
-#endif /* !USE_DL_EXPORT */
-#endif /* !MS_NO_COREDLL */
-
-#define PYTHONPATH ".\\DLLs;.\\lib;.\\lib\\plat-win;.\\lib\\lib-tk"
-typedef int pid_t;
-#define WORD_BIT 32
-#include <stdio.h>
-#define HAVE_STRERROR
-#define NT_THREADS
-#define WITH_THREAD
-#ifndef NETSCAPE_PI
-#define USE_SOCKET
-#endif
-/* BCC55 seems to understand __declspec(dllimport), it is used in its
-   own header files (winnt.h, ...) */
-#ifdef USE_DL_IMPORT
-#define DL_IMPORT(RTYPE) __declspec(dllimport) RTYPE
-#endif
-#ifdef USE_DL_EXPORT
-#define DL_IMPORT(RTYPE) __declspec(dllexport) RTYPE
-#define DL_EXPORT(RTYPE) __declspec(dllexport) RTYPE
-#endif
-
-#define HAVE_LONG_LONG 1
-#define LONG_LONG __int64
-
-#else /* !_WIN32 */
-/* XXX These defines are likely incomplete, but should be easy to fix. */
-
 #define PYTHONPATH ".;.\\lib;.\\lib\\plat-win;.\\lib\\dos-8x3"
 #define IMPORT_8x3_NAMES
+#define HAVE_CLOCK
+#define HAVE_STRFTIME
 #ifdef USE_DL_IMPORT
 #define DL_IMPORT(RTYPE)  RTYPE __import
 #endif
-
-#endif /* !_WIN32 */
-
 #endif /* BORLANDC */
 
-/* egcs/gnu-win32 defines __GNUC__ and _WIN32 */
-#if defined(__GNUC__) && defined(_WIN32)
-/* XXX These defines are likely incomplete, but should be easy to fix. 
-   They should be complete enough to build extension modules. */
-/* Suggested by Rene Liebscher <R.Liebscher@gmx.de> to avoid a GCC 2.91.*
-   bug that requires structure imports.  More recent versions of the
-   compiler don't exhibit this bug.
-*/
-#if (__GNUC__==2) && (__GNUC_MINOR__<=91)
-#warning "Please use an up-to-date version of gcc! (>2.91 recommended)"
-#endif
-
-#define NT	/* NT is obsolete - please use MS_WIN32 instead */
-#define MS_WIN32
-#define MS_WINDOWS
-
-/* For NT the Python core is in a DLL by default.  Test the
-standard macro MS_COREDLL to find out.  If you have an exception
-you must define MS_NO_COREDLL (do not test this macro) */
-#ifndef MS_NO_COREDLL
-#define MS_COREDLL	/* Python core is in a DLL */
-#ifndef USE_DL_EXPORT
-#define USE_DL_IMPORT
-#endif /* !USE_DL_EXPORT */
-#endif /* !MS_NO_COREDLL */
-
-#define COMPILER "[gcc]"
-#define PYTHONPATH ".\\DLLs;.\\lib;.\\lib\\plat-win;.\\lib\\lib-tk"
-#define WORD_BIT 32
-#define hypot _hypot
-#include <stdio.h>
-#define HAVE_CLOCK
-#define HAVE_STRFTIME
-#define HAVE_STRERROR
-#define NT_THREADS
-#define WITH_THREAD
-#ifndef NETSCAPE_PI
-#define USE_SOCKET
-#endif
-#ifdef USE_DL_IMPORT
-#define DL_IMPORT(RTYPE) __declspec(dllimport) RTYPE
-#endif
-#ifdef USE_DL_EXPORT
-#define DL_IMPORT(RTYPE) __declspec(dllexport) RTYPE
-#define DL_EXPORT(RTYPE) __declspec(dllexport) RTYPE
-#endif
-
-#define HAVE_LONG_LONG 1
-#define LONG_LONG long long 
-#endif /* GNUC */
-
-/* lcc-win32 defines __LCC__ */
-
-#if defined(__LCC__)
-/* XXX These defines are likely incomplete, but should be easy to fix. 
-   They should be complete enough to build extension modules. */
-
-#define NT	/* NT is obsolete - please use MS_WIN32 instead */
-#define MS_WIN32
-#define MS_WINDOWS
-
-/* For NT the Python core is in a DLL by default.  Test the
-standard macro MS_COREDLL to find out.  If you have an exception
-you must define MS_NO_COREDLL (do not test this macro) */
-#ifndef MS_NO_COREDLL
-#define MS_COREDLL	/* Python core is in a DLL */
-#ifndef USE_DL_EXPORT
-#define USE_DL_IMPORT
-#endif /* !USE_DL_EXPORT */
-#endif /* !MS_NO_COREDLL */
-
-#define COMPILER "[lcc-win32]"
-#define PYTHONPATH ".\\DLLs;.\\lib;.\\lib\\plat-win;.\\lib\\lib-tk"
-typedef int pid_t;
-#define WORD_BIT 32
-#include <stdio.h>
-#define HAVE_CLOCK
-#define HAVE_STRFTIME
-#define HAVE_STRERROR
-#define NT_THREADS
-#define WITH_THREAD
-#ifndef NETSCAPE_PI
-#define USE_SOCKET
-#endif
-#ifdef USE_DL_IMPORT
-#define DL_IMPORT(RTYPE) __declspec(dllimport) RTYPE
-#endif
-#ifdef USE_DL_EXPORT
-#define DL_IMPORT(RTYPE) __declspec(dllexport) RTYPE
-#define DL_EXPORT(RTYPE) __declspec(dllexport) RTYPE
-#endif
-
-#define HAVE_LONG_LONG 1
-#define LONG_LONG __int64
-#endif /* LCC */
-
 /* End of compilers - finish up */
-
-/* define some ANSI types that are not defined in earlier Win headers */
-#if _MSC_VER >= 1200 /* This file only exists in VC 6.0 or higher */
-#include <basetsd.h>
-#endif
-#if defined(MS_WINDOWS) && !defined(MS_WIN64)
-typedef long intptr_t;
-typedef unsigned long uintptr_t;
-#endif
 
 #if defined(MS_WIN64)
 /* maintain "win32" sys.platform for backward compatibility of Python code,
    the Win64 API should be close enough to the Win32 API to make this
    preferable */
-#	define PLATFORM "win32"
-#	define SIZEOF_VOID_P 8
-#	define SIZEOF_TIME_T 8
-#	define SIZEOF_OFF_T 4
-#	define SIZEOF_FPOS_T 8
-#	define SIZEOF_HKEY 8
-/* configure.in defines HAVE_LARGEFILE_SUPPORT iff HAVE_LONG_LONG,
-   sizeof(off_t) > sizeof(long), and sizeof(LONG_LONG) >= sizeof(off_t).
-   On Win64 the second condition is not true, but if fpos_t replaces off_t
-   then this is true. The uses of HAVE_LARGEFILE_SUPPORT imply that Win64
-   should define this. */
-#	define HAVE_LARGEFILE_SUPPORT
+#define PLATFORM "win32"
+#define SIZEOF_VOID_P 8
 #elif defined(MS_WIN32)
-#	define PLATFORM "win32"
-#	ifdef _M_ALPHA
-#		define SIZEOF_VOID_P 8
-#		define SIZEOF_TIME_T 8
-#	else
-#		define SIZEOF_VOID_P 4
-#		define SIZEOF_TIME_T 4
-#		define SIZEOF_OFF_T 4
-#		define SIZEOF_FPOS_T 8
-#		define SIZEOF_HKEY 4
-#	endif
-#elif defined(MS_WIN16)
-#	define PLATFORM "win16"
+#define PLATFORM "win32"
+#ifdef _M_ALPHA
+#define SIZEOF_VOID_P 8
 #else
-#	define PLATFORM "dos"
+#define SIZEOF_VOID_P 4
+#endif
+#elif defined(MS_WIN16)
+#define PLATFORM "win16"
+#else
+#define PLATFORM "dos"
 #endif
 
 
@@ -426,12 +257,12 @@ typedef unsigned long uintptr_t;
 
 #if !defined(USE_DL_EXPORT) && defined(_MSC_VER)
 /* So nobody using MSVC needs to specify the .lib in their Makefile any
-   more (other compilers will still need to do so, but that's taken care
+   more (other compilers will still need it, but that's taken care
    of by the Distutils, so it's not a problem). */
 #ifdef _DEBUG
-#pragma comment(lib,"python20_d.lib")
+#pragma comment(lib,"python16_d.lib")
 #else
-#pragma comment(lib,"python20.lib")
+#pragma comment(lib,"python16.lib")
 #endif
 #endif /* USE_DL_EXPORT */
 
@@ -442,6 +273,13 @@ typedef unsigned long uintptr_t;
 #define SIZEOF_INT 4
 #define SIZEOF_LONG 4
 #define SIZEOF_LONG_LONG 8
+
+/* Smaller stack size limit.  (9500 would work too, but we're conservative.) */
+
+#ifndef MAX_RECURSION_DEPTH
+#define MAX_RECURSION_DEPTH 5000
+#endif
+
 
 /* EXPERIMENTAL FEATURE: When CHECK_IMPORT_CASE is defined, check case of
    imported modules against case of file; this causes "import String" to fail
@@ -584,9 +422,6 @@ typedef unsigned long uintptr_t;
 
 /* Define if you want to use the GNU readline library */
 /* #define WITH_READLINE 1 */
-
-/* Define if you want cycle garbage collection */
-#define WITH_CYCLE_GC 1
 
 /* Define if you have clock.  */
 /* #define HAVE_CLOCK */

@@ -54,11 +54,8 @@ Triple = group("[rR]?'''", '[rR]?"""')
 String = group("[rR]?'" + any(r"[^\n'\\]", r'\\.') + "'",
                '[rR]?"' + any(r'[^\n"\\]', r'\\.') + '"')
 
-Operator = group('\+=', '\-=', '\*=', '%=', '/=', '\*\*=', '&=', '\|=',
-                 '\^=', '>>=', '<<=', '\+', '\-', '\*\*', '\*', '\^', '~',
-                 '/', '%', '&', '\|', '<<', '>>', '==', '<=', '<>', '!=',
-                 '>=', '=', '<', '>')
-
+Operator = group('\+', '\-', '\*\*', '\*', '\^', '~', '/', '%', '&', '\|',
+                 '<<', '>>', '==', '<=', '<>', '!=', '>=', '=', '<', '>')
 Bracket = '[][(){}]'
 Special = group(r'\r?\n', r'[:;.,`]')
 Funny = group(Operator, Bracket, Special)
@@ -79,10 +76,7 @@ endprogs = {"'": re.compile(Single), '"': re.compile(Double),
             "R'''": single3prog, 'R"""': double3prog, 'r': None, 'R': None}
 
 tabsize = 8
-
-class TokenError(Exception):
-    pass
-
+TokenError = 'TokenError'
 def printtoken(type, token, (srow, scol), (erow, ecol), line): # for testing
     print "%d,%d-%d,%d:\t%s\t%s" % \
         (srow, scol, erow, ecol, tok_name[type], repr(token))

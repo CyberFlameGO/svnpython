@@ -1,57 +1,84 @@
-
 /* New getargs implementation */
 
 /* XXX There are several unchecked sprintf or strcat calls in this file.
    XXX The only way these can become a danger is if some C code in the
    XXX Python source (or in an extension) uses ridiculously long names
-   XXX or ridiculously deep nesting in format strings. */
+   XXX or riduculously deep nesting in format strings. */
 
 #include "Python.h"
 
 #include <ctype.h>
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
 
 
-int PyArg_Parse(PyObject *, char *, ...);
-int PyArg_ParseTuple(PyObject *, char *, ...);
-int PyArg_VaParse(PyObject *, char *, va_list);
+int PyArg_Parse Py_PROTO((PyObject *, char *, ...));
+int PyArg_ParseTuple Py_PROTO((PyObject *, char *, ...));
+int PyArg_VaParse Py_PROTO((PyObject *, char *, va_list));
 
-int PyArg_ParseTupleAndKeywords(PyObject *, PyObject *,
-				char *, char **, ...);
+int PyArg_ParseTupleAndKeywords Py_PROTO((PyObject *, PyObject *,
+				       char *, char **, ...));
 
 /* Forward */
-static int vgetargs1(PyObject *, char *, va_list *, int);
-static void seterror(int, char *, int *, char *, char *);
-static char *convertitem(PyObject *, char **, va_list *, int *, char *);
-static char *converttuple(PyObject *, char **, va_list *,
-			  int *, char *, int);
-static char *convertsimple(PyObject *, char **, va_list *, char *);
-static char *convertsimple1(PyObject *, char **, va_list *);
+static int vgetargs1 Py_PROTO((PyObject *, char *, va_list *, int));
+static void seterror Py_PROTO((int, char *, int *, char *, char *));
+static char *convertitem Py_PROTO((PyObject *, char **, va_list *,
+				   int *, char *));
+static char *converttuple Py_PROTO((PyObject *, char **, va_list *,
+				 int *, char *, int));
+static char *convertsimple Py_PROTO((PyObject *, char **, va_list *, char *));
+static char *convertsimple1 Py_PROTO((PyObject *, char **, va_list *));
 
-static int vgetargskeywords(PyObject *, PyObject *,
-			    char *, char **, va_list *);
-static char *skipitem(char **, va_list *);
+static int vgetargskeywords Py_PROTO((PyObject *, PyObject *,
+				   char *, char **, va_list *));
+static char *skipitem Py_PROTO((char **, va_list *));
 
+#ifdef HAVE_STDARG_PROTOTYPES
+/* VARARGS2 */
 int PyArg_Parse(PyObject *args, char *format, ...)
+#else
+/* VARARGS */
+int PyArg_Parse(va_alist) va_dcl
+#endif
 {
 	int retval;
 	va_list va;
+#ifdef HAVE_STDARG_PROTOTYPES
 	
 	va_start(va, format);
+#else
+	PyObject *args;
+	char *format;
+	
+	va_start(va);
+	args = va_arg(va, PyObject *);
+	format = va_arg(va, char *);
+#endif
 	retval = vgetargs1(args, format, &va, 1);
 	va_end(va);
 	return retval;
 }
 
 
+#ifdef HAVE_STDARG_PROTOTYPES
+/* VARARGS2 */
 int PyArg_ParseTuple(PyObject *args, char *format, ...)
+#else
+/* VARARGS */
+int PyArg_ParseTuple(va_alist) va_dcl
+#endif
 {
 	int retval;
 	va_list va;
+#ifdef HAVE_STDARG_PROTOTYPES
 	
 	va_start(va, format);
+#else
+	PyObject *args;
+	char *format;
+	
+	va_start(va);
+	args = va_arg(va, PyObject *);
+	format = va_arg(va, char *);
+#endif
 	retval = vgetargs1(args, format, &va, 0);
 	va_end(va);
 	return retval;
@@ -59,7 +86,10 @@ int PyArg_ParseTuple(PyObject *args, char *format, ...)
 
 
 int
-PyArg_VaParse(PyObject *args, char *format, va_list va)
+PyArg_VaParse(args, format, va)
+	PyObject *args;
+	char *format;
+	va_list va;
 {
 	va_list lva;
 
@@ -74,7 +104,11 @@ PyArg_VaParse(PyObject *args, char *format, va_list va)
 
 
 static int
-vgetargs1(PyObject *args, char *format, va_list *p_va, int compat)
+vgetargs1(args, format, p_va, compat)
+	PyObject *args;
+	char *format;
+	va_list *p_va;
+	int compat;
 {
 	char msgbuf[256];
 	int levels[32];
@@ -208,7 +242,12 @@ vgetargs1(PyObject *args, char *format, va_list *p_va, int compat)
 
 
 static void
-seterror(int iarg, char *msg, int *levels, char *fname, char *message)
+seterror(iarg, msg, levels, fname, message)
+	int iarg;
+	char *msg;
+	int *levels;
+	char *fname;
+	char *message;
 {
 	char buf[256];
 	int i;
@@ -258,8 +297,13 @@ seterror(int iarg, char *msg, int *levels, char *fname, char *message)
 */
 
 static char *
-converttuple(PyObject *arg, char **p_format, va_list *p_va, int *levels,
-	     char *msgbuf, int toplevel)
+converttuple(arg, p_format, p_va, levels, msgbuf, toplevel)
+	PyObject *arg;
+	char **p_format;
+	va_list *p_va;
+	int *levels;
+	char *msgbuf;
+	int toplevel;
 {
 	int level = 0;
 	int n = 0;
@@ -292,7 +336,7 @@ converttuple(PyObject *arg, char **p_format, va_list *p_va, int *levels,
 		return msgbuf;
 	}
 	
-	if ((i = PySequence_Size(arg)) != n) {
+	if ((i = PySequence_Length(arg)) != n) {
 		levels[0] = 0;
 		sprintf(msgbuf,
 		    toplevel ? "%d arguments, %d" : "%d-sequence, %d-sequence",
@@ -322,8 +366,12 @@ converttuple(PyObject *arg, char **p_format, va_list *p_va, int *levels,
 /* Convert a single item. */
 
 static char *
-convertitem(PyObject *arg, char **p_format, va_list *p_va, int *levels,
-	    char *msgbuf)
+convertitem(arg, p_format, p_va, levels, msgbuf)
+	PyObject *arg;
+	char **p_format;
+	va_list *p_va;
+	int *levels;
+	char *msgbuf;
 {
 	char *msg;
 	char *format = *p_format;
@@ -349,7 +397,11 @@ convertitem(PyObject *arg, char **p_format, va_list *p_va, int *levels,
    by appending ", <actual argument type>" to error message. */
 
 static char *
-convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf)
+convertsimple(arg, p_format, p_va, msgbuf)
+	PyObject *arg;
+	char **p_format;
+	va_list *p_va;
+	char *msgbuf;
 {
 	char *msg = convertsimple1(arg, p_format, p_va);
 	if (msg != NULL) {
@@ -372,7 +424,10 @@ PyObject *_PyUnicode_AsDefaultEncodedString(PyObject *unicode,
    Don't call if a tuple is expected. */
 
 static char *
-convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
+convertsimple1(arg, p_format, p_va)
+	PyObject *arg;
+	char **p_format;
+	va_list *p_va;
 {
 	char *format = *p_format;
 	char c = *format++;
@@ -387,34 +442,13 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				return "integer<b>";
 			else if (ival < 0) {
 				PyErr_SetString(PyExc_OverflowError,
-			      "unsigned byte integer is less than minimum");
+					"unsigned byte integer is less than minimum");
 				return "integer<b>";
 			}
 			else if (ival > UCHAR_MAX) {
 				PyErr_SetString(PyExc_OverflowError,
-			      "unsigned byte integer is greater than maximum");
+				    "unsigned byte integer is greater than maximum");
 				return "integer<b>";
-			}
-			else
-				*p = (unsigned char) ival;
-			break;
-		}
-	
-	case 'B': /* byte sized bitfield - both signed and unsigned values allowed */
-		{
-			char *p = va_arg(*p_va, char *);
-			long ival = PyInt_AsLong(arg);
-			if (ival == -1 && PyErr_Occurred())
-				return "integer<b>";
-			else if (ival < SCHAR_MIN) {
-				PyErr_SetString(PyExc_OverflowError,
-			      "byte-sized integer bitfield is less than minimum");
-				return "integer<B>";
-			}
-			else if (ival > UCHAR_MAX) {
-				PyErr_SetString(PyExc_OverflowError,
-			      "byte-sized integer bitfield is greater than maximum");
-				return "integer<B>";
 			}
 			else
 				*p = (unsigned char) ival;
@@ -429,37 +463,16 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				return "integer<h>";
 			else if (ival < SHRT_MIN) {
 				PyErr_SetString(PyExc_OverflowError,
-			      "signed short integer is less than minimum");
+					"signed short integer is less than minimum");
 				return "integer<h>";
 			}
 			else if (ival > SHRT_MAX) {
 				PyErr_SetString(PyExc_OverflowError,
-			      "signed short integer is greater than maximum");
+				  "signed short integer is greater than maximum");
 				return "integer<h>";
 			}
 			else
 				*p = (short) ival;
-			break;
-		}
-	
-	case 'H': /* short int sized bitfield, both signed and unsigned allowed */
-		{
-			unsigned short *p = va_arg(*p_va, unsigned short *);
-			long ival = PyInt_AsLong(arg);
-			if (ival == -1 && PyErr_Occurred())
-				return "integer<H>";
-			else if (ival < SHRT_MIN) {
-				PyErr_SetString(PyExc_OverflowError,
-			      "short integer bitfield is less than minimum");
-				return "integer<H>";
-			}
-			else if (ival > USHRT_MAX) {
-				PyErr_SetString(PyExc_OverflowError,
-			      "short integer bitfield is greater than maximum");
-				return "integer<H>";
-			}
-			else
-				*p = (unsigned short) ival;
 			break;
 		}
 	
@@ -469,20 +482,21 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 			long ival = PyInt_AsLong(arg);
 			if (ival == -1 && PyErr_Occurred())
 				return "integer<i>";
-			else if (ival > INT_MAX) {
-				PyErr_SetString(PyExc_OverflowError,
-				    "signed integer is greater than maximum");
-				return "integer<i>";
-			}
 			else if (ival < INT_MIN) {
 				PyErr_SetString(PyExc_OverflowError,
-				    "signed integer is less than minimum");
+					"signed integer is less than minimum");
+				return "integer<i>";
+			}
+			else if (ival > INT_MAX) {
+				PyErr_SetString(PyExc_OverflowError,
+				  "signed integer is greater than maximum");
 				return "integer<i>";
 			}
 			else
 				*p = ival;
 			break;
 		}
+	
 	case 'l': /* long int */
 		{
 			long *p = va_arg(*p_va, long *);
@@ -841,7 +855,8 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 				
 			}
 			else if (*format == '&') {
-				typedef int (*converter)(PyObject *, void *);
+				typedef int (*converter)
+					Py_PROTO((PyObject *, void *));
 				converter convert = va_arg(*p_va, converter);
 				void *addr = va_arg(*p_va, void *);
 				format++;
@@ -917,15 +932,34 @@ convertsimple1(PyObject *arg, char **p_format, va_list *p_va)
 /* Support for keyword arguments donated by
    Geoff Philbrick <philbric@delphi.hks.com> */
 
+#ifdef HAVE_STDARG_PROTOTYPES
+/* VARARGS2 */
 int PyArg_ParseTupleAndKeywords(PyObject *args,
 				PyObject *keywords,
 				char *format, 
 				char **kwlist, ...)
+#else
+/* VARARGS */
+int PyArg_ParseTupleAndKeywords(va_alist) va_dcl
+#endif
 {
 	int retval;
 	va_list va;
+#ifdef HAVE_STDARG_PROTOTYPES
 	
 	va_start(va, kwlist);
+#else
+	PyObject *args;
+	PyObject *keywords;
+	char *format;
+	char **kwlist;
+	
+	va_start(va);
+	args = va_arg(va, PyObject *);
+	keywords = va_arg(va, PyObject *);
+	format = va_arg(va, char *);
+	kwlist = va_arg(va, char **);
+#endif
 	retval = vgetargskeywords(args, keywords, format, kwlist, &va);	
 	va_end(va);
 	return retval;
@@ -933,8 +967,12 @@ int PyArg_ParseTupleAndKeywords(PyObject *args,
 
 
 static int
-vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
-	         char **kwlist, va_list *p_va)
+vgetargskeywords(args, keywords, format, kwlist, p_va)
+	PyObject *args;
+	PyObject *keywords;
+	char *format;
+	char **kwlist;
+	va_list *p_va;
 {
 	char msgbuf[256];
 	int levels[32];
@@ -1137,7 +1175,9 @@ vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
 
 
 static char *
-skipitem(char **p_format, va_list *p_va)
+skipitem(p_format, p_va)
+	char **p_format;
+	va_list *p_va;
 {
 	char *format = *p_format;
 	char c = *format++;
@@ -1145,7 +1185,6 @@ skipitem(char **p_format, va_list *p_va)
 	switch (c) {
 	
 	case 'b': /* byte -- very short int */
-	case 'B': /* byte as bitfield */
 		{
 			(void) va_arg(*p_va, char *);
 			break;
@@ -1154,12 +1193,6 @@ skipitem(char **p_format, va_list *p_va)
 	case 'h': /* short int */
 		{
 			(void) va_arg(*p_va, short *);
-			break;
-		}
-	
-	case 'H': /* short int as bitfield */
-		{
-			(void) va_arg(*p_va, unsigned short *);
 			break;
 		}
 	
@@ -1253,7 +1286,8 @@ skipitem(char **p_format, va_list *p_va)
 			}
 #endif
 			else if (*format == '&') {
-				typedef int (*converter)(PyObject *, void *);
+				typedef int (*converter)
+					Py_PROTO((PyObject *, void *));
 				(void) va_arg(*p_va, converter);
 				(void) va_arg(*p_va, void *);
 				format++;

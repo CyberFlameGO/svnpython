@@ -1,9 +1,8 @@
-
 /* Portable fmod(x, y) implementation for systems that don't have it */
 
 #include "config.h"
 
-#include "pyport.h"
+#include "mymath.h"
 #include <errno.h>
 
 double

@@ -42,13 +42,6 @@ def rmdir(x):
     if verbose: print "rmdir", x
     os.rmdir(x)
 
-def fixdir(lst):
-    try:
-        lst.remove('__builtins__')
-    except ValueError:
-        pass
-    return lst
-
 # Helper to run a test
 
 def runtest(hier, code):
@@ -153,9 +146,9 @@ import t5
 from t5 import *
 print dir()
 import t5
-print fixdir(dir(t5))
-print fixdir(dir(t5.foo))
-print fixdir(dir(t5.string))
+print dir(t5)
+print dir(t5.foo)
+print dir(t5.string)
 """),
 
     ("t6", [
@@ -167,37 +160,10 @@ print fixdir(dir(t5.string))
     ],
 """
 import t6
-print fixdir(dir(t6))
+print dir(t6)
 from t6 import *
-print fixdir(dir(t6))
+print dir(t6)
 print dir()
-"""),
-    
-    ("t7", [
-    ("t7.py", "print 'Importing t7.py'"),
-    ("t7", None),
-    ("t7 __init__.py", "print __name__, 'loading'"),
-    ("t7 sub.py", "print 'THIS SHOULD NOT BE PRINTED (sub.py)'"),
-    ("t7 sub", None),
-    ("t7 sub __init__.py", ""),
-    ("t7 sub subsub.py", "print 'THIS SHOULD NOT BE PRINTED (subsub.py)'"),
-    ("t7 sub subsub", None),
-    ("t7 sub subsub __init__.py", "print __name__, 'loading'; spam = 1"),
-    ],
-"""
-t7, sub, subsub = None, None, None
-import t7 as tas
-print dir(tas)
-assert not t7
-from t7 import sub as subpar
-print dir(subpar)
-assert not t7 and not sub
-from t7.sub import subsub as subsubsub
-print dir(subsubsub)
-assert not t7 and not sub and not subsub
-from t7.sub.subsub import spam as ham
-print "t7.sub.subsub.spam =", ham
-assert not t7 and not sub and not subsub
 """),
 
 ]

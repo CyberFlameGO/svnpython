@@ -152,25 +152,13 @@ A list display is a possibly empty series of expressions enclosed in
 square brackets:
 
 \begin{verbatim}
-list_display:   "[" [listmaker] "]"
-listmaker:   expression ( list_for | ( "," expression)* [","] )
-list_iter:   list_for | list_if
-list_for:    "for" expression_list "in" testlist [list_iter]
-list_if:     "if" test [list_iter]
+list_display:   "[" [expression_list] "]"
 \end{verbatim}
 
-A list display yields a new list object.  Its contents are specified
-by providing either a list of expressions or a list comprehension.
-When a comma-separated list of expressions is supplied, its elements are
-evaluated from left to right and placed into the list object in that
-order.  When a list comprehension is supplied, it consists of a
-single expression followed by at least one \keyword{for} clause and zero or
-more \keyword{for} or \keyword{if} clauses.  In this 
-case, the elements of the new list are those that would be produced
-by considering each of the \keyword{for} or \keyword{if} clauses a block,
-nesting from 
-left to right, and evaluating the expression to produce a list element
-each time the innermost block is reached.
+A list display yields a new list object.  If it has no expression
+list, the list object has no items.  Otherwise, the elements of the
+expression list are evaluated from left to right and inserted in the
+list object in that order.
 \obindex{list}
 \indexii{empty}{list}
 
@@ -465,9 +453,8 @@ function call.
 \obindex{function}
 
 \item[a built-in function or method:] The result is up to the
-interpreter; see the \citetitle[../lib/built-in-funcs.html]{Python
-Library Reference} for the descriptions of built-in functions and
-methods.
+interpreter; see the library reference manual for the descriptions of
+built-in functions and methods.
 \indexii{function}{call}
 \indexii{built-in function}{call}
 \indexii{method}{call}
@@ -753,35 +740,14 @@ execution of a program.
 
 \end{itemize}
 
-The operators \keyword{in} and \keyword{not in} test for set
-membership: every type can define membership in whatever way is
-appropriate.  Traditionally, this interface has been tightly bound
-the sequence interface, which is related in that presence in a sequence
-can be usefully interpreted as membership in a set.
-
-For the list, tuple types, \code{\var{x} in \var{y}} is true if and only
-if there exists such an index \var{i} such that
-\code{var{x} == \var{y}[\var{i}]} is true.
-
-For the Unicode and string types, \code{\var{x} in \var{y}} is true if and only
-if there exists such an index \var{i} such that
-\code{var{x} == \var{y}[\var{i}]} is true. If \code{\var{x}} is not
-a string of length \code{1} or a unicode object of length \code{1},
-a \exception{TypeError} exception is raised.
-
-For user-defined classes which define the \method{__contains__()} method,
-\code{\var{x} in \var{y}} is true if and only if
-\code{\var{y}.__contains__(\var{x})} is true.
-
-For user-defined classes which do not define \method{__contains__()} and
-do define \var{__getitem__}, \code{\var{x} in \var{y}} is true if and only
-if there is a non-negative integer index \var{i} such that
-\code{\var{x} == \var{y}[\var{i}]}, and all lower integer indices
-do not raise \exception{IndexError} exception. (If any other exception
-is raised, it is as if \keyword{in} raised that exception).
-
-The operator \keyword{not in} is defined to have the inverse true value
-of \keyword{in}.
+The operators \keyword{in} and \keyword{not in} test for sequence
+membership: if \var{y} is a sequence, \code{\var{x} in \var{y}} is
+true if and only if there exists an index \var{i} such that
+\code{\var{x} = \var{y}[\var{i}]}.
+\code{\var{x} not in \var{y}} yields the inverse truth value.  The
+exception \exception{TypeError} is raised when \var{y} is not a sequence,
+or when \var{y} is a string and \var{x} is not a string of length
+one.\footnote{The latter restriction is sometimes a nuisance.}
 \opindex{in}
 \opindex{not in}
 \indexii{membership}{test}

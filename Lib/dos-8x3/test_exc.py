@@ -6,20 +6,8 @@ from types import ClassType
 print '5. Built-in exceptions'
 # XXX This is not really enough, each *operation* should be tested!
 
-def test_raise_catch(exc):
-    try:
-        raise exc, "spam"
-    except exc, err:
-        buf = str(err)
-    try:
-        raise exc("spam")
-    except exc, err:
-        buf = str(err)
-    print buf
-
 def r(thing):
-    test_raise_catch(thing)
-    if isinstance(thing, ClassType):
+    if type(thing) == ClassType:
         print thing.__name__
     else:
         print thing
@@ -86,14 +74,6 @@ r(SyntaxError)
 try: exec '/\n'
 except SyntaxError: pass
 
-r(IndentationError)
-
-r(TabError)
-# can only be tested under -tt, and is the only test for -tt
-#try: compile("try:\n\t1/0\n    \t1/0\nfinally:\n pass\n", '<string>', 'exec')
-#except TabError: pass
-#else: raise TestFailed
-
 r(SystemError)
 print '(hard to reproduce)'
 
@@ -113,9 +93,5 @@ except ValueError: pass
 r(ZeroDivisionError)
 try: x = 1/0
 except ZeroDivisionError: pass
-
-r(Exception)
-try: x = 1/0
-except Exception, e: pass
 
 unlink(TESTFN)

@@ -174,9 +174,9 @@ PyErr_Occurred:PyObject*::0:
 PyErr_Print:void:::
 
 PyErr_Restore:void:::
-PyErr_Restore:PyObject*:type:-1:
-PyErr_Restore:PyObject*:value:-1:
-PyErr_Restore:PyObject*:traceback:-1:
+PyErr_Restore:PyObject*:type:0:
+PyErr_Restore:PyObject*:value:0:
+PyErr_Restore:PyObject*:traceback:0:
 
 PyErr_SetFromErrno:PyObject*::null:
 PyErr_SetFromErrno:PyObject*:type:0:
@@ -215,11 +215,6 @@ PyEval_RestoreThread:void:::
 PyEval_RestoreThread:PyThreadState*:tstate::
 
 PyEval_SaveThread:PyThreadState*:::
-
-PyEval_EvalCode:PyObject*::+1:
-PyEval_EvalCode:PyCodeObject*:co:0:
-PyEval_EvalCode:PyObject*:globals:0:
-PyEval_EvalCode:PyObject*:locals:0:
 
 PyFile_AsFile:FILE*:::
 PyFile_AsFile:PyFileObject*:p:0:
@@ -544,9 +539,6 @@ PyNumber_Xor:PyObject*:o2:0:
 PyOS_GetLastModificationTime:long:::
 PyOS_GetLastModificationTime:char*:filename::
 
-PyObject_AsFileDescriptor:int::: 
-PyObject_AsFileDescriptor:PyObject*:o:0:
-
 PyObject_CallFunction:PyObject*::+1:
 PyObject_CallFunction:PyObject*:callable_object:0:
 PyObject_CallFunction:char*:format::
@@ -654,7 +646,7 @@ PyRun_AnyFile:int:::
 PyRun_AnyFile:FILE*:fp::
 PyRun_AnyFile:char*:filename::
 
-PyRun_File:PyObject*::+1:??? -- same as eval_code2()
+PyRun_File:PyObject*::1:??? -- same as eval_code2()
 PyRun_File:FILE*:fp::
 PyRun_File:char*:filename::
 PyRun_File:int:start::
@@ -676,7 +668,7 @@ PyRun_SimpleFile:char*:filename::
 PyRun_SimpleString:int:::
 PyRun_SimpleString:char*:command::
 
-PyRun_String:PyObject*::+1:??? -- same as eval_code2()
+PyRun_String:PyObject*::1:??? -- same as eval_code2()
 PyRun_String:char*:str::
 PyRun_String:int:start::
 PyRun_String:PyObject*:globals:0:

@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-
 /* Interface to map C struct members to Python object attributes */
 
 #ifdef HAVE_STDDEF_H
@@ -62,8 +61,8 @@ struct memberlist {
 #define READONLY	1
 #define RO		READONLY		/* Shorthand */
 
-DL_IMPORT(PyObject *) PyMember_Get(char *, struct memberlist *, char *);
-DL_IMPORT(int) PyMember_Set(char *, struct memberlist *, char *, PyObject *);
+DL_IMPORT(PyObject *) PyMember_Get Py_PROTO((char *, struct memberlist *, char *));
+DL_IMPORT(int) PyMember_Set Py_PROTO((char *, struct memberlist *, char *, PyObject *));
 
 #ifdef __cplusplus
 }

@@ -11,7 +11,7 @@ between binary and various \ASCII{}-encoded binary
 representations. Normally, you will not use these functions directly
 but use wrapper modules like \refmodule{uu}\refstmodindex{uu} or
 \refmodule{binhex}\refstmodindex{binhex} instead, this module solely
-exists because bit-manipulation of large amounts of data is slow in
+exists because bit-manipuation of large amounts of data is slow in
 Python.
 
 The \module{binascii} module defines the following functions:
@@ -84,23 +84,6 @@ crc.  This is consistent with the ZIP file checksum.  Use as follows:
 \end{verbatim}
 \end{funcdesc}
  
-\begin{funcdesc}{b2a_hex}{data}
-\funcline{hexlify}{data}
-Return the hexadecimal representation of the binary \var{data}.  Every
-byte of \var{data} is converted into the corresponding 2-digit hex
-representation.  The resulting string is therefore twice as long as
-the length of \var{data}.
-\end{funcdesc}
-
-\begin{funcdesc}{a2b_hex}{hexstr}
-\funcline{unhexlify}{hexstr}
-Return the binary data represented by the hexadecimal string
-\var{hexstr}.  This function is the inverse of \function{b2a_hex()}.
-\var{hexstr} must contain an even number of hexadecimal digits (which
-can be upper or lower case), otherwise a \exception{TypeError} is
-raised.
-\end{funcdesc}
-
 \begin{excdesc}{Error}
 Exception raised on errors. These are usually programming errors.
 \end{excdesc}
@@ -113,9 +96,9 @@ again.
 
 
 \begin{seealso}
-  \seemodule{base64}{Support for base64 encoding used in MIME email messages.}
+  \seemodule{base64}{support for base64 encoding used in MIME email messages}
 
-  \seemodule{binhex}{Support for the binhex format used on the Macintosh.}
+  \seemodule{binhex}{support for the binhex format used on the Macintosh}
 
-  \seemodule{uu}{Support for UU encoding used on \UNIX.}
+  \seemodule{uu}{support for UU encoding used on \UNIX{}}
 \end{seealso}

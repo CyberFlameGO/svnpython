@@ -8,12 +8,14 @@ class netrc:
     def __init__(self, file=None):
         if not file:
             file = os.path.join(os.environ['HOME'], ".netrc")
-        fp = open(file)
+        try:
+            fp = open(file)
+        except:
+            return None
         self.hosts = {}
         self.macros = {}
         lexer = shlex.shlex(fp)
-	# Allows @ in hostnames.  Not a big deal...
-        lexer.wordchars = lexer.wordchars + '.-@'
+        lexer.wordchars = lexer.wordchars + '.'
         while 1:
             # Look for a machine, default, or macdef top-level keyword
             toplevel = tt = lexer.get_token()

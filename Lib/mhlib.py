@@ -85,8 +85,7 @@ from bisect import bisect
 
 # Exported constants
 
-class Error(Exception):
-    pass
+Error = 'mhlib.Error'
 
 
 class MH:
@@ -331,7 +330,7 @@ class Folder:
             f.close()
 
     def getcurrent(self):
-        """Return the current message.  Raise Error when there is none."""
+        """Return the current message.  Raise KeyError when there is none."""
         seqs = self.getsequences()
         try:
             return max(seqs['cur'])
@@ -627,7 +626,7 @@ class Folder:
                     pass
 
     def removefromallsequences(self, list):
-        """Remove one or more messages from all sequences (including last)
+        """Remove one or more messages from all sequeuces (including last)
         -- but not from 'cur'!!!"""
         if hasattr(self, 'last') and self.last in list:
             del self.last

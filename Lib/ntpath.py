@@ -183,7 +183,7 @@ def getmtime(filename):
 def getatime(filename):
     """Return the last access time of a file, reported by os.stat()"""
     st = os.stat(filename)
-    return st[stat.ST_ATIME]
+    return st[stat.ST_MTIME]
 
 
 # Is a path a symbolic link?
@@ -411,11 +411,8 @@ def abspath(path):
             return normpath(path)
         abspath = _abspath
         return _abspath(path)
-    if path: # Empty path must return current working directory.
-        try:
-            path = win32api.GetFullPathName(path)
-        except win32api.error:
-            pass # Bad path - return unchanged.
-    else:
-        path = os.getcwd()
+    try:
+        path = win32api.GetFullPathName(path)
+    except win32api.error:
+        pass # Bad path - return unchanged.
     return normpath(path)

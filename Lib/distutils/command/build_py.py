@@ -177,15 +177,13 @@ class build_py (Command):
         self.check_package (package, package_dir)
         module_files = glob (os.path.join (package_dir, "*.py"))
         modules = []
-        setup_script = os.path.abspath(self.distribution.script_name)
+        setup_script = os.path.abspath (sys.argv[0])
 
         for f in module_files:
             abs_f = os.path.abspath (f)
             if abs_f != setup_script:
                 module = os.path.splitext (os.path.basename (f))[0]
                 modules.append ((package, module, f))
-            else:
-                self.debug_print("excluding %s" % setup_script)
         return modules
 
 

@@ -126,8 +126,6 @@ def makedirs(name, mode=0777):
 
     """
     head, tail = path.split(name)
-    if not tail:
-        head, tail = path.split(head)
     if head and tail and not path.exists(head):
         makedirs(head, mode)
     mkdir(name, mode)
@@ -145,8 +143,6 @@ def removedirs(name):
     """
     rmdir(name)
     head, tail = path.split(name)
-    if not tail:
-        head, tail = path.split(head)
     while head and tail:
         try:
             rmdir(head)
@@ -222,7 +218,7 @@ def execvp(file, args):
 
     Execute the executable file (which is searched for along $PATH)
     with argument list args, replacing the current process.
-    args may be a list or tuple of strings. """
+    args may be a list or tupe of strings. """
     _execvpe(file, args)
 
 def execvpe(file, args, env):
@@ -231,7 +227,7 @@ def execvpe(file, args, env):
     Execute the executable file (which is searched for along $PATH)
     with argument list args and environment env , replacing the
     current process.
-    args may be a list or tuple of strings. """    
+    args may be a list or tupe of strings. """    
     _execvpe(file, args, env)
 
 _notfound = None
@@ -454,16 +450,3 @@ otherwise return -SIG, where SIG is the signal that killed it. """
         return spawnvpe(mode, file, args[:-1], env)
 
 
-if not _exists("popen2"):
-    def popen2(cmd, mode="t", bufsize=-1):
-        assert mode[:1] in ("b", "t")
-        import popen2
-        stdout, stdin = popen2.popen2(cmd, bufsize)
-        return stdin, stdout
-
-if not _exists("popen3"):
-    def popen3(cmd, mode="t", bufsize=-1):
-        assert mode[:1] in ("b", "t")
-        import popen2
-        stdout, stdin, stderr = popen2.popen3(cmd, bufsize)
-        return stdin, stdout, stderr

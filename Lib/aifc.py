@@ -82,7 +82,7 @@ This returns an instance of a class with the following public methods:
   close()     -- close the instance (make it unusable)
 The position returned by tell(), the position given to setpos() and
 the position of marks are all compatible and have nothing to do with
-the actual position in the file.
+the actual postion in the file.
 The close() method is called automatically when the class instance
 is destroyed.
 
@@ -137,8 +137,7 @@ writeframesraw.
 import struct
 import __builtin__
 
-class Error(Exception):
-    pass
+Error = 'aifc.Error'
 
 _AIFC_version = 0xA2805140      # Version 1 of AIFF-C
 

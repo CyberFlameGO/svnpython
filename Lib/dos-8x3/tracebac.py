@@ -117,7 +117,7 @@ def format_exception(etype, value, tb, limit = None):
 	have the same meaning as the corresponding arguments to
 	print_exception().  The return value is a list of strings, each
 	ending in a newline and some containing internal newlines.  When 
-	these lines are concatenated and printed, exactly the same text is
+	these lines are contatenated and printed, exactly the same text is
 	printed as does print_exception()."""
 	if tb:
 		list = ['Traceback (most recent call last):\n']
@@ -166,14 +166,8 @@ def format_exception_only(etype, value):
 						s = s + ' '
 				list.append('%s^\n' % s)
 				value = msg
-		list.append('%s: %s\n' % (str(stype), _some_str(value)))
+		list.append('%s: %s\n' % (str(stype), str(value)))
 	return list
-
-def _some_str(value):
-	try:
-		return str(value)
-	except:
-		return '<unprintable %s object>' % type(value).__name__
 
 
 def print_exc(limit=None, file=None):

@@ -1,4 +1,3 @@
-
 /* Use this file as a template to start implementing a new object type.
    If your objects will be called foobar, start by copying this file to
    foobarobject.c, changing all occurrences of xx to foobar and all
@@ -23,7 +22,8 @@ staticforward PyTypeObject Xxtype;
 #define is_xxobject(v)		((v)->ob_type == &Xxtype)
 
 static xxobject *
-newxxobject(PyObject *arg)
+newxxobject(arg)
+	PyObject *arg;
 {
 	xxobject *xp;
 	xp = PyObject_NEW(xxobject, &Xxtype);
@@ -36,28 +36,33 @@ newxxobject(PyObject *arg)
 /* Xx methods */
 
 static void
-xx_dealloc(xxobject *xp)
+xx_dealloc(xp)
+	xxobject *xp;
 {
 	Py_XDECREF(xp->x_attr);
 	PyObject_DEL(xp);
 }
 
 static PyObject *
-xx_demo(xxobject *self, PyObject *args)
+xx_demo(self, args)
+	xxobject *self;
+	PyObject *args;
 {
-	if (!PyArg_ParseTuple(args, ":demo"))
+	if (!PyArg_NoArgs(args))
 		return NULL;
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
 static PyMethodDef xx_methods[] = {
-	{"demo",	(PyCFunction)xx_demo,	METH_VARARGS},
+	{"demo",	(PyCFunction)xx_demo},
 	{NULL,		NULL}		/* sentinel */
 };
 
 static PyObject *
-xx_getattr(xxobject *xp, char *name)
+xx_getattr(xp, name)
+	xxobject *xp;
+	char *name;
 {
 	if (xp->x_attr != NULL) {
 		PyObject *v = PyDict_GetItemString(xp->x_attr, name);
@@ -70,7 +75,10 @@ xx_getattr(xxobject *xp, char *name)
 }
 
 static int
-xx_setattr(xxobject *xp, char *name, PyObject *v)
+xx_setattr(xp, name, v)
+	xxobject *xp;
+	char *name;
+	PyObject *v;
 {
 	if (xp->x_attr == NULL) {
 		xp->x_attr = PyDict_New();
@@ -81,7 +89,7 @@ xx_setattr(xxobject *xp, char *name, PyObject *v)
 		int rv = PyDict_DelItemString(xp->x_attr, name);
 		if (rv < 0)
 			PyErr_SetString(PyExc_AttributeError,
-                                        "delete non-existing xx attribute");
+			        "delete non-existing xx attribute");
 		return rv;
 	}
 	else

@@ -1,7 +1,6 @@
-
 /* IMGFILE module - Interface to sgi libimage */
 
-/* XXX This module should be done better at some point. It should return
+/* XXX This modele should be done better at some point. It should return
 ** an object of image file class, and have routines to manipulate these
 ** image files in a neater way (so you can get rgb images off a greyscale
 ** file, for instance, or do a straight display without having to get the
@@ -37,7 +36,8 @@ static int error_called;
 /* The error handler */
 
 static void
-imgfile_error(char *str)
+imgfile_error(str)
+	char *str;
 {
 	PyErr_SetString(ImgfileError, str);
 	error_called = 1;
@@ -49,7 +49,8 @@ imgfile_error(char *str)
    Make sure we raise an exception if we fail. */
 
 static IMAGE *
-imgfile_open(char *fname)
+imgfile_open(fname)
+	char *fname;
 {
 	IMAGE *image;
 	i_seterror(imgfile_error);
@@ -70,7 +71,9 @@ imgfile_open(char *fname)
 }
 
 static PyObject *
-imgfile_ttob(PyObject *self, PyObject *args)
+imgfile_ttob(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	int newval;
 	PyObject *rv;
@@ -83,7 +86,9 @@ imgfile_ttob(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-imgfile_read(PyObject *self, PyObject *args)
+imgfile_read(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	char *fname;
 	PyObject *rv;
@@ -175,7 +180,9 @@ static long *glob_datap;
 static int glob_width, glob_z, glob_ysize;
 
 static void
-xs_get(short *buf, int y)
+xs_get(buf, y)
+	short *buf;
+int y;
 {
 	if (top_to_bottom)
 		getrow(glob_image, buf, (glob_ysize-1-y), glob_z);
@@ -184,7 +191,9 @@ xs_get(short *buf, int y)
 }
 
 static void
-xs_put_c(short *buf, int y)
+xs_put_c(buf, y)
+	short *buf;
+int y;
 {
 	char *datap = (char *)glob_datap + y*glob_width;
 	int width = glob_width;
@@ -194,7 +203,9 @@ xs_put_c(short *buf, int y)
 }
 
 static void
-xs_put_0(short *buf, int y)
+xs_put_0(buf, y)
+	short *buf;
+int y;
 {
 	long *datap = glob_datap + y*glob_width;
 	int width = glob_width;
@@ -203,7 +214,9 @@ xs_put_0(short *buf, int y)
 		*datap++ = (*buf++) & 0xff;
 }
 static void
-xs_put_12(short *buf, int y)
+xs_put_12(buf, y)
+	short *buf;
+int y;
 {
 	long *datap = glob_datap + y*glob_width;
 	int width = glob_width;
@@ -213,8 +226,13 @@ xs_put_12(short *buf, int y)
 }
 
 static void
-xscale(IMAGE *image, int xsize, int ysize, int zsize,
-       long *datap, int xnew, int ynew, int fmode, double blur)
+xscale(image, xsize, ysize, zsize, datap, xnew, ynew, fmode, blur)
+	IMAGE *image;
+int xsize, ysize, zsize;
+long *datap;
+int xnew, ynew;
+int fmode;
+double blur;
 {
 	glob_image = image;
 	glob_datap = datap;
@@ -239,7 +257,9 @@ xscale(IMAGE *image, int xsize, int ysize, int zsize,
 
 
 static PyObject *
-imgfile_readscaled(PyObject *self, PyObject *args)
+imgfile_readscaled(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	char *fname;
 	PyObject *rv;
@@ -385,7 +405,9 @@ imgfile_readscaled(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-imgfile_getsizes(PyObject *self, PyObject *args)
+imgfile_getsizes(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	char *fname;
 	PyObject *rv;
@@ -402,7 +424,9 @@ imgfile_getsizes(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-imgfile_write(PyObject *self, PyObject *args)
+imgfile_write(self, args)
+	PyObject *self;
+PyObject *args;
 {
 	IMAGE *image;
 	char *fname;
@@ -500,7 +524,7 @@ static PyMethodDef imgfile_methods[] = {
 
 
 void
-initimgfile(void)
+initimgfile()
 {
 	PyObject *m, *d;
 	m = Py_InitModule("imgfile", imgfile_methods);

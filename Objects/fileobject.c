@@ -1,44 +1,19 @@
-
 /* File object implementation */
 
 #include "Python.h"
 #include "structmember.h"
 
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#endif
-
 #ifndef DONT_HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif /* DONT_HAVE_SYS_TYPES_H */
-
-/* We expect that fstat exists on most systems.
-   It's confirmed on Unix, Mac and Windows.
-   If you don't have it, add #define DONT_HAVE_FSTAT to your config.h. */
-#ifndef DONT_HAVE_FSTAT
-#define HAVE_FSTAT
-
-#ifndef DONT_HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
-#ifndef DONT_HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#else
-#ifdef HAVE_STAT_H
-#include <stat.h>
-#endif
-#endif
-
-#endif /* DONT_HAVE_FSTAT */
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
 #ifdef MS_WIN32
+#define ftruncate _chsize
 #define fileno _fileno
-/* can (almost fully) duplicate with _chsize, see file_truncate */
 #define HAVE_FTRUNCATE
 #endif
 
@@ -48,6 +23,9 @@
 #endif
 #endif
 
+#ifdef THINK_C
+#define HAVE_FOPENRF
+#endif
 #ifdef __MWERKS__
 /* Mwerks fopen() doesn't always set errno */
 #define NO_FOPEN_ERRNO
@@ -59,25 +37,20 @@
 #include <errno.h>
 #endif
 
-/* define the appropriate 64-bit capable tell() function */
-#ifdef MS_WIN64
-#	define TELL64 _telli64
-#endif
-
-
 typedef struct {
 	PyObject_HEAD
 	FILE *f_fp;
 	PyObject *f_name;
 	PyObject *f_mode;
-	int (*f_close)(FILE *);
+	int (*f_close) Py_PROTO((FILE *));
 	int f_softspace; /* Flag used by 'print' command */
 	int f_binary; /* Flag which indicates whether the file is open
 			 open in binary (1) or test (0) mode */
 } PyFileObject;
 
 FILE *
-PyFile_AsFile(PyObject *f)
+PyFile_AsFile(f)
+	PyObject *f;
 {
 	if (f == NULL || !PyFile_Check(f))
 		return NULL;
@@ -86,7 +59,8 @@ PyFile_AsFile(PyObject *f)
 }
 
 PyObject *
-PyFile_Name(PyObject *f)
+PyFile_Name(f)
+	PyObject *f;
 {
 	if (f == NULL || !PyFile_Check(f))
 		return NULL;
@@ -95,7 +69,11 @@ PyFile_Name(PyObject *f)
 }
 
 PyObject *
-PyFile_FromFile(FILE *fp, char *name, char *mode, int (*close)(FILE *))
+PyFile_FromFile(fp, name, mode, close)
+	FILE *fp;
+	char *name;
+	char *mode;
+	int (*close) Py_FPROTO((FILE *));
 {
 	PyFileObject *f = PyObject_NEW(PyFileObject, &PyFile_Type);
 	if (f == NULL)
@@ -118,9 +96,10 @@ PyFile_FromFile(FILE *fp, char *name, char *mode, int (*close)(FILE *))
 }
 
 PyObject *
-PyFile_FromString(char *name, char *mode)
+PyFile_FromString(name, mode)
+	char *name, *mode;
 {
-	extern int fclose(FILE *);
+	extern int fclose Py_PROTO((FILE *));
 	PyFileObject *f;
 	f = (PyFileObject *) PyFile_FromFile((FILE *)NULL, name, mode, fclose);
 	if (f == NULL)
@@ -154,7 +133,9 @@ PyFile_FromString(char *name, char *mode)
 }
 
 void
-PyFile_SetBufSize(PyObject *f, int bufsize)
+PyFile_SetBufSize(f, bufsize)
+	PyObject *f;
+	int bufsize;
 {
 	if (bufsize >= 0) {
 #ifdef HAVE_SETVBUF
@@ -180,7 +161,7 @@ PyFile_SetBufSize(PyObject *f, int bufsize)
 }
 
 static PyObject *
-err_closed(void)
+err_closed()
 {
 	PyErr_SetString(PyExc_ValueError, "I/O operation on closed file");
 	return NULL;
@@ -189,7 +170,8 @@ err_closed(void)
 /* Methods */
 
 static void
-file_dealloc(PyFileObject *f)
+file_dealloc(f)
+	PyFileObject *f;
 {
 	if (f->f_fp != NULL && f->f_close != NULL) {
 		Py_BEGIN_ALLOW_THREADS
@@ -206,19 +188,22 @@ file_dealloc(PyFileObject *f)
 }
 
 static PyObject *
-file_repr(PyFileObject *f)
+file_repr(f)
+	PyFileObject *f;
 {
 	char buf[300];
-	sprintf(buf, "<%s file '%.256s', mode '%.10s' at %p>",
+	sprintf(buf, "<%s file '%.256s', mode '%.10s' at %lx>",
 		f->f_fp == NULL ? "closed" : "open",
 		PyString_AsString(f->f_name),
 		PyString_AsString(f->f_mode),
-		f);
+		(long)f);
 	return PyString_FromString(buf);
 }
 
 static PyObject *
-file_close(PyFileObject *f, PyObject *args)
+file_close(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	int sts = 0;
 	if (!PyArg_NoArgs(args))
@@ -240,83 +225,14 @@ file_close(PyFileObject *f, PyObject *args)
 	return Py_None;
 }
 
-
-/* a portable fseek() function
-   return 0 on success, non-zero on failure (with errno set) */
-int
-#if defined(HAVE_LARGEFILE_SUPPORT) && SIZEOF_OFF_T < 8 && SIZEOF_FPOS_T >= 8 
-_portable_fseek(FILE *fp, fpos_t offset, int whence)
-#else
-_portable_fseek(FILE *fp, off_t offset, int whence)
-#endif
-{
-#if defined(HAVE_FSEEKO)
-	return fseeko(fp, offset, whence);
-#elif defined(HAVE_FSEEK64)
-	return fseek64(fp, offset, whence);
-#elif defined(HAVE_LARGEFILE_SUPPORT) && SIZEOF_FPOS_T >= 8 
-	/* lacking a 64-bit capable fseek() (as Win64 does) use a 64-bit capable
-		fsetpos() and tell() to implement fseek()*/
-	fpos_t pos;
-	switch (whence) {
-		case SEEK_CUR:
-			if (fgetpos(fp, &pos) != 0)
-				return -1;
-			offset += pos;
-			break;
-		case SEEK_END:
-			/* do a "no-op" seek first to sync the buffering so that
-			   the low-level tell() can be used correctly */
-			if (fseek(fp, 0, SEEK_END) != 0)
-				return -1;
-			if ((pos = TELL64(fileno(fp))) == -1L)
-				return -1;
-			offset += pos;
-			break;
-		/* case SEEK_SET: break; */
-	}
-	return fsetpos(fp, &offset);
-#else
-	return fseek(fp, offset, whence);
-#endif
-}
-
-
-/* a portable ftell() function
-   Return -1 on failure with errno set appropriately, current file
-   position on success */
-#if defined(HAVE_LARGEFILE_SUPPORT) && SIZEOF_OFF_T < 8 && SIZEOF_FPOS_T >= 8 
-fpos_t
-#else
-off_t
-#endif
-_portable_ftell(FILE* fp)
-{
-#if defined(HAVE_FTELLO) && defined(HAVE_LARGEFILE_SUPPORT)
-	return ftello(fp);
-#elif defined(HAVE_FTELL64) && defined(HAVE_LARGEFILE_SUPPORT)
-	return ftell64(fp);
-#elif SIZEOF_FPOS_T >= 8 && defined(HAVE_LARGEFILE_SUPPORT)
-	fpos_t pos;
-	if (fgetpos(fp, &pos) != 0)
-		return -1;
-	return pos;
-#else
-	return ftell(fp);
-#endif
-}
-
-
 static PyObject *
-file_seek(PyFileObject *f, PyObject *args)
+file_seek(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	int whence;
 	int ret;
-#if defined(HAVE_LARGEFILE_SUPPORT) && SIZEOF_OFF_T < 8 && SIZEOF_FPOS_T >= 8 
-	fpos_t offset, pos;
-#else
 	off_t offset;
-#endif /* !MS_WIN64 */
 	PyObject *offobj;
 	
 	if (f->f_fp == NULL)
@@ -332,12 +248,16 @@ file_seek(PyFileObject *f, PyObject *args)
 #endif
 	if (PyErr_Occurred())
 		return NULL;
-	
 	Py_BEGIN_ALLOW_THREADS
 	errno = 0;
-	ret = _portable_fseek(f->f_fp, offset, whence);
+#if defined(HAVE_FSEEKO)
+	ret = fseeko(f->f_fp, offset, whence);
+#elif defined(HAVE_FSEEK64)
+	ret = fseek64(f->f_fp, offset, whence);
+#else
+	ret = fseek(f->f_fp, offset, whence);
+#endif
 	Py_END_ALLOW_THREADS
-
 	if (ret != 0) {
 		PyErr_SetFromErrno(PyExc_IOError);
 		clearerr(f->f_fp);
@@ -347,17 +267,14 @@ file_seek(PyFileObject *f, PyObject *args)
 	return Py_None;
 }
 
-
 #ifdef HAVE_FTRUNCATE
 static PyObject *
-file_truncate(PyFileObject *f, PyObject *args)
+file_truncate(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	int ret;
-#if defined(HAVE_LARGEFILE_SUPPORT) && SIZEOF_OFF_T < 8 && SIZEOF_FPOS_T >= 8 
-	fpos_t newsize;
-#else
 	off_t newsize;
-#endif
 	PyObject *newsizeobj;
 	
 	if (f->f_fp == NULL)
@@ -379,7 +296,13 @@ file_truncate(PyFileObject *f, PyObject *args)
 		/* Default to current position*/
 		Py_BEGIN_ALLOW_THREADS
 		errno = 0;
-		newsize = _portable_ftell(f->f_fp);
+#if defined(HAVE_FTELLO) && defined(HAVE_LARGEFILE_SUPPORT)
+		newsize =  ftello(f->f_fp);
+#elif defined(HAVE_FTELL64) && defined(HAVE_LARGEFILE_SUPPORT)
+		newsize =  ftell64(f->f_fp);
+#else
+		newsize =  ftell(f->f_fp);
+#endif
 		Py_END_ALLOW_THREADS
 		if (newsize == -1) {
 		        PyErr_SetFromErrno(PyExc_IOError);
@@ -391,71 +314,58 @@ file_truncate(PyFileObject *f, PyObject *args)
 	errno = 0;
 	ret = fflush(f->f_fp);
 	Py_END_ALLOW_THREADS
-	if (ret != 0) goto onioerror;
-
-#ifdef MS_WIN32
-	/* can use _chsize; if, however, the newsize overflows 32-bits then
-	   _chsize is *not* adequate; in this case, an OverflowError is raised */
-	if (newsize > LONG_MAX) {
-		PyErr_SetString(PyExc_OverflowError,
-			"the new size is too long for _chsize (it is limited to 32-bit values)");
-		return NULL;
-	} else {
-		Py_BEGIN_ALLOW_THREADS
+	if (ret == 0) {
+	        Py_BEGIN_ALLOW_THREADS
 		errno = 0;
-		ret = _chsize(fileno(f->f_fp), newsize);
+		ret = ftruncate(fileno(f->f_fp), newsize);
 		Py_END_ALLOW_THREADS
-		if (ret != 0) goto onioerror;
 	}
-#else
-	Py_BEGIN_ALLOW_THREADS
-	errno = 0;
-	ret = ftruncate(fileno(f->f_fp), newsize);
-	Py_END_ALLOW_THREADS
-	if (ret != 0) goto onioerror;
-#endif /* !MS_WIN32 */
-	
+	if (ret != 0) {
+		PyErr_SetFromErrno(PyExc_IOError);
+		clearerr(f->f_fp);
+		return NULL;
+	}
 	Py_INCREF(Py_None);
 	return Py_None;
-
-onioerror:
-	PyErr_SetFromErrno(PyExc_IOError);
-	clearerr(f->f_fp);
-	return NULL;
 }
 #endif /* HAVE_FTRUNCATE */
 
 static PyObject *
-file_tell(PyFileObject *f, PyObject *args)
+file_tell(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
-#if defined(HAVE_LARGEFILE_SUPPORT) && SIZEOF_OFF_T < 8 && SIZEOF_FPOS_T >= 8 
-	fpos_t pos;
-#else
-	off_t pos;
-#endif
-
+	off_t offset;
 	if (f->f_fp == NULL)
 		return err_closed();
 	if (!PyArg_NoArgs(args))
 		return NULL;
 	Py_BEGIN_ALLOW_THREADS
 	errno = 0;
-	pos = _portable_ftell(f->f_fp);
+#if defined(HAVE_FTELLO) && defined(HAVE_LARGEFILE_SUPPORT)
+	offset = ftello(f->f_fp);
+#elif defined(HAVE_FTELL64) && defined(HAVE_LARGEFILE_SUPPORT)
+	offset = ftell64(f->f_fp);
+#else
+	offset = ftell(f->f_fp);
+#endif
 	Py_END_ALLOW_THREADS
-	if (pos == -1) {
+	if (offset == -1) {
 		PyErr_SetFromErrno(PyExc_IOError);
 		clearerr(f->f_fp);
 		return NULL;
 	}
 #if !defined(HAVE_LARGEFILE_SUPPORT)
-	return PyInt_FromLong(pos);
+	return PyInt_FromLong(offset);
 #else
-	return PyLong_FromLongLong(pos);
+	return PyLong_FromLongLong(offset);
 #endif
 }
 
 static PyObject *
-file_fileno(PyFileObject *f, PyObject *args)
+file_fileno(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	if (f->f_fp == NULL)
 		return err_closed();
@@ -465,7 +375,9 @@ file_fileno(PyFileObject *f, PyObject *args)
 }
 
 static PyObject *
-file_flush(PyFileObject *f, PyObject *args)
+file_flush(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	int res;
 	
@@ -487,7 +399,9 @@ file_flush(PyFileObject *f, PyObject *args)
 }
 
 static PyObject *
-file_isatty(PyFileObject *f, PyObject *args)
+file_isatty(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	long res;
 	if (f->f_fp == NULL)
@@ -500,6 +414,21 @@ file_isatty(PyFileObject *f, PyObject *args)
 	return PyInt_FromLong(res);
 }
 
+/* We expect that fstat exists on most systems.
+   It's confirmed on Unix, Mac and Windows.
+   If you don't have it, add #define DONT_HAVE_FSTAT to your config.h. */
+#ifndef DONT_HAVE_FSTAT
+#define HAVE_FSTAT
+
+#ifndef DONT_HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
+#ifndef DONT_HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
+#endif /* DONT_HAVE_FSTAT */
 
 #if BUFSIZ < 8192
 #define SMALLCHUNK 8192
@@ -514,7 +443,9 @@ file_isatty(PyFileObject *f, PyObject *args)
 #endif
 
 static size_t
-new_buffersize(PyFileObject *f, size_t currentsize)
+new_buffersize(f, currentsize)
+	PyFileObject *f;
+	size_t currentsize;
 {
 #ifdef HAVE_FSTAT
 	long pos, end;
@@ -552,7 +483,9 @@ new_buffersize(PyFileObject *f, size_t currentsize)
 }
 
 static PyObject *
-file_read(PyFileObject *f, PyObject *args)
+file_read(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	long bytesrequested = -1;
 	size_t bytesread, buffersize, chunksize;
@@ -566,11 +499,6 @@ file_read(PyFileObject *f, PyObject *args)
 		buffersize = new_buffersize(f, (size_t)0);
 	else
 		buffersize = bytesrequested;
-	if (buffersize > INT_MAX) {
-		PyErr_SetString(PyExc_OverflowError,
-			"requested number of bytes is more than a Python string can hold");
-		return NULL;
-	}
 	v = PyString_FromStringAndSize((char *)NULL, buffersize);
 	if (v == NULL)
 		return NULL;
@@ -604,10 +532,12 @@ file_read(PyFileObject *f, PyObject *args)
 }
 
 static PyObject *
-file_readinto(PyFileObject *f, PyObject *args)
+file_readinto(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	char *ptr;
-	size_t ntodo, ndone, nnow;
+	int ntodo, ndone, nnow;
 	
 	if (f->f_fp == NULL)
 		return err_closed();
@@ -629,7 +559,7 @@ file_readinto(PyFileObject *f, PyObject *args)
 		ndone += nnow;
 		ntodo -= nnow;
 	}
-	return PyInt_FromLong((long)ndone);
+	return PyInt_FromLong(ndone);
 }
 
 
@@ -641,12 +571,14 @@ file_readinto(PyFileObject *f, PyObject *args)
 */
 
 static PyObject *
-get_line(PyFileObject *f, int n)
+get_line(f, n)
+	PyFileObject *f;
+	int n;
 {
 	register FILE *fp;
 	register int c;
 	register char *buf, *end;
-	size_t n1, n2;
+	int n1, n2;
 	PyObject *v;
 
 	fp = f->f_fp;
@@ -685,11 +617,6 @@ get_line(PyFileObject *f, int n)
 				break;
 			n1 = n2;
 			n2 += 1000;
-			if (n2 > INT_MAX) {
-				PyErr_SetString(PyExc_OverflowError,
-					"line is longer than a Python string can hold");
-				return NULL;
-			}
 			Py_BLOCK_THREADS
 			if (_PyString_Resize(&v, n2) < 0)
 				return NULL;
@@ -709,7 +636,9 @@ get_line(PyFileObject *f, int n)
 /* External C interface */
 
 PyObject *
-PyFile_GetLine(PyObject *f, int n)
+PyFile_GetLine(f, n)
+	PyObject *f;
+	int n;
 {
 	if (f == NULL) {
 		PyErr_BadInternalCall();
@@ -770,7 +699,9 @@ PyFile_GetLine(PyObject *f, int n)
 /* Python method */
 
 static PyObject *
-file_readline(PyFileObject *f, PyObject *args)
+file_readline(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	int n = -1;
 
@@ -786,7 +717,9 @@ file_readline(PyFileObject *f, PyObject *args)
 }
 
 static PyObject *
-file_readlines(PyFileObject *f, PyObject *args)
+file_readlines(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	long sizehint = 0;
 	PyObject *list;
@@ -829,11 +762,6 @@ file_readlines(PyFileObject *f, PyObject *args)
 			/* Need a larger buffer to fit this line */
 			nfilled += nread;
 			buffersize *= 2;
-			if (buffersize > INT_MAX) {
-				PyErr_SetString(PyExc_OverflowError,
-					"line is too long for a Python string");
-				goto error;
-			}
 			if (big_buffer == NULL) {
 				/* Create the big buffer */
 				big_buffer = PyString_FromStringAndSize(
@@ -902,7 +830,9 @@ file_readlines(PyFileObject *f, PyObject *args)
 }
 
 static PyObject *
-file_write(PyFileObject *f, PyObject *args)
+file_write(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 	char *s;
 	int n, n2;
@@ -925,7 +855,9 @@ file_write(PyFileObject *f, PyObject *args)
 }
 
 static PyObject *
-file_writelines(PyFileObject *f, PyObject *args)
+file_writelines(f, args)
+	PyFileObject *f;
+	PyObject *args;
 {
 #define CHUNKSIZE 1000
 	PyObject *list, *line;
@@ -1073,7 +1005,9 @@ static struct memberlist file_memberlist[] = {
 };
 
 static PyObject *
-file_getattr(PyFileObject *f, char *name)
+file_getattr(f, name)
+	PyFileObject *f;
+	char *name;
 {
 	PyObject *res;
 
@@ -1087,7 +1021,10 @@ file_getattr(PyFileObject *f, char *name)
 }
 
 static int
-file_setattr(PyFileObject *f, char *name, PyObject *v)
+file_setattr(f, name, v)
+	PyFileObject *f;
+	char *name;
+	PyObject *v;
 {
 	if (v == NULL) {
 		PyErr_SetString(PyExc_AttributeError,
@@ -1114,7 +1051,9 @@ PyTypeObject PyFile_Type = {
 /* Interface for the 'soft space' between print items. */
 
 int
-PyFile_SoftSpace(PyObject *f, int newflag)
+PyFile_SoftSpace(f, newflag)
+	PyObject *f;
+	int newflag;
 {
 	int oldflag = 0;
 	if (f == NULL) {
@@ -1149,7 +1088,10 @@ PyFile_SoftSpace(PyObject *f, int newflag)
 /* Interfaces to write objects/strings to file-like objects */
 
 int
-PyFile_WriteObject(PyObject *v, PyObject *f, int flags)
+PyFile_WriteObject(v, f, flags)
+	PyObject *v;
+	PyObject *f;
+	int flags;
 {
 	PyObject *writer, *value, *args, *result;
 	if (f == NULL) {
@@ -1192,11 +1134,13 @@ PyFile_WriteObject(PyObject *v, PyObject *f, int flags)
 }
 
 int
-PyFile_WriteString(char *s, PyObject *f)
+PyFile_WriteString(s, f)
+	char *s;
+	PyObject *f;
 {
 	if (f == NULL) {
 		/* Should be caused by a pre-existing error */
-		if (!PyErr_Occurred())
+		if(!PyErr_Occurred())
 			PyErr_SetString(PyExc_SystemError,
 					"null file for PyFile_WriteString");
 		return -1;
@@ -1222,61 +1166,3 @@ PyFile_WriteString(char *s, PyObject *f)
 	else
 		return -1;
 }
-
-/* Try to get a file-descriptor from a Python object.  If the object
-   is an integer or long integer, its value is returned.  If not, the
-   object's fileno() method is called if it exists; the method must return
-   an integer or long integer, which is returned as the file descriptor value.
-   -1 is returned on failure.
-*/
-
-int PyObject_AsFileDescriptor(PyObject *o)
-{
-	int fd;
-	PyObject *meth;
-
-	if (PyInt_Check(o)) {
-		fd = PyInt_AsLong(o);
-	}
-	else if (PyLong_Check(o)) {
-		fd = PyLong_AsLong(o);
-	}
-	else if ((meth = PyObject_GetAttrString(o, "fileno")) != NULL)
-	{
-		PyObject *fno = PyEval_CallObject(meth, NULL);
-		Py_DECREF(meth);
-		if (fno == NULL)
-			return -1;
-		
-		if (PyInt_Check(fno)) {
-			fd = PyInt_AsLong(fno);
-			Py_DECREF(fno);
-		}
-		else if (PyLong_Check(fno)) {
-			fd = PyLong_AsLong(fno);
-			Py_DECREF(fno);
-		}
-		else {
-			PyErr_SetString(PyExc_TypeError,
-					"fileno() returned a non-integer");
-			Py_DECREF(fno);
-			return -1;
-		}
-	}
-	else {
-		PyErr_SetString(PyExc_TypeError,
-				"argument must be an int, or have a fileno() method.");
-		return -1;
-	}
-
-	if (fd < 0) {
-		PyErr_Format(PyExc_ValueError,
-			     "file descriptor cannot be a negative integer (%i)",
-			     fd);
-		return -1;
-	}
-	return fd;
-}
-
-
-

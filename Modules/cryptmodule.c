@@ -9,10 +9,11 @@
 /* Module crypt */
 
 
-static PyObject *crypt_crypt(PyObject *self, PyObject *args)
+static PyObject *crypt_crypt(self, args)
+	PyObject *self, *args;
 {
 	char *word, *salt; 
-	extern char * crypt(const char *, const char *);
+	extern char * crypt();
 
 	if (!PyArg_Parse(args, "(ss)", &word, &salt)) {
 		return NULL;
@@ -31,12 +32,12 @@ the same alphabet as the salt.";
 
 
 static PyMethodDef crypt_methods[] = {
-	{"crypt",	crypt_crypt, METH_OLDARGS, crypt_crypt__doc__},
+	{"crypt",	crypt_crypt, 0, crypt_crypt__doc__},
 	{NULL,		NULL}		/* sentinel */
 };
 
 DL_EXPORT(void)
-initcrypt(void)
+initcrypt()
 {
 	Py_InitModule("crypt", crypt_methods);
 }

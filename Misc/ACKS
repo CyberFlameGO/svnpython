@@ -8,8 +8,6 @@ Without you I would've stopped working on Python long ago!
 
 	--Guido
 
-PS: In the standard Python distribution this file is encoded in Latin-1.
-
 Jim Ahlstrom
 Jyrki Alakuijala
 Mark Anacker
@@ -46,7 +44,6 @@ Monty Brandenberg
 Terrence Brannon
 Dave Brennan
 Gary S. Brown
-Oleg Broytmann
 Erik de Bueger
 Jan-Hein B"uhrman
 Dick Bulterman
@@ -117,7 +114,6 @@ Lele Gaifax
 Raymund Galvin
 Fred Gansevles
 Lars Marius Garshol
-Harry Henry Gebel
 Thomas Gellekum
 Ben Gertzfield
 Jonathan Giddy
@@ -143,7 +139,6 @@ Jochen Hayek
 Thomas Heller
 Lance Finn Helsten
 Jonathan Hendry
-James Henstridge
 Chris Herborth
 Ivan Herman
 Gary Herron
@@ -216,7 +211,7 @@ Eric Lindvall
 Per Lindqvist
 Nick Lockwood
 Stephanie Lockwood
-Martin von Löwis
+Martin von Loewis
 Anne Lord
 Ray Loyzaga
 Fredrik Lundh
@@ -295,7 +290,6 @@ Just van Rossum
 Hugo van Rossum
 Saskia van Rossum
 Donald Wallace Rouse II
-Audun S. Runde
 Jeff Rush
 Sam Rushing
 Nick Russo
@@ -329,11 +323,9 @@ Per Spilling
 Greg Stein
 Dan Stromberg
 Nathan Sullivan
-Kalle Svensson
 Neale Pickett
 Dan Pierson
 François Pinard
-Hajime Saitou
 RajGopal Srinivasan
 Jim St. Pierre
 Quentin Stafford-Fraser
@@ -347,6 +339,7 @@ Amy Taylor
 Tobias Thelen
 Eric Tiedemann
 Tracy Tims
+Christian Tismer
 Christian Tismer
 R Lindsay Todd
 Bennett Todd
@@ -392,3 +385,4 @@ Moshe Zadka
 Milan Zamazal
 Siebren van der Zee
 Uwe Zessin
+hajime@jsk.t.u-tokyo.ac.jp

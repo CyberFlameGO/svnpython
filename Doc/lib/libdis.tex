@@ -130,11 +130,6 @@ Lifts second and third stack item one position up, moves top down
 to position three.
 \end{opcodedesc}
 
-\begin{opcodedesc}{ROT_FOUR}{}
-Lifts second, third and forth stack item one position up, moves top down to
-position four.
-\end{opcodedesc}
-
 \begin{opcodedesc}{DUP_TOP}{}
 Duplicates the reference on top of the stack.
 \end{opcodedesc}
@@ -146,7 +141,7 @@ push the result back on the stack.
 Implements \code{TOS = +TOS}.
 \end{opcodedesc}
 
-\begin{opcodedesc}{UNARY_NEGATIVE}{}
+\begin{opcodedesc}{UNARY_NEG}{}
 Implements \code{TOS = -TOS}.
 \end{opcodedesc}
 
@@ -159,7 +154,7 @@ Implements \code{TOS = `TOS`}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{UNARY_INVERT}{}
-Implements \code{TOS = \~{}TOS}.
+Implements \code{TOS = \~TOS}.
 \end{opcodedesc}
 
 Binary operations remove the top of the stack (TOS) and the second top-most
@@ -179,7 +174,7 @@ Implements \code{TOS = TOS1 / TOS}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BINARY_MODULO}{}
-Implements \code{TOS = TOS1 \%{} TOS}.
+Implements \code{TOS = TOS1 \% TOS}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BINARY_ADD}{}
@@ -203,7 +198,7 @@ Implements \code{TOS = TOS1 >> TOS}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BINARY_AND}{}
-Implements \code{TOS = TOS1 \&\ TOS}.
+Implements \code{TOS = TOS1 and TOS}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BINARY_XOR}{}
@@ -211,56 +206,7 @@ Implements \code{TOS = TOS1 \^\ TOS}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BINARY_OR}{}
-Implements \code{TOS = TOS1 | TOS}.
-\end{opcodedesc}
-
-In-place operations are like binary operations, in that they remove TOS and
-TOS1, and push the result back on the stack, but the operation is done
-in-place when TOS1 supports it, and the resulting TOS may be (but does not
-have to be) the original TOS1.
-
-\begin{opcodedesc}{INPLACE_POWER}{}
-Implements in-place \code{TOS = TOS1 ** TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_MULTIPLY}{}
-Implements in-place \code{TOS = TOS1 * TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_DIVIDE}{}
-Implements in-place \code{TOS = TOS1 / TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_MODULO}{}
-Implements in-place \code{TOS = TOS1 \%{} TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_ADD}{}
-Implements in-place \code{TOS = TOS1 + TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_SUBTRACT}{}
-Implements in-place \code{TOS = TOS1 - TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_LSHIFT}{}
-Implements in-place \code{TOS = TOS1 << TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_RSHIFT}{}
-Implements in-place \code{TOS = TOS1 >> TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_AND}{}
-Implements in-place \code{TOS = TOS1 \&\ TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_XOR}{}
-Implements in-place \code{TOS = TOS1 \^\ TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_OR}{}
-Implements in-place \code{TOS = TOS1 | TOS}.
+Implements \code{TOS = TOS1 or TOS}.
 \end{opcodedesc}
 
 The slice opcodes take up to three parameters.
@@ -331,28 +277,18 @@ expression statement is terminated with \code{POP_STACK}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{PRINT_ITEM}{}
-Prints TOS to the file-like object bound to \code{sys.stdout}.  There
-is one such instruction for each item in the \keyword{print} statement.
-\end{opcodedesc}
-
-\begin{opcodedesc}{PRINT_ITEM_TO}{}
-Like \code{PRINT_ITEM}, but prints the item second from TOS to the
-file-like object at TOS.  This is used by the extended print statement.
+Prints TOS.  There is one such instruction for
+each item in the print statement.
 \end{opcodedesc}
 
 \begin{opcodedesc}{PRINT_NEWLINE}{}
 Prints a new line on \code{sys.stdout}.  This is generated as the
-last operation of a \keyword{print} statement, unless the statement
-ends with a comma.
-\end{opcodedesc}
-
-\begin{opcodedesc}{PRINT_NEWLINE_TO}{}
-Like \code{PRINT_NEWLINE}, but prints the new line on the file-like
-object on the TOS.  This is used by the extended print statement.
+last operation of a print statement, unless the statement ends
+with a comma.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BREAK_LOOP}{}
-Terminates a loop due to a \keyword{break} statement.
+Terminates a loop due to a break statement.
 \end{opcodedesc}
 
 \begin{opcodedesc}{LOAD_LOCALS}{}
@@ -365,15 +301,9 @@ is evaluated, the locals are passed to the class definition.
 Returns with TOS to the caller of the function.
 \end{opcodedesc}
 
-\begin{opcodedesc}{IMPORT_STAR}{}
-Loads all symbols not starting with \character{_} directly from the module TOS
-to the local namespace. The module is popped after loading all names.
-This opcode implements \code{from module import *}.
-\end{opcodedesc}
-
 \begin{opcodedesc}{EXEC_STMT}{}
 Implements \code{exec TOS2,TOS1,TOS}.  The compiler fills
-missing optional parameters with \code{None}.
+missing optional parameters with None.
 \end{opcodedesc}
 
 \begin{opcodedesc}{POP_BLOCK}{}
@@ -382,9 +312,9 @@ stack of blocks, denoting nested loops, try statements, and such.
 \end{opcodedesc}
 
 \begin{opcodedesc}{END_FINALLY}{}
-Terminates a \keyword{finally} clause.  The interpreter recalls
-whether the exception has to be re-raised, or whether the function
-returns, and continues with the outer-next block.
+Terminates a finally-block.  The interpreter recalls whether the
+exception has to be re-raised, or whether the function returns,
+and continues with the outer-next block.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BUILD_CLASS}{}
@@ -407,23 +337,18 @@ Implements \code{del name}, where \var{namei} is the index into
 \member{co_names} attribute of the code object.
 \end{opcodedesc}
 
-\begin{opcodedesc}{UNPACK_SEQUENCE}{count}
+\begin{opcodedesc}{UNPACK_TUPLE}{count}
 Unpacks TOS into \var{count} individual values, which are put onto
 the stack right-to-left.
 \end{opcodedesc}
 
-%\begin{opcodedesc}{UNPACK_LIST}{count}
-%This opcode is obsolete.
-%\end{opcodedesc}
+\begin{opcodedesc}{UNPACK_LIST}{count}
+Unpacks TOS into \var{count} individual values.
+\end{opcodedesc}
 
 %\begin{opcodedesc}{UNPACK_ARG}{count}
 %This opcode is obsolete.
 %\end{opcodedesc}
-
-\begin{opcodedesc}{DUP_TOPX}{count}
-Duplicate \var{count} items, keeping them in the same order. Due to
-implementation limits, \var{count} should be between 1 and 5 inclusive.
-\end{opcodedesc}
 
 \begin{opcodedesc}{STORE_ATTR}{namei}
 Implements \code{TOS.name = TOS1}, where \var{namei} is the index
@@ -465,12 +390,12 @@ Works as \code{BUILD_TUPLE}, but creates a list.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BUILD_MAP}{zero}
-Pushes a new empty dictionary object onto the stack.  The argument is
-ignored and set to zero by the compiler.
+Pushes an empty dictionary object onto the stack.  The argument is ignored
+and set to zero by the compiler.
 \end{opcodedesc}
 
 \begin{opcodedesc}{LOAD_ATTR}{namei}
-Replaces TOS with \code{getattr(TOS, co_names[\var{namei}]}.
+Replaces TOS with \code{getattr(TOS,co_names[\var{namei}]}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{COMPARE_OP}{opname}
@@ -486,9 +411,8 @@ modifies the name space.
 \end{opcodedesc}
 
 \begin{opcodedesc}{IMPORT_FROM}{namei}
-Loads the attribute \code{co_names[\var{namei}]} from the module found in
-TOS. The resulting object is pushed onto the stack, to be subsequently
-stored by a \code{STORE_FAST} instruction.
+Imports the attribute \code{co_names[\var{namei}]}.  The module to import
+from is found in TOS and left there.
 \end{opcodedesc}
 
 \begin{opcodedesc}{JUMP_FORWARD}{delta}
@@ -562,7 +486,7 @@ Sets the current line number to \var{lineno}.
 
 \begin{opcodedesc}{RAISE_VARARGS}{argc}
 Raises an exception. \var{argc} indicates the number of parameters
-to the raise statement, ranging from 0 to 3.  The handler will find
+to the raise statement, ranging from 1 to 3.  The handler will find
 the traceback as TOS2, the parameter as TOS1, and the exception
 as TOS.
 \end{opcodedesc}
@@ -587,32 +511,5 @@ default parameters, which are found below TOS.
 Pushes a slice object on the stack.  \var{argc} must be 2 or 3.  If it
 is 2, \code{slice(TOS1, TOS)} is pushed; if it is 3,
 \code{slice(TOS2, TOS1, TOS)} is pushed.
-See the \code{slice()}\bifuncindex{slice} built-in function for more
-information.
-\end{opcodedesc}
-
-\begin{opcodedesc}{EXTENDED_ARG}{ext}
-Prefixes any opcode which has an argument too big to fit into the
-default two bytes.  \var{ext} holds two additional bytes which, taken
-together with the subsequent opcode's argument, comprise a four-byte
-argument, \var{ext} being the two most-significant bytes.
-\end{opcodedesc}
-
-\begin{opcodedesc}{CALL_FUNCTION_VAR}{argc}
-Calls a function. \var{argc} is interpreted as in \code{CALL_FUNCTION}.
-The top element on the stack contains the variable argument list, followed
-by keyword and positional arguments.
-\end{opcodedesc}
-
-\begin{opcodedesc}{CALL_FUNCTION_KW}{argc}
-Calls a function. \var{argc} is interpreted as in \code{CALL_FUNCTION}.
-The top element on the stack contains the keyword arguments dictionary, 
-followed by explicit keyword and positional arguments.
-\end{opcodedesc}
-
-\begin{opcodedesc}{CALL_FUNCTION_VAR_KW}{argc}
-Calls a function. \var{argc} is interpreted as in
-\code{CALL_FUNCTION}.  The top element on the stack contains the
-keyword arguments dictionary, followed by the variable-arguments
-tuple, followed by explicit keyword and positional arguments.
+See the \code{slice()}\bifuncindex{slice} built-in function.
 \end{opcodedesc}

@@ -2,10 +2,12 @@
 
 #include "Python.h"
 
-extern DL_EXPORT(int) Py_Main(int, char **);
+extern DL_EXPORT(int) Py_Main();
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+	int argc;
+	char **argv;
 {
 	return Py_Main(argc, argv);
 }

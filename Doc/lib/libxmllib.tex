@@ -20,16 +20,14 @@ The \class{XMLParser} class must be instantiated without
 arguments.\footnote{Actually, a number of keyword arguments are
 recognized which influence the parser to accept certain non-standard
 constructs.  The following keyword arguments are currently
-recognized.  The defaults for all of these is \code{0} (false) except
-for the last one for which the default is \code{1} (true).
+recognized.  The defaults for all of these is \code{0} (false).
 \var{accept_unquoted_attributes} (accept certain attribute values
 without requiring quotes), \var{accept_missing_endtag_name} (accept
 end tags that look like \code{</>}), \var{map_case} (map upper case to
 lower case in tags and attributes), \var{accept_utf8} (allow UTF-8
 characters in input; this is required according to the XML standard,
 but Python does not as yet deal properly with these characters, so
-this is not the default), \var{translate_attribute_references} (don't
-attempt to translate character and entity references in attribute values).}
+this is not the default).}
 \end{classdesc}
 
 This class provides the following interface methods and instance variables:
@@ -92,11 +90,6 @@ Translate all entity and character references in \var{data} and
 return the translated string.
 \end{methoddesc}
 
-\begin{methoddesc}{getnamespace}{}
-Return a mapping of namespace abbreviations to namespace URIs that are
-currently in effect.
-\end{methoddesc}
-
 \begin{methoddesc}{handle_xml}{encoding, standalone}
 This method is called when the \samp{<?xml ...?>} tag is processed.
 The arguments are the values of the encoding and standalone attributes 
@@ -106,28 +99,27 @@ passed to \method{handle_xml()} default to \code{None} and the string
 \end{methoddesc}
 
 \begin{methoddesc}{handle_doctype}{tag, pubid, syslit, data}
-This\index{DOCTYPE declaration} method is called when the
-\samp{<!DOCTYPE...>} declaration is processed.  The arguments are the
-tag name of the root element, the Formal Public\index{Formal Public
-Identifier} Identifier (or \code{None} if not specified), the system
-identifier, and the uninterpreted contents of the internal DTD subset
-as a string (or \code{None} if not present).
+This method is called when the \samp{<!DOCTYPE...>} tag is processed.
+The arguments are the name of the root element, the Formal Public
+Identifier (or \code{None} if not specified), the system identifier,
+and the uninterpreted contents of the internal DTD subset as a string
+(or \code{None} if not present).
 \end{methoddesc}
 
 \begin{methoddesc}{handle_starttag}{tag, method, attributes}
 This method is called to handle start tags for which a start tag
 handler is defined in the instance variable \member{elements}.  The
-\var{tag} argument is the name of the tag, and the
-\var{method} argument is the function (method) which should be used to
-support semantic interpretation of the start tag.  The
-\var{attributes} argument is a dictionary of attributes, the key being
-the \var{name} and the value being the \var{value} of the attribute
-found inside the tag's \code{<>} brackets.  Character and entity
-references in the \var{value} have been interpreted.  For instance,
-for the start tag \code{<A HREF="http://www.cwi.nl/">}, this method
-would be called as \code{handle_starttag('A', self.elements['A'][0],
-\{'HREF': 'http://www.cwi.nl/'\})}.  The base implementation simply
-calls \var{method} with \var{attributes} as the only argument.
+\var{tag} argument is the name of the tag, and the \var{method}
+argument is the function (method) which should be used to support semantic
+interpretation of the start tag.  The \var{attributes} argument is a
+dictionary of attributes, the key being the \var{name} and the value
+being the \var{value} of the attribute found inside the tag's
+\code{<>} brackets.  Character and entity references in the
+\var{value} have been interpreted.  For instance, for the start tag
+\code{<A HREF="http://www.cwi.nl/">}, this method would be called as
+\code{handle_starttag('A', self.elements['A'][0], \{'HREF': 'http://www.cwi.nl/'\})}.
+The base implementation simply calls \var{method} with \var{attributes}
+as the only argument.
 \end{methoddesc}
 
 \begin{methoddesc}{handle_endtag}{tag, method}
@@ -193,18 +185,17 @@ does nothing.  Note that if a document starts with \samp{<?xml
 This method is called when a declaration is encountered.  The
 \var{data} argument is a string containing the text between the
 \samp{<!} and \samp{>} delimiters, but not the delimiters
-themselves.  For example, the \index{ENTITY declaration}entity
-declaration \samp{<!ENTITY text>} will cause this method to be called
-with the argument \code{'ENTITY text'}.  The default method does
-nothing.  Note that \samp{<!DOCTYPE ...>} is handled separately if it
-is located at the start of the document.
+themselves.  For example, the entity \samp{<!ENTITY text>} will
+cause this method to be called with the argument \code{'ENTITY text'}.  The
+default method does nothing.  Note that \samp{<!DOCTYPE ...>} is
+handled separately if it is located at the start of the document.
 \end{methoddesc}
 
 \begin{methoddesc}{syntax_error}{message}
 This method is called when a syntax error is encountered.  The
 \var{message} is a description of what was wrong.  The default method 
 raises a \exception{RuntimeError} exception.  If this method is
-overridden, it is permissible for it to return.  This method is only
+overridden, it is permissable for it to return.  This method is only
 called when the error can be recovered from.  Unrecoverable errors
 raise a \exception{RuntimeError} without first calling
 \method{syntax_error()}.

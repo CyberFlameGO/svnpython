@@ -1,4 +1,3 @@
-
 /* Berkeley DB interface.
    Author: Michael McLay
    Hacked: Guido van Rossum
@@ -21,11 +20,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#ifdef HAVE_DB_185_H
-#include <db_185.h>
-#else
 #include <db.h>
-#endif
 /* Please don't include internal header files of the Berkeley db package
    (it messes up the info required in the Setup file) */
 
@@ -48,8 +43,17 @@ staticforward PyTypeObject Bsddbtype;
 static PyObject *BsddbError;
 
 static PyObject *
-newdbhashobject(char *file, int flags, int mode,
-		int bsize, int ffactor, int nelem, int cachesize, int hash, int lorder)
+newdbhashobject(file, flags, mode,
+		bsize, ffactor, nelem, cachesize, hash, lorder)
+	char *file;
+        int flags;
+        int mode;
+        int bsize;
+        int ffactor;
+        int nelem;
+        int cachesize;
+        int hash; /* XXX ignored */
+        int lorder;
 {
 	bsddbobject *dp;
 	HASHINFO info;
@@ -93,8 +97,17 @@ newdbhashobject(char *file, int flags, int mode,
 }
 
 static PyObject *
-newdbbtobject(char *file, int flags, int mode,
-	      int btflags, int cachesize, int maxkeypage, int minkeypage, int psize, int lorder)
+newdbbtobject(file, flags, mode,
+	      btflags, cachesize, maxkeypage, minkeypage, psize, lorder)
+	char *file;
+        int flags;
+        int mode;
+        int btflags;
+        int cachesize;
+        int maxkeypage;
+        int minkeypage;
+        int psize;
+        int lorder;
 {
 	bsddbobject *dp;
 	BTREEINFO info;
@@ -140,8 +153,18 @@ newdbbtobject(char *file, int flags, int mode,
 }
 
 static PyObject *
-newdbrnobject(char *file, int flags, int mode,
-	      int rnflags, int cachesize, int psize, int lorder, size_t reclen, u_char bval, char *bfname)
+newdbrnobject(file, flags, mode,
+	      rnflags, cachesize, psize, lorder, reclen, bval, bfname)
+	char *file;
+        int flags;
+        int mode;
+        int rnflags;
+        int cachesize;
+        int psize;
+        int lorder;
+        size_t reclen;
+        u_char bval;
+        char *bfname;
 {
 	bsddbobject *dp;
 	RECNOINFO info;
@@ -186,7 +209,8 @@ newdbrnobject(char *file, int flags, int mode,
 }
 
 static void
-bsddb_dealloc(bsddbobject *dp)
+bsddb_dealloc(dp)
+	bsddbobject *dp;
 {
 #ifdef WITH_THREAD
 	if (dp->di_lock) {
@@ -218,7 +242,8 @@ bsddb_dealloc(bsddbobject *dp)
 #endif
 
 static int
-bsddb_length(bsddbobject *dp)
+bsddb_length(dp)
+	bsddbobject *dp;
 {
         if (dp->di_bsddb == NULL) {
                  PyErr_SetString(BsddbError, "BSDDB object has already been closed"); 
@@ -246,7 +271,9 @@ bsddb_length(bsddbobject *dp)
 }
 
 static PyObject *
-bsddb_subscript(bsddbobject *dp, PyObject *key)
+bsddb_subscript(dp, key)
+	bsddbobject *dp;
+        PyObject *key;
 {
 	int status;
 	DBT krec, drec;
@@ -283,7 +310,9 @@ bsddb_subscript(bsddbobject *dp, PyObject *key)
 }
 
 static int
-bsddb_ass_sub(bsddbobject *dp, PyObject *key, PyObject *value)
+bsddb_ass_sub(dp, key, value)
+	bsddbobject *dp;
+        PyObject *key, *value;
 {
 	int status;
 	DBT krec, drec;
@@ -347,7 +376,9 @@ static PyMappingMethods bsddb_as_mapping = {
 };
 
 static PyObject *
-bsddb_close(bsddbobject *dp, PyObject *args)
+bsddb_close(dp, args)
+	bsddbobject *dp;
+        PyObject *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -368,7 +399,9 @@ bsddb_close(bsddbobject *dp, PyObject *args)
 }
 
 static PyObject *
-bsddb_keys(bsddbobject *dp, PyObject *args)
+bsddb_keys(dp, args)
+	bsddbobject *dp;
+        PyObject *args;
 {
 	PyObject *list, *item;
 	DBT krec, drec;
@@ -423,7 +456,9 @@ bsddb_keys(bsddbobject *dp, PyObject *args)
 }
 
 static PyObject *
-bsddb_has_key(bsddbobject *dp, PyObject *args)
+bsddb_has_key(dp, args)
+	bsddbobject *dp;
+        PyObject *args;
 {
 	DBT krec, drec;
 	int status;
@@ -448,7 +483,9 @@ bsddb_has_key(bsddbobject *dp, PyObject *args)
 }
 
 static PyObject *
-bsddb_set_location(bsddbobject *dp, PyObject *key)
+bsddb_set_location(dp, key)
+	bsddbobject *dp;
+        PyObject *key;
 {
 	int status;
 	DBT krec, drec;
@@ -484,7 +521,10 @@ bsddb_set_location(bsddbobject *dp, PyObject *key)
 }
 
 static PyObject *
-bsddb_seq(bsddbobject *dp, PyObject *args, int sequence_request)
+bsddb_seq(dp, args, sequence_request)
+	bsddbobject *dp;
+        PyObject *args;
+        int sequence_request;
 {
 	int status;
 	DBT krec, drec;
@@ -526,27 +566,37 @@ bsddb_seq(bsddbobject *dp, PyObject *args, int sequence_request)
 }
 
 static PyObject *
-bsddb_next(bsddbobject *dp, PyObject *key)
+bsddb_next(dp, key)
+	bsddbobject *dp;
+        PyObject *key;
 {
 	return bsddb_seq(dp, key, R_NEXT);
 }
 static PyObject *
-bsddb_previous(bsddbobject *dp, PyObject *key)
+bsddb_previous(dp, key)
+	bsddbobject *dp;
+        PyObject *key;
 {
 	return bsddb_seq(dp, key, R_PREV);
 }
 static PyObject *
-bsddb_first(bsddbobject *dp, PyObject *key)
+bsddb_first(dp, key)
+	bsddbobject *dp;
+        PyObject *key;
 {
 	return bsddb_seq(dp, key, R_FIRST);
 }
 static PyObject *
-bsddb_last(bsddbobject *dp, PyObject *key)
+bsddb_last(dp, key)
+	bsddbobject *dp;
+        PyObject *key;
 {
 	return bsddb_seq(dp, key, R_LAST);
 }
 static PyObject *
-bsddb_sync(bsddbobject *dp, PyObject *args)
+bsddb_sync(dp, args)
+	bsddbobject *dp;
+        PyObject *args;
 {
 	int status;
 
@@ -576,7 +626,9 @@ static PyMethodDef bsddb_methods[] = {
 };
 
 static PyObject *
-bsddb_getattr(PyObject *dp, char *name)
+bsddb_getattr(dp, name)
+	PyObject *dp;
+        char *name;
 {
 	return Py_FindMethod(bsddb_methods, dp, name);
 }
@@ -599,7 +651,9 @@ static PyTypeObject Bsddbtype = {
 };
 
 static PyObject *
-bsdhashopen(PyObject *self, PyObject *args)
+bsdhashopen(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	char *file;
 	char *flag = NULL;
@@ -650,7 +704,9 @@ bsdhashopen(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-bsdbtopen(PyObject *self, PyObject *args)
+bsdbtopen(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	char *file;
 	char *flag = NULL;
@@ -702,7 +758,9 @@ bsdbtopen(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-bsdrnopen(PyObject *self, PyObject *args)
+bsdrnopen(self, args)
+	PyObject *self;
+        PyObject *args;
 {
 	char *file;
 	char *flag = NULL;
@@ -780,7 +838,7 @@ static PyMethodDef bsddbmodule_methods[] = {
 };
 
 DL_EXPORT(void)
-initbsddb(void) {
+initbsddb() {
 	PyObject *m, *d;
 
 	Bsddbtype.ob_type = &PyType_Type;

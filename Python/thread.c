@@ -1,4 +1,3 @@
-
 /* Thread package.
    This is intended to be usable independently from Python.
    The implementation for system foobar is in a file thread_foobar.h
@@ -20,7 +19,7 @@
 #include <stdlib.h>
 #else
 #ifdef Py_DEBUG
-extern char *getenv(const char *);
+extern char *getenv();
 #endif
 #endif
 
@@ -64,6 +63,17 @@ extern char *getenv(const char *);
 
 #endif /* _POSIX_THREADS */
 
+#ifdef __STDC__
+#define _P(args)		args
+#define _P0()			(void)
+#define _P1(v,t)		(t)
+#define _P2(v1,t1,v2,t2)	(t1,t2)
+#else
+#define _P(args)		()
+#define _P0()			()
+#define _P1(v,t)		(v) t;
+#define _P2(v1,t1,v2,t2)	(v1,v2) t1; t2;
+#endif /* __STDC__ */
 
 #ifdef Py_DEBUG
 static int thread_debug = 0;
@@ -76,9 +86,9 @@ static int thread_debug = 0;
 
 static int initialized;
 
-static void PyThread__init_thread(void); /* Forward */
+static void PyThread__init_thread(); /* Forward */
 
-void PyThread_init_thread(void)
+void PyThread_init_thread _P0()
 {
 #ifdef Py_DEBUG
 	char *p = getenv("THREADDEBUG");

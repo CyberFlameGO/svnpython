@@ -1,4 +1,3 @@
-
 /* Grammar subroutines needed by parser */
 
 #include "pgenheaders.h"
@@ -9,7 +8,9 @@
 /* Return the DFA for the given type */
 
 dfa *
-PyGrammar_FindDFA(grammar *g, register int type)
+PyGrammar_FindDFA(g, type)
+	grammar *g;
+	register int type;
 {
 	register dfa *d;
 #if 1
@@ -31,7 +32,8 @@ PyGrammar_FindDFA(grammar *g, register int type)
 }
 
 char *
-PyGrammar_LabelRepr(label *lb)
+PyGrammar_LabelRepr(lb)
+	label *lb;
 {
 	static char buf[100];
 	
