@@ -22,67 +22,79 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ******************************************************************/
 
-/* UNIX password file access module */
+/* UNIX group file access module */
 
 #include "allobjects.h"
 #include "modsupport.h"
 
 #include <sys/types.h>
-#include <pwd.h>
+#include <grp.h>
 
-static object *mkpwent(p)
-	struct passwd *p;
+static object *mkgrent(p)
+	struct group *p;
 {
-	return mkvalue("(ssllsss)",
-		       p->pw_name,
-		       p->pw_passwd,
-		       (long)p->pw_uid,
-		       (long)p->pw_gid,
-		       p->pw_gecos,
-		       p->pw_dir,
-		       p->pw_shell);
-}
-
-static object *pwd_getpwuid(self, args)
-	object *self, *args;
-{
-	int uid;
-	struct passwd *p;
-	if (!getintarg(args, &uid))
-		return NULL;
-	if ((p = getpwuid(uid)) == NULL) {
-		err_setstr(KeyError, "getpwuid(): uid not found");
+	object *v, *w;
+	char **member;
+	if ((w = newlistobject(0)) == NULL) {
 		return NULL;
 	}
-	return mkpwent(p);
+	for (member = p->gr_mem; *member != NULL; member++) {
+		object *x = newstringobject(*member);
+		if (x == NULL || addlistitem(w, x) != 0) {
+			XDECREF(x);
+			DECREF(w);
+			return NULL;
+		}
+	}
+	v = mkvalue("(sslO)",
+		       p->gr_name,
+		       p->gr_passwd,
+		       (long)p->gr_gid,
+		       w);
+	DECREF(w);
+	return v;
 }
 
-static object *pwd_getpwnam(self, args)
+static object *grp_getgrgid(self, args)
+	object *self, *args;
+{
+	int gid;
+	struct group *p;
+	if (!getintarg(args, &gid))
+		return NULL;
+	if ((p = getgrgid(gid)) == NULL) {
+		err_setstr(KeyError, "getgrgid(): gid not found");
+		return NULL;
+	}
+	return mkgrent(p);
+}
+
+static object *grp_getgrnam(self, args)
 	object *self, *args;
 {
 	char *name;
-	struct passwd *p;
+	struct group *p;
 	if (!getstrarg(args, &name))
 		return NULL;
-	if ((p = getpwnam(name)) == NULL) {
-		err_setstr(KeyError, "getpwnam(): name not found");
+	if ((p = getgrnam(name)) == NULL) {
+		err_setstr(KeyError, "getgrnam(): name not found");
 		return NULL;
 	}
-	return mkpwent(p);
+	return mkgrent(p);
 }
 
-static object *pwd_getpwall(self, args)
+static object *grp_getgrall(self, args)
 	object *self, *args;
 {
 	object *d;
-	struct passwd *p;
+	struct group *p;
 	if (!getnoarg(args))
 		return NULL;
 	if ((d = newlistobject(0)) == NULL)
 		return NULL;
-	setpwent();
-	while ((p = getpwent()) != NULL) {
-		object *v = mkpwent(p);
+	setgrent();
+	while ((p = getgrent()) != NULL) {
+		object *v = mkgrent(p);
 		if (v == NULL || addlistitem(d, v) != 0) {
 			XDECREF(v);
 			DECREF(d);
@@ -92,15 +104,15 @@ static object *pwd_getpwall(self, args)
 	return d;
 }
 
-static struct methodlist pwd_methods[] = {
-	{"getpwuid",	pwd_getpwuid},
-	{"getpwnam",	pwd_getpwnam},
-	{"getpwall",	pwd_getpwall},
+static struct methodlist grp_methods[] = {
+	{"getgrgid",	grp_getgrgid},
+	{"getgrnam",	grp_getgrnam},
+	{"getgrall",	grp_getgrall},
 	{NULL,		NULL}		/* sentinel */
 };
 
 void
-initpwd()
+initgrp()
 {
-	initmodule("pwd", pwd_methods);
+	initmodule("grp", grp_methods);
 }
