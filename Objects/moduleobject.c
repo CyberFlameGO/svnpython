@@ -9,7 +9,7 @@ typedef struct {
 	PyObject *md_dict;
 } PyModuleObject;
 
-static PyMemberDef module_members[] = {
+PyMemberDef module_members[] = {
 	{"__dict__", T_OBJECT, offsetof(PyModuleObject, md_dict), READONLY},
 	{0}
 };

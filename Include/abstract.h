@@ -299,6 +299,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 					 PyObject *args, PyObject *kw);
 
        /*
+
 	 Call a callable Python object, callable_object, with
 	 arguments and keywords arguments.  The 'args' argument can not be
 	 NULL, but the 'kw' argument can be NULL.
@@ -309,6 +310,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
                                                PyObject *args);
 
        /*
+
 	 Call a callable Python object, callable_object, with
 	 arguments given by the tuple, args.  If no arguments are
 	 needed, then args may be NULL.  Returns the result of the
@@ -341,31 +343,11 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 arguments are provided. Returns the result of the call on
 	 success, or NULL on failure.  This is the equivalent of the
 	 Python expression: o.method(args).
-       */
 
+         Note that Special method names, such as "__add__",
+	 "__getitem__", and so on are not supported. The specific
+	 abstract-object routines for these must be used.
 
-     DL_IMPORT(PyObject *) PyObject_CallFunctionObjArgs(PyObject *callable,
-                                                        ...);
-
-       /*
-	 Call a callable Python object, callable_object, with a
-	 variable number of C arguments.  The C arguments are provided
-	 as PyObject * values; 'n' specifies the number of arguments
-	 present.  Returns the result of the call on success, or NULL
-	 on failure.  This is the equivalent of the Python expression:
-	 apply(o,args).
-       */
-
-
-     DL_IMPORT(PyObject *) PyObject_CallMethodObjArgs(PyObject *o,
-                                                      PyObject *m, ...);
-
-       /*
-	 Call the method named m of object o with a variable number of
-	 C arguments.  The C arguments are provided as PyObject * values;
-	 'n' specifies the number of arguments present.  Returns the
-	 result of the call on success, or NULL on failure.  This is the
-	 equivalent of the Python expression: o.method(args).
        */
 
 
@@ -969,30 +951,26 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 
 
      DL_IMPORT(PyObject *) PySequence_List(PyObject *o);
+
        /*
 	 Returns the sequence, o, as a list on success, and NULL on failure.
 	 This is equivalent to the Python expression: list(o)
        */
 
      DL_IMPORT(PyObject *) PySequence_Fast(PyObject *o, const char* m);
+
        /*
          Returns the sequence, o, as a tuple, unless it's already a
          tuple or list.  Use PySequence_Fast_GET_ITEM to access the
-         members of this list, and PySequence_Fast_GET_SIZE to get its length.
+         members of this list.
 
          Returns NULL on failure.  If the object does not support iteration,
          raises a TypeError exception with m as the message text.
        */
 
-#define PySequence_Fast_GET_SIZE(o) \
-	(PyList_Check(o) ? PyList_GET_SIZE(o) : PyTuple_GET_SIZE(o))
-       /*
-	 Return the size of o, assuming that o was returned by
-         PySequence_Fast and is not NULL.
-       */
-
 #define PySequence_Fast_GET_ITEM(o, i)\
      (PyList_Check(o) ? PyList_GET_ITEM(o, i) : PyTuple_GET_ITEM(o, i))
+
        /*
 	 Return the ith element of o, assuming that o was returned by
          PySequence_Fast, and that i is within bounds.

@@ -1,8 +1,5 @@
 """Do a minimal test of all the modules that aren't otherwise tested."""
 
-import warnings
-warnings.filterwarnings('ignore', '', DeprecationWarning, 'posixfile')
-
 from test_support import verbose
 
 import BaseHTTPServer

@@ -383,12 +383,8 @@ binary_op(PyObject *v, PyObject *w, const int op_slot, const char *op_name)
 	PyObject *result = binary_op1(v, w, op_slot);
 	if (result == Py_NotImplemented) {
 		Py_DECREF(Py_NotImplemented);
-		PyErr_Format(
-			PyExc_TypeError, 
-			"unsupported operand type(s) for %s: '%s' and '%s'",
-			op_name,
-			v->ob_type->tp_name,
-			w->ob_type->tp_name);
+		PyErr_Format(PyExc_TypeError, 
+				"unsupported operand type(s) for %s", op_name);
 		return NULL;
 	}
 	return result;
@@ -537,22 +533,9 @@ ternary_op(PyObject *v,
 		if (c >= 0)
 			return x;
 	}
-
-	if (z == Py_None)
-		PyErr_Format(
-			PyExc_TypeError,
-			"unsupported operand type(s) for ** or pow(): "
-			"'%s' and '%s'",
-			v->ob_type->tp_name,
-			w->ob_type->tp_name);
-	else
-		PyErr_Format(
-			PyExc_TypeError,
-			"unsupported operand type(s) for pow(): "
-			"'%s', '%s', '%s'",
-			v->ob_type->tp_name,
-			w->ob_type->tp_name,
-			z->ob_type->tp_name);
+	
+	PyErr_Format(PyExc_TypeError, "unsupported operand type(s) for %s",
+			op_name);
 	return NULL;
 }
 
@@ -583,11 +566,8 @@ PyNumber_Add(PyObject *v, PyObject *w)
 			result = (*m->sq_concat)(v, w);
 		}
                 else {
-                    PyErr_Format(
-			    PyExc_TypeError,
-			    "unsupported operand types for +: '%s' and '%s'",
-			    v->ob_type->tp_name,
-			    w->ob_type->tp_name);
+                    PyErr_SetString(PyExc_TypeError,
+                                    "unsupported operand types for +");
                     result = NULL;
                 }
 	}
@@ -1278,7 +1258,7 @@ PySequence_Tuple(PyObject *v)
 	/* Get iterator. */
 	it = PyObject_GetIter(v);
 	if (it == NULL)
-		return NULL;
+		return type_error("tuple() argument must support iteration");
 
 	/* Guess result size and allocate space. */
 	n = PySequence_Size(v);
@@ -1670,18 +1650,20 @@ PyObject_CallFunction(PyObject *callable, char *format, ...)
 {
 	va_list va;
 	PyObject *args, *retval;
+	va_start(va, format);
 
-	if (callable == NULL)
-		return null_error();
-
-	if (format && *format) {
-		va_start(va, format);
-		args = Py_VaBuildValue(format, va);
+	if (callable == NULL) {
 		va_end(va);
+		return null_error();
 	}
+
+	if (format)
+		args = Py_VaBuildValue(format, va);
 	else
 		args = PyTuple_New(0);
 
+	va_end(va);
+	
 	if (args == NULL)
 		return NULL;
 
@@ -1707,26 +1689,31 @@ PyObject_CallMethod(PyObject *o, char *name, char *format, ...)
 {
 	va_list va;
 	PyObject *args, *func = 0, *retval;
+	va_start(va, format);
 
-	if (o == NULL || name == NULL)
+	if (o == NULL || name == NULL) {
+		va_end(va);
 		return null_error();
+	}
 
 	func = PyObject_GetAttrString(o, name);
 	if (func == NULL) {
+		va_end(va);
 		PyErr_SetString(PyExc_AttributeError, name);
 		return 0;
 	}
 
-	if (!PyCallable_Check(func))
-		return type_error("call of non-callable attribute");
-
-	if (format && *format) {
-		va_start(va, format);
-		args = Py_VaBuildValue(format, va);
+	if (!PyCallable_Check(func)) {
 		va_end(va);
+		return type_error("call of non-callable attribute");
 	}
+
+	if (format && *format)
+		args = Py_VaBuildValue(format, va);
 	else
 		args = PyTuple_New(0);
+
+	va_end(va);
 
 	if (!args)
 		return NULL;
@@ -1748,82 +1735,6 @@ PyObject_CallMethod(PyObject *o, char *name, char *format, ...)
 	Py_DECREF(func);
 
 	return retval;
-}
-
-
-static PyObject *
-objargs_mktuple(va_list va)
-{
-	int i, n = 0;
-	va_list countva;
-	PyObject *result, *tmp;
-
-#ifdef VA_LIST_IS_ARRAY
-	memcpy(countva, va, sizeof(va_list));
-#else
-	countva = va;
-#endif
-
-	while (((PyObject *)va_arg(countva, PyObject *)) != NULL)
-		++n;
-	result = PyTuple_New(n);
-	if (result != NULL && n > 0) {
-		for (i = 0; i < n; ++i) {
-			tmp = (PyObject *)va_arg(va, PyObject *);
-			PyTuple_SET_ITEM(result, i, tmp);
-			Py_INCREF(tmp);
-		}
-	}
-	return result;
-}
-
-PyObject *
-PyObject_CallMethodObjArgs(PyObject *callable, PyObject *name, ...)
-{
-	PyObject *args, *tmp;
-	va_list vargs;
-
-	if (callable == NULL || name == NULL)
-		return null_error();
-
-	callable = PyObject_GetAttr(callable, name);
-	if (callable == NULL)
-		return NULL;
-
-	/* count the args */
-	va_start(vargs, name);
-	args = objargs_mktuple(vargs);
-	va_end(vargs);
-	if (args == NULL) {
-		Py_DECREF(callable);
-		return NULL;
-	}
-	tmp = PyObject_Call(callable, args, NULL);
-	Py_DECREF(args);
-	Py_DECREF(callable);
-
-	return tmp;
-}
-
-PyObject *
-PyObject_CallFunctionObjArgs(PyObject *callable, ...)
-{
-	PyObject *args, *tmp;
-	va_list vargs;
-
-	if (callable == NULL)
-		return null_error();
-
-	/* count the args */
-	va_start(vargs, callable);
-	args = objargs_mktuple(vargs);
-	va_end(vargs);
-	if (args == NULL)
-		return NULL;
-	tmp = PyObject_Call(callable, args, NULL);
-	Py_DECREF(args);
-
-	return tmp;
 }
 
 

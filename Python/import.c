@@ -392,7 +392,7 @@ _PyImport_FixupExtension(char *name, char *filename)
 	dict = PyModule_GetDict(mod);
 	if (dict == NULL)
 		return NULL;
-	copy = PyDict_Copy(dict);
+	copy = PyObject_CallMethod(dict, "copy", "");
 	if (copy == NULL)
 		return NULL;
 	PyDict_SetItemString(extensions, filename, copy);
@@ -403,7 +403,7 @@ _PyImport_FixupExtension(char *name, char *filename)
 PyObject *
 _PyImport_FindExtension(char *name, char *filename)
 {
-	PyObject *dict, *mod, *mdict;
+	PyObject *dict, *mod, *mdict, *result;
 	if (extensions == NULL)
 		return NULL;
 	dict = PyDict_GetItemString(extensions, filename);
@@ -415,8 +415,10 @@ _PyImport_FindExtension(char *name, char *filename)
 	mdict = PyModule_GetDict(mod);
 	if (mdict == NULL)
 		return NULL;
-	if (PyDict_Update(mdict, dict))
+	result = PyObject_CallMethod(mdict, "update", "O", dict);
+	if (result == NULL)
 		return NULL;
+	Py_DECREF(result);
 	if (Py_VerboseFlag)
 		PySys_WriteStderr("import %s # previously loaded (%s)\n",
 			name, filename);
@@ -893,13 +895,6 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		strcat(buf, ".");
 		strcat(buf, name);
 		strcpy(name, buf);
-#ifdef macintosh
-		/* Freezing on the mac works different, and the modules are
-		** actually on sys.path. So we don't take the quick exit but
-		** continue with the normal flow.
-		*/
-		path = NULL;
-#else
 		if (find_frozen(name) != NULL) {
 			strcpy(buf, name);
 			return &fd_frozen;
@@ -907,7 +902,6 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		PyErr_Format(PyExc_ImportError,
 			     "No frozen submodule named %.200s", name);
 		return NULL;
-#endif
 	}
 	if (path == NULL) {
 		if (is_builtin(name)) {
@@ -989,10 +983,13 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 #else
 		/* XXX How are you going to test for directories? */
 #ifdef RISCOS
-		if (isdir(buf) &&
-		    find_init_module(buf) &&
-		    case_ok(buf, len, namelen, name))
-			return &fd_package;
+		{
+			static struct filedescr fd = {"", "", PKG_DIRECTORY};
+			if (isdir(buf)) {
+				if (find_init_module(buf))
+					return &fd;
+			}
+		}
 #endif
 #endif
 #ifdef macintosh
@@ -1072,8 +1069,6 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 #include <sys/types.h>
 #include <dirent.h>
 
-#elif defined(RISCOS)
-#include "oslib/osfscontrol.h"
 #endif
 
 static int
@@ -1202,31 +1197,6 @@ case_ok(char *buf, int len, int namelen, char *name)
 		(void)closedir(dirp);
 	}
 	return 0 ; /* Not found */
-
-/* RISC OS */
-#elif defined(RISCOS)
-	char canon[MAXPATHLEN+1]; /* buffer for the canonical form of the path */
-	char buf2[MAXPATHLEN+2];
-	char *nameWithExt = buf+len-namelen;
-	int canonlen;
-	os_error *e;
-
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
-		return 1;
-
-	/* workaround:
-	   append wildcard, otherwise case of filename wouldn't be touched */
-	strcpy(buf2, buf);
-	strcat(buf2, "*");
-
-	e = xosfscontrol_canonicalise_path(buf2,canon,0,0,MAXPATHLEN+1,&canonlen);
-	canonlen = MAXPATHLEN+1-canonlen;
-	if (e || canonlen<=0 || canonlen>(MAXPATHLEN+1) )
-		return 0;
-	if (strcmp(nameWithExt, canon+canonlen-strlen(nameWithExt))==0)
-		return 1; /* match */
-
-	return 0;
 
 /* assuming it's a case-sensitive filesystem, so there's nothing to do! */
 #else

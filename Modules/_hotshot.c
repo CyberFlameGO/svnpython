@@ -82,7 +82,6 @@ typedef struct {
 
 typedef struct {
     PyObject_HEAD
-    PyObject *info;
     FILE *logfp;
     int filled;
     int index;
@@ -258,7 +257,6 @@ logreader_tp_iter(LogReaderObject *self)
 #define ERR_NONE          0
 #define ERR_EOF          -1
 #define ERR_EXCEPTION    -2
-#define ERR_BAD_RECTYPE  -3
 
 #define PISIZE            (sizeof(int) + 1)
 #define MPISIZE           (PISIZE + 1)
@@ -328,73 +326,6 @@ unpack_string(LogReaderObject *self, PyObject **pvalue)
 }
 
 
-static int
-unpack_add_info(LogReaderObject *self, int skip_opcode)
-{
-    PyObject *key;
-    PyObject *value = NULL;
-    int err;
-
-    if (skip_opcode) {
-        if (self->buffer[self->index] != WHAT_ADD_INFO)
-            return ERR_BAD_RECTYPE;
-        self->index++;
-    }
-    err = unpack_string(self, &key);
-    if (!err) {
-        err = unpack_string(self, &value);
-        if (err)
-            Py_DECREF(key);
-        else {
-            PyObject *list = PyDict_GetItem(self->info, key);
-            if (list == NULL) {
-                list = PyList_New(0);
-                if (list == NULL) {
-                    err = ERR_EXCEPTION;
-                    goto finally;
-                }
-                if (PyDict_SetItem(self->info, key, list)) {
-                    err = ERR_EXCEPTION;
-                    goto finally;
-                }
-            }
-            if (PyList_Append(list, value))
-                err = ERR_EXCEPTION;
-        }
-    }
- finally:
-    Py_XDECREF(key);
-    Py_XDECREF(value);
-    return err;
-}
-
-
-static void
-logreader_refill(LogReaderObject *self)
-{
-    int needed;
-    size_t res;
-
-    if (self->index) {
-        memmove(self->buffer, &self->buffer[self->index],
-                self->filled - self->index);
-        self->filled = self->filled - self->index;
-        self->index = 0;
-    }
-    needed = BUFFERSIZE - self->filled;
-    if (needed > 0) {
-        res = fread(&self->buffer[self->filled], 1, needed, self->logfp);
-        self->filled += res;
-    }
-}
-
-static void
-eof_error(void)
-{
-    PyErr_SetString(PyExc_EOFError,
-                    "end of file with incomplete profile record");
-}
-
 static PyObject *
 logreader_tp_iternext(LogReaderObject *self)
 {
@@ -415,9 +346,21 @@ logreader_tp_iternext(LogReaderObject *self)
         return NULL;
     }
  restart:
-    if ((self->filled - self->index) < MAXEVENTSIZE)
-        logreader_refill(self);
-
+    if ((self->filled - self->index) < MAXEVENTSIZE) {
+        /* add a little to the buffer */
+        int needed;
+        size_t res;
+    refill:
+        if (self->index) {
+            memmove(self->buffer, &self->buffer[self->index],
+                    self->filled - self->index);
+            self->filled = self->filled - self->index;
+            self->index = 0;
+        }
+        needed = BUFFERSIZE - self->filled;
+        res = fread(&self->buffer[self->filled], 1, needed, self->logfp);
+        self->filled += res;
+    }
     /* end of input */
     if (self->filled == 0)
         return NULL;
@@ -448,7 +391,14 @@ logreader_tp_iternext(LogReaderObject *self)
             err = unpack_packed_int(self, &tdelta, 0);
         break;
     case WHAT_ADD_INFO:
-        err = unpack_add_info(self, 0);
+        err = unpack_string(self, &s1);
+        if (!err) {
+            err = unpack_string(self, &s2);
+            if (err) {
+                Py_DECREF(s1);
+                s1 = NULL;
+            }
+        }
         break;
     case WHAT_DEFINE_FILE:
         err = unpack_packed_int(self, &fileno, 0);
@@ -476,7 +426,6 @@ logreader_tp_iternext(LogReaderObject *self)
             self->index++;
             goto restart;
         }
-        break;
     case WHAT_FRAME_TIMES:
         if (self->index >= self->filled)
             err = ERR_EOF;
@@ -485,9 +434,8 @@ logreader_tp_iternext(LogReaderObject *self)
             self->index++;
             goto restart;
         }
-        break;
     default:
-        err = ERR_BAD_RECTYPE;
+	;
     }
     if (err == ERR_EOF && oldindex != 0) {
         /* It looks like we ran out of data before we had it all; this
@@ -495,15 +443,12 @@ logreader_tp_iternext(LogReaderObject *self)
          * data.  Try forcing the buffer to be re-filled before failing.
          */
         err = ERR_NONE;
-        logreader_refill(self);
+        goto refill;
     }
-    if (err == ERR_BAD_RECTYPE) {
-        PyErr_SetString(PyExc_ValueError,
-                        "unknown record type in log file");
-    }
-    else if (err == ERR_EOF) {
+    if (err == ERR_EOF) {
         /* Could not avoid end-of-buffer error. */
-        eof_error();
+        PyErr_SetString(PyExc_EOFError,
+                        "end of file with incomplete profile record");
     }
     else if (!err) {
         result = PyTuple_New(4);
@@ -1028,28 +973,6 @@ is_available(ProfilerObject *self)
 
 /* Profiler object interface methods. */
 
-static char addinfo__doc__[] =
-"addinfo(key, value)\n"
-"Insert an ADD_INFO record into the log.";
-
-static PyObject *
-profiler_addinfo(ProfilerObject *self, PyObject *args)
-{
-    PyObject *result = NULL;
-    char *key, *value;
-
-    if (PyArg_ParseTuple(args, "ss:addinfo", &key, &value)) {
-        if (self->logfp == NULL)
-            PyErr_SetString(ProfilerError, "profiler already closed");
-        else {
-            pack_add_info(self, key, value);
-            result = Py_None;
-            Py_INCREF(result);
-        }
-    }
-    return result;
-}
-
 static char close__doc__[] =
 "close()\n"
 "Shut down this profiler and close the log files, even if its active.";
@@ -1186,7 +1109,6 @@ profiler_dealloc(ProfilerObject *self)
  * more easily, requiring only the changes to the dispatcher to be made.
  */
 static PyMethodDef profiler_methods[] = {
-    {"addinfo", (PyCFunction)profiler_addinfo, METH_VARARGS, addinfo__doc__},
     {"close",   (PyCFunction)profiler_close,   METH_VARARGS, close__doc__},
     {"runcall", (PyCFunction)profiler_runcall, METH_VARARGS, runcall__doc__},
     {"runcode", (PyCFunction)profiler_runcode, METH_VARARGS, runcode__doc__},
@@ -1246,7 +1168,7 @@ static char profiler_object__doc__[] =
 static PyTypeObject ProfilerType = {
     PyObject_HEAD_INIT(NULL)
     0,					/* ob_size		*/
-    "_hotshot.ProfilerType",		/* tp_name		*/
+    "HotShot-profiler",			/* tp_name		*/
     (int) sizeof(ProfilerObject),	/* tp_basicsize		*/
     0,					/* tp_itemsize		*/
     (destructor)profiler_dealloc,	/* tp_dealloc		*/
@@ -1264,7 +1186,7 @@ static PyTypeObject ProfilerType = {
     0,					/* tp_getattro		*/
     0,					/* tp_setattro		*/
     0,					/* tp_as_buffer		*/
-    Py_TPFLAGS_DEFAULT,			/* tp_flags		*/
+    0,					/* tp_flags		*/
     profiler_object__doc__,		/* tp_doc		*/
 };
 
@@ -1278,12 +1200,8 @@ static PyMethodDef logreader_methods[] = {
 };
 
 static PyObject *
-logreader_getattr(LogReaderObject *self, char *name)
+logreader_getattr(ProfilerObject *self, char *name)
 {
-    if (strcmp(name, "info") == 0) {
-        Py_INCREF(self->info);
-        return self->info;
-    }
     return Py_FindMethod(logreader_methods, (PyObject *)self, name);
 }
 
@@ -1308,7 +1226,7 @@ static PySequenceMethods logreader_as_sequence = {
 static PyTypeObject LogReaderType = {
     PyObject_HEAD_INIT(NULL)
     0,					/* ob_size		*/
-    "_hotshot.LogReaderType",		/* tp_name		*/
+    "HotShot-logreader",		/* tp_name		*/
     (int) sizeof(LogReaderObject),	/* tp_basicsize		*/
     0,					/* tp_itemsize		*/
     (destructor)logreader_dealloc,	/* tp_dealloc		*/
@@ -1326,7 +1244,7 @@ static PyTypeObject LogReaderType = {
     0,					/* tp_getattro		*/
     0,					/* tp_setattro		*/
     0,					/* tp_as_buffer		*/
-    Py_TPFLAGS_DEFAULT,			/* tp_flags		*/
+    0,					/* tp_flags		*/
     logreader__doc__,			/* tp_doc		*/
 #if Py_TPFLAGS_HAVE_ITER
     0,					/* tp_traverse		*/
@@ -1351,45 +1269,14 @@ hotshot_logreader(PyObject *unused, PyObject *args)
             self->index = 0;
             self->frametimings = 1;
             self->linetimings = 0;
-            self->info = NULL;
             self->logfp = fopen(filename, "rb");
             if (self->logfp == NULL) {
                 PyErr_SetFromErrnoWithFilename(PyExc_IOError, filename);
                 Py_DECREF(self);
                 self = NULL;
-                goto finally;
-            }
-            self->info = PyDict_New();
-            if (self->info == NULL) {
-                Py_DECREF(self);
-                goto finally;
-            }
-            /* Aggressively attempt to load all preliminary ADD_INFO
-             * records from the log so the info records are available
-             * from a fresh logreader object.
-             */
-            logreader_refill(self);
-            while (self->filled > self->index
-                   && self->buffer[self->index] == WHAT_ADD_INFO) {
-                int err = unpack_add_info(self, 1);
-                if (err) {
-                    if (err == ERR_EOF)
-                        eof_error();
-                    else
-                        PyErr_SetString(PyExc_RuntimeError,
-                                        "unexpected error");
-                    break;
-                }
-                /* Refill agressively so we can avoid EOF during
-                 * initialization unless there's a real EOF condition
-                 * (the tp_iternext handler loops attempts to refill
-                 * and try again).
-                 */
-                logreader_refill(self);
             }
         }
     }
- finally:
     return (PyObject *) self;
 }
 
@@ -1435,32 +1322,30 @@ write_header(ProfilerObject *self)
         PyErr_NoMemory();
         return -1;
     }
-    pack_add_info(self, "hotshot-version", buffer);
-    pack_add_info(self, "requested-frame-timings",
-                  (self->frametimings ? "yes" : "no"));
-    pack_add_info(self, "requested-line-events",
+    pack_add_info(self, "HotShot-Version", buffer);
+    pack_add_info(self, "Requested-Line-Events",
                   (self->lineevents ? "yes" : "no"));
-    pack_add_info(self, "requested-line-timings",
-                  (self->linetimings ? "yes" : "no"));
-    pack_add_info(self, "platform", Py_GetPlatform());
-    pack_add_info(self, "executable", Py_GetProgramFullPath());
+    pack_add_info(self, "Platform", Py_GetPlatform());
+    pack_add_info(self, "Executable", Py_GetProgramFullPath());
     buffer = (char *) Py_GetVersion();
     if (buffer == NULL)
         PyErr_Clear();
     else
-        pack_add_info(self, "executable-version", buffer);
+        pack_add_info(self, "Executable-Version", buffer);
 
 #ifdef MS_WIN32
     sprintf(cwdbuffer, "%I64d", frequency.QuadPart);
-    pack_add_info(self, "reported-performance-frequency", cwdbuffer);
+    pack_add_info(self, "Reported-Performance-Frequency", cwdbuffer);
 #else
     sprintf(cwdbuffer, "%lu", rusage_diff);
-    pack_add_info(self, "observed-interval-getrusage", cwdbuffer);
+    pack_add_info(self, "Observed-Interval-getrusage", cwdbuffer);
     sprintf(cwdbuffer, "%lu", timeofday_diff);
-    pack_add_info(self, "observed-interval-gettimeofday", cwdbuffer);
+    pack_add_info(self, "Observed-Interval-gettimeofday", cwdbuffer);
 #endif
+    pack_frame_times(self);
+    pack_line_times(self);
 
-    pack_add_info(self, "current-directory",
+    pack_add_info(self, "Current-Directory",
                   getcwd(cwdbuffer, sizeof cwdbuffer));
 
     temp = PySys_GetObject("path");
@@ -1470,11 +1355,8 @@ write_header(ProfilerObject *self)
         buffer = PyString_AsString(item);
         if (buffer == NULL)
             return -1;
-        pack_add_info(self, "sys-path-entry", buffer);
+        pack_add_info(self, "Sys-Path-Entry", buffer);
     }
-    pack_frame_times(self);
-    pack_line_times(self);
-
     return 0;
 }
 

@@ -75,11 +75,7 @@ MKDVI=	   $(PYTHON) ../tools/mkhowto --paper=$(PAPER) --dvi
 MKHTML=	   $(PYTHON) tools/mkhowto --html --about html/stdabout.dat \
 		--address $(PYTHONDOCS) --up-link ../index.html \
 		--up-title "Python Documentation Index" \
-		--global-module-index "../modindex.html" --dvips-safe
-MKISILOHTML=$(PYTHON) tools/mkhowto --html --about html/stdabout.dat \
-		--l2h-init perl/isilo.perl --numeric --split 1 \
-		--dvips-safe
-MKISILO=   iSilo386 -U -y -rCR -d0
+		--global-module-index "../modindex.html"
 MKPDF=	   $(PYTHON) ../tools/mkhowto --paper=$(PAPER) --pdf
 MKPS=	   $(PYTHON) ../tools/mkhowto --paper=$(PAPER) --ps
 
@@ -111,28 +107,6 @@ DVIFILES=	$(MANDVIFILES) $(HOWTODVIFILES)
 PDFFILES=	$(MANPDFFILES) $(HOWTOPDFFILES)
 PSFILES=	$(MANPSFILES) $(HOWTOPSFILES)
 
-HTMLCSSFILES=html/api/api.css \
-	html/doc/doc.css \
-	html/ext/ext.css \
-	html/lib/lib.css \
-	html/mac/mac.css \
-	html/ref/ref.css \
-	html/tut/tut.css \
-	html/inst/inst.css \
-	html/dist/dist.css
-
-ISILOCSSFILES=isilo/api/api.css \
-	isilo/doc/doc.css \
-	isilo/ext/ext.css \
-	isilo/lib/lib.css \
-	isilo/mac/mac.css \
-	isilo/ref/ref.css \
-	isilo/tut/tut.css \
-	isilo/inst/inst.css \
-	isilo/dist/dist.css
-
-ALLCSSFILES=$(HTMLCSSFILES) $(ISILOCSSFILES)
-
 INDEXFILES=html/api/api.html \
 	html/doc/doc.html \
 	html/ext/ext.html \
@@ -147,14 +121,12 @@ ALLHTMLFILES=$(INDEXFILES) html/index.html html/modindex.html html/acks.html
 
 COMMONPERL= perl/manual.perl perl/python.perl perl/l2hinit.perl
 
-ANNOAPI=api/refcounts.dat tools/anno-api.py
-
 include Makefile.deps
 
 # These must be declared phony since there
 # are directories with matching names:
 .PHONY: api doc ext lib mac ref tut inst dist
-.PHONY: html info isilo
+.PHONY: html info
 
 
 # Main target
@@ -176,44 +148,14 @@ world:	ps pdf html distfiles
 
 # Targets for each document:
 # Python/C API Reference Manual
-paper-$(PAPER)/api.dvi: $(ANNOAPIFILES)
+paper-$(PAPER)/api.dvi: paper-$(PAPER)/api.tex $(APIFILES)
 	cd paper-$(PAPER) && $(MKDVI) api.tex
 
-paper-$(PAPER)/api.pdf: $(ANNOAPIFILES)
+paper-$(PAPER)/api.pdf: paper-$(PAPER)/api.tex $(APIFILES)
 	cd paper-$(PAPER) && $(MKPDF) api.tex
 
-paper-$(PAPER)/api.tex: api/api.tex $(ANNOAPI)
+paper-$(PAPER)/api.tex: api/api.tex api/refcounts.dat tools/anno-api.py
 	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/api.tex
-
-paper-$(PAPER)/abstract.tex: api/abstract.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/abstract.tex
-
-paper-$(PAPER)/concrete.tex: api/concrete.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/concrete.tex
-
-paper-$(PAPER)/exceptions.tex: api/exceptions.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/exceptions.tex
-
-paper-$(PAPER)/init.tex: api/init.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/init.tex
-
-paper-$(PAPER)/intro.tex: api/intro.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/intro.tex
-
-paper-$(PAPER)/memory.tex: api/memory.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/memory.tex
-
-paper-$(PAPER)/newtypes.tex: api/newtypes.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/newtypes.tex
-
-paper-$(PAPER)/refcounting.tex: api/refcounting.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/refcounting.tex
-
-paper-$(PAPER)/utilities.tex: api/utilities.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/utilities.tex
-
-paper-$(PAPER)/veryhigh.tex: api/veryhigh.tex $(ANNOAPI)
-	$(PYTHON) $(TOOLSDIR)/anno-api.py -o $@ api/veryhigh.tex
 
 # Distributing Python Modules
 paper-$(PAPER)/dist.dvi: $(DISTFILES)
@@ -293,9 +235,6 @@ info:
 # instead.  The standard set does *not* include all the icons used in the
 # Python documentation.
 
-$(ALLCSSFILES): html/style.css
-	cp $< $@
-
 $(INDEXFILES): $(COMMONPERL) html/about.dat tools/node2label.pl
 
 html/acks.html: ACKS $(TOOLSDIR)/support.py $(TOOLSDIR)/mkackshtml
@@ -321,141 +260,34 @@ html/modindex.html: html/lib/lib.html html/mac/mac.html
 		--output modindex.html --address $(PYTHONDOCS) \
 		lib/modindex.html mac/modindex.html
 
-html:	$(ALLHTMLFILES) $(HTMLCSSFILES)
+html:	$(ALLHTMLFILES)
 
-api: html/api/api.html html/api/api.css
-html/api/api.html: $(APIFILES)
+api html/api/api.html: $(APIFILES)
 	$(MKHTML) --dir html/api api/api.tex
 
-doc: html/doc/doc.html html/doc/doc.css
-html/doc/doc.html: $(DOCFILES)
+doc html/doc/doc.html: $(DOCFILES)
 	$(MKHTML) --dir html/doc doc/doc.tex
 
-ext: html/ext/ext.html html/ext/ext.css
-html/ext/ext.html: $(EXTFILES)
+ext html/ext/ext.html: $(EXTFILES)
 	$(MKHTML) --dir html/ext ext/ext.tex
 
-lib: html/lib/lib.html html/lib/lib.css
-html/lib/lib.html: $(LIBFILES)
+lib html/lib/lib.html: $(LIBFILES)
 	$(MKHTML) --dir html/lib lib/lib.tex
 
-mac: html/mac/mac.html html/mac/mac.css
-html/mac/mac.html: $(MACFILES)
+mac html/mac/mac.html: $(MACFILES)
 	$(MKHTML) --dir html/mac mac/mac.tex
 
-ref: html/ref/ref.html html/ref/ref.css
-html/ref/ref.html: $(REFFILES)
+ref html/ref/ref.html: $(REFFILES)
 	$(MKHTML) --dir html/ref ref/ref.tex
 
-tut: html/tut/tut.html html/tut/tut.css
-html/tut/tut.html: $(TUTFILES)
+tut html/tut/tut.html: $(TUTFILES)
 	$(MKHTML) --dir html/tut --numeric --split 3 tut/tut.tex
 
-inst: html/inst/inst.html html/inst/inst.css
-html/inst/inst.html: $(INSTFILES) perl/distutils.perl
+inst html/inst/inst.html: $(INSTFILES) perl/distutils.perl
 	$(MKHTML) --dir html/inst --split 4 inst/inst.tex
 
-dist: html/dist/dist.html html/dist/dist.css
-html/dist/dist.html: $(DISTFILES) perl/distutils.perl
+dist html/dist/dist.html: $(DISTFILES) perl/distutils.perl
 	$(MKHTML) --dir html/dist --split 4 dist/dist.tex
-
-
-# The iSilo format is used by the iSilo document reader for PalmOS devices.
-
-ISILOINDEXFILES=isilo/api/api.html \
-	isilo/doc/doc.html \
-	isilo/ext/ext.html \
-	isilo/lib/lib.html \
-	isilo/mac/mac.html \
-	isilo/ref/ref.html \
-	isilo/tut/tut.html \
-	isilo/inst/inst.html \
-	isilo/dist/dist.html
-
-$(ISILOINDEXFILES): $(COMMONPERL) html/about.dat perl/isilo.perl
-
-isilo:	isilo/python-api-$(RELEASE).pdb \
-	isilo/python-doc-$(RELEASE).pdb \
-	isilo/python-ext-$(RELEASE).pdb \
-	isilo/python-lib-$(RELEASE).pdb \
-	isilo/python-mac-$(RELEASE).pdb \
-	isilo/python-ref-$(RELEASE).pdb \
-	isilo/python-tut-$(RELEASE).pdb \
-	isilo/python-dist-$(RELEASE).pdb \
-	isilo/python-inst-$(RELEASE).pdb
-
-isilo/python-api-$(RELEASE).pdb: isilo/api/api.html isilo/api/api.css
-	$(MKISILO) "-iPython/C API Reference Manual" \
-		isilo/api/api.html $@
-
-isilo/python-doc-$(RELEASE).pdb: isilo/doc/doc.html isilo/doc/doc.css
-	$(MKISILO) "-iDocumenting Python" \
-		isilo/doc/doc.html $@
-
-isilo/python-ext-$(RELEASE).pdb: isilo/ext/ext.html isilo/ext/ext.css
-	$(MKISILO) "-iExtending & Embedding Python" \
-		isilo/ext/ext.html $@
-
-isilo/python-lib-$(RELEASE).pdb: isilo/lib/lib.html isilo/lib/lib.css
-	$(MKISILO) "-iPython Library Reference" \
-		isilo/lib/lib.html $@
-
-isilo/python-mac-$(RELEASE).pdb: isilo/mac/mac.html isilo/mac/mac.css
-	$(MKISILO) "-iPython/C API Reference Manual" \
-		isilo/mac/mac.html $@
-
-isilo/python-ref-$(RELEASE).pdb: isilo/ref/ref.html isilo/ref/ref.css
-	$(MKISILO) "-iPython Reference Manual" \
-		isilo/ref/ref.html $@
-
-isilo/python-tut-$(RELEASE).pdb: isilo/tut/tut.html isilo/tut/tut.css
-	$(MKISILO) "-iPython Tutorial" \
-		isilo/tut/tut.html $@
-
-isilo/python-dist-$(RELEASE).pdb: isilo/dist/dist.html isilo/dist/dist.css
-	$(MKISILO) "-iDistributing Python Modules" \
-		isilo/dist/dist.html $@
-
-isilo/python-inst-$(RELEASE).pdb: isilo/inst/inst.html isilo/inst/inst.css
-	$(MKISILO) "-iInstalling Python Modules" \
-		isilo/inst/inst.html $@
-
-isilo/api/api.html: $(APIFILES)
-	$(MKISILOHTML) --dir isilo/api api/api.tex
-
-isilo/doc/doc.html: $(DOCFILES)
-	$(MKISILOHTML) --dir isilo/doc doc/doc.tex
-
-isilo/ext/ext.html: $(EXTFILES)
-	$(MKISILOHTML) --dir isilo/ext ext/ext.tex
-
-isilo/lib/lib.html: $(LIBFILES)
-	$(MKISILOHTML) --dir isilo/lib lib/lib.tex
-
-isilo/mac/mac.html: $(MACFILES)
-	$(MKISILOHTML) --dir isilo/mac mac/mac.tex
-
-isilo/ref/ref.html: $(REFFILES)
-	$(MKISILOHTML) --dir isilo/ref ref/ref.tex
-
-isilo/tut/tut.html: $(TUTFILES)
-	$(MKISILOHTML) --dir isilo/tut tut/tut.tex
-
-isilo/inst/inst.html: $(INSTFILES) perl/distutils.perl
-	$(MKISILOHTML) --dir isilo/inst inst/inst.tex
-
-isilo/dist/dist.html: $(DISTFILES) perl/distutils.perl
-	$(MKISILOHTML) --dir isilo/dist dist/dist.tex
-
-# These are useful if you need to transport the iSilo-ready HTML to
-# another machine to perform the conversion:
-
-isilozip:  isilo-html-$(RELEASE).zip
-
-isilo-html-$(RELEASE).zip:	$(ISILOINDEXFILES)
-	rm -f $@
-	cd isilo && \
-		zip -q -9 ../$@ */*.css */*.html */*.txt
 
 
 # webchecker needs an extra flag to process the huge index from the libref
@@ -534,7 +366,7 @@ postscript-$(PAPER)-$(RELEASE).zip: $(PSFILES) paper-$(PAPER)/README
 	rm -f $@
 	cd paper-$(PAPER) && zip -q -9 ../$@ *.ps README
 
-html-$(RELEASE).tar:	$(ALLHTMLFILES) $(HTMLCSSFILES)
+html-$(RELEASE).tar:	$(ALLHTMLFILES)
 	cd html && \
 		tar cf ../html-$(RELEASE).tar *.html */*.css */*.html \
 					      */*.gif */*.txt
@@ -545,14 +377,10 @@ html-$(RELEASE).tgz:	html-$(RELEASE).tar
 html-$(RELEASE).tar.bz2: html-$(RELEASE).tar
 	bzip2 -9 <$? >$@
 
-html-$(RELEASE).zip:	$(ALLHTMLFILES) $(HTMLCSSFILES)
+html-$(RELEASE).zip:	$(ALLHTMLFILES)
 	rm -f $@
 	cd html && \
 		zip -q -9 ../$@ *.html */*.css */*.html */*.gif */*.txt
-
-isilo-$(RELEASE).zip:	isilo
-	cd isilo && zip -q -9 ../$@ python-*-$(RELEASE).pdb
-
 
 # convenience targets:
 
@@ -568,7 +396,6 @@ ziphtml:	html-$(RELEASE).zip
 zipps:		postscript-$(PAPER)-$(RELEASE).zip
 zippdf:		pdf-$(PAPER)-$(RELEASE).zip
 ziplatex:	latex-$(RELEASE).zip
-zipisilo:	isilo-$(RELEASE).zip
 
 zips:		zippdf zipps ziphtml
 
@@ -614,8 +441,5 @@ clobber:
 	rm -rf html/index.html html/modindex.html html/acks.html
 	rm -rf html/api/ html/doc/ html/ext/ html/lib/ html/mac/
 	rm -rf html/ref/ html/tut/ html/inst/ html/dist/
-	rm -rf isilo/api/ isilo/doc/ isilo/ext/ isilo/lib/ isilo/mac/
-	rm -rf isilo/ref/ isilo/tut/ isilo/inst/ isilo/dist/
-	rm -f isilo/python-*-$(RELEASE).pdb isilo-$(RELEASE).zip
 
 realclean distclean:  clobber

@@ -17,7 +17,9 @@
 #define GUSI_TO_MSL_EPOCH (4*365*24*60*60)
 #endif /* USE_GUSI2 */
 #else
+#ifndef RISCOS
 #include <sys/types.h>
+#endif /* RISCOS */
 #endif
 
 #ifdef QUICKWIN

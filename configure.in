@@ -63,7 +63,7 @@ then
 	ac_md_system=`echo $ac_sys_system |
 			   tr -d '[/ ]' | tr '[[A-Z]]' '[[a-z]]'`
 	ac_md_release=`echo $ac_sys_release |
-			   tr -d '[/ ]' | sed 's/^[[A-Z]]\.//' | sed 's/\..*//'`
+			   tr -d '[/ ]' | sed 's/\..*//'`
 	MACHDEP="$ac_md_system$ac_md_release"
 
 	case $MACHDEP in
@@ -327,8 +327,8 @@ AC_SUBST(AR)
 AC_CHECK_PROGS(AR, ar aal, ar)
 
 case $MACHDEP in
-bsdos*|hp*|HP*)
-	# install -d does not work on BSDI or HP-UX
+bsdos*)
+	# install -d does not work on BSDI
 	if test -z "$INSTALL"
 	then
 		INSTALL="${srcdir}/install-sh -c"
@@ -1426,17 +1426,7 @@ AC_CHECK_FUNCS(getpgrp, AC_TRY_COMPILE([#include <unistd.h>], [getpgrp(0);], AC_
 AC_CHECK_FUNCS(setpgrp, AC_TRY_COMPILE([#include <unistd.h>], [setpgrp(0,0);], AC_DEFINE(SETPGRP_HAVE_ARG)))
 AC_CHECK_FUNCS(gettimeofday, AC_TRY_COMPILE([#include <sys/time.h>], [gettimeofday((struct timeval*)0,(struct timezone*)0);], ,AC_DEFINE(GETTIMEOFDAY_NO_TZ)))
 
-
-# On OSF/1 V5.1, getaddrinfo is available, but a define
-# for [no]getaddrinfo in netdb.h. 
-AC_MSG_CHECKING(for getaddrinfo)
-AC_TRY_LINK([
-#include <sys/socket.h>
-#include <netdb.h>
-],[
-getaddrinfo(NULL, NULL, NULL, NULL);
-], [
-AC_MSG_RESULT(yes)
+AC_CHECK_FUNCS(getaddrinfo, [dnl
 AC_MSG_CHECKING(getaddrinfo bug)
 AC_TRY_RUN([
 #include <sys/types.h>
@@ -1529,10 +1519,7 @@ buggygetaddrinfo=no,
 AC_MSG_RESULT(buggy)
 buggygetaddrinfo=yes,
 AC_MSG_RESULT(buggy)
-buggygetaddrinfo=yes)], [
-AC_MSG_RESULT(no)
-buggygetaddrinfo=yes
-])
+buggygetaddrinfo=yes)], [buggygetaddrinfo=yes])
 
 if test "$buggygetaddrinfo" = "yes"; then
 	if test "$ipv6" = "yes"; then
@@ -1540,8 +1527,6 @@ if test "$buggygetaddrinfo" = "yes"; then
 		echo '       or you can specify "--disable-ipv6"'.
 		exit 1
 	fi
-else
-	AC_DEFINE(HAVE_GETADDRINFO)
 fi
 AC_CHECK_FUNCS(getnameinfo)
 
@@ -1849,7 +1834,7 @@ wchar_h="no"
 # determine wchar_t size
 if test "$wchar_h" = yes
 then
-  AC_CHECK_SIZEOF(wchar_t, 4, [#include <wchar.h>])
+  AC_CHECK_SIZEOF(wchar_t, 4)
 fi
 
 AC_MSG_CHECKING(what type to use for unicode)
@@ -1961,38 +1946,6 @@ AC_MSG_RESULT($ac_cv_broken_nice)
 if test "$ac_cv_broken_nice" = yes
 then
   AC_DEFINE(HAVE_BROKEN_NICE)
-fi
-
-# On HP/UX 11.0, mvwdelch is a block with a return statement
-AC_MSG_CHECKING(whether mvwdelch is an expression)
-AC_CACHE_VAL(ac_cv_mvwdelch_is_expression,
-AC_TRY_COMPILE([#include <curses.h>], [
-  int rtn;
-  rtn = mvwdelch(0,0,0);
-], ac_cv_mvwdelch_is_expression=yes,
-   ac_cv_mvwdelch_is_expression=no,
-   ac_cv_mvwdelch_is_expression=yes))
-AC_MSG_RESULT($ac_cv_mvwdelch_is_expression)
-
-if test "$ac_cv_mvwdelch_is_expression" = yes
-then
-  AC_DEFINE(MVWDELCH_IS_EXPRESSION)
-fi
-
-AC_MSG_CHECKING(whether WINDOW has _flags)
-AC_CACHE_VAL(ac_cv_window_has_flags,
-AC_TRY_COMPILE([#include <curses.h>], [
-  WINDOW *w;
-  w->_flags = 0;
-], ac_cv_window_has_flags=yes,
-   ac_cv_window_has_flags=no,
-   ac_cv_window_has_flags=no))
-AC_MSG_RESULT($ac_cv_window_has_flags)
-
-
-if test "$ac_cv_window_has_flags" = yes
-then
-  AC_DEFINE(WINDOW_HAS_FLAGS)
 fi
 
 # THIS MUST BE LAST, IT CAN BREAK OTHER TESTS!

@@ -48,7 +48,7 @@ __all__.extend(os._get_exports_list(_socket))
 
 if (sys.platform.lower().startswith("win")
     or (hasattr(os, 'uname') and os.uname()[0] == "BeOS")
-    or (sys.platform=="riscos")):
+    or (sys.platform=="RISCOS")):
 
     _realsocketcall = _socket.socket
 
@@ -125,7 +125,7 @@ def getfqdn(name=''):
 _socketmethods = (
     'bind', 'connect', 'connect_ex', 'fileno', 'listen',
     'getpeername', 'getsockname', 'getsockopt', 'setsockopt',
-    'recv', 'recvfrom', 'send', 'sendall', 'sendto', 'setblocking', 'shutdown')
+    'recv', 'recvfrom', 'send', 'sendto', 'setblocking', 'shutdown')
 
 class _socketobject:
 

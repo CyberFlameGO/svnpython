@@ -8,8 +8,7 @@
  *   Version 1.5b1, heavily extended for ncurses by Oliver Andrich:
  *   Copyright 1996,1997 by Oliver Andrich, Koblenz, Germany.
  *
- *   Tidied for Python 1.6, and currently maintained by
- *   <akuchlin@mems-exchange.org>.
+ *   Tidied for Python 1.6, and currently maintained by AMK (amk1@bigfoot.com)
  *
  *   Permission is hereby granted, free of charge, to any person obtaining
  *   a copy of this source file to use, copy, modify, merge, or publish it
@@ -96,7 +95,7 @@ Form extension (ncurses and probably SYSV):
 
 /* Release Number */
 
-char *PyCursesVersion = "2.2";
+char *PyCursesVersion = "2.1";
 
 /* Includes */
 
@@ -105,11 +104,6 @@ char *PyCursesVersion = "2.2";
 #ifdef __osf__
 #define _XOPEN_SOURCE_EXTENDED  /* Define macro for OSF/1 */
 #define STRICT_SYSV_CURSES      /* Don't use ncurses extensions */
-#endif
-
-#ifdef __hpux
-#define _XOPEN_SOURCE_EXTENDED
-#define STRICT_SYSV_CURSES
 #endif
 
 #define CURSES_MODULE
@@ -124,7 +118,7 @@ extern int setupterm(char *,int,int *);
 #include <term.h>
 #endif
 
-#if !defined(HAVE_NCURSES_H) && (defined(sgi) || defined(__sun))
+#if defined(sgi) || defined(__sun)
 #define STRICT_SYSV_CURSES       /* Don't use ncurses extensions */
 typedef chtype attr_t;           /* No attr_t type is available */
 #endif
@@ -394,7 +388,7 @@ PyCursesWindow_AddCh(PyCursesWindowObject *self, PyObject *args)
     use_xy = TRUE;
     break;
   default:
-    PyErr_SetString(PyExc_TypeError, "addch requires 1 to 4 arguments");
+    PyErr_SetString(PyExc_TypeError, "addch requires 1 or 4 arguments");
     return NULL;
   }
 
@@ -566,32 +560,12 @@ PyCursesWindow_BkgdSet(PyCursesWindowObject *self, PyObject *args)
 static PyObject *
 PyCursesWindow_Border(PyCursesWindowObject *self, PyObject *args)
 {
-  PyObject *temp[8];
-  chtype ch[8];
-  int i;
-
-  /* Clear the array of parameters */
-  for(i=0; i<8; i++) {
-       temp[i] = NULL;
-       ch[i] = 0;
-  }    
-  
-  if (!PyArg_ParseTuple(args,"|OOOOOOOO;ls,rs,ts,bs,tl,tr,bl,br",
-                        &temp[0], &temp[1], &temp[2], &temp[3],
-                        &temp[4], &temp[5], &temp[6], &temp[7]))
+  chtype ls, rs, ts, bs, tl, tr, bl, br;
+  ls = rs = ts = bs = tl = tr = bl = br = 0;
+  if (!PyArg_Parse(args,"|llllllll;ls,rs,ts,bs,tl,tr,bl,br",
+                        &ls, &rs, &ts, &bs, &tl, &tr, &bl, &br))
     return NULL;
-
-  for(i=0; i<8; i++) {
-      if (temp[i] != NULL && !PyCurses_ConvertToChtype(temp[i], &ch[i])) {
-          PyErr_Format(PyExc_TypeError,
-                       "argument %i must be a ch or an int", i+1);
-          return NULL;
-      }
-  }
-  
-  wborder(self->win,
-          ch[0], ch[1], ch[2], ch[3],
-          ch[4], ch[5], ch[6], ch[7]);
+  wborder(self->win, ls, rs, ts, bs, tl, tr, bl, br);
   Py_INCREF(Py_None);
   return Py_None;
 }
@@ -610,19 +584,6 @@ PyCursesWindow_Box(PyCursesWindowObject *self, PyObject *args)
   return Py_None;
 }
 
-#if defined(HAVE_NCURSES_H) || defined(MVWDELCH_IS_EXPRESSION)
-#define py_mvwdelch mvwdelch
-#else
-int py_mvwdelch(WINDOW *w, int y, int x)
-{
-  mvwdelch(w,y,x);
-  /* On HP/UX, mvwdelch already returns. On other systems,
-     we may well run into this return statement. */
-  return 0;
-}
-#endif
-
-
 static PyObject *
 PyCursesWindow_DelCh(PyCursesWindowObject *self, PyObject *args)
 {
@@ -636,7 +597,7 @@ PyCursesWindow_DelCh(PyCursesWindowObject *self, PyObject *args)
   case 2:
     if (!PyArg_Parse(args,"(ii);y,x", &y, &x))
       return NULL;
-    rtn = py_mvwdelch(self->win,y,x);
+    rtn = mvwdelch(self->win,y,x);
     break;
   default:
     PyErr_SetString(PyExc_TypeError, "delch requires 0 or 2 arguments");
@@ -706,7 +667,7 @@ PyCursesWindow_EchoChar(PyCursesWindowObject *self, PyObject *args)
     return NULL;
   }
   
-#ifdef WINDOW_HAS_FLAGS
+#if !defined(__NetBSD__)
   if (self->win->_flags & _ISPAD)
     return PyCursesCheckERR(pechochar(self->win, ch | attr), 
 			    "echochar");
@@ -873,9 +834,8 @@ PyCursesWindow_Hline(PyCursesWindowObject *self, PyObject *args)
 		     &y, &x, &temp, &n, &attr))
       return NULL;
     code = wmove(self->win, y, x);
-    break;
   default:
-    PyErr_SetString(PyExc_TypeError, "hline requires 2 to 5 arguments");
+    PyErr_SetString(PyExc_TypeError, "hline requires 2 or 5 arguments");
     return NULL;
   }
 
@@ -1112,7 +1072,7 @@ PyCursesWindow_NoOutRefresh(PyCursesWindowObject *self, PyObject *args)
   int pminrow,pmincol,sminrow,smincol,smaxrow,smaxcol;
   int rtn;
 
-#ifndef WINDOW_HAS_FLAGS
+#if defined(__NetBSD__)
   if (0) {
 #else
   if (self->win->_flags & _ISPAD) {
@@ -1254,7 +1214,7 @@ PyCursesWindow_Refresh(PyCursesWindowObject *self, PyObject *args)
   int pminrow,pmincol,sminrow,smincol,smaxrow,smaxcol;
   int rtn;
   
-#ifndef WINDOW_HAS_FLAGS
+#if defined(__NetBSD__)
   if (0) {
 #else
   if (self->win->_flags & _ISPAD) {
@@ -1322,7 +1282,7 @@ PyCursesWindow_SubWin(PyCursesWindowObject *self, PyObject *args)
   }
 
   /* printf("Subwin: %i %i %i %i   \n", nlines, ncols, begin_y, begin_x); */
-#ifdef WINDOW_HAS_FLAGS
+#if !defined(__NetBSD__)
   if (self->win->_flags & _ISPAD)
     win = subpad(self->win, nlines, ncols, begin_y, begin_x);
   else
@@ -1400,9 +1360,8 @@ PyCursesWindow_Vline(PyCursesWindowObject *self, PyObject *args)
 		     &y, &x, &temp, &n, &attr))
       return NULL;
     code = wmove(self->win, y, x);
-    break;
   default:
-    PyErr_SetString(PyExc_TypeError, "vline requires 2 to 5 arguments");
+    PyErr_SetString(PyExc_TypeError, "vline requires 2 or 5 arguments");
     return NULL;
   }
 
@@ -1472,9 +1431,8 @@ static PyMethodDef PyCursesWindow_Methods[] = {
 	{"noutrefresh",     (PyCFunction)PyCursesWindow_NoOutRefresh},
         /* Backward compatibility alias -- remove in Python 2.1 */
 	{"nooutrefresh",    (PyCFunction)PyCursesWindow_NoOutRefresh},
-	{"overlay",         (PyCFunction)PyCursesWindow_Overlay, METH_VARARGS},
-	{"overwrite",       (PyCFunction)PyCursesWindow_Overwrite,
-         METH_VARARGS},
+	{"overlay",       (PyCFunction)PyCursesWindow_Overlay, METH_VARARGS},
+	{"overwrite",     (PyCFunction)PyCursesWindow_Overwrite, METH_VARARGS},
 	{"putwin",          (PyCFunction)PyCursesWindow_PutWin},
 	{"redrawln",        (PyCFunction)PyCursesWindow_RedrawLine},
 	{"redrawwin",       (PyCFunction)PyCursesWindow_redrawwin},
@@ -1497,7 +1455,7 @@ static PyMethodDef PyCursesWindow_Methods[] = {
 	{"touchwin",        (PyCFunction)PyCursesWindow_touchwin},
 	{"untouchwin",      (PyCFunction)PyCursesWindow_untouchwin},
 	{"vline",           (PyCFunction)PyCursesWindow_Vline},
-	{NULL,		    NULL}   /* sentinel */
+	{NULL,		        NULL}   /* sentinel */
 };
 
 static PyObject *
@@ -1850,11 +1808,6 @@ PyCurses_InitScr(PyObject *self, PyObject *args)
 	SetDictInt("ACS_HLINE",         (ACS_HLINE));
 	SetDictInt("ACS_VLINE",         (ACS_VLINE));
 	SetDictInt("ACS_PLUS",          (ACS_PLUS));
-#if !defined(__hpux) || defined(HAVE_NCURSES_H)
-        /* On HP/UX 11, these are of type cchar_t, which is not an
-           integral type. If this is a problem on more platforms, a
-           configure test should be added to determine whether ACS_S1
-           is of integral type. */
 	SetDictInt("ACS_S1",            (ACS_S1));
 	SetDictInt("ACS_S9",            (ACS_S9));
 	SetDictInt("ACS_DIAMOND",       (ACS_DIAMOND));
@@ -1869,7 +1822,6 @@ PyCurses_InitScr(PyObject *self, PyObject *args)
 	SetDictInt("ACS_BOARD",         (ACS_BOARD));
 	SetDictInt("ACS_LANTERN",       (ACS_LANTERN));
 	SetDictInt("ACS_BLOCK",         (ACS_BLOCK));
-#endif
 	SetDictInt("ACS_BSSB",          (ACS_ULCORNER));
 	SetDictInt("ACS_SSBB",          (ACS_LLCORNER));
 	SetDictInt("ACS_BBSS",          (ACS_URCORNER));
@@ -2310,15 +2262,6 @@ PyCurses_tparm(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	
-#ifdef __hpux
-        /* tparm is declared with 10 arguments on HP/UX 11.
-           If this is a problem on other platforms as well,
-           an autoconf test should be added to determine
-           whether tparm can be called with a variable number
-           of arguments. Perhaps the other arguments should
-           be initialized in this case also. */
-        result = tparm(fmt,i1,i2,i3,i4,i5,i6,i7,i8,i9);
-#else
 	switch (PyTuple_GET_SIZE(args)) {
 	case 1:
 		result = tparm(fmt);
@@ -2351,7 +2294,7 @@ PyCurses_tparm(PyObject *self, PyObject *args)
 		result = tparm(fmt,i1,i2,i3,i4,i5,i6,i7,i8,i9);
 		break;
 	}
-#endif /* __hpux */
+
 	return PyString_FromString(result);
 }
 
@@ -2501,8 +2444,7 @@ static PyMethodDef PyCurses_methods[] = {
   {"resetty",             (PyCFunction)PyCurses_resetty},
   {"savetty",             (PyCFunction)PyCurses_savetty},
   {"setsyx",              (PyCFunction)PyCurses_setsyx},
-  {"setupterm",           (PyCFunction)PyCurses_setupterm,
-   METH_VARARGS|METH_KEYWORDS},
+  {"setupterm",           (PyCFunction)PyCurses_setupterm, METH_VARARGS|METH_KEYWORDS},
   {"start_color",         (PyCFunction)PyCurses_Start_Color},
   {"termattrs",           (PyCFunction)PyCurses_termattrs},
   {"termname",            (PyCFunction)PyCurses_termname},
@@ -2514,7 +2456,7 @@ static PyMethodDef PyCurses_methods[] = {
   {"unctrl",              (PyCFunction)PyCurses_UnCtrl},
   {"ungetch",             (PyCFunction)PyCurses_UngetCh},
   {"use_env",             (PyCFunction)PyCurses_Use_Env},
-  {NULL,		  NULL}		/* sentinel */
+  {NULL,		NULL}		/* sentinel */
 };
 
 /* Initialization function for the module */

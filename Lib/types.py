@@ -34,7 +34,7 @@ BufferType = type(buffer(''))
 
 TupleType = tuple
 ListType = list
-DictType = DictionaryType = dict
+DictType = DictionaryType = dictionary
 
 def _f(): pass
 FunctionType = type(_f)

@@ -673,7 +673,7 @@ proxy_getiter(proxyobject *pp)
 	return PyObject_GetIter(pp->dict);
 }
 
-static PyObject *
+PyObject *
 proxy_str(proxyobject *pp)
 {
 	return PyObject_Str(pp->dict);
@@ -693,7 +693,7 @@ proxy_traverse(PyObject *self, visitproc visit, void *arg)
 	return 0;
 }
 
-static PyTypeObject proxytype = {
+PyTypeObject proxytype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
 	"dict-proxy",				/* tp_name */
@@ -805,17 +805,6 @@ wrapper_call(wrapperobject *wp, PyObject *args, PyObject *kwds)
 	wrapperfunc wrapper = wp->descr->d_base->wrapper;
 	PyObject *self = wp->self;
 
-	if (wp->descr->d_base->flags & PyWrapperFlag_KEYWORDS) {
-		wrapperfunc_kwds wk = (wrapperfunc_kwds)wrapper;
-		return (*wk)(self, args, wp->descr->d_wrapped, kwds);
-	}
-
-	if (kwds != NULL && (!PyDict_Check(kwds) || PyDict_Size(kwds) != 0)) {
-		PyErr_Format(PyExc_TypeError,
-			     "wrapper %s doesn't take keyword arguments",
-			     wp->descr->d_base->name);
-		return NULL;
-	}
 	return (*wrapper)(self, args, wp->descr->d_wrapped);
 }
 
@@ -838,7 +827,7 @@ wrapper_traverse(PyObject *self, visitproc visit, void *arg)
 	return 0;
 }
 
-static PyTypeObject wrappertype = {
+PyTypeObject wrappertype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
 	"method-wrapper",			/* tp_name */

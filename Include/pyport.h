@@ -153,10 +153,6 @@ typedef LONG_LONG		Py_intptr_t;
 #define HAVE_FSTAT
 #endif
 
-#ifdef RISCOS
-#include <sys/types.h>
-#endif
-
 #ifndef DONT_HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #elif defined(HAVE_STAT_H)
@@ -448,16 +444,6 @@ typedef	struct fd_set {
 
 #ifdef __cplusplus
 }
-#endif
-
-/*
- * Hide GCC attributes from compilers that don't support them.
- */
-#if (!defined(__GNUC__) || __GNUC__ < 2 || \
-     (__GNUC__ == 2 && __GNUC_MINOR__ < 7) || \
-     defined(NEXT) ) && \
-    !defined(RISCOS)
-#define __attribute__(__x)
 #endif
 
 #endif /* Py_PYPORT_H */

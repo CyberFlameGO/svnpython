@@ -32,7 +32,7 @@ class CommandTests(unittest.TestCase):
     def test_getstatus(self):
         # This pattern should match 'ls -ld /bin/ls' on any posix
         # system, however perversely configured.
-        pat = r'''[l-]..x..x..x # It is executable. (May be a symlink.)
+        pat = r'''-..x..x..x   # It is executable.
                   \s+\d+       # It has some number of links.
                   \s+\w+\s+\w+ # It has a user and group, which may
                                #     be named anything.

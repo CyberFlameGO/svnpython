@@ -53,7 +53,7 @@ import sys
 
 import os
 from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
-     ENOTCONN, ESHUTDOWN, EINTR, EISCONN
+     ENOTCONN, ESHUTDOWN
 
 try:
     socket_map
@@ -66,6 +66,7 @@ class ExitNow (exceptions.Exception):
 DEBUG = 0
 
 def poll (timeout=0.0, map=None):
+    global DEBUG
     if map is None:
         map = socket_map
     if map:
@@ -75,11 +76,7 @@ def poll (timeout=0.0, map=None):
                 r.append (fd)
             if obj.writable():
                 w.append (fd)
-        try:
-            r,w,e = select.select (r,w,e, timeout)
-        except select.error, err:
-            if err[0] != EINTR:
-                raise
+        r,w,e = select.select (r,w,e, timeout)
 
         if DEBUG:
             print r,w,e
@@ -161,12 +158,7 @@ def poll3 (timeout=0.0, map=None):
                 flags = flags | select.POLLOUT
             if flags:
                 pollster.register(fd, flags)
-        try:
-            r = pollster.poll (timeout)
-        except select.error, err:
-            if err[0] != EINTR:
-                raise
-            r = []
+        r = pollster.poll (timeout)
         for fd, flags in r:
             try:
                 obj = map[fd]
@@ -213,8 +205,6 @@ class dispatcher:
             self.socket.setblocking (0)
             self.connected = 1
             self.addr = sock.getpeername()
-        else:
-            self.socket = None
 
     def __repr__ (self):
         status = [self.__class__.__module__+"."+self.__class__.__name__]
@@ -251,8 +241,7 @@ class dispatcher:
         self.add_channel()
 
     def set_socket (self, sock, map=None):
-        self.socket = sock
-##        self.__dict__['socket'] = sock
+        self.__dict__['socket'] = sock
         self._fileno = sock.fileno()
         self.add_channel (map)
 
@@ -301,15 +290,17 @@ class dispatcher:
 
     def connect (self, address):
         self.connected = 0
-        err = self.socket.connect_ex(address)
-        if err in (EINPROGRESS, EALREADY, EWOULDBLOCK):
-            return
-        if err in (0, EISCONN):
-            self.addr = address
-            self.connected = 1
-            self.handle_connect()
-        else:
-            raise socket.error, err
+        # XXX why not use connect_ex?
+        try:
+            self.socket.connect (address)
+        except socket.error, why:
+            if why[0] in (EINPROGRESS, EALREADY, EWOULDBLOCK):
+                return
+            else:
+                raise socket.error, why
+        self.addr = address
+        self.connected = 1
+        self.handle_connect()
 
     def accept (self):
         try:

@@ -36,9 +36,6 @@ those requiring large file support or network connectivity.  The argument is a
 comma-separated list of words indicating the resources to test.  Currently
 only the following are defined:
 
-    curses -    Tests that use curses and will modify the terminal's
-                state and output modes.
-
     largefile - It is okay to run some test that may create huge files.  These
                 tests can take a long time and may consume >2GB of disk space
                 temporarily.
@@ -121,7 +118,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
         elif o in ('-u', '--use'):
             u = [x.lower() for x in a.split(',')]
             for r in u:
-                if r not in ('curses', 'largefile', 'network'):
+                if r not in ('largefile', 'network'):
                     usage(1, 'Invalid -u/--use option: %s' % a)
             use_resources.extend(u)
     if generate and verbose:
@@ -156,7 +153,7 @@ def main(tests=None, testdir=None, verbose=0, quiet=0, generate=0,
             pass
     for i in range(len(args)):
         # Strip trailing ".py" from arguments
-        if args[i][-3:] == os.extsep+'py':
+        if args[i][-3:] == '.py':
             args[i] = args[i][:-3]
     stdtests = STDTESTS[:]
     nottests = NOTTESTS[:]
@@ -272,7 +269,7 @@ def findtests(testdir=None, stdtests=STDTESTS, nottests=NOTTESTS):
     names = os.listdir(testdir)
     tests = []
     for name in names:
-        if name[:5] == "test_" and name[-3:] == os.extsep+"py":
+        if name[:5] == "test_" and name[-3:] == ".py":
             modname = name[:-3]
             if modname not in stdtests and modname not in nottests:
                 tests.append(modname)
@@ -474,7 +471,6 @@ _expectations = {
         test_cl
         test_commands
         test_crypt
-        test_curses
         test_dbm
         test_dl
         test_fcntl
@@ -502,7 +498,6 @@ _expectations = {
         test_al
         test_cd
         test_cl
-        test_curses
         test_dl
         test_gl
         test_imgfile
@@ -572,48 +567,6 @@ _expectations = {
         test_socketserver
         test_sunaudiodev
         test_sundry
-        test_unicode_file
-        test_winreg
-        test_winsound
-        """,
-    'riscos':
-        """
-        test_al
-        test_asynchat
-        test_bsddb
-        test_cd
-        test_cl
-        test_commands
-        test_crypt
-        test_dbm
-        test_dl
-        test_fcntl
-        test_fork1
-        test_gdbm
-        test_gl
-        test_grp
-        test_imgfile
-        test_largefile
-        test_linuxaudiodev
-        test_locale
-        test_mmap
-        test_nis
-        test_ntpath
-        test_openpty
-        test_poll
-        test_popen2
-        test_pty
-        test_pwd
-        test_socket_ssl
-        test_socketserver
-        test_strop
-        test_sunaudiodev
-        test_sundry
-        test_thread
-        test_threaded_import
-        test_threadedtempfile
-        test_threading
-        test_timing
         test_unicode_file
         test_winreg
         test_winsound

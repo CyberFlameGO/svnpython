@@ -31,8 +31,7 @@ static int vgetargskeywords(PyObject *, PyObject *,
 			    char *, char **, va_list *);
 static char *skipitem(char **, va_list *);
 
-int
-PyArg_Parse(PyObject *args, char *format, ...)
+int PyArg_Parse(PyObject *args, char *format, ...)
 {
 	int retval;
 	va_list va;
@@ -44,8 +43,7 @@ PyArg_Parse(PyObject *args, char *format, ...)
 }
 
 
-int
-PyArg_ParseTuple(PyObject *args, char *format, ...)
+int PyArg_ParseTuple(PyObject *args, char *format, ...)
 {
 	int retval;
 	va_list va;
@@ -973,8 +971,7 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf)
 	return NULL;
 }
 
-static int
-convertbuffer(PyObject *arg, void **p, char **errmsg)
+int convertbuffer(PyObject *arg, void **p, char **errmsg)
 {
 	PyBufferProcs *pb = arg->ob_type->tp_as_buffer;
 	int count;
@@ -997,25 +994,14 @@ convertbuffer(PyObject *arg, void **p, char **errmsg)
 /* Support for keyword arguments donated by
    Geoff Philbrick <philbric@delphi.hks.com> */
 
-/* Return false (0) for error, else true. */
-int
-PyArg_ParseTupleAndKeywords(PyObject *args,
-			    PyObject *keywords,
-			    char *format, 
-			    char **kwlist, ...)
+int PyArg_ParseTupleAndKeywords(PyObject *args,
+				PyObject *keywords,
+				char *format, 
+				char **kwlist, ...)
 {
 	int retval;
 	va_list va;
-
-	if ((args == NULL || !PyTuple_Check(args)) ||
-	    (keywords != NULL && !PyDict_Check(keywords)) ||
-	    format == NULL ||
-	    kwlist == NULL)
-	{
-		PyErr_BadInternalCall();
-		return 0;
-	}
-
+	
 	va_start(va, kwlist);
 	retval = vgetargskeywords(args, keywords, format, kwlist, &va);	
 	va_end(va);
@@ -1027,115 +1013,114 @@ static int
 vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
 	         char **kwlist, va_list *p_va)
 {
-	char msgbuf[512];
+	char msgbuf[256];
 	int levels[32];
-	char *fname, *message;
-	int min, max;
-	char *formatsave;
-	int i, len, nargs, nkeywords;
-	char *msg, **p;
-
-	assert(args != NULL && PyTuple_Check(args));
-	assert(keywords == NULL || PyDict_Check(keywords));
-	assert(format != NULL);
-	assert(kwlist != NULL);
-	assert(p_va != NULL);
-
-	/* Search the format:
-	   message <- error msg, if any (else NULL).
-	   name <- routine name, if any (else NULL).
-	   min <- # of required arguments, or -1 if all are required.
-	   max <- most arguments (required + optional).
-	   Check that kwlist has a non-NULL entry for each arg.
-	   Raise error if a tuple arg spec is found.
-	*/
-	fname = message = NULL;
-	formatsave = format;
-	p = kwlist;
-	min = -1;
-	max = 0;
-	while ((i = *format++) != '\0') {
-		if (isalpha(i) && i != 'e') {
-			max++;
-			if (*p == NULL) {
-				/* kwlist is too short */
-				PyErr_BadInternalCall();
-				return 0;
-			}
-			p++;
-		}
-		else if (i == '|')
-			min = max;
-		else if (i == ':') {
-			fname = format;
-			break;
-		}
-		else if (i == ';') {
-			message = format;
-			break;
-		}
-		else if (i == '(') {
+	char *fname = NULL;
+	char *message = NULL;
+	int min = -1;
+	int max = 0;
+	char *formatsave = format;
+	int i, len, tplen, kwlen;
+	char *msg, *ks, **p;
+	int nkwds, pos, match, converted;
+	PyObject *key, *value;
+	
+	/* nested tuples cannot be parsed when using keyword arguments */
+	
+	for (;;) {
+		int c = *format++;
+		if (c == '(') {
 			PyErr_SetString(PyExc_SystemError,
 		      "tuple found in format when using keyword arguments");
 			return 0;
 		}
-	}
-	format = formatsave;
-	if (*p != NULL) {
-		/* kwlist is too long */
-		PyErr_BadInternalCall();
-		return 0;
-	}
-	if (min < 0) {
-		/* All arguments are required. */
+		else if (c == '\0')
+			break;
+		else if (c == ':') {
+			fname = format;
+			break;
+		} else if (c == ';') {
+			message = format;
+			break;
+		} else if (c == 'e')
+			; /* Pass */
+		else if (isalpha(c))
+			max++;
+		else if (c == '|')
+			min = max;
+	}	
+	
+	if (min < 0)
 		min = max;
+	
+	format = formatsave;
+	
+	if (!PyTuple_Check(args)) {
+		PyErr_SetString(PyExc_SystemError,
+		    "new style getargs format but argument is not a tuple");
+		return 0;
+	}	
+	
+	tplen = PyTuple_GET_SIZE(args);
+	
+	/* do a cursory check of the keywords just to see how many we got */
+	   
+	if (keywords) { 	
+		if (!PyDict_Check(keywords)) {
+			if (keywords == NULL)
+				PyErr_SetString(PyExc_SystemError,
+		     "NULL received when keyword dictionary expected");
+			else
+				PyErr_Format(PyExc_SystemError,
+		     "%s received when keyword dictionary expected",
+					     keywords->ob_type->tp_name);
+			return 0;
+		}	
+		kwlen = PyDict_Size(keywords);
 	}
-
-	nargs = PyTuple_GET_SIZE(args);
-	nkeywords = keywords == NULL ? 0 : PyDict_Size(keywords);
-
+	else {
+		kwlen = 0;
+	}
+			
 	/* make sure there are no duplicate values for an argument;
 	   its not clear when to use the term "keyword argument vs. 
 	   keyword parameter in messages */
-	if (nkeywords > 0) {
-		for (i = 0; i < nargs; i++) {
-			char *thiskw = kwlist[i];
-			if (thiskw == NULL)
-				break;
-			if (PyDict_GetItemString(keywords, thiskw)) {
-				PyErr_Format(PyExc_TypeError,
-					"keyword parameter '%s' was given "
-					"by position and by name",
-					thiskw);
+	
+	if (keywords) {
+		for (i = 0; i < tplen; i++) {
+			if (PyMapping_HasKeyString(keywords, kwlist[i])) {
+				sprintf(msgbuf,
+					"keyword parameter %s redefined",
+					kwlist[i]);
+				PyErr_SetString(PyExc_TypeError, msgbuf);
 				return 0;
 			}
-			else if (PyErr_Occurred())
-				return 0;
 		}
 	}
-
+	PyErr_Clear(); /* I'm not which Py functions set the error string */
+		
 	/* required arguments missing from args can be supplied by keyword 
-	   arguments; set len to the number of posiitional arguments, and,
-	   if that's less than the minimum required, add in the number of
-	   required arguments that are supplied by keywords */
-	len = nargs;
-	if (nkeywords > 0 && nargs < min) {
-		for (i = nargs; i < min; i++) {
-			if (PyDict_GetItemString(keywords, kwlist[i]))
+	   arguments */
+	
+	len = tplen;
+	if (keywords && tplen < min) {
+		for (i = tplen; i < min; i++) {
+		  if (PyMapping_HasKeyString(keywords, kwlist[i])) {
 				len++;
-			else if (PyErr_Occurred())
-				return 0;
+		  }
 		}
 	}
-
+	PyErr_Clear();	
+	
 	/* make sure we got an acceptable number of arguments; the message
 	   is a little confusing with keywords since keyword arguments
 	   which are supplied, but don't match the required arguments
 	   are not included in the "%d given" part of the message */
+
 	if (len < min || max < len) {
 		if (message == NULL) {
 			sprintf(msgbuf,
-				"%.200s%s takes %s %d argument%s (%d given)",
+				"%s%s takes %s %d argument%s (%d given)",
 				fname==NULL ? "function" : fname,
 				fname==NULL ? "" : "()",
 				min==max ? "exactly"
@@ -1148,9 +1133,8 @@ vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
 		PyErr_SetString(PyExc_TypeError, message);
 		return 0;
 	}
-
-	/* convert the positional arguments */
-	for (i = 0; i < nargs; i++) {
+	
+	for (i = 0; i < tplen; i++) {
 		if (*format == '|')
 			format++;
 		msg = convertitem(PyTuple_GET_ITEM(args, i), &format, p_va,
@@ -1161,32 +1145,46 @@ vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
 		}
 	}
 
-	/* handle no keyword parameters in call */	
-	if (nkeywords == 0)
-		return 1; 
+	/* handle no keyword parameters in call  */	
+	   	   
+	if (!keywords) return 1; 
+		
+	/* make sure the number of keywords in the keyword list matches the 
+	   number of items in the format string */
+	  
+	nkwds = 0;
+	p =  kwlist;
+	for (;;) {
+		if (!*(p++)) break;
+		nkwds++;
+	}
 
+	if (nkwds != max) {
+		PyErr_SetString(PyExc_SystemError,
+	  "number of items in format string and keyword list do not match");
+		return 0;
+	}	  	  
+			
 	/* convert the keyword arguments; this uses the format 
 	   string where it was left after processing args */
-	for (i = nargs; i < max; i++) {
+	
+	converted = 0;
+	for (i = tplen; i < nkwds; i++) {
 		PyObject *item;
 		if (*format == '|')
 			format++;
-		item = PyDict_GetItemString(keywords, kwlist[i]);
+		item = PyMapping_GetItemString(keywords, kwlist[i]);
 		if (item != NULL) {
-			Py_INCREF(item);
 			msg = convertitem(item, &format, p_va, levels, msgbuf);
-			Py_DECREF(item);
 			if (msg) {
 				seterror(i+1, msg, levels, fname, message);
 				return 0;
 			}
-			--nkeywords;
-			if (nkeywords == 0)
-				break;
+			converted++;
+			Py_DECREF(item);
 		}
-		else if (PyErr_Occurred())
-			return 0;
 		else {
+			PyErr_Clear();
 			msg = skipitem(&format, p_va);
 			if (msg) {
 				seterror(i+1, msg, levels, fname, message);
@@ -1194,30 +1192,30 @@ vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
 			}
 		}
 	}
-
+	
 	/* make sure there are no extraneous keyword arguments */
-	if (nkeywords > 0) {
-		PyObject *key, *value;
-		int pos = 0;
+	
+	pos = 0;
+	if (converted < kwlen) {
 		while (PyDict_Next(keywords, &pos, &key, &value)) {
-			int match = 0;
-			char *ks = PyString_AsString(key);
-			for (i = 0; i < max; i++) {
+			match = 0;
+			ks = PyString_AsString(key);
+			for (i = 0; i < nkwds; i++) {
 				if (!strcmp(ks, kwlist[i])) {
 					match = 1;
 					break;
 				}
 			}
 			if (!match) {
-				PyErr_Format(PyExc_TypeError,
-					     "'%s' is an invalid keyword "
-					     "argument for this function",
-					     ks);
+				sprintf(msgbuf,
+			"%s is an invalid keyword argument for this function",
+					ks);
+				PyErr_SetString(PyExc_TypeError, msgbuf);
 				return 0;
 			}
 		}
 	}
-
+	
 	return 1;
 }
 
@@ -1357,64 +1355,4 @@ skipitem(char **p_format, va_list *p_va)
 	
 	*p_format = format;
 	return NULL;
-}
-
-
-int
-PyArg_UnpackTuple(PyObject *args, char *name, int min, int max, ...)
-{
-	int i, l;
-	PyObject **o;
-	va_list vargs;
-
-#ifdef HAVE_STDARG_PROTOTYPES
-	va_start(vargs, max);
-#else
-	va_start(vargs);
-#endif
-
-	assert(min >= 0);
-	assert(min <= max);
-	if (!PyTuple_Check(args)) {
-		PyErr_SetString(PyExc_SystemError,
-		    "PyArg_UnpackTuple() argument list is not a tuple");
-		return 0;
-	}	
-	l = PyTuple_GET_SIZE(args);
-	if (l < min) {
-		if (name != NULL)
-			PyErr_Format(
-			    PyExc_TypeError,
-			    "%s expected %s%d arguments, got %d", 
-			    name, (min == max ? "" : "at least "), min, l);
-		else
-			PyErr_Format(
-			    PyExc_TypeError,
-			    "unpacked tuple should have %s%d elements,"
-			    " but has %d", 
-			    (min == max ? "" : "at least "), min, l);
-		va_end(vargs);
-		return 0;
-	}
-	if (l > max) {
-		if (name != NULL)
-			PyErr_Format(
-			    PyExc_TypeError,
-			    "%s expected %s%d arguments, got %d", 
-			    name, (min == max ? "" : "at most "), max, l);
-		else
-			PyErr_Format(
-			    PyExc_TypeError,
-			    "unpacked tuple should have %s%d elements,"
-			    " but has %d", 
-			    (min == max ? "" : "at most "), max, l);
-		va_end(vargs);
-		return 0;
-	}
-	for (i = 0; i < l; i++) {
-		o = va_arg(vargs, PyObject **);
-		*o = PyTuple_GET_ITEM(args, i);
-	}
-	va_end(vargs);
-	return 1;
 }

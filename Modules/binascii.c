@@ -135,9 +135,7 @@ static char table_a2b_base64[] = {
 };
 
 #define BASE64_PAD '='
-
-/* Max binary chunk size; limited only by available memory */
-#define BASE64_MAXBIN (INT_MAX/2 - sizeof(PyStringObject))
+#define BASE64_MAXBIN 57	/* Max binary chunk size (76 char line) */
 
 static unsigned char table_b2a_base64[] =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

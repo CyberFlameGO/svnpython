@@ -163,7 +163,7 @@ def dicts():
     for i in d.__iter__(): l.append(i)
     vereq(l, l1)
     l = []
-    for i in dict.__iter__(d): l.append(i)
+    for i in dictionary.__iter__(d): l.append(i)
     vereq(l, l1)
     d = {1:2, 3:4}
     testunop(d, 2, "len(a)", "__len__")
@@ -173,87 +173,52 @@ def dicts():
 
 def dict_constructor():
     if verbose:
-        print "Testing dict constructor ..."
-    d = dict()
+        print "Testing dictionary constructor ..."
+    d = dictionary()
     vereq(d, {})
-    d = dict({})
+    d = dictionary({})
     vereq(d, {})
-    d = dict(items={})
+    d = dictionary(mapping={})
     vereq(d, {})
-    d = dict({1: 2, 'a': 'b'})
+    d = dictionary({1: 2, 'a': 'b'})
     vereq(d, {1: 2, 'a': 'b'})
-    vereq(d, dict(d.items()))
-    vereq(d, dict(items=d.iteritems()))
     for badarg in 0, 0L, 0j, "0", [0], (0,):
         try:
-            dict(badarg)
+            dictionary(badarg)
         except TypeError:
             pass
-        except ValueError:
-            if badarg == "0":
-                # It's a sequence, and its elements are also sequences (gotta
-                # love strings <wink>), but they aren't of length 2, so this
-                # one seemed better as a ValueError than a TypeError.
-                pass
-            else:
-                raise TestFailed("no TypeError from dict(%r)" % badarg)
         else:
-            raise TestFailed("no TypeError from dict(%r)" % badarg)
+            raise TestFailed("no TypeError from dictionary(%r)" % badarg)
     try:
-        dict(senseless={})
+        dictionary(senseless={})
     except TypeError:
         pass
     else:
-        raise TestFailed("no TypeError from dict(senseless={})")
+        raise TestFailed("no TypeError from dictionary(senseless={}")
 
     try:
-        dict({}, {})
+        dictionary({}, {})
     except TypeError:
         pass
     else:
-        raise TestFailed("no TypeError from dict({}, {})")
+        raise TestFailed("no TypeError from dictionary({}, {})")
 
     class Mapping:
-        # Lacks a .keys() method; will be added later.
         dict = {1:2, 3:4, 'a':1j}
 
+        def __getitem__(self, i):
+            return self.dict[i]
+
     try:
-        dict(Mapping())
+        dictionary(Mapping())
     except TypeError:
         pass
     else:
-        raise TestFailed("no TypeError from dict(incomplete mapping)")
+        raise TestFailed("no TypeError from dictionary(incomplete mapping)")
 
     Mapping.keys = lambda self: self.dict.keys()
-    Mapping.__getitem__ = lambda self, i: self.dict[i]
-    d = dict(items=Mapping())
+    d = dictionary(mapping=Mapping())
     vereq(d, Mapping.dict)
-
-    # Init from sequence of iterable objects, each producing a 2-sequence.
-    class AddressBookEntry:
-        def __init__(self, first, last):
-            self.first = first
-            self.last = last
-        def __iter__(self):
-            return iter([self.first, self.last])
-
-    d = dict([AddressBookEntry('Tim', 'Warsaw'),
-              AddressBookEntry('Barry', 'Peters'),
-              AddressBookEntry('Tim', 'Peters'),
-              AddressBookEntry('Barry', 'Warsaw')])
-    vereq(d, {'Barry': 'Warsaw', 'Tim': 'Peters'})
-
-    d = dict(zip(range(4), range(1, 5)))
-    vereq(d, dict([(i, i+1) for i in range(4)]))
-
-    # Bad sequence lengths.
-    for bad in [('tooshort',)], [('too', 'long', 'by 1')]:
-        try:
-            dict(bad)
-        except ValueError:
-            pass
-        else:
-            raise TestFailed("no ValueError from dict(%r)" % bad)
 
 def test_dir():
     if verbose:
@@ -354,10 +319,6 @@ def test_dir():
         dir(m2instance)
     except TypeError:
         pass
-
-    # Two essentially featureless objects, just inheriting stuff from
-    # object.
-    vereq(dir(None), dir(Ellipsis))
 
 binops = {
     'add': '+',
@@ -547,13 +508,13 @@ def spamdicts():
 
 def pydicts():
     if verbose: print "Testing Python subclass of dict..."
-    verify(issubclass(dict, dict))
-    verify(isinstance({}, dict))
-    d = dict()
+    verify(issubclass(dictionary, dictionary))
+    verify(isinstance({}, dictionary))
+    d = dictionary()
     vereq(d, {})
-    verify(d.__class__ is dict)
-    verify(isinstance(d, dict))
-    class C(dict):
+    verify(d.__class__ is dictionary)
+    verify(isinstance(d, dictionary))
+    class C(dictionary):
         state = -1
         def __init__(self, *a, **kw):
             if a:
@@ -565,12 +526,12 @@ def pydicts():
             return self.get(key, 0)
         def __setitem__(self, key, value):
             assert isinstance(key, type(0))
-            dict.__setitem__(self, key, value)
+            dictionary.__setitem__(self, key, value)
         def setstate(self, state):
             self.state = state
         def getstate(self):
             return self.state
-    verify(issubclass(C, dict))
+    verify(issubclass(C, dictionary))
     a1 = C(12)
     vereq(a1.state, 12)
     a2 = C(foo=1, bar=2)
@@ -805,7 +766,7 @@ def multi():
     vereq(a.getstate(), 0)
     a.setstate(10)
     vereq(a.getstate(), 10)
-    class D(dict, C):
+    class D(dictionary, C):
         def __init__(self):
             type({}).__init__(self)
             C.__init__(self)
@@ -817,7 +778,7 @@ def multi():
     vereq(d.getstate(), 0)
     d.setstate(10)
     vereq(d.getstate(), 10)
-    vereq(D.__mro__, (D, dict, C, object))
+    vereq(D.__mro__, (D, dictionary, C, object))
 
     # SF bug #442833
     class Node(object):
@@ -1003,7 +964,7 @@ def errors():
     if verbose: print "Testing errors..."
 
     try:
-        class C(list, dict):
+        class C(list, dictionary):
             pass
     except TypeError:
         pass
@@ -1413,7 +1374,7 @@ def weakrefs():
     try:
         weakref.ref(no)
     except TypeError, msg:
-        verify(str(msg).find("weak reference") >= 0)
+        verify(str(msg).find("weakly") >= 0)
     else:
         verify(0, "weakref.ref(no) should be illegal")
     class Weak(object):
@@ -1869,10 +1830,10 @@ def keywords():
     vereq(unicode(string='abc', errors='strict'), u'abc')
     vereq(tuple(sequence=range(3)), (0, 1, 2))
     vereq(list(sequence=(0, 1, 2)), range(3))
-    vereq(dict(items={1: 2}), {1: 2})
+    vereq(dictionary(mapping={1: 2}), {1: 2})
 
     for constructor in (int, float, long, complex, str, unicode,
-                        tuple, list, dict, file):
+                        tuple, list, dictionary, file):
         try:
             constructor(bogus_keyword_arg=1)
         except TypeError:
@@ -2122,31 +2083,6 @@ def setclass():
     cant(C(), object)
     cant(object(), list)
     cant(list(), object)
-
-def setdict():
-    if verbose: print "Testing __dict__ assignment..."
-    class C(object): pass
-    a = C()
-    a.__dict__ = {'b': 1}
-    vereq(a.b, 1)
-    def cant(x, dict):
-        try:
-            x.__dict__ = dict
-        except TypeError:
-            pass
-        else:
-            raise TestFailed, "shouldn't allow %r.__dict__ = %r" % (x, dict)
-    cant(a, None)
-    cant(a, [])
-    cant(a, 1)
-    try:
-        del a.__dict__
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "shouldn't allow del %r.__dict__" % (a)
-    # Classes don't allow __dict__ assignment
-    cant(C, {})
 
 def pickles():
     if verbose:
@@ -2404,25 +2340,6 @@ def str_of_str_subclass():
     vereq(capture.getvalue(), '41\n41\n')
     capture.close()
 
-def kwdargs():
-    if verbose: print "Testing keyword arguments to __init__, __call__..."
-    def f(a): return a
-    vereq(f.__call__(a=42), 42)
-    a = []
-    list.__init__(a, sequence=[0, 1, 2])
-    vereq(a, [0, 1, 2])
-
-def delhook():
-    if verbose: print "Testing __del__ hook..."
-    log = []
-    class C(object):
-        def __del__(self):
-            log.append(1)
-    c = C()
-    vereq(log, [])
-    del c
-    vereq(log, [1])
-
 def test_main():
     class_docstrings()
     lists()
@@ -2466,15 +2383,12 @@ def test_main():
     coercions()
     descrdoc()
     setclass()
-    setdict()
     pickles()
     copies()
     binopoverride()
     subclasspropagation()
     buffer_inherit()
     str_of_str_subclass()
-    kwdargs()
-    delhook()
     if verbose: print "All OK"
 
 if __name__ == "__main__":

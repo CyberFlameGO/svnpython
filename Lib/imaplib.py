@@ -16,7 +16,7 @@ Public functions:       Internaldate2tuple
 # String method conversion by ESR, February 2001.
 # GET/SETACL contributed by Anthony Baxter <anthony@interlink.com.au> April 2001.
 
-__version__ = "2.49"
+__version__ = "2.47"
 
 import binascii, re, socket, time, random, sys
 
@@ -222,13 +222,7 @@ class IMAP4:
 
     def send(self, data):
         """Send data to remote."""
-        bytes = len(data)
-        while bytes > 0:
-            sent = self.sock.send(data)
-            if sent == bytes:
-                break   # avoid copy
-            data = data[sent:]
-            bytes = bytes - sent
+        self.sock.send(data)
 
 
     def shutdown(self):

@@ -17,13 +17,15 @@
 r"""Support for regular expressions (RE).
 
 This module provides regular expression matching operations similar to
-those found in Perl.  It supports both 8-bit and Unicode strings; both
-the pattern and the strings being processed can contain null bytes and
-characters outside the US ASCII range.
+those found in Perl. It's 8-bit clean: the strings being processed may
+contain both null bytes and characters whose high bit is set. Regular
+expression pattern strings may not contain null bytes, but can specify
+the null byte using the \\number notation. Characters with the high
+bit set may be included.
 
-Regular expressions can contain both special and ordinary characters.
-Most ordinary characters, like "A", "a", or "0", are the simplest
-regular expressions; they simply match themselves.  You can
+Regular expressions can contain both special and ordinary
+characters. Most ordinary characters, like "A", "a", or "0", are the
+simplest regular expressions; they simply match themselves. You can
 concatenate ordinary characters, so last matches the string 'last'.
 
 The special characters are:
@@ -43,7 +45,7 @@ The special characters are:
     "|"      A|B, creates an RE that will match either A or B.
     (...)    Matches the RE inside the parentheses.
              The contents can be retrieved or matched later in the string.
-    (?iLmsux) Set the I, L, M, S, U, or X flag for the RE (see below).
+    (?iLmsx) Set the I, L, M, S, or X flag for the RE (see below).
     (?:...)  Non-grouping version of regular parentheses.
     (?P<name>...) The substring matched by the group is accessible by name.
     (?P=name)     Matches the text matched earlier by the group named name.
@@ -52,7 +54,7 @@ The special characters are:
     (?!...)  Matches if ... doesn't match next.
 
 The special sequences consist of "\\" and a character from the list
-below.  If the ordinary character is not on the list, then the
+below. If the ordinary character is not on the list, then the
 resulting RE will match the second character.
     \number  Matches the contents of the group of the same number.
     \A       Matches only at the start of the string.
@@ -93,7 +95,6 @@ This module also defines an exception 'error'.
 
 """
 
-import sys
 import sre_compile
 import sre_parse
 
@@ -103,7 +104,7 @@ __all__ = [ "match", "search", "sub", "subn", "split", "findall",
     "U", "IGNORECASE", "LOCALE", "MULTILINE", "DOTALL", "VERBOSE",
     "UNICODE", "error" ]
 
-__version__ = "2.2.1"
+__version__ = "2.2.0"
 
 # this module works under 1.5.2 and later.  don't use string methods
 import string
@@ -164,14 +165,6 @@ def findall(pattern, string):
 
     Empty matches are included in the result."""
     return _compile(pattern, 0).findall(string)
-
-if sys.hexversion >= 0x02020000:
-    def finditer(pattern, string):
-        """Return an iterator over all non-overlapping matches in the
-        string.  For each match, the iterator returns a match object.
-
-        Empty matches are included in the result."""
-        return _compile(pattern, 0).finditer(string)
 
 def compile(pattern, flags=0):
     "Compile a regular expression pattern, returning a pattern object."
@@ -251,15 +244,70 @@ def _expand(pattern, match, template):
     template = sre_parse.parse_template(template, pattern)
     return sre_parse.expand_template(template, match)
 
-def _subx(pattern, template):
-    # internal: pattern.sub/subn implementation helper
-    template = _compile_repl(template, pattern)
-    if not template[0] and len(template[1]) == 1:
-        # literal replacement
-        return template[1][0]
-    def filter(match, template=template):
-        return sre_parse.expand_template(template, match)
-    return filter
+def _sub(pattern, template, text, count=0):
+    # internal: pattern.sub implementation hook
+    return _subn(pattern, template, text, count, 1)[0]
+
+def _subn(pattern, template, text, count=0, sub=0):
+    # internal: pattern.subn implementation hook
+    if callable(template):
+        filter = template
+    else:
+        template = _compile_repl(template, pattern)
+        literals = template[1]
+        if sub and not count:
+            literal = pattern._getliteral()
+            if literal and "\\" in literal:
+                literal = None # may contain untranslated escapes
+            if literal is not None and len(literals) == 1 and literals[0]:
+                # shortcut: both pattern and string are literals
+                return string.replace(text, pattern.pattern, literals[0]), 0
+        def filter(match, template=template):
+            return sre_parse.expand_template(template, match)
+    n = i = 0
+    s = []
+    append = s.append
+    c = pattern.scanner(text)
+    while not count or n < count:
+        m = c.search()
+        if not m:
+            break
+        b, e = m.span()
+        if i < b:
+            append(text[i:b])
+        elif i == b == e and n:
+            append(text[i:b])
+            continue # ignore empty match at previous position
+        append(filter(m))
+        i = e
+        n = n + 1
+    append(text[i:])
+    return _join(s, text[:0]), n
+
+def _split(pattern, text, maxsplit=0):
+    # internal: pattern.split implementation hook
+    n = i = 0
+    s = []
+    append = s.append
+    extend = s.extend
+    c = pattern.scanner(text)
+    g = pattern.groups
+    while not maxsplit or n < maxsplit:
+        m = c.search()
+        if not m:
+            break
+        b, e = m.span()
+        if b == e:
+            if i >= len(text):
+                break
+            continue
+        append(text[i:b])
+        if g and b != e:
+            extend(list(m.groups()))
+        i = e
+        n = n + 1
+    append(text[i:])
+    return s
 
 # register myself for pickling
 
@@ -274,16 +322,15 @@ copy_reg.pickle(_pattern_type, _pickle, _compile)
 # experimental stuff (see python-dev discussions for details)
 
 class Scanner:
-    def __init__(self, lexicon, flags=0):
+    def __init__(self, lexicon):
         from sre_constants import BRANCH, SUBPATTERN
         self.lexicon = lexicon
         # combine phrases into a compound pattern
         p = []
         s = sre_parse.Pattern()
-        s.flags = flags
         for phrase, action in lexicon:
             p.append(sre_parse.SubPattern(s, [
-                (SUBPATTERN, (len(p)+1, sre_parse.parse(phrase, flags))),
+                (SUBPATTERN, (len(p), sre_parse.parse(phrase))),
                 ]))
         p = sre_parse.SubPattern(s, [(BRANCH, (None, p))])
         s.groups = len(p)
@@ -291,16 +338,16 @@ class Scanner:
     def scan(self, string):
         result = []
         append = result.append
-        match = self.scanner.scanner(string).match
+        match = self.scanner.match
         i = 0
         while 1:
-            m = match()
+            m = match(string, i)
             if not m:
                 break
             j = m.end()
             if i == j:
                 break
-            action = self.lexicon[m.lastindex-1][1]
+            action = self.lexicon[m.lastindex][1]
             if callable(action):
                 self.match = m
                 action = action(self, m.group())

@@ -7,17 +7,17 @@
 
 from test_support import verbose, unlink
 
-import imageop, uu, os
+import imageop, uu
 
 def main(use_rgbimg=1):
 
     # Create binary test files
-    uu.decode(get_qualified_path('testrgb'+os.extsep+'uue'), 'test'+os.extsep+'rgb')
+    uu.decode(get_qualified_path('testrgb.uue'), 'test.rgb')
 
     if use_rgbimg:
-        image, width, height = getrgbimage('test'+os.extsep+'rgb')
+        image, width, height = getrgbimage('test.rgb')
     else:
-        image, width, height = getimage('test'+os.extsep+'rgb')
+        image, width, height = getimage('test.rgb')
 
     # Return the selected part of image, which should by width by height
     # in size and consist of pixels of psize bytes.
@@ -114,7 +114,7 @@ def main(use_rgbimg=1):
     image = imageop.grey22grey (grey2image, width, height)
 
     # Cleanup
-    unlink('test'+os.extsep+'rgb')
+    unlink('test.rgb')
 
 def getrgbimage(name):
     """return a tuple consisting of image (in 'imgfile' format but

@@ -114,15 +114,8 @@ raise an \exception{ImportError}. The features list must be a sequence of
 
 % Should the Node documentation go here?
 
-In addition, \module{xml.dom} contains a base \class{Node} class and
-the DOM exception classes.  The \class{Node} class provided by this
-module does not implement any of the methods or attributes defined by
-the DOM specification; concrete DOM implementations must provide
-those.  The \class{Node} class provided as part of this module does
-provide the constants used for the \member{nodeType} attribute on
-concrete \class{Node} objects; they are located within the class
-rather than at the module level to conform with the DOM
-specifications.
+In addition, \module{xml.dom} contains the \class{Node}, and the DOM
+exceptions.
 
 \subsection{Objects in the DOM \label{dom-objects}}
 
@@ -200,7 +193,7 @@ This is a read-only attribute.
 \end{memberdesc}
 
 \begin{memberdesc}[Node]{attributes}
-A \class{NamedNodeMap} of attribute objects.  Only elements have
+A \class{NamedNodeList} of attribute objects.  Only elements have
 actual values for this; others provide \code{None} for this attribute.
 This is a read-only attribute.
 \end{memberdesc}
@@ -281,11 +274,11 @@ This is especially useful for DOM implementations which use any sort
 of proxy architecture (because more than one object can refer to the
 same node).
 
-\note{This is based on a proposed DOM Level 3 API which is
+\strong{Note:}  This is based on a proposed DOM Level 3 API which is
 still in the ``working draft'' stage, but this particular interface
 appears uncontroversial.  Changes from the W3C will not necessarily
 affect this method in the Python DOM interface (though any new W3C
-API for this would also be supported).}
+API for this would also be supported).
 \end{methoddesc}
 
 \begin{methoddesc}[Node]{appendChild}{newChild}
@@ -365,10 +358,7 @@ Information about the notations and entities declared by a document
 (including the external subset if the parser uses it and can provide
 the information) is available from a \class{DocumentType} object.  The
 \class{DocumentType} for a document is available from the
-\class{Document} object's \member{doctype} attribute; if there is no
-\code{DOCTYPE} declaration for the document, the document's
-\member{doctype} attribute will be set to \code{None} instead of an
-instance of this interface.
+\class{Document} object's \member{doctype} attribute.
 
 \class{DocumentType} is a specialization of \class{Node}, and adds the
 following attributes:
@@ -391,7 +381,8 @@ following attributes:
 
 \begin{memberdesc}[DocumentType]{name}
   The name of the root element as given in the \code{DOCTYPE}
-  declaration, if present.
+  declaration, if present.  If the was no \code{DOCTYPE} declaration,
+  this will be \code{None}.
 \end{memberdesc}
 
 \begin{memberdesc}[DocumentType]{entities}
@@ -598,8 +589,7 @@ DOM.  Each item is an attribute node.  Get its value with the
 
 There are also experimental methods that give this class more mapping
 behavior.  You can use them or you can use the standardized
-\method{getAttribute*()} family of methods on the \class{Element}
-objects.
+\method{getAttribute*()}-family methods on the \class{Element} objects.
 
 
 \subsubsection{Comment Objects \label{dom-comment-objects}}
@@ -629,12 +619,12 @@ child nodes.
 The content of the text node as a string.
 \end{memberdesc}
 
-\note{The use of a \class{CDATASection} node does not
+\strong{Note:}  The use of a \class{CDATASection} node does not
 indicate that the node represents a complete CDATA marked section,
 only that the content of the node was part of a CDATA section.  A
 single CDATA section may be represented by more than one node in the
 document tree.  There is no way to determine whether two adjacent
-\class{CDATASection} nodes represent different CDATA marked sections.}
+\class{CDATASection} nodes represent different CDATA marked sections.
 
 
 \subsubsection{ProcessingInstruction Objects \label{dom-pi-objects}}

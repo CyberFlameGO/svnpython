@@ -4,56 +4,11 @@ XXX Planned XXX Release date: 14-Nov-2001
 
 Type/class unification and new-style classes
 
-- The new builtin dictionary() constructor, and dictionary type, have
-  been renamed to dict.  This reflects a decade of common usage.
-
-- New-style classes can now have a __del__ method, which is called
-  when the instance is deleted (just like for classic classes).
-
-- Assignment to object.__dict__ is now possible, for objects that are
-  instances of new-style classes that have a __dict__ (unless the base
-  class forbids it).
-
-- dictionary() now accepts an iterable object producing 2-sequences.
-  For example, dictionary(d.items()) == d for any dictionary d.  The
-  argument, and the elements of the argument, can be any iterable
-  objects.
-
-- Methods of built-in types now properly check for keyword arguments
-  (formerly these were silently ignored).  The only built-in methods
-  that take keyword arguments are __call__, __init__ and __new__.
-
-- The socket function has been converted to a type; see below.
-
 Core and builtins
-
-- Clarified the error messages for unsupported operands to an operator
-  (like 1 + '').
 
 Extension modules
 
-- The socket module defines a new method for socket objects,
-  sendall().  This is like send() but may make multiple calls to
-  send() until all data has been sent.  Also, the socket function has
-  been converted to a subclassable type, like list and tuple (etc.)
-  before it; socket and SocketType are now the same thing.
-
-- Various bugfixes to the curses module.  There is now a test suite
-  for the curses module (you have to run it manually).
-
-- binascii.b2a_base64 no longer places an arbitrary restriction of 57
-  bytes on its input.
-
 Library
-
-- Traceback objects are now scanned by cyclic garbage collection, so
-  cycles created by casual use of sys.exc_info() no longer cause
-  permanent memory leaks (provided garbage collection is enabled).
-
-- os.extsep -- a new variable needed by the RISCOS support.  It is the
-  separator used by extensions, and is '.' on all platforms except
-  RISCOS, where it is '/'.  There is no need to use this variable
-  unless you have a masochistic desire to port your code to RISCOS.
 
 Tools/Demos
 
@@ -61,21 +16,9 @@ Build
 
 C API
 
-- New function PySequence_Fast_GET_SIZE() returns the size of a non-
-  NULL result from PySequence_Fast(), more quickly than calling
-  PySequence_Size().
-
 New platforms
 
-- We've finally confirmed that this release builds on HP-UX 11.00,
-  *with* threads, and passes the test suite.
-
-- Updated RISCOS port by Dietmar Schwertberger.
-
 Tests
-
-- Added a test script for the curses module.  It isn't run automatically;
-  regrtest.py must be run with '-u curses' to enable it.
 
 Windows
 
@@ -118,9 +61,9 @@ Core and builtins
   exceptions (which could mask bugs in a __getattr__ hook, for
   example).
 
-- Weak reference objects are now part of the core and offer a C API.
+- Weak reference objects are now part of the core and offers a C API.
   A bug which could allow a core dump when binary operations involved
-  proxy reference has been fixed.  weakref.ReferenceError is now a
+  proxy reference has been fixed.  weekref.ReferenceError is now a
   built-in exception.
 
 - unicode(obj) now behaves more like str(obj), accepting arbitrary
@@ -178,11 +121,6 @@ Library
 - doctest now excludes functions and classes not defined by the module
   being tested, thanks to Tim Hochberg.
 
-- HotShot, a new profiler implemented using a C-based callback, has
-  been added.  This substantially reduces the overhead of profiling,
-  but it is still quite preliminary.  Support modules and
-  documentation will be added in upcoming releases (before 2.2 final).
-
 - profile now produces correct output in situations where an exception
   raised in Python is cleared by C code (e.g. hasattr()).  This used
   to cause wrong output, including spurious claims of recursive
@@ -229,9 +167,6 @@ Library
 
 - ConfigParser.getboolean() now also interprets TRUE, FALSE, YES, NO,
   ON, and OFF.
-
-- xml.dom.minidom NodeList objects now support the length attribute
-  and item() method as required by the DOM specifications.
 
 Tools/Demos
 
@@ -340,7 +275,7 @@ Type/class unification and new-style classes
 
 - For new-style classes, what was previously called __getattr__ is now
   called __getattribute__.  This method, if defined, is called for
-  *every* attribute access.  A new __getattr__ hook more similar to the
+  *every* attribute access.  A new __getattr__ hook mor similar to the
   one in classic classes is defined which is called only if regular
   attribute access raises AttributeError; to catch *all* attribute
   access, you can use __getattribute__ (for new-style classes).  If
@@ -384,8 +319,8 @@ Core
   makes unicode() behave like str() when applied to non-string/buffer
   objects.
 
-- PyFile_WriteObject now passes Unicode objects to the file's write
-  method. As a result, all file-like objects which may be the target
+- PyFile_WriteObject now passes Unicode object to the file's write
+  method. As a result, all file-like object which may be the target
   of a print statement must support Unicode objects, i.e. they must
   at least convert them into ASCII strings.
 
@@ -812,7 +747,6 @@ Windows
 
 
 What's New in Python 2.2a1?
-Release date: 18-Jul-2001
 ===========================
 
 Core
@@ -1491,7 +1425,10 @@ New platforms
 - 2.1 contains new files and patches for RISCOS, thanks to Dietmar
   Schwertberger!  See RISCOS/README for more information -- it seems
   that because of the bizarre filename conventions on RISCOS, no port
-  to that platform is easy.
+  to that platform is easy.  Note that the new variable os.endsep is
+  silently supported in order to make life easier on this platform,
+  but we don't advertise it because it's not worth for most folks to
+  care about RISCOS portability.
 
 
 What's New in Python 2.1 alpha 2?

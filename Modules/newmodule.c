@@ -215,7 +215,7 @@ static PyMethodDef new_methods[] = {
 	{NULL,			NULL}		/* sentinel */
 };
 
-static char new_doc[] =
+char new_doc[] =
 "Functions to create new objects used by the interpreter.\n\
 \n\
 You need to know a great deal about the interpreter to use this!";

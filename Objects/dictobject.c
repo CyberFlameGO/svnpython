@@ -993,89 +993,7 @@ dict_update(PyObject *mp, PyObject *other)
 
 /* Update unconditionally replaces existing items.
    Merge has a 3rd argument 'override'; if set, it acts like Update,
-   otherwise it leaves existing items unchanged.
-
-   PyDict_{Update,Merge} update/merge from a mapping object.
-
-   PyDict_{Update,Merge}FromSeq2 update/merge from any iterable object
-   producing iterable objects of length 2.
-*/
-
-static int
-PyDict_MergeFromSeq2(PyObject *d, PyObject *seq2, int override)
-{
-	PyObject *it;	/* iter(seq2) */
-	int i;		/* index into seq2 of current element */
-	PyObject *item;	/* seq2[i] */
-	PyObject *fast;	/* item as a 2-tuple or 2-list */
-
-	assert(d != NULL);
-	assert(PyDict_Check(d));
-	assert(seq2 != NULL);
-
-	it = PyObject_GetIter(seq2);
-	if (it == NULL)
-		return -1;
-
-	for (i = 0; ; ++i) {
-		PyObject *key, *value;
-		int n;
-
-		fast = NULL;
-		item = PyIter_Next(it);
-		if (item == NULL) {
-			if (PyErr_Occurred())
-				goto Fail;
-			break;
-		}
-
-		/* Convert item to sequence, and verify length 2. */
-		fast = PySequence_Fast(item, "");
-		if (fast == NULL) {
-			if (PyErr_ExceptionMatches(PyExc_TypeError))
-				PyErr_Format(PyExc_TypeError,
-					"cannot convert dictionary update "
-					"sequence element #%d to a sequence",
-					i);
-			goto Fail;
-		}
-		n = PySequence_Fast_GET_SIZE(fast);
-		if (n != 2) {
-			PyErr_Format(PyExc_ValueError,
-				     "dictionary update sequence element #%d "
-				     "has length %d; 2 is required",
-				     i, n);
-			goto Fail;
-		}
-
-		/* Update/merge with this (key, value) pair. */
-		key = PySequence_Fast_GET_ITEM(fast, 0);
-		value = PySequence_Fast_GET_ITEM(fast, 1);
-		if (override || PyDict_GetItem(d, key) == NULL) {
-			int status = PyDict_SetItem(d, key, value);
-			if (status < 0)
-				goto Fail;
-		}
-		Py_DECREF(fast);
-		Py_DECREF(item);
-	}
-
-	i = 0;
-	goto Return;
-Fail:
-	Py_XDECREF(item);
-	Py_XDECREF(fast);
-	i = -1;
-Return:
-	Py_DECREF(it);
-	return i;
-}
-
-static int
-PyDict_UpdateFromSeq2(PyObject *d, PyObject *seq2)
-{
-	return PyDict_MergeFromSeq2(d, seq2, 1);
-}
+   otherwise it leaves existing items unchanged. */
 
 int
 PyDict_Update(PyObject *a, PyObject *b)
@@ -1781,20 +1699,23 @@ static int
 dict_init(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *arg = NULL;
-	static char *kwlist[] = {"items", 0};
-	int result = 0;
+	static char *kwlist[] = {"mapping", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O:dict",
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O:dictionary",
 					 kwlist, &arg))
-		result = -1;
-
-	else if (arg != NULL) {
-		if (PyObject_HasAttrString(arg, "keys"))
-			result = PyDict_Merge(self, arg, 1);
-		else
-			result = PyDict_MergeFromSeq2(self, arg, 1);
+		return -1;
+	if (arg != NULL) {
+		if (PyDict_Merge(self, arg, 1) < 0) {
+			/* An error like "AttributeError: keys" is too
+			   cryptic in this context. */
+			if (PyErr_ExceptionMatches(PyExc_AttributeError)) {
+				PyErr_SetString(PyExc_TypeError,
+					"argument must be of a mapping type");
+			}
+			return -1;
+		}
 	}
-	return result;
+	return 0;
 }
 
 static PyObject *
@@ -1804,18 +1725,13 @@ dict_iter(dictobject *dict)
 }
 
 static char dictionary_doc[] =
-"dict() -> new empty dictionary.\n"
-"dict(mapping) -> new dictionary initialized from a mapping object's\n"
-"    (key, value) pairs.\n"
-"dict(seq) -> new dictionary initialized as if via:\n"
-"    d = {}\n"
-"    for k, v in seq:\n"
-"        d[k] = v";
+"dictionary() -> new empty dictionary\n"
+"dictionary(mapping) -> new dict initialized from mapping's key+value pairs";
 
 PyTypeObject PyDict_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
-	"dict",
+	"dictionary",
 	sizeof(dictobject),
 	0,
 	(destructor)dict_dealloc,		/* tp_dealloc */

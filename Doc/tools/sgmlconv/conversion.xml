@@ -874,7 +874,6 @@
   <macro name="maketitle" outputname=""/>
   <macro name="noindent" outputname=""/>
   <macro name="protect" outputname=""/>
-  <macro name="textwidth"/>
   <macro name="renewcommand">
     <attribute name="macro"/>
     <attribute name="nargs" optional="yes"/>

@@ -145,7 +145,7 @@ class ReprTests(unittest.TestCase):
     def test_descriptors(self):
         eq = self.assertEquals
         # method descriptors
-        eq(repr(dict.items), "<method 'items' of 'dict' objects>")
+        eq(repr(dictionary.items), "<method 'items' of 'dictionary' objects>")
         # XXX member descriptors
         # XXX attribute descriptors
         # XXX slot descriptors
@@ -173,9 +173,9 @@ class LongReprTest(unittest.TestCase):
         self.subpkgname = os.path.join(longname, longname)
         # Make the package and subpackage
         os.mkdir(self.pkgname)
-        touch(os.path.join(self.pkgname, '__init__'+os.extsep+'py'))
+        touch(os.path.join(self.pkgname, '__init__.py'))
         os.mkdir(self.subpkgname)
-        touch(os.path.join(self.subpkgname, '__init__'+os.extsep+'py'))
+        touch(os.path.join(self.subpkgname, '__init__.py'))
         # Remember where we are
         self.here = os.getcwd()
         sys.path.insert(0, self.here)
@@ -195,14 +195,14 @@ class LongReprTest(unittest.TestCase):
 
     def test_module(self):
         eq = self.assertEquals
-        touch(os.path.join(self.subpkgname, self.pkgname + os.extsep + 'py'))
+        touch(os.path.join(self.subpkgname, self.pkgname + '.py'))
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import areallylongpackageandmodulenametotestreprtruncation
         eq(repr(areallylongpackageandmodulenametotestreprtruncation),
            "<module 'areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation' from '%s'>" % areallylongpackageandmodulenametotestreprtruncation.__file__)
 
     def test_type(self):
         eq = self.assertEquals
-        touch(os.path.join(self.subpkgname, 'foo'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'foo.py'), '''\
 class foo(object):
     pass
 ''')
@@ -216,7 +216,7 @@ class foo(object):
         pass
 
     def test_class(self):
-        touch(os.path.join(self.subpkgname, 'bar'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'bar.py'), '''\
 class bar:
     pass
 ''')
@@ -225,7 +225,7 @@ class bar:
             "<class areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation.bar.bar at 0x"))
 
     def test_instance(self):
-        touch(os.path.join(self.subpkgname, 'baz'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'baz.py'), '''\
 class baz:
     pass
 ''')
@@ -236,7 +236,7 @@ class baz:
 
     def test_method(self):
         eq = self.assertEquals
-        touch(os.path.join(self.subpkgname, 'qux'+os.extsep+'py'), '''\
+        touch(os.path.join(self.subpkgname, 'qux.py'), '''\
 class aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:
     def amethod(self): pass
 ''')

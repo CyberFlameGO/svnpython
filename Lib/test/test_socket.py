@@ -124,7 +124,7 @@ try:
                     break
                 if verbose:
                     print 'received:', data
-                conn.sendall(data)
+                conn.send(data)
             conn.close()
     else:
         try:

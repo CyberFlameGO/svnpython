@@ -1,9 +1,9 @@
-#include "oslib/osmodule.h"
+#include "osmodule.h"
 #include <stdio.h>
 #include "kernel.h"
 #include <limits.h>
 #include <errno.h>
-#include "oslib/taskwindow.h"
+#include "taskwindow.h"
 #include "Python.h"
 
 

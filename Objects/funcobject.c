@@ -270,8 +270,7 @@ static void
 func_dealloc(PyFunctionObject *op)
 {
 	_PyObject_GC_UNTRACK(op);
-	if (op->func_weakreflist != NULL)
-		PyObject_ClearWeakRefs((PyObject *) op);
+	PyObject_ClearWeakRefs((PyObject *) op);
 	Py_DECREF(op->func_code);
 	Py_DECREF(op->func_globals);
 	Py_DECREF(op->func_name);

@@ -13,10 +13,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef RISCOS
-#include "unixstuff.h"
-#endif
-
 /* The default encoding used by the platform file system APIs
    Can remain NULL for all platforms that don't have such a concept
 */
@@ -540,9 +536,7 @@ builtin_execfile(PyObject *self, PyObject *args)
 	FILE* fp = NULL;
 	PyCompilerFlags cf;
 	int exists;
-#ifndef RISCOS
 	struct stat s;
-#endif
 
 	if (!PyArg_ParseTuple(args, "s|O!O!:execfile",
 			&filename,
@@ -564,21 +558,12 @@ builtin_execfile(PyObject *self, PyObject *args)
 
 	exists = 0;
 	/* Test for existence or directory. */
-#ifndef RISCOS
 	if (!stat(filename, &s)) {
 		if (S_ISDIR(s.st_mode))
 			errno = EISDIR;
 		else
 			exists = 1;
 	}
-#else
-	if (object_exists(filename)) {
-		if (isdir(filename))
-			errno = EISDIR;
-		else
-			exists = 1;
-	}
-#endif /* RISCOS */
 
         if (exists) {
 		Py_BEGIN_ALLOW_THREADS
@@ -1848,7 +1833,7 @@ _PyBuiltin_Init(void)
 #ifndef WITHOUT_COMPLEX
 	SETBUILTIN("complex",		&PyComplex_Type);
 #endif
-	SETBUILTIN("dict",		&PyDict_Type);
+	SETBUILTIN("dictionary",	&PyDict_Type);
 	SETBUILTIN("float",		&PyFloat_Type);
 	SETBUILTIN("property",		&PyProperty_Type);
 	SETBUILTIN("int",		&PyInt_Type);

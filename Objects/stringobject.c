@@ -691,7 +691,7 @@ string_concat(register PyStringObject *a, register PyObject *bb)
 		    return PyUnicode_Concat((PyObject *)a, bb);
 #endif
 		PyErr_Format(PyExc_TypeError,
-			     "cannot concatenate 'str' and '%.200s' objects",
+			     "cannot add type \"%.200s\" to string",
 			     bb->ob_type->tp_name);
 		return NULL;
 	}

@@ -18,6 +18,7 @@ document = """\
 
 dom = xml.dom.minidom.parseString(document)
 
+space = " "
 def getText(nodelist):
     rc = ""
     for node in nodelist:
