@@ -947,14 +947,12 @@ int_subtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		if (!PyLong_Check(tmp)) {
 			PyErr_SetString(PyExc_ValueError,
 					"value must convertable to an int");
-			Py_DECREF(tmp);
 			return NULL;
 		}
 		ival = PyLong_AsLong(tmp);
-		if (ival == -1 && PyErr_Occurred()) {
-			Py_DECREF(tmp);
+		if (ival == -1 && PyErr_Occurred())
 			return NULL;
-		}
+
 	} else {
 		ival = ((PyIntObject *)tmp)->ob_ival;
 	}

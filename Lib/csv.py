@@ -207,7 +207,7 @@ class Sniffer:
                       '(?:^|\n)(?P<quote>["\']).*?(?P=quote)(?P<delim>[^\w\n"\'])(?P<space> ?)',   #  ".*?",
                       '(?P<delim>>[^\w\n"\'])(?P<space> ?)(?P<quote>["\']).*?(?P=quote)(?:$|\n)',  # ,".*?"
                       '(?:^|\n)(?P<quote>["\']).*?(?P=quote)(?:$|\n)'):                            #  ".*?" (no delim, no space)
-            regexp = re.compile(restr, re.DOTALL | re.MULTILINE)
+            regexp = re.compile(restr, re.S | re.M)
             matches = regexp.findall(data)
             if matches:
                 break

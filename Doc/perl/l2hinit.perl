@@ -26,7 +26,7 @@ $BOTTOM_NAVIGATION = 1;
 $AUTO_NAVIGATION = 0;
 
 $BODYTEXT = '';
-$CHILDLINE = "\n<p><br /></p><hr class='online-navigation' />\n";
+$CHILDLINE = "\n<p><hr>\n";
 $VERBOSITY = 0;
 
 # default # of columns for the indexes
@@ -51,7 +51,7 @@ if (!defined $mydir) {
     use Cwd;
     use File::Basename;
     ($myname, $mydir, $myext) = fileparse(__FILE__, '\..*');
-    chop $mydir;                        # remove trailing '/'
+    chop $mydir;			# remove trailing '/'
     $mydir = getcwd() . "$dd$mydir"
         unless $mydir =~ s|^/|/|;
 }
@@ -116,7 +116,6 @@ sub make_nav_sectref($$$) {
     if ($title) {
         if ($title =~ /\<[aA] /) {
             $title =~ s/\<[aA] /<a class="sectref" rel="$linktype" /;
-            $title =~ s/ HREF=/ href=/;
         }
         else {
             $title = "<span class=\"sectref\">$title</span>";
@@ -151,7 +150,7 @@ sub get_my_icon($) {
     }
     my $iconserver = ($ICONSERVER eq '.') ? '' : "$ICONSERVER/";
     return "<img src='$iconserver$name.$IMAGE_TYPE'\n  border='0'"
-           . " height='32'  alt='$text' width='32' />";
+           . " height='32'  alt='$text' width='32'>";
 }
 
 sub unlinkify($) {
@@ -170,7 +169,6 @@ sub use_icon($$$) {
             $s =~ s/\<tex2html_[a-z_]+_visible_mark\>/$r/;
         }
         $s =~ s/<[aA] /<a rel="$rel" title="$title" \n  /;
-        $s =~ s/ HREF=/ href=/;
         return $s;
     }
     else {
@@ -192,23 +190,20 @@ sub make_nav_panel() {
     $s = ('<table align="center" width="100%" cellpadding="0" cellspacing="2">'
           . "\n<tr>"
           # left-hand side
-          . "\n<td class='online-navigation'>$PREVIOUS</td>"
-          . "\n<td class='online-navigation'>$UP</td>"
-          . "\n<td class='online-navigation'>$NEXT</td>"
+          . "\n<td>$PREVIOUS</td>"
+          . "\n<td>$UP</td>"
+          . "\n<td>$NEXT</td>"
           # title box
           . "\n<td align=\"center\" width=\"100%\">$t_title</td>"
           # right-hand side
-          . "\n<td class='online-navigation'>$CONTENTS</td>"
-          # module index
-          . "\n<td class='online-navigation'>$CUSTOM_BUTTONS</td>"
-          . "\n<td class='online-navigation'>$INDEX</td>"
+          . "\n<td>$CONTENTS</td>"
+          . "\n<td>$CUSTOM_BUTTONS</td>" # module index
+          . "\n<td>$INDEX</td>"
           . "\n</tr></table>\n"
           # textual navigation
-          . "<div class='online-navigation'>\n"
           . make_nav_sectref("Previous", "prev", $PREVIOUS_TITLE)
           . make_nav_sectref("Up", "parent", $UP_TITLE)
           . make_nav_sectref("Next", "next", $NEXT_TITLE)
-          . "</div>\n"
           );
     # remove these; they are unnecessary and cause errors from validation
     $s =~ s/ NAME="tex2html\d+"\n */ /g;
@@ -219,10 +214,7 @@ sub add_child_links {
     my $toc = add_real_child_links(@_);
     $toc =~ s|\s*</[aA]>|</a>|g;
     $toc =~ s/ NAME=\"tex2html\d+\"\s*href=/ href=/gi;
-    $toc =~ s|</UL>(\s*<BR( /)?>)?|</ul>|gi;
-    if ($toc =~ / NAME=["']CHILD_LINKS["']/) {
-        return "<div class='online-navigation'>\n$toc</div>\n";
-    }
+    $toc =~ s|</UL>(\s*<BR>)?|</ul>|gi;
     return $toc;
 }
 
@@ -245,17 +237,15 @@ sub get_version_text() {
 
 
 sub top_navigation_panel() {
-    return "\n<div id='top-navigation-panel'>\n"
+    return "\n"
            . make_nav_panel()
-           . "<hr /></div>\n";
+           . "<br><hr>\n";
 }
 
 sub bot_navigation_panel() {
-    return "\n<div class='online-navigation'>\n"
-           . "<p></p><hr />\n"
+    return "\n<p><hr>\n"
            . make_nav_panel()
-           . "</div>\n"
-           . "<hr />\n"
+           . "<hr>\n"
            . get_version_text()
            . "\n";
 }
@@ -264,30 +254,30 @@ sub add_link {
     # Returns a pair (iconic link, textual link)
     my($icon, $current_file, @link) = @_;
     my($dummy, $file, $title) = split($delim,
-                                      $section_info{join(' ',@link)});
+				      $section_info{join(' ',@link)});
     if ($icon =~ /\<tex2html_([_a-z]+)_visible_mark\>/) {
         my $r = get_my_icon($1);
         $icon =~ s/\<tex2html_[_a-z]+_visible_mark\>/$r/;
     }
     if ($title && ($file ne $current_file)) {
         $title = purify($title);
-        $title = get_first_words($title, $WORDS_IN_NAVIGATION_PANEL_TITLES);
-        return (make_href($file, $icon), make_href($file, "$title"))
-        }
+	$title = get_first_words($title, $WORDS_IN_NAVIGATION_PANEL_TITLES);
+	return (make_href($file, $icon), make_href($file, "$title"))
+	}
     elsif ($icon eq get_my_icon('up') && $EXTERNAL_UP_LINK) {
-        return (make_href($EXTERNAL_UP_LINK, $icon),
-                make_href($EXTERNAL_UP_LINK, "$EXTERNAL_UP_TITLE"))
-        }
+ 	return (make_href($EXTERNAL_UP_LINK, $icon),
+		make_href($EXTERNAL_UP_LINK, "$EXTERNAL_UP_TITLE"))
+	}
     elsif ($icon eq get_my_icon('previous')
-           && $EXTERNAL_PREV_LINK && $EXTERNAL_PREV_TITLE) {
-        return (make_href($EXTERNAL_PREV_LINK, $icon),
-                make_href($EXTERNAL_PREV_LINK, "$EXTERNAL_PREV_TITLE"))
-        }
+	   && $EXTERNAL_PREV_LINK && $EXTERNAL_PREV_TITLE) {
+	return (make_href($EXTERNAL_PREV_LINK, $icon),
+		make_href($EXTERNAL_PREV_LINK, "$EXTERNAL_PREV_TITLE"))
+	}
     elsif ($icon eq get_my_icon('next')
-           && $EXTERNAL_DOWN_LINK && $EXTERNAL_DOWN_TITLE) {
-        return (make_href($EXTERNAL_DOWN_LINK, $icon),
-                make_href($EXTERNAL_DOWN_LINK, "$EXTERNAL_DOWN_TITLE"))
-        }
+	   && $EXTERNAL_DOWN_LINK && $EXTERNAL_DOWN_TITLE) {
+	return (make_href($EXTERNAL_DOWN_LINK, $icon),
+		make_href($EXTERNAL_DOWN_LINK, "$EXTERNAL_DOWN_TITLE"))
+	}
     return (&inactive_img($icon), "");
 }
 
@@ -328,10 +318,10 @@ sub insert_index($$$$$) {
     my $prog = "$myrootdir/tools/buildindex.py";
     my $index;
     if ($letters) {
-        $index = `$prog --columns $columns --letters $datafile`;
+	$index = `$prog --columns $columns --letters $datafile`;
     }
     else {
-        $index = `$prog --columns $columns $datafile`;
+	$index = `$prog --columns $columns $datafile`;
     }
     if (!s/$mark/$prefix$index/) {
         print "\nCould not locate index mark: $mark";
@@ -356,29 +346,29 @@ sub add_module_idx() {
     my $allthesame = 1;
     my $prefix = '';
     foreach $key (keys %Modules) {
-        $key =~ s/<tt>([a-zA-Z0-9._]*)<\/tt>/$1/;
-        my $plat = "$ModulePlatforms{$key}";
-        $plat = ''
-          if ($plat eq $IGNORE_PLATFORM_ANNOTATION);
-        if (!$first) {
-            $allthesame = 0
-              if ($prevplat ne $plat);
-        }
-        else { $first = 0; }
-        $prevplat = $plat;
+	$key =~ s/<tt>([a-zA-Z0-9._]*)<\/tt>/$1/;
+	my $plat = "$ModulePlatforms{$key}";
+	$plat = ''
+	  if ($plat eq $IGNORE_PLATFORM_ANNOTATION);
+	if (!$first) {
+	    $allthesame = 0
+	      if ($prevplat ne $plat);
+	}
+	else { $first = 0; }
+	$prevplat = $plat;
     }
     open(MODIDXFILE, '>modindex.dat') || die "\n$!\n";
     foreach $key (keys %Modules) {
-        # dump the line in the data file; just use a dummy seqno field
-        my $nkey = $1;
-        my $moditem = "$Modules{$key}";
-        my $plat = '';
-        $key =~ s/<tt>([a-zA-Z0-9._]*)<\/tt>/$1/;
-        if ($ModulePlatforms{$key} && !$allthesame) {
-            $plat = (" <em>(<span class=\"platform\">$ModulePlatforms{$key}"
-                     . '</span>)</em>');
-        }
-        print MODIDXFILE $moditem . $IDXFILE_FIELD_SEP
+	# dump the line in the data file; just use a dummy seqno field
+	my $nkey = $1;
+	my $moditem = "$Modules{$key}";
+	my $plat = '';
+	$key =~ s/<tt>([a-zA-Z0-9._]*)<\/tt>/$1/;
+	if ($ModulePlatforms{$key} && !$allthesame) {
+	    $plat = (" <em>(<span class=\"platform\">$ModulePlatforms{$key}"
+		     . '</span>)</em>');
+	}
+	print MODIDXFILE $moditem . $IDXFILE_FIELD_SEP
               . "<tt class=\"module\">$key</tt>$plat###\n";
     }
     close(MODIDXFILE);
@@ -393,7 +383,7 @@ sub add_module_idx() {
 MODULE_INDEX_PREFIX
     }
     if (!$allthesame) {
-        $prefix .= <<PLAT_DISCUSS;
+	$prefix .= <<PLAT_DISCUSS;
 
 <p> Some module names are followed by an annotation indicating what
 platform they are available on.</p>
@@ -401,7 +391,7 @@ platform they are available on.</p>
 PLAT_DISCUSS
     }
     insert_index($idx_module_mark, 'modindex.dat', $MODULE_INDEX_COLUMNS, 0,
-                 $prefix);
+		 $prefix);
 }
 
 # replace both indexes as needed:
@@ -429,11 +419,11 @@ sub do_cmd_tableofcontents {
     $TITLE = $toc_title;
     $tocfile = $CURRENT_FILE;
     my($closures, $reopens) = preserve_open_tags();
-    anchor_label('contents', $CURRENT_FILE, $_);        # this is added
+    anchor_label('contents', $CURRENT_FILE, $_);	# this is added
     $MY_CONTENTS_PAGE = "$CURRENT_FILE";
-    join('', "<br />\n\\tableofchildlinks[off]", $closures
-         , make_section_heading($toc_title, 'h2'), $toc_mark
-         , $reopens, $_);
+    join('', "<BR>\n\\tableofchildlinks[off]", $closures
+	 , make_section_heading($toc_title, 'H2'), $toc_mark
+	 , $reopens, $_);
 }
 # In addition to the standard stuff, add label to allow named node files.
 sub do_cmd_listoffigures {
@@ -441,10 +431,10 @@ sub do_cmd_listoffigures {
     $TITLE = $lof_title;
     $loffile = $CURRENT_FILE;
     my($closures, $reopens) = preserve_open_tags();
-    anchor_label('lof', $CURRENT_FILE, $_);             # this is added
-    join('', "<br />\n", $closures
-         , make_section_heading($lof_title, 'h2'), $lof_mark
-         , $reopens, $_);
+    anchor_label('lof', $CURRENT_FILE, $_);		# this is added
+    join('', "<BR>\n", $closures
+	 , make_section_heading($lof_title, 'H2'), $lof_mark
+	 , $reopens, $_);
 }
 # In addition to the standard stuff, add label to allow named node files.
 sub do_cmd_listoftables {
@@ -452,23 +442,23 @@ sub do_cmd_listoftables {
     $TITLE = $lot_title;
     $lotfile = $CURRENT_FILE;
     my($closures, $reopens) = preserve_open_tags();
-    anchor_label('lot', $CURRENT_FILE, $_);             # this is added
-    join('', "<br />\n", $closures
-         , make_section_heading($lot_title, 'h2'), $lot_mark
-         , $reopens, $_);
+    anchor_label('lot', $CURRENT_FILE, $_);		# this is added
+    join('', "<BR>\n", $closures
+	 , make_section_heading($lot_title, 'H2'), $lot_mark
+	 , $reopens, $_);
 }
 # In addition to the standard stuff, add label to allow named node files.
 sub do_cmd_textohtmlinfopage {
     local($_) = @_;
-    if ($INFO) {                                        #
-        anchor_label("about",$CURRENT_FILE,$_);         # this is added
-    }                                                   #
-    my $the_version = '';                               # and the rest is
-    if ($t_date) {                                      # mostly ours
-        $the_version = ",\n$t_date";
-        if ($PACKAGE_VERSION) {
-            $the_version .= ", Release $PACKAGE_VERSION$RELEASE_INFO";
-        }
+    if ($INFO) {					# 
+	anchor_label("about",$CURRENT_FILE,$_);		# this is added
+    }							#
+    my $the_version = '';				# and the rest is
+    if ($t_date) {					# mostly ours
+	$the_version = ",\n$t_date";
+	if ($PACKAGE_VERSION) {
+	    $the_version .= ", Release $PACKAGE_VERSION$RELEASE_INFO";
+	}
     }
     my $about;
     open(ABOUT, "<$ABOUT_FILE") || die "\n$!\n";
@@ -494,8 +484,8 @@ sub do_cmd_textohtmlindex {
     else { $preindex = ''; }
     my $heading = make_section_heading($idx_title, 'h2') . $idx_mark;
     my($pre, $post) = minimize_open_tags($heading);
-    anchor_label('genindex',$CURRENT_FILE,$_);          # this is added
-    return "<br />\n" . $pre . $_;
+    anchor_label('genindex',$CURRENT_FILE,$_);		# this is added
+    return "<br>\n" . $pre . $_;
 }
 
 $MODULE_INDEX_FILE = '';
@@ -506,7 +496,7 @@ sub do_cmd_textohtmlmoduleindex {
     $TITLE = $idx_module_title;
     anchor_label('modindex', $CURRENT_FILE, $_);
     $MODULE_INDEX_FILE = "$CURRENT_FILE";
-    $_ = ('<p></p>' . make_section_heading($idx_module_title, 'h2')
+    $_ = ('<p>' . make_section_heading($idx_module_title, 'h2')
           . $idx_module_mark . $_);
     return $_;
 }
@@ -520,10 +510,10 @@ sub do_cmd_textohtmlmoduleindex {
 # inserts a \bibliography{} or a dummy \textohtmlindex command just
 # before the appropriate environments to force sectioning.
 
-# XXX   This *assumes* that if there are two {theindex} environments,
-#       the first is the module index and the second is the standard
-#       index.  This is sufficient for the current Python documentation,
-#       but that's about it.
+# XXX	This *assumes* that if there are two {theindex} environments,
+#	the first is the module index and the second is the standard
+#	index.  This is sufficient for the current Python documentation,
+#	but that's about it.
 
 sub add_bbl_and_idx_dummy_commands {
     my $id = $global{'max_id'};
@@ -560,7 +550,7 @@ sub add_bbl_and_idx_dummy_commands {
         $CUSTOM_BUTTONS .= get_my_icon('blank');
         $global{'max_id'} = $id; # not sure why....
         s/([\\]begin\s*$O\d+$C\s*theindex)/\\textohtmlindex $1/o;
-            s/[\\]printindex/\\textohtmlindex /o;
+	    s/[\\]printindex/\\textohtmlindex /o;
     }
     else {
         die "\n\nBad number of index environments!\n\n";
@@ -580,27 +570,27 @@ sub set_depth_levels {
     my $level;
     #RRM:  do not alter user-set value for  $MAX_SPLIT_DEPTH
     foreach $level ("part", "chapter", "section", "subsection",
-                    "subsubsection", "paragraph") {
-        last if (($outermost_level) = /\\($level)$delimiter_rx/);
+		    "subsubsection", "paragraph") {
+	last if (($outermost_level) = /\\($level)$delimiter_rx/);
     }
     $level = ($outermost_level ? $section_commands{$outermost_level} :
-              do {$outermost_level = 'section'; 3;});
+	      do {$outermost_level = 'section'; 3;});
 
     #RRM:  but calculate value for $MAX_SPLIT_DEPTH when a $REL_DEPTH was given
-    if ($REL_DEPTH && $MAX_SPLIT_DEPTH) {
-        $MAX_SPLIT_DEPTH = $level + $MAX_SPLIT_DEPTH;
+    if ($REL_DEPTH && $MAX_SPLIT_DEPTH) { 
+	$MAX_SPLIT_DEPTH = $level + $MAX_SPLIT_DEPTH;
     } elsif (!($MAX_SPLIT_DEPTH)) { $MAX_SPLIT_DEPTH = 1 };
 
     %unnumbered_section_commands = ('tableofcontents' => $level,
-                                    'listoffigures' => $level,
-                                    'listoftables' => $level,
-                                    'bibliography' => $level,
-                                    'textohtmlindex' => $level,
-                                    'textohtmlmoduleindex' => $level);
+				    'listoffigures' => $level,
+				    'listoftables' => $level,
+				    'bibliography' => $level,
+				    'textohtmlindex' => $level,
+				    'textohtmlmoduleindex' => $level);
     $section_headings{'textohtmlmoduleindex'} = 'h1';
 
     %section_commands = (%unnumbered_section_commands,
-                         %section_commands);
+			 %section_commands);
 
     make_sections_rx();
 }
@@ -616,7 +606,7 @@ sub set_depth_levels {
 # before style files are loaded).
 #
 %declarations = ('preform' => '<div class="verbatim"><pre></pre></div>',
-                 %declarations);
+		 %declarations);
 
 
 # This is used to map the link rel attributes LaTeX2HTML uses to those
@@ -646,47 +636,46 @@ sub make_head_and_body($$) {
     $title = &purify($title,1);
     eval("\$title = ". $default_title ) unless ($title);
 
-    # allow user-modification of the <title> tag; thanks Dan Young
+    # allow user-modification of the <TITLE> tag; thanks Dan Young
     if (defined &custom_TITLE_hook) {
-        $title = &custom_TITLE_hook($title, $toc_sec_title);
+	$title = &custom_TITLE_hook($title, $toc_sec_title);
     }
 
     if ($DOCTYPE =~ /\/\/[\w\.]+\s*$/) { # language spec included
-        $DTDcomment = "<!DOCTYPE html PUBLIC \"$DOCTYPE\">\n";
+	$DTDcomment = "<!DOCTYPE html PUBLIC \"$DOCTYPE\">\n";
     } else {
-        $DTDcomment = "<!DOCTYPE html PUBLIC \"$DOCTYPE//"
-            . ($ISO_LANGUAGE ? $ISO_LANGUAGE : $isolanguage) . "\">\n";
+	$DTDcomment = "<!DOCTYPE html PUBLIC \"$DOCTYPE//"
+	    . ($ISO_LANGUAGE ? $ISO_LANGUAGE : $isolanguage) . "\">\n";
     }
     if ($MY_PARTIAL_HEADER eq '') {
         $STYLESHEET = $FILE.".css" unless $STYLESHEET;
         $MY_PARTIAL_HEADER = join('',
             ($DOCTYPE ? $DTDcomment : ''),
             "<html>\n<head>",
-            ($BASE ? "\n<base href=\"$BASE\" />" : ''),
-            "\n<link rel=\"STYLESHEET\" href=\"$STYLESHEET\" type='text/css'",
-            " />",
+            ($BASE ? "\n<base href=\"$BASE\">" : ''),
+            "\n<link rel=\"STYLESHEET\" href=\"$STYLESHEET\" type='text/css'>",
             ($FAVORITES_ICON
-             ? ("\n<link rel=\"SHORTCUT ICON\" href=\"$FAVORITES_ICON\" />")
+             ? ("\n<link rel=\"SHORTCUT ICON\" href=\"" . "$FAVORITES_ICON\">")
              : ''),
             ($EXTERNAL_UP_LINK
              ? ("\n<link rel='start' href='" . $EXTERNAL_UP_LINK
                 . ($EXTERNAL_UP_TITLE ?
-                   "' title='$EXTERNAL_UP_TITLE' />" : "' />"))
+                   "' title='$EXTERNAL_UP_TITLE'>" : "'>"))
              : ''),
             "\n<link rel=\"first\" href=\"$FILE.html\"",
             ($t_title ? " title='$t_title'" : ''),
-            ' />',
+            '>',
             ($HAVE_TABLE_OF_CONTENTS
              ? ("\n<link rel='contents' href='$MY_CONTENTS_PAGE'"
-                . ' title="Contents" />')
+                . ' title="Contents">')
              : ''),
             ($HAVE_GENERAL_INDEX
-             ? "\n<link rel='index' href='genindex.html' title='Index' />"
+             ? "\n<link rel='index' href='genindex.html' title='Index'>"
              : ''),
             # disable for now -- Mozilla doesn't do well with multiple indexes
             # ($HAVE_MODULE_INDEX
-            #  ? '<link rel="index" href="modindex.html" title="Module Index"'
-            #    . " />\n"
+            #  ? '<link rel="index" href="modindex.html" title="Module Index">'
+            #    . "\n"
             #  : ''),
             ($INFO
              # XXX We can do this with the Python tools since the About...
@@ -694,18 +683,18 @@ sub make_head_and_body($$) {
              # generated node###.html page names.  Won't work with the
              # rest of the Python doc tools.
              ? ("\n<link rel='last' href='about.html'"
-                . " title='About this document...' />"
+                . " title='About this document...'>"
                 . "\n<link rel='help' href='about.html'"
-                . " title='About this document...' />")
+                . " title='About this document...'>")
              : ''),
             $more_links_mark,
             "\n",
             ($CHARSET && $HTML_VERSION ge "2.1"
              ? ('<meta http-equiv="Content-Type" content="text/html; '
-                . "charset=$CHARSET\" />\n")
+                . "charset=$CHARSET\">\n")
              : ''),
             ($AESOP_META_TYPE
-             ? "<meta name='aesop' content='$AESOP_META_TYPE' />\n" : ''));
+             ? "<meta name='aesop' content='$AESOP_META_TYPE'>\n" : ''));
     }
     if (!$charset && $CHARSET) {
         $charset = $CHARSET;
@@ -715,20 +704,11 @@ sub make_head_and_body($$) {
     # <meta name='description' ...> element in the document head.
     my $metatitle = "$title";
     $metatitle =~ s/^\d+(\.\d+)*\s*//;
-    $metatitle = meta_information($metatitle);
-    $metatitle =~ s/ NAME=/ name=/g;
-    $metatitle =~ s/ CONTENT=/ content=/g;
 
     join('',
          $MY_PARTIAL_HEADER,
-         $metatitle,
+         &meta_information($metatitle),
          "<title>", $title, "</title>\n</head>\n<body$body>");
 }
 
-sub replace_morelinks {
-    $more_links =~ s/ REL=/ rel=/g;
-    $more_links =~ s/ HREF=/ href=/g;
-    $_ =~ s/$more_links_mark/$more_links/e;
-}
-
-1;      # This must be the last line
+1;	# This must be the last line

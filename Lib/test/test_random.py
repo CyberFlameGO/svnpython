@@ -94,6 +94,7 @@ class TestBasicOps(unittest.TestCase):
         self.gen.sample(xrange(20), 2)
         self.gen.sample(dict.fromkeys('abcdefghijklmnopqrst'), 2)
         self.gen.sample(str('abcdefghijklmnopqrst'), 2)
+        self.gen.sample(unicode('abcdefghijklmnopqrst'), 2)
         self.gen.sample(tuple('abcdefghijklmnopqrst'), 2)
 
     def test_gauss(self):

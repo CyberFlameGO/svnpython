@@ -64,14 +64,9 @@ PAPER=letter
 INFODIR=	info
 TOOLSDIR=	tools
 
-# This is the *documentation* release, and is used to construct the
-# file names of the downloadable tarballs.  It is initialized by the
-# getversioninfo script to ensure that the right version number is
-# used; the script will also write commontex/patchlevel.tex if that
-# doesn't exist or needs to be changed.  Documents which depend on the
-# version number should use \input{patchlevel} and include
-# commontex/patchlevel.tex in their dependencies.
-RELEASE=$(shell $(PYTHON) tools/getversioninfo)
+# This is the *documentation* release, and is used to construct the file
+# names of the downloadable tarballs.
+RELEASE=2.3.2
 
 PYTHON=	   python
 DVIPS=	   dvips -N0 -t $(PAPER)
@@ -94,8 +89,8 @@ TEXINPUTS=$(PWD)/commontex:
 # using the second version.  The standard documentation is typically
 # built using the second flavor, where the preferred version is from
 # the Python CVS trunk.
-MKHOWTO=   TEXINPUTS=$(TEXINPUTS) $(PYTHON) $(PWD)/tools/mkhowto
-#MKHOWTO=   TEXINPUTS=$(TEXINPUTS) mkhowto
+#MKHOWTO=   TEXINPUTS=$(TEXINPUTS) $(PYTHON) $(PWD)/tools/mkhowto
+MKHOWTO=   TEXINPUTS=$(TEXINPUTS) mkhowto
 
 MKDVI=	   $(MKHOWTO) --paper=$(PAPER) --dvi
 MKHTML=	   $(MKHOWTO) --html --about html/stdabout.dat \
@@ -121,7 +116,7 @@ EMACS=     emacs
 
 # The end of this should reflect the major/minor version numbers of
 # the release:
-WHATSNEW=whatsnew24
+WHATSNEW=whatsnew23
 
 # what's what
 MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \

@@ -1,7 +1,7 @@
 dnl Process this file with autoconf 2.0 or later to make a configure script.
 
 # Set VERSION so we only need to edit in one place (i.e., here)
-m4_define(PYTHON_VERSION, 2.4)
+m4_define(PYTHON_VERSION, 2.3)
 
 AC_REVISION($Revision$)
 AC_PREREQ(2.53)
@@ -538,13 +538,6 @@ if test $enable_shared = "yes"; then
         LDLIBRARY='libpython$(VERSION).so'
         BASECFLAGS="$BASECFLAGS -pic"
         ;;
-  esac
-else # shared is disabled
-  case $ac_sys_system in
-    CYGWIN*)
-          BLDLIBRARY='$(LIBRARY)'
-          LDLIBRARY='libpython$(VERSION).dll.a'
-          ;;
   esac
 fi
 
@@ -1376,11 +1369,6 @@ then
 			LINKFORSHARED="-Xlinker --export-dynamic"
 		    fi;;
 		  esac;;
-	CYGWIN*)
-		if test $enable_shared = "no"
-		then
-			LINKFORSHARED='-Wl,--out-implib=$(LDLIBRARY)'
-		fi;;
 	esac
 fi
 AC_MSG_RESULT($LINKFORSHARED)
@@ -2689,25 +2677,6 @@ AC_TRY_COMPILE([
 ])
 AC_MSG_RESULT($have_ucs4_tcl)
 
-# check whether wchar_t is signed or not
-if test "$wchar_h" = yes
-then
-  # check whether wchar_t is signed or not
-  AC_MSG_CHECKING(whether wchar_t is signed)
-  AC_CACHE_VAL(ac_cv_wchar_t_signed, [
-  AC_TRY_RUN([
-  #include <wchar.h>
-  int main()
-  {
-        exit((((wchar_t) -1) < ((wchar_t) 0)) ? 1 : 0);
-  }
-  ],
-  ac_cv_wchar_t_signed=yes,
-  ac_cv_wchar_t_signed=no,
-  ac_cv_wchar_t_signed=yes)])
-  AC_MSG_RESULT($ac_cv_wchar_t_signed)
-fi
-  
 AC_MSG_CHECKING(what type to use for unicode)
 dnl quadrigraphs "@<:@" and "@:>@" produce "[" and "]" in the output
 AC_ARG_ENABLE(unicode, 
@@ -2749,15 +2718,12 @@ else
   UNICODE_OBJS="Objects/unicodeobject.o Objects/unicodectype.o"
   AC_DEFINE(Py_USING_UNICODE, 1,
   [Define if you want to have a Unicode type.])
-
-  # wchar_t is only usable if it maps to an unsigned type
-  if test "$unicode_size" = "$ac_cv_sizeof_wchar_t" \
-          -a "$ac_cv_wchar_t_signed" == "no"
+  if test "$unicode_size" = "$ac_cv_sizeof_wchar_t"
   then
     PY_UNICODE_TYPE="wchar_t"
     AC_DEFINE(HAVE_USABLE_WCHAR_T, 1,
     [Define if you have a useable wchar_t type defined in wchar.h; useable
-     means wchar_t must be an unsigned type with at least 16 bits. (see
+     means wchar_t must be 16-bit unsigned type. (see
      Include/unicodeobject.h).])
     AC_DEFINE(PY_UNICODE_TYPE,wchar_t)
   elif test "$ac_cv_sizeof_short" = "$unicode_size"
@@ -2869,11 +2835,11 @@ int main()
 	   do 'something' with localtime, but it works as documented
 	   in the library reference and as expected by the test suite.
 
-	   Red Hat 6.2 doesn't understand the southern hemisphere 
-	   after New Year's Day; it thinks swaps on that day.
+	   Linux 6.2 doesn't understand the southern hemisphere 
+	   after New Year's Day.
 	*/
 
-	time_t groundhogday = 1044144000; /* GMT-based; well, it's a colony */
+	time_t groundhogday = 1044144000; /* GMT-based, well, it's a colony */
 	time_t midyear = groundhogday + (365 * 24 * 3600 / 2);
 
 	putenv("TZ=UTC+0");

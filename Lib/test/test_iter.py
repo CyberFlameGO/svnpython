@@ -423,10 +423,7 @@ class TestCase(unittest.TestCase):
 
     # Test zip()'s use of iterators.
     def test_builtin_zip(self):
-        self.assertEqual(zip(), [])
-        self.assertEqual(zip(*[]), [])
-        self.assertEqual(zip(*[(1, 2), 'ab']), [(1, 'a'), (2, 'b')])
-
+        self.assertRaises(TypeError, zip)
         self.assertRaises(TypeError, zip, None)
         self.assertRaises(TypeError, zip, range(10), 42)
         self.assertRaises(TypeError, zip, range(10), zip)

@@ -45,8 +45,8 @@ from math import floor as _floor
 
 __all__ = ["Random","seed","random","uniform","randint","choice","sample",
            "randrange","shuffle","normalvariate","lognormvariate",
-           "expovariate","vonmisesvariate","gammavariate",
-           "gauss","betavariate","paretovariate","weibullvariate",
+           "cunifvariate","expovariate","vonmisesvariate","gammavariate",
+           "stdgamma","gauss","betavariate","paretovariate","weibullvariate",
            "getstate","setstate","jumpahead"]
 
 NV_MAGICCONST = 4 * _exp(-0.5)/_sqrt(2.0)
@@ -315,6 +315,29 @@ class Random(_random.Random):
         """
         return _exp(self.normalvariate(mu, sigma))
 
+## -------------------- circular uniform --------------------
+
+    def cunifvariate(self, mean, arc):
+        """Circular uniform distribution.
+
+        mean is the mean angle, and arc is the range of the distribution,
+        centered around the mean angle.  Both values must be expressed in
+        radians.  Returned values range between mean - arc/2 and
+        mean + arc/2 and are normalized to between 0 and pi.
+
+        Deprecated in version 2.3.  Use:
+            (mean + arc * (Random.random() - 0.5)) % Math.pi
+
+        """
+        # mean: mean angle (in radians between 0 and pi)
+        # arc:  range of distribution (in radians between 0 and pi)
+        import warnings
+        warnings.warn("The cunifvariate function is deprecated; Use (mean "
+                      "+ arc * (Random.random() - 0.5)) % Math.pi instead.",
+                      DeprecationWarning, 2)
+
+        return (mean + arc * (self.random() - 0.5)) % _pi
+
 ## -------------------- exponential distribution --------------------
 
     def expovariate(self, lambd):
@@ -448,6 +471,27 @@ class Random(_random.Random):
                           ((p > 1)  and  (u1 > pow(x, alpha - 1.0)))):
                     break
             return x * beta
+
+
+    def stdgamma(self, alpha, ainv, bbb, ccc):
+        # This method was (and shall remain) undocumented.
+        # This method is deprecated
+        # for the following reasons:
+        # 1. Returns same as .gammavariate(alpha, 1.0)
+        # 2. Requires caller to provide 3 extra arguments
+        #    that are functions of alpha anyway
+        # 3. Can't be used for alpha < 0.5
+
+        # ainv = sqrt(2 * alpha - 1)
+        # bbb = alpha - log(4)
+        # ccc = alpha + ainv
+        import warnings
+        warnings.warn("The stdgamma function is deprecated; "
+                      "use gammavariate() instead.",
+                      DeprecationWarning, 2)
+        return self.gammavariate(alpha, 1.0)
+
+
 
 ## -------------------- Gauss (faster alternative) --------------------
 
@@ -691,16 +735,17 @@ class WichmannHill(Random):
 
 ## -------------------- test program --------------------
 
-def _test_generator(n, func, args):
+def _test_generator(n, funccall):
     import time
-    print n, 'times', func.__name__
+    print n, 'times', funccall
+    code = compile(funccall, funccall, 'eval')
     total = 0.0
     sqsum = 0.0
     smallest = 1e10
     largest = -1e10
     t0 = time.time()
     for i in range(n):
-        x = func(*args)
+        x = eval(code)
         total += x
         sqsum = sqsum + x*x
         smallest = min(x, smallest)
@@ -714,21 +759,22 @@ def _test_generator(n, func, args):
 
 
 def _test(N=2000):
-    _test_generator(N, random, ())
-    _test_generator(N, normalvariate, (0.0, 1.0))
-    _test_generator(N, lognormvariate, (0.0, 1.0))
-    _test_generator(N, vonmisesvariate, (0.0, 1.0))
-    _test_generator(N, gammavariate, (0.01, 1.0))
-    _test_generator(N, gammavariate, (0.1, 1.0))
-    _test_generator(N, gammavariate, (0.1, 2.0))
-    _test_generator(N, gammavariate, (0.5, 1.0))
-    _test_generator(N, gammavariate, (0.9, 1.0))
-    _test_generator(N, gammavariate, (1.0, 1.0))
-    _test_generator(N, gammavariate, (2.0, 1.0))
-    _test_generator(N, gammavariate, (20.0, 1.0))
-    _test_generator(N, gammavariate, (200.0, 1.0))
-    _test_generator(N, gauss, (0.0, 1.0))
-    _test_generator(N, betavariate, (3.0, 3.0))
+    _test_generator(N, 'random()')
+    _test_generator(N, 'normalvariate(0.0, 1.0)')
+    _test_generator(N, 'lognormvariate(0.0, 1.0)')
+    _test_generator(N, 'cunifvariate(0.0, 1.0)')
+    _test_generator(N, 'vonmisesvariate(0.0, 1.0)')
+    _test_generator(N, 'gammavariate(0.01, 1.0)')
+    _test_generator(N, 'gammavariate(0.1, 1.0)')
+    _test_generator(N, 'gammavariate(0.1, 2.0)')
+    _test_generator(N, 'gammavariate(0.5, 1.0)')
+    _test_generator(N, 'gammavariate(0.9, 1.0)')
+    _test_generator(N, 'gammavariate(1.0, 1.0)')
+    _test_generator(N, 'gammavariate(2.0, 1.0)')
+    _test_generator(N, 'gammavariate(20.0, 1.0)')
+    _test_generator(N, 'gammavariate(200.0, 1.0)')
+    _test_generator(N, 'gauss(0.0, 1.0)')
+    _test_generator(N, 'betavariate(3.0, 3.0)')
 
 # Create one instance, seeded from current time, and export its methods
 # as module-level functions.  The functions share state across all uses
@@ -747,9 +793,11 @@ sample = _inst.sample
 shuffle = _inst.shuffle
 normalvariate = _inst.normalvariate
 lognormvariate = _inst.lognormvariate
+cunifvariate = _inst.cunifvariate
 expovariate = _inst.expovariate
 vonmisesvariate = _inst.vonmisesvariate
 gammavariate = _inst.gammavariate
+stdgamma = _inst.stdgamma
 gauss = _inst.gauss
 betavariate = _inst.betavariate
 paretovariate = _inst.paretovariate

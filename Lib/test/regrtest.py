@@ -554,7 +554,6 @@ def printlist(x, width=70, indent=4):
 _expectations = {
     'win32':
         """
-        test__locale
         test_al
         test_bsddb185
         test_bsddb3
