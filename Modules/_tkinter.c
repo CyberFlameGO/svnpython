@@ -41,13 +41,6 @@ Copyright (C) 1994 Steen Lumholt.
 #define MAC_TCL
 #endif
 
-/* Starting with Tcl 8.4, many APIs offer const-correctness.  Unfortunately,
-   making _tkinter correct for this API means to break earlier
-   versions. USE_COMPAT_CONST allows to make _tkinter work with both 8.4 and
-   earlier versions. Once Tcl releases before 8.4 don't need to be supported
-   anymore, this should go. */
-#define USE_COMPAT_CONST
-
 #ifdef TK_FRAMEWORK
 #include <Tcl/tcl.h>
 #include <Tk/tk.h>
@@ -58,16 +51,8 @@ Copyright (C) 1994 Steen Lumholt.
 
 #define TKMAJORMINOR (TK_MAJOR_VERSION*1000 + TK_MINOR_VERSION)
 
-#if TKMAJORMINOR < 8002
-#error "Tk older than 8.2 not supported"
-#endif
-
-/* Unicode conversion assumes that Tcl_UniChar is two bytes.
-   We cannot test this directly, so we test UTF-8 size instead,
-   expecting that TCL_UTF_MAX is changed if Tcl ever supports
-   either UTF-16 or UCS-4.  */
-#if TCL_UTF_MAX != 3
-#error "unsupported Tcl configuration"
+#if TKMAJORMINOR < 8000
+#error "Tk older than 8.0 not supported"
 #endif
 
 #if defined(macintosh)
@@ -201,7 +186,7 @@ typedef int (*TclMacConvertEventPtr) (EventRecord *eventPtr);
 void Tcl_MacSetEventProc(TclMacConvertEventPtr procPtr);
 int TkMacConvertEvent(EventRecord *eventPtr);
 
-static int PyMacConvertEvent(EventRecord *eventPtr);
+staticforward int PyMacConvertEvent(EventRecord *eventPtr);
 
 #include <SIOUX.h>
 extern int SIOUXIsAppWindow(WindowPtr);
@@ -214,7 +199,7 @@ extern int SIOUXIsAppWindow(WindowPtr);
 
 /**** Tkapp Object Declaration ****/
 
-static PyTypeObject Tkapp_Type;
+staticforward PyTypeObject Tkapp_Type;
 
 typedef struct {
 	PyObject_HEAD
@@ -513,6 +498,12 @@ Tkapp_New(char *screenName, char *baseName, char *className, int interactive)
 
 /** Tcl Eval **/
 
+#if TKMAJORMINOR >= 8001
+#define USING_OBJECTS
+#endif
+
+#ifdef USING_OBJECTS
+
 static Tcl_Obj*
 AsObj(PyObject *value)
 {
@@ -539,35 +530,26 @@ AsObj(PyObject *value)
 	}
 #ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(value)) {
-		Py_UNICODE *inbuf = PyUnicode_AS_UNICODE(value);
-		int size = PyUnicode_GET_SIZE(value);
-		/* This #ifdef assumes that Tcl uses UCS-2.
-		   See TCL_UTF_MAX test above. */
-#ifdef Py_UNICODE_WIDE
-		Tcl_UniChar *outbuf;
-		int i;
-		outbuf = (Tcl_UniChar*)ckalloc(size * sizeof(Tcl_UniChar));
-		if (!outbuf) {
-			PyErr_NoMemory();
-			return NULL;
-		}
-		for (i = 0; i < size; i++) {
-			if (inbuf[i] >= 0x10000) {
-				/* Tcl doesn't do UTF-16, yet. */
-				PyErr_SetString(PyExc_ValueError,
-						"unsupported character");
-				ckfree(FREECAST outbuf);
-				return NULL;
-			}
-			outbuf[i] = inbuf[i];
-		}
-		result = Tcl_NewUnicodeObj(outbuf, size);
-		ckfree(FREECAST outbuf);
+#if TKMAJORMINOR <= 8001
+		/* In Tcl 8.1 we must use UTF-8 */
+		PyObject* utf8 = PyUnicode_AsUTF8String(value);
+		if (!utf8)
+			return 0;
+		result = Tcl_NewStringObj(PyString_AS_STRING(utf8),
+					  PyString_GET_SIZE(utf8));
+		Py_DECREF(utf8);
 		return result;
-#else
-		return Tcl_NewUnicodeObj(inbuf, size);
-#endif
-
+#else /* TKMAJORMINOR > 8001 */
+		/* In Tcl 8.2 and later, use Tcl_NewUnicodeObj() */
+		if (sizeof(Py_UNICODE) != sizeof(Tcl_UniChar)) {
+			/* XXX Should really test this at compile time */
+			PyErr_SetString(PyExc_SystemError,
+				"Py_UNICODE and Tcl_UniChar differ in size");
+			return 0;
+		}
+		return Tcl_NewUnicodeObj(PyUnicode_AS_UNICODE(value),
+					 PyUnicode_GET_SIZE(value));
+#endif /* TKMAJORMINOR > 8001 */
 	}
 #endif
 	else {
@@ -642,8 +624,8 @@ Tkapp_Call(PyObject *self, PyObject *args)
 	else {
 		/* We could request the object result here, but doing
 		   so would confuse applications that expect a string. */
-		const char *s = Tcl_GetStringResult(interp);
-		const char *p = s;
+		char *s = Tcl_GetStringResult(interp);
+		char *p = s;
 
 		/* If the result contains any bytes with the top bit set,
 		   it's UTF-8 and we should decode it to Unicode */
@@ -681,6 +663,124 @@ Tkapp_Call(PyObject *self, PyObject *args)
 	return res;
 }
 
+#else /* !USING_OBJECTS */
+
+static PyObject *
+Tkapp_Call(PyObject *self, PyObject *args)
+{
+	/* This is copied from Merge() */
+	PyObject *tmp = NULL;
+	char *argvStore[ARGSZ];
+	char **argv = NULL;
+	int fvStore[ARGSZ];
+	int *fv = NULL;
+	int argc = 0, fvc = 0, i;
+	PyObject *res = NULL; /* except this has a different type */
+	Tcl_CmdInfo info; /* and this is added */
+	Tcl_Interp *interp = Tkapp_Interp(self); /* and this too */
+
+	if (!(tmp = PyList_New(0)))
+	    return NULL;
+
+	argv = argvStore;
+	fv = fvStore;
+
+	if (args == NULL)
+		argc = 0;
+
+	else if (!PyTuple_Check(args)) {
+		argc = 1;
+		fv[0] = 0;
+		if (!(argv[0] = AsString(args, tmp)))
+			goto finally;
+	}
+	else {
+		argc = PyTuple_Size(args);
+
+		if (argc > ARGSZ) {
+			argv = (char **)ckalloc(argc * sizeof(char *));
+			fv = (int *)ckalloc(argc * sizeof(int));
+			if (argv == NULL || fv == NULL) {
+				PyErr_NoMemory();
+				goto finally;
+			}
+		}
+
+		for (i = 0; i < argc; i++) {
+			PyObject *v = PyTuple_GetItem(args, i);
+			if (PyTuple_Check(v)) {
+				fv[i] = 1;
+				if (!(argv[i] = Merge(v)))
+					goto finally;
+				fvc++;
+			}
+			else if (v == Py_None) {
+				argc = i;
+				break;
+			}
+			else {
+				fv[i] = 0;
+				if (!(argv[i] = AsString(v, tmp)))
+					goto finally;
+				fvc++;
+			}
+		}
+	}
+	/* End code copied from Merge() */
+
+	/* All this to avoid a call to Tcl_Merge() and the corresponding call
+	   to Tcl_SplitList() inside Tcl_Eval()...  It can save a bundle! */
+	if (Py_VerboseFlag >= 2) {
+		for (i = 0; i < argc; i++)
+			PySys_WriteStderr("%s ", argv[i]);
+	}
+	ENTER_TCL
+	info.proc = NULL;
+	if (argc < 1 ||
+	    !Tcl_GetCommandInfo(interp, argv[0], &info) ||
+	    info.proc == NULL)
+	{
+		char *cmd;
+		cmd = Tcl_Merge(argc, argv);
+		i = Tcl_Eval(interp, cmd);
+		ckfree(cmd);
+	}
+	else {
+		Tcl_ResetResult(interp);
+		i = (*info.proc)(info.clientData, interp, argc, argv);
+	}
+	ENTER_OVERLAP
+	if (info.proc == NULL && Py_VerboseFlag >= 2)
+		PySys_WriteStderr("... use TclEval ");
+	if (i == TCL_ERROR) {
+		if (Py_VerboseFlag >= 2)
+			PySys_WriteStderr("... error: '%s'\n",
+				Tcl_GetStringResult(interp));
+		Tkinter_Error(self);
+	}
+	else {
+		if (Py_VerboseFlag >= 2)
+			PySys_WriteStderr("-> '%s'\n", Tcl_GetStringResult(interp));
+		res = PyString_FromString(Tcl_GetStringResult(interp));
+	}
+	LEAVE_OVERLAP_TCL
+
+	/* Copied from Merge() again */
+  finally:
+	for (i = 0; i < fvc; i++)
+		if (fv[i]) {
+			ckfree(argv[i]);
+		}
+	if (argv != argvStore)
+		ckfree(FREECAST argv);
+	if (fv != fvStore)
+		ckfree(FREECAST fv);
+
+	Py_DECREF(tmp);
+	return res;
+}
+
+#endif /* !USING_OBJECTS */
 
 static PyObject *
 Tkapp_GlobalCall(PyObject *self, PyObject *args)
@@ -818,8 +918,7 @@ Tkapp_AddErrorInfo(PyObject *self, PyObject *args)
 static PyObject *
 SetVar(PyObject *self, PyObject *args, int flags)
 {
-	char *name1, *name2, *s;
-	const char *ok;
+	char *name1, *name2, *ok, *s;
 	PyObject *newValue;
 	PyObject *tmp;
 
@@ -879,8 +978,7 @@ Tkapp_GlobalSetVar(PyObject *self, PyObject *args)
 static PyObject *
 GetVar(PyObject *self, PyObject *args, int flags)
 {
-	char *name1, *name2=NULL;
-	const char *s;
+	char *name1, *name2=NULL, *s;
 	PyObject *res = NULL;
 
 	if (!PyArg_ParseTuple(args, "s|s:getvar", &name1, &name2))
@@ -1417,7 +1515,7 @@ Tkapp_DeleteFileHandler(PyObject *self, PyObject *args)
 
 /**** Tktt Object (timer token) ****/
 
-static PyTypeObject Tktt_Type;
+staticforward PyTypeObject Tktt_Type;
 
 typedef struct {
 	PyObject_HEAD
@@ -1448,7 +1546,7 @@ Tktt_DeleteTimerHandler(PyObject *self, PyObject *args)
 
 static PyMethodDef Tktt_methods[] =
 {
-	{"deletetimerhandler", Tktt_DeleteTimerHandler, METH_VARARGS},
+	{"deletetimerhandler", Tktt_DeleteTimerHandler, 1},
 	{NULL, NULL}
 };
 
@@ -1665,40 +1763,40 @@ Tkapp_InterpAddr(PyObject *self, PyObject *args)
 
 static PyMethodDef Tkapp_methods[] =
 {
-	{"call", 	       Tkapp_Call, METH_OLDARGS},
-	{"globalcall", 	       Tkapp_GlobalCall, METH_OLDARGS},
-	{"eval", 	       Tkapp_Eval, METH_VARARGS},
-	{"globaleval", 	       Tkapp_GlobalEval, METH_VARARGS},
-	{"evalfile", 	       Tkapp_EvalFile, METH_VARARGS},
-	{"record", 	       Tkapp_Record, METH_VARARGS},
-	{"adderrorinfo",       Tkapp_AddErrorInfo, METH_VARARGS},
-	{"setvar", 	       Tkapp_SetVar, METH_VARARGS},
-	{"globalsetvar",       Tkapp_GlobalSetVar, METH_VARARGS},
-	{"getvar", 	       Tkapp_GetVar, METH_VARARGS},
-	{"globalgetvar",       Tkapp_GlobalGetVar, METH_VARARGS},
-	{"unsetvar", 	       Tkapp_UnsetVar, METH_VARARGS},
-	{"globalunsetvar",     Tkapp_GlobalUnsetVar, METH_VARARGS},
-	{"getint", 	       Tkapp_GetInt, METH_VARARGS},
-	{"getdouble", 	       Tkapp_GetDouble, METH_VARARGS},
-	{"getboolean", 	       Tkapp_GetBoolean, METH_VARARGS},
-	{"exprstring", 	       Tkapp_ExprString, METH_VARARGS},
-	{"exprlong", 	       Tkapp_ExprLong, METH_VARARGS},
-	{"exprdouble", 	       Tkapp_ExprDouble, METH_VARARGS},
-	{"exprboolean",        Tkapp_ExprBoolean, METH_VARARGS},
-	{"splitlist", 	       Tkapp_SplitList, METH_VARARGS},
-	{"split", 	       Tkapp_Split, METH_VARARGS},
-	{"merge", 	       Tkapp_Merge, METH_OLDARGS},
-	{"createcommand",      Tkapp_CreateCommand, METH_VARARGS},
-	{"deletecommand",      Tkapp_DeleteCommand, METH_VARARGS},
+	{"call", 	       Tkapp_Call, 0},
+	{"globalcall", 	       Tkapp_GlobalCall, 0},
+	{"eval", 	       Tkapp_Eval, 1},
+	{"globaleval", 	       Tkapp_GlobalEval, 1},
+	{"evalfile", 	       Tkapp_EvalFile, 1},
+	{"record", 	       Tkapp_Record, 1},
+	{"adderrorinfo",       Tkapp_AddErrorInfo, 1},
+	{"setvar", 	       Tkapp_SetVar, 1},
+	{"globalsetvar",       Tkapp_GlobalSetVar, 1},
+	{"getvar", 	       Tkapp_GetVar, 1},
+	{"globalgetvar",       Tkapp_GlobalGetVar, 1},
+	{"unsetvar", 	       Tkapp_UnsetVar, 1},
+	{"globalunsetvar",     Tkapp_GlobalUnsetVar, 1},
+	{"getint", 	       Tkapp_GetInt, 1},
+	{"getdouble", 	       Tkapp_GetDouble, 1},
+	{"getboolean", 	       Tkapp_GetBoolean, 1},
+	{"exprstring", 	       Tkapp_ExprString, 1},
+	{"exprlong", 	       Tkapp_ExprLong, 1},
+	{"exprdouble", 	       Tkapp_ExprDouble, 1},
+	{"exprboolean",        Tkapp_ExprBoolean, 1},
+	{"splitlist", 	       Tkapp_SplitList, 1},
+	{"split", 	       Tkapp_Split, 1},
+	{"merge", 	       Tkapp_Merge, 0},
+	{"createcommand",      Tkapp_CreateCommand, 1},
+	{"deletecommand",      Tkapp_DeleteCommand, 1},
 #ifdef HAVE_CREATEFILEHANDLER
-	{"createfilehandler",  Tkapp_CreateFileHandler, METH_VARARGS},
-	{"deletefilehandler",  Tkapp_DeleteFileHandler, METH_VARARGS},
+	{"createfilehandler",  Tkapp_CreateFileHandler, 1},
+	{"deletefilehandler",  Tkapp_DeleteFileHandler, 1},
 #endif
-	{"createtimerhandler", Tkapp_CreateTimerHandler, METH_VARARGS},
-	{"mainloop", 	       Tkapp_MainLoop, METH_VARARGS},
-	{"dooneevent", 	       Tkapp_DoOneEvent, METH_VARARGS},
-	{"quit", 	       Tkapp_Quit, METH_VARARGS},
-	{"interpaddr",         Tkapp_InterpAddr, METH_VARARGS},
+	{"createtimerhandler", Tkapp_CreateTimerHandler, 1},
+	{"mainloop", 	       Tkapp_MainLoop, 1},
+	{"dooneevent", 	       Tkapp_DoOneEvent, 1},
+	{"quit", 	       Tkapp_Quit, 1},
+	{"interpaddr",         Tkapp_InterpAddr, 1},
 	{NULL, 		       NULL}
 };
 
@@ -1880,16 +1978,16 @@ Tkinter_Create(PyObject *self, PyObject *args)
 
 static PyMethodDef moduleMethods[] =
 {
-	{"_flatten",           Tkinter_Flatten, METH_VARARGS},
-	{"create",             Tkinter_Create, METH_VARARGS},
+	{"_flatten",           Tkinter_Flatten, 1},
+	{"create",             Tkinter_Create, 1},
 #ifdef HAVE_CREATEFILEHANDLER
-	{"createfilehandler",  Tkapp_CreateFileHandler, METH_VARARGS},
-	{"deletefilehandler",  Tkapp_DeleteFileHandler, METH_VARARGS},
+	{"createfilehandler",  Tkapp_CreateFileHandler, 1},
+	{"deletefilehandler",  Tkapp_DeleteFileHandler, 1},
 #endif
-	{"createtimerhandler", Tkapp_CreateTimerHandler, METH_VARARGS},
-	{"mainloop",           Tkapp_MainLoop, METH_VARARGS},
-	{"dooneevent",         Tkapp_DoOneEvent, METH_VARARGS},
-	{"quit",               Tkapp_Quit, METH_VARARGS},
+	{"createtimerhandler", Tkapp_CreateTimerHandler, 1},
+	{"mainloop",           Tkapp_MainLoop, 1},
+	{"dooneevent",         Tkapp_DoOneEvent, 1},
+	{"quit",               Tkapp_Quit, 1},
 	{NULL,                 NULL}
 };
 
@@ -2011,7 +2109,7 @@ ins_string(PyObject *d, char *name, char *val)
 }
 
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 init_tkinter(void)
 {
 	PyObject *m, *d;
@@ -2025,7 +2123,7 @@ init_tkinter(void)
 	m = Py_InitModule("_tkinter", moduleMethods);
 
 	d = PyModule_GetDict(m);
-	Tkinter_TclError = PyErr_NewException("_tkinter.TclError", NULL, NULL);
+	Tkinter_TclError = Py_BuildValue("s", "TclError");
 	PyDict_SetItemString(d, "TclError", Tkinter_TclError);
 
 	ins_long(d, "READABLE", TCL_READABLE);

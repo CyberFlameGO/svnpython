@@ -176,7 +176,7 @@ your local Python guru or system administrator.  (E.g.,
 \file{/usr/local/python} is a popular alternative location.)
 
 Typing an end-of-file character (\kbd{Control-D} on \UNIX,
-\kbd{Control-Z} on Windows) at the primary prompt causes the
+\kbd{Control-Z} on DOS or Windows) at the primary prompt causes the
 interpreter to exit with a zero exit status.  If that doesn't work,
 you can exit the interpreter by typing the following commands:
 \samp{import sys; sys.exit()}.
@@ -1215,7 +1215,7 @@ program requires no action.
 For example:
 
 \begin{verbatim}
->>> while True:
+>>> while 1:
 ...       pass # Busy-wait for keyboard interrupt
 ... 
 \end{verbatim}
@@ -1358,7 +1358,7 @@ arguments than it is defined
 
 \begin{verbatim}
 def ask_ok(prompt, retries=4, complaint='Yes or no, please!'):
-    while True:
+    while 1:
         ok = raw_input(prompt)
         if ok in ('y', 'ye', 'yes'): return 1
         if ok in ('n', 'no', 'nop', 'nope'): return 0
@@ -2060,19 +2060,6 @@ gallahad the pure
 robin the brave
 \end{verbatim}
  
-When looping through a sequence, the position index and corresponding
-value can be retrieved at the same time using the
-\function{enumerate()} function.
-
-\begin{verbatim} 
->>> for i, v in enumerate(['tic', 'tac', 'toe']):
-...     print i, v
-...
-0 tic
-1 tac
-2 toe
-\end{verbatim}
-
 To loop over two or more sequences at the same time, the entries
 can be paired with the \function{zip()} function.
 
@@ -2353,11 +2340,12 @@ Some tips for experts:
 
 \item
 When the Python interpreter is invoked with the \programopt{-O} flag,
-optimized code is generated and stored in \file{.pyo} files.  The
-optimizer currently doesn't help much; it only removes
-\keyword{assert} statements.  When \programopt{-O} is used, \emph{all}
-bytecode is optimized; \code{.pyc} files are ignored and \code{.py}
-files are compiled to optimized bytecode.
+optimized code is generated and stored in \file{.pyo} files.
+The optimizer currently doesn't help much; it only removes
+\keyword{assert} statements and \code{SET_LINENO} instructions.
+When \programopt{-O} is used, \emph{all} bytecode is optimized;
+\code{.pyc} files are ignored and \code{.py} files are compiled to
+optimized bytecode.
 
 \item
 Passing two \programopt{-O} flags to the Python interpreter
@@ -2483,26 +2471,25 @@ standard module \module{__builtin__}\refbimodindex{__builtin__}:
 >>> dir(__builtin__)
 ['ArithmeticError', 'AssertionError', 'AttributeError',
  'DeprecationWarning', 'EOFError', 'Ellipsis', 'EnvironmentError',
- 'Exception', 'False', 'FloatingPointError', 'IOError', 'ImportError',
+ 'Exception', 'FloatingPointError', 'IOError', 'ImportError',
  'IndentationError', 'IndexError', 'KeyError', 'KeyboardInterrupt',
  'LookupError', 'MemoryError', 'NameError', 'None', 'NotImplemented',
  'NotImplementedError', 'OSError', 'OverflowError', 'OverflowWarning',
- 'PendingDeprecationWarning', 'ReferenceError',
- 'RuntimeError', 'RuntimeWarning', 'StandardError', 'StopIteration',
- 'SyntaxError', 'SyntaxWarning', 'SystemError', 'SystemExit', 'TabError',
- 'True', 'TypeError', 'UnboundLocalError', 'UnicodeError', 'UserWarning',
- 'ValueError', 'Warning', 'ZeroDivisionError', '__debug__', '__doc__',
- '__import__', '__name__', 'abs', 'apply', 'bool', 'buffer',
- 'callable', 'chr', 'classmethod', 'cmp', 'coerce', 'compile', 'complex',
- 'copyright', 'credits', 'delattr', 'dict', 'dir', 'divmod',
- 'enumerate', 'eval', 'execfile', 'exit', 'file', 'filter', 'float',
- 'getattr', 'globals', 'hasattr', 'hash', 'help', 'hex', 'id',
- 'input', 'int', 'intern', 'isinstance', 'issubclass', 'iter',
- 'len', 'license', 'list', 'locals', 'long', 'map', 'max', 'min',
- 'object', 'oct', 'open', 'ord', 'pow', 'property', 'quit',
- 'range', 'raw_input', 'reduce', 'reload', 'repr', 'round',
- 'setattr', 'slice', 'staticmethod', 'str', 'string', 'super',
- 'tuple', 'type', 'unichr', 'unicode', 'vars', 'xrange', 'zip']
+ 'ReferenceError', 'RuntimeError', 'RuntimeWarning', 'StandardError',
+ 'StopIteration', 'SyntaxError', 'SyntaxWarning', 'SystemError',
+ 'SystemExit', 'TabError', 'TypeError', 'UnboundLocalError',
+ 'UnicodeError', 'UserWarning', 'ValueError', 'Warning',
+ 'ZeroDivisionError', '_', '__debug__', '__doc__', '__import__',
+ '__name__', 'abs', 'apply', 'buffer', 'callable', 'chr', 'classmethod',
+ 'cmp', 'coerce', 'compile', 'complex', 'copyright', 'credits', 'delattr',
+ 'dict', 'dir', 'divmod', 'eval', 'execfile', 'exit', 'file', 'filter',
+ 'float', 'getattr', 'globals', 'hasattr', 'hash', 'help', 'hex', 'id',
+ 'input', 'int', 'intern', 'isinstance', 'issubclass', 'iter', 'len',
+ 'license', 'list', 'locals', 'long', 'map', 'max', 'min', 'object',
+ 'oct', 'open', 'ord', 'pow', 'property', 'quit', 'range', 'raw_input',
+ 'reduce', 'reload', 'repr', 'round', 'setattr', 'slice', 'staticmethod',
+ 'str', 'super', 'tuple', 'type', 'unichr', 'unicode', 'vars', 'xrange',
+ 'zip']
 \end{verbatim}
 
 
@@ -3089,10 +3076,10 @@ Syntax errors, also known as parsing errors, are perhaps the most common
 kind of complaint you get while you are still learning Python:
 
 \begin{verbatim}
->>> while True print 'Hello world'
+>>> while 1 print 'Hello world'
   File "<stdin>", line 1, in ?
-    while True print 'Hello world'
-                   ^
+    while 1 print 'Hello world'
+                ^
 SyntaxError: invalid syntax
 \end{verbatim}
 
@@ -3162,7 +3149,7 @@ supports); note that a user-generated interruption is signalled by
 raising the \exception{KeyboardInterrupt} exception.
 
 \begin{verbatim}
->>> while True:
+>>> while 1:
 ...     try:
 ...         x = int(raw_input("Please enter a number: "))
 ...         break
@@ -3773,7 +3760,7 @@ later time.  For example:
 
 \begin{verbatim}
 xf = x.f
-while True:
+while 1:
     print xf()
 \end{verbatim}
 

@@ -17,25 +17,19 @@ typedef struct {
     int expected;
 } perrdetail;
 
-#if 0
 #define PyPARSE_YIELD_IS_KEYWORD	0x0001
-#endif
 
-PyAPI_FUNC(node *) PyParser_ParseString(char *, grammar *, int,
+extern DL_IMPORT(node *) PyParser_ParseString(char *, grammar *, int,
                                               perrdetail *);
-PyAPI_FUNC(node *) PyParser_ParseFile (FILE *, char *, grammar *, int,
+extern DL_IMPORT(node *) PyParser_ParseFile (FILE *, char *, grammar *, int,
                                              char *, char *, perrdetail *);
 
-PyAPI_FUNC(node *) PyParser_ParseStringFlags(char *, grammar *, int,
+extern DL_IMPORT(node *) PyParser_ParseStringFlags(char *, grammar *, int,
                                               perrdetail *, int);
-PyAPI_FUNC(node *) PyParser_ParseFileFlags(FILE *, char *, grammar *,
+extern DL_IMPORT(node *) PyParser_ParseFileFlags(FILE *, char *, grammar *,
 						 int, char *, char *,
 						 perrdetail *, int);
 
-PyAPI_FUNC(node *) PyParser_ParseStringFlagsFilename(char *,
-					      char *,
-					      grammar *, int,
-                                              perrdetail *, int);
 #ifdef __cplusplus
 }
 #endif

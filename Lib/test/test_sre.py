@@ -6,7 +6,7 @@
 import sys
 sys.path=['.']+sys.path
 
-from test.test_support import verbose, TestFailed, have_unicode
+from test_support import verbose, TestFailed, have_unicode
 import sre
 import sys, os, string, traceback
 
@@ -298,7 +298,7 @@ test("sre.match('(x)*', 50000*'x').span()", (0, 50000), RuntimeError)
 test("sre.match(r'(x)*y', 50000*'x'+'y').span()", (0, 50001), RuntimeError)
 test("sre.match(r'(x)*?y', 50000*'x'+'y').span()", (0, 50001), RuntimeError)
 
-from test.re_tests import *
+from re_tests import *
 
 if verbose:
     print 'Running re_tests test suite'

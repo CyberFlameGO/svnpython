@@ -31,6 +31,7 @@ are strings, not numbers, since they are rarely used for calculations.
 # Imports
 import re
 import socket
+import types
 
 __all__ = ["NNTP","NNTPReplyError","NNTPTemporaryError",
            "NNTPPermanentError","NNTPProtocolError","NNTPDataError",
@@ -217,7 +218,7 @@ class NNTP:
         openedFile = None
         try:
             # If a string was passed then open a file with that name
-            if isinstance(file, str):
+            if isinstance(file, types.StringType):
                 openedFile = file = open(file, "w")
 
             resp = self.getresp()

@@ -1,15 +1,13 @@
 # test for xml.dom.minidom
 
+from xml.dom.minidom import parse, Node, Document, parseString
+from xml.dom import HierarchyRequestErr
+import xml.parsers.expat
+
 import os
 import sys
 import traceback
-
-from test.test_support import verbose
-
-import xml.dom
-import xml.parsers.expat
-
-from xml.dom.minidom import parse, Node, Document, parseString
+from test_support import verbose
 
 if __name__ == "__main__":
     base = sys.argv[0]
@@ -137,29 +135,29 @@ def testLegalChildren():
     text = dom.createTextNode('text')
 
     try: dom.appendChild(text)
-    except xml.dom.HierarchyRequestErr: pass
+    except HierarchyRequestErr: pass
     else:
         print "dom.appendChild didn't raise HierarchyRequestErr"
 
     dom.appendChild(elem)
     try: dom.insertBefore(text, elem)
-    except xml.dom.HierarchyRequestErr: pass
+    except HierarchyRequestErr: pass
     else:
         print "dom.appendChild didn't raise HierarchyRequestErr"
 
     try: dom.replaceChild(text, elem)
-    except xml.dom.HierarchyRequestErr: pass
+    except HierarchyRequestErr: pass
     else:
         print "dom.appendChild didn't raise HierarchyRequestErr"
 
     nodemap = elem.attributes
     try: nodemap.setNamedItem(text)
-    except xml.dom.HierarchyRequestErr: pass
+    except HierarchyRequestErr: pass
     else:
         print "NamedNodeMap.setNamedItem didn't raise HierarchyRequestErr"
 
     try: nodemap.setNamedItemNS(text)
-    except xml.dom.HierarchyRequestErr: pass
+    except HierarchyRequestErr: pass
     else:
         print "NamedNodeMap.setNamedItemNS didn't raise HierarchyRequestErr"
 
@@ -385,7 +383,7 @@ def testTooManyDocumentElements():
     elem = doc.createElement("extra")
     try:
         doc.appendChild(elem)
-    except xml.dom.HierarchyRequestErr:
+    except HierarchyRequestErr:
         pass
     else:
         print "Failed to catch expected exception when" \
@@ -603,14 +601,6 @@ def testSAX2DOM():
 
     doc.unlink()
 
-def testEncodings():
-    doc = parseString('<foo>&#x20ac;</foo>')
-    confirm(doc.toxml() == u'<?xml version="1.0" ?>\n<foo>\u20ac</foo>'
-            and doc.toxml('utf-8') == '<?xml version="1.0" encoding="utf-8"?>\n<foo>\xe2\x82\xac</foo>'
-            and doc.toxml('iso-8859-15') == '<?xml version="1.0" encoding="iso-8859-15"?>\n<foo>\xa4</foo>',
-            "testEncodings - encoding EURO SIGN")
-    doc.unlink()
-
 # --- MAIN PROGRAM
 
 names = globals().keys()
@@ -621,7 +611,7 @@ failed = []
 try:
     Node.allnodes
 except AttributeError:
-    # We don't actually have the minidom from teh standard library,
+    # We don't actually have the minidom from the standard library,
     # but are picking up the PyXML version from site-packages.
     def check_allnodes():
         pass

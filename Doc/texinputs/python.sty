@@ -181,27 +181,19 @@
 \newlength{\py@codewidth}
 
 \renewcommand{\verbatim}{%
-  \setlength{\parindent}{1cm}%
-  % Calculate the text width for the minipage:
-  \setlength{\py@codewidth}{\linewidth}%
-  \addtolength{\py@codewidth}{-\parindent}%
-  %
-  \par\indent%
-  \begin{minipage}[t]{\py@codewidth}%
-    \small%
+  \begingroup%
+  \small%
+  \begin{list}{}{\setlength{\leftmargin}{1cm}}
+    \item%
     \py@OldVerbatim%
 }
 \renewcommand{\endverbatim}{%
     \py@OldEndVerbatim%
-  \end{minipage}%
+  \end{list}%
+  \endgroup
 }
 \renewcommand{\verbatiminput}[1]{%
-  {\setlength{\parindent}{1cm}%
-   % Calculate the text width for the minipage:
-   \setlength{\py@codewidth}{\linewidth}%
-   \addtolength{\py@codewidth}{-\parindent}%
-   %
-   \small%
+  {\small%
    \begin{list}{}{\setlength{\leftmargin}{1cm}}
      \item%
      \py@OldVerbatimInput{#1}%
@@ -581,27 +573,13 @@
 % something else.
 \newcommand{\py@unspecified}{...}
 
-
-\newlength{\py@argswidth}
-\newcommand{\py@sigparams}[1]{%
-  \parbox[t]{\py@argswidth}{\py@varvars{#1}\code{)}}}
-\newcommand{\py@sigline}[2]{%
-  \settowidth{\py@argswidth}{#1\code{(}}%
-  \addtolength{\py@argswidth}{-2\py@argswidth}%
-  \addtolength{\py@argswidth}{\textwidth}%
-  \item[#1\code{(}\py@sigparams{#2}]}
-
 % C functions ------------------------------------------------------------
 % \begin{cfuncdesc}[refcount]{type}{name}{arglist}
 % Note that the [refcount] slot should only be filled in by
 % tools/anno-api.py; it pulls the value from the refcounts database.
-\newcommand{\cfuncline}[3]{
-  \py@sigline{\code{#1 \bfcode{#2}}}{#3}%
-  \index{#2@{\py@idxcode{#2()}}}
-}
 \newenvironment{cfuncdesc}[4][\py@badkey]{
   \begin{fulllineitems}
-    \cfuncline{#2}{#3}{#4}
+    \item[\code{#2 \bfcode{#3}(\py@varvars{#4})}\index{#3@{\py@idxcode{#3()}}}]
     \ifx#1\@undefined\else%
       \emph{Return value: \textbf{#1}.}\\
     \fi
@@ -626,19 +604,8 @@
     \fi]
 }{\end{fulllineitems}}
 
-% C type fields ----------------------------------------------------------
-% \begin{cmemberdesc}{container type}{ctype}{membername}
-\newcommand{\cmemberline}[3]{
-  \item[\code{#2 \bfcode{#3}}]
-  \index{#3@{\py@idxcode{#3}} (#1 member)}
-}
-\newenvironment{cmemberdesc}[3]{
-  \begin{fulllineitems}
-    \cmemberline{#1}{#2}{#3}
-}{\end{fulllineitems}}
-
 % Funky macros -----------------------------------------------------------
-% \begin{csimplemacrodesc}{name}
+% \begin{csimplemacro}{name}
 % -- "simple" because it has no args; NOT for constant definitions!
 \newenvironment{csimplemacrodesc}[1]{
   \begin{fulllineitems}
@@ -656,8 +623,7 @@
 }{\end{fulllineitems}}
 
 % similar to {funcdesc}, but doesn't add to the index
-\newcommand{\funclineni}[2]{%
-  \py@sigline{\bfcode{#1}}{#2}}
+\newcommand{\funclineni}[2]{\item[\code{\bfcode{#1}(\py@varvars{#2})}]}
 \newenvironment{funcdescni}[2]{
   \begin{fulllineitems}
     \funclineni{#1}{#2}
@@ -669,8 +635,8 @@
   % Using \renewcommand doesn't work for this, for unknown reasons:
   \global\def\py@thisclass{#1}
   \begin{fulllineitems}
-    \py@sigline{\strong{class }\bfcode{#1}}{#2}%
-    \index{#1@{\py@idxcode{#1}} (class in \py@thismodule)}
+    \item[\strong{class }\code{\bfcode{#1}(\py@varvars{#2})}%
+      \index{#1@{\py@idxcode{#1}} (class in \py@thismodule)}]
 }{\end{fulllineitems}}
 
 % \begin{classdesc*}{name}
@@ -688,8 +654,8 @@
   % Using \renewcommand doesn't work for this, for unknown reasons:
   \global\def\py@thisclass{#1}
   \begin{fulllineitems}
-    \py@sigline{\strong{exception }\bfcode{#1}}{#2}%
-    \index{#1@{\py@idxcode{#1}} (exception in \py@thismodule)}
+    \item[\strong{exception }\code{\bfcode{#1}(\py@varvars{#2})}%
+      \index{#1@{\py@idxcode{#1}} (exception in \py@thismodule)}]
 }{\end{fulllineitems}}
 
 % There is no corresponding {excclassdesc*} environment.  To describe
@@ -721,7 +687,7 @@
 % similar to {methoddesc}, but doesn't add to the index
 % (never actually uses the optional argument)
 \newcommand{\methodlineni}[3][\py@classbadkey]{%
-  \py@sigline{\bfcode{#2}}{#3}}
+  \item[\code{\bfcode{#2}(\py@varvars{#3})}]}
 \newenvironment{methoddescni}[3][\py@classbadkey]{
   \begin{fulllineitems}
     \methodlineni{#2}{#3}
@@ -804,7 +770,6 @@
 \newcommand{\NULL}{\constant{NULL}}
 \newcommand{\infinity}{\ensuremath{\infty}}
 \newcommand{\plusminus}{\ensuremath{\pm}}
-% \menuselection{Start \sub Programs \sub Python}
 \newcommand{\menuselection}[1]{{\def\sub{ \ensuremath{>} }#1}}
 
 % Also for consistency: spell Python "Python", not "python"!
@@ -814,7 +779,6 @@
 \texttt{#1}}}
 
 \newcommand{\bfcode}[1]{\code{\bfseries#1}} % bold-faced code font
-\newcommand{\csimplemacro}[1]{\code{#1}}
 \newcommand{\kbd}[1]{\code{#1}}
 \newcommand{\samp}[1]{`\code{#1}'}
 % This weird definition of \var{} allows it to always appear in roman

@@ -2,7 +2,7 @@
 # these are all functions _testcapi exports whose name begins with 'test_'.
 
 import sys
-from test import test_support
+import test_support
 import _testcapi
 
 for name in dir(_testcapi):

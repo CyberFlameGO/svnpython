@@ -2,7 +2,7 @@
    Test cases for pyclbr.py
    Nick Mathewson
 '''
-from test.test_support import run_unittest
+from test_support import run_unittest
 import unittest, sys
 from types import ClassType, FunctionType, MethodType
 import pyclbr
@@ -33,8 +33,7 @@ class PyclbrTest(unittest.TestCase):
         ''' succeed iff hasattr(obj,attr) or attr in ignore. '''
         if attr in ignore: return
         if not hasattr(obj, attr): print "???", attr
-        self.failUnless(hasattr(obj, attr),
-                        'expected hasattr(%r, %r)' % (obj, attr))
+        self.failUnless(hasattr(obj, attr))
 
 
     def assertHaskey(self, obj, key, ignore):
@@ -107,6 +106,7 @@ class PyclbrTest(unittest.TestCase):
                                  '_ismodule',
                                  '_classify_class_attrs'])
         self.checkModule('rfc822', ignore=["get"])
+        self.checkModule('xmllib')
         self.checkModule('difflib')
 
     def test_others(self):

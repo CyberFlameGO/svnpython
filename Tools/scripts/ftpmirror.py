@@ -22,6 +22,7 @@ import os
 import sys
 import time
 import getopt
+import string
 import ftplib
 import netrc
 from fnmatch import fnmatch
@@ -126,7 +127,7 @@ def mirrorsubdir(f, localdir):
         if mac:
             # Mac listing has just filenames;
             # trailing / means subdirectory
-            filename = line.strip()
+            filename = string.strip(line)
             mode = '-'
             if filename[-1:] == '/':
                 filename = filename[:-1]
@@ -134,12 +135,12 @@ def mirrorsubdir(f, localdir):
             infostuff = ''
         else:
             # Parse, assuming a UNIX listing
-            words = line.split(None, 8)
+            words = string.split(line, None, 8)
             if len(words) < 6:
                 if verbose > 1: print 'Skipping short line'
                 continue
-            filename = words[-1].lstrip()
-            i = filename.find(" -> ")
+            filename = string.lstrip(words[-1])
+            i = string.find(filename, " -> ")
             if i >= 0:
                 # words[0] had better start with 'l'...
                 if verbose > 1:
@@ -359,7 +360,7 @@ class LoggingFile:
 def askabout(filetype, filename, pwd):
     prompt = 'Retrieve %s %s from %s ? [ny] ' % (filetype, filename, pwd)
     while 1:
-        reply = raw_input(prompt).strip().lower()
+        reply = string.lower(string.strip(raw_input(prompt)))
         if reply in ['y', 'ye', 'yes']:
             return 1
         if reply in ['', 'n', 'no', 'nop', 'nope']:

@@ -5,11 +5,11 @@
 extern "C" {
 #endif
 
-PyAPI_DATA(int) _PyOS_opterr;
-PyAPI_DATA(int) _PyOS_optind;
-PyAPI_DATA(char *) _PyOS_optarg;
+extern DL_IMPORT(int) _PyOS_opterr;
+extern DL_IMPORT(int) _PyOS_optind;
+extern DL_IMPORT(char *) _PyOS_optarg;
 
-PyAPI_FUNC(int) _PyOS_GetOpt(int argc, char **argv, char *optstring);
+DL_IMPORT(int) _PyOS_GetOpt(int argc, char **argv, char *optstring);
 
 #ifdef __cplusplus
 }

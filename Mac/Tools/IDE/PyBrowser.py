@@ -387,26 +387,14 @@ class BrowserWidget(W.CustomList):
 			if dataLen >= 6:
 				data = theList.LGetCell(dataLen, theCell)
 				iconId, indent, tab = struct.unpack("hhh", data[:6])
-				try:
-					key, value = data[6:].split("\t", 1)
-				except ValueError:
-					# bogus data, at least don't crash.
-					indent = 0
-					tab = 0
-					iconId = 0
-					key = ""
-					value = data[6:]
+				key, value = data[6:].split("\t", 1)
 				
 				if iconId:
-					try:
-						theIcon = Icn.GetCIcon(iconId)
-					except Icn.Error:
-						pass
-					else:
-						rect = (0, 0, 16, 16)
-						rect = Qd.OffsetRect(rect, l, t)
-						rect = Qd.OffsetRect(rect, 0, (theList.cellSize[1] - (rect[3] - rect[1])) / 2)
-						Icn.PlotCIcon(rect, theIcon)
+					theIcon = Icn.GetCIcon(iconId)
+					rect = (0, 0, 16, 16)
+					rect = Qd.OffsetRect(rect, l, t)
+					rect = Qd.OffsetRect(rect, 0, (theList.cellSize[1] - (rect[3] - rect[1])) / 2)
+					Icn.PlotCIcon(rect, theIcon)
 				
 				if len(key) >= 0:
 					cl, ct, cr, cb = cellRect
@@ -423,8 +411,6 @@ class BrowserWidget(W.CustomList):
 						drawTextCell(value, (cl, ct, cr, cb), ascent, theList)
 			#elif dataLen != 0:
 			#	drawTextCell("???", 3, cellRect, ascent, theList)
-			else:
-				return  # we have bogus data
 			
 			# draw nice dotted line
 			l, t, r, b = cellRect

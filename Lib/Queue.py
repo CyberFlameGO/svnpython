@@ -146,4 +146,6 @@ class Queue:
 
     # Get an item from the queue
     def _get(self):
-        return self.queue.pop(0)
+        item = self.queue[0]
+        del self.queue[0]
+        return item

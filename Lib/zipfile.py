@@ -25,7 +25,7 @@ ZIP_DEFLATED = 8
 # Here are some struct module formats for reading headers
 structEndArchive = "<4s4H2lH"     # 9 items, end of archive, 22 bytes
 stringEndArchive = "PK\005\006"   # magic number for end of archive record
-structCentralDir = "<4s4B4H3l5HLl"# 19 items, central directory, 46 bytes
+structCentralDir = "<4s4B4H3l5H2l"# 19 items, central directory, 46 bytes
 stringCentralDir = "PK\001\002"   # magic number for central directory
 structFileHeader = "<4s2B4H3l2H"  # 12 items, file header record, 30 bytes
 stringFileHeader = "PK\003\004"   # magic number for file header
@@ -65,51 +65,27 @@ _FH_UNCOMPRESSED_SIZE = 9
 _FH_FILENAME_LENGTH = 10
 _FH_EXTRA_FIELD_LENGTH = 11
 
+# Used to compare file passed to ZipFile
+import types
+_STRING_TYPES = (types.StringType,)
+if hasattr(types, "UnicodeType"):
+    _STRING_TYPES = _STRING_TYPES + (types.UnicodeType,)
+
+
 def is_zipfile(filename):
-    """Quickly see if file is a ZIP file by checking the magic number."""
+    """Quickly see if file is a ZIP file by checking the magic number.
+
+    Will not accept a ZIP archive with an ending comment.
+    """
     try:
         fpin = open(filename, "rb")
-        endrec = _EndRecData(fpin)
+        fpin.seek(-22, 2)               # Seek to end-of-file record
+        endrec = fpin.read()
         fpin.close()
-        if endrec:
-            return True                 # file has correct magic number
+        if endrec[0:4] == "PK\005\006" and endrec[-2:] == "\000\000":
+            return 1    # file has correct magic number
     except IOError:
         pass
-    return False
-
-def _EndRecData(fpin):
-    """Return data from the "End of Central Directory" record, or None.
-
-    The data is a list of the nine items in the ZIP "End of central dir"
-    record followed by a tenth item, the file seek offset of this record."""
-    fpin.seek(-22, 2)               # Assume no archive comment.
-    filesize = fpin.tell() + 22     # Get file size
-    data = fpin.read()
-    if data[0:4] == stringEndArchive and data[-2:] == "\000\000":
-        endrec = struct.unpack(structEndArchive, data)
-        endrec = list(endrec)
-        endrec.append("")               # Append the archive comment
-        endrec.append(filesize - 22)    # Append the record start offset
-        return endrec
-    # Search the last END_BLOCK bytes of the file for the record signature.
-    # The comment is appended to the ZIP file and has a 16 bit length.
-    # So the comment may be up to 64K long.  We limit the search for the
-    # signature to a few Kbytes at the end of the file for efficiency.
-    # also, the signature must not appear in the comment.
-    END_BLOCK = min(filesize, 1024 * 4)
-    fpin.seek(filesize - END_BLOCK, 0)
-    data = fpin.read()
-    start = data.rfind(stringEndArchive)
-    if start >= 0:     # Correct signature string was found
-        endrec = struct.unpack(structEndArchive, data[start:start+22])
-        endrec = list(endrec)
-        comment = data[start+22:]
-        if endrec[7] == len(comment):     # Comment length checks out
-            # Append the archive comment and start offset
-            endrec.append(comment)
-            endrec.append(filesize - END_BLOCK + start)
-            return endrec
-    return      # Error, return None
 
 
 class ZipInfo:
@@ -198,7 +174,7 @@ class ZipFile:
         self.mode = key = mode[0]
 
         # Check if we were passed a file-like object
-        if isinstance(file, basestring):
+        if type(file) in _STRING_TYPES:
             self._filePassed = 0
             self.filename = file
             modeDict = {'r' : 'rb', 'w': 'wb', 'a' : 'r+b'}
@@ -213,12 +189,16 @@ class ZipFile:
         elif key == 'w':
             pass
         elif key == 'a':
-            try:                        # See if file is a zip file
-                self._RealGetContents()
+            fp = self.fp
+            fp.seek(-22, 2)             # Seek to end-of-file record
+            endrec = fp.read()
+            if endrec[0:4] == stringEndArchive and \
+                       endrec[-2:] == "\000\000":
+                self._GetContents()     # file is a zip file
                 # seek to start of directory and overwrite
-                self.fp.seek(self.start_dir, 0)
-            except BadZipfile:          # file is not a zip file, just append
-                self.fp.seek(0, 2)
+                fp.seek(self.start_dir, 0)
+            else:               # file is not a zip file, just append
+                fp.seek(0, 2)
         else:
             if not self._filePassed:
                 self.fp.close()
@@ -239,16 +219,17 @@ class ZipFile:
     def _RealGetContents(self):
         """Read in the table of contents for the ZIP file."""
         fp = self.fp
-        endrec = _EndRecData(fp)
-        if not endrec:
-            raise BadZipfile, "File is not a zip file"
+        fp.seek(-22, 2)         # Start of end-of-archive record
+        filesize = fp.tell() + 22       # Get file size
+        endrec = fp.read(22)    # Archive must not end with a comment!
+        if endrec[0:4] != stringEndArchive or endrec[-2:] != "\000\000":
+            raise BadZipfile, "File is not a zip file, or ends with a comment"
+        endrec = struct.unpack(structEndArchive, endrec)
         if self.debug > 1:
             print endrec
         size_cd = endrec[5]             # bytes in central directory
         offset_cd = endrec[6]   # offset of central directory
-        self.comment = endrec[8]        # archive comment
-        # endrec[9] is the offset of the "End of Central Dir" record
-        x = endrec[9] - size_cd
+        x = filesize - 22 - size_cd
         # "concat" is zero, unless zip was concatenated to another file
         concat = x - offset_cd
         if self.debug > 2:
@@ -372,7 +353,7 @@ class ZipFile:
 
     def _writecheck(self, zinfo):
         """Check for errors before writing a file to the archive."""
-        if zinfo.filename in self.NameToInfo:
+        if self.NameToInfo.has_key(zinfo.filename):
             if self.debug:      # Warning for duplicate names
                 print "Duplicate name:", zinfo.filename
         if self.mode not in ("w", "a"):
@@ -391,14 +372,14 @@ class ZipFile:
         """Put the bytes from filename into the archive under the name
         arcname."""
         st = os.stat(filename)
-        mtime = time.localtime(st.st_mtime)
+        mtime = time.localtime(st[8])
         date_time = mtime[0:6]
         # Create ZipInfo instance to store file information
         if arcname is None:
             zinfo = ZipInfo(filename, date_time)
         else:
             zinfo = ZipInfo(arcname, date_time)
-        zinfo.external_attr = st[0] << 16L      # Unix attributes
+        zinfo.external_attr = st[0] << 16       # Unix attributes
         if compress_type is None:
             zinfo.compress_type = self.compression
         else:
@@ -590,10 +571,10 @@ class PyZipFile(ZipFile):
         file_pyc = pathname + ".pyc"
         file_pyo = pathname + ".pyo"
         if os.path.isfile(file_pyo) and \
-                            os.stat(file_pyo).st_mtime >= os.stat(file_py).st_mtime:
+                            os.stat(file_pyo)[8] >= os.stat(file_py)[8]:
             fname = file_pyo    # Use .pyo file
         elif not os.path.isfile(file_pyc) or \
-             os.stat(file_pyc).st_mtime < os.stat(file_py).st_mtime:
+             os.stat(file_pyc)[8] < os.stat(file_py)[8]:
             import py_compile
             if self.debug:
                 print "Compiling", file_py

@@ -21,12 +21,8 @@ This software comes with no warranty. Use at your own risk.
 #include <langinfo.h>
 #endif
 
-#ifdef HAVE_LIBINTL_H
-#include <libintl.h>
-#endif
-
-#if defined(MS_WINDOWS)
-#define WIN32_LEAN_AND_MEAN
+#if defined(MS_WIN32)
+#define WINDOWS_LEAN_AND_MEAN
 #include <windows.h>
 #endif
 
@@ -38,14 +34,15 @@ This software comes with no warranty. Use at your own risk.
 char *strdup(const char *);
 #endif
 
-PyDoc_STRVAR(locale__doc__, "Support for POSIX locales.");
+static char locale__doc__[] = "Support for POSIX locales.";
 
 static PyObject *Error;
 
 /* support functions for formatting floating point numbers */
 
-PyDoc_STRVAR(setlocale__doc__,
-"(integer,string=None) -> string. Activates/queries locale processing.");
+static char setlocale__doc__[] =
+"(integer,string=None) -> string. Activates/queries locale processing."
+;
 
 /* to record the LC_NUMERIC settings */
 static PyObject* grouping = NULL;
@@ -243,15 +240,19 @@ PyLocale_setlocale(PyObject* self, PyObject* args)
     return result_object;
 }
 
-PyDoc_STRVAR(localeconv__doc__,
-"() -> dict. Returns numeric and monetary locale-specific parameters.");
+static char localeconv__doc__[] =
+"() -> dict. Returns numeric and monetary locale-specific parameters."
+;
 
 static PyObject*
-PyLocale_localeconv(PyObject* self)
+PyLocale_localeconv(PyObject* self, PyObject* args)
 {
     PyObject* result;
     struct lconv *l;
     PyObject *x;
+
+    if (!PyArg_NoArgs(args))
+        return NULL;
 
     result = PyDict_New();
     if (!result)
@@ -319,8 +320,9 @@ PyLocale_localeconv(PyObject* self)
     return NULL;
 }
 
-PyDoc_STRVAR(strcoll__doc__,
-"string,string -> int. Compares two strings according to the locale.");
+static char strcoll__doc__[] =
+"string,string -> int. Compares two strings according to the locale."
+;
 
 static PyObject*
 PyLocale_strcoll(PyObject* self, PyObject* args)
@@ -332,8 +334,9 @@ PyLocale_strcoll(PyObject* self, PyObject* args)
   return PyInt_FromLong(strcoll(s1, s2));
 }
 
-PyDoc_STRVAR(strxfrm__doc__,
-"string -> string. Returns a string that behaves for cmp locale-aware.");
+static char strxfrm__doc__[] =
+"string -> string. Returns a string that behaves for cmp locale-aware."
+;
 
 static PyObject*
 PyLocale_strxfrm(PyObject* self, PyObject* args)
@@ -363,12 +366,15 @@ PyLocale_strxfrm(PyObject* self, PyObject* args)
     return result;
 }
 
-#if defined(MS_WINDOWS)
+#if defined(MS_WIN32)
 static PyObject*
-PyLocale_getdefaultlocale(PyObject* self)
+PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
 {
     char encoding[100];
     char locale[100];
+
+    if (!PyArg_NoArgs(args))
+        return NULL;
 
     PyOS_snprintf(encoding, sizeof(encoding), "cp%d", GetACP());
 
@@ -402,7 +408,7 @@ PyLocale_getdefaultlocale(PyObject* self)
 
 #if defined(macintosh)
 static PyObject*
-PyLocale_getdefaultlocale(PyObject* self)
+PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
 {
     return Py_BuildValue("Os", Py_None, PyMac_getscript());
 }
@@ -517,9 +523,10 @@ struct langinfo_constant{
     {0, 0}
 };
 
-PyDoc_STRVAR(nl_langinfo__doc__,
+static char nl_langinfo__doc__[] =
 "nl_langinfo(key) -> string\n"
-"Return the value for the locale information associated with key.");
+"Return the value for the locale information associated with key."
+;
 
 static PyObject*
 PyLocale_nl_langinfo(PyObject* self, PyObject* args)
@@ -537,119 +544,29 @@ PyLocale_nl_langinfo(PyObject* self, PyObject* args)
     return NULL;
 }
 #endif /* HAVE_LANGINFO_H */
-
-#ifdef HAVE_LIBINTL_H
-
-PyDoc_STRVAR(gettext__doc__,
-"gettext(msg) -> string\n"
-"Return translation of msg.");
-
-static PyObject*
-PyIntl_gettext(PyObject* self, PyObject *args)
-{
-	char *in;
-	if (!PyArg_ParseTuple(args, "z", &in))
-		return 0;
-	return PyString_FromString(gettext(in));
-}
-
-PyDoc_STRVAR(dgettext__doc__,
-"dgettext(domain, msg) -> string\n"
-"Return translation of msg in domain.");
-
-static PyObject*
-PyIntl_dgettext(PyObject* self, PyObject *args)
-{
-	char *domain, *in;
-	if (!PyArg_ParseTuple(args, "zz", &domain, &in))
-		return 0;
-	return PyString_FromString(dgettext(domain, in));
-}
-
-PyDoc_STRVAR(dcgettext__doc__,
-"dcgettext(domain, msg, category) -> string\n"
-"Return translation of msg in domain and category.");
-
-static PyObject*
-PyIntl_dcgettext(PyObject *self, PyObject *args)
-{
-	char *domain, *msgid;
-	int category;
-	if (!PyArg_ParseTuple(args, "zzi", &domain, &msgid, &category))
-		return 0;
-	return PyString_FromString(dcgettext(domain,msgid,category));
-}
-
-PyDoc_STRVAR(textdomain__doc__,
-"textdomain(domain) -> string\n"
-"Set the C library's textdmain to domain, returning the new domain.");
-
-static PyObject*
-PyIntl_textdomain(PyObject* self, PyObject* args)
-{
-	char *domain;
-	if (!PyArg_ParseTuple(args, "z", &domain))
-		return 0;
-	domain = textdomain(domain);
-	if (!domain) {
-		PyErr_SetFromErrno(PyExc_OSError);
-		return NULL;
-	}
-	return PyString_FromString(domain);
-}
-
-PyDoc_STRVAR(bindtextdomain__doc__,
-"bindtextdomain(domain, dir) -> string\n"
-"Bind the C library's domain to dir.");
-
-static PyObject*
-PyIntl_bindtextdomain(PyObject* self,PyObject*args)
-{
-	char *domain,*dirname;
-	if (!PyArg_ParseTuple(args, "zz", &domain, &dirname))
-		return 0;
-	dirname = bindtextdomain(domain, dirname);
-	if (!dirname) {
-		PyErr_SetFromErrno(PyExc_OSError);
-		return NULL;
-	}
-	return PyString_FromString(dirname);
-}
-
-#endif
+    
 
 static struct PyMethodDef PyLocale_Methods[] = {
   {"setlocale", (PyCFunction) PyLocale_setlocale, 
    METH_VARARGS, setlocale__doc__},
   {"localeconv", (PyCFunction) PyLocale_localeconv, 
-   METH_NOARGS, localeconv__doc__},
+   0, localeconv__doc__},
   {"strcoll", (PyCFunction) PyLocale_strcoll, 
    METH_VARARGS, strcoll__doc__},
   {"strxfrm", (PyCFunction) PyLocale_strxfrm, 
    METH_VARARGS, strxfrm__doc__},
-#if defined(MS_WINDOWS) || defined(macintosh)
-  {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, METH_NOARGS},
+#if defined(MS_WIN32) || defined(macintosh)
+  {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, 0},
 #endif
 #ifdef HAVE_LANGINFO_H
   {"nl_langinfo", (PyCFunction) PyLocale_nl_langinfo,
    METH_VARARGS, nl_langinfo__doc__},
 #endif
-#ifdef HAVE_LIBINTL_H
-  {"gettext",(PyCFunction)PyIntl_gettext,METH_VARARGS,
-    gettext__doc__},
-  {"dgettext",(PyCFunction)PyIntl_dgettext,METH_VARARGS,
-   dgettext__doc__},
-  {"dcgettext",(PyCFunction)PyIntl_dcgettext,METH_VARARGS,
-    dcgettext__doc__},
-  {"textdomain",(PyCFunction)PyIntl_textdomain,METH_VARARGS,
-   textdomain__doc__},
-  {"bindtextdomain",(PyCFunction)PyIntl_bindtextdomain,METH_VARARGS,
-   bindtextdomain__doc__},
-#endif  
+  
   {NULL, NULL}
 };
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 init_locale(void)
 {
     PyObject *m, *d, *x;

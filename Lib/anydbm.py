@@ -25,7 +25,7 @@ It has the following interface (key and data are strings):
                         # such key)
         del d[key]      # delete data stored at key (raises KeyError
                         # if no such key)
-        flag = key in d   # true if the key exists
+        flag = d.has_key(key)   # true if the key exists
         list = d.keys() # return a list of all existing keys (slow!)
 
 Future versions may change the order in which implementations are
@@ -42,8 +42,11 @@ only if it doesn't exist; and 'n' always creates a new database.
 
 """
 
-class error(Exception):
-    pass
+try:
+    class error(Exception):
+        pass
+except (NameError, TypeError):
+    error = "anydbm.error"
 
 _names = ['dbhash', 'gdbm', 'dbm', 'dumbdbm']
 _errors = [error]

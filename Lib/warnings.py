@@ -11,9 +11,6 @@ onceregistry = {}
 
 def warn(message, category=None, stacklevel=1):
     """Issue a warning, or maybe ignore it or raise an exception."""
-    # Check if message is already a Warning object
-    if isinstance(message, Warning):
-        category = message.__class__
     # Check category argument
     if category is None:
         category = UserWarning
@@ -27,7 +24,7 @@ def warn(message, category=None, stacklevel=1):
     else:
         globals = caller.f_globals
         lineno = caller.f_lineno
-    if '__name__' in globals:
+    if globals.has_key('__name__'):
         module = globals['__name__']
     else:
         module = "<string>"
@@ -52,20 +49,14 @@ def warn_explicit(message, category, filename, lineno,
             module = module[:-3] # XXX What about leading pathname?
     if registry is None:
         registry = {}
-    if isinstance(message, Warning):
-        text = str(message)
-        category = message.__class__
-    else:
-        text = message
-        message = category(message)
-    key = (text, category, lineno)
+    key = (message, category, lineno)
     # Quick test for common case
     if registry.get(key):
         return
     # Search the filters
     for item in filters:
         action, msg, cat, mod, ln = item
-        if (msg.match(text) and
+        if (msg.match(message) and
             issubclass(category, cat) and
             mod.match(module) and
             (ln == 0 or lineno == ln)):
@@ -77,11 +68,11 @@ def warn_explicit(message, category, filename, lineno,
         registry[key] = 1
         return
     if action == "error":
-        raise message
+        raise category(message)
     # Other actions
     if action == "once":
         registry[key] = 1
-        oncekey = (text, category)
+        oncekey = (message, category)
         if onceregistry.get(oncekey):
             return
         onceregistry[oncekey] = 1
@@ -89,7 +80,7 @@ def warn_explicit(message, category, filename, lineno,
         pass
     elif action == "module":
         registry[key] = 1
-        altkey = (text, category, 0)
+        altkey = (message, category, 0)
         if registry.get(altkey):
             return
         registry[altkey] = 1
@@ -128,11 +119,11 @@ def filterwarnings(action, message="", category=Warning, module="", lineno=0,
     Use assertions to check that all arguments have the right type."""
     assert action in ("error", "ignore", "always", "default", "module",
                       "once"), "invalid action: %s" % `action`
-    assert isinstance(message, str), "message must be a string"
+    assert isinstance(message, types.StringType), "message must be a string"
     assert isinstance(category, types.ClassType), "category must be a class"
     assert issubclass(category, Warning), "category must be a Warning subclass"
-    assert isinstance(module, str), "module must be a string"
-    assert isinstance(lineno, int) and lineno >= 0, \
+    assert type(module) is types.StringType, "module must be a string"
+    assert type(lineno) is types.IntType and lineno >= 0, \
            "lineno must be an int >= 0"
     item = (action, re.compile(message, re.I), category,
             re.compile(module), lineno)
@@ -265,4 +256,3 @@ if __name__ == "__main__":
 else:
     _processoptions(sys.warnoptions)
     filterwarnings("ignore", category=OverflowWarning, append=1)
-    filterwarnings("ignore", category=PendingDeprecationWarning, append=1)

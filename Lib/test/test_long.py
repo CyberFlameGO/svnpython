@@ -1,4 +1,4 @@
-from test.test_support import verify, verbose, TestFailed, fcmp
+from test_support import verify, verbose, TestFailed, fcmp
 from string import join
 from random import random, randint
 
@@ -6,11 +6,10 @@ from random import random, randint
 SHIFT = 15
 BASE = 2 ** SHIFT
 MASK = BASE - 1
-KARATSUBA_CUTOFF = 35   # from longobject.c
 
 # Max number of base BASE digits to use in test cases.  Doubling
-# this will more than double the runtime.
-MAXDIGITS = 15
+# this will at least quadruple the runtime.
+MAXDIGITS = 10
 
 # build some special values
 special = map(long, [0, 1, 2, BASE, BASE >> 1])
@@ -91,40 +90,13 @@ def test_division_2(x, y):
 def test_division(maxdigits=MAXDIGITS):
     if verbose:
         print "long / * % divmod"
-    digits = range(1, maxdigits+1) + range(KARATSUBA_CUTOFF,
-                                           KARATSUBA_CUTOFF + 14)
-    digits.append(KARATSUBA_CUTOFF * 3)
+    digits = range(1, maxdigits+1)
     for lenx in digits:
         x = getran(lenx)
         for leny in digits:
             y = getran(leny) or 1L
             test_division_2(x, y)
-# ------------------------------------------------------------ karatsuba
 
-def test_karatsuba():
-
-    if verbose:
-        print "Karatsuba"
-
-    digits = range(1, 5) + range(KARATSUBA_CUTOFF, KARATSUBA_CUTOFF + 10)
-    digits.extend([KARATSUBA_CUTOFF * 10, KARATSUBA_CUTOFF * 100])
-
-    bits = [digit * SHIFT for digit in digits]
-
-    # Test products of long strings of 1 bits -- (2**x-1)*(2**y-1) ==
-    # 2**(x+y) - 2**x - 2**y + 1, so the proper result is easy to check.
-    for abits in bits:
-        a = (1L << abits) - 1
-        for bbits in bits:
-            if bbits < abits:
-                continue
-            b = (1L << bbits) - 1
-            x = a * b
-            y = ((1L << (abits + bbits)) -
-                 (1L << abits) -
-                 (1L << bbits) +
-                 1)
-            check(x == y, "bad result for", a, "*", b, x, y)
 # -------------------------------------------------------------- ~ & | ^
 
 def test_bitop_identities_1(x):
@@ -354,7 +326,7 @@ def test_auto_overflow():
                                 pass
                             else:
                                 raise TestFailed("pow%r should have raised "
-                                "TypeError" % ((longx, longy, long(z)),))
+                                "TypeError" % ((longx, longy, long(z))))
 
 # ---------------------------------------- tests of long->float overflow
 
@@ -428,7 +400,6 @@ def test_logs():
 # ---------------------------------------------------------------- do it
 
 test_division()
-test_karatsuba()
 test_bitop_identities()
 test_format()
 test_misc()

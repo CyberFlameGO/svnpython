@@ -12,12 +12,15 @@ extern void initaudioop(void);
 extern void initbinascii(void);
 extern void initcmath(void);
 extern void initerrno(void);
+#ifdef WITH_CYCLE_GC
 extern void initgc(void);
+#endif
 #ifndef MS_WIN64
 extern void initimageop(void);
 #endif
 extern void initmath(void);
 extern void initmd5(void);
+extern void initnew(void);
 extern void initnt(void);
 extern void initoperator(void);
 extern void initregex(void);
@@ -61,12 +64,15 @@ struct _inittab _PyImport_Inittab[] = {
         {"binascii", initbinascii},
         {"cmath", initcmath},
         {"errno", initerrno},
+#ifdef WITH_CYCLE_GC
         {"gc", initgc},
+#endif
 #ifndef MS_WIN64
         {"imageop", initimageop},
 #endif
         {"math", initmath},
         {"md5", initmd5},
+        {"new", initnew},
         {"nt", initnt}, /* Use the NT os functions, not posix */
         {"operator", initoperator},
         {"regex", initregex},

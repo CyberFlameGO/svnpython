@@ -17,7 +17,7 @@ $NUMBERED_FOOTNOTES = 1;
 #
 $SHOW_SECTION_NUMBERS = 1;
 
-$ICONSERVER = '.';
+$ICONSERVER = '../icons';
 $IMAGE_TYPE = 'gif';
 
 # Control where the navigation bars should show up:
@@ -36,8 +36,6 @@ $MODULE_INDEX_COLUMNS = 4;
 $HAVE_MODULE_INDEX = 0;
 $HAVE_GENERAL_INDEX = 0;
 $HAVE_TABLE_OF_CONTENTS = 0;
-
-$AESOP_META_TYPE = 'information';
 
 
 # A little painful, but lets us clean up the top level directory a little,
@@ -99,8 +97,8 @@ sub custom_driver_hook {
 
 $CUSTOM_BUTTONS = '';
 
-sub make_nav_sectref($$) {
-    my($label, $title) = @_;
+sub make_nav_sectref {
+    my($label,$title) = @_;
     if ($title) {
         if ($title =~ /\<[aA] /) {
             $title =~ s/\<[aA] /<a class="sectref" /;
@@ -127,7 +125,7 @@ $my_icon_tags{'modules'} = 'Module Index';
 $my_icon_names{'previous_page'} = 'previous';
 $my_icon_names{'next_page'} = 'next';
 
-sub get_my_icon($) {
+sub get_my_icon {
     my $name = @_[0];
     my $text = $my_icon_tags{$name};
     if ($my_icon_names{$name}) {
@@ -141,7 +139,7 @@ sub get_my_icon($) {
            . " height=\"32\"\n  alt=\"$text\" width=\"32\">";
 }
 
-sub use_my_icon($) {
+sub use_my_icon {
     my $s = @_[0];
     if ($s =~ /\<tex2html_([a-z_]+)_visible_mark\>/) {
         my $r = get_my_icon($1);
@@ -150,7 +148,7 @@ sub use_my_icon($) {
     return $s;
 }
 
-sub make_nav_panel() {
+sub make_nav_panel {
     my $s;
     my $BLANK_ICON = get_my_icon('blank');
     $NEXT = $NEXT_TITLE ? use_my_icon("$NEXT") : $BLANK_ICON;
@@ -192,7 +190,7 @@ sub add_child_links {
     return $toc;
 }
 
-sub get_version_text() {
+sub get_version_text {
     if ($PACKAGE_VERSION ne '' && $t_date) {
         return ("<span class=\"release-info\">"
                 . "Release $PACKAGE_VERSION$RELEASE_INFO,"
@@ -210,13 +208,13 @@ sub get_version_text() {
 }
 
 
-sub top_navigation_panel() {
+sub top_navigation_panel {
     return "\n"
            . make_nav_panel()
            . "<br><hr>\n";
 }
 
-sub bot_navigation_panel() {
+sub bot_navigation_panel {
     return "\n<p><hr>\n"
            . make_nav_panel()
            . "<hr>\n"
@@ -255,7 +253,7 @@ sub add_link {
     return (&inactive_img($icon), "");
 }
 
-sub add_special_link($$$) {
+sub add_special_link {
     my($icon, $file, $current_file) = @_;
     if ($icon =~ /\<tex2html_([_a-z]+)_visible_mark\>/) {
         my $r = get_my_icon($1);
@@ -281,14 +279,14 @@ sub do_cmd_arabic {
 }
 
 
-sub gen_index_id($$) {
+sub gen_index_id {
     # this is used to ensure common index key generation and a stable sort
-    my($str, $extra) = @_;
+    my($str,$extra) = @_;
     sprintf('%s###%s%010d', $str, $extra, ++$global{'max_id'});
 }
 
-sub insert_index($$$$$) {
-    my($mark, $datafile, $columns, $letters, $prefix) = @_;
+sub insert_index {
+    my($mark,$datafile,$columns,$letters,$prefix) = @_;
     my $prog = "$myrootdir/tools/buildindex.py";
     my $index;
     if ($letters) {
@@ -302,7 +300,7 @@ sub insert_index($$$$$) {
     }
 }
 
-sub add_idx() {
+sub add_idx {
     print "\nBuilding HTML for the index ...";
     close(IDXFILE);
     insert_index($idx_mark, 'index.dat', $INDEX_COLUMNS, 1, '');
@@ -312,7 +310,7 @@ sub add_idx() {
 $idx_module_mark = '<tex2html_idx_module_mark>';
 $idx_module_title = 'Module Index';
 
-sub add_module_idx() {
+sub add_module_idx {
     print "\nBuilding HTML for the module index ...";
     my $key;
     my $first = 1;
@@ -391,7 +389,7 @@ sub do_cmd_tableofcontents {
     local($_) = @_;
     $TITLE = $toc_title;
     $tocfile = $CURRENT_FILE;
-    my($closures, $reopens) = preserve_open_tags();
+    my($closures,$reopens) = preserve_open_tags();
     anchor_label('contents', $CURRENT_FILE, $_);	# this is added
     join('', "<BR>\n\\tableofchildlinks[off]", $closures
 	 , make_section_heading($toc_title, 'H2'), $toc_mark
@@ -402,7 +400,7 @@ sub do_cmd_listoffigures {
     local($_) = @_;
     $TITLE = $lof_title;
     $loffile = $CURRENT_FILE;
-    my($closures, $reopens) = preserve_open_tags();
+    my($closures,$reopens) = preserve_open_tags();
     anchor_label('lof', $CURRENT_FILE, $_);		# this is added
     join('', "<BR>\n", $closures
 	 , make_section_heading($lof_title, 'H2'), $lof_mark
@@ -413,7 +411,7 @@ sub do_cmd_listoftables {
     local($_) = @_;
     $TITLE = $lot_title;
     $lotfile = $CURRENT_FILE;
-    my($closures, $reopens) = preserve_open_tags();
+    my($closures,$reopens) = preserve_open_tags();
     anchor_label('lot', $CURRENT_FILE, $_);		# this is added
     join('', "<BR>\n", $closures
 	 , make_section_heading($lot_title, 'H2'), $lot_mark
@@ -455,7 +453,7 @@ sub do_cmd_textohtmlindex {
     if (($SHORT_INDEX) && (%index_segment)) { make_preindex(); }
     else { $preindex = ''; }
     my $heading = make_section_heading($idx_title, 'h2') . $idx_mark;
-    my($pre, $post) = minimize_open_tags($heading);
+    my($pre,$post) = minimize_open_tags($heading);
     anchor_label('genindex',$CURRENT_FILE,$_);		# this is added
     return "<br>\n" . $pre . $_;
 }
@@ -577,7 +575,7 @@ sub set_depth_levels {
 # initialize() is called in the main LaTeX2HTML script (which happens
 # before style files are loaded).
 #
-%declarations = ('preform' => '<div class="verbatim"><pre></pre></div>',
+%declarations = ('preform' => '<dl><dd><pre class="verbatim"></pre></dl>',
 		 %declarations);
 
 
@@ -585,7 +583,7 @@ sub set_depth_levels {
 # doctype declaration; MSIE5 on NT4 SP4 barfs on it and drops the
 # content of the page.
 $MY_PARTIAL_HEADER = '';
-sub make_head_and_body($$) {
+sub make_head_and_body {
     my($title, $body) = @_;
     $body = " $body" unless ($body eq '');
     my $DTDcomment = '';
@@ -618,7 +616,7 @@ sub make_head_and_body($$) {
                 . "charset=$CHARSET\">\n")
              : ''),
             ($BASE ? "<base href=\"$BASE\">\n" : ''),
-            "<link rel=\"STYLESHEET\" href=\"$STYLESHEET\" type='text/css'>\n",
+            "<link rel=\"STYLESHEET\" href=\"$STYLESHEET\">\n",
             "<link rel=\"first\" href=\"$FILE.html\">\n",
             ($HAVE_TABLE_OF_CONTENTS
              ? ('<link rel="contents" href="contents.html" title="Contents">'
@@ -641,8 +639,6 @@ sub make_head_and_body($$) {
          , "<html>\n<head>\n<title>", $title, "</title>\n"
          , &meta_information($title)
          , $MY_PARTIAL_HEADER
-         , ($AESOP_META_TYPE eq '' ? ''
-            : "\n<meta name='aesop' content='$AESOP_META_TYPE'>")
          , "\n</head>\n<body$body>");
 }
 

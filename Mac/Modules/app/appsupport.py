@@ -69,6 +69,8 @@ ThemeDragSoundKind = OSTypeType("ThemeDragSoundKind")
 ThemeBackgroundKind = Type("ThemeBackgroundKind", "l")
 ThemeMetric = Type("ThemeMetric", "l")
 RGBColor = OpaqueType("RGBColor", "QdRGB")
+CFStringRef = OpaqueByValueType("CFStringRef", "CFStringRefObj")
+CFMutableStringRef = OpaqueByValueType("CFMutableStringRef", "CFMutableStringRefObj")
 TruncCode = Type("TruncCode", "h")
 
 

@@ -83,7 +83,7 @@ Sample use, programmatically
    trace.print_results(show_missing=1)
 """
 
-import sys, os, tempfile, types, copy, operator, inspect, exceptions, marshal
+import sys, os, string, tempfile, types, copy, operator, inspect, exceptions, marshal
 try:
     import cPickle
     pickle = cPickle
@@ -177,7 +177,7 @@ class Ignore:
             # or
             #  d = "/usr/local.py"
             #  filename = "/usr/local.py"
-            if filename.startswith(d + os.sep):
+            if string.find(filename, d + os.sep) == 0:
                 self._ignore[modulename] = 1
                 return 1
 
@@ -341,12 +341,13 @@ class CoverageResults:
                     # '#pragma: NO COVER' (it is possible to embed this into
                     # the text as a non-comment; no easy fix)
                     if executable_linenos.has_key(i+1) and \
-                       lines[i].find(' '.join(['#pragma', 'NO COVER'])) == -1:
+                       string.find(lines[i],
+                                   string.join(['#pragma', 'NO COVER'])) == -1:
                         outfile.write('>>>>>> ')
                     else:
                         outfile.write(' '*7)
                     n_lines = n_lines + 1
-                outfile.write(lines[i].expandtabs(8))
+                outfile.write(string.expandtabs(lines[i], 8))
 
             outfile.close()
 
@@ -369,29 +370,41 @@ class CoverageResults:
             except IOError, err:
                 sys.stderr.write("cannot save counts files because %s" % err)
 
-def _find_LINENO_from_code(code):
-    """return the numbers of the lines containing the source code that
-    was compiled into code"""
+# Given a code string, return the SET_LINENO information
+def _find_LINENO_from_string(co_code):
+    """return all of the SET_LINENO information from a code string"""
+    import dis
     linenos = {}
 
-    line_increments = [ord(c) for c in code.co_lnotab[1::2]]
-    table_length = len(line_increments)
-
-    lineno = code.co_first_lineno
-
-    for li in line_increments:
-        linenos[lineno] = 1
-        lineno += li
-    linenos[lineno] = 1
-
+    # This code was filched from the `dis' module then modified
+    n = len(co_code)
+    i = 0
+    prev_op = None
+    prev_lineno = 0
+    while i < n:
+        c = co_code[i]
+        op = ord(c)
+        if op == dis.SET_LINENO:
+            if prev_op == op:
+                # two SET_LINENO in a row, so the previous didn't
+                # indicate anything.  This occurs with triple
+                # quoted strings (?).  Remove the old one.
+                del linenos[prev_lineno]
+            prev_lineno = ord(co_code[i+1]) + ord(co_code[i+2])*256
+            linenos[prev_lineno] = 1
+        if op >= dis.HAVE_ARGUMENT:
+            i = i + 3
+        else:
+            i = i + 1
+        prev_op = op
     return linenos
 
 def _find_LINENO(code):
-    """return all of the lineno information from a code object"""
+    """return all of the SET_LINENO information from a code object"""
     import types
 
     # get all of the lineno information from the code of this scope level
-    linenos = _find_LINENO_from_code(code)
+    linenos = _find_LINENO_from_string(code.co_code)
 
     # and check the constants for references to other code objects
     for c in code.co_consts:
@@ -403,6 +416,9 @@ def _find_LINENO(code):
 def find_executable_linenos(filename):
     """return a dict of the line numbers from executable statements in a file
 
+    Works by finding all of the code-like objects in the module then searching
+    the byte code for 'SET_LINENO' terms (so this won't work one -O files).
+
     """
     import parser
 
@@ -411,6 +427,10 @@ def find_executable_linenos(filename):
     prog = open(filename).read()
     ast = parser.suite(prog)
     code = parser.compileast(ast, filename)
+
+    # The only way I know to find line numbers is to look for the
+    # SET_LINENO instructions.  Isn't there some way to get it from
+    # the AST?
 
     return _find_LINENO(code)
 
@@ -480,9 +500,9 @@ class Trace:
         if globals is None: globals = {}
         if locals is None: locals = {}
         if not self.donothing:
-            sys.settrace(self.globaltrace)
+            sys.settrace(gself.lobaltrace)
         try:
-            exec cmd in globals, locals
+            exec cmd in dict, dict
         finally:
             if not self.donothing:
                 sys.settrace(None)
@@ -520,17 +540,16 @@ class Trace:
             #     print "%s.globaltrace(frame: %s, why: %s, arg: %s): filename: %s, lineno: %s, funcname: %s, context: %s, lineindex: %s\n" % (self, frame, why, arg, filename, lineno, funcname, context, lineindex,)
             if filename:
                 modulename = inspect.getmodulename(filename)
-                if modulename is not None:
-                    ignore_it = self.ignore.names(filename, modulename)
-                    # if DEBUG_MODE and not self.blabbed.has_key((filename, modulename,)):
-                    #     self.blabbed[(filename, modulename,)] = None
-                    #     print "%s.globaltrace(frame: %s, why: %s, arg: %s, filename: %s, modulename: %s, ignore_it: %s\n" % (self, frame, why, arg, filename, modulename, ignore_it,)
-                    if not ignore_it:
-                        if self.trace:
-                            print " --- modulename: %s, funcname: %s" % (modulename, funcname,)
-                        # if DEBUG_MODE:
-                        #     print "%s.globaltrace(frame: %s, why: %s, arg: %s, filename: %s, modulename: %s, ignore_it: %s -- about to localtrace\n" % (self, frame, why, arg, filename, modulename, ignore_it,)
-                        return self.localtrace
+                ignore_it = self.ignore.names(filename, modulename)
+                # if DEBUG_MODE and not self.blabbed.has_key((filename, modulename,)):
+                #     self.blabbed[(filename, modulename,)] = None
+                #     print "%s.globaltrace(frame: %s, why: %s, arg: %s, filename: %s, modulename: %s, ignore_it: %s\n" % (self, frame, why, arg, filename, modulename, ignore_it,)
+                if not ignore_it:
+                    if self.trace:
+                        print " --- modulename: %s, funcname: %s" % (modulename, funcname,)
+                    # if DEBUG_MODE:
+                    #     print "%s.globaltrace(frame: %s, why: %s, arg: %s, filename: %s, modulename: %s, ignore_it: %s -- about to localtrace\n" % (self, frame, why, arg, filename, modulename, ignore_it,)
+                    return self.localtrace
             else:
                 # XXX why no filename?
                 return None
@@ -567,14 +586,11 @@ class Trace:
             if bname is None:
                 # Using setdefault faster than two separate lines?  --Zooko 2001-10-14
                 bname = self.pathtobasename.setdefault(filename, os.path.basename(filename))
-            if context is not None:
-                try:
-                    print "%s(%d): %s" % (bname, lineno, context[lineindex],),
-                except IndexError:
-                    # Uh.. sometimes getframeinfo gives me a context of length 1 and a lineindex of -2.  Oh well.
-                    pass
-            else:
-                print "%s(???): ???" % bname
+            try:
+                print "%s(%d): %s" % (bname, lineno, context[lineindex],),
+            except IndexError:
+                # Uh.. sometimes getframeinfo gives me a context of length 1 and a lineindex of -2.  Oh well.
+                pass
         return self.localtrace
 
     def localtrace_count(self, frame, why, arg):
@@ -674,16 +690,16 @@ def main(argv=None):
             continue
 
         if opt == "--ignore-dir":
-            for s in val.split(os.pathsep):
+            for s in string.split(val, os.pathsep):
                 s = os.path.expandvars(s)
                 # should I also call expanduser? (after all, could use $HOME)
 
-                s = s.replace("$prefix",
-                              os.path.join(sys.prefix, "lib",
-                                           "python" + sys.version[:3]))
-                s = s.replace("$exec_prefix",
-                              os.path.join(sys.exec_prefix, "lib",
-                                           "python" + sys.version[:3]))
+                s = string.replace(s, "$prefix",
+                                   os.path.join(sys.prefix, "lib",
+                                                "python" + sys.version[:3]))
+                s = string.replace(s, "$exec_prefix",
+                                   os.path.join(sys.exec_prefix, "lib",
+                                                "python" + sys.version[:3]))
                 s = os.path.normpath(s)
                 ignore_dirs.append(s)
             continue

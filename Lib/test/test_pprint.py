@@ -1,6 +1,7 @@
 import pprint
 import unittest
-from test import test_support
+
+import test_support
 
 try:
     uni = unicode
@@ -16,7 +17,7 @@ class QueryTestCase(unittest.TestCase):
         self.a[-12] = self.b
 
     def test_basic(self):
-        # Verify .isrecursive() and .isreadable() w/o recursion
+        """Verify .isrecursive() and .isreadable() w/o recursion."""
         verify = self.assert_
         for safe in (2, 2.0, 2j, "abc", [3], (2,2), {3: 3}, uni("yaddayadda"),
                      self.a, self.b):
@@ -26,7 +27,7 @@ class QueryTestCase(unittest.TestCase):
                    "expected isreadable for " + `safe`)
 
     def test_knotted(self):
-        # Verify .isrecursive() and .isreadable() w/ recursion
+        """Verify .isrecursive() and .isreadable() w/ recursion."""
         # Tie a knot.
         self.b[67] = self.a
         # Messy dict.
@@ -51,7 +52,7 @@ class QueryTestCase(unittest.TestCase):
                    "expected isreadable for " + `safe`)
 
     def test_unreadable(self):
-        # Not recursive but not readable anyway
+        """Not recursive but not readable anyway."""
         verify = self.assert_
         for unreadable in type(3), pprint, pprint.isrecursive:
             verify(not pprint.isrecursive(unreadable),
@@ -60,7 +61,7 @@ class QueryTestCase(unittest.TestCase):
                    "expected not isreadable for " + `unreadable`)
 
     def test_same_as_repr(self):
-        # Simple objects and small containers that should be same as repr()
+        "Simple objects and small containers that should be same as repr()."
         verify = self.assert_
         for simple in (0, 0L, 0+0j, 0.0, "", uni(""), (), [], {}, verify, pprint,
                        -6, -6L, -6-6j, -1.5, "x", uni("x"), (3,), [3], {3: 6},
@@ -77,7 +78,7 @@ class QueryTestCase(unittest.TestCase):
 
 
     def test_basic_line_wrap(self):
-        # verify basic line-wrapping operation
+        """verify basic line-wrapping operation"""
         o = {'RPM_cal': 0,
              'RPM_cal2': 48059,
              'Speed_cal': 0,
@@ -94,28 +95,6 @@ class QueryTestCase(unittest.TestCase):
  'read_io_runtime_us': 0,
  'write_io_runtime_us': 43690}"""
         self.assertEqual(pprint.pformat(o), exp)
-
-    def test_subclassing(self):
-        o = {'names with spaces': 'should be presented using repr()',
-             'others.should.not.be': 'like.this'}
-        exp = """\
-{'names with spaces': 'should be presented using repr()',
- others.should.not.be: like.this}"""
-        self.assertEqual(DottedPrettyPrinter().pformat(o), exp)
-
-
-class DottedPrettyPrinter(pprint.PrettyPrinter):
-
-    def format(self, object, context, maxlevels, level):
-        if isinstance(object, str):
-            if ' ' in object:
-                return `object`, 1, 0
-            else:
-                return object, 0, 0
-        else:
-            return pprint.PrettyPrinter.format(
-                self, object, context, maxlevels, level)
-
 
 def test_main():
     test_support.run_unittest(QueryTestCase)

@@ -27,52 +27,14 @@ def read32(input):
     return struct.unpack("<l", input.read(4))[0]
 
 def open(filename, mode="rb", compresslevel=9):
-    """Shorthand for GzipFile(filename, mode, compresslevel).
-
-    The filename argument is required; mode defaults to 'rb'
-    and compresslevel defaults to 9.
-
-    """
     return GzipFile(filename, mode, compresslevel)
 
 class GzipFile:
-    """The GzipFile class simulates most of the methods of a file object with
-    the exception of the readinto() and truncate() methods.
-
-    """
 
     myfileobj = None
 
     def __init__(self, filename=None, mode=None,
                  compresslevel=9, fileobj=None):
-        """Constructor for the GzipFile class.
-
-        At least one of fileobj and filename must be given a
-        non-trivial value.
-
-        The new class instance is based on fileobj, which can be a regular
-        file, a StringIO object, or any other object which simulates a file.
-        It defaults to None, in which case filename is opened to provide
-        a file object.
-
-        When fileobj is not None, the filename argument is only used to be
-        included in the gzip file header, which may includes the original
-        filename of the uncompressed file.  It defaults to the filename of
-        fileobj, if discernible; otherwise, it defaults to the empty string,
-        and in this case the original filename is not included in the header.
-
-        The mode argument can be any of 'r', 'rb', 'a', 'ab', 'w', or 'wb',
-        depending on whether the file will be read or written.  The default
-        is the mode of fileobj if discernible; otherwise, the default is 'rb'.
-        Be aware that only the 'rb', 'ab', and 'wb' values should be used
-        for cross-platform portability.
-
-        The compresslevel argument is an integer from 1 to 9 controlling the
-        level of compression; 1 is fastest and produces the least compression,
-        and 9 is slowest and produces the most compression.  The default is 9.
-
-        """
-
         # guarantee the file is opened in binary mode on platforms
         # that care about that sort of thing
         if mode and 'b' not in mode:
@@ -89,7 +51,7 @@ class GzipFile:
         if mode[0:1] == 'r':
             self.mode = READ
             # Set flag indicating start of a new member
-            self._new_member = True
+            self._new_member = 1
             self.extrabuf = ""
             self.extrasize = 0
             self.filename = filename
@@ -103,7 +65,7 @@ class GzipFile:
                                              zlib.DEF_MEM_LEVEL,
                                              0)
         else:
-            raise IOError, "Mode " + mode + " not supported"
+            raise ValueError, "Mode " + mode + " not supported"
 
         self.fileobj = fileobj
         self.offset = 0
@@ -162,12 +124,12 @@ class GzipFile:
             self.fileobj.read(xlen)
         if flag & FNAME:
             # Read and discard a null-terminated string containing the filename
-            while True:
+            while (1):
                 s=self.fileobj.read(1)
                 if not s or s=='\000': break
         if flag & FCOMMENT:
             # Read and discard a null-terminated string containing a comment
-            while True:
+            while (1):
                 s=self.fileobj.read(1)
                 if not s or s=='\000': break
         if flag & FHCRC:
@@ -175,10 +137,6 @@ class GzipFile:
 
 
     def write(self,data):
-        if self.mode != WRITE:
-            import errno
-            raise IOError(errno.EBADF, "write() on read-only GzipFile object")
-
         if self.fileobj is None:
             raise ValueError, "write() on closed GzipFile object"
         if len(data) > 0:
@@ -188,17 +146,13 @@ class GzipFile:
             self.offset += len(data)
 
     def read(self, size=-1):
-        if self.mode != READ:
-            import errno
-            raise IOError(errno.EBADF, "write() on read-only GzipFile object")
-
         if self.extrasize <= 0 and self.fileobj is None:
             return ''
 
         readsize = 1024
         if size < 0:        # get the whole thing
             try:
-                while True:
+                while 1:
                     self._read(readsize)
                     readsize = readsize * 2
             except EOFError:
@@ -243,7 +197,7 @@ class GzipFile:
             self._init_read()
             self._read_gzip_header()
             self.decompress = zlib.decompressobj(-zlib.MAX_WBITS)
-            self._new_member = False
+            self._new_member = 0
 
         # Read a chunk of data from the file
         buf = self.fileobj.read(size)
@@ -271,7 +225,7 @@ class GzipFile:
             # Check the CRC and file size, and set the flag so we read
             # a new member on the next call
             self._read_eof()
-            self._new_member = True
+            self._new_member = 1
 
     def _add_read_data(self, data):
         self.crc = zlib.crc32(data, self.crc)
@@ -317,7 +271,7 @@ class GzipFile:
         self.fileobj.flush()
 
     def isatty(self):
-        return False
+        return 0
 
     def tell(self):
         return self.offset
@@ -328,7 +282,7 @@ class GzipFile:
         if self.mode != READ:
             raise IOError("Can't rewind in write mode")
         self.fileobj.seek(0)
-        self._new_member = True
+        self._new_member = 1
         self.extrabuf = ""
         self.extrasize = 0
         self.offset = 0
@@ -353,7 +307,7 @@ class GzipFile:
         if size < 0: size = sys.maxint
         bufs = []
         readsize = min(100, size)    # Read from the file in small chunks
-        while True:
+        while 1:
             if size == 0:
                 return "".join(bufs) # Return resulting line
 
@@ -384,7 +338,7 @@ class GzipFile:
         while sizehint > 0:
             line = self.readline()
             if line == "": break
-            L.append(line)
+            L.append( line )
             sizehint = sizehint - len(line)
 
         return L
@@ -392,16 +346,6 @@ class GzipFile:
     def writelines(self, L):
         for line in L:
             self.write(line)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        line = self.readline()
-        if line:
-            return line
-        else:
-            raise StopIteration
 
 
 def _test():
@@ -432,7 +376,7 @@ def _test():
             else:
                 f = __builtin__.open(arg, "rb")
                 g = open(arg + ".gz", "wb")
-        while True:
+        while 1:
             chunk = f.read(1024)
             if not chunk:
                 break

@@ -13,10 +13,9 @@ Options specifying formats to build:
 
 HTML options:
     --address, -a	Specify an address for page footers.
-    --dir		Specify the directory for HTML output.
     --link		Specify the number of levels to include on each page.
     --split, -s		Specify a section level for page splitting, default: %(max_split_depth)s.
-    --iconserver, -i	Specify location of icons (default: ./).
+    --iconserver, -i	Specify location of icons (default: ../).
     --image-type	Specify the image type to use in HTML output;
                         values: gif (default), png.
     --numeric           Don't rename the HTML files; just keep node#.html for
@@ -44,6 +43,7 @@ import re
 import shutil
 import string
 import sys
+import tempfile
 
 
 if not hasattr(os.path, "abspath"):
@@ -94,7 +94,7 @@ class Options:
     debugging = 0
     discard_temps = 1
     have_temps = 0
-    icon_server = "."
+    icon_server = None
     image_type = "gif"
     logging = 0
     max_link_depth = 3
@@ -205,7 +205,7 @@ class Options:
             elif opt == "--dir":
                 if os.sep == "\\":
                     arg = re.sub("/", "\\", arg)
-                self.builddir = os.path.expanduser(arg)
+                self.builddir = arg
             elif opt == "--paper":
                 self.paper = arg
             elif opt == "--dvips-safe":
@@ -265,12 +265,10 @@ class Job:
             self.log_filename = os.path.abspath(self.doc + ".how")
         if os.path.exists(self.log_filename):
             os.unlink(self.log_filename)
-        l2hconf = self.doc + ".l2h"
-        if os.path.exists(l2hconf):
-            if os.path.exists(l2hconf + "~"):
-                os.unlink(l2hconf + "~")
-            os.rename(l2hconf, l2hconf + "~")
-        self.l2h_aux_init_file = self.doc + ".l2h"
+        if os.path.exists(self.doc + ".l2h"):
+            self.l2h_aux_init_file = tempfile.mktemp()
+        else:
+            self.l2h_aux_init_file = self.doc + ".l2h"
         self.write_l2h_aux_init_file()
 
     def build(self):
@@ -294,7 +292,7 @@ class Job:
                         "Could not locate support images of type %s."
                         % `self.options.image_type`)
                 for fn in imgs:
-                    new_fn = os.path.join(self.builddir, os.path.basename(fn))
+                    new_fn = os.path.join(self.doc, os.path.basename(fn))
                     shutil.copyfile(fn, new_fn)
         if "text" in formats:
             self.require_temps()

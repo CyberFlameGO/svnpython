@@ -16,7 +16,9 @@ static PyMemberDef frame_memberlist[] = {
 	{"f_builtins",	T_OBJECT,	OFF(f_builtins),RO},
 	{"f_globals",	T_OBJECT,	OFF(f_globals),	RO},
 	{"f_lasti",	T_INT,		OFF(f_lasti),	RO},
+	{"f_lineno",	T_INT,		OFF(f_lineno),	RO},
 	{"f_restricted",T_INT,		OFF(f_restricted),RO},
+	{"f_trace",	T_OBJECT,	OFF(f_trace)},
 	{"f_exc_type",	T_OBJECT,	OFF(f_exc_type)},
 	{"f_exc_value",	T_OBJECT,	OFF(f_exc_value)},
 	{"f_exc_traceback", T_OBJECT,	OFF(f_exc_traceback)},
@@ -31,54 +33,8 @@ frame_getlocals(PyFrameObject *f, void *closure)
 	return f->f_locals;
 }
 
-static PyObject *
-frame_getlineno(PyFrameObject *f, void *closure)
-{
-	int lineno;
-
-	if (f->f_trace)
-		lineno = f->f_lineno;
-	else
-		lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
-
-	return PyInt_FromLong(lineno);
-}
-
-static PyObject *
-frame_gettrace(PyFrameObject *f, void *closure)
-{
-	PyObject* trace = f->f_trace;
-
-	if (trace == NULL)
-		trace = Py_None;
-
-	Py_INCREF(trace);
-
-	return trace;
-}
-
-static int
-frame_settrace(PyFrameObject *f, PyObject* v, void *closure)
-{
-	/* We rely on f_lineno being accurate when f_trace is set. */
-
-	PyObject* old_value = f->f_trace;
-
-	Py_XINCREF(v);
-	f->f_trace = v;
-	
-	if (v != NULL)
-		f->f_lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
-
-	Py_XDECREF(old_value);
-
-	return 0;
-}
-
 static PyGetSetDef frame_getsetlist[] = {
 	{"f_locals",	(getter)frame_getlocals, NULL, NULL},
-	{"f_lineno",	(getter)frame_getlineno, NULL, NULL},
-	{"f_trace",	(getter)frame_gettrace, (setter)frame_settrace, NULL},
 	{0}
 };
 
@@ -272,13 +228,13 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 		if (builtin_object == NULL)
 			return NULL;
 	}
-#ifdef Py_DEBUG
-	if (code == NULL || globals == NULL || !PyDict_Check(globals) ||
+	if ((back != NULL && !PyFrame_Check(back)) ||
+	    code == NULL || !PyCode_Check(code) ||
+	    globals == NULL || !PyDict_Check(globals) ||
 	    (locals != NULL && !PyDict_Check(locals))) {
 		PyErr_BadInternalCall();
 		return NULL;
 	}
-#endif
 	ncells = PyTuple_GET_SIZE(code->co_cellvars);
 	nfrees = PyTuple_GET_SIZE(code->co_freevars);
 	extras = code->co_stacksize + code->co_nlocals + ncells + nfrees;
@@ -321,7 +277,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 		}
 	}
 	else
-		Py_INCREF(builtins);
+		Py_XINCREF(builtins);
 	f->f_builtins = builtins;
 	Py_XINCREF(back);
 	f->f_back = back;
@@ -350,7 +306,7 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 	f->f_exc_type = f->f_exc_value = f->f_exc_traceback = NULL;
 	f->f_tstate = tstate;
 
-	f->f_lasti = -1;
+	f->f_lasti = 0;
 	f->f_lineno = code->co_firstlineno;
 	f->f_restricted = (builtins != tstate->interp->builtins);
 	f->f_iblock = 0;
@@ -516,8 +472,7 @@ PyFrame_LocalsToFast(PyFrameObject *f, int clear)
 			    locals, fast + f->f_nlocals, 1, clear);
 		dict_to_map(f->f_code->co_freevars, 
 			    PyTuple_GET_SIZE(f->f_code->co_freevars),
-			    locals, fast + f->f_nlocals + f->f_ncells, 1, 
-			    clear);
+			    locals, fast + f->f_nlocals + f->f_ncells, 1, clear);
 	}
 	PyErr_Restore(error_type, error_value, error_traceback);
 }

@@ -28,7 +28,7 @@ import MacOS
 import sys
 
 from aetypes import *
-from aepack import packkey, pack, unpack, coerce, AEDescType
+from aepack import pack, unpack, coerce, AEDescType
 
 Error = 'aetools.Error'
 
@@ -56,19 +56,19 @@ def missed(ae):
 		return None
 	return desc.data
 
-def unpackevent(ae, formodulename=""):
+def unpackevent(ae):
 	parameters = {}
 	try:
 		dirobj = ae.AEGetParamDesc('----', '****')
 	except AE.Error:
 		pass
 	else:
-		parameters['----'] = unpack(dirobj, formodulename)
+		parameters['----'] = unpack(dirobj)
 		del dirobj
 	while 1:
 		key = missed(ae)
 		if not key: break
-		parameters[key] = unpack(ae.AEGetParamDesc(key, '****'), formodulename)
+		parameters[key] = unpack(ae.AEGetParamDesc(key, '****'))
 	attributes = {}
 	for key in aekeywords:
 		try:
@@ -77,14 +77,14 @@ def unpackevent(ae, formodulename=""):
 			if msg[0] != -1701 and msg[0] != -1704:
 				raise sys.exc_type, sys.exc_value
 			continue
-		attributes[key] = unpack(desc, formodulename)
+		attributes[key] = unpack(desc)
 	return parameters, attributes
 
 def packevent(ae, parameters = {}, attributes = {}):
 	for key, value in parameters.items():
-		packkey(ae, key, value)
+		ae.AEPutParamDesc(key, pack(value))
 	for key, value in attributes.items():
-		packkey(ae, key, value)
+		ae.AEPutAttributeDesc(key, pack(value))
 
 #
 # Support routine for automatically generated Suite interfaces
@@ -130,7 +130,6 @@ def decodeerror(arguments):
 class TalkTo:
 	"""An AE connection to an application"""
 	_signature = None	# Can be overridden by subclasses
-	_moduleName = None # Can be overridden by subclasses
 	
 	def __init__(self, signature=None, start=0, timeout=0):
 		"""Create a communication channel with a particular application.
@@ -184,7 +183,7 @@ class TalkTo:
 		
 		reply = event.AESend(self.send_flags, self.send_priority,
 		                          self.send_timeout)
-		parameters, attributes = unpackevent(reply, self._moduleName)
+		parameters, attributes = unpackevent(reply)
 		return reply, parameters, attributes
 		
 	def send(self, code, subcode, parameters = {}, attributes = {}):
@@ -211,29 +210,6 @@ class TalkTo:
 		_arguments = {'----':_object}
 		if as:
 			_arguments['rtyp'] = mktype(as)
-
-		_reply, _arguments, _attributes = self.send(_code, _subcode,
-				_arguments, _attributes)
-		if _arguments.has_key('errn'):
-			raise Error, decodeerror(_arguments)
-
-		if _arguments.has_key('----'):
-			return _arguments['----']
-			if as:
-				item.__class__ = as
-			return item
-
-	def _set(self, _object, _arguments = {}, _attributes = {}):
-		""" _set: set data for an object
-		Required argument: the object
-		Keyword argument _parameters: Parameter dictionary for the set operation
-		Keyword argument _attributes: AppleEvent attribute dictionary
-		Returns: the data
-		"""
-		_code = 'core'
-		_subcode = 'setd'
-		
-		_arguments['----'] = _object
 
 		_reply, _arguments, _attributes = self.send(_code, _subcode,
 				_arguments, _attributes)

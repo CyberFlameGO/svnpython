@@ -44,9 +44,9 @@ Example:
 import socket
 import re
 import rfc822
+import types
 import base64
 import hmac
-from email.base64MIME import encode as encode_base64
 
 __all__ = ["SMTPException","SMTPServerDisconnected","SMTPResponseException",
            "SMTPSenderRefused","SMTPRecipientsRefused","SMTPDataError",
@@ -57,6 +57,9 @@ SMTP_PORT = 25
 CRLF="\r\n"
 
 OLDSTYLE_AUTH = re.compile(r"auth=(.*)", re.I)
+
+def encode_base64(s, eol=None):
+    return "".join(base64.encodestring(s).split("\n"))
 
 # Exception classes used by this module.
 class SMTPException(Exception):
@@ -224,15 +227,13 @@ class SMTP:
     ehlo_resp = None
     does_esmtp = 0
 
-    def __init__(self, host = '', port = 0, local_hostname = None):
+    def __init__(self, host = '', port = 0):
         """Initialize a new instance.
 
         If specified, `host' is the name of the remote host to which to
         connect.  If specified, `port' specifies the port to which to connect.
         By default, smtplib.SMTP_PORT is used.  An SMTPConnectError is raised
-        if the specified `host' doesn't respond correctly.  If specified,
-        `local_hostname` is used as the FQDN of the local host.  By default,
-        the local hostname is found using socket.getfqdn().
+        if the specified `host' doesn't respond correctly.
 
         """
         self.esmtp_features = {}
@@ -240,19 +241,6 @@ class SMTP:
             (code, msg) = self.connect(host, port)
             if code != 220:
                 raise SMTPConnectError(code, msg)
-        if local_hostname is not None:
-            self.local_hostname = local_hostname
-        else:
-            # RFC 2821 says we should use the fqdn in the EHLO/HELO verb, and
-            # if that can't be calculated, that we should use a domain literal
-            # instead (essentially an encoded IP address like [A.B.C.D]).
-            fqdn = socket.getfqdn()
-            if '.' in fqdn:
-                self.local_hostname = fqdn
-            else:
-                # We can't find an fqdn hostname, so use a domain literal
-                addr = socket.gethostbyname(socket.gethostname())
-                self.local_hostname = '[%s]' % addr
 
     def set_debuglevel(self, debuglevel):
         """Set the debug output level.
@@ -375,7 +363,10 @@ class SMTP:
         Hostname to send for this command defaults to the FQDN of the local
         host.
         """
-        self.putcmd("helo", name or self.local_hostname)
+        if name:
+            self.putcmd("helo", name)
+        else:
+            self.putcmd("helo", socket.getfqdn())
         (code,msg)=self.getreply()
         self.helo_resp=msg
         return (code,msg)
@@ -386,7 +377,10 @@ class SMTP:
         host.
         """
         self.esmtp_features = {}
-        self.putcmd("ehlo", name or self.local_hostname)
+        if name:
+            self.putcmd("ehlo", name)
+        else:
+            self.putcmd("ehlo", socket.getfqdn())
         (code,msg)=self.getreply()
         # According to RFC1869 some (badly written)
         # MTA's will disconnect on an ehlo. Toss an exception if
@@ -419,7 +413,7 @@ class SMTP:
             # It's actually stricter, in that only spaces are allowed between
             # parameters, but were not going to check for that here.  Note
             # that the space isn't present if there are no parameters.
-            m=re.match(r'(?P<feature>[A-Za-z0-9][A-Za-z0-9\-]*) ?',each)
+            m=re.match(r'(?P<feature>[A-Za-z0-9][A-Za-z0-9\-]*)',each)
             if m:
                 feature=m.group("feature").lower()
                 params=m.string[m.end("feature"):].strip()
@@ -432,7 +426,7 @@ class SMTP:
 
     def has_extn(self, opt):
         """Does the server support a given SMTP service extension?"""
-        return opt.lower() in self.esmtp_features
+        return self.esmtp_features.has_key(opt.lower())
 
     def help(self, args=''):
         """SMTP 'help' command.
@@ -575,7 +569,7 @@ class SMTP:
             if code != 334:
                 raise SMTPAuthenticationError(code, resp)
             (code, resp) = self.docmd(encode_base64(password, eol=""))
-        elif authmethod is None:
+        elif authmethod == None:
             raise SMTPException("No suitable authentication method found.")
         if code not in [235, 503]:
             # 235 == 'Authentication successful'
@@ -675,7 +669,7 @@ class SMTP:
             self.rset()
             raise SMTPSenderRefused(code, resp, from_addr)
         senderrs={}
-        if isinstance(to_addrs, basestring):
+        if isinstance(to_addrs, types.StringTypes):
             to_addrs = [to_addrs]
         for each in to_addrs:
             (code,resp)=self.rcpt(each, rcpt_options)

@@ -13,7 +13,6 @@
    - check for duplicate definitions of names (instead of fatal err)
 */
 
-#include "Python.h"
 #include "pgenheaders.h"
 #include "grammar.h"
 #include "node.h"
@@ -22,7 +21,6 @@
 
 int Py_DebugFlag;
 int Py_VerboseFlag;
-int Py_IgnoreEnvironmentFlag;
 
 /* Forward */
 grammar *getgrammar(char *filename);
@@ -147,7 +145,7 @@ askfile(void)
 #endif
 
 void
-Py_FatalError(const char *msg)
+Py_FatalError(char *msg)
 {
 	fprintf(stderr, "pgen: FATAL ERROR: %s\n", msg);
 	Py_Exit(1);
@@ -183,16 +181,6 @@ PyOS_Readline(char *prompt)
 		p[n-1] = '\n';
 	return PyMem_REALLOC(p, n+1);
 }
-
-#ifdef WITH_UNIVERSAL_NEWLINES
-/* No-nonsense fgets */
-char *
-Py_UniversalNewlineFgets(char *buf, int n, FILE *stream, PyObject *fobj)
-{
-	return fgets(buf, n, stream);
-}
-#endif
-
 
 #include <stdarg.h>
 

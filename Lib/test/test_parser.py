@@ -1,6 +1,6 @@
 import parser
+import test_support
 import unittest
-from test import test_support
 
 #
 #  First, we test that we can generate trees from valid source fragments,
@@ -9,7 +9,6 @@ from test import test_support
 #
 
 class RoundtripLegalSyntaxTestCase(unittest.TestCase):
-
     def roundtrip(self, f, s):
         st1 = f(s)
         t = st1.totuple()
@@ -28,10 +27,14 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
         self.roundtrip(parser.suite, s)
 
     def test_yield_statement(self):
-        self.check_suite("def f(): yield 1")
-        self.check_suite("def f(): return; yield 1")
-        self.check_suite("def f(): yield 1; return")
-        self.check_suite("def f():\n"
+        self.check_suite("from __future__ import generators\n"
+                         "def f(): yield 1")
+        self.check_suite("from __future__ import generators\n"
+                         "def f(): return; yield 1")
+        self.check_suite("from __future__ import generators\n"
+                         "def f(): yield 1; return")
+        self.check_suite("from __future__ import generators\n"
+                         "def f():\n"
                          "    for x in range(30):\n"
                          "        yield x\n")
 
@@ -135,7 +138,6 @@ class RoundtripLegalSyntaxTestCase(unittest.TestCase):
 #
 
 class IllegalSyntaxTestCase(unittest.TestCase):
-
     def check_bad_tree(self, tree, label):
         try:
             parser.sequence2st(tree)
@@ -149,7 +151,7 @@ class IllegalSyntaxTestCase(unittest.TestCase):
         self.check_bad_tree((1, 2, 3), "<junk>")
 
     def test_illegal_yield_1(self):
-        # Illegal yield statement: def f(): return 1; yield 1
+        """Illegal yield statement: def f(): return 1; yield 1"""
         tree = \
         (257,
          (264,
@@ -204,7 +206,7 @@ class IllegalSyntaxTestCase(unittest.TestCase):
         self.check_bad_tree(tree, "def f():\n  return 1\n  yield 1")
 
     def test_illegal_yield_2(self):
-        # Illegal return in generator: def f(): return 1; yield 1
+        """Illegal return in generator: def f(): return 1; yield 1"""
         tree = \
         (257,
          (264,
@@ -268,7 +270,7 @@ class IllegalSyntaxTestCase(unittest.TestCase):
         self.check_bad_tree(tree, "def f():\n  return 1\n  yield 1")
 
     def test_print_chevron_comma(self):
-        # Illegal input: print >>fp,
+        """Illegal input: print >>fp,"""
         tree = \
         (257,
          (264,
@@ -291,7 +293,7 @@ class IllegalSyntaxTestCase(unittest.TestCase):
         self.check_bad_tree(tree, "print >>fp,")
 
     def test_a_comma_comma_c(self):
-        # Illegal input: a,,c
+        """Illegal input: a,,c"""
         tree = \
         (258,
          (311,
@@ -318,7 +320,7 @@ class IllegalSyntaxTestCase(unittest.TestCase):
         self.check_bad_tree(tree, "a,,c")
 
     def test_illegal_operator(self):
-        # Illegal input: a $= b
+        """Illegal input: a $= b"""
         tree = \
         (257,
          (264,

@@ -18,47 +18,29 @@ except ImportError, why:
           'Failed to load the builtin codecs: %s' % why
 
 __all__ = ["register", "lookup", "open", "EncodedFile", "BOM", "BOM_BE",
-           "BOM_LE", "BOM32_BE", "BOM32_LE", "BOM64_BE", "BOM64_LE",
-           "BOM_UTF8", "BOM_UTF16", "BOM_UTF16_LE", "BOM_UTF16_BE",
-           "BOM_UTF32", "BOM_UTF32_LE", "BOM_UTF32_BE",
-           "strict_errors", "ignore_errors", "replace_errors",
-           "xmlcharrefreplace_errors",
-           "register_error", "lookup_error"]
+           "BOM_LE", "BOM32_BE", "BOM32_LE", "BOM64_BE", "BOM64_LE"]
 
 ### Constants
 
 #
-# Byte Order Mark (BOM = ZERO WIDTH NO-BREAK SPACE = U+FEFF)
-# and its possible byte string values
-# for UTF8/UTF16/UTF32 output and little/big endian machines
+# Byte Order Mark (BOM) and its possible values (BOM_BE, BOM_LE)
 #
+BOM = struct.pack('=H', 0xFEFF)
+#
+BOM_BE = BOM32_BE = '\376\377'
+#       corresponds to Unicode U+FEFF in UTF-16 on big endian
+#       platforms == ZERO WIDTH NO-BREAK SPACE
+BOM_LE = BOM32_LE = '\377\376'
+#       corresponds to Unicode U+FFFE in UTF-16 on little endian
+#       platforms == defined as being an illegal Unicode character
 
-# UTF-8
-BOM_UTF8 = '\xef\xbb\xbf'
-
-# UTF-16, little endian
-BOM_LE = BOM_UTF16_LE = '\xff\xfe'
-
-# UTF-16, big endian
-BOM_BE = BOM_UTF16_BE = '\xfe\xff'
-
-# UTF-32, little endian
-BOM_UTF32_LE = '\xff\xfe\x00\x00'
-
-# UTF-32, big endian
-BOM_UTF32_BE = '\x00\x00\xfe\xff'
-
-# UTF-16, native endianness
-BOM = BOM_UTF16 = struct.pack('=H', 0xFEFF)
-
-# UTF-32, native endianness
-BOM_UTF32 = struct.pack('=L', 0x0000FEFF)
-
-# Old broken names (don't use in new code)
-BOM32_LE = BOM_UTF16_LE
-BOM32_BE = BOM_UTF16_BE
-BOM64_LE = BOM_UTF32_LE
-BOM64_BE = BOM_UTF32_BE
+#
+# 64-bit Byte Order Marks
+#
+BOM64_BE = '\000\000\376\377'
+#       corresponds to Unicode U+0000FEFF in UCS-4
+BOM64_LE = '\377\376\000\000'
+#       corresponds to Unicode U+0000FFFE in UCS-4
 
 
 ### Codec base classes (defining the API)
@@ -629,19 +611,11 @@ def make_encoding_map(decoding_map):
     """
     m = {}
     for k,v in decoding_map.items():
-        if not v in m:
+        if not m.has_key(v):
             m[v] = k
         else:
             m[v] = None
     return m
-
-### error handlers
-
-strict_errors = lookup_error("strict")
-ignore_errors = lookup_error("ignore")
-replace_errors = lookup_error("replace")
-xmlcharrefreplace_errors = lookup_error("xmlcharrefreplace")
-backslashreplace_errors = lookup_error("backslashreplace")
 
 # Tell modulefinder that using codecs probably needs the encodings
 # package

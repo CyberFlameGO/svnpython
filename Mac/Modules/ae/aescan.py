@@ -7,8 +7,9 @@ import os
 import string
 import MacOS
 
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
+from bgenlocations import TOOLBOXDIR
 
 from scantools import Scanner
 
@@ -20,8 +21,6 @@ def main():
 	scanner = AppleEventsScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done Scanning and Generating, now doing 'import aesupport' ==="
 	import aesupport
 	print "=== Done 'import aesupport'.  It's up to you to compile AEmodule.c ==="

@@ -1,5 +1,6 @@
 import os
 import sys
+import string
 import linecache
 
 from TreeWidget import TreeNode, TreeItem, ScrolledCanvas
@@ -49,7 +50,7 @@ class FrameTreeItem(TreeItem):
         filename = code.co_filename
         funcname = code.co_name
         sourceline = linecache.getline(filename, lineno)
-        sourceline = sourceline.strip()
+        sourceline = string.strip(sourceline)
         if funcname in ("?", "", None):
             item = "%s, line %d: %s" % (modname, lineno, sourceline)
         else:

@@ -50,7 +50,7 @@ def Message(msg, id=260, ok=None):
 	
 	d = GetNewDialog(id, -1)
 	if not d:
-		print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+		print "Can't get DLOG resource with id =", id
 		return
 	h = d.GetDialogItemAsControl(2)
 	SetDialogItemText(h, lf2cr(msg))
@@ -81,7 +81,7 @@ def AskString(prompt, default = "", id=261, ok=None, cancel=None):
 	
 	d = GetNewDialog(id, -1)
 	if not d:
-		print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+		print "Can't get DLOG resource with id =", id
 		return
 	h = d.GetDialogItemAsControl(3)
 	SetDialogItemText(h, lf2cr(prompt))
@@ -121,7 +121,7 @@ def AskPassword(prompt,	 default='', id=264, ok=None, cancel=None):
 	"""
 	d = GetNewDialog(id, -1)
 	if not d:
-		print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+		print "Can't get DLOG resource with id =", id
 		return
 	h = d.GetDialogItemAsControl(3)
 	SetDialogItemText(h, lf2cr(prompt))	
@@ -163,7 +163,7 @@ def AskYesNoCancel(question, default = 0, yes=None, no=None, cancel=None, id=262
 	
 	d = GetNewDialog(id, -1)
 	if not d:
-		print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+		print "Can't get DLOG resource with id =", id
 		return
 	# Button assignments:
 	# 1 = default (invisible)
@@ -361,18 +361,12 @@ def _selectoption(d, optionlist, idx):
 		MacOS.SysBeep()
 		return
 	option = optionlist[idx]
-	if type(option) == type(()):
-		if len(option) == 4:
-			help = option[2]
-		elif len(option) > 1:
-			help = option[-1]
-		else:
-			help = ''
+	if type(option) == type(()) and \
+			len(option) > 1:
+		help = option[-1]
 	else:
 		help = ''
 	h = d.GetDialogItemAsControl(ARGV_OPTION_EXPLAIN)
-	if help and len(help) > 250:
-		help = help[:250] + '...'
 	Dlg.SetDialogItemText(h, help)
 	hasvalue = 0
 	if type(option) == type(()):
@@ -393,7 +387,7 @@ def _selectoption(d, optionlist, idx):
 def GetArgv(optionlist=None, commandlist=None, addoldfile=1, addnewfile=1, addfolder=1, id=ARGV_ID):
 	d = GetNewDialog(id, -1)
 	if not d:
-		print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+		print "Can't get DLOG resource with id =", id
 		return
 #	h = d.GetDialogItemAsControl(3)
 #	SetDialogItemText(h, lf2cr(prompt))

@@ -18,7 +18,7 @@ typedef struct {
 	PyObject	*x_attr;	/* Attributes dictionary */
 } xxobject;
 
-static PyTypeObject Xxtype;
+staticforward PyTypeObject Xxtype;
 
 #define is_xxobject(v)		((v)->ob_type == &Xxtype)
 
@@ -26,7 +26,7 @@ static xxobject *
 newxxobject(PyObject *arg)
 {
 	xxobject *xp;
-	xp = PyObject_New(xxobject, &Xxtype);
+	xp = PyObject_NEW(xxobject, &Xxtype);
 	if (xp == NULL)
 		return NULL;
 	xp->x_attr = NULL;
@@ -39,7 +39,7 @@ static void
 xx_dealloc(xxobject *xp)
 {
 	Py_XDECREF(xp->x_attr);
-	PyObject_Del(xp);
+	PyObject_DEL(xp);
 }
 
 static PyObject *

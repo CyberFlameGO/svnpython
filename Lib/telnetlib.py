@@ -186,7 +186,7 @@ class Telnet:
         self.cookedq = ''
         self.eof = 0
         self.option_callback = None
-        if host is not None:
+        if host:
             self.open(host, port)
 
     def open(self, host, port=0):

@@ -2,9 +2,10 @@
 
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 from scantools import Scanner_OSX
+from bgenlocations import TOOLBOXDIR
 
 LONG = "CoreFoundation"
 SHORT = "cf"
@@ -14,7 +15,6 @@ OBJECTS = ("CFTypeRef",
 		"CFDictionaryRef", "CFMutableDictionaryRef",
 		"CFStringRef", "CFMutableStringRef",
 		"CFURLRef",
-##		"CFPropertyListRef",
 		)
 # ADD object typenames here
 
@@ -30,8 +30,8 @@ def main():
 		"CFDictionary.h",
 ##		"CFNumber.h",
 ##		"CFPlugIn.h",
-		"CFPreferences.h",
-		"CFPropertyList.h",
+##		"CFPreferences.h",
+##		"CFPropertyList.h",
 ##		"CFSet.h",
 		"CFString.h",
 ##		"CFStringEncodingExt.h",
@@ -44,8 +44,6 @@ def main():
 	scanner.scan()
 	scanner.gentypetest(SHORT+"typetest.py")
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now importing the generated code... ==="
 	exec "import " + SHORT + "support"
 	print "=== Done.  It's up to you to compile it now! ==="
@@ -55,7 +53,7 @@ class MyScanner(Scanner_OSX):
 	def destination(self, type, name, arglist):
 		classname = "Function"
 		listname = "functions"
-		if arglist and name[:13] != 'CFPreferences':
+		if arglist:
 			t, n, m = arglist[0]
 			if t in OBJECTS and m == "InMode":
 				classname = "Method"
@@ -98,7 +96,6 @@ class MyScanner(Scanner_OSX):
 			"CFStringSetExternalCharactersNoCopy",
 			"CFStringGetCharacterAtIndex", # No format for single unichars yet.
 			"kCFStringEncodingInvalidId", # incompatible constant declaration
-			"CFPropertyListCreateFromXMLData", # Manually generated
 			]
 
 	def makegreylist(self):
@@ -133,9 +130,6 @@ class MyScanner(Scanner_OSX):
 			([("CFURLRef", "baseURL", "InMode")],
 			 [("OptionalCFURLRef", "*", "*")]),
 			 
-			# We handle CFPropertyListRef objects as plain CFTypeRef
-			([("CFPropertyListRef", "*", "*")],
-			 [("CFTypeRef", "*", "*")]),
 			]
 			
 if __name__ == "__main__":

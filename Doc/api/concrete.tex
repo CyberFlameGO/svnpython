@@ -75,10 +75,6 @@ This section describes Python type objects and the singleton object
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{int}{PyType_Ready}{PyTypeObject *type}
-  Finalize a type object.  This should be called on all type objects
-  to finish their initialization.  This function is responsible for
-  adding inherited slots from a type's base class.  Returns \code{0}
-  on success, or returns \code{-1} and sets an exception on error.
   \versionadded{2.2}
 \end{cfuncdesc}
 
@@ -591,11 +587,11 @@ parameter and are called with a non-string parameter.
   object is not one.
   Pass the address of an existing string object as an lvalue (it may
   be written into), and the new size desired.  On success, \var{*string}
-  holds the resized string object and \code{0} is returned; the address in
+  holds the resized string object and 0 is returned; the address in
   \var{*string} may differ from its input value.  If the
   reallocation fails, the original string object at \var{*string} is
   deallocated, \var{*string} is set to \NULL{}, a memory exception is set,
-  and \code{-1} is returned.
+  and -1 is returned.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyString_Format}{PyObject *format,
@@ -1760,7 +1756,7 @@ format.
 \begin{cfuncdesc}{int}{PyDict_DelItem}{PyObject *p, PyObject *key}
   Removes the entry in dictionary \var{p} with key \var{key}.
   \var{key} must be hashable; if it isn't, \exception{TypeError} is
-  raised.  Returns \code{0} on success or \code{-1} on failure.
+  raised.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{int}{PyDict_DelItemString}{PyObject *p, char *key}
@@ -1812,8 +1808,7 @@ format.
   dictionary, and false once all pairs have been reported.  The
   parameters \var{pkey} and \var{pvalue} should either point to
   \ctype{PyObject*} variables that will be filled in with each key and
-  value, respectively, or may be \NULL.  Any references returned through
-  them are borrowed.
+  value, respectively, or may be \NULL.
 
   For example:
 
@@ -2124,9 +2119,6 @@ There are only a few functions special to module objects.
   namespace; this object is the same as the \member{__dict__}
   attribute of the module object.  This function never fails.
   \withsubitem{(module attribute)}{\ttindex{__dict__}}
-  It is recommended extensions use other \cfunction{PyModule_*()}
-  and \cfunction{PyObject_*()} functions rather than directly
-  manipulate a module's \member{__dict__}.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{char*}{PyModule_GetName}{PyObject *module}
@@ -2292,32 +2284,6 @@ They are found in the dictionary of type objects.
 
 \begin{cfuncdesc}{int}{PySlice_GetIndices}{PySliceObject *slice, int length,
                                            int *start, int *stop, int *step}
-Retrieve the start, stop and step indices from the slice object
-\var{slice}, assuming a sequence of length \var{length}. Treats
-indices greater than \var{length} as errors.
-
-Returns 0 on success and -1 on error with no exception set (unless one
-of the indices was not \constant{None} and failed to be converted to
-an integer, in which case -1 is returned with an exception set).
-
-You probably do not want to use this function.  If you want to use
-slice objects in versions of Python prior to 2.3, you would probably
-do well to incorporate the source of \cfunction{PySlice_GetIndicesEx},
-suitably renamed, in the source of your extension.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{int}{PySlice_GetIndicesEx}{PySliceObject *slice, int length,
-                                             int *start, int *stop, int *step, 
-                                             int *slicelength}
-Usable replacement for \cfunction{PySlice_GetIndices}.  Retrieve the
-start, stop, and step indices from the slice object \var{slice}
-assuming a sequence of length \var{length}, and store the length of
-the slice in \var{slicelength}.  Out of bounds indices are clipped in
-a manner consistent with the handling of normal slices.
-
-Returns 0 on success and -1 on error with exception set.
-
-\versionadded{2.3}
 \end{cfuncdesc}
 
 

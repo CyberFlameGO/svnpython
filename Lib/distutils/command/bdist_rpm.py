@@ -10,12 +10,10 @@ __revision__ = "$Id$"
 import sys, os, string
 import glob
 from types import *
-from distutils.core import Command
-from distutils.debug import DEBUG
+from distutils.core import Command, DEBUG
 from distutils.util import get_platform
 from distutils.file_util import write_file
 from distutils.errors import *
-from distutils import log
 
 class bdist_rpm (Command):
 
@@ -280,7 +278,7 @@ class bdist_rpm (Command):
 
 
         # build package
-        log.info("building RPMs")
+        self.announce('building RPMs')
         rpm_cmd = ['rpm']
         if os.path.exists('/usr/bin/rpmbuild') or \
            os.path.exists('/bin/rpmbuild'):
@@ -352,7 +350,7 @@ class bdist_rpm (Command):
             spec_file.append('Source0: %{name}-%{version}.tar.gz')
 
         spec_file.extend([
-            'License: ' + self.distribution.get_license(),
+            'Copyright: ' + self.distribution.get_license(),
             'Group: ' + self.group,
             'BuildRoot: %{_tmppath}/%{name}-buildroot',
             'Prefix: %{_prefix}', ])

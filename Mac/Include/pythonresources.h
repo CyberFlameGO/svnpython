@@ -40,12 +40,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ** Resources that reside in the python executable (or, for
 ** shared ppc python, in the core dynamic library)
 */
-#ifndef Py_PYTHONRESOURCES_H
-#define Py_PYTHONRESOURCES_H
-
-#ifdef __cplusplus
-	extern "C" {
-#endif
 
 #define BASE_ID 228
 
@@ -186,10 +180,4 @@ void PyMac_PreferenceOptions(PyMac_PrefRecord *);
 char * PyMac_GetPythonDir(void);
 /* from macmain.c: */
 extern PyMac_PrefRecord PyMac_options;
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
 #endif

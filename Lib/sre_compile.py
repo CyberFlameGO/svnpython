@@ -145,7 +145,7 @@ def _compile(code, pattern, flags):
 def _compile_charset(charset, flags, code, fixup=None):
     # compile charset subprogram
     emit = code.append
-    if fixup is None:
+    if not fixup:
         fixup = lambda x: x
     for op, av in _optimize_charset(charset, fixup):
         emit(OPCODES[op])

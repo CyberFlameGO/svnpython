@@ -6,7 +6,6 @@ import FrameWork
 import Wapplication
 import W
 import os
-import sys
 import macfs
 import MacOS
 
@@ -26,7 +25,7 @@ def runningOnOSX():
 class PythonIDE(Wapplication.Application):
 	
 	def __init__(self):
-		self.preffilepath = os.path.join("Python", "PythonIDE preferences")
+		self.preffilepath = ":Python:PythonIDE preferences"
 		Wapplication.Application.__init__(self, 'Pide')
 		from Carbon import AE
 		from Carbon import AppleEvents
@@ -43,16 +42,9 @@ class PythonIDE(Wapplication.Application):
 				self.quitevent)
 		import PyConsole, PyEdit
 		Splash.wait()
-		# With -D option (OSX command line only) keep stderr, for debugging the IDE
-		# itself.
-		debug_stderr = None
-		if len(sys.argv) >= 2 and sys.argv[1] == '-D':
-			debug_stderr = sys.stderr
-			del sys.argv[1]
 		PyConsole.installoutput()
 		PyConsole.installconsole()
-		if debug_stderr:
-			sys.stderr = debug_stderr
+		import sys
 		for path in sys.argv[1:]:
 			self.opendoc(path)
 		try:
@@ -145,7 +137,6 @@ class PythonIDE(Wapplication.Application):
 		self._scripts = {}
 		self.scriptsmenu = None
 		self.makescriptsmenu()
-		self.makehelpmenu()
 	
 	def quitevent(self, theAppleEvent, theReply):
 		from Carbon import AE
@@ -179,8 +170,6 @@ class PythonIDE(Wapplication.Application):
 	def opendoc(self, path):
 		fcreator, ftype = macfs.FSSpec(path).GetCreatorType()
 		if ftype == 'TEXT':
-			self.openscript(path)
-		elif ftype == '\0\0\0\0' and path[-3:] == '.py':
 			self.openscript(path)
 		else:
 			W.Message("Can't open file of type '%s'." % ftype)
@@ -279,108 +268,6 @@ class PythonIDE(Wapplication.Application):
 			if rv and rv > 0:
 				return
 		self.quitting = 1
-		
-	def makehelpmenu(self):
-		docs = self.installdocumentation()
-		self.helpmenu = m = self.gethelpmenu()
-		docitem = FrameWork.MenuItem(m, "Python Documentation", None, self.domenu_localdocs)
-		docitem.enable(docs)
-		finditem = FrameWork.MenuItem(m, "Lookup in Python Documentation", None, 'lookuppython')
-		finditem.enable(docs)
-		if runningOnOSX():
-			FrameWork.Separator(m)
-			doc2item = FrameWork.MenuItem(m, "Apple Developer Documentation", None, self.domenu_appledocs)
-			find2item = FrameWork.MenuItem(m, "Lookup in Carbon Documentation", None, 'lookupcarbon')
-		FrameWork.Separator(m)
-		webitem = FrameWork.MenuItem(m, "Python Documentation on the Web", None, self.domenu_webdocs)
-		web2item = FrameWork.MenuItem(m, "Python on the Web", None, self.domenu_webpython)
-		web3item = FrameWork.MenuItem(m, "MacPython on the Web", None, self.domenu_webmacpython)
-		
-	def domenu_localdocs(self, *args):
-		from Carbon import AH
-		AH.AHGotoPage("Python Help", None, None)
-		
-	def domenu_appledocs(self, *args):
-		from Carbon import AH, AppleHelp
-		try:
-			AH.AHGotoMainTOC(AppleHelp.kAHTOCTypeDeveloper)
-		except AH.Error, arg:
-			if arg[0] == -50:
-				W.Message("Developer documentation not installed")
-			else:
-				W.Message("AppleHelp Error: %s" % `arg`)
-		
-	def domenu_lookuppython(self, *args):
-		from Carbon import AH
-		searchstring = self._getsearchstring()
-		if not searchstring:
-			return
-		try:
-			AH.AHSearch("Python Help", searchstring)
-		except AH.Error, arg:
-			W.Message("AppleHelp Error: %s" % `arg`)
-			
-	def domenu_lookupcarbon(self, *args):
-		from Carbon import AH
-		searchstring = self._getsearchstring()
-		if not searchstring:
-			return
-		try:
-			AH.AHSearch("Carbon", searchstring)
-		except AH.Error, arg:
-			W.Message("AppleHelp Error: %s" % `arg`)
-			
-	def _getsearchstring(self):
-		import PyEdit
-		editor = PyEdit.findeditor(None, fromtop=1)
-		if editor:
-			text = editor.getselectedtext()
-			if text:
-				return text
-		# This is a cop-out. We should have disabled the menus
-		# if there is no selection, but the can_ methods only seem
-		# to work for Windows. Or not for the Help menu, maybe?
-		import EasyDialogs
-		text = EasyDialogs.AskString("Search documentation for", ok="Search")
-		return text
-		
-	def domenu_webdocs(self, *args):
-		import webbrowser
-		major, minor, micro, state, nano = sys.version_info
-		if state in ('alpha', 'beta'):
-			docversion = 'dev/doc/devel'
-		elif micro == 0:
-			docversion = 'doc/%d.%d' % (major, minor)
-		else:
-			docversion = 'doc/%d.%d.%d' % (major, minor, micro)
-		webbrowser.open("http://www.python.org/%s" % docversion)
-		
-	def domenu_webpython(self, *args):
-		import webbrowser
-		webbrowser.open("http://www.python.org/")
-		
-	def domenu_webmacpython(self, *args):
-		import webbrowser
-		webbrowser.open("http://www.cwi.nl/~jack/macpython.html")
-		
-	def installdocumentation(self):
-		# This is rather much of a hack. Someone has to tell the Help Viewer
-		# about the Python documentation, so why not us. The documentation
-		# is located in the framework, but there's a symlink in Python.app.
-		# And as AHRegisterHelpBook wants a bundle (with the right bits in
-		# the plist file) we refer it to Python.app
-		python_app = os.path.join(sys.prefix, 'Resources/Python.app')
-		doc_source = os.path.join(python_app, 'Contents/Resources/English.lproj/Documentation')
-		if not os.path.isdir(doc_source):
-			return 0
-		try:
-			from Carbon import AH
-			AH.AHRegisterHelpBook(python_app)
-		except (ImportError, MacOS.Error), arg:
-			W.Message("Cannot register Python documentation: %s" % `arg`)
-			return 0
-		return 1
-	
 
 PythonIDE()
 

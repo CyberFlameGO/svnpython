@@ -2,14 +2,13 @@
 
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 from scantools import Scanner
+from bgenlocations import MWERKSDIR, TOOLBOXDIR
 
-WASTEDIR='/Applications/Metrowerks CodeWarrior 7.0/Metrowerks CodeWarrior/MacOS Support/(Third Party Support)/Waste 2.0 Distribution/C_C++ Headers/'
-		
-if not os.path.exists(WASTEDIR):
-	raise 'Error: not found: %s', WASTEDIR
+#WASTEDIR=":::::Waste 1.3 Distribution:WASTE C/C++ Headers:"
+WASTEDIR=MWERKSDIR + 'MacOS Support:(Third Party Support):Waste 2.0 Distribution:C_C++ Headers:'
 
 OBJECT = "TEHandle"
 SHORT = "waste"
@@ -24,8 +23,6 @@ def main():
 	scanner.scan()
 ##	scanner.gentypetest(SHORT+"typetest.py")
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now importing the generated code... ==="
 	exec "import " + SHORT + "support"
 	print "=== Done.  It's up to you to compile it now! ==="
@@ -51,8 +48,6 @@ class MyScanner(Scanner):
 
 	def writeinitialdefs(self):
 		self.defsfile.write("kPascalStackBased = None # workaround for header parsing\n")
-		self.defsfile.write("def FOUR_CHAR_CODE(x): return x\n")
-
 	def makeblacklistnames(self):
 		return [
 			"WEDispose",
@@ -61,22 +56,6 @@ class MyScanner(Scanner):
 			"WEVersion", # Unfortunately...
 			"WEPut", # XXXX TBD: needs array of flavortypes.
 			"WEGetOneAttribute", # XXXX TBD: output buffer
-			# Incompatible constant definitions
-			"weDoAutoScroll",
-			"weDoOutlineHilite",
-			"weDoReadOnly",
-			"weDoUndo",
-			"weDoIntCutAndPaste",
-			"weDoDragAndDrop",
-			"weDoInhibitRecal",
-			"weDoUseTempMem",
-			"weDoDrawOffscreen",
-			"weDoInhibitRedraw",
-			"weDoMonoStyled",
-			"weDoMultipleUndo",
-			"weDoNoKeyboardSync",
-			"weDoInhibitICSupport",
-			"weDoInhibitColor",
 			]
 
 	def makeblacklisttypes(self):

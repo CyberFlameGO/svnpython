@@ -1,3 +1,4 @@
+import string
 #from Tkinter import TclError
 #import tkMessageBox
 #import tkSimpleDialog
@@ -167,15 +168,15 @@ class AutoIndent:
             return "break"
         # Ick.  It may require *inserting* spaces if we back up over a
         # tab character!  This is written to be clear, not fast.
-        tabwidth = self.tabwidth
-        have = len(chars.expandtabs(tabwidth))
+        expand, tabwidth = string.expandtabs, self.tabwidth
+        have = len(expand(chars, tabwidth))
         assert have > 0
         want = ((have - 1) // self.indentwidth) * self.indentwidth
         ncharsdeleted = 0
         while 1:
             chars = chars[:-1]
             ncharsdeleted = ncharsdeleted + 1
-            have = len(chars.expandtabs(tabwidth))
+            have = len(expand(chars, tabwidth))
             if have <= want or chars[-1] not in " \t":
                 break
         text.undo_block_start()
@@ -209,7 +210,8 @@ class AutoIndent:
                 if self.usetabs:
                     pad = '\t'
                 else:
-                    effective = len(prefix.expandtabs(self.tabwidth))
+                    effective = len(string.expandtabs(prefix,
+                                                      self.tabwidth))
                     n = self.indentwidth
                     pad = ' ' * (n - effective % n)
                 text.insert("insert", pad)
@@ -374,7 +376,7 @@ class AutoIndent:
         head, tail, chars, lines = self.get_region()
         tabwidth = self._asktabwidth()
         for pos in range(len(lines)):
-            lines[pos] = lines[pos].expandtabs(tabwidth)
+            lines[pos] = string.expandtabs(lines[pos], tabwidth)
         self.set_region(head, tail, chars, lines)
 
     def toggle_tabs_event(self, event):
@@ -415,12 +417,12 @@ class AutoIndent:
             head = text.index("insert linestart")
             tail = text.index("insert lineend +1c")
         chars = text.get(head, tail)
-        lines = chars.split("\n")
+        lines = string.split(chars, "\n")
         return head, tail, chars, lines
 
     def set_region(self, head, tail, chars, lines):
         text = self.text
-        newchars = "\n".join(lines)
+        newchars = string.join(lines, "\n")
         if newchars == chars:
             text.bell()
             return

@@ -1,7 +1,7 @@
 import pprint
 import sgmllib
+import test_support
 import unittest
-from test import test_support
 
 
 class EventCollector(sgmllib.SGMLParser):
@@ -260,12 +260,6 @@ DOCTYPE html PUBLIC '-//W3C//DTD HTML 4.01//EN'
             ("data", "abc"),
             ("unknown decl", 'spacer type="block" height="25"'),
             ("data", "def"),
-            ])
-
-    def test_enumerated_attr_type(self):
-        s = "<!DOCTYPE doc [<!ATTLIST doc attr (a | b) >]>"
-        self.check_events(s, [
-            ('decl', 'DOCTYPE doc [<!ATTLIST doc attr (a | b) >]'),
             ])
 
     # XXX These tests have been disabled by prefixing their names with

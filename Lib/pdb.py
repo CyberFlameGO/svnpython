@@ -64,7 +64,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
 
         # Read $HOME/.pdbrc and ./.pdbrc
         self.rcLines = []
-        if 'HOME' in os.environ:
+        if os.environ.has_key('HOME'):
             envHome = os.environ['HOME']
             try:
                 rcFile = open(os.path.join(envHome, ".pdbrc"))
@@ -108,16 +108,10 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             self.rcLines = []
             for line in rcLines:
                 line = line[:-1]
-                if len(line) > 0 and line[0] != '#':
-                    self.onecmd(line)
+                if len (line) > 0 and line[0] != '#':
+                    self.onecmd (line)
 
-    # Override Bdb methods
-
-    def user_call(self, frame, argument_list):
-        """This method is called when there is the remote possibility
-        that we ever need to stop in this function."""
-        print '--Call--'
-        self.interaction(frame, None)
+    # Override Bdb methods (except user_call, for now)
 
     def user_line(self, frame):
         """This function is called when we stop or break at this line."""
@@ -166,7 +160,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         if not line.strip():
             return line
         args = line.split()
-        while args[0] in self.aliases:
+        while self.aliases.has_key(args[0]):
             line = self.aliases[args[0]]
             ii = 1
             for tmpArg in args[1:]:
@@ -333,8 +327,8 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             return 0
         line = line.strip()
         # Don't allow setting breakpoint at a blank line
-        if (not line or (line[0] == '#') or
-             (line[:3] == '"""') or line[:3] == "'''"):
+        if ( not line or (line[0] == '#') or
+             (line[:3] == '"""') or line[:3] == "'''" ):
             print '*** Blank or comment'
             return 0
         # When a file is read in and a breakpoint is at
@@ -413,9 +407,9 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         bp = bdb.Breakpoint.bpbynumber[bpnum]
         if bp:
             bp.ignore = count
-            if count > 0:
+            if (count > 0):
                 reply = 'Will ignore next '
-                if count > 1:
+                if (count > 1):
                     reply = reply + '%d crossings' % count
                 else:
                     reply = reply + '1 crossing'
@@ -521,12 +515,12 @@ class Pdb(bdb.Bdb, cmd.Cmd):
         for i in range(n):
             name = co.co_varnames[i]
             print name, '=',
-            if name in dict: print dict[name]
+            if dict.has_key(name): print dict[name]
             else: print "*** undefined ***"
     do_a = do_args
 
     def do_retval(self, arg):
-        if '__return__' in self.curframe.f_locals:
+        if self.curframe.f_locals.has_key('__return__'):
             print self.curframe.f_locals['__return__']
         else:
             print '*** Not yet returned!'
@@ -626,7 +620,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
             for alias in keys:
                 print "%s = %s" % (alias, self.aliases[alias])
             return
-        if args[0] in self.aliases and len(args) == 1:
+        if self.aliases.has_key(args[0]) and len (args) == 1:
             print "%s = %s" % (args[0], self.aliases[args[0]])
         else:
             self.aliases[args[0]] = ' '.join(args[1:])
@@ -634,7 +628,7 @@ class Pdb(bdb.Bdb, cmd.Cmd):
     def do_unalias(self, arg):
         args = arg.split()
         if len(args) == 0: return
-        if args[0] in self.aliases:
+        if self.aliases.has_key(args[0]):
             del self.aliases[args[0]]
 
     # Print a traceback starting at the top stack frame.

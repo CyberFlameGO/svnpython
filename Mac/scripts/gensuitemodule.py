@@ -14,28 +14,20 @@ import types
 import StringIO
 import macfs
 import keyword
-import macresource
-from aetools import unpack
 
 from Carbon.Res import *
 
-DEFAULT_PACKAGEFOLDER=os.path.join(sys.prefix, 'Mac', 'Lib', 'lib-scriptpackages')
-
 def main():
-	if len(sys.argv) > 1:
-		for filename in sys.argv[1:]:
-			processfile(filename)
-	else:
-		fss, ok = macfs.PromptGetFile('Select file with aeut/aete resource:')
-		if not ok:
-			sys.exit(0)
-		processfile(fss.as_pathname())
+	fss, ok = macfs.PromptGetFile('Select file with aeut/aete resource:')
+	if not ok:
+		sys.exit(0)
+	processfile(fss.as_pathname())
 
 def processfile(fullname):
 	"""Process all resources in a single file"""
 	cur = CurResFile()
-	print "Processing", fullname
-	rf = macresource.open_pathname(fullname)
+	print fullname
+	rf = OpenRFPerm(fullname, 0, 1)
 	try:
 		UseResFile(rf)
 		resources = []
@@ -233,15 +225,15 @@ def compileaete(aete, resinfo, fname):
 	major, minor = divmod(version, 256)
 	fss = macfs.FSSpec(fname)
 	creatorsignature, dummy = fss.GetCreatorType()
-	packagename = identify(os.path.splitext(os.path.basename(fname))[0])
+	packagename = identify(os.path.basename(fname))
 	if language:
 		packagename = packagename+'_lang%d'%language
 	if script:
 		packagename = packagename+'_script%d'%script
 	if len(packagename) > 27:
 		packagename = packagename[:27]
-	macfs.SetFolder(DEFAULT_PACKAGEFOLDER)
-	fss, ok = macfs.GetDirectory('Create and select package folder for %s'%packagename)
+	macfs.SetFolder(os.path.join(sys.prefix, ':Mac:Lib:lib-scriptpackages'))
+	fss, ok = macfs.GetDirectory('Package folder for %s'%packagename)
 	if not ok:
 		return
 	pathname = fss.as_pathname()
@@ -275,8 +267,7 @@ def compileaete(aete, resinfo, fname):
 	fss.SetCreatorType('Pyth', 'TEXT')
 	fp.write('"""\n')
 	fp.write("Package generated from %s\n"%fname)
-	if resinfo:
-		fp.write("Resource %s resid %d %s\n"%(ascii(resinfo[1]), resinfo[0], ascii(resinfo[2])))
+	fp.write("Resource %s resid %d %s\n"%(resinfo[1], resinfo[0], resinfo[2]))
 	fp.write('"""\n')
 	fp.write('import aetools\n')
 	fp.write('Error = aetools.Error\n')
@@ -284,50 +275,20 @@ def compileaete(aete, resinfo, fname):
 		fp.write("import %s\n" % modname)
 	fp.write("\n\n_code_to_module = {\n")
 	for code, modname in suitelist:
-		fp.write("\t'%s' : %s,\n"%(ascii(code), modname))
+		fp.write("\t'%s' : %s,\n"%(code, modname))
 	fp.write("}\n\n")
 	fp.write("\n\n_code_to_fullname = {\n")
 	for code, modname in suitelist:
-		fp.write("\t'%s' : ('%s.%s', '%s'),\n"%(ascii(code), packagename, modname, modname))
+		fp.write("\t'%s' : ('%s.%s', '%s'),\n"%(code, packagename, modname, modname))
 	fp.write("}\n\n")
 	for code, modname in suitelist:
 		fp.write("from %s import *\n"%modname)
-	
-	# Generate property dicts and element dicts for all types declared in this module
-	fp.write("def getbaseclasses(v):\n")
-	fp.write("\tif hasattr(v, '_superclassnames') and not hasattr(v, '_propdict'):\n")
-	fp.write("\t\tv._propdict = {}\n")
-	fp.write("\t\tv._elemdict = {}\n")
-	fp.write("\t\tfor superclass in v._superclassnames:\n")
-##	fp.write("\t\t\tgetbaseclasses(superclass)\n")
-	fp.write("\t\t\tv._propdict.update(getattr(eval(superclass), '_privpropdict', {}))\n")
-	fp.write("\t\t\tv._elemdict.update(getattr(eval(superclass), '_privelemdict', {}))\n")
-	fp.write("\t\tv._propdict.update(v._privpropdict)\n")
-	fp.write("\t\tv._elemdict.update(v._privelemdict)\n")
-	fp.write("\n")
-	fp.write("import StdSuites\n")
-	if allprecompinfo:
-		fp.write("\n#\n# Set property and element dictionaries now that all classes have been defined\n#\n")
-		for codenamemapper in allprecompinfo:
-			for k, v in codenamemapper.getall('class'):
-				fp.write("getbaseclasses(%s)\n" % v)
-
-	# Generate a code-to-name mapper for all of the types (classes) declared in this module
-	if allprecompinfo:
-		fp.write("\n#\n# Indices of types declared in this module\n#\n")
-		fp.write("_classdeclarations = {\n")
-		for codenamemapper in allprecompinfo:
-			for k, v in codenamemapper.getall('class'):
-				fp.write("\t%s : %s,\n" % (`k`, v))
-		fp.write("}\n")
-
 	if suitelist:
 		fp.write("\n\nclass %s(%s_Events"%(packagename, suitelist[0][1]))
 		for code, modname in suitelist[1:]:
 			fp.write(",\n\t\t%s_Events"%modname)
 		fp.write(",\n\t\taetools.TalkTo):\n")
-		fp.write("\t_signature = %s\n\n"%`creatorsignature`)
-		fp.write("\t_moduleName = '%s'\n\n"%packagename)
+		fp.write("\t_signature = '%s'\n\n"%creatorsignature)
 	fp.close()
 	
 def precompilesuite(suite, basepackage=None):
@@ -385,9 +346,9 @@ def compilesuite((suite, fss, modname), major, minor, language, script, fname, b
 	fp = open(fss.as_pathname(), 'w')
 	fss.SetCreatorType('Pyth', 'TEXT')
 	
-	fp.write('"""Suite %s: %s\n' % (ascii(name), ascii(desc)))
+	fp.write('"""Suite %s: %s\n' % (name, desc))
 	fp.write("Level %d, version %d\n\n" % (level, version))
-	fp.write("Generated from %s\n"%ascii(fname))
+	fp.write("Generated from %s\n"%fname)
 	fp.write("AETE/AEUT resource version %d/%d, language %d, script %d\n" % \
 		(major, minor, language, script))
 	fp.write('"""\n\n')
@@ -475,7 +436,7 @@ def compileevent(fp, event, enumsneeded):
 	# Generate doc string (important, since it may be the only
 	# available documentation, due to our name-remaping)
 	#
-	fp.write('\t\t"""%s: %s\n'%(ascii(name), ascii(desc)))
+	fp.write('\t\t"""%s: %s\n'%(name, desc))
 	if has_arg:
 		fp.write("\t\tRequired argument: %s\n"%getdatadoc(accepts))
 	elif opt_arg:
@@ -530,7 +491,7 @@ def compileevent(fp, event, enumsneeded):
 	#
 	# Error handling
 	#
-	fp.write("\t\tif _arguments.get('errn', 0):\n")
+	fp.write("\t\tif _arguments.has_key('errn'):\n")
 	fp.write("\t\t\traise aetools.Error, aetools.decodeerror(_arguments)\n")
 	fp.write("\t\t# XXXX Optionally decode result\n")
 	#
@@ -697,7 +658,7 @@ class ObjectCompiler:
 		else:
 			if self.fp:
 				self.fp.write('\nclass %s(aetools.ComponentItem):\n' % pname)
-				self.fp.write('\t"""%s - %s """\n' % (ascii(name), ascii(desc)))
+				self.fp.write('\t"""%s - %s """\n' % (name, desc))
 				self.fp.write('\twant = %s\n' % `code`)
 		self.namemappers[0].addnamecode('class', pname, code)
 		for prop in properties:
@@ -721,7 +682,7 @@ class ObjectCompiler:
 		else:
 			if self.fp:
 				self.fp.write("class %s(aetools.NProperty):\n" % pname)
-				self.fp.write('\t"""%s - %s """\n' % (ascii(name), ascii(what[1])))
+				self.fp.write('\t"""%s - %s """\n' % (name, what[1]))
 				self.fp.write("\twhich = %s\n" % `code`)
 				self.fp.write("\twant = %s\n" % `what[0]`)
 		self.namemappers[0].addnamecode('property', pname, code)
@@ -740,25 +701,12 @@ class ObjectCompiler:
 			return
 		plist = []
 		elist = []
-		superclasses = []
 		for prop in properties:
 			[pname, pcode, what] = prop
-			if pcode == "c@#^":
-				superclasses.append(what)
 			if pcode == 'c@#!':
 				continue
 			pname = identify(pname)
 			plist.append(pname)
-
-		superclassnames = []
-		for superclass in superclasses:
-			superId, superDesc, dummy = superclass
-			superclassname, fullyqualifiedname, module = self.findcodename("class", superId)
-			superclassnames.append(superclassname)
-
-		if self.fp:
-			self.fp.write("%s._superclassnames = %s\n"%(cname, `superclassnames`))
-
 		for elem in elements:
 			[ecode, keyform] = elem
 			if ecode == 'c@#!':
@@ -771,11 +719,11 @@ class ObjectCompiler:
 				elist.append((name, ename))
 		
 		if self.fp:
-			self.fp.write("%s._privpropdict = {\n"%cname)
+			self.fp.write("%s._propdict = {\n"%cname)
 			for n in plist:
 				self.fp.write("\t'%s' : %s,\n"%(n, n))
 			self.fp.write("}\n")
-			self.fp.write("%s._privelemdict = {\n"%cname)
+			self.fp.write("%s._elemdict = {\n"%cname)
 			for n, fulln in elist:
 				self.fp.write("\t'%s' : %s,\n"%(n, fulln))
 			self.fp.write("}\n")
@@ -786,7 +734,7 @@ class ObjectCompiler:
 		self.namemappers[0].addnamecode('comparison', iname, code)
 		if self.fp:
 			self.fp.write("class %s(aetools.NComparison):\n" % iname)
-			self.fp.write('\t"""%s - %s """\n' % (ascii(name), ascii(comment)))
+			self.fp.write('\t"""%s - %s """\n' % (name, comment))
 		
 	def compileenumeration(self, enum):
 		[code, items] = enum
@@ -801,14 +749,14 @@ class ObjectCompiler:
 	
 	def compileenumerator(self, item):
 		[name, code, desc] = item
-		self.fp.write("\t%s : %s,\t# %s\n" % (`identify(name)`, `code`, ascii(desc)))
+		self.fp.write("\t%s : %s,\t# %s\n" % (`identify(name)`, `code`, desc))
 		
 	def checkforenum(self, enum):
 		"""This enum code is used by an event. Make sure it's available"""
 		name, fullname, module = self.findcodename('enum', enum)
 		if not name:
 			if self.fp:
-				self.fp.write("_Enum_%s = None # XXXX enum %s not found!!\n"%(identify(enum), ascii(enum)))
+				self.fp.write("_Enum_%s = None # XXXX enum %s not found!!\n"%(identify(enum), enum))
 			return
 		if module:
 			if self.fp:
@@ -851,7 +799,7 @@ def is_enum(data):
 def getdatadoc(data):
 	[type, descr, flags] = data
 	if descr:
-		return ascii(descr)
+		return descr
 	if type == '****':
 		return 'anything'
 	if type == 'obj ':
@@ -869,18 +817,6 @@ def compiledataflags(flags):
 				bits.append(`i`)
 	return '[%s]' % string.join(bits)
 	
-def ascii(str):
-	"""Return a string with all non-ascii characters hex-encoded"""
-	if type(str) != type(''):
-		return map(ascii, str)
-	rv = ''
-	for c in str:
-		if c in ('\t', '\n', '\r') or ' ' <= c < chr(0x7f):
-			rv = rv + c
-		else:
-			rv = rv + '\\' + 'x%02.2x' % ord(c)
-	return rv
-	
 def identify(str):
 	"""Turn any string into an identifier:
 	- replace space by _
@@ -888,7 +824,7 @@ def identify(str):
 	- prepend _ if the result is a python keyword
 	"""
 	if not str:
-		return "empty_ae_name_"
+		return "_empty_ae_name"
 	rv = ''
 	ok = string.ascii_letters + '_'
 	ok2 = ok + string.digits
@@ -901,7 +837,7 @@ def identify(str):
 			rv = rv + '_%02.2x_'%ord(c)
 		ok = ok2
 	if keyword.iskeyword(rv):
-		rv = rv + '_'
+		rv = '_' + rv
 	return rv
 
 # Call the main program

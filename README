@@ -1,5 +1,5 @@
-This is Python version 2.3 (pre-alpha)
-==========================
+This is Python version 2.2.2
+============================
 
 Copyright (c) 2001, 2002 Python Software Foundation.
 All rights reserved.
@@ -45,7 +45,7 @@ current directory and when it finishes, type "make".  This creates an
 executable "./python"; to install in /usr/local, first do "su root"
 and then "make install".
 
-The section `Build instructions' below is still recommended reading,
+The section `Build Instructions' below is still recommended reading,
 especially the part on customizing Modules/Setup.
 
 
@@ -88,10 +88,10 @@ access.  The documentation is available in HTML, PostScript, PDF, and
 LaTeX formats; the LaTeX version is primarily for documentation
 authors, translators, and people with special formatting requirements.
 
-The best documentation for the new (in Python 2.2) type/class
-unification features is Guido's tutorial introduction, at
+The best documentation for the new (in Python 2.2) type/class unification
+features is Guido's tutorial introduction, at
 
-    http://www.python.org/2.2.1/descrintro.html
+    http://www.python.org/2.2/descrintro.html
 
 
 Web sites
@@ -100,8 +100,7 @@ Web sites
 New Python releases and related technologies are published at
 http://www.python.org/.  Come visit us!
 
-There's also a Python community web site at
-http://starship.python.net/.
+There's also a Python community web site at http://starship.python.net/.
 
 
 Newsgroups and Mailing Lists
@@ -113,8 +112,8 @@ for Python-related announcements.  These are also accessible as
 mailing lists: see http://www.python.org/psa/MailingLists.html for an
 overview of the many Python-related mailing lists.
 
-Archives are accessible via the Google Groups usenet archive; see
-http://groups.google.com/.  The mailing lists are also archived, see
+Archives are accessible via Deja.com Usenet News: see
+http://www.deja.com/usenet.  The mailing lists are also archived, see
 http://www.python.org/psa/MailingLists.html for details.
 
 
@@ -307,11 +306,6 @@ HP-UX:	Please read the file Misc/HPUX-NOTES for shared libraries.
 	this seems to make a difference (at least for HP-UX 10.20)
 	even though config.h defines it.
 
-HP PA-RISC 2.0: A recent bug report (http://www.python.org/sf/546117)
-	suggests that the C compiler in this 64-bit system has bugs
-	in the optimizer that break Python.  Compiling without
-	optimization solves the problems.
-
 Minix:  When using ack, use "CC=cc AR=aal RANLIB=: ./configure"!
 
 SCO:	The following apply to SCO 3 only; Python builds out of the box
@@ -468,24 +462,17 @@ MacOSX: The tests will crash on both 10.1 and 10.2 with SEGV in
         if you add the --enable-framework option, see below.
 
         On a clean OSX /usr/local does not exist. Do a
-        "sudo mkdir -m 775 /usr/local"
-        before you do a make install. It is probably not a good idea to
-        do "sudo make install" which installs everything as superuser,
-        as this may later cause problems when installing distutils-based
-        additions.
-        
-        Some people have reported problems building Python after using "fink"
-        to install additional unix software. Disabling fink (remove all references
-        to /sw from your .profile or .login) should solve this.
+	"sudo mkdir -m 775 /usr/local"
+        before you do a make install. Alternatively, do "sudo make install"
+        which installs everything as superuser.
 
         You may want to try the configure option "--enable-framework"
         which installs Python as a framework. The location can be set
         as argument to the --enable-framework option (default
-        /Library/Frameworks). A framework install is probably needed if you
-        want to use any Aqua-based GUI toolkit (whether Tkinter, wxPython,
-        Carbon, Cocoa or anything else).
-        
-        See Mac/OSX/README for more information on framework builds.
+        /Library/Frameworks). You may also want to check out ./Mac/OSX
+        for building a Python.app. You may also want to manually
+        install a symlink in /usr/local/bin/python to the executable
+        deep down in the framework.
 
 Cygwin: With recent (relative to the time of writing, 2001-12-19)
         Cygwin installations, there are problems with the interaction
@@ -552,46 +539,6 @@ Cygwin: With recent (relative to the time of writing, 2001-12-19)
         News regarding these platforms with more recent Cygwin
         versions would be appreciated!
 
-Configuring the bsddb and dbm modules
--------------------------------------
-
-Configuring the bsddb module can sometimes be a bit tricky.  This module
-provides a Python interface to the Berkeley DB library.  As of this writing
-several versions of the underlying library are in common use (versions 1.85,
-2.x, 3.x, and 4.x).  The file formats across the various versions tend to be
-incompatible.  Some Linux distributions install multiple versions by
-default.  It is important that compatible versions of header files and
-libraries are used when building bsddb.  To make matters worse, version 1.85
-of Berkeley DB has known bugs in its hash file implementation, but is still
-the most widely available version of the library.  Many people build bsddb
-with version 1.85 but aren't aware of the bugs.  This affects people using
-the anydbm and dbhash modules because they are both use Berkeley DB's hash
-file format as a side effect of calling bsddb.hashopen.
-
-To try and remedy this problem, beginning with Python version 2.3 a number
-of changes to the bsddb build process were made.  First, and most important,
-the bsddb module will not be built with version 1.85 unless the relevant
-lines in setup.py are uncommented first and no other higher-numbered
-versions are found.  Second, matching versions of the library and include
-files must be found.  Third, searching is performed in order, starting from
-version 4 and proceeding to version 2 (or version 1 if it is enabled).
-Version-independent libraries and header files (e.g. /usr/lib/libdb.a and
-/usr/include/db.h) are never considered.  They must be in version-specific
-directories or have version-specific filenames (e.g. /usr/lib/libdb-3.2.so
-and /usr/include/db3/db_185.h).
-
-Since the bsddb module is programmed using the Berkeley DB version 1 API,
-the underlying library must be configured with the --enable-compat185 flag.
-Most vendor-provided distributions are so-configured.  This is generally
-only an issue if you build Berkeley DB from source.
-
-All this affects the dbm module as well.  There are several dbm-compliant
-APIs provided by different libraries, including ndbm, gdbm and Berkeley DB.
-The build process for dbm would previously use the version 1.85 library,
-thus extending the potential hash file corruption to the dbm module as well.
-The dbm module will use the library and include files found for the bsddb
-module if neither ndbm nor gdbm libraries are found.
-
 Configuring threads
 -------------------
 
@@ -650,21 +597,6 @@ Linker (ld) libraries and flags for threads
 	    (buhrt@iquest.net)
     IRIX 6.2/POSIX                      -lpthread
 	    (jph@emilia.engr.sgi.com)
-
-
-Building a shared libpython
----------------------------
-
-Starting with Python 2.3, the majority of the interpreter can be built
-into a shared library, which can then be used by the interpreter 
-executable, and by applications embedding Python. To enable this feature,
-configure with --enable-shared. 
-
-If you do so, a static library will be created in addition to the
-shared library, which uses the same object files as the shared library
-In particular, the library likely object files using
-position-independent code (PIC) if PIC flags are needed for the shared
-library.
 
 
 Configuring additional built-in modules
@@ -911,13 +843,6 @@ Modules/getpath.o.
 --with-pydebug:  Enable additional debugging code to help track down
 	memory management problems.  This allows printing a list of all
 	live objects when the interpreter terminates.
-	
---with(out)-universal-newlines: enable reading of text files with
-	foreign newline convention (default: enabled). In other words,
-	any of \r, \n or \r\n is acceptable as end-of-line character.
-	If enabled import and execfile will automatically accept any newline
-	in files. Python code can open a file with open(file, 'U') to
-	read it in universal newline mode.
 
 
 Building for multiple architectures (using the VPATH feature)
@@ -980,11 +905,11 @@ platforms -- see http://www.python.org/.
 To port Python to a new non-UNIX system, you will have to fake the
 effect of running the configure script manually (for Mac and PC, this
 has already been done for you).  A good start is to copy the file
-pyconfig.h.in to pyconfig.h and edit the latter to reflect the actual
+config.h.in to config.h and edit the latter to reflect the actual
 configuration of your system.  Most symbols must simply be defined as
 1 only if the corresponding feature is present and can be left alone
-otherwise; however the *_t type symbols must be defined as some
-variant of int if they need to be defined at all.
+otherwise; however the *_t type symbols must be defined as some variant
+of int if they need to be defined at all.
 
 For all platforms, it's important that the build arrange to define the
 preprocessor symbol NDEBUG on the compiler command line in a release
@@ -1051,7 +976,6 @@ Grammar/        Input for the parser generator
 Include/        Public header files
 LICENSE		Licensing information
 Lib/            Python library modules
-Mac/            Macintosh specific resources
 Makefile.pre.in Source from which config.status creates the Makefile.pre
 Misc/           Miscellaneous useful files
 Modules/        Implementation of most built-in modules
@@ -1062,7 +986,8 @@ Parser/         The parser and tokenizer and their input handling
 Python/         The byte-compiler and interpreter
 README          The file you're reading now
 Tools/          Some useful programs written in Python
-pyconfig.h.in   Source from which pyconfig.h is created (GNU autoheader output)
+acconfig.h      Additional input for the GNU autoheader program
+config.h.in     Source from which config.h is created (GNU autoheader output)
 configure       Configuration shell script (GNU autoconf output)
 configure.in    Configuration specification (input for GNU autoconf)
 install-sh      Shell script used to install files
@@ -1072,9 +997,9 @@ the configuration and build processes:
 
 Makefile        Build rules
 Makefile.pre    Build rules before running Modules/makesetup
-buildno         Keeps track of the build number
+buildno		Keeps track of the build number
 config.cache    Cache of configuration variables
-pyconfig.h      Configuration header
+config.h        Configuration header
 config.log      Log from last configure run
 config.status   Status from last run of the configure script
 getbuildinfo.o	Object file from Modules/getbuildinfo.c

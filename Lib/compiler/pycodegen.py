@@ -1,6 +1,8 @@
 import imp
 import os
 import marshal
+import stat
+import string
 import struct
 import sys
 import types
@@ -133,8 +135,8 @@ class Module(AbstractCompileMode):
         # calling the interface that would also generate a 1-byte code
         # to indicate the type of the value.  simplest way to get the
         # same effect is to call marshal and then skip the code.
-        mtime = os.path.getmtime(self.filename)
-        mtime = struct.pack('i', mtime)
+        mtime = os.stat(self.filename)[stat.ST_MTIME]
+        mtime = struct.pack('<i', mtime)
         return self.MAGIC + mtime
 
 class LocalNameFinder:
@@ -387,9 +389,6 @@ class CodeGenerator:
     def visitClass(self, node):
         gen = self.ClassGen(node, self.scopes,
                             self.get_module())
-        if node.doc:
-            self.emit('LOAD_CONST', node.doc)
-            self.storeName('__doc__')
         walk(node.code, gen)
         gen.finish()
         self.set_lineno(node)
@@ -762,7 +761,7 @@ class CodeGenerator:
             if VERSION > 1:
                 self.emit('LOAD_CONST', None)
             self.emit('IMPORT_NAME', name)
-            mod = name.split(".")[0]
+            mod = string.split(name, ".")[0]
             self.storeName(alias or mod)
 
     def visitFrom(self, node):
@@ -788,7 +787,7 @@ class CodeGenerator:
         self.emit('POP_TOP')
 
     def _resolveDots(self, name):
-        elts = name.split(".")
+        elts = string.split(name, ".")
         if len(elts) == 1:
             return
         for elt in elts[1:]:
@@ -1185,7 +1184,7 @@ class InteractiveCodeGenerator(NestedScopeMixin, CodeGenerator):
 
     def get_module(self):
         return self
-
+    
     def visitDiscard(self, node):
         # XXX Discard means it's an expression.  Perhaps this is a bad
         # name.
@@ -1304,6 +1303,10 @@ class ClassCodeGenerator(NestedScopeMixin, AbstractClassCode, CodeGenerator):
         self.__super_init(klass, scopes, module)
         self.graph.setFreeVars(self.scope.get_free_vars())
         self.graph.setCellVars(self.scope.get_cell_vars())
+        self.set_lineno(klass)
+        if klass.doc:
+            self.emit("LOAD_CONST", klass.doc)
+            self.storeName("__doc__")
 
 def generateArgList(arglist):
     """Generate an arg list marking TupleArgs"""

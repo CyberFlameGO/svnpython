@@ -20,11 +20,11 @@
 
 #include <Python.h>
 
-#ifndef MS_WINDOWS
+#ifndef MS_WIN32
 #define UNIX
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 #include <windows.h>
 static int
 my_getpagesize(void)
@@ -75,7 +75,7 @@ typedef struct {
 	size_t	size;
 	size_t	pos;
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	HANDLE	map_handle;
 	HANDLE	file_handle;
 	char *	tagname;
@@ -92,7 +92,7 @@ typedef struct {
 static void
 mmap_object_dealloc(mmap_object *m_obj)
 {
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	if (m_obj->data != NULL)
 		UnmapViewOfFile (m_obj->data);
 	if (m_obj->map_handle != INVALID_HANDLE_VALUE)
@@ -101,7 +101,7 @@ mmap_object_dealloc(mmap_object *m_obj)
 		CloseHandle (m_obj->file_handle);
 	if (m_obj->tagname)
 		PyMem_Free(m_obj->tagname);
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 
 #ifdef UNIX
 	if (m_obj->data!=NULL) {
@@ -118,7 +118,7 @@ mmap_close_method(mmap_object *self, PyObject *args)
 {
         if (!PyArg_ParseTuple(args, ":close"))
 		return NULL;
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	/* For each resource we maintain, we need to check
 	   the value is valid, and if so, free the resource 
 	   and set the member value to an invalid value so
@@ -138,7 +138,7 @@ mmap_close_method(mmap_object *self, PyObject *args)
 		CloseHandle (self->file_handle);
 		self->file_handle = INVALID_HANDLE_VALUE;
 	}
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 
 #ifdef UNIX
 	munmap(self->data, self->size);
@@ -149,7 +149,7 @@ mmap_close_method(mmap_object *self, PyObject *args)
 	return (Py_None);
 }
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 #define CHECK_VALID(err)						\
 do {									\
     if (!self->map_handle) {						\
@@ -157,7 +157,7 @@ do {									\
 	return err;							\
     }									\
 } while (0)
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 
 #ifdef UNIX
 #define CHECK_VALID(err)						\
@@ -336,7 +336,7 @@ mmap_size_method(mmap_object *self,
         if (!PyArg_ParseTuple(args, ":size"))
 		return NULL;
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	if (self->file_handle != INVALID_HANDLE_VALUE) {
 		return (Py_BuildValue (
 			"l", (long)
@@ -344,7 +344,7 @@ mmap_size_method(mmap_object *self,
 	} else {
 		return (Py_BuildValue ("l", (long) self->size) );
 	}
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 
 #ifdef UNIX
 	{
@@ -376,7 +376,7 @@ mmap_resize_method(mmap_object *self,
 	if (!PyArg_ParseTuple (args, "l:resize", &new_size) || 
 	    !is_resizeable(self)) {
 		return NULL;
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	} else { 
 		DWORD dwErrCode = 0;
 		/* First, unmap the file view */
@@ -414,7 +414,7 @@ mmap_resize_method(mmap_object *self,
 		}
 		PyErr_SetFromWindowsErr(dwErrCode);
 		return (NULL);
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 
 #ifdef UNIX
 #ifndef HAVE_MREMAP 
@@ -467,10 +467,10 @@ mmap_flush_method(mmap_object *self, PyObject *args)
 				 "flush values out of range");
 		return NULL;
 	} else {
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 		return (Py_BuildValue("l", (long)
                                       FlushViewOfFile(self->data+offset, size)));
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 #ifdef UNIX
 		/* XXX semantics of return value? */
 		/* XXX flags for msync? */
@@ -554,19 +554,19 @@ mmap_move_method(mmap_object *self, PyObject *args)
 }
 
 static struct PyMethodDef mmap_object_methods[] = {
-	{"close",	(PyCFunction) mmap_close_method,	METH_VARARGS},
-	{"find",	(PyCFunction) mmap_find_method,		METH_VARARGS},
-	{"flush",	(PyCFunction) mmap_flush_method,	METH_VARARGS},
-	{"move",	(PyCFunction) mmap_move_method,		METH_VARARGS},
-	{"read",	(PyCFunction) mmap_read_method,		METH_VARARGS},
-	{"read_byte",	(PyCFunction) mmap_read_byte_method,  	METH_VARARGS},
-	{"readline",	(PyCFunction) mmap_read_line_method,	METH_VARARGS},
-	{"resize",	(PyCFunction) mmap_resize_method,	METH_VARARGS},
-	{"seek",	(PyCFunction) mmap_seek_method,		METH_VARARGS},
-	{"size",	(PyCFunction) mmap_size_method,		METH_VARARGS},
-	{"tell",	(PyCFunction) mmap_tell_method,		METH_VARARGS},
-	{"write",	(PyCFunction) mmap_write_method,	METH_VARARGS},
-	{"write_byte",	(PyCFunction) mmap_write_byte_method,	METH_VARARGS},
+	{"close",	(PyCFunction) mmap_close_method,	1},
+	{"find",	(PyCFunction) mmap_find_method,		1},
+	{"flush",	(PyCFunction) mmap_flush_method,	1},
+	{"move",	(PyCFunction) mmap_move_method,		1},
+	{"read",	(PyCFunction) mmap_read_method,		1},
+	{"read_byte",	(PyCFunction) mmap_read_byte_method,  	1},
+	{"readline",	(PyCFunction) mmap_read_line_method,	1},
+	{"resize",	(PyCFunction) mmap_resize_method,	1},
+	{"seek",	(PyCFunction) mmap_seek_method,		1},
+	{"size",	(PyCFunction) mmap_size_method,		1},
+	{"tell",	(PyCFunction) mmap_tell_method,		1},
+	{"write",	(PyCFunction) mmap_write_method,	1},
+	{"write_byte",	(PyCFunction) mmap_write_byte_method,	1},
 	{NULL,	   NULL}       /* sentinel */
 };
 
@@ -919,7 +919,7 @@ new_mmap_object(PyObject *self, PyObject *args, PyObject *kwdict)
 }
 #endif /* UNIX */
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 static PyObject *
 new_mmap_object(PyObject *self, PyObject *args, PyObject *kwdict)
 {
@@ -1052,7 +1052,7 @@ new_mmap_object(PyObject *self, PyObject *args, PyObject *kwdict)
 	PyErr_SetFromWindowsErr(dwErr);
 	return (NULL);
 }
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 
 /* List of functions exported by this module */
 static struct PyMethodDef mmap_functions[] = {
@@ -1061,7 +1061,7 @@ static struct PyMethodDef mmap_functions[] = {
 	{NULL,		NULL}	     /* Sentinel */
 };
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 	initmmap(void)
 {
 	PyObject *dict, *module;

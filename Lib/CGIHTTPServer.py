@@ -86,8 +86,8 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             i = len(x)
             if path[:i] == x and (not path[i:] or path[i] == '/'):
                 self.cgi_info = path[:i], path[i+1:]
-                return True
-        return False
+                return 1
+        return 0
 
     cgi_directories = ['/cgi-bin', '/htbin']
 
@@ -234,7 +234,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             self.log_message("command: %s", cmdline)
             try:
                 nbytes = int(length)
-            except ValueError:
+            except:
                 nbytes = 0
             files = popenx(cmdline, 'b')
             fi = files[0]
@@ -305,8 +305,8 @@ def executable(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return st.st_mode & 0111 != 0
+        return 0
+    return st[0] & 0111 != 0
 
 
 def test(HandlerClass = CGIHTTPRequestHandler,

@@ -1,7 +1,10 @@
+import string
 import os
+import re
 import fnmatch
 import sys
 from Tkinter import *
+import tkMessageBox
 import SearchEngine
 from SearchDialogBase import SearchDialogBase
 

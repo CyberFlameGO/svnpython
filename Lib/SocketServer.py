@@ -226,10 +226,10 @@ class BaseServer:
     def verify_request(self, request, client_address):
         """Verify the request.  May be overridden.
 
-        Return True if we should proceed with this request.
+        Return true if we should proceed with this request.
 
         """
-        return True
+        return 1
 
     def process_request(self, request, client_address):
         """Call finish_request.
@@ -319,7 +319,7 @@ class TCPServer(BaseServer):
 
     request_queue_size = 5
 
-    allow_reuse_address = False
+    allow_reuse_address = 0
 
     def __init__(self, server_address, RequestHandlerClass):
         """Constructor.  May be extended, do not override."""
@@ -380,7 +380,7 @@ class UDPServer(TCPServer):
 
     """UDP server class."""
 
-    allow_reuse_address = False
+    allow_reuse_address = 0
 
     socket_type = socket.SOCK_DGRAM
 

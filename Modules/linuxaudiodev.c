@@ -70,7 +70,7 @@ static struct {
 
 static int n_audio_types = sizeof(audio_types) / sizeof(audio_types[0]);
 
-static PyTypeObject Ladtype;
+staticforward PyTypeObject Ladtype;
 
 static PyObject *LinuxAudioError;
 
@@ -158,7 +158,8 @@ lad_read(lad_t *self, PyObject *args)
         return NULL;
     }
     self->x_icount += count;
-    _PyString_Resize(&rv, count);
+    if (_PyString_Resize(&rv, count) == -1)
+	return NULL;
     return rv;
 }
 

@@ -13,7 +13,7 @@ except ImportError:
 __all__ = ["Error", "Packer", "Unpacker", "ConversionError"]
 
 # exceptions
-class Error(Exception):
+class Error:
     """Exception class for this module. Use:
 
     except xdrlib.Error, var:

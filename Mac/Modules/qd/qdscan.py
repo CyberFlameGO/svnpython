@@ -2,10 +2,11 @@
 
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 
 from scantools import Scanner
+from bgenlocations import TOOLBOXDIR
 
 def main():
 	input = "QuickDraw.h"
@@ -40,8 +41,6 @@ def main():
 		ifp.close()
 		ofp.close()
 		
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now importing the generated code... ==="
 	import qdsupport
 	print "=== Done.  It's up to you to compile it now! ==="

@@ -86,13 +86,13 @@ static Sigfunc sigfpe_handler;
 static void fpe_reset(Sigfunc *);
 
 static PyObject *fpe_error;
-PyMODINIT_FUNC initfpectl(void);
+DL_EXPORT(void) initfpectl(void);
 static PyObject *turnon_sigfpe            (PyObject *self,PyObject *args);
 static PyObject *turnoff_sigfpe           (PyObject *self,PyObject *args);
 
 static PyMethodDef fpectl_methods[] = {
-    {"turnon_sigfpe",		 (PyCFunction) turnon_sigfpe,		 METH_VARARGS},
-    {"turnoff_sigfpe",		 (PyCFunction) turnoff_sigfpe, 	         METH_VARARGS},
+    {"turnon_sigfpe",		 (PyCFunction) turnon_sigfpe,		 1},
+    {"turnoff_sigfpe",		 (PyCFunction) turnoff_sigfpe, 	         1},
     {0,0}
 };
 
@@ -219,6 +219,12 @@ static void fpe_reset(Sigfunc *handler)
 #endif
     PyOS_setsig(SIGFPE, handler);
 
+/*-- NeXT -----------------------------------------------------------------*/
+#elif defined(NeXT) && defined(m68k) && defined(__GNUC__)
+    /* NeXT needs explicit csr set to generate SIGFPE */
+    asm("fmovel     #0x1400,fpcr");   /* set OVFL and ZD bits */
+    PyOS_setsig(SIGFPE, handler);
+
 /*-- Microsoft Windows, NT ------------------------------------------------*/
 #elif defined(_MSC_VER)
     /* Reference: Visual C++ Books Online 4.2,
@@ -257,7 +263,7 @@ static void sigfpe_handler(int signo)
     }
 }
 
-PyMODINIT_FUNC initfpectl(void)
+DL_EXPORT(void) initfpectl(void)
 {
     PyObject *m, *d;
     m = Py_InitModule("fpectl", fpectl_methods);

@@ -233,7 +233,7 @@ typedef struct {
 	NavReplyRecord itself;
 } navrrobject;
 
-static PyTypeObject Navrrtype;
+staticforward PyTypeObject Navrrtype;
 
 
 
@@ -309,7 +309,7 @@ static void
 navrr_dealloc(navrrobject *self)
 {
 	NavDisposeReply(&self->itself);
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *

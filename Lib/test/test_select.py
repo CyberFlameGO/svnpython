@@ -1,5 +1,5 @@
 # Testing select module
-from test.test_support import verbose
+from test_support import verbose
 import select
 import os
 
@@ -27,13 +27,6 @@ else:
 
 try:
     rfd, wfd, xfd = select.select([Almost()], [], [])
-except TypeError:
-    pass
-else:
-    print 'expected TypeError exception not raised'
-
-try:
-    rfd, wfd, xfd = select.select([], [], [], 'not a number')
 except TypeError:
     pass
 else:

@@ -36,20 +36,9 @@
 #
 # Finally, if a line contains just the word "*shared*" (without the
 # quotes but with the stars), then the following modules will not be
-# built statically.  The build process works like this:
-#
-# 1. Build all modules that are declared as static in Modules/Setup,
-#    combine them into libpythonxy.a, combine that into python.
-# 2. Build all modules that are listed as shared in Modules/Setup.
-# 3. Invoke setup.py. That builds all modules that
-#    a) are not builtin, and
-#    b) are not listed in Modules/Setup, and
-#    c) can be build on the target
-#
-# Therefore, modules declared to be shared will not be
 # included in the config.c file, nor in the list of objects to be
 # added to the library archive, and their linker options won't be
-# added to the linker options. Rules to create their .o files and
+# added to the linker options, but rules to create their .o files and
 # their shared libraries will still be added to the Makefile, and
 # their names will be collected in the Make variable SHAREDMODS.  This
 # is used to build modules as shared libraries.  (They can be
@@ -57,9 +46,8 @@
 # toplevel "make install" target.)  (For compatibility,
 # *noconfig* has the same effect as *shared*.)
 #
-# In addition, *static* explicitly declares the following modules to
-# be static.  Lines containing "*static*" and "*shared*" may thus
-# alternate thoughout this file.
+# In addition, *static* reverses this effect (negating a previous
+# *shared* line).
 
 # NOTE: As a standard policy, as many modules as can be supported by a
 # platform should be present.  The distribution comes with all modules
@@ -111,6 +99,7 @@ PYTHONPATH=$(COREPYTHONPATH)
 posix posixmodule.c		# posix (UNIX) system calls
 errno errnomodule.c		# posix (UNIX) errno values
 _sre _sre.c			# Fredrik Lundh's new regular expressions
+new newmodule.c			# Tommy Burnette's 'new' module
 
 # The rest of the modules listed in this file are all commented out by
 # default.  Usually they can be detected and built as dynamically
@@ -186,13 +175,13 @@ GLHACK=-Dclear=__GLclear
 # Dynamic readlines
 #xreadlines xreadlinesmodule.c
 
-# Socket module helper for socket(2)
+# for socket(2), without SSL support.
 #_socket socketmodule.c
 
-# Socket module helper for SSL support; you must comment out the other
+# Socket module compiled with SSL support; you must comment out the other
 # socket line above, and possibly edit the SSL variable:
 #SSL=/usr/local/ssl
-#_ssl _ssl.c \
+#_socket socketmodule.c \
 #	-DUSE_SSL -I$(SSL)/include -I$(SSL)/include/openssl \
 #	-L$(SSL)/lib -lssl -lcrypto
 
@@ -421,7 +410,7 @@ GLHACK=-Dclear=__GLclear
 # Fred Drake's interface to the Python parser
 #parser parsermodule.c
 
-# cStringIO and cPickle
+# Digital Creations' cStringIO and cPickle
 #cStringIO cStringIO.c
 #cPickle cPickle.c
 
@@ -453,14 +442,17 @@ GLHACK=-Dclear=__GLclear
 # Expat was written by James Clark and is now maintained by a group of
 # developers on SourceForge; see www.libexpat.org for more
 # information.  The pyexpat module was written by Paul Prescod after a
-# prototype by Jack Jansen.  Source of Expat 1.95.2 is included in
-# Modules/expat/.  Usage of a system shared libexpat.so/expat.dll is
-# not advised.
+# prototype by Jack Jansen.  Expat 1.95.2 is the recommended version
+# of Expat for use with Python.  Usage of a system shared
+# libexpat.so/expat.dll is not advised; a static version of the
+# library is sufficient.
+#
+# The Expat library should be installed so that the linker will find
+# it properly.
 #
 # More information on Expat can be found at www.libexpat.org.
 #
-#EXPAT_DIR=/usr/local/src/expat-1.95.2
-#pyexpat pyexpat.c -DHAVE_EXPAT_H -I$(EXPAT_DIR)/lib -L$(EXPAT_DIR) -lexpat
+#pyexpat pyexpat.c -DHAVE_EXPAT_H -lexpat
 
 
 # Example -- included for reference only:

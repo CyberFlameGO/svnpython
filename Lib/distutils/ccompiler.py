@@ -16,7 +16,7 @@ from distutils.file_util import move_file
 from distutils.dir_util import mkpath
 from distutils.dep_util import newer_pairwise, newer_group
 from distutils.util import split_quoted, execute
-from distutils import log
+
 
 class CCompiler:
     """Abstract base class to define the interface that must be implemented
@@ -80,9 +80,9 @@ class CCompiler:
                   dry_run=0,
                   force=0):
 
+        self.verbose = verbose
         self.dry_run = dry_run
         self.force = force
-        self.verbose = verbose
 
         # 'output_dir': a common output directory for object, library,
         # shared object, and shared library files
@@ -159,6 +159,7 @@ class CCompiler:
             setattr(self, key, split_quoted(value))
         else:
             setattr(self, key, value)
+
 
 
     def _find_macro (self, name):
@@ -318,102 +319,8 @@ class CCompiler:
         self.objects = copy (objects)
 
 
-    # -- Private utility methods --------------------------------------
+    # -- Priviate utility methods --------------------------------------
     # (here for the convenience of subclasses)
-
-    # Helper method to prep compiler in subclass compile() methods
-
-    def _setup_compile(self, outdir, macros, incdirs, sources, depends,
-                       extra):
-        """Process arguments and decide which source files to compile.
-
-        Merges _fix_compile_args() and _prep_compile().
-        """
-        if outdir is None:
-            outdir = self.output_dir
-        elif type(outdir) is not StringType:
-            raise TypeError, "'output_dir' must be a string or None"
-
-        if macros is None:
-            macros = self.macros
-        elif type(macros) is ListType:
-            macros = macros + (self.macros or [])
-        else:
-            raise TypeError, "'macros' (if supplied) must be a list of tuples"
-
-        if incdirs is None:
-            incdirs = self.include_dirs
-        elif type(incdirs) in (ListType, TupleType):
-            incdirs = list(incdirs) + (self.include_dirs or [])
-        else:
-            raise TypeError, \
-                  "'include_dirs' (if supplied) must be a list of strings"
-
-        if extra is None:
-            extra = []
-
-        # Get the list of expected output (object) files
-        objects = self.object_filenames(sources, 1, outdir)
-        assert len(objects) == len(sources)
-
-        # XXX should redo this code to eliminate skip_source entirely.
-        # XXX instead create build and issue skip messages inline
-
-        if self.force:
-            skip_source = {}            # rebuild everything
-            for source in sources:
-                skip_source[source] = 0
-        elif depends is None:
-            # If depends is None, figure out which source files we
-            # have to recompile according to a simplistic check. We
-            # just compare the source and object file, no deep
-            # dependency checking involving header files.
-            skip_source = {}            # rebuild everything
-            for source in sources:      # no wait, rebuild nothing
-                skip_source[source] = 1
-
-            n_sources, n_objects = newer_pairwise(sources, objects)
-            for source in n_sources:    # no really, only rebuild what's
-                skip_source[source] = 0 # out-of-date
-        else:
-            # If depends is a list of files, then do a different
-            # simplistic check.  Assume that each object depends on
-            # its source and all files in the depends list.
-            skip_source = {}
-            # L contains all the depends plus a spot at the end for a
-            # particular source file
-            L = depends[:] + [None]
-            for i in range(len(objects)):
-                source = sources[i]
-                L[-1] = source
-                if newer_group(L, objects[i]):
-                    skip_source[source] = 0
-                else:
-                    skip_source[source] = 1
-
-        pp_opts = gen_preprocess_options(macros, incdirs)
-
-        build = {}
-        for i in range(len(sources)):
-            src = sources[i]
-            obj = objects[i]
-            ext = os.path.splitext(src)[1]
-            self.mkpath(os.path.dirname(obj))
-            if skip_source[src]:
-                log.debug("skipping %s (%s up-to-date)", src, obj)
-            else:
-                build[obj] = src, ext
-
-        return macros, objects, extra, pp_opts, build
-
-    def _get_cc_args(self, pp_opts, debug, before):
-        # works for unixccompiler, emxccompiler, cygwinccompiler
-        cc_args = pp_opts + ['-c']
-        if debug:
-            cc_args[:0] = ['-g']
-        if before:
-            cc_args[:0] = before
-        return cc_args
 
     def _fix_compile_args (self, output_dir, macros, include_dirs):
         """Typecheck and fix-up some of the arguments to the 'compile()'
@@ -435,7 +342,8 @@ class CCompiler:
         elif type (macros) is ListType:
             macros = macros + (self.macros or [])
         else:
-            raise TypeError, "'macros' (if supplied) must be a list of tuples"
+            raise TypeError, \
+                  "'macros' (if supplied) must be a list of tuples"
 
         if include_dirs is None:
             include_dirs = self.include_dirs
@@ -445,57 +353,40 @@ class CCompiler:
             raise TypeError, \
                   "'include_dirs' (if supplied) must be a list of strings"
 
-        return output_dir, macros, include_dirs
+        return (output_dir, macros, include_dirs)
 
     # _fix_compile_args ()
 
 
-    def _prep_compile(self, sources, output_dir, depends=None):
-        """Decide which souce files must be recompiled.
-
-        Determine the list of object files corresponding to 'sources',
-        and figure out which ones really need to be recompiled.
-        Return a list of all object files and a dictionary telling
-        which source files can be skipped.
+    def _prep_compile (self, sources, output_dir):
+        """Determine the list of object files corresponding to 'sources',
+        and figure out which ones really need to be recompiled.  Return a
+        list of all object files and a dictionary telling which source
+        files can be skipped.
         """
         # Get the list of expected output (object) files
-        objects = self.object_filenames(sources, strip_dir=1,
-                                        output_dir=output_dir)
-        assert len(objects) == len(sources)
+        objects = self.object_filenames (sources,
+                                         strip_dir=1,
+                                         output_dir=output_dir)
 
         if self.force:
             skip_source = {}            # rebuild everything
             for source in sources:
                 skip_source[source] = 0
-        elif depends is None:
-            # If depends is None, figure out which source files we
-            # have to recompile according to a simplistic check. We
-            # just compare the source and object file, no deep
-            # dependency checking involving header files.
+        else:
+            # Figure out which source files we have to recompile according
+            # to a simplistic check -- we just compare the source and
+            # object file, no deep dependency checking involving header
+            # files.
             skip_source = {}            # rebuild everything
             for source in sources:      # no wait, rebuild nothing
                 skip_source[source] = 1
 
-            n_sources, n_objects = newer_pairwise(sources, objects)
+            (n_sources, n_objects) = newer_pairwise (sources, objects)
             for source in n_sources:    # no really, only rebuild what's
                 skip_source[source] = 0 # out-of-date
-        else:
-            # If depends is a list of files, then do a different
-            # simplistic check.  Assume that each object depends on
-            # its source and all files in the depends list.
-            skip_source = {}
-            # L contains all the depends plus a spot at the end for a
-            # particular source file
-            L = depends[:] + [None]
-            for i in range(len(objects)):
-                source = sources[i]
-                L[-1] = source
-                if newer_group(L, objects[i]):
-                    skip_source[source] = 0
-                else:
-                    skip_source[source] = 1
 
-        return objects, skip_source
+        return (objects, skip_source)
 
     # _prep_compile ()
 
@@ -594,19 +485,22 @@ class CCompiler:
         """
         pass
 
-    def compile(self, sources, output_dir=None, macros=None,
-                include_dirs=None, debug=0, extra_preargs=None,
-                extra_postargs=None, depends=None):
-        """Compile one or more source files.
-
-        'sources' must be a list of filenames, most likely C/C++
-        files, but in reality anything that can be handled by a
-        particular compiler and compiler class (eg. MSVCCompiler can
-        handle resource files in 'sources').  Return a list of object
-        filenames, one per source filename in 'sources'.  Depending on
-        the implementation, not all source files will necessarily be
-        compiled, but all corresponding object filenames will be
-        returned.
+    def compile (self,
+                 sources,
+                 output_dir=None,
+                 macros=None,
+                 include_dirs=None,
+                 debug=0,
+                 extra_preargs=None,
+                 extra_postargs=None):
+        """Compile one or more source files.  'sources' must be a list of
+        filenames, most likely C/C++ files, but in reality anything that
+        can be handled by a particular compiler and compiler class
+        (eg. MSVCCompiler can handle resource files in 'sources').  Return
+        a list of object filenames, one per source filename in 'sources'.
+        Depending on the implementation, not all source files will
+        necessarily be compiled, but all corresponding object filenames
+        will be returned.
 
         If 'output_dir' is given, object files will be put under it, while
         retaining their original path component.  That is, "foo/bar.c"
@@ -637,35 +531,10 @@ class CCompiler:
         for those occasions when the abstract compiler framework doesn't
         cut the mustard.
 
-        'depends', if given, is a list of filenames that all targets
-        depend on.  If a source file is older than any file in
-        depends, then the source file will be recompiled.  This
-        supports dependency tracking, but only at a coarse
-        granularity.
-
         Raises CompileError on failure.
         """
-
-        # A concrete compiler class can either override this method
-        # entirely or implement _compile().
-        
-        macros, objects, extra_postargs, pp_opts, build = \
-                self._setup_compile(output_dir, macros, include_dirs, sources,
-                                    depends, extra_postargs)
-        cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
-
-        for obj, (src, ext) in build.items():
-            self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
-
-        # Return *all* object filenames, not just the ones we just built.
-        return objects
-
-    def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
-        """Compile 'src' to product 'obj'."""
-        
-        # A concrete compiler class that does not override compile()
-        # should implement _compile().
         pass
+
 
     def create_static_lib (self,
                            objects,
@@ -842,6 +711,7 @@ class CCompiler:
         """
         raise NotImplementedError
 
+
     # -- Filename generation methods -----------------------------------
 
     # The default implementation of the filename generating methods are
@@ -876,56 +746,73 @@ class CCompiler:
     #   * exe_extension -
     #     extension for executable files, eg. '' or '.exe'
 
-    def object_filenames(self, source_filenames, strip_dir=0, output_dir=''):
-        if output_dir is None:
-            output_dir = ''
+    def object_filenames (self,
+                          source_filenames,
+                          strip_dir=0,
+                          output_dir=''):
+        if output_dir is None: output_dir = ''
         obj_names = []
         for src_name in source_filenames:
-            base, ext = os.path.splitext(src_name)
+            (base, ext) = os.path.splitext (src_name)
             if ext not in self.src_extensions:
                 raise UnknownFileError, \
-                      "unknown file type '%s' (from '%s')" % (ext, src_name)
+                      "unknown file type '%s' (from '%s')" % \
+                      (ext, src_name)
             if strip_dir:
-                base = os.path.basename(base)
-            obj_names.append(os.path.join(output_dir,
-                                          base + self.obj_extension))
+                base = os.path.basename (base)
+            obj_names.append (os.path.join (output_dir,
+                                            base + self.obj_extension))
         return obj_names
 
-    def shared_object_filename(self, basename, strip_dir=0, output_dir=''):
-        assert output_dir is not None
+    # object_filenames ()
+
+
+    def shared_object_filename (self,
+                                basename,
+                                strip_dir=0,
+                                output_dir=''):
+        if output_dir is None: output_dir = ''
         if strip_dir:
             basename = os.path.basename (basename)
-        return os.path.join(output_dir, basename + self.shared_lib_extension)
+        return os.path.join (output_dir, basename + self.shared_lib_extension)
 
-    def executable_filename(self, basename, strip_dir=0, output_dir=''):
-        assert output_dir is not None
+    def executable_filename (self,
+                                basename,
+                                strip_dir=0,
+                                output_dir=''):
+        if output_dir is None: output_dir = ''
         if strip_dir:
             basename = os.path.basename (basename)
         return os.path.join(output_dir, basename + (self.exe_extension or ''))
 
-    def library_filename(self, libname, lib_type='static',     # or 'shared'
-                         strip_dir=0, output_dir=''):
-        assert output_dir is not None
-        if lib_type not in ("static", "shared", "dylib"):
-            raise ValueError, "'lib_type' must be \"static\", \"shared\" or \"dylib\""
-        fmt = getattr(self, lib_type + "_lib_format")
-        ext = getattr(self, lib_type + "_lib_extension")
+    def library_filename (self,
+                          libname,
+                          lib_type='static',     # or 'shared'
+                          strip_dir=0,
+                          output_dir=''):
 
-        dir, base = os.path.split (libname)
+        if output_dir is None: output_dir = ''
+        if lib_type not in ("static","shared","dylib"):
+            raise ValueError, "'lib_type' must be \"static\", \"shared\" or \"dylib\""
+        fmt = getattr (self, lib_type + "_lib_format")
+        ext = getattr (self, lib_type + "_lib_extension")
+
+        (dir, base) = os.path.split (libname)
         filename = fmt % (base, ext)
         if strip_dir:
             dir = ''
 
-        return os.path.join(output_dir, dir, filename)
+        return os.path.join (output_dir, dir, filename)
 
 
     # -- Utility methods -----------------------------------------------
 
     def announce (self, msg, level=1):
-        log.debug(msg)
+        if self.verbose >= level:
+            print msg
 
     def debug_print (self, msg):
-        from distutils.debug import DEBUG
+        from distutils.core import DEBUG
         if DEBUG:
             print msg
 
@@ -933,16 +820,16 @@ class CCompiler:
         sys.stderr.write ("warning: %s\n" % msg)
 
     def execute (self, func, args, msg=None, level=1):
-        execute(func, args, msg, self.dry_run)
+        execute(func, args, msg, self.verbose >= level, self.dry_run)
 
     def spawn (self, cmd):
-        spawn (cmd, dry_run=self.dry_run)
+        spawn (cmd, verbose=self.verbose, dry_run=self.dry_run)
 
     def move_file (self, src, dst):
-        return move_file (src, dst, dry_run=self.dry_run)
+        return move_file (src, dst, verbose=self.verbose, dry_run=self.dry_run)
 
     def mkpath (self, name, mode=0777):
-        mkpath (name, mode, self.dry_run)
+        mkpath (name, mode, self.verbose, self.dry_run)
 
 
 # class CCompiler
@@ -959,7 +846,6 @@ _default_compilers = (
     # on a cygwin built python we can use gcc like an ordinary UNIXish
     # compiler
     ('cygwin.*', 'unix'),
-    ('os2emx', 'emx'),
 
     # OS name mappings
     ('posix', 'unix'),
@@ -1006,8 +892,6 @@ compiler_class = { 'unix':    ('unixccompiler', 'UnixCCompiler',
                                "Borland C++ Compiler"),
                    'mwerks':  ('mwerkscompiler', 'MWerksCompiler',
                                "MetroWerks CodeWarrior"),
-                   'emx':     ('emxccompiler', 'EMXCCompiler',
-                               "EMX port of GNU C Compiler for OS/2"),
                  }
 
 def show_compilers():
@@ -1070,10 +954,7 @@ def new_compiler (plat=None,
               ("can't compile C/C++ code: unable to find class '%s' " +
                "in module '%s'") % (class_name, module_name)
 
-    # XXX The None is necessary to preserve backwards compatibility
-    # with classes that expect verbose to be the first positional
-    # argument.
-    return klass (None, dry_run, force)
+    return klass (verbose, dry_run, force)
 
 
 def gen_preprocess_options (macros, include_dirs):

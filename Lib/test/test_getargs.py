@@ -14,11 +14,8 @@ single case that failed between 2.1 and 2.2a2.
 # XXX If the encoding succeeds using the current default encoding,
 # this test will fail because it does not test the right part of the
 # PyArg_ParseTuple() implementation.
-from test.test_support import have_unicode
 import marshal
-
-if have_unicode:
-    try:
-        marshal.loads(unicode(r"\222", 'unicode-escape'))
-    except UnicodeError:
-        pass
+try:
+    marshal.loads(u"\222")
+except UnicodeError:
+    pass

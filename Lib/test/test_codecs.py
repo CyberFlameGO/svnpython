@@ -1,5 +1,4 @@
-from test import test_support
-import unittest
+import test_support,unittest
 import codecs
 import StringIO
 
@@ -23,16 +22,9 @@ class UTF16Test(unittest.TestCase):
         f = reader(s)
         self.assertEquals(f.read(), u"spamspam")
 
-class EscapeDecodeTest(unittest.TestCase):
-    def test_empty_escape_decode(self):
-        self.assertEquals(codecs.escape_decode(""), ("", 0))
-
 
 def test_main():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(UTF16Test))
-    suite.addTest(unittest.makeSuite(EscapeDecodeTest))
-    test_support.run_suite(suite)
+    test_support.run_unittest(UTF16Test)
 
 
 if __name__ == "__main__":

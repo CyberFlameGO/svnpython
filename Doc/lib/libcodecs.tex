@@ -17,7 +17,7 @@
 
 This module defines base classes for standard Python codecs (encoders
 and decoders) and provides access to the internal Python codec
-registry which manages the codec and error handling lookup process.
+registry which manages the codec lookup process.
 
 It defines the following functions:
 
@@ -63,7 +63,7 @@ is found, a \exception{LookupError} is raised. Otherwise, the codecs
 tuple is stored in the cache and returned to the caller.
 \end{funcdesc}
 
-To simplify access to the various codecs, the module provides these
+To simply access to the various codecs, the module provides these
 additional functions which use \function{lookup()} for the codec
 lookup:
 
@@ -97,43 +97,6 @@ Raises a \exception{LookupError} in case the encoding cannot be found.
 
 To simplify working with encoded files or stream, the module
 also defines these utility functions:
-
-\begin{funcdesc}{register_error}{name, error_handler}
-Register the error handling function \var{error_handler} under the
-name \var{name}. \var{error_handler} will be called during encoding
-and decoding in case of an error, when \var{name} is specified as the
-errors parameter. \var{error_handler} will be called with an
-\exception{UnicodeEncodeError}, \exception{UnicodeDecodeError} or
-\exception{UnicodeTranslateError} instance and must return a tuple
-with a replacement for the unencodable/undecodable part of the input
-and a position where encoding/decoding should continue.
-\end{funcdesc}
-
-\begin{funcdesc}{lookup_error}{name}
-Return the error handler previously register under the name \var{name}.
-
-Raises a \exception{LookupError} in case the handler cannot be found.
-\end{funcdesc}
-
-\begin{funcdesc}{strict_errors}{exception}
-Implements the \code{strict} error handling.
-\end{funcdesc}
-
-\begin{funcdesc}{replace_errors}{exception}
-Implements the \code{replace} error handling.
-\end{funcdesc}
-
-\begin{funcdesc}{ignore_errors}{exception}
-Implements the \code{ignore} error handling.
-\end{funcdesc}
-
-\begin{funcdesc}{xmlcharrefreplace_errors_errors}{exception}
-Implements the \code{xmlcharrefreplace} error handling.
-\end{funcdesc}
-
-\begin{funcdesc}{backslashreplace_errors_errors}{exception}
-Implements the \code{backslashreplace} error handling.
-\end{funcdesc}
 
 \begin{funcdesc}{open}{filename, mode\optional{, encoding\optional{,
                        errors\optional{, buffering}}}}
@@ -179,21 +142,16 @@ for reading and writing to platform dependent files:
 \begin{datadesc}{BOM}
 \dataline{BOM_BE}
 \dataline{BOM_LE}
-\dataline{BOM_UTF8}
-\dataline{BOM_UTF16}
-\dataline{BOM_UTF16_BE}
-\dataline{BOM_UTF16_LE}
-\dataline{BOM_UTF32}
-\dataline{BOM_UTF32_BE}
-\dataline{BOM_UTF32_LE}
-These constants define various encodings of the Unicode byte order mark
-(BOM) used in UTF-16 and UTF-32 data streams to indicate the byte order
-used in the stream or file and in UTF-8 as a Unicode signature.
-\constant{BOM_UTF16} is either \constant{BOM_UTF16_BE} or
-\constant{BOM_UTF16_LE} depending on the platform's native byte order,
-\constant{BOM} is an alias for \constant{BOM_UTF16}, \constant{BOM_LE}
-for \constant{BOM_UTF16_LE} and \constant{BOM_BE} for \constant{BOM_UTF16_BE}.
-The others represent the BOM in UTF-8 and UTF-32 encodings.
+\dataline{BOM32_BE}
+\dataline{BOM32_LE}
+\dataline{BOM64_BE}
+\dataline{BOM64_LE}
+These constants define the byte order marks (BOM) used in data
+streams to indicate the byte order used in the stream or file.
+\constant{BOM} is either \constant{BOM_BE} or \constant{BOM_LE}
+depending on the platform's native byte order, while the others
+represent big endian (\samp{_BE} suffix) and little endian
+(\samp{_LE} suffix) byte order using 32-bit and 64-bit encodings.
 \end{datadesc}
 
 
@@ -243,10 +201,7 @@ function interfaces of the stateless encoder and decoder:
 
 \begin{methoddesc}{encode}{input\optional{, errors}}
   Encodes the object \var{input} and returns a tuple (output object,
-  length consumed).  While codecs are not restricted to use with Unicode, in
-  a Unicode context, encoding converts a Unicode object to a plain string
-  using a particular character set encoding (e.g., \code{cp1252} or
-  \code{iso-8859-1}).
+  length consumed).
 
   \var{errors} defines the error handling to apply. It defaults to
   \code{'strict'} handling.
@@ -261,8 +216,7 @@ function interfaces of the stateless encoder and decoder:
 
 \begin{methoddesc}{decode}{input\optional{, errors}}
   Decodes the object \var{input} and returns a tuple (output object,
-  length consumed).  In a Unicode context, decoding converts a plain string
-  encoded using a particular character set encoding to a Unicode object.
+  length consumed).
 
   \var{input} must be an object which provides the \code{bf_getreadbuf}
   buffer slot.  Python strings, buffer objects and memory mapped files

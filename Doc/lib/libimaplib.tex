@@ -9,18 +9,16 @@
 % Based on HTML documentation by Piers Lauder <piers@staff.cs.usyd.edu.au>;
 % converted by Fred L. Drake, Jr. <fdrake@acm.org>.
 % Revised by ESR, January 2000.
-% Changes for IMAP4_SSL by Tino Lange <Tino.Lange@isg.de>, March 2002 
 
 \indexii{IMAP4}{protocol}
-\indexii{IMAP4_SSL}{protocol}
 
-This module defines two classes, \class{IMAP4} and \class{IMAP4_SSL}, which encapsulate a
-connection to an IMAP4 server and implement a large subset of the
+This module defines a class, \class{IMAP4}, which encapsulates a
+connection to an IMAP4 server and implements a large subset of the
 IMAP4rev1 client protocol as defined in \rfc{2060}. It is backward
 compatible with IMAP4 (\rfc{1730}) servers, but note that the
 \samp{STATUS} command is not supported in IMAP4.
 
-Two classes are provided by the \module{imaplib} module, \class{IMAP4} is the base class:
+A single class is provided by the \module{imaplib} module:
 
 \begin{classdesc}{IMAP4}{\optional{host\optional{, port}}}
 This class implements the actual IMAP4 protocol.  The connection is
@@ -49,17 +47,6 @@ This exception is raised when a writable mailbox has its status changed by the s
 sub-class of \exception{IMAP4.error}.  Some other client now has write permission,
 and the mailbox will need to be re-opened to re-obtain write permission.
 \end{excdesc}
-
-There's also a subclass for secure connections:
-
-\begin{classdesc}{IMAP4_SSL}{\optional{host\optional{, port\optional{, keyfile\optional{, certfile}}}}}
-This is a subclass derived from \class{IMAP4} that connects over an SSL encrypted socket 
-(to use this class you need a socket module that was compiled with SSL support).
-If \var{host} is not specified, \code{''} (the local host) is used.
-If \var{port} is omitted, the standard IMAP4-over-SSL port (993) is used.
-\var{keyfile} and \var{certfile} are also optional - they can contain a PEM formatted
-private key and certificate chain file for the SSL connection. 
-\end{classdesc}
 
 The following utility functions are defined:
 
@@ -174,18 +161,6 @@ An \class{IMAP4} instance has the following methods:
   The method is non-standard, but is supported by the \samp{Cyrus} server.
 \end{methoddesc}
 
-\begin{methoddesc}{getquota}{root}
-  Get the \samp{quota} \var{root}'s resource usage and limits.
-  This method is part of the IMAP4 QUOTA extension defined in rfc2087.
-\versionadded{2.3}
-\end{methoddesc}
-
-\begin{methoddesc}{getquotaroot}{mailbox}
-  Get the list of \samp{quota} \samp{roots} for the named \var{mailbox}.
-  This method is part of the IMAP4 QUOTA extension defined in rfc2087.
-\versionadded{2.3}
-\end{methoddesc}
-
 \begin{methoddesc}{list}{\optional{directory\optional{, pattern}}}
   List mailbox names in \var{directory} matching
   \var{pattern}.  \var{directory} defaults to the top-level mail
@@ -216,7 +191,7 @@ An \class{IMAP4} instance has the following methods:
 \begin{methoddesc}{open}{host, port}
   Opens socket to \var{port} at \var{host}.
   The connection objects established by this method
-  will be used in the \code{read}, \code{readline}, \code{send}, and \code{shutdown} methods.
+  will be used in the \code{read}, \code{readline}, and \code{shutdown} methods.
   You may override this method.
 \end{methoddesc}
 
@@ -275,20 +250,9 @@ msgnums = M.search(None, '(FROM "LDJ")')
   to the mailbox are not allowed.
 \end{methoddesc}
 
-\begin{methoddesc}{send}{data}
-  Sends \code{data} to the remote server.
-  You may override this method.
-\end{methoddesc}
-
 \begin{methoddesc}{setacl}{mailbox, who, what}
   Set an \samp{ACL} for \var{mailbox}.
   The method is non-standard, but is supported by the \samp{Cyrus} server.
-\end{methoddesc}
-
-\begin{methoddesc}{setquota}{root, limits}
-  Set the \samp{quota} \var{root}'s resource \var{limits}.
-  This method is part of the IMAP4 QUOTA extension defined in rfc2087.
-\versionadded{2.3}
 \end{methoddesc}
 
 \begin{methoddesc}{shutdown}{}
@@ -344,13 +308,6 @@ msgnums = M.search(None, '(FROM "LDJ")')
 \begin{methoddesc}{xatom}{name\optional{, arg\optional{, ...}}}
   Allow simple extension commands notified by server in
   \samp{CAPABILITY} response.
-\end{methoddesc}
-
-
-Instances of \class{IMAP4_SSL} have just one additional method:
-
-\begin{methoddesc}{ssl}{}
-  Returns SSLObject instance used for the secure connection with the server.
 \end{methoddesc}
 
 

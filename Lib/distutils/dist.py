@@ -15,8 +15,7 @@ from copy import copy
 from distutils.errors import *
 from distutils.fancy_getopt import FancyGetopt, translate_longopt
 from distutils.util import check_environ, strtobool, rfc822_escape
-from distutils import log
-from distutils.debug import DEBUG
+
 
 # Regex to define acceptable Distutils command names.  This is not *quite*
 # the same as a Python NAME -- I don't allow leading underscores.  The fact
@@ -47,8 +46,7 @@ class Distribution:
     # since every global option is also valid as a command option -- and we
     # don't want to pollute the commands with too many options that they
     # have minimal control over.
-    # The fourth entry for verbose means that it can be repeated.
-    global_options = [('verbose', 'v', "run verbosely (default)", 1),
+    global_options = [('verbose', 'v', "run verbosely (default)"),
                       ('quiet', 'q', "run quietly (turns verbosity off)"),
                       ('dry-run', 'n', "don't actually do anything"),
                       ('help', 'h', "show detailed help message"),
@@ -306,6 +304,7 @@ class Distribution:
     def parse_config_files (self, filenames=None):
 
         from ConfigParser import ConfigParser
+        from distutils.core import DEBUG
 
         if filenames is None:
             filenames = self.find_config_files()
@@ -393,7 +392,6 @@ class Distribution:
         parser.set_aliases({'licence': 'license'})
         args = parser.getopt(args=self.script_args, object=self)
         option_order = parser.get_option_order()
-        log.set_verbosity(self.verbose)
 
         # for display options we return immediately
         if self.handle_display_options(option_order):
@@ -771,6 +769,7 @@ class Distribution:
         object for 'command' is in the cache, then we either create and
         return it (if 'create' is true) or return None.
         """
+        from distutils.core import DEBUG
         cmd_obj = self.command_obj.get(command)
         if not cmd_obj and create:
             if DEBUG:
@@ -801,6 +800,8 @@ class Distribution:
         supplied, uses the standard option dictionary for this command
         (from 'self.command_options').
         """
+        from distutils.core import DEBUG
+
         command_name = command_obj.get_command_name()
         if option_dict is None:
             option_dict = self.get_option_dict(command_name)
@@ -875,7 +876,13 @@ class Distribution:
     # -- Methods that operate on the Distribution ----------------------
 
     def announce (self, msg, level=1):
-        log.debug(msg)
+        """Print 'msg' if 'level' is greater than or equal to the verbosity
+        level recorded in the 'verbose' attribute (which, currently, can be
+        only 0 or 1).
+        """
+        if self.verbose >= level:
+            print msg
+
 
     def run_commands (self):
         """Run each command that was seen on the setup script command line.
@@ -900,7 +907,7 @@ class Distribution:
         if self.have_run.get(command):
             return
 
-        log.info("running %s", command)
+        self.announce("running " + command)
         cmd_obj = self.get_command_obj(command)
         cmd_obj.ensure_finalized()
         cmd_obj.run()

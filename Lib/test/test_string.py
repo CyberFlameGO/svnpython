@@ -1,5 +1,5 @@
-from test.test_support import verbose, TestSkipped
-from test import string_tests
+from test_support import verbose, TestSkipped
+import string_tests
 import string, sys
 
 # XXX: kludge... short circuit if strings don't have methods
@@ -51,8 +51,6 @@ def test(name, input, output, *args):
 
 string_tests.run_module_tests(test)
 string_tests.run_method_tests(test)
-string_tests.run_contains_tests(test)
-string_tests.run_inplace_tests(str)
 
 string.whitespace
 string.lowercase

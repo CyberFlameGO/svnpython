@@ -222,7 +222,7 @@ class Message:
         data in RFC 2822-like formats that support embedded comments or
         free-text data.
         """
-        return False
+        return None
 
     def getallmatchingheaders(self, name):
         """Find all header lines matching a given header name.
@@ -351,8 +351,8 @@ class Message:
                     addr = h[i+1:]
                 raw.append(addr)
         alladdrs = ''.join(raw)
-        a = AddressList(alladdrs)
-        return a.addresslist
+        a = AddrlistClass(alladdrs)
+        return a.getaddrlist()
 
     def getdate(self, name):
         """Retrieve a date field from a header.
@@ -406,7 +406,7 @@ class Message:
     def __delitem__(self, name):
         """Delete all occurrences of a specific header, if it is present."""
         name = name.lower()
-        if not name in self.dict:
+        if not self.dict.has_key(name):
             return
         del self.dict[name]
         name = name + ':'
@@ -427,7 +427,7 @@ class Message:
 
     def setdefault(self, name, default=""):
         lowername = name.lower()
-        if lowername in self.dict:
+        if self.dict.has_key(lowername):
             return self.dict[lowername]
         else:
             text = name + ": " + default
@@ -439,11 +439,7 @@ class Message:
 
     def has_key(self, name):
         """Determine whether a message contains the named header."""
-        return name.lower() in self.dict
-
-    def __contains__(self, name):
-        """Determine whether a message contains the named header."""
-        return name.lower() in self.dict
+        return self.dict.has_key(name.lower())
 
     def keys(self):
         """Get all of a message's header field names."""
@@ -477,9 +473,9 @@ class Message:
 def unquote(str):
     """Remove quotes from a string."""
     if len(str) > 1:
-        if str.startswith('"') and str.endswith('"'):
-            return str[1:-1].replace('\\\\', '\\').replace('\\"', '"')
-        if str.startswith('<') and str.endswith('>'):
+        if str[0] == '"' and str[-1:] == '"':
+            return str[1:-1]
+        if str[0] == '<' and str[-1:] == '>':
             return str[1:-1]
     return str
 
@@ -916,7 +912,7 @@ def parsedate_tz(data):
         return None
     tzoffset = None
     tz = tz.upper()
-    if tz in _timezones:
+    if _timezones.has_key(tz):
         tzoffset = _timezones[tz]
     else:
         try:
@@ -1007,8 +1003,8 @@ if __name__ == '__main__':
     print 'Lines:', n
     print '-'*70
     print 'len =', len(m)
-    if 'Date' in m: print 'Date =', m['Date']
-    if 'X-Nonsense' in m: pass
+    if m.has_key('Date'): print 'Date =', m['Date']
+    if m.has_key('X-Nonsense'): pass
     print 'keys =', m.keys()
     print 'values =', m.values()
     print 'items =', m.items()

@@ -1,7 +1,7 @@
 """Suite Standard Suite: Common terms for most applications
 Level 1, version 1
 
-Generated from /Volumes/Sap/Applications (Mac OS 9)/Netscape Communicator\xe2\x84\xa2 Folder/Netscape Communicator\xe2\x84\xa2
+Generated from Moes:Applications (Mac OS 9):Netscape Communicatoré Folder:Netscape Communicatoré
 AETE/AEUT resource version 1/0, language 0, script 0
 """
 
@@ -80,7 +80,7 @@ class Standard_Suite_Events(Standard_Suite_Events):
 	}
 
 	def set(self, _object, _attributes={}, **_arguments):
-		"""set: Set an object\xd5s data
+		"""set: Set an object’s data
 		Required argument: the object to change
 		Keyword argument to: the new value
 		Keyword argument _attributes: AppleEvent attribute dictionary
@@ -105,7 +105,7 @@ class application(aetools.ComponentItem):
 	"""application - An application program """
 	want = 'capp'
 class alert_application(aetools.NProperty):
-	"""alert application - Most of the alerts will be sent to this application using yet unspecified AE interface. We need a few alert boxes: alert, confirm and notify. Any ideas on how to design this event? mailto:atotic@netscape.com. I\xd5d like to conform to the standard. """
+	"""alert application - Most of the alerts will be sent to this application using yet unspecified AE interface. We need a few alert boxes: alert, confirm and notify. Any ideas on how to design this event? mailto:atotic@netscape.com. I’d like to conform to the standard. """
 	which = 'ALAP'
 	want = 'type'
 class kiosk_mode(aetools.NProperty):
@@ -170,23 +170,21 @@ class URL(aetools.NProperty):
 	which = 'curl'
 	want = 'TEXT'
 class unique_ID(aetools.NProperty):
-	"""unique ID - Window\xd5s unique ID (a bridge between WWW! suite window id\xd5s and standard AE windows) """
+	"""unique ID - Window’s unique ID (a bridge between WWW! suite window id’s and standard AE windows) """
 	which = 'wiid'
 	want = 'long'
 class busy(aetools.NProperty):
 	"""busy - Is window loading something right now. 2, window is busy and will reject load requests. 1, window is busy, but will interrupt outstanding loads """
 	which = 'busy'
 	want = 'long'
-application._superclassnames = []
-application._privpropdict = {
+application._propdict = {
 	'alert_application' : alert_application,
 	'kiosk_mode' : kiosk_mode,
 }
-application._privelemdict = {
+application._elemdict = {
 	'window' : window,
 }
-window._superclassnames = []
-window._privpropdict = {
+window._propdict = {
 	'bounds' : bounds,
 	'closeable' : closeable,
 	'titled' : titled,
@@ -203,7 +201,7 @@ window._privpropdict = {
 	'unique_ID' : unique_ID,
 	'busy' : busy,
 }
-window._privelemdict = {
+window._elemdict = {
 }
 
 #

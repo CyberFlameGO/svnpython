@@ -1,62 +1,40 @@
-# This file can be invoked from the various frameworkinstall... targets in the 
-# main Makefile. The next couple of variables are overridden on the 
-# commandline in that case.
-
-VERSION=2.3
-builddir = ../..
-srcdir = ../..
-dstroot=/.
-prefix=$(dstroot)/Library/Frameworks/Python.framework/Versions/$(VERSION)
-LIBDEST=$(prefix)/lib/python$(VERSION)
-
-# These are normally glimpsed from the previous set
-bindir=$(dstroot)/usr/local/bin
-PYTHONAPPSDIR=$(dstroot)/Applications/Python
-APPINSTALLDIR=$(prefix)/Resources/Python.app
-
-# Variables for installing the "normal" unix binaries
-INSTALLED_PYTHON=$(prefix)/bin/python
-INSTALLED_PYTHONW=$(APPINSTALLDIR)/Contents/MacOS/python
+PYTHONBUILDDIR=../..
+INSTALLDIR=/Library/Frameworks/Python.framework/Versions/Current
+APPINSTALLDIR=/Applications/Python.app
 
 # Items more-or-less copied from the main Makefile
 DIRMODE=755
 INSTALL=/usr/bin/install -c
-INSTALL_SYMLINK=ln -fs
 INSTALL_PROGRAM=${INSTALL}
 INSTALL_SCRIPT= ${INSTALL_PROGRAM}
 INSTALL_DATA=	${INSTALL} -m 644
-LN=ln
-STRIPFLAG=-s
-OPT=-g -O3 -Wall -Wstrict-prototypes -Wno-long-double -no-cpp-precomp \
-	-fno-common -dynamic
-INCLUDES=-I$(builddir) -I$(srcdir)/Include -I$(srcdir)/Mac/Include
-DEFINES=
+OPT=-g -O3 -Wall -Wstrict-prototypes -no-cpp-precomp -fno-common -dynamic
+INCLUDES=-I$(PYTHONBUILDDIR) -I$(PYTHONBUILDDIR)/Include \
+	-I$(PYTHONBUILDDIR)/Mac/Include
+DEFINES=-DHAVE_CONFIG_H
 
 CFLAGS=$(OPT) $(DEFINES) $(INCLUDES)
-LDFLAGS=-F$(builddir) -framework System -framework Python -framework Carbon \
+LDFLAGS=-framework System -framework Python -framework Carbon \
 	-framework Foundation
 CC=cc
 LD=cc
 REZ=/Developer/Tools/Rez
 DEREZ=/Developer/Tools/DeRez
-CPMAC=/Developer/Tools/CpMac
 
-PYTHON=$(builddir)/python.exe
-APPTEMPLATE=$(srcdir)/Mac/OSXResources/app
+OBJECTS=$(PYTHONBUILDDIR)/Mac/Python/macmain.o \
+	$(PYTHONBUILDDIR)/Mac/Python/macgetargv.o
+
+pythonforbundle: $(OBJECTS)
+	$(LD) $(LDFLAGS) $(OBJECTS) -o pythonforbundle
+
+PYTHON=$(PYTHONBUILDDIR)/python.exe
+APPTEMPLATE=$(PYTHONBUILDDIR)/Mac/OSXResources/app
 APPSUBDIRS=MacOS Resources Resources/English.lproj
-RESOURCEDIR=$(srcdir)/Mac/Resources
+RESOURCEDIR=$(PYTHONBUILDDIR)/Mac/Resources
 RESOURCEFILE=python.rsrc
-RFCONVERTER=$(srcdir)/Mac/Lib/applesingle.py
-CACHERSRC=$(srcdir)/Mac/scripts/cachersrc.py
-
-installapps: install_PythonLauncher install_Python install_BuildApplet install_IDE install_IDLE
-
-install_PythonLauncher:
-	cd $(srcdir)/Mac/OSX/PythonLauncher/PythonLauncher.pbproj ; \
-	pbxbuild -target PythonLauncher -buildstyle Deployment DSTROOT=$(dstroot) install
-	
-install_Python: $(PYTHON)
-	@for i in $(PYTHONAPPSDIR) $(APPINSTALLDIR) $(APPINSTALLDIR)/Contents; do \
+RFCONVERTER=$(PYTHONBUILDDIR)/Mac/Lib/applesingle.py
+install: pythonforbundle
+	@for i in $(APPINSTALLDIR) $(APPINSTALLDIR)/Contents; do \
 		if test ! -d $$i; then \
 			echo "Creating directory $$i"; \
 			$(INSTALL) -d -m $(DIRMODE) $$i; \
@@ -93,90 +71,25 @@ install_Python: $(PYTHON)
 			esac; \
 		done; \
 	done
-	$(INSTALL_PROGRAM) $(STRIPFLAG) $(PYTHON) $(APPINSTALLDIR)/Contents/MacOS/python
-# Create a temporary version of the resources here
-# Note that the resource files can either be real 2-fork resource files
-# or AppleSingle encoded files.
-	@if test -s $(RESOURCEDIR)/dialogs.rsrc; then \
-		echo $(PYTHON) $(RFCONVERTER) -r $(RESOURCEDIR)/dialogs.rsrc dialogs.rsrc ;\
-		$(PYTHON) $(RFCONVERTER) -r $(RESOURCEDIR)/dialogs.rsrc dialogs.rsrc ; \
-		echo $(DEREZ) -useDF -skip ckid dialogs.rsrc > dialogs.r ; \
-		$(DEREZ) -useDF -skip ckid dialogs.rsrc > dialogs.r ; \
-	else \
-		echo $(DEREZ) -skip ckid $(RESOURCEDIR)/dialogs.rsrc > dialogs.r ; \
-		$(DEREZ) -skip ckid $(RESOURCEDIR)/dialogs.rsrc > dialogs.r ; \
-	fi
-	@if test -s $(RESOURCEDIR)/errors.rsrc; then \
-		echo $(PYTHON) $(RFCONVERTER) -r $(RESOURCEDIR)/errors.rsrc errors.rsrc ;\
-		$(PYTHON) $(RFCONVERTER) -r $(RESOURCEDIR)/errors.rsrc errors.rsrc ; \
-		echo $(DEREZ) -useDF -skip ckid errors.rsrc > errors.r ; \
-		$(DEREZ) -useDF -skip ckid errors.rsrc > errors.r ; \
-	else \
-		echo $(DEREZ) -skip ckid $(RESOURCEDIR)/errors.rsrc > errors.r ; \
-		$(DEREZ) -skip ckid $(RESOURCEDIR)/errors.rsrc > errors.r ; \
-	fi
+	$(INSTALL_PROGRAM) pythonforbundle $(APPINSTALLDIR)/Contents/MacOS/python
+	# Create a temporary version of the resources here
+	$(PYTHON) $(RFCONVERTER) -r $(RESOURCEDIR)/dialogs.rsrc dialogs.rsrc
+	$(PYTHON) $(RFCONVERTER) -r $(RESOURCEDIR)/errors.rsrc errors.rsrc
+	$(DEREZ) -useDF -skip ckid dialogs.rsrc > dialogs.r
+	$(DEREZ) -useDF -skip ckid errors.rsrc > errors.r
 	$(REZ) -useDF -o $(RESOURCEFILE) dialogs.r errors.r 
 	$(INSTALL_DATA) $(RESOURCEFILE) $(APPINSTALLDIR)/Contents/Resources/$(RESOURCEFILE)
-# Finally create the documentation symlink
-	$(LN) -fsn ../../../../English.lproj/Documentation $(APPINSTALLDIR)/Contents/Resources/English.lproj/Documentation
-	
-	
-install_IDE: $(INSTALLED_PYTHONW)
-	@if $(INSTALLED_PYTHONW) -c "import waste"; then : ; else \
-		echo PythonIDE needs the \"waste\" extension module; \
-		echo See Mac/OSX/README for details; \
-		exit 1; \
-	fi
-	$(INSTALLED_PYTHONW) $(srcdir)/Mac/scripts/BuildApplet.py \
-		--output $(PYTHONAPPSDIR)/PythonIDE.app --noargv \
-		$(srcdir)/Mac/Tools/IDE/PythonIDE.py
-
-install_IDLE: $(INSTALLED_PYTHONW)
-	@if ! $(INSTALLED_PYTHONW) -c "import _tkinter"; then \
-		echo IDLE needs the \"Tkinter\" extension module; \
-		echo See Mac/OSX/README for details; \
-	else \
-		echo $(INSTALLED_PYTHONW) $(srcdir)/Mac/scripts/BuildApplet.py \
-			--output $(PYTHONAPPSDIR)/IDLE.app \
-			--extra $(srcdir)/Tools/idle \
-			$(srcdir)/Tools/idle/idle ; \
-		$(INSTALLED_PYTHONW) $(srcdir)/Mac/scripts/BuildApplet.py \
-			--output $(PYTHONAPPSDIR)/IDLE.app \
-			--extra $(srcdir)/Tools/idle \
-			$(srcdir)/Tools/idle/idle ; \
-		echo mv $(PYTHONAPPSDIR)/IDLE.app/Contents/Resources/idle \
-			$(PYTHONAPPSDIR)/IDLE.app/Contents/Resources/idlelib; \
-		mv $(PYTHONAPPSDIR)/IDLE.app/Contents/Resources/idle \
-			$(PYTHONAPPSDIR)/IDLE.app/Contents/Resources/idlelib; \
-	fi
-
 		
-install_BuildApplet: $(INSTALLED_PYTHONW)
-	$(INSTALLED_PYTHONW) $(srcdir)/Mac/scripts/BuildApplet.py \
-		--output $(PYTHONAPPSDIR)/BuildApplet.app \
-		$(srcdir)/Mac/scripts/BuildApplet.py
-		
-MACLIBDEST=$(prefix)/Mac/Lib
-MACLIBSRC=$(srcdir)/Mac/Lib
-MACLIBSUBDIRS= \
-	Carbon \
-	lib-scriptpackages \
-	lib-scriptpackages/_builtinSuites \
-	lib-scriptpackages/CodeWarrior \
-	lib-scriptpackages/Explorer \
-	lib-scriptpackages/Finder \
-	lib-scriptpackages/Netscape \
-	lib-scriptpackages/StdSuites \
-	lib-scriptpackages/Terminal \
-	mkcwproject \
-	mkcwproject/template \
-	mkcwproject/template-carbon \
-	mkcwproject/template-ppc
-MACTOOLSDEST=$(prefix)/Mac/Tools
-MACTOOLSSRC=$(srcdir)/Mac/Tools
-MACTOOLSSUBDIRS=IDE
+LIBDEST=$(INSTALLDIR)/Mac/Lib
+LIBSRC=$(PYTHONBUILDDIR)/Mac/Lib
+LIBSUBDIRS=Carbon lib-scriptpackages lib-scriptpackages/CodeWarrior lib-scriptpackages/Explorer \
+	lib-scriptpackages/Finder lib-scriptpackages/Netscape lib-scriptpackages/StdSuites \
+	mkcwproject mkcwproject/template mkcwproject/template-carbon mkcwproject/template-ppc
+TOOLSDEST=$(INSTALLDIR)/Mac/Tools
+TOOLSSRC=$(PYTHONBUILDDIR)/Mac/Tools
+TOOLSSUBDIRS=IDE
 installmacsubtree:
-	@for i in $(MACLIBDEST) $(MACTOOLSDEST); \
+	@for i in $(LIBDEST) $(TOOLSDEST); \
 	do \
 		if test ! -d $$i; then \
 			echo "Creating directory $$i"; \
@@ -184,37 +97,32 @@ installmacsubtree:
 		else	true; \
 		fi; \
 	done
-	@for d in $(MACLIBSUBDIRS); \
+	@for d in $(LIBSUBDIRS); \
 	do \
-		a=$(MACLIBSRC)/$$d; \
+		a=$(LIBSRC)/$$d; \
 		if test ! -d $$a; then continue; else true; fi; \
-		b=$(MACLIBDEST)/$$d; \
+		b=$(LIBDEST)/$$d; \
 		if test ! -d $$b; then \
 			echo "Creating directory $$b"; \
 			$(INSTALL) -d -m $(DIRMODE) $$b; \
 		else	true; \
 		fi; \
 	done
-	@for i in $(MACLIBSRC)/*.py; \
+	@for i in $(LIBSRC)/*.py $(LIBSRC)/*.rsrc; \
 	do \
 		if test -x $$i; then \
-			$(INSTALL_SCRIPT) $$i $(MACLIBDEST); \
-			echo $(INSTALL_SCRIPT) $$i $(MACLIBDEST); \
+			$(INSTALL_SCRIPT) $$i $(LIBDEST); \
+			echo $(INSTALL_SCRIPT) $$i $(LIBDEST); \
 		else \
-			$(INSTALL_DATA) $$i $(MACLIBDEST); \
-			echo $(INSTALL_DATA) $$i $(MACLIBDEST); \
+			$(INSTALL_DATA) $$i $(LIBDEST); \
+			echo $(INSTALL_DATA) $$i $(LIBDEST); \
 		fi; \
 	done
-##	@for i in $(MACLIBSRC)/*.rsrc; \
-##	do \
-##		echo $(CPMAC) $$i $$b ; \
-##		$(CPMAC) $$i $$b ; \
-##	done
-	@for d in $(MACLIBSUBDIRS); \
+	@for d in $(LIBSUBDIRS); \
 	do \
-		a=$(MACLIBSRC)/$$d; \
+		a=$(LIBSRC)/$$d; \
 		if test ! -d $$a; then continue; else true; fi; \
-		b=$(MACLIBDEST)/$$d; \
+		b=$(LIBDEST)/$$d; \
 		for i in $$a/*; \
 		do \
 			case $$i in \
@@ -222,10 +130,6 @@ installmacsubtree:
 			*.py[co]) ;; \
 			*.orig) ;; \
 			*~) ;; \
-			*.rsrc) \
-				echo $(CPMAC) $$i $$b ; \
-				$(CPMAC) $$i $$b ; \
-				;; \
 			*) \
 				if test -d $$i; then continue; fi; \
 				if test -x $$i; then \
@@ -238,22 +142,22 @@ installmacsubtree:
 			esac; \
 		done; \
 	done
-	@for d in $(MACTOOLSSUBDIRS); \
+	@for d in $(TOOLSSUBDIRS); \
 	do \
-		a=$(MACTOOLSSRC)/$$d; \
+		a=$(TOOLSSRC)/$$d; \
 		if test ! -d $$a; then continue; else true; fi; \
-		b=$(MACTOOLSDEST)/$$d; \
+		b=$(TOOLSDEST)/$$d; \
 		if test ! -d $$b; then \
 			echo "Creating directory $$b"; \
 			$(INSTALL) -d -m $(DIRMODE) $$b; \
 		else	true; \
 		fi; \
 	done
-	@for d in $(MACTOOLSSUBDIRS); \
+	@for d in $(TOOLSSUBDIRS); \
 	do \
-		a=$(MACTOOLSSRC)/$$d; \
+		a=$(TOOLSSRC)/$$d; \
 		if test ! -d $$a; then continue; else true; fi; \
-		b=$(MACTOOLSDEST)/$$d; \
+		b=$(TOOLSDEST)/$$d; \
 		for i in $$a/*; \
 		do \
 			case $$i in \
@@ -261,10 +165,6 @@ installmacsubtree:
 			*.py[co]) ;; \
 			*.orig) ;; \
 			*~) ;; \
-			*.rsrc) \
-				echo $(CPMAC) $$i $$b ; \
-				$(CPMAC) $$i $$b ; \
-				;; \
 			*) \
 				if test -d $$i; then continue; fi; \
 				if test -x $$i; then \
@@ -277,30 +177,7 @@ installmacsubtree:
 			esac; \
 		done; \
 	done
+
+	@echo '** Copy the contents of sample_sitecustomize.py (or similar code) into'
+	@echo '**' $(INSTALLDIR)/lib/python2.2/sitecustomize.py
 	
-	$(INSTALL_DATA) $(srcdir)/Mac/OSX/Mac.pth $(LIBDEST)/site-packages/
-
-	$(PYTHON) $(CACHERSRC) -v $(MACLIBDEST) $(MACTOOLSDEST)
-	$(PYTHON) -Wi -tt $(srcdir)/Lib/compileall.py -x badsyntax $(MACLIBDEST) $(MACTOOLSDEST)
-	$(PYTHON) -O -Wi -tt $(srcdir)/Lib/compileall.py -x badsyntax $(MACLIBDEST) $(MACTOOLSDEST)
-
-	
-# Put symlinks "python" and "pythonw" in the standard place
-$(INSTALLED_PYTHONW): install_Python
-
-# $(INSTALLED_PYTHON) has to be done by the main Makefile, we cannot do that here.
-# At least this rule will give an error if it doesn't exist.
-
-installunixtools: $(INSTALLED_PYTHON) $(INSTALLED_PYTHONW)
-	$(INSTALL) -d $(bindir)
-	$(INSTALL_SYMLINK) $(INSTALLED_PYTHON) $(bindir)/python
-	echo "#!/bin/sh" > pythonw.sh
-	echo "exec \"$(INSTALLED_PYTHONW)\" \"\$$@\"" >> pythonw.sh
-	$(INSTALL) pythonw.sh $(bindir)/pythonw
-	
-# This is for development purposes: create a Mac.pth that refers to the source
-# directories
-dontinstallmacsubtree:
-	l=`cd $(srcdir)/Mac/Lib; pwd`; \
-	echo $$l > $(MACLIBDEST)/site-packages/Mac.pth ; \
-	echo $$l/lib-scriptpackages >> $(MACLIBDEST)/site-packages/Mac.pth

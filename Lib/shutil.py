@@ -7,13 +7,9 @@ XXX The functions here don't copy the resource fork or other metadata on Mac.
 import os
 import sys
 import stat
-import exceptions
 
 __all__ = ["copyfileobj","copyfile","copymode","copystat","copy","copy2",
-           "copytree","rmtree","Error"]
-
-class Error(exceptions.EnvironmentError):
-    pass
+           "copytree","rmtree"]
 
 def copyfileobj(fsrc, fdst, length=16*1024):
     """copy data from file-like object fsrc to file-like object fdst"""
@@ -28,11 +24,6 @@ def copyfile(src, dst):
     """Copy data from src to dst"""
     fsrc = None
     fdst = None
-    # check for same pathname; all platforms
-    _src = os.path.normcase(os.path.abspath(src))
-    _dst = os.path.normcase(os.path.abspath(dst))
-    if _src == _dst:
-        return
     try:
         fsrc = open(src, 'rb')
         fdst = open(dst, 'wb')
@@ -47,15 +38,15 @@ def copymode(src, dst):
     """Copy mode bits from src to dst"""
     if hasattr(os, 'chmod'):
         st = os.stat(src)
-        mode = stat.S_IMODE(st.st_mode)
+        mode = stat.S_IMODE(st[stat.ST_MODE])
         os.chmod(dst, mode)
 
 def copystat(src, dst):
     """Copy all stat info (mode bits, atime and mtime) from src to dst"""
     st = os.stat(src)
-    mode = stat.S_IMODE(st.st_mode)
+    mode = stat.S_IMODE(st[stat.ST_MODE])
     if hasattr(os, 'utime'):
-        os.utime(dst, (st.st_atime, st.st_mtime))
+        os.utime(dst, (st[stat.ST_ATIME], st[stat.ST_MTIME]))
     if hasattr(os, 'chmod'):
         os.chmod(dst, mode)
 
@@ -99,7 +90,6 @@ def copytree(src, dst, symlinks=0):
     """
     names = os.listdir(src)
     os.mkdir(dst)
-    errors = []
     for name in names:
         srcname = os.path.join(src, name)
         dstname = os.path.join(dst, name)
@@ -113,9 +103,7 @@ def copytree(src, dst, symlinks=0):
                 copy2(srcname, dstname)
             # XXX What about devices, sockets etc.?
         except (IOError, os.error), why:
-            errors.append((srcname, dstname, why))
-    if errors:
-        raise Error, errors
+            print "Can't copy %s to %s: %s" % (`srcname`, `dstname`, str(why))
 
 def rmtree(path, ignore_errors=0, onerror=None):
     """Recursively delete a directory tree.
@@ -134,7 +122,7 @@ def rmtree(path, ignore_errors=0, onerror=None):
             exc = sys.exc_info()
             if ignore_errors:
                 pass
-            elif onerror is not None:
+            elif onerror:
                 onerror(cmd[0], cmd[1], exc)
             else:
                 raise exc[0], (exc[1][0], exc[1][1] + ' removing '+cmd[1])
@@ -148,24 +136,3 @@ def _build_cmdtuple(path, cmdtuples):
         else:
             cmdtuples.append((os.remove, real_f))
     cmdtuples.append((os.rmdir, path))
-
-
-def move(src, dst):
-    """Recursively move a file or directory to another location.
-
-    If the destination is on our current filesystem, then simply use
-    rename.  Otherwise, copy src to the dst and then remove src.
-    A lot more could be done here...  A look at a mv.c shows a lot of
-    the issues this implementation glosses over.
-
-    """
-
-    try:
-        os.rename(src, dst)
-    except OSError:
-        if os.path.isdir(src):
-            copytree(src, dst, symlinks=1)
-            rmtree(src)
-        else:
-            copy2(src,dst)
-            os.unlink(src)

@@ -78,7 +78,7 @@ int ScrapObj_Convert(PyObject *v, ScrapRef *p_itself)
 static void ScrapObj_dealloc(ScrapObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *ScrapObj_GetScrapFlavorFlags(ScrapObject *_self, PyObject *_args)

@@ -1,5 +1,5 @@
 import unittest
-from test.test_support import TestFailed, have_unicode, TESTFN
+from test_support import TestFailed, have_unicode
 
 class C:
     def __cmp__(self, other):
@@ -195,14 +195,13 @@ class AbstractPickleTests(unittest.TestCase):
 
     def test_insecure_strings(self):
         insecure = ["abc", "2 + 2", # not quoted
-                    #"'abc' + 'def'", # not a single quoted string
+                    "'abc' + 'def'", # not a single quoted string
                     "'abc", # quote is not closed
                     "'abc\"", # open quote and close quote don't match
                     "'abc'   ?", # junk after close quote
-                    "'\\'", # trailing backslash
                     # some tests of the quoting rules
-                    #"'abc\"\''",
-                    #"'\\\\a\'\'\'\\\'\\\\\''",
+                    "'abc\"\''",
+                    "'\\\\a\'\'\'\\\'\\\\\''",
                     ]
         for s in insecure:
             buf = "S" + s + "\012p0\012."
@@ -270,19 +269,17 @@ class AbstractPickleTests(unittest.TestCase):
 class AbstractPickleModuleTests(unittest.TestCase):
 
     def test_dump_closed_file(self):
-        import os
-        f = open(TESTFN, "w")
-        try:
-            f.close()
-            self.assertRaises(ValueError, self.module.dump, 123, f)
-        finally:
-            os.remove(TESTFN)
+        import tempfile, os
+        fn = tempfile.mktemp()
+        f = open(fn, "w")
+        f.close()
+        self.assertRaises(ValueError, self.module.dump, 123, f)
+        os.remove(fn)
 
     def test_load_closed_file(self):
-        import os
-        f = open(TESTFN, "w")
-        try:
-            f.close()
-            self.assertRaises(ValueError, self.module.dump, 123, f)
-        finally:
-            os.remove(TESTFN)
+        import tempfile, os
+        fn = tempfile.mktemp()
+        f = open(fn, "w")
+        f.close()
+        self.assertRaises(ValueError, self.module.dump, 123, f)
+        os.remove(fn)

@@ -115,7 +115,7 @@ class InputOnlyMixIn:
 	"Mix-in class to boobytrap passOutput"
 
 	def passOutput(self, name):
-		raise RuntimeError, "Type '%s' can only be used for input parameters" % self.typeName
+		raise RuntimeError, "this type can only be used for input parameters"
 
 class InputOnlyType(InputOnlyMixIn, Type):
 
@@ -126,7 +126,7 @@ class OutputOnlyMixIn:
 	"Mix-in class to boobytrap passInput"
 
 	def passInput(self, name):
-		raise RuntimeError, "Type '%s' can only be used for output parameters" % self.typeName
+		raise RuntimeError, "this type can only be used for output parameters"
 
 class OutputOnlyType(OutputOnlyMixIn, Type):
 
@@ -149,7 +149,6 @@ double = Type("double", "d")
 # For input, this is easy.  For output, and for other uses of char *,
 # see the module bgenBuffer.
 stringptr = InputOnlyType("char*", "s")
-unicodestringptr = InputOnlyType("wchar_t *", "u")
 
 
 # Some Python related types.
@@ -233,14 +232,6 @@ class OpaqueByValueType(OpaqueType):
 
 	def mkvalueArgs(self, name):
 		return "%s, %s" % (self.new, name)
-		
-class OpaqueByValueStructType(OpaqueByValueType):
-	"""Similar to OpaqueByValueType, but we also pass this to mkvalue by
-	address, in stead of by value.
-	"""
-
-	def mkvalueArgs(self, name):
-		return "%s, &%s" % (self.new, name)
 
 
 class OpaqueArrayType(OpaqueByValueType):

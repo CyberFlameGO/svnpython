@@ -236,6 +236,9 @@
    one supplied by Python itself. (see Include/unicodectype.h). */
 #undef WANT_WCTYPE_FUNCTIONS
 
+/* Define if you want to compile in cycle garbage collection */
+#define WITH_CYCLE_GC 1
+
 /* Define if you want to emulate SGI (IRIX 4) dynamic linking.
    This is rumoured to work on VAX (Ultrix), Sun3 (SunOS 3.4),
    Sequent Symmetry (Dynix), and Atari ST.
@@ -246,9 +249,6 @@
    Don't bother on SunOS 4 or 5, they already have dynamic linking using
    shared libraries */ 
 #undef WITH_DL_DLD
-
-/* Define if you want documentation strings in extension modules */
-#define WITH_DOC_STRINGS 1
 
 /* Define if you want to use the new-style (Openstep, Rhapsody, MacOS)
    dynamic linker (dyld) instead of the old-style (NextStep) dynamic
@@ -400,9 +400,6 @@
 
 /* Define if you have the getpeername function.  */
 #undef HAVE_GETPEERNAME
-
-/* Define if you have the getpgid function.  */
-#undef HAVE_GETPGID
 
 /* Define if you have the getpgrp function.  */
 #undef HAVE_GETPGRP

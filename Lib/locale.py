@@ -719,7 +719,7 @@ def _print_locale():
 
 try:
     LC_MESSAGES
-except NameError:
+except:
     pass
 else:
     __all__.append("LC_MESSAGES")

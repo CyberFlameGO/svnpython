@@ -21,6 +21,12 @@ EXIT  = WHAT_EXIT
 LINE  = WHAT_LINENO
 
 
+try:
+    StopIteration
+except NameError:
+    StopIteration = IndexError
+
+
 class LogReader:
     def __init__(self, logfn):
         # fileno -> filename
@@ -35,22 +41,9 @@ class LogReader:
             self.cwd = self._info['current-directory']
         else:
             self.cwd = None
-
-        # This mirrors the call stack of the profiled code as the log
-        # is read back in.  It contains tuples of the form:
-        #
-        #   (file name, line number of function def, function name)
-        #
         self._stack = []
         self._append = self._stack.append
         self._pop = self._stack.pop
-
-    def close(self):
-        self._reader.close()
-
-    def fileno(self):
-        """Return the file descriptor of the log reader's log file."""
-        return self._reader.fileno()
 
     def addinfo(self, key, value):
         """This method is called for each additional ADD_INFO record.
@@ -95,22 +88,26 @@ class LogReader:
 
     def next(self, index=0):
         while 1:
-            # This call may raise StopIteration:
-            what, tdelta, fileno, lineno = self._nextitem()
+            try:
+                what, tdelta, fileno, lineno = self._nextitem()
+            except TypeError:
+                # logreader().next() returns None at the end
+                self._reader.close()
+                raise StopIteration()
 
             # handle the most common cases first
 
             if what == WHAT_ENTER:
                 filename, funcname = self._decode_location(fileno, lineno)
-                t = (filename, lineno, funcname)
-                self._append(t)
-                return what, t, tdelta
+                self._append((filename, funcname, lineno))
+                return what, (filename, lineno, funcname), tdelta
 
             if what == WHAT_EXIT:
-                return what, self._pop(), tdelta
+                filename, funcname, lineno = self._pop()
+                return what, (filename, lineno, funcname), tdelta
 
             if what == WHAT_LINENO:
-                filename, firstlineno, funcname = self._stack[-1]
+                filename, funcname, firstlineno = self._stack[-1]
                 return what, (filename, lineno, funcname), tdelta
 
             if what == WHAT_DEFINE_FILE:
@@ -129,8 +126,13 @@ class LogReader:
             else:
                 raise ValueError, "unknown event type"
 
-    def __iter__(self):
-        return self
+    if sys.version < "2.2":
+        # Don't add this for newer Python versions; we only want iteration
+        # support, not general sequence support.
+        __getitem__ = next
+    else:
+        def __iter__(self):
+            return self
 
     #
     #  helpers

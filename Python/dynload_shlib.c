@@ -18,10 +18,6 @@
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
-#else
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-#include "dlfcn.h"
-#endif
 #endif
 
 #if (defined(__OpenBSD__) || defined(__NetBSD__)) && !defined(__ELF__)
@@ -36,13 +32,8 @@ const struct filedescr _PyImport_DynLoadFiletab[] = {
 	{".dll", "rb", C_EXTENSION},
 	{"module.dll", "rb", C_EXTENSION},
 #else
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-	{".pyd", "rb", C_EXTENSION},
-	{".dll", "rb", C_EXTENSION},
-#else
 	{".so", "rb", C_EXTENSION},
 	{"module.so", "rb", C_EXTENSION},
-#endif
 #endif
 	{0, 0}
 };
@@ -91,9 +82,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 		}
 	}
 
-#if !(defined(PYOS_OS2) && defined(PYCC_GCC))
         dlopenflags = PyThreadState_Get()->interp->dlopenflags;
-#endif
 
 	if (Py_VerboseFlag)
 		printf("dlopen(\"%s\", %x);\n", pathname, dlopenflags);

@@ -11,10 +11,9 @@ from distutils import sysconfig
 from distutils.core import Command
 from distutils.dep_util import newer
 from distutils.util import convert_path
-from distutils import log
 
 # check if Python is called on the first line with this expression
-first_line_re = re.compile(r'^#!.*python[0-9.]*(\s+.*)?$')
+first_line_re = re.compile(r'^#!.*python(\s+.*)?$')
 
 class build_scripts (Command):
 
@@ -60,7 +59,7 @@ class build_scripts (Command):
             outfile = os.path.join(self.build_dir, os.path.basename(script))
 
             if not self.force and not newer(script, outfile):
-                log.debug("not copying %s (up-to-date)", script)
+                self.announce("not copying %s (up-to-date)" % script)
                 continue
 
             # Always open the file, but ignore failures in dry-run mode --
@@ -84,8 +83,8 @@ class build_scripts (Command):
                     post_interp = match.group(1) or ''
 
             if adjust:
-                log.info("copying and adjusting %s -> %s", script,
-                         self.build_dir)
+                self.announce("copying and adjusting %s -> %s" %
+                              (script, self.build_dir))
                 if not self.dry_run:
                     outf = open(outfile, "w")
                     if not sysconfig.python_build:

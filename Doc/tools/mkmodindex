@@ -34,8 +34,6 @@ import sys
 
 
 class IndexOptions(support.Options):
-    aesop_type = "links"
-
     def __init__(self):
         support.Options.__init__(self)
         self.add_args("l", ["letters"])
