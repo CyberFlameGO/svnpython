@@ -11,8 +11,6 @@
 
 \input{boilerplate}
 
-\makeindex
-
 \begin{document}
 
 \maketitle
@@ -331,19 +329,19 @@ With that declaration, all characters in the source file will be treated as
 possible to directly write Unicode string literals in the selected
 encoding.  The list of possible encodings can be found in the
 \citetitle[../lib/lib.html]{Python Library Reference}, in the section
-on \ulink{\module{codecs}}{../lib/module-codecs.html}.
+on \module{codecs}.
 
-If your editor supports saving files as \code{UTF-8} with a UTF-8
-\emph{byte order mark} (aka BOM), you can use that instead of an
+If your editor supports saving files as \code{UTF-8} with an UTF-8
+signature (aka BOM -- Byte Order Mark), you can use that instead of an
 encoding declaration. IDLE supports this capability if
 \code{Options/General/Default Source Encoding/UTF-8} is set. Notice
 that this signature is not understood in older Python releases (2.2
 and earlier), and also not understood by the operating system for
-\code{\#!} files.
+\code{\#!} files. 
 
 By using UTF-8 (either through the signature or an encoding
 declaration), characters of most languages in the world can be used
-simultaneously in string literals and comments. Using non-\ASCII
+simultaneously in string literals and comments. Using non-ASCII
 characters in identifiers is not supported. To display all these
 characters properly, your editor must recognize that the file is
 UTF-8, and it must use a font that supports all the characters in the
@@ -659,14 +657,15 @@ the first line above could also have been written \samp{word = 'Help'
 expressions:
 
 \begin{verbatim}
+>>> import string
 >>> 'str' 'ing'                   #  <-  This is ok
 'string'
->>> 'str'.strip() + 'ing'   #  <-  This is ok
+>>> string.strip('str') + 'ing'   #  <-  This is ok
 'string'
->>> 'str'.strip() 'ing'     #  <-  This is invalid
+>>> string.strip('str') 'ing'     #  <-  This is invalid
   File "<stdin>", line 1, in ?
-    'str'.strip() 'ing'
-                      ^
+    string.strip('str') 'ing'
+                            ^
 SyntaxError: invalid syntax
 \end{verbatim}
 
@@ -808,21 +807,6 @@ The built-in function \function{len()} returns the length of a string:
 \end{verbatim}
 
 
-\begin{seealso}
-  \seetitle[../lib/typesseq.html]{Sequence Types}%
-           {Strings, and the Unicode strings described in the next
-            section, are examples of \emph{sequence types}, and
-            support the common operations supported by such types.}
-  \seetitle[../lib/string-methods.html]{String Methods}%
-           {Both strings and Unicode strings support a large number of
-            methods for basic transformations and searching.}
-  \seetitle[../lib/typesseq-strings.html]{String Formatting Operations}%
-           {The formatting operations invoked when strings and Unicode
-            strings are the left operand of the \code{\%} operator are
-            described in more detail here.}
-\end{seealso}
-
-
 \subsection{Unicode Strings \label{unicodeStrings}}
 \sectionauthor{Marc-Andre Lemburg}{mal@lemburg.com}
 
@@ -895,7 +879,7 @@ the more well known encodings which these codecs can convert are
 \emph{Latin-1}, \emph{ASCII}, \emph{UTF-8}, and \emph{UTF-16}.
 The latter two are variable-length encodings that store each Unicode
 character in one or more bytes. The default encoding is
-normally set to \ASCII, which passes through characters in the range
+normally set to ASCII, which passes through characters in the range
 0 to 127 and rejects any other characters with an error.
 When a Unicode string is printed, written to a file, or converted
 with \function{str()}, conversion takes place using this default encoding.
@@ -1532,7 +1516,7 @@ TypeError: function() got multiple values for keyword argument 'a'
 \end{verbatim}
 
 When a final formal parameter of the form \code{**\var{name}} is
-present, it receives a \ulink{dictionary}{../lib/typesmapping.html} containing all keyword arguments
+present, it receives a dictionary containing all keyword arguments
 whose keyword doesn't correspond to a formal parameter.  This may be
 combined with a formal parameter of the form
 \code{*\var{name}} (described in the next subsection) which receives a
@@ -1852,14 +1836,19 @@ cubes:
 More than one sequence may be passed; the function must then have as
 many arguments as there are sequences and is called with the
 corresponding item from each sequence (or \code{None} if some sequence
-is shorter than another).  For example:
+is shorter than another).  If \code{None} is passed for the function,
+a function returning its argument(s) is substituted.
+
+Combining these two special cases, we see that
+\samp{map(None, \var{list1}, \var{list2})} is a convenient way of
+turning a pair of lists into a list of pairs.  For example:
 
 \begin{verbatim}
 >>> seq = range(8)
->>> def add(x, y): return x+y
+>>> def square(x): return x*x
 ...
->>> map(add, seq, seq)
-[0, 2, 4, 6, 8, 10, 12, 14]
+>>> map(None, seq, map(square, seq))
+[(0, 0), (1, 1), (2, 4), (3, 9), (4, 16), (5, 25), (6, 36), (7, 49)]
 \end{verbatim}
 
 \samp{reduce(\var{func}, \var{sequence})} returns a single value
@@ -1994,10 +1983,9 @@ another value is assigned to it).  We'll find other uses for
 
 We saw that lists and strings have many common properties, such as
 indexing and slicing operations.  They are two examples of
-\ulink{\emph{sequence} data types}{../lib/typesseq.html}.  Since
-Python is an evolving language, other sequence data types may be
-added.  There is also another standard sequence data type: the
-\emph{tuple}.
+\emph{sequence} data types.  Since Python is an evolving language,
+other sequence data types may be added.  There is also another
+standard sequence data type: the \emph{tuple}.
 
 A tuple consists of a number of values separated by commas, for
 instance:
@@ -2067,8 +2055,7 @@ always creates a tuple, and unpacking works for any sequence.
 
 \section{Dictionaries \label{dictionaries}}
 
-Another useful data type built into Python is the
-\ulink{\emph{dictionary}}{../lib/typesmapping.html}.
+Another useful data type built into Python is the \emph{dictionary}.
 Dictionaries are sometimes found in other languages as ``associative
 memories'' or ``associative arrays''.  Unlike sequences, which are
 indexed by a range of numbers, dictionaries are indexed by \emph{keys},
@@ -2096,11 +2083,11 @@ If you store using a key that is already in use, the old value
 associated with that key is forgotten.  It is an error to extract a
 value using a non-existent key.
 
-The \method{keys()} method of a dictionary object returns a list of all
+The \code{keys()} method of a dictionary object returns a list of all
 the keys used in the dictionary, in random order (if you want it
-sorted, just apply the \method{sort()} method to the list of keys).  To
+sorted, just apply the \code{sort()} method to the list of keys).  To
 check whether a single key is in the dictionary, use the
-\method{has_key()} method of the dictionary.
+\code{has_key()} method of the dictionary.
 
 Here is a small example using a dictionary:
 
@@ -2411,7 +2398,7 @@ script being run is on the search path, it is important that the
 script not have the same name as a standard module, or Python will
 attempt to load the script as a module when that module is imported.
 This will generally be an error.  See section~\ref{standardModules},
-``Standard Modules,'' for more information.
+``Standard Modules.'' for more information.
 
 
 \subsection{``Compiled'' Python files}
@@ -2477,10 +2464,9 @@ library of Python code in a form that is moderately hard to reverse
 engineer.
 
 \item
-The module \ulink{\module{compileall}}{../lib/module-compileall.html}%
-{} \refstmodindex{compileall} can create \file{.pyc} files (or
-\file{.pyo} files when \programopt{-O} is used) for all modules in a
-directory.
+The module \module{compileall}\refstmodindex{compileall} can create
+\file{.pyc} files (or \file{.pyo} files when \programopt{-O} is used) for
+all modules in a directory.
 
 \end{itemize}
 
@@ -2497,8 +2483,7 @@ system calls.  The set of such modules is a configuration option which
 also dependson the underlying platform  For example,
 the \module{amoeba} module is only provided on systems that somehow
 support Amoeba primitives.  One particular module deserves some
-attention: \ulink{\module{sys}}{../lib/module-sys.html}%
-\refstmodindex{sys}, which is built into every 
+attention: \module{sys}\refstmodindex{sys}, which is built into every
 Python interpreter.  The variables \code{sys.ps1} and
 \code{sys.ps2} define the strings used as primary and secondary
 prompts:
@@ -2781,15 +2766,14 @@ submodules with the same name from different packages.
 \subsection{Intra-package References}
 
 The submodules often need to refer to each other.  For example, the
-\module{surround} module might use the \module{echo} module.  In fact,
-such references
-are so common that the \keyword{import} statement first looks in the
+\module{surround} module might use the \module{echo} module.  In fact, such references
+are so common that the \code{import} statement first looks in the
 containing package before looking in the standard module search path.
 Thus, the surround module can simply use \code{import echo} or
 \code{from echo import echofilter}.  If the imported module is not
 found in the current package (the package of which the current module
-is a submodule), the \keyword{import} statement looks for a top-level
-module with the given name.
+is a submodule), the \code{import} statement looks for a top-level module
+with the given name.
 
 When packages are structured into subpackages (as with the
 \module{Sound} package in the example), there's no shortcut to refer
@@ -2798,6 +2782,15 @@ must be used.  For example, if the module
 \module{Sound.Filters.vocoder} needs to use the \module{echo} module
 in the \module{Sound.Effects} package, it can use \code{from
 Sound.Effects import echo}.
+
+%(One could design a notation to refer to parent packages, similar to
+%the use of ".." to refer to the parent directory in \UNIX{} and Windows
+%filesystems.  In fact, the \module{ni} module, which was the
+%ancestor of this package system, supported this using \code{__} for
+%the package containing the current module,
+%\code{__.__} for the parent package, and so on.  This feature was dropped
+%because of its awkwardness; since most packages will have a relative
+%shallow substructure, this is no big loss.)
 
 \subsection{Packages in Multiple Directories}
 
@@ -2890,10 +2883,11 @@ The value of x is 32.5, and y is 40000...
 Here are two ways to write a table of squares and cubes:
 
 \begin{verbatim}
+>>> import string
 >>> for x in range(1, 11):
-...     print repr(x).rjust(2), repr(x*x).rjust(3),
+...     print string.rjust(repr(x), 2), string.rjust(repr(x*x), 3),
 ...     # Note trailing comma on previous line
-...     print repr(x*x*x).rjust(4)
+...     print string.rjust(repr(x*x*x), 4)
 ...
  1   1    1
  2   4    8
@@ -2923,27 +2917,28 @@ Here are two ways to write a table of squares and cubes:
 (Note that one space between each column was added by the way
 \keyword{print} works: it always adds spaces between its arguments.)
 
-This example demonstrates the \method{rjust()} method of string objects,
+This example demonstrates the function \function{string.rjust()},
 which right-justifies a string in a field of a given width by padding
-it with spaces on the left.  There are similar methods
-\method{ljust()} and \method{center()}.  These
-methods do not write anything, they just return a new string.  If
+it with spaces on the left.  There are similar functions
+\function{string.ljust()} and \function{string.center()}.  These
+functions do not write anything, they just return a new string.  If
 the input string is too long, they don't truncate it, but return it
 unchanged; this will mess up your column lay-out but that's usually
 better than the alternative, which would be lying about a value.  (If
 you really want truncation you can always add a slice operation, as in
-\samp{x.ljust(~n)[:n]}.)
+\samp{string.ljust(x,~n)[0:n]}.)
 
-There is another method, \method{zfill()}, which pads a
+There is another function, \function{string.zfill()}, which pads a
 numeric string on the left with zeros.  It understands about plus and
 minus signs:
 
 \begin{verbatim}
->>> '12'.zfill(5)
+>>> import string
+>>> string.zfill('12', 5)
 '00012'
->>> '-3.14'.zfill(7)
+>>> string.zfill('-3.14', 7)
 '-003.14'
->>> '3.14159265359'.zfill(5)
+>>> string.zfill('3.14159265359', 5)
 '3.14159265359'
 \end{verbatim}
 
@@ -3126,15 +3121,14 @@ objects.
 Strings can easily be written to and read from a file. Numbers take a
 bit more effort, since the \method{read()} method only returns
 strings, which will have to be passed to a function like
-\function{int()}, which takes a string like \code{'123'} and
+\function{string.atoi()}, which takes a string like \code{'123'} and
 returns its numeric value 123.  However, when you want to save more
 complex data types like lists, dictionaries, or class instances,
 things get a lot more complicated.
 
 Rather than have users be constantly writing and debugging code to
 save complicated data types, Python provides a standard module called
-\ulink{\module{pickle}}{../lib/module-pickle.html}.  This is an
-amazing module that can take almost
+\module{pickle}.  This is an amazing module that can take almost
 any Python object (even some forms of Python code!), and convert it to
 a string representation; this process is called \dfn{pickling}.  
 Reconstructing the object from the string representation is called
@@ -3159,15 +3153,12 @@ x = pickle.load(f)
 
 (There are other variants of this, used when pickling many objects or
 when you don't want to write the pickled data to a file; consult the
-complete documentation for
-\ulink{\module{pickle}}{../lib/module-pickle.html} in the
-\citetitle[../lib/]{Python Library Reference}.)
+complete documentation for \module{pickle} in the Library Reference.)
 
-\ulink{\module{pickle}}{../lib/module-pickle.html} is the standard way
-to make Python objects which can be stored and reused by other
-programs or by a future invocation of the same program; the technical
-term for this is a \dfn{persistent} object.  Because
-\ulink{\module{pickle}}{../lib/module-pickle.html} is so widely used,
+\module{pickle} is the standard way to make Python objects which can
+be stored and reused by other programs or by a future invocation of
+the same program; the technical term for this is a
+\dfn{persistent} object.  Because \module{pickle} is so widely used,
 many authors who write Python extensions take care to ensure that new
 data types such as matrices can be properly pickled and unpickled.
 
@@ -3313,12 +3304,12 @@ error message and then re-raise the exception (allowing a caller to
 handle the exception as well):
 
 \begin{verbatim}
-import sys
+import string, sys
 
 try:
     f = open('myfile.txt')
     s = f.readline()
-    i = int(s.strip())
+    i = int(string.strip(s))
 except IOError, (errno, strerror):
     print "I/O error(%s): %s" % (errno, strerror)
 except ValueError:
@@ -4317,11 +4308,11 @@ be trivially easy to create:
 
 \begin{verbatim}
 >>> def reverse(data):
-        for index in range(len(data)-1, -1, -1):
-            yield data[index]
+	for index in range(len(data)-1, -1, -1):
+		yield data[index]
 		
 >>> for char in reverse('golf'):
-        print char
+	print char
 
 f
 l
@@ -4370,8 +4361,8 @@ than the main site, depending on your geographical location.  A more
 informal site is \url{http://starship.python.net/}, which contains a
 bunch of Python-related personal home pages; many people have
 downloadable software there. Many more user-created Python modules
-can be found in the \ulink{Python Package
-Index}{http://www.python.org/pypi} (PyPI).
+can be found in a third-party repository at
+\url{http://www.vex.net/parnassus}.
 
 For Python-related questions and problem reports, you can post to the
 newsgroup \newsgroup{comp.lang.python}, or send them to the mailing
@@ -4384,7 +4375,8 @@ up to several hundred),
 % days = 116.9 msgs / day and steadily increasing.
 asking (and answering) questions, suggesting new features, and
 announcing new modules.  Before posting, be sure to check the list of
-\ulink{Frequently Asked Questions}{http://www.python.org/doc/faq/} (also called the FAQ), or look for it in the
+Frequently Asked Questions (also called the FAQ), at
+\url{http://www.python.org/doc/FAQ.html}, or look for it in the
 \file{Misc/} directory of the Python source distribution.  Mailing
 list archives are available at \url{http://www.python.org/pipermail/}.
 The FAQ answers many of the questions that come up again and again,
@@ -4482,8 +4474,7 @@ Tab: complete
 \end{verbatim}
 
 in your \file{\~{}/.inputrc}.  (Of course, this makes it harder to
-type indented continuation lines if you're accustomed to using
-\kbd{Tab} for that purpose.)
+type indented continuation lines.)
 
 Automatic completion of variable and module names is optionally
 available.  To enable it in the interpreter's interactive mode, add
@@ -4512,8 +4503,7 @@ this deletes the names it creates once they are no longer needed; this
 is done since the startup file is executed in the same namespace as
 the interactive commands, and removing the names avoids creating side
 effects in the interactive environments.  You may find it convenient
-to keep some of the imported modules, such as
-\ulink{\module{os}}{../lib/module-os.html}, which turn
+to keep some of the imported modules, such as \module{os}, which turn
 out to be needed in most sessions with the interpreter.
 
 \begin{verbatim}
@@ -4825,9 +4815,5 @@ not!).
 
 \chapter{History and License}
 \input{license}
-
-\input{glossary}
-
-\input{tut.ind}
 
 \end{document}

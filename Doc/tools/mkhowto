@@ -325,7 +325,8 @@ class Job:
 
     def setup_texinputs(self):
         texinputs = [self.filedir] + self.options.base_texinputs
-        os.environ["TEXINPUTS"] = os.pathsep.join(texinputs)
+        texinputs = os.pathsep.join(texinputs)
+        os.environ["TEXINPUTS"] = texinputs
         self.message("TEXINPUTS=" + os.environ["TEXINPUTS"])
 
     def build_aux(self, binary=None):
@@ -640,7 +641,7 @@ _to_perl["$"] = "\\$"
 _to_perl['"'] = '\\"'
 
 def string_to_perl(s):
-    return ''.join(map(_to_perl.get, s))
+    return "".join(map(_to_perl.get, s))
 
 
 def check_for_bibtex(filename):

@@ -15,7 +15,6 @@ VERSION=`$TOOLDIR/getversioninfo`
 
 # Set $EXTRA to something non-empty if this is a non-trunk version:
 EXTRA=`echo "$VERSION" | sed 's/^[0-9][0-9]*\.[0-9][0-9]*//'`
-
 if echo "$EXTRA" | grep -q '[.]' ; then
     DOCLABEL="maintenance"
     DOCTYPE="maint"
@@ -61,6 +60,11 @@ if [ "$1" ] ; then
     fi
     EXPLANATION="$1"
     shift
+fi
+
+if [ "$DOCTYPE" = 'maint' ] ; then
+    # 'maint' is a symlink
+    DOCTYPE='maint23'
 fi
 
 START="`pwd`"

@@ -75,6 +75,7 @@ import time
 import socket # For gethostbyaddr()
 import mimetools
 import SocketServer
+import cStringIO
 
 # Default error message
 DEFAULT_ERROR_MESSAGE = """\
@@ -275,8 +276,17 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
             return False
         self.command, self.path, self.request_version = command, path, version
 
+        # Deal with pipelining
+        bytes = ""
+        while 1:
+            line = self.rfile.readline()
+            bytes = bytes + line
+            if line == '\r\n' or line == '\n' or line == '':
+                break
+
         # Examine the headers and look for a Connection directive
-        self.headers = self.MessageClass(self.rfile, 0)
+        hfile = cStringIO.StringIO(bytes)
+        self.headers = self.MessageClass(hfile)
 
         conntype = self.headers.get('Connection', "")
         if conntype.lower() == 'close':

@@ -93,7 +93,7 @@
 /* 40 = 4.0, 33 = 3.3; this will break if the second number is > 9 */
 #define DBVER (DB_VERSION_MAJOR * 10 + DB_VERSION_MINOR)
 
-#define PY_BSDDB_VERSION "4.2.1"
+#define PY_BSDDB_VERSION "4.2.0"
 static char *rcs_id = "$Id$";
 
 
@@ -4351,9 +4351,6 @@ static PyMethodDef bsddb_methods[] = {
  */
 #define ADD_INT(dict, NAME)         _addIntToDict(dict, #NAME, NAME)
 
-#define MODULE_NAME_MAX_LEN     11
-static char _bsddbModuleName[MODULE_NAME_MAX_LEN+1] = "_bsddb";
-
 DL_EXPORT(void) init_bsddb(void)
 {
     PyObject* m;
@@ -4377,7 +4374,7 @@ DL_EXPORT(void) init_bsddb(void)
 #endif
 
     /* Create the module and add the functions */
-    m = Py_InitModule(_bsddbModuleName, bsddb_methods);
+    m = Py_InitModule("_bsddb", bsddb_methods);
 
     /* Add some symbolic constants to the module */
     d = PyModule_GetDict(m);
@@ -4715,13 +4712,4 @@ DL_EXPORT(void) init_bsddb(void)
         PyErr_Print();
         Py_FatalError("can't initialize module _bsddb");
     }
-}
-
-/* allow this module to be named _pybsddb so that it can be installed
- * and imported on top of python >= 2.3 that includes its own older
- * copy of the library named _bsddb without importing the old version. */
-DL_EXPORT(void) init_pybsddb(void)
-{
-    strncpy(_bsddbModuleName, "_pybsddb", MODULE_NAME_MAX_LEN);
-    init_bsddb();
 }

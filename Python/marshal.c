@@ -875,7 +875,7 @@ static PyMethodDef marshal_methods[] = {
 	{NULL,		NULL}		/* sentinel */
 };
 
-PyMODINIT_FUNC
+void
 PyMarshal_Init(void)
 {
 	(void) Py_InitModule("marshal", marshal_methods);
