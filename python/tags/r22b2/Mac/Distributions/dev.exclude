@@ -1,0 +1,19 @@
+* Data
+*.Lib
+*.MAP
+*.SYM
+*.dbg
+*.hqx
+*.idb
+*.pyc
+*.slb
+*.xMAP
+*.xSYM
+*Icon
+.#*
+.DS_Store
+.cvsignore
+@*
+CVS
+[(]*[)]
+*.pyo
