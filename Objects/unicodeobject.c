@@ -4557,12 +4557,6 @@ static PyMethodDef unicode_methods[] = {
     {NULL, NULL}
 };
 
-static PyObject * 
-unicode_getattr(PyUnicodeObject *self, char *name)
-{
-    return Py_FindMethod(unicode_methods, (PyObject*) self, name);
-}
-
 static PySequenceMethods unicode_as_sequence = {
     (inquiry) unicode_length, 		/* sq_length */
     (binaryfunc) PyUnicode_Concat, 	/* sq_concat */
@@ -4737,7 +4731,6 @@ formatint(Py_UNICODE *buf,
        + 1 + 1 = 24*/
     char fmt[64]; /* plenty big enough! */
     long x;
-    int use_native_c_format = 1;
 
     x = PyInt_AsLong(v);
     if (x == -1 && PyErr_Occurred())
@@ -4754,21 +4747,11 @@ formatint(Py_UNICODE *buf,
     /* When converting 0 under %#x or %#X, C leaves off the base marker,
      * but we want it (for consistency with other %#x conversions, and
      * for consistency with Python's hex() function).
-     * BUG 28-Apr-2001 tim:  At least two platform Cs (Metrowerks &
-     * Compaq Tru64) violate the std by converting 0 w/ leading 0x anyway.
-     * So add it only if the platform doesn't already.
      */
-    if (x == 0 && (flags & F_ALT) && (type == 'x' || type == 'X')) {
-        /* Only way to know what the platform does is to try it. */
-        sprintf(fmt, type == 'x' ? "%#x" : "%#X", 0);
-        if (fmt[1] != (char)type) {
-            /* Supply our own leading 0x/0X -- needed under std C */
-            use_native_c_format = 0;
-            sprintf(fmt, "0%c%%#.%dl%c", type, prec, type);
-        }
-    }
-    if (use_native_c_format)
-         sprintf(fmt, "%%%s.%dl%c", (flags & F_ALT) ? "#" : "", prec, type);
+    if (x == 0 && (flags & F_ALT) && (type == 'x' || type == 'X'))
+        sprintf(fmt, "0%c%%%s.%dl%c", type, "#", prec, type);
+    else
+        sprintf(fmt, "%%%s.%dl%c", (flags & F_ALT) ? "#" : "", prec, type);
     return usprintf(buf, fmt, x);
 }
 
@@ -5245,7 +5228,7 @@ PyTypeObject PyUnicode_Type = {
     /* Slots */
     (destructor)_PyUnicode_Free, 	/* tp_dealloc */
     0, 					/* tp_print */
-    (getattrfunc)unicode_getattr, 	/* tp_getattr */
+    0,				 	/* tp_getattr */
     0, 					/* tp_setattr */
     (cmpfunc) unicode_compare, 		/* tp_compare */
     (reprfunc) unicode_repr, 		/* tp_repr */
@@ -5255,10 +5238,22 @@ PyTypeObject PyUnicode_Type = {
     (hashfunc) unicode_hash, 		/* tp_hash*/
     0, 					/* tp_call*/
     (reprfunc) unicode_str,	 	/* tp_str */
-    (getattrofunc) NULL, 		/* tp_getattro */
-    (setattrofunc) NULL, 		/* tp_setattro */
+    PyGeneric_GetAttr,	 		/* tp_getattro */
+    0,			 		/* tp_setattro */
     &unicode_as_buffer,			/* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,			/* tp_flags */
+    0,					/* tp_doc */
+    0,					/* tp_traverse */
+    0,					/* tp_clear */
+    0,					/* tp_richcompare */
+    0,					/* tp_weaklistoffset */
+    0,					/* tp_iter */
+    0,					/* tp_iternext */
+    unicode_methods,			/* tp_methods */
+    0,					/* tp_members */
+    0,					/* tp_getset */
+    0,					/* tp_base */
+    0,					/* tp_dict */
 };
 
 /* Initialize the Unicode implementation */

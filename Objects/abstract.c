@@ -1236,82 +1236,52 @@ PySequence_Tuple(PyObject *v)
 PyObject *
 PySequence_List(PyObject *v)
 {
-	PyObject *it;      /* iter(v) */
-	PyObject *result;  /* result list */
-	int n;		   /* guess for result list size */
-	int i;
+	PySequenceMethods *m;
 
 	if (v == NULL)
 		return null_error();
 
-	/* Special-case list(a_list), for speed. */
 	if (PyList_Check(v))
 		return PyList_GetSlice(v, 0, PyList_GET_SIZE(v));
 
-	/* Get iterator.  There may be some low-level efficiency to be gained
-	 * by caching the tp_iternext slot instead of using PyIter_Next()
-	 * later, but premature optimization is the root etc.
-	 */
-	it = PyObject_GetIter(v);
-	if (it == NULL)
-		return NULL;
-
-	/* Guess a result list size. */
-	n = -1;	 /* unknown */
-	if (PySequence_Check(v) &&
-	    v->ob_type->tp_as_sequence->sq_length) {
-		n = PySequence_Size(v);
+	m = v->ob_type->tp_as_sequence;
+	if (m && m->sq_item) {
+		int i;
+		PyObject *l;
+		int n = PySequence_Size(v);
 		if (n < 0)
-			PyErr_Clear();
-	}
-	if (n < 0)
-		n = 8;	/* arbitrary */
-	result = PyList_New(n);
-	if (result == NULL) {
-		Py_DECREF(it);
-		return NULL;
-	}
-
-	/* Run iterator to exhaustion. */
-	for (i = 0; ; i++) {
-		PyObject *item = PyIter_Next(it);
-		if (item == NULL) {
-			/* We're out of here in any case, but if this is a
-			 * StopIteration exception it's expected, but if
-			 * any other kind of exception it's an error.
-			 */
-			if (PyErr_Occurred()) {
-				if (PyErr_ExceptionMatches(PyExc_StopIteration))
+			return NULL;
+		l = PyList_New(n);
+		if (l == NULL)
+			return NULL;
+		for (i = 0; ; i++) {
+			PyObject *item = (*m->sq_item)(v, i);
+			if (item == NULL) {
+				if (PyErr_ExceptionMatches(PyExc_IndexError))
 					PyErr_Clear();
 				else {
-					Py_DECREF(result);
-					result = NULL;
+					Py_DECREF(l);
+					l = NULL;
 				}
+				break;
 			}
-			break;
-		}
-		if (i < n)
-			PyList_SET_ITEM(result, i, item); /* steals ref */
-		else {
-			int status = PyList_Append(result, item);
-			Py_DECREF(item);  /* append creates a new ref */
-			if (status < 0) {
-				Py_DECREF(result);
-				result = NULL;
+			if (i < n)
+				PyList_SET_ITEM(l, i, item);
+			else if (PyList_Append(l, item) < 0) {
+				Py_DECREF(l);
+				l = NULL;
 				break;
 			}
 		}
-	}
-
-	/* Cut back result list if initial guess was too large. */
-	if (i < n && result != NULL) {
-		if (PyList_SetSlice(result, i, n, (PyObject *)NULL) != 0) {
-			Py_DECREF(result);
-			result = NULL;
+		if (i < n && l != NULL) {
+			if (PyList_SetSlice(l, i, n, (PyObject *)NULL) != 0) {
+				Py_DECREF(l);
+				l = NULL;
+			}
 		}
+		return l;
 	}
-	Py_DECREF(it);
-	return result;
+	return type_error("list() argument must be a sequence");
 }
 
 PyObject *
@@ -1723,7 +1693,7 @@ PyObject_IsInstance(PyObject *inst, PyObject *cls)
 		}
 	}
 	else if (PyType_Check(cls)) {
-		retval = ((PyObject *)(inst->ob_type) == cls);
+		retval = PyObject_TypeCheck(inst, (PyTypeObject *)cls);
 	}
 	else if (!PyInstance_Check(inst)) {
 		if (__class__ == NULL) {
