@@ -106,14 +106,9 @@ are none provided with this release.
 
 -- Contact Info
 
-Jeff Rush is no longer supporting the VACPP port :-(
+If you have questions, suggestions or problems specifically with
+the OS/2 VAC++ port of Python, please contact me at:
 
-I don't have the VACPP compiler, so can't reliably maintain this port. 
+    Jeff Rush <jrush@summit-research.com>.
 
-Anyone with VACPP who can contribute patches to keep this port buildable
-should upload them to the Python Patch Manager at Sourceforge and 
-assign them to me for review/checkin.
-
-Andrew MacIntyre
-aimacintyre at users.sourceforge.net
-August 18, 2002.
+I support no other platform but OS/2 (and eventually AmigaDOS).

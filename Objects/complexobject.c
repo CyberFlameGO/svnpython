@@ -5,10 +5,10 @@
 
 /* Submitted by Jim Hugunin */
 
+#ifndef WITHOUT_COMPLEX
+
 #include "Python.h"
 #include "structmember.h"
-
-#ifndef WITHOUT_COMPLEX
 
 /* Precisions used by repr() and str(), respectively.
 
@@ -823,15 +823,6 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OO:complex", kwlist,
 					 &r, &i))
 		return NULL;
-
-	/* Special-case for single argumet that is already complex */
-	if (PyComplex_CheckExact(r) && i == NULL) {
-		/* Note that we can't know whether it's safe to return
-		   a complex *subclass* instance as-is, hence the restriction
-		   to exact complexes here.  */
-		Py_INCREF(r);
-		return r;
-	}
 	if (PyString_Check(r) || PyUnicode_Check(r)) {
 		if (i != NULL) {
 			PyErr_SetString(PyExc_TypeError,
@@ -921,11 +912,11 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	return complex_subtype_from_c_complex(type, cr);
 }
 
-PyDoc_STRVAR(complex_doc,
+static char complex_doc[] =
 "complex(real[, imag]) -> complex number\n"
 "\n"
 "Create a complex number from a real part and an optional imaginary part.\n"
-"This is equivalent to (real + imag*1j) where imag defaults to 0.");
+"This is equivalent to (real + imag*1j) where imag defaults to 0.";
 
 static PyNumberMethods complex_as_number = {
 	(binaryfunc)complex_add, 		/* nb_add */
@@ -1008,7 +999,7 @@ PyTypeObject PyComplex_Type = {
 	0,					/* tp_init */
 	0,					/* tp_alloc */
 	complex_new,				/* tp_new */
-	PyObject_Del,           		/* tp_free */
+	_PyObject_Del,				/* tp_free */
 };
 
 #endif

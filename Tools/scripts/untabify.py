@@ -4,6 +4,7 @@
 
 import os
 import sys
+import string
 import getopt
 
 def main():
@@ -31,7 +32,7 @@ def process(file, tabsize):
     except IOError, msg:
         print "%s: I/O error: %s" % (`file`, str(msg))
         return
-    newtext = text.expandtabs(tabsize)
+    newtext = string.expandtabs(text, tabsize)
     if newtext == text:
         return
     backup = file + "~"

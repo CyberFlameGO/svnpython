@@ -25,7 +25,7 @@ ZIP_DEFLATED = 8
 # Here are some struct module formats for reading headers
 structEndArchive = "<4s4H2lH"     # 9 items, end of archive, 22 bytes
 stringEndArchive = "PK\005\006"   # magic number for end of archive record
-structCentralDir = "<4s4B4H3l5HLl"# 19 items, central directory, 46 bytes
+structCentralDir = "<4s4B4H3l5H2l"# 19 items, central directory, 46 bytes
 stringCentralDir = "PK\001\002"   # magic number for central directory
 structFileHeader = "<4s2B4H3l2H"  # 12 items, file header record, 30 bytes
 stringFileHeader = "PK\003\004"   # magic number for file header
@@ -65,6 +65,13 @@ _FH_UNCOMPRESSED_SIZE = 9
 _FH_FILENAME_LENGTH = 10
 _FH_EXTRA_FIELD_LENGTH = 11
 
+# Used to compare file passed to ZipFile
+import types
+_STRING_TYPES = (types.StringType,)
+if hasattr(types, "UnicodeType"):
+    _STRING_TYPES = _STRING_TYPES + (types.UnicodeType,)
+
+
 def is_zipfile(filename):
     """Quickly see if file is a ZIP file by checking the magic number.
 
@@ -76,10 +83,9 @@ def is_zipfile(filename):
         endrec = fpin.read()
         fpin.close()
         if endrec[0:4] == "PK\005\006" and endrec[-2:] == "\000\000":
-            return True                 # file has correct magic number
+            return 1    # file has correct magic number
     except IOError:
         pass
-    return False
 
 
 class ZipInfo:
@@ -168,7 +174,7 @@ class ZipFile:
         self.mode = key = mode[0]
 
         # Check if we were passed a file-like object
-        if isinstance(file, basestring):
+        if type(file) in _STRING_TYPES:
             self._filePassed = 0
             self.filename = file
             modeDict = {'r' : 'rb', 'w': 'wb', 'a' : 'r+b'}
@@ -347,7 +353,7 @@ class ZipFile:
 
     def _writecheck(self, zinfo):
         """Check for errors before writing a file to the archive."""
-        if zinfo.filename in self.NameToInfo:
+        if self.NameToInfo.has_key(zinfo.filename):
             if self.debug:      # Warning for duplicate names
                 print "Duplicate name:", zinfo.filename
         if self.mode not in ("w", "a"):
@@ -366,14 +372,14 @@ class ZipFile:
         """Put the bytes from filename into the archive under the name
         arcname."""
         st = os.stat(filename)
-        mtime = time.localtime(st.st_mtime)
+        mtime = time.localtime(st[8])
         date_time = mtime[0:6]
         # Create ZipInfo instance to store file information
         if arcname is None:
             zinfo = ZipInfo(filename, date_time)
         else:
             zinfo = ZipInfo(arcname, date_time)
-        zinfo.external_attr = st[0] << 16L      # Unix attributes
+        zinfo.external_attr = st[0] << 16       # Unix attributes
         if compress_type is None:
             zinfo.compress_type = self.compression
         else:
@@ -565,10 +571,10 @@ class PyZipFile(ZipFile):
         file_pyc = pathname + ".pyc"
         file_pyo = pathname + ".pyo"
         if os.path.isfile(file_pyo) and \
-                            os.stat(file_pyo).st_mtime >= os.stat(file_py).st_mtime:
+                            os.stat(file_pyo)[8] >= os.stat(file_py)[8]:
             fname = file_pyo    # Use .pyo file
         elif not os.path.isfile(file_pyc) or \
-             os.stat(file_pyc).st_mtime < os.stat(file_py).st_mtime:
+             os.stat(file_pyc)[8] < os.stat(file_py)[8]:
             import py_compile
             if self.debug:
                 print "Compiling", file_py

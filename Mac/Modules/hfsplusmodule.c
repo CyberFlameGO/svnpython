@@ -43,7 +43,7 @@ typedef struct {
 	short		forkref;
 } forkRefObject;
 
-static PyTypeObject forkRefObject_Type;
+staticforward PyTypeObject forkRefObject_Type;
 
 #define forkRefObject_Check(v)	((v)->ob_type == &forkRefObject_Type)
 
@@ -359,7 +359,7 @@ typedef struct {
 	FSIterator	iterator;
 } iteratorObject;
 
-static PyTypeObject iteratorObject_Type;
+staticforward PyTypeObject iteratorObject_Type;
 
 #define iteratorObject_Check(v)	((v)->ob_type == &iteratorObject_Type)
 
@@ -534,7 +534,7 @@ typedef struct {
 	Boolean		directory;
 } fsRefObject;
 
-static PyTypeObject fsRefObject_Type;
+staticforward PyTypeObject fsRefObject_Type;
 
 #define fsRefObject_Check(v)	((v)->ob_type == &fsRefObject_Type)
 

@@ -57,7 +57,7 @@ def main():
     for arg in args:
         check(arg)
 
-class NannyNag(Exception):
+class NannyNag:
     """
     Raised by tokeneater() if detecting an ambiguous indent.
     Captured and handled in check().
@@ -219,7 +219,7 @@ class Whitespace:
                            other.indent_level(ts)) )
         return a
 
-    # Return True iff self.indent_level(t) < other.indent_level(t)
+    # Return true iff self.indent_level(t) < other.indent_level(t)
     # for all t >= 1.
     # The algorithm is due to Vincent Broman.
     # Easy to prove it's correct.
@@ -234,7 +234,7 @@ class Whitespace:
     # Note that M is of the form (T*)(S*) iff len(M.norm[0]) <= 1.
     def less(self, other):
         if self.n >= other.n:
-            return False
+            return 0
         if self.is_simple and other.is_simple:
             return self.nt <= other.nt
         n = max(self.longest_run_of_spaces(),
@@ -242,8 +242,8 @@ class Whitespace:
         # the self.n >= other.n test already did it for ts=1
         for ts in range(2, n+1):
             if self.indent_level(ts) >= other.indent_level(ts):
-                return False
-        return True
+                return 0
+        return 1
 
     # return a list of tuples (ts, i1, i2) such that
     # i1 == self.indent_level(ts) >= other.indent_level(ts) == i2.
@@ -261,11 +261,12 @@ class Whitespace:
         return a
 
 def format_witnesses(w):
+    import string
     firsts = map(lambda tup: str(tup[0]), w)
     prefix = "at tab size"
     if len(w) > 1:
         prefix = prefix + "s"
-    return prefix + " " + ', '.join(firsts)
+    return prefix + " " + string.join(firsts, ', ')
 
 def process_tokens(tokens):
     INDENT = tokenize.INDENT

@@ -21,8 +21,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ******************************************************************/
-#ifndef Py_MACGLUE_H
-#define Py_MACGLUE_H
+
 #ifdef WITHOUT_FRAMEWORKS
 #include <Types.h>
 #include <Files.h>
@@ -47,6 +46,11 @@ typedef struct {
 	double		bg_yield;		/* yield at most so long when in background */
 } PyMacSchedParams;
 
+#ifdef USE_GUSI1
+void PyMac_FixGUSIcd(void);		/* Workaround for GUSI chdir() call */
+extern void PyMac_SetGUSISpin(void);		/* Install our private GUSI spin routine */
+#endif
+
 unsigned char *Pstring(char *str);		/* Convert c-string to pascal-string in static buffer */
 
 #ifdef USE_GUSI
@@ -59,6 +63,7 @@ extern FSSpec PyMac_ApplicationFSSpec;		/* Application location (from macargv.c)
 extern char PyMac_ApplicationPath[];		/* Application location (from macargv.c) */
 extern OSErr PyMac_init_application_location(void);	/* Init the above */
 extern int PyMac_GetArgv(char ***, int);	/* Get argc, argv (from macargv.c) */
+extern int PyMac_AppearanceCompliant;	/* True if in appearance support mode */
 
 extern PyObject *PyMac_OSErrException;		/* Exception for OSErr */
 PyObject *PyMac_GetOSErrException(void);	/* Initialize & return it */
@@ -137,5 +142,4 @@ long PyMac_DummyWriteHandler(char *, long);
 
 #ifdef __cplusplus
 	}
-#endif
 #endif

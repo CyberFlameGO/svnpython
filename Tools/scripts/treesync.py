@@ -23,7 +23,7 @@ entry in the master tree are synchronized.  This means:
 
 """
 
-import os, sys, stat, getopt
+import os, sys, stat, string, getopt
 
 # Interactivity options
 default_answer = "ask"
@@ -97,7 +97,7 @@ def process(slave, master):
     if cvsdir:
         entries = os.path.join(cvsdir, "Entries")
         for e in open(entries).readlines():
-            words = e.split('/')
+            words = string.split(e, '/')
             if words[0] == '' and words[1:]:
                 name = words[1]
                 s = os.path.join(slave, name)
@@ -188,10 +188,10 @@ def copy(src, dst, rmode="rb", wmode="wb", answer='ask'):
     g.close()
 
 def okay(prompt, answer='ask'):
-    answer = answer.strip().lower()
+    answer = string.lower(string.strip(answer))
     if not answer or answer[0] not in 'ny':
         answer = raw_input(prompt)
-        answer = answer.strip().lower()
+        answer = string.lower(string.strip(answer))
         if not answer:
             answer = default_answer
     if answer[:1] == 'y':

@@ -24,7 +24,6 @@ import macfs
 import StringIO
 import aetypes
 from aetypes import mkenum, mktype
-import os
 
 # These ones seem to be missing from AppleEvents
 # (they're in AERegistry.h)
@@ -58,18 +57,11 @@ unpacker_coercions = {
 #
 # Some python types we need in the packer:
 #
-AEDescType = AE.AEDescType
-FSSType = macfs.FSSpecType
-AliasType = macfs.AliasType
-
-def packkey(ae, key, value):
-	if hasattr(key, 'which'):
-		keystr = key.which
-	elif hasattr(key, 'want'):
-		keystr = key.want
-	else:
-		keystr = key
-	ae.AEPutParamDesc(keystr, pack(value))
+AEDescType = type(AE.AECreateDesc('TEXT', ''))
+_sample_fss = macfs.FSSpec(':')
+_sample_alias = _sample_fss.NewAliasMinimal()
+FSSType = type(_sample_fss)
+AliasType = type(_sample_alias)
 
 def pack(x, forcetype = None):
 	"""Pack a python object into an AE descriptor"""
@@ -109,18 +101,13 @@ def pack(x, forcetype = None):
 	if t == DictionaryType:
 		record = AE.AECreateList('', 1)
 		for key, value in x.items():
-			packkey(record, key, value)
-			#record.AEPutParamDesc(key, pack(value))
+			record.AEPutParamDesc(key, pack(value))
 		return record
 	if t == InstanceType and hasattr(x, '__aepack__'):
 		return x.__aepack__()
-	if hasattr(x, 'which'):
-		return AE.AECreateDesc('TEXT', x.which)
-	if hasattr(x, 'want'):
-		return AE.AECreateDesc('TEXT', x.want)
 	return AE.AECreateDesc('TEXT', repr(x)) # Copout
 
-def unpack(desc, formodulename=""):
+def unpack(desc):
 	"""Unpack an AE descriptor to a python object"""
 	t = desc.type
 	
@@ -132,17 +119,17 @@ def unpack(desc, formodulename=""):
 		l = []
 		for i in range(desc.AECountItems()):
 			keyword, item = desc.AEGetNthDesc(i+1, '****')
-			l.append(unpack(item, formodulename))
+			l.append(unpack(item))
 		return l
 	if t == typeAERecord:
 		d = {}
 		for i in range(desc.AECountItems()):
 			keyword, item = desc.AEGetNthDesc(i+1, '****')
-			d[keyword] = unpack(item, formodulename)
+			d[keyword] = unpack(item)
 		return d
 	if t == typeAEText:
 		record = desc.AECoerceDesc('reco')
-		return mkaetext(unpack(record, formodulename))
+		return mkaetext(unpack(record))
 	if t == typeAlias:
 		return macfs.RawAlias(desc.data)
 	# typeAppleEvent returned as unknown
@@ -168,7 +155,7 @@ def unpack(desc, formodulename=""):
 		return macfs.RawFSSpec(desc.data)
 	if t == typeInsertionLoc:
 		record = desc.AECoerceDesc('reco')
-		return mkinsertionloc(unpack(record, formodulename))
+		return mkinsertionloc(unpack(record))
 	# typeInteger equal to typeLongInteger
 	if t == typeIntlText:
 		script, language = struct.unpack('hh', desc.data[:4])
@@ -192,11 +179,7 @@ def unpack(desc, formodulename=""):
 		return v
 	if t == typeObjectSpecifier:
 		record = desc.AECoerceDesc('reco')
-		# If we have been told the name of the module we are unpacking aedescs for,
-		# we can attempt to create the right type of python object from that module.
-		if formodulename:
-			return mkobjectfrommodule(unpack(record, formodulename), formodulename)
-		return mkobject(unpack(record, formodulename))
+		return mkobject(unpack(record))
 	# typePict returned as unknown
 	# typePixelMap coerced to typeAERecord
 	# typePixelMapMinus returned as unknown
@@ -233,13 +216,13 @@ def unpack(desc, formodulename=""):
 	#
 	if t == 'rang':
 		record = desc.AECoerceDesc('reco')
-		return mkrange(unpack(record, formodulename))
+		return mkrange(unpack(record))
 	if t == 'cmpd':
 		record = desc.AECoerceDesc('reco')
-		return mkcomparison(unpack(record, formodulename))
+		return mkcomparison(unpack(record))
 	if t == 'logi':
 		record = desc.AECoerceDesc('reco')
-		return mklogical(unpack(record, formodulename))
+		return mklogical(unpack(record))
 	return mkunknown(desc.type, desc.data)
 	
 def coerce(data, egdata):
@@ -329,20 +312,6 @@ def mkobject(dict):
 	if want == 'prop' and form == 'prop' and aetypes.IsType(seld):
 		return aetypes.Property(seld.type, fr)
 	return aetypes.ObjectSpecifier(want, form, seld, fr)
-
-# Note by Jack: I'm not 100% sure of the following code. This was
-# provided by Donovan Preston, but I wonder whether the assignment
-# to __class__ is safe. Moreover, shouldn't there be a better
-# initializer for the classes in the suites?
-def mkobjectfrommodule(dict, modulename):
-	want = dict['want'].type
-	module = __import__(modulename)
-	codenamemapper = module._classdeclarations
-	classtype = codenamemapper.get(want, None)
-	newobj = mkobject(dict)
-	if classtype:
-		newobj.__class__ = classtype
-	return newobj
 
 def _test():
 	"""Test program. Pack and unpack various things"""

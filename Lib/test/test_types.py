@@ -1,6 +1,6 @@
 # Python test set -- part 6, built-in types
 
-from test.test_support import *
+from test_support import *
 
 print '6. Built-in types'
 
@@ -48,38 +48,6 @@ if 0 in [0] and 0 not in [1]: pass
 else: raise TestFailed, 'membership test failed'
 if None is None and [] is not []: pass
 else: raise TestFailed, 'identity test failed'
-
-try: float('')
-except ValueError: pass
-else: raise TestFailed, "float('') didn't raise ValueError"
-
-try: float('5\0')
-except ValueError: pass
-else: raise TestFailed, "float('5\0') didn't raise ValueError"
-
-try: 5.0 / 0.0
-except ZeroDivisionError: pass
-else: raise TestFailed, "5.0 / 0.0 didn't raise ZeroDivisionError"
-
-try: 5.0 // 0.0
-except ZeroDivisionError: pass
-else: raise TestFailed, "5.0 // 0.0 didn't raise ZeroDivisionError"
-
-try: 5.0 % 0.0
-except ZeroDivisionError: pass
-else: raise TestFailed, "5.0 % 0.0 didn't raise ZeroDivisionError"
-
-try: 5 / 0L
-except ZeroDivisionError: pass
-else: raise TestFailed, "5 / 0L didn't raise ZeroDivisionError"
-
-try: 5 // 0L
-except ZeroDivisionError: pass
-else: raise TestFailed, "5 // 0L didn't raise ZeroDivisionError"
-
-try: 5 % 0L
-except ZeroDivisionError: pass
-else: raise TestFailed, "5 % 0L didn't raise ZeroDivisionError"
 
 print '6.4 Numeric types (mostly conversions)'
 if 0 != 0L or 0 != 0.0 or 0L != 0.0: raise TestFailed, 'mixed comparisons'
@@ -148,23 +116,6 @@ if int(long(x)) != x: raise TestFailed, 'long op'
 try: int(long(x)-1L)
 except OverflowError: pass
 else:raise TestFailed, 'long op'
-
-try: 5 << -5
-except ValueError: pass
-else: raise TestFailed, 'int negative shift <<'
-
-try: 5L << -5L
-except ValueError: pass
-else: raise TestFailed, 'long negative shift <<'
-
-try: 5 >> -5
-except ValueError: pass
-else: raise TestFailed, 'int negative shift >>'
-
-try: 5L >> -5L
-except ValueError: pass
-else: raise TestFailed, 'long negative shift >>'
-
 print '6.4.3 Floating point numbers'
 if 12.0 + 24.0 != 36.0: raise TestFailed, 'float op'
 if 12.0 + (-24.0) != -12.0: raise TestFailed, 'float op'
@@ -188,31 +139,6 @@ else: raise TestFailed, 'in/not in string'
 x = 'x'*103
 if '%s!'%x != x+'!': raise TestFailed, 'nasty string formatting bug'
 
-#extended slices for strings
-a = '0123456789'
-vereq(a[::], a)
-vereq(a[::2], '02468')
-vereq(a[1::2], '13579')
-vereq(a[::-1],'9876543210')
-vereq(a[::-2], '97531')
-vereq(a[3::-2], '31')
-vereq(a[-100:100:], a)
-vereq(a[100:-100:-1], a[::-1])
-vereq(a[-100L:100L:2L], '02468')
-
-if have_unicode:
-    a = unicode('0123456789', 'ascii')
-    vereq(a[::], a)
-    vereq(a[::2], unicode('02468', 'ascii'))
-    vereq(a[1::2], unicode('13579', 'ascii'))
-    vereq(a[::-1], unicode('9876543210', 'ascii'))
-    vereq(a[::-2], unicode('97531', 'ascii'))
-    vereq(a[3::-2], unicode('31', 'ascii'))
-    vereq(a[-100:100:], a)
-    vereq(a[100:-100:-1], a[::-1])
-    vereq(a[-100L:100L:2L], unicode('02468', 'ascii'))
-
-
 print '6.5.2 Tuples'
 if len(()) != 0: raise TestFailed, 'len(())'
 if len((1,)) != 1: raise TestFailed, 'len((1,))'
@@ -223,32 +149,6 @@ if 0*(1,2,3) != (): raise TestFailed, 'tuple repetition 0*'
 if min((1,2)) != 1 or max((1,2)) != 2: raise TestFailed, 'min/max tuple'
 if 0 in (0,1,2) and 1 in (0,1,2) and 2 in (0,1,2) and 3 not in (0,1,2): pass
 else: raise TestFailed, 'in/not in tuple'
-try: ()[0]
-except IndexError: pass
-else: raise TestFailed, "tuple index error didn't raise IndexError"
-x = ()
-x += ()
-if x != (): raise TestFailed, 'tuple inplace add from () to () failed'
-x += (1,)
-if x != (1,): raise TestFailed, 'tuple resize from () failed'
-
-# extended slicing - subscript only for tuples
-a = (0,1,2,3,4)
-vereq(a[::], a)
-vereq(a[::2], (0,2,4))
-vereq(a[1::2], (1,3))
-vereq(a[::-1], (4,3,2,1,0))
-vereq(a[::-2], (4,2,0))
-vereq(a[3::-2], (3,1))
-vereq(a[-100:100:], a)
-vereq(a[100:-100:-1], a[::-1])
-vereq(a[-100L:100L:2L], (0,2,4))
-
-# Check that a specific bug in _PyTuple_Resize() is squashed.
-def f():
-    for i in range(1000):
-        yield i
-vereq(list(tuple(f())), range(1000))
 
 print '6.5.3 Lists'
 if len([]) != 0: raise TestFailed, 'len([])'
@@ -274,28 +174,6 @@ a = [1, 2, 3, 4, 5]
 a[1:-1] = a
 if a != [1, 1, 2, 3, 4, 5, 5]:
     raise TestFailed, "list self-slice-assign (center)"
-try: [][0]
-except IndexError: pass
-else: raise TestFailed, "list index error didn't raise IndexError"
-try: [][0] = 5
-except IndexError: pass
-else: raise TestFailed, "list assignment index error didn't raise IndexError"
-try: [].pop()
-except IndexError: pass
-else: raise TestFailed, "empty list.pop() didn't raise IndexError"
-try: [1].pop(5)
-except IndexError: pass
-else: raise TestFailed, "[1].pop(5) didn't raise IndexError"
-try: [][0:1] = 5
-except TypeError: pass
-else: raise TestFailed, "bad list slice assignment didn't raise TypeError"
-try: [].extend(None)
-except TypeError: pass
-else: raise TestFailed, "list.extend(None) didn't raise TypeError"
-a = [1, 2, 3, 4]
-a *= 0
-if a != []:
-    raise TestFailed, "list inplace repeat"
 
 
 print '6.5.3a Additional list operations'
@@ -358,21 +236,6 @@ def myComparison(x,y):
 z = range(12)
 z.sort(myComparison)
 
-try: z.sort(2)
-except TypeError: pass
-else: raise TestFailed, 'list sort compare function is not callable'
-
-def selfmodifyingComparison(x,y):
-    z[0] = 1
-    return cmp(x, y)
-try: z.sort(selfmodifyingComparison)
-except TypeError: pass
-else: raise TestFailed, 'modifying list during sort'
-
-try: z.sort(lambda x, y: 's')
-except TypeError: pass
-else: raise TestFailed, 'list sort compare function does not return int'
-
 # Test extreme cases with long ints
 a = [0,1,2,3,4]
 if a[ -pow(2,128L): 3 ] != [0,1,2]:
@@ -380,58 +243,9 @@ if a[ -pow(2,128L): 3 ] != [0,1,2]:
 if a[ 3: pow(2,145L) ] != [3,4]:
     raise TestFailed, "list slicing with too-large long integer"
 
-
-# extended slicing
-
-#  subscript
-a = [0,1,2,3,4]
-vereq(a[::], a)
-vereq(a[::2], [0,2,4])
-vereq(a[1::2], [1,3])
-vereq(a[::-1], [4,3,2,1,0])
-vereq(a[::-2], [4,2,0])
-vereq(a[3::-2], [3,1])
-vereq(a[-100:100:], a)
-vereq(a[100:-100:-1], a[::-1])
-vereq(a[-100L:100L:2L], [0,2,4])
-vereq(a[1000:2000:2], [])
-vereq(a[-1000:-2000:-2], [])
-#  deletion
-del a[::2]
-vereq(a, [1,3])
-a = range(5)
-del a[1::2]
-vereq(a, [0,2,4])
-a = range(5)
-del a[1::-2]
-vereq(a, [0,2,3,4])
-a = range(10)
-del a[::1000]
-vereq(a, [1, 2, 3, 4, 5, 6, 7, 8, 9])
-#  assignment
-a = range(10)
-a[::2] = [-1]*5
-vereq(a, [-1, 1, -1, 3, -1, 5, -1, 7, -1, 9])
-a = range(10)
-a[::-4] = [10]*3
-vereq(a, [0, 10, 2, 3, 4, 10, 6, 7, 8 ,10])
-a = range(4)
-a[::-1] = a
-vereq(a, [3, 2, 1, 0])
-a = range(10)
-b = a[:]
-c = a[:]
-a[2:3] = ["two", "elements"]
-b[slice(2,3)] = ["two", "elements"]
-c[2:3:] = ["two", "elements"]
-vereq(a, b)
-vereq(a, c)
-
 print '6.6 Mappings == Dictionaries'
 d = {}
 if d.keys() != []: raise TestFailed, '{}.keys()'
-if d.values() != []: raise TestFailed, '{}.values()'
-if d.items() != []: raise TestFailed, '{}.items()'
 if d.has_key('a') != 0: raise TestFailed, '{}.has_key(\'a\')'
 if ('a' in d) != 0: raise TestFailed, "'a' in {}"
 if ('a' not in d) != 1: raise TestFailed, "'a' not in {}"
@@ -576,35 +390,6 @@ for copymode in -1, +1:
         if a: raise TestFailed, 'a not empty after popitems: %s' % str(a)
         if b: raise TestFailed, 'b not empty after popitems: %s' % str(b)
 
-d.clear()
-try: d.popitem()
-except KeyError: pass
-else: raise TestFailed, "{}.popitem doesn't raise KeyError"
-
-# Tests for pop with specified key
-d.clear()
-k, v = 'abc', 'def'
-d[k] = v
-try: d.pop('ghi')
-except KeyError: pass
-else: raise TestFailed, "{}.pop(k) doesn't raise KeyError when k not in dictionary"
-
-if d.pop(k) != v: raise TestFailed, "{}.pop(k) doesn't find known key/value pair"
-if len(d) > 0: raise TestFailed, "{}.pop(k) failed to remove the specified pair"
-
-try: d.pop(k)
-except KeyError: pass
-else: raise TestFailed, "{}.pop(k) doesn't raise KeyError when dictionary is empty"
-
-d[1] = 1
-try:
-    for i in d:
-        d[i+1] = 1
-except RuntimeError:
-    pass
-else:
-    raise TestFailed, "changing dict size during iteration doesn't raise Error"
-
 try: type(1, 2)
 except TypeError: pass
 else: raise TestFailed, 'type(), w/2 args expected TypeError'
@@ -613,7 +398,7 @@ try: type(1, 2, 3, 4)
 except TypeError: pass
 else: raise TestFailed, 'type(), w/4 args expected TypeError'
 
-print 'Buffers'
+print '6.7 Buffers'
 try: buffer('asdf', -1)
 except ValueError: pass
 else: raise TestFailed, "buffer('asdf', -1) should raise ValueError"

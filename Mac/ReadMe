@@ -83,6 +83,13 @@ Python and "import test.regrtest ; test.regrtest.main()".
 test_frozen will fail in MacPython because of different handling on
 frozen modules. This should not be a problem in normal use.
 
+test_time will fail because MacPython accepts bogus values for
+mktime(), this will be fixed later (it is not a very serious problem).
+
+test_email will fail during summer (no kidding:-). Actually, it will fail
+when DST is active, because the date parsing test is GMT-centric
+and does not handle the Macintosh's localtime very well.
+
 Three tests will fail on MacOS9 with MemoryErrors:
 test_longexp, test_sha and test_zlib (on MacOSX these should pass).
 
@@ -204,8 +211,15 @@ installer (with Installer Vise Lite), and Jack worked from there.
 Thanks!
 -------
 
-As of Python 2.3 the MacPython thanks list has been merged into the
-general acknowledgements, see :Misc:ACKS.
+Thanks go to the whole Python community with Guido in the lead, of
+course. Mac-specific thanks go to the pythonmac-sig, Just van Rossum,
+Corran Webster, Tony Ingraldi, Erik van Blokland, Bill Bedford, Chris
+Stern, Gordon Worley, Oliver Steele, M. Papillon, Steven Majewski, David
+Goodger, Chris Barker, Luc Lefebvre, Tattoo Mabonzo K., Russell Finn,
+Tom Bridgman, Russel Owen, Pascal Oberndoerfer, Dean Draayer,
+Alexandre Parenteau, Donovan Preston, Daniel Brotsky, Jason Harper,
+Nitin Ganatra, 
+and all the other people who provided feedback, code or both!
 
 MacPython includes waste, a TextEdit replacement which is (c) 1998
 Marco Piovanelli.

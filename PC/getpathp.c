@@ -57,7 +57,7 @@
 #include "Python.h"
 #include "osdefs.h"
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 #include <windows.h>
 #include <tchar.h>
 #endif
@@ -182,7 +182,7 @@ search_for_prefix(char *argv0_path, char *landmark)
 	return 0;
 }
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 
 /* a string loaded from the DLL at startup.*/
 extern const char *PyWin_DLLVersionString;
@@ -340,7 +340,7 @@ done:
 		free(keyBuf);
 	return retval;
 }
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 
 static void
 get_progpath(void)
@@ -349,14 +349,14 @@ get_progpath(void)
 	char *path = getenv("PATH");
 	char *prog = Py_GetProgramName();
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 #ifdef UNICODE
 	WCHAR wprogpath[MAXPATHLEN+1];
 	/* Windows documents that GetModuleFileName() will "truncate",
 	   but makes no mention of the null terminator.  Play it safe.
 	   PLUS Windows itself defines MAX_PATH as the same, but anyway...
 	*/
-	wprogpath[MAXPATHLEN]=_T('\0');
+	wprogpath[MAXPATHLEN]=_T('\0')';
 	if (GetModuleFileName(NULL, wprogpath, MAXPATHLEN)) {
 		WideCharToMultiByte(CP_ACP, 0, 
 		                    wprogpath, -1, 
@@ -423,7 +423,7 @@ calculate_path(void)
 	char *pythonhome = Py_GetPythonHome();
 	char *envpath = Py_GETENV("PYTHONPATH");
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	int skiphome, skipdefault;
 	char *machinepath = NULL;
 	char *userpath = NULL;
@@ -446,7 +446,7 @@ calculate_path(void)
 		envpath = NULL;
 
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	skiphome = pythonhome==NULL ? 0 : 1;
 	machinepath = getpythonregpath(HKEY_LOCAL_MACHINE, skiphome);
 	userpath = getpythonregpath(HKEY_CURRENT_USER, skiphome);
@@ -482,7 +482,7 @@ calculate_path(void)
 		bufsz = 0;
 	bufsz += strlen(PYTHONPATH) + 1;
 	bufsz += strlen(argv0_path) + 1;
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	if (userpath)
 		bufsz += strlen(userpath) + 1;
 	if (machinepath)
@@ -503,12 +503,12 @@ calculate_path(void)
 			fprintf(stderr, "Using default static path.\n");
 			module_search_path = PYTHONPATH;
 		}
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 		if (machinepath)
 			free(machinepath);
 		if (userpath)
 			free(userpath);
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 		return;
 	}
 
@@ -517,7 +517,7 @@ calculate_path(void)
 		buf = strchr(buf, '\0');
 		*buf++ = DELIM;
 	}
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	if (userpath) {
 		strcpy(buf, userpath);
 		buf = strchr(buf, '\0');
@@ -541,7 +541,7 @@ calculate_path(void)
 		strcpy(buf, PYTHONPATH);
 		buf = strchr(buf, '\0');
 	}
-#endif /* MS_WINDOWS */
+#endif /* MS_WIN32 */
 	else {
 		char *p = PYTHONPATH;
 		char *q;

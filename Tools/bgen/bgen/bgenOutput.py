@@ -69,11 +69,12 @@ def VaOutput(format, args):
 	text = format % args
 	if _Level > 0:
 		indent = '\t' * _Level
-		lines = text.split('\n')
+		import string
+		lines = string.splitfields(text, '\n')
 		for i in range(len(lines)):
 			if lines[i] and lines[i][0] != '#':
 				lines[i] = indent + lines[i]
-		text = '\n'.join(lines)
+		text = string.joinfields(lines, '\n')
 	_File.write(text + '\n')
 
 def IndentLevel(by = 1):
@@ -167,12 +168,13 @@ def Out(text):
 	"""
 	# (Don't you love using triple quotes *inside* triple quotes? :-)
 	
-	lines = text.split('\n')
+	import string
+	lines = string.splitfields(text, '\n')
 	indent = ""
 	for line in lines:
-		if line.strip():
+		if string.strip(line):
 			for c in line:
-				if not c.isspace():
+				if c not in string.whitespace:
 					break
 				indent = indent + c
 			break

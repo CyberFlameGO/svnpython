@@ -46,9 +46,7 @@ ConstStringPtr = StringPtr
 
 # File System Specifications
 FSSpec_ptr = OpaqueType("FSSpec", "PyMac_BuildFSSpec", "PyMac_GetFSSpec")
-FSSpec = OpaqueByValueStructType("FSSpec", "PyMac_BuildFSSpec", "PyMac_GetFSSpec")
-FSRef_ptr = OpaqueType("FSRef", "PyMac_BuildFSRef", "PyMac_GetFSRef")
-FSRef = OpaqueByValueStructType("FSRef", "PyMac_BuildFSRef", "PyMac_GetFSRef")
+FSSpec = OpaqueByValueType("FSSpec", "PyMac_BuildFSSpec", "PyMac_GetFSSpec")
 
 # OSType and ResType: 4-byte character strings
 def OSTypeType(typename):
@@ -90,17 +88,6 @@ Point_ptr = OpaqueType("Point", "PyMac_BuildPoint", "PyMac_GetPoint")
 EventRecord = OpaqueType("EventRecord", "PyMac_BuildEventRecord", "PyMac_GetEventRecord")
 EventRecord_ptr = EventRecord
 
-# CoreFoundation datatypes
-CFTypeRef = OpaqueByValueType("CFTypeRef", "CFTypeRefObj")
-CFStringRef = OpaqueByValueType("CFStringRef", "CFStringRefObj")
-CFMutableStringRef = OpaqueByValueType("CFMutableStringRef", "CFMutableStringRefObj")
-CFArrayRef = OpaqueByValueType("CFArrayRef", "CFArrayRefObj")
-CFMutableArrayRef = OpaqueByValueType("CFMutableArrayRef", "CFMutableArrayRefObj")
-CFDictionaryRef = OpaqueByValueType("CFDictionaryRef", "CFDictionaryRefObj")
-CFMutableDictionaryRef = OpaqueByValueType("CFMutableDictionaryRef", "CFMutableDictionaryRefObj")
-CFURLRef = OpaqueByValueType("CFURLRef", "CFURLRefObj")
-OptionalCFURLRef = OpaqueByValueType("CFURLRef", "OptionalCFURLRefObj")
-
 # OSErr is special because it is turned into an exception
 # (Could do this with less code using a variant of mkvalue("O&")?)
 class OSErrType(Type):
@@ -123,19 +110,6 @@ VarInOutBuffer = VarHeapInputOutputBufferType('char', 'long', 'l') # (inbuf, out
 OutBuffer = HeapOutputBufferType('char', 'long', 'l')		# (buf, len)
 VarOutBuffer = VarHeapOutputBufferType('char', 'long', 'l')	# (buf, &len)
 VarVarOutBuffer = VarVarHeapOutputBufferType('char', 'long', 'l') # (buf, len, &len)
-
-# Unicode arguments sometimes have reversed len, buffer (don't understand why Apple did this...)
-class VarUnicodeInputBufferType(VarInputBufferType):
-
-	def getargsFormat(self):
-		return "u#"
-		
-class VarUnicodeReverseInputBufferType(ReverseInputBufferMixin, VarUnicodeInputBufferType):
-	pass
-	
-UnicodeInBuffer = VarUnicodeInputBufferType('UniChar', 'UniCharCount', 'l')
-UnicodeReverseInBuffer = VarUnicodeReverseInputBufferType('UniChar', 'UniCharCount', 'l')
-UniChar_ptr = InputOnlyType("UniCharPtr", "u")
 
 
 # Predefine various pieces of program text to be passed to Module() later:

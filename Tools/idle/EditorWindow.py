@@ -1,5 +1,6 @@
 import sys
 import os
+import string
 import re
 import imp
 from Tkinter import *
@@ -220,7 +221,7 @@ class EditorWindow:
         self.text.after_idle(self.set_line_and_column)
 
     def set_line_and_column(self, event=None):
-        line, column = self.text.index(INSERT).split('.')
+        line, column = string.split(self.text.index(INSERT), '.')
         self.status_bar.set_label('column', 'Col: %s' % column)
         self.status_bar.set_label('line', 'Ln: %s' % line)
 
@@ -343,14 +344,14 @@ class EditorWindow:
         except TclError:
             name = ""
         else:
-            name = name.strip()
+            name = string.strip(name)
         if not name:
             name = tkSimpleDialog.askstring("Module",
                      "Enter the name of a Python module\n"
                      "to search on sys.path and open:",
                      parent=self.text)
             if name:
-                name = name.strip()
+                name = string.strip(name)
             if not name:
                 return
         # XXX Ought to insert current file's directory in front of path
@@ -397,17 +398,17 @@ class EditorWindow:
 
     def ispythonsource(self, filename):
         if not filename:
-            return True
+            return 1
         base, ext = os.path.splitext(os.path.basename(filename))
         if os.path.normcase(ext) in (".py", ".pyw"):
-            return True
+            return 1
         try:
             f = open(filename)
             line = f.readline()
             f.close()
         except IOError:
-            return False
-        return line.startswith('#!') and 'python' in line
+            return 0
+        return line[:2] == '#!' and string.find(line, 'python') >= 0
 
     def close_hook(self):
         if self.flist:
@@ -579,7 +580,7 @@ class EditorWindow:
         if keydefs:
             self.apply_bindings(keydefs)
             for vevent in keydefs.keys():
-                methodname = vevent.replace("-", "_")
+                methodname = string.replace(vevent, "-", "_")
                 while methodname[:1] == '<':
                     methodname = methodname[1:]
                 while methodname[-1:] == '>':
@@ -699,7 +700,7 @@ class EditorWindow:
 def prepstr(s):
     # Helper to extract the underscore from a string, e.g.
     # prepstr("Co_py") returns (2, "Copy").
-    i = s.find('_')
+    i = string.find(s, '_')
     if i >= 0:
         s = s[:i] + s[i+1:]
     return i, s
@@ -716,7 +717,7 @@ def get_accelerator(keydefs, event):
     if not keylist:
         return ""
     s = keylist[0]
-    s = re.sub(r"-[a-z]\b", lambda m: m.group().upper(), s)
+    s = re.sub(r"-[a-z]\b", lambda m: string.upper(m.group()), s)
     s = re.sub(r"\b\w+\b", lambda m: keynames.get(m.group(), m.group()), s)
     s = re.sub("Key-", "", s)
     s = re.sub("Control-", "Ctrl-", s)

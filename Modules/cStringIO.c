@@ -1,9 +1,57 @@
-
-#include "Python.h"
-#include "import.h"
-#include "cStringIO.h"
-
-PyDoc_STRVAR(cStringIO_module_documentation,
+/*
+ * cStringIO.c,v 1.29 1999/06/15 14:10:27 jim Exp
+ * 
+ * Copyright (c) 1996-1998, Digital Creations, Fredericksburg, VA, USA.  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ *   o Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions, and the disclaimer that follows.
+ * 
+ *   o Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions, and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ * 
+ *   o All advertising materials mentioning features or use of this
+ *     software must display the following acknowledgement:
+ * 
+ *       This product includes software developed by Digital Creations
+ *       and its contributors.
+ * 
+ *   o Neither the name of Digital Creations nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ * 
+ * 
+ * THIS SOFTWARE IS PROVIDED BY DIGITAL CREATIONS AND CONTRIBUTORS *AS
+ * IS* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL DIGITAL
+ * CREATIONS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+ * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+ * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+ * DAMAGE.
+ * 
+ # 
+ # If you have questions regarding this software, contact:
+ #
+ #   Digital Creations, L.C.
+ #   910 Princess Ann Street
+ #   Fredericksburge, Virginia  22401
+ #
+ #   info@digicool.com
+ #
+ #   (540) 371-6909
+ */
+static char cStringIO_module_documentation[] = 
 "A simple fast partial StringIO replacement.\n"
 "\n"
 "This module provides a simple useful replacement for\n"
@@ -30,7 +78,12 @@ PyDoc_STRVAR(cStringIO_module_documentation,
 "If someone else wants to provide a more complete implementation,\n"
 "go for it. :-)  \n"
 "\n"
-"cStringIO.c,v 1.29 1999/06/15 14:10:27 jim Exp\n");
+"cStringIO.c,v 1.29 1999/06/15 14:10:27 jim Exp\n"
+;
+
+#include "Python.h"
+#include "import.h"
+#include "cStringIO.h"
 
 #define UNLESS(E) if (!(E))
 
@@ -74,7 +127,7 @@ typedef struct { /* Subtype of IOobject */
 
 /* IOobject (common) methods */
 
-PyDoc_STRVAR(IO_flush__doc__, "flush(): does nothing.");
+static char IO_flush__doc__[] = "flush(): does nothing.";
 
 static int
 IO__opencheck(IOobject *self) {
@@ -96,11 +149,12 @@ IO_flush(IOobject *self, PyObject *args) {
         return Py_None;
 }
 
-PyDoc_STRVAR(IO_getval__doc__,
-"getvalue([use_pos]) -- Get the string value."
-"\n"
-"If use_pos is specified and is a true value, then the string returned\n"
-"will include only the text up to the current file position.\n");
+static char IO_getval__doc__[] = 
+   "getvalue([use_pos]) -- Get the string value."
+   "\n"
+   "If use_pos is specified and is a true value, then the string returned\n"
+   "will include only the text up to the current file position.\n"
+;
 
 static PyObject *
 IO_cgetval(PyObject *self) {
@@ -126,19 +180,19 @@ IO_getval(IOobject *self, PyObject *args) {
         return PyString_FromStringAndSize(self->buf, s);
 }
 
-PyDoc_STRVAR(IO_isatty__doc__, "isatty(): always returns 0");
+static char IO_isatty__doc__[] = "isatty(): always returns 0";
 
 static PyObject *
 IO_isatty(IOobject *self, PyObject *args) {
 
         UNLESS (PyArg_ParseTuple(args, ":isatty")) return NULL;
 
-	Py_INCREF(Py_False);
-        return Py_False;
+        return PyInt_FromLong(0);
 }
 
-PyDoc_STRVAR(IO_read__doc__,
-"read([s]) -- Read s characters, or the rest of the string");
+static char IO_read__doc__[] = 
+"read([s]) -- Read s characters, or the rest of the string"
+;
 
 static int
 IO_cread(PyObject *self, char **output, int  n) {
@@ -168,7 +222,9 @@ IO_read(IOobject *self, PyObject *args) {
         return PyString_FromStringAndSize(output, n);
 }
 
-PyDoc_STRVAR(IO_readline__doc__, "readline() -- Read one line");
+static char IO_readline__doc__[] = 
+"readline() -- Read one line"
+;
 
 static int
 IO_creadline(PyObject *self, char **output) {
@@ -204,7 +260,9 @@ IO_readline(IOobject *self, PyObject *args) {
         return PyString_FromStringAndSize(output, n);
 }
 
-PyDoc_STRVAR(IO_readlines__doc__, "readlines() -- Read all lines");
+static char IO_readlines__doc__[] = 
+"readlines() -- Read all lines"
+;
 
 static PyObject *
 IO_readlines(IOobject *self, PyObject *args) {
@@ -239,8 +297,9 @@ IO_readlines(IOobject *self, PyObject *args) {
         return NULL;
 }
 
-PyDoc_STRVAR(IO_reset__doc__,
-"reset() -- Reset the file position to the beginning");
+static char IO_reset__doc__[] = 
+"reset() -- Reset the file position to the beginning"
+;
 
 static PyObject *
 IO_reset(IOobject *self, PyObject *args) {
@@ -254,7 +313,8 @@ IO_reset(IOobject *self, PyObject *args) {
         return Py_None;
 }
 
-PyDoc_STRVAR(IO_tell__doc__, "tell() -- get the current position.");
+static char IO_tell__doc__[] =
+"tell() -- get the current position.";
 
 static PyObject *
 IO_tell(IOobject *self, PyObject *args) {
@@ -265,8 +325,8 @@ IO_tell(IOobject *self, PyObject *args) {
         return PyInt_FromLong(self->pos);
 }
 
-PyDoc_STRVAR(IO_truncate__doc__,
-"truncate(): truncate the file at the current position.");
+static char IO_truncate__doc__[] = 
+"truncate(): truncate the file at the current position.";
 
 static PyObject *
 IO_truncate(IOobject *self, PyObject *args) {
@@ -287,9 +347,9 @@ IO_truncate(IOobject *self, PyObject *args) {
 
 /* Read-write object methods */
 
-PyDoc_STRVAR(O_seek__doc__,
+static char O_seek__doc__[] =
 "seek(position)       -- set the current position\n"
-"seek(position, mode) -- mode 0: absolute; 1: relative; 2: relative to EOF");
+"seek(position, mode) -- mode 0: absolute; 1: relative; 2: relative to EOF";
 
 static PyObject *
 O_seek(Oobject *self, PyObject *args) {
@@ -325,9 +385,10 @@ O_seek(Oobject *self, PyObject *args) {
         return Py_None;
 }
 
-PyDoc_STRVAR(O_write__doc__,
+static char O_write__doc__[] = 
 "write(s) -- Write a string to the file"
-"\n\nNote (hack:) writing None resets the buffer");
+"\n\nNote (hack:) writing None resets the buffer"
+;
 
 
 static int
@@ -368,7 +429,7 @@ O_write(Oobject *self, PyObject *args) {
         char *c;
         int l;
 
-        UNLESS (PyArg_ParseTuple(args, "t#:write", &c, &l)) return NULL;
+        UNLESS (PyArg_ParseTuple(args, "s#:write", &c, &l)) return NULL;
 
         if (O_cwrite((PyObject*)self,c,l) < 0) return NULL;
 
@@ -376,7 +437,7 @@ O_write(Oobject *self, PyObject *args) {
         return Py_None;
 }
 
-PyDoc_STRVAR(O_close__doc__, "close(): explicitly release resources held.");
+static char O_close__doc__[] = "close(): explicitly release resources held.";
 
 static PyObject *
 O_close(Oobject *self, PyObject *args) {
@@ -393,8 +454,8 @@ O_close(Oobject *self, PyObject *args) {
 }
 
 
-PyDoc_STRVAR(O_writelines__doc__,
-"writelines(sequence_of_strings): write each string");
+static char O_writelines__doc__[] =
+"writelines(sequence_of_strings): write each string";
 static PyObject *
 O_writelines(Oobject *self, PyObject *args) {
         PyObject *tmp = 0;
@@ -475,7 +536,9 @@ O_setattr(Oobject *self, char *name, PyObject *value) {
 	return 0;
 }
 
-PyDoc_STRVAR(Otype__doc__, "Simple type for output to strings.");
+static char Otype__doc__[] = 
+"Simple type for output to strings."
+;
 
 static PyTypeObject Otype = {
   PyObject_HEAD_INIT(NULL)
@@ -607,8 +670,9 @@ I_getiter(Iobject *self)
 }
 
 
-PyDoc_STRVAR(Itype__doc__,
-"Simple type for treating strings as input file streams");
+static char Itype__doc__[] = 
+"Simple type for treating strings as input file streams"
+;
 
 static PyTypeObject Itype = {
   PyObject_HEAD_INIT(NULL)
@@ -667,8 +731,9 @@ newIobject(PyObject *s) {
 /* -------------------------------------------------------- */
 
 
-PyDoc_STRVAR(IO_StringIO__doc__,
-"StringIO([s]) -- Return a StringIO-like stream for reading or writing");
+static char IO_StringIO__doc__[] =
+"StringIO([s]) -- Return a StringIO-like stream for reading or writing"
+;
 
 static PyObject *
 IO_StringIO(PyObject *self, PyObject *args) {
@@ -702,10 +767,10 @@ static struct PycStringIO_CAPI CAPI = {
   &Otype,
 };
 
-#ifndef PyMODINIT_FUNC	/* declarations for DLL import/export */
-#define PyMODINIT_FUNC void
+#ifndef DL_EXPORT	/* declarations for DLL import/export */
+#define DL_EXPORT(RTYPE) RTYPE
 #endif
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initcStringIO(void) {
   PyObject *m, *d, *v;
 

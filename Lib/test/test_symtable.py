@@ -1,4 +1,4 @@
-from test.test_support import verify
+from test_support import verify
 
 import _symtable
 

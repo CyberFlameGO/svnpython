@@ -3,11 +3,8 @@
 /* New version supporting byte order, alignment and size options,
    character strings, and unsigned numbers */
 
-#include "Python.h"
-#include <ctype.h>
-
-PyDoc_STRVAR(struct__doc__,
-"Functions to convert between Python values and C structs.\n\
+static char struct__doc__[] = "\
+Functions to convert between Python values and C structs.\n\
 Python strings are used to hold the data representing the C struct\n\
 and also as format strings to describe the layout of data in the C struct.\n\
 \n\
@@ -31,7 +28,11 @@ Special case (not in native mode unless 'long long' in platform C):\n\
  q:long long; Q:unsigned long long\n\
 Whitespace between formats is ignored.\n\
 \n\
-The variable struct.error is an exception raised on errors.");
+The variable struct.error is an exception raised on errors.";
+
+#include "Python.h"
+
+#include <ctype.h>
 
 
 /* Exception */
@@ -1253,10 +1254,10 @@ calcsize(const char *fmt, const formatdef *f)
 }
 
 
-PyDoc_STRVAR(calcsize__doc__,
-"calcsize(fmt) -> int\n\
+static char calcsize__doc__[] = "\
+calcsize(fmt) -> int\n\
 Return size of C struct described by format string fmt.\n\
-See struct.__doc__ for more on format strings.");
+See struct.__doc__ for more on format strings.";
 
 static PyObject *
 struct_calcsize(PyObject *self, PyObject *args)
@@ -1275,10 +1276,10 @@ struct_calcsize(PyObject *self, PyObject *args)
 }
 
 
-PyDoc_STRVAR(pack__doc__,
-"pack(fmt, v1, v2, ...) -> string\n\
+static char pack__doc__[] = "\
+pack(fmt, v1, v2, ...) -> string\n\
 Return string containing values v1, v2, ... packed according to fmt.\n\
-See struct.__doc__ for more on format strings.");
+See struct.__doc__ for more on format strings.";
 
 static PyObject *
 struct_pack(PyObject *self, PyObject *args)
@@ -1299,8 +1300,7 @@ struct_pack(PyObject *self, PyObject *args)
 		return NULL;
 	}
 	format = PyTuple_GetItem(args, 0);
-	fmt = PyString_AsString(format);
-	if (!fmt)
+	if (!PyArg_Parse(format, "s", &fmt))
 		return NULL;
 	f = whichtable(&fmt);
 	size = calcsize(fmt, f);
@@ -1415,11 +1415,11 @@ struct_pack(PyObject *self, PyObject *args)
 }
 
 
-PyDoc_STRVAR(unpack__doc__,
-"unpack(fmt, string) -> (v1, v2, ...)\n\
+static char unpack__doc__[] = "\
+unpack(fmt, string) -> (v1, v2, ...)\n\
 Unpack the string, containing packed C structure data, according\n\
 to fmt.  Requires len(string)==calcsize(fmt).\n\
-See struct.__doc__ for more on format strings.");
+See struct.__doc__ for more on format strings.";
 
 static PyObject *
 struct_unpack(PyObject *self, PyObject *args)
@@ -1526,21 +1526,19 @@ static PyMethodDef struct_methods[] = {
 
 /* Module initialization */
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initstruct(void)
 {
-	PyObject *m;
+	PyObject *m, *d;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule4("struct", struct_methods, struct__doc__,
 			   (PyObject*)NULL, PYTHON_API_VERSION);
 
 	/* Add some symbolic constants to the module */
-	if (StructError == NULL) {
-		StructError = PyErr_NewException("struct.error", NULL, NULL);
-		if (StructError == NULL)
-			return;
-	}
-	Py_INCREF(StructError);
-	PyModule_AddObject(m, "error", StructError);
+	d = PyModule_GetDict(m);
+	StructError = PyErr_NewException("struct.error", NULL, NULL);
+	if (StructError == NULL)
+		return;
+	PyDict_SetItemString(d, "error", StructError);
 }

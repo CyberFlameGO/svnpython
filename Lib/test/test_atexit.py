@@ -1,7 +1,7 @@
 # Test the atexit module.
-from test.test_support import TESTFN, vereq
+from test_support import TESTFN, vereq
 import atexit
-from os import popen, unlink
+import os
 import sys
 
 input = """\
@@ -23,7 +23,7 @@ f = file(fname, "w")
 f.write(input)
 f.close()
 
-p = popen("%s %s" % (sys.executable, fname))
+p = os.popen("%s %s" % (sys.executable, fname))
 output = p.read()
 p.close()
 vereq(output, """\
@@ -51,7 +51,7 @@ f = file(fname, "w")
 f.write(input)
 f.close()
 
-p = popen("%s %s" % (sys.executable, fname))
+p = os.popen("%s %s" % (sys.executable, fname))
 output = p.read()
 p.close()
 vereq(output, """\
@@ -59,4 +59,4 @@ indirect exit
 direct exit
 """)
 
-unlink(fname)
+os.unlink(fname)

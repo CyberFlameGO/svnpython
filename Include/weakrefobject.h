@@ -18,9 +18,9 @@ struct _PyWeakReference {
     PyWeakReference *wr_next;
 };
 
-PyAPI_DATA(PyTypeObject) _PyWeakref_RefType;
-PyAPI_DATA(PyTypeObject) _PyWeakref_ProxyType;
-PyAPI_DATA(PyTypeObject) _PyWeakref_CallableProxyType;
+extern DL_IMPORT(PyTypeObject) _PyWeakref_RefType;
+extern DL_IMPORT(PyTypeObject) _PyWeakref_ProxyType;
+extern DL_IMPORT(PyTypeObject) _PyWeakref_CallableProxyType;
 
 #define PyWeakref_CheckRef(op) \
         ((op)->ob_type == &_PyWeakref_RefType)
@@ -31,13 +31,13 @@ PyAPI_DATA(PyTypeObject) _PyWeakref_CallableProxyType;
         (PyWeakref_CheckRef(op) || PyWeakref_CheckProxy(op))
 
 
-PyAPI_FUNC(PyObject *) PyWeakref_NewRef(PyObject *ob,
+extern DL_IMPORT(PyObject *) PyWeakref_NewRef(PyObject *ob,
                                               PyObject *callback);
-PyAPI_FUNC(PyObject *) PyWeakref_NewProxy(PyObject *ob,
+extern DL_IMPORT(PyObject *) PyWeakref_NewProxy(PyObject *ob,
                                                 PyObject *callback);
-PyAPI_FUNC(PyObject *) PyWeakref_GetObject(PyObject *ref);
+extern DL_IMPORT(PyObject *) PyWeakref_GetObject(PyObject *ref);
 
-PyAPI_FUNC(long) _PyWeakref_GetWeakrefCount(PyWeakReference *head);
+extern DL_IMPORT(long) _PyWeakref_GetWeakrefCount(PyWeakReference *head);
 
 #define PyWeakref_GET_OBJECT(ref) (((PyWeakReference *)(ref))->wr_object)
 

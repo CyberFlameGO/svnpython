@@ -61,7 +61,7 @@ typedef struct {
 	ICInstance inst;
 } iciobject;
 
-static PyTypeObject Icitype;
+staticforward PyTypeObject Icitype;
 
 
 
@@ -460,7 +460,7 @@ newiciobject(OSType creator)
 		return NULL;
 	if ((err=ICStart(&self->inst, creator)) != 0 ) {
 		(void)PyMac_Error(err);
-		PyObject_DEL(self);
+		PyMem_DEL(self);
 		return NULL;
 	}
 	return self;
@@ -471,7 +471,7 @@ static void
 ici_dealloc(iciobject *self)
 {
 	(void)ICStop(self->inst);
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *

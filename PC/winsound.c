@@ -40,13 +40,13 @@
 #include <conio.h>	/* port functions on Win9x */
 #include <Python.h>
 
-PyDoc_STRVAR(sound_playsound_doc,
+static char sound_playsound_doc[] =
 "PlaySound(sound, flags) - a wrapper around the Windows PlaySound API\n"
 "\n"
 "The sound argument can be a filename, data, or None.\n"
-"For flag values, ored together, see module documentation.");
+"For flag values, ored together, see module documentation.\n";
 
-PyDoc_STRVAR(sound_beep_doc,
+static char sound_beep_doc[] =
 "Beep(frequency, duration) - a wrapper around the Windows Beep API\n"
 "\n"
 "The frequency argument specifies frequency, in hertz, of the sound.\n"
@@ -54,9 +54,9 @@ PyDoc_STRVAR(sound_beep_doc,
 "The duration argument specifies the number of milliseconds.\n"
 "On WinNT and 2000, the platform Beep API is used directly.  Else funky\n"
 "code doing direct port manipulation is used; it's unknown whether that\n"
-"will work on all systems.");
+"will work on all systems.\n";
 
-PyDoc_STRVAR(sound_module_doc,
+static char sound_module_doc[] =
 "PlaySound(sound, flags) - play a sound\n"
 "SND_FILENAME - sound is a wav file name\n"
 "SND_ALIAS - sound is a registry sound association name\n"
@@ -68,7 +68,7 @@ PyDoc_STRVAR(sound_module_doc,
 "SND_NOSTOP - Do not interrupt any sounds currently playing\n"  // Raising RuntimeError if needed
 "SND_NOWAIT - Return immediately if the sound driver is busy\n" // Without any errors
 "\n"
-"Beep(frequency, duration) - Make a beep through the PC speaker.");
+"Beep(frequency, duration) - Make a beep through the PC speaker.\n";
 
 PyObject *
 sound_playsound(PyObject *s, PyObject *args)
@@ -175,8 +175,8 @@ sound_beep(PyObject *self, PyObject *args)
 
 static struct PyMethodDef sound_methods[] =
 {
-    {"PlaySound", sound_playsound, METH_VARARGS, sound_playsound_doc},
-    {"Beep",      sound_beep,      METH_VARARGS, sound_beep_doc},
+    {"PlaySound", sound_playsound, 1, sound_playsound_doc},
+    {"Beep",      sound_beep,      1, sound_beep_doc},
     {NULL,  NULL}
 };
 
@@ -195,7 +195,7 @@ add_define(PyObject *dict, const char *key, long value)
 
 #define ADD_DEFINE(tok) add_define(dict,#tok,tok)
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initwinsound(void)
 {
 	OSVERSIONINFO version;

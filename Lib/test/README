@@ -40,59 +40,21 @@ The test_support helper module provides a two functions for use by
 PyUnit based tests in the Python regression testing framework:
 run_unittest() takes a unittest.TestCase derived class as a parameter
 and runs the tests defined in that class, and run_suite() takes a
-populated TestSuite instance and runs the tests.  run_suite() is
-preferred because unittest files typically grow multiple test classes,
-and you might as well be prepared.
-
-All test methods in the Python regression framework have names that
-start with "test_" and use lower-case names with words separated with
-underscores.
-
-Test methods should *not* have docstrings!  The unittest module prints
-the docstring if there is one, but otherwise prints the function name
-and the full class name.  When there's a problem with a test, the
-latter information makes it easier to find the source for the test
-than the docstring.
+populated TestSuite instance and runs the tests..  All test methods in
+the Python regression framework have names that start with "test_" and
+use lower-case names with words separated with underscores.
 
 All PyUnit-based tests in the Python test suite use boilerplate that
-looks like this (with minor variations):
+looks like this:
 
     import unittest
-    from test import test_support
+    import test_support
 
-    class MyTestCase1(unittest.TestCase):
-
-        # Define setUp and tearDown only if needed
-
-        def setUp(self):
-            unittest.TestCase.setUp(self)
-            ... additional initialization...
-
-        def tearDown(self):
-            ... additional finalization...
-            unittest.TestCase.tearDown(self)
-
-        def test_feature_one(self):
-            # Testing feature one
-            ...unit test for feature one...
-
-        def test_feature_two(self):
-            # Testing feature two
-            ...unit test for feature two...
-
-        ...etc...
-
-    class MyTestCase2(unittest.TestCase):
-        ...same structure as MyTestCase1...
-
-    ...etc...
+    class MyTestCase(unittest.TestCase):
+        # define test methods here...
 
     def test_main():
-        suite = unittest.TestSuite()
-        suite.addTest(unittest.makeSuite(MyTestCase1))
-        suite.addTest(unittest.makeSuite(MyTestCase2))
-        ...add more suites...
-        test_support.run_suite(suite)
+        test_support.run_unittest(MyTestCase)
 
     if __name__ == "__main__":
         test_main()
@@ -113,8 +75,7 @@ The module in the test package is simply a wrapper that causes doctest
 to run over the tests in the module.  The test for the difflib module
 provides a convenient example:
 
-    import difflib
-    from test import test_support
+    import difflib, test_support
     test_support.run_doctest(difflib)
 
 If the test is successful, nothing is written to stdout (so you should not
@@ -130,8 +91,8 @@ of the regrtest framework.  The tail end of test_descrtut.py is a good
 example:
 
     def test_main(verbose=None):
-        from test import test_support, test_descrtut
-        test_support.run_doctest(test_descrtut, verbose)
+        import test_support, test.test_descrtut
+        test_support.run_doctest(test.test_descrtut, verbose)
 
     if __name__ == "__main__":
         test_main(1)
@@ -192,7 +153,7 @@ top level:
 
     make test
 
-[WINDOWS] Run rt.bat from your PCBuild directory.  Read the comments at
+{WINDOWS] Run rt.bat from your PCBuild directory.  Read the comments at
 the top of rt.bat for the use of special -d, -O and -q options processed
 by rt.bat.
 
@@ -277,7 +238,7 @@ these mostly apply only to the "classic" tests; unittest- and doctest-
 based tests should follow the conventions natural to those frameworks):
 
     * If your test case detects a failure, raise TestFailed (found in
-      test.test_support).
+      test_support).
 
     * Import everything you'll need as early as possible.
 
@@ -304,16 +265,8 @@ based tests should follow the conventions natural to those frameworks):
 
 Miscellaneous
 
-There is a test_support module in the test package you can import for
-your test case.  Import this module using either
-
-    import test.test_support
-
-or
-
-    from test import test_support
-
-test_support provides the following useful objects:
+There is a test_support module you can import from your test case.  It
+provides the following useful objects:
 
     * TestFailed - raise this exception when your regression test detects a
       failure.
@@ -354,6 +307,28 @@ test_support provides the following useful objects:
     * fcmp(x,y) - you can call this function to compare two floating point
       numbers when you expect them to only be approximately equal withing a
       fuzz factor (test_support.FUZZ, which defaults to 1e-6).
+
+NOTE:  Always import something from test_support like so:
+
+    from test_support import verbose
+
+or like so:
+
+    import test_support
+    ... use test_support.verbose in the code ...
+
+Never import anything from test_support like this:
+
+    from test.test_support import verbose
+
+"test" is a package already, so can refer to modules it contains without
+"test." qualification.  If you do an explicit "test.xxx" qualification, that
+can fool Python into believing test.xxx is a module distinct from the xxx
+in the current package, and you can end up importing two distinct copies of
+xxx.  This is especially bad if xxx=test_support, as regrtest.py can (and
+routinely does) overwrite its "verbose" and "use_large_resources"
+attributes:  if you get a second copy of test_support loaded, it may not
+have the same values for those as regrtest intended.
 
 
 Python and C statement coverage results are currently available at

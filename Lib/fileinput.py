@@ -79,7 +79,7 @@ XXX Possible additions:
 
 """
 
-import sys, os
+import sys, os, stat
 
 __all__ = ["input","close","nextfile","filename","lineno","filelineno",
            "isfirstline","isstdin","FileInput"]
@@ -203,7 +203,7 @@ class FileInput:
         self._lineno = 0
         self._filelineno = 0
         self._file = None
-        self._isstdin = False
+        self._isstdin = 0
         self._backupfilename = None
         self._buffer = []
         self._bufindex = 0
@@ -215,10 +215,7 @@ class FileInput:
         self.nextfile()
         self._files = ()
 
-    def __iter__(self):
-        return self
-
-    def next(self):
+    def __getitem__(self, i):
         try:
             line = self._buffer[self._bufindex]
         except IndexError:
@@ -228,18 +225,12 @@ class FileInput:
             self._lineno += 1
             self._filelineno += 1
             return line
-        line = self.readline()
-        if not line:
-            raise StopIteration
-        return line
-
-    def __getitem__(self, i):
         if i != self._lineno:
             raise RuntimeError, "accessing lines out of order"
-        try:
-            return self.next()
-        except StopIteration:
+        line = self.readline()
+        if not line:
             raise IndexError, "end of input reached"
+        return line
 
     def nextfile(self):
         savestdout = self._savestdout
@@ -261,9 +252,9 @@ class FileInput:
         self._backupfilename = 0
         if backupfilename and not self._backup:
             try: os.unlink(backupfilename)
-            except OSError: pass
+            except: pass
 
-        self._isstdin = False
+        self._isstdin = 0
         self._buffer = []
         self._bufindex = 0
 
@@ -284,12 +275,12 @@ class FileInput:
             self._files = self._files[1:]
             self._filelineno = 0
             self._file = None
-            self._isstdin = False
+            self._isstdin = 0
             self._backupfilename = 0
             if self._filename == '-':
                 self._filename = '<stdin>'
                 self._file = sys.stdin
-                self._isstdin = True
+                self._isstdin = 1
             else:
                 if self._inplace:
                     self._backupfilename = (
@@ -300,8 +291,8 @@ class FileInput:
                     os.rename(self._filename, self._backupfilename)
                     self._file = open(self._backupfilename, "r")
                     try:
-                        perm = os.fstat(self._file.fileno()).st_mode
-                    except OSError:
+                        perm = os.fstat(self._file.fileno())[stat.ST_MODE]
+                    except:
                         self._output = open(self._filename, "w")
                     else:
                         fd = os.open(self._filename,
@@ -310,7 +301,7 @@ class FileInput:
                         self._output = os.fdopen(fd, "w")
                         try:
                             os.chmod(self._filename, perm)
-                        except OSError:
+                        except:
                             pass
                     self._savestdout = sys.stdout
                     sys.stdout = self._output

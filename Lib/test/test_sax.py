@@ -1,4 +1,4 @@
-# regression test for SAX 2.0            -*- coding: iso-8859-1 -*-
+# regression test for SAX 2.0
 # $Id$
 
 from xml.sax import make_parser, ContentHandler, \
@@ -12,7 +12,7 @@ from xml.sax.saxutils import XMLGenerator, escape, quoteattr, XMLFilterBase
 from xml.sax.expatreader import create_parser
 from xml.sax.xmlreader import InputSource, AttributesImpl, AttributesNSImpl
 from cStringIO import StringIO
-from test.test_support import verify, verbose, TestFailed, findfile
+from test_support import verify, verbose, TestFailed, findfile
 import os
 
 # ===== Utilities
@@ -337,7 +337,7 @@ def test_expat_nsattrs_wattr():
 
     return attrs.getLength() == 1 and \
            attrs.getNames() == [(ns_uri, "attr")] and \
-           (attrs.getQNames() == [] or attrs.getQNames() == ["ns:attr"]) and \
+           attrs.getQNames() == ["ns:attr"] and \
            len(attrs) == 1 and \
            attrs.has_key((ns_uri, "attr")) and \
            attrs.keys() == [(ns_uri, "attr")] and \

@@ -1,7 +1,7 @@
 import zlib
+from test_support import TestFailed
 import sys
 import imp
-from test.test_support import TestFailed
 
 try:
     t = imp.find_module('test_zlib')
@@ -12,10 +12,8 @@ buf = file.read() * 8
 file.close()
 
 # test the checksums (hex so the test doesn't break on 64-bit machines)
-def fix(x):
-    return "0x%x" % (x & 0xffffffffL)
-print fix(zlib.crc32('penguin')), fix(zlib.crc32('penguin', 1))
-print fix(zlib.adler32('penguin')), fix(zlib.adler32('penguin', 1))
+print hex(zlib.crc32('penguin')), hex(zlib.crc32('penguin', 1))
+print hex(zlib.adler32('penguin')), hex(zlib.adler32('penguin', 1))
 
 # make sure we generate some expected errors
 try:

@@ -66,7 +66,7 @@ class ImportManager:
 
         # This is the Importer that we use for grabbing stuff from the
         # filesystem. It defines one more method (import_from_dir) for our use.
-        if fs_imp is None:
+        if not fs_imp:
             cls = self.clsFilesystemImporter or _FilesystemImporter
             fs_imp = cls()
         self.fs_imp = fs_imp
@@ -410,7 +410,7 @@ def _compile(pathname, timestamp):
     saved back to the filesystem for future imports. The source file's
     modification timestamp must be provided as a Long value.
     """
-    codestring = open(pathname, 'rU').read()
+    codestring = open(pathname, 'r').read()
     if codestring and codestring[-1] != '\n':
         codestring = codestring + '\n'
     code = __builtin__.compile(codestring, pathname, 'exec')
@@ -455,6 +455,7 @@ def _os_bootstrap():
         def join(a, b):
             if a == '':
                 return b
+            path = s
             if ':' not in a:
                 a = ':' + a
             if a[-1:] != ':':
@@ -484,7 +485,7 @@ def _os_path_isdir(pathname):
         s = _os_stat(pathname)
     except OSError:
         return None
-    return (s.st_mode & 0170000) == 0040000
+    return (s[0] & 0170000) == 0040000
 
 def _timestamp(pathname):
     "Return the file modification time as a Long."
@@ -492,7 +493,7 @@ def _timestamp(pathname):
         s = _os_stat(pathname)
     except OSError:
         return None
-    return long(s.st_mtime)
+    return long(s[8])
 
 
 ######################################################################

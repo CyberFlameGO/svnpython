@@ -190,6 +190,10 @@ def rfind(s, *args):
 _float = float
 _int = int
 _long = long
+try:
+    _StringTypes = (str, unicode)
+except NameError:
+    _StringTypes = (str,)
 
 # Convert string to float
 def atof(s):
@@ -275,7 +279,7 @@ def zfill(x, width):
     of the specified width.  The string x is never truncated.
 
     """
-    if not isinstance(x, basestring):
+    if not isinstance(x, _StringTypes):
         x = repr(x)
     return x.zfill(width)
 

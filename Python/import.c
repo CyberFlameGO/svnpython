@@ -19,6 +19,9 @@
 #include <fcntl.h>
 #endif
 
+/* check if the int_value can't be written in 15 bits (signed) */
+#define CANT_WRITE(int_value)	(int_value > 32767)
+
 extern time_t PyOS_GetLastModificationTime(char *, FILE *);
 						/* In getmtime.c */
 
@@ -41,36 +44,8 @@ extern time_t PyOS_GetLastModificationTime(char *, FILE *);
        the Unicode -U option is in use.  IMO (Tim's), that's a Bad Idea
        (quite apart from that the -U option doesn't work so isn't used
        anyway).
-
-   XXX MAL, 2002-02-07: I had to modify the MAGIC due to a fix of the
-       UTF-8 encoder (it previously produced invalid UTF-8 for unpaired
-       high surrogates), so I simply bumped the month value to 20 (invalid
-       month) and set the day to 1.  This should be recognizable by any
-       algorithm relying on the above scheme. Perhaps we should simply
-       start counting in increments of 10 from now on ?!
-
-       MWH, 2002-08-03: Removed SET_LINENO.  Couldn't be bothered figuring
-       out the MAGIC schemes, so just incremented it by 10.
-
-       GvR, 2002-08-31: Because MWH changed the bytecode again, moved the
-       magic number *back* to 62011.  This should get the snake-farm to
-       throw away its old .pyc files, amongst others.
-
-   Known values:
-       Python 1.5:   20121
-       Python 1.5.1: 20121
-       Python 1.5.2: 20121
-       Python 2.0:   50823
-       Python 2.0.1: 50823
-       Python 2.1:   60202
-       Python 2.1.1: 60202
-       Python 2.1.2: 60202
-       Python 2.2:   60717
-       Python 2.3a0: 62011
-       Python 2.3a0: 62021
-       Python 2.3a0: 62011 (!)
 */
-#define MAGIC (62011 | ((long)'\r'<<16) | ((long)'\n'<<24))
+#define MAGIC (60717 | ((long)'\r'<<16) | ((long)'\n'<<24))
 
 /* Magic word as global; note that _PyImport_Init() can change the
    value of this global to accommodate for alterations of how the
@@ -90,15 +65,15 @@ struct filedescr * _PyImport_Filetab = NULL;
 
 #ifdef RISCOS
 static const struct filedescr _PyImport_StandardFiletab[] = {
-	{"/py", "U", PY_SOURCE},
+	{"/py", "r", PY_SOURCE},
 	{"/pyc", "rb", PY_COMPILED},
 	{0, 0}
 };
 #else
 static const struct filedescr _PyImport_StandardFiletab[] = {
-	{".py", "U", PY_SOURCE},
-#ifdef MS_WINDOWS
-	{".pyw", "U", PY_SOURCE},
+	{".py", "r", PY_SOURCE},
+#ifdef MS_WIN32
+	{".pyw", "r", PY_SOURCE},
 #endif
 	{".pyc", "rb", PY_COMPILED},
 	{0, 0}
@@ -223,9 +198,9 @@ imp_lock_held(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, ":lock_held"))
 		return NULL;
 #ifdef WITH_THREAD
-	return PyBool_FromLong(import_lock_thread != -1);
+	return PyInt_FromLong(import_lock_thread != -1);
 #else
-	return PyBool_FromLong(0);
+	return PyInt_FromLong(0);
 #endif
 }
 
@@ -557,7 +532,7 @@ make_compiled_pathname(char *pathname, char *buf, size_t buflen)
 	if (len+2 > buflen)
 		return NULL;
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 	/* Treat .pyw as if it were .py.  The case of ".pyw" must match
 	   that used in _PyImport_StandardFiletab. */
 	if (len >= 4 && strcmp(&pathname[len-4], ".pyw") == 0)
@@ -714,6 +689,18 @@ static void
 write_compiled_module(PyCodeObject *co, char *cpathname, long mtime)
 {
 	FILE *fp;
+
+	if (CANT_WRITE(co->co_argcount) ||
+	    CANT_WRITE(co->co_nlocals) ||
+	    CANT_WRITE(co->co_stacksize) ||
+	    CANT_WRITE(co->co_flags) ||
+	    CANT_WRITE(co->co_firstlineno)) {
+		if (Py_VerboseFlag)
+			PySys_WriteStderr(
+				"# code too large: can't write %s\n",
+				cpathname);
+		return;
+	}
 
 	fp = open_exclusive(cpathname);
 	if (fp == NULL) {
@@ -901,7 +888,6 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 	int i, npath;
 	size_t len, namelen;
 	struct filedescr *fdp = NULL;
-	char *filemode;
 	FILE *fp = NULL;
 #ifndef RISCOS
 	struct stat statbuf;
@@ -910,11 +896,6 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 	static struct filedescr fd_builtin = {"", "", C_BUILTIN};
 	static struct filedescr fd_package = {"", "", PKG_DIRECTORY};
 	char name[MAXPATHLEN+1];
-#if defined(PYOS_OS2)
-	size_t saved_len;
-	size_t saved_namelen;
-	char *saved_buf = NULL;
-#endif
 
 	if (strlen(realname) > MAXPATHLEN) {
 		PyErr_SetString(PyExc_OverflowError,
@@ -978,31 +959,17 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 	npath = PyList_Size(path);
 	namelen = strlen(name);
 	for (i = 0; i < npath; i++) {
-		PyObject *copy = NULL;
 		PyObject *v = PyList_GetItem(path, i);
-#ifdef Py_USING_UNICODE
-		if (PyUnicode_Check(v)) {
-			copy = PyUnicode_Encode(PyUnicode_AS_UNICODE(v),
-				PyUnicode_GET_SIZE(v), Py_FileSystemDefaultEncoding, NULL);
-			if (copy == NULL)
-				return NULL;
-			v = copy;
-		}
-		else
-#endif
 		if (!PyString_Check(v))
 			continue;
 		len = PyString_Size(v);
-		if (len + 2 + namelen + MAXSUFFIXSIZE >= buflen) {
-			Py_XDECREF(copy);
+		if (len + 2 + namelen + MAXSUFFIXSIZE >= buflen)
 			continue; /* Too long */
-		}
 		strcpy(buf, PyString_AsString(v));
-		if (strlen(buf) != len) {
-			Py_XDECREF(copy);
+		if (strlen(buf) != len)
 			continue; /* v contains '\0' */
-		}
 #ifdef macintosh
+#ifdef INTERN_STRINGS
 		/*
 		** Speedup: each sys.path item is interned, and
 		** FindResourceModule remembers which items refer to
@@ -1011,18 +978,17 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		*/
 		PyString_InternInPlace(&PyList_GET_ITEM(path, i));
 		v = PyList_GET_ITEM(path, i);
+#endif
 		if (PyMac_FindResourceModule((PyStringObject *)v, name, buf)) {
 			static struct filedescr resfiledescr =
 				{"", "", PY_RESOURCE};
 
-			Py_XDECREF(copy);
 			return &resfiledescr;
 		}
 		if (PyMac_FindCodeResourceModule((PyStringObject *)v, name, buf)) {
 			static struct filedescr resfiledescr =
 				{"", "", PY_CODERESOURCE};
 
-			Py_XDECREF(copy);
 			return &resfiledescr;
 		}
 #endif
@@ -1038,70 +1004,30 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		/* Check for package import (buf holds a directory name,
 		   and there's an __init__ module in that directory */
 #ifdef HAVE_STAT
-		if (stat(buf, &statbuf) == 0 &&         /* it exists */
-		    S_ISDIR(statbuf.st_mode) &&         /* it's a directory */
-		    find_init_module(buf) &&            /* it has __init__.py */
-		    case_ok(buf, len, namelen, name)) { /* and case matches */
-			Py_XDECREF(copy);
+		if (stat(buf, &statbuf) == 0 &&       /* it exists */
+		    S_ISDIR(statbuf.st_mode) &&       /* it's a directory */
+		    find_init_module(buf) &&          /* it has __init__.py */
+		    case_ok(buf, len, namelen, name)) /* and case matches */
 			return &fd_package;
-		}
 #else
 		/* XXX How are you going to test for directories? */
 #ifdef RISCOS
 		if (isdir(buf) &&
 		    find_init_module(buf) &&
-		    case_ok(buf, len, namelen, name)) {
-			Py_XDECREF(copy);
+		    case_ok(buf, len, namelen, name))
 			return &fd_package;
-		}
 #endif
 #endif
 #ifdef macintosh
 		fdp = PyMac_FindModuleExtension(buf, &len, name);
 		if (fdp) {
 #else
-#if defined(PYOS_OS2)
-		/* take a snapshot of the module spec for restoration
-		 * after the 8 character DLL hackery
-		 */
-		saved_buf = strdup(buf);
-		saved_len = len;
-		saved_namelen = namelen;
-#endif /* PYOS_OS2 */
 		for (fdp = _PyImport_Filetab; fdp->suffix != NULL; fdp++) {
-#if defined(PYOS_OS2)
-			/* OS/2 limits DLLs to 8 character names (w/o
-			   extension)
-			 * so if the name is longer than that and its a
-			 * dynamically loaded module we're going to try,
-			 * truncate the name before trying
-			 */
-			if (strlen(realname) > 8) {
-				/* is this an attempt to load a C extension? */
-				const struct filedescr *scan;
-				scan = _PyImport_DynLoadFiletab;
-				while (scan->suffix != NULL) {
-					if (!strcmp(scan->suffix, fdp->suffix))
-						break;
-					else
-						scan++;
-				}
-				if (scan->suffix != NULL) {
-					/* yes, so truncate the name */
-					namelen = 8;
-					len -= strlen(realname) - namelen;
-					buf[len] = '\0';
-				}
-			}
-#endif /* PYOS_OS2 */
 			strcpy(buf+len, fdp->suffix);
 			if (Py_VerboseFlag > 1)
 				PySys_WriteStderr("# trying %s\n", buf);
 #endif /* !macintosh */
-			filemode = fdp->mode;
-			if (filemode[0] == 'U') 
-				filemode = "r" PY_STDIOTEXTMODE;
-			fp = fopen(buf, filemode);
+			fp = fopen(buf, fdp->mode);
 			if (fp != NULL) {
 				if (case_ok(buf, len, namelen, name))
 					break;
@@ -1110,22 +1036,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 					fp = NULL;
 				}
 			}
-#if defined(PYOS_OS2)
-			/* restore the saved snapshot */
-			strcpy(buf, saved_buf);
-			len = saved_len;
-			namelen = saved_namelen;
-#endif
 		}
-#if defined(PYOS_OS2)
-		/* don't need/want the module name snapshot anymore */
-		if (saved_buf)
-		{
-			free(saved_buf);
-			saved_buf = NULL;
-		}
-#endif
-		Py_XDECREF(copy);
 		if (fp != NULL)
 			break;
 	}
@@ -1165,7 +1076,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 /* First we may need a pile of platform-specific header files; the sequence
  * of #if's here should match the sequence in the body of case_ok().
  */
-#if defined(MS_WINDOWS) || defined(__CYGWIN__)
+#if defined(MS_WIN32) || defined(__CYGWIN__)
 #include <windows.h>
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>
@@ -1176,16 +1087,13 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 
 #elif defined(macintosh)
 #include <TextUtils.h>
+#ifdef USE_GUSI1
+#include "TFileSpec.h"		/* for Path2FSSpec() */
+#endif
 
 #elif defined(__MACH__) && defined(__APPLE__) && defined(HAVE_DIRENT_H)
 #include <sys/types.h>
 #include <dirent.h>
-
-#elif defined(PYOS_OS2)
-#define INCL_DOS
-#define INCL_DOSERRORS
-#define INCL_NOPMAPI
-#include <os2.h>
 
 #elif defined(RISCOS)
 #include "oslib/osfscontrol.h"
@@ -1198,8 +1106,8 @@ case_ok(char *buf, int len, int namelen, char *name)
  * match the sequence just above.
  */
 
-/* MS_WINDOWS || __CYGWIN__ */
-#if defined(MS_WINDOWS) || defined(__CYGWIN__)
+/* MS_WIN32 || __CYGWIN__ */
+#if defined(MS_WIN32) || defined(__CYGWIN__)
 	WIN32_FIND_DATA data;
 	HANDLE h;
 #ifdef __CYGWIN__
@@ -1249,7 +1157,25 @@ case_ok(char *buf, int len, int namelen, char *name)
 	if (Py_GETENV("PYTHONCASEOK") != NULL)
 		return 1;
 
+#ifndef USE_GUSI1
 	err = FSMakeFSSpec(0, 0, Pstring(buf), &fss);
+#else
+	/* GUSI's Path2FSSpec() resolves all possible aliases nicely on
+	   the way, which is fine for all directories, but here we need
+	   the original name of the alias file (say, Dlg.ppc.slb, not
+	   toolboxmodules.ppc.slb). */
+	char *colon;
+	err = Path2FSSpec(buf, &fss);
+	if (err == noErr) {
+		colon = strrchr(buf, ':'); /* find filename */
+		if (colon != NULL)
+			err = FSMakeFSSpec(fss.vRefNum, fss.parID,
+					   Pstring(colon+1), &fss);
+		else
+			err = FSMakeFSSpec(fss.vRefNum, fss.parID,
+					   fss.name, &fss);
+	}
+#endif
 	if (err) {
 		PyErr_Format(PyExc_NameError,
 		     "Can't find file for module %.100s\n(filename %.300s)",
@@ -1324,26 +1250,6 @@ case_ok(char *buf, int len, int namelen, char *name)
 		return 1; /* match */
 
 	return 0;
-
-/* OS/2 */
-#elif defined(PYOS_OS2)
-	HDIR hdir = 1;
-	ULONG srchcnt = 1;
-	FILEFINDBUF3 ffbuf;
-	APIRET rc;
-
-	if (getenv("PYTHONCASEOK") != NULL)
-		return 1;
-
-	rc = DosFindFirst(buf,
-			  &hdir,
-			  FILE_READONLY | FILE_HIDDEN | FILE_SYSTEM | FILE_DIRECTORY,
-			  &ffbuf, sizeof(ffbuf),
-			  &srchcnt,
-			  FIL_STANDARD);
-	if (rc != NO_ERROR)
-		return 0;
-	return strncmp(ffbuf.achName, name, namelen) == 0;
 
 /* assuming it's a case-sensitive filesystem, so there's nothing to do! */
 #else
@@ -2322,7 +2228,7 @@ imp_is_frozen(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s:is_frozen", &name))
 		return NULL;
 	p = find_frozen(name);
-	return PyBool_FromLong((long) (p == NULL ? 0 : p->size));
+	return PyInt_FromLong((long) (p == NULL ? 0 : p->size));
 }
 
 static FILE *
@@ -2330,8 +2236,6 @@ get_file(char *pathname, PyObject *fob, char *mode)
 {
 	FILE *fp;
 	if (fob == NULL) {
-		if (mode[0] == 'U') 
-			mode = "r" PY_STDIOTEXTMODE;
 		fp = fopen(pathname, mode);
 		if (fp == NULL)
 			PyErr_SetFromErrno(PyExc_IOError);
@@ -2439,16 +2343,10 @@ imp_load_module(PyObject *self, PyObject *args)
 			      &name, &fob, &pathname,
 			      &suffix, &mode, &type))
 		return NULL;
-	if (*mode) {
-		/* Mode must start with 'r' or 'U' and must not contain '+'.
-		   Implicit in this test is the assumption that the mode
-		   may contain other modifiers like 'b' or 't'. */
-
-		if (!(*mode == 'r' || *mode == 'U') || strchr(mode, '+')) {
-			PyErr_Format(PyExc_ValueError,
-				     "invalid file open mode %.200s", mode);
-			return NULL;
-		}
+	if (*mode && (*mode != 'r' || strchr(mode, '+') != NULL)) {
+		PyErr_Format(PyExc_ValueError,
+			     "invalid file open mode %.200s", mode);
+		return NULL;
 	}
 	if (fob == Py_None)
 		fp = NULL;
@@ -2486,63 +2384,70 @@ imp_new_module(PyObject *self, PyObject *args)
 
 /* Doc strings */
 
-PyDoc_STRVAR(doc_imp,
-"This module provides the components needed to build your own\n\
-__import__ function.  Undocumented functions are obsolete.");
+static char doc_imp[] = "\
+This module provides the components needed to build your own\n\
+__import__ function.  Undocumented functions are obsolete.\n\
+";
 
-PyDoc_STRVAR(doc_find_module,
-"find_module(name, [path]) -> (file, filename, (suffix, mode, type))\n\
+static char doc_find_module[] = "\
+find_module(name, [path]) -> (file, filename, (suffix, mode, type))\n\
 Search for a module.  If path is omitted or None, search for a\n\
 built-in, frozen or special module and continue search in sys.path.\n\
 The module name cannot contain '.'; to search for a submodule of a\n\
-package, pass the submodule name and the package's __path__.");
+package, pass the submodule name and the package's __path__.\
+";
 
-PyDoc_STRVAR(doc_load_module,
-"load_module(name, file, filename, (suffix, mode, type)) -> module\n\
+static char doc_load_module[] = "\
+load_module(name, file, filename, (suffix, mode, type)) -> module\n\
 Load a module, given information returned by find_module().\n\
-The module name must include the full package name, if any.");
+The module name must include the full package name, if any.\
+";
 
-PyDoc_STRVAR(doc_get_magic,
-"get_magic() -> string\n\
-Return the magic number for .pyc or .pyo files.");
+static char doc_get_magic[] = "\
+get_magic() -> string\n\
+Return the magic number for .pyc or .pyo files.\
+";
 
-PyDoc_STRVAR(doc_get_suffixes,
-"get_suffixes() -> [(suffix, mode, type), ...]\n\
+static char doc_get_suffixes[] = "\
+get_suffixes() -> [(suffix, mode, type), ...]\n\
 Return a list of (suffix, mode, type) tuples describing the files\n\
-that find_module() looks for.");
+that find_module() looks for.\
+";
 
-PyDoc_STRVAR(doc_new_module,
-"new_module(name) -> module\n\
+static char doc_new_module[] = "\
+new_module(name) -> module\n\
 Create a new module.  Do not enter it in sys.modules.\n\
-The module name must include the full package name, if any.");
+The module name must include the full package name, if any.\
+";
 
-PyDoc_STRVAR(doc_lock_held,
-"lock_held() -> 0 or 1\n\
+static char doc_lock_held[] = "\
+lock_held() -> 0 or 1\n\
 Return 1 if the import lock is currently held.\n\
-On platforms without threads, return 0.");
+On platforms without threads, return 0.\
+";
 
 static PyMethodDef imp_methods[] = {
-	{"find_module",		imp_find_module, METH_VARARGS, doc_find_module},
-	{"get_magic",		imp_get_magic,	 METH_VARARGS, doc_get_magic},
-	{"get_suffixes",	imp_get_suffixes, METH_VARARGS, doc_get_suffixes},
-	{"load_module",		imp_load_module, METH_VARARGS, doc_load_module},
-	{"new_module",		imp_new_module,	 METH_VARARGS, doc_new_module},
-	{"lock_held",		imp_lock_held,	 METH_VARARGS, doc_lock_held},
+	{"find_module",		imp_find_module,	1, doc_find_module},
+	{"get_magic",		imp_get_magic,		1, doc_get_magic},
+	{"get_suffixes",	imp_get_suffixes,	1, doc_get_suffixes},
+	{"load_module",		imp_load_module,	1, doc_load_module},
+	{"new_module",		imp_new_module,		1, doc_new_module},
+	{"lock_held",		imp_lock_held,		1, doc_lock_held},
 	/* The rest are obsolete */
-	{"get_frozen_object",	imp_get_frozen_object,	METH_VARARGS},
-	{"init_builtin",	imp_init_builtin,	METH_VARARGS},
-	{"init_frozen",		imp_init_frozen,	METH_VARARGS},
-	{"is_builtin",		imp_is_builtin,		METH_VARARGS},
-	{"is_frozen",		imp_is_frozen,		METH_VARARGS},
-	{"load_compiled",	imp_load_compiled,	METH_VARARGS},
+	{"get_frozen_object",	imp_get_frozen_object,	1},
+	{"init_builtin",	imp_init_builtin,	1},
+	{"init_frozen",		imp_init_frozen,	1},
+	{"is_builtin",		imp_is_builtin,		1},
+	{"is_frozen",		imp_is_frozen,		1},
+	{"load_compiled",	imp_load_compiled,	1},
 #ifdef HAVE_DYNAMIC_LOADING
-	{"load_dynamic",	imp_load_dynamic,	METH_VARARGS},
+	{"load_dynamic",	imp_load_dynamic,	1},
 #endif
-	{"load_package",	imp_load_package,	METH_VARARGS},
+	{"load_package",	imp_load_package,	1},
 #ifdef macintosh
-	{"load_resource",	imp_load_resource,	METH_VARARGS},
+	{"load_resource",	imp_load_resource,	1},
 #endif
-	{"load_source",		imp_load_source,	METH_VARARGS},
+	{"load_source",		imp_load_source,	1},
 	{NULL,			NULL}		/* sentinel */
 };
 

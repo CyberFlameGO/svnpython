@@ -13,17 +13,13 @@
  */
 #if defined(HAVE_NDBM_H)
 #include <ndbm.h>
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
 static char *which_dbm = "ndbm";
-#else
-static char *which_dbm = "GNU gdbm";  /* EMX port of GDBM */
-#endif
+#elif defined(HAVE_DB1_NDBM_H)
+#include <db1/ndbm.h>
+static char *which_dbm = "BSD db";
 #elif defined(HAVE_GDBM_NDBM_H)
 #include <gdbm/ndbm.h>
 static char *which_dbm = "GNU gdbm";
-#elif defined(HAVE_BERKDB_H)
-#include <db.h>
-static char *which_dbm = "Berkeley DB";
 #else
 #error "No ndbm.h available!"
 #endif
@@ -34,7 +30,7 @@ typedef struct {
 	DBM *di_dbm;
 } dbmobject;
 
-static PyTypeObject Dbmtype;
+staticforward PyTypeObject Dbmtype;
 
 #define is_dbmobject(v) ((v)->ob_type == &Dbmtype)
 #define check_dbmobject_open(v) if ((v)->di_dbm == NULL) \
@@ -342,7 +338,7 @@ static PyMethodDef dbmmodule_methods[] = {
 	{ 0, 0 },
 };
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initdbm(void) {
 	PyObject *m, *d, *s;
 

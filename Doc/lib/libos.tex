@@ -96,12 +96,11 @@ environment.  \function{putenv()} will be called automatically when
 the mapping is modified.
 
 If \function{putenv()} is not provided, this mapping may be passed to
-the appropriate process-creation functions to cause child processes to
+the appropriate process-creation functions to cause child processes to 
 use a modified environment.
 \end{datadesc}
 
 \begin{funcdescni}{chdir}{path}
-\funclineni{fchdir}{fd}
 \funclineni{getcwd}{}
 These functions are described in ``Files and Directories'' (section
 \ref{os-file-dir}).
@@ -139,17 +138,9 @@ Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{getlogin}{}
-Return the name of the user logged in on the controlling terminal of
-the process.  For most purposes, it is more useful to use the
-environment variable \envvar{LOGNAME} to find out who the user is.
+Return the actual login name for the current process, even if there
+are multiple login names which map to the same user id.
 Availability: \UNIX.
-\end{funcdesc}
-
-\begin{funcdesc}{getpgid}{pid}
-Return the process group id of the process with process id \var{pid}.
-If \var{pid} is 0, the process group id of the current process is
-returned. Availability: \UNIX.
-\versionadded{2.3}
 \end{funcdesc}
 
 \begin{funcdesc}{getpgrp}{}
@@ -195,7 +186,7 @@ When \function{putenv()} is
 supported, assignments to items in \code{os.environ} are automatically
 translated into corresponding calls to \function{putenv()}; however,
 calls to \function{putenv()} don't update \code{os.environ}, so it is
-actually preferable to assign to items of \code{os.environ}.
+actually preferable to assign to items of \code{os.environ}.  
 \end{funcdesc}
 
 \begin{funcdesc}{setegid}{egid}
@@ -441,14 +432,14 @@ Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{ftruncate}{fd, length}
-Truncate the file corresponding to file descriptor \var{fd},
+Truncate the file corresponding to file descriptor \var{fd}, 
 so that it is at most \var{length} bytes in size.
 Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{isatty}{fd}
-Return \code{True} if the file descriptor \var{fd} is open and
-connected to a tty(-like) device, else \code{False}.
+Return \code{1} if the file descriptor \var{fd} is open and connected to a
+tty(-like) device, else \code{0}.
 Availability: \UNIX.
 \end{funcdesc}
 
@@ -561,7 +552,6 @@ The following data items are available for use in constructing the
 Options for the \var{flag} argument to the \function{open()} function.
 These can be bit-wise OR'd together.
 Availability: Macintosh, \UNIX, Windows.
-% XXX O_NDELAY, O_NONBLOCK, O_DSYNC, O_RSYNC, O_SYNC, O_NOCTTY are not on Windows.
 \end{datadesc}
 
 \begin{datadesc}{O_BINARY}
@@ -571,16 +561,6 @@ Availability: Macintosh, Windows.
 % XXX need to check on the availability of this one.
 \end{datadesc}
 
-\begin{datadesc}{O_NOINHERIT}
-\dataline{O_SHORT_LIVED}
-\dataline{O_TEMPORARY}
-\dataline{O_RANDOM}
-\dataline{O_SEQUENTIAL}
-\dataline{O_TEXT}
-Options for the \var{flag} argument to the \function{open()} function.
-These can be bit-wise OR'd together.
-Availability: Windows.
-\end{datadesc}
 
 \subsection{Files and Directories \label{os-file-dir}}
 
@@ -622,23 +602,9 @@ Change the current working directory to \var{path}.
 Availability: Macintosh, \UNIX, Windows.
 \end{funcdesc}
 
-\begin{funcdesc}{fchdir}{fd}
-Change the current working directory to the directory represented by
-the file descriptor \var{fd}.  The descriptor must refer to an opened
-directory, not an open file.
-Availability: \UNIX.
-\versionadded{2.3}
-\end{funcdesc}
-
 \begin{funcdesc}{getcwd}{}
 Return a string representing the current working directory.
 Availability: Macintosh, \UNIX, Windows.
-\end{funcdesc}
-
-\begin{funcdesc}{getcwdu}{}
-Return a Unicode object representing the current working directory.
-Availability: \UNIX, Windows.
-\versionadded{2.3}
 \end{funcdesc}
 
 \begin{funcdesc}{chroot}{path}
@@ -658,13 +624,6 @@ and \var{gid}.
 Availability: \UNIX.
 \end{funcdesc}
 
-\begin{funcdesc}{lchown}{path, uid, gid}
-Change the owner and group id of \var{path} to the numeric \var{uid}
-and gid. This function will not follow symbolic links.
-Availability: \UNIX.
-\versionadded{2.3}
-\end{funcdesc}
-
 \begin{funcdesc}{link}{src, dst}
 Create a hard link pointing to \var{src} named \var{dst}.
 Availability: \UNIX.
@@ -676,9 +635,6 @@ The list is in arbitrary order.  It does not include the special
 entries \code{'.'} and \code{'..'} even if they are present in the
 directory.
 Availability: Macintosh, \UNIX, Windows.
-
-\versionadded[On Windows NT/2k/XP, if \var{path} is a Unicode object,
-the result will be a list of Unicode objects.]{2.3}
 \end{funcdesc}
 
 \begin{funcdesc}{lstat}{path}
@@ -698,17 +654,6 @@ Generally, FIFOs are used as rendezvous between ``client'' and
 ``server'' type processes: the server opens the FIFO for reading, and
 the client opens it for writing.  Note that \function{mkfifo()}
 doesn't open the FIFO --- it just creates the rendezvous point.
-\end{funcdesc}
-
-\begin{funcdesc}{mknod}{path\optional{, mode=0600, major, minor}}
-Create a filesystem node (file, device special file or named pipe)
-named filename. mode specifies both the permissions to use and the
-type of node to be created, being combined (bitwise OR) with one of
-S_IFREG, S_IFCHR, S_IFBLK, and S_IFIFO (those constants are available
-in \module{stat}). For S_IFCHR and S_IFBLK, major and minor define the
-newly created device special file, otherwise they are ignored.
-
-\versionadded{2.3}
 \end{funcdesc}
 
 \begin{funcdesc}{mkdir}{path\optional{, mode}}
@@ -778,7 +723,7 @@ Availability: Macintosh, \UNIX, Windows.
 
 \begin{funcdesc}{removedirs}{path}
 \index{directory!deleting}
-Removes directories recursively.  Works like
+Recursive directory removal function.  Works like
 \function{rmdir()} except that, if the leaf directory is
 successfully removed, directories corresponding to rightmost path
 segments will be pruned way until either the whole path is consumed or
@@ -835,10 +780,6 @@ the \ctype{stat} structure, namely:
 \member{st_ctime}
 (time of most recent content modification or metadata change).
 
-\versionchanged [The time values are floats, measuring
-  seconds. Fractions of a second may be reported if the system
-  supports that]{2.3}
-
 On some Unix systems (such as Linux), the following attributes may
 also be available:
 \member{st_blocks} (number of blocks allocated for file),
@@ -869,7 +810,9 @@ order
 \member{st_atime},
 \member{st_mtime},
 \member{st_ctime}.
-More items may be added at the end by some implementations. 
+More items may be added at the end by some implementations.  Note that
+on the Mac OS, the time values are floating point values, like all
+time values on the Mac OS.
 The standard module \refmodule{stat}\refstmodindex{stat} defines
 functions and constants that are useful for extracting information
 from a \ctype{stat} structure.
@@ -978,7 +921,7 @@ will seem to be ignored.
 
 \begin{funcdesc}{abort}{}
 Generate a \constant{SIGABRT} signal to the current process.  On
-\UNIX, the default behavior is to produce a core dump; on Windows, the
+\UNIX, the default behavior is to produce a core dump; on Windows, the 
 process immediately returns an exit code of \code{3}.  Be aware that
 programs which use \function{signal.signal()} to register a handler
 for \constant{SIGABRT} will behave differently.
@@ -1099,8 +1042,7 @@ Execute the program \var{path} in a new process.  If \var{mode} is
 process; if \var{mode} is \constant{P_WAIT}, returns the process's
 exit code if it exits normally, or \code{-\var{signal}}, where
 \var{signal} is the signal that killed the process.  On Windows, the
-process ID will actually be the process handle, so can be used with
-the \function{waitpid()} function.
+process ID will actually be the process handle.
 
 The \character{l} and \character{v} variants of the
 \function{spawn*()} functions differ in how command-line arguments are
@@ -1237,14 +1179,12 @@ Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{waitpid}{pid, options}
-The details of this function differ on \UNIX{} and Windows.
-
-On \UNIX:
 Wait for completion of a child process given by process id \var{pid},
 and return a tuple containing its process id and exit status
 indication (encoded as for \function{wait()}).  The semantics of the
 call are affected by the value of the integer \var{options}, which
 should be \code{0} for normal operation.
+Availability: \UNIX.
 
 If \var{pid} is greater than \code{0}, \function{waitpid()} requests
 status information for that specific process.  If \var{pid} is
@@ -1253,19 +1193,6 @@ group of the current process.  If \var{pid} is \code{-1}, the request
 pertains to any child of the current process.  If \var{pid} is less
 than \code{-1}, status is requested for any process in the process
 group \code{-\var{pid}} (the absolute value of \var{pid}).
-
-On Windows:
-Wait for completion of a process given by process handle \var{pid},
-and return a tuple containing \var{pid},
-and its exit status shifted left by 8 bits (shifting makes cross-platform
-use of the function easier).
-A \var{pid} less than or equal to \code{0} has no special meaning on
-Windows, and raises an exception.
-The value of integer \var{options} has no effect.
-\var{pid} can refer to any process whose id is known, not necessarily a
-child process.
-The \function{spawn()} functions called with \constant{P_NOWAIT}
-return suitable process handles.
 \end{funcdesc}
 
 \begin{datadesc}{WNOHANG}
@@ -1274,62 +1201,30 @@ process status is available immediately.
 Availability: \UNIX.
 \end{datadesc}
 
-\begin{datadesc}{WCONTINUED}
-This option causes child processes to be reported if they have been
-continued from a job control stop since their status was last
-reported.
-Availability: Some \UNIX{} systems.
-\versionadded{2.3}
-\end{datadesc}
-
-\begin{datadesc}{WUNTRACED}
-This option causes child processes to be reported if they have been
-stopped but their current state has not been reported since they were
-stopped.
-Availability: \UNIX.
-\versionadded{2.3}
-\end{datadesc}
-
 The following functions take a process status code as returned by
 \function{system()}, \function{wait()}, or \function{waitpid()} as a
 parameter.  They may be used to determine the disposition of a
 process.
 
-\begin{funcdesc}{WCOREDUMP}{status}
-Returns \code{True} if a core dump was generated for the process,
-otherwise it returns \code{False}.
-Availability: \UNIX.
-\versionadded{2.3}
-\end{funcdesc}
-
-\begin{funcdesc}{WIFCONTINUED}{status}
-Returns \code{True} if the process has been continued from a job
-control stop, otherwise it returns \code{False}.
-Availability: \UNIX.
-\versionadded{2.3}
-\end{funcdesc}
-
 \begin{funcdesc}{WIFSTOPPED}{status}
-Returns \code{True} if the process has been stopped, otherwise it
-returns \code{False}.
+Return true if the process has been stopped.
 Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{WIFSIGNALED}{status}
-Returns \code{True} if the process exited due to a signal, otherwise
-it returns \code{False}.
+Return true if the process exited due to a signal.
 Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{WIFEXITED}{status}
-Returns \code{True} if the process exited using the \manpage{exit}{2}
-system call, otherwise it returns \code{False}.
+Return true if the process exited using the \manpage{exit}{2} system
+call.
 Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{WEXITSTATUS}{status}
 If \code{WIFEXITED(\var{status})} is true, return the integer
-parameter to the \manpage{exit}{2} system call.  Otherwise, the return
+parameter to the \manpage{exit}{2} system call.  Otherwise, the return 
 value is meaningless.
 Availability: \UNIX.
 \end{funcdesc}

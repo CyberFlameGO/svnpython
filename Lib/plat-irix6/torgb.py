@@ -70,8 +70,7 @@ def torgb(filename):
 
 def _torgb(filename, temps):
 	if filename[-2:] == '.Z':
-		(fd, fname) = tempfile.mkstemp()
-		os.close(fd)
+		fname = tempfile.mktemp()
 		temps.append(fname)
 		sts = uncompress.copy(filename, fname)
 		if sts:
@@ -92,8 +91,7 @@ def _torgb(filename, temps):
 	if ftype is None or not table.has_key(ftype):
 		raise error, \
 			filename + ': unsupported image file type ' + `ftype`
-	(fd, temp) = tempfile.mkstemp()
-	os.close(fd)
+	temp = tempfile.mktemp()
 	sts = table[ftype].copy(fname, temp)
 	if sts:
 		raise error, filename + ': conversion to rgb failed'

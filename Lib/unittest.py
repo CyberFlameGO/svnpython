@@ -46,7 +46,7 @@ SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 __author__ = "Steve Purcell"
 __email__ = "stephen_purcell at yahoo dot com"
-__version__ = "#Revision: 1.46 $"[11:-2]
+__version__ = "#Revision: 1.43 $"[11:-2]
 
 import time
 import sys
@@ -58,12 +58,6 @@ import types
 ##############################################################################
 # Test framework core
 ##############################################################################
-
-# All classes defined herein are 'new-style' classes, allowing use of 'super()'
-__metaclass__ = type
-
-def _strclass(cls):
-    return "%s.%s" % (cls.__module__, cls.__name__)
 
 class TestResult:
     """Holder for test result information.
@@ -119,7 +113,7 @@ class TestResult:
 
     def __repr__(self):
         return "<%s run=%i errors=%i failures=%i>" % \
-               (_strclass(self.__class__), self.testsRun, len(self.errors),
+               (self.__class__, self.testsRun, len(self.errors),
                 len(self.failures))
 
 
@@ -189,14 +183,14 @@ class TestCase:
         return doc and string.strip(string.split(doc, "\n")[0]) or None
 
     def id(self):
-        return "%s.%s" % (_strclass(self.__class__), self.__testMethodName)
+        return "%s.%s" % (self.__class__, self.__testMethodName)
 
     def __str__(self):
-        return "%s (%s)" % (self.__testMethodName, _strclass(self.__class__))
+        return "%s (%s)" % (self.__testMethodName, self.__class__)
 
     def __repr__(self):
         return "<%s testMethod=%s>" % \
-               (_strclass(self.__class__), self.__testMethodName)
+               (self.__class__, self.__testMethodName)
 
     def run(self, result=None):
         return self(result)
@@ -324,7 +318,7 @@ class TestSuite:
         self.addTests(tests)
 
     def __repr__(self):
-        return "<%s tests=%s>" % (_strclass(self.__class__), self._tests)
+        return "<%s tests=%s>" % (self.__class__, self._tests)
 
     __str__ = __repr__
 
@@ -388,10 +382,10 @@ class FunctionTestCase(TestCase):
         return self.__testFunc.__name__
 
     def __str__(self):
-        return "%s (%s)" % (_strclass(self.__class__), self.__testFunc.__name__)
+        return "%s (%s)" % (self.__class__, self.__testFunc.__name__)
 
     def __repr__(self):
-        return "<%s testFunc=%s>" % (_strclass(self.__class__), self.__testFunc)
+        return "<%s testFunc=%s>" % (self.__class__, self.__testFunc)
 
     def shortDescription(self):
         if self.__description is not None: return self.__description
@@ -422,8 +416,7 @@ class TestLoader:
         tests = []
         for name in dir(module):
             obj = getattr(module, name)
-            if (isinstance(obj, (type, types.ClassType)) and
-                issubclass(obj, TestCase)):
+            if type(obj) == types.ClassType and issubclass(obj, TestCase):
                 tests.append(self.loadTestsFromTestCase(obj))
         return self.suiteClass(tests)
 
@@ -457,8 +450,7 @@ class TestLoader:
         import unittest
         if type(obj) == types.ModuleType:
             return self.loadTestsFromModule(obj)
-        elif (isinstance(obj, (type, types.ClassType)) and
-              issubclass(obj, unittest.TestCase)):
+        elif type(obj) == types.ClassType and issubclass(obj, unittest.TestCase):
             return self.loadTestsFromTestCase(obj)
         elif type(obj) == types.UnboundMethodType:
             return obj.im_class(obj.__name__)
@@ -624,7 +616,7 @@ class TextTestRunner:
         self.stream.writeln(result.separator2)
         run = result.testsRun
         self.stream.writeln("Ran %d test%s in %.3fs" %
-                            (run, run != 1 and "s" or "", timeTaken))
+                            (run, run == 1 and "" or "s", timeTaken))
         self.stream.writeln()
         if not result.wasSuccessful():
             self.stream.write("FAILED (")

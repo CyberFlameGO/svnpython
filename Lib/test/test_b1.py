@@ -1,10 +1,6 @@
 # Python test set -- part 4a, built-in functions a-m
 
-import warnings
-warnings.filterwarnings("ignore", "hex../oct.. of negative int",
-                        FutureWarning, __name__)
-
-from test.test_support import TestFailed, fcmp, have_unicode, TESTFN, unlink
+from test_support import *
 
 print '__import__'
 __import__('sys')
@@ -105,17 +101,6 @@ print 'compile'
 compile('print 1\n', '', 'exec')
 
 print 'complex'
-class OS:
-    def __complex__(self): return 1+10j
-class NS(object):
-    def __complex__(self): return 1+10j
-if complex(OS()) != 1+10j: raise TestFailed, '__complex__ in old style class'
-if complex(NS()) != 1+10j: raise TestFailed, '__complex__ in new style class'
-if complex("1+10j") != 1+10j: raise TestFailed, 'complex("1+10j")'
-if complex(10) != 10+0j: raise TestFailed, 'complex(10)'
-if complex(10.0) != 10+0j: raise TestFailed, 'complex(10.0)'
-if complex(10L) != 10+0j: raise TestFailed, 'complex(10L)'
-if complex(10+0j) != 10+0j: raise TestFailed, 'complex(10+0j)'
 if complex(1,10) != 1+10j: raise TestFailed, 'complex(1,10)'
 if complex(1,10L) != 1+10j: raise TestFailed, 'complex(1,10L)'
 if complex(1,10.0) != 1+10j: raise TestFailed, 'complex(1,10.0)'
@@ -139,10 +124,6 @@ if complex(0j, 3.14) != 3.14j: raise TestFailed, 'complex(0j, 3.14)'
 if complex(0.0, 3.14) != 3.14j: raise TestFailed, 'complex(0.0, 3.14)'
 if complex("1") != 1+0j: raise TestFailed, 'complex("1")'
 if complex("1j") != 1j: raise TestFailed, 'complex("1j")'
-
-c = 3.14 + 1j
-if complex(c) is not c: raise TestFailed, 'complex(3.14+1j) changed identity'
-del c
 
 try: complex("1", "1")
 except TypeError: pass
@@ -464,21 +445,6 @@ try: int('123\0')
 except ValueError: pass
 else: raise TestFailed("int('123\0') didn't raise exception")
 
-try: int('53', 40)
-except ValueError: pass
-else: raise TestFailed("int('53', 40) didn't raise ValueError")
-
-try: int('1' * 512)
-except ValueError: pass
-else: raise TestFailed("int('1' * 512) didn't raise ValueError")
-
-try: int(1, 12)
-except TypeError: pass
-else: raise TestFailed("int(1, 12) didn't raise TypeError")
-
-if int('0123', 0) != 83:
-    raise TestFailed("int('0123', 0) != 83")
-
 print 'isinstance'
 class C:
     pass
@@ -602,14 +568,6 @@ for s, v in L + LL:
 try: long('123\0')
 except ValueError: pass
 else: raise TestFailed("long('123\0') didn't raise exception")
-
-try: long('53', 40)
-except ValueError: pass
-else: raise TestFailed("long('53', 40) didn't raise ValueError")
-
-try: long(1, 12)
-except TypeError: pass
-else: raise TestFailed("long(1, 12) didn't raise TypeError")
 
 print 'map'
 if map(None, 'hello world') != ['h','e','l','l','o',' ','w','o','r','l','d']:

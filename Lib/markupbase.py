@@ -1,6 +1,7 @@
 """Shared support for scanning document type declarations in HTML and XHTML."""
 
 import re
+import string
 
 _declname_match = re.compile(r'[a-zA-Z][-_.a-zA-Z0-9]*\s*').match
 _declstringlit_match = re.compile(r'(\'[^\']*\'|"[^"]*")\s*').match
@@ -37,10 +38,10 @@ class ParserBase:
         if i >= j:
             return j
         rawdata = self.rawdata
-        nlines = rawdata.count("\n", i, j)
+        nlines = string.count(rawdata, "\n", i, j)
         if nlines:
             self.lineno = self.lineno + nlines
-            pos = rawdata.rindex("\n", i, j) # Should not fail
+            pos = string.rindex(rawdata, "\n", i, j) # Should not fail
             self.offset = j-(pos+1)
         else:
             self.offset = self.offset + j-i
@@ -150,7 +151,7 @@ class ParserBase:
                     j = j + 1
             elif c == "]":
                 j = j + 1
-                while j < n and rawdata[j].isspace():
+                while j < n and rawdata[j] in string.whitespace:
                     j = j + 1
                 if j < n:
                     if rawdata[j] == ">":
@@ -159,7 +160,7 @@ class ParserBase:
                     self.error("unexpected char after internal subset")
                 else:
                     return -1
-            elif c.isspace():
+            elif c in string.whitespace:
                 j = j + 1
             else:
                 self.updatepos(declstartpos, j)
@@ -175,7 +176,7 @@ class ParserBase:
         # style content model; just skip until '>'
         rawdata = self.rawdata
         if '>' in rawdata[j:]:
-            return rawdata.find(">", j) + 1
+            return string.find(rawdata, ">", j) + 1
         return -1
 
     # Internal -- scan past <!ATTLIST declarations
@@ -199,10 +200,10 @@ class ParserBase:
             if c == "(":
                 # an enumerated type; look for ')'
                 if ")" in rawdata[j:]:
-                    j = rawdata.find(")", j) + 1
+                    j = string.find(rawdata, ")", j) + 1
                 else:
                     return -1
-                while rawdata[j:j+1].isspace():
+                while rawdata[j:j+1] in string.whitespace:
                     j = j + 1
                 if not rawdata[j:]:
                     # end of buffer, incomplete
@@ -267,7 +268,7 @@ class ParserBase:
                 c = rawdata[j:j+1]
                 if not c:
                     return -1
-                if c.isspace():
+                if c in string.whitespace:
                     j = j + 1
                 else:
                     break
@@ -306,7 +307,7 @@ class ParserBase:
             name = s.strip()
             if (i + len(s)) == n:
                 return None, -1  # end of buffer
-            return name.lower(), m.end()
+            return string.lower(name), m.end()
         else:
             self.updatepos(declstartpos, i)
             self.error("expected name token")

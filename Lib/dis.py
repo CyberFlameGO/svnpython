@@ -13,7 +13,7 @@ def dis(x=None):
     With no argument, disassemble the last traceback.
 
     """
-    if x is None:
+    if not x:
         distb()
         return
     if type(x) is types.InstanceType:
@@ -44,7 +44,7 @@ def dis(x=None):
 
 def distb(tb=None):
     """Disassemble a traceback (default: last traceback)."""
-    if tb is None:
+    if not tb:
         try:
             tb = sys.last_traceback
         except AttributeError:
@@ -55,20 +55,6 @@ def distb(tb=None):
 def disassemble(co, lasti=-1):
     """Disassemble a code object."""
     code = co.co_code
-
-    byte_increments = [ord(c) for c in co.co_lnotab[0::2]]
-    line_increments = [ord(c) for c in co.co_lnotab[1::2]]
-    table_length = len(byte_increments) # == len(line_increments)
-
-    lineno = co.co_firstlineno
-    table_index = 0
-    while (table_index < table_length
-           and byte_increments[table_index] == 0):
-        lineno += line_increments[table_index]
-        table_index += 1
-    addr = 0
-    line_incr = 0
-
     labels = findlabels(code)
     n = len(code)
     i = 0
@@ -77,23 +63,7 @@ def disassemble(co, lasti=-1):
     while i < n:
         c = code[i]
         op = ord(c)
-
-        if i >= addr:
-            lineno += line_incr
-            while table_index < table_length:
-                addr += byte_increments[table_index]
-                line_incr = line_increments[table_index]
-                table_index += 1
-                if line_incr:
-                    break
-            else:
-                addr = sys.maxint
-            if i > 0:
-                print
-            print "%3d"%lineno,
-        else:
-            print '   ',
-
+        if op == SET_LINENO and i > 0: print # Extra blank line
         if i == lasti: print '-->',
         else: print '   ',
         if i in labels: print '>>',
@@ -165,7 +135,6 @@ hasfree = []
 
 opname = [''] * 256
 for op in range(256): opname[op] = '<' + `op` + '>'
-del op
 
 def def_op(name, op):
     opname[op] = name
@@ -258,7 +227,7 @@ def_op('LOAD_LOCALS', 82)
 def_op('RETURN_VALUE', 83)
 def_op('IMPORT_STAR', 84)
 def_op('EXEC_STMT', 85)
-def_op('YIELD_VALUE', 86)
+def_op('YIELD_STMT', 86)
 
 def_op('POP_BLOCK', 87)
 def_op('END_FINALLY', 88)
@@ -292,6 +261,7 @@ jrel_op('JUMP_FORWARD', 110)    # Number of bytes to skip
 jrel_op('JUMP_IF_FALSE', 111)   # ""
 jrel_op('JUMP_IF_TRUE', 112)    # ""
 jabs_op('JUMP_ABSOLUTE', 113)   # Target byte offset from beginning of code
+jrel_op('FOR_LOOP', 114)        # Number of bytes to skip
 
 name_op('LOAD_GLOBAL', 116)     # Index in name list
 
@@ -306,6 +276,9 @@ def_op('STORE_FAST', 125)       # Local variable number
 haslocal.append(125)
 def_op('DELETE_FAST', 126)      # Local variable number
 haslocal.append(126)
+
+def_op('SET_LINENO', 127)       # Current line number
+SET_LINENO = 127
 
 def_op('RAISE_VARARGS', 130)    # Number of raise arguments (1, 2, or 3)
 def_op('CALL_FUNCTION', 131)    # #args + (#kwargs << 8)
@@ -338,12 +311,12 @@ def _test():
             fn = None
     else:
         fn = None
-    if fn is None:
+    if not fn:
         f = sys.stdin
     else:
         f = open(fn)
     source = f.read()
-    if fn is not None:
+    if fn:
         f.close()
     else:
         fn = "<stdin>"

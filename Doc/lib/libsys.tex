@@ -282,11 +282,10 @@ else:
 \begin{datadesc}{path}
 \indexiii{module}{search}{path}
   A list of strings that specifies the search path for modules.
-  Initialized from the environment variable \envvar{PYTHONPATH}, plus an
+  Initialized from the environment variable \envvar{PYTHONPATH}, or an
   installation-dependent default.
 
-  As initialized upon program startup,
-  the first item of this list, \code{path[0]}, is the directory
+  The first item of this list, \code{path[0]}, is the directory
   containing the script that was used to invoke the Python
   interpreter.  If the script directory is not available (e.g.  if the
   interpreter is invoked interactively or if the script is read from
@@ -294,8 +293,6 @@ else:
   Python to search modules in the current directory first.  Notice
   that the script directory is inserted \emph{before} the entries
   inserted as a result of \envvar{PYTHONPATH}.
-
-  A program is free to modify this list for its own purposes.
 \end{datadesc}
 
 \begin{datadesc}{platform}
@@ -459,12 +456,6 @@ else:
 \end{verbatim}
 \end{datadesc}
 
-\begin{datadesc}{api_version}
-  The C API version for this interpreter.  Programmers may find this useful
-  when debugging version conflicts between Python and extension
-  modules. \versionadded{2.3}
-\end{datadesc}
-
 \begin{datadesc}{version_info}
   A tuple containing the five components of the version number:
   \var{major}, \var{minor}, \var{micro}, \var{releaselevel}, and
@@ -491,9 +482,3 @@ else:
   Python.
   Availability: Windows.
 \end{datadesc}
-
-
-\begin{seealso}
-  \seemodule{site}
-    {This describes how to use .pth files to extend \code{sys.path}.}
-\end{seealso}

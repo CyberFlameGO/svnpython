@@ -88,7 +88,7 @@ typedef struct {
 	PyObject *curtext;	/* If non-NULL current text being spoken */
 } scobject;
 
-static PyTypeObject sctype;
+staticforward PyTypeObject sctype;
 
 #define is_scobject(v)		((v)->ob_type == &sctype)
 
@@ -117,7 +117,7 @@ sc_dealloc(self)
 	scobject *self;
 {
 	DisposeSpeechChannel(self->chan);
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *
@@ -285,7 +285,7 @@ typedef struct {
 	VoiceDescription vd;
 } mvobject;
 
-static PyTypeObject mvtype;
+staticforward PyTypeObject mvtype;
 
 #define is_mvobject(v)		((v)->ob_type == &mvtype)
 
@@ -324,7 +324,7 @@ static void
 mv_dealloc(self)
 	mvobject *self;
 {
-	PyObject_DEL(self);
+	PyMem_DEL(self);
 }
 
 static PyObject *

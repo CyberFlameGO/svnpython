@@ -3,8 +3,6 @@ import sys
 import os
 import string
 
-CARBON_ONLY=1
-
 PYTHONDIR = sys.prefix
 PROJECTDIR = os.path.join(PYTHONDIR, ":Mac:Build")
 MODULEDIRS = [	# Relative to projectdirs
@@ -38,19 +36,16 @@ def genpluginproject(architecture, module,
 		sources=[], sourcedirs=[],
 		libraries=[], extradirs=[],
 		extraexportsymbols=[], outputdir=":::Lib:lib-dynload",
-		libraryflags=None, stdlibraryflags=None, prefixname=None,
-		initialize=None):
-	if CARBON_ONLY and architecture == "ppc":
-		return
+		libraryflags=None, stdlibraryflags=None, prefixname=None):
 	if architecture == "all":
 		# For the time being we generate two project files. Not as nice as
 		# a single multitarget project, but easier to implement for now.
 		genpluginproject("ppc", module, project, projectdir, sources, sourcedirs,
 				libraries, extradirs, extraexportsymbols, outputdir, libraryflags,
-				stdlibraryflags, prefixname, initialize)
+				stdlibraryflags, prefixname)
 		genpluginproject("carbon", module, project, projectdir, sources, sourcedirs,
 				libraries, extradirs, extraexportsymbols, outputdir, libraryflags,
-				stdlibraryflags, prefixname, initialize)
+				stdlibraryflags, prefixname)
 		return
 	templatename = "template-%s" % architecture
 	targetname = "%s.%s" % (module, architecture)
@@ -86,7 +81,7 @@ def genpluginproject(architecture, module,
 	if prefixname:
 		pass
 	elif architecture == "carbon":
-		prefixname = "mwerks_shcarbon_pch"
+		prefixname = "mwerks_carbonplugin_config.h"
 	else:
 		prefixname = "mwerks_plugin_config.h"
 	dict = {
@@ -104,8 +99,6 @@ def genpluginproject(architecture, module,
 		dict['libraryflags'] = libraryflags
 	if stdlibraryflags:
 		dict['stdlibraryflags'] = stdlibraryflags
-	if initialize:
-		dict['initialize'] = initialize
 	mkcwproject.mkproject(os.path.join(projectdir, project), module, dict, 
 			force=FORCEREBUILD, templatename=templatename)
 
@@ -113,16 +106,10 @@ def	genallprojects(force=0):
 	global FORCEREBUILD
 	FORCEREBUILD = force
 	# Standard Python modules
-	genpluginproject("ppc", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_shared_config.h"
-		)
-	genpluginproject("carbon", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_shcarbon_config.h"
-		)
+	genpluginproject("all", "pyexpat", 
+		sources=["pyexpat.c"], 
+		libraries=["libexpat.ppc.lib"], 
+		extradirs=["::::expat:*"])
 	genpluginproject("all", "zlib", 
 		libraries=["zlib.ppc.Lib"], 
 		extradirs=["::::imglibs:zlib:mac", "::::imglibs:zlib"])
@@ -139,7 +126,6 @@ def	genallprojects(force=0):
 	
 	# bgen-generated Toolbox modules
 	genpluginproject("carbon", "_AE", outputdir="::Lib:Carbon")
-	genpluginproject("carbon", "_AH", outputdir="::Lib:Carbon")
 	genpluginproject("ppc", "_AE", libraries=["ObjectSupportLib"], 
 			stdlibraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
 	genpluginproject("ppc", "_App", libraries=["CarbonAccessors.o", "AppearanceLib"],
@@ -169,8 +155,6 @@ def	genallprojects(force=0):
 	genpluginproject("ppc", "_Help", outputdir="::Lib:Carbon")
 	genpluginproject("ppc", "_Icn", libraries=["IconServicesLib"], 
 			libraryflags="Debug, WeakImport",  outputdir="::Lib:Carbon")
-	genpluginproject("carbon", "_IBCarbon", sources=[":ibcarbon:_IBCarbon.c"], 
-			outputdir="::Lib:Carbon")
 	genpluginproject("carbon", "_Icn", outputdir="::Lib:Carbon")
 	genpluginproject("all", "_List", outputdir="::Lib:Carbon")
 	genpluginproject("carbon", "_Menu", outputdir="::Lib:Carbon")
@@ -201,7 +185,7 @@ def	genallprojects(force=0):
 	genpluginproject("ppc", "_Win", libraries=["CarbonAccessors.o", "WindowsLib", "AppearanceLib"],
 			libraryflags="Debug, WeakImport", outputdir="::Lib:Carbon")
 	# Carbon Only?
-	genpluginproject("carbon", "_CF", sources=["_CFmodule.c", "pycfbridge.c"], outputdir="::Lib:Carbon")
+	genpluginproject("carbon", "_CF", outputdir="::Lib:Carbon")
 	genpluginproject("carbon", "_CarbonEvt", outputdir="::Lib:Carbon")
 	genpluginproject("carbon", "hfsplus")
 	

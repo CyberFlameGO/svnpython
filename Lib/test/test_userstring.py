@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
-from test.test_support import verbose
-from test import string_tests
+from test_support import verbose
+import string_tests
 # UserString is a wrapper around the native builtin string type.
 # UserString instances should behave similar to builtin string objects.
 # The test cases were in part derived from 'test_string.py'.
@@ -41,5 +41,3 @@ def test(methodname, input, output, *args):
         print (methodname, input, output, args, res[0], res[1], res[2])
 
 string_tests.run_method_tests(test)
-string_tests.run_contains_tests(test)
-string_tests.run_inplace_tests(UserString)

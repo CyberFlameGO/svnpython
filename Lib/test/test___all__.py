@@ -1,13 +1,5 @@
-from test.test_support import verify, verbose
+from test_support import verify, verbose
 import sys
-import warnings
-
-warnings.filterwarnings("ignore", ".* 'pre' .*", DeprecationWarning,
-                        r'pre$')
-warnings.filterwarnings("ignore", ".* regsub .*", DeprecationWarning,
-                        r'^regsub$')
-warnings.filterwarnings("ignore", ".* statcache .*", DeprecationWarning,
-                        r'statcache$')
 
 def check_all(modname):
     names = {}
@@ -118,7 +110,7 @@ check_all("popen2")
 check_all("poplib")
 check_all("posixpath")
 check_all("pprint")
-check_all("pre")  # deprecated
+check_all("pre")
 check_all("profile")
 check_all("pstats")
 check_all("pty")
@@ -128,6 +120,9 @@ check_all("quopri")
 check_all("random")
 check_all("re")
 check_all("reconvert")
+import warnings
+warnings.filterwarnings("ignore", ".* regsub .*", DeprecationWarning, "regsub",
+                        append=1)
 check_all("regsub")
 check_all("repr")
 check_all("rexec")

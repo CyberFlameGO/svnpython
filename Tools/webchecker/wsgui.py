@@ -8,6 +8,7 @@ their respective text boxes, click GO or hit return, and presto.
 
 from Tkinter import *
 import Tkinter
+import string
 import websucker
 import sys
 import os
@@ -149,13 +150,13 @@ class App:
             return
         self.url_entry.selection_range(0, END)
         url = self.url_entry.get()
-        url = url.strip()
+        url = string.strip(url)
         if not url:
             self.top.bell()
             self.message("[Error: No URL entered]")
             return
         self.rooturl = url
-        dir = self.dir_entry.get().strip()
+        dir = string.strip(self.dir_entry.get())
         if not dir:
             self.sucker.savedir = None
         else:
@@ -183,7 +184,7 @@ class App:
                 text = self.top.selection_get(selection=t)
             except TclError:
                 continue
-            text = text.strip()
+            text = string.strip(text)
             if text:
                 break
         if not text:

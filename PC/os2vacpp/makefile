@@ -6,10 +6,10 @@
 # for OS/2 compiler, version 3.0, with Fixpack 8 applied.  It uses
 # version 4.0 of the NMAKE tool that comes with that package.
 #
-# The output of the build is a largish Python23.DLL containing the
+# The output of the build is a largish Python15.DLL containing the
 # essential modules of Python and a small Python.exe program to start
 # the interpreter.  When embedding Python within another program, only
-# Python23.DLL is needed.
+# Python15.DLL is needed.
 #
 # These two binaries can be statically linked with the VisualAge C/C++
 # runtime library (producing larger binaries), or dynamically linked
@@ -133,33 +133,24 @@ PYTHON		=                               \
 PARSER		=                              \
                   $(PATHOBJ)\Acceler.obj       \
                   $(PATHOBJ)\Grammar1.obj      \
-                  $(PATHOBJ)\ListNode.obj      \
+                  $(PATHOBJ)\MyReadline.obj    \
                   $(PATHOBJ)\Node.obj          \
                   $(PATHOBJ)\Parser.obj        \
                   $(PATHOBJ)\ParseTok.obj      \
-                  $(PATHOBJ)\BitSet.obj        \
-                  $(PATHOBJ)\MetaGrammar.obj   \
-                  $(PATHOBJ)\Tokenizer.obj     \
-                  $(PATHOBJ)\MyReadline.obj
+                  $(PATHOBJ)\Tokenizer.obj
 
 # Python Object Types
 OBJECTS		=                              \
                   $(PATHOBJ)\Abstract.obj      \
-                  $(PATHOBJ)\BoolObject.obj    \
-                  $(PATHOBJ)\BufferObject.obj  \
-                  $(PATHOBJ)\CellObject.obj    \
                   $(PATHOBJ)\ClassObject.obj   \
                   $(PATHOBJ)\CObject.obj       \
                   $(PATHOBJ)\ComplexObject.obj \
-                  $(PATHOBJ)\DescrObject.obj   \
                   $(PATHOBJ)\DictObject.obj    \
-                  $(PATHOBJ)\EnumObject.obj    \
                   $(PATHOBJ)\FileObject.obj    \
                   $(PATHOBJ)\FloatObject.obj   \
                   $(PATHOBJ)\FrameObject.obj   \
                   $(PATHOBJ)\FuncObject.obj    \
                   $(PATHOBJ)\IntObject.obj     \
-                  $(PATHOBJ)\IterObject.obj    \
                   $(PATHOBJ)\ListObject.obj    \
                   $(PATHOBJ)\LongObject.obj    \
                   $(PATHOBJ)\MethodObject.obj  \
@@ -168,12 +159,14 @@ OBJECTS		=                              \
                   $(PATHOBJ)\RangeObject.obj   \
                   $(PATHOBJ)\SliceObject.obj   \
                   $(PATHOBJ)\StringObject.obj  \
-                  $(PATHOBJ)\StructSeq.obj     \
                   $(PATHOBJ)\TupleObject.obj   \
                   $(PATHOBJ)\TypeObject.obj    \
-                  $(PATHOBJ)\UnicodeObject.obj \
-                  $(PATHOBJ)\UnicodeCType.obj  \
-                  $(PATHOBJ)\WeakrefObject.obj
+                  $(PATHOBJ)\unicodeobject.obj \
+                  $(PATHOBJ)\unicodectype.obj  \
+                  $(PATHOBJ)\cellobject.obj    \
+                  $(PATHOBJ)\descrobject.obj   \
+                  $(PATHOBJ)\weakrefobject.obj \
+                  $(PATHOBJ)\structseq.obj
 
 # Extension Modules (Built-In or as Separate DLLs)
 MODULES		=                              \
@@ -183,13 +176,13 @@ MODULES		=                              \
                   $(PATHOBJ)\cPickle.obj       \
                   $(PATHOBJ)\cStringIO.obj     \
                   $(PATHOBJ)\ErrnoModule.obj   \
-                  $(PATHOBJ)\GCModule.obj      \
                   $(PATHOBJ)\GetBuildInfo.obj  \
                   $(PATHOBJ)\GetPathP.obj      \
                   $(PATHOBJ)\Main.obj          \
                   $(PATHOBJ)\MathModule.obj    \
                   $(PATHOBJ)\MD5c.obj          \
                   $(PATHOBJ)\MD5Module.obj     \
+                  $(PATHOBJ)\NewModule.obj     \
                   $(PATHOBJ)\Operator.obj      \
                   $(PATHOBJ)\PCREModule.obj    \
                   $(PATHOBJ)\PyPCRE.obj        \
@@ -204,17 +197,20 @@ MODULES		=                              \
                   $(PATHOBJ)\StructModule.obj  \
                   $(PATHOBJ)\TimeModule.obj    \
                   $(PATHOBJ)\ThreadModule.obj  \
-                  $(PATHOBJ)\YUVConvert.obj
+                  $(PATHOBJ)\YUVConvert.obj    \
+                  $(PATHOBJ)\bufferobject.obj  \
+                  $(PATHOBJ)\gcmodule.obj
 
 # Standalone Parser Generator Program (Shares Some of Python's Modules)
 PGEN            =                              \
-                  $(PATHOBJ)\PGen.obj          \
                   $(PATHOBJ)\PGenMain.obj      \
-                  $(PATHOBJ)\MySNPrintf.obj    \
-                  $(PATHOBJ)\Tokenizer_Pgen.obj \
+                  $(PATHOBJ)\PGen.obj          \
                   $(PATHOBJ)\PrintGrammar.obj  \
+                  $(PATHOBJ)\ListNode.obj      \
                   $(PATHOBJ)\Grammar.obj       \
-                  $(PATHOBJ)\FirstSets.obj
+                  $(PATHOBJ)\BitSet.obj        \
+                  $(PATHOBJ)\FirstSets.obj     \
+                  $(PATHOBJ)\MetaGrammar.obj
 
 ##################
 # Macros and Flags
@@ -228,7 +224,7 @@ _GEN		= /G4 /Gm /Gd-
 		# /Gm  = Use Multithread Runtime
 		# /Gd  = Dynamically Load Runtime
 		# /Ms  = Use _System Calling Convention (vs _Optlink)
-		#        (to allow non-VAC++ code to call into Python23.dll)
+		#        (to allow non-VAC++ code to call into Python22.dll)
 
 _OPT		= /O /Gl
 		# /O   = Enable Speed-Optimizations
@@ -263,8 +259,8 @@ CFLAGS		= $(_BASE) $(_GEN) $(_OPT) $(_DBG) $(_OUT) $(_EXE) /Ss
 ###################
 # Primary Target(s)
 ###################
-All:  obj noise PyCore.lib Python23.lib PGen.exe \
-      Python.exe PythonPM.exe Python23.dll # _tkinter.dll
+All:  obj noise PyCore.lib Python22.lib PGen.exe \
+      Python.exe PythonPM.exe Python22.dll # _tkinter.dll
 
 Modules: $(MODULES)
 Objects: $(OBJECTS)
@@ -284,7 +280,7 @@ noise:
 ##############
 
 # Python Extension DLL: Tcl/Tk Interface
-#_tkinter.dll: $(PATHOBJ)\_tkinter.obj Python23.lib _tkinter.def
+#_tkinter.dll: $(PATHOBJ)\_tkinter.obj Python22.lib _tkinter.def
 #	@ Echo Linking $@ As DLL
 #	@ $(CC) $(CFLAGS) /B"/NOE" $(_DLL) /Fe$@ $(_MAP) $** $(OTHERLIBS) >>$(ERRS)
 
@@ -297,7 +293,7 @@ PyCore.lib: $(MODULES) $(OBJECTS) $(PARSER) $(PYTHON) $(PATHOBJ)\Config.obj
 	@ Echo Adding Updated Object Files to Link Library $@
 	@ ! ILIB $@ /NOLOGO /NOBACKUP -+$? ; >>$(ERRS)
 
-Python23.dll: $(PATHOBJ)\Compile.obj PyCore.lib Python.def
+Python22.dll: $(PATHOBJ)\Compile.obj PyCore.lib Python.def
 	@ Echo Linking $@ As DLL
 	@ $(CC) $(CFLAGS) /B"/NOE" $(_DLL) /Fe$@ $(_MAP) $** $(OTHERLIBS) >>$(ERRS)
 #	@ Echo Compressing $@ with LxLite
@@ -308,19 +304,19 @@ $(PATHOBJ)\Compile.obj: $(PY_PYTHON)\Compile.c
 	@ Echo Compiling $**
 	@ $(CC) -c $(CFLAGS) $(_DLL) -Fo$@ $** >>$(ERRS)
 
-# Import Library for Using the Python23.dll
-Python23.lib: Python.def
+# Import Library for Using the Python22.dll
+Python22.lib: Python.def
 	@ Echo Making $@
 	@ IMPLIB /NOLOGO /NOIGNORE $@ $** >>$(ERRS)
 	@ ILIB /NOLOGO /CONVFORMAT /NOEXTDICTIONARY /NOBROWSE /NOBACKUP $@; >>$(ERRS)
 
-# Small Command-Line Program to Start Interpreter in Python23.dll
-Python.exe: $(PATHOBJ)\Python.obj Python23.lib
+# Small Command-Line Program to Start Interpreter in Python22.dll
+Python.exe: $(PATHOBJ)\Python.obj Python22.lib
 	@ Echo Linking $@ As EXE
 	@ $(CC) $(CFLAGS) $(_EXE) /B"/PM:VIO /STACK:360000" /Fe$@ $(_MAP) $** $(OTHERLIBS) >>$(ERRS)
 
-# Small PM-GUI Program to Start Interpreter in Python23.dll
-PythonPM.exe: $(PATHOBJ)\Python.obj Python23.lib
+# Small PM-GUI Program to Start Interpreter in Python22.dll
+PythonPM.exe: $(PATHOBJ)\Python.obj Python22.lib
 	@ Echo Linking $@ As EXE
 	@ $(CC) $(CFLAGS) $(_EXE) /B"/PM:PM /STACK:360000" /Fe$@ $(_MAP) $** $(OTHERLIBS) >>$(ERRS)
 
@@ -340,13 +336,13 @@ clean:
 
 # Remove All Targets, Including Final Binaries
 distclean: clean
-        -- Del /Q PyCore.lib Python23.lib       >NUL 2>&1
-        -- Del /Q Python23.dll Python.exe PGen.exe >NUL 2>&1
+        -- Del /Q PyCore.lib Python22.lib       >NUL 2>&1
+        -- Del /Q Python22.dll Python.exe PGen.exe >NUL 2>&1
 
-release: Python.exe Python23.dll Python23.lib
+release: Python.exe Python22.dll Python22.lib
 	-- @Echo Y | copy /U Python.exe   D:\EXEs
-	-- @Echo Y | copy /U Python23.dll D:\DLLs
-	-- @Echo Y | copy /U Python23.lib E:\Tau\Lib
+	-- @Echo Y | copy /U Python22.dll D:\DLLs
+	-- @Echo Y | copy /U Python22.lib E:\Tau\Lib
 	-- @Echo Y | copy /U _tkinter.dll D:\Python
 
 test:
@@ -809,6 +805,20 @@ mpzmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h $(PY_INCLUDE)\rangeobject.h \
 	 $(PY_INCLUDE)\sliceobject.h $(PY_INCLUDE)\stringobject.h \
 	 $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h $(PY_INCLUDE)\tupleobject.h
+
+newmodule.obj: $(PY_INCLUDE)\abstract.h $(PY_INCLUDE)\ceval.h $(PY_INCLUDE)\classobject.h \
+	 $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\compile.h $(PY_INCLUDE)\complexobject.h \
+	 pyconfig.h $(PY_INCLUDE)\dictobject.h $(PY_INCLUDE)\fileobject.h \
+	 $(PY_INCLUDE)\floatobject.h $(PY_INCLUDE)\funcobject.h $(PY_INCLUDE)\import.h \
+	 $(PY_INCLUDE)\intobject.h $(PY_INCLUDE)\intrcheck.h $(PY_INCLUDE)\listobject.h \
+	 $(PY_INCLUDE)\longobject.h $(PY_INCLUDE)\methodobject.h \
+	 $(PY_INCLUDE)\modsupport.h $(PY_INCLUDE)\moduleobject.h $(PY_INCLUDE)\mymalloc.h \
+	 $(PY_INCLUDE)\myproto.h $(PY_INCLUDE)\object.h $(PY_INCLUDE)\objimpl.h \
+	 $(PY_INCLUDE)\pydebug.h $(PY_INCLUDE)\pyerrors.h $(PY_INCLUDE)\pyfpe.h \
+	 $(PY_INCLUDE)\pystate.h $(PY_INCLUDE)\python.h $(PY_INCLUDE)\pythonrun.h \
+	 $(PY_INCLUDE)\rangeobject.h $(PY_INCLUDE)\sliceobject.h \
+	 $(PY_INCLUDE)\stringobject.h $(PY_INCLUDE)\sysmodule.h $(PY_INCLUDE)\traceback.h \
+	 $(PY_INCLUDE)\tupleobject.h
 
 nismodule.obj: $(PY_INCLUDE)\abstract.h $(OS2TCPIP)\Include\sys\time.h $(PY_INCLUDE)\ceval.h \
 	 $(PY_INCLUDE)\classobject.h $(PY_INCLUDE)\cobject.h $(PY_INCLUDE)\complexobject.h \

@@ -37,7 +37,7 @@ structseq_dealloc(PyStructSequence *obj)
 	for (i = 0; i < size; ++i) {
 		Py_XDECREF(obj->ob_item[i]);
 	}
-	PyObject_Del(obj);
+	PyObject_FREE(obj);
 }
 
 static int

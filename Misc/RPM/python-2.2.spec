@@ -4,42 +4,40 @@
 
 #  Is the resulting package and the installed binary named "python" or
 #  "python2"?
-#WARNING: Commenting out doesn't work.  Last line is what's used.
-%define config_binsuffix none
-%define config_binsuffix 2
+# Valid values: [none/2/2.2]
+%define config_binsuffix 2.2.2b1
 
 #  Build tkinter?  "auto" enables it if /usr/bin/wish exists.
-#WARNING: Commenting out doesn't work.  Last line is what's used.
-%define config_tkinter no
-%define config_tkinter yes
+# Valid values: [no/yes/auto]
 %define config_tkinter auto
 
 #  Use pymalloc?  The last line (commented or not) determines wether
 #  pymalloc is used.
-#WARNING: Commenting out doesn't work.  Last line is what's used.
-%define config_pymalloc yes
+# Valid values: [no/yes]
 %define config_pymalloc no
 
 #  Enable IPV6?
-#WARNING: Commenting out doesn't work.  Last line is what's used.
-%define config_ipv6 yes
-%define config_ipv6 no
+# Valid values: [no/yes/auto]
+%define config_ipv6 auto
 
 #################################
 #  End of user-modifiable configs
 #################################
 
 %define name python
-%define version 2.2
-%define libvers 2.2
-%define release 2
+%define version 2.2.2b1
+%define release 1
 %define __prefix /usr
+%define libvers %(echo "%{version}" | awk -F. '{ printf "%s.%s", $1, $2 }')
 
 #  kludge to get around rpm <percent>define weirdness
-%define ipv6 %(if [ "%{config_ipv6}" = yes ]; then echo --enable-ipv6; else echo --disable-ipv6; fi)
+%define ipv6 %(if [ "%{config_ipv6}" = yes ]; then echo --enable-ipv6; else if [ "%{config_ipv6}" == auto ]; then echo; else echo --disable-ipv6; fi; fi)
 %define pymalloc %(if [ "%{config_pymalloc}" = yes ]; then echo --with-pymalloc; else echo --without-pymalloc; fi)
 %define binsuffix %(if [ "%{config_binsuffix}" = none ]; then echo ; else echo "%{config_binsuffix}"; fi)
 %define include_tkinter %(if [ \\( "%{config_tkinter}" = auto -a -f /usr/bin/wish \\) -o "%{config_tkinter}" = yes ]; then echo 1; else echo 0; fi)
+
+#  look for documentation files
+%define include_htmldocs %(if [ -f "%{_sourcedir}/html-%{version}.tar.bz2" ]; then echo 1; else echo 0; fi)
 
 Summary: An interpreted, interactive, object-oriented programming language.
 Name: %{name}%{binsuffix}
@@ -48,13 +46,12 @@ Release: %{release}
 Copyright: Modified CNRI Open Source License
 Group: Development/Languages
 Source: Python-%{version}.tgz
+%if %{include_htmldocs}
 Source1: html-%{version}.tar.bz2
-Source2: info-%{version}.tar.bz2
-Patch0: Python-2.1-pythonpath.patch
-Patch1: Python-2.1-expat.patch
+%endif
 BuildRoot: /var/tmp/%{name}-%{version}-root
 BuildPrereq: expat-devel
-BuildPrereq: db1-devel
+BuildPrereq: /usr/include/db1/db.h
 BuildPrereq: gdbm-devel
 Prefix: %{__prefix}
 Packager: Sean Reifschneider <jafo-rpms@tummy.com>
@@ -114,6 +111,7 @@ Install python-tools if you want to use these tools to develop
 Python programs.  You will also need to install the python and
 tkinter packages.
 
+%if %{include_htmldocs}
 %package docs
 Summary: Python-related documentation.
 Group: Development/Documentation
@@ -121,8 +119,32 @@ Group: Development/Documentation
 %description docs
 Documentation relating to the Python programming language in HTML and info
 formats.
+%endif
 
 %changelog
+* Sun Oct 06 2002 Sean Reifschneider <jafo-rpms@tummy.com>
+[Release 2.2.2b1-1]
+- Updated for the 2.2.2b1 release.
+- Changing ipv6 settings to include "auto" which will let configure
+      figure it out.  (suggested by Martin v. Loewis)
+- Changing the settable flags at the top of this file.
+      (suggested by Martin v. Loewis)
+
+[Release 2.2.1-2]
+- Enabled IPV6 by default.  (Suggested by Pekka Pessi)
+- Set up to install python2 and python2.2 when using the suffix.
+- Added Makefile.pre.in to -devel.
+
+[Release 2.2.1c2-1]
+- Updated to 2.2.1c2.
+- Changed build pre-req for db to use file instead of package.
+  (Suggested by Alf Werder)
+
+* Wed Jan 23 2002 Sean Reifschneider <jafo-rpms@tummy.com>
+[Release 2.2-3]
+- Using "*" for the man page extension to pick up both systems which use
+  .bz2 and .gz compressed man pages.  (Pointed out by Tony Hammitt)
+
 * Sun Dec 23 2001 Sean Reifschneider <jafo-rpms@tummy.com>
 [Release 2.2-2]
 - Added -docs package.
@@ -170,8 +192,8 @@ formats.
 #######
 %prep
 %setup -n Python-%{version}
-%patch0 -p1
-%patch1
+
+#  fix path to xmlparse header file
 
 ########
 #  BUILD
@@ -179,6 +201,17 @@ formats.
 %build
 ./configure %{ipv6} %{pymalloc} --prefix=%{__prefix}
 make
+
+#  fix paths
+for file in \
+      Tools/scripts/pathfix.py \
+      Lib/cgi.py \
+      Tools/faqwiz/faqw.py \
+      Tools/scripts/parseentities.py
+do
+   ./python Tools/scripts/pathfix.py -i '/usr/bin/env python' "$file"
+   rm -f "$file"~       #  remove backup
+done
 
 ##########
 #  INSTALL
@@ -191,6 +224,9 @@ echo 'install_dir='"${RPM_BUILD_ROOT}/usr/bin" >>setup.cfg
 [ -d "$RPM_BUILD_ROOT" -a "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{__prefix}/lib/python%{libvers}/lib-dynload
 make prefix=$RPM_BUILD_ROOT%{__prefix} install
+
+#  copy over Makefile.pre.in
+cp Makefile.pre.in Makefile.pre $RPM_BUILD_ROOT%{__prefix}/lib/python%{libvers}/config/
 
 #  REPLACE PATH IN PYDOC
 if [ ! -z "%{binsuffix}" ]
@@ -208,7 +244,8 @@ fi
 #  add the binsuffix
 if [ ! -z "%{binsuffix}" ]
 then
-   ( cd $RPM_BUILD_ROOT%{__prefix}/bin; rm -f python[0-9a-zA-Z]*;
+   ( cd $RPM_BUILD_ROOT%{__prefix}/bin;
+         rm -f python"%{binsuffix}";
          mv -f python python"%{binsuffix}" )
    ( cd $RPM_BUILD_ROOT%{__prefix}/man/man1; mv python.1 python%{binsuffix}.1 )
    ( cd $RPM_BUILD_ROOT%{__prefix}/bin; mv -f pydoc pydoc"%{binsuffix}" )
@@ -237,16 +274,13 @@ echo "%{__prefix}"/bin/idle%{binsuffix} >>tools.files
 
 ######
 # Docs
+%if %{include_htmldocs}
 mkdir -p "$RPM_BUILD_ROOT"/var/www/html/python
 (
    cd "$RPM_BUILD_ROOT"/var/www/html/python
    bunzip2 < %{SOURCE1} | tar x
 )
-mkdir -p "$RPM_BUILD_ROOT"/usr/share/info
-(
-   cd "$RPM_BUILD_ROOT"/usr/share/info
-   bunzip2 < %{SOURCE2} | tar x
-)
+%endif
 
 ########
 #  CLEAN
@@ -260,9 +294,11 @@ rm -f mainpkg.files tools.files
 ########
 %files -f mainpkg.files
 %defattr(-,root,root)
-%doc Misc/README Misc/HYPE Misc/cheatsheet Misc/unicode.txt Misc/Porting
-%doc LICENSE Misc/ACKS Misc/BLURB.* Misc/HISTORY Misc/NEWS
-%{__prefix}/man/man1/python%{binsuffix}.1.gz
+%doc Misc/*README Misc/cheatsheet Misc/Porting Misc/gdbinit Misc/indent.pro
+%doc LICENSE Misc/ACKS Misc/HISTORY Misc/NEWS Misc/Porting
+%doc Misc/python-mode.el Misc/RFD Misc/setuid-prog.c Misc/vgrindefs
+%doc Misc/RPM/README
+%{__prefix}/man/man1/python%{binsuffix}.1*
 
 %dir %{__prefix}/include/python%{libvers}
 %dir %{__prefix}/lib/python%{libvers}/
@@ -296,7 +332,9 @@ rm -f mainpkg.files tools.files
 %{__prefix}/lib/python%{libvers}/lib-dynload/_tkinter.so*
 %endif
 
+%if %{include_htmldocs}
 %files docs
 %defattr(-,root,root)
 /var/www/html/python
-/usr/share/info
+#/usr/share/info
+%endif

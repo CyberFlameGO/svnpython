@@ -175,7 +175,7 @@ class Hooks(_Verbose):
 
     def add_module(self, name):
         d = self.modules_dict()
-        if name in d: return d[name]
+        if d.has_key(name): return d[name]
         d[name] = m = self.new_module(name)
         return m
 
@@ -352,7 +352,7 @@ class BasicModuleImporter(_Verbose):
         return self.loader.set_hooks(hooks)
 
     def import_module(self, name, globals={}, locals={}, fromlist=[]):
-        if name in self.modules:
+        if self.modules.has_key(name):
             return self.modules[name] # Fast path
         stuff = self.loader.find_module(name)
         if not stuff:
@@ -403,10 +403,10 @@ class ModuleImporter(BasicModuleImporter):
         return m
 
     def determine_parent(self, globals):
-        if not globals or not "__name__" in globals:
+        if not globals or not globals.has_key("__name__"):
             return None
         pname = globals['__name__']
-        if "__path__" in globals:
+        if globals.has_key("__path__"):
             parent = self.modules[pname]
             assert globals is parent.__dict__
             return parent

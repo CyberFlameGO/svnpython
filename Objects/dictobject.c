@@ -480,8 +480,10 @@ PyDict_GetItem(PyObject *op, PyObject *key)
 	if (!PyDict_Check(op)) {
 		return NULL;
 	}
+#ifdef CACHE_HASH
 	if (!PyString_CheckExact(key) ||
 	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
+#endif
 	{
 		hash = PyObject_Hash(key);
 		if (hash == -1) {
@@ -510,12 +512,24 @@ PyDict_SetItem(register PyObject *op, PyObject *key, PyObject *value)
 		return -1;
 	}
 	mp = (dictobject *)op;
+#ifdef CACHE_HASH
 	if (PyString_CheckExact(key)) {
-		hash = ((PyStringObject *)key)->ob_shash;
-		if (hash == -1)
-			hash = PyObject_Hash(key);
+#ifdef INTERN_STRINGS
+		if (((PyStringObject *)key)->ob_sinterned != NULL) {
+			key = ((PyStringObject *)key)->ob_sinterned;
+			hash = ((PyStringObject *)key)->ob_shash;
+		}
+		else
+#endif
+		{
+			hash = ((PyStringObject *)key)->ob_shash;
+			if (hash == -1)
+				hash = PyObject_Hash(key);
+		}
 	}
-	else {
+	else
+#endif
+	{
 		hash = PyObject_Hash(key);
 		if (hash == -1)
 			return -1;
@@ -550,8 +564,11 @@ PyDict_DelItem(PyObject *op, PyObject *key)
 		PyErr_BadInternalCall();
 		return -1;
 	}
+#ifdef CACHE_HASH
 	if (!PyString_CheckExact(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
+	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
+#endif
+	{
 		hash = PyObject_Hash(key);
 		if (hash == -1)
 			return -1;
@@ -827,8 +844,11 @@ dict_subscript(dictobject *mp, register PyObject *key)
 	PyObject *v;
 	long hash;
 	assert(mp->ma_table != NULL);
+#ifdef CACHE_HASH
 	if (!PyString_CheckExact(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
+	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
+#endif
+	{
 		hash = PyObject_Hash(key);
 		if (hash == -1)
 			return NULL;
@@ -1416,14 +1436,17 @@ dict_has_key(register dictobject *mp, PyObject *key)
 {
 	long hash;
 	register long ok;
+#ifdef CACHE_HASH
 	if (!PyString_CheckExact(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
+	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
+#endif
+	{
 		hash = PyObject_Hash(key);
 		if (hash == -1)
 			return NULL;
 	}
 	ok = (mp->ma_lookup)(mp, key, hash)->me_value != NULL;
-	return PyBool_FromLong(ok);
+	return PyInt_FromLong(ok);
 }
 
 static PyObject *
@@ -1437,8 +1460,11 @@ dict_get(register dictobject *mp, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O|O:get", &key, &failobj))
 		return NULL;
 
+#ifdef CACHE_HASH
 	if (!PyString_CheckExact(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
+	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
+#endif
+	{
 		hash = PyObject_Hash(key);
 		if (hash == -1)
 			return NULL;
@@ -1463,8 +1489,11 @@ dict_setdefault(register dictobject *mp, PyObject *args)
 	if (!PyArg_ParseTuple(args, "O|O:setdefault", &key, &failobj))
 		return NULL;
 
+#ifdef CACHE_HASH
 	if (!PyString_CheckExact(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
+	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
+#endif
+	{
 		hash = PyObject_Hash(key);
 		if (hash == -1)
 			return NULL;
@@ -1486,39 +1515,6 @@ dict_clear(register dictobject *mp)
 	PyDict_Clear((PyObject *)mp);
 	Py_INCREF(Py_None);
 	return Py_None;
-}
-
-static PyObject *
-dict_pop(dictobject *mp, PyObject *key)
-{
-	long hash;
-	dictentry *ep;
-	PyObject *old_value, *old_key;
-
-	if (mp->ma_used == 0) {
-		PyErr_SetString(PyExc_KeyError,
-				"pop(): dictionary is empty");
-		return NULL;
-	}
-	if (!PyString_CheckExact(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
-		hash = PyObject_Hash(key);
-		if (hash == -1)
-			return NULL;
-	}
-	ep = (mp->ma_lookup)(mp, key, hash);
-	if (ep->me_value == NULL) {
-		PyErr_SetObject(PyExc_KeyError, key);
-		return NULL;
-	}
-	old_key = ep->me_key;
-	Py_INCREF(dummy);
-	ep->me_key = dummy;
-	old_value = ep->me_value;
-	ep->me_value = NULL;
-	mp->ma_used--;
-	Py_DECREF(old_key);
-	return old_value;
 }
 
 static PyObject *
@@ -1605,7 +1601,7 @@ dict_tp_clear(PyObject *op)
 }
 
 
-static PyObject *dictiter_new(dictobject *, binaryfunc);
+staticforward PyObject *dictiter_new(dictobject *, binaryfunc);
 
 static PyObject *
 select_key(PyObject *key, PyObject *value)
@@ -1654,48 +1650,45 @@ dict_iteritems(dictobject *dict)
 }
 
 
-PyDoc_STRVAR(has_key__doc__,
-"D.has_key(k) -> 1 if D has a key k, else 0");
+static char has_key__doc__[] =
+"D.has_key(k) -> 1 if D has a key k, else 0";
 
-PyDoc_STRVAR(get__doc__,
-"D.get(k[,d]) -> D[k] if k in D, else d.  d defaults to None.");
+static char get__doc__[] =
+"D.get(k[,d]) -> D[k] if D.has_key(k), else d.  d defaults to None.";
 
-PyDoc_STRVAR(setdefault_doc__,
-"D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D");
+static char setdefault_doc__[] =
+"D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if not D.has_key(k)";
 
-PyDoc_STRVAR(pop__doc__,
-"D.pop(k) -> v, remove specified key and return the corresponding value");
-
-PyDoc_STRVAR(popitem__doc__,
+static char popitem__doc__[] =
 "D.popitem() -> (k, v), remove and return some (key, value) pair as a\n\
-2-tuple; but raise KeyError if D is empty");
+2-tuple; but raise KeyError if D is empty";
 
-PyDoc_STRVAR(keys__doc__,
-"D.keys() -> list of D's keys");
+static char keys__doc__[] =
+"D.keys() -> list of D's keys";
 
-PyDoc_STRVAR(items__doc__,
-"D.items() -> list of D's (key, value) pairs, as 2-tuples");
+static char items__doc__[] =
+"D.items() -> list of D's (key, value) pairs, as 2-tuples";
 
-PyDoc_STRVAR(values__doc__,
-"D.values() -> list of D's values");
+static char values__doc__[] =
+"D.values() -> list of D's values";
 
-PyDoc_STRVAR(update__doc__,
-"D.update(E) -> None.  Update D from E: for k in E.keys(): D[k] = E[k]");
+static char update__doc__[] =
+"D.update(E) -> None.  Update D from E: for k in E.keys(): D[k] = E[k]";
 
-PyDoc_STRVAR(clear__doc__,
-"D.clear() -> None.  Remove all items from D.");
+static char clear__doc__[] =
+"D.clear() -> None.  Remove all items from D.";
 
-PyDoc_STRVAR(copy__doc__,
-"D.copy() -> a shallow copy of D");
+static char copy__doc__[] =
+"D.copy() -> a shallow copy of D";
 
-PyDoc_STRVAR(iterkeys__doc__,
-"D.iterkeys() -> an iterator over the keys of D");
+static char iterkeys__doc__[] =
+"D.iterkeys() -> an iterator over the keys of D";
 
-PyDoc_STRVAR(itervalues__doc__,
-"D.itervalues() -> an iterator over the values of D");
+static char itervalues__doc__[] =
+"D.itervalues() -> an iterator over the values of D";
 
-PyDoc_STRVAR(iteritems__doc__,
-"D.iteritems() -> an iterator over the (key, value) items of D");
+static char iteritems__doc__[] =
+"D.iteritems() -> an iterator over the (key, value) items of D";
 
 static PyMethodDef mapp_methods[] = {
 	{"has_key",	(PyCFunction)dict_has_key,      METH_O,
@@ -1704,8 +1697,6 @@ static PyMethodDef mapp_methods[] = {
 	 get__doc__},
 	{"setdefault",  (PyCFunction)dict_setdefault,   METH_VARARGS,
 	 setdefault_doc__},
-	{"pop",         (PyCFunction)dict_pop,          METH_O,
-	 pop__doc__},	
 	{"popitem",	(PyCFunction)dict_popitem,	METH_NOARGS,
 	 popitem__doc__},
 	{"keys",	(PyCFunction)dict_keys,		METH_NOARGS,
@@ -1734,8 +1725,11 @@ dict_contains(dictobject *mp, PyObject *key)
 {
 	long hash;
 
+#ifdef CACHE_HASH
 	if (!PyString_CheckExact(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1) {
+	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
+#endif
+	{
 		hash = PyObject_Hash(key);
 		if (hash == -1)
 			return -1;
@@ -1810,14 +1804,14 @@ dict_iter(dictobject *dict)
 	return dictiter_new(dict, select_key);
 }
 
-PyDoc_STRVAR(dictionary_doc,
+static char dictionary_doc[] =
 "dict() -> new empty dictionary.\n"
 "dict(mapping) -> new dictionary initialized from a mapping object's\n"
 "    (key, value) pairs.\n"
 "dict(seq) -> new dictionary initialized as if via:\n"
 "    d = {}\n"
 "    for k, v in seq:\n"
-"        d[k] = v");
+"        d[k] = v";
 
 PyTypeObject PyDict_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
@@ -1860,7 +1854,7 @@ PyTypeObject PyDict_Type = {
 	(initproc)dict_init,			/* tp_init */
 	PyType_GenericAlloc,			/* tp_alloc */
 	dict_new,				/* tp_new */
-	PyObject_GC_Del,        		/* tp_free */
+	_PyObject_GC_Del,			/* tp_free */
 };
 
 /* For backward compatibility with old dictionary interface */
@@ -1910,7 +1904,7 @@ extern PyTypeObject PyDictIter_Type; /* Forward */
 
 typedef struct {
 	PyObject_HEAD
-	dictobject *di_dict; /* Set to NULL when iterator is exhausted */
+	dictobject *di_dict;
 	int di_used;
 	int di_pos;
 	binaryfunc di_select;
@@ -1920,7 +1914,7 @@ static PyObject *
 dictiter_new(dictobject *dict, binaryfunc select)
 {
 	dictiterobject *di;
-	di = PyObject_New(dictiterobject, &PyDictIter_Type);
+	di = PyObject_NEW(dictiterobject, &PyDictIter_Type);
 	if (di == NULL)
 		return NULL;
 	Py_INCREF(dict);
@@ -1934,8 +1928,25 @@ dictiter_new(dictobject *dict, binaryfunc select)
 static void
 dictiter_dealloc(dictiterobject *di)
 {
-	Py_XDECREF(di->di_dict);
-	PyObject_Del(di);
+	Py_DECREF(di->di_dict);
+	PyObject_DEL(di);
+}
+
+static PyObject *
+dictiter_next(dictiterobject *di, PyObject *args)
+{
+	PyObject *key, *value;
+
+	if (di->di_used != di->di_dict->ma_used) {
+		PyErr_SetString(PyExc_RuntimeError,
+				"dictionary changed size during iteration");
+		return NULL;
+	}
+	if (PyDict_Next((PyObject *)(di->di_dict), &di->di_pos, &key, &value)) {
+		return (*di->di_select)(key, value);
+	}
+	PyErr_SetObject(PyExc_StopIteration, Py_None);
+	return NULL;
 }
 
 static PyObject *
@@ -1945,24 +1956,24 @@ dictiter_getiter(PyObject *it)
 	return it;
 }
 
+static PyMethodDef dictiter_methods[] = {
+	{"next",	(PyCFunction)dictiter_next,	METH_VARARGS,
+	 "it.next() -- get the next value, or raise StopIteration"},
+	{NULL,		NULL}		/* sentinel */
+};
+
 static PyObject *dictiter_iternext(dictiterobject *di)
 {
 	PyObject *key, *value;
 
-	if (di->di_dict == NULL)
-		return NULL;
-
 	if (di->di_used != di->di_dict->ma_used) {
 		PyErr_SetString(PyExc_RuntimeError,
 				"dictionary changed size during iteration");
-		di->di_used = -1; /* Make this state sticky */
 		return NULL;
 	}
-	if (PyDict_Next((PyObject *)(di->di_dict), &di->di_pos, &key, &value))
+	if (PyDict_Next((PyObject *)(di->di_dict), &di->di_pos, &key, &value)) {
 		return (*di->di_select)(key, value);
-
-	Py_DECREF(di->di_dict);
-	di->di_dict = NULL;
+	}
 	return NULL;
 }
 
@@ -1996,7 +2007,7 @@ PyTypeObject PyDictIter_Type = {
 	0,					/* tp_weaklistoffset */
 	(getiterfunc)dictiter_getiter,		/* tp_iter */
 	(iternextfunc)dictiter_iternext,	/* tp_iternext */
-	0,					/* tp_methods */
+	dictiter_methods,			/* tp_methods */
 	0,					/* tp_members */
 	0,					/* tp_getset */
 	0,					/* tp_base */

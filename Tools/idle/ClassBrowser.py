@@ -12,6 +12,7 @@ XXX TO DO:
 
 import os
 import sys
+import string
 import pyclbr
 
 # XXX Patch pyclbr with dummies if it's vintage Python 1.5.2:
@@ -116,7 +117,7 @@ class ModuleBrowserTreeItem(TreeItem):
                             if sup.module != cl.module:
                                 sname = "%s.%s" % (sup.module, sname)
                         supers.append(sname)
-                    s = s + "(%s)" % ", ".join(supers)
+                    s = s + "(%s)" % string.join(supers, ", ")
                 items.append((cl.lineno, s))
                 self.classes[s] = cl
         items.sort()

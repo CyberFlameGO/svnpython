@@ -197,8 +197,7 @@ the \method{dump()} method.
 This exception is raised when there is a problem unpickling an object,
 such as a security violation.  Note that other exceptions may also be
 raised during unpickling, including (but not necessarily limited to)
-\exception{AttributeError}, \exception{EOFError},
-\exception{ImportError}, and \exception{IndexError}.
+\exception{AttributeError} and \exception{ImportError}.
 \end{excdesc}
 
 The \module{pickle} module also exports two callables\footnote{In the
@@ -237,20 +236,15 @@ remembers which objects the pickler has already seen, so that shared
 or recursive objects pickled by reference and not by value.  This
 method is useful when re-using picklers.
 
-\begin{notice}
-Prior to Python 2.3, \method{clear_memo()} was only available on the
-picklers created by \refmodule{cPickle}.  In the \module{pickle} module,
-picklers have an instance variable called \member{memo} which is a
-Python dictionary.  So to clear the memo for a \module{pickle} module
+\strong{Note:} \method{clear_memo()} is only available on the picklers
+created by \module{cPickle}.  In the \module{pickle} module, picklers
+have an instance variable called \member{memo} which is a Python
+dictionary.  So to clear the memo for a \module{pickle} module
 pickler, you could do the following:
 
 \begin{verbatim}
 mypickler.memo.clear()
 \end{verbatim}
-
-Code that does not need to support older versions of Python should
-simply use \method{clear_memo()}.
-\end{notice}
 \end{methoddesc}
 
 It is possible to make multiple calls to the \method{dump()} method of
@@ -310,7 +304,7 @@ The following types can be pickled:
 
 \begin{itemize}
 
-\item \code{None}, \code{True}, and \code{False}
+\item \code{None}
 
 \item integers, long integers, floating point numbers, complex numbers
 

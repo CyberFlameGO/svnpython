@@ -1,7 +1,7 @@
 """Suite QuickDraw Graphics Suite: A set of basic classes for graphics
 Level 1, version 1
 
-Generated from /Volumes/Sap/System Folder/Extensions/AppleScript
+Generated from Moes:Systeemmap:Extensies:AppleScript
 AETE/AEUT resource version 1/0, language 0, script 0
 """
 
@@ -226,8 +226,7 @@ class corner_curve_width(aetools.NProperty):
 	want = 'shor'
 
 rounded_rectangles = rounded_rectangle
-arc._superclassnames = []
-arc._privpropdict = {
+arc._propdict = {
 	'arc_angle' : arc_angle,
 	'bounds' : bounds,
 	'definition_rect' : definition_rect,
@@ -239,10 +238,9 @@ arc._privpropdict = {
 	'start_angle' : start_angle,
 	'transfer_mode' : transfer_mode,
 }
-arc._privelemdict = {
+arc._elemdict = {
 }
-drawing_area._superclassnames = []
-drawing_area._privpropdict = {
+drawing_area._propdict = {
 	'background_color' : background_color,
 	'background_pattern' : background_pattern,
 	'color_table' : color_table,
@@ -257,74 +255,63 @@ drawing_area._privpropdict = {
 	'style' : style,
 	'update_on_change' : update_on_change,
 }
-drawing_area._privelemdict = {
+drawing_area._elemdict = {
 }
-graphic_line._superclassnames = []
-graphic_line._privpropdict = {
+graphic_line._propdict = {
 	'start_point' : start_point,
 	'end_point' : end_point,
 	'dash_style' : dash_style,
 	'arrow_style' : arrow_style,
 }
-graphic_line._privelemdict = {
+graphic_line._elemdict = {
 }
-graphic_object._superclassnames = []
-graphic_object._privpropdict = {
+graphic_object._propdict = {
 }
-graphic_object._privelemdict = {
+graphic_object._elemdict = {
 }
-graphic_shape._superclassnames = []
-graphic_shape._privpropdict = {
+graphic_shape._propdict = {
 }
-graphic_shape._privelemdict = {
+graphic_shape._elemdict = {
 }
-graphic_text._superclassnames = []
-graphic_text._privpropdict = {
+graphic_text._propdict = {
 	'color' : color,
 	'font' : font,
 	'size' : size,
 	'uniform_styles' : uniform_styles,
 }
-graphic_text._privelemdict = {
+graphic_text._elemdict = {
 }
-graphic_group._superclassnames = []
-graphic_group._privpropdict = {
+graphic_group._propdict = {
 }
-graphic_group._privelemdict = {
+graphic_group._elemdict = {
 }
-oval._superclassnames = []
-oval._privpropdict = {
+oval._propdict = {
 }
-oval._privelemdict = {
+oval._elemdict = {
 }
-pixel._superclassnames = []
-pixel._privpropdict = {
+pixel._propdict = {
 	'color' : color,
 }
-pixel._privelemdict = {
+pixel._elemdict = {
 }
-pixel_map._superclassnames = []
-pixel_map._privpropdict = {
+pixel_map._propdict = {
 }
-pixel_map._privelemdict = {
+pixel_map._elemdict = {
 }
-polygon._superclassnames = []
-polygon._privpropdict = {
+polygon._propdict = {
 	'point_list' : point_list,
 }
-polygon._privelemdict = {
+polygon._elemdict = {
 }
-rectangle._superclassnames = []
-rectangle._privpropdict = {
+rectangle._propdict = {
 }
-rectangle._privelemdict = {
+rectangle._elemdict = {
 }
-rounded_rectangle._superclassnames = []
-rounded_rectangle._privpropdict = {
+rounded_rectangle._propdict = {
 	'corner_curve_height' : corner_curve_height,
 	'corner_curve_width' : corner_curve_width,
 }
-rounded_rectangle._privelemdict = {
+rounded_rectangle._elemdict = {
 }
 _Enum_tran = {
 	'copy_pixels' : 'cpy ',	# 

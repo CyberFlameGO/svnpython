@@ -1,6 +1,12 @@
+import string
+import os
+import re
+import fnmatch
 from Tkinter import *
+import tkMessageBox
 import SearchEngine
 from SearchDialogBase import SearchDialogBase
+import sre_parse
 
 def replace(text):
     root = text._root()
@@ -85,7 +91,7 @@ class ReplaceDialog(SearchDialogBase):
             line, m = res
             chars = text.get("%d.0" % line, "%d.0" % (line+1))
             orig = m.group()
-            new = m.expand(repl)
+            new = self._expand(m, repl)
             i, j = m.span()
             first = "%d.%d" % (line, i)
             last = "%d.%d" % (line, j)
@@ -106,24 +112,24 @@ class ReplaceDialog(SearchDialogBase):
 
     def do_find(self, ok=0):
         if not self.engine.getprog():
-            return False
+            return 0
         text = self.text
         res = self.engine.search_text(text, None, ok)
         if not res:
             text.bell()
-            return False
+            return 0
         line, m = res
         i, j = m.span()
         first = "%d.%d" % (line, i)
         last = "%d.%d" % (line, j)
         self.show_hit(first, last)
         self.ok = 1
-        return True
+        return 1
 
     def do_replace(self):
         prog = self.engine.getprog()
         if not prog:
-            return False
+            return 0
         text = self.text
         try:
             first = pos = text.index("sel.first")
@@ -136,8 +142,8 @@ class ReplaceDialog(SearchDialogBase):
         chars = text.get("%d.0" % line, "%d.0" % (line+1))
         m = prog.match(chars, col)
         if not prog:
-            return False
-        new = m.expand(self.replvar.get())
+            return 0
+        new = self._expand(m, self.replvar.get())
         text.mark_set("insert", first)
         text.undo_block_start()
         if m.group():
@@ -147,7 +153,15 @@ class ReplaceDialog(SearchDialogBase):
         text.undo_block_stop()
         self.show_hit(first, text.index("insert"))
         self.ok = 0
-        return True
+        return 1
+
+    def _expand(self, m, template):
+        # XXX This code depends on internals of the regular expression
+        # engine!  There's no standard API to do a substitution when you
+        # have already found the match.  One should be added.
+        # XXX This parses the template over and over...
+        ptemplate = sre_parse.parse_template(template, m.re)
+        return sre_parse.expand_template(ptemplate, m)
 
     def show_hit(self, first, last):
         text = self.text

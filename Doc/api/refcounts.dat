@@ -233,13 +233,6 @@ PyErr_SetFromErrnoWithFilename:PyObject*::null:
 PyErr_SetFromErrnoWithFilename:PyObject*:type:0:
 PyErr_SetFromErrnoWithFilename:char*:filename::
 
-PyErr_SetFromWindowsErr:PyObject*::null:
-PyErr_SetFromWindowsErr:int:ierr::
-
-PyErr_SetFromWindowsErrWithFilename:PyObject*::null:
-PyErr_SetFromWindowsErrWithFilename:int:ierr::
-PyErr_SetFromWindowsErrWithFilename:char*:filename::
-
 PyErr_SetInterrupt:void:::
 
 PyErr_SetNone:void:::
@@ -983,10 +976,6 @@ PySequence_InPlaceConcat:PyObject*:o:0:
 PySequence_InPlaceRepeat:PyObject*::+1:
 PySequence_InPlaceRepeat:PyObject*:s:0:
 PySequence_InPlaceRepeat:PyObject*:o:0:
-
-PySequence_ITEM:PyObject*::+1:
-PySequence_ITEM:PyObject*:o:0:
-PySequence_ITEM:int:i::
 
 PySequence_Repeat:PyObject*::+1:
 PySequence_Repeat:PyObject*:o:0:

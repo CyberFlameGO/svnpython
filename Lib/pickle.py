@@ -41,27 +41,9 @@ compatible_formats = ["1.0", "1.1", "1.2"] # Old format versions we can read
 mdumps = marshal.dumps
 mloads = marshal.loads
 
-class PickleError(Exception):
-    """A common base class for the other pickling exceptions."""
-    pass
-
-class PicklingError(PickleError):
-    """This exception is raised when an unpicklable object is passed to the
-    dump() method.
-
-    """
-    pass
-
-class UnpicklingError(PickleError):
-    """This exception is raised when there is a problem unpickling an object,
-    such as a security violation.
-
-    Note that other exceptions may also be raised during unpickling, including
-    (but not necessarily limited to) AttributeError, EOFError, ImportError,
-    and IndexError.
-
-    """
-    pass
+class PickleError(Exception): pass
+class PicklingError(PickleError): pass
+class UnpicklingError(PickleError): pass
 
 class _Stop(Exception):
     def __init__(self, value):
@@ -119,51 +101,17 @@ TUPLE           = 't'
 EMPTY_TUPLE     = ')'
 SETITEMS        = 'u'
 BINFLOAT        = 'G'
-TRUE            = 'I01\n'
-FALSE           = 'I00\n'
-
 
 __all__.extend([x for x in dir() if re.match("[A-Z][A-Z0-9_]+$",x)])
-del x
-
-_quotes = ["'", '"']
 
 class Pickler:
 
     def __init__(self, file, bin = 0):
-        """This takes a file-like object for writing a pickle data stream.
-
-        The optional bin parameter if true, tells the pickler to use the more
-        efficient binary pickle format, otherwise the ASCII format is used
-        (this is the default).
-
-        The file parameter must have a write() method that accepts a single
-        string argument.  It can thus be an open file object, a StringIO
-        object, or any other custom object that meets this interface.
-
-        """
         self.write = file.write
         self.memo = {}
         self.bin = bin
 
-    def clear_memo(self):
-        """Clears the pickler's "memo".
-
-        The memo is the data structure that remembers which objects the
-        pickler has already seen, so that shared or recursive objects pickled
-        by reference and not by value.  This method is useful when re-using
-        picklers.
-
-        """
-        self.memo.clear()
-
     def dump(self, object):
-        """Write a pickled representation of object to the open file object.
-
-        Either the binary or ASCII format will be used, depending on the
-        value of the bin flag passed to the constructor.
-
-        """
         self.save(object)
         self.write(STOP)
 
@@ -208,7 +156,7 @@ class Pickler:
                 self.save_tuple(object)
             return
 
-        if d in memo:
+        if memo.has_key(d):
             self.write(self.get(memo[d][0]))
             return
 
@@ -306,13 +254,6 @@ class Pickler:
     def save_none(self, object):
         self.write(NONE)
     dispatch[NoneType] = save_none
-
-    def save_bool(self, object):
-        if object:
-            self.write(TRUE)
-        else:
-            self.write(FALSE)
-    dispatch[bool] = save_bool
 
     def save_int(self, object):
         if self.bin:
@@ -432,7 +373,7 @@ class Pickler:
         for element in object:
             save(element)
 
-        if len(object) and d in memo:
+        if len(object) and memo.has_key(d):
             if self.bin:
                 write(POP_MARK + self.get(memo[d][0]))
                 return
@@ -621,7 +562,7 @@ def whichmodule(func, funcname):
     Return a module name.
     If the function cannot be found, return __main__.
     """
-    if func in classmap:
+    if classmap.has_key(func):
         return classmap[func]
 
     for name, module in sys.modules.items():
@@ -640,30 +581,11 @@ def whichmodule(func, funcname):
 class Unpickler:
 
     def __init__(self, file):
-        """This takes a file-like object for reading a pickle data stream.
-
-        This class automatically determines whether the data stream was
-        written in binary mode or not, so it does not need a flag as in
-        the Pickler class factory.
-
-        The file-like object must have two methods, a read() method that
-        takes an integer argument, and a readline() method that requires no
-        arguments.  Both methods should return a string.  Thus file-like
-        object can be a file object opened for reading, a StringIO object,
-        or any other custom object that meets this interface.
-
-        """
         self.readline = file.readline
         self.read = file.read
         self.memo = {}
 
     def load(self):
-        """Read a pickled object representation from the open file object.
-
-        Return the reconstituted object hierarchy specified in the file
-        object.
-
-        """
         self.mark = object() # any new unique object
         self.stack = []
         self.append = self.stack.append
@@ -695,7 +617,11 @@ class Unpickler:
     dispatch[PERSID] = load_persid
 
     def load_binpersid(self):
-        pid = self.stack.pop()
+        stack = self.stack
+
+        pid = stack[-1]
+        del stack[-1]
+
         self.append(self.persistent_load(pid))
     dispatch[BINPERSID] = load_binpersid
 
@@ -705,16 +631,10 @@ class Unpickler:
 
     def load_int(self):
         data = self.readline()
-        if data == FALSE[1:]:
-            val = False
-        elif data == TRUE[1:]:
-            val = True
-        else:
-            try:
-                val = int(data)
-            except ValueError:
-                val = long(data)
-        self.append(val)
+        try:
+            self.append(int(data))
+        except ValueError:
+            self.append(long(data))
     dispatch[INT] = load_int
 
     def load_binint(self):
@@ -743,15 +663,10 @@ class Unpickler:
 
     def load_string(self):
         rep = self.readline()[:-1]
-        for q in _quotes:
-            if rep.startswith(q):
-                if not rep.endswith(q):
-                    raise ValueError, "insecure string pickle"
-                rep = rep[len(q):-len(q)]
-                break
-        else:
+        if not self._is_string_secure(rep):
             raise ValueError, "insecure string pickle"
-        self.append(rep.decode("string-escape"))
+        self.append(eval(rep,
+                         {'__builtins__': {}})) # Let's be careful
     dispatch[STRING] = load_string
 
     def _is_string_secure(self, s):
@@ -917,7 +832,7 @@ class Unpickler:
         del stack[-2:]
 
         if type(callable) is not ClassType:
-            if not callable in safe_constructors:
+            if not safe_constructors.has_key(callable):
                 try:
                     safe = callable.__safe_for_unpickling__
                 except AttributeError:
@@ -928,10 +843,6 @@ class Unpickler:
                                            "unpickling" % callable
 
         if arg_tup is None:
-            import warnings
-            warnings.warn("The None return argument form of __reduce__  is "
-                          "deprecated. Return a tuple of arguments instead.",
-                          DeprecationWarning)
             value = callable.__basicnew__()
         else:
             value = apply(callable, arg_tup)
@@ -981,7 +892,8 @@ class Unpickler:
 
     def load_append(self):
         stack = self.stack
-        value = stack.pop()
+        value = stack[-1]
+        del stack[-1]
         list = stack[-1]
         list.append(value)
     dispatch[APPEND] = load_append
@@ -998,8 +910,9 @@ class Unpickler:
 
     def load_setitem(self):
         stack = self.stack
-        value = stack.pop()
-        key = stack.pop()
+        value = stack[-1]
+        key = stack[-2]
+        del stack[-2:]
         dict = stack[-1]
         dict[key] = value
     dispatch[SETITEM] = load_setitem
@@ -1016,7 +929,8 @@ class Unpickler:
 
     def load_build(self):
         stack = self.stack
-        value = stack.pop()
+        value = stack[-1]
+        del stack[-1]
         inst = stack[-1]
         try:
             setstate = inst.__setstate__
@@ -1039,7 +953,8 @@ class Unpickler:
     dispatch[MARK] = load_mark
 
     def load_stop(self):
-        value = self.stack.pop()
+        value = self.stack[-1]
+        del self.stack[-1]
         raise _Stop(value)
     dispatch[STOP] = load_stop
 

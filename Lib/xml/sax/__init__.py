@@ -58,14 +58,14 @@ _false = 0
 if _false:
     import xml.sax.expatreader
 
-import os, sys
+import os, string, sys
 if os.environ.has_key("PY_SAX_PARSER"):
-    default_parser_list = os.environ["PY_SAX_PARSER"].split(",")
+    default_parser_list = string.split(os.environ["PY_SAX_PARSER"], ",")
 del os
 
 _key = "python.xml.sax.parser"
 if sys.platform[:4] == "java" and sys.registry.containsKey(_key):
-    default_parser_list = sys.registry.getProperty(_key).split(",")
+    default_parser_list = string.split(sys.registry.getProperty(_key), ",")
 
 
 def make_parser(parser_list = []):

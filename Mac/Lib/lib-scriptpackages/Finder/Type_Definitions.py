@@ -1,7 +1,7 @@
 """Suite Type Definitions: Definitions of records used in scripting the Finder
 Level 1, version 1
 
-Generated from /Volumes/Sap/System Folder/Finder
+Generated from Moes:Systeemmap:Finder
 AETE/AEUT resource version 0/144, language 0, script 0
 """
 
@@ -163,10 +163,9 @@ class small_4_bit_icon(aetools.NProperty):
 	want = 'ics4'
 
 class alias_list(aetools.ComponentItem):
-	"""alias list - A list of aliases.  Use \xd4as alias list\xd5 when a list of aliases is needed (instead of a list of file system item references). """
+	"""alias list - A list of aliases.  Use ïas alias list’ when a list of aliases is needed (instead of a list of file system item references). """
 	want = 'alst'
-preferences._superclassnames = []
-preferences._privpropdict = {
+preferences._propdict = {
 	'window' : window,
 	'button_view_arrangement' : button_view_arrangement,
 	'button_view_icon_size' : button_view_icon_size,
@@ -189,19 +188,17 @@ preferences._privpropdict = {
 	'view_font' : view_font,
 	'view_font_size' : view_font_size,
 }
-preferences._privelemdict = {
+preferences._elemdict = {
 	'label' : label,
 }
-label._superclassnames = []
-label._privpropdict = {
+label._propdict = {
 	'name' : name,
 	'index' : index,
 	'color' : color,
 }
-label._privelemdict = {
+label._elemdict = {
 }
-icon_family._superclassnames = []
-icon_family._privpropdict = {
+icon_family._propdict = {
 	'large_monochrome_icon_and_mask' : large_monochrome_icon_and_mask,
 	'large_8_bit_mask' : large_8_bit_mask,
 	'large_32_bit_icon' : large_32_bit_icon,
@@ -213,12 +210,11 @@ icon_family._privpropdict = {
 	'small_8_bit_icon' : small_8_bit_icon,
 	'small_4_bit_icon' : small_4_bit_icon,
 }
-icon_family._privelemdict = {
+icon_family._elemdict = {
 }
-alias_list._superclassnames = []
-alias_list._privpropdict = {
+alias_list._propdict = {
 }
-alias_list._privelemdict = {
+alias_list._elemdict = {
 }
 
 #

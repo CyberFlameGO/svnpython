@@ -66,19 +66,17 @@ TOOLSDIR=	tools
 
 # This is the *documentation* release, and is used to construct the file
 # names of the downloadable tarballs.
-RELEASE=2.3a0
+RELEASE=2.2.2b1
 
 PYTHON=	   python
 DVIPS=	   dvips -N0 -t $(PAPER)
 
 MKDVI=	   $(PYTHON) ../tools/mkhowto --paper=$(PAPER) --dvi
 MKHTML=	   $(PYTHON) tools/mkhowto --html --about html/stdabout.dat \
-		--iconserver ../icons \
 		--address $(PYTHONDOCS) --up-link ../index.html \
 		--up-title "Python Documentation Index" \
 		--global-module-index "../modindex.html" --dvips-safe
 MKISILOHTML=$(PYTHON) tools/mkhowto --html --about html/stdabout.dat \
-		--iconserver ../icons \
 		--l2h-init perl/isilo.perl --numeric --split 1 \
 		--dvips-safe
 MKISILO=   iSilo386 -U -y -rCR -d0
@@ -95,7 +93,7 @@ EMACS=     emacs
 
 # The end of this should reflect the major/minor version numbers of
 # the release:
-WHATSNEW=whatsnew23
+WHATSNEW=whatsnew22
 
 # what's what
 MANDVIFILES=	paper-$(PAPER)/api.dvi paper-$(PAPER)/ext.dvi \
@@ -168,8 +166,7 @@ include Makefile.deps
 
 
 # Main target
-default:	html
-all:		html dvi ps pdf isilo
+all:	html
 
 dvi:	$(DVIFILES)
 pdf:	$(PDFFILES)
@@ -398,54 +395,54 @@ ISILOINDEXFILES=isilo/api/api.html \
 
 $(ISILOINDEXFILES): $(COMMONPERL) html/about.dat perl/isilo.perl
 
-isilo:	isilo/python-api.pdb \
-	isilo/python-doc.pdb \
-	isilo/python-ext.pdb \
-	isilo/python-lib.pdb \
-	isilo/python-mac.pdb \
-	isilo/python-ref.pdb \
-	isilo/python-tut.pdb \
-	isilo/python-dist.pdb \
-	isilo/python-inst.pdb \
-	isilo/python-whatsnew.pdb
+isilo:	isilo/python-api-$(RELEASE).pdb \
+	isilo/python-doc-$(RELEASE).pdb \
+	isilo/python-ext-$(RELEASE).pdb \
+	isilo/python-lib-$(RELEASE).pdb \
+	isilo/python-mac-$(RELEASE).pdb \
+	isilo/python-ref-$(RELEASE).pdb \
+	isilo/python-tut-$(RELEASE).pdb \
+	isilo/python-dist-$(RELEASE).pdb \
+	isilo/python-inst-$(RELEASE).pdb \
+	isilo/python-whatsnew-$(RELEASE).pdb
 
-isilo/python-api.pdb: isilo/api/api.html isilo/api/api.css
+isilo/python-api-$(RELEASE).pdb: isilo/api/api.html isilo/api/api.css
 	$(MKISILO) "-iPython/C API Reference Manual" \
 		isilo/api/api.html $@
 
-isilo/python-doc.pdb: isilo/doc/doc.html isilo/doc/doc.css
+isilo/python-doc-$(RELEASE).pdb: isilo/doc/doc.html isilo/doc/doc.css
 	$(MKISILO) "-iDocumenting Python" \
 		isilo/doc/doc.html $@
 
-isilo/python-ext.pdb: isilo/ext/ext.html isilo/ext/ext.css
+isilo/python-ext-$(RELEASE).pdb: isilo/ext/ext.html isilo/ext/ext.css
 	$(MKISILO) "-iExtending & Embedding Python" \
 		isilo/ext/ext.html $@
 
-isilo/python-lib.pdb: isilo/lib/lib.html isilo/lib/lib.css
+isilo/python-lib-$(RELEASE).pdb: isilo/lib/lib.html isilo/lib/lib.css
 	$(MKISILO) "-iPython Library Reference" \
 		isilo/lib/lib.html $@
 
-isilo/python-mac.pdb: isilo/mac/mac.html isilo/mac/mac.css
+isilo/python-mac-$(RELEASE).pdb: isilo/mac/mac.html isilo/mac/mac.css
 	$(MKISILO) "-iPython/C API Reference Manual" \
 		isilo/mac/mac.html $@
 
-isilo/python-ref.pdb: isilo/ref/ref.html isilo/ref/ref.css
+isilo/python-ref-$(RELEASE).pdb: isilo/ref/ref.html isilo/ref/ref.css
 	$(MKISILO) "-iPython Reference Manual" \
 		isilo/ref/ref.html $@
 
-isilo/python-tut.pdb: isilo/tut/tut.html isilo/tut/tut.css
+isilo/python-tut-$(RELEASE).pdb: isilo/tut/tut.html isilo/tut/tut.css
 	$(MKISILO) "-iPython Tutorial" \
 		isilo/tut/tut.html $@
 
-isilo/python-dist.pdb: isilo/dist/dist.html isilo/dist/dist.css
+isilo/python-dist-$(RELEASE).pdb: isilo/dist/dist.html isilo/dist/dist.css
 	$(MKISILO) "-iDistributing Python Modules" \
 		isilo/dist/dist.html $@
 
-isilo/python-inst.pdb: isilo/inst/inst.html isilo/inst/inst.css
+isilo/python-inst-$(RELEASE).pdb: isilo/inst/inst.html isilo/inst/inst.css
 	$(MKISILO) "-iInstalling Python Modules" \
 		isilo/inst/inst.html $@
 
-isilo/python-whatsnew.pdb: isilo/whatsnew/$(WHATSNEW).html isilo/whatsnew/$(WHATSNEW).css
+isilo/python-whatsnew-$(RELEASE).pdb: isilo/whatsnew/$(WHATSNEW).html isilo/whatsnew/$(WHATSNEW).css
 	$(MKISILO) "-iWhat's New in Python X.Y" \
 		isilo/whatsnew/$(WHATSNEW).html $@
 
@@ -543,11 +540,7 @@ latex-$(RELEASE).zip:
 	$(PYTHON) $(TOOLSDIR)/mksourcepkg --zip $(RELEASE)
 
 pdf-$(PAPER)-$(RELEASE).tar: $(PDFFILES)
-	rm -f $@
-	mkdir Python-Docs-$(RELEASE)
-	cp paper-$(PAPER)/*.pdf Python-Docs-$(RELEASE)
-	tar cf $@ Python-Docs-$(RELEASE)
-	rm -r Python-Docs-$(RELEASE)
+	cd paper-$(PAPER) && tar cf ../$@ *.pdf
 
 pdf-$(PAPER)-$(RELEASE).tgz: pdf-$(PAPER)-$(RELEASE).tar
 	gzip -9 <$? >$@
@@ -557,18 +550,10 @@ pdf-$(PAPER)-$(RELEASE).tar.bz2: pdf-$(PAPER)-$(RELEASE).tar
 
 pdf-$(PAPER)-$(RELEASE).zip: pdf
 	rm -f $@
-	mkdir Python-Docs-$(RELEASE)
-	cp paper-$(PAPER)/*.pdf Python-Docs-$(RELEASE)
-	zip -q -r -9 $@ Python-Docs-$(RELEASE)
-	rm -r Python-Docs-$(RELEASE)
+	cd paper-$(PAPER) && zip -q -9 ../$@ *.pdf
 
 postscript-$(PAPER)-$(RELEASE).tar: $(PSFILES) paper-$(PAPER)/README
-	rm -f $@
-	mkdir Python-Docs-$(RELEASE)
-	cp paper-$(PAPER)/*.ps Python-Docs-$(RELEASE)
-	cp paper-$(PAPER)/README Python-Docs-$(RELEASE)
-	tar cf $@ Python-Docs-$(RELEASE)
-	rm -r Python-Docs-$(RELEASE)
+	cd paper-$(PAPER) && tar cf ../$@ *.ps README
 
 postscript-$(PAPER)-$(RELEASE).tar.bz2: postscript-$(PAPER)-$(RELEASE).tar
 	bzip2 -9 <$< >$@
@@ -578,21 +563,12 @@ postscript-$(PAPER)-$(RELEASE).tgz: postscript-$(PAPER)-$(RELEASE).tar
 
 postscript-$(PAPER)-$(RELEASE).zip: $(PSFILES) paper-$(PAPER)/README
 	rm -f $@
-	mkdir Python-Docs-$(RELEASE)
-	cp paper-$(PAPER)/*.ps Python-Docs-$(RELEASE)
-	cp paper-$(PAPER)/README Python-Docs-$(RELEASE)
-	zip -q -r -9 $@ Python-Docs-$(RELEASE)
-	rm -r Python-Docs-$(RELEASE)
-
-HTMLPKGFILES=*.html */*.css */*.html */*.gif */*.txt
+	cd paper-$(PAPER) && zip -q -9 ../$@ *.ps README
 
 html-$(RELEASE).tar:	$(ALLHTMLFILES) $(HTMLCSSFILES)
-	mkdir Python-Docs-$(RELEASE)
-	cd html && tar cf ../temp.tar $(HTMLPKGFILES)
-	cd Python-Docs-$(RELEASE) && tar xf ../temp.tar
-	rm temp.tar
-	tar cf html-$(RELEASE).tar Python-Docs-$(RELEASE)
-	rm -r Python-Docs-$(RELEASE)
+	cd html && \
+		tar cf ../html-$(RELEASE).tar *.html */*.css */*.html \
+					      */*.gif */*.txt
 
 html-$(RELEASE).tgz:	html-$(RELEASE).tar
 	gzip -9 <$? >$@
@@ -602,19 +578,11 @@ html-$(RELEASE).tar.bz2: html-$(RELEASE).tar
 
 html-$(RELEASE).zip:	$(ALLHTMLFILES) $(HTMLCSSFILES)
 	rm -f $@
-	mkdir Python-Docs-$(RELEASE)
-	cd html && tar cf ../temp.tar $(HTMLPKGFILES)
-	cd Python-Docs-$(RELEASE) && tar xf ../temp.tar
-	rm temp.tar
-	zip -q -r -9 $@ Python-Docs-$(RELEASE)
-	rm -r Python-Docs-$(RELEASE)
+	cd html && \
+		zip -q -9 ../$@ *.html */*.css */*.html */*.gif */*.txt
 
 isilo-$(RELEASE).zip:	isilo
-	rm -f $@
-	mkdir Python-Docs-$(RELEASE)
-	cp isilo/python-*.pdb Python-Docs-$(RELEASE)
-	zip -q -r -9 $@ Python-Docs-$(RELEASE)
-	rm -r Python-Docs-$(RELEASE)
+	cd isilo && zip -q -9 ../$@ python-*-$(RELEASE).pdb
 
 
 # convenience targets:
@@ -674,8 +642,6 @@ clobber:
 	rm -f pdf-$(RELEASE).zip postscript-$(RELEASE).zip
 	rm -f $(DVIFILES) $(PSFILES) $(PDFFILES)
 	cd $(INFODIR) && $(MAKE) clobber
-	rm -f paper-$(PAPER)/*.tex paper-$(PAPER)/*.ind paper-$(PAPER)/*.idx
-	rm -f paper-$(PAPER)/*.l2h paper-$(PAPER)/*.how paper-$(PAPER)/README
 	rm -rf html/index.html html/modindex.html html/acks.html
 	rm -rf html/api/ html/doc/ html/ext/ html/lib/ html/mac/
 	rm -rf html/ref/ html/tut/ html/inst/ html/dist/
@@ -683,6 +649,6 @@ clobber:
 	rm -rf isilo/api/ isilo/doc/ isilo/ext/ isilo/lib/ isilo/mac/
 	rm -rf isilo/ref/ isilo/tut/ isilo/inst/ isilo/dist/
 	rm -rf isilo/whatsnew/
-	rm -f isilo/python-*.pdb isilo-$(RELEASE).zip
+	rm -f isilo/python-*-$(RELEASE).pdb isilo-$(RELEASE).zip
 
 realclean distclean:  clobber

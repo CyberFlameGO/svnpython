@@ -22,12 +22,14 @@ FILES_PER_THREAD = 50   # change w/ -f option
 
 import thread # If this fails, we can't test this module
 import threading
-from test.test_support import TestFailed
+from test_support import TestFailed
 import StringIO
 from traceback import print_exc
-import tempfile
 
 startEvent = threading.Event()
+
+import tempfile
+tempfile.gettempdir() # Do this now, to avoid spurious races later
 
 class TempFileGreedy(threading.Thread):
     error_count = 0
@@ -46,7 +48,7 @@ class TempFileGreedy(threading.Thread):
             else:
                 self.ok_count += 1
 
-def test_main():
+def _test():
     threads = []
 
     print "Creating"
@@ -72,7 +74,6 @@ def test_main():
     if errors:
         raise TestFailed(msg)
 
-
 if __name__ == "__main__":
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], "t:f:")
@@ -81,4 +82,5 @@ if __name__ == "__main__":
             FILES_PER_THREAD = int(v)
         elif o == "-t":
             NUM_THREADS = int(v)
-    test_main()
+
+_test()

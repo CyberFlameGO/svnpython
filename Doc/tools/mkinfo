@@ -7,6 +7,7 @@
 #
 #  Written by Fred L. Drake, Jr. <fdrake@acm.org>
 
+PERL=${PERL:-perl}
 EMACS=${EMACS:-emacs}
 MAKEINFO=${MAKEINFO:-makeinfo}
 

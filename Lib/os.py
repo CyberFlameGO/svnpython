@@ -95,27 +95,16 @@ elif 'dos' in _names:
 elif 'os2' in _names:
     name = 'os2'
     linesep = '\r\n'
-    curdir = '.'; pardir = '..'; pathsep = ';'
-    if sys.version.find('EMX GCC') == -1:
-        # standard OS/2 compiler (VACPP or Watcom?)
-        sep = '\\'; altsep = '/'
-    else:
-        # EMX
-        sep = '/'; altsep = '\\'
+    curdir = '.'; pardir = '..'; sep = '\\'; pathsep = ';'
     defpath = '.;C:\\bin'
     from os2 import *
     try:
         from os2 import _exit
     except ImportError:
         pass
-    if sys.version.find('EMX GCC') == -1:
-        import ntpath
-        path = ntpath
-        del ntpath
-    else:
-        import os2emxpath
-        path = os2emxpath
-        del os2emxpath
+    import ntpath
+    path = ntpath
+    del ntpath
 
     import os2
     __all__.extend(_get_exports_list(os2))
@@ -198,7 +187,7 @@ sys.modules['os.path'] = path
 # (Inspired by Eric Raymond; the doc strings are mostly his)
 
 def makedirs(name, mode=0777):
-    """makedirs(path [, mode=0777])
+    """makedirs(path [, mode=0777]) -> None
 
     Super-mkdir; create a leaf directory and all intermediate ones.
     Works like mkdir, except that any intermediate path segment (not
@@ -214,7 +203,7 @@ def makedirs(name, mode=0777):
     mkdir(name, mode)
 
 def removedirs(name):
-    """removedirs(path)
+    """removedirs(path) -> None
 
     Super-rmdir; remove a leaf directory and empty all intermediate
     ones.  Works like rmdir except that, if the leaf directory is
@@ -236,7 +225,7 @@ def removedirs(name):
         head, tail = path.split(head)
 
 def renames(old, new):
-    """renames(old, new)
+    """renames(old, new) -> None
 
     Super-rename; create directories as necessary and delete any left
     empty.  Works like rename, except creation of any intermediate
@@ -334,7 +323,7 @@ def _execvpe(file, args, env=None):
     if head:
         apply(func, (file,) + argrest)
         return
-    if 'PATH' in env:
+    if env.has_key('PATH'):
         envpath = env['PATH']
     else:
         envpath = defpath
@@ -398,16 +387,12 @@ else:
                     unsetenv(key)
                     del self.data[key.upper()]
             def has_key(self, key):
-                return key.upper() in self.data
-            def __contains__(self, key):
-                return key.upper() in self.data
+                return self.data.has_key(key.upper())
             def get(self, key, failobj=None):
                 return self.data.get(key.upper(), failobj)
             def update(self, dict):
                 for k, v in dict.items():
                     self[k] = v
-            def copy(self):
-                return dict(self)
 
     else:  # Where Env Var Names Can Be Mixed Case
         class _Environ(UserDict.IterableUserDict):
@@ -428,8 +413,6 @@ else:
                 def __delitem__(self, key):
                     unsetenv(key)
                     del self.data[key]
-            def copy(self):
-                return dict(self)
 
 
     environ = _Environ(environ)
@@ -443,9 +426,9 @@ else:
 def _exists(name):
     try:
         eval(name)
-        return True
+        return 1
     except NameError:
-        return False
+        return 0
 
 # Supply spawn*() (probably only for Unix)
 if _exists("fork") and not _exists("spawnv") and _exists("execv"):

@@ -1,4 +1,4 @@
-from test import test_support
+import test_support
 import unittest
 
 from cStringIO import StringIO

@@ -1,6 +1,6 @@
 # Test just the SSL support in the socket module, in a moderately bogus way.
 
-from test import test_support
+import test_support
 
 # Optionally test SSL support.  This currently requires the 'network' resource
 # as given on the regrtest command line.  If not available, nothing after this

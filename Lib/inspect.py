@@ -1,4 +1,3 @@
-# -*- coding: iso-8859-1 -*-
 """Get useful information from live Python objects.
 
 This module encapsulates the interface provided by the internal special
@@ -28,7 +27,7 @@ Here are some of the useful functions provided by this module:
 __author__ = 'Ka-Ping Yee <ping@lfw.org>'
 __date__ = '1 Jan 2001'
 
-import sys, os, types, string, re, dis, imp, tokenize, linecache
+import sys, os, types, string, re, dis, imp, tokenize
 
 # ----------------------------------------------------------- type-checking
 def ismodule(object):
@@ -268,7 +267,7 @@ def getdoc(object):
         doc = object.__doc__
     except AttributeError:
         return None
-    if not isinstance(doc, types.StringTypes):
+    if not isinstance(doc, (str, unicode)):
         return None
     try:
         lines = string.split(string.expandtabs(doc), '\n')
@@ -357,12 +356,12 @@ def getmodule(object):
         file = getabsfile(object)
     except TypeError:
         return None
-    if file in modulesbyfile:
+    if modulesbyfile.has_key(file):
         return sys.modules[modulesbyfile[file]]
     for module in sys.modules.values():
         if hasattr(module, '__file__'):
             modulesbyfile[getabsfile(module)] = module.__name__
-    if file in modulesbyfile:
+    if modulesbyfile.has_key(file):
         return sys.modules[modulesbyfile[file]]
     main = sys.modules['__main__']
     if hasattr(main, object.__name__):
@@ -382,10 +381,12 @@ def findsource(object):
     or code object.  The source code is returned as a list of all the lines
     in the file and the line number indexes a line in that list.  An IOError
     is raised if the source code cannot be retrieved."""
-    file = getsourcefile(object) or getfile(object)
-    lines = linecache.getlines(file)
-    if not lines:
+    try:
+        file = open(getsourcefile(object))
+    except (TypeError, IOError):
         raise IOError, 'could not get source code'
+    lines = file.readlines()
+    file.close()
 
     if ismodule(object):
         return lines, 0
@@ -417,14 +418,9 @@ def findsource(object):
     raise IOError, 'could not find code object'
 
 def getcomments(object):
-    """Get lines of comments immediately preceding an object's source code.
-
-    Returns None when source can't be found.
-    """
-    try:
-        lines, lnum = findsource(object)
-    except (IOError, TypeError):
-        return None
+    """Get lines of comments immediately preceding an object's source code."""
+    try: lines, lnum = findsource(object)
+    except IOError: return None
 
     if ismodule(object):
         # Look for a comment block at the top of the file.
@@ -530,7 +526,7 @@ def walktree(classes, children, parent):
     classes.sort(lambda a, b: cmp(a.__name__, b.__name__))
     for c in classes:
         results.append((c, c.__bases__))
-        if c in children:
+        if children.has_key(c):
             results.append(walktree(children[c], children, c))
     return results
 
@@ -548,13 +544,13 @@ def getclasstree(classes, unique=0):
     for c in classes:
         if c.__bases__:
             for parent in c.__bases__:
-                if not parent in children:
+                if not children.has_key(parent):
                     children[parent] = []
                 children[parent].append(c)
                 if unique and parent in classes: break
         elif c not in roots:
             roots.append(c)
-    for parent in children:
+    for parent in children.keys():
         if parent not in classes:
             roots.append(parent)
     return walktree(roots, children, None)
@@ -666,9 +662,9 @@ def formatargspec(args, varargs=None, varkw=None, defaults=None,
         if defaults and i >= firstdefault:
             spec = spec + formatvalue(defaults[i - firstdefault])
         specs.append(spec)
-    if varargs is not None:
+    if varargs:
         specs.append(formatvarargs(varargs))
-    if varkw is not None:
+    if varkw:
         specs.append(formatvarkw(varkw))
     return '(' + string.join(specs, ', ') + ')'
 
@@ -710,8 +706,8 @@ def getframeinfo(frame, context=1):
     if not isframe(frame):
         raise TypeError, 'arg is not a frame or traceback object'
 
-    filename = getsourcefile(frame) or getfile(frame)
-    lineno = frame.f_lineno
+    filename = getsourcefile(frame)
+    lineno = getlineno(frame)
     if context > 0:
         start = lineno - 1 - context//2
         try:
@@ -730,8 +726,18 @@ def getframeinfo(frame, context=1):
 
 def getlineno(frame):
     """Get the line number from a frame object, allowing for optimization."""
-    # FrameType.f_lineno is now a descriptor that grovels co_lnotab
-    return frame.f_lineno
+    # Written by Marc-André Lemburg; revised by Jim Hugunin and Fredrik Lundh.
+    lineno = frame.f_lineno
+    code = frame.f_code
+    if hasattr(code, 'co_lnotab'):
+        table = code.co_lnotab
+        lineno = code.co_firstlineno
+        addr = 0
+        for i in range(0, len(table), 2):
+            addr = addr + ord(table[i])
+            if addr > frame.f_lasti: break
+            lineno = lineno + ord(table[i+1])
+    return lineno
 
 def getouterframes(frame, context=1):
     """Get a list of records for a frame and all higher (calling) frames.
@@ -758,9 +764,9 @@ def getinnerframes(tb, context=1):
 def currentframe():
     """Return the frame object for the caller's stack frame."""
     try:
-        1/0
-    except ZeroDivisionError:
-        return sys.exc_info()[2].tb_frame.f_back
+        raise 'catch me'
+    except:
+        return sys.exc_traceback.tb_frame.f_back
 
 if hasattr(sys, '_getframe'): currentframe = sys._getframe
 
@@ -770,4 +776,4 @@ def stack(context=1):
 
 def trace(context=1):
     """Return a list of records for the stack below the current exception."""
-    return getinnerframes(sys.exc_info()[2], context)
+    return getinnerframes(sys.exc_traceback, context)

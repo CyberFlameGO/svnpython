@@ -5,6 +5,7 @@ import imp
 import marshal
 import os
 import re
+import string
 import sys
 import new
 
@@ -149,7 +150,7 @@ class ModuleFinder:
             self.msgout(4, "determine_parent ->", parent)
             return parent
         if '.' in pname:
-            i = pname.rfind('.')
+            i = string.rfind(pname, '.')
             pname = pname[:i]
             parent = self.modules[pname]
             assert parent.__name__ == pname
@@ -161,7 +162,7 @@ class ModuleFinder:
     def find_head_package(self, parent, name):
         self.msgin(4, "find_head_package", parent, name)
         if '.' in name:
-            i = name.find('.')
+            i = string.find(name, '.')
             head = name[:i]
             tail = name[i+1:]
         else:
@@ -189,7 +190,7 @@ class ModuleFinder:
         self.msgin(4, "load_tail", q, tail)
         m = q
         while tail:
-            i = tail.find('.')
+            i = string.find(tail, '.')
             if i < 0: i = len(tail)
             head, tail = tail[:i], tail[i+1:]
             mname = "%s.%s" % (m.__name__, head)
@@ -398,7 +399,7 @@ class ModuleFinder:
             if key not in self.excludes:
                 mods = self.badmodules[key].keys()
                 mods.sort()
-                print "?", key, "from", ', '.join(mods)
+                print "?", key, "from", string.join(mods, ', ')
 
     def any_missing(self):
         keys = self.badmodules.keys()
@@ -456,7 +457,7 @@ def test():
         if o == '-m':
             domods = 1
         if o == '-p':
-            addpath = addpath + a.split(os.pathsep)
+            addpath = addpath + string.split(a, os.pathsep)
         if o == '-q':
             debug = 0
         if o == '-x':

@@ -123,22 +123,25 @@ def commonprefix(m):
 
 def getsize(filename):
     """Return the size of a file, reported by os.stat()."""
-    return os.stat(filename).st_size
+    st = os.stat(filename)
+    return st[stat.ST_SIZE]
 
 def getmtime(filename):
     """Return the last modification time of a file, reported by os.stat()."""
-    return os.stat(filename).st_mtime
+    st = os.stat(filename)
+    return st[stat.ST_MTIME]
 
 def getatime(filename):
     """Return the last access time of a file, reported by os.stat()."""
+    st = os.stat(filename)
+    return st[stat.ST_ATIME]
 
-    return os.stat(filename).st_atime
 
 def islink(path):
     """Is a path a symbolic link?
     This will always return false on systems where posix.lstat doesn't exist."""
 
-    return False
+    return 0
 
 
 def exists(path):
@@ -148,8 +151,8 @@ def exists(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 def isdir(path):
@@ -158,8 +161,8 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return stat.S_ISDIR(st.st_mode)
+        return 0
+    return stat.S_ISDIR(st[stat.ST_MODE])
 
 
 def isfile(path):
@@ -168,8 +171,8 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return stat.S_ISREG(st.st_mode)
+        return 0
+    return stat.S_ISREG(st[stat.ST_MODE])
 
 
 def ismount(path):
@@ -223,7 +226,7 @@ def expanduser(path):
     while i < n and path[i] not in '/\\':
         i = i+1
     if i == 1:
-        if not 'HOME' in os.environ:
+        if not os.environ.has_key('HOME'):
             return path
         userhome = os.environ['HOME']
     else:
@@ -269,7 +272,7 @@ def expandvars(path):
                 try:
                     index = path.index('}')
                     var = path[:index]
-                    if var in os.environ:
+                    if os.environ.has_key(var):
                         res = res + os.environ[var]
                 except ValueError:
                     res = res + path
@@ -282,7 +285,7 @@ def expandvars(path):
                     var = var + c
                     index = index + 1
                     c = path[index:index + 1]
-                if var in os.environ:
+                if os.environ.has_key(var):
                     res = res + os.environ[var]
                 if c != '':
                     res = res + c

@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-PyAPI_FUNC(int) PyOS_InterruptOccurred(void);
-PyAPI_FUNC(void) PyOS_InitInterrupts(void);
-PyAPI_FUNC(void) PyOS_AfterFork(void);
+extern DL_IMPORT(int) PyOS_InterruptOccurred(void);
+extern DL_IMPORT(void) PyOS_InitInterrupts(void);
+DL_IMPORT(void) PyOS_AfterFork(void);
 
 #ifdef __cplusplus
 }

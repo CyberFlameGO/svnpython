@@ -330,7 +330,7 @@ sha_final(unsigned char digest[20], SHAobject *sha_info)
  * ------------------------------------------------------------------------
  */
 
-static PyTypeObject SHAtype;
+staticforward PyTypeObject SHAtype;
 
 
 static SHAobject *
@@ -350,7 +350,8 @@ SHA_dealloc(PyObject *ptr)
 
 /* External methods for a hashing object */
 
-PyDoc_STRVAR(SHA_copy__doc__, "Return a copy of the hashing object.");
+static char SHA_copy__doc__[] = 
+"Return a copy of the hashing object.";
 
 static PyObject *
 SHA_copy(SHAobject *self, PyObject *args)
@@ -367,8 +368,8 @@ SHA_copy(SHAobject *self, PyObject *args)
     return (PyObject *)newobj;
 }
 
-PyDoc_STRVAR(SHA_digest__doc__,
-"Return the digest value as a string of binary data.");
+static char SHA_digest__doc__[] = 
+"Return the digest value as a string of binary data.";
 
 static PyObject *
 SHA_digest(SHAobject *self, PyObject *args)
@@ -384,8 +385,8 @@ SHA_digest(SHAobject *self, PyObject *args)
     return PyString_FromStringAndSize((const char *)digest, sizeof(digest));
 }
 
-PyDoc_STRVAR(SHA_hexdigest__doc__,
-"Return the digest value as a string of hexadecimal digits.");
+static char SHA_hexdigest__doc__[] = 
+"Return the digest value as a string of hexadecimal digits.";
 
 static PyObject *
 SHA_hexdigest(SHAobject *self, PyObject *args)
@@ -426,8 +427,8 @@ SHA_hexdigest(SHAobject *self, PyObject *args)
     return retval;
 }
 
-PyDoc_STRVAR(SHA_update__doc__,
-"Update this hashing object's state with the provided string.");
+static char SHA_update__doc__[] = 
+"Update this hashing object's state with the provided string.";
 
 static PyObject *
 SHA_update(SHAobject *self, PyObject *args)
@@ -478,10 +479,10 @@ static PyTypeObject SHAtype = {
 
 /* The single module-level function: new() */
 
-PyDoc_STRVAR(SHA_new__doc__,
-"Return a new SHA hashing object.  An optional string argument\n\
-may be provided; if present, this string will be automatically\n\
-hashed.");
+static char SHA_new__doc__[] =
+ "Return a new SHA hashing object.  An optional string "
+ "argument may be provided; if present, this string will be "
+ " automatically hashed."; 
 
 static PyObject *
 SHA_new(PyObject *self, PyObject *args, PyObject *kwdict)
@@ -525,15 +526,16 @@ static struct PyMethodDef SHA_functions[] = {
 
 #define insint(n,v) { PyModule_AddIntConstant(m,n,v); }
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initsha(void)
 {
-    PyObject *m;
+    PyObject *d, *m;
 
     SHAtype.ob_type = &PyType_Type;
     m = Py_InitModule("sha", SHA_functions);
 
     /* Add some symbolic constants to the module */
+    d = PyModule_GetDict(m);
     insint("blocksize", 1);  /* For future use, in case some hash
                                 functions require an integral number of
                                 blocks */ 

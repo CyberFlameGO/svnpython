@@ -1,7 +1,7 @@
 """Suite Containers and folders: Classes that can contain other file system items
 Level 1, version 1
 
-Generated from /Volumes/Sap/System Folder/Finder
+Generated from Moes:Systeemmap:Finder
 AETE/AEUT resource version 0/144, language 0, script 0
 """
 
@@ -216,7 +216,7 @@ class folder(aetools.ComponentItem):
 folders = folder
 
 class desktop_2d_object(aetools.ComponentItem):
-	"""desktop-object - Desktop-object is the class of the \xd2desktop\xd3 object """
+	"""desktop-object - Desktop-object is the class of the –desktop” object """
 	want = 'cdsk'
 class startup_disk(aetools.NProperty):
 	"""startup disk - the startup disk """
@@ -246,7 +246,7 @@ class trash(aetools.NProperty):
 #        element 'dsut' as ['indx', 'name']
 
 class trash_2d_object(aetools.ComponentItem):
-	"""trash-object - Trash-object is the class of the \xd2trash\xd3 object """
+	"""trash-object - Trash-object is the class of the –trash” object """
 	want = 'ctrs'
 class warns_before_emptying(aetools.NProperty):
 	"""warns before emptying - Display a dialog when emptying the trash? """
@@ -270,9 +270,8 @@ class warns_before_emptying(aetools.NProperty):
 #        element 'fsut' as ['indx', 'name']
 #        element 'dsut' as ['indx', 'name']
 import Earlier_terms
-container._superclassnames = ['item']
 import Files_and_suitcases
-container._privpropdict = {
+container._propdict = {
 	'_3c_Inheritance_3e_' : _3c_Inheritance_3e_,
 	'selection' : selection,
 	'entire_contents' : entire_contents,
@@ -283,7 +282,7 @@ container._privpropdict = {
 	'icon_size' : icon_size,
 	'view_options_window' : view_options_window,
 }
-container._privelemdict = {
+container._elemdict = {
 	'item' : Earlier_terms.item,
 	'container' : container,
 	'sharable_container' : sharable_container,
@@ -302,8 +301,7 @@ container._privelemdict = {
 	'font_suitcase' : Files_and_suitcases.font_suitcase,
 	'accessory_suitcase' : Earlier_terms.accessory_suitcase,
 }
-sharable_container._superclassnames = ['container']
-sharable_container._privpropdict = {
+sharable_container._propdict = {
 	'_3c_Inheritance_3e_' : _3c_Inheritance_3e_,
 	'owner' : owner,
 	'group' : group,
@@ -316,7 +314,7 @@ sharable_container._privpropdict = {
 	'shared' : shared,
 	'protected' : protected,
 }
-sharable_container._privelemdict = {
+sharable_container._elemdict = {
 	'item' : Earlier_terms.item,
 	'container' : container,
 	'sharable_container' : sharable_container,
@@ -335,16 +333,14 @@ sharable_container._privelemdict = {
 	'font_suitcase' : Files_and_suitcases.font_suitcase,
 	'accessory_suitcase' : Earlier_terms.accessory_suitcase,
 }
-sharing_privileges._superclassnames = []
-sharing_privileges._privpropdict = {
+sharing_privileges._propdict = {
 	'see_folders' : see_folders,
 	'see_files' : see_files,
 	'make_changes' : make_changes,
 }
-sharing_privileges._privelemdict = {
+sharing_privileges._elemdict = {
 }
-disk._superclassnames = ['sharable_container']
-disk._privpropdict = {
+disk._propdict = {
 	'_3c_Inheritance_3e_' : _3c_Inheritance_3e_,
 	'capacity' : capacity,
 	'free_space' : free_space,
@@ -352,7 +348,7 @@ disk._privpropdict = {
 	'local_volume' : local_volume,
 	'startup' : startup,
 }
-disk._privelemdict = {
+disk._elemdict = {
 	'item' : Earlier_terms.item,
 	'container' : container,
 	'sharable_container' : sharable_container,
@@ -371,11 +367,10 @@ disk._privelemdict = {
 	'font_suitcase' : Files_and_suitcases.font_suitcase,
 	'accessory_suitcase' : Earlier_terms.accessory_suitcase,
 }
-folder._superclassnames = ['sharable_container']
-folder._privpropdict = {
+folder._propdict = {
 	'_3c_Inheritance_3e_' : _3c_Inheritance_3e_,
 }
-folder._privelemdict = {
+folder._elemdict = {
 	'item' : Earlier_terms.item,
 	'container' : container,
 	'sharable_container' : sharable_container,
@@ -394,13 +389,12 @@ folder._privelemdict = {
 	'font_suitcase' : Files_and_suitcases.font_suitcase,
 	'accessory_suitcase' : Earlier_terms.accessory_suitcase,
 }
-desktop_2d_object._superclassnames = ['container']
-desktop_2d_object._privpropdict = {
+desktop_2d_object._propdict = {
 	'_3c_Inheritance_3e_' : _3c_Inheritance_3e_,
 	'startup_disk' : startup_disk,
 	'trash' : trash,
 }
-desktop_2d_object._privelemdict = {
+desktop_2d_object._elemdict = {
 	'item' : Earlier_terms.item,
 	'container' : container,
 	'sharable_container' : sharable_container,
@@ -420,12 +414,11 @@ desktop_2d_object._privelemdict = {
 	'font_suitcase' : Files_and_suitcases.font_suitcase,
 	'accessory_suitcase' : Earlier_terms.accessory_suitcase,
 }
-trash_2d_object._superclassnames = ['container']
-trash_2d_object._privpropdict = {
+trash_2d_object._propdict = {
 	'_3c_Inheritance_3e_' : _3c_Inheritance_3e_,
 	'warns_before_emptying' : warns_before_emptying,
 }
-trash_2d_object._privelemdict = {
+trash_2d_object._elemdict = {
 	'item' : Earlier_terms.item,
 	'container' : container,
 	'sharable_container' : sharable_container,

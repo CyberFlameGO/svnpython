@@ -85,13 +85,13 @@ math_2(PyObject *args, double (*func) (double, double), char *argsfmt)
 	static PyObject * math_##funcname(PyObject *self, PyObject *args) { \
 		return math_1(args, func, "d:" #funcname); \
 	}\
-        PyDoc_STRVAR(math_##funcname##_doc, docstring);
+        static char math_##funcname##_doc [] = docstring;
 
 #define FUNC2(funcname, func, docstring) \
 	static PyObject * math_##funcname(PyObject *self, PyObject *args) { \
 		return math_2(args, func, "dd:" #funcname); \
 	}\
-        PyDoc_STRVAR(math_##funcname##_doc, docstring);
+        static char math_##funcname##_doc [] = docstring;
 
 FUNC1(acos, acos,
       "acos(x)\n\nReturn the arc cosine (measured in radians) of x.")
@@ -155,12 +155,12 @@ math_frexp(PyObject *self, PyObject *args)
 		return Py_BuildValue("(di)", x, i);
 }
 
-PyDoc_STRVAR(math_frexp_doc,
+static char math_frexp_doc [] =
 "frexp(x)\n"
 "\n"
 "Return the mantissa and exponent of x, as pair (m, e).\n"
 "m is a float and e is an int, such that x = m * 2.**e.\n"
-"If x is 0, m and e are both 0.  Else 0.5 <= abs(m) < 1.0.");
+"If x is 0, m and e are both 0.  Else 0.5 <= abs(m) < 1.0.";
 
 static PyObject *
 math_ldexp(PyObject *self, PyObject *args)
@@ -180,8 +180,8 @@ math_ldexp(PyObject *self, PyObject *args)
 		return PyFloat_FromDouble(x);
 }
 
-PyDoc_STRVAR(math_ldexp_doc,
-"ldexp(x, i) -> x * (2**i)");
+static char math_ldexp_doc [] =
+"ldexp(x, i) -> x * (2**i)";
 
 static PyObject *
 math_modf(PyObject *self, PyObject *args)
@@ -206,11 +206,11 @@ math_modf(PyObject *self, PyObject *args)
 		return Py_BuildValue("(dd)", x, y);
 }
 
-PyDoc_STRVAR(math_modf_doc,
+static char math_modf_doc [] =
 "modf(x)\n"
 "\n"
 "Return the fractional and integer parts of x.  Both results carry the sign\n"
-"of x.  The integer part is returned as a real.");
+"of x.  The integer part is returned as a real.";
 
 /* A decent logarithm is easy to compute even for huge longs, but libm can't
    do that by itself -- loghelper can.  func is log or log10, and name is
@@ -262,8 +262,8 @@ math_log(PyObject *self, PyObject *args)
 	return loghelper(args, log, "log");
 }
 
-PyDoc_STRVAR(math_log_doc,
-"log(x) -> the natural logarithm (base e) of x.");
+static char math_log_doc[] =
+"log(x) -> the natural logarithm (base e) of x.";
 
 static PyObject *
 math_log10(PyObject *self, PyObject *args)
@@ -271,34 +271,9 @@ math_log10(PyObject *self, PyObject *args)
 	return loghelper(args, log10, "log10");
 }
 
-PyDoc_STRVAR(math_log10_doc,
-"log10(x) -> the base 10 logarithm of x.");
+static char math_log10_doc[] =
+"log10(x) -> the base 10 logarithm of x.";
 
-static const double degToRad = 3.141592653589793238462643383 / 180.0;
-
-static PyObject *
-math_degrees(PyObject *self, PyObject *args)
-{
-	double x;
-	if (! PyArg_ParseTuple(args, "d:degrees", &x))
-		return NULL;
-	return PyFloat_FromDouble(x / degToRad);
-}
-
-PyDoc_STRVAR(math_degrees_doc,
-"degrees(x) -> converts angle x from radians to degrees");
-
-static PyObject *
-math_radians(PyObject *self, PyObject *args)
-{
-	double x;
-	if (! PyArg_ParseTuple(args, "d:radians", &x))
-		return NULL;
-	return PyFloat_FromDouble(x * degToRad);
-}
-
-PyDoc_STRVAR(math_radians_doc,
-"radians(x) -> converts angle x from degrees to radians");
 
 static PyMethodDef math_methods[] = {
 	{"acos",	math_acos,	METH_VARARGS,	math_acos_doc},
@@ -308,7 +283,6 @@ static PyMethodDef math_methods[] = {
 	{"ceil",	math_ceil,	METH_VARARGS,	math_ceil_doc},
 	{"cos",		math_cos,	METH_VARARGS,	math_cos_doc},
 	{"cosh",	math_cosh,	METH_VARARGS,	math_cosh_doc},
-	{"degrees",	math_degrees,	METH_VARARGS,	math_degrees_doc},
 	{"exp",		math_exp,	METH_VARARGS,	math_exp_doc},
 	{"fabs",	math_fabs,	METH_VARARGS,	math_fabs_doc},
 	{"floor",	math_floor,	METH_VARARGS,	math_floor_doc},
@@ -320,7 +294,6 @@ static PyMethodDef math_methods[] = {
 	{"log10",	math_log10,	METH_VARARGS,	math_log10_doc},
 	{"modf",	math_modf,	METH_VARARGS,	math_modf_doc},
 	{"pow",		math_pow,	METH_VARARGS,	math_pow_doc},
-	{"radians",	math_radians,	METH_VARARGS,	math_radians_doc},
 	{"sin",		math_sin,	METH_VARARGS,	math_sin_doc},
 	{"sinh",	math_sinh,	METH_VARARGS,	math_sinh_doc},
 	{"sqrt",	math_sqrt,	METH_VARARGS,	math_sqrt_doc},
@@ -330,11 +303,11 @@ static PyMethodDef math_methods[] = {
 };
 
 
-PyDoc_STRVAR(module_doc,
+static char module_doc [] =
 "This module is always available.  It provides access to the\n"
-"mathematical functions defined by the C standard.");
+"mathematical functions defined by the C standard.";
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initmath(void)
 {
 	PyObject *m, *d, *v;

@@ -17,7 +17,7 @@ def register(name, klass, instance=None):
 
 def get(using=None):
     """Return a browser launcher instance appropriate for the environment."""
-    if using is not None:
+    if using:
         alternatives = [using]
     else:
         alternatives = _tryorder
@@ -78,15 +78,15 @@ def _synthesize(browser):
 
 
 def _iscommand(cmd):
-    """Return True if cmd can be found on the executable search path."""
+    """Return true if cmd can be found on the executable search path."""
     path = os.environ.get("PATH")
     if not path:
-        return False
+        return 0
     for d in path.split(os.pathsep):
         exe = os.path.join(d, cmd)
         if os.path.isfile(exe):
-            return True
-    return False
+            return 1
+    return 0
 
 
 PROCESS_CREATION_DELAY = 4
@@ -312,19 +312,19 @@ if sys.platform[:3] == "os2" and _iscommand("netscape.exe"):
 # OK, now that we know what the default preference orders for each
 # platform are, allow user to override them with the BROWSER variable.
 #
-if "BROWSER" in os.environ:
+if os.environ.has_key("BROWSER"):
     # It's the user's responsibility to register handlers for any unknown
     # browser referenced by this value, before calling open().
     _tryorder = os.environ["BROWSER"].split(os.pathsep)
 
 for cmd in _tryorder:
-    if not cmd.lower() in _browsers:
+    if not _browsers.has_key(cmd.lower()):
         if _iscommand(cmd.lower()):
             register(cmd.lower(), None, GenericBrowser(
                 "%s '%%s'" % cmd.lower()))
 cmd = None # to make del work if _tryorder was empty
 del cmd
 
-_tryorder = filter(lambda x: x.lower() in _browsers
+_tryorder = filter(lambda x: _browsers.has_key(x.lower())
                    or x.find("%s") > -1, _tryorder)
 # what to do if _tryorder is now empty?

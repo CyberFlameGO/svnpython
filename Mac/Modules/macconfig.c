@@ -69,6 +69,7 @@ extern void initfl();
 extern void initthread();
 extern void inittiming();
 extern void initsignal();
+extern void initnew();
 extern void initdl();
 extern void initsyslog();
 extern void initgestalt();
@@ -94,11 +95,9 @@ extern void initicglue();
 #ifndef USE_CORE_TOOLBOX
 #define USE_CORE_TOOLBOX
 #endif
-extern void init_AH();
 extern void init_App();
 extern void init_Fm();
 extern void init_Help();
-extern void init_IBCarbon();
 extern void init_Icn();
 extern void init_List();
 extern void init_Mlte();
@@ -165,7 +164,9 @@ extern void init_hotshot();
 #ifdef USE_PYEXPAT
 extern void initpyexpat();
 #endif
+#ifdef WITH_CYCLE_GC
 extern void initgc();
+#endif
 
 extern void initcPickle();
 extern void initcStringIO();
@@ -198,6 +199,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"rgbimg", initrgbimg},
 	{"md5", initmd5},
 	{"rotor", initrotor},
+	{"new", initnew},
 	{"gestalt", initgestalt},
 	{"macfs", initmacfs},
 	{"binascii", initbinascii},
@@ -230,10 +232,8 @@ struct _inittab _PyImport_Inittab[] = {
 	{"_Res", init_Res},
 #endif
 #ifdef USE_TOOLBOX
-	{"_AH", init_AH},
 	{"_App", init_App},
 	{"_Fm", init_Fm},
-	{"_IBCarbon", init_IBCarbon},
 	{"_Icn", init_Icn},
 	{"_List", init_List},
 	{"_Mlte", init_Mlte},
@@ -297,7 +297,9 @@ struct _inittab _PyImport_Inittab[] = {
 #ifdef USE_PYEXPAT
 	{"pyexpat", initpyexpat},
 #endif
+#ifdef WITH_CYCLE_GC
 	{"gc", initgc},
+#endif
 	{"cPickle",	initcPickle},
 	{"cStringIO",	initcStringIO},
 	{"_locale", init_locale},

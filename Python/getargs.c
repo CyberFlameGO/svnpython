@@ -842,20 +842,16 @@ convertsimple(PyObject *arg, char **p_format, va_list *p_va, char *msgbuf,
 		if (*format == '#') { /* any buffer-like object */
 			void **p = (void **)va_arg(*p_va, char **);
 			int *q = va_arg(*p_va, int *);
-			if (PyUnicode_Check(arg)) {
-			    	*p = PyUnicode_AS_UNICODE(arg);
-				*q = PyUnicode_GET_SIZE(arg);
-			}
-			else {
 			char *buf;
 			int count = convertbuffer(arg, p, &buf);
+
 			if (count < 0)
 				return converterr(buf, arg, msgbuf, bufsize);
 			*q = count/(sizeof(Py_UNICODE)); 
-			}
 			format++;
 		} else {
 			Py_UNICODE **p = va_arg(*p_va, Py_UNICODE **);
+			
 			if (PyUnicode_Check(arg))
 				*p = PyUnicode_AS_UNICODE(arg);
 			else
@@ -1220,13 +1216,7 @@ vgetargskeywords(PyObject *args, PyObject *keywords, char *format,
 		int pos = 0;
 		while (PyDict_Next(keywords, &pos, &key, &value)) {
 			int match = 0;
-			char *ks;
-			if (!PyString_Check(key)) {
-				PyErr_SetString(PyExc_TypeError, 
-					        "keywords must be strings");
-				return 0;
-			}
-			ks = PyString_AsString(key);
+			char *ks = PyString_AsString(key);
 			for (i = 0; i < max; i++) {
 				if (!strcmp(ks, kwlist[i])) {
 					match = 1;

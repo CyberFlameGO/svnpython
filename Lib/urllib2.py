@@ -92,6 +92,7 @@ import httplib
 import inspect
 import re
 import base64
+import types
 import urlparse
 import md5
 import mimetypes
@@ -101,6 +102,7 @@ import ftplib
 import sys
 import time
 import os
+import stat
 import gopherlib
 import posixpath
 
@@ -141,7 +143,7 @@ def install_opener(opener):
 
 # do these error classes make sense?
 # make sure all of the IOError stuff is overridden.  we just want to be
-# subtypes.
+ # subtypes.
 
 class URLError(IOError):
     # URLError is a sub-type of IOError, but it doesn't share any of
@@ -157,17 +159,13 @@ class HTTPError(URLError, addinfourl):
     __super_init = addinfourl.__init__
 
     def __init__(self, url, code, msg, hdrs, fp):
+        self.__super_init(fp, hdrs, url)
         self.code = code
         self.msg = msg
         self.hdrs = hdrs
         self.fp = fp
+        # XXX
         self.filename = url
-        # The addinfourl classes depend on fp being a valid file
-        # object.  In some cases, the HTTPError may not have a valid
-        # file object.  If this happens, the simplest workaround is to
-        # not initialize the base classes.
-        if fp is not None:
-            self.__super_init(fp, hdrs, url)
 
     def __str__(self):
         return 'HTTP Error %s: %s' % (self.code, self.msg)
@@ -258,7 +256,7 @@ class OpenerDirector:
         for meth in dir(handler):
             if meth[-5:] == '_open':
                 protocol = meth[:-5]
-                if protocol in self.handle_open:
+                if self.handle_open.has_key(protocol):
                     self.handle_open[protocol].append(handler)
                 else:
                     self.handle_open[protocol] = [handler]
@@ -274,7 +272,7 @@ class OpenerDirector:
                 except ValueError:
                     pass
                 dict = self.handle_error.get(proto, {})
-                if kind in dict:
+                if dict.has_key(kind):
                     dict[kind].append(handler)
                 else:
                     dict[kind] = [handler]
@@ -306,7 +304,7 @@ class OpenerDirector:
 
     def open(self, fullurl, data=None):
         # accept a URL or a Request object
-        if isinstance(fullurl, basestring):
+        if isinstance(fullurl, (types.StringType, types.UnicodeType)):
             req = Request(fullurl, data)
         else:
             req = fullurl
@@ -350,9 +348,9 @@ class OpenerDirector:
             return self._call_chain(*args)
 
 # XXX probably also want an abstract factory that knows things like
-# the fact that a ProxyHandler needs to get inserted first.
+ # the fact that a ProxyHandler needs to get inserted first.
 # would also know when it makes sense to skip a superclass in favor of
-# a subclass and when it might make sense to include both
+ # a subclass and when it might make sense to include both
 
 def build_opener(*handlers):
     """Create an opener object from a list of handlers.
@@ -407,9 +405,9 @@ class HTTPRedirectHandler(BaseHandler):
     # have already seen.  Do this by adding a handler-specific
     # attribute to the Request object.
     def http_error_302(self, req, fp, code, msg, headers):
-        if 'location' in headers:
+        if headers.has_key('location'):
             newurl = headers['location']
-        elif 'uri' in headers:
+        elif headers.has_key('uri'):
             newurl = headers['uri']
         else:
             return
@@ -422,7 +420,7 @@ class HTTPRedirectHandler(BaseHandler):
         new.error_302_dict = {}
         if hasattr(req, 'error_302_dict'):
             if len(req.error_302_dict)>10 or \
-               newurl in req.error_302_dict:
+               req.error_302_dict.has_key(newurl):
                 raise HTTPError(req.get_full_url(), code,
                                 self.inf_msg + msg, headers, fp)
             new.error_302_dict.update(req.error_302_dict)
@@ -511,7 +509,7 @@ class CustomProxyHandler(BaseHandler):
         return self.parent.open(req)
 
     def add_proxy(self, cpo):
-        if cpo.proto in self.proxies:
+        if self.proxies.has_key(cpo.proto):
             self.proxies[cpo.proto].append(cpo)
         else:
             self.proxies[cpo.proto] = [cpo]
@@ -522,10 +520,10 @@ class HTTPPasswordMgr:
 
     def add_password(self, realm, uri, user, passwd):
         # uri could be a single URI or a sequence
-        if isinstance(uri, basestring):
+        if isinstance(uri, (types.StringType, types.UnicodeType)):
             uri = [uri]
         uri = tuple(map(self.reduce_uri, uri))
-        if not realm in self.passwd:
+        if not self.passwd.has_key(realm):
             self.passwd[realm] = {}
         self.passwd[realm][uri] = (user, passwd)
 
@@ -552,13 +550,13 @@ class HTTPPasswordMgr:
         Both args must be URIs in reduced form.
         """
         if base == test:
-            return True
+            return 1
         if base[0] != test[0]:
-            return False
+            return 0
         common = posixpath.commonprefix((base[1], test[1]))
         if len(common) == len(base[1]):
-            return True
-        return False
+            return 1
+        return 0
 
 
 class HTTPPasswordMgrWithDefaultRealm(HTTPPasswordMgr):
@@ -757,10 +755,10 @@ class AbstractHTTPHandler(BaseHandler):
             if req.has_data():
                 data = req.get_data()
                 h.putrequest('POST', req.get_selector())
-                if not 'Content-type' in req.headers:
+                if not req.headers.has_key('Content-type'):
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
-                if not 'Content-length' in req.headers:
+                if not req.headers.has_key('Content-length'):
                     h.putheader('Content-length', '%d' % len(data))
             else:
                 h.putrequest('GET', req.get_selector())
@@ -884,9 +882,10 @@ class FileHandler(BaseHandler):
         file = req.get_selector()
         localfile = url2pathname(file)
         stats = os.stat(localfile)
-        size = stats.st_size
-        modified = rfc822.formatdate(stats.st_mtime)
+        size = stats[stat.ST_SIZE]
+        modified = rfc822.formatdate(stats[stat.ST_MTIME])
         mtype = mimetypes.guess_type(file)[0]
+        stats = os.stat(localfile)
         headers = mimetools.Message(StringIO(
             'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
             (mtype or 'text/plain', size, modified)))
@@ -962,7 +961,7 @@ class CacheFTPHandler(FTPHandler):
 
     def connect_ftp(self, user, passwd, host, port, dirs):
         key = user, passwd, host, port
-        if key in self.cache:
+        if self.cache.has_key(key):
             self.timeout[key] = time.time() + self.delay
         else:
             self.cache[key] = ftpwrapper(user, passwd, host, port, dirs)
@@ -1092,7 +1091,7 @@ if __name__ == "__main__":
     install_opener(build_opener(cfh, GopherHandler))
 
     for url in urls:
-        if isinstance(url, tuple):
+        if isinstance(url, types.TupleType):
             url, req = url
         else:
             req = None
