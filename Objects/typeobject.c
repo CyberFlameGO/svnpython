@@ -273,9 +273,6 @@ PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)
 {
 	PyObject *mro;
 
-	if (!(a->tp_flags & Py_TPFLAGS_HAVE_CLASS))
-		return b == a || b == &PyBaseObject_Type;
-
 	mro = a->tp_mro;
 	if (mro != NULL) {
 		/* Deal with multiple inheritance without recursion
@@ -2559,8 +2556,7 @@ slot_sq_contains(PyObject *self, PyObject *value)
 	}
 	else {
 		PyErr_Clear();
-		return _PySequence_IterSearch(self, value,
-					      PY_ITERSEARCH_CONTAINS);
+		return _PySequence_IterContains(self, value);
 	}
 }
 

@@ -1,26 +1,3 @@
-What's New in Python 2.2a4?
-===========================
-
-Core
-
-Library
-
-- operator.indexOf() (PySequence_Index() in the C API) now works with any
-  iterable object.
-
-Tools
-
-Build
-
-C API
-
-New platforms
-
-Tests
-
-Windows
-
-
 What's New in Python 2.2a3?
 ===========================
 

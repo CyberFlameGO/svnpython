@@ -65,25 +65,15 @@ PyClass_New(PyObject *bases, PyObject *dict, PyObject *name)
 			return NULL;
 	}
 	else {
-		int i, n;
-		PyObject *base;
+		int i;
 		if (!PyTuple_Check(bases)) {
 			PyErr_SetString(PyExc_TypeError,
 					"PyClass_New: bases must be a tuple");
 			return NULL;
 		}
-		n = PyTuple_Size(bases);
-		for (i = 0; i < n; i++) {
-			base = PyTuple_GET_ITEM(bases, i);
-			if (!PyClass_Check(base)) {
-				if (PyCallable_Check(
-					(PyObject *) base->ob_type))
-					return PyObject_CallFunction(
-						(PyObject *) base->ob_type,
-						"OOO",
-						name,
-						bases,
-						dict);
+		i = PyTuple_Size(bases);
+		while (--i >= 0) {
+			if (!PyClass_Check(PyTuple_GetItem(bases, i))) {
 				PyErr_SetString(PyExc_TypeError,
 					"PyClass_New: base must be a class");
 				return NULL;
@@ -1224,8 +1214,7 @@ instance_contains(PyInstanceObject *inst, PyObject *member)
 		 * __contains__ attribute, and try iterating instead.
 		 */
 		PyErr_Clear();
-		return _PySequence_IterSearch((PyObject *)inst, member,
-					      PY_ITERSEARCH_CONTAINS);
+		return _PySequence_IterContains((PyObject *)inst, member);
 	}
 	else
 		return -1;
