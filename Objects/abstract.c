@@ -1428,12 +1428,6 @@ PySequence_Tuple(PyObject *v)
 		}
 		if (j >= n) {
 			int oldn = n;
-			/* The over-allocation strategy can grow a bit faster
-			   than for lists because unlike lists the 
-			   over-allocation isn't permanent -- we reclaim
-			   the excess before the end of this routine.
-			   So, grow by ten and then add 25%.
-			*/
 			n += 10;
 			n += n >> 2;
 			if (n < oldn) {
@@ -1506,7 +1500,7 @@ PySequence_Fast(PyObject *v, const char *m)
 		return NULL;
 	}
 
-	v = PySequence_List(it);
+	v = PySequence_Tuple(it);
 	Py_DECREF(it);
 
 	return v;

@@ -1,5 +1,6 @@
-This package will install MacPython 2.5a0 for Mac OS X
-10.3.
+This package will install MacPython 2.4.1 for Mac OS X
+10.3. Separate installers are available for older versions
+of MacOSX, see the homepage, below.
 
 Installation requires approximately 20 MB of disk
 space, ignore the message that it will take zero bytes.
@@ -16,7 +17,7 @@ a set of pre-built extension modules that open up
 specific Macintosh technologies to Python programs
 (Carbon, AppleScript, Quicktime, more).
 
-The installer puts the applications in MacPython-2.5 in
+The installer puts the applications in MacPython-2.3 in
 your Applications folder, command-line tools in
 /usr/local/bin and the underlying machinery in
 /Library/Frameworks/Python.framework.

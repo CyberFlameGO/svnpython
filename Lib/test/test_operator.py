@@ -324,14 +324,7 @@ class OperatorTestCase(unittest.TestCase):
         f = operator.attrgetter(2)
         self.assertRaises(TypeError, f, a)
         self.assertRaises(TypeError, operator.attrgetter)
-
-        # multiple gets
-        record = A()
-        record.x = 'X'
-        record.y = 'Y'
-        record.z = 'Z'
-        self.assertEqual(operator.attrgetter('x','z','y')(record), ('X', 'Z', 'Y'))
-        self.assertRaises(TypeError, operator.attrgetter('x', (), 'y'), record)
+        self.assertRaises(TypeError, operator.attrgetter, 1, 2)
 
         class C(object):
             def __getattr(self, name):
@@ -353,6 +346,7 @@ class OperatorTestCase(unittest.TestCase):
         f = operator.itemgetter('name')
         self.assertRaises(TypeError, f, a)
         self.assertRaises(TypeError, operator.itemgetter)
+        self.assertRaises(TypeError, operator.itemgetter, 1, 2)
 
         d = dict(key='val')
         f = operator.itemgetter('key')
@@ -367,29 +361,9 @@ class OperatorTestCase(unittest.TestCase):
         self.assertEqual(sorted(inventory, key=getcount),
             [('orange', 1), ('banana', 2), ('apple', 3), ('pear', 5)])
 
-        # multiple gets
-        data = map(str, range(20))
-        self.assertEqual(operator.itemgetter(2,10,5)(data), ('2', '10', '5'))
-        self.assertRaises(TypeError, operator.itemgetter(2, 'x', 5), data)
+def test_main():
+    test_support.run_unittest(OperatorTestCase)
 
-
-def test_main(verbose=None):
-    import sys
-    test_classes = (
-        OperatorTestCase,
-    )
-
-    test_support.run_unittest(*test_classes)
-
-    # verify reference counting
-    if verbose and hasattr(sys, "gettotalrefcount"):
-        import gc
-        counts = [None] * 5
-        for i in xrange(len(counts)):
-            test_support.run_unittest(*test_classes)
-            gc.collect()
-            counts[i] = sys.gettotalrefcount()
-        print counts
 
 if __name__ == "__main__":
-    test_main(verbose=True)
+    test_main()

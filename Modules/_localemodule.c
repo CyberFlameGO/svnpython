@@ -426,7 +426,7 @@ static char *mac_getscript(void)
     /* XXX which one is mac-latin2? */
     }
     if (!name) {
-        /* This leaks an object. */
+        /* This leaks a an object. */
         name = CFStringConvertEncodingToIANACharSetName(enc);
     }
     return (char *)CFStringGetCStringPtr(name, 0); 

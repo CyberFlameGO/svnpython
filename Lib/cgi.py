@@ -34,16 +34,13 @@ __version__ = "2.6"
 # Imports
 # =======
 
-from operator import attrgetter
 import sys
 import os
 import urllib
-import email.Parser
+import mimetools
+import rfc822
 import UserDict
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 __all__ = ["MiniFieldStorage", "FieldStorage", "FormContentDict",
            "SvFormContentDict", "InterpFormContentDict", "FormContent",
@@ -106,8 +103,6 @@ log = initlog           # The current logging function
 
 # Parsing functions
 # =================
-
-_header_parser = email.Parser.HeaderParser()
 
 # Maximum input we will accept when REQUEST_METHOD is POST
 # 0 ==> unlimited input
@@ -238,7 +233,7 @@ def parse_multipart(fp, pdict):
 
     Arguments:
     fp   : input file
-    pdict: dictionary containing other parameters of content-type header
+    pdict: dictionary containing other parameters of conten-type header
 
     Returns a dictionary just like parse_qs(): keys are the field names, each
     value is a list of values for that field.  This is easy to use but not
@@ -271,7 +266,7 @@ def parse_multipart(fp, pdict):
         data = None
         if terminator:
             # At start of next part.  Read headers first.
-            headers = _header_parser.parse(fp)
+            headers = mimetools.Message(fp)
             clength = headers.getheader('content-length')
             if clength:
                 try:
@@ -333,7 +328,7 @@ def parse_header(line):
     Return the main content-type and a dictionary of options.
 
     """
-    plist = [x.strip() for x in line.split(';')]
+    plist = map(lambda x: x.strip(), line.split(';'))
     key = plist.pop(0).lower()
     pdict = {}
     for p in plist:
@@ -408,9 +403,8 @@ class FieldStorage:
 
     disposition_options: dictionary of corresponding options
 
-    headers: a dictionary(-like) object (sometimes
-        email.Message.Message or a subclass thereof) containing *all*
-        headers
+    headers: a dictionary(-like) object (sometimes rfc822.Message or a
+        subclass thereof) containing *all* headers
 
     The class is subclassable, mostly for the purpose of overriding
     the make_file() method, which is called internally to come up with
@@ -573,7 +567,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return map(lambda v: v.value, value)
             else:
                 return value.value
         else:
@@ -595,7 +589,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return map(lambda v: v.value, value)
             else:
                 return [value.value]
         else:
@@ -652,7 +646,7 @@ class FieldStorage:
                      environ, keep_blank_values, strict_parsing)
         # Throw first part away
         while not part.done:
-            headers = _header_parser.parse(self.fp)
+            headers = rfc822.Message(self.fp)
             part = klass(self.fp, headers, ib,
                          environ, keep_blank_values, strict_parsing)
             self.list.append(part)

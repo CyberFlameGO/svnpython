@@ -53,7 +53,6 @@ extern void init_sre(void);
 extern void initparser(void);
 extern void init_winreg(void);
 extern void initdatetime(void);
-extern void initfunctional(void);
 
 extern void init_multibytecodec(void);
 extern void init_codecs_cn(void);
@@ -125,7 +124,6 @@ struct _inittab _PyImport_Inittab[] = {
 	{"parser", initparser},
 	{"_winreg", init_winreg},
 	{"datetime", initdatetime},
-	{"functional", initfunctional},
 
 	{"xxsubtype", initxxsubtype},
 	{"zipimport", initzipimport},
