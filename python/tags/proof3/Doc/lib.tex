@@ -1,0 +1,156 @@
+\documentstyle[twoside,11pt,myformat]{report}
+
+% NOTE: this file controls which chapters/sections of the library
+% manual are actually printed.  It is easy to customize your manual
+% by commenting out sections that you're not interested in.
+
+\title{Python Library Reference}
+
+\input{boilerplate}
+
+\makeindex			% tell \index to actually write the .idx file
+
+
+\begin{document}
+
+\pagenumbering{roman}
+
+\maketitle
+
+\input{copyright}
+
+\begin{abstract}
+
+\noindent
+This document describes the built-in and standard types, exceptions,
+functions and modules that come with the Python system.  It assumes
+basic knowledge about the Python language.  For an informal
+introduction to the language, see the {\em Python Tutorial}.  The {\em
+Python Reference Manual} gives a more formal definition of the
+language.
+
+\end{abstract}
+
+\pagebreak
+
+{
+\parskip = 0mm
+\tableofcontents
+}
+
+\pagebreak
+
+\pagenumbering{arabic}
+
+				% Chapter title:
+
+\input{libintro}		% Introduction
+
+\input{libobjs}			% Built-in Types, Exceptions and Functions
+\input{libtypes}
+\input{libexcs}
+\input{libfuncs}
+
+\input{libpython}		% Python Services
+\input{libsys}
+\input{libtypes2}		% types is already taken :-(
+\input{libtraceback}
+\input{libpickle}
+\input{libshelve}
+\input{libcopy}
+\input{libmarshal}
+\input{libimp}
+\input{libbltin}		% really __builtin__
+\input{libmain}			% really __main__
+
+\input{libstrings}		% String Services
+\input{libstring}
+\input{libregex}
+\input{libregsub}
+\input{libstruct}
+
+\input{libmisc}			% Miscellaneous Services
+\input{libmath}
+\input{librand}
+\input{libwhrandom}
+\input{libarray}
+
+\input{liballos}		% Generic Operating System Services
+\input{libos}
+\input{libtime}
+\input{libgetopt}
+\input{libtempfile}
+
+\input{libsomeos}		% Optional Operating System Services
+\input{libsignal}
+\input{libsocket}
+\input{libselect}
+\input{libthread}
+
+\input{libunix}			% UNIX Specific Services
+\input{libposix}
+\input{libppath}		% == posixpath
+\input{libpwd}
+\input{libgrp}
+\input{libdbm}
+\input{libgdbm}
+\input{libtermios}
+\input{libfcntl}
+\input{libposixfile}
+
+\input{libpdb}			% The Python Debugger
+
+\input{libprofile}		% The Python Profiler
+
+\input{libwww}			% Internet and WWW Services
+\input{libcgi}
+\input{liburllib}
+\input{libhttplib}
+\input{libftplib}
+\input{libgopherlib}
+\input{libnntplib}
+\input{liburlparse}
+\input{libhtmllib}
+\input{libsgmllib}
+\input{librfc822}
+\input{libmimetools}
+
+\input{libmm}			% Multimedia Services
+\input{libaudioop}
+\input{libimageop}
+\input{libaifc}
+\input{libjpeg}
+\input{librgbimg}
+
+\input{libcrypto}		% Cryptographic Services
+\input{libmd5}
+\input{libmpz}
+\input{librotor}
+
+%\input{libamoeba}		% AMOEBA ONLY
+
+\input{libmac}			% MACINTOSH ONLY
+\input{libctb}
+\input{libmacconsole}
+\input{libmacdnr}
+\input{libmacfs}
+\input{libmactcp}
+\input{libmacspeech}
+
+\input{libstdwin}		% STDWIN ONLY
+
+\input{libsgi}			% SGI IRIX ONLY
+\input{libal}
+%\input{libaudio}
+\input{libcd}
+\input{libfl}
+\input{libfm}
+\input{libgl}
+\input{libimgfile}
+%\input{libpanel}
+
+\input{libsun}			% SUNOS ONLY
+
+\input{lib.ind}			% Index
+
+\end{document}
