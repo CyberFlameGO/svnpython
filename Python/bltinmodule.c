@@ -497,7 +497,7 @@ builtin_eval(PyObject *self, PyObject *args)
 	}
 
 	if (PyCode_Check(cmd)) {
-		if (PyCode_GetNumFree((PyCodeObject *)cmd) > 0) {
+		if (PyTuple_GET_SIZE(((PyCodeObject *)cmd)->co_freevars) > 0) {
 			PyErr_SetString(PyExc_TypeError,
 		"code object passed to eval() may not contain free variables");
 			return NULL;
