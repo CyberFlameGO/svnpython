@@ -1,6 +1,3 @@
-% Based on HTML documentation by Piers Lauder <piers@staff.cs.usyd.edu.au>;
-% converted by Fred L. Drake, Jr. <fdrake@acm.org>.
-
 \section{\module{imaplib} ---
          IMAP4 protocol client}
 
@@ -8,6 +5,9 @@
 \modulesynopsis{IMAP4 protocol client (requires sockets).}
 \moduleauthor{Piers Lauder}{piers@staff.cs.usyd.edu.au}
 \sectionauthor{Piers Lauder}{piers@staff.cs.usyd.edu.au}
+
+% Based on HTML documentation by Piers Lauder <piers@staff.cs.usyd.edu.au>;
+% converted by Fred L. Drake, Jr. <fdrake@acm.org>.
 
 \indexii{IMAP4}{protocol}
 
@@ -41,12 +41,6 @@ and instantiating a new one will usually allow recovery from this
 exception.
 \end{excdesc}
 
-\begin{excdesc}{IMAP4.readonly}
-This exception is raised when a writeable mailbox has its status changed by the server.  This is a
-sub-class of \exception{IMAP4.error}.  Some other client now has write permission,
-and the mailbox will need to be re-opened to re-obtain write permission.
-\end{excdesc}
-
 The following utility functions are defined:
 
 \begin{funcdesc}{Internaldate2tuple}{datestr}
@@ -78,10 +72,10 @@ At the end of the module, there is a test section that contains a more
 extensive example of usage.
 
 \begin{seealso}
-  \seetext{Documents describing the protocol, and sources and binaries 
-           for servers implementing it, can all be found at the
-           University of Washington's \emph{IMAP Information Center}
-           (\url{http://www.cac.washington.edu/imap/}).}
+\seetext{Documents describing the protocol, and sources and binaries
+for servers implementing it, can all be found at the University of
+Washington's \emph{IMAP Information Center}
+(\url{http://www.cac.washington.edu/imap/}).}
 \end{seealso}
 
 
@@ -89,13 +83,6 @@ extensive example of usage.
 
 All IMAP4rev1 commands are represented by methods of the same name,
 either upper-case or lower-case.
-
-All arguments to commands are converted to strings, except for
-\samp{AUTHENTICATE}, and the last argument to \samp{APPEND} which is
-passed as an IMAP4 literal.  If necessary (the string contains IMAP4
-protocol-sensitive characters and isn't enclosed with either
-parentheses or double quotes) each string is quoted. However, the
-\var{password} argument to the \samp{LOGIN} command is always quoted.
 
 Each command returns a tuple: \code{(\var{type}, [\var{data},
 ...])} where \var{type} is usually \code{'OK'} or \code{'NO'},
@@ -157,7 +144,6 @@ An \class{IMAP4} instance has the following methods:
 
 \begin{methoddesc}{login}{user, password}
   Identify the client using a plaintext password.
-  The \var{password} will be quoted.
 \end{methoddesc}
 
 \begin{methoddesc}{logout}{}
@@ -169,20 +155,6 @@ An \class{IMAP4} instance has the following methods:
   \var{directory} defaults to the top level directory and
   \var{pattern} defaults to match any mailbox.
   Returned data are tuples of message part envelope and data.
-\end{methoddesc}
-
-\begin{methoddesc}{noop}{}
-  Send \samp{NOOP} to server.
-\end{methoddesc}
-
-\begin{methoddesc}{open}{host, port}
-  Opens socket to \var{port} at \var{host}.
-  You may override this method.
-\end{methoddesc}
-
-\begin{methoddesc}{partial}{message_num, message_part, start, length}
-  Fetch truncated part of a message.
-  Returned data is a tuple of message part envelope and data.
 \end{methoddesc}
 
 \begin{methoddesc}{recent}{}
@@ -209,10 +181,6 @@ An \class{IMAP4} instance has the following methods:
   \var{mailbox} (\samp{EXISTS} response).  The default \var{mailbox}
   is \code{'INBOX'}.  If the \var{readonly} flag is set, modifications
   to the mailbox are not allowed.
-\end{methoddesc}
-
-\begin{methoddesc}{socket}{}
-  Returns socket instance used to connect to server. 
 \end{methoddesc}
 
 \begin{methoddesc}{status}{mailbox, names}

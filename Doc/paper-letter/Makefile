@@ -35,14 +35,31 @@ PSFILES=	$(MANPSFILES) $(HOWTOPSFILES)
 
 include ../Makefile.deps
 
+COMMONSTYLES= ../texinputs/python.sty \
+	../texinputs/pypaper.sty \
+	../texinputs/python.ist
+
+COMMONTEX= ../texinputs/copyright.tex \
+	../texinputs/boilerplate.tex
+
+MANSTYLES= ../texinputs/fncychap.sty \
+	../texinputs/manual.cls \
+	$(COMMONSTYLES)
+
+HOWTOSTYLES= ../texinputs/howto.cls \
+	$(COMMONSTYLES)
+
 
 SCRIPTS:	  ../tools/fix_hack ../tools/mkdvi.sh ../tools/indfix.py
 
-$(DVIFILES):	  $(SCRIPTS)
-$(PDFFILES):	  $(SCRIPTS)
+$(DVIFILES):	  $(SCRIPTS) $(COMMONTEX)
+$(PDFFILES):	  $(SCRIPTS) $(COMMONTEX)
 
-$(HOWTODVIFILES): ../tools/mkhowto
-$(HOWTOPDFFILES): ../tools/mkhowto
+$(MANDVIFILES):	  $(MANSTYLES)
+$(MANPDFFILES):	  $(MANSTYLES)
+
+$(HOWTODVIFILES): ../tools/mkhowto $(HOWTOSTYLES)
+$(HOWTOPDFFILES): ../tools/mkhowto $(HOWTOSTYLES)
 
 
 # Rules to build PostScript and PDF formats
@@ -58,22 +75,25 @@ pdf:	$(PDFFILES)
 ps:	$(PSFILES)
 
 
-README:	$(PSFILES)
+README:	$(PSFILES) $(TOOLSDIR)/getpagecounts
 	$(TOOLSDIR)/getpagecounts >$@
 
 
 # Python/C API Reference Manual
-api.dvi: $(APIFILES)
+api.dvi: api.tex $(APIFILES)
 	$(MKDVI) api
 
-api.pdf: $(APIFILES)
+api.pdf: api.tex $(APIFILES)
 	$(MKPDF) api
 
+api.tex: ../api/api.tex ../api/refcounts.dat ../tools/anno-api.py
+	$(PYTHON) ../tools/anno-api.py -o $@ ../api/api.tex
+
 # Documenting Python
-doc.dvi: $(DOCFILES)
+doc.dvi: $(DOCFILES) ../texinputs/ltxmarkup.sty
 	$(MKHOWTO) --dvi ../doc/doc.tex
 
-doc.pdf: $(DOCFILES)
+doc.pdf: $(DOCCFILES) ../texinputs/ltxmarkup.sty
 	$(MKHOWTO) --pdf ../doc/doc.tex
 
 # Extending and Embedding the Python Interpreter
@@ -113,7 +133,7 @@ tut.pdf: $(TUTFILES)
 
 
 clean:
-	rm -f *~ *.aux *.idx *.ilg *.ind *.log *.toc *.bkm *.syn *.pla
+	rm -f *~ *.aux *.idx *.ilg *.ind *.log *.toc *.bkm *.syn *.pla api.tex
 
 clobber: clean
 	rm -f $(DVIFILES) $(PSFILES) $(PDFFILES)

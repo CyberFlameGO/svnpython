@@ -67,7 +67,7 @@ When exceptions are strings, the string for the exception is
 \begin{datadesc}{name}
 The name of the OS dependent module imported.  The following names
 have currently been registered: \code{'posix'}, \code{'nt'},
-\code{'dos'}, \code{'mac'}, \code{'os2'}, \code{'ce'}, \code{'java'}.
+\code{'dos'}, \code{'mac'}, \code{'os2'}, \code{'ce'}.
 \end{datadesc}
 
 \begin{datadesc}{path}
@@ -107,12 +107,6 @@ These functions are described in ``Files and Directories'' (section
 \ref{os-file-dir}).
 \end{funcdescni}
 
-\begin{funcdesc}{ctermid}{}
-Return the filename corresponding to the controlling terminal of the
-process.
-Availability: \UNIX{}.
-\end{funcdesc}
-
 \begin{funcdesc}{getegid}{}
 Return the current process' effective group id.
 Availability: \UNIX{}.
@@ -127,18 +121,6 @@ Availability: \UNIX{}.
 \begin{funcdesc}{getgid}{}
 \index{process!group}
 Return the current process' group id.
-Availability: \UNIX{}.
-\end{funcdesc}
-
-\begin{funcdesc}{getgroups}{}
-Return list of supplemental group ids associated with the current
-process.
-Availability: \UNIX{}.
-\end{funcdesc}
-
-\begin{funcdesc}{getlogin}{}
-Return the actual login name for the current process, even if there
-are multiple login names which map to the same user id.
 Availability: \UNIX{}.
 \end{funcdesc}
 
@@ -262,16 +244,12 @@ argument to the built-in \function{open()} function.  The exit status of
 the command (encoded in the format specified for \function{wait()}) is
 available as the return value of the \method{close()} method of the file
 object, except that when the exit status is zero (termination without
-errors), \code{None} is returned.
+errors), \code{None} is returned.  \strong{Note:} This function
+behaves unreliably under Windows due to the native implementation of
+\cfunction{popen()}.
 Availability: \UNIX{}, Windows.
 \end{funcdesc}
 
-\begin{funcdesc}{tmpfile}{}
-Return a new file object opened in update mode (\samp{w+}).  The file
-has no directory entries associated with it and will be automatically
-deleted once there are no file descriptors for the file.
-Availability: \UNIX{}.
-\end{funcdesc}
 
 
 \subsection{File Descriptor Operations \label{os-fd-ops}}
@@ -300,25 +278,6 @@ Availability: Macintosh, \UNIX{}, Windows.
 Duplicate file descriptor \var{fd} to \var{fd2}, closing the latter
 first if necessary.
 Availability: \UNIX{}, Windows.
-\end{funcdesc}
-
-\begin{funcdesc}{fpathconf}{fd, name}
-Return system configration information relevant to an open file.
-\var{name} specifies the configuration value to retrieve; it may be a
-string which is the name of a defined system value; these names are
-specified in a number of standards (\POSIX.1, Unix95, Unix98, and
-others).  Some platforms define additional names as well.  The names
-known to the host operating system are given in the
-\code{pathconf_names} dictionary.  For configuration variables not
-included in that mapping, passing an integer for \var{name} is also
-accepted.
-Availability: \UNIX{}.
-
-If \var{name} is a string and is not known, \exception{ValueError} is
-raised.  If a specific value for \var{name} is not supported by the
-host system, even if it is included in \code{pathconf_names}, an
-\exception{OSError} is raised with \constant{errno.EINVAL} for the
-error number.
 \end{funcdesc}
 
 \begin{funcdesc}{fstat}{fd}
@@ -443,11 +402,34 @@ Availability: Macintosh, \UNIX{}, Windows.
 \subsection{Files and Directories \label{os-file-dir}}
 
 \begin{funcdesc}{access}{path, mode}
-Check read/write/execute permissions for this process or extance of file
-\var{path}.  Return \code{1} if access is granted, \code{0} if not.
-See the \UNIX{} manual for the semantics.
+Check read/write/execute permissions for this process or existence of
+file \var{path}.  \var{mode} should be \constant{F_OK} to test the
+existence of \var{path}, or it can be the inclusive OR of one or more
+of \constant{R_OK}, \constant{W_OK}, and \constant{X_OK} to test
+permissions.  Return \code{1} if access is allowed, \code{0} if not.
+See the \UNIX{} man page \manpage{access}{2} for more information.
 Availability: \UNIX{}.
 \end{funcdesc}
+
+\begin{datadesc}{F_OK}
+  Value to pass as the \var{mode} parameter of \function{access()} to
+  test the existence of \var{path}.
+\end{datadesc}
+
+\begin{datadesc}{R_OK}
+  Value to include in the \var{mode} parameter of \function{access()}
+  to test the readability of \var{path}.
+\end{datadesc}
+
+\begin{datadesc}{W_OK}
+  Value to include in the \var{mode} parameter of \function{access()}
+  to test the writability of \var{path}.
+\end{datadesc}
+
+\begin{datadesc}{X_OK}
+  Value to include in the \var{mode} parameter of \function{access()}
+  to determine if \var{path} can be executed.
+\end{datadesc}
 
 \begin{funcdesc}{chdir}{path}
 \index{directory!changing}
@@ -520,33 +502,6 @@ directory already exists or cannot be created.  The default \var{mode}
 is \code{0777} (octal).
 \versionadded{1.5.2}
 \end{funcdesc}
-
-\begin{funcdesc}{pathconf}{path, name}
-Return system configration information relevant to a named file.
-\var{name} specifies the configuration value to retrieve; it may be a
-string which is the name of a defined system value; these names are
-specified in a number of standards (\POSIX.1, Unix95, Unix98, and
-others).  Some platforms define additional names as well.  The names
-known to the host operating system are given in the
-\code{pathconf_names} dictionary.  For configuration variables not
-included in that mapping, passing an integer for \var{name} is also
-accepted.
-Availability: \UNIX{}.
-
-If \var{name} is a string and is not known, \exception{ValueError} is
-raised.  If a specific value for \var{name} is not supported by the
-host system, even if it is included in \code{pathconf_names}, an
-\exception{OSError} is raised with \constant{errno.EINVAL} for the
-error number.
-\end{funcdesc}
-
-\begin{datadesc}{pathconf_names}
-Dictionary mapping names accepted by \function{pathconf()} and
-\function{fpathconf()} to the integer values defined for those names
-by the host operating system.  This can be used to determine the set
-of names known to the system.
-Availability: \UNIX.
-\end{datadesc}
 
 \begin{funcdesc}{readlink}{path}
 Return a string representing the path to which the symbolic link
@@ -645,31 +600,6 @@ Create a symbolic link pointing to \var{src} named \var{dst}.
 Availability: \UNIX{}.
 \end{funcdesc}
 
-\begin{funcdesc}{tempnam}{\optional{dir\optional{, prefix}}}
-Return a unique path name that is reasonable for creating a temporary
-file.  This will be an absolute path that names a potential directory
-entry in the directory \var{dir} or a common location for temporary
-files if \var{dir} is omitted or \code{None}.  If given and not
-\code{None}, \var{prefix} is used to provide a short prefix to the
-filename.  Applications are responsible for properly creating and
-managing files created using paths returned by \function{tempnam()};
-no automatic cleanup is provided.
-\end{funcdesc}
-
-\begin{funcdesc}{tmpnam}{}
-Return a unique path name that is reasonable for creating a temporary
-file.  This will be an absolute path that names a potential directory
-entry in a common location for temporary files.  Applications are
-responsible for properly creating and managing files created using
-paths returned by \function{tmpnam()}; no automatic cleanup is
-provided.
-\end{funcdesc}
-
-\begin{datadesc}{TMP_MAX}
-The maximum number of unique names that \function{tmpnam()} will
-generate before reusing names.
-\end{datadesc}
-
 \begin{funcdesc}{unlink}{path}
 Remove the file \var{path}.  This is the same function as
 \function{remove()}; the \function{unlink()} name is its traditional
@@ -686,17 +616,9 @@ Availability: Macintosh, \UNIX{}, Windows.
 
 \subsection{Process Management \label{os-process}}
 
-These functions may be used to create and manage processes.
+These functions may be used to create and manage additional
+processes.
 
-
-\begin{funcdesc}{abort}{}
-Generate a \constant{SIGABRT} signal to the current process.  On
-\UNIX, the default behavior is to produce a core dump; on Windows, the 
-process immediately returns an exit code of \code{3}.  Be aware that
-programs which use \function{signal.signal()} to register a handler
-for \constant{SIGABRT} will behave differently.
-Availability: \UNIX, Windows.
-\end{funcdesc}
 
 \begin{funcdesc}{execl}{path, arg0, arg1, ...}
 This is equivalent to
@@ -788,7 +710,7 @@ a list or a tuple.  \var{mode} is a magic operational constant.  See
 the Visual \Cpp{} Runtime Library documentation for further
 information; the constants are exposed to the Python programmer as
 listed below.
-Availability: \UNIX{}, Windows.
+Availability: Windows.
 \versionadded{1.5.2}
 \end{funcdesc}
 
@@ -799,24 +721,17 @@ the mapping \var{env} as the environment.  \var{args} may be a list or
 a tuple.  \var{mode} is a magic operational constant.  See the Visual
 \Cpp{} Runtime Library documentation for further information; the
 constants are exposed to the Python programmer as listed below.
-Availability: \UNIX{}, Windows.
+Availability: Windows.
 \versionadded{1.5.2}
 \end{funcdesc}
 
 \begin{datadesc}{P_WAIT}
 \dataline{P_NOWAIT}
 \dataline{P_NOWAITO}
-Possible values for the \var{mode} parameter to \function{spawnv()}
-and \function{spawnve()}.
-Availability: \UNIX{}, Windows.
-\versionadded{1.5.2}
-\end{datadesc}
-
-\begin{datadesc}{P_OVERLAY}
+\dataline{P_OVERLAY}
 \dataline{P_DETACH}
 Possible values for the \var{mode} parameter to \function{spawnv()}
-and \function{spawnve()}.  These are less portable than those listed
-above.
+and \function{spawnve()}.
 Availability: Windows.
 \versionadded{1.5.2}
 \end{datadesc}
@@ -877,9 +792,10 @@ process status is available immediately.
 Availability: \UNIX{}.
 \end{datadesc}
 
-The following functions take a process stats code as returned by
-\function{waitpid()} as a parameter.  They may be used to determine
-the disposition of a process.
+The following functions take a process status code as returned by
+\function{system()}, \function{wait()}, or \function{waitpid()} as a
+parameter.  They may be used to determine the disposition of a
+process.
 
 \begin{funcdesc}{WIFSTOPPED}{status}
 Return true if the process has been stopped.
@@ -915,55 +831,7 @@ Availability: \UNIX{}.
 \end{funcdesc}
 
 
-\subsection{Miscellanenous System Information \label{os-path}}
-
-
-\begin{funcdesc}{confstr}{name}
-Return string-valued system configuration values.
-\var{name} specifies the configuration value to retrieve; it may be a
-string which is the name of a defined system value; these names are
-specified in a number of standards (\POSIX, Unix95, Unix98, and
-others).  Some platforms define additional names as well.  The names
-known to the host operating system are given in the
-\code{confstr_names} dictionary.  For configuration variables not
-included in that mapping, passing an integer for \var{name} is also
-accepted.
-Availability: \UNIX{}.
-
-If the configuration value specified by \var{name} isn't defined, the
-empty string is returned.
-
-If \var{name} is a string and is not known, \exception{ValueError} is
-raised.  If a specific value for \var{name} is not supported by the
-host system, even if it is included in \code{confstr_names}, an
-\exception{OSError} is raised with \constant{errno.EINVAL} for the
-error number.
-\end{funcdesc}
-
-\begin{datadesc}{confstr_names}
-Dictionary mapping names accepted by \function{confstr()} to the
-integer values defined for those names by the host operating system.
-This can be used to determine the set of names known to the system.
-Availability: \UNIX.
-\end{datadesc}
-
-\begin{funcdesc}{sysconf}{name}
-Return integer-valued system configuration values.
-If the configuration value specified by \var{name} isn't defined,
-\code{-1} is returned.  The comments regarding the \var{name}
-parameter for \function{confstr()} apply here as well; the dictionary
-that provides information on the known names is given by
-\code{sysconf_names}.
-Availability: \UNIX{}.
-\end{funcdesc}
-
-\begin{datadesc}{sysconf_names}
-Dictionary mapping names accepted by \function{sysconf()} to the
-integer values defined for those names by the host operating system.
-This can be used to determine the set of names known to the system.
-Availability: \UNIX.
-\end{datadesc}
-
+\subsection{Miscellanenous System Data \label{os-path}}
 
 The follow data values are used to support path manipulation
 operations.  These are defined for all platforms.

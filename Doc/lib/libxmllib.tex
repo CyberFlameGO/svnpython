@@ -16,18 +16,7 @@ This module defines a class \class{XMLParser} which serves as the basis
 for parsing text files formatted in XML (Extensible Markup Language).
 
 \begin{classdesc}{XMLParser}{}
-The \class{XMLParser} class must be instantiated without
-arguments.\footnote{Actually, a number of keyword arguments are
-recognized which influence the parser to accept certain non-standard
-constructs.  The following keyword arguments are currently
-recognized.  The defaults for all of these is \code{0} (false).
-\var{accept_unquoted_attributes} (accept certain attribute values
-without requiring quotes), \var{accept_missing_endtag_name} (accept
-end tags that look like \code{</>}), \var{map_case} (map upper case to
-lower case in tags and attributes), \var{accept_utf8} (allow UTF-8
-characters in input; this is required according to the XML standard,
-but Python does not as yet deal properly with these characters, so
-this is not the default).}
+The \class{XMLParser} class must be instantiated without arguments.
 \end{classdesc}
 
 This class provides the following interface methods and instance variables:
@@ -98,11 +87,12 @@ passed to \method{handle_xml()} default to \code{None} and the string
 \code{'no'} respectively.
 \end{methoddesc}
 
-\begin{methoddesc}{handle_doctype}{tag, data}
+\begin{methoddesc}{handle_doctype}{tag, pubid, syslit, data}
 This method is called when the \samp{<!DOCTYPE...>} tag is processed.
-The arguments are the name of the root element and the uninterpreted
-contents of the tag, starting after the white space after the name of
-the root element.
+The arguments are the name of the root element, the Formal Public
+Identifier (or \code{None} if not specified), the system identifier,
+and the uninterpreted contents of the internal DTD subset as a string
+(or \code{None} if not present).
 \end{methoddesc}
 
 \begin{methoddesc}{handle_starttag}{tag, method, attributes}
@@ -149,6 +139,19 @@ method \method{handle_data()} with the character as argument.  If
 \code{unknown_charref(\var{ref})} is called to handle the error.  A
 subclass must override this method to provide support for character
 references outside of the \ASCII{} range.
+\end{methoddesc}
+
+\begin{methoddesc}{handle_entityref}{ref}
+This method is called to process a general entity reference of the
+form \samp{\&\var{ref};} where \var{ref} is an general entity
+reference.  It looks for \var{ref} in the instance (or class)
+variable \member{entitydefs} which should be a mapping from entity
+names to corresponding translations.
+If a translation is found, it calls the method \method{handle_data()}
+with the translation; otherwise, it calls the method
+\code{unknown_entityref(\var{ref})}.  The default \member{entitydefs}
+defines translations for \code{\&amp;}, \code{\&apos}, \code{\&gt;},
+\code{\&lt;}, and \code{\&quot;}.
 \end{methoddesc}
 
 \begin{methoddesc}{handle_comment}{comment}
@@ -221,11 +224,17 @@ base class implementation does nothing.
 \begin{methoddesc}{unknown_entityref}{ref}
 This method is called to process an unknown entity reference.  It is
 intended to be overridden by a derived class; the base class
-implementation calls \method{syntax_error()} to signal an error.
+implementation does nothing.
 \end{methoddesc}
 
 
 \begin{seealso}
+  \seetext{The XML specification, published by the World Wide Web
+           Consortium (W3C), is available online at
+           \url{http://www.w3.org/TR/REC-xml}.  References to
+           additional material on XML are available at
+           \url{http://www.w3.org/XML/}.}
+
   \seetext{The Python XML Topic Guide provides a great deal of information
            on using XML from Python and links to other sources of information
            on XML.  It's located on the Web at

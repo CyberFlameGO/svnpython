@@ -218,8 +218,7 @@ raised the exception).
 
 When a matching except clause is found, the exception's parameter is
 assigned to the target specified in that except clause, if present,
-and the except clause's suite is executed.  All except clauses must
-have an executable block.  When the end of this block
+and the except clause's suite is executed.  When the end of this suite
 is reached, execution continues normally after the entire try
 statement.  (This means that if two nested handlers exist for the same
 exception, and the exception occurs in the try clause of the inner
@@ -306,9 +305,7 @@ default value, the corresponding argument may be omitted from a call,
 in which case the parameter's default value is substituted.  If a
 parameter has a default value, all following parameters must also have
 a default value --- this is a syntactic restriction that is not
-expressed by the grammar.\footnote{
-Currently this is not checked; instead, \code{def f(a=1, b)} is
-interpreted as \code{def f(a=1, b=None)}.}
+expressed by the grammar.
 \indexiii{default}{parameter}{value}
 
 \strong{Default parameter values are evaluated when the function

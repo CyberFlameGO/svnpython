@@ -13,8 +13,8 @@ It is always available.
   The list of command line arguments passed to a Python script.
   \code{argv[0]} is the script name (it is operating system
   dependent whether this is a full pathname or not).
-  If the command was executed using the \programopt{-c} command line
-  option to the interpreter, \code{argv[0]} is set to the string
+  If the command was executed using the \samp{-c} command line option
+  to the interpreter, \code{argv[0]} is set to the string
   \code{'-c'}.
   If no script name was passed to the Python interpreter,
   \code{argv} has zero length.
@@ -29,6 +29,11 @@ It is always available.
 
 \begin{datadesc}{copyright}
 A string containing the copyright pertaining to the Python interpreter.
+\end{datadesc}
+
+\begin{datadesc}{dllhandle}
+Integer specifying the handle of the Python DLL.
+Availability: Windows.
 \end{datadesc}
 
 \begin{funcdesc}{exc_info}{}
@@ -81,16 +86,16 @@ the other two are undefined.
 \end{datadesc}
 
 \begin{datadesc}{exec_prefix}
-A string giving the site-specific directory prefix where the
-platform-dependent Python files are installed; by default, this is
-also \code{'/usr/local'}.  This can be set at build time with the
-\programopt{-}\programopt{-exec-prefix} argument to the
+A string giving the site-specific
+directory prefix where the platform-dependent Python files are
+installed; by default, this is also \code{'/usr/local'}.  This can be
+set at build time with the \code{-}\code{-exec-prefix} argument to the
 \program{configure} script.  Specifically, all configuration files
 (e.g. the \file{config.h} header file) are installed in the directory
-\code{exec_prefix + '/lib/python\var{version}/config'}, and shared
-library modules are installed in \code{exec_prefix +
-'/lib/python\var{version}/lib-dynload'}, where \var{version} is equal
-to \code{version[:3]}.
+\code{exec_prefix + '/lib/python\var{version}/config'}, and shared library
+modules are installed in
+\code{exec_prefix + '/lib/python\var{version}/lib-dynload'},
+where \var{version} is equal to \code{version[:3]}.
 \end{datadesc}
 
 \begin{datadesc}{executable}
@@ -194,13 +199,13 @@ components to \code{path}, for instance.
 A string giving the site-specific directory prefix where the platform
 independent Python files are installed; by default, this is the string
 \code{'/usr/local'}.  This can be set at build time with the
-\programopt{-}\programopt{-prefix} argument to the
-\program{configure} script.  The main collection of Python library
-modules is installed in the directory \code{prefix +
-'/lib/python\var{version}'} while the platform independent header
-files (all except \file{config.h}) are stored in \code{prefix +
-'/include/python\var{version}'}, where \var{version} is equal to
-\code{version[:3]}.
+\code{-}\code{-prefix} argument to the \program{configure} script.  The main
+collection of Python library modules is installed in the directory
+\code{prefix + '/lib/python\var{version}'} while the platform
+independent header files (all except \file{config.h}) are stored in
+\code{prefix + '/include/python\var{version}'},
+where \var{version} is equal to \code{version[:3]}.
+
 \end{datadesc}
 
 \begin{datadesc}{ps1}
@@ -285,5 +290,26 @@ exception type and value are printed.
 \end{datadesc}
 
 \begin{datadesc}{version}
-A string containing the version number of the Python interpreter.
+A string containing the version number of the Python interpreter plus
+additional information on the build number and compiler used.  It has
+a value of the form \code{'\var{version} (\#\var{build_number},
+\var{build_date}, \var{build_time}) [\var{compiler}]'}.  The first
+three characters are used to identify the version in the installation
+directories (where appropriate on each platform).  An example:
+
+\begin{verbatim}
+>>> import sys
+>>> sys.version
+'1.5.2 (#0 Apr 13 1999, 10:51:12) [MSC 32 bit (Intel)]'
+\end{verbatim}
+\end{datadesc}
+
+\begin{datadesc}{winver}
+The version number used to form registry keys on Windows platforms.
+This is stored as string resource 1000 in the Python DLL.  The value
+is normally the first three characters of \constant{version}.  It is
+provided in the \module{sys} module for informational purposes;
+modifying this value has no effect on the registry keys used by
+Python.
+Availability: Windows.
 \end{datadesc}

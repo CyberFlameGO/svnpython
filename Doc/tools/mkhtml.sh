@@ -16,7 +16,7 @@ cd $WORKDIR
 use_logical_names=true
 
 if [ "$1" = "--numeric" ] ; then
-    use_logical_names=false
+    use_logical_names=''
     shift 1
 fi
 
@@ -27,14 +27,18 @@ export TEXINPUTS
 
 if [ -d $part ] ; then
     rm -f $part/*.html
+else
+    mkdir $part
 fi
 
 echo "latex2html -init_file $srcdir/perl/l2hinit.perl -dir $part" \
  "${1:+$@} $srcdir/$part/$part.tex"
 latex2html \
  -no_auto_link \
+ -up_url '../index.html' \
+ -up_title 'Documentation Index' \
  -init_file $srcdir/perl/l2hinit.perl \
- -address '<hr>See <i><a href="about.html">About this document...</a></i> for information on suggesting changes.' \
+ -address '<hr>Send comments on this document to <a href="mailto:python-docs@python.org">python-docs@python.org</a>.' \
  -dir $part \
  ${1:+$@} \
  $srcdir/$part/$part.tex || exit $?
@@ -45,7 +49,7 @@ cp $part/$part.html $part/index.html
 echo "cp $srcdir/html/style.css $part/$part.css"
 cp $srcdir/html/style.css $part/$part.css || exit $?
 
-if $use_logical_names ; then
+if [ "$use_logical_names" ] ; then
     echo "(cd $part; $srcdir/tools/node2label.pl \*.html)"
     cd $part
     $srcdir/tools/node2label.pl *.html || exit $?

@@ -16,6 +16,7 @@ package main;
 $HTML_VERSION = 4.0;
 
 $MAX_LINK_DEPTH = 2;
+$MAX_SPLIT_DEPTH = 5;      # split at subsections but not sub-subsections
 $ADDRESS = '';
 
 $NO_FOOTNODE = 1;
@@ -33,12 +34,7 @@ $TOP_NAVIGATION = 1;
 $BOTTOM_NAVIGATION = 1;
 $AUTO_NAVIGATION = 0;
 
-$SUPPRESS_CONTENTS = 0;
-$SUPPRESS_INDEXES = 0;
-
-# these exactly match the python.org colors
-$BODYTEXT = ('bgcolor="#ffffff" text="#000000"'
-	     . ' link="#0000bb"  vlink="#551a8b" alink="#ff0000"');
+$BODYTEXT = 'bgcolor="#ffffff"';
 $CHILDLINE = "\n<p><hr>\n";
 $VERBOSITY = 0;
 
@@ -77,12 +73,6 @@ else {
 $mytexinputs .= "$myrootdir${dd}texinputs";
 
 
-# Change this variable to change the text added in "About this document...";
-# this should be an absolute pathname to get it right.
-#
-$ABOUT_FILE = "$myrootdir${dd}html${dd}stdabout.dat";
-
-
 sub custom_driver_hook{
     #
     # This adds the directory of the main input file to $TEXINPUTS; it
@@ -97,23 +87,6 @@ sub custom_driver_hook{
     print "\nadding $dir to \$TEXINPUTS\n";
 }
 
-# Defining this allows us to remove all table of contents and index
-# processing using an init file; this is required to get rid of the
-# Table of Contents or we'd get a blank page.  Based on a suggestion
-# from Ross Moore <ross@ics.mq.edu.au>.
-#
-# Seems to require a more recent version of LaTeX2HTML than I've
-# been using, though.
-#
-sub preprocess{
-    if ($SUPPRESS_CONTENTS) {
-	s/\\(tableofcontents|listof(figures|tables))/\2/g;
-    }
-    if ($SUPPRESS_INDEXES) {
-	s/\\(print|make)index//g;
-    }
-}
-
 
 sub set_icon_size{
     my($name, $w, $h) = @_;
@@ -123,74 +96,61 @@ sub set_icon_size{
 foreach $name (split(/ /, 'up next previous contents index modules blank')) {
     set_icon_size($name, 32, 32);
 }
-sub adjust_icon_information{
-    # The '_motif' is really annoying, and makes the HTML larger with no value
-    # added, so strip it off:
-    foreach $name (keys %icons) {
-        my $icon = $icons{$name};
-        # Strip off the wasteful '_motif':
-        $icon =~ s/_motif//;
-        # Change the greyed-out icons to be blank:
-        $icon =~ s/[a-z]*_gr[.]/blank./;
-        # make sure we're using the latest $IMAGE_TYPE
-        $icon =~ s/[.](gif|png)$/.$IMAGE_TYPE/;
-        $icons{$name} = $icon;
-    }
-    $icons{'blank'} = 'blank.' . $IMAGE_TYPE;
-    
-    $CUSTOM_BUTTONS = '';
-    $BLANK_ICON = "\n<td>" . img_tag('blank.' . $IMAGE_TYPE) . "</td>";
-    $BLANK_ICON =~ s/alt="blank"/alt=""/;
-    $NAV_BGCOLOR = " bgcolor=\"#99CCFF\"";
+# The '_motif' is really annoying, and makes the HTML larger with no value
+# added, so strip it off:
+foreach $name (keys %icons) {
+    my $icon = $icons{$name};
+    # Strip off the wasteful '_motif':
+    $icon =~ s/_motif//;
+    # Change the greyed-out icons to be blank:
+    $icon =~ s/[a-z]*_gr/blank/;
+    $icons{$name} = $icon;
 }
-adjust_icon_information();
+$icons{'blank'} = 'blank.' . $IMAGE_TYPE;
 
+$CUSTOM_BUTTONS = '';
+$BLANK_ICON = "\n<td>" . img_tag('blank.' . $IMAGE_TYPE) . "</td>";
+$BLANK_ICON =~ s/alt="blank"/alt=""/;
+$NAV_BGCOLOR = " bgcolor='#99CCFF'";
 
 sub make_nav_sectref{
     my($label,$title) = @_;
     if ($title) {
-        $title =~ s/<A/<A class=sectref/;
-	return ("<b class=navlabel>$label:</b> "
-		. "$title\n");
+	return ("<b class='navlabel'>$label:</b> "
+		. "<span class='sectref'>$title</span>\n");
     }
     return '';
 }
 
 sub make_nav_panel{
     my $s;
-    $s = "<table align=center width=\"100%\" cellpadding=0 cellspacing=2>"
+    $s = "<table align='center' width='100%' cellpadding='0' cellspacing='2'>"
          . "\n<tr>"
 	 . "\n<td>$NEXT</td>"
 	 . "\n<td>$UP</td>"
-	 . "\n<td>$PREVIOUS</td>";
-    if ($SUPPRESS_CONTENTS && $SUPPRESS_INDEXES) {
-	$s .= ("\n<td align=right$NAV_BGCOLOR width=\"100%\">"
-	       . "\n <b class=title>$t_title\&nbsp;\&nbsp;\&nbsp;</b></td>");
-    }
-    else {
-	$s .= ("\n<td align=center$NAV_BGCOLOR width=\"100%\">"
-	       . "\n <b class=title>$t_title</b></td>"
-	       . ($CONTENTS ? "\n<td>$CONTENTS</td>" : $BLANK_ICON)
-	       . "\n<td>$CUSTOM_BUTTONS</td>" # module index
-	       . ($INDEX ? "\n<td>$INDEX</td>" : $BLANK_ICON));
-    }
-    $s .= ("\n</tr></table>"
-	   . make_nav_sectref("Next", $NEXT_TITLE)
-	   . make_nav_sectref("Up", $UP_TITLE)
-	   . make_nav_sectref("Previous", $PREVIOUS_TITLE));
-    # remove these; they are unnecessary and cause error from validation
+	 . "\n<td>$PREVIOUS</td>"
+	 . "\n<td align='center'$NAV_BGCOLOR width='100%'>"
+	 . "\n <b class=title>$t_title</b></td>"
+	 . ($CONTENTS ? "\n<td>$CONTENTS</td>" : $BLANK_ICON)
+	 . "\n<td>$CUSTOM_BUTTONS</td>" # module index
+	 . ($INDEX ? "\n<td>$INDEX</td>" : $BLANK_ICON)
+	 . "\n</tr></table>"
+	 #. "<hr>"
+	 . make_nav_sectref("Next", $NEXT_TITLE)
+	 . make_nav_sectref("Up", $UP_TITLE)
+	 . make_nav_sectref("Previous", $PREVIOUS_TITLE);
     $s =~ s/ NAME="tex2html\d+"\n//g;
     return $s;
 }
 
 sub top_navigation_panel {
-    "<div class=navigation>\n"
+    "<div class='navigation'>\n"
       . make_nav_panel()
       . '<br><hr></div>';
 }
 
 sub bot_navigation_panel {
-    "<p>\n<div class=navigation><hr>"
+    "<p>\n<div class='navigation'><hr>"
       . make_nav_panel()
       . '</div>';
 }
@@ -258,12 +218,9 @@ sub img_tag {
 			,'border=', $nav_border, ' alt="', $alt
 			,'" src="', $icon, '">' );
 	}
-	my $s = join('', '<img ', $iconsizes{$1}, $align,
-                     'border=', $nav_border, ' alt="', $alt, "\"\n",
-                     ' src="', $ICONSERVER, "/$icon", '">' );
-        # if $ICONSERVER starts with "./", remove "./":
-        $s =~ s|src="(.\/)+|src="|;
-        return $s;
+	return join('', '<img ', $iconsizes{$1}, $align
+		    ,'border=', $nav_border, ' alt="', $alt, "\"\n"
+		    ,' src="', $ICONSERVER, "/$icon", '">' );
     }
     else {
 	return $icon;
@@ -334,13 +291,11 @@ sub add_module_idx{
 	my $plat = '';
 	$key =~ s/<tt>([a-zA-Z0-9._]*)<\/tt>/\1/;
 	if ($ModulePlatforms{$key} && !$allthesame) {
-	    $plat = (" <em>(<span class=platform>$ModulePlatforms{$key}"
+	    $plat = (" <em>(<span class='platform'>$ModulePlatforms{$key}"
 		     . '</span>)</em>');
 	}
-	print MODIDXFILE
-	  $moditem
-	    . $IDXFILE_FIELD_SEP
-	    . "<tt class=module>$key</tt>$plat###\n";
+	print MODIDXFILE $moditem . $IDXFILE_FIELD_SEP
+              . "<tt class='module'>$key</tt>$plat###\n";
     }
     close(MODIDXFILE);
     if (!$allthesame) {
@@ -364,13 +319,9 @@ sub add_idx_hook{
 }
 
 
-# In addition to the standard stuff, add label to allow named node files and
-# support suppression of the page complete (for HTML Help use).
+# In addition to the standard stuff, add label to allow named node files.
 sub do_cmd_tableofcontents {
     local($_) = @_;
-#     if ($SUPPRESS_CONTENTS) {
-# 	return $_;
-#     }
     $TITLE = $toc_title;
     $tocfile = $CURRENT_FILE;
     my($closures,$reopens) = preserve_open_tags();
@@ -415,12 +366,11 @@ sub do_cmd_textohtmlinfopage {
 	}
     }
     $_ = (($INFO == 1)
-          ? join('',
-                 $close_all,
-                 "<strong>$t_title</strong>$the_version\n",
-                 `cat $ABOUT_FILE`,
-                 $open_all, $_)
-          : join('', $close_all, $INFO,"\n", $open_all, $_));
+      ? join('', $close_all
+	, "<strong>$t_title</strong>$the_version\n"
+	, `cat $myrootdir${dd}html${dd}about.dat`
+	, $open_all, $_)
+      : join('', $close_all, $INFO,"\n", $open_all, $_));
     $_;
 }
 
@@ -465,31 +415,29 @@ sub add_bbl_and_idx_dummy_commands {
     my $id = $global{'max_id'};
 
     s/([\\]begin\s*$O\d+$C\s*thebibliography)/$bbl_cnt++; $1/eg;
-    s/([\\]begin\s*$O\d+$C\s*thebibliography)/$id++; "\\bibliography$O$id$C$O$id$C $1"/geo;
+    s/([\\]begin\s*$O\d+$C\s*thebibliography)/$id++; "\\bibliography$O$id$C$O$id$C $1"/geo
+      #if ($bbl_cnt == 1)
+    ;
+    #}
     #----------------------------------------------------------------------
     # (FLD) This was added
-    if ($SUPPRESS_INDEXES) {
-	$CUSTOM_BUTTONS .= img_tag('blank.' . $IMAGE_TYPE);
+    my(@parts) = split(/\\begin\s*$O\d+$C\s*theindex/);
+    if (scalar(@parts) == 3) {
+	# Be careful to re-write the string in place, since $_ is *not*
+	# returned explicity;  *** nasty side-effect dependency! ***
+	print "\nadd_bbl_and_idx_dummy_commands ==> adding module index";
+	my $rx = "([\\\\]begin\\s*$O\\d+$C\\s*theindex[\\s\\S]*)"
+	         . "([\\\\]begin\\s*$O\\d+$C\\s*theindex)";
+	s/$rx/\\textohtmlmoduleindex \1 \\textohtmlindex \2/o;
+	# Add a button to the navigation areas:
+	$CUSTOM_BUTTONS .= ("<a\n href='modindex.html'>"
+			    . img_tag('modules.'.$IMAGE_TYPE) . "</a>");
     }
     else {
-	my(@parts) = split(/\\begin\s*$O\d+$C\s*theindex/);
-	if (scalar(@parts) == 3) {
-	    # Be careful to re-write the string in place, since $_ is *not*
-	    # returned explicity;  *** nasty side-effect dependency! ***
-	    print "\nadd_bbl_and_idx_dummy_commands ==> adding module index";
-	    my $rx = "([\\\\]begin\\s*$O\\d+$C\\s*theindex[\\s\\S]*)"
-	      . "([\\\\]begin\\s*$O\\d+$C\\s*theindex)";
-	    s/$rx/\\textohtmlmoduleindex \1 \\textohtmlindex \2/o;
-	    # Add a button to the navigation areas:
-	    $CUSTOM_BUTTONS .= ("<a\n href=\"modindex.html\">"
-				. img_tag('modules.'.$IMAGE_TYPE) . "</a>");
-	}
-	else {
-	    $CUSTOM_BUTTONS .= img_tag('blank.' . $IMAGE_TYPE);
-	    $global{'max_id'} = $id; # not sure why....
-	    s/([\\]begin\s*$O\d+$C\s*theindex)/\\textohtmlindex $1/o;
-	    s/[\\]printindex/\\textohtmlindex /o;
-	}
+	$CUSTOM_BUTTONS .= img_tag('blank.' . $IMAGE_TYPE);
+	$global{'max_id'} = $id; # not sure why....
+	s/([\\]begin\s*$O\d+$C\s*theindex)/\\textohtmlindex $1/o;
+	s/[\\]printindex/\\textohtmlindex /o;
     }
     #----------------------------------------------------------------------
     lib_add_bbl_and_idx_dummy_commands()
@@ -556,9 +504,55 @@ sub protect_useritems {
 #
 # Note that this *must* be done in the init file, not the python.perl
 # style support file.  The %declarations must be set before initialize()
-# is called in the main script.
+# is called in the main LaTeX2HTML script (which happens before style files
+# are loaded).
 #
-%declarations = ('preform' => '<dl><dd><pre class=verbatim></pre></dl>',
+%declarations = ('preform' => '<dl><dd><pre class="verbatim"></pre></dl>',
 		 %declarations);
+
+
+# This is added to get rid of the long comment that follows the doctype
+# declaration; MSIE5 on NT4 SP4 barfs on it and drops the content of the
+# page.
+sub make_head_and_body {
+    local($title,$body) = @_;
+    local($DTDcomment) = '';
+    local($version,$isolanguage) = ($HTML_VERSION, 'EN');
+    local(%isolanguages) = (  'english',  'EN'   , 'USenglish', 'EN.US'
+			    , 'original', 'EN'   , 'german'   , 'DE'
+			    , 'austrian', 'DE.AT', 'french'   , 'FR'
+			    , 'spanish',  'ES'
+			    , %isolanguages );
+    $isolanguage = $isolanguages{$default_language};
+    $isolanguage = 'EN' unless $isolanguage;
+    $title = &purify($title,1);
+    eval("\$title = ". $default_title ) unless ($title);
+
+    # allow user-modification of the <TITLE> tag; thanks Dan Young
+    if (defined &custom_TITLE_hook) {
+	$title = &custom_TITLE_hook($title, $toc_sec_title);
+    }
+
+    if ($DOCTYPE =~ /\/\/[\w\.]+\s*$/) { # language spec included
+	$DTDcomment = "<!DOCTYPE html PUBLIC \"$DOCTYPE\">\n";
+    } else {
+	$DTDcomment = "<!DOCTYPE html PUBLIC \"$DOCTYPE//"
+	    . ($ISO_LANGUAGE ? $ISO_LANGUAGE : $isolanguage) . "\">\n";
+    }
+
+    $STYLESHEET = $FILE.".css" unless $STYLESHEET;
+    if (!$charset && $CHARSET) { $charset = $CHARSET; $charset =~ s/_/\-/go; }
+
+    join('', ($DOCTYPE ? $DTDcomment : '' )
+	,"<html>\n<head>\n<title>", $title, "</title>\n"
+	, &meta_information($title)
+	, ($CHARSET && $HTML_VERSION ge "2.1" ?
+           "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=$charset\">\n"
+           : "" )
+	, ($BASE ? "<base href=\"$BASE\">\n" : "" )
+	, "<link rel=\"STYLESHEET\" href=\"$STYLESHEET\">"
+	, $more_links_mark
+	, "\n</head>\n<body $body>\n");
+}
 
 1;	# This must be the last line
