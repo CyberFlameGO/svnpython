@@ -148,8 +148,6 @@ sub do_cmd_character{
     return use_wrappers(@_[0], '"<tt class=character>', '</tt>"'); }
 sub do_cmd_program{
     return use_wrappers(@_[0], '<b class=program>', '</b>'); }
-sub do_cmd_programopt{
-    return use_wrappers(@_[0], '<b class="programopt">', '</b>'); }
 sub do_cmd_email{
     return use_wrappers(@_[0], '<span class=email>', '</span>'); }
 sub do_cmd_mimetype{
@@ -189,7 +187,8 @@ sub do_cmd_refmodule{
 sub do_cmd_newsgroup{
     local($_) = @_;
     my $newsgroup = next_argument();
-    my $stuff = "<a class=newsgroup href=\"news:$newsgroup\">$newsgroup</a>";
+    my $stuff = "<span class=newsgroup><a href=\"news:$newsgroup\">"
+      . "$newsgroup</a></span>";
     return $stuff . $_;
 }
 
@@ -202,8 +201,7 @@ sub do_cmd_envvar{
     add_index_entry("environment variables!$envvar@<tt>\$$envvar</tt>",
 		    $ahref);
     add_index_entry("$envvar@\$$envvar", $ahref);
-    $aname =~ s/<a/<a class=envvar/;
-    return "$aname\$$envvar</a>" . $_;
+    return "<span class=envvar>$aname\$$envvar</a></span>" . $_;
 }
 
 sub do_cmd_url{
@@ -211,7 +209,7 @@ sub do_cmd_url{
     local($_) = @_;
     my $url = next_argument();
     $url =~ s/~/&#126;/g;
-    return "<a class=url href=\"$url\">$url</a>" . $_;
+    return "<span class=url><a href=\"$url\">$url</a></span>" . $_;
 }
 
 sub do_cmd_manpage{
@@ -231,25 +229,8 @@ sub do_cmd_rfc{
     # Save the reference
     my $nstr = gen_index_id("RFC!RFC $rfcnumber", '');
     $index{$nstr} .= make_half_href("$CURRENT_FILE#$id");
-    return ("<a class=rfc name=\"$id\"\nhref=\"$href\">RFC $rfcnumber</a>"
-            . $_);
-}
-
-sub do_cmd_citetitle{
-    local($_) = @_;
-    my $url = next_optional_argument();
-    my $title = next_argument();
-    my $repl = '';
-    if ($url) {
-        $repl = ("<em class='citetitle'><a\n"
-                 . " href='$url'\n"
-                 . " title='$title'\n"
-                 . " >$title</a></em>");
-    }
-    else {
-        $repl = "<em class='citetitle'\n >$title</em>";
-    }
-    return $repl . $_;
+    return ("<span class=rfc><a name=\"$id\"\nhref=\"$href\">"
+	    . "RFC $rfcnumber</a></span>" .$_);
 }
 
 sub do_cmd_deprecated{

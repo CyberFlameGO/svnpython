@@ -14,10 +14,9 @@ effort spent.
 
 \begin{description}
 \item[\module{Tkinter}]
---- Interface to Tcl/Tk for graphical user interfaces; Fredrik Lundh
-is working on this one!  See
-\citetitle[http://www.pythonware.com/library.htm]{An Introduction to
-Tkinter} at \url{http://www.pythonware.com/library.htm} for on-line
+--- Interface to Tcl/Tk for graphical user interfaces;
+Fredrik Lundh is working on this one!  See \emph{An Introduction to
+Tkinter} at \url{http://www.pythonware.com/library/} for on-line
 reference material.
 
 \item[\module{Tkdnd}]
@@ -35,6 +34,9 @@ This is a package rather than a module.
 Some of these are very old and/or not very robust; marked with ``hmm.''
 
 \begin{description}
+\item[\module{dircmp}]
+--- class to build directory diff tools on (may become a demo or tool)
+
 \item[\module{bdb}]
 --- A generic Python debugger base class (used by pdb)
 
@@ -90,15 +92,12 @@ To use any of these modules, add that directory to \code{sys.path},
 possibly using \envvar{PYTHONPATH}.
 
 \begin{description}
+\item[\module{newdir}]
+--- New \function{dir()} function (the standard \function{dir()} is
+now just as good)
+
 \item[\module{addpack}]
 --- alternate approach to packages
-
-\item[\module{cmp}]
---- File comparison function.  Use the newer \refmodule{filecmp} instead.
-
-\item[\module{cmpcache}]
---- Caching version of the obsolete \module{cmp} module.  Use the
-newer \refmodule{filecmp} instead.
 
 \item[\module{codehack}]
 --- Extract function name or line number from a function
@@ -106,25 +105,18 @@ code object (these are now accessible as attributes:
 \member{co.co_name}, \member{func.func_name},
 \member{co.co_firstlineno}).
 
-\item[\module{dircmp}]
---- class to build directory diff tools on (may become a demo or tool)
-
 \item[\module{dump}]
 --- Print python code that reconstructs a variable
 
 \item[\module{fmt}]
 --- text formatting abstractions (too slow)
 
+\item[\module{Para}]
+--- helper for fmt.py
+
 \item[\module{lockfile}]
 --- wrapper around FCNTL file locking (use
 \function{fcntl.lockf()}/\function{flock()} intead; see \refmodule{fcntl})
-
-\item[\module{newdir}]
---- New \function{dir()} function (the standard \function{dir()} is
-now just as good)
-
-\item[\module{Para}]
---- helper for fmt.py
 
 \item[\module{poly}]
 --- Polynomials

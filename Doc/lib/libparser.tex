@@ -35,23 +35,23 @@ the \module{parser} module are presented.
 
 Most importantly, a good understanding of the Python grammar processed
 by the internal parser is required.  For full information on the
-language syntax, refer to the \citetitle[../ref/ref.html]{Python
-Language Reference}.  The parser itself is created from a grammar
-specification defined in the file \file{Grammar/Grammar} in the
-standard Python distribution.  The parse trees stored in the AST
-objects created by this module are the actual output from the internal
-parser when created by the \function{expr()} or \function{suite()}
-functions, described below.  The AST objects created by
-\function{sequence2ast()} faithfully simulate those structures.  Be
-aware that the values of the sequences which are considered
-``correct'' will vary from one version of Python to another as the
-formal grammar for the language is revised.  However, transporting
-code from one Python version to another as source text will always
-allow correct parse trees to be created in the target version, with
-the only restriction being that migrating to an older version of the
-interpreter will not support more recent language constructs.  The
-parse trees are not typically compatible from one version to another,
-whereas source code has always been forward-compatible.
+language syntax, refer to the \emph{Python Language Reference}.  The
+parser itself is created from a grammar specification defined in the file
+\file{Grammar/Grammar} in the standard Python distribution.  The parse
+trees stored in the AST objects created by this module are the
+actual output from the internal parser when created by the
+\function{expr()} or \function{suite()} functions, described below.  The AST
+objects created by \function{sequence2ast()} faithfully simulate those
+structures.  Be aware that the values of the sequences which are
+considered ``correct'' will vary from one version of Python to another
+as the formal grammar for the language is revised.  However,
+transporting code from one Python version to another as source text
+will always allow correct parse trees to be created in the target
+version, with the only restriction being that migrating to an older
+version of the interpreter will not support more recent language
+constructs.  The parse trees are not typically compatible from one
+version to another, whereas source code has always been
+forward-compatible.
 
 Each element of the sequences returned by \function{ast2list()} or
 \function{ast2tuple()} has a simple form.  Sequences representing
@@ -110,17 +110,17 @@ AST objects may be created from source code or from a parse tree.
 When creating an AST object from source, different functions are used
 to create the \code{'eval'} and \code{'exec'} forms.
 
-\begin{funcdesc}{expr}{source}
-The \function{expr()} function parses the parameter \var{source}
-as if it were an input to \samp{compile(\var{source}, 'eval')}.  If
+\begin{funcdesc}{expr}{string}
+The \function{expr()} function parses the parameter \var{string}
+as if it were an input to \samp{compile(\var{string}, 'eval')}.  If
 the parse succeeds, an AST object is created to hold the internal
 parse tree representation, otherwise an appropriate exception is
 thrown.
 \end{funcdesc}
 
-\begin{funcdesc}{suite}{source}
-The \function{suite()} function parses the parameter \var{source}
-as if it were an input to \samp{compile(\var{source}, 'exec')}.  If
+\begin{funcdesc}{suite}{string}
+The \function{suite()} function parses the parameter \var{string}
+as if it were an input to \samp{compile(\var{string}, 'exec')}.  If
 the parse succeeds, an AST object is created to hold the internal
 parse tree representation, otherwise an appropriate exception is
 thrown.

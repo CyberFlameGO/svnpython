@@ -1,34 +1,17 @@
 # LaTeX source dependencies; note that the files are named relative to a
 # child directory and not the directory this file is located in.
 
-COMMONSTYLES= ../texinputs/python.sty \
-	../texinputs/pypaper.sty \
-	../texinputs/python.ist
 
-COMMONTEX= ../texinputs/copyright.tex \
-	../texinputs/boilerplate.tex
+APIFILES= ../api/api.tex
 
-MANSTYLES= ../texinputs/fncychap.sty \
-	../texinputs/manual.cls \
-	$(COMMONSTYLES)
+DOCFILES= ../doc/doc.tex
 
-HOWTOSTYLES= ../texinputs/howto.cls \
-	$(COMMONSTYLES)
+EXTFILES= ../ext/ext.tex
 
-
-APIFILES= ../api/api.tex $(MANSTYLES) $(COMMONTEX)
-
-DOCFILES= $(HOWTOSTYLES) $(COMMONTEX) \
-	../texinputs/ltxmarkup.sty \
-	../doc/doc.tex
-
-EXTFILES= ../ext/ext.tex $(MANSTYLES) $(COMMONTEX)
-
-TUTFILES= ../tut/tut.tex $(MANSTYLES) $(COMMONTEX)
+TUTFILES= ../tut/tut.tex
 
 # LaTeX source files for the Python Reference Manual
-REFFILES= $(MANSTYLES) $(COMMONTEX) \
-	../ref/ref.tex \
+REFFILES= ../ref/ref.tex \
 	../ref/ref1.tex \
 	../ref/ref2.tex \
 	../ref/ref3.tex \
@@ -39,8 +22,7 @@ REFFILES= $(MANSTYLES) $(COMMONTEX) \
 	../ref/ref8.tex
 
 # LaTeX source files for the Python Library Reference
-LIBFILES= $(MANSTYLES) $(COMMONTEX) \
-	../lib/lib.tex \
+LIBFILES= ../lib/lib.tex \
 	../lib/libintro.tex \
 	../lib/libobjs.tex \
 	../lib/libstdtypes.tex \
@@ -196,7 +178,6 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/windows.tex \
 	../lib/libpyclbr.tex \
 	../lib/libtokenize.tex \
-	../lib/libtabnanny.tex \
 	../lib/libmhlib.tex \
 	../lib/libtelnetlib.tex \
 	../lib/libcolorsys.tex \
@@ -206,7 +187,8 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/liblinecache.tex \
 	../lib/libnew.tex \
 	../lib/libdircache.tex \
-	../lib/libfilecmp.tex \
+	../lib/libcmp.tex \
+	../lib/libcmpcache.tex \
 	../lib/libstatcache.tex \
 	../lib/libsunau.tex \
 	../lib/libwave.tex \
@@ -226,8 +208,7 @@ LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	../lib/libcfgparser.tex
 
 # LaTeX source files for Macintosh Library Modules.
-MACFILES= $(HOWTOSTYLES) $(COMMONTEX) \
-	../mac/mac.tex \
+MACFILES= ../mac/mac.tex \
 	../mac/libmac.tex \
 	../mac/libctb.tex \
 	../mac/libmacconsole.tex \
