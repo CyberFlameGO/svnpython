@@ -205,15 +205,10 @@ determination.
                                             PyObject *cls}
   Returns \code{1} if the class \var{derived} is identical to or
   derived from the class \var{cls}, otherwise returns \code{0}.  In
-  case of an error, returns \code{-1}. If \var{cls}
-  is a tuple, the check will be done against every entry in \var{cls}.
-  The result will be \code{1} when at least one of the checks returns
-  \code{1}, otherwise it will be \code{0}. If either \var{derived} or
-  \var{cls} is not an actual class object (or tuple), this function
-  uses the generic algorithm described above.
+  case of an error, returns \code{-1}.  If either \var{derived} or
+  \var{cls} is not an actual class object, this function uses the
+  generic algorithm described above.
   \versionadded{2.1}
-  \versionchanged[Older versions of Python did not support a tuple
-                  as the second argument]{2.3}
 \end{cfuncdesc}
 
 
@@ -221,22 +216,6 @@ determination.
   Determine if the object \var{o} is callable.  Return \code{1} if the
   object is callable and \code{0} otherwise.  This function always
   succeeds.
-\end{cfuncdesc}
-
-
-\begin{cfuncdesc}{PyObject*}{PyObject_Call}{PyObject *callable_object,
-                                            PyObject *args,
-                                            PyObject *kw}
-  Call a callable Python object \var{callable_object}, with arguments
-  given by the tuple \var{args}, and named arguments given by the
-  dictionary \var{kw}. If no named arguments are needed, \var{kw} may
-  be \NULL{}. \var{args} must not be \NULL{}, use an empty tuple if
-  no arguments are needed. Returns the result of the call on success,
-  or \NULL{} on failure.  This is the equivalent of the Python
-  expression \samp{apply(\var{callable_object}, \var{args}, \var{kw})}
-  or \samp{\var{callable_object}(*\var{args}, **\var{kw})}.
-  \bifuncindex{apply}
-  \versionadded{2.2}
 \end{cfuncdesc}
 
 
@@ -324,8 +303,8 @@ determination.
 \begin{cfuncdesc}{PyObject*}{PyObject_Type}{PyObject *o}
   When \var{o} is non-\NULL, returns a type object corresponding to
   the object type of object \var{o}. On failure, raises
-  \exception{SystemError} and returns \NULL.  This is equivalent to
-  the Python expression \code{type(\var{o})}.\bifuncindex{type}
+  \exception{SystemError} and returns \NULL.\bifuncindex{type}
+  This is equivalent to the Python expression \code{type(\var{o})}.
   This function increments the reference count of the return value.
   There's really no reason to use this function instead of the
   common expression \code{\var{o}->ob_type}, which returns a pointer
@@ -340,7 +319,6 @@ determination.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{int}{PyObject_Length}{PyObject *o}
-\cfuncline{int}{PyObject_Size}{PyObject *o}
   Return the length of object \var{o}.  If the object \var{o} provides
   both sequence and mapping protocols, the sequence length is
   returned.  On error, \code{-1} is returned.  This is the equivalent
@@ -671,9 +649,8 @@ determination.
 
 \begin{cfuncdesc}{PyObject*}{PyNumber_Int}{PyObject *o}
   Returns the \var{o} converted to an integer object on success, or
-  \NULL{} on failure.  If the argument is outside the integer range
-  a long object will be returned instead. This is the equivalent
-  of the Python expression \samp{int(\var{o})}.\bifuncindex{int}
+  \NULL{} on failure.  This is the equivalent of the Python expression
+  \samp{int(\var{o})}.\bifuncindex{int}
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyNumber_Long}{PyObject *o}
@@ -827,14 +804,6 @@ determination.
   Return the \var{i}th element of \var{o}, assuming that \var{o} was
   returned by \cfunction{PySequence_Fast()}, \var{o} is not \NULL,
   and that \var{i} is within bounds.
-\end{cfuncdesc}
-
-\begin{cfuncdesc}{PyObject*}{PySequence_ITEM}{PyObject *o, int i}
-  Return the \var{i}th element of \var{o} or \NULL on failure.
-  Macro form of \cfunction{PySequence_GetItem()} but without checking
-  that \cfunction{PySequence_Check(\var{o})} is true and without
-  adjustment for negative indices.
-  \versionadded{2.3}
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{int}{PySequence_Fast_GET_SIZE}{PyObject *o}

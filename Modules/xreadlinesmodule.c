@@ -1,9 +1,9 @@
 #include "Python.h"
 
-PyDoc_STRVAR(xreadlines_doc,
+static char xreadlines_doc [] =
 "xreadlines(f)\n\
 \n\
-Return an xreadlines object for the file f.");
+Return an xreadlines object for the file f.";
 
 typedef struct {
 	PyObject_HEAD
@@ -14,7 +14,7 @@ typedef struct {
 	int abslineno;
 } PyXReadlinesObject;
 
-static PyTypeObject XReadlinesObject_Type;
+staticforward PyTypeObject XReadlinesObject_Type;
 
 static void
 xreadlines_dealloc(PyXReadlinesObject *op)
@@ -82,6 +82,13 @@ xreadlines_item(PyXReadlinesObject *a, int i)
 }
 
 static PyObject *
+xreadlines_getiter(PyXReadlinesObject *a)
+{
+	Py_INCREF(a);
+	return (PyObject *)a;
+}
+
+static PyObject *
 xreadlines_iternext(PyXReadlinesObject *a)
 {
 	PyObject *res;
@@ -105,7 +112,7 @@ xreadlines_next(PyXReadlinesObject *a, PyObject *args)
 	return res;
 }
 
-PyDoc_STRVAR(next_doc, "x.next() -> the next line or raise StopIteration");
+static char next_doc[] = "x.next() -> the next line or raise StopIteration";
 
 static PyMethodDef xreadlines_methods[] = {
 	{"next", (PyCFunction)xreadlines_next, METH_VARARGS, next_doc},
@@ -152,7 +159,7 @@ static PyTypeObject XReadlinesObject_Type = {
  	0,					/* tp_clear */
 	0,					/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
-	PyObject_SelfIter,			/* tp_iter */
+	(getiterfunc)xreadlines_getiter,	/* tp_iter */
 	(iternextfunc)xreadlines_iternext,	/* tp_iternext */
 };
 
@@ -161,11 +168,9 @@ static PyMethodDef xreadlines_functions[] = {
 	{NULL, NULL}
 };
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initxreadlines(void)
 {
 	XReadlinesObject_Type.ob_type = &PyType_Type;
 	Py_InitModule("xreadlines", xreadlines_functions);
-	PyErr_Warn(PyExc_DeprecationWarning,
-		   "xreadlines is deprecated; use 'for line in file'.");
 }

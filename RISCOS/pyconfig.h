@@ -143,7 +143,7 @@
 #undef HAVE_LARGEFILE_SUPPORT
 
 /* Define this if you have the type long long */
-#define HAVE_LONG_LONG
+#undef HAVE_LONG_LONG
 
 /* Define if your compiler supports function prototypes */
 #define HAVE_PROTOTYPES 1
@@ -183,6 +183,9 @@
 
 /* Define if nice() returns success/failure instead of the new priority. */
 #undef HAVE_BROKEN_NICE
+
+/* Define if malloc(0) returns a NULL pointer */
+#undef MALLOC_ZERO_RETURNS_NULL
 
 /* Define if you have POSIX threads */
 #undef _POSIX_THREADS
@@ -233,6 +236,9 @@
    one supplied by Python itself. (see Include/unicodectype.h). */
 #undef WANT_WCTYPE_FUNCTIONS
 
+/* Define if you want to compile in cycle garbage collection */
+#define WITH_CYCLE_GC 1
+
 /* Define if you want to emulate SGI (IRIX 4) dynamic linking.
    This is rumoured to work on VAX (Ultrix), Sun3 (SunOS 3.4),
    Sequent Symmetry (Dynix), and Atari ST.
@@ -244,19 +250,13 @@
    shared libraries */ 
 #undef WITH_DL_DLD
 
-/* Define if you want to read files with foreign newlines. */
-#define WITH_UNIVERSAL_NEWLINES 1
-
-/* Define if you want documentation strings in extension modules */
-#define WITH_DOC_STRINGS 1
-
 /* Define if you want to use the new-style (Openstep, Rhapsody, MacOS)
    dynamic linker (dyld) instead of the old-style (NextStep) dynamic
    linker (rld). Dyld is necessary to support frameworks. */
 #undef WITH_DYLD
 
 /* Define if you want to compile in Python-specific mallocs */
-#define WITH_PYMALLOC 1
+#undef WITH_PYMALLOC
 
 /* Define if you want to produce an OpenStep/Rhapsody framework
    (shared library plus accessory files). */
@@ -294,7 +294,7 @@
 #define SIZEOF_LONG 4
 
 /* The number of bytes in a long long.  */
-#define SIZEOF_LONG_LONG 8
+#undef SIZEOF_LONG_LONG
 
 /* The number of bytes in a short.  */
 #define SIZEOF_SHORT 2
@@ -399,10 +399,7 @@
 #undef HAVE_GETNAMEINFO
 
 /* Define if you have the getpeername function.  */
-#define HAVE_GETPEERNAME
-
-/* Define if you have the getpgid function.  */
-#undef HAVE_GETPGID
+#undef HAVE_GETPEERNAME
 
 /* Define if you have the getpgrp function.  */
 #undef HAVE_GETPGRP
@@ -426,7 +423,7 @@
 #undef HAVE_HSTRERROR
 
 /* Define if you have the hypot function.  */
-#define HAVE_HYPOT
+#undef HAVE_HYPOT
 
 /* Define if you have the inet_pton function.  */
 #define HAVE_INET_PTON 1

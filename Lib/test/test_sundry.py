@@ -1,14 +1,9 @@
 """Do a minimal test of all the modules that aren't otherwise tested."""
 
 import warnings
-warnings.filterwarnings('ignore', r".*posixfile module",
-                        DeprecationWarning, 'posixfile$')
-warnings.filterwarnings('ignore', r".*statcache module",
-                        DeprecationWarning, 'statcache$')
-warnings.filterwarnings('ignore', r".*'re' module",
-                        DeprecationWarning, 'pre$')
+warnings.filterwarnings('ignore', '', DeprecationWarning, 'posixfile')
 
-from test.test_support import verbose
+from test_support import verbose
 
 import BaseHTTPServer
 import CGIHTTPServer
@@ -36,6 +31,7 @@ import distutils
 import doctest
 import dumbdbm
 import encodings
+import filecmp
 import fnmatch
 import formatter
 import fpformat
@@ -50,6 +46,7 @@ import imaplib
 import imghdr
 import imputil
 import keyword
+#import knee
 import macpath
 import macurl2path
 import mailcap
@@ -68,6 +65,7 @@ import pre
 import profile
 import pstats
 import py_compile
+import pyclbr
 #import reconvert
 import repr
 try:

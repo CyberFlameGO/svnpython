@@ -9,10 +9,6 @@
 #include "token.h"
 #include "grammar.h"
 
-#ifdef RISCOS
-#include <unixlib.h>
-#endif
-
 extern int Py_DebugFlag;
 
 grammar *
@@ -42,7 +38,7 @@ adddfa(grammar *g, int type, char *name)
 		Py_FatalError("no mem to resize dfa in adddfa");
 	d = &g->g_dfa[g->g_ndfas++];
 	d->d_type = type;
-	d->d_name = strdup(name);
+	d->d_name = name;
 	d->d_nstates = 0;
 	d->d_state = NULL;
 	d->d_initial = -1;
@@ -102,10 +98,7 @@ addlabel(labellist *ll, int type, char *str)
 		Py_FatalError("no mem to resize labellist in addlabel");
 	lb = &ll->ll_label[ll->ll_nlabels++];
 	lb->lb_type = type;
-	lb->lb_str = strdup(str);
-	if (Py_DebugFlag)
-		printf("Label @ %08x, %d: %s\n", (unsigned)ll, ll->ll_nlabels,
-		       PyGrammar_LabelRepr(lb));
+	lb->lb_str = str; /* XXX strdup(str) ??? */
 	return lb - ll->ll_label;
 }
 
@@ -159,7 +152,6 @@ translabel(grammar *g, label *lb)
 					    lb->lb_str,
 					    g->g_dfa[i].d_type);
 				lb->lb_type = g->g_dfa[i].d_type;
-				free(lb->lb_str);
 				lb->lb_str = NULL;
 				return;
 			}
@@ -170,7 +162,6 @@ translabel(grammar *g, label *lb)
 					printf("Label %s is terminal %d.\n",
 						lb->lb_str, i);
 				lb->lb_type = i;
-				free(lb->lb_str);
 				lb->lb_str = NULL;
 				return;
 			}
@@ -182,29 +173,18 @@ translabel(grammar *g, label *lb)
 	if (lb->lb_type == STRING) {
 		if (isalpha((int)(lb->lb_str[1])) || lb->lb_str[1] == '_') {
 			char *p;
-			char *src;
-			char *dest;
-			size_t name_len;
 			if (Py_DebugFlag)
 				printf("Label %s is a keyword\n", lb->lb_str);
 			lb->lb_type = NAME;
-			src = lb->lb_str + 1;
-			p = strchr(src, '\'');
+			lb->lb_str++;
+			p = strchr(lb->lb_str, '\'');
 			if (p)
-				name_len = p - src;
-			else
-				name_len = strlen(src);
-			dest = malloc(name_len + 1);
-			strncpy(dest, src, name_len);
-			dest[name_len] = '\0';
-			free(lb->lb_str);
-			lb->lb_str = dest;
+				*p = '\0';
 		}
 		else if (lb->lb_str[2] == lb->lb_str[0]) {
 			int type = (int) PyToken_OneChar(lb->lb_str[1]);
 			if (type != OP) {
 				lb->lb_type = type;
-				free(lb->lb_str);
 				lb->lb_str = NULL;
 			}
 			else
@@ -216,7 +196,6 @@ translabel(grammar *g, label *lb)
 						   lb->lb_str[2]);
 			if (type != OP) {
 				lb->lb_type = type;
-				free(lb->lb_str);
 				lb->lb_str = NULL;
 			}
 			else
@@ -229,7 +208,6 @@ translabel(grammar *g, label *lb)
 							    lb->lb_str[3]);
 			if (type != OP) {
 				lb->lb_type = type;
-				free(lb->lb_str);
 				lb->lb_str = NULL;
 			}
 			else

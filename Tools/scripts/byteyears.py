@@ -7,6 +7,7 @@
 # Options -[amc] select atime, mtime (default) or ctime as age.
 
 import sys, os, time
+import string
 from stat import *
 
 # Use lstat() to stat files if it exists, else stat()
@@ -34,15 +35,15 @@ status = 0                              # Exit status, set to 1 on errors
 
 # Compute max file name length
 maxlen = 1
-for filename in sys.argv[1:]:
-    maxlen = max(maxlen, len(filename))
+for file in sys.argv[1:]:
+    if len(file) > maxlen: maxlen = len(file)
 
 # Process each argument in turn
-for filename in sys.argv[1:]:
+for file in sys.argv[1:]:
     try:
-        st = statfunc(filename)
+        st = statfunc(file)
     except os.error, msg:
-        sys.stderr.write('can\'t stat ' + `filename` + ': ' + `msg` + '\n')
+        sys.stderr.write('can\'t stat ' + `file` + ': ' + `msg` + '\n')
         status = 1
         st = ()
     if st:
@@ -50,7 +51,7 @@ for filename in sys.argv[1:]:
         size = st[ST_SIZE]
         age = now - anytime
         byteyears = float(size) * float(age) / secs_per_year
-        print filename.ljust(maxlen),
-        print repr(int(byteyears)).rjust(8)
+        print string.ljust(file, maxlen),
+        print string.rjust(`int(byteyears)`, 8)
 
 sys.exit(status)

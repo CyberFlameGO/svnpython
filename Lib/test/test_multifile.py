@@ -56,11 +56,11 @@ def getMIMEMsg(mf):
         lines = mf.readlines()
         linecount += len(lines)
 
-def test_main():
+def main():
     f = cStringIO.StringIO(msg)
     getMIMEMsg(multifile.MultiFile(f))
     assert boundaries == 2
     assert linecount == 9
 
 if __name__ == '__main__':
-    test_main()
+    main()

@@ -4,7 +4,7 @@
    Roger E. Masse
 """
 
-from test.test_support import verbose, unlink, findfile
+from test_support import verbose, unlink, findfile
 
 import imgfile, uu, os
 

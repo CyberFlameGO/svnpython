@@ -14,9 +14,9 @@
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
@@ -97,7 +97,7 @@ static PyObject *Qt_Error;
 
 PyTypeObject MovieController_Type;
 
-#define MovieCtlObj_Check(x) ((x)->ob_type == &MovieController_Type || PyObject_TypeCheck((x), &MovieController_Type))
+#define MovieCtlObj_Check(x) ((x)->ob_type == &MovieController_Type)
 
 typedef struct MovieControllerObject {
 	PyObject_HEAD
@@ -130,7 +130,7 @@ int MovieCtlObj_Convert(PyObject *v, MovieController *p_itself)
 static void MovieCtlObj_dealloc(MovieControllerObject *self)
 {
 	DisposeMovieController(self->ob_itself);
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *MovieCtlObj_MCSetMovie(MovieControllerObject *_self, PyObject *_args)
@@ -996,126 +996,114 @@ static PyObject *MovieCtlObj_MCTrimMovieSegment(MovieControllerObject *_self, Py
 
 static PyMethodDef MovieCtlObj_methods[] = {
 	{"MCSetMovie", (PyCFunction)MovieCtlObj_MCSetMovie, 1,
-	 PyDoc_STR("(Movie theMovie, WindowPtr movieWindow, Point where) -> (ComponentResult _rv)")},
+	 "(Movie theMovie, WindowPtr movieWindow, Point where) -> (ComponentResult _rv)"},
 	{"MCGetIndMovie", (PyCFunction)MovieCtlObj_MCGetIndMovie, 1,
-	 PyDoc_STR("(short index) -> (Movie _rv)")},
+	 "(short index) -> (Movie _rv)"},
 	{"MCRemoveAllMovies", (PyCFunction)MovieCtlObj_MCRemoveAllMovies, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"MCRemoveAMovie", (PyCFunction)MovieCtlObj_MCRemoveAMovie, 1,
-	 PyDoc_STR("(Movie m) -> (ComponentResult _rv)")},
+	 "(Movie m) -> (ComponentResult _rv)"},
 	{"MCRemoveMovie", (PyCFunction)MovieCtlObj_MCRemoveMovie, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"MCIsPlayerEvent", (PyCFunction)MovieCtlObj_MCIsPlayerEvent, 1,
-	 PyDoc_STR("(EventRecord e) -> (ComponentResult _rv)")},
+	 "(EventRecord e) -> (ComponentResult _rv)"},
 	{"MCDoAction", (PyCFunction)MovieCtlObj_MCDoAction, 1,
-	 PyDoc_STR("(short action, void * params) -> (ComponentResult _rv)")},
+	 "(short action, void * params) -> (ComponentResult _rv)"},
 	{"MCSetControllerAttached", (PyCFunction)MovieCtlObj_MCSetControllerAttached, 1,
-	 PyDoc_STR("(Boolean attach) -> (ComponentResult _rv)")},
+	 "(Boolean attach) -> (ComponentResult _rv)"},
 	{"MCIsControllerAttached", (PyCFunction)MovieCtlObj_MCIsControllerAttached, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"MCSetControllerPort", (PyCFunction)MovieCtlObj_MCSetControllerPort, 1,
-	 PyDoc_STR("(CGrafPtr gp) -> (ComponentResult _rv)")},
+	 "(CGrafPtr gp) -> (ComponentResult _rv)"},
 	{"MCGetControllerPort", (PyCFunction)MovieCtlObj_MCGetControllerPort, 1,
-	 PyDoc_STR("() -> (CGrafPtr _rv)")},
+	 "() -> (CGrafPtr _rv)"},
 	{"MCSetVisible", (PyCFunction)MovieCtlObj_MCSetVisible, 1,
-	 PyDoc_STR("(Boolean visible) -> (ComponentResult _rv)")},
+	 "(Boolean visible) -> (ComponentResult _rv)"},
 	{"MCGetVisible", (PyCFunction)MovieCtlObj_MCGetVisible, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"MCGetControllerBoundsRect", (PyCFunction)MovieCtlObj_MCGetControllerBoundsRect, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv, Rect bounds)")},
+	 "() -> (ComponentResult _rv, Rect bounds)"},
 	{"MCSetControllerBoundsRect", (PyCFunction)MovieCtlObj_MCSetControllerBoundsRect, 1,
-	 PyDoc_STR("(Rect bounds) -> (ComponentResult _rv)")},
+	 "(Rect bounds) -> (ComponentResult _rv)"},
 	{"MCGetControllerBoundsRgn", (PyCFunction)MovieCtlObj_MCGetControllerBoundsRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"MCGetWindowRgn", (PyCFunction)MovieCtlObj_MCGetWindowRgn, 1,
-	 PyDoc_STR("(WindowPtr w) -> (RgnHandle _rv)")},
+	 "(WindowPtr w) -> (RgnHandle _rv)"},
 	{"MCMovieChanged", (PyCFunction)MovieCtlObj_MCMovieChanged, 1,
-	 PyDoc_STR("(Movie m) -> (ComponentResult _rv)")},
+	 "(Movie m) -> (ComponentResult _rv)"},
 	{"MCSetDuration", (PyCFunction)MovieCtlObj_MCSetDuration, 1,
-	 PyDoc_STR("(TimeValue duration) -> (ComponentResult _rv)")},
+	 "(TimeValue duration) -> (ComponentResult _rv)"},
 	{"MCGetCurrentTime", (PyCFunction)MovieCtlObj_MCGetCurrentTime, 1,
-	 PyDoc_STR("() -> (TimeValue _rv, TimeScale scale)")},
+	 "() -> (TimeValue _rv, TimeScale scale)"},
 	{"MCNewAttachedController", (PyCFunction)MovieCtlObj_MCNewAttachedController, 1,
-	 PyDoc_STR("(Movie theMovie, WindowPtr w, Point where) -> (ComponentResult _rv)")},
+	 "(Movie theMovie, WindowPtr w, Point where) -> (ComponentResult _rv)"},
 	{"MCDraw", (PyCFunction)MovieCtlObj_MCDraw, 1,
-	 PyDoc_STR("(WindowPtr w) -> (ComponentResult _rv)")},
+	 "(WindowPtr w) -> (ComponentResult _rv)"},
 	{"MCActivate", (PyCFunction)MovieCtlObj_MCActivate, 1,
-	 PyDoc_STR("(WindowPtr w, Boolean activate) -> (ComponentResult _rv)")},
+	 "(WindowPtr w, Boolean activate) -> (ComponentResult _rv)"},
 	{"MCIdle", (PyCFunction)MovieCtlObj_MCIdle, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"MCKey", (PyCFunction)MovieCtlObj_MCKey, 1,
-	 PyDoc_STR("(SInt8 key, long modifiers) -> (ComponentResult _rv)")},
+	 "(SInt8 key, long modifiers) -> (ComponentResult _rv)"},
 	{"MCClick", (PyCFunction)MovieCtlObj_MCClick, 1,
-	 PyDoc_STR("(WindowPtr w, Point where, long when, long modifiers) -> (ComponentResult _rv)")},
+	 "(WindowPtr w, Point where, long when, long modifiers) -> (ComponentResult _rv)"},
 	{"MCEnableEditing", (PyCFunction)MovieCtlObj_MCEnableEditing, 1,
-	 PyDoc_STR("(Boolean enabled) -> (ComponentResult _rv)")},
+	 "(Boolean enabled) -> (ComponentResult _rv)"},
 	{"MCIsEditingEnabled", (PyCFunction)MovieCtlObj_MCIsEditingEnabled, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"MCCopy", (PyCFunction)MovieCtlObj_MCCopy, 1,
-	 PyDoc_STR("() -> (Movie _rv)")},
+	 "() -> (Movie _rv)"},
 	{"MCCut", (PyCFunction)MovieCtlObj_MCCut, 1,
-	 PyDoc_STR("() -> (Movie _rv)")},
+	 "() -> (Movie _rv)"},
 	{"MCPaste", (PyCFunction)MovieCtlObj_MCPaste, 1,
-	 PyDoc_STR("(Movie srcMovie) -> (ComponentResult _rv)")},
+	 "(Movie srcMovie) -> (ComponentResult _rv)"},
 	{"MCClear", (PyCFunction)MovieCtlObj_MCClear, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"MCUndo", (PyCFunction)MovieCtlObj_MCUndo, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"MCPositionController", (PyCFunction)MovieCtlObj_MCPositionController, 1,
-	 PyDoc_STR("(Rect movieRect, Rect controllerRect, long someFlags) -> (ComponentResult _rv)")},
+	 "(Rect movieRect, Rect controllerRect, long someFlags) -> (ComponentResult _rv)"},
 	{"MCGetControllerInfo", (PyCFunction)MovieCtlObj_MCGetControllerInfo, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv, long someFlags)")},
+	 "() -> (ComponentResult _rv, long someFlags)"},
 	{"MCSetClip", (PyCFunction)MovieCtlObj_MCSetClip, 1,
-	 PyDoc_STR("(RgnHandle theClip, RgnHandle movieClip) -> (ComponentResult _rv)")},
+	 "(RgnHandle theClip, RgnHandle movieClip) -> (ComponentResult _rv)"},
 	{"MCGetClip", (PyCFunction)MovieCtlObj_MCGetClip, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv, RgnHandle theClip, RgnHandle movieClip)")},
+	 "() -> (ComponentResult _rv, RgnHandle theClip, RgnHandle movieClip)"},
 	{"MCDrawBadge", (PyCFunction)MovieCtlObj_MCDrawBadge, 1,
-	 PyDoc_STR("(RgnHandle movieRgn) -> (ComponentResult _rv, RgnHandle badgeRgn)")},
+	 "(RgnHandle movieRgn) -> (ComponentResult _rv, RgnHandle badgeRgn)"},
 	{"MCSetUpEditMenu", (PyCFunction)MovieCtlObj_MCSetUpEditMenu, 1,
-	 PyDoc_STR("(long modifiers, MenuHandle mh) -> (ComponentResult _rv)")},
+	 "(long modifiers, MenuHandle mh) -> (ComponentResult _rv)"},
 	{"MCGetMenuString", (PyCFunction)MovieCtlObj_MCGetMenuString, 1,
-	 PyDoc_STR("(long modifiers, short item, Str255 aString) -> (ComponentResult _rv)")},
+	 "(long modifiers, short item, Str255 aString) -> (ComponentResult _rv)"},
 	{"MCPtInController", (PyCFunction)MovieCtlObj_MCPtInController, 1,
-	 PyDoc_STR("(Point thePt) -> (ComponentResult _rv, Boolean inController)")},
+	 "(Point thePt) -> (ComponentResult _rv, Boolean inController)"},
 	{"MCInvalidate", (PyCFunction)MovieCtlObj_MCInvalidate, 1,
-	 PyDoc_STR("(WindowPtr w, RgnHandle invalidRgn) -> (ComponentResult _rv)")},
+	 "(WindowPtr w, RgnHandle invalidRgn) -> (ComponentResult _rv)"},
 	{"MCAdjustCursor", (PyCFunction)MovieCtlObj_MCAdjustCursor, 1,
-	 PyDoc_STR("(WindowPtr w, Point where, long modifiers) -> (ComponentResult _rv)")},
+	 "(WindowPtr w, Point where, long modifiers) -> (ComponentResult _rv)"},
 	{"MCGetInterfaceElement", (PyCFunction)MovieCtlObj_MCGetInterfaceElement, 1,
-	 PyDoc_STR("(MCInterfaceElement whichElement, void * element) -> (ComponentResult _rv)")},
+	 "(MCInterfaceElement whichElement, void * element) -> (ComponentResult _rv)"},
 	{"MCAddMovieSegment", (PyCFunction)MovieCtlObj_MCAddMovieSegment, 1,
-	 PyDoc_STR("(Movie srcMovie, Boolean scaled) -> (ComponentResult _rv)")},
+	 "(Movie srcMovie, Boolean scaled) -> (ComponentResult _rv)"},
 	{"MCTrimMovieSegment", (PyCFunction)MovieCtlObj_MCTrimMovieSegment, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{NULL, NULL, 0}
 };
 
-#define MovieCtlObj_getsetlist NULL
+PyMethodChain MovieCtlObj_chain = { MovieCtlObj_methods, NULL };
 
+static PyObject *MovieCtlObj_getattr(MovieControllerObject *self, char *name)
+{
+	return Py_FindMethodInChain(&MovieCtlObj_chain, (PyObject *)self, name);
+}
+
+#define MovieCtlObj_setattr NULL
 
 #define MovieCtlObj_compare NULL
 
 #define MovieCtlObj_repr NULL
 
 #define MovieCtlObj_hash NULL
-#define MovieCtlObj_tp_init 0
-
-#define MovieCtlObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *MovieCtlObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	MovieController itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, MovieCtlObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((MovieControllerObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define MovieCtlObj_tp_free PyObject_Del
-
 
 PyTypeObject MovieController_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -1126,39 +1114,14 @@ PyTypeObject MovieController_Type = {
 	/* methods */
 	(destructor) MovieCtlObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) MovieCtlObj_getattr, /*tp_getattr*/
+	(setattrfunc) MovieCtlObj_setattr, /*tp_setattr*/
 	(cmpfunc) MovieCtlObj_compare, /*tp_compare*/
 	(reprfunc) MovieCtlObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) MovieCtlObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	MovieCtlObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	MovieCtlObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	MovieCtlObj_tp_init, /* tp_init */
-	MovieCtlObj_tp_alloc, /* tp_alloc */
-	MovieCtlObj_tp_new, /* tp_new */
-	MovieCtlObj_tp_free, /* tp_free */
 };
 
 /* ---------------- End object type MovieController ----------------- */
@@ -1168,7 +1131,7 @@ PyTypeObject MovieController_Type = {
 
 PyTypeObject TimeBase_Type;
 
-#define TimeBaseObj_Check(x) ((x)->ob_type == &TimeBase_Type || PyObject_TypeCheck((x), &TimeBase_Type))
+#define TimeBaseObj_Check(x) ((x)->ob_type == &TimeBase_Type)
 
 typedef struct TimeBaseObject {
 	PyObject_HEAD
@@ -1201,7 +1164,7 @@ int TimeBaseObj_Convert(PyObject *v, TimeBase *p_itself)
 static void TimeBaseObj_dealloc(TimeBaseObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *TimeBaseObj_DisposeTimeBase(TimeBaseObject *_self, PyObject *_args)
@@ -1538,72 +1501,60 @@ static PyObject *TimeBaseObj_GetTimeBaseEffectiveRate(TimeBaseObject *_self, PyO
 
 static PyMethodDef TimeBaseObj_methods[] = {
 	{"DisposeTimeBase", (PyCFunction)TimeBaseObj_DisposeTimeBase, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetTimeBaseTime", (PyCFunction)TimeBaseObj_GetTimeBaseTime, 1,
-	 PyDoc_STR("(TimeScale s) -> (TimeValue _rv, TimeRecord tr)")},
+	 "(TimeScale s) -> (TimeValue _rv, TimeRecord tr)"},
 	{"SetTimeBaseTime", (PyCFunction)TimeBaseObj_SetTimeBaseTime, 1,
-	 PyDoc_STR("(TimeRecord tr) -> None")},
+	 "(TimeRecord tr) -> None"},
 	{"SetTimeBaseValue", (PyCFunction)TimeBaseObj_SetTimeBaseValue, 1,
-	 PyDoc_STR("(TimeValue t, TimeScale s) -> None")},
+	 "(TimeValue t, TimeScale s) -> None"},
 	{"GetTimeBaseRate", (PyCFunction)TimeBaseObj_GetTimeBaseRate, 1,
-	 PyDoc_STR("() -> (Fixed _rv)")},
+	 "() -> (Fixed _rv)"},
 	{"SetTimeBaseRate", (PyCFunction)TimeBaseObj_SetTimeBaseRate, 1,
-	 PyDoc_STR("(Fixed r) -> None")},
+	 "(Fixed r) -> None"},
 	{"GetTimeBaseStartTime", (PyCFunction)TimeBaseObj_GetTimeBaseStartTime, 1,
-	 PyDoc_STR("(TimeScale s) -> (TimeValue _rv, TimeRecord tr)")},
+	 "(TimeScale s) -> (TimeValue _rv, TimeRecord tr)"},
 	{"SetTimeBaseStartTime", (PyCFunction)TimeBaseObj_SetTimeBaseStartTime, 1,
-	 PyDoc_STR("(TimeRecord tr) -> None")},
+	 "(TimeRecord tr) -> None"},
 	{"GetTimeBaseStopTime", (PyCFunction)TimeBaseObj_GetTimeBaseStopTime, 1,
-	 PyDoc_STR("(TimeScale s) -> (TimeValue _rv, TimeRecord tr)")},
+	 "(TimeScale s) -> (TimeValue _rv, TimeRecord tr)"},
 	{"SetTimeBaseStopTime", (PyCFunction)TimeBaseObj_SetTimeBaseStopTime, 1,
-	 PyDoc_STR("(TimeRecord tr) -> None")},
+	 "(TimeRecord tr) -> None"},
 	{"GetTimeBaseFlags", (PyCFunction)TimeBaseObj_GetTimeBaseFlags, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"SetTimeBaseFlags", (PyCFunction)TimeBaseObj_SetTimeBaseFlags, 1,
-	 PyDoc_STR("(long timeBaseFlags) -> None")},
+	 "(long timeBaseFlags) -> None"},
 	{"SetTimeBaseMasterTimeBase", (PyCFunction)TimeBaseObj_SetTimeBaseMasterTimeBase, 1,
-	 PyDoc_STR("(TimeBase master, TimeRecord slaveZero) -> None")},
+	 "(TimeBase master, TimeRecord slaveZero) -> None"},
 	{"GetTimeBaseMasterTimeBase", (PyCFunction)TimeBaseObj_GetTimeBaseMasterTimeBase, 1,
-	 PyDoc_STR("() -> (TimeBase _rv)")},
+	 "() -> (TimeBase _rv)"},
 	{"SetTimeBaseMasterClock", (PyCFunction)TimeBaseObj_SetTimeBaseMasterClock, 1,
-	 PyDoc_STR("(Component clockMeister, TimeRecord slaveZero) -> None")},
+	 "(Component clockMeister, TimeRecord slaveZero) -> None"},
 	{"GetTimeBaseMasterClock", (PyCFunction)TimeBaseObj_GetTimeBaseMasterClock, 1,
-	 PyDoc_STR("() -> (ComponentInstance _rv)")},
+	 "() -> (ComponentInstance _rv)"},
 	{"GetTimeBaseStatus", (PyCFunction)TimeBaseObj_GetTimeBaseStatus, 1,
-	 PyDoc_STR("() -> (long _rv, TimeRecord unpinnedTime)")},
+	 "() -> (long _rv, TimeRecord unpinnedTime)"},
 	{"SetTimeBaseZero", (PyCFunction)TimeBaseObj_SetTimeBaseZero, 1,
-	 PyDoc_STR("(TimeRecord zero) -> None")},
+	 "(TimeRecord zero) -> None"},
 	{"GetTimeBaseEffectiveRate", (PyCFunction)TimeBaseObj_GetTimeBaseEffectiveRate, 1,
-	 PyDoc_STR("() -> (Fixed _rv)")},
+	 "() -> (Fixed _rv)"},
 	{NULL, NULL, 0}
 };
 
-#define TimeBaseObj_getsetlist NULL
+PyMethodChain TimeBaseObj_chain = { TimeBaseObj_methods, NULL };
 
+static PyObject *TimeBaseObj_getattr(TimeBaseObject *self, char *name)
+{
+	return Py_FindMethodInChain(&TimeBaseObj_chain, (PyObject *)self, name);
+}
+
+#define TimeBaseObj_setattr NULL
 
 #define TimeBaseObj_compare NULL
 
 #define TimeBaseObj_repr NULL
 
 #define TimeBaseObj_hash NULL
-#define TimeBaseObj_tp_init 0
-
-#define TimeBaseObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *TimeBaseObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	TimeBase itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TimeBaseObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TimeBaseObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define TimeBaseObj_tp_free PyObject_Del
-
 
 PyTypeObject TimeBase_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -1614,39 +1565,14 @@ PyTypeObject TimeBase_Type = {
 	/* methods */
 	(destructor) TimeBaseObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) TimeBaseObj_getattr, /*tp_getattr*/
+	(setattrfunc) TimeBaseObj_setattr, /*tp_setattr*/
 	(cmpfunc) TimeBaseObj_compare, /*tp_compare*/
 	(reprfunc) TimeBaseObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) TimeBaseObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	TimeBaseObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	TimeBaseObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	TimeBaseObj_tp_init, /* tp_init */
-	TimeBaseObj_tp_alloc, /* tp_alloc */
-	TimeBaseObj_tp_new, /* tp_new */
-	TimeBaseObj_tp_free, /* tp_free */
 };
 
 /* -------------------- End object type TimeBase -------------------- */
@@ -1656,7 +1582,7 @@ PyTypeObject TimeBase_Type = {
 
 PyTypeObject UserData_Type;
 
-#define UserDataObj_Check(x) ((x)->ob_type == &UserData_Type || PyObject_TypeCheck((x), &UserData_Type))
+#define UserDataObj_Check(x) ((x)->ob_type == &UserData_Type)
 
 typedef struct UserDataObject {
 	PyObject_HEAD
@@ -1689,7 +1615,7 @@ int UserDataObj_Convert(PyObject *v, UserData *p_itself)
 static void UserDataObj_dealloc(UserDataObject *self)
 {
 	DisposeUserData(self->ob_itself);
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *UserDataObj_GetUserData(UserDataObject *_self, PyObject *_args)
@@ -1899,52 +1825,40 @@ static PyObject *UserDataObj_PutUserDataIntoHandle(UserDataObject *_self, PyObje
 
 static PyMethodDef UserDataObj_methods[] = {
 	{"GetUserData", (PyCFunction)UserDataObj_GetUserData, 1,
-	 PyDoc_STR("(Handle data, OSType udType, long index) -> None")},
+	 "(Handle data, OSType udType, long index) -> None"},
 	{"AddUserData", (PyCFunction)UserDataObj_AddUserData, 1,
-	 PyDoc_STR("(Handle data, OSType udType) -> None")},
+	 "(Handle data, OSType udType) -> None"},
 	{"RemoveUserData", (PyCFunction)UserDataObj_RemoveUserData, 1,
-	 PyDoc_STR("(OSType udType, long index) -> None")},
+	 "(OSType udType, long index) -> None"},
 	{"CountUserDataType", (PyCFunction)UserDataObj_CountUserDataType, 1,
-	 PyDoc_STR("(OSType udType) -> (short _rv)")},
+	 "(OSType udType) -> (short _rv)"},
 	{"GetNextUserDataType", (PyCFunction)UserDataObj_GetNextUserDataType, 1,
-	 PyDoc_STR("(OSType udType) -> (long _rv)")},
+	 "(OSType udType) -> (long _rv)"},
 	{"AddUserDataText", (PyCFunction)UserDataObj_AddUserDataText, 1,
-	 PyDoc_STR("(Handle data, OSType udType, long index, short itlRegionTag) -> None")},
+	 "(Handle data, OSType udType, long index, short itlRegionTag) -> None"},
 	{"GetUserDataText", (PyCFunction)UserDataObj_GetUserDataText, 1,
-	 PyDoc_STR("(Handle data, OSType udType, long index, short itlRegionTag) -> None")},
+	 "(Handle data, OSType udType, long index, short itlRegionTag) -> None"},
 	{"RemoveUserDataText", (PyCFunction)UserDataObj_RemoveUserDataText, 1,
-	 PyDoc_STR("(OSType udType, long index, short itlRegionTag) -> None")},
+	 "(OSType udType, long index, short itlRegionTag) -> None"},
 	{"PutUserDataIntoHandle", (PyCFunction)UserDataObj_PutUserDataIntoHandle, 1,
-	 PyDoc_STR("(Handle h) -> None")},
+	 "(Handle h) -> None"},
 	{NULL, NULL, 0}
 };
 
-#define UserDataObj_getsetlist NULL
+PyMethodChain UserDataObj_chain = { UserDataObj_methods, NULL };
 
+static PyObject *UserDataObj_getattr(UserDataObject *self, char *name)
+{
+	return Py_FindMethodInChain(&UserDataObj_chain, (PyObject *)self, name);
+}
+
+#define UserDataObj_setattr NULL
 
 #define UserDataObj_compare NULL
 
 #define UserDataObj_repr NULL
 
 #define UserDataObj_hash NULL
-#define UserDataObj_tp_init 0
-
-#define UserDataObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *UserDataObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	UserData itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, UserDataObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((UserDataObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define UserDataObj_tp_free PyObject_Del
-
 
 PyTypeObject UserData_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -1955,39 +1869,14 @@ PyTypeObject UserData_Type = {
 	/* methods */
 	(destructor) UserDataObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) UserDataObj_getattr, /*tp_getattr*/
+	(setattrfunc) UserDataObj_setattr, /*tp_setattr*/
 	(cmpfunc) UserDataObj_compare, /*tp_compare*/
 	(reprfunc) UserDataObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) UserDataObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	UserDataObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	UserDataObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	UserDataObj_tp_init, /* tp_init */
-	UserDataObj_tp_alloc, /* tp_alloc */
-	UserDataObj_tp_new, /* tp_new */
-	UserDataObj_tp_free, /* tp_free */
 };
 
 /* -------------------- End object type UserData -------------------- */
@@ -1997,7 +1886,7 @@ PyTypeObject UserData_Type = {
 
 PyTypeObject Media_Type;
 
-#define MediaObj_Check(x) ((x)->ob_type == &Media_Type || PyObject_TypeCheck((x), &Media_Type))
+#define MediaObj_Check(x) ((x)->ob_type == &Media_Type)
 
 typedef struct MediaObject {
 	PyObject_HEAD
@@ -2030,7 +1919,7 @@ int MediaObj_Convert(PyObject *v, Media *p_itself)
 static void MediaObj_dealloc(MediaObject *self)
 {
 	DisposeTrackMedia(self->ob_itself);
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *MediaObj_LoadMediaIntoRam(MediaObject *_self, PyObject *_args)
@@ -3035,128 +2924,116 @@ static PyObject *MediaObj_GetMediaNextInterestingTimeOnly(MediaObject *_self, Py
 
 static PyMethodDef MediaObj_methods[] = {
 	{"LoadMediaIntoRam", (PyCFunction)MediaObj_LoadMediaIntoRam, 1,
-	 PyDoc_STR("(TimeValue time, TimeValue duration, long flags) -> None")},
+	 "(TimeValue time, TimeValue duration, long flags) -> None"},
 	{"GetMediaTrack", (PyCFunction)MediaObj_GetMediaTrack, 1,
-	 PyDoc_STR("() -> (Track _rv)")},
+	 "() -> (Track _rv)"},
 	{"GetMediaCreationTime", (PyCFunction)MediaObj_GetMediaCreationTime, 1,
-	 PyDoc_STR("() -> (unsigned long _rv)")},
+	 "() -> (unsigned long _rv)"},
 	{"GetMediaModificationTime", (PyCFunction)MediaObj_GetMediaModificationTime, 1,
-	 PyDoc_STR("() -> (unsigned long _rv)")},
+	 "() -> (unsigned long _rv)"},
 	{"GetMediaTimeScale", (PyCFunction)MediaObj_GetMediaTimeScale, 1,
-	 PyDoc_STR("() -> (TimeScale _rv)")},
+	 "() -> (TimeScale _rv)"},
 	{"SetMediaTimeScale", (PyCFunction)MediaObj_SetMediaTimeScale, 1,
-	 PyDoc_STR("(TimeScale timeScale) -> None")},
+	 "(TimeScale timeScale) -> None"},
 	{"GetMediaDuration", (PyCFunction)MediaObj_GetMediaDuration, 1,
-	 PyDoc_STR("() -> (TimeValue _rv)")},
+	 "() -> (TimeValue _rv)"},
 	{"GetMediaLanguage", (PyCFunction)MediaObj_GetMediaLanguage, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"SetMediaLanguage", (PyCFunction)MediaObj_SetMediaLanguage, 1,
-	 PyDoc_STR("(short language) -> None")},
+	 "(short language) -> None"},
 	{"GetMediaQuality", (PyCFunction)MediaObj_GetMediaQuality, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"SetMediaQuality", (PyCFunction)MediaObj_SetMediaQuality, 1,
-	 PyDoc_STR("(short quality) -> None")},
+	 "(short quality) -> None"},
 	{"GetMediaHandlerDescription", (PyCFunction)MediaObj_GetMediaHandlerDescription, 1,
-	 PyDoc_STR("(Str255 creatorName) -> (OSType mediaType, OSType creatorManufacturer)")},
+	 "(Str255 creatorName) -> (OSType mediaType, OSType creatorManufacturer)"},
 	{"GetMediaUserData", (PyCFunction)MediaObj_GetMediaUserData, 1,
-	 PyDoc_STR("() -> (UserData _rv)")},
+	 "() -> (UserData _rv)"},
 	{"GetMediaHandler", (PyCFunction)MediaObj_GetMediaHandler, 1,
-	 PyDoc_STR("() -> (MediaHandler _rv)")},
+	 "() -> (MediaHandler _rv)"},
 	{"SetMediaHandler", (PyCFunction)MediaObj_SetMediaHandler, 1,
-	 PyDoc_STR("(MediaHandlerComponent mH) -> None")},
+	 "(MediaHandlerComponent mH) -> None"},
 	{"BeginMediaEdits", (PyCFunction)MediaObj_BeginMediaEdits, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"EndMediaEdits", (PyCFunction)MediaObj_EndMediaEdits, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"SetMediaDefaultDataRefIndex", (PyCFunction)MediaObj_SetMediaDefaultDataRefIndex, 1,
-	 PyDoc_STR("(short index) -> None")},
+	 "(short index) -> None"},
 	{"GetMediaDataHandlerDescription", (PyCFunction)MediaObj_GetMediaDataHandlerDescription, 1,
-	 PyDoc_STR("(short index, Str255 creatorName) -> (OSType dhType, OSType creatorManufacturer)")},
+	 "(short index, Str255 creatorName) -> (OSType dhType, OSType creatorManufacturer)"},
 	{"GetMediaDataHandler", (PyCFunction)MediaObj_GetMediaDataHandler, 1,
-	 PyDoc_STR("(short index) -> (DataHandler _rv)")},
+	 "(short index) -> (DataHandler _rv)"},
 	{"SetMediaDataHandler", (PyCFunction)MediaObj_SetMediaDataHandler, 1,
-	 PyDoc_STR("(short index, DataHandlerComponent dataHandler) -> None")},
+	 "(short index, DataHandlerComponent dataHandler) -> None"},
 	{"GetMediaSampleDescriptionCount", (PyCFunction)MediaObj_GetMediaSampleDescriptionCount, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"GetMediaSampleDescription", (PyCFunction)MediaObj_GetMediaSampleDescription, 1,
-	 PyDoc_STR("(long index, SampleDescriptionHandle descH) -> None")},
+	 "(long index, SampleDescriptionHandle descH) -> None"},
 	{"SetMediaSampleDescription", (PyCFunction)MediaObj_SetMediaSampleDescription, 1,
-	 PyDoc_STR("(long index, SampleDescriptionHandle descH) -> None")},
+	 "(long index, SampleDescriptionHandle descH) -> None"},
 	{"GetMediaSampleCount", (PyCFunction)MediaObj_GetMediaSampleCount, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"GetMediaSyncSampleCount", (PyCFunction)MediaObj_GetMediaSyncSampleCount, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"SampleNumToMediaTime", (PyCFunction)MediaObj_SampleNumToMediaTime, 1,
-	 PyDoc_STR("(long logicalSampleNum) -> (TimeValue sampleTime, TimeValue sampleDuration)")},
+	 "(long logicalSampleNum) -> (TimeValue sampleTime, TimeValue sampleDuration)"},
 	{"MediaTimeToSampleNum", (PyCFunction)MediaObj_MediaTimeToSampleNum, 1,
-	 PyDoc_STR("(TimeValue time) -> (long sampleNum, TimeValue sampleTime, TimeValue sampleDuration)")},
+	 "(TimeValue time) -> (long sampleNum, TimeValue sampleTime, TimeValue sampleDuration)"},
 	{"AddMediaSample", (PyCFunction)MediaObj_AddMediaSample, 1,
-	 PyDoc_STR("(Handle dataIn, long inOffset, unsigned long size, TimeValue durationPerSample, SampleDescriptionHandle sampleDescriptionH, long numberOfSamples, short sampleFlags) -> (TimeValue sampleTime)")},
+	 "(Handle dataIn, long inOffset, unsigned long size, TimeValue durationPerSample, SampleDescriptionHandle sampleDescriptionH, long numberOfSamples, short sampleFlags) -> (TimeValue sampleTime)"},
 	{"AddMediaSampleReference", (PyCFunction)MediaObj_AddMediaSampleReference, 1,
-	 PyDoc_STR("(long dataOffset, unsigned long size, TimeValue durationPerSample, SampleDescriptionHandle sampleDescriptionH, long numberOfSamples, short sampleFlags) -> (TimeValue sampleTime)")},
+	 "(long dataOffset, unsigned long size, TimeValue durationPerSample, SampleDescriptionHandle sampleDescriptionH, long numberOfSamples, short sampleFlags) -> (TimeValue sampleTime)"},
 	{"GetMediaSample", (PyCFunction)MediaObj_GetMediaSample, 1,
-	 PyDoc_STR("(Handle dataOut, long maxSizeToGrow, TimeValue time, SampleDescriptionHandle sampleDescriptionH, long maxNumberOfSamples) -> (long size, TimeValue sampleTime, TimeValue durationPerSample, long sampleDescriptionIndex, long numberOfSamples, short sampleFlags)")},
+	 "(Handle dataOut, long maxSizeToGrow, TimeValue time, SampleDescriptionHandle sampleDescriptionH, long maxNumberOfSamples) -> (long size, TimeValue sampleTime, TimeValue durationPerSample, long sampleDescriptionIndex, long numberOfSamples, short sampleFlags)"},
 	{"GetMediaSampleReference", (PyCFunction)MediaObj_GetMediaSampleReference, 1,
-	 PyDoc_STR("(TimeValue time, SampleDescriptionHandle sampleDescriptionH, long maxNumberOfSamples) -> (long dataOffset, long size, TimeValue sampleTime, TimeValue durationPerSample, long sampleDescriptionIndex, long numberOfSamples, short sampleFlags)")},
+	 "(TimeValue time, SampleDescriptionHandle sampleDescriptionH, long maxNumberOfSamples) -> (long dataOffset, long size, TimeValue sampleTime, TimeValue durationPerSample, long sampleDescriptionIndex, long numberOfSamples, short sampleFlags)"},
 	{"SetMediaPreferredChunkSize", (PyCFunction)MediaObj_SetMediaPreferredChunkSize, 1,
-	 PyDoc_STR("(long maxChunkSize) -> None")},
+	 "(long maxChunkSize) -> None"},
 	{"GetMediaPreferredChunkSize", (PyCFunction)MediaObj_GetMediaPreferredChunkSize, 1,
-	 PyDoc_STR("() -> (long maxChunkSize)")},
+	 "() -> (long maxChunkSize)"},
 	{"SetMediaShadowSync", (PyCFunction)MediaObj_SetMediaShadowSync, 1,
-	 PyDoc_STR("(long frameDiffSampleNum, long syncSampleNum) -> None")},
+	 "(long frameDiffSampleNum, long syncSampleNum) -> None"},
 	{"GetMediaShadowSync", (PyCFunction)MediaObj_GetMediaShadowSync, 1,
-	 PyDoc_STR("(long frameDiffSampleNum) -> (long syncSampleNum)")},
+	 "(long frameDiffSampleNum) -> (long syncSampleNum)"},
 	{"GetMediaDataSize", (PyCFunction)MediaObj_GetMediaDataSize, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> (long _rv)")},
+	 "(TimeValue startTime, TimeValue duration) -> (long _rv)"},
 	{"GetMediaDataSize64", (PyCFunction)MediaObj_GetMediaDataSize64, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> (wide dataSize)")},
+	 "(TimeValue startTime, TimeValue duration) -> (wide dataSize)"},
 	{"GetMediaNextInterestingTime", (PyCFunction)MediaObj_GetMediaNextInterestingTime, 1,
-	 PyDoc_STR("(short interestingTimeFlags, TimeValue time, Fixed rate) -> (TimeValue interestingTime, TimeValue interestingDuration)")},
+	 "(short interestingTimeFlags, TimeValue time, Fixed rate) -> (TimeValue interestingTime, TimeValue interestingDuration)"},
 	{"GetMediaDataRef", (PyCFunction)MediaObj_GetMediaDataRef, 1,
-	 PyDoc_STR("(short index) -> (Handle dataRef, OSType dataRefType, long dataRefAttributes)")},
+	 "(short index) -> (Handle dataRef, OSType dataRefType, long dataRefAttributes)"},
 	{"SetMediaDataRef", (PyCFunction)MediaObj_SetMediaDataRef, 1,
-	 PyDoc_STR("(short index, Handle dataRef, OSType dataRefType) -> None")},
+	 "(short index, Handle dataRef, OSType dataRefType) -> None"},
 	{"SetMediaDataRefAttributes", (PyCFunction)MediaObj_SetMediaDataRefAttributes, 1,
-	 PyDoc_STR("(short index, long dataRefAttributes) -> None")},
+	 "(short index, long dataRefAttributes) -> None"},
 	{"AddMediaDataRef", (PyCFunction)MediaObj_AddMediaDataRef, 1,
-	 PyDoc_STR("(Handle dataRef, OSType dataRefType) -> (short index)")},
+	 "(Handle dataRef, OSType dataRefType) -> (short index)"},
 	{"GetMediaDataRefCount", (PyCFunction)MediaObj_GetMediaDataRefCount, 1,
-	 PyDoc_STR("() -> (short count)")},
+	 "() -> (short count)"},
 	{"SetMediaPlayHints", (PyCFunction)MediaObj_SetMediaPlayHints, 1,
-	 PyDoc_STR("(long flags, long flagsMask) -> None")},
+	 "(long flags, long flagsMask) -> None"},
 	{"GetMediaPlayHints", (PyCFunction)MediaObj_GetMediaPlayHints, 1,
-	 PyDoc_STR("() -> (long flags)")},
+	 "() -> (long flags)"},
 	{"GetMediaNextInterestingTimeOnly", (PyCFunction)MediaObj_GetMediaNextInterestingTimeOnly, 1,
-	 PyDoc_STR("(short interestingTimeFlags, TimeValue time, Fixed rate) -> (TimeValue interestingTime)")},
+	 "(short interestingTimeFlags, TimeValue time, Fixed rate) -> (TimeValue interestingTime)"},
 	{NULL, NULL, 0}
 };
 
-#define MediaObj_getsetlist NULL
+PyMethodChain MediaObj_chain = { MediaObj_methods, NULL };
 
+static PyObject *MediaObj_getattr(MediaObject *self, char *name)
+{
+	return Py_FindMethodInChain(&MediaObj_chain, (PyObject *)self, name);
+}
+
+#define MediaObj_setattr NULL
 
 #define MediaObj_compare NULL
 
 #define MediaObj_repr NULL
 
 #define MediaObj_hash NULL
-#define MediaObj_tp_init 0
-
-#define MediaObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *MediaObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	Media itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, MediaObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((MediaObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define MediaObj_tp_free PyObject_Del
-
 
 PyTypeObject Media_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -3167,39 +3044,14 @@ PyTypeObject Media_Type = {
 	/* methods */
 	(destructor) MediaObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) MediaObj_getattr, /*tp_getattr*/
+	(setattrfunc) MediaObj_setattr, /*tp_setattr*/
 	(cmpfunc) MediaObj_compare, /*tp_compare*/
 	(reprfunc) MediaObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) MediaObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	MediaObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	MediaObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	MediaObj_tp_init, /* tp_init */
-	MediaObj_tp_alloc, /* tp_alloc */
-	MediaObj_tp_new, /* tp_new */
-	MediaObj_tp_free, /* tp_free */
 };
 
 /* --------------------- End object type Media ---------------------- */
@@ -3209,7 +3061,7 @@ PyTypeObject Media_Type = {
 
 PyTypeObject Track_Type;
 
-#define TrackObj_Check(x) ((x)->ob_type == &Track_Type || PyObject_TypeCheck((x), &Track_Type))
+#define TrackObj_Check(x) ((x)->ob_type == &Track_Type)
 
 typedef struct TrackObject {
 	PyObject_HEAD
@@ -3242,7 +3094,7 @@ int TrackObj_Convert(PyObject *v, Track *p_itself)
 static void TrackObj_dealloc(TrackObject *self)
 {
 	DisposeMovieTrack(self->ob_itself);
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *TrackObj_LoadTrackIntoRam(TrackObject *_self, PyObject *_args)
@@ -4333,148 +4185,136 @@ static PyObject *TrackObj_GetTrackLoadSettings(TrackObject *_self, PyObject *_ar
 
 static PyMethodDef TrackObj_methods[] = {
 	{"LoadTrackIntoRam", (PyCFunction)TrackObj_LoadTrackIntoRam, 1,
-	 PyDoc_STR("(TimeValue time, TimeValue duration, long flags) -> None")},
+	 "(TimeValue time, TimeValue duration, long flags) -> None"},
 	{"GetTrackPict", (PyCFunction)TrackObj_GetTrackPict, 1,
-	 PyDoc_STR("(TimeValue time) -> (PicHandle _rv)")},
+	 "(TimeValue time) -> (PicHandle _rv)"},
 	{"GetTrackClipRgn", (PyCFunction)TrackObj_GetTrackClipRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"SetTrackClipRgn", (PyCFunction)TrackObj_SetTrackClipRgn, 1,
-	 PyDoc_STR("(RgnHandle theClip) -> None")},
+	 "(RgnHandle theClip) -> None"},
 	{"GetTrackDisplayBoundsRgn", (PyCFunction)TrackObj_GetTrackDisplayBoundsRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"GetTrackMovieBoundsRgn", (PyCFunction)TrackObj_GetTrackMovieBoundsRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"GetTrackBoundsRgn", (PyCFunction)TrackObj_GetTrackBoundsRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"GetTrackMatte", (PyCFunction)TrackObj_GetTrackMatte, 1,
-	 PyDoc_STR("() -> (PixMapHandle _rv)")},
+	 "() -> (PixMapHandle _rv)"},
 	{"SetTrackMatte", (PyCFunction)TrackObj_SetTrackMatte, 1,
-	 PyDoc_STR("(PixMapHandle theMatte) -> None")},
+	 "(PixMapHandle theMatte) -> None"},
 	{"GetTrackID", (PyCFunction)TrackObj_GetTrackID, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"GetTrackMovie", (PyCFunction)TrackObj_GetTrackMovie, 1,
-	 PyDoc_STR("() -> (Movie _rv)")},
+	 "() -> (Movie _rv)"},
 	{"GetTrackCreationTime", (PyCFunction)TrackObj_GetTrackCreationTime, 1,
-	 PyDoc_STR("() -> (unsigned long _rv)")},
+	 "() -> (unsigned long _rv)"},
 	{"GetTrackModificationTime", (PyCFunction)TrackObj_GetTrackModificationTime, 1,
-	 PyDoc_STR("() -> (unsigned long _rv)")},
+	 "() -> (unsigned long _rv)"},
 	{"GetTrackEnabled", (PyCFunction)TrackObj_GetTrackEnabled, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"SetTrackEnabled", (PyCFunction)TrackObj_SetTrackEnabled, 1,
-	 PyDoc_STR("(Boolean isEnabled) -> None")},
+	 "(Boolean isEnabled) -> None"},
 	{"GetTrackUsage", (PyCFunction)TrackObj_GetTrackUsage, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"SetTrackUsage", (PyCFunction)TrackObj_SetTrackUsage, 1,
-	 PyDoc_STR("(long usage) -> None")},
+	 "(long usage) -> None"},
 	{"GetTrackDuration", (PyCFunction)TrackObj_GetTrackDuration, 1,
-	 PyDoc_STR("() -> (TimeValue _rv)")},
+	 "() -> (TimeValue _rv)"},
 	{"GetTrackOffset", (PyCFunction)TrackObj_GetTrackOffset, 1,
-	 PyDoc_STR("() -> (TimeValue _rv)")},
+	 "() -> (TimeValue _rv)"},
 	{"SetTrackOffset", (PyCFunction)TrackObj_SetTrackOffset, 1,
-	 PyDoc_STR("(TimeValue movieOffsetTime) -> None")},
+	 "(TimeValue movieOffsetTime) -> None"},
 	{"GetTrackLayer", (PyCFunction)TrackObj_GetTrackLayer, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"SetTrackLayer", (PyCFunction)TrackObj_SetTrackLayer, 1,
-	 PyDoc_STR("(short layer) -> None")},
+	 "(short layer) -> None"},
 	{"GetTrackAlternate", (PyCFunction)TrackObj_GetTrackAlternate, 1,
-	 PyDoc_STR("() -> (Track _rv)")},
+	 "() -> (Track _rv)"},
 	{"SetTrackAlternate", (PyCFunction)TrackObj_SetTrackAlternate, 1,
-	 PyDoc_STR("(Track alternateT) -> None")},
+	 "(Track alternateT) -> None"},
 	{"GetTrackVolume", (PyCFunction)TrackObj_GetTrackVolume, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"SetTrackVolume", (PyCFunction)TrackObj_SetTrackVolume, 1,
-	 PyDoc_STR("(short volume) -> None")},
+	 "(short volume) -> None"},
 	{"GetTrackDimensions", (PyCFunction)TrackObj_GetTrackDimensions, 1,
-	 PyDoc_STR("() -> (Fixed width, Fixed height)")},
+	 "() -> (Fixed width, Fixed height)"},
 	{"SetTrackDimensions", (PyCFunction)TrackObj_SetTrackDimensions, 1,
-	 PyDoc_STR("(Fixed width, Fixed height) -> None")},
+	 "(Fixed width, Fixed height) -> None"},
 	{"GetTrackUserData", (PyCFunction)TrackObj_GetTrackUserData, 1,
-	 PyDoc_STR("() -> (UserData _rv)")},
+	 "() -> (UserData _rv)"},
 	{"GetTrackSoundLocalizationSettings", (PyCFunction)TrackObj_GetTrackSoundLocalizationSettings, 1,
-	 PyDoc_STR("() -> (Handle settings)")},
+	 "() -> (Handle settings)"},
 	{"SetTrackSoundLocalizationSettings", (PyCFunction)TrackObj_SetTrackSoundLocalizationSettings, 1,
-	 PyDoc_STR("(Handle settings) -> None")},
+	 "(Handle settings) -> None"},
 	{"NewTrackMedia", (PyCFunction)TrackObj_NewTrackMedia, 1,
-	 PyDoc_STR("(OSType mediaType, TimeScale timeScale, Handle dataRef, OSType dataRefType) -> (Media _rv)")},
+	 "(OSType mediaType, TimeScale timeScale, Handle dataRef, OSType dataRefType) -> (Media _rv)"},
 	{"GetTrackMedia", (PyCFunction)TrackObj_GetTrackMedia, 1,
-	 PyDoc_STR("() -> (Media _rv)")},
+	 "() -> (Media _rv)"},
 	{"InsertMediaIntoTrack", (PyCFunction)TrackObj_InsertMediaIntoTrack, 1,
-	 PyDoc_STR("(TimeValue trackStart, TimeValue mediaTime, TimeValue mediaDuration, Fixed mediaRate) -> None")},
+	 "(TimeValue trackStart, TimeValue mediaTime, TimeValue mediaDuration, Fixed mediaRate) -> None"},
 	{"InsertTrackSegment", (PyCFunction)TrackObj_InsertTrackSegment, 1,
-	 PyDoc_STR("(Track dstTrack, TimeValue srcIn, TimeValue srcDuration, TimeValue dstIn) -> None")},
+	 "(Track dstTrack, TimeValue srcIn, TimeValue srcDuration, TimeValue dstIn) -> None"},
 	{"InsertEmptyTrackSegment", (PyCFunction)TrackObj_InsertEmptyTrackSegment, 1,
-	 PyDoc_STR("(TimeValue dstIn, TimeValue dstDuration) -> None")},
+	 "(TimeValue dstIn, TimeValue dstDuration) -> None"},
 	{"DeleteTrackSegment", (PyCFunction)TrackObj_DeleteTrackSegment, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> None")},
+	 "(TimeValue startTime, TimeValue duration) -> None"},
 	{"ScaleTrackSegment", (PyCFunction)TrackObj_ScaleTrackSegment, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue oldDuration, TimeValue newDuration) -> None")},
+	 "(TimeValue startTime, TimeValue oldDuration, TimeValue newDuration) -> None"},
 	{"IsScrapMovie", (PyCFunction)TrackObj_IsScrapMovie, 1,
-	 PyDoc_STR("() -> (Component _rv)")},
+	 "() -> (Component _rv)"},
 	{"CopyTrackSettings", (PyCFunction)TrackObj_CopyTrackSettings, 1,
-	 PyDoc_STR("(Track dstTrack) -> None")},
+	 "(Track dstTrack) -> None"},
 	{"AddEmptyTrackToMovie", (PyCFunction)TrackObj_AddEmptyTrackToMovie, 1,
-	 PyDoc_STR("(Movie dstMovie, Handle dataRef, OSType dataRefType) -> (Track dstTrack)")},
+	 "(Movie dstMovie, Handle dataRef, OSType dataRefType) -> (Track dstTrack)"},
 	{"AddClonedTrackToMovie", (PyCFunction)TrackObj_AddClonedTrackToMovie, 1,
-	 PyDoc_STR("(Movie dstMovie, long flags) -> (Track dstTrack)")},
+	 "(Movie dstMovie, long flags) -> (Track dstTrack)"},
 	{"AddTrackReference", (PyCFunction)TrackObj_AddTrackReference, 1,
-	 PyDoc_STR("(Track refTrack, OSType refType) -> (long addedIndex)")},
+	 "(Track refTrack, OSType refType) -> (long addedIndex)"},
 	{"DeleteTrackReference", (PyCFunction)TrackObj_DeleteTrackReference, 1,
-	 PyDoc_STR("(OSType refType, long index) -> None")},
+	 "(OSType refType, long index) -> None"},
 	{"SetTrackReference", (PyCFunction)TrackObj_SetTrackReference, 1,
-	 PyDoc_STR("(Track refTrack, OSType refType, long index) -> None")},
+	 "(Track refTrack, OSType refType, long index) -> None"},
 	{"GetTrackReference", (PyCFunction)TrackObj_GetTrackReference, 1,
-	 PyDoc_STR("(OSType refType, long index) -> (Track _rv)")},
+	 "(OSType refType, long index) -> (Track _rv)"},
 	{"GetNextTrackReferenceType", (PyCFunction)TrackObj_GetNextTrackReferenceType, 1,
-	 PyDoc_STR("(OSType refType) -> (OSType _rv)")},
+	 "(OSType refType) -> (OSType _rv)"},
 	{"GetTrackReferenceCount", (PyCFunction)TrackObj_GetTrackReferenceCount, 1,
-	 PyDoc_STR("(OSType refType) -> (long _rv)")},
+	 "(OSType refType) -> (long _rv)"},
 	{"GetTrackEditRate", (PyCFunction)TrackObj_GetTrackEditRate, 1,
-	 PyDoc_STR("(TimeValue atTime) -> (Fixed _rv)")},
+	 "(TimeValue atTime) -> (Fixed _rv)"},
 	{"GetTrackDataSize", (PyCFunction)TrackObj_GetTrackDataSize, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> (long _rv)")},
+	 "(TimeValue startTime, TimeValue duration) -> (long _rv)"},
 	{"GetTrackDataSize64", (PyCFunction)TrackObj_GetTrackDataSize64, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> (wide dataSize)")},
+	 "(TimeValue startTime, TimeValue duration) -> (wide dataSize)"},
 	{"PtInTrack", (PyCFunction)TrackObj_PtInTrack, 1,
-	 PyDoc_STR("(Point pt) -> (Boolean _rv)")},
+	 "(Point pt) -> (Boolean _rv)"},
 	{"GetTrackNextInterestingTime", (PyCFunction)TrackObj_GetTrackNextInterestingTime, 1,
-	 PyDoc_STR("(short interestingTimeFlags, TimeValue time, Fixed rate) -> (TimeValue interestingTime, TimeValue interestingDuration)")},
+	 "(short interestingTimeFlags, TimeValue time, Fixed rate) -> (TimeValue interestingTime, TimeValue interestingDuration)"},
 	{"GetTrackSegmentDisplayBoundsRgn", (PyCFunction)TrackObj_GetTrackSegmentDisplayBoundsRgn, 1,
-	 PyDoc_STR("(TimeValue time, TimeValue duration) -> (RgnHandle _rv)")},
+	 "(TimeValue time, TimeValue duration) -> (RgnHandle _rv)"},
 	{"GetTrackStatus", (PyCFunction)TrackObj_GetTrackStatus, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv)")},
+	 "() -> (ComponentResult _rv)"},
 	{"SetTrackLoadSettings", (PyCFunction)TrackObj_SetTrackLoadSettings, 1,
-	 PyDoc_STR("(TimeValue preloadTime, TimeValue preloadDuration, long preloadFlags, long defaultHints) -> None")},
+	 "(TimeValue preloadTime, TimeValue preloadDuration, long preloadFlags, long defaultHints) -> None"},
 	{"GetTrackLoadSettings", (PyCFunction)TrackObj_GetTrackLoadSettings, 1,
-	 PyDoc_STR("() -> (TimeValue preloadTime, TimeValue preloadDuration, long preloadFlags, long defaultHints)")},
+	 "() -> (TimeValue preloadTime, TimeValue preloadDuration, long preloadFlags, long defaultHints)"},
 	{NULL, NULL, 0}
 };
 
-#define TrackObj_getsetlist NULL
+PyMethodChain TrackObj_chain = { TrackObj_methods, NULL };
 
+static PyObject *TrackObj_getattr(TrackObject *self, char *name)
+{
+	return Py_FindMethodInChain(&TrackObj_chain, (PyObject *)self, name);
+}
+
+#define TrackObj_setattr NULL
 
 #define TrackObj_compare NULL
 
 #define TrackObj_repr NULL
 
 #define TrackObj_hash NULL
-#define TrackObj_tp_init 0
-
-#define TrackObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *TrackObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	Track itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TrackObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TrackObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define TrackObj_tp_free PyObject_Del
-
 
 PyTypeObject Track_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -4485,39 +4325,14 @@ PyTypeObject Track_Type = {
 	/* methods */
 	(destructor) TrackObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) TrackObj_getattr, /*tp_getattr*/
+	(setattrfunc) TrackObj_setattr, /*tp_setattr*/
 	(cmpfunc) TrackObj_compare, /*tp_compare*/
 	(reprfunc) TrackObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) TrackObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	TrackObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	TrackObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	TrackObj_tp_init, /* tp_init */
-	TrackObj_tp_alloc, /* tp_alloc */
-	TrackObj_tp_new, /* tp_new */
-	TrackObj_tp_free, /* tp_free */
 };
 
 /* --------------------- End object type Track ---------------------- */
@@ -4527,7 +4342,7 @@ PyTypeObject Track_Type = {
 
 PyTypeObject Movie_Type;
 
-#define MovieObj_Check(x) ((x)->ob_type == &Movie_Type || PyObject_TypeCheck((x), &Movie_Type))
+#define MovieObj_Check(x) ((x)->ob_type == &Movie_Type)
 
 typedef struct MovieObject {
 	PyObject_HEAD
@@ -4560,7 +4375,7 @@ int MovieObj_Convert(PyObject *v, Movie *p_itself)
 static void MovieObj_dealloc(MovieObject *self)
 {
 	DisposeMovie(self->ob_itself);
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *MovieObj_MoviesTask(MovieObject *_self, PyObject *_args)
@@ -6276,6 +6091,58 @@ static PyObject *MovieObj_GetMovieDefaultDataRef(MovieObject *_self, PyObject *_
 	return _res;
 }
 
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *MovieObj_SetMovieAnchorDataRef(MovieObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	OSErr _err;
+	Handle dataRef;
+	OSType dataRefType;
+#ifndef SetMovieAnchorDataRef
+	PyMac_PRECHECK(SetMovieAnchorDataRef);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&O&",
+	                      ResObj_Convert, &dataRef,
+	                      PyMac_GetOSType, &dataRefType))
+		return NULL;
+	_err = SetMovieAnchorDataRef(_self->ob_itself,
+	                             dataRef,
+	                             dataRefType);
+	if (_err != noErr) return PyMac_Error(_err);
+	Py_INCREF(Py_None);
+	_res = Py_None;
+	return _res;
+}
+#endif
+
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *MovieObj_GetMovieAnchorDataRef(MovieObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	OSErr _err;
+	Handle dataRef;
+	OSType dataRefType;
+	long outFlags;
+#ifndef GetMovieAnchorDataRef
+	PyMac_PRECHECK(GetMovieAnchorDataRef);
+#endif
+	if (!PyArg_ParseTuple(_args, ""))
+		return NULL;
+	_err = GetMovieAnchorDataRef(_self->ob_itself,
+	                             &dataRef,
+	                             &dataRefType,
+	                             &outFlags);
+	if (_err != noErr) return PyMac_Error(_err);
+	_res = Py_BuildValue("O&O&l",
+	                     ResObj_New, dataRef,
+	                     PyMac_BuildOSType, dataRefType,
+	                     outFlags);
+	return _res;
+}
+#endif
+
 static PyObject *MovieObj_SetMovieColorTable(MovieObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -6482,6 +6349,24 @@ static PyObject *MovieObj_GetMovieStatus(MovieObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *MovieObj_GetMovieLoadState(MovieObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	long _rv;
+#ifndef GetMovieLoadState
+	PyMac_PRECHECK(GetMovieLoadState);
+#endif
+	if (!PyArg_ParseTuple(_args, ""))
+		return NULL;
+	_rv = GetMovieLoadState(_self->ob_itself);
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
 static PyObject *MovieObj_NewMovieController(MovieObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -6604,250 +6489,253 @@ static PyObject *MovieObj_QTGetDataRefMaxFileOffset(MovieObject *_self, PyObject
 
 static PyMethodDef MovieObj_methods[] = {
 	{"MoviesTask", (PyCFunction)MovieObj_MoviesTask, 1,
-	 PyDoc_STR("(long maxMilliSecToUse) -> None")},
+	 "(long maxMilliSecToUse) -> None"},
 	{"PrerollMovie", (PyCFunction)MovieObj_PrerollMovie, 1,
-	 PyDoc_STR("(TimeValue time, Fixed Rate) -> None")},
+	 "(TimeValue time, Fixed Rate) -> None"},
 	{"AbortPrePrerollMovie", (PyCFunction)MovieObj_AbortPrePrerollMovie, 1,
-	 PyDoc_STR("(OSErr err) -> None")},
+	 "(OSErr err) -> None"},
 	{"LoadMovieIntoRam", (PyCFunction)MovieObj_LoadMovieIntoRam, 1,
-	 PyDoc_STR("(TimeValue time, TimeValue duration, long flags) -> None")},
+	 "(TimeValue time, TimeValue duration, long flags) -> None"},
 	{"SetMovieActive", (PyCFunction)MovieObj_SetMovieActive, 1,
-	 PyDoc_STR("(Boolean active) -> None")},
+	 "(Boolean active) -> None"},
 	{"GetMovieActive", (PyCFunction)MovieObj_GetMovieActive, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"StartMovie", (PyCFunction)MovieObj_StartMovie, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"StopMovie", (PyCFunction)MovieObj_StopMovie, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GoToBeginningOfMovie", (PyCFunction)MovieObj_GoToBeginningOfMovie, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GoToEndOfMovie", (PyCFunction)MovieObj_GoToEndOfMovie, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"IsMovieDone", (PyCFunction)MovieObj_IsMovieDone, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"GetMoviePreviewMode", (PyCFunction)MovieObj_GetMoviePreviewMode, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"SetMoviePreviewMode", (PyCFunction)MovieObj_SetMoviePreviewMode, 1,
-	 PyDoc_STR("(Boolean usePreview) -> None")},
+	 "(Boolean usePreview) -> None"},
 	{"ShowMoviePoster", (PyCFunction)MovieObj_ShowMoviePoster, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetMovieTimeBase", (PyCFunction)MovieObj_GetMovieTimeBase, 1,
-	 PyDoc_STR("() -> (TimeBase _rv)")},
+	 "() -> (TimeBase _rv)"},
 	{"SetMovieMasterTimeBase", (PyCFunction)MovieObj_SetMovieMasterTimeBase, 1,
-	 PyDoc_STR("(TimeBase tb, TimeRecord slaveZero) -> None")},
+	 "(TimeBase tb, TimeRecord slaveZero) -> None"},
 	{"SetMovieMasterClock", (PyCFunction)MovieObj_SetMovieMasterClock, 1,
-	 PyDoc_STR("(Component clockMeister, TimeRecord slaveZero) -> None")},
+	 "(Component clockMeister, TimeRecord slaveZero) -> None"},
 	{"GetMovieGWorld", (PyCFunction)MovieObj_GetMovieGWorld, 1,
-	 PyDoc_STR("() -> (CGrafPtr port, GDHandle gdh)")},
+	 "() -> (CGrafPtr port, GDHandle gdh)"},
 	{"SetMovieGWorld", (PyCFunction)MovieObj_SetMovieGWorld, 1,
-	 PyDoc_STR("(CGrafPtr port, GDHandle gdh) -> None")},
+	 "(CGrafPtr port, GDHandle gdh) -> None"},
 	{"GetMovieNaturalBoundsRect", (PyCFunction)MovieObj_GetMovieNaturalBoundsRect, 1,
-	 PyDoc_STR("() -> (Rect naturalBounds)")},
+	 "() -> (Rect naturalBounds)"},
 	{"GetNextTrackForCompositing", (PyCFunction)MovieObj_GetNextTrackForCompositing, 1,
-	 PyDoc_STR("(Track theTrack) -> (Track _rv)")},
+	 "(Track theTrack) -> (Track _rv)"},
 	{"GetPrevTrackForCompositing", (PyCFunction)MovieObj_GetPrevTrackForCompositing, 1,
-	 PyDoc_STR("(Track theTrack) -> (Track _rv)")},
+	 "(Track theTrack) -> (Track _rv)"},
 	{"GetMoviePict", (PyCFunction)MovieObj_GetMoviePict, 1,
-	 PyDoc_STR("(TimeValue time) -> (PicHandle _rv)")},
+	 "(TimeValue time) -> (PicHandle _rv)"},
 	{"GetMoviePosterPict", (PyCFunction)MovieObj_GetMoviePosterPict, 1,
-	 PyDoc_STR("() -> (PicHandle _rv)")},
+	 "() -> (PicHandle _rv)"},
 	{"UpdateMovie", (PyCFunction)MovieObj_UpdateMovie, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"InvalidateMovieRegion", (PyCFunction)MovieObj_InvalidateMovieRegion, 1,
-	 PyDoc_STR("(RgnHandle invalidRgn) -> None")},
+	 "(RgnHandle invalidRgn) -> None"},
 	{"GetMovieBox", (PyCFunction)MovieObj_GetMovieBox, 1,
-	 PyDoc_STR("() -> (Rect boxRect)")},
+	 "() -> (Rect boxRect)"},
 	{"SetMovieBox", (PyCFunction)MovieObj_SetMovieBox, 1,
-	 PyDoc_STR("(Rect boxRect) -> None")},
+	 "(Rect boxRect) -> None"},
 	{"GetMovieDisplayClipRgn", (PyCFunction)MovieObj_GetMovieDisplayClipRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"SetMovieDisplayClipRgn", (PyCFunction)MovieObj_SetMovieDisplayClipRgn, 1,
-	 PyDoc_STR("(RgnHandle theClip) -> None")},
+	 "(RgnHandle theClip) -> None"},
 	{"GetMovieClipRgn", (PyCFunction)MovieObj_GetMovieClipRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"SetMovieClipRgn", (PyCFunction)MovieObj_SetMovieClipRgn, 1,
-	 PyDoc_STR("(RgnHandle theClip) -> None")},
+	 "(RgnHandle theClip) -> None"},
 	{"GetMovieDisplayBoundsRgn", (PyCFunction)MovieObj_GetMovieDisplayBoundsRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"GetMovieBoundsRgn", (PyCFunction)MovieObj_GetMovieBoundsRgn, 1,
-	 PyDoc_STR("() -> (RgnHandle _rv)")},
+	 "() -> (RgnHandle _rv)"},
 	{"SetMovieVideoOutput", (PyCFunction)MovieObj_SetMovieVideoOutput, 1,
-	 PyDoc_STR("(ComponentInstance vout) -> None")},
+	 "(ComponentInstance vout) -> None"},
 	{"PutMovieIntoHandle", (PyCFunction)MovieObj_PutMovieIntoHandle, 1,
-	 PyDoc_STR("(Handle publicMovie) -> None")},
+	 "(Handle publicMovie) -> None"},
 	{"PutMovieIntoDataFork", (PyCFunction)MovieObj_PutMovieIntoDataFork, 1,
-	 PyDoc_STR("(short fRefNum, long offset, long maxSize) -> None")},
+	 "(short fRefNum, long offset, long maxSize) -> None"},
 	{"PutMovieIntoDataFork64", (PyCFunction)MovieObj_PutMovieIntoDataFork64, 1,
-	 PyDoc_STR("(long fRefNum, wide offset, unsigned long maxSize) -> None")},
+	 "(long fRefNum, wide offset, unsigned long maxSize) -> None"},
 	{"GetMovieCreationTime", (PyCFunction)MovieObj_GetMovieCreationTime, 1,
-	 PyDoc_STR("() -> (unsigned long _rv)")},
+	 "() -> (unsigned long _rv)"},
 	{"GetMovieModificationTime", (PyCFunction)MovieObj_GetMovieModificationTime, 1,
-	 PyDoc_STR("() -> (unsigned long _rv)")},
+	 "() -> (unsigned long _rv)"},
 	{"GetMovieTimeScale", (PyCFunction)MovieObj_GetMovieTimeScale, 1,
-	 PyDoc_STR("() -> (TimeScale _rv)")},
+	 "() -> (TimeScale _rv)"},
 	{"SetMovieTimeScale", (PyCFunction)MovieObj_SetMovieTimeScale, 1,
-	 PyDoc_STR("(TimeScale timeScale) -> None")},
+	 "(TimeScale timeScale) -> None"},
 	{"GetMovieDuration", (PyCFunction)MovieObj_GetMovieDuration, 1,
-	 PyDoc_STR("() -> (TimeValue _rv)")},
+	 "() -> (TimeValue _rv)"},
 	{"GetMovieRate", (PyCFunction)MovieObj_GetMovieRate, 1,
-	 PyDoc_STR("() -> (Fixed _rv)")},
+	 "() -> (Fixed _rv)"},
 	{"SetMovieRate", (PyCFunction)MovieObj_SetMovieRate, 1,
-	 PyDoc_STR("(Fixed rate) -> None")},
+	 "(Fixed rate) -> None"},
 	{"GetMoviePreferredRate", (PyCFunction)MovieObj_GetMoviePreferredRate, 1,
-	 PyDoc_STR("() -> (Fixed _rv)")},
+	 "() -> (Fixed _rv)"},
 	{"SetMoviePreferredRate", (PyCFunction)MovieObj_SetMoviePreferredRate, 1,
-	 PyDoc_STR("(Fixed rate) -> None")},
+	 "(Fixed rate) -> None"},
 	{"GetMoviePreferredVolume", (PyCFunction)MovieObj_GetMoviePreferredVolume, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"SetMoviePreferredVolume", (PyCFunction)MovieObj_SetMoviePreferredVolume, 1,
-	 PyDoc_STR("(short volume) -> None")},
+	 "(short volume) -> None"},
 	{"GetMovieVolume", (PyCFunction)MovieObj_GetMovieVolume, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"SetMovieVolume", (PyCFunction)MovieObj_SetMovieVolume, 1,
-	 PyDoc_STR("(short volume) -> None")},
+	 "(short volume) -> None"},
 	{"GetMoviePreviewTime", (PyCFunction)MovieObj_GetMoviePreviewTime, 1,
-	 PyDoc_STR("() -> (TimeValue previewTime, TimeValue previewDuration)")},
+	 "() -> (TimeValue previewTime, TimeValue previewDuration)"},
 	{"SetMoviePreviewTime", (PyCFunction)MovieObj_SetMoviePreviewTime, 1,
-	 PyDoc_STR("(TimeValue previewTime, TimeValue previewDuration) -> None")},
+	 "(TimeValue previewTime, TimeValue previewDuration) -> None"},
 	{"GetMoviePosterTime", (PyCFunction)MovieObj_GetMoviePosterTime, 1,
-	 PyDoc_STR("() -> (TimeValue _rv)")},
+	 "() -> (TimeValue _rv)"},
 	{"SetMoviePosterTime", (PyCFunction)MovieObj_SetMoviePosterTime, 1,
-	 PyDoc_STR("(TimeValue posterTime) -> None")},
+	 "(TimeValue posterTime) -> None"},
 	{"GetMovieSelection", (PyCFunction)MovieObj_GetMovieSelection, 1,
-	 PyDoc_STR("() -> (TimeValue selectionTime, TimeValue selectionDuration)")},
+	 "() -> (TimeValue selectionTime, TimeValue selectionDuration)"},
 	{"SetMovieSelection", (PyCFunction)MovieObj_SetMovieSelection, 1,
-	 PyDoc_STR("(TimeValue selectionTime, TimeValue selectionDuration) -> None")},
+	 "(TimeValue selectionTime, TimeValue selectionDuration) -> None"},
 	{"SetMovieActiveSegment", (PyCFunction)MovieObj_SetMovieActiveSegment, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> None")},
+	 "(TimeValue startTime, TimeValue duration) -> None"},
 	{"GetMovieActiveSegment", (PyCFunction)MovieObj_GetMovieActiveSegment, 1,
-	 PyDoc_STR("() -> (TimeValue startTime, TimeValue duration)")},
+	 "() -> (TimeValue startTime, TimeValue duration)"},
 	{"GetMovieTime", (PyCFunction)MovieObj_GetMovieTime, 1,
-	 PyDoc_STR("() -> (TimeValue _rv, TimeRecord currentTime)")},
+	 "() -> (TimeValue _rv, TimeRecord currentTime)"},
 	{"SetMovieTime", (PyCFunction)MovieObj_SetMovieTime, 1,
-	 PyDoc_STR("(TimeRecord newtime) -> None")},
+	 "(TimeRecord newtime) -> None"},
 	{"SetMovieTimeValue", (PyCFunction)MovieObj_SetMovieTimeValue, 1,
-	 PyDoc_STR("(TimeValue newtime) -> None")},
+	 "(TimeValue newtime) -> None"},
 	{"GetMovieUserData", (PyCFunction)MovieObj_GetMovieUserData, 1,
-	 PyDoc_STR("() -> (UserData _rv)")},
+	 "() -> (UserData _rv)"},
 	{"GetMovieTrackCount", (PyCFunction)MovieObj_GetMovieTrackCount, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"GetMovieTrack", (PyCFunction)MovieObj_GetMovieTrack, 1,
-	 PyDoc_STR("(long trackID) -> (Track _rv)")},
+	 "(long trackID) -> (Track _rv)"},
 	{"GetMovieIndTrack", (PyCFunction)MovieObj_GetMovieIndTrack, 1,
-	 PyDoc_STR("(long index) -> (Track _rv)")},
+	 "(long index) -> (Track _rv)"},
 	{"GetMovieIndTrackType", (PyCFunction)MovieObj_GetMovieIndTrackType, 1,
-	 PyDoc_STR("(long index, OSType trackType, long flags) -> (Track _rv)")},
+	 "(long index, OSType trackType, long flags) -> (Track _rv)"},
 	{"NewMovieTrack", (PyCFunction)MovieObj_NewMovieTrack, 1,
-	 PyDoc_STR("(Fixed width, Fixed height, short trackVolume) -> (Track _rv)")},
+	 "(Fixed width, Fixed height, short trackVolume) -> (Track _rv)"},
 	{"SetAutoTrackAlternatesEnabled", (PyCFunction)MovieObj_SetAutoTrackAlternatesEnabled, 1,
-	 PyDoc_STR("(Boolean enable) -> None")},
+	 "(Boolean enable) -> None"},
 	{"SelectMovieAlternates", (PyCFunction)MovieObj_SelectMovieAlternates, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"InsertMovieSegment", (PyCFunction)MovieObj_InsertMovieSegment, 1,
-	 PyDoc_STR("(Movie dstMovie, TimeValue srcIn, TimeValue srcDuration, TimeValue dstIn) -> None")},
+	 "(Movie dstMovie, TimeValue srcIn, TimeValue srcDuration, TimeValue dstIn) -> None"},
 	{"InsertEmptyMovieSegment", (PyCFunction)MovieObj_InsertEmptyMovieSegment, 1,
-	 PyDoc_STR("(TimeValue dstIn, TimeValue dstDuration) -> None")},
+	 "(TimeValue dstIn, TimeValue dstDuration) -> None"},
 	{"DeleteMovieSegment", (PyCFunction)MovieObj_DeleteMovieSegment, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> None")},
+	 "(TimeValue startTime, TimeValue duration) -> None"},
 	{"ScaleMovieSegment", (PyCFunction)MovieObj_ScaleMovieSegment, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue oldDuration, TimeValue newDuration) -> None")},
+	 "(TimeValue startTime, TimeValue oldDuration, TimeValue newDuration) -> None"},
 	{"CutMovieSelection", (PyCFunction)MovieObj_CutMovieSelection, 1,
-	 PyDoc_STR("() -> (Movie _rv)")},
+	 "() -> (Movie _rv)"},
 	{"CopyMovieSelection", (PyCFunction)MovieObj_CopyMovieSelection, 1,
-	 PyDoc_STR("() -> (Movie _rv)")},
+	 "() -> (Movie _rv)"},
 	{"PasteMovieSelection", (PyCFunction)MovieObj_PasteMovieSelection, 1,
-	 PyDoc_STR("(Movie src) -> None")},
+	 "(Movie src) -> None"},
 	{"AddMovieSelection", (PyCFunction)MovieObj_AddMovieSelection, 1,
-	 PyDoc_STR("(Movie src) -> None")},
+	 "(Movie src) -> None"},
 	{"ClearMovieSelection", (PyCFunction)MovieObj_ClearMovieSelection, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"PutMovieIntoTypedHandle", (PyCFunction)MovieObj_PutMovieIntoTypedHandle, 1,
-	 PyDoc_STR("(Track targetTrack, OSType handleType, Handle publicMovie, TimeValue start, TimeValue dur, long flags, ComponentInstance userComp) -> None")},
+	 "(Track targetTrack, OSType handleType, Handle publicMovie, TimeValue start, TimeValue dur, long flags, ComponentInstance userComp) -> None"},
 	{"CopyMovieSettings", (PyCFunction)MovieObj_CopyMovieSettings, 1,
-	 PyDoc_STR("(Movie dstMovie) -> None")},
+	 "(Movie dstMovie) -> None"},
 	{"ConvertMovieToFile", (PyCFunction)MovieObj_ConvertMovieToFile, 1,
-	 PyDoc_STR("(Track onlyTrack, FSSpec outputFile, OSType fileType, OSType creator, ScriptCode scriptTag, long flags, ComponentInstance userComp) -> (short resID)")},
+	 "(Track onlyTrack, FSSpec outputFile, OSType fileType, OSType creator, ScriptCode scriptTag, long flags, ComponentInstance userComp) -> (short resID)"},
 	{"GetMovieDataSize", (PyCFunction)MovieObj_GetMovieDataSize, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> (long _rv)")},
+	 "(TimeValue startTime, TimeValue duration) -> (long _rv)"},
 	{"GetMovieDataSize64", (PyCFunction)MovieObj_GetMovieDataSize64, 1,
-	 PyDoc_STR("(TimeValue startTime, TimeValue duration) -> (wide dataSize)")},
+	 "(TimeValue startTime, TimeValue duration) -> (wide dataSize)"},
 	{"PtInMovie", (PyCFunction)MovieObj_PtInMovie, 1,
-	 PyDoc_STR("(Point pt) -> (Boolean _rv)")},
+	 "(Point pt) -> (Boolean _rv)"},
 	{"SetMovieLanguage", (PyCFunction)MovieObj_SetMovieLanguage, 1,
-	 PyDoc_STR("(long language) -> None")},
+	 "(long language) -> None"},
 	{"GetMovieNextInterestingTime", (PyCFunction)MovieObj_GetMovieNextInterestingTime, 1,
-	 PyDoc_STR("(short interestingTimeFlags, short numMediaTypes, OSType whichMediaTypes, TimeValue time, Fixed rate) -> (TimeValue interestingTime, TimeValue interestingDuration)")},
+	 "(short interestingTimeFlags, short numMediaTypes, OSType whichMediaTypes, TimeValue time, Fixed rate) -> (TimeValue interestingTime, TimeValue interestingDuration)"},
 	{"AddMovieResource", (PyCFunction)MovieObj_AddMovieResource, 1,
-	 PyDoc_STR("(short resRefNum, Str255 resName) -> (short resId)")},
+	 "(short resRefNum, Str255 resName) -> (short resId)"},
 	{"UpdateMovieResource", (PyCFunction)MovieObj_UpdateMovieResource, 1,
-	 PyDoc_STR("(short resRefNum, short resId, Str255 resName) -> None")},
+	 "(short resRefNum, short resId, Str255 resName) -> None"},
 	{"HasMovieChanged", (PyCFunction)MovieObj_HasMovieChanged, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"ClearMovieChanged", (PyCFunction)MovieObj_ClearMovieChanged, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"SetMovieDefaultDataRef", (PyCFunction)MovieObj_SetMovieDefaultDataRef, 1,
-	 PyDoc_STR("(Handle dataRef, OSType dataRefType) -> None")},
+	 "(Handle dataRef, OSType dataRefType) -> None"},
 	{"GetMovieDefaultDataRef", (PyCFunction)MovieObj_GetMovieDefaultDataRef, 1,
-	 PyDoc_STR("() -> (Handle dataRef, OSType dataRefType)")},
+	 "() -> (Handle dataRef, OSType dataRefType)"},
+
+#if !TARGET_API_MAC_CARBON
+	{"SetMovieAnchorDataRef", (PyCFunction)MovieObj_SetMovieAnchorDataRef, 1,
+	 "(Handle dataRef, OSType dataRefType) -> None"},
+#endif
+
+#if !TARGET_API_MAC_CARBON
+	{"GetMovieAnchorDataRef", (PyCFunction)MovieObj_GetMovieAnchorDataRef, 1,
+	 "() -> (Handle dataRef, OSType dataRefType, long outFlags)"},
+#endif
 	{"SetMovieColorTable", (PyCFunction)MovieObj_SetMovieColorTable, 1,
-	 PyDoc_STR("(CTabHandle ctab) -> None")},
+	 "(CTabHandle ctab) -> None"},
 	{"GetMovieColorTable", (PyCFunction)MovieObj_GetMovieColorTable, 1,
-	 PyDoc_STR("() -> (CTabHandle ctab)")},
+	 "() -> (CTabHandle ctab)"},
 	{"FlattenMovie", (PyCFunction)MovieObj_FlattenMovie, 1,
-	 PyDoc_STR("(long movieFlattenFlags, FSSpec theFile, OSType creator, ScriptCode scriptTag, long createMovieFileFlags, Str255 resName) -> (short resId)")},
+	 "(long movieFlattenFlags, FSSpec theFile, OSType creator, ScriptCode scriptTag, long createMovieFileFlags, Str255 resName) -> (short resId)"},
 	{"FlattenMovieData", (PyCFunction)MovieObj_FlattenMovieData, 1,
-	 PyDoc_STR("(long movieFlattenFlags, FSSpec theFile, OSType creator, ScriptCode scriptTag, long createMovieFileFlags) -> (Movie _rv)")},
+	 "(long movieFlattenFlags, FSSpec theFile, OSType creator, ScriptCode scriptTag, long createMovieFileFlags) -> (Movie _rv)"},
 	{"MovieSearchText", (PyCFunction)MovieObj_MovieSearchText, 1,
-	 PyDoc_STR("(Ptr text, long size, long searchFlags) -> (Track searchTrack, TimeValue searchTime, long searchOffset)")},
+	 "(Ptr text, long size, long searchFlags) -> (Track searchTrack, TimeValue searchTime, long searchOffset)"},
 	{"GetPosterBox", (PyCFunction)MovieObj_GetPosterBox, 1,
-	 PyDoc_STR("() -> (Rect boxRect)")},
+	 "() -> (Rect boxRect)"},
 	{"SetPosterBox", (PyCFunction)MovieObj_SetPosterBox, 1,
-	 PyDoc_STR("(Rect boxRect) -> None")},
+	 "(Rect boxRect) -> None"},
 	{"GetMovieSegmentDisplayBoundsRgn", (PyCFunction)MovieObj_GetMovieSegmentDisplayBoundsRgn, 1,
-	 PyDoc_STR("(TimeValue time, TimeValue duration) -> (RgnHandle _rv)")},
+	 "(TimeValue time, TimeValue duration) -> (RgnHandle _rv)"},
 	{"GetMovieStatus", (PyCFunction)MovieObj_GetMovieStatus, 1,
-	 PyDoc_STR("() -> (ComponentResult _rv, Track firstProblemTrack)")},
+	 "() -> (ComponentResult _rv, Track firstProblemTrack)"},
+
+#if !TARGET_API_MAC_CARBON
+	{"GetMovieLoadState", (PyCFunction)MovieObj_GetMovieLoadState, 1,
+	 "() -> (long _rv)"},
+#endif
 	{"NewMovieController", (PyCFunction)MovieObj_NewMovieController, 1,
-	 PyDoc_STR("(Rect movieRect, long someFlags) -> (MovieController _rv)")},
+	 "(Rect movieRect, long someFlags) -> (MovieController _rv)"},
 	{"PutMovieOnScrap", (PyCFunction)MovieObj_PutMovieOnScrap, 1,
-	 PyDoc_STR("(long movieScrapFlags) -> None")},
+	 "(long movieScrapFlags) -> None"},
 	{"SetMoviePlayHints", (PyCFunction)MovieObj_SetMoviePlayHints, 1,
-	 PyDoc_STR("(long flags, long flagsMask) -> None")},
+	 "(long flags, long flagsMask) -> None"},
 	{"GetMaxLoadedTimeInMovie", (PyCFunction)MovieObj_GetMaxLoadedTimeInMovie, 1,
-	 PyDoc_STR("() -> (TimeValue time)")},
+	 "() -> (TimeValue time)"},
 	{"QTMovieNeedsTimeTable", (PyCFunction)MovieObj_QTMovieNeedsTimeTable, 1,
-	 PyDoc_STR("() -> (Boolean needsTimeTable)")},
+	 "() -> (Boolean needsTimeTable)"},
 	{"QTGetDataRefMaxFileOffset", (PyCFunction)MovieObj_QTGetDataRefMaxFileOffset, 1,
-	 PyDoc_STR("(OSType dataRefType, Handle dataRef) -> (long offset)")},
+	 "(OSType dataRefType, Handle dataRef) -> (long offset)"},
 	{NULL, NULL, 0}
 };
 
-#define MovieObj_getsetlist NULL
+PyMethodChain MovieObj_chain = { MovieObj_methods, NULL };
 
+static PyObject *MovieObj_getattr(MovieObject *self, char *name)
+{
+	return Py_FindMethodInChain(&MovieObj_chain, (PyObject *)self, name);
+}
+
+#define MovieObj_setattr NULL
 
 #define MovieObj_compare NULL
 
 #define MovieObj_repr NULL
 
 #define MovieObj_hash NULL
-#define MovieObj_tp_init 0
-
-#define MovieObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *MovieObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	Movie itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, MovieObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((MovieObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define MovieObj_tp_free PyObject_Del
-
 
 PyTypeObject Movie_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -6858,43 +6746,40 @@ PyTypeObject Movie_Type = {
 	/* methods */
 	(destructor) MovieObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) MovieObj_getattr, /*tp_getattr*/
+	(setattrfunc) MovieObj_setattr, /*tp_setattr*/
 	(cmpfunc) MovieObj_compare, /*tp_compare*/
 	(reprfunc) MovieObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) MovieObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	MovieObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	MovieObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	MovieObj_tp_init, /* tp_init */
-	MovieObj_tp_alloc, /* tp_alloc */
-	MovieObj_tp_new, /* tp_new */
-	MovieObj_tp_free, /* tp_free */
 };
 
 /* --------------------- End object type Movie ---------------------- */
 
+
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_CheckQuickTimeRegistration(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	void * registrationKey;
+	long flags;
+#ifndef CheckQuickTimeRegistration
+	PyMac_PRECHECK(CheckQuickTimeRegistration);
+#endif
+	if (!PyArg_ParseTuple(_args, "sl",
+	                      &registrationKey,
+	                      &flags))
+		return NULL;
+	CheckQuickTimeRegistration(registrationKey,
+	                           flags);
+	Py_INCREF(Py_None);
+	_res = Py_None;
+	return _res;
+}
+#endif
 
 static PyObject *Qt_EnterMovies(PyObject *_self, PyObject *_args)
 {
@@ -7027,6 +6912,44 @@ static PyObject *Qt_GetDataHandler(PyObject *_self, PyObject *_args)
 	                     CmpObj_New, _rv);
 	return _res;
 }
+
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_OpenADataHandler(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	OSErr _err;
+	Handle dataRef;
+	OSType dataHandlerSubType;
+	Handle anchorDataRef;
+	OSType anchorDataRefType;
+	TimeBase tb;
+	long flags;
+	ComponentInstance dh;
+#ifndef OpenADataHandler
+	PyMac_PRECHECK(OpenADataHandler);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&O&O&O&O&l",
+	                      ResObj_Convert, &dataRef,
+	                      PyMac_GetOSType, &dataHandlerSubType,
+	                      ResObj_Convert, &anchorDataRef,
+	                      PyMac_GetOSType, &anchorDataRefType,
+	                      TimeBaseObj_Convert, &tb,
+	                      &flags))
+		return NULL;
+	_err = OpenADataHandler(dataRef,
+	                        dataHandlerSubType,
+	                        anchorDataRef,
+	                        anchorDataRefType,
+	                        tb,
+	                        flags,
+	                        &dh);
+	if (_err != noErr) return PyMac_Error(_err);
+	_res = Py_BuildValue("O&",
+	                     CmpInstObj_New, dh);
+	return _res;
+}
+#endif
 
 static PyObject *Qt_PasteHandleIntoMovie(PyObject *_self, PyObject *_args)
 {
@@ -8701,6 +8624,35 @@ static PyObject *Qt_SpriteMediaGetActionVariable(PyObject *_self, PyObject *_arg
 	return _res;
 }
 
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_SpriteMediaGetIndImageProperty(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	ComponentResult _rv;
+	MediaHandler mh;
+	short imageIndex;
+	long imagePropertyType;
+	void * imagePropertyValue;
+#ifndef SpriteMediaGetIndImageProperty
+	PyMac_PRECHECK(SpriteMediaGetIndImageProperty);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&hls",
+	                      CmpInstObj_Convert, &mh,
+	                      &imageIndex,
+	                      &imagePropertyType,
+	                      &imagePropertyValue))
+		return NULL;
+	_rv = SpriteMediaGetIndImageProperty(mh,
+	                                     imageIndex,
+	                                     imagePropertyType,
+	                                     imagePropertyValue);
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
 static PyObject *Qt_SpriteMediaDisposeSprite(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -9084,6 +9036,151 @@ static PyObject *Qt_FlashMediaGetSupportedSwfVersion(PyObject *_self, PyObject *
 	return _res;
 }
 
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_MovieMediaGetCurrentMovieProperty(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	ComponentResult _rv;
+	MediaHandler mh;
+	OSType whichProperty;
+	void * value;
+#ifndef MovieMediaGetCurrentMovieProperty
+	PyMac_PRECHECK(MovieMediaGetCurrentMovieProperty);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&O&s",
+	                      CmpInstObj_Convert, &mh,
+	                      PyMac_GetOSType, &whichProperty,
+	                      &value))
+		return NULL;
+	_rv = MovieMediaGetCurrentMovieProperty(mh,
+	                                        whichProperty,
+	                                        value);
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_MovieMediaGetCurrentTrackProperty(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	ComponentResult _rv;
+	MediaHandler mh;
+	long trackID;
+	OSType whichProperty;
+	void * value;
+#ifndef MovieMediaGetCurrentTrackProperty
+	PyMac_PRECHECK(MovieMediaGetCurrentTrackProperty);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&lO&s",
+	                      CmpInstObj_Convert, &mh,
+	                      &trackID,
+	                      PyMac_GetOSType, &whichProperty,
+	                      &value))
+		return NULL;
+	_rv = MovieMediaGetCurrentTrackProperty(mh,
+	                                        trackID,
+	                                        whichProperty,
+	                                        value);
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_MovieMediaGetChildMovieDataReference(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	ComponentResult _rv;
+	MediaHandler mh;
+	QTAtomID dataRefID;
+	short dataRefIndex;
+	OSType dataRefType;
+	Handle dataRef;
+	QTAtomID dataRefIDOut;
+	short dataRefIndexOut;
+#ifndef MovieMediaGetChildMovieDataReference
+	PyMac_PRECHECK(MovieMediaGetChildMovieDataReference);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&lh",
+	                      CmpInstObj_Convert, &mh,
+	                      &dataRefID,
+	                      &dataRefIndex))
+		return NULL;
+	_rv = MovieMediaGetChildMovieDataReference(mh,
+	                                           dataRefID,
+	                                           dataRefIndex,
+	                                           &dataRefType,
+	                                           &dataRef,
+	                                           &dataRefIDOut,
+	                                           &dataRefIndexOut);
+	_res = Py_BuildValue("lO&O&lh",
+	                     _rv,
+	                     PyMac_BuildOSType, dataRefType,
+	                     ResObj_New, dataRef,
+	                     dataRefIDOut,
+	                     dataRefIndexOut);
+	return _res;
+}
+#endif
+
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_MovieMediaSetChildMovieDataReference(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	ComponentResult _rv;
+	MediaHandler mh;
+	QTAtomID dataRefID;
+	OSType dataRefType;
+	Handle dataRef;
+#ifndef MovieMediaSetChildMovieDataReference
+	PyMac_PRECHECK(MovieMediaSetChildMovieDataReference);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&lO&O&",
+	                      CmpInstObj_Convert, &mh,
+	                      &dataRefID,
+	                      PyMac_GetOSType, &dataRefType,
+	                      ResObj_Convert, &dataRef))
+		return NULL;
+	_rv = MovieMediaSetChildMovieDataReference(mh,
+	                                           dataRefID,
+	                                           dataRefType,
+	                                           dataRef);
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_MovieMediaLoadChildMovieFromDataReference(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	ComponentResult _rv;
+	MediaHandler mh;
+	QTAtomID dataRefID;
+#ifndef MovieMediaLoadChildMovieFromDataReference
+	PyMac_PRECHECK(MovieMediaLoadChildMovieFromDataReference);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&l",
+	                      CmpInstObj_Convert, &mh,
+	                      &dataRefID))
+		return NULL;
+	_rv = MovieMediaLoadChildMovieFromDataReference(mh,
+	                                                dataRefID);
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
 static PyObject *Qt_Media3DGetCurrentGroup(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -9317,6 +9414,29 @@ static PyObject *Qt_Media3DGetCameraRange(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if !TARGET_API_MAC_CARBON
+
+static PyObject *Qt_Media3DGetViewObject(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	ComponentResult _rv;
+	MediaHandler mh;
+	void * tq3viewObject;
+#ifndef Media3DGetViewObject
+	PyMac_PRECHECK(Media3DGetViewObject);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&s",
+	                      CmpInstObj_Convert, &mh,
+	                      &tq3viewObject))
+		return NULL;
+	_rv = Media3DGetViewObject(mh,
+	                           tq3viewObject);
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
 static PyObject *Qt_NewTimeBase(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -9340,8 +9460,7 @@ static PyObject *Qt_ConvertTime(PyObject *_self, PyObject *_args)
 #ifndef ConvertTime
 	PyMac_PRECHECK(ConvertTime);
 #endif
-	if (!PyArg_ParseTuple(_args, "O&O&",
-	                      QtTimeRecord_Convert, &theTime,
+	if (!PyArg_ParseTuple(_args, "O&",
 	                      TimeBaseObj_Convert, &newBase))
 		return NULL;
 	ConvertTime(&theTime,
@@ -9359,8 +9478,7 @@ static PyObject *Qt_ConvertTimeScale(PyObject *_self, PyObject *_args)
 #ifndef ConvertTimeScale
 	PyMac_PRECHECK(ConvertTimeScale);
 #endif
-	if (!PyArg_ParseTuple(_args, "O&l",
-	                      QtTimeRecord_Convert, &theTime,
+	if (!PyArg_ParseTuple(_args, "l",
 	                      &newScale))
 		return NULL;
 	ConvertTimeScale(&theTime,
@@ -9494,220 +9612,265 @@ static PyObject *Qt_MoviesTask(PyObject *_self, PyObject *_args)
 }
 
 static PyMethodDef Qt_methods[] = {
+
+#if !TARGET_API_MAC_CARBON
+	{"CheckQuickTimeRegistration", (PyCFunction)Qt_CheckQuickTimeRegistration, 1,
+	 "(void * registrationKey, long flags) -> None"},
+#endif
 	{"EnterMovies", (PyCFunction)Qt_EnterMovies, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"ExitMovies", (PyCFunction)Qt_ExitMovies, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetMoviesError", (PyCFunction)Qt_GetMoviesError, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"ClearMoviesStickyError", (PyCFunction)Qt_ClearMoviesStickyError, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetMoviesStickyError", (PyCFunction)Qt_GetMoviesStickyError, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"DisposeMatte", (PyCFunction)Qt_DisposeMatte, 1,
-	 PyDoc_STR("(PixMapHandle theMatte) -> None")},
+	 "(PixMapHandle theMatte) -> None"},
 	{"NewMovie", (PyCFunction)Qt_NewMovie, 1,
-	 PyDoc_STR("(long flags) -> (Movie _rv)")},
+	 "(long flags) -> (Movie _rv)"},
 	{"GetDataHandler", (PyCFunction)Qt_GetDataHandler, 1,
-	 PyDoc_STR("(Handle dataRef, OSType dataHandlerSubType, long flags) -> (Component _rv)")},
+	 "(Handle dataRef, OSType dataHandlerSubType, long flags) -> (Component _rv)"},
+
+#if !TARGET_API_MAC_CARBON
+	{"OpenADataHandler", (PyCFunction)Qt_OpenADataHandler, 1,
+	 "(Handle dataRef, OSType dataHandlerSubType, Handle anchorDataRef, OSType anchorDataRefType, TimeBase tb, long flags) -> (ComponentInstance dh)"},
+#endif
 	{"PasteHandleIntoMovie", (PyCFunction)Qt_PasteHandleIntoMovie, 1,
-	 PyDoc_STR("(Handle h, OSType handleType, Movie theMovie, long flags, ComponentInstance userComp) -> None")},
+	 "(Handle h, OSType handleType, Movie theMovie, long flags, ComponentInstance userComp) -> None"},
 	{"GetMovieImporterForDataRef", (PyCFunction)Qt_GetMovieImporterForDataRef, 1,
-	 PyDoc_STR("(OSType dataRefType, Handle dataRef, long flags) -> (Component importer)")},
+	 "(OSType dataRefType, Handle dataRef, long flags) -> (Component importer)"},
 	{"QTGetMIMETypeInfo", (PyCFunction)Qt_QTGetMIMETypeInfo, 1,
-	 PyDoc_STR("(char* mimeStringStart, short mimeStringLength, OSType infoSelector, void * infoDataPtr) -> (long infoDataSize)")},
+	 "(char* mimeStringStart, short mimeStringLength, OSType infoSelector, void * infoDataPtr) -> (long infoDataSize)"},
 	{"TrackTimeToMediaTime", (PyCFunction)Qt_TrackTimeToMediaTime, 1,
-	 PyDoc_STR("(TimeValue value, Track theTrack) -> (TimeValue _rv)")},
+	 "(TimeValue value, Track theTrack) -> (TimeValue _rv)"},
 	{"NewUserData", (PyCFunction)Qt_NewUserData, 1,
-	 PyDoc_STR("() -> (UserData theUserData)")},
+	 "() -> (UserData theUserData)"},
 	{"NewUserDataFromHandle", (PyCFunction)Qt_NewUserDataFromHandle, 1,
-	 PyDoc_STR("(Handle h) -> (UserData theUserData)")},
+	 "(Handle h) -> (UserData theUserData)"},
 	{"CreateMovieFile", (PyCFunction)Qt_CreateMovieFile, 1,
-	 PyDoc_STR("(FSSpec fileSpec, OSType creator, ScriptCode scriptTag, long createMovieFileFlags) -> (short resRefNum, Movie newmovie)")},
+	 "(FSSpec fileSpec, OSType creator, ScriptCode scriptTag, long createMovieFileFlags) -> (short resRefNum, Movie newmovie)"},
 	{"OpenMovieFile", (PyCFunction)Qt_OpenMovieFile, 1,
-	 PyDoc_STR("(FSSpec fileSpec, SInt8 permission) -> (short resRefNum)")},
+	 "(FSSpec fileSpec, SInt8 permission) -> (short resRefNum)"},
 	{"CloseMovieFile", (PyCFunction)Qt_CloseMovieFile, 1,
-	 PyDoc_STR("(short resRefNum) -> None")},
+	 "(short resRefNum) -> None"},
 	{"DeleteMovieFile", (PyCFunction)Qt_DeleteMovieFile, 1,
-	 PyDoc_STR("(FSSpec fileSpec) -> None")},
+	 "(FSSpec fileSpec) -> None"},
 	{"NewMovieFromFile", (PyCFunction)Qt_NewMovieFromFile, 1,
-	 PyDoc_STR("(short resRefNum, short resId, short newMovieFlags) -> (Movie theMovie, short resId, Boolean dataRefWasChanged)")},
+	 "(short resRefNum, short resId, short newMovieFlags) -> (Movie theMovie, short resId, Boolean dataRefWasChanged)"},
 	{"NewMovieFromHandle", (PyCFunction)Qt_NewMovieFromHandle, 1,
-	 PyDoc_STR("(Handle h, short newMovieFlags) -> (Movie theMovie, Boolean dataRefWasChanged)")},
+	 "(Handle h, short newMovieFlags) -> (Movie theMovie, Boolean dataRefWasChanged)"},
 	{"NewMovieFromDataFork", (PyCFunction)Qt_NewMovieFromDataFork, 1,
-	 PyDoc_STR("(short fRefNum, long fileOffset, short newMovieFlags) -> (Movie theMovie, Boolean dataRefWasChanged)")},
+	 "(short fRefNum, long fileOffset, short newMovieFlags) -> (Movie theMovie, Boolean dataRefWasChanged)"},
 	{"NewMovieFromDataFork64", (PyCFunction)Qt_NewMovieFromDataFork64, 1,
-	 PyDoc_STR("(long fRefNum, wide fileOffset, short newMovieFlags) -> (Movie theMovie, Boolean dataRefWasChanged)")},
+	 "(long fRefNum, wide fileOffset, short newMovieFlags) -> (Movie theMovie, Boolean dataRefWasChanged)"},
 	{"NewMovieFromDataRef", (PyCFunction)Qt_NewMovieFromDataRef, 1,
-	 PyDoc_STR("(short flags, Handle dataRef, OSType dataRefType) -> (Movie m, short id)")},
+	 "(short flags, Handle dataRef, OSType dataRefType) -> (Movie m, short id)"},
 	{"RemoveMovieResource", (PyCFunction)Qt_RemoveMovieResource, 1,
-	 PyDoc_STR("(short resRefNum, short resId) -> None")},
+	 "(short resRefNum, short resId) -> None"},
 	{"CreateShortcutMovieFile", (PyCFunction)Qt_CreateShortcutMovieFile, 1,
-	 PyDoc_STR("(FSSpec fileSpec, OSType creator, ScriptCode scriptTag, long createMovieFileFlags, Handle targetDataRef, OSType targetDataRefType) -> None")},
+	 "(FSSpec fileSpec, OSType creator, ScriptCode scriptTag, long createMovieFileFlags, Handle targetDataRef, OSType targetDataRefType) -> None"},
 	{"CanQuickTimeOpenFile", (PyCFunction)Qt_CanQuickTimeOpenFile, 1,
-	 PyDoc_STR("(FSSpec fileSpec, OSType fileType, OSType fileNameExtension, UInt32 inFlags) -> (Boolean outCanOpenWithGraphicsImporter, Boolean outCanOpenAsMovie, Boolean outPreferGraphicsImporter)")},
+	 "(FSSpec fileSpec, OSType fileType, OSType fileNameExtension, UInt32 inFlags) -> (Boolean outCanOpenWithGraphicsImporter, Boolean outCanOpenAsMovie, Boolean outPreferGraphicsImporter)"},
 	{"CanQuickTimeOpenDataRef", (PyCFunction)Qt_CanQuickTimeOpenDataRef, 1,
-	 PyDoc_STR("(Handle dataRef, OSType dataRefType, UInt32 inFlags) -> (Boolean outCanOpenWithGraphicsImporter, Boolean outCanOpenAsMovie, Boolean outPreferGraphicsImporter)")},
+	 "(Handle dataRef, OSType dataRefType, UInt32 inFlags) -> (Boolean outCanOpenWithGraphicsImporter, Boolean outCanOpenAsMovie, Boolean outPreferGraphicsImporter)"},
 	{"NewMovieFromScrap", (PyCFunction)Qt_NewMovieFromScrap, 1,
-	 PyDoc_STR("(long newMovieFlags) -> (Movie _rv)")},
+	 "(long newMovieFlags) -> (Movie _rv)"},
 	{"QTNewAlias", (PyCFunction)Qt_QTNewAlias, 1,
-	 PyDoc_STR("(FSSpec fss, Boolean minimal) -> (AliasHandle alias)")},
+	 "(FSSpec fss, Boolean minimal) -> (AliasHandle alias)"},
 	{"EndFullScreen", (PyCFunction)Qt_EndFullScreen, 1,
-	 PyDoc_STR("(Ptr fullState, long flags) -> None")},
+	 "(Ptr fullState, long flags) -> None"},
 	{"AddSoundDescriptionExtension", (PyCFunction)Qt_AddSoundDescriptionExtension, 1,
-	 PyDoc_STR("(SoundDescriptionHandle desc, Handle extension, OSType idType) -> None")},
+	 "(SoundDescriptionHandle desc, Handle extension, OSType idType) -> None"},
 	{"GetSoundDescriptionExtension", (PyCFunction)Qt_GetSoundDescriptionExtension, 1,
-	 PyDoc_STR("(SoundDescriptionHandle desc, OSType idType) -> (Handle extension)")},
+	 "(SoundDescriptionHandle desc, OSType idType) -> (Handle extension)"},
 	{"RemoveSoundDescriptionExtension", (PyCFunction)Qt_RemoveSoundDescriptionExtension, 1,
-	 PyDoc_STR("(SoundDescriptionHandle desc, OSType idType) -> None")},
+	 "(SoundDescriptionHandle desc, OSType idType) -> None"},
 	{"QTIsStandardParameterDialogEvent", (PyCFunction)Qt_QTIsStandardParameterDialogEvent, 1,
-	 PyDoc_STR("(QTParameterDialog createdDialog) -> (EventRecord pEvent)")},
+	 "(QTParameterDialog createdDialog) -> (EventRecord pEvent)"},
 	{"QTDismissStandardParameterDialog", (PyCFunction)Qt_QTDismissStandardParameterDialog, 1,
-	 PyDoc_STR("(QTParameterDialog createdDialog) -> None")},
+	 "(QTParameterDialog createdDialog) -> None"},
 	{"QTStandardParameterDialogDoAction", (PyCFunction)Qt_QTStandardParameterDialogDoAction, 1,
-	 PyDoc_STR("(QTParameterDialog createdDialog, long action, void * params) -> None")},
+	 "(QTParameterDialog createdDialog, long action, void * params) -> None"},
 	{"QTRegisterAccessKey", (PyCFunction)Qt_QTRegisterAccessKey, 1,
-	 PyDoc_STR("(Str255 accessKeyType, long flags, Handle accessKey) -> None")},
+	 "(Str255 accessKeyType, long flags, Handle accessKey) -> None"},
 	{"QTUnregisterAccessKey", (PyCFunction)Qt_QTUnregisterAccessKey, 1,
-	 PyDoc_STR("(Str255 accessKeyType, long flags, Handle accessKey) -> None")},
+	 "(Str255 accessKeyType, long flags, Handle accessKey) -> None"},
 	{"QTTextToNativeText", (PyCFunction)Qt_QTTextToNativeText, 1,
-	 PyDoc_STR("(Handle theText, long encoding, long flags) -> None")},
+	 "(Handle theText, long encoding, long flags) -> None"},
 	{"VideoMediaResetStatistics", (PyCFunction)Qt_VideoMediaResetStatistics, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv)"},
 	{"VideoMediaGetStatistics", (PyCFunction)Qt_VideoMediaGetStatistics, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv)"},
 	{"VideoMediaGetStallCount", (PyCFunction)Qt_VideoMediaGetStallCount, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, unsigned long stalls)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, unsigned long stalls)"},
 	{"VideoMediaSetCodecParameter", (PyCFunction)Qt_VideoMediaSetCodecParameter, 1,
-	 PyDoc_STR("(MediaHandler mh, CodecType cType, OSType parameterID, long parameterChangeSeed, void * dataPtr, long dataSize) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, CodecType cType, OSType parameterID, long parameterChangeSeed, void * dataPtr, long dataSize) -> (ComponentResult _rv)"},
 	{"VideoMediaGetCodecParameter", (PyCFunction)Qt_VideoMediaGetCodecParameter, 1,
-	 PyDoc_STR("(MediaHandler mh, CodecType cType, OSType parameterID, Handle outParameterData) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, CodecType cType, OSType parameterID, Handle outParameterData) -> (ComponentResult _rv)"},
 	{"TextMediaAddTextSample", (PyCFunction)Qt_TextMediaAddTextSample, 1,
-	 PyDoc_STR("(MediaHandler mh, Ptr text, unsigned long size, short fontNumber, short fontSize, Style textFace, short textJustification, long displayFlags, TimeValue scrollDelay, short hiliteStart, short hiliteEnd, TimeValue duration) -> (ComponentResult _rv, RGBColor textColor, RGBColor backColor, Rect textBox, RGBColor rgbHiliteColor, TimeValue sampleTime)")},
+	 "(MediaHandler mh, Ptr text, unsigned long size, short fontNumber, short fontSize, Style textFace, short textJustification, long displayFlags, TimeValue scrollDelay, short hiliteStart, short hiliteEnd, TimeValue duration) -> (ComponentResult _rv, RGBColor textColor, RGBColor backColor, Rect textBox, RGBColor rgbHiliteColor, TimeValue sampleTime)"},
 	{"TextMediaAddTESample", (PyCFunction)Qt_TextMediaAddTESample, 1,
-	 PyDoc_STR("(MediaHandler mh, TEHandle hTE, short textJustification, long displayFlags, TimeValue scrollDelay, short hiliteStart, short hiliteEnd, TimeValue duration) -> (ComponentResult _rv, RGBColor backColor, Rect textBox, RGBColor rgbHiliteColor, TimeValue sampleTime)")},
+	 "(MediaHandler mh, TEHandle hTE, short textJustification, long displayFlags, TimeValue scrollDelay, short hiliteStart, short hiliteEnd, TimeValue duration) -> (ComponentResult _rv, RGBColor backColor, Rect textBox, RGBColor rgbHiliteColor, TimeValue sampleTime)"},
 	{"TextMediaAddHiliteSample", (PyCFunction)Qt_TextMediaAddHiliteSample, 1,
-	 PyDoc_STR("(MediaHandler mh, short hiliteStart, short hiliteEnd, TimeValue duration) -> (ComponentResult _rv, RGBColor rgbHiliteColor, TimeValue sampleTime)")},
+	 "(MediaHandler mh, short hiliteStart, short hiliteEnd, TimeValue duration) -> (ComponentResult _rv, RGBColor rgbHiliteColor, TimeValue sampleTime)"},
 	{"TextMediaDrawRaw", (PyCFunction)Qt_TextMediaDrawRaw, 1,
-	 PyDoc_STR("(MediaHandler mh, GWorldPtr gw, GDHandle gd, void * data, long dataSize, TextDescriptionHandle tdh) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, GWorldPtr gw, GDHandle gd, void * data, long dataSize, TextDescriptionHandle tdh) -> (ComponentResult _rv)"},
 	{"TextMediaSetTextProperty", (PyCFunction)Qt_TextMediaSetTextProperty, 1,
-	 PyDoc_STR("(MediaHandler mh, TimeValue atMediaTime, long propertyType, void * data, long dataSize) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, TimeValue atMediaTime, long propertyType, void * data, long dataSize) -> (ComponentResult _rv)"},
 	{"TextMediaRawSetup", (PyCFunction)Qt_TextMediaRawSetup, 1,
-	 PyDoc_STR("(MediaHandler mh, GWorldPtr gw, GDHandle gd, void * data, long dataSize, TextDescriptionHandle tdh, TimeValue sampleDuration) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, GWorldPtr gw, GDHandle gd, void * data, long dataSize, TextDescriptionHandle tdh, TimeValue sampleDuration) -> (ComponentResult _rv)"},
 	{"TextMediaRawIdle", (PyCFunction)Qt_TextMediaRawIdle, 1,
-	 PyDoc_STR("(MediaHandler mh, GWorldPtr gw, GDHandle gd, TimeValue sampleTime, long flagsIn) -> (ComponentResult _rv, long flagsOut)")},
+	 "(MediaHandler mh, GWorldPtr gw, GDHandle gd, TimeValue sampleTime, long flagsIn) -> (ComponentResult _rv, long flagsOut)"},
 	{"TextMediaGetTextProperty", (PyCFunction)Qt_TextMediaGetTextProperty, 1,
-	 PyDoc_STR("(MediaHandler mh, TimeValue atMediaTime, long propertyType, void * data, long dataSize) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, TimeValue atMediaTime, long propertyType, void * data, long dataSize) -> (ComponentResult _rv)"},
 	{"TextMediaFindNextText", (PyCFunction)Qt_TextMediaFindNextText, 1,
-	 PyDoc_STR("(MediaHandler mh, Ptr text, long size, short findFlags, TimeValue startTime) -> (ComponentResult _rv, TimeValue foundTime, TimeValue foundDuration, long offset)")},
+	 "(MediaHandler mh, Ptr text, long size, short findFlags, TimeValue startTime) -> (ComponentResult _rv, TimeValue foundTime, TimeValue foundDuration, long offset)"},
 	{"TextMediaHiliteTextSample", (PyCFunction)Qt_TextMediaHiliteTextSample, 1,
-	 PyDoc_STR("(MediaHandler mh, TimeValue sampleTime, short hiliteStart, short hiliteEnd) -> (ComponentResult _rv, RGBColor rgbHiliteColor)")},
+	 "(MediaHandler mh, TimeValue sampleTime, short hiliteStart, short hiliteEnd) -> (ComponentResult _rv, RGBColor rgbHiliteColor)"},
 	{"TextMediaSetTextSampleData", (PyCFunction)Qt_TextMediaSetTextSampleData, 1,
-	 PyDoc_STR("(MediaHandler mh, void * data, OSType dataType) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, void * data, OSType dataType) -> (ComponentResult _rv)"},
 	{"SpriteMediaSetProperty", (PyCFunction)Qt_SpriteMediaSetProperty, 1,
-	 PyDoc_STR("(MediaHandler mh, short spriteIndex, long propertyType, void * propertyValue) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, short spriteIndex, long propertyType, void * propertyValue) -> (ComponentResult _rv)"},
 	{"SpriteMediaGetProperty", (PyCFunction)Qt_SpriteMediaGetProperty, 1,
-	 PyDoc_STR("(MediaHandler mh, short spriteIndex, long propertyType, void * propertyValue) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, short spriteIndex, long propertyType, void * propertyValue) -> (ComponentResult _rv)"},
 	{"SpriteMediaHitTestSprites", (PyCFunction)Qt_SpriteMediaHitTestSprites, 1,
-	 PyDoc_STR("(MediaHandler mh, long flags, Point loc) -> (ComponentResult _rv, short spriteHitIndex)")},
+	 "(MediaHandler mh, long flags, Point loc) -> (ComponentResult _rv, short spriteHitIndex)"},
 	{"SpriteMediaCountSprites", (PyCFunction)Qt_SpriteMediaCountSprites, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, short numSprites)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, short numSprites)"},
 	{"SpriteMediaCountImages", (PyCFunction)Qt_SpriteMediaCountImages, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, short numImages)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, short numImages)"},
 	{"SpriteMediaGetIndImageDescription", (PyCFunction)Qt_SpriteMediaGetIndImageDescription, 1,
-	 PyDoc_STR("(MediaHandler mh, short imageIndex, ImageDescriptionHandle imageDescription) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, short imageIndex, ImageDescriptionHandle imageDescription) -> (ComponentResult _rv)"},
 	{"SpriteMediaGetDisplayedSampleNumber", (PyCFunction)Qt_SpriteMediaGetDisplayedSampleNumber, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, long sampleNum)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, long sampleNum)"},
 	{"SpriteMediaGetSpriteName", (PyCFunction)Qt_SpriteMediaGetSpriteName, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID spriteID, Str255 spriteName) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, QTAtomID spriteID, Str255 spriteName) -> (ComponentResult _rv)"},
 	{"SpriteMediaGetImageName", (PyCFunction)Qt_SpriteMediaGetImageName, 1,
-	 PyDoc_STR("(MediaHandler mh, short imageIndex, Str255 imageName) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, short imageIndex, Str255 imageName) -> (ComponentResult _rv)"},
 	{"SpriteMediaSetSpriteProperty", (PyCFunction)Qt_SpriteMediaSetSpriteProperty, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID spriteID, long propertyType, void * propertyValue) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, QTAtomID spriteID, long propertyType, void * propertyValue) -> (ComponentResult _rv)"},
 	{"SpriteMediaGetSpriteProperty", (PyCFunction)Qt_SpriteMediaGetSpriteProperty, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID spriteID, long propertyType, void * propertyValue) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, QTAtomID spriteID, long propertyType, void * propertyValue) -> (ComponentResult _rv)"},
 	{"SpriteMediaHitTestAllSprites", (PyCFunction)Qt_SpriteMediaHitTestAllSprites, 1,
-	 PyDoc_STR("(MediaHandler mh, long flags, Point loc) -> (ComponentResult _rv, QTAtomID spriteHitID)")},
+	 "(MediaHandler mh, long flags, Point loc) -> (ComponentResult _rv, QTAtomID spriteHitID)"},
 	{"SpriteMediaHitTestOneSprite", (PyCFunction)Qt_SpriteMediaHitTestOneSprite, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID spriteID, long flags, Point loc) -> (ComponentResult _rv, Boolean wasHit)")},
+	 "(MediaHandler mh, QTAtomID spriteID, long flags, Point loc) -> (ComponentResult _rv, Boolean wasHit)"},
 	{"SpriteMediaSpriteIndexToID", (PyCFunction)Qt_SpriteMediaSpriteIndexToID, 1,
-	 PyDoc_STR("(MediaHandler mh, short spriteIndex) -> (ComponentResult _rv, QTAtomID spriteID)")},
+	 "(MediaHandler mh, short spriteIndex) -> (ComponentResult _rv, QTAtomID spriteID)"},
 	{"SpriteMediaSpriteIDToIndex", (PyCFunction)Qt_SpriteMediaSpriteIDToIndex, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID spriteID) -> (ComponentResult _rv, short spriteIndex)")},
+	 "(MediaHandler mh, QTAtomID spriteID) -> (ComponentResult _rv, short spriteIndex)"},
 	{"SpriteMediaSetActionVariable", (PyCFunction)Qt_SpriteMediaSetActionVariable, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID variableID, float value) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, QTAtomID variableID, float value) -> (ComponentResult _rv)"},
 	{"SpriteMediaGetActionVariable", (PyCFunction)Qt_SpriteMediaGetActionVariable, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID variableID) -> (ComponentResult _rv, float value)")},
+	 "(MediaHandler mh, QTAtomID variableID) -> (ComponentResult _rv, float value)"},
+
+#if !TARGET_API_MAC_CARBON
+	{"SpriteMediaGetIndImageProperty", (PyCFunction)Qt_SpriteMediaGetIndImageProperty, 1,
+	 "(MediaHandler mh, short imageIndex, long imagePropertyType, void * imagePropertyValue) -> (ComponentResult _rv)"},
+#endif
 	{"SpriteMediaDisposeSprite", (PyCFunction)Qt_SpriteMediaDisposeSprite, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID spriteID) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, QTAtomID spriteID) -> (ComponentResult _rv)"},
 	{"SpriteMediaSetActionVariableToString", (PyCFunction)Qt_SpriteMediaSetActionVariableToString, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID variableID, Ptr theCString) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, QTAtomID variableID, Ptr theCString) -> (ComponentResult _rv)"},
 	{"SpriteMediaGetActionVariableAsString", (PyCFunction)Qt_SpriteMediaGetActionVariableAsString, 1,
-	 PyDoc_STR("(MediaHandler mh, QTAtomID variableID) -> (ComponentResult _rv, Handle theCString)")},
+	 "(MediaHandler mh, QTAtomID variableID) -> (ComponentResult _rv, Handle theCString)"},
 	{"FlashMediaSetPan", (PyCFunction)Qt_FlashMediaSetPan, 1,
-	 PyDoc_STR("(MediaHandler mh, short xPercent, short yPercent) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, short xPercent, short yPercent) -> (ComponentResult _rv)"},
 	{"FlashMediaSetZoom", (PyCFunction)Qt_FlashMediaSetZoom, 1,
-	 PyDoc_STR("(MediaHandler mh, short factor) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, short factor) -> (ComponentResult _rv)"},
 	{"FlashMediaSetZoomRect", (PyCFunction)Qt_FlashMediaSetZoomRect, 1,
-	 PyDoc_STR("(MediaHandler mh, long left, long top, long right, long bottom) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, long left, long top, long right, long bottom) -> (ComponentResult _rv)"},
 	{"FlashMediaGetRefConBounds", (PyCFunction)Qt_FlashMediaGetRefConBounds, 1,
-	 PyDoc_STR("(MediaHandler mh, long refCon) -> (ComponentResult _rv, long left, long top, long right, long bottom)")},
+	 "(MediaHandler mh, long refCon) -> (ComponentResult _rv, long left, long top, long right, long bottom)"},
 	{"FlashMediaGetRefConID", (PyCFunction)Qt_FlashMediaGetRefConID, 1,
-	 PyDoc_STR("(MediaHandler mh, long refCon) -> (ComponentResult _rv, long refConID)")},
+	 "(MediaHandler mh, long refCon) -> (ComponentResult _rv, long refConID)"},
 	{"FlashMediaIDToRefCon", (PyCFunction)Qt_FlashMediaIDToRefCon, 1,
-	 PyDoc_STR("(MediaHandler mh, long refConID) -> (ComponentResult _rv, long refCon)")},
+	 "(MediaHandler mh, long refConID) -> (ComponentResult _rv, long refCon)"},
 	{"FlashMediaGetDisplayedFrameNumber", (PyCFunction)Qt_FlashMediaGetDisplayedFrameNumber, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, long flashFrameNumber)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, long flashFrameNumber)"},
 	{"FlashMediaFrameNumberToMovieTime", (PyCFunction)Qt_FlashMediaFrameNumberToMovieTime, 1,
-	 PyDoc_STR("(MediaHandler mh, long flashFrameNumber) -> (ComponentResult _rv, TimeValue movieTime)")},
+	 "(MediaHandler mh, long flashFrameNumber) -> (ComponentResult _rv, TimeValue movieTime)"},
 	{"FlashMediaFrameLabelToMovieTime", (PyCFunction)Qt_FlashMediaFrameLabelToMovieTime, 1,
-	 PyDoc_STR("(MediaHandler mh, Ptr theLabel) -> (ComponentResult _rv, TimeValue movieTime)")},
+	 "(MediaHandler mh, Ptr theLabel) -> (ComponentResult _rv, TimeValue movieTime)"},
 	{"FlashMediaGetFlashVariable", (PyCFunction)Qt_FlashMediaGetFlashVariable, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, char path, char name, Handle theVariableCStringOut)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, char path, char name, Handle theVariableCStringOut)"},
 	{"FlashMediaSetFlashVariable", (PyCFunction)Qt_FlashMediaSetFlashVariable, 1,
-	 PyDoc_STR("(MediaHandler mh, Boolean updateFocus) -> (ComponentResult _rv, char path, char name, char value)")},
+	 "(MediaHandler mh, Boolean updateFocus) -> (ComponentResult _rv, char path, char name, char value)"},
 	{"FlashMediaDoButtonActions", (PyCFunction)Qt_FlashMediaDoButtonActions, 1,
-	 PyDoc_STR("(MediaHandler mh, long buttonID, long transition) -> (ComponentResult _rv, char path)")},
+	 "(MediaHandler mh, long buttonID, long transition) -> (ComponentResult _rv, char path)"},
 	{"FlashMediaGetSupportedSwfVersion", (PyCFunction)Qt_FlashMediaGetSupportedSwfVersion, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, UInt8 swfVersion)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, UInt8 swfVersion)"},
+
+#if !TARGET_API_MAC_CARBON
+	{"MovieMediaGetCurrentMovieProperty", (PyCFunction)Qt_MovieMediaGetCurrentMovieProperty, 1,
+	 "(MediaHandler mh, OSType whichProperty, void * value) -> (ComponentResult _rv)"},
+#endif
+
+#if !TARGET_API_MAC_CARBON
+	{"MovieMediaGetCurrentTrackProperty", (PyCFunction)Qt_MovieMediaGetCurrentTrackProperty, 1,
+	 "(MediaHandler mh, long trackID, OSType whichProperty, void * value) -> (ComponentResult _rv)"},
+#endif
+
+#if !TARGET_API_MAC_CARBON
+	{"MovieMediaGetChildMovieDataReference", (PyCFunction)Qt_MovieMediaGetChildMovieDataReference, 1,
+	 "(MediaHandler mh, QTAtomID dataRefID, short dataRefIndex) -> (ComponentResult _rv, OSType dataRefType, Handle dataRef, QTAtomID dataRefIDOut, short dataRefIndexOut)"},
+#endif
+
+#if !TARGET_API_MAC_CARBON
+	{"MovieMediaSetChildMovieDataReference", (PyCFunction)Qt_MovieMediaSetChildMovieDataReference, 1,
+	 "(MediaHandler mh, QTAtomID dataRefID, OSType dataRefType, Handle dataRef) -> (ComponentResult _rv)"},
+#endif
+
+#if !TARGET_API_MAC_CARBON
+	{"MovieMediaLoadChildMovieFromDataReference", (PyCFunction)Qt_MovieMediaLoadChildMovieFromDataReference, 1,
+	 "(MediaHandler mh, QTAtomID dataRefID) -> (ComponentResult _rv)"},
+#endif
 	{"Media3DGetCurrentGroup", (PyCFunction)Qt_Media3DGetCurrentGroup, 1,
-	 PyDoc_STR("(MediaHandler mh, void * group) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, void * group) -> (ComponentResult _rv)"},
 	{"Media3DTranslateNamedObjectTo", (PyCFunction)Qt_Media3DTranslateNamedObjectTo, 1,
-	 PyDoc_STR("(MediaHandler mh, Fixed x, Fixed y, Fixed z) -> (ComponentResult _rv, char objectName)")},
+	 "(MediaHandler mh, Fixed x, Fixed y, Fixed z) -> (ComponentResult _rv, char objectName)"},
 	{"Media3DScaleNamedObjectTo", (PyCFunction)Qt_Media3DScaleNamedObjectTo, 1,
-	 PyDoc_STR("(MediaHandler mh, Fixed xScale, Fixed yScale, Fixed zScale) -> (ComponentResult _rv, char objectName)")},
+	 "(MediaHandler mh, Fixed xScale, Fixed yScale, Fixed zScale) -> (ComponentResult _rv, char objectName)"},
 	{"Media3DRotateNamedObjectTo", (PyCFunction)Qt_Media3DRotateNamedObjectTo, 1,
-	 PyDoc_STR("(MediaHandler mh, Fixed xDegrees, Fixed yDegrees, Fixed zDegrees) -> (ComponentResult _rv, char objectName)")},
+	 "(MediaHandler mh, Fixed xDegrees, Fixed yDegrees, Fixed zDegrees) -> (ComponentResult _rv, char objectName)"},
 	{"Media3DSetCameraData", (PyCFunction)Qt_Media3DSetCameraData, 1,
-	 PyDoc_STR("(MediaHandler mh, void * cameraData) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, void * cameraData) -> (ComponentResult _rv)"},
 	{"Media3DGetCameraData", (PyCFunction)Qt_Media3DGetCameraData, 1,
-	 PyDoc_STR("(MediaHandler mh, void * cameraData) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, void * cameraData) -> (ComponentResult _rv)"},
 	{"Media3DSetCameraAngleAspect", (PyCFunction)Qt_Media3DSetCameraAngleAspect, 1,
-	 PyDoc_STR("(MediaHandler mh, QTFloatSingle fov, QTFloatSingle aspectRatioXToY) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, QTFloatSingle fov, QTFloatSingle aspectRatioXToY) -> (ComponentResult _rv)"},
 	{"Media3DGetCameraAngleAspect", (PyCFunction)Qt_Media3DGetCameraAngleAspect, 1,
-	 PyDoc_STR("(MediaHandler mh) -> (ComponentResult _rv, QTFloatSingle fov, QTFloatSingle aspectRatioXToY)")},
+	 "(MediaHandler mh) -> (ComponentResult _rv, QTFloatSingle fov, QTFloatSingle aspectRatioXToY)"},
 	{"Media3DSetCameraRange", (PyCFunction)Qt_Media3DSetCameraRange, 1,
-	 PyDoc_STR("(MediaHandler mh, void * tQ3CameraRange) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, void * tQ3CameraRange) -> (ComponentResult _rv)"},
 	{"Media3DGetCameraRange", (PyCFunction)Qt_Media3DGetCameraRange, 1,
-	 PyDoc_STR("(MediaHandler mh, void * tQ3CameraRange) -> (ComponentResult _rv)")},
+	 "(MediaHandler mh, void * tQ3CameraRange) -> (ComponentResult _rv)"},
+
+#if !TARGET_API_MAC_CARBON
+	{"Media3DGetViewObject", (PyCFunction)Qt_Media3DGetViewObject, 1,
+	 "(MediaHandler mh, void * tq3viewObject) -> (ComponentResult _rv)"},
+#endif
 	{"NewTimeBase", (PyCFunction)Qt_NewTimeBase, 1,
-	 PyDoc_STR("() -> (TimeBase _rv)")},
+	 "() -> (TimeBase _rv)"},
 	{"ConvertTime", (PyCFunction)Qt_ConvertTime, 1,
-	 PyDoc_STR("(TimeRecord theTime, TimeBase newBase) -> (TimeRecord theTime)")},
+	 "(TimeBase newBase) -> (TimeRecord theTime)"},
 	{"ConvertTimeScale", (PyCFunction)Qt_ConvertTimeScale, 1,
-	 PyDoc_STR("(TimeRecord theTime, TimeScale newScale) -> (TimeRecord theTime)")},
+	 "(TimeScale newScale) -> (TimeRecord theTime)"},
 	{"AddTime", (PyCFunction)Qt_AddTime, 1,
-	 PyDoc_STR("(TimeRecord dst, TimeRecord src) -> (TimeRecord dst)")},
+	 "(TimeRecord dst, TimeRecord src) -> (TimeRecord dst)"},
 	{"SubtractTime", (PyCFunction)Qt_SubtractTime, 1,
-	 PyDoc_STR("(TimeRecord dst, TimeRecord src) -> (TimeRecord dst)")},
+	 "(TimeRecord dst, TimeRecord src) -> (TimeRecord dst)"},
 	{"MusicMediaGetIndexedTunePlayer", (PyCFunction)Qt_MusicMediaGetIndexedTunePlayer, 1,
-	 PyDoc_STR("(ComponentInstance ti, long sampleDescIndex) -> (ComponentResult _rv, ComponentInstance tp)")},
+	 "(ComponentInstance ti, long sampleDescIndex) -> (ComponentResult _rv, ComponentInstance tp)"},
 	{"AlignWindow", (PyCFunction)Qt_AlignWindow, 1,
-	 PyDoc_STR("(WindowPtr wp, Boolean front) -> None")},
+	 "(WindowPtr wp, Boolean front) -> None"},
 	{"DragAlignedWindow", (PyCFunction)Qt_DragAlignedWindow, 1,
-	 PyDoc_STR("(WindowPtr wp, Point startPt, Rect boundsRect) -> None")},
+	 "(WindowPtr wp, Point startPt, Rect boundsRect) -> None"},
 	{"MoviesTask", (PyCFunction)Qt_MoviesTask, 1,
-	 PyDoc_STR("(long maxMilliSecToUse) -> None")},
+	 "(long maxMilliSecToUse) -> None"},
 	{NULL, NULL, 0}
 };
 
@@ -9742,47 +9905,29 @@ void init_Qt(void)
 	    PyDict_SetItemString(d, "Error", Qt_Error) != 0)
 		return;
 	MovieController_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&MovieController_Type) < 0) return;
 	Py_INCREF(&MovieController_Type);
-	PyModule_AddObject(m, "MovieController", (PyObject *)&MovieController_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&MovieController_Type);
-	PyModule_AddObject(m, "MovieControllerType", (PyObject *)&MovieController_Type);
+	if (PyDict_SetItemString(d, "MovieControllerType", (PyObject *)&MovieController_Type) != 0)
+		Py_FatalError("can't initialize MovieControllerType");
 	TimeBase_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&TimeBase_Type) < 0) return;
 	Py_INCREF(&TimeBase_Type);
-	PyModule_AddObject(m, "TimeBase", (PyObject *)&TimeBase_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&TimeBase_Type);
-	PyModule_AddObject(m, "TimeBaseType", (PyObject *)&TimeBase_Type);
+	if (PyDict_SetItemString(d, "TimeBaseType", (PyObject *)&TimeBase_Type) != 0)
+		Py_FatalError("can't initialize TimeBaseType");
 	UserData_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&UserData_Type) < 0) return;
 	Py_INCREF(&UserData_Type);
-	PyModule_AddObject(m, "UserData", (PyObject *)&UserData_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&UserData_Type);
-	PyModule_AddObject(m, "UserDataType", (PyObject *)&UserData_Type);
+	if (PyDict_SetItemString(d, "UserDataType", (PyObject *)&UserData_Type) != 0)
+		Py_FatalError("can't initialize UserDataType");
 	Media_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&Media_Type) < 0) return;
 	Py_INCREF(&Media_Type);
-	PyModule_AddObject(m, "Media", (PyObject *)&Media_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&Media_Type);
-	PyModule_AddObject(m, "MediaType", (PyObject *)&Media_Type);
+	if (PyDict_SetItemString(d, "MediaType", (PyObject *)&Media_Type) != 0)
+		Py_FatalError("can't initialize MediaType");
 	Track_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&Track_Type) < 0) return;
 	Py_INCREF(&Track_Type);
-	PyModule_AddObject(m, "Track", (PyObject *)&Track_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&Track_Type);
-	PyModule_AddObject(m, "TrackType", (PyObject *)&Track_Type);
+	if (PyDict_SetItemString(d, "TrackType", (PyObject *)&Track_Type) != 0)
+		Py_FatalError("can't initialize TrackType");
 	Movie_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&Movie_Type) < 0) return;
 	Py_INCREF(&Movie_Type);
-	PyModule_AddObject(m, "Movie", (PyObject *)&Movie_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&Movie_Type);
-	PyModule_AddObject(m, "MovieType", (PyObject *)&Movie_Type);
+	if (PyDict_SetItemString(d, "MovieType", (PyObject *)&Movie_Type) != 0)
+		Py_FatalError("can't initialize MovieType");
 }
 
 /* ========================= End module _Qt ========================= */

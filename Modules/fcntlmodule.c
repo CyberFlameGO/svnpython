@@ -9,9 +9,7 @@
 
 #include <sys/ioctl.h>
 #include <fcntl.h>
-#ifdef HAVE_STROPTS_H
-#include <stropts.h>
-#endif
+
 
 static int
 conv_descriptor(PyObject *object, int *target)
@@ -74,7 +72,8 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 	return PyInt_FromLong((long)ret);
 }
 
-PyDoc_STRVAR(fcntl_doc,
+static char fcntl_doc [] =
+
 "fcntl(fd, opt, [arg])\n\
 \n\
 Perform the requested operation on file descriptor fd.  The operation\n\
@@ -85,7 +84,7 @@ the return value of fcntl is a string of that length, containing the\n\
 resulting value put in the arg buffer by the operating system.The length\n\
 of the arg string is not allowed to exceed 1024 bytes. If the arg given\n\
 is an integer or if none is specified, the result value is an integer\n\
-corresponding to the return value of the fcntl call in the C code.");
+corresponding to the return value of the fcntl call in the C code.";
 
 
 /* ioctl(fd, opt, [arg]) */
@@ -99,62 +98,8 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	int ret;
 	char *str;
 	int len;
-	int mutate_arg = 0;
 	char buf[1024];
 
-	if (PyArg_ParseTuple(args, "O&iw#|i:ioctl",
-                             conv_descriptor, &fd, &code, 
-			     &str, &len, &mutate_arg)) {
-		char *arg;
-
-		if (PyTuple_Size(args) == 3) {
-			/* warning goes here in 2.4 */
-			mutate_arg = 0;
-		}
-	       	if (mutate_arg) {
-			if (len <= sizeof buf) {
-				memcpy(buf, str, len);
-				arg = buf;
-			} 
-			else {
-				arg = str;
-			}
-		}
-		else {
-			if (len > sizeof buf) {
-				PyErr_SetString(PyExc_ValueError,
-					"ioctl string arg too long");
-				return NULL;
-			}
-			else {
-				memcpy(buf, str, len);
-				arg = buf;
-			}
-		}
-		if (buf == arg) {
-			Py_BEGIN_ALLOW_THREADS /* think array.resize() */
-			ret = ioctl(fd, code, arg);
-			Py_END_ALLOW_THREADS
-		}
-		else {
-			ret = ioctl(fd, code, arg);
-		}
-		if (mutate_arg && (len < sizeof buf)) {
-			memcpy(str, buf, len);
-		}
-		if (ret < 0) {
-			PyErr_SetFromErrno(PyExc_IOError);
-			return NULL;
-		}
-		if (mutate_arg) {
-			return PyInt_FromLong(ret);
-		}
-		else {
-			return PyString_FromStringAndSize(buf, len);
-		}
-	}
-
-	PyErr_Clear();
 	if (PyArg_ParseTuple(args, "O&is#:ioctl",
                              conv_descriptor, &fd, &code, &str, &len)) {
 		if (len > sizeof buf) {
@@ -177,16 +122,12 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	arg = 0;
 	if (!PyArg_ParseTuple(args,
 	     "O&i|i;ioctl requires a file or file descriptor,"
-	     " an integer and optionally a integer or buffer argument",
+	     " an integer and optionally a third integer or a string",
 			      conv_descriptor, &fd, &code, &arg)) {
 	  return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
-#ifdef __VMS
-	ret = ioctl(fd, code, (void *)arg);
-#else
 	ret = ioctl(fd, code, arg);
-#endif
 	Py_END_ALLOW_THREADS
 	if (ret < 0) {
 		PyErr_SetFromErrno(PyExc_IOError);
@@ -195,36 +136,18 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	return PyInt_FromLong((long)ret);
 }
 
-PyDoc_STRVAR(ioctl_doc,
-"ioctl(fd, opt[, arg[, mutate_flag]])\n\
+static char ioctl_doc [] =
+"ioctl(fd, opt, [arg])\n\
 \n\
-Perform the requested operation on file descriptor fd.  The operation is\n\
-defined by op and is operating system dependent.  Typically these codes are\n\
-retrieved from the fcntl or termios library modules.\n\
-\n\
-The argument arg is optional, and defaults to 0; it may be an int or a\n\
-buffer containing character data (most likely a string or an array). \n\
-\n\
-If the argument is a mutable buffer (such as an array) and if the\n\
-mutate_flag argument (which is only allowed in this case) is true then the\n\
-buffer is (in effect) passed to the operating system and changes made by\n\
-the OS will be reflected in the contents of the buffer after the call has\n\
-returned.  The return value is the integer returned by the ioctl system\n\
-call.\n\
-\n\
-If the argument is a mutable buffer and the mutable_flag argument is not\n\
-passed or is false, the behavior is as if a string had been passed.  This\n\
-behavior will change in future releases of Python.\n\
-\n\
-If the argument is an immutable buffer (most likely a string) then a copy\n\
-of the buffer is passed to the operating system and the return value is a\n\
-string of the same length containing whatever the operating system put in\n\
-the buffer.  The length of the arg buffer in this case is not allowed to\n\
-exceed 1024 bytes.\n\
-\n\
-If the arg given is an integer or if none is specified, the result value is\n\
-an integer corresponding to the return value of the ioctl call in the C\n\
-code.");
+Perform the requested operation on file descriptor fd.  The operation\n\
+is defined by op and is operating system dependent.  Typically these\n\
+codes can be retrieved from the library module IOCTL.  The argument arg\n\
+is optional, and defaults to 0; it may be an int or a string. If arg is\n\
+given as a string, the return value of ioctl is a string of that length,\n\
+containing the resulting value put in the arg buffer by the operating system.\n\
+The length of the arg string is not allowed to exceed 1024 bytes. If the arg\n\
+given is an integer or if none is specified, the result value is an integer\n\
+corresponding to the return value of the ioctl call in the C code.";
 
 
 /* flock(fd, operation) */
@@ -279,12 +202,12 @@ fcntl_flock(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
-PyDoc_STRVAR(flock_doc,
+static char flock_doc [] =
 "flock(fd, operation)\n\
 \n\
 Perform the lock operation op on file descriptor fd.  See the Unix \n\
 manual flock(3) for details.  (On some systems, this function is\n\
-emulated using fcntl().)");
+emulated using fcntl().)";
 
 
 /* lockf(fd, operation) */
@@ -299,17 +222,12 @@ fcntl_lockf(PyObject *self, PyObject *args)
 			      &lenobj, &startobj, &whence))
 	    return NULL;
 
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-	PyErr_SetString(PyExc_NotImplementedError,
-			"lockf not supported on OS/2 (EMX)");
-	return NULL;
-#else
 #ifndef LOCK_SH
 #define LOCK_SH		1	/* shared lock */
 #define LOCK_EX		2	/* exclusive lock */
 #define LOCK_NB		4	/* don't block when locking */
 #define LOCK_UN		8	/* unlock */
-#endif  /* LOCK_SH */
+#endif
 	{
 		struct flock l;
 		if (code == LOCK_UN)
@@ -357,10 +275,9 @@ fcntl_lockf(PyObject *self, PyObject *args)
 	}
 	Py_INCREF(Py_None);
 	return Py_None;
-#endif  /* defined(PYOS_OS2) && defined(PYCC_GCC) */
 }
 
-PyDoc_STRVAR(lockf_doc,
+static char lockf_doc [] =
 "lockf (fd, operation, length=0, start=0, whence=0)\n\
 \n\
 This is essentially a wrapper around the fcntl() locking calls.  fd is the\n\
@@ -383,7 +300,7 @@ starts.  whence is as with fileobj.seek(), specifically:\n\
 \n\
     0 - relative to the start of the file (SEEK_SET)\n\
     1 - relative to the current buffer position (SEEK_CUR)\n\
-    2 - relative to the end of the file (SEEK_END)");
+    2 - relative to the end of the file (SEEK_END)";
 
 /* List of functions */
 
@@ -396,11 +313,12 @@ static PyMethodDef fcntl_methods[] = {
 };
 
 
-PyDoc_STRVAR(module_doc,
+static char module_doc [] =
+
 "This module performs file control and I/O control on file \n\
 descriptors.  It is an interface to the fcntl() and ioctl() Unix\n\
 routines.  File descriptors can be obtained with the fileno() method of\n\
-a file or socket object.");
+a file or socket object.";
 
 /* Module initialisation */
 
@@ -414,8 +332,6 @@ ins(PyObject* d, char* symbol, long value)
         Py_DECREF(v);
         return 0;
 }
-
-#define INS(x) if (ins(d, #x, (long)x)) return -1
 
 static int
 all_ins(PyObject* d)
@@ -539,48 +455,10 @@ all_ins(PyObject* d)
         if (ins(d, "DN_MULTISHOT", (long)DN_MULTISHOT)) return -1;
 #endif
 
-#ifdef HAVE_STROPTS_H
-	/* Unix 98 guarantees that these are in stropts.h. */
-	INS(I_PUSH);
-	INS(I_POP);
-	INS(I_LOOK);
-	INS(I_FLUSH);
-	INS(I_FLUSHBAND);
-	INS(I_SETSIG);
-	INS(I_GETSIG);
-	INS(I_FIND);
-	INS(I_PEEK);
-	INS(I_SRDOPT);
-	INS(I_GRDOPT);
-	INS(I_NREAD);
-	INS(I_FDINSERT);
-	INS(I_STR);
-	INS(I_SWROPT);
-#ifdef I_GWROPT
-	/* despite the comment above, old-ish glibcs miss a couple... */
-	INS(I_GWROPT);
-#endif
-	INS(I_SENDFD);
-	INS(I_RECVFD);
-	INS(I_LIST);
-	INS(I_ATMARK);
-	INS(I_CKBAND);
-	INS(I_GETBAND);
-	INS(I_CANPUT);
-	INS(I_SETCLTIME);
-#ifdef I_GETCLTIME
-	INS(I_GETCLTIME);
-#endif
-	INS(I_LINK);
-	INS(I_UNLINK);
-	INS(I_PLINK);
-	INS(I_PUNLINK);
-#endif
-	
 	return 0;
 }
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initfcntl(void)
 {
 	PyObject *m, *d;

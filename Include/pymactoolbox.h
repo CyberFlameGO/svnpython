@@ -35,9 +35,7 @@ char *PyMac_StrError(int);					/* strerror with mac errors */
 PyObject *PyErr_Mac(PyObject *, int);		/* Exception with a mac error */
 PyObject *PyMac_Error(OSErr);				/* Uses PyMac_GetOSErrException */
 extern OSErr PyMac_GetFullPathname(FSSpec *, char *, int); /* convert fsspec->path */
-#ifdef WITH_NEXT_FRAMEWORK
-extern char *PyMac_GetAppletScriptFile(void);	/* Return applet script file or NULL */
-#endif
+
 /*
 ** These conversion routines are defined in mactoolboxglue.c itself.
 */
@@ -106,7 +104,6 @@ PyObject *PyMac_BuildFSRef(FSRef *);		/* Convert FSRef to PyObject */
 
 /* AE exports */
 extern PyObject *AEDesc_New(AppleEvent *); /* XXXX Why passed by address?? */
-extern PyObject *AEDesc_NewBorrowed(AppleEvent *);
 extern int AEDesc_Convert(PyObject *, AppleEvent *);
 
 /* Cm exports */

@@ -38,7 +38,11 @@ PERFORMANCE OF THIS SOFTWARE.
 #include <unistd.h>
 #endif
 
+#ifdef TARGET_API_MAC_OSX
+#define PATHNAMELEN 1024
+#else
 #define PATHNAMELEN 256
+#endif
 
 /* Return the initial python search path.  This is called once from
 ** initsys() to initialize sys.path.
@@ -59,8 +63,12 @@ PERFORMANCE OF THIS SOFTWARE.
 #include <TextUtils.h>
 #include <Dialogs.h>
 
+#ifdef USE_GUSI1
+#include <GUSI.h>
+#endif
+
 #ifndef USE_BUILTIN_PATH
-static char *PyMac_GetPythonPath();
+staticforward char *PyMac_GetPythonPath();
 #endif
 
 #define PYTHONPATH "\
@@ -203,6 +211,11 @@ PyMac_OpenPrefFile()
 		return -1;
 	prefrh = FSpOpenResFile(&dirspec, fsRdWrShPerm);
 	if ( prefrh < 0 ) {
+#if 0
+		action = CautionAlert(NOPREFFILE_ID, NULL);
+		if ( action == NOPREFFILE_NO )
+			exit(1);
+#endif
 		FSpCreateResFile(&dirspec, 'Pyth', 'pref', 0);
 		prefrh = FSpOpenResFile(&dirspec, fsRdWrShPerm);
 		if ( prefrh == -1 ) {
@@ -440,3 +453,28 @@ PyMac_PreferenceOptions(PyMac_PrefRecord *pr)
    	if ( prefrh != -1) CloseResFile(prefrh);
 	UseResFile(oldrh);
 }
+
+#ifdef USE_GUSI1
+void
+PyMac_SetGUSIOptions()
+{
+	Handle h;
+	short oldrh, prefrh = -1;
+	
+	oldrh = CurResFile();
+	
+	/* Try override from the application resource fork */
+	UseResFile(PyMac_AppRefNum);
+	h = Get1Resource('GU\267I', GUSIOPTIONSOVERRIDE_ID);
+	UseResFile(oldrh);
+	
+	/* If that didn't work try nonoverride from anywhere */
+	if ( h == NULL ) {
+		prefrh = PyMac_OpenPrefFile();
+		h = GetResource('GU\267I', GUSIOPTIONS_ID);
+	}
+	if ( h ) GUSILoadConfiguration(h);
+   	if ( prefrh != -1) CloseResFile(prefrh);
+	UseResFile(oldrh);
+}
+#endif /* USE_GUSI1 */	

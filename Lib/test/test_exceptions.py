@@ -1,9 +1,11 @@
 # Python test set -- part 5, built-in exceptions
 
-from test.test_support import TestFailed, TESTFN, unlink
+from test_support import *
 from types import ClassType
 import warnings
-import sys, traceback, os
+import sys, traceback
+
+warnings.filterwarnings("error", "", OverflowWarning, __name__)
 
 print '5. Built-in exceptions'
 # XXX This is not really enough, each *operation* should be tested!
@@ -84,12 +86,6 @@ try: x = undefined_variable
 except NameError: pass
 
 r(OverflowError)
-# XXX
-# Obscure:  this test relies on int+int raising OverflowError if the
-# ints are big enough.  But ints no longer do that by default.  This
-# test will have to go away someday.  For now, we can convert the
-# transitional OverflowWarning into an error.
-warnings.filterwarnings("error", "", OverflowWarning, __name__)
 x = 1
 try:
     while 1: x = x+x
@@ -185,7 +181,7 @@ def test_capi1():
         exc, err, tb = sys.exc_info()
         co = tb.tb_frame.f_code
         assert co.co_name == "test_capi1"
-        assert co.co_filename.endswith('test_exceptions'+os.extsep+'py')
+        assert co.co_filename.endswith('test_exceptions.py')
     else:
         print "Expected exception"
 
@@ -197,7 +193,7 @@ def test_capi2():
         exc, err, tb = sys.exc_info()
         co = tb.tb_frame.f_code
         assert co.co_name == "__init__"
-        assert co.co_filename.endswith('test_exceptions'+os.extsep+'py')
+        assert co.co_filename.endswith('test_exceptions.py')
         co2 = tb.tb_frame.f_back.f_code
         assert co2.co_name == "test_capi2"
     else:

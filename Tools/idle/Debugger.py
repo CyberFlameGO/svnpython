@@ -1,5 +1,6 @@
 import os
 import bdb
+import traceback
 from Tkinter import *
 from WindowList import ListedToplevel
 

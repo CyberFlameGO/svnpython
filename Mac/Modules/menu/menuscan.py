@@ -1,10 +1,11 @@
 # Scan <Menus.h>, generating menugen.py.
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 
 from scantools import Scanner
+from bgenlocations import TOOLBOXDIR
 
 def main():
 	input = "Menus.h"
@@ -13,8 +14,6 @@ def main():
 	scanner = MyScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now doing 'import menusupport' ==="
 	import menusupport
 	print "=== Done.  It's up to you to compile Menumodule.c ==="
@@ -44,21 +43,80 @@ class MyScanner(Scanner):
 			"GetMenuTitle", # Funny arg/returnvalue
 			"SetMenuTitle",
 			"SetMenuTitleIcon", # void*
-			# OS8 calls:
-			'GetMenuItemRefCon2',
-			'SetMenuItemRefCon2',
-			'EnableItem',
-			'DisableItem',
-			'CheckItem',
-			'CountMItems',
-			'OpenDeskAcc',
-			'SystemEdit',
-			'SystemMenu',
-			'SetMenuFlash',
-			'InitMenus',
-			'InitProcMenu',
 			]
 
+	def makegreylist(self):
+		return [
+			('#if !TARGET_API_MAC_CARBON', [
+				'GetMenuItemRefCon2',
+				'SetMenuItemRefCon2',
+				'EnableItem',
+				'DisableItem',
+				'CheckItem',
+				'CountMItems',
+				'OpenDeskAcc',
+				'SystemEdit',
+				'SystemMenu',
+				'SetMenuFlash',
+				'InitMenus',
+				'InitProcMenu',
+			]),
+			('#if TARGET_API_MAC_CARBON', [
+				'DisposeMenuBar',
+				'DuplicateMenuBar',
+				'CreateNewMenu',
+				'GetFontFamilyFromMenuSelection',
+				'UpdateStandardFontMenu',
+				'CreateStandardFontMenu',
+				'RemoveMenuCommandProperty',
+				'GetMenuCommandPropertySize',
+				'IsMenuCommandEnabled',
+				'DisableMenuCommand',
+				'EnableMenuCommand',
+				'GetIndMenuItemWithCommandID',
+				'CountMenuItemsWithCommandID',
+				'MenuHasEnabledItems',
+				'EnableAllMenuItems',
+				'DisableAllMenuItems',
+				'ChangeMenuItemAttributes',
+				'GetMenuItemAttributes',
+				'ChangeMenuAttributes',
+				'GetMenuAttributes',
+				'ChangeMenuItemPropertyAttributes',
+				'GetMenuItemPropertyAttributes',
+				'AcquireRootMenu',
+				'UpdateInvalidMenuItems',
+				'InvalidateMenuItems',
+				'IsMenuItemInvalid',
+				'GetMenuCommandMark',
+				'SetMenuCommandMark',
+				'GetMenuType',
+				'SetMenuItemCommandKey',
+				'GetMenuItemCommandKey',
+				'SetMenuItemIndent',
+				'GetMenuItemIndent',
+				'SetMenuItemTextWithCFString',
+				'CopyMenuItemTextAsCFString',
+				'GetMenuItemHierarchicalMenu',
+				'SetMenuItemHierarchicalMenu',
+				'SetRootMenu',
+				'IsMenuBarInvalid',
+				'InvalidateMenuEnabling',
+				'InsertMenuItemTextWithCFString',
+				'AppendMenuItemTextWithCFString',
+				'DeleteMenuItems',
+				'CopyMenuItems',
+				'IsMenuSizeInvalid',
+				'InvalidateMenuSize',
+				'SetMenuTitleWithCFString',
+				'CopyMenuTitleAsCFString',
+				'DuplicateMenu',
+				'ReleaseMenu',
+				'RetainMenu',
+				'GetMenuRetainCount',
+				'IsValidMenu',
+			])]
+			
 	def makeblacklisttypes(self):
 		return [
 			'MCTableHandle',

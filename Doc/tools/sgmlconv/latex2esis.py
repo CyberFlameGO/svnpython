@@ -19,9 +19,13 @@ import errno
 import getopt
 import os
 import re
+import string
 import sys
+import UserList
 import xml.sax
 import xml.sax.saxutils
+
+from types import ListType, StringType, TupleType
 
 from esistools import encode
 
@@ -70,30 +74,29 @@ def popping(name, point, depth):
     dbgmsg("popping </%s> at %s" % (name, point))
 
 
-class _Stack(list):
+class _Stack(UserList.UserList):
     def append(self, entry):
-        if not isinstance(entry, str):
+        if type(entry) is not StringType:
             raise LaTeXFormatError("cannot push non-string on stack: "
                                    + `entry`)
         #dbgmsg("%s<%s>" % (" "*len(self.data), entry))
-        list.append(self, entry)
+        self.data.append(entry)
 
     def pop(self, index=-1):
-        entry = self[index]
-        del self[index]
-        #dbgmsg("%s</%s>" % (" " * len(self), entry))
+        entry = self.data[index]
+        del self.data[index]
+        #dbgmsg("%s</%s>" % (" "*len(self.data), entry))
 
     def __delitem__(self, index):
-        entry = self[index]
-        list.__delitem__(self, index)
-        #dbgmsg("%s</%s>" % (" " * len(self), entry))
+        entry = self.data[index]
+        del self.data[index]
+        #dbgmsg("%s</%s>" % (" "*len(self.data), entry))
 
 
 def new_stack():
     if DEBUG:
         return _Stack()
-    else:
-        return []
+    return []
 
 
 class Conversion:
@@ -103,7 +106,7 @@ class Conversion:
         self.table = table
         L = [s.rstrip() for s in ifp.readlines()]
         L.append("")
-        self.line = "\n".join(L)
+        self.line = string.join(L, "\n")
         self.preamble = 1
 
     def convert(self):
@@ -337,7 +340,7 @@ class Conversion:
                 break
         if stack:
             raise LaTeXFormatError("elements remain on stack: "
-                                   + ", ".join(stack))
+                                   + string.join(stack, ", "))
         # otherwise we just ran out of input here...
 
     # This is a really limited table of combinations, but it will have
@@ -484,10 +487,7 @@ class TableHandler(xml.sax.handler.ContentHandler):
         if attrs.has_key("outputname"):
             self.__current.outputname = attrs.get("outputname")
     def end_macro(self):
-        name = self.__current.name
-        if self.__table.has_key(name):
-            raise ValueError("name %s already in use" % `name`)
-        self.__table[name] = self.__current
+        self.__table[self.__current.name] = self.__current
         self.__current = None
 
     def start_attribute(self, attrs):
@@ -543,12 +543,12 @@ def main():
     opts, args = getopt.getopt(sys.argv[1:], "D", ["debug"])
     for opt, arg in opts:
         if opt in ("-D", "--debug"):
-            DEBUG += 1
+            DEBUG = DEBUG + 1
     if len(args) == 0:
         ifp = sys.stdin
         ofp = sys.stdout
     elif len(args) == 1:
-        ifp = open(args[0])
+        ifp = open(args)
         ofp = sys.stdout
     elif len(args) == 2:
         ifp = open(args[0])

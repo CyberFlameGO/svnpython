@@ -4,22 +4,14 @@
 #include "osdefs.h"
 #include "compile.h" /* For CO_FUTURE_DIVISION */
 
-#ifdef __VMS
-#include <unixlib.h>
-#endif
-
-#if defined(MS_WINDOWS) || defined(__CYGWIN__)
+#ifdef MS_WINDOWS
 #include <fcntl.h>
 #endif
 
-#if (defined(PYOS_OS2) && !defined(PYCC_GCC)) || defined(MS_WINDOWS)
+#if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-#define PYTHONHOMEHELP "<prefix>/Lib"
-#else
 #define PYTHONHOMEHELP "<prefix>/pythonX.X"
-#endif
 #endif
 
 #include "pygetopt.h"
@@ -66,7 +58,6 @@ static char *usage_2 = "\
 -S     : don't imply 'import site' on initialization\n\
 -t     : issue warnings about inconsistent tab usage (-tt: issue errors)\n\
 -u     : unbuffered binary stdout and stderr (also PYTHONUNBUFFERED=x)\n\
-         see man page for details on internal buffering relating to '-u'\n\
 ";
 static char *usage_3 = "\
 -v     : verbose (trace import statements) (also PYTHONVERBOSE=x)\n\
@@ -88,7 +79,7 @@ PYTHONCASEOK : ignore case in 'import' statements (Windows).\n\
 ";
 
 
-static int
+static void
 usage(int exitcode, char* program)
 {
 	FILE *f = exitcode ? stderr : stdout;
@@ -102,25 +93,14 @@ usage(int exitcode, char* program)
 		fprintf(f, usage_3);
 		fprintf(f, usage_4, DELIM, DELIM, PYTHONHOMEHELP);
 	}
-#if defined(__VMS)
-	if (exitcode == 0) {
-		/* suppress 'error' message */
-		return 1;
-	}
-	else {
-		/* STS$M_INHIB_MSG + SS$_ABORT */
-		return 0x1000002c;
-	}
-#else
-	return exitcode;
-#endif
+	exit(exitcode);
 	/*NOTREACHED*/
 }
 
 
 /* Main program */
 
-int
+DL_EXPORT(int)
 Py_Main(int argc, char **argv)
 {
 	int c;
@@ -194,7 +174,7 @@ Py_Main(int argc, char **argv)
 			fprintf(stderr,
 				"-Q option should be `-Qold', "
 				"`-Qwarn', `-Qwarnall', or `-Qnew' only\n");
-			return usage(2, argv[0]);
+			usage(2, argv[0]);
 			/* NOTREACHED */
 
 		case 'i':
@@ -255,18 +235,18 @@ Py_Main(int argc, char **argv)
 		/* This space reserved for other options */
 
 		default:
-			return usage(2, argv[0]);
+			usage(2, argv[0]);
 			/*NOTREACHED*/
 
 		}
 	}
 
 	if (help)
-		return usage(0, argv[0]);
+		usage(0, argv[0]);
 
 	if (version) {
 		fprintf(stderr, "Python %s\n", PY_VERSION);
-		return 0;
+		exit(0);
 	}
 
 	if (!saw_inspect_flag &&
@@ -279,19 +259,12 @@ Py_Main(int argc, char **argv)
 	if (command == NULL && _PyOS_optind < argc &&
 	    strcmp(argv[_PyOS_optind], "-") != 0)
 	{
-#ifdef __VMS
-		filename = decc$translate_vms(argv[_PyOS_optind]);
-		if (filename == (char *)0 || filename == (char *)-1)
-			filename = argv[_PyOS_optind];
-
-#else
 		filename = argv[_PyOS_optind];
-#endif
 		if (filename != NULL) {
 			if ((fp = fopen(filename, "r")) == NULL) {
 				fprintf(stderr, "%s: can't open file '%s'\n",
 					argv[0], filename);
-				return 2;
+				exit(2);
 			}
 			else if (skipfirstline) {
 				int ch;
@@ -310,7 +283,7 @@ Py_Main(int argc, char **argv)
 	stdin_is_interactive = Py_FdIsInteractive(stdin, (char *)0);
 
 	if (unbuffered) {
-#if defined(MS_WINDOWS) || defined(__CYGWIN__)
+#ifdef MS_WINDOWS
 		_setmode(fileno(stdin), O_BINARY);
 		_setmode(fileno(stdout), O_BINARY);
 #endif
@@ -344,29 +317,8 @@ Py_Main(int argc, char **argv)
 #endif /* !MS_WINDOWS */
 		/* Leave stderr alone - it should be unbuffered anyway. */
   	}
-#ifdef __VMS
-	else {
-		setvbuf (stdout, (char *)NULL, _IOLBF, BUFSIZ);
-	}
-#endif /* __VMS */
 
-#ifdef __APPLE__
-	/* On MacOS X, when the Python interpreter is embedded in an
-	   application bundle, it gets executed by a bootstrapping script
-	   that does os.execve() with an argv[0] that's different from the
-	   actual Python executable. This is needed to keep the Finder happy,
-	   or rather, to work around Apple's overly strict requirements of
-	   the process name. However, we still need a usable sys.executable,
-	   so the actual executable path is passed in an environment variable.
-	   See Lib/plat-mac/bundlebuiler.py for details about the bootstrap
-	   script. */
-	if ((p = Py_GETENV("PYTHONEXECUTABLE")) && *p != '\0')
-		Py_SetProgramName(p);
-	else
-		Py_SetProgramName(argv[0]);
-#else
 	Py_SetProgramName(argv[0]);
-#endif
 	Py_Initialize();
 
 	if (Py_VerboseFlag ||
@@ -425,7 +377,7 @@ Py_Main(int argc, char **argv)
 
 	Py_Finalize();
 #ifdef RISCOS
-	if (Py_RISCOSWimpFlag)
+	if(Py_RISCOSWimpFlag)
                 fprintf(stderr, "\x0cq\x0c"); /* make frontend quit */
 #endif
 

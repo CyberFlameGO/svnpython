@@ -4,6 +4,7 @@
 
 import os
 import sys
+import string
 import getopt
 
 def main():
@@ -20,33 +21,33 @@ def main():
         if optname == '-t':
             tabsize = int(optvalue)
 
-    for filename in args:
-        process(filename, tabsize)
+    for file in args:
+        process(file, tabsize)
 
-def process(filename, tabsize):
+def process(file, tabsize):
     try:
-        f = open(filename)
+        f = open(file)
         text = f.read()
         f.close()
     except IOError, msg:
-        print "%s: I/O error: %s" % (`filename`, str(msg))
+        print "%s: I/O error: %s" % (`file`, str(msg))
         return
-    newtext = text.expandtabs(tabsize)
+    newtext = string.expandtabs(text, tabsize)
     if newtext == text:
         return
-    backup = filename + "~"
+    backup = file + "~"
     try:
         os.unlink(backup)
     except os.error:
         pass
     try:
-        os.rename(filename, backup)
+        os.rename(file, backup)
     except os.error:
         pass
-    f = open(filename, "w")
+    f = open(file, "w")
     f.write(newtext)
     f.close()
-    print filename
+    print file
 
 if __name__ == '__main__':
     main()

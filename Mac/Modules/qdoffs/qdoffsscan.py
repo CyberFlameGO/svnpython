@@ -1,8 +1,9 @@
 # Scan an Apple header file, generating a Python file of generator calls.
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
+from bgenlocations import TOOLBOXDIR
 
 from scantools import Scanner
 
@@ -13,8 +14,6 @@ def main():
 	scanner = MyScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now importing the generated code... ==="
 	import qdoffssupport
 	print "=== Done.  It's up to you to compile it now! ==="

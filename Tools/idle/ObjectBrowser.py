@@ -59,7 +59,7 @@ class ObjectTreeItem(TreeItem):
 
 class InstanceTreeItem(ObjectTreeItem):
     def IsExpandable(self):
-        return True
+        return 1
     def GetSubList(self):
         sublist = ObjectTreeItem.GetSubList(self)
         sublist.insert(0,
@@ -68,7 +68,7 @@ class InstanceTreeItem(ObjectTreeItem):
 
 class ClassTreeItem(ObjectTreeItem):
     def IsExpandable(self):
-        return True
+        return 1
     def GetSubList(self):
         sublist = ObjectTreeItem.GetSubList(self)
         if len(self.object.__bases__) == 1:

@@ -56,8 +56,7 @@ instance, a threading UDP server class is created as follows:
         class ThreadingUDPServer(ThreadingMixIn, UDPServer): pass
 
 The Mix-in class must come first, since it overrides a method defined
-in UDPServer! Setting the various member variables also changes
-the behavior of the underlying server mechanism.
+in UDPServer!
 
 To implement a service, you must derive a class from
 BaseRequestHandler and redefine its handle() method.  You can then run
@@ -227,10 +226,10 @@ class BaseServer:
     def verify_request(self, request, client_address):
         """Verify the request.  May be overridden.
 
-        Return True if we should proceed with this request.
+        Return true if we should proceed with this request.
 
         """
-        return True
+        return 1
 
     def process_request(self, request, client_address):
         """Call finish_request.
@@ -320,7 +319,7 @@ class TCPServer(BaseServer):
 
     request_queue_size = 5
 
-    allow_reuse_address = False
+    allow_reuse_address = 0
 
     def __init__(self, server_address, RequestHandlerClass):
         """Constructor.  May be extended, do not override."""
@@ -381,7 +380,7 @@ class UDPServer(TCPServer):
 
     """UDP server class."""
 
-    allow_reuse_address = False
+    allow_reuse_address = 0
 
     socket_type = socket.SOCK_DGRAM
 
@@ -449,10 +448,6 @@ class ForkingMixIn:
 class ThreadingMixIn:
     """Mix-in class to handle each request in a new thread."""
 
-    # Decides how threads will act upon termination of the
-    # main process
-    daemon_threads = False
-
     def process_request_thread(self, request, client_address):
         """Same as in BaseServer but as a thread.
 
@@ -471,8 +466,6 @@ class ThreadingMixIn:
         import threading
         t = threading.Thread(target = self.process_request_thread,
                              args = (request, client_address))
-        if self.daemon_threads:
-            t.setDaemon (1)
         t.start()
 
 
@@ -561,8 +554,7 @@ class StreamRequestHandler(BaseRequestHandler):
         self.wfile = self.connection.makefile('wb', self.wbufsize)
 
     def finish(self):
-        if not self.wfile.closed:
-            self.wfile.flush()
+        self.wfile.flush()
         self.wfile.close()
         self.rfile.close()
 

@@ -215,7 +215,7 @@ module = MacModule('_CarbonEvt', 'CarbonEvents', includestuff, finalstuff, inits
 
 
 
-class EventHandlerRefObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
+class EventHandlerRefObjectDefinition(GlobalObjectDefinition):
 	def outputStructMembers(self):
 		Output("%s ob_itself;", self.itselftype)
 		Output("PyObject *ob_callback;")
@@ -227,15 +227,12 @@ class EventHandlerRefObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
 		Output("RemoveEventHandler(self->ob_itself);")
 		Output("Py_DECREF(self->ob_callback);")
 		OutRbrace()
-		
-class MyGlobalObjectDefinition(PEP253Mixin, GlobalObjectDefinition):
-	pass
 
 for typ in RefObjectTypes:
 	if typ == 'EventHandlerRef':
 		EventHandlerRefobject = EventHandlerRefObjectDefinition('EventHandlerRef')
 	else:
-		execstr = typ + 'object = MyGlobalObjectDefinition(typ)'
+		execstr = typ + 'object = GlobalObjectDefinition(typ)'
 		exec execstr
 	module.addobject(eval(typ + 'object'))
 
@@ -357,8 +354,8 @@ MPDeleteCriticalRegion(reentrantLock);
 #endif /* USE_MAC_MP_MULTITHREADING */
 
 Py_INCREF(Py_None);
-_res = Py_None;
-return _res;
+
+return Py_None;
 """			
 
 f = ManualGenerator("RunApplicationEventLoop", runappeventloop);

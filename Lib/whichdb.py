@@ -1,16 +1,6 @@
 """Guess which db package to use to open a db file."""
 
 import os
-import struct
-
-try:
-    import dbm
-    _dbmerror = dbm.error
-except ImportError:
-    dbm = None
-    # just some sort of valid exception which might be raised in the
-    # dbm test
-    _dbmerror = IOError
 
 def whichdb(filename):
     """Guess which db package to use to open a db file.
@@ -25,6 +15,8 @@ def whichdb(filename):
     database using that module may still fail.
     """
 
+    import struct
+
     # Check for dbm first -- this has a .pag and a .dir file
     try:
         f = open(filename + os.extsep + "pag", "rb")
@@ -33,20 +25,7 @@ def whichdb(filename):
         f.close()
         return "dbm"
     except IOError:
-        # some dbm emulations based on Berkeley DB generate a .db file
-        # some do not, but they should be caught by the dbhash checks
-        try:
-            f = open(filename + os.extsep + "db", "rb")
-            f.close()
-            # guarantee we can actually open the file using dbm
-            # kind of overkill, but since we are dealing with emulations
-            # it seems like a prudent step
-            if dbm is not None:
-                d = dbm.open(filename)
-                d.close()
-                return "dbm"
-        except (IOError, _dbmerror):
-            pass
+        pass
 
     # Check for dumbdbm next -- this has a .dir and and a .dat file
     try:
@@ -86,12 +65,11 @@ def whichdb(filename):
     if magic == 0x13579ace:
         return "gdbm"
 
-    # Check for old Berkeley db hash file format v2
+    # Check for BSD hash
     if magic in (0x00061561, 0x61150600):
-        return "bsddb185"
+        return "dbhash"
 
-    # Later versions of Berkeley db hash file have a 12-byte pad in
-    # front of the file type
+    # BSD hash v2 has a 12-byte NULL pad in front of the file type
     try:
         (magic,) = struct.unpack("=l", s16[-4:])
     except struct.error:

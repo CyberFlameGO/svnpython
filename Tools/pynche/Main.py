@@ -1,18 +1,20 @@
 """Pynche -- The PYthon Natural Color and Hue Editor.
 
-Contact: %(AUTHNAME)s
-Email:   %(AUTHEMAIL)s
+Contact: Barry Warsaw
+Email:   bwarsaw@python.org
 Version: %(__version__)s
 
 Pynche is based largely on a similar color editor I wrote years ago for the
-SunView window system.  That editor was called ICE: the Interactive Color
+Sunview window system.  That editor was called ICE: the Interactive Color
 Editor.  I'd always wanted to port the editor to X but didn't feel like
 hacking X and C code to do it.  Fast forward many years, to where Python +
 Tkinter provides such a nice programming environment, with enough power, that
 I finally buckled down and implemented it.  I changed the name because these
 days, too many other systems have the acronym `ICE'.
 
-This program currently requires Python 2.2 with Tkinter.
+This program currently requires Python 1.5 with Tkinter.  It has only been
+tested on Solaris 2.6.  Feedback is greatly appreciated.  Send email to
+bwarsaw@python.org
 
 Usage: %(PROGRAM)s [-d file] [-i file] [-X] [-v] [-h] [initialcolor]
 
@@ -36,7 +38,7 @@ Where:
 
     --version
     -v
-        print the version number and exit
+        print the version number
 
     --help
     -h
@@ -46,7 +48,7 @@ Where:
         initial color, as a color name or #RRGGBB format
 """
 
-__version__ = '1.4'
+__version__ = '1.3'
 
 import sys
 import os
@@ -62,8 +64,6 @@ from TypeinViewer import TypeinViewer
 
 
 PROGRAM = sys.argv[0]
-AUTHNAME = 'Barry Warsaw'
-AUTHEMAIL = 'barry@python.org'
 
 # Default locations of rgb.txt or other textual color database
 RGB_TXT = [
@@ -120,26 +120,25 @@ def initial_color(s, colordb):
 
 
 
-def build(master=None, initialcolor=None, initfile=None, ignore=None,
-          dbfile=None):
+def build(master=None, initialcolor=None, initfile=None, ignore=None):
     # create all output widgets
     s = Switchboard(not ignore and initfile)
-    # defer to the command line chosen color database, falling back to the one
-    # in the .pynche file.
-    if dbfile is None:
-        dbfile = s.optiondb()['DBFILE']
-    # find a parseable color database
+
+    # load the color database
     colordb = None
-    files = RGB_TXT[:]
-    while colordb is None:
-        try:
-            colordb = ColorDB.get_colordb(dbfile)
-        except (KeyError, IOError):
-            pass
-        if colordb is None:
-            if not files:
-                break
-            dbfile = files.pop(0)
+    try:
+        dbfile = s.optiondb()['DBFILE']
+        colordb = ColorDB.get_colordb(dbfile)
+    except (KeyError, IOError):
+        # scoot through the files listed above to try to find a usable color
+        # database file
+        for f in RGB_TXT:
+            try:
+                colordb = ColorDB.get_colordb(f)
+                if colordb:
+                    break
+            except IOError:
+                pass
     if not colordb:
         usage(1, 'No color database file found, see the -d option.')
     s.set_colordb(colordb)
@@ -154,7 +153,7 @@ def build(master=None, initialcolor=None, initfile=None, ignore=None,
     s.add_view(TypeinViewer(s, w))
 
     # get the initial color as components and set the color on all views.  if
-    # there was no initial color given on the command line, use the one that's
+    # there was no initial color given on the command line, use the one that's 
     # stored in the option database
     if initialcolor is None:
         optiondb = s.optiondb()
@@ -172,52 +171,50 @@ def build(master=None, initialcolor=None, initfile=None, ignore=None,
 
 def run(app, s):
     try:
-        app.start()
+	app.start()
     except KeyboardInterrupt:
-        pass
+	pass
 
 
 
 def main():
     try:
-        opts, args = getopt.getopt(
+	opts, args = getopt.getopt(
             sys.argv[1:],
             'hd:i:Xv',
             ['database=', 'initfile=', 'ignore', 'help', 'version'])
     except getopt.error, msg:
-        usage(1, msg)
+	usage(1, msg)
 
     if len(args) == 0:
         initialcolor = None
     elif len(args) == 1:
         initialcolor = args[0]
     else:
-        usage(1)
+	usage(1)
 
-    ignore = False
-    dbfile = None
+    ignore = 0
     initfile = os.path.expanduser('~/.pynche')
     for opt, arg in opts:
-        if opt in ('-h', '--help'):
-            usage(0)
+	if opt in ('-h', '--help'):
+	    usage(0)
         elif opt in ('-v', '--version'):
-            print """\
+            print '''\
 Pynche -- The PYthon Natural Color and Hue Editor.
-Contact: %(AUTHNAME)s
-Email:   %(AUTHEMAIL)s
-Version: %(__version__)s""" % globals()
+Contact: Barry Warsaw
+Email:   bwarsaw@python.org
+Version: %s''' % __version__
             sys.exit(0)
-        elif opt in ('-d', '--database'):
-            dbfile = arg
+	elif opt in ('-d', '--database'):
+	    RGB_TXT.insert(0, arg)
         elif opt in ('-X', '--ignore'):
-            ignore = True
+            ignore = 1
         elif opt in ('-i', '--initfile'):
             initfile = arg
 
     app, sb = build(initialcolor=initialcolor,
                     initfile=initfile,
-                    ignore=ignore,
-                    dbfile=dbfile)
+                    ignore=ignore)
     run(app, sb)
     sb.save_views()
 

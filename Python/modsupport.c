@@ -33,7 +33,7 @@ PyObject *
 Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 	       PyObject *passthrough, int module_api_version)
 {
-	PyObject *m, *d, *v, *n;
+	PyObject *m, *d, *v;
 	PyMethodDef *ml;
 	if (!Py_IsInitialized())
 	    Py_FatalError("Interpreter not initialized (version mismatch?)");
@@ -46,15 +46,6 @@ Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 		if (PyErr_Warn(PyExc_RuntimeWarning, message)) 
 			return NULL;
 	}
-	/* Make sure name is fully qualified.
-
-	   This is a bit of a hack: when the shared library is loaded,
-	   the module name is "package.module", but the module calls
-	   Py_InitModule*() with just "module" for the name.  The shared
-	   library loader squirrels away the true name of the module in
-	   _Py_PackageContext, and Py_InitModule*() will substitute this
-	   (if the name actually matches).
-	*/
 	if (_Py_PackageContext != NULL) {
 		char *p = strrchr(_Py_PackageContext, '.');
 		if (p != NULL && strcmp(name, p+1) == 0) {
@@ -65,32 +56,20 @@ Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 	if ((m = PyImport_AddModule(name)) == NULL)
 		return NULL;
 	d = PyModule_GetDict(m);
-	if (methods != NULL) {
-		n = PyString_FromString(name);
-		if (n == NULL)
+	for (ml = methods; ml->ml_name != NULL; ml++) {
+		v = PyCFunction_New(ml, passthrough);
+		if (v == NULL)
 			return NULL;
-		for (ml = methods; ml->ml_name != NULL; ml++) {
-			if ((ml->ml_flags & METH_CLASS) ||
-			    (ml->ml_flags & METH_STATIC)) {
-				PyErr_SetString(PyExc_ValueError,
-						"module functions cannot set"
-						" METH_CLASS or METH_STATIC");
-				return NULL;
-			}
-			v = PyCFunction_NewEx(ml, passthrough, n);
-			if (v == NULL)
-				return NULL;
-			if (PyDict_SetItemString(d, ml->ml_name, v) != 0) {
-				Py_DECREF(v);
-				return NULL;
-			}
+		if (PyDict_SetItemString(d, ml->ml_name, v) != 0) {
 			Py_DECREF(v);
+			return NULL;
 		}
+		Py_DECREF(v);
 	}
 	if (doc != NULL) {
 		v = PyString_FromString(doc);
 		if (v == NULL || PyDict_SetItemString(d, "__doc__", v) != 0) {
-			Py_XDECREF(v);
+			Py_DECREF(v);
 			return NULL;
 		}
 		Py_DECREF(v);
@@ -101,8 +80,7 @@ Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 
 /* Helper for mkvalue() to scan the length of a format */
 
-static int
-countformat(char *format, int endchar)
+static int countformat(char *format, int endchar)
 {
 	int count = 0;
 	int level = 0;
@@ -289,15 +267,9 @@ do_mkvalue(char **p_format, va_list *p_va)
 		case 'l':
 			return PyInt_FromLong((long)va_arg(*p_va, long));
 
-		case 'k':
-			return PyInt_FromLong((long)va_arg(*p_va, unsigned long));
-
 #ifdef HAVE_LONG_LONG
 		case 'L':
-			return PyLong_FromLongLong((PY_LONG_LONG)va_arg(*p_va, PY_LONG_LONG));
-
-		case 'K':
-			return PyLong_FromLongLong((PY_LONG_LONG)va_arg(*p_va, unsigned PY_LONG_LONG));
+			return PyLong_FromLongLong((LONG_LONG)va_arg(*p_va, LONG_LONG));
 #endif
 #ifdef Py_USING_UNICODE
 		case 'u':
@@ -419,8 +391,7 @@ do_mkvalue(char **p_format, va_list *p_va)
 }
 
 
-PyObject *
-Py_BuildValue(char *format, ...)
+PyObject *Py_BuildValue(char *format, ...)
 {
 	va_list va;
 	PyObject* retval;

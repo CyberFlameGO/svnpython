@@ -82,7 +82,6 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return None
         self.send_response(200)
         self.send_header("Content-type", ctype)
-        self.send_header("Content-Length", str(os.fstat(f.fileno())[6]))
         self.end_headers()
         return f
 
@@ -116,11 +115,9 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 # Note: a link to a directory displays with @ and links with /
             f.write('<li><a href="%s">%s</a>\n' % (linkname, displayname))
         f.write("</ul>\n<hr>\n")
-        length = f.tell()
         f.seek(0)
         self.send_response(200)
         self.send_header("Content-type", "text/html")
-        self.send_header("Content-Length", str(length))
         self.end_headers()
         return f
 
@@ -175,10 +172,10 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
 
         base, ext = posixpath.splitext(path)
-        if ext in self.extensions_map:
+        if self.extensions_map.has_key(ext):
             return self.extensions_map[ext]
         ext = ext.lower()
-        if ext in self.extensions_map:
+        if self.extensions_map.has_key(ext):
             return self.extensions_map[ext]
         else:
             return self.extensions_map['']

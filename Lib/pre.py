@@ -87,12 +87,6 @@ This module also defines an exception 'error'.
 import sys
 from pcre import *
 
-# XXX This module is deprecated as of Python 2.3, and should be removed
-# in the version that follows 2.3.
-import warnings as _warnings
-_warnings.warn("Please use the 're' module, not the 'pre' module",
-               DeprecationWarning)
-
 __all__ = ["match","search","sub","subn","split","findall","escape","compile",
            "I","L","M","S","X","IGNORECASE","LOCALE","MULTILINE","DOTALL",
            "VERBOSE","error"]
@@ -505,7 +499,7 @@ class RegexObject:
         self.pattern = statetuple[0]
         self.flags = statetuple[1]
         self.groupindex = statetuple[2]
-        self.code = pcre_compile(*statetuple)
+        self.code = apply(pcre_compile, statetuple)
 
 class _Dummy:
     # Dummy class used by _subn_string().  Has 'group' to avoid core dump.

@@ -11,6 +11,7 @@ import sys
 import struct
 import img
 import imgformat
+import macfs
 import struct
 import mac_image
 
@@ -46,10 +47,11 @@ class imgbrowse(FrameWork.Application):
 		self._quit()
 		
 	def opendoc(self, *args):
-		pathname = EasyDialogs.AskFileForOpen() # Any file type
-		if not pathname:
+		fss, ok = macfs.StandardGetFile() # Any file type
+		if not ok:
 			return
 		bar = EasyDialogs.ProgressBar('Reading and converting...')
+		pathname = fss.as_pathname()
 		try:
 			rdr = img.reader(imgformat.macrgb16, pathname)
 		except img.error, arg:
@@ -86,16 +88,16 @@ class imgwindow(FrameWork.Window):
 		currect = self.fitrect()
 		print 'PICT:', self.pictrect
 		print 'WIND:', currect
-		print 'ARGS:', (self.pixmap, self.wid.GetWindowPort().GetPortBitMapForCopyBits(), self.pictrect,
+		print 'ARGS:', (self.pixmap, self.wid.GetWindowPort().portBits, self.pictrect,
 				currect, QuickDraw.srcCopy, None)
 		self.info()
-		Qd.CopyBits(self.pixmap, self.wid.GetWindowPort().GetPortBitMapForCopyBits(), self.pictrect,
+		Qd.CopyBits(self.pixmap, self.wid.GetWindowPort().portBits, self.pictrect,
 				currect, QuickDraw.srcCopy, None)
 		
 	def fitrect(self):
 		"""Return self.pictrect scaled to fit in window"""
 		graf = self.wid.GetWindowPort()
-		screenrect = graf.GetPortBounds()
+		screenrect = graf.portRect
 		picwidth = self.pictrect[2] - self.pictrect[0]
 		picheight = self.pictrect[3] - self.pictrect[1]
 		if picwidth > screenrect[2] - screenrect[0]:
@@ -111,7 +113,7 @@ class imgwindow(FrameWork.Window):
 				
 	def info(self):
 		graf = self.wid.GetWindowPort()
-		bits = graf.GetPortBitMapForCopyBits()
+		bits = graf.portBits
 		mac_image.dumppixmap(bits.pixmap_data)
 
 main()

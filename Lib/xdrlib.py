@@ -13,7 +13,7 @@ except ImportError:
 __all__ = ["Error", "Packer", "Unpacker", "ConversionError"]
 
 # exceptions
-class Error(Exception):
+class Error:
     """Exception class for this module. Use:
 
     except xdrlib.Error, var:
@@ -246,7 +246,7 @@ def _test():
     for method, args in packtest:
         print 'pack test', count,
         try:
-            method(*args)
+            apply(method, args)
             print 'succeeded'
         except ConversionError, var:
             print 'ConversionError:', var.msg
@@ -272,7 +272,7 @@ def _test():
         print 'unpack test', count,
         try:
             if succeedlist[count]:
-                x = method(*args)
+                x = apply(method, args)
                 print pred(x) and 'succeeded' or 'failed', ':', x
             else:
                 print 'skipping'

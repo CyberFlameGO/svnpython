@@ -11,6 +11,7 @@ from Carbon import Qd
 from Carbon import Res
 from Carbon import Scrap
 import os
+import macfs
 from Carbon import MacTextEditor
 from Carbon import Mlte
 
@@ -91,9 +92,9 @@ class MlteWindow(Window):
 		self.changed = 0
 		
 	def menu_save_as(self):
-		path = EasyDialogs.AskFileForSave(message='Save as:')
-		if not path: return
-		self.path = path
+		fss, ok = macfs.StandardPutFile('Save as:')
+		if not ok: return
+		self.path = fss.as_pathname()
 		self.name = os.path.split(self.path)[-1]
 		self.wid.SetWTitle(self.name)
 		self.menu_save()
@@ -267,9 +268,10 @@ class Mlted(Application):
 
 	def _open(self, askfile):
 		if askfile:
-			path = EasyDialogs.AskFileForOpen(typeList=('TEXT',))
-			if not path:
+			fss, ok = macfs.StandardGetFile('TEXT')
+			if not ok:
 				return
+			path = fss.as_pathname()
 			name = os.path.split(path)[-1]
 			try:
 				fp = open(path, 'rb') # NOTE binary, we need cr as end-of-line
@@ -360,7 +362,7 @@ class Mlted(Application):
 		if self.active:
 			self.active.do_idle(event)
 		else:
-			Qd.SetCursor(Qd.GetQDGlobalsArrow())
+			Qd.SetCursor(Qd.qd.arrow)
 
 def main():
 	Mlte.TXNInitTextension(0)

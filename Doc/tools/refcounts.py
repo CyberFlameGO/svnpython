@@ -2,6 +2,7 @@
 __version__ = '$Revision$'
 
 import os
+import string
 import sys
 
 
@@ -9,7 +10,7 @@ import sys
 try:
     p = os.path.dirname(__file__)
 except NameError:
-    p = os.path.dirname(sys.argv[0])
+    p = sys.path[0]
 p = os.path.normpath(os.path.join(os.getcwd(), p, os.pardir,
                                   "api", "refcounts.dat"))
 DEFAULT_PATH = p
@@ -26,11 +27,11 @@ def loadfile(fp):
         line = fp.readline()
         if not line:
             break
-        line = line.strip()
+        line = string.strip(line)
         if line[:1] in ("", "#"):
             # blank lines and comments
             continue
-        parts = line.split(":", 4)
+        parts = string.split(line, ":", 4)
         if len(parts) != 5:
             raise ValueError("Not enough fields in " + `line`)
         function, type, arg, refcount, comment = parts

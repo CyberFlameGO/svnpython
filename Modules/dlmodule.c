@@ -15,7 +15,7 @@ typedef struct {
 	PyUnivPtr *dl_handle;
 } dlobject;
 
-static PyTypeObject Dltype;
+staticforward PyTypeObject Dltype;
 
 static PyObject *Dlerror;
 
@@ -39,8 +39,10 @@ dl_dealloc(dlobject *xp)
 }
 
 static PyObject *
-dl_close(dlobject *xp)
+dl_close(dlobject *xp, PyObject *args)
 {
+	if (!PyArg_Parse(args, ""))
+		return NULL;
 	if (xp->dl_handle != NULL) {
 		dlclose(xp->dl_handle);
 		xp->dl_handle = NULL;
@@ -54,13 +56,8 @@ dl_sym(dlobject *xp, PyObject *args)
 {
 	char *name;
 	PyUnivPtr *func;
-	if (PyString_Check(args)) {
-		name = PyString_AS_STRING(args);
-	} else {
-		PyErr_Format(PyExc_TypeError, "expected string, found %.200s",
-			     args->ob_type->tp_name);
+	if (!PyArg_Parse(args, "s", &name))
 		return NULL;
-	}
 	func = dlsym(xp->dl_handle, name);
 	if (func == NULL) {
 		Py_INCREF(Py_None);
@@ -123,9 +120,9 @@ dl_call(dlobject *xp, PyObject *args)
 }
 
 static PyMethodDef dlobject_methods[] = {
-	{"call",	(PyCFunction)dl_call, METH_VARARGS},
-	{"sym", 	(PyCFunction)dl_sym, METH_O},
-	{"close",	(PyCFunction)dl_close, METH_NOARGS},
+	{"call",	(PyCFunction)dl_call,	1 /* varargs */},
+	{"sym", 	(PyCFunction)dl_sym},
+	{"close",	(PyCFunction)dl_close},
 	{NULL,  	NULL}			 /* Sentinel */
 };
 
@@ -161,18 +158,11 @@ dl_open(PyObject *self, PyObject *args)
 	char *name;
 	int mode;
 	PyUnivPtr *handle;
-	if (sizeof(int) != sizeof(long) ||
-	    sizeof(long) != sizeof(char *)) {
-		PyErr_SetString(PyExc_SystemError,
- "module dl requires sizeof(int) == sizeof(long) == sizeof(char*)");
-		return NULL;
-	}
-
-	if (PyArg_ParseTuple(args, "z:open", &name))
+	if (PyArg_Parse(args, "z", &name))
 		mode = RTLD_LAZY;
 	else {
 		PyErr_Clear();
-		if (!PyArg_ParseTuple(args, "zi:open", &name, &mode))
+		if (!PyArg_Parse(args, "(zi)", &name, &mode))
 			return NULL;
 #ifndef RTLD_NOW
 		if (mode != RTLD_LAZY) {
@@ -190,7 +180,7 @@ dl_open(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef dl_methods[] = {
-	{"open",	dl_open, METH_VARARGS},
+	{"open",	dl_open},
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -209,10 +199,17 @@ insint(PyObject *d, char *name, int value)
 	Py_XDECREF(v);
 }
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initdl(void)
 {
 	PyObject *m, *d, *x;
+
+	if (sizeof(int) != sizeof(long) ||
+	    sizeof(long) != sizeof(char *)) {
+		PyErr_SetString(PyExc_SystemError,
+ "module dl requires sizeof(int) == sizeof(long) == sizeof(char*)");
+		return;
+	}
 
 	/* Initialize object type */
 	Dltype.ob_type = &PyType_Type;

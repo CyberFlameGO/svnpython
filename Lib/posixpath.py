@@ -15,20 +15,9 @@ import stat
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "basename","dirname","commonprefix","getsize","getmtime",
-           "getatime","getctime","islink","exists","isdir","isfile","ismount",
+           "getatime","islink","exists","isdir","isfile","ismount",
            "walk","expanduser","expandvars","normpath","abspath",
-           "samefile","sameopenfile","samestat",
-           "curdir","pardir","sep","pathsep","defpath","altsep","extsep",
-           "realpath","supports_unicode_filenames"]
-
-# strings representing various path-related bits and pieces
-curdir = '.'
-pardir = '..'
-extsep = '.'
-sep = '/'
-pathsep = ':'
-defpath = ':/bin:/usr/bin'
-altsep = None
+           "samefile","sameopenfile","samestat","realpath"]
 
 # Normalize the case of a pathname.  Trivial in Posix, string.lower on Mac.
 # On MS-DOS this may also turn slashes into backslashes; however, other
@@ -89,11 +78,20 @@ def split(p):
 def splitext(p):
     """Split the extension from a pathname.  Extension is everything from the
     last dot to the end.  Returns "(root, ext)", either part may be empty."""
-    i = p.rfind('.')
-    if i<=p.rfind('/'):
-        return p, ''
-    else:
-        return p[:i], p[i:]
+    root, ext = '', ''
+    for c in p:
+        if c == '/':
+            root, ext = root + ext + c, ''
+        elif c == '.':
+            if ext:
+                root, ext = root + ext, c
+            else:
+                ext = c
+        elif ext:
+            ext = ext + c
+        else:
+            root = root + c
+    return root, ext
 
 
 # Split a pathname into a drive specification and the rest of the
@@ -138,19 +136,19 @@ def commonprefix(m):
 
 def getsize(filename):
     """Return the size of a file, reported by os.stat()."""
-    return os.stat(filename).st_size
+    st = os.stat(filename)
+    return st[stat.ST_SIZE]
 
 def getmtime(filename):
     """Return the last modification time of a file, reported by os.stat()."""
-    return os.stat(filename).st_mtime
+    st = os.stat(filename)
+    return st[stat.ST_MTIME]
 
 def getatime(filename):
     """Return the last access time of a file, reported by os.stat()."""
-    return os.stat(filename).st_atime
+    st = os.stat(filename)
+    return st[stat.ST_ATIME]
 
-def getctime(filename):
-    """Return the creation time of a file, reported by os.stat()."""
-    return os.stat(filename).st_ctime
 
 # Is a path a symbolic link?
 # This will always return false on systems where os.lstat doesn't exist.
@@ -160,20 +158,20 @@ def islink(path):
     try:
         st = os.lstat(path)
     except (os.error, AttributeError):
-        return False
-    return stat.S_ISLNK(st.st_mode)
+        return 0
+    return stat.S_ISLNK(st[stat.ST_MODE])
 
 
 # Does a path exist?
 # This is false for dangling symbolic links.
 
 def exists(path):
-    """Test whether a path exists.  Returns False for broken symbolic links"""
+    """Test whether a path exists.  Returns false for broken symbolic links"""
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 # Is a path a directory?
@@ -185,8 +183,8 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return stat.S_ISDIR(st.st_mode)
+        return 0
+    return stat.S_ISDIR(st[stat.ST_MODE])
 
 
 # Is a path a regular file?
@@ -198,8 +196,8 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return stat.S_ISREG(st.st_mode)
+        return 0
+    return stat.S_ISREG(st[stat.ST_MODE])
 
 
 # Are two filenames really pointing to the same file?
@@ -226,8 +224,8 @@ def sameopenfile(fp1, fp2):
 
 def samestat(s1, s2):
     """Test whether two stat buffers reference the same file"""
-    return s1.st_ino == s2.st_ino and \
-           s1.st_dev == s2.st_dev
+    return s1[stat.ST_INO] == s2[stat.ST_INO] and \
+           s1[stat.ST_DEV] == s2[stat.ST_DEV]
 
 
 # Is a path a mount point?
@@ -239,16 +237,16 @@ def ismount(path):
         s1 = os.stat(path)
         s2 = os.stat(join(path, '..'))
     except os.error:
-        return False # It doesn't exist -- so not a mount point :-)
-    dev1 = s1.st_dev
-    dev2 = s2.st_dev
+        return 0 # It doesn't exist -- so not a mount point :-)
+    dev1 = s1[stat.ST_DEV]
+    dev2 = s2[stat.ST_DEV]
     if dev1 != dev2:
-        return True     # path/.. on a different device as path
-    ino1 = s1.st_ino
-    ino2 = s2.st_ino
+        return 1        # path/.. on a different device as path
+    ino1 = s1[stat.ST_INO]
+    ino2 = s2[stat.ST_INO]
     if ino1 == ino2:
-        return True     # path/.. is the same i-node as path
-    return False
+        return 1        # path/.. is the same i-node as path
+    return 0
 
 
 # Directory tree walk.
@@ -285,7 +283,7 @@ def walk(top, func, arg):
             st = os.lstat(name)
         except os.error:
             continue
-        if stat.S_ISDIR(st.st_mode):
+        if stat.S_ISDIR(st[stat.ST_MODE]):
             walk(name, func, arg)
 
 
@@ -307,7 +305,7 @@ def expanduser(path):
     while i < n and path[i] != '/':
         i = i + 1
     if i == 1:
-        if not 'HOME' in os.environ:
+        if not os.environ.has_key('HOME'):
             import pwd
             userhome = pwd.getpwuid(os.getuid())[5]
         else:
@@ -339,7 +337,7 @@ def expandvars(path):
         import re
         _varprog = re.compile(r'\$(\w+|\{[^}]*\})')
     i = 0
-    while True:
+    while 1:
         m = _varprog.search(path, i)
         if not m:
             break
@@ -347,7 +345,7 @@ def expandvars(path):
         name = m.group(1)
         if name[:1] == '{' and name[-1:] == '}':
             name = name[1:-1]
-        if name in os.environ:
+        if os.environ.has_key(name):
             tail = path[j:]
             path = path[:i] + os.environ[name]
             i = len(path)
@@ -414,5 +412,3 @@ symbolic links encountered in the path."""
             return realpath(newpath)
 
     return filename
-
-supports_unicode_filenames = False

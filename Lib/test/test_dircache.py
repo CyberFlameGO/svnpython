@@ -4,7 +4,7 @@
 """
 
 import unittest
-from test.test_support import run_unittest, TESTFN
+from test_support import run_unittest, TESTFN
 import dircache, os, time, sys
 
 

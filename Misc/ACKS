@@ -14,11 +14,9 @@ David Abrahams
 Jim Ahlstrom
 Jyrki Alakuijala
 Billy G. Allie
-Kevin Altis
 Mark Anacker
 Anders Andersen
 Erik Andersén
-John Anderson
 Oliver Andrich
 Ross Andrus
 Jason Asbahr
@@ -52,14 +50,12 @@ Eric Beser
 Stephen Bevan
 Ron Bickers
 Dominic Binks
-Stuart Bishop
 Roy Bixler
 Martin Bless
 Pablo Bleyer
 Erik van Blokland
 Finn Bock
 Paul Boddie
-Matthew Boedicker
 David Bolen
 Jurjen Bos
 Peter Bosch
@@ -84,16 +80,13 @@ Alastair Burt
 Tarn Weisner Burton
 Lee Busby
 Ralph Butler
-Jp Calderone
 Daniel Calvelo
 Brett Cannon
 Mike Carlton
-Terry Carroll
 Luke Kenneth Casson Leighton
 Donn Cave
 Per Cederqvist
 Octavian Cerna
-Hye-Shik Chang
 Jeffrey Chang
 Brad Chapman
 Greg Chapman
@@ -114,7 +107,6 @@ Benjamin Collar
 Jeffery Collins
 Matt Conway
 David M. Cooke
-Greg Copeland
 David Costanzo
 Scott Cotton
 Greg Couch
@@ -129,7 +121,6 @@ John Cugini
 Andrew Dalke
 Lars Damerow
 Eric Daniel
-Scott David Daniels
 Ben Darnell
 Jonathan Dasteel
 John DeGood
@@ -176,21 +167,18 @@ Russell Finn
 Nils Fischbeck
 Hernán Martínez Foffani
 Doug Fort
-Martin Franklin
 Robin Friedrich
 Ivan Frohne
 Jim Fulton
-Tadayoshi Funaba
-Gyro Funch
-Peter Funk
 Geoff Furnish
+Tadayoshi Funaba
+Peter Funk
 Lele Gaifax
 Raymund Galvin
 Nitin Ganatra
 Fred Gansevles
 Lars Marius Garshol
 Harry Henry Gebel
-Marius Gedminas
 Thomas Gellekum
 Christos Georgiou
 Ben Gertzfield
@@ -204,7 +192,6 @@ Eddy De Greef
 Duncan Grisby
 Dag Gruneau
 Michael Guravage
-Lars Gustäbel
 Barry Haddow
 Paul ten Hagen
 Rasmus Hahn
@@ -230,14 +217,12 @@ Jonathan Hendry
 James Henstridge
 Chris Herborth
 Ivan Herman
-Jürgen Hermann
 Gary Herron
 Bernhard Herzog
 Magnus L. Hetland
 Raymond Hettinger
 Kevan Heydon
 Jason Hildebrand
-Richie Hindle
 Konrad Hinsen
 David Hobley
 Tim Hochberg
@@ -262,8 +247,6 @@ Michael Hudson
 Jim Hugunin
 Greg Humphreys
 Jeremy Hylton
-Mihai Ibanescu
-Juan David Ibáñez Palomar
 Tony Ingraldi
 John Interrante
 Ben Jackson
@@ -288,7 +271,6 @@ Bob Kahn
 Tamito Kajiyama
 Jacob Kaplan-Moss
 Lou Kates
-Sebastien Keim
 Randall Kern
 Robert Kern
 Magnus Kessler
@@ -314,11 +296,9 @@ Cameron Laird
 Detlef Lannert
 Soren Larsen
 Piers Lauder
-Ben Laurie
 Chris Lawrence
 Christopher Lee
 Inyeol Lee
-John J. Lee
 Luc Lefebvre
 Kip Lehman
 Marc-Andre Lemburg
@@ -359,7 +339,6 @@ Greg McFarlane
 Michael McLay
 Gordon McMillan
 Jay T. Miller
-Andrew McNamara
 Caolan McNamara
 Craig McPheeters
 Lambert Meertens
@@ -370,7 +349,6 @@ Trent Mick
 Roman Milner
 Dom Mitchell
 Doug Moen
-Paul Moore
 The Dragon De Monsyne
 Skip Montanaro
 James A Morrison
@@ -391,16 +369,15 @@ Stefan Norberg
 Tim Northover
 Joe Norton
 Neal Norwitz
+Jeffrey Ollie
 Nigel O'Brian
 Kevin O'Connor
 Tim O'Malley
 Pascal Oberndoerfer
-Jeffrey Ollie
-Grant Olson
+Denis S. Otkidach
 Piet van Oostrum
 Jason Orendorff
 Douglas Orr
-Denis S. Otkidach
 Russel Owen
 Todd R. Palmer
 Alexandre Parenteau
@@ -421,7 +398,6 @@ Geoff Philbrick
 Adrian Phillips
 Christopher J. Phoenix
 Neale Pickett
-Jean-François Piéronne
 Dan Pierson
 Martijn Pieters
 François Pinard
@@ -439,7 +415,6 @@ Edward K. Ream
 Marc Recht
 John Redford
 Terry Reedy
-Steve Reeves
 Ofir Reichenberg
 Sean Reifschneider
 Michael P. Reilly
@@ -486,7 +461,6 @@ Steven Scott
 Nick Seidenman
 Fred Sells
 Denis Severson
-Ha Shao
 Bruce Sherwood
 Pete Shinners
 Michael Shiplett
@@ -527,9 +501,6 @@ Casper Stoel
 Peter Stoehr
 Michael Stone
 Ken Stox
-Daniel Stutzbach
-Paul Swartz
-Geoff Talvola
 William Tanksley
 Christian Tanzer
 Amy Taylor
@@ -551,7 +522,6 @@ Stephen Turner
 Bill Tutt
 Doobee R. Tzeck
 Lionel Ulmer
-Frank Vercruesse
 Jaap Vermeulen
 Al Vezza
 Jacques A. Vidrine
@@ -572,7 +542,6 @@ Henrik Weber
 Corran Webster
 Zack Weinberg
 Edward Welbourne
-Cliff Wells
 Rickard Westman
 Mats Wichmann
 Truida Wiedijk

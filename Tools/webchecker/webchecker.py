@@ -109,6 +109,7 @@ __version__ = "$Revision$"
 import sys
 import os
 from types import *
+import string
 import StringIO
 import getopt
 import pickle
@@ -116,14 +117,13 @@ import pickle
 import urllib
 import urlparse
 import sgmllib
-import cgi
 
 import mimetypes
 import robotparser
 
 # Extract real version number if necessary
 if __version__[0] == '$':
-    _v = __version__.split()
+    _v = string.split(__version__)
     if len(_v) == 3:
         __version__ = _v[1]
 
@@ -169,13 +169,13 @@ def main():
         if o == '-d':
             dumpfile = a
         if o == '-m':
-            maxpage = int(a)
+            maxpage = string.atoi(a)
         if o == '-n':
             norun = 1
         if o == '-q':
             verbose = 0
         if o == '-r':
-            roundsize = int(a)
+            roundsize = string.atoi(a)
         if o == '-t':
             extra_roots.append(a)
         if o == '-a':
@@ -247,7 +247,7 @@ def load_pickle(dumpfile=DUMPFILE, verbose=VERBOSE):
     f.close()
     if verbose > 0:
         print "Done."
-        print "Root:", "\n      ".join(c.roots)
+        print "Root:", string.join(c.roots, "\n      ")
     return c
 
 
@@ -315,7 +315,7 @@ class Checker:
             troot = root
             scheme, netloc, path, params, query, fragment = \
                     urlparse.urlparse(root)
-            i = path.rfind("/") + 1
+            i = string.rfind(path, "/") + 1
             if 0 < i < len(path):
                 path = path[:i]
                 troot = urlparse.urlunparse((scheme, netloc, path,
@@ -400,15 +400,7 @@ class Checker:
         if local_fragment and self.nonames:
             self.markdone(url_pair)
             return
-        try:
-            page = self.getpage(url_pair)
-        except sgmllib.SGMLParseError, msg:
-            msg = self.sanitize(msg)
-            self.note(0, "Error parsing %s: %s",
-                          self.format_url(url_pair), msg)
-            # Dont actually mark the URL as bad - it exists, just
-            # we can't parse it!
-            page = None
+        page = self.getpage(url_pair)
         if page:
             # Store the page which corresponds to this URL.
             self.name_table[url] = page
@@ -551,7 +543,7 @@ class Checker:
 
     def checkforhtml(self, info, url):
         if info.has_key('content-type'):
-            ctype = cgi.parse_header(info['content-type'])[0].lower()
+            ctype = string.lower(info['content-type'])
             if ';' in ctype:
                 # handle content-type: text/html; charset=iso8859-1 :
                 ctype = ctype.split(';', 1)[0].strip()
@@ -819,7 +811,7 @@ class MyHTMLParser(sgmllib.SGMLParser):
     def do_link(self, attributes):
         for name, value in attributes:
             if name == "rel":
-                parts = value.lower().split()
+                parts = string.split(string.lower(value))
                 if (  parts == ["stylesheet"]
                       or parts == ["alternate", "stylesheet"]):
                     self.link_attr(attributes, "href")
@@ -846,13 +838,13 @@ class MyHTMLParser(sgmllib.SGMLParser):
     def link_attr(self, attributes, *args):
         for name, value in attributes:
             if name in args:
-                if value: value = value.strip()
+                if value: value = string.strip(value)
                 if value: self.links[value] = None
 
     def do_base(self, attributes):
         for name, value in attributes:
             if name == 'href':
-                if value: value = value.strip()
+                if value: value = string.strip(value)
                 if value:
                     if self.checker:
                         self.checker.note(1, "  Base %s", value)

@@ -75,8 +75,7 @@ def toaiff(filename):
 
 def _toaiff(filename, temps):
     if filename[-2:] == '.Z':
-        (fd, fname) = tempfile.mkstemp()
-        os.close(fd)
+        fname = tempfile.mktemp()
         temps.append(fname)
         sts = uncompress.copy(filename, fname)
         if sts:
@@ -96,11 +95,10 @@ def _toaiff(filename, temps):
         raise error, filename + ': ' + msg
     if ftype == 'aiff':
         return fname
-    if ftype is None or not ftype in table:
+    if ftype is None or not table.has_key(ftype):
         raise error, \
                 filename + ': unsupported audio file type ' + `ftype`
-    (fd, temp) = tempfile.mkstemp()
-    os.close(fd)
+    temp = tempfile.mktemp()
     temps.append(temp)
     sts = table[ftype].copy(fname, temp)
     if sts:

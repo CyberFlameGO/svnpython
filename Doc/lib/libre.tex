@@ -1,8 +1,8 @@
 \section{\module{re} ---
          Regular expression operations}
 \declaremodule{standard}{re}
-\moduleauthor{Fredrik Lundh}{fredrik@pythonware.com}
-\sectionauthor{Andrew M. Kuchling}{amk@amk.ca}
+\moduleauthor{Fredrik Lundh}{effbot@telia.com}
+\sectionauthor{Andrew M. Kuchling}{akuchlin@mems-exchange.org}
 
 
 \modulesynopsis{Regular expression search and match operations with a
@@ -33,11 +33,20 @@ while \code{"\e n"} is a one-character string containing a newline.
 Usually patterns will be expressed in Python code using this raw
 string notation.
 
+\strong{Implementation note:}
+The \module{re}\refstmodindex{pre} module has two distinct
+implementations: \module{sre} is the default implementation and
+includes Unicode support, but may run into stack limitations for some
+patterns.  Though this will be fixed for a future release of Python,
+the older implementation (without Unicode support) is still available
+as the \module{pre}\refstmodindex{pre} module.
+
+
 \begin{seealso}
   \seetitle{Mastering Regular Expressions}{Book on regular expressions
-            by Jeffrey Friedl, published by O'Reilly.  The second 
-            edition of the book no longer covers Python at all, 
-            but the first edition covered writing good regular expression
+            by Jeffrey Friedl, published by O'Reilly.  The Python
+            material in this book dates from before the \refmodule{re}
+            module, but it covers writing good regular expression
             patterns in great detail.}
 \end{seealso}
 
@@ -58,7 +67,7 @@ conditions that are no longer satisfied by \emph{pq}.  Thus, complex
 expressions can easily be constructed from simpler primitive
 expressions like the ones described here.  For details of the theory
 and implementation of regular expressions, consult the Friedl book
-referenced above, or almost any textbook about compiler construction.
+referenced below, or almost any textbook about compiler construction.
 
 A brief explanation of the format of regular expressions follows.  For
 further information and a gentler presentation, consult the Regular
@@ -129,10 +138,9 @@ not five.
 \item[\code{\{\var{m},\var{n}\}}] Causes the resulting RE to match from
 \var{m} to \var{n} repetitions of the preceding RE, attempting to
 match as many repetitions as possible.  For example, \regexp{a\{3,5\}}
-will match from 3 to 5 \character{a} characters.  Omitting \var{m}
-specifies a lower bound of zero, 
-and omitting \var{n} specifies an infinite upper bound.  As an
-example, \regexp{a\{4,\}b} will match \code{aaaab} or a thousand
+will match from 3 to 5 \character{a} characters.  Omitting \var{n}
+specifies an infinite upper bound; you can't omit \var{m}.  As an
+example, \regexp{a\{4,\}b} will match \code{aaaab}, a thousand
 \character{a} characters followed by a \code{b}, but not \code{aaab}.
 The comma may not be omitted or the modifier would be confused with
 the previously described form.
@@ -314,6 +322,8 @@ the space after the group).  This special sequence can only be used to
 match one of the first 99 groups.  If the first digit of \var{number}
 is 0, or \var{number} is 3 octal digits long, it will not be interpreted
 as a group match, but as the character with octal value \var{number}.
+(There is a group 0, which is the entire matched pattern, but it can't
+be referenced with \regexp{\e 0}; instead, use \regexp{\e g<0>}.)
 Inside the \character{[} and \character{]} of a character class, all numeric
 escapes are treated as characters.
 
@@ -376,9 +386,11 @@ also accepted by the regular expression parser:
 \\
 \end{verbatim}
 
-Octal escapes are included in a limited form: If the first digit is a
-0, or if there are three octal digits, it is considered an octal
-escape. Otherwise, it is a group reference.
+Note that octal escapes are not included.  While the parser can
+attempt to determine whether a character is being specified by its
+ordinal value expressed in octal, doing so yields an expression which
+is relatively difficult to maintain, as the same syntax is used to
+refer to numbered groups.
 
 
 % Note the lack of a period in the section title; it causes problems
@@ -638,6 +650,18 @@ ignored.
 Compiled regular expression objects support the following methods and
 attributes:
 
+\begin{methoddesc}[RegexObject]{search}{string\optional{, pos\optional{,
+                                        endpos}}}
+  Scan through \var{string} looking for a location where this regular
+  expression produces a match, and return a
+  corresponding \class{MatchObject} instance.  Return \code{None} if no
+  position in the string matches the pattern; note that this is
+  different from finding a zero-length match at some point in the string.
+
+  The optional \var{pos} and \var{endpos} parameters have the same
+  meaning as for the \method{match()} method.
+\end{methoddesc}
+
 \begin{methoddesc}[RegexObject]{match}{string\optional{, pos\optional{,
                                        endpos}}}
   If zero or more characters at the beginning of \var{string} match
@@ -665,18 +689,6 @@ attributes:
   compiled regular expression object,
   \code{\var{rx}.match(\var{string}, 0, 50)} is equivalent to
   \code{\var{rx}.match(\var{string}[:50], 0)}.
-\end{methoddesc}
-
-\begin{methoddesc}[RegexObject]{search}{string\optional{, pos\optional{,
-                                        endpos}}}
-  Scan through \var{string} looking for a location where this regular
-  expression produces a match, and return a
-  corresponding \class{MatchObject} instance.  Return \code{None} if no
-  position in the string matches the pattern; note that this is
-  different from finding a zero-length match at some point in the string.
-
-  The optional \var{pos} and \var{endpos} parameters have the same
-  meaning as for the \method{match()} method.
 \end{methoddesc}
 
 \begin{methoddesc}[RegexObject]{split}{string\optional{,
@@ -812,30 +824,25 @@ Note that if \var{group} did not contribute to the match, this is
 \end{methoddesc}
 
 \begin{memberdesc}[MatchObject]{pos}
-The value of \var{pos} which was passed to the \function{search()} or
-\function{match()} method of the \class{RegexObject}.  This is the
-index into the string at which the RE engine started looking for a
-match.
+The value of \var{pos} which was passed to the
+\function{search()} or \function{match()} function.  This is the index
+into the string at which the RE engine started looking for a match.
 \end{memberdesc}
 
 \begin{memberdesc}[MatchObject]{endpos}
-The value of \var{endpos} which was passed to the \function{search()}
-or \function{match()} method of the \class{RegexObject}.  This is the
-index into the string beyond which the RE engine will not go.
-\end{memberdesc}
-
-\begin{memberdesc}[MatchObject]{lastindex}
-The integer index of the last matched capturing group, or \code{None}
-if no group was matched at all. For example, the expressions
-\regexp{(a)b}, \regexp{((a)(b))}, and \regexp{((ab))} will have
-\code{lastindex == 1} if applyied to the string \code{'ab'},
-while the expression \regexp{(a)(b)} will have \code{lastindex == 2},
-if applyied to the same string.
+The value of \var{endpos} which was passed to the
+\function{search()} or \function{match()} function.  This is the index
+into the string beyond which the RE engine will not go.
 \end{memberdesc}
 
 \begin{memberdesc}[MatchObject]{lastgroup}
 The name of the last matched capturing group, or \code{None} if the
 group didn't have a name, or if no group was matched at all.
+\end{memberdesc}
+
+\begin{memberdesc}[MatchObject]{lastindex}
+The integer index of the last matched capturing group, or \code{None}
+if no group was matched at all.
 \end{memberdesc}
 
 \begin{memberdesc}[MatchObject]{re}
@@ -848,6 +855,10 @@ The string passed to \function{match()} or \function{search()}.
 \end{memberdesc}
 
 \subsection{Examples}
+
+%\begin{list}{}{\leftmargin 0.7in \labelwidth 0.65in}
+
+%\item[Simulating scanf]
 
 \leftline{\strong{Simulating \cfunction{scanf()}}}
 
@@ -894,30 +905,7 @@ you would use a \cfunction{scanf()} format like
 The equivalent regular expression would be
 
 \begin{verbatim}
-    (\S+) - (\d+) errors, (\d+) warnings
+    ([^\s]+) - (\d+) errors, (\d+) warnings
 \end{verbatim}
 
-\leftline{\strong{Avoiding recursion}}
-
-If you create regular expressions that require the engine to perform a
-lot of recursion, you may encounter a RuntimeError exception with
-the message \code{maximum recursion limit} exceeded. For example,
-
-\begin{verbatim}
->>> import re
->>> s = 'Begin ' + 1000*'a very long string ' + 'end'
->>> re.match('Begin (\w| )*? end', s).end()
-Traceback (most recent call last):
-  File "<stdin>", line 1, in ?
-  File "/usr/local/lib/python2.3/sre.py", line 132, in match
-    return _compile(pattern, flags).match(string)
-RuntimeError: maximum recursion limit exceeded
-\end{verbatim}
-
-You can often restructure your regular expression to avoid recursion.
-
-\versionchanged[Simple uses of the \regexp{*?} pattern are now
-special-cased to avoid recursion.  Thus, the above regular expression
-can avoid recursion by being recast as \regexp{Begin [a-zA-Z0-9_ ]*?end}.
-As a further benefit, such regular expressions will run faster than
-their recursive equivalents.]{2.3}
+%\end{list}

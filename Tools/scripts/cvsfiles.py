@@ -14,6 +14,7 @@ import os
 import sys
 import stat
 import getopt
+import string
 
 cutofftime = 0
 
@@ -50,7 +51,7 @@ def process(dir):
     if cvsdir:
         entries = os.path.join(cvsdir, "Entries")
         for e in open(entries).readlines():
-            words = e.split('/')
+            words = string.split(e, '/')
             if words[0] == '' and words[1:]:
                 name = words[1]
                 fullname = os.path.join(dir, name)

@@ -29,6 +29,7 @@
 import sys
 import regex
 import getopt
+import string
 
 defs = []
 undefs = []
@@ -42,11 +43,11 @@ def main():
             undefs.append(a)
     if not args:
         args = ['-']
-    for filename in args:
-        if filename == '-':
+    for file in args:
+        if file == '-':
             process(sys.stdin, sys.stdout)
         else:
-            f = open(filename, 'r')
+            f = open(file, 'r')
             process(f, sys.stdout)
             f.close()
 
@@ -61,12 +62,12 @@ def process(fpi, fpo):
             nextline = fpi.readline()
             if not nextline: break
             line = line + nextline
-        tmp = line.strip()
+        tmp = string.strip(line)
         if tmp[:1] != '#':
             if ok: fpo.write(line)
             continue
-        tmp = tmp[1:].strip()
-        words = tmp.split()
+        tmp = string.strip(tmp[1:])
+        words = string.split(tmp)
         keyword = words[0]
         if keyword not in keywords:
             if ok: fpo.write(line)

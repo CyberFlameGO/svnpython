@@ -1,11 +1,10 @@
 import hmac
 import unittest
-from test import test_support
+import test_support
 
 class TestVectorsTestCase(unittest.TestCase):
-
     def test_vectors(self):
-        # Test the HMAC module against test vectors from the RFC.
+        """Test the HMAC module against test vectors from the RFC."""
 
         def md5test(key, data, digest):
             h = hmac.HMAC(key, data)
@@ -24,9 +23,8 @@ class TestVectorsTestCase(unittest.TestCase):
                 "56be34521d144c88dbb8c733f0e8b3f6")
 
 class ConstructorTestCase(unittest.TestCase):
-
     def test_normal(self):
-        # Standard constructor call.
+        """Standard constructor call."""
         failed = 0
         try:
             h = hmac.HMAC("key")
@@ -34,14 +32,14 @@ class ConstructorTestCase(unittest.TestCase):
             self.fail("Standard constructor call raised exception.")
 
     def test_withtext(self):
-        # Constructor call with text.
+        """Constructor call with text."""
         try:
             h = hmac.HMAC("key", "hash this!")
         except:
             self.fail("Constructor call with text argument raised exception.")
 
     def test_withmodule(self):
-        # Constructor call with text and digest module.
+        """Constructor call with text and digest module."""
         import sha
         try:
             h = hmac.HMAC("key", "", sha)
@@ -49,15 +47,14 @@ class ConstructorTestCase(unittest.TestCase):
             self.fail("Constructor call with sha module raised exception.")
 
 class SanityTestCase(unittest.TestCase):
-
     def test_default_is_md5(self):
-        # Testing if HMAC defaults to MD5 algorithm.
+        """Testing if HMAC defaults to MD5 algorithm."""
         import md5
         h = hmac.HMAC("key")
         self.failUnless(h.digestmod == md5)
 
     def test_exercise_all_methods(self):
-        # Exercising all methods once.
+        """Exercising all methods once."""
         # This must not raise any exceptions
         try:
             h = hmac.HMAC("my secret key")
@@ -66,12 +63,11 @@ class SanityTestCase(unittest.TestCase):
             dig = h.hexdigest()
             h2 = h.copy()
         except:
-            self.fail("Exception raised during normal usage of HMAC class.")
+            fail("Exception raised during normal usage of HMAC class.")
 
 class CopyTestCase(unittest.TestCase):
-
     def test_attributes(self):
-        # Testing if attributes are of same type.
+        """Testing if attributes are of same type."""
         h1 = hmac.HMAC("key")
         h2 = h1.copy()
         self.failUnless(h1.digestmod == h2.digestmod,
@@ -82,7 +78,7 @@ class CopyTestCase(unittest.TestCase):
             "Types of outer don't match.")
 
     def test_realcopy(self):
-        # Testing if the copy method created a real copy.
+        """Testing if the copy method created a real copy."""
         h1 = hmac.HMAC("key")
         h2 = h1.copy()
         # Using id() in case somebody has overridden __cmp__.
@@ -93,7 +89,7 @@ class CopyTestCase(unittest.TestCase):
             "No real copy of the attribute 'outer'.")
 
     def test_equality(self):
-        # Testing if the copy has the same digests.
+        """Testing if the copy has the same digests."""
         h1 = hmac.HMAC("key")
         h1.update("some random text")
         h2 = h1.copy()
@@ -103,12 +99,10 @@ class CopyTestCase(unittest.TestCase):
             "Hexdigest of copy doesn't match original hexdigest.")
 
 def test_main():
-    test_support.run_unittest(
-        TestVectorsTestCase,
-        ConstructorTestCase,
-        SanityTestCase,
-        CopyTestCase
-    )
+    test_support.run_unittest(TestVectorsTestCase)
+    test_support.run_unittest(ConstructorTestCase)
+    test_support.run_unittest(SanityTestCase)
+    test_support.run_unittest(CopyTestCase)
 
 if __name__ == "__main__":
     test_main()

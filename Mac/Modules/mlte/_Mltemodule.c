@@ -27,10 +27,10 @@
 #endif
 
 /* For now we declare them forward here. They'll go to mactoolbox later */
-static PyObject *TXNObj_New(TXNObject);
-static int TXNObj_Convert(PyObject *, TXNObject *);
-static PyObject *TXNFontMenuObj_New(TXNFontMenuObject);
-static int TXNFontMenuObj_Convert(PyObject *, TXNFontMenuObject *);
+staticforward PyObject *TXNObj_New(TXNObject);
+staticforward int TXNObj_Convert(PyObject *, TXNObject *);
+staticforward PyObject *TXNFontMenuObj_New(TXNFontMenuObject);
+staticforward int TXNFontMenuObj_Convert(PyObject *, TXNFontMenuObject *);
 
 // ADD declarations
 #ifdef NOTYET_USE_TOOLBOX_OBJECT_GLUE
@@ -95,7 +95,7 @@ static PyObject *Mlte_Error;
 
 PyTypeObject TXNObject_Type;
 
-#define TXNObj_Check(x) ((x)->ob_type == &TXNObject_Type || PyObject_TypeCheck((x), &TXNObject_Type))
+#define TXNObj_Check(x) ((x)->ob_type == &TXNObject_Type)
 
 typedef struct TXNObjectObject {
 	PyObject_HEAD
@@ -125,7 +125,7 @@ int TXNObj_Convert(PyObject *v, TXNObject *p_itself)
 static void TXNObj_dealloc(TXNObjectObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *TXNObj_TXNDeleteObject(TXNObjectObject *_self, PyObject *_args)
@@ -244,6 +244,27 @@ static PyObject *TXNObj_TXNClick(TXNObjectObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+
+#if TARGET_API_MAC_OS8
+
+static PyObject *TXNObj_TXNTSMCheck(TXNObjectObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	Boolean _rv;
+	EventRecord ioEvent;
+#ifndef TXNTSMCheck
+	PyMac_PRECHECK(TXNTSMCheck);
+#endif
+	if (!PyArg_ParseTuple(_args, ""))
+		return NULL;
+	_rv = TXNTSMCheck(_self->ob_itself,
+	                  &ioEvent);
+	_res = Py_BuildValue("bO&",
+	                     _rv,
+	                     PyMac_BuildEventRecord, &ioEvent);
+	return _res;
+}
+#endif
 
 static PyObject *TXNObj_TXNSelectAll(TXNObjectObject *_self, PyObject *_args)
 {
@@ -1161,140 +1182,133 @@ static PyObject *TXNObj_TXNIsObjectAttachedToSpecificWindow(TXNObjectObject *_se
 
 static PyMethodDef TXNObj_methods[] = {
 	{"TXNDeleteObject", (PyCFunction)TXNObj_TXNDeleteObject, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNResizeFrame", (PyCFunction)TXNObj_TXNResizeFrame, 1,
-	 PyDoc_STR("(UInt32 iWidth, UInt32 iHeight, TXNFrameID iTXNFrameID) -> None")},
+	 "(UInt32 iWidth, UInt32 iHeight, TXNFrameID iTXNFrameID) -> None"},
 	{"TXNSetFrameBounds", (PyCFunction)TXNObj_TXNSetFrameBounds, 1,
-	 PyDoc_STR("(SInt32 iTop, SInt32 iLeft, SInt32 iBottom, SInt32 iRight, TXNFrameID iTXNFrameID) -> None")},
+	 "(SInt32 iTop, SInt32 iLeft, SInt32 iBottom, SInt32 iRight, TXNFrameID iTXNFrameID) -> None"},
 	{"TXNKeyDown", (PyCFunction)TXNObj_TXNKeyDown, 1,
-	 PyDoc_STR("(EventRecord iEvent) -> None")},
+	 "(EventRecord iEvent) -> None"},
 	{"TXNAdjustCursor", (PyCFunction)TXNObj_TXNAdjustCursor, 1,
-	 PyDoc_STR("(RgnHandle ioCursorRgn) -> None")},
+	 "(RgnHandle ioCursorRgn) -> None"},
 	{"TXNClick", (PyCFunction)TXNObj_TXNClick, 1,
-	 PyDoc_STR("(EventRecord iEvent) -> None")},
+	 "(EventRecord iEvent) -> None"},
+
+#if TARGET_API_MAC_OS8
+	{"TXNTSMCheck", (PyCFunction)TXNObj_TXNTSMCheck, 1,
+	 "() -> (Boolean _rv, EventRecord ioEvent)"},
+#endif
 	{"TXNSelectAll", (PyCFunction)TXNObj_TXNSelectAll, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNFocus", (PyCFunction)TXNObj_TXNFocus, 1,
-	 PyDoc_STR("(Boolean iBecomingFocused) -> None")},
+	 "(Boolean iBecomingFocused) -> None"},
 	{"TXNUpdate", (PyCFunction)TXNObj_TXNUpdate, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNDraw", (PyCFunction)TXNObj_TXNDraw, 1,
-	 PyDoc_STR("(GWorldPtr iDrawPort) -> None")},
+	 "(GWorldPtr iDrawPort) -> None"},
 	{"TXNForceUpdate", (PyCFunction)TXNObj_TXNForceUpdate, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNGetSleepTicks", (PyCFunction)TXNObj_TXNGetSleepTicks, 1,
-	 PyDoc_STR("() -> (UInt32 _rv)")},
+	 "() -> (UInt32 _rv)"},
 	{"TXNIdle", (PyCFunction)TXNObj_TXNIdle, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNGrowWindow", (PyCFunction)TXNObj_TXNGrowWindow, 1,
-	 PyDoc_STR("(EventRecord iEvent) -> None")},
+	 "(EventRecord iEvent) -> None"},
 	{"TXNZoomWindow", (PyCFunction)TXNObj_TXNZoomWindow, 1,
-	 PyDoc_STR("(short iPart) -> None")},
+	 "(short iPart) -> None"},
 	{"TXNCanUndo", (PyCFunction)TXNObj_TXNCanUndo, 1,
-	 PyDoc_STR("() -> (Boolean _rv, TXNActionKey oTXNActionKey)")},
+	 "() -> (Boolean _rv, TXNActionKey oTXNActionKey)"},
 	{"TXNUndo", (PyCFunction)TXNObj_TXNUndo, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNCanRedo", (PyCFunction)TXNObj_TXNCanRedo, 1,
-	 PyDoc_STR("() -> (Boolean _rv, TXNActionKey oTXNActionKey)")},
+	 "() -> (Boolean _rv, TXNActionKey oTXNActionKey)"},
 	{"TXNRedo", (PyCFunction)TXNObj_TXNRedo, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNCut", (PyCFunction)TXNObj_TXNCut, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNCopy", (PyCFunction)TXNObj_TXNCopy, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNPaste", (PyCFunction)TXNObj_TXNPaste, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNClear", (PyCFunction)TXNObj_TXNClear, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNGetSelection", (PyCFunction)TXNObj_TXNGetSelection, 1,
-	 PyDoc_STR("() -> (TXNOffset oStartOffset, TXNOffset oEndOffset)")},
+	 "() -> (TXNOffset oStartOffset, TXNOffset oEndOffset)"},
 	{"TXNShowSelection", (PyCFunction)TXNObj_TXNShowSelection, 1,
-	 PyDoc_STR("(Boolean iShowEnd) -> None")},
+	 "(Boolean iShowEnd) -> None"},
 	{"TXNIsSelectionEmpty", (PyCFunction)TXNObj_TXNIsSelectionEmpty, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"TXNSetSelection", (PyCFunction)TXNObj_TXNSetSelection, 1,
-	 PyDoc_STR("(TXNOffset iStartOffset, TXNOffset iEndOffset) -> None")},
+	 "(TXNOffset iStartOffset, TXNOffset iEndOffset) -> None"},
 	{"TXNCountRunsInRange", (PyCFunction)TXNObj_TXNCountRunsInRange, 1,
-	 PyDoc_STR("(TXNOffset iStartOffset, TXNOffset iEndOffset) -> (ItemCount oRunCount)")},
+	 "(TXNOffset iStartOffset, TXNOffset iEndOffset) -> (ItemCount oRunCount)"},
 	{"TXNDataSize", (PyCFunction)TXNObj_TXNDataSize, 1,
-	 PyDoc_STR("() -> (ByteCount _rv)")},
+	 "() -> (ByteCount _rv)"},
 	{"TXNGetData", (PyCFunction)TXNObj_TXNGetData, 1,
-	 PyDoc_STR("(TXNOffset iStartOffset, TXNOffset iEndOffset) -> (Handle oDataHandle)")},
+	 "(TXNOffset iStartOffset, TXNOffset iEndOffset) -> (Handle oDataHandle)"},
 	{"TXNGetDataEncoded", (PyCFunction)TXNObj_TXNGetDataEncoded, 1,
-	 PyDoc_STR("(TXNOffset iStartOffset, TXNOffset iEndOffset, TXNDataType iEncoding) -> (Handle oDataHandle)")},
+	 "(TXNOffset iStartOffset, TXNOffset iEndOffset, TXNDataType iEncoding) -> (Handle oDataHandle)"},
 	{"TXNSetDataFromFile", (PyCFunction)TXNObj_TXNSetDataFromFile, 1,
-	 PyDoc_STR("(SInt16 iFileRefNum, OSType iFileType, ByteCount iFileLength, TXNOffset iStartOffset, TXNOffset iEndOffset) -> None")},
+	 "(SInt16 iFileRefNum, OSType iFileType, ByteCount iFileLength, TXNOffset iStartOffset, TXNOffset iEndOffset) -> None"},
 	{"TXNSetData", (PyCFunction)TXNObj_TXNSetData, 1,
-	 PyDoc_STR("(TXNDataType iDataType, Buffer iDataPtr, TXNOffset iStartOffset, TXNOffset iEndOffset) -> None")},
+	 "(TXNDataType iDataType, Buffer iDataPtr, TXNOffset iStartOffset, TXNOffset iEndOffset) -> None"},
 	{"TXNGetChangeCount", (PyCFunction)TXNObj_TXNGetChangeCount, 1,
-	 PyDoc_STR("() -> (ItemCount _rv)")},
+	 "() -> (ItemCount _rv)"},
 	{"TXNSave", (PyCFunction)TXNObj_TXNSave, 1,
-	 PyDoc_STR("(TXNFileType iType, OSType iResType, TXNPermanentTextEncodingType iPermanentEncoding, FSSpec iFileSpecification, SInt16 iDataReference, SInt16 iResourceReference) -> None")},
+	 "(TXNFileType iType, OSType iResType, TXNPermanentTextEncodingType iPermanentEncoding, FSSpec iFileSpecification, SInt16 iDataReference, SInt16 iResourceReference) -> None"},
 	{"TXNRevert", (PyCFunction)TXNObj_TXNRevert, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNPageSetup", (PyCFunction)TXNObj_TXNPageSetup, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNPrint", (PyCFunction)TXNObj_TXNPrint, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNGetViewRect", (PyCFunction)TXNObj_TXNGetViewRect, 1,
-	 PyDoc_STR("() -> (Rect oViewRect)")},
+	 "() -> (Rect oViewRect)"},
 	{"TXNSetViewRect", (PyCFunction)TXNObj_TXNSetViewRect, 1,
-	 PyDoc_STR("(Rect iViewRect) -> None")},
+	 "(Rect iViewRect) -> None"},
 	{"TXNAttachObjectToWindow", (PyCFunction)TXNObj_TXNAttachObjectToWindow, 1,
-	 PyDoc_STR("(GWorldPtr iWindow, Boolean iIsActualWindow) -> None")},
+	 "(GWorldPtr iWindow, Boolean iIsActualWindow) -> None"},
 	{"TXNIsObjectAttachedToWindow", (PyCFunction)TXNObj_TXNIsObjectAttachedToWindow, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"TXNDragTracker", (PyCFunction)TXNObj_TXNDragTracker, 1,
-	 PyDoc_STR("(TXNFrameID iTXNFrameID, DragTrackingMessage iMessage, WindowPtr iWindow, DragReference iDragReference, Boolean iDifferentObjectSameWindow) -> None")},
+	 "(TXNFrameID iTXNFrameID, DragTrackingMessage iMessage, WindowPtr iWindow, DragReference iDragReference, Boolean iDifferentObjectSameWindow) -> None"},
 	{"TXNDragReceiver", (PyCFunction)TXNObj_TXNDragReceiver, 1,
-	 PyDoc_STR("(TXNFrameID iTXNFrameID, WindowPtr iWindow, DragReference iDragReference, Boolean iDifferentObjectSameWindow) -> None")},
+	 "(TXNFrameID iTXNFrameID, WindowPtr iWindow, DragReference iDragReference, Boolean iDifferentObjectSameWindow) -> None"},
 	{"TXNActivate", (PyCFunction)TXNObj_TXNActivate, 1,
-	 PyDoc_STR("(TXNFrameID iTXNFrameID, TXNScrollBarState iActiveState) -> None")},
+	 "(TXNFrameID iTXNFrameID, TXNScrollBarState iActiveState) -> None"},
 	{"TXNEchoMode", (PyCFunction)TXNObj_TXNEchoMode, 1,
-	 PyDoc_STR("(UniChar iEchoCharacter, TextEncoding iEncoding, Boolean iOn) -> None")},
+	 "(UniChar iEchoCharacter, TextEncoding iEncoding, Boolean iOn) -> None"},
 	{"TXNDoFontMenuSelection", (PyCFunction)TXNObj_TXNDoFontMenuSelection, 1,
-	 PyDoc_STR("(TXNFontMenuObject iTXNFontMenuObject, SInt16 iMenuID, SInt16 iMenuItem) -> None")},
+	 "(TXNFontMenuObject iTXNFontMenuObject, SInt16 iMenuID, SInt16 iMenuItem) -> None"},
 	{"TXNPrepareFontMenu", (PyCFunction)TXNObj_TXNPrepareFontMenu, 1,
-	 PyDoc_STR("(TXNFontMenuObject iTXNFontMenuObject) -> None")},
+	 "(TXNFontMenuObject iTXNFontMenuObject) -> None"},
 	{"TXNPointToOffset", (PyCFunction)TXNObj_TXNPointToOffset, 1,
-	 PyDoc_STR("(Point iPoint) -> (TXNOffset oOffset)")},
+	 "(Point iPoint) -> (TXNOffset oOffset)"},
 	{"TXNOffsetToPoint", (PyCFunction)TXNObj_TXNOffsetToPoint, 1,
-	 PyDoc_STR("(TXNOffset iOffset) -> (Point oPoint)")},
+	 "(TXNOffset iOffset) -> (Point oPoint)"},
 	{"TXNGetLineCount", (PyCFunction)TXNObj_TXNGetLineCount, 1,
-	 PyDoc_STR("() -> (ItemCount oLineTotal)")},
+	 "() -> (ItemCount oLineTotal)"},
 	{"TXNGetLineMetrics", (PyCFunction)TXNObj_TXNGetLineMetrics, 1,
-	 PyDoc_STR("(UInt32 iLineNumber) -> (Fixed oLineWidth, Fixed oLineHeight)")},
+	 "(UInt32 iLineNumber) -> (Fixed oLineWidth, Fixed oLineHeight)"},
 	{"TXNIsObjectAttachedToSpecificWindow", (PyCFunction)TXNObj_TXNIsObjectAttachedToSpecificWindow, 1,
-	 PyDoc_STR("(WindowPtr iWindow) -> (Boolean oAttached)")},
+	 "(WindowPtr iWindow) -> (Boolean oAttached)"},
 	{NULL, NULL, 0}
 };
 
-#define TXNObj_getsetlist NULL
+PyMethodChain TXNObj_chain = { TXNObj_methods, NULL };
 
+static PyObject *TXNObj_getattr(TXNObjectObject *self, char *name)
+{
+	return Py_FindMethodInChain(&TXNObj_chain, (PyObject *)self, name);
+}
+
+#define TXNObj_setattr NULL
 
 #define TXNObj_compare NULL
 
 #define TXNObj_repr NULL
 
 #define TXNObj_hash NULL
-#define TXNObj_tp_init 0
-
-#define TXNObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *TXNObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	TXNObject itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TXNObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TXNObjectObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define TXNObj_tp_free PyObject_Del
-
 
 PyTypeObject TXNObject_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -1305,39 +1319,14 @@ PyTypeObject TXNObject_Type = {
 	/* methods */
 	(destructor) TXNObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) TXNObj_getattr, /*tp_getattr*/
+	(setattrfunc) TXNObj_setattr, /*tp_setattr*/
 	(cmpfunc) TXNObj_compare, /*tp_compare*/
 	(reprfunc) TXNObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) TXNObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	TXNObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	TXNObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	TXNObj_tp_init, /* tp_init */
-	TXNObj_tp_alloc, /* tp_alloc */
-	TXNObj_tp_new, /* tp_new */
-	TXNObj_tp_free, /* tp_free */
 };
 
 /* ------------------- End object type TXNObject -------------------- */
@@ -1347,7 +1336,7 @@ PyTypeObject TXNObject_Type = {
 
 PyTypeObject TXNFontMenuObject_Type;
 
-#define TXNFontMenuObj_Check(x) ((x)->ob_type == &TXNFontMenuObject_Type || PyObject_TypeCheck((x), &TXNFontMenuObject_Type))
+#define TXNFontMenuObj_Check(x) ((x)->ob_type == &TXNFontMenuObject_Type)
 
 typedef struct TXNFontMenuObjectObject {
 	PyObject_HEAD
@@ -1377,7 +1366,7 @@ int TXNFontMenuObj_Convert(PyObject *v, TXNFontMenuObject *p_itself)
 static void TXNFontMenuObj_dealloc(TXNFontMenuObjectObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *TXNFontMenuObj_TXNGetFontMenuHandle(TXNFontMenuObjectObject *_self, PyObject *_args)
@@ -1416,38 +1405,26 @@ static PyObject *TXNFontMenuObj_TXNDisposeFontMenuObject(TXNFontMenuObjectObject
 
 static PyMethodDef TXNFontMenuObj_methods[] = {
 	{"TXNGetFontMenuHandle", (PyCFunction)TXNFontMenuObj_TXNGetFontMenuHandle, 1,
-	 PyDoc_STR("() -> (MenuHandle oFontMenuHandle)")},
+	 "() -> (MenuHandle oFontMenuHandle)"},
 	{"TXNDisposeFontMenuObject", (PyCFunction)TXNFontMenuObj_TXNDisposeFontMenuObject, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{NULL, NULL, 0}
 };
 
-#define TXNFontMenuObj_getsetlist NULL
+PyMethodChain TXNFontMenuObj_chain = { TXNFontMenuObj_methods, NULL };
 
+static PyObject *TXNFontMenuObj_getattr(TXNFontMenuObjectObject *self, char *name)
+{
+	return Py_FindMethodInChain(&TXNFontMenuObj_chain, (PyObject *)self, name);
+}
+
+#define TXNFontMenuObj_setattr NULL
 
 #define TXNFontMenuObj_compare NULL
 
 #define TXNFontMenuObj_repr NULL
 
 #define TXNFontMenuObj_hash NULL
-#define TXNFontMenuObj_tp_init 0
-
-#define TXNFontMenuObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *TXNFontMenuObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	TXNFontMenuObject itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TXNFontMenuObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TXNFontMenuObjectObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define TXNFontMenuObj_tp_free PyObject_Del
-
 
 PyTypeObject TXNFontMenuObject_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -1458,39 +1435,14 @@ PyTypeObject TXNFontMenuObject_Type = {
 	/* methods */
 	(destructor) TXNFontMenuObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) TXNFontMenuObj_getattr, /*tp_getattr*/
+	(setattrfunc) TXNFontMenuObj_setattr, /*tp_setattr*/
 	(cmpfunc) TXNFontMenuObj_compare, /*tp_compare*/
 	(reprfunc) TXNFontMenuObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) TXNFontMenuObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	TXNFontMenuObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	TXNFontMenuObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	TXNFontMenuObj_tp_init, /* tp_init */
-	TXNFontMenuObj_tp_alloc, /* tp_alloc */
-	TXNFontMenuObj_tp_new, /* tp_new */
-	TXNFontMenuObj_tp_free, /* tp_free */
 };
 
 /* --------------- End object type TXNFontMenuObject ---------------- */
@@ -1665,21 +1617,21 @@ static PyObject *Mlte_TXNInitTextension(PyObject *_self, PyObject *_args)
 
 static PyMethodDef Mlte_methods[] = {
 	{"TXNNewObject", (PyCFunction)Mlte_TXNNewObject, 1,
-	 PyDoc_STR("(FSSpec * iFileSpec, WindowPtr iWindow, Rect * iFrame, TXNFrameOptions iFrameOptions, TXNFrameType iFrameType, TXNFileType iFileType, TXNPermanentTextEncodingType iPermanentEncoding) -> (TXNObject oTXNObject, TXNFrameID oTXNFrameID)")},
+	 "(FSSpec * iFileSpec, WindowPtr iWindow, Rect * iFrame, TXNFrameOptions iFrameOptions, TXNFrameType iFrameType, TXNFileType iFileType, TXNPermanentTextEncodingType iPermanentEncoding) -> (TXNObject oTXNObject, TXNFrameID oTXNFrameID)"},
 	{"TXNTerminateTextension", (PyCFunction)Mlte_TXNTerminateTextension, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNIsScrapPastable", (PyCFunction)Mlte_TXNIsScrapPastable, 1,
-	 PyDoc_STR("() -> (Boolean _rv)")},
+	 "() -> (Boolean _rv)"},
 	{"TXNConvertToPublicScrap", (PyCFunction)Mlte_TXNConvertToPublicScrap, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNConvertFromPublicScrap", (PyCFunction)Mlte_TXNConvertFromPublicScrap, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"TXNNewFontMenuObject", (PyCFunction)Mlte_TXNNewFontMenuObject, 1,
-	 PyDoc_STR("(MenuHandle iFontMenuHandle, SInt16 iMenuID, SInt16 iStartHierMenuID) -> (TXNFontMenuObject oTXNFontMenuObject)")},
+	 "(MenuHandle iFontMenuHandle, SInt16 iMenuID, SInt16 iStartHierMenuID) -> (TXNFontMenuObject oTXNFontMenuObject)"},
 	{"TXNVersionInformation", (PyCFunction)Mlte_TXNVersionInformation, 1,
-	 PyDoc_STR("() -> (TXNVersionValue _rv, TXNFeatureBits oFeatureFlags)")},
+	 "() -> (TXNVersionValue _rv, TXNFeatureBits oFeatureFlags)"},
 	{"TXNInitTextension", (PyCFunction)Mlte_TXNInitTextension, 1,
-	 PyDoc_STR("(TXNInitOptions) -> None")},
+	 "(TXNInitOptions) -> None"},
 	{NULL, NULL, 0}
 };
 
@@ -1703,19 +1655,13 @@ void init_Mlte(void)
 	    PyDict_SetItemString(d, "Error", Mlte_Error) != 0)
 		return;
 	TXNObject_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&TXNObject_Type) < 0) return;
 	Py_INCREF(&TXNObject_Type);
-	PyModule_AddObject(m, "TXNObject", (PyObject *)&TXNObject_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&TXNObject_Type);
-	PyModule_AddObject(m, "TXNObjectType", (PyObject *)&TXNObject_Type);
+	if (PyDict_SetItemString(d, "TXNObjectType", (PyObject *)&TXNObject_Type) != 0)
+		Py_FatalError("can't initialize TXNObjectType");
 	TXNFontMenuObject_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&TXNFontMenuObject_Type) < 0) return;
 	Py_INCREF(&TXNFontMenuObject_Type);
-	PyModule_AddObject(m, "TXNFontMenuObject", (PyObject *)&TXNFontMenuObject_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&TXNFontMenuObject_Type);
-	PyModule_AddObject(m, "TXNFontMenuObjectType", (PyObject *)&TXNFontMenuObject_Type);
+	if (PyDict_SetItemString(d, "TXNFontMenuObjectType", (PyObject *)&TXNFontMenuObject_Type) != 0)
+		Py_FatalError("can't initialize TXNFontMenuObjectType");
 }
 
 /* ======================== End module _Mlte ======================== */

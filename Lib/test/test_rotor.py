@@ -1,9 +1,3 @@
-import warnings
-
-warnings.filterwarnings("ignore",
-                        category=DeprecationWarning,
-                        message='.*is deprecated', module=__name__)
-
 import rotor
 
 r = rotor.newrotor("you'll never guess this")

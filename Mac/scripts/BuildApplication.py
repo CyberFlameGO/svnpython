@@ -12,6 +12,7 @@ import sys
 
 import string
 import os
+import macfs
 import MacOS
 from Carbon import Res
 from Carbon import Dlg
@@ -53,10 +54,10 @@ def buildapplication(debug = 0):
 	# Ask for source text if not specified in sys.argv[1:]
 	
 	if not sys.argv[1:]:
-		filename = EasyDialogs.AskFileForOpen(message='Select Python source:', 
-			fileTypes=('TEXT',))
-		if not filename:
+		srcfss, ok = macfs.PromptGetFile('Select Python source:', 'TEXT')
+		if not ok:
 			return
+		filename = srcfss.as_pathname()
 	else:
 		if sys.argv[2:]:
 			raise buildtools.BuildError, "please select one file at a time"
@@ -72,10 +73,10 @@ def buildapplication(debug = 0):
 	else:
 		tf = tf + '.app'
 	
-	dstfilename = EasyDialogs.AskFileForSate(message='Save application as:', 
-		savedFileName=tf)
+	dstfss, ok = macfs.StandardPutFile('Save application as:', tf)
 	if not ok:
 		return
+	dstfilename = dstfss.as_pathname()
 	
 	macgen_bin.generate(filename, dstfilename, None, architecture, 1)
 

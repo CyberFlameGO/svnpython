@@ -4,8 +4,9 @@
 
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
+from bgenlocations import TOOLBOXDIR
 
 from scantools import Scanner
 
@@ -16,8 +17,6 @@ def main():
 	scanner = SoundScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now doing 'import sndsupport' ==="
 	import sndsupport
 	print "=== Done.  It's up to you to compile Sndmodule.c ==="
@@ -49,20 +48,24 @@ class SoundScanner(Scanner):
 			'rate48khz',
 			'rate44khz',
 			'kInvalidSource',
-			# OS8 only:
-			'MACEVersion',
-			'SPBRecordToFile',
-			'Exp1to6',
-			'Comp6to1',
-			'Exp1to3',
-			'Comp3to1',
-			'SndControl',
-			'SndStopFilePlay',
-			'SndStartFilePlay',
-			'SndPauseFilePlay',
-			'SndRecordToFile',
 
 			]
+
+	def makegreylist(self):
+		return [
+			('#if !TARGET_API_MAC_CARBON', [
+				'MACEVersion',
+				'SPBRecordToFile',
+				'Exp1to6',
+				'Comp6to1',
+				'Exp1to3',
+				'Comp3to1',
+				'SndControl',
+				'SndStopFilePlay',
+				'SndStartFilePlay',
+				'SndPauseFilePlay',
+				'SndRecordToFile',
+			])]
 
 	def makeblacklisttypes(self):
 		return [

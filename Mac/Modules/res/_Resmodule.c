@@ -20,9 +20,6 @@
     }} while(0)
 
 
-#ifndef PyDoc_STR
-#define PyDoc_STR(x) (x)
-#endif
 #ifdef WITHOUT_FRAMEWORKS
 #include <Resources.h>
 #include <string.h>
@@ -54,7 +51,7 @@ static PyObject *Res_Error;
 
 PyTypeObject Resource_Type;
 
-#define ResObj_Check(x) ((x)->ob_type == &Resource_Type || PyObject_TypeCheck((x), &Resource_Type))
+#define ResObj_Check(x) ((x)->ob_type == &Resource_Type)
 
 typedef struct ResourceObject {
 	PyObject_HEAD
@@ -101,7 +98,7 @@ static void ResObj_dealloc(ResourceObject *self)
 		self->ob_freeit(self->ob_itself);
 	}
 	self->ob_itself = NULL;
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *ResObj_HomeResFile(ResourceObject *_self, PyObject *_args)
@@ -311,6 +308,28 @@ static PyObject *ResObj_GetMaxResourceSize(ResourceObject *_self, PyObject *_arg
 	return _res;
 }
 
+#if TARGET_API_MAC_OS8
+
+static PyObject *ResObj_RsrcMapEntry(ResourceObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	long _rv;
+#ifndef RsrcMapEntry
+	PyMac_PRECHECK(RsrcMapEntry);
+#endif
+	if (!PyArg_ParseTuple(_args, ""))
+		return NULL;
+	_rv = RsrcMapEntry(_self->ob_itself);
+	{
+		OSErr _err = ResError();
+		if (_err != noErr) return PyMac_Error(_err);
+	}
+	_res = Py_BuildValue("l",
+	                     _rv);
+	return _res;
+}
+#endif
+
 static PyObject *ResObj_SetResAttrs(ResourceObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -482,102 +501,100 @@ static PyObject *ResObj_AutoDispose(ResourceObject *_self, PyObject *_args)
 
 static PyMethodDef ResObj_methods[] = {
 	{"HomeResFile", (PyCFunction)ResObj_HomeResFile, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"MacLoadResource", (PyCFunction)ResObj_MacLoadResource, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"ReleaseResource", (PyCFunction)ResObj_ReleaseResource, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"DetachResource", (PyCFunction)ResObj_DetachResource, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetResAttrs", (PyCFunction)ResObj_GetResAttrs, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"GetResInfo", (PyCFunction)ResObj_GetResInfo, 1,
-	 PyDoc_STR("() -> (short theID, ResType theType, Str255 name)")},
+	 "() -> (short theID, ResType theType, Str255 name)"},
 	{"SetResInfo", (PyCFunction)ResObj_SetResInfo, 1,
-	 PyDoc_STR("(short theID, Str255 name) -> None")},
+	 "(short theID, Str255 name) -> None"},
 	{"AddResource", (PyCFunction)ResObj_AddResource, 1,
-	 PyDoc_STR("(ResType theType, short theID, Str255 name) -> None")},
+	 "(ResType theType, short theID, Str255 name) -> None"},
 	{"GetResourceSizeOnDisk", (PyCFunction)ResObj_GetResourceSizeOnDisk, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
 	{"GetMaxResourceSize", (PyCFunction)ResObj_GetMaxResourceSize, 1,
-	 PyDoc_STR("() -> (long _rv)")},
+	 "() -> (long _rv)"},
+
+#if TARGET_API_MAC_OS8
+	{"RsrcMapEntry", (PyCFunction)ResObj_RsrcMapEntry, 1,
+	 "() -> (long _rv)"},
+#endif
 	{"SetResAttrs", (PyCFunction)ResObj_SetResAttrs, 1,
-	 PyDoc_STR("(short attrs) -> None")},
+	 "(short attrs) -> None"},
 	{"ChangedResource", (PyCFunction)ResObj_ChangedResource, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"RemoveResource", (PyCFunction)ResObj_RemoveResource, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"WriteResource", (PyCFunction)ResObj_WriteResource, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"SetResourceSize", (PyCFunction)ResObj_SetResourceSize, 1,
-	 PyDoc_STR("(long newSize) -> None")},
+	 "(long newSize) -> None"},
 	{"GetNextFOND", (PyCFunction)ResObj_GetNextFOND, 1,
-	 PyDoc_STR("() -> (Handle _rv)")},
+	 "() -> (Handle _rv)"},
 	{"as_Control", (PyCFunction)ResObj_as_Control, 1,
-	 PyDoc_STR("Return this resource/handle as a Control")},
+	 "Return this resource/handle as a Control"},
 	{"as_Menu", (PyCFunction)ResObj_as_Menu, 1,
-	 PyDoc_STR("Return this resource/handle as a Menu")},
+	 "Return this resource/handle as a Menu"},
 	{"LoadResource", (PyCFunction)ResObj_LoadResource, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"AutoDispose", (PyCFunction)ResObj_AutoDispose, 1,
-	 PyDoc_STR("(int)->int. Automatically DisposeHandle the object on Python object cleanup")},
+	 "(int)->int. Automatically DisposeHandle the object on Python object cleanup"},
 	{NULL, NULL, 0}
 };
 
-static PyObject *ResObj_get_data(ResourceObject *self, void *closure)
+PyMethodChain ResObj_chain = { ResObj_methods, NULL };
+
+static PyObject *ResObj_getattr(ResourceObject *self, char *name)
 {
 
-			PyObject *res;
-			char state;
+	if (strcmp(name, "size") == 0)
+		return PyInt_FromLong(GetHandleSize(self->ob_itself));
+	if (strcmp(name, "data") == 0) {
+		PyObject *res;
+		char state;
+		state = HGetState(self->ob_itself);
+		HLock(self->ob_itself);
+		res = PyString_FromStringAndSize(
+			*self->ob_itself,
+			GetHandleSize(self->ob_itself));
+		HUnlock(self->ob_itself);
+		HSetState(self->ob_itself, state);
+		return res;
+	}
+	if (strcmp(name, "__members__") == 0)
+		return Py_BuildValue("[ss]", "data", "size");
 
-			state = HGetState(self->ob_itself);
-			HLock(self->ob_itself);
-			res = PyString_FromStringAndSize(
-				*self->ob_itself,
-				GetHandleSize(self->ob_itself));
-			HUnlock(self->ob_itself);
-			HSetState(self->ob_itself, state);
-			return res;
-			
+	return Py_FindMethodInChain(&ResObj_chain, (PyObject *)self, name);
 }
 
-static int ResObj_set_data(ResourceObject *self, PyObject *v, void *closure)
+static int
+ResObj_setattr(ResourceObject *self, char *name, PyObject *value)
 {
-
-			char *data;
-			long size;
-		
-			if ( v == NULL )
-				return -1;
-			if ( !PyString_Check(v) )
-				return -1;
-			size = PyString_Size(v);
-			data = PyString_AsString(v);
-			/* XXXX Do I need the GetState/SetState calls? */
-			SetHandleSize(self->ob_itself, size);
-			if ( MemError())
-				return -1;
-			HLock(self->ob_itself);
-			memcpy((char *)*self->ob_itself, data, size);
-			HUnlock(self->ob_itself);
-			/* XXXX Should I do the Changed call immedeately? */
-			return 0;
-			
+	char *data;
+	long size;
+	
+	if (strcmp(name, "data") != 0 || value == NULL )
+		return -1;
+	if ( !PyString_Check(value) )
+		return -1;
+	size = PyString_Size(value);
+	data = PyString_AsString(value);
+	/* XXXX Do I need the GetState/SetState calls? */
+	SetHandleSize(self->ob_itself, size);
+	if ( MemError())
+		return -1;
+	HLock(self->ob_itself);
+	memcpy((char *)*self->ob_itself, data, size);
+	HUnlock(self->ob_itself);
+	/* XXXX Should I do the Changed call immedeately? */
 	return 0;
 }
-
-static PyObject *ResObj_get_size(ResourceObject *self, void *closure)
-{
-	return PyInt_FromLong(GetHandleSize(self->ob_itself));
-}
-
-#define ResObj_set_size NULL
-
-static PyGetSetDef ResObj_getsetlist[] = {
-	{"data", (getter)ResObj_get_data, (setter)ResObj_set_data, "The resource data"},
-	{"size", (getter)ResObj_get_size, (setter)ResObj_set_size, "The length of the resource data"},
-	{NULL, NULL, NULL, NULL},
-};
 
 
 #define ResObj_compare NULL
@@ -585,48 +602,6 @@ static PyGetSetDef ResObj_getsetlist[] = {
 #define ResObj_repr NULL
 
 #define ResObj_hash NULL
-static int ResObj_tp_init(PyObject *self, PyObject *args, PyObject *kwds)
-{
-	char *srcdata = NULL;
-	int srclen = 0;
-	Handle itself;
-	char *kw[] = {"itself", 0};
-
-	if (PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, ResObj_Convert, &itself))
-	{
-		((ResourceObject *)self)->ob_itself = itself;
-		return 0;
-	}
-	PyErr_Clear();
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s#", kw, &srcdata, &srclen)) return -1;
-	if ((itself = NewHandle(srclen)) == NULL)
-	{
-		PyErr_NoMemory();
-		return 0;
-	}
-	((ResourceObject *)self)->ob_itself = itself;
-	if (srclen && srcdata)
-	{
-		HLock(itself);
-		memcpy(*itself, srcdata, srclen);
-		HUnlock(itself);
-	}
-	return 0;
-}
-
-#define ResObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *ResObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((ResourceObject *)self)->ob_itself = NULL;
-	((ResourceObject *)self)->ob_freeit = NULL;
-	return self;
-}
-
-#define ResObj_tp_free PyObject_Del
-
 
 PyTypeObject Resource_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -637,43 +612,61 @@ PyTypeObject Resource_Type = {
 	/* methods */
 	(destructor) ResObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) ResObj_getattr, /*tp_getattr*/
+	(setattrfunc) ResObj_setattr, /*tp_setattr*/
 	(cmpfunc) ResObj_compare, /*tp_compare*/
 	(reprfunc) ResObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) ResObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	ResObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	ResObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	ResObj_tp_init, /* tp_init */
-	ResObj_tp_alloc, /* tp_alloc */
-	ResObj_tp_new, /* tp_new */
-	ResObj_tp_free, /* tp_free */
 };
 
 /* -------------------- End object type Resource -------------------- */
 
+
+#if TARGET_API_MAC_OS8
+
+static PyObject *Res_InitResources(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	short _rv;
+#ifndef InitResources
+	PyMac_PRECHECK(InitResources);
+#endif
+	if (!PyArg_ParseTuple(_args, ""))
+		return NULL;
+	_rv = InitResources();
+	{
+		OSErr _err = ResError();
+		if (_err != noErr) return PyMac_Error(_err);
+	}
+	_res = Py_BuildValue("h",
+	                     _rv);
+	return _res;
+}
+#endif
+
+#if TARGET_API_MAC_OS8
+
+static PyObject *Res_RsrcZoneInit(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+#ifndef RsrcZoneInit
+	PyMac_PRECHECK(RsrcZoneInit);
+#endif
+	if (!PyArg_ParseTuple(_args, ""))
+		return NULL;
+	RsrcZoneInit();
+	{
+		OSErr _err = ResError();
+		if (_err != noErr) return PyMac_Error(_err);
+	}
+	Py_INCREF(Py_None);
+	_res = Py_None;
+	return _res;
+}
+#endif
 
 static PyObject *Res_CloseResFile(PyObject *_self, PyObject *_args)
 {
@@ -729,6 +722,53 @@ static PyObject *Res_CurResFile(PyObject *_self, PyObject *_args)
 	                     _rv);
 	return _res;
 }
+
+#if TARGET_API_MAC_OS8
+
+static PyObject *Res_CreateResFile(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	Str255 fileName;
+#ifndef CreateResFile
+	PyMac_PRECHECK(CreateResFile);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&",
+	                      PyMac_GetStr255, fileName))
+		return NULL;
+	CreateResFile(fileName);
+	{
+		OSErr _err = ResError();
+		if (_err != noErr) return PyMac_Error(_err);
+	}
+	Py_INCREF(Py_None);
+	_res = Py_None;
+	return _res;
+}
+#endif
+
+#if TARGET_API_MAC_OS8
+
+static PyObject *Res_OpenResFile(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	short _rv;
+	Str255 fileName;
+#ifndef OpenResFile
+	PyMac_PRECHECK(OpenResFile);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&",
+	                      PyMac_GetStr255, fileName))
+		return NULL;
+	_rv = OpenResFile(fileName);
+	{
+		OSErr _err = ResError();
+		if (_err != noErr) return PyMac_Error(_err);
+	}
+	_res = Py_BuildValue("h",
+	                     _rv);
+	return _res;
+}
+#endif
 
 static PyObject *Res_UseResFile(PyObject *_self, PyObject *_args)
 {
@@ -1191,6 +1231,33 @@ static PyObject *Res_OpenRFPerm(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_OS8
+
+static PyObject *Res_RGetResource(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	Handle _rv;
+	ResType theType;
+	short theID;
+#ifndef RGetResource
+	PyMac_PRECHECK(RGetResource);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&h",
+	                      PyMac_GetOSType, &theType,
+	                      &theID))
+		return NULL;
+	_rv = RGetResource(theType,
+	                   theID);
+	{
+		OSErr _err = ResError();
+		if (_err != noErr) return PyMac_Error(_err);
+	}
+	_res = Py_BuildValue("O&",
+	                     ResObj_New, _rv);
+	return _res;
+}
+#endif
+
 static PyObject *Res_HOpenResFile(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1300,6 +1367,8 @@ static PyObject *Res_FSpCreateResFile(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_CARBON
+
 static PyObject *Res_InsertResourceFile(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1320,6 +1389,9 @@ static PyObject *Res_InsertResourceFile(PyObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Res_DetachResourceFile(PyObject *_self, PyObject *_args)
 {
@@ -1338,6 +1410,9 @@ static PyObject *Res_DetachResourceFile(PyObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Res_FSpResourceFileAlreadyOpen(PyObject *_self, PyObject *_args)
 {
@@ -1365,6 +1440,9 @@ static PyObject *Res_FSpResourceFileAlreadyOpen(PyObject *_self, PyObject *_args
 	                     refNum);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Res_FSpOpenOrphanResFile(PyObject *_self, PyObject *_args)
 {
@@ -1388,6 +1466,9 @@ static PyObject *Res_FSpOpenOrphanResFile(PyObject *_self, PyObject *_args)
 	                     refNum);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Res_GetTopResourceFile(PyObject *_self, PyObject *_args)
 {
@@ -1405,6 +1486,9 @@ static PyObject *Res_GetTopResourceFile(PyObject *_self, PyObject *_args)
 	                     refNum);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Res_GetNextResourceFile(PyObject *_self, PyObject *_args)
 {
@@ -1425,6 +1509,7 @@ static PyObject *Res_GetNextResourceFile(PyObject *_self, PyObject *_args)
 	                     nextRefNum);
 	return _res;
 }
+#endif
 
 static PyObject *Res_FSOpenResFile(PyObject *_self, PyObject *_args)
 {
@@ -1510,6 +1595,8 @@ static PyObject *Res_FSResourceFileAlreadyOpen(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_CARBON
+
 static PyObject *Res_FSCreateResourceFile(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1546,6 +1633,9 @@ static PyObject *Res_FSCreateResourceFile(PyObject *_self, PyObject *_args)
 	                     PyMac_BuildFSSpec, &newSpec);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *Res_FSOpenResourceFile(PyObject *_self, PyObject *_args)
 {
@@ -1575,6 +1665,30 @@ static PyObject *Res_FSOpenResourceFile(PyObject *_self, PyObject *_args)
 	                     refNum);
 	return _res;
 }
+#endif
+
+static PyObject *Res_Resource(PyObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+
+	char *buf;
+	int len;
+	Handle h;
+
+	if (!PyArg_ParseTuple(_args, "s#", &buf, &len))
+		return NULL;
+	h = NewHandle(len);
+	if ( h == NULL ) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+	HLock(h);
+	memcpy(*h, buf, len);
+	HUnlock(h);
+	_res = ResObj_New(h);
+	return _res;
+
+}
 
 static PyObject *Res_Handle(PyObject *_self, PyObject *_args)
 {
@@ -1603,86 +1717,137 @@ static PyObject *Res_Handle(PyObject *_self, PyObject *_args)
 }
 
 static PyMethodDef Res_methods[] = {
+
+#if TARGET_API_MAC_OS8
+	{"InitResources", (PyCFunction)Res_InitResources, 1,
+	 "() -> (short _rv)"},
+#endif
+
+#if TARGET_API_MAC_OS8
+	{"RsrcZoneInit", (PyCFunction)Res_RsrcZoneInit, 1,
+	 "() -> None"},
+#endif
 	{"CloseResFile", (PyCFunction)Res_CloseResFile, 1,
-	 PyDoc_STR("(short refNum) -> None")},
+	 "(short refNum) -> None"},
 	{"ResError", (PyCFunction)Res_ResError, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"CurResFile", (PyCFunction)Res_CurResFile, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
+
+#if TARGET_API_MAC_OS8
+	{"CreateResFile", (PyCFunction)Res_CreateResFile, 1,
+	 "(Str255 fileName) -> None"},
+#endif
+
+#if TARGET_API_MAC_OS8
+	{"OpenResFile", (PyCFunction)Res_OpenResFile, 1,
+	 "(Str255 fileName) -> (short _rv)"},
+#endif
 	{"UseResFile", (PyCFunction)Res_UseResFile, 1,
-	 PyDoc_STR("(short refNum) -> None")},
+	 "(short refNum) -> None"},
 	{"CountTypes", (PyCFunction)Res_CountTypes, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"Count1Types", (PyCFunction)Res_Count1Types, 1,
-	 PyDoc_STR("() -> (short _rv)")},
+	 "() -> (short _rv)"},
 	{"GetIndType", (PyCFunction)Res_GetIndType, 1,
-	 PyDoc_STR("(short index) -> (ResType theType)")},
+	 "(short index) -> (ResType theType)"},
 	{"Get1IndType", (PyCFunction)Res_Get1IndType, 1,
-	 PyDoc_STR("(short index) -> (ResType theType)")},
+	 "(short index) -> (ResType theType)"},
 	{"SetResLoad", (PyCFunction)Res_SetResLoad, 1,
-	 PyDoc_STR("(Boolean load) -> None")},
+	 "(Boolean load) -> None"},
 	{"CountResources", (PyCFunction)Res_CountResources, 1,
-	 PyDoc_STR("(ResType theType) -> (short _rv)")},
+	 "(ResType theType) -> (short _rv)"},
 	{"Count1Resources", (PyCFunction)Res_Count1Resources, 1,
-	 PyDoc_STR("(ResType theType) -> (short _rv)")},
+	 "(ResType theType) -> (short _rv)"},
 	{"GetIndResource", (PyCFunction)Res_GetIndResource, 1,
-	 PyDoc_STR("(ResType theType, short index) -> (Handle _rv)")},
+	 "(ResType theType, short index) -> (Handle _rv)"},
 	{"Get1IndResource", (PyCFunction)Res_Get1IndResource, 1,
-	 PyDoc_STR("(ResType theType, short index) -> (Handle _rv)")},
+	 "(ResType theType, short index) -> (Handle _rv)"},
 	{"GetResource", (PyCFunction)Res_GetResource, 1,
-	 PyDoc_STR("(ResType theType, short theID) -> (Handle _rv)")},
+	 "(ResType theType, short theID) -> (Handle _rv)"},
 	{"Get1Resource", (PyCFunction)Res_Get1Resource, 1,
-	 PyDoc_STR("(ResType theType, short theID) -> (Handle _rv)")},
+	 "(ResType theType, short theID) -> (Handle _rv)"},
 	{"GetNamedResource", (PyCFunction)Res_GetNamedResource, 1,
-	 PyDoc_STR("(ResType theType, Str255 name) -> (Handle _rv)")},
+	 "(ResType theType, Str255 name) -> (Handle _rv)"},
 	{"Get1NamedResource", (PyCFunction)Res_Get1NamedResource, 1,
-	 PyDoc_STR("(ResType theType, Str255 name) -> (Handle _rv)")},
+	 "(ResType theType, Str255 name) -> (Handle _rv)"},
 	{"UniqueID", (PyCFunction)Res_UniqueID, 1,
-	 PyDoc_STR("(ResType theType) -> (short _rv)")},
+	 "(ResType theType) -> (short _rv)"},
 	{"Unique1ID", (PyCFunction)Res_Unique1ID, 1,
-	 PyDoc_STR("(ResType theType) -> (short _rv)")},
+	 "(ResType theType) -> (short _rv)"},
 	{"UpdateResFile", (PyCFunction)Res_UpdateResFile, 1,
-	 PyDoc_STR("(short refNum) -> None")},
+	 "(short refNum) -> None"},
 	{"SetResPurge", (PyCFunction)Res_SetResPurge, 1,
-	 PyDoc_STR("(Boolean install) -> None")},
+	 "(Boolean install) -> None"},
 	{"GetResFileAttrs", (PyCFunction)Res_GetResFileAttrs, 1,
-	 PyDoc_STR("(short refNum) -> (short _rv)")},
+	 "(short refNum) -> (short _rv)"},
 	{"SetResFileAttrs", (PyCFunction)Res_SetResFileAttrs, 1,
-	 PyDoc_STR("(short refNum, short attrs) -> None")},
+	 "(short refNum, short attrs) -> None"},
 	{"OpenRFPerm", (PyCFunction)Res_OpenRFPerm, 1,
-	 PyDoc_STR("(Str255 fileName, short vRefNum, SignedByte permission) -> (short _rv)")},
+	 "(Str255 fileName, short vRefNum, SignedByte permission) -> (short _rv)"},
+
+#if TARGET_API_MAC_OS8
+	{"RGetResource", (PyCFunction)Res_RGetResource, 1,
+	 "(ResType theType, short theID) -> (Handle _rv)"},
+#endif
 	{"HOpenResFile", (PyCFunction)Res_HOpenResFile, 1,
-	 PyDoc_STR("(short vRefNum, long dirID, Str255 fileName, SignedByte permission) -> (short _rv)")},
+	 "(short vRefNum, long dirID, Str255 fileName, SignedByte permission) -> (short _rv)"},
 	{"HCreateResFile", (PyCFunction)Res_HCreateResFile, 1,
-	 PyDoc_STR("(short vRefNum, long dirID, Str255 fileName) -> None")},
+	 "(short vRefNum, long dirID, Str255 fileName) -> None"},
 	{"FSpOpenResFile", (PyCFunction)Res_FSpOpenResFile, 1,
-	 PyDoc_STR("(FSSpec spec, SignedByte permission) -> (short _rv)")},
+	 "(FSSpec spec, SignedByte permission) -> (short _rv)"},
 	{"FSpCreateResFile", (PyCFunction)Res_FSpCreateResFile, 1,
-	 PyDoc_STR("(FSSpec spec, OSType creator, OSType fileType, ScriptCode scriptTag) -> None")},
+	 "(FSSpec spec, OSType creator, OSType fileType, ScriptCode scriptTag) -> None"},
+
+#if TARGET_API_MAC_CARBON
 	{"InsertResourceFile", (PyCFunction)Res_InsertResourceFile, 1,
-	 PyDoc_STR("(SInt16 refNum, RsrcChainLocation where) -> None")},
+	 "(SInt16 refNum, RsrcChainLocation where) -> None"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"DetachResourceFile", (PyCFunction)Res_DetachResourceFile, 1,
-	 PyDoc_STR("(SInt16 refNum) -> None")},
+	 "(SInt16 refNum) -> None"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"FSpResourceFileAlreadyOpen", (PyCFunction)Res_FSpResourceFileAlreadyOpen, 1,
-	 PyDoc_STR("(FSSpec resourceFile) -> (Boolean _rv, Boolean inChain, SInt16 refNum)")},
+	 "(FSSpec resourceFile) -> (Boolean _rv, Boolean inChain, SInt16 refNum)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"FSpOpenOrphanResFile", (PyCFunction)Res_FSpOpenOrphanResFile, 1,
-	 PyDoc_STR("(FSSpec spec, SignedByte permission) -> (SInt16 refNum)")},
+	 "(FSSpec spec, SignedByte permission) -> (SInt16 refNum)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"GetTopResourceFile", (PyCFunction)Res_GetTopResourceFile, 1,
-	 PyDoc_STR("() -> (SInt16 refNum)")},
+	 "() -> (SInt16 refNum)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"GetNextResourceFile", (PyCFunction)Res_GetNextResourceFile, 1,
-	 PyDoc_STR("(SInt16 curRefNum) -> (SInt16 nextRefNum)")},
+	 "(SInt16 curRefNum) -> (SInt16 nextRefNum)"},
+#endif
 	{"FSOpenResFile", (PyCFunction)Res_FSOpenResFile, 1,
-	 PyDoc_STR("(FSRef ref, SignedByte permission) -> (short _rv)")},
+	 "(FSRef ref, SignedByte permission) -> (short _rv)"},
 	{"FSCreateResFile", (PyCFunction)Res_FSCreateResFile, 1,
-	 PyDoc_STR("(FSRef parentRef, Buffer nameLength) -> (FSRef newRef, FSSpec newSpec)")},
+	 "(FSRef parentRef, Buffer nameLength) -> (FSRef newRef, FSSpec newSpec)"},
 	{"FSResourceFileAlreadyOpen", (PyCFunction)Res_FSResourceFileAlreadyOpen, 1,
-	 PyDoc_STR("(FSRef resourceFileRef) -> (Boolean _rv, Boolean inChain, SInt16 refNum)")},
+	 "(FSRef resourceFileRef) -> (Boolean _rv, Boolean inChain, SInt16 refNum)"},
+
+#if TARGET_API_MAC_CARBON
 	{"FSCreateResourceFile", (PyCFunction)Res_FSCreateResourceFile, 1,
-	 PyDoc_STR("(FSRef parentRef, Buffer nameLength, Buffer forkNameLength) -> (FSRef newRef, FSSpec newSpec)")},
+	 "(FSRef parentRef, Buffer nameLength, Buffer forkNameLength) -> (FSRef newRef, FSSpec newSpec)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"FSOpenResourceFile", (PyCFunction)Res_FSOpenResourceFile, 1,
-	 PyDoc_STR("(FSRef ref, Buffer forkNameLength, SignedByte permissions) -> (SInt16 refNum)")},
+	 "(FSRef ref, Buffer forkNameLength, SignedByte permissions) -> (SInt16 refNum)"},
+#endif
+	{"Resource", (PyCFunction)Res_Resource, 1,
+	 "Convert a string to a resource object.\n\nThe created resource object is actually just a handle,\napply AddResource() to write it to a resource file.\nSee also the Handle() docstring.\n"},
 	{"Handle", (PyCFunction)Res_Handle, 1,
-	 PyDoc_STR("Convert a string to a Handle object.\n\nResource() and Handle() are very similar, but objects created with Handle() are\nby default automatically DisposeHandle()d upon object cleanup. Use AutoDispose()\nto change this.\n")},
+	 "Convert a string to a Handle object.\n\nResource() and Handle() are very similar, but objects created with Handle() are\nby default automatically DisposeHandle()d upon object cleanup. Use AutoDispose()\nto change this.\n"},
 	{NULL, NULL, 0}
 };
 
@@ -1744,12 +1909,9 @@ void init_Res(void)
 	    PyDict_SetItemString(d, "Error", Res_Error) != 0)
 		return;
 	Resource_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&Resource_Type) < 0) return;
 	Py_INCREF(&Resource_Type);
-	PyModule_AddObject(m, "Resource", (PyObject *)&Resource_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&Resource_Type);
-	PyModule_AddObject(m, "ResourceType", (PyObject *)&Resource_Type);
+	if (PyDict_SetItemString(d, "ResourceType", (PyObject *)&Resource_Type) != 0)
+		Py_FatalError("can't initialize ResourceType");
 }
 
 /* ======================== End module _Res ========================= */

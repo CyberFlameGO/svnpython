@@ -9,7 +9,7 @@ extern "C" {
 
 typedef struct {
     int error;
-    const char *filename;
+    char *filename;
     int lineno;
     int offset;
     char *text;
@@ -17,30 +17,18 @@ typedef struct {
     int expected;
 } perrdetail;
 
-#if 0
 #define PyPARSE_YIELD_IS_KEYWORD	0x0001
-#endif
 
-#define PyPARSE_DONT_IMPLY_DEDENT	0x0002
-
-PyAPI_FUNC(node *) PyParser_ParseString(const char *, grammar *, int,
+extern DL_IMPORT(node *) PyParser_ParseString(char *, grammar *, int,
                                               perrdetail *);
-PyAPI_FUNC(node *) PyParser_ParseFile (FILE *, const char *, grammar *, int,
+extern DL_IMPORT(node *) PyParser_ParseFile (FILE *, char *, grammar *, int,
                                              char *, char *, perrdetail *);
 
-PyAPI_FUNC(node *) PyParser_ParseStringFlags(const char *, grammar *, int,
+extern DL_IMPORT(node *) PyParser_ParseStringFlags(char *, grammar *, int,
                                               perrdetail *, int);
-PyAPI_FUNC(node *) PyParser_ParseFileFlags(FILE *, const char *, grammar *,
+extern DL_IMPORT(node *) PyParser_ParseFileFlags(FILE *, char *, grammar *,
 						 int, char *, char *,
 						 perrdetail *, int);
-
-PyAPI_FUNC(node *) PyParser_ParseStringFlagsFilename(const char *,
-					      const char *,
-					      grammar *, int,
-                                              perrdetail *, int);
-
-/* Note that he following function is defined in pythonrun.c not parsetok.c. */
-PyAPI_FUNC(void) PyParser_SetError(perrdetail *);
 
 #ifdef __cplusplus
 }

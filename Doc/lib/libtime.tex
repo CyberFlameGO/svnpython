@@ -5,12 +5,9 @@
 \modulesynopsis{Time access and conversions.}
 
 
-This module provides various time-related functions.  It is always
-available, but not all functions are available on all platforms.  Most
-of the functions defined in this module call platform C library
-functions with the same name.  It may sometimes be helpful to consult
-the platform documentation, because the semantics of these functions
-varies among platforms.
+This module provides various time-related functions.
+It is always available, but not all functions are available
+on all platforms.
 
 An explanation of some terminology and conventions is in order.
 
@@ -244,7 +241,7 @@ specification, and are replaced by the indicated characters in the
   \lineiii{\%X}{Locale's appropriate time representation.}{}
   \lineiii{\%y}{Year without century as a decimal number [00,99].}{}
   \lineiii{\%Y}{Year with century as a decimal number.}{}
-  \lineiii{\%Z}{Time zone name (no characters if no time zone exists).}{}
+  \lineiii{\%Z}{Time zone name (or by no characters if no time zone exists).}{}
   \lineiii{\%\%}{A literal \character{\%} character.}{}
 \end{tableiii}
 
@@ -295,6 +292,13 @@ supported directives.  If \var{string} cannot be parsed according to
 provided as part of the input string are filled in with default
 values; the specific values are platform-dependent as the XPG standard
 does not provide sufficient information to constrain the result.
+
+\note{This function relies entirely on the underlying
+platform's C library for the date parsing, and some of these libraries
+are buggy.  There's nothing to be done about this short of a new,
+portable implementation of \cfunction{strptime()}.}
+
+Availability: Most modern \UNIX{} systems.
 \end{funcdesc}
 
 \begin{datadesc}{struct_time}

@@ -16,8 +16,7 @@ enum filetype {
 	PKG_DIRECTORY,
 	C_BUILTIN,
 	PY_FROZEN,
-	PY_CODERESOURCE, /* Mac only */
-	IMP_HOOK
+	PY_CODERESOURCE /* Mac only */
 };
 
 struct filedescr {
@@ -38,7 +37,7 @@ extern PyObject *_PyImport_LoadDynamicModule(char *name, char *pathname,
 #include <windows.h>
 typedef FARPROC dl_funcptr;
 #else
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
+#ifdef PYOS_OS2
 #include <os2def.h>
 typedef int (* APIENTRY dl_funcptr)();
 #else

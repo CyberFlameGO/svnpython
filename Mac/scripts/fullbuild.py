@@ -9,13 +9,11 @@
 # NOTE: You should proably make a copy of python with which to execute this
 # script, rebuilding running programs does not work...
 
-CARBON_ONLY = 1
-
 MACBUILDNO=":Mac:Include:macbuildno.h"
 
 import os
 import sys
-import Carbon.File
+import macfs
 import MacOS
 import EasyDialogs
 import re
@@ -26,7 +24,15 @@ import macresource
 import aetools
 from Carbon import AppleEvents
 
-import CodeWarrior
+OLDAESUPPORT = 0
+
+if OLDAESUPPORT:
+	from Metrowerks_Shell_Suite import Metrowerks_Shell_Suite
+	from CodeWarrior_suite import CodeWarrior_suite
+	from Metrowerks_Standard_Suite import Metrowerks_Standard_Suite
+	from Required_Suite import Required_Suite
+else:
+	import CodeWarrior
 
 from Carbon import Res
 from Carbon import Dlg
@@ -68,24 +74,18 @@ I_APPLETS=26
 
 N_BUTTONS=27
 
-if CARBON_ONLY:
-	BUTTONS_DISABLE = [
-		I_PPC_EXTLIBS,
-		I_PPC_CORE,
-		I_PPC_PLUGINS,
-		I_PPC_EXTENSIONS,
-		I_INTERPRETER,
-		I_PPC_FULL,
-		I_PPC_SMALL,
-	]
+if OLDAESUPPORT:
+	class MwShell(Metrowerks_Shell_Suite, CodeWarrior_suite, Metrowerks_Standard_Suite,
+					Required_Suite, aetools.TalkTo):
+		pass
 else:
-	BUTTONS_DISABLE = []
-	
+	MwShell = CodeWarrior.CodeWarrior
+
 RUNNING=[]
 
 def buildmwproject(top, creator, projects):
 	"""Build projects with an MW compiler"""
-	mgr = CodeWarrior.CodeWarrior(creator, start=1)
+	mgr = MwShell(creator, start=1)
 	mgr.send_timeout = AppleEvents.kNoTimeOut
 	
 	failed = []
@@ -96,7 +96,7 @@ def buildmwproject(top, creator, projects):
 			target = ''
 		file = os.path.join(top, file)
 		try:
-			fss = Carbon.File.FSSpec(file)
+			fss = macfs.FSSpec(file)
 		except MacOS.Error:
 			print '** file not found:', file
 			continue
@@ -171,85 +171,12 @@ def buildcopy(top, dummy, list):
 		dst = os.path.join(top, dst)
 		macostools.copy(src, dst, forcetype="APPL")
 		
-def buildsetup(top, dummy, list):
-	print 'Building extensions with setup.py ', ' '.join(list)
-	argv = ['setup.py'] + list[:]
-	save_argv = sys.argv
-	sys.argv = argv
-	sys.path.insert(0, top)
-	m = __import__('setup')
-	r = getattr(m, 'main')
-	r()
-	del sys.path[0]
-	sys.argv = save_argv
-
-def buildcarbonplugins(top, dummy1, dummy2):
-## XXXX Need to convert pathnames, I guess, and adapt distutils Mac-specific
-## code to not call GetArgv if not needed.
-##	buildsetup(top, None, [
-##		'--dry_run',
-##        	'install',
-##                '--prefix=%s' % sys.prefix,
-##                '--install-scripts=%s' % os.path.join(sys.prefix, 'Scripts'),
-##                '--install-platlib=%s' % os.path.join(sys.prefix, 'Lib', 'lib-dynload')
-##		])
-	buildmwproject(top, "CWIE", [
-		(":Mac:Build:_csv.carbon.mcp", "_csv.carbon"),
-		(":Mac:Build:_weakref.carbon.mcp", "_weakref.carbon"),
-		(":Mac:Build:_symtable.carbon.mcp", "_symtable.carbon"),
-		(":Mac:Build:_testcapi.carbon.mcp", "_testcapi.carbon"),
-		(":Mac:Build:_hotshot.carbon.mcp", "_hotshot.carbon"),
-		(":Mac:Build:xx.carbon.mcp", "xx.carbon"),
-		(":Mac:Build:xxsubtype.carbon.mcp", "xxsubtype.carbon"),
-		(":Mac:Build:pyexpat.carbon.mcp", "pyexpat.carbon"),
-		(":Mac:Build:calldll.carbon.mcp", "calldll.carbon"),
-		(":Mac:Build:datetime.carbon.mcp", "datetime.carbon"),
-		(":Mac:Build:gdbm.carbon.mcp", "gdbm.carbon"),
-		(":Mac:Build:icglue.carbon.mcp", "icglue.carbon"),
-		(":Mac:Build:waste.carbon.mcp", "waste.carbon"),
-		(":Mac:Build:zlib.carbon.mcp", "zlib.carbon"),
-		(":Mac:Build:hfsplus.carbon.mcp", "hfsplus.carbon"),
-		(":Mac:Build:ColorPicker.carbon.mcp", "ColorPicker.carbon"),
-		(":Mac:Build:_AE.carbon.mcp", "_AE.carbon"),
-		(":Mac:Build:_AH.carbon.mcp", "_AH.carbon"),
-		(":Mac:Build:_App.carbon.mcp", "_App.carbon"),
-		(":Mac:Build:_CF.carbon.mcp", "_CF.carbon"),
-		(":Mac:Build:_CG.carbon.mcp", "_CG.carbon"),
-		(":Mac:Build:_CarbonEvt.carbon.mcp", "_CarbonEvt.carbon"),
-		(":Mac:Build:_Cm.carbon.mcp", "_Cm.carbon"),
-		(":Mac:Build:_Ctl.carbon.mcp", "_Ctl.carbon"),
-		(":Mac:Build:_Dlg.carbon.mcp", "_Dlg.carbon"),
-		(":Mac:Build:_Drag.carbon.mcp", "_Drag.carbon"),
-		(":Mac:Build:_Evt.carbon.mcp", "_Evt.carbon"),
-		(":Mac:Build:_File.carbon.mcp", "_File.carbon"),
-		(":Mac:Build:_Fm.carbon.mcp", "_Fm.carbon"),
-		(":Mac:Build:_Folder.carbon.mcp", "_Folder.carbon"),
-		(":Mac:Build:_Help.carbon.mcp", "_Help.carbon"),
-		(":Mac:Build:_IBCarbon.carbon.mcp", "_IBCarbon.carbon"),
-		(":Mac:Build:_Icn.carbon.mcp", "_Icn.carbon"),
-		(":Mac:Build:_List.carbon.mcp", "_List.carbon"),
-		(":Mac:Build:_Menu.carbon.mcp", "_Menu.carbon"),
-		(":Mac:Build:_Mlte.carbon.mcp", "_Mlte.carbon"),
-		(":Mac:Build:_Qd.carbon.mcp", "_Qd.carbon"),
-		(":Mac:Build:_Qdoffs.carbon.mcp", "_Qdoffs.carbon"),
-		(":Mac:Build:_Qt.carbon.mcp", "_Qt.carbon"),
-		(":Mac:Build:_Res.carbon.mcp", "_Res.carbon"),
-		(":Mac:Build:_Scrap.carbon.mcp", "_Scrap.carbon"),
-		(":Mac:Build:_Snd.carbon.mcp", "_Snd.carbon"),
-		(":Mac:Build:_Sndihooks.carbon.mcp", "_Sndihooks.carbon"),
-		(":Mac:Build:_TE.carbon.mcp", "_TE.carbon"),
-		(":Mac:Build:_Win.carbon.mcp", "_Win.carbon"),
-	])
-	
 def handle_dialog(filename):
 	"""Handle selection dialog, return list of selected items"""
 	d = Dlg.GetNewDialog(DIALOG_ID, -1)
 	d.SetDialogDefaultItem(I_OK)
 	d.SetDialogCancelItem(I_CANCEL)
 	results = [0]*N_BUTTONS
-	for n in BUTTONS_DISABLE:
-		ctl = d.GetDialogItemAsControl(n)
-		ctl.HideControl()
 	while 1:
 		n = Dlg.ModalDialog(None)
 		if n == I_OK:
@@ -351,7 +278,49 @@ I_PPC_PLUGINS : (buildmwproject, "CWIE", [
 	(":Mac:Build:_Win.mcp", "_Win.ppc"),
 	]),
 
-I_CARBON_PLUGINS :  (buildcarbonplugins, None, []),
+I_CARBON_PLUGINS :  (buildmwproject, "CWIE", [
+	(":Mac:Build:_weakref.carbon.mcp", "_weakref.carbon"),
+	(":Mac:Build:_symtable.carbon.mcp", "_symtable.carbon"),
+	(":Mac:Build:_testcapi.carbon.mcp", "_testcapi.carbon"),
+	(":Mac:Build:_hotshot.carbon.mcp", "_hotshot.carbon"),
+	(":Mac:Build:xx.carbon.mcp", "xx.carbon"),
+	(":Mac:Build:xxsubtype.carbon.mcp", "xxsubtype.carbon"),
+	(":Mac:Build:pyexpat.carbon.mcp", "pyexpat.carbon"),
+	(":Mac:Build:calldll.carbon.mcp", "calldll.carbon"),
+	(":Mac:Build:gdbm.carbon.mcp", "gdbm.carbon"),
+	(":Mac:Build:icglue.carbon.mcp", "icglue.carbon"),
+	(":Mac:Build:waste.carbon.mcp", "waste.carbon"),
+	(":Mac:Build:zlib.carbon.mcp", "zlib.carbon"),
+	(":Mac:Build:_dummy_tkinter.mcp", "_tkinter.carbon"),
+	(":Mac:Build:hfsplus.carbon.mcp", "hfsplus.carbon"),
+##	(":Extensions:Imaging:_tkinter.carbon.mcp", "_tkinter.carbon"),
+	(":Mac:Build:ColorPicker.carbon.mcp", "ColorPicker.carbon"),
+	(":Mac:Build:_AE.carbon.mcp", "_AE.carbon"),
+	(":Mac:Build:_App.carbon.mcp", "_App.carbon"),
+	(":Mac:Build:_CF.carbon.mcp", "_CF.carbon"),
+	(":Mac:Build:_CG.carbon.mcp", "_CG.carbon"),
+	(":Mac:Build:_CarbonEvt.carbon.mcp", "_CarbonEvt.carbon"),
+	(":Mac:Build:_Cm.carbon.mcp", "_Cm.carbon"),
+	(":Mac:Build:_Ctl.carbon.mcp", "_Ctl.carbon"),
+	(":Mac:Build:_Dlg.carbon.mcp", "_Dlg.carbon"),
+	(":Mac:Build:_Drag.carbon.mcp", "_Drag.carbon"),
+	(":Mac:Build:_Evt.carbon.mcp", "_Evt.carbon"),
+	(":Mac:Build:_Fm.carbon.mcp", "_Fm.carbon"),
+	(":Mac:Build:_Icn.carbon.mcp", "_Icn.carbon"),
+	(":Mac:Build:_List.carbon.mcp", "_List.carbon"),
+	(":Mac:Build:_Menu.carbon.mcp", "_Menu.carbon"),
+	(":Mac:Build:_Mlte.carbon.mcp", "_Mlte.carbon"),
+	(":Mac:Build:_Qd.carbon.mcp", "_Qd.carbon"),
+	(":Mac:Build:_Qdoffs.carbon.mcp", "_Qdoffs.carbon"),
+	(":Mac:Build:_Qt.carbon.mcp", "_Qt.carbon"),
+	(":Mac:Build:_Res.carbon.mcp", "_Res.carbon"),
+	(":Mac:Build:_Scrap.carbon.mcp", "_Scrap.carbon"),
+	(":Mac:Build:_Snd.carbon.mcp", "_Snd.carbon"),
+	(":Mac:Build:_Sndihooks.carbon.mcp", "_Sndihooks.carbon"),
+	(":Mac:Build:_TE.carbon.mcp", "_TE.carbon"),
+	(":Mac:Build:_Win.carbon.mcp", "_Win.carbon"),
+	
+	]),
 
 I_PPC_FULL : (buildmwproject, "CWIE", [
 		(":Mac:Build:PythonStandalone.mcp", "PythonStandalone"),
@@ -386,8 +355,8 @@ I_APPLETS : (buildapplet, None, [
 		(":Mac:scripts:BuildApplet.py", "BuildApplet", None),
 		(":Mac:scripts:BuildApplication.py", "BuildApplication", None),
 		(":Mac:scripts:ConfigurePython.py", "ConfigurePython", None),
-##		(":Mac:scripts:ConfigurePython.py", "ConfigurePythonCarbon", "PythonInterpreterCarbon"),
-##		(":Mac:scripts:ConfigurePython.py", "ConfigurePythonClassic", "PythonInterpreterClassic"),
+		(":Mac:scripts:ConfigurePython.py", "ConfigurePythonCarbon", "PythonInterpreterCarbon"),
+		(":Mac:scripts:ConfigurePython.py", "ConfigurePythonClassic", "PythonInterpreterClassic"),
 		(":Mac:Tools:IDE:PythonIDE.py", "Python IDE", None),
 		(":Mac:Tools:CGI:PythonCGISlave.py", ":Mac:Tools:CGI:PythonCGISlave", None),
 		(":Mac:Tools:CGI:BuildCGIApplet.py", ":Mac:Tools:CGI:BuildCGIApplet", None),
@@ -411,9 +380,10 @@ def incbuildno(filename):
 				
 def main():
 	macresource.need('DLOG', DIALOG_ID, 'fullbuild.rsrc')
-	dir = EasyDialogs.AskFolder(message='Python source folder:')
-	if not dir:
+	dir, ok = macfs.GetDirectory('Python source folder:')
+	if not ok:
 		sys.exit(0)
+	dir = dir.as_pathname()
 	# Set genpluginprojects to use this folder (slight hack)
 	genpluginprojects.PYTHONDIR = dir
 	

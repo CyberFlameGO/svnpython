@@ -1,3 +1,5 @@
+import string
+
 class History:
 
     def __init__(self, text, output_sep = "\n"):
@@ -20,11 +22,11 @@ class History:
     def _get_source(self, start, end):
         # Get source code from start index to end index.  Lines in the
         # text control may be separated by sys.ps2 .
-        lines = self.text.get(start, end).split(self.output_sep)
-        return "\n".join(lines)
+        lines = string.split(self.text.get(start, end), self.output_sep)
+        return string.join(lines, "\n")
 
     def _put_source(self, where, source):
-        output = self.output_sep.join(source.split("\n"))
+        output = string.join(string.split(source, "\n"), self.output_sep)
         self.text.insert(where, output)
 
     def history_do(self, reverse):
@@ -66,7 +68,7 @@ class History:
         self.history_prefix = prefix
 
     def history_store(self, source):
-        source = source.strip()
+        source = string.strip(source)
         if len(source) > 2:
             # avoid duplicates
             try:
@@ -78,7 +80,7 @@ class History:
         self.history_prefix = None
 
     def recall(self, s):
-        s = s.strip()
+        s = string.strip(s)
         self.text.tag_remove("sel", "1.0", "end")
         self.text.delete("iomark", "end-1c")
         self.text.mark_set("insert", "end-1c")

@@ -45,12 +45,20 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <Carbon/Carbon.h>
 #endif /* WITHOUT_FRAMEWORKS */
 
+#if UNIVERSAL_INTERFACES_VERSION >= 0x0340
 typedef long refcontype;
+#else
+typedef unsigned long refcontype;
+#endif
 
 #include "Python.h"
 #include "macglue.h"
 
+#ifdef TARGET_API_MAC_OSX
+#define PATHNAMELEN 1024
+#else
 #define PATHNAMELEN 256
+#endif
 
 static int arg_count;
 static char *arg_vector[256];
@@ -71,6 +79,8 @@ strdup(const char *src)
 }
 #endif
 
+
+#if !TARGET_API_MAC_OSX
 /* Initialize FSSpec and full name of current application */
 
 OSErr
@@ -87,13 +97,18 @@ PyMac_init_process_location(void)
 	info.processInfoLength = sizeof(ProcessInfoRec);
 	info.processName = NULL;
 	info.processAppSpec = &PyMac_ApplicationFSSpec;
-	if ( err=GetProcessInformation(&currentPSN, &info))
+	if ( err=GetProcessInformation(&currentPSN, &info)) {
+		fprintf(stderr, "GetProcessInformation failed: error %d\n", err);
 		return err;
-	if ( err=PyMac_GetFullPathname(&PyMac_ApplicationFSSpec, PyMac_ApplicationPath, PATHNAMELEN) )
+	}
+	if ( err=PyMac_GetFullPathname(&PyMac_ApplicationFSSpec, PyMac_ApplicationPath, PATHNAMELEN) ) {
+		fprintf(stderr, "PyMac_GetFullPathname failed for application: error %d\n", err);
 		return err;
+	}
 	applocation_inited = 1;
 	return 0;
 }
+#endif /* !TARGET_API_MAC_OSX */
 
 /* Check that there aren't any args remaining in the event */
 
@@ -130,8 +145,10 @@ static pascal OSErr
 handle_open_app(const AppleEvent *theAppleEvent, AppleEvent *reply, refcontype refCon)
 {
 	#pragma unused (reply, refCon)
-#if 0
-	/* Test by Jack: would removing this facilitate debugging? */
+#if 1
+	/* Removing this facilitate debugging: you can start Python under CW and
+	 * then double-click a file to run it.
+	 */
 	got_one = 1;
 #endif
 	return get_missing_params(theAppleEvent);
@@ -218,11 +235,15 @@ event_loop(void)
 	
 	got_one = 0;
 	for (n = 0; n < 100 && !got_one; n++) {
-		ok = GetNextEvent(everyEvent, &event);
+#if !TARGET_API_MAC_CARBON
+		SystemTask();
+#endif
+		ok = WaitNextEvent(everyEvent, &event, 1, NULL);
 		if (ok && event.what == kHighLevelEvent) {
 			AEProcessAppleEvent(&event);
 		}
 	}
+	if (!got_one) fprintf(stderr, "Warning: no OAPP or ODOC AppleEvent received\n");
 }
 
 /* Get the argv vector, return argc */
@@ -231,8 +252,13 @@ int
 PyMac_GetArgv(char ***pargv, int noevents)
 {
 	arg_count = 0;
+#if TARGET_API_MAC_OSX
+	/* In an OSX bundle argv[0] is okay */
+	arg_count++;
+#else
 	(void)PyMac_init_process_location();
 	arg_vector[arg_count++] = strdup(PyMac_ApplicationPath);
+#endif /* TARGET_API_MAC_OSX */
 	
 	if( !noevents ) {
 		set_ae_handlers();

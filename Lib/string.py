@@ -34,10 +34,9 @@ punctuation = """!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""
 printable = digits + letters + punctuation + whitespace
 
 # Case conversion helpers
-# Use str to convert Unicode literal in case of -U
-l = map(chr, xrange(256))
-_idmap = str('').join(l)
-del l
+_idmap = ''
+for i in range(256): _idmap = _idmap + chr(i)
+del i
 
 # Backward compatible names for exceptions
 index_error = ValueError
@@ -91,6 +90,7 @@ def lstrip(s, chars=None):
 
     Return a copy of the string s with leading whitespace removed.
     If chars is given and not None, remove characters in chars instead.
+    If chars is unicode, S will be converted to unicode before stripping.
 
     """
     return s.lstrip(chars)
@@ -101,6 +101,7 @@ def rstrip(s, chars=None):
 
     Return a copy of the string s with trailing whitespace removed.
     If chars is given and not None, remove characters in chars instead.
+    If chars is unicode, S will be converted to unicode before stripping.
 
     """
     return s.rstrip(chars)
@@ -194,6 +195,10 @@ def rfind(s, *args):
 _float = float
 _int = int
 _long = long
+try:
+    _StringTypes = (str, unicode)
+except NameError:
+    _StringTypes = (str,)
 
 # Convert string to float
 def atof(s):
@@ -279,7 +284,7 @@ def zfill(x, width):
     of the specified width.  The string x is never truncated.
 
     """
-    if not isinstance(x, basestring):
+    if not isinstance(x, _StringTypes):
         x = repr(x)
     return x.zfill(width)
 

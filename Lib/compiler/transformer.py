@@ -28,6 +28,7 @@ import parser
 # 1.5.2 for code branches executed in 1.5.2
 import symbol
 import token
+import string
 import sys
 
 error = 'walker.error'
@@ -37,11 +38,7 @@ from consts import OP_ASSIGN, OP_DELETE, OP_APPLY
 
 def parseFile(path):
     f = open(path)
-    # XXX The parser API tolerates files without a trailing newline,
-    # but not strings without a trailing newline.  Always add an extra
-    # newline to the file contents, since we're going through the string
-    # version of the API.
-    src = f.read() + "\n"
+    src = f.read()
     f.close()
     return parse(src)
 
@@ -72,7 +69,7 @@ def Node(*args):
     kind = args[0]
     if nodes.has_key(kind):
         try:
-            return nodes[kind](*args[1:])
+            return apply(nodes[kind], args[1:])
         except TypeError:
             print nodes[kind], len(args), args
             raise
@@ -104,7 +101,6 @@ class Transformer:
                                token.STRING: self.atom_string,
                                token.NAME: self.atom_name,
                                }
-        self.encoding = None
 
     def transform(self, tree):
         """Transform an AST into a modified parse tree."""
@@ -115,8 +111,7 @@ class Transformer:
     def parsesuite(self, text):
         """Return a modified parse tree for the given suite text."""
         # Hack for handling non-native line endings on non-DOS like OSs.
-        # this can go now we have universal newlines?
-        text = text.replace('\x0d', '')
+        text = string.replace(text, '\x0d', '')
         return self.transform(parser.suite(text))
 
     def parseexpr(self, text):
@@ -137,12 +132,6 @@ class Transformer:
     def compile_node(self, node):
         ### emit a line-number node?
         n = node[0]
-
-        if n == symbol.encoding_decl:
-            self.encoding = node[2]
-            node = node[1]
-            n = node[0]
-
         if n == symbol.single_input:
             return self.single_input(node[1:])
         if n == symbol.file_input:
@@ -303,10 +292,10 @@ class Transformer:
             n.lineno = exprNode.lineno
             return n
         if nodelist[1][0] == token.EQUAL:
-            nodesl = []
+            nodes = []
             for i in range(0, len(nodelist) - 2, 2):
-                nodesl.append(self.com_assign(nodelist[i], OP_ASSIGN))
-            n = Assign(nodesl, exprNode)
+                nodes.append(self.com_assign(nodelist[i], OP_ASSIGN))
+            n = Assign(nodes, exprNode)
             n.lineno = nodelist[1][2]
         else:
             lval = self.com_augassign(nodelist[0])
@@ -531,7 +520,6 @@ class Transformer:
         return self.com_binary(Tuple, nodelist)
 
     testlist_safe = testlist # XXX
-    testlist1 = testlist
     exprlist = testlist
 
     def test(self, nodelist):
@@ -651,7 +639,6 @@ class Transformer:
         elt = nodelist[0]
         t = elt[0]
         node = self.com_node(nodelist[-1])
-        # need to handle (unary op)constant here...
         if t == token.PLUS:
             node = UnaryAdd(node)
             node.lineno = elt[2]
@@ -713,21 +700,11 @@ class Transformer:
         n.lineno = nodelist[0][2]
         return n
 
-    def decode_literal(self, lit):
-        if self.encoding:
-            # this is particularly fragile & a bit of a
-            # hack... changes in compile.c:parsestr and
-            # tokenizer.c must be reflected here.
-            if self.encoding not in ['utf-8', 'iso-8859-1']:
-                lit = unicode(lit, 'utf-8').encode(self.encoding)
-            return eval("# coding: %s\n%s" % (self.encoding, lit))
-        else:
-            return eval(lit)
-
     def atom_string(self, nodelist):
+        ### need to verify this matches compile.c
         k = ''
         for node in nodelist:
-            k += self.decode_literal(node[1])
+            k = k + eval(node[1])
         n = Const(k)
         n.lineno = nodelist[0][2]
         return n

@@ -17,7 +17,7 @@ typedef struct {
         MD5_CTX	md5;		/* the context holder */
 } md5object;
 
-static PyTypeObject MD5type;
+staticforward PyTypeObject MD5type;
 
 #define is_md5object(v)		((v)->ob_type == &MD5type)
 
@@ -52,7 +52,7 @@ md5_update(md5object *self, PyObject *args)
 	unsigned char *cp;
 	int len;
 
-	if (!PyArg_ParseTuple(args, "s#:update", &cp, &len))
+	if (!PyArg_Parse(args, "s#", &cp, &len))
 		return NULL;
 
 	MD5Update(&self->md5, cp, len);
@@ -61,19 +61,22 @@ md5_update(md5object *self, PyObject *args)
 	return Py_None;
 }
 
-PyDoc_STRVAR(update_doc,
+static char update_doc [] =
 "update (arg)\n\
 \n\
 Update the md5 object with the string arg. Repeated calls are\n\
 equivalent to a single call with the concatenation of all the\n\
-arguments.");
+arguments.";
 
 
 static PyObject *
-md5_digest(md5object *self)
+md5_digest(md5object *self, PyObject *args)
 {
  	MD5_CTX mdContext;
 	unsigned char aDigest[16];
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	/* make a temporary copy, and perform the final */
 	mdContext = self->md5;
@@ -82,21 +85,24 @@ md5_digest(md5object *self)
 	return PyString_FromStringAndSize((char *)aDigest, 16);
 }
 
-PyDoc_STRVAR(digest_doc,
+static char digest_doc [] =
 "digest() -> string\n\
 \n\
 Return the digest of the strings passed to the update() method so\n\
 far. This is an 16-byte string which may contain non-ASCII characters,\n\
-including null bytes.");
+including null bytes.";
 
 
 static PyObject *
-md5_hexdigest(md5object *self)
+md5_hexdigest(md5object *self, PyObject *args)
 {
  	MD5_CTX mdContext;
 	unsigned char digest[16];
 	unsigned char hexdigest[32];
 	int i, j;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	/* make a temporary copy, and perform the final */
 	mdContext = self->md5;
@@ -116,16 +122,19 @@ md5_hexdigest(md5object *self)
 }
 
 
-PyDoc_STRVAR(hexdigest_doc,
+static char hexdigest_doc [] =
 "hexdigest() -> string\n\
 \n\
-Like digest(), but returns the digest as a string of hexadecimal digits.");
+Like digest(), but returns the digest as a string of hexadecimal digits.";
 
 
 static PyObject *
-md5_copy(md5object *self)
+md5_copy(md5object *self, PyObject *args)
 {
 	md5object *md5p;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	if ((md5p = newmd5object()) == NULL)
 		return NULL;
@@ -135,17 +144,17 @@ md5_copy(md5object *self)
 	return (PyObject *)md5p;
 }
 
-PyDoc_STRVAR(copy_doc,
+static char copy_doc [] =
 "copy() -> md5 object\n\
 \n\
-Return a copy (``clone'') of the md5 object.");
+Return a copy (``clone'') of the md5 object.";
 
 
 static PyMethodDef md5_methods[] = {
-	{"update",    (PyCFunction)md5_update,    METH_VARARGS, update_doc},
-	{"digest",    (PyCFunction)md5_digest,    METH_NOARGS,  digest_doc},
-	{"hexdigest", (PyCFunction)md5_hexdigest, METH_NOARGS,  hexdigest_doc},
-	{"copy",      (PyCFunction)md5_copy,      METH_NOARGS,  copy_doc},
+	{"update",    (PyCFunction)md5_update,    METH_OLDARGS, update_doc},
+	{"digest",    (PyCFunction)md5_digest,    METH_OLDARGS, digest_doc},
+	{"hexdigest", (PyCFunction)md5_hexdigest, METH_OLDARGS, hexdigest_doc},
+	{"copy",      (PyCFunction)md5_copy,      METH_OLDARGS, copy_doc},
 	{NULL, NULL}			     /* sentinel */
 };
 
@@ -159,7 +168,8 @@ md5_getattr(md5object *self, char *name)
 	return Py_FindMethod(md5_methods, (PyObject *)self, name);
 }
 
-PyDoc_STRVAR(module_doc,
+static char module_doc [] =
+
 "This module implements the interface to RSA's MD5 message digest\n\
 algorithm (see also Internet RFC 1321). Its use is quite\n\
 straightforward: use the new() to create an md5 object. You can now\n\
@@ -175,9 +185,10 @@ md5([arg]) -- DEPRECATED, same as new, but for compatibility\n\
 \n\
 Special Objects:\n\
 \n\
-MD5Type -- type object for md5 objects");
+MD5Type -- type object for md5 objects\n\
+";
 
-PyDoc_STRVAR(md5type_doc,
+static char md5type_doc [] =
 "An md5 represents the object used to calculate the MD5 checksum of a\n\
 string of information.\n\
 \n\
@@ -186,9 +197,10 @@ Methods:\n\
 update() -- updates the current digest with an additional string\n\
 digest() -- return the current digest value\n\
 hexdigest() -- return the current digest as a string of hexadecimal digits\n\
-copy() -- return a copy of the current md5 object");
+copy() -- return a copy of the current md5 object\n\
+";
 
-static PyTypeObject MD5type = {
+statichere PyTypeObject MD5type = {
 	PyObject_HEAD_INIT(NULL)
 	0,			  /*ob_size*/
 	"md5.md5",		  /*tp_name*/
@@ -236,11 +248,11 @@ MD5_new(PyObject *self, PyObject *args)
 	return (PyObject *)md5p;
 }
 
-PyDoc_STRVAR(new_doc,
+static char new_doc [] =
 "new([arg]) -> md5 object\n\
 \n\
 Return a new md5 object. If arg is present, the method call update(arg)\n\
-is made.");
+is made.";
 
 
 /* List of functions exported by this module */
@@ -254,7 +266,7 @@ static PyMethodDef md5_functions[] = {
 
 /* Initialize this module. */
 
-PyMODINIT_FUNC
+DL_EXPORT(void)
 initmd5(void)
 {
 	PyObject *m, *d;

@@ -1,10 +1,10 @@
-from test.test_support import verify, verbose, TestFailed, vereq
+from test_support import verify, verbose, TestFailed
 import sys
 import gc
 
 def expect(actual, expected, name):
     if actual != expected:
-        raise TestFailed, "test_%s: actual %r, expected %r" % (
+        raise TestFailed, "test_%s: actual %d, expected %d" % (
             name, actual, expected)
 
 def expect_nonzero(actual, name):
@@ -124,30 +124,6 @@ def test_finalizer():
         raise TestFailed, "didn't find obj in garbage (finalizer)"
     gc.garbage.remove(obj)
 
-def test_finalizer_newclass():
-    # A() is uncollectable if it is part of a cycle, make sure it shows up
-    # in gc.garbage.
-    class A(object):
-        def __del__(self): pass
-    class B(object):
-        pass
-    a = A()
-    a.a = a
-    id_a = id(a)
-    b = B()
-    b.b = b
-    gc.collect()
-    del a
-    del b
-    expect_nonzero(gc.collect(), "finalizer")
-    for obj in gc.garbage:
-        if id(obj) == id_a:
-            del obj.a
-            break
-    else:
-        raise TestFailed, "didn't find obj in garbage (finalizer)"
-    gc.garbage.remove(obj)
-
 def test_function():
     # Tricky: f -> d -> f, code should call d.clear() after the exec to
     # break the cycle.
@@ -168,25 +144,23 @@ def test_frame():
 def test_saveall():
     # Verify that cyclic garbage like lists show up in gc.garbage if the
     # SAVEALL option is enabled.
-
-    # First make sure we don't save away other stuff that just happens to
-    # be waiting for collection.
-    gc.collect()
-    vereq(gc.garbage, []) # if this fails, someone else created immortal trash
-
-    L = []
-    L.append(L)
-    id_L = id(L)
-
     debug = gc.get_debug()
     gc.set_debug(debug | gc.DEBUG_SAVEALL)
-    del L
+    l = []
+    l.append(l)
+    id_l = id(l)
+    del l
     gc.collect()
-    gc.set_debug(debug)
-
-    vereq(len(gc.garbage), 1)
-    obj = gc.garbage.pop()
-    vereq(id(obj), id_L)
+    try:
+        for obj in gc.garbage:
+            if id(obj) == id_l:
+                del obj[:]
+                break
+        else:
+            raise TestFailed, "didn't find obj in garbage (saveall)"
+        gc.garbage.remove(obj)
+    finally:
+        gc.set_debug(debug)
 
 def test_del():
     # __del__ methods can trigger collection, make this to happen
@@ -201,28 +175,13 @@ def test_del():
     del a
 
     gc.disable()
-    gc.set_threshold(*thresholds)
-
-def test_del_newclass():
-    # __del__ methods can trigger collection, make this to happen
-    thresholds = gc.get_threshold()
-    gc.enable()
-    gc.set_threshold(1)
-
-    class A(object):
-        def __del__(self):
-            dir(self)
-    a = A()
-    del a
-
-    gc.disable()
-    gc.set_threshold(*thresholds)
+    apply(gc.set_threshold, thresholds)
 
 class Ouch:
     n = 0
     def __del__(self):
         Ouch.n = Ouch.n + 1
-        if Ouch.n % 17 == 0:
+        if Ouch.n % 7 == 0:
             gc.collect()
 
 def test_trashcan():
@@ -233,15 +192,9 @@ def test_trashcan():
     # If this test fails (as it does in 2.0, 2.1 and 2.2), it will
     # most likely die via segfault.
 
-    # Note:  In 2.3 the possibility for compiling without cyclic gc was
-    # removed, and that in turn allows the trashcan mechanism to work
-    # via much simpler means (e.g., it never abuses the type pointer or
-    # refcount fields anymore).  Since it's much less likely to cause a
-    # problem now, the various constants in this expensive (we force a lot
-    # of full collections) test are cut back from the 2.2 version.
     gc.enable()
-    N = 150
-    for count in range(2):
+    N = 200
+    for count in range(3):
         t = []
         for i in range(N):
             t = [t, Ouch()]
@@ -346,29 +299,6 @@ def test_boom2_new():
     expect(gc.collect(), 4, "boom2_new")
     expect(len(gc.garbage), garbagelen, "boom2_new")
 
-def test_get_referents():
-    alist = [1, 3, 5]
-    got = gc.get_referents(alist)
-    got.sort()
-    expect(got, alist, "get_referents")
-
-    atuple = tuple(alist)
-    got = gc.get_referents(atuple)
-    got.sort()
-    expect(got, alist, "get_referents")
-
-    adict = {1: 3, 5: 7}
-    expected = [1, 3, 5, 7]
-    got = gc.get_referents(adict)
-    got.sort()
-    expect(got, expected, "get_referents")
-
-    got = gc.get_referents([1, 2], {3: 4}, (0, 0, 0))
-    got.sort()
-    expect(got, [0, 0] + range(5), "get_referents")
-
-    expect(gc.get_referents(1, 'a', 4j), [], "get_referents")
-
 def test_all():
     gc.collect() # Delete 2nd generation garbage
     run_test("lists", test_list)
@@ -382,23 +312,20 @@ def test_all():
     run_test("functions", test_function)
     run_test("frames", test_frame)
     run_test("finalizers", test_finalizer)
-    run_test("finalizers (new class)", test_finalizer_newclass)
     run_test("__del__", test_del)
-    run_test("__del__ (new class)", test_del_newclass)
     run_test("saveall", test_saveall)
     run_test("trashcan", test_trashcan)
     run_test("boom", test_boom)
     run_test("boom2", test_boom2)
     run_test("boom_new", test_boom_new)
     run_test("boom2_new", test_boom2_new)
-    run_test("get_referents", test_get_referents)
 
 def test():
     if verbose:
         print "disabling automatic collection"
     enabled = gc.isenabled()
     gc.disable()
-    verify(not gc.isenabled())
+    verify(not gc.isenabled() )
     debug = gc.get_debug()
     gc.set_debug(debug & ~gc.DEBUG_LEAK) # this test is supposed to leak
 

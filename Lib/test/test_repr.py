@@ -7,7 +7,7 @@ import sys
 import os
 import unittest
 
-from test.test_support import run_unittest
+from test_support import run_unittest
 from repr import repr as r # Don't shadow builtin repr
 
 
@@ -34,8 +34,6 @@ class ReprTests(unittest.TestCase):
         eq(r(s), expected)
 
     def test_container(self):
-        from array import array
-
         eq = self.assertEquals
         # Tuples give up after 6 elements
         eq(r(()), "()")
@@ -57,16 +55,6 @@ class ReprTests(unittest.TestCase):
         eq(r(d), "{'alice': 1, 'bob': 2, 'charles': 3, 'dave': 4}")
         d['arthur'] = 1
         eq(r(d), "{'alice': 1, 'arthur': 1, 'bob': 2, 'charles': 3, ...}")
-
-        # array.array after 5.
-        eq(r(array('i')), "array('i', [])")
-        eq(r(array('i', [1])), "array('i', [1])")
-        eq(r(array('i', [1, 2])), "array('i', [1, 2])")
-        eq(r(array('i', [1, 2, 3])), "array('i', [1, 2, 3])")
-        eq(r(array('i', [1, 2, 3, 4])), "array('i', [1, 2, 3, 4])")
-        eq(r(array('i', [1, 2, 3, 4, 5])), "array('i', [1, 2, 3, 4, 5])")
-        eq(r(array('i', [1, 2, 3, 4, 5, 6])),
-                   "array('i', [1, 2, 3, 4, 5, ...])")
 
     def test_numbers(self):
         eq = self.assertEquals
@@ -117,11 +105,15 @@ class ReprTests(unittest.TestCase):
             '<built-in method split of str object at 0x'))
 
     def test_xrange(self):
-        import warnings
         eq = self.assertEquals
         eq(repr(xrange(1)), 'xrange(1)')
         eq(repr(xrange(1, 2)), 'xrange(1, 2)')
         eq(repr(xrange(1, 2, 3)), 'xrange(1, 4, 3)')
+        # Turn off warnings for deprecated multiplication
+        import warnings
+        warnings.filterwarnings('ignore', category=DeprecationWarning,
+                                module=ReprTests.__module__)
+        eq(repr(xrange(1) * 3), '(xrange(1) * 3)')
 
     def test_nesting(self):
         eq = self.assertEquals
@@ -206,8 +198,7 @@ class LongReprTest(unittest.TestCase):
         touch(os.path.join(self.subpkgname, self.pkgname + os.extsep + 'py'))
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import areallylongpackageandmodulenametotestreprtruncation
         eq(repr(areallylongpackageandmodulenametotestreprtruncation),
-           "<module '%s' from '%s'>" % (areallylongpackageandmodulenametotestreprtruncation.__name__, areallylongpackageandmodulenametotestreprtruncation.__file__))
-        eq(repr(sys), "<module 'sys' (built-in)>")
+           "<module 'areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation' from '%s'>" % areallylongpackageandmodulenametotestreprtruncation.__file__)
 
     def test_type(self):
         eq = self.assertEquals
@@ -217,7 +208,7 @@ class foo(object):
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import foo
         eq(repr(foo.foo),
-               "<class '%s.foo'>" % foo.__name__)
+               "<class 'areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation.foo.foo'>")
 
     def test_object(self):
         # XXX Test the repr of a type with a really long tp_name but with no
@@ -230,9 +221,8 @@ class bar:
     pass
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import bar
-        # Module name may be prefixed with "test.", depending on how run.
         self.failUnless(repr(bar.bar).startswith(
-            "<class %s.bar at 0x" % bar.__name__))
+            "<class areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation.bar.bar at 0x"))
 
     def test_instance(self):
         touch(os.path.join(self.subpkgname, 'baz'+os.extsep+'py'), '''\
@@ -242,7 +232,7 @@ class baz:
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import baz
         ibaz = baz.baz()
         self.failUnless(repr(ibaz).startswith(
-            "<%s.baz instance at 0x" % baz.__name__))
+            "<areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation.baz.baz instance at 0x"))
 
     def test_method(self):
         eq = self.assertEquals
@@ -257,8 +247,7 @@ class aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         # Bound method next
         iqux = qux.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa()
         self.failUnless(repr(iqux.amethod).startswith(
-            '<bound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod of <%s.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa instance at 0x' \
-            % (qux.__name__,) ))
+            '<bound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod of <areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation.qux.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa instance at 0x'))
 
     def test_builtin_function(self):
         # XXX test built-in functions and methods with really long names

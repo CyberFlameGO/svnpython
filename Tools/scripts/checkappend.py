@@ -35,13 +35,14 @@ __version__ = 1, 0, 0
 
 import os
 import sys
+import string
 import getopt
 import tokenize
 
 verbose = 0
 
 def errprint(*args):
-    msg = ' '.join(args)
+    msg = string.join(args)
     sys.stderr.write(msg)
     sys.stderr.write("\n")
 

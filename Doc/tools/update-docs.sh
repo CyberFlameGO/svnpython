@@ -25,7 +25,6 @@ cd .. || exit $?
 if [ -d $DOCTYPE ] ; then
     mv $DOCTYPE $DOCTYPE-temp
 fi
-mv $TMPDIR/Python-Docs-* $DOCTYPE
-rmdir $TMPDIR
+mv $TMPDIR $DOCTYPE
 rm -rf $DOCTYPE-temp || exit $?
 rm "$UPDATES" || exit $?

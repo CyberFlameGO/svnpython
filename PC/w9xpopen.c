@@ -14,10 +14,8 @@
  * AKA solution to the problem described in KB: Q150956.
  */    
 
-#define WIN32_LEAN_AND_MEAN
+#define WINDOWS_LEAN_AND_MEAN
 #include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>  /* for malloc and its friends */
 
 const char *usage =
 "This program is used by Python's os.popen function\n"
@@ -30,56 +28,11 @@ int main(int argc, char *argv[])
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     DWORD exit_code=0;
-    int cmdlen = 0;
-    int i;
-    char *cmdline, *cmdlinefill;
 
-    if (argc < 2) {
-        if (GetFileType(GetStdHandle(STD_INPUT_HANDLE))==FILE_TYPE_CHAR)
-            /* Attached to a console, and therefore not executed by Python
-               Display a message box for the inquisitive user
-            */
-            MessageBox(NULL, usage, argv[0], MB_OK);
-        else {
-            /* Eeek - executed by Python, but args are screwed!
-               Write an error message to stdout so there is at
-               least some clue for the end user when it appears
-               in their output.
-               A message box would be hidden and blocks the app.
-             */
-            fprintf(stdout, "Internal popen error - no args specified\n%s\n", usage);
-        }
+    if (argc != 2) {
+        MessageBox(NULL, usage, argv[0], MB_OK);
         return 1;
     }
-    /* Build up the command-line from the args.
-       Args with a space are quoted, existing quotes are escaped.
-       To keep things simple calculating the buffer size, we assume
-       every character is a quote - ie, we allocate double what we need
-       in the worst case.  As this is only double the command line passed
-       to us, there is a good chance this is reasonably small, so the total 
-       allocation will almost always be < 512 bytes.
-    */
-    for (i=1;i<argc;i++)
-        cmdlen += strlen(argv[i])*2 + 3; /* one space, maybe 2 quotes */
-    cmdline = cmdlinefill = (char *)malloc(cmdlen+1);
-    if (cmdline == NULL)
-        return -1;
-    for (i=1;i<argc;i++) {
-        const char *arglook;
-        int bQuote = strchr(argv[i], ' ') != NULL;
-        if (bQuote)
-            *cmdlinefill++ = '"';
-        /* escape quotes */
-        for (arglook=argv[i];*arglook;arglook++) {
-            if (*arglook=='"')
-                *cmdlinefill++ = '\\';
-            *cmdlinefill++ = *arglook;
-        }
-        if (bQuote)
-            *cmdlinefill++ = '"';
-        *cmdlinefill++ = ' ';
-    }
-    *cmdlinefill = '\0';
 
     /* Make child process use this app's standard files. */
     ZeroMemory(&si, sizeof si);
@@ -90,14 +43,12 @@ int main(int argc, char *argv[])
     si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
     bRet = CreateProcess(
-        NULL, cmdline,
+        NULL, argv[1],
         NULL, NULL,
         TRUE, 0,
         NULL, NULL,
         &si, &pi
         );
-
-    free(cmdline);
 
     if (bRet) {
         if (WaitForSingleObject(pi.hProcess, INFINITE) != WAIT_FAILED) {

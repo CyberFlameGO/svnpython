@@ -14,7 +14,6 @@ PyFunction_New(PyObject *code, PyObject *globals)
 	if (op != NULL) {
 		PyObject *doc;
 		PyObject *consts;
-		PyObject *module;
 		op->func_weakreflist = NULL;
 		Py_INCREF(code);
 		op->func_code = code;
@@ -35,16 +34,6 @@ PyFunction_New(PyObject *code, PyObject *globals)
 		Py_INCREF(doc);
 		op->func_doc = doc;
 		op->func_dict = NULL;
-		op->func_module = NULL;
-
-		/* __module__: If module name is in globals, use it.
-		   Otherwise, use None.
-		*/
-		module = PyDict_GetItemString(globals, "__name__");
-		if (module) {
-		    Py_INCREF(module);
-		    op->func_module = module;
-		}
 	}
 	else
 		return NULL;
@@ -70,16 +59,6 @@ PyFunction_GetGlobals(PyObject *op)
 		return NULL;
 	}
 	return ((PyFunctionObject *) op) -> func_globals;
-}
-
-PyObject *
-PyFunction_GetModule(PyObject *op)
-{
-	if (!PyFunction_Check(op)) {
-		PyErr_BadInternalCall();
-		return NULL;
-	}
-	return ((PyFunctionObject *) op) -> func_module;
 }
 
 PyObject *
@@ -159,7 +138,6 @@ static PyMemberDef func_memberlist[] = {
 	 RESTRICTED|READONLY},
         {"func_name",     T_OBJECT,     OFF(func_name),         READONLY},
         {"__name__",      T_OBJECT,     OFF(func_name),         READONLY},
-        {"__module__",    T_OBJECT,     OFF(func_module), WRITE_RESTRICTED},
         {NULL}  /* Sentinel */
 };
 
@@ -288,13 +266,13 @@ static PyGetSetDef func_getsetlist[] = {
 	{NULL} /* Sentinel */
 };
 
-PyDoc_STRVAR(func_doc,
+static char func_doc[] =
 "function(code, globals[, name[, argdefs[, closure]]])\n\
 \n\
 Create a function object from a code object and a dictionary.\n\
 The optional name string overrides the name from the code object.\n\
 The optional argdefs tuple specifies the default argument values.\n\
-The optional closure tuple supplies the bindings for free variables.");
+The optional closure tuple supplies the bindings for free variables.";
 
 /* func_new() maintains the following invariants for closures.  The
    closure must correspond to the free variables of the code object.
@@ -398,7 +376,6 @@ func_dealloc(PyFunctionObject *op)
 		PyObject_ClearWeakRefs((PyObject *) op);
 	Py_DECREF(op->func_code);
 	Py_DECREF(op->func_globals);
-	Py_XDECREF(op->func_module);
 	Py_DECREF(op->func_name);
 	Py_XDECREF(op->func_defaults);
 	Py_XDECREF(op->func_doc);
@@ -428,11 +405,6 @@ func_traverse(PyFunctionObject *f, visitproc visit, void *arg)
 	}
 	if (f->func_globals) {
 		err = visit(f->func_globals, arg);
-		if (err)
-			return err;
-	}
-	if (f->func_module) {
-		err = visit(f->func_module, arg);
 		if (err)
 			return err;
 	}
@@ -615,7 +587,6 @@ cm_clear(classmethod *cm)
 	return 0;
 }
 
-
 static PyObject *
 cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)
 {
@@ -638,14 +609,14 @@ cm_init(PyObject *self, PyObject *args, PyObject *kwds)
 	classmethod *cm = (classmethod *)self;
 	PyObject *callable;
 
-	if (!PyArg_UnpackTuple(args, "classmethod", 1, 1, &callable))
+	if (!PyArg_ParseTuple(args, "O:callable", &callable))
 		return -1;
 	Py_INCREF(callable);
 	cm->cm_callable = callable;
 	return 0;
 }
 
-PyDoc_STRVAR(classmethod_doc,
+static char classmethod_doc[] =
 "classmethod(function) -> method\n\
 \n\
 Convert a function to be a class method.\n\
@@ -664,7 +635,7 @@ If a class method is called for a derived class, the derived class\n\
 object is passed as the implied first argument.\n\
 \n\
 Class methods are different than C++ or Java static methods.\n\
-If you want those, see the staticmethod builtin.");
+If you want those, see the staticmethod builtin.";
 
 PyTypeObject PyClassMethod_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
@@ -706,7 +677,7 @@ PyTypeObject PyClassMethod_Type = {
 	cm_init,				/* tp_init */
 	PyType_GenericAlloc,			/* tp_alloc */
 	PyType_GenericNew,			/* tp_new */
-	PyObject_GC_Del,	                /* tp_free */
+	_PyObject_GC_Del,			/* tp_free */
 };
 
 PyObject *
@@ -788,14 +759,14 @@ sm_init(PyObject *self, PyObject *args, PyObject *kwds)
 	staticmethod *sm = (staticmethod *)self;
 	PyObject *callable;
 
-	if (!PyArg_UnpackTuple(args, "staticmethod", 1, 1, &callable))
+	if (!PyArg_ParseTuple(args, "O:callable", &callable))
 		return -1;
 	Py_INCREF(callable);
 	sm->sm_callable = callable;
 	return 0;
 }
 
-PyDoc_STRVAR(staticmethod_doc,
+static char staticmethod_doc[] =
 "staticmethod(function) -> method\n\
 \n\
 Convert a function to be a static method.\n\
@@ -811,7 +782,7 @@ It can be called either on the class (e.g. C.f()) or on an instance\n\
 (e.g. C().f()).  The instance is ignored except for its class.\n\
 \n\
 Static methods in Python are similar to those found in Java or C++.\n\
-For a more advanced concept, see the classmethod builtin.");
+For a more advanced concept, see the classmethod builtin.";
 
 PyTypeObject PyStaticMethod_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
@@ -853,7 +824,7 @@ PyTypeObject PyStaticMethod_Type = {
 	sm_init,				/* tp_init */
 	PyType_GenericAlloc,			/* tp_alloc */
 	PyType_GenericNew,			/* tp_new */
-	PyObject_GC_Del,           		/* tp_free */
+	_PyObject_GC_Del,			/* tp_free */
 };
 
 PyObject *

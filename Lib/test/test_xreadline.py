@@ -1,7 +1,4 @@
-from test.test_support import verbose
-
-import warnings
-warnings.filterwarnings('ignore', "xreadlines", DeprecationWarning)
+from test_support import verbose
 
 class XReader:
     def __init__(self):

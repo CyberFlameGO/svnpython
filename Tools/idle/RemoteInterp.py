@@ -323,6 +323,7 @@ def riExec(id, file):
     cli.run()
 
 if __name__ == "__main__":
+    import sys
     import getopt
 
     SERVER = 1

@@ -13,7 +13,7 @@
 
 # update when constants are added or removed
 
-MAGIC = 20030419
+MAGIC = 20010701
 
 # max code word in this release
 
@@ -60,7 +60,6 @@ RANGE = "range"
 REPEAT = "repeat"
 REPEAT_ONE = "repeat_one"
 SUBPATTERN = "subpattern"
-MIN_REPEAT_ONE = "min_repeat_one"
 
 # positions
 AT_BEGINNING = "at_beginning"
@@ -121,8 +120,7 @@ OPCODES = [
     RANGE,
     REPEAT,
     REPEAT_ONE,
-    SUBPATTERN,
-    MIN_REPEAT_ONE
+    SUBPATTERN
 
 ]
 

@@ -56,14 +56,6 @@
     (match-string 0 py2texi-python-version))
   "Short version number, usually set by the LaTeX commands.")
 
-(defvar py2texi-texi-file-name nil
-  "If non-nil, that string is used as the name of the Texinfo file.
-Otherwise a generated Texinfo file name is used.")
-
-(defvar py2texi-info-file-name nil
-  "If non-nil, that string is used as the name of the Info file.
-Otherwise a generated Info file name is used.")
-
 (defvar py2texi-stop-on-problems nil
   "*If non-nil, stop when you encouter soft problem.")
 
@@ -73,35 +65,32 @@ Otherwise a generated Info file name is used.")
     ("cfuncdesc" 3
      (progn (setq findex t)
 	    "\n@table @code\n@item \\1 \\2(\\3)\n@findex \\2\n")
-     "@end table\n")
-    ("cmemberdesc" 3
-     "\n@table @code\n@item \\2 \\3\n"
-     "@end table\n")
+     "@end table")
     ("classdesc" 2
      (progn (setq obindex t)
 	    "\n@table @code\n@item \\1(\\2)\n@obindex \\1\n")
-     "@end table\n")
+     "@end table")
     ("classdesc*" 1
      (progn (setq obindex t)
 	    "\n@table @code\n@item \\1\n@obindex \\1\n")
-     "@end table\n")
+     "@end table")
     ("csimplemacrodesc" 1
      (progn (setq cindex t)
 	    "\n@table @code\n@item \\1\n@cindex \\1\n")
-     "@end table\n")     
+     "@end table")
     ("ctypedesc" 1
      (progn (setq cindex t)
 	    "\n@table @code\n@item \\1\n@cindex \\1\n")
-     "@end table\n")
+     "@end table")
     ("cvardesc" 2
      (progn (setq findex t)
 	    "\n@table @code\n@item \\1 \\2\n@findex \\2\n")
-     "@end table\n")
+     "@end table")
     ("datadesc" 1
      (progn (setq findex t)
 	    "\n@table @code\n@item \\1\n@findex \\1\n")
-     "@end table\n")
-    ("datadescni" 1 "\n@table @code\n@item \\1\n" "@end table\n")
+     "@end table")
+    ("datadescni" 1 "\n@table @code\n@item \\1\n" "@end table")
     ("definitions" 0 "@table @dfn" "@end table\n")
     ("description" 0 "@table @samp" "@end table\n")
     ("displaymath" 0 "" "")
@@ -122,20 +111,20 @@ Otherwise a generated Info file name is used.")
     ("excdesc" 1
      (progn (setq obindex t)
 	    "\n@table @code\n@item \\1\n@obindex \\1\n")
-     "@end table\n")
+     "@end table")
     ("excclassdesc" 2
      (progn (setq obindex t)
 	    "\n@table @code\n@item \\1(\\2)\n@obindex \\1\n")
-     "@end table\n")
+     "@end table")
     ("flushleft" 0 "" "")
-    ("fulllineitems" 0 "\n@table @code\n" "@end table\n")
+    ("fulllineitems" 0 "\n@table @code\n" "@end table")
     ("funcdesc" 2
      (progn (setq findex t)
 	    "\n@table @code\n@item \\1(\\2)\n@findex \\1\n")
-     "@end table\n")
-    ("funcdescni" 2 "\n@table @code\n@item \\1(\\2)\n" "@end table\n")
+     "@end table")
+    ("funcdescni" 2 "\n@table @code\n@item \\1(\\2)\n" "@end table")
     ("itemize" 0 "@itemize @bullet" "@end itemize\n")
-    ("list" 2 "\n@table @code\n" "@end table\n")
+    ("list" 2 "\n@table @code\n" "@end table")
     ("longtableii" 4 (concat "@multitable @columnfractions .5 .5\n"
 			     "@item \\3 @tab \\4\n"
 			     "@item ------- @tab ------ \n")
@@ -147,22 +136,22 @@ Otherwise a generated Info file name is used.")
     ("memberdesc" 1
      (progn (setq findex t)
 	    "\n@table @code\n@item \\1\n@findex \\1\n")
-     "@end table\n")
-    ("memberdescni" 1 "\n@table @code\n@item \\1\n" "@end table\n")
+     "@end table")
+    ("memberdescni" 1 "\n@table @code\n@item \\1\n" "@end table")
     ("methoddesc" 2
      (progn (setq findex t)
 	    "\n@table @code\n@item \\1(\\2)\n@findex \\1\n")
-     "@end table\n")
-    ("methoddescni" 2 "\n@table @code\n@item \\1(\\2)\n" "@end table\n")
+     "@end table")
+    ("methoddescni" 2 "\n@table @code\n@item \\1(\\2)\n" "@end table")
     ("notice" 0 "@emph{Notice:} " "")
     ("opcodedesc" 2
      (progn (setq findex t)
 	    "\n@table @code\n@item \\1 \\2\n@findex \\1\n")
-     "@end table\n")
-    ("productionlist" 0 "\n@table @code\n" "@end table\n")
+     "@end table")
+    ("productionlist" 0 "\n@table @code\n" "@end table")
     ("quotation" 0 "@quotation" "@end quotation")
-    ("seealso" 0 "See also:\n@table @emph\n" "@end table\n")
-    ("seealso*" 0 "@table @emph\n" "@end table\n")
+    ("seealso" 0 "See also:\n@table @emph\n" "@end table")
+    ("seealso*" 0 "@table @emph\n" "@end table")
     ("sloppypar" 0 "" "")
     ("small" 0 "" "")
     ("tableii" 4 (concat "@multitable @columnfractions .5 .5\n"
@@ -207,7 +196,6 @@ Both BEGIN and END are evaled.  Moreover, you can reference arguments through
     ("catcode" 0 "")
     ("cdata" 1 "@code{\\1}")
     ("centerline" 1 "@center \\1")
-    ("cfuncline" 3 "@itemx \\1 \\2(\\3)\n@findex \\2")
     ("cfunction" 1 "@code{\\1}")
     ("chapter" 1 (format "@node \\1\n@%s \\1\n"
 			 (if appendix "appendix" "chapter")))
@@ -215,13 +203,11 @@ Both BEGIN and END are evaled.  Moreover, you can reference arguments through
     ("character" 1 "@samp{\\1}")
     ("citetitle" 1 "@ref{Top,,,\\1}")
     ("class" 1 "@code{\\1}")
-    ("cmemberline" 3 "@itemx \\2 \\3\n")
     ("code" 1 "@code{\\1}")
     ("command" 1 "@command{\\1}")
     ("constant" 1 "@code{\\1}")
     ("copyright" 1 "@copyright{}")
     ("Cpp" 0 "C++")
-    ("csimplemacro" 1 "@code{\\1}")
     ("ctype" 1 "@code{\\1}")
     ("dataline" 1 (progn (setq findex t) "@item \\1\n@findex \\1\n"))
     ("date" 1 "\\1")
@@ -285,7 +271,7 @@ Both BEGIN and END are evaled.  Moreover, you can reference arguments through
     ("methodlineni" 2 "@item \\1(\\2)\n")
     ("mimetype" 1 "@samp{\\1}")
     ("module" 1 "@samp{\\1}")
-    ("moduleauthor" 2 "")
+    ("moduleauthor" 2 "This module was written by \\1 @email{\\2}.@*")
     ("modulesynopsis" 1 "\\1")
     ("moreargs" 0 "@dots{}")
     ("n" 0 "@backslash{}n")
@@ -311,7 +297,6 @@ Both BEGIN and END are evaled.  Moreover, you can reference arguments through
     ("plusminus" 0 "+-")
     ("POSIX" 0 "POSIX")
     ("production" 2 "@item \\1 \\2")
-    ("productioncont" 1 "@item @w{} \\1")
     ("program" 1 "@command{\\1}")
     ("programopt" 1 "@option{\\1}")
     ("protect" 0 "")
@@ -337,7 +322,8 @@ Both BEGIN and END are evaled.  Moreover, you can reference arguments through
 			  (py2texi-backslash-quote (match-string 1 str))
 			  (py2texi-backslash-quote (match-string 2 str)))
 		       "@node \\1\n@section \\1\n"))))
-    ("sectionauthor" 2 "")
+    ("sectionauthor" 2
+     "\nThis manual section was written by \\1 @email{\\2}.@*")
     ("seemodule" 2 "@ref{\\1} \\2")
     ("seepep" 3 "\n@table @strong\n@item PEP\\1 \\2\n\\3\n@end table\n")
     ("seerfc" 3 "\n@table @strong\n@item RFC\\1 \\2\n\\3\n@end table\n")
@@ -362,8 +348,6 @@ Both BEGIN and END are evaled.  Moreover, you can reference arguments through
     ("textasciitilde" 0 "~")
     ("textasciicircum" 0 "^")
     ("textbackslash" 0 "@backslash{}")
-    ("textgreater" 0 ">")
-    ("textless" 0 "<")
     ("textrm" 1 "\\1")
     ("texttt" 1 "@code{\\1}")
     ("textunderscore" 0 "_")
@@ -470,26 +454,20 @@ Each list item is of the form (COMMAND ARGNUM SUBSTITUTION) where:
     (py2texi-destroy-empties)
     (py2texi-fix-newlines)
     (py2texi-adjust-level))
-  (let* ((texi-file-name (or py2texi-texi-file-name
-			     (py2texi-texi-file-name file)))
-	 (info-file-name (or py2texi-info-file-name
-			     (py2texi-info-file-name texi-file-name))))
+  (let* ((filename (concat "./"
+			   (file-name-nondirectory file)
+			   (if (string-match "\\.tex$" file) "i" ".texi")))
+	 (infofilename (py2texi-info-file-name filename)))
     (goto-char (point-min))
     (when (looking-at py2texi-magic)
       (delete-region (point) (progn (beginning-of-line 2) (point)))
       (insert "\\input texinfo @c -*-texinfo-*-\n")
-      (insert "@setfilename " info-file-name))
+      (insert "@setfilename " (file-name-nondirectory infofilename)))
     (when (re-search-forward "@chapter" nil t)
       (texinfo-all-menus-update t))
     (goto-char (point-min))
-    (write-file texi-file-name)
-    (message (format "You can apply `makeinfo %s' now." texi-file-name))))
-
-
-(defun py2texi-texi-file-name (filename)
-  "Generate name of Texinfo file from original file name FILENAME."
-  (concat filename
-	  (if (string-match "\\.tex$" filename) "i" ".texi")))
+    (write-file filename)
+    (message (format "You can apply `makeinfo %s' now." filename))))
 
 
 (defun py2texi-info-file-name (filename)
@@ -727,25 +705,19 @@ Do not include .ind files."
 	id
 	counter
 	string
-	label
-	index)
+	label)
     (py2texi-search "^@node +\\(.*\\)$"
       (setq string (match-string 1))
       (if py2texi-xemacs
 	  (replace-match "@node " t)
 	(replace-match "" t nil nil 1))
-      (while (string-match "@label{[^}]*}" string)
+      (when (string-match "@label{[^}]*}" string)
 	(setq label (match-string 0 string))
-	(setq string (replace-match "" t nil string)))
-      (while (string-match "@..?index{[^}]*}" string)
-	(setq index (match-string 0 string))
 	(setq string (replace-match "" t nil string)))
       (while (string-match "@[a-zA-Z]+\\|[{}():]\\|``\\|''" string)
 	(setq string (replace-match "" t nil string)))
       (while (string-match " -- " string)
 	(setq string (replace-match " - " t nil string)))
-      (while (string-match "\\." string)
-	(setq string (replace-match "" t nil string)))
       (when (string-match " +$" string)
 	(setq string (replace-match "" t nil string)))
       (when (string-match "^\\(Built-in\\|Standard\\) Module \\|The " string)
@@ -761,11 +733,9 @@ Do not include .ind files."
 	(setq counter 1))
       (setf (gethash id nodes) counter)
       (insert string)
-      (beginning-of-line 3)
       (when label
-	(insert label "\n"))
-      (when index
-	(insert index "\n")))))
+	(beginning-of-line 3)
+	(insert label "\n")))))
 
 
 (defun py2texi-fix-references ()

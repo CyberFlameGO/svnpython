@@ -176,7 +176,7 @@ your local Python guru or system administrator.  (E.g.,
 \file{/usr/local/python} is a popular alternative location.)
 
 Typing an end-of-file character (\kbd{Control-D} on \UNIX,
-\kbd{Control-Z} on Windows) at the primary prompt causes the
+\kbd{Control-Z} on DOS or Windows) at the primary prompt causes the
 interpreter to exit with a zero exit status.  If that doesn't work,
 you can exit the interpreter by typing the following commands:
 \samp{import sys; sys.exit()}.
@@ -208,7 +208,7 @@ or other characters that are special to the shell, it is best to quote
 
 Note that there is a difference between \samp{python file} and
 \samp{python <file}.  In the latter case, input requests from the
-program, such as calls to \function{input()} and \function{raw_input()}, are
+program, such as calls to \code{input()} and \code{raw_input()}, are
 satisfied from \emph{file}.  Since this file has already been read
 until the end by the parser before the program starts executing, the
 program will encounter end-of-file immediately.  In the former case
@@ -271,8 +271,8 @@ When an error occurs, the interpreter prints an error
 message and a stack trace.  In interactive mode, it then returns to
 the primary prompt; when input came from a file, it exits with a
 nonzero exit status after printing
-the stack trace.  (Exceptions handled by an \keyword{except} clause in a
-\keyword{try} statement are not errors in this context.)  Some errors are
+the stack trace.  (Exceptions handled by an \code{except} clause in a
+\code{try} statement are not errors in this context.)  Some errors are
 unconditionally fatal and cause an exit with a nonzero exit; this
 applies to internal inconsistencies and some cases of running out of
 memory.  All error messages are written to the standard error stream;
@@ -285,8 +285,8 @@ primary prompt.\footnote{
         A problem with the GNU Readline package may prevent this.
 }
 Typing an interrupt while a command is executing raises the
-\exception{KeyboardInterrupt} exception, which may be handled by a
-\keyword{try} statement.
+\code{KeyboardInterrupt} exception, which may be handled by a
+\code{try} statement.
 
 \subsection{Executable Python Scripts \label{scripts}}
 
@@ -640,17 +640,6 @@ separated by a colon.
 'lp'
 \end{verbatim}
 
-Slice indices have useful defaults; an omitted first index defaults to
-zero, an omitted second index defaults to the size of the string being
-sliced.
-
-\begin{verbatim}
->>> word[:2]    # The first two characters
-'He'
->>> word[2:]    # All but the first two characters
-'lpA'
-\end{verbatim}
-
 Unlike a C string, Python strings cannot be changed.  Assigning to an 
 indexed position in the string results in an error:
 
@@ -673,6 +662,17 @@ efficient:
 'xelpA'
 >>> 'Splat' + word[4]
 'SplatA'
+\end{verbatim}
+
+Slice indices have useful defaults; an omitted first index defaults to
+zero, an omitted second index defaults to the size of the string being
+sliced.
+
+\begin{verbatim}
+>>> word[:2]    # The first two characters
+'He'
+>>> word[2:]    # All but the first two characters
+'lpA'
 \end{verbatim}
 
 Here's a useful invariant of slice operations:
@@ -850,7 +850,7 @@ u'\xe4\xf6\xfc'
 >>> str(u"הצü")
 Traceback (most recent call last):
   File "<stdin>", line 1, in ?
-UnicodeEncodeError: 'ascii' codec can't encode characters in position 0-2: ordinal not in range(128)
+UnicodeError: ASCII encoding error: ordinal not in range(128)
 \end{verbatim}
 
 To convert a Unicode string into an 8-bit string using a specific
@@ -1215,7 +1215,7 @@ program requires no action.
 For example:
 
 \begin{verbatim}
->>> while True:
+>>> while 1:
 ...       pass # Busy-wait for keyboard interrupt
 ... 
 \end{verbatim}
@@ -1358,7 +1358,7 @@ arguments than it is defined
 
 \begin{verbatim}
 def ask_ok(prompt, retries=4, complaint='Yes or no, please!'):
-    while True:
+    while 1:
         ok = raw_input(prompt)
         if ok in ('y', 'ye', 'yes'): return 1
         if ok in ('n', 'no', 'nop', 'nope'): return 0
@@ -1467,7 +1467,7 @@ Here's an example that fails due to this restriction:
 >>> function(0, a=0)
 Traceback (most recent call last):
   File "<stdin>", line 1, in ?
-TypeError: function() got multiple values for keyword argument 'a'
+TypeError: keyword parameter redefined
 \end{verbatim}
 
 When a final formal parameter of the form \code{**\var{name}} is
@@ -1819,11 +1819,6 @@ item, then to the result and the next item, and so on.  For example,
 0
 \end{verbatim}
 
-Don't use this example's definition of \function{sum()}: since summing
-numbers is such a common need, a built-in function
-\code{sum(\var{sequence})} is already provided, and works exactly like
-this.
-\versionadded{2.3}
 
 \subsection{List Comprehensions}
 
@@ -1875,8 +1870,9 @@ of the comprehension:
 >>> x = 100                     # this gets overwritten
 >>> [x**3 for x in range(5)]
 [0, 1, 8, 27, 64]
->>> x                           # the final value for range(5)
-4
+>>> x
+4                               # the final value for range(5)
+>>
 \end{verbatim}
 
 
@@ -1888,7 +1884,8 @@ remove slices from a list (which we did earlier by assignment of an
 empty list to the slice).  For example:
 
 \begin{verbatim}
->>> a = [-1, 1, 66.6, 333, 333, 1234.5]
+>>> a
+[-1, 1, 66.6, 333, 333, 1234.5]
 >>> del a[0]
 >>> a
 [1, 66.6, 333, 333, 1234.5]
@@ -2034,7 +2031,7 @@ Here is a small example using a dictionary:
 >>> tel.keys()
 ['guido', 'irv', 'jack']
 >>> tel.has_key('guido')
-True
+1
 \end{verbatim}
 
 The \function{dict()} contructor builds dictionaries directly from
@@ -2063,19 +2060,6 @@ gallahad the pure
 robin the brave
 \end{verbatim}
  
-When looping through a sequence, the position index and corresponding
-value can be retrieved at the same time using the
-\function{enumerate()} function.
-
-\begin{verbatim} 
->>> for i, v in enumerate(['tic', 'tac', 'toe']):
-...     print i, v
-...
-0 tic
-1 tac
-2 toe
-\end{verbatim}
-
 To loop over two or more sequences at the same time, the entries
 can be paired with the \function{zip()} function.
 
@@ -2356,11 +2340,12 @@ Some tips for experts:
 
 \item
 When the Python interpreter is invoked with the \programopt{-O} flag,
-optimized code is generated and stored in \file{.pyo} files.  The
-optimizer currently doesn't help much; it only removes
-\keyword{assert} statements.  When \programopt{-O} is used, \emph{all}
-bytecode is optimized; \code{.pyc} files are ignored and \code{.py}
-files are compiled to optimized bytecode.
+optimized code is generated and stored in \file{.pyo} files.
+The optimizer currently doesn't help much; it only removes
+\keyword{assert} statements and \code{SET_LINENO} instructions.
+When \programopt{-O} is used, \emph{all} bytecode is optimized;
+\code{.pyc} files are ignored and \code{.py} files are compiled to
+optimized bytecode.
 
 \item
 Passing two \programopt{-O} flags to the Python interpreter
@@ -2426,8 +2411,7 @@ prompts:
 >>> sys.ps1 = 'C> '
 C> print 'Yuck!'
 Yuck!
-C>
-
+C> 
 \end{verbatim}
 
 These two variables are only defined if the interpreter is in
@@ -2455,15 +2439,14 @@ a module defines.  It returns a sorted list of strings:
 ['__name__', 'fib', 'fib2']
 >>> dir(sys)
 ['__displayhook__', '__doc__', '__excepthook__', '__name__', '__stderr__',
- '__stdin__', '__stdout__', '_getframe', 'api_version', 'argv', 
- 'builtin_module_names', 'byteorder', 'callstats', 'copyright',
- 'displayhook', 'exc_clear', 'exc_info', 'exc_type', 'excepthook',
- 'exec_prefix', 'executable', 'exit', 'getdefaultencoding', 'getdlopenflags',
- 'getrecursionlimit', 'getrefcount', 'hexversion', 'maxint', 'maxunicode',
- 'meta_path', 'modules', 'path', 'path_hooks', 'path_importer_cache',
- 'platform', 'prefix', 'ps1', 'ps2', 'setcheckinterval', 'setdlopenflags',
- 'setprofile', 'setrecursionlimit', 'settrace', 'stderr', 'stdin', 'stdout',
- 'version', 'version_info', 'warnoptions']
+ '__stdin__', '__stdout__', '_getframe', 'argv', 'builtin_module_names',
+ 'byteorder', 'copyright', 'displayhook', 'exc_info', 'exc_type',
+ 'excepthook', 'exec_prefix', 'executable', 'exit', 'getdefaultencoding',
+ 'getdlopenflags', 'getrecursionlimit', 'getrefcount', 'hexversion',
+ 'maxint', 'maxunicode', 'modules', 'path', 'platform', 'prefix', 'ps1',
+ 'ps2', 'setcheckinterval', 'setdlopenflags', 'setprofile',
+ 'setrecursionlimit', 'settrace', 'stderr', 'stdin', 'stdout', 'version',
+ 'version_info', 'warnoptions']
 \end{verbatim}
 
 Without arguments, \function{dir()} lists the names you have defined
@@ -2488,26 +2471,25 @@ standard module \module{__builtin__}\refbimodindex{__builtin__}:
 >>> dir(__builtin__)
 ['ArithmeticError', 'AssertionError', 'AttributeError',
  'DeprecationWarning', 'EOFError', 'Ellipsis', 'EnvironmentError',
- 'Exception', 'False', 'FloatingPointError', 'IOError', 'ImportError',
+ 'Exception', 'FloatingPointError', 'IOError', 'ImportError',
  'IndentationError', 'IndexError', 'KeyError', 'KeyboardInterrupt',
  'LookupError', 'MemoryError', 'NameError', 'None', 'NotImplemented',
  'NotImplementedError', 'OSError', 'OverflowError', 'OverflowWarning',
- 'PendingDeprecationWarning', 'ReferenceError',
- 'RuntimeError', 'RuntimeWarning', 'StandardError', 'StopIteration',
- 'SyntaxError', 'SyntaxWarning', 'SystemError', 'SystemExit', 'TabError',
- 'True', 'TypeError', 'UnboundLocalError', 'UnicodeError', 'UserWarning',
- 'ValueError', 'Warning', 'ZeroDivisionError', '__debug__', '__doc__',
- '__import__', '__name__', 'abs', 'apply', 'bool', 'buffer',
- 'callable', 'chr', 'classmethod', 'cmp', 'coerce', 'compile', 'complex',
- 'copyright', 'credits', 'delattr', 'dict', 'dir', 'divmod',
- 'enumerate', 'eval', 'execfile', 'exit', 'file', 'filter', 'float',
- 'getattr', 'globals', 'hasattr', 'hash', 'help', 'hex', 'id',
- 'input', 'int', 'intern', 'isinstance', 'issubclass', 'iter',
- 'len', 'license', 'list', 'locals', 'long', 'map', 'max', 'min',
- 'object', 'oct', 'open', 'ord', 'pow', 'property', 'quit',
- 'range', 'raw_input', 'reduce', 'reload', 'repr', 'round',
- 'setattr', 'slice', 'staticmethod', 'str', 'string', 'sum', 'super',
- 'tuple', 'type', 'unichr', 'unicode', 'vars', 'xrange', 'zip']
+ 'ReferenceError', 'RuntimeError', 'RuntimeWarning', 'StandardError',
+ 'StopIteration', 'SyntaxError', 'SyntaxWarning', 'SystemError',
+ 'SystemExit', 'TabError', 'TypeError', 'UnboundLocalError',
+ 'UnicodeError', 'UserWarning', 'ValueError', 'Warning',
+ 'ZeroDivisionError', '_', '__debug__', '__doc__', '__import__',
+ '__name__', 'abs', 'apply', 'buffer', 'callable', 'chr', 'classmethod',
+ 'cmp', 'coerce', 'compile', 'complex', 'copyright', 'credits', 'delattr',
+ 'dict', 'dir', 'divmod', 'eval', 'execfile', 'exit', 'file', 'filter',
+ 'float', 'getattr', 'globals', 'hasattr', 'hash', 'help', 'hex', 'id',
+ 'input', 'int', 'intern', 'isinstance', 'issubclass', 'iter', 'len',
+ 'license', 'list', 'locals', 'long', 'map', 'max', 'min', 'object',
+ 'oct', 'open', 'ord', 'pow', 'property', 'quit', 'range', 'raw_input',
+ 'reduce', 'reload', 'repr', 'round', 'setattr', 'slice', 'staticmethod',
+ 'str', 'super', 'tuple', 'type', 'unichr', 'unicode', 'vars', 'xrange',
+ 'zip']
 \end{verbatim}
 
 
@@ -2562,7 +2544,8 @@ Sound/                          Top-level package
 \end{verbatim}
 
 When importing the package, Python searchs through the directories
-on \code{sys.path} looking for the package subdirectory.
+on \code{sys.path} looking for a subdirectory containing the
+top-level package.
 
 The \file{__init__.py} files are required to make Python treat the
 directories as containing packages; this is done to prevent
@@ -3106,10 +3089,10 @@ Syntax errors, also known as parsing errors, are perhaps the most common
 kind of complaint you get while you are still learning Python:
 
 \begin{verbatim}
->>> while True print 'Hello world'
+>>> while 1 print 'Hello world'
   File "<stdin>", line 1, in ?
-    while True print 'Hello world'
-                   ^
+    while 1 print 'Hello world'
+                ^
 SyntaxError: invalid syntax
 \end{verbatim}
 
@@ -3134,7 +3117,7 @@ however, and result in error messages as shown here:
 >>> 10 * (1/0)
 Traceback (most recent call last):
   File "<stdin>", line 1, in ?
-ZeroDivisionError: integer division or modulo by zero
+ZeroDivisionError: integer division or modulo
 >>> 4 + spam*3
 Traceback (most recent call last):
   File "<stdin>", line 1, in ?
@@ -3142,7 +3125,7 @@ NameError: name 'spam' is not defined
 >>> '2' + 2
 Traceback (most recent call last):
   File "<stdin>", line 1, in ?
-TypeError: cannot concatenate 'str' and 'int' objects
+TypeError: illegal argument type for built-in operation
 \end{verbatim}
 
 The last line of the error message indicates what happened.
@@ -3179,7 +3162,7 @@ supports); note that a user-generated interruption is signalled by
 raising the \exception{KeyboardInterrupt} exception.
 
 \begin{verbatim}
->>> while True:
+>>> while 1:
 ...     try:
 ...         x = int(raw_input("Please enter a number: "))
 ...         break
@@ -3790,7 +3773,7 @@ later time.  For example:
 
 \begin{verbatim}
 xf = x.f
-while True:
+while 1:
     print xf()
 \end{verbatim}
 

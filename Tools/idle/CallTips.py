@@ -2,6 +2,7 @@
 # displays parameter information as you open parens.
 
 import string
+import sys
 import types
 
 class CallTips:
@@ -140,7 +141,7 @@ def get_arg_text(ob):
                     items.append("...")
                 if fob.func_code.co_flags & 0x8:
                     items.append("***")
-                argText = ", ".join(items)
+                argText = string.join(items , ", ")
                 argText = "(%s)" % argText
             except:
                 pass

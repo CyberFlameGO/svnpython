@@ -548,13 +548,6 @@ tests = [
     ('a(?:b|(c|e){1,2}?|d)+?(.)', 'ace', SUCCEED, 'g1 + g2', 'ce'),
     ('^(.+)?B', 'AB', SUCCEED, 'g1', 'A'),
 
-    # lookbehind: split by : but not if it is escaped by -.
-    ('(?<!-):(.*?)(?<!-):', 'a:bc-:de:f', SUCCEED, 'g1', 'bc-:de' ),
-    # escaping with \ as we know it
-    ('(?<!\\\):(.*?)(?<!\\\):', 'a:bc\\:de:f', SUCCEED, 'g1', 'bc\\:de' ),
-    # terminating with ' and escaping with ? as in edifact
-    ("(?<!\\?)'(.*?)(?<!\\?)'", "a'bc?'de'f", SUCCEED, 'g1', "bc?'de" ),
-
     # Comments using the (?#...) syntax
 
     ('w(?# comment', 'w', SYNTAX_ERROR),
@@ -653,12 +646,6 @@ xyzabc
     (r'a[^>]*?b', 'a>b', FAIL),
     # bug 490573: minimizing repeat problem
     (r'^a*?$', 'foo', FAIL),
-    # bug 470582: nested groups problem
-    (r'^((a)c)?(ab)$', 'ab', SUCCEED, 'g1+"-"+g2+"-"+g3', 'None-None-ab'),
-    # another minimizing repeat problem (capturing groups in assertions)
-    ('^([ab]*?)(?=(b)?)c', 'abc', SUCCEED, 'g1+"-"+g2', 'ab-None'),
-    ('^([ab]*?)(?!(b))c', 'abc', SUCCEED, 'g1+"-"+g2', 'ab-None'),
-    ('^([ab]*?)(?<!(a))c', 'abc', SUCCEED, 'g1+"-"+g2', 'ab-None'),
 ]
 
 try:

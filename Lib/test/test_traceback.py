@@ -1,7 +1,7 @@
 """Test cases for traceback module"""
 
 import unittest
-from test.test_support import run_unittest, is_jython
+from test_support import run_unittest, is_jython
 
 import traceback
 
@@ -22,7 +22,7 @@ class TracebackCases(unittest.TestCase):
 
     def syntax_error_without_caret(self):
         # XXX why doesn't compile raise the same traceback?
-        import test.badsyntax_nocaret
+        import badsyntax_nocaret
 
     def test_caret(self):
         err = self.get_exception_format(self.syntax_error_with_caret,

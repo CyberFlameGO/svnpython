@@ -28,6 +28,7 @@ Notes:
   bytes that occupy space in the buffer.
 - There's a simple test set (see end of this file).
 """
+import types
 try:
     from errno import EINVAL
 except ImportError:
@@ -49,7 +50,7 @@ class StringIO:
     """
     def __init__(self, buf = ''):
         # Force self.buf to be a string or unicode
-        if not isinstance(buf, basestring):
+        if type(buf) not in types.StringTypes:
             buf = str(buf)
         self.buf = buf
         self.len = len(buf)
@@ -59,19 +60,10 @@ class StringIO:
         self.softspace = 0
 
     def __iter__(self):
-        return self
-
-    def next(self):
-        if self.closed:
-            raise StopIteration
-        r = self.readline()
-        if not r:
-            raise StopIteration
-        return r
+        return iter(self.readline, '')
 
     def close(self):
-        """Free the memory buffer.
-        """
+        """Free the memory buffer."""
         if not self.closed:
             self.closed = 1
             del self.buf, self.pos
@@ -79,7 +71,7 @@ class StringIO:
     def isatty(self):
         if self.closed:
             raise ValueError, "I/O operation on closed file"
-        return False
+        return 0
 
     def seek(self, pos, mode = 0):
         if self.closed:
@@ -158,12 +150,8 @@ class StringIO:
             raise ValueError, "I/O operation on closed file"
         if not s: return
         # Force s to be a string or unicode
-        if not isinstance(s, basestring):
+        if type(s) not in types.StringTypes:
             s = str(s)
-        if self.pos == self.len:
-            self.buflist.append(s)
-            self.len = self.pos = self.pos + len(s)
-            return
         if self.pos > self.len:
             self.buflist.append('\0'*(self.pos - self.len))
             self.len = self.pos
@@ -227,7 +215,7 @@ def test():
     f.write(lines[1])
     f.seek(0)
     print 'First line =', `f.readline()`
-    print 'Position =', f.tell()
+    here = f.tell()
     line = f.readline()
     print 'Second line =', `line`
     f.seek(-len(line), 1)

@@ -3,9 +3,9 @@
    Nick Mathewson
 """
 import unittest
-from test.test_support import run_unittest, is_jython
+from test_support import run_unittest, is_jython
 
-from codeop import compile_command, PyCF_DONT_IMPLY_DEDENT
+from codeop import compile_command
 
 if is_jython:
     import sys
@@ -39,7 +39,7 @@ class CodeopTests(unittest.TestCase):
                 r = { 'value': eval(str,ctx) }
             self.assertEquals(unify_callables(r),unify_callables(d))
         else:
-            expected = compile(str, "<input>", symbol, PyCF_DONT_IMPLY_DEDENT)
+            expected = compile(str, "<input>", symbol)
             self.assertEquals( compile_command(str, "<input>", symbol), expected)
 
     def assertIncomplete(self, str, symbol='single'):
@@ -62,11 +62,9 @@ class CodeopTests(unittest.TestCase):
         # special case
         if not is_jython:
             self.assertEquals(compile_command(""),
-                            compile("pass", "<input>", 'single',
-                                    PyCF_DONT_IMPLY_DEDENT))
+                            compile("pass", "<input>", 'single'))
             self.assertEquals(compile_command("\n"),
-                            compile("pass", "<input>", 'single', 
-                                    PyCF_DONT_IMPLY_DEDENT))
+                            compile("pass", "<input>", 'single'))          
         else:
             av("")
             av("\n")

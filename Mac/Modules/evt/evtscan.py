@@ -2,9 +2,10 @@
 
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 from scantools import Scanner
+from bgenlocations import TOOLBOXDIR
 
 LONG = "Events"
 SHORT = "evt"
@@ -17,8 +18,6 @@ def main():
 	scanner = MyScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now importing the generated code... ==="
 	exec "import " + SHORT + "support"
 	print "=== Done.  It's up to you to compile it now! ==="
@@ -36,6 +35,21 @@ class MyScanner(Scanner):
 				listname = "methods"
 		return classname, listname
 
+	def makegreylist(self):
+		return [
+			('#if !TARGET_API_MAC_CARBON', [
+				'SystemEvent',
+				'SystemTask',
+				'SystemClick',
+				'GetOSEvent',
+				'OSEventAvail',
+			]),
+			('#if TARGET_API_MAC_CARBON', [
+				'CheckEventQueueForUserCancel',
+				'GetCurrentKeyModifiers',
+				'GetGlobalMouse',
+			])]
+
 	def makeblacklistnames(self):
 		return [
 			"KeyTranslate",
@@ -43,12 +57,6 @@ class MyScanner(Scanner):
 			"WaitNextEvent",	# Manually generated because of optional region
 			# Constants with funny definitions
 			"osEvtMessageMask",
-			# OS8 calls
-			'SystemEvent',
-			'SystemTask',
-			'SystemClick',
-			'GetOSEvent',
-			'OSEventAvail',
 			]
 
 	def makeblacklisttypes(self):

@@ -4,13 +4,12 @@ import W
 import Wtraceback
 from Wkeys import *
 
+import macfs
+import MACFS
 import MacOS
-import EasyDialogs
 from Carbon import Win
 from Carbon import Res
 from Carbon import Evt
-from Carbon import Qd
-from Carbon import File
 import os
 import imp
 import sys
@@ -18,13 +17,18 @@ import string
 import marshal
 import re
 
-smAllScripts = -3
-
 if hasattr(Win, "FrontNonFloatingWindow"):
 	MyFrontWindow = Win.FrontNonFloatingWindow
 else:
 	MyFrontWindow = Win.FrontWindow
 
+
+try:
+	import Wthreading
+except ImportError:
+	haveThreading = 0
+else:
+	haveThreading = Wthreading.haveThreading
 
 _scriptuntitledcounter = 1
 _wordchars = string.ascii_letters + string.digits + "_"
@@ -47,7 +51,6 @@ class Editor(W.Window):
 				_scriptuntitledcounter = _scriptuntitledcounter + 1
 			text = ""
 			self._creator = W._signature
-			self._eoln = os.linesep
 		elif os.path.exists(path):
 			path = resolvealiases(path)
 			dir, name = os.path.split(path)
@@ -55,22 +58,27 @@ class Editor(W.Window):
 			f = open(path, "rb")
 			text = f.read()
 			f.close()
-			self._creator, filetype = MacOS.GetCreatorAndType(path)
-			self.addrecentfile(path)
+			fss = macfs.FSSpec(path)
+			self._creator, filetype = fss.GetCreatorType()
 		else:
 			raise IOError, "file '%s' does not exist" % path
 		self.path = path
 		
 		if '\n' in text:
+			import EasyDialogs
 			if string.find(text, '\r\n') >= 0:
-				self._eoln = '\r\n'
+				sourceOS = 'DOS'
+				searchString = '\r\n'
 			else:
-				self._eoln = '\n'
-			text = string.replace(text, self._eoln, '\r')
-			change = 0
+				sourceOS = 'UNIX'
+				searchString = '\n'
+			change = EasyDialogs.AskYesNoCancel('"%s" contains %s-style line feeds. '
+					'Change them to MacOS carriage returns?' % (self.title, sourceOS), 1)
+			# bug: Cancel is treated as No
+			if change > 0:
+				text = string.replace(text, searchString, '\r')
 		else:
 			change = 0
-			self._eoln = '\r'
 		
 		self.settings = {}
 		if self.path:
@@ -105,9 +113,16 @@ class Editor(W.Window):
 		self._buf = ""  # for write method
 		self.debugging = 0
 		self.profiling = 0
-		self.run_as_main = self.settings.get("run_as_main", 0)
-		self.run_with_interpreter = self.settings.get("run_with_interpreter", 0)
-		self.run_with_cl_interpreter = self.settings.get("run_with_cl_interpreter", 0)
+		if self.settings.has_key("run_as_main"):
+			self.run_as_main = self.settings["run_as_main"]
+		else:
+			self.run_as_main = 0
+		if self.settings.has_key("run_with_interpreter"):
+			self.run_with_interpreter = self.settings["run_with_interpreter"]
+		else:
+			self.run_with_interpreter = 0
+		self._threadstate = (0, 0)
+		self._thread = None
 	
 	def readwindowsettings(self):
 		try:
@@ -126,7 +141,7 @@ class Editor(W.Window):
 		try:
 			resref = Res.FSpOpenResFile(self.path, 3)
 		except Res.Error:
-			Res.FSpCreateResFile(self.path, self._creator, 'TEXT', smAllScripts)
+			Res.FSpCreateResFile(self.path, self._creator, 'TEXT', MACFS.smAllScripts)
 			resref = Res.FSpOpenResFile(self.path, 3)
 		try:
 			data = Res.Resource(marshal.dumps(self.settings))
@@ -149,7 +164,6 @@ class Editor(W.Window):
 		self.settings["tabsize"] = self.editgroup.editor.gettabsettings()
 		self.settings["run_as_main"] = self.run_as_main
 		self.settings["run_with_interpreter"] = self.run_with_interpreter
-		self.settings["run_with_cl_interpreter"] = self.run_with_cl_interpreter
 	
 	def get(self):
 		return self.editgroup.editor.get()
@@ -159,9 +173,6 @@ class Editor(W.Window):
 	
 	def setselection(self, selstart, selend):
 		self.editgroup.editor.setselection(selstart, selend)
-		
-	def getselectedtext(self):
-		return self.editgroup.editor.getselectedtext()
 	
 	def getfilename(self):
 		if self.path:
@@ -222,9 +233,8 @@ class Editor(W.Window):
 				("Save options\xc9", self.domenu_options),
 				'-',
 				('\0' + chr(self.run_as_main) + 'Run as __main__', self.domenu_toggle_run_as_main), 
-				#('\0' + chr(self.run_with_interpreter) + 'Run with Interpreter', self.domenu_dtoggle_run_with_interpreter), 
-				('\0' + chr(self.run_with_cl_interpreter) + 'Run with commandline Python', self.domenu_toggle_run_with_cl_interpreter), 
-				'-',
+				#('\0' + chr(self.run_with_interpreter) + 'Run with Interpreter', self.domenu_toggle_run_with_interpreter), 
+				#'-',
 				('Modularize', self.domenu_modularize),
 				('Browse namespace\xc9', self.domenu_browsenamespace), 
 				'-']
@@ -243,19 +253,11 @@ class Editor(W.Window):
 	def domenu_toggle_run_as_main(self):
 		self.run_as_main = not self.run_as_main
 		self.run_with_interpreter = 0
-		self.run_with_cl_interpreter = 0
 		self.editgroup.editor.selectionchanged()
 	
-	def XXdomenu_toggle_run_with_interpreter(self):
+	def domenu_toggle_run_with_interpreter(self):
 		self.run_with_interpreter = not self.run_with_interpreter
 		self.run_as_main = 0
-		self.run_with_cl_interpreter = 0
-		self.editgroup.editor.selectionchanged()
-	
-	def domenu_toggle_run_with_cl_interpreter(self):
-		self.run_with_cl_interpreter = not self.run_with_cl_interpreter
-		self.run_as_main = 0
-		self.run_with_interpreter = 0
 		self.editgroup.editor.selectionchanged()
 	
 	def showbreakpoints(self, onoff):
@@ -316,10 +318,10 @@ class Editor(W.Window):
 			self.editgroup.editor.settabsettings(tabsettings)
 	
 	def domenu_options(self, *args):
-		rv = SaveOptions(self._creator, self._eoln)
+		rv = SaveOptions(self._creator)
 		if rv:
 			self.editgroup.editor.selectionchanged() # ouch...
-			self._creator, self._eoln = rv
+			self._creator = rv
 	
 	def clicklinefield(self):
 		if self._currentwidget <> self.linefield:
@@ -360,6 +362,8 @@ class Editor(W.Window):
 	
 	def close(self):
 		if self.editgroup.editor.changed:
+			import EasyDialogs
+			from Carbon import Qd
 			Qd.InitCursor()
 			save = EasyDialogs.AskYesNoCancel('Save window "%s" before closing?' % self.title,
 					default=1, no="Don\xd5t save")
@@ -379,12 +383,11 @@ class Editor(W.Window):
 			# Will call us recursively
 			return self.domenu_save_as()
 		data = self.editgroup.editor.get()
-		if self._eoln != '\r':
-			data = string.replace(data, '\r', self._eoln)
 		fp = open(self.path, 'wb')  # open file in binary mode, data has '\r' line-endings
 		fp.write(data)
 		fp.close()
-		MacOS.SetCreatorAndType(self.path, self._creator, 'TEXT')
+		fss = macfs.FSSpec(self.path)
+		fss.SetCreatorType(self._creator, 'TEXT')
 		self.getsettings()
 		self.writewindowsettings()
 		self.editgroup.editor.changed = 0
@@ -394,17 +397,16 @@ class Editor(W.Window):
 			del linecache.cache[self.path]
 		import macostools
 		macostools.touched(self.path)
-		self.addrecentfile(self.path)
 	
 	def can_save(self, menuitem):
 		return self.editgroup.editor.changed or self.editgroup.editor.selchanged
 	
 	def domenu_save_as(self, *args):
-		path = EasyDialogs.AskFileForSave(message='Save as:', savedFileName=self.title)
-		if not path: 
+		fss, ok = macfs.StandardPutFile('Save as:', self.title)
+		if not ok: 
 			return 1
 		self.showbreakpoints(0)
-		self.path = path
+		self.path = fss.as_pathname()
 		self.setinfotext()
 		self.title = os.path.split(self.path)[-1]
 		self.wid.SetWTitle(self.title)
@@ -414,8 +416,8 @@ class Editor(W.Window):
 		app.makeopenwindowsmenu()
 		if hasattr(app, 'makescriptsmenu'):
 			app = W.getapplication()
-			fsr, changed = app.scriptsfolder.FSResolveAlias(None)
-			path = fsr.as_pathname()
+			fss, fss_changed = app.scriptsfolder.Resolve()
+			path = fss.as_pathname()
 			if path == self.path[:len(path)]:
 				W.getapplication().makescriptsmenu()
 	
@@ -428,11 +430,11 @@ class Editor(W.Window):
 			destname = self.title[:-3]
 		else:
 			destname = self.title + ".applet"
-		destname = EasyDialogs.AskFileForSave(message='Save as Applet:', 
-			savedFileName=destname)
-		if not destname: 
+		fss, ok = macfs.StandardPutFile('Save as Applet:', destname)
+		if not ok: 
 			return 1
 		W.SetCursor("watch")
+		destname = fss.as_pathname()
 		if self.path:
 			filename = self.path
 			if filename[-3:] == ".py":
@@ -450,16 +452,6 @@ class Editor(W.Window):
 			code = compile(pytext, filename, "exec")
 		except (SyntaxError, EOFError):
 			raise buildtools.BuildError, "Syntax error in script %s" % `filename`
-			
-		import tempfile
-		tmpdir = tempfile.mkdtemp()
-		
-		if filename[-3:] != ".py":
-			filename = filename + ".py"
-		filename = os.path.join(tmpdir, os.path.split(filename)[1])
-		fp = open(filename, "w")
-		fp.write(pytext)
-		fp.close()
 		
 		# Try removing the output file
 		try:
@@ -467,12 +459,7 @@ class Editor(W.Window):
 		except os.error:
 			pass
 		template = buildtools.findtemplate()
-		buildtools.process(template, filename, destname, 1, rsrcname=rsrcname, progress=None)
-		try:
-			os.remove(filename)
-			os.rmdir(tmpdir)
-		except os.error:
-			pass
+		buildtools.process_common(template, None, code, rsrcname, destname, 0, 1)
 	
 	def domenu_gotoline(self, *args):
 		self.linefield.selectall()
@@ -504,12 +491,21 @@ class Editor(W.Window):
 		self.runselbutton.push()
 	
 	def run(self):
-		self._run()
+		if self._threadstate == (0, 0):
+			self._run()
+		else:
+			lock = Wthreading.Lock()
+			lock.acquire()
+			self._thread.postException(KeyboardInterrupt)
+			if self._thread.isBlocked():
+				self._thread.start()
+			lock.release()
 	
 	def _run(self):
 		if self.run_with_interpreter:
 			if self.editgroup.editor.changed:
-				Qd.InitCursor()
+				import EasyDialogs
+				import Qd; Qd.InitCursor()
 				save = EasyDialogs.AskYesNoCancel('Save "%s" before running?' % self.title, 1)
 				if save > 0:
 					if self.domenu_save():
@@ -519,18 +515,6 @@ class Editor(W.Window):
 			if not self.path:
 				raise W.AlertError, "Can't run unsaved file"
 			self._run_with_interpreter()
-		elif self.run_with_cl_interpreter:
-			if self.editgroup.editor.changed:
-				Qd.InitCursor()
-				save = EasyDialogs.AskYesNoCancel('Save "%s" before running?' % self.title, 1)
-				if save > 0:
-					if self.domenu_save():
-						return
-				elif save < 0:
-					return
-			if not self.path:
-				raise W.AlertError, "Can't run unsaved file"
-			self._run_with_cl_interpreter()
 		else:
 			pytext = self.editgroup.editor.get()
 			globals, file, modname = self.getenvironment()
@@ -542,23 +526,19 @@ class Editor(W.Window):
 			raise W.AlertError, "Can't find interpreter"
 		import findertools
 		XXX
-
-	def _run_with_cl_interpreter(self):
-		import Terminal
-		interp_path = os.path.join(sys.exec_prefix, "bin", "python")
-		file_path = self.path
-		if not os.path.exists(interp_path):
-			# This "can happen" if we are running IDE under MacPython-OS9.
-			raise W.AlertError, "Can't find command-line Python"
-		cmd = '"%s" "%s" ; exit' % (interp_path, file_path)
-		t = Terminal.Terminal()
-		t.do_script(with_command=cmd)
 	
 	def runselection(self):
-		self._runselection()
+		if self._threadstate == (0, 0):
+			self._runselection()
+		elif self._threadstate == (1, 1):
+			self._thread.block()
+			self.setthreadstate((1, 2))
+		elif self._threadstate == (1, 2):
+			self._thread.start()
+			self.setthreadstate((1, 1))
 	
 	def _runselection(self):
-		if self.run_with_interpreter or self.run_with_cl_interpreter:
+		if self.run_with_interpreter:
 			raise W.AlertError, "Can't run selection with Interpreter"
 		globals, file, modname = self.getenvironment()
 		locals = globals
@@ -608,6 +588,19 @@ class Editor(W.Window):
 			klass.__dict__.update(globals[classname].__dict__)
 			globals[classname] = klass
 	
+	def setthreadstate(self, state):
+		oldstate = self._threadstate
+		if oldstate[0] <> state[0]:
+			self.runbutton.settitle(runButtonLabels[state[0]])
+		if oldstate[1] <> state[1]:
+			self.runselbutton.settitle(runSelButtonLabels[state[1]])
+		self._threadstate = state
+	
+	def _exec_threadwrapper(self, *args, **kwargs):
+		apply(execstring, args, kwargs)
+		self.setthreadstate((0, 0))
+		self._thread = None
+	
 	def execstring(self, pytext, globals, locals, file, modname):
 		tracebackwindow.hide()
 		# update windows
@@ -619,38 +612,22 @@ class Editor(W.Window):
 			savedir = os.getcwd()
 			os.chdir(dir)
 			sys.path.insert(0, dir)
-		self._scriptDone = False
-		if sys.platform == "darwin":
-			# On MacOSX, MacPython doesn't poll for command-period
-			# (cancel), so to enable the user to cancel a running
-			# script, we have to spawn a thread which does the
-			# polling. It will send a SIGINT to the main thread
-			# (in which the script is running) when the user types
-			# command-period.
-			from threading import Thread
-			t = Thread(target=self._userCancelledMonitor,
-					name="UserCancelledMonitor")
-			t.start()
+		else:
+			cwdindex = None
 		try:
-			execstring(pytext, globals, locals, file, self.debugging, 
-					modname, self.profiling)
+			if haveThreading:
+				self._thread = Wthreading.Thread(os.path.basename(file), 
+							self._exec_threadwrapper, pytext, globals, locals, file, self.debugging, 
+							modname, self.profiling)
+				self.setthreadstate((1, 1))
+				self._thread.start()
+			else:
+				execstring(pytext, globals, locals, file, self.debugging, 
+							modname, self.profiling)
 		finally:
-			self._scriptDone = True
 			if self.path:
 				os.chdir(savedir)
 				del sys.path[0]
-	
-	def _userCancelledMonitor(self):
-		import time
-		from signal import SIGINT
-		while not self._scriptDone:
-			if Evt.CheckEventQueueForUserCancel():
-				# Send a SIGINT signal to ourselves.
-				# This gets delivered to the main thread,
-				# cancelling the running script.
-				os.kill(os.getpid(), SIGINT)
-				break
-			time.sleep(0.25)
 	
 	def getenvironment(self):
 		if self.path:
@@ -764,25 +741,18 @@ class Editor(W.Window):
 	
 	def selectline(self, lineno, charoffset = 0):
 		self.editgroup.editor.selectline(lineno - 1, charoffset)
-		
-	def addrecentfile(self, filename):
-		app = W.getapplication()
-		app.addrecentfile(filename)
 
 class _saveoptions:
 	
-	def __init__(self, creator, eoln):
+	def __init__(self, creator):
 		self.rv = None
-		self.eoln = eoln
-		self.w = w = W.ModalDialog((260, 160), 'Save options')
+		self.w = w = W.ModalDialog((240, 140), 'Save options')
 		radiobuttons = []
 		w.label = W.TextBox((8, 8, 80, 18), "File creator:")
 		w.ide_radio = W.RadioButton((8, 22, 160, 18), "This application", radiobuttons, self.ide_hit)
-		w.interp_radio = W.RadioButton((8, 42, 160, 18), "MacPython Interpreter", radiobuttons, self.interp_hit)
-		w.interpx_radio = W.RadioButton((8, 62, 160, 18), "OSX PythonW Interpreter", radiobuttons, self.interpx_hit)
-		w.other_radio = W.RadioButton((8, 82, 50, 18), "Other:", radiobuttons)
-		w.other_creator = W.EditText((62, 82, 40, 20), creator, self.otherselect)
-		w.none_radio = W.RadioButton((8, 102, 160, 18), "None", radiobuttons, self.none_hit)
+		w.interp_radio = W.RadioButton((8, 42, 160, 18), "Python Interpreter", radiobuttons, self.interp_hit)
+		w.other_radio = W.RadioButton((8, 62, 50, 18), "Other:", radiobuttons)
+		w.other_creator = W.EditText((62, 62, 40, 20), creator, self.otherselect)
 		w.cancelbutton = W.Button((-180, -30, 80, 16), "Cancel", self.cancelbuttonhit)
 		w.okbutton = W.Button((-90, -30, 80, 16), "Done", self.okbuttonhit)
 		w.setdefaultbutton(w.okbutton)
@@ -790,25 +760,8 @@ class _saveoptions:
 			w.interp_radio.set(1)
 		elif creator == W._signature:
 			w.ide_radio.set(1)
-		elif creator == 'PytX':
-			w.interpx_radio.set(1)
-		elif creator == '\0\0\0\0':
-			w.none_radio.set(1)
 		else:
 			w.other_radio.set(1)
-			
-		w.eolnlabel = W.TextBox((168, 8, 80, 18), "Newline style:")
-		radiobuttons = []
-		w.unix_radio = W.RadioButton((168, 22, 80, 18), "Unix", radiobuttons, self.unix_hit)
-		w.mac_radio = W.RadioButton((168, 42, 80, 18), "Macintosh", radiobuttons, self.mac_hit)
-		w.win_radio = W.RadioButton((168, 62, 80, 18), "Windows", radiobuttons, self.win_hit)
-		if self.eoln == '\n':
-			w.unix_radio.set(1)
-		elif self.eoln == '\r\n':
-			w.win_radio.set(1)
-		else:
-			w.mac_radio.set(1)
-		
 		w.bind("cmd.", w.cancelbutton.push)
 		w.open()
 	
@@ -818,12 +771,6 @@ class _saveoptions:
 	def interp_hit(self):
 		self.w.other_creator.set("Pyth")
 	
-	def interpx_hit(self):
-		self.w.other_creator.set("PytX")
-	
-	def none_hit(self):
-		self.w.other_creator.set("\0\0\0\0")
-	
 	def otherselect(self, *args):
 		sel_from, sel_to = self.w.other_creator.getselection()
 		creator = self.w.other_creator.get()[:4]
@@ -832,25 +779,16 @@ class _saveoptions:
 		self.w.other_creator.setselection(sel_from, sel_to)
 		self.w.other_radio.set(1)
 	
-	def mac_hit(self):
-		self.eoln = '\r'
-		
-	def unix_hit(self):
-		self.eoln = '\n'
-		
-	def win_hit(self):
-		self.eoln = '\r\n'
-		
 	def cancelbuttonhit(self):
 		self.w.close()
 	
 	def okbuttonhit(self):
-		self.rv = (self.w.other_creator.get()[:4], self.eoln)
+		self.rv = self.w.other_creator.get()[:4]
 		self.w.close()
 
 
-def SaveOptions(creator, eoln):
-	s = _saveoptions(creator, eoln)
+def SaveOptions(creator):
+	s = _saveoptions(creator)
 	return s.rv
 
 
@@ -1018,6 +956,7 @@ class SearchEngine:
 		W.SetCursor("arrow")
 		if counter:
 			self.hide()
+			import EasyDialogs
 			from Carbon import Res
 			editor.textchanged()
 			editor.selectionchanged()
@@ -1183,8 +1122,14 @@ def execstring(pytext, globals, locals, filename="<string>", debugging=0,
 		return
 	try:
 		if debugging:
-			PyDebugger.startfromhere()
-		else:
+			if haveThreading:
+				lock = Wthreading.Lock()
+				lock.acquire()
+				PyDebugger.startfromhere()
+				lock.release()
+			else:
+				PyDebugger.startfromhere()
+		elif not haveThreading:
 			if hasattr(MacOS, 'EnableAppswitch'):
 				MacOS.EnableAppswitch(0)
 		try:
@@ -1202,8 +1147,9 @@ def execstring(pytext, globals, locals, filename="<string>", debugging=0,
 			else:
 				exec code in globals, locals
 		finally:
-			if hasattr(MacOS, 'EnableAppswitch'):
-				MacOS.EnableAppswitch(-1)
+			if not haveThreading:
+				if hasattr(MacOS, 'EnableAppswitch'):
+					MacOS.EnableAppswitch(-1)
 	except W.AlertError, detail:
 		raise W.AlertError, detail
 	except (KeyboardInterrupt, BdbQuit):
@@ -1212,12 +1158,18 @@ def execstring(pytext, globals, locals, filename="<string>", debugging=0,
 		if arg.code:
 			sys.stderr.write("Script exited with status code: %s\n" % repr(arg.code))
 	except:
+		if haveThreading:
+			import continuation
+			lock = Wthreading.Lock()
+			lock.acquire()
 		if debugging:
 			sys.settrace(None)
 			PyDebugger.postmortem(sys.exc_type, sys.exc_value, sys.exc_traceback)
 			return
 		else:
 			tracebackwindow.traceback(1, filename)
+		if haveThreading:
+			lock.release()
 	if debugging:
 		sys.settrace(None)
 		PyDebugger.stop()
@@ -1351,10 +1303,8 @@ def EditorDefaultSettings():
 
 def resolvealiases(path):
 	try:
-		fsr, d1, d2 = File.FSResolveAliasFile(path, 1)
-		path = fsr.as_pathname()
-		return path
-	except (File.Error, ValueError), (error, str):
+		return macfs.ResolveAliasFile(path)[0].as_pathname()
+	except (macfs.error, ValueError), (error, str):
 		if error <> -120:
 			raise
 		dir, file = os.path.split(path)

@@ -17,7 +17,7 @@ def register(name, klass, instance=None):
 
 def get(using=None):
     """Return a browser launcher instance appropriate for the environment."""
-    if using is not None:
+    if using:
         alternatives = [using]
     else:
         alternatives = _tryorder
@@ -78,15 +78,15 @@ def _synthesize(browser):
 
 
 def _iscommand(cmd):
-    """Return True if cmd can be found on the executable search path."""
+    """Return true if cmd can be found on the executable search path."""
     path = os.environ.get("PATH")
     if not path:
-        return False
+        return 0
     for d in path.split(os.pathsep):
         exe = os.path.join(d, cmd)
         if os.path.isfile(exe):
-            return True
-    return False
+            return 1
+    return 0
 
 
 PROCESS_CREATION_DELAY = 4
@@ -130,33 +130,6 @@ class Netscape:
             self._remote("openURL(%s, new-window)"%url, autoraise)
         else:
             self._remote("openURL(%s)" % url, autoraise)
-
-    def open_new(self, url):
-        self.open(url, 1)
-
-
-class Galeon:
-    """Launcher class for Galeon browsers."""
-    def __init__(self, name):
-        self.name = name
-        self.basename = os.path.basename(name)
-
-    def _remote(self, action, autoraise):
-        raise_opt = ("--noraise", "")[autoraise]
-        cmd = "%s %s %s >/dev/null 2>&1" % (self.name, raise_opt, action)
-        rc = os.system(cmd)
-        if rc:
-            import time
-            os.system("%s >/dev/null 2>&1 &" % self.name)
-            time.sleep(PROCESS_CREATION_DELAY)
-            rc = os.system(cmd)
-        return not rc
-
-    def open(self, url, new=0, autoraise=1):
-        if new:
-            self._remote("-w '%s'" % url, autoraise)
-        else:
-            self._remote("-n '%s'" % url, autoraise)
 
     def open_new(self, url):
         self.open(url, 1)
@@ -261,7 +234,7 @@ class WindowsDefault:
 # the TERM and DISPLAY cases, because we might be running Python from inside
 # an xterm.
 if os.environ.get("TERM") or os.environ.get("DISPLAY"):
-    _tryorder = ["links", "lynx", "w3m"]
+    _tryorder = ["mozilla","netscape","kfm","grail","links","lynx","w3m"]
 
     # Easy cases first -- register console browsers if we have them.
     if os.environ.get("TERM"):
@@ -277,9 +250,6 @@ if os.environ.get("TERM") or os.environ.get("DISPLAY"):
 
     # X browsers have more in the way of options
     if os.environ.get("DISPLAY"):
-        _tryorder = ["galeon", "skipstone", "mozilla", "netscape",
-                     "kfm", "grail"] + _tryorder
-
         # First, the Netscape series
         if _iscommand("mozilla"):
             register("mozilla", None, Netscape("mozilla"))
@@ -290,15 +260,6 @@ if os.environ.get("TERM") or os.environ.get("DISPLAY"):
         if _iscommand("mosaic"):
             register("mosaic", None, GenericBrowser(
                 "mosaic '%s' >/dev/null &"))
-
-        # Gnome's Galeon
-        if _iscommand("galeon"):
-            register("galeon", None, Galeon("galeon"))
-
-        # Skipstone, another Gtk/Mozilla based browser
-        if _iscommand("skipstone"):
-            register("skipstone", None, GenericBrowser(
-                "skipstone '%s' >/dev/null &"))
 
         # Konqueror/kfm, the KDE browser.
         if _iscommand("kfm") or _iscommand("konqueror"):
@@ -351,19 +312,19 @@ if sys.platform[:3] == "os2" and _iscommand("netscape.exe"):
 # OK, now that we know what the default preference orders for each
 # platform are, allow user to override them with the BROWSER variable.
 #
-if "BROWSER" in os.environ:
+if os.environ.has_key("BROWSER"):
     # It's the user's responsibility to register handlers for any unknown
     # browser referenced by this value, before calling open().
     _tryorder = os.environ["BROWSER"].split(os.pathsep)
 
 for cmd in _tryorder:
-    if not cmd.lower() in _browsers:
+    if not _browsers.has_key(cmd.lower()):
         if _iscommand(cmd.lower()):
             register(cmd.lower(), None, GenericBrowser(
                 "%s '%%s'" % cmd.lower()))
 cmd = None # to make del work if _tryorder was empty
 del cmd
 
-_tryorder = filter(lambda x: x.lower() in _browsers
+_tryorder = filter(lambda x: _browsers.has_key(x.lower())
                    or x.find("%s") > -1, _tryorder)
 # what to do if _tryorder is now empty?

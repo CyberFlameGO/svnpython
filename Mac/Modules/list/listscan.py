@@ -2,9 +2,10 @@
 
 import sys
 import os
-from bgenlocations import TOOLBOXDIR, BGENDIR
+BGENDIR=os.path.join(sys.prefix, ':Tools:bgen:bgen')
 sys.path.append(BGENDIR)
 from scantools import Scanner
+from bgenlocations import TOOLBOXDIR
 
 LONG = "Lists"
 SHORT = "list"
@@ -17,8 +18,6 @@ def main():
 	scanner = MyScanner(input, output, defsoutput)
 	scanner.scan()
 	scanner.close()
-	print "=== Testing definitions output code ==="
-	execfile(defsoutput, {}, {})
 	print "=== Done scanning and generating, now importing the generated code... ==="
 	exec "import " + SHORT + "support"
 	print "=== Done.  It's up to you to compile it now! ==="
@@ -31,7 +30,7 @@ class MyScanner(Scanner):
 		if arglist:
 			t, n, m = arglist[-1]
 			# This is non-functional today
-			if t in ('ListHandle', 'ListRef') and m == "InMode":
+			if t == OBJECT and m == "InMode":
 				classname = "Method"
 				listname = "methods"
 		return classname, listname

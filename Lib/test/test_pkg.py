@@ -3,13 +3,12 @@
 import sys, os, tempfile, traceback
 from os import mkdir, rmdir, extsep          # Can't test if these fail
 del mkdir, rmdir
-from test.test_support import verify, verbose, TestFailed
+from test_support import verify, verbose, TestFailed
 
 # Helpers to create and destroy hierarchies.
 
 def mkhier(root, descr):
-    if not os.path.isdir(root):
-        mkdir(root)
+    mkdir(root)
     for name, contents in descr:
         comps = name.split()
         fullname = root
@@ -53,26 +52,27 @@ def fixdir(lst):
 # Helper to run a test
 
 def runtest(hier, code):
-    root = tempfile.mkdtemp()
+    root = tempfile.mktemp()
     mkhier(root, hier)
     savepath = sys.path[:]
-    fd, fname = tempfile.mkstemp(text=True)
-    os.write(fd, code)
-    os.close(fd)
+    codefile = tempfile.mktemp()
+    f = open(codefile, "w")
+    f.write(code)
+    f.close()
     try:
         sys.path.insert(0, root)
         if verbose: print "sys.path =", sys.path
         try:
-            execfile(fname, globals(), {})
+            execfile(codefile, globals(), {})
         except:
             traceback.print_exc(file=sys.stdout)
     finally:
         sys.path[:] = savepath
-        os.unlink(fname)
         try:
             cleanout(root)
         except (os.error, IOError):
             pass
+        os.remove(codefile)
 
 # Test descriptions
 

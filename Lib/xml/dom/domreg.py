@@ -2,8 +2,6 @@
 directly. Instead, the functions getDOMImplementation and
 registerDOMImplementation should be imported from xml.dom."""
 
-from xml.dom.minicompat import *  # isinstance, StringTypes
-
 # This is a list of well-known implementations.  Well-known names
 # should be published by posting to xml-sig@python.org, and are
 # subsequently recorded in this file.
@@ -26,7 +24,7 @@ def registerDOMImplementation(name, factory):
     interface. The factory function can either return the same object,
     or a new one (e.g. if that implementation supports some
     customization)."""
-
+    
     registered[name] = factory
 
 def _good_enough(dom, features):
@@ -48,7 +46,7 @@ def getDOMImplementation(name = None, features = ()):
     find one with the required feature set. If no implementation can
     be found, raise an ImportError. The features list must be a sequence
     of (feature, version) pairs which are passed to hasFeature."""
-
+    
     import os
     creator = None
     mod = well_known_implementations.get(name)
@@ -62,8 +60,6 @@ def getDOMImplementation(name = None, features = ()):
 
     # User did not specify a name, try implementations in arbitrary
     # order, returning the one that has the required features
-    if isinstance(features, StringTypes):
-        features = _parse_feature_string(features)
     for creator in registered.values():
         dom = creator()
         if _good_enough(dom, features):
@@ -78,22 +74,3 @@ def getDOMImplementation(name = None, features = ()):
             return dom
 
     raise ImportError,"no suitable DOM implementation found"
-
-def _parse_feature_string(s):
-    features = []
-    parts = s.split()
-    i = 0
-    length = len(parts)
-    while i < length:
-        feature = parts[i]
-        if feature[0] in "0123456789":
-            raise ValueError, "bad feature name: " + `feature`
-        i = i + 1
-        version = None
-        if i < length:
-            v = parts[i]
-            if v[0] in "0123456789":
-                i = i + 1
-                version = v
-        features.append((feature, version))
-    return tuple(features)

@@ -40,7 +40,7 @@ static PyObject *App_Error;
 
 PyTypeObject ThemeDrawingState_Type;
 
-#define ThemeDrawingStateObj_Check(x) ((x)->ob_type == &ThemeDrawingState_Type || PyObject_TypeCheck((x), &ThemeDrawingState_Type))
+#define ThemeDrawingStateObj_Check(x) ((x)->ob_type == &ThemeDrawingState_Type)
 
 typedef struct ThemeDrawingStateObject {
 	PyObject_HEAD
@@ -69,7 +69,7 @@ int ThemeDrawingStateObj_Convert(PyObject *v, ThemeDrawingState *p_itself)
 static void ThemeDrawingStateObj_dealloc(ThemeDrawingStateObject *self)
 {
 	/* Cleanup of self->ob_itself goes here */
-	self->ob_type->tp_free((PyObject *)self);
+	PyMem_DEL(self);
 }
 
 static PyObject *ThemeDrawingStateObj_SetThemeDrawingState(ThemeDrawingStateObject *_self, PyObject *_args)
@@ -107,38 +107,26 @@ static PyObject *ThemeDrawingStateObj_DisposeThemeDrawingState(ThemeDrawingState
 
 static PyMethodDef ThemeDrawingStateObj_methods[] = {
 	{"SetThemeDrawingState", (PyCFunction)ThemeDrawingStateObj_SetThemeDrawingState, 1,
-	 PyDoc_STR("(Boolean inDisposeNow) -> (OSStatus _rv)")},
+	 "(Boolean inDisposeNow) -> (OSStatus _rv)"},
 	{"DisposeThemeDrawingState", (PyCFunction)ThemeDrawingStateObj_DisposeThemeDrawingState, 1,
-	 PyDoc_STR("() -> (OSStatus _rv)")},
+	 "() -> (OSStatus _rv)"},
 	{NULL, NULL, 0}
 };
 
-#define ThemeDrawingStateObj_getsetlist NULL
+PyMethodChain ThemeDrawingStateObj_chain = { ThemeDrawingStateObj_methods, NULL };
 
+static PyObject *ThemeDrawingStateObj_getattr(ThemeDrawingStateObject *self, char *name)
+{
+	return Py_FindMethodInChain(&ThemeDrawingStateObj_chain, (PyObject *)self, name);
+}
+
+#define ThemeDrawingStateObj_setattr NULL
 
 #define ThemeDrawingStateObj_compare NULL
 
 #define ThemeDrawingStateObj_repr NULL
 
 #define ThemeDrawingStateObj_hash NULL
-#define ThemeDrawingStateObj_tp_init 0
-
-#define ThemeDrawingStateObj_tp_alloc PyType_GenericAlloc
-
-static PyObject *ThemeDrawingStateObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	PyObject *self;
-	ThemeDrawingState itself;
-	char *kw[] = {"itself", 0};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, ThemeDrawingStateObj_Convert, &itself)) return NULL;
-	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((ThemeDrawingStateObject *)self)->ob_itself = itself;
-	return self;
-}
-
-#define ThemeDrawingStateObj_tp_free PyObject_Del
-
 
 PyTypeObject ThemeDrawingState_Type = {
 	PyObject_HEAD_INIT(NULL)
@@ -149,39 +137,14 @@ PyTypeObject ThemeDrawingState_Type = {
 	/* methods */
 	(destructor) ThemeDrawingStateObj_dealloc, /*tp_dealloc*/
 	0, /*tp_print*/
-	(getattrfunc)0, /*tp_getattr*/
-	(setattrfunc)0, /*tp_setattr*/
+	(getattrfunc) ThemeDrawingStateObj_getattr, /*tp_getattr*/
+	(setattrfunc) ThemeDrawingStateObj_setattr, /*tp_setattr*/
 	(cmpfunc) ThemeDrawingStateObj_compare, /*tp_compare*/
 	(reprfunc) ThemeDrawingStateObj_repr, /*tp_repr*/
 	(PyNumberMethods *)0, /* tp_as_number */
 	(PySequenceMethods *)0, /* tp_as_sequence */
 	(PyMappingMethods *)0, /* tp_as_mapping */
 	(hashfunc) ThemeDrawingStateObj_hash, /*tp_hash*/
-	0, /*tp_call*/
-	0, /*tp_str*/
-	PyObject_GenericGetAttr, /*tp_getattro*/
-	PyObject_GenericSetAttr, /*tp_setattro */
-	0, /*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE, /* tp_flags */
-	0, /*tp_doc*/
-	0, /*tp_traverse*/
-	0, /*tp_clear*/
-	0, /*tp_richcompare*/
-	0, /*tp_weaklistoffset*/
-	0, /*tp_iter*/
-	0, /*tp_iternext*/
-	ThemeDrawingStateObj_methods, /* tp_methods */
-	0, /*tp_members*/
-	ThemeDrawingStateObj_getsetlist, /*tp_getset*/
-	0, /*tp_base*/
-	0, /*tp_dict*/
-	0, /*tp_descr_get*/
-	0, /*tp_descr_set*/
-	0, /*tp_dictoffset*/
-	ThemeDrawingStateObj_tp_init, /* tp_init */
-	ThemeDrawingStateObj_tp_alloc, /* tp_alloc */
-	ThemeDrawingStateObj_tp_new, /* tp_new */
-	ThemeDrawingStateObj_tp_free, /* tp_free */
 };
 
 /* --------------- End object type ThemeDrawingState ---------------- */
@@ -924,6 +887,8 @@ static PyObject *App_UseThemeFont(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_CARBON
+
 static PyObject *App_DrawThemeTextBox(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -957,6 +922,9 @@ static PyObject *App_DrawThemeTextBox(PyObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *App_TruncateThemeText(PyObject *_self, PyObject *_args)
 {
@@ -989,6 +957,9 @@ static PyObject *App_TruncateThemeText(PyObject *_self, PyObject *_args)
 	                     outTruncated);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *App_GetThemeTextDimensions(PyObject *_self, PyObject *_args)
 {
@@ -1022,6 +993,9 @@ static PyObject *App_GetThemeTextDimensions(PyObject *_self, PyObject *_args)
 	                     outBaseline);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_CARBON
 
 static PyObject *App_GetThemeTextShadowOutset(PyObject *_self, PyObject *_args)
 {
@@ -1045,6 +1019,7 @@ static PyObject *App_GetThemeTextShadowOutset(PyObject *_self, PyObject *_args)
 	                     PyMac_BuildRect, &outOutset);
 	return _res;
 }
+#endif
 
 static PyObject *App_DrawThemeScrollBarArrows(PyObject *_self, PyObject *_args)
 {
@@ -1646,6 +1621,8 @@ static PyObject *App_GetThemeTextColor(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_CARBON
+
 static PyObject *App_GetThemeMetric(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -1665,138 +1642,154 @@ static PyObject *App_GetThemeMetric(PyObject *_self, PyObject *_args)
 	                     outMetric);
 	return _res;
 }
+#endif
 
 static PyMethodDef App_methods[] = {
 	{"RegisterAppearanceClient", (PyCFunction)App_RegisterAppearanceClient, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"UnregisterAppearanceClient", (PyCFunction)App_UnregisterAppearanceClient, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"SetThemePen", (PyCFunction)App_SetThemePen, 1,
-	 PyDoc_STR("(ThemeBrush inBrush, SInt16 inDepth, Boolean inIsColorDevice) -> None")},
+	 "(ThemeBrush inBrush, SInt16 inDepth, Boolean inIsColorDevice) -> None"},
 	{"SetThemeBackground", (PyCFunction)App_SetThemeBackground, 1,
-	 PyDoc_STR("(ThemeBrush inBrush, SInt16 inDepth, Boolean inIsColorDevice) -> None")},
+	 "(ThemeBrush inBrush, SInt16 inDepth, Boolean inIsColorDevice) -> None"},
 	{"SetThemeTextColor", (PyCFunction)App_SetThemeTextColor, 1,
-	 PyDoc_STR("(ThemeTextColor inColor, SInt16 inDepth, Boolean inIsColorDevice) -> None")},
+	 "(ThemeTextColor inColor, SInt16 inDepth, Boolean inIsColorDevice) -> None"},
 	{"SetThemeWindowBackground", (PyCFunction)App_SetThemeWindowBackground, 1,
-	 PyDoc_STR("(WindowPtr inWindow, ThemeBrush inBrush, Boolean inUpdate) -> None")},
+	 "(WindowPtr inWindow, ThemeBrush inBrush, Boolean inUpdate) -> None"},
 	{"DrawThemeWindowHeader", (PyCFunction)App_DrawThemeWindowHeader, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeWindowListViewHeader", (PyCFunction)App_DrawThemeWindowListViewHeader, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemePlacard", (PyCFunction)App_DrawThemePlacard, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeEditTextFrame", (PyCFunction)App_DrawThemeEditTextFrame, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeListBoxFrame", (PyCFunction)App_DrawThemeListBoxFrame, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeFocusRect", (PyCFunction)App_DrawThemeFocusRect, 1,
-	 PyDoc_STR("(Rect inRect, Boolean inHasFocus) -> None")},
+	 "(Rect inRect, Boolean inHasFocus) -> None"},
 	{"DrawThemePrimaryGroup", (PyCFunction)App_DrawThemePrimaryGroup, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeSecondaryGroup", (PyCFunction)App_DrawThemeSecondaryGroup, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeSeparator", (PyCFunction)App_DrawThemeSeparator, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeModelessDialogFrame", (PyCFunction)App_DrawThemeModelessDialogFrame, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"DrawThemeGenericWell", (PyCFunction)App_DrawThemeGenericWell, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState, Boolean inFillCenter) -> None")},
+	 "(Rect inRect, ThemeDrawState inState, Boolean inFillCenter) -> None"},
 	{"DrawThemeFocusRegion", (PyCFunction)App_DrawThemeFocusRegion, 1,
-	 PyDoc_STR("(Boolean inHasFocus) -> None")},
+	 "(Boolean inHasFocus) -> None"},
 	{"IsThemeInColor", (PyCFunction)App_IsThemeInColor, 1,
-	 PyDoc_STR("(SInt16 inDepth, Boolean inIsColorDevice) -> (Boolean _rv)")},
+	 "(SInt16 inDepth, Boolean inIsColorDevice) -> (Boolean _rv)"},
 	{"GetThemeAccentColors", (PyCFunction)App_GetThemeAccentColors, 1,
-	 PyDoc_STR("() -> (CTabHandle outColors)")},
+	 "() -> (CTabHandle outColors)"},
 	{"DrawThemeMenuBarBackground", (PyCFunction)App_DrawThemeMenuBarBackground, 1,
-	 PyDoc_STR("(Rect inBounds, ThemeMenuBarState inState, UInt32 inAttributes) -> None")},
+	 "(Rect inBounds, ThemeMenuBarState inState, UInt32 inAttributes) -> None"},
 	{"GetThemeMenuBarHeight", (PyCFunction)App_GetThemeMenuBarHeight, 1,
-	 PyDoc_STR("() -> (SInt16 outHeight)")},
+	 "() -> (SInt16 outHeight)"},
 	{"DrawThemeMenuBackground", (PyCFunction)App_DrawThemeMenuBackground, 1,
-	 PyDoc_STR("(Rect inMenuRect, ThemeMenuType inMenuType) -> None")},
+	 "(Rect inMenuRect, ThemeMenuType inMenuType) -> None"},
 	{"GetThemeMenuBackgroundRegion", (PyCFunction)App_GetThemeMenuBackgroundRegion, 1,
-	 PyDoc_STR("(Rect inMenuRect, ThemeMenuType menuType) -> None")},
+	 "(Rect inMenuRect, ThemeMenuType menuType) -> None"},
 	{"DrawThemeMenuSeparator", (PyCFunction)App_DrawThemeMenuSeparator, 1,
-	 PyDoc_STR("(Rect inItemRect) -> None")},
+	 "(Rect inItemRect) -> None"},
 	{"GetThemeMenuSeparatorHeight", (PyCFunction)App_GetThemeMenuSeparatorHeight, 1,
-	 PyDoc_STR("() -> (SInt16 outHeight)")},
+	 "() -> (SInt16 outHeight)"},
 	{"GetThemeMenuItemExtra", (PyCFunction)App_GetThemeMenuItemExtra, 1,
-	 PyDoc_STR("(ThemeMenuItemType inItemType) -> (SInt16 outHeight, SInt16 outWidth)")},
+	 "(ThemeMenuItemType inItemType) -> (SInt16 outHeight, SInt16 outWidth)"},
 	{"GetThemeMenuTitleExtra", (PyCFunction)App_GetThemeMenuTitleExtra, 1,
-	 PyDoc_STR("(Boolean inIsSquished) -> (SInt16 outWidth)")},
+	 "(Boolean inIsSquished) -> (SInt16 outWidth)"},
 	{"DrawThemeTabPane", (PyCFunction)App_DrawThemeTabPane, 1,
-	 PyDoc_STR("(Rect inRect, ThemeDrawState inState) -> None")},
+	 "(Rect inRect, ThemeDrawState inState) -> None"},
 	{"GetThemeTabRegion", (PyCFunction)App_GetThemeTabRegion, 1,
-	 PyDoc_STR("(Rect inRect, ThemeTabStyle inStyle, ThemeTabDirection inDirection) -> None")},
+	 "(Rect inRect, ThemeTabStyle inStyle, ThemeTabDirection inDirection) -> None"},
 	{"SetThemeCursor", (PyCFunction)App_SetThemeCursor, 1,
-	 PyDoc_STR("(ThemeCursor inCursor) -> None")},
+	 "(ThemeCursor inCursor) -> None"},
 	{"SetAnimatedThemeCursor", (PyCFunction)App_SetAnimatedThemeCursor, 1,
-	 PyDoc_STR("(ThemeCursor inCursor, UInt32 inAnimationStep) -> None")},
+	 "(ThemeCursor inCursor, UInt32 inAnimationStep) -> None"},
 	{"GetThemeScrollBarThumbStyle", (PyCFunction)App_GetThemeScrollBarThumbStyle, 1,
-	 PyDoc_STR("() -> (ThemeScrollBarThumbStyle outStyle)")},
+	 "() -> (ThemeScrollBarThumbStyle outStyle)"},
 	{"GetThemeScrollBarArrowStyle", (PyCFunction)App_GetThemeScrollBarArrowStyle, 1,
-	 PyDoc_STR("() -> (ThemeScrollBarArrowStyle outStyle)")},
+	 "() -> (ThemeScrollBarArrowStyle outStyle)"},
 	{"GetThemeCheckBoxStyle", (PyCFunction)App_GetThemeCheckBoxStyle, 1,
-	 PyDoc_STR("() -> (ThemeCheckBoxStyle outStyle)")},
+	 "() -> (ThemeCheckBoxStyle outStyle)"},
 	{"UseThemeFont", (PyCFunction)App_UseThemeFont, 1,
-	 PyDoc_STR("(ThemeFontID inFontID, ScriptCode inScript) -> None")},
+	 "(ThemeFontID inFontID, ScriptCode inScript) -> None"},
+
+#if TARGET_API_MAC_CARBON
 	{"DrawThemeTextBox", (PyCFunction)App_DrawThemeTextBox, 1,
-	 PyDoc_STR("(CFStringRef inString, ThemeFontID inFontID, ThemeDrawState inState, Boolean inWrapToWidth, Rect inBoundingBox, SInt16 inJust) -> None")},
+	 "(CFStringRef inString, ThemeFontID inFontID, ThemeDrawState inState, Boolean inWrapToWidth, Rect inBoundingBox, SInt16 inJust) -> None"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"TruncateThemeText", (PyCFunction)App_TruncateThemeText, 1,
-	 PyDoc_STR("(CFMutableStringRef inString, ThemeFontID inFontID, ThemeDrawState inState, SInt16 inPixelWidthLimit, TruncCode inTruncWhere) -> (Boolean outTruncated)")},
+	 "(CFMutableStringRef inString, ThemeFontID inFontID, ThemeDrawState inState, SInt16 inPixelWidthLimit, TruncCode inTruncWhere) -> (Boolean outTruncated)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"GetThemeTextDimensions", (PyCFunction)App_GetThemeTextDimensions, 1,
-	 PyDoc_STR("(CFStringRef inString, ThemeFontID inFontID, ThemeDrawState inState, Boolean inWrapToWidth, Point ioBounds) -> (Point ioBounds, SInt16 outBaseline)")},
+	 "(CFStringRef inString, ThemeFontID inFontID, ThemeDrawState inState, Boolean inWrapToWidth, Point ioBounds) -> (Point ioBounds, SInt16 outBaseline)"},
+#endif
+
+#if TARGET_API_MAC_CARBON
 	{"GetThemeTextShadowOutset", (PyCFunction)App_GetThemeTextShadowOutset, 1,
-	 PyDoc_STR("(ThemeFontID inFontID, ThemeDrawState inState) -> (Rect outOutset)")},
+	 "(ThemeFontID inFontID, ThemeDrawState inState) -> (Rect outOutset)"},
+#endif
 	{"DrawThemeScrollBarArrows", (PyCFunction)App_DrawThemeScrollBarArrows, 1,
-	 PyDoc_STR("(Rect bounds, ThemeTrackEnableState enableState, ThemeTrackPressState pressState, Boolean isHoriz) -> (Rect trackBounds)")},
+	 "(Rect bounds, ThemeTrackEnableState enableState, ThemeTrackPressState pressState, Boolean isHoriz) -> (Rect trackBounds)"},
 	{"GetThemeScrollBarTrackRect", (PyCFunction)App_GetThemeScrollBarTrackRect, 1,
-	 PyDoc_STR("(Rect bounds, ThemeTrackEnableState enableState, ThemeTrackPressState pressState, Boolean isHoriz) -> (Rect trackBounds)")},
+	 "(Rect bounds, ThemeTrackEnableState enableState, ThemeTrackPressState pressState, Boolean isHoriz) -> (Rect trackBounds)"},
 	{"HitTestThemeScrollBarArrows", (PyCFunction)App_HitTestThemeScrollBarArrows, 1,
-	 PyDoc_STR("(Rect scrollBarBounds, ThemeTrackEnableState enableState, ThemeTrackPressState pressState, Boolean isHoriz, Point ptHit) -> (Boolean _rv, Rect trackBounds, ControlPartCode partcode)")},
+	 "(Rect scrollBarBounds, ThemeTrackEnableState enableState, ThemeTrackPressState pressState, Boolean isHoriz, Point ptHit) -> (Boolean _rv, Rect trackBounds, ControlPartCode partcode)"},
 	{"DrawThemeScrollBarDelimiters", (PyCFunction)App_DrawThemeScrollBarDelimiters, 1,
-	 PyDoc_STR("(ThemeWindowType flavor, Rect inContRect, ThemeDrawState state, ThemeWindowAttributes attributes) -> None")},
+	 "(ThemeWindowType flavor, Rect inContRect, ThemeDrawState state, ThemeWindowAttributes attributes) -> None"},
 	{"DrawThemeButton", (PyCFunction)App_DrawThemeButton, 1,
-	 PyDoc_STR("(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inNewInfo, ThemeButtonDrawInfo inPrevInfo, UInt32 inUserData) -> None")},
+	 "(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inNewInfo, ThemeButtonDrawInfo inPrevInfo, UInt32 inUserData) -> None"},
 	{"GetThemeButtonRegion", (PyCFunction)App_GetThemeButtonRegion, 1,
-	 PyDoc_STR("(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inNewInfo) -> None")},
+	 "(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inNewInfo) -> None"},
 	{"GetThemeButtonContentBounds", (PyCFunction)App_GetThemeButtonContentBounds, 1,
-	 PyDoc_STR("(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inDrawInfo) -> (Rect outBounds)")},
+	 "(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inDrawInfo) -> (Rect outBounds)"},
 	{"GetThemeButtonBackgroundBounds", (PyCFunction)App_GetThemeButtonBackgroundBounds, 1,
-	 PyDoc_STR("(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inDrawInfo) -> (Rect outBounds)")},
+	 "(Rect inBounds, UInt16 inKind, ThemeButtonDrawInfo inDrawInfo) -> (Rect outBounds)"},
 	{"PlayThemeSound", (PyCFunction)App_PlayThemeSound, 1,
-	 PyDoc_STR("(ThemeSoundKind kind) -> None")},
+	 "(ThemeSoundKind kind) -> None"},
 	{"BeginThemeDragSound", (PyCFunction)App_BeginThemeDragSound, 1,
-	 PyDoc_STR("(ThemeDragSoundKind kind) -> None")},
+	 "(ThemeDragSoundKind kind) -> None"},
 	{"EndThemeDragSound", (PyCFunction)App_EndThemeDragSound, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"DrawThemeTickMark", (PyCFunction)App_DrawThemeTickMark, 1,
-	 PyDoc_STR("(Rect bounds, ThemeDrawState state) -> None")},
+	 "(Rect bounds, ThemeDrawState state) -> None"},
 	{"DrawThemeChasingArrows", (PyCFunction)App_DrawThemeChasingArrows, 1,
-	 PyDoc_STR("(Rect bounds, UInt32 index, ThemeDrawState state, UInt32 eraseData) -> None")},
+	 "(Rect bounds, UInt32 index, ThemeDrawState state, UInt32 eraseData) -> None"},
 	{"DrawThemePopupArrow", (PyCFunction)App_DrawThemePopupArrow, 1,
-	 PyDoc_STR("(Rect bounds, ThemeArrowOrientation orientation, ThemePopupArrowSize size, ThemeDrawState state, UInt32 eraseData) -> None")},
+	 "(Rect bounds, ThemeArrowOrientation orientation, ThemePopupArrowSize size, ThemeDrawState state, UInt32 eraseData) -> None"},
 	{"DrawThemeStandaloneGrowBox", (PyCFunction)App_DrawThemeStandaloneGrowBox, 1,
-	 PyDoc_STR("(Point origin, ThemeGrowDirection growDirection, Boolean isSmall, ThemeDrawState state) -> None")},
+	 "(Point origin, ThemeGrowDirection growDirection, Boolean isSmall, ThemeDrawState state) -> None"},
 	{"DrawThemeStandaloneNoGrowBox", (PyCFunction)App_DrawThemeStandaloneNoGrowBox, 1,
-	 PyDoc_STR("(Point origin, ThemeGrowDirection growDirection, Boolean isSmall, ThemeDrawState state) -> None")},
+	 "(Point origin, ThemeGrowDirection growDirection, Boolean isSmall, ThemeDrawState state) -> None"},
 	{"GetThemeStandaloneGrowBoxBounds", (PyCFunction)App_GetThemeStandaloneGrowBoxBounds, 1,
-	 PyDoc_STR("(Point origin, ThemeGrowDirection growDirection, Boolean isSmall) -> (Rect bounds)")},
+	 "(Point origin, ThemeGrowDirection growDirection, Boolean isSmall) -> (Rect bounds)"},
 	{"NormalizeThemeDrawingState", (PyCFunction)App_NormalizeThemeDrawingState, 1,
-	 PyDoc_STR("() -> None")},
+	 "() -> None"},
 	{"GetThemeDrawingState", (PyCFunction)App_GetThemeDrawingState, 1,
-	 PyDoc_STR("() -> (ThemeDrawingState outState)")},
+	 "() -> (ThemeDrawingState outState)"},
 	{"ApplyThemeBackground", (PyCFunction)App_ApplyThemeBackground, 1,
-	 PyDoc_STR("(ThemeBackgroundKind inKind, Rect bounds, ThemeDrawState inState, SInt16 inDepth, Boolean inColorDev) -> None")},
+	 "(ThemeBackgroundKind inKind, Rect bounds, ThemeDrawState inState, SInt16 inDepth, Boolean inColorDev) -> None"},
 	{"SetThemeTextColorForWindow", (PyCFunction)App_SetThemeTextColorForWindow, 1,
-	 PyDoc_STR("(WindowPtr window, Boolean isActive, SInt16 depth, Boolean isColorDev) -> None")},
+	 "(WindowPtr window, Boolean isActive, SInt16 depth, Boolean isColorDev) -> None"},
 	{"IsValidAppearanceFileType", (PyCFunction)App_IsValidAppearanceFileType, 1,
-	 PyDoc_STR("(OSType fileType) -> (Boolean _rv)")},
+	 "(OSType fileType) -> (Boolean _rv)"},
 	{"GetThemeBrushAsColor", (PyCFunction)App_GetThemeBrushAsColor, 1,
-	 PyDoc_STR("(ThemeBrush inBrush, SInt16 inDepth, Boolean inColorDev) -> (RGBColor outColor)")},
+	 "(ThemeBrush inBrush, SInt16 inDepth, Boolean inColorDev) -> (RGBColor outColor)"},
 	{"GetThemeTextColor", (PyCFunction)App_GetThemeTextColor, 1,
-	 PyDoc_STR("(ThemeTextColor inColor, SInt16 inDepth, Boolean inColorDev) -> (RGBColor outColor)")},
+	 "(ThemeTextColor inColor, SInt16 inDepth, Boolean inColorDev) -> (RGBColor outColor)"},
+
+#if TARGET_API_MAC_CARBON
 	{"GetThemeMetric", (PyCFunction)App_GetThemeMetric, 1,
-	 PyDoc_STR("(ThemeMetric inMetric) -> (SInt32 outMetric)")},
+	 "(ThemeMetric inMetric) -> (SInt32 outMetric)"},
+#endif
 	{NULL, NULL, 0}
 };
 
@@ -1818,12 +1811,9 @@ void init_App(void)
 	    PyDict_SetItemString(d, "Error", App_Error) != 0)
 		return;
 	ThemeDrawingState_Type.ob_type = &PyType_Type;
-	if (PyType_Ready(&ThemeDrawingState_Type) < 0) return;
 	Py_INCREF(&ThemeDrawingState_Type);
-	PyModule_AddObject(m, "ThemeDrawingState", (PyObject *)&ThemeDrawingState_Type);
-	/* Backward-compatible name */
-	Py_INCREF(&ThemeDrawingState_Type);
-	PyModule_AddObject(m, "ThemeDrawingStateType", (PyObject *)&ThemeDrawingState_Type);
+	if (PyDict_SetItemString(d, "ThemeDrawingStateType", (PyObject *)&ThemeDrawingState_Type) != 0)
+		Py_FatalError("can't initialize ThemeDrawingStateType");
 }
 
 /* ======================== End module _App ========================= */
