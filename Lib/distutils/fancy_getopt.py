@@ -10,7 +10,7 @@ additional features:
 
 # created 1999/03/03, Greg Ward
 
-__revision__ = "$Id$"
+__rcsid__ = "$Id$"
 
 import sys, string, re
 from types import *

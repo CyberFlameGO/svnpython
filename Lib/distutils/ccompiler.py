@@ -5,14 +5,14 @@ for the Distutils compiler abstraction model."""
 
 # created 1999/07/05, Greg Ward
 
-__revision__ = "$Id$"
+__rcsid__ = "$Id$"
 
 import sys, os
 from types import *
 from copy import copy
 from distutils.errors import *
 from distutils.spawn import spawn
-from distutils.util import move_file, mkpath, newer_pairwise, newer_group
+from distutils.util import move_file
 
 
 class CCompiler:
@@ -64,18 +64,6 @@ class CCompiler:
     #     think this is useless without the ability to null out the
     #     library search path anyways.
     
-
-    # Subclasses that rely on the standard filename generation methods
-    # implemented below should override these; see the comment near
-    # those methods ('object_filenames()' et. al.) for details:
-    src_extensions = None               # list of strings
-    obj_extension = None                # string
-    static_lib_extension = None
-    shared_lib_extension = None         # string
-    static_lib_format = None            # format string
-    shared_lib_format = None            # prob. same as static_lib_format
-    exe_extension = None                # string
-
 
     def __init__ (self,
                   verbose=0,
@@ -267,150 +255,6 @@ class CCompiler:
         self.objects = copy (objects)
 
 
-    # -- Priviate utility methods --------------------------------------
-    # (here for the convenience of subclasses)
-
-    def _fix_compile_args (self, output_dir, macros, include_dirs):
-        """Typecheck and fix-up some of the arguments to the 'compile()' method,
-           and return fixed-up values.  Specifically: if 'output_dir' is
-           None, replaces it with 'self.output_dir'; ensures that 'macros'
-           is a list, and augments it with 'self.macros'; ensures that
-           'include_dirs' is a list, and augments it with
-           'self.include_dirs'.  Guarantees that the returned values are of
-           the correct type, i.e. for 'output_dir' either string or None,
-           and for 'macros' and 'include_dirs' either list or None."""
-
-        if output_dir is None:
-            output_dir = self.output_dir
-        elif type (output_dir) is not StringType:
-            raise TypeError, "'output_dir' must be a string or None"
-
-        if macros is None:
-            macros = self.macros
-        elif type (macros) is ListType:
-            macros = macros + (self.macros or [])
-        else:
-            raise TypeError, \
-                  "'macros' (if supplied) must be a list of tuples"
-
-        if include_dirs is None:
-            include_dirs = self.include_dirs
-        elif type (include_dirs) in (ListType, TupleType):
-            include_dirs = list (include_dirs) + (self.include_dirs or [])
-        else:
-            raise TypeError, \
-                  "'include_dirs' (if supplied) must be a list of strings"
-                    
-        return (output_dir, macros, include_dirs)
-
-    # _fix_compile_args ()
-
-
-    def _prep_compile (self, sources, output_dir):
-        """Determine the list of object files corresponding to 'sources', and
-           figure out which ones really need to be recompiled.  Return a list
-           of all object files and a dictionary telling which source files can
-           be skipped."""
-
-        # Get the list of expected output (object) files 
-        objects = self.object_filenames (sources,
-                                         output_dir=output_dir)
-
-        if self.force:
-            skip_source = {}            # rebuild everything
-            for source in sources:
-                skip_source[source] = 0
-        else:
-            # Figure out which source files we have to recompile according
-            # to a simplistic check -- we just compare the source and
-            # object file, no deep dependency checking involving header
-            # files.
-            skip_source = {}            # rebuild everything
-            for source in sources:      # no wait, rebuild nothing
-                skip_source[source] = 1
-
-            (n_sources, n_objects) = newer_pairwise (sources, objects)
-            for source in n_sources:    # no really, only rebuild what's out-of-date
-                skip_source[source] = 0
-
-        return (objects, skip_source)
-
-    # _prep_compile ()
-
-
-    def _fix_object_args (self, objects, output_dir):
-        """Typecheck and fix up some arguments supplied to various
-           methods.  Specifically: ensure that 'objects' is a list; if
-           output_dir is None, replace with self.output_dir.  Return fixed
-           versions of 'objects' and 'output_dir'."""
-
-        if type (objects) not in (ListType, TupleType):
-            raise TypeError, \
-                  "'objects' must be a list or tuple of strings"
-        objects = list (objects)
-            
-        if output_dir is None:
-            output_dir = self.output_dir
-        elif type (output_dir) is not StringType:
-            raise TypeError, "'output_dir' must be a string or None"
-
-        return (objects, output_dir)
-
-
-    def _fix_lib_args (self, libraries, library_dirs, runtime_library_dirs):
-        """Typecheck and fix up some of the arguments supplied to the
-           'link_*' methods.  Specifically: ensure that all arguments are
-           lists, and augment them with their permanent versions
-           (eg. 'self.libraries' augments 'libraries').  Return a tuple
-           with fixed versions of all arguments."""
-
-        if libraries is None:
-            libraries = self.libraries
-        elif type (libraries) in (ListType, TupleType):
-            libraries = list (libraries) + (self.libraries or [])
-        else:
-            raise TypeError, \
-                  "'libraries' (if supplied) must be a list of strings"
-
-        if library_dirs is None:
-            library_dirs = self.library_dirs
-        elif type (library_dirs) in (ListType, TupleType):
-            library_dirs = list (library_dirs) + (self.library_dirs or [])
-        else:
-            raise TypeError, \
-                  "'library_dirs' (if supplied) must be a list of strings"
-
-        if runtime_library_dirs is None:
-            runtime_library_dirs = self.runtime_library_dirs
-        elif type (runtime_library_dirs) in (ListType, TupleType):
-            runtime_library_dirs = (list (runtime_library_dirs) +
-                                    (self.runtime_library_dirs or []))
-        else:
-            raise TypeError, \
-                  "'runtime_library_dirs' (if supplied) " + \
-                  "must be a list of strings"
-
-        return (libraries, library_dirs, runtime_library_dirs)
-
-    # _fix_lib_args ()
-
-
-    def _need_link (self, objects, output_file):
-        """Return true if we need to relink the files listed in 'objects' to
-           recreate 'output_file'."""
-
-        if self.force:
-            return 1
-        else:
-            if self.dry_run:
-                newer = newer_group (objects, output_file, missing='newer')
-            else:
-                newer = newer_group (objects, output_file)
-            return newer
-
-    # _need_link ()
-
-
     # -- Worker methods ------------------------------------------------
     # (must be implemented by subclasses)
 
@@ -419,21 +263,12 @@ class CCompiler:
                  output_dir=None,
                  macros=None,
                  include_dirs=None,
-                 debug=0,
                  extra_preargs=None,
                  extra_postargs=None):
         """Compile one or more C/C++ source files.  'sources' must be
            a list of strings, each one the name of a C/C++ source
-           file.  Return a list of object filenames, one per source
-           filename in 'sources'.  Depending on the implementation,
-           not all source files will necessarily be compiled, but
-           all corresponding object filenames will be returned.
-
-           If 'output_dir' is given, object files will be put under it,
-           while retaining their original path component.  That is,
-           "foo/bar.c" normally compiles to "foo/bar.o" (for a Unix
-           implementation); if 'output_dir' is "build", then it would
-           compile to "build/foo/bar.o".
+           file.  Return a list of the object filenames generated
+           (one for each source filename in 'sources').
 
            'macros', if given, must be a list of macro definitions.  A
            macro definition is either a (name, value) 2-tuple or a (name,)
@@ -442,30 +277,25 @@ class CCompiler:
            undefines a macro.  Later definitions/redefinitions/
            undefinitions take precedence.
 
-           'include_dirs', if given, must be a list of strings, the
-           directories to add to the default include file search path for
-           this compilation only.
+           'include_dirs', if given, must be a list of strings, the directories
+           to add to the default include file search path for this
+           compilation only.
 
-           'debug' is a boolean; if true, the compiler will be instructed
-           to output debug symbols in (or alongside) the object file(s).
-
-           'extra_preargs' and 'extra_postargs' are implementation-
-           dependent.  On platforms that have the notion of a command-line
-           (e.g. Unix, DOS/Windows), they are most likely lists of strings:
-           extra command-line arguments to prepand/append to the compiler
-           command line.  On other platforms, consult the implementation
-           class documentation.  In any event, they are intended as an
+           'extra_preargs' and 'extra_postargs' are optional lists of extra
+           command-line arguments that will be, respectively, prepended or
+           appended to the generated command line immediately before
+           execution.  These will most likely be peculiar to the particular
+           platform and compiler being worked with, but are a necessary
            escape hatch for those occasions when the abstract compiler
            framework doesn't cut the mustard."""
            
         pass
 
 
-    def create_static_lib (self,
-                           objects,
-                           output_libname,
-                           output_dir=None,
-                           debug=0):
+    def link_static_lib (self,
+                         objects,
+                         output_libname,
+                         output_dir=None):
         """Link a bunch of stuff together to create a static library
            file.  The "bunch of stuff" consists of the list of object
            files supplied as 'objects', the extra object files supplied
@@ -474,34 +304,8 @@ class CCompiler:
            'set_libraries()', and the libraries supplied as 'libraries'
            (if any).
 
-           'output_libname' should be a library name, not a filename; the
-           filename will be inferred from the library name.  'output_dir'
-           is the directory where the library file will be put.
-
-           'debug' is a boolean; if true, debugging information will be
-           included in the library (note that on most platforms, it is the
-           compile step where this matters: the 'debug' flag is included
-           here just for consistency)."""
-
-        pass
-    
-
-    def link_shared_lib (self,
-                         objects,
-                         output_libname,
-                         output_dir=None,
-                         libraries=None,
-                         library_dirs=None,
-                         runtime_library_dirs=None,
-                         debug=0,
-                         extra_preargs=None,
-                         extra_postargs=None):
-        """Link a bunch of stuff together to create a shared library
-           file.  Similar semantics to 'create_static_lib()', with the
-           addition of other libraries to link against and directories to
-           search for them.  Also, of course, the type and name of
-           the generated file will almost certainly be different, as will
-           the program used to create it.
+           'output_libname' should be a library name, not a filename;
+           the filename will be inferred from the library name.
 
            'libraries' is a list of libraries to link against.  These are
            library names, not filenames, since they're translated into
@@ -517,15 +321,26 @@ class CCompiler:
            default and those supplied to 'add_library_dir()' and/or
            'set_library_dirs()'.
 
-           'debug' is as for 'compile()' and 'create_static_lib()', with the
-           slight distinction that it actually matters on most platforms
-           (as opposed to 'create_static_lib()', which includes a 'debug'
-           flag mostly for form's sake).
-
            'extra_preargs' and 'extra_postargs' are as for 'compile()'
            (except of course that they supply command-line arguments
-           for the particular linker being used)."""           
+           for the particular linker being used)."""
 
+        pass
+    
+
+    def link_shared_lib (self,
+                         objects,
+                         output_libname,
+                         output_dir=None,
+                         libraries=None,
+                         library_dirs=None,
+                         extra_preargs=None,
+                         extra_postargs=None):
+        """Link a bunch of stuff together to create a shared library
+           file.  Has the same effect as 'link_static_lib()' except
+           that the filename inferred from 'output_libname' will most
+           likely be different, and the type of file generated will
+           almost certainly be different."""
         pass
     
 
@@ -535,8 +350,6 @@ class CCompiler:
                             output_dir=None,
                             libraries=None,
                             library_dirs=None,
-                            runtime_library_dirs=None,
-                            debug=0,
                             extra_preargs=None,
                             extra_postargs=None):
         """Link a bunch of stuff together to create a shared object
@@ -554,12 +367,10 @@ class CCompiler:
                          output_dir=None,
                          libraries=None,
                          library_dirs=None,
-                         runtime_library_dirs=None,
-                         debug=0,
                          extra_preargs=None,
                          extra_postargs=None):
         """Link a bunch of stuff together to create a binary executable
-           file.  The "bunch of stuff" is as for 'link_shared_lib()'.
+           file.  The "bunch of stuff" is as for 'link_static_lib()'.
            'output_progname' should be the base name of the executable
            program--e.g. on Unix the same as the output filename, but
            on DOS/Windows ".exe" will be appended."""
@@ -567,88 +378,45 @@ class CCompiler:
 
 
 
-    # -- Filename generation methods -----------------------------------
+    # -- Filename mangling methods -------------------------------------
 
-    # The default implementation of the filename generating methods are
-    # prejudiced towards the Unix/DOS/Windows view of the world:
-    #   * object files are named by replacing the source file extension
-    #     (eg. .c/.cpp -> .o/.obj)
-    #   * library files (shared or static) are named by plugging the
-    #     library name and extension into a format string, eg.
-    #     "lib%s.%s" % (lib_name, ".a") for Unix static libraries
-    #   * executables are named by appending an extension (possibly
-    #     empty) to the program name: eg. progname + ".exe" for
-    #     Windows
-    #
-    # To reduce redundant code, these methods expect to find
-    # several attributes in the current object (presumably defined
-    # as class attributes):
-    #   * src_extensions -
-    #     list of C/C++ source file extensions, eg. ['.c', '.cpp']
-    #   * obj_extension -
-    #     object file extension, eg. '.o' or '.obj'
-    #   * static_lib_extension -
-    #     extension for static library files, eg. '.a' or '.lib'
-    #   * shared_lib_extension -
-    #     extension for shared library/object files, eg. '.so', '.dll'
-    #   * static_lib_format -
-    #     format string for generating static library filenames,
-    #     eg. 'lib%s.%s' or '%s.%s'
-    #   * shared_lib_format
-    #     format string for generating shared library filenames
-    #     (probably same as static_lib_format, since the extension
-    #     is one of the intended parameters to the format string)
-    #   * exe_extension -
-    #     extension for executable files, eg. '' or '.exe'
+    # General principle for the filename-mangling methods: by default,
+    # don't include a directory component, no matter what the caller
+    # supplies.  Eg. for UnixCCompiler, a source file of "foo/bar/baz.c"
+    # becomes "baz.o" or "baz.so", etc.  (That way, it's easiest for the
+    # caller to decide where it wants to put/find the output file.)  The
+    # 'output_dir' parameter overrides this, of course -- the directory
+    # component of the input filenames is replaced by 'output_dir'.
 
-    def object_filenames (self,
-                          source_filenames,
-                          strip_dir=0,
-                          output_dir=''):
-        if output_dir is None: output_dir = ''
-        obj_names = []
-        for src_name in source_filenames:
-            (base, ext) = os.path.splitext (src_name)
-            if ext not in self.src_extensions:
-                continue
-            if strip_dir:
-                base = os.path.basename (base)
-            obj_names.append (os.path.join (output_dir,
-                                            base + self.obj_extension))
-        return obj_names
+    def object_filenames (self, source_filenames, output_dir=None):
+        """Return the list of object filenames corresponding to each
+           specified source filename."""
+        pass
 
-    # object_filenames ()
+    def shared_object_filename (self, source_filename):
+        """Return the shared object filename corresponding to a
+           specified source filename (assuming the same directory)."""
+        pass    
 
+    def library_filename (self, libname):
+        """Return the static library filename corresponding to the
+           specified library name."""
+        
+        pass
 
-    def shared_object_filename (self,
-                                basename,
-                                strip_dir=0,
-                                output_dir=''):
-        if output_dir is None: output_dir = ''
-        if strip_dir:
-            basename = os.path.basename (basename)
-        return os.path.join (output_dir, basename + self.shared_lib_extension)
+    def shared_library_filename (self, libname):
+        """Return the shared library filename corresponding to the
+           specified library name."""
+        pass
 
+    # XXX ugh -- these should go!
+    def object_name (self, inname):
+        """Given a name with no extension, return the name + object extension"""
+        return inname + self._obj_ext
 
-    def library_filename (self,
-                          libname,
-                          lib_type='static',     # or 'shared'
-                          strip_dir=0,
-                          output_dir=''):
-
-        if output_dir is None: output_dir = ''
-        if lib_type not in ("static","shared"):
-            raise ValueError, "'lib_type' must be \"static\" or \"shared\""
-        fmt = getattr (self, lib_type + "_lib_format")
-        ext = getattr (self, lib_type + "_lib_extension")
-
-        (dir, base) = os.path.split (libname)
-        filename = fmt % (base, ext)
-        if strip_dir:
-            dir = ''
-
-        return os.path.join (output_dir, dir, filename)
-
+    def shared_library_name (self, inname):
+        """Given a name with no extension, return the name + shared object extension"""
+        return inname + self._shared_lib_ext
 
     # -- Utility methods -----------------------------------------------
 
@@ -664,9 +432,6 @@ class CCompiler:
 
     def move_file (self, src, dst):
         return move_file (src, dst, verbose=self.verbose, dry_run=self.dry_run)
-
-    def mkpath (self, name, mode=0777):
-        mkpath (name, mode, self.verbose, self.dry_run)
 
 
 # class CCompiler
@@ -785,7 +550,7 @@ def gen_preprocess_options (macros, include_dirs):
 # gen_preprocess_options ()
 
 
-def gen_lib_options (compiler, library_dirs, runtime_library_dirs, libraries):
+def gen_lib_options (compiler, library_dirs, libraries):
     """Generate linker options for searching library directories and
        linking with specific libraries.  'libraries' and 'library_dirs'
        are, respectively, lists of library names (not filenames!) and
@@ -797,9 +562,6 @@ def gen_lib_options (compiler, library_dirs, runtime_library_dirs, libraries):
 
     for dir in library_dirs:
         lib_opts.append (compiler.library_dir_option (dir))
-
-    for dir in runtime_library_dirs:
-        lib_opts.append (compiler.runtime_library_dir_option (dir))
 
     # XXX it's important that we *not* remove redundant library mentions!
     # sometimes you really do have to say "-lfoo -lbar -lfoo" in order to
@@ -821,4 +583,4 @@ def gen_lib_options (compiler, library_dirs, runtime_library_dirs, libraries):
 
     return lib_opts
 
-# gen_lib_options ()
+# _gen_lib_options ()

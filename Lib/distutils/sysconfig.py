@@ -13,102 +13,21 @@ import re
 import string
 import sys
 
-from errors import DistutilsPlatformError
-
-
-prefix = os.path.normpath(sys.prefix)
-exec_prefix = os.path.normpath(sys.exec_prefix)
-
-
-def get_python_inc(plat_specific=0):
-    """Return the directory containing installed Python header files.
-
-    If 'plat_specific' is false (the default), this is the path to the
-    non-platform-specific header files, i.e. Python.h and so on;
-    otherwise, this is the path to platform-specific header files
-    (namely config.h).
-
-    """    
-    the_prefix = (plat_specific and exec_prefix or prefix)
-    if os.name == "posix":
-        return os.path.join(the_prefix, "include", "python" + sys.version[:3])
-    elif os.name == "nt":
-        return os.path.join(the_prefix, "Include") # include or Include?
-    elif os.name == "mac":
-        return os.path.join(the_prefix, "Include")
-    else:
-        raise DistutilsPlatformError, \
-              ("I don't know where Python installs its C header files " +
-               "on platform '%s'") % os.name
-
-
-def get_python_lib(plat_specific=0, standard_lib=0):
-    """Return the directory containing the Python library (standard or
-    site additions).
-
-    If 'plat_specific' is true, return the directory containing
-    platform-specific modules, i.e. any module from a non-pure-Python
-    module distribution; otherwise, return the platform-shared library
-    directory.  If 'standard_lib' is true, return the directory
-    containing standard Python library modules; otherwise, return the
-    directory for site-specific modules.
-
-    """
-    the_prefix = (plat_specific and exec_prefix or prefix)
-       
-    if os.name == "posix":
-        libpython = os.path.join(the_prefix,
-                                 "lib", "python" + sys.version[:3])
-        if standard_lib:
-            return libpython
-        else:
-            return os.path.join(libpython, "site-packages")
-
-    elif os.name == "nt":
-        if standard_lib:
-            return os.path.join(the_prefix, "Lib")
-        else:
-            return the_prefix
-
-    elif os.name == "mac":
-        if platform_specific:
-            if standard_lib:
-                return os.path.join(exec_prefix, "Mac", "Plugins")
-            else:
-                raise DistutilsPlatformError, \
-                      "OK, where DO site-specific extensions go on the Mac?"
-        else:
-            if standard_lib:
-                return os.path.join(prefix, "Lib")
-            else:
-                raise DistutilsPlatformError, \
-                      "OK, where DO site-specific modules go on the Mac?"
-    else:
-        raise DistutilsPlatformError, \
-              ("I don't know where Python installs its library " +
-               "on platform '%s'") % os.name
-
-# get_python_lib()
-        
 
 def get_config_h_filename():
     """Return full pathname of installed config.h file."""
-    inc_dir = get_python_inc(plat_specific=1)
-    return os.path.join(inc_dir, "config.h")
-
+    return os.path.join(sys.exec_prefix, "include", "python" + sys.version[:3],
+                        "config.h")
 
 def get_makefile_filename():
     """Return full pathname of installed Makefile from the Python build."""
-    lib_dir = get_python_lib(plat_specific=1, standard_lib=1)
-    return os.path.join(lib_dir, "config", "Makefile")
-
+    return os.path.join(sys.exec_prefix, "lib", "python" + sys.version[:3],
+                        "config", "Makefile")
 
 def parse_config_h(fp, g=None):
-    """Parse a config.h-style file.
-
-    A dictionary containing name/value pairs is returned.  If an
-    optional dictionary is passed in as the second argument, it is
-    used instead of a new dictionary.
+    """Parse a config.h-style file.  A dictionary containing name/value
+    pairs is returned.  If an optional dictionary is passed in as the second
+    argument, it is used instead of a new dictionary.
     """
     if g is None:
         g = {}
@@ -132,12 +51,9 @@ def parse_config_h(fp, g=None):
     return g
 
 def parse_makefile(fp, g=None):
-    """Parse a Makefile-style file.
-
-    A dictionary containing name/value pairs is returned.  If an
-    optional dictionary is passed in as the second argument, it is
-    used instead of a new dictionary.
-
+    """Parse a Makefile-style file.  A dictionary containing name/value
+    pairs is returned.  If an optional dictionary is passed in as the second
+    argument, it is used instead of a new dictionary.
     """
     if g is None:
         g = {}
@@ -209,48 +125,25 @@ def _init_posix():
     g = globals()
     # load the installed config.h:
     parse_config_h(open(get_config_h_filename()), g)
-    # load the installed Makefile:
+    # load the installed Makefile.pre.in:
     parse_makefile(open(get_makefile_filename()), g)
 
 
 def _init_nt():
     """Initialize the module as appropriate for NT"""
-    g = globals()
+    g=globals()
     # load config.h, though I don't know how useful this is
-    parse_config_h(open(get_config_h_filename()), g)
-    # set basic install directories
-    g['LIBDEST'] = get_python_lib(plat_specific=0, standard_lib=1)
-    g['BINLIBDEST'] = get_python_lib(plat_specific=1, standard_lib=1)
-
-    # XXX hmmm.. a normal install puts include files here
-    g['INCLUDEPY'] = get_python_inc(plat_specific=0)
-
-    g['SO'] = '.pyd'
-    g['exec_prefix'] = exec_prefix
-
-
-def _init_mac():
-    """Initialize the module as appropriate for Macintosh systems"""
-    g = globals()
-    # load the installed config.h (what if not installed? - still need to
-    # be able to install packages which don't require compilation)
     parse_config_h(open(
-            os.path.join(sys.exec_prefix, "Mac", "Include", "config.h")), g)
+            os.path.join(sys.exec_prefix, "include", "config.h")), g)
     # set basic install directories
-    g['LIBDEST'] = get_python_lib(plat_specific=0, standard_lib=1)
-    g['BINLIBDEST'] = get_python_lib(plat_specific=1, standard_lib=1)
+    g['LIBDEST']=os.path.join(sys.exec_prefix, "Lib")
+    g['BINLIBDEST']= os.path.join(sys.exec_prefix, "Lib")
 
     # XXX hmmm.. a normal install puts include files here
-    g['INCLUDEPY'] = get_python_inc(plat_specific=0)
+    g['INCLUDEPY'] = os.path.join (sys.prefix, 'include' )
 
-    g['SO'] = '.ppc.slb'
+    g['SO'] = '.dll'
     g['exec_prefix'] = sys.exec_prefix
-    print sys.prefix
-
-    # XXX are these used anywhere?
-    g['install_lib'] = os.path.join(sys.exec_prefix, "Lib")
-    g['install_platlib'] = os.path.join(sys.exec_prefix, "Mac", "Lib")
-
 
 try:
     exec "_init_" + os.name
@@ -260,7 +153,5 @@ except NameError:
 else:
     exec "_init_%s()" % os.name
 
-
 del _init_posix
 del _init_nt
-del _init_mac
