@@ -45,6 +45,7 @@ iter_getiter(PyObject *it)
 	return it;
 }
 
+/* Return (value, 0) if OK; (NULL, 0) at end; (NULL, -1) if exception */
 static PyObject *
 iter_iternext(PyObject *iterator)
 {

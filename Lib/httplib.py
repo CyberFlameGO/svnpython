@@ -74,12 +74,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-__all__ = ["HTTP", "HTTPResponse", "HTTPConnection", "HTTPSConnection",
-           "HTTPException", "NotConnected", "UnknownProtocol",
-           "UnknownTransferEncoding", "IllegalKeywordArgument",
-           "UnimplementedFileMode", "IncompleteRead",
-           "ImproperConnectionState", "CannotSendRequest", "CannotSendHeader",
-           "ResponseNotReady", "BadStatusLine", "error"]
+__all__ = ["HTTP"]
 
 HTTP_PORT = 80
 HTTPS_PORT = 443

@@ -67,7 +67,6 @@ frame_dealloc(PyFrameObject *f)
 {
 	int i, slots;
 	PyObject **fastlocals;
-	PyObject **p;
 
 	Py_TRASHCAN_SAFE_BEGIN(f)
 	/* Kill all local variables */
@@ -77,12 +76,6 @@ frame_dealloc(PyFrameObject *f)
 		Py_XDECREF(*fastlocals);
 	}
 
-	/* Free stack */
-	if (f->f_stacktop != NULL) {
-		for (p = f->f_valuestack; p < f->f_stacktop; p++)
-			Py_XDECREF(*p);
-	}
-	
 	Py_XDECREF(f->f_back);
 	Py_XDECREF(f->f_code);
 	Py_XDECREF(f->f_builtins);
@@ -228,7 +221,6 @@ PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals,
 		f->f_localsplus[extras] = NULL;
 
 	f->f_valuestack = f->f_localsplus + (f->f_nlocals + ncells + nfrees);
-	f->f_stacktop = f->f_valuestack;
 
 	return f;
 }
@@ -291,9 +283,12 @@ dict_to_map(PyObject *map, int nmap, PyObject *dict, PyObject **values,
 		PyObject *value = PyDict_GetItem(dict, key);
 		Py_XINCREF(value);
 		if (deref) {
-			if (value || clear) {
+			if (value) {
 				if (PyCell_Set(values[j], value) < 0)
 					PyErr_Clear();
+			} else if (clear) {
+				Py_XDECREF(values[j]);
+				values[j] = value;
 			}
 		} else if (value != NULL || clear) {
 			Py_XDECREF(values[j]);
@@ -375,10 +370,10 @@ PyFrame_LocalsToFast(PyFrameObject *f, int clear)
 			return;
 		dict_to_map(f->f_code->co_cellvars, 
 			    PyTuple_GET_SIZE(f->f_code->co_cellvars),
-			    locals, fast + f->f_nlocals, 1, clear);
+			    locals, fast, 1, clear);
 		dict_to_map(f->f_code->co_freevars, 
 			    PyTuple_GET_SIZE(f->f_code->co_freevars),
-			    locals, fast + f->f_nlocals + f->f_ncells, 1, clear);
+			    locals, fast, 1, clear);
 	}
 	PyErr_Restore(error_type, error_value, error_traceback);
 }

@@ -1,22 +1,25 @@
-"""Test script for the grp module."""
-
-# XXX This really needs some work, but what are the expected invariants?
+#! /usr/bin/env python
+"""Test script for the grp module
+   Roger E. Masse
+"""
 
 import grp
-import test_support
-import unittest
+from test_support import verbose
 
+groups = grp.getgrall()
+if verbose:
+    print 'Groups:'
+    for group in groups:
+        print group
 
-class GroupDatabaseTestCase(unittest.TestCase):
+if not groups:
+    if verbose:
+        print "Empty Group Database -- no further tests of grp module possible"
+else:
+    group = grp.getgrgid(groups[0][2])
+    if verbose:
+        print 'Group Entry for GID %d: %s' % (groups[0][2], group)
 
-    def setUp(self):
-        self.groups = grp.getgrall()
-
-    def test_getgrgid(self):
-        entry = grp.getgrgid(self.groups[0][2])
-
-    def test_getgrnam(self):
-        entry = grp.getgrnam(self.groups[0][0])
-
-
-test_support.run_unittest(GroupDatabaseTestCase)
+    group = grp.getgrnam(groups[0][0])
+    if verbose:
+        print 'Group Entry for group %s: %s' % (groups[0][0], group)

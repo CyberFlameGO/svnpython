@@ -58,37 +58,17 @@ Copyright (c) Corporation for National Research Initiatives.
 
 /* --- Internal Unicode Format -------------------------------------------- */
 
-/* FIXME: MvL's new implementation assumes that Py_UNICODE_SIZE is
-   properly set, but the default rules below doesn't set it.  I'll
-   sort this out some other day -- fredrik@pythonware.com */
-
-#ifndef Py_UNICODE_SIZE
-#error Must define Py_UNICODE_SIZE
-#endif
-
-/* Setting Py_UNICODE_WIDE enables UCS-4 storage.  Otherwise, Unicode
-   strings are stored as UCS-2 (with limited support for UTF-16) */
-
-#if Py_UNICODE_SIZE >= 4
-#define Py_UNICODE_WIDE
-#endif
-
 /* Set these flags if the platform has "wchar.h", "wctype.h" and the
    wchar_t type is a 16-bit unsigned type */
 /* #define HAVE_WCHAR_H */
 /* #define HAVE_USABLE_WCHAR_T */
 
 /* Defaults for various platforms */
-#ifndef PY_UNICODE_TYPE
+#ifndef HAVE_USABLE_WCHAR_T
 
-/* Windows has a usable wchar_t type (unless we're using UCS-4) */
-# if defined(MS_WIN32) && Py_UNICODE_SIZE == 2
+/* Windows has a usable wchar_t type */
+# if defined(MS_WIN32)
 #  define HAVE_USABLE_WCHAR_T
-#  define PY_UNICODE_TYPE wchar_t
-# endif
-
-# if defined(Py_UNICODE_WIDE)
-#  define PY_UNICODE_TYPE Py_UCS4
 # endif
 
 #endif
@@ -111,6 +91,24 @@ Copyright (c) Corporation for National Research Initiatives.
 # include "wchar.h"
 #endif
 
+#ifdef HAVE_USABLE_WCHAR_T
+
+/* If the compiler defines whcar_t as a 16-bit unsigned type we can
+   use the compiler type directly.  Works fine with all modern Windows
+   platforms. */
+
+typedef wchar_t Py_UNICODE;
+
+#else
+
+/* Use if you have a standard ANSI compiler, without wchar_t support.
+   If a short is not 16 bits on your platform, you have to fix the
+   typedef below, or the module initialization code will complain. */
+
+typedef unsigned short Py_UNICODE;
+
+#endif
+
 /*
  * Use this typedef when you need to represent a UTF-16 surrogate pair
  * as single unsigned integer.
@@ -119,15 +117,8 @@ Copyright (c) Corporation for National Research Initiatives.
 typedef unsigned int Py_UCS4; 
 #elif SIZEOF_LONG >= 4
 typedef unsigned long Py_UCS4; 
-#endif
-
-#if SIZEOF_SHORT == 2
-typedef unsigned short Py_UCS2;
-#else
-#error Cannot find a two-byte type
 #endif 
 
-typedef PY_UNICODE_TYPE Py_UNICODE;
 
 /* --- Internal Unicode Operations ---------------------------------------- */
 
@@ -274,9 +265,6 @@ extern DL_IMPORT(Py_UNICODE *) PyUnicode_AsUnicode(
 extern DL_IMPORT(int) PyUnicode_GetSize(
     PyObject *unicode	 	/* Unicode object */
     );
-
-/* Get the maximum ordinal for a Unicode character. */
-extern DL_IMPORT(Py_UNICODE) PyUnicode_GetMax(void);
 
 /* Resize an already allocated Unicode object to the new size length.
 
@@ -471,11 +459,10 @@ extern DL_IMPORT(PyObject*) PyUnicode_EncodeUTF8(
 	*byteorder == 0:  native order
 	*byteorder == 1:  big endian
 
-   In native mode, the first two bytes of the stream are checked for a
-   BOM mark. If found, the BOM mark is analysed, the byte order
-   adjusted and the BOM skipped.  In the other modes, no BOM mark
-   interpretation is done. After completion, *byteorder is set to the
-   current byte order at the end of input data.
+   and then switches according to all BOM marks it finds in the input
+   data. BOM marks are not copied into the resulting Unicode string.
+   After completion, *byteorder is set to the current byte order at
+   the end of input data.
 
    If byteorder is NULL, the codec starts in native order mode.
 
@@ -864,63 +851,63 @@ extern DL_IMPORT(int) PyUnicode_Contains(
 */
 
 extern DL_IMPORT(int) _PyUnicode_IsLowercase(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsUppercase(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsTitlecase(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsWhitespace(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsLinebreak(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(Py_UNICODE) _PyUnicode_ToLowercase(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(Py_UNICODE) _PyUnicode_ToUppercase(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(Py_UNICODE) _PyUnicode_ToTitlecase(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_ToDecimalDigit(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_ToDigit(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(double) _PyUnicode_ToNumeric(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsDecimalDigit(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsDigit(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsNumeric(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 extern DL_IMPORT(int) _PyUnicode_IsAlpha(
-    Py_UNICODE ch 	/* Unicode character */
+    register const Py_UNICODE ch 	/* Unicode character */
     );
 
 #ifdef __cplusplus

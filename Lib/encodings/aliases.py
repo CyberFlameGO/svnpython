@@ -32,11 +32,6 @@ aliases = {
     # ASCII
     'us_ascii': 'ascii',
 
-    # EBCDIC
-    'ebcdic_cp_us': 'cp037',
-    'ibm039': 'cp037',
-    'ibm1140': 'cp1140',
-    
     # ISO
     '8859': 'latin_1',
     'iso8859': 'latin_1',
@@ -64,11 +59,6 @@ aliases = {
     'macroman': 'mac_roman',
     'macturkish': 'mac_turkish',
 
-    # Windows
-    'windows_1252': 'cp1252',
-    'windows_1254': 'cp1254',
-    'windows_1255': 'cp1255',
-
     # MBCS
     'dbcs': 'mbcs',
 
@@ -88,17 +78,5 @@ aliases = {
     'eucjp': 'euc_jp',
     'tis260': 'tactis',
     'sjis': 'shift_jis',
-
-    # Content transfer/compression encodings
-    'rot13': 'rot_13',
-    'base64': 'base64_codec',
-    'base_64': 'base64_codec',
-    'zlib': 'zlib_codec',
-    'zip': 'zlib_codec',
-    'hex': 'hex_codec',
-    'uu': 'uu_codec',
-    'quopri': 'quopri_codec',
-    'quotedprintable': 'quopri_codec',
-    'quoted_printable': 'quopri_codec',
 
 }

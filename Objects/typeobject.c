@@ -23,16 +23,6 @@ type_getattr(PyTypeObject *t, char *name)
 	return NULL;
 }
 
-static int
-type_compare(PyObject *v, PyObject *w)
-{
-	/* This is called with type objects only. So we
-	   can just compare the addresses. */
-	Py_uintptr_t vv = (Py_uintptr_t)v;
-	Py_uintptr_t ww = (Py_uintptr_t)w;
-	return (vv < ww) ? -1 : (vv > ww) ? 1 : 0;
-}
-
 static PyObject *
 type_repr(PyTypeObject *v)
 {
@@ -51,12 +41,12 @@ PyTypeObject PyType_Type = {
 	0,			/*tp_print*/
 	(getattrfunc)type_getattr, /*tp_getattr*/
 	0,			/*tp_setattr*/
-	type_compare,		/*tp_compare*/
+	0,			/*tp_compare*/
 	(reprfunc)type_repr,	/*tp_repr*/
 	0,			/*tp_as_number*/
 	0,			/*tp_as_sequence*/
 	0,			/*tp_as_mapping*/
-	(hashfunc)_Py_HashPointer,	/*tp_hash*/
+	0,			/*tp_hash*/
 	0,			/*tp_call*/
 	0,			/*tp_str*/
 	0,			/*tp_xxx1*/

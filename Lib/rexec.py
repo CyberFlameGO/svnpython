@@ -123,7 +123,7 @@ class RExec(ihooks._Verbose):
                           'cmath', 'errno', 'imageop',
                           'marshal', 'math', 'md5', 'operator',
                           'parser', 'regex', 'pcre', 'rotor', 'select',
-                          'sha', '_sre', 'strop', 'struct', 'time')
+                          'strop', 'struct', 'time')
 
     ok_posix_names = ('error', 'fstat', 'listdir', 'lstat', 'readlink',
                       'stat', 'times', 'uname', 'getpid', 'getppid',
@@ -332,25 +332,24 @@ class RExec(ihooks._Verbose):
                 r = apply(func, args)
         finally:
             self.restore_files()
-        return r
 
     def s_exec(self, *args):
-        return self.s_apply(self.r_exec, args)
+        self.s_apply(self.r_exec, args)
 
     def s_eval(self, *args):
-        return self.s_apply(self.r_eval, args)
+        self.s_apply(self.r_eval, args)
 
     def s_execfile(self, *args):
-        return self.s_apply(self.r_execfile, args)
+        self.s_apply(self.r_execfile, args)
 
     def s_import(self, *args):
-        return self.s_apply(self.r_import, args)
+        self.s_apply(self.r_import, args)
 
     def s_reload(self, *args):
-        return self.s_apply(self.r_reload, args)
+        self.s_apply(self.r_reload, args)
 
     def s_unload(self, *args):
-        return self.s_apply(self.r_unload, args)
+        self.s_apply(self.r_unload, args)
 
     # Restricted open(...)
 

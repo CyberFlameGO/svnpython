@@ -5,52 +5,39 @@
 #define PyInit_termios inittermios
 
 #include <termios.h>
-#ifdef __osf__
-/* On OSF, sys/ioctl.h requires that struct termio already be defined,
- * so this needs to be included first on that platform. */
-#include <termio.h>
-#endif
+/* XXX Some systems need this to get all the symbols, while
+       this breaks for others.
 #include <sys/ioctl.h>
-
-#ifdef __BEOS__
-#include <unistd.h>
-#endif
-
-/* HP-UX requires that this be included to pick up MDCD, MCTS, MDSR,
- * MDTR, MRI, and MRTS (appearantly used internally by some things
- * defined as macros; these are not used here directly).
- */
-#ifdef HAVE_SYS_MODEM_H
-#include <sys/modem.h>
-#endif
+*/
 
 static char termios__doc__[] = "\
 This module provides an interface to the Posix calls for tty I/O control.\n\
 For a complete description of these calls, see the Posix or Unix manual\n\
 pages. It is only available for those Unix versions that support Posix\n\
-termios style tty I/O control.\n\
+termios style tty I/O control (and then only if configured at installation\n\
+time).\n\
 \n\
 All functions in this module take a file descriptor fd as their first\n\
-argument. This can be an integer file descriptor, such as returned by\n\
-sys.stdin.fileno(), or a file object, such as sys.stdin itself.";
+argument. This must be an integer file descriptor, such as returned by\n\
+sys.stdin.fileno().";
+
+
+#ifdef __BEOS__
+#include <unistd.h>
+#endif
+
+#define BAD "bad termios argument"
 
 static PyObject *TermiosError;
 
-static int fdconv(PyObject* obj, void* p)
-{
-	int fd;
+/* termios = tcgetattr(fd)
+   termios is
+   [iflag, oflag, cflag, lflag, ispeed, ospeed, [cc[0], ..., cc[NCCS]]] 
 
-	fd = PyObject_AsFileDescriptor(obj);
-	if (fd >= 0) {
-		*(int*)p = fd;
-		return 1;
-	}
-	return 0;
-}
+   Return the attributes of the terminal device.  */
 
 static char termios_tcgetattr__doc__[] = "\
 tcgetattr(fd) -> list_of_attrs\n\
-\n\
 Get the tty attributes for file descriptor fd, as follows:\n\
 [iflag, oflag, cflag, lflag, ispeed, ospeed, cc] where cc is a list\n\
 of the tty special characters (each a string of length 1, except the items\n\
@@ -70,8 +57,7 @@ termios_tcgetattr(PyObject *self, PyObject *args)
 	int i;
 	char ch;
 
-	if (!PyArg_ParseTuple(args, "O&:tcgetattr", 
-			      fdconv, (void*)&fd))
+	if (!PyArg_Parse(args, "i", &fd))
 		return NULL;
 
 	if (tcgetattr(fd, &mode) == -1)
@@ -125,9 +111,11 @@ termios_tcgetattr(PyObject *self, PyObject *args)
 	return NULL;
 }
 
+/* tcsetattr(fd, when, termios)
+   Set the attributes of the terminal device.  */
+
 static char termios_tcsetattr__doc__[] = "\
 tcsetattr(fd, when, attributes) -> None\n\
-\n\
 Set the tty attributes for file descriptor fd.\n\
 The attributes to be set are taken from the attributes argument, which\n\
 is a list like the one returned by tcgetattr(). The when argument\n\
@@ -145,12 +133,10 @@ termios_tcsetattr(PyObject *self, PyObject *args)
 	PyObject *term, *cc, *v;
 	int i;
 
-	if (!PyArg_ParseTuple(args, "O&iO:tcsetattr", 
-			      fdconv, &fd, &when, &term))
+	if (!PyArg_Parse(args, "(iiO)", &fd, &when, &term))
 		return NULL;
 	if (!PyList_Check(term) || PyList_Size(term) != 7) {
-		PyErr_SetString(PyExc_TypeError, 
-			     "tcsetattr, arg 3: must be 7 element list");
+		PyErr_SetString(PyExc_TypeError, BAD);
 		return NULL;
 	}
 
@@ -168,9 +154,7 @@ termios_tcsetattr(PyObject *self, PyObject *args)
 		return NULL;
 
 	if (!PyList_Check(cc) || PyList_Size(cc) != NCCS) {
-		PyErr_Format(PyExc_TypeError, 
-			"tcsetattr: attributes[6] must be %d element list",
-			     NCCS);
+		PyErr_SetString(PyExc_TypeError, BAD);
 		return NULL;
 	}
 
@@ -182,8 +166,7 @@ termios_tcsetattr(PyObject *self, PyObject *args)
 		else if (PyInt_Check(v))
 			mode.c_cc[i] = (cc_t) PyInt_AsLong(v);
 		else {
-			PyErr_SetString(PyExc_TypeError, 
-     "tcsetattr: elements of attributes must be characters or integers");
+			PyErr_SetString(PyExc_TypeError, BAD);
 			return NULL;
 		}
 	}
@@ -199,20 +182,21 @@ termios_tcsetattr(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
+/* tcsendbreak(fd, duration)
+   Generate a break condition.  */
+
 static char termios_tcsendbreak__doc__[] = "\
 tcsendbreak(fd, duration) -> None\n\
-\n\
 Send a break on file descriptor fd.\n\
-A zero duration sends a break for 0.25-0.5 seconds; a nonzero duration\n\
-has a system dependent meaning.";
+A zero duration sends a break for 0.25-0.5 seconds; a nonzero duration \n\
+has a system dependent meaning. ";
 
 static PyObject *
 termios_tcsendbreak(PyObject *self, PyObject *args)
 {
 	int fd, duration;
 
-	if (!PyArg_ParseTuple(args, "O&i:tcsendbreak", 
-			      fdconv, &fd, &duration))
+	if (!PyArg_Parse(args, "(ii)", &fd, &duration))
 		return NULL;
 	if (tcsendbreak(fd, duration) == -1)
 		return PyErr_SetFromErrno(TermiosError);
@@ -221,18 +205,20 @@ termios_tcsendbreak(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
+/* tcdrain(fd) 
+   Wait until all queued output to the terminal has been 
+   transmitted.  */
+
 static char termios_tcdrain__doc__[] = "\
 tcdrain(fd) -> None\n\
-\n\
-Wait until all output written to file descriptor fd has been transmitted.";
+Wait until all output written to file descriptor fd has been transmitted. ";
 
 static PyObject *
 termios_tcdrain(PyObject *self, PyObject *args)
 {
 	int fd;
 
-	if (!PyArg_ParseTuple(args, "O&:tcdrain", 
-			      fdconv, &fd))
+	if (!PyArg_Parse(args, "i", &fd))
 		return NULL;
 	if (tcdrain(fd) == -1)
 		return PyErr_SetFromErrno(TermiosError);
@@ -241,9 +227,12 @@ termios_tcdrain(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
+/* tcflush(fd, queue) 
+   Clear the input and/or output queues associated with 
+   the terminal.  */
+
 static char termios_tcflush__doc__[] = "\
 tcflush(fd, queue) -> None\n\
-\n\
 Discard queued data on file descriptor fd.\n\
 The queue selector specifies which queue: termios.TCIFLUSH for the input\n\
 queue, termios.TCOFLUSH for the output queue, or termios.TCIOFLUSH for\n\
@@ -254,8 +243,7 @@ termios_tcflush(PyObject *self, PyObject *args)
 {
 	int fd, queue;
 
-	if (!PyArg_ParseTuple(args, "O&i:tcflush", 
-			      fdconv, &fd, &queue))
+	if (!PyArg_Parse(args, "(ii)", &fd, &queue))
 		return NULL;
 	if (tcflush(fd, queue) == -1)
 		return PyErr_SetFromErrno(TermiosError);
@@ -264,9 +252,12 @@ termios_tcflush(PyObject *self, PyObject *args)
 	return Py_None;
 }
 
+/* tcflow(fd, action) 
+   Perform operations relating to XON/XOFF flow control on 
+   the terminal.  */
+
 static char termios_tcflow__doc__[] = "\
 tcflow(fd, action) -> None\n\
-\n\
 Suspend or resume input or output on file descriptor fd.\n\
 The action argument can be termios.TCOOFF to suspend output,\n\
 termios.TCOON to restart output, termios.TCIOFF to suspend input,\n\
@@ -277,8 +268,7 @@ termios_tcflow(PyObject *self, PyObject *args)
 {
 	int fd, action;
 
-	if (!PyArg_ParseTuple(args, "O&i:tcflow", 
-			      fdconv, &fd, &action))
+	if (!PyArg_Parse(args, "(ii)", &fd, &action))
 		return NULL;
 	if (tcflow(fd, action) == -1)
 		return PyErr_SetFromErrno(TermiosError);
@@ -290,17 +280,17 @@ termios_tcflow(PyObject *self, PyObject *args)
 static PyMethodDef termios_methods[] =
 {
 	{"tcgetattr", termios_tcgetattr, 
-	 METH_VARARGS, termios_tcgetattr__doc__},
+	 METH_OLDARGS, termios_tcgetattr__doc__},
 	{"tcsetattr", termios_tcsetattr, 
-	 METH_VARARGS, termios_tcsetattr__doc__},
+	 METH_OLDARGS, termios_tcsetattr__doc__},
 	{"tcsendbreak", termios_tcsendbreak, 
-	 METH_VARARGS, termios_tcsendbreak__doc__},
+	 METH_OLDARGS, termios_tcsendbreak__doc__},
 	{"tcdrain", termios_tcdrain, 
-	 METH_VARARGS, termios_tcdrain__doc__},
+	 METH_OLDARGS, termios_tcdrain__doc__},
 	{"tcflush", termios_tcflush, 
-	 METH_VARARGS, termios_tcflush__doc__},
+	 METH_OLDARGS, termios_tcflush__doc__},
 	{"tcflow", termios_tcflow, 
-	 METH_VARARGS, termios_tcflow__doc__},
+	 METH_OLDARGS, termios_tcflow__doc__},
 	{NULL, NULL}
 };
 
@@ -379,9 +369,7 @@ static struct constant {
 	{"IXON", IXON},
 	{"IXANY", IXANY},
 	{"IXOFF", IXOFF},
-#ifdef IMAXBEL
 	{"IMAXBEL", IMAXBEL},
-#endif
 
 	/* struct termios.c_oflag constants */
 	{"OPOST", OPOST},
@@ -507,18 +495,12 @@ static struct constant {
 	{"ECHOE", ECHOE},
 	{"ECHOK", ECHOK},
 	{"ECHONL", ECHONL},
-#ifdef ECHOCTL
 	{"ECHOCTL", ECHOCTL},
-#endif
 #ifdef ECHOPRT
 	{"ECHOPRT", ECHOPRT},
 #endif
-#ifdef ECHOKE
 	{"ECHOKE", ECHOKE},
-#endif
-#ifdef FLUSHO
 	{"FLUSHO", FLUSHO},
-#endif
 	{"NOFLSH", NOFLSH},
 	{"TOSTOP", TOSTOP},
 #ifdef PENDIN
@@ -544,18 +526,10 @@ static struct constant {
 	{"VSTOP", VSTOP},
 	{"VSUSP", VSUSP},
 	{"VEOL", VEOL},
-#ifdef VREPRINT
 	{"VREPRINT", VREPRINT},
-#endif
-#ifdef VDISCARD
 	{"VDISCARD", VDISCARD},
-#endif
-#ifdef VWERASE
 	{"VWERASE", VWERASE},
-#endif
-#ifdef VLNEXT
 	{"VLNEXT", VLNEXT},
-#endif
 	{"VEOL2", VEOL2},
 
 

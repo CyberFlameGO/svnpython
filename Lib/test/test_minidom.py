@@ -239,14 +239,7 @@ def testGetAttributeNS(): pass
 
 def testGetAttributeNode(): pass
 
-def testGetElementsByTagNameNS():
-    d="""<foo xmlns:minidom="http://pyxml.sf.net/minidom">
-    <minidom:myelem/>
-    </foo>"""
-    dom = parseString(d)
-    elem = dom.getElementsByTagNameNS("http://pyxml.sf.net/minidom","myelem")
-    confirm(len(elem) == 1)
-    dom.unlink()
+def testGetElementsByTagNameNS(): pass
 
 def testGetEmptyNodeListFromElementsByTagNameNS(): pass
 

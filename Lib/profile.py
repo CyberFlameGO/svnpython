@@ -89,17 +89,6 @@ def help():
         print 'along the Python search path'
 
 
-if os.name == "mac":
-    import MacOS
-    def _get_time_mac(timer=MacOS.GetTicks):
-        return timer() / 60.0
-
-if hasattr(os, "times"):
-    def _get_time_times(timer=os.times):
-        t = timer()
-        return t[0] + t[1]
-
-
 class Profile:
     """Profiler class.
 
@@ -143,60 +132,62 @@ class Profile:
         self.cur = None
         self.cmd = ""
 
+        self.dispatch = {  \
+                  'call'     : self.trace_dispatch_call, \
+                  'return'   : self.trace_dispatch_return, \
+                  'exception': self.trace_dispatch_exception, \
+                  }
+
         if not timer:
             if os.name == 'mac':
                 import MacOS
                 self.timer = MacOS.GetTicks
                 self.dispatcher = self.trace_dispatch_mac
-                self.get_time = _get_time_mac
+                self.get_time = self.get_time_mac
             elif hasattr(time, 'clock'):
-                self.timer = self.get_time = time.clock
+                self.timer = time.clock
                 self.dispatcher = self.trace_dispatch_i
             elif hasattr(os, 'times'):
                 self.timer = os.times
                 self.dispatcher = self.trace_dispatch
-                self.get_time = _get_time_times
             else:
-                self.timer = self.get_time = time.time
+                self.timer = time.time
                 self.dispatcher = self.trace_dispatch_i
         else:
             self.timer = timer
             t = self.timer() # test out timer function
             try:
-                length = len(t)
-            except TypeError:
-                self.get_time = timer
-                self.dispatcher = self.trace_dispatch_i
-            else:
-                if length == 2:
+                if len(t) == 2:
                     self.dispatcher = self.trace_dispatch
                 else:
                     self.dispatcher = self.trace_dispatch_l
-                # This get_time() implementation needs to be defined
-                # here to capture the passed-in timer in the parameter
-                # list (for performance).  Note that we can't assume
-                # the timer() result contains two values in all
-                # cases.
-                def get_time_timer(timer=timer,
-                                   reduce=reduce, reducer=operator.add):
-                    return reduce(reducer, timer(), 0)
-                self.get_time = get_time_timer
+            except TypeError:
+                self.dispatcher = self.trace_dispatch_i
         self.t = self.get_time()
         self.simulate_call('profiler')
+
+
+    def get_time(self): # slow simulation of method to acquire time
+        t = self.timer()
+        if type(t) == type(()) or type(t) == type([]):
+            t = reduce(lambda x,y: x+y, t, 0)
+        return t
+
+    def get_time_mac(self):
+        return self.timer()/60.0
 
     # Heavily optimized dispatch routine for os.times() timer
 
     def trace_dispatch(self, frame, event, arg):
-        timer = self.timer
-        t = timer()
+        t = self.timer()
         t = t[0] + t[1] - self.t        # No Calibration constant
         # t = t[0] + t[1] - self.t - .00053 # Calibration constant
 
-        if self.dispatch[event](self, frame,t):
-            t = timer()
+        if self.dispatch[event](frame,t):
+            t = self.timer()
             self.t = t[0] + t[1]
         else:
-            r = timer()
+            r = self.timer()
             self.t = r[0] + r[1] - t # put back unrecorded delta
         return
 
@@ -205,37 +196,33 @@ class Profile:
     # Dispatch routine for best timer program (return = scalar integer)
 
     def trace_dispatch_i(self, frame, event, arg):
-        timer = self.timer
-        t = timer() - self.t # - 1 # Integer calibration constant
-        if self.dispatch[event](self, frame,t):
-            self.t = timer()
+        t = self.timer() - self.t # - 1 # Integer calibration constant
+        if self.dispatch[event](frame,t):
+            self.t = self.timer()
         else:
-            self.t = timer() - t  # put back unrecorded delta
+            self.t = self.timer() - t  # put back unrecorded delta
         return
 
-    # Dispatch routine for macintosh (timer returns time in ticks of
-    # 1/60th second)
+    # Dispatch routine for macintosh (timer returns time in ticks of 1/60th second)
 
     def trace_dispatch_mac(self, frame, event, arg):
-        timer = self.timer
-        t = timer()/60.0 - self.t # - 1 # Integer calibration constant
-        if self.dispatch[event](self, frame,t):
-            self.t = timer()/60.0
+        t = self.timer()/60.0 - self.t # - 1 # Integer calibration constant
+        if self.dispatch[event](frame,t):
+            self.t = self.timer()/60.0
         else:
-            self.t = timer()/60.0 - t  # put back unrecorded delta
+            self.t = self.timer()/60.0 - t  # put back unrecorded delta
         return
 
 
     # SLOW generic dispatch routine for timer returning lists of numbers
 
     def trace_dispatch_l(self, frame, event, arg):
-        get_time = self.get_time
-        t = get_time() - self.t
+        t = self.get_time() - self.t
 
-        if self.dispatch[event](self, frame,t):
-            self.t = get_time()
+        if self.dispatch[event](frame,t):
+            self.t = self.get_time()
         else:
-            self.t = get_time() - t # put back unrecorded delta
+            self.t = self.get_time()-t # put back unrecorded delta
         return
 
 
@@ -250,12 +237,11 @@ class Profile:
         fcode = frame.f_code
         fn = (fcode.co_filename, fcode.co_firstlineno, fcode.co_name)
         self.cur = (t, 0, 0, fn, frame, self.cur)
-        timings = self.timings
-        if timings.has_key(fn):
-            cc, ns, tt, ct, callers = timings[fn]
-            timings[fn] = cc, ns + 1, tt, ct, callers
+        if self.timings.has_key(fn):
+            cc, ns, tt, ct, callers = self.timings[fn]
+            self.timings[fn] = cc, ns + 1, tt, ct, callers
         else:
-            timings[fn] = 0, 0, 0, 0, {}
+            self.timings[fn] = 0, 0, 0, 0, {}
         return 1
 
     def trace_dispatch_return(self, frame, t):
@@ -271,8 +257,7 @@ class Profile:
         pt, ptt, pct, pfn, pframe, pcur = rcur
         self.cur = pt, ptt+rt, pct+sft, pfn, pframe, pcur
 
-        timings = self.timings
-        cc, ns, tt, ct, callers = timings[rfn]
+        cc, ns, tt, ct, callers = self.timings[rfn]
         if not ns:
             ct = ct + sft
             cc = cc + 1
@@ -283,17 +268,9 @@ class Profile:
             # courtesy of this call.
         else:
             callers[pfn] = 1
-        timings[rfn] = cc, ns - 1, tt+rtt, ct, callers
+        self.timings[rfn] = cc, ns - 1, tt+rtt, ct, callers
 
         return 1
-
-
-    dispatch = {
-        "call": trace_dispatch_call,
-        "exception": trace_dispatch_exception,
-        "return": trace_dispatch_return,
-        }
-
 
     # The next few function play with self.cmd. By carefully preloading
     # our parallel stack, we can force the profiled result to include
@@ -328,21 +305,20 @@ class Profile:
         else:
             pframe = None
         frame = self.fake_frame(code, pframe)
-        a = self.dispatch['call'](self, frame, 0)
+        a = self.dispatch['call'](frame, 0)
         return
 
     # collect stats from pending stack, including getting final
     # timings for self.cmd frame.
 
     def simulate_cmd_complete(self):
-        get_time = self.get_time
-        t = get_time() - self.t
+        t = self.get_time() - self.t
         while self.cur[-1]:
             # We *can* cause assertion errors here if
             # dispatch_trace_return checks for a frame match!
-            a = self.dispatch['return'](self, self.cur[-2], t)
+            a = self.dispatch['return'](self.cur[-2], t)
             t = 0
-        self.t = get_time() - t
+        self.t = self.get_time() - t
 
 
     def print_stats(self):
@@ -389,11 +365,11 @@ class Profile:
         return self
 
     # This method is more useful to profile a single function call.
-    def runcall(self, func, *args, **kw):
+    def runcall(self, func, *args):
         self.set_cmd(`func`)
         sys.setprofile(self.dispatcher)
         try:
-            return apply(func, args, kw)
+            return apply(func, args)
         finally:
             sys.setprofile(None)
 
@@ -443,22 +419,21 @@ class Profile:
 
     def calibrate(self, m):
         # Modified by Tim Peters
-        get_time = self.get_time
         n = m
-        s = get_time()
+        s = self.get_time()
         while n:
             self.simple()
             n = n - 1
-        f = get_time()
+        f = self.get_time()
         my_simple = f - s
         #print "Simple =", my_simple,
 
         n = m
-        s = get_time()
+        s = self.get_time()
         while n:
             self.instrumented()
             n = n - 1
-        f = get_time()
+        f = self.get_time()
         my_inst = f - s
         # print "Instrumented =", my_inst
         avg_cost = (my_inst - my_simple)/m
@@ -528,13 +503,6 @@ class OldProfile(Profile):
         return 1
 
 
-    dispatch = {
-        "call": trace_dispatch_call,
-        "exception": trace_dispatch_exception,
-        "return": trace_dispatch_return,
-        }
-
-
     def snapshot_stats(self):
         self.stats = {}
         for func in self.timings.keys():
@@ -581,13 +549,6 @@ class HotProfile(Profile):
         return 1
 
 
-    dispatch = {
-        "call": trace_dispatch_call,
-        "exception": trace_dispatch_exception,
-        "return": trace_dispatch_return,
-        }
-
-
     def snapshot_stats(self):
         self.stats = {}
         for func in self.timings.keys():
@@ -603,6 +564,8 @@ def Stats(*args):
 
 # When invoked as main program, invoke the profiler on a script
 if __name__ == '__main__':
+    import sys
+    import os
     if not sys.argv[1:]:
         print "usage: profile.py scriptfile [arg] ..."
         sys.exit(2)

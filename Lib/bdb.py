@@ -74,7 +74,6 @@ class Bdb:
         if self.stop_here(frame) or frame == self.returnframe:
             self.user_return(frame, arg)
             if self.quitting: raise BdbQuit
-        return self.trace_dispatch
 
     def dispatch_exception(self, frame, arg):
         if self.stop_here(frame):

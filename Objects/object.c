@@ -100,6 +100,10 @@ PyObject_Init(PyObject *op, PyTypeObject *tp)
 	/* Any changes should be reflected in PyObject_INIT (objimpl.h) */
 	op->ob_type = tp;
 	_Py_NewReference(op);
+	if (PyType_SUPPORTS_WEAKREFS(tp)) {
+		PyObject **weaklist = PyObject_GET_WEAKREFS_LISTPTR(op);
+		*weaklist = NULL;
+	}
 	return op;
 }
 
@@ -119,6 +123,10 @@ PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, int size)
 	op->ob_size = size;
 	op->ob_type = tp;
 	_Py_NewReference((PyObject *)op);
+	if (PyType_SUPPORTS_WEAKREFS(tp)) {
+		PyObject **weaklist = PyObject_GET_WEAKREFS_LISTPTR(op);
+		*weaklist = NULL;
+	}
 	return op;
 }
 
@@ -188,17 +196,24 @@ PyObject_Print(PyObject *op, FILE *fp, int flags)
 			fprintf(fp, "<refcnt %u at %p>",
 				op->ob_refcnt, op);
 		else if (op->ob_type->tp_print == NULL) {
-			PyObject *s;
-			if (flags & Py_PRINT_RAW)
-				s = PyObject_Str(op);
-			else
-				s = PyObject_Repr(op);
-			if (s == NULL)
-				ret = -1;
-			else {
-				ret = PyObject_Print(s, fp, Py_PRINT_RAW);
+			if (op->ob_type->tp_repr == NULL) {
+				fprintf(fp, "<%s object at %p>",
+					op->ob_type->tp_name, op);
 			}
-			Py_XDECREF(s);
+			else {
+				PyObject *s;
+				if (flags & Py_PRINT_RAW)
+					s = PyObject_Str(op);
+				else
+					s = PyObject_Repr(op);
+				if (s == NULL)
+					ret = -1;
+				else {
+					ret = PyObject_Print(s, fp,
+							     Py_PRINT_RAW);
+				}
+				Py_XDECREF(s);
+			}
 		}
 		else
 			ret = (*op->ob_type->tp_print)(op, fp, flags);
@@ -283,14 +298,22 @@ PyObject_Str(PyObject *v)
 	
 	if (v == NULL)
 		return PyString_FromString("<NULL>");
-	if (PyString_Check(v)) {
+	else if (PyString_Check(v)) {
 		Py_INCREF(v);
 		return v;
 	}
-	if (v->ob_type->tp_str == NULL)
-		return PyObject_Repr(v);
-
-	res = (*v->ob_type->tp_str)(v);
+	else if (v->ob_type->tp_str != NULL)
+		res = (*v->ob_type->tp_str)(v);
+	else {
+		PyObject *func;
+		if (!PyInstance_Check(v) ||
+		    (func = PyObject_GetAttrString(v, "__str__")) == NULL) {
+			PyErr_Clear();
+			return PyObject_Repr(v);
+		}
+		res = PyEval_CallObject(func, (PyObject *)NULL);
+		Py_DECREF(func);
+	}
 	if (res == NULL)
 		return NULL;
 	if (PyUnicode_Check(res)) {
@@ -447,7 +470,7 @@ try_rich_to_3way_compare(PyObject *v, PyObject *w)
 	for (i = 0; i < 3; i++) {
 		switch (try_rich_compare_bool(v, w, tries[i].op)) {
 		case -1:
-			return -2;
+			return -1;
 		case 1:
 			return tries[i].outcome;
 		}
@@ -477,6 +500,16 @@ try_3way_compare(PyObject *v, PyObject *w)
 	if (PyInstance_Check(w))
 		return (*w->ob_type->tp_compare)(v, w);
 
+	/* If the types are equal, don't bother with coercions etc. */
+	if (v->ob_type == w->ob_type) {
+		if ((f = v->ob_type->tp_compare) == NULL)
+			return 2;
+		c = (*f)(v, w);
+		if (PyErr_Occurred())
+			return -2;
+		return c < 0 ? -1 : c > 0 ? 1 : 0;
+	}
+
 	/* Try coercion; if it fails, give up */
 	c = PyNumber_CoerceEx(&v, &w);
 	if (c < 0)
@@ -489,7 +522,7 @@ try_3way_compare(PyObject *v, PyObject *w)
 		c = (*f)(v, w);
 		Py_DECREF(v);
 		Py_DECREF(w);
-		if (c < 0 && PyErr_Occurred())
+		if (PyErr_Occurred())
 			return -2;
 		return c < 0 ? -1 : c > 0 ? 1 : 0;
 	}
@@ -499,7 +532,7 @@ try_3way_compare(PyObject *v, PyObject *w)
 		c = (*f)(w, v); /* swapped! */
 		Py_DECREF(v);
 		Py_DECREF(w);
-		if (c < 0 && PyErr_Occurred())
+		if (PyErr_Occurred())
 			return -2;
 		return c < 0 ? 1 : c > 0 ? -1 : 0; /* negated! */
 	}
@@ -575,23 +608,11 @@ default_3way_compare(PyObject *v, PyObject *w)
 
 #define CHECK_TYPES(o) PyType_HasFeature((o)->ob_type, Py_TPFLAGS_CHECKTYPES)
 
-/* Do a 3-way comparison, by hook or by crook.  Return:
-   -2 for an exception;
-   -1 if v < w;
-    0 if v == w;
-    1 if v > w;
-   If the object implements a tp_compare function, it returns
-   whatever this function returns (whether with an exception or not).
-*/
 static int
 do_cmp(PyObject *v, PyObject *w)
 {
 	int c;
-	cmpfunc f;
 
-	if (v->ob_type == w->ob_type
-	    && (f = v->ob_type->tp_compare) != NULL)
-		return (*f)(v, w);
 	c = try_rich_to_3way_compare(v, w);
 	if (c < 2)
 		return c;
@@ -756,9 +777,16 @@ PyObject_Compare(PyObject *v, PyObject *w)
 }
 
 static PyObject *
-convert_3way_to_object(int op, int c)
+try_3way_to_rich_compare(PyObject *v, PyObject *w, int op)
 {
+	int c;
 	PyObject *result;
+
+	c = try_3way_compare(v, w);
+	if (c >= 2)
+		c = default_3way_compare(v, w);
+	if (c <= -2)
+		return NULL;
 	switch (op) {
 	case Py_LT: c = c <  0; break;
 	case Py_LE: c = c <= 0; break;
@@ -771,51 +799,11 @@ convert_3way_to_object(int op, int c)
 	Py_INCREF(result);
 	return result;
 }
-	
-
-static PyObject *
-try_3way_to_rich_compare(PyObject *v, PyObject *w, int op)
-{
-	int c;
-
-	c = try_3way_compare(v, w);
-	if (c >= 2)
-		c = default_3way_compare(v, w);
-	if (c <= -2)
-		return NULL;
-	return convert_3way_to_object(op, c);
-}
 
 static PyObject *
 do_richcmp(PyObject *v, PyObject *w, int op)
 {
 	PyObject *res;
-	cmpfunc f;
-
-	/* If the types are equal, don't bother with coercions etc. 
-	   Instances are special-cased in try_3way_compare, since
-	   a result of 2 does *not* mean one value being greater
-	   than the other. */
-	if (v->ob_type == w->ob_type
-	    && (f = v->ob_type->tp_compare) != NULL
-	    && !PyInstance_Check(v)) {
-		int c;
-		richcmpfunc f1;
-		if ((f1 = RICHCOMPARE(v->ob_type)) != NULL) {
-			/* If the type has richcmp, try it first.
-			   try_rich_compare would try it two-sided,
-			   which is not needed since we've a single
-			   type only. */
-			res = (*f1)(v, w, op);
-			if (res != Py_NotImplemented)
-				return res;
-			Py_DECREF(res);
-		}
-		c = (*f)(v, w);
-		if (c < 0 && PyErr_Occurred())
-			return NULL;
-		return convert_3way_to_object(op, c);
-	}
 
 	res = try_rich_compare(v, w, op);
 	if (res != Py_NotImplemented)
@@ -870,7 +858,6 @@ PyObject_RichCompare(PyObject *v, PyObject *w, int op)
 	return res;
 }
 
-/* Return -1 if error; 1 if v op w; 0 if not (v op w). */
 int
 PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)
 {
@@ -1081,7 +1068,7 @@ PyObject_GetAttr(PyObject *v, PyObject *name)
 	if (v->ob_type->tp_getattro != NULL)
 		return (*v->ob_type->tp_getattro)(v, name);
 	else
-		return PyObject_GetAttrString(v, PyString_AS_STRING(name));
+	return PyObject_GetAttrString(v, PyString_AS_STRING(name));
 }
 
 int

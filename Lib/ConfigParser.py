@@ -431,8 +431,7 @@ class ConfigParser:
             if line[0] in ' \t' and cursect is not None and optname:
                 value = line.strip()
                 if value:
-                    k = self.optionxform(optname)
-                    cursect[k] = "%s\n%s" % (cursect[k], value)
+                    cursect[optname] = cursect[optname] + '\n ' + value
             # a section header or option header?
             else:
                 # is it a section header?

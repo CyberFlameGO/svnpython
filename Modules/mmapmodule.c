@@ -163,13 +163,16 @@ static PyObject *
 mmap_read_byte_method(mmap_object *self,
 		      PyObject *args)
 {
+	char value;
+	char *where;
 	CHECK_VALID(NULL);
         if (!PyArg_ParseTuple(args, ":read_byte"))
 		return NULL;
 	if (self->pos < self->size) {
-	        char value = self->data[self->pos];
+	        where = self->data + self->pos;
+		value = (char) *(where);
 		self->pos += 1;
-		return Py_BuildValue("c", value);
+		return Py_BuildValue("c", (char) *(where));
 	} else {
 		PyErr_SetString (PyExc_ValueError, "read byte out of range");
 		return NULL;
@@ -224,25 +227,16 @@ static PyObject *
 mmap_find_method(mmap_object *self,
 		 PyObject *args)
 {
-	long start = self->pos;
+	int start = self->pos;
 	char *needle;
 	int len;
 
 	CHECK_VALID(NULL);
-	if (!PyArg_ParseTuple (args, "s#|l:find", &needle, &len, &start)) {
+	if (!PyArg_ParseTuple (args, "s#|i:find", &needle, &len, &start)) {
 		return NULL;
 	} else {
-		char *p;
-		char *e = self->data + self->size;
-
-                if (start < 0)
-                    start += self->size;
-                if (start < 0)
-                    start = 0;
-                else if ((size_t)start > self->size)
-                    start = self->size;
-                p = self->data + start;
-
+		char *p = self->data+self->pos;
+		char *e = self->data+self->size;
 		while (p < e) {
 			char *s = p;
 			char *n = needle;
@@ -251,8 +245,8 @@ mmap_find_method(mmap_object *self,
 			}
 			if (!*n) {
 				return Py_BuildValue (
-					"l",
-					(long) (p - self->data));
+					"i",
+					(int) (p - (self->data + start)));
 			}
 			p++;
 		}

@@ -34,12 +34,12 @@ endbracket = re.compile('[<>]')
 special = re.compile('<![^<>]*>')
 commentopen = re.compile('<!--')
 commentclose = re.compile(r'--\s*>')
-tagfind = re.compile('[a-zA-Z][-_.a-zA-Z0-9]*')
+tagfind = re.compile('[a-zA-Z][-.a-zA-Z0-9]*')
 attrfind = re.compile(
     r'\s*([a-zA-Z_][-.a-zA-Z_0-9]*)(\s*=\s*'
-    r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./:;+*%?!&$\(\)_#=~\'"]*))?')
+    r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./:;+*%?!&$\(\)_#=~]*))?')
 
-decldata = re.compile(r'[^>\'\"]+')
+declname = re.compile(r'[a-zA-Z][-_.a-zA-Z0-9]*\s*')
 declstringlit = re.compile(r'(\'[^\']*\'|"[^"]*")\s*')
 
 
@@ -212,8 +212,8 @@ class SGMLParser:
     def parse_declaration(self, i):
         rawdata = self.rawdata
         j = i + 2
-        n = len(rawdata)
-        while j < n:
+        # in practice, this should look like: ((name|stringlit) S*)+ '>'
+        while 1:
             c = rawdata[j:j+1]
             if c == ">":
                 # end of declaration syntax
@@ -225,14 +225,19 @@ class SGMLParser:
                     # incomplete or an error?
                     return -1
                 j = m.end()
-            else:
-                m = decldata.match(rawdata, j)
+            elif c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                m = declname.match(rawdata, j)
                 if not m:
                     # incomplete or an error?
                     return -1
                 j = m.end()
-        # end of buffer between tokens
-        return -1
+            elif i == len(rawdata):
+                # end of buffer between tokens
+                return -1
+            else:
+                raise SGMLParseError(
+                    "unexpected char in declaration: %s" % `rawdata[i]`)
+        assert 0, "can't get here!"
 
     # Internal -- parse processing instr, return length or -1 if not terminated
     def parse_pi(self, i):

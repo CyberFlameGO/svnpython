@@ -1176,143 +1176,112 @@ PySequence_DelSlice(PyObject *s, int i1, int i2)
 PyObject *
 PySequence_Tuple(PyObject *v)
 {
-	PyObject *it;  /* iter(v) */
-	int n;         /* guess for result tuple size */
-	PyObject *result;
-	int j;
+	PySequenceMethods *m;
 
 	if (v == NULL)
 		return null_error();
 
-	/* Special-case the common tuple and list cases, for efficiency. */
 	if (PyTuple_Check(v)) {
 		Py_INCREF(v);
 		return v;
 	}
+
 	if (PyList_Check(v))
 		return PyList_AsTuple(v);
 
-	/* Get iterator. */
-	it = PyObject_GetIter(v);
-	if (it == NULL)
-		return type_error("tuple() argument must support iteration");
+	/* There used to be code for strings here, but tuplifying strings is
+	   not a common activity, so I nuked it.  Down with code bloat! */
 
-	/* Guess result size and allocate space. */
-	n = PySequence_Size(v);
-	if (n < 0) {
-		PyErr_Clear();
-		n = 10;  /* arbitrary */
-	}
-	result = PyTuple_New(n);
-	if (result == NULL)
-		goto Fail;
-
-	/* Fill the tuple. */
-	for (j = 0; ; ++j) {
-		PyObject *item = PyIter_Next(it);
-		if (item == NULL) {
-			if (PyErr_Occurred())
-				goto Fail;
-			break;
-		}
-		if (j >= n) {
-			if (n < 500)
-				n += 10;
-			else
-				n += 100;
-			if (_PyTuple_Resize(&result, n) != 0) {
-				Py_DECREF(item);
-				goto Fail;
+	/* Generic sequence object */
+	m = v->ob_type->tp_as_sequence;
+	if (m && m->sq_item) {
+		int i;
+		PyObject *t;
+		int n = PySequence_Size(v);
+		if (n < 0)
+			return NULL;
+		t = PyTuple_New(n);
+		if (t == NULL)
+			return NULL;
+		for (i = 0; ; i++) {
+			PyObject *item = (*m->sq_item)(v, i);
+			if (item == NULL) {
+				if (PyErr_ExceptionMatches(PyExc_IndexError))
+					PyErr_Clear();
+				else {
+					Py_DECREF(t);
+					t = NULL;
+				}
+				break;
 			}
+			if (i >= n) {
+				if (n < 500)
+					n += 10;
+				else
+					n += 100;
+				if (_PyTuple_Resize(&t, n, 0) != 0)
+					break;
+			}
+			PyTuple_SET_ITEM(t, i, item);
 		}
-		PyTuple_SET_ITEM(result, j, item);
+		if (i < n && t != NULL)
+			_PyTuple_Resize(&t, i, 0);
+		return t;
 	}
 
-	/* Cut tuple back if guess was too large. */
-	if (j < n &&
-	    _PyTuple_Resize(&result, j) != 0)
-		goto Fail;
-
-	Py_DECREF(it);
-	return result;
-
-Fail:
-	Py_XDECREF(result);
-	Py_DECREF(it);
-	return NULL;
+	/* None of the above */
+	return type_error("tuple() argument must be a sequence");
 }
 
 PyObject *
 PySequence_List(PyObject *v)
 {
-	PyObject *it;      /* iter(v) */
-	PyObject *result;  /* result list */
-	int n;		   /* guess for result list size */
-	int i;
+	PySequenceMethods *m;
 
 	if (v == NULL)
 		return null_error();
 
-	/* Special-case list(a_list), for speed. */
 	if (PyList_Check(v))
 		return PyList_GetSlice(v, 0, PyList_GET_SIZE(v));
 
-	/* Get iterator.  There may be some low-level efficiency to be gained
-	 * by caching the tp_iternext slot instead of using PyIter_Next()
-	 * later, but premature optimization is the root etc.
-	 */
-	it = PyObject_GetIter(v);
-	if (it == NULL)
-		return NULL;
-
-	/* Guess a result list size. */
-	n = -1;	 /* unknown */
-	if (PySequence_Check(v) &&
-	    v->ob_type->tp_as_sequence->sq_length) {
-		n = PySequence_Size(v);
+	m = v->ob_type->tp_as_sequence;
+	if (m && m->sq_item) {
+		int i;
+		PyObject *l;
+		int n = PySequence_Size(v);
 		if (n < 0)
-			PyErr_Clear();
-	}
-	if (n < 0)
-		n = 8;	/* arbitrary */
-	result = PyList_New(n);
-	if (result == NULL) {
-		Py_DECREF(it);
-		return NULL;
-	}
-
-	/* Run iterator to exhaustion. */
-	for (i = 0; ; i++) {
-		PyObject *item = PyIter_Next(it);
-		if (item == NULL) {
-			if (PyErr_Occurred()) {
-				Py_DECREF(result);
-				result = NULL;
+			return NULL;
+		l = PyList_New(n);
+		if (l == NULL)
+			return NULL;
+		for (i = 0; ; i++) {
+			PyObject *item = (*m->sq_item)(v, i);
+			if (item == NULL) {
+				if (PyErr_ExceptionMatches(PyExc_IndexError))
+					PyErr_Clear();
+				else {
+					Py_DECREF(l);
+					l = NULL;
+				}
+				break;
 			}
-			break;
-		}
-		if (i < n)
-			PyList_SET_ITEM(result, i, item); /* steals ref */
-		else {
-			int status = PyList_Append(result, item);
-			Py_DECREF(item);  /* append creates a new ref */
-			if (status < 0) {
-				Py_DECREF(result);
-				result = NULL;
+			if (i < n)
+				PyList_SET_ITEM(l, i, item);
+			else if (PyList_Append(l, item) < 0) {
+				Py_DECREF(l);
+				l = NULL;
 				break;
 			}
 		}
-	}
-
-	/* Cut back result list if initial guess was too large. */
-	if (i < n && result != NULL) {
-		if (PyList_SetSlice(result, i, n, (PyObject *)NULL) != 0) {
-			Py_DECREF(result);
-			result = NULL;
+		if (i < n && l != NULL) {
+			if (PyList_SetSlice(l, i, n, (PyObject *)NULL) != 0) {
+				Py_DECREF(l);
+				l = NULL;
+			}
 		}
+		return l;
 	}
-	Py_DECREF(it);
-	return result;
+	return type_error("list() argument must be a sequence");
 }
 
 PyObject *
@@ -1333,98 +1302,76 @@ PySequence_Fast(PyObject *v, const char *m)
 	return v;
 }
 
-/* Return # of times o appears in s. */
 int
 PySequence_Count(PyObject *s, PyObject *o)
 {
-	int n;  /* running count of o hits */
-	PyObject *it;  /* iter(s) */
+	int l, i, n, cmp, err;
+	PyObject *item;
 
 	if (s == NULL || o == NULL) {
 		null_error();
 		return -1;
 	}
-
-	it = PyObject_GetIter(s);
-	if (it == NULL) {
-		type_error(".count() requires iterable argument");
+	
+	l = PySequence_Size(s);
+	if (l < 0)
 		return -1;
-	}
 
 	n = 0;
-	for (;;) {
-		int cmp;
-		PyObject *item = PyIter_Next(it);
-		if (item == NULL) {
-			if (PyErr_Occurred())
-				goto Fail;
-			break;
-		}
-		cmp = PyObject_RichCompareBool(o, item, Py_EQ);
+	for (i = 0; i < l; i++) {
+		item = PySequence_GetItem(s, i);
+		if (item == NULL)
+			return -1;
+		err = PyObject_Cmp(item, o, &cmp);
 		Py_DECREF(item);
-		if (cmp < 0)
-			goto Fail;
-		if (cmp > 0) {
-			if (n == INT_MAX) {
-				PyErr_SetString(PyExc_OverflowError,
-				                "count exceeds C int size");
-				goto Fail;
-			}
+		if (err < 0)
+			return err;
+		if (cmp == 0)
 			n++;
-		}
 	}
-	Py_DECREF(it);
 	return n;
-
-Fail:
-	Py_DECREF(it);
-	return -1;
 }
 
-/* Return -1 if error; 1 if ob in seq; 0 if ob not in seq.
- * Always uses the iteration protocol, and only Py_EQ comparison.
- */
 int
-_PySequence_IterContains(PyObject *seq, PyObject *ob)
+PySequence_Contains(PyObject *w, PyObject *v) /* v in w */
 {
-	int result;
-	PyObject *it = PyObject_GetIter(seq);
-	if (it == NULL) {
+	int i, cmp;
+	PyObject *x;
+	PySequenceMethods *sq;
+
+	if(PyType_HasFeature(w->ob_type, Py_TPFLAGS_HAVE_SEQUENCE_IN)) {
+		sq = w->ob_type->tp_as_sequence;
+	        if(sq != NULL && sq->sq_contains != NULL)
+			return (*sq->sq_contains)(w, v);
+	}
+	
+	/* If there is no better way to check whether an item is is contained,
+	   do it the hard way */
+	sq = w->ob_type->tp_as_sequence;
+	if (sq == NULL || sq->sq_item == NULL) {
 		PyErr_SetString(PyExc_TypeError,
-			"'in' or 'not in' needs iterable right argument");
+			"'in' or 'not in' needs sequence right argument");
 		return -1;
 	}
 
-	for (;;) {
-		int cmp;
-		PyObject *item = PyIter_Next(it);
-		if (item == NULL) {
-			result = PyErr_Occurred() ? -1 : 0;
-			break;
+	for (i = 0; ; i++) {
+		x = (*sq->sq_item)(w, i);
+		if (x == NULL) {
+			if (PyErr_ExceptionMatches(PyExc_IndexError)) {
+				PyErr_Clear();
+				break;
+			}
+			return -1;
 		}
-		cmp = PyObject_RichCompareBool(ob, item, Py_EQ);
-		Py_DECREF(item);
-		if (cmp == 0)
-			continue;
-		result = cmp > 0 ? 1 : -1;
-		break;
+		cmp = PyObject_RichCompareBool(v, x, Py_EQ);
+		Py_XDECREF(x);
+		if (cmp > 0)
+			return 1;
+		if (cmp < 0)
+			return -1;
 	}
-	Py_DECREF(it);
-	return result;
-}
 
-/* Return -1 if error; 1 if ob in seq; 0 if ob not in seq.
- * Use sq_contains if possible, else defer to _PySequence_IterContains().
- */
-int
-PySequence_Contains(PyObject *seq, PyObject *ob)
-{
-	if (PyType_HasFeature(seq->ob_type, Py_TPFLAGS_HAVE_SEQUENCE_IN)) {
-		PySequenceMethods *sqm = seq->ob_type->tp_as_sequence;
-	        if (sqm != NULL && sqm->sq_contains != NULL)
-			return (*sqm->sq_contains)(seq, ob);
-	}
-	return _PySequence_IterContains(seq, ob);
+	return 0;
 }
 
 /* Backwards compatibility */
@@ -1819,27 +1766,14 @@ PyObject_GetIter(PyObject *o)
 	}
 }
 
-/* Return next item.
- * If an error occurs, return NULL.  PyErr_Occurred() will be true.
- * If the iteration terminates normally, return NULL and clear the
- * PyExc_StopIteration exception (if it was set).  PyErr_Occurred()
- * will be false.
- * Else return the next object.  PyErr_Occurred() will be false.
- */
 PyObject *
 PyIter_Next(PyObject *iter)
 {
-	PyObject *result;
 	if (!PyIter_Check(iter)) {
 		PyErr_Format(PyExc_TypeError,
 			     "'%.100s' object is not an iterator",
 			     iter->ob_type->tp_name);
 		return NULL;
 	}
-	result = (*iter->ob_type->tp_iternext)(iter);
-	if (result == NULL &&
-	    PyErr_Occurred() &&
-	    PyErr_ExceptionMatches(PyExc_StopIteration))
-		PyErr_Clear();
-	return result;
+	return (*iter->ob_type->tp_iternext)(iter);
 }

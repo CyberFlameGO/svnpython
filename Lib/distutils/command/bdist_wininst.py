@@ -216,6 +216,7 @@ class bdist_wininst (Command):
     def get_exe_bytes (self):
         import base64
         return base64.decodestring(EXEDATA)
+
 # class bdist_wininst
 
 if __name__ == '__main__':

@@ -69,22 +69,15 @@ def updatecache(filename):
     try:
         stat = os.stat(fullname)
     except os.error, msg:
-        # Try looking through the module search path.
+        # Try looking through the module search path
         basename = os.path.split(filename)[1]
         for dirname in sys.path:
-            # When using imputil, sys.path may contain things other than
-            # strings; ignore them when it happens.
+            fullname = os.path.join(dirname, basename)
             try:
-                fullname = os.path.join(dirname, basename)
-            except (TypeError, AttributeError):
-                # Not sufficiently string-like to do anything useful with.
+                stat = os.stat(fullname)
+                break
+            except os.error:
                 pass
-            else:
-                try:
-                    stat = os.stat(fullname)
-                    break
-                except os.error:
-                    pass
         else:
             # No luck
 ##          print '*** Cannot stat', filename, ':', msg

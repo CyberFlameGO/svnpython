@@ -13,15 +13,6 @@
 #include <unistd.h>
 #endif
 
-/* The default encoding used by the platform file system APIs
-   Can remain NULL for all platforms that don't have such a concept
-*/
-#if defined(MS_WIN32) && defined(HAVE_USABLE_WCHAR_T)
-const char *Py_FileSystemDefaultEncoding = "mbcs";
-#else
-const char *Py_FileSystemDefaultEncoding = NULL; /* use default */
-#endif
-
 /* Forward */
 static PyObject *filterstring(PyObject *, PyObject *);
 static PyObject *filtertuple (PyObject *, PyObject *);
@@ -171,58 +162,53 @@ Note that classes are callable, as are instances with a __call__() method.";
 static PyObject *
 builtin_filter(PyObject *self, PyObject *args)
 {
-	PyObject *func, *seq, *result, *it;
-	int len;   /* guess for result list size */
-	register int j;
+	PyObject *func, *seq, *result;
+	PySequenceMethods *sqf;
+	int len;
+	register int i, j;
 
 	if (!PyArg_ParseTuple(args, "OO:filter", &func, &seq))
 		return NULL;
 
-	/* Strings and tuples return a result of the same type. */
-	if (PyString_Check(seq))
-		return filterstring(func, seq);
-	if (PyTuple_Check(seq))
-		return filtertuple(func, seq);
-
-	/* Get iterator. */
-	it = PyObject_GetIter(seq);
-	if (it == NULL)
-		return NULL;
-
-	/* Guess a result list size. */
-	len = -1;   /* unknown */
-	if (PySequence_Check(seq) &&
-	    seq->ob_type->tp_as_sequence->sq_length) {
-		len = PySequence_Size(seq);
-		if (len < 0)
-			PyErr_Clear();
+	if (PyString_Check(seq)) {
+		PyObject *r = filterstring(func, seq);
+		return r;
 	}
-	if (len < 0)
-		len = 8;  /* arbitrary */
 
-	/* Get a result list. */
+	if (PyTuple_Check(seq)) {
+		PyObject *r = filtertuple(func, seq);
+		return r;
+	}
+
+	sqf = seq->ob_type->tp_as_sequence;
+	if (sqf == NULL || sqf->sq_length == NULL || sqf->sq_item == NULL) {
+		PyErr_SetString(PyExc_TypeError,
+			   "filter() arg 2 must be a sequence");
+		goto Fail_2;
+	}
+
+	if ((len = (*sqf->sq_length)(seq)) < 0)
+		goto Fail_2;
+
 	if (PyList_Check(seq) && seq->ob_refcnt == 1) {
-		/* Eww - can modify the list in-place. */
 		Py_INCREF(seq);
 		result = seq;
 	}
 	else {
-		result = PyList_New(len);
-		if (result == NULL)
-			goto Fail_it;
+		if ((result = PyList_New(len)) == NULL)
+			goto Fail_2;
 	}
 
-	/* Build the result list. */
-	j = 0;
-	for (;;) {
+	for (i = j = 0; ; ++i) {
 		PyObject *item, *good;
 		int ok;
 
-		item = PyIter_Next(it);
-		if (item == NULL) {
-			if (PyErr_Occurred())
-				goto Fail_result_it;
-			break;
+		if ((item = (*sqf->sq_item)(seq, i)) == NULL) {
+			if (PyErr_ExceptionMatches(PyExc_IndexError)) {
+				PyErr_Clear();
+				break;
+			}
+			goto Fail_1;
 		}
 
 		if (func == Py_None) {
@@ -231,46 +217,43 @@ builtin_filter(PyObject *self, PyObject *args)
 		}
 		else {
 			PyObject *arg = Py_BuildValue("(O)", item);
-			if (arg == NULL) {
-				Py_DECREF(item);
-				goto Fail_result_it;
-			}
+			if (arg == NULL)
+				goto Fail_1;
 			good = PyEval_CallObject(func, arg);
 			Py_DECREF(arg);
 			if (good == NULL) {
 				Py_DECREF(item);
-				goto Fail_result_it;
+				goto Fail_1;
 			}
 		}
 		ok = PyObject_IsTrue(good);
 		Py_DECREF(good);
 		if (ok) {
-			if (j < len)
-				PyList_SET_ITEM(result, j, item);
+			if (j < len) {
+				if (PyList_SetItem(result, j++, item) < 0)
+					goto Fail_1;
+			}
 			else {
 				int status = PyList_Append(result, item);
+				j++;
 				Py_DECREF(item);
 				if (status < 0)
-					goto Fail_result_it;
+					goto Fail_1;
 			}
-			++j;
-		}
-		else
+		} else {
 			Py_DECREF(item);
+		}
 	}
 
 
-	/* Cut back result list if len is too big. */
 	if (j < len && PyList_SetSlice(result, j, len, NULL) < 0)
-		goto Fail_result_it;
+		goto Fail_1;
 
-	Py_DECREF(it);
 	return result;
 
-Fail_result_it:
+Fail_1:
 	Py_DECREF(result);
-Fail_it:
-	Py_DECREF(it);
+Fail_2:
 	return NULL;
 }
 
@@ -308,40 +291,23 @@ static PyObject *
 builtin_unichr(PyObject *self, PyObject *args)
 {
 	long x;
-	Py_UNICODE s[2];
+	Py_UNICODE s[1];
 
 	if (!PyArg_ParseTuple(args, "l:unichr", &x))
 		return NULL;
-
-	if (x < 0 || x > 0x10ffff) {
+	if (x < 0 || x >= 65536) {
 		PyErr_SetString(PyExc_ValueError,
-				"unichr() arg not in range(0x110000)");
+				"unichr() arg not in range(65536)");
 		return NULL;
 	}
-
-	if (x <= 0xffff) {
-		/* UCS-2 character */
-		s[0] = (Py_UNICODE) x;
-		return PyUnicode_FromUnicode(s, 1);
-	}
-	else {
-#ifndef Py_UNICODE_WIDE
-		/* UCS-4 character.  store as two surrogate characters */
-		x -= 0x10000L;
-		s[0] = 0xD800 + (Py_UNICODE) (x >> 10);
-		s[1] = 0xDC00 + (Py_UNICODE) (x & 0x03FF);
-		return PyUnicode_FromUnicode(s, 2);
-#else
-		s[0] = (Py_UNICODE)x;
-		return PyUnicode_FromUnicode(s, 1);
-#endif
-	}
+	s[0] = (Py_UNICODE)x;
+	return PyUnicode_FromUnicode(s, 1);
 }
 
 static char unichr_doc[] =
 "unichr(i) -> Unicode character\n\
 \n\
-Return a Unicode string of one character with ordinal i; 0 <= i <= 0x10ffff.";
+Return a Unicode string of one character with ordinal i; 0 <= i < 65536.";
 
 
 static PyObject *
@@ -850,10 +816,10 @@ builtin_execfile(PyObject *self, PyObject *args)
 	if (PyEval_GetNestedScopes()) {
 		PyCompilerFlags cf;
 		cf.cf_nested_scopes = 1;
-		res = PyRun_FileExFlags(fp, filename, Py_file_input, globals,
+		res = PyRun_FileExFlags(fp, filename, Py_file_input, globals, 
 				   locals, 1, &cf);
-	} else
-		res = PyRun_FileEx(fp, filename, Py_file_input, globals,
+	} else 
+		res = PyRun_FileEx(fp, filename, Py_file_input, globals, 
 				   locals, 1);
 	return res;
 }
@@ -956,8 +922,9 @@ static PyObject *
 builtin_map(PyObject *self, PyObject *args)
 {
 	typedef struct {
-		PyObject *it;	/* the iterator object */
-		int saw_StopIteration;  /* bool:  did the iterator end? */
+		PyObject *seq;
+		PySequenceMethods *sqf;
+		int len;
 	} sequence;
 
 	PyObject *func, *result;
@@ -980,95 +947,94 @@ builtin_map(PyObject *self, PyObject *args)
 		return PySequence_List(PyTuple_GetItem(args, 1));
 	}
 
-	/* Get space for sequence descriptors.  Must NULL out the iterator
-	 * pointers so that jumping to Fail_2 later doesn't see trash.
-	 */
 	if ((seqs = PyMem_NEW(sequence, n)) == NULL) {
 		PyErr_NoMemory();
-		return NULL;
-	}
-	for (i = 0; i < n; ++i) {
-		seqs[i].it = (PyObject*)NULL;
-		seqs[i].saw_StopIteration = 0;
+		goto Fail_2;
 	}
 
-	/* Do a first pass to obtain iterators for the arguments, and set len
-	 * to the largest of their lengths.
-	 */
-	len = 0;
-	for (i = 0, sqp = seqs; i < n; ++i, ++sqp) {
-		PyObject *curseq;
+	for (len = 0, i = 0, sqp = seqs; i < n; ++i, ++sqp) {
 		int curlen;
+		PySequenceMethods *sqf;
 
-		/* Get iterator. */
-		curseq = PyTuple_GetItem(args, i+1);
-		sqp->it = PyObject_GetIter(curseq);
-		if (sqp->it == NULL) {
+		if ((sqp->seq = PyTuple_GetItem(args, i + 1)) == NULL)
+			goto Fail_2;
+
+		sqp->sqf = sqf = sqp->seq->ob_type->tp_as_sequence;
+		if (sqf == NULL ||
+		    sqf->sq_length == NULL ||
+		    sqf->sq_item == NULL)
+		{
 			static char errmsg[] =
-			    "argument %d to map() must support iteration";
+			    "argument %d to map() must be a sequence object";
 			char errbuf[sizeof(errmsg) + 25];
+
 			sprintf(errbuf, errmsg, i+2);
 			PyErr_SetString(PyExc_TypeError, errbuf);
 			goto Fail_2;
 		}
 
-		/* Update len. */
-		curlen = -1;  /* unknown */
-		if (PySequence_Check(curseq) &&
-		    curseq->ob_type->tp_as_sequence->sq_length) {
-			curlen = PySequence_Size(curseq);
-			if (curlen < 0)
-				PyErr_Clear();
-		}
-		if (curlen < 0)
-			curlen = 8;  /* arbitrary */
+		if ((curlen = sqp->len = (*sqp->sqf->sq_length)(sqp->seq)) < 0)
+			goto Fail_2;
+
 		if (curlen > len)
 			len = curlen;
 	}
 
-	/* Get space for the result list. */
 	if ((result = (PyObject *) PyList_New(len)) == NULL)
 		goto Fail_2;
 
-	/* Iterate over the sequences until all have stopped. */
 	for (i = 0; ; ++i) {
 		PyObject *alist, *item=NULL, *value;
-		int numactive = 0;
+		int any = 0;
 
 		if (func == Py_None && n == 1)
 			alist = NULL;
-		else if ((alist = PyTuple_New(n)) == NULL)
-			goto Fail_1;
+		else {
+			if ((alist = PyTuple_New(n)) == NULL)
+				goto Fail_1;
+		}
 
 		for (j = 0, sqp = seqs; j < n; ++j, ++sqp) {
-			if (sqp->saw_StopIteration) {
+			if (sqp->len < 0) {
 				Py_INCREF(Py_None);
 				item = Py_None;
 			}
 			else {
-				item = PyIter_Next(sqp->it);
-				if (item)
-					++numactive;
-				else {
-					if (PyErr_Occurred()) {
-						Py_XDECREF(alist);
-						goto Fail_1;
+				item = (*sqp->sqf->sq_item)(sqp->seq, i);
+				if (item == NULL) {
+					if (PyErr_ExceptionMatches(
+						PyExc_IndexError))
+					{
+						PyErr_Clear();
+						Py_INCREF(Py_None);
+						item = Py_None;
+						sqp->len = -1;
 					}
-					Py_INCREF(Py_None);
-					item = Py_None;
-					sqp->saw_StopIteration = 1;
+					else {
+						goto Fail_0;
+					}
 				}
+				else
+					any = 1;
+
 			}
-			if (alist)
-				PyTuple_SET_ITEM(alist, j, item);
-			else
+			if (!alist)
 				break;
+			if (PyTuple_SetItem(alist, j, item) < 0) {
+				Py_DECREF(item);
+				goto Fail_0;
+			}
+			continue;
+
+		Fail_0:
+			Py_XDECREF(alist);
+			goto Fail_1;
 		}
 
 		if (!alist)
 			alist = item;
 
-		if (numactive == 0) {
+		if (!any) {
 			Py_DECREF(alist);
 			break;
 		}
@@ -1087,25 +1053,23 @@ builtin_map(PyObject *self, PyObject *args)
 			if (status < 0)
 				goto Fail_1;
 		}
-		else if (PyList_SetItem(result, i, value) < 0)
-		 	goto Fail_1;
+		else {
+			if (PyList_SetItem(result, i, value) < 0)
+				goto Fail_1;
+		}
 	}
 
 	if (i < len && PyList_SetSlice(result, i, len, NULL) < 0)
 		goto Fail_1;
 
-	goto Succeed;
+	PyMem_DEL(seqs);
+	return result;
 
 Fail_1:
 	Py_DECREF(result);
 Fail_2:
-	result = NULL;
-Succeed:
-	assert(seqs);
-	for (i = 0; i < n; ++i)
-		Py_XDECREF(seqs[i].it);
-	PyMem_DEL(seqs);
-	return result;
+	if (seqs) PyMem_DEL(seqs);
+	return NULL;
 }
 
 static char map_doc[] =
@@ -1455,29 +1419,31 @@ Return the dictionary containing the current scope's local variables.";
 static PyObject *
 min_max(PyObject *args, int op)
 {
-	PyObject *v, *w, *x, *it;
+	int i;
+	PyObject *v, *w, *x;
+	PySequenceMethods *sq;
 
 	if (PyTuple_Size(args) > 1)
 		v = args;
 	else if (!PyArg_ParseTuple(args, "O:min/max", &v))
 		return NULL;
-	
-	it = PyObject_GetIter(v);
-	if (it == NULL)
+	sq = v->ob_type->tp_as_sequence;
+	if (sq == NULL || sq->sq_item == NULL) {
+		PyErr_SetString(PyExc_TypeError,
+				"min() or max() arg must be a sequence");
 		return NULL;
-
-	w = NULL;  /* the result */
-	for (;;) {
-		x = PyIter_Next(it);
+	}
+	w = NULL;
+	for (i = 0; ; i++) {
+		x = (*sq->sq_item)(v, i); /* Implies INCREF */
 		if (x == NULL) {
-			if (PyErr_Occurred()) {
-				Py_XDECREF(w);
-				Py_DECREF(it);
-				return NULL;
+			if (PyErr_ExceptionMatches(PyExc_IndexError)) {
+				PyErr_Clear();
+				break;
 			}
-			break;
+			Py_XDECREF(w);
+			return NULL;
 		}
-
 		if (w == NULL)
 			w = x;
 		else {
@@ -1488,8 +1454,7 @@ min_max(PyObject *args, int op)
 			}
 			else if (cmp < 0) {
 				Py_DECREF(x);
-				Py_DECREF(w);
-				Py_DECREF(it);
+				Py_XDECREF(w);
 				return NULL;
 			}
 			else
@@ -1499,7 +1464,6 @@ min_max(PyObject *args, int op)
 	if (w == NULL)
 		PyErr_SetString(PyExc_ValueError,
 				"min() or max() arg is an empty sequence");
-	Py_DECREF(it);
 	return w;
 }
 
@@ -1557,16 +1521,14 @@ Return the octal representation of an integer or long integer.";
 static PyObject *
 builtin_open(PyObject *self, PyObject *args)
 {
-	char *name = NULL;
+	char *name;
 	char *mode = "r";
 	int bufsize = -1;
 	PyObject *f;
 
-	if (!PyArg_ParseTuple(args, "et|si:open", Py_FileSystemDefaultEncoding, 
-	                      &name, &mode, &bufsize))
+	if (!PyArg_ParseTuple(args, "s|si:open", &name, &mode, &bufsize))
 		return NULL;
 	f = PyFile_FromString(name, mode);
-	PyMem_Free(name); /* free the encoded string */
 	if (f != NULL)
 		PyFile_SetBufSize(f, bufsize);
 	return f;
@@ -1763,7 +1725,7 @@ builtin_xrange(PyObject *self, PyObject *args)
 				"xrange() result has too many items");
 		return NULL;
 	}
-	return PyRange_New(ilow, n, istep);
+	return PyRange_New(ilow, n, istep, 1);
 }
 
 static char xrange_doc[] =
@@ -1854,25 +1816,26 @@ is printed without a trailing newline before reading.";
 static PyObject *
 builtin_reduce(PyObject *self, PyObject *args)
 {
-	PyObject *seq, *func, *result = NULL, *it;
+	PyObject *seq, *func, *result = NULL;
+	PySequenceMethods *sqf;
+	register int i;
 
 	if (!PyArg_ParseTuple(args, "OO|O:reduce", &func, &seq, &result))
 		return NULL;
 	if (result != NULL)
 		Py_INCREF(result);
 
-	it = PyObject_GetIter(seq);
-	if (it == NULL) {
+	sqf = seq->ob_type->tp_as_sequence;
+	if (sqf == NULL || sqf->sq_item == NULL) {
 		PyErr_SetString(PyExc_TypeError,
-		    "reduce() arg 2 must support iteration");
-		Py_XDECREF(result);
+		    "reduce() arg 2 must be a sequence");
 		return NULL;
 	}
 
 	if ((args = PyTuple_New(2)) == NULL)
 		goto Fail;
 
-	for (;;) {
+	for (i = 0; ; ++i) {
 		PyObject *op2;
 
 		if (args->ob_refcnt > 1) {
@@ -1881,11 +1844,12 @@ builtin_reduce(PyObject *self, PyObject *args)
 				goto Fail;
 		}
 
-		op2 = PyIter_Next(it);
-		if (op2 == NULL) {
-			if (PyErr_Occurred())
-				goto Fail;
- 			break;
+		if ((op2 = (*sqf->sq_item)(seq, i)) == NULL) {
+			if (PyErr_ExceptionMatches(PyExc_IndexError)) {
+				PyErr_Clear();
+				break;
+			}
+			goto Fail;
 		}
 
 		if (result == NULL)
@@ -1904,13 +1868,11 @@ builtin_reduce(PyObject *self, PyObject *args)
 		PyErr_SetString(PyExc_TypeError,
 			   "reduce() of empty sequence with no initial value");
 
-	Py_DECREF(it);
 	return result;
 
 Fail:
 	Py_XDECREF(args);
 	Py_XDECREF(result);
-	Py_DECREF(it);
 	return NULL;
 }
 
@@ -2131,8 +2093,7 @@ builtin_zip(PyObject *self, PyObject *args)
 {
 	PyObject *ret;
 	int itemsize = PySequence_Length(args);
-	int i;
-	PyObject *itlist;  /* tuple of iterators */
+	int i, j;
 
 	if (itemsize < 1) {
 		PyErr_SetString(PyExc_TypeError,
@@ -2142,60 +2103,35 @@ builtin_zip(PyObject *self, PyObject *args)
 	/* args must be a tuple */
 	assert(PyTuple_Check(args));
 
-	/* allocate result list */
 	if ((ret = PyList_New(0)) == NULL)
 		return NULL;
 
-	/* obtain iterators */
-	itlist = PyTuple_New(itemsize);
-	if (itlist == NULL)
-		goto Fail_ret;
-	for (i = 0; i < itemsize; ++i) {
-		PyObject *item = PyTuple_GET_ITEM(args, i);
-		PyObject *it = PyObject_GetIter(item);
-		if (it == NULL) {
-			if (PyErr_ExceptionMatches(PyExc_TypeError))
-				PyErr_Format(PyExc_TypeError,
-				    "zip argument #%d must support iteration",
-				    i+1);
-			goto Fail_ret_itlist;
-		}
-		PyTuple_SET_ITEM(itlist, i, it);
-	}
-
-	/* build result into ret list */
-	for (;;) {
-		int status;
+	for (i = 0;; i++) {
 		PyObject *next = PyTuple_New(itemsize);
-		if (!next)
-			goto Fail_ret_itlist;
+		if (!next) {
+			Py_DECREF(ret);
+			return NULL;
+		}
+		for (j = 0; j < itemsize; j++) {
+			PyObject *seq = PyTuple_GET_ITEM(args, j);
+			PyObject *item = PySequence_GetItem(seq, i);
 
-		for (i = 0; i < itemsize; i++) {
-			PyObject *it = PyTuple_GET_ITEM(itlist, i);
-			PyObject *item = PyIter_Next(it);
 			if (!item) {
-				if (PyErr_Occurred()) {
-					Py_DECREF(ret);
-					ret = NULL;
+				if (PyErr_ExceptionMatches(PyExc_IndexError)) {
+					PyErr_Clear();
+					Py_DECREF(next);
+					return ret;
 				}
 				Py_DECREF(next);
-				Py_DECREF(itlist);
-				return ret;
+				Py_DECREF(ret);
+				return NULL;
 			}
-			PyTuple_SET_ITEM(next, i, item);
+			PyTuple_SET_ITEM(next, j, item);
 		}
-
-		status = PyList_Append(ret, next);
+		PyList_Append(ret, next);
 		Py_DECREF(next);
-		if (status < 0)
-			goto Fail_ret_itlist;
 	}
-
-Fail_ret_itlist:
-	Py_DECREF(itlist);
-Fail_ret:
-	Py_DECREF(ret);
-	return NULL;
+	/* no return */
 }
 
 
@@ -2346,7 +2282,7 @@ filtertuple(PyObject *func, PyObject *tuple)
 		}
 	}
 
-	if (_PyTuple_Resize(&result, j) < 0)
+	if (_PyTuple_Resize(&result, j, 0) < 0)
 		return NULL;
 
 	return result;

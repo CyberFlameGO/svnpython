@@ -28,9 +28,6 @@
  * 2001-01-16 fl  fixed memory leak in pattern destructor
  * 2001-03-20 fl  lots of fixes for 2.1b2
  * 2001-04-15 fl  export copyright as Python attribute, not global
- * 2001-04-28 fl  added __copy__ methods (work in progress)
- * 2001-05-14 fl  fixes for 1.5.2
- * 2001-07-01 fl  added BIGCHARSET support (from Martin von Loewis)
  *
  * Copyright (c) 1997-2001 by Secret Labs AB.  All rights reserved.
  *
@@ -46,10 +43,9 @@
 #ifndef SRE_RECURSIVE
 
 static char copyright[] =
-    " SRE 2.1.1 Copyright (c) 1997-2001 by Secret Labs AB ";
+    " SRE 2.1b2 Copyright (c) 1997-2001 by Secret Labs AB ";
 
 #include "Python.h"
-#include "structmember.h" /* offsetof */
 
 #include "sre.h"
 
@@ -89,9 +85,6 @@ static char copyright[] =
 
 /* enables aggressive inlining (always on for Visual C) */
 #undef USE_INLINE
-
-/* enables copy/deepcopy handling (work in progress) */
-#undef USE_BUILTIN_COPY
 
 #if PY_VERSION_HEX < 0x01060000
 #define PyObject_DEL(op) PyMem_DEL((op))
@@ -451,7 +444,6 @@ SRE_AT(SRE_STATE* state, SRE_CHAR* ptr, SRE_CODE at)
             SRE_LOC_IS_WORD((int) ptr[0]) : 0;
         return this == that;
 
-#if defined(HAVE_UNICODE)
     case SRE_AT_UNI_BOUNDARY:
         if (state->beginning == state->end)
             return 0;
@@ -469,8 +461,6 @@ SRE_AT(SRE_STATE* state, SRE_CHAR* ptr, SRE_CODE at)
         this = ((void*) ptr < state->end) ?
             SRE_UNI_IS_WORD((int) ptr[0]) : 0;
         return this == that;
-#endif
-
     }
 
     return 0;
@@ -506,19 +496,6 @@ SRE_CHARSET(SRE_CODE* set, SRE_CODE ch)
                 return ok;
             set += 16;
             break;
-
-        case SRE_OP_BIGCHARSET:
-            /* <BIGCHARSET> <blockcount> <256 blockindices> <blocks> */
-        {
-            int count, block;
-            count = *(set++);
-            block = ((unsigned char*)set)[ch >> 8];
-            set += 128;
-            if (set[block*16 + ((ch & 255)>>4)] & (1 << (ch & 15)))
-                return ok;
-            set += count*16;
-            break;
-        }
 
         case SRE_OP_CATEGORY:
             /* <CATEGORY> <code> */
@@ -1104,7 +1081,7 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
             /* see if the tail matches */
             state->repeat = rp->prev;
             /* FIXME: the following fix doesn't always work (#133283) */
-            if (rp->pattern[2] == 65535) {
+            if (0 && rp->pattern[2] == 65535) {
                 /* unbounded repeat */
                 for (;;) {
                     i = SRE_MATCH(state, pattern, level + 1);
@@ -1308,8 +1285,6 @@ _compile(PyObject* self_, PyObject* args)
     self = PyObject_NEW_VAR(PatternObject, &Pattern_Type, n);
     if (!self)
         return NULL;
-
-    self->codesize = n;
 
     for (i = 0; i < n; i++) {
         PyObject *o = PyList_GET_ITEM(code, i);
@@ -1697,22 +1672,22 @@ pattern_search(PatternObject* self, PyObject* args, PyObject* kw)
 }
 
 static PyObject*
-call(char* module, char* function, PyObject* args)
+call(char* function, PyObject* args)
 {
     PyObject* name;
-    PyObject* mod;
+    PyObject* module;
     PyObject* func;
     PyObject* result;
 
-    name = PyString_FromString(module);
+    name = PyString_FromString(SRE_MODULE);
     if (!name)
         return NULL;
-    mod = PyImport_Import(name);
+    module = PyImport_Import(name);
     Py_DECREF(name);
-    if (!mod)
+    if (!module)
         return NULL;
-    func = PyObject_GetAttrString(mod, function);
-    Py_DECREF(mod);
+    func = PyObject_GetAttrString(module, function);
+    Py_DECREF(module);
     if (!func)
         return NULL;
     result = PyObject_CallObject(func, args);
@@ -1720,26 +1695,6 @@ call(char* module, char* function, PyObject* args)
     Py_DECREF(args);
     return result;
 }
-
-#ifdef USE_BUILTIN_COPY
-static int
-deepcopy(PyObject** object, PyObject* memo)
-{
-    PyObject* copy;
-
-    copy = call(
-        "copy", "deepcopy",
-        Py_BuildValue("OO", *object, memo)
-        );
-    if (!copy)
-        return 0;
-
-    Py_DECREF(*object);
-    *object = copy;
-
-    return 1; /* success */
-}
-#endif
 
 static PyObject*
 pattern_sub(PatternObject* self, PyObject* args, PyObject* kw)
@@ -1753,10 +1708,7 @@ pattern_sub(PatternObject* self, PyObject* args, PyObject* kw)
         return NULL;
 
     /* delegate to Python code */
-    return call(
-        SRE_MODULE, "_sub",
-        Py_BuildValue("OOOO", self, template, string, count)
-        );
+    return call("_sub", Py_BuildValue("OOOO", self, template, string, count));
 }
 
 static PyObject*
@@ -1771,10 +1723,7 @@ pattern_subn(PatternObject* self, PyObject* args, PyObject* kw)
         return NULL;
 
     /* delegate to Python code */
-    return call(
-        SRE_MODULE, "_subn",
-        Py_BuildValue("OOOO", self, template, string, count)
-        );
+    return call("_subn", Py_BuildValue("OOOO", self, template, string, count));
 }
 
 static PyObject*
@@ -1788,10 +1737,7 @@ pattern_split(PatternObject* self, PyObject* args, PyObject* kw)
         return NULL;
 
     /* delegate to Python code */
-    return call(
-        SRE_MODULE, "_split",
-        Py_BuildValue("OOO", self, string, maxsplit)
-        );
+    return call("_split", Py_BuildValue("OOO", self, string, maxsplit));
 }
 
 static PyObject*
@@ -1898,63 +1844,6 @@ error:
     
 }
 
-static PyObject*
-pattern_copy(PatternObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    PatternObject* copy;
-    int offset;
-
-    if (args != Py_None && !PyArg_ParseTuple(args, ":__copy__"))
-        return NULL;
-    
-    copy = PyObject_NEW_VAR(PatternObject, &Pattern_Type, self->codesize);
-    if (!copy)
-        return NULL;
-
-    offset = offsetof(PatternObject, groups);
-
-    Py_XINCREF(self->groupindex);
-    Py_XINCREF(self->indexgroup);
-    Py_XINCREF(self->pattern);
-
-    memcpy((char*) copy + offset, (char*) self + offset,
-           sizeof(PatternObject) + self->codesize * sizeof(SRE_CODE) - offset);
-
-    return (PyObject*) copy;
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot copy this pattern object");
-    return NULL;
-#endif
-}
-
-static PyObject*
-pattern_deepcopy(PatternObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    PatternObject* copy;
-    
-    PyObject* memo;
-    if (!PyArg_ParseTuple(args, "O:__deepcopy__", &memo))
-        return NULL;
-
-    copy = (PatternObject*) pattern_copy(self, Py_None);
-    if (!copy)
-        return NULL;
-
-    if (!deepcopy(&copy->groupindex, memo) ||
-        !deepcopy(&copy->indexgroup, memo) ||
-        !deepcopy(&copy->pattern, memo)) {
-        Py_DECREF(copy);
-        return NULL;
-    }
-
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot deepcopy this pattern object");
-    return NULL;
-#endif
-}
-
 static PyMethodDef pattern_methods[] = {
     {"match", (PyCFunction) pattern_match, METH_VARARGS|METH_KEYWORDS},
     {"search", (PyCFunction) pattern_search, METH_VARARGS|METH_KEYWORDS},
@@ -1962,9 +1851,8 @@ static PyMethodDef pattern_methods[] = {
     {"subn", (PyCFunction) pattern_subn, METH_VARARGS|METH_KEYWORDS},
     {"split", (PyCFunction) pattern_split, METH_VARARGS|METH_KEYWORDS},
     {"findall", (PyCFunction) pattern_findall, METH_VARARGS|METH_KEYWORDS},
+    /* experimental */
     {"scanner", (PyCFunction) pattern_scanner, METH_VARARGS},
-    {"__copy__", (PyCFunction) pattern_copy, METH_VARARGS},
-    {"__deepcopy__", (PyCFunction) pattern_deepcopy, METH_VARARGS},
     {NULL, NULL}
 };
 
@@ -2085,7 +1973,7 @@ match_expand(MatchObject* self, PyObject* args)
 
     /* delegate to Python code */
     return call(
-        SRE_MODULE, "_expand",
+        "_expand",
         Py_BuildValue("OOO", self->pattern, self, template)
         );
 }
@@ -2323,67 +2211,6 @@ match_regs(MatchObject* self)
     return regs;
 }
 
-static PyObject*
-match_copy(MatchObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    MatchObject* copy;
-    int slots, offset;
-    
-    if (args != Py_None && !PyArg_ParseTuple(args, ":__copy__"))
-        return NULL;
-
-    slots = 2 * (self->pattern->groups+1);
-
-    copy = PyObject_NEW_VAR(MatchObject, &Match_Type, slots);
-    if (!copy)
-        return NULL;
-
-    /* this value a constant, but any compiler should be able to
-       figure that out all by itself */
-    offset = offsetof(MatchObject, string);
-
-    Py_XINCREF(self->pattern);
-    Py_XINCREF(self->string);
-    Py_XINCREF(self->regs);
-
-    memcpy((char*) copy + offset, (char*) self + offset,
-           sizeof(MatchObject) + slots * sizeof(int) - offset);
-
-    return (PyObject*) copy;
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot copy this match object");
-    return NULL;
-#endif
-}
-
-static PyObject*
-match_deepcopy(MatchObject* self, PyObject* args)
-{
-#ifdef USE_BUILTIN_COPY
-    MatchObject* copy;
-    
-    PyObject* memo;
-    if (!PyArg_ParseTuple(args, "O:__deepcopy__", &memo))
-        return NULL;
-
-    copy = (MatchObject*) match_copy(self, Py_None);
-    if (!copy)
-        return NULL;
-
-    if (!deepcopy((PyObject**) &copy->pattern, memo) ||
-        !deepcopy(&copy->string, memo) ||
-        !deepcopy(&copy->regs, memo)) {
-        Py_DECREF(copy);
-        return NULL;
-    }
-
-#else
-    PyErr_SetString(PyExc_TypeError, "cannot deepcopy this match object");
-    return NULL;
-#endif
-}
-
 static PyMethodDef match_methods[] = {
     {"group", (PyCFunction) match_group, METH_VARARGS},
     {"start", (PyCFunction) match_start, METH_VARARGS},
@@ -2392,8 +2219,6 @@ static PyMethodDef match_methods[] = {
     {"groups", (PyCFunction) match_groups, METH_VARARGS|METH_KEYWORDS},
     {"groupdict", (PyCFunction) match_groupdict, METH_VARARGS|METH_KEYWORDS},
     {"expand", (PyCFunction) match_expand, METH_VARARGS},
-    {"__copy__", (PyCFunction) match_copy, METH_VARARGS},
-    {"__deepcopy__", (PyCFunction) match_deepcopy, METH_VARARGS},
     {NULL, NULL}
 };
 

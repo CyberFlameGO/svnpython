@@ -1,25 +1,35 @@
 import copy_reg
-import test_support
-import unittest
-
 
 class C:
     pass
 
 
-class CopyRegTestCase(unittest.TestCase):
-
-    def test_class(self):
-        self.assertRaises(TypeError, copy_reg.pickle,
-                          C, None, None)
-
-    def test_noncallable_reduce(self):
-        self.assertRaises(TypeError, copy_reg.pickle,
-                          type(1), "not a callable")
-
-    def test_noncallable_constructor(self):
-        self.assertRaises(TypeError, copy_reg.pickle,
-                          type(1), int, "not a callable")
+try:
+    copy_reg.pickle(C, None, None)
+except TypeError, e:
+    print "Caught expected TypeError:"
+    print e
+else:
+    print "Failed to catch expected TypeError when registering a class type."
 
 
-test_support.run_unittest(CopyRegTestCase)
+print
+try:
+    copy_reg.pickle(type(1), "not a callable")
+except TypeError, e:
+    print "Caught expected TypeError:"
+    print e
+else:
+    print "Failed to catch TypeError " \
+          "when registering a non-callable reduction function."
+
+
+print
+try:
+    copy_reg.pickle(type(1), int, "not a callable")
+except TypeError, e:
+    print "Caught expected TypeError:"
+    print e
+else:
+    print "Failed to catch TypeError " \
+          "when registering a non-callable constructor."
