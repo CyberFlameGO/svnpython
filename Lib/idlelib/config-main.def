@@ -28,8 +28,6 @@
 
 [General]
 editor-on-startup= 1
-print-command-posix=lpr %s
-print-command-win=start /min notepad /p %s
 
 [EditorWindow]
 width= 80

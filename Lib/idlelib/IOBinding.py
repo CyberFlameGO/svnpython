@@ -6,11 +6,9 @@
 #     which will only understand the local convention.
 
 import os
-import tempfile
 import tkFileDialog
 import tkMessageBox
 import re
-from configHandler import idleConf
 
 #$ event <<open-window-from-file>>
 #$ win <Control-o>
@@ -23,10 +21,6 @@ from configHandler import idleConf
 #$ event <<save-window-as-file>>
 #$ win <Alt-s>
 #$ unix <Control-x><Control-w>
-
-#$ event <<print-window>>
-#$ win <Control-p>
-#$ unix <Control-x><Control-p>
 
 #$ event <<save-copy-of-window-as-file>>
 #$ win <Alt-Shift-s>
@@ -44,15 +38,13 @@ class IOBinding:
                                           self.save_as)
         self.__id_savecopy = self.text.bind("<<save-copy-of-window-as-file>>",
                                             self.save_a_copy)
-        self.__id_print = self.text.bind("<<print-window>>", self.print_window)
-        
+
     def close(self):
         # Undo command bindings
         self.text.unbind("<<open-window-from-file>>", self.__id_open)
         self.text.unbind("<<save-window>>", self.__id_save)
         self.text.unbind("<<save-window-as-file>>",self.__id_saveas)
         self.text.unbind("<<save-copy-of-window-as-file>>", self.__id_savecopy)
-        self.text.unbind("<<print-window>>", self.__id_print)
         # Break cycles
         self.editwin = None
         self.text = None
@@ -87,23 +79,17 @@ class IOBinding:
             else:
                 filename=editFile
             if filename:
-                # If the current window has no filename and hasn't been
-                # modified, we replace its contents (no loss).  Otherwise
-                # we open a new window.  But we won't replace the
-                # shell window (which has an interp(reter) attribute), which
-                # gets set to "not modified" at every new prompt.
-                try:
-                    interp = self.editwin.interp
-                except:
-                    interp = None
-                if not self.filename and self.get_saved() and not interp:
+                # if the current window has no filename and hasn't been
+                #   modified, we replace it's contents (no loss).  Otherwise
+                #   we open a new window.
+                if not self.filename and self.get_saved():
                     self.editwin.flist.open(filename, self.loadfile)
                 else:
                     self.editwin.flist.open(filename)
             else:
                 self.text.focus_set()
+
             return "break"
-        #
         # Code for use outside IDLE:
         if self.get_saved():
             reply = self.maybesave()
@@ -201,40 +187,7 @@ class IOBinding:
             tkMessageBox.showerror("I/O Error", str(msg),
                                    master=self.text)
             return 0
- 
-    def print_window(self, event):
-        tempfilename = None
-        if self.get_saved():
-            filename = self.filename
-        else:
-            filename = tempfilename = tempfile.mktemp()
-            if not self.writefile(filename):
-                os.unlink(tempfilename)
-                return "break"
-        platform=os.name
-        printPlatform=1
-        if platform == 'posix': #posix platform
-            command = idleConf.GetOption('main','General','print-command-posix')
-            command = command + " 2>&1"
-        elif platform == 'nt': #win32 platform
-            command = idleConf.GetOption('main','General','print-command-win')
-        else: #no printing for this platform
-            printPlatform=0
-        if printPlatform:  #we can try to print for this platform
-            command = command % filename
-            pipe = os.popen(command, "r")
-            output = pipe.read().strip()
-            status = pipe.close()
-            if status:
-                output = "Printing failed (exit status 0x%x)\n" % status + output
-            if output:
-                output = "Printing command: %s\n" % repr(command) + output
-                tkMessageBox.showerror("Print status", output, master=self.text)
-        else:  #no printing for this platform
-            message="Printing is not enabled for this platform: %s" % platform 
-            tkMessageBox.showinfo("Print status", message, master=self.text)
-        return "break"
-    
+
     def fixlastline(self):
         c = self.text.get("end-2c")
         if c != '\n':
