@@ -1091,22 +1091,9 @@ eval_frame(PyFrameObject *f)
 			break;
 
 		case INPLACE_DIVIDE:
-			if (!_Py_QnewFlag) {
-				w = POP();
-				v = POP();
-				x = PyNumber_InPlaceDivide(v, w);
-				Py_DECREF(v);
-				Py_DECREF(w);
-				PUSH(x);
-				if (x != NULL) continue;
-				break;
-			}
-			/* -Qnew is in effect:  fall through to
-			   INPLACE_TRUE_DIVIDE */
-		case INPLACE_TRUE_DIVIDE:
 			w = POP();
 			v = POP();
-			x = PyNumber_InPlaceTrueDivide(v, w);
+			x = PyNumber_InPlaceDivide(v, w);
 			Py_DECREF(v);
 			Py_DECREF(w);
 			PUSH(x);
@@ -1117,6 +1104,16 @@ eval_frame(PyFrameObject *f)
 			w = POP();
 			v = POP();
 			x = PyNumber_InPlaceFloorDivide(v, w);
+			Py_DECREF(v);
+			Py_DECREF(w);
+			PUSH(x);
+			if (x != NULL) continue;
+			break;
+
+		case INPLACE_TRUE_DIVIDE:
+			w = POP();
+			v = POP();
+			x = PyNumber_InPlaceTrueDivide(v, w);
 			Py_DECREF(v);
 			Py_DECREF(w);
 			PUSH(x);

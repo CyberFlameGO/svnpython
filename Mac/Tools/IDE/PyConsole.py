@@ -354,9 +354,7 @@ class SimpleStdin:
 		rv = EasyDialogs.AskString(prompt)
 		if rv is None:
 			return ""
-		rv = rv + "\n"  # readline should include line terminator
-		sys.stdout.write(rv)  # echo user's reply
-		return rv
+		return rv + '\n'
 
 
 def installconsole(defaultshow = 1):
