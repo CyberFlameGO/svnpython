@@ -33,20 +33,10 @@ typedef struct {
 #define CO_VARARGS	0x0004
 #define CO_VARKEYWORDS	0x0008
 #define CO_NESTED       0x0010
-#define CO_GENERATOR    0x0020
-/* XXX Temporary hack.  Until generators are a permanent part of the
-   language, we need a way for a code object to record that generators
-   were *possible* when it was compiled.  This is so code dynamically
-   compiled *by* a code object knows whether to allow yield stmts.  In
-   effect, this passes on the "from __future__ import generators" state
-   in effect when the code block was compiled. */
-#define CO_GENERATOR_ALLOWED    0x1000
-#define CO_FUTURE_DIVISION    	0x2000
 
 extern DL_IMPORT(PyTypeObject) PyCode_Type;
 
 #define PyCode_Check(op) ((op)->ob_type == &PyCode_Type)
-#define PyCode_GetNumFree(op) (PyTuple_GET_SIZE((op)->co_freevars))
 
 #define CO_MAXBLOCKS 20 /* Max static block nesting within a function */
 
@@ -64,16 +54,15 @@ DL_IMPORT(int) PyCode_Addr2Line(PyCodeObject *, int);
 typedef struct {
     int ff_found_docstring;
     int ff_last_lineno;
-    int ff_features;
+    int ff_nested_scopes;
 } PyFutureFeatures;
 
 DL_IMPORT(PyFutureFeatures *) PyNode_Future(struct _node *, char *);
 DL_IMPORT(PyCodeObject *) PyNode_CompileFlags(struct _node *, char *,
 					      PyCompilerFlags *);
 
+#define NESTED_SCOPES_DEFAULT 0
 #define FUTURE_NESTED_SCOPES "nested_scopes"
-#define FUTURE_GENERATORS "generators"
-#define FUTURE_DIVISION "division"
 
 /* for internal use only */
 #define _PyCode_GETCODEPTR(co, pp) \

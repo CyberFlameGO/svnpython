@@ -2,11 +2,11 @@
 
 import FrameWork
 import EasyDialogs
-from Carbon import Res
-from Carbon import Qd
-from Carbon import QuickDraw
-from Carbon import Win
-#ifrom Carbon mport List
+import Res
+import Qd
+import QuickDraw
+import Win
+#import List
 import sys
 import struct
 import img

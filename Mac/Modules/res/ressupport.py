@@ -5,22 +5,20 @@
 
 from macsupport import *
 
+
 class ResMixIn:
 
 	def checkit(self):
-		if self.returntype.__class__ != OSErrType:
-			OutLbrace()
-			Output("OSErr _err = ResError();")
-			Output("if (_err != noErr) return PyMac_Error(_err);")
-			OutRbrace()
+		OutLbrace()
+		Output("OSErr _err = ResError();")
+		Output("if (_err != noErr) return PyMac_Error(_err);")
+		OutRbrace()
 		FunctionGenerator.checkit(self) # XXX
 
-class ResFunction(ResMixIn, OSErrWeakLinkFunctionGenerator): pass
-class ResMethod(ResMixIn, OSErrWeakLinkMethodGenerator): pass
+class ResFunction(ResMixIn, FunctionGenerator): pass
+class ResMethod(ResMixIn, MethodGenerator): pass
 
 RsrcChainLocation = Type("RsrcChainLocation", "h")
-FSCatalogInfoBitmap = FakeType("0") # Type("FSCatalogInfoBitmap", "l")
-FSCatalogInfo_ptr = FakeType("(FSCatalogInfo *)0")
 
 # includestuff etc. are imported from macsupport
 
@@ -63,7 +61,7 @@ PyObject *OptResObj_New(Handle itself)
 	return ResObj_New(itself);
 }
 
-int OptResObj_Convert(PyObject *v, Handle *p_itself)
+OptResObj_Convert(PyObject *v, Handle *p_itself)
 {
 	PyObject *tmp;
 	
@@ -95,7 +93,7 @@ initstuff = initstuff + """
 	PyMac_INIT_TOOLBOX_OBJECT_CONVERT(Handle, OptResObj_Convert);
 """
 
-module = MacModule('_Res', 'Res', includestuff, finalstuff, initstuff)
+module = MacModule('Res', 'Res', includestuff, finalstuff, initstuff)
 
 getattrHookCode = """
 if (strcmp(name, "size") == 0)
@@ -194,5 +192,5 @@ execfile('resedit.py')
 for f in functions: module.add(f)
 for f in resmethods: resobject.add(f)
 
-SetOutputFileName('_Resmodule.c')
+SetOutputFileName('Resmodule.c')
 module.generate()

@@ -123,14 +123,6 @@ you're editing someone else's Python code."
   :type 'integer
   :group 'python)
 
-(defcustom py-continuation-offset 4
-  "*Additional amount of offset to give for some continuation lines.
-Continuation lines are those that immediately follow a backslash
-terminated line.  Only those continuation lines for a block opening
-statement are given this extra offset."
-  :type 'integer
-  :group 'python)
-
 (defcustom py-smart-indentation t
   "*Should `python-mode' try to automagically set some indentation variables?
 When this variable is non-nil, two things happen when a buffer is set
@@ -184,8 +176,8 @@ indentation is used as a hint for this line's indentation.  Lines that
 begin with `py-block-comment-prefix' are ignored for indentation
 purposes.
 
-When not nil or t, comment lines that begin with a single `#' are used
-as indentation hints, unless the comment character is in column zero."
+When not nil or t, comment lines that begin with a `#' are used as
+indentation hints, unless the comment character is in column zero."
   :type '(choice
 	  (const :tag "Skip all comment lines (fast)" nil)
 	  (const :tag "Single # `sets' indentation for next line" t)
@@ -204,14 +196,13 @@ as indentation hints, unless the comment character is in column zero."
     (or (funcall ok (getenv "TMPDIR"))
 	(funcall ok "/usr/tmp")
 	(funcall ok "/tmp")
-	(funcall ok "/var/tmp")
 	(funcall ok  ".")
 	(error
 	 "Couldn't find a usable temp directory -- set `py-temp-directory'")))
-  "*Directory used for temporary files created by a *Python* process.
+  "*Directory used for temp files created by a *Python* process.
 By default, the first directory from this list that exists and that you
-can write into: the value (if any) of the environment variable TMPDIR,
-/usr/tmp, /tmp, /var/tmp, or the current directory."
+can write into:  the value (if any) of the environment variable TMPDIR,
+/usr/tmp, /tmp, or the current directory."
   :type 'string
   :group 'python)
 
@@ -312,7 +303,7 @@ support for features needed by `python-mode'.")
 			  "from"     "global"   "if"      "import"
 			  "in"       "is"       "lambda"  "not"
 			  "or"       "pass"     "print"   "raise"
-			  "return"   "while"    "yield"
+			  "return"   "while"
 			  )
 			"\\|"))
 	(kw2 (mapconcat 'identity
@@ -1809,8 +1800,7 @@ dedenting."
 	      ;; chunk of non-whitespace characters on base line, + 1 more
 	      ;; column
 	      (end-of-line)
-	      (setq endpos (point)
-		    searching t)
+	      (setq endpos (point)  searching t)
 	      (back-to-indentation)
 	      (setq startpos (point))
 	      ;; look at all "=" from left to right, stopping at first
@@ -1835,12 +1825,7 @@ dedenting."
 		  (progn
 		    (goto-char startpos)
 		    (skip-chars-forward "^ \t\n")))
-	      ;; if this is a continuation for a block opening
-	      ;; statement, add some extra offset.
-	      (+ (current-column) (if (py-statement-opens-block-p)
-				      py-continuation-offset 0)
-		 1)
-	      ))))
+	      (1+ (current-column))))))
 
        ;; not on a continuation line
        ((bobp) (current-indentation))
@@ -1903,11 +1888,7 @@ dedenting."
 			     (and (not (eq py-honor-comment-indentation t))
 				  (save-excursion
 				    (back-to-indentation)
-				    (and (not (looking-at prefix-re))
-					 (or (looking-at "[^#]")
-					     (not (zerop (current-column)))
-					     ))
-				    ))
+				    (not (zerop (current-column)))))
 			     ))
 	      )))
 	;; if we landed inside a string, go to the beginning of that

@@ -159,7 +159,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	dl_funcptr p;
 	char funcname[258], *import_python;
 
-	PyOS_snprintf(funcname, sizeof(funcname), "init%.200s", shortname);
+	sprintf(funcname, "init%.200s", shortname);
 
 #ifdef MS_WIN32
 	{
@@ -201,9 +201,9 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 			/* Problem: could not get the error message.
 			   This should not happen if called correctly. */
 			if (theLength == 0) {
-				PyOS_snprintf(errBuf, sizeof(errBuf),
-				      "DLL load failed with error code %d",
-					      errorCode);
+				sprintf(errBuf,
+					"DLL load failed with error code %d",
+					errorCode);
 			} else {
 				size_t len;
 				/* For some reason a \r\n
@@ -225,16 +225,16 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 		} else {
 			char buffer[256];
 
-			PyOS_snprintf(buffer, sizeof(buffer), "python%d%d.dll",
+			sprintf(buffer,"python%d%d.dll",
 				PY_MAJOR_VERSION,PY_MINOR_VERSION);
 			import_python = GetPythonImport(hDLL);
 
 			if (import_python &&
 			    strcasecmp(buffer,import_python)) {
-				PyOS_snprintf(buffer, sizeof(buffer),
-					      "Module use of %.150s conflicts "
-					      "with this version of Python.",
-					      import_python);
+				sprintf(buffer,
+					"Module use of %s conflicts "
+					"with this version of Python.",
+					import_python);
 				PyErr_SetString(PyExc_ImportError,buffer);
 				FreeLibrary(hDLL);
 				return NULL;
@@ -251,16 +251,14 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 		    strchr(pathname, '/') == NULL)
 		{
 			/* Prefix bare filename with ".\" */
-			PyOS_snprintf(pathbuf, sizeof(pathbuf),
-				      ".\\%-.13s", pathname);
+			sprintf(pathbuf, ".\\%-.13s", pathname);
 			pathname = pathbuf;
 		}
 		hDLL = LoadLibrary(pathname);
 		if (hDLL < HINSTANCE_ERROR){
 			char errBuf[256];
-			PyOS_snprintf(errBuf, sizeof(errBuf),
-				      "DLL load failed with error code %d",
-				      hDLL);
+			sprintf(errBuf,
+				"DLL load failed with error code %d", hDLL);
 			PyErr_SetString(PyExc_ImportError, errBuf);
 			return NULL;
 		}

@@ -31,8 +31,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <Carbon/Carbon.h>
 #endif
 
-#include "pymactoolbox.h"
-
 #ifdef __cplusplus
 	extern "C" {
 #endif
@@ -46,11 +44,15 @@ typedef struct {
 	double		bg_yield;		/* yield at most so long when in background */
 } PyMacSchedParams;
 
+char *PyMac_getscript(void);	/* Get the default encoding for our 8bit character set */
 #ifdef USE_GUSI1
 void PyMac_FixGUSIcd(void);		/* Workaround for GUSI chdir() call */
 extern void PyMac_SetGUSISpin(void);		/* Install our private GUSI spin routine */
 #endif
 
+char *PyMac_StrError(int);			/* strerror with mac errors */
+PyObject *PyErr_Mac(PyObject *, int);		/* Exception with a mac error */
+PyObject *PyMac_Error(OSErr);			/* Uses PyMac_GetOSErrException */
 unsigned char *Pstring(char *str);		/* Convert c-string to pascal-string in static buffer */
 
 #ifdef USE_GUSI
@@ -62,6 +64,7 @@ extern short PyMac_AppRefNum;			/* RefNum of application rsrcfork (from macmain.
 extern FSSpec PyMac_ApplicationFSSpec;		/* Application location (from macargv.c) */
 extern char PyMac_ApplicationPath[];		/* Application location (from macargv.c) */
 extern OSErr PyMac_init_application_location(void);	/* Init the above */
+extern OSErr PyMac_GetFullPath(FSSpec *, char *); /* convert fsspec->path (macargv.c) */
 extern int PyMac_GetArgv(char ***, int);	/* Get argc, argv (from macargv.c) */
 extern int PyMac_AppearanceCompliant;	/* True if in appearance support mode */
 
@@ -94,12 +97,41 @@ void PyMac_PromptGetFile(short numTypes, ConstSFTypeListPtr typeList,
 	StandardFileReply *reply, char *prompt);	/* Ask user for file, with prompt */
 #endif /* TARGET_API_MAC_OS8 */
 
+int PyMac_GetOSType(PyObject *, OSType *);	/* argument parser for OSType */
+PyObject *PyMac_BuildOSType(OSType);		/* Convert OSType to PyObject */
+
+PyObject *PyMac_BuildNumVersion(NumVersion);	/* Convert NumVersion to PyObject */
+
+int PyMac_GetStr255(PyObject *, Str255);	/* argument parser for Str255 */
+PyObject *PyMac_BuildStr255(Str255);		/* Convert Str255 to PyObject */
+PyObject *PyMac_BuildOptStr255(Str255);		/* Convert Str255 to PyObject, NULL to None */
+
+int PyMac_GetRect(PyObject *, Rect *);		/* argument parser for Rect */
+PyObject *PyMac_BuildRect(Rect *);		/* Convert Rect to PyObject */
+
+int PyMac_GetPoint(PyObject *, Point *);	/* argument parser for Point */
+PyObject *PyMac_BuildPoint(Point);		/* Convert Point to PyObject */
+
+int PyMac_GetEventRecord(PyObject *, EventRecord *); /* argument parser for EventRecord */
+PyObject *PyMac_BuildEventRecord(EventRecord *); /* Convert EventRecord to PyObject */
+
+int PyMac_GetFixed(PyObject *, Fixed *);	/* argument parser for Fixed */
+PyObject *PyMac_BuildFixed(Fixed);			/* Convert Fixed to PyObject */
+int PyMac_Getwide(PyObject *, wide *);	/* argument parser for wide */
+PyObject *PyMac_Buildwide(wide *);			/* Convert wide to PyObject */
 void PyMac_InitApplet(void);			/* Initialize and run an Applet */
 void PyMac_Initialize(void);			/* Initialize function for embedding Python */
 
 #ifdef USE_GUSI2
 short PyMac_OpenPrefFile(void);			/* From macgetpath.c, open and return preference file */
 #endif
+
+/* from macfsmodule.c: */
+int PyMac_GetFSSpec(PyObject *, FSSpec *);	/* argument parser for FSSpec */
+PyObject *PyMac_BuildFSSpec(FSSpec *);		/* Convert FSSpec to PyObject */
+
+int PyMac_GetFSRef(PyObject *, FSRef *);	/* argument parser for FSRef */
+PyObject *PyMac_BuildFSRef(FSRef *);		/* Convert FSRef to PyObject */
 
 
 /* From macfiletype.c: */
@@ -119,26 +151,9 @@ void PyMac_InitApplet(void);
 
 /* from macgetargv: */
 OSErr PyMac_init_process_location(void);
+#ifndef HAVE_STRDUP
 char *	strdup(const char *str);
-
-#ifdef USE_GUSI2
-/* from pyGUSISIOUX.cp */
-typedef long (*PyWriteHandler)(char *buffer, long n);
-typedef long (*PyReadHandler)(char *buffer, long n);
-
-/* Override routines that normally reads and writes to the
-** SIOUX console window. Intended for embedding applications
-** that want to forestall a Python console window ever showing up.
-*/
-void PyMac_SetConsoleHandler(PyReadHandler stdinH, PyWriteHandler stdoutH,
-			     PyWriteHandler stderrH);
-
-/* Courtesy console handlers that drop all output and return
-** 0 on reads.
-*/
-long PyMac_DummyReadHandler(char *, long);
-long PyMac_DummyWriteHandler(char *, long);
-#endif /* USE_GUSI2 */
+#endif
 
 #ifdef __cplusplus
 	}

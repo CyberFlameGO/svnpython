@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #define __swi
-#include "oslib/osfile.h"
+#include "osfile.h"
 
 long PyOS_GetLastModificationTime(char *path, FILE *fp)
 {

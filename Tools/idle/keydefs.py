@@ -1,7 +1,7 @@
 windows_keydefs = \
-{'<<Copy>>': ['<Control-c>', '<Control-C>'],
- '<<Cut>>': ['<Control-x>', '<Control-X>'],
- '<<Paste>>': ['<Control-v>', '<Control-V>'],
+{'<<Copy>>': ['<Control-c>'],
+ '<<Cut>>': ['<Control-x>'],
+ '<<Paste>>': ['<Control-v>'],
  '<<beginning-of-line>>': ['<Control-a>', '<Home>'],
  '<<center-insert>>': ['<Control-l>'],
  '<<close-all-windows>>': ['<Control-q>'],

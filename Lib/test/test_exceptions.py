@@ -2,21 +2,9 @@
 
 from test_support import *
 from types import ClassType
-import warnings
-import sys, traceback
-
-warnings.filterwarnings("error", "", OverflowWarning, __name__)
 
 print '5. Built-in exceptions'
 # XXX This is not really enough, each *operation* should be tested!
-
-# Reloading the built-in exceptions module failed prior to Py2.2, while it
-# should act the same as reloading built-in sys.
-try:
-    import exceptions
-    reload(exceptions)
-except ImportError, e:
-    raise TestFailed, e
 
 def test_raise_catch(exc):
     try:
@@ -120,11 +108,7 @@ while 1:
     finally:
         continue
 '''
-if sys.platform.startswith('java'):
-    print "'continue' not supported inside 'finally' clause"
-    print "ok"
-else:
-    ckmsg(s, "'continue' not supported inside 'finally' clause")
+ckmsg(s, "'continue' not supported inside 'finally' clause")
 s = '''\
 try:
     continue
@@ -165,42 +149,5 @@ except ZeroDivisionError: pass
 r(Exception)
 try: x = 1/0
 except Exception, e: pass
-
-# test that setting an exception at the C level works even if the
-# exception object can't be constructed.
-
-class BadException:
-    def __init__(self):
-        raise RuntimeError, "can't instantiate BadException"
-
-def test_capi1():
-    import _testcapi
-    try:
-        _testcapi.raise_exception(BadException, 1)
-    except TypeError, err:
-        exc, err, tb = sys.exc_info()
-        co = tb.tb_frame.f_code
-        assert co.co_name == "test_capi1"
-        assert co.co_filename.endswith('test_exceptions.py')
-    else:
-        print "Expected exception"
-
-def test_capi2():
-    import _testcapi
-    try:
-        _testcapi.raise_exception(BadException, 0)
-    except RuntimeError, err:
-        exc, err, tb = sys.exc_info()
-        co = tb.tb_frame.f_code
-        assert co.co_name == "__init__"
-        assert co.co_filename.endswith('test_exceptions.py')
-        co2 = tb.tb_frame.f_back.f_code
-        assert co2.co_name == "test_capi2"
-    else:
-        print "Expected exception"
-
-if not sys.platform.startswith('java'):
-    test_capi1()
-    test_capi2()
 
 unlink(TESTFN)

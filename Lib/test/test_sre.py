@@ -6,7 +6,7 @@
 import sys
 sys.path=['.']+sys.path
 
-from test_support import verbose, TestFailed, have_unicode
+from test_support import verbose, TestFailed
 import sre
 import sys, os, string, traceback
 
@@ -104,9 +104,6 @@ test(r"""sre.sub(r'(?P<a>x)', '\g<a>\g<1>', 'xx')""", 'xxxx')
 test(r"""sre.sub(r'(?P<unk>x)', '\g<unk>\g<unk>', 'xx')""", 'xxxx')
 test(r"""sre.sub(r'(?P<unk>x)', '\g<1>\g<1>', 'xx')""", 'xxxx')
 
-# bug 449964: fails for group followed by other escape
-test(r"""sre.sub(r'(?P<unk>x)', '\g<1>\g<1>\\b', 'xx')""", 'xx\bxx\b')
-
 test(r"""sre.sub(r'a', r'\t\n\v\r\f\a\b\B\Z\a\A\w\W\s\S\d\D', 'a')""", '\t\n\v\r\f\a\b\\B\\Z\a\\A\\w\\W\\s\\S\\d\\D')
 test(r"""sre.sub(r'a', '\t\n\v\r\f\a', 'a')""", '\t\n\v\r\f\a')
 test(r"""sre.sub(r'a', '\t\n\v\r\f\a', 'a')""", (chr(9)+chr(10)+chr(11)+chr(13)+chr(12)+chr(7)))
@@ -119,16 +116,6 @@ test(r"""sre.sub(r'a', 'b', 'aaaaa', 1)""", 'baaaa')
 
 # bug 114660
 test(r"""sre.sub(r'(\S)\s+(\S)', r'\1 \2', 'hello  there')""", 'hello there')
-
-# Test for sub() on escaped characters, see SF bug #449000
-test(r"""sre.sub(r'\r\n', r'\n', 'abc\r\ndef\r\n')""", 'abc\ndef\n')
-test(r"""sre.sub('\r\n', r'\n', 'abc\r\ndef\r\n')""", 'abc\ndef\n')
-test(r"""sre.sub(r'\r\n', '\n', 'abc\r\ndef\r\n')""", 'abc\ndef\n')
-test(r"""sre.sub('\r\n', '\n', 'abc\r\ndef\r\n')""", 'abc\ndef\n')
-
-# Test for empty sub() behaviour, see SF bug #462270
-test(r"""sre.sub('x*', '-', 'abxd')""", '-a-b-d-')
-test(r"""sre.sub('x+', '-', 'abxd')""", 'ab-d')
 
 if verbose:
     print 'Running tests on symbolic references'
@@ -155,7 +142,6 @@ if verbose:
     print 'Running tests on sre.split'
 
 test(r"""sre.split(r":", ":a:b::c")""", ['', 'a', 'b', '', 'c'])
-test(r"""sre.split(r":+", ":a:b:::")""", ['', 'a', 'b', ''])
 test(r"""sre.split(r":*", ":a:b::c")""", ['', 'a', 'b', 'c'])
 test(r"""sre.split(r"(:*)", ":a:b::c")""", ['', ':', 'a', ':', 'b', '::', 'c'])
 test(r"""sre.split(r"(?::*)", ":a:b::c")""", ['', 'a', 'b', 'c'])
@@ -184,17 +170,6 @@ test(r"""sre.findall(r"(a)|(b)", "abc")""", [("a", ""), ("", "b")])
 # bug 117612
 test(r"""sre.findall(r"(a|(b))", "aba")""", [("a", ""),("b", "b"),("a", "")])
 
-if sys.hexversion >= 0x02020000:
-    if verbose:
-        print "Running tests on sre.finditer"
-    def fixup(seq):
-        # convert iterator to list
-        if not hasattr(seq, "next") or not hasattr(seq, "__iter__"):
-            print "finditer returned", type(seq)
-        return map(lambda item: item.group(0), seq)
-    # sanity
-    test(r"""fixup(sre.finditer(r":+", "a:b::c:::d"))""", [":", "::", ":::"])
-
 if verbose:
     print "Running tests on sre.match"
 
@@ -216,12 +191,6 @@ test(r"""pat.match('a').group(1, 2, 3)""", ('a', None, None))
 test(r"""pat.match('b').group('a1', 'b2', 'c3')""", (None, 'b', None))
 test(r"""pat.match('ac').group(1, 'b2', 3)""", ('a', None, 'c'))
 
-# bug 448951 (similar to 429357, but with single char match)
-# (Also test greedy matches.)
-for op in '','?','*':
-    test(r"""sre.match(r'((.%s):)?z', 'z').groups()"""%op, (None, None))
-    test(r"""sre.match(r'((.%s):)?z', 'a:z').groups()"""%op, ('a:', 'a'))
-
 if verbose:
     print "Running tests on sre.escape"
 
@@ -236,26 +205,6 @@ test(r"""pat.match(p) is not None""", 1)
 test(r"""pat.match(p).span()""", (0,256))
 
 if verbose:
-    print 'Running tests on sre.Scanner'
-
-def s_ident(scanner, token): return token
-def s_operator(scanner, token): return "op%s" % token
-def s_float(scanner, token): return float(token)
-def s_int(scanner, token): return int(token)
-
-scanner = sre.Scanner([
-    (r"[a-zA-Z_]\w*", s_ident),
-    (r"\d+\.\d*", s_float),
-    (r"\d+", s_int),
-    (r"=|\+|-|\*|/", s_operator),
-    (r"\s+", None),
-    ])
-
-# sanity check
-test('scanner.scan("sum = 3*foo + 312.50 + bar")',
-     (['sum', 'op=', 3, 'op*', 'foo', 'op+', 312.5, 'op+', 'bar'], ''))
-
-if verbose:
     print 'Pickling a SRE_Pattern instance'
 
 try:
@@ -264,7 +213,7 @@ try:
     s = pickle.dumps(pat)
     pat = pickle.loads(s)
 except:
-    print TestFailed, 're module pickle'
+    print TestFailed, 're module pickle' # expected
 
 try:
     import cPickle
@@ -272,7 +221,7 @@ try:
     s = cPickle.dumps(pat)
     pat = cPickle.loads(s)
 except:
-    print TestFailed, 're module cPickle'
+    print TestFailed, 're module cPickle' # expected
 
 # constants
 test(r"""sre.I""", sre.IGNORECASE)
@@ -423,8 +372,7 @@ for t in tests:
 
             # Try the match with UNICODE locale enabled, and check
             # that it still succeeds.
-            if have_unicode:
-                obj=sre.compile(pattern, sre.UNICODE)
-                result=obj.search(s)
-                if result==None:
-                    print '=== Fails on unicode-sensitive match', t
+            obj=sre.compile(pattern, sre.UNICODE)
+            result=obj.search(s)
+            if result==None:
+                print '=== Fails on unicode-sensitive match', t

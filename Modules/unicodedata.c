@@ -227,7 +227,7 @@ unicodedata_decomposition(PyObject *self, PyObject *args)
                              (code&((1<<DECOMP_SHIFT)-1))];
     }
 
-    /* high byte is number of hex bytes (usually one or two), low byte
+    /* high byte is of hex bytes (usually one or two), low byte
        is prefix code (from*/
     count = decomp_data[index] >> 8;
 
@@ -241,9 +241,7 @@ unicodedata_decomposition(PyObject *self, PyObject *args)
     while (count-- > 0) {
         if (i)
             decomp[i++] = ' ';
-        assert((size_t)i < sizeof(decomp));
-        PyOS_snprintf(decomp + i, sizeof(decomp) - i, "%04X",
-                      decomp_data[++index]);
+        sprintf(decomp + i, "%04X", decomp_data[++index]);
         i += strlen(decomp + i);
     }
     
@@ -277,14 +275,14 @@ _gethash(const char *s, int len, int scale)
 }
 
 static int
-_Py_getname(Py_UCS4 code, char* buffer, int buflen)
+_getname(Py_UCS4 code, char* buffer, int buflen)
 {
     int offset;
     int i;
     int word;
     unsigned char* w;
 
-    if (code >= 65536)
+    if (code < 0 || code >= 65536)
         return 0;
 
     /* get offset into phrasebook */
@@ -334,7 +332,7 @@ _cmpname(int code, const char* name, int namelen)
     /* check if code corresponds to the given name */
     int i;
     char buffer[NAME_MAXLEN];
-    if (!_Py_getname(code, buffer, sizeof(buffer)))
+    if (!_getname(code, buffer, sizeof(buffer)))
         return 0;
     for (i = 0; i < namelen; i++) {
         if (toupper(name[i]) != buffer[i])
@@ -384,7 +382,7 @@ _getcode(const char* name, int namelen, Py_UCS4* code)
 static const _PyUnicode_Name_CAPI hashAPI = 
 {
     sizeof(_PyUnicode_Name_CAPI),
-    _Py_getname,
+    _getname,
     _getcode
 };
 
@@ -407,7 +405,7 @@ unicodedata_name(PyObject* self, PyObject* args)
 	return NULL;
     }
 
-    if (!_Py_getname((Py_UCS4) *PyUnicode_AS_UNICODE(v),
+    if (!_getname((Py_UCS4) *PyUnicode_AS_UNICODE(v),
                              name, sizeof(name))) {
 	if (defobj == NULL) {
 	    PyErr_SetString(PyExc_ValueError, "no such name");
@@ -463,15 +461,21 @@ static char *unicodedata_docstring = "unicode character database";
 DL_EXPORT(void)
 initunicodedata(void)
 {
-    PyObject *m, *v;
+    PyObject *m, *d, *v;
 
     m = Py_InitModule3(
         "unicodedata", unicodedata_functions, unicodedata_docstring);
     if (!m)
         return;
 
+    d = PyModule_GetDict(m);
+    if (!d)
+        return;
+
     /* Export C API */
     v = PyCObject_FromVoidPtr((void *) &hashAPI, NULL);
-    if (v != NULL)
-        PyModule_AddObject(m, "ucnhash_CAPI", v);
+    if (v != NULL) {
+        PyDict_SetItemString(d, "ucnhash_CAPI", v);
+        Py_DECREF(v);
+    }
 }

@@ -13,28 +13,20 @@ import sys
 import types
 import StringIO
 import macfs
-import keyword
-import macresource
 
-from Carbon.Res import *
-
-DEFAULT_PACKAGEFOLDER=os.path.join(sys.prefix, 'Mac', 'Lib', 'lib-scriptpackages')
+from Res import *
 
 def main():
-	if len(sys.argv) > 1:
-		for filename in sys.argv[1:]:
-			processfile(filename)
-	else:
-		fss, ok = macfs.PromptGetFile('Select file with aeut/aete resource:')
-		if not ok:
-			sys.exit(0)
-		processfile(fss.as_pathname())
+	fss, ok = macfs.PromptGetFile('Select file with aeut/aete resource:')
+	if not ok:
+		sys.exit(0)
+	processfile(fss.as_pathname())
 
 def processfile(fullname):
 	"""Process all resources in a single file"""
 	cur = CurResFile()
-	print "Processing", fullname
-	rf = macresource.open_pathname(fullname)
+	print fullname
+	rf = OpenRFPerm(fullname, 0, 1)
 	try:
 		UseResFile(rf)
 		resources = []
@@ -232,15 +224,15 @@ def compileaete(aete, resinfo, fname):
 	major, minor = divmod(version, 256)
 	fss = macfs.FSSpec(fname)
 	creatorsignature, dummy = fss.GetCreatorType()
-	packagename = identify(os.path.splitext(os.path.basename(fname))[0])
+	packagename = identify(os.path.basename(fname))
 	if language:
 		packagename = packagename+'_lang%d'%language
 	if script:
 		packagename = packagename+'_script%d'%script
 	if len(packagename) > 27:
 		packagename = packagename[:27]
-	macfs.SetFolder(DEFAULT_PACKAGEFOLDER)
-	fss, ok = macfs.GetDirectory('Create and select package folder for %s'%packagename)
+	macfs.SetFolder(os.path.join(sys.prefix, ':Mac:Lib:lib-scriptpackages'))
+	fss, ok = macfs.GetDirectory('Package folder for %s'%packagename)
 	if not ok:
 		return
 	pathname = fss.as_pathname()
@@ -295,7 +287,7 @@ def compileaete(aete, resinfo, fname):
 		for code, modname in suitelist[1:]:
 			fp.write(",\n\t\t%s_Events"%modname)
 		fp.write(",\n\t\taetools.TalkTo):\n")
-		fp.write("\t_signature = %s\n\n"%`creatorsignature`)
+		fp.write("\t_signature = '%s'\n\n"%creatorsignature)
 	fp.close()
 	
 def precompilesuite(suite, basepackage=None):
@@ -368,10 +360,6 @@ def compilesuite((suite, fss, modname), major, minor, language, script, fname, b
 		# Standard_Suite or so). Import everything from our base module
 		fp.write('from %s import *\n'%basepackage._code_to_fullname[code][0])
 		basemodule = basepackage._code_to_module[code]
-	elif basepackage and basepackage._code_to_module.has_key(code.lower()):
-		# This is needed by CodeWarrior and some others.
-		fp.write('from %s import *\n'%basepackage._code_to_fullname[code.lower()][0])
-		basemodule = basepackage._code_to_module[code.lower()]
 	else:
 		# We are not an extension.
 		basemodule = None
@@ -756,7 +744,7 @@ class ObjectCompiler:
 	
 	def compileenumerator(self, item):
 		[name, code, desc] = item
-		self.fp.write("\t%s : %s,\t# %s\n" % (`identify(name)`, `code`, desc))
+		self.fp.write("\t%s : %s,\t# %s\n" % (`name`, `code`, desc))
 		
 	def checkforenum(self, enum):
 		"""This enum code is used by an event. Make sure it's available"""
@@ -824,6 +812,10 @@ def compiledataflags(flags):
 				bits.append(`i`)
 	return '[%s]' % string.join(bits)
 	
+# XXXX Do we have a set of python keywords somewhere?
+illegal_ids = [ "for", "in", "from", "and", "or", "not", "print", "class", "return",
+	"def" ]
+
 def identify(str):
 	"""Turn any string into an identifier:
 	- replace space by _
@@ -833,7 +825,7 @@ def identify(str):
 	if not str:
 		return "_empty_ae_name"
 	rv = ''
-	ok = string.ascii_letters + '_'
+	ok = string.letters  + '_'
 	ok2 = ok + string.digits
 	for c in str:
 		if c in ok:
@@ -843,7 +835,7 @@ def identify(str):
 		else:
 			rv = rv + '_%02.2x_'%ord(c)
 		ok = ok2
-	if keyword.iskeyword(rv):
+	if rv in illegal_ids:
 		rv = '_' + rv
 	return rv
 
@@ -852,4 +844,3 @@ def identify(str):
 if __name__ == '__main__':
 	main()
 	sys.exit(1)
-print identify('for')

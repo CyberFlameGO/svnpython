@@ -7,7 +7,6 @@ This exports:
   - os.curdir is a string representing the current directory ('.' or ':')
   - os.pardir is a string representing the parent directory ('..' or '::')
   - os.sep is the (or a most common) pathname separator ('/' or ':' or '\\')
-  - os.extsep is the extension separator ('.' or '/')
   - os.altsep is the alternate pathname separator (None or '/')
   - os.pathsep is the component separator used in $PATH etc
   - os.linesep is the line separator in text files ('\r' or '\n' or '\r\n')
@@ -95,27 +94,16 @@ elif 'dos' in _names:
 elif 'os2' in _names:
     name = 'os2'
     linesep = '\r\n'
-    curdir = '.'; pardir = '..'; pathsep = ';'
-    if sys.version.find('EMX GCC') == -1:
-        # standard OS/2 compiler (VACPP or Watcom?)
-        sep = '\\'; altsep = '/'
-    else:
-        # EMX
-        sep = '/'; altsep = '\\'
+    curdir = '.'; pardir = '..'; sep = '\\'; pathsep = ';'
     defpath = '.;C:\\bin'
     from os2 import *
     try:
         from os2 import _exit
     except ImportError:
         pass
-    if sys.version.find('EMX GCC') == -1:
-        import ntpath
-        path = ntpath
-        del ntpath
-    else:
-        import os2emxpath
-        path = os2emxpath
-        del os2emxpath
+    import ntpath
+    path = ntpath
+    del ntpath
 
     import os2
     __all__.extend(_get_exports_list(os2))
@@ -179,12 +167,6 @@ elif 'riscos' in _names:
 
 else:
     raise ImportError, 'no os specific module found'
-
-
-if sep=='.':
-    extsep = '/'
-else:
-    extsep = '.'
 
 __all__.append("path")
 
@@ -372,14 +354,6 @@ except NameError:
 else:
     import UserDict
 
-    # Fake unsetenv() for Windows
-    # not sure about os2 and dos here but
-    # I'm guessing they are the same.
-
-    if name in ('os2', 'nt', 'dos'):
-        def unsetenv(key):
-            putenv(key, "")
-
     if name == "riscos":
         # On RISC OS, all env access goes through getenv and putenv
         from riscosenviron import _Environ
@@ -396,15 +370,8 @@ else:
                 self.data[key.upper()] = item
             def __getitem__(self, key):
                 return self.data[key.upper()]
-            try:
-                unsetenv
-            except NameError:
-                def __delitem__(self, key):
-                    del self.data[key.upper()]
-            else:
-                def __delitem__(self, key):
-                    unsetenv(key)
-                    del self.data[key.upper()]
+            def __delitem__(self, key):
+                del self.data[key.upper()]
             def has_key(self, key):
                 return self.data.has_key(key.upper())
             def get(self, key, failobj=None):
@@ -424,15 +391,6 @@ else:
             def update(self, dict):
                 for k, v in dict.items():
                     self[k] = v
-            try:
-                unsetenv
-            except NameError:
-                pass
-            else:
-                def __delitem__(self, key):
-                    unsetenv(key)
-                    del self.data[key]
-
 
     environ = _Environ(environ)
 
@@ -445,9 +403,9 @@ else:
 def _exists(name):
     try:
         eval(name)
-        return True
+        return 1
     except NameError:
-        return False
+        return 0
 
 # Supply spawn*() (probably only for Unix)
 if _exists("fork") and not _exists("spawnv") and _exists("execv"):
@@ -602,30 +560,3 @@ if _exists("fork"):
             stdout, stdin = popen2.popen4(cmd, bufsize)
             return stdin, stdout
         __all__.append("popen4")
-
-import copy_reg as _copy_reg
-
-def _make_stat_result(tup, dict):
-    return stat_result(tup, dict)
-
-def _pickle_stat_result(sr):
-    (type, args) = sr.__reduce__()
-    return (_make_stat_result, args)
-
-try:
-    _copy_reg.pickle(stat_result, _pickle_stat_result, _make_stat_result)
-except NameError: # stat_result may not exist
-    pass
-
-def _make_statvfs_result(tup, dict):
-    return statvfs_result(tup, dict)
-
-def _pickle_statvfs_result(sr):
-    (type, args) = sr.__reduce__()
-    return (_make_statvfs_result, args)
-
-try:
-    _copy_reg.pickle(statvfs_result, _pickle_statvfs_result,
-                     _make_statvfs_result)
-except NameError: # statvfs_result may not exist
-    pass

@@ -13,7 +13,7 @@
 \indexii{POP3}{protocol}
 
 This module defines a class, \class{POP3}, which encapsulates a
-connection to an POP3 server and implements the protocol as defined in
+connection to an POP3 server and implements protocol as defined in
 \rfc{1725}.  The \class{POP3} class supports both the minimal and
 optional command sets.
 
@@ -55,18 +55,10 @@ in lower-case; most return the response text sent by the server.
 An \class{POP3} instance has the following methods:
 
 
-\begin{methoddesc}{set_debuglevel}{level}
-Set the instance's debugging level.  This controls the amount of
-debugging output printed.  The default, \code{0}, produces no
-debugging output.  A value of \code{1} produces a moderate amount of
-debugging output, generally a single line per request.  A value of
-\code{2} or higher produces the maximum amount of debugging output,
-logging each line sent and received on the control connection.
-\end{methoddesc}
-
 \begin{methoddesc}{getwelcome}{}
 Returns the greeting string sent by the POP3 server.
 \end{methoddesc}
+
 
 \begin{methoddesc}{user}{username}
 Send user command, response should indicate that a password is required.

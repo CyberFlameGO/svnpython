@@ -17,8 +17,8 @@ simplest and most popular way to do it, but there is another very
 different technique, that lets you have nearly all the advantages of 
 multi-threading, without actually using multiple threads.  It's really 
 only practical if your program is largely I/O bound.  If your program 
-is processor bound, then pre-emptive scheduled threads are probably what 
-you really need. Network servers are rarely processor bound, however.
+is CPU bound, then pre-emptive scheduled threads are probably what 
+you really need. Network servers are rarely CPU-bound, however.
 
 If your operating system supports the \cfunction{select()} system call 
 in its I/O library (and nearly all do), then you can use it to juggle 
@@ -56,20 +56,6 @@ network servers and clients a snap.
   \end{tableii}
 \end{classdesc}
 
-\begin{funcdesc}{loop}{\optional{timeout\optional{, use_poll\optional{,
-                       map}}}}
-  Enter a polling loop that only terminates after all open channels
-  have been closed.  All arguments are optional.  The \var{timeout}
-  argument sets the timeout parameter for the appropriate
-  \function{select()} or \function{poll()} call, measured in seconds;
-  the default is 30 seconds.  The \var{use_poll} parameter, if true,
-  indicates that \function{poll()} should be used in preference to
-  \function{select()} (the default is false).  The \var{map} parameter
-  is a dictionary that gives a list of channels to watch.  As channels
-  are closed they are deleted from their map.  If \var{map} is
-  omitted, a global map is used.
-\end{funcdesc}
-
 This set of user-level events is larger than the basics.  The 
 full set of methods that can be overridden in your subclass are:
 
@@ -105,11 +91,6 @@ def handle_write(self):
   Called when the socket is closed.
 \end{methoddesc}
 
-\begin{methoddesc}{handle_error}{}
-  Called when an exception is raised and not otherwise handled.  The default
-  version prints a condensed traceback.
-\end{methoddesc}
-
 \begin{methoddesc}{handle_accept}{}
   Called on listening sockets when they actually accept a new 
   connection.
@@ -118,14 +99,14 @@ def handle_write(self):
 \begin{methoddesc}{readable}{}
   Each time through the \method{select()} loop, the set of sockets 
   is scanned, and this method is called to see if there is any 
-  interest in reading.  The default method simply returns \code{True}, 
+  interest in reading.  The default method simply returns \code{1}, 
   indicating that by default, all channels will be interested.
 \end{methoddesc}
 
 \begin{methoddesc}{writable}{}
   Each time through the \method{select()} loop, the set of sockets 
   is scanned, and this method is called to see if there is any 
-  interest in writing.  The default method simply returns \code{True}, 
+  interest in writing.  The default method simply returns \code{1}, 
   indicating that by default, all channels will be interested.
 \end{methoddesc}
 

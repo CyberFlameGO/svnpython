@@ -20,8 +20,8 @@ pathname, (2) an \pytype{FSSpec} object or (3) a 3-tuple
 \citetitle{Inside Macintosh:\ Files}. A description of aliases and the
 Standard File package can also be found there.
 
-\note{A module, \refmodule{macfsn}, is auto-imported to replace
-StandardFile calls in \module{macfs} with NavServices calls.}
+\strong{Note:} A module, \refmodule{macfsn}, is auto-imported to replace
+StandardFile calls in macfs with NavServices calls.
 
 \begin{funcdesc}{FSSpec}{file}
 Create an \pytype{FSSpec} object for the specified file.
@@ -116,7 +116,7 @@ function returns an \pytype{FSSpec} object pointing to the application.
 \end{funcdesc}
 
 
-\subsection{FSSpec Objects \label{fsspec-objects}}
+\subsection{FSSpec objects \label{fsspec-objects}}
 
 \begin{memberdesc}[FSSpec]{data}
 The raw data from the FSSpec object, suitable for passing

@@ -1,5 +1,5 @@
 import W
-from Carbon.Controls import *
+from Controls import *
 
 w = W.Window((200,200), "Test")
 

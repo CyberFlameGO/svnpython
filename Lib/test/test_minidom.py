@@ -4,7 +4,7 @@ from xml.dom.minidom import parse, Node, Document, parseString
 from xml.dom import HierarchyRequestErr
 import xml.parsers.expat
 
-import os
+import os.path
 import sys
 import traceback
 from test_support import verbose
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     base = sys.argv[0]
 else:
     base = __file__
-tstfile = os.path.join(os.path.dirname(base), "test"+os.extsep+"xml")
+tstfile = os.path.join(os.path.dirname(base), "test.xml")
 del base
 
 def confirm(test, testname = "Test"):
@@ -44,11 +44,8 @@ def testInsertBefore():
     nelem = dom.createElement("element")
     root.insertBefore(nelem, elem)
     confirm(len(root.childNodes) == 2
-            and root.childNodes.length == 2
             and root.childNodes[0] is nelem
-            and root.childNodes.item(0) is nelem
             and root.childNodes[1] is elem
-            and root.childNodes.item(1) is elem
             and root.firstChild is nelem
             and root.lastChild is elem
             and root.toxml() == "<doc><element/><foo/></doc>"
@@ -56,11 +53,8 @@ def testInsertBefore():
     nelem = dom.createElement("element")
     root.insertBefore(nelem, None)
     confirm(len(root.childNodes) == 3
-            and root.childNodes.length == 3
             and root.childNodes[1] is elem
-            and root.childNodes.item(1) is elem
             and root.childNodes[2] is nelem
-            and root.childNodes.item(2) is nelem
             and root.lastChild is nelem
             and nelem.previousSibling is elem
             and root.toxml() == "<doc><element/><foo/><element/></doc>"
@@ -68,43 +62,12 @@ def testInsertBefore():
     nelem2 = dom.createElement("bar")
     root.insertBefore(nelem2, nelem)
     confirm(len(root.childNodes) == 4
-            and root.childNodes.length == 4
             and root.childNodes[2] is nelem2
-            and root.childNodes.item(2) is nelem2
             and root.childNodes[3] is nelem
-            and root.childNodes.item(3) is nelem
             and nelem2.nextSibling is nelem
             and nelem.previousSibling is nelem2
             and root.toxml() == "<doc><element/><foo/><bar/><element/></doc>"
             , "testInsertBefore -- node properly placed in tree")
-    dom.unlink()
-
-def _create_fragment_test_nodes():
-    dom = parseString("<doc/>")
-    orig = dom.createTextNode("original")
-    c1 = dom.createTextNode("foo")
-    c2 = dom.createTextNode("bar")
-    c3 = dom.createTextNode("bat")
-    dom.documentElement.appendChild(orig)
-    frag = dom.createDocumentFragment()
-    frag.appendChild(c1)
-    frag.appendChild(c2)
-    frag.appendChild(c3)
-    return dom, orig, c1, c2, c3, frag
-
-def testInsertBeforeFragment():
-    dom, orig, c1, c2, c3, frag = _create_fragment_test_nodes()
-    dom.documentElement.insertBefore(frag, None)
-    confirm(tuple(dom.documentElement.childNodes) == (orig, c1, c2, c3),
-            "insertBefore(<fragment>, None)")
-    frag.unlink()
-    dom.unlink()
-    #
-    dom, orig, c1, c2, c3, frag = _create_fragment_test_nodes()
-    dom.documentElement.insertBefore(frag, orig)
-    confirm(tuple(dom.documentElement.childNodes) == (c1, c2, c3, orig),
-            "insertBefore(<fragment>, orig)")
-    frag.unlink()
     dom.unlink()
 
 def testAppendChild():
@@ -112,23 +75,6 @@ def testAppendChild():
     dom.documentElement.appendChild(dom.createComment(u"Hello"))
     confirm(dom.documentElement.childNodes[-1].nodeName == "#comment")
     confirm(dom.documentElement.childNodes[-1].data == "Hello")
-    dom.unlink()
-
-def testAppendChildFragment():
-    dom, orig, c1, c2, c3, frag = _create_fragment_test_nodes()
-    dom.documentElement.appendChild(frag)
-    confirm(tuple(dom.documentElement.childNodes) == (orig, c1, c2, c3),
-            "appendChild(<fragment>)")
-    frag.unlink()
-    dom.unlink()
-
-def testReplaceChildFragment():
-    dom, orig, c1, c2, c3, frag = _create_fragment_test_nodes()
-    dom.documentElement.replaceChild(frag, orig)
-    orig.unlink()
-    confirm(tuple(dom.documentElement.childNodes) == (c1, c2, c3),
-            "replaceChild(<fragment>)")
-    frag.unlink()
     dom.unlink()
 
 def testLegalChildren():
@@ -166,23 +112,6 @@ def testLegalChildren():
     elem.appendChild(text)
     dom.unlink()
 
-def testNamedNodeMapSetItem():
-    dom = Document()
-    elem = dom.createElement('element')
-    attrs = elem.attributes
-    attrs["foo"] = "bar"
-    a = attrs.item(0)
-    confirm(a.ownerDocument is dom,
-            "NamedNodeMap.__setitem__() sets ownerDocument")
-    confirm(a.ownerElement is elem,
-            "NamedNodeMap.__setitem__() sets ownerElement")
-    confirm(a.value == "bar",
-            "NamedNodeMap.__setitem__() sets value")
-    confirm(a.nodeValue == "bar",
-            "NamedNodeMap.__setitem__() sets nodeValue")
-    elem.unlink()
-    dom.unlink()
-
 def testNonZero():
     dom = parse(tstfile)
     confirm(dom)# should not be zero
@@ -205,11 +134,6 @@ def testAAA():
     el = dom.documentElement
     el.setAttribute("spam", "jam2")
     confirm(el.toxml() == '<abc spam="jam2"/>', "testAAA")
-    a = el.getAttributeNode("spam")
-    confirm(a.ownerDocument is dom,
-            "setAttribute() sets ownerDocument")
-    confirm(a.ownerElement is dom.documentElement,
-            "setAttribute() sets ownerElement")
     dom.unlink()
 
 def testAAB():
@@ -315,14 +239,7 @@ def testGetAttributeNS(): pass
 
 def testGetAttributeNode(): pass
 
-def testGetElementsByTagNameNS():
-    d="""<foo xmlns:minidom="http://pyxml.sf.net/minidom">
-    <minidom:myelem/>
-    </foo>"""
-    dom = parseString(d)
-    elem = dom.getElementsByTagNameNS("http://pyxml.sf.net/minidom","myelem")
-    confirm(len(elem) == 1)
-    dom.unlink()
+def testGetElementsByTagNameNS(): pass
 
 def testGetEmptyNodeListFromElementsByTagNameNS(): pass
 
@@ -445,7 +362,6 @@ def testHasChildNodes(): pass
 def testCloneElementShallow():
     dom, clone = _setupCloneElement(0)
     confirm(len(clone.childNodes) == 0
-            and clone.childNodes.length == 0
             and clone.parentNode is None
             and clone.toxml() == '<doc attr="value"/>'
             , "testCloneElementShallow")
@@ -454,7 +370,6 @@ def testCloneElementShallow():
 def testCloneElementDeep():
     dom, clone = _setupCloneElement(1)
     confirm(len(clone.childNodes) == 1
-            and clone.childNodes.length == 1
             and clone.parentNode is None
             and clone.toxml() == '<doc attr="value"><foo/></doc>'
             , "testCloneElementDeep")
@@ -510,11 +425,9 @@ def testNormalize():
     root = doc.documentElement
     root.appendChild(doc.createTextNode("first"))
     root.appendChild(doc.createTextNode("second"))
-    confirm(len(root.childNodes) == 2
-            and root.childNodes.length == 2, "testNormalize -- preparation")
+    confirm(len(root.childNodes) == 2, "testNormalize -- preparation")
     doc.normalize()
     confirm(len(root.childNodes) == 1
-            and root.childNodes.length == 1
             and root.firstChild is root.lastChild
             and root.firstChild.data == "firstsecond"
             , "testNormalize -- result")
@@ -524,8 +437,7 @@ def testNormalize():
     root = doc.documentElement
     root.appendChild(doc.createTextNode(""))
     doc.normalize()
-    confirm(len(root.childNodes) == 0
-            and root.childNodes.length == 0,
+    confirm(len(root.childNodes) == 0,
             "testNormalize -- single empty node removed")
     doc.unlink()
 
@@ -556,18 +468,6 @@ def testParents():
             elm2b.parentNode is elm1 and
             elm3.parentNode is elm2b, "testParents")
 
-    doc.unlink()
-
-def testNodeListItem():
-    doc = parseString("<doc><e/><e/></doc>")
-    children = doc.childNodes
-    docelem = children[0]
-    confirm(children[0] is children.item(0)
-            and children.item(1) is None
-            and docelem.childNodes.item(0) is docelem.childNodes[0]
-            and docelem.childNodes.item(1) is docelem.childNodes[1]
-            and docelem.childNodes.item(0).childNodes.item(0) is None,
-            "test NodeList.item()")
     doc.unlink()
 
 def testSAX2DOM():

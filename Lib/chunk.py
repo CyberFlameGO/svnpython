@@ -25,13 +25,13 @@ of the file, creating a new instance will fail with a EOFError
 exception.
 
 Usage:
-while True:
+while 1:
     try:
         chunk = Chunk(file)
     except EOFError:
         break
     chunktype = chunk.getname()
-    while True:
+    while 1:
         data = chunk.read(nbytes)
         if not data:
             pass
@@ -49,9 +49,9 @@ default is 1, i.e. aligned.
 """
 
 class Chunk:
-    def __init__(self, file, align=True, bigendian=True, inclheader=False):
+    def __init__(self, file, align = 1, bigendian = 1, inclheader = 0):
         import struct
-        self.closed = False
+        self.closed = 0
         self.align = align      # whether to align to word (2-byte) boundaries
         if bigendian:
             strflag = '>'
@@ -70,10 +70,10 @@ class Chunk:
         self.size_read = 0
         try:
             self.offset = self.file.tell()
-        except (AttributeError, IOError):
-            self.seekable = False
+        except:
+            self.seekable = 0
         else:
-            self.seekable = True
+            self.seekable = 1
 
     def getname(self):
         """Return the name (ID) of the current chunk."""
@@ -86,14 +86,14 @@ class Chunk:
     def close(self):
         if not self.closed:
             self.skip()
-            self.closed = True
+            self.closed = 1
 
     def isatty(self):
         if self.closed:
             raise ValueError, "I/O operation on closed file"
-        return False
+        return 0
 
-    def seek(self, pos, whence=0):
+    def seek(self, pos, whence = 0):
         """Seek to specified position into the chunk.
         Default position is 0 (start of chunk).
         If the file is not seekable, this will result in an error.
@@ -117,7 +117,7 @@ class Chunk:
             raise ValueError, "I/O operation on closed file"
         return self.size_read
 
-    def read(self, size=-1):
+    def read(self, size = -1):
         """Read at most size bytes from the chunk.
         If size is omitted or negative, read until the end
         of the chunk.
@@ -158,7 +158,7 @@ class Chunk:
                 self.file.seek(n, 1)
                 self.size_read = self.size_read + n
                 return
-            except IOError:
+            except:
                 pass
         while self.size_read < self.chunksize:
             n = min(8192, self.chunksize - self.size_read)

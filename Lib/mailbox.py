@@ -6,17 +6,13 @@
 import rfc822
 import os
 
-__all__ = ["UnixMailbox","MmdfMailbox","MHMailbox","Maildir","BabylMailbox",
-           "PortableUnixMailbox"]
+__all__ = ["UnixMailbox","MmdfMailbox","MHMailbox","Maildir","BabylMailbox"]
 
 class _Mailbox:
     def __init__(self, fp, factory=rfc822.Message):
         self.fp = fp
         self.seekp = 0
         self.factory = factory
-
-    def __iter__(self):
-        return iter(self.next, None)
 
     def next(self):
         while 1:
@@ -92,7 +88,6 @@ class _Subfile:
         del self.fp
 
 
-# Recommended to use PortableUnixMailbox instead!
 class UnixMailbox(_Mailbox):
     def _search_start(self):
         while 1:
@@ -151,7 +146,7 @@ class UnixMailbox(_Mailbox):
         return self._regexp.match(line)
 
     def _portable_isrealfromline(self, line):
-        return True
+        return 1
 
     _isrealfromline = _strict_isrealfromline
 
@@ -196,9 +191,6 @@ class MHMailbox:
         self.boxes = map(str, list)
         self.factory = factory
 
-    def __iter__(self):
-        return iter(self.next, None)
-
     def next(self):
         if not self.boxes:
             return None
@@ -226,9 +218,6 @@ class Maildir:
                   for f in os.listdir(curdir) if f[0] != '.']
 
         self.boxes = boxes
-
-    def __iter__(self):
-        return iter(self.next, None)
 
     def next(self):
         if not self.boxes:
@@ -260,7 +249,9 @@ class BabylMailbox(_Mailbox):
 
 
 def _test():
+    import time
     import sys
+    import os
 
     args = sys.argv[1:]
     if not args:
@@ -276,10 +267,7 @@ def _test():
     if mbox[:1] == '+':
         mbox = os.environ['HOME'] + '/Mail/' + mbox[1:]
     elif not '/' in mbox:
-        if os.path.isfile('/var/mail/' + mbox):
-            mbox = '/var/mail/' + mbox
-        else:
-            mbox = '/usr/mail/' + mbox
+        mbox = '/usr/mail/' + mbox
     if os.path.isdir(mbox):
         if os.path.isdir(os.path.join(mbox, 'cur')):
             mb = Maildir(mbox)
@@ -287,7 +275,7 @@ def _test():
             mb = MHMailbox(mbox)
     else:
         fp = open(mbox, 'r')
-        mb = PortableUnixMailbox(fp)
+        mb = UnixMailbox(fp)
 
     msgs = []
     while 1:

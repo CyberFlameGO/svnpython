@@ -9,8 +9,7 @@
 \index{MIME!base64 encoding}
 
 This module performs base64 encoding and decoding of arbitrary binary
-strings into text strings that can be safely sent by email or included
-as part of an HTTP POST request.  The
+strings into text strings that can be safely emailed or posted.  The
 encoding scheme is defined in \rfc{1521} (\emph{MIME
 (Multipurpose Internet Mail Extensions) Part One: Mechanisms for
 Specifying and Describing the Format of Internet Message Bodies},
@@ -40,23 +39,18 @@ Encode the contents of the \var{input} file and write the resulting
 base64 encoded data to the \var{output} file.
 \var{input} and \var{output} must either be file objects or objects that
 mimic the file object interface. \var{input} will be read until
-\code{\var{input}.read()} returns an empty string.  If the last input
-character is not a newline (\code{'\e n'}), a newline will be added to
-the input data.
+\code{\var{input}.read()} returns an empty string.
 \end{funcdesc}
 
 \begin{funcdesc}{encodestring}{s}
 Encode the string \var{s}, which can contain arbitrary binary data,
 and return a string containing one or more lines of
-base64-encoded data.  If the last character of \var{s} is not a
-newline (\code{'\e n'}), a newline will be added.  This causes
-\code{encodestring('hello!')} to return the same value as
-\code{encodestring('hello!\e n')}.
+base64 encoded data.
 \end{funcdesc}
 
 
 \begin{seealso}
-  \seemodule{binascii}{Support module containing \ASCII-to-binary
+  \seemodule{binascii}{Support module containing \ASCII{}-to-binary
                        and binary-to-\ASCII{} conversions.}
   \seerfc{1521}{MIME (Multipurpose Internet Mail Extensions) Part One:
           Mechanisms for Specifying and Describing the Format of

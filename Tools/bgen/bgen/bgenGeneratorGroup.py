@@ -28,10 +28,9 @@ class GeneratorGroup:
 
 
 def _test():
-	void = None
-	from bgenGenerator import FunctionGenerator
+	from bgenGenerator import Generator
 	group = GeneratorGroup("spam")
-	eggs = FunctionGenerator(void, "eggs")
+	eggs = Generator(void, "eggs")
 	group.add(eggs)
 	print "/* START */"
 	group.generate()

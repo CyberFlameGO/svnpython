@@ -22,10 +22,7 @@ class NetrcParseError(Exception):
 class netrc:
     def __init__(self, file=None):
         if not file:
-            try:
-                file = os.path.join(os.environ['HOME'], ".netrc")
-            except KeyError:
-                raise IOError("Could not find .netrc: $HOME is not set")
+            file = os.path.join(os.environ['HOME'], ".netrc")
         fp = open(file)
         self.hosts = {}
         self.macros = {}
@@ -44,26 +41,28 @@ class netrc:
             elif tt == 'macdef':                # Just skip to end of macdefs
                 entryname = lexer.get_token()
                 self.macros[entryname] = []
-                lexer.whitespace = ' \t'
+                lexer.whitepace = ' \t'
                 while 1:
                     line = lexer.instream.readline()
-                    if not line or line == '\012':
-                        lexer.whitespace = ' \t\r\n'
+                    if not line or line == '\012' and tt == '\012':
+                        lexer.whitepace = ' \t\r\n'
                         break
+                    tt = line
                     self.macros[entryname].append(line)
-                continue
             else:
                 raise NetrcParseError(
                     "bad toplevel token %r" % tt, file, lexer.lineno)
 
             # We're looking at start of an entry for a named machine or default.
-            login = account = password = None
-            self.hosts[entryname] = {}
+            if toplevel == 'machine':
+                login = account = password = None
+                self.hosts[entryname] = {}
             while 1:
                 tt = lexer.get_token()
-                if (tt=='' or tt == 'machine' or
-                    tt == 'default' or tt =='macdef'):
-                    if login and password:
+                if tt=='' or tt == 'machine' or tt == 'default' or tt == 'macdef':
+                    if toplevel == 'macdef':
+                        break
+                    elif login and password:
                         self.hosts[entryname] = (login, account, password)
                         lexer.push_token(tt)
                         break

@@ -473,7 +473,7 @@ ctbcm_setattr(self, name, v)
 statichere PyTypeObject ctbcmtype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,			/*ob_size*/
-	"ctb.CTBConnectionMgr",	/*tp_name*/
+	"CTBConnectionMgr",	/*tp_name*/
 	sizeof(ctbcmobject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
 	/* methods */

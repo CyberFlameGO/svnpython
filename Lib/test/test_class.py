@@ -51,6 +51,7 @@ testmeths = [
 
 # generic operations
     "init",
+    "del",
     ]
 
 # These need to return something other than None
@@ -85,20 +86,10 @@ class AllTests:
         print "__cmp__:", args
         return 0
 
-    def __del__(self, *args):
-        print "__del__:", args
-
-# Synthesize AllTests methods from the names in testmeths.
-
-method_template = """\
-def __%(method)s__(self, *args):
-    print "__%(method)s__:", args
-"""
-
 for method in testmeths:
-    exec method_template % locals() in AllTests.__dict__
-
-del method, method_template
+    exec """def __%(method)s__(self, *args):
+                print "__%(method)s__:", args
+"""%locals() in AllTests.__dict__
 
 # this also tests __init__ of course.
 testme = AllTests()
@@ -114,16 +105,8 @@ testme - 1
 testme * 1
 1 * testme
 
-if 1/2 == 0:
-    testme / 1
-    1 / testme
-else:
-    # True division is in effect, so "/" doesn't map to __div__ etc; but
-    # the canned expected-output file requires that __div__ etc get called.
-    testme.__coerce__(1)
-    testme.__div__(1)
-    testme.__coerce__(1)
-    testme.__rdiv__(1)
+testme / 1
+1 / testme
 
 testme % 1
 1 % testme
@@ -178,37 +161,21 @@ del AllTests.__getslice__
 del AllTests.__setslice__
 del AllTests.__delslice__
 
-import sys
-if sys.platform[:4] != 'java':
-    testme[:42]
-    testme[:42] = "The Answer"
-    del testme[:42]
-else:
-    # This works under Jython, but the actual slice values are
-    # different.
-    print "__getitem__: (slice(0, 42, None),)"
-    print "__setitem__: (slice(0, 42, None), 'The Answer')"
-    print "__delitem__: (slice(0, 42, None),)"
+testme[:42]
+testme[:42] = "The Answer"
+del testme[:42]
+
 
 # Unary operations
 
 -testme
 +testme
 abs(testme)
-if sys.platform[:4] != 'java':
-    int(testme)
-    long(testme)
-    float(testme)
-    oct(testme)
-    hex(testme)
-else:
-    # Jython enforced that the these methods return
-    # a value of the expected type.
-    print "__int__: ()"
-    print "__long__: ()"
-    print "__float__: ()"
-    print "__oct__: ()"
-    print "__hex__: ()"
+int(testme)
+long(testme)
+float(testme)
+oct(testme)
+hex(testme)
 
 
 # And the rest...
@@ -231,9 +198,7 @@ testme != 1
 # This test has to be last (duh.)
 
 del testme
-if sys.platform[:4] == 'java':
-    import java
-    java.lang.System.gc()
+
 
 # Interfering tests
 

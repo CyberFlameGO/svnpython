@@ -10,28 +10,10 @@ import sys, os, string
 from types import *
 from distutils.core import Command, DEBUG
 from distutils.sysconfig import get_config_vars
-from distutils.errors import DistutilsPlatformError
 from distutils.file_util import write_file
 from distutils.util import convert_path, subst_vars, change_root
 from distutils.errors import DistutilsOptionError
 from glob import glob
-
-if sys.version < "2.2":
-    WINDOWS_SCHEME = {
-        'purelib': '$base',
-        'platlib': '$base',
-        'headers': '$base/Include/$dist_name',
-        'scripts': '$base/Scripts',
-        'data'   : '$base',
-    }
-else:
-    WINDOWS_SCHEME = {
-        'purelib': '$base/Lib/site-packages',
-        'platlib': '$base/Lib/site-packages',
-        'headers': '$base/Include/$dist_name',
-        'scripts': '$base/Scripts',
-        'data'   : '$base',
-    }
 
 INSTALL_SCHEMES = {
     'unix_prefix': {
@@ -48,15 +30,14 @@ INSTALL_SCHEMES = {
         'scripts': '$base/bin',
         'data'   : '$base',
         },
-    'nt': WINDOWS_SCHEME,
-    'mac': {
-        'purelib': '$base/Lib/site-packages',
-        'platlib': '$base/Lib/site-packages',
+    'nt': {
+        'purelib': '$base',
+        'platlib': '$base',
         'headers': '$base/Include/$dist_name',
         'scripts': '$base/Scripts',
         'data'   : '$base',
         },
-    'os2': {
+    'mac': {
         'purelib': '$base/Lib/site-packages',
         'platlib': '$base/Lib/site-packages',
         'headers': '$base/Include/$dist_name',
@@ -117,7 +98,7 @@ class install (Command):
         ('optimize=', 'O',
          "also compile with optimization: -O1 for \"python -O\", "
          "-O2 for \"python -OO\", and -O0 to disable [default: -O0]"),
-
+         
         # Miscellaneous control options
         ('force', 'f',
          "force installation (overwrite any existing files)"),
@@ -134,7 +115,7 @@ class install (Command):
          "filename in which to record list of installed files"),
         ]
 
-    boolean_options = ['compile', 'force', 'skip-build']
+    boolean_options = ['force', 'skip-build']
     negative_opt = {'no-compile' : 'compile'}
 
 
@@ -165,6 +146,7 @@ class install (Command):
         self.install_data = None
 
         self.compile = None
+        self.no_compile = None
         self.optimize = None
 
         # These two are for putting non-packagized distributions into their
@@ -311,7 +293,7 @@ class install (Command):
                 self.install_lib = self.install_platlib
             else:
                 self.install_lib = self.install_purelib
-
+                    
 
         # Convert directories from Unix /-separated syntax to the local
         # convention.
@@ -359,7 +341,7 @@ class install (Command):
 
 
     def finalize_unix (self):
-
+        
         if self.install_base is not None or self.install_platbase is not None:
             if ((self.install_lib is None and
                  self.install_purelib is None and
@@ -432,7 +414,7 @@ class install (Command):
     def expand_basedirs (self):
         self._expand_attrs(['install_base',
                             'install_platbase',
-                            'root'])
+                            'root'])        
 
     def expand_dirs (self):
         self._expand_attrs(['install_purelib',
@@ -543,7 +525,8 @@ class install (Command):
     # -- Reporting methods ---------------------------------------------
 
     def get_outputs (self):
-        # Assemble the outputs of all the sub-commands.
+        # This command doesn't have any outputs of its own, so just
+        # get the outputs of all its sub-commands.
         outputs = []
         for cmd_name in self.get_sub_commands():
             cmd = self.get_finalized_command(cmd_name)
@@ -552,10 +535,6 @@ class install (Command):
             for filename in cmd.get_outputs():
                 if filename not in outputs:
                     outputs.append(filename)
-
-        if self.path_file and self.install_path_file:
-            outputs.append(os.path.join(self.install_libbase,
-                                        self.path_file + ".pth"))
 
         return outputs
 

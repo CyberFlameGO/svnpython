@@ -35,6 +35,10 @@ Richard Chamberlain, for the first implementation of textdoc.
 
 Mynd you, møøse bites Kan be pretty nasti..."""
 
+# Note: this module is designed to deploy instantly and run under any
+# version of Python from 1.5 and up.  That's why it's a single file and
+# some 2.0 features (like string methods) are conspicuously absent.
+
 # Known bugs that can't be fixed here:
 #   - imp.load_module() cannot be prevented from clobbering existing
 #     loaded modules, so calling synopsis() on a binary module file
@@ -111,35 +115,15 @@ def stripid(text):
             return re.sub(pattern, '>', text)
     return text
 
-def _is_some_method(object):
-    return inspect.ismethod(object) or inspect.ismethoddescriptor(object)
-
 def allmethods(cl):
     methods = {}
-    for key, value in inspect.getmembers(cl, _is_some_method):
+    for key, value in inspect.getmembers(cl, inspect.ismethod):
         methods[key] = 1
     for base in cl.__bases__:
         methods.update(allmethods(base)) # all your base are belong to us
     for key in methods.keys():
         methods[key] = getattr(cl, key)
     return methods
-
-def _split_list(s, predicate):
-    """Split sequence s via predicate, and return pair ([true], [false]).
-
-    The return value is a 2-tuple of lists,
-        ([x for x in s if predicate(x)],
-         [x for x in s if not predicate(x)])
-    """
-
-    yes = []
-    no = []
-    for x in s:
-        if predicate(x):
-            yes.append(x)
-        else:
-            no.append(x)
-    return yes, no
 
 # ----------------------------------------------------- module manipulation
 
@@ -148,8 +132,7 @@ def ispackage(path):
     if os.path.isdir(path):
         for ext in ['.py', '.pyc', '.pyo']:
             if os.path.isfile(os.path.join(path, '__init__' + ext)):
-                return True
-    return False
+                return 1
 
 def synopsis(filename, cache={}):
     """Get the one-line summary out of a module file."""
@@ -312,8 +295,6 @@ class HTMLRepr(Repr):
                       r'<font color="#c040c0">\1</font>',
                       self.escape(testrepr))
 
-    repr_str = repr_string
-
     def repr_instance(self, x, level):
         try:
             return self.escape(cram(stripid(repr(x)), self.maxstring))
@@ -334,7 +315,7 @@ class HTMLDoc(Doc):
     def page(self, title, contents):
         """Format an HTML page."""
         return '''
-<!doctype html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN">
 <html><head><title>Python: %s</title>
 <style type="text/css"><!--
 TT { font-family: lucidatypewriter, lucida console, courier }
@@ -345,10 +326,10 @@ TT { font-family: lucidatypewriter, lucida console, courier }
     def heading(self, title, fgcol, bgcol, extras=''):
         """Format a page heading."""
         return '''
-<table width="100%%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<table width="100%%" cellspacing=0 cellpadding=2 border=0>
 <tr bgcolor="%s">
-<td valign=bottom>&nbsp;<br>
-<font color="%s" face="helvetica, arial">&nbsp;<br>%s</font></td
+<td valign=bottom><small>&nbsp;<br></small
+><font color="%s" face="helvetica, arial">&nbsp;<br>%s</font></td
 ><td align=right valign=bottom
 ><font color="%s" face="helvetica, arial">%s</font></td></tr></table>
     ''' % (bgcol, fgcol, title, fgcol, extras or '&nbsp;')
@@ -359,10 +340,10 @@ TT { font-family: lucidatypewriter, lucida console, courier }
         if marginalia is None:
             marginalia = '<tt>' + '&nbsp;' * width + '</tt>'
         result = '''
-<table width="100%%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<p><table width="100%%" cellspacing=0 cellpadding=2 border=0>
 <tr bgcolor="%s">
-<td colspan=3 valign=bottom>&nbsp;<br>
-<font color="%s" face="helvetica, arial">%s</font></td></tr>
+<td colspan=3 valign=bottom><small><small>&nbsp;<br></small></small
+><font color="%s" face="helvetica, arial">%s</font></td></tr>
     ''' % (bgcol, fgcol, title)
         if prelude:
             result = result + '''
@@ -396,8 +377,9 @@ TT { font-family: lucidatypewriter, lucida console, courier }
                 if i < len(list):
                     result = result + format(list[i]) + '<br>\n'
             result = result + '</td>'
-        return '<table width="100%%" summary="list"><tr>%s</tr></table>' % result
+        return '<table width="100%%"><tr>%s</tr></table>' % result
 
+    def small(self, text): return '<small>%s</small>' % text
     def grey(self, text): return '<font color="#909090">%s</font>' % text
 
     def namelink(self, name, *dicts):
@@ -442,8 +424,8 @@ TT { font-family: lucidatypewriter, lucida console, courier }
         pattern = re.compile(r'\b((http|ftp)://\S+[\w/]|'
                                 r'RFC[- ]?(\d+)|'
                                 r'PEP[- ]?(\d+)|'
-                                r'(self\.)?(\w+))')
-        while True:
+                                r'(self\.)?(\w+))\b')
+        while 1:
             match = pattern.search(text, here)
             if not match: break
             start, end = match.span()
@@ -451,8 +433,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
 
             all, scheme, rfc, pep, selfdot, name = match.groups()
             if scheme:
-                url = escape(all).replace('"', '&quot;')
-                results.append('<a href="%s">%s</a>' % (url, url))
+                results.append('<a href="%s">%s</a>' % (all, escape(all)))
             elif rfc:
                 url = 'http://www.rfc-editor.org/rfc/rfc%d.txt' % int(rfc)
                 results.append('<a href="%s">%s</a>' % (url, escape(all)))
@@ -477,20 +458,20 @@ TT { font-family: lucidatypewriter, lucida console, courier }
         for entry in tree:
             if type(entry) is type(()):
                 c, bases = entry
-                result = result + '<dt><font face="helvetica, arial">'
+                result = result + '<dt><font face="helvetica, arial"><small>'
                 result = result + self.classlink(c, modname)
                 if bases and bases != (parent,):
                     parents = []
                     for base in bases:
                         parents.append(self.classlink(base, modname))
                     result = result + '(' + join(parents, ', ') + ')'
-                result = result + '\n</font></dt>'
+                result = result + '\n</small></font></dt>'
             elif type(entry) is type([]):
                 result = result + '<dd>\n%s</dd>\n' % self.formattree(
                     entry, modname, c)
         return '<dl>\n%s</dl>\n' % result
 
-    def docmodule(self, object, name=None, mod=None, *ignored):
+    def docmodule(self, object, name=None, mod=None):
         """Produce HTML documentation for a module object."""
         name = object.__name__ # ignore the passed-in name
         parts = split(name, '.')
@@ -551,7 +532,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
 
         doc = self.markup(getdoc(object), self.preformat, fdict, cdict)
         doc = doc and '<tt>%s</tt>' % doc
-        result = result + '<p>%s</p>\n' % doc
+        result = result + '<p>%s</p>\n' % self.small(doc)
 
         if hasattr(object, '__path__'):
             modpkgs = []
@@ -605,131 +586,20 @@ TT { font-family: lucidatypewriter, lucida console, courier }
 
         return result
 
-    def docclass(self, object, name=None, mod=None, funcs={}, classes={},
-                 *ignored):
+    def docclass(self, object, name=None, mod=None, funcs={}, classes={}):
         """Produce HTML documentation for a class object."""
         realname = object.__name__
         name = name or realname
         bases = object.__bases__
+        contents = ''
 
-        contents = []
-        push = contents.append
-
-        # Cute little class to pump out a horizontal rule between sections.
-        class HorizontalRule:
-            def __init__(self):
-                self.needone = 0
-            def maybe(self):
-                if self.needone:
-                    push('<hr>\n')
-                self.needone = 1
-        hr = HorizontalRule()
-
-        # List the mro, if non-trivial.
-        mro = list(inspect.getmro(object))
-        if len(mro) > 2:
-            hr.maybe()
-            push('<dl><dt>Method resolution order:</dt>\n')
-            for base in mro:
-                push('<dd>%s</dd>\n' % self.classlink(base,
-                                                      object.__module__))
-            push('</dl>\n')
-
-        def spill(msg, attrs, predicate):
-            ok, attrs = _split_list(attrs, predicate)
-            if ok:
-                hr.maybe()
-                push(msg)
-                for name, kind, homecls, value in ok:
-                    push(self.document(getattr(object, name), name, mod,
-                                       funcs, classes, mdict, object))
-                    push('\n')
-            return attrs
-
-        def spillproperties(msg, attrs, predicate):
-            ok, attrs = _split_list(attrs, predicate)
-            if ok:
-                hr.maybe()
-                push(msg)
-                for name, kind, homecls, value in ok:
-                    push('<dl><dt><strong>%s</strong></dt>\n' % name)
-                    if value.__doc__ is not None:
-                        doc = self.markup(value.__doc__, self.preformat,
-                                          funcs, classes, mdict)
-                        push('<dd><tt>%s</tt></dd>\n' % doc)
-                    for attr, tag in [("fget", " getter"),
-                                      ("fset", " setter"),
-                                      ("fdel", " deleter")]:
-                        func = getattr(value, attr)
-                        if func is not None:
-                            base = self.document(func, name + tag, mod,
-                                                 funcs, classes, mdict, object)
-                            push('<dd>%s</dd>\n' % base)
-                    push('</dl>\n')
-            return attrs
-
-        def spilldata(msg, attrs, predicate):
-            ok, attrs = _split_list(attrs, predicate)
-            if ok:
-                hr.maybe()
-                push(msg)
-                for name, kind, homecls, value in ok:
-                    base = self.docother(getattr(object, name), name, mod)
-                    doc = getattr(value, "__doc__", None)
-                    if doc is None:
-                        push('<dl><dt>%s</dl>\n' % base)
-                    else:
-                        doc = self.markup(getdoc(value), self.preformat,
-                                          funcs, classes, mdict)
-                        doc = '<dd><tt>%s</tt>' % doc
-                        push('<dl><dt>%s%s</dl>\n' % (base, doc))
-                    push('\n')
-            return attrs
-
-        attrs = inspect.classify_class_attrs(object)
-        mdict = {}
-        for key, kind, homecls, value in attrs:
-            mdict[key] = anchor = '#' + name + '-' + key
-            value = getattr(object, key)
-            try:
-                # The value may not be hashable (e.g., a data attr with
-                # a dict or list value).
-                mdict[value] = anchor
-            except TypeError:
-                pass
-
-        while attrs:
-            if mro:
-                thisclass = mro.pop(0)
-            else:
-                thisclass = attrs[0][2]
-            attrs, inherited = _split_list(attrs, lambda t: t[2] is thisclass)
-
-            if thisclass is object:
-                tag = "defined here"
-            else:
-                tag = "inherited from %s" % self.classlink(thisclass,
-                                                          object.__module__)
-            tag += ':<br>\n'
-
-            # Sort attrs by name.
-            attrs.sort(lambda t1, t2: cmp(t1[0], t2[0]))
-
-            # Pump out the attrs, segregated by kind.
-            attrs = spill("Methods %s" % tag, attrs,
-                          lambda t: t[1] == 'method')
-            attrs = spill("Class methods %s" % tag, attrs,
-                          lambda t: t[1] == 'class method')
-            attrs = spill("Static methods %s" % tag, attrs,
-                          lambda t: t[1] == 'static method')
-            attrs = spillproperties("Properties %s" % tag, attrs,
-                                    lambda t: t[1] == 'property')
-            attrs = spilldata("Data and non-method functions %s" % tag, attrs,
-                              lambda t: t[1] == 'data')
-            assert attrs == []
-            attrs = inherited
-
-        contents = ''.join(contents)
+        methods, mdict = allmethods(object).items(), {}
+        methods.sort()
+        for key, value in methods:
+            mdict[key] = mdict[value] = '#' + name + '-' + key
+        for key, value in methods:
+            contents = contents + self.document(
+                value, key, mod, funcs, classes, mdict, object)
 
         if name == realname:
             title = '<a name="%s">class <strong>%s</strong></a>' % (
@@ -742,14 +612,15 @@ TT { font-family: lucidatypewriter, lucida console, courier }
             for base in bases:
                 parents.append(self.classlink(base, object.__module__))
             title = title + '(%s)' % join(parents, ', ')
-        doc = self.markup(getdoc(object), self.preformat, funcs, classes, mdict)
-        doc = doc and '<tt>%s<br>&nbsp;</tt>' % doc or '&nbsp;'
-
+        doc = self.markup(
+            getdoc(object), self.preformat, funcs, classes, mdict)
+        doc = self.small(doc and '<tt>%s<br>&nbsp;</tt>' % doc or
+                                 self.small('&nbsp;'))
         return self.section(title, '#000000', '#ffc8d8', contents, 5, doc)
 
     def formatvalue(self, object):
         """Format an argument default value as text."""
-        return self.grey('=' + self.repr(object))
+        return self.small(self.grey('=' + self.repr(object)))
 
     def docroutine(self, object, name=None, mod=None,
                    funcs={}, classes={}, methods={}, cl=None):
@@ -764,6 +635,7 @@ TT { font-family: lucidatypewriter, lucida console, courier }
             if cl:
                 if imclass is not cl:
                     note = ' from ' + self.classlink(imclass, mod)
+                    skipdocs = 1
             else:
                 if object.im_self:
                     note = ' method of %s instance' % self.classlink(
@@ -784,28 +656,28 @@ TT { font-family: lucidatypewriter, lucida console, courier }
                 reallink = realname
             title = '<a name="%s"><strong>%s</strong></a> = %s' % (
                 anchor, name, reallink)
-        if inspect.isfunction(object):
+        if inspect.isbuiltin(object):
+            argspec = '(...)'
+        else:
             args, varargs, varkw, defaults = inspect.getargspec(object)
             argspec = inspect.formatargspec(
                 args, varargs, varkw, defaults, formatvalue=self.formatvalue)
             if realname == '<lambda>':
-                title = '<strong>%s</strong> <em>lambda</em> ' % name
+                decl = '<em>lambda</em>'
                 argspec = argspec[1:-1] # remove parentheses
-        else:
-            argspec = '(...)'
 
-        decl = title + argspec + (note and self.grey(
-               '<font face="helvetica, arial">%s</font>' % note))
+        decl = title + argspec + (note and self.small(self.grey(
+            '<font face="helvetica, arial">%s</font>' % note)))
 
         if skipdocs:
-            return '<dl><dt>%s</dt></dl>\n' % decl
+            return '<dl><dt>%s</dl>\n' % decl
         else:
             doc = self.markup(
                 getdoc(object), self.preformat, funcs, classes, methods)
-            doc = doc and '<dd><tt>%s</tt></dd>' % doc
-            return '<dl><dt>%s</dt>%s</dl>\n' % (decl, doc)
+            doc = doc and '<dd>' + self.small('<tt>%s</tt>' % doc)
+            return '<dl><dt>%s%s</dl>\n' % (decl, doc)
 
-    def docother(self, object, name=None, mod=None, *ignored):
+    def docother(self, object, name=None, mod=None):
         """Produce HTML documentation for a data object."""
         lhs = name and '<strong>%s</strong> = ' % name or ''
         return lhs + self.repr(object)
@@ -863,8 +735,6 @@ class TextRepr(Repr):
             # needed to make any special characters, so show a raw string.
             return 'r' + testrepr[0] + test + testrepr[0]
         return testrepr
-
-    repr_str = repr_string
 
     def repr_instance(self, x, level):
         try:
@@ -993,119 +863,23 @@ class TextDoc(Doc):
         name = name or realname
         bases = object.__bases__
 
-        def makename(c, m=object.__module__):
-            return classname(c, m)
-
         if name == realname:
             title = 'class ' + self.bold(realname)
         else:
             title = self.bold(name) + ' = class ' + realname
         if bases:
+            def makename(c, m=object.__module__): return classname(c, m)
             parents = map(makename, bases)
             title = title + '(%s)' % join(parents, ', ')
 
         doc = getdoc(object)
-        contents = doc and [doc + '\n'] or []
-        push = contents.append
+        contents = doc and doc + '\n'
+        methods = allmethods(object).items()
+        methods.sort()
+        for key, value in methods:
+            contents = contents + '\n' + self.document(value, key, mod, object)
 
-        # List the mro, if non-trivial.
-        mro = list(inspect.getmro(object))
-        if len(mro) > 2:
-            push("Method resolution order:")
-            for base in mro:
-                push('    ' + makename(base))
-            push('')
-
-        # Cute little class to pump out a horizontal rule between sections.
-        class HorizontalRule:
-            def __init__(self):
-                self.needone = 0
-            def maybe(self):
-                if self.needone:
-                    push('-' * 70)
-                self.needone = 1
-        hr = HorizontalRule()
-
-        def spill(msg, attrs, predicate):
-            ok, attrs = _split_list(attrs, predicate)
-            if ok:
-                hr.maybe()
-                push(msg)
-                for name, kind, homecls, value in ok:
-                    push(self.document(getattr(object, name),
-                                       name, mod, object))
-            return attrs
-
-        def spillproperties(msg, attrs, predicate):
-            ok, attrs = _split_list(attrs, predicate)
-            if ok:
-                hr.maybe()
-                push(msg)
-                for name, kind, homecls, value in ok:
-                    push(name)
-                    need_blank_after_doc = 0
-                    doc = getdoc(value) or ''
-                    if doc:
-                        push(self.indent(doc))
-                        need_blank_after_doc = 1
-                    for attr, tag in [("fget", " getter"),
-                                      ("fset", " setter"),
-                                      ("fdel", " deleter")]:
-                        func = getattr(value, attr)
-                        if func is not None:
-                            if need_blank_after_doc:
-                                push('')
-                                need_blank_after_doc = 0
-                            base = self.docother(func, name + tag, mod, 70)
-                            push(self.indent(base))
-                    push('')
-            return attrs
-
-        def spilldata(msg, attrs, predicate):
-            ok, attrs = _split_list(attrs, predicate)
-            if ok:
-                hr.maybe()
-                push(msg)
-                for name, kind, homecls, value in ok:
-                    doc = getattr(value, "__doc__", None)
-                    push(self.docother(getattr(object, name),
-                                       name, mod, 70, doc) + '\n')
-            return attrs
-
-        attrs = inspect.classify_class_attrs(object)
-        while attrs:
-            if mro:
-                thisclass = mro.pop(0)
-            else:
-                thisclass = attrs[0][2]
-            attrs, inherited = _split_list(attrs, lambda t: t[2] is thisclass)
-
-            if thisclass is object:
-                tag = "defined here"
-            else:
-                tag = "inherited from %s" % classname(thisclass,
-                                                      object.__module__)
-
-            # Sort attrs by name.
-            attrs.sort(lambda t1, t2: cmp(t1[0], t2[0]))
-
-            # Pump out the attrs, segregated by kind.
-            attrs = spill("Methods %s:\n" % tag, attrs,
-                          lambda t: t[1] == 'method')
-            attrs = spill("Class methods %s:\n" % tag, attrs,
-                          lambda t: t[1] == 'class method')
-            attrs = spill("Static methods %s:\n" % tag, attrs,
-                          lambda t: t[1] == 'static method')
-            attrs = spillproperties("Properties %s:\n" % tag, attrs,
-                                    lambda t: t[1] == 'property')
-            attrs = spilldata("Data and non-method functions %s:\n" % tag,
-                              attrs, lambda t: t[1] == 'data')
-            assert attrs == []
-            attrs = inherited
-
-        contents = '\n'.join(contents)
-        if not contents:
-            return title + '\n'
+        if not contents: return title + '\n'
         return title + '\n' + self.indent(rstrip(contents), ' |  ') + '\n'
 
     def formatvalue(self, object):
@@ -1123,6 +897,7 @@ class TextDoc(Doc):
             if cl:
                 if imclass is not cl:
                     note = ' from ' + classname(imclass, mod)
+                    skipdocs = 1
             else:
                 if object.im_self:
                     note = ' method of %s instance' % classname(
@@ -1138,15 +913,15 @@ class TextDoc(Doc):
                 cl.__dict__[realname] is object):
                 skipdocs = 1
             title = self.bold(name) + ' = ' + realname
-        if inspect.isfunction(object):
+        if inspect.isbuiltin(object):
+            argspec = '(...)'
+        else:
             args, varargs, varkw, defaults = inspect.getargspec(object)
             argspec = inspect.formatargspec(
                 args, varargs, varkw, defaults, formatvalue=self.formatvalue)
             if realname == '<lambda>':
                 title = 'lambda'
                 argspec = argspec[1:-1] # remove parentheses
-        else:
-            argspec = '(...)'
         decl = title + argspec + note
 
         if skipdocs:
@@ -1155,7 +930,7 @@ class TextDoc(Doc):
             doc = getdoc(object) or ''
             return decl + '\n' + (doc and rstrip(self.indent(doc)) + '\n')
 
-    def docother(self, object, name=None, mod=None, maxlen=None, doc=None):
+    def docother(self, object, name=None, mod=None, maxlen=None):
         """Produce text documentation for a data object."""
         repr = self.repr(object)
         if maxlen:
@@ -1163,8 +938,6 @@ class TextDoc(Doc):
             chop = maxlen - len(line)
             if chop < 0: repr = repr[:chop] + '...'
         line = (name and self.bold(name) + ' = ' or '') + repr
-        if doc is not None:
-            line += '\n' + self.indent(str(doc))
         return line
 
 # --------------------------------------------------------- user interfaces
@@ -1181,8 +954,6 @@ def getpager():
         return plainpager
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         return plainpager
-    if os.environ.get('TERM') in ['dumb', 'emacs']:
-        return plainpager
     if os.environ.has_key('PAGER'):
         if sys.platform == 'win32': # pipes completely broken in Windows
             return lambda text: tempfilepager(plain(text), os.environ['PAGER'])
@@ -1190,7 +961,7 @@ def getpager():
             return lambda text: pipepager(plain(text), os.environ['PAGER'])
         else:
             return lambda text: pipepager(text, os.environ['PAGER'])
-    if sys.platform == 'win32' or sys.platform.startswith('os2'):
+    if sys.platform == 'win32':
         return lambda text: tempfilepager(plain(text), 'more <')
     if hasattr(os, 'system') and os.system('less 2>/dev/null') == 0:
         return lambda text: pipepager(text, 'less')
@@ -1513,7 +1284,7 @@ class Helper:
             self.intro()
             self.interact()
             self.output.write('''
-You are now leaving help and returning to the Python interpreter.
+You're now leaving help and returning to the Python interpreter.
 If you want to ask for help on a particular object directly from the
 interpreter, you can type "help(object)".  Executing "help('string')"
 has the same effect as typing a particular string at the help> prompt.
@@ -1521,7 +1292,7 @@ has the same effect as typing a particular string at the help> prompt.
 
     def interact(self):
         self.output.write('\n')
-        while True:
+        while 1:
             self.output.write('help> ')
             self.output.flush()
             try:
@@ -1710,11 +1481,10 @@ class ModuleScanner(Scanner):
         if not (os.path.islink(dir) and inode in self.inodes):
             self.inodes.append(inode) # detect circular symbolic links
             return ispackage(dir)
-        return False
 
     def run(self, callback, key=None, completer=None):
         if key: key = lower(key)
-        self.quit = False
+        self.quit = 0
         seen = {}
 
         for modname in sys.builtin_module_names:
@@ -1810,8 +1580,8 @@ def serve(port, callback=None, completer=None):
                 for dir in pathdirs():
                     indices.append(html.index(dir, seen))
                 contents = heading + join(indices) + '''<p align=right>
-<font color="#909090" face="helvetica, arial"><strong>
-pydoc</strong> by Ka-Ping Yee &lt;ping@lfw.org&gt;</font>'''
+<small><small><font color="#909090" face="helvetica, arial"><strong>
+pydoc</strong> by Ka-Ping Yee &lt;ping@lfw.org&gt;</font></small></small>'''
                 self.send_document('Index of Modules', contents)
 
         def log_message(self, *args): pass
@@ -1826,7 +1596,7 @@ pydoc</strong> by Ka-Ping Yee &lt;ping@lfw.org&gt;</font>'''
 
         def serve_until_quit(self):
             import select
-            self.quit = False
+            self.quit = 0
             while not self.quit:
                 rd, wr, ex = select.select([self.socket.fileno()], [], [], 1)
                 if rd: self.handle_request()

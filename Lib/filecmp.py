@@ -35,7 +35,7 @@ def cmp(f1, f2, shallow=1, use_statcache=0):
 
     Return value:
 
-    True if the files are the same, False otherwise.
+    integer -- 1 if the files are the same, 0 otherwise.
 
     This function uses a cache for past comparisons and the results,
     with a cache invalidation mechanism relying on stale signatures.
@@ -50,11 +50,11 @@ def cmp(f1, f2, shallow=1, use_statcache=0):
     s1 = _sig(stat_function(f1))
     s2 = _sig(stat_function(f2))
     if s1[0] != stat.S_IFREG or s2[0] != stat.S_IFREG:
-        return False
+        return 0
     if shallow and s1 == s2:
-        return True
+        return 1
     if s1[1] != s2[1]:
-        return False
+        return 0
 
     result = _cache.get((f1, f2))
     if result and (s1, s2) == result[:2]:

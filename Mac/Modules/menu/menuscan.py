@@ -42,7 +42,6 @@ class MyScanner(Scanner):
 			"GetMenuCommandProperty",
 			"GetMenuTitle", # Funny arg/returnvalue
 			"SetMenuTitle",
-			"SetMenuTitleIcon", # void*
 			]
 
 	def makegreylist(self):
@@ -84,37 +83,7 @@ class MyScanner(Scanner):
 				'GetMenuAttributes',
 				'ChangeMenuItemPropertyAttributes',
 				'GetMenuItemPropertyAttributes',
-				'AcquireRootMenu',
-				'UpdateInvalidMenuItems',
-				'InvalidateMenuItems',
-				'IsMenuItemInvalid',
-				'GetMenuCommandMark',
-				'SetMenuCommandMark',
-				'GetMenuType',
-				'SetMenuItemCommandKey',
-				'GetMenuItemCommandKey',
-				'SetMenuItemIndent',
-				'GetMenuItemIndent',
-				'SetMenuItemTextWithCFString',
-				'CopyMenuItemTextAsCFString',
-				'GetMenuItemHierarchicalMenu',
-				'SetMenuItemHierarchicalMenu',
-				'SetRootMenu',
-				'IsMenuBarInvalid',
-				'InvalidateMenuEnabling',
-				'InsertMenuItemTextWithCFString',
-				'AppendMenuItemTextWithCFString',
-				'DeleteMenuItems',
-				'CopyMenuItems',
-				'IsMenuSizeInvalid',
-				'InvalidateMenuSize',
-				'SetMenuTitleWithCFString',
-				'CopyMenuTitleAsCFString',
-				'DuplicateMenu',
-				'ReleaseMenu',
-				'RetainMenu',
-				'GetMenuRetainCount',
-				'IsValidMenu',
+				
 			])]
 			
 	def makeblacklisttypes(self):
@@ -127,10 +96,6 @@ class MyScanner(Scanner):
 			"MenuDefSpecPtr", # Too difficult for now
 			"MenuDefSpec_ptr", # ditto
 			"MenuTrackingData",
-			"void_ptr", 	# Don't know yet.
-			"EventRef",	# For now, not exported yet.
-			"MenuItemDataPtr", # Not yet.
-			"MenuItemDataRec_ptr",
 			]
 
 	def makerepairinstructions(self):
@@ -144,8 +109,6 @@ class MyScanner(Scanner):
 			([("void", "*", "OutMode"), ("long", "*", "InMode"),
 			                            ("long", "*", "OutMode")],
 			 [("VarVarOutBuffer", "*", "InOutMode")]),
-			([("MenuRef", 'outHierMenu', "OutMode")],
-			 [("OptMenuRef", 'outHierMenu', "OutMode")]),
 			]
 
 	def writeinitialdefs(self):

@@ -6,8 +6,7 @@ import types
 
 __all__ = ["BdbQuit","Bdb","Breakpoint"]
 
-class BdbQuit(Exception):
-    """Exception to give up completely"""
+BdbQuit = 'bdb.BdbQuit' # Exception to give up completely
 
 
 class Bdb:
@@ -24,12 +23,9 @@ class Bdb:
         self.fncache = {}
 
     def canonic(self, filename):
-        if filename == "<" + filename[1:-1] + ">":
-            return filename
         canonic = self.fncache.get(filename)
         if not canonic:
             canonic = os.path.abspath(filename)
-            canonic = os.path.normcase(canonic)
             self.fncache[filename] = canonic
         return canonic
 
@@ -78,7 +74,6 @@ class Bdb:
         if self.stop_here(frame) or frame == self.returnframe:
             self.user_return(frame, arg)
             if self.quitting: raise BdbQuit
-        return self.trace_dispatch
 
     def dispatch_exception(self, frame, arg):
         if self.stop_here(frame):
@@ -92,31 +87,31 @@ class Bdb:
 
     def stop_here(self, frame):
         if self.stopframe is None:
-            return True
+            return 1
         if frame is self.stopframe:
-            return True
+            return 1
         while frame is not None and frame is not self.stopframe:
             if frame is self.botframe:
-                return True
+                return 1
             frame = frame.f_back
-        return False
+        return 0
 
     def break_here(self, frame):
         filename = self.canonic(frame.f_code.co_filename)
         if not self.breaks.has_key(filename):
-            return False
+            return 0
         lineno = frame.f_lineno
         if not lineno in self.breaks[filename]:
-            return False
+            return 0
         # flag says ok to delete temp. bp
         (bp, flag) = effective(filename, lineno, frame)
         if bp:
             self.currentbp = bp.number
             if (flag and bp.temporary):
                 self.do_clear(str(bp.number))
-            return True
+            return 1
         else:
-            return False
+            return 0
 
     def do_clear(self, arg):
         raise NotImplementedError, "subclass of bdb must implement do_clear()"
@@ -170,7 +165,7 @@ class Bdb:
     def set_trace(self):
         """Start debugging from here."""
         try:
-            raise Exception
+            1 + ''
         except:
             frame = sys.exc_info()[2].tb_frame.f_back
         self.reset()
@@ -190,7 +185,7 @@ class Bdb:
             # no breakpoints; run without debugger overhead
             sys.settrace(None)
             try:
-                raise Exception
+                1 + ''  # raise an exception
             except:
                 frame = sys.exc_info()[2].tb_frame.f_back
             while frame and frame is not self.botframe:

@@ -47,7 +47,7 @@ extern int _DlgObj_Convert(PyObject *, DialogRef *);
 #define DlgObj_Convert _DlgObj_Convert
 #endif
 
-#if !ACCESSOR_CALLS_ARE_FUNCTIONS && UNIVERSAL_INTERFACES_VERSION < 0x340
+#if !ACCESSOR_CALLS_ARE_FUNCTIONS
 #define GetDialogTextEditHandle(dlg) (((DialogPeek)(dlg))->textH)
 #define SetPortDialogPort(dlg) SetPort(dlg)
 #define GetDialogPort(dlg) ((CGrafPtr)(dlg))
@@ -240,13 +240,13 @@ class MyObjectDefinition(GlobalObjectDefinition):
 		Output("DisposeDialog(%s);", itselfname)
 
 # Create the generator groups and link them
-module = MacModule('_Dlg', 'Dlg', includestuff, finalstuff, initstuff)
+module = MacModule('Dlg', 'Dlg', includestuff, finalstuff, initstuff)
 object = MyObjectDefinition('Dialog', 'DlgObj', 'DialogPtr')
 module.addobject(object)
 
 # Create the generator classes used to populate the lists
-Function = OSErrWeakLinkFunctionGenerator
-Method = OSErrWeakLinkMethodGenerator
+Function = OSErrFunctionGenerator
+Method = OSErrMethodGenerator
 
 # Create and populate the lists
 functions = []
@@ -256,6 +256,21 @@ execfile("dlggen.py")
 # add the populated lists to the generator groups
 for f in functions: module.add(f)
 for f in methods: object.add(f)
+
+# Some methods that are currently macro's in C, but will be real routines
+# in MacOS 8.
+
+##f = Method(ExistingWindowPtr, 'GetDialogWindow', (DialogRef, 'dialog', InMode))
+##object.add(f)
+##f = Method(SInt16, 'GetDialogDefaultItem', (DialogRef, 'dialog', InMode))
+##object.add(f)
+##f = Method(SInt16, 'GetDialogCancelItem', (DialogRef, 'dialog', InMode))
+##object.add(f)
+##f = Method(SInt16, 'GetDialogKeyboardFocusItem', (DialogRef, 'dialog', InMode))
+##object.add(f)
+f = Method(void, 'SetGrafPortOfDialog', (DialogRef, 'dialog', InMode), 
+	condition='#if !TARGET_API_MAC_CARBON')
+object.add(f)
 
 setuseritembody = """
 	PyObject *new = NULL;
@@ -285,5 +300,5 @@ f = ManualGenerator("SetUserItemHandler", setuseritembody)
 module.add(f)
 
 # generate output
-SetOutputFileName('_Dlgmodule.c')
+SetOutputFileName('Dlgmodule.c')
 module.generate()

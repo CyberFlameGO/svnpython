@@ -1,4 +1,4 @@
-from test_support import TestFailed, have_unicode
+from test_support import TestFailed
 
 class base_set:
 
@@ -31,13 +31,13 @@ check(0 not in c, "0 in seq(1)")
 try:
     1 in a
     check(0, "in base_set did not raise error")
-except TypeError:
+except AttributeError:
     pass
 
 try:
     1 not in a
     check(0, "not in base_set did not raise error")
-except TypeError:
+except AttributeError:
     pass
 
 # Test char in string
@@ -63,65 +63,62 @@ try:
 except TypeError:
     pass
 
+# Test char in Unicode
 
-if have_unicode:
+check('c' in u'abc', "'c' not in u'abc'")
+check('d' not in u'abc', "'d' in u'abc'")
 
-    # Test char in Unicode
+try:
+    '' in u'abc'
+    check(0, "'' in u'abc' did not raise error")
+except TypeError:
+    pass
 
-    check('c' in unicode('abc'), "'c' not in u'abc'")
-    check('d' not in unicode('abc'), "'d' in u'abc'")
+try:
+    'ab' in u'abc'
+    check(0, "'ab' in u'abc' did not raise error")
+except TypeError:
+    pass
 
-    try:
-        '' in unicode('abc')
-        check(0, "'' in u'abc' did not raise error")
-    except TypeError:
-        pass
+try:
+    None in u'abc'
+    check(0, "None in u'abc' did not raise error")
+except TypeError:
+    pass
 
-    try:
-        'ab' in unicode('abc')
-        check(0, "'ab' in u'abc' did not raise error")
-    except TypeError:
-        pass
+# Test Unicode char in Unicode
 
-    try:
-        None in unicode('abc')
-        check(0, "None in u'abc' did not raise error")
-    except TypeError:
-        pass
+check(u'c' in u'abc', "u'c' not in u'abc'")
+check(u'd' not in u'abc', "u'd' in u'abc'")
 
-    # Test Unicode char in Unicode
+try:
+    u'' in u'abc'
+    check(0, "u'' in u'abc' did not raise error")
+except TypeError:
+    pass
 
-    check(unicode('c') in unicode('abc'), "u'c' not in u'abc'")
-    check(unicode('d') not in unicode('abc'), "u'd' in u'abc'")
+try:
+    u'ab' in u'abc'
+    check(0, "u'ab' in u'abc' did not raise error")
+except TypeError:
+    pass
 
-    try:
-        unicode('') in unicode('abc')
-        check(0, "u'' in u'abc' did not raise error")
-    except TypeError:
-        pass
+# Test Unicode char in string
 
-    try:
-        unicode('ab') in unicode('abc')
-        check(0, "u'ab' in u'abc' did not raise error")
-    except TypeError:
-        pass
+check(u'c' in 'abc', "u'c' not in 'abc'")
+check(u'd' not in 'abc', "u'd' in 'abc'")
 
-    # Test Unicode char in string
+try:
+    u'' in 'abc'
+    check(0, "u'' in 'abc' did not raise error")
+except TypeError:
+    pass
 
-    check(unicode('c') in 'abc', "u'c' not in 'abc'")
-    check(unicode('d') not in 'abc', "u'd' in 'abc'")
-
-    try:
-        unicode('') in 'abc'
-        check(0, "u'' in 'abc' did not raise error")
-    except TypeError:
-        pass
-
-    try:
-        unicode('ab') in 'abc'
-        check(0, "u'ab' in 'abc' did not raise error")
-    except TypeError:
-        pass
+try:
+    u'ab' in 'abc'
+    check(0, "u'ab' in 'abc' did not raise error")
+except TypeError:
+    pass
 
 # A collection of tests on builtin sequence types
 a = range(10)

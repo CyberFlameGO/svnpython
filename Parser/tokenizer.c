@@ -80,8 +80,6 @@ char *_PyParser_TokenNames[] = {
 	"LEFTSHIFTEQUAL",
 	"RIGHTSHIFTEQUAL",
 	"DOUBLESTAREQUAL",
-	"DOUBLESLASH",
-	"DOUBLESLASHEQUAL",
 	/* This table must match the #defines in token.h! */
 	"OP",
 	"<ERRORTOKEN>",
@@ -410,7 +408,6 @@ PyToken_TwoChars(int c1, int c2)
 		break;
 	case '/':
 		switch (c2) {
-		case '/':	return DOUBLESLASH;
 		case '=':	return SLASHEQUAL;
 		}
 		break;
@@ -448,6 +445,7 @@ PyToken_ThreeChars(int c1, int c2, int c3)
 			switch (c3) {
 			case '=':
 				return LEFTSHIFTEQUAL;
+				break;
 			}
 			break;
 		}
@@ -458,6 +456,7 @@ PyToken_ThreeChars(int c1, int c2, int c3)
 			switch (c3) {
 			case '=':
 				return RIGHTSHIFTEQUAL;
+				break;
 			}
 			break;
 		}
@@ -468,16 +467,7 @@ PyToken_ThreeChars(int c1, int c2, int c3)
 			switch (c3) {
 			case '=':
 				return DOUBLESTAREQUAL;
-			}
-			break;
-		}
-		break;
-	case '/':
-		switch (c2) {
-		case '/':
-			switch (c3) {
-			case '=':
-				return DOUBLESLASHEQUAL;
+				break;
 			}
 			break;
 		}
@@ -722,7 +712,7 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 	/* Number */
 	if (isdigit(c)) {
 		if (c == '0') {
-			/* Hex or octal -- maybe. */
+			/* Hex or octal */
 			c = tok_nextc(tok);
 			if (c == '.')
 				goto fraction;
@@ -737,30 +727,12 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 				} while (isxdigit(c));
 			}
 			else {
-				int found_decimal = 0;
+				/* XXX This is broken!  E.g.,
+				   09.9 should be accepted as float! */
 				/* Octal; c is first char of it */
 				/* There's no 'isoctdigit' macro, sigh */
 				while ('0' <= c && c < '8') {
 					c = tok_nextc(tok);
-				}
-				if (isdigit(c)) {
-					found_decimal = 1;
-					do {
-						c = tok_nextc(tok);
-					} while (isdigit(c));
-				}
-				if (c == '.')
-					goto fraction;
-				else if (c == 'e' || c == 'E')
-					goto exponent;
-#ifndef WITHOUT_COMPLEX
-				else if (c == 'j' || c == 'J')
-					goto imaginary;
-#endif
-				else if (found_decimal) {
-					tok->done = E_TOKEN;
-					tok_backup(tok, c);
-					return ERRORTOKEN;
 				}
 			}
 			if (c == 'l' || c == 'L')
@@ -774,7 +746,9 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 			if (c == 'l' || c == 'L')
 				c = tok_nextc(tok);
 			else {
-				/* Accept floating point numbers. */
+				/* Accept floating point numbers.
+				   XXX This accepts incomplete things like
+				   XXX 12e or 1e+; worry run-time */
 				if (c == '.') {
 		fraction:
 					/* Fraction */
@@ -783,19 +757,13 @@ PyTokenizer_Get(register struct tok_state *tok, char **p_start,
 					} while (isdigit(c));
 				}
 				if (c == 'e' || c == 'E') {
-		exponent:
 					/* Exponent part */
 					c = tok_nextc(tok);
 					if (c == '+' || c == '-')
 						c = tok_nextc(tok);
-					if (!isdigit(c)) {
-						tok->done = E_TOKEN;
-						tok_backup(tok, c);
-						return ERRORTOKEN;
-					}
-					do {
+					while (isdigit(c)) {
 						c = tok_nextc(tok);
-					} while (isdigit(c));
+					}
 				}
 #ifndef WITHOUT_COMPLEX
 				if (c == 'j' || c == 'J')

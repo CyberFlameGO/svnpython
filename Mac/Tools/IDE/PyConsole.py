@@ -1,15 +1,15 @@
 import W
 import Wkeys
-from Carbon import Fm
+import Fm
 import WASTEconst
 from types import *
-from Carbon import Events
+import Events
 import string
 import sys
 import traceback
 import MacOS
 import MacPrefs
-from Carbon import Qd
+import Qd
 import PyInteractive
 
 if not hasattr(sys, 'ps1'):
@@ -47,11 +47,8 @@ class ConsoleTextWidget(W.EditText):
 		self._namespace = dict
 	
 	def open(self):
-		import __main__
 		W.EditText.open(self)
-		self.write('Python %s\n' % sys.version)
-		self.write('Type "copyright", "credits" or "license" for more information.\n')
-		self.write('MacPython IDE %s\n' % __main__.__version__)
+		self.write('Python ' + sys.version + '\nType "copyright", "credits" or "license" for more information.\n')
 		self.write(sys.ps1)
 		self.flush()
 	
@@ -75,11 +72,9 @@ class ConsoleTextWidget(W.EditText):
 			if char == Wkeys.returnkey:
 				text = self.get()[self._inputstart:selstart]
 				text = string.join(string.split(text, "\r"), "\n")
-				if hasattr(MacOS, 'EnableAppswitch'):
-					saveyield = MacOS.EnableAppswitch(0)
+				saveyield = MacOS.EnableAppswitch(0)
 				self.pyinteractive.executeline(text, self, self._namespace)
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(saveyield)
+				MacOS.EnableAppswitch(saveyield)
 				selstart, selend = self.getselection()
 				self._inputstart = selstart
 	
@@ -108,8 +103,6 @@ class ConsoleTextWidget(W.EditText):
 		self._buf = ""
 		self.ted.WEClearUndo()
 		self.updatescrollbars()
-		if Qd.QDIsPortBuffered(self._parentwindow.wid):
-			Qd.QDFlushPortBuffer(self._parentwindow.wid, None)
 	
 	def selection_ok(self):
 		selstart, selend = self.getselection()
@@ -182,7 +175,7 @@ class PyConsole(W.Window):
 		PyBrowser.Browser(self.consoletext._namespace, self.consoletext._namespace["__name__"])
 	
 	def clearbuffer(self):
-		from Carbon import Res
+		import Res
 		self.consoletext.ted.WEUseText(Res.Resource(''))
 		self.consoletext.write(sys.ps1)
 		self.consoletext.flush()
@@ -279,15 +272,13 @@ class PyOutput:
 		self.w.bind("<activate>", self.activate)
 	
 	def write(self, text):
-		if hasattr(MacOS, 'EnableAppswitch'):
-			oldyield = MacOS.EnableAppswitch(-1)
+		oldyield = MacOS.EnableAppswitch(-1)
 		try:
 			self._buf = self._buf + text
 			if '\n' in self._buf:
 				self.flush()
 		finally:
-			if hasattr(MacOS, 'EnableAppswitch'):
-				MacOS.EnableAppswitch(oldyield)
+			MacOS.EnableAppswitch(oldyield)
 	
 	def flush(self):
 		self.show()
@@ -300,8 +291,6 @@ class PyOutput:
 		self._buf = ""
 		self.w.outputtext.updatescrollbars()
 		self.w.outputtext.ted.WEFeatureFlag(WASTEconst.weFReadOnly, 1)
-		if Qd.QDIsPortBuffered(self.w.wid):
-			Qd.QDFlushPortBuffer(self.w.wid, None)
 	
 	def show(self):
 		if self.closed:
@@ -334,7 +323,7 @@ class PyOutput:
 			self.w.outputtext.settabsettings(tabsettings)
 	
 	def clearbuffer(self):
-		from Carbon import Res
+		import Res
 		self.w.outputtext.set('')
 	
 	def activate(self, onoff):
@@ -362,9 +351,7 @@ class SimpleStdin:
 		rv = EasyDialogs.AskString(prompt)
 		if rv is None:
 			return ""
-		rv = rv + "\n"  # readline should include line terminator
-		sys.stdout.write(rv)  # echo user's reply
-		return rv
+		return rv + '\n'
 
 
 def installconsole(defaultshow = 1):

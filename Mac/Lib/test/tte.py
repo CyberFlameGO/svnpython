@@ -1,8 +1,8 @@
 # Test TE module, simple version
 
-from Carbon.Win import *
-from Carbon.TE import *
-from Carbon import Qd
+from Win import *
+from TE import *
+import Qd
 
 r = (40, 40, 140, 140)
 w = NewWindow(r, "TETextBox test", 1, 0, -1, 1, 0x55555555)

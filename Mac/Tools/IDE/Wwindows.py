@@ -1,16 +1,18 @@
-from Carbon import Dlg, Evt, Events, Fm
-from Carbon import Menu, Qd, Win, Windows
+import Qd
+import Win
+import Evt
+import Fm
 import FrameWork
+import Windows
+import Events
 import Wbase
+import Dlg
 import MacOS
+import Menu
 import struct
 import traceback
-from types import InstanceType, StringType
 
-if hasattr(Win, "FrontNonFloatingWindow"):
-	MyFrontWindow = Win.FrontNonFloatingWindow
-else:
-	MyFrontWindow = Win.FrontWindow
+from types import *
 
 
 class Window(FrameWork.Window, Wbase.SelectableWidget):
@@ -460,8 +462,7 @@ class ModalDialog(Dialog):
 		Dialog.close(self)
 	
 	def mainloop(self):
-		if hasattr(MacOS, 'EnableAppswitch'):
-			saveyield = MacOS.EnableAppswitch(-1)
+		saveyield = MacOS.EnableAppswitch(-1)
 		while not self.done:
 			#self.do1event()
 			self.do1event(	Events.keyDownMask + 
@@ -471,8 +472,7 @@ class ModalDialog(Dialog):
 						Events.mDownMask +
 						Events.mUpMask, 
 						10)
-		if hasattr(MacOS, 'EnableAppswitch'):
-			MacOS.EnableAppswitch(saveyield)
+		MacOS.EnableAppswitch(saveyield)
 	
 	def do1event(self, mask = Events.everyEvent, wait = 0):
 		ok, event = self.app.getevent(mask, wait)
@@ -493,9 +493,9 @@ class ModalDialog(Dialog):
 	
 	def do_key(self, event):
 		(what, message, when, where, modifiers) = event
-		#w = Win.FrontWindow()
-		#if w <> self.wid:
-		#	return
+		w = Win.FrontWindow()
+		if w <> self.wid:
+			return
 		c = chr(message & Events.charCodeMask)
 		if modifiers & Events.cmdKey:
 			self.app.checkmenus(self)
@@ -519,10 +519,7 @@ class ModalDialog(Dialog):
 			name = "do_%d" % partcode
 		
 		if name == "do_inDesk":
-			if hasattr(MacOS, "HandleEvent"):
-				MacOS.HandleEvent(event)
-			else:
-				print 'Unexpected inDesk event:', event
+			MacOS.HandleEvent(event)
 			return
 		if wid == self.wid:
 			try:
@@ -560,7 +557,7 @@ def FrontWindowInsert(stuff):
 		raise TypeError, 'string expected'
 	import W
 	app = W.getapplication()
-	wid = MyFrontWindow()
+	wid = Win.FrontWindow()
 	if wid and app._windows.has_key(wid):
 		window = app._windows[wid]
 		if hasattr(window, "insert"):
@@ -573,14 +570,9 @@ def FrontWindowInsert(stuff):
 	if EasyDialogs.AskYesNoCancel(
 			"Can't find window or widget to insert text into; copy to clipboard instead?", 
 			1) == 1:
-		from Carbon import Scrap
-		if hasattr(Scrap, 'PutScrap'):
-			Scrap.ZeroScrap()
-			Scrap.PutScrap('TEXT', stuff)
-		else:
-			Scrap.ClearCurrentScrap()
-			sc = Scrap.GetCurrentScrap()
-			sc.PutScrapFlavor('TEXT', 0, stuff)
+		import Scrap
+		Scrap.ZeroScrap()
+		Scrap.PutScrap('TEXT', stuff)
 
 
 # not quite based on the same function in FrameWork	

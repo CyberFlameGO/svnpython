@@ -20,6 +20,7 @@ struct _symtable_entry;
 
 struct symtable {
 	int st_pass;             /* pass == 1 or 2 */
+	int st_nested_scopes;    /* true if nested scopes are enabled */
 	char *st_filename;       /* name of file being compiled */
 	struct _symtable_entry *st_cur; /* current symbol table entry */
 	PyObject *st_symbols;    /* dictionary of symbol table entries */
@@ -45,7 +46,6 @@ typedef struct _symtable_entry {
 	int ste_nested;          /* true if scope is nested */
 	int ste_child_free;      /* true if a child scope has free variables,
 				    including free refs to globals */
-	int ste_generator;       /* true if namespace is a generator */
 	int ste_opt_lineno;      /* lineno of last exec or import * */
 	struct symtable *ste_table;
 } PySymtableEntryObject;

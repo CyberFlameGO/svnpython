@@ -149,7 +149,6 @@ double = Type("double", "d")
 # For input, this is easy.  For output, and for other uses of char *,
 # see the module bgenBuffer.
 stringptr = InputOnlyType("char*", "s")
-unicodestringptr = InputOnlyType("wchar_t *", "u")
 
 
 # Some Python related types.
@@ -233,14 +232,6 @@ class OpaqueByValueType(OpaqueType):
 
 	def mkvalueArgs(self, name):
 		return "%s, %s" % (self.new, name)
-		
-class OpaqueByValueStructType(OpaqueByValueType):
-	"""Similar to OpaqueByValueType, but we also pass this to mkvalue by
-	address, in stead of by value.
-	"""
-
-	def mkvalueArgs(self, name):
-		return "%s, &%s" % (self.new, name)
 
 
 class OpaqueArrayType(OpaqueByValueType):

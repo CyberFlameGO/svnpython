@@ -21,7 +21,6 @@ def test(name, input, output, *args):
             value = apply(f, (input,) + args)
     except:
         value = sys.exc_type
-        f = name
     if value != output:
         if verbose:
             print 'no'

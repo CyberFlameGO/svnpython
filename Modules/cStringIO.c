@@ -1,3 +1,56 @@
+/*
+ * cStringIO.c,v 1.29 1999/06/15 14:10:27 jim Exp
+ * 
+ * Copyright (c) 1996-1998, Digital Creations, Fredericksburg, VA, USA.  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ * 
+ *   o Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions, and the disclaimer that follows.
+ * 
+ *   o Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions, and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ * 
+ *   o All advertising materials mentioning features or use of this
+ *     software must display the following acknowledgement:
+ * 
+ *       This product includes software developed by Digital Creations
+ *       and its contributors.
+ * 
+ *   o Neither the name of Digital Creations nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ * 
+ * 
+ * THIS SOFTWARE IS PROVIDED BY DIGITAL CREATIONS AND CONTRIBUTORS *AS
+ * IS* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL DIGITAL
+ * CREATIONS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+ * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+ * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+ * DAMAGE.
+ * 
+ # 
+ # If you have questions regarding this software, contact:
+ #
+ #   Digital Creations, L.C.
+ #   910 Princess Ann Street
+ #   Fredericksburge, Virginia  22401
+ #
+ #   info@digicool.com
+ #
+ #   (540) 371-6909
+ */
 static char cStringIO_module_documentation[] = 
 "A simple fast partial StringIO replacement.\n"
 "\n"
@@ -14,7 +67,7 @@ static char cStringIO_module_documentation[] =
 "  an_output_stream=StringIO()\n"
 "  an_output_stream.write(some_stuff)\n"
 "  ...\n"
-"  value=an_output_stream.getvalue()\n"
+"  value=an_output_stream.getvalue() # str(an_output_stream) works too!\n"
 "\n"
 "  an_input_stream=StringIO(a_string)\n"
 "  spam=an_input_stream.readline()\n"
@@ -67,8 +120,7 @@ typedef struct { /* Subtype of IOobject */
   PyObject_HEAD
   char *buf;
   int pos, string_size;
-  /* We store a reference to the object here in order to keep
-     the buffer alive during the lifetime of the Iobject. */
+
   PyObject *pbuf;
 } Iobject;
 
@@ -341,43 +393,45 @@ static char O_write__doc__[] =
 static int
 O_cwrite(PyObject *self, char *c, int  l) {
         int newl;
-        Oobject *oself;
 
         UNLESS (IO__opencheck(IOOOBJECT(self))) return -1;
-        oself = (Oobject *)self;
 
-        newl = oself->pos+l;
-        if (newl >= oself->buf_size) {
-            oself->buf_size *= 2;
-            if (oself->buf_size <= newl) 
-                    oself->buf_size = newl+1;
-            UNLESS (oself->buf = 
-                    (char*)realloc(oself->buf,
-                                   (oself->buf_size) * sizeof(char))) {
+        newl=((Oobject*)self)->pos+l;
+        if (newl >= ((Oobject*)self)->buf_size) {
+            ((Oobject*)self)->buf_size*=2;
+            if (((Oobject*)self)->buf_size <= newl) 
+                    ((Oobject*)self)->buf_size=newl+1;
+            UNLESS (((Oobject*)self)->buf=
+                   (char*)realloc(
+                        ((Oobject*)self)->buf,
+                        (((Oobject*)self)->buf_size) *sizeof(char))) {
                     PyErr_SetString(PyExc_MemoryError,"out of memory");
-                    oself->buf_size = oself->pos = 0;
+                    ((Oobject*)self)->buf_size=((Oobject*)self)->pos=0;
                     return -1;
               }
           }
 
-        memcpy(oself->buf+oself->pos,c,l);
+        memcpy(((Oobject*)((Oobject*)self))->buf+((Oobject*)self)->pos,c,l);
 
-        oself->pos += l;
+        ((Oobject*)self)->pos += l;
 
-        if (oself->string_size < oself->pos) {
-            oself->string_size = oself->pos;
-        }
+        if (((Oobject*)self)->string_size < ((Oobject*)self)->pos) {
+            ((Oobject*)self)->string_size = ((Oobject*)self)->pos;
+          }
 
         return l;
 }
 
 static PyObject *
 O_write(Oobject *self, PyObject *args) {
+        PyObject *s;
         char *c;
         int l;
 
-        UNLESS (PyArg_ParseTuple(args, "s#:write", &c, &l)) return NULL;
+        UNLESS (PyArg_ParseTuple(args, "O:write", &s)) return NULL;
 
+        UNLESS (-1 != (l=PyString_Size(s))) return NULL;
+        UNLESS (c=PyString_AsString(s)) return NULL;
         if (O_cwrite((PyObject*)self,c,l) < 0) return NULL;
 
         Py_INCREF(Py_None);
@@ -490,7 +544,7 @@ static char Otype__doc__[] =
 static PyTypeObject Otype = {
   PyObject_HEAD_INIT(NULL)
   0,	       		/*ob_size*/
-  "cStringIO.StringO",   		/*tp_name*/
+  "StringO",     		/*tp_name*/
   sizeof(Oobject),       	/*tp_basicsize*/
   0,	       		/*tp_itemsize*/
   /* methods */
@@ -599,58 +653,33 @@ I_getattr(Iobject *self, char *name) {
   return Py_FindMethod(I_methods, (PyObject *)self, name);
 }
 
-static PyObject *
-I_getiter(Iobject *self)
-{
-	PyObject *myreadline = PyObject_GetAttrString((PyObject*)self,
-						      "readline");
-	PyObject *emptystring = PyString_FromString("");
-	PyObject *iter = NULL;
-	if (!myreadline || !emptystring)
-		goto finally;
-
-	iter = PyCallIter_New(myreadline, emptystring);
-  finally:
-	Py_XDECREF(myreadline);
-	Py_XDECREF(emptystring);
-	return iter;
-}
-
-
 static char Itype__doc__[] = 
 "Simple type for treating strings as input file streams"
 ;
 
 static PyTypeObject Itype = {
   PyObject_HEAD_INIT(NULL)
-  0,					/*ob_size*/
-  "cStringIO.StringI",			/*tp_name*/
-  sizeof(Iobject),			/*tp_basicsize*/
-  0,					/*tp_itemsize*/
+  0,		       	/*ob_size*/
+  "StringI",	       	/*tp_name*/
+  sizeof(Iobject),       	/*tp_basicsize*/
+  0,		       	/*tp_itemsize*/
   /* methods */
-  (destructor)I_dealloc,		/*tp_dealloc*/
-  (printfunc)0,				/*tp_print*/
-  (getattrfunc)I_getattr,		/*tp_getattr*/
-  (setattrfunc)0,			/*tp_setattr*/
-  (cmpfunc)0,				/*tp_compare*/
-  (reprfunc)0,				/*tp_repr*/
-  0,					/*tp_as_number*/
-  0,					/*tp_as_sequence*/
-  0,					/*tp_as_mapping*/
-  (hashfunc)0,				/*tp_hash*/
-  (ternaryfunc)0,			/*tp_call*/
-  (reprfunc)0,				/*tp_str*/
-  0,					/* tp_getattro */
-  0,					/* tp_setattro */
-  0,					/* tp_as_buffer */
-  Py_TPFLAGS_DEFAULT,			/* tp_flags */
-  Itype__doc__,				/* tp_doc */
-  0,					/* tp_traverse */
-  0,					/* tp_clear */
-  0,					/* tp_richcompare */
-  0,					/* tp_weaklistoffset */
-  (getiterfunc)I_getiter,		/* tp_iter */
-  0,					/* tp_iternext */
+  (destructor)I_dealloc,	/*tp_dealloc*/
+  (printfunc)0,		/*tp_print*/
+  (getattrfunc)I_getattr,	/*tp_getattr*/
+  (setattrfunc)0,		/*tp_setattr*/
+  (cmpfunc)0,		/*tp_compare*/
+  (reprfunc)0,		/*tp_repr*/
+  0,			/*tp_as_number*/
+  0,			/*tp_as_sequence*/
+  0,			/*tp_as_mapping*/
+  (hashfunc)0,		/*tp_hash*/
+  (ternaryfunc)0,		/*tp_call*/
+  (reprfunc)0,		/*tp_str*/
+  
+  /* Space for future expansion */
+  0L,0L,0L,0L,
+  Itype__doc__ 		/* Documentation string */
 };
 
 static PyObject *
@@ -659,11 +688,13 @@ newIobject(PyObject *s) {
   char *buf;
   int size;
 
-  if (PyObject_AsReadBuffer(s, (const void **)&buf, &size)) {
-      PyErr_Format(PyExc_TypeError, "expected read buffer, %.200s found",
+  if (!PyString_Check(s)) {
+      PyErr_Format(PyExc_TypeError, "expected string, %.200s found",
 		   s->ob_type->tp_name);
       return NULL;
   }
+  buf = PyString_AS_STRING(s);
+  size = PyString_GET_SIZE(s);
   UNLESS (self = PyObject_New(Iobject, &Itype)) return NULL;
   Py_INCREF(s);
   self->buf=buf;

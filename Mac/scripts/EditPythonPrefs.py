@@ -3,22 +3,21 @@
 # This program is getting more and more clunky. It should really
 # be rewritten in a modeless way some time soon.
 
-from Carbon.Dlg import *
-from Carbon.Events import *
-from Carbon.Res import *
-from Carbon import Controls
+from Dlg import *
+from Events import *
+from Res import *
+import Controls
 import string
 import struct
 import macfs
 import MacOS
 import os
 import sys
-from Carbon import Res # For Res.Error
+import Res # For Res.Error
 import pythonprefs
-import macresource
 import EasyDialogs
 try:
-	from Carbon import Help
+	import Help
 except ImportError:
 	Help = None
 
@@ -54,8 +53,6 @@ opt_dialog_map = [
 	"nointopt",
 	"noargs",
 	"delayconsole",
-	"divisionwarn",
-	"unixnewlines",
 	]
 opt_dialog_dict = {}
 for i in range(len(opt_dialog_map)):
@@ -63,15 +60,15 @@ for i in range(len(opt_dialog_map)):
 		opt_dialog_dict[opt_dialog_map[i]] = i
 # 1 thru 10 are the options
 # The GUSI creator/type and delay-console
-OD_CREATOR_ITEM = 20
-OD_TYPE_ITEM = 21
+OD_CREATOR_ITEM = 18
+OD_TYPE_ITEM = 19
 OD_OK_ITEM = 1
 OD_CANCEL_ITEM = 2
-OD_HELP_ITEM = 22
-OD_KEEPALWAYS_ITEM = 16
-OD_KEEPOUTPUT_ITEM = 17
-OD_KEEPERROR_ITEM = 18
-OD_KEEPNEVER_ITEM = 19
+OD_HELP_ITEM = 20
+OD_KEEPALWAYS_ITEM = 14
+OD_KEEPOUTPUT_ITEM = 15
+OD_KEEPERROR_ITEM = 16
+OD_KEEPNEVER_ITEM = 17
 
 def optinteract(options):
 	"""Let the user interact with the options dialog"""
@@ -198,7 +195,10 @@ def edit_applet(name):
 		handler.save(result)
 
 def main():
-	macresource.need('DLOG', DIALOG_ID, 'EditPythonPrefs.rsrc')
+	try:
+		h = FSpOpenResFile('EditPythonPrefs.rsrc', 1)
+	except Res.Error:
+		pass	# Assume we already have acces to our own resource
 	
 	MacOS.SchedParams(1, 0)
 	if len(sys.argv) <= 1:

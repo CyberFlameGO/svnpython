@@ -18,6 +18,9 @@
 #define FD_SETSIZE 512
 #endif 
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #if defined(HAVE_POLL_H)
 #include <poll.h>
 #elif defined(HAVE_SYS_POLL_H)
@@ -33,7 +36,7 @@ extern void bzero(void *, int);
 #include <sys/types.h>
 #endif
 
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
+#if defined(PYOS_OS2)
 #include <sys/time.h>
 #include <utils.h>
 #endif
@@ -49,6 +52,14 @@ extern void bzero(void *, int);
 #endif
 #endif
 
+#ifdef RISCOS
+#define NO_DUP
+#undef off_t
+#undef uid_t
+#undef gid_t
+#undef errno
+#include "socklib.h"
+#endif /* RISCOS */
 
 static PyObject *SelectError;
 
@@ -215,8 +226,7 @@ select_select(PyObject *self, PyObject *args)
 	}
 	else {
 		if (timeout > (double)LONG_MAX) {
-			PyErr_SetString(PyExc_OverflowError,
-					"timeout period too long");
+			PyErr_SetString(PyExc_OverflowError, "timeout period too long");
 			return NULL;
 		}
 		seconds = (long)timeout;
@@ -331,7 +341,7 @@ staticforward PyTypeObject poll_Type;
 static int
 update_ufd_array(pollObject *self)
 {
-	int i, pos;
+	int i, j, pos;
 	PyObject *key, *value;
 
 	self->ufd_len = PyDict_Size(self->dict);
@@ -342,9 +352,9 @@ update_ufd_array(pollObject *self)
 	}
 
 	i = pos = 0;
-	while (PyDict_Next(self->dict, &pos, &key, &value)) {
+	while ((j = PyDict_Next(self->dict, &pos, &key, &value))) {
 		self->ufds[i].fd = PyInt_AsLong(key);
-		self->ufds[i].events = (short)PyInt_AsLong(value);
+		self->ufds[i].events = PyInt_AsLong(value);
 		i++;
 	}
 	self->ufd_uptodate = 1;
@@ -354,8 +364,7 @@ update_ufd_array(pollObject *self)
 static char poll_register_doc[] =
 "register(fd [, eventmask] ) -> None\n\n\
 Register a file descriptor with the polling object.\n\
-fd -- either an integer, or an object with a fileno() method returning an\n\
-      int.\n\
+fd -- either an integer, or an object with a fileno() method returning an int.\n\
 events -- an optional bitmask describing the type of events to check for";
 
 static PyObject *
@@ -564,7 +573,7 @@ statichere PyTypeObject poll_Type = {
 	 * to be portable to Windows without using C++. */
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"select.poll",		/*tp_name*/
+	"poll",			/*tp_name*/
 	sizeof(pollObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
 	/* methods */
@@ -657,35 +666,34 @@ insint(PyObject *d, char *name, int value)
 DL_EXPORT(void)
 initselect(void)
 {
-	PyObject *m;
+	PyObject *m, *d;
 	m = Py_InitModule3("select", select_methods, module_doc);
-
+	d = PyModule_GetDict(m);
 	SelectError = PyErr_NewException("select.error", NULL, NULL);
-	Py_INCREF(SelectError);
-	PyModule_AddObject(m, "error", SelectError);
+	PyDict_SetItemString(d, "error", SelectError);
 #ifdef HAVE_POLL
 	poll_Type.ob_type = &PyType_Type;
-	PyModule_AddIntConstant(m, "POLLIN", POLLIN);
-	PyModule_AddIntConstant(m, "POLLPRI", POLLPRI);
-	PyModule_AddIntConstant(m, "POLLOUT", POLLOUT);
-	PyModule_AddIntConstant(m, "POLLERR", POLLERR);
-	PyModule_AddIntConstant(m, "POLLHUP", POLLHUP);
-	PyModule_AddIntConstant(m, "POLLNVAL", POLLNVAL);
+	insint(d, "POLLIN", POLLIN);
+	insint(d, "POLLPRI", POLLPRI);
+	insint(d, "POLLOUT", POLLOUT);
+	insint(d, "POLLERR", POLLERR);
+	insint(d, "POLLHUP", POLLHUP);
+	insint(d, "POLLNVAL", POLLNVAL);
 
 #ifdef POLLRDNORM
-	PyModule_AddIntConstant(m, "POLLRDNORM", POLLRDNORM);
+	insint(d, "POLLRDNORM", POLLRDNORM);
 #endif
 #ifdef POLLRDBAND
-	PyModule_AddIntConstant(m, "POLLRDBAND", POLLRDBAND);
+	insint(d, "POLLRDBAND", POLLRDBAND);
 #endif
 #ifdef POLLWRNORM
-	PyModule_AddIntConstant(m, "POLLWRNORM", POLLWRNORM);
+	insint(d, "POLLWRNORM", POLLWRNORM);
 #endif
 #ifdef POLLWRBAND
-	PyModule_AddIntConstant(m, "POLLWRBAND", POLLWRBAND);
+	insint(d, "POLLWRBAND", POLLWRBAND);
 #endif
 #ifdef POLLMSG
-	PyModule_AddIntConstant(m, "POLLMSG", POLLMSG);
+	insint(d, "POLLMSG", POLLMSG);
 #endif
 #endif /* HAVE_POLL */
 }

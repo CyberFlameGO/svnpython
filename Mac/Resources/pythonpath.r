@@ -26,8 +26,6 @@ type 'Popt' {
 	byte sitePython = 0, noSitePython = 1;
 	byte navService = 0, noNavService = 1;
 	byte noDelayConsole = 0, delayConsole = 1;
-	byte noDivisionWarning = 0, divisionWarning = 1;
-	byte noUnixNewlines = 0, unixNewlines = 1;
 };
 
 type 'TMPL' {
@@ -57,8 +55,6 @@ resource 'TMPL' (PYTHONOPTIONS_ID, "Popt") {
 		"No site-python support",		'DBYT',
 		"No NavServices in macfs",		'DBYT',
 		"Delay console window",			'DBYT',
-		"Warnings for old-style division",	'DBYT',
-		"Allow unix newlines on textfile input",'DBYT',
 	}
 };
 
@@ -79,8 +75,6 @@ resource 'Popt' (PYTHONOPTIONS_ID, "Options") {
 	sitePython,
 	navService,
 	noDelayConsole,
-	noDivisionWarning,
-	unixNewlines,
 };
 
 /* The sys.path initializer */
@@ -88,14 +82,14 @@ resource 'Popt' (PYTHONOPTIONS_ID, "Options") {
 resource 'STR#' (PYTHONPATH_ID, "sys.path initialization") {
 	{
 		"$(PYTHON)",
+		"$(PYTHON):Mac:PlugIns",
 		"$(PYTHON):Mac:Lib",
-		"$(PYTHON):Mac:Lib:lib-compat",
+		"$(PYTHON):Mac:Lib:lib-toolbox",
 		"$(PYTHON):Mac:Lib:lib-scriptpackages",
-		"$(PYTHON):Lib:lib-dynload",
 		"$(PYTHON):Lib",
 		"$(PYTHON):Extensions:img:Mac",
 		"$(PYTHON):Extensions:img:Lib",
-		"$(PYTHON):Extensions:Imaging",
+		"$(PYTHON):Extensions:Imaging:PIL",
 		"$(PYTHON):Lib:lib-tk",
 		"$(PYTHON):Lib:site-packages",
 	}

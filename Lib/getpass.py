@@ -26,6 +26,7 @@ def unix_getpass(prompt='Password: '):
     except:
         return default_getpass(prompt)
 
+    getpass = default_getpass
     old = termios.tcgetattr(fd)     # a copy to save
     new = old[:]
 
@@ -42,8 +43,6 @@ def unix_getpass(prompt='Password: '):
 
 def win_getpass(prompt='Password: '):
     """Prompt for password with echo off, using Windows getch()."""
-    if sys.stdin is not sys.__stdin__:
-        return default_getpass(prompt)
     import msvcrt
     for c in prompt:
         msvcrt.putch(c)
@@ -71,6 +70,7 @@ def default_getpass(prompt='Password: '):
 def _raw_input(prompt=""):
     # A raw_input() replacement that doesn't save the string in the
     # GNU readline history.
+    import sys
     prompt = str(prompt)
     if prompt:
         sys.stdout.write(prompt)

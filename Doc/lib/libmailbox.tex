@@ -6,7 +6,7 @@
 
 
 This module defines a number of classes that allow easy and uniform
-access to mail messages in a (\UNIX) mailbox.
+access to mail messages in a (\UNIX{}) mailbox.
 
 \begin{classdesc}{UnixMailbox}{fp\optional{, factory}}
 Access to a classic \UNIX-style mailbox, where all messages are
@@ -84,31 +84,15 @@ messages start with the EOOH line and end with a line containing only
 \end{classdesc}
 
 
-\begin{seealso}
-  \seetitle[http://www.qmail.org/man/man5/mbox.html]{mbox -
-            file containing mail messages}{Description of the
-            traditional ``mbox'' mailbox format.}
-  \seetitle[http://www.qmail.org/man/man5/maildir.html]{maildir -
-            directory for incoming mail messages}{Description of the
-            ``maildir'' mailbox format.}
-  \seetitle[http://home.netscape.com/eng/mozilla/2.0/relnotes/demo/content-length.html]{Configuring
-            Netscape Mail on \UNIX: Why the Content-Length Format is
-            Bad}{A description of problems with relying on the
-            \mailheader{Content-Length} header for messages stored in
-            mailbox files.}
-\end{seealso}
-
-
 \subsection{Mailbox Objects \label{mailbox-objects}}
 
-All implementations of mailbox objects are iterable objects, and
-have one externally visible method.  This method is used by iterators
-created from mailbox objects and may also be used directly.
+All implementations of Mailbox objects have one externally visible
+method:
 
 \begin{methoddesc}[mailbox]{next}{}
 Return the next message in the mailbox, created with the optional
 \var{factory} argument passed into the mailbox object's constructor.
-By default this is an \class{rfc822.Message}
+By defaul this is an \class{rfc822.Message}
 object (see the \refmodule{rfc822} module).  Depending on the mailbox
 implementation the \var{fp} attribute of this object may be a true
 file object or a class instance simulating a file object, taking care

@@ -1,6 +1,7 @@
 """Miscellaneous utility functions useful for dealing with ESIS streams."""
 
 import re
+import string
 
 import xml.dom.pulldom
 
@@ -34,19 +35,15 @@ def decode(s):
 
 
 _charmap = {}
-for c in range(128):
-    _charmap[chr(c)] = chr(c)
-    _charmap[unichr(c + 128)] = chr(c + 128)
+for c in map(chr, range(256)):
+    _charmap[c] = c
 _charmap["\n"] = r"\n"
 _charmap["\\"] = r"\\"
 del c
 
 _null_join = ''.join
 def encode(s):
-    try:
-        return _null_join(map(_charmap.get, s))
-    except TypeError:
-        raise Exception("could not encode %r: %r" % (s, map(_charmap.get, s)))
+    return _null_join(map(_charmap.get, s))
 
 
 class ESISReader(xml.sax.xmlreader.XMLReader):
@@ -181,7 +178,7 @@ class ESISReader(xml.sax.xmlreader.XMLReader):
         elif token == '?':
             if handler:
                 if ' ' in data:
-                    target, data = data.split(None, 1)
+                    target, data = string.split(data, None, 1)
                 else:
                     target, data = data, ""
                 handler.processingInstruction(target, decode(data))

@@ -21,13 +21,13 @@
 /* Include nearly all Python header files */
 
 #include "patchlevel.h"
-#include "pyconfig.h"
+#include "config.h"
 
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
 
-/* pyconfig.h may or may not define DL_IMPORT */
+/* config.h may or may not define DL_IMPORT */
 #ifndef DL_IMPORT	/* declarations for DLL import/export */
 #define DL_IMPORT(RTYPE) RTYPE
 #endif
@@ -49,27 +49,10 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-/* CAUTION:  Build setups should ensure that NDEBUG is defined on the
- * compiler command line when building Python in release mode; else
- * assert() calls won't be removed.
- */
 #include <assert.h>
 
 #include "pyport.h"
 
-/* Debug-mode build with pymalloc implies PYMALLOC_DEBUG.
- *  PYMALLOC_DEBUG is in error if pymalloc is not in use.
- */
-#if defined(Py_DEBUG) && defined(WITH_PYMALLOC) && !defined(PYMALLOC_DEBUG)
-#define PYMALLOC_DEBUG
-#endif
-#if defined(PYMALLOC_DEBUG) && !defined(WITH_PYMALLOC)
-#error "PYMALLOC_DEBUG requires WITH_PYMALLOC"
-#endif
 #include "pymem.h"
 
 #include "object.h"
@@ -79,7 +62,6 @@
 
 #include "unicodeobject.h"
 #include "intobject.h"
-#include "boolobject.h"
 #include "longobject.h"
 #include "floatobject.h"
 #ifndef WITHOUT_COMPLEX
@@ -100,9 +82,6 @@
 #include "traceback.h"
 #include "sliceobject.h"
 #include "cellobject.h"
-#include "iterobject.h"
-#include "descrobject.h"
-#include "weakrefobject.h"
 
 #include "codecs.h"
 #include "pyerrors.h"
@@ -110,19 +89,15 @@
 #include "pystate.h"
 
 #include "modsupport.h"
-#include "pythonrun.h"
 #include "ceval.h"
+#include "pythonrun.h"
 #include "sysmodule.h"
 #include "intrcheck.h"
 #include "import.h"
 
 #include "abstract.h"
 
-/* PyArg_GetInt is deprecated and should not be used, use PyArg_Parse(). */
 #define PyArg_GetInt(v, a)	PyArg_Parse((v), "i", (a))
-
-/* PyArg_NoArgs should not be necessary.
-   Set ml_flags in the PyMethodDef to METH_NOARGS. */
 #define PyArg_NoArgs(v)		PyArg_Parse(v, "")
 
 /* Convert a possibly signed character to a nonnegative int */

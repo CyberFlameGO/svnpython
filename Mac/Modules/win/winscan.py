@@ -32,8 +32,6 @@ class MyScanner(Scanner):
 
 	def writeinitialdefs(self):
 		self.defsfile.write("def FOUR_CHAR_CODE(x): return x\n")
-		self.defsfile.write("false = 0\n")
-		self.defsfile.write("true = 1\n")
 
 	def makeblacklistnames(self):
 		return [
@@ -73,7 +71,7 @@ class MyScanner(Scanner):
 				'GetWindowGoAwayFlag',
 				'GetWindowSpareFlag',
 			]),
-			('#if !TARGET_API_MAC_OS8', [
+			('#if TARGET_API_MAC_CARBON', [
 				'IsWindowUpdatePending',
 				'FindWindowOfClass',
 				'GetFrontWindowOfClass',
@@ -84,28 +82,6 @@ class MyScanner(Scanner):
 				'ScrollWindowRect',
 				'ChangeWindowAttributes',
 				'ReshapeCustomWindow',
-				'EnableScreenUpdates',
-				'DisableScreenUpdates',
-				'GetAvailableWindowPositioningBounds',
-				'CreateStandardWindowMenu',
-				'GetSheetWindowParent',
-				'HideSheetWindow',
-				'ShowSheetWindow',
-				'ConstrainWindowToScreen',
-				'GetWindowGreatestAreaDevice',
-				'CopyWindowTitleAsCFString',
-				'SetWindowTitleWithCFString',
-				'CopyWindowAlternateTitle',
-				'SetWindowAlternateTitle',
-				'GetWindowModality',
-				'SetWindowModality',
-				'SetWindowClass',
-				'ReleaseWindow',
-				'RetainWindow',
-				'GetWindowRetainCount',
-			]),
-			('#if TARGET_API_MAC_OSX', [
-				'TransitionWindowAndParent',
 			])]
 			
 	def makeblacklisttypes(self):
@@ -116,7 +92,6 @@ class MyScanner(Scanner):
 			'Collection',		# For now, to be done later
 			'WindowDefSpec',	# Too difficult for now
 			'WindowDefSpec_ptr',
-			'EventRef', #TBD
 			]
 
 	def makerepairinstructions(self):

@@ -2,33 +2,37 @@
 # Variable substitution. Variables are $delimited$
 #
 import string
-import re
+import regex
+import regsub
 
 error = 'varsubst.error'
 
 class Varsubst:
     def __init__(self, dict):
         self.dict = dict
-        self.prog = re.compile('\$([a-zA-Z0-9_]*)\$')
+        self.prog = regex.compile('\$[a-zA-Z0-9_]*\$')
         self.do_useindent = 0
 
     def useindent(self, onoff):
         self.do_useindent = onoff
         
-    def subst(self, s):
+    def subst(self, str):
         rv = ''
         while 1:
-            m = self.prog.search(s)
-            if not m:
-                return rv + s
-            rv = rv + s[:m.start()]
-            s = s[m.end():]
-            if m.end() - m.start() == 2:
+            pos = self.prog.search(str)
+            if pos < 0:
+                return rv + str
+            if pos:
+                rv = rv + str[:pos]
+                str = str[pos:]
+            len = self.prog.match(str)
+            if len == 2:
                 # Escaped dollar
                 rv = rv + '$'
-                s = s[2:]
+                str = str[2:]
                 continue
-            name = m.group(1)
+            name = str[1:len-1]
+            str = str[len:]
             if not self.dict.has_key(name):
                 raise error, 'No such variable: '+name
             value = self.dict[name]
@@ -40,7 +44,7 @@ class Varsubst:
         lastnl = string.rfind(old, '\n', 0) + 1
         lastnl = len(old) - lastnl
         sub = '\n' + (' '*lastnl)
-        return re.sub('\n', sub, value)
+        return regsub.gsub('\n', sub, value)
 
 def _test():
     import sys

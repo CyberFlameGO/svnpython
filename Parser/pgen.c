@@ -4,8 +4,8 @@
 
 /* For a description, see the comments at end of this file */
 
-#include "Python.h"
 #include "pgenheaders.h"
+#include "assert.h"
 #include "token.h"
 #include "node.h"
 #include "grammar.h"
@@ -149,9 +149,8 @@ metacompile(node *n)
 {
 	nfagrammar *gr;
 	int i;
-
-	if (Py_DebugFlag)
-		printf("Compiling (meta-) parse tree into NFA grammar\n");
+	
+	printf("Compiling (meta-) parse tree into NFA grammar\n");
 	gr = newnfagrammar();
 	REQ(n, MSTART);
 	i = n->n_nchildren - 1; /* Last child is ENDMARKER */
@@ -646,8 +645,8 @@ maketables(nfagrammar *gr)
 		if (Py_DebugFlag) {
 			printf("Dump of NFA for '%s' ...\n", nf->nf_name);
 			dumpnfa(&gr->gr_ll, nf);
-			printf("Making DFA for '%s' ...\n", nf->nf_name);
 		}
+		printf("Making DFA for '%s' ...\n", nf->nf_name);
 		d = adddfa(g, nf->nf_type, nf->nf_name);
 		makedfa(gr, gr->gr_nfa[i], d);
 	}

@@ -122,11 +122,6 @@ extend						= 0x40
 				'CreateNewPort',
 				'DisposePort',
 				'SetQDError',
-				'IsPortPolyBeingDefined',
-				'QDSetDirtyRegion',
-				'QDGetDirtyRegion',
-				'IsValidPort',
-				'RgnToHandle',
 			])]
 
 

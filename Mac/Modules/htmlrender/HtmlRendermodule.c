@@ -588,7 +588,7 @@ static PyObject *HtmlObj_getattr(self, name)
 PyTypeObject HtmlObject_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0, /*ob_size*/
-	"HtmlRender.HtmlObject", /*tp_name*/
+	"HtmlObject", /*tp_name*/
 	sizeof(HtmlObjectObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
 	/* methods */

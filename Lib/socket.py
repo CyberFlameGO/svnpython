@@ -38,42 +38,33 @@ Many other constants may be defined; these may be used in calls to
 the setsockopt() and getsockopt() methods.
 """
 
-import _socket
 from _socket import *
-
-SSL_EXISTS = 1
-try:
-    import _ssl
-    from _ssl import *
-except ImportError:
-    SSL_EXISTS = 0
 
 import os, sys
 
 __all__ = ["getfqdn"]
+import _socket
 __all__.extend(os._get_exports_list(_socket))
-# XXX shouldn't there be something similar to the above for _ssl exports?
 
 if (sys.platform.lower().startswith("win")
     or (hasattr(os, 'uname') and os.uname()[0] == "BeOS")
-    or sys.platform=="riscos"):
+    or (sys.platform=="RISCOS")):
 
     _realsocketcall = _socket.socket
 
     def socket(family, type, proto=0):
         return _socketobject(_realsocketcall(family, type, proto))
 
-    if SSL_EXISTS:
-        _realsslcall = _ssl.ssl
+    try:
+        _realsslcall = _socket.ssl
+    except AttributeError:
+        pass # No ssl
+    else:
         def ssl(sock, keyfile=None, certfile=None):
             if hasattr(sock, "_sock"):
                 sock = sock._sock
             return _realsslcall(sock, keyfile, certfile)
 
-del _socket
-if SSL_EXISTS:
-    del _ssl
-del SSL_EXISTS
 
 # WSA error codes
 if sys.platform.lower().startswith("win"):
@@ -131,23 +122,13 @@ def getfqdn(name=''):
 # These are not actually used on other platforms.
 #
 
-_socketmethods = (
-    'bind', 'connect', 'connect_ex', 'fileno', 'listen',
-    'getpeername', 'getsockname', 'getsockopt', 'setsockopt',
-    'recv', 'recvfrom', 'send', 'sendall', 'sendto', 'setblocking', 'shutdown')
-
 class _socketobject:
-
-    class _closedsocket:
-        def __getattr__(self, name):
-            raise error(9, 'Bad file descriptor')
 
     def __init__(self, sock):
         self._sock = sock
 
     def close(self):
-        # Avoid referencing globals here
-        self._sock = self.__class__._closedsocket()
+        self._sock = 0
 
     def __del__(self):
         self.close()
@@ -162,8 +143,13 @@ class _socketobject:
     def makefile(self, mode='r', bufsize=-1):
         return _fileobject(self._sock, mode, bufsize)
 
-    _s = "def %s(self, *args): return self._sock.%s(*args)\n\n"
-    for _m in _socketmethods:
+    _s = "def %s(self, *args): return apply(self._sock.%s, args)\n\n"
+    for _m in ('bind', 'connect', 'connect_ex', 'fileno', 'listen',
+               'getpeername', 'getsockname',
+               'getsockopt', 'setsockopt',
+               'recv', 'recvfrom', 'send', 'sendall', 'sendto',
+               'setblocking',
+               'shutdown'):
         exec _s % (_m, _m)
 
 

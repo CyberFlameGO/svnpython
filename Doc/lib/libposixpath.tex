@@ -7,10 +7,6 @@
 This module implements some useful functions on pathnames.
 \index{path!operations}
 
-\warning{On Windows, many of these functions do not properly
-support UNC pathnames.  \function{splitunc()} and \function{ismount()}
-do handle them correctly.}
-
 
 \begin{funcdesc}{abspath}{path}
 Return a normalized absolutized version of the pathname \var{path}.
@@ -42,7 +38,7 @@ half of the pair returned by \code{split(\var{path})}.
 \end{funcdesc}
 
 \begin{funcdesc}{exists}{path}
-Return \code{True} if \var{path} refers to an existing path.
+Return true if \var{path} refers to an existing path.
 \end{funcdesc}
 
 \begin{funcdesc}{expanduser}{path}
@@ -88,29 +84,29 @@ Return the size, in bytes, of \var{filename}.  Raise
 \end{funcdesc}
 
 \begin{funcdesc}{isabs}{path}
-Return \code{True} if \var{path} is an absolute pathname (begins with a
+Return true if \var{path} is an absolute pathname (begins with a
 slash).
 \end{funcdesc}
 
 \begin{funcdesc}{isfile}{path}
-Return \code{True} if \var{path} is an existing regular file.  This follows
+Return true if \var{path} is an existing regular file.  This follows
 symbolic links, so both \function{islink()} and \function{isfile()}
 can be true for the same path.
 \end{funcdesc}
 
 \begin{funcdesc}{isdir}{path}
-Return \code{True} if \var{path} is an existing directory.  This follows
+Return true if \var{path} is an existing directory.  This follows
 symbolic links, so both \function{islink()} and \function{isdir()} can
 be true for the same path.
 \end{funcdesc}
 
 \begin{funcdesc}{islink}{path}
-Return \code{True} if \var{path} refers to a directory entry that is a
-symbolic link.  Always \code{False} if symbolic links are not supported.
+Return true if \var{path} refers to a directory entry that is a
+symbolic link.  Always false if symbolic links are not supported.
 \end{funcdesc}
 
 \begin{funcdesc}{ismount}{path}
-Return \code{True} if pathname \var{path} is a \dfn{mount point}: a point in
+Return true if pathname \var{path} is a \dfn{mount point}: a point in
 a file system where a different file system has been mounted.  The
 function checks whether \var{path}'s parent, \file{\var{path}/..}, is
 on a different device than \var{path}, or whether \file{\var{path}/..}
@@ -127,7 +123,7 @@ inserted between components, unless \var{path} is empty.
 \end{funcdesc}
 
 \begin{funcdesc}{normcase}{path}
-Normalize the case of a pathname.  On \UNIX, this returns the path
+Normalize the case of a pathname.  On \UNIX{}, this returns the path
 unchanged; on case-insensitive filesystems, it converts the path to
 lowercase.  On Windows, it also converts forward slashes to backward
 slashes.
@@ -141,35 +137,28 @@ case (use \function{normcase()} for that).  On Windows, it converts
 forward slashes to backward slashes.
 \end{funcdesc}
 
-\begin{funcdesc}{realpath}{path}
-Return the canonical path of the specified filename, eliminating any
-symbolic links encountered in the path.
-Availability:  \UNIX.
-\versionadded{2.2}
-\end{funcdesc}
-
 \begin{funcdesc}{samefile}{path1, path2}
-Return \code{True} if both pathname arguments refer to the same file or
+Return true if both pathname arguments refer to the same file or
 directory (as indicated by device number and i-node number).
 Raise an exception if a \function{os.stat()} call on either pathname
 fails.
-Availability:  Macintosh, \UNIX.
+Availability:  Macintosh, \UNIX{}.
 \end{funcdesc}
 
 \begin{funcdesc}{sameopenfile}{fp1, fp2}
-Return \code{True} if the file objects \var{fp1} and \var{fp2} refer to the
+Return true if the file objects \var{fp1} and \var{fp2} refer to the
 same file.  The two file objects may represent different file
 descriptors.
-Availability:  Macintosh, \UNIX.
+Availability:  Macintosh, \UNIX{}.
 \end{funcdesc}
 
 \begin{funcdesc}{samestat}{stat1, stat2}
-Return \code{True} if the stat tuples \var{stat1} and \var{stat2} refer to
+Return true if the stat tuples \var{stat1} and \var{stat2} refer to
 the same file.  These structures may have been returned by
 \function{fstat()}, \function{lstat()}, or \function{stat()}.  This
 function implements the underlying comparison used by
 \function{samefile()} and \function{sameopenfile()}.
-Availability:  Macintosh, \UNIX.
+Availability:  Macintosh, \UNIX{}.
 \end{funcdesc}
 
 \begin{funcdesc}{split}{path}

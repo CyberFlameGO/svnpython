@@ -52,20 +52,14 @@ sub show{
 
 sub tohtml{
     my $self = shift;
-    my $oddrow = 1;
-    my $data = "<table class='synopsistable' valign='baseline'>\n";
+    my $data = "<table class='synopsistable'>\n";
     my $name;
     foreach $name (split /,/, $self->{names}) {
 	my($key,$type,$synopsis) = $self->get($name);
 	my $link = "<a href='module-$key.html'>";
-	$synopsis =~ s/<tex2html_percent_mark>/%/g;
-	$synopsis =~ s/<tex2html_ampersand_mark>/\&amp;/g;
-	$data .= ('  <tr'
-                  . ($oddrow ? " class='oddrow'>\n      " : '>')
+	$data .= ('  <tr>'
 		  . "<td><b><tt class='module'>$link$name</a></tt></b></td>\n"
-                  . "      <td>\&nbsp;</td>\n"
 		  . "      <td class='synopsis'>$synopsis</td></tr>\n");
-        $oddrow = !$oddrow;
     }
     $data .= "</table>\n";
     $data;

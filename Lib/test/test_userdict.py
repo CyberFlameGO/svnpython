@@ -1,7 +1,7 @@
 # Check every path through every method of UserDict
 
 from test_support import verify, verbose
-from UserDict import UserDict, IterableUserDict
+from UserDict import UserDict
 
 d0 = {}
 d1 = {"one": 1}
@@ -12,7 +12,7 @@ d2 = {"one": 1, "two": 2}
 u = UserDict()
 u0 = UserDict(d0)
 u1 = UserDict(d1)
-u2 = IterableUserDict(d2)
+u2 = UserDict(d2)
 
 uu = UserDict(u)
 uu0 = UserDict(u0)
@@ -75,25 +75,18 @@ m2 = MyUserDict(u2)
 m2a = m2.copy()
 verify(m2a == m2)
 
-# SF bug #476616 -- copy() of UserDict subclass shared data
-m2['foo'] = 'bar'
-verify(m2a != m2)
-
 # Test keys, items, values
 
 verify(u2.keys() == d2.keys())
 verify(u2.items() == d2.items())
 verify(u2.values() == d2.values())
 
-# Test has_key and "in".
+# Test has_key
 
 for i in u2.keys():
     verify(u2.has_key(i) == 1)
-    verify((i in u2) == 1)
     verify(u1.has_key(i) == d1.has_key(i))
-    verify((i in u1) == (i in d1))
     verify(u0.has_key(i) == d0.has_key(i))
-    verify((i in u0) == (i in d0))
 
 # Test update
 
@@ -107,14 +100,3 @@ for i in u2.keys():
     verify(u2.get(i) == u2[i])
     verify(u1.get(i) == d1.get(i))
     verify(u0.get(i) == d0.get(i))
-
-# Test "in" iteration.
-for i in xrange(20):
-    u2[i] = str(i)
-ikeys = []
-for k in u2:
-    ikeys.append(k)
-ikeys.sort()
-keys = u2.keys()
-keys.sort()
-verify(ikeys == keys)

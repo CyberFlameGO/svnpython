@@ -8,6 +8,7 @@ of the Python documentation, and dump the ESIS data for the transformed tree.
 import errno
 import esistools
 import re
+import string
 import sys
 import xml.dom
 import xml.dom.minidom
@@ -118,12 +119,6 @@ def simplify(doc, fragment):
     node = get_first_element(fragment, "document")
     if node is not None:
         set_tagName(node, documentclass)
-        # Move everything that comes before this node into this node;
-        # this will be the document element.
-        nodelist = fragment.childNodes
-        point = node.firstChild
-        while not nodelist[0].isSameNode(node):
-            node.insertBefore(nodelist[0], point)
     while 1:
         node = extract_first_element(fragment, "input")
         if node is None:
@@ -195,7 +190,12 @@ def rewrite_descriptor(doc, descriptor):
     #
     # 1.
     descname = descriptor.tagName
-    index = descriptor.getAttribute("name") != "no"
+    index = 1
+    if descname[-2:] == "ni":
+        descname = descname[:-2]
+        descriptor.setAttribute("index", "no")
+        set_tagName(descriptor, descname)
+        index = 0
     desctype = descname[:-4] # remove 'desc'
     linename = desctype + "line"
     if not index:
@@ -256,7 +256,7 @@ def rewrite_descriptor(doc, descriptor):
     move_children(descriptor, description, pos)
     last = description.childNodes[-1]
     if last.nodeType == TEXT:
-        last.data = last.data.rstrip() + "\n  "
+        last.data = string.rstrip(last.data) + "\n  "
     # 6.
     # should have nothing but whitespace and signature lines in <descriptor>;
     # discard them
@@ -315,7 +315,7 @@ def handle_appendix(doc, fragment):
         docelem.appendChild(back)
         back.appendChild(doc.createTextNode("\n"))
         while nodes and nodes[0].nodeType == TEXT \
-              and not nodes[0].data.strip():
+              and not string.strip(nodes[0].data):
             del nodes[0]
         map(back.appendChild, nodes)
         docelem.appendChild(doc.createTextNode("\n"))
@@ -338,44 +338,30 @@ def handle_labels(doc, fragment):
             parent.normalize()
             children = parent.childNodes
             if children[-1].nodeType == TEXT:
-                children[-1].data = children[-1].data.rstrip()
+                children[-1].data = string.rstrip(children[-1].data)
 
 
-def fixup_trailing_whitespace(doc, fragment, wsmap):
-    queue = [fragment]
-    fixups = []
+def fixup_trailing_whitespace(doc, wsmap):
+    queue = [doc]
     while queue:
         node = queue[0]
         del queue[0]
         if wsmap.has_key(node.nodeName):
-            fixups.append(node)
+            ws = wsmap[node.tagName]
+            children = node.childNodes
+            children.reverse()
+            if children[0].nodeType == TEXT:
+                data = string.rstrip(children[0].data) + ws
+                children[0].data = data
+            children.reverse()
+            # hack to get the title in place:
+            if node.tagName == "title" \
+               and node.parentNode.firstChild.nodeType == ELEMENT:
+                node.parentNode.insertBefore(doc.createText("\n  "),
+                                             node.parentNode.firstChild)
         for child in node.childNodes:
             if child.nodeType == ELEMENT:
                 queue.append(child)
-
-    # reverse the list to process from the inside out
-    fixups.reverse()
-    for node in fixups:
-        node.parentNode.normalize()
-        lastchild = node.lastChild
-        before, after = wsmap[node.tagName]
-        if lastchild.nodeType == TEXT:
-            data = lastchild.data.rstrip() + before
-            lastchild.data = data
-        norm = 0
-        if wsmap[node.tagName]:
-            nextnode = node.nextSibling
-            if nextnode and nextnode.nodeType == TEXT:
-                nextnode.data = after + nextnode.data.lstrip()
-            else:
-                wsnode = doc.createTextNode(after)
-                node.parentNode.insertBefore(wsnode, nextnode)
-        # hack to get the title in place:
-        if node.tagName == "title" \
-           and node.parentNode.firstChild.nodeType == ELEMENT:
-            node.parentNode.insertBefore(doc.createTextNode("\n  "),
-                                         node.parentNode.firstChild)
-            node.parentNode.normalize()
 
 
 def normalize(doc):
@@ -389,16 +375,20 @@ def cleanup_trailing_parens(doc, element_names):
     for gi in element_names:
         d[gi] = gi
     rewrite_element = d.has_key
-    queue = [node for node in doc.childNodes if node.nodeType == ELEMENT]
+    queue = []
+    for node in doc.childNodes:
+        if node.nodeType == ELEMENT:
+            queue.append(node)
     while queue:
         node = queue[0]
         del queue[0]
         if rewrite_element(node.tagName):
-            lastchild = node.lastChild
-            if lastchild and lastchild.nodeType == TEXT:
-                data = lastchild.data
-                if data.endswith("()"):
-                    lastchild.data = data[:-2]
+            children = node.childNodes
+            if len(children) == 1 \
+               and children[0].nodeType == TEXT:
+                data = children[0].data
+                if data[-2:] == "()":
+                    children[0].data = data[:-2]
         else:
             for child in node.childNodes:
                 if child.nodeType == ELEMENT:
@@ -476,7 +466,7 @@ def create_module_info(doc, section):
                 # this is it; morph the <title> into <short-synopsis>
                 first_data = children[1]
                 if first_data.data[:4] == " ---":
-                    first_data.data = first_data.data[4:].lstrip()
+                    first_data.data = string.lstrip(first_data.data[4:])
                 set_tagName(title, "short-synopsis")
                 if children[-1].nodeType == TEXT \
                    and children[-1].data[-1:] == ".":
@@ -519,9 +509,8 @@ def create_module_info(doc, section):
                 nextnode = children[i+1]
                 if nextnode.nodeType == TEXT:
                     data = nextnode.data
-                    s = data.lstrip()
-                    if len(s) < (len(data) - 4):
-                        nextnode.data = "\n\n\n" + s
+                    if len(string.lstrip(data)) < (len(data) - 4):
+                        nextnode.data = "\n\n\n" + string.lstrip(data)
 
 
 def cleanup_synopses(doc, fragment):
@@ -562,7 +551,7 @@ def fixup_table(doc, table):
         child = children[0]
         nodeType = child.nodeType
         if nodeType == TEXT:
-            if child.data.strip():
+            if string.strip(child.data):
                 raise ConversionError("unexpected free data in <%s>: %r"
                                       % (table.tagName, child.data))
             table.removeChild(child)
@@ -621,7 +610,6 @@ PARA_LEVEL_ELEMENTS = (
     "moduleinfo", "title", "verbatim", "enumerate", "item",
     "interpreter-session", "back-matter", "interactive-session",
     "opcodedesc", "classdesc", "datadesc",
-    "cfuncdesc", "ctypedesc", "cvardesc",
     "funcdesc", "methoddesc", "excdesc", "memberdesc", "membderdescni",
     "funcdescni", "methoddescni", "excdescni",
     "tableii", "tableiii", "tableiv", "localmoduletable",
@@ -632,7 +620,7 @@ PARA_LEVEL_ELEMENTS = (
 
 PARA_LEVEL_PRECEEDERS = (
     "setindexsubitem", "author",
-    "stindex", "obindex", "COMMENT", "label", "xi:include", "title",
+    "stindex", "obindex", "COMMENT", "label", "input", "title",
     "versionadded", "versionchanged", "declaremodule", "modulesynopsis",
     "moduleauthor", "indexterm", "leader",
     )
@@ -679,7 +667,7 @@ def build_para(doc, parent, start, i):
                 after = j
                 break
         elif nodeType == TEXT:
-            pos = child.data.find("\n\n")
+            pos = string.find(child.data, "\n\n")
             if pos == 0:
                 after = j
                 break
@@ -695,9 +683,9 @@ def build_para(doc, parent, start, i):
         # we may need to split off trailing white space:
         child = children[after - 1]
         data = child.data
-        if data.rstrip() != data:
+        if string.rstrip(data) != data:
             have_last = 0
-            child.splitText(len(data.rstrip()))
+            child.splitText(len(string.rstrip(data)))
     para = doc.createElement(PARA_ELEMENT)
     prev = None
     indexes = range(start, after)
@@ -740,7 +728,7 @@ def skip_leading_nodes(children, start=0):
         nodeType = child.nodeType
         if nodeType == TEXT:
             data = child.data
-            shortened = data.lstrip()
+            shortened = string.lstrip(data)
             if shortened:
                 if data != shortened:
                     # break into two nodes: whitespace and non-whitespace
@@ -759,9 +747,9 @@ def skip_leading_nodes(children, start=0):
 
 
 def fixup_rfc_references(doc, fragment):
-    for rfcnode in find_all_elements_from_set(fragment, ("pep", "rfc")):
+    for rfcnode in find_all_elements(fragment, "rfc"):
         rfcnode.appendChild(doc.createTextNode(
-            rfcnode.tagName.upper() + " " + rfcnode.getAttribute("num")))
+            "RFC " + rfcnode.getAttribute("num")))
 
 
 def fixup_signatures(doc, fragment):
@@ -769,17 +757,13 @@ def fixup_signatures(doc, fragment):
         if child.nodeType == ELEMENT:
             args = child.getElementsByTagName("args")
             for arg in args:
-                rewrite_args(doc, arg)
+                fixup_args(doc, arg)
+                arg.normalize()
             args = child.getElementsByTagName("constructor-args")
             for arg in args:
-                rewrite_args(doc, arg)
+                fixup_args(doc, arg)
+                arg.normalize()
 
-def rewrite_args(doc, arglist):
-    fixup_args(doc, arglist)
-    arglist.normalize()
-    if arglist.childNodes.length == 1 and arglist.firstChild.nodeType == TEXT:
-        node = arglist.firstChild
-        node.data = ' '.join(node.data.split())
 
 def fixup_args(doc, arglist):
     for child in arglist.childNodes:
@@ -788,7 +772,9 @@ def fixup_args(doc, arglist):
             arglist.insertBefore(doc.createTextNode("["), child)
             optkids = child.childNodes
             while optkids:
-                arglist.insertBefore(child.firstChild, child)
+                k = optkids[0]
+                child.removeChild(k)
+                arglist.insertBefore(k, child)
             arglist.insertBefore(doc.createTextNode("]"), child)
             arglist.removeChild(child)
             return fixup_args(doc, arglist)
@@ -814,7 +800,7 @@ def fixup_verbatims(doc):
     for verbatim in find_all_elements(doc, "verbatim"):
         child = verbatim.childNodes[0]
         if child.nodeType == TEXT \
-           and child.data.lstrip().startswith(">>>"):
+           and string.lstrip(child.data)[:3] == ">>>":
             set_tagName(verbatim, "interactive-session")
 
 
@@ -827,24 +813,6 @@ def add_node_ids(fragment, counter=0):
         else:
             node.node_id = counter
     return counter + 1
-
-
-def fixup_ulink(doc, fragment):
-    for ulink in find_all_elements(fragment, "ulink"):
-        children = ulink.childNodes
-        assert len(children) == 2
-        text = children[0]
-        href = children[1]
-        href.normalize()
-        assert len(href.childNodes) == 1
-        assert href.childNodes[0].nodeType == TEXT
-        url = href.childNodes[0].data
-        ulink.setAttribute("href", url)
-        ulink.removeChild(href)
-        content = text.childNodes
-        while len(content):
-            ulink.appendChild(content[0])
-        ulink.removeChild(text)
 
 
 REFMODINDEX_ELEMENTS = ('refmodindex', 'refbimodindex',
@@ -992,19 +960,15 @@ def convert(ifp, ofp):
     simplify(doc, fragment)
     handle_labels(doc, fragment)
     handle_appendix(doc, fragment)
-    fixup_trailing_whitespace(doc, fragment, {
-        # element -> (before-end-tag, after-end-tag)
-        "abstract": ("\n", "\n"),
-        "title": ("", "\n"),
-        "chapter": ("\n", "\n\n\n"),
-        "section": ("\n", "\n\n\n"),
-        "subsection": ("\n", "\n\n"),
-        "subsubsection": ("\n", "\n\n"),
-        "paragraph": ("\n", "\n\n"),
-        "subparagraph": ("\n", "\n\n"),
-        "description": ("\n", "\n\n"),
-        "enumeration": ("\n", "\n\n"),
-        "item": ("\n", "\n\n"),
+    fixup_trailing_whitespace(doc, {
+        "abstract": "\n",
+        "title": "",
+        "chapter": "\n\n",
+        "section": "\n\n",
+        "subsection": "\n\n",
+        "subsubsection": "\n\n",
+        "paragraph": "\n\n",
+        "subparagraph": "\n\n",
         })
     cleanup_root_text(doc)
     cleanup_trailing_parens(fragment, ["function", "method", "cfunction"])
@@ -1017,24 +981,20 @@ def convert(ifp, ofp):
     fixup_table_structures(doc, fragment)
     fixup_rfc_references(doc, fragment)
     fixup_signatures(doc, fragment)
-    fixup_ulink(doc, fragment)
     add_node_ids(fragment)
     fixup_refmodindexes(fragment)
     fixup_bifuncindexes(fragment)
     # Take care of ugly hacks in the LaTeX markup to avoid LaTeX and
     # LaTeX2HTML screwing with GNU-style long options (the '--' problem).
     join_adjacent_elements(fragment, "option")
-    # Attempt to avoid trailing blank lines:
-    fragment.normalize()
-    if fragment.lastChild.data[-1:] == "\n":
-        fragment.lastChild.data = fragment.lastChild.data.rstrip() + "\n"
     #
     d = {}
     for gi in events.parser.get_empties():
         d[gi] = gi
-    for key in ("author", "pep", "rfc"):
-        if d.has_key(key):
-            del d[key]
+    if d.has_key("author"):
+        del d["author"]
+    if d.has_key("rfc"):
+        del d["rfc"]
     knownempty = d.has_key
     #
     try:

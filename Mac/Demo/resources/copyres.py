@@ -1,5 +1,5 @@
-from Carbon.Res import *
-from Carbon.Resources import *
+from Res import *
+from Resources import *
 import MacOS
 
 READ = 1

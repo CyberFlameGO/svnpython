@@ -110,4 +110,3 @@ def load(dir):
                    os.path.join(homedir, ".idle")))
 
 idleconf = IdleConfParser()
-load(os.path.dirname(__file__))

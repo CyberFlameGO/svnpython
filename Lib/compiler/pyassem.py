@@ -7,8 +7,6 @@ import sys
 import types
 
 from compiler import misc
-from compiler.consts import CO_OPTIMIZED, CO_NEWLOCALS, CO_VARARGS, \
-     CO_VARKEYWORDS
 
 def xxx_sort(l):
     l = l[:]
@@ -55,7 +53,7 @@ class FlowGraph:
         # these edges to get the blocks emitted in the right order,
         # however. :-(  If a client needs to remove these edges, call
         # pruneEdges().
-
+        
         self.current.addNext(block)
         self.startBlock(block)
 
@@ -110,13 +108,13 @@ class FlowGraph:
 
         # XXX This is a total mess.  There must be a better way to get
         # the code blocks in the right order.
-
+        
         self.fixupOrderHonorNext(blocks, default_next)
         self.fixupOrderForward(blocks, default_next)
 
     def fixupOrderHonorNext(self, blocks, default_next):
         """Fix one problem with DFS.
-
+        
         The DFS uses child block, but doesn't know about the special
         "next" block.  As a result, the DFS can order blocks so that a
         block isn't next to the right block for implicit control
@@ -196,18 +194,19 @@ class FlowGraph:
             chains.remove(c)
             chains.insert(goes_before, c)
 
+
         del blocks[:]
         for c in chains:
             for b in c:
                 blocks.append(b)
-
+            
     def getBlocks(self):
         return self.blocks.elements()
 
     def getRoot(self):
         """Return nodes appropriate for use with dominator"""
         return self.entry
-
+    
     def getContainedGraphs(self):
         l = []
         for b in self.getBlocks():
@@ -246,7 +245,7 @@ class Block:
     def __str__(self):
         insts = map(str, self.insts)
         return "<block %s %d:\n%s>" % (self.label, self.bid,
-                                       string.join(insts, '\n'))
+                                       string.join(insts, '\n')) 
 
     def emit(self, inst):
         op = inst[0]
@@ -268,7 +267,7 @@ class Block:
         assert len(self.next) == 1, map(str, self.next)
 
     _uncond_transfer = ('RETURN_VALUE', 'RAISE_VARARGS',
-                        'JUMP_ABSOLUTE', 'JUMP_FORWARD', 'CONTINUE_LOOP')
+                        'JUMP_ABSOLUTE', 'JUMP_FORWARD')
 
     def pruneNext(self):
         """Remove bogus edge for unconditional transfers
@@ -312,6 +311,11 @@ class Block:
         return contained
 
 # flags for code objects
+CO_OPTIMIZED = 0x0001
+CO_NEWLOCALS = 0x0002
+CO_VARARGS = 0x0004
+CO_VARKEYWORDS = 0x0008
+CO_NESTED = 0x0010
 
 # the FlowGraph is transformed in place; it exists in one of these states
 RAW = "RAW"
@@ -322,16 +326,15 @@ DONE = "DONE"
 class PyFlowGraph(FlowGraph):
     super_init = FlowGraph.__init__
 
-    def __init__(self, name, filename, args=(), optimized=0, klass=None):
+    def __init__(self, name, filename, args=(), optimized=0):
         self.super_init()
         self.name = name
         self.filename = filename
         self.docstring = None
         self.args = args # XXX
         self.argcount = getArgCount(args)
-        self.klass = klass
         if optimized:
-            self.flags = CO_OPTIMIZED | CO_NEWLOCALS
+            self.flags = CO_OPTIMIZED | CO_NEWLOCALS 
         else:
             self.flags = 0
         self.consts = []
@@ -360,10 +363,6 @@ class PyFlowGraph(FlowGraph):
         if flag == CO_VARARGS:
             self.argcount = self.argcount - 1
 
-    def checkFlag(self, flag):
-        if self.flags & flag:
-            return 1
-
     def setFreeVars(self, names):
         self.freevars = list(names)
 
@@ -373,7 +372,6 @@ class PyFlowGraph(FlowGraph):
     def getCode(self):
         """Get a Python code object"""
         if self.stage == RAW:
-            self.computeStackDepth()
             self.flattenGraph()
         if self.stage == FLAT:
             self.convertArgs()
@@ -400,36 +398,6 @@ class PyFlowGraph(FlowGraph):
                 pc = pc + 3
         if io:
             sys.stdout = save
-
-    def computeStackDepth(self):
-        """Compute the max stack depth.
-
-        Approach is to compute the stack effect of each basic block.
-        Then find the path through the code with the largest total
-        effect.
-        """
-        depth = {}
-        exit = None
-        for b in self.getBlocks():
-            depth[b] = findDepth(b.getInstructions())
-
-        seen = {}
-
-        def max_depth(b, d):
-            if seen.has_key(b):
-                return d
-            seen[b] = 1
-            d = d + depth[b]
-            children = b.get_children()
-            if children:
-                return max([max_depth(c, d) for c in children])
-            else:
-                if not b.label == "exit":
-                    return max_depth(self.exit, d)
-                else:
-                    return d
-
-        self.stacksize = max_depth(self.entry, 0)
 
     def flattenGraph(self):
         """Arrange the blocks in order and resolve jumps"""
@@ -462,6 +430,7 @@ class PyFlowGraph(FlowGraph):
                 insts[i] = opname, offset
             elif self.hasjabs.has_elt(opname):
                 insts[i] = opname, begin[inst[1]]
+        self.stacksize = findDepth(self.insts)
         self.stage = FLAT
 
     hasjrel = misc.Set()
@@ -479,7 +448,8 @@ class PyFlowGraph(FlowGraph):
         for i in range(len(self.insts)):
             t = self.insts[i]
             if len(t) == 2:
-                opname, oparg = t
+                opname = t[0]
+                oparg = t[1]
                 conv = self._converters.get(opname, None)
                 if conv:
                     self.insts[i] = opname, conv(self, oparg)
@@ -499,16 +469,10 @@ class PyFlowGraph(FlowGraph):
         self.closure = self.cellvars + self.freevars
 
     def _lookupName(self, name, list):
-        """Return index of name in list, appending if necessary
-
-        This routine uses a list instead of a dictionary, because a
-        dictionary can't store two different keys if the keys have the
-        same value but different types, e.g. 2 and 2L.  The compiler
-        must treat these two separately, so it does an explicit type
-        comparison before comparing the values.
-        """
+        """Return index of name in list, appending if necessary"""
         t = type(name)
         for i in range(len(list)):
+            # must do a comparison on type first to prevent UnicodeErrors 
             if t == type(list[i]) and list[i] == name:
                 return i
         end = len(list)
@@ -527,15 +491,9 @@ class PyFlowGraph(FlowGraph):
     _convert_STORE_FAST = _convert_LOAD_FAST
     _convert_DELETE_FAST = _convert_LOAD_FAST
 
-    def _convert_LOAD_NAME(self, arg):
-        if self.klass is None:
-            self._lookupName(arg, self.varnames)
-        return self._lookupName(arg, self.names)
-
     def _convert_NAME(self, arg):
-        if self.klass is None:
-            self._lookupName(arg, self.varnames)
         return self._lookupName(arg, self.names)
+    _convert_LOAD_NAME = _convert_NAME
     _convert_STORE_NAME = _convert_NAME
     _convert_DELETE_NAME = _convert_NAME
     _convert_IMPORT_NAME = _convert_NAME
@@ -567,7 +525,7 @@ class PyFlowGraph(FlowGraph):
     for name, obj in locals().items():
         if name[:9] == "_convert_":
             opname = name[9:]
-            _converters[opname] = obj
+            _converters[opname] = obj            
     del name, obj, opname
 
     def makeByteCode(self):
@@ -597,7 +555,7 @@ class PyFlowGraph(FlowGraph):
 
     def newCodeObject(self):
         assert self.stage == DONE
-        if (self.flags & CO_NEWLOCALS) == 0:
+        if self.flags == 0:
             nlocals = 0
         else:
             nlocals = len(self.varnames)
@@ -623,7 +581,7 @@ class PyFlowGraph(FlowGraph):
                 elt = elt.getCode()
             l.append(elt)
         return tuple(l)
-
+            
 def isJump(opname):
     if opname[:4] == 'JUMP':
         return 1
@@ -654,7 +612,7 @@ def twobyte(val):
 
 class LineAddrTable:
     """lnotab
-
+    
     This class builds the lnotab, which is documented in compile.c.
     Here's a brief recap:
 
@@ -717,22 +675,26 @@ class LineAddrTable:
 
     def getTable(self):
         return string.join(map(chr, self.lnotab), '')
-
+    
 class StackDepthTracker:
     # XXX 1. need to keep track of stack depth on jumps
     # XXX 2. at least partly as a result, this code is broken
 
-    def findDepth(self, insts, debug=0):
+    def findDepth(self, insts):
         depth = 0
         maxDepth = 0
         for i in insts:
             opname = i[0]
-            if debug:
-                print i,
-            delta = self.effect.get(opname, None)
-            if delta is not None:
+            delta = self.effect.get(opname, 0)
+            if delta > 1:
+                depth = depth + delta
+            elif delta < 0:
+                if depth > maxDepth:
+                    maxDepth = depth
                 depth = depth + delta
             else:
+                if depth > maxDepth:
+                    maxDepth = depth
                 # now check patterns
                 for pat, pat_delta in self.patterns:
                     if opname[:len(pat)] == pat:
@@ -740,14 +702,12 @@ class StackDepthTracker:
                         depth = depth + delta
                         break
                 # if we still haven't found a match
-                if delta is None:
+                if delta == 0:
                     meth = getattr(self, opname, None)
                     if meth is not None:
                         depth = depth + meth(i[1])
-            if depth > maxDepth:
-                maxDepth = depth
-            if debug:
-                print depth, maxDepth
+            if depth < 0:
+                depth = 0
         return maxDepth
 
     effect = {
@@ -768,8 +728,9 @@ class StackDepthTracker:
         'DELETE_SUBSCR': -2,
         # PRINT_EXPR?
         'PRINT_ITEM': -1,
+        'LOAD_LOCALS': 1,
         'RETURN_VALUE': -1,
-        'EXEC_STMT': -3,
+        'EXEC_STMT': -2,
         'BUILD_CLASS': -2,
         'STORE_NAME': -1,
         'STORE_ATTR': -2,
@@ -781,44 +742,37 @@ class StackDepthTracker:
         'IMPORT_STAR': -1,
         'IMPORT_NAME': 0,
         'IMPORT_FROM': 1,
-        'LOAD_ATTR': 0, # unlike other loads
-        # close enough...
-        'SETUP_EXCEPT': 3,
-        'SETUP_FINALLY': 3,
-        'FOR_ITER': 1,
         }
     # use pattern match
     patterns = [
         ('BINARY_', -1),
         ('LOAD_', 1),
         ]
-
+    
+    # special cases:
+    # UNPACK_SEQUENCE, BUILD_TUPLE,
+    # BUILD_LIST, CALL_FUNCTION, MAKE_FUNCTION, BUILD_SLICE
     def UNPACK_SEQUENCE(self, count):
-        return count-1
+        return count
     def BUILD_TUPLE(self, count):
-        return -count+1
+        return -count
     def BUILD_LIST(self, count):
-        return -count+1
+        return -count
     def CALL_FUNCTION(self, argc):
         hi, lo = divmod(argc, 256)
-        return -(lo + hi * 2)
+        return lo + hi * 2
     def CALL_FUNCTION_VAR(self, argc):
-        return self.CALL_FUNCTION(argc)-1
+        return self.CALL_FUNCTION(argc)+1
     def CALL_FUNCTION_KW(self, argc):
-        return self.CALL_FUNCTION(argc)-1
+        return self.CALL_FUNCTION(argc)+1
     def CALL_FUNCTION_VAR_KW(self, argc):
-        return self.CALL_FUNCTION(argc)-2
+        return self.CALL_FUNCTION(argc)+2
     def MAKE_FUNCTION(self, argc):
-        return -argc
-    def MAKE_CLOSURE(self, argc):
-        # XXX need to account for free variables too!
         return -argc
     def BUILD_SLICE(self, argc):
         if argc == 2:
             return -1
         elif argc == 3:
             return -2
-    def DUP_TOPX(self, argc):
-        return argc
-
+    
 findDepth = StackDepthTracker().findDepth

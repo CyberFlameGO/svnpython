@@ -13,7 +13,7 @@ import macfs
 import MacOS
 import gestalt
 import string
-from Carbon import Res
+import Res
 
 SPLASH_COPYCORE=512
 SPLASH_COPYCARBON=513
@@ -71,13 +71,10 @@ def mkcorealias(src, altsrc):
 	except os.error:
 		pass
 	do_copy = ask_copy()
-	try:
-		if do_copy:
-			macostools.copy(os.path.join(sys.exec_prefix, src), dst)
-		else:
-			macostools.mkalias(os.path.join(sys.exec_prefix, src), dst)
-	except IOError:
-		return 0
+	if do_copy:
+		macostools.copy(os.path.join(sys.exec_prefix, src), dst)
+	else:
+		macostools.mkalias(os.path.join(sys.exec_prefix, src), dst)
 	return 1
 	
 do_copy = None
@@ -92,7 +89,7 @@ def ask_copy():
 	do_copy = 0
 	if macfs.FSSpec(sys.exec_prefix).as_tuple()[0] != -1: # XXXX
 		try:
-			from Carbon import Dlg
+			import Dlg
 			rv = Dlg.CautionAlert(ALERT_NONBOOT, None)
 			if rv == ALERT_NONBOOT_COPY:
 				do_copy = 1
@@ -144,7 +141,7 @@ def main():
 	elif oldcwd != newcwd:
 		# Hack to make sure we get the new MACFS
 		sys.path.insert(0, os.path.join(oldcwd, ':Mac:Lib'))
-		from Carbon import Dlg
+		import Dlg
 		rv = Dlg.CautionAlert(ALERT_NOTPYTHONFOLDER, None)
 		if rv == ALERT_NOTPYTHONFOLDER_REMOVE_QUIT:
 			import pythonprefs, preferences
@@ -165,11 +162,10 @@ def main():
 	n = n + mkcorealias('PythonCore', 'PythonCore')
 	n = n + mkcorealias('PythonCoreCarbon', 'PythonCoreCarbon')
 	if n == 0:
-		from Carbon import Dlg
+		import Dlg
 		Dlg.CautionAlert(ALERT_NOCORE, None)
 		if verbose:
 			print "Warning: PythonCore not copied to Extensions folder"
-			print "         (Applets will not work unless run from the Python folder)"
 	if sys.argv[0][-7:] == 'Classic':
 		do_classic = 1
 	elif sys.argv[0][-6:] == 'Carbon':

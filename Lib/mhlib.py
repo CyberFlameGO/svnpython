@@ -530,7 +530,7 @@ class Folder:
             try:
                 toseq = tosequences[name]
                 new = 0
-            except KeyError:
+            except:
                 toseq = []
                 new = 1
             for fromn, ton in refileditems:
@@ -648,7 +648,7 @@ class Folder:
     def getlast(self):
         """Return the last message number."""
         if not hasattr(self, 'last'):
-            self.listmessages() # Set self.last
+            messages = self.listmessages()
         return self.last
 
     def setlast(self, last):
@@ -850,8 +850,8 @@ class IntSet:
 
     def contains(self, x):
         for lo, hi in self.pairs:
-            if lo <= x <= hi: return True
-        return False
+            if lo <= x <= hi: return 1
+        return 0
 
     def append(self, x):
         for i in range(len(self.pairs)):

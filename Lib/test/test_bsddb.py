@@ -5,7 +5,6 @@
 
 import os
 import bsddb
-import dbhash # Just so we know it's imported
 import tempfile
 from test_support import verbose, verify
 

@@ -78,15 +78,15 @@ def _synthesize(browser):
 
 
 def _iscommand(cmd):
-    """Return True if cmd can be found on the executable search path."""
+    """Return true if cmd can be found on the executable search path."""
     path = os.environ.get("PATH")
     if not path:
-        return False
+        return 0
     for d in path.split(os.pathsep):
         exe = os.path.join(d, cmd)
         if os.path.isfile(exe):
-            return True
-    return False
+            return 1
+    return 0
 
 
 PROCESS_CREATION_DELAY = 4
@@ -234,7 +234,7 @@ class WindowsDefault:
 # the TERM and DISPLAY cases, because we might be running Python from inside
 # an xterm.
 if os.environ.get("TERM") or os.environ.get("DISPLAY"):
-    _tryorder = ["mozilla","netscape","kfm","grail","links","lynx","w3m"]
+    _tryorder = ("mozilla","netscape","kfm","grail","links","lynx","w3m")
 
     # Easy cases first -- register console browsers if we have them.
     if os.environ.get("TERM"):
@@ -283,7 +283,7 @@ class InternetConfig:
 #
 
 if sys.platform[:3] == "win":
-    _tryorder = ["netscape", "windows-default"]
+    _tryorder = ("netscape", "windows-default")
     register("windows-default", WindowsDefault)
 
 #
@@ -297,17 +297,8 @@ except ImportError:
 else:
     # internet-config is the only supported controller on MacOS,
     # so don't mess with the default!
-    _tryorder = ["internet-config"]
+    _tryorder = ("internet-config")
     register("internet-config", InternetConfig)
-
-#
-# Platform support for OS/2
-#
-
-if sys.platform[:3] == "os2" and _iscommand("netscape.exe"):
-    _tryorder = ["os2netscape"]
-    register("os2netscape", None,
-             GenericBrowser("start netscape.exe %s"))
 
 # OK, now that we know what the default preference orders for each
 # platform are, allow user to override them with the BROWSER variable.
@@ -315,15 +306,13 @@ if sys.platform[:3] == "os2" and _iscommand("netscape.exe"):
 if os.environ.has_key("BROWSER"):
     # It's the user's responsibility to register handlers for any unknown
     # browser referenced by this value, before calling open().
-    _tryorder = os.environ["BROWSER"].split(os.pathsep)
+    _tryorder = os.environ["BROWSER"].split(":")
 
 for cmd in _tryorder:
     if not _browsers.has_key(cmd.lower()):
         if _iscommand(cmd.lower()):
             register(cmd.lower(), None, GenericBrowser(
                 "%s '%%s'" % cmd.lower()))
-cmd = None # to make del work if _tryorder was empty
-del cmd
 
 _tryorder = filter(lambda x: _browsers.has_key(x.lower())
                    or x.find("%s") > -1, _tryorder)

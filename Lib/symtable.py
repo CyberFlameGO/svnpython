@@ -1,4 +1,5 @@
 """Interface to the compiler's internal symbol tables"""
+from __future__ import nested_scopes
 
 import _symtable
 from _symtable import USE, DEF_GLOBAL, DEF_LOCAL, DEF_PARAM, \
@@ -35,13 +36,19 @@ class SymbolTableFactory:
 
 newSymbolTable = SymbolTableFactory()
 
+def bool(x):
+    """Helper to force boolean result to 1 or 0"""
+    if x:
+        return 1
+    return 0
+
 def is_free(flags):
     if (flags & (USE | DEF_FREE)) \
        and (flags & (DEF_LOCAL | DEF_PARAM | DEF_GLOBAL)):
-        return True
+        return 1
     if flags & DEF_FREE_CLASS:
-        return True
-    return False
+        return 1
+    return 0
 
 class SymbolTable:
     def __init__(self, raw_table, filename):
@@ -200,10 +207,10 @@ class Symbol:
     def is_free(self):
         if (self.__flags & (USE | DEF_FREE)) \
             and (self.__flags & (DEF_LOCAL | DEF_PARAM | DEF_GLOBAL)):
-            return True
+            return 1
         if self.__flags & DEF_FREE_CLASS:
-            return True
-        return False
+            return 1
+        return 0
 
     def is_imported(self):
         return bool(self.__flags & DEF_IMPORT)

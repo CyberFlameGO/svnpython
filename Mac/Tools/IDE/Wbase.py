@@ -1,12 +1,14 @@
-from Carbon import App, Evt, Qd, QuickDraw, Win
+import Qd
+import Win
+import QuickDraw
+import Evt
 import string
 from types import *
 import sys
 
-class WidgetsError(Exception): pass
+WidgetsError = "WidgetsError"
 
 DEBUG = 0
-
 
 class Widget:
 	
@@ -329,7 +331,15 @@ class SelectableWidget(ClickableWidget):
 	def drawselframe(self, onoff):
 		if not self._parentwindow._hasselframes:
 			return
-		App.DrawThemeFocusRect(self._bounds, onoff)
+		thickrect = Qd.InsetRect(self._bounds, -3, -3)
+		state = Qd.GetPenState()
+		Qd.PenSize(2, 2)
+		if onoff:
+			Qd.PenPat(Qd.qd.black)
+		else:
+			Qd.PenPat(Qd.qd.white)
+		Qd.FrameRect(thickrect)
+		Qd.SetPenState(state)
 	
 	def adjust(self, oldbounds):
 		self.SetPort()
@@ -445,7 +455,7 @@ class HorizontalPanes(Widget):
 		"""panesizes should be a tuple of numbers. The length of the tuple is the number of panes, 
 		the items in the tuple are the relative sizes of these panes; these numbers should add up 
 		to 1 (the total size of all panes)."""
-		Widget.__init__(self, possize)
+		ClickableWidget.__init__(self, possize)
 		self._panesizes = panesizes
 		self._gutter = gutter
 		self._enabled = 1
@@ -588,8 +598,6 @@ class HorizontalPanes(Widget):
 			Qd.PenPat(Qd.qd.gray)
 			Qd.PaintRect(rect)
 			lastpos = pos
-			Qd.QDFlushPortBuffer(self._parentwindow.wid, None)
-			Evt.WaitNextEvent(0, 3)
 		Qd.PaintRect(rect)
 		Qd.PenNormal()
 		SetCursor("watch")
@@ -601,7 +609,7 @@ class HorizontalPanes(Widget):
 		self.makepanebounds()
 		self.installbounds()
 		self._calcbounds()
-
+	
 
 class VerticalPanes(HorizontalPanes):
 	"""see HorizontalPanes"""

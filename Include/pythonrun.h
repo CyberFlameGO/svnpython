@@ -7,11 +7,8 @@
 extern "C" {
 #endif
 
-#define PyCF_MASK (CO_GENERATOR_ALLOWED | CO_FUTURE_DIVISION)
-#define PyCF_MASK_OBSOLETE (CO_NESTED)
-
 typedef struct {
-	int cf_flags;  /* bitmask of CO_xxx flags relevant to future */
+	int cf_nested_scopes;
 } PyCompilerFlags;
 
 DL_IMPORT(void) Py_SetProgramName(char *);
@@ -33,7 +30,6 @@ DL_IMPORT(int) PyRun_AnyFileFlags(FILE *, char *, PyCompilerFlags *);
 DL_IMPORT(int) PyRun_AnyFileExFlags(FILE *, char *, int, PyCompilerFlags *);
 
 DL_IMPORT(int) PyRun_SimpleString(char *);
-DL_IMPORT(int) PyRun_SimpleStringFlags(char *, PyCompilerFlags *);
 DL_IMPORT(int) PyRun_SimpleFile(FILE *, char *);
 DL_IMPORT(int) PyRun_SimpleFileEx(FILE *, char *, int);
 DL_IMPORT(int) PyRun_SimpleFileExFlags(FILE *, char *, int, PyCompilerFlags *);
@@ -44,9 +40,6 @@ DL_IMPORT(int) PyRun_InteractiveLoopFlags(FILE *, char *, PyCompilerFlags *);
 
 DL_IMPORT(struct _node *) PyParser_SimpleParseString(char *, int);
 DL_IMPORT(struct _node *) PyParser_SimpleParseFile(FILE *, char *, int);
-DL_IMPORT(struct _node *) PyParser_SimpleParseStringFlags(char *, int, int);
-DL_IMPORT(struct _node *) PyParser_SimpleParseFileFlags(FILE *, char *,
-							int, int);
 
 DL_IMPORT(PyObject *) PyRun_String(char *, int, PyObject *, PyObject *);
 DL_IMPORT(PyObject *) PyRun_File(FILE *, char *, int, PyObject *, PyObject *);
@@ -91,10 +84,10 @@ DL_IMPORT(const char *) Py_GetBuildInfo(void);
 DL_IMPORT(PyObject *) _PyBuiltin_Init(void);
 DL_IMPORT(PyObject *) _PySys_Init(void);
 DL_IMPORT(void) _PyImport_Init(void);
-DL_IMPORT(void) _PyExc_Init(void);
+DL_IMPORT(void) init_exceptions(void);
 
 /* Various internal finalizers */
-DL_IMPORT(void) _PyExc_Fini(void);
+DL_IMPORT(void) fini_exceptions(void);
 DL_IMPORT(void) _PyImport_Fini(void);
 DL_IMPORT(void) PyMethod_Fini(void);
 DL_IMPORT(void) PyFrame_Fini(void);

@@ -7,7 +7,7 @@ The regression test is run with the interpreter in verbose mode so
 that import problems can be observed easily.
 """
 
-from compiler import compileFile
+from compiler import compile
 
 import os
 import sys
@@ -43,7 +43,7 @@ def compile_files(dir):
                 line_len = len(source) + 9
             print file,
             try:
-                compileFile(source)
+                compile(source)
             except SyntaxError, err:
                 print err
                 continue

@@ -4,6 +4,19 @@
 
 #include "Python.h"
 
+#ifdef i860
+/* Cray APP has bogus definition of HUGE_VAL in <math.h> */
+#undef HUGE_VAL
+#endif
+
+#ifdef HUGE_VAL
+#define CHECK(x) if (errno != 0) ; \
+	else if (-HUGE_VAL <= (x) && (x) <= HUGE_VAL) ; \
+	else errno = ERANGE
+#else
+#define CHECK(x) /* Don't know how to check */
+#endif
+
 #ifndef M_PI
 #define M_PI (3.141592653589793239)
 #endif
@@ -337,7 +350,8 @@ math_1(PyObject *args, Py_complex (*func)(Py_complex))
 	PyFPE_START_PROTECT("complex function", return 0)
 	x = (*func)(x);
 	PyFPE_END_PROTECT(x)
-	Py_ADJUST_ERANGE2(x.real, x.imag);
+	CHECK(x.real);
+	CHECK(x.imag);
 	if (errno != 0)
 		return math_error();
 	else
@@ -394,11 +408,13 @@ static PyMethodDef cmath_methods[] = {
 DL_EXPORT(void)
 initcmath(void)
 {
-	PyObject *m;
+	PyObject *m, *d, *v;
 
 	m = Py_InitModule3("cmath", cmath_methods, module_doc);
-
-	PyModule_AddObject(m, "pi",
-                           PyFloat_FromDouble(atan(1.0) * 4.0));
-	PyModule_AddObject(m, "e", PyFloat_FromDouble(exp(1.0)));
+	d = PyModule_GetDict(m);
+	PyDict_SetItemString(d, "pi",
+			     v = PyFloat_FromDouble(atan(1.0) * 4.0));
+	Py_DECREF(v);
+	PyDict_SetItemString(d, "e", v = PyFloat_FromDouble(exp(1.0)));
+	Py_DECREF(v);
 }

@@ -8,8 +8,6 @@
 # See the sre.py file for information on usage and redistribution.
 #
 
-"""Internal support module for sre"""
-
 # XXX: show string offset and offending character for all errors
 
 # this module works under 1.5.2 and later.  don't use string methods
@@ -81,10 +79,6 @@ class Pattern:
         gid = self.groups
         self.groups = gid + 1
         if name:
-            ogid = self.groupdict.get(name, None)
-            if ogid is not None:
-                raise error, ("redefinition of group name %s as group %d; "
-                              "was group %d" % (repr(name), gid,  ogid))
             self.groupdict[name] = gid
         self.open.append(gid)
         return gid
@@ -193,7 +187,7 @@ class Tokenizer:
             try:
                 c = self.string[self.index + 1]
             except IndexError:
-                raise error, "bogus escape (end of line)"
+                raise error, "bogus escape"
             char = char + c
         self.index = self.index + len(char)
         self.next = char
@@ -221,11 +215,11 @@ def isdigit(char):
 def isname(name):
     # check that group name is a valid string
     if not isident(name[0]):
-        return False
+        return 0
     for char in name:
         if not isident(char) and not isdigit(char):
-            return False
-    return True
+            return 0
+    return 1
 
 def _group(escape, groups):
     # check if the escape string represents a valid group
@@ -289,6 +283,7 @@ def _escape(source, escape, state):
             return LITERAL, atoi(escape[1:], 8) & 0xff
         elif escape[1:2] in DIGITS:
             # octal escape *or* decimal group reference (sigh)
+            here = source.tell()
             if source.next in DIGITS:
                 escape = escape + source.get()
                 if (escape[1] in OCTDIGITS and escape[2] in OCTDIGITS and
@@ -650,9 +645,9 @@ def parse_template(source, pattern):
             p.append((LITERAL, literal))
     sep = source[:0]
     if type(sep) is type(""):
-        makechar = chr
+        char = chr
     else:
-        makechar = unichr
+        char = unichr
     while 1:
         this = s.get()
         if this is None:
@@ -696,14 +691,14 @@ def parse_template(source, pattern):
                         break
                 if not code:
                     this = this[1:]
-                    code = LITERAL, makechar(atoi(this[-6:], 8) & 0xff)
+                    code = LITERAL, char(atoi(this[-6:], 8) & 0xff)
                 if code[0] is LITERAL:
                     literal(code[1])
                 else:
                     a(code)
             else:
                 try:
-                    this = makechar(ESCAPES[this][1])
+                    this = char(ESCAPES[this][1])
                 except KeyError:
                     pass
                 literal(this)

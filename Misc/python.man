@@ -1,4 +1,4 @@
-.TH PYTHON "1" "$Date$"
+.TH PYTHON "1" "5 September, 2000"
 .SH NAME
 python \- an interpreted, interactive, object-oriented programming language
 .SH SYNOPSIS
@@ -7,21 +7,10 @@ python \- an interpreted, interactive, object-oriented programming language
 .B \-d
 ]
 [
-.B \-E
-]
-[
-.B \-h
-]
-[
 .B \-i
 ]
 [
 .B \-O
-]
-.br
-       [
-.B -Q
-.I argument
 ]
 [
 .B \-S
@@ -33,11 +22,13 @@ python \- an interpreted, interactive, object-oriented programming language
 .B \-u
 ]
 [
-.B \-U
-]
-.br
-       [
 .B \-v
+]
+[
+.B \-x
+]
+[
+.B \-h
 ]
 [
 .B \-V
@@ -45,9 +36,6 @@ python \- an interpreted, interactive, object-oriented programming language
 [
 .B \-W
 .I argument
-]
-[
-.B \-x
 ]
 .br
        [
@@ -87,21 +75,9 @@ viewed by running the
 program.  
 .SH COMMAND LINE OPTIONS
 .TP
-.BI "\-c " command
-Specify the command to execute (see next section).
-This terminates the option list (following options are passed as
-arguments to the command).
-.TP
 .B \-d
 Turn on parser debugging output (for wizards only, depending on
 compilation options).
-.TP
-.B \-E
-Ignore environment variables like PYTHONPATH and PYTHONHOME that modify
-the behavior of the interpreter.
-.TP
-.B \-h
-Prints the usage for the interpreter executable and exits.
 .TP
 .B \-i
 When a script is passed as first argument or the \fB\-c\fP option is
@@ -115,15 +91,6 @@ Turn on basic optimizations.  This changes the filename extension for
 compiled (bytecode) files from
 .I .pyc
 to \fI.pyo\fP.  Given twice, causes docstrings to be discarded.
-.TP
-.BI "\-Q " argument
-Division control; see PEP 238.  The argument must be one of "old" (the
-default, int/int and long/long return an int or long), "new" (new
-division semantics, i.e. int/int and long/long returns a float),
-"warn" (old division semantics with a warning for int/int and
-long/long), or "warnall" (old division semantics with a warning for
-all use of the division operator).  For a use of "warnall", see the
-Tools/scripts/fixdiv.py script.
 .TP
 .B \-S
 Disable the import of the module
@@ -146,6 +113,14 @@ Print a message each time a module is initialized, showing the place
 twice, print a message for each file that is checked for when 
 searching for a module.  Also provides information on module cleanup
 at exit.
+.TP
+.B \-x
+Skip the first line of the source.  This is intended for a DOS
+specific hack only.  Warning: the line numbers in error messages will
+be off by one!
+.TP
+.B \-h
+Prints the usage for the interpreter executable and exits.
 .TP
 .B \-V
 Prints the Python version number of the executable and exits.
@@ -182,7 +157,7 @@ per source line);
 .B all
 to print a warning each time it occurs (this may generate many
 messages if a warning is triggered repeatedly for the same source
-line, such as inside a loop);
+line, e.g. inside a loop);
 .B module
 to print each warning only only the first time it occurs in each
 module;
@@ -215,10 +190,10 @@ case-sensitive.  The
 field matches the line number, where zero matches all line numbers and
 is thus equivalent to an omitted line number.
 .TP
-.B \-x
-Skip the first line of the source.  This is intended for a DOS
-specific hack only.  Warning: the line numbers in error messages will
-be off by one!
+.BI "\-c " command
+Specify the command to execute (see next section).
+This terminates the option list (following options are passed as
+arguments to the command).
 .SH INTERPRETER INTERFACE
 The interpreter interface resembles that of the UNIX shell: when
 called with standard input connected to a tty device, it prompts for
@@ -334,19 +309,9 @@ You can also change the prompts
 and
 .I sys.ps2
 in this file.
-.IP PYTHONY2K
-Set this to a non-empty string to cause the \fItime\fP module to
-require dates specified as strings to include 4-digit years, otherwise
-2-digit years are converted based on rules described in the \fItime\fP
-module documnetation.
-.IP PYTHONOPTIMIZE
-If this is set to a non-empty string it is equivalent to specifying
-the \fB\-O\fP option. If set to an integer, it is equivalent to
-specifying \fB\-O\fP multiple times.
 .IP PYTHONDEBUG
 If this is set to a non-empty string it is equivalent to specifying
-the \fB\-d\fP option. If set to an integer, it is equivalent to
-specifying \fB\-d\fP multiple times.
+the \fB\-d\fP option.
 .IP PYTHONINSPECT
 If this is set to a non-empty string it is equivalent to specifying
 the \fB\-i\fP option.
@@ -355,8 +320,7 @@ If this is set to a non-empty string it is equivalent to specifying
 the \fB\-u\fP option.
 .IP PYTHONVERBOSE
 If this is set to a non-empty string it is equivalent to specifying
-the \fB\-v\fP option. If set to an integer, it is equivalent to
-specifying \fB\-v\fP multiple times. 
+the \fB\-v\fP option.
 .SH AUTHOR
 .nf
 Guido van Rossum
@@ -366,19 +330,19 @@ E-mail: guido@python.org
 .PP
 And a cast of thousands.
 .SH INTERNET RESOURCES
-Main website:  http://www.python.org/
+Main website: http://www.python.org
 .br
-Documentation:  http://www.python.org/doc/
+Community website: http://starship.python.net
 .br
-Community website:  http://starship.python.net/
+Developer resources:
 .br
-Developer resources:  http://sourceforge.net/project/python/
+  http://sourceforge.net/project/?group_id=5470
 .br
-FTP:  ftp://ftp.python.org/pub/python/
+FTP: ftp://ftp.python.org/pub/python
 .br
-Module repository:  http://www.vex.net/parnassus/
+Module repository: http://www.vex.net/parnassus/
 .br
-Newsgroups:  comp.lang.python, comp.lang.python.announce
+Newsgroups: comp.lang.python, comp.lang.python.announce
 .SH LICENSING
 Python is distributed under an Open Source license.  See the file
 "LICENSE" in the Python source distribution for information on terms &

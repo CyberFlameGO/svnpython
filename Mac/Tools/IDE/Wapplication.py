@@ -1,27 +1,18 @@
 import FrameWork
-from Carbon import Win
-from Carbon import Qd
-from Carbon import Evt
+import Win
+import Qd
+import Evt
 import MacOS
-from Carbon import Events
+import Events
 import traceback
 from types import *
-from Carbon import Menu; MenuToolbox = Menu; del Menu
-import macresource
 
-if hasattr(Win, "FrontNonFloatingWindow"):
-	MyFrontWindow = Win.FrontNonFloatingWindow
-else:
-	MyFrontWindow = Win.FrontWindow
+import Menu; MenuToolbox = Menu; del Menu
 
-
-KILLUNKNOWNWINDOWS = 0  # Set to 0 for debugging.
 
 class Application(FrameWork.Application):
 	
 	def __init__(self, signature='Pyth'):
-		# Open our resource file, if it is not open yet
-		macresource.need('CURS', 468, "Widgets.rsrc")
 		import W
 		W.setapplication(self, signature)
 		FrameWork.Application.__init__(self)
@@ -36,33 +27,27 @@ class Application(FrameWork.Application):
 	def mainloop(self, mask=FrameWork.everyEvent, wait=None):
 		import W
 		self.quitting = 0
-		if hasattr(MacOS, 'EnableAppswitch'):
-			saveyield = MacOS.EnableAppswitch(-1)
+		saveyield = MacOS.EnableAppswitch(-1)
 		try:
 			while not self.quitting:
 				try:
 					self.do1event(mask, wait)
 				except W.AlertError, detail:
-					if hasattr(MacOS, 'EnableAppswitch'):
-						MacOS.EnableAppswitch(-1)
+					MacOS.EnableAppswitch(-1)
 					W.Message(detail)
 				except self.DebuggerQuit:
-					if hasattr(MacOS, 'EnableAppswitch'):
-						MacOS.EnableAppswitch(-1)
+					MacOS.EnableAppswitch(-1)
 				except:
-					if hasattr(MacOS, 'EnableAppswitch'):
-						MacOS.EnableAppswitch(-1)
+					MacOS.EnableAppswitch(-1)
 					import PyEdit
 					PyEdit.tracebackwindow.traceback()
 		finally:
-			if hasattr(MacOS, 'EnableAppswitch'):
-				MacOS.EnableAppswitch(1)
+			MacOS.EnableAppswitch(1)
 	
 	def debugger_mainloop(self, mask=FrameWork.everyEvent, wait=None):
 		import W
 		self.debugger_quitting = 0
-		if hasattr(MacOS, 'EnableAppswitch'):
-			saveyield = MacOS.EnableAppswitch(-1)
+		saveyield = MacOS.EnableAppswitch(-1)
 		try:
 			while not self.quitting and not self.debugger_quitting:
 				try:
@@ -73,8 +58,7 @@ class Application(FrameWork.Application):
 					import PyEdit
 					PyEdit.tracebackwindow.traceback()
 		finally:
-			if hasattr(MacOS, 'EnableAppswitch'):
-				MacOS.EnableAppswitch(saveyield)
+			MacOS.EnableAppswitch(saveyield)
 	
 	def breathe(self, wait=1):
 		import W
@@ -123,7 +107,7 @@ class Application(FrameWork.Application):
 					break
 	
 	def do_frontWindowMethod(self, attr, *args):
-		wid = MyFrontWindow()
+		wid = Win.FrontWindow()
 		if wid and self._windows.has_key(wid):
 			window = self._windows[wid]
 			if hasattr(window, attr):
@@ -154,7 +138,7 @@ class Application(FrameWork.Application):
 		if keycode in self.fkeymaps.keys():		# JJS
 			ch = self.fkeymaps[keycode]
 			modifiers = modifiers | FrameWork.cmdKey
-		wid = MyFrontWindow()
+		wid = Win.FrontWindow()
 		if modifiers & FrameWork.cmdKey and not modifiers & FrameWork.shiftKey:
 			if wid and self._windows.has_key(wid):
 				self.checkmenus(self._windows[wid])
@@ -183,7 +167,7 @@ class Application(FrameWork.Application):
 		Qd.InitCursor()
 		(what, message, when, where, modifiers) = event
 		self.checkopenwindowsmenu()
-		wid = MyFrontWindow()
+		wid = Win.FrontWindow()
 		if wid and self._windows.has_key(wid):
 			self.checkmenus(self._windows[wid])
 		else:
@@ -200,15 +184,12 @@ class Application(FrameWork.Application):
 			window = self._windows[wid]
 			window.do_rawupdate(wid, event)
 		else:
-			if KILLUNKNOWNWINDOWS and wid:
+			if wid:
 				wid.HideWindow()
 				import sys
 				sys.stderr.write("XXX killed unknown (crashed?) Python window.\n")
 			else:
-				if hasattr(MacOS, 'HandleEvent'):
-					MacOS.HandleEvent(event)
-				else:
-					print 'Unexpected updateEvent:', event
+				MacOS.HandleEvent(event)
 	
 	def suspendresume(self, onoff):
 		pass
@@ -220,7 +201,7 @@ class Application(FrameWork.Application):
 	def checkopenwindowsmenu(self):
 		if self._openwindowscheckmark:
 			self.openwindowsmenu.menu.CheckMenuItem(self._openwindowscheckmark, 0)
-		window = MyFrontWindow()
+		window = Win.FrontWindow()
 		if window:
 			for item, wid in self._openwindows.items():
 				if wid == window:
@@ -327,24 +308,19 @@ class Application(FrameWork.Application):
 				# exec in that window's namespace.
 				# xxx what to do when it's not saved???
 				# promt to save?
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(0)
+				MacOS.EnableAppswitch(0)
 				execfile(path, {'__name__': '__main__', '__file__': path})
 			except W.AlertError, detail:
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(-1)
+				MacOS.EnableAppswitch(-1)
 				raise W.AlertError, detail
 			except KeyboardInterrupt:
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(-1)
+				MacOS.EnableAppswitch(-1)
 			except:
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(-1)
+				MacOS.EnableAppswitch(-1)
 				import PyEdit
 				PyEdit.tracebackwindow.traceback(1)
 			else:
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(-1)
+				MacOS.EnableAppswitch(-1)
 			#os.chdir(cwd)
 	
 	def openscript(self, filename, lineno=None, charoffset=0, modname=""):
@@ -452,7 +428,7 @@ class Menu(FrameWork.Menu):
 	
 	def _getmenuhandler(self, callback):
 		menuhandler = None
-		wid = MyFrontWindow()
+		wid = Win.FrontWindow()
 		if wid and self.bar.parent._windows.has_key(wid):
 			window = self.bar.parent._windows[wid]
 			if hasattr(window, "domenu_" + callback):

@@ -37,8 +37,7 @@ extern PyObject *_PyImport_LoadDynamicModule(char *name, char *pathname,
 #include <windows.h>
 typedef FARPROC dl_funcptr;
 #else
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
-#include <os2def.h>
+#ifdef PYOS_OS2
 typedef int (* APIENTRY dl_funcptr)();
 #else
 typedef void (*dl_funcptr)(void);

@@ -7,9 +7,9 @@
 
 import sys
 import traceback
-from codeop import CommandCompiler, compile_command
+from codeop import compile_command
 
-__all__ = ["InteractiveInterpreter", "InteractiveConsole", "interact",
+__all__ = ["InteractiveInterpreter","InteractiveConsole","interact",
            "compile_command"]
 
 def softspace(file, newvalue):
@@ -20,8 +20,7 @@ def softspace(file, newvalue):
         pass
     try:
         file.softspace = newvalue
-    except (AttributeError, TypeError):
-        # "attribute-less object" or "read-only attributes"
+    except TypeError: # "attribute-less object" or "read-only attributes"
         pass
     return oldvalue
 
@@ -46,7 +45,6 @@ class InteractiveInterpreter:
         if locals is None:
             locals = {"__name__": "__console__", "__doc__": None}
         self.locals = locals
-        self.compile = CommandCompiler()
 
     def runsource(self, source, filename="<input>", symbol="single"):
         """Compile and run some source in the interpreter.
@@ -66,26 +64,26 @@ class InteractiveInterpreter:
         object.  The code is executed by calling self.runcode() (which
         also handles run-time exceptions, except for SystemExit).
 
-        The return value is True in case 2, False in the other cases (unless
+        The return value is 1 in case 2, 0 in the other cases (unless
         an exception is raised).  The return value can be used to
         decide whether to use sys.ps1 or sys.ps2 to prompt the next
         line.
 
         """
         try:
-            code = self.compile(source, filename, symbol)
+            code = compile_command(source, filename, symbol)
         except (OverflowError, SyntaxError, ValueError):
             # Case 1
             self.showsyntaxerror(filename)
-            return False
+            return 0
 
         if code is None:
             # Case 2
-            return True
+            return 1
 
         # Case 3
         self.runcode(code)
-        return False
+        return 0
 
     def runcode(self, code):
         """Execute a code object.
@@ -133,8 +131,12 @@ class InteractiveInterpreter:
                 pass
             else:
                 # Stuff in the right filename
-                value = SyntaxError(msg, (filename, lineno, offset, line))
-                sys.last_value = value
+                try:
+                    # Assume SyntaxError is a class exception
+                    value = SyntaxError(msg, (filename, lineno, offset, line))
+                except:
+                    # If that failed, assume SyntaxError is a string
+                    value = msg, (filename, lineno, offset, line)
         list = traceback.format_exception_only(type, value)
         map(self.write, list)
 
@@ -216,7 +218,7 @@ class InteractiveConsole(InteractiveInterpreter):
             sys.ps2
         except AttributeError:
             sys.ps2 = "... "
-        cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+        cprt = 'Type "copyright", "credits" or "license" for more information.'
         if banner is None:
             self.write("Python %s on %s\n%s\n(%s)\n" %
                        (sys.version, sys.platform, cprt,
@@ -297,7 +299,7 @@ def interact(banner=None, readfunc=None, local=None):
     else:
         try:
             import readline
-        except ImportError:
+        except:
             pass
     console.interact(banner)
 

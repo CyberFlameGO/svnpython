@@ -46,10 +46,6 @@ class ResourcesScanner(Scanner):
 ##			"MaxSizeRsrc",		# GetMaxResourceSize
 			]
 			
-	def makeblacklisttypes(self):
-		return [
-			]
-			
 	def makegreylist(self):
 		return [
 			('#if TARGET_API_MAC_OS8', [
@@ -67,8 +63,6 @@ class ResourcesScanner(Scanner):
 				'DetachResourceFile',
 				'InsertResourceFile',
 				'FSpResourceFileAlreadyOpen',
-				'FSOpenResourceFile',
-				'FSCreateResourceFile',
 			])]
 
 	def makerepairinstructions(self):
@@ -87,11 +81,7 @@ class ResourcesScanner(Scanner):
 			 [("OutBuffer", "*", "InOutMode")]),
 			 
 			([("SInt8", "*", "*")],
-			 [("SignedByte", "*", "*")]),
-			 
-			
-			([("UniCharCount", "*", "InMode"), ("UniChar_ptr", "*", "InMode")],
-			 [("UnicodeReverseInBuffer", "*", "*")]),
+			 [("SignedByte", "*", "*")])
 			]
 
 if __name__ == "__main__":

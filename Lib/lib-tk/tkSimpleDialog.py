@@ -68,9 +68,8 @@ class Dialog(Toplevel):
 
         self.protocol("WM_DELETE_WINDOW", self.cancel)
 
-        if self.parent is not None:
-            self.geometry("+%d+%d" % (parent.winfo_rootx()+50,
-                                      parent.winfo_rooty()+50))
+        self.geometry("+%d+%d" % (parent.winfo_rootx()+50,
+                                  parent.winfo_rooty()+50))
 
         self.initial_focus.focus_set()
 
@@ -96,7 +95,7 @@ class Dialog(Toplevel):
     def buttonbox(self):
         '''add standard button box.
 
-        override if you do not want the standard buttons
+        override if you don't want the standard buttons
         '''
 
         box = Frame(self)
@@ -130,8 +129,7 @@ class Dialog(Toplevel):
     def cancel(self, event=None):
 
         # put focus back to the parent window
-        if self.parent is not None:
-            self.parent.focus_set()
+        self.parent.focus_set()
         self.destroy()
 
     #
@@ -272,20 +270,6 @@ def askfloat(title, prompt, **kw):
     return d.result
 
 class _QueryString(_QueryDialog):
-    def __init__(self, *args, **kw):
-        if kw.has_key("show"):
-            self.__show = kw["show"]
-            del kw["show"]
-        else:
-            self.__show = None
-        _QueryDialog.__init__(self, *args, **kw)
-
-    def body(self, master):
-        entry = _QueryDialog.body(self, master)
-        if self.__show is not None:
-            entry.configure(show=self.__show)
-        return entry
-
     def getresult(self):
         return self.entry.get()
 

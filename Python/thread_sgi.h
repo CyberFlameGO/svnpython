@@ -168,7 +168,7 @@ static void clean_threads(void)
 	}
 }
 
-long PyThread_start_new_thread(void (*func)(void *), void *arg)
+int PyThread_start_new_thread(void (*func)(void *), void *arg)
 {
 #ifdef USE_DL
 	long addr, size;
@@ -223,7 +223,7 @@ long PyThread_start_new_thread(void (*func)(void *), void *arg)
 	}
 	if (usunsetlock(count_lock) < 0)
 		perror("usunsetlock (count_lock)");
-	return success;
+	return success < 0 ? 0 : 1;
 }
 
 long PyThread_get_thread_ident(void)
@@ -376,6 +376,50 @@ void PyThread_release_lock(PyThread_type_lock lock)
 	dprintf(("PyThread_release_lock(%p) called\n", lock));
 	if (usunsetlock((ulock_t) lock) < 0)
 		perror("usunsetlock");
+}
+
+/*
+ * Semaphore support.
+ */
+PyThread_type_sema PyThread_allocate_sema(int value)
+{
+	usema_t *sema;
+	dprintf(("PyThread_allocate_sema called\n"));
+	if (!initialized)
+		PyThread_init_thread();
+
+	if ((sema = usnewsema(shared_arena, value)) == NULL)
+		perror("usnewsema");
+	dprintf(("PyThread_allocate_sema() -> %p\n",  sema));
+	return (PyThread_type_sema) sema;
+}
+
+void PyThread_free_sema(PyThread_type_sema sema)
+{
+	dprintf(("PyThread_free_sema(%p) called\n",  sema));
+	usfreesema((usema_t *) sema, shared_arena);
+}
+
+int PyThread_down_sema(PyThread_type_sema sema, int waitflag)
+{
+	int success;
+
+	dprintf(("PyThread_down_sema(%p) called\n",  sema));
+	if (waitflag)
+		success = uspsema((usema_t *) sema);
+	else
+		success = uscpsema((usema_t *) sema);
+	if (success < 0)
+		perror(waitflag ? "uspsema" : "uscpsema");
+	dprintf(("PyThread_down_sema(%p) return\n",  sema));
+	return success;
+}
+
+void PyThread_up_sema(PyThread_type_sema sema)
+{
+	dprintf(("PyThread_up_sema(%p)\n",  sema));
+	if (usvsema((usema_t *) sema) < 0)
+		perror("usvsema");
 }
 
 /*

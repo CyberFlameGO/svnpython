@@ -1,16 +1,14 @@
 """Minimal W application."""
 
 import Wapplication
-import macresource
-import os
 
 class TestApp(Wapplication.Application):
 	
 	def __init__(self):
-		from Carbon import Res
-#		macresource.open_pathname("Widgets.rsrc")
+		import Res
+		Res.FSpOpenResFile("Widgets.rsrc", 1)
 		self._menustocheck = []
-		self.preffilepath = os.path.join("Python", "PythonIDE preferences")
+		self.preffilepath = ":Python:PythonIDE preferences"
 		Wapplication.Application.__init__(self, 'Pyth')
 		# open a new text editor
 		import PyEdit

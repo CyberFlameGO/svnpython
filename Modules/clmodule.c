@@ -104,7 +104,7 @@ cl_CompressImage(PyObject *self, PyObject *args)
 	char *frameBuffer;
 	PyObject *compressedBuffer;
 
-	if (!PyArg_ParseTuple(args, "iiiifs#", &compressionScheme,
+	if (!PyArg_Parse(args, "(iiiifs#)", &compressionScheme,
 			 &width, &height,
 			 &originalFormat, &compressionRatio, &frameBuffer,
 			 &frameBufferSize))
@@ -149,7 +149,7 @@ cl_DecompressImage(PyObject *self, PyObject *args)
 	int compressedBufferSize, frameBufferSize;
 	PyObject *frameBuffer;
 
-	if (!PyArg_ParseTuple(args, "iiiis#", &compressionScheme, &width, &height,
+	if (!PyArg_Parse(args, "(iiiis#)", &compressionScheme, &width, &height,
 			 &originalFormat, &compressedBuffer,
 			 &compressedBufferSize))
 		return NULL;
@@ -183,9 +183,12 @@ cl_DecompressImage(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-doClose(clobject *self, int (*close_func)(CL_Handle))
+doClose(clobject *self, PyObject *args, int (*close_func)(CL_Handle))
 {
 	CheckCompressor(self);
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	error_handler_called = 0;
 	if ((*close_func)(self->ob_compressorHdl) == FAILURE ||
@@ -206,15 +209,15 @@ doClose(clobject *self, int (*close_func)(CL_Handle))
 }
 
 static PyObject *
-clm_CloseCompressor(PyObject *self)
+clm_CloseCompressor(PyObject *self, PyObject *args)
 {
-	return doClose(SELF, clCloseCompressor);
+	return doClose(SELF, args, clCloseCompressor);
 }
 
 static PyObject *
-clm_CloseDecompressor(PyObject *self)
+clm_CloseDecompressor(PyObject *self, PyObject *args)
 {
-	return doClose(SELF, clCloseDecompressor);
+	return doClose(SELF, args, clCloseDecompressor);
 }
 
 static PyObject *
@@ -476,7 +479,7 @@ clm_GetParamID(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-clm_QueryParams(PyObject *self)
+clm_QueryParams(PyObject *self, PyObject *args)
 {
 	int bufferlength;
 	int *PVbuffer;
@@ -484,6 +487,9 @@ clm_QueryParams(PyObject *self)
 	int i;
 
 	CheckCompressor(SELF);
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	error_handler_called = 0;
 	bufferlength = clQueryParams(SELF->ob_compressorHdl, 0, 0);
@@ -568,9 +574,13 @@ clm_GetName(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-clm_QuerySchemeFromHandle(PyObject *self)
+clm_QuerySchemeFromHandle(PyObject *self, PyObject *args)
 {
 	CheckCompressor(SELF);
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
+
 	return PyInt_FromLong(clQuerySchemeFromHandle(SELF->ob_compressorHdl));
 }
 
@@ -590,37 +600,37 @@ clm_ReadHeader(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef compressor_methods[] = {
-	{"close",		clm_CloseCompressor, METH_NOARGS}, /* alias */
-	{"CloseCompressor",	clm_CloseCompressor, METH_NOARGS},
-	{"Compress",		clm_Compress, METH_OLDARGS},
-	{"GetDefault",		clm_GetDefault, METH_OLDARGS},
-	{"GetMinMax",		clm_GetMinMax, METH_OLDARGS},
-	{"GetName",		clm_GetName, METH_OLDARGS},
-	{"GetParam",		clm_GetParam, METH_OLDARGS},
-	{"GetParamID",		clm_GetParamID, METH_OLDARGS},
-	{"GetParams",		clm_GetParams, METH_OLDARGS},
-	{"QueryParams",		clm_QueryParams, METH_NOARGS},
-	{"QuerySchemeFromHandle",clm_QuerySchemeFromHandle, METH_NOARGS},
-	{"SetParam",		clm_SetParam, METH_OLDARGS},
-	{"SetParams",		clm_SetParams, METH_OLDARGS},
+	{"close",		clm_CloseCompressor}, /* alias */
+	{"CloseCompressor",	clm_CloseCompressor},
+	{"Compress",		clm_Compress},
+	{"GetDefault",		clm_GetDefault},
+	{"GetMinMax",		clm_GetMinMax},
+	{"GetName",		clm_GetName},
+	{"GetParam",		clm_GetParam},
+	{"GetParamID",		clm_GetParamID},
+	{"GetParams",		clm_GetParams},
+	{"QueryParams",		clm_QueryParams},
+	{"QuerySchemeFromHandle",clm_QuerySchemeFromHandle},
+	{"SetParam",		clm_SetParam},
+	{"SetParams",		clm_SetParams},
 	{NULL,			NULL}		/* sentinel */
 };
 
 static PyMethodDef decompressor_methods[] = {
-	{"close",		clm_CloseDecompressor, METH_NOARGS},	/* alias */
-	{"CloseDecompressor",	clm_CloseDecompressor, METH_NOARGS},
-	{"Decompress",		clm_Decompress, METH_OLDARGS},
-	{"GetDefault",		clm_GetDefault, METH_OLDARGS},
-	{"GetMinMax",		clm_GetMinMax, METH_OLDARGS},
-	{"GetName",		clm_GetName, METH_OLDARGS},
-	{"GetParam",		clm_GetParam, METH_OLDARGS},
-	{"GetParamID",		clm_GetParamID, METH_OLDARGS},
-	{"GetParams",		clm_GetParams, METH_OLDARGS},
-	{"ReadHeader",		clm_ReadHeader, METH_OLDARGS},
-	{"QueryParams",		clm_QueryParams, METH_NOARGS},
-	{"QuerySchemeFromHandle",clm_QuerySchemeFromHandle, METH_NOARGS},
-	{"SetParam",		clm_SetParam, METH_OLDARGS},
-	{"SetParams",		clm_SetParams, METH_OLDARGS},
+	{"close",		clm_CloseDecompressor},	/* alias */
+	{"CloseDecompressor",	clm_CloseDecompressor},
+	{"Decompress",		clm_Decompress},
+	{"GetDefault",		clm_GetDefault},
+	{"GetMinMax",		clm_GetMinMax},
+	{"GetName",		clm_GetName},
+	{"GetParam",		clm_GetParam},
+	{"GetParamID",		clm_GetParamID},
+	{"GetParams",		clm_GetParams},
+	{"ReadHeader",		clm_ReadHeader},
+	{"QueryParams",		clm_QueryParams},
+	{"QuerySchemeFromHandle",clm_QuerySchemeFromHandle},
+	{"SetParam",		clm_SetParam},
+	{"SetParams",		clm_SetParams},
 	{NULL,			NULL}		/* sentinel */
 };
 
@@ -648,7 +658,7 @@ cl_getattr(PyObject *self, char *name)
 static PyTypeObject Cltype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,			/*ob_size*/
-	"cl.cl",		/*tp_name*/
+	"cl",			/*tp_name*/
 	sizeof(clobject),	/*tp_size*/
 	0,			/*tp_itemsize*/
 	/* methods */
@@ -670,7 +680,7 @@ doOpen(PyObject *self, PyObject *args, int (*open_func)(int, CL_Handle *),
 	int scheme;
 	clobject *new;
 
-	if (!PyArg_ParseTuple(args, "i", &scheme))
+	if (!PyArg_Parse(args, "i", &scheme))
 		return NULL;
 
 	new = PyObject_New(clobject, &Cltype);
@@ -711,7 +721,7 @@ cl_QueryScheme(PyObject *self, PyObject *args)
 	int headerlen;
 	int scheme;
 
-	if (!PyArg_ParseTuple(args, "s#", &header, &headerlen))
+	if (!PyArg_Parse(args, "s#", &header, &headerlen))
 		return NULL;
 
 	scheme = clQueryScheme(header);
@@ -728,7 +738,7 @@ cl_QueryMaxHeaderSize(PyObject *self, PyObject *args)
 {
 	int scheme;
 
-	if (!PyArg_ParseTuple(args, "i", &scheme))
+	if (!PyArg_Parse(args, "i", &scheme))
 		return NULL;
 
 	return PyInt_FromLong(clQueryMaxHeaderSize(scheme));
@@ -743,7 +753,7 @@ cl_QueryAlgorithms(PyObject *self, PyObject *args)
 	PyObject *list;
 	int i;
 
-	if (!PyArg_ParseTuple(args, "i", &algorithmMediaType))
+	if (!PyArg_Parse(args, "i", &algorithmMediaType))
 		return NULL;
 
 	error_handler_called = 0;
@@ -791,7 +801,7 @@ cl_QuerySchemeFromName(PyObject *self, PyObject *args)
 	char *name;
 	int scheme;
 
-	if (!PyArg_ParseTuple(args, "is", &algorithmMediaType, &name))
+	if (!PyArg_Parse(args, "(is)", &algorithmMediaType, &name))
 		return NULL;
 
 	error_handler_called = 0;
@@ -810,7 +820,7 @@ cl_GetAlgorithmName(PyObject *self, PyObject *args)
 	int scheme;
 	char *name;
 
-	if (!PyArg_ParseTuple(args, "i", &scheme))
+	if (!PyArg_Parse(args, "i", &scheme))
 		return NULL;
 
 	name = clGetAlgorithmName(scheme);
@@ -829,9 +839,9 @@ do_set(PyObject *self, PyObject *args, int (*func)(int, int, int))
 	float fvalue;
 	int is_float = 0;
 
-	if (!PyArg_ParseTuple(args, "iii", &scheme, &paramID, &value)) {
+	if (!PyArg_Parse(args, "(iii)", &scheme, &paramID, &value)) {
 		PyErr_Clear();
-		if (!PyArg_ParseTuple(args, "iif", &scheme, &paramID, &fvalue)) {
+		if (!PyArg_Parse(args, "(iif)", &scheme, &paramID, &fvalue)) {
 			PyErr_Clear();
 			PyErr_SetString(PyExc_TypeError,
 			     "bad argument list (format '(iii)' or '(iif)')");
@@ -884,7 +894,7 @@ cl_SetMax(PyObject *self, PyObject *args)
 static PyObject *cl_##name(PyObject *self, PyObject *args) \
 { \
 	  int x; \
-	  if (!PyArg_ParseTuple(args, "i", &x)) return NULL; \
+	  if (!PyArg_Parse(args, "i", &x)) return NULL; \
 	  return Py##handler(CL_##name(x)); \
 }
 
@@ -892,7 +902,7 @@ static PyObject *cl_##name(PyObject *self, PyObject *args) \
 static PyObject *cl_##name(PyObject *self, PyObject *args) \
 { \
 	  int a1, a2; \
-	  if (!PyArg_ParseTuple(args, "ii", &a1, &a2)) return NULL; \
+	  if (!PyArg_Parse(args, "(ii)", &a1, &a2)) return NULL; \
 	  return Py##handler(CL_##name(a1, a2)); \
 }
 
@@ -926,30 +936,30 @@ cvt_type(PyObject *self, PyObject *args)
 #endif
 
 static PyMethodDef cl_methods[] = {
-	{"CompressImage",	cl_CompressImage, METH_VARARGS},
-	{"DecompressImage",	cl_DecompressImage, METH_VARARGS},
-	{"GetAlgorithmName",	cl_GetAlgorithmName, METH_VARARGS},
-	{"OpenCompressor",	cl_OpenCompressor, METH_VARARGS},
-	{"OpenDecompressor",	cl_OpenDecompressor, METH_VARARGS},
-	{"QueryAlgorithms",	cl_QueryAlgorithms, METH_VARARGS},
-	{"QueryMaxHeaderSize",	cl_QueryMaxHeaderSize, METH_VARARGS},
-	{"QueryScheme",		cl_QueryScheme, METH_VARARGS},
-	{"QuerySchemeFromName",	cl_QuerySchemeFromName, METH_VARARGS},
-	{"SetDefault",		cl_SetDefault, METH_VARARGS},
-	{"SetMax",		cl_SetMax, METH_VARARGS},
-	{"SetMin",		cl_SetMin, METH_VARARGS},
-	{"BytesPerSample",	cl_BytesPerSample, METH_VARARGS},
-	{"BytesPerPixel",	cl_BytesPerPixel, METH_VARARGS},
-	{"AudioFormatName",	cl_AudioFormatName, METH_VARARGS},
-	{"VideoFormatName",	cl_VideoFormatName, METH_VARARGS},
-	{"AlgorithmNumber",	cl_AlgorithmNumber, METH_VARARGS},
-	{"AlgorithmType",	cl_AlgorithmType, METH_VARARGS},
-	{"Algorithm",		cl_Algorithm, METH_VARARGS},
-	{"ParamNumber",		cl_ParamNumber, METH_VARARGS},
-	{"ParamType",		cl_ParamType, METH_VARARGS},
-	{"ParamID",		cl_ParamID, METH_VARARGS},
+	{"CompressImage",	cl_CompressImage},
+	{"DecompressImage",	cl_DecompressImage},
+	{"GetAlgorithmName",	cl_GetAlgorithmName},
+	{"OpenCompressor",	cl_OpenCompressor},
+	{"OpenDecompressor",	cl_OpenDecompressor},
+	{"QueryAlgorithms",	cl_QueryAlgorithms},
+	{"QueryMaxHeaderSize",	cl_QueryMaxHeaderSize},
+	{"QueryScheme",		cl_QueryScheme},
+	{"QuerySchemeFromName",	cl_QuerySchemeFromName},
+	{"SetDefault",		cl_SetDefault},
+	{"SetMax",		cl_SetMax},
+	{"SetMin",		cl_SetMin},
+	{"BytesPerSample",	cl_BytesPerSample},
+	{"BytesPerPixel",	cl_BytesPerPixel},
+	{"AudioFormatName",	cl_AudioFormatName},
+	{"VideoFormatName",	cl_VideoFormatName},
+	{"AlgorithmNumber",	cl_AlgorithmNumber},
+	{"AlgorithmType",	cl_AlgorithmType},
+	{"Algorithm",		cl_Algorithm},
+	{"ParamNumber",		cl_ParamNumber},
+	{"ParamType",		cl_ParamType},
+	{"ParamID",		cl_ParamID},
 #ifdef CLDEBUG
-	{"cvt_type",		cvt_type, METH_VARARGS},
+	{"cvt_type",		cvt_type},
 #endif
 	{NULL,			NULL} /* Sentinel */
 };

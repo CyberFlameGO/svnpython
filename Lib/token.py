@@ -58,11 +58,9 @@ CIRCUMFLEXEQUAL = 44
 LEFTSHIFTEQUAL = 45
 RIGHTSHIFTEQUAL = 46
 DOUBLESTAREQUAL = 47
-DOUBLESLASH = 48
-DOUBLESLASHEQUAL = 49
-OP = 50
-ERRORTOKEN = 51
-N_TOKENS = 52
+OP = 48
+ERRORTOKEN = 49
+N_TOKENS = 50
 NT_OFFSET = 256
 #--end constants--
 
@@ -84,6 +82,7 @@ def ISEOF(x):
 
 def main():
     import re
+    import string
     import sys
     args = sys.argv[1:]
     inFileName = args and args[0] or "Include/token.h"

@@ -1,4 +1,4 @@
-# copyright 1997-2001 Just van Rossum, Letterror. just@letterror.com
+# copyright 1997-2000 Just van Rossum, Letterror. just@letterror.com
 
 import Splash
 
@@ -6,21 +6,7 @@ import FrameWork
 import Wapplication
 import W
 import os
-import sys
 import macfs
-import MacOS
-
-if MacOS.runtimemodel == 'macho':
-	ELIPSES = '...'
-else:
-	ELIPSES = '\xc9'
-
-def runningOnOSX():
-	from gestalt import gestalt
-	gestaltMenuMgrAquaLayoutBit = 1  # menus have the Aqua 1.0 layout
-	gestaltMenuMgrAquaLayoutMask = (1L << gestaltMenuMgrAquaLayoutBit)
-	value = gestalt("menu") & gestaltMenuMgrAquaLayoutMask
-	return not not value
 
 
 class PythonIDE(Wapplication.Application):
@@ -28,8 +14,7 @@ class PythonIDE(Wapplication.Application):
 	def __init__(self):
 		self.preffilepath = ":Python:PythonIDE preferences"
 		Wapplication.Application.__init__(self, 'Pide')
-		from Carbon import AE
-		from Carbon import AppleEvents
+		import AE, AppleEvents
 		
 		AE.AEInstallEventHandler(AppleEvents.kCoreEventClass, AppleEvents.kAEOpenApplication, 
 				self.ignoreevent)
@@ -43,16 +28,10 @@ class PythonIDE(Wapplication.Application):
 				self.quitevent)
 		import PyConsole, PyEdit
 		Splash.wait()
-		# With -D option (OSX command line only) keep stderr, for debugging the IDE
-		# itself.
-		debug_stderr = None
-		if len(sys.argv) >= 2 and sys.argv[1] == '-D':
-			debug_stderr = sys.stderr
-			del sys.argv[1]
+		Splash.uninstall_importhook()
 		PyConsole.installoutput()
 		PyConsole.installconsole()
-		if debug_stderr:
-			sys.stderr = debug_stderr
+		import sys
 		for path in sys.argv[1:]:
 			self.opendoc(path)
 		try:
@@ -71,18 +50,15 @@ class PythonIDE(Wapplication.Application):
 	def makeusermenus(self):
 		m = Wapplication.Menu(self.menubar, "File")
 		newitem = FrameWork.MenuItem(m, "New", "N", 'new')
-		openitem = FrameWork.MenuItem(m, "Open"+ELIPSES, "O", 'open')
+		openitem = FrameWork.MenuItem(m, "Open\xc9", "O", 'open')
 		FrameWork.Separator(m)
 		closeitem = FrameWork.MenuItem(m, "Close", "W", 'close')
 		saveitem = FrameWork.MenuItem(m, "Save", "S", 'save')
-		saveasitem = FrameWork.MenuItem(m, "Save as"+ELIPSES, None, 'save_as')
+		saveasitem = FrameWork.MenuItem(m, "Save as\xc9", None, 'save_as')
 		FrameWork.Separator(m)
-		saveasappletitem = FrameWork.MenuItem(m, "Save as Applet"+ELIPSES, None, 'save_as_applet')
-		if not runningOnOSX():
-			# On OSX there's a special "magic" quit menu, so we shouldn't add
-			# it to the File menu.
-			FrameWork.Separator(m)
-			quititem = FrameWork.MenuItem(m, "Quit", "Q", 'quit')
+		saveasappletitem = FrameWork.MenuItem(m, "Save as Applet\xc9", None, 'save_as_applet')
+		FrameWork.Separator(m)
+		quititem = FrameWork.MenuItem(m, "Quit", "Q", 'quit')
 		
 		m = Wapplication.Menu(self.menubar, "Edit")
 		undoitem = FrameWork.MenuItem(m, "Undo", 'Z', "undo")
@@ -95,7 +71,7 @@ class PythonIDE(Wapplication.Application):
 		selallitem = FrameWork.MenuItem(m, "Select all", "A", "selectall")
 		sellineitem = FrameWork.MenuItem(m, "Select line", "L", "selectline")
 		FrameWork.Separator(m)
-		finditem = FrameWork.MenuItem(m, "Find"+ELIPSES, "F", "find")
+		finditem = FrameWork.MenuItem(m, "Find\xc9", "F", "find")
 		findagainitem = FrameWork.MenuItem(m, "Find again", 'G', "findnext")
 		enterselitem = FrameWork.MenuItem(m, "Enter search string", "E", "entersearchstring")
 		replaceitem = FrameWork.MenuItem(m, "Replace", None, "replace")
@@ -108,12 +84,12 @@ class PythonIDE(Wapplication.Application):
 		runitem = FrameWork.MenuItem(m, "Run window", "R", 'run')
 		runselitem = FrameWork.MenuItem(m, "Run selection", None, 'runselection')
 		FrameWork.Separator(m)
-		moditem = FrameWork.MenuItem(m, "Module browser"+ELIPSES, "M", self.domenu_modulebrowser)
+		moditem = FrameWork.MenuItem(m, "Module browser\xc9", "M", self.domenu_modulebrowser)
 		FrameWork.Separator(m)
 		mm = FrameWork.SubMenu(m, "Preferences")
-		FrameWork.MenuItem(mm, "Set Scripts folder"+ELIPSES, None, self.do_setscriptsfolder)
-		FrameWork.MenuItem(mm, "Editor default settings"+ELIPSES, None, self.do_editorprefs)
-		FrameWork.MenuItem(mm, "Set default window font"+ELIPSES, None, self.do_setwindowfont)
+		FrameWork.MenuItem(mm, "Set Scripts folder\xc9", None, self.do_setscriptsfolder)
+		FrameWork.MenuItem(mm, "Editor default settings\xc9", None, self.do_editorprefs)
+		FrameWork.MenuItem(mm, "Set default window font\xc9", None, self.do_setwindowfont)
 		
 		self.openwindowsmenu = Wapplication.Menu(self.menubar, 'Windows')
 		self.makeopenwindowsmenu()
@@ -134,7 +110,7 @@ class PythonIDE(Wapplication.Application):
 				path = os.path.join(os.getcwd(), "Scripts")
 				if not os.path.exists(path):
 					os.mkdir(path)
-					f = open(os.path.join(path, "Place your scripts here"+ELIPSES), "w")
+					f = open(os.path.join(path, "Place your scripts here\xc9"), "w")
 					f.close()
 			fss = macfs.FSSpec(path)
 			self.scriptsfolder = fss.NewAlias()
@@ -147,7 +123,7 @@ class PythonIDE(Wapplication.Application):
 		self.makescriptsmenu()
 	
 	def quitevent(self, theAppleEvent, theReply):
-		from Carbon import AE
+		import AE
 		AE.AEInteractWithUser(50000000)
 		self._quit()
 	
@@ -179,13 +155,11 @@ class PythonIDE(Wapplication.Application):
 		fcreator, ftype = macfs.FSSpec(path).GetCreatorType()
 		if ftype == 'TEXT':
 			self.openscript(path)
-		elif ftype == '\0\0\0\0' and path[-3:] == '.py':
-			self.openscript(path)
 		else:
 			W.Message("Can't open file of type '%s'." % ftype)
 	
 	def getabouttext(self):
-		return "About Python IDE"+ELIPSES
+		return "About Python IDE\xc9"
 	
 	def do_about(self, id, item, window, event):
 		Splash.about()

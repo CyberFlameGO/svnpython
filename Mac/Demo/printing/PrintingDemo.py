@@ -1,7 +1,7 @@
 import Printing
-from Carbon import Qd
-from Carbon import Fm
-from Carbon import Res
+import Qd
+import Fm
+import Res
 
 # some constants
 PostScriptBegin = 190	# Set driver state to PostScript	

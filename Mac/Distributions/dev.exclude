@@ -6,7 +6,6 @@
 *.hqx
 *.idb
 *.pyc
-*.pyo
 *.slb
 *.xMAP
 *.xSYM
@@ -17,4 +16,3 @@
 @*
 CVS
 [(]*[)]
-*~[0-9]

@@ -1,6 +1,6 @@
 """mac_image - Helper routines (hacks) for images"""
 import imgformat
-from Carbon import Qd
+import Qd
 import time
 import struct
 import MacOS

@@ -12,22 +12,6 @@ expressions.
 
 The constants defined in this module are:
 
-\begin{datadesc}{ascii_letters}
-  The concatenation of the \constant{ascii_lowercase} and
-  \constant{ascii_uppercase} constants described below.  This value is
-  not locale-dependent.
-\end{datadesc}
-
-\begin{datadesc}{ascii_lowercase}
-  The lowercase letters \code{'abcdefghijklmnopqrstuvwxyz'}.  This
-  value is not locale-dependent and will not change.
-\end{datadesc}
-
-\begin{datadesc}{ascii_uppercase}
-  The uppercase letters \code{'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}.  This
-  value is not locale-dependent and will not change.
-\end{datadesc}
-
 \begin{datadesc}{digits}
   The string \code{'0123456789'}.
 \end{datadesc}
@@ -38,9 +22,7 @@ The constants defined in this module are:
 
 \begin{datadesc}{letters}
   The concatenation of the strings \constant{lowercase} and
-  \constant{uppercase} described below.  The specific value is
-  locale-dependent, and will be updated when
-  \function{locale.setlocale()} is called.
+  \constant{uppercase} described below.
 \end{datadesc}
 
 \begin{datadesc}{lowercase}
@@ -48,9 +30,7 @@ The constants defined in this module are:
   letters.  On most systems this is the string
   \code{'abcdefghijklmnopqrstuvwxyz'}.  Do not change its definition ---
   the effect on the routines \function{upper()} and
-  \function{swapcase()} is undefined.  The specific value is
-  locale-dependent, and will be updated when
-  \function{locale.setlocale()} is called.
+  \function{swapcase()} is undefined.
 \end{datadesc}
 
 \begin{datadesc}{octdigits}
@@ -73,9 +53,7 @@ The constants defined in this module are:
   letters.  On most systems this is the string
   \code{'ABCDEFGHIJKLMNOPQRSTUVWXYZ'}.  Do not change its definition ---
   the effect on the routines \function{lower()} and
-  \function{swapcase()} is undefined.  The specific value is
-  locale-dependent, and will be updated when
-  \function{locale.setlocale()} is called.
+  \function{swapcase()} is undefined.
 \end{datadesc}
 
 \begin{datadesc}{whitespace}
@@ -100,11 +78,11 @@ The functions defined in this module are:
   this behaves identical to the built-in function
   \function{float()}\bifuncindex{float} when passed a string.
 
-  \note{When passing in a string, values for NaN\index{NaN}
+  \strong{Note:} When passing in a string, values for NaN\index{NaN}
   and Infinity\index{Infinity} may be returned, depending on the
   underlying C library.  The specific set of strings accepted which
   cause these values to be returned depends entirely on the C library
-  and is known to vary.}
+  and is known to vary.
 \end{funcdesc}
 
 \begin{funcdesc}{atoi}{s\optional{, base}}
@@ -194,10 +172,10 @@ The functions defined in this module are:
   each character in \var{from} into the character at the same position
   in \var{to}; \var{from} and \var{to} must have the same length.
 
-  \warning{Don't use strings derived from \constant{lowercase}
+  \strong{Warning:} don't use strings derived from \constant{lowercase}
   and \constant{uppercase} as arguments; in some locales, these don't have
   the same length.  For case conversions, always use
-  \function{lower()} and \function{upper()}.}
+  \function{lower()} and \function{upper()}.
 \end{funcdesc}
 
 \begin{funcdesc}{split}{s\optional{, sep\optional{, maxsplit}}}

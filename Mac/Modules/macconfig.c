@@ -80,13 +80,15 @@ extern void initerrno();
 extern void initpcre();
 extern void initunicodedata();
 extern void init_codecs();
-extern void initNav();
-extern void inithfsplus();
 #ifdef USE_MACCTB
 extern void initctb();
 #endif
 #ifdef USE_MACSPEECH
 extern void initmacspeech();
+#endif
+#ifdef USE_MACTCP
+extern void initmacdnr();
+extern void initmactcp();
 #endif
 #ifdef USE_IC
 extern void initicglue();
@@ -95,35 +97,34 @@ extern void initicglue();
 #ifndef USE_CORE_TOOLBOX
 #define USE_CORE_TOOLBOX
 #endif
-extern void init_App();
-extern void init_Fm();
-extern void init_Help();
-extern void init_Icn();
-extern void init_List();
-extern void init_Mlte();
-extern void init_Qdoffs();
-extern void init_Snd();
-extern void init_Sndihooks();
-extern void init_Scrap();
-extern void init_TE();
+extern void initApp();
+extern void initFm();
+extern void initHelp();
+extern void initIcn();
+extern void initList();
+extern void initQdoffs();
+extern void initSnd();
+extern void initSndihooks();
+extern void initScrap();
+extern void initTE();
 extern void initColorPicker();
 extern void initPrinting();
-extern void init_CF();
 #endif
 #ifdef USE_CORE_TOOLBOX
-extern void init_AE();
-extern void init_Ctl();
-extern void init_Dlg();
-extern void init_Drag();
-extern void init_Evt();
-extern void init_Menu();
-extern void init_Qd();
-extern void init_Res();
-extern void init_Win();
+extern void initAE();
+extern void initCtl();
+extern void initDlg();
+extern void initDrag();
+extern void initEvt();
+extern void initMenu();
+extern void initQd();
+extern void initRes();
+extern void initWin();
+extern void initNav();
 #endif
 #ifdef USE_QT
-extern void init_Cm();
-extern void init_Qt();
+extern void initCm();
+extern void initQt();
 #endif
 
 #ifdef USE_IMG
@@ -157,9 +158,6 @@ extern void initzlib();
 #endif
 #ifdef WITH_THREAD
 extern void initthread();
-#endif
-#ifdef WITH_HOTSHOT
-extern void init_hotshot();
 #endif
 #ifdef USE_PYEXPAT
 extern void initpyexpat();
@@ -209,7 +207,6 @@ struct _inittab _PyImport_Inittab[] = {
 	{"unicodedata", initunicodedata},
 	{"_codecs", init_codecs},
 	{"sha", initsha},
-	{"Nav", initNav},
 #ifdef USE_MACCTB
 	{"ctb", initctb},
 #endif
@@ -217,47 +214,45 @@ struct _inittab _PyImport_Inittab[] = {
 #ifdef USE_MACSPEECH
 	{"macspeech", initmacspeech},
 #endif
+#ifdef USE_MACTCP
+	{"macdnr", initmacdnr},
+	{"mactcp", initmactcp},
+#endif
 #ifdef USE_IC
 	{"icglue", initicglue},
 #endif
 #ifdef USE_CORE_TOOLBOX
-	{"_AE", init_AE},
-	{"_Ctl", init_Ctl},
-	{"_Dlg", init_Dlg},
-	{"_Drag", init_Drag},
-	{"_Evt", init_Evt},
-	{"_Menu", init_Menu},
-	{"_Qd", init_Qd},
-	{"_Win", init_Win},
-	{"_Res", init_Res},
+	{"AE", initAE},
+	{"Ctl", initCtl},
+	{"Dlg", initDlg},
+	{"Drag", initDrag},
+	{"Evt", initEvt},
+	{"Menu", initMenu},
+	{"Nav", initNav},
+	{"Qd", initQd},
+	{"Win", initWin},
+	{"Res", initRes},
 #endif
 #ifdef USE_TOOLBOX
-	{"_App", init_App},
-	{"_Fm", init_Fm},
-	{"_Icn", init_Icn},
-	{"_List", init_List},
-	{"_Mlte", init_Mlte},
-	{"_Qdoffs", init_Qdoffs},
-	{"_Snd", init_Snd},
-	{"_Sndihooks", init_Sndihooks},
+	{"App", initApp},
+	{"Fm", initFm},
+	{"Icn", initIcn},
+	{"List", initList},
+	{"Qdoffs", initQdoffs},
+	{"Snd", initSnd},
+	{"Sndihooks", initSndihooks},
 	/* Carbon scrap manager is completely different */
-	{"_Scrap", init_Scrap},
-	{"_TE", init_TE},
+	{"Scrap", initScrap},
+	{"TE", initTE},
 	{"ColorPicker", initColorPicker},
 #if !TARGET_API_MAC_CARBON
-	{"_Help", init_Help},
+	{"Help", initHelp},
 	{"Printing", initPrinting},
 #endif
-#if TARGET_API_MAC_CARBON
-	{"_CF", init_CF},
 #endif
-#if TARGET_API_MAC_CARBON
-	{"hfsplus", inithfsplus},
-#endif
-#endif /* USE_TOOLBOX */
 #ifdef USE_QT
-	{"_Cm", init_Cm},
-	{"_Qt", init_Qt},
+	{"Cm", initCm},
+	{"Qt", initQt},
 #endif
 #ifdef USE_IMG
 	{"imgcolormap",	initimgcolormap},
@@ -291,9 +286,6 @@ struct _inittab _PyImport_Inittab[] = {
 #ifdef WITH_THREAD
 	{"thread",	initthread},
 #endif
-#ifdef WITH_HOTSHOT
-	{"_hotshot",	init_hotshot},
-#endif
 #ifdef USE_PYEXPAT
 	{"pyexpat", initpyexpat},
 #endif
@@ -316,7 +308,6 @@ struct _inittab _PyImport_Inittab[] = {
 	/* These entries are here for sys.builtin_module_names */
 	{"__main__", NULL},
 	{"__builtin__", NULL},
-	{"exceptions", NULL},
 	{"sys", NULL},
 
 	/* Sentinel */

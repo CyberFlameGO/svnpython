@@ -1,16 +1,12 @@
 import sys
 import getopt
 
-from compiler import compileFile, visitor
-
-import profile
+from compiler import compile, visitor
 
 def main():
     VERBOSE = 0
     DISPLAY = 0
-    PROFILE = 0
-    CONTINUE = 0
-    opts, args = getopt.getopt(sys.argv[1:], 'vqdcp')
+    opts, args = getopt.getopt(sys.argv[1:], 'vqd')
     for k, v in opts:
         if k == '-v':
             VERBOSE = 1
@@ -23,30 +19,13 @@ def main():
             sys.stdout = f
         if k == '-d':
             DISPLAY = 1
-        if k == '-c':
-            CONTINUE = 1
-        if k == '-p':
-            PROFILE = 1
     if not args:
         print "no files to compile"
     else:
         for filename in args:
             if VERBOSE:
                 print filename
-            try:
-                if PROFILE:
-                    profile.run('compileFile(%s, %s)' % (`filename`,
-                                                         `DISPLAY`),
-                                filename + ".prof")
-                else:
-                    compileFile(filename, DISPLAY)
-                    
-            except SyntaxError, err:
-                print err
-                if err.lineno is not None:
-                    print err.lineno
-                if not CONTINUE:
-                    sys.exit(-1)
+            compile(filename, DISPLAY)
 
 if __name__ == "__main__":
     main()

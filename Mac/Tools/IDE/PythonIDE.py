@@ -4,30 +4,33 @@
 # it like the "normal" interpreter.
 
 __version__ = '1.0.1'
-import sys
-import os
+
 
 def init():
 	import MacOS
-	if hasattr(MacOS, 'EnableAppswitch'):
-		MacOS.EnableAppswitch(-1)
+	MacOS.EnableAppswitch(-1)
 	
-	from Carbon import Qd, QuickDraw
+	import Qd, QuickDraw
 	Qd.SetCursor(Qd.GetCursor(QuickDraw.watchCursor).data)
 	
-	import macresource
-	import sys, os
-	macresource.need('DITL', 468, "PythonIDE.rsrc")
-	widgetrespathsegs = [sys.exec_prefix, "Mac", "Tools", "IDE", "Widgets.rsrc"]
-	widgetresfile = os.path.join(*widgetrespathsegs)
-	refno = macresource.need('CURS', 468, widgetresfile)
-	if refno:
-		# We're not a fullblown application
-		idepathsegs = [sys.exec_prefix, "Mac", "Tools", "IDE"]
-		ide_path = os.path.join(*idepathsegs)
+	import Res, sys, os
+	try:
+		Res.GetResource('DITL', 468)
+	except Res.Error:
+		# we're not an applet
+		Res.FSpOpenResFile(os.path.join(sys.exec_prefix, ":Mac:Tools:IDE:PythonIDE.rsrc"), 1)
+		Res.FSpOpenResFile(os.path.join(sys.exec_prefix, ":Mac:Tools:IDE:Widgets.rsrc"), 1)
+		ide_path = os.path.join(sys.exec_prefix, ":Mac:Tools:IDE")
 	else:
-		# We are a fully frozen application
-		ide_path = sys.argv[0]
+		# we're an applet
+		try:
+			Res.GetResource('CURS', 468)
+		except Res.Error:
+			Res.FSpOpenResFile(os.path.join(sys.exec_prefix, ":Mac:Tools:IDE:Widgets.rsrc"), 1)
+			ide_path = os.path.join(sys.exec_prefix, ":Mac:Tools:IDE")
+		else:
+			# we're a full blown applet
+			ide_path = sys.argv[0]
 	if ide_path not in sys.path:
 		sys.path.insert(0, ide_path)
 

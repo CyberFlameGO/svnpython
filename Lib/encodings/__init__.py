@@ -28,45 +28,27 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 """#"
 
-import codecs,exceptions
+import codecs,aliases
 
 _cache = {}
 _unknown = '--unknown--'
-_import_tail = ['*']
-
-class CodecRegistryError(exceptions.LookupError,
-                         exceptions.SystemError):
-    pass
 
 def search_function(encoding):
     
     # Cache lookup
-    entry = _cache.get(encoding, _unknown)
+    entry = _cache.get(encoding,_unknown)
     if entry is not _unknown:
         return entry
 
-    # Import the module:
-    #
-    # First look in the encodings package, then try to lookup the
-    # encoding in the aliases mapping and retry the import using the
-    # default import module lookup scheme with the alias name.
-    #
+    # Import the module
     modname = encoding.replace('-', '_')
+    modname = aliases.aliases.get(modname,modname)
     try:
-        mod = __import__('encodings.' + modname,
-                         globals(), locals(), _import_tail)
+        mod = __import__(modname,globals(),locals(),'*')
     except ImportError,why:
-        import aliases
-        modname = aliases.aliases.get(modname, modname)
-        try:
-            mod = __import__(modname, globals(), locals(), _import_tail)
-        except ImportError,why:
-            mod = None
-    if mod is None:
-        # Cache misses
+        # cache misses
         _cache[encoding] = None
         return None
-        
     
     # Now ask the module for the registry entry
     try:
@@ -74,14 +56,14 @@ def search_function(encoding):
     except AttributeError:
         entry = ()
     if len(entry) != 4:
-        raise CodecRegistryError,\
-              'module "%s" (%s) failed to register' % \
-              (mod.__name__, mod.__file__)
+        raise SystemError,\
+              'module "%s.%s" failed to register' % \
+              (__name__,modname)
     for obj in entry:
         if not callable(obj):
-            raise CodecRegistryError,\
-                  'incompatible codecs in module "%s" (%s)' % \
-                  (mod.__name__, mod.__file__)
+            raise SystemError,\
+                  'incompatible codecs in module "%s.%s"' % \
+                  (__name__,modname)
 
     # Cache the codec registry entry
     _cache[encoding] = entry
@@ -93,7 +75,6 @@ def search_function(encoding):
     except AttributeError:
         pass
     else:
-        import aliases
         for alias in codecaliases:
             if not aliases.aliases.has_key(alias):
                 aliases.aliases[alias] = modname

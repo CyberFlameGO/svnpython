@@ -91,8 +91,8 @@ static PyObject *turnon_sigfpe            (PyObject *self,PyObject *args);
 static PyObject *turnoff_sigfpe           (PyObject *self,PyObject *args);
 
 static PyMethodDef fpectl_methods[] = {
-    {"turnon_sigfpe",		 (PyCFunction) turnon_sigfpe,		 METH_VARARGS},
-    {"turnoff_sigfpe",		 (PyCFunction) turnoff_sigfpe, 	         METH_VARARGS},
+    {"turnon_sigfpe",		 (PyCFunction) turnon_sigfpe,		 1},
+    {"turnoff_sigfpe",		 (PyCFunction) turnoff_sigfpe, 	         1},
     {0,0}
 };
 
@@ -209,6 +209,12 @@ static void fpe_reset(Sigfunc *handler)
 #else
     __setfpucw(0x1372);
 #endif
+    PyOS_setsig(SIGFPE, handler);
+
+/*-- NeXT -----------------------------------------------------------------*/
+#elif defined(NeXT) && defined(m68k) && defined(__GNUC__)
+    /* NeXT needs explicit csr set to generate SIGFPE */
+    asm("fmovel     #0x1400,fpcr");   /* set OVFL and ZD bits */
     PyOS_setsig(SIGFPE, handler);
 
 /*-- Microsoft Windows, NT ------------------------------------------------*/

@@ -1,5 +1,5 @@
 \section{\module{marshal} ---
-         Internal Python object serialization}
+         Alternate Python object serialization}
 
 \declaremodule{builtin}{marshal}
 \modulesynopsis{Convert Python objects to streams of bytes and back
@@ -23,13 +23,7 @@ This is not a general ``persistence'' module.  For general persistence
 and transfer of Python objects through RPC calls, see the modules
 \refmodule{pickle} and \refmodule{shelve}.  The \module{marshal} module exists
 mainly to support reading and writing the ``pseudo-compiled'' code for
-Python modules of \file{.pyc} files.  Therefore, the Python
-maintainers reserve the right to modify the marshal format in backward
-incompatible ways should the need arise.  If you're serializing and
-de-serializing Python objects, use the \module{pickle} module.  There
-may also be unknown security problems with
-\module{marshal}\footnote{As opposed to the known security issues in
-the \module{pickle} module!}.
+Python modules of \file{.pyc} files.
 \refstmodindex{pickle}
 \refstmodindex{shelve}
 \obindex{code}
@@ -45,14 +39,19 @@ therein are themselves supported; and recursive lists and dictionaries
 should not be written (they will cause infinite loops).
 
 \strong{Caveat:} On machines where C's \code{long int} type has more than
-32 bits (such as the DEC Alpha), it is possible to create plain Python
-integers that are longer than 32 bits.
-If such an integer is marshaled and read back in on a machine where
-C's \code{long int} type has only 32 bits, a Python long integer object
-is returned instead.  While of a different type, the numeric value is
-the same.  (This behavior is new in Python 2.2.  In earlier versions,
-all but the least-significant 32 bits of the value were lost, and a
-warning message was printed.)
+32 bits (such as the DEC Alpha), it
+is possible to create plain Python integers that are longer than 32
+bits.  Since the current \module{marshal} module uses 32 bits to
+transfer plain Python integers, such values are silently truncated.
+This particularly affects the use of very long integer literals in
+Python modules --- these will be accepted by the parser on such
+machines, but will be silently be truncated when the module is read
+from the \file{.pyc} instead.\footnote{
+  A solution would be to refuse such literals in the parser,
+  since they are inherently non-portable.  Another solution would be to
+  let the \module{marshal} module raise an exception when an integer
+  value would be truncated.  At least one of these solutions will be
+  implemented in a future version.}
 
 There are functions that read/write files as well as functions
 operating on strings.
@@ -78,9 +77,9 @@ The module defines these functions:
   \exception{TypeError}.  The file must be an open file object opened
   in binary mode (\code{'rb'} or \code{'r+b'}).
 
-  \warning{If an object containing an unsupported type was
+  \strong{Warning:} If an object containing an unsupported type was
   marshalled with \function{dump()}, \function{load()} will substitute
-  \code{None} for the unmarshallable type.}
+  \code{None} for the unmarshallable type.
 \end{funcdesc}
 
 \begin{funcdesc}{dumps}{value}

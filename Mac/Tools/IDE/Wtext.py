@@ -1,16 +1,23 @@
-from Carbon import Evt, Events, Fm, Fonts
-from Carbon import Qd, Res, Scrap
-from Carbon import TE, TextEdit, Win
-from Carbon import App
-from Carbon.Appearance import kThemeStateActive, kThemeStateInactive
+import Qd
+import TE
+import Fm
 import waste
 import WASTEconst
+import Res
+import Evt
+import Events
+import Scrap
+import string
+
+import Win
 import Wbase
 import Wkeys
 import Wcontrols
 import PyFontify
-import string
-from types import TupleType, StringType
+from types import *
+import Fonts
+import TextEdit
+
 
 
 class TextBox(Wbase.Widget):
@@ -57,39 +64,25 @@ class TextBox(Wbase.Widget):
 class _ScrollWidget:
 	
 	# to be overridden
-	def getscrollrects(self):
-		"""Return (destrect, viewrect)."""
+	def getscrollbarvalues(self):
 		return None, None
 	
 	# internal method
-	
 	def updatescrollbars(self):
-		(dl, dt, dr, db), (vl, vt, vr, vb) = self.getscrollrects()
+		vx, vy = self.getscrollbarvalues()
 		if self._parent._barx:
-			viewwidth = vr - vl
-			destwidth = dr - dl
-			bar = self._parent._barx
-			bar.setmax(destwidth - viewwidth)
-			
-			# MacOS 8.1 doesn't automatically disable
-			# scrollbars whose max <= min
-			bar.enable(destwidth > viewwidth)
-			
-			bar.setviewsize(viewwidth)
-			bar.set(vl - dl)
+			if vx <> None:
+				self._parent._barx.enable(1)
+				self._parent._barx.set(vx)
+			else:
+				self._parent._barx.enable(0)
 		if self._parent._bary:
-			viewheight = vb - vt
-			destheight = db - dt
-			bar = self._parent._bary
-			bar.setmax(destheight - viewheight)
-			
-			# MacOS 8.1 doesn't automatically disable
-			# scrollbars whose max <= min
-			bar.enable(destheight > viewheight)
-			
-			bar.setviewsize(viewheight)
-			bar.set(vt - dt)
-
+			if vy <> None:
+				self._parent._bary.enable(1)
+				self._parent._bary.set(vy)
+			else:
+				self._parent._bary.enable(0)
+	
 
 UNDOLABELS = [	# Indexed by WEGetUndoInfo() value
 	None, "", "typing", "Cut", "Paste", "Clear", "Drag", "Style",
@@ -112,7 +105,6 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		self.temptext = text
 		self.ted = None
 		self.selection = None
-		self.oldselection = None
 		self._callback = callback
 		self.changed = 0
 		self.selchanged = 0
@@ -163,13 +155,6 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		self.temptext = None
 		Wbase.SelectableWidget.close(self)
 	
-	def textchanged(self, all=0):
-		self.changed = 1
-	
-	def selectionchanged(self):
-		self.selchanged = 1
-		self.oldselection = self.getselection()
-	
 	def gettabsettings(self):
 		return self.tabsettings
 	
@@ -190,7 +175,7 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 			self.ted.WEUpdate(port.visRgn)
 	
 	def getfontsettings(self):
-		from Carbon import Res
+		import Res
 		(font, style, size, color) = self.ted.WEGetRunInfo(0)[4]
 		font = Fm.GetFontName(font)
 		return (font, style, size, color)
@@ -223,14 +208,11 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		viewrect = self.ted.WEGetViewRect()
 		Qd.EraseRect(viewrect)
 		self.ted.WEUpdate(self._parentwindow.wid.GetWindowPort().visRgn)
-		self.selectionchanged()
+		self.selchanged = 1
 		self.updatescrollbars()
 	
 	def adjust(self, oldbounds):
 		self.SetPort()
-		# Note: if App.DrawThemeEditTextFrame is ever used, it will be necessary
-		# to unconditionally outset the invalidated rectangles, since Appearance
-		# frames are drawn outside the bounds.
 		if self._selected and self._parentwindow._hasselframes:
 			self.GetWindow().InvalWindowRect(Qd.InsetRect(oldbounds, -3, -3))
 			self.GetWindow().InvalWindowRect(Qd.InsetRect(self._bounds, -3, -3))
@@ -253,7 +235,7 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 	
 	def selectall(self):
 		self.ted.WESetSelection(0, self.ted.WEGetTextLength())
-		self.selectionchanged()
+		self.selchanged = 1
 		self.updatescrollbars()
 	
 	def selectline(self, lineno, charoffset = 0):
@@ -264,7 +246,7 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		# Let's fool Waste by initially selecting one char less:
 		self.ted.WESetSelection(newselstart + charoffset, newselend-1)
 		self.ted.WESetSelection(newselstart + charoffset, newselend)
-		self.selectionchanged()
+		self.selchanged = 1
 		self.updatescrollbars()
 	
 	def getselection(self):
@@ -274,7 +256,7 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 			return self.selection
 	
 	def setselection(self, selstart, selend):
-		self.selectionchanged()
+		self.selchanged = 1
 		if self.ted:
 			self.ted.WESetSelection(selstart, selend)
 			self.ted.WESelView()
@@ -302,12 +284,12 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		if oldselstart <> newselstart or  oldselend <> newselend:
 			self.ted.WESetSelection(newselstart, newselend)
 			self.updatescrollbars()
-		self.selectionchanged()
+		self.selchanged = 1
 	
 	def insert(self, text):
 		self.ted.WEInsert(text, None, None)
-		self.textchanged()
-		self.selectionchanged()
+		self.changed = 1
+		self.selchanged = 1
 	
 	# text
 	def set(self, text):
@@ -324,8 +306,8 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 			Qd.RectRgn(rgn, viewrect)
 			Qd.EraseRect(viewrect)
 			self.draw(rgn)
+			#self.GetWindow().InvalWindowRect(self.ted.WEGetViewRect())
 			self.updatescrollbars()
-			self.textchanged(1)
 	
 	def get(self):
 		if not self._parent:
@@ -339,9 +321,9 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		if self._enabled and not modifiers & Events.cmdKey or char in Wkeys.arrowkeys:
 			self.ted.WEKey(ord(char), modifiers)
 			if char not in Wkeys.navigationkeys:
-				self.textchanged()
+				self.changed = 1
 			if char not in Wkeys.scrollkeys:
-				self.selectionchanged()
+				self.selchanged = 1
 			self.updatescrollbars()
 			if self._callback:
 				Wbase.CallbackCall(self._callback, 0, char, modifiers)
@@ -350,7 +332,7 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		if not self._enabled:
 			return
 		self.ted.WEClick(point, modifiers, Evt.TickCount())
-		self.selectionchanged()
+		self.selchanged = 1
 		self.updatescrollbars()
 		return 1
 	
@@ -364,19 +346,12 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 	
 	def activate(self, onoff):
 		self._activated = onoff
-		if self._visible:
-			self.SetPort()
-			
-			# DISABLED!  There are too many places where it is assumed that
-			# the frame of an EditText item is 1 pixel, inside the bounds.
-			#state = [kThemeStateActive, kThemeStateInactive][not onoff]
-			#App.DrawThemeEditTextFrame(Qd.InsetRect(self._bounds, 1, 1), state)
-			
+		if self._selected and self._visible:
+			if onoff:
+				self.ted.WEActivate()
+			else:
+				self.ted.WEDeactivate()
 			if self._selected:
-				if onoff:
-					self.ted.WEActivate()
-				else:
-					self.ted.WEDeactivate()
 				self.drawselframe(onoff)
 	
 	def select(self, onoff, isclick = 0):
@@ -396,15 +371,9 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 			if not visRgn:
 				visRgn = self._parentwindow.wid.GetWindowPort().visRgn
 			self.ted.WEUpdate(visRgn)
-
-			# DISABLED!  There are too many places where it is assumed that
-			# the frame of an EditText item is 1 pixel, inside the bounds.
-			#state = [kThemeStateActive, kThemeStateInactive][not self._activated]
-			#App.DrawThemeEditTextFrame(Qd.InsetRect(self._bounds, 1, 1), state)
-			Qd.FrameRect(self._bounds)
-
 			if self._selected and self._activated:
 				self.drawselframe(1)
+			Qd.FrameRect(self._bounds)
 	
 	# scrolling
 	def scrollpageup(self):
@@ -417,23 +386,20 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 	
 	def scrolltop(self):
 		if self._parent._bary and self._parent._bary._enabled:
-			self.vscroll(self._parent._bary.getmin())
+			self.vscroll(0)
 		if self._parent._barx and self._parent._barx._enabled:
-			self.hscroll(self._parent._barx.getmin())
+			self.hscroll(0)
 	
 	def scrollbottom(self):
 		if self._parent._bary and self._parent._bary._enabled:
-			self.vscroll(self._parent._bary.getmax())
+			self.vscroll(32767)
 	
 	# menu handlers
 	def domenu_copy(self, *args):
 		selbegin, selend = self.ted.WEGetSelection()
 		if selbegin == selend:
 			return
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		self.ted.WECopy()
 		self.updatescrollbars()
 	
@@ -441,15 +407,12 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		selbegin, selend = self.ted.WEGetSelection()
 		if selbegin == selend:
 			return
-		if hasattr(Scrap, 'ZeroScrap'):
-			Scrap.ZeroScrap()
-		else:
-			Scrap.ClearCurrentScrap()
+		Scrap.ZeroScrap()
 		self.ted.WECut()
 		self.updatescrollbars()
 		self.selview()
-		self.textchanged()
-		self.selectionchanged()
+		self.changed = 1
+		self.selchanged = 1
 		if self._callback:
 			Wbase.CallbackCall(self._callback, 0, "", None)
 	
@@ -459,8 +422,8 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		self.selview()
 		self.ted.WEPaste()
 		self.updatescrollbars()
-		self.textchanged()
-		self.selectionchanged()
+		self.changed = 1
+		self.selchanged = 1
 		if self._callback:
 			Wbase.CallbackCall(self._callback, 0, "", None)
 	
@@ -468,8 +431,8 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		self.ted.WEDelete()
 		self.selview()
 		self.updatescrollbars()
-		self.textchanged()
-		self.selectionchanged()
+		self.changed = 1
+		self.selchanged = 1
 		if self._callback:
 			Wbase.CallbackCall(self._callback, 0, "", None)
 	
@@ -479,8 +442,8 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 			return
 		self.ted.WEUndo()
 		self.updatescrollbars()
-		self.textchanged()
-		self.selectionchanged()
+		self.changed = 1
+		self.selchanged = 1
 		if self._callback:
 			Wbase.CallbackCall(self._callback, 0, "", None)
 	
@@ -507,15 +470,20 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		self.selectall()
 	
 	# private
-	def getscrollrects(self):
-		return self.ted.WEGetDestRect(), self.ted.WEGetViewRect()
+	def getscrollbarvalues(self):
+		dr = self.ted.WEGetDestRect()
+		vr = self.ted.WEGetViewRect()
+		vx = Wcontrols._scalebarvalue(dr[0], dr[2], vr[0], vr[2])
+		vy = Wcontrols._scalebarvalue(dr[1], dr[3], vr[1], vr[3])
+		return vx, vy
 	
 	def vscroll(self, value):
 		lineheight = self.ted.WEGetHeight(0, 1)
 		dr = self.ted.WEGetDestRect()
 		vr = self.ted.WEGetViewRect()
+		destheight = dr[3] - dr[1]
 		viewheight = vr[3] - vr[1]
-		maxdelta = vr[1] - dr[1]
+		viewoffset = maxdelta = vr[1] - dr[1]
 		mindelta = vr[3] - dr[3]
 		if value == "+":
 			delta = lineheight
@@ -526,7 +494,11 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		elif value == "--":
 			delta = lineheight - viewheight
 		else:	# in thumb
-			delta = vr[1] - dr[1] - value
+			cur = (32767L * viewoffset) / (destheight - viewheight)
+			delta = (cur-value)*(destheight - viewheight)/32767
+			if abs(delta - viewoffset) <=2:
+				# compensate for irritating rounding error
+				delta = viewoffset
 		delta = min(maxdelta, delta)
 		delta = max(mindelta, delta)
 		self.ted.WEScroll(0, delta)
@@ -548,12 +520,11 @@ class EditText(Wbase.SelectableWidget, _ScrollWidget):
 		elif value == "--":
 			delta = 0.5 * (vr[0] - vr[2])
 		else:	# in thumb
-			delta = vr[0] - dr[0] - value
-			#cur = (32767 * viewoffset) / (destwidth - viewwidth)
-			#delta = (cur-value)*(destwidth - viewwidth)/32767
-			#if abs(delta - viewoffset) <=2:
-			#	# compensate for irritating rounding error
-			#	delta = viewoffset
+			cur = (32767 * viewoffset) / (destwidth - viewwidth)
+			delta = (cur-value)*(destwidth - viewwidth)/32767
+			if abs(delta - viewoffset) <=2:
+				# compensate for irritating rounding error
+				delta = viewoffset
 		delta = min(maxdelta, delta)
 		delta = max(mindelta, delta)
 		self.ted.WEScroll(delta, 0)
@@ -635,24 +606,10 @@ class TextEditor(EditText):
 			if self._selected and self._activated:
 				self.drawselframe(1)
 
-	def activate(self, onoff):
-		self._activated = onoff
-		if self._visible:
-			self.SetPort()
-			# doesn't draw frame, as EditText.activate does
-			if self._selected:
-				if onoff:
-					self.ted.WEActivate()
-				else:
-					self.ted.WEDeactivate()
-				self.drawselframe(onoff)
-
 
 import re
 commentPat = re.compile("[ \t]*(#)")
 indentPat = re.compile("[ \t]*")
-kStringColor = (0, 0x7fff, 0)
-kCommentColor = (0, 0, 0xb000)
 
 
 class PyEditor(TextEditor):
@@ -670,111 +627,10 @@ class PyEditor(TextEditor):
 		self.bind("cmd]", self.domenu_shiftright)
 		self.bind("cmdshift[", self.domenu_uncomment)
 		self.bind("cmdshift]", self.domenu_comment)
-		self.bind("cmdshiftd", self.alldirty)
 		self.file = file	# only for debugger reference
 		self._debugger = debugger
 		if debugger:
 			debugger.register_editor(self, self.file)
-		self._dirty = (0, None)
-		self.do_fontify = 0
-	
-	#def open(self):
-	#	TextEditor.open(self)
-	#	if self.do_fontify:
-	#		self.fontify()
-	#	self._dirty = (None, None)
-	
-	def _getflags(self):
-		flags = (WASTEconst.weDoDrawOffscreen | WASTEconst.weDoUseTempMem |
-				WASTEconst.weDoAutoScroll | WASTEconst.weDoOutlineHilite)
-		if self.readonly:
-			flags = flags | WASTEconst.weDoReadOnly
-		else:
-			flags = flags | WASTEconst.weDoUndo
-		return flags
-	
-	def textchanged(self, all=0):
-		self.changed = 1
-		if all:
-			self._dirty = (0, None)
-			return
-		oldsel = self.oldselection
-		sel = self.getselection()
-		if not sel:
-			# XXX what to do?
-			return
-		selstart, selend = sel
-		selstart, selend = min(selstart, selend), max(selstart, selend)
-		if oldsel:
-			oldselstart, oldselend = min(oldsel), max(oldsel)
-			selstart, selend = min(selstart, oldselstart), max(selend, oldselend)
-		startline = self.offsettoline(selstart)
-		endline = self.offsettoline(selend)
-		selstart, _ = self.ted.WEGetLineRange(startline)
-		_, selend = self.ted.WEGetLineRange(endline)
-		if selstart > 0:
-			selstart = selstart - 1
-		self._dirty = (selstart, selend)
-	
-	def idle(self):
-		self.SetPort()
-		self.ted.WEIdle()
-		if not self.do_fontify:
-			return
-		start, end = self._dirty
-		if start is None:
-			return
-		textLength = self.ted.WEGetTextLength()
-		if end is None:
-			end = textLength
-		if start >= end:
-			self._dirty = (None, None)
-		else:
-			self.fontify(start, end)
-			self._dirty = (None, None)
-	
-	def alldirty(self, *args):
-		self._dirty = (0, None)
-	
-	def fontify(self, start=0, end=None):
-		#W.SetCursor('watch')
-		if self.readonly:
-			self.ted.WEFeatureFlag(WASTEconst.weFReadOnly, 0)
-		self.ted.WEFeatureFlag(WASTEconst.weFOutlineHilite, 0)
-		self.ted.WEDeactivate()
-		self.ted.WEFeatureFlag(WASTEconst.weFAutoScroll, 0)
-		self.ted.WEFeatureFlag(WASTEconst.weFUndo, 0)
-		pytext = self.get().replace("\r", "\n")
-		if end is None:
-			end = len(pytext)
-		else:
-			end = min(end, len(pytext))
-		selstart, selend = self.ted.WEGetSelection()
-		self.ted.WESetSelection(start, end)
-		self.ted.WESetStyle(WASTEconst.weDoFace | WASTEconst.weDoColor, 
-				(0, 0, 12, (0, 0, 0)))
-		
-		tags = PyFontify.fontify(pytext, start, end)
-		styles = {
-			'string': (WASTEconst.weDoColor, (0, 0, 0, kStringColor)),
-			'keyword': (WASTEconst.weDoFace, (0, 1, 0, (0, 0, 0))),
-			'comment': (WASTEconst.weDoFace | WASTEconst.weDoColor, (0, 0, 0, kCommentColor)),
-			'identifier': (WASTEconst.weDoColor, (0, 0, 0, (0xbfff, 0, 0)))
-		}
-		setselection = self.ted.WESetSelection
-		setstyle = self.ted.WESetStyle
-		for tag, start, end, sublist in tags:
-			setselection(start, end)
-			mode, style = styles[tag]
-			setstyle(mode, style)
-		self.ted.WESetSelection(selstart, selend)
-		self.SetPort()
-		self.ted.WEFeatureFlag(WASTEconst.weFAutoScroll, 1)
-		self.ted.WEFeatureFlag(WASTEconst.weFUndo, 1)
-		self.ted.WEActivate()
-		self.ted.WEFeatureFlag(WASTEconst.weFOutlineHilite, 1)
-		if self.readonly:
-			self.ted.WEFeatureFlag(WASTEconst.weFReadOnly, 1)
 	
 	def domenu_shiftleft(self):
 		self.expandselection()
@@ -930,8 +786,8 @@ class PyEditor(TextEditor):
 		else:
 			self.ted.WEKey(ord(char), modifiers)
 		if char not in Wkeys.navigationkeys:
-			self.textchanged()
-		self.selectionchanged()
+			self.changed = 1
+		self.selchanged = 1
 		self.updatescrollbars()
 	
 	def balanceparens(self, char):
@@ -965,7 +821,6 @@ class PyEditor(TextEditor):
 					if autoscroll:
 						self.ted.WEFeatureFlag(WASTEconst.weFAutoScroll, 0)
 					self.ted.WESetSelection(count, count + 1)
-					Qd.QDFlushPortBuffer(self._parentwindow.wid, None)  # needed under OSX
 					time.sleep(0.2)
 					self.ted.WESetSelection(selstart, selend)
 					if autoscroll:

@@ -41,13 +41,8 @@ Copyright (C) 1994 Steen Lumholt.
 #define MAC_TCL
 #endif
 
-#ifdef TK_FRAMEWORK
-#include <Tcl/tcl.h>
-#include <Tk/tk.h>
-#else
 #include <tcl.h>
 #include <tk.h>
-#endif
 
 #define TKMAJORMINOR (TK_MAJOR_VERSION*1000 + TK_MINOR_VERSION)
 
@@ -188,9 +183,16 @@ int TkMacConvertEvent(EventRecord *eventPtr);
 
 staticforward int PyMacConvertEvent(EventRecord *eventPtr);
 
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
 #include <SIOUX.h>
 extern int SIOUXIsAppWindow(WindowPtr);
 
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
 #endif /* macintosh */
 
 #ifndef FREECAST
@@ -260,7 +262,6 @@ AsString(PyObject *value, PyObject *tmp)
 {
 	if (PyString_Check(value))
 		return PyString_AsString(value);
-#ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(value)) {
 		PyObject *v = PyUnicode_AsUTF8String(value);
 		if (v == NULL)
@@ -272,7 +273,6 @@ AsString(PyObject *value, PyObject *tmp)
 		Py_DECREF(v);
 		return PyString_AsString(v);
 	}
-#endif
 	else {
 		PyObject *v = PyObject_Str(value);
 		if (v == NULL)
@@ -459,7 +459,6 @@ Tkapp_New(char *screenName, char *baseName, char *className, int interactive)
 	ClearMenuBar();
 	TkMacInitMenus(v->interp);
 #endif
-
 	/* Delete the 'exit' command, which can screw things up */
 	Tcl_DeleteCommand(v->interp, "exit");
 
@@ -528,7 +527,6 @@ AsObj(PyObject *value)
 		ckfree(FREECAST argv);
 		return result;
 	}
-#ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(value)) {
 #if TKMAJORMINOR <= 8001
 		/* In Tcl 8.1 we must use UTF-8 */
@@ -551,7 +549,6 @@ AsObj(PyObject *value)
 					 PyUnicode_GET_SIZE(value));
 #endif /* TKMAJORMINOR > 8001 */
 	}
-#endif
 	else {
 		PyObject *v = PyObject_Str(value);
 		if (!v)
@@ -626,16 +623,13 @@ Tkapp_Call(PyObject *self, PyObject *args)
 		   so would confuse applications that expect a string. */
 		char *s = Tcl_GetStringResult(interp);
 		char *p = s;
-
 		/* If the result contains any bytes with the top bit set,
 		   it's UTF-8 and we should decode it to Unicode */
-#ifdef Py_USING_UNICODE
 		while (*p != '\0') {
 			if (*p & 0x80)
 				break;
 			p++;
 		}
-
 		if (*p == '\0')
 			res = PyString_FromStringAndSize(s, (int)(p-s));
 		else {
@@ -647,10 +641,6 @@ Tkapp_Call(PyObject *self, PyObject *args)
 			    res = PyString_FromStringAndSize(s, (int)(p-s));
 			}
 		}
-#else
-		p = strchr(p, '\0');
-		res = PyString_FromStringAndSize(s, (int)(p-s));
-#endif
 	}
 
 	LEAVE_OVERLAP_TCL
@@ -1191,7 +1181,7 @@ Tkapp_SplitList(PyObject *self, PyObject *args)
 	PyObject *v;
 	int i;
 
-	if (!PyArg_ParseTuple(args, "et:splitlist", "utf-8", &list))
+	if (!PyArg_ParseTuple(args, "s:splitlist", &list))
 		return NULL;
 
 	if (Tcl_SplitList(Tkapp_Interp(self), list, &argc, &argv) == TCL_ERROR)
@@ -1219,7 +1209,7 @@ Tkapp_Split(PyObject *self, PyObject *args)
 {
 	char *list;
 
-	if (!PyArg_ParseTuple(args, "et:split", "utf-8", &list))
+	if (!PyArg_ParseTuple(args, "s:split", &list))
 		return NULL;
 	return Split(list);
 }
@@ -1546,7 +1536,7 @@ Tktt_DeleteTimerHandler(PyObject *self, PyObject *args)
 
 static PyMethodDef Tktt_methods[] =
 {
-	{"deletetimerhandler", Tktt_DeleteTimerHandler, METH_VARARGS},
+	{"deletetimerhandler", Tktt_DeleteTimerHandler, 1},
 	{NULL, NULL}
 };
 
@@ -1585,8 +1575,8 @@ Tktt_Repr(PyObject *self)
 	TkttObject *v = (TkttObject *)self;
 	char buf[100];
 
-	PyOS_snprintf(buf, sizeof(buf), "<tktimertoken at %p%s>", v,
-	                v->func == NULL ? ", handler deleted" : "");
+	sprintf(buf, "<tktimertoken at %p%s>", v,
+		v->func == NULL ? ", handler deleted" : "");
 	return PyString_FromString(buf);
 }
 
@@ -1763,40 +1753,40 @@ Tkapp_InterpAddr(PyObject *self, PyObject *args)
 
 static PyMethodDef Tkapp_methods[] =
 {
-	{"call", 	       Tkapp_Call, METH_OLDARGS},
-	{"globalcall", 	       Tkapp_GlobalCall, METH_OLDARGS},
-	{"eval", 	       Tkapp_Eval, METH_VARARGS},
-	{"globaleval", 	       Tkapp_GlobalEval, METH_VARARGS},
-	{"evalfile", 	       Tkapp_EvalFile, METH_VARARGS},
-	{"record", 	       Tkapp_Record, METH_VARARGS},
-	{"adderrorinfo",       Tkapp_AddErrorInfo, METH_VARARGS},
-	{"setvar", 	       Tkapp_SetVar, METH_VARARGS},
-	{"globalsetvar",       Tkapp_GlobalSetVar, METH_VARARGS},
-	{"getvar", 	       Tkapp_GetVar, METH_VARARGS},
-	{"globalgetvar",       Tkapp_GlobalGetVar, METH_VARARGS},
-	{"unsetvar", 	       Tkapp_UnsetVar, METH_VARARGS},
-	{"globalunsetvar",     Tkapp_GlobalUnsetVar, METH_VARARGS},
-	{"getint", 	       Tkapp_GetInt, METH_VARARGS},
-	{"getdouble", 	       Tkapp_GetDouble, METH_VARARGS},
-	{"getboolean", 	       Tkapp_GetBoolean, METH_VARARGS},
-	{"exprstring", 	       Tkapp_ExprString, METH_VARARGS},
-	{"exprlong", 	       Tkapp_ExprLong, METH_VARARGS},
-	{"exprdouble", 	       Tkapp_ExprDouble, METH_VARARGS},
-	{"exprboolean",        Tkapp_ExprBoolean, METH_VARARGS},
-	{"splitlist", 	       Tkapp_SplitList, METH_VARARGS},
-	{"split", 	       Tkapp_Split, METH_VARARGS},
-	{"merge", 	       Tkapp_Merge, METH_OLDARGS},
-	{"createcommand",      Tkapp_CreateCommand, METH_VARARGS},
-	{"deletecommand",      Tkapp_DeleteCommand, METH_VARARGS},
+	{"call", 	       Tkapp_Call, 0},
+	{"globalcall", 	       Tkapp_GlobalCall, 0},
+	{"eval", 	       Tkapp_Eval, 1},
+	{"globaleval", 	       Tkapp_GlobalEval, 1},
+	{"evalfile", 	       Tkapp_EvalFile, 1},
+	{"record", 	       Tkapp_Record, 1},
+	{"adderrorinfo",       Tkapp_AddErrorInfo, 1},
+	{"setvar", 	       Tkapp_SetVar, 1},
+	{"globalsetvar",       Tkapp_GlobalSetVar, 1},
+	{"getvar", 	       Tkapp_GetVar, 1},
+	{"globalgetvar",       Tkapp_GlobalGetVar, 1},
+	{"unsetvar", 	       Tkapp_UnsetVar, 1},
+	{"globalunsetvar",     Tkapp_GlobalUnsetVar, 1},
+	{"getint", 	       Tkapp_GetInt, 1},
+	{"getdouble", 	       Tkapp_GetDouble, 1},
+	{"getboolean", 	       Tkapp_GetBoolean, 1},
+	{"exprstring", 	       Tkapp_ExprString, 1},
+	{"exprlong", 	       Tkapp_ExprLong, 1},
+	{"exprdouble", 	       Tkapp_ExprDouble, 1},
+	{"exprboolean",        Tkapp_ExprBoolean, 1},
+	{"splitlist", 	       Tkapp_SplitList, 1},
+	{"split", 	       Tkapp_Split, 1},
+	{"merge", 	       Tkapp_Merge, 0},
+	{"createcommand",      Tkapp_CreateCommand, 1},
+	{"deletecommand",      Tkapp_DeleteCommand, 1},
 #ifdef HAVE_CREATEFILEHANDLER
-	{"createfilehandler",  Tkapp_CreateFileHandler, METH_VARARGS},
-	{"deletefilehandler",  Tkapp_DeleteFileHandler, METH_VARARGS},
+	{"createfilehandler",  Tkapp_CreateFileHandler, 1},
+	{"deletefilehandler",  Tkapp_DeleteFileHandler, 1},
 #endif
-	{"createtimerhandler", Tkapp_CreateTimerHandler, METH_VARARGS},
-	{"mainloop", 	       Tkapp_MainLoop, METH_VARARGS},
-	{"dooneevent", 	       Tkapp_DoOneEvent, METH_VARARGS},
-	{"quit", 	       Tkapp_Quit, METH_VARARGS},
-	{"interpaddr",         Tkapp_InterpAddr, METH_VARARGS},
+	{"createtimerhandler", Tkapp_CreateTimerHandler, 1},
+	{"mainloop", 	       Tkapp_MainLoop, 1},
+	{"dooneevent", 	       Tkapp_DoOneEvent, 1},
+	{"quit", 	       Tkapp_Quit, 1},
+	{"interpaddr",         Tkapp_InterpAddr, 1},
 	{NULL, 		       NULL}
 };
 
@@ -1862,7 +1852,7 @@ _bump(FlattenContext* context, int size)
 
 	context->maxsize = maxsize;
 
-	return _PyTuple_Resize(&context->tuple, maxsize) >= 0;
+	return _PyTuple_Resize(&context->tuple, maxsize, 0) >= 0;
 }
 
 static int
@@ -1946,7 +1936,7 @@ Tkinter_Flatten(PyObject* self, PyObject* args)
 	if (!_flatten1(&context, item,0))
 		return NULL;
 
-	if (_PyTuple_Resize(&context.tuple, context.size))
+	if (_PyTuple_Resize(&context.tuple, context.size, 0))
 		return NULL;
 
 	return context.tuple;
@@ -1978,16 +1968,16 @@ Tkinter_Create(PyObject *self, PyObject *args)
 
 static PyMethodDef moduleMethods[] =
 {
-	{"_flatten",           Tkinter_Flatten, METH_VARARGS},
-	{"create",             Tkinter_Create, METH_VARARGS},
+	{"_flatten",           Tkinter_Flatten, 1},
+	{"create",             Tkinter_Create, 1},
 #ifdef HAVE_CREATEFILEHANDLER
-	{"createfilehandler",  Tkapp_CreateFileHandler, METH_VARARGS},
-	{"deletefilehandler",  Tkapp_DeleteFileHandler, METH_VARARGS},
+	{"createfilehandler",  Tkapp_CreateFileHandler, 1},
+	{"deletefilehandler",  Tkapp_DeleteFileHandler, 1},
 #endif
-	{"createtimerhandler", Tkapp_CreateTimerHandler, METH_VARARGS},
-	{"mainloop",           Tkapp_MainLoop, METH_VARARGS},
-	{"dooneevent",         Tkapp_DoOneEvent, METH_VARARGS},
-	{"quit",               Tkapp_Quit, METH_VARARGS},
+	{"createtimerhandler", Tkapp_CreateTimerHandler, 1},
+	{"mainloop",           Tkapp_MainLoop, 1},
+	{"dooneevent",         Tkapp_DoOneEvent, 1},
+	{"quit",               Tkapp_Quit, 1},
 	{NULL,                 NULL}
 };
 
@@ -2142,22 +2132,6 @@ init_tkinter(void)
 
 	Tktt_Type.ob_type = &PyType_Type;
 	PyDict_SetItemString(d, "TkttType", (PyObject *)&Tktt_Type);
-
-
-#ifdef TK_AQUA
-	/* Tk_MacOSXSetupTkNotifier must be called before Tcl's subsystems
-	 * start waking up.  Note that Tcl_FindExecutable will do this, this
-	 * code must be above it! The original warning from
-	 * tkMacOSXAppInit.c is copied below.
-	 *
-	 * NB - You have to swap in the Tk Notifier BEFORE you start up the
-	 * Tcl interpreter for now.  It probably should work to do this
-	 * in the other order, but for now it doesn't seem to.
-	 *
-	 */
-	Tk_MacOSXSetupTkNotifier();
-#endif
-
 
 	/* This helps the dynamic loader; in Unicode aware Tcl versions
 	   it also helps Tcl find its encodings. */

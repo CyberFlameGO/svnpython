@@ -1,7 +1,7 @@
 import cwxmlgen
 import cwtalker
 import os
-from Carbon import AppleEvents
+import AppleEvents
 import macfs
 
 def mkproject(outputfile, modulename, settings, force=0, templatename=None):
@@ -12,15 +12,23 @@ def mkproject(outputfile, modulename, settings, force=0, templatename=None):
 	for k, v in settings.items():
 		dictcopy[k] = v
 	#
-	# Generate the XML for the project
+	# Fill in mac-specific values
 	#
 	dictcopy['mac_projectxmlname'] = outputfile + '.xml'
 	dictcopy['mac_exportname'] = os.path.split(outputfile)[1] + '.exp'
+	if not dictcopy.has_key('mac_outputdir'):
+		dictcopy['mac_outputdir'] = ':lib:'
 	if not dictcopy.has_key('mac_dllname'):
 		dictcopy['mac_dllname'] = modulename + '.ppc.slb'
 	if not dictcopy.has_key('mac_targetname'):
 		dictcopy['mac_targetname'] = modulename + '.ppc'
-	
+	if os.path.isabs(dictcopy['sysprefix']):
+		dictcopy['mac_sysprefixtype'] = 'Absolute'
+	else:
+		dictcopy['mac_sysprefixtype'] = 'Project' # XXX not sure this is right...
+	#
+	# Generate the XML for the project
+	#
 	xmlbuilder = cwxmlgen.ProjectBuilder(dictcopy, templatename=templatename)
 	xmlbuilder.generate()
 	if not force:
@@ -60,6 +68,7 @@ def makeproject(xmlfile, projectfile):
 	cw.send_timeout = AppleEvents.kNoTimeOut
 	xmlfss = macfs.FSSpec(xmlfile)
 	prjfss = macfs.FSSpec(projectfile)
+	cw.activate()
 	cw.my_mkproject(prjfss, xmlfss)
 	
 def buildproject(projectfile):

@@ -7,9 +7,9 @@ extern "C" {
 
 /* Include files and extern declarations used by most of the parser. */
 
-#include "pyconfig.h"
+#include "config.h"
 
-/* pyconfig.h may or may not define DL_IMPORT */
+/* config.h may or may not define DL_IMPORT */
 #ifndef DL_IMPORT	/* declarations for DLL import/export */
 #define DL_IMPORT(RTYPE) RTYPE
 #endif
@@ -25,10 +25,8 @@ extern "C" {
 
 #include "pydebug.h"
 
-DL_IMPORT(void) PySys_WriteStdout(const char *format, ...)
-			__attribute__((format(printf, 1, 2)));
-DL_IMPORT(void) PySys_WriteStderr(const char *format, ...)
-			__attribute__((format(printf, 1, 2)));
+DL_IMPORT(void) PySys_WriteStdout(const char *format, ...);
+DL_IMPORT(void) PySys_WriteStderr(const char *format, ...);
 
 #define addarc _Py_addarc
 #define addbit _Py_addbit

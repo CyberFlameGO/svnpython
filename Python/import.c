@@ -15,8 +15,21 @@
 #include "macglue.h"
 #endif
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+
+#if defined(PYCC_VACPP)
+/* VisualAge C/C++ Failed to Define MountType Field in sys/stat.h */
+#define S_IFMT (S_IFDIR|S_IFCHR|S_IFREG)
+#endif
+
+#ifndef S_ISDIR
+#define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
 #endif
 
 extern time_t PyOS_GetLastModificationTime(char *, FILE *);
@@ -26,42 +39,11 @@ extern time_t PyOS_GetLastModificationTime(char *, FILE *);
 /* Change for each incompatible change */
 /* The value of CR and LF is incorporated so if you ever read or write
    a .pyc file in text mode the magic number will be wrong; also, the
-   Apple MPW compiler swaps their values, botching string constants.
-   XXX That probably isn't important anymore.
-*/
+   Apple MPW compiler swaps their values, botching string constants */
 /* XXX Perhaps the magic number should be frozen and a version field
    added to the .pyc file header? */
-/* New way to come up with the low 16 bits of the magic number:
-      (YEAR-1995) * 10000 +  MONTH * 100 + DAY
-   where MONTH and DAY are 1-based.
-   XXX Whatever the "old way" may have been isn't documented.
-   XXX This scheme breaks in 2002, as (2002-1995)*10000 = 70000 doesn't
-       fit in 16 bits.
-   XXX Later, sometimes 1 gets added to MAGIC in order to record that
-       the Unicode -U option is in use.  IMO (Tim's), that's a Bad Idea
-       (quite apart from that the -U option doesn't work so isn't used
-       anyway).
-
-   XXX MAL, 2002-02-07: I had to modify the MAGIC due to a fix of the
-       UTF-8 encoder (it previously produced invalid UTF-8 for unpaired
-       high surrogates), so I simply bumped the month value to 20 (invalid
-       month) and set the day to 1.  This should be recognizable by any
-       algorithm relying on the above scheme. Perhaps we should simply
-       start counting in increments of 10 from now on ?!
-
-   Known values:
-       Python 1.5:   20121
-       Python 1.5.1: 20121
-       Python 1.5.2: 20121
-       Python 2.0:   50823
-       Python 2.0.1: 50823
-       Python 2.1:   60202
-       Python 2.1.1: 60202
-       Python 2.1.2: 60202
-       Python 2.2:   60717
-       Python 2.3a0: 62001
-*/
-#define MAGIC (62001 | ((long)'\r'<<16) | ((long)'\n'<<24))
+/* New way to come up with the magic number: (YEAR-1995), MONTH, DAY */
+#define MAGIC (60202 | ((long)'\r'<<16) | ((long)'\n'<<24))
 
 /* Magic word as global; note that _PyImport_Init() can change the
    value of this global to accommodate for alterations of how the
@@ -88,9 +70,6 @@ static const struct filedescr _PyImport_StandardFiletab[] = {
 #else
 static const struct filedescr _PyImport_StandardFiletab[] = {
 	{".py", "r", PY_SOURCE},
-#ifdef MS_WIN32
-	{".pyw", "r", PY_SOURCE},
-#endif
 	{".pyc", "rb", PY_COMPILED},
 	{0, 0}
 };
@@ -207,18 +186,6 @@ unlock_import(void)
 #define unlock_import()
 
 #endif
-
-static PyObject *
-imp_lock_held(PyObject *self, PyObject *args)
-{
-	if (!PyArg_ParseTuple(args, ":lock_held"))
-		return NULL;
-#ifdef WITH_THREAD
-	return PyBool_FromLong(import_lock_thread != -1);
-#else
-	return PyBool_FromLong(0);
-#endif
-}
 
 /* Helper for sys */
 
@@ -394,7 +361,7 @@ PyImport_GetMagicNumber(void)
    loaded).  To prevent initializing an extension module more than
    once, we keep a static dictionary 'extensions' keyed by module name
    (for built-in modules) or by filename (for dynamically loaded
-   modules), containing these modules.  A copy of the module's
+   modules), containing these modules.  A copy od the module's
    dictionary is stored by calling _PyImport_FixupExtension()
    immediately after the module initialization function succeeds.  A
    copy can be retrieved from there by calling
@@ -419,7 +386,7 @@ _PyImport_FixupExtension(char *name, char *filename)
 	dict = PyModule_GetDict(mod);
 	if (dict == NULL)
 		return NULL;
-	copy = PyDict_Copy(dict);
+	copy = PyObject_CallMethod(dict, "copy", "");
 	if (copy == NULL)
 		return NULL;
 	PyDict_SetItemString(extensions, filename, copy);
@@ -430,7 +397,7 @@ _PyImport_FixupExtension(char *name, char *filename)
 PyObject *
 _PyImport_FindExtension(char *name, char *filename)
 {
-	PyObject *dict, *mod, *mdict;
+	PyObject *dict, *mod, *mdict, *result;
 	if (extensions == NULL)
 		return NULL;
 	dict = PyDict_GetItemString(extensions, filename);
@@ -442,8 +409,10 @@ _PyImport_FindExtension(char *name, char *filename)
 	mdict = PyModule_GetDict(mod);
 	if (mdict == NULL)
 		return NULL;
-	if (PyDict_Update(mdict, dict))
+	result = PyObject_CallMethod(mdict, "update", "O", dict);
+	if (result == NULL)
 		return NULL;
+	Py_DECREF(result);
 	if (Py_VerboseFlag)
 		PySys_WriteStderr("import %s # previously loaded (%s)\n",
 			name, filename);
@@ -544,19 +513,13 @@ PyImport_ExecCodeModuleEx(char *name, PyObject *co, char *pathname)
 static char *
 make_compiled_pathname(char *pathname, char *buf, size_t buflen)
 {
-	size_t len = strlen(pathname);
+	size_t len;
+
+	len = strlen(pathname);
 	if (len+2 > buflen)
 		return NULL;
-
-#ifdef MS_WIN32
-	/* Treat .pyw as if it were .py.  The case of ".pyw" must match
-	   that used in _PyImport_StandardFiletab. */
-	if (len >= 4 && strcmp(&pathname[len-4], ".pyw") == 0)
-		--len;	/* pretend 'w' isn't there */
-#endif
-	memcpy(buf, pathname, len);
-	buf[len] = Py_OptimizeFlag ? 'o' : 'c';
-	buf[len+1] = '\0';
+	strcpy(buf, pathname);
+	strcpy(buf+len, Py_OptimizeFlag ? "o" : "c");
 
 	return buf;
 }
@@ -766,7 +729,7 @@ load_source_module(char *name, char *pathname, FILE *fp)
 		return NULL;
 	}
 #endif
-	cpathname = make_compiled_pathname(pathname, buf,
+	cpathname = make_compiled_pathname(pathname, buf, 
 					   (size_t)MAXPATHLEN + 1);
 	if (cpathname != NULL &&
 	    (fpc = check_compiled_module(pathname, mtime, cpathname))) {
@@ -891,6 +854,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 {
 	int i, npath;
 	size_t len, namelen;
+	struct _frozen *f;
 	struct filedescr *fdp = NULL;
 	FILE *fp = NULL;
 #ifndef RISCOS
@@ -900,22 +864,17 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 	static struct filedescr fd_builtin = {"", "", C_BUILTIN};
 	static struct filedescr fd_package = {"", "", PKG_DIRECTORY};
 	char name[MAXPATHLEN+1];
-#if defined(PYOS_OS2)
-	size_t saved_len;
-	size_t saved_namelen;
-	char *saved_buf = NULL;
-#endif
 
 	if (strlen(realname) > MAXPATHLEN) {
-		PyErr_SetString(PyExc_OverflowError,
-				"module name is too long");
+		PyErr_SetString(PyExc_OverflowError, "module name is too long");
 		return NULL;
 	}
 	strcpy(name, realname);
 
 	if (path != NULL && PyString_Check(path)) {
-		/* The only type of submodule allowed inside a "frozen"
-		   package are other frozen modules or packages. */
+		/* Submodule of "frozen" package:
+		   Set name to the fullname, path to NULL
+		   and continue as "usual" */
 		if (PyString_Size(path) + 1 + strlen(name) >= (size_t)buflen) {
 			PyErr_SetString(PyExc_ImportError,
 					"full frozen module name too long");
@@ -925,28 +884,14 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		strcat(buf, ".");
 		strcat(buf, name);
 		strcpy(name, buf);
-#ifdef macintosh
-		/* Freezing on the mac works different, and the modules are
-		** actually on sys.path. So we don't take the quick exit but
-		** continue with the normal flow.
-		*/
 		path = NULL;
-#else
-		if (find_frozen(name) != NULL) {
-			strcpy(buf, name);
-			return &fd_frozen;
-		}
-		PyErr_Format(PyExc_ImportError,
-			     "No frozen submodule named %.200s", name);
-		return NULL;
-#endif
 	}
 	if (path == NULL) {
 		if (is_builtin(name)) {
 			strcpy(buf, name);
 			return &fd_builtin;
 		}
-		if ((find_frozen(name)) != NULL) {
+		if ((f = find_frozen(name)) != NULL) {
 			strcpy(buf, name);
 			return &fd_frozen;
 		}
@@ -978,6 +923,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		if (strlen(buf) != len)
 			continue; /* v contains '\0' */
 #ifdef macintosh
+#ifdef INTERN_STRINGS
 		/*
 		** Speedup: each sys.path item is interned, and
 		** FindResourceModule remembers which items refer to
@@ -986,6 +932,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 		*/
 		PyString_InternInPlace(&PyList_GET_ITEM(path, i));
 		v = PyList_GET_ITEM(path, i);
+#endif
 		if (PyMac_FindResourceModule((PyStringObject *)v, name, buf)) {
 			static struct filedescr resfiledescr =
 				{"", "", PY_RESOURCE};
@@ -1019,48 +966,20 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 #else
 		/* XXX How are you going to test for directories? */
 #ifdef RISCOS
-		if (isdir(buf) &&
-		    find_init_module(buf) &&
-		    case_ok(buf, len, namelen, name))
-			return &fd_package;
+		{
+			static struct filedescr fd = {"", "", PKG_DIRECTORY};
+			if (isdir(buf)) {
+				if (find_init_module(buf))
+					return &fd;
+			}
+		}
 #endif
 #endif
 #ifdef macintosh
 		fdp = PyMac_FindModuleExtension(buf, &len, name);
 		if (fdp) {
 #else
-#if defined(PYOS_OS2)
-		/* take a snapshot of the module spec for restoration
-		 * after the 8 character DLL hackery
-		 */
-		saved_buf = strdup(buf);
-		saved_len = len;
-		saved_namelen = namelen;
-#endif /* PYOS_OS2 */
 		for (fdp = _PyImport_Filetab; fdp->suffix != NULL; fdp++) {
-#if defined(PYOS_OS2)
-			/* OS/2 limits DLLs to 8 character names (w/o extension)
-			 * so if the name is longer than that and its a
-			 * dynamically loaded module we're going to try,
-			 * truncate the name before trying
-			 */
-			if (strlen(realname) > 8) {
-				/* is this an attempt to load a C extension? */
-				const struct filedescr *scan = _PyImport_DynLoadFiletab;
-				while (scan->suffix != NULL) {
-					if (strcmp(scan->suffix, fdp->suffix) == 0)
-						break;
-					else
-						scan++;
-				}
-				if (scan->suffix != NULL) {
-					/* yes, so truncate the name */
-					namelen = 8;
-					len -= strlen(realname) - namelen;
-					buf[len] = '\0';
-				}
-			}
-#endif /* PYOS_OS2 */
 			strcpy(buf+len, fdp->suffix);
 			if (Py_VerboseFlag > 1)
 				PySys_WriteStderr("# trying %s\n", buf);
@@ -1074,21 +993,7 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 					fp = NULL;
 				}
 			}
-#if defined(PYOS_OS2)
-			/* restore the saved snapshot */
-			strcpy(buf, saved_buf);
-			len = saved_len;
-			namelen = saved_namelen;
-#endif
 		}
-#if defined(PYOS_OS2)
-		/* don't need/want the module name snapshot anymore */
-		if (saved_buf)
-		{
-			free(saved_buf);
-			saved_buf = NULL;
-		}
-#endif
 		if (fp != NULL)
 			break;
 	}
@@ -1147,14 +1052,6 @@ find_module(char *realname, PyObject *path, char *buf, size_t buflen,
 #include <sys/types.h>
 #include <dirent.h>
 
-#elif defined(PYOS_OS2)
-#define INCL_DOS
-#define INCL_DOSERRORS
-#define INCL_NOPMAPI
-#include <os2.h>
-
-#elif defined(RISCOS)
-#include "oslib/osfscontrol.h"
 #endif
 
 static int
@@ -1172,7 +1069,7 @@ case_ok(char *buf, int len, int namelen, char *name)
 	char tempbuf[MAX_PATH];
 #endif
 
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
+	if (getenv("PYTHONCASEOK") != NULL)
 		return 1;
 
 #ifdef __CYGWIN__
@@ -1195,7 +1092,7 @@ case_ok(char *buf, int len, int namelen, char *name)
 	struct ffblk ffblk;
 	int done;
 
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
+	if (getenv("PYTHONCASEOK") != NULL)
 		return 1;
 
 	done = findfirst(buf, &ffblk, FA_ARCH|FA_RDONLY|FA_HIDDEN|FA_DIREC);
@@ -1212,7 +1109,7 @@ case_ok(char *buf, int len, int namelen, char *name)
 	FSSpec fss;
 	OSErr err;
 
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
+	if (getenv("PYTHONCASEOK") != NULL)
 		return 1;
 
 #ifndef USE_GUSI1
@@ -1250,7 +1147,7 @@ case_ok(char *buf, int len, int namelen, char *name)
 	char dirname[MAXPATHLEN + 1];
 	const int dirlen = len - namelen - 1; /* don't want trailing SEP */
 
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
+	if (getenv("PYTHONCASEOK") != NULL)
 		return 1;
 
 	/* Copy the dir component into dirname; substitute "." if empty */
@@ -1283,51 +1180,6 @@ case_ok(char *buf, int len, int namelen, char *name)
 		(void)closedir(dirp);
 	}
 	return 0 ; /* Not found */
-
-/* RISC OS */
-#elif defined(RISCOS)
-	char canon[MAXPATHLEN+1]; /* buffer for the canonical form of the path */
-	char buf2[MAXPATHLEN+2];
-	char *nameWithExt = buf+len-namelen;
-	int canonlen;
-	os_error *e;
-
-	if (Py_GETENV("PYTHONCASEOK") != NULL)
-		return 1;
-
-	/* workaround:
-	   append wildcard, otherwise case of filename wouldn't be touched */
-	strcpy(buf2, buf);
-	strcat(buf2, "*");
-
-	e = xosfscontrol_canonicalise_path(buf2,canon,0,0,MAXPATHLEN+1,&canonlen);
-	canonlen = MAXPATHLEN+1-canonlen;
-	if (e || canonlen<=0 || canonlen>(MAXPATHLEN+1) )
-		return 0;
-	if (strcmp(nameWithExt, canon+canonlen-strlen(nameWithExt))==0)
-		return 1; /* match */
-
-	return 0;
-
-/* OS/2 */
-#elif defined(PYOS_OS2)
-	HDIR hdir = 1;
-	ULONG srchcnt = 1;
-	FILEFINDBUF3 ffbuf;
-	APIRET rc;
-
-	if (getenv("PYTHONCASEOK") != NULL)
-		return 1;
-
-	rc = DosFindFirst(buf,
-			  &hdir,
-			  FILE_READONLY | FILE_HIDDEN | FILE_SYSTEM | FILE_DIRECTORY,
-			  &ffbuf, sizeof(ffbuf),
-			  &srchcnt,
-			  FIL_STANDARD);
-	if (rc != NO_ERROR)
-		return 0;
-	return strncmp(ffbuf.achName, name, namelen) == 0;
 
 /* assuming it's a case-sensitive filesystem, so there's nothing to do! */
 #else
@@ -1524,8 +1376,9 @@ static int
 init_builtin(char *name)
 {
 	struct _inittab *p;
+	PyObject *mod;
 
-	if (_PyImport_FindExtension(name, name) != NULL)
+	if ((mod = _PyImport_FindExtension(name, name)) != NULL)
 		return 1;
 
 	for (p = PyImport_Inittab; p->name != NULL; p++) {
@@ -1578,12 +1431,6 @@ get_frozen_object(char *name)
 			     name);
 		return NULL;
 	}
-	if (p->code == NULL) {
-		PyErr_Format(PyExc_ImportError,
-			     "Excluded frozen object named %.200s",
-			     name);
-		return NULL;
-	}
 	size = p->size;
 	if (size < 0)
 		size = -size;
@@ -1606,12 +1453,6 @@ PyImport_ImportFrozenModule(char *name)
 
 	if (p == NULL)
 		return 0;
-	if (p->code == NULL) {
-		PyErr_Format(PyExc_ImportError,
-			     "Excluded frozen object named %.200s",
-			     name);
-		return -1;
-	}
 	size = p->size;
 	ispackage = (size < 0);
 	if (ispackage)
@@ -1948,7 +1789,7 @@ static PyObject *
 import_submodule(PyObject *mod, char *subname, char *fullname)
 {
 	PyObject *modules = PyImport_GetModuleDict();
-	PyObject *m, *res = NULL;
+	PyObject *m;
 
 	/* Require:
 	   if mod == None: subname == fullname
@@ -1988,21 +1829,9 @@ import_submodule(PyObject *mod, char *subname, char *fullname)
 		m = load_module(fullname, fp, buf, fdp->type);
 		if (fp)
 			fclose(fp);
-		if (mod != Py_None) {
-			/* Irrespective of the success of this load, make a
-			   reference to it in the parent package module.
-			   A copy gets saved in the modules dictionary
-			   under the full name, so get a reference from
-			   there, if need be.  (The exception is when
-			   the load failed with a SyntaxError -- then
-			   there's no trace in sys.modules.  In that case,
-			   of course, do nothing extra.) */
-			res = m;
-			if (res == NULL)
-				res = PyDict_GetItemString(modules, fullname);
-			if (res != NULL &&
-			    PyObject_SetAttrString(mod, subname, res) < 0) {
-				Py_XDECREF(m);
+		if (m != NULL && mod != Py_None) {
+			if (PyObject_SetAttrString(mod, subname, m) < 0) {
+				Py_DECREF(m);
 				m = NULL;
 			}
 		}
@@ -2127,11 +1956,8 @@ PyImport_Import(PyObject *module_name)
 	}
 
 	/* Get the __import__ function from the builtins */
-	if (PyDict_Check(builtins)) {
+	if (PyDict_Check(builtins))
 		import = PyObject_GetItem(builtins, import_str);
-		if (import == NULL)
-			PyErr_SetObject(PyExc_KeyError, import_str);
-	}
 	else
 		import = PyObject_GetAttr(builtins, import_str);
 	if (import == NULL)
@@ -2295,7 +2121,7 @@ imp_is_builtin(PyObject *self, PyObject *args)
 	char *name;
 	if (!PyArg_ParseTuple(args, "s:is_builtin", &name))
 		return NULL;
-	return PyBool_FromLong(is_builtin(name));
+	return PyInt_FromLong(is_builtin(name));
 }
 
 static PyObject *
@@ -2306,7 +2132,7 @@ imp_is_frozen(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s:is_frozen", &name))
 		return NULL;
 	p = find_frozen(name);
-	return PyBool_FromLong((long) (p == NULL ? 0 : p->size));
+	return PyInt_FromLong((long) (p == NULL ? 0 : p->size));
 }
 
 static FILE *
@@ -2498,34 +2324,27 @@ Create a new module.  Do not enter it in sys.modules.\n\
 The module name must include the full package name, if any.\
 ";
 
-static char doc_lock_held[] = "\
-lock_held() -> 0 or 1\n\
-Return 1 if the import lock is currently held.\n\
-On platforms without threads, return 0.\
-";
-
 static PyMethodDef imp_methods[] = {
-	{"find_module",		imp_find_module, METH_VARARGS, doc_find_module},
-	{"get_magic",		imp_get_magic,	 METH_VARARGS, doc_get_magic},
-	{"get_suffixes",	imp_get_suffixes, METH_VARARGS, doc_get_suffixes},
-	{"load_module",		imp_load_module, METH_VARARGS, doc_load_module},
-	{"new_module",		imp_new_module,	 METH_VARARGS, doc_new_module},
-	{"lock_held",		imp_lock_held,	 METH_VARARGS, doc_lock_held},
+	{"find_module",		imp_find_module,	1, doc_find_module},
+	{"get_magic",		imp_get_magic,		1, doc_get_magic},
+	{"get_suffixes",	imp_get_suffixes,	1, doc_get_suffixes},
+	{"load_module",		imp_load_module,	1, doc_load_module},
+	{"new_module",		imp_new_module,		1, doc_new_module},
 	/* The rest are obsolete */
-	{"get_frozen_object",	imp_get_frozen_object,	METH_VARARGS},
-	{"init_builtin",	imp_init_builtin,	METH_VARARGS},
-	{"init_frozen",		imp_init_frozen,	METH_VARARGS},
-	{"is_builtin",		imp_is_builtin,		METH_VARARGS},
-	{"is_frozen",		imp_is_frozen,		METH_VARARGS},
-	{"load_compiled",	imp_load_compiled,	METH_VARARGS},
+	{"get_frozen_object",	imp_get_frozen_object,	1},
+	{"init_builtin",	imp_init_builtin,	1},
+	{"init_frozen",		imp_init_frozen,	1},
+	{"is_builtin",		imp_is_builtin,		1},
+	{"is_frozen",		imp_is_frozen,		1},
+	{"load_compiled",	imp_load_compiled,	1},
 #ifdef HAVE_DYNAMIC_LOADING
-	{"load_dynamic",	imp_load_dynamic,	METH_VARARGS},
+	{"load_dynamic",	imp_load_dynamic,	1},
 #endif
-	{"load_package",	imp_load_package,	METH_VARARGS},
+	{"load_package",	imp_load_package,	1},
 #ifdef macintosh
-	{"load_resource",	imp_load_resource,	METH_VARARGS},
+	{"load_resource",	imp_load_resource,	1},
 #endif
-	{"load_source",		imp_load_source,	METH_VARARGS},
+	{"load_source",		imp_load_source,	1},
 	{NULL,			NULL}		/* sentinel */
 };
 

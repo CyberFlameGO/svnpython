@@ -47,38 +47,6 @@ class Module:
         s = s + ")"
         return s
 
-_warned = 0
-
-def _try_registry(name):
-    # Emulate the Registered Module support on Windows.
-    try:
-        import _winreg
-        RegQueryValue = _winreg.QueryValue
-        HKLM = _winreg.HKEY_LOCAL_MACHINE
-        exception = _winreg.error
-    except ImportError:
-        try:
-            import win32api
-            RegQueryValue = win32api.RegQueryValue
-            HKLM = 0x80000002 # HKEY_LOCAL_MACHINE
-            exception = win32api.error
-        except ImportError:
-            global _warned
-            if not _warned:
-                _warned = 1
-                print "Warning: Neither _winreg nor win32api is available - modules"
-                print "listed in the registry will not be found"
-            return None
-    try:
-        pathname = RegQueryValue(HKLM, \
-         r"Software\Python\PythonCore\%s\Modules\%s" % (sys.winver, name))
-        fp = open(pathname, "rb")
-    except exception:
-        return None
-    else:
-        # XXX - To do - remove the hard code of C_EXTENSION.
-        stuff = "", "rb", imp.C_EXTENSION
-        return fp, pathname, stuff
 
 class ModuleFinder:
 
@@ -356,23 +324,28 @@ class ModuleFinder:
         return m
 
     def find_module(self, name, path):
-        if path:
-            fullname = '.'.join(path)+'.'+name
-        else:
-            fullname = name
-        if fullname in self.excludes:
-            self.msgout(3, "find_module -> Excluded", fullname)
+        if name in self.excludes:
+            self.msgout(3, "find_module -> Excluded")
             raise ImportError, name
 
         if path is None:
             if name in sys.builtin_module_names:
                 return (None, None, ("", "", imp.C_BUILTIN))
 
+            # Emulate the Registered Module support on Windows.
             if sys.platform=="win32":
-                result = _try_registry(name)
-                if result:
-                    return result
-                    
+                import _winreg
+                from _winreg import HKEY_LOCAL_MACHINE
+                try:
+                    pathname = _winreg.QueryValueEx(HKEY_LOCAL_MACHINE, \
+                        "Software\\Python\\PythonCore\\%s\\Modules\\%s" % (sys.winver, name))
+                    fp = open(pathname, "rb")
+                    # XXX - To do - remove the hard code of C_EXTENSION.
+                    stuff = "", "rb", imp.C_EXTENSION
+                    return fp, pathname, stuff
+                except _winreg.error:
+                    pass
+
             path = self.path
         return imp.find_module(name, path)
 
@@ -400,15 +373,6 @@ class ModuleFinder:
                 mods = self.badmodules[key].keys()
                 mods.sort()
                 print "?", key, "from", string.join(mods, ', ')
-
-    def any_missing(self):
-        keys = self.badmodules.keys()
-        missing = []
-        for key in keys:
-            if key not in self.excludes:
-                # Missing, and its not supposed to be
-                missing.append(key)
-        return missing
 
     def replace_paths_in_code(self, co):
         new_filename = original_filename = os.path.normpath(co.co_filename)

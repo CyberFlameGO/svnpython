@@ -7,7 +7,7 @@ __author__ = "jvr"
 
 import macfs
 import struct
-from Carbon import Res
+import Res
 import os
 import sys
 

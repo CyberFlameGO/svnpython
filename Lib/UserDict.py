@@ -19,19 +19,9 @@ class UserDict:
         if self.__class__ is UserDict:
             return UserDict(self.data)
         import copy
-        data = self.data
-        try:
-            self.data = {}
-            c = copy.copy(self)
-        finally:
-            self.data = data
-        c.update(self)
-        return c
+        return copy.copy(self)
     def keys(self): return self.data.keys()
     def items(self): return self.data.items()
-    def iteritems(self): return self.data.iteritems()
-    def iterkeys(self): return self.data.iterkeys()
-    def itervalues(self): return self.data.itervalues()
     def values(self): return self.data.values()
     def has_key(self, key): return self.data.has_key(key)
     def update(self, dict):
@@ -41,20 +31,12 @@ class UserDict:
             self.data.update(dict)
         else:
             for k, v in dict.items():
-                self[k] = v
+                self.data[k] = v
     def get(self, key, failobj=None):
-        if not self.has_key(key):
-            return failobj
-        return self[key]
+        return self.data.get(key, failobj)
     def setdefault(self, key, failobj=None):
-        if not self.has_key(key):
-            self[key] = failobj
-        return self[key]
+        if not self.data.has_key(key):
+            self.data[key] = failobj
+        return self.data[key]
     def popitem(self):
         return self.data.popitem()
-    def __contains__(self, key):
-        return key in self.data
-
-class IterableUserDict(UserDict):
-    def __iter__(self):
-        return iter(self.data)

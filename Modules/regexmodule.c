@@ -246,9 +246,9 @@ regobj_group(regexobject *re, PyObject *args)
 
 
 static struct PyMethodDef reg_methods[] = {
-	{"match",	(PyCFunction)regobj_match, METH_VARARGS},
-	{"search",	(PyCFunction)regobj_search, METH_VARARGS},
-	{"group",	(PyCFunction)regobj_group, METH_VARARGS},
+	{"match",	(PyCFunction)regobj_match, 1},
+	{"search",	(PyCFunction)regobj_search, 1},
+	{"group",	(PyCFunction)regobj_group, 1},
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -340,7 +340,7 @@ regobj_getattr(regexobject *re, char *name)
 static PyTypeObject Regextype = {
 	PyObject_HEAD_INIT(NULL)
 	0,				     /*ob_size*/
-	"regex.regex",			     /*tp_name*/
+	"regex",			     /*tp_name*/
 	sizeof(regexobject),		     /*tp_size*/
 	0,				     /*tp_itemsize*/
 	/* methods */
@@ -583,7 +583,7 @@ regex_match(PyObject *self, PyObject *args)
 	PyObject *pat, *string;
 	PyObject *tuple, *v;
 
-	if (!PyArg_ParseTuple(args, "SS:match", &pat, &string))
+	if (!PyArg_Parse(args, "(SS)", &pat, &string))
 		return NULL;
 	if (update_cache(pat) < 0)
 		return NULL;
@@ -601,7 +601,7 @@ regex_search(PyObject *self, PyObject *args)
 	PyObject *pat, *string;
 	PyObject *tuple, *v;
 
-	if (!PyArg_ParseTuple(args, "SS:search", &pat, &string))
+	if (!PyArg_Parse(args, "(SS)", &pat, &string))
 		return NULL;
 	if (update_cache(pat) < 0)
 		return NULL;
@@ -617,7 +617,7 @@ static PyObject *
 regex_set_syntax(PyObject *self, PyObject *args)
 {
 	int syntax;
-	if (!PyArg_ParseTuple(args, "i:set_syntax", &syntax))
+	if (!PyArg_Parse(args, "i", &syntax))
 		return NULL;
 	syntax = re_set_syntax(syntax);
 	/* wipe the global pattern cache */
@@ -629,19 +629,21 @@ regex_set_syntax(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-regex_get_syntax(PyObject *self)
+regex_get_syntax(PyObject *self, PyObject *args)
 {
+	if (!PyArg_Parse(args, ""))
+		return NULL;
 	return PyInt_FromLong((long)re_syntax);
 }
 
 
 static struct PyMethodDef regex_global_methods[] = {
-	{"compile",	regex_compile, METH_VARARGS},
-	{"symcomp",	regex_symcomp, METH_VARARGS},
-	{"match",	regex_match, METH_VARARGS},
-	{"search",	regex_search, METH_VARARGS},
-	{"set_syntax",	regex_set_syntax, METH_VARARGS},
-	{"get_syntax",  (PyCFunction)regex_get_syntax, METH_NOARGS},
+	{"compile",	regex_compile, 1},
+	{"symcomp",	regex_symcomp, 1},
+	{"match",	regex_match, 0},
+	{"search",	regex_search, 0},
+	{"set_syntax",	regex_set_syntax, 0},
+	{"get_syntax",  regex_get_syntax, 0},
 	{NULL,		NULL}		     /* sentinel */
 };
 

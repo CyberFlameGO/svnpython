@@ -52,7 +52,7 @@ md5_update(md5object *self, PyObject *args)
 	unsigned char *cp;
 	int len;
 
-	if (!PyArg_ParseTuple(args, "s#:update", &cp, &len))
+	if (!PyArg_Parse(args, "s#", &cp, &len))
 		return NULL;
 
 	MD5Update(&self->md5, cp, len);
@@ -70,10 +70,13 @@ arguments.";
 
 
 static PyObject *
-md5_digest(md5object *self)
+md5_digest(md5object *self, PyObject *args)
 {
  	MD5_CTX mdContext;
 	unsigned char aDigest[16];
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	/* make a temporary copy, and perform the final */
 	mdContext = self->md5;
@@ -91,12 +94,15 @@ including null bytes.";
 
 
 static PyObject *
-md5_hexdigest(md5object *self)
+md5_hexdigest(md5object *self, PyObject *args)
 {
  	MD5_CTX mdContext;
 	unsigned char digest[16];
 	unsigned char hexdigest[32];
 	int i, j;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	/* make a temporary copy, and perform the final */
 	mdContext = self->md5;
@@ -123,9 +129,12 @@ Like digest(), but returns the digest as a string of hexadecimal digits.";
 
 
 static PyObject *
-md5_copy(md5object *self)
+md5_copy(md5object *self, PyObject *args)
 {
 	md5object *md5p;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	if ((md5p = newmd5object()) == NULL)
 		return NULL;
@@ -142,20 +151,16 @@ Return a copy (``clone'') of the md5 object.";
 
 
 static PyMethodDef md5_methods[] = {
-	{"update",    (PyCFunction)md5_update,    METH_VARARGS, update_doc},
-	{"digest",    (PyCFunction)md5_digest,    METH_NOARGS,  digest_doc},
-	{"hexdigest", (PyCFunction)md5_hexdigest, METH_NOARGS,  hexdigest_doc},
-	{"copy",      (PyCFunction)md5_copy,      METH_NOARGS,  copy_doc},
+	{"update",    (PyCFunction)md5_update,    METH_OLDARGS, update_doc},
+	{"digest",    (PyCFunction)md5_digest,    METH_OLDARGS, digest_doc},
+	{"hexdigest", (PyCFunction)md5_hexdigest, METH_OLDARGS, hexdigest_doc},
+	{"copy",      (PyCFunction)md5_copy,      METH_OLDARGS, copy_doc},
 	{NULL, NULL}			     /* sentinel */
 };
 
 static PyObject *
 md5_getattr(md5object *self, char *name)
 {
-        if (strcmp(name, "digest_size") == 0) {
-    		return PyInt_FromLong(16);
-        }
-
 	return Py_FindMethod(md5_methods, (PyObject *)self, name);
 }
 
@@ -193,7 +198,7 @@ copy() -- return a copy of the current md5 object\n\
 statichere PyTypeObject MD5type = {
 	PyObject_HEAD_INIT(NULL)
 	0,			  /*ob_size*/
-	"md5.md5",		  /*tp_name*/
+	"md5",			  /*tp_name*/
 	sizeof(md5object),	  /*tp_size*/
 	0,			  /*tp_itemsize*/
 	/* methods */
@@ -265,6 +270,5 @@ initmd5(void)
 	m = Py_InitModule3("md5", md5_functions, module_doc);
 	d = PyModule_GetDict(m);
 	PyDict_SetItemString(d, "MD5Type", (PyObject *)&MD5type);
-	PyModule_AddIntConstant(m, "digest_size", 16);
 	/* No need to check the error here, the caller will do that */
 }

@@ -4,7 +4,7 @@
 /* (A separate file because this may be OS dependent) */
 
 #include "Python.h"
-#include "pyconfig.h"
+#include "config.h"
 
 time_t
 PyOS_GetLastModificationTime(char *path, FILE *fp)

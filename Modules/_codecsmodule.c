@@ -71,7 +71,6 @@ PyObject *codeclookup(PyObject *self, PyObject *args)
     return NULL;
 }
 
-#ifdef Py_USING_UNICODE
 /* --- Helpers ------------------------------------------------------------ */
 
 static
@@ -121,22 +120,6 @@ unicode_internal_decode(PyObject *self,
 						 size / sizeof(Py_UNICODE)),
 			   size);
     }
-}
-
-static PyObject *
-utf_7_decode(PyObject *self,
-	    PyObject *args)
-{
-    const char *data;
-    int size;
-    const char *errors = NULL;
-    
-    if (!PyArg_ParseTuple(args, "t#|z:utf_7_decode",
-			  &data, &size, &errors))
-	return NULL;
-
-    return codec_tuple(PyUnicode_DecodeUTF7(data, size, errors),
-		       size);
 }
 
 static PyObject *
@@ -316,7 +299,7 @@ charmap_decode(PyObject *self,
 		       size);
 }
 
-#if defined(MS_WIN32) && defined(HAVE_USABLE_WCHAR_T)
+#ifdef MS_WIN32
 
 static PyObject *
 mbcs_decode(PyObject *self,
@@ -395,30 +378,6 @@ unicode_internal_encode(PyObject *self,
 	return codec_tuple(PyString_FromStringAndSize(data, size),
 			   size);
     }
-}
-
-static PyObject *
-utf_7_encode(PyObject *self,
-	    PyObject *args)
-{
-    PyObject *str, *v;
-    const char *errors = NULL;
-
-    if (!PyArg_ParseTuple(args, "O|z:utf_7_encode",
-			  &str, &errors))
-	return NULL;
-
-    str = PyUnicode_FromObject(str);
-    if (str == NULL)
-	return NULL;
-    v = codec_tuple(PyUnicode_EncodeUTF7(PyUnicode_AS_UNICODE(str),
-					 PyUnicode_GET_SIZE(str),
-                     0,
-                     0,
-					 errors),
-		    PyUnicode_GET_SIZE(str));
-    Py_DECREF(str);
-    return v;
 }
 
 static PyObject *
@@ -636,7 +595,7 @@ charmap_encode(PyObject *self,
     return v;
 }
 
-#if defined(MS_WIN32) && defined(HAVE_USABLE_WCHAR_T)
+#ifdef MS_WIN32
 
 static PyObject *
 mbcs_encode(PyObject *self,
@@ -662,44 +621,39 @@ mbcs_encode(PyObject *self,
 }
 
 #endif /* MS_WIN32 */
-#endif /* Py_USING_UNICODE */
 
 /* --- Module API --------------------------------------------------------- */
 
 static PyMethodDef _codecs_functions[] = {
-    {"register",		codecregister,			METH_VARARGS},
-    {"lookup",			codeclookup, 			METH_VARARGS},
-#ifdef Py_USING_UNICODE
-    {"utf_8_encode",		utf_8_encode,			METH_VARARGS},
-    {"utf_8_decode",		utf_8_decode,			METH_VARARGS},
-    {"utf_7_encode",		utf_7_encode,			METH_VARARGS},
-    {"utf_7_decode",		utf_7_decode,			METH_VARARGS},
-    {"utf_16_encode",		utf_16_encode,			METH_VARARGS},
-    {"utf_16_le_encode",	utf_16_le_encode,		METH_VARARGS},
-    {"utf_16_be_encode",	utf_16_be_encode,		METH_VARARGS},
-    {"utf_16_decode",		utf_16_decode,			METH_VARARGS},
-    {"utf_16_le_decode",	utf_16_le_decode,		METH_VARARGS},
-    {"utf_16_be_decode",	utf_16_be_decode,		METH_VARARGS},
-    {"utf_16_ex_decode",	utf_16_ex_decode,		METH_VARARGS},
-    {"unicode_escape_encode",	unicode_escape_encode,		METH_VARARGS},
-    {"unicode_escape_decode",	unicode_escape_decode,		METH_VARARGS},
-    {"unicode_internal_encode",	unicode_internal_encode,	METH_VARARGS},
-    {"unicode_internal_decode",	unicode_internal_decode,	METH_VARARGS},
-    {"raw_unicode_escape_encode", raw_unicode_escape_encode,	METH_VARARGS},
-    {"raw_unicode_escape_decode", raw_unicode_escape_decode,	METH_VARARGS},
-    {"latin_1_encode", 		latin_1_encode,			METH_VARARGS},
-    {"latin_1_decode", 		latin_1_decode,			METH_VARARGS},
-    {"ascii_encode", 		ascii_encode,			METH_VARARGS},
-    {"ascii_decode", 		ascii_decode,			METH_VARARGS},
-    {"charmap_encode", 		charmap_encode,			METH_VARARGS},
-    {"charmap_decode", 		charmap_decode,			METH_VARARGS},
-    {"readbuffer_encode",	readbuffer_encode,		METH_VARARGS},
-    {"charbuffer_encode",	charbuffer_encode,		METH_VARARGS},
-#if defined(MS_WIN32) && defined(HAVE_USABLE_WCHAR_T)
-    {"mbcs_encode", 		mbcs_encode,			METH_VARARGS},
-    {"mbcs_decode", 		mbcs_decode,			METH_VARARGS},
+    {"register",		codecregister,			1},
+    {"lookup",			codeclookup, 			1},
+    {"utf_8_encode",		utf_8_encode,			1},
+    {"utf_8_decode",		utf_8_decode,			1},
+    {"utf_16_encode",		utf_16_encode,			1},
+    {"utf_16_le_encode",	utf_16_le_encode,		1},
+    {"utf_16_be_encode",	utf_16_be_encode,		1},
+    {"utf_16_decode",		utf_16_decode,			1},
+    {"utf_16_le_decode",	utf_16_le_decode,		1},
+    {"utf_16_be_decode",	utf_16_be_decode,		1},
+    {"utf_16_ex_decode",	utf_16_ex_decode,		1},
+    {"unicode_escape_encode",	unicode_escape_encode,		1},
+    {"unicode_escape_decode",	unicode_escape_decode,		1},
+    {"unicode_internal_encode",	unicode_internal_encode,	1},
+    {"unicode_internal_decode",	unicode_internal_decode,	1},
+    {"raw_unicode_escape_encode", raw_unicode_escape_encode,	1},
+    {"raw_unicode_escape_decode", raw_unicode_escape_decode,	1},
+    {"latin_1_encode", 		latin_1_encode,			1},
+    {"latin_1_decode", 		latin_1_decode,			1},
+    {"ascii_encode", 		ascii_encode,			1},
+    {"ascii_decode", 		ascii_decode,			1},
+    {"charmap_encode", 		charmap_encode,			1},
+    {"charmap_decode", 		charmap_decode,			1},
+    {"readbuffer_encode",	readbuffer_encode,		1},
+    {"charbuffer_encode",	charbuffer_encode,		1},
+#ifdef MS_WIN32
+    {"mbcs_encode", 		mbcs_encode,			1},
+    {"mbcs_decode", 		mbcs_decode,			1},
 #endif
-#endif /* Py_USING_UNICODE */
     {NULL, NULL}		/* sentinel */
 };
 

@@ -30,7 +30,7 @@ del StringIO
 
 # Debug support (adapted from ihooks.py)
 
-_VERBOSE = 0 # XXX Bool or int?
+_VERBOSE = 0
 
 if __debug__:
 
@@ -174,9 +174,9 @@ class _Condition(_Verbose):
     def _is_owned(self):
         if self.__lock.acquire(0):
             self.__lock.release()
-            return False
+            return 0
         else:
-            return True
+            return 1
 
     def wait(self, timeout=None):
         me = currentThread()
@@ -191,22 +191,15 @@ class _Condition(_Verbose):
                 if __debug__:
                     self._note("%s.wait(): got it", self)
             else:
-                # Balancing act:  We can't afford a pure busy loop, so we
-                # have to sleep; but if we sleep the whole timeout time,
-                # we'll be unresponsive.  The scheme here sleeps very
-                # little at first, longer as time goes on, but never longer
-                # than 20 times per second (or the timeout time remaining).
                 endtime = _time() + timeout
-                delay = 0.0005 # 500 us -> initial delay of 1 ms
-                while True:
+                delay = 0.000001 # 1 usec
+                while 1:
                     gotit = waiter.acquire(0)
-                    if gotit:
+                    if gotit or _time() >= endtime:
                         break
-                    remaining = endtime - _time()
-                    if remaining <= 0:
-                        break
-                    delay = min(delay * 2, remaining, .05)
                     _sleep(delay)
+                    if delay < 1.0:
+                        delay = delay * 2.0
                 if not gotit:
                     if __debug__:
                         self._note("%s.wait(%s): timed out", self, timeout)
@@ -256,47 +249,23 @@ class _Semaphore(_Verbose):
         self.__value = value
 
     def acquire(self, blocking=1):
-        rc = False
+        rc = 0
         self.__cond.acquire()
         while self.__value == 0:
             if not blocking:
                 break
-            if __debug__:
-                self._note("%s.acquire(%s): blocked waiting, value=%s",
-                           self, blocking, self.__value)
             self.__cond.wait()
         else:
             self.__value = self.__value - 1
-            if __debug__:
-                self._note("%s.acquire: success, value=%s",
-                           self, self.__value)
-            rc = True
+            rc = 1
         self.__cond.release()
         return rc
 
     def release(self):
         self.__cond.acquire()
         self.__value = self.__value + 1
-        if __debug__:
-            self._note("%s.release: success, value=%s",
-                       self, self.__value)
         self.__cond.notify()
         self.__cond.release()
-
-
-def BoundedSemaphore(*args, **kwargs):
-    return apply(_BoundedSemaphore, args, kwargs)
-
-class _BoundedSemaphore(_Semaphore):
-    """Semaphore that checks that # releases is <= # acquires"""
-    def __init__(self, value=1, verbose=None):
-        _Semaphore.__init__(self, value, verbose)
-        self._initial_value = value
-
-    def release(self):
-        if self._Semaphore__value >= self._initial_value:
-            raise ValueError, "Semaphore released too many times"
-        return _Semaphore.release(self)
 
 
 def Event(*args, **kwargs):
@@ -309,20 +278,20 @@ class _Event(_Verbose):
     def __init__(self, verbose=None):
         _Verbose.__init__(self, verbose)
         self.__cond = Condition(Lock())
-        self.__flag = False
+        self.__flag = 0
 
     def isSet(self):
         return self.__flag
 
     def set(self):
         self.__cond.acquire()
-        self.__flag = True
+        self.__flag = 1
         self.__cond.notifyAll()
         self.__cond.release()
 
     def clear(self):
         self.__cond.acquire()
-        self.__flag = False
+        self.__flag = 0
         self.__cond.release()
 
     def wait(self, timeout=None):
@@ -330,6 +299,7 @@ class _Event(_Verbose):
         if not self.__flag:
             self.__cond.wait(timeout)
         self.__cond.release()
+
 
 # Helper to generate new thread names
 _counter = 0
@@ -348,7 +318,7 @@ _limbo = {}
 
 class Thread(_Verbose):
 
-    __initialized = False
+    __initialized = 0
 
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs={}, verbose=None):
@@ -359,10 +329,10 @@ class Thread(_Verbose):
         self.__args = args
         self.__kwargs = kwargs
         self.__daemonic = self._set_daemon()
-        self.__started = False
-        self.__stopped = False
+        self.__started = 0
+        self.__stopped = 0
         self.__block = Condition(Lock())
-        self.__initialized = True
+        self.__initialized = 1
 
     def _set_daemon(self):
         # Overridden in _MainThread and _DummyThread
@@ -388,7 +358,7 @@ class Thread(_Verbose):
         _limbo[self] = self
         _active_limbo_lock.release()
         _start_new_thread(self.__bootstrap, ())
-        self.__started = True
+        self.__started = 1
         _sleep(0.000001)    # 1 usec, to let the thread run (Solaris hack)
 
     def run(self):
@@ -397,7 +367,7 @@ class Thread(_Verbose):
 
     def __bootstrap(self):
         try:
-            self.__started = True
+            self.__started = 1
             _active_limbo_lock.acquire()
             _active[_get_ident()] = self
             del _limbo[self]
@@ -428,7 +398,7 @@ class Thread(_Verbose):
 
     def __stop(self):
         self.__block.acquire()
-        self.__stopped = True
+        self.__stopped = 1
         self.__block.notifyAll()
         self.__block.release()
 
@@ -485,36 +455,6 @@ class Thread(_Verbose):
         assert not self.__started, "cannot set daemon status of active thread"
         self.__daemonic = daemonic
 
-# The timer class was contributed by Itamar Shtull-Trauring
-
-def Timer(*args, **kwargs):
-    return _Timer(*args, **kwargs)
-
-class _Timer(Thread):
-    """Call a function after a specified number of seconds:
-
-    t = Timer(30.0, f, args=[], kwargs={})
-    t.start()
-    t.cancel() # stop the timer's action if it's still waiting
-    """
-
-    def __init__(self, interval, function, args=[], kwargs={}):
-        Thread.__init__(self)
-        self.interval = interval
-        self.function = function
-        self.args = args
-        self.kwargs = kwargs
-        self.finished = Event()
-
-    def cancel(self):
-        """Stop the timer if it hasn't finished yet"""
-        self.finished.set()
-
-    def run(self):
-        self.finished.wait(self.interval)
-        if not self.finished.isSet():
-            self.function(*self.args, **self.kwargs)
-        self.finished.set()
 
 # Special thread class to represent the main thread
 # This is garbage collected through an exit handler
@@ -523,7 +463,7 @@ class _MainThread(Thread):
 
     def __init__(self):
         Thread.__init__(self, name="MainThread")
-        self._Thread__started = True
+        self._Thread__started = 1
         _active_limbo_lock.acquire()
         _active[_get_ident()] = self
         _active_limbo_lock.release()
@@ -531,7 +471,7 @@ class _MainThread(Thread):
         atexit.register(self.__exitfunc)
 
     def _set_daemon(self):
-        return False
+        return 0
 
     def __exitfunc(self):
         self._Thread__stop()
@@ -564,16 +504,16 @@ class _DummyThread(Thread):
 
     def __init__(self):
         Thread.__init__(self, name=_newname("Dummy-%d"))
-        self._Thread__started = True
+        self._Thread__started = 1
         _active_limbo_lock.acquire()
         _active[_get_ident()] = self
         _active_limbo_lock.release()
 
     def _set_daemon(self):
-        return True
+        return 1
 
-    def join(self, timeout=None):
-        assert False, "cannot join a dummy thread"
+    def join(self):
+        assert 0, "cannot join a dummy thread"
 
 
 # Global API functions
@@ -606,6 +546,8 @@ _MainThread()
 # Self-test code
 
 def _test():
+
+    import random
 
     class BoundedQueue(_Verbose):
 
@@ -668,6 +610,8 @@ def _test():
                 item = self.queue.get()
                 print item
                 self.count = self.count - 1
+
+    import time
 
     NP = 3
     QL = 4

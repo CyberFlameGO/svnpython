@@ -1,5 +1,6 @@
 """Test cases for the fnmatch module."""
 
+import re
 import test_support
 import unittest
 
@@ -38,9 +39,4 @@ class FnmatchTestCase(unittest.TestCase):
         check('\\', r'[!\]', 0)
 
 
-def test_main():
-    test_support.run_unittest(FnmatchTestCase)
-
-
-if __name__ == "__main__":
-    test_main()
+test_support.run_unittest(FnmatchTestCase)

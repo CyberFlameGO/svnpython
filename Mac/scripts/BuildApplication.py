@@ -14,11 +14,10 @@ import string
 import os
 import macfs
 import MacOS
-from Carbon import Res
-from Carbon import Dlg
+import Res
+import Dlg
 import EasyDialogs
 import buildtools
-import macresource
 
 # Hmmm...
 MACFREEZEPATH = os.path.join(sys.prefix, ":Mac:Tools:macfreeze")
@@ -39,7 +38,13 @@ GEN68K_BUTTON = 6
 PPC_ONLY=1
 
 
-macresource.need('DITL', DLG_ID, "BuildApplication.rsrc")
+try:
+	Res.GetResource('DITL', DLG_ID)
+except Res.Error:
+	Res.FSpOpenResFile("BuildApplication.rsrc", 1)
+else:
+	pass # we're an applet
+
 
 def main():
 	try:

@@ -6,9 +6,9 @@ import os
 import W
 import WASTEconst
 import PyBrowser
-from Carbon import Qd
-from Carbon import Evt
-from Carbon import Lists
+import Qd
+import Evt
+import Lists
 import MacOS
 _filenames = {}
 
@@ -65,7 +65,7 @@ class Debugger(bdb.Bdb):
 	
 	def start(self, bottomframe = None, running = 0):
 		W.getapplication().DebuggerQuit = bdb.BdbQuit
-		from Carbon import Menu
+		import Menu
 		Menu.HiliteMenu(0)
 		if self.closed:
 			self.setupwidgets(self.title)
@@ -496,8 +496,7 @@ class Debugger(bdb.Bdb):
 			self.w.panes.bottom.tracingmonitor.toggle()
 		try:
 			try:
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(0)
+				MacOS.EnableAppswitch(0)
 				if self.quitting:
 					# returning None is not enough, a former BdbQuit exception
 					# might have been eaten by the print statement
@@ -513,8 +512,7 @@ class Debugger(bdb.Bdb):
 				print 'bdb.Bdb.dispatch: unknown debugging event:', `event`
 				return self.trace_dispatch
 			finally:
-				if hasattr(MacOS, 'EnableAppswitch'):
-					MacOS.EnableAppswitch(-1)
+				MacOS.EnableAppswitch(-1)
 		except KeyboardInterrupt:
 			self.set_step()
 			return self.trace_dispatch
@@ -683,6 +681,7 @@ class BreakpointsViewer:
 	
 	def __init__(self, debugger):
 		self.debugger = debugger
+		import Lists
 		self.w = W.Window((300, 250), 'Breakpoints', minsize = (200, 200))
 		self.w.panes = W.HorizontalPanes((8, 8, -8, -32), (0.3, 0.7))
 		self.w.panes.files = W.List(None, callback = self.filehit)		#, flags = Lists.lOnlyOne)

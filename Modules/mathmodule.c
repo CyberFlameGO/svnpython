@@ -1,7 +1,6 @@
 /* Math module -- standard C math library functions, pi and e */
 
 #include "Python.h"
-#include "longintrepr.h"
 
 #ifndef _MSC_VER
 #ifndef __STDC__
@@ -11,6 +10,25 @@ extern double ldexp (double, int);
 extern double modf (double, double *);
 #endif /* __STDC__ */
 #endif /* _MSC_VER */
+
+
+#ifdef i860
+/* Cray APP has bogus definition of HUGE_VAL in <math.h> */
+#undef HUGE_VAL
+#endif
+
+/* RED_FLAG 12-Oct-2000 Tim
+ * What CHECK does if errno == 0 and x is a NaN is a platform-dependent crap
+ * shoot.  Most (but not all!) platforms will end up setting errno to ERANGE
+ * then, but EDOM is probably better.
+ */
+#ifdef HUGE_VAL
+#define CHECK(x) if (errno != 0) ; \
+	else if (-HUGE_VAL <= (x) && (x) <= HUGE_VAL) ; \
+	else errno = ERANGE
+#else
+#define CHECK(x) /* Don't know how to check */
+#endif
 
 /* Call is_error when errno != 0, and where x is the result libm
  * returned.  is_error will usually set up an exception and return
@@ -23,20 +41,17 @@ is_error(double x)
 	assert(errno);	/* non-zero errno is a precondition for calling */
 	if (errno == EDOM)
 		PyErr_SetString(PyExc_ValueError, "math domain error");
-
 	else if (errno == ERANGE) {
 		/* ANSI C generally requires libm functions to set ERANGE
 		 * on overflow, but also generally *allows* them to set
 		 * ERANGE on underflow too.  There's no consistency about
-		 * the latter across platforms.
-		 * Alas, C99 never requires that errno be set.
-		 * Here we suppress the underflow errors (libm functions
-		 * should return a zero on underflow, and +- HUGE_VAL on
-		 * overflow, so testing the result for zero suffices to
-		 * distinguish the cases).
+		 * the latter across platforms.  Here we suppress the
+		 * underflow errors (libm functions should return a zero
+		 * on underflow, and +- HUGE_VAL on overflow, so testing
+		 * the result for zero suffices to distinguish the cases).
 		 */
 		if (x)
-			PyErr_SetString(PyExc_OverflowError,
+			PyErr_SetString(PyExc_OverflowError, 
 					"math range error");
 		else
 			result = 0;
@@ -57,7 +72,7 @@ math_1(PyObject *args, double (*func) (double), char *argsfmt)
 	PyFPE_START_PROTECT("in math_1", return 0)
 	x = (*func)(x);
 	PyFPE_END_PROTECT(x)
-	Py_SET_ERANGE_IF_OVERFLOW(x);
+	CHECK(x);
 	if (errno && is_error(x))
 		return NULL;
 	else
@@ -74,7 +89,7 @@ math_2(PyObject *args, double (*func) (double, double), char *argsfmt)
 	PyFPE_START_PROTECT("in math_2", return 0)
 	x = (*func)(x, y);
 	PyFPE_END_PROTECT(x)
-	Py_SET_ERANGE_IF_OVERFLOW(x);
+	CHECK(x);
 	if (errno && is_error(x))
 		return NULL;
 	else
@@ -94,50 +109,52 @@ math_2(PyObject *args, double (*func) (double, double), char *argsfmt)
         static char math_##funcname##_doc [] = docstring;
 
 FUNC1(acos, acos,
-      "acos(x)\n\nReturn the arc cosine (measured in radians) of x.")
+      "acos(x)\n\nReturn the arc cosine of x.")
 FUNC1(asin, asin,
-      "asin(x)\n\nReturn the arc sine (measured in radians) of x.")
+      "asin(x)\n\nReturn the arc sine of x.")
 FUNC1(atan, atan,
-      "atan(x)\n\nReturn the arc tangent (measured in radians) of x.")
+      "atan(x)\n\nReturn the arc tangent of x.")
 FUNC2(atan2, atan2,
-      "atan2(y, x)\n\nReturn the arc tangent (measured in radians) of y/x.\n"
-      "Unlike atan(y/x), the signs of both x and y are considered.")
+      "atan2(y, x)\n\nReturn atan(y/x).")
 FUNC1(ceil, ceil,
-      "ceil(x)\n\nReturn the ceiling of x as a float.\n"
-      "This is the smallest integral value >= x.")
+      "ceil(x)\n\nReturn the ceiling of x as a real.")
 FUNC1(cos, cos,
-      "cos(x)\n\nReturn the cosine of x (measured in radians).")
+      "cos(x)\n\nReturn the cosine of x.")
 FUNC1(cosh, cosh,
       "cosh(x)\n\nReturn the hyperbolic cosine of x.")
 FUNC1(exp, exp,
       "exp(x)\n\nReturn e raised to the power of x.")
 FUNC1(fabs, fabs,
-      "fabs(x)\n\nReturn the absolute value of the float x.")
+      "fabs(x)\n\nReturn the absolute value of the real x.")
 FUNC1(floor, floor,
-      "floor(x)\n\nReturn the floor of x as a float.\n"
-      "This is the largest integral value <= x.")
-FUNC2(fmod, fmod,
+      "floor(x)\n\nReturn the floor of x as a real.")
+     FUNC2(fmod, fmod,
       "fmod(x,y)\n\nReturn fmod(x, y), according to platform C."
       "  x % y may differ.")
 FUNC2(hypot, hypot,
       "hypot(x,y)\n\nReturn the Euclidean distance, sqrt(x*x + y*y).")
+FUNC1(log, log,
+      "log(x)\n\nReturn the natural logarithm of x.")
+FUNC1(log10, log10,
+      "log10(x)\n\nReturn the base-10 logarithm of x.")
 #ifdef MPW_3_1 /* This hack is needed for MPW 3.1 but not for 3.2 ... */
 FUNC2(pow, power,
-      "pow(x,y)\n\nReturn x**y (x to the power of y).")
+      "pow(x,y)\n\nReturn x**y.")
 #else
 FUNC2(pow, pow,
-      "pow(x,y)\n\nReturn x**y (x to the power of y).")
+      "pow(x,y)\n\nReturn x**y.")
 #endif
 FUNC1(sin, sin,
-      "sin(x)\n\nReturn the sine of x (measured in radians).")
+      "sin(x)\n\nReturn the sine of x.")
 FUNC1(sinh, sinh,
       "sinh(x)\n\nReturn the hyperbolic sine of x.")
 FUNC1(sqrt, sqrt,
       "sqrt(x)\n\nReturn the square root of x.")
 FUNC1(tan, tan,
-      "tan(x)\n\nReturn the tangent of x (measured in radians).")
+      "tan(x)\n\nReturn the tangent of x.")
 FUNC1(tanh, tanh,
       "tanh(x)\n\nReturn the hyperbolic tangent of x.")
+
 
 static PyObject *
 math_frexp(PyObject *self, PyObject *args)
@@ -148,7 +165,7 @@ math_frexp(PyObject *self, PyObject *args)
 		return NULL;
 	errno = 0;
 	x = frexp(x, &i);
-	Py_SET_ERANGE_IF_OVERFLOW(x);
+	CHECK(x);
 	if (errno && is_error(x))
 		return NULL;
 	else
@@ -156,11 +173,12 @@ math_frexp(PyObject *self, PyObject *args)
 }
 
 static char math_frexp_doc [] =
-"frexp(x)\n"
-"\n"
-"Return the mantissa and exponent of x, as pair (m, e).\n"
-"m is a float and e is an int, such that x = m * 2.**e.\n"
-"If x is 0, m and e are both 0.  Else 0.5 <= abs(m) < 1.0.";
+"frexp(x)\n\
+\n\
+Return the mantissa and exponent of x, as pair (m, e).\n\
+m is a float and e is an int, such that x = m * 2.**e.\n\
+If x is 0, m and e are both 0.  Else 0.5 <= abs(m) < 1.0.";
+
 
 static PyObject *
 math_ldexp(PyObject *self, PyObject *args)
@@ -173,15 +191,18 @@ math_ldexp(PyObject *self, PyObject *args)
 	PyFPE_START_PROTECT("ldexp", return 0)
 	x = ldexp(x, exp);
 	PyFPE_END_PROTECT(x)
-	Py_SET_ERANGE_IF_OVERFLOW(x);
+	CHECK(x);
 	if (errno && is_error(x))
 		return NULL;
 	else
 		return PyFloat_FromDouble(x);
 }
 
-static char math_ldexp_doc [] =
-"ldexp(x, i) -> x * (2**i)";
+static char math_ldexp_doc [] = 
+"ldexp_doc(x, i)\n\
+\n\
+Return x * (2**i).";
+
 
 static PyObject *
 math_modf(PyObject *self, PyObject *args)
@@ -199,7 +220,7 @@ math_modf(PyObject *self, PyObject *args)
 #else
 	x = modf(x, &y);
 #endif
-	Py_SET_ERANGE_IF_OVERFLOW(x);
+	CHECK(x);
 	if (errno && is_error(x))
 		return NULL;
 	else
@@ -207,72 +228,10 @@ math_modf(PyObject *self, PyObject *args)
 }
 
 static char math_modf_doc [] =
-"modf(x)\n"
-"\n"
-"Return the fractional and integer parts of x.  Both results carry the sign\n"
-"of x.  The integer part is returned as a real.";
-
-/* A decent logarithm is easy to compute even for huge longs, but libm can't
-   do that by itself -- loghelper can.  func is log or log10, and name is
-   "log" or "log10".  Note that overflow isn't possible:  a long can contain
-   no more than INT_MAX * SHIFT bits, so has value certainly less than
-   2**(2**64 * 2**16) == 2**2**80, and log2 of that is 2**80, which is
-   small enough to fit in an IEEE single.  log and log10 are even smaller.
-*/
-
-static PyObject*
-loghelper(PyObject* args, double (*func)(double), char *name)
-{
-	PyObject *arg;
-	char format[16];
-
-	/* See whether this is a long. */
-	format[0] = 'O';
-	format[1] = ':';
-	strcpy(format + 2, name);
-	if (! PyArg_ParseTuple(args, format, &arg))
-		return NULL;
-
-	/* If it is long, do it ourselves. */
-	if (PyLong_Check(arg)) {
-		double x;
-		int e;
-		x = _PyLong_AsScaledDouble(arg, &e);
-		if (x <= 0.0) {
-			PyErr_SetString(PyExc_ValueError,
-					"math domain error");
-			return NULL;
-		}
-		/* Value is ~= x * 2**(e*SHIFT), so the log ~=
-		   log(x) + log(2) * e * SHIFT.
-		   CAUTION:  e*SHIFT may overflow using int arithmetic,
-		   so force use of double. */
-		x = func(x) + (e * (double)SHIFT) * func(2.0);
-		return PyFloat_FromDouble(x);
-	}
-
-	/* Else let libm handle it by itself. */
-	format[0] = 'd';
-	return math_1(args, func, format);
-}
-
-static PyObject *
-math_log(PyObject *self, PyObject *args)
-{
-	return loghelper(args, log, "log");
-}
-
-static char math_log_doc[] =
-"log(x) -> the natural logarithm (base e) of x.";
-
-static PyObject *
-math_log10(PyObject *self, PyObject *args)
-{
-	return loghelper(args, log10, "log10");
-}
-
-static char math_log10_doc[] =
-"log10(x) -> the base 10 logarithm of x.";
+"modf(x)\n\
+\n\
+Return the fractional and integer parts of x. Both results carry the sign\n\
+of x.  The integer part is returned as a real.";
 
 
 static PyMethodDef math_methods[] = {
@@ -304,14 +263,14 @@ static PyMethodDef math_methods[] = {
 
 
 static char module_doc [] =
-"This module is always available.  It provides access to the\n"
-"mathematical functions defined by the C standard.";
+"This module is always available.  It provides access to the\n\
+mathematical functions defined by the C standard.";
 
 DL_EXPORT(void)
 initmath(void)
 {
 	PyObject *m, *d, *v;
-
+	
 	m = Py_InitModule3("math", math_methods, module_doc);
 	d = PyModule_GetDict(m);
 

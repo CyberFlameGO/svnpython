@@ -1,5 +1,5 @@
-from Carbon.Sound import *
-from Carbon import Snd
+from Sound import *
+import Snd
 
 import aifc, audioop
 

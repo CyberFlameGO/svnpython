@@ -3,7 +3,6 @@ from bgenGeneratorGroup import GeneratorGroup
 
 class ObjectDefinition(GeneratorGroup):
 	"Spit out code that together defines a new Python object type"
-	basechain = "NULL"
 
 	def __init__(self, name, prefix, itselftype):
 		"""ObjectDefinition constructor.  May be extended, but do not override.
@@ -22,7 +21,7 @@ class ObjectDefinition(GeneratorGroup):
 		self.typename = name + '_Type'
 		self.argref = ""	# set to "*" if arg to <type>_New should be pointer
 		self.static = "static " # set to "" to make <type>_New and <type>_Convert public
-		self.modulename = None
+		self.basechain = "NULL" # set to &<basetype>_chain to chain methods
 
 	def add(self, g, dupcheck=0):
 		g.setselftype(self.objecttype, self.itselftype)
@@ -31,9 +30,6 @@ class ObjectDefinition(GeneratorGroup):
 	def reference(self):
 		# In case we are referenced from a module
 		pass
-		
-	def setmodulename(self, name):
-		self.modulename = name
 
 	def generate(self):
 		# XXX This should use long strings and %(varname)s substitution!
@@ -84,8 +80,10 @@ class ObjectDefinition(GeneratorGroup):
 
 	def outputNew(self):
 		Output()
-		Output("%sPyObject *%s_New(%s %sitself)", self.static, self.prefix,
-				self.itselftype, self.argref)
+		Output("%sPyObject *%s_New(itself)", self.static, self.prefix)
+		IndentLevel()
+		Output("%s %sitself;", self.itselftype, self.argref)
+		DedentLevel()
 		OutLbrace()
 		Output("%s *it;", self.objecttype)
 		self.outputCheckNewArg()
@@ -102,8 +100,11 @@ class ObjectDefinition(GeneratorGroup):
 			"Override this method to apply additional checks/conversions"
 	
 	def outputConvert(self):
-		Output("%sint %s_Convert(PyObject *v, %s *p_itself)", self.static, self.prefix,
-				self.itselftype)
+		Output("%s%s_Convert(v, p_itself)", self.static, self.prefix)
+		IndentLevel()
+		Output("PyObject *v;")
+		Output("%s *p_itself;", self.itselftype)
+		DedentLevel()
 		OutLbrace()
 		self.outputCheckConvertArg()
 		Output("if (!%s_Check(v))", self.prefix)
@@ -120,7 +121,10 @@ class ObjectDefinition(GeneratorGroup):
 
 	def outputDealloc(self):
 		Output()
-		Output("static void %s_dealloc(%s *self)", self.prefix, self.objecttype)
+		Output("static void %s_dealloc(self)", self.prefix)
+		IndentLevel()
+		Output("%s *self;", self.objecttype)
+		DedentLevel()
 		OutLbrace()
 		self.outputCleanupStructMembers()
 		Output("PyMem_DEL(self);")
@@ -134,7 +138,11 @@ class ObjectDefinition(GeneratorGroup):
 
 	def outputGetattr(self):
 		Output()
-		Output("static PyObject *%s_getattr(%s *self, char *name)", self.prefix, self.objecttype)
+		Output("static PyObject *%s_getattr(self, name)", self.prefix)
+		IndentLevel()
+		Output("%s *self;", self.objecttype)
+		Output("char *name;")
+		DedentLevel()
 		OutLbrace()
 		self.outputGetattrBody()
 		OutRbrace()
@@ -168,12 +176,9 @@ class ObjectDefinition(GeneratorGroup):
 		Output()
 		Output("%sPyTypeObject %s = {", sf, self.typename)
 		IndentLevel()
-		Output("PyObject_HEAD_INIT(NULL)")
+		Output("PyObject_HEAD_INIT(&PyType_Type)")
 		Output("0, /*ob_size*/")
-		if self.modulename:
-			Output("\"%s.%s\", /*tp_name*/", self.modulename, self.name)
-		else:
-			Output("\"%s\", /*tp_name*/", self.name)
+		Output("\"%s\", /*tp_name*/", self.name)
 		Output("sizeof(%s), /*tp_basicsize*/", self.objecttype)
 		Output("0, /*tp_itemsize*/")
 		Output("/* methods */")
@@ -196,7 +201,7 @@ class ObjectDefinition(GeneratorGroup):
 		Output("""if (PyDict_SetItemString(d, "%sType", (PyObject *)&%s) != 0)""",
 			self.name, self.typename);
 		IndentLevel()
-		Output("""Py_FatalError("can\'t initialize %sType");""",
+		Output("""Py_FatalError("can't initialize %sType");""",
 		                                           self.name)
 		DedentLevel()
 
@@ -221,8 +226,10 @@ class ObjectIdentityMixin:
 	
 	def outputCompare(self):
 		Output()
-		Output("static int %s_compare(%s *self, %s *other)", self.prefix, self.objecttype,
-				self.objecttype)
+		Output("static int %s_compare(self, other)", self.prefix)
+		IndentLevel()
+		Output("%s *self, *other;", self.objecttype)
+		DedentLevel()
 		OutLbrace()
 		Output("unsigned long v, w;")
 		Output()
@@ -243,7 +250,10 @@ class ObjectIdentityMixin:
 		
 	def outputHash(self):
 		Output()
-		Output("static long %s_hash(%s *self)", self.prefix, self.objecttype)
+		Output("static long %s_hash(self)", self.prefix)
+		IndentLevel()
+		Output("%s *self;", self.objecttype)
+		DedentLevel()
 		OutLbrace()
 		Output("return (long)self->ob_itself;")
 		OutRbrace()

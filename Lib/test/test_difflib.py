@@ -1,2 +1,2 @@
-import difflib, test_support
-test_support.run_doctest(difflib)
+import doctest, difflib
+doctest.testmod(difflib, verbose=1)

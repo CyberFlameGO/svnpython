@@ -22,7 +22,7 @@ class UserList:
         if isinstance(other, UserList): return other.data
         else: return other
     def __cmp__(self, other):
-        return cmp(self.data, self.__cast(other))
+        raise RuntimeError, "UserList.__cmp__() is obsolete"
     def __contains__(self, item): return item in self.data
     def __len__(self): return len(self.data)
     def __getitem__(self, i): return self.data[i]

@@ -41,7 +41,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     # Determine platform specifics
     have_fork = hasattr(os, 'fork')
     have_popen2 = hasattr(os, 'popen2')
-    have_popen3 = hasattr(os, 'popen3')
 
     # Make rfile unbuffered -- we need to read one line and then pass
     # the rest to a subprocess, so we can't use buffered input.
@@ -86,8 +85,8 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             i = len(x)
             if path[:i] == x and (not path[i:] or path[i] == '/'):
                 self.cgi_info = path[:i], path[i+1:]
-                return True
-        return False
+                return 1
+        return 0
 
     cgi_directories = ['/cgi-bin', '/htbin']
 
@@ -124,7 +123,7 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             return
         ispy = self.is_python(scriptname)
         if not ispy:
-            if not (self.have_fork or self.have_popen2 or self.have_popen3):
+            if not (self.have_fork or self.have_popen2):
                 self.send_error(403, "CGI script is not a Python script (%s)" %
                                 `scriptname`)
                 return
@@ -215,13 +214,9 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 self.server.handle_error(self.request, self.client_address)
                 os._exit(127)
 
-        elif self.have_popen2 or self.have_popen3:
-            # Windows -- use popen2 or popen3 to create a subprocess
+        elif self.have_popen2:
+            # Windows -- use popen2 to create a subprocess
             import shutil
-            if self.have_popen3:
-                popenx = os.popen3
-            else:
-                popenx = os.popen2
             os.environ.update(env)
             cmdline = scriptfile
             if self.is_python(scriptfile):
@@ -235,23 +230,14 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             self.log_message("command: %s", cmdline)
             try:
                 nbytes = int(length)
-            except ValueError:
+            except:
                 nbytes = 0
-            files = popenx(cmdline, 'b')
-            fi = files[0]
-            fo = files[1]
-            if self.have_popen3:
-                fe = files[2]
+            fi, fo = os.popen2(cmdline, 'b')
             if self.command.lower() == "post" and nbytes > 0:
                 data = self.rfile.read(nbytes)
                 fi.write(data)
             fi.close()
             shutil.copyfileobj(fo, self.wfile)
-            if self.have_popen3:
-                errors = fe.read()
-                fe.close()
-                if errors:
-                    self.log_error('%s', errors)
             sts = fo.close()
             if sts:
                 self.log_error("CGI script exit status %#x", sts)
@@ -307,7 +293,7 @@ def executable(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return st[0] & 0111 != 0
 
 

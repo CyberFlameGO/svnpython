@@ -29,10 +29,6 @@ extern "C" {
 #define BINARY_ADD	23
 #define BINARY_SUBTRACT	24
 #define BINARY_SUBSCR	25
-#define BINARY_FLOOR_DIVIDE 26
-#define BINARY_TRUE_DIVIDE 27
-#define INPLACE_FLOOR_DIVIDE 28
-#define INPLACE_TRUE_DIVIDE 29
 
 #define SLICE		30
 /* Also uses 31-33 */
@@ -57,7 +53,6 @@ extern "C" {
 #define BINARY_XOR	65
 #define BINARY_OR	66
 #define INPLACE_POWER	67
-#define GET_ITER	68
 
 #define PRINT_EXPR	70
 #define PRINT_ITEM	71
@@ -75,7 +70,6 @@ extern "C" {
 #define RETURN_VALUE	83
 #define IMPORT_STAR	84
 #define EXEC_STMT	85
-#define YIELD_VALUE	86
 
 #define POP_BLOCK	87
 #define END_FINALLY	88
@@ -86,7 +80,6 @@ extern "C" {
 #define STORE_NAME	90	/* Index in name list */
 #define DELETE_NAME	91	/* "" */
 #define UNPACK_SEQUENCE	92	/* Number of sequence items */
-#define FOR_ITER	93
 
 #define STORE_ATTR	95	/* Index in name list */
 #define DELETE_ATTR	96	/* "" */
@@ -142,9 +135,9 @@ extern "C" {
 /* Support for opargs more than 16 bits long */
 #define EXTENDED_ARG  143
 
-
-enum cmp_op {PyCmp_LT=Py_LT, PyCmp_LE=Py_LE, PyCmp_EQ=Py_EQ, PyCmp_NE=Py_NE, PyCmp_GT=Py_GT, PyCmp_GE=Py_GE,
-	     PyCmp_IN, PyCmp_NOT_IN, PyCmp_IS, PyCmp_IS_NOT, PyCmp_EXC_MATCH, PyCmp_BAD};
+/* Comparison operator codes (argument to COMPARE_OP) */
+enum cmp_op {LT=Py_LT, LE=Py_LE, EQ=Py_EQ, NE=Py_NE, GT=Py_GT, GE=Py_GE,
+	     IN, NOT_IN, IS, IS_NOT, EXC_MATCH, BAD};
 
 #define HAS_ARG(op) ((op) >= HAVE_ARGUMENT)
 

@@ -39,18 +39,14 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 		char buf[256];
 		if (Py_VerboseFlag)
 			perror(pathname);
-		PyOS_snprintf(buf, sizeof(buf), "Failed to load %.200s",
-			      pathname);
+		sprintf(buf, "Failed to load %.200s", pathname);
 		PyErr_SetString(PyExc_ImportError, buf);
 		return NULL;
 	}
-	PyOS_snprintf(funcname, sizeof(funcname), FUNCNAME_PATTERN, shortname);
+	sprintf(funcname, FUNCNAME_PATTERN, shortname);
 	if (Py_VerboseFlag)
 		printf("shl_findsym %s\n", funcname);
-	if (shl_findsym(&lib, funcname, TYPE_UNDEFINED, (void *) &p) == -1) {
-		shl_unload(lib);
-		p = NULL;
-	}
+	shl_findsym(&lib, funcname, TYPE_UNDEFINED, (void *) &p);
 	if (p == NULL && Py_VerboseFlag)
 		perror(funcname);
 

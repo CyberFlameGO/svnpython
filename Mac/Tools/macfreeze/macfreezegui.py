@@ -1,12 +1,11 @@
 """macfreezegui - The GUI for macfreeze"""
-from Carbon import Dlg
+import Dlg
 import macfs
 import EasyDialogs
 import sys
 import os
 import string
-from Carbon import Res
-import macresource
+import Res
 
 ID_MAINDIALOG=512
 
@@ -55,8 +54,17 @@ def dialog(script=None):
 	dirname = os.path.join(dirname, 'build.'+basebase)
 	
 	# Get the dialog, possibly opening the resource file (if needed)
-	macresource.need('DLOG', ID_MAINDIALOG, 'macfreeze.rsrc')
-	d = Dlg.GetNewDialog(ID_MAINDIALOG, -1)
+	try:
+		d = Dlg.GetNewDialog(ID_MAINDIALOG, -1)
+	except Dlg.Error:
+		d = None
+	if d == None:
+		try:
+			Res.FSpOpenResFile('macfreeze.rsrc', 1)
+		except Res.Error:
+			d = None
+		else:
+			d = Dlg.GetNewDialog(ID_MAINDIALOG, -1)
 	if d == None:
 		EasyDialogs.Message("Dialog resource not found or faulty")
 		sys.exit(1)

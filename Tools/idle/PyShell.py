@@ -36,9 +36,6 @@ def linecache_checkcache(orig_checkcache=linecache.checkcache):
 linecache.checkcache = linecache_checkcache
 
 
-IDENTCHARS = string.ascii_letters + string.digits + "_"
-
-
 # Note: <<newline-and-indent>> event is defined in AutoIndent.py
 
 #$ event <<plain-newline-and-indent>>
@@ -220,7 +217,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         text.tag_add("ERROR", pos)
         text.see(pos)
         char = text.get(pos)
-        if char and char in IDENTCHARS:
+        if char and char in string.letters + string.digits + "_":
             text.tag_add("ERROR", pos + " wordstart", pos)
         self.tkconsole.resetoutput()
         self.write("SyntaxError: %s\n" % str(msg))
@@ -421,7 +418,7 @@ class PyShell(OutputWindow):
             if self.reading:
                 self.top.quit()
             return "cancel"
-        return OutputWindow.close(self)
+        return PyShellEditorWindow.close(self)
 
     def _close(self):
         self.close_debugger()
@@ -439,7 +436,7 @@ class PyShell(OutputWindow):
 
     def ispythonsource(self, filename):
         # Override this so EditorWindow never removes the colorizer
-        return True
+        return 1
 
     def short_title(self):
         return self.shell_title
@@ -482,7 +479,7 @@ class PyShell(OutputWindow):
         return line
 
     def isatty(self):
-        return True
+        return 1
 
     def cancel_callback(self, event):
         try:
@@ -685,7 +682,7 @@ class PseudoFile:
         pass
 
     def isatty(self):
-        return True
+        return 1
 
 
 usage_msg = """\

@@ -46,17 +46,6 @@ import sys
 import tempfile
 
 
-if not hasattr(os.path, "abspath"):
-    # Python 1.5.1 or earlier
-    def abspath(path):
-        """Return an absolute path."""
-        if not os.path.isabs(path):
-            path = os.path.join(os.getcwd(), path)
-        return os.path.normpath(path)
-
-    os.path.abspath = abspath
-
-
 MYDIR = os.path.abspath(sys.path[0])
 TOPDIR = os.path.dirname(MYDIR)
 
@@ -109,28 +98,6 @@ class Options:
     up_link = None
     up_title = None
     #
-    # 'dvips_safe' is a weird option.  It is used mostly to make
-    # LaTeX2HTML not try to be too smart about protecting the user
-    # from a bad version of dvips -- some versions would core dump if
-    # the path to the source DVI contained a dot, and it's appearantly
-    # difficult to determine if the version available has that bug.
-    # This option gets set when PostScript output is requested
-    # (because we're going to run dvips regardless, and we'll either
-    # know it succeeds before LaTeX2HTML is run, or we'll have
-    # detected the failure and bailed), or the user asserts that it's
-    # safe from the command line.
-    #
-    # So, why does LaTeX2HTML think it appropriate to protect the user
-    # from a dvips that's only potentially going to core dump?  Only
-    # because they want to avoid doing a lot of work just to have to
-    # bail later with no useful intermediates.  Unfortunately, they
-    # bail *before* they know whether dvips will be needed at all.
-    # I've gone around the bush a few times with the LaTeX2HTML
-    # developers over whether this is appropriate behavior, and they
-    # don't seem interested in changing their position.
-    #
-    dvips_safe = 0
-    #
     DEFAULT_FORMATS = ("html",)
     ALL_FORMATS = ("dvi", "html", "pdf", "ps", "text")
 
@@ -153,12 +120,11 @@ class Options:
                                     "keep", "quiet", "runs=", "image-type=",
                                     "about=", "numeric", "style=", "paper=",
                                     "up-link=", "up-title=", "dir=",
-                                    "global-module-index=", "dvips-safe"]
+                                    "global-module-index="]
                                    + list(self.ALL_FORMATS))
         for opt, arg in opts:
             if opt == "--all":
                 self.formats = list(self.ALL_FORMATS)
-                self.dvips_safe = "ps" in self.formats
             elif opt in ("-H", "--help"):
                 usage(self)
                 sys.exit()
@@ -203,13 +169,9 @@ class Options:
             elif opt == "--global-module-index":
                 self.global_module_index = arg
             elif opt == "--dir":
-                if os.sep == "\\":
-                    arg = re.sub("/", "\\", arg)
                 self.builddir = arg
             elif opt == "--paper":
                 self.paper = arg
-            elif opt == "--dvips-safe":
-                self.dvips_safe = 1
             #
             # Format specifiers:
             #
@@ -227,9 +189,6 @@ class Options:
     def add_format(self, format):
         """Add a format to the formats list if not present."""
         if not format in self.formats:
-            if format == "ps":
-                # assume this is safe since we're going to run it anyway
-                self.dvips_safe = 1
             self.formats.append(format)
 
     def initialize(self):
@@ -245,8 +204,6 @@ class Options:
             os.path.join(TOPDIR, "paper-" + self.paper),
             os.path.join(TOPDIR, "texinputs"),
             ] + texinputs
-        if self.builddir:
-            self.builddir = os.path.abspath(self.builddir)
 
 
 class Job:
@@ -256,13 +213,7 @@ class Job:
         self.options = options
         self.doctype = get_doctype(path)
         self.filedir, self.doc = split_pathname(path)
-        self.builddir = os.path.abspath(options.builddir or self.doc)
-        if ("html" in options.formats or "text" in options.formats):
-            if not os.path.exists(self.builddir):
-                os.mkdir(self.builddir)
-            self.log_filename = os.path.join(self.builddir, self.doc + ".how")
-        else:
-            self.log_filename = os.path.abspath(self.doc + ".how")
+        self.log_filename = self.doc + ".how"
         if os.path.exists(self.log_filename):
             os.unlink(self.log_filename)
         if os.path.exists(self.doc + ".l2h"):
@@ -282,7 +233,7 @@ class Job:
             self.build_ps()
         if "html" in formats:
             self.require_temps()
-            self.build_html(self.builddir)
+            self.build_html(self.options.builddir or self.doc)
             if self.options.icon_server == ".":
                 pattern = os.path.join(TOPDIR, "html", "icons",
                                        "*." + self.options.image_type)
@@ -347,6 +298,9 @@ class Job:
             if self.use_bibtex:
                 self.run("%s %s" % (BIBTEX_BINARY, self.doc))
             self.process_synopsis_files()
+            #
+            # let the doctype-specific handler do some intermediate work:
+            #
             self.run("%s %s" % (binary, self.doc))
             self.latex_runs = self.latex_runs + 1
             if os.path.isfile("mod%s.idx" % self.doc):
@@ -380,7 +334,9 @@ class Job:
     def build_ps(self):
         self.run("%s -N0 -o %s.ps %s" % (DVIPS_BINARY, self.doc, self.doc))
 
-    def build_html(self, builddir, max_split_depth=None):
+    def build_html(self, builddir=None, max_split_depth=None):
+        if builddir is None:
+            builddir = self.doc
         if max_split_depth is None:
             max_split_depth = self.options.max_split_depth
         texfile = None
@@ -476,7 +432,6 @@ class Job:
         l2hoption(fp, "EXTERNAL_UP_LINK", options.up_link)
         l2hoption(fp, "EXTERNAL_UP_TITLE", options.up_title)
         l2hoption(fp, "GLOBAL_MODULE_INDEX", options.global_module_index)
-        l2hoption(fp, "DVIPS_SAFE", options.dvips_safe)
         fp.write("1;\n")
         fp.close()
 
@@ -503,22 +458,12 @@ class Job:
 
     def run(self, command):
         self.message(command)
-        if sys.platform.startswith("win"):
-            rc = os.system(command)
-        else:
-            rc = os.system("(%s) </dev/null >>%s 2>&1"
-                           % (command, self.log_filename))
+        rc = os.system("(%s) </dev/null >>%s 2>&1"
+                       % (command, self.log_filename))
         if rc:
             self.warning(
                 "Session transcript and error messages are in %s."
                 % self.log_filename)
-            if hasattr(os, "WIFEXITED"):
-                if os.WIFEXITED(rc):
-                    self.warning("Exited with status %s." % os.WEXITSTATUS(rc))
-                else:
-                    self.warning("Killed by signal %s." % os.WSTOPSIG(rc))
-            else:
-                self.warning("Return code: %s" % rc)
             sys.stderr.write("The relevant lines from the transcript are:\n")
             sys.stderr.write("-" * 72 + "\n")
             sys.stderr.writelines(get_run_transcript(self.log_filename))
@@ -565,7 +510,7 @@ def safe_unlink(path):
 
 
 def split_pathname(path):
-    path = os.path.abspath(path)
+    path = os.path.normpath(os.path.join(os.getcwd(), path))
     dirname, basename = os.path.split(path)
     if basename[-4:] == ".tex":
         basename = basename[:-4]

@@ -14,14 +14,14 @@ import sys
 import traceback
 import aetools
 import string
-from Carbon import AE
+import AE
 import EasyDialogs
 import os
-from Carbon import Qd
-from types import *
-from Carbon.Events import charCodeMask, cmdKey
+import Qd
+from Types import *
+from Events import charCodeMask, cmdKey
 import MacOS
-from Carbon import Evt
+import Evt
 
 def dummyfunc(): pass
 

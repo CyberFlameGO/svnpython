@@ -4,56 +4,50 @@ LIBSROOT = $.AcornC_C++.Libraries
 # You may need to change some of the following
 OSLIB = $(LIBSROOT).OSLib
 CLIB = $(LIBSROOT).clib
-TCPIPLIB = $(LIBSROOT).TCPIPLibs
+SOCKLIB = $(LIBSROOT).netlib
 DLKLIB = $(LIBSROOT).dlk
 ZLIB = $(LIBSROOT).zlib
 EXPAT = $(LIBSROOT).expat.lib
 
-OBJSCAN = objscan
-MAKEDLK = makedlk
+OBJSCAN = $(DLKLIB).objscan
+MAKEDLK = $(DLKLIB).makedlk
 
 # change from time to time (don't forget to change !Boot also)
-TARGET=Python22
-BUILD=25
+TARGET=Python21
+BUILD=12
 
 
 #
 # You shouldn't need to change anything below this line
 #
+OSLIBS = OSLib:Computer,OSLib:Core,OSLib:User
+
 DLKFLAG= -DDLK
 DLKOBJS = $(DLKLIB).o.dlk_load @.o.linktab
 
-HEADERS = @,$(TCPIPLIB),@.^.Include,@.^.Modules,@.^.Objects,@.^.Python,$(CLIB),$(OSLIB),$(DLKLIB)
+HEADERS = @,@.^.Include,@.^.Modules,@.^.Objects,@.^.Python,$(CLIB),$(OSLIBS),$(DLKLIB)
 
-CFLAGS = -c  $(DLKFLAG) -DRISCOS -DHAVE_CONFIG_H -wadP -throwback -APCS 3/32bit/fpe3
-
-CC = cc $(CFLAGS) -j$(HEADERS)
-CCEXPAT = cc $(CFLAGS) -j$(HEADERS),$(EXPAT) -DHAVE_EXPAT_H
+CC = cc -c -j$(HEADERS) $(DLKFLAG) -DRISCOS -DHAVE_CONFIG_H -wad -throwback
+#-depend !Depend
+CCEXPAT = cc -c -j$(HEADERS),$(EXPAT) $(DLKFLAG) -DHAVE_EXPAT_H -DRISCOS -DHAVE_CONFIG_H -wad -throwback
 
 LINK = link
 LINKFLAGS = -aif #-NOUNUSED #-d
-LOADLIBS = $(TCPIPLIB).o.unixlib $(TCPIPLIB).o.inetlib $(TCPIPLIB).o.socklib $(CLIB).o.Stubs $(OSLIB).o.OSLib32 $(DLKOBJS)
-
-LIBFILE = libfile -c 
+LOADLIBS = $(CLIB).o.Stubs $(OSLIB).o.OSLib $(DLKOBJS)
 
 
 .c.o  :
        $(CC) -o $@ $*.c
 
-MAIN_PYTHON =\
-	@.^.Modules.o.python
-
-LIB_PYTHON =\
-	@.^.LibPython
 
 # code for main Python binary
 MODULES_STATIC =\
+	@.^.Modules.o.python\
 	@.^.Modules.o.main\
-	@.Modules.o.config\
+	Modules.o.config\
 	@.^.Modules.o.getbuildinfo\
-	@.Modules.o.getpath_riscos\
-	@.Modules.o.riscosmodule\
-	@.^.Modules.o.gcmodule
+	Modules.o.getpath_riscos\
+	Modules.o.riscosmodule
 
 
 # dynamic Modules
@@ -91,9 +85,7 @@ MODULES_DYNAMIC =\
 	@.^.Lib.pyexpat/pyd\
 	@.^.Lib.plat-riscos.drawf/pyd\
 	@.^.Lib.plat-riscos.swi/pyd\
-	@.^.Lib._sre/pyd\
-	@.^.Lib.xxsubtype/pyd\
-	@.^.Lib._symtable/pyd
+	@.^.Lib._sre/pyd
 
 
 OBJECTS_PYTHON =\
@@ -106,7 +98,6 @@ OBJECTS_PYTHON =\
 	@.^.Python.o.pystate\
 	@.^.Python.o.pyfpe\
 	@.^.Python.o.mystrtoul\
-	@.^.Python.o.mysnprintf\
 	@.^.Python.o.modsupport\
 	@.^.Python.o.marshal\
 	@.^.Python.o.importdl\
@@ -150,7 +141,6 @@ OBJECTS_OBJECTS =\
 	@.^.Objects.o.longobject\
 	@.^.Objects.o.listobject\
 	@.^.Objects.o.intobject\
-	@.^.Objects.o.iterobject\
 	@.^.Objects.o.funcobject\
 	@.^.Objects.o.frameobject\
 	@.^.Objects.o.floatobject\
@@ -163,10 +153,7 @@ OBJECTS_OBJECTS =\
 	@.^.Objects.o.bufferobject\
 	@.^.Objects.o.abstract\
 	@.^.Objects.o.unicodectype\
-	@.^.Objects.o.unicodeobject\
-	@.^.Objects.o.descrobject\
-	@.^.Objects.o.weakrefobject\
-	@.^.Objects.o.structseq
+	@.^.Objects.o.unicodeobject
 
 
 OBJECTS_PARSER =\
@@ -196,11 +183,8 @@ all: @.^.$(TARGET) $(MODULES_DYNAMIC) $(SUPPORT_FILES)
        $(CC) -DBUILD=$(BUILD) -o @.^.Modules.o.getbuildinfo @.^.Modules.c.getbuildinfo
 
 
-$(LIB_PYTHON):	$(OBJECTS)
-	$(LIBFILE) $(LIB_PYTHON) $(OBJECTS)
-
-@.^.$(TARGET):  o.linktab $(MAIN_PYTHON) $(LIB_PYTHON)
-	$(LINK) -o @.^.$(TARGET) $(MAIN_PYTHON) @.^.LibPython $(LOADLIBS)
+@.^.$(TARGET):  $(OBJECTS) o.linktab
+	$(LINK) -o @.^.$(TARGET) $(OBJECTS) $(LOADLIBS)
 
 
 #########################################################################
@@ -245,7 +229,7 @@ $(LIB_PYTHON):	$(OBJECTS)
 	$(MAKEDLK) -d @.^.Lib.cStringIO/pyd -s s.linktab -o @.^.Modules.o.cStringIO -e initcStringIO
 
 @.^.Lib.plat-riscos.drawf/pyd: Modules.o.drawfmodule #s.linktab
-	$(LINK) -aof -o Modules.o.drawflink Modules.o.drawfmodule $(OSLIB).o.OSLIB32
+	$(LINK) -aof -o Modules.o.drawflink Modules.o.drawfmodule $(OSLIB).o.OSLIB
 	$(MAKEDLK) -d @.^.Lib.plat-riscos.drawf/pyd -s s.linktab -o Modules.o.drawflink -e initdrawf
 
 @.^.Lib.errno/pyd: @.^.Modules.o.errnomodule #s.linktab
@@ -293,6 +277,9 @@ $(LIB_PYTHON):	$(OBJECTS)
 @.^.Lib.signal/pyd: @.^.Modules.o.signalmodule s.linktab
 	$(MAKEDLK) -d @.^.Lib.signal/pyd -s s.linktab -o @.^.Modules.o.signalmodule -e initsignal
 
+#@.^.Lib.soundex/pyd: @.^.Modules.o.soundex s.linktab
+#	$(MAKEDLK) -d @.^.Lib.soundex/pyd -s s.linktab -o @.^.Modules.o.soundex -e initsoundex
+
 @.^.Lib.strop/pyd: @.^.Modules.o.stropmodule s.linktab
 	$(MAKEDLK) -d @.^.Lib.strop/pyd -s s.linktab -o @.^.Modules.o.stropmodule -e initstrop
 
@@ -300,7 +287,7 @@ $(LIB_PYTHON):	$(OBJECTS)
 	$(MAKEDLK) -d @.^.Lib.struct/pyd -s s.linktab -o @.^.Modules.o.structmodule -e initstruct
 
 @.^.Lib.plat-riscos.swi/pyd: Modules.o.swimodule s.linktab
-	$(LINK) -aof -o Modules.o.swilink Modules.o.swimodule $(OSLIB).o.OSLIB32
+	$(LINK) -aof -o Modules.o.swilink Modules.o.swimodule $(OSLIB).o.OSLIB
 	$(MAKEDLK) -d @.^.Lib.plat-riscos.swi/pyd -s s.linktab -o Modules.o.swilink -e initswi
 
 @.^.Lib._locale/pyd: @.^.Modules.o._localemodule s.linktab
@@ -324,33 +311,28 @@ $(LIB_PYTHON):	$(OBJECTS)
 @.^.Lib.xreadlines/pyd: @.^.Modules.o.xreadlinesmodule s.linktab
 	$(MAKEDLK) -d @.^.Lib.xreadlines/pyd -s s.linktab -o @.^.Modules.o.xreadlinesmodule -e initxreadlines
 
-@.^.Lib.xxsubtype/pyd: @.^.Modules.o.xxsubtype s.linktab
-	$(MAKEDLK) -d @.^.Lib.xxsubtype/pyd -s s.linktab -o @.^.Modules.o.xxsubtype -e initxxsubtype
-
-@.^.Lib._symtable/pyd: @.^.Modules.o.symtablemodule s.linktab
-	$(MAKEDLK) -d @.^.Lib._symtable/pyd -s s.linktab -o @.^.Modules.o.symtablemodule -e init_symtable
 
 
 ############################################################################
 # Dynamic Modules with other dependencies
 #
 @.^.Lib.select/pyd:  @.^.Modules.o.selectmodule s.linktab
-	$(LINK) -aof -o @.^.Modules.o.selectlink @.^.Modules.o.selectmodule $(TCPIPLIB).o.socklib
+	$(LINK) -aof -o @.^.Modules.o.selectlink @.^.Modules.o.selectmodule $(SOCKLIB).o.socklib
 	$(MAKEDLK) -d @.^.Lib.select/pyd -s s.linktab -o @.^.Modules.o.selectlink -e initselect
 
 @.^.Modules.o.selectmodule: @.^.Modules.c.selectmodule
-	$(CC) -I$(TCPIPLIB).include -o $@ @.^.Modules.c.selectmodule
+	$(CC) -I$(SOCKLIB).include -o $@ @.^.Modules.c.selectmodule
 
 @.^.Lib._socket/pyd: @.^.Modules.o.socketmodule s.linktab 
-	$(LINK) -aof -o @.^.Modules.o._socketlink @.^.Modules.o.socketmodule $(TCPIPLIB).o.inetlib $(TCPIPLIB).o.unixlib $(TCPIPLIB).o.socklib
+	$(LINK) -aof -o @.^.Modules.o._socketlink @.^.Modules.o.socketmodule $(SOCKLIB).o.inetlib $(SOCKLIB).o.unixlib $(SOCKLIB).o.socklib
 	$(MAKEDLK) -d @.^.Lib._socket/pyd -s s.linktab -o @.^.Modules.o._socketlink -e init_socket
 
 @.^.Modules.o.socketmodule: @.^.Modules.c.socketmodule
-	$(CC) -I$(TCPIPLIB).include -o $@ @.^.Modules.c.socketmodule
+	$(CC) -I$(SOCKLIB).include -o $@ @.^.Modules.c.socketmodule
 
 
 @.^.Lib.zlib/pyd: @.^.Modules.o.zlibmodule s.linktab
-	$(LINK) -aof -o @.^.Modules.o.zliblink @.^.Modules.o.zlibmodule $(ZLIB).zlib
+	$(LINK) -aof -o @.^.Modules.o.zliblink @.^.Modules.o.zlibmodule $(ZLIB).zlib_lib
 	$(MAKEDLK) -d @.^.Lib.zlib/pyd -s s.linktab -o @.^.Modules.o.zliblink -e initzlib
 
 @.^.Modules.o.zlibmodule: @.^.Modules.c.zlibmodule
@@ -358,12 +340,8 @@ $(LIB_PYTHON):	$(OBJECTS)
 
 
 @.^.Lib.time/pyd: @.^.Modules.o.timemodule s.linktab @.o.sleep
-	$(LINK) -aof -o @.^.Modules.o.timelink @.^.Modules.o.timemodule @.o.sleep $(OSLIB).o.OSLib32
+	$(LINK) -aof -o @.^.Modules.o.timelink @.^.Modules.o.timemodule @.o.sleep $(OSLIB).o.OSLib
 	$(MAKEDLK) -d @.^.Lib.time/pyd -s s.linktab -o @.^.Modules.o.timelink -e inittime
-
-#@.^.Lib.time/pyd: @.Modules.o.timemodule s.linktab
-#	$(LINK) -aof -o @.Modules.o.timelink @.Modules.o.timemodule $(OSLIB).o.OSLib32
-#	$(MAKEDLK) -d @.^.Lib.time/pyd -s s.linktab -o @.Modules.o.timelink -e inittime
 
 
 @.^.Lib.pyexpat/pyd: @.^.Modules.o.pyexpat s.linktab
@@ -378,7 +356,7 @@ $(LIB_PYTHON):	$(OBJECTS)
 # dynamic linking symbol table
 #
 o.linktab: s.linktab
-	ObjAsm -APCS 3/32bit s.linktab o.linktab
+	ObjAsm s.linktab o.linktab
 
 s.linktab: $(OBJECTS)
 	$(OBJSCAN) -s s.linktab -o $(OBJECTS) $(clib).o.stubs
@@ -387,44 +365,42 @@ s.linktab: $(OBJECTS)
 # special targets
 #
 libclean:
-	-wipe @.^.Lib.*/pyc ~C~V
-	-wipe @.^.Lib.*/pyo ~C~V
-	-wipe @.^.Lib.plat-riscos.*/pyc ~C~V
-	-wipe @.^.Lib.plat-riscos.*/pyo ~C~V
-	-wipe @.^.Lib.test.*/pyc ~C~V
-	-wipe @.^.Lib.test.*/pyo ~C~V
-	-wipe @.^.Lib.encodings.*/pyc ~C~V
-	-wipe @.^.Lib.encodings.*/pyo ~C~V
-	-wipe @.^.Lib.curses.*/pyc ~C~V
-	-wipe @.^.Lib.curses.*/pyo ~C~V
-	-wipe @.^.Lib.xml.*/pyc ~C~V
-	-wipe @.^.Lib.xml.*/pyo ~C~V
-	-wipe @.^.Lib.xml.sax.*/pyc ~C~V
-	-wipe @.^.Lib.xml.sax.*/pyo ~C~V
-	-wipe @.^.Lib.xml.dom.*/pyc ~C~V
-	-wipe @.^.Lib.xml.dom.*/pyo ~C~V
-	-wipe @.^.Lib.xml.parsers.*/pyc ~C~V
-	-wipe @.^.Lib.xml.parsers.*/pyo ~C~V
+	create @.^.Lib.dummy/pyc
+	create @.^.Lib.dummy/pyo
+	create @.^.Lib.plat-riscos.dummy/pyc
+	create @.^.Lib.plat-riscos.dummy/pyo
+	create @.^.Lib.test.dummy/pyc
+	create @.^.Lib.test.dummy/pyo
+	wipe @.^.Lib.*/pyc ~C~V
+	wipe @.^.Lib.*/pyo ~C~V
+	wipe @.^.Lib.plat-riscos.*/pyc ~C~V
+	wipe @.^.Lib.plat-riscos.*/pyo ~C~V
+	wipe @.^.Lib.test.*/pyc ~C~V
+	wipe @.^.Lib.test.*/pyo ~C~V
 
 clean: libclean
-	-wipe @.^.Modules.o.* ~C~V
-	-wipe @.^.Objects.o.* ~C~V
-	-wipe @.^.Parser.o.* ~C~V
-	-wipe @.^.Python.o.* ~C~V
-	-wipe @.Modules.o.* ~C~V
-	-wipe @.Python.o.* ~C~V
-	-wipe @.o.* ~C ~V
+	create @.^.Objects.o.dummy
+	create @.^.Parser.o.dummy
+	create @.^.Modules.o.dummy
+	create o.dummy
+	create @.^.Python.o.dummy
+	wipe @.^.Modules.o.* ~C ~V
+	wipe @.^.Objects.o.* ~C ~V
+	wipe @.^.Parser.o.* ~C ~V
+	wipe @.^.Python.o.* ~C ~V
+	wipe o.* ~C ~V
 
-rebuild: clean clean-support
-	remove @.^.$(TARGET)
-	-wipe @.^.Lib.*/pyd ~C ~V
-	-wipe @.^.Lib.plat-riscos.*/pyd ~C~V
-	remove s.linktab
-	remove @.^.LibPython
-
-clean-support:
-	-wipe @.^.!* ~C~V
-	remove @.^.AddToPath
+rebuild: clean
+	create @.^.Lib.dummy/pyd
+	create @.^.$(TARGET)
+	create @.^.Lib.plat-riscos.dummy/pyd
+	create s.linktab
+	create o.linktab
+	wipe @.^.$(TARGET) ~C~V
+	wipe @.^.Lib.*/pyd ~C ~V
+	wipe @.^.Lib.plat-riscos.*/pyd ~C~V
+	wipe s.linktab ~C~V
+	wipe o.linktab ~C~V
 
 cdirs:
 	cdir @.Modules.o

@@ -24,9 +24,6 @@ whitespace = ' \t\n\r\v\f'
 lowercase = 'abcdefghijklmnopqrstuvwxyz'
 uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 letters = lowercase + uppercase
-ascii_lowercase = lowercase
-ascii_uppercase = uppercase
-ascii_letters = ascii_lowercase + ascii_uppercase
 digits = '0123456789'
 hexdigits = digits + 'abcdef' + 'ABCDEF'
 octdigits = '01234567'
@@ -190,7 +187,7 @@ def rfind(s, *args):
 _float = float
 _int = int
 _long = long
-_StringTypes = (str, unicode)
+_StringType = type('')
 
 # Convert string to float
 def atof(s):
@@ -276,14 +273,14 @@ def zfill(x, width):
     of the specified width.  The string x is never truncated.
 
     """
-    if not isinstance(x, _StringTypes):
-        x = str(x)
-    n = len(x)
-    if n >= width: return x
+    if type(x) == type(''): s = x
+    else: s = `x`
+    n = len(s)
+    if n >= width: return s
     sign = ''
-    if x[0] in '-+':
-        sign, x = x[0], x[1:]
-    return sign + '0'*(width-n) + x
+    if s[0] in ('-', '+'):
+        sign, s = s[0], s[1:]
+    return sign + '0'*(width-n) + s
 
 # Expand tabs in a string.
 # Doesn't take non-printing chars into account, but does understand \n.

@@ -52,9 +52,6 @@ mmap
     mmapmodule.c
 parser
     the parser module
-pyexpat
-    Python wrapper for accelerated XML parsing, which incorporates stable
-    code from the Expat project:  http://sourceforge.net/projects/expat/
 select
     selectmodule.c
 unicodedata
@@ -77,16 +74,17 @@ _tkinter
     Be sure to install everything, including the Tcl/Tk header files.
 
 zlib
+    NOTE: This procedure is new (& simpler, & safer) for 2.1a2.
     Python wrapper for the zlib compression library.  Get the source code
-    for version 1.1.4 from a convenient mirror at:
-        http://www.gzip.org/zlib/
-    Unpack into dist\zlib-1.1.4.
+    for version 1.1.3 from a convenient mirror at:
+        http://www.info-zip.org/pub/infozip/zlib/
+    Unpack into dist\zlib-1.1.3.
     A custom pre-link step in the zlib project settings should manage to
-    build zlib-1.1.4\zlib.lib by magic before zlib.pyd (or zlib_d.pyd) is
+    build zlib-1.1.3\zlib.lib by magic before zlib.pyd (or zlib_d.pyd) is
     linked in PCbuild\.
     However, the zlib project is not smart enough to remove anything under
-    zlib-1.1.4\ when you do a clean, so if you want to rebuild zlib.lib
-    you need to clean up zlib-1.1.4\ by hand.
+    zlib-1.1.3\ when you do a clean, so if you want to rebuild zlib.lib
+    you need to clean up zlib-1.1.3\ by hand.
 
 bsddb
     Python wrapper for the BSD database 1.85.  Requires db.1.85.win32.zip,
@@ -100,6 +98,11 @@ bsddb
     before running nmake (this batch file is in your MSVC installation).
     TODO:  make this work like zlib (in particular, MSVC runs the prelink
     step in an enviroment that already has the correct envars set up).
+
+pyexpat
+    Python wrapper for accelerated XML parsing.  Requires
+        ftp://ftp.jclark.com/pub/xml/expat.zip
+    Unpack into dist\expat.
 
 
 NOTE ON CONFIGURATIONS

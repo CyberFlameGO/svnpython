@@ -1,7 +1,5 @@
 test_minidom
 Passed testAAA
-Passed setAttribute() sets ownerDocument
-Passed setAttribute() sets ownerElement
 Test Succeeded testAAA
 Passed assertion: len(Node.allnodes) == 0
 Passed testAAB
@@ -20,9 +18,6 @@ Passed assertion: len(Node.allnodes) == 0
 Passed Test
 Passed Test
 Test Succeeded testAppendChild
-Passed assertion: len(Node.allnodes) == 0
-Passed appendChild(<fragment>)
-Test Succeeded testAppendChildFragment
 Passed assertion: len(Node.allnodes) == 0
 Test Succeeded testAttrListItem
 Passed assertion: len(Node.allnodes) == 0
@@ -115,7 +110,6 @@ Passed assertion: len(Node.allnodes) == 0
 Passed Test
 Test Succeeded testGetElementsByTagName
 Passed assertion: len(Node.allnodes) == 0
-Passed Test
 Test Succeeded testGetElementsByTagNameNS
 Passed assertion: len(Node.allnodes) == 0
 Test Succeeded testGetEmptyNodeListFromElementsByTagNameNS
@@ -127,20 +121,7 @@ Passed testInsertBefore -- node properly placed in tree
 Passed testInsertBefore -- node properly placed in tree
 Test Succeeded testInsertBefore
 Passed assertion: len(Node.allnodes) == 0
-Passed insertBefore(<fragment>, None)
-Passed insertBefore(<fragment>, orig)
-Test Succeeded testInsertBeforeFragment
-Passed assertion: len(Node.allnodes) == 0
 Test Succeeded testLegalChildren
-Passed assertion: len(Node.allnodes) == 0
-Passed NamedNodeMap.__setitem__() sets ownerDocument
-Passed NamedNodeMap.__setitem__() sets ownerElement
-Passed NamedNodeMap.__setitem__() sets value
-Passed NamedNodeMap.__setitem__() sets nodeValue
-Test Succeeded testNamedNodeMapSetItem
-Passed assertion: len(Node.allnodes) == 0
-Passed test NodeList.item()
-Test Succeeded testNodeListItem
 Passed assertion: len(Node.allnodes) == 0
 Passed Test
 Passed Test
@@ -186,9 +167,6 @@ Passed assertion: len(Node.allnodes) == 0
 Passed Test
 Passed Test
 Test Succeeded testRemoveAttributeNode
-Passed assertion: len(Node.allnodes) == 0
-Passed replaceChild(<fragment>)
-Test Succeeded testReplaceChildFragment
 Passed assertion: len(Node.allnodes) == 0
 Passed testSAX2DOM - siblings
 Passed testSAX2DOM - parents

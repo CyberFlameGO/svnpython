@@ -19,7 +19,6 @@ class Module(GeneratorGroup):
 	def addobject(self, od):
 		self.generators.append(od)
 		self.typeobjects.append(od)
-		od.setmodulename(self.name)
 
 	def generate(self):
 		OutHeader1("Module " + self.name)
@@ -39,7 +38,7 @@ class Module(GeneratorGroup):
 			Output("%s", self.finalstuff)
 
 		Output()
-		Output("void init%s(void)", self.name)
+		Output("void init%s()", self.name)
 		OutLbrace()
 		Output("PyObject *m;")
 		Output("PyObject *d;")
@@ -79,9 +78,9 @@ class Module(GeneratorGroup):
 
 
 def _test():
-	from bgenGenerator import FunctionGenerator
+	from bgenGenerator import Generator
 	m = Module("spam", "", "#include <stdio.h>")
-	g = FunctionGenerator(None, "bacon")
+	g = Generator(None, "bacon")
 	m.add(g)
 	m.generate()
 

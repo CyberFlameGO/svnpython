@@ -10,13 +10,17 @@
 #include <process.h>
 #endif
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include <signal.h>
 
 #ifndef SIG_ERR
 #define SIG_ERR ((PyOS_sighandler_t)(-1))
 #endif
 
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
+#if defined(PYOS_OS2)
 #define NSIG 12
 #include <process.h>
 #endif
@@ -149,10 +153,10 @@ static PyObject *
 signal_alarm(PyObject *self, PyObject *args)
 {
 	int t;
-	if (!PyArg_ParseTuple(args, "i:alarm", &t))
+	if (!PyArg_Parse(args, "i", &t))
 		return NULL;
 	/* alarm() returns the number of seconds remaining */
-	return PyInt_FromLong((long)alarm(t));
+	return PyInt_FromLong(alarm(t));
 }
 
 static char alarm_doc[] =
@@ -163,8 +167,11 @@ Arrange for SIGALRM to arrive after the given number of seconds.";
 
 #ifdef HAVE_PAUSE
 static PyObject *
-signal_pause(PyObject *self)
+signal_pause(PyObject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
+
 	Py_BEGIN_ALLOW_THREADS
 	(void)pause();
 	Py_END_ALLOW_THREADS
@@ -192,7 +199,7 @@ signal_signal(PyObject *self, PyObject *args)
 	int sig_num;
 	PyObject *old_handler;
 	void (*func)(int);
-	if (!PyArg_ParseTuple(args, "iO:signal", &sig_num, &obj))
+	if (!PyArg_Parse(args, "(iO)", &sig_num, &obj))
 		return NULL;
 #ifdef WITH_THREAD
 	if (PyThread_get_thread_ident() != main_thread) {
@@ -248,7 +255,7 @@ signal_getsignal(PyObject *self, PyObject *args)
 {
 	int sig_num;
 	PyObject *old_handler;
-	if (!PyArg_ParseTuple(args, "i:getsignal", &sig_num))
+	if (!PyArg_Parse(args, "i", &sig_num))
 		return NULL;
 	if (sig_num < 1 || sig_num >= NSIG) {
 		PyErr_SetString(PyExc_ValueError,
@@ -274,16 +281,15 @@ anything else -- the callable Python object used as a handler\n\
 /* List of functions defined in the module */
 static PyMethodDef signal_methods[] = {
 #ifdef HAVE_ALARM
-	{"alarm",	        signal_alarm, METH_VARARGS, alarm_doc},
+	{"alarm",	        signal_alarm, METH_OLDARGS, alarm_doc},
 #endif
-	{"signal",	        signal_signal, METH_VARARGS, signal_doc},
-	{"getsignal",	        signal_getsignal, METH_VARARGS, getsignal_doc},
+	{"signal",	        signal_signal, METH_OLDARGS, signal_doc},
+	{"getsignal",	        signal_getsignal, METH_OLDARGS, getsignal_doc},
 #ifdef HAVE_PAUSE
-	{"pause",	        (PyCFunction)signal_pause,
-	 METH_NOARGS,pause_doc},
+	{"pause",	        signal_pause, METH_OLDARGS, pause_doc},
 #endif
 	{"default_int_handler", signal_default_int_handler, 
-	 METH_VARARGS, default_int_handler_doc},
+	 METH_OLDARGS, default_int_handler_doc},
 	{NULL,			NULL}		/* sentinel */
 };
 
@@ -375,11 +381,6 @@ initsignal(void)
 #ifdef SIGINT
 	x = PyInt_FromLong(SIGINT);
 	PyDict_SetItemString(d, "SIGINT", x);
-        Py_XDECREF(x);
-#endif
-#ifdef SIGBREAK
-	x = PyInt_FromLong(SIGBREAK);
-	PyDict_SetItemString(d, "SIGBREAK", x);
         Py_XDECREF(x);
 #endif
 #ifdef SIGQUIT
@@ -540,11 +541,6 @@ initsignal(void)
 #ifdef SIGXFSZ
 	x = PyInt_FromLong(SIGXFSZ);
 	PyDict_SetItemString(d, "SIGXFSZ", x);
-        Py_XDECREF(x);
-#endif
-#ifdef SIGINFO
-	x = PyInt_FromLong(SIGINFO);
-	PyDict_SetItemString(d, "SIGINFO", x);
         Py_XDECREF(x);
 #endif
         if (!PyErr_Occurred())

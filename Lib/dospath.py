@@ -141,7 +141,7 @@ def islink(path):
     """Is a path a symbolic link?
     This will always return false on systems where posix.lstat doesn't exist."""
 
-    return False
+    return 0
 
 
 def exists(path):
@@ -151,8 +151,8 @@ def exists(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 def isdir(path):
@@ -161,7 +161,7 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISDIR(st[stat.ST_MODE])
 
 
@@ -171,7 +171,7 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISREG(st[stat.ST_MODE])
 
 
@@ -183,19 +183,13 @@ def ismount(path):
 
 
 def walk(top, func, arg):
-    """Directory tree walk with callback function.
-
-    For each directory in the directory tree rooted at top (including top
-    itself, but excluding '.' and '..'), call func(arg, dirname, fnames).
-    dirname is the name of the directory, and fnames a list of the names of
-    the files and subdirectories in dirname (excluding '.' and '..').  func
-    may modify the fnames list in-place (e.g. via del or slice assignment),
-    and walk will only recurse into the subdirectories whose names remain in
-    fnames; this can be used to implement a filter, or to impose a specific
-    order of visiting.  No semantics are defined for, or required of, arg,
-    beyond that arg is always passed to func.  It can be used, e.g., to pass
-    a filename pattern, or a mutable object designed to accumulate
-    statistics.  Passing None for arg is common."""
+    """Directory tree walk.
+    For each directory under top (including top itself, but excluding
+    '.' and '..'), func(arg, dirname, filenames) is called, where
+    dirname is the name of the directory and filenames is the list
+    files files (and subdirectories etc.) in the directory.
+    The func may modify the filenames list, to implement a filter,
+    or to impose a different order of visiting."""
 
     try:
         names = os.listdir(top)
@@ -247,7 +241,7 @@ def expandvars(path):
     if '$' not in path:
         return path
     import string
-    varchars = string.ascii_letters + string.digits + "_-"
+    varchars = string.letters + string.digits + '_-'
     res = ''
     index = 0
     pathlen = len(path)
@@ -336,6 +330,3 @@ def abspath(path):
     if not isabs(path):
         path = join(os.getcwd(), path)
     return normpath(path)
-
-# realpath is a no-op on systems without islink support
-realpath = abspath

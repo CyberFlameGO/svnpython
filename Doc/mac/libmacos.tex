@@ -1,24 +1,17 @@
 \section{\module{MacOS} ---
-         Access to Mac OS interpreter features}
+         Access to MacOS interpreter features}
 
 \declaremodule{builtin}{MacOS}
   \platform{Mac}
-\modulesynopsis{Access to Mac OS-specific interpreter features.}
+\modulesynopsis{Access to MacOS specific interpreter features.}
 
 
 This module provides access to MacOS specific functionality in the
 Python interpreter, such as how the interpreter eventloop functions
 and the like. Use with care.
 
-Note the capitalization of the module name; this is a historical
+Note the capitalisation of the module name, this is a historical
 artifact.
-
-\begin{datadesc}{runtimemodel}
-Either \code{'ppc'}, \code{'carbon'} or \code{'macho'}.  This
-signifies whether this Python uses the classic (InterfaceLib style)
-runtime model, the Mac OS X compatible CarbonLib style or the Mac OS
-X-only Mach-O style.
-\end{datadesc}
 
 \begin{excdesc}{Error}
 This exception is raised on MacOS generated errors, either from
@@ -26,7 +19,7 @@ functions in this module or from other mac-specific modules like the
 toolbox interfaces. The arguments are the integer error code (the
 \cdata{OSErr} value) and a textual description of the error code.
 Symbolic names for all known error codes are defined in the standard
-module \refmodule{macerrors}.\refstmodindex{macerrors}
+module \module{macerrors}\refstmodindex{macerrors}.
 \end{excdesc}
 
 \begin{funcdesc}{SetEventHandler}{handler}
@@ -58,7 +51,7 @@ runtime when Python is in the foreground and \var{bgyield} seconds per
 All parameters are optional, and default to the current value. The return
 value of this function is a tuple with the old values of these options.
 Initial defaults are that all processing is enabled, checking is done every
-quarter second and the processor is given up for a quarter second when in the
+quarter second and the CPU is given up for a quarter second when in the
 background.
 \end{funcdesc}
 

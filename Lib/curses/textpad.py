@@ -1,6 +1,6 @@
 """Simple textbox editing widget with Emacs-like keybindings."""
 
-import curses, ascii
+import sys, curses, ascii
 
 def rectangle(win, uly, ulx, lry, lrx):
     "Draw a rectangle."
@@ -66,10 +66,10 @@ class Textbox:
             if y < self.maxy or x < self.maxx:
                 # The try-catch ignores the error we trigger from some curses
                 # versions by trying to write into the lowest-rightmost spot
-                # in the window.
+                # in the self.window.
                 try:
                     self.win.addch(ch)
-                except curses.error:
+                except ERR:
                     pass
         elif ch == ascii.SOH:				# ^a
             self.win.move(y, 0)
@@ -132,6 +132,7 @@ class Textbox:
         for y in range(self.maxy+1):
             self.win.move(y, 0)
             stop = self._end_of_line(y)
+            #sys.stderr.write("y=%d, _end_of_line(y)=%d\n" % (y, stop))
             if stop == 0 and self.stripspaces:
                 continue
             for x in range(self.maxx+1):

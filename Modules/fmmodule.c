@@ -49,18 +49,22 @@ fh_scalefont(fhobject *self, PyObject *args)
 /* XXX fmmakefont */
 
 static PyObject *
-fh_setfont(fhobject *self)
+fh_setfont(fhobject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	fmsetfont(self->fh_fh);
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
 static PyObject *
-fh_getfontname(fhobject *self)
+fh_getfontname(fhobject *self, PyObject *args)
 {
 	char fontname[256];
 	int len;
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	len = fmgetfontname(self->fh_fh, sizeof fontname, fontname);
 	if (len < 0) {
 		PyErr_SetString(PyExc_RuntimeError, "error in fmgetfontname");
@@ -70,10 +74,12 @@ fh_getfontname(fhobject *self)
 }
 
 static PyObject *
-fh_getcomment(fhobject *self)
+fh_getcomment(fhobject *self, PyObject *args)
 {
 	char comment[256];
 	int len;
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	len = fmgetcomment(self->fh_fh, sizeof comment, comment);
 	if (len < 0) {
 		PyErr_SetString(PyExc_RuntimeError, "error in fmgetcomment");
@@ -83,9 +89,11 @@ fh_getcomment(fhobject *self)
 }
 
 static PyObject *
-fh_getfontinfo(fhobject *self)
+fh_getfontinfo(fhobject *self, PyObject *args)
 {
 	fmfontinfo info;
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	if (fmgetfontinfo(self->fh_fh, &info) < 0) {
 		PyErr_SetString(PyExc_RuntimeError, "error in fmgetfontinfo");
 		return NULL;
@@ -118,15 +126,15 @@ fh_getstrwidth(fhobject *self, PyObject *args)
 }
 
 static PyMethodDef fh_methods[] = {
-	{"scalefont",	(PyCFunction)fh_scalefont,   METH_OLDARGS},
-	{"setfont",	(PyCFunction)fh_setfont,     METH_NOARGS},
-	{"getfontname",	(PyCFunction)fh_getfontname, METH_NOARGS},
-	{"getcomment",	(PyCFunction)fh_getcomment,  METH_NOARGS},
-	{"getfontinfo",	(PyCFunction)fh_getfontinfo, METH_NOARGS},
+	{"scalefont",	(PyCFunction)fh_scalefont},
+	{"setfont",	(PyCFunction)fh_setfont},
+	{"getfontname",	(PyCFunction)fh_getfontname},
+	{"getcomment",	(PyCFunction)fh_getcomment},
+	{"getfontinfo",	(PyCFunction)fh_getfontinfo},
 #if 0
-	{"getwholemetrics",	(PyCFunction)fh_getwholemetrics, METH_OLDARGS},
+	{"getwholemetrics",	(PyCFunction)fh_getwholemetrics},
 #endif
-	{"getstrwidth",	(PyCFunction)fh_getstrwidth, METH_OLDARGS},
+	{"getstrwidth",	(PyCFunction)fh_getstrwidth},
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -146,7 +154,7 @@ fh_dealloc(fhobject *fhp)
 static PyTypeObject Fhtype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
-	"fm.font handle",		/*tp_name*/
+	"font handle",			/*tp_name*/
 	sizeof(fhobject),		/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -162,8 +170,10 @@ static PyTypeObject Fhtype = {
 /* Font Manager functions */
 
 static PyObject *
-fm_init(PyObject *self)
+fm_init(PyObject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	fminit();
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -214,9 +224,11 @@ clientproc(char *fontname)
 }
 
 static PyObject *
-fm_enumerate(PyObject *self)
+fm_enumerate(PyObject *self, PyObject *args)
 {
 	PyObject *res;
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	fontlist = PyList_New(0);
 	if (fontlist == NULL)
 		return NULL;
@@ -238,18 +250,20 @@ fm_setpath(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-fm_fontpath(PyObject *self)
+fm_fontpath(PyObject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	return PyString_FromString(fmfontpath());
 }
 
 static PyMethodDef fm_methods[] = {
-	{"init",	fm_init,      METH_NOARGS},
-	{"findfont",	fm_findfont,  METH_OLDARGS},
-	{"enumerate",	fm_enumerate, METH_NOARGS},
-	{"prstr",	fm_prstr,     METH_OLDARGS},
-	{"setpath",	fm_setpath,   METH_OLDARGS},
-	{"fontpath",	fm_fontpath,  METH_NOARGS},
+	{"init",	fm_init},
+	{"findfont",	fm_findfont},
+	{"enumerate",	fm_enumerate},
+	{"prstr",	fm_prstr},
+	{"setpath",	fm_setpath},
+	{"fontpath",	fm_fontpath},
 	{NULL,		NULL}		/* sentinel */
 };
 

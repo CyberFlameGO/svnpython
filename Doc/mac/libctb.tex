@@ -9,10 +9,7 @@
 
 This module provides a partial interface to the Macintosh
 Communications Toolbox. Currently, only Connection Manager tools are
-supported.
-
-This module is only available under MacOS9 or earlier, in classic PPC
-MacPython.
+supported.  It may not be available in all Mac Python versions.
 \index{Communications Toolbox, Macintosh}
 \index{Macintosh Communications Toolbox}
 \index{Connection Manager}
@@ -65,9 +62,9 @@ object). This will make all connection object methods work
 asynchronously, with the callback routine being called upon
 completion.
 
-\note{For reasons beyond my understanding, the callback routine
+\emph{Note:} for reasons beyond my understanding the callback routine
 is currently never called. You are advised against using asynchronous
-calls for the time being.}
+calls for the time being.
 \end{memberdesc}
 
 
@@ -88,7 +85,7 @@ Accept (when \var{yesno} is non-zero) or reject an incoming call after
 
 \begin{methoddesc}[connection]{Close}{timeout, now}
 Close a connection. When \var{now} is zero, the close is orderly
-(outstanding output is flushed, etc.)\ with a timeout of
+(i.e.\ outstanding output is flushed, etc.)\ with a timeout of
 \var{timeout} seconds. When \var{now} is non-zero the close is
 immediate, discarding output.
 \end{methoddesc}

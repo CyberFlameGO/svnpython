@@ -2,7 +2,7 @@
 API calls with Navigation Services"""
 import macfs
 import struct
-from Carbon import Res
+import Res
 try:
 	import Nav
 except ImportError:
@@ -12,9 +12,6 @@ _curfolder = None
 _movablemodal = 1
 
 def _mktypelist(typelist):
-	# Workaround for OSX typeless files:
-	if 'TEXT' in typelist and not '\0\0\0\0' in typelist:
-		typelist = typelist + ('\0\0\0\0',)
 	if not typelist:
 		return None
 	data = 'Pyth' + struct.pack("hh", 0, len(typelist))
@@ -47,13 +44,9 @@ def _PromptGetFile(prompt, *typelist):
 		if arg[0] != -128: # userCancelledErr
 			raise Nav.error, arg
 		good = 0
-		fss = None
+		fss = macfs.FSSpec(':cancelled')
 	else:
-		if rr.selection:
-			fss = rr.selection[0]
-		else:
-			fss = None
-			good = 0
+		fss = rr.selection[0]
 ##	if typehandle:
 ##		typehandle.DisposeHandle()
 	return fss, good
@@ -77,7 +70,7 @@ def _StandardPutFile(prompt, default=None):
 		if arg[0] != -128: # userCancelledErr
 			raise Nav.error, arg
 		good = 0
-		fss = None
+		fss = macfs.FSSpec(':cancelled')
 	else:
 		fss = rr.selection[0]
 	return fss, good
@@ -118,7 +111,7 @@ def _GetDirectory(prompt=None):
 		if arg[0] != -128: # userCancelledErr
 			raise Nav.error, arg
 		good = 0
-		fss = None
+		fss = macfs.FSSpec(':cancelled')
 	else:
 		fss = rr.selection[0]
 	return fss, good

@@ -24,6 +24,7 @@ select the color under the cursor while you drag it, but be forewarned that
 this can be slow.
 """
 
+import string
 from Tkinter import *
 import ColorDB
 
@@ -45,10 +46,7 @@ BTNDOWN = 4
 BTNUP = 5
 BTNDRAG = 6
 
-SPACE = ' '
 
-
-
 def constant(numchips):
     step = 255.0 / (numchips - 1)
     start = 0.0
@@ -143,7 +141,7 @@ class RightArrow(LeftArrow):
 	    width=3.0,
 	    tags=self._TAG)
 	text = self._canvas.create_text(
-	    x - self._ARROWWIDTH + 15,		  # BAW: kludge
+	    x - self._ARROWWIDTH + 15,		  # TBD: kludge
 	    self._ARROWHEIGHT - self._TEXTYOFFSET,
             justify=RIGHT,
 	    text='128',
@@ -153,7 +151,7 @@ class RightArrow(LeftArrow):
     def _x(self):
 	coords = self._canvas.bbox(self._TAG)
 	assert coords
-	return coords[2] - 6			  # BAW: kludge
+	return coords[2] - 6			  # TBD: kludge
 
 
 
@@ -184,7 +182,7 @@ class StripWidget:
         self.__sb = switchboard
         
 	canvaswidth = numchips * (chipwidth + 1)
-	canvasheight = chipheight + 43		  # BAW: Kludge
+	canvasheight = chipheight + 43		  # TBD: Kludge
 
 	# create the canvas and pack it
 	canvas = self.__canvas = Canvas(master,
@@ -210,7 +208,7 @@ class StripWidget:
 	tags = ('chip',)
 	for c in range(self.__numchips):
 	    color = 'grey'
-	    canvas.create_rectangle(
+	    rect = canvas.create_rectangle(
 		x, y, x+chipwidth, y+chipheight,
 		fill=color, outline=color,
 		tags=tags)
@@ -293,6 +291,7 @@ class StripWidget:
 	i = 1
 	chip = 0
 	chips = self.__chips = []
+	tclcmd = []
 	tk = self.__canvas.tk
         # get the red, green, and blue components for all chips
         for t in self.__generator(self.__numchips, red, green, blue):
@@ -303,7 +302,7 @@ class StripWidget:
                 chip = i
             i = i + 1
         # call the raw tcl script
-        colors = SPACE.join(chips)
+        colors = string.join(chips)
         tk.eval('setcolor %s {%s}' % (self.__canvas._w, colors))
         # move the arrows around
         self.__trackarrow(chip, (red, green, blue))
@@ -402,25 +401,25 @@ class StripViewer:
         red, green, blue = self.__sb.current_rgb()
         self.update_yourself(red, green, blue)
 
-##    def __togglegentype(self, event=None):
-##        which = self.__gentypevar.get()
-##        if which == 0:
-##            self.__reds.set(label='Red Variations',
-##                            generator=constant_cyan_generator)
-##            self.__greens.set(label='Green Variations',
-##                              generator=constant_magenta_generator)
-##            self.__blues.set(label='Blue Variations',
-##                             generator=constant_yellow_generator)
-##        elif which == 1:
-##            self.__reds.set(label='Red Constant',
-##                            generator=constant_red_generator)
-##            self.__greens.set(label='Green Constant',
-##                              generator=constant_green_generator)
-##            self.__blues.set(label='Blue Constant',
-##                             generator=constant_blue_generator)
-##        else:
-##            assert 0
-##        self.__sb.update_views_current()
+    def __togglegentype(self, event=None):
+        which = self.__gentypevar.get()
+        if which == 0:
+            self.__reds.set(label='Red Variations',
+                            generator=constant_cyan_generator)
+            self.__greens.set(label='Green Variations',
+                              generator=constant_magenta_generator)
+            self.__blues.set(label='Blue Variations',
+                             generator=constant_yellow_generator)
+        elif which == 1:
+            self.__reds.set(label='Red Constant',
+                            generator=constant_red_generator)
+            self.__greens.set(label='Green Constant',
+                              generator=constant_green_generator)
+            self.__blues.set(label='Blue Constant',
+                             generator=constant_blue_generator)
+        else:
+            assert 0
+        self.__sb.update_views_current()
 
     def __toblack(self, event=None):
         self.__sb.update_views(0, 0, 0)

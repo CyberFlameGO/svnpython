@@ -25,9 +25,9 @@ def testimg(rgb_file, raw_file):
     os.unlink('@.rgb')
 
 table = [
-    ('testrgb'+os.extsep+'uue', 'test'+os.extsep+'rgb'),
-    ('testimg'+os.extsep+'uue', 'test'+os.extsep+'rawimg'),
-    ('testimgr'+os.extsep+'uue', 'test'+os.extsep+'rawimg'+os.extsep+'rev'),
+    ('testrgb.uue', 'test.rgb'),
+    ('testimg.uue', 'test.rawimg'),
+    ('testimgr.uue', 'test.rawimg.rev'),
     ]
 for source, target in table:
     source = findfile(source)
@@ -43,13 +43,13 @@ ttob = rgbimg.ttob(0)
 if ttob != 0:
     raise error, 'ttob should start out as zero'
 
-testimg('test'+os.extsep+'rgb', 'test'+os.extsep+'rawimg')
+testimg('test.rgb', 'test.rawimg')
 
 ttob = rgbimg.ttob(1)
 if ttob != 0:
     raise error, 'ttob should be zero'
 
-testimg('test'+os.extsep+'rgb', 'test'+os.extsep+'rawimg'+os.extsep+'rev')
+testimg('test.rgb', 'test.rawimg.rev')
 
 ttob = rgbimg.ttob(0)
 if ttob != 1:

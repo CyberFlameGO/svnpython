@@ -46,7 +46,6 @@ internationalized, to the local language and cultural habits.
 import os
 import sys
 import struct
-import copy
 from errno import ENOENT
 
 __all__ = ["bindtextdomain","textdomain","gettext","dgettext",
@@ -103,27 +102,16 @@ class NullTranslations:
     def __init__(self, fp=None):
         self._info = {}
         self._charset = None
-        self._fallback = None
         if fp:
             self._parse(fp)
 
     def _parse(self, fp):
         pass
 
-    def add_fallback(self, fallback):
-        if self._fallback:
-            self._fallback.add_fallback(fallback)
-        else:
-            self._fallback = fallback
-
     def gettext(self, message):
-        if self._fallback:
-            return self._fallback.gettext(message)
         return message
 
     def ugettext(self, message):
-        if self._fallback:
-            return self._fallback.ugettext(message)
         return unicode(message)
 
     def info(self):
@@ -200,26 +188,16 @@ class GNUTranslations(NullTranslations):
             transidx += 8
 
     def gettext(self, message):
-        try:
-            return self._catalog[message]
-        except KeyError:
-            if self._fallback:
-                return self._fallback.gettext(message)
-            return message
+        return self._catalog.get(message, message)
 
     def ugettext(self, message):
-        try:
-            tmsg = self._catalog[message]
-        except KeyError:
-            if self._fallback:
-                return self._fallback.ugettext(message)
-            tmsg = message
+        tmsg = self._catalog.get(message, message)
         return unicode(tmsg, self._charset)
 
 
 
 # Locate a .mo file using the gettext strategy
-def find(domain, localedir=None, languages=None, all=0):
+def find(domain, localedir=None, languages=None):
     # Get some reasonable defaults for arguments that were not supplied
     if localedir is None:
         localedir = _default_localedir
@@ -239,56 +217,38 @@ def find(domain, localedir=None, languages=None, all=0):
             if nelang not in nelangs:
                 nelangs.append(nelang)
     # select a language
-    if all:
-        result = []
-    else:
-        result = None
     for lang in nelangs:
         if lang == 'C':
             break
         mofile = os.path.join(localedir, lang, 'LC_MESSAGES', '%s.mo' % domain)
         if os.path.exists(mofile):
-            if all:
-                result.append(mofile)
-            else:
-                return mofile
-    return result
+            return mofile
+    return None
 
 
 
 # a mapping between absolute .mo file path and Translation object
 _translations = {}
 
-def translation(domain, localedir=None, languages=None,
-                class_=None, fallback=0):
+def translation(domain, localedir=None, languages=None, class_=None):
     if class_ is None:
         class_ = GNUTranslations
-    mofiles = find(domain, localedir, languages, all=1)
-    if len(mofiles)==0:
-        if fallback:
-            return NullTranslations()
+    mofile = find(domain, localedir, languages)
+    if mofile is None:
         raise IOError(ENOENT, 'No translation file found for domain', domain)
+    key = os.path.abspath(mofile)
     # TBD: do we need to worry about the file pointer getting collected?
     # Avoid opening, reading, and parsing the .mo file after it's been done
     # once.
-    result = None
-    for mofile in mofiles:
-        key = os.path.abspath(mofile)
-        t = _translations.get(key)
-        if t is None:
-            t = _translations.setdefault(key, class_(open(mofile, 'rb')))
-        # Copy the translation object to allow setting fallbacks.
-        # All other instance data is shared with the cached object.
-        t = copy.copy(t)
-        if result is None:
-            result = t
-        else:
-            result.add_fallback(t)
-    return result
+    t = _translations.get(key)
+    if t is None:
+        t = _translations.setdefault(key, class_(open(mofile, 'rb')))
+    return t
+
 
 
 def install(domain, localedir=None, unicode=0):
-    translation(domain, localedir, fallback=1).install(unicode)
+    translation(domain, localedir).install(unicode)
 
 
 

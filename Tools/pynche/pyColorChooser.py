@@ -5,8 +5,6 @@ import os
 import Main
 import ColorDB
 
-
-
 class Chooser:
     """Ask for a color"""
     def __init__(self,
@@ -56,8 +54,8 @@ class Chooser:
         # check to see if the cancel button was pushed
         if self.__sb.canceled_p():
             return None, None
-        # Try to return the color name from the database if there is an exact
-        # match, otherwise use the "#rrggbb" spec.  BAW: Forget about color
+        # try to return the color name from the database if there is an exact
+        # match, otherwise use the "#rrggbb" spec.  TBD: Forget about color
         # aliases for now, maybe later we should return these too.
         name = None
         if not self.__wantspec:

@@ -158,7 +158,7 @@ def islink(path):
     try:
         st = os.lstat(path)
     except (os.error, AttributeError):
-        return False
+        return 0
     return stat.S_ISLNK(st[stat.ST_MODE])
 
 
@@ -166,12 +166,12 @@ def islink(path):
 # This is false for dangling symbolic links.
 
 def exists(path):
-    """Test whether a path exists.  Returns False for broken symbolic links"""
+    """Test whether a path exists.  Returns false for broken symbolic links"""
     try:
         st = os.stat(path)
     except os.error:
-        return False
-    return True
+        return 0
+    return 1
 
 
 # Is a path a directory?
@@ -183,7 +183,7 @@ def isdir(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISDIR(st[stat.ST_MODE])
 
 
@@ -196,7 +196,7 @@ def isfile(path):
     try:
         st = os.stat(path)
     except os.error:
-        return False
+        return 0
     return stat.S_ISREG(st[stat.ST_MODE])
 
 
@@ -237,16 +237,16 @@ def ismount(path):
         s1 = os.stat(path)
         s2 = os.stat(join(path, '..'))
     except os.error:
-        return False # It doesn't exist -- so not a mount point :-)
+        return 0 # It doesn't exist -- so not a mount point :-)
     dev1 = s1[stat.ST_DEV]
     dev2 = s2[stat.ST_DEV]
     if dev1 != dev2:
-        return True     # path/.. on a different device as path
+        return 1        # path/.. on a different device as path
     ino1 = s1[stat.ST_INO]
     ino2 = s2[stat.ST_INO]
     if ino1 == ino2:
-        return True     # path/.. is the same i-node as path
-    return False
+        return 1        # path/.. is the same i-node as path
+    return 0
 
 
 # Directory tree walk.
@@ -258,20 +258,10 @@ def ismount(path):
 # or to impose a different order of visiting.
 
 def walk(top, func, arg):
-    """Directory tree walk with callback function.
-
-    For each directory in the directory tree rooted at top (including top
-    itself, but excluding '.' and '..'), call func(arg, dirname, fnames).
-    dirname is the name of the directory, and fnames a list of the names of
-    the files and subdirectories in dirname (excluding '.' and '..').  func
-    may modify the fnames list in-place (e.g. via del or slice assignment),
-    and walk will only recurse into the subdirectories whose names remain in
-    fnames; this can be used to implement a filter, or to impose a specific
-    order of visiting.  No semantics are defined for, or required of, arg,
-    beyond that arg is always passed to func.  It can be used, e.g., to pass
-    a filename pattern, or a mutable object designed to accumulate
-    statistics.  Passing None for arg is common."""
-
+    """walk(top,func,arg) calls func(arg, d, files) for each directory "d"
+    in the tree  rooted at "top" (including "top" itself).  "files" is a list
+    of all the files and subdirs in directory "d".
+    """
     try:
         names = os.listdir(top)
     except os.error:
@@ -335,7 +325,7 @@ def expandvars(path):
         import re
         _varprog = re.compile(r'\$(\w+|\{[^}]*\})')
     i = 0
-    while True:
+    while 1:
         m = _varprog.search(path, i)
         if not m:
             break
@@ -389,24 +379,3 @@ def abspath(path):
     if not isabs(path):
         path = join(os.getcwd(), path)
     return normpath(path)
-
-
-# Return a canonical path (i.e. the absolute location of a file on the
-# filesystem).
-
-def realpath(filename):
-    """Return the canonical path of the specified filename, eliminating any
-symbolic links encountered in the path."""
-    filename = abspath(filename)
-
-    bits = ['/'] + filename.split('/')[1:]
-    for i in range(2, len(bits)+1):
-        component = join(*bits[0:i])
-        if islink(component):
-            resolved = os.readlink(component)
-            (dir, file) = split(component)
-            resolved = normpath(join(dir, resolved))
-            newpath = join(*([resolved] + bits[i:]))
-            return realpath(newpath)
-
-    return filename

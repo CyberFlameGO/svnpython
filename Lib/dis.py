@@ -135,7 +135,6 @@ hasfree = []
 
 opname = [''] * 256
 for op in range(256): opname[op] = '<' + `op` + '>'
-del op
 
 def def_op(name, op):
     opname[op] = name
@@ -176,10 +175,6 @@ def_op('BINARY_MODULO', 22)
 def_op('BINARY_ADD', 23)
 def_op('BINARY_SUBTRACT', 24)
 def_op('BINARY_SUBSCR', 25)
-def_op('BINARY_FLOOR_DIVIDE', 26)
-def_op('BINARY_TRUE_DIVIDE', 27)
-def_op('INPLACE_FLOOR_DIVIDE', 28)
-def_op('INPLACE_TRUE_DIVIDE', 29)
 
 def_op('SLICE+0', 30)
 def_op('SLICE+1', 31)
@@ -210,7 +205,6 @@ def_op('BINARY_AND', 64)
 def_op('BINARY_XOR', 65)
 def_op('BINARY_OR', 66)
 def_op('INPLACE_POWER', 67)
-def_op('GET_ITER', 68)
 
 def_op('PRINT_EXPR', 70)
 def_op('PRINT_ITEM', 71)
@@ -228,7 +222,6 @@ def_op('LOAD_LOCALS', 82)
 def_op('RETURN_VALUE', 83)
 def_op('IMPORT_STAR', 84)
 def_op('EXEC_STMT', 85)
-def_op('YIELD_STMT', 86)
 
 def_op('POP_BLOCK', 87)
 def_op('END_FINALLY', 88)
@@ -239,7 +232,6 @@ HAVE_ARGUMENT = 90              # Opcodes from here have an argument:
 name_op('STORE_NAME', 90)       # Index in name list
 name_op('DELETE_NAME', 91)      # ""
 def_op('UNPACK_SEQUENCE', 92)   # Number of tuple items
-jrel_op('FOR_ITER', 93)
 
 name_op('STORE_ATTR', 95)       # Index in name list
 name_op('DELETE_ATTR', 96)      # ""

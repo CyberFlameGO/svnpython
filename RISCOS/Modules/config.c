@@ -41,11 +41,10 @@ PERFORMANCE OF THIS SOFTWARE.
 
 /* -- ADDMODULE MARKER 1 -- */
 
-extern void PyMarshal_Init(void);
-extern void initimp(void);
-extern void initgc(void);
-extern void initriscos(void);
-extern void initswi(void);
+extern void PyMarshal_Init();
+extern void initimp();
+extern void initriscos();
+extern void initswi();
 
 struct _inittab _PyImport_Inittab[] = {
 
@@ -63,12 +62,6 @@ struct _inittab _PyImport_Inittab[] = {
 	{"__main__", NULL},
 	{"__builtin__", NULL},
 	{"sys", NULL},
-	{"exceptions", NULL},
-
-#ifdef WITH_CYCLE_GC
-	/* This lives in gcmodule.c */
-	{"gc", initgc},
-#endif
 
 	/* Sentinel */
 	{0, 0}

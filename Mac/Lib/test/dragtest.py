@@ -1,4 +1,4 @@
-from Carbon import Drag
+import Drag
 import time
 xxxx=1
 def decode_hfs(data):

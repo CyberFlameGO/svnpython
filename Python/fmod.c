@@ -1,7 +1,7 @@
 
 /* Portable fmod(x, y) implementation for systems that don't have it */
 
-#include "pyconfig.h"
+#include "config.h"
 
 #include "pyport.h"
 #include <errno.h>

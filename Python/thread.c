@@ -5,9 +5,9 @@
    which is included by this file dependent on config settings.
    Stuff shared by all thread_*.h files is collected here. */
 
-#include "Python.h"
+#include "config.h"
 
-/* pyconfig.h may or may not define DL_IMPORT */
+/* config.h may or may not define DL_IMPORT */
 #ifndef DL_IMPORT	/* declarations for DLL import/export */
 #define DL_IMPORT(RTYPE) RTYPE
 #endif
@@ -24,6 +24,10 @@ extern char *getenv(const char *);
 #endif
 #endif
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #ifdef __DGUX
 #define _USING_POSIX4A_DRAFT6
 #endif
@@ -35,6 +39,10 @@ extern char *getenv(const char *);
 #endif
 
 #include "pythread.h"
+
+#ifdef __ksr__
+#define _POSIX_THREADS
+#endif
 
 #ifndef _POSIX_THREADS
 
@@ -103,6 +111,7 @@ void PyThread_init_thread(void)
 
 #ifdef HAVE_PTH
 #include "thread_pth.h"
+#undef _POSIX_THREADS
 #endif
 
 #ifdef _POSIX_THREADS
@@ -127,10 +136,6 @@ void PyThread_init_thread(void)
 
 #ifdef WINCE_THREADS
 #include "thread_wince.h"
-#endif
-
-#ifdef PLAN9_THREADS
-#include "thread_plan9.h"
 #endif
 
 /*

@@ -5,38 +5,30 @@ DEBUG=0
 import MacOS
 import traceback
 
-from Carbon.AE import *
-from Carbon.AppleEvents import *
-from Carbon.Ctl import *
-from Carbon.Controls import *
-from Carbon.Dlg import *
-from Carbon.Dialogs import *
-from Carbon.Evt import *
-from Carbon.Events import *
-from Carbon.Menu import *
-from Carbon.Menus import *
-from Carbon.Qd import *
-from Carbon.QuickDraw import *
-#from Carbon.Res import *
-#from Carbon.Resources import *
-#from Carbon.Snd import *
-#from Carbon.Sound import *
-from Carbon.Win import *
-from Carbon.Windows import *
+from AE import *
+from AppleEvents import *
+from Ctl import *
+from Controls import *
+from Dlg import *
+from Dialogs import *
+from Evt import *
+from Events import *
+from Menu import *
+from Menus import *
+from Qd import *
+from QuickDraw import *
+#from Res import *
+#from Resources import *
+#from Snd import *
+#from Sound import *
+from Win import *
+from Windows import *
 import types
 
 import EasyDialogs
 
-try:
-	MyFrontWindow = FrontNonFloatingWindow
-except NameError:
-	MyFrontWindow = FrontWindow
-
 kHighLevelEvent = 23	# Don't know what header file this should come from
 SCROLLBARWIDTH = 16		# Again, not a clue...
-
-# Trick to forestall a set of SIOUX menus being added to our menubar
-SIOUX_APPLEMENU_ID=32000
 
 
 # Map event 'what' field to strings
@@ -158,8 +150,7 @@ class Application:
 	
 	def mainloop(self, mask = everyEvent, wait = None):
 		self.quitting = 0
-		if hasattr(MacOS, 'SchedParams'):
-			saveparams = apply(MacOS.SchedParams, self.schedparams)
+		saveparams = apply(MacOS.SchedParams, self.schedparams)
 		try:
 			while not self.quitting:
 				try:
@@ -170,8 +161,7 @@ class Application:
 					# applications.
 					break
 		finally:
-			if hasattr(MacOS, 'SchedParams'):
-				apply(MacOS.SchedParams, saveparams)
+			apply(MacOS.SchedParams, saveparams)
 	
 	def dopendingevents(self, mask = everyEvent):
 		"""dopendingevents - Handle all pending events"""
@@ -221,8 +211,6 @@ class Application:
 		
 	def asyncevents(self, onoff):
 		"""asyncevents - Set asynchronous event handling on or off"""
-		if MacOS.runtimemodel == 'macho':
-			raise 'Unsupported in MachoPython'
 		old = self._doing_asyncevents
 		if old:
 			MacOS.SetEventHandler()
@@ -266,8 +254,7 @@ class Application:
 			except AttributeError:
 				# Not menubar or something, so assume someone
 				# else's window
-				if hasattr(MacOS, 'HandleEvent'):
-					MacOS.HandleEvent(event)
+				MacOS.HandleEvent(event)
 				return		
 		elif self._windows.has_key(wid):
 			# It is a window. Hand off to correct window.
@@ -282,17 +269,14 @@ class Application:
 		handler(partcode, wid, event)
 
 	def do_inSysWindow(self, partcode, window, event):
-		if hasattr(MacOS, 'HandleEvent'):
-			MacOS.HandleEvent(event)
+		MacOS.HandleEvent(event)
 	
 	def do_inDesk(self, partcode, window, event):
-		if hasattr(MacOS, 'HandleEvent'):
-			MacOS.HandleEvent(event)
+		MacOS.HandleEvent(event)
 	
 	def do_inMenuBar(self, partcode, window, event):
 		if not self.menubar:
-			if hasattr(MacOS, 'HandleEvent'):
-				MacOS.HandleEvent(event)
+			MacOS.HandleEvent(event)
 			return
 		(what, message, when, where, modifiers) = event
 		result = MenuSelect(where)
@@ -307,8 +291,7 @@ class Application:
 			HiliteMenu(0)
 	
 	def do_menu(self, id, item, window, event):
-		if hasattr(MacOS, 'OutputSeen'):
-			MacOS.OutputSeen()
+		MacOS.OutputSeen()
 		self.menubar.dispatch(id, item, window, event)
 	
 	
@@ -317,13 +300,11 @@ class Application:
 		if DEBUG: print "Mouse down at global:", where
 		if DEBUG: print "\tUnknown part code:", partcode
 		if DEBUG: print "\tEvent:", self.printevent(event)
-		if hasattr(MacOS, 'HandleEvent'):
-			MacOS.HandleEvent(event)
+		MacOS.HandleEvent(event)
 		
 	def do_unknownwindow(self, partcode, window, event):
 		if DEBUG: print 'Unknown window:', window
-		if hasattr(MacOS, 'HandleEvent'):
-			MacOS.HandleEvent(event)
+		MacOS.HandleEvent(event)
 	
 	def do_keyDown(self, event):
 		self.do_key(event)
@@ -348,12 +329,11 @@ class Application:
 				raise self
 			else:
 				if not self.menubar:
-					if hasattr(MacOS, 'HandleEvent'):
-						MacOS.HandleEvent(event)
+					MacOS.HandleEvent(event)
 				return
 		else:
 			# See whether the front window wants it
-			w = MyFrontWindow()
+			w = FrontWindow()
 			if w and self._windows.has_key(w):
 				window = self._windows[w]
 				try:
@@ -373,8 +353,7 @@ class Application:
 			window = self._windows[wid]
 			window.do_rawupdate(wid, event)
 		else:
-			if hasattr(MacOS, 'HandleEvent'):
-				MacOS.HandleEvent(event)
+			MacOS.HandleEvent(event)
 	
 	def do_activateEvt(self, event):
 		(what, message, when, where, modifiers) = event
@@ -383,8 +362,7 @@ class Application:
 			window = self._windows[wid]
 			window.do_activate(modifiers & 1, event)
 		else:
-			if hasattr(MacOS, 'HandleEvent'):
-				MacOS.HandleEvent(event)
+			MacOS.HandleEvent(event)
 	
 	def do_osEvt(self, event):
 		(what, message, when, where, modifiers) = event
@@ -398,7 +376,7 @@ class Application:
 	
 	def do_suspendresume(self, event):
 		(what, message, when, where, modifiers) = event
-		wid = MyFrontWindow()
+		wid = FrontWindow()
 		if wid and self._windows.has_key(wid):
 			window = self._windows[wid]
 			window.do_activate(message & 1, event)
@@ -411,9 +389,8 @@ class Application:
 		try:
 			AEProcessAppleEvent(event)
 		except:
-			pass
-			#print "AEProcessAppleEvent error:"
-			#traceback.print_exc()
+			print "AEProcessAppleEvent error:"
+			traceback.print_exc()
 	
 	def do_unknownevent(self, event):
 		if DEBUG:
@@ -465,9 +442,8 @@ class MenuBar:
 		self.bar = None
 		self.menus = None
 	
-	def addmenu(self, title, after = 0, id=None):
-		if id == None:
-			id = self.getnextid()
+	def addmenu(self, title, after = 0):
+		id = self.getnextid()
 		if DEBUG: print 'Newmenu', title, id # XXXX
 		m = NewMenu(id, title)
 		m.InsertMenu(after)
@@ -502,7 +478,7 @@ class MenuBar:
 			for i in range(len(menu.items)):
 				label, shortcut, callback, kind = menu.items[i]
 				if type(callback) == types.StringType:
-					wid = MyFrontWindow()
+					wid = Win.FrontWindow()
 					if wid and self.parent._windows.has_key(wid):
 						window = self.parent._windows[wid]
 						if hasattr(window, "domenu_" + callback):
@@ -531,9 +507,9 @@ class MenuBar:
 class Menu:
 	"One menu."
 	
-	def __init__(self, bar, title, after=0, id=None):
+	def __init__(self, bar, title, after=0):
 		self.bar = bar
-		self.id, self.menu = self.bar.addmenu(title, after, id)
+		self.id, self.menu = self.bar.addmenu(title, after)
 		bar.menus[self.id] = self
 		self.items = []
 		self._parent = None
@@ -594,7 +570,7 @@ class Menu:
 				menuhandler = callback
 			else: 
 				# callback is string
-				wid = MyFrontWindow()
+				wid = Win.FrontWindow()
 				if wid and self.bar.parent._windows.has_key(wid):
 					window = self.bar.parent._windows[wid]
 					if hasattr(window, "domenu_" + callback):
@@ -639,7 +615,7 @@ class PopupMenu(Menu):
 		id = (reply & 0xffff0000) >> 16
 		item = reply & 0xffff
 		if not window:
-			wid = MyFrontWindow()
+			wid = Win.FrontWindow()
 			try:
 				window = self.bar.parent._windows[wid]
 			except:
@@ -699,7 +675,7 @@ def SubMenu(menu, label, title=''):
 class AppleMenu(Menu):
 	
 	def __init__(self, bar, abouttext="About me...", aboutcallback=None):
-		Menu.__init__(self, bar, "\024", id=SIOUX_APPLEMENU_ID)
+		Menu.__init__(self, bar, "\024")
 		if MacOS.runtimemodel == 'ppc':
 			self.additem(abouttext, None, aboutcallback)
 			self.addseparator()
@@ -802,7 +778,7 @@ class Window:
 		# If we're not frontmost, select ourselves and wait for
 		# the activate event.
 		#
-		if MyFrontWindow() <> window:
+		if FrontWindow() <> window:
 			window.SelectWindow()
 			return
 		# We are. Handle the event.
@@ -851,7 +827,7 @@ class ControlsWindow(Window):
 		if DEBUG: print "control hit in", window, "on", control, "; pcode =", pcode
 
 	def do_inContent(self, partcode, window, event):
-		if MyFrontWindow() <> window:
+		if FrontWindow() <> window:
 			window.SelectWindow()
 			return
 		(what, message, when, where, modifiers) = event

@@ -5,7 +5,7 @@ copy(src, dst) - Full copy of 'src' to 'dst'
 """
 
 import macfs
-from Carbon import Res
+import Res
 import os
 from MACFS import *
 import MacOS
@@ -17,6 +17,8 @@ except AttributeError:
 	openrf = open
 
 Error = 'macostools.Error'
+
+FSSpecType = type(macfs.FSSpec(':'))
 
 BUFSIZ=0x80000		# Copy in 0.5Mb chunks
 
@@ -34,13 +36,9 @@ def mkalias(src, dst, relative=None):
 		alias = srcfss.NewAlias(relativefss)
 	else:
 		alias = srcfss.NewAlias()
-	
-	if os.path.isdir(src):
-		cr, tp = 'MACS', 'fdrp'
-	else:
-		cr, tp = srcfss.GetCreatorType()
-	
-	Res.FSpCreateResFile(dstfss, cr, tp, -1)
+	srcfinfo = srcfss.GetFInfo()
+
+	Res.FSpCreateResFile(dstfss, srcfinfo.Creator, srcfinfo.Type, -1)
 	h = Res.FSpOpenResFile(dstfss, 3)
 	resource = Res.Resource(alias.data)
 	resource.AddResource('alis', 0, '')
