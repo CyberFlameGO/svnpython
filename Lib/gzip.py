@@ -331,10 +331,7 @@ class GzipFile:
             return
         self.close()
 
-    def flush(self,zlib_mode=zlib.Z_SYNC_FLUSH):
-        if self.mode == WRITE:
-            # Ensure the compressor's buffer is flushed
-            self.fileobj.write(self.compress.flush(zlib_mode))
+    def flush(self):
         self.fileobj.flush()
 
     def fileno(self):

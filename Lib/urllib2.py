@@ -304,13 +304,10 @@ class OpenerDirector:
                 self.handle_error[protocol] = lookup
             elif condition == "open":
                 kind = protocol
-                lookup = self.handle_open
-            elif condition == "response":
+                lookup = getattr(self, "handle_"+condition)
+            elif condition in ["response", "request"]:
                 kind = protocol
-                lookup = self.process_response
-            elif condition == "request":
-                kind = protocol
-                lookup = self.process_request
+                lookup = getattr(self, "process_"+condition)
             else:
                 continue
 
@@ -384,7 +381,7 @@ class OpenerDirector:
                                 'unknown_open', req)
 
     def error(self, proto, *args):
-        if proto in ('http', 'https'):
+        if proto in ['http', 'https']:
             # XXX http[s] protocols are special-cased
             dict = self.handle_error['http'] # https is not different than http
             proto = args[2]  # YUCK!
@@ -723,10 +720,7 @@ class AbstractBasicAuthHandler:
                     return self.retry_http_basic_auth(host, req, realm)
 
     def retry_http_basic_auth(self, host, req, realm):
-        # TODO(jhylton): Remove the host argument? It depends on whether
-        # retry_http_basic_auth() is consider part of the public API.
-        # It probably is.
-        user, pw = self.passwd.find_user_password(realm, req.get_full_url())
+        user,pw = self.passwd.find_user_password(realm, host)
         if pw is not None:
             raw = "%s:%s" % (user, pw)
             auth = 'Basic %s' % base64.encodestring(raw).strip()
@@ -883,12 +877,13 @@ class AbstractDigestAuthHandler:
                'response="%s"' % (user, realm, nonce, req.get_selector(),
                                   respdig)
         if opaque:
-            base += ', opaque="%s"' % opaque
+            base = base + ', opaque="%s"' % opaque
         if entdig:
-            base += ', digest="%s"' % entdig
-        base += ', algorithm="%s"' % algorithm
+            base = base + ', digest="%s"' % entdig
+        if algorithm != 'MD5':
+            base = base + ', algorithm="%s"' % algorithm
         if qop:
-            base += ', qop=auth, nc=%s, cnonce="%s"' % (ncvalue, cnonce)
+            base = base + ', qop=auth, nc=%s, cnonce="%s"' % (ncvalue, cnonce)
         return base
 
     def get_algorithm_impls(self, algorithm):

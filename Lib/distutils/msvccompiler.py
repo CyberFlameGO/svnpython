@@ -257,6 +257,7 @@ class MSVCCompiler (CCompiler) :
 
         self.initialized = True
 
+
     # -- Worker methods ------------------------------------------------
 
     def object_filenames (self,

@@ -1426,27 +1426,26 @@ static arc arcs_67_2[2] = {
 	{13, 3},
 	{21, 4},
 };
-static arc arcs_67_3[2] = {
+static arc arcs_67_3[1] = {
 	{9, 5},
-	{15, 6},
 };
 static arc arcs_67_4[1] = {
-	{22, 7},
+	{22, 6},
 };
 static arc arcs_67_5[1] = {
-	{15, 6},
+	{15, 7},
 };
 static arc arcs_67_6[1] = {
-	{21, 4},
+	{0, 6},
 };
 static arc arcs_67_7[1] = {
-	{0, 7},
+	{21, 4},
 };
 static state states_67[8] = {
 	{1, arcs_67_0},
 	{1, arcs_67_1},
 	{2, arcs_67_2},
-	{2, arcs_67_3},
+	{1, arcs_67_3},
 	{1, arcs_67_4},
 	{1, arcs_67_5},
 	{1, arcs_67_6},

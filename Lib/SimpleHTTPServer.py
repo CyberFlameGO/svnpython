@@ -17,10 +17,7 @@ import urllib
 import cgi
 import shutil
 import mimetypes
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 
 class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -73,12 +70,11 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             else:
                 return self.list_directory(path)
         ctype = self.guess_type(path)
-        if ctype.startswith('text/'):
-            mode = 'r'
-        else:
-            mode = 'rb'
         try:
-            f = open(path, mode)
+            # Always read in binary mode. Opening files in text mode may cause
+            # newline translations, making the actual size of the content
+            # transmitted *less* than the content-length!
+            f = open(path, 'rb')
         except IOError:
             self.send_error(404, "File not found")
             return None

@@ -4,10 +4,10 @@ Python News
 
 (editors: check NEWS.help for information about editing NEWS using ReST.)
 
-What's New in Python 2.5 alpha 1?
+What's New in Python 2.4.1 final?
 =================================
 
-*Release date: XX-XXX-2006*
+*Release date: 30-MAR-2005*
 
 Core and builtins
 -----------------
@@ -15,110 +15,102 @@ Core and builtins
 - Move exception finalisation later in the shutdown process - this 
   fixes the crash seen in bug #1165761
 
-- Added two new builtins, any() and all().
+Tests
+-----
 
-- Defining a class with empty parentheses is now allowed
-  (e.g., ``class C(): pass`` is no longer a syntax error)
+- SF patch 1167316: doctest.py fails self-test if run directly.
 
-- Patch #1115086: Support PY_LONGLONG in structmember.
+Build
+-----
 
-- Bug #1155938: new style classes did not check that __init__() was
-  returning None.
+- SF patch 1171767: Darwin 8's headers are anal about POSIX compliance, 
+  and linking has changed (prebinding is now deprecated, and libcc_dynamic 
+  no longer exists). This configure patch makes things right.
 
-- Patch #802188: Report characters after line continuation character 
-  ('\') with a specific error message.
+
+What's New in Python 2.4.1c2?
+=============================
+
+*Release date: 17-MAR-2005*
+
+Library
+-------
+
+- Fixed decimal operator and comparison methods to return NotImplemented
+  instead of raising a TypeError when interacting with other types. 
+  Allows other classes to successfully implement __radd__ style methods.
+
+- Bug #1163325:  Decimal infinities failed to hash.  Attempting to
+  hash a NaN raised an InvalidOperation instead of a TypeError.
+
+- Bug #1160802: can't build Zope on Windows with 2.4.1c1.  The
+  ``MSVCCompiler`` class in distutils forgot to record that it was
+  initialized, and continued adding redundant entries to the system
+  ``PATH`` environment variable until ``putenv()`` complained about the
+  size.  This only affected building projects with many C extensions,
+  and only on Windows using Microsoft's compiler.  This wasn't visible
+  before because a bugfix first included in 2.4.1c1 provoked it (bug
+  #1110478: revert os.environ.update to do putenv again).
+
+- Bug #1156259: Seeking in codecs.reader was broken, now fixed.
+
+Tests
+-----
+
+- Fix the test for socket.getfqdn() in test_socket to also consider the host
+  name returned by socket.gethostname() a valid return value for getfqdn().
+  Also clarified the wording of docs and docstring that this is the case.
+
+Extensions Modules
+------------------
+
+- os.access now supports Unicode path names on non-Win32 systems.
+
+
+What's New in Python 2.4.1c1?
+=============================
+
+*Release date: 10-MAR-2005*
+
+Core and builtins
+-----------------
+
+- Bug #1155938: new style classes did not verify that __init__()
+  returns None.
 
 - Bug #723201: Raise a TypeError for passing bad objects to 'L' format.
 
 - Bug #1124295: the __name__ attribute of file objects was
   inadvertently made inaccessible in restricted mode.
 
-- Bug #1074011: closing sys.std{out,err} now causes a flush() and 
+- Bug #1074011: closing sys.std{out,err} now causes a flush() and
   an ferror() call.
 
-- min() and max() now support key= arguments with the same meaning as in
-  list.sort().
+- Bug #1085744:  Add missing overflow check to PySequence_Tuple().
+  Make resize schedule linear (amortized).
 
-- The peephole optimizer now performs simple constant folding in expressions:
-      (2+3) --> (5).
+- marshal.dumps() no longer crashes when the optional argument ``version``
+  is provided.
 
-- set and frozenset objects can now be marshalled.  SF #1098985.
-
-- Bug #1077106: Poor argument checking could cause memory corruption
-  in calls to os.read().
-
-- The parser did not complain about future statements in illegal
-  positions.  It once again reports a syntax error if a future
-  statement occurs after anything other than a doc string.
 
 Extension Modules
 -----------------
 
-- collections.deque objects now support a remove() method.
-
-- operator.itemgetter() and operator.attrgetter() now support retrieving
-  multiple fields.  This provides direct support for sorting on multiple
-  keys (primary, secondary, etc).
-
-- os.access now supports Unicode path names on non-Win32 systems.
-
 - Patches #925152, #1118602: Avoid reading after the end of the buffer
   in pyexpat.GetInputContext.
-
-- Patches #749830, #1144555: allow UNIX mmap size to default to current 
-  file size.
-
-- Added functional.partial().  See PEP309.
 
 - Patch #1093585: raise a ValueError for negative history items in readline.
   {remove_history,replace_history}
 
-- The spwd module has been added, allowing access to the shadow password
-  database.
-
-- stat_float_times is now True.
-
-- array.array objects are now picklable.
-
-- the cPickle module no longer accepts the deprecated None option in the
-  args tuple returned by __reduce__().
-
-- itertools.islice() now accepts None for the start and step arguments.
-  This allows islice() to work more readily with slices:
-      islice(s.start, s.stop, s.step)
-
-- datetime.datetime() now has a strptime class method which can be used to
-  create datetime object using a string and format.
 
 Library
 -------
-
-- distutils.commands.upload was added to support uploading distribution
-  files to PyPI.
-
-- decimal operator and comparison methods now return NotImplemented
-  instead of raising a TypeError when interacting with other types.  This
-  allows other classes to implement __radd__ style methods and have them
-  work as expected.
-
-- Bug #1163325:  Decimal infinities failed to hash.  Attempting to
-  hash a NaN raised an InvalidOperation instead of a TypeError.
-
-- Patch #918101: Add tarfile open mode r|* for auto-detection of the 
-  stream compression; add, for symmetry reasons, r:* as a synonym of r.
-
-- Patch #1043890: Add extractall method to tarfile.
 
 - Patch #1075887: Don't require MSVC in distutils if there is nothing
   to build.
 
 - Patch #1103407: Properly deal with tarfile iterators when untarring
   symbolic links on Windows.
-
-- Patch #645894: Use getrusage for computing the time consumption in 
-  profile.py if available.
-
-- Patch #1046831: Use get_python_version where appropriate in sysconfig.py.
 
 - Patch #1117454: Remove code to special-case cookies without values
   in LWPCookieJar.
@@ -127,17 +119,7 @@ Library
 
 - Patch #1112812: Make bsddb/__init__.py more friendly for modulefinder.
 
-- Patch #1110248: SYNC_FLUSH the zlib buffer for GZipFile.flush.
-
-- Patch #1107973: Allow to iterate over the lines of a tarfile.ExFileObject.
-
-- Patch #1104111: Alter setup.py --help and --help-commands.
-
 - Patch #1121234: Properly cleanup _exit and tkerror commands.
-
-- Patch #1049151: xdrlib now unpacks booleans as True or False.
-
-- Fixed bug in a NameError bug in cookielib.  Patch #1116583.
 
 - Applied a security fix to SimpleXMLRPCserver (PSF-2005-001).  This
   disables recursive traversal through instance attributes, which can
@@ -147,83 +129,21 @@ Library
 
 - Bug #1103844: fix distutils.install.dump_dirs() with negated options.
 
-- os.{SEEK_SET, SEEK_CUR, SEEK_END} have been added for convenience.
-
-- Enhancements to the csv module:
-
-  + Dialects are now validated by the underlying C code, better
-    reflecting it's capabilities, and improving it's compliance with
-    PEP 305. 
-  + Dialect parameter parsing has been re-implemented to improve error
-    reporting.
-  + quotechar=None and quoting=QUOTE_NONE now work the way PEP 305
-    dictates.
-  + the parser now removes the escapechar prefix from escaped characters.
-  + when quoting=QUOTE_NONNUMERIC, the writer now tests for numeric
-    types, rather than any object than can be represented as a numeric.
-  + when quoting=QUOTE_NONNUMERIC, the reader now casts unquoted fields
-    to floats.
-  + reader now allows \r characters to be quoted (previously it only allowed
-    \n to be quoted).
-  + writer doublequote handling improved.
-  + Dialect classes passed to the module are no longer instantiated by
-    the module before being parsed (the former validation scheme required
-    this, but the mechanism was unreliable).
-  + The dialect registry now contains instances of the internal
-    C-coded dialect type, rather than references to python objects.
-  + the internal c-coded dialect type is now immutable.
-  + register_dialect now accepts the same keyword dialect specifications
-    as the reader and writer, allowing the user to register dialects
-    without first creating a dialect class.
-  + a configurable limit to the size of parsed fields has been added -
-    previously, an unmatched quote character could result in the entire
-    file being read into the field buffer before an error was reported.
-  + A new module method csv.field_size_limit() has been added that sets
-    the parser field size limit (returning the former limit). The initial
-    limit is 128kB.
-  + A line_num attribute has been added to the reader object, which tracks
-    the number of lines read from the source iterator. This is not
-    the same as the number of records returned, as records can span
-    multiple lines.
-  + reader and writer objects were not being registered with the cyclic-GC.
-    This has been fixed.
-
-- _DummyThread objects in the threading module now delete self.__block that is
-  inherited from _Thread since it uses up a lock allocated by 'thread'.  The
-  lock primitives tend to be limited in number and thus should not be wasted on
-  a _DummyThread object.  Fixes bug #1089632.
-
-- The imghdr module now detects Exif files.
+- Bug #1067732: wininst --install-script doesn't leave residual files anymore.
 
 - StringIO.truncate() now correctly adjusts the size attribute.
   (Bug #951915).
 
-- locale.py now uses an updated locale alias table (built using
-  Tools/i18n/makelocalealias.py, a tool to parse the X11 locale
-  alias file); the encoding lookup was enhanced to use Python's
-  encoding alias table
+- The decimal module wouldn't run on builds without threads (Bug #1083645).
 
-- moved deprecated modules to Lib/lib-old:  whrandom, tzparse, statcache.
+- Bug #1086555:  Fix leak in syslog module.
 
-- the pickle module no longer accepts the deprecated None option in the
-  args tuple returned by __reduce__().
-
-- optparse now optionally imports gettext.  This allows its use in setup.py.
-
-- the pickle module no longer uses the deprecated bin parameter.
-
-- the shelve module no longer uses the deprecated binary parameter.
-
-- the pstats module no longer uses the deprecated ignore() method.
-
-- the filecmp module no longer uses the deprecated use_statcache argument.
+- atexit.register no longer references the sys module before importing it.
+  (Bug #1083202).
 
 - unittest.TestCase.run() and unittest.TestSuite.run() can now be successfully
   extended or overridden by subclasses.  Formerly, the subclassed method would
   be ignored by the rest of the module.  (Bug #1078905).
-
-- heapq.nsmallest() and heapq.nlargest() now support key= arguments with
-  the same meaning as in list.sort().
 
 - Bug #1076985: ``codecs.StreamReader.readline()`` now calls ``read()`` only
   once when a size argument is given. This prevents a buffer overflow in the
@@ -232,12 +152,6 @@ Library
 - Bug #1083110: ``zlib.decompress.flush()`` would segfault if called immediately
   after creating the object, without any intervening ``.decompress()`` calls.
 
-- The reconvert.quote function can now emit triple-quoted strings.  The
-  reconvert module now has some simple documentation.
-
-- ``UserString.MutableString`` now supports negative indices in
-  ``__setitem__`` and ``__delitem__``
-
 - Bug #1149508: ``textwrap`` now handles hyphenated numbers (eg. "2004-03-05")
   correctly.
 
@@ -245,40 +159,45 @@ Library
 Build
 -----
 
-- SF patch 1171735: Darwin 8's headers are anal about POSIX compliance,
-  and linking has changed (prebinding is now deprecated, and libcc_dynamic
-  no longer exists). This configure patch makes things right.
-
 - Bug #1158607: Build with --disable-unicode again.
 
-- spwdmodule.c is built only if either HAVE_GETSPNAM or HAVE_HAVE_GETSPENT is
-  defined.  Discovered as a result of not being able to build on OS X.
+- term.h is now properly detected again.
 
-- setup.py now uses the directories specified in LDFLAGS using the -L option
-  and in CPPFLAGS using the -I option for adding library and include
-  directories, respectively, for compiling extension modules against.  This has
-  led to the core being compiled using the values in CPPFLAGS.  It also removes
-  the need for the special-casing of both DarwinPorts and Fink for darwin since
-  the proper directories can be specified in LDFLAGS (``-L/sw/lib`` for Fink,
-  ``-L/opt/local/lib`` for DarwinPorts) and CPPFLAGS (``-I/sw/include`` for
-  Fink, ``-I/opt/local/include`` for DarwinPorts).
-
-- Test in configure.in that checks for tzset no longer dependent on tm->tm_zone
-  to exist in the struct (not required by either ISO C nor the UNIX 2 spec).
+- Check for tzset no longer dependent on tm->tm_zone to exist in the struct
+  (not required by either ISO C nor the UNIX 2 spec).
   Tests for sanity in tzname when HAVE_TZNAME defined were also defined.
   Closes bug #1096244.  Thanks Gregory Bond.
 
 
-C API
------
+Windows
+-------
 
-- Removed PyRange_New().
+- Bug #1076861: The IDLE shortcut is now correct even if the target
+  directory contains a space.
 
+- Bug #1085208 and similar: The installer does not fail anymore if
+  VBScript is not available on the target machine, not installed
+  properly, or outdated; the MSI package now does not rely on VB
+  anymore.
 
-Tests
------
+Macintosh
+---------
 
-- In test_os, st_?time is now truncated before comparing it with ST_?TIME.
+- Bug #1091468: make frameworkinstall now works with DESTROOT builds
+
+- On 10.3 and later extensions are built with -undefined dynamic_lookup.
+  This ensures that extensions can be built in older versions of Python after
+  a newer framework has been installed. In addition, an extension will not
+  accidentally pull in another copy of the Python interpreter.
+
+  On 10.2 and earlier (or if MACOSX_DEPLOYMENT_TARGET is set to a value <= 10.2)
+  extensions are linked directly to the dylib in the framework, in stead
+  of against the framework itself. This ensures that extensions can be built
+  in older versions of Python after a newer framework has been installed.
+
+- PackageManager and the underlying pimp.py module have been updated to
+  version 0.5, which greatly simplifies maintainance of the package
+  databases.
 
 
 Documentation
@@ -287,15 +206,6 @@ Documentation
 - Remove all latent references for "Macintosh" that referred to semantics for
   Mac OS 9 and change to reflect the state for OS X.
   Closes patch #1095802.  Thanks Jack Jansen.
-
-Mac
----
-
-
-
-Tools/Demos
------------
-
 
 
 What's New in Python 2.4 final?

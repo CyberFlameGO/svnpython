@@ -1,44 +1,28 @@
-What's New in IDLE 1.2a0?
-=======================
+What's New in IDLE 1.1.1?
+=========================
 
-*Release date: XX-XXX-2005*
+*Release date: 30-MAR-2005*
 
-- Add config-main option to make the 'history' feature non-cyclic.
-  Default remains cyclic.  Python Patch 914546 Noam Raphael.
 
-- Removed ability to configure tabs indent from Options dialog.  This 'feature'
-  has never worked and no one has complained.  It is still possible to set a
-  default tabs (v. spaces) indent 'manually' via config-main.def (or to turn on
-  tabs for the current EditorWindow via the Format menu) but IDLE will
-  encourage indentation via spaces.
+What's New in IDLE 1.1.1c2?
+===========================
 
-- Enable setting the indentation width using the Options dialog.
-  Bug # 783877
+*Release date: 17-MAR-2005*
 
-- Add keybindings for del-word-left and del-word-right.
 
-- Discourage using an indent width other than 8 when using tabs to indent
-  Python code.
+What's New in IDLE 1.1.1c1?
+===========================
 
-- Restore use of EditorWindow.set_indentation_params(), was dead code since
-  Autoindent was merged into EditorWindow.  This allows IDLE to conform to the
-  indentation width of a loaded file.  (But it still will not switch to tabs
-  even if the file uses tabs.)  Any change in indent width is local to that
-  window.
-
-- Add Tabnanny check before Run/F5, not just when Checking module.
+*Release date: 10-MAR-2005*
 
 - If an extension can't be loaded, print warning and skip it instead of
   erroring out.
 
-- Improve error handling when .idlerc can't be created (warn and exit).
+- Improve error handling when .idlerc can't be created (warn and exit)
 
 - The GUI was hanging if the shell window was closed while a raw_input() 
   was pending.  Restored the quit() of the readline() mainloop().
   http://mail.python.org/pipermail/idle-dev/2004-December/002307.html
-
-- The remote procedure call module rpc.py can now access data attributes of
-  remote registered objects.  Changes to these attributes are local, however.
 
 What's New in IDLE 1.1?
 =======================
@@ -172,7 +156,7 @@ What's New in IDLE 1.0?
 
 *Release date: 29-Jul-2003*
 
-- Added a banner to the shell discussing warnings possibly raised by personal
+- Added a banner to the shell discussimg warnings possibly raised by personal
   firewall software.  Added same comment to README.txt.
 
 

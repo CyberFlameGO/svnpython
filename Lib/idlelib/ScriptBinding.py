@@ -138,8 +138,6 @@ class ScriptBinding:
         filename = self.getfilename()
         if not filename:
             return
-        if not self.tabnanny(filename):
-            return
         code = self.checksyntax(filename)
         if not code:
             return

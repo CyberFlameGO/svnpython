@@ -44,22 +44,6 @@ class ProcessTestCase(unittest.TestCase):
                               "import sys; sys.exit(47)"])
         self.assertEqual(rc, 47)
 
-    def test_check_call_zero(self):
-        # check_call() function with zero return code
-        rc = subprocess.check_call([sys.executable, "-c",
-                                    "import sys; sys.exit(0)"])
-        self.assertEqual(rc, 0)
-
-    def test_check_call_nonzero(self):
-        # check_call() function with non-zero return code
-        try:
-            subprocess.check_call([sys.executable, "-c",
-                                   "import sys; sys.exit(47)"])
-        except subprocess.CalledProcessError, e:
-            self.assertEqual(e.errno, 47)
-        else:
-            self.fail("Expected CalledProcessError")
-
     def test_call_kwargs(self):
         # call() function with keyword args
         newenv = os.environ.copy()
@@ -248,31 +232,6 @@ class ProcessTestCase(unittest.TestCase):
                          env=newenv)
         self.assertEqual(p.stdout.read(), "orange")
 
-    def test_communicate_stdin(self):
-        p = subprocess.Popen([sys.executable, "-c",
-                              'import sys; sys.exit(sys.stdin.read() == "pear")'],
-                             stdin=subprocess.PIPE)
-        p.communicate("pear")
-        self.assertEqual(p.returncode, 1)
-
-    def test_communicate_stdout(self):
-        p = subprocess.Popen([sys.executable, "-c",
-                              'import sys; sys.stdout.write("pineapple")'],
-                             stdout=subprocess.PIPE)
-        (stdout, stderr) = p.communicate()
-        self.assertEqual(stdout, "pineapple")
-        self.assertEqual(stderr, None)
-
-    def test_communicate_stderr(self):
-        p = subprocess.Popen([sys.executable, "-c",
-                              'import sys; sys.stderr.write("pineapple")'],
-                             stderr=subprocess.PIPE)
-        (stdout, stderr) = p.communicate()
-        self.assertEqual(stdout, None)
-        # When running with a pydebug build, the # of references is outputted
-        # to stderr, so just check if stderr at least started with "pinapple"
-        self.assert_(stderr.startswith("pineapple"))
-
     def test_communicate(self):
         p = subprocess.Popen([sys.executable, "-c",
                           'import sys,os;' \
@@ -387,7 +346,7 @@ class ProcessTestCase(unittest.TestCase):
         if test_support.is_resource_enabled("subprocess") and not mswindows:
             max_handles = 1026 # too much for most UNIX systems
         else:
-            max_handles = 65
+            max_handles = 65 
         for i in range(max_handles):
             p = subprocess.Popen([sys.executable, "-c",
                     "import sys;sys.stdout.write(sys.stdin.read())"],

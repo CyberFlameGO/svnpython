@@ -7,10 +7,6 @@ import unittest
 from test import test_support
 from weakref import proxy
 import array, cStringIO, math
-from cPickle import loads, dumps
-
-class ArraySubclass(array.array):
-    pass
 
 tests = [] # list to accumulate all tests
 typecodes = "cubBhHiIlLfd"
@@ -84,21 +80,6 @@ class BaseTest(unittest.TestCase):
         b = copy.copy(a)
         self.assertNotEqual(id(a), id(b))
         self.assertEqual(a, b)
-
-    def test_pickle(self):
-        for protocol in (0, 1, 2):
-            a = array.array(self.typecode, self.example)
-            b = loads(dumps(a, protocol))
-            self.assertNotEqual(id(a), id(b))
-            self.assertEqual(a, b)
-
-            a = ArraySubclass(self.typecode, self.example)
-            a.x = 10
-            b = loads(dumps(a, protocol))
-            self.assertNotEqual(id(a), id(b))
-            self.assertEqual(a, b)
-            self.assertEqual(a.x, b.x)
-            self.assertEqual(type(a), type(b))
 
     def test_insert(self):
         a = array.array(self.typecode, self.example)
@@ -424,11 +405,6 @@ class BaseTest(unittest.TestCase):
 
         self.assertEqual(
             a[-1:-1],
-            array.array(self.typecode)
-        )
-
-        self.assertEqual(
-            a[2:1],
             array.array(self.typecode)
         )
 
