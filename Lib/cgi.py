@@ -439,12 +439,6 @@ def parse(fp=None, environ=os.environ, keep_blank_values=None):
 	    qs = fp.read(clength)
 	else:
 	    qs = ''			# Unknown content-type
-	if environ.has_key('QUERY_STRING'): 
-	    if qs: qs = qs + '&'
-	    qs = qs + environ['QUERY_STRING']
-	elif sys.argv[1:]: 
-	    if qs: qs = qs + '&'
-	    qs = qs + sys.argv[1]
 	environ['QUERY_STRING'] = qs	# XXX Shouldn't, really
     elif environ.has_key('QUERY_STRING'):
 	qs = environ['QUERY_STRING']
@@ -967,7 +961,7 @@ class FormContentDict:
 
     """
     def __init__(self, environ=os.environ):
-        self.dict = parse(environ=environ)
+        self.dict = parse(environ)
 	self.query_string = environ['QUERY_STRING']
     def __getitem__(self,key):
 	return self.dict[key]

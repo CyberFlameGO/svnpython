@@ -80,7 +80,7 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include "traceback.h"
 #include "sliceobject.h"
 
-#include "pyerrors.h"
+#include "errors.h"
 #include "mymalloc.h"
 
 #include "modsupport.h"
