@@ -37,8 +37,12 @@ class BaseFunctionGenerator:
 
 	def functionheader(self):
 		Output()
-		Output("static PyObject *%s_%s(%s *_self, PyObject *_args)",
-		       self.prefix, self.name, self.objecttype)
+		Output("static PyObject *%s_%s(_self, _args)",
+		       self.prefix, self.name)
+		IndentLevel()
+		Output("%s *_self;", self.objecttype)
+		Output("PyObject *_args;")
+		DedentLevel()
 		OutLbrace()
 		Output("PyObject *_res = NULL;")
 
@@ -164,7 +168,6 @@ class FunctionGenerator(BaseFunctionGenerator):
 	
 	def functionbody(self):
 		self.declarations()
-		self.precheck()
 		self.getargs()
 		self.callit()
 		self.checkit()
@@ -195,9 +198,6 @@ class FunctionGenerator(BaseFunctionGenerator):
 				continue
 			if arg.mode in (InMode, InOutMode):
 				arg.getargsCheck()
-	
-	def precheck(self):
-		pass
 
 	def callit(self):
 		args = ""

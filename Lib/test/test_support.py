@@ -63,10 +63,6 @@ if os.name == 'java':
     TESTFN = '$test'
 elif os.name != 'riscos':
     TESTFN = '@test'
-    # Unicode name only used if TEST_FN_ENCODING exists for the platform.
-    TESTFN_UNICODE=u"@test-\xe0\xf2" # 2 latin characters.
-    if os.name=="nt":
-        TESTFN_ENCODING="mbcs"
 else:
     TESTFN = 'test'
 del os
@@ -93,14 +89,6 @@ def verify(condition, reason='test failed'):
 
     if not condition:
         raise TestFailed(reason)
-
-def sortdict(dict):
-    "Like repr(dict), but in sorted order."
-    items = dict.items()
-    items.sort()
-    reprpairs = ["%r: %r" % pair for pair in items]
-    withcommas = ", ".join(reprpairs)
-    return "{%s}" % withcommas
 
 def check_syntax(statement):
     try:
@@ -135,14 +123,5 @@ def run_unittest(testclass):
     suite = unittest.makeSuite(testclass)
     result = runner.run(suite)
     if not result.wasSuccessful():
-        if len(result.errors) == 1 and not result.failures:
-            err = result.errors[0][1]
-        elif len(result.failures) == 1 and not result.errors:
-            err = result.failures[0][1]
-        else:
-            raise TestFailed("errors occurred in %s.%s"
-                             % (testclass.__module__, testclass.__name__))
-        if err[0] is AssertionError:
-            raise TestFailed(str(err[1]))
-        else:
-            raise TestFailed("%s: %s" % err[:2])
+        raise TestFailed("errors occurred in %s.%s"
+                         % (testclass.__module__, testclass.__name__))

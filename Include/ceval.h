@@ -22,20 +22,13 @@ DL_IMPORT(PyObject *) PyEval_CallFunction(PyObject *obj, char *format, ...);
 DL_IMPORT(PyObject *) PyEval_CallMethod(PyObject *obj,
                                         char *methodname, char *format, ...);
 
-DL_IMPORT(void) PyEval_SetProfile(Py_tracefunc, PyObject *);
-DL_IMPORT(void) PyEval_SetTrace(Py_tracefunc, PyObject *);
-
 DL_IMPORT(PyObject *) PyEval_GetBuiltins(void);
 DL_IMPORT(PyObject *) PyEval_GetGlobals(void);
 DL_IMPORT(PyObject *) PyEval_GetLocals(void);
 DL_IMPORT(PyObject *) PyEval_GetOwner(void);
 DL_IMPORT(PyObject *) PyEval_GetFrame(void);
 DL_IMPORT(int) PyEval_GetRestricted(void);
-
-/* Look at the current frame's (if any) code's co_flags, and turn on
-   the corresponding compiler flags in cf->cf_flags.  Return 1 if any
-   flag was set, else return 0. */
-DL_IMPORT(int) PyEval_MergeCompilerFlags(PyCompilerFlags *cf);
+DL_IMPORT(int) PyEval_GetNestedScopes(void);
 
 DL_IMPORT(int) Py_FlushLine(void);
 

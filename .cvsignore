@@ -6,6 +6,3 @@ config.status
 Makefile
 buildno
 python
-build
-Makefile.pre
-platform

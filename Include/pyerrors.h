@@ -24,7 +24,6 @@ DL_IMPORT(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 /* Predefined exceptions */
 
 extern DL_IMPORT(PyObject *) PyExc_Exception;
-extern DL_IMPORT(PyObject *) PyExc_StopIteration;
 extern DL_IMPORT(PyObject *) PyExc_StandardError;
 extern DL_IMPORT(PyObject *) PyExc_ArithmeticError;
 extern DL_IMPORT(PyObject *) PyExc_LookupError;

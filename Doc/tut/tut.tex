@@ -33,7 +33,7 @@ on most platforms.
 
 The Python interpreter and the extensive standard library are freely
 available in source or binary form for all major platforms from the
-Python Web site, \url{http://www.python.org/}, and can be freely
+Python web site, \url{http://www.python.org}, and can be freely
 distributed.  The same site also contains distributions of and
 pointers to many free third party Python modules, programs and tools,
 and additional documentation.
@@ -105,7 +105,7 @@ reused in other Python programs.  It comes with a large collection of
 standard modules that you can use as the basis of your programs --- or
 as examples to start learning to program in Python.  There are also
 built-in modules that provide things like file I/O, system calls,
-sockets, and even interfaces to graphical user interface toolkits like Tk.  
+sockets, and even interfaces to GUI toolkits like Tk.  
 
 Python is an interpreted language, which can save you considerable time
 during program development because no compilation and linking is
@@ -242,7 +242,7 @@ with the \emph{primary prompt}, usually three greater-than signs
 (\samp{>\code{>}>~}); for continuation lines it prompts with the
 \emph{secondary prompt}, by default three dots (\samp{...~}).
 The interpreter prints a welcome message stating its version number
-and a copyright notice before printing the first prompt:
+and a copyright notice before printing the first prompt, e.g.:
 
 \begin{verbatim}
 python
@@ -325,8 +325,8 @@ You can also change the prompts \code{sys.ps1} and \code{sys.ps2} in
 this file.
 
 If you want to read an additional start-up file from the current
-directory, you can program this in the global start-up file using code
-like \samp{if os.path.isfile('.pythonrc.py'):
+directory, you can program this in the global start-up file,
+e.g.\ \samp{if os.path.isfile('.pythonrc.py'):
 execfile('.pythonrc.py')}.  If you want to use the startup file in a
 script, you must do this explicitly in the script:
 
@@ -426,8 +426,8 @@ There is full support for floating point; operators with mixed type
 operands convert the integer operand to floating point:
 
 \begin{verbatim}
->>> 3 * 3.75 / 1.5
-7.5
+>>> 4 * 2.5 / 3.3
+3.0303030303030303
 >>> 7.0 / 2
 3.5
 \end{verbatim}
@@ -469,18 +469,15 @@ complex number to a real number.  Use \code{abs(\var{z})} to get its
 magnitude (as a float) or \code{z.real} to get its real part.
 
 \begin{verbatim}
->>> a=3.0+4.0j
+>>> a=1.5+0.5j
 >>> float(a)
 Traceback (most recent call last):
   File "<stdin>", line 1, in ?
 TypeError: can't convert complex to float; use e.g. abs(z)
 >>> a.real
-3.0
->>> a.imag
-4.0
->>> abs(a)  # sqrt(a.real**2 + a.imag**2)
-5.0
->>>
+1.5
+>>> abs(a)
+1.5811388300841898
 \end{verbatim}
 
 In interactive mode, the last printed expression is assigned to the
@@ -489,15 +486,14 @@ desk calculator, it is somewhat easier to continue calculations, for
 example:
 
 \begin{verbatim}
->>> tax = 12.5 / 100
->>> price = 100.50
+>>> tax = 17.5 / 100
+>>> price = 3.50
 >>> price * tax
-12.5625
+0.61249999999999993
 >>> price + _
-113.0625
+4.1124999999999998
 >>> round(_, 2)
-113.06
->>>
+4.1100000000000003
 \end{verbatim}
 
 This variable should be treated as read-only by the user.  Don't
@@ -527,7 +523,7 @@ double quotes:
 \end{verbatim}
 
 String literals can span multiple lines in several ways.  Newlines can
-be escaped with backslashes:
+be escaped with backslashes, e.g.:
 
 \begin{verbatim}
 hello = "This is a rather long string containing\n\
@@ -728,7 +724,7 @@ The slice from \var{i} to \var{j} consists of all characters between
 the edges labeled \var{i} and \var{j}, respectively.
 
 For non-negative indices, the length of a slice is the difference of
-the indices, if both are within bounds.  For example, the length of
+the indices, if both are within bounds, e.g., the length of
 \code{word[1:3]} is 2.
 
 The built-in function \function{len()} returns the length of a string:
@@ -745,7 +741,7 @@ The built-in function \function{len()} returns the length of a string:
 
 Starting with Python 2.0 a new data type for storing text data is
 available to the programmer: the Unicode object. It can be used to
-store and manipulate Unicode data (see \url{http://www.unicode.org/})
+store and manipulate Unicode data (see \url{http://www.unicode.org})
 and integrates well with the existing string objects providing
 auto-conversions where necessary.
 
@@ -799,8 +795,8 @@ u'Hello World !'
 u'Hello\\\\u0020World !'
 \end{verbatim}
 
-The raw mode is most useful when you have to enter lots of
-backslashes, as can be necessary in regular expressions.
+The raw mode is most useful when you have to enter lots of backslashes
+e.g. in regular expressions.
 
 Apart from these standard encodings, Python provides a whole set of
 other ways of creating Unicode strings on the basis of a known
@@ -1073,7 +1069,7 @@ iterating over an arithmetic progression of numbers (like in Pascal),
 or giving the user the ability to define both the iteration step and
 halting condition (as C), Python's
 \keyword{for}\stindex{for} statement iterates over the items of any
-sequence (a list or a string), in the order that they appear in
+sequence (e.g., a list or a string), in the order that they appear in
 the sequence.  For example (no pun intended):
 % One suggestion was to give a real C example here, but that may only
 % serve to confuse non-C programmers.
@@ -1090,10 +1086,10 @@ defenestrate 12
 \end{verbatim}
 
 It is not safe to modify the sequence being iterated over in the loop
-(this can only happen for mutable sequence types, such as lists).  If
-you need to modify the list you are iterating over (for example, to
-duplicate selected items) you must iterate over a copy.  The slice
-notation makes this particularly convenient:
+(this can only happen for mutable sequence types, i.e., lists).  If
+you need to modify the list you are iterating over, e.g., duplicate
+selected items, you must iterate over a copy.  The slice notation
+makes this particularly convenient:
 
 \begin{verbatim}
 >>> for x in a[:]: # make a slice copy of the entire list
@@ -1108,7 +1104,7 @@ notation makes this particularly convenient:
 
 If you do need to iterate over a sequence of numbers, the built-in
 function \function{range()} comes in handy.  It generates lists
-containing arithmetic progressions:
+containing arithmetic progressions, e.g.:
 
 \begin{verbatim}
 >>> range(10)
@@ -1170,7 +1166,6 @@ which searches for prime numbers:
 ...            print n, 'equals', x, '*', n/x
 ...            break
 ...     else:
-...          # loop fell through without finding a factor
 ...          print n, 'is a prime number'
 ... 
 2 is a prime number
@@ -1245,7 +1240,7 @@ arguments are passed using \emph{call by value} (where the
 the object).\footnote{
          Actually, \emph{call by object reference} would be a better
          description, since if a mutable object is passed, the caller
-         will see any changes the callee makes to it (items
+         will see any changes the callee makes to it (e.g., items
          inserted into a list).
 } When a function calls another function, a new local symbol table is
 created for that call.
@@ -1331,7 +1326,7 @@ arguments.  There are three forms, which can be combined.
 
 The most useful form is to specify a default value for one or more
 arguments.  This creates a function that can be called with fewer
-arguments than it is defined
+arguments than it is defined, e.g.
 
 \begin{verbatim}
 def ask_ok(prompt, retries=4, complaint='Yes or no, please!'):
@@ -1349,7 +1344,7 @@ This function can be called either like this:
 \code{ask_ok('OK to overwrite the file?', 2)}.
 
 The default values are evaluated at the point of function definition
-in the \emph{defining} scope, so that
+in the \emph{defining} scope, so that e.g.
 
 \begin{verbatim}
 i = 5
@@ -1509,7 +1504,7 @@ objects are required.  They are syntactically restricted to a single
 expression.  Semantically, they are just syntactic sugar for a normal
 function definition.  Like nested function definitions, lambda forms
 cannot reference variables from the containing scope, but this can be
-overcome through the judicious use of default argument values:
+overcome through the judicious use of default argument values, e.g.
 
 \begin{verbatim}
 >>> def make_incrementor(n):
@@ -1853,7 +1848,7 @@ another value is assigned to it).  We'll find other uses for
 
 \section{Tuples and Sequences \label{tuples}}
 
-We saw that lists and strings have many common properties, such as
+We saw that lists and strings have many common properties, e.g.,
 indexing and slicing operations.  They are two examples of
 \emph{sequence} data types.  Since Python is an evolving language,
 other sequence data types may be added.  There is also another
@@ -1879,9 +1874,9 @@ that nested tuples are interpreted correctly; they may be input with
 or without surrounding parentheses, although often parentheses are
 necessary anyway (if the tuple is part of a larger expression).
 
-Tuples have many uses.  For example: (x, y) coordinate pairs, employee
-records from a database, etc.  Tuples, like strings, are immutable: it
-is not possible to assign to the individual items of a tuple (you can
+Tuples have many uses, e.g., (x, y) coordinate pairs, employee records
+from a database, etc.  Tuples, like strings, are immutable: it is not
+possible to assign to the individual items of a tuple (you can
 simulate much of the same effect with slicing and concatenation,
 though).  It is also possible to create tuples which contain mutable
 objects, such as lists.
@@ -1907,7 +1902,7 @@ Ugly, but effective.  For example:
 The statement \code{t = 12345, 54321, 'hello!'} is an example of
 \emph{tuple packing}: the values \code{12345}, \code{54321} and
 \code{'hello!'} are packed together in a tuple.  The reverse operation
-is also possible:
+is also possible, e.g.:
 
 \begin{verbatim}
 >>> x, y, z = t
@@ -1992,9 +1987,8 @@ only matters for mutable objects like lists.  All comparison operators
 have the same priority, which is lower than that of all numerical
 operators.
 
-Comparisons can be chained.  For example, \code{a < b == c} tests
-whether \code{a} is less than \code{b} and moreover \code{b} equals
-\code{c}.
+Comparisons can be chained: e.g., \code{a < b == c} tests whether
+\code{a} is less than \code{b} and moreover \code{b} equals \code{c}.
 
 Comparisons may be combined by the Boolean operators \code{and} and
 \code{or}, and the outcome of a comparison (or of any other Boolean
@@ -2199,7 +2193,7 @@ When a module named \module{spam} is imported, the interpreter searches
 for a file named \file{spam.py} in the current directory,
 and then in the list of directories specified by
 the environment variable \envvar{PYTHONPATH}.  This has the same syntax as
-the shell variable \envvar{PATH}, that is, a list of
+the shell variable \envvar{PATH}, i.e., a list of
 directory names.  When \envvar{PYTHONPATH} is not set, or when the file
 is not found there, the search continues in an installation-dependent
 default path; on \UNIX{}, this is usually \file{.:/usr/local/lib/python}.
@@ -2290,8 +2284,7 @@ document, the \citetitle[../lib/lib.html]{Python Library Reference}
 interpreter; these provide access to operations that are not part of
 the core of the language but are nevertheless built in, either for
 efficiency or to provide access to operating system primitives such as
-system calls.  The set of such modules is a configuration option which
-also dependson the underlying platform  For example,
+system calls. The set of such modules is a configuration option; e.g.,
 the \module{amoeba} module is only provided on systems that somehow
 support Amoeba primitives.  One particular module deserves some
 attention: \module{sys}\refstmodindex{sys}, which is built into every
@@ -2318,7 +2311,7 @@ The variable \code{sys.path} is a list of strings that determine the
 interpreter's search path for modules. It is initialized to a default
 path taken from the environment variable \envvar{PYTHONPATH}, or from
 a built-in default if \envvar{PYTHONPATH} is not set.  You can modify
-it using standard list operations: 
+it using standard list operations, e.g.: 
 
 \begin{verbatim}
 >>> import sys
@@ -2386,15 +2379,15 @@ about each other's module names.
 Suppose you want to design a collection of modules (a ``package'') for
 the uniform handling of sound files and sound data.  There are many
 different sound file formats (usually recognized by their extension,
-for example: \file{.wav}, \file{.aiff}, \file{.au}), so you may need
-to create and maintain a growing collection of modules for the
-conversion between the various file formats.  There are also many
-different operations you might want to perform on sound data (such as
-mixing, adding echo, applying an equalizer function, creating an
-artificial stereo effect), so in addition you will be writing a
-never-ending stream of modules to perform these operations.  Here's a
-possible structure for your package (expressed in terms of a
-hierarchical filesystem):
+e.g. \file{.wav}, \file{.aiff}, \file{.au}), so you may need to create
+and maintain a growing collection of modules for the conversion
+between the various file formats.  There are also many different
+operations you might want to perform on sound data (e.g. mixing,
+adding echo, applying an equalizer function, creating an artificial
+stereo effect), so in addition you will be writing a never-ending
+stream of modules to perform these operations.  Here's a possible
+structure for your package (expressed in terms of a hierarchical
+filesystem):
 
 \begin{verbatim}
 Sound/                          Top-level package
@@ -2438,7 +2431,7 @@ import Sound.Effects.echo
 \end{verbatim}
 
 This loads the submodule \module{Sound.Effects.echo}.  It must be referenced
-with its full name.
+with its full name, e.g.
 
 \begin{verbatim}
 Sound.Effects.echo.echofilter(input, output, delay=0.7, atten=4)
@@ -2525,7 +2518,7 @@ initialization code, \file{__init__.py}) and then imports whatever names are
 defined in the package.  This includes any names defined (and
 submodules explicitly loaded) by \file{__init__.py}.  It also includes any
 submodules of the package that were explicitly loaded by previous
-import statements.  Consider this code:
+import statements, e.g.
 
 \begin{verbatim}
 import Sound.Effects.echo
@@ -2615,16 +2608,16 @@ the \function{repr()} function, or just write the value between
 reverse quotes (\code{``}).  Some examples:
 
 \begin{verbatim}
->>> x = 10 * 3.25
+>>> x = 10 * 3.14
 >>> y = 200 * 200
 >>> s = 'The value of x is ' + `x` + ', and y is ' + `y` + '...'
 >>> print s
-The value of x is 32.5, and y is 40000...
+The value of x is 31.400000000000002, and y is 40000...
 >>> # Reverse quotes work on other types besides numbers:
 ... p = [x, y]
 >>> ps = repr(p)
 >>> ps
-'[32.5, 40000]'
+'[31.400000000000002, 40000]'
 >>> # Converting a string adds string quotes and backslashes:
 ... hello = 'hello, world\n'
 >>> hellos = `hello`
@@ -2632,7 +2625,7 @@ The value of x is 32.5, and y is 40000...
 'hello, world\n'
 >>> # The argument of reverse quotes may be a tuple:
 ... `x, y, ('spam', 'eggs')`
-"(32.5, 40000, ('spam', 'eggs'))"
+"(31.400000000000002, 40000, ('spam', 'eggs'))"
 \end{verbatim}
 
 Here are two ways to write a table of squares and cubes:
@@ -2705,8 +2698,8 @@ Using the \code{\%} operator looks like this:
 The value of PI is approximately 3.142.
 \end{verbatim}
 
-If there is more than one format in the string, you need to pass a
-tuple as right operand, as in this example:
+If there is more than one format in the string you pass a tuple as
+right operand, e.g.
 
 \begin{verbatim}
 >>> table = {'Sjoerd': 4127, 'Jack': 4098, 'Dcab': 7678}
@@ -2729,7 +2722,7 @@ C formats \code{\%n} and \code{\%p} are not supported.
 If you have a really long format string that you don't want to split
 up, it would be nice if you could reference the variables to be
 formatted by name instead of by position.  This can be done by using
-form \code{\%(name)format}, as shown here:
+an extension of C formats using the form \code{\%(name)format}, e.g.
 
 \begin{verbatim}
 >>> table = {'Sjoerd': 4127, 'Jack': 4098, 'Dcab': 8637678}
@@ -3044,8 +3037,8 @@ A \keyword{try} statement may have more than one except clause, to
 specify handlers for different exceptions.  At most one handler will
 be executed.  Handlers only handle exceptions that occur in the
 corresponding try clause, not in other handlers of the same
-\keyword{try} statement.  An except clause may name multiple exceptions
-as a parenthesized list, for example:
+\keyword{try} statement. An except clause may name multiple exceptions
+as a parenthesized list, e.g.:
 
 \begin{verbatim}
 ... except (RuntimeError, TypeError, NameError):
@@ -3312,9 +3305,8 @@ global names defined in the module: they share the same namespace!
 Attributes may be read-only or writable.  In the latter case,
 assignment to attributes is possible.  Module attributes are writable:
 you can write \samp{modname.the_answer = 42}.  Writable attributes may
-also be deleted with the \keyword{del} statement.  For example,
-\samp{del modname.the_answer} will remove the attribute
-\member{the_answer} from the object named by \code{modname}.
+also be deleted with the \keyword{del} statement, e.g.
+\samp{del modname.the_answer}.
 
 Name spaces are created at different moments and have different
 lifetimes.  The namespace containing the built-in names is created
@@ -3341,7 +3333,7 @@ the namespace.
 
 Although scopes are determined statically, they are used dynamically.
 At any time during execution, exactly three nested scopes are in use
-(exactly three namespaces are directly accessible): the
+(i.e., exactly three namespaces are directly accessible): the
 innermost scope, which is searched first, contains the local names,
 the middle scope, searched next, contains the current module's global
 names, and the outermost scope (searched last) is the namespace
@@ -3484,7 +3476,7 @@ example,
 ...         self.r = realpart
 ...         self.i = imagpart
 ... 
->>> x = Complex(3.0, -4.5)
+>>> x = Complex(3.0,-4.5)
 >>> x.r, x.i
 (3.0, -4.5)
 \end{verbatim}
@@ -3515,7 +3507,7 @@ del x.counter
 The second kind of attribute references understood by instance objects
 are \emph{methods}.  A method is a function that ``belongs to'' an
 object.  (In Python, the term method is not unique to class instances:
-other object types can have methods as well.  For example, list objects have
+other object types can have methods as well, e.g., list objects have
 methods called append, insert, remove, sort, and so on.  However,
 below, we'll use the term method exclusively to mean methods of class
 instance objects, unless explicitly stated otherwise.)
@@ -3532,7 +3524,7 @@ a function object.
 
 \subsection{Method Objects \label{methodObjects}}
 
-Usually, a method is called immediately:
+Usually, a method is called immediately, e.g.:
 
 \begin{verbatim}
 x.f()
@@ -3586,10 +3578,9 @@ list, and the function object is called with this new argument list.
 Data attributes override method attributes with the same name; to
 avoid accidental name conflicts, which may cause hard-to-find bugs in
 large programs, it is wise to use some kind of convention that
-minimizes the chance of conflicts.  Possible conventions include
-capitalizing method names, prefixing data attribute names with a small
-unique string (perhaps just an underscore), or using verbs for methods
-and nouns for data attributes.
+minimizes the chance of conflicts, e.g., capitalize method names,
+prefix data attribute names with a small unique string (perhaps just
+an underscore), or use verbs for methods and nouns for data attributes.
 
 
 Data attributes may be referenced by methods as well as by ordinary
@@ -3651,7 +3642,7 @@ the reader of a program.
 
 
 Methods may call other methods by using method attributes of the
-\code{self} argument:
+\code{self} argument, e.g.:
 
 \begin{verbatim}
 class Bag:
@@ -3694,7 +3685,7 @@ class DerivedClassName(BaseClassName):
 The name \class{BaseClassName} must be defined in a scope containing
 the derived class definition.  Instead of a base class name, an
 expression is also allowed.  This is useful when the base class is
-defined in another module,
+defined in another module, e.g.,
 
 \begin{verbatim}
 class DerivedClassName(modname.BaseClassName):
@@ -3789,10 +3780,10 @@ about instance variables defined by derived classes, or mucking with
 instance variables by code outside the class.  Note that the mangling
 rules are designed mostly to avoid accidents; it still is possible for
 a determined soul to access or modify a variable that is considered
-private.  This can even be useful in special circumstances, such as in
-the debugger, and that's one reason why this loophole is not closed.
-(Buglet: derivation of a class with the same name as the base class
-makes use of private variables of the base class possible.)
+private.  This can even be useful, e.g. for the debugger, and that's
+one reason why this loophole is not closed.  (Buglet: derivation of a
+class with the same name as the base class makes use of private
+variables of the base class possible.)
 
 Notice that code passed to \code{exec}, \code{eval()} or
 \code{evalfile()} does not consider the classname of the invoking 
@@ -3828,7 +3819,7 @@ class VirtualAttributes:
 
 Sometimes it is useful to have a data type similar to the Pascal
 ``record'' or C ``struct'', bundling together a couple of named data
-items.  An empty class definition will do nicely:
+items.  An empty class definition will do nicely, e.g.:
 
 \begin{verbatim}
 class Employee:
@@ -3936,7 +3927,7 @@ you an idea of what's available.
 
 The major Python Web site is \url{http://www.python.org/}; it contains
 code, documentation, and pointers to Python-related pages around the
-Web.  This Web site is mirrored in various places around the
+Web.  This web site is mirrored in various places around the
 world, such as Europe, Japan, and Australia; a mirror may be faster
 than the main site, depending on your geographical location.  A more
 informal site is \url{http://starship.python.net/}, which contains a
@@ -4125,273 +4116,6 @@ mechanism might use the interpreter's symbol table.  A command to
 check (or even suggest) matching parentheses, quotes, etc., would also
 be useful.
 
-
-\chapter{Floating Point Arithmetic:  Issues and Limitations
-         \label{fp-issues}}
-\sectionauthor{Tim Peters}{tim.one@home.com}
-
-Floating-point numbers are represented in computer hardware as
-base 2 (binary) fractions.  For example, the decimal fraction
-
-\begin{verbatim}
-0.125
-\end{verbatim}
-
-has value 1/10 + 2/100 + 5/1000, and in the same way the binary fraction
-
-\begin{verbatim}
-0.001
-\end{verbatim}
-
-has value 0/2 + 0/4 + 1/8.  These two fractions have identical values,
-the only real difference being that the first is written in base 10
-fractional notation, and the second in base 2.
-
-Unfortunately, most decimal fractions cannot be represented exactly as
-binary fractions.  A consequence is that, in general, the decimal
-floating-point numbers you enter are only approximated by the binary
-floating-point numbers actually stored in the machine.
-
-The problem is easier to understand at first in base 10.  Consider the
-fraction 1/3.  You can approximate that as a base 10 fraction:
-
-\begin{verbatim}
-0.3
-\end{verbatim}
-
-or, better,
-
-\begin{verbatim}
-0.33
-\end{verbatim}
-
-or, better,
-
-\begin{verbatim}
-0.333
-\end{verbatim}
-
-and so on.  No matter how many digits you're willing to write down, the
-result will never be exactly 1/3, but will be an increasingly better
-approximation to 1/3.
-
-In the same way, no matter how many base 2 digits you're willing to
-use, the decimal value 0.1 cannot be represented exactly as a base 2
-fraction.  In base 2, 1/10 is the infinitely repeating fraction
-
-\begin{verbatim}
-0.0001100110011001100110011001100110011001100110011...
-\end{verbatim}
-
-Stop at any finite number of bits, and you get an approximation.  This
-is why you see things like:
-
-\begin{verbatim}
->>> 0.1
-0.10000000000000001
-\end{verbatim}
-
-On most machines today, that is what you'll see if you enter 0.1 at
-a Python prompt.  You may not, though, because the number of bits
-used by the hardware to store floating-point values can vary across
-machines, and Python only prints a decimal approximation to the true
-decimal value of the binary approximation stored by the machine.  On
-most machines, if Python were to print the true decimal value of
-the binary approximation stored for 0.1, it would have to display
-
-\begin{verbatim}
->>> 0.1
-0.1000000000000000055511151231257827021181583404541015625
-\end{verbatim}
-
-instead!  The Python prompt (implicitly) uses the builtin
-\function{repr()} function to obtain a string version of everything it
-displays.  For floats, \code{repr(\var{float})} rounds the true
-decimal value to 17 significant digits, giving
-
-\begin{verbatim}
-0.10000000000000001
-\end{verbatim}
-
-\code{repr(\var{float})} produces 17 significant digits because it
-turns out that's enough (on most machines) so that
-\code{eval(repr(\var{x})) == \var{x}} exactly for all finite floats
-\var{x}, but rounding to 16 digits is not enough to make that true.
-
-Note that this is in the very nature of binary floating-point: this is
-not a bug in Python, it is not a bug in your code either, and you'll
-see the same kind of thing in all languages that support your
-hardware's floating-point arithmetic (although some languages may
-not \emph{display} the difference by default, or in all output modes).
-
-Python's builtin \function{str()} function produces only 12
-significant digits, and you may wish to use that instead.  It's
-unusual for \code{eval(str(\var{x}))} to reproduce \var{x}, but the
-output may be more pleasant to look at:
-
-\begin{verbatim}
->>> print str(0.1)
-0.1
-\end{verbatim}
-
-It's important to realize that this is, in a real sense, an illusion:
-the value in the machine is not exactly 1/10, you're simply rounding
-the \emph{display} of the true machine value.
-
-Other surprises follow from this one.  For example, after seeing
-
-\begin{verbatim}
->>> 0.1
-0.10000000000000001
-\end{verbatim}
-
-you may be tempted to use the \function{round()} function to chop it
-back to the single digit you expect.  But that makes no difference:
-
-\begin{verbatim}
->>> round(0.1, 1)
-0.10000000000000001
-\end{verbatim}
-
-The problem is that the binary floating-point value stored for "0.1"
-was already the best possible binary approximation to 1/10, so trying
-to round it again can't make it better:  it was already as good as it
-gets.
-
-Another consequence is that since 0.1 is not exactly 1/10, adding 0.1
-to itself 10 times may not yield exactly 1.0, either:
-
-\begin{verbatim}
->>> sum = 0.0
->>> for i in range(10):
-...     sum += 0.1
-...
->>> sum
-0.99999999999999989
-\end{verbatim}
-
-Binary floating-point arithmetic holds many surprises like this.  The
-problem with "0.1" is explained in precise detail below, in the
-"Representation Error" section.  See
-\citetitle[http://www.lahey.com/float.htm]{The Perils of Floating
-Point} for a more complete account of other common surprises.
-
-As that says near the end, ``there are no easy answers.''  Still,
-don't be unduly wary of floating-point!  The errors in Python float
-operations are inherited from the floating-point hardware, and on most
-machines are on the order of no more than 1 part in 2**53 per
-operation.  That's more than adequate for most tasks, but you do need
-to keep in mind that it's not decimal arithmetic, and that every float
-operation can suffer a new rounding error.
-
-While pathological cases do exist, for most casual use of
-floating-point arithmetic you'll see the result you expect in the end
-if you simply round the display of your final results to the number of
-decimal digits you expect.  \function{str()} usually suffices, and for
-finer control see the discussion of Pythons's \code{\%} format
-operator: the \code{\%g}, \code{\%f} and \code{\%e} format codes
-supply flexible and easy ways to round float results for display.
-
-
-\section{Representation Error
-         \label{fp-error}}
-
-This section explains the ``0.1'' example in detail, and shows how
-you can perform an exact analysis of cases like this yourself.  Basic
-familiarity with binary floating-point representation is assumed.
-
-\dfn{Representation error} refers to that some (most, actually)
-decimal fractions cannot be represented exactly as binary (base 2)
-fractions.  This is the chief reason why Python (or Perl, C, \Cpp,
-Java, Fortran, and many others) often won't display the exact decimal
-number you expect:
-
-\begin{verbatim}
->>> 0.1
-0.10000000000000001
-\end{verbatim}
-
-Why is that?  1/10 is not exactly representable as a binary fraction.
-Almost all machines today (November 2000) use IEEE-754 floating point
-arithmetic, and almost all platforms map Python floats to IEEE-754
-"double precision".  754 doubles contain 53 bits of precision, so on
-input the computer strives to convert 0.1 to the closest fraction it can
-of the form \var{J}/2**\var{N} where \var{J} is an integer containing
-exactly 53 bits.  Rewriting
-
-\begin{verbatim}
- 1 / 10 ~= J / (2**N)
-\end{verbatim}
-
-as
-
-\begin{verbatim}
-J ~= 2**N / 10
-\end{verbatim}
-
-and recalling that \var{J} has exactly 53 bits (is \code{>= 2**52} but
-\code{< 2**53}), the best value for \var{N} is 56:
-
-\begin{verbatim}
->>> 2L**52
-4503599627370496L
->>> 2L**53
-9007199254740992L
->>> 2L**56/10
-7205759403792793L
-\end{verbatim}
-
-That is, 56 is the only value for \var{N} that leaves \var{J} with
-exactly 53 bits.  The best possible value for \var{J} is then that
-quotient rounded:
-
-\begin{verbatim}
->>> q, r = divmod(2L**56, 10)
->>> r
-6L
-\end{verbatim}
-
-Since the remainder is more than half of 10, the best approximation is
-obtained by rounding up:
-
-\begin{verbatim}
->>> q+1
-7205759403792794L
-\end{verbatim}
-
-Therefore the best possible approximation to 1/10 in 754 double
-precision is that over 2**56, or
-
-\begin{verbatim}
-7205759403792794 / 72057594037927936
-\end{verbatim}
-
-Note that since we rounded up, this is actually a little bit larger than
-1/10; if we had not rounded up, the quotient would have been a little
-bit smaller than 1/10.  But in no case can it be \emph{exactly} 1/10!
-
-So the computer never ``sees'' 1/10:  what it sees is the exact
-fraction given above, the best 754 double approximation it can get:
-
-\begin{verbatim}
->>> .1 * 2L**56
-7205759403792794.0
-\end{verbatim}
-
-If we multiply that fraction by 10**30, we can see the (truncated)
-value of its 30 most significant decimal digits:
-
-\begin{verbatim}
->>> 7205759403792794L * 10L**30 / 2L**56
-100000000000000005551115123125L
-\end{verbatim}
-
-meaning that the exact number stored in the computer is approximately
-equal to the decimal value 0.100000000000000005551115123125.  Rounding
-that to 17 significant digits gives the 0.10000000000000001 that Python
-displays (well, will display on any 754-conforming platform that does
-best-possible input and output conversions in its C library --- yours may
-not!).
 
 \chapter{History and License}
 \input{license}

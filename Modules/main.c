@@ -14,14 +14,13 @@
 #if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#define PYTHONHOMEHELP "<prefix>/pythonX.X"
+#define PYTHONHOMEHELP "<prefix>/python2.1"
 #endif
 
 #include "pygetopt.h"
 
 #define COPYRIGHT \
-    "Type \"help\", \"copyright\", \"credits\" or \"license\" " \
-    "for more information."
+    "Type \"copyright\", \"credits\" or \"license\" for more information."
 
 /* For Py_GetArgcArgv(); set by main() */
 static char **orig_argv;
@@ -299,7 +298,7 @@ Py_Main(int argc, char **argv)
 			Py_DECREF(v);
 	}
 
-	cf.cf_flags = 0;
+	cf.cf_nested_scopes = 0;
 
 	if (command) {
 		sts = PyRun_SimpleString(command) != 0;

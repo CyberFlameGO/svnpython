@@ -21,7 +21,7 @@ is read when the database is opened, and some updates rewrite the whole index)
 
 """
 
-import os as _os
+_os = __import__('os')
 import __builtin__
 
 _open = __builtin__.open
@@ -135,13 +135,6 @@ class _Database:
     def has_key(self, key):
         return self._index.has_key(key)
 
-    def __contains__(self, key):
-        return self._index.has_key(key)
-
-    def iterkeys(self):
-        return self._index.iterkeys()
-    __iter__ = iterkeys
-
     def __len__(self):
         return len(self._index)
 
@@ -150,6 +143,6 @@ class _Database:
         self._datfile = self._dirfile = self._bakfile = None
 
 
-def open(file, flag=None, mode=None):
+def open(file, flag = None, mode = None):
     # flag, mode arguments are currently ignored
     return _Database(file)

@@ -49,12 +49,6 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-
-#ifndef Py_DEBUG
-#ifndef NDEBUG
-#define NDEBUG 1
-#endif
-#endif
 #include <assert.h>
 
 #include "pyport.h"
@@ -88,7 +82,6 @@
 #include "traceback.h"
 #include "sliceobject.h"
 #include "cellobject.h"
-#include "iterobject.h"
 
 #include "codecs.h"
 #include "pyerrors.h"
@@ -96,8 +89,8 @@
 #include "pystate.h"
 
 #include "modsupport.h"
-#include "pythonrun.h"
 #include "ceval.h"
+#include "pythonrun.h"
 #include "sysmodule.h"
 #include "intrcheck.h"
 #include "import.h"

@@ -1,4 +1,4 @@
-from test_support import verbose, sortdict
+from test_support import verbose
 import warnings
 warnings.filterwarnings("ignore", "the regex module is deprecated",
                         DeprecationWarning, __name__)
@@ -40,7 +40,7 @@ print cre.group('one')
 print cre.group(1, 2)
 print cre.group('one', 'two')
 print 'realpat:', cre.realpat
-print 'groupindex:', sortdict(cre.groupindex)
+print 'groupindex:', cre.groupindex
 
 re = 'world'
 cre = regex.compile(re)

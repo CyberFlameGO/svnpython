@@ -1,6 +1,5 @@
-from test_support import verbose, TESTFN
+from test_support import verbose
 import random
-import os
 
 # From SF bug #422121:  Insecurities in dict comparison.
 
@@ -61,7 +60,7 @@ def maybe_mutate():
         mutate = 0   # disable mutation until key inserted
         while 1:
             newkey = Horrid(random.randrange(100))
-            if newkey not in target:
+            if not target.has_key(newkey):
                 break
         target[newkey] = Horrid(random.randrange(100))
         keys.append(newkey)
@@ -152,134 +151,3 @@ def test(n):
 
 # See last comment block for clues about good values for n.
 test(100)
-
-##########################################################################
-# Another segfault bug, distilled by Michael Hudson from a c.l.py post.
-
-class Child:
-    def __init__(self, parent):
-        self.__dict__['parent'] = parent
-    def __getattr__(self, attr):
-        self.parent.a = 1
-        self.parent.b = 1
-        self.parent.c = 1
-        self.parent.d = 1
-        self.parent.e = 1
-        self.parent.f = 1
-        self.parent.g = 1
-        self.parent.h = 1
-        self.parent.i = 1
-        return getattr(self.parent, attr)
-
-class Parent:
-    def __init__(self):
-        self.a = Child(self)
-
-# Hard to say what this will print!  May vary from time to time.  But
-# we're specifically trying to test the tp_print slot here, and this is
-# the clearest way to do it.  We print the result to a temp file so that
-# the expected-output file doesn't need to change.
-
-f = open(TESTFN, "w")
-print >> f, Parent().__dict__
-f.close()
-os.unlink(TESTFN)
-
-##########################################################################
-# And another core-dumper from Michael Hudson.
-
-dict = {}
-
-# Force dict to malloc its table.
-for i in range(1, 10):
-    dict[i] = i
-
-f = open(TESTFN, "w")
-
-class Machiavelli:
-    def __repr__(self):
-        dict.clear()
-
-        # Michael sez:  "doesn't crash without this.  don't know why."
-        # Tim sez:  "luck of the draw; crashes with or without for me."
-        print >> f
-
-        return `"machiavelli"`
-
-    def __hash__(self):
-        return 0
-
-dict[Machiavelli()] = Machiavelli()
-
-print >> f, str(dict)
-f.close()
-os.unlink(TESTFN)
-del f, dict
-
-
-##########################################################################
-# And another core-dumper from Michael Hudson.
-
-dict = {}
-
-# let's force dict to malloc its table
-for i in range(1, 10):
-    dict[i] = i
-
-class Machiavelli2:
-    def __eq__(self, other):
-        dict.clear()
-        return 1
-
-    def __hash__(self):
-        return 0
-
-dict[Machiavelli2()] = Machiavelli2()
-
-try:
-    dict[Machiavelli2()]
-except KeyError:
-    pass
-
-del dict
-
-##########################################################################
-# And another core-dumper from Michael Hudson.
-
-dict = {}
-
-# let's force dict to malloc its table
-for i in range(1, 10):
-    dict[i] = i
-
-class Machiavelli3:
-    def __init__(self, id):
-        self.id = id
-
-    def __eq__(self, other):
-        if self.id == other.id:
-            dict.clear()
-            return 1
-        else:
-            return 0
-
-    def __repr__(self):
-        return "%s(%s)"%(self.__class__.__name__, self.id)
-
-    def __hash__(self):
-        return 0
-
-dict[Machiavelli3(1)] = Machiavelli3(0)
-dict[Machiavelli3(2)] = Machiavelli3(0)
-
-f = open(TESTFN, "w")
-try:
-    try:
-        print >> f, dict[Machiavelli3(2)]
-    except KeyError:
-        pass
-finally:
-    f.close()
-    os.unlink(TESTFN)
-
-del dict

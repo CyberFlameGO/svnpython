@@ -114,8 +114,9 @@ char *PyCursesVersion = "2.1";
     curses module in other ways.  So the code will just specify 
     explicit prototypes here. */
 extern int setupterm(char *,int,int *);
-#ifdef __sgi
-#include <term.h>
+#ifdef sgi
+extern char *tigetstr(char *);
+extern char *tparm(char *instring, ...);
 #endif
 
 #if defined(sgi) || defined(__sun__)
@@ -188,8 +189,8 @@ PyCurses_ConvertToChtype(PyObject *obj, chtype *ch)
 {
   if (PyInt_Check(obj)) {
     *ch = (chtype) PyInt_AsLong(obj);
-  } else if(PyString_Check(obj) 
-	    && (PyString_Size(obj) == 1)) {
+  } else if(PyString_Check(obj) &
+	    (PyString_Size(obj) == 1)) {
     *ch = (chtype) *PyString_AsString(obj);
   } else {
     return 0;
@@ -720,7 +721,7 @@ PyCursesWindow_GetCh(PyCursesWindowObject *self, PyObject *args)
     PyErr_SetString(PyExc_TypeError, "getch requires 0 or 2 arguments");
     return NULL;
   }
-  return PyInt_FromLong((long)rtn);
+  return PyInt_FromLong(rtn);
 }
 
 static PyObject *
@@ -1304,6 +1305,7 @@ PyCursesWindow_Scroll(PyCursesWindowObject *self, PyObject *args)
   switch(ARG_COUNT(args)) {
   case 0:
     return PyCursesCheckERR(scroll(self->win), "scroll");
+    break;
   case 1:
     if (!PyArg_Parse(args, "i;nlines", &nlines))
       return NULL;
@@ -1323,6 +1325,7 @@ PyCursesWindow_TouchLine(PyCursesWindowObject *self, PyObject *args)
     if (!PyArg_Parse(args,"(ii);start,count",&st,&cnt))
       return NULL;
     return PyCursesCheckERR(touchline(self->win,st,cnt), "touchline");
+    break;
   case 3:
     if (!PyArg_Parse(args, "(iii);start,count,val", &st, &cnt, &val))
       return NULL;
@@ -2048,7 +2051,7 @@ static PyObject *
 PyCurses_NewWindow(PyObject *self, PyObject *args)
 {
   WINDOW *win;
-  int nlines, ncols, begin_y=0, begin_x=0;
+  int nlines, ncols, begin_y, begin_x;
 
   PyCursesInitialised
 
@@ -2056,18 +2059,19 @@ PyCurses_NewWindow(PyObject *self, PyObject *args)
   case 2:
     if (!PyArg_Parse(args,"(ii);nlines,ncols",&nlines,&ncols))
       return NULL;
+    win = newpad(nlines, ncols);
     break;
   case 4:
     if (!PyArg_Parse(args, "(iiii);nlines,ncols,begin_y,begin_x",
 		   &nlines,&ncols,&begin_y,&begin_x))
       return NULL;
+    win = newwin(nlines,ncols,begin_y,begin_x);
     break;
   default:
     PyErr_SetString(PyExc_TypeError, "newwin requires 2 or 4 arguments");
     return NULL;
   }
 
-  win = newwin(nlines,ncols,begin_y,begin_x);
   if (win == NULL) {
     PyErr_SetString(PyCursesError, catchall_NULL);
     return NULL;

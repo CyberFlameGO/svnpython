@@ -32,7 +32,9 @@ def powtest(type):
                     try:
                         pow(ii, jj)
                     except ValueError:
-                        raise ValueError, "pow(%s, %s) failed" % (ii, jj)
+                        pass # taking an int to a neg int power should fail
+                    else:
+                        raise ValueError, "pow(%s, %s) did not fail" % (ii, jj)
 
     for othertype in int, long, float:
         for i in range(1, 100):

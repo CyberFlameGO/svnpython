@@ -1,9 +1,8 @@
 # LaTeX source dependencies.
 
 COMMONSTYLES= texinputs/python.sty \
-	texinputs/pypaper.sty
-
-INDEXSTYLES=texinputs/python.ist
+	texinputs/pypaper.sty \
+	texinputs/python.ist
 
 COMMONTEX= texinputs/copyright.tex \
 	texinputs/license.tex \
@@ -17,21 +16,20 @@ HOWTOSTYLES= texinputs/howto.cls \
 	$(COMMONSTYLES)
 
 
-APIFILES= api/api.tex $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+APIFILES= api/api.tex $(MANSTYLES) $(COMMONTEX) \
 	texinputs/reportingbugs.tex
 
-DOCFILES= $(HOWTOSTYLES) \
-	texinputs/boilerplate.tex \
+DOCFILES= $(HOWTOSTYLES) $(COMMONTEX) \
 	texinputs/ltxmarkup.sty \
 	doc/doc.tex
 
-EXTFILES= ext/ext.tex $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+EXTFILES= ext/ext.tex $(MANSTYLES) $(COMMONTEX) \
 	texinputs/reportingbugs.tex
 
 TUTFILES= tut/tut.tex $(MANSTYLES) $(COMMONTEX)
 
 # LaTeX source files for the Python Reference Manual
-REFFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+REFFILES= $(MANSTYLES) $(COMMONTEX) \
 	ref/ref.tex \
 	ref/ref1.tex \
 	ref/ref2.tex \
@@ -44,7 +42,7 @@ REFFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	ref/refa1.tex
 
 # LaTeX source files for the Python Library Reference
-LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+LIBFILES= $(MANSTYLES) $(COMMONTEX) \
 	lib/lib.tex \
 	texinputs/reportingbugs.tex \
 	lib/libintro.tex \
@@ -115,7 +113,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libgopherlib.tex \
 	lib/libnntplib.tex \
 	lib/liburlparse.tex \
-	lib/libhtmlparser.tex \
 	lib/libhtmllib.tex \
 	lib/libsgmllib.tex \
 	lib/librfc822.tex \
@@ -180,7 +177,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libuserdict.tex \
 	lib/libdis.tex \
 	lib/libxmllib.tex \
-	lib/libxmlrpclib.tex \
 	lib/libpyexpat.tex \
 	lib/xmldom.tex \
 	lib/xmldomminidom.tex \
@@ -265,7 +261,7 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libcfgparser.tex
 
 # LaTeX source files for Macintosh Library Modules.
-MACFILES= $(HOWTOSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
+MACFILES= $(HOWTOSTYLES) $(COMMONTEX) \
 	mac/mac.tex \
 	mac/using.tex \
 	mac/toolbox.tex \
@@ -286,6 +282,6 @@ MACFILES= $(HOWTOSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	mac/libframework.tex \
 	mac/libminiae.tex
 
-INSTFILES = $(HOWTOSTYLES) inst/inst.tex
+INSTFILES = $(HOWTOSTYLES) $(COMMONTEX) inst/inst.tex
 
-DISTFILES = $(HOWTOSTYLES) dist/dist.tex
+DISTFILES = $(HOWTOSTYLES) $(COMMONTEX) dist/dist.tex

@@ -12,6 +12,7 @@
 
 #include "Python.h"
 
+#include <assert.h>
 #include <sys/types.h>		/* For size_t */
 
 /*

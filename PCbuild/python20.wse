@@ -1,7 +1,7 @@
 Document Type: WSE
 item: Global
   Version=5.0
-  Title=Python 2.2 alpha 1
+  Title=Python 2.1.1
   Flags=00010100
   Languages=65 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
   Japanese Font Name=MS Gothic
@@ -16,7 +16,6 @@ item: Global
   Patch Flags=0000000000000001
   Patch Threshold=85
   Patch Memory=4000
-  EXE Filename=Python-2.2a1.exe
   Variable Name1=_SYS_
   Variable Description1=System directory (where to find MSVCRT.DLL)
   Variable Default1=C:\Windows\System
@@ -67,22 +66,22 @@ item: End Block
 end
 item: Set Variable
   Variable=APPTITLE
-  Value=Python 2.2a1
+  Value=Python 2.1.1
 end
 item: Set Variable
   Variable=GROUP
-  Value=Python 2.2
+  Value=Python 2.1
 end
 item: Remark
   Text=PY_VERSION should be major.minor only; used to create the registry key; must match MS_DLL_ID in python_nt.rc
 end
 item: Set Variable
   Variable=PY_VERSION
-  Value=2.2
+  Value=2.1
 end
 item: Set Variable
   Variable=MAINDIR
-  Value=Python22
+  Value=Python21
 end
 item: Get Registry Key Value
   Variable=PROGRAM_FILES
@@ -829,8 +828,8 @@ item: Install File
   Flags=0000000000000010
 end
 item: Install File
-  Source=%_SRC_%\PCbuild\python22.lib
-  Destination=%MAINDIR%\libs\python22.lib
+  Source=%_SRC_%\PCbuild\python21.lib
+  Destination=%MAINDIR%\libs\python21.lib
   Flags=0000000000000010
 end
 item: Remark
@@ -852,8 +851,8 @@ item: Remark
   Text=*** Main Python DLL ***
 end
 item: Install File
-  Source=%_SRC_%\pcbuild\python22.dll
-  Destination=%DLLDEST%\python22.dll
+  Source=%_SRC_%\pcbuild\python21.dll
+  Destination=%DLLDEST%\python21.dll
   Flags=0000000000000010
 end
 item: Install File
@@ -908,12 +907,6 @@ item: Install File
   Source=%_SRC_%\Lib\lib-old\*.py
   Destination=%MAINDIR%\Lib\lib-old
   Description=Obsolete modules
-  Flags=0000000000000010
-end
-item: Install File
-  Source=%_SRC_%\Lib\site-packages\README
-  Destination=%MAINDIR%\Lib\site-packages\README.txt
-  Description=Site packages
   Flags=0000000000000010
 end
 item: Remark

@@ -20,7 +20,7 @@
 % and Feeding of a Python Installation" talk in here somewhere.  Yow!
 
 \author{Greg Ward}
-\authoraddress{Email: \email{gward@python.net}}
+\authoraddress{E-mail: \email{gward@python.net}}
 
 \makeindex
 
@@ -198,10 +198,10 @@ python setup.py install
 On Windows, you'd probably download \file{foo-1.0.zip}.  If you
 downloaded the archive file to \file{C:\textbackslash{}Temp}, then it
 would unpack into \file{C:\textbackslash{}Temp\textbackslash{}foo-1.0};
-you can use either a archive manipulator with a grapical user interface
-(such as WinZip) or a command-line tool (such as \program{unzip} or
-\program{pkunzip}) to unpack the archive.  Then, open a command prompt
-window (``DOS box''), and run:
+you can use either a GUI archive manipulator (such as WinZip) or a
+command-line tool (such as \program{unzip} or \program{pkunzip}) to
+unpack the archive.  Then, open a command prompt window (``DOS box''),
+and run:
 
 \begin{verbatim}
 cd c:\Temp\foo-1.0
@@ -361,13 +361,12 @@ run-time.  They are always the same under Windows and MacOS, and very
 often the same under \UNIX.  You can find out what your Python
 installation uses for \filevar{prefix} and \filevar{exec-prefix} by
 running Python in interactive mode and typing a few simple commands.
-Under \UNIX, just type \code{python} at the shell prompt.  Under
-Windows, choose \menuselection{Start \sub Programs \sub Python
-2.1 \sub Python (command line)}.  Under MacOS, \XXX{???}.
+Under \UNIX, just type \code{python} at the shell prompt; under Windows,
+run ``Python 2.0 (interpreter)'' \XXX{right?}; under MacOS, \XXX{???}.
 Once the interpreter is started, you type Python code at the
-prompt.  For example, on my Linux system, I type the three Python
-statements shown below, and get the output as shown, to find out my
-\filevar{prefix} and \filevar{exec-prefix}:
+\samp{>\code{>}> } prompt.  For example, on my Linux system, I type the three
+Python statements shown below, and get the output as shown, to find
+out my \filevar{prefix} and \filevar{exec-prefix}:
 
 \begin{verbatim}
 Python 1.5.2 (#1, Apr 18 1999, 16:03:16)  [GCC pgcc-2.91.60 19981201 (egcs-1.1.1  on linux2
@@ -442,7 +441,7 @@ Borland \Cpp{} compiler version 5.5.\footnote{Check
 
 First you have to know that the Borland's object file format(OMF) is
 different from what is used by the Python version you can download
-from the Python Web site.  (Python is built with Microsoft Visual \Cpp,
+from the Python web site.  (Python is built with Microsoft Visual \Cpp,
 which uses COFF as object file format.)  For this reason you have to
 convert Python's library \file{python20.lib} into the Borland format.
 You can do this as follows:

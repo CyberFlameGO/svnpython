@@ -133,18 +133,22 @@ node2tuple(node *n,                     /* node to convert               */
 
 
 /*  There are two types of intermediate objects we're interested in:
- *  'eval' and 'exec' types.  These constants can be used in the st_type
+ *  'eval' and 'exec' types.  These constants can be used in the ast_type
  *  field of the object type to identify which any given object represents.
  *  These should probably go in an external header to allow other extensions
  *  to use them, but then, we really should be using C++ too.  ;-)
+ *
+ *  The PyAST_FRAGMENT type is not currently supported.  Maybe not useful?
+ *  Haven't decided yet.
  */
 
-#define PyST_EXPR  1
-#define PyST_SUITE 2
+#define PyAST_EXPR      1
+#define PyAST_SUITE     2
+#define PyAST_FRAGMENT  3
 
 
 /*  These are the internal objects and definitions required to implement the
- *  ST type.  Most of the internal names are more reminiscent of the 'old'
+ *  AST type.  Most of the internal names are more reminiscent of the 'old'
  *  naming style, but the code uses the new naming convention.
  */
 
@@ -152,29 +156,29 @@ static PyObject*
 parser_error = 0;
 
 
-typedef struct {
+typedef struct _PyAST_Object {
     PyObject_HEAD                       /* standard object header           */
-    node* st_node;                      /* the node* returned by the parser */
-    int   st_type;                      /* EXPR or SUITE ?                  */
-} PyST_Object;
+    node* ast_node;                     /* the node* returned by the parser */
+    int   ast_type;                     /* EXPR or SUITE ?                  */
+} PyAST_Object;
 
 
 staticforward void
-parser_free(PyST_Object *st);
+parser_free(PyAST_Object *ast);
 
 staticforward int
-parser_compare(PyST_Object *left, PyST_Object *right);
+parser_compare(PyAST_Object *left, PyAST_Object *right);
 
 staticforward PyObject *
 parser_getattr(PyObject *self, char *name);
 
 
 static
-PyTypeObject PyST_Type = {
+PyTypeObject PyAST_Type = {
     PyObject_HEAD_INIT(NULL)
     0,
-    "st",                               /* tp_name              */
-    (int) sizeof(PyST_Object),          /* tp_basicsize         */
+    "ast",                              /* tp_name              */
+    (int) sizeof(PyAST_Object),         /* tp_basicsize         */
     0,                                  /* tp_itemsize          */
     (destructor)parser_free,            /* tp_dealloc           */
     0,                                  /* tp_print             */
@@ -198,7 +202,7 @@ PyTypeObject PyST_Type = {
 
     /* __doc__ */
     "Intermediate representation of a Python parse tree."
-};  /* PyST_Type */
+};  /* PyAST_Type */
 
 
 static int
@@ -231,7 +235,7 @@ parser_compare_nodes(node *left, node *right)
 }
 
 
-/*  int parser_compare(PyST_Object* left, PyST_Object* right)
+/*  int parser_compare(PyAST_Object* left, PyAST_Object* right)
  *
  *  Comparison function used by the Python operators ==, !=, <, >, <=, >=
  *  This really just wraps a call to parser_compare_nodes() with some easy
@@ -239,7 +243,7 @@ parser_compare_nodes(node *left, node *right)
  *
  */
 static int
-parser_compare(PyST_Object *left, PyST_Object *right)
+parser_compare(PyAST_Object *left, PyAST_Object *right)
 {
     if (left == right)
         return (0);
@@ -247,54 +251,54 @@ parser_compare(PyST_Object *left, PyST_Object *right)
     if ((left == 0) || (right == 0))
         return (-1);
 
-    return (parser_compare_nodes(left->st_node, right->st_node));
+    return (parser_compare_nodes(left->ast_node, right->ast_node));
 }
 
 
-/*  parser_newstobject(node* st)
+/*  parser_newastobject(node* ast)
  *
- *  Allocates a new Python object representing an ST.  This is simply the
+ *  Allocates a new Python object representing an AST.  This is simply the
  *  'wrapper' object that holds a node* and allows it to be passed around in
  *  Python code.
  *
  */
 static PyObject*
-parser_newstobject(node *st, int type)
+parser_newastobject(node *ast, int type)
 {
-    PyST_Object* o = PyObject_New(PyST_Object, &PyST_Type);
+    PyAST_Object* o = PyObject_New(PyAST_Object, &PyAST_Type);
 
     if (o != 0) {
-        o->st_node = st;
-        o->st_type = type;
+        o->ast_node = ast;
+        o->ast_type = type;
     }
     else {
-        PyNode_Free(st);
+        PyNode_Free(ast);
     }
     return ((PyObject*)o);
 }
 
 
-/*  void parser_free(PyST_Object* st)
+/*  void parser_free(PyAST_Object* ast)
  *
  *  This is called by a del statement that reduces the reference count to 0.
  *
  */
 static void
-parser_free(PyST_Object *st)
+parser_free(PyAST_Object *ast)
 {
-    PyNode_Free(st->st_node);
-    PyObject_Del(st);
+    PyNode_Free(ast->ast_node);
+    PyObject_Del(ast);
 }
 
 
-/*  parser_st2tuple(PyObject* self, PyObject* args, PyObject* kw)
+/*  parser_ast2tuple(PyObject* self, PyObject* args, PyObject* kw)
  *
  *  This provides conversion from a node* to a tuple object that can be
- *  returned to the Python-level caller.  The ST object is not modified.
+ *  returned to the Python-level caller.  The AST object is not modified.
  *
  */
 static PyObject*
-parser_st2tuple(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_ast2tuple(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     PyObject *line_option = 0;
     PyObject *res = 0;
@@ -303,8 +307,8 @@ parser_st2tuple(PyST_Object *self, PyObject *args, PyObject *kw)
     static char *keywords[] = {"ast", "line_info", NULL};
 
     if (self == NULL) {
-        ok = PyArg_ParseTupleAndKeywords(args, kw, "O!|O:st2tuple", keywords,
-                                         &PyST_Type, &self, &line_option);
+        ok = PyArg_ParseTupleAndKeywords(args, kw, "O!|O:ast2tuple", keywords,
+                                         &PyAST_Type, &self, &line_option);
     }
     else
         ok = PyArg_ParseTupleAndKeywords(args, kw, "|O:totuple", &keywords[1],
@@ -315,24 +319,24 @@ parser_st2tuple(PyST_Object *self, PyObject *args, PyObject *kw)
             lineno = (PyObject_IsTrue(line_option) != 0) ? 1 : 0;
         }
         /*
-         *  Convert ST into a tuple representation.  Use Guido's function,
+         *  Convert AST into a tuple representation.  Use Guido's function,
          *  since it's known to work already.
          */
-        res = node2tuple(((PyST_Object*)self)->st_node,
+        res = node2tuple(((PyAST_Object*)self)->ast_node,
                          PyTuple_New, PyTuple_SetItem, lineno);
     }
     return (res);
 }
 
 
-/*  parser_st2list(PyObject* self, PyObject* args, PyObject* kw)
+/*  parser_ast2list(PyObject* self, PyObject* args, PyObject* kw)
  *
  *  This provides conversion from a node* to a list object that can be
- *  returned to the Python-level caller.  The ST object is not modified.
+ *  returned to the Python-level caller.  The AST object is not modified.
  *
  */
 static PyObject*
-parser_st2list(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_ast2list(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     PyObject *line_option = 0;
     PyObject *res = 0;
@@ -341,8 +345,8 @@ parser_st2list(PyST_Object *self, PyObject *args, PyObject *kw)
     static char *keywords[] = {"ast", "line_info", NULL};
 
     if (self == NULL)
-        ok = PyArg_ParseTupleAndKeywords(args, kw, "O!|O:st2list", keywords,
-                                         &PyST_Type, &self, &line_option);
+        ok = PyArg_ParseTupleAndKeywords(args, kw, "O!|O:ast2list", keywords,
+                                         &PyAST_Type, &self, &line_option);
     else
         ok = PyArg_ParseTupleAndKeywords(args, kw, "|O:tolist", &keywords[1],
                                          &line_option);
@@ -352,40 +356,40 @@ parser_st2list(PyST_Object *self, PyObject *args, PyObject *kw)
             lineno = PyObject_IsTrue(line_option) ? 1 : 0;
         }
         /*
-         *  Convert ST into a tuple representation.  Use Guido's function,
+         *  Convert AST into a tuple representation.  Use Guido's function,
          *  since it's known to work already.
          */
-        res = node2tuple(self->st_node,
+        res = node2tuple(self->ast_node,
                          PyList_New, PyList_SetItem, lineno);
     }
     return (res);
 }
 
 
-/*  parser_compilest(PyObject* self, PyObject* args)
+/*  parser_compileast(PyObject* self, PyObject* args)
  *
  *  This function creates code objects from the parse tree represented by
  *  the passed-in data object.  An optional file name is passed in as well.
  *
  */
 static PyObject*
-parser_compilest(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_compileast(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     PyObject*     res = 0;
-    char*         str = "<syntax-tree>";
+    char*         str = "<ast>";
     int ok;
 
     static char *keywords[] = {"ast", "filename", NULL};
 
     if (self == NULL)
-        ok = PyArg_ParseTupleAndKeywords(args, kw, "O!|s:compilest", keywords,
-                                         &PyST_Type, &self, &str);
+        ok = PyArg_ParseTupleAndKeywords(args, kw, "O!|s:compileast", keywords,
+                                         &PyAST_Type, &self, &str);
     else
         ok = PyArg_ParseTupleAndKeywords(args, kw, "|s:compile", &keywords[1],
                                          &str);
 
     if (ok)
-        res = (PyObject *)PyNode_Compile(self->st_node, str);
+        res = (PyObject *)PyNode_Compile(self->ast_node, str);
 
     return (res);
 }
@@ -394,12 +398,12 @@ parser_compilest(PyST_Object *self, PyObject *args, PyObject *kw)
 /*  PyObject* parser_isexpr(PyObject* self, PyObject* args)
  *  PyObject* parser_issuite(PyObject* self, PyObject* args)
  *
- *  Checks the passed-in ST object to determine if it is an expression or
+ *  Checks the passed-in AST object to determine if it is an expression or
  *  a statement suite, respectively.  The return is a Python truth value.
  *
  */
 static PyObject*
-parser_isexpr(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_isexpr(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     PyObject* res = 0;
     int ok;
@@ -408,13 +412,13 @@ parser_isexpr(PyST_Object *self, PyObject *args, PyObject *kw)
 
     if (self == NULL)
         ok = PyArg_ParseTupleAndKeywords(args, kw, "O!:isexpr", keywords,
-                                         &PyST_Type, &self);
+                                         &PyAST_Type, &self);
     else
         ok = PyArg_ParseTupleAndKeywords(args, kw, ":isexpr", &keywords[1]);
 
     if (ok) {
-        /* Check to see if the ST represents an expression or not. */
-        res = (self->st_type == PyST_EXPR) ? Py_True : Py_False;
+        /* Check to see if the AST represents an expression or not. */
+        res = (self->ast_type == PyAST_EXPR) ? Py_True : Py_False;
         Py_INCREF(res);
     }
     return (res);
@@ -422,7 +426,7 @@ parser_isexpr(PyST_Object *self, PyObject *args, PyObject *kw)
 
 
 static PyObject*
-parser_issuite(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_issuite(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     PyObject* res = 0;
     int ok;
@@ -431,13 +435,13 @@ parser_issuite(PyST_Object *self, PyObject *args, PyObject *kw)
 
     if (self == NULL)
         ok = PyArg_ParseTupleAndKeywords(args, kw, "O!:issuite", keywords,
-                                         &PyST_Type, &self);
+                                         &PyAST_Type, &self);
     else
         ok = PyArg_ParseTupleAndKeywords(args, kw, ":issuite", &keywords[1]);
 
     if (ok) {
-        /* Check to see if the ST represents an expression or not. */
-        res = (self->st_type == PyST_EXPR) ? Py_False : Py_True;
+        /* Check to see if the AST represents an expression or not. */
+        res = (self->ast_type == PyAST_EXPR) ? Py_False : Py_True;
         Py_INCREF(res);
     }
     return (res);
@@ -448,16 +452,16 @@ parser_issuite(PyST_Object *self, PyObject *args, PyObject *kw)
 
 static PyMethodDef
 parser_methods[] = {
-    {"compile",         (PyCFunction)parser_compilest,  PUBLIC_METHOD_TYPE,
-        "Compile this ST object into a code object."},
+    {"compile",         (PyCFunction)parser_compileast, PUBLIC_METHOD_TYPE,
+        "Compile this AST object into a code object."},
     {"isexpr",          (PyCFunction)parser_isexpr,     PUBLIC_METHOD_TYPE,
-        "Determines if this ST object was created from an expression."},
+        "Determines if this AST object was created from an expression."},
     {"issuite",         (PyCFunction)parser_issuite,    PUBLIC_METHOD_TYPE,
-        "Determines if this ST object was created from a suite."},
-    {"tolist",          (PyCFunction)parser_st2list,    PUBLIC_METHOD_TYPE,
-        "Creates a list-tree representation of this ST."},
-    {"totuple",         (PyCFunction)parser_st2tuple,   PUBLIC_METHOD_TYPE,
-        "Creates a tuple-tree representation of this ST."},
+        "Determines if this AST object was created from a suite."},
+    {"tolist",          (PyCFunction)parser_ast2list,   PUBLIC_METHOD_TYPE,
+        "Creates a list-tree representation of this AST."},
+    {"totuple",         (PyCFunction)parser_ast2tuple,  PUBLIC_METHOD_TYPE,
+        "Creates a tuple-tree representation of this AST."},
 
     {NULL, NULL, 0, NULL}
 };
@@ -498,11 +502,11 @@ parser_do_parse(PyObject *args, PyObject *kw, char *argspec, int type)
 
     if (PyArg_ParseTupleAndKeywords(args, kw, argspec, keywords, &string)) {
         node* n = PyParser_SimpleParseString(string,
-                                             (type == PyST_EXPR)
+                                             (type == PyAST_EXPR)
                                              ? eval_input : file_input);
 
         if (n != 0)
-            res = parser_newstobject(n, type);
+            res = parser_newastobject(n, type);
         else
             err_string("could not parse string");
     }
@@ -519,23 +523,23 @@ parser_do_parse(PyObject *args, PyObject *kw, char *argspec, int type)
  *
  */
 static PyObject*
-parser_expr(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_expr(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     NOTE(ARGUNUSED(self))
-    return (parser_do_parse(args, kw, "s:expr", PyST_EXPR));
+    return (parser_do_parse(args, kw, "s:expr", PyAST_EXPR));
 }
 
 
 static PyObject*
-parser_suite(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_suite(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     NOTE(ARGUNUSED(self))
-    return (parser_do_parse(args, kw, "s:suite", PyST_SUITE));
+    return (parser_do_parse(args, kw, "s:suite", PyAST_SUITE));
 }
 
 
 
-/*  This is the messy part of the code.  Conversion from a tuple to an ST
+/*  This is the messy part of the code.  Conversion from a tuple to an AST
  *  object requires that the input tuple be valid without having to rely on
  *  catching an exception from the compiler.  This is done to allow the
  *  compiler itself to remain fast, since most of its input will come from
@@ -545,8 +549,8 @@ parser_suite(PyST_Object *self, PyObject *args, PyObject *kw)
  *
  *  Two aspects can be broken out in this code:  creating a node tree from
  *  the tuple passed in, and verifying that it is indeed valid.  It may be
- *  advantageous to expand the number of ST types to include funcdefs and
- *  lambdadefs to take advantage of the optimizer, recognizing those STs
+ *  advantageous to expand the number of AST types to include funcdefs and
+ *  lambdadefs to take advantage of the optimizer, recognizing those ASTs
  *  here.  They are not necessary, and not quite as useful in a raw form.
  *  For now, let's get expressions and suites working reliably.
  */
@@ -557,35 +561,35 @@ staticforward int   validate_expr_tree(node *tree);
 staticforward int   validate_file_input(node *tree);
 
 
-/*  PyObject* parser_tuple2st(PyObject* self, PyObject* args)
+/*  PyObject* parser_tuple2ast(PyObject* self, PyObject* args)
  *
  *  This is the public function, called from the Python code.  It receives a
- *  single tuple object from the caller, and creates an ST object if the
+ *  single tuple object from the caller, and creates an AST object if the
  *  tuple can be validated.  It does this by checking the first code of the
  *  tuple, and, if acceptable, builds the internal representation.  If this
  *  step succeeds, the internal representation is validated as fully as
  *  possible with the various validate_*() routines defined below.
  *
- *  This function must be changed if support is to be added for PyST_FRAGMENT
- *  ST objects.
+ *  This function must be changed if support is to be added for PyAST_FRAGMENT
+ *  AST objects.
  *
  */
 static PyObject*
-parser_tuple2st(PyST_Object *self, PyObject *args, PyObject *kw)
+parser_tuple2ast(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     NOTE(ARGUNUSED(self))
-    PyObject *st = 0;
+    PyObject *ast = 0;
     PyObject *tuple;
     node *tree;
 
     static char *keywords[] = {"sequence", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "O:sequence2st", keywords,
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O:sequence2ast", keywords,
                                      &tuple))
         return (0);
     if (!PySequence_Check(tuple)) {
         PyErr_SetString(PyExc_ValueError,
-                        "sequence2st() requires a single sequence argument");
+                        "sequence2ast() requires a single sequence argument");
         return (0);
     }
     /*
@@ -597,12 +601,12 @@ parser_tuple2st(PyST_Object *self, PyObject *args, PyObject *kw)
         if (start_sym == eval_input) {
             /*  Might be an eval form.  */
             if (validate_expr_tree(tree))
-                st = parser_newstobject(tree, PyST_EXPR);
+                ast = parser_newastobject(tree, PyAST_EXPR);
         }
         else if (start_sym == file_input) {
             /*  This looks like an exec form so far.  */
             if (validate_file_input(tree))
-                st = parser_newstobject(tree, PyST_SUITE);
+                ast = parser_newastobject(tree, PyAST_SUITE);
         }
         else {
             /*  This is a fragment, at best. */
@@ -613,10 +617,10 @@ parser_tuple2st(PyST_Object *self, PyObject *args, PyObject *kw)
     /*  Make sure we throw an exception on all errors.  We should never
      *  get this, but we'd do well to be sure something is done.
      */
-    if (st == NULL && !PyErr_Occurred())
-        err_string("unspecified ST error occurred");
+    if ((ast == 0) && !PyErr_Occurred())
+        err_string("unspecified AST error occurred");
 
-    return st;
+    return (ast);
 }
 
 
@@ -748,7 +752,7 @@ build_node_tree(PyObject *tuple)
          *  Throw an exception now and be done with it.
          */
         tuple = Py_BuildValue("os", tuple,
-                    "Illegal syntax-tree; cannot start with terminal symbol.");
+                      "Illegal ast tuple; cannot start with terminal symbol.");
         PyErr_SetObject(parser_error, tuple);
     }
     else if (ISNONTERMINAL(num)) {
@@ -826,7 +830,7 @@ VALIDATER(trailer);             VALIDATER(subscript);
 VALIDATER(subscriptlist);       VALIDATER(sliceop);
 VALIDATER(exprlist);            VALIDATER(dictmaker);
 VALIDATER(arglist);             VALIDATER(argument);
-VALIDATER(listmaker);           VALIDATER(yield_stmt);
+VALIDATER(listmaker);
 
 #undef VALIDATER
 
@@ -1531,18 +1535,6 @@ validate_raise_stmt(node *tree)
                && validate_test(CHILD(tree, 3)));
 
     return (res);
-}
-
-
-/* yield_stmt: 'yield' testlist
- */
-static int
-validate_yield_stmt(node *tree)
-{
-    return (validate_ntype(tree, yield_stmt)
-            && validate_numnodes(tree, 2, "yield_stmt")
-            && validate_name(CHILD(tree, 0), "yield")
-            && validate_testlist(CHILD(tree, 1)));
 }
 
 
@@ -2532,7 +2524,7 @@ validate_node(node *tree)
     int   res  = 1;                     /* result value                   */
     node* next = 0;                     /* node to process after this one */
 
-    while (res && (tree != 0)) {
+    while (res & (tree != 0)) {
         nch  = NCH(tree);
         next = 0;
         switch (TYPE(tree)) {
@@ -2563,16 +2555,12 @@ validate_node(node *tree)
             res  = (validate_numnodes(tree, 1, "flow_stmt")
                     && ((TYPE(CHILD(tree, 0)) == break_stmt)
                         || (TYPE(CHILD(tree, 0)) == continue_stmt)
-                        || (TYPE(CHILD(tree, 0)) == yield_stmt)
                         || (TYPE(CHILD(tree, 0)) == return_stmt)
                         || (TYPE(CHILD(tree, 0)) == raise_stmt)));
             if (res)
                 next = CHILD(tree, 0);
             else if (nch == 1)
                 err_string("illegal flow_stmt type");
-            break;
-          case yield_stmt:
-            res = validate_yield_stmt(tree);
             break;
             /*
              *  Compound statements.
@@ -2722,12 +2710,12 @@ validate_expr_tree(node *tree)
 static int
 validate_file_input(node *tree)
 {
-    int j;
+    int j   = 0;
     int nch = NCH(tree) - 1;
     int res = ((nch >= 0)
                && validate_ntype(CHILD(tree, nch), ENDMARKER));
 
-    for (j = 0; res && (j < nch); ++j) {
+    for ( ; res && (j < nch); ++j) {
         if (TYPE(CHILD(tree, j)) == stmt)
             res = validate_stmt(CHILD(tree, j));
         else
@@ -2753,18 +2741,18 @@ parser__pickler(PyObject *self, PyObject *args)
 {
     NOTE(ARGUNUSED(self))
     PyObject *result = NULL;
-    PyObject *st = NULL;
+    PyObject *ast = NULL;
     PyObject *empty_dict = NULL;
 
-    if (PyArg_ParseTuple(args, "O!:_pickler", &PyST_Type, &st)) {
+    if (PyArg_ParseTuple(args, "O!:_pickler", &PyAST_Type, &ast)) {
         PyObject *newargs;
         PyObject *tuple;
 
         if ((empty_dict = PyDict_New()) == NULL)
             goto finally;
-        if ((newargs = Py_BuildValue("Oi", st, 1)) == NULL)
+        if ((newargs = Py_BuildValue("Oi", ast, 1)) == NULL)
             goto finally;
-        tuple = parser_st2tuple((PyST_Object*)NULL, newargs, empty_dict);
+        tuple = parser_ast2tuple((PyAST_Object*)NULL, newargs, empty_dict);
         if (tuple != NULL) {
             result = Py_BuildValue("O(O)", pickle_constructor, tuple);
             Py_DECREF(tuple);
@@ -2780,44 +2768,34 @@ parser__pickler(PyObject *self, PyObject *args)
 
 
 /*  Functions exported by this module.  Most of this should probably
- *  be converted into an ST object with methods, but that is better
+ *  be converted into an AST object with methods, but that is better
  *  done directly in Python, allowing subclasses to be created directly.
  *  We'd really have to write a wrapper around it all anyway to allow
  *  inheritance.
  */
 static PyMethodDef parser_functions[] =  {
-    {"ast2tuple",       (PyCFunction)parser_st2tuple,  PUBLIC_METHOD_TYPE,
-        "Creates a tuple-tree representation of an ST."},
-    {"ast2list",        (PyCFunction)parser_st2list,   PUBLIC_METHOD_TYPE,
-        "Creates a list-tree representation of an ST."},
-    {"compileast",      (PyCFunction)parser_compilest, PUBLIC_METHOD_TYPE,
-        "Compiles an ST object into a code object."},
-    {"compilest",      (PyCFunction)parser_compilest,  PUBLIC_METHOD_TYPE,
-        "Compiles an ST object into a code object."},
-    {"expr",            (PyCFunction)parser_expr,      PUBLIC_METHOD_TYPE,
-        "Creates an ST object from an expression."},
-    {"isexpr",          (PyCFunction)parser_isexpr,    PUBLIC_METHOD_TYPE,
-        "Determines if an ST object was created from an expression."},
-    {"issuite",         (PyCFunction)parser_issuite,   PUBLIC_METHOD_TYPE,
-        "Determines if an ST object was created from a suite."},
-    {"suite",           (PyCFunction)parser_suite,     PUBLIC_METHOD_TYPE,
-        "Creates an ST object from a suite."},
-    {"sequence2ast",    (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        "Creates an ST object from a tree representation."},
-    {"sequence2st",     (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        "Creates an ST object from a tree representation."},
-    {"st2tuple",        (PyCFunction)parser_st2tuple,  PUBLIC_METHOD_TYPE,
-        "Creates a tuple-tree representation of an ST."},
-    {"st2list",         (PyCFunction)parser_st2list,   PUBLIC_METHOD_TYPE,
-        "Creates a list-tree representation of an ST."},
-    {"tuple2ast",       (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        "Creates an ST object from a tree representation."},
-    {"tuple2st",        (PyCFunction)parser_tuple2st,  PUBLIC_METHOD_TYPE,
-        "Creates an ST object from a tree representation."},
+    {"ast2tuple",       (PyCFunction)parser_ast2tuple,  PUBLIC_METHOD_TYPE,
+        "Creates a tuple-tree representation of an AST."},
+    {"ast2list",        (PyCFunction)parser_ast2list,   PUBLIC_METHOD_TYPE,
+        "Creates a list-tree representation of an AST."},
+    {"compileast",      (PyCFunction)parser_compileast, PUBLIC_METHOD_TYPE,
+        "Compiles an AST object into a code object."},
+    {"expr",            (PyCFunction)parser_expr,       PUBLIC_METHOD_TYPE,
+        "Creates an AST object from an expression."},
+    {"isexpr",          (PyCFunction)parser_isexpr,     PUBLIC_METHOD_TYPE,
+        "Determines if an AST object was created from an expression."},
+    {"issuite",         (PyCFunction)parser_issuite,    PUBLIC_METHOD_TYPE,
+        "Determines if an AST object was created from a suite."},
+    {"suite",           (PyCFunction)parser_suite,      PUBLIC_METHOD_TYPE,
+        "Creates an AST object from a suite."},
+    {"sequence2ast",    (PyCFunction)parser_tuple2ast,  PUBLIC_METHOD_TYPE,
+        "Creates an AST object from a tree representation."},
+    {"tuple2ast",       (PyCFunction)parser_tuple2ast,  PUBLIC_METHOD_TYPE,
+        "Creates an AST object from a tree representation."},
 
     /* private stuff: support pickle module */
     {"_pickler",        (PyCFunction)parser__pickler,   METH_VARARGS,
-        "Returns the pickle magic to allow ST objects to be pickled."},
+        "Returns the pickle magic to allow ast objects to be pickled."},
 
     {NULL, NULL, 0, NULL}
     };
@@ -2830,8 +2808,8 @@ initparser(void)
 {
     PyObject* module;
     PyObject* dict;
-
-    PyST_Type.ob_type = &PyType_Type;
+        
+    PyAST_Type.ob_type = &PyType_Type;
     module = Py_InitModule("parser", parser_functions);
     dict = PyModule_GetDict(module);
 
@@ -2839,14 +2817,16 @@ initparser(void)
         parser_error = PyErr_NewException("parser.ParserError", NULL, NULL);
 
     if ((parser_error == 0)
-        || (PyDict_SetItemString(dict, "ParserError", parser_error) != 0)) {
-        /* caller will check PyErr_Occurred() */
-        return;
+        || (PyDict_SetItemString(dict, "ParserError", parser_error) != 0))
+    {
+	    /* caller will check PyErr_Occurred() */
+	    return;
     }
-    Py_INCREF(&PyST_Type);
-    PyDict_SetItemString(dict, "ASTType", (PyObject*)&PyST_Type);
-    Py_INCREF(&PyST_Type);
-    PyDict_SetItemString(dict, "STType", (PyObject*)&PyST_Type);
+    /*
+     *  Nice to have, but don't cry if we fail.
+     */
+    Py_INCREF(&PyAST_Type);
+    PyDict_SetItemString(dict, "ASTType", (PyObject*)&PyAST_Type);
 
     PyDict_SetItemString(dict, "__copyright__",
                          PyString_FromString(parser_copyright_string));
@@ -2855,24 +2835,21 @@ initparser(void)
     PyDict_SetItemString(dict, "__version__",
                          PyString_FromString(parser_version_string));
 
-    /* Register to support pickling.
-     * If this fails, the import of this module will fail because an
-     * exception will be raised here; should we clear the exception?
-     */
+    /* register to support pickling */
     module = PyImport_ImportModule("copy_reg");
     if (module != NULL) {
         PyObject *func, *pickler;
 
         func = PyObject_GetAttrString(module, "pickle");
-        pickle_constructor = PyDict_GetItemString(dict, "sequence2st");
+        pickle_constructor = PyDict_GetItemString(dict, "sequence2ast");
         pickler = PyDict_GetItemString(dict, "_pickler");
         Py_XINCREF(pickle_constructor);
         if ((func != NULL) && (pickle_constructor != NULL)
             && (pickler != NULL)) {
             PyObject *res;
 
-            res = PyObject_CallFunction(func, "OOO", &PyST_Type, pickler,
-                                        pickle_constructor);
+            res = PyObject_CallFunction(
+                    func, "OOO", &PyAST_Type, pickler, pickle_constructor);
             Py_XDECREF(res);
         }
         Py_XDECREF(func);

@@ -41,8 +41,7 @@ wide_ptr = OpaqueType("wide", "PyMac_Buildwide", "PyMac_Getwide")
 # Pascal strings
 ConstStr255Param = OpaqueArrayType("Str255", "PyMac_BuildStr255", "PyMac_GetStr255")
 Str255 = OpaqueArrayType("Str255", "PyMac_BuildStr255", "PyMac_GetStr255")
-StringPtr = OpaqueByValueType("StringPtr", "PyMac_BuildStr255", "PyMac_GetStr255")
-ConstStringPtr = StringPtr
+StringPtr = OpaqueByValueType("StringPtr", "PyMac_BuildStr255", "BUG")
 
 # File System Specifications
 FSSpec_ptr = OpaqueType("FSSpec", "PyMac_BuildFSSpec", "PyMac_GetFSSpec")
@@ -101,7 +100,6 @@ OSStatus = OSErrType("OSStatus", 'l')
 # Various buffer types
 
 InBuffer = VarInputBufferType('char', 'long', 'l')		# (buf, len)
-UcharInBuffer  = VarInputBufferType('unsigned char', 'long', 'l')		# (buf, len)
 OptionalInBuffer = OptionalVarInputBufferType('char', 'long', 'l')		# (buf, len)
 
 InOutBuffer = HeapInputOutputBufferType('char', 'long', 'l')	# (inbuf, outbuf, len)
@@ -118,14 +116,6 @@ VarVarOutBuffer = VarVarHeapOutputBufferType('char', 'long', 'l') # (buf, len, &
 includestuff = """
 #include "macglue.h"
 #include "pymactoolbox.h"
-
-/* Macro to test whether a weak-loaded CFM function exists */
-#define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\\
-    	PyErr_SetString(PyExc_NotImplementedError, \\
-    	"Not available in this shared library/OS version"); \\
-    	return NULL; \\
-    }} while(0)
-
 """
 
 # Stuff added just before the module's init function
@@ -153,16 +143,6 @@ class OSErrMixIn:
 class OSErrFunctionGenerator(OSErrMixIn, FunctionGenerator): pass
 class OSErrMethodGenerator(OSErrMixIn, MethodGenerator): pass
 
-class WeakLinkMixIn:
-	"Mix-in to test the function actually exists (!= NULL) before calling"
-	
-	def precheck(self):
-		Output('PyMac_PRECHECK(%s);', self.name)
-
-class WeakLinkFunctionGenerator(WeakLinkMixIn, FunctionGenerator): pass
-class WeakLinkMethodGenerator(WeakLinkMixIn, MethodGenerator): pass
-class OSErrWeakLinkFunctionGenerator(OSErrMixIn, WeakLinkMixIn, FunctionGenerator): pass
-class OSErrWeakLinkMethodGenerator(OSErrMixIn, WeakLinkMixIn, MethodGenerator): pass
 
 class MacModule(Module):
 	"Subclass which gets the exception initializer from macglue.c"

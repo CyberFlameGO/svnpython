@@ -5,9 +5,6 @@
 #include "structmember.h"
 #include <string.h>
 
-#define WARN(msg) if (PyErr_Warn(PyExc_DeprecationWarning, msg) < 0) \
-			return NULL;
-
 typedef struct {
 	PyObject_HEAD
 	long	start;
@@ -58,9 +55,6 @@ PyRange_New(long start, long len, long step, int reps)
 
 	if (obj == NULL)
 		return NULL;
-		
-	if (reps != 1)
-		WARN("PyRange_New's 'repetitions' argument is deprecated");
 
 	if (len == 0 || reps <= 0) {
 		start = 0;
@@ -72,8 +66,8 @@ PyRange_New(long start, long len, long step, int reps)
 	else {
 		long last = start + (len - 1) * step;
 		if ((step > 0) ?
-		    (last > (PyInt_GetMax() - step)) : 
-		    (last < (-1 - PyInt_GetMax() - step))) {
+		    (last > (PyInt_GetMax() - step))
+		    :(last < (-1 - PyInt_GetMax() - step))) {
 			PyErr_SetString(PyExc_OverflowError,
 					"integer addition");
 			return NULL;
@@ -153,12 +147,16 @@ range_repr(rangeobject *r)
 }
 
 static PyObject *
+range_concat(rangeobject *r, PyObject *obj)
+{
+	PyErr_SetString(PyExc_TypeError, "cannot concatenate xrange objects");
+	return NULL;
+}
+
+static PyObject *
 range_repeat(rangeobject *r, int n)
 {
 	long lreps = 0;
-
-	WARN("xrange object multiplication is deprecated; "
-	     "convert to list instead");
 
 	if (n <= 0)
 		return (PyObject *) PyRange_New(0, 0, 1, 1);
@@ -182,12 +180,6 @@ range_repeat(rangeobject *r, int n)
 static int
 range_compare(rangeobject *r1, rangeobject *r2)
 {
-
-        if (PyErr_Warn(PyExc_DeprecationWarning,
-        	       "xrange object comparision is deprecated; "
-        	       "convert to list instead") < 0)
-        	return -1;
-
 	if (r1->start != r2->start)
 		return r1->start - r2->start;
 
@@ -204,9 +196,6 @@ range_compare(rangeobject *r1, rangeobject *r2)
 static PyObject *
 range_slice(rangeobject *r, int low, int high)
 {
-	WARN("xrange object slicing is deprecated; "
-	     "convert to list instead");
-
 	if (r->reps != 1) {
 		PyErr_SetString(PyExc_TypeError,
 				"cannot slice a replicated xrange");
@@ -241,8 +230,6 @@ range_tolist(rangeobject *self, PyObject *args)
 	PyObject *thelist;
 	int j;
 
-	WARN("xrange.tolist() is deprecated; use list(xrange) instead");
-
 	if (! PyArg_ParseTuple(args, ":tolist"))
 		return NULL;
 
@@ -268,8 +255,7 @@ range_getattr(rangeobject *r, char *name)
 	static PyMethodDef range_methods[] = {
 		{"tolist",	(PyCFunction)range_tolist, METH_VARARGS,
                  "tolist() -> list\n"
-                 "Return a list object with the same values.\n"
-                 "(This method is deprecated; use list() instead.)"},
+                 "Return a list object with the same values."},
 		{NULL,		NULL}
 	};
 	static struct memberlist range_members[] = {
@@ -286,22 +272,42 @@ range_getattr(rangeobject *r, char *name)
 			result = PyInt_FromLong(r->start + (r->len * r->step));
 		else
 			result = PyMember_Get((char *)r, range_members, name);
-		if (result)
-			WARN("xrange object's 'start', 'stop' and 'step' "
-			     "attributes are deprecated");
 	}
 	return result;
 }
 
+static int
+range_contains(rangeobject *r, PyObject *obj)
+{
+	long num = PyInt_AsLong(obj);
+
+	if (num < 0 && PyErr_Occurred())
+		return -1;
+
+	if (r->step > 0) {
+		if ((num < r->start) || ((num - r->start) % r->step))
+			return 0;
+		if (num >= (r->start + (r->len * r->step)))
+			return 0;
+	}
+	else {
+		if ((num > r->start) || ((num - r->start) % r->step))
+			return 0;
+		if (num <= (r->start + (r->len * r->step)))
+			return 0;
+	}
+	return 1;
+}
+
 static PySequenceMethods range_as_sequence = {
 	(inquiry)range_length,	/*sq_length*/
-	0,			/*sq_concat*/
+	(binaryfunc)range_concat, /*sq_concat*/
 	(intargfunc)range_repeat, /*sq_repeat*/
 	(intargfunc)range_item, /*sq_item*/
 	(intintargfunc)range_slice, /*sq_slice*/
 	0,			/*sq_ass_item*/
 	0,			/*sq_ass_slice*/
-	0, 			/*sq_contains*/
+	(objobjproc)range_contains, /*sq_contains*/
 };
 
 PyTypeObject PyRange_Type = {
@@ -327,5 +333,3 @@ PyTypeObject PyRange_Type = {
 	0,			/*tp_as_buffer*/
 	Py_TPFLAGS_DEFAULT,	/*tp_flags*/
 };
-
-#undef WARN

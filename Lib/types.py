@@ -2,7 +2,6 @@
 
 Types that are part of optional modules (e.g. array) are not listed.
 """
-from __future__ import generators
 
 import sys
 
@@ -32,11 +31,6 @@ try:
     CodeType = type(_f.func_code)
 except:
     pass
-
-def g():
-    yield 1
-GeneratorType = type(g())
-del g
 
 class _C:
     def _m(self): pass

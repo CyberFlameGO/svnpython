@@ -418,7 +418,7 @@ class PyShell(OutputWindow):
             if self.reading:
                 self.top.quit()
             return "cancel"
-        return OutputWindow.close(self)
+        return PyShellEditorWindow.close(self)
 
     def _close(self):
         self.close_debugger()

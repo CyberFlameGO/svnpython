@@ -10,16 +10,9 @@ require "labels.pl";
 my $key;
 # sort so that we get a consistent assignment for nodes with multiple labels 
 foreach $label (sort keys %external_labels) {
-  #
-  # If the label can't be used as a filename on non-Unix platforms,
-  # skip it.  Such labels may be used internally within the documentation,
-  # but will never be used for filename generation.
-  #
-  if ($label =~ /^([-.a-zA-Z0-9]+)$/) {
-    $key = $external_labels{$label};
-    $key =~ s|^/||;
-    $nodes{$key} = $label;
-  }
+  $key = $external_labels{$label};
+  $key =~ s|^/||;
+  $nodes{$key} = $label;
 }
 
 # This adds the "internal" labels added for indexing.  These labels will not
@@ -39,7 +32,7 @@ foreach $label (keys %internal_labels) {
 while (<>) {
   # don't want to do one s/// per line per node
   # so look for lines with hrefs, then do s/// on nodes present
-  if (/(HREF|href)=[\"\']node\d+\.html[\#\"\']/) {
+  if (/(HREF|href)=[\"\']([^\#\"\']*)html[\#\"\']/) {
     @parts = split(/(HREF|href)\=[\"\']/);
     shift @parts;
     for $node (@parts) {

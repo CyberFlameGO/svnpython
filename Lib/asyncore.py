@@ -50,7 +50,6 @@ import exceptions
 import select
 import socket
 import sys
-import types
 
 import os
 if os.name == 'nt':
@@ -216,22 +215,19 @@ class dispatcher:
             elif self.connected:
                 status.append ('connected')
             if self.addr:
-                if self.addr == types.TupleType:
-                    status.append ('%s:%d' % self.addr)
-                else:
-                    status.append (self.addr)
-            return '<%s %s at %x>' % (self.__class__.__name__,
-                                      ' '.join (status), id (self))
+                status.append ('%s:%d' % self.addr)
+            return '<%s %s at %x>' % (
+                self.__class__.__name__,
+                ' '.join (status),
+                id(self)
+                )
         except:
-            pass
+            try:
+                ar = repr(self.addr)
+            except:
+                ar = 'no self.addr!'
 
-        try:
-            ar = repr (self.addr)
-        except AttributeError:
-            ar = 'no self.addr!'
-
-        return '<__repr__() failed for %s instance at %x (addr=%s)>' % \
-               (self.__class__.__name__, id (self), ar)
+            return '<__repr__ (self) failed for object at %x (addr=%s)>' % (id(self),ar)
 
     def add_channel (self, map=None):
         #self.log_info ('adding channel %s' % self)
@@ -266,7 +262,7 @@ class dispatcher:
                 socket.SOL_SOCKET, socket.SO_REUSEADDR,
                 self.socket.getsockopt (socket.SOL_SOCKET, socket.SO_REUSEADDR) | 1
                 )
-        except socket.error:
+        except:
             pass
 
     # ==================================================
@@ -303,7 +299,6 @@ class dispatcher:
 
     def connect (self, address):
         self.connected = 0
-        # XXX why not use connect_ex?
         try:
             self.socket.connect (address)
         except socket.error, why:
@@ -510,6 +505,7 @@ def close_all (map=None):
 import os
 if os.name == 'posix':
     import fcntl
+    import FCNTL
 
     class file_wrapper:
         # here we override just enough to make a file
@@ -537,9 +533,9 @@ if os.name == 'posix':
             dispatcher.__init__ (self)
             self.connected = 1
             # set it to non-blocking mode
-            flags = fcntl.fcntl (fd, fcntl.F_GETFL, 0)
-            flags = flags | os.O_NONBLOCK
-            fcntl.fcntl (fd, fcntl.F_SETFL, flags)
+            flags = fcntl.fcntl (fd, FCNTL.F_GETFL, 0)
+            flags = flags | FCNTL.O_NONBLOCK
+            fcntl.fcntl (fd, FCNTL.F_SETFL, flags)
             self.set_file (fd)
 
         def set_file (self, fd):

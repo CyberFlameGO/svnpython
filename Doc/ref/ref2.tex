@@ -28,12 +28,10 @@ though the current implementation appears to favor Latin-1.  This
 applies both to the source character set and the run-time character
 set.
 
-
 \section{Line structure\label{line-structure}}
 
 A Python program is divided into a number of \emph{logical lines}.
 \index{line structure}
-
 
 \subsection{Logical lines\label{logical}}
 
@@ -48,7 +46,6 @@ by following the explicit or implicit \emph{line joining} rules.
 \index{line joining}
 \index{NEWLINE token}
 
-
 \subsection{Physical lines\label{physical}}
 
 A physical line ends in whatever the current platform's convention is
@@ -56,7 +53,6 @@ for terminating lines.  On \UNIX{}, this is the \ASCII{} LF (linefeed)
 character.  On DOS/Windows, it is the \ASCII{} sequence CR LF (return
 followed by linefeed).  On Macintosh, it is the \ASCII{} CR (return)
 character.
-
 
 \subsection{Comments\label{comments}}
 
@@ -67,7 +63,6 @@ rules are invoked.
 Comments are ignored by the syntax; they are not tokens.
 \index{comment}
 \index{hash character}
-
 
 \subsection{Explicit line joining\label{explicit-joining}}
 
@@ -208,7 +203,6 @@ The following example shows various indentation errors:
 last error is found by the lexical analyzer --- the indentation of
 \code{return r} does not match a level popped off the stack.)
 
-
 \subsection{Whitespace between tokens\label{whitespace}}
 
 Except at the beginning of a logical line or in string literals, the
@@ -216,7 +210,6 @@ whitespace characters space, tab and formfeed can be used
 interchangeably to separate tokens.  Whitespace is needed between two
 tokens only if their concatenation could otherwise be interpreted as a
 different token (e.g., ab is one token, but a b is two tokens).
-
 
 \section{Other tokens\label{other-tokens}}
 
@@ -229,7 +222,6 @@ Where
 ambiguity exists, a token comprises the longest possible string that
 forms a legal token, when read from left to right.
 
-
 \section{Identifiers and keywords\label{identifiers}}
 
 Identifiers (also referred to as \emph{names}) are described by the following
@@ -237,21 +229,15 @@ lexical definitions:
 \index{identifier}
 \index{name}
 
-\begin{productionlist}
-  \production{identifier}
-             {(\token{letter}|"_") (\token{letter} | \token{digit} | "_")*}
-  \production{letter}
-             {\token{lowercase} | \token{uppercase}}
-  \production{lowercase}
-             {"a"..."z"}
-  \production{uppercase}
-             {"A"..."Z"}
-  \production{digit}
-             {"0"..."9"}
-\end{productionlist}
+\begin{verbatim}
+identifier:     (letter|"_") (letter|digit|"_")*
+letter:         lowercase | uppercase
+lowercase:      "a"..."z"
+uppercase:      "A"..."Z"
+digit:          "0"..."9"
+\end{verbatim}
 
 Identifiers are unlimited in length.  Case is significant.
-
 
 \subsection{Keywords\label{keywords}}
 
@@ -265,13 +251,12 @@ identifiers.  They must be spelled exactly as written here:%
 and       del       for       is        raise    
 assert    elif      from      lambda    return   
 break     else      global    not       try      
-class     except    if        or        yield    
-continue  exec      import    pass      while
+class     except    if        or        while    
+continue  exec      import    pass               
 def       finally   in        print              
 \end{verbatim}
 
 % When adding keywords, use reswords.py for reformatting
-
 
 \subsection{Reserved classes of identifiers\label{id-classes}}
 
@@ -302,33 +287,22 @@ Literals are notations for constant values of some built-in types.
 \index{literal}
 \index{constant}
 
-
 \subsection{String literals\label{strings}}
 
 String literals are described by the following lexical definitions:
 \index{string literal}
 
+\begin{verbatim}
+stringliteral:   shortstring | longstring
+shortstring:     "'" shortstringitem* "'" | '"' shortstringitem* '"'
+longstring:      "'''" longstringitem* "'''" | '"""' longstringitem* '"""'
+shortstringitem: shortstringchar | escapeseq
+longstringitem:  longstringchar | escapeseq
+shortstringchar: <any ASCII character except "\" or newline or the quote>
+longstringchar:  <any ASCII character except "\">
+escapeseq:       "\" <any ASCII character>
+\end{verbatim}
 \index{ASCII@\ASCII{}}
-\begin{productionlist}
-  \production{stringliteral}
-             {\token{shortstring} | \token{longstring}}
-  \production{shortstring}
-             {"'" \token{shortstringitem}* "'"
-              | '"' \token{shortstringitem}* '"'}
-  \production{longstring}
-             {"'''" \token{longstringitem}* "'''"
-              | '"""' \token{longstringitem}* '"""'}
-  \production{shortstringitem}
-             {\token{shortstringchar} | \token{escapeseq}}
-  \production{longstringitem}
-             {\token{longstringchar} | \token{escapeseq}}
-  \production{shortstringchar}
-             {<any ASCII character except "\e" or newline or the quote>}
-  \production{longstringchar}
-             {<any ASCII character except "\e">}
-  \production{escapeseq}
-             {"\e" <any ASCII character>}
-\end{productionlist}
 
 \index{triple-quoted string}
 \index{Unicode Consortium}
@@ -403,13 +377,12 @@ backslashes are left in the string}.  For example, the string literal
 `n'.  String quotes can be escaped with a backslash, but the backslash
 remains in the string; for example, \code{r"\e""} is a valid string
 literal consisting of two characters: a backslash and a double quote;
-\code{r"\e"} is not a valid string literal (even a raw string cannot
+\code{r"\e"} is not a value string literal (even a raw string cannot
 end in an odd number of backslashes).  Specifically, \emph{a raw
 string cannot end in a single backslash} (since the backslash would
 escape the following quote character).  Note also that a single
 backslash followed by a newline is interpreted as those two characters
 as part of the string, \emph{not} as a line continuation.
-
 
 \subsection{String literal concatenation\label{string-catenation}}
 
@@ -461,30 +434,21 @@ Note that numeric literals do not include a sign; a phrase like
 \code{-1} is actually an expression composed of the unary operator
 `\code{-}' and the literal \code{1}.
 
-
 \subsection{Integer and long integer literals\label{integers}}
 
 Integer and long integer literals are described by the following
 lexical definitions:
 
-\begin{productionlist}
-  \production{longinteger}
-             {\token{integer} ("l" | "L")}
-  \production{integer}
-             {\token{decimalinteger} | \token{octinteger} | \token{hexinteger}}
-  \production{decimalinteger}
-             {\token{nonzerodigit} \token{digit}* | "0"}
-  \production{octinteger}
-             {"0" \token{octdigit}+}
-  \production{hexinteger}
-             {"0" ("x" | "X") \token{hexdigit}+}
-  \production{nonzerodigit}
-             {"1"..."9"}
-  \production{octdigit}
-             {"0"..."7"}
-  \production{hexdigit}
-             {\token{digit} | "a"..."f" | "A"..."F"}
-\end{productionlist}
+\begin{verbatim}
+longinteger:    integer ("l"|"L")
+integer:        decimalinteger | octinteger | hexinteger
+decimalinteger: nonzerodigit digit* | "0"
+octinteger:     "0" octdigit+
+hexinteger:     "0" ("x"|"X") hexdigit+
+nonzerodigit:   "1"..."9"
+octdigit:       "0"..."7"
+hexdigit:        digit|"a"..."f"|"A"..."F"
+\end{verbatim}
 
 Although both lower case `l' and upper case `L' are allowed as suffix
 for long integers, it is strongly recommended to always use `L', since
@@ -504,27 +468,19 @@ Some examples of plain and long integer literals:
 3L    79228162514264337593543950336L    0377L   0x100000000L
 \end{verbatim}
 
-
 \subsection{Floating point literals\label{floating}}
 
 Floating point literals are described by the following lexical
 definitions:
 
-\begin{productionlist}
-  \production{floatnumber}
-             {\token{pointfloat} | \token{exponentfloat}}
-  \production{pointfloat}
-             {[\token{intpart}] \token{fraction} | \token{intpart} "."}
-  \production{exponentfloat}
-             {(\token{nonzerodigit} \token{digit}* | \token{pointfloat})
-              \token{exponent}}
-  \production{intpart}
-             {\token{nonzerodigit} \token{digit}* | "0"}
-  \production{fraction}
-             {"." \token{digit}+}
-  \production{exponent}
-             {("e" | "E") ["+" | "-"] \token{digit}+}
-\end{productionlist}
+\begin{verbatim}
+floatnumber:    pointfloat | exponentfloat
+pointfloat:     [intpart] fraction | intpart "."
+exponentfloat:  (nonzerodigit digit* | pointfloat) exponent
+intpart:        nonzerodigit digit* | "0"
+fraction:       "." digit+
+exponent:       ("e"|"E") ["+"|"-"] digit+
+\end{verbatim}
 
 Note that the integer part of a floating point number cannot look like
 an octal integer, though the exponent may look like an octal literal
@@ -542,14 +498,13 @@ Note that numeric literals do not include a sign; a phrase like
 \code{-1} is actually an expression composed of the operator
 \code{-} and the literal \code{1}.
 
-
 \subsection{Imaginary literals\label{imaginary}}
 
 Imaginary literals are described by the following lexical definitions:
 
-\begin{productionlist}
-  \production{imagnumber}{(\token{floatnumber} | \token{intpart}) ("j" | "J")}
-\end{productionlist}
+\begin{verbatim}
+imagnumber:     (floatnumber | intpart) ("j"|"J")
+\end{verbatim}
 
 An imaginary literal yields a complex number with a real part of
 0.0.  Complex numbers are represented as a pair of floating point
@@ -576,7 +531,6 @@ The following tokens are operators:
 The comparison operators \code{<>} and \code{!=} are alternate
 spellings of the same operator.  \code{!=} is the preferred spelling;
 \code{<>} is obsolescent.
-
 
 \section{Delimiters\label{delimiters}}
 

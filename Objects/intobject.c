@@ -510,11 +510,13 @@ int_pow(PyIntObject *v, PyIntObject *w, PyIntObject *z)
 	CONVERT_TO_LONG(v, iv);
 	CONVERT_TO_LONG(w, iw);
 	if (iw < 0) {
-		/* Return a float.  This works because we know that
-		   this calls float_pow() which converts its
-		   arguments to double. */
-		return PyFloat_Type.tp_as_number->nb_power(
-			(PyObject *)v, (PyObject *)w, (PyObject *)z);
+		if (iv)
+			PyErr_SetString(PyExc_ValueError,
+					"cannot raise integer to a negative power");
+		else
+			PyErr_SetString(PyExc_ZeroDivisionError,
+					"cannot raise 0 to a negative power");
+		return NULL;
 	}
  	if ((PyObject *)z != Py_None) {
 		CONVERT_TO_LONG(z, iz);
@@ -645,7 +647,7 @@ int_lshift(PyIntObject *v, PyIntObject *w)
 	if (b >= LONG_BIT) {
 		return PyInt_FromLong(0L);
 	}
-	a = (long)((unsigned long)a << b);
+	a = (unsigned long)a << b;
 	return PyInt_FromLong(a);
 }
 

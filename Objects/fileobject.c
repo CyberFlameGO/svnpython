@@ -473,7 +473,7 @@ static size_t
 new_buffersize(PyFileObject *f, size_t currentsize)
 {
 #ifdef HAVE_FSTAT
-	off_t pos, end;
+	long pos, end;
 	struct stat st;
 	if (fstat(fileno(f->f_fp), &st) == 0) {
 		end = st.st_size;
@@ -1297,41 +1297,18 @@ file_setattr(PyFileObject *f, char *name, PyObject *v)
 	return PyMember_Set((char *)f, file_memberlist, name, v);
 }
 
-static PyObject *
-file_getiter(PyObject *f)
-{
-	return PyObject_CallMethod(f, "xreadlines", "");
-}
-
 PyTypeObject PyFile_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"file",
 	sizeof(PyFileObject),
 	0,
-	(destructor)file_dealloc,		/* tp_dealloc */
-	0,					/* tp_print */
-	(getattrfunc)file_getattr,		/* tp_getattr */
-	(setattrfunc)file_setattr,		/* tp_setattr */
-	0,					/* tp_compare */
-	(reprfunc)file_repr,			/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	0,					/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	0,					/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,			/* tp_flags */
- 	0,					/* tp_doc */
- 	0,					/* tp_traverse */
- 	0,					/* tp_clear */
-	0,					/* tp_richcompare */
-	0,					/* tp_weaklistoffset */
-	file_getiter,				/* tp_iter */
-	0,					/* tp_iternext */
+	(destructor)file_dealloc, /*tp_dealloc*/
+	0,		/*tp_print*/
+	(getattrfunc)file_getattr, /*tp_getattr*/
+	(setattrfunc)file_setattr, /*tp_setattr*/
+	0,		/*tp_compare*/
+	(reprfunc)file_repr, /*tp_repr*/
 };
 
 /* Interface for the 'soft space' between print items. */
@@ -1500,3 +1477,6 @@ int PyObject_AsFileDescriptor(PyObject *o)
 	}
 	return fd;
 }
+
+
+

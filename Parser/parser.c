@@ -79,7 +79,6 @@ PyParser_New(grammar *g, int start)
 	if (ps == NULL)
 		return NULL;
 	ps->p_grammar = g;
-	ps->p_generators = 0;
 	ps->p_tree = PyNode_New(start);
 	if (ps->p_tree == NULL) {
 		PyMem_DEL(ps);
@@ -132,9 +131,8 @@ push(register stack *s, int type, dfa *d, int newstate, int lineno)
 /* PARSER PROPER */
 
 static int
-classify(parser_state *ps, int type, char *str)
+classify(grammar *g, int type, char *str)
 {
-	grammar *g = ps->p_grammar;
 	register int n = g->g_ll.ll_nlabels;
 	
 	if (type == NAME) {
@@ -145,10 +143,6 @@ classify(parser_state *ps, int type, char *str)
 			if (l->lb_type == NAME && l->lb_str != NULL &&
 					l->lb_str[0] == s[0] &&
 					strcmp(l->lb_str, s) == 0) {
-				if (!ps->p_generators &&
-				    s[0] == 'y' &&
-				    strcmp(s, "yield") == 0)
-					break; /* not a keyword */
 				D(printf("It's a keyword\n"));
 				return n - i;
 			}
@@ -170,28 +164,6 @@ classify(parser_state *ps, int type, char *str)
 	return -1;
 }
 
-static void
-future_hack(parser_state *ps)
-{
-	node *n = ps->p_stack.s_top->s_parent;
-	node *ch;
-	int i;
-
-	if (strcmp(STR(CHILD(n, 0)), "from") != 0)
-		return;
-	ch = CHILD(n, 1);
-	if (strcmp(STR(CHILD(ch, 0)), "__future__") != 0)
-		return;
-	for (i = 3; i < NCH(n); i += 2) {
-		ch = CHILD(n, i);
-		if (NCH(ch) >= 1 && TYPE(CHILD(ch, 0)) == NAME &&
-		    strcmp(STR(CHILD(ch, 0)), "generators") == 0) {
-			ps->p_generators = 1;
-			break;
-		}
-	}
-}
-
 int
 PyParser_AddToken(register parser_state *ps, register int type, char *str,
 	          int lineno, int *expected_ret)
@@ -202,7 +174,7 @@ PyParser_AddToken(register parser_state *ps, register int type, char *str,
 	D(printf("Token %s/'%s' ... ", _PyParser_TokenNames[type], str));
 	
 	/* Find out which label this token is */
-	ilabel = classify(ps, type, str);
+	ilabel = classify(ps->p_grammar, type, str);
 	if (ilabel < 0)
 		return E_SYNTAX;
 	
@@ -245,14 +217,7 @@ PyParser_AddToken(register parser_state *ps, register int type, char *str,
 				while (s = &d->d_state
 						[ps->p_stack.s_top->s_state],
 					s->s_accept && s->s_narcs == 1) {
-					D(printf("  DFA '%s', state %d: "
-						 "Direct pop.\n",
-						 d->d_name,
-						 ps->p_stack.s_top->s_state));
-					if (d->d_name[0] == 'i' &&
-					    strcmp(d->d_name,
-						   "import_stmt") == 0)
-						future_hack(ps);
+					D(printf("  Direct pop.\n"));
 					s_pop(&ps->p_stack);
 					if (s_empty(&ps->p_stack)) {
 						D(printf("  ACCEPT.\n"));
@@ -265,9 +230,6 @@ PyParser_AddToken(register parser_state *ps, register int type, char *str,
 		}
 		
 		if (s->s_accept) {
-			if (d->d_name[0] == 'i' &&
-			    strcmp(d->d_name, "import_stmt") == 0)
-				future_hack(ps);
 			/* Pop this dfa and try again */
 			s_pop(&ps->p_stack);
 			D(printf(" Pop ...\n"));

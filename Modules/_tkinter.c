@@ -1852,7 +1852,7 @@ _bump(FlattenContext* context, int size)
 
 	context->maxsize = maxsize;
 
-	return _PyTuple_Resize(&context->tuple, maxsize) >= 0;
+	return _PyTuple_Resize(&context->tuple, maxsize, 0) >= 0;
 }
 
 static int
@@ -1936,7 +1936,7 @@ Tkinter_Flatten(PyObject* self, PyObject* args)
 	if (!_flatten1(&context, item,0))
 		return NULL;
 
-	if (_PyTuple_Resize(&context.tuple, context.size))
+	if (_PyTuple_Resize(&context.tuple, context.size, 0))
 		return NULL;
 
 	return context.tuple;

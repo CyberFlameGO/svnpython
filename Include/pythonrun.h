@@ -7,13 +7,8 @@
 extern "C" {
 #endif
 
-/* These flags are named after the __future__ statements that introduced
-   them.  May not remain true for later additions, so fiddle this comment
-   accordingly then. */
-#define PyCF_NESTED_SCOPES	(0x00000001UL)
-#define PyCF_GENERATORS		(0x00000002UL)
 typedef struct {
-	unsigned long cf_flags;  /* bitmask of PyCF_xxx flags */
+	int cf_nested_scopes;
 } PyCompilerFlags;
 
 DL_IMPORT(void) Py_SetProgramName(char *);
@@ -45,9 +40,6 @@ DL_IMPORT(int) PyRun_InteractiveLoopFlags(FILE *, char *, PyCompilerFlags *);
 
 DL_IMPORT(struct _node *) PyParser_SimpleParseString(char *, int);
 DL_IMPORT(struct _node *) PyParser_SimpleParseFile(FILE *, char *, int);
-DL_IMPORT(struct _node *) PyParser_SimpleParseStringFlags(char *, int, int);
-DL_IMPORT(struct _node *) PyParser_SimpleParseFileFlags(FILE *, char *,
-							int, int);
 
 DL_IMPORT(PyObject *) PyRun_String(char *, int, PyObject *, PyObject *);
 DL_IMPORT(PyObject *) PyRun_File(FILE *, char *, int, PyObject *, PyObject *);

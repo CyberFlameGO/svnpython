@@ -1,6 +1,5 @@
 \chapter{Data model\label{datamodel}}
 
-
 \section{Objects, values and types\label{objects}}
 
 \dfn{Objects} are Python's abstraction for data.  All data in a Python
@@ -95,7 +94,6 @@ are guaranteed to refer to two different, unique, newly created empty
 lists.
 (Note that \samp{c = d = []} assigns the same object to both
 \code{c} and \code{d}.)
-
 
 \section{The standard type hierarchy\label{types}}
 
@@ -210,7 +208,7 @@ These represent machine-level double precision floating point numbers.
 You are at the mercy of the underlying machine architecture and
 \C{} implementation for the accepted range and handling of overflow.
 Python does not support single-precision floating point numbers; the
-savings in processor and memory usage that are usually the reason for using
+savings in CPU and memory usage that are usually the reason for using
 these is dwarfed by the overhead of using objects in Python, so there
 is no reason to complicate the language with two kinds of floating
 point numbers.

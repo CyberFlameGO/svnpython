@@ -18,7 +18,7 @@ can subclass \class{RExec} to add or remove capabilities as desired.
 \emph{Note:} The \class{RExec} class can prevent code from performing
 unsafe operations like reading or writing disk files, or using TCP/IP
 sockets.  However, it does not protect against code using extremely
-large amounts of memory or processor time.  
+large amounts of memory or CPU time.  
 
 \begin{classdesc}{RExec}{\optional{hooks\optional{, verbose}}}
 Returns an instance of the \class{RExec} class.  
@@ -32,8 +32,7 @@ the file system itself.  Rather, it calls methods of an \class{RHooks}
 instance that was passed to or created by its constructor.  (Actually,
 the \class{RExec} object doesn't make these calls --- they are made by
 a module loader object that's part of the \class{RExec} object.  This
-allows another level of flexibility, which can be useful when changing
-the mechanics of \keyword{import} within the restricted environment.)
+allows another level of flexibility, e.g. using packages.)
 
 By providing an alternate \class{RHooks} object, we can control the
 file system accesses made to import a module, without changing the
@@ -136,7 +135,7 @@ Reload the module object \var{module}, re-parsing and re-initializing it.
 \end{methoddesc}
 
 \begin{methoddesc}{r_unload}{module}
-Unload the module object \var{module} (remove it from the
+Unload the module object \var{module} (i.e., remove it from the
 restricted environment's \code{sys.modules} dictionary).
 \end{methoddesc}
 
@@ -183,9 +182,9 @@ this module.)
 Contains the names of built-in modules which can be safely imported.
 The value for \class{RExec} is \code{('audioop', 'array', 'binascii',
 'cmath', 'errno', 'imageop', 'marshal', 'math', 'md5', 'operator',
-'parser', 'regex', 'rotor', 'select', 'sha', '_sre', 'strop',
-'struct', 'time')}.  A similar remark about overriding this variable
-applies --- use the value from the base class as a starting point.
+'parser', 'regex', 'rotor', 'select', 'strop', 'struct', 'time')}.  A
+similar remark about overriding this variable applies --- use the
+value from the base class as a starting point.
 \end{memberdesc}
 
 \begin{memberdesc}{ok_path}

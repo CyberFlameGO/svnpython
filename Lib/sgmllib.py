@@ -5,8 +5,7 @@
 # XXX There should be a way to distinguish between PCDATA (parsed
 # character data -- the normal case), RCDATA (replaceable character
 # data -- only char and entity references and end tags are special)
-# and CDATA (character data -- only end tags are special).  RCDATA is
-# not supported at all.
+# and CDATA (character data -- only end tags are special).
 
 
 import re
@@ -35,15 +34,12 @@ endbracket = re.compile('[<>]')
 special = re.compile('<![^<>]*>')
 commentopen = re.compile('<!--')
 commentclose = re.compile(r'--\s*>')
-declopen = re.compile('<!')
-declname = re.compile(r'[a-zA-Z][-_.a-zA-Z0-9]*\s*')
-declstringlit = re.compile(r'(\'[^\']*\'|"[^"]*")\s*')
 tagfind = re.compile('[a-zA-Z][-_.a-zA-Z0-9]*')
 attrfind = re.compile(
-    r'\s*([a-zA-Z_][-:.a-zA-Z_0-9]*)(\s*=\s*'
+    r'\s*([a-zA-Z_][-.a-zA-Z_0-9]*)(\s*=\s*'
     r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./:;+*%?!&$\(\)_#=~\'"]*))?')
 
-decldata = re.compile(r'[^>\'\"]+')
+declname = re.compile(r'[a-zA-Z][-_.a-zA-Z0-9]*\s*')
 declstringlit = re.compile(r'(\'[^\']*\'|"[^"]*")\s*')
 
 
@@ -65,46 +61,37 @@ class SGMLParseError(RuntimeError):
 
 class SGMLParser:
 
+    # Interface -- initialize and reset this instance
     def __init__(self, verbose=0):
-        """Initialize and reset this instance."""
         self.verbose = verbose
         self.reset()
 
+    # Interface -- reset this instance.  Loses all unprocessed data
     def reset(self):
-        """Reset this instance. Loses all unprocessed data."""
         self.rawdata = ''
         self.stack = []
         self.lasttag = '???'
         self.nomoretags = 0
         self.literal = 0
 
+    # For derived classes only -- enter literal mode (CDATA) till EOF
     def setnomoretags(self):
-        """Enter literal mode (CDATA) till EOF.
-
-        Intended for derived classes only.
-        """
         self.nomoretags = self.literal = 1
 
+    # For derived classes only -- enter literal mode (CDATA)
     def setliteral(self, *args):
-        """Enter literal mode (CDATA).
-
-        Intended for derived classes only.
-        """
         self.literal = 1
 
+    # Interface -- feed some data to the parser.  Call this as
+    # often as you want, with as little or as much text as you
+    # want (may include '\n').  (This just saves the text, all the
+    # processing is done by goahead().)
     def feed(self, data):
-        """Feed some data to the parser.
-
-        Call this as often as you want, with as little or as much text
-        as you want (may include '\n').  (This just saves the text,
-        all the processing is done by goahead().)
-        """
-
         self.rawdata = self.rawdata + data
         self.goahead(0)
 
+    # Interface -- handle the remaining data
     def close(self):
-        """Handle the remaining data."""
         self.goahead(1)
 
     # Internal -- handle data as far as reasonable.  May leave state
@@ -173,10 +160,6 @@ class SGMLParser:
                     i = k
                     continue
             elif rawdata[i] == '&':
-                if self.literal:
-                    self.handle_data(rawdata[i])
-                    i = i+1
-                    continue
                 match = charref.match(rawdata, i)
                 if match:
                     name = match.group(1)
@@ -227,20 +210,11 @@ class SGMLParser:
 
     # Internal -- parse declaration.
     def parse_declaration(self, i):
-        # This is some sort of declaration; in "HTML as
-        # deployed," this should only be the document type
-        # declaration ("<!DOCTYPE html...>").
         rawdata = self.rawdata
         j = i + 2
-        assert rawdata[i:j] == "<!", "unexpected call to parse_declaration"
-        if rawdata[j:j+1] in ("-", ""):
-            # Start of comment followed by buffer boundary,
-            # or just a buffer boundary.
-            return -1
         # in practice, this should look like: ((name|stringlit) S*)+ '>'
-        n = len(rawdata)
-        while j < n:
-            c = rawdata[j]
+        while 1:
+            c = rawdata[j:j+1]
             if c == ">":
                 # end of declaration syntax
                 self.handle_decl(rawdata[i+2:j])
@@ -248,18 +222,22 @@ class SGMLParser:
             if c in "\"'":
                 m = declstringlit.match(rawdata, j)
                 if not m:
-                    return -1 # incomplete
+                    # incomplete or an error?
+                    return -1
                 j = m.end()
             elif c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
                 m = declname.match(rawdata, j)
                 if not m:
-                    return -1 # incomplete
+                    # incomplete or an error?
+                    return -1
                 j = m.end()
+            elif i == len(rawdata):
+                # end of buffer between tokens
+                return -1
             else:
                 raise SGMLParseError(
-                    "unexpected char in declaration: %s" % `rawdata[j]`)
-        # end of buffer between tokens
-        return -1
+                    "unexpected char in declaration: %s" % `rawdata[i]`)
+        assert 0, "can't get here!"
 
     # Internal -- parse processing instr, return length or -1 if not terminated
     def parse_pi(self, i):
@@ -416,8 +394,8 @@ class SGMLParser:
             print '*** Unbalanced </' + tag + '>'
             print '*** Stack:', self.stack
 
+    # Example -- handle character reference, no need to override
     def handle_charref(self, name):
-        """Handle character reference, no need to override."""
         try:
             n = int(name)
         except ValueError:
@@ -432,12 +410,8 @@ class SGMLParser:
     entitydefs = \
             {'lt': '<', 'gt': '>', 'amp': '&', 'quot': '"', 'apos': '\''}
 
+    # Example -- handle entity reference, no need to override
     def handle_entityref(self, name):
-        """Handle entity references.
-
-        There should be no need to override this method; it can be
-        tailored by setting up the self.entitydefs mapping appropriately.
-        """
         table = self.entitydefs
         if table.has_key(name):
             self.handle_data(table[name])
