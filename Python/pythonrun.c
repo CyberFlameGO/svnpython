@@ -37,7 +37,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include "ceval.h"
 #include "pythonrun.h"
 #include "import.h"
-#include "marshal.h"
 
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
@@ -193,24 +192,11 @@ run_script(fp, filename)
 	char *filename;
 {
 	object *m, *d, *v;
-	char *ext;
-
 	m = add_module("__main__");
 	if (m == NULL)
 		return -1;
 	d = getmoduledict(m);
-	ext = filename + strlen(filename) - 4;
-	if ( strcmp(ext, ".pyc") == 0 ) {
-		/* Try to run a pyc file. First, re-open in binary */
-		fclose(fp);
-		if( (fp = fopen(filename, "rb")) == NULL ) {
-			fprintf(stderr, "python: Can't reopen .pyc file\n");
-			return -1;
-		}
-		v = run_pyc_file(fp, filename, d, d);
-	} else {
-		v = run_file(fp, filename, file_input, d, d);
-	}
+	v = run_file(fp, filename, file_input, d, d);
 	flushline();
 	if (v == NULL) {
 		print_error();
@@ -286,18 +272,6 @@ print_error()
 				writestring(buf, f);
 				writestring("\n", f);
 				if (text != NULL) {
-					char *nl;
-					if (offset > 0 &&
-					    offset == strlen(text))
-						offset--;
-					for (;;) {
-						nl = strchr(text, '\n');
-						if (nl == NULL ||
-						    nl-text >= offset)
-							break;
-						offset -= (nl+1-text);
-						text = nl+1;
-					}
 					while (*text == ' ' || *text == '\t') {
 						text++;
 						offset--;
@@ -377,38 +351,6 @@ run_node(n, filename, globals, locals)
 	freetree(n);
 	if (co == NULL)
 		return NULL;
-	v = eval_code(co, globals, locals, (object *)NULL, (object *)NULL);
-	DECREF(co);
-	return v;
-}
-
-object *
-run_pyc_file(fp, filename, globals, locals)
-	FILE *fp;
-	char *filename;
-	object *globals, *locals;
-{
-	codeobject *co;
-	object *v;
-	long magic;
-	long get_pyc_magic();
-
-	magic = rd_long(fp);
-	if (magic != get_pyc_magic()) {
-		err_setstr(RuntimeError,
-			   "Bad magic number in .pyc file");
-		return NULL;
-	}
-	(void) rd_long(fp);
-	v = rd_object(fp);
-	fclose(fp);
-	if (v == NULL || !is_codeobject(v)) {
-		XDECREF(v);
-		err_setstr(RuntimeError,
-			   "Bad code object in .pyc file");
-		return NULL;
-	}
-	co = (codeobject *)v;
 	v = eval_code(co, globals, locals, (object *)NULL, (object *)NULL);
 	DECREF(co);
 	return v;
@@ -524,19 +466,6 @@ fatal(msg)
 int threads_started = 0; /* Set by threadmodule.c and maybe others */
 #endif
 
-#define NEXITFUNCS 32
-static void (*exitfuncs[NEXITFUNCS])();
-static int nexitfuncs = 0;
-
-int Py_AtExit(func)
-	void (*func) PROTO((void));
-{
-	if (nexitfuncs >= NEXITFUNCS)
-		return -1;
-	exitfuncs[nexitfuncs++] = func;
-	return 0;
-}
-
 void
 cleanup()
 {
@@ -560,9 +489,6 @@ cleanup()
 	}
 
 	flushline();
-
-	while (nexitfuncs > 0)
-		(*exitfuncs[--nexitfuncs])();
 }
 
 #ifdef COUNT_ALLOCS

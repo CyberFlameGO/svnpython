@@ -28,16 +28,6 @@
 # <name> = <value>
 #
 # which defines a Make variable definition inserted into Makefile.in
-#
-# Finally, if a line has the literal form
-#
-# *noconfig*
-#
-# (that is including the '*' and '*' !) then the following modules will
-# not be included in the config.c file, nor in the list of objects to be
-# added to the library archive, and their linker options won't be added 
-# to the linker options, but rules to create their .o files and their
-# shared libraries will still be added to the Makefile
 
 # NOTE: As a standard policy, as many modules as can be supported by a
 # platform should be present.  The distribution comes with all modules
@@ -57,18 +47,22 @@ DESTLIB=$(prefix)/lib/python
 # Standard enabled (tests are always available)
 TESTPATH=:$(DESTLIB)/test
 
-# Path for machine- or system-dependent modules (and shared libraries)
-MACHDEPPATH=:$(DESTLIB)/$(MACHDEP)
+# Enable this for SGI systems
+#ARCHPATH=:$(DESTLIB)/sgi
 
-COREPYTHONPATH=.:$(DESTLIB)$(TESTPATH)$(MACHDEPPATH)$(STDWINPATH)$(TKPATH)
-PYTHONPATH=$(COREPYTHONPATH)
+# Enable this for Sun systems
+#ARCHPATH=:$(DESTLIB)/sun4
+
+# Enable this if stdwin installed
+#STDWINPATH=:$(DESTLIB)/stdwin
+
+PYTHONPATH=.:$(DESTLIB)$(TESTPATH)$(ARCHPATH)$(STDWINPATH)
 
 
 # Modules that should always be present (non UNIX dependent)
-# NB when using shared libraries, don't make posix a shared library!
 
 array arraymodule.c	# array objects
-math mathmodule.c -lm	# math library functions, e.g. sin()
+math mathmodule.c	# math library functions, e.g. sin()
 parser parsermodule.c	# raw interface to the Python parser
 posix posixmodule.c	# posix (UNIX) system calls
 regex regexmodule.c regexpr.c	# Regular expressions, GNU Emacs style
@@ -95,7 +89,6 @@ signal signalmodule.c	# signal(2)
 
 #dbm dbmmodule.c 	# dbm(3) may require -lndbm or similar
 #nis nismodule.c 	# Sun yellow pages -- not everywhere
-#termios termios.c	# Steen Lumholt's termios module
 
 
 # Multimedia modules -- on by default.
@@ -111,25 +104,12 @@ rgbimg rgbimgmodule.c   # Read SGI RGB image files (but coded portably)
 # ftp://ftp.cwi.nl/pub/stdwin.  The STDWIN variable must point to the
 # STDWIN toplevel directory.  The ARCH variable must be set to the
 # architecture identifier used to build STDWIN.  NB if you combine this
-# with the gl module on an SGI IRIX 4 machine, you should replace
-# "-lX11" with "-lX11_s".
+# with the gl module on an SGI machine, you should replace "-lX11" with
+# "-lX11_s".
 
 #STDWIN=/ufs/guido/src/stdwin
 #ARCH=???
 #stdwin stdwinmodule.c -I$(STDWIN)/H $(STDWIN)/Build/$(ARCH)/x11/lib/lib.a -lX11
-#STDWINPATH=:$(DESTLIB)/stdwin
-
-# For STDWIN 1.0 it's a bit different:
-
-#STDWIN=/ufs/guido/src/stdwin
-#LIBTEXTEDIT=$(STDWIN)/$(MACHDEP)/Packs/textedit/libtextedit.a
-#LIBX11STDWIN=$(STDWIN)/$(MACHDEP)/Ports/x11/libstdwin.a
-#LIBALFASTDWIN=$(STDWIN)/$(MACHDEP)/Ports/alfa/libstdwin.a
-#stdwin stdwinmodule.c -I$(STDWIN)/H $(LIBTEXTEDIT) $(LIBX11STDWIN) -lX11
-
-# Or use the following for the alphanumeric version:
-
-#stdwin stdwinmodule.c -I$(STDWIN)/H $(LIBTEXTEDIT) $(LIBALFASTDWIN) -ltermcap
 
 
 # The md5 module implements the RSA Data Security, Inc. MD5
@@ -156,17 +136,16 @@ md5 md5module.c md5c.c
 # Note that some required libraries and header files aren't always
 # installed; you may be better off switching on only 'fm' and 'gl'
 # (Font Manager and Graphics Library).
-# NB when using shared libraries, don't make gl a shared library!
 
-#				      # THESE ARE ONLY FOR IRIX5:
+#                               # ADD THESE FOR IRIX5:
 #al almodule.c -laudio
-#cd cdmodule.c -lcdaudio -lds		-lmediad
-#cl clmodule.c -lcl			-lawareaudio
-#fm fmmodule.c -lfm -lgl
-#gl glmodule.c -lgl -lX11
-#imgfile imgfile.c -limage -lgutil -lm
+#cd cdmodule.c -lcdaudio -lds	# -lmediad
+#cl clmodule.c -lcl		# -lawareaudio
+#fm fmmodule.c -lfm_s -lgl_s
+#gl glmodule.c -lgl_s -lX11_s
+#imgfile imgfile.c -limage -lgutil
 #sgi sgimodule.c
-#sv svmodule.c yuvconvert.c -lsvideo -lXext -lX11
+#sv svmodule.c yuvconvert.c -lsvideo -lXext -lX11_s
 
 # The FORMS library, by Mark Overmars, implements user interface
 # components such as dialogs and buttons using SGI's GL and FM
@@ -176,71 +155,50 @@ md5 md5module.c md5c.c
 # toplevel directory.
 
 #FORMS=/ufs/guido/src/forms/FORMS
-#fl flmodule.c -I$(FORMS) $(FORMS)/libforms.a -lfm -lgl
+#fl flmodule.c -I$(FORMS) $(FORMS)/libforms.a
 
 
 # SunOS specific modules -- off by default
 
-#sunaudiodev sunaudiodev.c
+# sunaudiodev sunaudiodev.c
 
 
 # Thread module -- works on SGI IRIX and on SunOS 5.x (SOLARIS) only.
 # Note that you must have configured (and built!) Python with the
 # --with-thread option passed to the configure script for this to work.
-# NB when using shared libraries, don't make thread a shared library!
 
-#thread threadmodule.c
+# thread threadmodule.c
 
 
 # GNN's timing module
-
-#timing timingmodule.c
-
-
-# Steen Lumholt's tkinter module.  For use with plain Tk, use the
-# first line.  For use with extended Tk, edit tkappinit.c, add
-# appropriate -DWITH_... and libraries/objects to the second line, and
-# use that.  In all cases also enable the last line (TKPATH).
-
-# *** Use ONE of the following two lines, see previous comments ***
-#tkinter tkintermodule.c -I/usr/local/include -L/usr/local/lib -ltk -ltcl -lX11
-#tkinter tkintermodule.c tkappinit.c -DWITH_APPINIT -I/usr/local/include -L/usr/local/lib -ltk -ltcl -lX11
-
-#TKPATH=:$(DESTLIB)/tkinter
+# timing timingmodule.c
 
 
 # Lance Ellinghouse's modules
-
-rotor rotormodule.c		# enigma-inspired encryption
-#syslog syslogmodule.c		# syslog daemon interface
-#curses cursesmodule.c -lcurses -ltermcap	# guess what?
-
+rotor rotormodule.c		# enigma-inspired en-, decryption
+# syslog syslogmodule.c		# syslog daemon interface
+# curses cursesmodule.c -lcurses -ltermcap	# guess what?
 
 
 # Tommy Burnette's 'new' module (creates new empty objects of certain kinds)
-
-#new newmodule.c
+# new newmodule.c
 
 
 # John Redford's sybase module
-
-#sybase sybasemodule.c
+# sybase sybasemodule.c
 
 
 # Generic (SunOS / SVR4) dynamic loading module
-
-#dl dlmodule.c
+# dl dlmodule.c
 
 
 # Jack Jansen's imgformat module
-
-#imgformat imgformat.c
+# imgformat imgformat.c
 
 
 # Anthony Baxter's gdbm module (derived from Jack's dbm module)
 # GNU dbm(3) will require -lgdbm
-
-#gdbm gdbmmodule.c -I/usr/local/include -L/usr/local/lib -lgdbm
+# gdbm gdbmmodule.c -I/usr/local/include -L/usr/local/lib -lgdbm
 
 
 # Example -- included for reference only

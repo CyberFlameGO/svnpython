@@ -55,12 +55,15 @@ NOTE: you MUST use the SAME key in rotor.newrotor()
 
 /* Rotor objects */
 
-#include "Python.h"
-
+#include "allobjects.h"
+#include "modsupport.h"
 #include <stdio.h>
 #include <math.h>
 #define TRUE	1
 #define FALSE	0
+
+/* This is temp until the renaming effort is done with Python */
+#include "rename1.h"
 
 typedef struct {
 	PyObject_HEAD

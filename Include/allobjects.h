@@ -76,6 +76,8 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include "modsupport.h"
 #include "ceval.h"
 
+#include "rename1.h"
+
 extern void fatal PROTO((char *));
 
 #ifdef __cplusplus

@@ -29,9 +29,6 @@ srcdir=		@srcdir@
 VPATH=		@srcdir@
 INSTALL=	@INSTALL@
 
-# Machine-dependent subdirectories
-MACHDEP=	@MACHDEP@
-
 # Install prefixes are treated specially by the configure script:
 # it only changes these lines if it has received a --prefix=... or
 # --exec-prefix=... command line option.  Note that $(prefix) is
@@ -44,13 +41,6 @@ prefix=		/usr/local
 
 # Install prefix for architecture-dependent files
 exec_prefix=	$(prefix)
-
-# Symbols used for using shared libraries
-SO=		@SO@
-LDSHARED=	@LDSHARED@
-CCSHARED=	@CCSHARED@
-LINKFORSHARED=	@LINKFORSHARED@
-DESTSHARED=	$(prefix)/lib/python/$(MACHDEP)
 
 # Programs
 SHELL=		/bin/sh
@@ -141,17 +131,6 @@ libainstall:	all
 		$(INSTALL) $(srcdir)/Modules/makesetup $(LIBPL)/makesetup
 		$(INSTALL) config.h $(LIBPL)/config.h
 		$(INSTALL) $(srcdir)/Python/frozenmain.c $(LIBPL)/frozenmain.c
-
-# install the dynamically loadable modules
-sharedinstall:
-		cd Modules; $(MAKE) \
-			OPT="$(OPT)" \
-			SO="$(SO)" \
-			LDSHARED="$(LDSHARED)" \
-			CCSHARED="$(CCSHARED)" \
-			LINKFORSHARED="$(LINKFORSHARED)" \
-			DESTSHARED="$(DESTSHARED)" \
-			sharedinstall
 
 # Build the sub-Makefiles
 Makefiles:	config.status

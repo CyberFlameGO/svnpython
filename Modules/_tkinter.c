@@ -1,9 +1,35 @@
 /* tkintermodule.c -- Interface to libtk.a and libtcl.a.
    Copyright (C) 1994 Steen Lumholt */
 
-#include <Python.h>
+#if 0
+#include <Py/Python.h>
+#else
 
+#include "allobjects.h"
+#include "pythonrun.h"
+#include "intrcheck.h"
+#include "modsupport.h"
+#include "sysmodule.h"
+
+#ifndef PyObject
+#define PyObject object
+typedef struct methodlist PyMethodDef;
+#endif
 #define PyInit_tkinter inittkinter
+
+#undef Py_True
+#define Py_True ((object *) &TrueObject)
+#undef True
+
+#undef Py_False
+#define Py_False ((object *) &FalseObject)
+#undef False
+
+#undef Py_None
+#define Py_None (&NoObject)
+#undef None
+
+#endif /* 0 */
 
 #include <tcl.h>
 #include <tk.h>
@@ -1066,9 +1092,8 @@ PyInit_tkinter ()
   if (!inited)
     {
       inited = 1;
-      if (Py_AtExit (Tkinter_Cleanup) != 0)
-	fprintf(stderr,
-		"Tkinter: warning: cleanup procedure not registered\n");
+      if (atexit (Tkinter_Cleanup))
+	PyErr_SetFromErrno (Tkinter_TclError);
     }
 
   if (PyErr_Occurred ())

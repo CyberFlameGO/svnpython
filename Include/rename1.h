@@ -32,11 +32,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
    "new style" names (e.g. PyObject) with the old style Python source
    distribution. */
 
-/* Remove some symbols (these conflict with X11 symbols) */
-#undef True
-#undef False
-#undef None
-
 typedef ANY *PyUnivPtr;
 typedef struct methodlist PyMethodDef;
 
@@ -152,9 +147,9 @@ typedef struct methodlist PyMethodDef;
 #define _Py_NewReference NEWREF
 #define _Py_Dealloc DELREF
 #define _Py_ForgetReference UNREF
-#define Py_None (&_Py_NoneStruct)
-#define Py_False ((object *) &_Py_ZeroStruct)
-#define Py_True ((object *) &_Py_TrueStruct)
+#define Py_None None
+#define Py_False False
+#define Py_True True
 #define PyObject_Compare cmpobject
 #define PyObject_GetAttrString getattr
 #define PyObject_GetAttr getattro
@@ -327,7 +322,6 @@ typedef struct methodlist PyMethodDef;
 #define PyArg_GetDoubleArray getidoublearray
 #define PyArg_GetFloat getifloatarg
 #define PyArg_GetFloatArray getifloatarray
-#define PyArg_GetInt getintarg
 #define PyArg_GetLong getilongarg
 #define PyArg_GetLongArray getilongarray
 #define PyArg_GetLongArraySize getilongarraysize

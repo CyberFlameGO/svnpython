@@ -29,10 +29,6 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include "structmember.h"
 #include "ceval.h"
 
-/* Forward */
-static object *class_lookup PROTO((classobject *, char *, classobject **));
-static object *instance_getattr1 PROTO((instanceobject *, char *));
-
 object *
 newclassobject(bases, dict, name)
 	object *bases; /* NULL or tuple of classobjects! */
@@ -41,7 +37,7 @@ newclassobject(bases, dict, name)
 {
 	int pos;
 	object *key, *value;
-	classobject *op, *dummy;
+	classobject *op;
 	if (bases == NULL) {
 		bases = newtupleobject(0);
 		if (bases == NULL)
@@ -59,12 +55,6 @@ newclassobject(bases, dict, name)
 	op->cl_dict = dict;
 	XINCREF(name);
 	op->cl_name = name;
-	op->cl_getattr = class_lookup(op, "__getattr__", &dummy);
-	op->cl_setattr = class_lookup(op, "__setattr__", &dummy);
-	op->cl_delattr = class_lookup(op, "__delattr__", &dummy);
-	XINCREF(op->cl_getattr);
-	XINCREF(op->cl_setattr);
-	XINCREF(op->cl_delattr);
 	pos = 0;
 	while (mappinggetnext(dict, &pos, &key, &value)) {
 		if (is_accessobject(value))
@@ -114,21 +104,23 @@ class_getattr(op, name)
 {
 	register object *v;
 	classobject *class;
-	if (strcmp(name, "__dict__") == 0) {
-		INCREF(op->cl_dict);
-		return op->cl_dict;
-	}
-	if (strcmp(name, "__bases__") == 0) {
-		INCREF(op->cl_bases);
-		return op->cl_bases;
-	}
-	if (strcmp(name, "__name__") == 0) {
-		if (op->cl_name == NULL)
-			v = None;
-		else
-			v = op->cl_name;
-		INCREF(v);
-		return v;
+	if (name[0] == '_' && name[1] == '_') {
+		if (strcmp(name, "__dict__") == 0) {
+			INCREF(op->cl_dict);
+			return op->cl_dict;
+		}
+		if (strcmp(name, "__bases__") == 0) {
+			INCREF(op->cl_bases);
+			return op->cl_bases;
+		}
+		if (strcmp(name, "__name__") == 0) {
+			if (op->cl_name == NULL)
+				v = None;
+			else
+				v = op->cl_name;
+			INCREF(v);
+			return v;
+		}
 	}
 	v = class_lookup(op, name, &class);
 	if (v == NULL) {
@@ -233,6 +225,8 @@ issubclass(class, base)
 
 /* Instance objects */
 
+static object *instance_getattr PROTO((instanceobject *, char *));
+
 static int
 addaccess(class, inst)
 	classobject *class;
@@ -288,12 +282,26 @@ newinstanceobject(class, arg)
 	INCREF(class);
 	inst->in_class = (classobject *)class;
 	inst->in_dict = newdictobject();
+	inst->in_getattr = NULL;
+	inst->in_setattr = NULL;
+#ifdef WITH_THREAD
+	inst->in_lock = NULL;
+	inst->in_ident = 0;
+#endif
 	if (inst->in_dict == NULL ||
 	    addaccess((classobject *)class, inst) != 0) {
 		DECREF(inst);
 		return NULL;
 	}
-	init = instance_getattr1(inst, "__init__");
+	inst->in_setattr = instance_getattr(inst, "__setattr__");
+	err_clear();
+	inst->in_getattr = instance_getattr(inst, "__getattr__");
+	err_clear();
+#ifdef WITH_THREAD
+	if (inst->in_getattr != NULL)
+		inst->in_lock = allocate_lock();
+#endif
+	init = instance_getattr(inst, "__init__");
 	if (init == NULL) {
 		err_clear();
 		if (arg != NULL && !(is_tupleobject(arg) &&
@@ -336,7 +344,7 @@ instance_dealloc(inst)
 	   revive the object and save the current exception, if any. */
 	INCREF(inst);
 	err_get(&error_type, &error_value);
-	if ((del = instance_getattr1(inst, "__del__")) != NULL) {
+	if ((del = instance_getattr(inst, "__del__")) != NULL) {
 		object *args = newtupleobject(0);
 		object *res = args;
 		if (res != NULL)
@@ -353,11 +361,17 @@ instance_dealloc(inst)
 		return; /* __del__ added a reference; don't delete now */
 	DECREF(inst->in_class);
 	XDECREF(inst->in_dict);
+	XDECREF(inst->in_getattr);
+	XDECREF(inst->in_setattr);
+#ifdef WITH_THREAD
+	if (inst->in_lock != NULL)
+		free_lock(inst->in_lock);
+#endif
 	free((ANY *)inst);
 }
 
 static object *
-instance_getattr1(inst, name)
+instance_getattr(inst, name)
 	register instanceobject *inst;
 	register char *name;
 {
@@ -378,6 +392,32 @@ instance_getattr1(inst, name)
 	if (v == NULL) {
 		v = class_lookup(inst->in_class, name, &class);
 		if (v == NULL) {
+			object *func;
+			long ident;
+			if ((func = inst->in_getattr) != NULL &&
+			    inst->in_ident != (ident = get_thread_ident())) {
+				object *args;
+#ifdef WITH_THREAD
+				type_lock lock = inst->in_lock;
+				if (lock != NULL) {
+					BGN_SAVE
+					acquire_lock(lock, 0);
+					END_SAVE
+				}
+#endif
+				inst->in_ident = ident;
+				args = mkvalue("(s)", name);
+				if (args != NULL) {
+					v = call_object(func, args);
+					DECREF(args);
+				}
+				inst->in_ident = 0;
+#ifdef WITH_THREAD
+				if (lock != NULL)
+					release_lock(lock);
+#endif
+				return v;
+			}
 			err_setstr(AttributeError, name);
 			return NULL;
 		}
@@ -411,40 +451,36 @@ instance_getattr1(inst, name)
 	return v;
 }
 
-static object *
-instance_getattr(inst, name)
-	register instanceobject *inst;
-	register char *name;
-{
-	register object *func, *res;
-	res = instance_getattr1(inst, name);
-	if (res == NULL && (func = inst->in_class->cl_getattr) != NULL) {
-		object *args;
-#if 0
-		if (name[0] == '_' && name[1] == '_') {
-			int n = strlen(name);
-			if (name[n-1] == '_' && name[n-2] == '_') {
-				/* Don't mess with system attributes */
-				return NULL;
-			}
-		}
-#endif
-		args = mkvalue("(Os)", inst, name);
-		if (args == NULL)
-			return NULL;
-		res = call_object(func, args);
-		DECREF(args);
-	}
-	return res;
-}
-
 static int
-instance_setattr1(inst, name, v)
+instance_setattr(inst, name, v)
 	instanceobject *inst;
 	char *name;
 	object *v;
 {
 	object *ac;
+	if (inst->in_setattr != NULL) {
+		object *args;
+		if (v == NULL)
+			args = mkvalue("(s)", name);
+		else
+			args = mkvalue("(sO)", name, v);
+		if (args != NULL) {
+			object *res = call_object(inst->in_setattr, args);
+			DECREF(args);
+			if (res != NULL) {
+				DECREF(res);
+				return 0;
+			}
+		}
+		return -1;
+	}
+	if (name[0] == '_' && name[1] == '_') {
+		int n = strlen(name);
+		if (name[n-1] == '_' && name[n-2] == '_') {
+			err_setstr(TypeError, "read-only special attribute");
+			return -1;
+		}
+	}
 	ac = dictlookup(inst->in_dict, name);
 	if (ac != NULL && is_accessobject(ac))
 		return setaccessvalue(ac, getowner(), v);
@@ -457,40 +493,6 @@ instance_setattr1(inst, name, v)
 	}
 	else
 		return dictinsert(inst->in_dict, name, v);
-}
-
-static int
-instance_setattr(inst, name, v)
-	instanceobject *inst;
-	char *name;
-	object *v;
-{
-	object *func, *args, *res;
-	if (name[0] == '_' && name[1] == '_') {
-		int n = strlen(name);
-		if (name[n-1] == '_' && name[n-2] == '_') {
-			err_setstr(TypeError, "read-only special attribute");
-			return -1;
-		}
-	}
-	if (v == NULL)
-		func = inst->in_class->cl_delattr;
-	else
-		func = inst->in_class->cl_setattr;
-	if (func == NULL)
-		return instance_setattr1(inst, name, v);
-	if (v == NULL)
-		args = mkvalue("(Os)", inst, name);
-	else
-		args = mkvalue("(OsO)", inst, name, v);
-	if (args == NULL)
-		return -1;
-	res = call_object(func, args);
-	DECREF(args);
-	if (res == NULL)
-		return -1;
-	DECREF(res);
-	return 0;
 }
 
 static object *
@@ -886,10 +888,32 @@ BINARY(instance_mul, "__mul__")
 BINARY(instance_div, "__div__")
 BINARY(instance_mod, "__mod__")
 BINARY(instance_divmod, "__divmod__")
-BINARY(instance_pow, "__pow__")
 UNARY(instance_neg, "__neg__")
 UNARY(instance_pos, "__pos__")
 UNARY(instance_abs, "__abs__")
+
+static object *
+instance_pow(self, other, modulus)
+	instanceobject *self;
+	object *other, *modulus;
+{
+	object *func, *arg, *res;
+
+	if ((func = instance_getattr(self, "__pow__")) == NULL)
+		return NULL;
+	if (modulus == None)
+		arg = mkvalue("O", other);
+	else
+		arg = mkvalue("(OO)", other, modulus);
+	if (arg == NULL) {
+		DECREF(func);
+		return NULL;
+	}
+	res = call_object(func, arg);
+	DECREF(func);
+	DECREF(arg);
+	return res;
+}
 
 static int
 instance_nonzero(self)

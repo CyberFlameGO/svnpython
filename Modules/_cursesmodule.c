@@ -22,125 +22,15 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ******************************************************************/
 
-/******************************************************************
-This is a curses implementation. I have tried to be as complete
-as possible. If there are functions you need that are not included,
-please let me know and/or send me some diffs.
-
-There are 3 basic types exported by this module:
-   1) Screen - This is not currently used
-   2) Window - This is the basic type. This is equivalent to "WINDOW *".
-   3) Pad    - This is similar to Window, but works with Pads as defined
-               in curses.
-
-Most of the routines can be looked up using the curses man page.
-
-Here is a list of the currently supported methods and attributes
-in the curses module:
-
-Return Value      Func/Attr            Description
---------------------------------------------------------------------------
-StringObject      __version__          This returns a string representing
-                                       the current version of this module
-WindowObject      initscr()            This initializes the screen for use
-None              endwin()             Closes down the screen and returns
-                                       things as they were before calling
-                                       initscr()
-True/FalseObject  isendwin()           Has endwin() been called?
-IntObject         doupdate()           Updates screen and returns number
-                                       of bytes written to screen
-WindowObject      newwin(nlines,ncols,begin_y,begin_x)
-                  newwin(begin_y,begin_x)
-                                       newwin() creates and returns
-                                       a new window.
-None              beep()               Beep the screen if possible
-None              flash()              Flash the screen if possible
-None              ungetch(int)         Push the int back so next getch()
-                                       will return it.
-                                       Note: argument is an INT, not a CHAR
-None              flushinp()           Flush all input buffers
-None              cbreak()             Enter cbreak mode
-None              nocbreak()           Leave cbreak mode
-None              echo()               Enter echo mode
-None              noecho()             Leave echo mode
-None              nl()                 Enter nl mode
-None              nonl()               Leave nl mode
-None              raw()                Enter raw mode
-None              noraw()              Leave raw mode
-None              intrflush(int)       Set or reset interruptable flush
-                                       mode, int=1 if set, 0 if notset.
-None              meta(int)            Allow 8 bit or 7 bit chars.
-                                       int=1 is 8 bit, int=0 is 7 bit
-StringObject      keyname(int)         return the text representation
-                                       of a KEY_ value. (see below)
-
-Here is a list of the currently supported methods and attributes
-in the WindowObject:
-
-Return Value      Func/Attr            Description
---------------------------------------------------------------------------
-IntObject         refresh()            Do refresh
-IntObject         nooutrefresh()       Mark for refresh but wait
-True/False        mvwin(new_y,new_x)   Move Window
-True/False        move(new_y,new_x)    Move Cursor
-WindowObject      subwin(nlines,ncols,begin_y,begin_x)
-                  subwin(begin_y,begin_x)
-True/False        addch(y,x,ch,attr)
-                  addch(y,x,ch)
-                  addch(ch,attr)
-                  addch(ch)
-True/False        insch(y,x,ch,attr)
-                  insch(y,x,ch)
-                  insch(ch,attr)
-                  insch(ch)
-True/False        delch(y,x)
-                  delch()
-True/False        echochar(ch,attr)
-                  echochar(ch)
-True/False        addstr(y,x,str,attr)
-                  addstr(y,x,str)
-                  addstr(str,attr)
-                  addstr(str)
-True/False        attron(attr)
-True/False        attroff(attr)
-True/False        attrset(sttr)
-True/False        standend()
-True/False        standout()
-True/False        box(vertch,horch)    vertch and horch are INTS
-                  box()
-None              erase()
-None              deleteln()
-None              insertln()
-(y,x)             getyx()
-(y,x)             getbegyx()
-(y,x)             getmaxyx()
-None              clear()
-None              clrtobot()
-None              clrtoeol()
-None              scroll()
-None              touchwin()
-None              touchline(start,count)
-IntObject         getch(y,x)
-                  getch()
-StringObject      getstr(y,x)
-                  getstr()
-IntObject         inch(y,x)
-                  inch()
-None              clearok(int)      int=0 or int=1
-None              idlok(int)        int=0 or int=1
-None              leaveok(int)      int=0 or int=1
-None              scrollok(int)     int=0 or int=1
-None              setscrreg(top,bottom)
-None              nodelay(int)      int=0 or int=1
-None              notimeout(int)    int=0 or int=1
-******************************************************************/
-
-
 /* curses module */
 
-#include "Python.h"
+#include "allobjects.h"
+#include "fileobject.h"
+#include "modsupport.h"
 
 #include <curses.h>
+
+#include "rename1.h"
 
 typedef struct {
 	PyObject_HEAD
@@ -169,24 +59,6 @@ staticforward PyTypeObject PyCursesPad_Type;
 /* Defines */
 PyObject *PyCurses_OK;
 PyObject *PyCurses_ERR;
-
-/******************************************************************
-
-Change Log:
-
-Version 1.1: 94/08/31:
-    Minor fixes given by Guido.
-    Changed 'ncurses' to 'curses'
-    Changed '__version__' to 'version'
-    Added PyErr_Clear() where needed
-    Moved ACS_* attribute initialization to PyCurses_InitScr() to fix
-        crash on SGI
-Version 1.0: 94/08/30:
-    This is the first release of this software.
-    Released to the Internet via python-list@cwi.nl
-
-******************************************************************/
-char *PyCursesVersion = "1.1";
 
 /* ------------- SCREEN routines --------------- */
 #ifdef NOT_YET
@@ -408,7 +280,6 @@ PyCursesWindow_DelCh(self,arg)
   int use_xy = TRUE;
   if (!PyArg_Parse(arg,"(ii);y,x", &y, &x))
     use_xy = FALSE;
-  PyErr_Clear();
   if (use_xy == TRUE)
     rtn = mvwdelch(self->win,y,x);
   else
@@ -754,7 +625,6 @@ PyCursesWindow_GetCh(self,arg)
   int rtn;
   if (!PyArg_Parse(arg,"(ii);y,x",&y,&x))
     use_xy = FALSE;
-  PyErr_Clear();
   if (use_xy == TRUE)
     rtn = mvwgetch(self->win,y,x);
   else
@@ -773,7 +643,6 @@ PyCursesWindow_GetStr(self,arg)
   int rtn2;
   if (!PyArg_Parse(arg,"(ii);y,x",&y,&x))
     use_xy = FALSE;
-  PyErr_Clear();
   if (use_xy == TRUE)
     rtn2 = mvwgetstr(self->win,y,x,rtn);
   else
@@ -793,7 +662,6 @@ PyCursesWindow_InCh(self,arg)
   int rtn;
   if (!PyArg_Parse(arg,"(ii);y,x",&y,&x))
     use_xy = FALSE;
-  PyErr_Clear();
   if (use_xy == TRUE)
     rtn = mvwinch(self->win,y,x);
   else
@@ -1029,15 +897,12 @@ static PyTypeObject PyCursesPad_Type = {
 
 /* -------------------------------------------------------*/
 
-static PyObject *ModDict;
-
 static PyObject * 
 PyCurses_InitScr(self, args)
      PyObject * self;
      PyObject * args;
 {
   static int already_inited = FALSE;
-  WINDOW *win;
   if (!PyArg_NoArgs(args))
     return (PyObject *)NULL;
   if (already_inited == TRUE) {
@@ -1045,41 +910,7 @@ PyCurses_InitScr(self, args)
     return (PyObject *)PyCursesWindow_New(stdscr);
   }
   already_inited = TRUE;
-
-  win = initscr();
-
-/* This was moved from initcurses() because core dumped on SGI */
-#define SetDictChar(string,ch) \
-	PyDict_SetItemString(ModDict,string,PyInt_FromLong(ch));
- 
-	/* Here are some graphic symbols you can use */
-        SetDictChar("ACS_ULCORNER",(ACS_ULCORNER));
-	SetDictChar("ACS_ULCORNER",(ACS_ULCORNER));
-	SetDictChar("ACS_LLCORNER",(ACS_LLCORNER));
-	SetDictChar("ACS_URCORNER",(ACS_URCORNER));
-	SetDictChar("ACS_LRCORNER",(ACS_LRCORNER));
-	SetDictChar("ACS_RTEE",    (ACS_RTEE));
-	SetDictChar("ACS_LTEE",    (ACS_LTEE));
-	SetDictChar("ACS_BTEE",    (ACS_BTEE));
-	SetDictChar("ACS_TTEE",    (ACS_TTEE));
-	SetDictChar("ACS_HLINE",   (ACS_HLINE));
-	SetDictChar("ACS_VLINE",   (ACS_VLINE));
-	SetDictChar("ACS_PLUS",    (ACS_PLUS));
-	SetDictChar("ACS_S1",      (ACS_S1));
-	SetDictChar("ACS_S9",      (ACS_S9));
-	SetDictChar("ACS_DIAMOND", (ACS_DIAMOND));
-	SetDictChar("ACS_CKBOARD", (ACS_CKBOARD));
-	SetDictChar("ACS_DEGREE",  (ACS_DEGREE));
-	SetDictChar("ACS_PLMINUS", (ACS_PLMINUS));
-	SetDictChar("ACS_BULLET",  (ACS_BULLET));
-	SetDictChar("ACS_LARROW",  (ACS_RARROW));
-	SetDictChar("ACS_DARROW",  (ACS_DARROW));
-	SetDictChar("ACS_UARROW",  (ACS_UARROW));
-	SetDictChar("ACS_BOARD",   (ACS_BOARD));
-	SetDictChar("ACS_LANTERN", (ACS_LANTERN));
-	SetDictChar("ACS_BLOCK",   (ACS_BLOCK));
-
-  return (PyObject *)PyCursesWindow_New(win);
+  return (PyObject *)PyCursesWindow_New(initscr());
 }
 
 static PyObject * 
@@ -1377,7 +1208,7 @@ initcurses()
 	PyObject *m, *d, *x;
 
 	/* Create the module and add the functions */
-	m = Py_InitModule("curses", PyCurses_methods);
+	m = Py_InitModule("ncurses", PyCurses_methods);
 
 	PyCurses_OK  = Py_True;
 	PyCurses_ERR = Py_False;
@@ -1385,15 +1216,39 @@ initcurses()
 	Py_INCREF(PyCurses_ERR);
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
-	ModDict = d; /* For PyCurses_InitScr */
-
-	/* Make the version available */
-	PyDict_SetItemString(d,"version",
-			     PyString_FromString(PyCursesVersion));
-
 	/* Here are some defines */
 	PyDict_SetItemString(d,"OK", PyCurses_OK);
 	PyDict_SetItemString(d,"ERR",PyCurses_ERR);
+
+#define SetDictChar(string,ch) \
+	PyDict_SetItemString(d,string,PyInt_FromLong(ch));
+ 
+	/* Here are some graphic symbols you can use */
+        SetDictChar("ACS_ULCORNER",(ACS_ULCORNER));
+	SetDictChar("ACS_ULCORNER",(ACS_ULCORNER));
+	SetDictChar("ACS_LLCORNER",(ACS_LLCORNER));
+	SetDictChar("ACS_URCORNER",(ACS_URCORNER));
+	SetDictChar("ACS_LRCORNER",(ACS_LRCORNER));
+	SetDictChar("ACS_RTEE",    (ACS_RTEE));
+	SetDictChar("ACS_LTEE",    (ACS_LTEE));
+	SetDictChar("ACS_BTEE",    (ACS_BTEE));
+	SetDictChar("ACS_TTEE",    (ACS_TTEE));
+	SetDictChar("ACS_HLINE",   (ACS_HLINE));
+	SetDictChar("ACS_VLINE",   (ACS_VLINE));
+	SetDictChar("ACS_PLUS",    (ACS_PLUS));
+	SetDictChar("ACS_S1",      (ACS_S1));
+	SetDictChar("ACS_S9",      (ACS_S9));
+	SetDictChar("ACS_DIAMOND", (ACS_DIAMOND));
+	SetDictChar("ACS_CKBOARD", (ACS_CKBOARD));
+	SetDictChar("ACS_DEGREE",  (ACS_DEGREE));
+	SetDictChar("ACS_PLMINUS", (ACS_PLMINUS));
+	SetDictChar("ACS_BULLET",  (ACS_BULLET));
+	SetDictChar("ACS_LARROW",  (ACS_RARROW));
+	SetDictChar("ACS_DARROW",  (ACS_DARROW));
+	SetDictChar("ACS_UARROW",  (ACS_UARROW));
+	SetDictChar("ACS_BOARD",   (ACS_BOARD));
+	SetDictChar("ACS_LANTERN", (ACS_LANTERN));
+	SetDictChar("ACS_BLOCK",   (ACS_BLOCK));
 
 	/* Here are some attributes you can add to chars to print */
 	PyDict_SetItemString(d, "A_NORMAL",    PyInt_FromLong(A_NORMAL));

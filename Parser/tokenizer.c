@@ -122,7 +122,8 @@ tok_setups(str)
 	struct tok_state *tok = tok_new();
 	if (tok == NULL)
 		return NULL;
-	tok->buf = tok->cur = tok->end = tok->inp = str;
+	tok->buf = tok->cur = str;
+	tok->end = tok->inp = strchr(str, '\0');
 	return tok;
 }
 
@@ -169,27 +170,13 @@ tok_nextc(tok)
 	register struct tok_state *tok;
 {
 	for (;;) {
-		if (tok->cur != tok->inp) {
+		if (tok->cur != tok->inp)
 			return *tok->cur++; /* Fast path */
-		}
 		if (tok->done != E_OK)
 			return EOF;
 		if (tok->fp == NULL) {
-			char *end = strchr(tok->inp, '\n');
-			if (end != NULL)
-				end++;
-			else {
-				end = strchr(tok->inp, '\0');
-				if (end == tok->inp) {
-					tok->done = E_EOF;
-					return EOF;
-				}
-			}
-			if (tok->start == NULL)
-				tok->buf = tok->cur;
-			tok->lineno++;
-			tok->inp = end;
-			return *tok->cur++;
+			tok->done = E_EOF;
+			return EOF;
 		}
 		if (tok->prompt != NULL) {
 			char *new = my_readline(tok->prompt);
@@ -491,10 +478,9 @@ tok_get(tok, p_start, p_end)
 		   This is also recognized by vi, when it occurs near the
 		   beginning or end of the file.  (Will vi never die...?)
 		   For Python it must be at the beginning of the file! */
-		/* XXX The real vi syntax is actually different :-( */
-		/* XXX Should recognize Emacs syntax, too */
 		int x;
-		if (sscanf(tok->cur,
+		/* XXX The cast to (unsigned char *) is needed by THINK C 3.0 */
+		if (sscanf(/*(unsigned char *)*/tok->cur,
 				" vi:set tabsize=%d:", &x) == 1 &&
 						x >= 1 && x <= 40) {
 			/* fprintf(stderr, "# vi:set tabsize=%d:\n", x); */

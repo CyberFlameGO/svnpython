@@ -406,13 +406,12 @@ UNREF(op)
 DELREF(op)
 	object *op;
 {
-	destructor dealloc = op->ob_type->tp_dealloc;
 	UNREF(op);
 #ifdef COUNT_ALLOCS
 	op->ob_type->tp_free++;
 #endif
+	(*(op)->ob_type->tp_dealloc)(op);
 	op->ob_type = NULL;
-	(*dealloc)(op);
 }
 
 printrefs(fp)

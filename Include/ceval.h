@@ -40,8 +40,6 @@ object *getframe PROTO((void));
 void printtraceback PROTO((object *));
 void flushline PROTO((void));
 
-int Py_AddPendingCall PROTO((int (*func) PROTO((ANY *)), ANY *arg));
-
 
 /* Interface for threads.
 
