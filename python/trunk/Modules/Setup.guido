@@ -31,11 +31,11 @@
 # Some special rules to define PYTHONPATH
 # Edit the definitions below to indicate which options you are using
 
-DESTDIR=/usr/local		# Edit this if needed
+DESTDIR=/ufs/guido		# Edit this if needed
 DESTLIB=$(DESTDIR)/lib/python	# Don't edit this (usually)
-#ARCHPATH=:$(DESTLIB)/sgi	# Enable this for SGI systems
+ARCHPATH=:$(DESTLIB)/sgi	# Enable this for SGI systems
 #ARCHPATH=:$(DESTLIB)/sun4	# Enable this for Sun systems
-#STDWINPATH=:$(DESTLIB)/stdwin	# Enable this if stdwin installed
+STDWINPATH=:$(DESTLIB)/stdwin	# Enable this if stdwin installed
 
 PYTHONPATH=.:$(DESTLIB)$(ARCHPATH)$(STDWINPATH)
 
@@ -80,9 +80,9 @@ rgbimg rgbimgmodule.o   # Read SGI RGB image files (but coded portably)
 # with the gl module on an SGI machine, you should replace "-lX11" with
 # "-lX11_s".
 
-#STDWIN=/ufs/guido/src/stdwin
-#ARCH=???
-#stdwin stdwinmodule.o -I$(STDWIN)/H $(STDWIN)/Build/$(ARCH)/x11/lib/lib.a -lX11
+STDWIN=/ufs/guido/src/stdwin
+ARCH=sgi
+stdwin stdwinmodule.o -I$(STDWIN)/H $(STDWIN)/Build/$(ARCH)/x11/lib/lib.a -lX11_s
 
 
 # The md5 module implements the RSA Data Security, Inc. MD5
@@ -98,8 +98,8 @@ md5 md5module.o md5c.o
 # likely need some work for more recent versions.  The GMP variable
 # must point to the GMP source directory.
 
-#GMP=/ufs/guido/src/gmp
-#mpz mpzmodule.o -I$(GMP) $(GMP)/libgmp.a
+GMP=/ufs/guido/src/gmp
+mpz mpzmodule.o -I$(GMP) $(GMP)/libgmp.a
 
 
 # The rotor module (contributed by Lance Ellinghouse) implements a
@@ -114,14 +114,14 @@ rotor rotormodule.o
 # installed; you may be better off switching on only 'fm' and 'gl'
 # (Font Manager and Graphics Library).
 
-#al almodule.o -laudio		# audio
-#cd cdmodule.o -lcdaudio -lds	#
-#cl clmodule.o -lcl
-#fm fmmodule.o -lfm_s -lgl_s
-#gl glmodule.o -lgl_s
-#imgfile imgfilemodule.o -limage -lgutil -lm
-#sgi sgimodule.o
-#sv svmodule.o yuvconvert.o -lsvideo -lXext -lX11_s
+al almodule.o -laudio		# audio
+cd cdmodule.o -lcdaudio -lds	#
+cl clmodule.o -lcl
+fm fmmodule.o -lfm_s -lgl_s
+gl glmodule.o -lgl_s
+imgfile imgfilemodule.o -limage -lgutil -lm
+sgi sgimodule.o
+sv svmodule.o yuvconvert.o -lsvideo -lXext -lX11_s
 
 # The FORMS library, by Mark Overmars, implements user interface
 # components such as dialogs and buttons using SGI's GL and FM
@@ -130,8 +130,8 @@ rotor rotormodule.o
 # The FORMS variable must point to the FORMS subdirectory of the forms
 # toplevel directory.
 
-#FORMS=/ufs/guido/src/forms/FORMS
-#fl flmodule.o -I$(FORMS) $(FORMS)/libforms.a
+FORMS=/ufs/guido/src/forms/FORMS
+fl flmodule.o -I$(FORMS) $(FORMS)/libforms.a
 
 
 # SunOS specific modules -- off by default
@@ -143,7 +143,7 @@ rotor rotormodule.o
 # Note that you must have configured (and built!) Python with the
 # --with-thread option passed to the configure script for this to work.
 
-# thread threadmodule.o
+thread threadmodule.o
 
 
 # GNN's timing module
