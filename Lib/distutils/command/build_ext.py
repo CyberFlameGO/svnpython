@@ -15,7 +15,6 @@ from distutils.errors import *
 from distutils.sysconfig import customize_compiler
 from distutils.dep_util import newer_group
 from distutils.extension import Extension
-from distutils import log
 
 # An extension name is just a dot-separated list of Python NAMEs (ie.
 # the same as a fully-qualified module name).
@@ -168,24 +167,12 @@ class build_ext (Command):
             else:
                 self.build_temp = os.path.join(self.build_temp, "Release")
 
-            # Append the source distribution include and library directories,
-            # this allows distutils on windows to work in the source tree
-            self.include_dirs.append(os.path.join(sys.exec_prefix, 'PC'))
-            self.library_dirs.append(os.path.join(sys.exec_prefix, 'PCBuild'))
-
-        # OS/2 (EMX) doesn't support Debug vs Release builds, but has the 
-        # import libraries in its "Config" subdirectory
-        if os.name == 'os2':
-            self.library_dirs.append(os.path.join(sys.exec_prefix, 'Config'))
-
-        # for extensions under Cygwin and AtheOS Python's library directory must be
+        # for extensions under Cygwin Python's library directory must be
         # appended to library_dirs
-        if sys.platform[:6] == 'cygwin' or sys.platform[:6] == 'atheos':
+        if sys.platform[:6] == 'cygwin':
             if string.find(sys.executable, sys.exec_prefix) != -1:
                 # building third party extensions
-                self.library_dirs.append(os.path.join(sys.prefix, "lib",
-                                                      "python" + sys.version[:3],
-                                                      "config"))
+                self.library_dirs.append(os.path.join(sys.prefix, "lib", "python" + sys.version[:3], "config"))
             else:
                 # building python standard extensions
                 self.library_dirs.append('.')
@@ -292,9 +279,9 @@ class build_ext (Command):
                                         # by Extension constructor)
 
             (ext_name, build_info) = ext
-            log.warn(("old-style (ext_name, build_info) tuple found in "
-                      "ext_modules for extension '%s'"
-                      "-- please convert to Extension instance" % ext_name))
+            self.warn(("old-style (ext_name, build_info) tuple found in "
+                       "ext_modules for extension '%s'"
+                       "-- please convert to Extension instance" % ext_name))
             if type(ext) is not TupleType and len(ext) != 2:
                 raise DistutilsSetupError, \
                       ("each element of 'ext_modules' option must be an "
@@ -330,8 +317,8 @@ class build_ext (Command):
             # Medium-easy stuff: same syntax/semantics, different names.
             ext.runtime_library_dirs = build_info.get('rpath')
             if build_info.has_key('def_file'):
-                log.warn("'def_file' element of build info dict "
-                         "no longer supported")
+                self.warn("'def_file' element of build info dict "
+                          "no longer supported")
 
             # Non-trivial stuff: 'macros' split into 'define_macros'
             # and 'undef_macros'.
@@ -388,6 +375,7 @@ class build_ext (Command):
     # get_outputs ()
 
     def build_extensions(self):
+
         # First, sanity-check the 'extensions' list
         self.check_extensions_list(self.extensions)
 
@@ -395,6 +383,7 @@ class build_ext (Command):
             self.build_extension(ext)
 
     def build_extension(self, ext):
+
         sources = ext.sources
         if sources is None or type(sources) not in (ListType, TupleType):
             raise DistutilsSetupError, \
@@ -419,12 +408,13 @@ class build_ext (Command):
         else:
             ext_filename = os.path.join(self.build_lib,
                                         self.get_ext_filename(fullname))
-        depends = sources + ext.depends
-        if not (self.force or newer_group(depends, ext_filename, 'newer')):
-            log.debug("skipping '%s' extension (up-to-date)", ext.name)
+
+        if not (self.force or newer_group(sources, ext_filename, 'newer')):
+            self.announce("skipping '%s' extension (up-to-date)" %
+                          ext.name)
             return
         else:
-            log.info("building '%s' extension", ext.name)
+            self.announce("building '%s' extension" % ext.name)
 
         # First, scan the sources for SWIG definition files (.i), run
         # SWIG on 'em to create .c files, and modify the sources list
@@ -464,8 +454,7 @@ class build_ext (Command):
                                         macros=macros,
                                         include_dirs=ext.include_dirs,
                                         debug=self.debug,
-                                        extra_postargs=extra_args,
-                                        depends=ext.depends)
+                                        extra_postargs=extra_args)
 
         # XXX -- this is a Vile HACK!
         #
@@ -522,7 +511,7 @@ class build_ext (Command):
         for source in sources:
             (base, ext) = os.path.splitext(source)
             if ext == ".i":             # SWIG interface file
-                new_sources.append(base + '_wrap' + target_ext)
+                new_sources.append(base + target_ext)
                 swig_sources.append(source)
                 swig_targets[source] = new_sources[-1]
             else:
@@ -532,13 +521,13 @@ class build_ext (Command):
             return new_sources
 
         swig = self.find_swig()
-        swig_cmd = [swig, "-python"]
+        swig_cmd = [swig, "-python", "-dnone", "-ISWIG"]
         if self.swig_cpp:
             swig_cmd.append("-c++")
 
         for source in swig_sources:
             target = swig_targets[source]
-            log.info("swigging %s to %s", source, target)
+            self.announce("swigging %s to %s" % (source, target))
             self.spawn(swig_cmd + ["-o", target, source])
 
         return new_sources
@@ -565,10 +554,6 @@ class build_ext (Command):
             else:
                 return "swig.exe"
 
-        elif os.name == "os2":
-            # assume swig available in the PATH.
-            return "swig.exe"
-
         else:
             raise DistutilsPlatformError, \
                   ("I don't know how to find (much less run) SWIG "
@@ -593,9 +578,6 @@ class build_ext (Command):
 
         from distutils.sysconfig import get_config_var
         ext_path = string.split(ext_name, '.')
-        # OS/2 has an 8 character module (extension) limit :-(
-        if os.name == "os2":
-            ext_path[len(ext_path) - 1] = ext_path[len(ext_path) - 1][:8]
         # extensions in debug_mode are named 'module_d.pyd' under windows
         so_ext = get_config_var('SO')
         if os.name == 'nt' and self.debug:
@@ -617,32 +599,19 @@ class build_ext (Command):
     def get_libraries (self, ext):
         """Return the list of libraries to link against when building a
         shared extension.  On most platforms, this is just 'ext.libraries';
-        on Windows and OS/2, we add the Python library (eg. python20.dll).
+        on Windows, we add the Python library (eg. python20.dll).
         """
         # The python library is always needed on Windows.  For MSVC, this
         # is redundant, since the library is mentioned in a pragma in
         # pyconfig.h that MSVC groks.  The other Windows compilers all seem
         # to need it mentioned explicitly, though, so that's what we do.
         # Append '_d' to the python import library on debug builds.
-        if sys.platform == "win32":
-            from distutils.msvccompiler import MSVCCompiler
-            if not isinstance(self.compiler, MSVCCompiler):
-                template = "python%d%d"
-                if self.debug:
-                    template = template + '_d'
-                pythonlib = (template %
-                       (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
-                # don't extend ext.libraries, it may be shared with other
-                # extensions, it is a reference to the original list
-                return ext.libraries + [pythonlib]
-        elif sys.platform == "os2emx":
-            # EMX/GCC requires the python library explicitly, and I
-            # believe VACPP does as well (though not confirmed) - AIM Apr01
+        from distutils.msvccompiler import MSVCCompiler
+        if sys.platform == "win32" and \
+           not isinstance(self.compiler, MSVCCompiler):
             template = "python%d%d"
-            # debug versions of the main DLL aren't supported, at least 
-            # not at this time - AIM Apr01
-            #if self.debug:
-            #    template = template + '_d'
+            if self.debug:
+                template = template + '_d'
             pythonlib = (template %
                    (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
             # don't extend ext.libraries, it may be shared with other
@@ -655,22 +624,6 @@ class build_ext (Command):
             # don't extend ext.libraries, it may be shared with other
             # extensions, it is a reference to the original list
             return ext.libraries + [pythonlib]
-        elif sys.platform[:6] == "atheos":
-            from distutils import sysconfig
-
-            template = "python%d.%d"
-            pythonlib = (template %
-                   (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
-            # Get SHLIBS from Makefile
-            extra = []
-            for lib in sysconfig.get_config_var('SHLIBS').split():
-                if lib.startswith('-l'):
-                    extra.append(lib[2:])
-                else:
-                    extra.append(lib)
-            # don't extend ext.libraries, it may be shared with other
-            # extensions, it is a reference to the original list
-            return ext.libraries + [pythonlib, "m"] + extra
         else:
             return ext.libraries
 

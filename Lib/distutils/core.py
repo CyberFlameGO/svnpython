@@ -12,8 +12,6 @@ __revision__ = "$Id$"
 
 import sys, os
 from types import *
-
-from distutils.debug import DEBUG
 from distutils.errors import *
 from distutils.util import grok_environment_error
 
@@ -21,6 +19,7 @@ from distutils.util import grok_environment_error
 from distutils.dist import Distribution
 from distutils.cmd import Command
 from distutils.extension import Extension
+
 
 # This is a barebones help message generated displayed when the user
 # runs the setup script with no arguments at all.  More useful help
@@ -32,6 +31,11 @@ usage: %(script)s [global_opts] cmd1 [cmd1_opts] [cmd2 [cmd2_opts] ...]
    or: %(script)s --help-commands
    or: %(script)s cmd --help
 """
+
+
+# If DISTUTILS_DEBUG is anything other than the empty string, we run in
+# debug mode.
+DEBUG = os.environ.get('DISTUTILS_DEBUG')
 
 def gen_usage (script_name):
     script = os.path.basename(script_name)
@@ -96,11 +100,7 @@ def setup (**attrs):
     try:
         _setup_distribution = dist = klass(attrs)
     except DistutilsSetupError, msg:
-        if attrs.has_key('name'):
-            raise SystemExit, "error in %s setup command: %s" % \
-                  (attrs['name'], msg)
-        else:
-            raise SystemExit, "error in setup command: %s" % msg
+        raise SystemExit, "error in setup script: %s" % msg
 
     if _setup_stop_after == "init":
         return dist
@@ -121,7 +121,9 @@ def setup (**attrs):
     try:
         ok = dist.parse_command_line()
     except DistutilsArgError, msg:
-        raise SystemExit, gen_usage(dist.script_name) + "\nerror: %s" % msg
+        script = os.path.basename(dist.script_name)
+        raise SystemExit, \
+              gen_usage(dist.script_name) + "\nerror: %s" % msg
 
     if DEBUG:
         print "options (after parsing command line):"

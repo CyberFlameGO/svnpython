@@ -29,11 +29,20 @@ EXEC_PREFIX = os.path.normpath(sys.exec_prefix)
 
 argv0_path = os.path.dirname(os.path.abspath(sys.executable))
 landmark = os.path.join(argv0_path, "Modules", "Setup")
-
-python_build = os.path.isfile(landmark)
-
+if not os.path.isfile(landmark):
+    python_build = 0
+elif os.path.isfile(os.path.join(argv0_path, "Lib", "os.py")):
+    python_build = 1
+else:
+    python_build = os.path.isfile(os.path.join(os.path.dirname(argv0_path),
+                                               "Lib", "os.py"))
 del argv0_path, landmark
 
+# set_python_build() was present in 2.2 and 2.2.1; it's not needed
+# any more, but so 3rd party build scripts don't break, we leave
+# a do-nothing version:
+def set_python_build():
+    pass
 
 def get_python_inc(plat_specific=0, prefix=None):
     """Return the directory containing installed Python header files.
@@ -62,11 +71,6 @@ def get_python_inc(plat_specific=0, prefix=None):
     elif os.name == "nt":
         return os.path.join(prefix, "include")
     elif os.name == "mac":
-        if plat_specific:
-                return os.path.join(prefix, "Mac", "Include")
-        else:
-                return os.path.join(prefix, "Include")
-    elif os.name == "os2":
         return os.path.join(prefix, "Include")
     else:
         raise DistutilsPlatformError(
@@ -119,13 +123,6 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
                 return os.path.join(prefix, "Lib")
             else:
                 return os.path.join(prefix, "Lib", "site-packages")
-
-    elif os.name == "os2":
-        if standard_lib:
-            return os.path.join(PREFIX, "Lib")
-        else:
-            return os.path.join(PREFIX, "Lib", "site-packages")
-
     else:
         raise DistutilsPlatformError(
             "I don't know where Python installs its library "
@@ -304,6 +301,7 @@ def expand_makefile_vars(s, vars):
     while 1:
         m = _findvar1_rx.search(s) or _findvar2_rx.search(s)
         if m:
+            name = m.group(1)
             (beg, end) = m.span()
             s = s[0:beg] + vars.get(m.group(1)) + s[end:]
         else:
@@ -401,25 +399,6 @@ def _init_mac():
     # XXX are these used anywhere?
     g['install_lib'] = os.path.join(EXEC_PREFIX, "Lib")
     g['install_platlib'] = os.path.join(EXEC_PREFIX, "Mac", "Lib")
-
-    # These are used by the extension module build
-    g['srcdir'] = ':'
-    global _config_vars
-    _config_vars = g
-
-
-def _init_os2():
-    """Initialize the module as appropriate for OS/2"""
-    g = {}
-    # set basic install directories
-    g['LIBDEST'] = get_python_lib(plat_specific=0, standard_lib=1)
-    g['BINLIBDEST'] = get_python_lib(plat_specific=1, standard_lib=1)
-
-    # XXX hmmm.. a normal install puts include files here
-    g['INCLUDEPY'] = get_python_inc(plat_specific=0)
-
-    g['SO'] = '.pyd'
-    g['EXE'] = ".exe"
 
     global _config_vars
     _config_vars = g
