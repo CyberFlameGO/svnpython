@@ -1,10 +1,9 @@
 import time
-import string
 import re
 import keyword
 from Tkinter import *
 from Delegator import Delegator
-from configHandler import idleConf
+from IdleConf import idleconf
 
 #$ event <<toggle-auto-coloring>>
 #$ win <Control-slash>
@@ -14,7 +13,7 @@ DEBUG = 0
 
 
 def any(name, list):
-    return "(?P<%s>" % name + string.join(list, "|") + ")"
+    return "(?P<%s>" % name + "|".join(list) + ")"
 
 def make_pat():
     kw = r"\b" + any("KEYWORD", keyword.kwlist) + r"\b"
@@ -37,7 +36,6 @@ class ColorDelegator(Delegator):
         self.prog = prog
         self.idprog = idprog
         self.asprog = asprog
-        self.LoadTagDefs()
 
     def setdelegate(self, delegate):
         if self.delegate is not None:
@@ -53,22 +51,20 @@ class ColorDelegator(Delegator):
             if cnf:
                 apply(self.tag_configure, (tag,), cnf)
         self.tag_raise('sel')
-    
-    def LoadTagDefs(self):
-        theme = idleConf.GetOption('main','Theme','name')
-        self.tagdefs = {
-            "COMMENT": idleConf.GetHighlight(theme, "comment"),
-            "KEYWORD": idleConf.GetHighlight(theme, "keyword"),
-            "STRING": idleConf.GetHighlight(theme, "string"),
-            "DEFINITION": idleConf.GetHighlight(theme, "definition"),
-            "SYNC": {'background':None,'foreground':None},
-            "TODO": {'background':None,'foreground':None},
-            "BREAK": idleConf.GetHighlight(theme, "break"),
-            # The following is used by ReplaceDialog:
-            "hit": idleConf.GetHighlight(theme, "hit"),
-            }
-        
-    if DEBUG: print 'tagdefs',tagdefs
+
+    cconf = idleconf.getsection('Colors')
+
+    tagdefs = {
+        "COMMENT": cconf.getcolor("comment"),
+        "KEYWORD": cconf.getcolor("keyword"),
+        "STRING": cconf.getcolor("string"),
+        "DEFINITION": cconf.getcolor("definition"),
+        "SYNC": cconf.getcolor("sync"),
+        "TODO": cconf.getcolor("todo"),
+        "BREAK": cconf.getcolor("break"),
+        # The following is used by ReplaceDialog:
+        "hit": cconf.getcolor("hit"),
+        }
 
     def insert(self, index, chars, tags=None):
         index = self.index(index)

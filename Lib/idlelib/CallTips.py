@@ -2,13 +2,25 @@
 # displays parameter information as you open parens.
 
 import string
-import sys
 import types
 
 class CallTips:
 
     menudefs = [
     ]
+
+    keydefs = {
+        '<<paren-open>>': ['<Key-parenleft>'],
+        '<<paren-close>>': ['<Key-parenright>'],
+        '<<check-calltip-cancel>>': ['<KeyRelease>'],
+        '<<calltip-cancel>>': ['<ButtonPress>', '<Key-Escape>'],
+    }
+
+    windows_keydefs = {
+    }
+
+    unix_keydefs = {
+    }
 
     def __init__(self, editwin):
         self.editwin = editwin
@@ -63,7 +75,7 @@ class CallTips:
         return "" #so the event is handled normally.
 
     def get_object_at_cursor(self,
-                wordchars="._" + string.ascii_letters + string.digits):
+                             wordchars="._" + string.ascii_letters + string.digits):
         # Usage of ascii_letters is necessary to avoid UnicodeErrors
         # if chars contains non-ASCII.
 
@@ -128,16 +140,21 @@ def get_arg_text(ob):
                     items.append("...")
                 if fob.func_code.co_flags & 0x8:
                     items.append("***")
-                argText = string.join(items , ", ")
+                argText = ", ".join(items)
                 argText = "(%s)" % argText
             except:
                 pass
         # See if we can use the docstring
-        if hasattr(ob, "__doc__") and ob.__doc__:
-            pos = string.find(ob.__doc__, "\n")
-            if pos<0 or pos>70: pos=70
-            if argText: argText = argText + "\n"
-            argText = argText + ob.__doc__[:pos]
+        doc = getattr(ob, "__doc__", "")
+        if doc:
+            while doc[:1] in " \t\n":
+                doc = doc[1:]
+            pos = doc.find("\n")
+            if pos < 0 or pos > 70:
+                pos = 70
+            if argText:
+                argText += "\n"
+            argText += doc[:pos]
 
     return argText
 

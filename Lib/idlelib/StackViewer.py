@@ -1,10 +1,10 @@
 import os
 import sys
-import string
 import linecache
 
 from TreeWidget import TreeNode, TreeItem, ScrolledCanvas
 from ObjectBrowser import ObjectTreeItem, make_objecttreeitem
+from OldStackViewer import StackViewer, NamespaceViewer
 
 def StackBrowser(root, flist=None, tb=None, top=None):
     if top is None:
@@ -49,7 +49,7 @@ class FrameTreeItem(TreeItem):
         filename = code.co_filename
         funcname = code.co_name
         sourceline = linecache.getline(filename, lineno)
-        sourceline = string.strip(sourceline)
+        sourceline = sourceline.strip()
         if funcname in ("?", "", None):
             item = "%s, line %d: %s" % (modname, lineno, sourceline)
         else:

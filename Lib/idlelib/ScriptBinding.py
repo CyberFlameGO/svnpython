@@ -1,19 +1,18 @@
 """Extension to execute code outside the Python shell window.
 
-This adds the following commands:
+This adds the following commands (to the Edit menu, until there's a
+separate Python menu):
 
-- Check module does a full syntax check of the current module.
+- Check module (Alt-F5) does a full syntax check of the current module.
 It also runs the tabnanny to catch any inconsistent tabs.
 
-- Run module executes the module's code in the __main__ namespace.  The window
-must have been saved previously. The module is added to sys.modules, and is
-also added to the __main__ namespace.
+- Import module (F5) is equivalent to either import or reload of the
+current module.  The window must have been saved previously. The
+module is added to sys.modules, and is also added to the __main__
+namespace.  Output goes to the shell window.
 
-XXX Redesign this interface (yet again) as follows:
-
-- Present a dialog box for ``Run script''
-
-- Allow specify command line arguments in the dialog box
+- Run module (Control-F5) does the same but executes the module's
+code in the __main__ namespace.
 
 """
 
@@ -26,27 +25,35 @@ indent_message = """Error: Inconsistent indentation detected!
 
 This means that either:
 
-1) your indentation is outright incorrect (easy to fix), or
+(1) your indentation is outright incorrect (easy to fix), or
 
-2) your indentation mixes tabs and spaces in a way that depends on \
+(2) your indentation mixes tabs and spaces in a way that depends on \
 how many spaces a tab is worth.
 
 To fix case 2, change all tabs to spaces by using Select All followed \
 by Untabify Region (both in the Edit menu)."""
 
-
-# XXX TBD Implement stop-execution  KBK 11Jun02
 class ScriptBinding:
 
+    keydefs = {
+        '<<check-module>>': ['<Alt-F5>', '<Meta-F5>'],
+        '<<import-module>>': ['<F5>'],
+        '<<run-script>>': ['<Control-F5>'],
+    }
+
     menudefs = [
-        ('run', [None,
-#                 ('Check module', '<<check-module>>'),
+        ('edit', [None,
+                  ('Check module', '<<check-module>>'),
+                  ('Import module', '<<import-module>>'),
                   ('Run script', '<<run-script>>'),
                  ]
         ),
     ]
 
     def __init__(self, editwin):
+        if not editwin.runnable:
+            self.menudefs = []
+            self.keydefs = {}
         self.editwin = editwin
         # Provide instance variables referenced by Debugger
         # XXX This should be done differently
@@ -65,10 +72,9 @@ class ScriptBinding:
     def tabnanny(self, filename):
         import tabnanny
         import tokenize
-        tabnanny.reset_globals()
         f = open(filename, 'r')
         try:
-            tokenize.tokenize(f.readline, tabnanny.tokeneater)
+            tabnanny.process_tokens(tokenize.generate_tokens(f.readline))
         except tokenize.TokenError, msg:
             self.errorbox("Token error",
                           "Token error:\n%s" % str(msg))
@@ -106,28 +112,42 @@ class ScriptBinding:
                           "There's an error in your program:\n" + msg)
         return 1
 
+    def import_module_event(self, event):
+        filename = self.getfilename()
+        if not filename:
+            return
+
+        modname, ext = os.path.splitext(os.path.basename(filename))
+        if sys.modules.has_key(modname):
+            mod = sys.modules[modname]
+        else:
+            mod = imp.new_module(modname)
+            sys.modules[modname] = mod
+        mod.__file__ = filename
+        setattr(sys.modules['__main__'], modname, mod)
+
+        dir = os.path.dirname(filename)
+        dir = os.path.normpath(os.path.abspath(dir))
+        if dir not in sys.path:
+            sys.path.insert(0, dir)
+
+        flist = self.editwin.flist
+        shell = flist.open_shell()
+        interp = shell.interp
+        interp.runcode("reload(%s)" % modname)
+
     def run_script_event(self, event):
         filename = self.getfilename()
         if not filename:
             return
+
         flist = self.editwin.flist
         shell = flist.open_shell()
         interp = shell.interp
-        if interp.tkconsole.executing:
-            interp.display_executing_dialog()
-            return
-        interp.restart_subprocess()
-        # XXX Too often this discards arguments the user just set...
-        interp.runcommand("""if 1:
-            _filename = %s
-            import sys as _sys
-            from os.path import basename as _basename
-            if (not _sys.argv or
-                _basename(_sys.argv[0]) != _basename(_filename)):
-                # XXX 25 July 2002 KBK should this be sys.argv not _sys.argv?
-                _sys.argv = [_filename]
-            del _filename, _sys, _basename
-                \n""" % `filename`)
+        if (not sys.argv or
+            os.path.basename(sys.argv[0]) != os.path.basename(filename)):
+            # XXX Too often this discards arguments the user just set...
+            sys.argv = [filename]
         interp.execfile(filename)
 
     def getfilename(self):

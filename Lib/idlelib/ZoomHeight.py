@@ -10,7 +10,14 @@ class ZoomHeight:
             ('_Zoom Height', '<<zoom-height>>'),
          ])
     ]
- 
+
+    windows_keydefs = {
+        '<<zoom-height>>': ['<Alt-F2>'],
+    }
+    unix_keydefs = {
+        '<<zoom-height>>': ['<Control-x><Control-z>'],
+    }
+
     def __init__(self, editwin):
         self.editwin = editwin
 

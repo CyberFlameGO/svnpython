@@ -10,11 +10,9 @@ We'll have to fix IDLE to do something reasonable when two or more
 extensions what to capture the same event.
 """
 
-import string
-
 import PyParse
 from AutoIndent import AutoIndent, index2line
-from configHandler import idleConf
+from IdleConf import idleconf
 
 class ParenMatch:
     """Highlight matching parentheses
@@ -43,14 +41,25 @@ class ParenMatch:
     to the right of a right paren.  I don't know how to do that in Tk,
     so I haven't bothered.
     """
+
     menudefs = []
-    STYLE = idleConf.GetOption('extensions','ParenMatch','style',
-            default='expression')
-    FLASH_DELAY = idleConf.GetOption('extensions','ParenMatch','flash-delay',
-            type='int',default=500)
-    HILITE_CONFIG = idleConf.GetHighlight(idleConf.CurrentTheme(),'hilite')
-    BELL = idleConf.GetOption('extensions','ParenMatch','bell',
-            type='bool',default=1)
+
+    keydefs = {
+        '<<flash-open-paren>>' : ('<KeyRelease-parenright>',
+                                  '<KeyRelease-bracketright>',
+                                  '<KeyRelease-braceright>'),
+        '<<check-restore>>' : ('<KeyPress>',),
+    }
+
+    windows_keydefs = {}
+    unix_keydefs = {}
+
+    iconf = idleconf.getsection('ParenMatch')
+    STYLE = iconf.getdef('style', 'default')
+    FLASH_DELAY = iconf.getint('flash-delay')
+    HILITE_CONFIG = iconf.getcolor('hilite')
+    BELL = iconf.getboolean('bell')
+    del iconf
 
     def __init__(self, editwin):
         self.editwin = editwin
@@ -166,10 +175,10 @@ class LastOpenBracketFinder:
         if i is None \
            or keysym_type(buf[i]) != right_keysym_type:
             return None
-        lines_back = string.count(buf[i:], "\n") - 1
+        lines_back = buf[i:].count("\n") - 1
         # subtract one for the "\n" added to please the parser
         upto_open = buf[:i]
-        j = string.rfind(upto_open, "\n") + 1 # offset of column 0 of line
+        j = upto_open.rfind("\n") + 1 # offset of column 0 of line
         offset = i - j
         return "%d.%d" % (lno - lines_back, offset)
 
