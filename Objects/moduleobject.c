@@ -1,4 +1,3 @@
-
 /* Module object implementation */
 
 #include "Python.h"
@@ -9,7 +8,8 @@ typedef struct {
 } PyModuleObject;
 
 PyObject *
-PyModule_New(char *name)
+PyModule_New(name)
+	char *name;
 {
 	PyModuleObject *m;
 	PyObject *nameobj;
@@ -18,7 +18,6 @@ PyModule_New(char *name)
 		return NULL;
 	nameobj = PyString_FromString(name);
 	m->md_dict = PyDict_New();
-	PyObject_GC_Init(m);
 	if (m->md_dict == NULL || nameobj == NULL)
 		goto fail;
 	if (PyDict_SetItemString(m->md_dict, "__name__", nameobj) != 0)
@@ -35,7 +34,8 @@ PyModule_New(char *name)
 }
 
 PyObject *
-PyModule_GetDict(PyObject *m)
+PyModule_GetDict(m)
+	PyObject *m;
 {
 	if (!PyModule_Check(m)) {
 		PyErr_BadInternalCall();
@@ -45,7 +45,8 @@ PyModule_GetDict(PyObject *m)
 }
 
 char *
-PyModule_GetName(PyObject *m)
+PyModule_GetName(m)
+	PyObject *m;
 {
 	PyObject *nameobj;
 	if (!PyModule_Check(m)) {
@@ -62,7 +63,8 @@ PyModule_GetName(PyObject *m)
 }
 
 char *
-PyModule_GetFilename(PyObject *m)
+PyModule_GetFilename(m)
+        PyObject *m;
 {
 	PyObject *fileobj;
 	if (!PyModule_Check(m)) {
@@ -79,7 +81,8 @@ PyModule_GetFilename(PyObject *m)
 }
 
 void
-_PyModule_Clear(PyObject *m)
+_PyModule_Clear(m)
+	PyObject *m;
 {
 	/* To make the execution order of destructors for global
 	   objects a bit more predictable, we first zap all objects
@@ -129,18 +132,19 @@ _PyModule_Clear(PyObject *m)
 /* Methods */
 
 static void
-module_dealloc(PyModuleObject *m)
+module_dealloc(m)
+	PyModuleObject *m;
 {
-	PyObject_GC_Fini(m);
 	if (m->md_dict != NULL) {
 		_PyModule_Clear((PyObject *)m);
 		Py_DECREF(m->md_dict);
 	}
-	PyObject_DEL(PyObject_AS_GC(m));
+	PyObject_DEL(m);
 }
 
 static PyObject *
-module_repr(PyModuleObject *m)
+module_repr(m)
+	PyModuleObject *m;
 {
 	char buf[400];
 	char *name;
@@ -162,34 +166,29 @@ module_repr(PyModuleObject *m)
 }
 
 static PyObject *
-module_getattr(PyModuleObject *m, char *name)
+module_getattr(m, name)
+	PyModuleObject *m;
+	char *name;
 {
 	PyObject *res;
-	char* modname;
 	if (strcmp(name, "__dict__") == 0) {
 		Py_INCREF(m->md_dict);
 		return m->md_dict;
 	}
 	res = PyDict_GetItemString(m->md_dict, name);
-	if (res == NULL) {
-		modname = PyModule_GetName((PyObject *)m);
-		if (modname == NULL) {
-			PyErr_Clear();
-			modname = "?";
-		}
-		PyErr_Format(PyExc_AttributeError,
-			     "'%.50s' module has no attribute '%.400s'",
-			     modname, name);
-	}
+	if (res == NULL)
+		PyErr_SetString(PyExc_AttributeError, name);
 	else
 		Py_INCREF(res);
 	return res;
 }
 
 static int
-module_setattr(PyModuleObject *m, char *name, PyObject *v)
+module_setattr(m, name, v)
+	PyModuleObject *m;
+	char *name;
+	PyObject *v;
 {
-	char* modname;
 	if (name[0] == '_' && strcmp(name, "__dict__") == 0) {
 		PyErr_SetString(PyExc_TypeError,
 				"read-only special attribute");
@@ -197,38 +196,20 @@ module_setattr(PyModuleObject *m, char *name, PyObject *v)
 	}
 	if (v == NULL) {
 		int rv = PyDict_DelItemString(m->md_dict, name);
-		if (rv < 0) {
-			modname = PyModule_GetName((PyObject *)m);
-			if (modname == NULL) {
-				PyErr_Clear();
-				modname = "?";
-			}
-			PyErr_Format(PyExc_AttributeError,
-				     "'%.50s' module has no attribute '%.400s'",
-				     modname, name);
-		}
+		if (rv < 0)
+			PyErr_SetString(PyExc_AttributeError,
+				   "delete non-existing module attribute");
 		return rv;
 	}
 	else
 		return PyDict_SetItemString(m->md_dict, name, v);
 }
 
-/* We only need a traverse function, no clear function: If the module
-   is in a cycle, md_dict will be cleared as well, which will break
-   the cycle. */
-static int
-module_traverse(PyModuleObject *m, visitproc visit, void *arg)
-{
-	if (m->md_dict != NULL)
-		return visit(m->md_dict, arg);
-	return 0;
-}
-
 PyTypeObject PyModule_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,			/*ob_size*/
 	"module",		/*tp_name*/
-	sizeof(PyModuleObject) + PyGC_HEAD_SIZE,	/*tp_size*/
+	sizeof(PyModuleObject),	/*tp_size*/
 	0,			/*tp_itemsize*/
 	(destructor)module_dealloc, /*tp_dealloc*/
 	0,			/*tp_print*/
@@ -236,16 +217,4 @@ PyTypeObject PyModule_Type = {
 	(setattrfunc)module_setattr, /*tp_setattr*/
 	0,			/*tp_compare*/
 	(reprfunc)module_repr, /*tp_repr*/
-	0,			/*tp_as_number*/
-	0,			/*tp_as_sequence*/
-	0,		/*tp_as_mapping*/
-	0,		/* tp_hash */
-	0,		/* tp_call */
-	0,		/* tp_str */
-	0,		/* tp_getattro */
-	0,		/* tp_setattro */
-	0,		/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC, /*tp_flags*/
-	0,		/* tp_doc */
-	(traverseproc)module_traverse,	/* tp_traverse */
 };

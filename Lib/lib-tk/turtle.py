@@ -2,8 +2,8 @@
 
 from math import * # Also for export
 import Tkinter
-class Error(Exception):
-    pass
+Tk = Tkinter
+Error = Exception
 
 class RawPen:
 
@@ -85,7 +85,7 @@ class RawPen:
                 # Test the color first
                 try:
                     id = self._canvas.create_line(0, 0, 0, 0, fill=color)
-                except Tkinter.TclError:
+                except Tk.TclError:
                     raise Error, "bad color string: %s" % `color`
                 self._color = color
                 return
@@ -108,7 +108,7 @@ class RawPen:
     def write(self, arg, move=0):
         x, y = start = self._position
         x = x-1 # correction -- calibrated for Windows
-        item = self._canvas.create_text(x, y,
+        item = self._canvas.create_text(x, y, 
                                         text=str(arg), anchor="sw",
                                         fill=self._color)
         self._items.append(item)
@@ -221,10 +221,8 @@ class RawPen:
                         self._canvas.coords(item, x0, y0, x, y)
                         self._canvas.update()
                         self._canvas.after(10)
-                    # in case nhops==0
-                    self._canvas.coords(item, x0, y0, x1, y1)
                     self._canvas.itemconfigure(item, arrow="none")
-                except Tkinter.TclError:
+                except Tk.TclError:
                     # Probably the window was closed!
                     return
             else:
@@ -244,11 +242,11 @@ class Pen(RawPen):
     def __init__(self):
         global _root, _canvas
         if _root is None:
-            _root = Tkinter.Tk()
+            _root = Tk.Tk()
             _root.wm_protocol("WM_DELETE_WINDOW", self._destroy)
         if _canvas is None:
             # XXX Should have scroll bars
-            _canvas = Tkinter.Canvas(_root, background="white")
+            _canvas = Tk.Canvas(_root, background="white")
             _canvas.pack(expand=1, fill="both")
         RawPen.__init__(self, _canvas)
 
@@ -260,7 +258,7 @@ class Pen(RawPen):
             _root = None
             _canvas = None
         root.destroy()
-
+        
 
 def _getpen():
     global _pen

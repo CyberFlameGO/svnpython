@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- mode: python -*-
+# $Id$
 
 # Re test suite and benchmark suite v1.5
 
@@ -9,29 +10,22 @@
 # Benchmark suite (needs expansion)
 #
 # The benchmark suite does not test correctness, just speed.  The
-# first element of each tuple is the regex pattern; the second is a
+# first element of each tuple is the regex pattern; the second is a 
 # string to match it against.  The benchmarking code will embed the
-# second string inside several sizes of padding, to test how regex
+# second string inside several sizes of padding, to test how regex 
 # matching performs on large strings.
 
 benchmarks = [
-
-    # test common prefix
-    ('Python|Perl', 'Perl'),    # Alternation
-    ('(Python|Perl)', 'Perl'),  # Grouped alternation
-
-    ('Python|Perl|Tcl', 'Perl'),        # Alternation
-    ('(Python|Perl|Tcl)', 'Perl'),      # Grouped alternation
-
-    ('(Python)\\1', 'PythonPython'),    # Backreference
-    ('([0a-z][a-z0-9]*,)+', 'a5,b7,c9,'), # Disable the fastmap optimization
-    ('([a-z][a-z0-9]*,)+', 'a5,b7,c9,'), # A few sets
-
-    ('Python', 'Python'),               # Simple text literal
-    ('.*Python', 'Python'),             # Bad text literal
-    ('.*Python.*', 'Python'),           # Worse text literal
-    ('.*(Python)', 'Python'),           # Bad text literal with grouping
-
+    ('Python', 'Python'),		# Simple text literal
+    ('.*Python', 'Python'),		# Bad text literal
+    ('.*Python.*', 'Python'),		# Worse text literal
+    ('.*(Python)', 'Python'),		# Bad text literal with grouping
+    
+    ('(Python|Perl|Tcl', 'Perl'),	# Alternation
+    ('(Python|Perl|Tcl)', 'Perl'),	# Grouped alternation
+    ('(Python)\\1', 'PythonPython'),	# Backreference
+    ('([0a-z][a-z]*,)+', 'a5,b7,c9,'),	# Disable the fastmap optimization
+    ('([a-z][a-z0-9]*,)+', 'a5,b7,c9,') # A few sets
 ]
 
 # Test suite (for verifying correctness)
@@ -53,7 +47,7 @@ benchmarks = [
 #
 # If the regex isn't expected to work, the latter two elements can be omitted.
 
-tests = [
+tests = [ 
     # Test ?P< and ?P= extensions
     ('(?P<foo_123', '', SYNTAX_ERROR),      # Unterminated group identifier
     ('(?P<1>a)', '', SYNTAX_ERROR),         # Begins with a digit
@@ -81,25 +75,20 @@ tests = [
     (r'[\0a]', '\0', SUCCEED, 'found', '\0'),
     (r'[a\0]', '\0', SUCCEED, 'found', '\0'),
     (r'[^a\0]', '\0', FAIL),
-
+    
     # Test various letter escapes
     (r'\a[\b]\f\n\r\t\v', '\a\b\f\n\r\t\v', SUCCEED, 'found', '\a\b\f\n\r\t\v'),
     (r'[\a][\b][\f][\n][\r][\t][\v]', '\a\b\f\n\r\t\v', SUCCEED, 'found', '\a\b\f\n\r\t\v'),
-    # NOTE: not an error under PCRE/PRE:
-    # (r'\u', '', SYNTAX_ERROR),    # A Perl escape
+    (r'\u', '', SYNTAX_ERROR),    # A Perl escape
     (r'\c\e\g\h\i\j\k\m\o\p\q\y\z', 'ceghijkmopqyz', SUCCEED, 'found', 'ceghijkmopqyz'),
     (r'\xff', '\377', SUCCEED, 'found', chr(255)),
-    # new \x semantics
-    (r'\x00ffffffffffffff', '\377', FAIL, 'found', chr(255)),
-    (r'\x00f', '\017', FAIL, 'found', chr(15)),
-    (r'\x00fe', '\376', FAIL, 'found', chr(254)),
-    # (r'\x00ffffffffffffff', '\377', SUCCEED, 'found', chr(255)),
-    # (r'\x00f', '\017', SUCCEED, 'found', chr(15)),
-    # (r'\x00fe', '\376', SUCCEED, 'found', chr(254)),
+    (r'\x00ffffffffffffff', '\377', SUCCEED, 'found', chr(255)),
+    (r'\x00f', '\017', SUCCEED, 'found', chr(15)),
+    (r'\x00fe', '\376', SUCCEED, 'found', chr(254)),
 
-    (r"^\w+=(\\[\000-\277]|[^\n\\])*", "SRC=eval.c g.c blah blah blah \\\\\n\tapes.c",
+    (r"^\w+=(\\[\000-\277]|[^\n\\])*", "SRC=eval.c g.c blah blah blah \\\\\n\tapes.c", 
      SUCCEED, 'found', "SRC=eval.c g.c blah blah blah \\\\"),
-
+     
     # Test that . only matches \n in DOTALL mode
     ('a.b', 'acb', SUCCEED, 'found', 'acb'),
     ('a.b', 'a\nb', FAIL),
@@ -149,8 +138,7 @@ tests = [
     ('a[b-d]', 'aac', SUCCEED, 'found', 'ac'),
     ('a[-b]', 'a-', SUCCEED, 'found', 'a-'),
     ('a[\\-b]', 'a-', SUCCEED, 'found', 'a-'),
-    # NOTE: not an error under PCRE/PRE:
-    # ('a[b-]', 'a-', SYNTAX_ERROR),
+    ('a[b-]', 'a-', SYNTAX_ERROR),
     ('a[]b', '-', SYNTAX_ERROR),
     ('a[', '-', SYNTAX_ERROR),
     ('a\\', '-', SYNTAX_ERROR),
@@ -276,7 +264,7 @@ tests = [
     ('\\09', chr(0) + '9', SUCCEED, 'found', chr(0) + '9'),
     ('\\141', 'a', SUCCEED, 'found', 'a'),
     ('(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)\\119', 'abcdefghijklk9', SUCCEED, 'found+"-"+g11', 'abcdefghijklk9-k'),
-
+    
     # All tests from Perl
 
     ('abc', 'abc', SUCCEED, 'found', 'abc'),
@@ -555,16 +543,14 @@ tests = [
 
     # Check odd placement of embedded pattern modifiers
 
-    # not an error under PCRE/PRE:
-    ('w(?i)', 'W', SUCCEED, 'found', 'W'),
-    # ('w(?i)', 'W', SYNTAX_ERROR),
-
+    ('w(?i)', 'W', SYNTAX_ERROR),
+    
     # Comments using the x embedded pattern modifier
 
     ("""(?x)w# comment 1
         x y
-        # comment 2
-        z""", 'wxyz', SUCCEED, 'found', 'wxyz'),
+	# comment 2
+	z""", 'wxyz', SUCCEED, 'found', 'wxyz'),
 
     # using the m embedded pattern modifier
 
@@ -578,7 +564,7 @@ xyz""", SUCCEED, 'found', 'abc'),
     ('(?m)abc$', """jkl
 xyzabc
 123""", SUCCEED, 'found', 'abc'),
-
+    
     # using the s embedded pattern modifier
 
     ('a.b', 'a\nb', FAIL),
@@ -591,51 +577,14 @@ xyzabc
     ('\\D+', '1234abc5678', SUCCEED, 'found', 'abc'),
     ('[\\D]+', '1234abc5678', SUCCEED, 'found', 'abc'),
     ('[\\da-fA-F]+', '123abc', SUCCEED, 'found', '123abc'),
-    # not an error under PCRE/PRE:
-    # ('[\\d-x]', '-', SYNTAX_ERROR),
+    ('[\\d-x]', '-', SYNTAX_ERROR),
     (r'([\s]*)([\S]*)([\s]*)', ' testing!1972', SUCCEED, 'g3+g2+g1', 'testing!1972 '),
     (r'(\s*)(\S*)(\s*)', ' testing!1972', SUCCEED, 'g3+g2+g1', 'testing!1972 '),
 
     (r'\xff', '\377', SUCCEED, 'found', chr(255)),
-    # new \x semantics
-    (r'\x00ff', '\377', FAIL),
-    # (r'\x00ff', '\377', SUCCEED, 'found', chr(255)),
+    (r'\x00ff', '\377', SUCCEED, 'found', chr(255)),
     (r'\t\n\v\r\f\a\g', '\t\n\v\r\f\ag', SUCCEED, 'found', '\t\n\v\r\f\ag'),
     ('\t\n\v\r\f\a\g', '\t\n\v\r\f\ag', SUCCEED, 'found', '\t\n\v\r\f\ag'),
     (r'\t\n\v\r\f\a', '\t\n\v\r\f\a', SUCCEED, 'found', chr(9)+chr(10)+chr(11)+chr(13)+chr(12)+chr(7)),
     (r'[\t][\n][\v][\r][\f][\b]', '\t\n\v\r\f\b', SUCCEED, 'found', '\t\n\v\r\f\b'),
-
-    #
-    # post-1.5.2 additions
-
-    # xmllib problem
-    (r'(([a-z]+):)?([a-z]+)$', 'smil', SUCCEED, 'g1+"-"+g2+"-"+g3', 'None-None-smil'),
-    # bug 110866: reference to undefined group
-    (r'((.)\1+)', '', SYNTAX_ERROR),
-    # bug 111869: search (PRE/PCRE fails on this one, SRE doesn't)
-    (r'.*d', 'abc\nabd', SUCCEED, 'found', 'abd'),
-    # bug 112468: various expected syntax errors
-    (r'(', '', SYNTAX_ERROR),
-    (r'[\41]', '!', SUCCEED, 'found', '!'),
-    # bug 114033: nothing to repeat
-    (r'(x?)?', 'x', SUCCEED, 'found', 'x'),
-    # bug 115040: rescan if flags are modified inside pattern
-    (r' (?x)foo ', 'foo', SUCCEED, 'found', 'foo'),
-    # bug 115618: negative lookahead
-    (r'(?<!abc)(d.f)', 'abcdefdof', SUCCEED, 'found', 'dof'),
-    # bug 116251: character class bug
-    (r'[\w-]+', 'laser_beam', SUCCEED, 'found', 'laser_beam'),
-    # bug 123769+127259: non-greedy backtracking bug
-    (r'.*?\S *:', 'xx:', SUCCEED, 'found', 'xx:'),
-    (r'a[ ]*?\ (\d+).*', 'a   10', SUCCEED, 'found', 'a   10'),
-    (r'a[ ]*?\ (\d+).*', 'a    10', SUCCEED, 'found', 'a    10'),
-    # bug 127259: \Z shouldn't depend on multiline mode
-    (r'(?ms).*?x\s*\Z(.*)','xx\nx\n', SUCCEED, 'g1', ''),
-    # bug 128899: uppercase literals under the ignorecase flag
-    (r'(?i)M+', 'MMM', SUCCEED, 'found', 'MMM'),
-    (r'(?i)m+', 'MMM', SUCCEED, 'found', 'MMM'),
-    (r'(?i)[M]+', 'MMM', SUCCEED, 'found', 'MMM'),
-    (r'(?i)[m]+', 'MMM', SUCCEED, 'found', 'MMM'),
-    # bug 130748: ^* should be an error (nothing to repeat)
-    (r'^*', '', SYNTAX_ERROR),
 ]

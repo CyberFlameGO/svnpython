@@ -11,7 +11,6 @@
 import re
 import string
 
-__all__ = ["SGMLParser"]
 
 # Regular expressions used for parsing
 
@@ -38,7 +37,7 @@ tagfind = re.compile('[a-zA-Z][-.a-zA-Z0-9]*')
 attrfind = re.compile(
     '[%s]*([a-zA-Z_][-.a-zA-Z_0-9]*)' % string.whitespace
     + ('([%s]*=[%s]*' % (string.whitespace, string.whitespace))
-    + r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./:;+*%?!&$\(\)_#=~]*))?')
+    + r'(\'[^\']*\'|"[^"]*"|[-a-zA-Z0-9./:+*%?!\(\)_#=~]*))?')
 
 
 # SGML parser base class -- find tags and call handler functions.
@@ -48,7 +47,7 @@ attrfind = re.compile(
 # <foo> and </foo>, respectively, or do_foo to handle <foo> by itself.
 # (Tags are converted to lower case for this purpose.)  The data
 # between tags is passed to the parser by calling self.handle_data()
-# with some data as argument (the data may be split up in arbitrary
+# with some data as argument (the data may be split up in arbutrary
 # chunks).  Entity references are passed by calling
 # self.handle_entityref() with the entity reference as argument.
 
@@ -138,7 +137,7 @@ class SGMLParser:
                     k = self.parse_pi(i)
                     if k < 0: break
                     i = i+k
-                    continue
+                    continue                    
                 match = special.match(rawdata, i)
                 if match:
                     if self.literal:
@@ -186,7 +185,7 @@ class SGMLParser:
     # Internal -- parse comment, return length or -1 if not terminated
     def parse_comment(self, i):
         rawdata = self.rawdata
-        if rawdata[i:i+4] != '<!--':
+        if rawdata[i:i+4] <> '<!--':
             raise RuntimeError, 'unexpected call to handle_comment'
         match = commentclose.search(rawdata, i+4)
         if not match:
@@ -199,7 +198,7 @@ class SGMLParser:
     # Internal -- parse processing instr, return length or -1 if not terminated
     def parse_pi(self, i):
         rawdata = self.rawdata
-        if rawdata[i:i+2] != '<?':
+        if rawdata[i:i+2] <> '<?':
             raise RuntimeError, 'unexpected call to handle_pi'
         match = piclose.search(rawdata, i+2)
         if not match:
@@ -208,15 +207,9 @@ class SGMLParser:
         self.handle_pi(rawdata[i+2: j])
         j = match.end(0)
         return j-i
-
-    __starttag_text = None
-    def get_starttag_text(self):
-        return self.__starttag_text
-
+    
     # Internal -- handle starttag, return length or -1 if not terminated
     def parse_starttag(self, i):
-        self.__starttag_text = None
-        start_pos = i
         rawdata = self.rawdata
         if shorttagopen.match(rawdata, i):
             # SGML shorthand: <tag/data/ == <tag>data</tag>
@@ -227,11 +220,9 @@ class SGMLParser:
             if not match:
                 return -1
             tag, data = match.group(1, 2)
-            self.__starttag_text = '<%s/' % tag
-            tag = tag.lower()
-            k = match.end(0)
+            tag = string.lower(tag)
             self.finish_shorttag(tag, data)
-            self.__starttag_text = rawdata[start_pos:match.end(1) + 1]
+            k = match.end(0)
             return k
         # XXX The following should skip matching quotes (' or ")
         match = endbracket.search(rawdata, i+1)
@@ -249,7 +240,7 @@ class SGMLParser:
             if not match:
                 raise RuntimeError, 'unexpected call to parse_starttag'
             k = match.end(0)
-            tag = rawdata[i+1:k].lower()
+            tag = string.lower(rawdata[i+1:k])
             self.lasttag = tag
         while k < j:
             match = attrfind.match(rawdata, k)
@@ -260,11 +251,10 @@ class SGMLParser:
             elif attrvalue[:1] == '\'' == attrvalue[-1:] or \
                  attrvalue[:1] == '"' == attrvalue[-1:]:
                 attrvalue = attrvalue[1:-1]
-            attrs.append((attrname.lower(), attrvalue))
+            attrs.append((string.lower(attrname), attrvalue))
             k = match.end(0)
         if rawdata[j] == '>':
             j = j+1
-        self.__starttag_text = rawdata[start_pos:j]
         self.finish_starttag(tag, attrs)
         return j
 
@@ -275,7 +265,7 @@ class SGMLParser:
         if not match:
             return -1
         j = match.start(0)
-        tag = rawdata[i+2:j].strip().lower()
+        tag = string.lower(string.strip(rawdata[i+2:j]))
         if rawdata[j] == '>':
             j = j+1
         self.finish_endtag(tag)
@@ -354,8 +344,8 @@ class SGMLParser:
     # Example -- handle character reference, no need to override
     def handle_charref(self, name):
         try:
-            n = int(name)
-        except ValueError:
+            n = string.atoi(name)
+        except string.atoi_error:
             self.unknown_charref(name)
             return
         if not 0 <= n <= 255:

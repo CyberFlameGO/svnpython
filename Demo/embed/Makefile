@@ -1,6 +1,5 @@
 # Makefile for embedded Python use demo.
-# (This version tailored for my Red Hat Linux 6.1 setup;
-# edit lines marked with XXX.)
+# (This version tailored for CNRI and Solaris; edit lines marked with XXX.)
 
 # XXX The compiler you are using
 CC=	 	gcc
@@ -10,7 +9,7 @@ blddir=		../..
 srcdir=		../..
 
 # Python version
-VERSION=	2.1
+VERSION=	1.5
 
 # Compiler flags
 OPT=		-g
@@ -18,39 +17,26 @@ INCLUDES=	-I$(srcdir)/Include -I$(blddir)
 CFLAGS=		$(OPT) $(INCLUDES)
 
 # The Python library
-LIBPYTHON=	$(blddir)/libpython$(VERSION).a
+LIBPYTHON=		$(blddir)/libpython$(VERSION).a
 
 # XXX edit LIBS (in particular) to match $(blddir)/Modules/Makefile
-LIBS=		-lnsl -ldl -lreadline -ltermcap -lieee -lpthread -lutil
-LDFLAGS=	-Xlinker -export-dynamic
+LIBS=		-lsocket -lnsl -ldl  -lreadline -ltermcap
 SYSLIBS=	-lm
 MODLIBS=	
 ALLLIBS=	$(LIBPYTHON) $(MODLIBS) $(LIBS) $(SYSLIBS)
 
 # Build the demo application
-all:		demo loop importexc
+all:		demo
 demo:		demo.o
-		$(CC) $(LDFLAGS) demo.o $(ALLLIBS) -o demo
-
-loop:		loop.o
-		$(CC) $(LDFLAGS) loop.o $(ALLLIBS) -o loop
-
-importexc:	importexc.o
-		$(CC) $(LDFLAGS) importexc.o $(ALLLIBS) -o importexc
+		$(CC) demo.o $(ALLLIBS) -o demo
 
 # Administrative targets
 
 test:		demo
 		./demo
 
-COMMAND="print 'hello world'"
-looptest:	loop
-		./loop $(COMMAND)
-
 clean:
 		-rm -f *.o core
 
 clobber:	clean
-		-rm -f *~ @* '#'* demo loop importexc
-
-realclean:	clobber
+		-rm -f *~ @* '#'* demo

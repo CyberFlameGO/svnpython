@@ -19,10 +19,10 @@ It starts by constructing up to four directories from a head and a
 tail part.  For the head part, it uses \code{sys.prefix} and
 \code{sys.exec_prefix}; empty heads are skipped.  For
 the tail part, it uses the empty string (on Macintosh or Windows) or
-it uses first \file{lib/python\shortversion/site-packages} and then
+it uses first \file{lib/python{\var{version}}/site-packages} and then
 \file{lib/site-python} (on \UNIX{}).  For each of the distinct
 head-tail combinations, it sees if it refers to an existing directory,
-and if so, adds to \code{sys.path}, and also inspects the path for
+and if so, adds to \code{sys.path}, and also inspected for path
 configuration files.
 \indexii{site-python}{directory}
 \indexii{site-packages}{directory}
@@ -33,16 +33,16 @@ per line) to be added to \code{sys.path}.  Non-existing items are
 never added to \code{sys.path}, but no check is made that the item
 refers to a directory (rather than a file).  No item is added to
 \code{sys.path} more than once.  Blank lines and lines beginning with
-\code{\#} are skipped.  Lines starting with \code{import} are executed.
+\code{\#} are skipped.
 \index{package}
 \indexiii{path}{configuration}{file}
 
 For example, suppose \code{sys.prefix} and \code{sys.exec_prefix} are
 set to \file{/usr/local}.  The Python \version\ library is then
-installed in \file{/usr/local/lib/python\shortversion} (where only the
-first three characters of \code{sys.version} are used to form the
-installation path name).  Suppose this has a subdirectory
-\file{/usr/local/lib/python\shortversion/site-packages} with three
+installed in \file{/usr/local/lib/python1.5} (note that only the first 
+three characters of \code{sys.version} are used to form the path
+name).  Suppose this has a subdirectory
+\file{/usr/local/lib/python1.5/site-packages} with three
 subsubdirectories, \file{foo}, \file{bar} and \file{spam}, and two
 path configuration files, \file{foo.pth} and \file{bar.pth}.  Assume
 \file{foo.pth} contains the following:

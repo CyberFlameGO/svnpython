@@ -101,17 +101,6 @@ those symbols that are defined in the \UNIX{} header files are defined;
 for a few symbols, default values are provided.
 \end{datadesc}
 
-\begin{funcdesc}{getfqdn}{\optional{name}}
-Return a fully qualified domain name for \var{name}.
-If \var{name} is omitted or empty, it is interpreted as the local
-host.  To find the fully qualified name, the hostname returned by
-\function{gethostbyaddr()} is checked, then aliases for the host, if
-available.  The first name which includes a period is selected.  In
-case no fully qualified domain name is available, the hostname is
-returned.
-\versionadded{2.0}
-\end{funcdesc}
-
 \begin{funcdesc}{gethostbyname}{hostname}
 Translate a host name to IP address format.  The IP address is
 returned as a string, e.g.,  \code{'100.50.200.5'}.  If the host name
@@ -145,8 +134,8 @@ responding to the given \var{ip_address}, \var{aliaslist} is a
 (possibly empty) list of alternative host names for the same address,
 and \var{ipaddrlist} is a list of IP addresses for the same interface
 on the same host (most likely containing only a single address).
-To find the fully qualified domain name, use the function
-\function{getfqdn()}.
+To find the fully qualified domain name, check \var{hostname} and the
+items of \var{aliaslist} for an entry containing at least one period.
 \end{funcdesc}
 
 \begin{funcdesc}{getprotobyname}{protocolname}
@@ -241,12 +230,6 @@ This is a Python type object that represents the socket object type.
 It is the same as \code{type(socket(...))}.
 \end{datadesc}
 
-
-\begin{seealso}
-  \seemodule{SocketServer}{Classes that simplify writing network servers.}
-\end{seealso}
-
-
 \subsection{Socket Objects \label{socket-objects}}
 
 Socket objects have the following methods.  Except for
@@ -267,8 +250,8 @@ Bind the socket to \var{address}.  The socket must not already be bound.
 (The format of \var{address} depends on the address family --- see
 above.)  \strong{Note:}  This method has historically accepted a pair
 of parameters for \constant{AF_INET} addresses instead of only a
-tuple.  This was never intentional and is no longer be available in
-Python 2.0.
+tuple.  This was never intentional and will no longer be available in
+Python 1.7.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{close}{}
@@ -282,8 +265,8 @@ Connect to a remote socket at \var{address}.
 (The format of \var{address} depends on the address family --- see
 above.)  \strong{Note:}  This method has historically accepted a pair
 of parameters for \constant{AF_INET} addresses instead of only a
-tuple.  This was never intentional and is no longer available in
-Python 2.0 and later.
+tuple.  This was never intentional and will no longer be available in
+Python 1.7.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{connect_ex}{address}
@@ -295,8 +278,8 @@ operation succeeded, otherwise the value of the \cdata{errno}
 variable.  This is useful, e.g., for asynchronous connects.
 \strong{Note:}  This method has historically accepted a pair of
 parameters for \constant{AF_INET} addresses instead of only a tuple.
-This was never intentional and is no longer be available in Python
-2.0 and later.
+This was never intentional and will no longer be available in Python
+1.7.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{fileno}{}
@@ -389,7 +372,7 @@ block until they can proceed.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{setsockopt}{level, optname, value}
-Set the value of the given socket option (see the \UNIX{} manual page
+Set the value of the given socket option (see the \UNIX{} man page
 \manpage{setsockopt}{2}).  The needed symbolic constants are defined in
 the \module{socket} module (\code{SO_*} etc.).  The value can be an
 integer or a string representing a buffer.  In the latter case it is
@@ -410,8 +393,8 @@ Note that there are no methods \method{read()} or \method{write()};
 use \method{recv()} and \method{send()} without \var{flags} argument
 instead.
 
-
-\subsection{Example \label{socket-example}}
+\subsection{Example}
+\nodename{Socket Example}
 
 Here are two minimal example programs using the TCP/IP protocol:\ a
 server that echoes all data that it receives back (servicing only one
@@ -426,11 +409,10 @@ socket it is listening on but on the new socket returned by
 
 \begin{verbatim}
 # Echo server program
-import socket
-
+from socket import *
 HOST = ''                 # Symbolic name meaning the local host
-PORT = 50007              # Arbitrary non-privileged port
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+PORT = 50007              # Arbitrary non-privileged server
+s = socket(AF_INET, SOCK_STREAM)
 s.bind((HOST, PORT))
 s.listen(1)
 conn, addr = s.accept()
@@ -444,14 +426,17 @@ conn.close()
 
 \begin{verbatim}
 # Echo client program
-import socket
-
+from socket import *
 HOST = 'daring.cwi.nl'    # The remote host
 PORT = 50007              # The same port as used by the server
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s = socket(AF_INET, SOCK_STREAM)
 s.connect((HOST, PORT))
 s.send('Hello, world')
 data = s.recv(1024)
 s.close()
 print 'Received', `data`
 \end{verbatim}
+
+\begin{seealso}
+  \seemodule{SocketServer}{classes that simplify writing network servers}
+\end{seealso}

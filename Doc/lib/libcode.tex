@@ -103,7 +103,7 @@ The return value can be used to decide whether to use
 Execute a code object.
 When an exception occurs, \method{showtraceback()} is called to
 display a traceback.  All exceptions are caught except
-\exception{SystemExit}, which is allowed to propagate.
+\exception{SystemExit}, which is allowed to propogate.
 
 A note about \exception{KeyboardInterrupt}: this exception may occur
 elsewhere in this code, and may not always be caught.  The caller
@@ -126,9 +126,8 @@ The output is written by the \method{write()} method.
 \end{methoddesc}
 
 \begin{methoddesc}{write}{data}
-Write a string to the standard error stream (\code{sys.stderr}).
-Derived classes should override this to provide the appropriate output
-handling as needed.
+Write a string to standard output.  Derived classes should override
+this to provide the appropriate output handling as needed.
 \end{methoddesc}
 
 

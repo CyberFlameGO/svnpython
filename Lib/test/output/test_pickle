@@ -9,5 +9,3 @@ loads() binary
 ok
 loads() BINDATA
 ok
-dumps() RECURSIVE
-ok

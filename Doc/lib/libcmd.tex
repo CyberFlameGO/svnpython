@@ -1,9 +1,10 @@
 \section{\module{cmd} ---
-         Support for line-oriented command interpreters}
-
+         Build line-oriented command interpreters.}
 \declaremodule{standard}{cmd}
 \sectionauthor{Eric S. Raymond}{esr@snark.thyrsus.com}
-\modulesynopsis{Build line-oriented command interpreters.}
+
+\modulesynopsis{Build line-oriented command interpreters; this is used
+by module \module{pdb}.}
 
 
 The \class{Cmd} class provides a simple framework for writing
@@ -42,9 +43,9 @@ An end-of-file on input is passed back as the string \code{'EOF'}.
 
 An interpreter instance will recognize a command name \samp{foo} if
 and only if it has a method \method{do_foo()}.  As a special case,
-a line beginning with the character \character{?} is dispatched to
+a line containing only the character \character{?} is dispatched to
 the method \method{do_help()}.  As another special case, a line
-beginning with the character \character{!} is dispatched to the
+containing only the character \character{!} is dispatched to the
 method \method{do_shell} (if such a method is defined).
 
 All subclasses of \class{Cmd} inherit a predefined \method{do_help}.

@@ -40,8 +40,7 @@ The following values are considered false:
 \item	instances of user-defined classes, if the class defines a
 	\method{__nonzero__()} or \method{__len__()} method, when that
 	method returns zero.\footnote{Additional information on these
-special methods may be found in the \citetitle[../ref/ref.html]{Python
-Reference Manual}.}
+special methods may be found in the \emph{Python Reference Manual}.}
 
 \end{itemize}
 
@@ -62,13 +61,10 @@ These are the Boolean operations, ordered by ascending priority:
 \indexii{Boolean}{operations}
 
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
-  \lineiii{\var{x} or \var{y}}
-          {if \var{x} is false, then \var{y}, else \var{x}}{(1)}
-  \lineiii{\var{x} and \var{y}}
-          {if \var{x} is false, then \var{x}, else \var{y}}{(1)}
+  \lineiii{\var{x} or \var{y}}{if \var{x} is false, then \var{y}, else \var{x}}{(1)}
+  \lineiii{\var{x} and \var{y}}{if \var{x} is false, then \var{x}, else \var{y}}{(1)}
   \hline
-  \lineiii{not \var{x}}
-          {if \var{x} is false, then \code{1}, else \code{0}}{(2)}
+  \lineiii{not \var{x}}{if \var{x} is false, then \code{1}, else \code{0}}{(2)}
 \end{tableiii}
 \opindex{and}
 \opindex{or}
@@ -109,8 +105,8 @@ This table summarizes the comparison operations:
   \lineiii{>}{strictly greater than}{}
   \lineiii{>=}{greater than or equal}{}
   \lineiii{==}{equal}{}
-  \lineiii{!=}{not equal}{(1)}
   \lineiii{<>}{not equal}{(1)}
+  \lineiii{!=}{not equal}{(1)}
   \lineiii{is}{object identity}{}
   \lineiii{is not}{negated object identity}{}
 \end{tableiii}
@@ -126,10 +122,10 @@ Notes:
 
 \item[(1)]
 \code{<>} and \code{!=} are alternate spellings for the same operator.
-(I couldn't choose between \ABC{} and C! :-)
+(I couldn't choose between \ABC{} and \C{}! :-)
 \index{ABC language@\ABC{} language}
 \index{language!ABC@\ABC{}}
-\indexii{C}{language}
+\indexii{C@\C{}}{language}
 \code{!=} is the preferred spelling; \code{<>} is obsolescent.
 
 \end{description}
@@ -146,9 +142,9 @@ consistently.
 
 Instances of a class normally compare as non-equal unless the class
 \withsubitem{(instance method)}{\ttindex{__cmp__()}}
-defines the \method{__cmp__()} method.  Refer to the
-\citetitle[../ref/customization.html]{Python Reference Manual} for
-information on the use of this method to effect object comparisons.
+defines the \method{__cmp__()} method.  Refer to the \emph{Python
+Reference Manual} for information on the use of this method to effect
+object comparisons.
 
 \strong{Implementation note:} Objects of different types except
 numbers are ordered by their type names; objects of the same types
@@ -169,11 +165,12 @@ bits of precision.  Long integers have unlimited precision.  Floating
 point numbers are implemented using \ctype{double} in C.  All bets on
 their precision are off unless you happen to know the machine you are
 working with.
-\obindex{numeric}
-\obindex{integer}
-\obindex{long integer}
-\obindex{floating point}
-\obindex{complex number}
+\indexii{numeric}{types}
+\indexii{integer}{types}
+\indexii{integer}{type}
+\indexiii{long}{integer}{type}
+\indexii{floating point}{type}
+\indexii{complex number}{type}
 \indexii{C}{language}
 
 Complex numbers have a real and imaginary part, which are both
@@ -257,12 +254,11 @@ the numeric value.
 
 \item[(2)]
 Conversion from floating point to (long or plain) integer may round or
-truncate as in C; see functions \function{floor()} and
-\function{ceil()} in the \refmodule{math}\refbimodindex{math} module
-for well-defined conversions.
+truncate as in \C{}; see functions \function{floor()} and \function{ceil()} in
+module \refmodule{math}\refbimodindex{math} for well-defined conversions.
 \withsubitem{(in module math)}{\ttindex{floor()}\ttindex{ceil()}}
 \indexii{numeric}{conversions}
-\indexii{C}{language}
+\indexii{C@\C{}}{language}
 
 \item[(3)]
 See section \ref{built-in-funcs}, ``Built-in Functions,'' for a full
@@ -315,32 +311,21 @@ division by \code{pow(2, \var{n})} without overflow check.
 
 \subsection{Sequence Types \label{typesseq}}
 
-There are six sequence types: strings, Unicode strings, lists,
-tuples, buffers, and xrange objects.
+There are three sequence types: strings, lists and tuples.
 
 Strings literals are written in single or double quotes:
 \code{'xyzzy'}, \code{"frobozz"}.  See chapter 2 of the
-\citetitle[../ref/strings.html]{Python Reference Manual} for more about
-string literals.  Unicode strings are much like strings, but are
-specified in the syntax using a preceeding \character{u} character:
-\code{u'abc'}, \code{u"def"}.  Lists are constructed with square brackets,
+\citetitle[../ref/ref.html]{Python Reference Manual} for more about
+string literals.  Lists are constructed with square brackets,
 separating items with commas: \code{[a, b, c]}.  Tuples are
 constructed by the comma operator (not within square brackets), with
 or without enclosing parentheses, but an empty tuple must have the
 enclosing parentheses, e.g., \code{a, b, c} or \code{()}.  A single
-item tuple must have a trailing comma, e.g., \code{(d,)}.  Buffers are
-not directly supported by Python syntax, but can be created by calling the
-builtin function \function{buffer()}.\bifuncindex{buffer}  XRanges
-objects are similar to buffers in that there is no specific syntax to
-create them, but they are created using the \function{xrange()}
-function.\bifuncindex{xrange}
-\obindex{sequence}
-\obindex{string}
-\obindex{Unicode}
-\obindex{buffer}
-\obindex{tuple}
-\obindex{list}
-\obindex{xrange}
+item tuple must have a trailing comma, e.g., \code{(d,)}.
+\indexii{sequence}{types}
+\indexii{string}{type}
+\indexii{tuple}{type}
+\indexii{list}{type}
 
 Sequence types support the following operations.  The \samp{in} and
 \samp{not in} operations have the same priorities as the comparison
@@ -401,244 +386,45 @@ Notes:
 \end{description}
 
 
-\subsubsection{String Methods \label{string-methods}}
+\subsubsection{More String Operations \label{typesseq-strings}}
 
-These are the string methods which both 8-bit strings and Unicode
-objects support:
+String objects have one unique built-in operation: the \code{\%}
+operator (modulo) with a string left argument interprets this string
+as a \C{} \cfunction{sprintf()} format string to be applied to the
+right argument, and returns the string resulting from this formatting
+operation.
 
-\begin{methoddesc}[string]{capitalize}{}
-Return a copy of the string with only its first character capitalized.
-\end{methoddesc}
+The right argument should be a tuple with one item for each argument
+required by the format string; if the string requires a single
+argument, the right argument may also be a single non-tuple
+object.\footnote{A tuple object in this case should be a singleton.}
+The following format characters are understood:
+\code{\%}, \code{c}, \code{s}, \code{i}, \code{d}, \code{u}, \code{o},
+\code{x}, \code{X}, \code{e}, \code{E}, \code{f}, \code{g}, \code{G}. 
+Width and precision may be a \code{*} to specify that an integer argument
+specifies the actual width or precision.  The flag characters
+\code{-}, \code{+}, blank, \code{\#} and \code{0} are understood.  The 
+size specifiers \code{h}, \code{l} or \code{L} may be present but are
+ignored.  The \code{\%s} conversion takes any Python object and
+converts it to a string using \code{str()} before formatting it.  The
+ANSI features \code{\%p} and \code{\%n} are not supported.  Since
+Python strings have an explicit length, \code{\%s} conversions don't
+assume that \code{'\e0'} is the end of the string.
 
-\begin{methoddesc}[string]{center}{width}
-Return centered in a string of length \var{width}. Padding is done
-using spaces.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{count}{sub\optional{, start\optional{, end}}}
-Return the number of occurrences of substring \var{sub} in string
-S\code{[\var{start}:\var{end}]}.  Optional arguments \var{start} and
-\var{end} are interpreted as in slice notation.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{encode}{\optional{encoding\optional{,errors}}}
-Return an encoded version of the string.  Default encoding is the current
-default string encoding.  \var{errors} may be given to set a different
-error handling scheme.  The default for \var{errors} is
-\code{'strict'}, meaning that encoding errors raise a
-\exception{ValueError}.  Other possible values are \code{'ignore'} and
-\code{'replace'}.
-\versionadded{2.0}
-\end{methoddesc}
-
-\begin{methoddesc}[string]{endswith}{suffix\optional{, start\optional{, end}}}
-Return true if the string ends with the specified \var{suffix},
-otherwise return false.  With optional \var{start}, test beginning at
-that position.  With optional \var{end}, stop comparing at that position.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{expandtabs}{\optional{tabsize}}
-Return a copy of the string where all tab characters are expanded
-using spaces.  If \var{tabsize} is not given, a tab size of \code{8}
-characters is assumed.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{find}{sub\optional{, start\optional{, end}}}
-Return the lowest index in the string where substring \var{sub} is
-found, such that \var{sub} is contained in the range [\var{start},
-\var{end}).  Optional arguments \var{start} and \var{end} are
-interpreted as in slice notation.  Return \code{-1} if \var{sub} is
-not found.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{index}{sub\optional{, start\optional{, end}}}
-Like \method{find()}, but raise \exception{ValueError} when the
-substring is not found.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{isalnum}{}
-Return true if all characters in the string are alphanumeric and there
-is at least one character, false otherwise.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{isalpha}{}
-Return true if all characters in the string are alphabetic and there
-is at least one character, false otherwise.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{isdigit}{}
-Return true if there are only digit characters, false otherwise.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{islower}{}
-Return true if all cased characters in the string are lowercase and
-there is at least one cased character, false otherwise.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{isspace}{}
-Return true if there are only whitespace characters in the string and
-the string is not empty, false otherwise.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{istitle}{}
-Return true if the string is a titlecased string, i.e.\ uppercase
-characters may only follow uncased characters and lowercase characters
-only cased ones.  Return false otherwise.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{isupper}{}
-Return true if all cased characters in the string are uppercase and
-there is at least one cased character, false otherwise.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{join}{seq}
-Return a string which is the concatenation of the strings in the
-sequence \var{seq}.  The separator between elements is the string
-providing this method.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{ljust}{width}
-Return the string left justified in a string of length \var{width}.
-Padding is done using spaces.  The original string is returned if
-\var{width} is less than \code{len(\var{s})}.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{lower}{}
-Return a copy of the string converted to lowercase.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{lstrip}{}
-Return a copy of the string with leading whitespace removed.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{replace}{old, new\optional{, maxsplit}}
-Return a copy of the string with all occurrences of substring
-\var{old} replaced by \var{new}.  If the optional argument
-\var{maxsplit} is given, only the first \var{maxsplit} occurrences are
-replaced.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{rfind}{sub \optional{,start \optional{,end}}}
-Return the highest index in the string where substring \var{sub} is
-found, such that \var{sub} is contained within s[start,end].  Optional
-arguments \var{start} and \var{end} are interpreted as in slice
-notation.  Return \code{-1} on failure.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{rindex}{sub\optional{, start\optional{, end}}}
-Like \method{rfind()} but raises \exception{ValueError} when the
-substring \var{sub} is not found.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{rjust}{width}
-Return the string right justified in a string of length \var{width}.
-Padding is done using spaces.  The original string is returned if
-\var{width} is less than \code{len(\var{s})}.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{rstrip}{}
-Return a copy of the string with trailing whitespace removed.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{split}{\optional{sep \optional{,maxsplit}}}
-Return a list of the words in the string, using \var{sep} as the
-delimiter string.  If \var{maxsplit} is given, at most \var{maxsplit}
-splits are done.  If \var{sep} is not specified or \code{None}, any
-whitespace string is a separator.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{splitlines}{\optional{keepends}}
-Return a list of the lines in the string, breaking at line
-boundaries.  Line breaks are not included in the resulting list unless
-\var{keepends} is given and true.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{startswith}{prefix\optional{, start\optional{, end}}}
-Return true if string starts with the \var{prefix}, otherwise
-return false.  With optional \var{start}, test string beginning at
-that position.  With optional \var{end}, stop comparing string at that
-position.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{strip}{}
-Return a copy of the string with leading and trailing whitespace
-removed.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{swapcase}{}
-Return a copy of the string with uppercase characters converted to
-lowercase and vice versa.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{title}{}
-Return a titlecased version of, i.e.\ words start with uppercase
-characters, all remaining cased characters are lowercase.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{translate}{table\optional{, deletechars}}
-Return a copy of the string where all characters occurring in the
-optional argument \var{deletechars} are removed, and the remaining
-characters have been mapped through the given translation table, which
-must be a string of length 256.
-\end{methoddesc}
-
-\begin{methoddesc}[string]{upper}{}
-Return a copy of the string converted to uppercase.
-\end{methoddesc}
-
-
-\subsubsection{String Formatting Operations \label{typesseq-strings}}
-
-\index{formatting, string}
-\index{string!formatting}
-\index{printf-style formatting}
-\index{sprintf-style formatting}
-
-String and Unicode objects have one unique built-in operation: the
-\code{\%} operator (modulo).  Given \code{\var{format} \%
-\var{values}} (where \var{format} is a string or Unicode object),
-\code{\%} conversion specifications in \var{format} are replaced with
-zero or more elements of \var{values}.  The effect is similar to the
-using \cfunction{sprintf()} in the C language.  If \var{format} is a
-Unicode object, or if any of the objects being converted using the
-\code{\%s} conversion are Unicode objects, the result will be a
-Unicode object as well.
-
-If \var{format} requires a single argument, \var{values} may be a
-single non-tuple object. \footnote{A tuple object in this case should
-  be a singleton.}  Otherwise, \var{values} must be a tuple with
-exactly the number of items specified by the format string, or a
-single mapping object (for example, a dictionary).
-
-A conversion specifier contains two or more characters and has the
-following components, which must occur in this order:
-
-\begin{enumerate}
-  \item  The \character{\%} character, which marks the start of the
-         specifier.
-  \item  Mapping key value (optional), consisting of an identifier in
-         parentheses (for example, \code{(somename)}).
-  \item  Conversion flags (optional), which affect the result of some
-         conversion types.
-  \item  Minimum field width (optional).  If specified as an
-         \character{*} (asterisk), the actual width is read from the
-         next element of the tuple in \var{values}, and the object to
-         convert comes after the minimum field width and optional
-         precision.
-  \item  Precision (optional), given as a \character{.} (dot) followed
-         by the precision.  If specified as \character{*} (an
-         asterisk), the actual width is read from the next element of
-         the tuple in \var{values}, and the value to convert comes after
-         the precision.
-  \item  Length modifier (optional).
-  \item  Conversion type.
-\end{enumerate}
+For safety reasons, floating point precisions are clipped to 50;
+\code{\%f} conversions for numbers whose absolute value is over 1e25
+are replaced by \code{\%g} conversions.\footnote{
+  These numbers are fairly arbitrary.  They are intended to
+  avoid printing endless strings of meaningless digits without hampering
+  correct use and without having to know the exact precision of floating
+  point values on a particular machine.}
+All other errors raise exceptions.
 
 If the right argument is a dictionary (or any kind of mapping), then
-the formats in the string \emph{must} have a parenthesized key into
-that dictionary inserted immediately after the \character{\%}
-character, and each format formats the corresponding entry from the
-mapping.  For example:
+the formats in the string must have a parenthesized key into that
+dictionary inserted immediately after the \character{\%} character,
+and each format formats the corresponding entry from the mapping.
+For example:
 
 \begin{verbatim}
 >>> count = 2
@@ -650,87 +436,10 @@ Python has 002 quote types.
 In this case no \code{*} specifiers may occur in a format (since they
 require a sequential parameter list).
 
-The conversion flag characters are:
-
-\begin{tableii}{c|l}{character}{Flag}{Meaning}
-  \lineii{\#}{The value conversion will use the ``alternate form''
-              (where defined below).}
-  \lineii{0}{The conversion will be zero padded.}
-  \lineii{-}{The converted value is left adjusted (overrides
-             \character{-}).}
-  \lineii{{~}}{(a space) A blank should be left before a positive number
-             (or empty string) produced by a signed conversion.}
-  \lineii{+}{A sign character (\character{+} or \character{-}) will
-             precede the conversion (overrides a "space" flag).}
-\end{tableii}
-
-The length modifier may be \code{h}, \code{l}, and \code{L} may be
-present, but are ignored as they are not necessary for Python.
-
-The conversion types are:
-
-\begin{tableii}{c|l}{character}{Conversion}{Meaning}
-  \lineii{d}{Signed integer decimal.}
-  \lineii{i}{Signed integer decimal.}
-  \lineii{o}{Unsigned octal.}
-  \lineii{u}{Unsigned decimal.}
-  \lineii{x}{Unsigned hexidecimal (lowercase).}
-  \lineii{X}{Unsigned hexidecimal (uppercase).}
-  \lineii{e}{Floating point exponential format (lowercase).}
-  \lineii{E}{Floating point exponential format (uppercase).}
-  \lineii{f}{Floating point decimal format.}
-  \lineii{F}{Floating point decimal format.}
-  \lineii{g}{Same as \character{e} if exponent is greater than -4 or
-             less than precision, \character{f} otherwise.}
-  \lineii{G}{Same as \character{E} if exponent is greater than -4 or
-             less than precision, \character{F} otherwise.}
-  \lineii{c}{Single character (accepts integer or single character
-             string).}
-  \lineii{r}{String (converts any python object using
-             \function{repr()}).}
-  \lineii{s}{String (converts any python object using
-             \function{str()}).}
-  \lineii{\%}{No argument is converted, results in a \character{\%}
-              character in the result.  (The complete specification is
-              \code{\%\%}.)}
-\end{tableii}
-
-% XXX Examples?
-
-
-Since Python strings have an explicit length, \code{\%s} conversions
-do not assume that \code{'\e0'} is the end of the string.
-
-For safety reasons, floating point precisions are clipped to 50;
-\code{\%f} conversions for numbers whose absolute value is over 1e25
-are replaced by \code{\%g} conversions.\footnote{
-  These numbers are fairly arbitrary.  They are intended to
-  avoid printing endless strings of meaningless digits without hampering
-  correct use and without having to know the exact precision of floating
-  point values on a particular machine.
-}  All other errors raise exceptions.
-
 Additional string operations are defined in standard module
-\refmodule{string} and in built-in module \refmodule{re}.
+\module{string} and in built-in module \module{re}.
 \refstmodindex{string}
 \refstmodindex{re}
-
-
-\subsubsection{XRange Type \label{typesseq-xrange}}
-
-The xrange\obindex{xrange} type is an immutable sequence which is
-commonly used for looping.  The advantage of the xrange type is that an
-xrange object will always take the same amount of memory, no matter the
-size of the range it represents.  There are no consistent performance
-advantages.
-
-XRange objects behave like tuples, and offer a single method:
-
-\begin{methoddesc}[xrange]{tolist}{}
-  Return a list object which represents the same values as the xrange
-  object.
-\end{methoddesc}
-
 
 \subsubsection{Mutable Sequence Types \label{typesseq-mutable}}
 
@@ -743,7 +452,7 @@ be modified once created.
 The following operations are defined on mutable sequence types (where
 \var{x} is an arbitrary object):
 \indexiii{mutable}{sequence}{types}
-\obindex{list}
+\indexii{list}{type}
 
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
   \lineiii{\var{s}[\var{i}] = \var{x}}
@@ -787,7 +496,7 @@ Notes:
 \begin{description}
 \item[(1)] The C implementation of Python has historically accepted
   multiple parameters and implicitly joined them into a tuple; this
-  no longer works in Python 2.0.  Use of this misfeature has been
+  will no longer work in Python 1.6.  Use of this misfeature has been
   deprecated since Python 1.4.
 
 \item[(2)] Raises an exception when \var{x} is not a list object.  The 
@@ -797,9 +506,10 @@ Notes:
 \item[(3)] Raises \exception{ValueError} when \var{x} is not found in
   \var{s}.
 
-\item[(4)] The \method{pop()} method is only supported by the list and
-  array types.  The optional argument \var{i} defaults to \code{-1},
-  so that by default the last item is removed and returned.
+\item[(4)] The \method{pop()} method is experimental and not supported 
+  by other mutable sequence types than lists.  The optional argument
+  \var{i} defaults to \code{-1}, so that by default the last item is
+  removed and returned.
 
 \item[(5)] The \method{sort()} and \method{reverse()} methods modify the
   list in place for economy of space when sorting or reversing a large
@@ -820,8 +530,8 @@ Notes:
 
 
 \subsection{Mapping Types \label{typesmapping}}
-\obindex{mapping}
-\obindex{dictionary}
+\indexii{mapping}{types}
+\indexii{dictionary}{type}
 
 A \dfn{mapping} object maps values of one type (the key type) to
 arbitrary objects.  Mappings are mutable objects.  There is currently
@@ -859,8 +569,8 @@ arbitrary objects):
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
   \lineiii{len(\var{a})}{the number of items in \var{a}}{}
   \lineiii{\var{a}[\var{k}]}{the item of \var{a} with key \var{k}}{(1)}
-  \lineiii{\var{a}[\var{k}] = \var{v}}
-          {set \code{\var{a}[\var{k}]} to \var{v}}
+  \lineiii{\var{a}[\var{k}] = \var{x}}
+          {set \code{\var{a}[\var{k}]} to \var{x}}
           {}
   \lineiii{del \var{a}[\var{k}]}
           {remove \code{\var{a}[\var{k}]} from \var{a}}
@@ -875,20 +585,13 @@ arbitrary objects):
           {(2)}
   \lineiii{\var{a}.keys()}{a copy of \var{a}'s list of keys}{(2)}
   \lineiii{\var{a}.update(\var{b})}
-          {\code{for k in \var{b}.keys(): \var{a}[k] = \var{b}[k]}}
+          {\code{for k, v in \var{b}.items(): \var{a}[k] = v}}
           {(3)}
   \lineiii{\var{a}.values()}{a copy of \var{a}'s list of values}{(2)}
   \lineiii{\var{a}.get(\var{k}\optional{, \var{x}})}
           {\code{\var{a}[\var{k}]} if \code{\var{a}.has_key(\var{k})},
            else \var{x}}
           {(4)}
-  \lineiii{\var{a}.setdefault(\var{k}\optional{, \var{x}})}
-          {\code{\var{a}[\var{k}]} if \code{\var{a}.has_key(\var{k})},
-           else \var{x} (also setting it)}
-          {(5)}
-  \lineiii{\var{a}.popitem()}
-          {remove and return an arbitrary (\var{key}, \var{value}) pair}
-          {(6)}
 \end{tableiii}
 
 \noindent
@@ -909,13 +612,6 @@ correspond.  This allows the creation of \code{(\var{value},
 \item[(4)] Never raises an exception if \var{k} is not in the map,
 instead it returns \var{x}.  \var{x} is optional; when \var{x} is not
 provided and \var{k} is not in the map, \code{None} is returned.
-
-\item[(5)] \function{setdefault()} is like \function{get()}, except
-that if \var{k} is missing, \var{x} is both returned and inserted into
-the dictionary as the value of \var{k}.
-
-\item[(6)] \function{popitem()} is useful to destructively iterate
-over a dictionary, as often used in set algorithms.
 \end{description}
 
 
@@ -946,8 +642,7 @@ defines \code{\var{m}.a} to be \code{1}, but you can't write
 
 Modules built into the interpreter are written like this:
 \code{<module 'sys' (built-in)>}.  If loaded from a file, they are
-written as \code{<module 'os' from
-'/usr/local/lib/python\shortversion/os.pyc'>}.
+written as \code{<module 'os' from '/usr/local/lib/python1.5/os.pyc'>}.
 
 
 \subsubsection{Classes and Class Instances \label{typesobjects}}
@@ -971,16 +666,9 @@ different object types.
 The implementation adds two special read-only attributes:
 \code{\var{f}.func_code} is a function's \dfn{code
 object}\obindex{code} (see below) and \code{\var{f}.func_globals} is
-the dictionary used as the function's global namespace (this is the
+the dictionary used as the function's global name space (this is the
 same as \code{\var{m}.__dict__} where \var{m} is the module in which
 the function \var{f} was defined).
-
-Function objects also support getting and setting arbitrary
-attributes, which can be used to, e.g. attach metadata to functions.
-Regular attribute dot-notation is used to get and set such
-attributes. \emph{Note that the current implementation only supports
-function attributes on functions written in Python.  Function
-attributes on built-ins may be supported in the future.}
 
 
 \subsubsection{Methods \label{typesmethods}}
@@ -998,37 +686,6 @@ implementing the method.  Calling \code{\var{m}(\var{arg-1},
 \var{arg-2}, \textrm{\ldots}, \var{arg-n})} is completely equivalent to
 calling \code{\var{m}.im_func(\var{m}.im_self, \var{arg-1},
 \var{arg-2}, \textrm{\ldots}, \var{arg-n})}.
-
-Class instance methods are either \emph{bound} or \emph{unbound},
-referring to whether the method was accessed through an instance or a
-class, respectively.  When a method is unbound, its \code{im_self}
-attribute will be \code{None} and if called, an explicit \code{self}
-object must be passed as the first argument.  In this case,
-\code{self} must be an instance of the unbound method's class (or a
-subclass of that class), otherwise a \code{TypeError} is raised.
-
-Like function objects, methods objects support getting and setting
-arbitrary attributes.  However, the attributes are actually stored on
-the underlying function object (i.e. \code{meth.im_func}).  To avoid
-surprising behavior, a \code{TypeError} is raised when an attempt is
-made to set an attribute on a bound method.  It is legal to get a
-bound method's attribute (the underlying function's attribute is
-returned), and it is also legal to set or get an unbound method's
-attribute.  For example:
-
-\begin{verbatim}
-class C:
-    def method(self):
-        pass
-
-c = C()
-d = C()
-c.method.whoami = 'my name is c'
-d.method.whoami = 'my name is d'
-\end{verbatim}
-
-If bound method attribute setting was allowed, \code{c.method.whoami}
-would return ``my name is d''.
 
 See the \citetitle[../ref/ref.html]{Python Reference Manual} for more
 information.
@@ -1087,18 +744,17 @@ special operations.  There is exactly one ellipsis object, named
 
 It is written as \code{Ellipsis}.
 
-
 \subsubsection{File Objects\obindex{file}
                \label{bltin-file-objects}}
 
-File objects are implemented using C's \code{stdio} package and can be
-created with the built-in function
-\function{open()}\bifuncindex{open} described in section 
+File objects are implemented using \C{}'s \code{stdio}
+package and can be created with the built-in function
+\function{open()}\bifuncindex{open} described in section
 \ref{built-in-funcs}, ``Built-in Functions.''  They are also returned
 by some other built-in functions and methods, e.g.,
-\function{os.popen()} and \function{os.fdopen()} and the
+\function{posix.popen()} and \function{posix.fdopen()} and the
 \method{makefile()} method of socket objects.
-\refstmodindex{os}
+\refbimodindex{posix}
 \refbimodindex{socket}
 
 When a file operation fails for an I/O-related reason, the exception
@@ -1111,33 +767,23 @@ Files have the following methods:
 
 \begin{methoddesc}[file]{close}{}
   Close the file.  A closed file cannot be read or written anymore.
-  Any operation which requires that the file be open will raise a
-  \exception{ValueError} after the file has been closed.  Calling
-  \method{close()} more than once is allowed.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{flush}{}
-  Flush the internal buffer, like \code{stdio}'s
-  \cfunction{fflush()}.  This may be a no-op on some file-like
-  objects.
+  Flush the internal buffer, like \code{stdio}'s \cfunction{fflush()}.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{isatty}{}
-  Return true if the file is connected to a tty(-like) device, else
-  false.  \strong{Note:} If a file-like object is not associated
-  with a real file, this method should \emph{not} be implemented.
+  Return \code{1} if the file is connected to a tty(-like) device, else
+  \code{0}.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{fileno}{}
-  \index{file descriptor}
-  \index{descriptor, file}
-  Return the integer ``file descriptor'' that is used by the
-  underlying implementation to request I/O operations from the
-  operating system.  This can be useful for other, lower level
-  interfaces that use file descriptors, e.g.\ module
-  \refmodule{fcntl}\refbimodindex{fcntl} or \function{os.read()} and
-  friends.  \strong{Note:} File-like objects which do not have a real
-  file descriptor should \emph{not} provide this method!
+Return the integer ``file descriptor'' that is used by the underlying
+implementation to request I/O operations from the operating system.
+This can be useful for other, lower level interfaces that use file
+descriptors, e.g. module \module{fcntl} or \function{os.read()} and friends.
+\refbimodindex{fcntl}
 \end{methoddesc}
 
 \begin{methoddesc}[file]{read}{\optional{size}}
@@ -1160,15 +806,15 @@ Files have the following methods:
 	advantage is that (in cases where it might matter, e.g. if you 
 	want to make an exact copy of a file while scanning its lines) 
 	you can tell whether the last line of a file ended in a newline
-	or not (yes this happens!).
-  } (but may be absent when a file ends with an
+	or not (yes this happens!).}
+  (but may be absent when a file ends with an
   incomplete line).  If the \var{size} argument is present and
   non-negative, it is a maximum byte count (including the trailing
   newline) and an incomplete line may be returned.
   An empty string is returned when \EOF{} is hit
-  immediately.  Note: Unlike \code{stdio}'s \cfunction{fgets()}, the
-  returned string contains null characters (\code{'\e 0'}) if they
-  occurred in the input.
+  immediately.  Note: Unlike \code{stdio}'s \cfunction{fgets()}, the returned
+  string contains null characters (\code{'\e 0'}) if they occurred in the
+  input.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{readlines}{\optional{sizehint}}
@@ -1176,13 +822,7 @@ Files have the following methods:
   the lines thus read.  If the optional \var{sizehint} argument is
   present, instead of reading up to \EOF{}, whole lines totalling
   approximately \var{sizehint} bytes (possibly after rounding up to an
-  internal buffer size) are read.  Objects implementing a file-like
-  interface may choose to ignore \var{sizehint} if it cannot be
-  implemented, or cannot be implemented efficiently.
-\end{methoddesc}
-
-\begin{methoddesc}[file]{xreadlines}{}
-  Equivalent to \function{xreadlines.xreadlines(file)}.\refstmodindex{xreadlines}
+  internal buffer size) are read.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{seek}{offset\optional{, whence}}
@@ -1190,12 +830,7 @@ Files have the following methods:
   The \var{whence} argument is optional and defaults to \code{0}
   (absolute file positioning); other values are \code{1} (seek
   relative to the current position) and \code{2} (seek relative to the
-  file's end).  There is no return value.  Note that if the file is
-  opened for appending (mode \code{'a'} or \code{'a+'}), any
-  \method{seek()} operations will be undone at the next write.  If the
-  file is only opened for writing in append mode (mode \code{'a'}),
-  this method is essentially a no-op, but it remains useful for files
-  opened in append mode with reading enabled (mode \code{'a+'}).
+  file's end).  There is no return value.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{tell}{}
@@ -1204,54 +839,44 @@ Files have the following methods:
 \end{methoddesc}
 
 \begin{methoddesc}[file]{truncate}{\optional{size}}
-  Truncate the file's size.  If the optional \var{size} argument
-  present, the file is truncated to (at most) that size.  The size
-  defaults to the current position.  Availability of this function
-  depends on the operating system version (for example, not all
-  \UNIX{} versions support this operation).
+Truncate the file's size.  If the optional size argument present, the
+file is truncated to (at most) that size.  The size defaults to the
+current position.  Availability of this function depends on the
+operating system version (for example, not all \UNIX{} versions support this
+operation).
 \end{methoddesc}
 
 \begin{methoddesc}[file]{write}{str}
-  Write a string to the file.  There is no return value.  Note: Due to
-  buffering, the string may not actually show up in the file until
-  the \method{flush()} or \method{close()} method is called.
+Write a string to the file.  There is no return value.  Note: Due to
+buffering, the string may not actually show up in the file until
+the \method{flush()} or \method{close()} method is called.
 \end{methoddesc}
 
 \begin{methoddesc}[file]{writelines}{list}
-  Write a list of strings to the file.  There is no return value.
-  (The name is intended to match \method{readlines()};
-  \method{writelines()} does not add line separators.)
-\end{methoddesc}
-
-\begin{methoddesc}[file]{xreadlines}{}
-  Equivalent to
-  \function{xreadlines.xreadlines(\var{file})}.\refstmodindex{xreadlines}
-  (See the \refmodule{xreadlines} module for more information.)
+Write a list of strings to the file.  There is no return value.
+(The name is intended to match \method{readlines()};
+\method{writelines()} does not add line separators.)
 \end{methoddesc}
 
 
-File objects also offer a number of other interesting attributes.
-These are not required for file-like objects, but should be
-implemented if they make sense for the particular object.
+File objects also offer the following attributes:
 
 \begin{memberdesc}[file]{closed}
 Boolean indicating the current state of the file object.  This is a
 read-only attribute; the \method{close()} method changes the value.
-It may not be available on all file-like objects.
 \end{memberdesc}
 
 \begin{memberdesc}[file]{mode}
 The I/O mode for the file.  If the file was created using the
 \function{open()} built-in function, this will be the value of the
-\var{mode} parameter.  This is a read-only attribute and may not be
-present on all file-like objects.
+\var{mode} parameter.  This is a read-only attribute.
 \end{memberdesc}
 
 \begin{memberdesc}[file]{name}
 If the file object was created using \function{open()}, the name of
 the file.  Otherwise, some string that indicates the source of the
 file object, of the form \samp{<\mbox{\ldots}>}.  This is a read-only
-attribute and may not be present on all file-like objects.
+attribute.
 \end{memberdesc}
 
 \begin{memberdesc}[file]{softspace}
@@ -1259,21 +884,16 @@ Boolean that indicates whether a space character needs to be printed
 before another value when using the \keyword{print} statement.
 Classes that are trying to simulate a file object should also have a
 writable \member{softspace} attribute, which should be initialized to
-zero.  This will be automatic for most classes implemented in Python
-(care may be needed for objects that override attribute access); types
-implemented in C will have to provide a writable
-\member{softspace} attribute.
-\strong{Note:}  This attribute is not used to control the
-\keyword{print} statement, but to allow the implementation of
-\keyword{print} to keep track of its internal state.
+zero.  This will be automatic for classes implemented in Python; types
+implemented in \C{} will have to provide a writable \member{softspace}
+attribute.
 \end{memberdesc}
-
 
 \subsubsection{Internal Objects \label{typesinternal}}
 
 See the \citetitle[../ref/ref.html]{Python Reference Manual} for this
-information.  It describes stack frame objects, traceback objects, and
-slice objects.
+information.  It describes code objects, stack frame objects,
+traceback objects, and slice objects.
 
 
 \subsection{Special Attributes \label{specialattrs}}
@@ -1281,28 +901,26 @@ slice objects.
 The implementation adds a few special read-only attributes to several
 object types, where they are relevant:
 
-\begin{memberdesc}[object]{__dict__}
-A dictionary or other mapping object used to store an
+\begin{memberdescni}{__dict__}
+A dictionary of some sort used to store an
 object's (writable) attributes.
-\end{memberdesc}
+\end{memberdescni}
 
-\begin{memberdesc}[object]{__methods__}
+\begin{memberdescni}{__methods__}
 List of the methods of many built-in object types,
 e.g., \code{[].__methods__} yields
 \code{['append', 'count', 'index', 'insert', 'pop', 'remove',
-'reverse', 'sort']}.  This usually does not need to be explicitly
-provided by the object.
-\end{memberdesc}
+'reverse', 'sort']}.
+\end{memberdescni}
 
-\begin{memberdesc}[object]{__members__}
-Similar to \member{__methods__}, but lists data attributes.  This
-usually does not need to be explicitly provided by the object.
-\end{memberdesc}
+\begin{memberdescni}{__members__}
+Similar to \member{__methods__}, but lists data attributes.
+\end{memberdescni}
 
-\begin{memberdesc}[instance]{__class__}
+\begin{memberdescni}{__class__}
 The class to which a class instance belongs.
-\end{memberdesc}
+\end{memberdescni}
 
-\begin{memberdesc}[class]{__bases__}
+\begin{memberdescni}{__bases__}
 The tuple of base classes of a class object.
-\end{memberdesc}
+\end{memberdescni}

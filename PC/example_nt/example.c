@@ -1,7 +1,8 @@
 #include "Python.h"
 
 static PyObject *
-ex_foo(PyObject *self, PyObject *args)
+ex_foo(self, args)
+	PyObject *self, *args;
 {
 	printf("Hello, world\n");
 	Py_INCREF(Py_None);
@@ -14,7 +15,7 @@ static PyMethodDef example_methods[] = {
 };
 
 void
-initexample(void)
+initexample()
 {
 	Py_InitModule("example", example_methods);
 }

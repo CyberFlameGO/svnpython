@@ -12,36 +12,23 @@ from bgen import *
 # Simple types
 Boolean = Type("Boolean", "b")
 SignedByte = Type("SignedByte", "b")
+ScriptCode = Type("ScriptCode", "h")
 Size = Type("Size", "l")
 Style = Type("Style", "b")
 StyleParameter = Type("StyleParameter", "h")
 CharParameter = Type("CharParameter", "h")
 TextEncoding = Type("TextEncoding", "l")
-ByteCount = Type("ByteCount", "l")
-Duration = Type("Duration", "l")
-ByteOffset = Type("ByteOffset", "l")
-OptionBits = Type("OptionBits", "l")
-ItemCount = Type("ItemCount", "l")
-PBVersion = Type("PBVersion", "l")
-ScriptCode = Type("ScriptCode", "h")
-LangCode = Type("LangCode", "h")
-RegionCode = Type("RegionCode", "h")
 
 UInt8 = Type("UInt8", "b")
 SInt8 = Type("SInt8", "b")
-UInt16 = Type("UInt16", "H")
+UInt16 = Type("UInt16", "h")
 SInt16 = Type("SInt16", "h")
 UInt32 = Type("UInt32", "l")
 SInt32 = Type("SInt32", "l")
-Float32 = Type("Float32", "f")
-
-wide = OpaqueByValueType("wide", "PyMac_Buildwide", "PyMac_Getwide")
-wide_ptr = OpaqueType("wide", "PyMac_Buildwide", "PyMac_Getwide")
 
 # Pascal strings
 ConstStr255Param = OpaqueArrayType("Str255", "PyMac_BuildStr255", "PyMac_GetStr255")
 Str255 = OpaqueArrayType("Str255", "PyMac_BuildStr255", "PyMac_GetStr255")
-StringPtr = OpaqueByValueType("StringPtr", "PyMac_BuildStr255", "BUG")
 
 # File System Specifications
 FSSpec_ptr = OpaqueType("FSSpec", "PyMac_BuildFSSpec", "PyMac_GetFSSpec")
@@ -52,7 +39,6 @@ def OSTypeType(typename):
 	return OpaqueByValueType(typename, "PyMac_BuildOSType", "PyMac_GetOSType")
 OSType = OSTypeType("OSType")
 ResType = OSTypeType("ResType")
-FourCharCode = OSTypeType("FourCharCode")
 
 # Version numbers
 NumVersion = OpaqueByValueType("NumVersion", "PyMac_BuildNumVersion", "BUG")
@@ -70,7 +56,6 @@ WindowRef = WindowPtr
 DialogPtr = OpaqueByValueType("DialogPtr", "DlgObj")
 DialogRef = DialogPtr
 ExistingWindowPtr = OpaqueByValueType("WindowPtr", "WinObj_WhichWindow", "BUG")
-# XXX This is incorrect: it returns a Window, not a Dialog!
 ExistingDialogPtr = OpaqueByValueType("DialogPtr", "WinObj_WhichWindow", "BUG")
 
 # NULL pointer passed in as optional storage -- not present in Python version
@@ -115,8 +100,42 @@ VarVarOutBuffer = VarVarHeapOutputBufferType('char', 'long', 'l') # (buf, len, &
 
 # Stuff added immediately after the system include files
 includestuff = """
+#define SystemSevenOrLater 1
+
 #include "macglue.h"
-#include "pymactoolbox.h"
+#include <Memory.h>
+#include <Dialogs.h>
+#include <Menus.h>
+#include <Controls.h>
+
+extern PyObject *ResObj_New(Handle);
+extern int ResObj_Convert(PyObject *, Handle *);
+extern PyObject *OptResObj_New(Handle);
+extern int OptResObj_Convert(PyObject *, Handle *);
+
+extern PyObject *WinObj_New(WindowPtr);
+extern int WinObj_Convert(PyObject *, WindowPtr *);
+extern PyTypeObject Window_Type;
+#define WinObj_Check(x) ((x)->ob_type == &Window_Type)
+
+extern PyObject *DlgObj_New(DialogPtr);
+extern int DlgObj_Convert(PyObject *, DialogPtr *);
+extern PyTypeObject Dialog_Type;
+#define DlgObj_Check(x) ((x)->ob_type == &Dialog_Type)
+
+extern PyObject *MenuObj_New(MenuHandle);
+extern int MenuObj_Convert(PyObject *, MenuHandle *);
+
+extern PyObject *CtlObj_New(ControlHandle);
+extern int CtlObj_Convert(PyObject *, ControlHandle *);
+
+extern PyObject *GrafObj_New(GrafPtr);
+extern int GrafObj_Convert(PyObject *, GrafPtr *);
+
+extern PyObject *BMObj_New(BitMapPtr);
+extern int BMObj_Convert(PyObject *, BitMapPtr *);
+
+extern PyObject *WinObj_WhichWindow(WindowPtr);
 """
 
 # Stuff added just before the module's init function

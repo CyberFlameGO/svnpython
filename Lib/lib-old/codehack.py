@@ -48,7 +48,7 @@ def getcodename(co):
 	if ord(code[0]) == SET_LINENO:
 		lineno = ord(code[1]) | ord(code[2]) << 8
 		line = linecache.getline(filename, lineno)
-		words = line.split()
+		words = string.split(line)
 		if len(words) >= 2 and words[0] in ('def', 'class'):
 			name = words[1]
 			for i in range(len(name)):

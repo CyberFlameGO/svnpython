@@ -14,7 +14,6 @@ this header file lives".
 __revision__ = "$Id$"
 
 import sys, os, string, re
-from types import *
 from distutils.core import Command
 from distutils.errors import DistutilsExecError
 
@@ -70,21 +69,7 @@ class config (Command):
         self.temp_files = []
 
     def finalize_options (self):
-        if self.include_dirs is None:
-            self.include_dirs = self.distribution.include_dirs or []
-        elif type(self.include_dirs) is StringType:
-            self.include_dirs = string.split(self.include_dirs, os.pathsep)
-
-        if self.libraries is None:
-            self.libraries = []
-        elif type(self.libraries) is StringType:
-            self.libraries = [self.libraries]
-
-        if self.library_dirs is None:
-            self.library_dirs = []
-        elif type(self.library_dirs) is StringType:
-            self.library_dirs = string.split(self.library_dirs, os.pathsep)
-
+        pass
 
     def run (self):
         pass
@@ -102,10 +87,10 @@ class config (Command):
         # import.
         from distutils.ccompiler import CCompiler, new_compiler
         if not isinstance(self.compiler, CCompiler):
-            self.compiler = new_compiler(compiler=self.compiler,
-                                         verbose=self.noisy,
-                                         dry_run=self.dry_run,
-                                         force=1)
+            self.compiler = new_compiler (compiler=self.compiler,
+                                          verbose=self.noisy,
+                                          dry_run=self.dry_run,
+                                          force=1)
             if self.include_dirs:
                 self.compiler.set_include_dirs(self.include_dirs)
             if self.libraries:
@@ -325,19 +310,16 @@ class config (Command):
     # check_func ()
 
     def check_lib (self, library, library_dirs=None,
-                   headers=None, include_dirs=None, other_libraries=[]):
+                   headers=None, include_dirs=None):
         """Determine if 'library' is available to be linked against,
         without actually checking that any particular symbols are provided
         by it.  'headers' will be used in constructing the source file to
         be compiled, but the only effect of this is to check if all the
-        header files listed are available.  Any libraries listed in
-        'other_libraries' will be included in the link, in case 'library'
-        has symbols that depend on other libraries.
+        header files listed are available.
         """
         self._check_compiler()
         return self.try_link("int main (void) { }",
-                             headers, include_dirs,
-                             [library]+other_libraries, library_dirs)
+                             headers, include_dirs, [library], library_dirs)
 
     def check_header (self, header, include_dirs=None,
                       library_dirs=None, lang="c"):

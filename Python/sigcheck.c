@@ -1,4 +1,3 @@
-
 /* Sigcheck is similar to intrcheck() but sets an exception when an
    interrupt occurs.  It can't be in the intrcheck.c file since that
    file (and the whole directory it is in) doesn't know about objects
@@ -10,7 +9,7 @@
 
 /* ARGSUSED */
 int
-PyErr_CheckSignals(void)
+PyErr_CheckSignals()
 {
 	if (!PyOS_InterruptOccurred())
 		return 0;

@@ -5,11 +5,11 @@ but random access is not allowed."""
 
 # based on Andrew Kuchling's minigzip.py distributed with the zlib module
 
-import struct, sys, time
+import time
+import string
 import zlib
+import struct
 import __builtin__
-
-__all__ = ["GzipFile","open"]
 
 FTEXT, FHCRC, FEXTRA, FNAME, FCOMMENT = 1, 2, 4, 8, 16
 
@@ -17,10 +17,8 @@ READ, WRITE = 1, 2
 
 def write32(output, value):
     output.write(struct.pack("<l", value))
-
+    
 def write32u(output, value):
-    if value < 0:
-        value = value + 0x100000000L
     output.write(struct.pack("<L", value))
 
 def read32(input):
@@ -33,7 +31,7 @@ class GzipFile:
 
     myfileobj = None
 
-    def __init__(self, filename=None, mode=None,
+    def __init__(self, filename=None, mode=None, 
                  compresslevel=9, fileobj=None):
         if fileobj is None:
             fileobj = self.myfileobj = __builtin__.open(filename, mode or 'rb')
@@ -46,8 +44,8 @@ class GzipFile:
 
         if mode[0:1] == 'r':
             self.mode = READ
-            # Set flag indicating start of a new member
-            self._new_member = 1
+ 	    # Set flag indicating start of a new member
+            self._new_member = 1 
             self.extrabuf = ""
             self.extrasize = 0
             self.filename = filename
@@ -56,7 +54,7 @@ class GzipFile:
             self.mode = WRITE
             self._init_write(filename)
             self.compress = zlib.compressobj(compresslevel,
-                                             zlib.DEFLATED,
+                                             zlib.DEFLATED, 
                                              -zlib.MAX_WBITS,
                                              zlib.DEF_MEM_LEVEL,
                                              0)
@@ -114,7 +112,7 @@ class GzipFile:
 
         if flag & FEXTRA:
             # Read & discard the extra field, if present
-            xlen=ord(self.fileobj.read(1))
+            xlen=ord(self.fileobj.read(1))              
             xlen=xlen+256*ord(self.fileobj.read(1))
             self.fileobj.read(xlen)
         if flag & FNAME:
@@ -140,7 +138,7 @@ class GzipFile:
             self.fileobj.write( self.compress.compress(data) )
 
     def writelines(self,lines):
-        self.write(" ".join(lines))
+        self.write(string.join(lines))
 
     def read(self, size=-1):
         if self.extrasize <= 0 and self.fileobj is None:
@@ -162,7 +160,7 @@ class GzipFile:
             except EOFError:
                 if size > self.extrasize:
                     size = self.extrasize
-
+        
         chunk = self.extrabuf[:size]
         self.extrabuf = self.extrabuf[size:]
         self.extrasize = self.extrasize - size
@@ -175,11 +173,10 @@ class GzipFile:
 
     def _read(self, size=1024):
         if self.fileobj is None: raise EOFError, "Reached EOF"
-
+ 	
         if self._new_member:
-            # If the _new_member flag is set, we have to
-            # jump to the next member, if there is one.
-            #
+            # If the _new_member flag is set, we have to 
+            # 
             # First, check if we're at the end of the file;
             # if so, it's time to stop; no more members to read.
             pos = self.fileobj.tell()   # Save current position
@@ -187,27 +184,27 @@ class GzipFile:
             if pos == self.fileobj.tell():
                 self.fileobj = None
                 raise EOFError, "Reached EOF"
-            else:
+            else: 
                 self.fileobj.seek( pos ) # Return to original position
-
-            self._init_read()
+  
+            self._init_read()       
             self._read_gzip_header()
             self.decompress = zlib.decompressobj(-zlib.MAX_WBITS)
             self._new_member = 0
-
+ 
         # Read a chunk of data from the file
         buf = self.fileobj.read(size)
-
+ 
         # If the EOF has been reached, flush the decompression object
         # and mark this object as finished.
-
+       
         if buf == "":
             uncompress = self.decompress.flush()
             self._read_eof()
             self.fileobj = None
             self._add_read_data( uncompress )
             raise EOFError, 'Reached EOF'
-
+  
         uncompress = self.decompress.decompress(buf)
         self._add_read_data( uncompress )
 
@@ -220,11 +217,11 @@ class GzipFile:
             self.fileobj.seek( -len(self.decompress.unused_data)+8, 1)
 
             # Check the CRC and file size, and set the flag so we read
-            # a new member on the next call
+            # a new member on the next call 
             self._read_eof()
-            self._new_member = 1
-
-    def _add_read_data(self, data):
+            self._new_member = 1        
+	    
+    def _add_read_data(self, data):	        
         self.crc = zlib.crc32(data, self.crc)
         self.extrabuf = self.extrabuf + data
         self.extrasize = self.extrasize + len(data)
@@ -232,7 +229,7 @@ class GzipFile:
 
     def _read_eof(self):
         # We've read to the end of the file, so we have to rewind in order
-        # to reread the 8 bytes containing the CRC and the file size.
+        # to reread the 8 bytes containing the CRC and the file size.  
         # We check the that the computed CRC and size of the
         # uncompressed data matches the stored values.
         self.fileobj.seek(-8, 1)
@@ -242,7 +239,7 @@ class GzipFile:
             raise ValueError, "CRC check failed"
         elif isize != self.size:
             raise ValueError, "Incorrect length of data produced"
-
+          
     def close(self):
         if self.mode == WRITE:
             self.fileobj.write(self.compress.flush())
@@ -263,7 +260,7 @@ class GzipFile:
         except AttributeError:
             return
         self.close()
-
+        
     def flush(self):
         self.fileobj.flush()
 
@@ -276,46 +273,27 @@ class GzipFile:
     def isatty(self):
         return 0
 
-    def readline(self, size=-1):
-        if size < 0: size = sys.maxint
+    def readline(self):
         bufs = []
-        orig_size = size
-        readsize = min(100, size)    # Read from the file in small chunks
+        readsize = 100
         while 1:
-            if size == 0:
-                return "".join(bufs) # Return resulting line
-
             c = self.read(readsize)
-            i = c.find('\n')
-            if size is not None:
-                # We set i=size to break out of the loop under two
-                # conditions: 1) there's no newline, and the chunk is
-                # larger than size, or 2) there is a newline, but the
-                # resulting line would be longer than 'size'.
-                if i==-1 and len(c) > size: i=size-1
-                elif size <= i: i = size -1
-
+            i = string.find(c, '\n')
             if i >= 0 or c == '':
-                bufs.append(c[:i+1])    # Add portion of last chunk
-                self._unread(c[i+1:])   # Push back rest of chunk
-                return ''.join(bufs)    # Return resulting line
-
-            # Append chunk to list, decrease 'size',
+                bufs.append(c[:i+1])
+                self._unread(c[i+1:])
+                return string.join(bufs, '')
             bufs.append(c)
-            size = size - len(c)
-            readsize = min(size, readsize * 2)
+            readsize = readsize * 2
 
-    def readlines(self, sizehint=0):
-        # Negative numbers result in reading all the lines
-        if sizehint <= 0: sizehint = sys.maxint
-        L = []
-        while sizehint > 0:
-            line = self.readline()
-            if line == "": break
-            L.append( line )
-            sizehint = sizehint - len(line)
-
-        return L
+    def readlines(self, ignored=None):
+        buf = self.read()
+        lines = string.split(buf, '\n')
+        for i in range(len(lines)-1):
+            lines[i] = lines[i] + '\n'
+        if lines and not lines[-1]:
+            del lines[-1]
+        return lines
 
     def writelines(self, L):
         for line in L:

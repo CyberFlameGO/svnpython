@@ -1,15 +1,16 @@
 \section{\module{BaseHTTPServer} ---
-         Basic HTTP server}
-
+         Basic HTTP server.}
 \declaremodule{standard}{BaseHTTPServer}
+
 \modulesynopsis{Basic HTTP server (base class for
-                \class{SimpleHTTPServer} and \class{CGIHTTPServer}).}
+\class{SimpleHTTPServer} and \class{CGIHTTPServer}).}
 
 
 \indexii{WWW}{server}
 \indexii{HTTP}{protocol}
 \index{URL}
 \index{httpd}
+
 
 This module defines two classes for implementing HTTP servers
 (web servers). Usually, this module isn't used directly, but is used
@@ -89,7 +90,7 @@ input data.
 
 \begin{memberdesc}{wfile}
 Contains the output stream for writing a response back to the client.
-Proper adherence to the HTTP protocol must be used when writing
+Proper adherance to the HTTP protocol must be used when writing
 to this stream.
 \end{memberdesc}
 
@@ -114,7 +115,7 @@ variable. For example, \code{'Python/1.4'}.
 Specifies a format string for building an error response to the
 client. It uses parenthesized, keyed format specifiers, so the
 format operand must be a dictionary. The \var{code} key should
-be an integer, specifying the numeric HTTP error code value.
+be an integer, specifing the numeric HTTP error code value.
 \var{message} should be a string containing a (detailed) error
 message of what occurred, and \var{explain} should be an
 explanation of the error code number. Default \var{message}

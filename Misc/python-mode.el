@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 1992,1993,1994  Tim Peters
 
-;; Author: 1995-2001 Barry A. Warsaw
+;; Author: 1995-1998 Barry A. Warsaw
 ;;         1992-1994 Tim Peters
 ;; Maintainer: python-mode@python.org
 ;; Created:    Feb 1992
@@ -60,6 +60,8 @@
 
 ;; - Better integration with pdb.py and gud-mode for debugging.
 ;; - Rewrite according to GNU Emacs Lisp standards.
+;; - have py-execute-region on indented code act as if the region is
+;;   left justified.  Avoids syntax errors.
 ;; - add a py-goto-block-down, bound to C-c C-d
 
 ;;; Code:
@@ -330,8 +332,6 @@ support for features needed by `python-mode'.")
      ;; block introducing keywords with immediately following colons.
      ;; Yes "except" is in both lists.
      (cons (concat "\\b\\(" kw2 "\\)[ \n\t(]") 1)
-     ;; `as' but only in "import foo as bar"
-     '("[ \t]*\\(\\bfrom\\b.*\\)?\\bimport\\b.*\\b\\(as\\)\\b" . 2)
      ;; classes
      '("\\bclass[ \t]+\\([a-zA-Z_]+[a-zA-Z0-9_]*\\)"
        1 font-lock-type-face)
@@ -1278,24 +1278,11 @@ is inserted at the end.  See also the command `py-clear-queue'."
 			 (format "python-%d-%d" sn pid)
 		       (format "python-%d" sn)))
 		 (make-temp-name "python-")))
-	 (file (expand-file-name temp py-temp-directory))
-	 (cur (current-buffer))
-	 (buf (get-buffer-create file)))
-    ;; Write the contents of the buffer, watching out for indented regions.
-    (save-excursion
-      (goto-char start)
-      (let ((needs-if (/= (py-point 'bol) (py-point 'boi))))
-	(set-buffer buf)
-	(when needs-if
-	  (insert "if 1:\n"))
-	(insert-buffer-substring cur start end)))
+	 (file (expand-file-name temp py-temp-directory)))
+    (write-region start end file nil 'nomsg)
     (cond
      ;; always run the code in its own asynchronous subprocess
      (async
-      ;; User explicitly wants this to run in its own async subprocess
-      (save-excursion
-	(set-buffer buf)
-	(write-region (point-min) (point-max) file nil 'nomsg))
       (let* ((buf (generate-new-buffer-name py-output-buffer))
 	     ;; TBD: a horrible hack, but why create new Custom variables?
 	     (arg (if (string-equal py-which-bufname "Python")
@@ -1303,15 +1290,11 @@ is inserted at the end.  See also the command `py-clear-queue'."
 	(start-process py-which-bufname buf py-which-shell arg file)
 	(pop-to-buffer buf)
 	(py-postprocess-output-buffer buf)
-	;; TBD: clean up the temporary file!
 	))
      ;; if the Python interpreter shell is running, queue it up for
      ;; execution there.
      (proc
       ;; use the existing python shell
-      (save-excursion
-	(set-buffer buf)
-	(write-region (point-min) (point-max) file nil 'nomsg))
       (if (not py-file-queue)
 	  (py-execute-file proc file)
 	(message "File %s queued for execution" file))
@@ -1323,10 +1306,7 @@ is inserted at the end.  See also the command `py-clear-queue'."
 			 (if (string-equal py-which-bufname "JPython")
 			     " -" ""))))
 	;; otherwise either run it synchronously in a subprocess
-	(save-excursion
-	  (set-buffer buf)
-	  (shell-command-on-region (point-min) (point-max)
-				   cmd py-output-buffer))
+	(shell-command-on-region start end cmd py-output-buffer)
 	;; shell-command-on-region kills the output buffer if it never
 	;; existed and there's no output from the command
 	(if (not (get-buffer py-output-buffer))
@@ -1336,12 +1316,8 @@ is inserted at the end.  See also the command `py-clear-queue'."
 	    (pop-to-buffer py-output-buffer)
 	    (if err-p
 		(pop-to-buffer py-exception-buffer)))
-	  ))
-      ;; TBD: delete the buffer
-      )
-     )
-    ;; Clean up after ourselves.
-    (kill-buffer buf)))
+	  )))
+     )))
 
 
 ;; Code execution commands
@@ -2799,7 +2775,7 @@ local bindings to py-newline-and-indent."))
   "Return the parse state at point (see `parse-partial-sexp' docs)."
   (save-excursion
     (let ((here (point))
-	  in-listcomp pps done)
+	  pps done)
       (while (not done)
 	;; back up to the first preceding line (if any; else start of
 	;; buffer) that begins with a popular Python keyword, or a
@@ -2808,13 +2784,6 @@ local bindings to py-newline-and-indent."))
 	;; at a non-zero nesting level.  It may be slow for people who
 	;; write huge code blocks or huge lists ... tough beans.
 	(re-search-backward py-parse-state-re nil 'move)
-	;; Watch out for landing inside a list comprehension
-	(save-excursion
-	  (if (and (looking-at "[ \t]*\\<\\(if\\|for\\)\\>")
-		   (py-safe (progn (up-list -1) t))
-		   (eq (char-after) ?\[))
-	      (setq in-listcomp (point))
-	    (setq in-listcomp nil)))
 	(beginning-of-line)
 	;; In XEmacs, we have a much better way to test for whether
 	;; we're in a triple-quoted string or not.  Emacs does not
@@ -2837,9 +2806,6 @@ local bindings to py-newline-and-indent."))
 	  ;; XEmacs
 	  (setq done (or (not (buffer-syntactic-context))
 			 (bobp)))
-	  (when in-listcomp
-	    (goto-char in-listcomp)
-	    (setq done nil))
 	  (when done
 	    (setq pps (parse-partial-sexp (point) here)))
 	  ))
@@ -2876,16 +2842,12 @@ If nesting level is zero, return nil."
   "Go to the beginning of the triple quoted string we find ourselves in.
 DELIM is the TQS string delimiter character we're searching backwards
 for."
-  (let ((skip (and delim (make-string 1 delim)))
-	(continue t))
+  (let ((skip (and delim (make-string 1 delim))))
     (when skip
       (save-excursion
-	(while continue
-	  (py-safe (search-backward skip))
-	  (setq continue (and (not (bobp))
-			      (= (char-before) ?\\))))
-	(if (and (= (char-before) delim)
-		 (= (char-before (1- (point))) delim))
+	(py-safe (search-backward skip))
+	(if (and (eq (char-before) delim)
+		 (eq (char-before (1- (point))) delim))
 	    (setq skip (make-string 3 delim))))
       ;; we're looking at a triple-quoted string
       (py-safe (search-backward skip)))))

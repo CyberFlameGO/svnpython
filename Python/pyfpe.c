@@ -17,7 +17,8 @@ int PyFPE_counter = 0;
    warning when compiling an empty file. */
 
 double
-PyFPE_dummy(void *dummy)
+PyFPE_dummy(dummy)
+	void *dummy;
 {
 	return 1.0;
 }

@@ -1,17 +1,13 @@
 """Pathname and path-related operations for the Macintosh."""
 
+import string
 import os
 from stat import *
 
-__all__ = ["normcase","isabs","join","splitdrive","split","splitext",
-           "basename","dirname","commonprefix","getsize","getmtime",
-           "getatime","islink","exists","isdir","isfile",
-           "walk","expanduser","expandvars","normpath","abspath"]
 
-# Normalize the case of a pathname.  Dummy in Posix, but <s>.lower() here.
+# Normalize the case of a pathname.  Dummy in Posix, but string.lower here.
 
-def normcase(path):
-    return path.lower()
+normcase = string.lower
 
 
 def isabs(s):
@@ -21,7 +17,7 @@ def isabs(s):
     Anything else is absolute (the string up to the first colon is the
     volume name)."""
 
-    return ':' in s and s[0] != ':'
+    return ':' in s and s[0] <> ':'
 
 
 def join(s, *p):
@@ -34,7 +30,7 @@ def join(s, *p):
             t = t[1:]
         if ':' not in path:
             path = ':' + path
-        if path[-1:] != ':':
+        if path[-1:] <> ':':
             path = path + ':'
         path = path + t
     return path
@@ -48,7 +44,7 @@ def split(s):
     if ':' not in s: return '', s
     colon = 0
     for i in range(len(s)):
-        if s[i] == ':': colon = i + 1
+        if s[i] == ':': colon = i+1
     path, file = s[:colon-1], s[colon:]
     if path and not ':' in path:
         path = path + ':'
@@ -118,7 +114,7 @@ def getmtime(filename):
 def getatime(filename):
     """Return the last access time of a file, reported by os.stat()."""
     st = os.stat(filename)
-    return st[ST_ATIME]
+    return st[ST_MTIME]
 
 
 def islink(s):
@@ -147,19 +143,6 @@ def exists(s):
         return 0
     return 1
 
-# Return the longest prefix of all list elements.
-
-def commonprefix(m):
-    "Given a list of pathnames, returns the longest common leading component"
-    if not m: return ''
-    prefix = m[0]
-    for item in m:
-        for i in range(len(prefix)):
-            if prefix[:i+1] != item[:i+1]:
-                prefix = prefix[:i]
-                if i == 0: return ''
-                break
-    return prefix
 
 def expandvars(path):
     """Dummy to retain interface-compatibility with other operating systems."""
@@ -173,30 +156,39 @@ def expanduser(path):
 norm_error = 'macpath.norm_error: path cannot be normalized'
 
 def normpath(s):
-    """Normalize a pathname.  Will return the same result for
-    equivalent paths."""
+    """Normalize a pathname: get rid of '::' sequences by backing up,
+    e.g., 'foo:bar::bletch' becomes 'foo:bletch'.
+    Raise the exception norm_error below if backing up is impossible,
+    e.g., for '::foo'."""
+    # XXX The Unix version doesn't raise an exception but simply
+    # returns an unnormalized path.  Should do so here too.
 
-    if ":" not in s:
-        return ":"+s
-
-    comps = s.split(":")
-    i = 1
-    while i < len(comps)-1:
-        if comps[i] == "" and comps[i-1] != "":
-            if i > 1:
-                del comps[i-1:i+1]
-                i = i - 1
-            else:
-                # best way to handle this is to raise an exception
-                raise norm_error, 'Cannot use :: immedeately after volume name'
+    import string
+    if ':' not in s:
+        return ':' + s
+    f = string.splitfields(s, ':')
+    pre = []
+    post = []
+    if not f[0]:
+        pre = f[:1]
+        f = f[1:]
+    if not f[len(f)-1]:
+        post = f[-1:]
+        f = f[:-1]
+    res = []
+    for seg in f:
+        if seg:
+            res.append(seg)
         else:
-            i = i + 1
-
-    s = ":".join(comps)
-
-    # remove trailing ":" except for ":" and "Volume:"
-    if s[-1] == ":" and len(comps) > 2 and s != ":"*len(s):
-        s = s[:-1]
+            if not res: raise norm_error, 'path starts with ::'
+            del res[len(res)-1]
+            if not (pre or res):
+                raise norm_error, 'path starts with volume::'
+    if pre: res = pre + res
+    if post: res = res + post
+    s = res[0]
+    for seg in res[1:]:
+        s = s + ':' + seg
     return s
 
 

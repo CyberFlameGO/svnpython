@@ -18,9 +18,8 @@
 
     * getaliases() -> sequence of encoding name strings to use as aliases
 
-    Alias names returned by getaliases() must be standard encoding
-    names as defined above (lower-case, hyphens converted to
-    underscores).
+    Alias names returned by getaliases() must be lower-case.
+
 
 Written by Marc-Andre Lemburg (mal@lemburg.com).
 
@@ -28,7 +27,7 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 """#"
 
-import codecs,aliases
+import string,codecs,aliases
 
 _cache = {}
 _unknown = '--unknown--'
@@ -41,12 +40,11 @@ def search_function(encoding):
         return entry
 
     # Import the module
-    modname = encoding.replace('-', '_')
+    modname = string.replace(encoding, '-', '_')
     modname = aliases.aliases.get(modname,modname)
     try:
         mod = __import__(modname,globals(),locals(),'*')
     except ImportError,why:
-        # cache misses
         _cache[encoding] = None
         return None
     
@@ -65,21 +63,15 @@ def search_function(encoding):
                   'incompatible codecs in module "%s.%s"' % \
                   (__name__,modname)
 
-    # Cache the codec registry entry
+    # Cache the encoding and its aliases
     _cache[encoding] = entry
-
-    # Register its aliases (without overwriting previously registered
-    # aliases)
     try:
         codecaliases = mod.getaliases()
     except AttributeError:
         pass
     else:
         for alias in codecaliases:
-            if not aliases.aliases.has_key(alias):
-                aliases.aliases[alias] = modname
-
-    # Return the registry entry
+            _cache[alias] = entry
     return entry
 
 # Register the search_function in the Python codec registry

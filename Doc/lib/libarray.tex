@@ -83,14 +83,6 @@ values, \exception{RuntimeError} is raised.  It is useful when reading
 data from a file written on a machine with a different byte order.
 \end{methoddesc}
 
-\begin{methoddesc}[array]{count}{x}
-Return the number of occurences of \var{x} in the array.
-\end{methoddesc}
-
-\begin{methoddesc}[array]{extend}{a}
-Append array items from \var{a} to the end of the array.
-\end{methoddesc}
-
 \begin{methoddesc}[array]{fromfile}{f, n}
 Read \var{n} items (as machine values) from the file object \var{f}
 and append them to the end of the array.  If less than \var{n} items
@@ -112,20 +104,9 @@ array of machine values (i.e. as if it had been read from a
 file using the \method{fromfile()} method).
 \end{methoddesc}
 
-\begin{methoddesc}[array]{index}{x}
-Return the smallest \var{i} such that \var{i} is the index of
-the first occurence of \var{x} in the array.
-\end{methoddesc}
-
 \begin{methoddesc}[array]{insert}{i, x}
 Insert a new item with value \var{x} in the array before position
 \var{i}.
-\end{methoddesc}
-
-\begin{methoddesc}[array]{pop}{\optional{i}}
-Removes the item with the index \var{i} from the array and returns
-it. The optional argument defaults to \code{-1}, so that by default
-the last item is removed and returned. 
 \end{methoddesc}
 
 \begin{methoddesc}[array]{read}{f, n}
@@ -137,10 +118,6 @@ are available, \exception{EOFError} is raised, but the items that were
 available are still inserted into the array.  \var{f} must be a real
 built-in file object; something else with a \method{read()} method won't
 do.
-\end{methoddesc}
-
-\begin{methoddesc}[array]{remove}{x}
-Remove the first occurence of \var{x} from the array.
 \end{methoddesc}
 
 \begin{methoddesc}[array]{reverse}{}
@@ -185,15 +162,12 @@ array('d', [1.0, 2.0, 3.14])
 
 
 \begin{seealso}
-  \seemodule{struct}{Packing and unpacking of heterogeneous binary data.}
-  \seemodule{xdrlib}{Packing and unpacking of External Data
-                     Representation (XDR) data as used in some remote
-                     procedure call systems.}
-  \seetitle[http://numpy.sourceforge.net/numdoc/HTML/numdoc.html]{The
-           Numerical Python Manual}{The Numeric Python extension
-           (NumPy) defines another array type; see
-           \url{http://numpy.sourceforge.net/} for further information
-           about Numerical Python.  (A PDF version of the NumPy manual
-           is available at
-           \url{http://numpy.sourceforge.net/numdoc/numdoc.pdf}.}
+  \seemodule{struct}{packing and unpacking of heterogeneous binary data}
+  \seemodule{xdrlib}{packing and unpacking of XDR data}
+  \seetext{The Numeric Python extension (NumPy) defines another array
+           type; see \emph{The Numerical Python Manual} for additional 
+           information (available online at
+           \url{ftp://ftp-icf.llnl.gov/pub/python/numericalpython.pdf}). 
+           Further information about NumPy is available at
+           \url{http://www.python.org/topics/scicomp/numpy.html}.}
 \end{seealso}

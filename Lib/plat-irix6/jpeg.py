@@ -5,8 +5,7 @@
 # XXX It appears that compressing grayscale images doesn't work right;
 # XXX the resulting file causes weirdness.
 
-class error(Exception):
-	pass
+error = 'jpeg.error' # Exception
 
 options = {'quality': 75, 'optimize': 0, 'smooth': 0, 'forcegray': 0}
 
@@ -59,7 +58,7 @@ def decompress(jpegdata):
 	return imgdata, width, height, bytesperpixel
 
 def setoption(name, value):
-	if type(value) is not type(0):
+	if type(value) <> type(0):
 		raise TypeError, 'jpeg.setoption: numeric options only'
 	if name == 'forcegrey':
 		name = 'forcegray'

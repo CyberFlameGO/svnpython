@@ -1,4 +1,3 @@
-
 /* Support for dynamic loading of extension modules */
 
 #include "Python.h"
@@ -16,25 +15,14 @@
 #endif
 #endif
 
-#ifdef __OpenBSD__
-#define LEAD_UNDERSCORE "_"
-#else
-#define LEAD_UNDERSCORE ""
-#endif
-
 #ifndef RTLD_LAZY
 #define RTLD_LAZY 1
 #endif
 
 
 const struct filedescr _PyImport_DynLoadFiletab[] = {
-#ifdef __CYGWIN__
-	{".dll", "rb", C_EXTENSION},
-	{"module.dll", "rb", C_EXTENSION},
-#else
 	{".so", "rb", C_EXTENSION},
 	{"module.so", "rb", C_EXTENSION},
-#endif
 	{0, 0}
 };
 
@@ -60,7 +48,8 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 		pathname = pathbuf;
 	}
 
-	sprintf(funcname, LEAD_UNDERSCORE "init%.200s", shortname);
+	/* ### should there be a leading underscore for some platforms? */
+	sprintf(funcname, "init%.200s", shortname);
 
 	if (fp != NULL) {
 		int i;

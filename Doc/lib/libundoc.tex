@@ -1,12 +1,10 @@
-\chapter{Undocumented Modules \label{undoc}}
+\chapter{Undocumented Modules}
+\label{undoc}
 
 Here's a quick listing of modules that are currently undocumented, but
 that should be documented.  Feel free to contribute documentation for
-them!  (Send via email to \email{python-docs@python.org}.)
-
-The idea and original contents for this chapter were taken
-from a posting by Fredrik Lundh; the specific contents of this chapter
-have been substantially revised.
+them!  (The idea and original contents for this chapter were taken
+from a posting by Fredrik Lundh; I have revised some modules' status.)
 
 
 \section{Frameworks}
@@ -31,7 +29,7 @@ reference material.
 \item[\module{test}]
 --- Regression testing framework.  This is used for the Python
 regression test, but is useful for other Python libraries as well.
-This is a package rather than a single module.
+This is a package rather than a module.
 \end{description}
 
 
@@ -40,15 +38,20 @@ This is a package rather than a single module.
 Some of these are very old and/or not very robust; marked with ``hmm.''
 
 \begin{description}
+\item[\module{dircmp}]
+--- Class to build directory diff tools on (may become a demo or tool).
+\deprecated{1.6}{The \refmodule{filecmp} module will replace
+\module{dircmp}.}
+
 \item[\module{bdb}]
---- A generic Python debugger base class (used by pdb).
+--- A generic Python debugger base class (used by pdb)
 
 \item[\module{ihooks}]
---- Import hook support (for \refmodule{rexec}; may become obsolete).
+--- Import hook support (for \refmodule{rexec}; may become obsolete)
 
 \item[\module{tzparse}]
 --- Parse a timezone specification (unfinished; may disappear in the
-future).
+future)
 \end{description}
 
 
@@ -60,14 +63,13 @@ document these.
 
 \begin{description}
 \item[\module{dospath}]
---- Implementation of \module{os.path} on MS-DOS.
+--- implementation of \module{os.path} on MS-DOS
 
 \item[\module{ntpath}]
---- Implementation on \module{os.path} on Win32, Win64, WinCE, and
-OS/2 platforms.
+--- implementation on \module{os.path} on 32-bit Windows
 
 \item[\module{posixpath}]
---- Implementation on \module{os.path} on \POSIX.
+--- implementation on \module{os.path} on \POSIX{}
 \end{description}
 
 
@@ -75,10 +77,10 @@ OS/2 platforms.
 
 \begin{description}
 \item[\module{audiodev}]
---- Platform-independent API for playing audio data.
+--- Platform-independent API for playing audio data
 
 \item[\module{sunaudio}]
---- Interpret Sun audio headers (may become obsolete or a tool/demo).
+--- Interpret Sun audio headers (may become obsolete or a tool/demo)
 
 \item[\module{toaiff}]
 --- Convert "arbitrary" sound files to AIFF files; should probably
@@ -106,8 +108,7 @@ installing the shared object if using dynamically-loaded extensions.
 
 \begin{description}
 \item[\module{addpack}]
---- Alternate approach to packages.  Use the built-in package support
-instead.
+--- alternate approach to packages
 
 \item[\module{cmp}]
 --- File comparison function.  Use the newer \refmodule{filecmp} instead.
@@ -123,45 +124,31 @@ code object (these are now accessible as attributes:
 \member{co.co_firstlineno}).
 
 \item[\module{dircmp}]
---- Class to build directory diff tools on (may become a demo or tool).
-\deprecated{2.0}{The \refmodule{filecmp} module replaces
-\module{dircmp}.}
+--- class to build directory diff tools on (may become a demo or tool)
 
 \item[\module{dump}]
---- Print python code that reconstructs a variable.
+--- Print python code that reconstructs a variable
 
 \item[\module{fmt}]
---- Text formatting abstractions (too slow).
+--- text formatting abstractions (too slow)
 
 \item[\module{lockfile}]
---- Wrapper around FCNTL file locking (use
-\function{fcntl.lockf()}/\function{flock()} instead; see \refmodule{fcntl}).
+--- wrapper around FCNTL file locking (use
+\function{fcntl.lockf()}/\function{flock()} intead; see \refmodule{fcntl})
 
 \item[\module{newdir}]
 --- New \function{dir()} function (the standard \function{dir()} is
-now just as good).
+now just as good)
 
 \item[\module{Para}]
---- Helper for \module{fmt}.
+--- helper for fmt.py
 
 \item[\module{poly}]
---- Polynomials.
-
-\item[\module{regex}]
---- Emacs-style regular expression support; may still be used in some
-old code (extension module).  Refer to the
-\citetitle[http://www.python.org/doc/1.6/lib/module-regex.html]{Python
-1.6 Documentation} for documentation.
-
-\item[\module{regsub}]
---- Regular expression based string replacement utilities, for use
-with \module{regex} (extension module).  Refer to the
-\citetitle[http://www.python.org/doc/1.6/lib/module-regsub.html]{Python
-1.6 Documentation} for documentation.
+--- Polynomials
 
 \item[\module{tb}]
 --- Print tracebacks, with a dump of local variables (use
-\function{pdb.pm()} or \refmodule{traceback} instead).
+\function{pdb.pm()} or \refmodule{traceback} instead)
 
 \item[\module{timing}]
 --- Measure time intervals to high resolution (use
@@ -170,26 +157,29 @@ with \module{regex} (extension module).  Refer to the
 \item[\module{util}]
 --- Useful functions that don't fit elsewhere.
 
+\item[\module{wdb}]
+--- A primitive windowing debugger based on STDWIN.
+
 \item[\module{whatsound}]
 --- Recognize sound files; use \refmodule{sndhdr} instead.
 
 \item[\module{zmod}]
---- Compute properties of mathematical ``fields.''
+--- Compute properties of mathematical "fields"
 \end{description}
 
 
-The following modules are obsolete, but are likely to re-surface as
-tools or scripts:
+The following modules are obsolete, but are likely re-surface as tools
+or scripts.
 
 \begin{description}
 \item[\module{find}]
---- Find files matching pattern in directory tree.
+--- find files matching pattern in directory tree
 
 \item[\module{grep}]
---- \program{grep} implementation in Python.
+--- grep
 
 \item[\module{packmail}]
---- Create a self-unpacking \UNIX{} shell archive.
+--- create a self-unpacking \UNIX{} shell archive
 \end{description}
 
 
@@ -201,20 +191,25 @@ archive.
 \begin{description}
 \item[\module{ni}]
 --- Import modules in ``packages.''  Basic package support is now
-built in.  The built-in support is very similar to what is provided in
-this module.
+built in.
 
 \item[\module{rand}]
 --- Old interface to the random number generator.
 
 \item[\module{soundex}]
 --- Algorithm for collapsing names which sound similar to a shared
-key.  The specific algorithm doesn't seem to match any published
-algorithm.  (This is an extension module.)
+key.  (This is an extension module.)
 \end{description}
 
 
-\section{SGI-specific Extension modules}
+\section{Extension modules}
+
+\begin{description}
+\item[\module{stdwin}]
+--- Interface to STDWIN (an old, unsupported
+platform-independent GUI package).  Obsolete; use \module{Tkinter} for
+a platform-independent GUI instead.
+\end{description}
 
 The following are SGI specific, and may be out of touch with the
 current version of reality.

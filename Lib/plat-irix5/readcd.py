@@ -2,10 +2,8 @@
 
 import cd, CD
 
-class Error(Exception):
-	pass
-class _Stop(Exception):
-	pass
+Error = 'Readcd.Error'
+_Stop = 'Readcd.Stop'
 
 def _doatime(self, cb_type, data):
 	if ((data[0] * 60) + data[1]) * 75 + data[2] > self.end:
@@ -93,7 +91,7 @@ class Readcd:
 				if prog < self.status[5] or prog > self.status[6]:
 					raise Error, 'range error'
 				end = self.pmsf2msf(prog, min, sec, frame)
-			elif l != 3:
+			elif l <> 3:
 				raise Error, 'syntax error'
 		if type(start) == type(0):
 			if start < self.status[5] or start > self.status[6]:
@@ -111,7 +109,7 @@ class Readcd:
 				if prog < self.status[5] or prog > self.status[6]:
 					raise Error, 'range error'
 				start = self.pmsf2msf(prog, min, sec, frame)
-			elif l != 3:
+			elif l <> 3:
 				raise Error, 'syntax error'
 		self.list.append((start, end))
 
@@ -127,10 +125,10 @@ class Readcd:
 		if self.playing:
 			start, end = self.list[self.listindex]
 			if type(end) == type(0):
-				if cb_type != CD.PNUM:
+				if cb_type <> CD.PNUM:
 					self.parser.setcallback(cb_type, func, arg)
 			else:
-				if cb_type != CD.ATIME:
+				if cb_type <> CD.ATIME:
 					self.parser.setcallback(cb_type, func, arg)
 
 	def removecallback(self, cb_type):
@@ -140,10 +138,10 @@ class Readcd:
 		if self.playing:
 			start, end = self.list[self.listindex]
 			if type(end) == type(0):
-				if cb_type != CD.PNUM:
+				if cb_type <> CD.PNUM:
 					self.parser.removecallback(cb_type)
 			else:
-				if cb_type != CD.ATIME:
+				if cb_type <> CD.ATIME:
 					self.parser.removecallback(cb_type)
 
 	def gettrackinfo(self, *arg):

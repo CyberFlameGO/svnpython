@@ -10,7 +10,8 @@
 
 \author{Fred L. Drake, Jr.}
 \authoraddress{
-	PythonLabs \\
+	Corporation for National Research Initiatives (CNRI) \\
+	1895 Preston White Drive, Reston, Va 20191, USA \\
 	E-mail: \email{fdrake@acm.org}
 }
 
@@ -21,7 +22,7 @@
 
 \begin{abstract}
 \noindent
-The Python language has a substantial body of
+The Python language documentation has a substantial body of
 documentation, much of it contributed by various authors.  The markup
 used for the Python documentation is based on \LaTeX{} and requires a
 significant set of macros written specifically for documenting Python.
@@ -93,28 +94,17 @@ distribution, to create or maintain whole documents or sections.
   \begin{definitions}
     \term{Document Sources}
 	The \LaTeX{} sources for each document are placed in a
-	separate directory.  These directories are given short
-	names which vaguely indicate the document in each:
+	separate directory.  These directories are given short,
+	three-character names:
 
 	\begin{tableii}{p{.75in}|p{3in}}{filenq}{Directory}{Document Title}
-	  \lineii{api/}
-            {\citetitle[../api/api.html]{The Python/C API}}
-	  \lineii{dist/}
-            {\citetitle[../dist/dist.html]{Distributing Python Modules}}
-	  \lineii{doc/}
-            {\citetitle[../doc/doc.html]{Documenting Python}}
-	  \lineii{ext/}
-            {\citetitle[../ext/ext.html]{Extending and Embedding the Python Interpreter}}
-	  \lineii{inst/}
-            {\citetitle[../inst/inst.html]{Installing Python Modules}}
-	  \lineii{lib/}
-            {\citetitle[../lib/lib.html]{Python Library Reference}}
-	  \lineii{mac/}
-            {\citetitle[../mac/mac.html]{Macintosh Module Reference}}
-	  \lineii{ref/}
-            {\citetitle[../ref/ref.html]{Python Reference Manual}}
-	  \lineii{tut/}
-            {\citetitle[../tut/tut.html]{Python Tutorial}}
+	  \lineii{api/}{\citetitle[../api/api.html]{The Python/C API}}
+	  \lineii{doc/}{\citetitle[../doc/doc.html]{Documenting Python}}
+	  \lineii{ext/}{\citetitle[../ext/ext.html]{Extending and Embedding the Python Interpreter}}
+	  \lineii{lib/}{\citetitle[../lib/lib.html]{Python Library Reference}}
+	  \lineii{mac/}{\citetitle[../mac/mac.html]{Macintosh Module Reference}}
+	  \lineii{ref/}{\citetitle[../ref/ref.html]{Python Reference Manual}}
+	  \lineii{tut/}{\citetitle[../tut/tut.html]{Python Tutorial}}
 	\end{tableii}
 
     \term{Format-Specific Output}
@@ -160,7 +150,7 @@ distribution, to create or maintain whole documents or sections.
   productively without having to become ``\TeX{}nicians.''
 
   Perhaps the most important concept to keep in mind while marking up
-  Python documentation is that while \TeX{} is unstructured, \LaTeX{} was
+  Python documentation is the while \TeX{} is unstructured, \LaTeX{} was
   designed as a layer on top of \TeX{} which specifically supports 
   structured markup.  The Python-specific markup is intended to extend
   the structure provided by standard \LaTeX{} document classes to
@@ -191,194 +181,10 @@ distribution, to create or maintain whole documents or sections.
   because it would cause output.
 
   The document body follows the preamble.  This contains all the
-  printed components of the document marked up structurally.  Generic
-  \LaTeX{} structures include hierarchical sections
+  printed components of the document marked up structurally.  
 
-  \subsection{Syntax}
-
-    There are only a things that an author of Python documentation
-    needs to know about \LaTeX{} syntax.
-
-    A \dfn{comment} is started by the ``percent'' character
-    (\character{\%}) and continues through the end of the line and all
-    leading whitespace on the following line.  This is a little
-    different from any programming language I know of, so an example
-    is in order:
-
-\begin{verbatim}
-This is text.% comment
-    This is more text.  % another comment
-Still more text.
-\end{verbatim}
-
-    The first non-comment character following the first comment is the
-    letter \character{T} on the second line; the leading whitespace on
-    that line is consumed as part of the first comment.  This means
-    that there is no space between the first and second sentences, so
-    the period and letter \character{T} will be directly adjacent in
-    the typeset document.
-
-    Note also that though the first non-comment character after the
-    second comment is the letter \character{S}, there is whitespace
-    preceding the comment, so the two sentences are separated as
-    expected.
-
-    A \dfn{group} is an enclosure for a collection of text and
-    commands which encloses the formatting context and constrains the
-    scope of any changes to that context made by commands within the
-    group.  Groups can be nested hierarchically.  The formatting
-    context includes the font and the definition of additional macros
-    (or overrides of macros defined in outer groups).  Syntactically,
-    groups are enclosed in braces:
-
-\begin{verbatim}
-{text in a group}
-\end{verbatim}
-
-    An alternate syntax for a group using brackets (\code{\{...\}}) is
-    used by macros and environment constructors which take optional
-    parameters; brackets do not normally hold syntactic significance.
-    A degenerate group, containing only one atomic bit of content,
-    does not need to have an explicit group, unless it is required to
-    avoid ambiguity.  Since Python tends toward the explicit, groups
-    are also made explicit in the documentation markup.
-
-    Groups are used only sparingly in the Python documentation, except
-    for their use in marking parameters to macros and environments.
-
-    A \dfn{macro} is usually simple construct which is identified by
-    name and can take some number of parameters.  In normal \LaTeX{}
-    usage, one of these can be optional.  The markup is introduced
-    using the backslash character (\character{\e}), and the name is
-    given by alphabetic characters (no digits, hyphens, or
-    underscores).  Required parameters should be marked as a group,
-    and optional parameters should be marked using the alternate
-    syntax for a group.
-
-    For example, a macro named ``foo'' which takes a single parameter
-    would appear like this:
-
-\begin{verbatim}
-\name{parameter}
-\end{verbatim}
-
-    A macro which takes an optional parameter would be typed like this
-    when the optional paramter is given:
-
-\begin{verbatim}
-\name[optional]
-\end{verbatim}
-
-    If both optional and required parameters are to be required, it
-    looks like this:
-
-\begin{verbatim}
-\name[optional]{required}
-\end{verbatim}
-
-    A macro name may be followed by a space or newline; a space
-    between the macro name and any parameters will be consumed, but
-    this usage is not practiced in the Python documentation.  Such a
-    space is still consumed if there are no parameters to the marco,
-    in which case inserting an empty group (\code{\{\}}) or explicit
-    word space (\samp{\e\ }) immediately after the macro name helps to
-    avoid running the expansion of the macro into the following text.
-    Macros which take no parameters but which should not be followed
-    by a word space do not need special treatment if the following
-    character in the document source if not a name character (such as
-    puctuation).
-
-    Each line of this example shows an appropriate way to write text
-    which includes a macro which takes no parameters:
-
-\begin{verbatim}
-This \UNIX{} is followed by a space.
-This \UNIX\ is also followed by a space.
-\UNIX, followed by a comma, needs no additional markup.
-\end{verbatim}
-
-    An \dfn{environment} is a larger construct than a macro, and can
-    be used for things with more content that would conveniently fit
-    in a macro parameter.  They are primarily used when formatting
-    parameters need to be changed before and after a large chunk of
-    content, but the content itself needs to be highly flexible.  Code
-    samples are presented using an environment, and descriptions of
-    functions, methods, and classes are also marked using envionments.
-
-    Since the content of an environment is free-form and can consist
-    of several paragraphs, they are actually marked using a pair of
-    macros: \macro{begin} and \macro{end}.  These macros both take the
-    name of the environment as a parameter.  An example is the
-    environment used to mark the abstract of a document:
-
-\begin{verbatim}
-\begin{abstract}
-  This is the text of the abstract.  It concisely explains what
-  information is found in the document.
-
-  It can consist of multiple paragraphs.
-\end{abstract}
-\end{verbatim}
-
-    An environment can also have required and optional parameters of
-    its own.  These follow the parameter of the \macro{begin} macro.
-    This example shows an environment which takes a single required
-    parameter:
-
-\begin{verbatim}
-\begin{datadesc}{datadesc}{controlnames}
-  A 33-element string array that contains the \ASCII{} mnemonics for
-  the thirty-two \ASCII{} control characters from 0 (NUL) to 0x1f
-  (US), in order, plus the mnemonic \samp{SP} for the space character.
-\end{datadesc}
-\end{verbatim}
-
-    There are a number of less-used marks in \LaTeX{} are used to
-    enter non-\ASCII{} characters, especially those used in European
-    names.  Given that these are often used adjacent to other
-    characters, the markup required to produce the proper character
-    may need to be followed by a space or an empty group, or the the
-    markup can be enclosed in a group.  Some which are found in Python
-    documentation are:
-
-\begin{tableii}{c|l}{textrm}{Character}{Markup}
-  \lineii{\c c}{\code{\e c c}}
-  \lineii{\"o}{\code{\e"o}}
-  \lineii{\o}{\code{\e o}}
-\end{tableii}
-
-
-  \subsection{Hierarchical Structure}
-
-    \LaTeX{} expects documents to be arranged in a conventional,
-    hierarchical way, with chapters, sections, sub-sections,
-    appendixes, and the like.  These are marked using macros rather
-    than environments, probably because the end of a section can be
-    safely inferred when a section of equal or higher level starts.
-
-    There are six ``levels'' of sectioning in the document classes
-    used for Python documentation, and the lowest two levels are not
-    used.  The levels are:
-
-      \begin{tableiii}{c|l|c}{textrm}{Level}{Macro Name}{Notes}
-        \lineiii{1}{\macro{chapter}}{(1)}
-        \lineiii{2}{\macro{section}}{}
-        \lineiii{3}{\macro{subsection}}{}
-        \lineiii{4}{\macro{subsubsection}}{}
-        \lineiii{5}{\macro{paragraph}}{(2)}
-        \lineiii{6}{\macro{subparagraph}}{}
-      \end{tableiii}
-
-    \noindent
-    Notes:
-
-    \begin{description}
-      \item[(1)]
-      Only used for the \code{manual} documents, as described in
-      section \ref{classes}, ``Document Classes.''
-      \item[(2)]
-      Not the same as a paragraph of text; nobody seems to use this.
-    \end{description}
+  XXX This section will discuss what the markup looks like, and
+   explain the difference between an environment and a macro.
 
 
 \section{Document Classes \label{classes}}
@@ -403,12 +209,12 @@ This \UNIX\ is also followed by a space.
   originally using the LinuxDoc software.  The original intent for the
   document class was that it serve a similar role as the LDP's HOWTO
   series, but the applicability of the class turns out to be somewhat
-  broader.  This class is used for ``how-to'' documents (this
+  more broad.  This class is used for ``how-to'' documents (this
   document is an example) and for shorter reference manuals for small,
   fairly cohesive module libraries.  Examples of the later use include
   the standard \citetitle[../mac/mac.html]{Macintosh Library Modules}
   and
-\citetitle[http://starship.python.net/crew/fdrake/manuals/krb5py/krb5py.html]{Using
+\citetitle[http://starship.python.org/crew/fdrake/manuals/krb5py/krb5py.html]{Using
   Kerberos from Python}, which contains reference material for an
   extension package.  These documents are roughly equivalent to a
   single chapter from a larger work.
@@ -419,18 +225,6 @@ This \UNIX\ is also followed by a space.
   The Python document classes define a lot of new environments and
   macros.  This section contains the reference material for these
   facilities.
-
-  \subsection{Markup for the Preamble \label{preamble-info}}
-
-    \begin{macrodesc}{release}{\p{ver}}
-      Set the version number for the software described in the
-      document.
-    \end{macrodesc}
-
-    \begin{macrodesc}{setshortversion}{\p{sver}}
-      Specify the ``short'' version number of the documented software
-      to be \var{sver}.
-    \end{macrodesc}
 
   \subsection{Meta-information Markup \label{meta-info}}
 
@@ -477,34 +271,6 @@ This \UNIX\ is also followed by a space.
     \module{formatter} module: these may be documented without any
     specific implementation classes, and will always require the
     \var{type name} parameter to be provided.
-
-    \begin{envdesc}{cfuncdesc}{\p{type}\p{name}\p{args}}
-      Environment used to described a C function.  The \var{type}
-      should be specified as a \keyword{typedef} name, \code{struct
-      \var{tag}}, or the name of a primitive type.  If it is a pointer
-      type, the trailing asterisk should not be preceded by a space.
-      \var{name} should be the name of the function (or function-like
-      pre-processor macro), and \var{args} should give the types and
-      names of the parameters.  The names need to be given so they may
-      be used in the description.
-    \end{envdesc}
-
-    \begin{envdesc}{ctypedesc}{\op{tag}\p{name}}
-      Environment used to described a C type.  The \var{name}
-      parameter should be the \keyword{typedef} name.  If the type is
-      defined as a \keyword{struct} without a \keyword{typedef},
-      \var{name} should have the form \code{struct \var{tag}}.
-      \var{name} will be added to the index unless \var{tag} is
-      provided, in which case \var{tag} will be used instead.
-      \var{tag} should not be used for a \keyword{typedef} name.
-    \end{envdesc}
-
-    \begin{envdesc}{cvardesc}{\p{type}\p{name}}
-      Description of a global C variable.  \var{type} should be the
-      \keyword{typedef} name, \code{struct \var{tag}}, or the name of
-      a primitive type.  If variable has a pointer type, the trailing
-      asterisk should \emph{not} be preceded by a space.
-    \end{envdesc}
 
     \begin{envdesc}{datadesc}{\p{name}}
       This environment is used to document global data in a module,
@@ -574,22 +340,13 @@ This \UNIX\ is also followed by a space.
 
     Representing an interactive session requires including the prompts
     and output along with the Python code.  No special markup is
-    required for interactive sessions.  After the last line of input
-    or output presented, there should not be an ``unused'' primary
-    prompt; this is an example of what \emph{not} to do:
-
-\begin{verbatim}
->>> 1 + 1
-2
->>> 
-\end{verbatim}
+    required for interactive sessions.
 
     Within the \env{verbatim} environment, characters special to
     \LaTeX{} do not need to be specially marked in any way.  The entire
     example will be presented in a monospaced font; no attempt at
     ``pretty-printing'' is made, as the environment must work for
-    non-Python code and non-code displays.  There should be no blank
-    lines at the top or bottom of any \env{verbatim} display.
+    non-Python code and non-code displays.
 
     The Python Documentation Special Interest Group has discussed a
     number of approaches to creating pretty-printed code displays and
@@ -663,7 +420,7 @@ This \UNIX\ is also followed by a space.
 
     \begin{macrodesc}{e}{}
       Produces a backslash.  This is convenient in \macro{code} and
-      similar macros, and is only defined there.  To create a
+      similar macros, and is only defined there.  The create a
       backslash in ordinary text (such as the contents of the
       \macro{file} macro), use the standard \macro{textbackslash} macro.
     \end{macrodesc}
@@ -690,16 +447,12 @@ This \UNIX\ is also followed by a space.
       The name of a file or directory.  In the PDF and PostScript
       outputs, single quotes and a font change are used to indicate
       the file name, but no quotes are used in the HTML output.
-      \strong{Warning:} The \macro{file} macro cannot be used in the
-      content of a section title due to processing limitations.
     \end{macrodesc}
 
     \begin{macrodesc}{filenq}{\p{file or dir}}
       Like \macro{file}, but single quotes are never used.  This can
       be used in conjunction with tables if a column will only contain 
       file or directory names.
-      \strong{Warning:} The \macro{filenq} macro cannot be used in the
-      content of a section title due to processing limitations.
     \end{macrodesc}
 
     \begin{macrodesc}{function}{\p{name}}
@@ -767,13 +520,6 @@ This \UNIX\ is also followed by a space.
       \var{option}.
     \end{macrodesc}
 
-    \begin{macrodesc}{pep}{\p{number}}
-      A reference to a Python Enhancement Proposal.  This generates
-      appropriate index entries.  The text \samp{PEP \var{number}} is
-      generated; in the HTML output, this text is a hyperlink to an
-      online copy of the specified PEP.
-    \end{macrodesc}
-
     \begin{macrodesc}{refmodule}{\op{key}\p{name}}
       Like \macro{module}, but create a hyperlink to the documentation 
       for the named module.  Note that the corresponding
@@ -800,17 +546,6 @@ This \UNIX\ is also followed by a space.
       acceptable.
     \end{macrodesc}
 
-    \begin{macrodesc}{shortversion}{}
-      The ``short'' version number of the documented software, as
-      specified using the \macro{setshortversion} macro in the
-      preamble.  For Python, the short version number for a release is
-      the first three characters of the \code{sys.version} value.  For
-      example, versions 2.0b1 and 2.0.1 both have a short version of
-      2.0.  This may not apply for all packages; if
-      \macro{setshortversion} is not used, this produces an empty
-      expansion.  See also the \macro{version} macro.
-    \end{macrodesc}
-
     \begin{macrodesc}{strong}{\p{text}}
       Strongly emphasized text; this will be presented using a bold
       font.
@@ -832,9 +567,8 @@ This \UNIX\ is also followed by a space.
     \end{macrodesc}
 
     \begin{macrodesc}{version}{}
-      The version number of the described software, as specified using
-      \macro{release} in the preamble.  See also the
-      \macro{shortversion} macro.
+      The version number for the documentation, as specified using
+      \macro{release} in the preamble.
     \end{macrodesc}
 
     \begin{macrodesc}{versionadded}{\p{version}}
@@ -849,7 +583,7 @@ This \UNIX\ is also followed by a space.
       The version of Python in which the named feature was changed in
       some way (new parameters, changed side effects, etc.).
       \var{explanation} should be a \emph{brief} explanation of the
-      change consisting of a capitalized sentence fragment; a
+      change consisting of a non-capitalized sentence fragment; a
       period will be appended by the formatting process.
       This is typically added to the end of the first paragraph of the
       description before any availability notes and after
@@ -874,26 +608,6 @@ This \UNIX\ is also followed by a space.
 \modulesynopsis{Access to the SPAM facility of \UNIX{}.}
 \moduleauthor{Jane Doe}{jane.doe@frobnitz.org}
 \end{verbatim}
-
-  Python packages\index{packages} --- collections of modules that can
-  be described as a unit --- are documented using the same markup as
-  modules.  The name for a module in a package should be typed in
-  ``fully qualified'' form (i.e., it should include the package name).
-  For example, a module ``foo'' in package ``bar'' should be marked as
-  \samp{\e module\{bar.foo\}}, and the beginning of the reference
-  section would appear as:
-
-\begin{verbatim}
-\section{\module{bar.foo} ---
-         Module from the \module{bar} package}
-
-\declaremodule{extension}{bar.foo}
-\modulesynopsis{Nifty module from the \module{bar} package.}
-\moduleauthor{Jane Doe}{jane.doe@frobnitz.org}
-\end{verbatim}
-
-  Note that the name of a package is also marked using
-  \macro{module}.
 
   \begin{macrodesc}{declaremodule}{\op{key}\p{type}\p{name}}
     Requires two parameters: module type (\samp{standard},
@@ -973,23 +687,13 @@ This \UNIX\ is also followed by a space.
     matches the \var{cols} value of the corresponding table
     environment.  These are supported for \var{cols} values of
     \code{ii}, \code{iii}, and \code{iv}.  These environments are all
-    built on top of the \env{tabular} environment.  Variants based on
-    the \env{longtable} environment are also provided.
+    built on top of the \env{tabular} environment.
 
     Note that all tables in the standard Python documentation use
     vertical lines between columns, and this must be specified in the
     markup for each table.  A general border around the outside of the
     table is not used, but would be the responsibility of the
-    processor; the document markup should not include an exterior
-    border.
-
-    The \env{longtable}-based variants of the table environments are
-    formatted with extra space before and after, so should only be
-    used on tables which are long enough that splitting over multiple
-    pages is reasonable; tables with fewer than twenty rows should
-    never by marked using the long flavors of the table environments.
-    The header row is repeated across the top of each part of the
-    table.
+    processor.
 
     \begin{envdesc}{tableii}{\p{colspec}\p{col1font}\p{heading1}\p{heading2}}
       Create a two-column table using the \LaTeX{} column specifier
@@ -1005,15 +709,8 @@ This \UNIX\ is also followed by a space.
       \var{heading2}.
     \end{envdesc}
 
-    \begin{envdesc}{longtableii}{\unspecified}
-      Like \env{tableii}, but produces a table which may be broken
-      across page boundaries.  The parameters are the same as for
-      \env{tableii}.
-    \end{envdesc}
-
     \begin{macrodesc}{lineii}{\p{column1}\p{column2}}
-      Create a single table row within a \env{tableii} or
-      \env{longtableii} environment.
+      Create a single table row within a \env{tableii} environment.
       The text for the first column will be generated by applying the
       macro named by the \var{col1font} value when the \env{tableii}
       was opened.
@@ -1024,12 +721,6 @@ This \UNIX\ is also followed by a space.
       The heading for the third column is given by \var{heading3}.
     \end{envdesc}
 
-    \begin{envdesc}{longtableiii}{\unspecified}
-      Like \env{tableiii}, but produces a table which may be broken
-      across page boundaries.  The parameters are the same as for
-      \env{tableiii}.
-    \end{envdesc}
-
     \begin{macrodesc}{lineiii}{\p{column1}\p{column2}\p{column3}}
       Like the \macro{lineii} macro, but with a third column.  The
       text for the third column is given by \var{column3}.
@@ -1038,12 +729,6 @@ This \UNIX\ is also followed by a space.
     \begin{envdesc}{tableiv}{\p{colspec}\p{col1font}\p{heading1}\p{heading2}\p{heading3}\p{heading4}}
       Like the \env{tableiii} environment, but with a fourth column.
       The heading for the fourth column is given by \var{heading4}.
-    \end{envdesc}
-
-    \begin{envdesc}{longtableiv}{\unspecified}
-      Like \env{tableiv}, but produces a table which may be broken
-      across page boundaries.  The parameters are the same as for
-      \env{tableiv}.
     \end{envdesc}
 
     \begin{macrodesc}{lineiv}{\p{column1}\p{column2}\p{column3}\p{column4}}
@@ -1067,23 +752,10 @@ This \UNIX\ is also followed by a space.
     additional macros to support creating reference entries in a
     reasonable manner.
 
-    The \env{seealso} environment is typically placed in a section
-    just before any sub-sections.  This is done to ensure that
-    reference links related to the section are not hidden in a
-    subsection in the hypertext renditions of the documentation.
-
     \begin{envdesc}{seealso}{}
       This environment creates a ``See also:'' heading and defines the
       markup used to describe individual references.
     \end{envdesc}
-
-    For each of the following macros, \var{why} should be one or more
-    complete sentences, starting with a capital letter (unless it
-    starts with an identifier, which should not be modified), and
-    ending with the apropriate punctuation.
-
-    These macros are only defined within the content of the
-    \env{seealso} environment.
 
     \begin{macrodesc}{seemodule}{\op{key}\p{name}\p{why}}
       Refer to another module.  \var{why} should be a brief
@@ -1095,44 +767,10 @@ This \UNIX\ is also followed by a space.
       document (the corresponding \macro{declaremodule} is required).
     \end{macrodesc}
 
-    \begin{macrodesc}{seepep}{\p{number}\p{title}\p{why}}
-      Refer to an Python Enhancement Proposal (PEP).  \var{number}
-      should be the official number assigned by the PEP Editor,
-      \var{title} should be the human-readable title of the PEP as
-      found in the official copy of the document, and \var{why} should
-      explain what's interesting about the PEP.  This should be used
-      to refer the reader to PEPs which specify interfaces or language
-      features relevant to the material in the annotated section of the
-      documentation.
-    \end{macrodesc}
-
-    \begin{macrodesc}{seerfc}{\p{number}\p{title}\p{why}}
-      Refer to an IETF Request for Comments (RFC).  Otherwise very
-      similar to \macro{seepep}.  This should be used
-      to refer the reader to PEPs which specify protocols or data
-      formats relevant to the material in the annotated section of the
-      documentation.
-    \end{macrodesc}
-
     \begin{macrodesc}{seetext}{\p{text}}
       Add arbitrary text \var{text} to the ``See also:'' list.  This
       can be used to refer to off-line materials or on-line materials
-      using the \macro{url} macro.  This should consist of one or more
-      complete sentences.
-    \end{macrodesc}
-
-    \begin{macrodesc}{seetitle}{\op{url}\p{title}\p{why}}
-      Add a reference to an external document named \var{title}.  If
-      \var{url} is given, the title is made a hyperlink in the HTML
-      version of the documentation, and displayed below the title in
-      the typeset versions of the documentation.
-    \end{macrodesc}
-
-    \begin{macrodesc}{seeurl}{\p{url}\p{why}}
-      References to specific on-line resources should be given using
-      the \macro{seeurl} macro.  No title is associated with the
-      reference, but the \var{why} text may include a title marked
-      using the \macro{citetitle} macro.
+      using the \macro{url} macro.
     \end{macrodesc}
 
 

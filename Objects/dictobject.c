@@ -1,4 +1,3 @@
-
 /* Dictionary object implementation using a hash table */
 
 #include "Python.h"
@@ -10,12 +9,9 @@
 
 #define MINSIZE 4
 
-/* define this out if you don't want conversion statistics on exit */
-#undef SHOW_CONVERSION_COUNTS
-
 /*
 Table of irreducible polynomials to efficiently cycle through
-GF(2^n)-{0}, 2<=n<=30.  A table size is always a power of 2.
+GF(2^n)-{0}, 2<=n<=30.
 */
 static long polys[] = {
 	4 + 3,
@@ -54,30 +50,13 @@ static long polys[] = {
 static PyObject *dummy; /* Initialized by first call to newdictobject() */
 
 /*
-There are three kinds of slots in the table:
-
-1. Unused.  me_key == me_value == NULL
-   Does not hold an active (key, value) pair now and never did.  Unused can
-   transition to Active upon key insertion.  This is the only case in which
-   me_key is NULL, and is each slot's initial state.
-
-2. Active.  me_key != NULL and me_key != dummy and me_value != NULL
-   Holds an active (key, value) pair.  Active can transition to Dummy upon
-   key deletion.  This is the only case in which me_value != NULL.
-
-3. Dummy.  me_key == dummy and me_value == NULL
-   Previously held an active (key, value) pair, but that was deleted and an
-   active pair has not yet overwritten the slot.  Dummy can transition to
-   Active upon key insertion.  Dummy slots cannot be made Unused again
-   (cannot have me_key set to NULL), else the probe sequence in case of
-   collision would have no way to know they were once active.
-
-Note: .popitem() abuses the me_hash field of an Unused or Dummy slot to
-hold a search finger.  The me_hash field of Unused or Dummy slots has no
-meaning otherwise.
+Invariant for entries: when in use, me_value is not NULL and me_key is
+not NULL and not dummy; when not in use, me_value is NULL and me_key
+is either NULL or dummy.  A dummy key value cannot be replaced by
+NULL, since otherwise other keys may be lost.
 */
 typedef struct {
-	long me_hash;      /* cached hash code of me_key */
+	long me_hash;
 	PyObject *me_key;
 	PyObject *me_value;
 #ifdef USE_CACHE_ALIGNED
@@ -86,53 +65,30 @@ typedef struct {
 } dictentry;
 
 /*
-To ensure the lookup algorithm terminates, there must be at least one Unused
-slot (NULL key) in the table.
-The value ma_fill is the number of non-NULL keys (sum of Active and Dummy);
-ma_used is the number of non-NULL, non-dummy keys (== the number of non-NULL
-values == the number of Active items).
-To avoid slowing down lookups on a near-full table, we resize the table when
-it is more than half filled.
+To ensure the lookup algorithm terminates, the table size must be a
+prime number and there must be at least one NULL key in the table.
+The value ma_fill is the number of non-NULL keys; ma_used is the number
+of non-NULL, non-dummy keys.
+To avoid slowing down lookups on a near-full table, we resize the table
+when it is more than half filled.
 */
-typedef struct dictobject dictobject;
-struct dictobject {
+typedef struct {
 	PyObject_HEAD
-	int ma_fill;  /* # Active + # Dummy */
-	int ma_used;  /* # Active */
-	int ma_size;  /* total # slots in ma_table */
-	int ma_poly;  /* appopriate entry from polys vector */
+	int ma_fill;
+	int ma_used;
+	int ma_size;
+	int ma_poly;
 	dictentry *ma_table;
-	dictentry *(*ma_lookup)(dictobject *mp, PyObject *key, long hash);
-};
-
-/* forward declarations */
-static dictentry *
-lookdict_string(dictobject *mp, PyObject *key, long hash);
-
-#ifdef SHOW_CONVERSION_COUNTS
-static long created = 0L;
-static long converted = 0L;
-
-static void
-show_counts(void)
-{
-	fprintf(stderr, "created %ld string dicts\n", created);
-	fprintf(stderr, "converted %ld to normal dicts\n", converted);
-	fprintf(stderr, "%.2f%% conversion rate\n", (100.0*converted)/created);
-}
-#endif
+} dictobject;
 
 PyObject *
-PyDict_New(void)
+PyDict_New()
 {
 	register dictobject *mp;
 	if (dummy == NULL) { /* Auto-initialize dummy */
 		dummy = PyString_FromString("<dummy key>");
 		if (dummy == NULL)
 			return NULL;
-#ifdef SHOW_CONVERSION_COUNTS
-		Py_AtExit(show_counts);
-#endif
 	}
 	mp = PyObject_NEW(dictobject, &PyDict_Type);
 	if (mp == NULL)
@@ -142,11 +98,6 @@ PyDict_New(void)
 	mp->ma_table = NULL;
 	mp->ma_fill = 0;
 	mp->ma_used = 0;
-	mp->ma_lookup = lookdict_string;
-#ifdef SHOW_CONVERSION_COUNTS
-	++created;
-#endif
-	PyObject_GC_Init(mp);
 	return (PyObject *)mp;
 }
 
@@ -156,24 +107,24 @@ This is based on Algorithm D from Knuth Vol. 3, Sec. 6.4.
 Open addressing is preferred over chaining since the link overhead for
 chaining would be substantial (100% with typical malloc overhead).
 However, instead of going through the table at constant steps, we cycle
-through the values of GF(2^n).  This avoids modulo computations, being
+through the values of GF(2^n)-{0}. This avoids modulo computations, being
 much cheaper on RISC machines, without leading to clustering.
 
 The initial probe index is computed as hash mod the table size.
-Subsequent probe indices use the values of x^i in GF(2^n)-{0} as an offset,
-where x is a root. The initial offset is derived from hash, too.
+Subsequent probe indices use the values of x^i in GF(2^n) as an offset,
+where x is a root. The initial value is derived from hash, too.
 
 All arithmetic on hash should ignore overflow.
 
 (This version is due to Reimer Behrends, some ideas are also due to
 Jyrki Alakuijala and Vladimir Marangozov.)
-
-This function must never return NULL; failures are indicated by returning
-a dictentry* for which the me_value field is NULL.  Exceptions are never
-reported by this function, and outstanding exceptions are maintained.
 */
+static dictentry *lookdict Py_PROTO((dictobject *, PyObject *, long));
 static dictentry *
-lookdict(dictobject *mp, PyObject *key, register long hash)
+lookdict(mp, key, hash)
+	dictobject *mp;
+	PyObject *key;
+	register long hash;
 {
 	register int i;
 	register unsigned incr;
@@ -181,124 +132,6 @@ lookdict(dictobject *mp, PyObject *key, register long hash)
 	register unsigned int mask = mp->ma_size-1;
 	dictentry *ep0 = mp->ma_table;
 	register dictentry *ep;
-	register int restore_error = 0;
-	register int checked_error = 0;
-	register int cmp;
-	PyObject *err_type, *err_value, *err_tb;
-	/* We must come up with (i, incr) such that 0 <= i < ma_size
-	   and 0 < incr < ma_size and both are a function of hash.
-	   i is the initial table index and incr the initial probe offset. */
-	i = (~hash) & mask;
-	/* We use ~hash instead of hash, as degenerate hash functions, such
-	   as for ints <sigh>, can have lots of leading zeros. It's not
-	   really a performance risk, but better safe than sorry.
-	   12-Dec-00 tim:  so ~hash produces lots of leading ones instead --
-	   what's the gain? */
-	ep = &ep0[i];
-	if (ep->me_key == NULL || ep->me_key == key)
-		return ep;
-	if (ep->me_key == dummy)
-		freeslot = ep;
-	else {
-		if (ep->me_hash == hash) {
-			/* error can't have been checked yet */
-			checked_error = 1;
-			if (PyErr_Occurred()) {
-				restore_error = 1;
-				PyErr_Fetch(&err_type, &err_value, &err_tb);
-			}
-			cmp = PyObject_RichCompareBool(ep->me_key, key, Py_EQ);
-			if (cmp > 0) {
-				if (restore_error)
-					PyErr_Restore(err_type, err_value,
-						      err_tb);
-				return ep;
-			}
-			else if (cmp < 0)
-				PyErr_Clear();
-		}
-		freeslot = NULL;
-	}
-	/* Derive incr from hash, just to make it more arbitrary. Note that
-	   incr must not be 0, or we will get into an infinite loop.*/
-	incr = (hash ^ ((unsigned long)hash >> 3)) & mask;
-	if (!incr)
-		incr = mask;
-	for (;;) {
-		ep = &ep0[(i+incr)&mask];
-		if (ep->me_key == NULL) {
-			if (restore_error)
-				PyErr_Restore(err_type, err_value, err_tb);
-			if (freeslot != NULL)
-				return freeslot;
-			else
-				return ep;
-		}
-		if (ep->me_key == dummy) {
-			if (freeslot == NULL)
-				freeslot = ep;
-		}
-		else if (ep->me_key == key) {
-			if (restore_error)
-				PyErr_Restore(err_type, err_value, err_tb);
-			return ep;
-                }
-                else if (ep->me_hash == hash) {
-			if (!checked_error) {
-				checked_error = 1;
-				if (PyErr_Occurred()) {
-					restore_error = 1;
-					PyErr_Fetch(&err_type, &err_value,
-						    &err_tb);
-				}
-			}
-			cmp = PyObject_RichCompareBool(ep->me_key, key, Py_EQ);
-			if (cmp > 0) {
-				if (restore_error)
-					PyErr_Restore(err_type, err_value,
-						      err_tb);
-				return ep;
-			}
-			else if (cmp < 0)
-				PyErr_Clear();
-		}
-		/* Cycle through GF(2^n)-{0} */
-		incr = incr << 1;
-		if (incr > mask)
-			incr ^= mp->ma_poly; /* This will implicitly clear
-						the highest bit */
-	}
-}
-
-/*
- * Hacked up version of lookdict which can assume keys are always strings;
- * this assumption allows testing for errors during PyObject_Compare() to
- * be dropped; string-string comparisons never raise exceptions.  This also
- * means we don't need to go through PyObject_Compare(); we can always use
- * the tp_compare slot of the string type object directly.
- *
- * This really only becomes meaningful if proper error handling in lookdict()
- * is too expensive.
- */
-static dictentry *
-lookdict_string(dictobject *mp, PyObject *key, register long hash)
-{
-	register int i;
-	register unsigned incr;
-	register dictentry *freeslot;
-	register unsigned int mask = mp->ma_size-1;
-	dictentry *ep0 = mp->ma_table;
-	register dictentry *ep;
-        cmpfunc compare = PyString_Type.tp_compare;
-
-	/* make sure this function doesn't have to handle non-string keys */
-	if (!PyString_Check(key)) {
-#ifdef SHOW_CONVERSION_COUNTS
-		++converted;
-#endif
-		mp->ma_lookup = lookdict;
-		return lookdict(mp, key, hash);
-	}
 	/* We must come up with (i, incr) such that 0 <= i < ma_size
 	   and 0 < incr < ma_size and both are a function of hash */
 	i = (~hash) & mask;
@@ -311,12 +144,14 @@ lookdict_string(dictobject *mp, PyObject *key, register long hash)
 	if (ep->me_key == dummy)
 		freeslot = ep;
 	else {
-		if (ep->me_hash == hash
-                    && compare(ep->me_key, key) == 0) {
+		if (ep->me_hash == hash &&
+		    PyObject_Compare(ep->me_key, key) == 0)
+		{
 			return ep;
 		}
 		freeslot = NULL;
 	}
+	/* XXX What if PyObject_Compare returned an exception? */
 	/* Derive incr from hash, just to make it more arbitrary. Note that
 	   incr must not be 0, or we will get into an infinite loop.*/
 	incr = (hash ^ ((unsigned long)hash >> 3)) & mask;
@@ -334,15 +169,16 @@ lookdict_string(dictobject *mp, PyObject *key, register long hash)
 			if (freeslot == NULL)
 				freeslot = ep;
 		}
-		else if (ep->me_key == key
-			 || (ep->me_hash == hash
-			     && compare(ep->me_key, key) == 0)) {
+		else if (ep->me_key == key ||
+			 (ep->me_hash == hash &&
+			  PyObject_Compare(ep->me_key, key) == 0)) {
 			return ep;
-                }
+		}
+		/* XXX What if PyObject_Compare returned an exception? */
 		/* Cycle through GF(2^n)-{0} */
 		incr = incr << 1;
 		if (incr > mask)
-			incr ^= mp->ma_poly; /* This will implicitly clear
+			incr ^= mp->ma_poly; /* This will implicitely clear
 						the highest bit */
 	}
 }
@@ -352,12 +188,18 @@ Internal routine to insert a new item into the table.
 Used both by the internal resize routine and by the public insert routine.
 Eats a reference to key and one to value.
 */
+static void insertdict
+	Py_PROTO((dictobject *, PyObject *, long, PyObject *));
 static void
-insertdict(register dictobject *mp, PyObject *key, long hash, PyObject *value)
+insertdict(mp, key, hash, value)
+	register dictobject *mp;
+	PyObject *key;
+	long hash;
+	PyObject *value;
 {
 	PyObject *old_value;
 	register dictentry *ep;
-	ep = (mp->ma_lookup)(mp, key, hash);
+	ep = lookdict(mp, key, hash);
 	if (ep->me_value != NULL) {
 		old_value = ep->me_value;
 		ep->me_value = value;
@@ -381,8 +223,11 @@ Restructure the table by allocating a new table and reinserting all
 items again.  When entries have been deleted, the new table may
 actually be smaller than the old one.
 */
+static int dictresize Py_PROTO((dictobject *, int));
 static int
-dictresize(dictobject *mp, int minused)
+dictresize(mp, minused)
+	dictobject *mp;
+	int minused;
 {
 	register int oldsize = mp->ma_size;
 	register int newsize, newpoly;
@@ -431,14 +276,15 @@ dictresize(dictobject *mp, int minused)
 }
 
 PyObject *
-PyDict_GetItem(PyObject *op, PyObject *key)
+PyDict_GetItem(op, key)
+	PyObject *op;
+	PyObject *key;
 {
 	long hash;
-	dictobject *mp = (dictobject *)op;
 	if (!PyDict_Check(op)) {
 		return NULL;
 	}
-	if (mp->ma_table == NULL)
+	if (((dictobject *)op)->ma_table == NULL)
 		return NULL;
 #ifdef CACHE_HASH
 	if (!PyString_Check(key) ||
@@ -451,11 +297,14 @@ PyDict_GetItem(PyObject *op, PyObject *key)
 			return NULL;
 		}
 	}
-	return (mp->ma_lookup)(mp, key, hash)->me_value;
+	return lookdict((dictobject *)op, key, hash) -> me_value;
 }
 
 int
-PyDict_SetItem(register PyObject *op, PyObject *key, PyObject *value)
+PyDict_SetItem(op, key, value)
+	register PyObject *op;
+	PyObject *key;
+	PyObject *value;
 {
 	register dictobject *mp;
 	register long hash;
@@ -500,7 +349,9 @@ PyDict_SetItem(register PyObject *op, PyObject *key, PyObject *value)
 }
 
 int
-PyDict_DelItem(PyObject *op, PyObject *key)
+PyDict_DelItem(op, key)
+	PyObject *op;
+	PyObject *key;
 {
 	register dictobject *mp;
 	register long hash;
@@ -523,7 +374,7 @@ PyDict_DelItem(PyObject *op, PyObject *key)
 	mp = (dictobject *)op;
 	if (((dictobject *)op)->ma_table == NULL)
 		goto empty;
-	ep = (mp->ma_lookup)(mp, key, hash);
+	ep = lookdict(mp, key, hash);
 	if (ep->me_value == NULL) {
 	empty:
 		PyErr_SetObject(PyExc_KeyError, key);
@@ -535,13 +386,14 @@ PyDict_DelItem(PyObject *op, PyObject *key)
 	old_value = ep->me_value;
 	ep->me_value = NULL;
 	mp->ma_used--;
-	Py_DECREF(old_value);
-	Py_DECREF(old_key);
+	Py_DECREF(old_value); 
+	Py_DECREF(old_key); 
 	return 0;
 }
 
 void
-PyDict_Clear(PyObject *op)
+PyDict_Clear(op)
+	PyObject *op;
 {
 	int i, n;
 	register dictentry *table;
@@ -563,7 +415,11 @@ PyDict_Clear(PyObject *op)
 }
 
 int
-PyDict_Next(PyObject *op, int *ppos, PyObject **pkey, PyObject **pvalue)
+PyDict_Next(op, ppos, pkey, pvalue)
+	PyObject *op;
+	int *ppos;
+	PyObject **pkey;
+	PyObject **pvalue;
 {
 	int i;
 	register dictobject *mp;
@@ -588,12 +444,12 @@ PyDict_Next(PyObject *op, int *ppos, PyObject **pkey, PyObject **pvalue)
 /* Methods */
 
 static void
-dict_dealloc(register dictobject *mp)
+dict_dealloc(mp)
+	register dictobject *mp;
 {
 	register int i;
 	register dictentry *ep;
 	Py_TRASHCAN_SAFE_BEGIN(mp)
-	PyObject_GC_Fini(mp);
 	for (i = 0, ep = mp->ma_table; i < mp->ma_size; i++, ep++) {
 		if (ep->me_key != NULL) {
 			Py_DECREF(ep->me_key);
@@ -604,13 +460,15 @@ dict_dealloc(register dictobject *mp)
 	}
 	if (mp->ma_table != NULL)
 		PyMem_DEL(mp->ma_table);
-	mp = (dictobject *) PyObject_AS_GC(mp);
 	PyObject_DEL(mp);
 	Py_TRASHCAN_SAFE_END(mp)
 }
 
 static int
-dict_print(register dictobject *mp, register FILE *fp, register int flags)
+dict_print(mp, fp, flags)
+	register dictobject *mp;
+	register FILE *fp;
+	register int flags;
 {
 	register int i;
 	register int any;
@@ -647,7 +505,8 @@ dict_print(register dictobject *mp, register FILE *fp, register int flags)
 }
 
 static PyObject *
-dict_repr(dictobject *mp)
+dict_repr(mp)
+	dictobject *mp;
 {
 	auto PyObject *v;
 	PyObject *sepa, *colon;
@@ -683,13 +542,16 @@ dict_repr(dictobject *mp)
 }
 
 static int
-dict_length(dictobject *mp)
+dict_length(mp)
+	dictobject *mp;
 {
 	return mp->ma_used;
 }
 
 static PyObject *
-dict_subscript(dictobject *mp, register PyObject *key)
+dict_subscript(mp, key)
+	dictobject *mp;
+	register PyObject *key;
 {
 	PyObject *v;
 	long hash;
@@ -706,7 +568,7 @@ dict_subscript(dictobject *mp, register PyObject *key)
 		if (hash == -1)
 			return NULL;
 	}
-	v = (mp->ma_lookup)(mp, key, hash) -> me_value;
+	v = lookdict(mp, key, hash) -> me_value;
 	if (v == NULL)
 		PyErr_SetObject(PyExc_KeyError, key);
 	else
@@ -715,7 +577,9 @@ dict_subscript(dictobject *mp, register PyObject *key)
 }
 
 static int
-dict_ass_sub(dictobject *mp, PyObject *v, PyObject *w)
+dict_ass_sub(mp, v, w)
+	dictobject *mp;
+	PyObject *v, *w;
 {
 	if (w == NULL)
 		return PyDict_DelItem((PyObject *)mp, v);
@@ -730,7 +594,9 @@ static PyMappingMethods dict_as_mapping = {
 };
 
 static PyObject *
-dict_keys(register dictobject *mp, PyObject *args)
+dict_keys(mp, args)
+	register dictobject *mp;
+	PyObject *args;
 {
 	register PyObject *v;
 	register int i, j;
@@ -751,7 +617,9 @@ dict_keys(register dictobject *mp, PyObject *args)
 }
 
 static PyObject *
-dict_values(register dictobject *mp, PyObject *args)
+dict_values(mp, args)
+	register dictobject *mp;
+	PyObject *args;
 {
 	register PyObject *v;
 	register int i, j;
@@ -772,7 +640,9 @@ dict_values(register dictobject *mp, PyObject *args)
 }
 
 static PyObject *
-dict_items(register dictobject *mp, PyObject *args)
+dict_items(mp, args)
+	register dictobject *mp;
+	PyObject *args;
 {
 	register PyObject *v;
 	register int i, j;
@@ -802,15 +672,17 @@ dict_items(register dictobject *mp, PyObject *args)
 }
 
 static PyObject *
-dict_update(register dictobject *mp, PyObject *args)
+dict_update(mp, args)
+      register dictobject *mp;
+      PyObject *args;
 {
 	register int i;
 	dictobject *other;
         dictentry *entry;
 	if (!PyArg_Parse(args, "O!", &PyDict_Type, &other))
 		return NULL;
-	if (other == mp || other->ma_used == 0)
-		goto done; /* a.update(a) or a.update({}); nothing to do */
+	if (other == mp)
+		goto done; /* a.update(a); nothing to do */
 	/* Do one big resize at the start, rather than incrementally
 	   resizing as we insert new items.  Expect that there will be
 	   no (or few) overlapping keys. */
@@ -833,7 +705,9 @@ dict_update(register dictobject *mp, PyObject *args)
 }
 
 static PyObject *
-dict_copy(register dictobject *mp, PyObject *args)
+dict_copy(mp, args)
+      register dictobject *mp;
+      PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -841,7 +715,8 @@ dict_copy(register dictobject *mp, PyObject *args)
 }
 
 PyObject *
-PyDict_Copy(PyObject *o)
+PyDict_Copy(o)
+	PyObject *o;
 {
 	register dictobject *mp;
 	register int i;
@@ -873,7 +748,8 @@ PyDict_Copy(PyObject *o)
 }
 
 int
-PyDict_Size(PyObject *mp)
+PyDict_Size(mp)
+	PyObject *mp;
 {
 	if (mp == NULL || !PyDict_Check(mp)) {
 		PyErr_BadInternalCall();
@@ -883,7 +759,8 @@ PyDict_Size(PyObject *mp)
 }
 
 PyObject *
-PyDict_Keys(PyObject *mp)
+PyDict_Keys(mp)
+	PyObject *mp;
 {
 	if (mp == NULL || !PyDict_Check(mp)) {
 		PyErr_BadInternalCall();
@@ -893,7 +770,8 @@ PyDict_Keys(PyObject *mp)
 }
 
 PyObject *
-PyDict_Values(PyObject *mp)
+PyDict_Values(mp)
+	PyObject *mp;
 {
 	if (mp == NULL || !PyDict_Check(mp)) {
 		PyErr_BadInternalCall();
@@ -903,7 +781,8 @@ PyDict_Values(PyObject *mp)
 }
 
 PyObject *
-PyDict_Items(PyObject *mp)
+PyDict_Items(mp)
+	PyObject *mp;
 {
 	if (mp == NULL || !PyDict_Check(mp)) {
 		PyErr_BadInternalCall();
@@ -912,38 +791,35 @@ PyDict_Items(PyObject *mp)
 	return dict_items((dictobject *)mp, (PyObject *)NULL);
 }
 
+#define NEWCMP
+
+#ifdef NEWCMP
+
 /* Subroutine which returns the smallest key in a for which b's value
    is different or absent.  The value is returned too, through the
    pval argument.  No reference counts are incremented. */
 
 static PyObject *
-characterize(dictobject *a, dictobject *b, PyObject **pval)
+characterize(a, b, pval)
+	dictobject *a;
+	dictobject *b;
+	PyObject **pval;
 {
 	PyObject *diff = NULL;
-	int i, cmp;
+	int i;
 
 	*pval = NULL;
 	for (i = 0; i < a->ma_size; i++) {
 		if (a->ma_table[i].me_value != NULL) {
 			PyObject *key = a->ma_table[i].me_key;
 			PyObject *aval, *bval;
-			if (diff != NULL) {
-			    cmp = PyObject_RichCompareBool(diff, key, Py_LT);
-			    if (cmp < 0)
-				return NULL;
-			    if (cmp > 0)
+			/* XXX What if PyObject_Compare raises an exception? */
+			if (diff != NULL && PyObject_Compare(key, diff) > 0)
 				continue;
-			}
 			aval = a->ma_table[i].me_value;
 			bval = PyDict_GetItem((PyObject *)b, key);
-			if (bval == NULL)
-				cmp = 0;
-			else {
-			    cmp = PyObject_RichCompareBool(aval, bval, Py_EQ);
-			    if (cmp < 0)
-				return NULL;
-			}
-			if (cmp == 0)
+			/* XXX What if PyObject_Compare raises an exception? */
+			if (bval == NULL || PyObject_Compare(aval, bval) != 0)
 			{
 				diff = key;
 				*pval = aval;
@@ -954,7 +830,8 @@ characterize(dictobject *a, dictobject *b, PyObject **pval)
 }
 
 static int
-dict_compare(dictobject *a, dictobject *b)
+dict_compare(a, b)
+	dictobject *a, *b;
 {
 	PyObject *adiff, *bdiff, *aval, *bval;
 	int res;
@@ -966,12 +843,12 @@ dict_compare(dictobject *a, dictobject *b)
 		return 1;	/* b is shorter */
 	/* Same length -- check all keys */
 	adiff = characterize(a, b, &aval);
-	if (adiff == NULL && PyErr_Occurred())
+	if (PyErr_Occurred())
 		return -1;
 	if (adiff == NULL)
 		return 0;	/* a is a subset with the same length */
 	bdiff = characterize(b, a, &bval);
-	if (bdiff == NULL && PyErr_Occurred())
+	if (PyErr_Occurred())
 		return -1;
 	/* bdiff == NULL would be impossible now */
 	res = PyObject_Compare(adiff, bdiff);
@@ -980,8 +857,91 @@ dict_compare(dictobject *a, dictobject *b)
 	return res;
 }
 
+#else /* !NEWCMP */
+
+static int
+dict_compare(a, b)
+	dictobject *a, *b;
+{
+	PyObject *akeys, *bkeys;
+	int i, n, res;
+	if (a == b)
+		return 0;
+	if (a->ma_used == 0) {
+		if (b->ma_used != 0)
+			return -1;
+		else
+			return 0;
+	}
+	else {
+		if (b->ma_used == 0)
+			return 1;
+	}
+	akeys = dict_keys(a, (PyObject *)NULL);
+	bkeys = dict_keys(b, (PyObject *)NULL);
+	if (akeys == NULL || bkeys == NULL) {
+		/* Oops, out of memory -- what to do? */
+		/* For now, sort on address! */
+		Py_XDECREF(akeys);
+		Py_XDECREF(bkeys);
+		if (a < b)
+			return -1;
+		else
+			return 1;
+	}
+	PyList_Sort(akeys);
+	PyList_Sort(bkeys);
+	n = a->ma_used < b->ma_used ? a->ma_used : b->ma_used; /* smallest */
+	res = 0;
+	for (i = 0; i < n; i++) {
+		PyObject *akey, *bkey, *aval, *bval;
+		long ahash, bhash;
+		akey = PyList_GetItem(akeys, i);
+		bkey = PyList_GetItem(bkeys, i);
+		res = PyObject_Compare(akey, bkey);
+		if (res != 0)
+			break;
+#ifdef CACHE_HASH
+		if (!PyString_Check(akey) ||
+		    (ahash = ((PyStringObject *) akey)->ob_shash) == -1)
+#endif
+		{
+			ahash = PyObject_Hash(akey);
+			if (ahash == -1)
+				PyErr_Clear(); /* Don't want errors here */
+		}
+#ifdef CACHE_HASH
+		if (!PyString_Check(bkey) ||
+		    (bhash = ((PyStringObject *) bkey)->ob_shash) == -1)
+#endif
+		{
+			bhash = PyObject_Hash(bkey);
+			if (bhash == -1)
+				PyErr_Clear(); /* Don't want errors here */
+		}
+		aval = lookdict(a, akey, ahash) -> me_value;
+		bval = lookdict(b, bkey, bhash) -> me_value;
+		res = PyObject_Compare(aval, bval);
+		if (res != 0)
+			break;
+	}
+	if (res == 0) {
+		if (a->ma_used < b->ma_used)
+			res = -1;
+		else if (a->ma_used > b->ma_used)
+			res = 1;
+	}
+	Py_DECREF(akeys);
+	Py_DECREF(bkeys);
+	return res;
+}
+
+#endif /* !NEWCMP */
+
 static PyObject *
-dict_has_key(register dictobject *mp, PyObject *args)
+dict_has_key(mp, args)
+	register dictobject *mp;
+	PyObject *args;
 {
 	PyObject *key;
 	long hash;
@@ -997,13 +957,14 @@ dict_has_key(register dictobject *mp, PyObject *args)
 		if (hash == -1)
 			return NULL;
 	}
-	ok = (mp->ma_size != 0
-	      && (mp->ma_lookup)(mp, key, hash)->me_value != NULL);
+	ok = mp->ma_size != 0 && lookdict(mp, key, hash)->me_value != NULL;
 	return PyInt_FromLong(ok);
 }
 
 static PyObject *
-dict_get(register dictobject *mp, PyObject *args)
+dict_get(mp, args)
+	register dictobject *mp;
+	PyObject *args;
 {
 	PyObject *key;
 	PyObject *failobj = Py_None;
@@ -1024,7 +985,7 @@ dict_get(register dictobject *mp, PyObject *args)
 		if (hash == -1)
 			return NULL;
 	}
-	val = (mp->ma_lookup)(mp, key, hash)->me_value;
+	val = lookdict(mp, key, hash)->me_value;
 
   finally:
 	if (val == NULL)
@@ -1035,42 +996,9 @@ dict_get(register dictobject *mp, PyObject *args)
 
 
 static PyObject *
-dict_setdefault(register dictobject *mp, PyObject *args)
-{
-	PyObject *key;
-	PyObject *failobj = Py_None;
-	PyObject *val = NULL;
-	long hash;
-
-	if (!PyArg_ParseTuple(args, "O|O:setdefault", &key, &failobj))
-		return NULL;
-	if (mp->ma_table == NULL)
-		goto finally;
-
-#ifdef CACHE_HASH
-	if (!PyString_Check(key) ||
-	    (hash = ((PyStringObject *) key)->ob_shash) == -1)
-#endif
-	{
-		hash = PyObject_Hash(key);
-		if (hash == -1)
-			return NULL;
-	}
-	val = (mp->ma_lookup)(mp, key, hash)->me_value;
-
-  finally:
-	if (val == NULL) {
-		val = failobj;
-		if (PyDict_SetItem((PyObject*)mp, key, failobj))
-			val = NULL;
-	}
-	Py_XINCREF(val);
-	return val;
-}
-
-
-static PyObject *
-dict_clear(register dictobject *mp, PyObject *args)
+dict_clear(mp, args)
+	register dictobject *mp;
+	PyObject *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -1079,141 +1007,22 @@ dict_clear(register dictobject *mp, PyObject *args)
 	return Py_None;
 }
 
-static PyObject *
-dict_popitem(dictobject *mp, PyObject *args)
-{
-	int i = 0;
-	dictentry *ep;
-	PyObject *res;
-
-	if (!PyArg_NoArgs(args))
-		return NULL;
-	if (mp->ma_used == 0) {
-		PyErr_SetString(PyExc_KeyError,
-				"popitem(): dictionary is empty");
-		return NULL;
-	}
-	/* Set ep to "the first" dict entry with a value.  We abuse the hash
-	 * field of slot 0 to hold a search finger:
-	 * If slot 0 has a value, use slot 0.
-	 * Else slot 0 is being used to hold a search finger,
-	 * and we use its hash value as the first index to look.
-	 */
-	ep = &mp->ma_table[0];
-	if (ep->me_value == NULL) {
-		i = (int)ep->me_hash;
-		/* The hash field may be uninitialized trash, or it
-		 * may be a real hash value, or it may be a legit
-		 * search finger, or it may be a once-legit search
-		 * finger that's out of bounds now because it
-		 * wrapped around or the table shrunk -- simply
-		 * make sure it's in bounds now.
-		 */
-		if (i >= mp->ma_size || i < 1)
-			i = 1;	/* skip slot 0 */
-		while ((ep = &mp->ma_table[i])->me_value == NULL) {
-			i++;
-			if (i >= mp->ma_size)
-				i = 1;
-		}
-	}
-	res = PyTuple_New(2);
-	if (res != NULL) {
-		PyTuple_SET_ITEM(res, 0, ep->me_key);
-		PyTuple_SET_ITEM(res, 1, ep->me_value);
-		Py_INCREF(dummy);
-		ep->me_key = dummy;
-		ep->me_value = NULL;
-		mp->ma_used--;
-		assert(mp->ma_table[0].me_value == NULL);
-		mp->ma_table[0].me_hash = i + 1;  /* next place to start */
-	}
-	return res;
-}
-
-static int
-dict_traverse(PyObject *op, visitproc visit, void *arg)
-{
-	int i = 0, err;
-	PyObject *pk;
-	PyObject *pv;
-
-	while (PyDict_Next(op, &i, &pk, &pv)) {
-		err = visit(pk, arg);
-		if (err)
-			return err;
-		err = visit(pv, arg);
-		if (err)
-			return err;
-	}
-	return 0;
-}
-
-static int
-dict_tp_clear(PyObject *op)
-{
-	PyDict_Clear(op);
-	return 0;
-}
-
-
-static char has_key__doc__[] =
-"D.has_key(k) -> 1 if D has a key k, else 0";
-
-static char get__doc__[] =
-"D.get(k[,d]) -> D[k] if D.has_key(k), else d.  d defaults to None.";
-
-static char setdefault_doc__[] =
-"D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if not D.has_key(k)";
-
-static char popitem__doc__[] =
-"D.popitem() -> (k, v), remove and return some (key, value) pair as a\n\
-2-tuple; but raise KeyError if D is empty";
-
-static char keys__doc__[] =
-"D.keys() -> list of D's keys";
-
-static char items__doc__[] =
-"D.items() -> list of D's (key, value) pairs, as 2-tuples";
-
-static char values__doc__[] =
-"D.values() -> list of D's values";
-
-static char update__doc__[] =
-"D.update(E) -> None.  Update D from E: for k in E.keys(): D[k] = E[k]";
-
-static char clear__doc__[] =
-"D.clear() -> None.  Remove all items from D.";
-
-static char copy__doc__[] =
-"D.copy() -> a shallow copy of D";
-
 static PyMethodDef mapp_methods[] = {
-	{"has_key",	(PyCFunction)dict_has_key,      METH_VARARGS,
-	 has_key__doc__},
-	{"get",         (PyCFunction)dict_get,          METH_VARARGS,
-	 get__doc__},
-	{"setdefault",  (PyCFunction)dict_setdefault,   METH_VARARGS,
-	 setdefault_doc__},
-	{"popitem",	(PyCFunction)dict_popitem,	METH_OLDARGS,
-	 popitem__doc__},
-	{"keys",	(PyCFunction)dict_keys,		METH_OLDARGS,
-	keys__doc__},
-	{"items",	(PyCFunction)dict_items,	METH_OLDARGS,
-	 items__doc__},
-	{"values",	(PyCFunction)dict_values,	METH_OLDARGS,
-	 values__doc__},
-	{"update",	(PyCFunction)dict_update,	METH_OLDARGS,
-	 update__doc__},
-	{"clear",	(PyCFunction)dict_clear,	METH_OLDARGS,
-	 clear__doc__},
-	{"copy",	(PyCFunction)dict_copy,		METH_OLDARGS,
-	 copy__doc__},
-	{NULL,		NULL}	/* sentinel */
+	{"has_key",	(PyCFunction)dict_has_key,      METH_VARARGS},
+	{"keys",	(PyCFunction)dict_keys},
+	{"items",	(PyCFunction)dict_items},
+	{"values",	(PyCFunction)dict_values},
+	{"update",	(PyCFunction)dict_update},
+	{"clear",	(PyCFunction)dict_clear},
+	{"copy",	(PyCFunction)dict_copy},
+	{"get",         (PyCFunction)dict_get,          METH_VARARGS},
+	{NULL,		NULL}		/* sentinel */
 };
 
 static PyObject *
-dict_getattr(dictobject *mp, char *name)
+dict_getattr(mp, name)
+	dictobject *mp;
+	char *name;
 {
 	return Py_FindMethod(mapp_methods, (PyObject *)mp, name);
 }
@@ -1222,34 +1031,25 @@ PyTypeObject PyDict_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"dictionary",
-	sizeof(dictobject) + PyGC_HEAD_SIZE,
+	sizeof(dictobject),
 	0,
-	(destructor)dict_dealloc,		/* tp_dealloc */
-	(printfunc)dict_print,			/* tp_print */
-	(getattrfunc)dict_getattr,		/* tp_getattr */
-	0,					/* tp_setattr */
-	(cmpfunc)dict_compare,			/* tp_compare */
-	(reprfunc)dict_repr,			/* tp_repr */
-	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
-	&dict_as_mapping,			/* tp_as_mapping */
-	0,					/* tp_hash */
-	0,					/* tp_call */
-	0,					/* tp_str */
-	0,					/* tp_getattro */
-	0,					/* tp_setattro */
-	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
-	0,					/* tp_doc */
-	(traverseproc)dict_traverse,		/* tp_traverse */
-	(inquiry)dict_tp_clear,			/* tp_clear */
-	0,					/* tp_richcompare */
+	(destructor)dict_dealloc, /*tp_dealloc*/
+	(printfunc)dict_print, /*tp_print*/
+	(getattrfunc)dict_getattr, /*tp_getattr*/
+	0,			/*tp_setattr*/
+	(cmpfunc)dict_compare, /*tp_compare*/
+	(reprfunc)dict_repr, /*tp_repr*/
+	0,			/*tp_as_number*/
+	0,			/*tp_as_sequence*/
+	&dict_as_mapping,	/*tp_as_mapping*/
 };
 
 /* For backward compatibility with old dictionary interface */
 
 PyObject *
-PyDict_GetItemString(PyObject *v, char *key)
+PyDict_GetItemString(v, key)
+	PyObject *v;
+	char *key;
 {
 	PyObject *kv, *rv;
 	kv = PyString_FromString(key);
@@ -1261,7 +1061,10 @@ PyDict_GetItemString(PyObject *v, char *key)
 }
 
 int
-PyDict_SetItemString(PyObject *v, char *key, PyObject *item)
+PyDict_SetItemString(v, key, item)
+	PyObject *v;
+	char *key;
+	PyObject *item;
 {
 	PyObject *kv;
 	int err;
@@ -1275,7 +1078,9 @@ PyDict_SetItemString(PyObject *v, char *key, PyObject *item)
 }
 
 int
-PyDict_DelItemString(PyObject *v, char *key)
+PyDict_DelItemString(v, key)
+	PyObject *v;
+	char *key;
 {
 	PyObject *kv;
 	int err;

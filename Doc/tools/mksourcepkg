@@ -16,20 +16,17 @@ with [tag]:  generate from the named tag
 #* should be modified to get the Python version number automatically
 #  from the Makefile or someplace.
 
+__version__ = "$Revision$"
+
 import getopt
 import glob
 import os
-import re
 import shutil
 import sys
 import tempfile
 
-import cvsinfo
-
 
 quiet = 0
-rx = re.compile(r":ext:(?:[a-zA-Z0-9]+)@cvs\.([a-zA-Z0-9]+).sourceforge.net:"
-                r"/cvsroot/\1")
 
 
 def main():
@@ -61,9 +58,9 @@ def main():
                formats["bzip2"] = 1
                formats["gzip"] = 1
                formats["zip"] = 1
+     formats = formats.keys()
      if formats:
           # make order human-predictable
-          formats = formats.keys()
           formats.sort()
      else:
           formats = ["gzip"]
@@ -73,52 +70,33 @@ def main():
           cvstag = args[1]
      tempdir = tempfile.mktemp()
      os.mkdir(tempdir)
-     pkgdir = os.path.join(tempdir, "Python-" + release)
-     os.mkdir(pkgdir)
-     pwd = os.getcwd()
-     mydir = os.path.abspath(os.path.dirname(sys.argv[0]))
-     info = cvsinfo.RepositoryInfo(mydir)
-     cvsroot = info.get_cvsroot()
-     m = rx.match(cvsroot)
-     if m:
-          # If this is an authenticated SourceForge repository, convert to
-          # anonymous usage for the export/checkout, since that avoids the
-          # SSH overhead.
-          group = m.group(1)
-          cvsroot = ":pserver:anonymous@cvs.%s.sourceforge.net:/cvsroot/%s" \
-                    % (group, group)
-          # For some reason, SourceForge/CVS doesn't seem to care that we
-          # might not have done a "cvs login" to the anonymous server.
-          # That avoids a lot of painful gunk here.
-     os.chdir(pkgdir)
-     if not quiet:
-          print "--- current directory is:", pkgdir
+     os.mkdir(os.path.join(tempdir, "Python-%s" % release))
+     docdir = os.path.join(tempdir, "Python-%s" % release, "Doc")
+     os.mkdir(docdir)
+     mydir = os.getcwd()
      if cvstag:
-          run("cvs -d%s export -r %s -d Doc python/dist/src/Doc"
-              % (cvsroot, cvstag))
+          run("cvs export -r %s -d %s/Python-%s/Doc python/dist/src/Doc"
+              % (cvstag, tempdir, release))
      else:
-          run("cvs -Q -d%s checkout -d Doc python/dist/src/Doc" % cvsroot)
+          run("cvs checkout -d %s/Python-%s/Doc python/dist/src/Doc"
+              % (tempdir, release))
           # remove CVS directories
+          os.chdir("%s/Python-%s" % (tempdir, release))
           for p in ('*/CVS', '*/*/CVS', '*/*/*/CVS'):
                map(shutil.rmtree, glob.glob(p))
-          for f in ('.cvsignore', '*/.cvsignore'):
-               map(os.unlink, glob.glob(f))
-     LICENSE = os.path.normpath(
-          os.path.join(mydir, os.pardir, os.pardir, "LICENSE"))
-     shutil.copyfile(LICENSE, "Doc/LICENSE")
+          os.chdir(mydir)
      if tools:
-          archive = "doctools-" + release
+          archive = "tools-" + release
           # we don't want the actual documents in this case:
-          for d in ("api", "dist", "doc", "ext", "inst",
-                    "lib", "mac", "ref", "tut"):
-               shutil.rmtree(os.path.join(os.path.join(pkgdir, "Doc"), d))
+          for d in ("api", "doc", "ext", "lib", "mac", "ref", "tut"):
+               shutil.rmtree(os.path.join(docdir, d))
      else:
           archive = "latex-" + release
 
      # XXX should also remove the .cvsignore files at this point
 
      os.chdir(tempdir)
-     archive = os.path.join(pwd, archive)
+     archive = os.path.join(mydir, archive)
      for format in formats:
           if format == "bzip2":
                run("tar cf - Python-%s | bzip2 -9 >%s.tar.bz2"
@@ -133,7 +111,7 @@ def main():
                    % (archive, release))
 
      # clean up the work area:
-     os.chdir(pwd)
+     os.chdir(mydir)
      shutil.rmtree(tempdir)
 
 
@@ -141,7 +119,7 @@ def run(cmd):
      if quiet < 2:
           print "+++", cmd
      if quiet:
-          cmd = "%s >/dev/null" % cmd
+          cmd = "(%s) >/dev/null" % cmd
      rc = os.system(cmd)
      if rc:
           sys.exit(rc)

@@ -2,11 +2,8 @@
 
 import os
 import stat
+import string
 
-__all__ = ["normcase","isabs","join","splitdrive","split","splitext",
-           "basename","dirname","commonprefix","getsize","getmtime",
-           "getatime","islink","exists","isdir","isfile","ismount",
-           "walk","expanduser","expandvars","normpath","abspath"]
 
 def normcase(s):
     """Normalize the case of a pathname.
@@ -14,11 +11,11 @@ def normcase(s):
     backslashes.
     Other normalizations (such as optimizing '../' away) are not allowed
     (this is done by normpath).
-    Previously, this version mapped invalid consecutive characters to a
-    single '_', but this has been removed.  This functionality should
+    Previously, this version mapped invalid consecutive characters to a 
+    single '_', but this has been removed.  This functionality should 
     possibly be added as a new function."""
 
-    return s.replace("/", "\\").lower()
+    return string.lower(string.replace(s, "/", "\\"))
 
 
 def isabs(s):
@@ -39,10 +36,10 @@ def join(a, *p):
     for b in p:
         if isabs(b):
             path = b
-        elif path == '' or path[-1:] in '/\\:':
+        elif path == '' or path[-1:] in '/\\':
             path = path + b
         else:
-            path = path + "\\" + b
+            path = path + os.sep + b
     return path
 
 
@@ -112,7 +109,7 @@ def commonprefix(m):
     prefix = m[0]
     for item in m:
         for i in range(len(prefix)):
-            if prefix[:i+1] != item[:i+1]:
+            if prefix[:i+1] <> item[:i+1]:
                 prefix = prefix[:i]
                 if i == 0: return ''
                 break
@@ -134,7 +131,7 @@ def getmtime(filename):
 def getatime(filename):
     """Return the last access time of a file, reported by os.stat()."""
     st = os.stat(filename)
-    return st[stat.ST_ATIME]
+    return st[stat.ST_MTIME]
 
 
 def islink(path):
@@ -214,7 +211,7 @@ def expanduser(path):
     (A function should also be defined to do full *sh-style environment
     variable expansion.)"""
 
-    if path[:1] != '~':
+    if path[:1] <> '~':
         return path
     i, n = 1, len(path)
     while i < n and path[i] not in '/\\':
@@ -228,6 +225,8 @@ def expanduser(path):
     return userhome + path[i:]
 
 
+varchars = string.letters + string.digits + '_-'
+
 def expandvars(path):
     """Expand paths containing shell variable substitutions.
     The following rules apply:
@@ -240,8 +239,6 @@ def expandvars(path):
 
     if '$' not in path:
         return path
-    import string
-    varchars = string.letters + string.digits + '_-'
     res = ''
     index = 0
     pathlen = len(path)
@@ -251,9 +248,9 @@ def expandvars(path):
             path = path[index + 1:]
             pathlen = len(path)
             try:
-                index = path.index('\'')
+                index = string.index(path, '\'')
                 res = res + '\'' + path[:index + 1]
-            except ValueError:
+            except string.index_error:
                 res = res + path
                 index = pathlen -1
         elif c == '$':  # variable or '$$'
@@ -264,11 +261,11 @@ def expandvars(path):
                 path = path[index+2:]
                 pathlen = len(path)
                 try:
-                    index = path.index('}')
+                    index = string.index(path, '}')
                     var = path[:index]
                     if os.environ.has_key(var):
                         res = res + os.environ[var]
-                except ValueError:
+                except string.index_error:
                     res = res + path
                     index = pathlen - 1
             else:
@@ -293,12 +290,12 @@ def normpath(path):
     """Normalize a path, e.g. A//B, A/./B and A/foo/../B all become A/B.
     Also, components of the path are silently truncated to 8+3 notation."""
 
-    path = path.replace("/", "\\")
+    path = string.replace(path, "/", "\\")
     prefix, path = splitdrive(path)
-    while path[:1] == "\\":
-        prefix = prefix + "\\"
+    while path[:1] == os.sep:
+        prefix = prefix + os.sep
         path = path[1:]
-    comps = path.split("\\")
+    comps = string.splitfields(path, os.sep)
     i = 0
     while i < len(comps):
         if comps[i] == '.':
@@ -306,22 +303,22 @@ def normpath(path):
         elif comps[i] == '..' and i > 0 and \
                       comps[i-1] not in ('', '..'):
             del comps[i-1:i+1]
-            i = i - 1
-        elif comps[i] == '' and i > 0 and comps[i-1] != '':
+            i = i-1
+        elif comps[i] == '' and i > 0 and comps[i-1] <> '':
             del comps[i]
         elif '.' in comps[i]:
-            comp = comps[i].split('.')
+            comp = string.splitfields(comps[i], '.')
             comps[i] = comp[0][:8] + '.' + comp[1][:3]
-            i = i + 1
+            i = i+1
         elif len(comps[i]) > 8:
             comps[i] = comps[i][:8]
-            i = i + 1
+            i = i+1
         else:
-            i = i + 1
+            i = i+1
     # If the path is now empty, substitute '.'
     if not prefix and not comps:
         comps.append('.')
-    return prefix + "\\".join(comps)
+    return prefix + string.joinfields(comps, os.sep)
 
 
 

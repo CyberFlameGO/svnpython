@@ -59,7 +59,7 @@ class sdist (Command):
          "forcibly regenerate the manifest and carry on as usual"),
         ('formats=', None,
          "formats for source distribution (comma-separated list)"),
-        ('keep-temp', 'k',
+        ('keep-tree', 'k',
          "keep the distribution tree around after creating " +
          "archive file(s)"),
         ('dist-dir=', 'd',
@@ -67,14 +67,11 @@ class sdist (Command):
          "[default: dist]"),
         ]
 
-    boolean_options = ['use-defaults', 'prune',
-                       'manifest-only', 'force-manifest',
-                       'keep-temp']
 
     help_options = [
         ('help-formats', None,
          "list available distribution formats", show_formats),
-        ]
+	]
 
     negative_opt = {'no-defaults': 'use-defaults',
                     'no-prune': 'prune' }
@@ -97,7 +94,7 @@ class sdist (Command):
         self.force_manifest = 0
 
         self.formats = None
-        self.keep_temp = 0
+        self.keep_tree = 0
         self.dist_dir = None
 
         self.archive_files = None
@@ -118,7 +115,7 @@ class sdist (Command):
                       "don't know how to create source distributions " + \
                       "on platform %s" % os.name
 
-        bad_format = archive_util.check_archive_formats(self.formats)
+        bad_format = archive_util.check_archive_formats (self.formats)
         if bad_format:
             raise DistutilsOptionError, \
                   "unknown archive format '%s'" % bad_format
@@ -135,12 +132,12 @@ class sdist (Command):
         
         # Ensure that all required meta-data is given; warn if not (but
         # don't die, it's not *that* serious!)
-        self.check_metadata()
+        self.check_metadata ()
 
         # Do whatever it takes to get the list of files to process
         # (process the manifest template, read an existing manifest,
         # whatever).  File list is accumulated in 'self.filelist'.
-        self.get_file_list()
+        self.get_file_list ()
 
         # If user just wanted us to regenerate the manifest, stop now.
         if self.manifest_only:
@@ -148,7 +145,7 @@ class sdist (Command):
 
         # Otherwise, go ahead and create the source distribution tarball,
         # or zipfile, or whatever.
-        self.make_distribution()
+        self.make_distribution ()
 
 
     def check_metadata (self):
@@ -161,25 +158,25 @@ class sdist (Command):
 
         missing = []
         for attr in ('name', 'version', 'url'):
-            if not (hasattr(metadata, attr) and getattr(metadata, attr)):
-                missing.append(attr)
+            if not (hasattr (metadata, attr) and getattr (metadata, attr)):
+                missing.append (attr)
 
         if missing:
-            self.warn("missing required meta-data: " +
-                      string.join(missing, ", "))
+            self.warn ("missing required meta-data: " +
+                       string.join (missing, ", "))
 
         if metadata.author:
             if not metadata.author_email:
-                self.warn("missing meta-data: if 'author' supplied, " +
-                          "'author_email' must be supplied too")
+                self.warn ("missing meta-data: if 'author' supplied, " +
+                           "'author_email' must be supplied too")
         elif metadata.maintainer:
             if not metadata.maintainer_email:
-                self.warn("missing meta-data: if 'maintainer' supplied, " +
-                          "'maintainer_email' must be supplied too")
+                self.warn ("missing meta-data: if 'maintainer' supplied, " +
+                           "'maintainer_email' must be supplied too")
         else:
-            self.warn("missing meta-data: either (author and author_email) " +
-                      "or (maintainer and maintainer_email) " +
-                      "must be supplied")
+            self.warn ("missing meta-data: either (author and author_email) " +
+                       "or (maintainer and maintainer_email) " +
+                       "must be supplied")
 
     # check_metadata ()
 
@@ -205,10 +202,7 @@ class sdist (Command):
         # manifest, but there's no template -- which will happen if the
         # developer elects to generate a manifest some other way -- then we
         # can't regenerate the manifest, so we don't.)
-        self.debug_print("checking if %s newer than %s" %
-                         (self.distribution.script_name, self.manifest))
-        setup_newer = dep_util.newer(self.distribution.script_name,
-                                     self.manifest)
+        setup_newer = dep_util.newer(sys.argv[0], self.manifest)
 
         # cases:
         #   1) no manifest, template exists: generate manifest
@@ -222,14 +216,10 @@ class sdist (Command):
         #      do nothing (unless --force or --manifest-only)
         #   4) no manifest, no template: generate w/ warning ("defaults only")
 
-        manifest_outofdate = (template_exists and
-                              (template_newer or setup_newer))
-        force_regen = self.force_manifest or self.manifest_only
-        manifest_exists = os.path.isfile(self.manifest)
-        neither_exists = (not template_exists and not manifest_exists)
-
         # Regenerate the manifest if necessary (or if explicitly told to)
-        if manifest_outofdate or neither_exists or force_regen:
+        if ((template_exists and (template_newer or setup_newer)) or
+            self.force_manifest or self.manifest_only):
+
             if not template_exists:
                 self.warn(("manifest template '%s' does not exist " +
                            "(using default file list)") %
@@ -280,43 +270,46 @@ class sdist (Command):
         else is optional.
         """
 
-        standards = [('README', 'README.txt'), self.distribution.script_name]
+        # XXX name of setup script and config file should be taken
+        # programmatically from the Distribution object (except
+        # it doesn't have that capability... yet!)
+        standards = [('README', 'README.txt'), 'setup.py']
         for fn in standards:
-            if type(fn) is TupleType:
+            if type (fn) is TupleType:
                 alts = fn
                 got_it = 0
                 for fn in alts:
-                    if os.path.exists(fn):
+                    if os.path.exists (fn):
                         got_it = 1
-                        self.filelist.append(fn)
+                        self.filelist.append (fn)
                         break
 
                 if not got_it:
-                    self.warn("standard file not found: should have one of " +
-                              string.join(alts, ', '))
+                    self.warn ("standard file not found: should have one of " +
+                               string.join (alts, ', '))
             else:
-                if os.path.exists(fn):
-                    self.filelist.append(fn)
+                if os.path.exists (fn):
+                    self.filelist.append (fn)
                 else:
-                    self.warn("standard file '%s' not found" % fn)
+                    self.warn ("standard file '%s' not found" % fn)
 
         optional = ['test/test*.py', 'setup.cfg']
         for pattern in optional:
-            files = filter(os.path.isfile, glob(pattern))
+            files = filter (os.path.isfile, glob (pattern))
             if files:
-                self.filelist.extend(files)
+                self.filelist.extend (files)
 
         if self.distribution.has_pure_modules():
-            build_py = self.get_finalized_command('build_py')
-            self.filelist.extend(build_py.get_source_files())
+            build_py = self.get_finalized_command ('build_py')
+            self.filelist.extend (build_py.get_source_files ())
 
         if self.distribution.has_ext_modules():
-            build_ext = self.get_finalized_command('build_ext')
-            self.filelist.extend(build_ext.get_source_files())
+            build_ext = self.get_finalized_command ('build_ext')
+            self.filelist.extend (build_ext.get_source_files ())
 
         if self.distribution.has_c_libraries():
-            build_clib = self.get_finalized_command('build_clib')
-            self.filelist.extend(build_clib.get_source_files())
+            build_clib = self.get_finalized_command ('build_clib')
+            self.filelist.extend (build_clib.get_source_files ())
 
     # add_defaults ()
     
@@ -329,13 +322,13 @@ class sdist (Command):
         accordingly.
         """
         self.announce("reading manifest template '%s'" % self.template)
-        template = TextFile(self.template,
-                            strip_comments=1,
-                            skip_blanks=1,
-                            join_lines=1,
-                            lstrip_ws=1,
-                            rstrip_ws=1,
-                            collapse_join=1)
+        template = TextFile (self.template,
+                             strip_comments=1,
+                             skip_blanks=1,
+                             join_lines=1,
+                             lstrip_ws=1,
+                             rstrip_ws=1,
+                             collapse_ws=1)
 
         while 1:
             line = template.readline()
@@ -357,7 +350,7 @@ class sdist (Command):
         by 'read_template()', but really don't belong there:
           * the build tree (typically "build")
           * the release tree itself (only an issue if we ran "sdist"
-            previously with --keep-temp, or it aborted)
+            previously with --keep-tree, or it aborted)
           * any RCS or CVS directories
         """
         build = self.get_finalized_command('build')
@@ -386,14 +379,14 @@ class sdist (Command):
         distribution.
         """
         self.announce("reading manifest file '%s'" % self.manifest)
-        manifest = open(self.manifest)
+        manifest = open (self.manifest)
         while 1:
-            line = manifest.readline()
+            line = manifest.readline ()
             if line == '':              # end of file
                 break
             if line[-1] == '\n':
                 line = line[0:-1]
-            self.filelist.append(line)
+            self.filelist.append (line)
 
     # read_manifest ()
             
@@ -408,11 +401,9 @@ class sdist (Command):
         to be distributed.
         """
         # Create all the directories under 'base_dir' necessary to
-        # put 'files' there; the 'mkpath()' is just so we don't die
-        # if the manifest happens to be empty.
-        self.mkpath(base_dir)
-        dir_util.create_tree(base_dir, files,
-                             verbose=self.verbose, dry_run=self.dry_run)
+        # put 'files' there.
+        dir_util.create_tree (base_dir, files,
+                              verbose=self.verbose, dry_run=self.dry_run)
 
         # And walk over the list of files, either making a hard link (if
         # os.link exists) to each one that doesn't already exist in its
@@ -421,23 +412,17 @@ class sdist (Command):
         # out-of-date, because by default we blow away 'base_dir' when
         # we're done making the distribution archives.)
     
-        if hasattr(os, 'link'):        # can make hard links on this system
+        if hasattr (os, 'link'):        # can make hard links on this system
             link = 'hard'
             msg = "making hard links in %s..." % base_dir
         else:                           # nope, have to copy
             link = None
             msg = "copying files to %s..." % base_dir
 
-        if not files:
-            self.warn("no files to distribute -- empty manifest?")
-        else:
-            self.announce(msg)
+        self.announce (msg)
         for file in files:
-            if not os.path.isfile(file):
-                self.warn("'%s' not a regular file -- skipping" % file)
-            else:
-                dest = os.path.join(base_dir, file)
-                self.copy_file(file, dest, link=link)
+            dest = os.path.join (base_dir, file)
+            self.copy_file (file, dest, link=link)
 
     # make_release_tree ()
 
@@ -447,7 +432,7 @@ class sdist (Command):
         tree with 'make_release_tree()'; then, we create all required
         archive files (according to 'self.formats') from the release tree.
         Finally, we clean up by blowing away the release tree (unless
-        'self.keep_temp' is true).  The list of archive files created is
+        'self.keep_tree' is true).  The list of archive files created is
         stored so it can be retrieved later by 'get_archive_files()'.
         """
         # Don't warn about missing meta-data here -- should be (and is!)
@@ -455,16 +440,18 @@ class sdist (Command):
         base_dir = self.distribution.get_fullname()
         base_name = os.path.join(self.dist_dir, base_dir)
 
-        self.make_release_tree(base_dir, self.filelist.files)
+        self.make_release_tree (base_dir, self.filelist.files)
         archive_files = []              # remember names of files we create
+        if self.dist_dir:
+            self.mkpath(self.dist_dir)
         for fmt in self.formats:
-            file = self.make_archive(base_name, fmt, base_dir=base_dir)
+            file = self.make_archive (base_name, fmt, base_dir=base_dir)
             archive_files.append(file)
 
         self.archive_files = archive_files
 
-        if not self.keep_temp:
-            dir_util.remove_tree(base_dir, self.verbose, self.dry_run)
+        if not self.keep_tree:
+            dir_util.remove_tree (base_dir, self.verbose, self.dry_run)
 
     def get_archive_files (self):
         """Return the list of archive files created when the command

@@ -7,7 +7,7 @@ distributions)."""
 
 __revision__ = "$Id$"
 
-import sys, os, string
+import os, string
 import glob
 from types import *
 from distutils.core import Command, DEBUG
@@ -28,12 +28,6 @@ class bdist_rpm (Command):
         ('dist-dir=', 'd',
          "directory to put final RPM files in "
          "(and .spec files if --spec-only)"),
-        ('python=', None,
-         "path to Python interpreter to hard-code in the .spec file "
-         "(default: \"python\")"),
-        ('fix-python', None,
-         "hard-code the exact path to the current Python interpreter in "
-         "the .spec file"),
         ('spec-only', None,
          "only regenerate spec file"),
         ('source-only', None,
@@ -48,43 +42,59 @@ class bdist_rpm (Command):
         # to "bdist_rpm".  The idea is that packagers would put this
         # info in setup.cfg, although they are of course free to
         # supply it on the command line.
-        ('distribution-name=', None,
-         "name of the (Linux) distribution to which this "
+        ('distribution-name', None,
+         "name of the (Linux) distribution name to which this "
          "RPM applies (*not* the name of the module distribution!)"),
-        ('group=', None,
+        ('group', None,
          "package classification [default: \"Development/Libraries\"]"),
-        ('release=', None,
+        ('release', None,
          "RPM release number"),
-        ('serial=', None,
+        ('serial', None,
          "RPM serial number"),
-        ('vendor=', None,
+        ('vendor', None,
          "RPM \"vendor\" (eg. \"Joe Blow <joe@example.com>\") "
          "[default: maintainer or author from setup script]"),
-        ('packager=', None,
+        ('packager', None,
          "RPM packager (eg. \"Jane Doe <jane@example.net>\")"
          "[default: vendor]"),
-        ('doc-files=', None,
+        ('doc-files', None,
          "list of documentation files (space or comma-separated)"),
-        ('changelog=', None,
+        ('changelog', None,
          "path to RPM changelog"),
-        ('icon=', None,
+        ('icon', None,
          "name of icon file"),
-        ('provides=', None,
+        ('prep-script', None,
+         "pre-build script  (Bourne shell code)"),
+        ('build-script', None,
+         "build script (Bourne shell code)"),
+        ('install-script', None,
+         "installation script (Bourne shell code)"),
+        ('clean-script', None,
+         "clean script (Bourne shell code)"),
+        ('pre-install', None,
+         "pre-install script (Bourne shell code)"),
+        ('post-install', None,
+         "post-install script (Bourne shell code)"),
+        ('pre-uninstall', None,
+         "pre-uninstall script (Bourne shell code)"),
+        ('post-uninstall', None,
+         "post-uninstall script (Bourne shell code)"),
+        ('provides', None,
          "capabilities provided by this package"),
-        ('requires=', None,
+        ('requires', None,
          "capabilities required by this package"),
-        ('conflicts=', None,
+        ('conflicts', None,
          "capabilities which conflict with this package"),
-        ('build-requires=', None,
+        ('build-requires', None,
          "capabilities required to build this package"),
-        ('obsoletes=', None,
+        ('obsoletes', None,
          "capabilities made obsolete by this package"),
 
         # Actions to take when building RPM
-        ('keep-temp', 'k',
-         "don't clean up RPM build directory"),
-        ('no-keep-temp', None,
+        ('clean', None,
          "clean up RPM build directory [default]"),
+        ('no-clean', None,
+         "don't clean up RPM build directory"),
         ('use-rpm-opt-flags', None,
          "compile with RPM_OPT_FLAGS when building from source RPM"),
         ('no-rpm-opt-flags', None,
@@ -95,9 +105,7 @@ class bdist_rpm (Command):
          "RPM 2 compatibility mode"),
        ]
 
-    boolean_options = ['keep-temp', 'rpm2-mode']
-
-    negative_opt = {'no-keep-temp': 'keep-temp',
+    negative_opt = {'no-clean': 'clean',
                     'no-rpm-opt-flags': 'use-rpm-opt-flags',
                     'rpm2-mode': 'rpm3-mode'}
 
@@ -106,8 +114,6 @@ class bdist_rpm (Command):
         self.bdist_base = None
         self.rpm_base = None
         self.dist_dir = None
-        self.python = None
-        self.fix_python = None
         self.spec_only = None
         self.binary_only = None
         self.source_only = None
@@ -138,7 +144,7 @@ class bdist_rpm (Command):
         self.build_requires = None
         self.obsoletes = None
 
-        self.keep_temp = 0
+        self.clean = 1
         self.use_rpm_opt_flags = 1
         self.rpm3_mode = 1
 
@@ -152,15 +158,6 @@ class bdist_rpm (Command):
                 raise DistutilsOptionError, \
                       "you must specify --rpm-base in RPM 2 mode"
             self.rpm_base = os.path.join(self.bdist_base, "rpm")
-
-        if self.python is None:
-            if self.fix_python:
-                self.python = sys.executable
-            else:
-                self.python = "python"
-        elif self.fix_python:
-            raise DistutilsOptionError, \
-                  "--python and --fix-python are mutually exclusive options"
 
         if os.name != 'posix':
             raise DistutilsPlatformError, \
@@ -258,7 +255,7 @@ class bdist_rpm (Command):
 
         # Make a source distribution and copy to SOURCES directory with
         # optional icon.
-        sdist = self.reinitialize_command('sdist')
+        sdist = self.reinitialize_command ('sdist')
         if self.use_bzip2:
             sdist.formats = ['bztar']
         else:
@@ -278,21 +275,21 @@ class bdist_rpm (Command):
         
 
         # build package
-        self.announce('building RPMs')
-        rpm_cmd = ['rpm']
+        self.announce('Building RPMs')
+        rpm_args = ['rpm',]
         if self.source_only: # what kind of RPMs?
-            rpm_cmd.append('-bs')
+            rpm_args.append('-bs')
         elif self.binary_only:
-            rpm_cmd.append('-bb')
+            rpm_args.append('-bb')
         else:
-            rpm_cmd.append('-ba')
+            rpm_args.append('-ba')
         if self.rpm3_mode:
-            rpm_cmd.extend(['--define',
+            rpm_args.extend(['--define',
                              '_topdir %s/%s' % (os.getcwd(), self.rpm_base),])
-        if not self.keep_temp:
-            rpm_cmd.append('--clean')
-        rpm_cmd.append(spec_path)
-        self.spawn(rpm_cmd)
+        if self.clean:
+            rpm_args.append('--clean')
+        rpm_args.append(spec_path)
+        self.spawn(rpm_args)
 
         # XXX this is a nasty hack -- we really should have a proper way to
         # find out the names of the RPM files created; also, this assumes
@@ -401,10 +398,10 @@ class bdist_rpm (Command):
 
         # rpm scripts
         # figure out default build script
-        def_build = "%s setup.py build" % self.python
         if self.use_rpm_opt_flags:
-            def_build = 'env CFLAGS="$RPM_OPT_FLAGS" ' + def_build
-
+            def_build = 'env CFLAGS="$RPM_OPT_FLAGS" python setup.py build'
+        else:
+            def_build = 'python setup.py build'
         # insert contents of files
 
         # XXX this is kind of misleading: user-supplied options are files
@@ -415,9 +412,9 @@ class bdist_rpm (Command):
             ('prep', 'prep_script', "%setup"),
             ('build', 'build_script', def_build),
             ('install', 'install_script',
-             ("%s setup.py install "
-              "--root=$RPM_BUILD_ROOT "
-              "--record=INSTALLED_FILES") % self.python),
+             "python setup.py install "
+             "--root=$RPM_BUILD_ROOT "
+             "--record=INSTALLED_FILES"),
             ('clean', 'clean_script', "rm -rf $RPM_BUILD_ROOT"),
             ('pre', 'pre_install', None),
             ('post', 'post_install', None),

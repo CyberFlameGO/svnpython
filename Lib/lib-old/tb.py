@@ -5,6 +5,7 @@
 import sys
 import os
 from stat import *
+import string
 import linecache
 
 def br(): browser(sys.last_traceback)
@@ -22,7 +23,7 @@ def browser(tb):
 	ptr = len(tblist)-1
 	tb = tblist[ptr]
 	while 1:
-		if tb != tblist[ptr]:
+		if tb <> tblist[ptr]:
 			tb = tblist[ptr]
 			print `ptr` + ':',
 			printtbheader(tb)
@@ -34,7 +35,7 @@ def browser(tb):
 		except EOFError:
 			print '\n[EOF]'
 			break
-		cmd = line.strip()
+		cmd = string.strip(line)
 		if cmd:
 			if cmd == 'quit':
 				break
@@ -61,8 +62,8 @@ def browserlist(tb):
 	last = lineno
 	first = max(1, last-10)
 	for i in range(first, last+1):
-		if i == lineno: prefix = '***' + `i`.rjust(4) + ':'
-		else: prefix = `i`.rjust(7) + ':'
+		if i == lineno: prefix = '***' + string.rjust(`i`, 4) + ':'
+		else: prefix = string.rjust(`i`, 7) + ':'
 		line = linecache.getline(filename, i)
 		if line[-1:] == '\n': line = line[:-1]
 		print prefix + line
@@ -75,11 +76,11 @@ def browserexec(tb, cmd):
 	except:
 		t, v = sys.exc_info()[:2]
 		print '*** Exception:',
-		if type(t) is type(''):
+		if type(t) == type(''):
 			print t,
 		else:
 			print t.__name__,
-		if v is not None:
+		if v <> None:
 			print ':', v,
 		print
 		print 'Type help to get help.'
@@ -114,36 +115,36 @@ def printtbheader(tb):
 	info = '"' + filename + '"(' + `lineno` + ')'
 	line = linecache.getline(filename, lineno)
 	if line:
-		info = info + ': ' + line.strip()
+		info = info + ': ' + string.strip(line)
 	print info
 
 def printsymbols(d):
 	keys = d.keys()
 	keys.sort()
 	for name in keys:
-		print '  ' + name.ljust(12) + ':',
+		print '  ' + string.ljust(name, 12) + ':',
 		printobject(d[name], 4)
 		print
 
 def printobject(v, maxlevel):
-	if v is None:
+	if v == None:
 		print 'None',
 	elif type(v) in (type(0), type(0.0)):
 		print v,
-	elif type(v) is type(''):
+	elif type(v) == type(''):
 		if len(v) > 20:
 			print `v[:17] + '...'`,
 		else:
 			print `v`,
-	elif type(v) is type(()):
+	elif type(v) == type(()):
 		print '(',
 		printlist(v, maxlevel)
 		print ')',
-	elif type(v) is type([]):
+	elif type(v) == type([]):
 		print '[',
 		printlist(v, maxlevel)
 		print ']',
-	elif type(v) is type({}):
+	elif type(v) == type({}):
 		print '{',
 		printdict(v, maxlevel)
 		print '}',

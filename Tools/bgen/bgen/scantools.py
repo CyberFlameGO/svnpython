@@ -99,22 +99,11 @@ if missing: raise "Missing Types"
 	def initblacklists(self):
 		self.blacklistnames = self.makeblacklistnames()
 		self.blacklisttypes = ["unknown", "-"] + self.makeblacklisttypes()
-		self.greydictnames = self.greylist2dict(self.makegreylist())
-		
-	def greylist2dict(self, list):
-		rv = {}
-		for define, namelist in list:
-			for name in namelist:
-				rv[name] = define
-		return rv
 
 	def makeblacklistnames(self):
 		return []
 
 	def makeblacklisttypes(self):
-		return []
-		
-	def makegreylist(self):
 		return []
 
 	def initrepairinstructions(self):
@@ -251,7 +240,7 @@ if missing: raise "Missing Types"
 		self.asplit_pat = "^\(<type>.*[^a-zA-Z0-9_]\)\(<name>[a-zA-Z0-9_]+\)$"
 		self.comment1_pat = "\(<rest>.*\)//.*"
 		# note that the next pattern only removes comments that are wholly within one line
-		self.comment2_pat = "\(<rest1>.*\)/\*.*\*/\(<rest2>.*\)"
+		self.comment2_pat = "\(<rest>.*\)/\*.*\*/"
 
 	def compilepatterns(self):
 		for name in dir(self):
@@ -328,16 +317,6 @@ if missing: raise "Missing Types"
 		return file
 
 	def setinput(self, scan = sys.stdin):
-		if not type(scan) in (TupleType, ListType):
-			scan = [scan]
-		self.allscaninputs = scan
-		self._nextinput()
-		
-	def _nextinput(self):
-		if not self.allscaninputs:
-			return 0
-		scan = self.allscaninputs[0]
-		self.allscaninputs = self.allscaninputs[1:]
 		self.closescan()
 		if scan:
 			if type(scan) == StringType:
@@ -349,7 +328,6 @@ if missing: raise "Missing Types"
 			self.scanfile = file
 			self.scanmine = mine
 		self.lineno = 0
-		return 1
 
 	def openinput(self, filename):
 		if not os.path.isabs(filename):
@@ -371,8 +349,6 @@ if missing: raise "Missing Types"
 			raise Error, "input file not set"
 		self.line = self.scanfile.readline()
 		if not self.line:
-			if self._nextinput():
-				return self.getline()
 			raise EOFError
 		self.lineno = self.lineno + 1
 		return self.line
@@ -401,8 +377,8 @@ if missing: raise "Missing Types"
 				except EOFError: break
 				if self.comment1.match(line) >= 0:
 					line = self.comment1.group('rest')
-				while self.comment2.match(line) >= 0:
-					line = self.comment2.group('rest1')+self.comment2.group('rest2')
+				if self.comment2.match(line) >= 0:
+					line = self.comment2.group('rest')
 				if self.defsfile and self.sym.match(line) >= 0:
 					self.dosymdef()
 					continue
@@ -419,16 +395,11 @@ if missing: raise "Missing Types"
 			self.defsfile.write("%s = %s\n" % (name, defn))
 		else:
 			self.defsfile.write("# %s = %s\n" % (name, defn))
-		# XXXX No way to handle greylisted names
 
 	def dofuncspec(self):
 		raw = self.line
 		while self.tail.search(raw) < 0:
 			line = self.getline()
-			if self.comment1.match(line) >= 0:
-				line = self.comment1.group('rest')
-			while self.comment2.match(line) >= 0:
-				line = self.comment2.group('rest1')+self.comment2.group('rest2')
 			raw = raw + line
 		self.processrawspec(raw)
 
@@ -548,8 +519,6 @@ if missing: raise "Missing Types"
 			self.typeused(atype, amode)
 			self.specfile.write("    (%s, %s, %s),\n" %
 			                    (atype, `aname`, amode))
-		if self.greydictnames.has_key(name):
-			self.specfile.write("    condition=%s,\n"%`self.greydictnames[name]`)
 		self.specfile.write(")\n")
 		self.specfile.write("%s.append(f)\n\n" % listname)
 
@@ -575,7 +544,6 @@ if missing: raise "Missing Types"
 class Scanner_PreUH3(Scanner):
 	"""Scanner for Universal Headers before release 3"""
 	def initpatterns(self):
-		Scanner.initpatterns(self)
 		self.head_pat = "^extern pascal[ \t]+" # XXX Mac specific!
 		self.tail_pat = "[;={}]"
 		self.type_pat = "pascal[ \t\n]+\(<type>[a-zA-Z0-9_ \t]*[a-zA-Z0-9_]\)[ \t\n]+"

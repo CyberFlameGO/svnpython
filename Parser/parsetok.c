@@ -1,4 +1,3 @@
-
 /* Parser-tokenizer link implementation */
 
 #include "pgenheaders.h"
@@ -13,12 +12,17 @@ int Py_TabcheckFlag;
 
 
 /* Forward */
-static node *parsetok(struct tok_state *, grammar *, int, perrdetail *);
+static node *parsetok Py_PROTO((struct tok_state *, grammar *, int,
+			     perrdetail *));
 
 /* Parse input coming from a string.  Return error code, print some errors. */
 
 node *
-PyParser_ParseString(char *s, grammar *g, int start, perrdetail *err_ret)
+PyParser_ParseString(s, g, start, err_ret)
+	char *s;
+	grammar *g;
+	int start;
+	perrdetail *err_ret;
 {
 	struct tok_state *tok;
 
@@ -27,8 +31,6 @@ PyParser_ParseString(char *s, grammar *g, int start, perrdetail *err_ret)
 	err_ret->lineno = 0;
 	err_ret->offset = 0;
 	err_ret->text = NULL;
-	err_ret->token = -1;
-	err_ret->expected = -1;
 
 	if ((tok = PyTokenizer_FromString(s)) == NULL) {
 		err_ret->error = E_NOMEM;
@@ -49,8 +51,13 @@ PyParser_ParseString(char *s, grammar *g, int start, perrdetail *err_ret)
 /* Parse input coming from a file.  Return error code, print some errors. */
 
 node *
-PyParser_ParseFile(FILE *fp, char *filename, grammar *g, int start,
-		   char *ps1, char *ps2, perrdetail *err_ret)
+PyParser_ParseFile(fp, filename, g, start, ps1, ps2, err_ret)
+	FILE *fp;
+	char *filename;
+	grammar *g;
+	int start;
+	char *ps1, *ps2;
+	perrdetail *err_ret;
 {
 	struct tok_state *tok;
 
@@ -71,6 +78,13 @@ PyParser_ParseFile(FILE *fp, char *filename, grammar *g, int start,
 			tok->alterror++;
 	}
 
+#ifdef macintosh
+	{
+		int tabsize = guesstabsize(filename);
+		if (tabsize > 0)
+			tok->tabsize = tabsize;
+	}
+#endif
 
 	return parsetok(tok, g, start, err_ret);
 }
@@ -79,7 +93,11 @@ PyParser_ParseFile(FILE *fp, char *filename, grammar *g, int start,
    Return error code. */
 
 static node *
-parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret)
+parsetok(tok, g, start, err_ret)
+	struct tok_state *tok;
+	grammar *g;
+	int start;
+	perrdetail *err_ret;
 {
 	parser_state *ps;
 	node *n;
@@ -94,7 +112,7 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret)
 	for (;;) {
 		char *a, *b;
 		int type;
-		size_t len;
+		int len;
 		char *str;
 
 		type = PyTokenizer_Get(tok, &a, &b);
@@ -119,8 +137,8 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret)
 			strncpy(str, a, len);
 		str[len] = '\0';
 		if ((err_ret->error =
-		     PyParser_AddToken(ps, (int)type, str, tok->lineno,
-				       &(err_ret->expected))) != E_OK) {
+		     PyParser_AddToken(ps, (int)type, str,
+				       tok->lineno)) != E_OK) {
 			if (err_ret->error != E_DONE)
 				PyMem_DEL(str);
 			break;
@@ -142,7 +160,7 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret)
 		err_ret->lineno = tok->lineno;
 		err_ret->offset = tok->cur - tok->buf;
 		if (tok->buf != NULL) {
-			size_t len = tok->inp - tok->buf;
+			int len = tok->inp - tok->buf;
 			err_ret->text = PyMem_NEW(char, len + 1);
 			if (err_ret->text != NULL) {
 				if (len > 0)

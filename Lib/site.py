@@ -23,7 +23,7 @@ A path configuration file is a file whose name has the form
 to be added to sys.path.  Non-existing directories (or
 non-directories) are never added to sys.path; no directory is added to
 sys.path more than once.  Blank lines and lines beginning with
-\code{#} are skipped. Lines starting with \code{import} are executed.
+\code{#} are skipped.
 
 For example, suppose sys.prefix and sys.exec_prefix are set to
 /usr/local and there is a directory /usr/local/lib/python1.5/site-packages
@@ -59,37 +59,7 @@ ImportError exception, it is silently ignored.
 
 import sys, os
 
-def makepath(*paths):
-    dir = os.path.join(*paths)
-    return os.path.normcase(os.path.abspath(dir))
-
-L = sys.modules.values()
-for m in L:
-    if hasattr(m, "__file__"):
-        m.__file__ = makepath(m.__file__)
-del m, L
-
-# This ensures that the initial path provided by the interpreter contains
-# only absolute pathnames, even if we're running from the build directory.
-L = []
-for dir in sys.path:
-    dir = makepath(dir)
-    if dir not in L:
-        L.append(dir)
-sys.path[:] = L
-del dir, L
-
-# Append ./build/lib.<platform> in case we're running in the build dir
-# (especially for Guido :-)
-if os.name == "posix" and os.path.basename(sys.path[-1]) == "Modules":
-    from distutils.util import get_platform
-    s = "build/lib.%s-%.3s" % (get_platform(), sys.version)
-    s = os.path.join(os.path.dirname(sys.path[-1]), s)
-    sys.path.append(s)
-    del get_platform, s
-
 def addsitedir(sitedir):
-    sitedir = makepath(sitedir)
     if sitedir not in sys.path:
         sys.path.append(sitedir)        # Add path component
     try:
@@ -114,12 +84,9 @@ def addpackage(sitedir, name):
             break
         if dir[0] == '#':
             continue
-        if dir.startswith("import"):
-            exec dir
-            continue
         if dir[-1] == '\n':
             dir = dir[:-1]
-        dir = makepath(sitedir, dir)
+        dir = os.path.join(sitedir, dir)
         if dir not in sys.path and os.path.exists(dir):
             sys.path.append(dir)
 
@@ -129,13 +96,11 @@ if sys.exec_prefix != sys.prefix:
 for prefix in prefixes:
     if prefix:
         if os.sep == '/':
-            sitedirs = [makepath(prefix,
-                                 "lib",
-                                 "python" + sys.version[:3],
-                                 "site-packages"),
-                        makepath(prefix, "lib", "site-python")]
-        elif os.sep == ':':
-            sitedirs = [makepath(prefix, "lib", "site-packages")]
+            sitedirs = [os.path.join(prefix,
+                                     "lib",
+                                     "python" + sys.version[:3],
+                                     "site-packages"),
+                        os.path.join(prefix, "lib", "site-python")]
         else:
             sitedirs = [prefix]
         for sitedir in sitedirs:
@@ -154,118 +119,10 @@ import __builtin__
 __builtin__.quit = __builtin__.exit = exit
 del exit
 
-# interactive prompt objects for printing the license text, a list of
-# contributors and the copyright notice.
-class _Printer:
-    MAXLINES = 23
-
-    def __init__(self, name, data, files=(), dirs=()):
-        self.__name = name
-        self.__data = data
-        self.__files = files
-        self.__dirs = dirs
-        self.__lines = None
-
-    def __setup(self):
-        if self.__lines:
-            return
-        data = None
-        for dir in self.__dirs:
-            for file in self.__files:
-                file = os.path.join(dir, file)
-                try:
-                    fp = open(file)
-                    data = fp.read()
-                    fp.close()
-                    break
-                except IOError:
-                    pass
-            if data:
-                break
-        if not data:
-            data = self.__data
-        self.__lines = data.split('\n')
-        self.__linecnt = len(self.__lines)
-
-    def __repr__(self):
-        self.__setup()
-        if len(self.__lines) <= self.MAXLINES:
-            return "\n".join(self.__lines)
-        else:
-            return "Type %s() to see the full %s text" % ((self.__name,)*2)
-
-    def __call__(self):
-        self.__setup()
-        prompt = 'Hit Return for more, or q (and Return) to quit: '
-        lineno = 0
-        while 1:
-            try:
-                for i in range(lineno, lineno + self.MAXLINES):
-                    print self.__lines[i]
-            except IndexError:
-                break
-            else:
-                lineno += self.MAXLINES
-                key = None
-                while key is None:
-                    key = raw_input(prompt)
-                    if key not in ('', 'q'):
-                        key = None
-                if key == 'q':
-                    break
-
-__builtin__.copyright = _Printer("copyright", sys.copyright)
-if sys.platform[:4] == 'java':
-    __builtin__.credits = _Printer(
-        "credits",
-        "Jython is maintained by the Jython developers (www.jython.org).")
-else:
-    __builtin__.credits = _Printer("credits", """\
-Thanks to CWI, CNRI, BeOpen.com, Digital Creations and a cast of thousands
-for supporting Python development.  See www.python.org for more information.""")
-here = os.path.dirname(os.__file__)
-__builtin__.license = _Printer(
-    "license", "See http://www.pythonlabs.com/products/python2.0/license.html",
-    ["LICENSE.txt", "LICENSE"],
-    [here, os.path.join(here, os.pardir), os.curdir])
-
-
-# Set the string encoding used by the Unicode implementation.  The
-# default is 'ascii', but if you're willing to experiment, you can
-# change this.
-
-encoding = "ascii" # Default value set by _PyUnicode_Init()
-
-if 0:
-    # Enable to support locale aware default string encodings.
-    import locale
-    loc = locale.getdefaultlocale()
-    if loc[1]:
-        encoding = loc[1]
-
-if 0:
-    # Enable to switch off string to Unicode coercion and implicit
-    # Unicode to string conversion.
-    encoding = "undefined"
-
-if encoding != "ascii":
-    sys.setdefaultencoding(encoding)
-
-#
-# Run custom site specific code, if available.
-#
 try:
-    import sitecustomize
+    import sitecustomize                # Run arbitrary site specific code
 except ImportError:
-    pass
-
-#
-# Remove sys.setdefaultencoding() so that users cannot change the
-# encoding after initialization.  The test for presence is needed when
-# this module is run as a script, because this code is executed twice.
-#
-if hasattr(sys, "setdefaultencoding"):
-    del sys.setdefaultencoding
+    pass                                # No site customization module
 
 def _test():
     print "sys.path = ["

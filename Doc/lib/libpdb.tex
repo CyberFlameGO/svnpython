@@ -19,6 +19,10 @@ source.  The extension interface uses the modules
 \module{bdb}\refstmodindex{bdb} (undocumented) and
 \refmodule{cmd}\refstmodindex{cmd}.
 
+A primitive windowing version of the debugger also exists --- this is
+module \module{wdb}\refstmodindex{wdb}, which requires
+\module{stdwin}\refbimodindex{stdwin}.
+
 The debugger's prompt is \samp{(Pdb) }.
 Typical usage to run a program under control of the debugger is:
 
@@ -48,7 +52,7 @@ Typical usage to inspect a crashed program is:
 >>> import pdb
 >>> import mymodule
 >>> mymodule.test()
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
   File "./mymodule.py", line 4, in test
     test2()
@@ -71,8 +75,8 @@ can set breakpoints and type \samp{continue}, or you can step through
 the statement using \samp{step} or \samp{next} (all these commands are
 explained below).  The optional \var{globals} and \var{locals}
 arguments specify the environment in which the code is executed; by
-default the dictionary of the module \refmodule[main]{__main__} is
-used.  (See the explanation of the \keyword{exec} statement or the
+default the dictionary of the module \module{__main__} is used.  (See
+the explanation of the \keyword{exec} statement or the
 \function{eval()} built-in function.)
 \end{funcdesc}
 
@@ -149,7 +153,7 @@ exists in the user's home directory or in the current directory, it is
 read in and executed as if it had been typed at the debugger prompt.
 This is particularly useful for aliases.  If both files exist, the one
 in the home directory is read first and aliases defined there can be
-overridden by the local file.
+overriden by the local file.
 
 \begin{description}
 

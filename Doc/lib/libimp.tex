@@ -52,7 +52,7 @@ returned by \function{get_suffixes()} describing the kind of module found.
 If the module does not live in a file, the returned \var{file} is
 \code{None}, \var{filename} is the empty string, and the
 \var{description} tuple contains empty strings for its suffix and
-mode; the module type is as indicate in parentheses above.  If the
+mode; the module type is as indicate in parentheses dabove.  If the
 search is unsuccessful, \exception{ImportError} is raised.  Other
 exceptions indicate problems with the arguments or environment.
 
@@ -70,14 +70,14 @@ Load a module that was previously found by \function{find_module()} (or by
 an otherwise conducted search yielding compatible results).  This
 function does more than importing the module: if the module was
 already imported, it is equivalent to a
-\function{reload()}\bifuncindex{reload}!  The \var{name} argument
-indicates the full module name (including the package name, if this is
-a submodule of a package).  The \var{file} argument is an open file,
-and \var{filename} is the corresponding file name; these can be
-\code{None} and \code{''}, respectively, when the module is not being
-loaded from a file.  The \var{description} argument is a tuple, as
-would be returned by \function{get_suffixes()}, describing what kind
-of module must be loaded.
+\function{reload()}\bifuncindex{reload}!  The
+\var{name} argument indicates the full module name (including the
+package name, if this is a submodule of a package).  The \var{file}
+argument is an open file, and \var{filename} is the corresponding
+file name; these can be \code{None} and \code{''}, respectively, when
+the module is not being loaded from a file.  The \var{description}
+argument is a tuple as returned by \function{find_module()} describing
+what kind of module must be loaded.
 
 If the load is successful, the return value is the module object;
 otherwise, an exception (usually \exception{ImportError}) is raised.
@@ -187,7 +187,7 @@ don't like that and may raise an exception.  The \var{pathname}
 argument must point to the shared library.  The \var{name} argument is
 used to construct the name of the initialization function: an external
 C function called \samp{init\var{name}()} in the shared library is
-called.  The optional \var{file} argument is ignored.  (Note: using
+called.  The optional \var{file} argment is ignored.  (Note: using
 shared libraries is highly system dependent, and not all systems
 support it.)
 \end{funcdesc}
@@ -217,8 +217,7 @@ up to Python 1.4 (i.e., no hierarchical module names).  (This
 \function{load_module()} has been added in 1.4.)
 
 \begin{verbatim}
-import imp
-import sys
+import imp import sys
 
 def __import__(name, globals=None, locals=None, fromlist=None):
     # Fast path: see if the module has already been imported.

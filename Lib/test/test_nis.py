@@ -1,4 +1,4 @@
-from test_support import verbose, TestFailed, TestSkipped
+from test_support import verbose, TestFailed
 import nis
 
 print 'nis.maps()'
@@ -9,7 +9,7 @@ except nis.error, msg:
     if verbose:
         raise TestFailed, msg
     # only do this if running under the regression suite
-    raise TestSkipped, msg
+    raise ImportError, msg
 
 done = 0
 for nismap in maps:
@@ -21,7 +21,7 @@ for nismap in maps:
             print '    ', k, v
         if not k:
             continue
-        if nis.match(k, nismap) != v:
+        if nis.match(k, nismap) <> v:
             print "NIS match failed for key `%s' in map `%s'" % (k, nismap)
         else:
             # just test the one key, otherwise this test could take a

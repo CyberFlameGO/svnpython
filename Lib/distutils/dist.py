@@ -14,8 +14,8 @@ from types import *
 from copy import copy
 from distutils.errors import *
 from distutils import sysconfig
-from distutils.fancy_getopt import FancyGetopt, translate_longopt
-from distutils.util import check_environ, strtobool
+from distutils.fancy_getopt import FancyGetopt, longopt_xlate
+from distutils.util import check_environ
 
 
 # Regex to define acceptable Distutils command names.  This is not *quite*
@@ -86,8 +86,8 @@ class Distribution:
         ('long-description', None,
          "print the long package description"),
         ]
-    display_option_names = map(lambda x: translate_longopt(x[0]),
-                               display_options)
+    display_option_names = map(lambda x: string.translate(x[0], longopt_xlate),
+                           display_options)
 
     # negative options are options that exclude other options
     negative_opt = {'quiet': 'verbose'}
@@ -118,7 +118,7 @@ class Distribution:
         # information here (and enough command-line options) that it's
         # worth it.  Also delegate 'get_XXX()' methods to the 'metadata'
         # object in a sneaky and underhanded (but efficient!) way.
-        self.metadata = DistributionMetadata()
+        self.metadata = DistributionMetadata ()
         method_basenames = dir(self.metadata) + \
                            ['fullname', 'contact', 'contact_email']
         for basename in method_basenames:
@@ -130,12 +130,6 @@ class Distribution:
         # we need to create a new command object, and 2) have a way
         # for the setup script to override command classes
         self.cmdclass = {}
-
-        # 'script_name' and 'script_args' are usually set to sys.argv[0]
-        # and sys.argv[1:], but they can be overridden when the caller is
-        # not necessarily a setup script run from the command-line.
-        self.script_name = None
-        self.script_args = None
 
         # 'command_options' is where we store command options between
         # parsing them (from config files, the command-line, etc.) and when
@@ -187,7 +181,7 @@ class Distribution:
             # specifically.  Note that this order guarantees that aliased
             # command options will override any supplied redundantly
             # through the general options dictionary.
-            options = attrs.get('options')
+            options = attrs.get ('options')
             if options:
                 del attrs['options']
                 for (command, cmd_options) in options.items():
@@ -198,10 +192,10 @@ class Distribution:
             # Now work on the rest of the attributes.  Any attribute that's
             # not already defined is invalid!
             for (key,val) in attrs.items():
-                if hasattr(self.metadata, key):
-                    setattr(self.metadata, key, val)
-                elif hasattr(self, key):
-                    setattr(self, key, val)
+                if hasattr (self.metadata, key):
+                    setattr (self.metadata, key, val)
+                elif hasattr (self, key):
+                    setattr (self, key, val)
                 else:
                     raise DistutilsSetupError, \
                           "invalid distribution option '%s'" % key
@@ -284,7 +278,7 @@ class Distribution:
             user_filename = ".pydistutils.cfg"
         else:
             user_filename = "pydistutils.cfg"
-
+	
         # And look for the user config file
         if os.environ.has_key('HOME'):
             user_file = os.path.join(os.environ.get('HOME'), user_filename)
@@ -321,9 +315,7 @@ class Distribution:
 
                 for opt in options:
                     if opt != '__name__':
-                        val = parser.get(section,opt)
-                        opt = string.replace(opt, '-', '_')
-                        opt_dict[opt] = (filename, val)
+                        opt_dict[opt] = (filename, parser.get(section,opt))
 
             # Make the ConfigParser forget everything (so we retain
             # the original filenames that options come from) -- gag,
@@ -331,54 +323,28 @@ class Distribution:
             # specific config parser (sigh...)
             parser.__init__()
 
-        # If there was a "global" section in the config file, use it
-        # to set Distribution options.
-
-        if self.command_options.has_key('global'):
-            for (opt, (src, val)) in self.command_options['global'].items():
-                alias = self.negative_opt.get(opt)
-                try:
-                    if alias:
-                        setattr(self, alias, not strtobool(val))
-                    elif opt in ('verbose', 'dry_run'): # ugh!
-                        setattr(self, opt, strtobool(val))
-                except ValueError, msg:
-                    raise DistutilsOptionError, msg
-
-    # parse_config_files ()
-
 
     # -- Command-line parsing methods ----------------------------------
 
-    def parse_command_line (self):
-        """Parse the setup script's command line, taken from the
-        'script_args' instance attribute (which defaults to 'sys.argv[1:]'
-        -- see 'setup()' in core.py).  This list is first processed for
-        "global options" -- options that set attributes of the Distribution
-        instance.  Then, it is alternately scanned for Distutils commands
-        and options for that command.  Each new command terminates the
-        options for the previous command.  The allowed options for a
-        command are determined by the 'user_options' attribute of the
-        command class -- thus, we have to be able to load command classes
-        in order to parse the command line.  Any error in that 'options'
-        attribute raises DistutilsGetoptError; any error on the
-        command-line raises DistutilsArgError.  If no Distutils commands
-        were found on the command line, raises DistutilsArgError.  Return
-        true if command-line was successfully parsed and we should carry
-        on with executing commands; false if no errors but we shouldn't
-        execute commands (currently, this only happens if user asks for
-        help).
+    def parse_command_line (self, args):
+        """Parse the setup script's command line.  'args' must be a list
+        of command-line arguments, most likely 'sys.argv[1:]' (see the
+        'setup()' function).  This list is first processed for "global
+        options" -- options that set attributes of the Distribution
+        instance.  Then, it is alternately scanned for Distutils
+        commands and options for that command.  Each new command
+        terminates the options for the previous command.  The allowed
+        options for a command are determined by the 'user_options'
+        attribute of the command class -- thus, we have to be able to
+        load command classes in order to parse the command line.  Any
+        error in that 'options' attribute raises DistutilsGetoptError;
+        any error on the command-line raises DistutilsArgError.  If no
+        Distutils commands were found on the command line, raises
+        DistutilsArgError.  Return true if command-line were
+        successfully parsed and we should carry on with executing
+        commands; false if no errors but we shouldn't execute commands
+        (currently, this only happens if user asks for help).
         """
-        #
-        # We now have enough information to show the Macintosh dialog that allows
-        # the user to interactively specify the "command line".
-        #
-        if sys.platform == 'mac':
-            import EasyDialogs
-            cmdlist = self.get_command_list()
-            self.script_args = EasyDialogs.GetArgv(
-                self.global_options + self.display_options, cmdlist)
- 
         # We have to parse the command line a bit at a time -- global
         # options, then the first command, then its options, and so on --
         # because each command will be handled by a different class, and
@@ -387,10 +353,10 @@ class Distribution:
         # until we know what the command is.
 
         self.commands = []
-        parser = FancyGetopt(self.global_options + self.display_options)
-        parser.set_negative_aliases(self.negative_opt)
-        parser.set_aliases({'license': 'licence'})
-        args = parser.getopt(args=self.script_args, object=self)
+        parser = FancyGetopt (self.global_options + self.display_options)
+        parser.set_negative_aliases (self.negative_opt)
+        parser.set_aliases ({'license': 'licence'})
+        args = parser.getopt (object=self)
         option_order = parser.get_option_order()
 
         # for display options we return immediately
@@ -437,28 +403,28 @@ class Distribution:
 
         # Pull the current command from the head of the command line
         command = args[0]
-        if not command_re.match(command):
+        if not command_re.match (command):
             raise SystemExit, "invalid command name '%s'" % command
-        self.commands.append(command)
+        self.commands.append (command)
 
         # Dig up the command class that implements this command, so we
         # 1) know that it's a valid command, and 2) know which options
         # it takes.
         try:
-            cmd_class = self.get_command_class(command)
+            cmd_class = self.get_command_class (command)
         except DistutilsModuleError, msg:
             raise DistutilsArgError, msg
 
         # Require that the command class be derived from Command -- want
         # to be sure that the basic "command" interface is implemented.
-        if not issubclass(cmd_class, Command):
+        if not issubclass (cmd_class, Command):
             raise DistutilsClassError, \
                   "command class %s must subclass Command" % cmd_class
 
         # Also make sure that the command object provides a list of its
         # known options.
-        if not (hasattr(cmd_class, 'user_options') and
-                type(cmd_class.user_options) is ListType):
+        if not (hasattr (cmd_class, 'user_options') and
+                type (cmd_class.user_options) is ListType):
             raise DistutilsClassError, \
                   ("command class %s must provide " +
                    "'user_options' attribute (a list of tuples)") % \
@@ -467,14 +433,14 @@ class Distribution:
         # If the command class has a list of negative alias options,
         # merge it in with the global negative aliases.
         negative_opt = self.negative_opt
-        if hasattr(cmd_class, 'negative_opt'):
-            negative_opt = copy(negative_opt)
-            negative_opt.update(cmd_class.negative_opt)
+        if hasattr (cmd_class, 'negative_opt'):
+            negative_opt = copy (negative_opt)
+            negative_opt.update (cmd_class.negative_opt)
 
-        # Check for help_options in command class.  They have a different
-        # format (tuple of four) so we need to preprocess them here.
+	# Check for help_options in command class.  They have a different
+	# format (tuple of four) so we need to preprocess them here.
         if (hasattr(cmd_class, 'help_options') and
-            type(cmd_class.help_options) is ListType):
+            type (cmd_class.help_options) is ListType):
             help_options = fix_help_options(cmd_class.help_options)
         else:
             help_options = []
@@ -482,22 +448,22 @@ class Distribution:
 
         # All commands support the global options too, just by adding
         # in 'global_options'.
-        parser.set_option_table(self.global_options +
-                                cmd_class.user_options +
-                                help_options)
-        parser.set_negative_aliases(negative_opt)
-        (args, opts) = parser.getopt(args[1:])
+        parser.set_option_table (self.global_options +
+                                 cmd_class.user_options +
+                                 help_options)
+        parser.set_negative_aliases (negative_opt)
+        (args, opts) = parser.getopt (args[1:])
         if hasattr(opts, 'help') and opts.help:
             self._show_help(parser, display_options=0, commands=[cmd_class])
             return
 
         if (hasattr(cmd_class, 'help_options') and
-            type(cmd_class.help_options) is ListType):
+            type (cmd_class.help_options) is ListType):
             help_option_found=0
             for (help_option, short, desc, func) in cmd_class.help_options:
                 if hasattr(opts, parser.get_attr_name(help_option)):
                     help_option_found=1
-                    #print "showing help for option %s of command %s" % \
+		    #print "showing help for option %s of command %s" % \
                     #      (help_option[0],cmd_class)
 
                     if callable(func):
@@ -540,17 +506,17 @@ class Distribution:
         in 'commands'.
         """
         # late import because of mutual dependence between these modules
-        from distutils.core import gen_usage
+        from distutils.core import usage
         from distutils.cmd import Command
 
         if global_options:
-            parser.set_option_table(self.global_options)
-            parser.print_help("Global options:")
+            parser.set_option_table (self.global_options)
+            parser.print_help ("Global options:")
             print
 
         if display_options:
-            parser.set_option_table(self.display_options)
-            parser.print_help(
+            parser.set_option_table (self.display_options)
+            parser.print_help (
                 "Information display options (just display " +
                 "information, ignore any commands)")
             print
@@ -559,21 +525,21 @@ class Distribution:
             if type(command) is ClassType and issubclass(klass, Command):
                 klass = command
             else:
-                klass = self.get_command_class(command)
+                klass = self.get_command_class (command)
             if (hasattr(klass, 'help_options') and
-                type(klass.help_options) is ListType):
-                parser.set_option_table(klass.user_options +
-                                        fix_help_options(klass.help_options))
+                type (klass.help_options) is ListType):
+                parser.set_option_table (klass.user_options +
+                                         fix_help_options(klass.help_options))
             else:
-                parser.set_option_table(klass.user_options)
-            parser.print_help("Options for '%s' command:" % klass.__name__)
+                parser.set_option_table (klass.user_options)
+            parser.print_help ("Options for '%s' command:" % klass.__name__)
             print
 
-        print gen_usage(self.script_name)
+        print usage
         return
 
     # _show_help ()
-
+	
 
     def handle_display_options (self, option_order):
         """If there were any non-global "display-only" options
@@ -581,15 +547,15 @@ class Distribution:
         line, display the requested info and return true; else return
         false.
         """
-        from distutils.core import gen_usage
+        from distutils.core import usage
 
         # User just wants a list of commands -- we'll print it out and stop
         # processing now (ie. if they ran "setup --help-commands foo bar",
         # we ignore "foo bar").
         if self.help_commands:
-            self.print_commands()
+            self.print_commands ()
             print
-            print gen_usage(self.script_name)
+            print usage
             return 1
 
         # If user supplied any of the "display metadata" options, then
@@ -602,7 +568,7 @@ class Distribution:
 
         for (opt, val) in option_order:
             if val and is_display_option.get(opt):
-                opt = translate_longopt(opt)
+                opt = string.translate (opt, longopt_xlate)
                 print getattr(self.metadata, "get_"+opt)()
                 any_display_options = 1
 
@@ -618,9 +584,9 @@ class Distribution:
         print header + ":"
 
         for cmd in commands:
-            klass = self.cmdclass.get(cmd)
+            klass = self.cmdclass.get (cmd)
             if not klass:
-                klass = self.get_command_class(cmd)
+                klass = self.get_command_class (cmd)
             try:
                 description = klass.description
             except AttributeError:
@@ -649,56 +615,24 @@ class Distribution:
         extra_commands = []
         for cmd in self.cmdclass.keys():
             if not is_std.get(cmd):
-                extra_commands.append(cmd)
+                extra_commands.append (cmd)
 
         max_length = 0
         for cmd in (std_commands + extra_commands):
-            if len(cmd) > max_length:
-                max_length = len(cmd)
+            if len (cmd) > max_length:
+                max_length = len (cmd)
 
-        self.print_command_list(std_commands,
-                                "Standard commands",
-                                max_length)
+        self.print_command_list (std_commands,
+                                 "Standard commands",
+                                 max_length)
         if extra_commands:
             print
-            self.print_command_list(extra_commands,
-                                    "Extra commands",
-                                    max_length)
+            self.print_command_list (extra_commands,
+                                     "Extra commands",
+                                     max_length)
 
     # print_commands ()
 
-    def get_command_list (self):
-        """Get a list of (command, description) tuples.
-        The list is divided into "standard commands" (listed in
-        distutils.command.__all__) and "extra commands" (mentioned in
-        self.cmdclass, but not a standard command).  The descriptions come
-        from the command class attribute 'description'.
-        """
-        # Currently this is only used on Mac OS, for the Mac-only GUI
-        # Distutils interface (by Jack Jansen)
-
-        import distutils.command
-        std_commands = distutils.command.__all__
-        is_std = {}
-        for cmd in std_commands:
-            is_std[cmd] = 1
-
-        extra_commands = []
-        for cmd in self.cmdclass.keys():
-            if not is_std.get(cmd):
-                extra_commands.append(cmd)
-
-        rv = []
-        for cmd in (std_commands + extra_commands):
-            klass = self.cmdclass.get(cmd)
-            if not klass:
-                klass = self.get_command_class(cmd)
-            try:
-                description = klass.description
-            except AttributeError:
-                description = "(no description available)"
-            rv.append((cmd, description))
-        return rv
 
     # -- Command class/object methods ----------------------------------
 
@@ -774,7 +708,7 @@ class Distribution:
         this means copying elements of a dictionary ('option_dict') to
         attributes of an instance ('command').
 
-        'command_obj' must be a Command instance.  If 'option_dict' is not
+        'command_obj' must be a Commnd instance.  If 'option_dict' is not
         supplied, uses the standard option dictionary for this command
         (from 'self.command_options').
         """
@@ -787,31 +721,13 @@ class Distribution:
         if DEBUG: print "  setting options for '%s' command:" % command_name
         for (option, (source, value)) in option_dict.items():
             if DEBUG: print "    %s = %s (from %s)" % (option, value, source)
-            try:
-                bool_opts = map(translate_longopt, command_obj.boolean_options)
-            except AttributeError:
-                bool_opts = []
-            try:
-                neg_opt = command_obj.negative_opt
-            except AttributeError:
-                neg_opt = {}
+            if not hasattr(command_obj, option):
+                raise DistutilsOptionError, \
+                      ("error in %s: command '%s' has no such option '%s'") % \
+                      (source, command_name, option)
+            setattr(command_obj, option, value)
 
-            try:
-                is_string = type(value) is StringType
-                if neg_opt.has_key(option) and is_string:
-                    setattr(command_obj, neg_opt[option], not strtobool(value))
-                elif option in bool_opts and is_string:
-                    setattr(command_obj, option, strtobool(value))
-                elif hasattr(command_obj, option):
-                    setattr(command_obj, option, value)
-                else:
-                    raise DistutilsOptionError, \
-                          ("error in %s: command '%s' has no such option '%s'"
-                           % (source, command_name, option))
-            except ValueError, msg:
-                raise DistutilsOptionError, msg
-
-    def reinitialize_command (self, command, reinit_subcommands=0):
+    def reinitialize_command (self, command):
         """Reinitializes a command to the state it was in when first
         returned by 'get_command_obj()': ie., initialized but not yet
         finalized.  This provides the opportunity to sneak option
@@ -821,13 +737,7 @@ class Distribution:
         'finalize_options()' or 'ensure_finalized()') before using it for
         real.  
 
-        'command' should be a command name (string) or command object.  If
-        'reinit_subcommands' is true, also reinitializes the command's
-        sub-commands, as declared by the 'sub_commands' class attribute (if
-        it has one).  See the "install" command for an example.  Only
-        reinitializes the sub-commands that actually matter, ie. those
-        whose test predicates return true.
-
+        'command' should be a command name (string) or command object.
         Returns the reinitialized command object.
         """
         from distutils.cmd import Command
@@ -843,11 +753,6 @@ class Distribution:
         command.finalized = 0
         self.have_run[command_name] = 0
         self._set_command_options(command)
-
-        if reinit_subcommands:
-            for sub in command.get_sub_commands():
-                self.reinitialize_command(sub, reinit_subcommands)            
-
         return command
 
         
@@ -865,10 +770,10 @@ class Distribution:
     def run_commands (self):
         """Run each command that was seen on the setup script command line.
         Uses the list of commands found and cache of command objects
-        created by 'get_command_obj()'.
-        """
+        created by 'get_command_obj()'."""
+
         for cmd in self.commands:
-            self.run_command(cmd)
+            self.run_command (cmd)
 
 
     # -- Methods that operate on its Commands --------------------------
@@ -881,27 +786,28 @@ class Distribution:
         doesn't even have a command object yet, create one.  Then invoke
         'run()' on that command object (or an existing one).
         """
+
         # Already been here, done that? then return silently.
-        if self.have_run.get(command):
+        if self.have_run.get (command):
             return
 
-        self.announce("running " + command)
-        cmd_obj = self.get_command_obj(command)
-        cmd_obj.ensure_finalized()
-        cmd_obj.run()
+        self.announce ("running " + command)
+        cmd_obj = self.get_command_obj (command)
+        cmd_obj.ensure_finalized ()
+        cmd_obj.run ()
         self.have_run[command] = 1
 
 
     # -- Distribution query methods ------------------------------------
 
     def has_pure_modules (self):
-        return len(self.packages or self.py_modules or []) > 0
+        return len (self.packages or self.py_modules or []) > 0
 
     def has_ext_modules (self):
-        return self.ext_modules and len(self.ext_modules) > 0
+        return self.ext_modules and len (self.ext_modules) > 0
 
     def has_c_libraries (self):
-        return self.libraries and len(self.libraries) > 0
+        return self.libraries and len (self.libraries) > 0
 
     def has_modules (self):
         return self.has_pure_modules() or self.has_ext_modules()
@@ -932,8 +838,7 @@ class Distribution:
 
 class DistributionMetadata:
     """Dummy class to hold the distribution meta-data: name, version,
-    author, and so forth.
-    """
+    author, and so forth."""
 
     def __init__ (self):
         self.name = None
@@ -1006,5 +911,5 @@ def fix_help_options (options):
 
 
 if __name__ == "__main__":
-    dist = Distribution()
+    dist = Distribution ()
     print "ok"

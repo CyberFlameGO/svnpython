@@ -19,45 +19,18 @@ algorithm (i.e., the boundary conditions are already right!).
 
 The following functions are provided:
 
-\begin{funcdesc}{bisect_left}{list, item\optional{, lo\optional{, hi}}}
-  Locate the proper insertion point for \var{item} in \var{list} to
-  maintain sorted order.  The parameters \var{lo} and \var{hi} may be
-  used to specify a subset of the list which should be considered; by
-  default the entire list is used.  If \var{item} is already present
-  in \var{list}, the insertion point will be before (to the left of)
-  any existing entries.  The return value is suitable for use as the
-  first parameter to \code{\var{list}.insert()}.  This assumes that
-  \var{list} is already sorted.
-\versionadded{2.1}
+\begin{funcdesc}{bisect}{list, item\optional{, lo\optional{, hi}}}
+Locate the proper insertion point for \var{item} in \var{list} to
+maintain sorted order.  The parameters \var{lo} and \var{hi} may be
+used to specify a subset of the list which should be considered.  The
+return value is suitable for use as the first parameter to
+\code{\var{list}.insert()}.
 \end{funcdesc}
 
-\begin{funcdesc}{bisect_right}{list, item\optional{, lo\optional{, hi}}}
-  Similar to \function{bisect_left()}, but returns an insertion point
-  which comes after (to the right of) any existing entries of
-  \var{item} in \var{list}.
-\versionadded{2.1}
-\end{funcdesc}
-
-\begin{funcdesc}{bisect}{\unspecified}
-  Alias for \function{bisect_right()}.
-\end{funcdesc}
-
-\begin{funcdesc}{insort_left}{list, item\optional{, lo\optional{, hi}}}
-  Insert \var{item} in \var{list} in sorted order.  This is equivalent
-  to \code{\var{list}.insert(bisect.bisect_left(\var{list}, \var{item},
-  \var{lo}, \var{hi}), \var{item})}.  This assumes that \var{list} is
-  already sorted.
-\versionadded{2.1}
-\end{funcdesc}
-
-\begin{funcdesc}{insort_right}{list, item\optional{, lo\optional{, hi}}}
-  Similar to \function{insort_left()}, but inserting \var{item} in
-  \var{list} after any existing entries of \var{item}.
-\versionadded{2.1}
-\end{funcdesc}
-
-\begin{funcdesc}{insort}{\unspecified}
-  Alias for \function{insort_right()}.
+\begin{funcdesc}{insort}{list, item\optional{, lo\optional{, hi}}}
+Insert \var{item} in \var{list} in sorted order.  This is equivalent
+to \code{\var{list}.insert(bisect.bisect(\var{list}, \var{item},
+\var{lo}, \var{hi}), \var{item})}.
 \end{funcdesc}
 
 

@@ -1,11 +1,11 @@
 /* Parse tree node implementation */
 
-#include "Python.h"
+#include "pgenheaders.h"
 #include "node.h"
-#include "errcode.h"
 
 node *
-PyNode_New(int type)
+PyNode_New(type)
+	int type;
 {
 	node *n = PyMem_NEW(node, 1);
 	if (n == NULL)
@@ -21,20 +21,22 @@ PyNode_New(int type)
 #define XXX 3 /* Node alignment factor to speed up realloc */
 #define XXXROUNDUP(n) ((n) == 1 ? 1 : ((n) + XXX - 1) / XXX * XXX)
 
-int
-PyNode_AddChild(register node *n1, int type, char *str, int lineno)
+node *
+PyNode_AddChild(n1, type, str, lineno)
+	register node *n1;
+	int type;
+	char *str;
+	int lineno;
 {
 	register int nch = n1->n_nchildren;
 	register int nch1 = nch+1;
 	register node *n;
-	if (nch == INT_MAX || nch < 0)
-		return E_OVERFLOW;
 	if (XXXROUNDUP(nch) < nch1) {
 		n = n1->n_child;
 		nch1 = XXXROUNDUP(nch1);
 		PyMem_RESIZE(n, node, nch1);
 		if (n == NULL)
-			return E_NOMEM;
+			return NULL;
 		n1->n_child = n;
 	}
 	n = &n1->n_child[n1->n_nchildren++];
@@ -43,15 +45,16 @@ PyNode_AddChild(register node *n1, int type, char *str, int lineno)
 	n->n_lineno = lineno;
 	n->n_nchildren = 0;
 	n->n_child = NULL;
-	return 0;
+	return n;
 }
 
 /* Forward */
-static void freechildren(node *);
+static void freechildren Py_PROTO((node *));
 
 
 void
-PyNode_Free(node *n)
+PyNode_Free(n)
+	node *n;
 {
 	if (n != NULL) {
 		freechildren(n);
@@ -60,7 +63,8 @@ PyNode_Free(node *n)
 }
 
 static void
-freechildren(node *n)
+freechildren(n)
+	node *n;
 {
 	int i;
 	for (i = NCH(n); --i >= 0; )

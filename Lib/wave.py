@@ -30,7 +30,7 @@ This returns an instance of a class with the following public methods:
       tell()          -- return the current position
       close()         -- close the instance (make it unusable)
 The position returned by tell() and the position given to setpos()
-are compatible and have nothing to do with the actual position in the
+are compatible and have nothing to do with the actual postion in the
 file.
 The close() method is called automatically when the class instance
 is destroyed.
@@ -73,8 +73,7 @@ is destroyed.
 
 import __builtin__
 
-class Error(Exception):
-    pass
+Error = 'wave.Error'
 
 WAVE_FORMAT_PCM = 0x0001
 
@@ -152,15 +151,11 @@ class Wave_read:
             raise Error, 'fmt chunk and/or data chunk missing'
 
     def __init__(self, f):
-        self._i_opened_the_file = None
         if type(f) == type(''):
             f = __builtin__.open(f, 'rb')
-            self._i_opened_the_file = f
         # else, assume it is an open file object already
         self.initfp(f)
 
-    def __del__(self):
-        self.close()
     #
     # User visible methods.
     #
@@ -172,9 +167,6 @@ class Wave_read:
         self._soundpos = 0
 
     def close(self):
-        if self._i_opened_the_file:
-            self._i_opened_the_file.close()
-            self._i_opened_the_file = None
         self._file = None
 
     def tell(self):
@@ -291,10 +283,8 @@ class Wave_write:
     """
 
     def __init__(self, f):
-        self._i_opened_the_file = None
         if type(f) == type(''):
             f = __builtin__.open(f, 'wb')
-            self._i_opened_the_file = f
         self.initfp(f)
 
     def initfp(self, file):
@@ -309,7 +299,8 @@ class Wave_write:
         self._datalength = 0
 
     def __del__(self):
-        self.close()
+        if self._file:
+            self.close()
 
     #
     # User visible methods.
@@ -395,7 +386,7 @@ class Wave_write:
 
     def getmarkers(self):
         return None
-
+                
     def tell(self):
         return self._nframeswritten
 
@@ -421,15 +412,11 @@ class Wave_write:
             self._patchheader()
 
     def close(self):
-        if self._file:
-            self._ensure_header_written(0)
-            if self._datalength != self._datawritten:
-                self._patchheader()
-            self._file.flush()
-            self._file = None
-        if self._i_opened_the_file:
-            self._i_opened_the_file.close()
-            self._i_opened_the_file = None
+        self._ensure_header_written(0)
+        if self._datalength != self._datawritten:
+            self._patchheader()
+        self._file.flush()
+        self._file = None
 
     #
     # Internal methods.
@@ -451,7 +438,7 @@ class Wave_write:
             self._nframes = initlength / (self._nchannels * self._sampwidth)
         self._datalength = self._nframes * self._nchannels * self._sampwidth
         self._form_length_pos = self._file.tell()
-        self._file.write(struct.pack('<l4s4slhhllhh4s',
+        self._file.write(struct.pack('<lsslhhllhhs',
             36 + self._datalength, 'WAVE', 'fmt ', 16,
             WAVE_FORMAT_PCM, self._nchannels, self._framerate,
             self._nchannels * self._framerate * self._sampwidth,

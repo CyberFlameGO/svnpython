@@ -1,16 +1,16 @@
 # Test packages (dotted-name import)
 
-import sys, os, tempfile, traceback
+import sys, os, string, tempfile, traceback
 from os import mkdir, rmdir             # Can't test if these fail
 del mkdir, rmdir
-from test_support import verify, verbose, TestFailed
+from test_support import verbose, TestFailed
 
 # Helpers to create and destroy hierarchies.
 
 def mkhier(root, descr):
     mkdir(root)
     for name, contents in descr:
-        comps = name.split()
+        comps = string.split(name)
         fullname = root
         for c in comps:
             fullname = os.path.join(fullname, c)
@@ -42,13 +42,6 @@ def rmdir(x):
     if verbose: print "rmdir", x
     os.rmdir(x)
 
-def fixdir(lst):
-    try:
-        lst.remove('__builtins__')
-    except ValueError:
-        pass
-    return lst
-
 # Helper to run a test
 
 def runtest(hier, code):
@@ -78,7 +71,7 @@ def runtest(hier, code):
 
 tests = [
     ("t1", [("t1", None), ("t1 __init__.py", "")], "import t1"),
-
+    
     ("t2", [
     ("t2", None),
     ("t2 __init__.py", "'doc for t2'; print __name__, 'loading'"),
@@ -108,7 +101,7 @@ print t2.__name__, t2.sub.__name__, t2.sub.subsub.__name__
 from t2 import *
 print dir()
 """),
-
+    
     ("t3", [
     ("t3", None),
     ("t3 __init__.py", "print __name__, 'loading'"),
@@ -124,7 +117,7 @@ reload(t3)
 reload(t3.sub)
 reload(t3.sub.subsub)
 """),
-
+    
     ("t4", [
     ("t4.py", "print 'THIS SHOULD NOT BE PRINTED (t4.py)'"),
     ("t4", None),
@@ -153,9 +146,9 @@ import t5
 from t5 import *
 print dir()
 import t5
-print fixdir(dir(t5))
-print fixdir(dir(t5.foo))
-print fixdir(dir(t5.string))
+print dir(t5)
+print dir(t5.foo)
+print dir(t5.string)
 """),
 
     ("t6", [
@@ -167,37 +160,10 @@ print fixdir(dir(t5.string))
     ],
 """
 import t6
-print fixdir(dir(t6))
+print dir(t6)
 from t6 import *
-print fixdir(dir(t6))
+print dir(t6)
 print dir()
-"""),
-
-    ("t7", [
-    ("t7.py", "print 'Importing t7.py'"),
-    ("t7", None),
-    ("t7 __init__.py", "print __name__, 'loading'"),
-    ("t7 sub.py", "print 'THIS SHOULD NOT BE PRINTED (sub.py)'"),
-    ("t7 sub", None),
-    ("t7 sub __init__.py", ""),
-    ("t7 sub subsub.py", "print 'THIS SHOULD NOT BE PRINTED (subsub.py)'"),
-    ("t7 sub subsub", None),
-    ("t7 sub subsub __init__.py", "print __name__, 'loading'; spam = 1"),
-    ],
-"""
-t7, sub, subsub = None, None, None
-import t7 as tas
-print fixdir(dir(tas))
-verify(not t7)
-from t7 import sub as subpar
-print fixdir(dir(subpar))
-verify(not t7 and not sub)
-from t7.sub import subsub as subsubsub
-print fixdir(dir(subsubsub))
-verify(not t7 and not sub and not subsub)
-from t7.sub.subsub import spam as ham
-print "t7.sub.subsub.spam =", ham
-verify(not t7 and not sub and not subsub)
 """),
 
 ]

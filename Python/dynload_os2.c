@@ -1,4 +1,3 @@
-
 /* Support for dynamic loading of extension modules */
 
 #define  INCL_DOSERRORS

@@ -1,49 +1,434 @@
 #! /usr/local/bin/python
 
-# NOTE: the above "/usr/local/bin/python" is NOT a mistake.  It is
-# intentionally NOT "/usr/bin/env python".  On many systems
-# (e.g. Solaris), /usr/local/bin is not in $PATH as passed to CGI
-# scripts, and /usr/local/bin is the default directory where Python is
-# installed, so /usr/bin/env would be unable to find python.  Granted,
-# binary installations by Linux vendors often install Python in
-# /usr/bin.  So let those vendors patch cgi.py to match their choice
-# of installation.
-
 """Support module for CGI (Common Gateway Interface) scripts.
 
 This module defines a number of utilities for use by CGI scripts
 written in Python.
+
+
+Introduction
+------------
+
+A CGI script is invoked by an HTTP server, usually to process user
+input submitted through an HTML <FORM> or <ISINPUT> element.
+
+Most often, CGI scripts live in the server's special cgi-bin
+directory.  The HTTP server places all sorts of information about the
+request (such as the client's hostname, the requested URL, the query
+string, and lots of other goodies) in the script's shell environment,
+executes the script, and sends the script's output back to the client.
+
+The script's input is connected to the client too, and sometimes the
+form data is read this way; at other times the form data is passed via
+the "query string" part of the URL.  This module (cgi.py) is intended
+to take care of the different cases and provide a simpler interface to
+the Python script.  It also provides a number of utilities that help
+in debugging scripts, and the latest addition is support for file
+uploads from a form (if your browser supports it -- Grail 0.3 and
+Netscape 2.0 do).
+
+The output of a CGI script should consist of two sections, separated
+by a blank line.  The first section contains a number of headers,
+telling the client what kind of data is following.  Python code to
+generate a minimal header section looks like this:
+
+        print "Content-type: text/html" # HTML is following
+        print                           # blank line, end of headers
+
+The second section is usually HTML, which allows the client software
+to display nicely formatted text with header, in-line images, etc.
+Here's Python code that prints a simple piece of HTML:
+
+        print "<TITLE>CGI script output</TITLE>"
+        print "<H1>This is my first CGI script</H1>"
+        print "Hello, world!"
+
+It may not be fully legal HTML according to the letter of the
+standard, but any browser will understand it.
+
+
+Using the cgi module
+--------------------
+
+Begin by writing "import cgi".  Don't use "from cgi import *" -- the
+module defines all sorts of names for its own use or for backward 
+compatibility that you don't want in your namespace.
+
+It's best to use the FieldStorage class.  The other classes define in this 
+module are provided mostly for backward compatibility.  Instantiate it 
+exactly once, without arguments.  This reads the form contents from 
+standard input or the environment (depending on the value of various 
+environment variables set according to the CGI standard).  Since it may 
+consume standard input, it should be instantiated only once.
+
+The FieldStorage instance can be accessed as if it were a Python 
+dictionary.  For instance, the following code (which assumes that the 
+Content-type header and blank line have already been printed) checks that 
+the fields "name" and "addr" are both set to a non-empty string:
+
+        form = cgi.FieldStorage()
+        form_ok = 0
+        if form.has_key("name") and form.has_key("addr"):
+                if form["name"].value != "" and form["addr"].value != "":
+                        form_ok = 1
+        if not form_ok:
+                print "<H1>Error</H1>"
+                print "Please fill in the name and addr fields."
+                return
+        ...further form processing here...
+
+Here the fields, accessed through form[key], are themselves instances
+of FieldStorage (or MiniFieldStorage, depending on the form encoding).
+
+If the submitted form data contains more than one field with the same
+name, the object retrieved by form[key] is not a (Mini)FieldStorage
+instance but a list of such instances.  If you are expecting this
+possibility (i.e., when your HTML form comtains multiple fields with
+the same name), use the type() function to determine whether you have
+a single instance or a list of instances.  For example, here's code
+that concatenates any number of username fields, separated by commas:
+
+        username = form["username"]
+        if type(username) is type([]):
+                # Multiple username fields specified
+                usernames = ""
+                for item in username:
+                        if usernames:
+                                # Next item -- insert comma
+                                usernames = usernames + "," + item.value
+                        else:
+                                # First item -- don't insert comma
+                                usernames = item.value
+        else:
+                # Single username field specified
+                usernames = username.value
+
+If a field represents an uploaded file, the value attribute reads the 
+entire file in memory as a string.  This may not be what you want.  You can 
+test for an uploaded file by testing either the filename attribute or the 
+file attribute.  You can then read the data at leasure from the file 
+attribute:
+
+        fileitem = form["userfile"]
+        if fileitem.file:
+                # It's an uploaded file; count lines
+                linecount = 0
+                while 1:
+                        line = fileitem.file.readline()
+                        if not line: break
+                        linecount = linecount + 1
+
+The file upload draft standard entertains the possibility of uploading
+multiple files from one field (using a recursive multipart/*
+encoding).  When this occurs, the item will be a dictionary-like
+FieldStorage item.  This can be determined by testing its type
+attribute, which should have the value "multipart/form-data" (or
+perhaps another string beginning with "multipart/").  It this case, it
+can be iterated over recursively just like the top-level form object.
+
+When a form is submitted in the "old" format (as the query string or as a 
+single data part of type application/x-www-form-urlencoded), the items 
+will actually be instances of the class MiniFieldStorage.  In this case,
+the list, file and filename attributes are always None.
+
+
+Old classes
+-----------
+
+These classes, present in earlier versions of the cgi module, are still 
+supported for backward compatibility.  New applications should use the
+FieldStorage class.
+
+SvFormContentDict: single value form content as dictionary; assumes each 
+field name occurs in the form only once.
+
+FormContentDict: multiple value form content as dictionary (the form
+items are lists of values).  Useful if your form contains multiple
+fields with the same name.
+
+Other classes (FormContent, InterpFormContentDict) are present for
+backwards compatibility with really old applications only.  If you still 
+use these and would be inconvenienced when they disappeared from a next 
+version of this module, drop me a note.
+
+
+Functions
+---------
+
+These are useful if you want more control, or if you want to employ
+some of the algorithms implemented in this module in other
+circumstances.
+
+parse(fp, [environ, [keep_blank_values, [strict_parsing]]]): parse a
+form into a Python dictionary.
+
+parse_qs(qs, [keep_blank_values, [strict_parsing]]): parse a query
+string (data of type application/x-www-form-urlencoded).  Data are
+returned as a dictionary.  The dictionary keys are the unique query
+variable names and the values are lists of vales for each name.
+
+parse_qsl(qs, [keep_blank_values, [strict_parsing]]): parse a query
+string (data of type application/x-www-form-urlencoded).  Data are
+returned as a list of (name, value) pairs.
+
+parse_multipart(fp, pdict): parse input of type multipart/form-data (for 
+file uploads).
+
+parse_header(string): parse a header like Content-type into a main
+value and a dictionary of parameters.
+
+test(): complete test program.
+
+print_environ(): format the shell environment in HTML.
+
+print_form(form): format a form in HTML.
+
+print_environ_usage(): print a list of useful environment variables in
+HTML.
+
+escape(): convert the characters "&", "<" and ">" to HTML-safe
+sequences.  Use this if you need to display text that might contain
+such characters in HTML.  To translate URLs for inclusion in the HREF
+attribute of an <A> tag, use urllib.quote().
+
+log(fmt, ...): write a line to a log file; see docs for initlog().
+
+
+Caring about security
+---------------------
+
+There's one important rule: if you invoke an external program (e.g.
+via the os.system() or os.popen() functions), make very sure you don't
+pass arbitrary strings received from the client to the shell.  This is
+a well-known security hole whereby clever hackers anywhere on the web
+can exploit a gullible CGI script to invoke arbitrary shell commands.
+Even parts of the URL or field names cannot be trusted, since the
+request doesn't have to come from your form!
+
+To be on the safe side, if you must pass a string gotten from a form
+to a shell command, you should make sure the string contains only
+alphanumeric characters, dashes, underscores, and periods.
+
+
+Installing your CGI script on a Unix system
+-------------------------------------------
+
+Read the documentation for your HTTP server and check with your local
+system administrator to find the directory where CGI scripts should be
+installed; usually this is in a directory cgi-bin in the server tree.
+
+Make sure that your script is readable and executable by "others"; the
+Unix file mode should be 755 (use "chmod 755 filename").  Make sure
+that the first line of the script contains #! starting in column 1
+followed by the pathname of the Python interpreter, for instance:
+
+        #! /usr/local/bin/python
+
+Make sure the Python interpreter exists and is executable by "others".
+
+Note that it's probably not a good idea to use #! /usr/bin/env python
+here, since the Python interpreter may not be on the default path
+given to CGI scripts!!!
+
+Make sure that any files your script needs to read or write are
+readable or writable, respectively, by "others" -- their mode should
+be 644 for readable and 666 for writable.  This is because, for
+security reasons, the HTTP server executes your script as user
+"nobody", without any special privileges.  It can only read (write,
+execute) files that everybody can read (write, execute).  The current
+directory at execution time is also different (it is usually the
+server's cgi-bin directory) and the set of environment variables is
+also different from what you get at login.  in particular, don't count
+on the shell's search path for executables ($PATH) or the Python
+module search path ($PYTHONPATH) to be set to anything interesting.
+
+If you need to load modules from a directory which is not on Python's
+default module search path, you can change the path in your script,
+before importing other modules, e.g.:
+
+        import sys
+        sys.path.insert(0, "/usr/home/joe/lib/python")
+        sys.path.insert(0, "/usr/local/lib/python")
+
+This way, the directory inserted last will be searched first!
+
+Instructions for non-Unix systems will vary; check your HTTP server's
+documentation (it will usually have a section on CGI scripts).
+
+
+Testing your CGI script
+-----------------------
+
+Unfortunately, a CGI script will generally not run when you try it
+from the command line, and a script that works perfectly from the
+command line may fail mysteriously when run from the server.  There's
+one reason why you should still test your script from the command
+line: if it contains a syntax error, the python interpreter won't
+execute it at all, and the HTTP server will most likely send a cryptic
+error to the client.
+
+Assuming your script has no syntax errors, yet it does not work, you
+have no choice but to read the next section:
+
+
+Debugging CGI scripts
+---------------------
+
+First of all, check for trivial installation errors -- reading the
+section above on installing your CGI script carefully can save you a
+lot of time.  If you wonder whether you have understood the
+installation procedure correctly, try installing a copy of this module
+file (cgi.py) as a CGI script.  When invoked as a script, the file
+will dump its environment and the contents of the form in HTML form.
+Give it the right mode etc, and send it a request.  If it's installed
+in the standard cgi-bin directory, it should be possible to send it a
+request by entering a URL into your browser of the form:
+
+        http://yourhostname/cgi-bin/cgi.py?name=Joe+Blow&addr=At+Home
+
+If this gives an error of type 404, the server cannot find the script
+-- perhaps you need to install it in a different directory.  If it
+gives another error (e.g.  500), there's an installation problem that
+you should fix before trying to go any further.  If you get a nicely
+formatted listing of the environment and form content (in this
+example, the fields should be listed as "addr" with value "At Home"
+and "name" with value "Joe Blow"), the cgi.py script has been
+installed correctly.  If you follow the same procedure for your own
+script, you should now be able to debug it.
+
+The next step could be to call the cgi module's test() function from
+your script: replace its main code with the single statement
+
+        cgi.test()
+        
+This should produce the same results as those gotten from installing
+the cgi.py file itself.
+
+When an ordinary Python script raises an unhandled exception (e.g.,
+because of a typo in a module name, a file that can't be opened,
+etc.), the Python interpreter prints a nice traceback and exits.
+While the Python interpreter will still do this when your CGI script
+raises an exception, most likely the traceback will end up in one of
+the HTTP server's log file, or be discarded altogether.
+
+Fortunately, once you have managed to get your script to execute
+*some* code, it is easy to catch exceptions and cause a traceback to
+be printed.  The test() function below in this module is an example.
+Here are the rules:
+
+        1. Import the traceback module (before entering the
+           try-except!)
+        
+        2. Make sure you finish printing the headers and the blank
+           line early
+        
+        3. Assign sys.stderr to sys.stdout
+        
+        3. Wrap all remaining code in a try-except statement
+        
+        4. In the except clause, call traceback.print_exc()
+
+For example:
+
+        import sys
+        import traceback
+        print "Content-type: text/html"
+        print
+        sys.stderr = sys.stdout
+        try:
+                ...your code here...
+        except:
+                print "\n\n<PRE>"
+                traceback.print_exc()
+
+Notes: The assignment to sys.stderr is needed because the traceback
+prints to sys.stderr.  The print "\n\n<PRE>" statement is necessary to
+disable the word wrapping in HTML.
+
+If you suspect that there may be a problem in importing the traceback
+module, you can use an even more robust approach (which only uses
+built-in modules):
+
+        import sys
+        sys.stderr = sys.stdout
+        print "Content-type: text/plain"
+        print
+        ...your code here...
+
+This relies on the Python interpreter to print the traceback.  The
+content type of the output is set to plain text, which disables all
+HTML processing.  If your script works, the raw HTML will be displayed
+by your client.  If it raises an exception, most likely after the
+first two lines have been printed, a traceback will be displayed.
+Because no HTML interpretation is going on, the traceback will
+readable.
+
+When all else fails, you may want to insert calls to log() to your
+program or even to a copy of the cgi.py file.  Note that this requires
+you to set cgi.logfile to the name of a world-writable file before the
+first call to log() is made!
+
+Good luck!
+
+
+Common problems and solutions
+-----------------------------
+
+- Most HTTP servers buffer the output from CGI scripts until the
+script is completed.  This means that it is not possible to display a
+progress report on the client's display while the script is running.
+
+- Check the installation instructions above.
+
+- Check the HTTP server's log files.  ("tail -f logfile" in a separate
+window may be useful!)
+
+- Always check a script for syntax errors first, by doing something
+like "python script.py".
+
+- When using any of the debugging techniques, don't forget to add
+"import sys" to the top of the script.
+
+- When invoking external programs, make sure they can be found.
+Usually, this means using absolute path names -- $PATH is usually not
+set to a very useful value in a CGI script.
+
+- When reading or writing external files, make sure they can be read
+or written by every user on the system.
+
+- Don't try to give a CGI script a set-uid mode.  This doesn't work on
+most systems, and is a security liability as well.
+
 """
 
-# XXX Perhaps there should be a slimmed version that doesn't contain
-# all those backwards compatible and debugging classes and functions?
+# XXX The module is getting pretty heavy with all those docstrings.
+# Perhaps there should be a slimmed version that doesn't contain all those 
+# backwards compatible and debugging classes and functions?
 
 # History
 # -------
-#
+# 
 # Michael McLay started this module.  Steve Majewski changed the
 # interface to SvFormContentDict and FormContentDict.  The multipart
 # parsing was inspired by code submitted by Andreas Paepcke.  Guido van
 # Rossum rewrote, reformatted and documented the module and is currently
 # responsible for its maintenance.
-#
+# 
 
-__version__ = "2.5"
+__version__ = "2.2"
 
 
 # Imports
 # =======
 
+import string
 import sys
 import os
 import urllib
 import mimetools
 import rfc822
-import UserDict
 from StringIO import StringIO
 
-__all__ = ["MiniFieldStorage","FieldStorage","FormContentDict",
-           "SvFormContentDict","InterpFormContentDict","FormContent"]
 
 # Logging support
 # ===============
@@ -114,8 +499,8 @@ def parse(fp=None, environ=os.environ, keep_blank_values=0, strict_parsing=0):
         environ         : environment dictionary; default: os.environ
 
         keep_blank_values: flag indicating whether blank values in
-            URL encoded forms should be treated as blank strings.
-            A true value indicates that blanks should be retained as
+            URL encoded forms should be treated as blank strings.  
+            A true value inicates that blanks should be retained as 
             blank strings.  The default false value indicates that
             blank values are to be ignored and treated as if they were
             not included.
@@ -133,16 +518,16 @@ def parse(fp=None, environ=os.environ, keep_blank_values=0, strict_parsing=0):
         if ctype == 'multipart/form-data':
             return parse_multipart(fp, pdict)
         elif ctype == 'application/x-www-form-urlencoded':
-            clength = int(environ['CONTENT_LENGTH'])
+            clength = string.atoi(environ['CONTENT_LENGTH'])
             if maxlen and clength > maxlen:
                 raise ValueError, 'Maximum content length exceeded'
             qs = fp.read(clength)
         else:
             qs = ''                     # Unknown content-type
-        if environ.has_key('QUERY_STRING'):
+        if environ.has_key('QUERY_STRING'): 
             if qs: qs = qs + '&'
             qs = qs + environ['QUERY_STRING']
-        elif sys.argv[1:]:
+        elif sys.argv[1:]: 
             if qs: qs = qs + '&'
             qs = qs + sys.argv[1]
         environ['QUERY_STRING'] = qs    # XXX Shouldn't, really
@@ -165,8 +550,8 @@ def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
         qs: URL-encoded query string to be parsed
 
         keep_blank_values: flag indicating whether blank values in
-            URL encoded queries should be treated as blank strings.
-            A true value indicates that blanks should be retained as
+            URL encoded queries should be treated as blank strings.  
+            A true value inicates that blanks should be retained as 
             blank strings.  The default false value indicates that
             blank values are to be ignored and treated as if they were
             not included.
@@ -177,43 +562,44 @@ def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
     """
     dict = {}
     for name, value in parse_qsl(qs, keep_blank_values, strict_parsing):
-        if dict.has_key(name):
-            dict[name].append(value)
-        else:
-            dict[name] = [value]
+        if len(value) or keep_blank_values:
+            if dict.has_key(name):
+                dict[name].append(value)
+            else:
+                dict[name] = [value]
     return dict
 
 def parse_qsl(qs, keep_blank_values=0, strict_parsing=0):
     """Parse a query given as a string argument.
 
-    Arguments:
+        Arguments:
 
-    qs: URL-encoded query string to be parsed
+        qs: URL-encoded query string to be parsed
 
-    keep_blank_values: flag indicating whether blank values in
-        URL encoded queries should be treated as blank strings.  A
-        true value indicates that blanks should be retained as blank
-        strings.  The default false value indicates that blank values
-        are to be ignored and treated as if they were  not included.
+        keep_blank_values: flag indicating whether blank values in
+            URL encoded queries should be treated as blank strings.  
+            A true value inicates that blanks should be retained as 
+            blank strings.  The default false value indicates that
+            blank values are to be ignored and treated as if they were
+            not included.
 
-    strict_parsing: flag indicating what to do with parsing errors. If
-        false (the default), errors are silently ignored. If true,
-        errors raise a ValueError exception.
+        strict_parsing: flag indicating what to do with parsing errors.
+            If false (the default), errors are silently ignored.
+            If true, errors raise a ValueError exception.
 
-    Returns a list, as G-d intended.
+       Returns a list, as God intended.
     """
-    pairs = [s2 for s1 in qs.split('&') for s2 in s1.split(';')]
-    r = []
-    for name_value in pairs:
-        nv = name_value.split('=', 1)
+    name_value_pairs = string.splitfields(qs, '&')
+    r=[]
+    for name_value in name_value_pairs:
+        nv = string.splitfields(name_value, '=')
         if len(nv) != 2:
             if strict_parsing:
                 raise ValueError, "bad query field: %s" % `name_value`
             continue
-        if len(nv[1]) or keep_blank_values:
-            name = urllib.unquote(nv[0].replace('+', ' '))
-            value = urllib.unquote(nv[1].replace('+', ' '))
-            r.append((name, value))
+        name = urllib.unquote(string.replace(nv[0], '+', ' '))
+        value = urllib.unquote(string.replace(nv[1], '+', ' '))
+        r.append((name, value))
 
     return r
 
@@ -225,17 +611,17 @@ def parse_multipart(fp, pdict):
     fp   : input file
     pdict: dictionary containing other parameters of conten-type header
 
-    Returns a dictionary just like parse_qs(): keys are the field names, each
-    value is a list of values for that field.  This is easy to use but not
-    much good if you are expecting megabytes to be uploaded -- in that case,
-    use the FieldStorage class instead which is much more flexible.  Note
-    that content-type is the raw, unparsed contents of the content-type
+    Returns a dictionary just like parse_qs(): keys are the field names, each 
+    value is a list of values for that field.  This is easy to use but not 
+    much good if you are expecting megabytes to be uploaded -- in that case, 
+    use the FieldStorage class instead which is much more flexible.  Note 
+    that content-type is the raw, unparsed contents of the content-type 
     header.
-
-    XXX This does not parse nested multipart parts -- use FieldStorage for
+    
+    XXX This does not parse nested multipart parts -- use FieldStorage for 
     that.
-
-    XXX This should really be subsumed by FieldStorage altogether -- no
+    
+    XXX This should really be subsumed by FieldStorage altogether -- no 
     point in having two implementations of the same parsing algorithm.
 
     """
@@ -257,8 +643,8 @@ def parse_multipart(fp, pdict):
             clength = headers.getheader('content-length')
             if clength:
                 try:
-                    bytes = int(clength)
-                except ValueError:
+                    bytes = string.atoi(clength)
+                except string.atoi_error:
                     pass
             if bytes > 0:
                 if maxlen and bytes > maxlen:
@@ -274,7 +660,7 @@ def parse_multipart(fp, pdict):
                 terminator = lastpart # End outer loop
                 break
             if line[:2] == "--":
-                terminator = line.strip()
+                terminator = string.strip(line)
                 if terminator in (nextpart, lastpart):
                     break
             lines.append(line)
@@ -290,7 +676,7 @@ def parse_multipart(fp, pdict):
                 elif line[-1:] == "\n":
                     line = line[:-1]
                 lines[-1] = line
-                data = "".join(lines)
+                data = string.joinfields(lines, "")
         line = headers['content-disposition']
         if not line:
             continue
@@ -315,15 +701,15 @@ def parse_header(line):
     Return the main content-type and a dictionary of options.
 
     """
-    plist = map(lambda x: x.strip(), line.split(';'))
-    key = plist[0].lower()
+    plist = map(string.strip, string.splitfields(line, ';'))
+    key = string.lower(plist[0])
     del plist[0]
     pdict = {}
     for p in plist:
-        i = p.find('=')
+        i = string.find(p, '=')
         if i >= 0:
-            name = p[:i].strip().lower()
-            value = p[i+1:].strip()
+            name = string.lower(string.strip(p[:i]))
+            value = string.strip(p[i+1:])
             if len(value) >= 2 and value[0] == value[-1] == '"':
                 value = value[1:-1]
             pdict[name] = value
@@ -419,8 +805,8 @@ class FieldStorage:
         environ         : environment dictionary; default: os.environ
 
         keep_blank_values: flag indicating whether blank values in
-            URL encoded forms should be treated as blank strings.
-            A true value indicates that blanks should be retained as
+            URL encoded forms should be treated as blank strings.  
+            A true value inicates that blanks should be retained as 
             blank strings.  The default false value indicates that
             blank values are to be ignored and treated as if they were
             not included.
@@ -434,7 +820,7 @@ class FieldStorage:
         self.keep_blank_values = keep_blank_values
         self.strict_parsing = strict_parsing
         if environ.has_key('REQUEST_METHOD'):
-            method = environ['REQUEST_METHOD'].upper()
+            method = string.upper(environ['REQUEST_METHOD'])
         if method == 'GET' or method == 'HEAD':
             if environ.has_key('QUERY_STRING'):
                 qs = environ['QUERY_STRING']
@@ -498,7 +884,7 @@ class FieldStorage:
         clen = -1
         if self.headers.has_key('content-length'):
             try:
-                clen = int(self.headers['content-length'])
+                clen = string.atoi(self.headers['content-length'])
             except:
                 pass
             if maxlen and clen > maxlen:
@@ -507,6 +893,7 @@ class FieldStorage:
 
         self.list = self.file = None
         self.done = 0
+        self.lines = []
         if ctype == 'application/x-www-form-urlencoded':
             self.read_urlencoded()
         elif ctype[:10] == 'multipart/':
@@ -545,17 +932,6 @@ class FieldStorage:
             return found[0]
         else:
             return found
-
-    def getvalue(self, key, default=None):
-        """Dictionary style get() method, including 'value' lookup."""
-        if self.has_key(key):
-            value = self[key]
-            if type(value) is type([]):
-                return map(lambda v: v.value, value)
-            else:
-                return value.value
-        else:
-            return default
 
     def keys(self):
         """Dictionary style keys() method."""
@@ -642,6 +1018,7 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             self.file.write(line)
 
     def read_lines_to_outerboundary(self):
@@ -654,8 +1031,9 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             if line[:2] == "--":
-                strippedline = line.strip()
+                strippedline = string.strip(line)
                 if strippedline == next:
                     break
                 if strippedline == last:
@@ -683,8 +1061,9 @@ class FieldStorage:
             if not line:
                 self.done = -1
                 break
+            self.lines.append(line)
             if line[:2] == "--":
-                strippedline = line.strip()
+                strippedline = string.strip(line)
                 if strippedline == next:
                     break
                 if strippedline == last:
@@ -717,14 +1096,14 @@ class FieldStorage:
         """
         import tempfile
         return tempfile.TemporaryFile("w+b")
-
+        
 
 
 # Backwards Compatibility Classes
 # ===============================
 
-class FormContentDict(UserDict.UserDict):
-    """Form content as dictionary with a list of values per field.
+class FormContentDict:
+    """Basic (multiple values per field) form content as dictionary.
 
     form = FormContentDict()
 
@@ -737,16 +1116,28 @@ class FormContentDict(UserDict.UserDict):
 
     """
     def __init__(self, environ=os.environ):
-        self.dict = self.data = parse(environ=environ)
+        self.dict = parse(environ=environ)
         self.query_string = environ['QUERY_STRING']
+    def __getitem__(self,key):
+        return self.dict[key]
+    def keys(self):
+        return self.dict.keys()
+    def has_key(self, key):
+        return self.dict.has_key(key)
+    def values(self):
+        return self.dict.values()
+    def items(self):
+        return self.dict.items() 
+    def __len__( self ):
+        return len(self.dict)
 
 
 class SvFormContentDict(FormContentDict):
-    """Form content as dictionary expecting a single value per field.
+    """Strict single-value expecting form content as dictionary.
 
-    If you only expect a single value for each field, then form[key]
+    IF you only expect a single value for each field, then form[key]
     will return that single value.  It will raise an IndexError if
-    that expectation is not true.  If you expect a field to have
+    that expectation is not true.  IF you expect a field to have
     possible multiple values, than you can use form.getlist(key) to
     get all of the values.  values() and items() are a compromise:
     they return single strings where there is a single value, and
@@ -754,63 +1145,63 @@ class SvFormContentDict(FormContentDict):
 
     """
     def __getitem__(self, key):
-        if len(self.dict[key]) > 1:
-            raise IndexError, 'expecting a single value'
+        if len(self.dict[key]) > 1: 
+            raise IndexError, 'expecting a single value' 
         return self.dict[key][0]
     def getlist(self, key):
         return self.dict[key]
     def values(self):
-        result = []
-        for value in self.dict.values():
-            if len(value) == 1:
-                result.append(value[0])
-            else: result.append(value)
-        return result
+        lis = []
+        for each in self.dict.values(): 
+            if len( each ) == 1 : 
+                lis.append(each[0])
+            else: lis.append(each)
+        return lis
     def items(self):
-        result = []
-        for key, value in self.dict.items():
-            if len(value) == 1:
-                result.append((key, value[0]))
-            else: result.append((key, value))
-        return result
+        lis = []
+        for key,value in self.dict.items():
+            if len(value) == 1 :
+                lis.append((key, value[0]))
+            else:       lis.append((key, value))
+        return lis
 
 
 class InterpFormContentDict(SvFormContentDict):
-    """This class is present for backwards compatibility only."""
-    def __getitem__(self, key):
-        v = SvFormContentDict.__getitem__(self, key)
-        if v[0] in '0123456789+-.':
-            try: return int(v)
+    """This class is present for backwards compatibility only.""" 
+    def __getitem__( self, key ):
+        v = SvFormContentDict.__getitem__( self, key )
+        if v[0] in string.digits+'+-.' : 
+            try:  return  string.atoi( v ) 
             except ValueError:
-                try: return float(v)
+                try:    return string.atof( v )
                 except ValueError: pass
-        return v.strip()
-    def values(self):
-        result = []
+        return string.strip(v)
+    def values( self ):
+        lis = [] 
         for key in self.keys():
             try:
-                result.append(self[key])
+                lis.append( self[key] )
             except IndexError:
-                result.append(self.dict[key])
-        return result
-    def items(self):
-        result = []
+                lis.append( self.dict[key] )
+        return lis
+    def items( self ):
+        lis = [] 
         for key in self.keys():
             try:
-                result.append((key, self[key]))
+                lis.append( (key, self[key]) )
             except IndexError:
-                result.append((key, self.dict[key]))
-        return result
+                lis.append( (key, self.dict[key]) )
+        return lis
 
 
 class FormContent(FormContentDict):
-    """This class is present for backwards compatibility only."""
+    """This class is present for backwards compatibility only.""" 
     def values(self, key):
         if self.dict.has_key(key) :return self.dict[key]
         else: return None
     def indexed_value(self, key, location):
         if self.dict.has_key(key):
-            if len(self.dict[key]) > location:
+            if len (self.dict[key]) > location:
                 return self.dict[key][location]
             else: return None
         else: return None
@@ -820,7 +1211,7 @@ class FormContent(FormContentDict):
     def length(self, key):
         return len(self.dict[key])
     def stripped(self, key):
-        if self.dict.has_key(key): return self.dict[key][0].strip()
+        if self.dict.has_key(key): return string.strip(self.dict[key][0])
         else: return None
     def pars(self):
         return self.dict
@@ -842,10 +1233,10 @@ def test(environ=os.environ):
     sys.stderr = sys.stdout
     try:
         form = FieldStorage()   # Replace with other classes to test those
-        print_directory()
-        print_arguments()
         print_form(form)
         print_environ(environ)
+        print_directory()
+        print_arguments()
         print_environ_usage()
         def f():
             exec "testing print_exception() -- <I>italics?</I>"
@@ -856,16 +1247,16 @@ def test(environ=os.environ):
     except:
         print_exception()
 
-    print "<H1>Second try with a small maxlen...</H1>"
-
+    # Second try with a small maxlen...
     global maxlen
     maxlen = 50
     try:
         form = FieldStorage()   # Replace with other classes to test those
-        print_directory()
-        print_arguments()
         print_form(form)
         print_environ(environ)
+        print_directory()
+        print_arguments()
+        print_environ_usage()
     except:
         print_exception()
 
@@ -874,11 +1265,11 @@ def print_exception(type=None, value=None, tb=None, limit=None):
         type, value, tb = sys.exc_info()
     import traceback
     print
-    print "<H3>Traceback (most recent call last):</H3>"
+    print "<H3>Traceback (innermost last):</H3>"
     list = traceback.format_tb(tb, limit) + \
            traceback.format_exception_only(type, value)
     print "<PRE>%s<B>%s</B></PRE>" % (
-        escape("".join(list[:-1])),
+        escape(string.join(list[:-1], "")),
         escape(list[-1]),
         )
     del tb
@@ -892,7 +1283,7 @@ def print_environ(environ=os.environ):
     print "<DL>"
     for key in keys:
         print "<DT>", escape(key), "<DD>", escape(environ[key])
-    print "</DL>"
+    print "</DL>" 
     print
 
 def print_form(form):
@@ -901,8 +1292,6 @@ def print_form(form):
     keys.sort()
     print
     print "<H3>Form Contents:</H3>"
-    if not keys:
-        print "<P>No form fields."
     print "<DL>"
     for key in keys:
         print "<DT>" + escape(key) + ":",
@@ -980,11 +1369,11 @@ environment as well.  Here are some common variable names:
 
 def escape(s, quote=None):
     """Replace special characters '&', '<' and '>' by SGML entities."""
-    s = s.replace("&", "&amp;") # Must be done first!
-    s = s.replace("<", "&lt;")
-    s = s.replace(">", "&gt;")
+    s = string.replace(s, "&", "&amp;") # Must be done first!
+    s = string.replace(s, "<", "&lt;")
+    s = string.replace(s, ">", "&gt;",)
     if quote:
-        s = s.replace('"', "&quot;")
+        s = string.replace(s, '"', "&quot;")
     return s
 
 
@@ -992,5 +1381,5 @@ def escape(s, quote=None):
 # ===============
 
 # Call test() when this file is run as a script (not imported as a module)
-if __name__ == '__main__':
+if __name__ == '__main__': 
     test()

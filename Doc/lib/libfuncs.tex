@@ -19,11 +19,12 @@ this, see the standard library modules
 operations out of which you can build your own
 \function{__import__()} function.
 
-For example, the statement \samp{import spam} results in the
+For example, the statement `\code{import} \code{spam}' results in the
 following call:
 \code{__import__('spam',} \code{globals(),} \code{locals(), [])};
-the statement \samp{from spam.ham import eggs} results
-in \samp{__import__('spam.ham', globals(), locals(), ['eggs'])}.
+the statement \code{from} \code{spam.ham import} \code{eggs} results
+in \code{__import__('spam.ham',} \code{globals(),} \code{locals(),}
+\code{['eggs'])}.
 Note that even though \code{locals()} and \code{['eggs']} are passed
 in as arguments, the \function{__import__()} function does not set the
 local variable named \code{eggs}; this is done by subsequent code that
@@ -167,6 +168,7 @@ class instances are callable if they have a \method{__call__()} method.
 ['sys']
 >>> dir(sys)
 ['argv', 'exit', 'modules', 'path', 'stderr', 'stdin', 'stdout']
+>>> 
 \end{verbatim}
 \end{funcdesc}
 
@@ -226,7 +228,7 @@ class instances are callable if they have a \method{__call__()} method.
   The arguments are a file name and two optional dictionaries.  The
   file is parsed and evaluated as a sequence of Python statements
   (similarly to a module) using the \var{globals} and \var{locals}
-  dictionaries as global and local namespace.  If the \var{locals}
+  dictionaries as global and local name space.  If the \var{locals}
   dictionary is omitted it defaults to the \var{globals} dictionary.
   If both dictionaries are omitted, the expression is executed in the
   environment where \function{execfile()} is called.  The return value is
@@ -300,28 +302,15 @@ module from which it is called).
 \end{funcdesc}
 
 \begin{funcdesc}{id}{object}
-  Return the `identity' of an object.  This is an integer (or long
-  integer) which is guaranteed to be unique and constant for this
-  object during its lifetime.  Two objects whose lifetimes are
-  disjunct may have the same \function{id()} value.  (Implementation
-  note: this is the address of the object.)
+  Return the `identity' of an object.  This is an integer which is
+  guaranteed to be unique and constant for this object during its
+  lifetime.  (Two objects whose lifetimes are disjunct may have the
+  same \function{id()} value.)  (Implementation note: this is the
+  address of the object.)
 \end{funcdesc}
 
 \begin{funcdesc}{input}{\optional{prompt}}
   Equivalent to \code{eval(raw_input(\var{prompt}))}.
-  \strong{Warning:} This function is not safe from user errors!  It
-  expects a valid Python expression as input; if the input is not
-  syntactically valid, a \exception{SyntaxError} will be raised.
-  Other exceptions may be raised if there is an error during
-  evaluation.  (On the other hand, sometimes this is exactly what you
-  need when writing a quick script for expert use.)
-
-  If the \module{readline} module was loaded, then
-  \function{input()} will use it to provide elaborate line editing and
-  history features.
-
-  Consider using the \function{raw_input()} function for general input
-  from users.
 \end{funcdesc}
 
 \begin{funcdesc}{int}{x\optional{, radix}}
@@ -330,10 +319,8 @@ module from which it is called).
   representable as a Python integer, possibly embedded in whitespace;
   this behaves identical to \code{string.atoi(\var{x}\optional{,
   \var{radix}})}.  The \var{radix} parameter gives the base for the
-  conversion and may be any integer in the range [2, 36], or zero.  If
-  \var{radix} is zero, the proper radix is guessed based on the
-  contents of string; the interpretation is the same as for integer
-  literals.  If \var{radix} is specified and \var{x} is not a string,
+  conversion and may be any integer in the range $[2, 36]$.  If
+  \var{radix} is specified and \var{x} is not a string,
   \exception{TypeError} is raised.
   Otherwise, the argument may be a plain or
   long integer or a floating point number.  Conversion of floating
@@ -388,18 +375,16 @@ returns \code{['a', 'b', 'c']} and \code{list( (1, 2, 3) )} returns
 
 \begin{funcdesc}{locals}{}
 Return a dictionary representing the current local symbol table.
-\strong{Warning:} The contents of this dictionary should not be
+\strong{Warning:} the contents of this dictionary should not be
 modified; changes may not affect the values of local variables used by 
 the interpreter.
 \end{funcdesc}
 
-\begin{funcdesc}{long}{x\optional{, radix}}
+\begin{funcdesc}{long}{x}
   Convert a string or number to a long integer.  If the argument is a
-  string, it must contain a possibly signed number of
+  string, it must contain a possibly signed decimal number of
   arbitrary size, possibly embedded in whitespace;
-  this behaves identical to \code{string.atol(\var{x})}.  The
-  \var{radix} argument is interpreted in the same way as for
-  \function{int()}, and may only be given when \var{x} is a string.
+  this behaves identical to \code{string.atol(\var{x})}.
   Otherwise, the argument may be a plain or
   long integer or a floating point number, and a long integer with
   the same value is returned.    Conversion of floating
@@ -530,6 +515,7 @@ one argument, return the smallest of the arguments.
 []
 >>> range(1, 0)
 []
+>>> 
 \end{verbatim}
 \end{funcdesc}
 
@@ -544,6 +530,7 @@ one argument, return the smallest of the arguments.
 --> Monty Python's Flying Circus
 >>> s
 "Monty Python's Flying Circus"
+>>> 
 \end{verbatim}
 
 If the \module{readline} module was loaded, then
@@ -590,7 +577,7 @@ and skip its initialization if desired.
 
 It is legal though generally not very useful to reload built-in or
 dynamically loaded modules, except for \module{sys}, \module{__main__}
-and \module{__builtin__}.  In many cases, however, extension
+and \module{__builtin__}.  In certain cases, however, extension
 modules are not designed to be initialized more than once, and may
 fail in arbitrary ways when reloaded.
 
@@ -682,15 +669,15 @@ integer \var{i}, e.g., \code{unichr(97)} returns the string
 \code{u'a'}.  This is the inverse of \function{ord()} for Unicode
 strings.  The argument must be in the range [0..65535], inclusive.
 \exception{ValueError} is raised otherwise.
-\versionadded{2.0}
+\versionadded{1.6}
 \end{funcdesc}
 
-\begin{funcdesc}{unicode}{string\optional{, encoding\optional{, errors}}}
+\begin{funcdesc}{unicode}{string\optional{, encoding='utf-8'\optional{, errors='strict'}}}
 Decodes \var{string} using the codec for \var{encoding}.  Error
 handling is done according to \var{errors}.  The default behavior is
 to decode UTF-8 in strict mode, meaning that encoding errors raise
-\exception{ValueError}.  See also the \refmodule{codecs} module.
-\versionadded{2.0}
+\exception{ValueError}.
+\versionadded{1.6}
 \end{funcdesc}
 
 \begin{funcdesc}{vars}{\optional{object}}
@@ -715,16 +702,4 @@ actually storing them all simultaneously.  The advantage of
 them) except when a very large range is used on a memory-starved
 machine (e.g. MS-DOS) or when all of the range's elements are never
 used (e.g. when the loop is usually terminated with \keyword{break}).
-\end{funcdesc}
-
-\begin{funcdesc}{zip}{seq1, \moreargs}
-This function returns a list of tuples, where each tuple contains the
-\var{i}-th element from each of the argument sequences.  At least one
-sequence is required, otherwise a \exception{TypeError} is raised.
-The returned list is truncated in length to the length of the shortest
-argument sequence.  When there are multiple argument sequences which
-are all of the same length, \function{zip()} is similar to
-\function{map()} with an initial argument of \code{None}.  With a
-single sequence argument, it returns a list of 1-tuples.
-\versionadded{2.0}
 \end{funcdesc}

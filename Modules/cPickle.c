@@ -54,6 +54,7 @@ static char cPickle_module_documentation[] =
 
 #include "Python.h"
 #include "cStringIO.h"
+#include "mymath.h"
 
 #ifndef Py_eval_input
 #include <graminit.h>
@@ -133,6 +134,9 @@ static PyObject *__class___str, *__getinitargs___str, *__dict___str,
   *read_str, *readline_str, *__main___str, *__basicnew___str,
   *copy_reg_str, *dispatch_table_str, *safe_constructors_str, *empty_str;
 
+static int save();
+static int put2();
+
 #ifndef PyList_SET_ITEM
 #define PyList_SET_ITEM(op, i, v) (((PyListObject *)(op))->ob_item[i] = (v))
 #endif
@@ -179,7 +183,7 @@ static PyTypeObject PdataType = {
 #define Pdata_Check(O) ((O)->ob_type == &PdataType)
 
 static PyObject *
-Pdata_New(void) {
+Pdata_New() {
     Pdata *self;
 
     UNLESS (self = PyObject_New(Pdata, &PdataType)) return NULL;
@@ -192,7 +196,7 @@ Pdata_New(void) {
 }
 
 static int 
-stackUnderflow(void) {
+stackUnderflow() {
     PyErr_SetString(UnpicklingError, "unpickling stack underflow");
     return -1;
 }
@@ -306,7 +310,7 @@ Pdata_popList(Pdata *self, int start) {
     }                                               \
   }
 
-typedef struct Picklerobject {
+typedef struct {
      PyObject_HEAD
      FILE *fp;
      PyObject *write;
@@ -317,7 +321,7 @@ typedef struct Picklerobject {
      PyObject *inst_pers_func;
      int bin;
      int fast; /* Fast mode doesn't save in memo, don't use if circ ref */
-     int (*write_func)(struct Picklerobject *, char *, int);
+     int (*write_func)();
      char *write_buf;
      int buf_size;
      PyObject *dispatch_table;
@@ -325,7 +329,7 @@ typedef struct Picklerobject {
 
 staticforward PyTypeObject Picklertype;
 
-typedef struct Unpicklerobject {
+typedef struct {
      PyObject_HEAD
      FILE *fp;
      PyObject *file;
@@ -340,8 +344,8 @@ typedef struct Unpicklerobject {
      int *marks;
      int num_marks;
      int marks_size;
-     int (*read_func)(struct Unpicklerobject *, char **, int);
-     int (*readline_func)(struct Unpicklerobject *, char **);
+     int (*read_func)();
+     int (*readline_func)();
      int buf_size;
      char *buf;
      PyObject *safe_constructors;
@@ -349,10 +353,6 @@ typedef struct Unpicklerobject {
 } Unpicklerobject;
  
 staticforward PyTypeObject Unpicklertype;
-
-/* Forward decls that need the above structs */
-static int save(Picklerobject *, PyObject *, int);
-static int put2(Picklerobject *, PyObject *);
 
 int 
 cPickle_PyMapping_HasKey(PyObject *o, PyObject *key) {
@@ -369,11 +369,25 @@ cPickle_PyMapping_HasKey(PyObject *o, PyObject *key) {
 
 static
 PyObject *
-cPickle_ErrFormat(PyObject *ErrType, char *stringformat, char *format, ...)
-{
+#ifdef HAVE_STDARG_PROTOTYPES
+/* VARARGS 2 */
+cPickle_ErrFormat(PyObject *ErrType, char *stringformat, char *format, ...) {
+#else
+/* VARARGS */
+cPickle_ErrFormat(va_alist) va_dcl {
+#endif
   va_list va;
   PyObject *args=0, *retval=0;
+#ifdef HAVE_STDARG_PROTOTYPES
   va_start(va, format);
+#else
+  PyObject *ErrType;
+  char *stringformat, *format;
+  va_start(va);
+  ErrType = va_arg(va, PyObject *);
+  stringformat   = va_arg(va, char *);
+  format   = va_arg(va, char *);
+#endif
   
   if (format) args = Py_VaBuildValue(format, va);
   va_end(va);
@@ -407,7 +421,7 @@ write_file(Picklerobject *self, char *s, int  n) {
         return 0;
     }
 
-    if (fwrite(s, sizeof(char), n, self->fp) != (size_t)n) {
+    if ((int)fwrite(s, sizeof(char), n, self->fp) != n) {
         PyErr_SetFromErrno(PyExc_IOError);
         return -1;
     }
@@ -503,7 +517,7 @@ read_file(Unpicklerobject *self, char **s, int  n) {
         self->buf_size = n;
     }
             
-    if (fread(self->buf, sizeof(char), n, self->fp) != (size_t)n) {
+    if ((int)fread(self->buf, sizeof(char), n, self->fp) != n) {  
         if (feof(self->fp)) {
             PyErr_SetNone(PyExc_EOFError);
             return -1;
@@ -642,7 +656,7 @@ get(Picklerobject *self, PyObject *id) {
     PyObject *value, *mv;
     long c_value;
     char s[30];
-    size_t len;
+    int len;
 
     UNLESS (mv = PyDict_GetItem(self->memo, id)) {
         PyErr_SetObject(PyExc_KeyError, id);
@@ -703,9 +717,7 @@ put(Picklerobject *self, PyObject *ob) {
 static int
 put2(Picklerobject *self, PyObject *ob) {
     char c_str[30];
-    int p;
-    size_t len;
-    int res = -1;
+    int p, len, res = -1;
     PyObject *py_ob_id = 0, *memo_len = 0, *t = 0;
 
     if (self->fast) return 0;
@@ -715,7 +727,7 @@ put2(Picklerobject *self, PyObject *ob) {
 
     p++;  /* Make sure memo keys are positive! */
 
-    UNLESS (py_ob_id = PyLong_FromVoidPtr(ob))
+    UNLESS (py_ob_id = PyInt_FromLong((long)ob))
         goto finally;
 
     UNLESS (memo_len = PyInt_FromLong(p))
@@ -1149,51 +1161,6 @@ err:
 }
 
 
-/* A copy of PyUnicode_EncodeRawUnicodeEscape() that also translates
-   backslash and newline characters to \uXXXX escapes. */
-static PyObject *
-modified_EncodeRawUnicodeEscape(const Py_UNICODE *s, int size)
-{
-    PyObject *repr;
-    char *p;
-    char *q;
-
-    static const char *hexdigit = "0123456789ABCDEF";
-
-    repr = PyString_FromStringAndSize(NULL, 6 * size);
-    if (repr == NULL)
-        return NULL;
-    if (size == 0)
-	return repr;
-
-    p = q = PyString_AS_STRING(repr);
-    while (size-- > 0) {
-        Py_UNICODE ch = *s++;
-	/* Map 16-bit characters to '\uxxxx' */
-	if (ch >= 256 || ch == '\\' || ch == '\n') {
-            *p++ = '\\';
-            *p++ = 'u';
-            *p++ = hexdigit[(ch >> 12) & 0xf];
-            *p++ = hexdigit[(ch >> 8) & 0xf];
-            *p++ = hexdigit[(ch >> 4) & 0xf];
-            *p++ = hexdigit[ch & 15];
-        }
-	/* Copy everything else as-is */
-	else
-            *p++ = (char) ch;
-    }
-    *p = '\0';
-    if (_PyString_Resize(&repr, p - q))
-	goto onError;
-
-    return repr;
-
- onError:
-    Py_DECREF(repr);
-    return NULL;
-}
-
-
 static int
 save_unicode(Picklerobject *self, PyObject *args, int doput) {
     int size, len;
@@ -1206,8 +1173,7 @@ save_unicode(Picklerobject *self, PyObject *args, int doput) {
         char *repr_str;
         static char string = UNICODE;
 
-        UNLESS(repr = modified_EncodeRawUnicodeEscape(
-		PyUnicode_AS_UNICODE(args), PyUnicode_GET_SIZE(args)))
+        UNLESS (repr = PyUnicode_AsRawUnicodeEscapeString(args))
             return -1;
 
         if ((len = PyString_Size(repr)) < 0)
@@ -1289,7 +1255,7 @@ save_tuple(Picklerobject *self, PyObject *args) {
             goto finally;
     }
 
-    UNLESS (py_tuple_id = PyLong_FromVoidPtr(args))
+    UNLESS (py_tuple_id = PyInt_FromLong((long)args))
         goto finally;
 
     if (len) {
@@ -1498,7 +1464,7 @@ save_inst(Picklerobject *self, PyObject *args) {
             PyObject_CallObject(getinitargs_func, empty_tuple))
             goto finally;
 
-        if ((len = PyObject_Size(class_args)) < 0)  
+        if ((len = PyObject_Length(class_args)) < 0)  
             goto finally;
 
         for (i = 0; i < len; i++) {
@@ -1809,9 +1775,12 @@ save(Picklerobject *self, PyObject *args, int  pers_save) {
     }
 
     if (args->ob_refcnt > 1) {
+        long ob_id;
         int  has_key;
 
-        UNLESS (py_ob_id = PyLong_FromVoidPtr(args))
+        ob_id = (long)args;
+
+        UNLESS (py_ob_id = PyInt_FromLong(ob_id))
             goto finally;
 
         if ((has_key = cPickle_PyMapping_HasKey(self->memo, py_ob_id)) < 0)
@@ -2463,7 +2432,7 @@ load_none(Unpicklerobject *self) {
 }
 
 static int
-bad_readline(void) {
+bad_readline() {
     PyErr_SetString(UnpicklingError, "pickle data was truncated");
     return -1;
 }
@@ -2791,7 +2760,7 @@ load_unicode(Unpicklerobject *self) {
     char *s;
 
     if ((len = (*self->readline_func)(self, &s)) < 0) return -1;
-    if (len < 1) return bad_readline();
+    if (len < 2) return bad_readline();
 
     UNLESS (str = PyUnicode_DecodeRawUnicodeEscape(s, len - 1, NULL))
         goto finally;
@@ -2906,7 +2875,7 @@ Instance_New(PyObject *cls, PyObject *args) {
   if (PyClass_Check(cls)) {
       int l;
       
-      if ((l=PyObject_Size(args)) < 0) goto err;
+      if ((l=PyObject_Length(args)) < 0) goto err;
       UNLESS (l) {
           PyObject *__getinitargs__;
 
@@ -2921,11 +2890,10 @@ Instance_New(PyObject *cls, PyObject *args) {
               inst->in_class=(PyClassObject*)cls;
               Py_INCREF(cls);
               UNLESS (inst->in_dict=PyDict_New()) {
-                inst = (PyInstanceObject *) PyObject_AS_GC(inst);
-                PyObject_DEL(inst);
+                Py_DECREF(inst);
                 goto err;
               }
-              PyObject_GC_Init(inst);
+
               return (PyObject *)inst;
             }
           Py_DECREF(__getinitargs__);
@@ -3236,8 +3204,7 @@ load_binget(Unpicklerobject *self) {
 static int
 load_long_binget(Unpicklerobject *self) {
     PyObject *py_key = 0, *value = 0;
-    unsigned char c;
-    char *s;
+    unsigned char c, *s;
     long key;
     int rc;
 
@@ -3288,8 +3255,7 @@ load_put(Unpicklerobject *self) {
 static int
 load_binput(Unpicklerobject *self) {
     PyObject *py_key = 0, *value = 0;
-    unsigned char key;
-    char *s;
+    unsigned char key, *s;
     int len;
 
     if ((*self->read_func)(self, &s, 1) < 0) return -1;
@@ -3309,8 +3275,7 @@ static int
 load_long_binput(Unpicklerobject *self) {
     PyObject *py_key = 0, *value = 0;
     long key;
-    unsigned char c;
-    char *s;
+    unsigned char c, *s;
     int len;
 
     if ((*self->read_func)(self, &s, 4) < 0) return -1;
@@ -4433,7 +4398,7 @@ static struct PyMethodDef cPickle_methods[] = {
 };
 
 static int
-init_stuff(PyObject *module_dict) {
+init_stuff(PyObject *module, PyObject *module_dict) {
     PyObject *string, *copy_reg, *t, *r;
 
 #define INIT_STR(S) UNLESS(S ## _str=PyString_FromString(#S)) return -1;
@@ -4562,9 +4527,8 @@ init_stuff(PyObject *module_dict) {
 #define DL_EXPORT(RTYPE) RTYPE
 #endif
 DL_EXPORT(void)
-initcPickle(void) {
-    PyObject *m, *d, *di, *v, *k;
-    int i;
+initcPickle() {
+    PyObject *m, *d, *v;
     char *rev="1.71";
     PyObject *format_version;
     PyObject *compatible_formats;
@@ -4572,13 +4536,6 @@ initcPickle(void) {
     Picklertype.ob_type = &PyType_Type;
     Unpicklertype.ob_type = &PyType_Type;
     PdataType.ob_type = &PyType_Type;
-
-    /* Initialize some pieces. We need to do this before module creation, 
-       so we're forced to use a temporary dictionary. :( 
-    */
-    di=PyDict_New();
-    if (!di) return;
-    if (init_stuff(di) < 0) return;
 
     /* Create the module and add the functions */
     m = Py_InitModule4("cPickle", cPickle_methods,
@@ -4590,15 +4547,6 @@ initcPickle(void) {
     PyDict_SetItemString(d,"__version__", v = PyString_FromString(rev));
     Py_XDECREF(v);
 
-    /* Copy data from di. Waaa. */
-    for (i=0; PyDict_Next(di, &i, &k, &v); ) {
-        if (PyObject_SetItem(d, k, v) < 0) {
-            Py_DECREF(di);
-            return;
-        }
-    }
-    Py_DECREF(di);
-
     format_version = PyString_FromString("1.3");
     compatible_formats = Py_BuildValue("[sss]", "1.0", "1.1", "1.2");
 
@@ -4606,4 +4554,6 @@ initcPickle(void) {
     PyDict_SetItemString(d, "compatible_formats", compatible_formats);
     Py_XDECREF(format_version);
     Py_XDECREF(compatible_formats);
+
+    init_stuff(m, d);
 }

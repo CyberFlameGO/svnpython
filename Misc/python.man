@@ -1,4 +1,4 @@
-.TH PYTHON "1" "5 September, 2000"
+.TH PYTHON "1" "20 August, 1999"
 .SH NAME
 python \- an interpreted, interactive, object-oriented programming language
 .SH SYNOPSIS
@@ -24,18 +24,12 @@ python \- an interpreted, interactive, object-oriented programming language
 [
 .B \-v
 ]
-[
+.br
+       [
 .B \-x
 ]
 [
-.B \-h
-]
-[
-.B \-V
-]
-[
-.B \-W
-.I argument
+.B \-X
 ]
 .br
        [
@@ -58,8 +52,8 @@ The Python Library Reference documents built-in and standard types,
 constants, functions and modules.
 Finally, the Python Reference Manual describes the syntax and
 semantics of the core language in (perhaps too) much detail.
-(These documents may be located via the
-.B "INTERNET RESOURCES"
+(Information on locating these documents is included in
+.B "SEE ALSO"
 below; they may be installed on your system as well.)
 .PP
 Python's basic power can be extended with your own modules written in
@@ -114,76 +108,10 @@ Skip the first line of the source.  This is intended for a DOS
 specific hack only.  Warning: the line numbers in error messages will
 be off by one!
 .TP
-.B \-h
-Prints the usage for the interpreter executable and exits.
-.TP
-.B \-V
-Prints the Python version number of the executable and exits.
-.TP
-.BI "\-W " argument
-Warning control.  Python sometimes prints warning message to
-.IR sys.stderr .
-A typical warning message has the following form:
-.IB file ":" line ": " category ": " message.
-By default, each warning is printed once for each source line where it
-occurs.  This option controls how often warnings are printed.
-Multiple
-.B \-W
-options may be given; when a warning matches more than one
-option, the action for the last matching option is performed.
-Invalid
-.B \-W
-options are ignored (a warning message is printed about invalid
-options when the first warning is issued).  Warnings can also be
-controlled from within a Python program using the
-.I warnings
-module.
-
-The simplest form of
-.I argument
-is one of the following
-.I action
-strings (or a unique abbreviation):
-.B ignore
-to ignore all warnings;
-.B default
-to explicitly request the default behavior (printing each warning once
-per source line);
-.B all
-to print a warning each time it occurs (this may generate many
-messages if a warning is triggered repeatedly for the same source
-line, e.g. inside a loop);
-.B module
-to print each warning only only the first time it occurs in each
-module;
-.B once
-to print each warning only the first time it occurs in the program; or
-.B error
-to raise an exception instead of printing a warning message.
-
-The full form of
-.I argument
-is
-.IB action : message : category : module : line.
-Here,
-.I action
-is as explained above but only applies to messages that match the
-remaining fields.  Empty fields match all values; trailing empty
-fields may be omitted.  The
-.I message
-field matches the start of the warning message printed; this match is
-case-insensitive.  The
-.I category
-field matches the warning category.  This must be a class name; the
-match test whether the actual warning category of the message is a
-subclass of the specified warning category.  The full class name must
-be given.  The
-.I module
-field matches the (fully-qualified) module name; this match is
-case-sensitive.  The
-.I line
-field matches the line number, where zero matches all line numbers and
-is thus equivalent to an omitted line number.
+.B \-X
+Make the standard exceptions strings instead of classes.
+Use for backward compatibility with old code only.  This is not
+necessary for most uses of string exceptions.
 .TP
 .BI "\-c " command
 Specify the command to execute (see next section).
@@ -216,8 +144,8 @@ which is a list of strings (you must first
 .I import sys
 to be able to access it).
 If no script name is given,
-.I sys.argv[0]
-is an empty string; if
+.I sys.argv
+is empty; if
 .B \-c
 is used,
 .I sys.argv[0]
@@ -316,30 +244,71 @@ the \fB\-u\fP option.
 .IP PYTHONVERBOSE
 If this is set to a non-empty string it is equivalent to specifying
 the \fB\-v\fP option.
+.SH SEE ALSO
+.IP "Python Tutorial"
+URL: http://www.python.org/doc/tut/tut.html
+.IP "Python Library Reference"
+URL: http://www.python.org/doc/lib/lib.html
+.IP "Python Reference Manual"
+URL: http://www.python.org/doc/ref/ref.html
+.IP "Extending and Embedding the Python Interpreter"
+URL: http://www.python.org/doc/ext/ext.html
+.IP "Python/C API"
+URL: http://www.python.org/doc/api/api.html
+.PP
+Downloadable versions of these documents in many formats are available
+at the Python website; see \fB\INTERNET RESOURCES\fP below.
 .SH AUTHOR
 .nf
 Guido van Rossum
+CNRI
+1895 Preston White Drive
+Reston, VA 20191
+USA
 .PP
-E-mail: guido@python.org
+E-mail: guido@cnri.reston.va.us, guido@python.org
 .fi
 .PP
 And a cast of thousands.
 .SH INTERNET RESOURCES
-Main website: http://www.python.org
+Web site: http://www.python.org
 .br
-Community website: http://starship.python.net
-.br
-Developer resources:
-.br
-  http://sourceforge.net/project/?group_id=5470
-.br
-FTP: ftp://ftp.python.org/pub/python
-.br
-Module repository: http://www.vex.net/parnassus/
+FTP site: ftp://ftp.python.org
 .br
 Newsgroups: comp.lang.python, comp.lang.python.announce
-.SH LICENSING
-Python is distributed under an Open Source license.  See the file
-"LICENSE" in the Python source distribution for information on terms &
-conditions for accessing and otherwise using Python and for a
-DISCLAIMER OF ALL WARRANTIES.
+.PP
+There are many mirror sites; a current list is available at
+http://www.python.org/mirrors.html.
+.PP
+The \fI\Python Software Activity\fP provides many mailing lists which
+serve various special interests within the Python community;
+information on these special interest groups is available at
+http://www.python.org/sigs/.
+.SH COPYRIGHT
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
+.IP " "
+All Rights Reserved
+.PP
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.

@@ -10,18 +10,18 @@ __revision__ = "$Id$"
 import os
 from distutils.errors import DistutilsExecError
 from distutils.spawn import spawn
-from distutils.dir_util import mkpath
+
 
 def make_tarball (base_name, base_dir, compress="gzip",
                   verbose=0, dry_run=0):
     """Create a (possibly compressed) tar file from all the files under
-    'base_dir'.  'compress' must be "gzip" (the default), "compress",
-    "bzip2", or None.  Both "tar" and the compression utility named by
-    'compress' must be on the default program search path, so this is
-    probably Unix-specific.  The output tar file will be named 'base_dir' +
-    ".tar", possibly plus the appropriate compression extension (".gz",
-    ".bz2" or ".Z").  Return the output filename.
-    """
+       'base_dir'.  'compress' must be "gzip" (the default), "compress",
+       "bzip2", or None.  Both "tar" and the compression utility named by
+       'compress' must be on the default program search path, so this is
+       probably Unix-specific.  The output tar file will be named 'base_dir'
+       + ".tar", possibly plus the appropriate compression extension (".gz",
+       ".bz2" or ".Z").  Return the output filename."""
+
     # XXX GNU tar 1.13 has a nifty option to add a prefix directory.
     # It's pretty new, though, so we certainly can't require it --
     # but it would be nice to take advantage of it to skip the
@@ -42,13 +42,12 @@ def make_tarball (base_name, base_dir, compress="gzip",
               "bad value for 'compress': must be None, 'gzip', or 'compress'"
 
     archive_name = base_name + ".tar"
-    mkpath(os.path.dirname(archive_name), verbose=verbose, dry_run=dry_run)
     cmd = ["tar", "-cf", archive_name, base_dir]
-    spawn(cmd, verbose=verbose, dry_run=dry_run)
+    spawn (cmd, verbose=verbose, dry_run=dry_run)
 
     if compress:
-        spawn([compress] + compress_flags[compress] + [archive_name],
-              verbose=verbose, dry_run=dry_run)
+        spawn ([compress] + compress_flags[compress] + [archive_name],
+               verbose=verbose, dry_run=dry_run)
         return archive_name + compress_ext[compress]
     else:
         return archive_name
@@ -57,22 +56,21 @@ def make_tarball (base_name, base_dir, compress="gzip",
 
 
 def make_zipfile (base_name, base_dir, verbose=0, dry_run=0):
-    """Create a zip file from all the files under 'base_dir'.  The output
-    zip file will be named 'base_dir' + ".zip".  Uses either the InfoZIP
-    "zip" utility (if installed and found on the default search path) or
-    the "zipfile" Python module (if available).  If neither tool is
-    available, raises DistutilsExecError.  Returns the name of the output
-    zip file.
-    """
+    """Create a zip file from all the files under 'base_dir'.  The
+       output zip file will be named 'base_dir' + ".zip".  Uses either the
+       InfoZIP "zip" utility (if installed and found on the default search
+       path) or the "zipfile" Python module (if available).  If neither
+       tool is available, raises DistutilsExecError.  Returns the name
+       of the output zip file."""
+
     # This initially assumed the Unix 'zip' utility -- but
     # apparently InfoZIP's zip.exe works the same under Windows, so
     # no changes needed!
 
     zip_filename = base_name + ".zip"
-    mkpath(os.path.dirname(zip_filename), verbose=verbose, dry_run=dry_run)
     try:
-        spawn(["zip", "-rq", zip_filename, base_dir],
-              verbose=verbose, dry_run=dry_run)
+        spawn (["zip", "-rq", zip_filename, base_dir],
+               verbose=verbose, dry_run=dry_run)
     except DistutilsExecError:
 
         # XXX really should distinguish between "couldn't find
@@ -96,14 +94,14 @@ def make_zipfile (base_name, base_dir, verbose=0, dry_run=0):
         def visit (z, dirname, names):
             for name in names:
                 path = os.path.normpath(os.path.join(dirname, name))
-                if os.path.isfile(path):
-                    z.write(path, path)
+                if os.path.isfile (path):
+                    z.write (path, path)
 
         if not dry_run:
-            z = zipfile.ZipFile(zip_filename, "wb",
-                                compression=zipfile.ZIP_DEFLATED)
+            z = zipfile.ZipFile (zip_filename, "wb",
+                                 compression=zipfile.ZIP_DEFLATED)
 
-            os.path.walk(base_dir, visit, z)
+            os.path.walk (base_dir, visit, z)
             z.close()
 
     return zip_filename
@@ -116,7 +114,7 @@ ARCHIVE_FORMATS = {
     'bztar': (make_tarball, [('compress', 'bzip2')], "bzip2'ed tar-file"),
     'ztar':  (make_tarball, [('compress', 'compress')], "compressed tar file"),
     'tar':   (make_tarball, [('compress', None)], "uncompressed tar file"),
-    'zip':   (make_zipfile, [],"ZIP file")
+    'zip':   (make_zipfile, [],"zip-file")
     }
 
 def check_archive_formats (formats):
@@ -143,9 +141,9 @@ def make_archive (base_name, format,
     if root_dir is not None:
         if verbose:
             print "changing into '%s'" % root_dir
-        base_name = os.path.abspath(base_name)
+        base_name = os.path.abspath (base_name)
         if not dry_run:
-            os.chdir(root_dir)
+            os.chdir (root_dir)
 
     if base_dir is None:
         base_dir = os.curdir
@@ -161,12 +159,12 @@ def make_archive (base_name, format,
     func = format_info[0]
     for (arg,val) in format_info[1]:
         kwargs[arg] = val
-    filename = apply(func, (base_name, base_dir), kwargs)
+    filename = apply (func, (base_name, base_dir), kwargs)
 
     if root_dir is not None:
         if verbose:
             print "changing back to '%s'" % save_cwd
-        os.chdir(save_cwd)
+        os.chdir (save_cwd)
 
     return filename
 

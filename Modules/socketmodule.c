@@ -7,8 +7,7 @@ This module provides an interface to Berkeley socket IPC.
 
 Limitations:
 
-- only AF_INET and AF_UNIX address families are supported in a
-  portable manner, though AF_PACKET is supported under Linux.
+- only AF_INET and AF_UNIX address families are supported
 - no read/write operations (use send/recv or makefile instead)
 - additional restrictions apply on Windows
 
@@ -34,13 +33,6 @@ Module interface:
   (including the dd.dd.dd.dd notation) and port is in host byte order
 - where a hostname is returned, the dd.dd.dd.dd notation is used
 - a UNIX domain socket address is a string specifying the pathname
-- an AF_PACKET socket address is a tuple containing a string
-  specifying the ethernet interface and an integer specifying
-  the Ethernet protocol number to be received. For example:
-  ("eth0",0x1234).  Optional 3rd,4th,5th elements in the tuple
-  specify packet-type and ha-type/addr -- these are ignored by
-  networking code, but accepted since they are returned by the
-  getsockname() method.
 
 Socket methods:
 
@@ -130,7 +122,7 @@ Socket methods:
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#if !(defined(__BEOS__) || defined(__CYGWIN__))
+#ifndef __BEOS__
 #include <netinet/tcp.h>
 #endif
 
@@ -154,12 +146,6 @@ Socket methods:
 #undef AF_UNIX
 #endif
 
-#if defined(linux) && defined(AF_PACKET)
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <netpacket/packet.h>
-#endif
-
 #ifndef O_NDELAY
 #define O_NDELAY O_NONBLOCK	/* For QNX only? */
 #endif
@@ -170,12 +156,12 @@ Socket methods:
 #endif
 
 #ifdef USE_SSL
-#include "openssl/rsa.h"
-#include "openssl/crypto.h"
-#include "openssl/x509.h"
-#include "openssl/pem.h"
-#include "openssl/ssl.h"
-#include "openssl/err.h"
+#include "rsa.h"
+#include "crypto.h"
+#include "x509.h"
+#include "pem.h"
+#include "ssl.h"
+#include "err.h"
 #endif /* USE_SSL */
 
 #if defined(MS_WINDOWS) || defined(__BEOS__)
@@ -361,9 +347,6 @@ typedef struct {
 #ifdef AF_UNIX
 		struct sockaddr_un un;
 #endif
-#if defined(linux) && defined(AF_PACKET)
-		struct sockaddr_ll ll;
-#endif		
 	} sock_addr;
 } PySocketSockObject;
 
@@ -534,7 +517,7 @@ makeipaddr(struct sockaddr_in *addr)
 
 /*ARGSUSED*/
 static PyObject *
-makesockaddr(int sockfd, struct sockaddr *addr, int addrlen)
+makesockaddr(struct sockaddr *addr, int addrlen)
 {
 	if (addrlen == 0) {
 		/* No address -- may be recvfrom() from known socket */
@@ -567,26 +550,8 @@ makesockaddr(int sockfd, struct sockaddr *addr, int addrlen)
 		struct sockaddr_un *a = (struct sockaddr_un *) addr;
 		return PyString_FromString(a->sun_path);
 	}
-#endif
+#endif /* AF_UNIX */
 
-#if defined(linux) && defined(AF_PACKET)
-	case AF_PACKET:
-	{
-		struct sockaddr_ll *a = (struct sockaddr_ll *)addr;
-		char *ifname = "";
-		struct ifreq ifr;
-		/* need to look up interface name give index */
-		if (a->sll_ifindex) {
-			ifr.ifr_ifindex = a->sll_ifindex;
-			if (ioctl(sockfd, SIOCGIFNAME, &ifr) == 0)
-				ifname = ifr.ifr_name;
-		}
-		return Py_BuildValue("shbhs#", ifname, ntohs(a->sll_protocol),
-				     a->sll_pkttype, a->sll_hatype, 
-                                     a->sll_addr, a->sll_halen);
-	}
-#endif
-          
 	/* More cases here... */
 
 	default:
@@ -607,8 +572,7 @@ makesockaddr(int sockfd, struct sockaddr *addr, int addrlen)
    through len_ret. */
 
 static int
-getsockaddrarg(PySocketSockObject *s, PyObject *args, 
-	       struct sockaddr **addr_ret, int *len_ret)
+getsockaddrarg(PySocketSockObject *s, PyObject *args, struct sockaddr **addr_ret, int *len_ret)
 {
 	switch (s->sock_family) {
 
@@ -641,13 +605,7 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
 		char *host;
 		int port;
  		addr=(struct sockaddr_in*)&(s->sock_addr).in;
-		if (!PyTuple_Check(args)) {
-			PyErr_Format(PyExc_TypeError,
-		  "getsockaddrarg: AF_INET address must be tuple, not %.500s",
-				     args->ob_type->tp_name);
-			return 0;
-		}
-		if (!PyArg_ParseTuple(args, "si:getsockaddrarg", &host, &port))
+		if (!PyArg_Parse(args, "(si)", &host, &port))
 			return 0;
 		if (setipaddr(host, addr) < 0)
 			return 0;
@@ -658,39 +616,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
 		return 1;
 	}
 
-#if defined(linux) && defined(AF_PACKET)
-	case AF_PACKET:
-	{
-		struct sockaddr_ll* addr;
-		struct ifreq ifr;
-		char *interfaceName;
-		int protoNumber;
-		int hatype = 0;
-		int pkttype = 0;
-		char *haddr;
-		
-		if (!PyArg_ParseTuple(args, "si|iis", &interfaceName,
-				      &protoNumber, &pkttype, &hatype, &haddr))
-			return 0;
-		strncpy(ifr.ifr_name, interfaceName, sizeof(ifr.ifr_name));
-		ifr.ifr_name[(sizeof(ifr.ifr_name))-1] = '\0';
-		if (ioctl(s->sock_fd, SIOCGIFINDEX, &ifr) < 0) {
-			PyErr_SetFromErrno(PySocket_Error);
-			return 0;
-		}
-		addr = &(s->sock_addr.ll);
-		addr->sll_family = AF_PACKET;
-		addr->sll_protocol = htons((short)protoNumber);
-		addr->sll_ifindex = ifr.ifr_ifindex;
-		addr->sll_pkttype = pkttype;
-		addr->sll_hatype = hatype;
-		*addr_ret = (struct sockaddr *) addr;
-		*len_ret = sizeof *addr;
-		return 1;
-	}
-#endif              
-              
-              
 	/* More cases here... */
 
 	default:
@@ -724,14 +649,6 @@ getsockaddrlen(PySocketSockObject *s, socklen_t *len_ret)
 		return 1;
 	}
 
-#if defined(linux) && defined(AF_PACKET)
-	case AF_PACKET:
-	{
-		*len_ret = sizeof (struct sockaddr_ll);
-		return 1;
-	}
-#endif
-		
 	/* More cases here... */
 
 	default:
@@ -778,12 +695,11 @@ PySocketSock_accept(PySocketSockObject *s, PyObject *args)
 		SOCKETCLOSE(newfd);
 		goto finally;
 	}
-	addr = makesockaddr(s->sock_fd, (struct sockaddr *)addrbuf, 
-			    addrlen);
-	if (addr == NULL)
+	if (!(addr = makesockaddr((struct sockaddr *) addrbuf, addrlen)))
 		goto finally;
 
-	res = Py_BuildValue("OO", sock, addr);
+	if (!(res = Py_BuildValue("OO", sock, addr)))
+		goto finally;
 
   finally:
 	Py_XDECREF(sock);
@@ -972,8 +888,7 @@ static char bind_doc[] =
 "bind(address)\n\
 \n\
 Bind the socket to a local address.  For IP sockets, the address is a\n\
-pair (host, port); the host must refer to the local host. For raw packet\n\
-sockets the address is a tuple (ifname, proto [,pkttype [,hatype]])";
+pair (host, port); the host must refer to the local host.";
 
 
 /* s.close() method.
@@ -983,15 +898,14 @@ sockets the address is a tuple (ifname, proto [,pkttype [,hatype]])";
 static PyObject *
 PySocketSock_close(PySocketSockObject *s, PyObject *args)
 {
-	SOCKET_T fd;
 	if (!PyArg_ParseTuple(args, ":close"))
 		return NULL;
-	if ((fd = s->sock_fd) != -1) {
-		s->sock_fd = -1;
+	if (s->sock_fd != -1) {
 		Py_BEGIN_ALLOW_THREADS
-		(void) SOCKETCLOSE(fd);
+		(void) SOCKETCLOSE(s->sock_fd);
 		Py_END_ALLOW_THREADS
 	}
+	s->sock_fd = -1;
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -1128,7 +1042,7 @@ PySocketSock_getsockname(PySocketSockObject *s, PyObject *args)
 	Py_END_ALLOW_THREADS
 	if (res < 0)
 		return PySocket_Err();
-	return makesockaddr(s->sock_fd, (struct sockaddr *) addrbuf, addrlen);
+	return makesockaddr((struct sockaddr *) addrbuf, addrlen);
 }
 
 static char getsockname_doc[] =
@@ -1157,7 +1071,7 @@ PySocketSock_getpeername(PySocketSockObject *s, PyObject *args)
 	Py_END_ALLOW_THREADS
 	if (res < 0)
 		return PySocket_Err();
-	return makesockaddr(s->sock_fd, (struct sockaddr *) addrbuf, addrlen);
+	return makesockaddr((struct sockaddr *) addrbuf, addrlen);
 }
 
 static char getpeername_doc[] =
@@ -1319,7 +1233,7 @@ PySocketSock_recvfrom(PySocketSockObject *s, PyObject *args)
 	if (n != len && _PyString_Resize(&buf, n) < 0)
 		return NULL;
 		
-	if (!(addr = makesockaddr(s->sock_fd, (struct sockaddr *)addrbuf, addrlen)))
+	if (!(addr = makesockaddr((struct sockaddr *)addrbuf, addrlen)))
 		goto finally;
 
 	ret = Py_BuildValue("OO", buf, addr);
@@ -2193,7 +2107,7 @@ static PyObject *SSL_getattr(SSLObject *self, char *name)
 }
 
 staticforward PyTypeObject SSL_Type = {
-	PyObject_HEAD_INIT(NULL)
+	PyObject_HEAD_INIT(&PyType_Type)
 	0,				/*ob_size*/
 	"SSL",			/*tp_name*/
 	sizeof(SSLObject),		/*tp_basicsize*/
@@ -2216,10 +2130,13 @@ staticforward PyTypeObject SSL_Type = {
 static PyObject *SSL_SSLwrite(SSLObject *self, PyObject *args)
 {
 	char *data;
-	size_t len;
+	size_t len = 0;
   
-	if (!PyArg_ParseTuple(args, "s#:write", &data, &len))
+	if (!PyArg_ParseTuple(args, "s|i:write", &data, &len))
 		return NULL;
+  
+	if (!len)
+		len = strlen(data);
   
 	len = SSL_write(self->ssl, data, len);
 	return PyInt_FromLong((long)len);
@@ -2241,14 +2158,17 @@ static PyObject *SSL_SSLread(SSLObject *self, PyObject *args)
 	res = SSL_get_error(self->ssl, count);
 
 	switch (res) {
-	case SSL_ERROR_NONE:
-		assert(count > 0);
+	case 0:			/* Good return value! */
 		break;
-	case SSL_ERROR_ZERO_RETURN: /* normal EOF */
-		assert(count == 0);
+	case 6:
+		PyErr_SetString(SSLErrorObject, "EOF");
+		Py_DECREF(buf);
+		return NULL;
 		break;
+	case 5:
 	default:
 		return PyErr_SetFromErrno(SSLErrorObject);
+		break;
 	}
   
 	fflush(stderr);
@@ -2411,8 +2331,40 @@ OS2init(void)
  */
 
 static char module_doc[] =
-"Implementation module for socket operations.  See the socket module\n\
-for documentation.";
+"This module provides socket operations and some related functions.\n\
+On Unix, it supports IP (Internet Protocol) and Unix domain sockets.\n\
+On other systems, it only supports IP.\n\
+\n\
+Functions:\n\
+\n\
+socket() -- create a new socket object\n\
+fromfd() -- create a socket object from an open file descriptor (*)\n\
+gethostname() -- return the current hostname\n\
+gethostbyname() -- map a hostname to its IP number\n\
+gethostbyaddr() -- map an IP number or hostname to DNS info\n\
+getservbyname() -- map a service name and a protocol name to a port number\n\
+getprotobyname() -- mape a protocol name (e.g. 'tcp') to a number\n\
+ntohs(), ntohl() -- convert 16, 32 bit int from network to host byte order\n\
+htons(), htonl() -- convert 16, 32 bit int from host to network byte order\n\
+inet_aton() -- convert IP addr string (123.45.67.89) to 32-bit packed format\n\
+inet_ntoa() -- convert 32-bit packed format IP to string (123.45.67.89)\n\
+ssl() -- secure socket layer support (only available if configured)\n\
+\n\
+(*) not available on all platforms!)\n\
+\n\
+Special objects:\n\
+\n\
+SocketType -- type object for socket objects\n\
+error -- exception raised for I/O errors\n\
+\n\
+Integer constants:\n\
+\n\
+AF_INET, AF_UNIX -- socket domains (first argument to socket() call)\n\
+SOCK_STREAM, SOCK_DGRAM, SOCK_RAW -- socket types (second argument)\n\
+\n\
+Many other constants may be defined; these may be used in calls to\n\
+the setsockopt() and getsockopt() methods.\n\
+";
 
 static char sockettype_doc[] =
 "A socket represents one endpoint of a network connection.\n\
@@ -2442,22 +2394,30 @@ shutdown() -- shut down traffic in one or both directions\n\
 (*) not available on all platforms!)";
 
 DL_EXPORT(void)
+#if defined(MS_WINDOWS) || defined(PYOS_OS2) || defined(__BEOS__)
 init_socket(void)
+#else
+initsocket(void)
+#endif
 {
 	PyObject *m, *d;
 #ifdef MS_WINDOWS
 	if (!NTinit())
 		return;
+	m = Py_InitModule3("_socket", PySocket_methods, module_doc);
 #else
 #if defined(__TOS_OS2__)
 	if (!OS2init())
 		return;
-#endif /* __TOS_OS2__ */
-#endif /* MS_WINDOWS */
-#ifdef USE_SSL
-	SSL_Type.ob_type = &PyType_Type;
-#endif
 	m = Py_InitModule3("_socket", PySocket_methods, module_doc);
+#else
+#if defined(__BEOS__)
+	m = Py_InitModule3("_socket", PySocket_methods, module_doc);
+#else
+	m = Py_InitModule3("socket", PySocket_methods, module_doc);
+#endif /* __BEOS__ */
+#endif
+#endif
 	d = PyModule_GetDict(m);
 	PySocket_Error = PyErr_NewException("socket.error", NULL, NULL);
 	if (PySocket_Error == NULL)
@@ -2517,17 +2477,6 @@ init_socket(void)
 #ifdef AF_ROSE
 	insint(d, "AF_ROSE", AF_ROSE); /* Amateur Radio X.25 PLP */
 #endif
-#if defined(linux) && defined(AF_PACKET)
-	insint(d, "AF_PACKET", AF_PACKET);
-	insint(d, "PF_PACKET", PF_PACKET);
-	insint(d, "PACKET_HOST", PACKET_HOST);
-	insint(d, "PACKET_BROADCAST", PACKET_BROADCAST);
-	insint(d, "PACKET_MULTICAST", PACKET_MULTICAST);
-	insint(d, "PACKET_OTHERHOST", PACKET_OTHERHOST);
-	insint(d, "PACKET_OUTGOING", PACKET_OUTGOING);
-	insint(d, "PACKET_LOOPBACK", PACKET_LOOPBACK);
-	insint(d, "PACKET_FASTROUTE", PACKET_FASTROUTE);
-#endif	
 
 	/* Socket types */
 	insint(d, "SOCK_STREAM", SOCK_STREAM);

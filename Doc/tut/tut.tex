@@ -174,11 +174,11 @@ lives is an installation option, other places are possible; check with
 your local Python guru or system administrator.  (E.g.,
 \file{/usr/local/python} is a popular alternative location.)
 
-Typing an \EOF{} character (\kbd{Control-D} on \UNIX,
-\kbd{Control-Z} on DOS or Windows) at the primary prompt causes the
-interpreter to exit with a zero exit status.  If that doesn't work,
-you can exit the interpreter by typing the following commands:
-\samp{import sys; sys.exit()}.
+Typing an EOF character (Control-D on \UNIX{}, Control-Z on DOS
+or Windows) at the primary prompt causes the interpreter to exit with
+a zero exit status.  If that doesn't work, you can exit the
+interpreter by typing the following commands: \samp{import sys;
+sys.exit()}.
 
 The interpreter's line-editing features usually aren't very
 sophisticated.  On \UNIX{}, whoever installed the interpreter may have
@@ -186,11 +186,10 @@ enabled support for the GNU readline library, which adds more
 elaborate interactive editing and history features. Perhaps the
 quickest check to see whether command line editing is supported is
 typing Control-P to the first Python prompt you get.  If it beeps, you
-have command line editing; see Appendix \ref{interacting} for an
-introduction to the keys.  If nothing appears to happen, or if
-\code{\^P} is echoed, command line editing isn't available; you'll
-only be able to use backspace to remove characters from the current
-line.
+have command line editing; see Appendix A for an introduction to the
+keys.  If nothing appears to happen, or if \code{\^P} is echoed,
+command line editing isn't available; you'll only be able to use
+backspace to remove characters from the current line.
 
 The interpreter operates somewhat like the \UNIX{} shell: when called
 with standard input connected to a tty device, it reads and executes
@@ -238,15 +237,18 @@ not consumed by the Python interpreter's option processing but left in
 When commands are read from a tty, the interpreter is said to be in
 \emph{interactive mode}.  In this mode it prompts for the next command
 with the \emph{primary prompt}, usually three greater-than signs
-(\samp{>\code{>}>~}); for continuation lines it prompts with the
+(\samp{>>>~}); for continuation lines it prompts with the
 \emph{secondary prompt}, by default three dots (\samp{...~}).
 The interpreter prints a welcome message stating its version number
 and a copyright notice before printing the first prompt, e.g.:
 
 \begin{verbatim}
 python
-Python 1.5.2b2 (#1, Feb 28 1999, 00:02:06)  [GCC 2.8.1] on sunos5
-Copyright 1991-1995 Stichting Mathematisch Centrum, Amsterdam
+Python 1.6 (#22, Sep  2 2000, 23:54:55)  [GCC egcs-2.91.66 19990314/Linux (egcs-1.1.2 release)] on linux2
+Copyright (c) 1995-2000 Corporation for National Research Initiatives.
+All Rights Reserved.
+Copyright (c) 1991-1995 Stichting Mathematisch Centrum, Amsterdam.
+All Rights Reserved.
 >>>
 \end{verbatim}
 
@@ -317,7 +319,7 @@ commands.  This is similar to the \file{.profile} feature of the
 This file is only read in interactive sessions, not when Python reads
 commands from a script, and not when \file{/dev/tty} is given as the
 explicit source of commands (which otherwise behaves like an
-interactive session).  It is executed in the same namespace where
+interactive session).  It is executed in the same name space where
 interactive commands are executed, so that objects that it defines or
 imports can be used without qualification in the interactive session.
 You can also change the prompts \code{sys.ps1} and \code{sys.ps2} in
@@ -325,22 +327,22 @@ this file.
 
 If you want to read an additional start-up file from the current
 directory, you can program this in the global start-up file,
-e.g.\ \samp{if os.path.isfile('.pythonrc.py'):
-execfile('.pythonrc.py')}.  If you want to use the startup file in a
-script, you must do this explicitly in the script:
+e.g.\ \samp{execfile('.pythonrc.py')}\indexii{.pythonrc.py}{file}.  If
+you want to use the startup file in a script, you must do this
+explicitly in the script:
 
 \begin{verbatim}
 import os
-filename = os.environ.get('PYTHONSTARTUP')
-if filename and os.path.isfile(filename):
-    execfile(filename)
+if os.environ.get('PYTHONSTARTUP') \
+   and os.path.isfile(os.environ['PYTHONSTARTUP']):
+    execfile(os.environ['PYTHONSTARTUP'])
 \end{verbatim}
 
 
 \chapter{An Informal Introduction to Python \label{informal}}
 
 In the following examples, input and output are distinguished by the
-presence or absence of prompts (\samp{>\code{>}>~} and \samp{...~}): to repeat
+presence or absence of prompts (\samp{>>>~} and \samp{...~}): to repeat
 the example, you must type everything after the prompt, when the
 prompt appears; lines that do not begin with a prompt are output from
 the interpreter. %
@@ -372,7 +374,7 @@ STRING = "# This is not a comment."
 \section{Using Python as a Calculator \label{calculator}}
 
 Let's try some simple Python commands.  Start the interpreter and wait
-for the primary prompt, \samp{>\code{>}>~}.  (It shouldn't take long.)
+for the primary prompt, \samp{>>> }.  (It shouldn't take long.)
 
 \subsection{Numbers \label{numbers}}
 
@@ -420,7 +422,7 @@ A value can be assigned to several variables simultaneously:
 >>> z
 0
 \end{verbatim}
-
+%
 There is full support for floating point; operators with mixed type
 operands convert the integer operand to floating point:
 
@@ -430,7 +432,7 @@ operands convert the integer operand to floating point:
 >>> 7.0 / 2
 3.5
 \end{verbatim}
-
+%
 Complex numbers are also supported; imaginary numbers are written with
 a suffix of \samp{j} or \samp{J}.  Complex numbers with a nonzero
 real component are written as \samp{(\var{real}+\var{imag}j)}, or can
@@ -448,7 +450,7 @@ be created with the \samp{complex(\var{real}, \var{imag})} function.
 >>> (1+2j)/(1+1j)
 (1.5+0.5j)
 \end{verbatim}
-
+%
 Complex numbers are always represented as two floating point numbers,
 the real and imaginary part.  To extract these parts from a complex
 number \var{z}, use \code{\var{z}.real} and \code{\var{z}.imag}.  
@@ -460,7 +462,7 @@ number \var{z}, use \code{\var{z}.real} and \code{\var{z}.imag}.
 >>> a.imag
 0.5
 \end{verbatim}
-
+%
 The conversion functions to floating point and integer
 (\function{float()}, \function{int()} and \function{long()}) don't
 work for complex numbers --- there is no one correct way to convert a
@@ -470,7 +472,7 @@ magnitude (as a float) or \code{z.real} to get its real part.
 \begin{verbatim}
 >>> a=1.5+0.5j
 >>> float(a)
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: can't convert complex to float; use e.g. abs(z)
 >>> a.real
@@ -478,7 +480,7 @@ TypeError: can't convert complex to float; use e.g. abs(z)
 >>> abs(a)
 1.58113883008
 \end{verbatim}
-
+%
 In interactive mode, the last printed expression is assigned to the
 variable \code{_}.  This means that when you are using Python as a
 desk calculator, it is somewhat easier to continue calculations, for
@@ -488,11 +490,11 @@ example:
 >>> tax = 17.5 / 100
 >>> price = 3.50
 >>> price * tax
-0.61249999999999993
+0.6125
 >>> price + _
-4.1124999999999998
+4.1125
 >>> round(_, 2)
-4.1100000000000003
+4.11
 \end{verbatim}
 
 This variable should be treated as read-only by the user.  Don't
@@ -617,11 +619,11 @@ indexed position in the string results in an error:
 
 \begin{verbatim}
 >>> word[0] = 'x'
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: object doesn't support item assignment
 >>> word[:-1] = 'Splat'
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: object doesn't support slice assignment
 \end{verbatim}
@@ -699,7 +701,7 @@ for single-element (non-slice) indices:
 >>> word[-100:]
 'HelpA'
 >>> word[-10]    # error
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 IndexError: string index out of range
 \end{verbatim}
@@ -738,10 +740,10 @@ The built-in function \function{len()} returns the length of a string:
 \subsection{Unicode Strings \label{unicodeStrings}}
 \sectionauthor{Marc-Andre Lemburg}{mal@lemburg.com}
 
-Starting with Python 2.0 a new data type for storing text data is
+Starting with Python 1.6 a new data type for storing text data is
 available to the programmer: the Unicode object. It can be used to
 store and manipulate Unicode data (see \url{http://www.unicode.org})
-and integrates well with the existing string objects providing
+and intergrates well with the existing string objects providing
 auto-conversions where necessary.
 
 Unicode has the advantage of providing one ordinal for every character
@@ -749,9 +751,9 @@ in every script used in modern and ancient texts. Previously, there
 were only 256 possible ordinals for script characters and texts were
 typically bound to a code page which mapped the ordinals to script
 characters. This lead to very much confusion especially with respect
-to internationalization (usually written as \samp{i18n} ---
-\character{i} + 18 characters + \character{n}) of software.  Unicode
-solves these problems by defining one code page for all scripts.
+to internalization (usually written as \samp{i18n} --- \character{i} +
+18 characters + \character{n}) of software. Unicode solves these
+problems by defining one code page for all scripts.
 
 Creating Unicode strings in Python is just as simple as creating
 normal strings:
@@ -767,24 +769,24 @@ special characters in the string, you can do so by using the Python
 \emph{Unicode-Escape} encoding. The following example shows how:
 
 \begin{verbatim}
->>> u'Hello\u0020World !'
+>>> u'Hello\\u0020World !'
 u'Hello World !'
 \end{verbatim}
 
-The escape sequence \code{\e u0020} indicates to insert the Unicode
-character with the ordinal value 0x0020 (the space character) at the
+The escape sequence \code{\\u0020} indicates to insert the Unicode
+character with the HEX ordinal 0x0020 (the space character) at the
 given position.
 
 Other characters are interpreted by using their respective ordinal
-values directly as Unicode ordinals.  If you have literal strings
-in the standard Latin-1 encoding that is used in many Western countries,
-you will find it convenient that the lower 256 characters
-of Unicode are the same as the 256 characters of Latin-1.
+value directly as Unicode ordinal. Due to the fact that the lower 256
+Unicode are the same as the standard Latin-1 encoding used in many
+western countries, the process of entering Unicode is greatly
+simplified.
 
-For experts, there is also a raw mode just like the one for normal
-strings. You have to prefix the opening quote with 'ur' to have
+For experts, there is also a raw mode just like for normal
+strings. You have to prepend the string with a small 'r' to have
 Python use the \emph{Raw-Unicode-Escape} encoding. It will only apply
-the above \code{\e uXXXX} conversion if there is an uneven number of
+the above \code{\\uXXXX} conversion if there is an uneven number of
 backslashes in front of the small 'u'.
 
 \begin{verbatim}
@@ -798,52 +800,42 @@ The raw mode is most useful when you have to enter lots of backslashes
 e.g. in regular expressions.
 
 Apart from these standard encodings, Python provides a whole set of
-other ways of creating Unicode strings on the basis of a known
+other ways of creating Unicod strings on the basis of a known
 encoding. 
 
-The built-in function \function{unicode()}\bifuncindex{unicode} provides
-access to all registered Unicode codecs (COders and DECoders). Some of
-the more well known encodings which these codecs can convert are
-\emph{Latin-1}, \emph{ASCII}, \emph{UTF-8}, and \emph{UTF-16}.
-The latter two are variable-length encodings that store each Unicode
-character in one or more bytes. The default encoding is
-normally set to ASCII, which passes through characters in the range
-0 to 127 and rejects any other characters with an error.
-When a Unicode string is printed, written to a file, or converted
-with \function{str()}, conversion takes place using this default encoding.
+The builtin \function{unicode()}\bifuncindex{unicode} provides access
+to all registered Unicode codecs (COders and DECoders). Some of the
+more well known encodings which these codecs can convert are
+\emph{Latin-1}, \emph{ASCII}, \emph{UTF-8} and \emph{UTF-16}. The latter two
+are variable length encodings which permit to store Unicode characters
+in 8 or 16 bits. Python uses UTF-8 as default encoding. This becomes
+noticable when printing Unicode strings or writing them to files.
 
 \begin{verbatim}
->>> u"abc"
-u'abc'
->>> str(u"abc")
-'abc'
 >>> u"הצü"
-u'\xe4\xf6\xfc'
+u'\344\366\374'
 >>> str(u"הצü")
-Traceback (most recent call last):
-  File "<stdin>", line 1, in ?
-UnicodeError: ASCII encoding error: ordinal not in range(128)
-\end{verbatim}
-
-To convert a Unicode string into an 8-bit string using a specific
-encoding, Unicode objects provide an \function{encode()} method
-that takes one argument, the name of the encoding.  Lowercase names
-for encodings are preferred.
-
-\begin{verbatim}
->>> u"הצü".encode('utf-8')
-'\xc3\xa4\xc3\xb6\xc3\xbc'
+'\303\244\303\266\303\274'
 \end{verbatim}
 
 If you have data in a specific encoding and want to produce a
 corresponding Unicode string from it, you can use the
-\function{unicode()} function with the encoding name as the second
+\function{unicode()} builtin with the encoding name as second
 argument.
 
 \begin{verbatim}
->>> unicode('\xc3\xa4\xc3\xb6\xc3\xbc', 'utf-8')
-u'\xe4\xf6\xfc'
+>>> unicode('\303\244\303\266\303\274','UTF-8')
+u'\344\366\374'
 \end{verbatim}
+
+To convert the Unicode string back into a string using the original
+encoding, the objects provide an \method{encode()} method.
+
+\begin{verbatim}
+>>> u"הצü".encode('UTF-8')
+'\303\244\303\266\303\274'
+\end{verbatim}
+
 
 \subsection{Lists \label{lists}}
 
@@ -1056,8 +1048,8 @@ short for `else if', and is useful to avoid excessive indentation.  An
 \keyword{if} \ldots\ \keyword{elif} \ldots\ \keyword{elif} \ldots\ sequence
 %    Weird spacings happen here if the wrapping of the source text
 %    gets changed in the wrong way.
-is a substitute for the \keyword{switch} or
-\keyword{case} statements found in other languages.
+is a substitute for the  \emph{switch} or
+\emph{case} statements found in other languages.
 
 
 \section{\keyword{for} Statements \label{for}}
@@ -1177,7 +1169,6 @@ which searches for prime numbers:
 9 equals 3 * 3
 \end{verbatim}
 
-
 \section{\keyword{pass} Statements \label{pass}}
 
 The \keyword{pass} statement does nothing.
@@ -1190,7 +1181,6 @@ For example:
 ...       pass # Busy-wait for keyboard interrupt
 ... 
 \end{verbatim}
-
 
 \section{Defining Functions \label{functions}}
 
@@ -1289,15 +1279,16 @@ the Fibonacci series, instead of printing it:
 >>> f100                # write the result
 [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
 \end{verbatim}
-
+%
 This example, as usual, demonstrates some new Python features:
 
 \begin{itemize}
 
 \item
 The \keyword{return} statement returns with a value from a function.
-\keyword{return} without an expression argument returns \code{None}.
-Falling off the end of a procedure also returns \code{None}.
+\keyword{return} without an expression argument is used to return from 
+the middle of a procedure (falling off the end also returns from a
+procedure), in which case the \code{None} value is returned.
 
 \item
 The statement \code{result.append(b)} calls a \emph{method} of the list
@@ -1432,7 +1423,7 @@ Here's an example that fails due to this restriction:
 ...     pass
 ... 
 >>> function(0, a=0)
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 TypeError: keyword parameter redefined
 \end{verbatim}
@@ -1478,7 +1469,6 @@ shopkeeper : Michael Palin
 sketch : Cheese Shop Sketch
 \end{verbatim}
 
-
 \subsection{Arbitrary Argument Lists \label{arbitraryArgs}}
 
 Finally, the least frequently used option is to specify that a
@@ -1506,15 +1496,8 @@ cannot reference variables from the containing scope, but this can be
 overcome through the judicious use of default argument values, e.g.
 
 \begin{verbatim}
->>> def make_incrementor(n):
-...     return lambda x, incr=n: x+incr
-...
->>> f = make_incrementor(42)
->>> f(0)
-42
->>> f(1)
-43
->>>
+def make_incrementor(n):
+    return lambda x, incr=n: x+incr
 \end{verbatim}
 
 
@@ -1772,54 +1755,10 @@ item, then to the result and the next item, and so on.  For example,
 0
 \end{verbatim}
 
-
-\subsection{List Comprehensions}
-
-List comprehensions provide a concise way to create lists without resorting
-to use of \function{map()}, \function{filter()} and/or \keyword{lambda}.
-The resulting list definition tends often to be clearer than lists built
-using those constructs.  Each list comprehension consists of an expression
-following by a \keyword{for} clause, then zero or more \keyword{for} or
-\keyword{if} clauses.  The result will be a list resulting from evaluating
-the expression in the context of the \keyword{for} and \keyword{if} clauses
-which follow it.  If the expression would evaluate to a tuple, it must be
-parenthesized.
-
-\begin{verbatim}
->>> freshfruit = ['  banana', '  loganberry ', 'passion fruit  ']
->>> [weapon.strip() for weapon in freshfruit]
-['banana', 'loganberry', 'passion fruit']
->>> vec = [2, 4, 6]
->>> [3*x for x in vec]
-[6, 12, 18]
->>> [3*x for x in vec if x > 3]
-[12, 18]
->>> [3*x for x in vec if x < 2]
-[]
->>> [{x: x**2} for x in vec]
-[{2: 4}, {4: 16}, {6: 36}]
->>> [[x,x**2] for x in vec]
-[[2, 4], [4, 16], [6, 36]]
->>> [x, x**2 for x in vec]	# error - parens required for tuples
-  File "<stdin>", line 1
-    [x, x**2 for x in vec]
-               ^
-SyntaxError: invalid syntax
->>> [(x, x**2) for x in vec]
-[(2, 4), (4, 16), (6, 36)]
->>> vec1 = [2, 4, 6]
->>> vec2 = [4, 3, -9]
->>> [x*y for x in vec1 for y in vec2]
-[8, 6, -18, 16, 12, -36, 24, 18, -54]
->>> [x+y for x in vec1 for y in vec2]
-[6, 5, -7, 8, 7, -5, 10, 9, -3]
-\end{verbatim}
-
-
 \section{The \keyword{del} statement \label{del}}
 
 There is a way to remove an item from a list given its index instead
-of its value: the \keyword{del} statement.  This can also be used to
+of its value: the \code{del} statement.  This can also be used to
 remove slices from a list (which we did earlier by assignment of an
 empty list to the slice).  For example:
 
@@ -1843,7 +1782,6 @@ empty list to the slice).  For example:
 Referencing the name \code{a} hereafter is an error (at least until
 another value is assigned to it).  We'll find other uses for
 \keyword{del} later.
-
 
 \section{Tuples and Sequences \label{tuples}}
 
@@ -1877,8 +1815,7 @@ Tuples have many uses, e.g., (x, y) coordinate pairs, employee records
 from a database, etc.  Tuples, like strings, are immutable: it is not
 possible to assign to the individual items of a tuple (you can
 simulate much of the same effect with slicing and concatenation,
-though).  It is also possible to create tuples which contain mutable
-objects, such as lists.
+though).
 
 A special problem is the construction of tuples containing 0 or 1
 items: the syntax has some extra quirks to accommodate these.  Empty
@@ -1907,17 +1844,24 @@ is also possible, e.g.:
 >>> x, y, z = t
 \end{verbatim}
 
-This is called, appropriately enough, \emph{sequence unpacking}.
-Sequence unpacking requires that the list of variables on the left
-have the same number of elements as the length of the sequence.  Note
-that multiple assignment is really just a combination of tuple packing
-and sequence unpacking!
+This is called, appropriately enough, \emph{tuple unpacking}.  Tuple
+unpacking requires that the list of variables on the left have the same
+number of elements as the length of the tuple.  Note that multiple
+assignment is really just a combination of tuple packing and tuple
+unpacking!
 
-There is a small bit of asymmetry here:  packing multiple values
-always creates a tuple, and unpacking works for any sequence.
+% XXX This is no longer necessary!
+Occasionally, the corresponding operation on lists is useful: \emph{list
+unpacking}.  This is supported by enclosing the list of variables in
+square brackets:
+
+\begin{verbatim}
+>>> a = ['spam', 'eggs', 100, 1234]
+>>> [a1, a2, a3, a4] = a
+\end{verbatim}
 
 % XXX Add a bit on the difference between tuples and lists.
-
+% XXX Also explain that a tuple can *contain* a mutable object!
 
 \section{Dictionaries \label{dictionaries}}
 
@@ -1927,14 +1871,11 @@ memories'' or ``associative arrays''.  Unlike sequences, which are
 indexed by a range of numbers, dictionaries are indexed by \emph{keys},
 which can be any immutable type; strings and numbers can always be
 keys.  Tuples can be used as keys if they contain only strings,
-numbers, or tuples; if a tuple contains any mutable object either
-directly or indirectly, it cannot be used as a key.  You can't use
-lists as keys, since lists can be modified in place using their
-\method{append()} and \method{extend()} methods, as well as slice and
-indexed assignments.
+numbers, or tuples.  You can't use lists as keys, since lists can be
+modified in place using their \code{append()} method.
 
 It is best to think of a dictionary as an unordered set of
-\emph{key: value} pairs, with the requirement that the keys are unique
+\emph{key:value} pairs, with the requirement that the keys are unique
 (within one dictionary).
 A pair of braces creates an empty dictionary: \code{\{\}}.
 Placing a comma-separated list of key:value pairs within the
@@ -2020,7 +1961,6 @@ C programmers may grumble about this, but it avoids a common class of
 problems encountered in C programs: typing \code{=} in an expression when
 \code{==} was intended.
 
-
 \section{Comparing Sequences and Other Types \label{comparing}}
 
 Sequence objects may be compared to other objects with the same
@@ -2032,7 +1972,7 @@ If two items to be compared are themselves sequences of the same type,
 the lexicographical comparison is carried out recursively.  If all
 items of two sequences compare equal, the sequences are considered
 equal.  If one sequence is an initial subsequence of the other, the
-shorter sequence is the smaller one.  Lexicographical ordering for
+shorted sequence is the smaller one.  Lexicographical ordering for
 strings uses the \ASCII{} ordering for individual characters.  Some
 examples of comparisons between sequences with the same types:
 
@@ -2122,7 +2062,7 @@ Using the module name you can access the functions:
 >>> fibo.__name__
 'fibo'
 \end{verbatim}
-
+%
 If you intend to use a function often you can assign it to a local name:
 
 \begin{verbatim}
@@ -2184,8 +2124,9 @@ There is even a variant to import all names that a module defines:
 This imports all names except those beginning with an underscore
 (\code{_}).
 
-
 \subsection{The Module Search Path \label{searchPath}}
+
+% XXX Need to document that a lone .pyc/.pyo is acceptable too!
 
 \indexiii{module}{search}{path}
 When a module named \module{spam} is imported, the interpreter searches
@@ -2257,14 +2198,13 @@ When a script is run by giving its name on the command line, the
 bytecode for the script is never written to a \file{.pyc} or
 \file{.pyo} file.  Thus, the startup time of a script may be reduced
 by moving most of its code to a module and having a small bootstrap
-script that imports that module.  It is also possible to name a
-\file{.pyc} or \file{.pyo} file directly on the command line.
+script that imports that module.
 
 \item
 It is possible to have a file called \file{spam.pyc} (or
-\file{spam.pyo} when \programopt{-O} is used) without a file
-\file{spam.py} for the same module.  This can be used to distribute a
-library of Python code in a form that is moderately hard to reverse
+\file{spam.pyo} when \programopt{-O} is used) without a module
+\file{spam.py} in the same module.  This can be used to distribute
+a library of Python code in a form that is moderately hard to reverse
 engineer.
 
 \item
@@ -2363,7 +2303,6 @@ standard module \module{__builtin__}\refbimodindex{__builtin__}:
 'reduce', 'reload', 'repr', 'round', 'setattr', 'str', 'type', 'xrange']
 \end{verbatim}
 
-
 \section{Packages \label{packages}}
 
 Packages are a way of structuring Python's module namespace
@@ -2413,7 +2352,6 @@ Sound/                          Top-level package
               karaoke.py
               ...
 \end{verbatim}
-
 The \file{__init__.py} files are required to make Python treat the
 directories as containing packages; this is done to prevent
 directories with a common name, such as \samp{string}, from
@@ -2428,20 +2366,17 @@ package, for example:
 \begin{verbatim}
 import Sound.Effects.echo
 \end{verbatim}
-
 This loads the submodule \module{Sound.Effects.echo}.  It must be referenced
 with its full name, e.g.
 
 \begin{verbatim}
 Sound.Effects.echo.echofilter(input, output, delay=0.7, atten=4)
 \end{verbatim}
-
 An alternative way of importing the submodule is:
 
 \begin{verbatim}
 from Sound.Effects import echo
 \end{verbatim}
-
 This also loads the submodule \module{echo}, and makes it available without
 its package prefix, so it can be used as follows:
 
@@ -2525,6 +2460,7 @@ import Sound.Effects.surround
 from Sound.Effects import *
 \end{verbatim}
 
+
 In this example, the echo and surround modules are imported in the
 current namespace because they are defined in the
 \module{Sound.Effects} package when the \code{from...import} statement
@@ -2597,7 +2533,7 @@ lay-out you can imagine.  The standard module
 for padding strings to a given column width; these will be discussed
 shortly.  The second way is to use the \code{\%} operator with a
 string as the left argument.  The \code{\%} operator interprets the
-left argument much like a \cfunction{sprintf()}-style format
+left argument as a C much like a \cfunction{sprintf()}-style format
 string to be applied to the right argument, and returns the string
 resulting from this formatting operation.
 
@@ -2616,7 +2552,7 @@ The value of x is 31.4, and y is 40000...
 ... p = [x, y]
 >>> ps = repr(p)
 >>> ps
-'[31.400000000000002, 40000]'
+'[31.4, 40000]'
 >>> # Converting a string adds string quotes and backslashes:
 ... hello = 'hello, world\n'
 >>> hellos = `hello`
@@ -2624,7 +2560,7 @@ The value of x is 31.4, and y is 40000...
 'hello, world\012'
 >>> # The argument of reverse quotes may be a tuple:
 ... `x, y, ('spam', 'eggs')`
-"(31.400000000000002, 40000, ('spam', 'eggs'))"
+"(31.4, 40000, ('spam', 'eggs'))"
 \end{verbatim}
 
 Here are two ways to write a table of squares and cubes:
@@ -2688,7 +2624,7 @@ minus signs:
 >>> string.zfill('3.14159265359', 5)
 '3.14159265359'
 \end{verbatim}
-
+%
 Using the \code{\%} operator looks like this:
 
 \begin{verbatim}
@@ -2804,12 +2740,8 @@ string containing only a single newline.
 ''
 \end{verbatim}
 
-\code{f.readlines()} returns a list containing all the lines of data
-in the file.  If given an optional parameter \var{sizehint}, it reads
-that many bytes from the file and enough more to complete a line, and
-returns the lines from that.  This is often used to allow efficient
-reading of a large file by lines, but without having to load the
-entire file in memory.  Only complete lines will be returned.
+\code{f.readlines()} uses \code{f.readline()} repeatedly, and returns
+a list containing all the lines of data in the file.
 
 \begin{verbatim}
 >>> f.readlines()
@@ -2852,7 +2784,7 @@ free up any system resources taken up by the open file.  After calling
 \begin{verbatim}
 >>> f.close()
 >>> f.read()
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1, in ?
 ValueError: I/O operation on closed file
 \end{verbatim}
@@ -2950,15 +2882,15 @@ however, and result in error messages as shown here:
 
 \begin{verbatim}
 >>> 10 * (1/0)
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 ZeroDivisionError: integer division or modulo
 >>> 4 + spam*3
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 NameError: spam
 >>> '2' + 2
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 TypeError: illegal argument type for built-in operation
 \end{verbatim}
@@ -2983,8 +2915,8 @@ exception happened, in the form of a stack backtrace.
 In general it contains a stack backtrace listing source lines; however,
 it will not display lines read from standard input.
 
-The \citetitle[../lib/module-exceptions.html]{Python Library
-Reference} lists the built-in exceptions and their meanings.
+The \emph{Python Library Reference} lists the built-in exceptions and
+their meanings.
 
 
 \section{Handling Exceptions \label{handling}}
@@ -3089,7 +3021,7 @@ by the \keyword{try} \ldots\ \keyword{except} statement.
 
 
 When an exception occurs, it may have an associated value, also known as
-the exception's \emph{argument}.
+the exceptions's \emph{argument}.
 The presence and type of the argument depend on the exception type.
 For exception types which have an argument, the except clause may
 specify a variable after the exception name (or list) to receive the
@@ -3133,7 +3065,7 @@ For example:
 
 \begin{verbatim}
 >>> raise NameError, 'HiThere'
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 NameError: HiThere
 \end{verbatim}
@@ -3162,7 +3094,7 @@ variable or creating a new exception class.  For example:
 ... 
 My exception occurred, value: 4
 >>> raise MyError, 1
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 1
 __main__.MyError: 1
 \end{verbatim}
@@ -3187,7 +3119,7 @@ circumstances.  For example:
 ...     print 'Goodbye, world!'
 ... 
 Goodbye, world!
-Traceback (most recent call last):
+Traceback (innermost last):
   File "<stdin>", line 2
 KeyboardInterrupt
 \end{verbatim}
@@ -3264,24 +3196,24 @@ Pascal.
 
 Before introducing classes, I first have to tell you something about
 Python's scope rules.  Class definitions play some neat tricks with
-namespaces, and you need to know how scopes and namespaces work to
+name spaces, and you need to know how scopes and name spaces work to
 fully understand what's going on.  Incidentally, knowledge about this
 subject is useful for any advanced Python programmer.
 
 Let's begin with some definitions.
 
-A \emph{namespace} is a mapping from names to objects.  Most
-namespaces are currently implemented as Python dictionaries, but
-that's normally not noticeable in any way (except for performance),
-and it may change in the future.  Examples of namespaces are: the set
-of built-in names (functions such as \function{abs()}, and built-in
-exception names); the global names in a module; and the local names in
-a function invocation.  In a sense the set of attributes of an object
-also form a namespace.  The important thing to know about namespaces
-is that there is absolutely no relation between names in different
-namespaces; for instance, two different modules may both define a
-function ``maximize'' without confusion --- users of the modules must
-prefix it with the module name.
+A \emph{name space} is a mapping from names to objects.  Most name
+spaces are currently implemented as Python dictionaries, but that's
+normally not noticeable in any way (except for performance), and it
+may change in the future.  Examples of name spaces are: the set of
+built-in names (functions such as \function{abs()}, and built-in exception
+names); the global names in a module; and the local names in a
+function invocation.  In a sense the set of attributes of an object
+also form a name space.  The important thing to know about name
+spaces is that there is absolutely no relation between names in
+different name spaces; for instance, two different modules may both
+define a function ``maximize'' without confusion --- users of the
+modules must prefix it with the module name.
 
 By the way, I use the word \emph{attribute} for any name following a
 dot --- for example, in the expression \code{z.real}, \code{real} is
@@ -3290,13 +3222,13 @@ names in modules are attribute references: in the expression
 \code{modname.funcname}, \code{modname} is a module object and
 \code{funcname} is an attribute of it.  In this case there happens to
 be a straightforward mapping between the module's attributes and the
-global names defined in the module: they share the same namespace!
-\footnote{
+global names defined in the module: they share the same name
+space!\footnote{
         Except for one thing.  Module objects have a secret read-only
-        attribute called \member{__dict__} which returns the dictionary
-        used to implement the module's namespace; the name
-        \member{__dict__} is an attribute but not a global name.
-        Obviously, using this violates the abstraction of namespace
+        attribute called \code{__dict__} which returns the dictionary
+        used to implement the module's name space; the name
+        \code{__dict__} is an attribute but not a global name.
+        Obviously, using this violates the abstraction of name space
         implementation, and should be restricted to things like
         post-mortem debuggers.
 }
@@ -3308,54 +3240,54 @@ also be deleted with the \keyword{del} statement, e.g.
 \samp{del modname.the_answer}.
 
 Name spaces are created at different moments and have different
-lifetimes.  The namespace containing the built-in names is created
+lifetimes.  The name space containing the built-in names is created
 when the Python interpreter starts up, and is never deleted.  The
-global namespace for a module is created when the module definition
-is read in; normally, module namespaces also last until the
+global name space for a module is created when the module definition
+is read in; normally, module name spaces also last until the
 interpreter quits.  The statements executed by the top-level
 invocation of the interpreter, either read from a script file or
 interactively, are considered part of a module called
-\module{__main__}, so they have their own global namespace.  (The
+\module{__main__}, so they have their own global name space.  (The
 built-in names actually also live in a module; this is called
 \module{__builtin__}.)
 
-The local namespace for a function is created when the function is
+The local name space for a function is created when the function is
 called, and deleted when the function returns or raises an exception
 that is not handled within the function.  (Actually, forgetting would
 be a better way to describe what actually happens.)  Of course,
-recursive invocations each have their own local namespace.
+recursive invocations each have their own local name space.
 
-A \emph{scope} is a textual region of a Python program where a
-namespace is directly accessible.  ``Directly accessible'' here means
-that an unqualified reference to a name attempts to find the name in
-the namespace.
+A \emph{scope} is a textual region of a Python program where a name space
+is directly accessible.  ``Directly accessible'' here means that an
+unqualified reference to a name attempts to find the name in the name
+space.
 
 Although scopes are determined statically, they are used dynamically.
 At any time during execution, exactly three nested scopes are in use
-(i.e., exactly three namespaces are directly accessible): the
+(i.e., exactly three name spaces are directly accessible): the
 innermost scope, which is searched first, contains the local names,
 the middle scope, searched next, contains the current module's global
-names, and the outermost scope (searched last) is the namespace
+names, and the outermost scope (searched last) is the name space
 containing built-in names.
 
 Usually, the local scope references the local names of the (textually)
 current function.  Outside of functions, the local scope references
-the same namespace as the global scope: the module's namespace.
-Class definitions place yet another namespace in the local scope.
+the same name space as the global scope: the module's name space.
+Class definitions place yet another name space in the local scope.
 
 It is important to realize that scopes are determined textually: the
-global scope of a function defined in a module is that module's
-namespace, no matter from where or by what alias the function is
-called.  On the other hand, the actual search for names is done
-dynamically, at run time --- however, the language definition is
-evolving towards static name resolution, at ``compile'' time, so don't
-rely on dynamic name resolution!  (In fact, local variables are
-already determined statically.)
+global scope of a function defined in a module is that module's name
+space, no matter from where or by what alias the function is called.
+On the other hand, the actual search for names is done dynamically, at
+run time --- however, the language definition is evolving towards
+static name resolution, at ``compile'' time, so don't rely on dynamic
+name resolution!  (In fact, local variables are already determined
+statically.)
 
 A special quirk of Python is that assignments always go into the
 innermost scope.  Assignments do not copy data --- they just
 bind names to objects.  The same is true for deletions: the statement
-\samp{del x} removes the binding of \code{x} from the namespace
+\samp{del x} removes the binding of \code{x} from the name space
 referenced by the local scope.  In fact, all operations that introduce
 new names use the local scope: in particular, import statements and
 function definitions bind the module or function name in the local
@@ -3394,14 +3326,14 @@ inside a class normally have a peculiar form of argument list,
 dictated by the calling conventions for methods --- again, this is
 explained later.
 
-When a class definition is entered, a new namespace is created, and
+When a class definition is entered, a new name space is created, and
 used as the local scope --- thus, all assignments to local variables
-go into this new namespace.  In particular, function definitions bind
+go into this new name space.  In particular, function definitions bind
 the name of the new function here.
 
 When a class definition is left normally (via the end), a \emph{class
 object} is created.  This is basically a wrapper around the contents
-of the namespace created by the class definition; we'll learn more
+of the name space created by the class definition; we'll learn more
 about class objects in the next section.  The original local scope
 (the one in effect just before the class definitions was entered) is
 reinstated, and the class object is bound here to the class name given
@@ -3415,7 +3347,7 @@ and instantiation.
 
 \emph{Attribute references} use the standard syntax used for all
 attribute references in Python: \code{obj.name}.  Valid attribute
-names are all the names that were in the class's namespace when the
+names are all the names that were in the class's name space when the
 class object was created.  So, if the class definition looked like
 this:
 
@@ -3654,6 +3586,7 @@ class Bag:
         self.add(x)
 \end{verbatim}
 
+
 Methods may reference global names in the same way as ordinary
 functions.  The global scope associated with a method is the module
 containing the class definition.  (The class itself is never used as a
@@ -3793,10 +3726,9 @@ code that is byte-compiled together.  The same restriction applies to
 when referencing \code{__dict__} directly.
 
 Here's an example of a class that implements its own
-\method{__getattr__()} and \method{__setattr__()} methods and stores
-all attributes in a private variable, in a way that works in all
-versions of Python, including those available before this feature was
-added:
+\code{__getattr__} and \code{__setattr__} methods and stores all
+attributes in a private variable, in a way that works in Python 1.4 as
+well as in previous versions:
 
 \begin{verbatim}
 class VirtualAttributes:
@@ -3813,6 +3745,20 @@ class VirtualAttributes:
         self.__vdict[name] = value
 \end{verbatim}
 
+%\emph{Warning: this is an experimental feature.}  To avoid all
+%potential problems, refrain from using identifiers starting with
+%double underscore except for predefined uses like \samp{__init__}.  To
+%use private names while maintaining future compatibility: refrain from
+%using the same private name in classes related via subclassing; avoid
+%explicit (manual) mangling/unmangling; and assume that at some point
+%in the future, leading double underscore will revert to being just a
+%naming convention.  Discussion on extensive compile-time declarations
+%are currently underway, and it is impossible to predict what solution
+%will eventually be chosen for private names.  Double leading
+%underscore is still a candidate, of course --- just not the only one.
+%It is placed in the distribution in the belief that it is useful, and
+%so that widespread experience with its use can be gained.  It will not
+%be removed without providing a better solution and a migration path.
 
 \section{Odds and Ends \label{odds}}
 
@@ -3831,6 +3777,7 @@ john.name = 'John Doe'
 john.dept = 'computer lab'
 john.salary = 1000
 \end{verbatim}
+
 
 A piece of Python code that expects a particular abstract data type
 can often be passed a class that emulates the methods of that data
@@ -3922,7 +3869,7 @@ numbers, parse command-line options, write CGI programs, compress
 data, and a lot more; skimming through the Library Reference will give
 you an idea of what's available.
 
-The major Python Web site is \url{http://www.python.org/}; it contains
+The major Python Web site is \url{http://www.python.org}; it contains
 code, documentation, and pointers to Python-related pages around the
 Web.  This web site is mirrored in various places around the
 world, such as Europe, Japan, and Australia; a mirror may be faster
@@ -3933,20 +3880,24 @@ downloadable software there.
 
 For Python-related questions and problem reports, you can post to the
 newsgroup \newsgroup{comp.lang.python}, or send them to the mailing
-list at \email{python-list@python.org}.  The newsgroup and mailing list
+list at \email{python-list@cwi.nl}.  The newsgroup and mailing list
 are gatewayed, so messages posted to one will automatically be
-forwarded to the other.  There are around 120 postings a day,
+forwarded to the other.  There are around 35--45 postings a day,
 % Postings figure based on average of last six months activity as
-% reported by www.egroups.com; Jan. 2000 - June 2000: 21272 msgs / 182
-% days = 116.9 msgs / day and steadily increasing.
+% reported by www.findmail.com; Oct. '97 - Mar. '98:  7480 msgs / 182
+% days = 41.1 msgs / day.
 asking (and answering) questions, suggesting new features, and
 announcing new modules.  Before posting, be sure to check the list of
 Frequently Asked Questions (also called the FAQ), at
 \url{http://www.python.org/doc/FAQ.html}, or look for it in the
-\file{Misc/} directory of the Python source distribution.  Mailing
-list archives are available at \url{http://www.python.org/pipermail/}.
-The FAQ answers many of the questions that come up again and again,
-and may already contain the solution for your problem.
+\file{Misc/} directory of the Python source distribution.  The FAQ
+answers many of the questions that come up again and again, and may
+already contain the solution for your problem.
+
+You can support the Python community by joining the Python Software
+Activity, which runs the python.org web, ftp and email servers, and
+organizes Python workshops.  See \url{http://www.python.org/psa/} for
+information on how to join.
 
 
 \appendix
@@ -3974,32 +3925,30 @@ is yet another beast.
 If supported, input line editing is active whenever the interpreter
 prints a primary or secondary prompt.  The current line can be edited
 using the conventional Emacs control characters.  The most important
-of these are: \kbd{C-A} (Control-A) moves the cursor to the beginning
-of the line, \kbd{C-E} to the end, \kbd{C-B} moves it one position to
-the left, \kbd{C-F} to the right.  Backspace erases the character to
-the left of the cursor, \kbd{C-D} the character to its right.
-\kbd{C-K} kills (erases) the rest of the line to the right of the
-cursor, \kbd{C-Y} yanks back the last killed string.
-\kbd{C-underscore} undoes the last change you made; it can be repeated
-for cumulative effect.
+of these are: C-A (Control-A) moves the cursor to the beginning of the
+line, C-E to the end, C-B moves it one position to the left, C-F to
+the right.  Backspace erases the character to the left of the cursor,
+C-D the character to its right.  C-K kills (erases) the rest of the
+line to the right of the cursor, C-Y yanks back the last killed
+string.  C-underscore undoes the last change you made; it can be
+repeated for cumulative effect.
 
 \section{History Substitution \label{history}}
 
 History substitution works as follows.  All non-empty input lines
 issued are saved in a history buffer, and when a new prompt is given
-you are positioned on a new line at the bottom of this buffer.
-\kbd{C-P} moves one line up (back) in the history buffer,
-\kbd{C-N} moves one down.  Any line in the history buffer can be
-edited; an asterisk appears in front of the prompt to mark a line as
-modified.  Pressing the \kbd{Return} key passes the current line to
-the interpreter.  \kbd{C-R} starts an incremental reverse search;
-\kbd{C-S} starts a forward search.
+you are positioned on a new line at the bottom of this buffer.  C-P
+moves one line up (back) in the history buffer, C-N moves one down.
+Any line in the history buffer can be edited; an asterisk appears in
+front of the prompt to mark a line as modified.  Pressing the Return
+key passes the current line to the interpreter.  C-R starts an
+incremental reverse search; C-S starts a forward search.
 
 \section{Key Bindings \label{keyBindings}}
 
 The key bindings and some other parameters of the Readline library can
 be customized by placing commands in an initialization file called
-\file{\~{}/.inputrc}.  Key bindings have the form
+\file{\$HOME/.inputrc}.  Key bindings have the form
 
 \begin{verbatim}
 key-name: function-name
@@ -4022,33 +3971,29 @@ For example:
 \begin{verbatim}
 # I prefer vi-style editing:
 set editing-mode vi
-
 # Edit using a single line:
 set horizontal-scroll-mode On
-
 # Rebind some keys:
 Meta-h: backward-kill-word
 "\C-u": universal-argument
 "\C-x\C-r": re-read-init-file
 \end{verbatim}
 
-Note that the default binding for \kbd{Tab} in Python is to insert a
-\kbd{Tab} character instead of Readline's default filename completion
-function.  If you insist, you can override this by putting
+Note that the default binding for TAB in Python is to insert a TAB
+instead of Readline's default filename completion function.  If you
+insist, you can override this by putting
 
 \begin{verbatim}
-Tab: complete
+TAB: complete
 \end{verbatim}
 
-in your \file{\~{}/.inputrc}.  (Of course, this makes it harder to
-type indented continuation lines.)
+in your \file{\$HOME/.inputrc}.  (Of course, this makes it hard to type
+indented continuation lines...)
 
 Automatic completion of variable and module names is optionally
 available.  To enable it in the interpreter's interactive mode, add
-the following to your startup file:\footnote{
-  Python will execute the contents of a file identified by the
-  \envvar{PYTHONSTARTUP} environment variable when you start an
-  interactive interpreter.}
+the following to your \file{\$HOME/.pythonrc.py} file:%
+\indexii{.pythonrc.py}{file}
 \refstmodindex{rlcompleter}\refbimodindex{readline}
 
 \begin{verbatim}
@@ -4068,13 +4013,14 @@ execute application-defined code if an object with a
 
 \section{Commentary \label{commentary}}
 
-This facility is an enormous step forward compared to earlier versions
-of the interpreter; however, some wishes are left: It would be nice if
-the proper indentation were suggested on continuation lines (the
-parser knows if an indent token is required next).  The completion
-mechanism might use the interpreter's symbol table.  A command to
-check (or even suggest) matching parentheses, quotes, etc., would also
-be useful.
+This facility is an enormous step forward compared to previous
+versions of the interpreter; however, some wishes are left: It would
+be nice if the proper indentation were suggested on continuation lines
+(the parser knows if an indent token is required next).  The
+completion mechanism might use the interpreter's symbol table.  A
+command to check (or even suggest) matching parentheses, quotes etc.
+would also be useful.
 
+% XXX Lele Gaifax's readline module, which adds name completion...
 
 \end{document}

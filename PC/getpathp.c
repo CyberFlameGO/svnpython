@@ -1,4 +1,3 @@
-
 /* Return the initial module search path. */
 /* Used by DOS, OS/2, Windows 3.1, Windows 95/98, Windows NT. */
 
@@ -23,7 +22,7 @@
 
    * We attempt to locate the "Python Home" - if the PYTHONHOME env var
      is set, we believe it.  Otherwise, we use the path of our host .EXE's
-     to try and locate our "landmark" (lib\\os.py) and deduce our home.
+     to try and locate our "landmark" (lib\\string.py) and deduce our home.
      - If we DO have a Python Home: The relevant sub-directories (Lib, 
        plat-win, lib-tk, etc) are based on the Python Home
      - If we DO NOT have a Python Home, the core Python Path is
@@ -80,7 +79,7 @@
  */
 
 #ifndef LANDMARK
-#define LANDMARK "lib\\os.py"
+#define LANDMARK "lib\\string.py"
 #endif
 
 static char prefix[MAXPATHLEN+1];
@@ -89,7 +88,8 @@ static char *module_search_path = NULL;
 
 
 static int
-is_sep(char ch)	/* determine if "ch" is a separator character */
+is_sep(ch)	/* determine if "ch" is a separator character */
+	char ch;
 {
 #ifdef ALTSEP
 	return ch == SEP || ch == ALTSEP;
@@ -98,13 +98,12 @@ is_sep(char ch)	/* determine if "ch" is a separator character */
 #endif
 }
 
-/* assumes 'dir' null terminated in bounds.  Never writes
-   beyond existing terminator.
-*/
+
 static void
-reduce(char *dir)
+reduce(dir)
+	char *dir;
 {
-	size_t i = strlen(dir);
+	int i = strlen(dir);
 	while (i > 0 && !is_sep(dir[i]))
 		--i;
 	dir[i] = '\0';
@@ -112,17 +111,17 @@ reduce(char *dir)
 	
 
 static int
-exists(char *filename)
+exists(filename)
+	char *filename;
 {
 	struct stat buf;
 	return stat(filename, &buf) == 0;
 }
 
-/* Assumes 'filename' MAXPATHLEN+1 bytes long - 
-   may extend 'filename' by one character.
-*/
+
 static int
-ismodule(char *filename)	/* Is module -- check for .pyc/.pyo too */
+ismodule(filename)	/* Is module -- check for .pyc/.pyo too */
+	char *filename;
 {
 	if (exists(filename))
 		return 1;
@@ -136,11 +135,13 @@ ismodule(char *filename)	/* Is module -- check for .pyc/.pyo too */
 	return 0;
 }
 
-/* guarantees buffer will never overflow MAXPATHLEN+1 bytes */
+
 static void
-join(char *buffer, char *stuff)
+join(buffer, stuff)
+	char *buffer;
+	char *stuff;
 {
-	size_t n, k;
+	int n, k;
 	if (is_sep(stuff[0]))
 		n = 0;
 	else {
@@ -155,12 +156,10 @@ join(char *buffer, char *stuff)
 	buffer[n+k] = '\0';
 }
 
-/* gotlandmark only called by search_for_prefix, which ensures
-   'prefix' is null terminated in bounds.  join() ensures
-   'landmark' can not overflow prefix if too long.
-*/
+
 static int
-gotlandmark(char *landmark)
+gotlandmark(landmark)
+	char *landmark;
 {
 	int n, ok;
 
@@ -171,11 +170,13 @@ gotlandmark(char *landmark)
 	return ok;
 }
 
-/* assumes argv0_path is MAXPATHLEN+1 bytes long, already \0 term'd. 
-   assumption provided by only caller, calculate_path() */
+
 static int
-search_for_prefix(char *argv0_path, char *landmark)
+search_for_prefix(argv0_path, landmark)
+	char *argv0_path;
+	char *landmark;
 {
+
 	/* Search from argv0_path, until landmark is found */
 	strcpy(prefix, argv0_path);
 	do {
@@ -199,10 +200,6 @@ extern const char *PyWin_DLLVersionString;
    Ex family of functions so it also works with Windows CE.
 
    Returns NULL, or a pointer that should be freed.
-
-   XXX - this code is pretty strange, as it used to also
-   work on Win16, where the buffer sizes werent available
-   in advance.  It could be simplied now Win16/Win32s is dead!
 */
 
 static char *
@@ -216,7 +213,7 @@ getpythonregpath(HKEY keyBase, int skipcore)
 	TCHAR *dataBuf = NULL;
 	static const TCHAR keyPrefix[] = _T("Software\\Python\\PythonCore\\");
 	static const TCHAR keySuffix[] = _T("\\PythonPath");
-	size_t versionLen;
+	int versionLen;
 	DWORD index;
 	TCHAR *keyBuf = NULL;
 	TCHAR *keyBufPtr;
@@ -275,45 +272,35 @@ getpythonregpath(HKEY keyBase, int skipcore)
 		if (reqdSize) {
 			ppPaths[index] = malloc(reqdSize);
 			if (ppPaths[index]) {
-				RegQueryValueEx(subKey, NULL, 0, NULL, 
-				                (LPBYTE)ppPaths[index], 
-				                &reqdSize);
+				RegQueryValueEx(subKey, NULL, 0, NULL, (LPBYTE)ppPaths[index], &reqdSize);
 				dataSize += reqdSize + 1; /* 1 for the ";" */
 			}
 		}
 		RegCloseKey(subKey);
 	}
-	/* original datasize from RegQueryInfo doesn't include the \0 */
 	dataBuf = malloc((dataSize+1) * sizeof(TCHAR));
 	if (dataBuf) {
 		TCHAR *szCur = dataBuf;
 		DWORD reqdSize = dataSize;
 		/* Copy our collected strings */
 		for (index=0;index<numKeys;index++) {
+			int len;
 			if (index > 0) {
 				*(szCur++) = _T(';');
 				dataSize--;
 			}
-			if (ppPaths[index]) {
-				int len = _tcslen(ppPaths[index]);
-				_tcsncpy(szCur, ppPaths[index], len);
-				szCur += len;
-				dataSize -= len;
-			}
+			len = _tcslen(ppPaths[index]);
+			_tcsncpy(szCur, ppPaths[index], len);
+			szCur += len;
+			dataSize -= len;
 		}
 		if (skipcore)
 			*szCur = '\0';
 		else {
-			/* If we have no values, we dont need a ';' */
-			if (numKeys) {
-				*(szCur++) = _T(';');
-				dataSize--;
-			}
-			/* Now append the core path entries - 
-			   this will include the NULL 
-			*/
-			rc = RegQueryValueEx(newKey, NULL, 0, NULL, 
-			                     (LPBYTE)szCur, &dataSize);
+			*(szCur++) = _T(';');
+			dataSize--;
+			/* Now append the core path entries - this will include the NULL */
+			rc = RegQueryValueEx(newKey, NULL, 0, NULL, (LPBYTE)szCur, &dataSize);
 		}
 		/* And set the result - caller must free 
 		   If MBCS, it is fine as is.  If Unicode, allocate new
@@ -347,29 +334,20 @@ done:
 #endif /* MS_WIN32 */
 
 static void
-get_progpath(void)
+get_progpath()
 {
-	extern char *Py_GetProgramName(void);
+	extern char *Py_GetProgramName();
 	char *path = getenv("PATH");
 	char *prog = Py_GetProgramName();
 
 #ifdef MS_WIN32
 #ifdef UNICODE
 	WCHAR wprogpath[MAXPATHLEN+1];
-	/* Windows documents that GetModuleFileName() will "truncate",
-	   but makes no mention of the null terminator.  Play it safe.
-	   PLUS Windows itself defines MAX_PATH as the same, but anyway...
-	*/
-	wprogpath[MAXPATHLEN]=_T('\0')';
 	if (GetModuleFileName(NULL, wprogpath, MAXPATHLEN)) {
-		WideCharToMultiByte(CP_ACP, 0, 
-		                    wprogpath, -1, 
-		                    progpath, MAXPATHLEN+1, 
-		                    NULL, NULL);
+		WideCharToMultiByte(CP_ACP, 0, wprogpath, -1, progpath, MAXPATHLEN+1, NULL, NULL);
 		return;
 	}
 #else
-	/* static init of progpath ensures final char remains \0 */
 	if (GetModuleFileName(NULL, progpath, MAXPATHLEN))
 		return;
 #endif
@@ -387,22 +365,19 @@ get_progpath(void)
 #else
 	if (strchr(prog, SEP))
 #endif
-		strncpy(progpath, prog, MAXPATHLEN);
+		strcpy(progpath, prog);
 	else if (path) {
 		while (1) {
 			char *delim = strchr(path, DELIM);
 
 			if (delim) {
-				size_t len = delim - path;
-				/* ensure we can't overwrite buffer */
-				len = min(MAXPATHLEN,len);
+				int len = delim - path;
 				strncpy(progpath, path, len);
 				*(progpath + len) = '\0';
 			}
 			else
-				strncpy(progpath, path, MAXPATHLEN);
+				strcpy(progpath, path);
 
-			/* join() is safe for MAXPATHLEN+1 size buffer */
 			join(progpath, prog);
 			if (exists(progpath))
 				break;
@@ -419,11 +394,11 @@ get_progpath(void)
 }
 
 static void
-calculate_path(void)
+calculate_path()
 {
 	char argv0_path[MAXPATHLEN+1];
 	char *buf;
-	size_t bufsz;
+	int bufsz;
 	char *pythonhome = Py_GetPythonHome();
 	char *envpath = getenv("PYTHONPATH");
 
@@ -434,7 +409,6 @@ calculate_path(void)
 #endif
 
 	get_progpath();
-	/* progpath guaranteed \0 terminated in MAXPATH+1 bytes. */
 	strcpy(argv0_path, progpath);
 	reduce(argv0_path);
 	if (pythonhome == NULL || *pythonhome == '\0') {
@@ -444,7 +418,7 @@ calculate_path(void)
 			pythonhome = NULL;
 	}
 	else
-		strncpy(prefix, pythonhome, MAXPATHLEN);
+		strcpy(prefix, pythonhome);
 
 	if (envpath && *envpath == '\0')
 		envpath = NULL;
@@ -549,7 +523,7 @@ calculate_path(void)
 	else {
 		char *p = PYTHONPATH;
 		char *q;
-		size_t n;
+		int n;
 		for (;;) {
 			q = strchr(p, DELIM);
 			if (q == NULL)
@@ -582,7 +556,7 @@ calculate_path(void)
 /* External interface */
 
 char *
-Py_GetPath(void)
+Py_GetPath()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -590,7 +564,7 @@ Py_GetPath(void)
 }
 
 char *
-Py_GetPrefix(void)
+Py_GetPrefix()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -598,13 +572,13 @@ Py_GetPrefix(void)
 }
 
 char *
-Py_GetExecPrefix(void)
+Py_GetExecPrefix()
 {
 	return Py_GetPrefix();
 }
 
 char *
-Py_GetProgramFullPath(void)
+Py_GetProgramFullPath()
 {
 	if (!module_search_path)
 		calculate_path();

@@ -68,10 +68,6 @@ extern "C" {
 #include "Python.h"
 #include <signal.h>
 
-#if defined(__FreeBSD__)
-#  include <ieeefp.h>
-#endif
-
 #ifndef WANT_SIGFPE_HANDLER
 /* Define locally if they are not defined in Python.  This gives only
  * the limited control to induce a core dump in case of an exception.
@@ -81,7 +77,7 @@ static jmp_buf PyFPE_jbuf;
 static int PyFPE_counter = 0;
 #endif
 
-typedef void Sigfunc(int);
+typedef RETSIGTYPE Sigfunc(int);
 static Sigfunc sigfpe_handler;
 static void fpe_reset(Sigfunc *);
 
@@ -130,7 +126,7 @@ static void fpe_reset(Sigfunc *handler)
 		 (user_routine *)0,
 		 _ABORT_ON_ERROR,
 		 NULL);
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- SunOS and Solaris ----------------------------------------------------*/
 #elif defined(sun)
@@ -144,7 +140,7 @@ static void fpe_reset(Sigfunc *handler)
     (void) nonstandard_arithmetic();
     (void) ieee_flags("clearall",mode,in,&out);
     (void) ieee_handler("set","common",(sigfpe_handler_type)handler);
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- HPUX -----------------------------------------------------------------*/
 #elif defined(__hppa) || defined(hppa)
@@ -153,7 +149,7 @@ static void fpe_reset(Sigfunc *handler)
     /* ld -b -o fpectlmodule.sl fpectlmodule.o -lm */
 #include <math.h>
     fpsetdefaults();
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- IBM AIX --------------------------------------------------------------*/
 #elif defined(__AIX) || defined(_AIX)
@@ -161,7 +157,7 @@ static void fpe_reset(Sigfunc *handler)
 #include <fptrap.h>
     fp_trap(FP_TRAP_SYNC);
     fp_enable(TRP_INVALID | TRP_DIV_BY_ZERO | TRP_OVERFLOW);
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- DEC ALPHA OSF --------------------------------------------------------*/
 #elif defined(__alpha) && defined(__osf__)
@@ -172,7 +168,7 @@ static void fpe_reset(Sigfunc *handler)
     unsigned long fp_control =
     IEEE_TRAP_ENABLE_INV | IEEE_TRAP_ENABLE_DZE | IEEE_TRAP_ENABLE_OVF;
     ieee_set_fp_control(fp_control);
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- Cray Unicos ----------------------------------------------------------*/
 #elif defined(cray)
@@ -180,13 +176,7 @@ static void fpe_reset(Sigfunc *handler)
 #ifdef HAS_LIBMSET
     libmset(-1);
 #endif
-    PyOS_setsig(SIGFPE, handler);
-
-/*-- FreeBSD ----------------------------------------------------------------*/
-#elif defined(__FreeBSD__)
-    fpresetsticky(fpgetsticky());
-    fpsetmask(FP_X_INV | FP_X_DZ | FP_X_OFL);
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- Linux ----------------------------------------------------------------*/
 #elif defined(linux)
@@ -195,21 +185,14 @@ static void fpe_reset(Sigfunc *handler)
 #else
 #include <i386/fpu_control.h>
 #endif
-#ifdef _FPU_SETCW
-    {
-        fpu_control_t cw = 0x1372;
-        _FPU_SETCW(cw);
-    }
-#else
     __setfpucw(0x1372);
-#endif
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- NeXT -----------------------------------------------------------------*/
 #elif defined(NeXT) && defined(m68k) && defined(__GNUC__)
     /* NeXT needs explicit csr set to generate SIGFPE */
     asm("fmovel     #0x1400,fpcr");   /* set OVFL and ZD bits */
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- Microsoft Windows, NT ------------------------------------------------*/
 #elif defined(_MSC_VER)
@@ -218,7 +201,7 @@ static void fpe_reset(Sigfunc *handler)
 #include <float.h>
     unsigned int cw = _EM_INVALID | _EM_ZERODIVIDE | _EM_OVERFLOW;
     (void)_controlfp(0, cw);
-    PyOS_setsig(SIGFPE, handler);
+    signal(SIGFPE, handler);
 
 /*-- Give Up --------------------------------------------------------------*/
 #else
@@ -229,13 +212,8 @@ static void fpe_reset(Sigfunc *handler)
 
 static PyObject *turnoff_sigfpe(PyObject *self,PyObject *args)
 {
-#ifdef __FreeBSD__
-    fpresetsticky(fpgetsticky());
-    fpsetmask(0);
-#else
     fputs("Operation not implemented\n", stderr);
-#endif
-    Py_INCREF(Py_None);
+    Py_INCREF (Py_None);
     return Py_None;
 }
 

@@ -25,7 +25,9 @@ $TOP_NAVIGATION = 1;
 $BOTTOM_NAVIGATION = 1;
 $AUTO_NAVIGATION = 0;
 
-$BODYTEXT = '';
+# these exactly match the python.org colors
+$BODYTEXT = ('bgcolor="#ffffff" text="#000000"'
+	     . ' link="#0000bb"  vlink="#551a8b" alink="#ff0000"');
 $CHILDLINE = "\n<p><hr>\n";
 $VERBOSITY = 0;
 
@@ -92,64 +94,53 @@ sub custom_driver_hook {
 
 
 $CUSTOM_BUTTONS = '';
+$NAV_BGCOLOR = " bgcolor=\"#99CCFF\"";
 
 sub make_nav_sectref {
     my($label,$title) = @_;
     if ($title) {
-        if ($title =~ /\<[aA] /) {
-            $title =~ s/\<[aA] /<a class="sectref" /;
-        }
-        else {
-            $title = "<span class=\"sectref\">$title</span>";
-        }
-        return "<b class=\"navlabel\">$label:</b> $title\n";
+	return ("<b class='navlabel'>$label:</b> "
+		. "<span class='sectref'>$title</span>\n");
     }
     return '';
 }
 
-@my_icon_tags = ();
-$my_icon_tags{'next'} = 'Next Page';
-$my_icon_tags{'next_page'} = 'Next Page';
-$my_icon_tags{'previous'} = 'Previous Page';
-$my_icon_tags{'previous_page'} = 'Previous Page';
-$my_icon_tags{'up'} = 'Up One Level';
-$my_icon_tags{'contents'} = 'Contents';
-$my_icon_tags{'index'} = 'Index';
-$my_icon_tags{'modules'} = 'Module Index';
-
-@my_icon_names = ();
-$my_icon_names{'previous_page'} = 'previous';
-$my_icon_names{'next_page'} = 'next';
-
-sub get_my_icon {
-    my $name = @_[0];
-    my $text = $my_icon_tags{$name};
-    if ($my_icon_names{$name}) {
-        $name = $my_icon_names{$name};
-    }
-    if ($text eq '') {
-        $name = 'blank';
-    }
+sub make_my_icon {
+    my($name, $text) = @_;
     my $iconserver = ($ICONSERVER eq '.') ? '' : "$ICONSERVER/";
-    return "<img src=\"$iconserver$name.$IMAGE_TYPE\"\n  border=\"0\""
+    return "<img src=\"$iconserver$name.$IMAGE_TYPE\" border=\"0\""
            . " height=\"32\"\n  alt=\"$text\" width=\"32\">";
 }
 
+$BLANK_ICON = make_my_icon("blank", "");
+
+@my_icons = ();
+$my_icons{'next_page_inactive'} = $BLANK_ICON;
+$my_icons{'previous_page_inactive'} = $BLANK_ICON;
+$my_icons{'up_page_inactive'} = $BLANK_ICON;
+$x = make_my_icon("next", "Next Page");
+$my_icons{'next_page'} = $x;
+$my_icons{'next'} = $x;
+$x = make_my_icon("previous", "Previous Page");
+$my_icons{'previous_page'} = $x;
+$my_icons{'previous'} = $x;
+$my_icons{'up'} = make_my_icon("up", "Up One Level");
+$my_icons{'contents'} = make_my_icon("contents", "Contents");
+$my_icons{'index'} = make_my_icon("index", "Index");
+$my_icons{'modules'} = make_my_icon("modules", "Module Index");
+
+
 sub use_my_icon {
     my $s = @_[0];
-    if ($s =~ /\<tex2html_([a-z_]+)_visible_mark\>/) {
-        my $r = get_my_icon($1);
-        $s =~ s/\<tex2html_[a-z_]+_visible_mark\>/$r/;
-    }
+    $s =~ s/\<tex2html_([a-z_]+)_visible_mark\>/$my_icons{$1}/;
     return $s;
 }
 
 sub make_nav_panel {
     my $s;
-    my $BLANK_ICON = get_my_icon('blank');
-    $NEXT = $NEXT_TITLE ? use_my_icon("$NEXT") : $BLANK_ICON;
-    $UP = $UP_TITLE ? use_my_icon("$UP") : $BLANK_ICON;
-    $PREVIOUS = $PREVIOUS_TITLE ? use_my_icon("$PREVIOUS") : $BLANK_ICON;
+    $NEXT = use_my_icon("$NEXT");
+    $UP = use_my_icon("$UP");
+    $PREVIOUS = use_my_icon("$PREVIOUS");
     $CONTENTS = use_my_icon("$CONTENTS");
     $INDEX = $INDEX ? use_my_icon("$INDEX") : $BLANK_ICON;
     if (!$CUSTOM_BUTTONS) {
@@ -158,56 +149,35 @@ sub make_nav_panel {
     $s = ('<table align="center" width="100%" cellpadding="0" cellspacing="2">'
           . "\n<tr>"
           # left-hand side
-          . "\n<td>$PREVIOUS</td>"
-          . "\n<td>$UP</td>"
           . "\n<td>$NEXT</td>"
+          . "\n<td>$UP</td>"
+          . "\n<td>$PREVIOUS</td>"
           # title box
-          . "\n<td align=\"center\" width=\"100%\">$t_title</td>"
+          . "\n<td align=\"center\"$NAV_BGCOLOR width=\"100%\">"
+          . "\n <b class=\"title\">$t_title</b></td>"
           # right-hand side
           . "\n<td>$CONTENTS</td>"
           . "\n<td>$CUSTOM_BUTTONS</td>" # module index
           . "\n<td>$INDEX</td>"
           . "\n</tr></table>\n"
           # textual navigation
-          . make_nav_sectref("Previous", $PREVIOUS_TITLE)
-          . make_nav_sectref("Up", $UP_TITLE)
           . make_nav_sectref("Next", $NEXT_TITLE)
-          );
+          . make_nav_sectref("Up", $UP_TITLE)
+          . make_nav_sectref("Previous", $PREVIOUS_TITLE));
     # remove these; they are unnecessary and cause errors from validation
     $s =~ s/ NAME="tex2html\d+"\n */ /g;
     return $s;
 }
 
-sub get_version_text {
-    if ($PACKAGE_VERSION ne '' && $t_date) {
-        return ("<span class=\"release-info\">"
-                . "Release $PACKAGE_VERSION,"
-                . " documentation updated on $t_date.</span>");
-    }
-    if ($PACKAGE_VERSION ne '') {
-        return ("<span class=\"release-info\">"
-                . "Release $PACKAGE_VERSION.</span>");
-    }
-    if ($t_date) {
-        return ("<span class=\"release-info\">Documentation released on "
-                . "$t_date.</span>");
-    }
-    return '';
-}
-
 
 sub top_navigation_panel {
-    return "\n"
-           . make_nav_panel()
-           . "<br><hr>\n";
+    return make_nav_panel()
+           . '<br><hr>';
 }
 
 sub bot_navigation_panel {
-    return "\n<p><hr>\n"
-           . make_nav_panel()
-           . "<hr>\n"
-           . get_version_text()
-           . "\n";
+    return "<p><hr>"
+           . make_nav_panel();
 }
 
 sub add_link {
@@ -215,25 +185,22 @@ sub add_link {
     my($icon, $current_file, @link) = @_;
     my($dummy, $file, $title) = split($delim,
 				      $section_info{join(' ',@link)});
-    if ($icon =~ /\<tex2html_([_a-z]+)_visible_mark\>/) {
-        my $r = get_my_icon($1);
-        $icon =~ s/\<tex2html_[_a-z]+_visible_mark\>/$r/;
-    }
+    $icon =~ s/\<tex2html_([_a-z]+)_visible_mark\>/$my_icons{$1}/;
     if ($title && ($file ne $current_file)) {
         $title = purify($title);
 	$title = get_first_words($title, $WORDS_IN_NAVIGATION_PANEL_TITLES);
 	return (make_href($file, $icon), make_href($file, "$title"))
 	}
-    elsif ($icon eq get_my_icon('up') && $EXTERNAL_UP_LINK) {
+    elsif ($icon eq $my_icons{"up"} && $EXTERNAL_UP_LINK) {
  	return (make_href($EXTERNAL_UP_LINK, $icon),
 		make_href($EXTERNAL_UP_LINK, "$EXTERNAL_UP_TITLE"))
 	}
-    elsif ($icon eq get_my_icon('previous')
+    elsif ($icon eq $my_icons{"previous"}
 	   && $EXTERNAL_PREV_LINK && $EXTERNAL_PREV_TITLE) {
 	return (make_href($EXTERNAL_PREV_LINK, $icon),
 		make_href($EXTERNAL_PREV_LINK, "$EXTERNAL_PREV_TITLE"))
 	}
-    elsif ($icon eq get_my_icon('next')
+    elsif ($icon eq $my_icons{"next"}
 	   && $EXTERNAL_DOWN_LINK && $EXTERNAL_DOWN_TITLE) {
 	return (make_href($EXTERNAL_DOWN_LINK, $icon),
 		make_href($EXTERNAL_DOWN_LINK, "$EXTERNAL_DOWN_TITLE"))
@@ -243,10 +210,7 @@ sub add_link {
 
 sub add_special_link {
     my($icon, $file, $current_file) = @_;
-    if ($icon =~ /\<tex2html_([_a-z]+)_visible_mark\>/) {
-        my $r = get_my_icon($1);
-        $icon =~ s/\<tex2html_[_a-z]+_visible_mark\>/$r/;
-    }
+    $icon =~ s/\<tex2html_([_a-z]+)_visible_mark\>/$my_icons{$1}/;
     return (($file && ($file ne $current_file))
             ? make_href($file, $icon)
             : undef)
@@ -283,9 +247,7 @@ sub insert_index {
     else {
 	$index = `$prog --columns $columns $datafile`;
     }
-    if (!s/$mark/$prefix$index/) {
-        print "\nCould not locate index mark: $mark";
-    }
+    s/$mark/$prefix$index/;
 }
 
 sub add_idx {
@@ -332,18 +294,9 @@ sub add_module_idx {
               . "<tt class='module'>$key</tt>$plat###\n";
     }
     close(MODIDXFILE);
-
-    if ($GLOBAL_MODULE_INDEX) {
-        $prefix = <<MODULE_INDEX_PREFIX;
-
-<p> This index only lists modules documented in this manual.
-  The <em class="citetitle"><a href="$GLOBAL_MODULE_INDEX">Global Module
-     Index</a></em> lists all modules that are documented in this set
-  of manuals.</p>
-MODULE_INDEX_PREFIX
-    }
     if (!$allthesame) {
-	$prefix .= <<PLAT_DISCUSS;
+	$prefix = <<PLAT_DISCUSS;
+
 
 <p> Some module names are followed by an annotation indicating what
 platform they are available on.</p>
@@ -357,17 +310,8 @@ PLAT_DISCUSS
 # replace both indexes as needed:
 sub add_idx_hook {
     add_idx() if (/$idx_mark/);
+    add_module_idx() if (/$idx_module_mark/);
     process_python_state();
-    if ($MODULE_INDEX_FILE) {
-        local ($_);
-        open(MYFILE, "<$MODULE_INDEX_FILE");
-        sysread(MYFILE, $_, 1024*1024);
-        close(MYFILE);
-        add_module_idx();
-        open(MYFILE,">$MODULE_INDEX_FILE");
-        print MYFILE $_;
-        close(MYFILE);
-    }
 }
 
 
@@ -414,8 +358,8 @@ sub do_cmd_textohtmlinfopage {
     my $the_version = '';				# and the rest is
     if ($t_date) {					# mostly ours
 	$the_version = ",\n$t_date";
-	if ($PACKAGE_VERSION) {
-	    $the_version .= ", Release $PACKAGE_VERSION";
+	if ($PYTHON_VERSION) {
+	    $the_version .= ", Release $PYTHON_VERSION";
 	}
     }
     $_ = (($INFO == 1)
@@ -439,35 +383,31 @@ sub do_cmd_textohtmlindex {
     my $heading = make_section_heading($idx_title, 'h2') . $idx_mark;
     my($pre,$post) = minimize_open_tags($heading);
     anchor_label('genindex',$CURRENT_FILE,$_);		# this is added
-    return "<br>\n" . $pre . $_;
+    '<br>\n' . $pre . $_;
 }
-
-$MODULE_INDEX_FILE = '';
 
 # $idx_module_mark will be replaced with the real index at the end
 sub do_cmd_textohtmlmoduleindex {
     local($_) = @_;
     $TITLE = $idx_module_title;
-    anchor_label('modindex', $CURRENT_FILE, $_);
-    $MODULE_INDEX_FILE = "$CURRENT_FILE";
-    $_ = ('<p>' . make_section_heading($idx_module_title, 'h2')
-          . $idx_module_mark . $_);
-    return $_;
+    anchor_label("modindex",$CURRENT_FILE,$_);
+    '<p>' . make_section_heading($idx_module_title, "h2")
+      . $idx_module_mark . $_;
 }
 
-# The bibliography and the index should be treated as separate
-# sections in their own HTML files. The \bibliography{} command acts
-# as a sectioning command that has the desired effect. But when the
-# bibliography is constructed manually using the thebibliography
-# environment, or when using the theindex environment it is not
-# possible to use the normal sectioning mechanism. This subroutine
-# inserts a \bibliography{} or a dummy \textohtmlindex command just
-# before the appropriate environments to force sectioning.
+# The bibliography and the index should be treated as separate sections
+# in their own HTML files. The \bibliography{} command acts as a sectioning command
+# that has the desired effect. But when the bibliography is constructed 
+# manually using the thebibliography environment, or when using the
+# theindex environment it is not possible to use the normal sectioning 
+# mechanism. This subroutine inserts a \bibliography{} or a dummy 
+# \textohtmlindex command just before the appropriate environments
+# to force sectioning.
 
-# XXX	This *assumes* that if there are two {theindex} environments,
-#	the first is the module index and the second is the standard
-#	index.  This is sufficient for the current Python documentation,
-#	but that's about it.
+# XXX	This *assumes* that if there are two {theindex} environments, the
+#	first is the module index and the second is the standard index.  This
+#	is sufficient for the current Python documentation, but that's about
+#	it.
 
 sub add_bbl_and_idx_dummy_commands {
     my $id = $global{'max_id'};
@@ -483,12 +423,10 @@ sub add_bbl_and_idx_dummy_commands {
           . "([\\\\]begin\\s*$O\\d+$C\\s*theindex)";
         s/$rx/\\textohtmlmoduleindex \1 \\textohtmlindex \2/o;
         # Add a button to the navigation areas:
-        $CUSTOM_BUTTONS .= ('<a href="modindex.html" title="Module Index">'
-                            . get_my_icon('modules')
-                            . '</a>');
+        $CUSTOM_BUTTONS .= $my_icons{'modules'};
     }
     else {
-        $CUSTOM_BUTTONS .= get_my_icon('blank');
+        $CUSTOM_BUTTONS .= $BLANK_ICON;
         $global{'max_id'} = $id; # not sure why....
         s/([\\]begin\s*$O\d+$C\s*theindex)/\\textohtmlindex $1/o;
 	    s/[\\]printindex/\\textohtmlindex /o;
@@ -498,10 +436,10 @@ sub add_bbl_and_idx_dummy_commands {
         if defined(&lib_add_bbl_and_idx_dummy_commands);
 }
 
-# The bibliographic references, the appendices, the lists of figures
-# and tables etc. must appear in the contents table at the same level
-# as the outermost sectioning command. This subroutine finds what is
-# the outermost level and sets the above to the same level;
+# The bibliographic references, the appendices, the lists of figures and tables
+# etc. must appear in the contents table at the same level as the outermost
+# sectioning command. This subroutine finds what is the outermost level and
+# sets the above to the same level;
 
 sub set_depth_levels {
     # Sets $outermost_level
@@ -539,20 +477,19 @@ sub set_depth_levels {
 # <pre>...</pre>.
 #
 # Note that this *must* be done in the init file, not the python.perl
-# style support file.  The %declarations must be set before
-# initialize() is called in the main LaTeX2HTML script (which happens
-# before style files are loaded).
+# style support file.  The %declarations must be set before initialize()
+# is called in the main LaTeX2HTML script (which happens before style files
+# are loaded).
 #
 %declarations = ('preform' => '<dl><dd><pre class="verbatim"></pre></dl>',
 		 %declarations);
 
 
-# This is added to get rid of the long comment that follows the
-# doctype declaration; MSIE5 on NT4 SP4 barfs on it and drops the
-# content of the page.
+# This is added to get rid of the long comment that follows the doctype
+# declaration; MSIE5 on NT4 SP4 barfs on it and drops the content of the
+# page.
 sub make_head_and_body {
     my($title, $body) = @_;
-    $body = " $body" unless ($body eq '');
     my $DTDcomment = '';
     my($version, $isolanguage) = ($HTML_VERSION, 'EN');
     my %isolanguages = (  'english',  'EN'   , 'USenglish', 'EN.US'
@@ -588,7 +525,7 @@ sub make_head_and_body {
 	, ($BASE ? "<base href=\"$BASE\">\n" : "" )
 	, "<link rel=\"STYLESHEET\" href=\"$STYLESHEET\">"
 	, $more_links_mark
-	, "\n</head>\n<body$body>");
+	, "\n</head>\n<body $body>\n");
 }
 
 1;	# This must be the last line

@@ -27,13 +27,10 @@ __version__ = "$Revision$"       # Code version
 
 from types import *
 from copy_reg import dispatch_table, safe_constructors
+import string
 import marshal
 import sys
 import struct
-import re
-
-__all__ = ["PickleError", "PicklingError", "UnpicklingError", "Pickler",
-           "Unpickler", "dump", "dumps", "load", "loads"]
 
 format_version = "1.3"                     # File format version we write
 compatible_formats = ["1.0", "1.1", "1.2"] # Old format versions we can read
@@ -41,13 +38,8 @@ compatible_formats = ["1.0", "1.1", "1.2"] # Old format versions we can read
 mdumps = marshal.dumps
 mloads = marshal.loads
 
-class PickleError(Exception): pass
-class PicklingError(PickleError): pass
-class UnpicklingError(PickleError): pass
-
-class _Stop(Exception):
-    def __init__(self, value):
-        self.value = value
+PicklingError = "pickle.PicklingError"
+UnpicklingError = "pickle.UnpicklingError"
 
 try:
     from org.python.core import PyStringMap
@@ -96,8 +88,6 @@ EMPTY_TUPLE     = ')'
 SETITEMS        = 'u'
 BINFLOAT        = 'G'
 
-__all__.extend([x for x in dir() if re.match("[A-Z][A-Z0-9_]+$",x)])
-
 class Pickler:
 
     def __init__(self, file, bin = 0):
@@ -129,7 +119,7 @@ class Pickler:
             return LONG_BINGET + s
 
         return GET + `i` + '\n'
-
+        
     def save(self, object, pers_save = 0):
         memo = self.memo
 
@@ -140,7 +130,7 @@ class Pickler:
                 return
 
         d = id(object)
-
+ 
         t = type(object)
 
         if ((t is TupleType) and (len(object) == 0)):
@@ -185,14 +175,14 @@ class Pickler:
                                      "tuple" % reduce
 
             l = len(tup)
-
+   
             if ((l != 2) and (l != 3)):
                 raise PicklingError, "tuple returned by %s must contain " \
                                      "only two or three elements" % reduce
 
             callable = tup[0]
             arg_tup  = tup[1]
-
+          
             if (l > 2):
                 state = tup[2]
             else:
@@ -202,7 +192,7 @@ class Pickler:
                 raise PicklingError, "Second element of tuple returned " \
                                      "by %s must be a tuple" % reduce
 
-            self.save_reduce(callable, arg_tup, state)
+            self.save_reduce(callable, arg_tup, state) 
             memo_len = len(memo)
             self.write(self.put(memo_len))
             memo[d] = (memo_len, object)
@@ -230,7 +220,7 @@ class Pickler:
         save(callable)
         save(arg_tup)
         write(REDUCE)
-
+        
         if (state is not None):
             save(state)
             write(BUILD)
@@ -297,47 +287,12 @@ class Pickler:
             s = mdumps(l)[1:]
             self.write(BINUNICODE + s + encoding)
         else:
-            object = object.replace(u"\\", u"\\u005c")
-            object = object.replace(u"\n", u"\\u000a")
             self.write(UNICODE + object.encode('raw-unicode-escape') + '\n')
 
         memo_len = len(memo)
         self.write(self.put(memo_len))
         memo[d] = (memo_len, object)
     dispatch[UnicodeType] = save_unicode
-
-    if StringType == UnicodeType:
-        # This is true for Jython
-        def save_string(self, object):
-            d = id(object)
-            memo = self.memo
-            unicode = object.isunicode()
-
-            if (self.bin):
-                if unicode:
-                    object = object.encode("utf-8")
-                l = len(object)
-                s = mdumps(l)[1:]
-                if (l < 256 and not unicode):
-                    self.write(SHORT_BINSTRING + s[0] + object)
-                else:
-                    if unicode:
-                        self.write(BINUNICODE + s + object)
-                    else:
-                        self.write(BINSTRING + s + object)
-            else:
-                if unicode:
-                    object = object.replace(u"\\", u"\\u005c")
-                    object = object.replace(u"\n", u"\\u000a")
-                    object = object.encode('raw-unicode-escape')
-                    self.write(UNICODE + object + '\n')
-                else:
-                    self.write(STRING + `object` + '\n')
-
-            memo_len = len(memo)
-            self.write(self.put(memo_len))
-            memo[d] = (memo_len, object)
-        dispatch[StringType] = save_string
 
     def save_tuple(self, object):
 
@@ -356,7 +311,7 @@ class Pickler:
             if (self.bin):
                 write(POP_MARK + self.get(memo[d][0]))
                 return
-
+           
             write(POP * (len(object) + 1) + self.get(memo[d][0]))
             return
 
@@ -391,7 +346,7 @@ class Pickler:
 
         for element in object:
             save(element)
-
+  
             if (not using_appends):
                 write(APPEND)
 
@@ -558,8 +513,8 @@ class Unpickler:
             while 1:
                 key = read(1)
                 dispatch[key](self)
-        except _Stop, stopinst:
-            return stopinst.value
+        except STOP, value:
+            return value
 
     def marker(self):
         stack = self.stack
@@ -581,7 +536,7 @@ class Unpickler:
 
     def load_binpersid(self):
         stack = self.stack
-
+         
         pid = stack[-1]
         del stack[-1]
 
@@ -593,7 +548,7 @@ class Unpickler:
     dispatch[NONE] = load_none
 
     def load_int(self):
-        self.append(int(self.readline()[:-1]))
+        self.append(string.atoi(self.readline()[:-1]))
     dispatch[INT] = load_int
 
     def load_binint(self):
@@ -607,13 +562,13 @@ class Unpickler:
     def load_binint2(self):
         self.append(mloads('i' + self.read(2) + '\000\000'))
     dispatch[BININT2] = load_binint2
-
+ 
     def load_long(self):
-        self.append(long(self.readline()[:-1], 0))
+        self.append(string.atol(self.readline()[:-1], 0))
     dispatch[LONG] = load_long
 
     def load_float(self):
-        self.append(float(self.readline()[:-1]))
+        self.append(string.atof(self.readline()[:-1]))
     dispatch[FLOAT] = load_float
 
     def load_binfloat(self, unpack=struct.unpack):
@@ -621,49 +576,9 @@ class Unpickler:
     dispatch[BINFLOAT] = load_binfloat
 
     def load_string(self):
-        rep = self.readline()[:-1]
-        if not self._is_string_secure(rep):
-            raise ValueError, "insecure string pickle"
-        self.append(eval(rep,
+        self.append(eval(self.readline()[:-1],
                          {'__builtins__': {}})) # Let's be careful
     dispatch[STRING] = load_string
-
-    def _is_string_secure(self, s):
-        """Return true if s contains a string that is safe to eval
-
-        The definition of secure string is based on the implementation
-        in cPickle.  s is secure as long as it only contains a quoted
-        string and optional trailing whitespace.
-        """
-        q = s[0]
-        if q not in ("'", '"'):
-            return 0
-        # find the closing quote
-        offset = 1
-        i = None
-        while 1:
-            try:
-                i = s.index(q, offset)
-            except ValueError:
-                # if there is an error the first time, there is no
-                # close quote
-                if offset == 1:
-                    return 0
-            if s[i-1] != '\\':
-                break
-            # check to see if this one is escaped
-            nslash = 0
-            j = i - 1
-            while j >= offset and s[j] == '\\':
-                j = j - 1
-                nslash = nslash + 1
-            if nslash % 2 == 0:
-                break
-            offset = i + 1
-        for c in s[i+1:]:
-            if ord(c) > 32:
-                return 0
-        return 1
 
     def load_binstring(self):
         len = mloads('i' + self.read(4))
@@ -749,7 +664,7 @@ class Unpickler:
         k = self.marker()
         klass = stack[k + 1]
         del stack[k + 1]
-        args = tuple(stack[k + 1:])
+        args = tuple(stack[k + 1:]) 
         del stack[k:]
         instantiated = 0
         if (not args and type(klass) is ClassType and
@@ -765,7 +680,7 @@ class Unpickler:
         if not instantiated:
             value = apply(klass, args)
         self.append(value)
-    dispatch[OBJ] = load_obj
+    dispatch[OBJ] = load_obj                
 
     def load_global(self):
         module = self.readline()[:-1]
@@ -800,8 +715,8 @@ class Unpickler:
                     safe = None
 
                 if (not safe):
-                    raise UnpicklingError, "%s is not safe for " \
-                                           "unpickling" % callable
+                   raise UnpicklingError, "%s is not safe for " \
+                                          "unpickling" % callable
 
         if arg_tup is None:
             value = callable.__basicnew__()
@@ -868,7 +783,7 @@ class Unpickler:
 
         del stack[mark:]
     dispatch[APPENDS] = load_appends
-
+           
     def load_setitem(self):
         stack = self.stack
         value = stack[-1]
@@ -916,7 +831,7 @@ class Unpickler:
     def load_stop(self):
         value = self.stack[-1]
         del self.stack[-1]
-        raise _Stop(value)
+        raise STOP, value
     dispatch[STOP] = load_stop
 
 # Helper class for load_inst/load_obj

@@ -1,4 +1,3 @@
-
 /* fcntl module */
 
 #include "Python.h"
@@ -18,7 +17,9 @@
 /* fcntl(fd, opt, [arg]) */
 
 static PyObject *
-fcntl_fcntl(PyObject *self, PyObject *args)
+fcntl_fcntl(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd;
 	int code;
@@ -28,7 +29,7 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 	int len;
 	char buf[1024];
 
-	if (PyArg_ParseTuple(args, "iis#:fcntl", &fd, &code, &str, &len)) {
+	if (PyArg_Parse(args, "(iis#)", &fd, &code, &str, &len)) {
 		if (len > sizeof buf) {
 			PyErr_SetString(PyExc_ValueError,
 					"fcntl string arg too long");
@@ -46,10 +47,12 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 	}
 
 	PyErr_Clear();
-	arg = 0;
-	if (!PyArg_ParseTuple(args, "ii|i;fcntl requires 2 integers and optionally a third integer or a string", 
-			      &fd, &code, &arg)) {
-	  return NULL;
+	if (PyArg_Parse(args, "(ii)", &fd, &code))
+		arg = 0;
+	else {
+		PyErr_Clear();
+		if (!PyArg_Parse(args, "(iii)", &fd, &code, &arg))
+			return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
 	ret = fcntl(fd, code, arg);
@@ -68,18 +71,15 @@ static char fcntl_doc [] =
 Perform the requested operation on file descriptor fd.  The operation\n\
 is defined by op and is operating system dependent.  Typically these\n\
 codes can be retrieved from the library module FCNTL.  The argument arg\n\
-is optional, and defaults to 0; it may be an int or a string. If arg is\n\
-given as a string, the return value of fcntl is a string of that length,\n\
-containing the resulting value put in the arg buffer by the operating system.\n\
-The length of the arg string is not allowed to exceed 1024 bytes. If the arg\n\
-given is an integer or if none is specified, the result value is an integer\n\
-corresponding to the return value of the fcntl call in the C code.";
+is optional, and defaults to 0; it may be an int or a string.";
 
 
 /* ioctl(fd, opt, [arg]) */
 
 static PyObject *
-fcntl_ioctl(PyObject *self, PyObject *args)
+fcntl_ioctl(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd;
 	int code;
@@ -89,7 +89,7 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	int len;
 	char buf[1024];
 
-	if (PyArg_ParseTuple(args, "iis#:ioctl", &fd, &code, &str, &len)) {
+	if (PyArg_Parse(args, "(iis#)", &fd, &code, &str, &len)) {
 		if (len > sizeof buf) {
 			PyErr_SetString(PyExc_ValueError,
 					"ioctl string arg too long");
@@ -107,10 +107,12 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	}
 
 	PyErr_Clear();
-	arg = 0;
-	if (!PyArg_ParseTuple(args, "ii|i;ioctl requires 2 integers and optionally a third integer or a string", 
-			      &fd, &code, &arg)) {
-	  return NULL;
+	if (PyArg_Parse(args, "(ii)", &fd, &code))
+		arg = 0;
+	else {
+		PyErr_Clear();
+		if (!PyArg_Parse(args, "(iii)", &fd, &code, &arg))
+			return NULL;
 	}
 	Py_BEGIN_ALLOW_THREADS
 	ret = ioctl(fd, code, arg);
@@ -128,24 +130,21 @@ static char ioctl_doc [] =
 Perform the requested operation on file descriptor fd.  The operation\n\
 is defined by op and is operating system dependent.  Typically these\n\
 codes can be retrieved from the library module IOCTL.  The argument arg\n\
-is optional, and defaults to 0; it may be an int or a string. If arg is\n\
-given as a string, the return value of ioctl is a string of that length,\n\
-containing the resulting value put in the arg buffer by the operating system.\n\
-The length of the arg string is not allowed to exceed 1024 bytes. If the arg\n\
-given is an integer or if none is specified, the result value is an integer\n\
-corresponding to the return value of the ioctl call in the C code.";
+is optional, and defaults to 0; it may be an int or a string.";
 
 
 /* flock(fd, operation) */
 
 static PyObject *
-fcntl_flock(PyObject *self, PyObject *args)
+fcntl_flock(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd;
 	int code;
 	int ret;
 
-	if (!PyArg_ParseTuple(args, "ii:flock", &fd, &code))
+	if (!PyArg_Parse(args, "(ii)", &fd, &code))
 		return NULL;
 
 #ifdef HAVE_FLOCK
@@ -197,7 +196,9 @@ emulated using fcntl().)";
 
 /* lockf(fd, operation) */
 static PyObject *
-fcntl_lockf(PyObject *self, PyObject *args)
+fcntl_lockf(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int fd, code, ret, whence = 0;
 	PyObject *lenobj = NULL, *startobj = NULL;
@@ -262,37 +263,18 @@ fcntl_lockf(PyObject *self, PyObject *args)
 }
 
 static char lockf_doc [] =
-"lockf (fd, operation, length=0, start=0, whence=0)\n\
+"lockf (fd, operation)\n\
 \n\
-This is essentially a wrapper around the fcntl() locking calls.  fd is the\n\
-file descriptor of the file to lock or unlock, and operation is one of the\n\
-following values:\n\
-\n\
-    LOCK_UN - unlock\n\
-    LOCK_SH - acquire a shared lock\n\
-    LOCK_EX - acquire an exclusive lock\n\
-\n\
-When operation is LOCK_SH or LOCK_EX, it can also be bit-wise OR'd with\n\
-LOCK_NB to avoid blocking on lock acquisition.  If LOCK_NB is used and the\n\
-lock cannot be acquired, an IOError will be raised and the exception will\n\
-have an errno attribute set to EACCES or EAGAIN (depending on the operating\n\
-system -- for portability, check for either value).\n\
-\n\
-length is the number of bytes to lock, with the default meaning to lock to\n\
-EOF.  start is the byte offset, relative to whence, to that the lock\n\
-starts.  whence is as with fileobj.seek(), specifically:\n\
-\n\
-    0 - relative to the start of the file (SEEK_SET)\n\
-    1 - relative to the current buffer position (SEEK_CUR)\n\
-    2 - relative to the end of the file (SEEK_END)";
+This is a wrapper around the FCNTL.F_SETLK and FCNTL.F_SETLKW fcntl()\n\
+calls.  See the Unix manual for details.";
 
 /* List of functions */
 
 static PyMethodDef fcntl_methods[] = {
-	{"fcntl",	fcntl_fcntl, METH_VARARGS, fcntl_doc},
-	{"ioctl",	fcntl_ioctl, METH_VARARGS, ioctl_doc},
-	{"flock",	fcntl_flock, METH_VARARGS, flock_doc},
-	{"lockf",       fcntl_lockf, METH_VARARGS, lockf_doc},
+	{"fcntl",	fcntl_fcntl, 0, fcntl_doc},
+	{"ioctl",	fcntl_ioctl, 0, ioctl_doc},
+	{"flock",	fcntl_flock, 0, flock_doc},
+	{"lockf",       fcntl_lockf, 1, lockf_doc},
 	{NULL,		NULL}		/* sentinel */
 };
 
@@ -307,7 +289,10 @@ a file or socket object.";
 /* Module initialisation */
 
 static int
-ins(PyObject* d, char* symbol, long value)
+ins(d, symbol, value)
+        PyObject* d;
+        char* symbol;
+        long value;
 {
         PyObject* v = PyInt_FromLong(value);
         if (!v || PyDict_SetItemString(d, symbol, v) < 0)
@@ -318,7 +303,8 @@ ins(PyObject* d, char* symbol, long value)
 }
 
 static int
-all_ins(PyObject* d)
+all_ins(d)
+        PyObject* d;
 {
         if (ins(d, "LOCK_SH", (long)LOCK_SH)) return -1;
         if (ins(d, "LOCK_EX", (long)LOCK_EX)) return -1;
@@ -328,7 +314,7 @@ all_ins(PyObject* d)
 }
 
 DL_EXPORT(void)
-initfcntl(void)
+initfcntl()
 {
 	PyObject *m, *d;
 
@@ -338,4 +324,8 @@ initfcntl(void)
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
 	all_ins(d);
+
+	/* Check for errors */
+	if (PyErr_Occurred())
+		Py_FatalError("can't initialize module fcntl");
 }

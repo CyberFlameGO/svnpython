@@ -17,9 +17,6 @@ except ImportError,why:
     raise SystemError,\
           'Failed to load the builtin codecs: %s' % why
 
-__all__ = ["register","lookup","open","EncodedFile","BOM","BOM_BE",
-           "BOM_LE","BOM32_BE","BOM32_LE","BOM64_BE","BOM64_LE"]
-
 ### Constants
 
 #
@@ -28,19 +25,19 @@ __all__ = ["register","lookup","open","EncodedFile","BOM","BOM_BE",
 BOM = struct.pack('=H',0xFEFF)
 #
 BOM_BE = BOM32_BE = '\376\377'
-#       corresponds to Unicode U+FEFF in UTF-16 on big endian
-#       platforms == ZERO WIDTH NO-BREAK SPACE
+#	corresponds to Unicode U+FEFF in UTF-16 on big endian
+#	platforms == ZERO WIDTH NO-BREAK SPACE
 BOM_LE = BOM32_LE = '\377\376'
-#       corresponds to Unicode U+FFFE in UTF-16 on little endian
-#       platforms == defined as being an illegal Unicode character
+#	corresponds to Unicode U+FFFE in UTF-16 on little endian
+#	platforms == defined as being an illegal Unicode character
 
 #
 # 64-bit Byte Order Marks
 #
 BOM64_BE = '\000\000\376\377'
-#       corresponds to Unicode U+0000FEFF in UCS-4
+#	corresponds to Unicode U+0000FEFF in UCS-4
 BOM64_LE = '\377\376\000\000'
-#       corresponds to Unicode U+0000FFFE in UCS-4
+#	corresponds to Unicode U+0000FFFE in UCS-4
 
 
 ### Codec base classes (defining the API)
@@ -208,7 +205,7 @@ class StreamReader(Codec):
         """
         # Unsliced reading:
         if size < 0:
-            return self.decode(self.stream.read(), self.errors)[0]
+            return self.decode(self.stream.read())[0]
 
         # Sliced reading:
         read = self.stream.read
@@ -217,7 +214,7 @@ class StreamReader(Codec):
         i = 0
         while 1:
             try:
-                object, decodedbytes = decode(data, self.errors)
+                object, decodedbytes = decode(data)
             except ValueError,why:
                 # This method is slow but should work under pretty much
                 # all conditions; at most 10 tries are made
@@ -250,7 +247,7 @@ class StreamReader(Codec):
             line = self.stream.readline()
         else:
             line = self.stream.readline(size)
-        return self.decode(line,self.errors)[0]
+        return self.decode(line)[0]
 
 
     def readlines(self, sizehint=0):
@@ -269,14 +266,14 @@ class StreamReader(Codec):
             data = self.stream.read()
         else:
             data = self.stream.read(sizehint)
-        return self.decode(data,self.errors)[0].splitlines(1)
+        return self.decode(data)[0].splitlines(1)
 
     def reset(self):
 
         """ Resets the codec buffers used for keeping state.
 
             Note that no stream repositioning should take place.
-            This method is primarily intended to be able to recover
+            This method is primarely intended to be able to recover
             from decoding errors.
 
         """
@@ -298,7 +295,7 @@ class StreamReaderWriter:
         work in both read and write modes.
 
         The design is such that one can use the factory functions
-        returned by the codec.lookup() function to construct the
+        returned by the codec.lookup() function to contruct the
         instance.
 
     """
@@ -461,7 +458,7 @@ class StreamRecoder:
 
 ### Shortcuts
 
-def open(filename, mode='rb', encoding=None, errors='strict', buffering=1):
+def open(filename, mode, encoding=None, errors='strict', buffering=1):
 
     """ Open an encoded file using the given mode and return
         a wrapped version providing transparent encoding/decoding.
@@ -470,11 +467,6 @@ def open(filename, mode='rb', encoding=None, errors='strict', buffering=1):
         defined by the codecs, i.e. Unicode objects for most builtin
         codecs. Output is also codec dependent and will usually by
         Unicode as well.
-
-        Files are always opened in binary mode, even if no binary mode
-        was specified. Thisis done to avoid data loss due to encodings
-        using 8-bit values. The default file mode is 'rb' meaning to
-        open the file in binary read mode.
 
         encoding specifies the encoding which is to be used for the
         the file.
@@ -524,6 +516,9 @@ def EncodedFile(file, data_encoding, file_encoding=None, errors='strict'):
         to 'strict' which causes ValueErrors to be raised in case an
         encoding error occurs.
 
+        data_encoding and file_encoding are added to the wrapped file
+        object as attributes .data_encoding and .file_encoding resp.
+
         The returned wrapped file object provides two extra attributes
         .data_encoding and .file_encoding which reflect the given
         parameters of the same name. The attributes can be used for
@@ -541,21 +536,6 @@ def EncodedFile(file, data_encoding, file_encoding=None, errors='strict'):
     sr.data_encoding = data_encoding
     sr.file_encoding = file_encoding
     return sr
-
-### Helpers for charmap-based codecs
-
-def make_identity_dict(rng):
-
-    """ make_identity_dict(rng) -> dict
-
-        Return a dictionary where elements of the rng sequence are
-        mapped to themselves.
-
-    """
-    res = {}
-    for i in rng:
-        res[i]=i
-    return res
 
 ### Tests
 

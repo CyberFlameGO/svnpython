@@ -86,7 +86,7 @@ is a tuple of 9 integers:
   \lineiii{3}{hour}{range [0,23]}
   \lineiii{4}{minute}{range [0,59]}
   \lineiii{5}{second}{range [0,61]; see \strong{(1)} in \function{strftime()} description}
-  \lineiii{6}{weekday}{range [0,6], Monday is 0}
+  \lineiii{6}{weekday}{range [0,6], monday is 0}
   \lineiii{7}{Julian day}{range [1,366]}
   \lineiii{8}{daylight savings flag}{0, 1 or -1; see below}
 \end{tableiii}
@@ -111,55 +111,51 @@ string.  It may also be modified at run time.
 
 \begin{datadesc}{altzone}
 The offset of the local DST timezone, in seconds west of UTC, if one
-is defined.  This is negative if the local DST timezone is east of UTC
-(as in Western Europe, including the UK).  Only use this if
+is defined.  Negative if the local DST timezone is east of the 0th
+meridian (as in Western Europe, including the UK).  Only use this if
 \code{daylight} is nonzero.
 \end{datadesc}
 
-\begin{funcdesc}{asctime}{\optional{tuple}}
+\begin{funcdesc}{asctime}{tuple}
 Convert a tuple representing a time as returned by \function{gmtime()}
 or \function{localtime()} to a 24-character string of the following form:
-\code{'Sun Jun 20 23:21:05 1993'}.  If \var{tuple} is not provided, the
-current time as returned by \function{localtime()} is used.  Note: unlike
-the C function of the same name, there is no trailing newline.
+\code{'Sun Jun 20 23:21:05 1993'}.  Note: unlike the C function of
+the same name, there is no trailing newline.
 \end{funcdesc}
 
 \begin{funcdesc}{clock}{}
 Return the current CPU time as a floating point number expressed in
-seconds.  The precision, and in fact the very definition of the meaning
+seconds.  The precision, and in fact the very definiton of the meaning
 of ``CPU time''\index{CPU time}, depends on that of the C function
 of the same name, but in any case, this is the function to use for
 benchmarking\index{benchmarking} Python or timing algorithms.
 \end{funcdesc}
 
-\begin{funcdesc}{ctime}{\optional{secs}}
+\begin{funcdesc}{ctime}{secs}
 Convert a time expressed in seconds since the epoch to a string
-representing local time. If \var{secs} is not provided, the current time
-as returned by \function{time()} is used.  \code{ctime(\var{secs})}
-is equivalent to \code{asctime(localtime(\var{secs}))}.
+representing local time.  \code{ctime(\var{secs})} is equivalent to
+\code{asctime(localtime(\var{secs}))}.
 \end{funcdesc}
 
 \begin{datadesc}{daylight}
 Nonzero if a DST timezone is defined.
 \end{datadesc}
 
-\begin{funcdesc}{gmtime}{\optional{secs}}
+\begin{funcdesc}{gmtime}{secs}
 Convert a time expressed in seconds since the epoch to a time tuple
-in UTC in which the dst flag is always zero.  If \var{secs} is not
-provided, the current time as returned by \function{time()} is used.
-Fractions of a second are ignored.  See above for a description of the
-tuple lay-out.
+in UTC in which the dst flag is always zero.  Fractions of a second are
+ignored.  See above for a description of the tuple lay-out.
 \end{funcdesc}
 
-\begin{funcdesc}{localtime}{\optional{secs}}
+\begin{funcdesc}{localtime}{secs}
 Like \function{gmtime()} but converts to local time.  The dst flag is
 set to \code{1} when DST applies to the given time.
 \end{funcdesc}
 
 \begin{funcdesc}{mktime}{tuple}
 This is the inverse function of \function{localtime()}.  Its argument
-is the full 9-tuple (since the dst flag is needed; use \code{-1} as
-the dst flag if it is unknown) which expresses the time in
+is the full 9-tuple (since the dst flag is needed --- pass \code{-1}
+as the dst flag if it is unknown) which expresses the time in
 \emph{local} time, not UTC.  It returns a floating point number, for
 compatibility with \function{time()}.  If the input value cannot be
 represented as a valid time, \exception{OverflowError} is raised.
@@ -175,11 +171,10 @@ time may be longer than requested by an arbitrary amount because of
 the scheduling of other activity in the system.
 \end{funcdesc}
 
-\begin{funcdesc}{strftime}{format\optional{, tuple}}
+\begin{funcdesc}{strftime}{format, tuple}
 Convert a tuple representing a time as returned by \function{gmtime()}
 or \function{localtime()} to a string as specified by the \var{format}
-argument.  If \var{tuple} is not provided, the current time as returned by
-\function{localtime()} is used.  \var{format} must be a string.
+argument.  \var{format} must be a string.
 
 The following directives can be embedded in the \var{format} string.
 They are shown without the optional field width and precision
@@ -224,22 +219,6 @@ Notes:
     seconds and the (very rare) double leap seconds.
 \end{description}
 
-Here is an example, a format for dates compatible with that specified 
-in the \rfc{822} Internet email standard.
-	\footnote{The use of \%Z is now
-	deprecated, but the \%z escape that expands to the preferred 
-	hour/minute offset is not supported by all ANSI C libraries. Also,
-	a strict reading of the original 1982 \rfc{822} standard calls for
-	a two-digit year (\%y rather than \%Y), but practice moved to
-	4-digit years long before the year 2000.}
-
-\begin{verbatim}
->>> from time import *
->>> strftime("%a, %d %b %Y %H:%M:%S %Z", localtime())
-'Sat, 27 Jan 2001 05:15:05 EST'
->>>
-\end{verbatim}
-
 Additional directives may be supported on certain platforms, but
 only the ones listed here have a meaning standardized by ANSI C.
 
@@ -258,15 +237,7 @@ directives as those used by \function{strftime()}; it defaults to
 returned by \function{ctime()}.  The same platform caveats apply; see
 the local \UNIX{} documentation for restrictions or additional
 supported directives.  If \var{string} cannot be parsed according to
-\var{format}, \exception{ValueError} is raised.  Values which are not
-provided as part of the input string are filled in with default
-values; the specific values are platform-dependent as the XPG standard
-does not provide sufficient information to constrain the result.
-
-\strong{Note:} This function relies entirely on the underlying
-platform's C library for the date parsing, and some of these libraries
-are buggy.  There's nothing to be done about this short of a new,
-portable implementation of \cfunction{strptime()}.
+\var{format}, \exception{ValueError} is raised.
 
 Availability: Most modern \UNIX{} systems.
 \end{funcdesc}

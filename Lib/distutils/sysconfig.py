@@ -15,23 +15,10 @@ import sys
 
 from errors import DistutilsPlatformError
 
-# These are needed in a couple of spots, so just compute them once.
+
 PREFIX = os.path.normpath(sys.prefix)
 EXEC_PREFIX = os.path.normpath(sys.exec_prefix)
 
-# Boolean; if it's true, we're still building Python, so
-# we use different (hard-wired) directories.
-
-python_build = 0
-
-def set_python_build():
-    """Set the python_build flag to true; this means that we're
-    building Python itself.  Only called from the setup.py script
-    shipped with Python.
-    """
-    
-    global python_build
-    python_build = 1
 
 def get_python_inc(plat_specific=0, prefix=None):
     """Return the directory containing installed Python header files.
@@ -47,8 +34,6 @@ def get_python_inc(plat_specific=0, prefix=None):
     if prefix is None:
         prefix = (plat_specific and EXEC_PREFIX or PREFIX)
     if os.name == "posix":
-        if python_build:
-            return "Include/"
         return os.path.join(prefix, "include", "python" + sys.version[:3])
     elif os.name == "nt":
         return os.path.join(prefix, "Include") # include or Include?
@@ -118,31 +103,25 @@ def customize_compiler (compiler):
     that varies across Unices and is stored in Python's Makefile.
     """
     if compiler.compiler_type == "unix":
-        (cc, opt, ccshared, ldshared, so_ext) = \
-            get_config_vars('CC', 'OPT', 'CCSHARED', 'LDSHARED', 'SO')
-
-        cc_cmd = cc + ' ' + opt
+        cc_cmd = CC + ' ' + OPT
         compiler.set_executables(
-            preprocessor=cc + " -E",    # not always!
+            preprocessor=CC + " -E",    # not always!
             compiler=cc_cmd,
-            compiler_so=cc_cmd + ' ' + ccshared,
-            linker_so=ldshared,
-            linker_exe=cc)
+            compiler_so=cc_cmd + ' ' + CCSHARED,
+            linker_so=LDSHARED,
+            linker_exe=CC)
 
-        compiler.shared_lib_extension = so_ext
+        compiler.shared_lib_extension = SO
 
 
 def get_config_h_filename():
     """Return full pathname of installed config.h file."""
-    if python_build: inc_dir = '.'
-    else:            inc_dir = get_python_inc(plat_specific=1)
+    inc_dir = get_python_inc(plat_specific=1)
     return os.path.join(inc_dir, "config.h")
 
 
 def get_makefile_filename():
     """Return full pathname of installed Makefile from the Python build."""
-    if python_build:
-        return './Makefile'
     lib_dir = get_python_lib(plat_specific=1, standard_lib=1)
     return os.path.join(lib_dir, "config", "Makefile")
 
@@ -175,14 +154,7 @@ def parse_config_h(fp, g=None):
                 g[m.group(1)] = 0
     return g
 
-
-# Regexes needed for parsing Makefile (and similar syntaxes,
-# like old-style Setup files).
-_variable_rx = re.compile("([a-zA-Z][a-zA-Z0-9_]+)\s*=\s*(.*)")
-_findvar1_rx = re.compile(r"\$\(([A-Za-z][A-Za-z0-9_]*)\)")
-_findvar2_rx = re.compile(r"\${([A-Za-z][A-Za-z0-9_]*)}")
-
-def parse_makefile(fn, g=None):
+def parse_makefile(fp, g=None):
     """Parse a Makefile-style file.
 
     A dictionary containing name/value pairs is returned.  If an
@@ -190,19 +162,17 @@ def parse_makefile(fn, g=None):
     used instead of a new dictionary.
 
     """
-    from distutils.text_file import TextFile
-    fp = TextFile(fn, strip_comments=1, skip_blanks=1, join_lines=1)
-
     if g is None:
         g = {}
+    variable_rx = re.compile("([a-zA-Z][a-zA-Z0-9_]+)\s*=\s*(.*)\n")
     done = {}
     notdone = {}
-
+    #
     while 1:
         line = fp.readline()
-        if line is None:                # eof
+        if not line:
             break
-        m = _variable_rx.match(line)
+        m = variable_rx.match(line)
         if m:
             n, v = m.group(1, 2)
             v = string.strip(v)
@@ -214,23 +184,25 @@ def parse_makefile(fn, g=None):
                 done[n] = v
 
     # do variable interpolation here
+    findvar1_rx = re.compile(r"\$\(([A-Za-z][A-Za-z0-9_]*)\)")
+    findvar2_rx = re.compile(r"\${([A-Za-z][A-Za-z0-9_]*)}")
     while notdone:
         for name in notdone.keys():
             value = notdone[name]
-            m = _findvar1_rx.search(value) or _findvar2_rx.search(value)
+            m = findvar1_rx.search(value)
+            if not m:
+                m = findvar2_rx.search(value)
             if m:
                 n = m.group(1)
                 if done.has_key(n):
                     after = value[m.end():]
-                    value = value[:m.start()] + str(done[n]) + after
+                    value = value[:m.start()] + done[n] + after
                     if "$" in after:
                         notdone[name] = value
                     else:
                         try: value = string.atoi(value)
-                        except ValueError:
-                            done[name] = string.strip(value)
-                        else:
-                            done[name] = value
+                        except ValueError: pass
+                        done[name] = string.strip(value)
                         del notdone[name]
                 elif notdone.has_key(n):
                     # get it on a subsequent round
@@ -243,57 +215,25 @@ def parse_makefile(fn, g=None):
                         notdone[name] = value
                     else:
                         try: value = string.atoi(value)
-                        except ValueError:
-                            done[name] = string.strip(value)
-                        else:
-                            done[name] = value
+                        except ValueError: pass
+                        done[name] = string.strip(value)
                         del notdone[name]
             else:
                 # bogus variable reference; just drop it since we can't deal
                 del notdone[name]
-
-    fp.close()
 
     # save the results in the global dictionary
     g.update(done)
     return g
 
 
-def expand_makefile_vars(s, vars):
-    """Expand Makefile-style variables -- "${foo}" or "$(foo)" -- in
-    'string' according to 'vars' (a dictionary mapping variable names to
-    values).  Variables not present in 'vars' are silently expanded to the
-    empty string.  The variable values in 'vars' should not contain further
-    variable expansions; if 'vars' is the output of 'parse_makefile()',
-    you're fine.  Returns a variable-expanded version of 's'.
-    """
-
-    # This algorithm does multiple expansion, so if vars['foo'] contains
-    # "${bar}", it will expand ${foo} to ${bar}, and then expand
-    # ${bar}... and so forth.  This is fine as long as 'vars' comes from
-    # 'parse_makefile()', which takes care of such expansions eagerly,
-    # according to make's variable expansion semantics.
-
-    while 1:
-        m = _findvar1_rx.search(s) or _findvar2_rx.search(s)
-        if m:
-            name = m.group(1)
-            (beg, end) = m.span()
-            s = s[0:beg] + vars.get(m.group(1)) + s[end:]
-        else:
-            break
-    return s
-
-
-_config_vars = None
-
 def _init_posix():
     """Initialize the module as appropriate for POSIX systems."""
-    g = {}
+    g = globals()
     # load the installed Makefile:
     try:
         filename = get_makefile_filename()
-        parse_makefile(filename, g)
+        file = open(filename)
     except IOError, msg:
         my_msg = "invalid Python installation: unable to open %s" % filename
         if hasattr(msg, "strerror"):
@@ -301,20 +241,24 @@ def _init_posix():
 
         raise DistutilsPlatformError, my_msg
               
+    parse_makefile(file, g)
     
     # On AIX, there are wrong paths to the linker scripts in the Makefile
     # -- these paths are relative to the Python source, but when installed
     # the scripts are in another directory.
-    if python_build:
-	g['LDSHARED'] = g['BLDSHARED']
+    if sys.platform == 'aix4':          # what about AIX 3.x ?
+        # Linker script is in the config directory, not in Modules as the
+        # Makefile says.
+        python_lib = get_python_lib(standard_lib=1)
+        ld_so_aix = os.path.join(python_lib, 'config', 'ld_so_aix')
+        python_exp = os.path.join(python_lib, 'config', 'python.exp')
 
-    global _config_vars
-    _config_vars = g
+        g['LDSHARED'] = "%s %s -bI:%s" % (ld_so_aix, g['CC'], python_exp)
 
 
 def _init_nt():
     """Initialize the module as appropriate for NT"""
-    g = {}
+    g = globals()
     # set basic install directories
     g['LIBDEST'] = get_python_lib(plat_specific=0, standard_lib=1)
     g['BINLIBDEST'] = get_python_lib(plat_specific=1, standard_lib=1)
@@ -324,14 +268,12 @@ def _init_nt():
 
     g['SO'] = '.pyd'
     g['EXE'] = ".exe"
-
-    global _config_vars
-    _config_vars = g
+    g['exec_prefix'] = EXEC_PREFIX
 
 
 def _init_mac():
     """Initialize the module as appropriate for Macintosh systems"""
-    g = {}
+    g = globals()
     # set basic install directories
     g['LIBDEST'] = get_python_lib(plat_specific=0, standard_lib=1)
     g['BINLIBDEST'] = get_python_lib(plat_specific=1, standard_lib=1)
@@ -340,50 +282,23 @@ def _init_mac():
     g['INCLUDEPY'] = get_python_inc(plat_specific=0)
 
     g['SO'] = '.ppc.slb'
+    g['exec_prefix'] = EXEC_PREFIX
+    print sys.prefix, PREFIX
 
     # XXX are these used anywhere?
     g['install_lib'] = os.path.join(EXEC_PREFIX, "Lib")
     g['install_platlib'] = os.path.join(EXEC_PREFIX, "Mac", "Lib")
 
-    global _config_vars
-    _config_vars = g
+
+try:
+    exec "_init_" + os.name
+except NameError:
+    # not needed for this platform
+    pass
+else:
+    exec "_init_%s()" % os.name
 
 
-def get_config_vars(*args):
-    """With no arguments, return a dictionary of all configuration
-    variables relevant for the current platform.  Generally this includes
-    everything needed to build extensions and install both pure modules and
-    extensions.  On Unix, this means every variable defined in Python's
-    installed Makefile; on Windows and Mac OS it's a much smaller set.
-
-    With arguments, return a list of values that result from looking up
-    each argument in the configuration variable dictionary.
-    """
-    global _config_vars
-    if _config_vars is None:
-        func = globals().get("_init_" + os.name)
-        if func:
-            func()
-        else:
-            _config_vars = {}
-
-        # Normalized versions of prefix and exec_prefix are handy to have;
-        # in fact, these are the standard versions used most places in the
-        # Distutils.
-        _config_vars['prefix'] = PREFIX
-        _config_vars['exec_prefix'] = EXEC_PREFIX
-
-    if args:
-        vals = []
-        for name in args:
-            vals.append(_config_vars.get(name))
-        return vals
-    else:
-        return _config_vars
-
-def get_config_var(name):
-    """Return the value of a single variable using the dictionary
-    returned by 'get_config_vars()'.  Equivalent to
-      get_config_vars().get(name)
-    """
-    return get_config_vars().get(name)
+del _init_posix
+del _init_nt
+del _init_mac

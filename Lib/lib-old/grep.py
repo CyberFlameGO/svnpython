@@ -2,6 +2,7 @@
 
 import regex
 from regex_syntax import *
+import string
 
 opt_show_where = 0
 opt_show_filename = 0
@@ -58,7 +59,7 @@ def pgrep(pat, *files):
 def showline(filename, lineno, line, prog):
 	if line[-1:] == '\n': line = line[:-1]
 	if opt_show_lineno:
-		prefix = `lineno`.rjust(3) + ': '
+		prefix = string.rjust(`lineno`, 3) + ': '
 	else:
 		prefix = ''
 	if opt_show_filename:
@@ -72,7 +73,7 @@ def showline(filename, lineno, line, prog):
 		else:
 			prefix = ' ' * len(prefix)
 			for c in line:
-				if c != '\t': c = ' '
+				if c <> '\t': c = ' '
 				prefix = prefix + c
 		if start == end: prefix = prefix + '\\'
 		else: prefix = prefix + '^'*(end-start)

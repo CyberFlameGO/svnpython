@@ -42,12 +42,10 @@ class build (Command):
          "forcibly build everything (ignore file timestamps)"),
         ]
 
-    boolean_options = ['debug', 'force']
-
     help_options = [
         ('help-compiler', None,
          "list available compilers", show_compilers),
-        ]
+	]
 
     def initialize_options (self):
         self.build_base = 'build'
@@ -64,16 +62,19 @@ class build (Command):
 
     def finalize_options (self):
 
-        plat_specifier = ".%s-%s" % (get_platform(), sys.version[0:3])
+        # Need this to name platform-specific directories, but sys.platform
+        # is not enough -- it only names the OS and version, not the
+        # hardware architecture!
+        self.plat = get_platform ()
 
         # 'build_purelib' and 'build_platlib' just default to 'lib' and
         # 'lib.<plat>' under the base build directory.  We only use one of
         # them for a given distribution, though --
         if self.build_purelib is None:
-            self.build_purelib = os.path.join(self.build_base, 'lib')
+            self.build_purelib = os.path.join (self.build_base, 'lib')
         if self.build_platlib is None:
-            self.build_platlib = os.path.join(self.build_base,
-                                              'lib' + plat_specifier)
+            self.build_platlib = os.path.join (self.build_base,
+                                               'lib.' + self.plat)
 
         # 'build_lib' is the actual directory that we will use for this
         # particular module distribution -- if user didn't supply it, pick
@@ -87,44 +88,35 @@ class build (Command):
         # 'build_temp' -- temporary directory for compiler turds,
         # "build/temp.<plat>"
         if self.build_temp is None:
-            self.build_temp = os.path.join(self.build_base,
-                                           'temp' + plat_specifier)
+            self.build_temp = os.path.join (self.build_base,
+                                            'temp.' + self.plat)
         if self.build_scripts is None:
-            self.build_scripts = os.path.join(self.build_base, 'scripts')
-
+            self.build_scripts = os.path.join (self.build_base, 'scripts')
     # finalize_options ()
 
 
     def run (self):
 
-        # Run all relevant sub-commands.  This will be some subset of:
-        #  - build_py      - pure Python modules
-        #  - build_clib    - standalone C libraries
-        #  - build_ext     - Python extensions
-        #  - build_scripts - (Python) scripts
-        for cmd_name in self.get_sub_commands():
-            self.run_command(cmd_name)
+        # For now, "build" means "build_py" then "build_ext".  (Eventually
+        # it should also build documentation.)
 
+        # Invoke the 'build_py' command to "build" pure Python modules
+        # (ie. copy 'em into the build tree)
+        if self.distribution.has_pure_modules():
+            self.run_command ('build_py')
 
-    # -- Predicates for the sub-command list ---------------------------
+        # Build any standalone C libraries next -- they're most likely to
+        # be needed by extension modules, so obviously have to be done
+        # first!
+        if self.distribution.has_c_libraries():
+            self.run_command ('build_clib')
 
-    def has_pure_modules (self):
-        return self.distribution.has_pure_modules()
+        # And now 'build_ext' -- compile extension modules and put them
+        # into the build tree
+        if self.distribution.has_ext_modules():
+            self.run_command ('build_ext')
 
-    def has_c_libraries (self):
-        return self.distribution.has_c_libraries()
-
-    def has_ext_modules (self):
-        return self.distribution.has_ext_modules()
-
-    def has_scripts (self):
-        return self.distribution.has_scripts()
-
-
-    sub_commands = [('build_py',      has_pure_modules),
-                    ('build_clib',    has_c_libraries),
-                    ('build_ext',     has_ext_modules),
-                    ('build_scripts', has_scripts),
-                   ]
+        if self.distribution.has_scripts():
+            self.run_command ('build_scripts')
 
 # class build

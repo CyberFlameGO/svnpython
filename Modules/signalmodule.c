@@ -1,4 +1,3 @@
-
 /* Signal module -- many thanks to Lance Ellinghaus */
 
 /* XXX Signals should be recorded per thread, now we have thread state. */
@@ -17,7 +16,7 @@
 #include <signal.h>
 
 #ifndef SIG_ERR
-#define SIG_ERR ((PyOS_sighandler_t)(-1))
+#define SIG_ERR ((RETSIGTYPE (*)())-1)
 #endif
 
 #if defined(PYOS_OS2)
@@ -26,18 +25,15 @@
 #endif
 
 #ifndef NSIG
-# if defined(_NSIG)
-#  define NSIG _NSIG		/* For BSD/SysV */
-# elif defined(_SIGMAX)
-#  define NSIG (_SIGMAX + 1)	/* For QNX */
-# elif defined(SIGMAX)
-#  define NSIG (SIGMAX + 1)	/* For djgpp */
-# else
-#  define NSIG 64		/* Use a reasonable default value */
-# endif
+#ifdef _SIGMAX
+#define NSIG (_SIGMAX + 1)	/* For QNX */
+#else
+#define NSIG (SIGMAX + 1)	/* for djgpp */
+#endif
 #endif
 
 
+
 /*
    NOTES ON THE INTERACTION BETWEEN SIGNALS AND THREADS
 
@@ -62,9 +58,6 @@
    handler ignores signals if getpid() isn't the same as in the main
    thread.  XXX This is a hack.
 
-   GNU pth is a user-space threading library, and as such, all threads
-   run within the same process. In this case, if the currently running
-   thread is not the main_thread, send the signal to the main_thread.
 */
 
 #ifdef WITH_THREAD
@@ -85,11 +78,14 @@ static PyObject *DefaultHandler;
 static PyObject *IgnoreHandler;
 static PyObject *IntHandler;
 
-static PyOS_sighandler_t old_siginthandler = SIG_DFL;
+static RETSIGTYPE (*old_siginthandler)() = SIG_DFL;
 
 
+
 static PyObject *
-signal_default_int_handler(PyObject *self, PyObject *args)
+signal_default_int_handler(self, arg)
+	PyObject *self;
+	PyObject *arg;
 {
 	PyErr_SetNone(PyExc_KeyboardInterrupt);
 	return NULL;
@@ -101,29 +97,19 @@ static char default_int_handler_doc[] =
 The default handler for SIGINT instated by Python.\n\
 It raises KeyboardInterrupt.";
 
-
-static int
-checksignals_witharg(void * unused)
-{
-	return PyErr_CheckSignals();
-}
-
-static void
-signal_handler(int sig_num)
+
+static RETSIGTYPE
+signal_handler(sig_num)
+	int sig_num;
 {
 #ifdef WITH_THREAD
-#ifdef WITH_PTH
-	if (PyThread_get_thread_ident() != main_thread) {
-		pth_raise(*(pth_t *) main_thread, sig_num);
-		return;
-	}
-#endif
 	/* See NOTES section above */
 	if (getpid() == main_pid) {
 #endif
 		is_tripped++;
 		Handlers[sig_num].tripped = 1;
-		Py_AddPendingCall(checksignals_witharg, NULL);
+		Py_AddPendingCall(
+			(int (*) Py_PROTO((ANY *)))PyErr_CheckSignals, NULL);
 #ifdef WITH_THREAD
 	}
 #endif
@@ -139,13 +125,16 @@ signal_handler(int sig_num)
 #ifdef HAVE_SIGINTERRUPT
 	siginterrupt(sig_num, 1);
 #endif
-	PyOS_setsig(sig_num, signal_handler);
+	(void)signal(sig_num, &signal_handler);
 }
 
 
+
 #ifdef HAVE_ALARM
 static PyObject *
-signal_alarm(PyObject *self, PyObject *args)
+signal_alarm(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int t;
 	if (!PyArg_Parse(args, "i", &t))
@@ -162,7 +151,9 @@ Arrange for SIGALRM to arrive after the given number of seconds.";
 
 #ifdef HAVE_PAUSE
 static PyObject *
-signal_pause(PyObject *self, PyObject *args)
+signal_pause(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -186,14 +177,16 @@ Wait until a signal arrives.";
 
 #endif
 
-
+
 static PyObject *
-signal_signal(PyObject *self, PyObject *args)
+signal_signal(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	PyObject *obj;
 	int sig_num;
 	PyObject *old_handler;
-	void (*func)(int);
+	RETSIGTYPE (*func)();
 	if (!PyArg_Parse(args, "(iO)", &sig_num, &obj))
 		return NULL;
 #ifdef WITH_THREAD
@@ -222,7 +215,7 @@ signal_signal(PyObject *self, PyObject *args)
 #ifdef HAVE_SIGINTERRUPT
 	siginterrupt(sig_num, 1);
 #endif
-	if (PyOS_setsig(sig_num, func) == SIG_ERR) {
+	if (signal(sig_num, func) == SIG_ERR) {
 		PyErr_SetFromErrno(PyExc_RuntimeError);
 		return NULL;
 	}
@@ -244,9 +237,11 @@ returned.  See getsignal() for possible return values.\n\
 A signal handler function is called with two arguments:\n\
 the first is the signal number, the second is the interrupted stack frame.";
 
-
+
 static PyObject *
-signal_getsignal(PyObject *self, PyObject *args)
+signal_getsignal(self, args)
+	PyObject *self; /* Not used */
+	PyObject *args;
 {
 	int sig_num;
 	PyObject *old_handler;
@@ -272,23 +267,24 @@ None -- if an unknown handler is in effect\n\
 anything else -- the callable Python object used as a handler\n\
 ";
 
-
+
 /* List of functions defined in the module */
 static PyMethodDef signal_methods[] = {
 #ifdef HAVE_ALARM
-	{"alarm",	        signal_alarm, METH_OLDARGS, alarm_doc},
+	{"alarm",	        signal_alarm, 0, alarm_doc},
 #endif
-	{"signal",	        signal_signal, METH_OLDARGS, signal_doc},
-	{"getsignal",	        signal_getsignal, METH_OLDARGS, getsignal_doc},
+	{"signal",	        signal_signal, 0, signal_doc},
+	{"getsignal",	        signal_getsignal, 0, getsignal_doc},
 #ifdef HAVE_PAUSE
-	{"pause",	        signal_pause, METH_OLDARGS, pause_doc},
+	{"pause",	        signal_pause, 0, pause_doc},
 #endif
-	{"default_int_handler", signal_default_int_handler, 
-	 METH_OLDARGS, default_int_handler_doc},
+	{"default_int_handler", signal_default_int_handler, 0,
+				default_int_handler_doc},
 	{NULL,			NULL}		/* sentinel */
 };
 
 
+
 static char module_doc[] =
 "This module provides mechanisms to use signal handlers in Python.\n\
 \n\
@@ -313,7 +309,7 @@ A signal handler function is called with two arguments:\n\
 the first is the signal number, the second is the interrupted stack frame.";
 
 DL_EXPORT(void)
-initsignal(void)
+initsignal()
 {
 	PyObject *m, *d, *x;
 	int i;
@@ -329,11 +325,11 @@ initsignal(void)
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
 
-	x = DefaultHandler = PyLong_FromVoidPtr((void *)SIG_DFL);
+	x = DefaultHandler = PyInt_FromLong((long)SIG_DFL);
         if (!x || PyDict_SetItemString(d, "SIG_DFL", x) < 0)
                 goto finally;
 
-	x = IgnoreHandler = PyLong_FromVoidPtr((void *)SIG_IGN);
+	x = IgnoreHandler = PyInt_FromLong((long)SIG_IGN);
         if (!x || PyDict_SetItemString(d, "SIG_IGN", x) < 0)
                 goto finally;
 
@@ -349,8 +345,15 @@ initsignal(void)
 
 	Handlers[0].tripped = 0;
 	for (i = 1; i < NSIG; i++) {
-		void (*t)(int);
-		t = PyOS_getsig(i);
+		RETSIGTYPE (*t)();
+#ifdef HAVE_SIGACTION
+		struct sigaction act;
+		sigaction(i,  0, &act);
+		t = act.sa_handler;
+#else
+		t = signal(i, SIG_IGN);
+		signal(i, t);
+#endif
 		Handlers[i].tripped = 0;
 		if (t == SIG_DFL)
 			Handlers[i].func = DefaultHandler;
@@ -365,7 +368,7 @@ initsignal(void)
 		Py_INCREF(IntHandler);
 		Py_DECREF(Handlers[SIGINT].func);
 		Handlers[SIGINT].func = IntHandler;
-		old_siginthandler = PyOS_setsig(SIGINT, &signal_handler);
+		old_siginthandler = signal(SIGINT, &signal_handler);
 	}
 
 #ifdef SIGHUP
@@ -547,12 +550,12 @@ initsignal(void)
 }
 
 static void
-finisignal(void)
+finisignal()
 {
 	int i;
 	PyObject *func;
 
-	PyOS_setsig(SIGINT, old_siginthandler);
+	signal(SIGINT, old_siginthandler);
 	old_siginthandler = SIG_DFL;
 
 	for (i = 1; i < NSIG; i++) {
@@ -561,7 +564,7 @@ finisignal(void)
 		Handlers[i].func = NULL;
 		if (i != SIGINT && func != NULL && func != Py_None &&
 		    func != DefaultHandler && func != IgnoreHandler)
-			PyOS_setsig(i, SIG_DFL);
+			signal(i, SIG_DFL);
 		Py_XDECREF(func);
 	}
 
@@ -574,9 +577,10 @@ finisignal(void)
 }
 
 
+
 /* Declared in pyerrors.h */
 int
-PyErr_CheckSignals(void)
+PyErr_CheckSignals()
 {
 	int i;
 	PyObject *f;
@@ -611,33 +615,33 @@ PyErr_CheckSignals(void)
 	return 0;
 }
 
-
+
 /* Replacements for intrcheck.c functionality
  * Declared in pyerrors.h
  */
 void
-PyErr_SetInterrupt(void)
+PyErr_SetInterrupt()
 {
 	is_tripped++;
 	Handlers[SIGINT].tripped = 1;
-	Py_AddPendingCall((int (*)(void *))PyErr_CheckSignals, NULL);
+	Py_AddPendingCall((int (*) Py_PROTO((ANY *)))PyErr_CheckSignals, NULL);
 }
 
 void
-PyOS_InitInterrupts(void)
+PyOS_InitInterrupts()
 {
 	initsignal();
 	_PyImport_FixupExtension("signal", "signal");
 }
 
 void
-PyOS_FiniInterrupts(void)
+PyOS_FiniInterrupts()
 {
 	finisignal();
 }
 
 int
-PyOS_InterruptOccurred(void)
+PyOS_InterruptOccurred()
 {
 	if (Handlers[SIGINT].tripped) {
 #ifdef WITH_THREAD
@@ -651,10 +655,9 @@ PyOS_InterruptOccurred(void)
 }
 
 void
-PyOS_AfterFork(void)
+PyOS_AfterFork()
 {
 #ifdef WITH_THREAD
-	PyEval_ReInitThreads();
 	main_thread = PyThread_get_thread_ident();
 	main_pid = getpid();
 #endif

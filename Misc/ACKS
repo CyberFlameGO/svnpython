@@ -8,8 +8,6 @@ Without you I would've stopped working on Python long ago!
 
 	--Guido
 
-PS: In the standard Python distribution this file is encoded in Latin-1.
-
 Jim Ahlstrom
 Jyrki Alakuijala
 Mark Anacker
@@ -18,9 +16,7 @@ Oliver Andrich
 Ross Andrus
 Jason Asbahr
 David Ascher
-Donovan Baarda
 Stig Bakken
-Greg Ball
 Des Barry
 Ulf Bartelt
 Jeff Bauer
@@ -48,36 +44,25 @@ Monty Brandenberg
 Terrence Brannon
 Dave Brennan
 Gary S. Brown
-Oleg Broytmann
-Stan Bubrouski
 Erik de Bueger
 Jan-Hein B"uhrman
 Dick Bulterman
-Bill Bumgarner
 Tommy Burnette
 Roger Burnham
 Lee Busby
 Ralph Butler
-Daniel Calvelo
 Mike Carlton
-Luke Kenneth Casson Leighton
 Donn Cave
 Per Cederqvist
 Jeffrey Chang
-Brad Chapman
 Mitch Chapman
 David Chaum
 Nicolas Chauvat
 Albert Chin-A-Young
 Tom Christiansen
 Vadim Chugunov
-Mike Clarkson
 Steve Clift
-Dave Cole
-Benjamin Collar
-Jeffery Collins
 Matt Conway
-David M. Cooke
 Scott Cotton
 Greg Couch
 Steve Cousins
@@ -91,7 +76,6 @@ Jonathan Dasteel
 John DeGood
 Roger Dev
 Toby Dickenson
-Daniel Dittmar
 Jaromir Dolecek
 Fred Drake
 John DuBois
@@ -101,7 +85,6 @@ Andy Dustman
 Gary Duzan
 Eugene Dvurechenski
 Hans Eckardt
-Grant Edwards
 Lance Ellinghaus
 David Ely
 Jeff Epler
@@ -121,9 +104,8 @@ Mark Favas
 Niels Ferguson
 Sebastian Fernandez
 Nils Fischbeck
-Doug Fort
 Robin Friedrich
-Ivan Frohne
+Ivan Frohe
 Jim Fulton
 Geoff Furnish
 Tadayoshi Funaba
@@ -132,7 +114,6 @@ Lele Gaifax
 Raymund Galvin
 Fred Gansevles
 Lars Marius Garshol
-Harry Henry Gebel
 Thomas Gellekum
 Ben Gertzfield
 Jonathan Giddy
@@ -158,7 +139,6 @@ Jochen Hayek
 Thomas Heller
 Lance Finn Helsten
 Jonathan Hendry
-James Henstridge
 Chris Herborth
 Ivan Herman
 Gary Herron
@@ -182,14 +162,12 @@ Nadav Horesh
 Ken Howard
 Brad Howes
 Chih-Hao Huang
-Lawrence Hudson
 Michael Hudson
 Jim Hugunin
 Greg Humphreys
 Jeremy Hylton
 John Interrante
 Ben Jackson
-Paul Jackson
 Jack Jansen
 Bill Janssen
 Drew Jenkins
@@ -202,7 +180,6 @@ Andreas Jung
 Bob Kahn
 Tamito Kajiyama
 Lou Kates
-Randall Kern
 Magnus Kessler
 Lawrence Kesteloot
 Vivek Khera
@@ -234,9 +211,8 @@ Eric Lindvall
 Per Lindqvist
 Nick Lockwood
 Stephanie Lockwood
-Martin von Löwis
+Martin von Loewis
 Anne Lord
-Tony Lownds
 Ray Loyzaga
 Fredrik Lundh
 Loren Luke
@@ -252,7 +228,6 @@ Vladimir Marangozov
 Doug Marien
 Anthony Martin
 Roger Masse
-Nick Mathewson
 Graham Matthews
 Dieter Maurer
 Greg McFarlane
@@ -278,14 +253,11 @@ George Neville-Neil
 Oscar Nierstrasz
 Hrvoje Niksic
 Bill Noon
-Stefan Norberg
 Jeffrey Ollie
 Nigel O'Brian
 Tim O'Malley
-Denis S. Otkidach
 Piet van Oostrum
 Jason Orendorff
-Todd R. Palmer
 Harri Pasanen
 Randy Pausch
 Marcel van der Peijl
@@ -295,9 +267,6 @@ Chris Petrilli
 Geoff Philbrick
 Adrian Phillips
 Christopher J. Phoenix
-Neale Pickett
-Dan Pierson
-François Pinard
 Amrit Prem
 Paul Prescod
 Eric Raymond
@@ -310,7 +279,6 @@ Bernhard Reiter
 Steven Reiz
 Jan Pieter Riegel
 Nicholas Riley
-Jean-Claude Rimbault
 Andy Robinson
 Jim Robinson
 Mike Romberg
@@ -322,7 +290,6 @@ Just van Rossum
 Hugo van Rossum
 Saskia van Rossum
 Donald Wallace Rouse II
-Audun S. Runde
 Jeff Rush
 Sam Rushing
 Nick Russo
@@ -346,7 +313,6 @@ Joel Shprentz
 Eric Siegerman
 Paul Sijben
 Nathan Paul Simons
-Janne Sinkkonen
 George Sipe
 Kragen Sitaker
 Rafal Smotrzyk
@@ -357,8 +323,9 @@ Per Spilling
 Greg Stein
 Dan Stromberg
 Nathan Sullivan
-Kalle Svensson
-Hajime Saitou
+Neale Pickett
+Dan Pierson
+François Pinard
 RajGopal Srinivasan
 Jim St. Pierre
 Quentin Stafford-Fraser
@@ -372,7 +339,7 @@ Amy Taylor
 Tobias Thelen
 Eric Tiedemann
 Tracy Tims
-Jason Tishler
+Christian Tismer
 Christian Tismer
 R Lindsay Todd
 Bennett Todd
@@ -409,14 +376,13 @@ Jean-Claude Wippler
 Lars Wirzenius
 Stefan Witzel
 Klaus-Juergen Wolf
-Dan Wolfe
 Richard Wolff
 Thomas Wouters
 Doug Wyatt
 Ka-Ping Yee
-Bob Yodlowski
 Masazumi Yoshikawa
 Moshe Zadka
 Milan Zamazal
 Siebren van der Zee
 Uwe Zessin
+hajime@jsk.t.u-tokyo.ac.jp

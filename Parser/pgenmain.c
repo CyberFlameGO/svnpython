@@ -1,4 +1,3 @@
-
 /* Parser generator main program */
 
 /* This expects a filename containing the grammar as argv[1] (UNIX)
@@ -23,54 +22,52 @@ int Py_DebugFlag;
 int Py_VerboseFlag;
 
 /* Forward */
-grammar *getgrammar(char *filename);
+grammar *getgrammar Py_PROTO((char *filename));
 #ifdef THINK_C
-int main(int, char **);
-char *askfile(void);
+int main Py_PROTO((int, char **));
+char *askfile Py_PROTO((void));
 #endif
 
 void
-Py_Exit(int sts)
+Py_Exit(sts)
+	int sts;
 {
 	exit(sts);
 }
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+	int argc;
+	char **argv;
 {
 	grammar *g;
 	FILE *fp;
-	char *filename, *graminit_h, *graminit_c;
+	char *filename;
 	
 #ifdef THINK_C
 	filename = askfile();
-	graminit_h = askfile();
-	graminit_c = askfile();
 #else
-	if (argc != 4) {
-		fprintf(stderr,
-			"usage: %s grammar graminit.h graminit.c\n", argv[0]);
+	if (argc != 2) {
+		fprintf(stderr, "usage: %s grammar\n", argv[0]);
 		Py_Exit(2);
 	}
 	filename = argv[1];
-	graminit_h = argv[2];
-	graminit_c = argv[3];
 #endif
 	g = getgrammar(filename);
-	fp = fopen(graminit_c, "w");
+	fp = fopen("graminit.c", "w");
 	if (fp == NULL) {
-		perror(graminit_c);
+		perror("graminit.c");
 		Py_Exit(1);
 	}
-	printf("Writing %s ...\n", graminit_c);
+	printf("Writing graminit.c ...\n");
 	printgrammar(g, fp);
 	fclose(fp);
-	fp = fopen(graminit_h, "w");
+	fp = fopen("graminit.h", "w");
 	if (fp == NULL) {
-		perror(graminit_h);
+		perror("graminit.h");
 		Py_Exit(1);
 	}
-	printf("Writing %s ...\n", graminit_h);
+	printf("Writing graminit.h ...\n");
 	printnonterminals(g, fp);
 	fclose(fp);
 	Py_Exit(0);
@@ -78,7 +75,8 @@ main(int argc, char **argv)
 }
 
 grammar *
-getgrammar(char *filename)
+getgrammar(filename)
+	char *filename;
 {
 	FILE *fp;
 	node *n;
@@ -98,7 +96,7 @@ getgrammar(char *filename)
 		fprintf(stderr, "Parsing error %d, line %d.\n",
 			err.error, err.lineno);
 		if (err.text != NULL) {
-			size_t i;
+			int i;
 			fprintf(stderr, "%s", err.text);
 			i = strlen(err.text);
 			if (i == 0 || err.text[i-1] != '\n')
@@ -124,7 +122,7 @@ getgrammar(char *filename)
 
 #ifdef THINK_C
 char *
-askfile(void)
+askfile()
 {
 	char buf[256];
 	static char name[256];
@@ -143,7 +141,8 @@ askfile(void)
 #endif
 
 void
-Py_FatalError(char *msg)
+Py_FatalError(msg)
+	char *msg;
 {
 	fprintf(stderr, "pgen: FATAL ERROR: %s\n", msg);
 	Py_Exit(1);
@@ -152,7 +151,8 @@ Py_FatalError(char *msg)
 #ifdef macintosh
 /* ARGSUSED */
 int
-guesstabsize(char *path)
+guesstabsize(path)
+	char *path;
 {
 	return 4;
 }
@@ -161,9 +161,10 @@ guesstabsize(char *path)
 /* No-nonsense my_readline() for tokenizer.c */
 
 char *
-PyOS_Readline(char *prompt)
+PyOS_Readline(prompt)
+	char *prompt;
 {
-	size_t n = 1000;
+	int n = 1000;
 	char *p = PyMem_MALLOC(n);
 	char *q;
 	if (p == NULL)
@@ -180,14 +181,29 @@ PyOS_Readline(char *prompt)
 	return PyMem_REALLOC(p, n+1);
 }
 
+#ifdef HAVE_STDARG_PROTOTYPES
 #include <stdarg.h>
+#else
+#include <varargs.h>
+#endif
 
 void
+#ifdef HAVE_STDARG_PROTOTYPES
 PySys_WriteStderr(const char *format, ...)
+#else
+PySys_WriteStderr(va_alist)
+	va_dcl
+#endif
 {
 	va_list va;
 
+#ifdef HAVE_STDARG_PROTOTYPES
 	va_start(va, format);
+#else
+	char *format;
+	va_start(va);
+	format = va_arg(va, char *);
+#endif
 	vfprintf(stderr, format, va);
 	va_end(va);
 }

@@ -10,7 +10,7 @@ classes and some useful string functions.  See the module
 \refmodule{re}\refstmodindex{re} for string functions based on regular
 expressions.
 
-The constants defined in this module are:
+The constants defined in this module are are:
 
 \begin{datadesc}{digits}
   The string \code{'0123456789'}.
@@ -37,17 +37,6 @@ The constants defined in this module are:
   The string \code{'01234567'}.
 \end{datadesc}
 
-\begin{datadesc}{punctuation}
-  String of \ASCII{} characters which are considered punctuation
-  characters in the \samp{C} locale.
-\end{datadesc}
-
-\begin{datadesc}{printable}
-  String of characters which are considered printable.  This is a
-  combination of \constant{digits}, \constant{letters},
-  \constant{punctuation}, and \constant{whitespace}.
-\end{datadesc}
-
 \begin{datadesc}{uppercase}
   A string containing all the characters that are considered uppercase
   letters.  On most systems this is the string
@@ -64,14 +53,10 @@ The constants defined in this module are:
   is undefined.
 \end{datadesc}
 
-
-Many of the functions provided by this module are also defined as
-methods of string and Unicode objects; see ``String Methods'' (section
-\ref{string-methods}) for more information on those.
 The functions defined in this module are:
 
+
 \begin{funcdesc}{atof}{s}
-  \deprecated{2.0}{Use the \function{float()} built-in function.}
   Convert a string to a floating point number.  The string must have
   the standard syntax for a floating point literal in Python,
   optionally preceded by a sign (\samp{+} or \samp{-}).  Note that
@@ -86,22 +71,21 @@ The functions defined in this module are:
 \end{funcdesc}
 
 \begin{funcdesc}{atoi}{s\optional{, base}}
-  \deprecated{2.0}{Use the \function{int()} built-in function.}
   Convert string \var{s} to an integer in the given \var{base}.  The
   string must consist of one or more digits, optionally preceded by a
   sign (\samp{+} or \samp{-}).  The \var{base} defaults to 10.  If it
   is 0, a default base is chosen depending on the leading characters
   of the string (after stripping the sign): \samp{0x} or \samp{0X}
   means 16, \samp{0} means 8, anything else means 10.  If \var{base}
-  is 16, a leading \samp{0x} or \samp{0X} is always accepted, though
-  not required.  This behaves identically to the built-in function
-  \function{int()} when passed a string.  (Also note: for a more
-  flexible interpretation of numeric literals, use the built-in
-  function \function{eval()}\bifuncindex{eval}.)
+  is 16, a leading \samp{0x} or \samp{0X} is always accepted.  Note
+  that when invoked without \var{base} or with \var{base} set to 10,
+  this behaves identical to the built-in function \function{int()}
+  when passed a string.  (Also note: for a more flexible
+  interpretation of numeric literals, use the built-in function
+  \function{eval()}\bifuncindex{eval}.)
 \end{funcdesc}
 
 \begin{funcdesc}{atol}{s\optional{, base}}
-  \deprecated{2.0}{Use the \function{long()} built-in function.}
   Convert string \var{s} to a long integer in the given \var{base}.
   The string must consist of one or more digits, optionally preceded
   by a sign (\samp{+} or \samp{-}).  The \var{base} argument has the
@@ -124,7 +108,7 @@ The functions defined in this module are:
   trailing whitespace.
 \end{funcdesc}
 
-\begin{funcdesc}{expandtabs}{s\optional{, tabsize}}
+\begin{funcdesc}{expandtabs}{s, \optional{tabsize}}
   Expand tabs in a string, i.e.\ replace them by one or more spaces,
   depending on the current column and the given tab size.  The column
   number is reset to zero after each newline occurring in the string.
@@ -158,7 +142,7 @@ The functions defined in this module are:
   Return the number of (non-overlapping) occurrences of substring
   \var{sub} in string \code{\var{s}[\var{start}:\var{end}]}.
   Defaults for \var{start} and \var{end} and interpretation of
-  negative values are the same as for slices.
+  negative values is the same as for slices.
 \end{funcdesc}
 
 \begin{funcdesc}{lower}{s}

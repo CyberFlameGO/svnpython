@@ -37,8 +37,6 @@ they automatically support Emacs-like command history and editing features.
 
 import string
 
-__all__ = ["Cmd"]
-
 PROMPT = '(Cmd) '
 IDENTCHARS = string.letters + string.digits + '_'
 
@@ -59,7 +57,7 @@ class Cmd:
 
     def cmdloop(self, intro=None):
         self.preloop()
-        if intro is not None:
+        if intro != None:
             self.intro = intro
         if self.intro:
             print self.intro
@@ -91,20 +89,20 @@ class Cmd:
         pass
 
     def onecmd(self, line):
-        line = line.strip()
-        if not line:
-            return self.emptyline()
-        elif line[0] == '?':
-            line = 'help ' + line[1:]
-        elif line[0] == '!':
+        line = string.strip(line)
+        if line == '?':
+            line = 'help'
+        elif line == '!':
             if hasattr(self, 'do_shell'):
-                line = 'shell ' + line[1:]
+                line = 'shell'
             else:
                 return self.default(line)
+        elif not line:
+            return self.emptyline()
         self.lastcmd = line
         i, n = 0, len(line)
         while i < n and line[i] in self.identchars: i = i+1
-        cmd, arg = line[:i], line[i:].strip()
+        cmd, arg = line[:i], string.strip(line[i:])
         if cmd == '':
             return self.default(line)
         else:
@@ -177,7 +175,7 @@ class Cmd:
 
     def print_topics(self, header, cmds, cmdlen, maxcol):
         if cmds:
-            print header
+            print header;
             if self.ruler:
                 print self.ruler * len(header)
             (cmds_per_line,junk)=divmod(maxcol,cmdlen)

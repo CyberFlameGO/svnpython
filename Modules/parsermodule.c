@@ -58,7 +58,7 @@ parser_doc_string
 = "This is an interface to Python's internal parser.";
 
 static char*
-parser_version_string = "0.5";
+parser_version_string = "0.4";
 
 
 typedef PyObject* (*SeqMaker) (int length);
@@ -66,7 +66,7 @@ typedef int (*SeqInserter) (PyObject* sequence,
                             int index,
                             PyObject* element);
 
-/*  The function below is copyrighted by Stichting Mathematisch Centrum.  The
+/*  The function below is copyrigthed by Stichting Mathematisch Centrum.  The
  *  original copyright statement is included below, and continues to apply
  *  in full to the function immediately following.  All other material is
  *  original, copyrighted by Fred L. Drake, Jr. and Virginia Polytechnic
@@ -74,7 +74,6 @@ typedef int (*SeqInserter) (PyObject* sequence,
  *  new naming conventions.  Added arguments to provide support for creating
  *  lists as well as tuples, and optionally including the line numbers.
  */
-
 
 static PyObject*
 node2tuple(node *n,                     /* node to convert               */
@@ -468,7 +467,9 @@ parser_methods[] = {
 
 
 static PyObject*
-parser_getattr(PyObject *self, char *name)
+parser_getattr(self, name)
+     PyObject *self;
+     char *name;
 {
     return (Py_FindMethod(parser_methods, self, name));
 }
@@ -480,7 +481,8 @@ parser_getattr(PyObject *self, char *name)
  *
  */
 static void
-err_string(char *message)
+err_string(message)
+     char *message;
 {
     PyErr_SetString(parser_error, message);
 }
@@ -508,7 +510,7 @@ parser_do_parse(PyObject *args, PyObject *kw, char *argspec, int type)
         if (n != 0)
             res = parser_newastobject(n, type);
         else
-            err_string("could not parse string");
+            err_string("Could not parse string.");
     }
     return (res);
 }
@@ -579,48 +581,135 @@ parser_tuple2ast(PyAST_Object *self, PyObject *args, PyObject *kw)
 {
     NOTE(ARGUNUSED(self))
     PyObject *ast = 0;
-    PyObject *tuple;
-    node *tree;
+    PyObject *tuple = 0;
+    PyObject *temp = 0;
+    int ok;
+    int start_sym = 0;
 
     static char *keywords[] = {"sequence", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "O:sequence2ast", keywords,
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O:tuple2ast", keywords,
                                      &tuple))
         return (0);
     if (!PySequence_Check(tuple)) {
         PyErr_SetString(PyExc_ValueError,
-                        "sequence2ast() requires a single sequence argument");
+                        "tuple2ast() requires a single sequence argument");
         return (0);
     }
     /*
-     *  Convert the tree to the internal form before checking it.
+     *  This mess of tests is written this way so we can use the abstract
+     *  object interface (AOI).  Unfortunately, the AOI increments reference
+     *  counts, which requires that we store a pointer to retrieved object
+     *  so we can DECREF it after the check.  But we really should accept
+     *  lists as well as tuples at the very least.
      */
-    tree = build_node_tree(tuple);
-    if (tree != 0) {
-        int start_sym = TYPE(tree);
-        if (start_sym == eval_input) {
-            /*  Might be an eval form.  */
-            if (validate_expr_tree(tree))
-                ast = parser_newastobject(tree, PyAST_EXPR);
-        }
-        else if (start_sym == file_input) {
-            /*  This looks like an exec form so far.  */
-            if (validate_file_input(tree))
-                ast = parser_newastobject(tree, PyAST_SUITE);
-        }
-        else {
-            /*  This is a fragment, at best. */
-            PyNode_Free(tree);
-            err_string("parse tree does not use a valid start symbol");
-        }
+    ok = PyObject_Length(tuple) >= 2;
+    if (ok) {
+        temp = PySequence_GetItem(tuple, 0);
+        ok = (temp != NULL) && PyInt_Check(temp);
+        if (ok)
+            /* this is used after the initial checks: */
+            start_sym = PyInt_AS_LONG(temp);
+        Py_XDECREF(temp);
     }
+    if (ok) {
+        temp = PySequence_GetItem(tuple, 1);
+        ok = (temp != NULL) && PySequence_Check(temp);
+        Py_XDECREF(temp);
+    }
+    if (ok) {
+        temp = PySequence_GetItem(tuple, 1);
+        ok = (temp != NULL) && PyObject_Length(temp) >= 2;
+        if (ok) {
+            PyObject *temp2 = PySequence_GetItem(temp, 0);
+            if (temp2 != NULL) {
+                ok = PyInt_Check(temp2);
+                Py_DECREF(temp2);
+            }
+        }
+        Py_XDECREF(temp);
+    }
+    /* If we've failed at some point, get out of here. */
+    if (!ok) {
+        err_string("malformed sequence for tuple2ast()");
+        return (0);
+    }
+    /*
+     *  This might be a valid parse tree, but let's do a quick check
+     *  before we jump the gun.
+     */
+    if (start_sym == eval_input) {
+        /*  Might be an eval form.  */
+        node* expression = build_node_tree(tuple);
+
+        if ((expression != 0) && validate_expr_tree(expression))
+            ast = parser_newastobject(expression, PyAST_EXPR);
+    }
+    else if (start_sym == file_input) {
+        /*  This looks like an exec form so far.  */
+        node* suite_tree = build_node_tree(tuple);
+
+        if ((suite_tree != 0) && validate_file_input(suite_tree))
+            ast = parser_newastobject(suite_tree, PyAST_SUITE);
+    }
+    else
+        /*  This is a fragment, and is not yet supported.  Maybe they
+         *  will be if I find a use for them.
+         */
+        err_string("Fragmentary parse trees not supported.");
+
     /*  Make sure we throw an exception on all errors.  We should never
      *  get this, but we'd do well to be sure something is done.
      */
     if ((ast == 0) && !PyErr_Occurred())
-        err_string("unspecified AST error occurred");
+        err_string("Unspecified ast error occurred.");
 
     return (ast);
+}
+
+
+/*  int check_terminal_tuple()
+ *
+ *  Check a tuple to determine that it is indeed a valid terminal
+ *  node.  The node is known to be required as a terminal, so we throw
+ *  an exception if there is a failure.
+ *
+ *  The format of an acceptable terminal tuple is "(is[i])": the fact
+ *  that elem is a tuple and the integer is a valid terminal symbol
+ *  has been established before this function is called.  We must
+ *  check the length of the tuple and the type of the second element
+ *  and optional third element.  We do *NOT* check the actual text of
+ *  the string element, which we could do in many cases.  This is done
+ *  by the validate_*() functions which operate on the internal
+ *  representation.
+ */
+static int
+check_terminal_tuple(PyObject *elem)
+{
+    int   len = PyObject_Length(elem);
+    int   res = 1;
+    char* str = "Illegal terminal symbol; bad node length.";
+
+    if ((len == 2) || (len == 3)) {
+        PyObject *temp = PySequence_GetItem(elem, 1);
+        res = PyString_Check(temp);
+        str = "Illegal terminal symbol; expected a string.";
+        if (res && (len == 3)) {
+            PyObject* third = PySequence_GetItem(elem, 2);
+            res = PyInt_Check(third);
+            str = "Invalid third element of terminal node.";
+            Py_XDECREF(third);
+        }
+        Py_XDECREF(temp);
+    }
+    else {
+        res = 0;
+    }
+    if (!res) {
+        elem = Py_BuildValue("(os)", elem, str);
+        PyErr_SetObject(parser_error, elem);
+    }
+    return (res);
 }
 
 
@@ -635,11 +724,11 @@ parser_tuple2ast(PyAST_Object *self, PyObject *args, PyObject *kw)
 static node*
 build_node_children(PyObject *tuple, node *root, int *line_num)
 {
-    int len = PyObject_Size(tuple);
+    int len = PyObject_Length(tuple);
     int i;
 
     for (i = 1; i < len; ++i) {
-        /* elem must always be a sequence, however simple */
+        /* elem must always be a tuple, however simple */
         PyObject* elem = PySequence_GetItem(tuple, i);
         int ok = elem != NULL;
         long  type = 0;
@@ -660,52 +749,31 @@ build_node_children(PyObject *tuple, node *root, int *line_num)
         }
         if (!ok) {
             PyErr_SetObject(parser_error,
-                            Py_BuildValue("os", elem,
+                            Py_BuildValue("(os)", elem,
                                           "Illegal node construct."));
             Py_XDECREF(elem);
             return (0);
         }
         if (ISTERMINAL(type)) {
-            int len = PyObject_Size(elem);
-            PyObject *temp;
+            if (check_terminal_tuple(elem)) {
+                PyObject *temp = PySequence_GetItem(elem, 1);
 
-            if ((len != 2) && (len != 3)) {
-                err_string("terminal nodes must have 2 or 3 entries");
-                return 0;
-            }
-            temp = PySequence_GetItem(elem, 1);
-            if (temp == NULL)
-                return 0;
-            if (!PyString_Check(temp)) {
-                PyErr_Format(parser_error,
-                             "second item in terminal node must be a string,"
-                             " found %s",
-                             ((PyTypeObject*)PyObject_Type(temp))->tp_name);
+                /* check_terminal_tuple() already verified it's a string */
+                strn = (char *)PyMem_MALLOC(PyString_GET_SIZE(temp) + 1);
+                if (strn != NULL)
+                    (void) strcpy(strn, PyString_AS_STRING(temp));
                 Py_DECREF(temp);
-                return 0;
-            }
-            if (len == 3) {
-                PyObject *o = PySequence_GetItem(elem, 2);
-                if (o != NULL) {
-                    if (PyInt_Check(o))
-                        *line_num = PyInt_AS_LONG(o);
-                    else {
-                        PyErr_Format(parser_error,
-                                     "third item in terminal node must be an"
-                                     " integer, found %s",
-                                ((PyTypeObject*)PyObject_Type(temp))->tp_name);
-                        Py_DECREF(o);
-                        Py_DECREF(temp);
-                        return 0;
-                    }
-                    Py_DECREF(o);
+
+                if (PyObject_Length(elem) == 3) {
+                    PyObject* temp = PySequence_GetItem(elem, 2);
+                    *line_num = PyInt_AsLong(temp);
+                    Py_DECREF(temp);
                 }
             }
-            len = PyString_GET_SIZE(temp) + 1;
-            strn = (char *)PyMem_MALLOC(len);
-            if (strn != NULL)
-                (void) memcpy(strn, PyString_AS_STRING(temp), len);
-            Py_DECREF(temp);
+            else {
+                Py_XDECREF(elem);
+                return (0);
+            }
         }
         else if (!ISNONTERMINAL(type)) {
             /*
@@ -713,7 +781,8 @@ build_node_children(PyObject *tuple, node *root, int *line_num)
              *  Throw an exception.
              */
             PyErr_SetObject(parser_error,
-                            Py_BuildValue("os", elem, "unknown node type."));
+                            Py_BuildValue("(os)", elem,
+                                          "Unknown node type."));
             Py_XDECREF(elem);
             return (0);
         }
@@ -741,7 +810,7 @@ build_node_tree(PyObject *tuple)
 {
     node* res = 0;
     PyObject *temp = PySequence_GetItem(tuple, 0);
-    long num = -1;
+    long  num = -1;
 
     if (temp != NULL)
         num = PyInt_AsLong(temp);
@@ -751,8 +820,8 @@ build_node_tree(PyObject *tuple)
          *  The tuple is simple, but it doesn't start with a start symbol.
          *  Throw an exception now and be done with it.
          */
-        tuple = Py_BuildValue("os", tuple,
-                      "Illegal ast tuple; cannot start with terminal symbol.");
+        tuple = Py_BuildValue("(os)", tuple,
+                    "Illegal ast tuple; cannot start with terminal symbol.");
         PyErr_SetObject(parser_error, tuple);
     }
     else if (ISNONTERMINAL(num)) {
@@ -769,15 +838,21 @@ build_node_tree(PyObject *tuple)
     }
     else
         /*  The tuple is illegal -- if the number is neither TERMINAL nor
-         *  NONTERMINAL, we can't use it.  Not sure the implementation
-         *  allows this condition, but the API doesn't preclude it.
+         *  NONTERMINAL, we can't use it.
          */
         PyErr_SetObject(parser_error,
-                        Py_BuildValue("os", tuple,
+                        Py_BuildValue("(os)", tuple,
                                       "Illegal component tuple."));
 
     return (res);
 }
+
+
+#ifdef HAVE_OLD_CPP
+#define VALIDATER(n)    static int validate_/**/n(node *tree)
+#else
+#define VALIDATER(n)    static int validate_##n(node *tree)
+#endif
 
 
 /*
@@ -802,8 +877,6 @@ staticforward int validate_terminal(node *terminal, int type, char *string);
 #define validate_dot(ch)        validate_terminal(ch,        DOT, ".")
 #define validate_name(ch, str)  validate_terminal(ch,       NAME, str)
 
-#define VALIDATER(n)    static int validate_##n(node *tree)
-
 VALIDATER(node);                VALIDATER(small_stmt);
 VALIDATER(class);               VALIDATER(node);
 VALIDATER(parameters);          VALIDATER(suite);
@@ -812,10 +885,10 @@ VALIDATER(fpdef);               VALIDATER(fplist);
 VALIDATER(stmt);                VALIDATER(simple_stmt);
 VALIDATER(expr_stmt);           VALIDATER(power);
 VALIDATER(print_stmt);          VALIDATER(del_stmt);
-VALIDATER(return_stmt);         VALIDATER(list_iter);
+VALIDATER(return_stmt);
 VALIDATER(raise_stmt);          VALIDATER(import_stmt);
-VALIDATER(global_stmt);         VALIDATER(list_if);
-VALIDATER(assert_stmt);         VALIDATER(list_for);
+VALIDATER(global_stmt);
+VALIDATER(assert_stmt);
 VALIDATER(exec_stmt);           VALIDATER(compound_stmt);
 VALIDATER(while);               VALIDATER(for);
 VALIDATER(try);                 VALIDATER(except_clause);
@@ -830,9 +903,7 @@ VALIDATER(trailer);             VALIDATER(subscript);
 VALIDATER(subscriptlist);       VALIDATER(sliceop);
 VALIDATER(exprlist);            VALIDATER(dictmaker);
 VALIDATER(arglist);             VALIDATER(argument);
-VALIDATER(listmaker);
 
-#undef VALIDATER
 
 #define is_even(n)      (((n) & 1) == 0)
 #define is_odd(n)       (((n) & 1) == 1)
@@ -841,12 +912,14 @@ VALIDATER(listmaker);
 static int
 validate_ntype(node *n, int t)
 {
-    if (TYPE(n) != t) {
-        PyErr_Format(parser_error, "Expected node type %d, got %d.",
-                     t, TYPE(n));
-        return 0;
+    int res = (TYPE(n) == t);
+
+    if (!res) {
+        char buffer[128];
+        (void) sprintf(buffer, "Expected node type %d, got %d.", t, TYPE(n));
+        err_string(buffer);
     }
-    return 1;
+    return (res);
 }
 
 
@@ -861,11 +934,11 @@ static int
 validate_numnodes(node *n, int num, const char *const name)
 {
     if (NCH(n) != num) {
-        PyErr_Format(parser_error,
-                     "Illegal number of children for %s node.", name);
-        return 0;
+        char buff[60];
+        (void) sprintf(buff, "Illegal number of children for %s node.", name);
+        err_string(buff);
     }
-    return 1;
+    return (NCH(n) == num);
 }
 
 
@@ -876,8 +949,9 @@ validate_terminal(node *terminal, int type, char *string)
                && ((string == 0) || (strcmp(string, STR(terminal)) == 0)));
 
     if (!res && !PyErr_Occurred()) {
-        PyErr_Format(parser_error,
-                     "Illegal terminal: expected \"%s\"", string);
+        char buffer[60];
+        (void) sprintf(buffer, "Illegal terminal: expected \"%s\"", string);
+        err_string(buffer);
     }
     return (res);
 }
@@ -886,7 +960,7 @@ validate_terminal(node *terminal, int type, char *string)
 /*  X (',' X) [',']
  */
 static int
-validate_repeating_list(node *tree, int ntype, int (*vfunc)(node *),
+validate_repeating_list(node *tree, int ntype, int (*vfunc)(),
                         const char *const name)
 {
     int nch = NCH(tree);
@@ -909,7 +983,7 @@ validate_repeating_list(node *tree, int ntype, int (*vfunc)(node *),
 }
 
 
-/*  validate_class()
+/*  VALIDATE(class)
  *
  *  classdef:
  *      'class' NAME ['(' testlist ')'] ':' suite
@@ -1001,7 +1075,7 @@ validate_parameters(node *tree)
 }
 
 
-/*  validate_suite()
+/*  VALIDATE(suite)
  *
  *  suite:
  *      simple_stmt
@@ -1043,51 +1117,15 @@ validate_testlist(node *tree)
 }
 
 
-/* '*' NAME [',' '**' NAME] | '**' NAME
- */
-static int
-validate_varargslist_trailer(node *tree, int start)
-{
-    int nch = NCH(tree);
-    int res = 0;
-    int sym;
-
-    if (nch <= start) {
-        err_string("expected variable argument trailer for varargslist");
-        return 0;
-    }
-    sym = TYPE(CHILD(tree, start));
-    if (sym == STAR) {
-        /*
-         *  ('*' NAME [',' '**' NAME]
-         */
-        if (nch-start == 2)
-            res = validate_name(CHILD(tree, start+1), NULL);
-        else if (nch-start == 5)
-            res = (validate_name(CHILD(tree, start+1), NULL)
-                   && validate_comma(CHILD(tree, start+2))
-                   && validate_doublestar(CHILD(tree, start+3))
-                   && validate_name(CHILD(tree, start+4), NULL));
-    }
-    else if (sym == DOUBLESTAR) {
-        /*
-         *  '**' NAME
-         */
-        if (nch-start == 2)
-            res = validate_name(CHILD(tree, start+1), NULL);
-    }
-    if (!res)
-        err_string("illegal variable argument trailer for varargslist");
-    return res;
-}
-
-
-/*  validate_varargslist()
+/*  VALIDATE(varargslist)
  *
  *  varargslist:
+ *      (fpdef ['=' test] ',')* ('*' NAME [',' '*' '*' NAME] | '*' '*' NAME)
+ *    | fpdef ['=' test] (',' fpdef ['=' test])* [',']
+ *
  *      (fpdef ['=' test] ',')*
- *           ('*' NAME [',' '**' NAME]
- *         | '**' NAME)
+ *           ('*' NAME [',' ('**'|'*' '*') NAME]
+ *         | ('**'|'*' '*') NAME)
  *    | fpdef ['=' test] (',' fpdef ['=' test])* [',']
  *
  */
@@ -1096,159 +1134,97 @@ validate_varargslist(node *tree)
 {
     int nch = NCH(tree);
     int res = validate_ntype(tree, varargslist) && (nch != 0);
-    int sym;
 
-    if (!res)
-        return 0;
-    if (nch < 1) {
-        err_string("varargslist missing child nodes");
-        return 0;
-    }
-    sym = TYPE(CHILD(tree, 0));
-    if (sym == STAR || sym == DOUBLESTAR)
-        /* whole thing matches:
-         *      '*' NAME [',' '**' NAME] | '**' NAME
+    if (res && (nch >= 2) && (TYPE(CHILD(tree, nch - 1)) == NAME)) {
+        /*  (fpdef ['=' test] ',')*
+         *  ('*' NAME [',' '*' '*' NAME] | '*' '*' NAME)
          */
-        res = validate_varargslist_trailer(tree, 0);
-    else if (sym == fpdef) {
-        int i = 0;
+        int pos = 0;
+        int remaining = nch;
 
-        sym = TYPE(CHILD(tree, nch-1));
-        if (sym == NAME) {
-            /*
-             *   (fpdef ['=' test] ',')+
-             *       ('*' NAME [',' '**' NAME]
-             *     | '**' NAME)
-             */
-            /* skip over (fpdef ['=' test] ',')+ */
-            while (res && (i+2 <= nch)) {
-                res = validate_fpdef(CHILD(tree, i));
-                ++i;
-                if (res && TYPE(CHILD(tree, i)) == EQUAL && (i+2 <= nch)) {
-                    res = (validate_equal(CHILD(tree, i))
-                           && validate_test(CHILD(tree, i+1)));
-                    if (res)
-                        i += 2;
+        while (res && (TYPE(CHILD(tree, pos)) == fpdef)) {
+            res = validate_fpdef(CHILD(tree, pos));
+            if (res) {
+                if (TYPE(CHILD(tree, pos + 1)) == EQUAL) {
+                    res = validate_test(CHILD(tree, pos + 2));
+                    pos += 2;
                 }
-                if (res && i < nch) {
-                    res = validate_comma(CHILD(tree, i));
-                    ++i;
-                    if (res && i < nch
-                        && (TYPE(CHILD(tree, i)) == DOUBLESTAR
-                            || TYPE(CHILD(tree, i)) == STAR))
-                        break;
-                }
+                res = res && validate_comma(CHILD(tree, pos + 1));
+                pos += 2;
             }
-            /* ... '*' NAME [',' '**' NAME] | '**' NAME
-             * i --^^^
-             */
-            if (res)
-                res = validate_varargslist_trailer(tree, i);
         }
-        else {
-            /*
-             *  fpdef ['=' test] (',' fpdef ['=' test])* [',']
-             */
-            /* strip trailing comma node */
-            if (sym == COMMA) {
-                res = validate_comma(CHILD(tree, nch-1));
-                if (!res)
-                    return 0;
-                --nch;
+        if (res) {
+            remaining = nch - pos;
+            res = ((remaining == 2) || (remaining == 3)
+                   || (remaining == 5) || (remaining == 6));
+            if (!res)
+                (void) validate_numnodes(tree, 2, "varargslist");
+            else if (TYPE(CHILD(tree, pos)) == DOUBLESTAR)
+                return ((remaining == 2)
+                        && validate_ntype(CHILD(tree, pos+1), NAME));
+            else {
+                res = validate_star(CHILD(tree, pos++));
+                --remaining;
             }
-            /*
-             *  fpdef ['=' test] (',' fpdef ['=' test])*
-             */
-            res = validate_fpdef(CHILD(tree, 0));
-            ++i;
-            if (res && (i+2 <= nch) && TYPE(CHILD(tree, i)) == EQUAL) {
-                res = (validate_equal(CHILD(tree, i))
-                       && validate_test(CHILD(tree, i+1)));
-                i += 2;
+        }
+        if (res) {
+            if (remaining == 2) {
+                res = (validate_star(CHILD(tree, pos))
+                       && validate_ntype(CHILD(tree, pos + 1), NAME));
             }
-            /*
-             *  ... (',' fpdef ['=' test])*
-             *  i ---^^^
-             */
-            while (res && (nch - i) >= 2) {
-                res = (validate_comma(CHILD(tree, i))
-                       && validate_fpdef(CHILD(tree, i+1)));
-                i += 2;
-                if (res && (nch - i) >= 2 && TYPE(CHILD(tree, i)) == EQUAL) {
-                    res = (validate_equal(CHILD(tree, i))
-                           && validate_test(CHILD(tree, i+1)));
-                    i += 2;
+            else {
+                res = validate_ntype(CHILD(tree, pos++), NAME);
+                if (res && (remaining >= 4)) {
+                    res = validate_comma(CHILD(tree, pos));
+                    if (--remaining == 3)
+                        res = (validate_star(CHILD(tree, pos + 1))
+                               && validate_star(CHILD(tree, pos + 2)));
+                    else
+                        res = validate_ntype(CHILD(tree, pos + 1), DOUBLESTAR);
                 }
             }
-            if (res && nch - i != 0) {
-                res = 0;
-                err_string("illegal formation for varargslist");
+        }
+        if (!res && !PyErr_Occurred())
+            err_string("Incorrect validation of variable arguments list.");
+    }
+    else if (res) {
+        /*  fpdef ['=' test] (',' fpdef ['=' test])* [',']  */
+        if (TYPE(CHILD(tree, nch - 1)) == COMMA)
+            --nch;
+
+        /*  fpdef ['=' test] (',' fpdef ['=' test])*  */
+        res = (is_odd(nch)
+               && validate_fpdef(CHILD(tree, 0)));
+
+        if (res && (nch > 1)) {
+            int pos = 1;
+            if (TYPE(CHILD(tree, 1)) == EQUAL) {
+                res = validate_test(CHILD(tree, 2));
+                pos += 2;
+            }
+            /*  ... (',' fpdef ['=' test])*  */
+            for ( ; res && (pos < nch); pos += 2) {
+                /* ',' fpdef */
+                res = (validate_comma(CHILD(tree, pos))
+                       && validate_fpdef(CHILD(tree, pos + 1)));
+                if (res
+                    && ((nch - pos) > 2)
+                    && (TYPE(CHILD(tree, pos + 2)) == EQUAL)) {
+                    /* ['=' test] */
+                    res = validate_test(CHILD(tree, pos + 3));
+                    pos += 2;
+                }
             }
         }
     }
-    return res;
+    else {
+        err_string("Improperly formed argument list.");
+    }
+    return (res);
 }
 
 
-/*  list_iter:  list_for | list_if
- */
-static int
-validate_list_iter(node *tree)
-{
-    int res = (validate_ntype(tree, list_iter)
-               && validate_numnodes(tree, 1, "list_iter"));
-    if (res && TYPE(CHILD(tree, 0)) == list_for)
-        res = validate_list_for(CHILD(tree, 0));
-    else
-        res = validate_list_if(CHILD(tree, 0));
-
-    return res;
-}
-
-/*  list_for:  'for' exprlist 'in' testlist [list_iter]
- */
-static int
-validate_list_for(node *tree)
-{
-    int nch = NCH(tree);
-    int res;
-
-    if (nch == 5)
-        res = validate_list_iter(CHILD(tree, 4));
-    else
-        res = validate_numnodes(tree, 4, "list_for");
-
-    if (res)
-        res = (validate_name(CHILD(tree, 0), "for")
-               && validate_exprlist(CHILD(tree, 1))
-               && validate_name(CHILD(tree, 2), "in")
-               && validate_testlist(CHILD(tree, 3)));
-
-    return res;
-}
-
-/*  list_if:  'if' test [list_iter]
- */
-static int
-validate_list_if(node *tree)
-{
-    int nch = NCH(tree);
-    int res;
-
-    if (nch == 3)
-        res = validate_list_iter(CHILD(tree, 2));
-    else
-        res = validate_numnodes(tree, 2, "list_if");
-
-    if (res)
-        res = (validate_name(CHILD(tree, 0), "if")
-               && validate_test(CHILD(tree, 1)));
-
-    return res;
-}
-
-
-/*  validate_fpdef()
+/*  VALIDATE(fpdef)
  *
  *  fpdef:
  *      NAME
@@ -1335,31 +1311,24 @@ static int
 validate_small_stmt(node *tree)
 {
     int nch = NCH(tree);
-    int res = validate_numnodes(tree, 1, "small_stmt");
+    int res = (validate_numnodes(tree, 1, "small_stmt")
+               && ((TYPE(CHILD(tree, 0)) == expr_stmt)
+                   || (TYPE(CHILD(tree, 0)) == print_stmt)
+                   || (TYPE(CHILD(tree, 0)) == del_stmt)
+                   || (TYPE(CHILD(tree, 0)) == pass_stmt)
+                   || (TYPE(CHILD(tree, 0)) == flow_stmt)
+                   || (TYPE(CHILD(tree, 0)) == import_stmt)
+                   || (TYPE(CHILD(tree, 0)) == global_stmt)
+                   || (TYPE(CHILD(tree, 0)) == assert_stmt)
+                   || (TYPE(CHILD(tree, 0)) == exec_stmt)));
 
-    if (res) {
-        int ntype = TYPE(CHILD(tree, 0));
-
-        if (  (ntype == expr_stmt)
-              || (ntype == print_stmt)
-              || (ntype == del_stmt)
-              || (ntype == pass_stmt)
-              || (ntype == flow_stmt)
-              || (ntype == import_stmt)
-              || (ntype == global_stmt)
-              || (ntype == assert_stmt)
-              || (ntype == exec_stmt))
-            res = validate_node(CHILD(tree, 0));
-        else {
-            res = 0;
-            err_string("illegal small_stmt child type");
-        }
-    }
+    if (res)
+        res = validate_node(CHILD(tree, 0));
     else if (nch == 1) {
-        res = 0;
-        PyErr_Format(parser_error,
-                     "Unrecognized child node of small_stmt: %d.",
-                     TYPE(CHILD(tree, 0)));
+        char buffer[60];
+        (void) sprintf(buffer, "Unrecognized child node of small_stmt: %d.",
+                       TYPE(CHILD(tree, 0)));
+        err_string(buffer);
     }
     return (res);
 }
@@ -1373,24 +1342,24 @@ validate_compound_stmt(node *tree)
 {
     int res = (validate_ntype(tree, compound_stmt)
                && validate_numnodes(tree, 1, "compound_stmt"));
-    int ntype;
 
     if (!res)
         return (0);
 
     tree = CHILD(tree, 0);
-    ntype = TYPE(tree);
-    if (  (ntype == if_stmt)
-          || (ntype == while_stmt)
-          || (ntype == for_stmt)
-          || (ntype == try_stmt)
-          || (ntype == funcdef)
-          || (ntype == classdef))
+    res = ((TYPE(tree) == if_stmt)
+           || (TYPE(tree) == while_stmt)
+           || (TYPE(tree) == for_stmt)
+           || (TYPE(tree) == try_stmt)
+           || (TYPE(tree) == funcdef)
+           || (TYPE(tree) == classdef));
+    if (res)
         res = validate_node(tree);
     else {
-        res = 0;
-        PyErr_Format(parser_error,
-                     "Illegal compound statement type: %d.", TYPE(tree));
+        char buffer[60];
+        (void) sprintf(buffer, "Illegal compound statement type: %d.",
+                       TYPE(tree));
+        err_string(buffer);
     }
     return (res);
 }
@@ -1405,82 +1374,38 @@ validate_expr_stmt(node *tree)
                && is_odd(nch)
                && validate_testlist(CHILD(tree, 0)));
 
-    if (res && nch == 3
-        && TYPE(CHILD(tree, 1)) == augassign) {
-        res = (validate_numnodes(CHILD(tree, 1), 1, "augassign")
-               && validate_testlist(CHILD(tree, 2)));
+    for (j = 1; res && (j < nch); j += 2)
+        res = (validate_equal(CHILD(tree, j))
+               && validate_testlist(CHILD(tree, j + 1)));
 
-        if (res) {
-            char *s = STR(CHILD(CHILD(tree, 1), 0));
-
-            res = (strcmp(s, "+=") == 0
-                   || strcmp(s, "-=") == 0
-                   || strcmp(s, "*=") == 0
-                   || strcmp(s, "/=") == 0
-                   || strcmp(s, "%=") == 0
-                   || strcmp(s, "&=") == 0
-                   || strcmp(s, "|=") == 0
-                   || strcmp(s, "^=") == 0
-                   || strcmp(s, "<<=") == 0
-                   || strcmp(s, ">>=") == 0
-                   || strcmp(s, "**=") == 0);
-            if (!res)
-                err_string("illegal augmmented assignment operator");
-        }
-    }
-    else {
-        for (j = 1; res && (j < nch); j += 2)
-            res = (validate_equal(CHILD(tree, j))
-                   && validate_testlist(CHILD(tree, j + 1)));
-    }
     return (res);
 }
 
 
 /*  print_stmt:
  *
- *      'print' ( [ test (',' test)* [','] ]
- *              | '>>' test [ (',' test)+ [','] ] )
+ *      'print' (test ',')* [test]
+ *
  */
 static int
 validate_print_stmt(node *tree)
 {
+    int j;
     int nch = NCH(tree);
     int res = (validate_ntype(tree, print_stmt)
-               && (nch > 0)
+               && (nch != 0)
                && validate_name(CHILD(tree, 0), "print"));
 
-    if (res && nch > 1) {
-        int sym = TYPE(CHILD(tree, 1));
-        int i = 1;
-        int allow_trailing_comma = 1;
-
-        if (sym == test)
-            res = validate_test(CHILD(tree, i++));
-        else {
-            if (nch < 3)
-                res = validate_numnodes(tree, 3, "print_stmt");
-            else {
-                res = (validate_ntype(CHILD(tree, i), RIGHTSHIFT)
-                       && validate_test(CHILD(tree, i+1)));
-                i += 2;
-                allow_trailing_comma = 0;
-            }
-        }
-        if (res) {
-            /*  ... (',' test)* [',']  */
-            while (res && i+2 <= nch) {
-                res = (validate_comma(CHILD(tree, i))
-                       && validate_test(CHILD(tree, i+1)));
-                allow_trailing_comma = 1;
-                i += 2;
-            }
-            if (res && !allow_trailing_comma)
-                res = validate_numnodes(tree, i, "print_stmt");
-            else if (res && i < nch)
-                res = validate_comma(CHILD(tree, i));
-        }
+    if (res && is_even(nch)) {
+        res = validate_test(CHILD(tree, nch - 1));
+        --nch;
     }
+    else if (!res && !PyErr_Occurred())
+        (void) validate_numnodes(tree, 1, "print_stmt");
+    for (j = 1; res && (j < nch); j += 2)
+        res = (validate_test(CHILD(tree, j))
+               && validate_ntype(CHILD(tree, j + 1), COMMA));
+
     return (res);
 }
 
@@ -1538,73 +1463,10 @@ validate_raise_stmt(node *tree)
 }
 
 
-static int
-validate_import_as_name(node *tree)
-{
-    int nch = NCH(tree);
-    int ok = validate_ntype(tree, import_as_name);
-
-    if (ok) {
-        if (nch == 1)
-            ok = validate_name(CHILD(tree, 0), NULL);
-        else if (nch == 3)
-            ok = (validate_name(CHILD(tree, 0), NULL)
-                  && validate_name(CHILD(tree, 1), "as")
-                  && validate_name(CHILD(tree, 2), NULL));
-        else
-            ok = validate_numnodes(tree, 3, "import_as_name");
-    }
-    return ok;
-}
-
-
-/* dotted_name:  NAME ("." NAME)*
- */
-static int
-validate_dotted_name(node *tree)
-{
-    int nch = NCH(tree);
-    int res = (validate_ntype(tree, dotted_name)
-               && is_odd(nch)
-               && validate_name(CHILD(tree, 0), NULL));
-    int i;
-
-    for (i = 1; res && (i < nch); i += 2) {
-        res = (validate_dot(CHILD(tree, i))
-               && validate_name(CHILD(tree, i+1), NULL));
-    }
-    return res;
-}
-
-
-/* dotted_as_name:  dotted_name [NAME NAME]
- */
-static int
-validate_dotted_as_name(node *tree)
-{
-    int nch = NCH(tree);
-    int res = validate_ntype(tree, dotted_as_name);
-
-    if (res) {
-        if (nch == 1)
-            res = validate_dotted_name(CHILD(tree, 0));
-        else if (nch == 3)
-            res = (validate_dotted_name(CHILD(tree, 0))
-                   && validate_name(CHILD(tree, 1), "as")
-                   && validate_name(CHILD(tree, 2), NULL));
-        else {
-            res = 0;
-            err_string("illegal number of children for dotted_as_name");
-        }
-    }
-    return res;
-}
-
-
 /*  import_stmt:
  *
- *    'import' dotted_as_name (',' dotted_as_name)*
- *  | 'from' dotted_name 'import' ('*' | import_as_name (',' import_as_name)*)
+ *    'import' dotted_name (',' dotted_name)*
+ *  | 'from' dotted_name 'import' ('*' | NAME (',' NAME)*)
  */
 static int
 validate_import_stmt(node *tree)
@@ -1612,35 +1474,32 @@ validate_import_stmt(node *tree)
     int nch = NCH(tree);
     int res = (validate_ntype(tree, import_stmt)
                && (nch >= 2) && is_even(nch)
-               && validate_ntype(CHILD(tree, 0), NAME));
+               && validate_ntype(CHILD(tree, 0), NAME)
+               && validate_ntype(CHILD(tree, 1), dotted_name));
 
     if (res && (strcmp(STR(CHILD(tree, 0)), "import") == 0)) {
         int j;
 
-        res = validate_dotted_as_name(CHILD(tree, 1));
         for (j = 2; res && (j < nch); j += 2)
             res = (validate_comma(CHILD(tree, j))
-                   && validate_dotted_as_name(CHILD(tree, j + 1)));
+                   && validate_ntype(CHILD(tree, j + 1), dotted_name));
     }
-    else if (res && (res = validate_name(CHILD(tree, 0), "from"))) {
+    else if (res && validate_name(CHILD(tree, 0), "from")) {
         res = ((nch >= 4) && is_even(nch)
-               && validate_dotted_name(CHILD(tree, 1))
                && validate_name(CHILD(tree, 2), "import"));
         if (nch == 4) {
-            if (TYPE(CHILD(tree, 3)) == import_as_name)
-                res = validate_import_as_name(CHILD(tree, 3));
-            else
-                res = validate_star(CHILD(tree, 3));
+            res = ((TYPE(CHILD(tree, 3)) == NAME)
+                   || (TYPE(CHILD(tree, 3)) == STAR));
+            if (!res)
+                err_string("Illegal import statement.");
         }
         else {
-            /*  'from' dotted_name 'import' import_as_name
-             *      (',' import_as_name)+
-             */
+            /*  'from' NAME 'import' NAME (',' NAME)+  */
             int j;
-            res = validate_import_as_name(CHILD(tree, 3));
+            res = validate_ntype(CHILD(tree, 3), NAME);
             for (j = 4; res && (j < nch); j += 2)
                 res = (validate_comma(CHILD(tree, j))
-                       && validate_import_as_name(CHILD(tree, j + 1)));
+                       && validate_ntype(CHILD(tree, j + 1), NAME));
         }
     }
     else
@@ -1683,7 +1542,7 @@ validate_exec_stmt(node *tree)
                && validate_expr(CHILD(tree, 1)));
 
     if (!res && !PyErr_Occurred())
-        err_string("illegal exec statement");
+        err_string("Illegal exec statement.");
     if (res && (nch > 2))
         res = (validate_name(CHILD(tree, 2), "in")
                && validate_test(CHILD(tree, 3)));
@@ -1710,7 +1569,7 @@ validate_assert_stmt(node *tree)
                && validate_test(CHILD(tree, 1)));
 
     if (!res && !PyErr_Occurred())
-        err_string("illegal assert statement");
+        err_string("Illegal assert statement.");
     if (res && (nch > 2))
         res = (validate_comma(CHILD(tree, 2))
                && validate_test(CHILD(tree, 3)));
@@ -1767,7 +1626,8 @@ validate_for(node *tree)
  *
  */
 static int
-validate_try(node *tree)
+validate_try(tree)
+    node *tree;
 {
     int nch = NCH(tree);
     int pos = 3;
@@ -1780,13 +1640,14 @@ validate_try(node *tree)
                && validate_suite(CHILD(tree, 2))
                && validate_colon(CHILD(tree, nch - 2))
                && validate_suite(CHILD(tree, nch - 1)));
-    else if (!PyErr_Occurred()) {
-        const char* name = "except";
+    else {
+        const char* name = "execpt";
+        char buffer[60];
         if (TYPE(CHILD(tree, nch - 3)) != except_clause)
             name = STR(CHILD(tree, nch - 3));
-
-        PyErr_Format(parser_error,
-                     "Illegal number of children for try/%s node.", name);
+        (void) sprintf(buffer,
+                       "Illegal number of children for try/%s node.", name);
+        err_string(buffer);
     }
     /*  Skip past except_clause sections:  */
     while (res && (TYPE(CHILD(tree, pos)) == except_clause)) {
@@ -1806,7 +1667,7 @@ validate_try(node *tree)
                 res = ((strcmp(STR(CHILD(tree, pos)), "except") == 0)
                        || (strcmp(STR(CHILD(tree, pos)), "else") == 0));
                 if (!res)
-                    err_string("illegal trailing triple in try statement");
+                    err_string("Illegal trailing triple in try statement.");
             }
             else if (nch == (pos + 6)) {
                 res = (validate_name(CHILD(tree, pos), "except")
@@ -1939,12 +1800,13 @@ validate_comp_op(node *tree)
               res = ((strcmp(STR(tree), "in") == 0)
                      || (strcmp(STR(tree), "is") == 0));
               if (!res) {
-                  PyErr_Format(parser_error,
-                               "illegal operator '%s'", STR(tree));
+                  char buff[128];
+                  (void) sprintf(buff, "Illegal operator: '%s'.", STR(tree));
+                  err_string(buff);
               }
               break;
           default:
-              err_string("illegal comparison operator type");
+              err_string("Illegal comparison operator type.");
               break;
         }
     }
@@ -1956,7 +1818,7 @@ validate_comp_op(node *tree)
                    || ((strcmp(STR(CHILD(tree, 0)), "not") == 0)
                        && (strcmp(STR(CHILD(tree, 1)), "in") == 0))));
         if (!res && !PyErr_Occurred())
-            err_string("unknown comparison operator");
+            err_string("Unknown comparison operator.");
     }
     return (res);
 }
@@ -2014,7 +1876,11 @@ validate_and_expr(node *tree)
 
 
 static int
-validate_chain_two_ops(node *tree, int (*termvalid)(node *), int op1, int op2)
+validate_chain_two_ops(tree, termvalid, op1, op2)
+     node *tree;
+     int (*termvalid)();
+     int op1;
+     int op2;
  {
     int pos = 1;
     int nch = NCH(tree);
@@ -2103,7 +1969,7 @@ validate_power(node *tree)
         res = validate_trailer(CHILD(tree, pos++));
     if (res && (pos < nch)) {
         if (!is_even(nch - pos)) {
-            err_string("illegal number of nodes for 'power'");
+            err_string("Illegal number of nodes for 'power'.");
             return (0);
         }
         for ( ; res && (pos < (nch - 1)); pos += 2)
@@ -2119,10 +1985,8 @@ validate_atom(node *tree)
 {
     int pos;
     int nch = NCH(tree);
-    int res = validate_ntype(tree, atom);
+    int res = validate_ntype(tree, atom) && (nch >= 1);
 
-    if (res && nch < 1)
-        res = validate_numnodes(tree, nch+1, "atom");
     if (res) {
         switch (TYPE(CHILD(tree, 0))) {
           case LPAR:
@@ -2133,15 +1997,11 @@ validate_atom(node *tree)
                 res = validate_testlist(CHILD(tree, 1));
             break;
           case LSQB:
-            if (nch == 2)
-                res = validate_ntype(CHILD(tree, 1), RSQB);
-            else if (nch == 3)
-                res = (validate_listmaker(CHILD(tree, 1))
-                       && validate_ntype(CHILD(tree, 2), RSQB));
-            else {
-                res = 0;
-                err_string("illegal list display atom");
-            }
+            res = ((nch <= 3)
+                   && validate_ntype(CHILD(tree, nch - 1), RSQB));
+
+            if (res && (nch == 3))
+                res = validate_testlist(CHILD(tree, 1));
             break;
           case LBRACE:
             res = ((nch <= 3)
@@ -2169,44 +2029,6 @@ validate_atom(node *tree)
         }
     }
     return (res);
-}
-
-
-/*  listmaker:
- *    test ( list_for | (',' test)* [','] )
- */
-static int
-validate_listmaker(node *tree)
-{
-    int nch = NCH(tree);
-    int ok = nch;
-
-    if (nch == 0)
-        err_string("missing child nodes of listmaker");
-    else
-        ok = validate_test(CHILD(tree, 0));
-
-    /*
-     *  list_iter | (',' test)* [',']
-     */
-    if (nch == 2 && TYPE(CHILD(tree, 1)) == list_for)
-        ok = validate_list_for(CHILD(tree, 1));
-    else {
-        /*  (',' test)* [',']  */
-        int i = 1;
-        while (ok && nch - i >= 2) {
-            ok = (validate_comma(CHILD(tree, i))
-                  && validate_test(CHILD(tree, i+1)));
-            i += 2;
-        }
-        if (ok && i == nch-1)
-            ok = validate_comma(CHILD(tree, i));
-        else if (i != nch) {
-            ok = 0;
-            err_string("illegal trailing nodes for listmaker");
-        }
-    }
-    return ok;
 }
 
 
@@ -2248,70 +2070,81 @@ validate_lambdef(node *tree)
 
 /*  arglist:
  *
- *  (argument ',')* (argument [','] | '*' test [',' '**' test] | '**' test)
+ *  (argument ',')* (argument* [','] | '*' test [',' '**' test] | '**' test)
  */
 static int
 validate_arglist(node *tree)
 {
     int nch = NCH(tree);
-    int i = 0;
-    int ok = 1;
+    int i, ok;
+    node *last;
 
     if (nch <= 0)
         /* raise the right error from having an invalid number of children */
         return validate_numnodes(tree, nch + 1, "arglist");
 
-    while (ok && nch-i >= 2) {
-        /* skip leading (argument ',') */
-        ok = (validate_argument(CHILD(tree, i))
-              && validate_comma(CHILD(tree, i+1)));
-        if (ok)
-            i += 2;
-        else
-            PyErr_Clear();
-    }
-    ok = 1;
-    if (nch-i > 0) {
-        /*
-         * argument | '*' test [',' '**' test] | '**' test
+    last = CHILD(tree, nch - 1);
+    if (TYPE(last) == test) {
+        /* Extended call syntax introduced in Python 1.6 has been used;
+         * validate and strip that off and continue;
+         * adjust nch to perform the cut, and ensure resulting nch is even
+         * (validation of the first part doesn't require that).
          */
-        int sym = TYPE(CHILD(tree, i));
-
-        if (sym == argument) {
-            ok = validate_argument(CHILD(tree, i));
-            if (ok && i+1 != nch) {
-                err_string("illegal arglist specification"
-                           " (extra stuff on end)");
-                ok = 0;
-            }
+        if (nch < 2) {
+            validate_numnodes(tree, nch + 1, "arglist");
+            return 0;
         }
-        else if (sym == STAR) {
-            ok = validate_star(CHILD(tree, i));
-            if (ok && (nch-i == 2))
-                ok = validate_test(CHILD(tree, i+1));
-            else if (ok && (nch-i == 5))
-                ok = (validate_test(CHILD(tree, i+1))
-                      && validate_comma(CHILD(tree, i+2))
-                      && validate_doublestar(CHILD(tree, i+3))
-                      && validate_test(CHILD(tree, i+4)));
+        ok = validate_test(last);
+        if (ok) {
+            node *prev = CHILD(tree, nch - 2);
+            /* next must be '*' or '**' */
+            if (validate_doublestar(prev)) {
+                nch -= 2;
+                if (nch >= 3) {
+                    /* may include:  '*' test ',' */
+                    last = CHILD(tree, nch - 1);
+                    prev = CHILD(tree, nch - 2);
+                    if (TYPE(prev) == test) {
+                        ok = validate_comma(last)
+                             && validate_test(prev)
+                             && validate_star(CHILD(tree, nch - 3));
+                        if (ok)
+                            nch -= 3;
+                    }
+                    /* otherwise, nothing special */
+                }
+            }
             else {
-                err_string("illegal use of '*' in arglist");
-                ok = 0;
+                /* must be only:  '*' test */
+                PyErr_Clear();
+                ok = validate_star(prev);
+                nch -= 2;
+            }
+            if (ok && is_odd(nch)) {
+                /* Illegal number of nodes before extended call syntax;
+                 * validation of the "normal" arguments does not require
+                 * a trailing comma, but requiring an even number of
+                 * children will effect the same requirement.
+                 */
+                return validate_numnodes(tree, nch + 1, "arglist");
             }
         }
-        else if (sym == DOUBLESTAR) {
-            if (nch-i == 2)
-                ok = (validate_doublestar(CHILD(tree, i))
-                      && validate_test(CHILD(tree, i+1)));
-            else {
-                err_string("illegal use of '**' in arglist");
-                ok = 0;
-            }
-        }
-        else {
-            err_string("illegal arglist specification");
-            ok = 0;
-        }
+    }
+    /* what remains must be:  (argument ",")* [argument [","]] */
+    i = 0;
+    while (ok && nch - i >= 2) {
+        ok = validate_argument(CHILD(tree, i))
+             && validate_comma(CHILD(tree, i + 1));
+        i += 2;
+    }
+    if (ok && i < nch) {
+        ok = validate_comma(CHILD(tree, i));
+        ++i;
+    }
+    if (i != nch) {
+        /* internal error! */
+        ok = 0;
+        err_string("arglist: internal error; nch != i");
     }
     return (ok);
 }
@@ -2546,7 +2379,7 @@ validate_node(node *tree)
             break;
           case small_stmt:
             /*
-             *  expr_stmt | print_stmt | del_stmt | pass_stmt | flow_stmt
+             *  expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt
              *  | import_stmt | global_stmt | exec_stmt | assert_stmt
              */
             res = validate_small_stmt(tree);
@@ -2560,7 +2393,7 @@ validate_node(node *tree)
             if (res)
                 next = CHILD(tree, 0);
             else if (nch == 1)
-                err_string("illegal flow_stmt type");
+                err_string("Illegal flow_stmt type.");
             break;
             /*
              *  Compound statements.
@@ -2572,7 +2405,7 @@ validate_node(node *tree)
             res = validate_compound_stmt(tree);
             break;
             /*
-             *  Fundamental statements.
+             *  Fundemental statements.
              */
           case expr_stmt:
             res = validate_expr_stmt(tree);
@@ -2682,7 +2515,7 @@ validate_node(node *tree)
 
           default:
             /* Hopefully never reached! */
-            err_string("unrecognized node type");
+            err_string("Unrecogniged node type.");
             res = 0;
             break;
         }
@@ -2698,7 +2531,7 @@ validate_expr_tree(node *tree)
     int res = validate_eval_input(tree);
 
     if (!res && !PyErr_Occurred())
-        err_string("could not validate expression tuple");
+        err_string("Could not validate expression tuple.");
 
     return (res);
 }
@@ -2721,12 +2554,12 @@ validate_file_input(node *tree)
         else
             res = validate_newline(CHILD(tree, j));
     }
-    /*  This stays in to prevent any internal failures from getting to the
+    /*  This stays in to prevent any internal failues from getting to the
      *  user.  Hopefully, this won't be needed.  If a user reports getting
      *  this, we have some debugging to do.
      */
     if (!res && !PyErr_Occurred())
-        err_string("VALIDATION FAILURE: report this to the maintainer!");
+        err_string("VALIDATION FAILURE: report this to the maintainer!.");
 
     return (res);
 }
@@ -2801,11 +2634,9 @@ static PyMethodDef parser_functions[] =  {
     };
 
 
-DL_EXPORT(void) initparser(void);  /* supply a prototype */
-
 DL_EXPORT(void)
-initparser(void)
-{
+initparser()
+ {
     PyObject* module;
     PyObject* dict;
         
@@ -2815,12 +2646,15 @@ initparser(void)
 
     if (parser_error == 0)
         parser_error = PyErr_NewException("parser.ParserError", NULL, NULL);
+    else
+        puts("parser module initialized more than once!");
 
     if ((parser_error == 0)
-        || (PyDict_SetItemString(dict, "ParserError", parser_error) != 0))
-    {
-	    /* caller will check PyErr_Occurred() */
-	    return;
+        || (PyDict_SetItemString(dict, "ParserError", parser_error) != 0)) {
+        /*
+         *  This is serious.
+         */
+        Py_FatalError("can't define parser.ParserError");
     }
     /*
      *  Nice to have, but don't cry if we fail.

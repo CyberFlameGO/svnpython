@@ -8,11 +8,11 @@
 This module implements the interface to RSA's MD5 message digest
 \index{message digest, MD5}
 algorithm (see also Internet \rfc{1321}).  Its use is quite
-straightforward:\ use \function{new()} to create an md5 object.
+straightforward:\ use the \function{new()} to create an md5 object.
 You can now feed this object with arbitrary strings using the
 \method{update()} method, and at any point you can ask it for the
 \dfn{digest} (a strong kind of 128-bit checksum,
-a.k.a. ``fingerprint'') of the concatenation of the strings fed to it
+a.k.a. ``fingerprint'') of the contatenation of the strings fed to it
 so far using the \method{digest()} method.
 \index{checksum!MD5}
 
@@ -25,14 +25,14 @@ the spammish repetition'}:
 >>> m.update("Nobody inspects")
 >>> m.update(" the spammish repetition")
 >>> m.digest()
-'\xbbd\x9c\x83\xdd\x1e\xa5\xc9\xd9\xde\xc9\xa1\x8d\xf0\xff\xe9'
+'\273d\234\203\335\036\245\311\331\336\311\241\215\360\377\351'
 \end{verbatim}
 
 More condensed:
 
 \begin{verbatim}
 >>> md5.new("Nobody inspects the spammish repetition").digest()
-'\xbbd\x9c\x83\xdd\x1e\xa5\xc9\xd9\xde\xc9\xa1\x8d\xf0\xff\xe9'
+'\273d\234\203\335\036\245\311\331\336\311\241\215\360\377\351'
 \end{verbatim}
 
 \begin{funcdesc}{new}{\optional{arg}}
@@ -56,15 +56,8 @@ arguments, i.e.\ \code{m.update(a); m.update(b)} is equivalent to
 
 \begin{methoddesc}[md5]{digest}{}
 Return the digest of the strings passed to the \method{update()}
-method so far.  This is a 16-byte string which may contain
+method so far.  This is an 16-byte string which may contain
 non-\ASCII{} characters, including null bytes.
-\end{methoddesc}
-
-\begin{methoddesc}[md5]{hexdigest}{}
-Like \method{digest()} except the digest is returned as a string of
-length 32, containing only hexadecimal digits.  This may 
-be used to exchange the value safely in email or other non-binary
-environments.
 \end{methoddesc}
 
 \begin{methoddesc}[md5]{copy}{}
@@ -72,10 +65,3 @@ Return a copy (``clone'') of the md5 object.  This can be used to
 efficiently compute the digests of strings that share a common initial
 substring.
 \end{methoddesc}
-
-
-\begin{seealso}
-  \seemodule{sha}{Similar module implementing the Secure Hash
-                  Algorithm (SHA).  The SHA algorithm is considered a
-                  more secure hash.}
-\end{seealso}

@@ -36,7 +36,7 @@ Revision history:
   - Changed arg parsing to use PyArg_ParseTuple.
   - Added PyErr_Clear() call(s) where needed.
   - Fix core dumps if user message contains format specifiers.
-  - Change openlog arg defaults to match normal syslog behavior.
+  - Change openlog arg defaults to match normal syslog behaviour.
   - Plug memory leak in openlog().
   - Fix setlogmask() to return previous mask value.
 
@@ -53,7 +53,9 @@ static PyObject *S_ident_o = NULL;			/*  identifier, held by openlog()  */
 
 
 static PyObject * 
-syslog_openlog(PyObject * self, PyObject * args)
+syslog_openlog(self, args)
+	PyObject * self;
+	PyObject * args;
 {
 	long logopt = 0;
 	long facility = LOG_USER;
@@ -78,7 +80,9 @@ syslog_openlog(PyObject * self, PyObject * args)
 
 
 static PyObject * 
-syslog_syslog(PyObject * self, PyObject * args)
+syslog_syslog(self, args)
+	PyObject * self;
+	PyObject * args;
 {
 	char *message;
 	int   priority = LOG_INFO;
@@ -97,7 +101,9 @@ syslog_syslog(PyObject * self, PyObject * args)
 }
 
 static PyObject * 
-syslog_closelog(PyObject *self, PyObject *args)
+syslog_closelog(self, args)
+	PyObject * self;
+	PyObject * args;
 {
 	if (!PyArg_ParseTuple(args, ":closelog"))
 		return NULL;
@@ -109,7 +115,9 @@ syslog_closelog(PyObject *self, PyObject *args)
 }
 
 static PyObject * 
-syslog_setlogmask(PyObject *self, PyObject *args)
+syslog_setlogmask(self, args)
+	PyObject * self;
+	PyObject * args;
 {
 	long maskpri, omaskpri;
 
@@ -120,7 +128,9 @@ syslog_setlogmask(PyObject *self, PyObject *args)
 }
 
 static PyObject * 
-syslog_log_mask(PyObject *self, PyObject *args)
+syslog_log_mask(self, args)
+	PyObject * self;
+	PyObject * args;
 {
 	long mask;
 	long pri;
@@ -131,7 +141,9 @@ syslog_log_mask(PyObject *self, PyObject *args)
 }
 
 static PyObject * 
-syslog_log_upto(PyObject *self, PyObject *args)
+syslog_log_upto(self, args)
+	PyObject * self;
+	PyObject * args;
 {
 	long mask;
 	long pri;
@@ -156,7 +168,10 @@ static PyMethodDef syslog_methods[] = {
 /* helper function for initialization function */
 
 static void
-ins(PyObject *d, char *s, long x)
+ins(d, s, x)
+	PyObject *d;
+	char *s;
+	long x;
 {
 	PyObject *v = PyInt_FromLong(x);
 	if (v) {
@@ -168,7 +183,7 @@ ins(PyObject *d, char *s, long x)
 /* Initialization function for the module */
 
 DL_EXPORT(void)
-initsyslog(void)
+initsyslog()
 {
 	PyObject *m, *d;
 
@@ -232,4 +247,8 @@ initsyslog(void)
 	ins(d, "LOG_CRON",	LOG_CRON);
 	ins(d, "LOG_UUCP",	LOG_UUCP);
 	ins(d, "LOG_NEWS",	LOG_NEWS);
+
+	/* Check for errors */
+	if (PyErr_Occurred())
+		Py_FatalError("can't initialize module syslog");
 }

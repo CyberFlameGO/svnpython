@@ -124,7 +124,7 @@ typedef struct match_state
 	/* Structure to encapsulate the stack. */
 	struct
 	{
-		/* index into the current page.  If index == 0 and you need
+		/* index into the curent page.  If index == 0 and you need
 		 * to pop an item, move to the previous page and set index
 		 * = STACK_PAGE_SIZE - 1.  Otherwise decrement index to
 		 * push a page. If index == STACK_PAGE_SIZE and you need
@@ -446,7 +446,7 @@ static int regexp_ansi_sequences;
 
 unsigned char re_syntax_table[256];
 
-void re_compile_initialize(void)
+void re_compile_initialize()
 {
 	int a;
   
@@ -546,7 +546,8 @@ void re_compile_initialize(void)
 	regexp_ansi_sequences = (regexp_syntax & RE_ANSI_HEX) != 0;
 }
 
-int re_set_syntax(int syntax)
+int re_set_syntax(syntax)
+	int syntax;
 {
 	int ret;
 	
@@ -557,7 +558,8 @@ int re_set_syntax(int syntax)
 	return ret;
 }
 
-static int hex_char_to_decimal(int ch)
+static int hex_char_to_decimal(ch)
+	int ch;
 {
 	if (ch >= '0' && ch <= '9')
 		return ch - '0';
@@ -568,10 +570,16 @@ static int hex_char_to_decimal(int ch)
 	return 16;
 }
 
-static void re_compile_fastmap_aux(unsigned char *code, int pos,
-                                   unsigned char *visited,
-                                   unsigned char *can_be_null,
-                                   unsigned char *fastmap)
+static void re_compile_fastmap_aux(code,
+				   pos,
+				   visited,
+				   can_be_null,
+				   fastmap)
+	unsigned char *code;
+	int pos;
+	unsigned char *visited;
+	unsigned char *can_be_null;
+	unsigned char *fastmap;
 {
 	int a;
 	int b;
@@ -698,9 +706,16 @@ static void re_compile_fastmap_aux(unsigned char *code, int pos,
 		}
 }
 
-static int re_do_compile_fastmap(unsigned char *buffer, int used, int pos,
-                                 unsigned char *can_be_null,
-                                 unsigned char *fastmap)
+static int re_do_compile_fastmap(buffer,
+				 used,
+				 pos,
+				 can_be_null,
+				 fastmap)
+	unsigned char *buffer;
+	int used;
+	int pos;
+	unsigned char *can_be_null;
+	unsigned char *fastmap;
 {
 	unsigned char small_visited[512], *visited;
    
@@ -721,7 +736,8 @@ static int re_do_compile_fastmap(unsigned char *buffer, int used, int pos,
 	return 1;
 }
 
-void re_compile_fastmap(regexp_t bufp)
+void re_compile_fastmap(bufp)
+	regexp_t bufp;
 {
 	if (!bufp->fastmap || bufp->fastmap_accurate)
 		return;
@@ -766,7 +782,9 @@ void re_compile_fastmap(regexp_t bufp)
  *
  */
 
-static int re_optimize_star_jump(regexp_t bufp, unsigned char *code)
+static int re_optimize_star_jump(bufp, code)
+	regexp_t bufp;
+	unsigned char *code;
 {
 	unsigned char map[256];
 	unsigned char can_be_null;
@@ -927,7 +945,8 @@ static int re_optimize_star_jump(regexp_t bufp, unsigned char *code)
 	return 1;
 }
 
-static int re_optimize(regexp_t bufp)
+static int re_optimize(bufp)
+	regexp_t bufp;
 {
 	unsigned char *code;
 	
@@ -1128,7 +1147,10 @@ else \
 	} \
 }
 
-char *re_compile_pattern(unsigned char *regex, int size, regexp_t bufp)
+char *re_compile_pattern(regex, size, bufp)
+	unsigned char *regex;
+	int size;
+	regexp_t bufp;
 {
 	int a;
 	int pos;
@@ -1395,8 +1417,8 @@ char *re_compile_pattern(unsigned char *regex, int size, regexp_t bufp)
 			int prev;
 			int offset;
 			int range;
-                        int firstchar;
-                        
+			int firstchar;
+	    
 			SET_LEVEL_START;
 			ALLOC(1+256/8);
 			STORE(Cset);
@@ -1564,8 +1586,16 @@ var = (unsigned char)*text++; \
 if (translate) \
 	var = translate[var]
 
-int re_match(regexp_t bufp, unsigned char *string, int size, int pos,
-             regexp_registers_t old_regs)
+int re_match(bufp,
+	     string,
+	     size,
+	     pos,
+	     old_regs)
+	regexp_t bufp;
+	unsigned char *string;
+	int size;
+	int pos;
+	regexp_registers_t old_regs;
 {
 	unsigned char *code;
 	unsigned char *translate;
@@ -1991,8 +2021,18 @@ int re_match(regexp_t bufp, unsigned char *string, int size, int pos,
 #undef PREFETCH
 #undef NEXTCHAR
 
-int re_search(regexp_t bufp, unsigned char *string, int size, int pos,
-              int range, regexp_registers_t regs)
+int re_search(bufp,
+	      string,
+	      size,
+	      pos,
+	      range,
+	      regs)
+	regexp_t bufp;
+	unsigned char *string;
+	int size;
+	int pos;
+	int range;
+	regexp_registers_t regs;
 {
 	unsigned char *fastmap;
 	unsigned char *translate;

@@ -7,7 +7,7 @@ _v20 = 1
 _v21 = 1
 ##import fl
 ##try:
-##	_v20 = (fl.get_rgbmode is not None)
+##	_v20 = (fl.get_rgbmode <> None)
 ##except:
 ##	_v20 = 0
 ##del fl

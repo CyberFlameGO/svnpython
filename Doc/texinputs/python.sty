@@ -6,8 +6,6 @@
 \ProvidesPackage{python}
              [1998/01/11 LaTeX package (Python markup)]
 
-\RequirePackage{longtable}
-
 % Uncomment these two lines to ignore the paper size and make the page 
 % size more like a typical published manual.
 %\renewcommand{\paperheight}{9in}
@@ -220,8 +218,7 @@
 \newcommand{\opindex}[1]{\indexii{operator}{#1@{\py@idxcode{#1}}}}
 \newcommand{\exindex}[1]{\indexii{exception}{#1@{\py@idxcode{#1}}}}
 \newcommand{\obindex}[1]{\indexii{object}{#1}}
-\newcommand{\bifuncindex}[1]{%
-  \index{#1@{\py@idxcode{#1()}} (built-in function)}}
+\newcommand{\bifuncindex}[1]{\withsubitem{(built-in function)}{\ttindex{#1()}}}
 
 % Add an index entry for a module
 \newcommand{\py@refmodule}[2]{\index{#1@{\py@idxcode{#1}} (#2module)}}
@@ -293,8 +290,12 @@
 }
 \newcommand{\withsubitem}[2]{%
   \begingroup%
-    \def\ttindex##1{\index{##1@{\py@idxcode{##1}} #1}}%
-    #2%
+    \ifpy@usingsubitem%
+      \def\index@subitem{#1}#2%
+    \else%
+      \def\index@subitem{#1}#2%
+      \py@usingsubitemfalse%
+    \fi
   \endgroup%
 }
 
@@ -561,9 +562,9 @@
   \begin{fulllineitems}
     \item[\bfcode{#2}%
     \ifx#1\@undefined%
-      \index{#2@{\py@idxcode{#2}} (C type)}
+      \withsubitem{(C type)}{\ttindex{#2}}%
     \else%
-      \index{#2@{\py@idxcode{#1}} (C type)}
+      \withsubitem{(C type)}{\ttindex{#1}}%
     \fi]
 }{\end{fulllineitems}}
 
@@ -572,14 +573,12 @@
 % -- "simple" because it has no args; NOT for constant definitions!
 \newenvironment{csimplemacrodesc}[1]{
   \begin{fulllineitems}
-    \item[\bfcode{#1}\index{#1@{\py@idxcode{#1}} (macro)}]
+    \item[\bfcode{#1}\withsubitem{(macro)}{\ttindex{#1}}]
 }{\end{fulllineitems}}
 
 % simple functions (not methods) -----------------------------------------
 % \begin{funcdesc}{name}{args}
-\newcommand{\funcline}[2]{%
-  \funclineni{#1}{#2}%
-  \index{#1@{\py@idxcode{#1()}} (in module \py@thismodule)}}
+\newcommand{\funcline}[2]{\funclineni{#1}{#2}\ttindex{#1()}}
 \newenvironment{funcdesc}[2]{
   \begin{fulllineitems}
     \funcline{#1}{#2}
@@ -599,17 +598,7 @@
   \global\def\py@thisclass{#1}
   \begin{fulllineitems}
     \item[\code{\bfcode{#1}(\py@varvars{#2})}%
-      \index{#1@{\py@idxcode{#1}} (class in \py@thismodule)}]
-}{\end{fulllineitems}}
-
-% \begin{excclassdesc}{name}{constructor args}
-% but indexes as an exception
-\newenvironment{excclassdesc}[2]{
-  % Using \renewcommand doesn't work for this, for unknown reasons:
-  \global\def\py@thisclass{#1}
-  \begin{fulllineitems}
-    \item[\code{\bfcode{#1}(\py@varvars{#2})}%
-      \index{#1@{\py@idxcode{#1}} (exception in \py@thismodule)}]
+      \withsubitem{(class in \py@thismodule)}{\ttindex{#1}}]
 }{\end{fulllineitems}}
 
 
@@ -617,21 +606,21 @@
 
 % object method ----------------------------------------------------------
 % \begin{methoddesc}[classname]{methodname}{args}
-\newcommand{\methodline}[3][\@undefined]{
+\newcommand{\methodline}[3][\py@classbadkey]{
   \methodlineni{#2}{#3}
   \ifx#1\@undefined
-    \index{#2@{\py@idxcode{#2()}} (\py@thisclass\ method)}
+    \withsubitem{(\py@thisclass\ method)}{\ttindex{#2()}}
   \else
-    \index{#2@{\py@idxcode{#2()}} (#1 method)}
+    \withsubitem{(#1 method)}{\ttindex{#2()}}
   \fi
 }
-\newenvironment{methoddesc}[3][\@undefined]{
+\newenvironment{methoddesc}[3][\py@classbadkey]{
   \begin{fulllineitems}
     \ifx#1\@undefined
       \methodline{#2}{#3}
     \else
       \def\py@thisclass{#1}
-      \methodline{#2}{#3}
+      \methodline[#1]{#2}{#3}
     \fi
 }{\end{fulllineitems}}
 
@@ -649,10 +638,10 @@
 \newcommand{\memberline}[2][\py@classbadkey]{%
   \ifx#1\@undefined
     \memberlineni{#2}
-    \index{#2@{\py@idxcode{#2}} (\py@thisclass\ attribute)}
+    \withsubitem{(\py@thisclass\ attribute)}{\ttindex{#2}}
   \else
     \memberlineni{#2}
-    \index{#2@{\py@idxcode{#2}} (#1 attribute)}
+    \withsubitem{(#1 attribute)}{\ttindex{#2}}
   \fi
 }
 \newenvironment{memberdesc}[2][\py@classbadkey]{
@@ -661,7 +650,7 @@
       \memberline{#2}
     \else
       \def\py@thisclass{#1}
-      \memberline{#2}
+      \memberline[#1]{#2}
     \fi
 }{\end{fulllineitems}}
 
@@ -675,17 +664,15 @@
 
 % For exceptions: --------------------------------------------------------
 % \begin{excdesc}{name}
-%  -- for constructor information, use excclassdesc instead
+%  -- need support for constructor; maybe use optional parameter?
 \newenvironment{excdesc}[1]{
   \begin{fulllineitems}
-    \item[\bfcode{#1}%
-          \index{#1@{\py@idxcode{#1}} (exception in \py@thismodule)}]
+    \item[\bfcode{#1}\ttindex{#1}]
 }{\end{fulllineitems}}
 
 % Module data or constants: ----------------------------------------------
 % \begin{datadesc}{name}
-\newcommand{\dataline}[1]{%
-  \datalineni{#1}\index{#1@{\py@idxcode{#1}} (data in \py@thismodule)}}
+\newcommand{\dataline}[1]{\datalineni{#1}\ttindex{#1}}
 \newenvironment{datadesc}[1]{
   \begin{fulllineitems}
     \dataline{#1}
@@ -723,7 +710,7 @@
 % Also for consistency: spell Python "Python", not "python"!
 
 % code is the most difficult one...
-\newcommand{\code}[1]{\textrm{\@vobeyspaces\@noligs\def\{{\char`\{}\def\}{\char`\}}\def\~{\char`\~}\def\^{\char`\^}\def\e{\char`\\}\def\${\char`\$}\def\#{\char`\#}\def\&{\char`\&}\def\%{\char`\%}%
+\newcommand{\code}[1]{{\@vobeyspaces\@noligs\def\{{\char`\{}\def\}{\char`\}}\def\~{\char`\~}\def\^{\char`\^}\def\e{\char`\\}\def\${\char`\$}\def\#{\char`\#}\def\&{\char`\&}\def\%{\char`\%}%
 \texttt{#1}}}
 
 \newcommand{\bfcode}[1]{\code{\bfseries#1}} % bold-faced code font
@@ -763,10 +750,13 @@
 \newcommand{\email}[1]{{\small\textsf{#1}}}
 \newcommand{\newsgroup}[1]{{\small\textsf{#1}}}
 
-\newcommand{\py@varvars}[1]{{%
+%\newcommand{\py@varvars}[1]{{\def\,{\/{\char`\,}}\var{#1}}}
+\newcommand{\py@varvars}[1]{%
   {\let\unspecified=\py@unspecified%
    \let\moreargs=\py@moreargs%
-   \var{#1}}}}
+   \def\,{\/{\char`\,}}\var{#1}}}
+% let's see if this breaks anything now; we may be able to simplify...
+\renewcommand{\py@varvars}[1]{\var{#1}}
 
 % I'd really like to get rid of this!
 \newif\iftexi\texifalse
@@ -805,9 +795,9 @@
    $\!\rfloor\!$%
   }}
 \newcommand{\envvar}[1]{%
-  #1%
-  \index{#1@{#1}}%
-  \index{environment variables!{#1}}%
+  \$#1%                                 $ <-- bow to font-lock 3 times!
+  \index{#1@{\$#1}}%                    $
+  \index{environment variables!{\$#1}}% $
 }
 \newcommand{\makevar}[1]{#1}		% variable in a Makefile
 \newcommand{\character}[1]{\samp{#1}}
@@ -816,7 +806,6 @@
 \newcommand{\constant}[1]{\code{#1}}	% manifest constant, not syntactic
 
 \newcommand{\manpage}[2]{{\emph{#1}(#2)}}
-\newcommand{\pep}[1]{PEP #1\index{Python Enhancement Proposals!PEP #1}}
 \newcommand{\rfc}[1]{RFC #1\index{RFC!RFC #1}}
 \newcommand{\program}[1]{\strong{#1}}
 \newcommand{\programopt}[1]{\strong{#1}}
@@ -825,7 +814,7 @@
 
 % cited titles:  \citetitle{Title of Work}
 %       online:  \citetitle[url-to-resource]{Title of Work}
-\newcommand{\citetitle}[2][URL]{\emph{#2}}
+\newcommand{\citetitle}[2][URL]{\emph{#1}}
 
 
 % Deprecation stuff.
@@ -849,7 +838,7 @@
 %
 % Example:
 %  \versionadded{1.5.2}
-%  \versionchanged[short explanation]{2.0}
+%  \versionchanged[short explanation]{1.6}
 %
 \newcommand{\versionadded}[1]{%
   {  New in version #1.  }}
@@ -867,38 +856,18 @@
 \newenvironment{tableii}[4]{%
   \begin{center}%
     \def\lineii##1##2{\csname#2\endcsname{##1}&##2\\}%
-    \begin{tabular}{#1}\strong{#3}&\strong{#4} \\* \hline%
+    \begin{tabular}{#1}\strong{#3}&\strong{#4} \\ \hline%
 }{%
     \end{tabular}%
-  \end{center}%
-}
-
-\newenvironment{longtableii}[4]{%
-  \begin{center}%
-    \def\lineii##1##2{\csname#2\endcsname{##1}&##2\\}%
-    \begin{longtable}[c]{#1}\strong{#3}&\strong{#4} \\* \hline\endhead%
-}{%
-    \end{longtable}%
   \end{center}%
 }
 
 \newenvironment{tableiii}[5]{%
   \begin{center}%
     \def\lineiii##1##2##3{\csname#2\endcsname{##1}&##2&##3\\}%
-    \begin{tabular}{#1}\strong{#3}&\strong{#4}&\strong{#5} \\%
-      \hline%
+    \begin{tabular}{#1}\strong{#3}&\strong{#4}&\strong{#5} \\ \hline%
 }{%
     \end{tabular}%
-  \end{center}%
-}
-
-\newenvironment{longtableiii}[5]{%
-  \begin{center}%
-    \def\lineiii##1##2##3{\csname#2\endcsname{##1}&##2&##3\\}%
-    \begin{longtable}[c]{#1}\strong{#3}&\strong{#4}&\strong{#5} \\%
-      \hline\endhead%
-}{%
-    \end{longtable}%
   \end{center}%
 }
 
@@ -909,17 +878,6 @@
       \hline%
 }{%
     \end{tabular}%
-  \end{center}%
-}
-
-\newenvironment{longtableiv}[6]{%
-  \begin{center}%
-    \def\lineiv##1##2##3##4{\csname#2\endcsname{##1}&##2&##3&##4\\}%
-    \begin{longtable}[c]{#1}\strong{#3}&\strong{#4}&\strong{#5}&\strong{#6}%
-      \\%
-      \hline\endhead%
-}{%
-    \end{longtable}%
   \end{center}%
 }
 
@@ -956,25 +914,6 @@
     \end{fulllineitems}
   }
 }
-% \seetitle[url]{title}{why it's interesting}
-\newcommand{\py@seetitle}[3][\py@modulebadkey]{%
-  \par
-  \begin{fulllineitems}
-    \item[\citetitle{#2}]
-    \ifx\py@modulebadkey#1\else
-      \item[{\small{(\url{#1})}}]
-    \fi
-    #3
-  \end{fulllineitems}
-}
-% \seepep{number}{title}{why it's interesting}
-\newcommand{\py@seepep}[3]{%
-  \par%
-  \begin{fulllineitems}
-    \item[\pep{#1}, ``\emph{#2}'']
-    #3
-  \end{fulllineitems}
-}
 % \seerfc{number}{title}{why it's interesting}
 \newcommand{\py@seerfc}[3]{%
   \par%
@@ -996,9 +935,7 @@
   \strong{See Also:}\par
   \def\seetext##1{\par{##1}}
   \let\seemodule=\py@seemodule
-  \let\seepep=\py@seepep
   \let\seerfc=\py@seerfc
-  \let\seetitle=\py@seetitle
   \let\seeurl=\py@seeurl
 }{\par}
 
@@ -1009,13 +946,10 @@
 %
 \newcommand{\py@release}{}
 \newcommand{\version}{}
-\newcommand{\shortversion}{}
 \newcommand{\releasename}{Release}
 \newcommand{\release}[1]{%
   \renewcommand{\py@release}{\releasename\space\version}%
   \renewcommand{\version}{#1}}
-\newcommand{\setshortversion}[1]{%
-  \renewcommand{\shortversion}{#1}}
 
 % Allow specification of the author's address separately from the
 % author's name.  This can be used to format them differently, which

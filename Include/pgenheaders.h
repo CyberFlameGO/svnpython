@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-
 /* Include files and extern declarations used by most of the parser. */
 
 #include "config.h"
@@ -17,16 +16,28 @@ extern "C" {
 #include <stdio.h>
 #include <string.h>
 
+#ifdef THINK_C
+#define label label_
+#undef label
+#endif
+
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
 
-#include "pymem.h"
+#include "myproto.h"
+#include "mymalloc.h"
 
 #include "pydebug.h"
 
+#ifdef HAVE_STDARG_PROTOTYPES
 DL_IMPORT(void) PySys_WriteStdout(const char *format, ...);
 DL_IMPORT(void) PySys_WriteStderr(const char *format, ...);
+#else
+/* Better to have no prototypes at all for varargs functions in this case */
+DL_IMPORT(void) PySys_WriteStdout();
+DL_IMPORT(void) PySys_WriteStderr();
+#endif
 
 #define addarc _Py_addarc
 #define addbit _Py_addbit

@@ -1,92 +1,44 @@
 """distutils.util
 
 Miscellaneous utility functions -- anything that doesn't fit into
-one of the other *util.py modules.
-"""
+one of the other *util.py modules."""
 
 # created 1999/03/08, Greg Ward
 
 __revision__ = "$Id$"
 
-import sys, os, string, re
-from distutils.errors import DistutilsPlatformError
-from distutils.dep_util import newer
+import sys, os, string, re, shutil
+from distutils.errors import *
 from distutils.spawn import spawn
 
 
 def get_platform ():
-    """Return a string that identifies the current platform.  This is used
-    mainly to distinguish platform-specific build directories and
-    platform-specific built distributions.  Typically includes the OS name
-    and version and the architecture (as supplied by 'os.uname()'),
-    although the exact information included depends on the OS; eg. for IRIX
-    the architecture isn't particularly important (IRIX only runs on SGI
-    hardware), but for Linux the kernel version isn't particularly
-    important.
-
-    Examples of returned values:
-       linux-i586
-       linux-alpha (?)
-       solaris-2.6-sun4u
-       irix-5.3
-       irix64-6.2
-       
-    For non-POSIX platforms, currently just returns 'sys.platform'.
+    """Return a string (suitable for tacking onto directory names) that
+    identifies the current platform.  Currently, this is just
+    'sys.platform'.
     """
-    if os.name != "posix" or not hasattr(os, 'uname'):
-        # XXX what about the architecture? NT is Intel or Alpha,
-        # Mac OS is M68k or PPC, etc.
-        return sys.platform
-
-    # Try to distinguish various flavours of Unix
-
-    (osname, host, release, version, machine) = os.uname()
-    osname = string.lower(osname)
-    if osname[:5] == "linux":
-        # At least on Linux/Intel, 'machine' is the processor --
-        # i386, etc.
-        # XXX what about Alpha, SPARC, etc?
-        return  "%s-%s" % (osname, machine)
-    elif osname[:5] == "sunos":
-        if release[0] >= "5":           # SunOS 5 == Solaris 2
-            osname = "solaris"
-            release = "%d.%s" % (int(release[0]) - 3, release[2:])
-        # fall through to standard osname-release-machine representation
-    elif osname[:4] == "irix":              # could be "irix64"!
-        return "%s-%s" % (osname, release)
-    elif osname[:6] == "cygwin":
-        rel_re = re.compile (r'[\d.]+')
-        m = rel_re.match(release)
-        if m:
-            release = m.group()
-            
-    return "%s-%s-%s" % (osname, release, machine)
-
-# get_platform ()
+    return sys.platform
 
 
 def convert_path (pathname):
-    """Return 'pathname' as a name that will work on the native filesystem,
-    i.e. split it on '/' and put it back together again using the current
-    directory separator.  Needed because filenames in the setup script are
-    always supplied in Unix style, and have to be converted to the local
-    convention before we can actually use them in the filesystem.  Raises
-    ValueError on non-Unix-ish systems if 'pathname' either starts or
-    ends with a slash.
-    """
-    if os.sep == '/':
-        return pathname
+    """Return 'pathname' as a name that will work on the native
+       filesystem, i.e. split it on '/' and put it back together again
+       using the current directory separator.  Needed because filenames in
+       the setup script are always supplied in Unix style, and have to be
+       converted to the local convention before we can actually use them in
+       the filesystem.  Raises ValueError if 'pathname' is
+       absolute (starts with '/') or contains local directory separators
+       (unless the local separator is '/', of course)."""
+
     if pathname[0] == '/':
         raise ValueError, "path '%s' cannot be absolute" % pathname
     if pathname[-1] == '/':
         raise ValueError, "path '%s' cannot end with '/'" % pathname
-
-    paths = string.split(pathname, '/')
-    while '.' in paths:
-        paths.remove('.')
-    if not paths:
-        return os.curdir
-    return apply(os.path.join, paths)
+    if os.sep != '/':
+        paths = string.split (pathname, '/')
+        return apply (os.path.join, paths)
+    else:
+        return pathname
 
 # convert_path ()
 
@@ -98,25 +50,19 @@ def change_root (new_root, pathname):
     two, which is tricky on DOS/Windows and Mac OS.
     """
     if os.name == 'posix':
-        if not os.path.isabs(pathname):
-            return os.path.join(new_root, pathname)
+        if not os.path.isabs (pathname):
+            return os.path.join (new_root, pathname)
         else:
-            return os.path.join(new_root, pathname[1:])
+            return os.path.join (new_root, pathname[1:])
 
     elif os.name == 'nt':
-        (drive, path) = os.path.splitdrive(pathname)
+        (drive, path) = os.path.splitdrive (pathname)
         if path[0] == '\\':
             path = path[1:]
-        return os.path.join(new_root, path)
+        return os.path.join (new_root, path)
 
     elif os.name == 'mac':
-        if not os.path.isabs(pathname):
-            return os.path.join(new_root, pathname)
-        else:
-            # Chop off volume name from start of path
-            elements = string.split(pathname, ":", 1)
-            pathname = ":" + elements[1]
-            return os.path.join(new_root, pathname)
+        raise RuntimeError, "no clue how to do this on Mac OS"
 
     else:
         raise DistutilsPlatformError, \
@@ -126,47 +72,46 @@ def change_root (new_root, pathname):
 _environ_checked = 0
 def check_environ ():
     """Ensure that 'os.environ' has all the environment variables we
-    guarantee that users can use in config files, command-line options,
-    etc.  Currently this includes:
-      HOME - user's home directory (Unix only)
-      PLAT - description of the current platform, including hardware
-             and OS (see 'get_platform()')
+       guarantee that users can use in config files, command-line
+       options, etc.  Currently this includes:
+         HOME - user's home directory (Unix only)
+         PLAT - description of the current platform, including hardware
+                and OS (see 'get_platform()')
     """
+
     global _environ_checked
     if _environ_checked:
         return
 
     if os.name == 'posix' and not os.environ.has_key('HOME'):
         import pwd
-        os.environ['HOME'] = pwd.getpwuid(os.getuid())[5]
+        os.environ['HOME'] = pwd.getpwuid (os.getuid())[5]
 
     if not os.environ.has_key('PLAT'):
-        os.environ['PLAT'] = get_platform()
+        os.environ['PLAT'] = get_platform ()
 
     _environ_checked = 1
 
 
-def subst_vars (s, local_vars):
-    """Perform shell/Perl-style variable substitution on 'string'.  Every
-    occurrence of '$' followed by a name is considered a variable, and
-    variable is substituted by the value found in the 'local_vars'
-    dictionary, or in 'os.environ' if it's not in 'local_vars'.
-    'os.environ' is first checked/augmented to guarantee that it contains
-    certain values: see 'check_environ()'.  Raise ValueError for any
-    variables not found in either 'local_vars' or 'os.environ'.
-    """
-    check_environ()
+def subst_vars (str, local_vars):
+    """Perform shell/Perl-style variable substitution on 'string'.
+       Every occurrence of '$' followed by a name, or a name enclosed in
+       braces, is considered a variable.  Every variable is substituted by
+       the value found in the 'local_vars' dictionary, or in 'os.environ'
+       if it's not in 'local_vars'.  'os.environ' is first checked/
+       augmented to guarantee that it contains certain values: see
+       '_check_environ()'.  Raise ValueError for any variables not found in
+       either 'local_vars' or 'os.environ'."""
+
+    check_environ ()
     def _subst (match, local_vars=local_vars):
         var_name = match.group(1)
-        if local_vars.has_key(var_name):
-            return str(local_vars[var_name])
+        if local_vars.has_key (var_name):
+            return str (local_vars[var_name])
         else:
             return os.environ[var_name]
 
-    try:
-        return re.sub(r'\$([a-zA-Z_][a-zA-Z_0-9]*)', _subst, s)
-    except KeyError, var:
-        raise ValueError, "invalid variable '$%s'" % var
+    return re.sub (r'\$([a-zA-Z_][a-zA-Z_0-9]*)', _subst, str)
 
 # subst_vars ()
 
@@ -180,7 +125,7 @@ def grok_environment_error (exc, prefix="error: "):
     prefixed with 'prefix'.
     """
     # check for Python 1.5.2-style {IO,OS}Error exception objects
-    if hasattr(exc, 'filename') and hasattr(exc, 'strerror'):
+    if hasattr (exc, 'filename') and hasattr (exc, 'strerror'):
         if exc.filename:
             error = prefix + "%s: %s" % (exc.filename, exc.strerror)
         else:
@@ -284,155 +229,3 @@ def execute (func, args, msg=None, verbose=0, dry_run=0):
         apply(func, args)
 
 # execute()
-
-
-def strtobool (val):
-    """Convert a string representation of truth to true (1) or false (0).
-    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
-    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
-    'val' is anything else.
-    """
-    val = string.lower(val)
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
-        return 1
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
-        return 0
-    else:
-        raise ValueError, "invalid truth value %s" % `val`
-
-
-def byte_compile (py_files,
-                  optimize=0, force=0,
-                  prefix=None, base_dir=None,
-                  verbose=1, dry_run=0,
-                  direct=None):
-    """Byte-compile a collection of Python source files to either .pyc
-    or .pyo files in the same directory.  'py_files' is a list of files
-    to compile; any files that don't end in ".py" are silently skipped.
-    'optimize' must be one of the following:
-      0 - don't optimize (generate .pyc)
-      1 - normal optimization (like "python -O")
-      2 - extra optimization (like "python -OO")
-    If 'force' is true, all files are recompiled regardless of
-    timestamps.
-
-    The source filename encoded in each bytecode file defaults to the
-    filenames listed in 'py_files'; you can modify these with 'prefix' and
-    'basedir'.  'prefix' is a string that will be stripped off of each
-    source filename, and 'base_dir' is a directory name that will be
-    prepended (after 'prefix' is stripped).  You can supply either or both
-    (or neither) of 'prefix' and 'base_dir', as you wish.
-
-    If 'verbose' is true, prints out a report of each file.  If 'dry_run'
-    is true, doesn't actually do anything that would affect the filesystem.
-
-    Byte-compilation is either done directly in this interpreter process
-    with the standard py_compile module, or indirectly by writing a
-    temporary script and executing it.  Normally, you should let
-    'byte_compile()' figure out to use direct compilation or not (see
-    the source for details).  The 'direct' flag is used by the script
-    generated in indirect mode; unless you know what you're doing, leave
-    it set to None.
-    """
-
-    # First, if the caller didn't force us into direct or indirect mode,
-    # figure out which mode we should be in.  We take a conservative
-    # approach: choose direct mode *only* if the current interpreter is
-    # in debug mode and optimize is 0.  If we're not in debug mode (-O
-    # or -OO), we don't know which level of optimization this
-    # interpreter is running with, so we can't do direct
-    # byte-compilation and be certain that it's the right thing.  Thus,
-    # always compile indirectly if the current interpreter is in either
-    # optimize mode, or if either optimization level was requested by
-    # the caller.
-    if direct is None:
-        direct = (__debug__ and optimize == 0)
-
-    # "Indirect" byte-compilation: write a temporary script and then
-    # run it with the appropriate flags.
-    if not direct:
-        from tempfile import mktemp
-        script_name = mktemp(".py")
-        if verbose:
-            print "writing byte-compilation script '%s'" % script_name
-        if not dry_run:
-            script = open(script_name, "w")
-
-            script.write("""\
-from distutils.util import byte_compile
-files = [
-""")
-
-            # XXX would be nice to write absolute filenames, just for
-            # safety's sake (script should be more robust in the face of
-            # chdir'ing before running it).  But this requires abspath'ing
-            # 'prefix' as well, and that breaks the hack in build_lib's
-            # 'byte_compile()' method that carefully tacks on a trailing
-            # slash (os.sep really) to make sure the prefix here is "just
-            # right".  This whole prefix business is rather delicate -- the
-            # problem is that it's really a directory, but I'm treating it
-            # as a dumb string, so trailing slashes and so forth matter.
-
-            #py_files = map(os.path.abspath, py_files)
-            #if prefix:
-            #    prefix = os.path.abspath(prefix)
-
-            script.write(string.join(map(repr, py_files), ",\n") + "]\n")
-            script.write("""
-byte_compile(files, optimize=%s, force=%s,
-             prefix=%s, base_dir=%s,
-             verbose=%s, dry_run=0,
-             direct=1)
-""" % (`optimize`, `force`, `prefix`, `base_dir`, `verbose`))
-
-            script.close()
-
-        cmd = [sys.executable, script_name]
-        if optimize == 1:
-            cmd.insert(1, "-O")
-        elif optimize == 2:
-            cmd.insert(1, "-OO")
-        spawn(cmd, verbose=verbose, dry_run=dry_run)
-        execute(os.remove, (script_name,), "removing %s" % script_name,
-                verbose=verbose, dry_run=dry_run)
-        
-    # "Direct" byte-compilation: use the py_compile module to compile
-    # right here, right now.  Note that the script generated in indirect
-    # mode simply calls 'byte_compile()' in direct mode, a weird sort of
-    # cross-process recursion.  Hey, it works!
-    else:
-        from py_compile import compile
-
-        for file in py_files:
-            if file[-3:] != ".py":
-                # This lets us be lazy and not filter filenames in
-                # the "install_lib" command.
-                continue
-
-            # Terminology from the py_compile module:
-            #   cfile - byte-compiled file
-            #   dfile - purported source filename (same as 'file' by default)
-            cfile = file + (__debug__ and "c" or "o")
-            dfile = file
-            if prefix:
-                if file[:len(prefix)] != prefix:
-                    raise ValueError, \
-                          ("invalid prefix: filename %s doesn't start with %s"
-                           % (`file`, `prefix`))
-                dfile = dfile[len(prefix):]
-            if base_dir:
-                dfile = os.path.join(base_dir, dfile)
-
-            cfile_base = os.path.basename(cfile)
-            if direct:
-                if force or newer(file, cfile):
-                    if verbose:
-                        print "byte-compiling %s to %s" % (file, cfile_base)
-                    if not dry_run:
-                        compile(file, cfile, dfile)
-                else:
-                    if verbose:
-                        print "skipping byte-compilation of %s to %s" % \
-                              (file, cfile_base)
-
-# byte_compile ()

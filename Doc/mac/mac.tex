@@ -1,11 +1,13 @@
-\documentclass{manual}
+\documentclass{howto}
 
 \title{Macintosh Library Modules}
 
 \input{boilerplate}
 
-\makeindex              % tell \index to actually write the .idx file
-\makemodindex           % ... and the module index as well.
+\makeindex			% tell \index to actually write the
+				% .idx file
+\makemodindex			% ... and the module index as well.
+%\ignorePlatformAnnotation{Mac}
 
 
 \begin{document}
@@ -39,20 +41,9 @@ and how to embed it in other applications.
 
 \tableofcontents
 
-
-\input{using.tex}                       % Using Python on the Macintosh
-
-
-\chapter{MacPython Modules \label{macpython-modules}}
-
-The following modules are only available on the Macintosh, and are
-documented here:
-
-\localmoduletable
-
-\input{libmac}
+\input{libmac}			% MACINTOSH ONLY
 \input{libctb}
-%\input{libmacconsole}
+\input{libmacconsole}
 \input{libmacdnr}
 \input{libmacfs}
 \input{libmacic}
@@ -63,12 +54,6 @@ documented here:
 \input{libmacui}
 \input{libframework}
 \input{libminiae}
-\input{libaepack}
-\input{libaetypes}
-
-\input{toolbox}                         % MacOS Toolbox Modules
-
-\input{undoc}                           % Undocumented Modules
 
 %
 %  The ugly "%begin{latexonly}" pseudo-environments are really just to
@@ -79,11 +64,11 @@ documented here:
 %begin{latexonly}
 \renewcommand{\indexname}{Module Index}
 %end{latexonly}
-\input{modmac.ind}      % Module Index
+\input{modmac.ind}		% Module Index
 
 %begin{latexonly}
 \renewcommand{\indexname}{Index}
 %end{latexonly}
-\input{mac.ind}         % Index
+\input{mac.ind}			% Index
 
 \end{document}

@@ -1,17 +1,20 @@
-
 /* Error handling */
 
 #include "Python.h"
 
+#ifdef SYMANTEC__CFM68K__
+#pragma lib_export on
+#endif
+
 #ifdef macintosh
-extern char *PyMac_StrError(int);
+extern char *PyMac_StrError Py_PROTO((int));
 #undef strerror
 #define strerror PyMac_StrError
 #endif /* macintosh */
 
 #ifndef __STDC__
 #ifndef MS_WINDOWS
-extern char *strerror(int);
+extern char *strerror Py_PROTO((int));
 #endif
 #endif
 
@@ -20,10 +23,11 @@ extern char *strerror(int);
 #include "winbase.h"
 #endif
 
-#include <ctype.h>
-
 void
-PyErr_Restore(PyObject *type, PyObject *value, PyObject *traceback)
+PyErr_Restore(type, value, traceback)
+	PyObject *type;
+	PyObject *value;
+	PyObject *traceback;
 {
 	PyThreadState *tstate = PyThreadState_GET();
 	PyObject *oldtype, *oldvalue, *oldtraceback;
@@ -50,7 +54,9 @@ PyErr_Restore(PyObject *type, PyObject *value, PyObject *traceback)
 }
 
 void
-PyErr_SetObject(PyObject *exception, PyObject *value)
+PyErr_SetObject(exception, value)
+	PyObject *exception;
+	PyObject *value;
 {
 	Py_XINCREF(exception);
 	Py_XINCREF(value);
@@ -58,13 +64,16 @@ PyErr_SetObject(PyObject *exception, PyObject *value)
 }
 
 void
-PyErr_SetNone(PyObject *exception)
+PyErr_SetNone(exception)
+	PyObject *exception;
 {
 	PyErr_SetObject(exception, (PyObject *)NULL);
 }
 
 void
-PyErr_SetString(PyObject *exception, const char *string)
+PyErr_SetString(exception, string)
+	PyObject *exception;
+	const char *string;
 {
 	PyObject *value = PyString_FromString(string);
 	PyErr_SetObject(exception, value);
@@ -73,7 +82,7 @@ PyErr_SetString(PyObject *exception, const char *string)
 
 
 PyObject *
-PyErr_Occurred(void)
+PyErr_Occurred()
 {
 	PyThreadState *tstate = PyThreadState_Get();
 
@@ -82,7 +91,8 @@ PyErr_Occurred(void)
 
 
 int
-PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)
+PyErr_GivenExceptionMatches(err, exc)
+     PyObject *err, *exc;
 {
 	if (err == NULL || exc == NULL) {
 		/* maybe caused by "import exceptions" that failed early on */
@@ -113,7 +123,8 @@ PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)
 
 
 int
-PyErr_ExceptionMatches(PyObject *exc)
+PyErr_ExceptionMatches(exc)
+     PyObject *exc;
 {
 	return PyErr_GivenExceptionMatches(PyErr_Occurred(), exc);
 }
@@ -123,17 +134,14 @@ PyErr_ExceptionMatches(PyObject *exc)
    eval_code2(), do_raise(), and PyErr_Print()
 */
 void
-PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)
+PyErr_NormalizeException(exc, val, tb)
+     PyObject **exc;
+     PyObject **val;
+     PyObject **tb;
 {
 	PyObject *type = *exc;
 	PyObject *value = *val;
 	PyObject *inclass = NULL;
-
-	if (type == NULL) {
-		/* This is a bug.  Should never happen.  Don't dump core. */
-		PyErr_SetString(PyExc_SystemError,
-			"PyErr_NormalizeException() called without exception");
-	}
 
 	/* If PyErr_SetNone() was used, the value will have been actually
 	   set to NULL.
@@ -199,7 +207,10 @@ finally:
 
 
 void
-PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)
+PyErr_Fetch(p_type, p_value, p_traceback)
+	PyObject **p_type;
+	PyObject **p_value;
+	PyObject **p_traceback;
 {
 	PyThreadState *tstate = PyThreadState_Get();
 
@@ -213,7 +224,7 @@ PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)
 }
 
 void
-PyErr_Clear(void)
+PyErr_Clear()
 {
 	PyErr_Restore(NULL, NULL, NULL);
 }
@@ -221,20 +232,16 @@ PyErr_Clear(void)
 /* Convenience functions to set a type error exception and return 0 */
 
 int
-PyErr_BadArgument(void)
+PyErr_BadArgument()
 {
 	PyErr_SetString(PyExc_TypeError,
-			"bad argument type for built-in operation");
+			"illegal argument type for built-in operation");
 	return 0;
 }
 
 PyObject *
-PyErr_NoMemory(void)
+PyErr_NoMemory()
 {
-	if (PyErr_ExceptionMatches(PyExc_MemoryError))
-		/* already current */
-		return NULL;
-
 	/* raise the pre-allocated instance if it still exists */
 	if (PyExc_MemoryErrorInst)
 		PyErr_SetObject(PyExc_MemoryError, PyExc_MemoryErrorInst);
@@ -248,7 +255,9 @@ PyErr_NoMemory(void)
 }
 
 PyObject *
-PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
+PyErr_SetFromErrnoWithFilename(exc, filename)
+	PyObject *exc;
+	char *filename;
 {
 	PyObject *v;
 	char *s;
@@ -311,7 +320,8 @@ PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
 
 
 PyObject *
-PyErr_SetFromErrno(PyObject *exc)
+PyErr_SetFromErrno(exc)
+	PyObject *exc;
 {
 	return PyErr_SetFromErrnoWithFilename(exc, NULL);
 }
@@ -319,7 +329,7 @@ PyErr_SetFromErrno(PyObject *exc)
 #ifdef MS_WINDOWS 
 /* Windows specific error code handling */
 PyObject *PyErr_SetFromWindowsErrWithFilename(
-	int ierr,
+	int ierr, 
 	const char *filename)
 {
 	int len;
@@ -357,40 +367,31 @@ PyObject *PyErr_SetFromWindowsErrWithFilename(
 PyObject *PyErr_SetFromWindowsErr(int ierr)
 {
 	return PyErr_SetFromWindowsErrWithFilename(ierr, NULL);
+
 }
 #endif /* MS_WINDOWS */
 
 void
-_PyErr_BadInternalCall(char *filename, int lineno)
+PyErr_BadInternalCall()
 {
-	PyErr_Format(PyExc_SystemError,
-		     "%s:%d: bad argument to internal function",
-		     filename, lineno);
+	PyErr_SetString(PyExc_SystemError,
+			"bad argument to internal function");
 }
 
-/* Remove the preprocessor macro for PyErr_BadInternalCall() so that we can
-   export the entry point for existing object code: */
-#undef PyErr_BadInternalCall
-void
-PyErr_BadInternalCall(void)
-{
-	PyErr_Format(PyExc_SystemError,
-		     "bad argument to internal function");
-}
-#define PyErr_BadInternalCall() _PyErr_BadInternalCall(__FILE__, __LINE__)
 
-
-
+#ifdef HAVE_STDARG_PROTOTYPES
 PyObject *
 PyErr_Format(PyObject *exception, const char *format, ...)
+#else
+PyObject *
+PyErr_Format(exception, format, va_alist)
+	PyObject *exception;
+	const char *format;
+	va_dcl
+#endif
 {
 	va_list vargs;
-	int n, i;
-	const char* f;
-	char* s;
-	PyObject* string;
-
-	/* step 1: figure out how large a buffer we need */
+	char buffer[500]; /* Caller is responsible for limiting the format */
 
 #ifdef HAVE_STDARG_PROTOTYPES
 	va_start(vargs, format);
@@ -398,124 +399,17 @@ PyErr_Format(PyObject *exception, const char *format, ...)
 	va_start(vargs);
 #endif
 
-	n = 0;
-	for (f = format; *f; f++) {
-		if (*f == '%') {
-			const char* p = f;
-			while (*++f && *f != '%' && !isalpha(*f))
-				;
-			switch (*f) {
-			case 'c':
-				(void) va_arg(vargs, int);
-				/* fall through... */
-			case '%':
-				n++;
-				break;
-			case 'd': case 'i': case 'x':
-				(void) va_arg(vargs, int);
-				/* 20 bytes should be enough to hold a 64-bit
-				   integer */
-				n = n + 20;
-				break;
-			case 's':
-				s = va_arg(vargs, char*);
-				n = n + strlen(s);
-				break;
-			default:
-				/* if we stumble upon an unknown
-				   formatting code, copy the rest of
-				   the format string to the output
-				   string. (we cannot just skip the
-				   code, since there's no way to know
-				   what's in the argument list) */ 
-				n = n + strlen(p);
-				goto expand;
-			}
-		} else
-			n = n + 1;
-	}
-	
- expand:
-	
-	string = PyString_FromStringAndSize(NULL, n);
-	if (!string)
-		return NULL;
-	
-#ifdef HAVE_STDARG_PROTOTYPES
-	va_start(vargs, format);
-#else
-	va_start(vargs);
-#endif
-
-	/* step 2: fill the buffer */
-
-	s = PyString_AsString(string);
-
-	for (f = format; *f; f++) {
-		if (*f == '%') {
-			const char* p = f++;
-			/* parse the width.precision part (we're only
-			   interested in the precision value, if any) */
-			n = 0;
-			while (isdigit(*f))
-				n = (n*10) + *f++ - '0';
-			if (*f == '.') {
-				f++;
-				n = 0;
-				while (isdigit(*f))
-					n = (n*10) + *f++ - '0';
-			}
-			while (*f && *f != '%' && !isalpha(*f))
-				f++;
-			switch (*f) {
-			case 'c':
-				*s++ = va_arg(vargs, int);
-				break;
-			case 'd': 
-				sprintf(s, "%d", va_arg(vargs, int));
-				s = s + strlen(s);
-				break;
-			case 'i':
-				sprintf(s, "%i", va_arg(vargs, int));
-				s = s + strlen(s);
-				break;
-			case 'x':
-				sprintf(s, "%x", va_arg(vargs, int));
-				s = s + strlen(s);
-				break;
-			case 's':
-				p = va_arg(vargs, char*);
-				i = strlen(p);
-				if (n > 0 && i > n)
-					i = n;
-				memcpy(s, p, i);
-				s = s + i;
-				break;
-			case '%':
-				*s++ = '%';
-				break;
-			default:
-				strcpy(s, p);
-				s = s + strlen(s);
-				goto end;
-			}
-		} else
-			*s++ = *f;
-	}
-	
- end:
-	
-	_PyString_Resize(&string, s - PyString_AsString(string));
-	
-	PyErr_SetObject(exception, string);
-	Py_XDECREF(string);
-	
+	vsprintf(buffer, format, vargs);
+	PyErr_SetString(exception, buffer);
 	return NULL;
 }
 
 
 PyObject *
-PyErr_NewException(char *name, PyObject *base, PyObject *dict)
+PyErr_NewException(name, base, dict)
+	char *name; /* modulename.classname */
+	PyObject *base;
+	PyObject *dict;
 {
 	char *dot;
 	PyObject *modulename = NULL;
@@ -560,65 +454,4 @@ PyErr_NewException(char *name, PyObject *base, PyObject *dict)
 	Py_XDECREF(classname);
 	Py_XDECREF(modulename);
 	return result;
-}
-
-/* Call when an exception has occurred but there is no way for Python
-   to handle it.  Examples: exception in __del__ or during GC. */
-void
-PyErr_WriteUnraisable(PyObject *obj)
-{
-	PyObject *f, *t, *v, *tb;
-	PyErr_Fetch(&t, &v, &tb);
-	f = PySys_GetObject("stderr");
-	if (f != NULL) {
-		PyFile_WriteString("Exception ", f);
-		if (t) {
-			PyFile_WriteObject(t, f, Py_PRINT_RAW);
-			if (v && v != Py_None) {
-				PyFile_WriteString(": ", f);
-				PyFile_WriteObject(v, f, 0);
-			}
-		}
-		PyFile_WriteString(" in ", f);
-		PyFile_WriteObject(obj, f, 0);
-		PyFile_WriteString(" ignored\n", f);
-		PyErr_Clear(); /* Just in case */
-	}
-	Py_XDECREF(t);
-	Py_XDECREF(v);
-	Py_XDECREF(tb);
-}
-
-
-/* Function to issue a warning message; may raise an exception. */
-int
-PyErr_Warn(PyObject *category, char *message)
-{
-	PyObject *mod, *dict, *func = NULL;
-
-	mod = PyImport_ImportModule("warnings");
-	if (mod != NULL) {
-		dict = PyModule_GetDict(mod);
-		func = PyDict_GetItemString(dict, "warn");
-		Py_DECREF(mod);
-	}
-	if (func == NULL) {
-		PySys_WriteStderr("warning: %s\n", message);
-		return 0;
-	}
-	else {
-		PyObject *args, *res;
-
-		if (category == NULL)
-			category = PyExc_RuntimeWarning;
-		args = Py_BuildValue("(sO)", message, category);
-		if (args == NULL)
-			return -1;
-		res = PyEval_CallObject(func, args);
-		Py_DECREF(args);
-		if (res == NULL)
-			return -1;
-		Py_DECREF(res);
-		return 0;
-	}
 }

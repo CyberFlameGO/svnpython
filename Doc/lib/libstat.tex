@@ -97,8 +97,7 @@ Group id of the owner.
 \end{datadesc}
 
 \begin{datadesc}{ST_SIZE}
-Size in bytes of a plain file; amount of data waiting on some special
-files.
+File size in bytes.
 \end{datadesc}
 
 \begin{datadesc}{ST_ATIME}
@@ -112,16 +111,6 @@ Time of last modification.
 \begin{datadesc}{ST_CTIME}
 Time of last status change (see manual pages for details).
 \end{datadesc}
-
-The interpretation of ``file size'' changes according to the file
-type.  For plain files this is the size of the file in bytes.  For
-FIFOs and sockets under most Unixes (including Linux in particular),
-the ``size'' is the number of bytes waiting to be read at the time of
-the call to \function{os.stat()}, \function{os.fstat()}, or
-\function{os.lstat()}; this can sometimes be useful, especially for
-polling one of these special files after a non-blocking open.  The
-meaning of the size field for other character and block devices varies
-more, depending on the implementation of the underlying system call.
 
 Example:
 

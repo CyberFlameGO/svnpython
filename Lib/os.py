@@ -19,21 +19,11 @@ and opendir), and leave all pathname manipulation to os.path
 (e.g., split and join).
 """
 
-#'
-
 import sys
 
 _names = sys.builtin_module_names
 
 altsep = None
-
-__all__ = []
-
-def _get_exports_list(module):
-    try:
-        return list(module.__all__)
-    except AttributeError:
-        return [n for n in dir(module) if n[0] != '_']
 
 if 'posix' in _names:
     name = 'posix'
@@ -48,11 +38,6 @@ if 'posix' in _names:
     import posixpath
     path = posixpath
     del posixpath
-
-    import posix
-    __all__.extend(_get_exports_list(posix))
-    del posix
-
 elif 'nt' in _names:
     name = 'nt'
     linesep = '\r\n'
@@ -67,11 +52,6 @@ elif 'nt' in _names:
     import ntpath
     path = ntpath
     del ntpath
-
-    import nt
-    __all__.extend(_get_exports_list(nt))
-    del nt
-
 elif 'dos' in _names:
     name = 'dos'
     linesep = '\r\n'
@@ -85,11 +65,6 @@ elif 'dos' in _names:
     import dospath
     path = dospath
     del dospath
-
-    import dos
-    __all__.extend(_get_exports_list(dos))
-    del dos
-
 elif 'os2' in _names:
     name = 'os2'
     linesep = '\r\n'
@@ -103,11 +78,6 @@ elif 'os2' in _names:
     import ntpath
     path = ntpath
     del ntpath
-
-    import os2
-    __all__.extend(_get_exports_list(os2))
-    del os2
-
 elif 'mac' in _names:
     name = 'mac'
     linesep = '\r'
@@ -121,11 +91,6 @@ elif 'mac' in _names:
     import macpath
     path = macpath
     del macpath
-
-    import mac
-    __all__.extend(_get_exports_list(mac))
-    del mac
-
 elif 'ce' in _names:
     name = 'ce'
     linesep = '\r\n'
@@ -141,21 +106,12 @@ elif 'ce' in _names:
     import ntpath
     path = ntpath
     del ntpath
-
-    import ce
-    __all__.extend(_get_exports_list(ce))
-    del ce
-
 else:
     raise ImportError, 'no os specific module found'
-
-__all__.append("path")
 
 del _names
 
 sys.modules['os.path'] = path
-
-#'
 
 # Super directory utilities.
 # (Inspired by Eric Raymond; the doc strings are mostly his)
@@ -170,8 +126,6 @@ def makedirs(name, mode=0777):
 
     """
     head, tail = path.split(name)
-    if not tail:
-        head, tail = path.split(head)
     if head and tail and not path.exists(head):
         makedirs(head, mode)
     mkdir(name, mode)
@@ -189,8 +143,6 @@ def removedirs(name):
     """
     rmdir(name)
     head, tail = path.split(name)
-    if not tail:
-        head, tail = path.split(head)
     while head and tail:
         try:
             rmdir(head)
@@ -223,8 +175,6 @@ def renames(old, new):
             removedirs(head)
         except error:
             pass
-
-__all__.extend(["makedirs", "removedirs", "renames"])
 
 # Make sure os.environ exists, at least
 try:
@@ -259,7 +209,7 @@ def execlpe(file, *args):
 
     Execute the executable file (which is searched for along $PATH)
     with argument list args and environment env, replacing the current
-    process. """
+    process. """    
     env = args[-1]
     execvpe(file, args[:-1], env)
 
@@ -268,7 +218,7 @@ def execvp(file, args):
 
     Execute the executable file (which is searched for along $PATH)
     with argument list args, replacing the current process.
-    args may be a list or tuple of strings. """
+    args may be a list or tupe of strings. """
     _execvpe(file, args)
 
 def execvpe(file, args, env):
@@ -277,10 +227,8 @@ def execvpe(file, args, env):
     Execute the executable file (which is searched for along $PATH)
     with argument list args and environment env , replacing the
     current process.
-    args may be a list or tuple of strings. """
+    args may be a list or tupe of strings. """    
     _execvpe(file, args, env)
-
-__all__.extend(["execl","execle","execlp","execlpe","execvp","execvpe"])
 
 _notfound = None
 def _execvpe(file, args, env=None):
@@ -365,9 +313,8 @@ else:
 def getenv(key, default=None):
     """Get an environment variable, return None if it doesn't exist.
 
-    The optional second argument can specify an alternate default."""
+    The optional second argument can specify an alternative default."""
     return environ.get(key, default)
-__all__.append("getenv")
 
 def _exists(name):
     try:
@@ -419,7 +366,7 @@ if _exists("fork") and not _exists("spawnv") and _exists("execv"):
 Execute file with arguments from args in a subprocess.
 If mode == P_NOWAIT return the pid of the process.
 If mode == P_WAIT return the process's exit code if it exits normally;
-otherwise return -SIG, where SIG is the signal that killed it. """
+otherwise return -SIG, where SIG is the signal that killed it. """   
         return _spawnvef(mode, file, args, None, execv)
 
     def spawnve(mode, file, args, env):
@@ -503,29 +450,3 @@ otherwise return -SIG, where SIG is the signal that killed it. """
         return spawnvpe(mode, file, args[:-1], env)
 
 
-    __all__.extend(["spawnlp","spawnlpe","spawnv", "spawnve","spawnvp",
-                    "spawnvpe","spawnl","spawnle",])
-
-
-# Supply popen2 etc. (for Unix)
-if _exists("fork"):
-    if not _exists("popen2"):
-        def popen2(cmd, mode="t", bufsize=-1):
-            import popen2
-            stdout, stdin = popen2.popen2(cmd, bufsize)
-            return stdin, stdout
-        __all__.append("popen2")
-
-    if not _exists("popen3"):
-        def popen3(cmd, mode="t", bufsize=-1):
-            import popen2
-            stdout, stdin, stderr = popen2.popen3(cmd, bufsize)
-            return stdin, stdout, stderr
-        __all__.append("popen3")
-
-    if not _exists("popen4"):
-        def popen4(cmd, mode="t", bufsize=-1):
-            import popen2
-            stdout, stdin = popen2.popen4(cmd, bufsize)
-            return stdin, stdout
-        __all__.append("popen4")

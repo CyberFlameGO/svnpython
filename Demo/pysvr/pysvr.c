@@ -19,7 +19,6 @@ can log in on your machine.  Use with caution!
 #include <netinet/in.h>
 
 #include <pthread.h>
-#include <getopt.h>
 
 /* XXX Umpfh.
    Python.h defines a typedef destructor, which conflicts with pthread.h.
@@ -32,6 +31,10 @@ extern int Py_VerboseFlag;
 #ifndef PORT
 #define PORT 4000
 #endif
+
+extern int optind;
+extern char *optarg;
+extern int getopt();
 
 struct workorder {
 	int conn;
@@ -94,7 +97,7 @@ main(int argc, char **argv)
 static char usage_line[] = "usage: %s [port]\n";
 
 static void
-usage(void)
+usage()
 {
 	fprintf(stderr, usage_line, progname);
 	exit(2);
@@ -217,7 +220,7 @@ static PyInterpreterState *the_interp;
 static PyObject *the_builtins;
 
 static void
-init_python(void)
+init_python()
 {
 	if (gtstate)
 		return;
@@ -265,7 +268,7 @@ service_thread(struct workorder *work)
 }
 
 static void
-oprogname(void)
+oprogname()
 {
 	int save = errno;
 	fprintf(stderr, "%s: ", progname);
@@ -361,7 +364,7 @@ run_command(char *buffer, PyObject *globals)
 }
 
 static void
-ps(void)
+ps()
 {
 	char buffer[100];
 	sprintf(buffer, "ps -l -p %d </dev/null | tail +2l\n", getpid());

@@ -60,11 +60,11 @@ BOOL CallModuleDllMain(char *modName, DWORD dwReason);
   Called by a frozen .EXE only, so that built-in extension
   modules are initialized correctly
 */
-void PyWinFreeze_ExeInit(void)
+void PyWinFreeze_ExeInit()
 {
 	char **modName;
 	for (modName = possibleModules;*modName;*modName++) {
-/*		printf("Initialising '%s'\n", *modName); */
+		printf("Initialising '%s'\n", *modName);
 		CallModuleDllMain(*modName, DLL_PROCESS_ATTACH);
 	}
 }
@@ -73,14 +73,14 @@ void PyWinFreeze_ExeInit(void)
   Called by a frozen .EXE only, so that built-in extension
   modules are cleaned up 
 */
-void PyWinFreeze_ExeTerm(void)
+void PyWinFreeze_ExeTerm()
 {
 	// Must go backwards
 	char **modName;
 	for (modName = possibleModules+(sizeof(possibleModules) / sizeof(char *))-2;
 	     modName >= possibleModules;
 	     *modName--) {
-/*		printf("Terminating '%s'\n", *modName);*/
+		printf("Terminating '%s'\n", *modName);
 		CallModuleDllMain(*modName, DLL_PROCESS_DETACH);
 	}
 }

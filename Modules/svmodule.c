@@ -27,18 +27,22 @@ typedef struct {
 
 static PyObject *SvError;		/* exception sv.error */
 
-static PyObject *newcaptureobject(svobject *, void *, int);
+static PyObject *newcaptureobject Py_PROTO((svobject *, void *, int));
 
 /* Set a SV-specific error from svideo_errno and return NULL */
 static PyObject *
-sv_error(void)
+sv_error()
 {
 	PyErr_SetString(SvError, svStrerror(svideo_errno));
 	return NULL;
 }
 
 static PyObject *
-svc_conversion(captureobject *self, PyObject *args, void (*function)(),	float factor)
+svc_conversion(self, args, function, factor)
+	captureobject *self;
+	PyObject *args;
+	void (*function)();
+	float factor;
 {
 	PyObject *output;
 	int invert;
@@ -70,7 +74,9 @@ svc_conversion(captureobject *self, PyObject *args, void (*function)(),	float fa
  * Compression Library 4:2:2 Duplicate Chroma format.
  */
 static PyObject *
-svc_YUVtoYUV422DC(captureobject *self, PyObject *args)
+svc_YUVtoYUV422DC(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	if (self->ob_info.format != SV_YUV411_FRAMES) {
 		PyErr_SetString(SvError, "data has bad format");
@@ -80,7 +86,9 @@ svc_YUVtoYUV422DC(captureobject *self, PyObject *args)
 }
 
 static PyObject *
-svc_YUVtoYUV422DC_quarter(captureobject *self, PyObject *args)
+svc_YUVtoYUV422DC_quarter(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	if (self->ob_info.format != SV_YUV411_FRAMES) {
 		PyErr_SetString(SvError, "data has bad format");
@@ -91,7 +99,9 @@ svc_YUVtoYUV422DC_quarter(captureobject *self, PyObject *args)
 }
 
 static PyObject *
-svc_YUVtoYUV422DC_sixteenth(captureobject *self, PyObject *args)
+svc_YUVtoYUV422DC_sixteenth(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	if (self->ob_info.format != SV_YUV411_FRAMES) {
 		PyErr_SetString(SvError, "data has bad format");
@@ -102,7 +112,9 @@ svc_YUVtoYUV422DC_sixteenth(captureobject *self, PyObject *args)
 }
 
 static PyObject *
-svc_YUVtoRGB(captureobject *self, PyObject *args)
+svc_YUVtoRGB(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	switch (self->ob_info.format) {
 	case SV_YUV411_FRAMES:
@@ -116,7 +128,9 @@ svc_YUVtoRGB(captureobject *self, PyObject *args)
 }
 
 static PyObject *
-svc_RGB8toRGB32(captureobject *self, PyObject *args)
+svc_RGB8toRGB32(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	if (self->ob_info.format != SV_RGB8_FRAMES) {
 		PyErr_SetString(SvError, "data has bad format");
@@ -126,7 +140,9 @@ svc_RGB8toRGB32(captureobject *self, PyObject *args)
 }
 
 static PyObject *
-svc_InterleaveFields(captureobject *self, PyObject *args)
+svc_InterleaveFields(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	if (self->ob_info.format != SV_RGB8_FRAMES) {
 		PyErr_SetString(SvError, "data has bad format");
@@ -136,7 +152,9 @@ svc_InterleaveFields(captureobject *self, PyObject *args)
 }
 
 static PyObject *
-svc_GetFields(captureobject *self, PyObject *args)
+svc_GetFields(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	PyObject *f1 = NULL;
 	PyObject *f2 = NULL;
@@ -166,7 +184,9 @@ svc_GetFields(captureobject *self, PyObject *args)
 }
 	
 static PyObject *
-svc_UnlockCaptureData(captureobject *self, PyObject *args)
+svc_UnlockCaptureData(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -189,7 +209,9 @@ svc_UnlockCaptureData(captureobject *self, PyObject *args)
 #include <gl.h>
 
 static PyObject *
-svc_lrectwrite(captureobject *self, PyObject *args)
+svc_lrectwrite(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	Screencoord x1, x2, y1, y2;
 
@@ -204,7 +226,9 @@ svc_lrectwrite(captureobject *self, PyObject *args)
 #endif
 
 static PyObject *
-svc_writefile(captureobject *self, PyObject *args)
+svc_writefile(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	PyObject *file;
 	int size;
@@ -233,7 +257,9 @@ svc_writefile(captureobject *self, PyObject *args)
 }
 
 static PyObject *
-svc_FindVisibleRegion(captureobject *self, PyObject *args)
+svc_FindVisibleRegion(self, args)
+	captureobject *self;
+	PyObject *args;
 {
 	void *visible;
 	int width;
@@ -272,7 +298,8 @@ static PyMethodDef capture_methods[] = {
 };
 
 static void
-capture_dealloc(captureobject *self)
+capture_dealloc(self)
+	captureobject *self;
 {
 	if (self->ob_capture != NULL) {
 		if (self->ob_mustunlock)
@@ -286,7 +313,9 @@ capture_dealloc(captureobject *self)
 }
 
 static PyObject *
-capture_getattr(svobject *self, char *name)
+capture_getattr(self, name)
+	svobject *self;
+	char *name;
 {
 	return Py_FindMethod(capture_methods, (PyObject *)self, name);
 }
@@ -307,7 +336,10 @@ PyTypeObject Capturetype = {
 };
 
 static PyObject *
-newcaptureobject(svobject *self, void *ptr, int mustunlock)
+newcaptureobject(self, ptr, mustunlock)
+	svobject *self;
+	void *ptr;
+	int mustunlock;
 {
 	captureobject *p;
 
@@ -323,7 +355,9 @@ newcaptureobject(svobject *self, void *ptr, int mustunlock)
 }
 
 static PyObject *
-sv_GetCaptureData(svobject *self, PyObject *args)
+sv_GetCaptureData(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	void *ptr;
 	long fieldID;
@@ -349,7 +383,9 @@ sv_GetCaptureData(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_BindGLWindow(svobject *self, PyObject *args)
+sv_BindGLWindow(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	long wid;
 	int mode;
@@ -365,7 +401,9 @@ sv_BindGLWindow(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_EndContinuousCapture(svobject *self, PyObject *args)
+sv_EndContinuousCapture(self, args)
+	svobject *self;
+	PyObject *args;
 {
 
 	if (!PyArg_Parse(args, ""))
@@ -379,7 +417,9 @@ sv_EndContinuousCapture(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_IsVideoDisplayed(svobject *self, PyObject *args)
+sv_IsVideoDisplayed(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	int v;
 
@@ -394,7 +434,9 @@ sv_IsVideoDisplayed(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_OutputOffset(svobject *self, PyObject *args)
+sv_OutputOffset(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	int x_offset;
 	int y_offset;
@@ -410,7 +452,9 @@ sv_OutputOffset(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_PutFrame(svobject *self, PyObject *args)
+sv_PutFrame(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	char *buffer;
 
@@ -425,7 +469,9 @@ sv_PutFrame(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_QuerySize(svobject *self, PyObject *args)
+sv_QuerySize(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	int w;
 	int h;
@@ -442,7 +488,9 @@ sv_QuerySize(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_SetSize(svobject *self, PyObject *args)
+sv_SetSize(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	int w;
 	int h;
@@ -458,7 +506,9 @@ sv_SetSize(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_SetStdDefaults(svobject *self, PyObject *args)
+sv_SetStdDefaults(self, args)
+	svobject *self;
+	PyObject *args;
 {
 
 	if (!PyArg_Parse(args, ""))
@@ -472,7 +522,9 @@ sv_SetStdDefaults(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_UseExclusive(svobject *self, PyObject *args)
+sv_UseExclusive(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	boolean onoff;
 	int mode;
@@ -488,7 +540,9 @@ sv_UseExclusive(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_WindowOffset(svobject *self, PyObject *args)
+sv_WindowOffset(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	int x_offset;
 	int y_offset;
@@ -504,7 +558,9 @@ sv_WindowOffset(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_CaptureBurst(svobject *self, PyObject *args)
+sv_CaptureBurst(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	int bytes, i;
 	svCaptureInfo info;
@@ -595,7 +651,9 @@ sv_CaptureBurst(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_CaptureOneFrame(svobject *self, PyObject *args)
+sv_CaptureOneFrame(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	svCaptureInfo info;
 	int format, width, height;
@@ -635,7 +693,9 @@ sv_CaptureOneFrame(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_InitContinuousCapture(svobject *self, PyObject *args)
+sv_InitContinuousCapture(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	svCaptureInfo info;
 
@@ -654,7 +714,9 @@ sv_InitContinuousCapture(svobject *self, PyObject *args)
 }
 
 static PyObject *
-sv_LoadMap(svobject *self, PyObject *args)
+sv_LoadMap(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	PyObject *rgb;
 	PyObject *res = NULL;
@@ -715,7 +777,9 @@ sv_LoadMap(svobject *self, PyObject *args)
 }
 		
 static PyObject *
-sv_CloseVideo(svobject *self, PyObject *args)
+sv_CloseVideo(self, args)
+	svobject *self;
+	PyObject *args;
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -729,8 +793,11 @@ sv_CloseVideo(svobject *self, PyObject *args)
 }
 
 static PyObject *
-doParams(svobject *self, PyObject *args,
-         int (*func)(SV_nodeP, long *, int), int modified)
+doParams(self, args, func, modified)
+	svobject *self;
+	PyObject *args;
+	int (*func)(SV_nodeP, long *, int);
+	int modified;
 {
 	PyObject *list;
 	PyObject *res = NULL;
@@ -792,19 +859,22 @@ doParams(svobject *self, PyObject *args,
 }
 
 static PyObject *
-sv_GetParam(PyObject *self, PyObject *args)
+sv_GetParam(self, args)
+	PyObject *self, *args;
 {
 	return doParams(self, args, svGetParam, 1);
 }
 
 static PyObject *
-sv_GetParamRange(PyObject *self, PyObject *args)
+sv_GetParamRange(self, args)
+	PyObject *self, *args;
 {
 	return doParams(self, args, svGetParamRange, 1);
 }
 
 static PyObject *
-sv_SetParam(PyObject *self, PyObject *args)
+sv_SetParam(self, args)
+	PyObject *self, *args;
 {
 	return doParams(self, args, svSetParam, 0);
 }
@@ -833,8 +903,11 @@ static PyMethodDef svideo_methods[] = {
 };
 
 static PyObject *
-sv_conversion(PyObject *self, PyObject *args, void (*function)(),
-              int inputfactor, float factor)
+sv_conversion(self, args, function, inputfactor, factor)
+	PyObject *self, *args;
+	void (*function)();
+	int inputfactor;
+	float factor;
 {
 	int invert, width, height, inputlength;
 	char *input, *str;
@@ -864,25 +937,29 @@ sv_conversion(PyObject *self, PyObject *args, void (*function)(),
 }
 
 static PyObject *
-sv_InterleaveFields(PyObject *self, PyObject *args)
+sv_InterleaveFields(self, args)
+	PyObject *self, *args;
 {
 	return sv_conversion(self, args, svInterleaveFields, 1, 1.0);
 }
 
 static PyObject *
-sv_RGB8toRGB32(PyObject *self, PyObject *args)
+sv_RGB8toRGB32(self, args)
+	PyObject *self, *args;
 {
 	return sv_conversion(self, args, svRGB8toRGB32, 1, (float) sizeof(long));
 }
 
 static PyObject *
-sv_YUVtoRGB(PyObject *self, PyObject *args)
+sv_YUVtoRGB(self, args)
+	PyObject *self, *args;
 {
 	return sv_conversion(self, args, svYUVtoRGB, 2, (float) sizeof(long));
 }
 
 static void
-svideo_dealloc(svobject *self)
+svideo_dealloc(self)
+	svobject *self;
 {
 	if (self->ob_svideo != NULL)
 		(void) svCloseVideo(self->ob_svideo);
@@ -890,7 +967,9 @@ svideo_dealloc(svobject *self)
 }
 
 static PyObject *
-svideo_getattr(svobject *self, char *name)
+svideo_getattr(self, name)
+	svobject *self;
+	char *name;
 {
 	return Py_FindMethod(svideo_methods, (PyObject *)self, name);
 }
@@ -911,7 +990,8 @@ PyTypeObject Svtype = {
 };
 
 static PyObject *
-newsvobject(SV_nodeP svp)
+newsvobject(svp)
+	SV_nodeP svp;
 {
 	svobject *p;
 
@@ -928,7 +1008,8 @@ newsvobject(SV_nodeP svp)
 }
 
 static PyObject *
-sv_OpenVideo(PyObject *self, PyObject *args)
+sv_OpenVideo(self, args)
+	PyObject *self, *args;
 {
 	SV_nodeP svp;
 
@@ -951,7 +1032,7 @@ static PyMethodDef sv_methods[] = {
 };
 
 void
-initsv(void)
+initsv()
 {
 	PyObject *m, *d;
 

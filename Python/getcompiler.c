@@ -1,4 +1,3 @@
-
 /* Return the compiler identification, if possible. */
 
 #include "Python.h"
@@ -6,7 +5,7 @@
 #ifndef COMPILER
 
 #ifdef __GNUC__
-#define COMPILER "\n[GCC " __VERSION__ "]"
+#define COMPILER " [GCC " __VERSION__ "]"
 #endif
 
 #endif /* !COMPILER */
@@ -22,7 +21,7 @@
 #endif /* !COMPILER */
 
 const char *
-Py_GetCompiler(void)
+Py_GetCompiler()
 {
 	return COMPILER;
 }

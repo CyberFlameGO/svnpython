@@ -16,16 +16,17 @@
 #include <tk.h>
 
 int
-Tcl_AppInit(Tcl_Interp *interp)
+Tcl_AppInit(interp)
+	Tcl_Interp *interp;
 {
-	Tk_Window main_window;
+	Tk_Window main;
 
 	if (Tcl_Init (interp) == TCL_ERROR)
 		return TCL_ERROR;
 	if (Tk_Init (interp) == TCL_ERROR)
 		return TCL_ERROR;
 
-	main_window = Tk_MainWindow(interp);
+	main = Tk_MainWindow(interp);
 
 #ifdef WITH_MOREBUTTONS
 	{
@@ -33,9 +34,9 @@ Tcl_AppInit(Tcl_Interp *interp)
 		extern Tcl_CmdProc triButtonCmd;
 
 		Tcl_CreateCommand(interp, "studbutton", studButtonCmd,
-				  (ClientData) main_window, NULL);
+				  (ClientData) main, NULL);
 		Tcl_CreateCommand(interp, "tributton", triButtonCmd,
-				  (ClientData) main_window, NULL);
+				  (ClientData) main, NULL);
 	}
 #endif
 

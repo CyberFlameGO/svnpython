@@ -1,8 +1,8 @@
 \section{\module{new} ---
-         Creation of runtime internal objects}
+         Runtime implementation object creation}
 
 \declaremodule{builtin}{new}
-\sectionauthor{Moshe Zadka}{moshez@zadka.site.co.il}
+\sectionauthor{Moshe Zadka}{mzadka@geocities.com}
 \modulesynopsis{Interface to the creation of runtime implementation objects.}
 
 
@@ -14,12 +14,10 @@ to the interpreter, so care must be exercised when using this module.
 
 The \module{new} module defines the following functions:
 
-\begin{funcdesc}{instance}{class\optional{, dict}}
+\begin{funcdesc}{instance}{class, dict}
 This function creates an instance of \var{class} with dictionary
-\var{dict} without calling the \method{__init__()} constructor.  If
-\var{dict} is omitted or \code{None}, a new, empty dictionary is
-created for the new instance.  Note that there are no guarantees that
-the object will be in a consistent state.
+\var{dict} without calling the \method{__init__()} constructor. Note that
+there are no guarantees that the object will be in a consistent state.
 \end{funcdesc}
 
 \begin{funcdesc}{instancemethod}{function, instance, class}
@@ -29,12 +27,12 @@ callable, and \var{instance} must be an instance object or
 \code{None}.
 \end{funcdesc}
 
-\begin{funcdesc}{function}{code, globals\optional{, name\optional{, argdefs}}}
+\begin{funcdesc}{function}{code, globals\optional{, name\optional{argdefs}}}
 Returns a (Python) function with the given code and globals. If
 \var{name} is given, it must be a string or \code{None}.  If it is a
 string, the function will have the given name, otherwise the function
 name will be taken from \code{\var{code}.co_name}.  If
-\var{argdefs} is given, it must be a tuple and will be used to
+\var{argdefs} is given, it must be a tuple and will be used to the
 determine the default values of parameters.
 \end{funcdesc}
 

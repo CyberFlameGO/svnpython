@@ -10,7 +10,7 @@ __revision__ = "$Id$"
 import os
 from types import StringType
 from distutils.core import Command
-from distutils.util import change_root, convert_path
+from distutils.util import change_root
 
 class install_data (Command):
 
@@ -22,50 +22,40 @@ class install_data (Command):
          "(default: installation base dir)"),
         ('root=', None,
          "install everything relative to this alternate root directory"),
-        ('force', 'f', "force installation (overwrite existing files)"),
         ]
-
-    boolean_options = ['force']
 
     def initialize_options (self):
         self.install_dir = None
         self.outfiles = []
         self.root = None
-        self.force = 0
-
         self.data_files = self.distribution.data_files
-        self.warn_dir = 1
 
     def finalize_options (self):
         self.set_undefined_options('install',
-                                   ('install_data', 'install_dir'),
-                                   ('root', 'root'),
-                                   ('force', 'force'),
-                                  )
+	                           ('install_data', 'install_dir'),
+				   ('root', 'root'),
+				  )
 
     def run (self):
         self.mkpath(self.install_dir)
         for f in self.data_files:
             if type(f) == StringType:
                 # it's a simple file, so copy it
-                f = convert_path(f)
-                if self.warn_dir:
-                    self.warn("setup script did not provide a directory for "
-                              "'%s' -- installing right in '%s'" %
-                              (f, self.install_dir))
-                (out, _) = self.copy_file(f, self.install_dir)
+                self.warn("setup script did not provide a directory for "
+                          "'%s' -- installing right in '%s'" %
+                          (f, self.install_dir))
+                out = self.copy_file(f, self.install_dir)
                 self.outfiles.append(out)
             else:
                 # it's a tuple with path to install to and a list of files
-                dir = convert_path(f[0])
+                dir = f[0]
                 if not os.path.isabs(dir):
                     dir = os.path.join(self.install_dir, dir)
                 elif self.root:
                     dir = change_root(self.root, dir)
                 self.mkpath(dir)
                 for data in f[1]:
-                    data = convert_path(data)
-                    (out, _) = self.copy_file(data, dir)
+                    out = self.copy_file(data, dir)
                     self.outfiles.append(out)
 
     def get_inputs (self):

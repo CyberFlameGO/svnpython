@@ -8,17 +8,6 @@ import os
 import sys
 import stat
 
-__all__ = ["copyfileobj","copyfile","copymode","copystat","copy","copy2",
-           "copytree","rmtree"]
-
-def copyfileobj(fsrc, fdst, length=16*1024):
-    """copy data from file-like object fsrc to file-like object fdst"""
-    while 1:
-        buf = fsrc.read(length)
-        if not buf:
-            break
-        fdst.write(buf)
-
 
 def copyfile(src, dst):
     """Copy data from src to dst"""
@@ -27,7 +16,11 @@ def copyfile(src, dst):
     try:
         fsrc = open(src, 'rb')
         fdst = open(dst, 'wb')
-        copyfileobj(fsrc, fdst)
+        while 1:
+            buf = fsrc.read(16*1024)
+            if not buf:
+                break
+            fdst.write(buf)
     finally:
         if fdst:
             fdst.close()
@@ -36,24 +29,21 @@ def copyfile(src, dst):
 
 def copymode(src, dst):
     """Copy mode bits from src to dst"""
-    if hasattr(os, 'chmod'):
-        st = os.stat(src)
-        mode = stat.S_IMODE(st[stat.ST_MODE])
-        os.chmod(dst, mode)
+    st = os.stat(src)
+    mode = stat.S_IMODE(st[stat.ST_MODE])
+    os.chmod(dst, mode)
 
 def copystat(src, dst):
     """Copy all stat info (mode bits, atime and mtime) from src to dst"""
     st = os.stat(src)
     mode = stat.S_IMODE(st[stat.ST_MODE])
-    if hasattr(os, 'utime'):
-        os.utime(dst, (st[stat.ST_ATIME], st[stat.ST_MTIME]))
-    if hasattr(os, 'chmod'):
-        os.chmod(dst, mode)
+    os.utime(dst, (st[stat.ST_ATIME], st[stat.ST_MTIME]))
+    os.chmod(dst, mode)
 
 
 def copy(src, dst):
     """Copy data and mode bits ("cp src dst").
-
+    
     The destination may be a directory.
 
     """

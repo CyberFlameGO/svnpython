@@ -1,3 +1,4 @@
+
 # Symbolic constants for Tk
 
 # Booleans
@@ -52,10 +53,6 @@ WORD='word'
 # -align
 BASELINE='baseline'
 
-# -bordermode
-INSIDE='inside'
-OUTSIDE='outside'
-
 # Special tags, marks and insert positions
 SEL='sel'
 SEL_FIRST='sel.first'
@@ -83,21 +80,3 @@ SINGLE='single'
 BROWSE='browse'
 MULTIPLE='multiple'
 EXTENDED='extended'
-
-# Various canvas styles
-PIESLICE='pieslice'
-CHORD='chord'
-ARC='arc'
-FIRST='first'
-LAST='last'
-BUTT='butt'
-PROJECTING='projecting'
-ROUND='round'
-BEVEL='bevel'
-MITER='miter'
-
-# Arguments to xview/yview
-MOVETO='moveto'
-SCROLL='scroll'
-UNITS='units'
-PAGES='pages'

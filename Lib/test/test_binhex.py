@@ -6,7 +6,7 @@
 """
 import binhex
 import tempfile
-from test_support import verbose, TestSkipped
+from test_support import verbose
 
 def test():
 
@@ -15,12 +15,12 @@ def test():
         fname2 = tempfile.mktemp()
         f = open(fname1, 'w')
     except:
-        raise TestSkipped, "Cannot test binhex without a temp file"
+        raise ImportError, "Cannot test binhex without a temp file"
 
     start = 'Jack is my hero'
     f.write(start)
     f.close()
-
+    
     binhex.binhex(fname1, fname2)
     if verbose:
         print 'binhex'
@@ -31,10 +31,9 @@ def test():
 
     f = open(fname1, 'r')
     finish = f.readline()
-    f.close()   # on Windows an open file cannot be unlinked
 
-    if start != finish:
-        print 'Error: binhex != hexbin'
+    if start <> finish:
+        print 'Error: binhex <> hexbin'
     elif verbose:
         print 'binhex == hexbin'
 

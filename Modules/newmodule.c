@@ -1,40 +1,40 @@
-
 /* Module new -- create new objects of various types */
 
 #include "Python.h"
 #include "compile.h"
 
 static char new_instance_doc[] =
-"Create an instance object from (CLASS [, DICT]) without calling its\n\
-__init__() method.  DICT must be a dictionary or None.";
+"Create an instance object from (CLASS, DICT) without calling its __init__().";
 
 static PyObject *
-new_instance(PyObject* unused, PyObject* args)
+new_instance(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
-	PyObject *klass;
-	PyObject *dict = NULL;
-
-	if (!PyArg_ParseTuple(args, "O!|O:instance",
-			      &PyClass_Type, &klass, &dict))
+	PyObject* klass;
+	PyObject *dict;
+	PyInstanceObject *inst;
+	if (!PyArg_ParseTuple(args, "O!O!:instance",
+			      &PyClass_Type, &klass,
+			      &PyDict_Type, &dict))
 		return NULL;
-
-	if (dict == Py_None)
-		dict = NULL;
-	else if (dict == NULL)
-		/* do nothing */;
-	else if (!PyDict_Check(dict)) {
-		PyErr_SetString(PyExc_TypeError,
-		      "new.instance() second arg must be dictionary or None");
+	inst = PyObject_New(PyInstanceObject, &PyInstance_Type);
+	if (inst == NULL)
 		return NULL;
-	}
-	return PyInstance_NewRaw(klass, dict);
+	Py_INCREF(klass);
+	Py_INCREF(dict);
+	inst->in_class = (PyClassObject *)klass;
+	inst->in_dict = dict;
+	return (PyObject *)inst;
 }
 
 static char new_im_doc[] =
 "Create a instance method object from (FUNCTION, INSTANCE, CLASS).";
 
 static PyObject *
-new_instancemethod(PyObject* unused, PyObject* args)
+new_instancemethod(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* func;
 	PyObject* self;
@@ -61,10 +61,12 @@ new_instancemethod(PyObject* unused, PyObject* args)
 }
 
 static char new_function_doc[] =
-"Create a function object from (CODE, GLOBALS, [NAME [, ARGDEFS]]).";
+"Create a function object from (CODE, GLOBALS, [NAME, ARGDEFS]).";
 
 static PyObject *
-new_function(PyObject* unused, PyObject* args)
+new_function(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject* code;
 	PyObject* globals;
@@ -72,17 +74,12 @@ new_function(PyObject* unused, PyObject* args)
 	PyObject* defaults = Py_None;
 	PyFunctionObject* newfunc;
 
-	if (!PyArg_ParseTuple(args, "O!O!|OO!:function",
+	if (!PyArg_ParseTuple(args, "O!O!|SO!:function",
 			      &PyCode_Type, &code,
 			      &PyDict_Type, &globals,
 			      &name,
 			      &PyTuple_Type, &defaults))
 		return NULL;
-	if (name != Py_None && !PyString_Check(name)) {
-		PyErr_SetString(PyExc_TypeError,
-				"arg 3 (name) must be None or string");
-		return NULL;
-	}
 
 	newfunc = (PyFunctionObject *)PyFunction_New(code, globals);
 	if (newfunc == NULL)
@@ -103,12 +100,12 @@ new_function(PyObject* unused, PyObject* args)
 }
 
 static char new_code_doc[] =
-"Create a code object from (ARGCOUNT, NLOCALS, STACKSIZE, FLAGS, CODESTRING,\n"
-"CONSTANTS, NAMES, VARNAMES, FILENAME, NAME, FIRSTLINENO, LNOTAB, FREEVARS,\n"
-"CELLVARS).";
+"Create a code object from (ARGCOUNT, NLOCALS, STACKSIZE, FLAGS, CODESTRING, CONSTANTS, NAMES, VARNAMES, FILENAME, NAME, FIRSTLINENO, LNOTAB).";
 
 static PyObject *
-new_code(PyObject* unused, PyObject* args)
+new_code(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	int argcount;
 	int nlocals;
@@ -118,40 +115,21 @@ new_code(PyObject* unused, PyObject* args)
 	PyObject* consts;
 	PyObject* names;
 	PyObject* varnames;
-	PyObject* freevars = NULL;
-	PyObject* cellvars = NULL;
 	PyObject* filename;
 	PyObject* name;
 	int firstlineno;
 	PyObject* lnotab;
 	PyBufferProcs *pb;
 
-	if (!PyArg_ParseTuple(args, "iiiiSO!O!O!SSiS|O!O!:code",
+	if (!PyArg_ParseTuple(args, "iiiiOO!O!O!SSiS:code",
 			      &argcount, &nlocals, &stacksize, &flags,
 			      &code,
 			      &PyTuple_Type, &consts,
 			      &PyTuple_Type, &names,
 			      &PyTuple_Type, &varnames,
 			      &filename, &name,
-			      &firstlineno, &lnotab,
-			      &PyTuple_Type, &freevars,
-			      &PyTuple_Type, &cellvars))
+			      &firstlineno, &lnotab))
 		return NULL;
-
-	if (freevars == NULL || cellvars == NULL) {
-		PyObject *empty = PyTuple_New(0);
-		if (empty == NULL)
-		    return NULL;
-		if (freevars == NULL) {
-		    freevars = empty;
-		    Py_INCREF(freevars);
-		}
-		if (cellvars == NULL) {
-		    cellvars = empty;
-		    Py_INCREF(cellvars);
-		}
-		Py_DECREF(empty);
-	}
 
 	pb = code->ob_type->tp_as_buffer;
 	if (pb == NULL ||
@@ -166,15 +144,16 @@ new_code(PyObject* unused, PyObject* args)
 
 	return (PyObject *)PyCode_New(argcount, nlocals, stacksize, flags,
 				      code, consts, names, varnames,
-				      freevars, cellvars, filename, name,
-				      firstlineno, lnotab); 
+				      filename, name, firstlineno, lnotab);
 }
 
 static char new_module_doc[] =
 "Create a module object from (NAME).";
 
 static PyObject *
-new_module(PyObject* unused, PyObject* args)
+new_module(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	char *name;
   
@@ -187,7 +166,9 @@ static char new_class_doc[] =
 "Create a class object from (NAME, BASE_CLASSES, DICT).";
 
 static PyObject *
-new_class(PyObject* unused, PyObject* args)
+new_class(unused, args)
+	PyObject* unused;
+	PyObject* args;
 {
 	PyObject * name;
 	PyObject * classes;
@@ -200,18 +181,12 @@ new_class(PyObject* unused, PyObject* args)
 }
 
 static PyMethodDef new_methods[] = {
-	{"instance",		new_instance,		
-	 METH_VARARGS, new_instance_doc},
-	{"instancemethod",	new_instancemethod,	
-	 METH_VARARGS, new_im_doc},
-	{"function",		new_function,		
-	 METH_VARARGS, new_function_doc},
-	{"code",		new_code,		
-	 METH_VARARGS, new_code_doc},
-	{"module",		new_module,		
-	 METH_VARARGS, new_module_doc},
-	{"classobj",		new_class,		
-	 METH_VARARGS, new_class_doc},
+	{"instance",		new_instance,		1, new_instance_doc},
+	{"instancemethod",	new_instancemethod,	1, new_im_doc},
+	{"function",		new_function,		1, new_function_doc},
+	{"code",		new_code,		1, new_code_doc},
+	{"module",		new_module,		1, new_module_doc},
+	{"classobj",		new_class,		1, new_class_doc},
 	{NULL,			NULL}		/* sentinel */
 };
 
@@ -221,7 +196,7 @@ char new_doc[] =
 You need to know a great deal about the interpreter to use this!";
 
 DL_EXPORT(void)
-initnew(void)
+initnew()
 {
 	Py_InitModule4("new", new_methods, new_doc, (PyObject *)NULL,
 		       PYTHON_API_VERSION);

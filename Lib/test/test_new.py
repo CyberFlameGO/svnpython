@@ -1,4 +1,4 @@
-from test_support import verbose, verify
+from test_support import verbose
 import sys
 import new
 
@@ -25,14 +25,6 @@ print 'new.instance()'
 c = new.instance(C, {'yolks': 3})
 if verbose:
     print c
-o = new.instance(C)
-verify(o.__dict__ == {},
-       "new __dict__ should be empty")
-del o
-o = new.instance(C, None)
-verify(o.__dict__ == {},
-       "new __dict__ should be empty")
-del o
 
 def break_yolks(self):
     self.yolks = self.yolks - 2
@@ -41,11 +33,11 @@ im = new.instancemethod(break_yolks, c, C)
 if verbose:
     print im
 
-verify(c.get_yolks() == 3 and c.get_more_yolks() == 6,
-       'Broken call of hand-crafted class instance')
+if c.get_yolks() <> 3 and c.get_more_yolks() <> 6:
+    print 'Broken call of hand-crafted class instance'
 im()
-verify(c.get_yolks() == 1 and c.get_more_yolks() == 4,
-       'Broken call of hand-crafted instance method')
+if c.get_yolks() <> 1 and c.get_more_yolks() <> 4:
+    print 'Broken call of hand-crafted instance method'
 
 codestr = '''
 a = 1
@@ -61,15 +53,11 @@ func = new.function(ccode, g)
 if verbose:
     print func
 func()
-verify(g['c'] == 3,
-       'Could not create a proper function object')
+if g['c'] <> 3:
+    print 'Could not create a proper function object'
 
 # bogus test of new.code()
 print 'new.code()'
-d = new.code(3, 3, 3, 3, codestr, (), (), (),
-             "<string>", "<name>", 1, "", (), ())
-# test backwards-compatibility version with no freevars or cellvars
-d = new.code(3, 3, 3, 3, codestr, (), (), (),
-             "<string>", "<name>", 1, "")
+d = new.code(3, 3, 3, 3, codestr, (), (), (), "<string>", "<name>", 1, "")
 if verbose:
     print d

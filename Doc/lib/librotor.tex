@@ -1,7 +1,7 @@
 \section{\module{rotor} ---
-         Enigma-like encryption and decryption}
-
+         Enigma-like encryption and decryption.}
 \declaremodule{builtin}{rotor}
+
 \modulesynopsis{Enigma-like encryption and decryption.}
 
 
@@ -54,13 +54,13 @@ string containing the ciphertext.
 
 \begin{methoddesc}[rotor]{decrypt}{ciphertext}
 Reset the rotor object to its initial state and decrypt \var{ciphertext},
-returning a string containing the plaintext.  The plaintext string will
+returning a string containing the ciphertext.  The plaintext string will
 always be the same length as the ciphertext.
 \end{methoddesc}
 
 \begin{methoddesc}[rotor]{decryptmore}{ciphertext}
 Decrypt \var{ciphertext} without resetting the rotor object, and return a
-string containing the plaintext.
+string containing the ciphertext.
 \end{methoddesc}
 
 An example usage:
@@ -68,17 +68,17 @@ An example usage:
 >>> import rotor
 >>> rt = rotor.newrotor('key', 12)
 >>> rt.encrypt('bar')
-'\xab4\xf3'
+'\2534\363'
 >>> rt.encryptmore('bar')
-'\xef\xfd$'
+'\357\375$'
 >>> rt.encrypt('bar')
-'\xab4\xf3'
->>> rt.decrypt('\xab4\xf3')
+'\2534\363'
+>>> rt.decrypt('\2534\363')
 'bar'
->>> rt.decryptmore('\xef\xfd$')
+>>> rt.decryptmore('\357\375$')
 'bar'
->>> rt.decrypt('\xef\xfd$')
-'l(\xcd'
+>>> rt.decrypt('\357\375$')
+'l(\315'
 >>> del rt
 \end{verbatim}
 
@@ -98,7 +98,7 @@ arbitrary number of rotors.
 The original Enigma cipher was broken in 1944. % XXX: Is this right?
 The version implemented here is probably a good deal more difficult to crack
 (especially if you use many rotors), but it won't be impossible for
-a truly skillful and determined attacker to break the cipher.  So if you want
+a truly skilful and determined attacker to break the cipher.  So if you want
 to keep the NSA out of your files, this rotor cipher may well be unsafe, but
 for discouraging casual snooping through your files, it will probably be
 just fine, and may be somewhat safer than using the \UNIX{} \program{crypt}

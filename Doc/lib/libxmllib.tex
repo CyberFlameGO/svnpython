@@ -10,10 +10,7 @@
 \index{XML}
 \index{Extensible Markup Language}
 
-\deprecated{2.0}{Use \refmodule{xml.sax} instead.  The newer XML
-                 package includes full support for XML 1.0.}
-
-\versionchanged[Added namespace support.]{1.5.2}
+\versionchanged{1.5.2}
 
 This module defines a class \class{XMLParser} which serves as the basis 
 for parsing text files formatted in XML (Extensible Markup Language).
@@ -23,16 +20,14 @@ The \class{XMLParser} class must be instantiated without
 arguments.\footnote{Actually, a number of keyword arguments are
 recognized which influence the parser to accept certain non-standard
 constructs.  The following keyword arguments are currently
-recognized.  The defaults for all of these is \code{0} (false) except
-for the last one for which the default is \code{1} (true).
+recognized.  The defaults for all of these is \code{0} (false).
 \var{accept_unquoted_attributes} (accept certain attribute values
 without requiring quotes), \var{accept_missing_endtag_name} (accept
 end tags that look like \code{</>}), \var{map_case} (map upper case to
 lower case in tags and attributes), \var{accept_utf8} (allow UTF-8
 characters in input; this is required according to the XML standard,
 but Python does not as yet deal properly with these characters, so
-this is not the default), \var{translate_attribute_references} (don't
-attempt to translate character and entity references in attribute values).}
+this is not the default).}
 \end{classdesc}
 
 This class provides the following interface methods and instance variables:
@@ -95,11 +90,6 @@ Translate all entity and character references in \var{data} and
 return the translated string.
 \end{methoddesc}
 
-\begin{methoddesc}{getnamespace}{}
-Return a mapping of namespace abbreviations to namespace URIs that are
-currently in effect.
-\end{methoddesc}
-
 \begin{methoddesc}{handle_xml}{encoding, standalone}
 This method is called when the \samp{<?xml ...?>} tag is processed.
 The arguments are the values of the encoding and standalone attributes 
@@ -109,28 +99,27 @@ passed to \method{handle_xml()} default to \code{None} and the string
 \end{methoddesc}
 
 \begin{methoddesc}{handle_doctype}{tag, pubid, syslit, data}
-This\index{DOCTYPE declaration} method is called when the
-\samp{<!DOCTYPE...>} declaration is processed.  The arguments are the
-tag name of the root element, the Formal Public\index{Formal Public
-Identifier} Identifier (or \code{None} if not specified), the system
-identifier, and the uninterpreted contents of the internal DTD subset
-as a string (or \code{None} if not present).
+This method is called when the \samp{<!DOCTYPE...>} tag is processed.
+The arguments are the name of the root element, the Formal Public
+Identifier (or \code{None} if not specified), the system identifier,
+and the uninterpreted contents of the internal DTD subset as a string
+(or \code{None} if not present).
 \end{methoddesc}
 
 \begin{methoddesc}{handle_starttag}{tag, method, attributes}
 This method is called to handle start tags for which a start tag
 handler is defined in the instance variable \member{elements}.  The
-\var{tag} argument is the name of the tag, and the
-\var{method} argument is the function (method) which should be used to
-support semantic interpretation of the start tag.  The
-\var{attributes} argument is a dictionary of attributes, the key being
-the \var{name} and the value being the \var{value} of the attribute
-found inside the tag's \code{<>} brackets.  Character and entity
-references in the \var{value} have been interpreted.  For instance,
-for the start tag \code{<A HREF="http://www.cwi.nl/">}, this method
-would be called as \code{handle_starttag('A', self.elements['A'][0],
-\{'HREF': 'http://www.cwi.nl/'\})}.  The base implementation simply
-calls \var{method} with \var{attributes} as the only argument.
+\var{tag} argument is the name of the tag, and the \var{method}
+argument is the function (method) which should be used to support semantic
+interpretation of the start tag.  The \var{attributes} argument is a
+dictionary of attributes, the key being the \var{name} and the value
+being the \var{value} of the attribute found inside the tag's
+\code{<>} brackets.  Character and entity references in the
+\var{value} have been interpreted.  For instance, for the start tag
+\code{<A HREF="http://www.cwi.nl/">}, this method would be called as
+\code{handle_starttag('A', self.elements['A'][0], \{'HREF': 'http://www.cwi.nl/'\})}.
+The base implementation simply calls \var{method} with \var{attributes}
+as the only argument.
 \end{methoddesc}
 
 \begin{methoddesc}{handle_endtag}{tag, method}
@@ -196,18 +185,17 @@ does nothing.  Note that if a document starts with \samp{<?xml
 This method is called when a declaration is encountered.  The
 \var{data} argument is a string containing the text between the
 \samp{<!} and \samp{>} delimiters, but not the delimiters
-themselves.  For example, the \index{ENTITY declaration}entity
-declaration \samp{<!ENTITY text>} will cause this method to be called
-with the argument \code{'ENTITY text'}.  The default method does
-nothing.  Note that \samp{<!DOCTYPE ...>} is handled separately if it
-is located at the start of the document.
+themselves.  For example, the entity \samp{<!ENTITY text>} will
+cause this method to be called with the argument \code{'ENTITY text'}.  The
+default method does nothing.  Note that \samp{<!DOCTYPE ...>} is
+handled separately if it is located at the start of the document.
 \end{methoddesc}
 
 \begin{methoddesc}{syntax_error}{message}
 This method is called when a syntax error is encountered.  The
 \var{message} is a description of what was wrong.  The default method 
 raises a \exception{RuntimeError} exception.  If this method is
-overridden, it is permissible for it to return.  This method is only
+overridden, it is permissable for it to return.  This method is only
 called when the error can be recovered from.  Unrecoverable errors
 raise a \exception{RuntimeError} without first calling
 \method{syntax_error()}.
@@ -239,23 +227,20 @@ implementation calls \method{syntax_error()} to signal an error.
 
 
 \begin{seealso}
-  \seetitle[http://www.w3.org/TR/REC-xml]{Extensible Markup Language
-            (XML) 1.0}{The XML specification, published by the World
-            Wide Web Consortium (W3C), defines the syntax and
-            processor requirements for XML.  References to additional
-            material on XML, including translations of the
-            specification, are available at
-            \url{http://www.w3.org/XML/}.}
+  \seetext{The XML specification, published by the World Wide Web
+           Consortium (W3C), is available online at
+           \url{http://www.w3.org/TR/REC-xml}.  References to
+           additional material on XML are available at
+           \url{http://www.w3.org/XML/}.}
 
-  \seetitle[http://www.python.org/topics/xml/]{Python and XML
-            Processing}{The Python XML Topic Guide provides a great
-            deal of information on using XML from Python and links to
-            other sources of information on XML.}
+  \seetext{The Python XML Topic Guide provides a great deal of information
+           on using XML from Python and links to other sources of information
+           on XML.  It's located on the Web at
+           \url{http://www.python.org/topics/xml/}.}
 
-  \seetitle[http://www.python.org/sigs/xml-sig/]{SIG for XML
-            Processing in Python}{The Python XML Special Interest
-            Group is developing substantial support for processing XML
-            from Python.}
+  \seetext{The Python XML Special Interest Group is developing substantial
+           support for processing XML from Python.  See
+           \url{http://www.python.org/sigs/xml-sig/} for more information.}
 \end{seealso}
 
 
@@ -274,14 +259,7 @@ the tag name was \code{'http://www.w3.org/TR/REC-html40 html'}, and
 the tag \code{<html:a href='http://frob.com'>} inside the above
 mentioned element is treated as if the tag name were
 \code{'http://www.w3.org/TR/REC-html40 a'} and the attribute name as
-if it were \code{'http://www.w3.org/TR/REC-html40 href'}.
+if it were \code{'http://www.w3.org/TR/REC-html40 src'}.
 
 An older draft of the XML Namespaces proposal is also recognized, but
 triggers a warning.
-
-\begin{seealso}
-  \seetitle[http://www.w3.org/TR/REC-xml-names/]{Namespaces in XML}{
-           This World-Wide Web Consortium recommendation describes the
-           proper syntax and processing requirements for namespaces in
-           XML.}
-\end{seealso}

@@ -1,5 +1,5 @@
 # Module 'ntpath' -- common operations on WinNT/Win95 pathnames
-"""Common pathname manipulations, WindowsNT/95 version.
+"""Common pathname manipulations, WindowsNT/95 version. 
 
 Instead of importing this module directly, import os and refer to this
 module as os.path.
@@ -7,11 +7,8 @@ module as os.path.
 
 import os
 import stat
+import string
 
-__all__ = ["normcase","isabs","join","splitdrive","split","splitext",
-           "basename","dirname","commonprefix","getsize","getmtime",
-           "getatime","islink","exists","isdir","isfile","ismount",
-           "walk","expanduser","expandvars","normpath","abspath","splitunc"]
 
 # Normalize the case of a pathname and map slashes to backslashes.
 # Other normalizations (such as optimizing '../' away) are not done
@@ -21,7 +18,7 @@ def normcase(s):
     """Normalize case of pathname.
 
     Makes all characters lowercase and all slashes into backslashes."""
-    return s.replace("/", "\\").lower()
+    return string.lower(string.replace(s, "/", "\\"))
 
 
 # Return whether a path is absolute.
@@ -44,10 +41,10 @@ def join(a, *p):
     for b in p:
         if isabs(b):
             path = b
-        elif path == '' or path[-1:] in '/\\:':
+        elif path == '' or path[-1:] in '/\\':
             path = path + b
         else:
-            path = path + "\\" + b
+            path = path + os.sep + b
     return path
 
 
@@ -80,11 +77,11 @@ def splitunc(p):
         # \\machine\mountpoint\directories...
         #           directory ^^^^^^^^^^^^^^^
         normp = normcase(p)
-        index = normp.find('\\', 2)
+        index = string.find(normp, '\\', 2)
         if index == -1:
             ##raise RuntimeError, 'illegal UNC path: "' + p + '"'
             return ("", p)
-        index = normp.find('\\', index + 1)
+        index = string.find(normp, '\\', index + 1)
         if index == -1:
             index = len(p)
         return p[:index], p[index:]
@@ -164,7 +161,7 @@ def commonprefix(m):
     prefix = m[0]
     for item in m:
         for i in range(len(prefix)):
-            if prefix[:i+1] != item[:i+1]:
+            if prefix[:i+1] <> item[:i+1]:
                 prefix = prefix[:i]
                 if i == 0: return ''
                 break
@@ -186,7 +183,7 @@ def getmtime(filename):
 def getatime(filename):
     """Return the last access time of a file, reported by os.stat()"""
     st = os.stat(filename)
-    return st[stat.ST_ATIME]
+    return st[stat.ST_MTIME]
 
 
 # Is a path a symbolic link?
@@ -244,7 +241,7 @@ def ismount(path):
     if unc:
         return rest in ("", "/", "\\")
     p = splitdrive(path)[1]
-    return len(p) == 1 and p[0] in '/\\'
+    return len(p)==1 and p[0] in '/\\'
 
 
 # Directory tree walk.
@@ -258,7 +255,7 @@ def ismount(path):
 def walk(top, func, arg):
     """Directory tree walk whth callback function.
 
-    walk(top, func, arg) calls func(arg, d, files) for each directory d
+    walk(top, func, arg) calls func(arg, d, files) for each directory d 
     in the tree rooted at top (including top itself); files is a list
     of all the files and subdirs in directory d."""
     try:
@@ -287,11 +284,11 @@ def expanduser(path):
     """Expand ~ and ~user constructs.
 
     If user or $HOME is unknown, do nothing."""
-    if path[:1] != '~':
+    if path[:1] <> '~':
         return path
     i, n = 1, len(path)
     while i < n and path[i] not in '/\\':
-        i = i + 1
+        i = i+1
     if i == 1:
         if os.environ.has_key('HOME'):
             userhome = os.environ['HOME']
@@ -299,7 +296,7 @@ def expanduser(path):
             return path
         else:
             try:
-                drive = os.environ['HOMEDRIVE']
+                drive=os.environ['HOMEDRIVE']
             except KeyError:
                 drive = ''
             userhome = join(drive, os.environ['HOMEPATH'])
@@ -317,14 +314,14 @@ def expanduser(path):
 # XXX With COMMAND.COM you can use any characters in a variable name,
 # XXX except '^|<>='.
 
-def expandvars(path):
+varchars = string.letters + string.digits + '_-'
+
+def expandvars(path):  
     """Expand shell variables of form $var and ${var}.
 
     Unknown variables are left unchanged."""
     if '$' not in path:
         return path
-    import string
-    varchars = string.letters + string.digits + '_-'
     res = ''
     index = 0
     pathlen = len(path)
@@ -334,11 +331,11 @@ def expandvars(path):
             path = path[index + 1:]
             pathlen = len(path)
             try:
-                index = path.index('\'')
+                index = string.index(path, '\'')
                 res = res + '\'' + path[:index + 1]
-            except ValueError:
+            except string.index_error:
                 res = res + path
-                index = pathlen - 1
+                index = pathlen -1
         elif c == '$':  # variable or '$$'
             if path[index + 1:index + 2] == '$':
                 res = res + c
@@ -347,11 +344,11 @@ def expandvars(path):
                 path = path[index+2:]
                 pathlen = len(path)
                 try:
-                    index = path.index('}')
+                    index = string.index(path, '}')
                     var = path[:index]
                     if os.environ.has_key(var):
                         res = res + os.environ[var]
-                except ValueError:
+                except string.index_error:
                     res = res + path
                     index = pathlen - 1
             else:
@@ -378,27 +375,27 @@ def expandvars(path):
 
 def normpath(path):
     """Normalize path, eliminating double slashes, etc."""
-    path = path.replace("/", "\\")
+    path = string.replace(path, "/", "\\")
     prefix, path = splitdrive(path)
-    while path[:1] == "\\":
-        prefix = prefix + "\\"
+    while path[:1] == os.sep:
+        prefix = prefix + os.sep
         path = path[1:]
-    comps = path.split("\\")
+    comps = string.splitfields(path, os.sep)
     i = 0
     while i < len(comps):
         if comps[i] == '.':
             del comps[i]
         elif comps[i] == '..' and i > 0 and comps[i-1] not in ('', '..'):
             del comps[i-1:i+1]
-            i = i - 1
-        elif comps[i] == '' and i > 0 and comps[i-1] != '':
+            i = i-1
+        elif comps[i] == '' and i > 0 and comps[i-1] <> '':
             del comps[i]
         else:
-            i = i + 1
+            i = i+1
     # If the path is now empty, substitute '.'
     if not prefix and not comps:
         comps.append('.')
-    return prefix + "\\".join(comps)
+    return prefix + string.joinfields(comps, os.sep)
 
 
 # Return an absolute path.
@@ -414,11 +411,8 @@ def abspath(path):
             return normpath(path)
         abspath = _abspath
         return _abspath(path)
-    if path: # Empty path must return current working directory.
-        try:
-            path = win32api.GetFullPathName(path)
-        except win32api.error:
-            pass # Bad path - return unchanged.
-    else:
-        path = os.getcwd()
+    try:
+        path = win32api.GetFullPathName(path)
+    except win32api.error:
+        pass # Bad path - return unchanged.
     return normpath(path)

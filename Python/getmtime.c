@@ -1,13 +1,17 @@
-
 /* Subroutine to get the last modification time of a file */
 
 /* (A separate file because this may be OS dependent) */
 
-#include "Python.h"
 #include "config.h"
 
-time_t
-PyOS_GetLastModificationTime(char *path, FILE *fp)
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+long
+PyOS_GetLastModificationTime(path, fp)
+	char *path;
+	FILE *fp;
 {
 	struct stat st;
 	if (fstat(fileno(fp), &st) != 0)

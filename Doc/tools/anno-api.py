@@ -4,13 +4,13 @@ __version__ = '$Revision$'
 
 import getopt
 import os
+import string
 import sys
 
 import refcounts
 
 
-PREFIX_1 = r"\begin{cfuncdesc}{PyObject*}{"
-PREFIX_2 = r"\begin{cfuncdesc}{PyVarObject*}{"
+PREFIX = r"\begin{cfuncdesc}{PyObject*}{"
 
 
 def main():
@@ -30,6 +30,8 @@ def main():
         output = open(outfile, "w")
     if not args:
         args = ["-"]
+    prefix = PREFIX
+    prefix_len = len(prefix)
     for infile in args:
         if infile == "-":
             input = sys.stdin
@@ -39,27 +41,21 @@ def main():
             line = input.readline()
             if not line:
                 break
-            prefix = None
-            if line.startswith(PREFIX_1):
-                prefix = PREFIX_1
-            elif line.startswith(PREFIX_2):
-                prefix = PREFIX_2
-            if prefix:
-                s = line[len(prefix):].split('}', 1)[0]
+            if line[:prefix_len] == prefix:
+                s = string.split(line[prefix_len:], '}', 1)[0]
                 try:
                     info = rcdict[s]
                 except KeyError:
                     sys.stderr.write("No refcount data for %s\n" % s)
                 else:
-                    if info.result_type in ("PyObject*", "PyVarObject*"):
+                    if info.result_type == "PyObject*":
                         if info.result_refs is None:
                             rc = "Always \NULL{}"
                         else:
                             rc = info.result_refs and "New" or "Borrowed"
                             rc = rc + " reference"
-                        line = (r"\begin{cfuncdesc}[%s]{%s}{"
-                                % (rc, info.result_type)) \
-                                + line[len(prefix):]
+                        line = r"\begin{cfuncdesc}[%s]{PyObject*}{" % rc \
+                               + line[prefix_len:]
             output.write(line)
         if infile != "-":
             input.close()

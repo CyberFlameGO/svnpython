@@ -6,7 +6,7 @@ import dbm
 from dbm import error
 from test_support import verbose
 
-filename = '/tmp/delete_me'
+filename= '/tmp/delete_me'
 
 d = dbm.open(filename, 'c')
 d['a'] = 'b'
@@ -15,7 +15,7 @@ d.keys()
 if d.has_key('a'):
     if verbose:
         print 'Test dbm keys: ', d.keys()
-
+        
 d.close()
 d = dbm.open(filename, 'r')
 d.close()
@@ -28,15 +28,7 @@ d.close()
 
 try:
     import os
-    if dbm.library == "ndbm":
-        # classic dbm
-        os.unlink(filename + '.dir')
-        os.unlink(filename + '.pag')
-    elif dbm.library == "BSD db":
-        # BSD DB's compatibility layer
-        os.unlink(filename + '.db')
-    else:
-        # GNU gdbm compatibility layer
-        os.unlink(filename)
+    os.unlink(filename + '.dir')
+    os.unlink(filename + '.pag')
 except:
     pass

@@ -26,7 +26,7 @@ tok_name[NL] = 'NL'
 #     Imagnumber is new.  Expfloat is corrected to reject '0e4'.
 # Note: to quote a backslash in a regex, it must be doubled in a r'aw' string.
 
-def group(*choices): return '(' + '|'.join(choices) + ')'
+def group(*choices): return '(' + string.join(choices, '|') + ')'
 def any(*choices): return apply(group, choices) + '*'
 def maybe(*choices): return apply(group, choices) + '?'
 
@@ -46,26 +46,16 @@ Floatnumber = group(Pointfloat, Expfloat)
 Imagnumber = group(r'0[jJ]', r'[1-9]\d*[jJ]', Floatnumber + r'[jJ]')
 Number = group(Imagnumber, Floatnumber, Intnumber)
 
-# Tail end of ' string.
-Single = r"[^'\\]*(?:\\.[^'\\]*)*'"
-# Tail end of " string.
-Double = r'[^"\\]*(?:\\.[^"\\]*)*"'
-# Tail end of ''' string.
-Single3 = r"[^'\\]*(?:(?:\\.|'(?!''))[^'\\]*)*'''"
-# Tail end of """ string.
-Double3 = r'[^"\\]*(?:(?:\\.|"(?!""))[^"\\]*)*"""'
-Triple = group("[uU]?[rR]?'''", '[uU]?[rR]?"""')
-# Single-line ' or " string.
-String = group(r"[uU]?[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*'",
-               r'[uU]?[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*"')
+Single = any(r"[^'\\]", r'\\.') + "'"
+Double = any(r'[^"\\]', r'\\.') + '"'
+Single3 = any(r"[^'\\]",r'\\.',r"'[^'\\]",r"'\\.",r"''[^'\\]",r"''\\.") + "'''"
+Double3 = any(r'[^"\\]',r'\\.',r'"[^"\\]',r'"\\.',r'""[^"\\]',r'""\\.') + '"""'
+Triple = group("[rR]?'''", '[rR]?"""')
+String = group("[rR]?'" + any(r"[^\n'\\]", r'\\.') + "'",
+               '[rR]?"' + any(r'[^\n"\\]', r'\\.') + '"')
 
-# Because of leftmost-then-longest match semantics, be sure to put the
-# longest operators first (e.g., if = came before ==, == would get
-# recognized as two instances of =).
-Operator = group(r"\*\*=?", r">>=?", r"<<=?", r"<>", r"!=",
-                 r"[+\-*/%&|^=<>]=?",
-                 r"~")
-
+Operator = group('\+', '\-', '\*\*', '\*', '\^', '~', '/', '%', '&', '\|',
+                 '<<', '>>', '==', '<=', '<>', '!=', '>=', '=', '<', '>')
 Bracket = '[][(){}]'
 Special = group(r'\r?\n', r'[:;.,`]')
 Funny = group(Operator, Bracket, Special)
@@ -73,11 +63,8 @@ Funny = group(Operator, Bracket, Special)
 PlainToken = group(Number, Funny, String, Name)
 Token = Ignore + PlainToken
 
-# First (or only) line of ' or " string.
-ContStr = group(r"[uU]?[rR]?'[^\n'\\]*(?:\\.[^\n'\\]*)*" +
-                group("'", r'\\\r?\n'),
-                r'[uU]?[rR]?"[^\n"\\]*(?:\\.[^\n"\\]*)*' +
-                group('"', r'\\\r?\n'))
+ContStr = group("[rR]?'" + any(r'\\.', r"[^\n'\\]") + group("'", r'\\\r?\n'),
+                '[rR]?"' + any(r'\\.', r'[^\n"\\]') + group('"', r'\\\r?\n'))
 PseudoExtras = group(r'\\\r?\n', Comment, Triple)
 PseudoToken = Whitespace + group(PseudoExtras, Number, Funny, ContStr, Name)
 
@@ -86,20 +73,10 @@ tokenprog, pseudoprog, single3prog, double3prog = map(
 endprogs = {"'": re.compile(Single), '"': re.compile(Double),
             "'''": single3prog, '"""': double3prog,
             "r'''": single3prog, 'r"""': double3prog,
-            "u'''": single3prog, 'u"""': double3prog,
-            "ur'''": single3prog, 'ur"""': double3prog,
-            "R'''": single3prog, 'R"""': double3prog,
-            "U'''": single3prog, 'U"""': double3prog,
-            "uR'''": single3prog, 'uR"""': double3prog,
-            "Ur'''": single3prog, 'Ur"""': double3prog,
-            "UR'''": single3prog, 'UR"""': double3prog,
-            'r': None, 'R': None, 'u': None, 'U': None}
+            "R'''": single3prog, 'R"""': double3prog, 'r': None, 'R': None}
 
 tabsize = 8
-
-class TokenError(Exception):
-    pass
-
+TokenError = 'TokenError'
 def printtoken(type, token, (srow, scol), (erow, ecol), line): # for testing
     print "%d,%d-%d,%d:\t%s\t%s" % \
         (srow, scol, erow, ecol, tok_name[type], repr(token))
@@ -181,10 +158,7 @@ def tokenize(readline, tokeneater=printtoken):
                 elif initial == '#':
                     tokeneater(COMMENT, token, spos, epos, line)
                 elif token in ("'''", '"""',               # triple-quoted
-                               "r'''", 'r"""', "R'''", 'R"""',
-                               "u'''", 'u"""', "U'''", 'U"""',
-                               "ur'''", 'ur"""', "Ur'''", 'Ur"""',
-                               "uR'''", 'uR"""', "UR'''", 'UR"""'):
+                               "r'''", 'r"""', "R'''", 'R"""'):
                     endprog = endprogs[token]
                     endmatch = endprog.match(line, pos)
                     if endmatch:                           # all on one line
@@ -197,14 +171,10 @@ def tokenize(readline, tokeneater=printtoken):
                         contline = line
                         break
                 elif initial in ("'", '"') or \
-                    token[:2] in ("r'", 'r"', "R'", 'R"',
-                                  "u'", 'u"', "U'", 'U"') or \
-                    token[:3] in ("ur'", 'ur"', "Ur'", 'Ur"',
-                                  "uR'", 'uR"', "UR'", 'UR"' ):
+                    token[:2] in ("r'", 'r"', "R'", 'R"'):
                     if token[-1] == '\n':                  # continued string
                         strstart = (lnum, start)
-                        endprog = (endprogs[initial] or endprogs[token[1]] or
-                                   endprogs[token[2]])
+                        endprog = endprogs[initial] or endprogs[token[1]]
                         contstr, needcont = line[start:], 1
                         contline = line
                         break
@@ -231,3 +201,4 @@ if __name__ == '__main__':                     # testing
     import sys
     if len(sys.argv) > 1: tokenize(open(sys.argv[1]).readline)
     else: tokenize(sys.stdin.readline)
+

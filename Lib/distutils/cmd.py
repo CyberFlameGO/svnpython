@@ -9,7 +9,7 @@ in the distutils.command package.
 
 __revision__ = "$Id$"
 
-import sys, os, re
+import sys, os, string, re
 from types import *
 from distutils.errors import *
 from distutils import util, dir_util, file_util, archive_util, dep_util
@@ -31,23 +31,6 @@ class Command:
     command class.
     """
 
-    # 'sub_commands' formalizes the notion of a "family" of commands,
-    # eg. "install" as the parent with sub-commands "install_lib",
-    # "install_headers", etc.  The parent of a family of commands
-    # defines 'sub_commands' as a class attribute; it's a list of
-    #    (command_name : string, predicate : unbound_method | string | None)
-    # tuples, where 'predicate' is a method of the parent command that
-    # determines whether the corresponding command is applicable in the
-    # current situation.  (Eg. we "install_headers" is only applicable if
-    # we have any C header files to install.)  If 'predicate' is None,
-    # that command is always applicable.
-    # 
-    # 'sub_commands' is usually defined at the *end* of a class, because
-    # predicates can be unbound methods, so they must already have been
-    # defined.  The canonical example is the "install" command.
-    sub_commands = []
-
-
     # -- Creation/initialization methods -------------------------------
 
     def __init__ (self, dist):
@@ -59,13 +42,13 @@ class Command:
         # late import because of mutual dependence between these classes
         from distutils.dist import Distribution
 
-        if not isinstance(dist, Distribution):
+        if not isinstance (dist, Distribution):
             raise TypeError, "dist must be a Distribution instance"
         if self.__class__ is Command:
             raise RuntimeError, "Command is an abstract class"
 
         self.distribution = dist
-        self.initialize_options()
+        self.initialize_options ()
 
         # Per-command versions of the global flags, so that the user can
         # customize Distutils' behaviour command-by-command and let some
@@ -98,9 +81,9 @@ class Command:
 
     def __getattr__ (self, attr):
         if attr in ('verbose', 'dry_run'):
-            myval = getattr(self, "_" + attr)
+            myval = getattr (self, "_" + attr)
             if myval is None:
-                return getattr(self.distribution, attr)
+                return getattr (self.distribution, attr)
             else:
                 return myval
         else:
@@ -109,7 +92,7 @@ class Command:
 
     def ensure_finalized (self):
         if not self.finalized:
-            self.finalize_options()
+            self.finalize_options ()
         self.finalized = 1
         
 
@@ -161,7 +144,7 @@ class Command:
         print indent + header
         indent = indent + "  "
         for (option, _, _) in self.user_options:
-            option = option.translate(longopt_xlate)
+            option = string.translate(option, longopt_xlate)
             if option[-1] == "=":
                 option = option[:-1]
             value = getattr(self, option)
@@ -273,7 +256,7 @@ class Command:
     # -- Convenience methods for commands ------------------------------
 
     def get_command_name (self):
-        if hasattr(self, 'command_name'):
+        if hasattr (self, 'command_name'):
             return self.command_name
         else:
             return self.__class__.__name__
@@ -296,12 +279,12 @@ class Command:
 
         # Option_pairs: list of (src_option, dst_option) tuples
 
-        src_cmd_obj = self.distribution.get_command_obj(src_cmd)
-        src_cmd_obj.ensure_finalized()
+        src_cmd_obj = self.distribution.get_command_obj (src_cmd)
+        src_cmd_obj.ensure_finalized ()
         for (src_option, dst_option) in option_pairs:
-            if getattr(self, dst_option) is None:
-                setattr(self, dst_option,
-                        getattr(src_cmd_obj, src_option))
+            if getattr (self, dst_option) is None:
+                setattr (self, dst_option,
+                         getattr (src_cmd_obj, src_option))
 
 
     def get_finalized_command (self, command, create=1):
@@ -310,43 +293,28 @@ class Command:
         'command', call its 'ensure_finalized()' method, and return the
         finalized command object.
         """
-        cmd_obj = self.distribution.get_command_obj(command, create)
-        cmd_obj.ensure_finalized()
+        cmd_obj = self.distribution.get_command_obj (command, create)
+        cmd_obj.ensure_finalized ()
         return cmd_obj
 
     # XXX rename to 'get_reinitialized_command()'? (should do the
     # same in dist.py, if so)
-    def reinitialize_command (self, command, reinit_subcommands=0):
-        return self.distribution.reinitialize_command(
-            command, reinit_subcommands)
+    def reinitialize_command (self, command):
+        return self.distribution.reinitialize_command(command)
 
     def run_command (self, command):
         """Run some other command: uses the 'run_command()' method of
         Distribution, which creates and finalizes the command object if
         necessary and then invokes its 'run()' method.
         """
-        self.distribution.run_command(command)
-
-
-    def get_sub_commands (self):
-        """Determine the sub-commands that are relevant in the current
-        distribution (ie., that need to be run).  This is based on the
-        'sub_commands' class attribute: each tuple in that list may include
-        a method that we call to determine if the subcommand needs to be
-        run for the current distribution.  Return a list of command names.
-        """
-        commands = []
-        for (cmd_name, method) in self.sub_commands:
-            if method is None or method(self):
-                commands.append(cmd_name)
-        return commands
+        self.distribution.run_command (command)
 
 
     # -- External world manipulation -----------------------------------
 
     def warn (self, msg):
-        sys.stderr.write("warning: %s: %s\n" %
-                         (self.get_command_name(), msg))
+        sys.stderr.write ("warning: %s: %s\n" %
+                          (self.get_command_name(), msg))
 
 
     def execute (self, func, args, msg=None, level=1):
@@ -389,17 +357,17 @@ class Command:
 
     def move_file (self, src, dst, level=1):
         """Move a file respecting verbose and dry-run flags."""
-        return file_util.move_file(src, dst,
-                                   self.verbose >= level,
-                                   self.dry_run)
+        return file_util.move_file (src, dst,
+                                    self.verbose >= level,
+                                    self.dry_run)
 
 
     def spawn (self, cmd, search_path=1, level=1):
         """Spawn an external command respecting verbose and dry-run flags."""
         from distutils.spawn import spawn
-        spawn(cmd, search_path,
-              self.verbose >= level,
-              self.dry_run)
+        spawn (cmd, search_path,
+               self.verbose >= level,
+               self.dry_run)
 
 
     def make_archive (self, base_name, format,
@@ -421,15 +389,15 @@ class Command:
         """
         if exec_msg is None:
             exec_msg = "generating %s from %s" % \
-                       (outfile, ', '.join(infiles))
+                       (outfile, string.join (infiles, ', '))
         if skip_msg is None:
             skip_msg = "skipping %s (inputs unchanged)" % outfile
         
 
         # Allow 'infiles' to be a single string
-        if type(infiles) is StringType:
+        if type (infiles) is StringType:
             infiles = (infiles,)
-        elif type(infiles) not in (ListType, TupleType):
+        elif type (infiles) not in (ListType, TupleType):
             raise TypeError, \
                   "'infiles' must be a string, or a list or tuple of strings"
 
@@ -437,11 +405,11 @@ class Command:
         # exist, is out-of-date, or the 'force' flag is true) then
         # perform the action that presumably regenerates it
         if self.force or dep_util.newer_group (infiles, outfile):
-            self.execute(func, args, exec_msg, level)
+            self.execute (func, args, exec_msg, level)
 
         # Otherwise, print the "skip" message
         else:
-            self.announce(skip_msg, level)
+            self.announce (skip_msg, level)
 
     # make_file ()
 

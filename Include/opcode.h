@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-
 /* Instruction opcodes for compiled code */
 
 #define STOP_CODE	0
@@ -12,7 +11,6 @@ extern "C" {
 #define ROT_TWO		2
 #define ROT_THREE	3
 #define DUP_TOP		4
-#define ROT_FOUR	5
 
 #define UNARY_POSITIVE	10
 #define UNARY_NEGATIVE	11
@@ -39,11 +37,6 @@ extern "C" {
 #define DELETE_SLICE	50
 /* Also uses 51-53 */
 
-#define INPLACE_ADD	55
-#define INPLACE_SUBTRACT	56
-#define INPLACE_MULTIPLY	57
-#define INPLACE_DIVIDE	58
-#define INPLACE_MODULO	59
 #define STORE_SUBSCR	60
 #define DELETE_SUBSCR	61
 
@@ -52,23 +45,17 @@ extern "C" {
 #define BINARY_AND	64
 #define BINARY_XOR	65
 #define BINARY_OR	66
-#define INPLACE_POWER	67
+
 
 #define PRINT_EXPR	70
 #define PRINT_ITEM	71
 #define PRINT_NEWLINE	72
-#define PRINT_ITEM_TO   73
-#define PRINT_NEWLINE_TO 74
-#define INPLACE_LSHIFT	75
-#define INPLACE_RSHIFT	76
-#define INPLACE_AND	77
-#define INPLACE_XOR	78
-#define INPLACE_OR	79
+
 #define BREAK_LOOP	80
 
 #define LOAD_LOCALS	82
 #define RETURN_VALUE	83
-#define IMPORT_STAR	84
+
 #define EXEC_STMT	85
 
 #define POP_BLOCK	87
@@ -79,13 +66,13 @@ extern "C" {
 
 #define STORE_NAME	90	/* Index in name list */
 #define DELETE_NAME	91	/* "" */
-#define UNPACK_SEQUENCE	92	/* Number of sequence items */
-
+#define UNPACK_TUPLE	92	/* Number of tuple items */
+#define UNPACK_LIST	93	/* Number of list items */
 #define STORE_ATTR	95	/* Index in name list */
 #define DELETE_ATTR	96	/* "" */
 #define STORE_GLOBAL	97	/* "" */
 #define DELETE_GLOBAL	98	/* "" */
-#define DUP_TOPX	99	/* number of items to duplicate */
+
 #define LOAD_CONST	100	/* Index in const list */
 #define LOAD_NAME	101	/* Index in name list */
 #define BUILD_TUPLE	102	/* Number of tuple items */
@@ -104,7 +91,6 @@ extern "C" {
 
 #define LOAD_GLOBAL	116	/* Index in name list */
 
-#define CONTINUE_LOOP	119	/* Start of loop (absolute) */
 #define SETUP_LOOP	120	/* Target address (absolute) */
 #define SETUP_EXCEPT	121	/* "" */
 #define SETUP_FINALLY	122	/* "" */
@@ -115,16 +101,16 @@ extern "C" {
 
 #define SET_LINENO	127	/* Current line number */
 
+/* It used to be the case that opcodes should fit in 7 bits.  This is
+   no longer the case -- 8 bits is fine (the instruction stream is now
+   a sequence of unsigned characters).  We gladly use the new space
+   for new opcodes. */
+
 #define RAISE_VARARGS	130	/* Number of raise arguments (1, 2 or 3) */
 /* CALL_FUNCTION_XXX opcodes defined below depend on this definition */
 #define CALL_FUNCTION	131	/* #args + (#kwargs<<8) */
 #define MAKE_FUNCTION	132	/* #defaults */
 #define BUILD_SLICE 	133	/* Number of items */
-
-#define MAKE_CLOSURE    134     /* #free vars */
-#define LOAD_CLOSURE    135     /* Load free variable from closure */
-#define LOAD_DEREF      136     /* Load and dereference from closure cell */ 
-#define STORE_DEREF     137     /* Store into cell */ 
 
 /* The next 3 opcodes must be contiguous and satisfy
    (CALL_FUNCTION_VAR - CALL_FUNCTION) & 3 == 1  */
@@ -132,12 +118,8 @@ extern "C" {
 #define CALL_FUNCTION_KW           141	/* #args + (#kwargs<<8) */
 #define CALL_FUNCTION_VAR_KW       142	/* #args + (#kwargs<<8) */
 
-/* Support for opargs more than 16 bits long */
-#define EXTENDED_ARG  143
-
 /* Comparison operator codes (argument to COMPARE_OP) */
-enum cmp_op {LT=Py_LT, LE=Py_LE, EQ=Py_EQ, NE=Py_NE, GT=Py_GT, GE=Py_GE,
-	     IN, NOT_IN, IS, IS_NOT, EXC_MATCH, BAD};
+enum cmp_op {LT, LE, EQ, NE, GT, GE, IN, NOT_IN, IS, IS_NOT, EXC_MATCH, BAD};
 
 #define HAS_ARG(op) ((op) >= HAVE_ARGUMENT)
 

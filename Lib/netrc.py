@@ -1,31 +1,31 @@
 """An object-oriented interface to .netrc files."""
 
-# Module and documentation by Eric S. Raymond, 21 Dec 1998
+# Module and documentation by Eric S. Raymond, 21 Dec 1998 
 
 import os, shlex
-
-__all__ = ["netrc"]
 
 class netrc:
     def __init__(self, file=None):
         if not file:
             file = os.path.join(os.environ['HOME'], ".netrc")
-        fp = open(file)
+        try:
+            fp = open(file)
+        except:
+            return None
         self.hosts = {}
         self.macros = {}
         lexer = shlex.shlex(fp)
-        # Allows @ in hostnames.  Not a big deal...
-        lexer.wordchars = lexer.wordchars + '.-@'
+        lexer.wordchars = lexer.wordchars + '.'
         while 1:
             # Look for a machine, default, or macdef top-level keyword
             toplevel = tt = lexer.get_token()
-            if not tt:
+            if tt == '' or tt == None:
                 break
             elif tt == 'machine':
                 entryname = lexer.get_token()
             elif tt == 'default':
                 entryname = 'default'
-            elif tt == 'macdef':                # Just skip to end of macdefs
+            elif tt == 'macdef':		# Just skip to end of macdefs
                 entryname = lexer.get_token()
                 self.macros[entryname] = []
                 lexer.whitepace = ' \t'
@@ -38,7 +38,7 @@ class netrc:
                     self.macros[entryname].append(line)
             else:
                 raise SyntaxError, "bad toplevel token %s, file %s, line %d" \
-                                        % (tt, file, lexer.lineno)
+            				% (tt, file, lexer.lineno) 
 
             # We're looking at start of an entry for a named machine or default.
             if toplevel == 'machine':
@@ -48,7 +48,7 @@ class netrc:
                 tt = lexer.get_token()
                 if tt=='' or tt == 'machine' or tt == 'default' or tt == 'macdef':
                     if toplevel == 'macdef':
-                        break
+                        break;
                     elif login and password:
                         self.hosts[entryname] = (login, account, password)
                         lexer.push_token(tt)
@@ -89,5 +89,6 @@ class netrc:
             rep = rep + "\n"
         return rep
 
-if __name__ == '__main__':
+if __name__ == '__main__': 
     print netrc()
+

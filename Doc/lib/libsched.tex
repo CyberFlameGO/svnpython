@@ -4,7 +4,7 @@
 % LaTeXed and enhanced from comments in file
 
 \declaremodule{standard}{sched}
-\sectionauthor{Moshe Zadka}{moshez@zadka.site.co.il}
+\sectionauthor{Moshe Zadka}{mzadka@geocities.com}
 \modulesynopsis{General purpose event scheduler.}
 
 The \module{sched} module defines a class which implements a general
@@ -92,6 +92,6 @@ the event will not be attempted in future calls to \method{run()}.
 
 If a sequence of events takes longer to run than the time available
 before the next event, the scheduler will simply fall behind.  No
-events will be dropped; the calling code is responsible for canceling 
+events will be dropped; the calling code is responsible for cancelling 
 events which are no longer pertinent.
 \end{methoddesc}

@@ -1,4 +1,3 @@
-
 /*
 Input used to generate the Python module "glmodule.c".
 The stub generator is a Python script called "cgen.py".
@@ -60,7 +59,9 @@ generator can include it in the table of functions.
 
 
 static PyObject *
-gl_qread(PyObject *self, PyObject *args)
+gl_qread(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	short arg1 ;
@@ -89,12 +90,14 @@ and for each point v3d() is called.
 
 
 static PyObject *
-gl_varray(PyObject *self, PyObject *args)
+gl_varray(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *v, *w=NULL;
 	int i, n, width;
 	double vec[3];
-	PyObject * (*getitem)(PyObject *, int);
+	PyObject * (*getitem) Py_FPROTO((PyObject *, int));
 	
 	if (!PyArg_GetObject(args, 1, 0, &v))
 		return NULL;
@@ -168,14 +171,18 @@ static PyObject *gen_nvarray(); /* Forward */
 
 
 static PyObject *
-gl_nvarray(PyObject *self, PyObject *args)
+gl_nvarray(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	return gen_nvarray(args, 0);
 }
 
 
 static PyObject *
-gl_vnarray(PyObject *self, PyObject *args)
+gl_vnarray(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	return gen_nvarray(args, 1);
 }
@@ -184,12 +191,14 @@ gl_vnarray(PyObject *self, PyObject *args)
    argument order, 0: normal first, 1: vector first. */
 
 static PyObject *
-gen_nvarray(PyObject *args, int inorm)
+gen_nvarray(args, inorm)
+	PyObject *args;
+	int inorm;
 {
 	PyObject *v, *w, *wnorm, *wvec;
 	int i, n;
 	float norm[3], vec[3];
-	PyObject * (*getitem)(PyObject *, int);
+	PyObject * (*getitem) Py_FPROTO((PyObject *, int));
 	
 	if (!PyArg_GetObject(args, 1, 0, &v))
 		return NULL;
@@ -233,7 +242,9 @@ gen_nvarray(PyObject *args, int inorm)
 
 
 static PyObject *
-gl_nurbssurface(PyObject *self, PyObject *args)
+gl_nurbssurface(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	double * arg2 ;
@@ -319,7 +330,9 @@ gl_nurbssurface(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_nurbscurve(PyObject *self, PyObject *args)
+gl_nurbscurve(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	double * arg2 ;
@@ -379,7 +392,9 @@ gl_nurbscurve(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_pwlcurve(PyObject *self, PyObject *args)
+gl_pwlcurve(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	PyObject *v;
 	long type;
@@ -423,7 +438,9 @@ static short *pickbuffer = NULL;
 static long pickbuffersize;
 
 static PyObject *
-pick_select(PyObject *args, void (*func)())
+pick_select(args, func)
+	PyObject *args;
+	void (*func)();
 {
 	if (!PyArg_GetLong(args, 1, 0, &pickbuffersize))
 		return NULL;
@@ -441,7 +458,9 @@ pick_select(PyObject *args, void (*func)())
 }
 
 static PyObject *
-endpick_select(PyObject *args, long (*func)())
+endpick_select(args, func)
+	PyObject *args;
+	long (*func)();
 {
 	PyObject *v, *w;
 	int i, nhits, n;
@@ -482,23 +501,19 @@ endpick_select(PyObject *args, long (*func)())
 extern void pick(), gselect();
 extern long endpick(), endselect();
 
-static PyObject *gl_pick(PyObject *self, PyObject *args)
-{
+static PyObject *gl_pick(self, args) PyObject *self, *args; {
 	return pick_select(args, pick);
 }
 
-static PyObject *gl_endpick(PyObject *self, PyObject *args)
-{
+static PyObject *gl_endpick(self, args) PyObject *self, *args; {
 	return endpick_select(args, endpick);
 }
 
-static PyObject *gl_gselect(PyObject *self, PyObject *args)
-{
+static PyObject *gl_gselect(self, args) PyObject *self, *args; {
 	return pick_select(args, gselect);
 }
 
-static PyObject *gl_endselect(PyObject *self, PyObject *args)
-{
+static PyObject *gl_endselect(self, args) PyObject *self, *args; {
 	return endpick_select(args, endselect);
 }
 
@@ -509,7 +524,9 @@ static PyObject *gl_endselect(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_getmatrix(PyObject *self, PyObject *args)
+gl_getmatrix(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	Matrix arg1;
 	PyObject *v, *w;
@@ -536,7 +553,9 @@ gl_getmatrix(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_altgetmatrix(PyObject *self, PyObject *args)
+gl_altgetmatrix(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	Matrix arg1;
 	PyObject *v, *w;
@@ -569,7 +588,9 @@ gl_altgetmatrix(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_lrectwrite(PyObject *self, PyObject *args)
+gl_lrectwrite(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short x1 ;
 	short y1 ;
@@ -608,7 +629,9 @@ gl_lrectwrite(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_lrectread(PyObject *self, PyObject *args)
+gl_lrectread(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short x1 ;
 	short y1 ;
@@ -634,7 +657,9 @@ gl_lrectread(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_readdisplay(PyObject *self, PyObject *args)
+gl_readdisplay(self, args)
+	PyObject *self;
+        PyObject *args;
 {
         short x1, y1, x2, y2;
 	unsigned long *parray, hints;
@@ -676,7 +701,9 @@ gl_readdisplay(PyObject *self, PyObject *args)
 
 
 static PyObject *
-gl_packrect(PyObject *self, PyObject *args)
+gl_packrect(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long width, height, packfactor;
 	char *s;
@@ -729,7 +756,9 @@ static unsigned long unpacktab[256];
 static int unpacktab_inited = 0;
 
 static PyObject *
-gl_unpackrect(PyObject *self, PyObject *args)
+gl_unpackrect(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long width, height, packfactor;
 	char *s;
@@ -797,7 +826,9 @@ gl_unpackrect(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-gl_gversion(PyObject *self, PyObject *args)
+gl_gversion(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	char buf[20];
 	gversion(buf);
@@ -807,7 +838,9 @@ gl_gversion(PyObject *self, PyObject *args)
 
 /* void clear - Manual because of clash with termcap */
 static PyObject *
-gl_clear(PyObject *self, PyObject *args)
+gl_clear(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	__GLclear( );
 	Py_INCREF(Py_None);
@@ -820,7 +853,9 @@ gl_clear(PyObject *self, PyObject *args)
 /* long getshade */
 
 static PyObject *
-gl_getshade(PyObject *self, PyObject *args)
+gl_getshade(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getshade( );
@@ -830,7 +865,9 @@ gl_getshade(PyObject *self, PyObject *args)
 /* void devport short s long s */
 
 static PyObject *
-gl_devport(PyObject *self, PyObject *args)
+gl_devport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	long arg2 ;
@@ -846,7 +883,9 @@ gl_devport(PyObject *self, PyObject *args)
 /* void rdr2i long s long s */
 
 static PyObject *
-gl_rdr2i(PyObject *self, PyObject *args)
+gl_rdr2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -862,7 +901,9 @@ gl_rdr2i(PyObject *self, PyObject *args)
 /* void rectfs short s short s short s short s */
 
 static PyObject *
-gl_rectfs(PyObject *self, PyObject *args)
+gl_rectfs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -884,7 +925,9 @@ gl_rectfs(PyObject *self, PyObject *args)
 /* void rects short s short s short s short s */
 
 static PyObject *
-gl_rects(PyObject *self, PyObject *args)
+gl_rects(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -906,7 +949,9 @@ gl_rects(PyObject *self, PyObject *args)
 /* void rmv2i long s long s */
 
 static PyObject *
-gl_rmv2i(PyObject *self, PyObject *args)
+gl_rmv2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -922,7 +967,9 @@ gl_rmv2i(PyObject *self, PyObject *args)
 /* void noport */
 
 static PyObject *
-gl_noport(PyObject *self, PyObject *args)
+gl_noport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	noport( );
 	Py_INCREF(Py_None);
@@ -932,7 +979,9 @@ gl_noport(PyObject *self, PyObject *args)
 /* void popviewport */
 
 static PyObject *
-gl_popviewport(PyObject *self, PyObject *args)
+gl_popviewport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	popviewport( );
 	Py_INCREF(Py_None);
@@ -942,7 +991,9 @@ gl_popviewport(PyObject *self, PyObject *args)
 /* void clearhitcode */
 
 static PyObject *
-gl_clearhitcode(PyObject *self, PyObject *args)
+gl_clearhitcode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	clearhitcode( );
 	Py_INCREF(Py_None);
@@ -952,7 +1003,9 @@ gl_clearhitcode(PyObject *self, PyObject *args)
 /* void closeobj */
 
 static PyObject *
-gl_closeobj(PyObject *self, PyObject *args)
+gl_closeobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	closeobj( );
 	Py_INCREF(Py_None);
@@ -962,7 +1015,9 @@ gl_closeobj(PyObject *self, PyObject *args)
 /* void cursoff */
 
 static PyObject *
-gl_cursoff(PyObject *self, PyObject *args)
+gl_cursoff(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	cursoff( );
 	Py_INCREF(Py_None);
@@ -972,7 +1027,9 @@ gl_cursoff(PyObject *self, PyObject *args)
 /* void curson */
 
 static PyObject *
-gl_curson(PyObject *self, PyObject *args)
+gl_curson(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	curson( );
 	Py_INCREF(Py_None);
@@ -982,7 +1039,9 @@ gl_curson(PyObject *self, PyObject *args)
 /* void doublebuffer */
 
 static PyObject *
-gl_doublebuffer(PyObject *self, PyObject *args)
+gl_doublebuffer(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	doublebuffer( );
 	Py_INCREF(Py_None);
@@ -992,7 +1051,9 @@ gl_doublebuffer(PyObject *self, PyObject *args)
 /* void finish */
 
 static PyObject *
-gl_finish(PyObject *self, PyObject *args)
+gl_finish(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	finish( );
 	Py_INCREF(Py_None);
@@ -1002,7 +1063,9 @@ gl_finish(PyObject *self, PyObject *args)
 /* void gconfig */
 
 static PyObject *
-gl_gconfig(PyObject *self, PyObject *args)
+gl_gconfig(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	gconfig( );
 	Py_INCREF(Py_None);
@@ -1012,7 +1075,9 @@ gl_gconfig(PyObject *self, PyObject *args)
 /* void ginit */
 
 static PyObject *
-gl_ginit(PyObject *self, PyObject *args)
+gl_ginit(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	ginit( );
 	Py_INCREF(Py_None);
@@ -1022,7 +1087,9 @@ gl_ginit(PyObject *self, PyObject *args)
 /* void greset */
 
 static PyObject *
-gl_greset(PyObject *self, PyObject *args)
+gl_greset(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	greset( );
 	Py_INCREF(Py_None);
@@ -1032,7 +1099,9 @@ gl_greset(PyObject *self, PyObject *args)
 /* void multimap */
 
 static PyObject *
-gl_multimap(PyObject *self, PyObject *args)
+gl_multimap(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	multimap( );
 	Py_INCREF(Py_None);
@@ -1042,7 +1111,9 @@ gl_multimap(PyObject *self, PyObject *args)
 /* void onemap */
 
 static PyObject *
-gl_onemap(PyObject *self, PyObject *args)
+gl_onemap(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	onemap( );
 	Py_INCREF(Py_None);
@@ -1052,7 +1123,9 @@ gl_onemap(PyObject *self, PyObject *args)
 /* void popattributes */
 
 static PyObject *
-gl_popattributes(PyObject *self, PyObject *args)
+gl_popattributes(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	popattributes( );
 	Py_INCREF(Py_None);
@@ -1062,7 +1135,9 @@ gl_popattributes(PyObject *self, PyObject *args)
 /* void popmatrix */
 
 static PyObject *
-gl_popmatrix(PyObject *self, PyObject *args)
+gl_popmatrix(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	popmatrix( );
 	Py_INCREF(Py_None);
@@ -1072,7 +1147,9 @@ gl_popmatrix(PyObject *self, PyObject *args)
 /* void pushattributes */
 
 static PyObject *
-gl_pushattributes(PyObject *self, PyObject *args)
+gl_pushattributes(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	pushattributes( );
 	Py_INCREF(Py_None);
@@ -1082,7 +1159,9 @@ gl_pushattributes(PyObject *self, PyObject *args)
 /* void pushmatrix */
 
 static PyObject *
-gl_pushmatrix(PyObject *self, PyObject *args)
+gl_pushmatrix(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	pushmatrix( );
 	Py_INCREF(Py_None);
@@ -1092,7 +1171,9 @@ gl_pushmatrix(PyObject *self, PyObject *args)
 /* void pushviewport */
 
 static PyObject *
-gl_pushviewport(PyObject *self, PyObject *args)
+gl_pushviewport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	pushviewport( );
 	Py_INCREF(Py_None);
@@ -1102,7 +1183,9 @@ gl_pushviewport(PyObject *self, PyObject *args)
 /* void qreset */
 
 static PyObject *
-gl_qreset(PyObject *self, PyObject *args)
+gl_qreset(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	qreset( );
 	Py_INCREF(Py_None);
@@ -1112,7 +1195,9 @@ gl_qreset(PyObject *self, PyObject *args)
 /* void RGBmode */
 
 static PyObject *
-gl_RGBmode(PyObject *self, PyObject *args)
+gl_RGBmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	RGBmode( );
 	Py_INCREF(Py_None);
@@ -1122,7 +1207,9 @@ gl_RGBmode(PyObject *self, PyObject *args)
 /* void singlebuffer */
 
 static PyObject *
-gl_singlebuffer(PyObject *self, PyObject *args)
+gl_singlebuffer(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	singlebuffer( );
 	Py_INCREF(Py_None);
@@ -1132,7 +1219,9 @@ gl_singlebuffer(PyObject *self, PyObject *args)
 /* void swapbuffers */
 
 static PyObject *
-gl_swapbuffers(PyObject *self, PyObject *args)
+gl_swapbuffers(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	swapbuffers( );
 	Py_INCREF(Py_None);
@@ -1142,7 +1231,9 @@ gl_swapbuffers(PyObject *self, PyObject *args)
 /* void gsync */
 
 static PyObject *
-gl_gsync(PyObject *self, PyObject *args)
+gl_gsync(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	gsync( );
 	Py_INCREF(Py_None);
@@ -1152,7 +1243,9 @@ gl_gsync(PyObject *self, PyObject *args)
 /* void gflush */
 
 static PyObject *
-gl_gflush(PyObject *self, PyObject *args)
+gl_gflush(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	gflush( );
 	Py_INCREF(Py_None);
@@ -1162,7 +1255,9 @@ gl_gflush(PyObject *self, PyObject *args)
 /* void tpon */
 
 static PyObject *
-gl_tpon(PyObject *self, PyObject *args)
+gl_tpon(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	tpon( );
 	Py_INCREF(Py_None);
@@ -1172,7 +1267,9 @@ gl_tpon(PyObject *self, PyObject *args)
 /* void tpoff */
 
 static PyObject *
-gl_tpoff(PyObject *self, PyObject *args)
+gl_tpoff(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	tpoff( );
 	Py_INCREF(Py_None);
@@ -1182,7 +1279,9 @@ gl_tpoff(PyObject *self, PyObject *args)
 /* void clkon */
 
 static PyObject *
-gl_clkon(PyObject *self, PyObject *args)
+gl_clkon(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	clkon( );
 	Py_INCREF(Py_None);
@@ -1192,7 +1291,9 @@ gl_clkon(PyObject *self, PyObject *args)
 /* void clkoff */
 
 static PyObject *
-gl_clkoff(PyObject *self, PyObject *args)
+gl_clkoff(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	clkoff( );
 	Py_INCREF(Py_None);
@@ -1202,7 +1303,9 @@ gl_clkoff(PyObject *self, PyObject *args)
 /* void ringbell */
 
 static PyObject *
-gl_ringbell(PyObject *self, PyObject *args)
+gl_ringbell(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	ringbell( );
 	Py_INCREF(Py_None);
@@ -1212,7 +1315,9 @@ gl_ringbell(PyObject *self, PyObject *args)
 /* void gbegin */
 
 static PyObject *
-gl_gbegin(PyObject *self, PyObject *args)
+gl_gbegin(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	gbegin( );
 	Py_INCREF(Py_None);
@@ -1222,7 +1327,9 @@ gl_gbegin(PyObject *self, PyObject *args)
 /* void textinit */
 
 static PyObject *
-gl_textinit(PyObject *self, PyObject *args)
+gl_textinit(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	textinit( );
 	Py_INCREF(Py_None);
@@ -1232,7 +1339,9 @@ gl_textinit(PyObject *self, PyObject *args)
 /* void initnames */
 
 static PyObject *
-gl_initnames(PyObject *self, PyObject *args)
+gl_initnames(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	initnames( );
 	Py_INCREF(Py_None);
@@ -1242,7 +1351,9 @@ gl_initnames(PyObject *self, PyObject *args)
 /* void pclos */
 
 static PyObject *
-gl_pclos(PyObject *self, PyObject *args)
+gl_pclos(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	pclos( );
 	Py_INCREF(Py_None);
@@ -1252,7 +1363,9 @@ gl_pclos(PyObject *self, PyObject *args)
 /* void popname */
 
 static PyObject *
-gl_popname(PyObject *self, PyObject *args)
+gl_popname(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	popname( );
 	Py_INCREF(Py_None);
@@ -1262,7 +1375,9 @@ gl_popname(PyObject *self, PyObject *args)
 /* void spclos */
 
 static PyObject *
-gl_spclos(PyObject *self, PyObject *args)
+gl_spclos(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	spclos( );
 	Py_INCREF(Py_None);
@@ -1272,7 +1387,9 @@ gl_spclos(PyObject *self, PyObject *args)
 /* void zclear */
 
 static PyObject *
-gl_zclear(PyObject *self, PyObject *args)
+gl_zclear(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	zclear( );
 	Py_INCREF(Py_None);
@@ -1282,7 +1399,9 @@ gl_zclear(PyObject *self, PyObject *args)
 /* void screenspace */
 
 static PyObject *
-gl_screenspace(PyObject *self, PyObject *args)
+gl_screenspace(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	screenspace( );
 	Py_INCREF(Py_None);
@@ -1292,7 +1411,9 @@ gl_screenspace(PyObject *self, PyObject *args)
 /* void reshapeviewport */
 
 static PyObject *
-gl_reshapeviewport(PyObject *self, PyObject *args)
+gl_reshapeviewport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	reshapeviewport( );
 	Py_INCREF(Py_None);
@@ -1302,7 +1423,9 @@ gl_reshapeviewport(PyObject *self, PyObject *args)
 /* void winpush */
 
 static PyObject *
-gl_winpush(PyObject *self, PyObject *args)
+gl_winpush(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	winpush( );
 	Py_INCREF(Py_None);
@@ -1312,7 +1435,9 @@ gl_winpush(PyObject *self, PyObject *args)
 /* void winpop */
 
 static PyObject *
-gl_winpop(PyObject *self, PyObject *args)
+gl_winpop(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	winpop( );
 	Py_INCREF(Py_None);
@@ -1322,7 +1447,9 @@ gl_winpop(PyObject *self, PyObject *args)
 /* void foreground */
 
 static PyObject *
-gl_foreground(PyObject *self, PyObject *args)
+gl_foreground(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	foreground( );
 	Py_INCREF(Py_None);
@@ -1332,7 +1459,9 @@ gl_foreground(PyObject *self, PyObject *args)
 /* void endfullscrn */
 
 static PyObject *
-gl_endfullscrn(PyObject *self, PyObject *args)
+gl_endfullscrn(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endfullscrn( );
 	Py_INCREF(Py_None);
@@ -1342,7 +1471,9 @@ gl_endfullscrn(PyObject *self, PyObject *args)
 /* void endpupmode */
 
 static PyObject *
-gl_endpupmode(PyObject *self, PyObject *args)
+gl_endpupmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endpupmode( );
 	Py_INCREF(Py_None);
@@ -1352,7 +1483,9 @@ gl_endpupmode(PyObject *self, PyObject *args)
 /* void fullscrn */
 
 static PyObject *
-gl_fullscrn(PyObject *self, PyObject *args)
+gl_fullscrn(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	fullscrn( );
 	Py_INCREF(Py_None);
@@ -1362,7 +1495,9 @@ gl_fullscrn(PyObject *self, PyObject *args)
 /* void pupmode */
 
 static PyObject *
-gl_pupmode(PyObject *self, PyObject *args)
+gl_pupmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	pupmode( );
 	Py_INCREF(Py_None);
@@ -1372,7 +1507,9 @@ gl_pupmode(PyObject *self, PyObject *args)
 /* void winconstraints */
 
 static PyObject *
-gl_winconstraints(PyObject *self, PyObject *args)
+gl_winconstraints(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	winconstraints( );
 	Py_INCREF(Py_None);
@@ -1382,7 +1519,9 @@ gl_winconstraints(PyObject *self, PyObject *args)
 /* void pagecolor short s */
 
 static PyObject *
-gl_pagecolor(PyObject *self, PyObject *args)
+gl_pagecolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1395,7 +1534,9 @@ gl_pagecolor(PyObject *self, PyObject *args)
 /* void textcolor short s */
 
 static PyObject *
-gl_textcolor(PyObject *self, PyObject *args)
+gl_textcolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1408,7 +1549,9 @@ gl_textcolor(PyObject *self, PyObject *args)
 /* void color short s */
 
 static PyObject *
-gl_color(PyObject *self, PyObject *args)
+gl_color(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1421,7 +1564,9 @@ gl_color(PyObject *self, PyObject *args)
 /* void curveit short s */
 
 static PyObject *
-gl_curveit(PyObject *self, PyObject *args)
+gl_curveit(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1434,7 +1579,9 @@ gl_curveit(PyObject *self, PyObject *args)
 /* void font short s */
 
 static PyObject *
-gl_font(PyObject *self, PyObject *args)
+gl_font(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1447,7 +1594,9 @@ gl_font(PyObject *self, PyObject *args)
 /* void linewidth short s */
 
 static PyObject *
-gl_linewidth(PyObject *self, PyObject *args)
+gl_linewidth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1460,7 +1609,9 @@ gl_linewidth(PyObject *self, PyObject *args)
 /* void setlinestyle short s */
 
 static PyObject *
-gl_setlinestyle(PyObject *self, PyObject *args)
+gl_setlinestyle(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1473,7 +1624,9 @@ gl_setlinestyle(PyObject *self, PyObject *args)
 /* void setmap short s */
 
 static PyObject *
-gl_setmap(PyObject *self, PyObject *args)
+gl_setmap(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1486,7 +1639,9 @@ gl_setmap(PyObject *self, PyObject *args)
 /* void swapinterval short s */
 
 static PyObject *
-gl_swapinterval(PyObject *self, PyObject *args)
+gl_swapinterval(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1499,7 +1654,9 @@ gl_swapinterval(PyObject *self, PyObject *args)
 /* void writemask short s */
 
 static PyObject *
-gl_writemask(PyObject *self, PyObject *args)
+gl_writemask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1512,7 +1669,9 @@ gl_writemask(PyObject *self, PyObject *args)
 /* void textwritemask short s */
 
 static PyObject *
-gl_textwritemask(PyObject *self, PyObject *args)
+gl_textwritemask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1525,7 +1684,9 @@ gl_textwritemask(PyObject *self, PyObject *args)
 /* void qdevice short s */
 
 static PyObject *
-gl_qdevice(PyObject *self, PyObject *args)
+gl_qdevice(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1538,7 +1699,9 @@ gl_qdevice(PyObject *self, PyObject *args)
 /* void unqdevice short s */
 
 static PyObject *
-gl_unqdevice(PyObject *self, PyObject *args)
+gl_unqdevice(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1551,7 +1714,9 @@ gl_unqdevice(PyObject *self, PyObject *args)
 /* void curvebasis short s */
 
 static PyObject *
-gl_curvebasis(PyObject *self, PyObject *args)
+gl_curvebasis(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1564,7 +1729,9 @@ gl_curvebasis(PyObject *self, PyObject *args)
 /* void curveprecision short s */
 
 static PyObject *
-gl_curveprecision(PyObject *self, PyObject *args)
+gl_curveprecision(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1577,7 +1744,9 @@ gl_curveprecision(PyObject *self, PyObject *args)
 /* void loadname short s */
 
 static PyObject *
-gl_loadname(PyObject *self, PyObject *args)
+gl_loadname(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1590,7 +1759,9 @@ gl_loadname(PyObject *self, PyObject *args)
 /* void passthrough short s */
 
 static PyObject *
-gl_passthrough(PyObject *self, PyObject *args)
+gl_passthrough(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1603,7 +1774,9 @@ gl_passthrough(PyObject *self, PyObject *args)
 /* void pushname short s */
 
 static PyObject *
-gl_pushname(PyObject *self, PyObject *args)
+gl_pushname(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1616,7 +1789,9 @@ gl_pushname(PyObject *self, PyObject *args)
 /* void setmonitor short s */
 
 static PyObject *
-gl_setmonitor(PyObject *self, PyObject *args)
+gl_setmonitor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1629,7 +1804,9 @@ gl_setmonitor(PyObject *self, PyObject *args)
 /* void setshade short s */
 
 static PyObject *
-gl_setshade(PyObject *self, PyObject *args)
+gl_setshade(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1642,7 +1819,9 @@ gl_setshade(PyObject *self, PyObject *args)
 /* void setpattern short s */
 
 static PyObject *
-gl_setpattern(PyObject *self, PyObject *args)
+gl_setpattern(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1655,7 +1834,9 @@ gl_setpattern(PyObject *self, PyObject *args)
 /* void pagewritemask short s */
 
 static PyObject *
-gl_pagewritemask(PyObject *self, PyObject *args)
+gl_pagewritemask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	if (!getishortarg(args, 1, 0, &arg1))
@@ -1668,7 +1849,9 @@ gl_pagewritemask(PyObject *self, PyObject *args)
 /* void callobj long s */
 
 static PyObject *
-gl_callobj(PyObject *self, PyObject *args)
+gl_callobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1681,7 +1864,9 @@ gl_callobj(PyObject *self, PyObject *args)
 /* void delobj long s */
 
 static PyObject *
-gl_delobj(PyObject *self, PyObject *args)
+gl_delobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1694,7 +1879,9 @@ gl_delobj(PyObject *self, PyObject *args)
 /* void editobj long s */
 
 static PyObject *
-gl_editobj(PyObject *self, PyObject *args)
+gl_editobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1707,7 +1894,9 @@ gl_editobj(PyObject *self, PyObject *args)
 /* void makeobj long s */
 
 static PyObject *
-gl_makeobj(PyObject *self, PyObject *args)
+gl_makeobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1720,7 +1909,9 @@ gl_makeobj(PyObject *self, PyObject *args)
 /* void maketag long s */
 
 static PyObject *
-gl_maketag(PyObject *self, PyObject *args)
+gl_maketag(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1733,7 +1924,9 @@ gl_maketag(PyObject *self, PyObject *args)
 /* void chunksize long s */
 
 static PyObject *
-gl_chunksize(PyObject *self, PyObject *args)
+gl_chunksize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1746,7 +1939,9 @@ gl_chunksize(PyObject *self, PyObject *args)
 /* void compactify long s */
 
 static PyObject *
-gl_compactify(PyObject *self, PyObject *args)
+gl_compactify(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1759,7 +1954,9 @@ gl_compactify(PyObject *self, PyObject *args)
 /* void deltag long s */
 
 static PyObject *
-gl_deltag(PyObject *self, PyObject *args)
+gl_deltag(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1772,7 +1969,9 @@ gl_deltag(PyObject *self, PyObject *args)
 /* void lsrepeat long s */
 
 static PyObject *
-gl_lsrepeat(PyObject *self, PyObject *args)
+gl_lsrepeat(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1785,7 +1984,9 @@ gl_lsrepeat(PyObject *self, PyObject *args)
 /* void objinsert long s */
 
 static PyObject *
-gl_objinsert(PyObject *self, PyObject *args)
+gl_objinsert(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1798,7 +1999,9 @@ gl_objinsert(PyObject *self, PyObject *args)
 /* void objreplace long s */
 
 static PyObject *
-gl_objreplace(PyObject *self, PyObject *args)
+gl_objreplace(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1811,7 +2014,9 @@ gl_objreplace(PyObject *self, PyObject *args)
 /* void winclose long s */
 
 static PyObject *
-gl_winclose(PyObject *self, PyObject *args)
+gl_winclose(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1824,7 +2029,9 @@ gl_winclose(PyObject *self, PyObject *args)
 /* void blanktime long s */
 
 static PyObject *
-gl_blanktime(PyObject *self, PyObject *args)
+gl_blanktime(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1837,7 +2044,9 @@ gl_blanktime(PyObject *self, PyObject *args)
 /* void freepup long s */
 
 static PyObject *
-gl_freepup(PyObject *self, PyObject *args)
+gl_freepup(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1850,7 +2059,9 @@ gl_freepup(PyObject *self, PyObject *args)
 /* void backbuffer long s */
 
 static PyObject *
-gl_backbuffer(PyObject *self, PyObject *args)
+gl_backbuffer(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1863,7 +2074,9 @@ gl_backbuffer(PyObject *self, PyObject *args)
 /* void frontbuffer long s */
 
 static PyObject *
-gl_frontbuffer(PyObject *self, PyObject *args)
+gl_frontbuffer(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1876,7 +2089,9 @@ gl_frontbuffer(PyObject *self, PyObject *args)
 /* void lsbackup long s */
 
 static PyObject *
-gl_lsbackup(PyObject *self, PyObject *args)
+gl_lsbackup(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1889,7 +2104,9 @@ gl_lsbackup(PyObject *self, PyObject *args)
 /* void resetls long s */
 
 static PyObject *
-gl_resetls(PyObject *self, PyObject *args)
+gl_resetls(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1902,7 +2119,9 @@ gl_resetls(PyObject *self, PyObject *args)
 /* void lampon long s */
 
 static PyObject *
-gl_lampon(PyObject *self, PyObject *args)
+gl_lampon(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1915,7 +2134,9 @@ gl_lampon(PyObject *self, PyObject *args)
 /* void lampoff long s */
 
 static PyObject *
-gl_lampoff(PyObject *self, PyObject *args)
+gl_lampoff(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1928,7 +2149,9 @@ gl_lampoff(PyObject *self, PyObject *args)
 /* void setbell long s */
 
 static PyObject *
-gl_setbell(PyObject *self, PyObject *args)
+gl_setbell(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1941,7 +2164,9 @@ gl_setbell(PyObject *self, PyObject *args)
 /* void blankscreen long s */
 
 static PyObject *
-gl_blankscreen(PyObject *self, PyObject *args)
+gl_blankscreen(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1954,7 +2179,9 @@ gl_blankscreen(PyObject *self, PyObject *args)
 /* void depthcue long s */
 
 static PyObject *
-gl_depthcue(PyObject *self, PyObject *args)
+gl_depthcue(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1967,7 +2194,9 @@ gl_depthcue(PyObject *self, PyObject *args)
 /* void zbuffer long s */
 
 static PyObject *
-gl_zbuffer(PyObject *self, PyObject *args)
+gl_zbuffer(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1980,7 +2209,9 @@ gl_zbuffer(PyObject *self, PyObject *args)
 /* void backface long s */
 
 static PyObject *
-gl_backface(PyObject *self, PyObject *args)
+gl_backface(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -1993,7 +2224,9 @@ gl_backface(PyObject *self, PyObject *args)
 /* void cmov2i long s long s */
 
 static PyObject *
-gl_cmov2i(PyObject *self, PyObject *args)
+gl_cmov2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2009,7 +2242,9 @@ gl_cmov2i(PyObject *self, PyObject *args)
 /* void draw2i long s long s */
 
 static PyObject *
-gl_draw2i(PyObject *self, PyObject *args)
+gl_draw2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2025,7 +2260,9 @@ gl_draw2i(PyObject *self, PyObject *args)
 /* void move2i long s long s */
 
 static PyObject *
-gl_move2i(PyObject *self, PyObject *args)
+gl_move2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2041,7 +2278,9 @@ gl_move2i(PyObject *self, PyObject *args)
 /* void pnt2i long s long s */
 
 static PyObject *
-gl_pnt2i(PyObject *self, PyObject *args)
+gl_pnt2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2057,7 +2296,9 @@ gl_pnt2i(PyObject *self, PyObject *args)
 /* void patchbasis long s long s */
 
 static PyObject *
-gl_patchbasis(PyObject *self, PyObject *args)
+gl_patchbasis(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2073,7 +2314,9 @@ gl_patchbasis(PyObject *self, PyObject *args)
 /* void patchprecision long s long s */
 
 static PyObject *
-gl_patchprecision(PyObject *self, PyObject *args)
+gl_patchprecision(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2089,7 +2332,9 @@ gl_patchprecision(PyObject *self, PyObject *args)
 /* void pdr2i long s long s */
 
 static PyObject *
-gl_pdr2i(PyObject *self, PyObject *args)
+gl_pdr2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2105,7 +2350,9 @@ gl_pdr2i(PyObject *self, PyObject *args)
 /* void pmv2i long s long s */
 
 static PyObject *
-gl_pmv2i(PyObject *self, PyObject *args)
+gl_pmv2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2121,7 +2368,9 @@ gl_pmv2i(PyObject *self, PyObject *args)
 /* void rpdr2i long s long s */
 
 static PyObject *
-gl_rpdr2i(PyObject *self, PyObject *args)
+gl_rpdr2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2137,7 +2386,9 @@ gl_rpdr2i(PyObject *self, PyObject *args)
 /* void rpmv2i long s long s */
 
 static PyObject *
-gl_rpmv2i(PyObject *self, PyObject *args)
+gl_rpmv2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2153,7 +2404,9 @@ gl_rpmv2i(PyObject *self, PyObject *args)
 /* void xfpt2i long s long s */
 
 static PyObject *
-gl_xfpt2i(PyObject *self, PyObject *args)
+gl_xfpt2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2169,7 +2422,9 @@ gl_xfpt2i(PyObject *self, PyObject *args)
 /* void objdelete long s long s */
 
 static PyObject *
-gl_objdelete(PyObject *self, PyObject *args)
+gl_objdelete(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2185,7 +2440,9 @@ gl_objdelete(PyObject *self, PyObject *args)
 /* void patchcurves long s long s */
 
 static PyObject *
-gl_patchcurves(PyObject *self, PyObject *args)
+gl_patchcurves(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2201,7 +2458,9 @@ gl_patchcurves(PyObject *self, PyObject *args)
 /* void minsize long s long s */
 
 static PyObject *
-gl_minsize(PyObject *self, PyObject *args)
+gl_minsize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2217,7 +2476,9 @@ gl_minsize(PyObject *self, PyObject *args)
 /* void maxsize long s long s */
 
 static PyObject *
-gl_maxsize(PyObject *self, PyObject *args)
+gl_maxsize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2233,7 +2494,9 @@ gl_maxsize(PyObject *self, PyObject *args)
 /* void keepaspect long s long s */
 
 static PyObject *
-gl_keepaspect(PyObject *self, PyObject *args)
+gl_keepaspect(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2249,7 +2512,9 @@ gl_keepaspect(PyObject *self, PyObject *args)
 /* void prefsize long s long s */
 
 static PyObject *
-gl_prefsize(PyObject *self, PyObject *args)
+gl_prefsize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2265,7 +2530,9 @@ gl_prefsize(PyObject *self, PyObject *args)
 /* void stepunit long s long s */
 
 static PyObject *
-gl_stepunit(PyObject *self, PyObject *args)
+gl_stepunit(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2281,7 +2548,9 @@ gl_stepunit(PyObject *self, PyObject *args)
 /* void fudge long s long s */
 
 static PyObject *
-gl_fudge(PyObject *self, PyObject *args)
+gl_fudge(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2297,7 +2566,9 @@ gl_fudge(PyObject *self, PyObject *args)
 /* void winmove long s long s */
 
 static PyObject *
-gl_winmove(PyObject *self, PyObject *args)
+gl_winmove(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -2313,7 +2584,9 @@ gl_winmove(PyObject *self, PyObject *args)
 /* void attachcursor short s short s */
 
 static PyObject *
-gl_attachcursor(PyObject *self, PyObject *args)
+gl_attachcursor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2329,7 +2602,9 @@ gl_attachcursor(PyObject *self, PyObject *args)
 /* void deflinestyle short s short s */
 
 static PyObject *
-gl_deflinestyle(PyObject *self, PyObject *args)
+gl_deflinestyle(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2345,7 +2620,9 @@ gl_deflinestyle(PyObject *self, PyObject *args)
 /* void noise short s short s */
 
 static PyObject *
-gl_noise(PyObject *self, PyObject *args)
+gl_noise(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2361,7 +2638,9 @@ gl_noise(PyObject *self, PyObject *args)
 /* void picksize short s short s */
 
 static PyObject *
-gl_picksize(PyObject *self, PyObject *args)
+gl_picksize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2377,7 +2656,9 @@ gl_picksize(PyObject *self, PyObject *args)
 /* void qenter short s short s */
 
 static PyObject *
-gl_qenter(PyObject *self, PyObject *args)
+gl_qenter(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2393,7 +2674,9 @@ gl_qenter(PyObject *self, PyObject *args)
 /* void setdepth short s short s */
 
 static PyObject *
-gl_setdepth(PyObject *self, PyObject *args)
+gl_setdepth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2409,7 +2692,9 @@ gl_setdepth(PyObject *self, PyObject *args)
 /* void cmov2s short s short s */
 
 static PyObject *
-gl_cmov2s(PyObject *self, PyObject *args)
+gl_cmov2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2425,7 +2710,9 @@ gl_cmov2s(PyObject *self, PyObject *args)
 /* void draw2s short s short s */
 
 static PyObject *
-gl_draw2s(PyObject *self, PyObject *args)
+gl_draw2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2441,7 +2728,9 @@ gl_draw2s(PyObject *self, PyObject *args)
 /* void move2s short s short s */
 
 static PyObject *
-gl_move2s(PyObject *self, PyObject *args)
+gl_move2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2457,7 +2746,9 @@ gl_move2s(PyObject *self, PyObject *args)
 /* void pdr2s short s short s */
 
 static PyObject *
-gl_pdr2s(PyObject *self, PyObject *args)
+gl_pdr2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2473,7 +2764,9 @@ gl_pdr2s(PyObject *self, PyObject *args)
 /* void pmv2s short s short s */
 
 static PyObject *
-gl_pmv2s(PyObject *self, PyObject *args)
+gl_pmv2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2489,7 +2782,9 @@ gl_pmv2s(PyObject *self, PyObject *args)
 /* void pnt2s short s short s */
 
 static PyObject *
-gl_pnt2s(PyObject *self, PyObject *args)
+gl_pnt2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2505,7 +2800,9 @@ gl_pnt2s(PyObject *self, PyObject *args)
 /* void rdr2s short s short s */
 
 static PyObject *
-gl_rdr2s(PyObject *self, PyObject *args)
+gl_rdr2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2521,7 +2818,9 @@ gl_rdr2s(PyObject *self, PyObject *args)
 /* void rmv2s short s short s */
 
 static PyObject *
-gl_rmv2s(PyObject *self, PyObject *args)
+gl_rmv2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2537,7 +2836,9 @@ gl_rmv2s(PyObject *self, PyObject *args)
 /* void rpdr2s short s short s */
 
 static PyObject *
-gl_rpdr2s(PyObject *self, PyObject *args)
+gl_rpdr2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2553,7 +2854,9 @@ gl_rpdr2s(PyObject *self, PyObject *args)
 /* void rpmv2s short s short s */
 
 static PyObject *
-gl_rpmv2s(PyObject *self, PyObject *args)
+gl_rpmv2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2569,7 +2872,9 @@ gl_rpmv2s(PyObject *self, PyObject *args)
 /* void xfpt2s short s short s */
 
 static PyObject *
-gl_xfpt2s(PyObject *self, PyObject *args)
+gl_xfpt2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -2585,7 +2890,9 @@ gl_xfpt2s(PyObject *self, PyObject *args)
 /* void cmov2 float s float s */
 
 static PyObject *
-gl_cmov2(PyObject *self, PyObject *args)
+gl_cmov2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2601,7 +2908,9 @@ gl_cmov2(PyObject *self, PyObject *args)
 /* void draw2 float s float s */
 
 static PyObject *
-gl_draw2(PyObject *self, PyObject *args)
+gl_draw2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2617,7 +2926,9 @@ gl_draw2(PyObject *self, PyObject *args)
 /* void move2 float s float s */
 
 static PyObject *
-gl_move2(PyObject *self, PyObject *args)
+gl_move2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2633,7 +2944,9 @@ gl_move2(PyObject *self, PyObject *args)
 /* void pnt2 float s float s */
 
 static PyObject *
-gl_pnt2(PyObject *self, PyObject *args)
+gl_pnt2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2649,7 +2962,9 @@ gl_pnt2(PyObject *self, PyObject *args)
 /* void pdr2 float s float s */
 
 static PyObject *
-gl_pdr2(PyObject *self, PyObject *args)
+gl_pdr2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2665,7 +2980,9 @@ gl_pdr2(PyObject *self, PyObject *args)
 /* void pmv2 float s float s */
 
 static PyObject *
-gl_pmv2(PyObject *self, PyObject *args)
+gl_pmv2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2681,7 +2998,9 @@ gl_pmv2(PyObject *self, PyObject *args)
 /* void rdr2 float s float s */
 
 static PyObject *
-gl_rdr2(PyObject *self, PyObject *args)
+gl_rdr2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2697,7 +3016,9 @@ gl_rdr2(PyObject *self, PyObject *args)
 /* void rmv2 float s float s */
 
 static PyObject *
-gl_rmv2(PyObject *self, PyObject *args)
+gl_rmv2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2713,7 +3034,9 @@ gl_rmv2(PyObject *self, PyObject *args)
 /* void rpdr2 float s float s */
 
 static PyObject *
-gl_rpdr2(PyObject *self, PyObject *args)
+gl_rpdr2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2729,7 +3052,9 @@ gl_rpdr2(PyObject *self, PyObject *args)
 /* void rpmv2 float s float s */
 
 static PyObject *
-gl_rpmv2(PyObject *self, PyObject *args)
+gl_rpmv2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2745,7 +3070,9 @@ gl_rpmv2(PyObject *self, PyObject *args)
 /* void xfpt2 float s float s */
 
 static PyObject *
-gl_xfpt2(PyObject *self, PyObject *args)
+gl_xfpt2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -2761,7 +3088,9 @@ gl_xfpt2(PyObject *self, PyObject *args)
 /* void loadmatrix float s[4*4] */
 
 static PyObject *
-gl_loadmatrix(PyObject *self, PyObject *args)
+gl_loadmatrix(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] [ 4 ] ;
 	if (!getifloatarray(args, 1, 0, 4 * 4 , (float *) arg1))
@@ -2774,7 +3103,9 @@ gl_loadmatrix(PyObject *self, PyObject *args)
 /* void multmatrix float s[4*4] */
 
 static PyObject *
-gl_multmatrix(PyObject *self, PyObject *args)
+gl_multmatrix(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] [ 4 ] ;
 	if (!getifloatarray(args, 1, 0, 4 * 4 , (float *) arg1))
@@ -2787,7 +3118,9 @@ gl_multmatrix(PyObject *self, PyObject *args)
 /* void crv float s[3*4] */
 
 static PyObject *
-gl_crv(PyObject *self, PyObject *args)
+gl_crv(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] [ 3 ] ;
 	if (!getifloatarray(args, 1, 0, 3 * 4 , (float *) arg1))
@@ -2800,7 +3133,9 @@ gl_crv(PyObject *self, PyObject *args)
 /* void rcrv float s[4*4] */
 
 static PyObject *
-gl_rcrv(PyObject *self, PyObject *args)
+gl_rcrv(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] [ 4 ] ;
 	if (!getifloatarray(args, 1, 0, 4 * 4 , (float *) arg1))
@@ -2813,7 +3148,9 @@ gl_rcrv(PyObject *self, PyObject *args)
 /* void addtopup long s char *s long s */
 
 static PyObject *
-gl_addtopup(PyObject *self, PyObject *args)
+gl_addtopup(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	string arg2 ;
@@ -2832,7 +3169,9 @@ gl_addtopup(PyObject *self, PyObject *args)
 /* void charstr char *s */
 
 static PyObject *
-gl_charstr(PyObject *self, PyObject *args)
+gl_charstr(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	string arg1 ;
 	if (!getistringarg(args, 1, 0, &arg1))
@@ -2845,7 +3184,9 @@ gl_charstr(PyObject *self, PyObject *args)
 /* void getport char *s */
 
 static PyObject *
-gl_getport(PyObject *self, PyObject *args)
+gl_getport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	string arg1 ;
 	if (!getistringarg(args, 1, 0, &arg1))
@@ -2858,7 +3199,9 @@ gl_getport(PyObject *self, PyObject *args)
 /* long strwidth char *s */
 
 static PyObject *
-gl_strwidth(PyObject *self, PyObject *args)
+gl_strwidth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	string arg1 ;
@@ -2871,7 +3214,9 @@ gl_strwidth(PyObject *self, PyObject *args)
 /* long winopen char *s */
 
 static PyObject *
-gl_winopen(PyObject *self, PyObject *args)
+gl_winopen(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	string arg1 ;
@@ -2884,7 +3229,9 @@ gl_winopen(PyObject *self, PyObject *args)
 /* void wintitle char *s */
 
 static PyObject *
-gl_wintitle(PyObject *self, PyObject *args)
+gl_wintitle(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	string arg1 ;
 	if (!getistringarg(args, 1, 0, &arg1))
@@ -2897,7 +3244,9 @@ gl_wintitle(PyObject *self, PyObject *args)
 /* void polf long s float s[3*arg1] */
 
 static PyObject *
-gl_polf(PyObject *self, PyObject *args)
+gl_polf(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 3 ] ;
@@ -2917,7 +3266,9 @@ gl_polf(PyObject *self, PyObject *args)
 /* void polf2 long s float s[2*arg1] */
 
 static PyObject *
-gl_polf2(PyObject *self, PyObject *args)
+gl_polf2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 2 ] ;
@@ -2937,7 +3288,9 @@ gl_polf2(PyObject *self, PyObject *args)
 /* void poly long s float s[3*arg1] */
 
 static PyObject *
-gl_poly(PyObject *self, PyObject *args)
+gl_poly(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 3 ] ;
@@ -2957,7 +3310,9 @@ gl_poly(PyObject *self, PyObject *args)
 /* void poly2 long s float s[2*arg1] */
 
 static PyObject *
-gl_poly2(PyObject *self, PyObject *args)
+gl_poly2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 2 ] ;
@@ -2977,7 +3332,9 @@ gl_poly2(PyObject *self, PyObject *args)
 /* void crvn long s float s[3*arg1] */
 
 static PyObject *
-gl_crvn(PyObject *self, PyObject *args)
+gl_crvn(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 3 ] ;
@@ -2997,7 +3354,9 @@ gl_crvn(PyObject *self, PyObject *args)
 /* void rcrvn long s float s[4*arg1] */
 
 static PyObject *
-gl_rcrvn(PyObject *self, PyObject *args)
+gl_rcrvn(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 4 ] ;
@@ -3017,7 +3376,9 @@ gl_rcrvn(PyObject *self, PyObject *args)
 /* void polf2i long s long s[2*arg1] */
 
 static PyObject *
-gl_polf2i(PyObject *self, PyObject *args)
+gl_polf2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long (* arg2) [ 2 ] ;
@@ -3037,7 +3398,9 @@ gl_polf2i(PyObject *self, PyObject *args)
 /* void polfi long s long s[3*arg1] */
 
 static PyObject *
-gl_polfi(PyObject *self, PyObject *args)
+gl_polfi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long (* arg2) [ 3 ] ;
@@ -3057,7 +3420,9 @@ gl_polfi(PyObject *self, PyObject *args)
 /* void poly2i long s long s[2*arg1] */
 
 static PyObject *
-gl_poly2i(PyObject *self, PyObject *args)
+gl_poly2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long (* arg2) [ 2 ] ;
@@ -3077,7 +3442,9 @@ gl_poly2i(PyObject *self, PyObject *args)
 /* void polyi long s long s[3*arg1] */
 
 static PyObject *
-gl_polyi(PyObject *self, PyObject *args)
+gl_polyi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long (* arg2) [ 3 ] ;
@@ -3097,7 +3464,9 @@ gl_polyi(PyObject *self, PyObject *args)
 /* void polf2s long s short s[2*arg1] */
 
 static PyObject *
-gl_polf2s(PyObject *self, PyObject *args)
+gl_polf2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short (* arg2) [ 2 ] ;
@@ -3117,7 +3486,9 @@ gl_polf2s(PyObject *self, PyObject *args)
 /* void polfs long s short s[3*arg1] */
 
 static PyObject *
-gl_polfs(PyObject *self, PyObject *args)
+gl_polfs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short (* arg2) [ 3 ] ;
@@ -3137,7 +3508,9 @@ gl_polfs(PyObject *self, PyObject *args)
 /* void polys long s short s[3*arg1] */
 
 static PyObject *
-gl_polys(PyObject *self, PyObject *args)
+gl_polys(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short (* arg2) [ 3 ] ;
@@ -3157,7 +3530,9 @@ gl_polys(PyObject *self, PyObject *args)
 /* void poly2s long s short s[2*arg1] */
 
 static PyObject *
-gl_poly2s(PyObject *self, PyObject *args)
+gl_poly2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short (* arg2) [ 2 ] ;
@@ -3177,7 +3552,9 @@ gl_poly2s(PyObject *self, PyObject *args)
 /* void defcursor short s u_short s[128] */
 
 static PyObject *
-gl_defcursor(PyObject *self, PyObject *args)
+gl_defcursor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	unsigned short arg2 [ 128 ] ;
@@ -3193,7 +3570,9 @@ gl_defcursor(PyObject *self, PyObject *args)
 /* void writepixels short s u_short s[arg1] */
 
 static PyObject *
-gl_writepixels(PyObject *self, PyObject *args)
+gl_writepixels(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	unsigned short * arg2 ;
@@ -3212,7 +3591,9 @@ gl_writepixels(PyObject *self, PyObject *args)
 /* void defbasis long s float s[4*4] */
 
 static PyObject *
-gl_defbasis(PyObject *self, PyObject *args)
+gl_defbasis(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float arg2 [ 4 ] [ 4 ] ;
@@ -3228,7 +3609,9 @@ gl_defbasis(PyObject *self, PyObject *args)
 /* void gewrite short s short s[arg1] */
 
 static PyObject *
-gl_gewrite(PyObject *self, PyObject *args)
+gl_gewrite(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short * arg2 ;
@@ -3247,7 +3630,9 @@ gl_gewrite(PyObject *self, PyObject *args)
 /* void rotate short s char s */
 
 static PyObject *
-gl_rotate(PyObject *self, PyObject *args)
+gl_rotate(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	char arg2 ;
@@ -3263,7 +3648,9 @@ gl_rotate(PyObject *self, PyObject *args)
 /* void rot float s char s */
 
 static PyObject *
-gl_rot(PyObject *self, PyObject *args)
+gl_rot(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	char arg2 ;
@@ -3279,7 +3666,9 @@ gl_rot(PyObject *self, PyObject *args)
 /* void circfi long s long s long s */
 
 static PyObject *
-gl_circfi(PyObject *self, PyObject *args)
+gl_circfi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3298,7 +3687,9 @@ gl_circfi(PyObject *self, PyObject *args)
 /* void circi long s long s long s */
 
 static PyObject *
-gl_circi(PyObject *self, PyObject *args)
+gl_circi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3317,7 +3708,9 @@ gl_circi(PyObject *self, PyObject *args)
 /* void cmovi long s long s long s */
 
 static PyObject *
-gl_cmovi(PyObject *self, PyObject *args)
+gl_cmovi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3336,7 +3729,9 @@ gl_cmovi(PyObject *self, PyObject *args)
 /* void drawi long s long s long s */
 
 static PyObject *
-gl_drawi(PyObject *self, PyObject *args)
+gl_drawi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3355,7 +3750,9 @@ gl_drawi(PyObject *self, PyObject *args)
 /* void movei long s long s long s */
 
 static PyObject *
-gl_movei(PyObject *self, PyObject *args)
+gl_movei(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3374,7 +3771,9 @@ gl_movei(PyObject *self, PyObject *args)
 /* void pnti long s long s long s */
 
 static PyObject *
-gl_pnti(PyObject *self, PyObject *args)
+gl_pnti(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3393,7 +3792,9 @@ gl_pnti(PyObject *self, PyObject *args)
 /* void newtag long s long s long s */
 
 static PyObject *
-gl_newtag(PyObject *self, PyObject *args)
+gl_newtag(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3412,7 +3813,9 @@ gl_newtag(PyObject *self, PyObject *args)
 /* void pdri long s long s long s */
 
 static PyObject *
-gl_pdri(PyObject *self, PyObject *args)
+gl_pdri(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3431,7 +3834,9 @@ gl_pdri(PyObject *self, PyObject *args)
 /* void pmvi long s long s long s */
 
 static PyObject *
-gl_pmvi(PyObject *self, PyObject *args)
+gl_pmvi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3450,7 +3855,9 @@ gl_pmvi(PyObject *self, PyObject *args)
 /* void rdri long s long s long s */
 
 static PyObject *
-gl_rdri(PyObject *self, PyObject *args)
+gl_rdri(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3469,7 +3876,9 @@ gl_rdri(PyObject *self, PyObject *args)
 /* void rmvi long s long s long s */
 
 static PyObject *
-gl_rmvi(PyObject *self, PyObject *args)
+gl_rmvi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3488,7 +3897,9 @@ gl_rmvi(PyObject *self, PyObject *args)
 /* void rpdri long s long s long s */
 
 static PyObject *
-gl_rpdri(PyObject *self, PyObject *args)
+gl_rpdri(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3507,7 +3918,9 @@ gl_rpdri(PyObject *self, PyObject *args)
 /* void rpmvi long s long s long s */
 
 static PyObject *
-gl_rpmvi(PyObject *self, PyObject *args)
+gl_rpmvi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3526,7 +3939,9 @@ gl_rpmvi(PyObject *self, PyObject *args)
 /* void xfpti long s long s long s */
 
 static PyObject *
-gl_xfpti(PyObject *self, PyObject *args)
+gl_xfpti(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -3545,7 +3960,9 @@ gl_xfpti(PyObject *self, PyObject *args)
 /* void circ float s float s float s */
 
 static PyObject *
-gl_circ(PyObject *self, PyObject *args)
+gl_circ(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3564,7 +3981,9 @@ gl_circ(PyObject *self, PyObject *args)
 /* void circf float s float s float s */
 
 static PyObject *
-gl_circf(PyObject *self, PyObject *args)
+gl_circf(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3583,7 +4002,9 @@ gl_circf(PyObject *self, PyObject *args)
 /* void cmov float s float s float s */
 
 static PyObject *
-gl_cmov(PyObject *self, PyObject *args)
+gl_cmov(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3602,7 +4023,9 @@ gl_cmov(PyObject *self, PyObject *args)
 /* void draw float s float s float s */
 
 static PyObject *
-gl_draw(PyObject *self, PyObject *args)
+gl_draw(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3621,7 +4044,9 @@ gl_draw(PyObject *self, PyObject *args)
 /* void move float s float s float s */
 
 static PyObject *
-gl_move(PyObject *self, PyObject *args)
+gl_move(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3640,7 +4065,9 @@ gl_move(PyObject *self, PyObject *args)
 /* void pnt float s float s float s */
 
 static PyObject *
-gl_pnt(PyObject *self, PyObject *args)
+gl_pnt(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3659,7 +4086,9 @@ gl_pnt(PyObject *self, PyObject *args)
 /* void scale float s float s float s */
 
 static PyObject *
-gl_scale(PyObject *self, PyObject *args)
+gl_scale(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3678,7 +4107,9 @@ gl_scale(PyObject *self, PyObject *args)
 /* void translate float s float s float s */
 
 static PyObject *
-gl_translate(PyObject *self, PyObject *args)
+gl_translate(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3697,7 +4128,9 @@ gl_translate(PyObject *self, PyObject *args)
 /* void pdr float s float s float s */
 
 static PyObject *
-gl_pdr(PyObject *self, PyObject *args)
+gl_pdr(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3716,7 +4149,9 @@ gl_pdr(PyObject *self, PyObject *args)
 /* void pmv float s float s float s */
 
 static PyObject *
-gl_pmv(PyObject *self, PyObject *args)
+gl_pmv(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3735,7 +4170,9 @@ gl_pmv(PyObject *self, PyObject *args)
 /* void rdr float s float s float s */
 
 static PyObject *
-gl_rdr(PyObject *self, PyObject *args)
+gl_rdr(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3754,7 +4191,9 @@ gl_rdr(PyObject *self, PyObject *args)
 /* void rmv float s float s float s */
 
 static PyObject *
-gl_rmv(PyObject *self, PyObject *args)
+gl_rmv(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3773,7 +4212,9 @@ gl_rmv(PyObject *self, PyObject *args)
 /* void rpdr float s float s float s */
 
 static PyObject *
-gl_rpdr(PyObject *self, PyObject *args)
+gl_rpdr(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3792,7 +4233,9 @@ gl_rpdr(PyObject *self, PyObject *args)
 /* void rpmv float s float s float s */
 
 static PyObject *
-gl_rpmv(PyObject *self, PyObject *args)
+gl_rpmv(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3811,7 +4254,9 @@ gl_rpmv(PyObject *self, PyObject *args)
 /* void xfpt float s float s float s */
 
 static PyObject *
-gl_xfpt(PyObject *self, PyObject *args)
+gl_xfpt(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -3830,7 +4275,9 @@ gl_xfpt(PyObject *self, PyObject *args)
 /* void RGBcolor short s short s short s */
 
 static PyObject *
-gl_RGBcolor(PyObject *self, PyObject *args)
+gl_RGBcolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3849,7 +4296,9 @@ gl_RGBcolor(PyObject *self, PyObject *args)
 /* void RGBwritemask short s short s short s */
 
 static PyObject *
-gl_RGBwritemask(PyObject *self, PyObject *args)
+gl_RGBwritemask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3868,7 +4317,9 @@ gl_RGBwritemask(PyObject *self, PyObject *args)
 /* void setcursor short s short s short s */
 
 static PyObject *
-gl_setcursor(PyObject *self, PyObject *args)
+gl_setcursor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3887,7 +4338,9 @@ gl_setcursor(PyObject *self, PyObject *args)
 /* void tie short s short s short s */
 
 static PyObject *
-gl_tie(PyObject *self, PyObject *args)
+gl_tie(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3906,7 +4359,9 @@ gl_tie(PyObject *self, PyObject *args)
 /* void circfs short s short s short s */
 
 static PyObject *
-gl_circfs(PyObject *self, PyObject *args)
+gl_circfs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3925,7 +4380,9 @@ gl_circfs(PyObject *self, PyObject *args)
 /* void circs short s short s short s */
 
 static PyObject *
-gl_circs(PyObject *self, PyObject *args)
+gl_circs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3944,7 +4401,9 @@ gl_circs(PyObject *self, PyObject *args)
 /* void cmovs short s short s short s */
 
 static PyObject *
-gl_cmovs(PyObject *self, PyObject *args)
+gl_cmovs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3963,7 +4422,9 @@ gl_cmovs(PyObject *self, PyObject *args)
 /* void draws short s short s short s */
 
 static PyObject *
-gl_draws(PyObject *self, PyObject *args)
+gl_draws(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -3982,7 +4443,9 @@ gl_draws(PyObject *self, PyObject *args)
 /* void moves short s short s short s */
 
 static PyObject *
-gl_moves(PyObject *self, PyObject *args)
+gl_moves(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4001,7 +4464,9 @@ gl_moves(PyObject *self, PyObject *args)
 /* void pdrs short s short s short s */
 
 static PyObject *
-gl_pdrs(PyObject *self, PyObject *args)
+gl_pdrs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4020,7 +4485,9 @@ gl_pdrs(PyObject *self, PyObject *args)
 /* void pmvs short s short s short s */
 
 static PyObject *
-gl_pmvs(PyObject *self, PyObject *args)
+gl_pmvs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4039,7 +4506,9 @@ gl_pmvs(PyObject *self, PyObject *args)
 /* void pnts short s short s short s */
 
 static PyObject *
-gl_pnts(PyObject *self, PyObject *args)
+gl_pnts(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4058,7 +4527,9 @@ gl_pnts(PyObject *self, PyObject *args)
 /* void rdrs short s short s short s */
 
 static PyObject *
-gl_rdrs(PyObject *self, PyObject *args)
+gl_rdrs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4077,7 +4548,9 @@ gl_rdrs(PyObject *self, PyObject *args)
 /* void rmvs short s short s short s */
 
 static PyObject *
-gl_rmvs(PyObject *self, PyObject *args)
+gl_rmvs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4096,7 +4569,9 @@ gl_rmvs(PyObject *self, PyObject *args)
 /* void rpdrs short s short s short s */
 
 static PyObject *
-gl_rpdrs(PyObject *self, PyObject *args)
+gl_rpdrs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4115,7 +4590,9 @@ gl_rpdrs(PyObject *self, PyObject *args)
 /* void rpmvs short s short s short s */
 
 static PyObject *
-gl_rpmvs(PyObject *self, PyObject *args)
+gl_rpmvs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4134,7 +4611,9 @@ gl_rpmvs(PyObject *self, PyObject *args)
 /* void xfpts short s short s short s */
 
 static PyObject *
-gl_xfpts(PyObject *self, PyObject *args)
+gl_xfpts(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4153,7 +4632,9 @@ gl_xfpts(PyObject *self, PyObject *args)
 /* void curorigin short s short s short s */
 
 static PyObject *
-gl_curorigin(PyObject *self, PyObject *args)
+gl_curorigin(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4172,7 +4653,9 @@ gl_curorigin(PyObject *self, PyObject *args)
 /* void cyclemap short s short s short s */
 
 static PyObject *
-gl_cyclemap(PyObject *self, PyObject *args)
+gl_cyclemap(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4191,7 +4674,9 @@ gl_cyclemap(PyObject *self, PyObject *args)
 /* void patch float s[4*4] float s[4*4] float s[4*4] */
 
 static PyObject *
-gl_patch(PyObject *self, PyObject *args)
+gl_patch(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] [ 4 ] ;
 	float arg2 [ 4 ] [ 4 ] ;
@@ -4210,7 +4695,9 @@ gl_patch(PyObject *self, PyObject *args)
 /* void splf long s float s[3*arg1] u_short s[arg1] */
 
 static PyObject *
-gl_splf(PyObject *self, PyObject *args)
+gl_splf(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 3 ] ;
@@ -4236,7 +4723,9 @@ gl_splf(PyObject *self, PyObject *args)
 /* void splf2 long s float s[2*arg1] u_short s[arg1] */
 
 static PyObject *
-gl_splf2(PyObject *self, PyObject *args)
+gl_splf2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float (* arg2) [ 2 ] ;
@@ -4262,7 +4751,9 @@ gl_splf2(PyObject *self, PyObject *args)
 /* void splfi long s long s[3*arg1] u_short s[arg1] */
 
 static PyObject *
-gl_splfi(PyObject *self, PyObject *args)
+gl_splfi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long (* arg2) [ 3 ] ;
@@ -4288,7 +4779,9 @@ gl_splfi(PyObject *self, PyObject *args)
 /* void splf2i long s long s[2*arg1] u_short s[arg1] */
 
 static PyObject *
-gl_splf2i(PyObject *self, PyObject *args)
+gl_splf2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long (* arg2) [ 2 ] ;
@@ -4314,7 +4807,9 @@ gl_splf2i(PyObject *self, PyObject *args)
 /* void splfs long s short s[3*arg1] u_short s[arg1] */
 
 static PyObject *
-gl_splfs(PyObject *self, PyObject *args)
+gl_splfs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short (* arg2) [ 3 ] ;
@@ -4340,7 +4835,9 @@ gl_splfs(PyObject *self, PyObject *args)
 /* void splf2s long s short s[2*arg1] u_short s[arg1] */
 
 static PyObject *
-gl_splf2s(PyObject *self, PyObject *args)
+gl_splf2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short (* arg2) [ 2 ] ;
@@ -4366,7 +4863,9 @@ gl_splf2s(PyObject *self, PyObject *args)
 /* void rpatch float s[4*4] float s[4*4] float s[4*4] float s[4*4] */
 
 static PyObject *
-gl_rpatch(PyObject *self, PyObject *args)
+gl_rpatch(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] [ 4 ] ;
 	float arg2 [ 4 ] [ 4 ] ;
@@ -4388,7 +4887,9 @@ gl_rpatch(PyObject *self, PyObject *args)
 /* void ortho2 float s float s float s float s */
 
 static PyObject *
-gl_ortho2(PyObject *self, PyObject *args)
+gl_ortho2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4410,7 +4911,9 @@ gl_ortho2(PyObject *self, PyObject *args)
 /* void rect float s float s float s float s */
 
 static PyObject *
-gl_rect(PyObject *self, PyObject *args)
+gl_rect(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4432,7 +4935,9 @@ gl_rect(PyObject *self, PyObject *args)
 /* void rectf float s float s float s float s */
 
 static PyObject *
-gl_rectf(PyObject *self, PyObject *args)
+gl_rectf(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4454,7 +4959,9 @@ gl_rectf(PyObject *self, PyObject *args)
 /* void xfpt4 float s float s float s float s */
 
 static PyObject *
-gl_xfpt4(PyObject *self, PyObject *args)
+gl_xfpt4(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4476,7 +4983,9 @@ gl_xfpt4(PyObject *self, PyObject *args)
 /* void textport short s short s short s short s */
 
 static PyObject *
-gl_textport(PyObject *self, PyObject *args)
+gl_textport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4498,7 +5007,9 @@ gl_textport(PyObject *self, PyObject *args)
 /* void mapcolor short s short s short s short s */
 
 static PyObject *
-gl_mapcolor(PyObject *self, PyObject *args)
+gl_mapcolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4520,7 +5031,9 @@ gl_mapcolor(PyObject *self, PyObject *args)
 /* void scrmask short s short s short s short s */
 
 static PyObject *
-gl_scrmask(PyObject *self, PyObject *args)
+gl_scrmask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4542,7 +5055,9 @@ gl_scrmask(PyObject *self, PyObject *args)
 /* void setvaluator short s short s short s short s */
 
 static PyObject *
-gl_setvaluator(PyObject *self, PyObject *args)
+gl_setvaluator(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4564,7 +5079,9 @@ gl_setvaluator(PyObject *self, PyObject *args)
 /* void viewport short s short s short s short s */
 
 static PyObject *
-gl_viewport(PyObject *self, PyObject *args)
+gl_viewport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4586,7 +5103,9 @@ gl_viewport(PyObject *self, PyObject *args)
 /* void shaderange short s short s short s short s */
 
 static PyObject *
-gl_shaderange(PyObject *self, PyObject *args)
+gl_shaderange(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4608,7 +5127,9 @@ gl_shaderange(PyObject *self, PyObject *args)
 /* void xfpt4s short s short s short s short s */
 
 static PyObject *
-gl_xfpt4s(PyObject *self, PyObject *args)
+gl_xfpt4s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4630,7 +5151,9 @@ gl_xfpt4s(PyObject *self, PyObject *args)
 /* void rectfi long s long s long s long s */
 
 static PyObject *
-gl_rectfi(PyObject *self, PyObject *args)
+gl_rectfi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -4652,7 +5175,9 @@ gl_rectfi(PyObject *self, PyObject *args)
 /* void recti long s long s long s long s */
 
 static PyObject *
-gl_recti(PyObject *self, PyObject *args)
+gl_recti(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -4674,7 +5199,9 @@ gl_recti(PyObject *self, PyObject *args)
 /* void xfpt4i long s long s long s long s */
 
 static PyObject *
-gl_xfpt4i(PyObject *self, PyObject *args)
+gl_xfpt4i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -4696,7 +5223,9 @@ gl_xfpt4i(PyObject *self, PyObject *args)
 /* void prefposition long s long s long s long s */
 
 static PyObject *
-gl_prefposition(PyObject *self, PyObject *args)
+gl_prefposition(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -4718,7 +5247,9 @@ gl_prefposition(PyObject *self, PyObject *args)
 /* void arc float s float s float s short s short s */
 
 static PyObject *
-gl_arc(PyObject *self, PyObject *args)
+gl_arc(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4743,7 +5274,9 @@ gl_arc(PyObject *self, PyObject *args)
 /* void arcf float s float s float s short s short s */
 
 static PyObject *
-gl_arcf(PyObject *self, PyObject *args)
+gl_arcf(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4768,7 +5301,9 @@ gl_arcf(PyObject *self, PyObject *args)
 /* void arcfi long s long s long s short s short s */
 
 static PyObject *
-gl_arcfi(PyObject *self, PyObject *args)
+gl_arcfi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -4793,7 +5328,9 @@ gl_arcfi(PyObject *self, PyObject *args)
 /* void arci long s long s long s short s short s */
 
 static PyObject *
-gl_arci(PyObject *self, PyObject *args)
+gl_arci(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -4818,7 +5355,9 @@ gl_arci(PyObject *self, PyObject *args)
 /* void bbox2 short s short s float s float s float s float s */
 
 static PyObject *
-gl_bbox2(PyObject *self, PyObject *args)
+gl_bbox2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4846,7 +5385,9 @@ gl_bbox2(PyObject *self, PyObject *args)
 /* void bbox2i short s short s long s long s long s long s */
 
 static PyObject *
-gl_bbox2i(PyObject *self, PyObject *args)
+gl_bbox2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4874,7 +5415,9 @@ gl_bbox2i(PyObject *self, PyObject *args)
 /* void bbox2s short s short s short s short s short s short s */
 
 static PyObject *
-gl_bbox2s(PyObject *self, PyObject *args)
+gl_bbox2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4902,7 +5445,9 @@ gl_bbox2s(PyObject *self, PyObject *args)
 /* void blink short s short s short s short s short s */
 
 static PyObject *
-gl_blink(PyObject *self, PyObject *args)
+gl_blink(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -4927,7 +5472,9 @@ gl_blink(PyObject *self, PyObject *args)
 /* void ortho float s float s float s float s float s float s */
 
 static PyObject *
-gl_ortho(PyObject *self, PyObject *args)
+gl_ortho(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4955,7 +5502,9 @@ gl_ortho(PyObject *self, PyObject *args)
 /* void window float s float s float s float s float s float s */
 
 static PyObject *
-gl_window(PyObject *self, PyObject *args)
+gl_window(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -4983,7 +5532,9 @@ gl_window(PyObject *self, PyObject *args)
 /* void lookat float s float s float s float s float s float s short s */
 
 static PyObject *
-gl_lookat(PyObject *self, PyObject *args)
+gl_lookat(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -5014,7 +5565,9 @@ gl_lookat(PyObject *self, PyObject *args)
 /* void perspective short s float s float s float s */
 
 static PyObject *
-gl_perspective(PyObject *self, PyObject *args)
+gl_perspective(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	float arg2 ;
@@ -5036,7 +5589,9 @@ gl_perspective(PyObject *self, PyObject *args)
 /* void polarview float s short s short s short s */
 
 static PyObject *
-gl_polarview(PyObject *self, PyObject *args)
+gl_polarview(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	short arg2 ;
@@ -5058,7 +5613,9 @@ gl_polarview(PyObject *self, PyObject *args)
 /* void arcfs short s short s short s short s short s */
 
 static PyObject *
-gl_arcfs(PyObject *self, PyObject *args)
+gl_arcfs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5083,7 +5640,9 @@ gl_arcfs(PyObject *self, PyObject *args)
 /* void arcs short s short s short s short s short s */
 
 static PyObject *
-gl_arcs(PyObject *self, PyObject *args)
+gl_arcs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5108,7 +5667,9 @@ gl_arcs(PyObject *self, PyObject *args)
 /* void rectcopy short s short s short s short s short s short s */
 
 static PyObject *
-gl_rectcopy(PyObject *self, PyObject *args)
+gl_rectcopy(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5136,7 +5697,9 @@ gl_rectcopy(PyObject *self, PyObject *args)
 /* void RGBcursor short s short s short s short s short s short s short s */
 
 static PyObject *
-gl_RGBcursor(PyObject *self, PyObject *args)
+gl_RGBcursor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5167,7 +5730,9 @@ gl_RGBcursor(PyObject *self, PyObject *args)
 /* long getbutton short s */
 
 static PyObject *
-gl_getbutton(PyObject *self, PyObject *args)
+gl_getbutton(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	short arg1 ;
@@ -5180,7 +5745,9 @@ gl_getbutton(PyObject *self, PyObject *args)
 /* long getcmmode */
 
 static PyObject *
-gl_getcmmode(PyObject *self, PyObject *args)
+gl_getcmmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getcmmode( );
@@ -5190,7 +5757,9 @@ gl_getcmmode(PyObject *self, PyObject *args)
 /* long getlsbackup */
 
 static PyObject *
-gl_getlsbackup(PyObject *self, PyObject *args)
+gl_getlsbackup(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getlsbackup( );
@@ -5200,7 +5769,9 @@ gl_getlsbackup(PyObject *self, PyObject *args)
 /* long getresetls */
 
 static PyObject *
-gl_getresetls(PyObject *self, PyObject *args)
+gl_getresetls(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getresetls( );
@@ -5210,7 +5781,9 @@ gl_getresetls(PyObject *self, PyObject *args)
 /* long getdcm */
 
 static PyObject *
-gl_getdcm(PyObject *self, PyObject *args)
+gl_getdcm(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getdcm( );
@@ -5220,7 +5793,9 @@ gl_getdcm(PyObject *self, PyObject *args)
 /* long getzbuffer */
 
 static PyObject *
-gl_getzbuffer(PyObject *self, PyObject *args)
+gl_getzbuffer(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getzbuffer( );
@@ -5230,7 +5805,9 @@ gl_getzbuffer(PyObject *self, PyObject *args)
 /* long ismex */
 
 static PyObject *
-gl_ismex(PyObject *self, PyObject *args)
+gl_ismex(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = ismex( );
@@ -5240,7 +5817,9 @@ gl_ismex(PyObject *self, PyObject *args)
 /* long isobj long s */
 
 static PyObject *
-gl_isobj(PyObject *self, PyObject *args)
+gl_isobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	long arg1 ;
@@ -5253,7 +5832,9 @@ gl_isobj(PyObject *self, PyObject *args)
 /* long isqueued short s */
 
 static PyObject *
-gl_isqueued(PyObject *self, PyObject *args)
+gl_isqueued(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	short arg1 ;
@@ -5266,7 +5847,9 @@ gl_isqueued(PyObject *self, PyObject *args)
 /* long istag long s */
 
 static PyObject *
-gl_istag(PyObject *self, PyObject *args)
+gl_istag(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	long arg1 ;
@@ -5279,7 +5862,9 @@ gl_istag(PyObject *self, PyObject *args)
 /* long genobj */
 
 static PyObject *
-gl_genobj(PyObject *self, PyObject *args)
+gl_genobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = genobj( );
@@ -5289,7 +5874,9 @@ gl_genobj(PyObject *self, PyObject *args)
 /* long gentag */
 
 static PyObject *
-gl_gentag(PyObject *self, PyObject *args)
+gl_gentag(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = gentag( );
@@ -5299,7 +5886,9 @@ gl_gentag(PyObject *self, PyObject *args)
 /* long getbuffer */
 
 static PyObject *
-gl_getbuffer(PyObject *self, PyObject *args)
+gl_getbuffer(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getbuffer( );
@@ -5309,7 +5898,9 @@ gl_getbuffer(PyObject *self, PyObject *args)
 /* long getcolor */
 
 static PyObject *
-gl_getcolor(PyObject *self, PyObject *args)
+gl_getcolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getcolor( );
@@ -5319,7 +5910,9 @@ gl_getcolor(PyObject *self, PyObject *args)
 /* long getdisplaymode */
 
 static PyObject *
-gl_getdisplaymode(PyObject *self, PyObject *args)
+gl_getdisplaymode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getdisplaymode( );
@@ -5329,7 +5922,9 @@ gl_getdisplaymode(PyObject *self, PyObject *args)
 /* long getfont */
 
 static PyObject *
-gl_getfont(PyObject *self, PyObject *args)
+gl_getfont(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getfont( );
@@ -5339,7 +5934,9 @@ gl_getfont(PyObject *self, PyObject *args)
 /* long getheight */
 
 static PyObject *
-gl_getheight(PyObject *self, PyObject *args)
+gl_getheight(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getheight( );
@@ -5349,7 +5946,9 @@ gl_getheight(PyObject *self, PyObject *args)
 /* long gethitcode */
 
 static PyObject *
-gl_gethitcode(PyObject *self, PyObject *args)
+gl_gethitcode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = gethitcode( );
@@ -5359,7 +5958,9 @@ gl_gethitcode(PyObject *self, PyObject *args)
 /* long getlstyle */
 
 static PyObject *
-gl_getlstyle(PyObject *self, PyObject *args)
+gl_getlstyle(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getlstyle( );
@@ -5369,7 +5970,9 @@ gl_getlstyle(PyObject *self, PyObject *args)
 /* long getlwidth */
 
 static PyObject *
-gl_getlwidth(PyObject *self, PyObject *args)
+gl_getlwidth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getlwidth( );
@@ -5379,7 +5982,9 @@ gl_getlwidth(PyObject *self, PyObject *args)
 /* long getmap */
 
 static PyObject *
-gl_getmap(PyObject *self, PyObject *args)
+gl_getmap(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getmap( );
@@ -5389,7 +5994,9 @@ gl_getmap(PyObject *self, PyObject *args)
 /* long getplanes */
 
 static PyObject *
-gl_getplanes(PyObject *self, PyObject *args)
+gl_getplanes(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getplanes( );
@@ -5399,7 +6006,9 @@ gl_getplanes(PyObject *self, PyObject *args)
 /* long getwritemask */
 
 static PyObject *
-gl_getwritemask(PyObject *self, PyObject *args)
+gl_getwritemask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getwritemask( );
@@ -5409,7 +6018,9 @@ gl_getwritemask(PyObject *self, PyObject *args)
 /* long qtest */
 
 static PyObject *
-gl_qtest(PyObject *self, PyObject *args)
+gl_qtest(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = qtest( );
@@ -5419,7 +6030,9 @@ gl_qtest(PyObject *self, PyObject *args)
 /* long getlsrepeat */
 
 static PyObject *
-gl_getlsrepeat(PyObject *self, PyObject *args)
+gl_getlsrepeat(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getlsrepeat( );
@@ -5429,7 +6042,9 @@ gl_getlsrepeat(PyObject *self, PyObject *args)
 /* long getmonitor */
 
 static PyObject *
-gl_getmonitor(PyObject *self, PyObject *args)
+gl_getmonitor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getmonitor( );
@@ -5439,7 +6054,9 @@ gl_getmonitor(PyObject *self, PyObject *args)
 /* long getopenobj */
 
 static PyObject *
-gl_getopenobj(PyObject *self, PyObject *args)
+gl_getopenobj(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getopenobj( );
@@ -5449,7 +6066,9 @@ gl_getopenobj(PyObject *self, PyObject *args)
 /* long getpattern */
 
 static PyObject *
-gl_getpattern(PyObject *self, PyObject *args)
+gl_getpattern(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getpattern( );
@@ -5459,7 +6078,9 @@ gl_getpattern(PyObject *self, PyObject *args)
 /* long winget */
 
 static PyObject *
-gl_winget(PyObject *self, PyObject *args)
+gl_winget(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = winget( );
@@ -5469,7 +6090,9 @@ gl_winget(PyObject *self, PyObject *args)
 /* long winattach */
 
 static PyObject *
-gl_winattach(PyObject *self, PyObject *args)
+gl_winattach(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = winattach( );
@@ -5479,7 +6102,9 @@ gl_winattach(PyObject *self, PyObject *args)
 /* long getothermonitor */
 
 static PyObject *
-gl_getothermonitor(PyObject *self, PyObject *args)
+gl_getothermonitor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getothermonitor( );
@@ -5489,7 +6114,9 @@ gl_getothermonitor(PyObject *self, PyObject *args)
 /* long newpup */
 
 static PyObject *
-gl_newpup(PyObject *self, PyObject *args)
+gl_newpup(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = newpup( );
@@ -5499,7 +6126,9 @@ gl_newpup(PyObject *self, PyObject *args)
 /* long getvaluator short s */
 
 static PyObject *
-gl_getvaluator(PyObject *self, PyObject *args)
+gl_getvaluator(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	short arg1 ;
@@ -5512,7 +6141,9 @@ gl_getvaluator(PyObject *self, PyObject *args)
 /* void winset long s */
 
 static PyObject *
-gl_winset(PyObject *self, PyObject *args)
+gl_winset(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -5525,7 +6156,9 @@ gl_winset(PyObject *self, PyObject *args)
 /* long dopup long s */
 
 static PyObject *
-gl_dopup(PyObject *self, PyObject *args)
+gl_dopup(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	long arg1 ;
@@ -5538,7 +6171,9 @@ gl_dopup(PyObject *self, PyObject *args)
 /* void getdepth short r short r */
 
 static PyObject *
-gl_getdepth(PyObject *self, PyObject *args)
+gl_getdepth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5554,7 +6189,9 @@ gl_getdepth(PyObject *self, PyObject *args)
 /* void getcpos short r short r */
 
 static PyObject *
-gl_getcpos(PyObject *self, PyObject *args)
+gl_getcpos(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5570,7 +6207,9 @@ gl_getcpos(PyObject *self, PyObject *args)
 /* void getsize long r long r */
 
 static PyObject *
-gl_getsize(PyObject *self, PyObject *args)
+gl_getsize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -5586,7 +6225,9 @@ gl_getsize(PyObject *self, PyObject *args)
 /* void getorigin long r long r */
 
 static PyObject *
-gl_getorigin(PyObject *self, PyObject *args)
+gl_getorigin(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -5602,7 +6243,9 @@ gl_getorigin(PyObject *self, PyObject *args)
 /* void getviewport short r short r short r short r */
 
 static PyObject *
-gl_getviewport(PyObject *self, PyObject *args)
+gl_getviewport(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5622,7 +6265,9 @@ gl_getviewport(PyObject *self, PyObject *args)
 /* void gettp short r short r short r short r */
 
 static PyObject *
-gl_gettp(PyObject *self, PyObject *args)
+gl_gettp(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5642,7 +6287,9 @@ gl_gettp(PyObject *self, PyObject *args)
 /* void getgpos float r float r float r float r */
 
 static PyObject *
-gl_getgpos(PyObject *self, PyObject *args)
+gl_getgpos(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -5662,7 +6309,9 @@ gl_getgpos(PyObject *self, PyObject *args)
 /* void winposition long s long s long s long s */
 
 static PyObject *
-gl_winposition(PyObject *self, PyObject *args)
+gl_winposition(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -5684,7 +6333,9 @@ gl_winposition(PyObject *self, PyObject *args)
 /* void gRGBcolor short r short r short r */
 
 static PyObject *
-gl_gRGBcolor(PyObject *self, PyObject *args)
+gl_gRGBcolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5702,7 +6353,9 @@ gl_gRGBcolor(PyObject *self, PyObject *args)
 /* void gRGBmask short r short r short r */
 
 static PyObject *
-gl_gRGBmask(PyObject *self, PyObject *args)
+gl_gRGBmask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5720,7 +6373,9 @@ gl_gRGBmask(PyObject *self, PyObject *args)
 /* void getscrmask short r short r short r short r */
 
 static PyObject *
-gl_getscrmask(PyObject *self, PyObject *args)
+gl_getscrmask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5740,7 +6395,9 @@ gl_getscrmask(PyObject *self, PyObject *args)
 /* void getmcolor short s short r short r short r */
 
 static PyObject *
-gl_getmcolor(PyObject *self, PyObject *args)
+gl_getmcolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5761,7 +6418,9 @@ gl_getmcolor(PyObject *self, PyObject *args)
 /* void mapw long s short s short s float r float r float r float r float r float r */
 
 static PyObject *
-gl_mapw(PyObject *self, PyObject *args)
+gl_mapw(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short arg2 ;
@@ -5794,7 +6453,9 @@ gl_mapw(PyObject *self, PyObject *args)
 /* void mapw2 long s short s short s float r float r */
 
 static PyObject *
-gl_mapw2(PyObject *self, PyObject *args)
+gl_mapw2(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	short arg2 ;
@@ -5819,7 +6480,9 @@ gl_mapw2(PyObject *self, PyObject *args)
 /* void getcursor short r u_short r u_short r long r */
 
 static PyObject *
-gl_getcursor(PyObject *self, PyObject *args)
+gl_getcursor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	unsigned short arg2 ;
@@ -5839,7 +6502,9 @@ gl_getcursor(PyObject *self, PyObject *args)
 /* void cmode */
 
 static PyObject *
-gl_cmode(PyObject *self, PyObject *args)
+gl_cmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	cmode( );
 	Py_INCREF(Py_None);
@@ -5849,7 +6514,9 @@ gl_cmode(PyObject *self, PyObject *args)
 /* void concave long s */
 
 static PyObject *
-gl_concave(PyObject *self, PyObject *args)
+gl_concave(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -5862,7 +6529,9 @@ gl_concave(PyObject *self, PyObject *args)
 /* void curstype long s */
 
 static PyObject *
-gl_curstype(PyObject *self, PyObject *args)
+gl_curstype(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -5875,7 +6544,9 @@ gl_curstype(PyObject *self, PyObject *args)
 /* void drawmode long s */
 
 static PyObject *
-gl_drawmode(PyObject *self, PyObject *args)
+gl_drawmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -5888,7 +6559,9 @@ gl_drawmode(PyObject *self, PyObject *args)
 /* void gammaramp short s[256] short s[256] short s[256] */
 
 static PyObject *
-gl_gammaramp(PyObject *self, PyObject *args)
+gl_gammaramp(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 [ 256 ] ;
 	short arg2 [ 256 ] ;
@@ -5907,7 +6580,9 @@ gl_gammaramp(PyObject *self, PyObject *args)
 /* long getbackface */
 
 static PyObject *
-gl_getbackface(PyObject *self, PyObject *args)
+gl_getbackface(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getbackface( );
@@ -5917,7 +6592,9 @@ gl_getbackface(PyObject *self, PyObject *args)
 /* long getdescender */
 
 static PyObject *
-gl_getdescender(PyObject *self, PyObject *args)
+gl_getdescender(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getdescender( );
@@ -5927,7 +6604,9 @@ gl_getdescender(PyObject *self, PyObject *args)
 /* long getdrawmode */
 
 static PyObject *
-gl_getdrawmode(PyObject *self, PyObject *args)
+gl_getdrawmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getdrawmode( );
@@ -5937,7 +6616,9 @@ gl_getdrawmode(PyObject *self, PyObject *args)
 /* long getmmode */
 
 static PyObject *
-gl_getmmode(PyObject *self, PyObject *args)
+gl_getmmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getmmode( );
@@ -5947,7 +6628,9 @@ gl_getmmode(PyObject *self, PyObject *args)
 /* long getsm */
 
 static PyObject *
-gl_getsm(PyObject *self, PyObject *args)
+gl_getsm(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = getsm( );
@@ -5957,7 +6640,9 @@ gl_getsm(PyObject *self, PyObject *args)
 /* long getvideo long s */
 
 static PyObject *
-gl_getvideo(PyObject *self, PyObject *args)
+gl_getvideo(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	long arg1 ;
@@ -5970,7 +6655,9 @@ gl_getvideo(PyObject *self, PyObject *args)
 /* void imakebackground */
 
 static PyObject *
-gl_imakebackground(PyObject *self, PyObject *args)
+gl_imakebackground(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	imakebackground( );
 	Py_INCREF(Py_None);
@@ -5980,7 +6667,9 @@ gl_imakebackground(PyObject *self, PyObject *args)
 /* void lmbind short s short s */
 
 static PyObject *
-gl_lmbind(PyObject *self, PyObject *args)
+gl_lmbind(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -5996,7 +6685,9 @@ gl_lmbind(PyObject *self, PyObject *args)
 /* void lmdef long s long s long s float s[arg3] */
 
 static PyObject *
-gl_lmdef(PyObject *self, PyObject *args)
+gl_lmdef(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6021,7 +6712,9 @@ gl_lmdef(PyObject *self, PyObject *args)
 /* void mmode long s */
 
 static PyObject *
-gl_mmode(PyObject *self, PyObject *args)
+gl_mmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6034,7 +6727,9 @@ gl_mmode(PyObject *self, PyObject *args)
 /* void normal float s[3] */
 
 static PyObject *
-gl_normal(PyObject *self, PyObject *args)
+gl_normal(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 3 ] ;
 	if (!getifloatarray(args, 1, 0, 3 , arg1))
@@ -6047,7 +6742,9 @@ gl_normal(PyObject *self, PyObject *args)
 /* void overlay long s */
 
 static PyObject *
-gl_overlay(PyObject *self, PyObject *args)
+gl_overlay(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6060,7 +6757,9 @@ gl_overlay(PyObject *self, PyObject *args)
 /* void RGBrange short s short s short s short s short s short s short s short s */
 
 static PyObject *
-gl_RGBrange(PyObject *self, PyObject *args)
+gl_RGBrange(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -6094,7 +6793,9 @@ gl_RGBrange(PyObject *self, PyObject *args)
 /* void setvideo long s long s */
 
 static PyObject *
-gl_setvideo(PyObject *self, PyObject *args)
+gl_setvideo(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6110,7 +6811,9 @@ gl_setvideo(PyObject *self, PyObject *args)
 /* void shademodel long s */
 
 static PyObject *
-gl_shademodel(PyObject *self, PyObject *args)
+gl_shademodel(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6123,7 +6826,9 @@ gl_shademodel(PyObject *self, PyObject *args)
 /* void underlay long s */
 
 static PyObject *
-gl_underlay(PyObject *self, PyObject *args)
+gl_underlay(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6136,7 +6841,9 @@ gl_underlay(PyObject *self, PyObject *args)
 /* void bgnclosedline */
 
 static PyObject *
-gl_bgnclosedline(PyObject *self, PyObject *args)
+gl_bgnclosedline(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	bgnclosedline( );
 	Py_INCREF(Py_None);
@@ -6146,7 +6853,9 @@ gl_bgnclosedline(PyObject *self, PyObject *args)
 /* void bgnline */
 
 static PyObject *
-gl_bgnline(PyObject *self, PyObject *args)
+gl_bgnline(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	bgnline( );
 	Py_INCREF(Py_None);
@@ -6156,7 +6865,9 @@ gl_bgnline(PyObject *self, PyObject *args)
 /* void bgnpoint */
 
 static PyObject *
-gl_bgnpoint(PyObject *self, PyObject *args)
+gl_bgnpoint(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	bgnpoint( );
 	Py_INCREF(Py_None);
@@ -6166,7 +6877,9 @@ gl_bgnpoint(PyObject *self, PyObject *args)
 /* void bgnpolygon */
 
 static PyObject *
-gl_bgnpolygon(PyObject *self, PyObject *args)
+gl_bgnpolygon(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	bgnpolygon( );
 	Py_INCREF(Py_None);
@@ -6176,7 +6889,9 @@ gl_bgnpolygon(PyObject *self, PyObject *args)
 /* void bgnsurface */
 
 static PyObject *
-gl_bgnsurface(PyObject *self, PyObject *args)
+gl_bgnsurface(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	bgnsurface( );
 	Py_INCREF(Py_None);
@@ -6186,7 +6901,9 @@ gl_bgnsurface(PyObject *self, PyObject *args)
 /* void bgntmesh */
 
 static PyObject *
-gl_bgntmesh(PyObject *self, PyObject *args)
+gl_bgntmesh(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	bgntmesh( );
 	Py_INCREF(Py_None);
@@ -6196,7 +6913,9 @@ gl_bgntmesh(PyObject *self, PyObject *args)
 /* void bgntrim */
 
 static PyObject *
-gl_bgntrim(PyObject *self, PyObject *args)
+gl_bgntrim(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	bgntrim( );
 	Py_INCREF(Py_None);
@@ -6206,7 +6925,9 @@ gl_bgntrim(PyObject *self, PyObject *args)
 /* void endclosedline */
 
 static PyObject *
-gl_endclosedline(PyObject *self, PyObject *args)
+gl_endclosedline(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endclosedline( );
 	Py_INCREF(Py_None);
@@ -6216,7 +6937,9 @@ gl_endclosedline(PyObject *self, PyObject *args)
 /* void endline */
 
 static PyObject *
-gl_endline(PyObject *self, PyObject *args)
+gl_endline(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endline( );
 	Py_INCREF(Py_None);
@@ -6226,7 +6949,9 @@ gl_endline(PyObject *self, PyObject *args)
 /* void endpoint */
 
 static PyObject *
-gl_endpoint(PyObject *self, PyObject *args)
+gl_endpoint(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endpoint( );
 	Py_INCREF(Py_None);
@@ -6236,7 +6961,9 @@ gl_endpoint(PyObject *self, PyObject *args)
 /* void endpolygon */
 
 static PyObject *
-gl_endpolygon(PyObject *self, PyObject *args)
+gl_endpolygon(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endpolygon( );
 	Py_INCREF(Py_None);
@@ -6246,7 +6973,9 @@ gl_endpolygon(PyObject *self, PyObject *args)
 /* void endsurface */
 
 static PyObject *
-gl_endsurface(PyObject *self, PyObject *args)
+gl_endsurface(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endsurface( );
 	Py_INCREF(Py_None);
@@ -6256,7 +6985,9 @@ gl_endsurface(PyObject *self, PyObject *args)
 /* void endtmesh */
 
 static PyObject *
-gl_endtmesh(PyObject *self, PyObject *args)
+gl_endtmesh(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endtmesh( );
 	Py_INCREF(Py_None);
@@ -6266,7 +6997,9 @@ gl_endtmesh(PyObject *self, PyObject *args)
 /* void endtrim */
 
 static PyObject *
-gl_endtrim(PyObject *self, PyObject *args)
+gl_endtrim(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	endtrim( );
 	Py_INCREF(Py_None);
@@ -6276,7 +7009,9 @@ gl_endtrim(PyObject *self, PyObject *args)
 /* void blendfunction long s long s */
 
 static PyObject *
-gl_blendfunction(PyObject *self, PyObject *args)
+gl_blendfunction(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6292,7 +7027,9 @@ gl_blendfunction(PyObject *self, PyObject *args)
 /* void c3f float s[3] */
 
 static PyObject *
-gl_c3f(PyObject *self, PyObject *args)
+gl_c3f(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 3 ] ;
 	if (!getifloatarray(args, 1, 0, 3 , arg1))
@@ -6305,7 +7042,9 @@ gl_c3f(PyObject *self, PyObject *args)
 /* void c3i long s[3] */
 
 static PyObject *
-gl_c3i(PyObject *self, PyObject *args)
+gl_c3i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 [ 3 ] ;
 	if (!getilongarray(args, 1, 0, 3 , arg1))
@@ -6318,7 +7057,9 @@ gl_c3i(PyObject *self, PyObject *args)
 /* void c3s short s[3] */
 
 static PyObject *
-gl_c3s(PyObject *self, PyObject *args)
+gl_c3s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 [ 3 ] ;
 	if (!getishortarray(args, 1, 0, 3 , arg1))
@@ -6331,7 +7072,9 @@ gl_c3s(PyObject *self, PyObject *args)
 /* void c4f float s[4] */
 
 static PyObject *
-gl_c4f(PyObject *self, PyObject *args)
+gl_c4f(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] ;
 	if (!getifloatarray(args, 1, 0, 4 , arg1))
@@ -6344,7 +7087,9 @@ gl_c4f(PyObject *self, PyObject *args)
 /* void c4i long s[4] */
 
 static PyObject *
-gl_c4i(PyObject *self, PyObject *args)
+gl_c4i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 [ 4 ] ;
 	if (!getilongarray(args, 1, 0, 4 , arg1))
@@ -6357,7 +7102,9 @@ gl_c4i(PyObject *self, PyObject *args)
 /* void c4s short s[4] */
 
 static PyObject *
-gl_c4s(PyObject *self, PyObject *args)
+gl_c4s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 [ 4 ] ;
 	if (!getishortarray(args, 1, 0, 4 , arg1))
@@ -6370,7 +7117,9 @@ gl_c4s(PyObject *self, PyObject *args)
 /* void colorf float s */
 
 static PyObject *
-gl_colorf(PyObject *self, PyObject *args)
+gl_colorf(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	if (!getifloatarg(args, 1, 0, &arg1))
@@ -6383,7 +7132,9 @@ gl_colorf(PyObject *self, PyObject *args)
 /* void cpack long s */
 
 static PyObject *
-gl_cpack(PyObject *self, PyObject *args)
+gl_cpack(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6396,7 +7147,9 @@ gl_cpack(PyObject *self, PyObject *args)
 /* void czclear long s long s */
 
 static PyObject *
-gl_czclear(PyObject *self, PyObject *args)
+gl_czclear(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6412,7 +7165,9 @@ gl_czclear(PyObject *self, PyObject *args)
 /* void dglclose long s */
 
 static PyObject *
-gl_dglclose(PyObject *self, PyObject *args)
+gl_dglclose(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6425,7 +7180,9 @@ gl_dglclose(PyObject *self, PyObject *args)
 /* long dglopen char *s long s */
 
 static PyObject *
-gl_dglopen(PyObject *self, PyObject *args)
+gl_dglopen(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	string arg1 ;
@@ -6441,7 +7198,9 @@ gl_dglopen(PyObject *self, PyObject *args)
 /* long getgdesc long s */
 
 static PyObject *
-gl_getgdesc(PyObject *self, PyObject *args)
+gl_getgdesc(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	long arg1 ;
@@ -6454,7 +7213,9 @@ gl_getgdesc(PyObject *self, PyObject *args)
 /* void getnurbsproperty long s float r */
 
 static PyObject *
-gl_getnurbsproperty(PyObject *self, PyObject *args)
+gl_getnurbsproperty(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float arg2 ;
@@ -6467,7 +7228,9 @@ gl_getnurbsproperty(PyObject *self, PyObject *args)
 /* void glcompat long s long s */
 
 static PyObject *
-gl_glcompat(PyObject *self, PyObject *args)
+gl_glcompat(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6483,7 +7246,9 @@ gl_glcompat(PyObject *self, PyObject *args)
 /* void iconsize long s long s */
 
 static PyObject *
-gl_iconsize(PyObject *self, PyObject *args)
+gl_iconsize(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6499,7 +7264,9 @@ gl_iconsize(PyObject *self, PyObject *args)
 /* void icontitle char *s */
 
 static PyObject *
-gl_icontitle(PyObject *self, PyObject *args)
+gl_icontitle(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	string arg1 ;
 	if (!getistringarg(args, 1, 0, &arg1))
@@ -6512,7 +7279,9 @@ gl_icontitle(PyObject *self, PyObject *args)
 /* void lRGBrange short s short s short s short s short s short s long s long s */
 
 static PyObject *
-gl_lRGBrange(PyObject *self, PyObject *args)
+gl_lRGBrange(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -6546,7 +7315,9 @@ gl_lRGBrange(PyObject *self, PyObject *args)
 /* void linesmooth long s */
 
 static PyObject *
-gl_linesmooth(PyObject *self, PyObject *args)
+gl_linesmooth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6559,7 +7330,9 @@ gl_linesmooth(PyObject *self, PyObject *args)
 /* void lmcolor long s */
 
 static PyObject *
-gl_lmcolor(PyObject *self, PyObject *args)
+gl_lmcolor(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6572,7 +7345,9 @@ gl_lmcolor(PyObject *self, PyObject *args)
 /* void logicop long s */
 
 static PyObject *
-gl_logicop(PyObject *self, PyObject *args)
+gl_logicop(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6585,7 +7360,9 @@ gl_logicop(PyObject *self, PyObject *args)
 /* void lsetdepth long s long s */
 
 static PyObject *
-gl_lsetdepth(PyObject *self, PyObject *args)
+gl_lsetdepth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6601,7 +7378,9 @@ gl_lsetdepth(PyObject *self, PyObject *args)
 /* void lshaderange short s short s long s long s */
 
 static PyObject *
-gl_lshaderange(PyObject *self, PyObject *args)
+gl_lshaderange(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -6623,7 +7402,9 @@ gl_lshaderange(PyObject *self, PyObject *args)
 /* void n3f float s[3] */
 
 static PyObject *
-gl_n3f(PyObject *self, PyObject *args)
+gl_n3f(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 3 ] ;
 	if (!getifloatarray(args, 1, 0, 3 , arg1))
@@ -6636,7 +7417,9 @@ gl_n3f(PyObject *self, PyObject *args)
 /* void noborder */
 
 static PyObject *
-gl_noborder(PyObject *self, PyObject *args)
+gl_noborder(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	noborder( );
 	Py_INCREF(Py_None);
@@ -6646,7 +7429,9 @@ gl_noborder(PyObject *self, PyObject *args)
 /* void pntsmooth long s */
 
 static PyObject *
-gl_pntsmooth(PyObject *self, PyObject *args)
+gl_pntsmooth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6659,7 +7444,9 @@ gl_pntsmooth(PyObject *self, PyObject *args)
 /* void readsource long s */
 
 static PyObject *
-gl_readsource(PyObject *self, PyObject *args)
+gl_readsource(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6672,7 +7459,9 @@ gl_readsource(PyObject *self, PyObject *args)
 /* void rectzoom float s float s */
 
 static PyObject *
-gl_rectzoom(PyObject *self, PyObject *args)
+gl_rectzoom(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -6688,7 +7477,9 @@ gl_rectzoom(PyObject *self, PyObject *args)
 /* void sbox float s float s float s float s */
 
 static PyObject *
-gl_sbox(PyObject *self, PyObject *args)
+gl_sbox(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -6710,7 +7501,9 @@ gl_sbox(PyObject *self, PyObject *args)
 /* void sboxi long s long s long s long s */
 
 static PyObject *
-gl_sboxi(PyObject *self, PyObject *args)
+gl_sboxi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6732,7 +7525,9 @@ gl_sboxi(PyObject *self, PyObject *args)
 /* void sboxs short s short s short s short s */
 
 static PyObject *
-gl_sboxs(PyObject *self, PyObject *args)
+gl_sboxs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -6754,7 +7549,9 @@ gl_sboxs(PyObject *self, PyObject *args)
 /* void sboxf float s float s float s float s */
 
 static PyObject *
-gl_sboxf(PyObject *self, PyObject *args)
+gl_sboxf(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 ;
 	float arg2 ;
@@ -6776,7 +7573,9 @@ gl_sboxf(PyObject *self, PyObject *args)
 /* void sboxfi long s long s long s long s */
 
 static PyObject *
-gl_sboxfi(PyObject *self, PyObject *args)
+gl_sboxfi(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6798,7 +7597,9 @@ gl_sboxfi(PyObject *self, PyObject *args)
 /* void sboxfs short s short s short s short s */
 
 static PyObject *
-gl_sboxfs(PyObject *self, PyObject *args)
+gl_sboxfs(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 ;
 	short arg2 ;
@@ -6820,7 +7621,9 @@ gl_sboxfs(PyObject *self, PyObject *args)
 /* void setnurbsproperty long s float s */
 
 static PyObject *
-gl_setnurbsproperty(PyObject *self, PyObject *args)
+gl_setnurbsproperty(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	float arg2 ;
@@ -6836,7 +7639,9 @@ gl_setnurbsproperty(PyObject *self, PyObject *args)
 /* void setpup long s long s long s */
 
 static PyObject *
-gl_setpup(PyObject *self, PyObject *args)
+gl_setpup(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -6855,7 +7660,9 @@ gl_setpup(PyObject *self, PyObject *args)
 /* void smoothline long s */
 
 static PyObject *
-gl_smoothline(PyObject *self, PyObject *args)
+gl_smoothline(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6868,7 +7675,9 @@ gl_smoothline(PyObject *self, PyObject *args)
 /* void subpixel long s */
 
 static PyObject *
-gl_subpixel(PyObject *self, PyObject *args)
+gl_subpixel(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -6881,7 +7690,9 @@ gl_subpixel(PyObject *self, PyObject *args)
 /* void swaptmesh */
 
 static PyObject *
-gl_swaptmesh(PyObject *self, PyObject *args)
+gl_swaptmesh(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	swaptmesh( );
 	Py_INCREF(Py_None);
@@ -6891,7 +7702,9 @@ gl_swaptmesh(PyObject *self, PyObject *args)
 /* long swinopen long s */
 
 static PyObject *
-gl_swinopen(PyObject *self, PyObject *args)
+gl_swinopen(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	long arg1 ;
@@ -6904,7 +7717,9 @@ gl_swinopen(PyObject *self, PyObject *args)
 /* void v2f float s[2] */
 
 static PyObject *
-gl_v2f(PyObject *self, PyObject *args)
+gl_v2f(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 2 ] ;
 	if (!getifloatarray(args, 1, 0, 2 , arg1))
@@ -6917,7 +7732,9 @@ gl_v2f(PyObject *self, PyObject *args)
 /* void v2i long s[2] */
 
 static PyObject *
-gl_v2i(PyObject *self, PyObject *args)
+gl_v2i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 [ 2 ] ;
 	if (!getilongarray(args, 1, 0, 2 , arg1))
@@ -6930,7 +7747,9 @@ gl_v2i(PyObject *self, PyObject *args)
 /* void v2s short s[2] */
 
 static PyObject *
-gl_v2s(PyObject *self, PyObject *args)
+gl_v2s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 [ 2 ] ;
 	if (!getishortarray(args, 1, 0, 2 , arg1))
@@ -6943,7 +7762,9 @@ gl_v2s(PyObject *self, PyObject *args)
 /* void v3f float s[3] */
 
 static PyObject *
-gl_v3f(PyObject *self, PyObject *args)
+gl_v3f(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 3 ] ;
 	if (!getifloatarray(args, 1, 0, 3 , arg1))
@@ -6956,7 +7777,9 @@ gl_v3f(PyObject *self, PyObject *args)
 /* void v3i long s[3] */
 
 static PyObject *
-gl_v3i(PyObject *self, PyObject *args)
+gl_v3i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 [ 3 ] ;
 	if (!getilongarray(args, 1, 0, 3 , arg1))
@@ -6969,7 +7792,9 @@ gl_v3i(PyObject *self, PyObject *args)
 /* void v3s short s[3] */
 
 static PyObject *
-gl_v3s(PyObject *self, PyObject *args)
+gl_v3s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 [ 3 ] ;
 	if (!getishortarray(args, 1, 0, 3 , arg1))
@@ -6982,7 +7807,9 @@ gl_v3s(PyObject *self, PyObject *args)
 /* void v4f float s[4] */
 
 static PyObject *
-gl_v4f(PyObject *self, PyObject *args)
+gl_v4f(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	float arg1 [ 4 ] ;
 	if (!getifloatarray(args, 1, 0, 4 , arg1))
@@ -6995,7 +7822,9 @@ gl_v4f(PyObject *self, PyObject *args)
 /* void v4i long s[4] */
 
 static PyObject *
-gl_v4i(PyObject *self, PyObject *args)
+gl_v4i(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 [ 4 ] ;
 	if (!getilongarray(args, 1, 0, 4 , arg1))
@@ -7008,7 +7837,9 @@ gl_v4i(PyObject *self, PyObject *args)
 /* void v4s short s[4] */
 
 static PyObject *
-gl_v4s(PyObject *self, PyObject *args)
+gl_v4s(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	short arg1 [ 4 ] ;
 	if (!getishortarray(args, 1, 0, 4 , arg1))
@@ -7021,7 +7852,9 @@ gl_v4s(PyObject *self, PyObject *args)
 /* void videocmd long s */
 
 static PyObject *
-gl_videocmd(PyObject *self, PyObject *args)
+gl_videocmd(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -7034,7 +7867,9 @@ gl_videocmd(PyObject *self, PyObject *args)
 /* long windepth long s */
 
 static PyObject *
-gl_windepth(PyObject *self, PyObject *args)
+gl_windepth(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	long arg1 ;
@@ -7047,7 +7882,9 @@ gl_windepth(PyObject *self, PyObject *args)
 /* void wmpack long s */
 
 static PyObject *
-gl_wmpack(PyObject *self, PyObject *args)
+gl_wmpack(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -7060,7 +7897,9 @@ gl_wmpack(PyObject *self, PyObject *args)
 /* void zdraw long s */
 
 static PyObject *
-gl_zdraw(PyObject *self, PyObject *args)
+gl_zdraw(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -7073,7 +7912,9 @@ gl_zdraw(PyObject *self, PyObject *args)
 /* void zfunction long s */
 
 static PyObject *
-gl_zfunction(PyObject *self, PyObject *args)
+gl_zfunction(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -7086,7 +7927,9 @@ gl_zfunction(PyObject *self, PyObject *args)
 /* void zsource long s */
 
 static PyObject *
-gl_zsource(PyObject *self, PyObject *args)
+gl_zsource(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -7099,7 +7942,9 @@ gl_zsource(PyObject *self, PyObject *args)
 /* void zwritemask long s */
 
 static PyObject *
-gl_zwritemask(PyObject *self, PyObject *args)
+gl_zwritemask(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -7112,7 +7957,9 @@ gl_zwritemask(PyObject *self, PyObject *args)
 /* void v2d double s[2] */
 
 static PyObject *
-gl_v2d(PyObject *self, PyObject *args)
+gl_v2d(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double arg1 [ 2 ] ;
 	if (!getidoublearray(args, 1, 0, 2 , arg1))
@@ -7125,7 +7972,9 @@ gl_v2d(PyObject *self, PyObject *args)
 /* void v3d double s[3] */
 
 static PyObject *
-gl_v3d(PyObject *self, PyObject *args)
+gl_v3d(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double arg1 [ 3 ] ;
 	if (!getidoublearray(args, 1, 0, 3 , arg1))
@@ -7138,7 +7987,9 @@ gl_v3d(PyObject *self, PyObject *args)
 /* void v4d double s[4] */
 
 static PyObject *
-gl_v4d(PyObject *self, PyObject *args)
+gl_v4d(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	double arg1 [ 4 ] ;
 	if (!getidoublearray(args, 1, 0, 4 , arg1))
@@ -7151,7 +8002,9 @@ gl_v4d(PyObject *self, PyObject *args)
 /* void pixmode long s long s */
 
 static PyObject *
-gl_pixmode(PyObject *self, PyObject *args)
+gl_pixmode(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	long arg2 ;
@@ -7167,7 +8020,9 @@ gl_pixmode(PyObject *self, PyObject *args)
 /* long qgetfd */
 
 static PyObject *
-gl_qgetfd(PyObject *self, PyObject *args)
+gl_qgetfd(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long retval;
 	retval = qgetfd( );
@@ -7177,7 +8032,9 @@ gl_qgetfd(PyObject *self, PyObject *args)
 /* void dither long s */
 
 static PyObject *
-gl_dither(PyObject *self, PyObject *args)
+gl_dither(self, args)
+	PyObject *self;
+	PyObject *args;
 {
 	long arg1 ;
 	if (!getilongarg(args, 1, 0, &arg1))
@@ -7624,7 +8481,7 @@ static struct PyMethodDef gl_methods[] = {
 };
 
 void
-initgl(void)
+initgl()
 {
 	(void) Py_InitModule("gl", gl_methods);
 }

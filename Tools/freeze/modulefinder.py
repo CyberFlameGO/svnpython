@@ -8,17 +8,24 @@ import re
 import string
 import sys
 
+if sys.platform=="win32":
+    # On Windows, we can locate modules in the registry with
+    # the help of the win32api package.
+    try:
+        import win32api
+    except ImportError:
+        print "The win32api module is not available - modules listed"
+        print "in the registry will not be found."
+        win32api = None
+
+
 IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 IMPORT_FROM = dis.opname.index('IMPORT_FROM')
-STORE_NAME = dis.opname.index('STORE_NAME')
-STORE_FAST = dis.opname.index('STORE_FAST')
-STORE_GLOBAL = dis.opname.index('STORE_GLOBAL')
-STORE_OPS = [STORE_NAME, STORE_FAST, STORE_GLOBAL]
 
 # Modulefinder does a good job at simulating Python's, but it can not
 # handle __path__ modifications packages make at runtime.  Therefore there
 # is a mechanism whereby you can register extra paths in this map for a
-# package, and it will be honored.
+# package, and it will be honoured.
 
 # Note this is a mapping is lists of paths.
 packagePathMap = {}
@@ -289,9 +296,6 @@ class ModuleFinder:
                         if not self.badmodules.has_key(fullname):
                             self.badmodules[fullname] = {}
                         self.badmodules[fullname][m.__name__] = None
-            elif op in STORE_OPS:
-                # Skip; each IMPORT_FROM is followed by a STORE_* opcode
-                pass
             else:
                 lastname = None
         for c in co.co_consts:
@@ -328,17 +332,15 @@ class ModuleFinder:
                 return (None, None, ("", "", imp.C_BUILTIN))
 
             # Emulate the Registered Module support on Windows.
-            if sys.platform=="win32":
-                import _winreg
-                from _winreg import HKEY_LOCAL_MACHINE
+            if sys.platform=="win32" and win32api is not None:
+                HKEY_LOCAL_MACHINE = 0x80000002
                 try:
-                    pathname = _winreg.QueryValueEx(HKEY_LOCAL_MACHINE, \
-                        "Software\\Python\\PythonCore\\%s\\Modules\\%s" % (sys.winver, name))
+                    pathname = win32api.RegQueryValue(HKEY_LOCAL_MACHINE, "Software\\Python\\PythonCore\\%s\\Modules\\%s" % (sys.winver, name))
                     fp = open(pathname, "rb")
                     # XXX - To do - remove the hard code of C_EXTENSION.
                     stuff = "", "rb", imp.C_EXTENSION
                     return fp, pathname, stuff
-                except _winreg.error:
+                except win32api.error:
                     pass
 
             path = self.path
@@ -363,7 +365,7 @@ class ModuleFinder:
         keys = self.badmodules.keys()
         keys.sort()
         for key in keys:
-            # ... but not if they were explicitly excluded.
+            # ... but not if they were explicitely excluded.
             if key not in self.excludes:
                 mods = self.badmodules[key].keys()
                 mods.sort()

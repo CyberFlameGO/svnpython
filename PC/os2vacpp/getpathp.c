@@ -1,4 +1,3 @@
-
 /* Return the initial module search path. */
 /* Used by DOS, OS/2, Windows 3.1.  Works on NT too. */
 
@@ -7,7 +6,7 @@
 
 #ifdef MS_WIN32
 #include <windows.h>
-extern BOOL PyWin_IsWin32s(void);
+extern BOOL PyWin_IsWin32s();
 #endif
 
 #include <sys/types.h>
@@ -38,14 +37,14 @@ extern BOOL PyWin_IsWin32s(void);
  *
  * Otherwise, if there is a PYTHONPATH environment variable, we return that.
  *
- * Otherwise we try to find $progpath/lib/os.py, and if found, then
+ * Otherwise we try to find $progpath/lib/string.py, and if found, then
  * root is $progpath/lib, and we return Python path as compiled PYTHONPATH
  * with all "./lib" replaced by $root (as above).
  *
  */
 
 #ifndef LANDMARK
-#define LANDMARK "lib\\os.py"
+#define LANDMARK "lib\\string.py"
 #endif
 
 static char prefix[MAXPATHLEN+1];
@@ -55,7 +54,8 @@ static char *module_search_path = NULL;
 
 
 static int
-is_sep(char ch)	/* determine if "ch" is a separator character */
+is_sep(ch)	/* determine if "ch" is a separator character */
+	char ch;
 {
 #ifdef ALTSEP
 	return ch == SEP || ch == ALTSEP;
@@ -66,7 +66,8 @@ is_sep(char ch)	/* determine if "ch" is a separator character */
 
 
 static void
-reduce(char *dir)
+reduce(dir)
+	char *dir;
 {
 	int i = strlen(dir);
 	while (i > 0 && !is_sep(dir[i]))
@@ -76,7 +77,8 @@ reduce(char *dir)
 	
 
 static int
-exists(char *filename)
+exists(filename)
+	char *filename;
 {
 	struct stat buf;
 	return stat(filename, &buf) == 0;
@@ -84,7 +86,9 @@ exists(char *filename)
 
 
 static void
-join(char *buffer, char *stuff)
+join(buffer, stuff)
+	char *buffer;
+	char *stuff;
 {
 	int n, k;
 	if (is_sep(stuff[0]))
@@ -103,7 +107,9 @@ join(char *buffer, char *stuff)
 
 
 static int
-search_for_prefix(char *argv0_path, char *landmark)
+search_for_prefix(argv0_path, landmark)
+	char *argv0_path;
+	char *landmark;
 {
 	int n;
 
@@ -231,9 +237,9 @@ getpythonregpath(HKEY keyBase, BOOL bWin32s)
 #endif /* MS_WIN32 */
 
 static void
-get_progpath(void)
+get_progpath()
 {
-	extern char *Py_GetProgramName(void);
+	extern char *Py_GetProgramName();
 	char *path = getenv("PATH");
 	char *prog = Py_GetProgramName();
 
@@ -283,7 +289,7 @@ get_progpath(void)
 }
 
 static void
-calculate_path(void)
+calculate_path()
 {
 	char argv0_path[MAXPATHLEN+1];
 	char *buf;
@@ -435,7 +441,7 @@ calculate_path(void)
 /* External interface */
 
 char *
-Py_GetPath(void)
+Py_GetPath()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -444,7 +450,7 @@ Py_GetPath(void)
 }
 
 char *
-Py_GetPrefix(void)
+Py_GetPrefix()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -453,7 +459,7 @@ Py_GetPrefix(void)
 }
 
 char *
-Py_GetExecPrefix(void)
+Py_GetExecPrefix()
 {
 	if (!module_search_path)
 		calculate_path();
@@ -462,7 +468,7 @@ Py_GetExecPrefix(void)
 }
 
 char *
-Py_GetProgramFullPath(void)
+Py_GetProgramFullPath()
 {
 	if (!module_search_path)
 		calculate_path();

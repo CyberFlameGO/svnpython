@@ -6,8 +6,6 @@
 
 import binascii
 
-__all__ = ["encode","decode","encodestring","decodestring"]
-
 MAXLINESIZE = 76 # Excluding the CRLF
 MAXBINSIZE = (MAXLINESIZE/4)*3
 
@@ -55,10 +53,10 @@ def test():
     except getopt.error, msg:
         sys.stdout = sys.stderr
         print msg
-        print """usage: %s [-d|-e|-u|-t] [file|-]
+        print """usage: basd64 [-d] [-e] [-u] [-t] [file|-]
         -d, -u: decode
         -e: encode (default)
-        -t: encode and decode string 'Aladdin:open sesame'"""%sys.argv[0]
+        -t: decode string 'Aladdin:open sesame'"""
         sys.exit(2)
     func = encode
     for o, a in opts:

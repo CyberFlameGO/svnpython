@@ -1,3 +1,4 @@
+/* -*- C -*- */
 /* Module configuration */
 
 /* This file contains the table of built-in modules.
@@ -5,51 +6,45 @@
 
 #include "Python.h"
 
-extern void initarray(void);
+extern void initarray();
 #ifndef MS_WIN64
-extern void initaudioop(void);
+extern void initaudioop();
+extern void initbinascii();
 #endif
-extern void initbinascii(void);
-extern void initcmath(void);
-extern void initerrno(void);
-#ifdef WITH_CYCLE_GC
-extern void initgc(void);
-#endif
+extern void initcmath();
+extern void initerrno();
 #ifndef MS_WIN64
-extern void initimageop(void);
+extern void initimageop();
 #endif
-extern void initmath(void);
-extern void initmd5(void);
-extern void initnew(void);
-extern void initnt(void);
-extern void initoperator(void);
-extern void initregex(void);
+extern void initmath();
+extern void initmd5();
+extern void initnew();
+extern void initnt();
+extern void initoperator();
+extern void initregex();
 #ifndef MS_WIN64
-extern void initrgbimg(void);
+extern void initrgbimg();
 #endif
-extern void initrotor(void);
-extern void initsignal(void);
-extern void initsha(void);
-extern void initstrop(void);
-extern void initstruct(void);
-extern void inittime(void);
-extern void initthread(void);
-extern void initcStringIO(void);
-extern void initcPickle(void);
-extern void initpcre(void);
+extern void initrotor();
+extern void initsignal();
+extern void initsha();
+extern void initstrop();
+extern void initstruct();
+extern void inittime();
+extern void initthread();
+extern void initcStringIO();
+extern void initcPickle();
+extern void initpcre();
 #ifdef WIN32
-extern void initmsvcrt(void);
-extern void init_locale(void);
+extern void initmsvcrt();
+extern void init_locale();
 #endif
-extern void init_codecs(void);
-extern void initxreadlines(void);
-extern void init_weakref(void);
+extern void init_codecs();
 
-/* XXX tim: what's the purpose of ADDMODULE MARKER? */
 /* -- ADDMODULE MARKER 1 -- */
 
-extern void PyMarshal_Init(void);
-extern void initimp(void);
+extern void PyMarshal_Init();
+extern void initimp();
 
 struct _inittab _PyImport_Inittab[] = {
 
@@ -59,12 +54,11 @@ struct _inittab _PyImport_Inittab[] = {
         {"audioop", initaudioop},
 #endif
 #endif
+#ifndef MS_WIN64
         {"binascii", initbinascii},
+#endif
         {"cmath", initcmath},
         {"errno", initerrno},
-#ifdef WITH_CYCLE_GC
-        {"gc", initgc},
-#endif
 #ifndef MS_WIN64
         {"imageop", initimageop},
 #endif
@@ -95,10 +89,7 @@ struct _inittab _PyImport_Inittab[] = {
 #endif
 
         {"_codecs", init_codecs},
-	{"xreadlines", initxreadlines},
-	{"_weakref", init_weakref},
 
-/* XXX tim: what's the purpose of ADDMODULE MARKER? */
 /* -- ADDMODULE MARKER 2 -- */
 
         /* This module "lives in" with marshal.c */
@@ -111,7 +102,6 @@ struct _inittab _PyImport_Inittab[] = {
         {"__main__", NULL},
         {"__builtin__", NULL},
         {"sys", NULL},
-	{"exceptions", NULL},
 
         /* Sentinel */
         {0, 0}

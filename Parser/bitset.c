@@ -1,11 +1,11 @@
-
 /* Bitset primitives used by the parser generator */
 
 #include "pgenheaders.h"
 #include "bitset.h"
 
 bitset
-newbitset(int nbits)
+newbitset(nbits)
+	int nbits;
 {
 	int nbytes = NBYTES(nbits);
 	bitset ss = PyMem_NEW(BYTE, nbytes);
@@ -20,13 +20,16 @@ newbitset(int nbits)
 }
 
 void
-delbitset(bitset ss)
+delbitset(ss)
+	bitset ss;
 {
 	PyMem_DEL(ss);
 }
 
 int
-addbit(bitset ss, int ibit)
+addbit(ss, ibit)
+	bitset ss;
+	int ibit;
 {
 	int ibyte = BIT2BYTE(ibit);
 	BYTE mask = BIT2MASK(ibit);
@@ -39,14 +42,18 @@ addbit(bitset ss, int ibit)
 
 #if 0 /* Now a macro */
 int
-testbit(bitset ss, int ibit)
+testbit(ss, ibit)
+	bitset ss;
+	int ibit;
 {
 	return (ss[BIT2BYTE(ibit)] & BIT2MASK(ibit)) != 0;
 }
 #endif
 
 int
-samebitset(bitset ss1, bitset ss2, int nbits)
+samebitset(ss1, ss2, nbits)
+	bitset ss1, ss2;
+	int nbits;
 {
 	int i;
 	
@@ -57,7 +64,9 @@ samebitset(bitset ss1, bitset ss2, int nbits)
 }
 
 void
-mergebitset(bitset ss1, bitset ss2, int nbits)
+mergebitset(ss1, ss2, nbits)
+	bitset ss1, ss2;
+	int nbits;
 {
 	int i;
 	

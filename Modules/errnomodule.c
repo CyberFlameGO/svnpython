@@ -1,4 +1,3 @@
-
 /* Errno module */
 
 #include "Python.h"
@@ -24,16 +23,23 @@ static PyMethodDef errno_methods[] = {
 /* Helper function doing the dictionary inserting */
 
 static void
-_inscode(PyObject *d, PyObject *de, char *name, int code)
+_inscode(d, de, name, code)
+	PyObject *d;
+	PyObject *de;
+	char *name;
+	int code;
 {
-	PyObject *u = PyString_FromString(name);
-	PyObject *v = PyInt_FromLong((long) code);
+	PyObject *u;
+	PyObject *v;
 
-	/* Don't bother checking for errors; they'll be caught at the end
-	 * of the module initialization function by the caller of
-	 * initerrno().
-	 */
-	if (u && v) {
+	u = PyString_FromString(name);
+	v = PyInt_FromLong((long) code);
+
+	if (!u || !v) {
+		/* Don't bother reporting this error */
+		PyErr_Clear();
+	}
+	else {
 		/* insert in modules dict */
 		PyDict_SetItem(d, u, v);
 		/* insert in errorcode dict */
@@ -58,14 +64,14 @@ To map error codes to error messages, use the function os.strerror(),\n\
 e.g. os.strerror(2) could return 'No such file or directory'.";
 
 DL_EXPORT(void)
-initerrno(void)
+initerrno()
 {
 	PyObject *m, *d, *de;
 	m = Py_InitModule3("errno", errno_methods, errno__doc__);
 	d = PyModule_GetDict(m);
 	de = PyDict_New();
-	if (!d || !de || PyDict_SetItemString(d, "errorcode", de) < 0)
-		return;
+	if (de == NULL || PyDict_SetItemString(d, "errorcode", de))
+		Py_FatalError("can't initialize errno module");
 
 /* Macro so I don't have to edit each and every line below... */
 #define inscode(d, ds, de, name, code, comment) _inscode(d, de, name, code)

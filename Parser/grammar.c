@@ -1,4 +1,3 @@
-
 /* Grammar implementation */
 
 #include "pgenheaders.h"
@@ -12,7 +11,8 @@
 extern int Py_DebugFlag;
 
 grammar *
-newgrammar(int start)
+newgrammar(start)
+	int start;
 {
 	grammar *g;
 	
@@ -29,7 +29,10 @@ newgrammar(int start)
 }
 
 dfa *
-adddfa(grammar *g, int type, char *name)
+adddfa(g, type, name)
+	grammar *g;
+	int type;
+	char *name;
 {
 	dfa *d;
 	
@@ -47,7 +50,8 @@ adddfa(grammar *g, int type, char *name)
 }
 
 int
-addstate(dfa *d)
+addstate(d)
+	dfa *d;
 {
 	state *s;
 	
@@ -65,7 +69,9 @@ addstate(dfa *d)
 }
 
 void
-addarc(dfa *d, int from, int to, int lbl)
+addarc(d, from, to, lbl)
+	dfa *d;
+	int lbl;
 {
 	state *s;
 	arc *a;
@@ -83,7 +89,10 @@ addarc(dfa *d, int from, int to, int lbl)
 }
 
 int
-addlabel(labellist *ll, int type, char *str)
+addlabel(ll, type, str)
+	labellist *ll;
+	int type;
+	char *str;
 {
 	int i;
 	label *lb;
@@ -105,7 +114,10 @@ addlabel(labellist *ll, int type, char *str)
 /* Same, but rather dies than adds */
 
 int
-findlabel(labellist *ll, int type, char *str)
+findlabel(ll, type, str)
+	labellist *ll;
+	int type;
+	char *str;
 {
 	int i;
 	
@@ -120,10 +132,11 @@ findlabel(labellist *ll, int type, char *str)
 }
 
 /* Forward */
-static void translabel(grammar *, label *);
+static void translabel Py_PROTO((grammar *, label *));
 
 void
-translatelabels(grammar *g)
+translatelabels(g)
+	grammar *g;
 {
 	int i;
 
@@ -136,7 +149,9 @@ translatelabels(grammar *g)
 }
 
 static void
-translabel(grammar *g, label *lb)
+translabel(g, lb)
+	grammar *g;
+	label *lb;
 {
 	int i;
 	
@@ -194,18 +209,6 @@ translabel(grammar *g, label *lb)
 		else if (lb->lb_str[2] && lb->lb_str[3] == lb->lb_str[0]) {
 			int type = (int) PyToken_TwoChars(lb->lb_str[1],
 						   lb->lb_str[2]);
-			if (type != OP) {
-				lb->lb_type = type;
-				lb->lb_str = NULL;
-			}
-			else
-				printf("Unknown OP label %s\n",
-					lb->lb_str);
-		}
-		else if (lb->lb_str[2] && lb->lb_str[3] && lb->lb_str[4] == lb->lb_str[0]) {
-			int type = (int) PyToken_ThreeChars(lb->lb_str[1],
-							    lb->lb_str[2],
-							    lb->lb_str[3]);
 			if (type != OP) {
 				lb->lb_type = type;
 				lb->lb_str = NULL;
