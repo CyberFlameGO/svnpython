@@ -1,9 +1,3 @@
-# changes by dscherer@cmu.edu
-#   - created format and run menus
-#   - added silly advice dialog (apologies to Douglas Adams)
-#   - made Python Documentation work on Windows (requires win32api to
-#     do a ShellExecute(); other ways of starting a web browser are awkward)
-
 import sys
 import os
 import string
@@ -12,12 +6,8 @@ import imp
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
-try:
-    import webbrowser
-except ImportError:
-    import BrowserControl
-    webbrowser = BrowserControl
-    del BrowserControl
+
+import webbrowser
 import idlever
 import WindowList
 from IdleConf import idleconf
@@ -89,9 +79,6 @@ IDLE %s
 An Integrated DeveLopment Environment for Python
 
 by Guido van Rossum
-
-This version of IDLE has been modified by David Scherer
-  (dscherer@cmu.edu).  See readme.txt for details.
 """ % idlever.IDLE_VERSION
 
 class EditorWindow:
@@ -138,7 +125,6 @@ class EditorWindow:
         self.top.bind("<<close-window>>", self.close_event)
         text.bind("<<center-insert>>", self.center_insert_event)
         text.bind("<<help>>", self.help_dialog)
-        text.bind("<<good-advice>>", self.good_advice)
         text.bind("<<python-docs>>", self.python_docs)
         text.bind("<<about-idle>>", self.about_dialog)
         text.bind("<<open-module>>", self.open_module)
@@ -234,8 +220,6 @@ class EditorWindow:
     menu_specs = [
         ("file", "_File"),
         ("edit", "_Edit"),
-        ("format", "F_ormat"),
-        ("run", "_Run"),
         ("windows", "_Windows"),
         ("help", "_Help"),
     ]
@@ -297,9 +281,6 @@ class EditorWindow:
 
     helpfile = "help.txt"
 
-    def good_advice(self, event=None):
-        tkMessageBox.showinfo('Advice', "Don't Panic!", master=self.text)
-
     def help_dialog(self, event=None):
         try:
             helpfile = os.path.join(os.path.dirname(__file__), self.helpfile)
@@ -313,7 +294,7 @@ class EditorWindow:
     help_url = "http://www.python.org/doc/current/"
     if sys.platform[:3] == "win":
         fn = os.path.dirname(__file__)
-        fn = os.path.join(fn, "../../Doc/index.html")
+        fn = os.path.join(fn, os.pardir, os.pardir, "Doc", "index.html")
         fn = os.path.normpath(fn)
         if os.path.isfile(fn):
             help_url = fn
@@ -716,7 +697,6 @@ def get_accelerator(keydefs, event):
     s = re.sub(r"-[a-z]\b", lambda m: string.upper(m.group()), s)
     s = re.sub(r"\b\w+\b", lambda m: keynames.get(m.group(), m.group()), s)
     s = re.sub("Key-", "", s)
-    s = re.sub("Cancel","Ctrl-Break",s)   # dscherer@cmu.edu
     s = re.sub("Control-", "Ctrl-", s)
     s = re.sub("-", "+", s)
     s = re.sub("><", " ", s)
