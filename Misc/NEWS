@@ -7,21 +7,16 @@ Python News
 What's New in Python 2.4 alpha 2?
 =================================
 
-*Release date: 05-AUG-2004*
+*Release date: XX-XXX-2004*
 
 Core and builtins
 -----------------
-
-- Patch #980695:  Implements efficient string concatenation for statements
-  of the form s=s+t and s+=t.  This will vary across implementations.
-  Accordingly, the str.join() method is strongly preferred for performance
-  sensitive code.
 
 - PEP-0318, Function Decorators have been added to the language. These are
   implemented using the Java-style @decorator syntax, like so:
      @staticmethod
      def foo(bar):
-  (The PEP needs to be updated to reflect the current state)
+  (The PEP needs to be updated to reflect this XXX before 2.4a2)
 
 - When importing a module M raises an exception, Python no longer leaves M
   in sys.modules.  Before 2.4a2 it did, and a subsequent import of M would
@@ -69,17 +64,6 @@ Core and builtins
 
 - Implemented bind_textdomain_codeset() in locale module.
 
-- Added a workaround for proper string operations in BSDs.  str.split
-  and str.is* methods can now work correctly with UTF-8 locales.
-
-- Bug #989185: unicode.iswide() and unicode.width() is dropped and
-  the East Asian Width support is moved to unicodedata extension
-  module.
-
-- Patch #941229: The source code encoding in interactive mode
-  now refers sys.stdin.encoding not just ISO-8859-1 anymore.  This
-  allows for non-latin-1 users to write unicode strings directly.
-
 Extension modules
 -----------------
 
@@ -87,32 +71,6 @@ Extension modules
 
 Library
 -------
-
-- Added new codecs and aliases for ISO_8859-11, ISO_8859-16 and
-  TIS-620
-
-- Thanks to Edward Loper, doctest has been massively refactored, and
-  many new features were added.  Full docs will appear later.  For now
-  the doctest module comments and new test cases give good coverage.
-  The refactoring provides many hook points for customizing behavior
-  (such as how to report errors, and how to compare expected to actual
-  output).  New features include a <BLANKLINE> marker for expected
-  output containing blank lines, options to produce unified or context
-  diffs when actual output doesn't match expectations, an option to
-  normalize whitespace before comparing, and an option to use an
-  ellipsis to signify "don't care" regions of output.
-
-- Tkinter now supports the wish -sync and -use options.
-
-- The following methods in time support passing of None: ctime(), gmtime(),
-  and localtime().  If None is provided, the current time is used (the
-  same as when the argument is omitted).
-  [SF bug 658254, patch 663482]
-
-- nntplib does now allow to ignore a .netrc file.
-
-- urllib2 now recognizes Basic authentication even if other authentication
-  schemes are offered.
 
 - Bug #1001053.  wave.open() now accepts unicode filenames.
 

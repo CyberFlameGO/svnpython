@@ -2284,7 +2284,9 @@ PyCurses_TypeAhead(PyObject *self, PyObject *args)
 
   if (!PyArg_ParseTuple(args,"i;fd",&fd)) return NULL;
 
-  return PyCursesCheckERR(typeahead( fd ), "typeahead");
+  PyCursesCheckERR(typeahead( fd ), "typeahead");
+  Py_INCREF(Py_None);
+  return Py_None;
 }
 
 static PyObject *

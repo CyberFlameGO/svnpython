@@ -141,14 +141,6 @@ class Distribution:
         # for the setup script to override command classes
         self.cmdclass = {}
 
-        # 'command_packages' is a list of packages in which commands
-        # are searched for.  The factory for command 'foo' is expected
-        # to be named 'foo' in the module 'foo' in one of the packages
-        # named here.  This list is searched from the left; an error
-        # is raised if no named package provides the command being
-        # searched for.  (Always access using get_command_packages().)
-        self.command_packages = None
-
         # 'script_name' and 'script_args' are usually set to sys.argv[0]
         # and sys.argv[1:], but they can be overridden when the caller is
         # not necessarily a setup script run from the command-line.
@@ -414,8 +406,6 @@ class Distribution:
                         setattr(self, alias, not strtobool(val))
                     elif opt in ('verbose', 'dry_run'): # ugh!
                         setattr(self, opt, strtobool(val))
-                    else:
-                        setattr(self, opt, val)
                 except ValueError, msg:
                     raise DistutilsOptionError, msg
 
@@ -447,12 +437,11 @@ class Distribution:
         # We now have enough information to show the Macintosh dialog
         # that allows the user to interactively specify the "command line".
         #
-        toplevel_options = self._get_toplevel_options()
         if sys.platform == 'mac':
             import EasyDialogs
             cmdlist = self.get_command_list()
             self.script_args = EasyDialogs.GetArgv(
-                toplevel_options + self.display_options, cmdlist)
+                self.global_options + self.display_options, cmdlist)
 
         # We have to parse the command line a bit at a time -- global
         # options, then the first command, then its options, and so on --
@@ -462,7 +451,7 @@ class Distribution:
         # until we know what the command is.
 
         self.commands = []
-        parser = FancyGetopt(toplevel_options + self.display_options)
+        parser = FancyGetopt(self.global_options + self.display_options)
         parser.set_negative_aliases(self.negative_opt)
         parser.set_aliases({'licence': 'license'})
         args = parser.getopt(args=self.script_args, object=self)
@@ -498,17 +487,6 @@ class Distribution:
         return 1
 
     # parse_command_line()
-
-    def _get_toplevel_options (self):
-        """Return the non-display options recognized at the top level.
-
-        This includes options that are recognized *only* at the top
-        level as well as options recognized for commands.
-        """
-        return self.global_options + [
-            ("command-packages=", None,
-             "list of packages that provide distutils commands"),
-            ]
 
     def _parse_command_opts (self, parser, args):
         """Parse the command-line options for a single command.
@@ -608,6 +586,7 @@ class Distribution:
 
     # _parse_command_opts ()
 
+
     def finalize_options (self):
         """Set final values for all the options on the Distribution
         instance, analogous to the .finalize_options() method of Command
@@ -648,11 +627,7 @@ class Distribution:
         from distutils.cmd import Command
 
         if global_options:
-            if display_options:
-                options = self._get_toplevel_options()
-            else:
-                options = self.global_options
-            parser.set_option_table(options)
+            parser.set_option_table(self.global_options)
             parser.print_help("Global options:")
             print
 
@@ -816,19 +791,6 @@ class Distribution:
 
     # -- Command class/object methods ----------------------------------
 
-    def get_command_packages (self):
-        """Return a list of packages from which commands are loaded."""
-        pkgs = self.command_packages
-        if not isinstance(pkgs, type([])):
-            pkgs = string.split(pkgs or "", ",")
-            for i in range(len(pkgs)):
-                pkgs[i] = string.strip(pkgs[i])
-            pkgs = filter(None, pkgs)
-            if "distutils.command" not in pkgs:
-                pkgs.insert(0, "distutils.command")
-            self.command_packages = pkgs
-        return pkgs
-
     def get_command_class (self, command):
         """Return the class that implements the Distutils command named by
         'command'.  First we check the 'cmdclass' dictionary; if the
@@ -845,28 +807,26 @@ class Distribution:
         if klass:
             return klass
 
-        for pkgname in self.get_command_packages():
-            module_name = "%s.%s" % (pkgname, command)
-            klass_name = command
+        module_name = 'distutils.command.' + command
+        klass_name = command
 
-            try:
-                __import__ (module_name)
-                module = sys.modules[module_name]
-            except ImportError:
-                continue
+        try:
+            __import__ (module_name)
+            module = sys.modules[module_name]
+        except ImportError:
+            raise DistutilsModuleError, \
+                  "invalid command '%s' (no module named '%s')" % \
+                  (command, module_name)
 
-            try:
-                klass = getattr(module, klass_name)
-            except AttributeError:
-                raise DistutilsModuleError, \
-                      "invalid command '%s' (no class '%s' in module '%s')" \
-                      % (command, klass_name, module_name)
+        try:
+            klass = getattr(module, klass_name)
+        except AttributeError:
+            raise DistutilsModuleError, \
+                  "invalid command '%s' (no class '%s' in module '%s')" \
+                  % (command, klass_name, module_name)
 
-            self.cmdclass[command] = klass
-            return klass
-
-        raise DistutilsModuleError("invalid command '%s'" % command)
-
+        self.cmdclass[command] = klass
+        return klass
 
     # get_command_class ()
 

@@ -109,7 +109,6 @@ set_error_attr(PyObject *err, char *name, int value)
         Py_DECREF(v);
         return 0;
     }
-    Py_DECREF(v);
     return 1;
 }
 
@@ -136,7 +135,6 @@ set_error(xmlparseobject *self, enum XML_Error code)
           && set_error_attr(err, "lineno", lineno)) {
         PyErr_SetObject(ErrorObject, err);
     }
-    Py_DECREF(err);
     return NULL;
 }
 
@@ -750,7 +748,7 @@ my_ElementDeclHandler(void *userData,
             flag_error(self);
             goto finally;
         }
-        args = Py_BuildValue("NN", nameobj, modelobj);
+        args = Py_BuildValue("NN", string_intern(self, name), modelobj);
         if (args == NULL) {
             Py_DECREF(modelobj);
             flag_error(self);
@@ -1937,23 +1935,6 @@ MODULE_INITFUNC(void)
     MYCONST(XML_ERROR_UNCLOSED_CDATA_SECTION);
     MYCONST(XML_ERROR_EXTERNAL_ENTITY_HANDLING);
     MYCONST(XML_ERROR_NOT_STANDALONE);
-    MYCONST(XML_ERROR_UNEXPECTED_STATE);
-    MYCONST(XML_ERROR_ENTITY_DECLARED_IN_PE);
-    MYCONST(XML_ERROR_FEATURE_REQUIRES_XML_DTD);
-    MYCONST(XML_ERROR_CANT_CHANGE_FEATURE_ONCE_PARSING);
-    /* Added in Expat 1.95.7. */
-    MYCONST(XML_ERROR_UNBOUND_PREFIX);
-    /* Added in Expat 1.95.8. */
-    MYCONST(XML_ERROR_UNDECLARING_PREFIX);
-    MYCONST(XML_ERROR_INCOMPLETE_PE);
-    MYCONST(XML_ERROR_XML_DECL);
-    MYCONST(XML_ERROR_TEXT_DECL);
-    MYCONST(XML_ERROR_PUBLICID);
-    MYCONST(XML_ERROR_SUSPENDED);
-    MYCONST(XML_ERROR_NOT_SUSPENDED);
-    MYCONST(XML_ERROR_ABORTED);
-    MYCONST(XML_ERROR_FINISHED);
-    MYCONST(XML_ERROR_SUSPEND_PE);
 
     PyModule_AddStringConstant(errors_module, "__doc__",
                                "Constants used to describe error conditions.");

@@ -277,33 +277,13 @@ time_convert(double when, struct tm * (*function)(const time_t *))
 	return tmtotuple(p);
 }
 
-/* Parse arg tuple that can contain an optional float-or-None value;
-   format needs to be "|O:name".
-   Returns non-zero on success (parallels PyArg_ParseTuple).
-*/
-static int
-parse_time_double_args(PyObject *args, char *format, double *pwhen)
-{
-	PyObject *ot = NULL;
-
-	if (!PyArg_ParseTuple(args, format, &ot))
-		return 0;
-	if (ot == NULL || ot == Py_None)
-		*pwhen = floattime();
-	else {
-		double when = PyFloat_AsDouble(ot);
-		if (PyErr_Occurred())
-			return 0;
-		*pwhen = when;
-	}
-	return 1;
-}
-
 static PyObject *
 time_gmtime(PyObject *self, PyObject *args)
 {
 	double when;
-	if (!parse_time_double_args(args, "|O:gmtime", &when))
+	if (PyTuple_Size(args) == 0)
+		when = floattime();
+	if (!PyArg_ParseTuple(args, "|d:gmtime", &when))
 		return NULL;
 	return time_convert(when, gmtime);
 }
@@ -319,7 +299,9 @@ static PyObject *
 time_localtime(PyObject *self, PyObject *args)
 {
 	double when;
-	if (!parse_time_double_args(args, "|O:localtime", &when))
+	if (PyTuple_Size(args) == 0)
+		when = floattime();
+	if (!PyArg_ParseTuple(args, "|d:localtime", &when))
 		return NULL;
 	return time_convert(when, localtime);
 }
@@ -520,17 +502,14 @@ is used.");
 static PyObject *
 time_ctime(PyObject *self, PyObject *args)
 {
-	PyObject *ot = NULL;
+	double dt;
 	time_t tt;
 	char *p;
 
-	if (!PyArg_ParseTuple(args, "|O:ctime", &ot))
-		return NULL;
-	if (ot == NULL || ot == Py_None)
+	if (PyTuple_Size(args) == 0)
 		tt = time(NULL);
 	else {
-		double dt = PyFloat_AsDouble(ot);
-		if (PyErr_Occurred())
+		if (!PyArg_ParseTuple(args, "|d:ctime", &dt))
 			return NULL;
 		tt = _PyTime_DoubleToTimet(dt);
 		if (tt == (time_t)-1 && PyErr_Occurred())
