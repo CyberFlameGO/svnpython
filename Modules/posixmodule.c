@@ -432,8 +432,7 @@ os2_strerror(char *msgbuf, int msgbuflen, int errorcode, char *reason)
     if (rc == NO_ERROR)
         os2_formatmsg(msgbuf, msglen, reason);
     else
-        PyOS_snprintf(msgbuf, msgbuflen,
-        	      "unknown OS error #%d", errorcode);
+        sprintf(msgbuf, "unknown OS error #%d", errorcode);
 
     return msgbuf;
 }
@@ -1696,7 +1695,7 @@ posix_spawnv(PyObject *self, PyObject *args)
 		getitem = PyTuple_GetItem;
 	}
 	else {
-		PyErr_SetString(PyExc_TypeError, "spawnv() arg 2 must be a tuple or list");
+		PyErr_SetString(PyExc_TypeError, "spawmv() arg 2 must be a tuple or list");
 		return NULL;
 	}
 
@@ -2555,7 +2554,7 @@ _PyPopenCreateProcess(char *cmdstring,
 			x = i + strlen(s3) + strlen(cmdstring) + 1;
 			s2 = (char *)_alloca(x);
 			ZeroMemory(s2, x);
-			PyOS_snprintf(s2, x, "%s%s%s", s1, s3, cmdstring);
+			sprintf(s2, "%s%s%s", s1, s3, cmdstring);
 		}
 		else {
 			/*
@@ -2608,8 +2607,8 @@ _PyPopenCreateProcess(char *cmdstring,
 
 			s2 = (char *)_alloca(x);
 			ZeroMemory(s2, x);
-			PyOS_snprintf(
-				s2, x,
+			sprintf(
+				s2,
 				"%s \"%s%s%s\"",
 				modulepath,
 				s1,
@@ -5788,7 +5787,7 @@ static int insertvalues(PyObject *d)
     APIRET    rc;
     ULONG     values[QSV_MAX+1];
     PyObject *v;
-    char     *ver, tmp[50];
+    char     *ver, tmp[10];
 
     Py_BEGIN_ALLOW_THREADS
     rc = DosQuerySysInfo(1, QSV_MAX, &values[1], sizeof(values));
@@ -5815,9 +5814,8 @@ static int insertvalues(PyObject *d)
     case 40: ver = "4.00"; break;
     case 50: ver = "5.00"; break;
     default:
-        PyOS_snprintf(tmp, sizeof(tmp),
-        	      "%d-%d", values[QSV_VERSION_MAJOR],
-                      values[QSV_VERSION_MINOR]);
+        sprintf(tmp, "%d-%d", values[QSV_VERSION_MAJOR],
+                              values[QSV_VERSION_MINOR]);
         ver = &tmp[0];
     }
 

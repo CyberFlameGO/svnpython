@@ -1833,7 +1833,7 @@ PyObject *unicodeescape_string(const Py_UNICODE *s,
         }
 
         /* Map non-printable US ASCII to '\xhh' */
-        else if (ch < ' ' || ch >= 0x7F) {
+        else if (ch < ' ' || ch >= 128) {
             *p++ = '\\';
             *p++ = 'x';
             *p++ = hexdigit[(ch >> 4) & 0x000F];
@@ -5080,8 +5080,7 @@ formatfloat(Py_UNICODE *buf,
 	prec = 6;
     if (type == 'f' && (fabs(x) / 1e25) >= 1e25)
 	type = 'g';
-    PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%d%c",
-		  (flags & F_ALT) ? "#" : "", prec, type);
+    sprintf(fmt, "%%%s.%d%c", (flags & F_ALT) ? "#" : "", prec, type);
     /* worst case length calc to ensure no buffer overrun:
          fmt = %#.<prec>g
          buf = '-' + [0-9]*prec + '.' + 'e+' + (longest exp
@@ -5152,16 +5151,15 @@ formatint(Py_UNICODE *buf,
      */
     if (x == 0 && (flags & F_ALT) && (type == 'x' || type == 'X')) {
         /* Only way to know what the platform does is to try it. */
-        PyOS_snprintf(fmt, sizeof(fmt), type == 'x' ? "%#x" : "%#X", 0);
+        sprintf(fmt, type == 'x' ? "%#x" : "%#X", 0);
         if (fmt[1] != (char)type) {
             /* Supply our own leading 0x/0X -- needed under std C */
             use_native_c_format = 0;
-            PyOS_snprintf(fmt, sizeof(fmt), "0%c%%#.%dl%c", type, prec, type);
+            sprintf(fmt, "0%c%%#.%dl%c", type, prec, type);
         }
     }
     if (use_native_c_format)
-         PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%dl%c",
-		       (flags & F_ALT) ? "#" : "", prec, type);
+         sprintf(fmt, "%%%s.%dl%c", (flags & F_ALT) ? "#" : "", prec, type);
     return usprintf(buf, fmt, x);
 }
 
@@ -5302,7 +5300,6 @@ PyObject *PyUnicode_Format(PyObject *format,
 				    "incomplete format key");
 		    goto onError;
 		}
-#if 0
 		/* keys are converted to strings using UTF-8 and
 		   then looked up since Python uses strings to hold
 		   variables names etc. in its namespaces and we
@@ -5310,9 +5307,6 @@ PyObject *PyUnicode_Format(PyObject *format,
 		key = PyUnicode_EncodeUTF8(keystart,
 					   keylen,
 					   NULL);
-#else
-		key = PyUnicode_FromUnicode(keystart, keylen);
-#endif
 		if (key == NULL)
 		    goto onError;
 		if (args_owned) {

@@ -1452,12 +1452,12 @@ write_header(ProfilerObject *self)
         pack_add_info(self, "executable-version", buffer);
 
 #ifdef MS_WIN32
-    PyOS_snprintf(cwdbuffer, sizeof(cwdbuffer), "%I64d", frequency.QuadPart);
+    sprintf(cwdbuffer, "%I64d", frequency.QuadPart);
     pack_add_info(self, "reported-performance-frequency", cwdbuffer);
 #else
-    PyOS_snprintf(cwdbuffer, sizeof(cwdbuffer), "%lu", rusage_diff);
+    sprintf(cwdbuffer, "%lu", rusage_diff);
     pack_add_info(self, "observed-interval-getrusage", cwdbuffer);
-    PyOS_snprintf(cwdbuffer, sizeof(cwdbuffer), "%lu", timeofday_diff);
+    sprintf(cwdbuffer, "%lu", timeofday_diff);
     pack_add_info(self, "observed-interval-gettimeofday", cwdbuffer);
 #endif
 

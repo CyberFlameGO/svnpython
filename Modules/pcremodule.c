@@ -263,8 +263,7 @@ PyPcre_expand_escape(unsigned char *pattern, int pattern_len,
 	case('U'):    case('l'):    case('u'):
 	{
 		char message[50];
-		PyOS_snprintf(message, sizeof(message),
-			      "\\%c is not allowed", c);
+		sprintf(message, "\\%c is not allowed", c);
 		PyErr_SetString(ErrorObject, message);
 		return NULL;
 	}
@@ -496,7 +495,7 @@ PyPcre_expand(PyObject *self, PyObject *args)
 				if (result==Py_None)
 				{
 					char message[50];
-					PyOS_snprintf(message, sizeof(message),
+					sprintf(message, 
 						"group did not contribute to the match");
 					PyErr_SetString(ErrorObject, 
 							message);

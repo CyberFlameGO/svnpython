@@ -144,16 +144,16 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 {
 	int err = 0;
 	FILE *xfp;
-	char linebuf[2000];
+	char linebuf[1000];
 	int i;
 	if (filename == NULL || name == NULL)
 		return -1;
 #ifdef MPW
 	/* This is needed by MPW's File and Line commands */
-#define FMT "  File \"%.500s\"; line %d # in %.500s\n"
+#define FMT "  File \"%.900s\"; line %d # in %s\n"
 #else
 	/* This is needed by Emacs' compile command */
-#define FMT "  File \"%.500s\", line %d, in %.500s\n"
+#define FMT "  File \"%.900s\", line %d, in %s\n"
 #endif
 	xfp = fopen(filename, "r");
 	if (xfp == NULL) {
@@ -195,7 +195,7 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 			}
 		}
 	}
-	PyOS_snprintf(linebuf, sizeof(linebuf), FMT, filename, lineno, name);
+	sprintf(linebuf, FMT, filename, lineno, name);
 	err = PyFile_WriteString(linebuf, f);
 	if (xfp == NULL || err != 0)
 		return err;

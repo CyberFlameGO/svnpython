@@ -123,8 +123,7 @@ long PyThread_start_new_thread( void (*func)(void *), void *arg )
 
 	/* We are so very thread-safe... */
 	this_thread = atomic_add( &thread_count, 1 );
-	PyOS_snprintf(name, sizeof(name),
-		      "python thread (%d)", this_thread );
+	sprintf( name, "python thread (%d)", this_thread );
 
 	tid = spawn_thread( (thread_func)func, name,
 	                    B_NORMAL_PRIORITY, arg );
@@ -223,7 +222,7 @@ PyThread_type_lock PyThread_allocate_lock( void )
 	}
 
 	this_lock = atomic_add( &lock_count, 1 );
-	PyOS_snprintf(name, sizeof(name), "python lock (%d)", this_lock);
+	sprintf( name, "python lock (%d)", this_lock );
 
 	retval = benaphore_create( name, lock );
 	if( retval != EOK ) {

@@ -150,8 +150,7 @@ PyFloat_FromString(PyObject *v, char **pend)
 	if (end > last)
 		end = last;
 	if (end == s) {
-		PyOS_snprintf(buffer, sizeof(buffer),
-			      "invalid literal for float(): %.200s", s);
+		sprintf(buffer, "invalid literal for float(): %.200s", s);
 		PyErr_SetString(PyExc_ValueError, buffer);
 		return NULL;
 	}
@@ -160,8 +159,7 @@ PyFloat_FromString(PyObject *v, char **pend)
 	while (*end && isspace(Py_CHARMASK(*end)))
 		end++;
 	if (*end != '\0') {
-		PyOS_snprintf(buffer, sizeof(buffer),
-			      "invalid literal for float(): %.200s", s);
+		sprintf(buffer, "invalid literal for float(): %.200s", s);
 		PyErr_SetString(PyExc_ValueError, buffer);
 		return NULL;
 	}
@@ -225,8 +223,8 @@ PyFloat_AsDouble(PyObject *op)
 
 /* Methods */
 
-static void
-format_float(char *buf, size_t buflen, PyFloatObject *v, int precision)
+void
+PyFloat_AsStringEx(char *buf, PyFloatObject *v, int precision)
 {
 	register char *cp;
 	/* Subroutine for float_repr and float_print.
@@ -234,9 +232,7 @@ format_float(char *buf, size_t buflen, PyFloatObject *v, int precision)
 	   i.e., they should contain a decimal point or an exponent.
 	   However, %g may print the number as an integer;
 	   in such cases, we append ".0" to the string. */
-
-	assert(PyFloat_Check(v));
-	PyOS_snprintf(buf, buflen, "%.*g", precision, v->ob_fval);
+	sprintf(buf, "%.*g", precision, v->ob_fval);
 	cp = buf;
 	if (*cp == '-')
 		cp++;
@@ -251,16 +247,6 @@ format_float(char *buf, size_t buflen, PyFloatObject *v, int precision)
 		*cp++ = '0';
 		*cp++ = '\0';
 	}
-}
-
-/* XXX PyFloat_AsStringEx should not be a public API function (for one
-   XXX thing, its signature passes a buffer without a length; for another,
-   XXX it isn't useful outside this file).
-*/
-void
-PyFloat_AsStringEx(char *buf, PyFloatObject *v, int precision)
-{
-	format_float(buf, 100, v, precision);
 }
 
 /* Macro and helper that convert PyObject obj to a C double and store
@@ -313,19 +299,16 @@ convert_to_double(PyObject **v, double *dbl)
 #define PREC_REPR	17
 #define PREC_STR	12
 
-/* XXX PyFloat_AsString and PyFloat_AsReprString should be deprecated:
-   XXX they pass a char buffer without passing a length.
-*/
 void
 PyFloat_AsString(char *buf, PyFloatObject *v)
 {
-	format_float(buf, 100, v, PREC_STR);
+	PyFloat_AsStringEx(buf, v, PREC_STR);
 }
 
 void
 PyFloat_AsReprString(char *buf, PyFloatObject *v)
 {
-	format_float(buf, 100, v, PREC_REPR);
+	PyFloat_AsStringEx(buf, v, PREC_REPR);
 }
 
 /* ARGSUSED */
@@ -333,8 +316,7 @@ static int
 float_print(PyFloatObject *v, FILE *fp, int flags)
 {
 	char buf[100];
-	format_float(buf, sizeof(buf), v,
-		     (flags & Py_PRINT_RAW) ? PREC_STR : PREC_REPR);
+	PyFloat_AsStringEx(buf, v, flags&Py_PRINT_RAW ? PREC_STR : PREC_REPR);
 	fputs(buf, fp);
 	return 0;
 }
@@ -343,7 +325,7 @@ static PyObject *
 float_repr(PyFloatObject *v)
 {
 	char buf[100];
-	format_float(buf, sizeof(buf), v, PREC_REPR);
+	PyFloat_AsStringEx(buf, v, PREC_REPR);
 	return PyString_FromString(buf);
 }
 
@@ -351,7 +333,7 @@ static PyObject *
 float_str(PyFloatObject *v)
 {
 	char buf[100];
-	format_float(buf, sizeof(buf), v, PREC_STR);
+	PyFloat_AsStringEx(buf, v, PREC_STR);
 	return PyString_FromString(buf);
 }
 

@@ -23,8 +23,6 @@ class Bdb:
         self.fncache = {}
 
     def canonic(self, filename):
-        if filename == "<" + filename[1:-1] + ">":
-            return filename
         canonic = self.fncache.get(filename)
         if not canonic:
             canonic = os.path.abspath(filename)

@@ -131,15 +131,13 @@ weakref_repr(PyWeakReference *self)
 {
     char buffer[256];
     if (PyWeakref_GET_OBJECT(self) == Py_None) {
-        PyOS_snprintf(buffer, sizeof(buffer), "<weakref at %lx; dead>",
-		      (long)(self));
+        sprintf(buffer, "<weakref at %lx; dead>",
+                (long)(self));
     }
     else {
-        PyOS_snprintf(buffer, sizeof(buffer),
-		      "<weakref at %#lx; to '%.50s' at %#lx>",
-		      (long)(self),
-		      PyWeakref_GET_OBJECT(self)->ob_type->tp_name,
-		      (long)(PyWeakref_GET_OBJECT(self)));
+        sprintf(buffer, "<weakref at %#lx; to '%s' at %#lx>",
+                (long)(self), PyWeakref_GET_OBJECT(self)->ob_type->tp_name,
+                (long)(PyWeakref_GET_OBJECT(self)));
     }
     return PyString_FromString(buffer);
 }
@@ -267,10 +265,9 @@ static PyObject *
 proxy_repr(PyWeakReference *proxy)
 {
     char buf[160];
-    PyOS_snprintf(buf, sizeof(buf),
-		  "<weakref at %p to %.100s at %p>", proxy,
-		  PyWeakref_GET_OBJECT(proxy)->ob_type->tp_name,
-		  PyWeakref_GET_OBJECT(proxy));
+    sprintf(buf, "<weakref at %p to %.100s at %p>", proxy,
+            PyWeakref_GET_OBJECT(proxy)->ob_type->tp_name,
+            PyWeakref_GET_OBJECT(proxy));
     return PyString_FromString(buf);
 }
 

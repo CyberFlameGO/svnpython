@@ -1,7 +1,4 @@
 #include "Python.h"
-#if PY_VERSION_HEX < 0x020000B1
-#include <assert.h>
-#endif
 #include <ctype.h>
 
 #include "compile.h"
@@ -129,7 +126,7 @@ set_error(xmlparseobject *self)
     int column = XML_GetErrorColumnNumber(parser);
     enum XML_Error code = XML_GetErrorCode(parser);
 
-    PyOS_snprintf(buffer, sizeof(buffer), "%.200s: line %i, column %i",
+    sprintf(buffer, "%.200s: line %i, column %i",
             XML_ErrorString(code), lineno, column);
     err = PyObject_CallFunction(ErrorObject, "s", buffer);
     if (  err != NULL

@@ -231,10 +231,9 @@ emb_numargs(PyObject *self, PyObject *args)
     return Py_BuildValue("i", numargs);
 }
 
-static PyMethodDef EmbMethods[] = {
-    {"numargs", emb_numargs, METH_VARARGS,
-     "Return the number of arguments received by the process."},
-    {NULL, NULL, 0, NULL}
+static PyMethodDef EmbMethods[]={
+    {"numargs", emb_numargs, METH_VARARGS},
+    {NULL,      NULL}
 };
 \end{verbatim}
 
@@ -272,14 +271,14 @@ application to Python.
 % (what to watch out for)
 
 
-\section{Embedding Python in \Cpp
+\section{Embedding Python in \Cpp{}
      \label{embeddingInCplusplus}}
 
 It is also possible to embed Python in a \Cpp{} program; precisely how this
 is done will depend on the details of the \Cpp{} system used; in general you
-will need to write the main program in \Cpp, and use the \Cpp{} compiler
+will need to write the main program in \Cpp{}, and use the \Cpp{} compiler
 to compile and link your program.  There is no need to recompile Python
-itself using \Cpp.
+itself using \Cpp{}.
 
 
 \section{Linking Requirements

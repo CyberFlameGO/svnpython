@@ -1349,24 +1349,14 @@ eval_frame(PyFrameObject *f)
 				err = PyFile_WriteString(" ", w);
 			if (err == 0)
 				err = PyFile_WriteObject(v, w, Py_PRINT_RAW);
-			if (err == 0) {
+			if (err == 0 && PyString_Check(v)) {
 				/* XXX move into writeobject() ? */
-			    if (PyString_Check(v)) {
-				char *s = PyString_AS_STRING(v);
-				int len = PyString_GET_SIZE(v);
+				char *s = PyString_AsString(v);
+				int len = PyString_Size(v);
 				if (len > 0 &&
 				    isspace(Py_CHARMASK(s[len-1])) &&
 				    s[len-1] != ' ')
 					PyFile_SoftSpace(w, 0);
-			    } 
-			    else if (PyUnicode_Check(v)) {
-				Py_UNICODE *s = PyUnicode_AS_UNICODE(v);
-				int len = PyUnicode_GET_SIZE(v);
-				if (len > 0 &&
-				    Py_UNICODE_ISSPACE(s[len-1]) &&
-				    s[len-1] != ' ')
-				    PyFile_SoftSpace(w, 0);
-			    }
 			}
 			Py_DECREF(v);
 			Py_XDECREF(stream);
@@ -2560,15 +2550,7 @@ PyEval_EvalCodeEx(PyCodeObject *co, PyObject *globals, PyObject *locals,
 
   fail: /* Jump here from prelude on failure */
 
-	/* decref'ing the frame can cause __del__ methods to get invoked,
-	   which can call back into Python.  While we're done with the
-	   current Python frame (f), the associated C stack is still in use,
-	   so recursion_depth must be boosted for the duration.
-	*/
-	assert(tstate != NULL);
-	++tstate->recursion_depth;
         Py_DECREF(f);
-	--tstate->recursion_depth;
 	return retval;
 }
 

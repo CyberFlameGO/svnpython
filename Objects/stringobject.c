@@ -2876,9 +2876,7 @@ formatfloat(char *buf, size_t buflen, int flags,
 		prec = 6;
 	if (type == 'f' && fabs(x)/1e25 >= 1e25)
 		type = 'g';
-	PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%d%c",
-		      (flags&F_ALT) ? "#" : "",
-		      prec, type);
+	sprintf(fmt, "%%%s.%d%c", (flags&F_ALT) ? "#" : "", prec, type);
 	/* worst case length calc to ensure no buffer overrun:
 	     fmt = %#.<prec>g
 	     buf = '-' + [0-9]*prec + '.' + 'e+' + (longest exp
@@ -2891,7 +2889,7 @@ formatfloat(char *buf, size_t buflen, int flags,
 			"formatted float is too long (precision too large?)");
 		return -1;
 	}
-	PyOS_snprintf(buf, buflen, fmt, x);
+	sprintf(buf, fmt, x);
 	return strlen(buf);
 }
 
@@ -3049,9 +3047,7 @@ formatint(char *buf, size_t buflen, int flags,
 		return -1;
 	if (prec < 0)
 		prec = 1;
-	PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%dl%c",
-		      (flags&F_ALT) ? "#" : "", 
-		      prec, type);
+	sprintf(fmt, "%%%s.%dl%c", (flags&F_ALT) ? "#" : "", prec, type);
 	/* buf = '+'/'-'/'0'/'0x' + '[0-9]'*max(prec, len(x in octal))
 	   worst case buf = '0x' + [0-9]*prec, where prec >= 11 */
 	if (buflen <= 13 || buflen <= (size_t)2 + (size_t)prec) {
@@ -3059,7 +3055,7 @@ formatint(char *buf, size_t buflen, int flags,
 			"formatted integer is too long (precision too large?)");
 		return -1;
 	}
-	PyOS_snprintf(buf, buflen, fmt, x);
+	sprintf(buf, fmt, x);
 	/* When converting 0 under %#x or %#X, C leaves off the base marker,
 	 * but we want it (for consistency with other %#x conversions, and
 	 * for consistency with Python's hex() function).

@@ -19,7 +19,7 @@ raiseTestError(const char* test_name, const char* msg)
 	if (strlen(test_name) + strlen(msg) > sizeof(buf) - 50)
 		PyErr_SetString(TestError, "internal error msg too large");
 	else {
-		PyOS_snprintf(buf, sizeof(buf), "%s: %s", test_name, msg);
+		sprintf(buf, "%s: %s", test_name, msg);
 		PyErr_SetString(TestError, buf);
 	}
 	return NULL;
@@ -36,8 +36,7 @@ sizeof_error(const char* fatname, const char* typename,
         int expected, int got)
 {
 	char buf[1024];
-	PyOS_snprintf(buf, sizeof(buf), 
-		"%.200s #define == %d but sizeof(%.200s) == %d",
+	sprintf(buf, "%s #define == %d but sizeof(%s) == %d",
 		fatname, expected, typename, got);
 	PyErr_SetString(TestError, buf);
 	return (PyObject*)NULL;

@@ -9,10 +9,10 @@
 # 	This is a demo program of all Tix widgets available from Python. If
 #	you have installed Python & Tix properly, you can execute this as
 #
-#		% python tixwidgets.py
+#		% python tixwidget.py
 #
 
-import os, os.path, sys, Tix
+import os, sys, Tix
 from Tkconstants import *
 
 TCL_DONT_WAIT		= 1<<1
@@ -60,16 +60,16 @@ class Demo:
         help = Tix.Menubutton(w, text='Help', underline=0, takefocus=0)
         file.pack(side=LEFT)
         help.pack(side=RIGHT)
-        fm = Tix.Menu(file, tearoff=0)
+        fm = Tix.Menu(file)
         file['menu'] = fm
-        hm = Tix.Menu(help, tearoff=0)
+        hm = Tix.Menu(help)
         help['menu'] = hm
 
         if w.tk.eval ('info commands console') == "console":
             fm.add_command(label='Console', underline=1,
                            command=lambda w=w: w.tk.eval('console show'))
 
-        fm.add_command(label='Exit', underline=1,
+        fm.add_command(label='Exit', underline=1, accelerator='Ctrl+X',
                      command = lambda self=self: self.quitcmd () )
         hm.add_checkbutton(label='BalloonHelp', underline=0, command=ToggleHelp,
                            variable=self.useBalloons)
@@ -128,43 +128,25 @@ class Demo:
         z.wm_protocol("WM_DELETE_WINDOW", lambda self=self: self.quitcmd())
 
     def quitcmd (self):
-        """Quit our mainloop. It is up to you to call root.destroy() after."""
+        # self.root.destroy()
         self.exit = 0
 
     def loop(self):
-        import tkMessageBox, traceback
-        while self.exit < 0:
-            try:
         while self.exit < 0:
             self.root.tk.dooneevent(TCL_ALL_EVENTS)
-            except SystemExit:
-                #print 'Exit'
-                self.exit = 1
-                break
-            except KeyboardInterrupt:
-                if tkMessageBox.askquestion ('Interrupt', 'Really Quit?') == 'yes':
-                    # self.tk.eval('exit')
-                    return
-                else:
-                    pass
-                continue
-            except:
-                t, v, tb = sys.exc_info()
-                text = ""
-                for line in traceback.format_exception(t,v,tb):
-                    text += line + '\n'
-                try: tkMessageBox.showerror ('Error', text)
-                except: pass
-                tkinspect_quit (1)
+        # self.root.tk.dooneevent(TCL_DONT_WAIT)
 
     def destroy (self):
         self.root.destroy()
     
-def RunMain(root):
-    global demo
+def RunMain(top):
+    global demo, root
 
-    demo = Demo(root)
+    demo = Demo(top)
 
+    # top.withdraw()
+    # root = Tix.Toplevel()
+    root = top
     demo.build()
     demo.loop()
     demo.destroy()
@@ -518,32 +500,17 @@ def SList_reset(rh, list):
     list.update()
     rh.attach_widget(list)
 
-# See below why this is necessary.
-global image1
-image1 = None
 def MkSWindow(w):
-    global demo, image1
-
-    text = 'The TixScrolledWindow widget allows you to scroll any kind of Tk widget. It is more versatile than a scrolled canvas widget.'
-    
-    file = os.path.join(demo.dir, 'bitmaps', 'tix.gif')
-    if not os.path.isfile(file):
-        text += ' (Image missing)'
+    global demo
 
     top = Tix.Frame(w, width=330, height=330)
     bot = Tix.Frame(w)
     msg = Tix.Message(top, 
 		      relief=Tix.FLAT, width=200, anchor=Tix.N,
-		      text=text)
-
+		      text='The TixScrolledWindow widget allows you to scroll any kind of Tk widget. It is more versatile than a scrolled canvas widget.')
     win = Tix.ScrolledWindow(top, scrollbar='auto')
-
-    # This image is not showing up under Python unless it is set to a
-    # global variable - no problem under Tcl. I assume it is being garbage
-    # collected some how, even though the tcl command 'image names' shows
-    # that as far as Tcl is concerned, the image exists and is called pyimage1.
-    image1 = Tix.Image('photo', file=file)
-    lbl = Tix.Label(win.window, image=image1)
+    image = Tix.Image('photo', file=demo.dir + "/bitmaps/tix.gif")
+    lbl = Tix.Label(win.window, image=image)
     lbl.pack(expand=1, fill=Tix.BOTH)
 
     win.place(x=30, y=150, width=190, height=120)
@@ -614,8 +581,7 @@ def MkPanedWindow(w):
     msg = Tix.Message(w, 
 		      relief=Tix.FLAT, width=240, anchor=Tix.N,
 		      text='The PanedWindow widget allows the user to interactively manipulate the sizes of several panes. The panes can be arranged either vertically or horizontally.')
-    group = Tix.LabelEntry(w, label='Newsgroup:', options='entry.width 25')
-    group.entry.insert(0,'comp.lang.python')
+    group = Tix.Label(w, text='Newsgroup: comp.lang.python')
     pane = Tix.PanedWindow(w, orientation='vertical')
 
     p1 = pane.add('list', min=70, size=100)
@@ -623,18 +589,18 @@ def MkPanedWindow(w):
     list = Tix.ScrolledListBox(p1)
     text = Tix.ScrolledText(p2)
 
-    list.listbox.insert(Tix.END, "  12324 Re: Tkinter is good for your health")
-    list.listbox.insert(Tix.END, "+ 12325 Re: Tkinter is good for your health")
-    list.listbox.insert(Tix.END, "+ 12326 Re: Tix is even better for your health (Was: Tkinter is good...)")
-    list.listbox.insert(Tix.END, "  12327 Re: Tix is even better for your health (Was: Tkinter is good...)")
-    list.listbox.insert(Tix.END, "+ 12328 Re: Tix is even better for your health (Was: Tkinter is good...)")
-    list.listbox.insert(Tix.END, "  12329 Re: Tix is even better for your health (Was: Tkinter is good...)")
-    list.listbox.insert(Tix.END, "+ 12330 Re: Tix is even better for your health (Was: Tkinter is good...)")
+    list.listbox.insert(Tix.END, "  12324 Re: TK is good for your health")
+    list.listbox.insert(Tix.END, "+ 12325 Re: TK is good for your health")
+    list.listbox.insert(Tix.END, "+ 12326 Re: Tix is even better for your health (Was: TK is good...)")
+    list.listbox.insert(Tix.END, "  12327 Re: Tix is even better for your health (Was: TK is good...)")
+    list.listbox.insert(Tix.END, "+ 12328 Re: Tix is even better for your health (Was: TK is good...)")
+    list.listbox.insert(Tix.END, "  12329 Re: Tix is even better for your health (Was: TK is good...)")
+    list.listbox.insert(Tix.END, "+ 12330 Re: Tix is even better for your health (Was: TK is good...)")
 
     text.text['bg'] = list.listbox['bg']
     text.text['wrap'] = 'none'
     text.text.insert(Tix.END, """
-Mon, 19 Jun 1995 11:39:52        comp.lang.python              Thread   34 of  220
+Mon, 19 Jun 1995 11:39:52        comp.lang.tcl              Thread   34 of  220
 Lines 353       A new way to put text and bitmaps together iNo responses
 ioi@blue.seas.upenn.edu                Ioi K. Lam at University of Pennsylvania
 
@@ -751,7 +717,6 @@ samples = {'Balloon'		: 'Balloon',
 	   'Control'		: 'Control',
 	   'Notebook'		: 'NoteBook',
 	   'Option Menu'	: 'OptMenu',
-	   'Paned Window'	: 'PanedWin',
 	   'Popup Menu'		: 'PopMenu',
 	   'ScrolledHList (1)'	: 'SHList1',
 	   'ScrolledHList (2)'	: 'SHList2',
@@ -830,8 +795,8 @@ samples = {'Balloon'		: 'Balloon',
 ##	
 ##	set manager {
 ##na	    {f ListNoteBook		ListNBK.tcl	}
-##done	    {f NoteBook			NoteBook.tcl	}
-##done	    {f PanedWindow		PanedWin.tcl	}
+##	    {f NoteBook			NoteBook.tcl	}
+##	    {f PanedWindow		PanedWin.tcl	}
 ##	}
 ##	
 ##	set misc {
@@ -852,7 +817,7 @@ samples = {'Balloon'		: 'Balloon',
 stypes = {}
 stypes['widget'] = ['Balloon', 'Button Box', 'Combo Box', 'Control',
                     'Directory List', 'Directory Tree',
-		    'Notebook', 'Option Menu', 'Popup Menu', 'Paned Window',
+		    'Notebook', 'Option Menu', 'Popup Menu',
 		    'ScrolledHList (1)', 'ScrolledHList (2)', 'Tree (dynamic)']
 stypes['image'] = ['Compound Image']
 
@@ -861,57 +826,43 @@ def MkSample(nb, name):
     prefix = Tix.OptionName(w)
     if not prefix:
 	prefix = ''
-    else:
-	prefix = '*' + prefix
-    w.option_add(prefix + '*TixLabelFrame*label.padX', 4)
+    w.option_add('*' + prefix + '*TixLabelFrame*label.padX', 4)
 
-    pane = Tix.PanedWindow(w, orientation='horizontal')
-    pane.pack(side=Tix.TOP, expand=1, fill=Tix.BOTH)
-    f1 = pane.add('list', expand='1')
-    f2 = pane.add('text', expand='5')
-    f1['relief'] = 'flat'
-    f2['relief'] = 'flat'
+    lab = Tix.Label(w, text='Select a sample program:', anchor=Tix.W)
+    lab1 = Tix.Label(w, text='Source:', anchor=Tix.W)
 
-    lab = Tix.Label(f1, text='Select a sample program:', anchor=Tix.W)
-    lab.pack(side=Tix.TOP, expand=0, fill=Tix.X, padx=5, pady=5)
-    lab1 = Tix.Label(f2, text='Source:', anchor=Tix.W)
-    lab1.pack(side=Tix.TOP, expand=0, fill=Tix.X, padx=5, pady=5)
+    slb = Tix.ScrolledHList(w, options='listbox.exportSelection 0')
+    slb.hlist['command'] = lambda args=0, w=w,slb=slb: Sample_Action(w, slb, 'run')
+    slb.hlist['browsecmd'] = lambda args=0, w=w,slb=slb: Sample_Action(w, slb, 'browse')
 
-    slb = Tix.Tree(f1, options='hlist.width 25')
-    slb.pack(side=Tix.TOP, expand=1, fill=Tix.BOTH, padx=5)
-
-    stext = Tix.ScrolledText(f2, name='stext')
+    stext = Tix.ScrolledText(w, name='stext')
     font = root.tk.eval('tix option get fixed_font')
     stext.text.config(font=font)
+    # stext.text.bind('<1>', stext.text.focus())
     stext.text.bind('<Up>', lambda w=stext.text: w.yview(scroll='-1 unit'))
     stext.text.bind('<Down>', lambda w=stext.text: w.yview(scroll='1 unit'))
     stext.text.bind('<Left>', lambda w=stext.text: w.xview(scroll='-1 unit'))
     stext.text.bind('<Right>', lambda w=stext.text: w.xview(scroll='1 unit'))
-    stext.pack(side=Tix.TOP, expand=1, fill=Tix.BOTH, padx=7)
 
-    frame = Tix.Frame(f2, name='frame')
-    frame.pack(side=Tix.TOP, expand=0, fill=Tix.X, padx=7)
+    run = Tix.Button(w, text='Run ...', name='run', command=lambda args=0, w=w,slb=slb: Sample_Action(w, slb, 'run'))
+    view = Tix.Button(w, text='View Source ...', name='view', command=lambda args=0,w=w,slb=slb: Sample_Action(w, slb, 'view'))
 
-    run = Tix.Button(frame, text='Run ...', name='run')
-    view = Tix.Button(frame, text='View Source ...', name='view')
-    run.pack(side=Tix.LEFT, expand=0, fill=Tix.NONE)
-    view.pack(side=Tix.LEFT, expand=0, fill=Tix.NONE)
+    lab.form(top=0, left=0, right='&'+str(slb))
+    slb.form(left=0, top=lab, bottom=-4)
+    lab1.form(left='&'+str(stext), top=0, right='&'+str(stext), bottom=stext)
+    run.form(left=str(slb)+' 30', bottom=-4)
+    view.form(left=run, bottom=-4)
+    stext.form(bottom=str(run)+' -5', left='&'+str(run), right='-0', top='&'+str(slb))
 
     stext.text['bg'] = slb.hlist['bg']
     stext.text['state'] = 'disabled'
     stext.text['wrap'] = 'none'
-    stext.text['width'] = 80
 
     slb.hlist['separator'] = '.'
     slb.hlist['width'] = 25
     slb.hlist['drawbranch'] = 0
     slb.hlist['indent'] = 10
     slb.hlist['wideselect'] = 1
-    slb.hlist['command'] = lambda args=0, w=w,slb=slb,stext=stext,run=run,view=view: Sample_Action(w, slb, stext, run, view, 'run')
-    slb.hlist['browsecmd'] = lambda args=0, w=w,slb=slb,stext=stext,run=run,view=view: Sample_Action(w, slb, stext, run, view, 'browse')
-
-    run['command']      = lambda args=0, w=w,slb=slb,stext=stext,run=run,view=view: Sample_Action(w, slb, stext, run, view, 'run')
-    view['command'] = lambda args=0, w=w,slb=slb,stext=stext,run=run,view=view: Sample_Action(w, slb, stext, run, view, 'view')
 
     for type in ['widget', 'image']:
 	if type != 'widget':
@@ -928,8 +879,12 @@ def MkSample(nb, name):
     run['state'] = 'disabled'
     view['state'] = 'disabled'
 
-def Sample_Action(w, slb, stext, run, view, action):
+def Sample_Action(w, slb, action):
     global demo
+
+    run = w._nametowidget(str(w) + '.run')
+    view = w._nametowidget(str(w) + '.view')
+    stext = w._nametowidget(str(w) + '.stext')
 
     hlist = slb.hlist
     anchor = hlist.info_anchor()

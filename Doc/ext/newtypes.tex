@@ -77,9 +77,8 @@ static PyTypeObject noddy_NoddyType = {
 };
 
 static PyMethodDef noddy_methods[] = {
-    {"new_noddy", noddy_new_noddy, METH_VARARGS,
-     "Create a new Noddy object."},
-    {NULL, NULL, 0, NULL}
+    { "new_noddy", noddy_new_noddy, METH_VARARGS },
+    {NULL, NULL}
 };
 
 DL_EXPORT(void)
@@ -582,11 +581,9 @@ Here is an example:
 
 \begin{verbatim}
 static PyMethodDef newdatatype_methods[] = {
-    {"getSize", (PyCFunction)newdatatype_getSize, METH_VARARGS,
-     "Return the current size."},
-    {"setSize", (PyCFunction)newdatatype_setSize, METH_VARARGS,
-     "Set the size."},
-    {NULL, NULL, 0, NULL}           /* sentinel */
+    {"getSize", (PyCFunction)newdatatype_getSize, METH_VARARGS},
+    {"setSize", (PyCFunction)newdatatype_setSize, METH_VARARGS},
+    {NULL,      NULL}           /* sentinel */
 };
 
 static PyObject *

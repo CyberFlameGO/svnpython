@@ -102,8 +102,7 @@ structseq_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	len = PySequence_Length(arg);
 	required_len = REAL_SIZE_TP(type);
 	if (len != required_len) {
-		PyOS_snprintf(
-			msgbuf, sizeof(msgbuf),
+		sprintf(msgbuf,
 			"constructor takes exactly %d arguments (%d given)",
 			required_len,
 			len);

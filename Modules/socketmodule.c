@@ -1481,11 +1481,6 @@ PySocketSock_recv(PySocketSockObject *s, PyObject *args)
 	PyObject *buf;
 	if (!PyArg_ParseTuple(args, "i|i:recv", &len, &flags))
 		return NULL;
-        if (len < 0) {
-		PyErr_SetString(PyExc_ValueError,
-				"negative buffersize in connect");
-		return NULL;
-	}
 	buf = PyString_FromStringAndSize((char *) 0, len);
 	if (buf == NULL)
 		return NULL;
@@ -1768,11 +1763,9 @@ PySocketSock_repr(PySocketSockObject *s)
 		return NULL;
 	}
 #endif
-	PyOS_snprintf(buf, sizeof(buf),
-		      "<socket object, fd=%ld, family=%d, type=%d, protocol=%d>",
-		      (long)s->sock_fd, s->sock_family,
-		      s->sock_type,
-		      s->sock_proto);
+	sprintf(buf,
+		"<socket object, fd=%ld, family=%d, type=%d, protocol=%d>",
+		(long)s->sock_fd, s->sock_family, s->sock_type, s->sock_proto);
 	return PyString_FromString(buf);
 }
 
@@ -1854,7 +1847,7 @@ getpeername() -- return remote address (*)\n\
 getsockname() -- return local address\n\
 getsockopt() -- get socket options\n\
 listen() -- start listening for incoming connections\n\
-makefile() -- return a file object corresponding to the socket (*)\n\
+makefile() -- return a file object corresponding tot the socket (*)\n\
 recv() -- receive data\n\
 recvfrom() -- receive data and sender's address\n\
 send() -- send data, may not send all of it\n\
@@ -3058,8 +3051,7 @@ NTinit(void)
 		    "WSAStartup failed: requested version not supported");
 		break;
 	default:
-		PyOS_snprintf(buf, sizeof(buf),
-			      "WSAStartup failed: error code %d", ret);
+		sprintf(buf, "WSAStartup failed: error code %d", ret);
 		PyErr_SetString(PyExc_ImportError, buf);
 		break;
 	}
@@ -3089,8 +3081,7 @@ OS2init(void)
 	    return 1; /* Indicate Success */
     }
 
-    PyOS_snprintf(reason, sizeof(reason),
-		  "OS/2 TCP/IP Error# %d", sock_errno());
+    sprintf(reason, "OS/2 TCP/IP Error# %d", sock_errno());
     PyErr_SetString(PyExc_ImportError, reason);
 
     return 0;  /* Indicate Failure */

@@ -121,9 +121,14 @@ open_the_file(PyFileObject *f, char *name, char *mode)
 	}
 	if (f->f_fp == NULL) {
 #ifdef NO_FOPEN_ERRNO
-		/* Metroworks only, not testable, so unchanged */
+		/* Metroworks only, wich does not always sets errno */
 		if (errno == 0) {
-			PyErr_SetString(PyExc_IOError, "Cannot open file");
+			PyObject *v;
+			v = Py_BuildValue("(is)", 0, "Cannot open file");
+			if (v != NULL) {
+				PyErr_SetObject(PyExc_IOError, v);
+				Py_DECREF(v);
+			}
 			return NULL;
 		}
 #endif
@@ -1634,7 +1639,7 @@ PyFile_WriteObject(PyObject *v, PyObject *f, int flags)
 }
 
 int
-PyFile_WriteString(const char *s, PyObject *f)
+PyFile_WriteString(char *s, PyObject *f)
 {
 	if (f == NULL) {
 		/* Should be caused by a pre-existing error */

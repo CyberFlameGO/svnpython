@@ -1,43 +1,3 @@
-What's New in Python 2.2c1
-XXX Release date: ??-Dec-2001 XXX
-===========================
-
-Type/class unification and new-style classes
-
-Core and builtins
-
-Extension modules
-
-- gc.get_referents was renamed to gc.get_referrers.
-
-Library
-
-- webbrowser defaults to netscape.exe on OS/2 now.
-
-- Tix.ResizeHandle exposes detach_widget, hide, and show.
-
-Tools/Demos
-
-Build
-
-C API
-
-- PyArg_ParseTupleAndKeywords() requires that the number of entries in
-  the keyword list equals the number of argument specifiers.  This
-  wasn't checked correctly, and PyArg_ParseTupleAndKeywords could even
-  dump core in some bad cases.  This has been repaired.  As a result,
-  PyArg_ParseTupleAndKeywords may raise RuntimeError in bad cases that
-  previously went unchallenged.
-
-New platforms
-
-Tests
-
-Windows
-
-Mac
-
-
 What's New in Python 2.2b2?
 Release date: 16-Nov-2001
 ===========================
@@ -917,8 +877,6 @@ Library
 - Added Ka-Ping Yee's cgitb.py module.
 
 - The `new' module now exposes the CO_xxx flags.
-
-- The gc module offers the get_referents function.
 
 New platforms
 

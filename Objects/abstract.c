@@ -103,8 +103,7 @@ PyObject_GetItem(PyObject *o, PyObject *key)
 				return NULL;
 			return PySequence_GetItem(o, key_value);
 		}
-		else if (o->ob_type->tp_as_sequence->sq_item)
-			return type_error("sequence index must be integer");
+		return type_error("sequence index must be integer");
 	}
 
 	return type_error("unsubscriptable object");
@@ -132,10 +131,8 @@ PyObject_SetItem(PyObject *o, PyObject *key, PyObject *value)
 				return -1;
 			return PySequence_SetItem(o, key_value, value);
 		}
-		else if (o->ob_type->tp_as_sequence->sq_ass_item) {
-			type_error("sequence index must be integer");
-			return -1;
-		}
+		type_error("sequence index must be integer");
+		return -1;
 	}
 
 	type_error("object does not support item assignment");
@@ -164,10 +161,8 @@ PyObject_DelItem(PyObject *o, PyObject *key)
 				return -1;
 			return PySequence_DelItem(o, key_value);
 		}
-		else if (o->ob_type->tp_as_sequence->sq_ass_item) {
-			type_error("sequence index must be integer");
-			return -1;
-		}
+		type_error("sequence index must be integer");
+		return -1;
 	}
 
 	type_error("object does not support item deletion");
