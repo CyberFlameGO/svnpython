@@ -19,8 +19,7 @@ import py_compile
 
 __all__ = ["compile_dir","compile_path"]
 
-def compile_dir(dir, maxlevels=10, ddir=None,
-                force=0, rx=None, quiet=0):
+def compile_dir(dir, maxlevels=10, ddir=None, force=0, rx=None):
     """Byte-compile all modules in the given directory tree.
 
     Arguments (only dir is required):
@@ -30,11 +29,9 @@ def compile_dir(dir, maxlevels=10, ddir=None,
     ddir:      if given, purported directory name (this is the
                directory name that will show up in error messages)
     force:     if 1, force compilation, even if timestamps are up-to-date
-    quiet:     if 1, be quiet during compilation
 
     """
-    if not quiet:
-        print 'Listing', dir, '...'
+    print 'Listing', dir, '...'
     try:
         names = os.listdir(dir)
     except os.error:
@@ -60,8 +57,7 @@ def compile_dir(dir, maxlevels=10, ddir=None,
                 try: ctime = os.stat(cfile)[stat.ST_MTIME]
                 except os.error: ctime = 0
                 if (ctime > ftime) and not force: continue
-                if not quiet:
-                    print 'Compiling', fullname, '...'
+                print 'Compiling', fullname, '...'
                 try:
                     ok = py_compile.compile(fullname, None, dfile)
                 except KeyboardInterrupt:
@@ -81,11 +77,11 @@ def compile_dir(dir, maxlevels=10, ddir=None,
              name != os.curdir and name != os.pardir and \
              os.path.isdir(fullname) and \
              not os.path.islink(fullname):
-            if not compile_dir(fullname, maxlevels - 1, dfile, force, rx, quiet):
+            if not compile_dir(fullname, maxlevels - 1, dfile, force, rx):
                 success = 0
     return success
 
-def compile_path(skip_curdir=1, maxlevels=0, force=0, quiet=0):
+def compile_path(skip_curdir=1, maxlevels=0, force=0):
     """Byte-compile all module on sys.path.
 
     Arguments (all optional):
@@ -93,7 +89,6 @@ def compile_path(skip_curdir=1, maxlevels=0, force=0, quiet=0):
     skip_curdir: if true, skip current directory (default true)
     maxlevels:   max recursion level (default 0)
     force: as for compile_dir() (default 0)
-    quiet: as for compile_dir() (default 0)
 
     """
     success = 1
@@ -101,22 +96,20 @@ def compile_path(skip_curdir=1, maxlevels=0, force=0, quiet=0):
         if (not dir or dir == os.curdir) and skip_curdir:
             print 'Skipping current directory'
         else:
-            success = success and compile_dir(dir, maxlevels, None,
-                                              force, quiet=quiet)
+            success = success and compile_dir(dir, maxlevels, None, force)
     return success
 
 def main():
     """Script main program."""
     import getopt
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'lfqd:x:')
+        opts, args = getopt.getopt(sys.argv[1:], 'lfd:x:')
     except getopt.error, msg:
         print msg
-        print "usage: python compileall.py [-l] [-f] [-q] [-d destdir] " \
+        print "usage: python compileall.py [-l] [-f] [-d destdir] " \
               "[-s regexp] [directory ...]"
         print "-l: don't recurse down"
         print "-f: force rebuild even if timestamps are up-to-date"
-        print "-q: quiet operation"
         print "-d destdir: purported directory name for error messages"
         print "   if no directory arguments, -l sys.path is assumed"
         print "-x regexp: skip files matching the regular expression regexp"
@@ -125,13 +118,11 @@ def main():
     maxlevels = 10
     ddir = None
     force = 0
-    quiet = 0
     rx = None
     for o, a in opts:
         if o == '-l': maxlevels = 0
         if o == '-d': ddir = a
         if o == '-f': force = 1
-        if o == '-q': quiet = 1
         if o == '-x':
             import re
             rx = re.compile(a)
@@ -143,8 +134,7 @@ def main():
     try:
         if args:
             for dir in args:
-                if not compile_dir(dir, maxlevels, ddir,
-                                   force, rx, quiet):
+                if not compile_dir(dir, maxlevels, ddir, force, rx):
                     success = 0
         else:
             success = compile_path()

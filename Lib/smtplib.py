@@ -220,15 +220,13 @@ class SMTP:
     ehlo_resp = None
     does_esmtp = 0
 
-    def __init__(self, host = '', port = 0, local_hostname = None):
+    def __init__(self, host = '', port = 0):
         """Initialize a new instance.
 
         If specified, `host' is the name of the remote host to which to
         connect.  If specified, `port' specifies the port to which to connect.
         By default, smtplib.SMTP_PORT is used.  An SMTPConnectError is raised
-        if the specified `host' doesn't respond correctly.  If specified,
-	`local_hostname` is used as the FQDN of the local host.  By default,
-	the local hostname is found using socket.getfqdn().
+        if the specified `host' doesn't respond correctly.
 
         """
         self.esmtp_features = {}
@@ -236,10 +234,6 @@ class SMTP:
             (code, msg) = self.connect(host, port)
             if code != 220:
                 raise SMTPConnectError(code, msg)
-        if local_hostname:
-                self.local_hostname = local_hostname
-        else:
-                self.local_hostname = socket.getfqdn()
 
     def set_debuglevel(self, debuglevel):
         """Set the debug output level.
@@ -362,7 +356,10 @@ class SMTP:
         Hostname to send for this command defaults to the FQDN of the local
         host.
         """
-        self.putcmd("helo", name or self.local_hostname)
+        if name:
+            self.putcmd("helo", name)
+        else:
+            self.putcmd("helo", socket.getfqdn())
         (code,msg)=self.getreply()
         self.helo_resp=msg
         return (code,msg)
@@ -373,7 +370,10 @@ class SMTP:
         host.
         """
         self.esmtp_features = {}
-        self.putcmd("ehlo", name or self.local_hostname)
+        if name:
+            self.putcmd("ehlo", name)
+        else:
+            self.putcmd("ehlo", socket.getfqdn())
         (code,msg)=self.getreply()
         # According to RFC1869 some (badly written)
         # MTA's will disconnect on an ehlo. Toss an exception if

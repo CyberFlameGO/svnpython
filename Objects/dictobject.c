@@ -1914,7 +1914,7 @@ static PyObject *
 dictiter_new(dictobject *dict, binaryfunc select)
 {
 	dictiterobject *di;
-	di = PyMalloc_New(dictiterobject, &PyDictIter_Type);
+	di = PyObject_NEW(dictiterobject, &PyDictIter_Type);
 	if (di == NULL)
 		return NULL;
 	Py_INCREF(dict);
@@ -1929,7 +1929,7 @@ static void
 dictiter_dealloc(dictiterobject *di)
 {
 	Py_DECREF(di->di_dict);
-	PyMalloc_Del(di);
+	PyObject_DEL(di);
 }
 
 static PyObject *

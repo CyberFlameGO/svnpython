@@ -25,6 +25,7 @@ used to query various info about the object, if available.
 import string
 import socket
 import os
+import stat
 import time
 import sys
 import types
@@ -409,8 +410,8 @@ class URLopener:
         host, file = splithost(url)
         localname = url2pathname(file)
         stats = os.stat(localname)
-        size = stats.st_size
-        modified = rfc822.formatdate(stats.st_mtime)
+        size = stats[stat.ST_SIZE]
+        modified = rfc822.formatdate(stats[stat.ST_MTIME])
         mtype = mimetypes.guess_type(url)[0]
         headers = mimetools.Message(StringIO.StringIO(
             'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %
@@ -1157,6 +1158,7 @@ def urlencode(query,doseq=0):
         # sequences...
         try:
             # non-sequence items should not work with len()
+            x = len(query)
             # non-empty strings will fail this
             if len(query) and type(query[0]) != types.TupleType:
                 raise TypeError

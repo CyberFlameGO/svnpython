@@ -16,7 +16,7 @@
 #define SIG_ERR ((PyOS_sighandler_t)(-1))
 #endif
 
-#if defined(PYOS_OS2) && !defined(PYCC_GCC)
+#if defined(PYOS_OS2)
 #define NSIG 12
 #include <process.h>
 #endif
@@ -163,8 +163,11 @@ Arrange for SIGALRM to arrive after the given number of seconds.";
 
 #ifdef HAVE_PAUSE
 static PyObject *
-signal_pause(PyObject *self)
+signal_pause(PyObject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
+
 	Py_BEGIN_ALLOW_THREADS
 	(void)pause();
 	Py_END_ALLOW_THREADS
@@ -279,7 +282,7 @@ static PyMethodDef signal_methods[] = {
 	{"signal",	        signal_signal, METH_OLDARGS, signal_doc},
 	{"getsignal",	        signal_getsignal, METH_OLDARGS, getsignal_doc},
 #ifdef HAVE_PAUSE
-	{"pause",	        signal_pause, METH_NOARGS, pause_doc},
+	{"pause",	        signal_pause, METH_OLDARGS, pause_doc},
 #endif
 	{"default_int_handler", signal_default_int_handler, 
 	 METH_OLDARGS, default_int_handler_doc},
@@ -539,11 +542,6 @@ initsignal(void)
 #ifdef SIGXFSZ
 	x = PyInt_FromLong(SIGXFSZ);
 	PyDict_SetItemString(d, "SIGXFSZ", x);
-        Py_XDECREF(x);
-#endif
-#ifdef SIGINFO
-	x = PyInt_FromLong(SIGINFO);
-	PyDict_SetItemString(d, "SIGINFO", x);
         Py_XDECREF(x);
 #endif
         if (!PyErr_Occurred())

@@ -380,8 +380,10 @@ static PyMappingMethods bsddb_as_mapping = {
 };
 
 static PyObject *
-bsddb_close(bsddbobject *dp)
+bsddb_close(bsddbobject *dp, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	if (dp->di_bsddb != NULL) {
 		int status;
 		BSDDB_BGN_SAVE(dp)
@@ -399,7 +401,7 @@ bsddb_close(bsddbobject *dp)
 }
 
 static PyObject *
-bsddb_keys(bsddbobject *dp)
+bsddb_keys(bsddbobject *dp, PyObject *args)
 {
 	PyObject *list, *item=NULL;
 	DBT krec, drec;
@@ -407,6 +409,8 @@ bsddb_keys(bsddbobject *dp)
 	int status;
 	int err;
 
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	check_bsddbobject_open(dp, NULL);
 	list = PyList_New(0);
 	if (list == NULL)
@@ -558,13 +562,16 @@ bsddb_set_location(bsddbobject *dp, PyObject *key)
 }
 
 static PyObject *
-bsddb_seq(bsddbobject *dp, int sequence_request)
+bsddb_seq(bsddbobject *dp, PyObject *args, int sequence_request)
 {
 	int status;
 	DBT krec, drec;
 	char *kdata=NULL,kbuf[4096];
 	char *ddata=NULL,dbuf[4096];
 	PyObject *result;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
 
 	check_bsddbobject_open(dp, NULL);
 	krec.data = 0;
@@ -591,10 +598,11 @@ bsddb_seq(bsddbobject *dp, int sequence_request)
 		if (status < 0)
 			PyErr_SetFromErrno(BsddbError);
 		else
-			PyErr_SetString(PyExc_KeyError, "no key/data pairs");
+			PyErr_SetObject(PyExc_KeyError, args);
 		return NULL;
 	}
 
+	
 	if (dp->di_type == DB_RECNO)
 		result = Py_BuildValue("is#", *((int*)kdata),
 				       ddata, drec.size);
@@ -607,30 +615,32 @@ bsddb_seq(bsddbobject *dp, int sequence_request)
 }
 
 static PyObject *
-bsddb_next(bsddbobject *dp)
+bsddb_next(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_NEXT);
+	return bsddb_seq(dp, key, R_NEXT);
 }
 static PyObject *
-bsddb_previous(bsddbobject *dp)
+bsddb_previous(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_PREV);
+	return bsddb_seq(dp, key, R_PREV);
 }
 static PyObject *
-bsddb_first(bsddbobject *dp)
+bsddb_first(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_FIRST);
+	return bsddb_seq(dp, key, R_FIRST);
 }
 static PyObject *
-bsddb_last(bsddbobject *dp)
+bsddb_last(bsddbobject *dp, PyObject *key)
 {
-	return bsddb_seq(dp, R_LAST);
+	return bsddb_seq(dp, key, R_LAST);
 }
 static PyObject *
-bsddb_sync(bsddbobject *dp)
+bsddb_sync(bsddbobject *dp, PyObject *args)
 {
 	int status;
 
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	check_bsddbobject_open(dp, NULL);
 	BSDDB_BGN_SAVE(dp)
 	status = (dp->di_bsddb->sync)(dp->di_bsddb, 0);
@@ -642,15 +652,15 @@ bsddb_sync(bsddbobject *dp)
 	return PyInt_FromLong(status = 0);
 }
 static PyMethodDef bsddb_methods[] = {
-	{"close",		(PyCFunction)bsddb_close, METH_NOARGS},
-	{"keys",		(PyCFunction)bsddb_keys, METH_NOARGS},
-	{"has_key",		(PyCFunction)bsddb_has_key, METH_OLDARGS},
-	{"set_location",	(PyCFunction)bsddb_set_location, METH_OLDARGS},
-	{"next",		(PyCFunction)bsddb_next, METH_NOARGS},
-	{"previous",	(PyCFunction)bsddb_previous, METH_NOARGS},
-	{"first",		(PyCFunction)bsddb_first, METH_NOARGS},
-	{"last",		(PyCFunction)bsddb_last, METH_NOARGS},
-	{"sync",		(PyCFunction)bsddb_sync, METH_NOARGS},
+	{"close",		(PyCFunction)bsddb_close},
+	{"keys",		(PyCFunction)bsddb_keys},
+	{"has_key",		(PyCFunction)bsddb_has_key},
+	{"set_location",	(PyCFunction)bsddb_set_location},
+	{"next",		(PyCFunction)bsddb_next},
+	{"previous",	(PyCFunction)bsddb_previous},
+	{"first",		(PyCFunction)bsddb_first},
+	{"last",		(PyCFunction)bsddb_last},
+	{"sync",		(PyCFunction)bsddb_sync},
 	{NULL,	       	NULL}		/* sentinel */
 };
 
@@ -839,9 +849,9 @@ bsdrnopen(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef bsddbmodule_methods[] = {
-	{"hashopen",	(PyCFunction)bsdhashopen, METH_VARARGS},
-	{"btopen",	(PyCFunction)bsdbtopen, METH_VARARGS},
-	{"rnopen",	(PyCFunction)bsdrnopen, METH_VARARGS},
+	{"hashopen",	(PyCFunction)bsdhashopen, 1},
+	{"btopen",	(PyCFunction)bsdbtopen, 1},
+	{"rnopen",	(PyCFunction)bsdrnopen, 1},
 	{0,		0},
 };
 

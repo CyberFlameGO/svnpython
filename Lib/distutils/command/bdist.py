@@ -40,11 +40,7 @@ class bdist (Command):
                     ('dist-dir=', 'd',
                      "directory to put final built distributions in "
                      "[default: dist]"),
-                    ('skip-build', None,
-                     "skip rebuilding everything (for testing/debugging)"),
                    ]
-
-    boolean_options = ['skip-build']
 
     help_options = [
         ('help-formats', None,
@@ -57,8 +53,7 @@ class bdist (Command):
     # This won't do in reality: will need to distinguish RPM-ish Linux,
     # Debian-ish Linux, Solaris, FreeBSD, ..., Windows, Mac OS.
     default_format = { 'posix': 'gztar',
-                       'nt': 'zip',
-                       'os2': 'zip', }
+                       'nt': 'zip', }
 
     # Establish the preferred order (for the --help-formats option).
     format_commands = ['rpm', 'gztar', 'bztar', 'ztar', 'tar',
@@ -81,7 +76,6 @@ class bdist (Command):
         self.plat_name = None
         self.formats = None
         self.dist_dir = None
-        self.skip_build = 0
 
     # initialize_options()
 

@@ -79,7 +79,7 @@ except ImportError:
 __all__ = ["HTTP", "HTTPResponse", "HTTPConnection", "HTTPSConnection",
            "HTTPException", "NotConnected", "UnknownProtocol",
            "UnknownTransferEncoding", "IllegalKeywordArgument",
-           "UnimplementedFileMode", "IncompleteRead", "InvalidURL",
+           "UnimplementedFileMode", "IncompleteRead",
            "ImproperConnectionState", "CannotSendRequest", "CannotSendHeader",
            "ResponseNotReady", "BadStatusLine", "error"]
 
@@ -347,10 +347,7 @@ class HTTPConnection:
         if port is None:
             i = host.find(':')
             if i >= 0:
-                try:
-                    port = int(host[i+1:])
-                except ValueError:
-                    raise InvalidURL, "nonnumeric port: '%s'"%host[i+1:]
+                port = int(host[i+1:])
                 host = host[:i]
             else:
                 port = self.default_port
@@ -631,7 +628,8 @@ class FakeSocket:
                 buf = self.__ssl.read()
             except socket.sslerror, err:
                 if (err[0] == socket.SSL_ERROR_WANT_READ
-                    or err[0] == socket.SSL_ERROR_WANT_WRITE):
+                    or err[0] == socket.SSL_ERROR_WANT_WRITE
+                    or 0):
                     continue
                 if err[0] == socket.SSL_ERROR_ZERO_RETURN:
                     break
@@ -809,9 +807,6 @@ class HTTPException(Exception):
     pass
 
 class NotConnected(HTTPException):
-    pass
-
-class InvalidURL(HTTPException):
     pass
 
 class UnknownProtocol(HTTPException):

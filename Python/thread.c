@@ -36,6 +36,10 @@ extern char *getenv(const char *);
 
 #include "pythread.h"
 
+#ifdef __ksr__
+#define _POSIX_THREADS
+#endif
+
 #ifndef _POSIX_THREADS
 
 #ifdef __sgi
@@ -127,10 +131,6 @@ void PyThread_init_thread(void)
 
 #ifdef WINCE_THREADS
 #include "thread_wince.h"
-#endif
-
-#ifdef PLAN9_THREADS
-#include "thread_plan9.h"
 #endif
 
 /*

@@ -1,7 +1,3 @@
-#include "Python.h"
-
-#ifdef WITH_PYMALLOC
-
 /* An object allocator for Python.
 
    Here is an introduction to the layers of the Python memory architecture,
@@ -53,6 +49,43 @@
  */
 
 /* #undef WITH_MEMORY_LIMITS */		/* disable mem limit checks  */
+#define WITH_MALLOC_HOOKS		/* for profiling & debugging */
+
+/*==========================================================================*/
+
+/*
+ * Public functions exported by this allocator.
+ *
+ * -- Define and use these names in your code to obtain or release memory --
+ */
+#define _THIS_MALLOC		PyCore_OBJECT_MALLOC_FUNC
+#define _THIS_CALLOC		/* unused */
+#define _THIS_REALLOC		PyCore_OBJECT_REALLOC_FUNC
+#define _THIS_FREE		PyCore_OBJECT_FREE_FUNC
+
+/*
+ * Underlying allocator's functions called by this allocator.
+ * The underlying allocator is usually the one which comes with libc.
+ *
+ * -- Don't use these functions in your code (to avoid mixing allocators) --
+ *
+ * Redefine these __only__ if you are using a 3rd party general purpose
+ * allocator which exports functions with names _other_ than the standard
+ * malloc, calloc, realloc, free.
+ */
+#define _SYSTEM_MALLOC		PyCore_MALLOC_FUNC
+#define _SYSTEM_CALLOC		/* unused */
+#define _SYSTEM_REALLOC		PyCore_REALLOC_FUNC
+#define _SYSTEM_FREE		PyCore_FREE_FUNC
+
+/*
+ * If malloc hooks are needed, names of the hooks' set & fetch
+ * functions exported by this allocator.
+ */
+#ifdef WITH_MALLOC_HOOKS
+#define _SET_HOOKS		_PyCore_ObjectMalloc_SetHooks
+#define _FETCH_HOOKS		_PyCore_ObjectMalloc_FetchHooks
+#endif
 
 /*==========================================================================*/
 
@@ -61,7 +94,7 @@
  *
  * For small requests, the allocator sub-allocates <Big> blocks of memory.
  * Requests greater than 256 bytes are routed to the system's allocator.
- *
+ *    
  * Small requests are grouped in size classes spaced 8 bytes apart, due
  * to the required valid alignment of the returned address. Requests of
  * a particular size are serviced from memory pools of 4K (one VMM page).
@@ -94,7 +127,7 @@
  *	  ...                   ...                     ...
  *	241-248                 248                      30
  *	249-256                 256                      31
- *
+ *	
  *	0, 257 and up: routed to the underlying allocator.
  */
 
@@ -329,6 +362,16 @@ static block *arenalist = NULL;		/* list of allocated arenas */
 static block *arenabase = NULL;		/* free space start address in
 					   current arena */
 
+/*
+ * Hooks
+ */
+#ifdef WITH_MALLOC_HOOKS
+static void *(*malloc_hook)(size_t) = NULL;
+static void *(*calloc_hook)(size_t, size_t) = NULL;
+static void *(*realloc_hook)(void *, size_t) = NULL;
+static void (*free_hook)(void *) = NULL;
+#endif /* !WITH_MALLOC_HOOKS */
+
 /*==========================================================================*/
 
 /* malloc */
@@ -342,12 +385,17 @@ static block *arenabase = NULL;		/* free space start address in
  */
 
 void *
-_PyMalloc_Malloc(size_t nbytes)
+_THIS_MALLOC(size_t nbytes)
 {
 	block *bp;
 	poolp pool;
 	poolp next;
 	uint size;
+
+#ifdef WITH_MALLOC_HOOKS	
+	if (malloc_hook != NULL)
+		return (*malloc_hook)(nbytes);
+#endif
 
 	/*
 	 * This implicitly redirects malloc(0)
@@ -467,12 +515,12 @@ _PyMalloc_Malloc(size_t nbytes)
 		 * With malloc, we can't avoid loosing one page address space
 		 * per arena due to the required alignment on page boundaries.
 		 */
-		bp = (block *)PyMem_MALLOC(ARENA_SIZE + SYSTEM_PAGE_SIZE);
+		bp = (block *)_SYSTEM_MALLOC(ARENA_SIZE + SYSTEM_PAGE_SIZE);
 		if (bp == NULL) {
 			UNLOCK();
 			goto redirect;
 		}
-		/*
+		/* 
 		 * Keep a reference in the list of allocated arenas. We might
 		 * want to release (some of) them in the future. The first
 		 * word is never used, no matter whether the returned address
@@ -491,25 +539,32 @@ _PyMalloc_Malloc(size_t nbytes)
         /* The small block allocator ends here. */
 
 	redirect:
-
+	
 	/*
 	 * Redirect the original request to the underlying (libc) allocator.
 	 * We jump here on bigger requests, on error in the code above (as a
 	 * last chance to serve the request) or when the max memory limit
 	 * has been reached.
 	 */
-	return (void *)PyMem_MALLOC(nbytes);
+	return (void *)_SYSTEM_MALLOC(nbytes);
 }
 
 /* free */
 
 void
-_PyMalloc_Free(void *p)
+_THIS_FREE(void *p)
 {
 	poolp pool;
 	poolp next, prev;
 	uint size;
 	off_t offset;
+
+#ifdef WITH_MALLOC_HOOKS
+	if (free_hook != NULL) {
+		(*free_hook)(p);
+		return;
+	}
+#endif
 
 	if (p == NULL)	/* free(NULL) has no effect */
 		return;
@@ -517,7 +572,7 @@ _PyMalloc_Free(void *p)
 	offset = (off_t )p & POOL_SIZE_MASK;
 	pool = (poolp )((block *)p - offset);
 	if (pool->pooladdr != pool || pool->magic != (uint )POOL_MAGIC) {
-		PyMem_FREE(p);
+		_SYSTEM_FREE(p);
 		return;
 	}
 
@@ -576,14 +631,19 @@ _PyMalloc_Free(void *p)
 /* realloc */
 
 void *
-_PyMalloc_Realloc(void *p, size_t nbytes)
+_THIS_REALLOC(void *p, size_t nbytes)
 {
 	block *bp;
 	poolp pool;
 	uint size;
 
+#ifdef WITH_MALLOC_HOOKS
+	if (realloc_hook != NULL)
+		return (*realloc_hook)(p, nbytes);
+#endif
+
 	if (p == NULL)
-		return _PyMalloc_Malloc(nbytes);
+		return _THIS_MALLOC(nbytes);
 
 	/* realloc(p, 0) on big blocks is redirected. */
 	pool = (poolp )((block *)p - ((off_t )p & POOL_SIZE_MASK));
@@ -594,7 +654,7 @@ _PyMalloc_Realloc(void *p, size_t nbytes)
 			size = nbytes;
 			goto malloc_copy_free;
 		}
-		bp = (block *)PyMem_REALLOC(p, nbytes);
+		bp = (block *)_SYSTEM_REALLOC(p, nbytes);
 	}
 	else {
 		/* We're in charge of this block */
@@ -603,7 +663,7 @@ _PyMalloc_Realloc(void *p, size_t nbytes)
 			/* Don't bother if a smaller size was requested
 			   except for realloc(p, 0) == free(p), ret NULL */
 			if (nbytes == 0) {
-				_PyMalloc_Free(p);
+				_THIS_FREE(p);
 				bp = NULL;
 			}
 			else
@@ -613,390 +673,71 @@ _PyMalloc_Realloc(void *p, size_t nbytes)
 
 		malloc_copy_free:
 
-			bp = (block *)_PyMalloc_Malloc(nbytes);
+			bp = (block *)_THIS_MALLOC(nbytes);
 			if (bp != NULL) {
 				memcpy(bp, p, size);
-				_PyMalloc_Free(p);
+				_THIS_FREE(p);
 			}
 		}
 	}
 	return (void *)bp;
 }
 
-#else	/* ! WITH_PYMALLOC */
+/* calloc */
 
-/*==========================================================================*/
-/* pymalloc not enabled:  Redirect the entry points to the PyMem family. */
-
+/* -- unused --
 void *
-_PyMalloc_Malloc(size_t n)
+_THIS_CALLOC(size_t nbel, size_t elsz)
 {
-	return PyMem_MALLOC(n);
-}
-
-void *
-_PyMalloc_Realloc(void *p, size_t n)
-{
-	return PyMem_REALLOC(p, n);
-}
-
-void
-_PyMalloc_Free(void *p)
-{
-	PyMem_FREE(p);
-}
-#endif /* WITH_PYMALLOC */
-
-/*==========================================================================*/
-/* Regardless of whether pymalloc is enabled, export entry points for
- * the object-oriented pymalloc functions.
- */
-
-PyObject *
-_PyMalloc_New(PyTypeObject *tp)
-{
-	PyObject *op;
-	op = (PyObject *) _PyMalloc_MALLOC(_PyObject_SIZE(tp));
-	if (op == NULL)
-		return PyErr_NoMemory();
-	return PyObject_INIT(op, tp);
-}
-
-PyVarObject *
-_PyMalloc_NewVar(PyTypeObject *tp, int nitems)
-{
-	PyVarObject *op;
-	const size_t size = _PyObject_VAR_SIZE(tp, nitems);
-	op = (PyVarObject *) _PyMalloc_MALLOC(size);
-	if (op == NULL)
-		return (PyVarObject *)PyErr_NoMemory();
-	return PyObject_INIT_VAR(op, tp, nitems);
-}
-
-void
-_PyMalloc_Del(PyObject *op)
-{
-	_PyMalloc_FREE(op);
-}
-
-#ifdef PYMALLOC_DEBUG
-/*==========================================================================*/
-/* A x-platform debugging allocator.  This doesn't manage memory directly,
- * it wraps a real allocator, adding extra debugging info to the memory blocks.
- */
-
-#define PYMALLOC_CLEANBYTE      0xCB    /* uninitialized memory */
-#define PYMALLOC_DEADBYTE       0xDB    /* free()ed memory */
-#define PYMALLOC_FORBIDDENBYTE  0xFB    /* unusable memory */
-
-static ulong serialno = 0;	/* incremented on each debug {m,re}alloc */
-
-/* serialno is always incremented via calling this routine.  The point is
-   to supply a single place to set a breakpoint.
-*/
-static void
-bumpserialno()
-{
-	++serialno;
-}
-
-
-/* Read 4 bytes at p as a big-endian ulong. */
-static ulong
-read4(const void *p)
-{
-	const uchar *q = (const uchar *)p;
-	return ((ulong)q[0] << 24) |
-	       ((ulong)q[1] << 16) |
-	       ((ulong)q[2] <<  8) |
-	        (ulong)q[3];
-}
-
-/* Write the 4 least-significant bytes of n as a big-endian unsigned int,
-   MSB at address p, LSB at p+3. */
-static void
-write4(void *p, ulong n)
-{
-	uchar *q = (uchar *)p;
-	q[0] = (uchar)((n >> 24) & 0xff);
-	q[1] = (uchar)((n >> 16) & 0xff);
-	q[2] = (uchar)((n >>  8) & 0xff);
-	q[3] = (uchar)( n        & 0xff);
-}
-
-static void
-check_family(const void *p, int family)
-{
-	const uchar *q = (const uchar *)p;
-	int original_family;
-	char buf[200];
-
-	assert(p != NULL);
-	original_family = (int)*(q-4);
-	if (family != original_family) {
-		/* XXX better msg */
-		PyOS_snprintf(buf, sizeof(buf),
-			"free or realloc from family #%d called, "
-			"but block was allocated by family #%d",
-			family, original_family);
-		_PyMalloc_DebugDumpAddress(p);
-		Py_FatalError(buf);
-	}
-}
-
-/* The debug malloc asks for 16 extra bytes and fills them with useful stuff,
-   here calling the underlying malloc's result p:
-
-p[0:4]
-    Number of bytes originally asked for.  4-byte unsigned integer,
-    big-endian (easier to read in a memory dump).
-p[4]
-    The API "family" this malloc call belongs to.  XXX todo XXX
-p[5:8]
-    Copies of PYMALLOC_FORBIDDENBYTE.  Used to catch under- writes
-    and reads.
-p[8:8+n]
-    The requested memory, filled with copies of PYMALLOC_CLEANBYTE.
-    Used to catch reference to uninitialized memory.
-    &p[8] is returned.  Note that this is 8-byte aligned if PyMalloc
-    handled the request itself.
-p[8+n:8+n+4]
-    Copies of PYMALLOC_FORBIDDENBYTE.  Used to catch over- writes
-    and reads.
-p[8+n+4:8+n+8]
-    A serial number, incremented by 1 on each call to _PyMalloc_DebugMalloc
-    and _PyMalloc_DebugRealloc.
-    4-byte unsigned integer, big-endian.
-    If "bad memory" is detected later, the serial number gives an
-    excellent way to set a breakpoint on the next run, to capture the
-    instant at which this block was passed out.
-*/
-
-void *
-_PyMalloc_DebugMalloc(size_t nbytes, int family)
-{
-	uchar *p;	/* base address of malloc'ed block */
-	uchar *tail;	/* p + 8 + nbytes == pointer to tail pad bytes */
-	size_t total;	/* nbytes + 16 */
-
-	assert(family == 0);
-
-	bumpserialno();
-	total = nbytes + 16;
-	if (total < nbytes || (total >> 31) > 1) {
-		/* overflow, or we can't represent it in 4 bytes */
-		/* Obscure:  can't do (total >> 32) != 0 instead, because
-		   C doesn't define what happens for a right-shift of 32
-		   when size_t is a 32-bit type.  At least C guarantees
-		   size_t is an unsigned type. */
-		return NULL;
-	}
-
-	p = _PyMalloc_Malloc(total);	/* XXX derive from family */
-	if (p == NULL)
-		return NULL;
-
-	write4(p, nbytes);
-	p[4] = (uchar)family;
-	p[5] = p[6] = p[7] = PYMALLOC_FORBIDDENBYTE;
-
-	if (nbytes > 0)
-		memset(p+8, PYMALLOC_CLEANBYTE, nbytes);
-
-	tail = p + 8 + nbytes;
-	tail[0] = tail[1] = tail[2] = tail[3] = PYMALLOC_FORBIDDENBYTE;
-	write4(tail + 4, serialno);
-
-	return p+8;
-}
-
-/* The debug free first checks the 8 bytes on each end for sanity (in
-   particular, that the PYMALLOC_FORBIDDENBYTEs are still intact).
-   Then fills the original bytes with PYMALLOC_DEADBYTE.
-   Then calls the underlying free.
-*/
-void
-_PyMalloc_DebugFree(void *p, int family)
-{
-	uchar *q = (uchar *)p;
+        void *p;
 	size_t nbytes;
 
-	assert(family == 0);
+#ifdef WITH_MALLOC_HOOKS
+	if (calloc_hook != NULL)
+		return (*calloc_hook)(nbel, elsz);
+#endif
 
-	if (p == NULL)
-		return;
-	check_family(p, family);
-	_PyMalloc_DebugCheckAddress(p);
-	nbytes = read4(q-8);
-	if (nbytes > 0)
-		memset(q, PYMALLOC_DEADBYTE, nbytes);
-	_PyMalloc_Free(q-8);	/* XXX derive from family */
+	nbytes = nbel * elsz;
+	p = _THIS_MALLOC(nbytes);
+	if (p != NULL)
+		memset(p, 0, nbytes);
+	return p;
 }
+*/
 
-void *
-_PyMalloc_DebugRealloc(void *p, size_t nbytes, int family)
+/*==========================================================================*/
+
+/*
+ * Hooks
+ */
+
+#ifdef WITH_MALLOC_HOOKS
+
+void
+_SET_HOOKS( void *(*malloc_func)(size_t),
+	    void *(*calloc_func)(size_t, size_t),
+	    void *(*realloc_func)(void *, size_t),
+	    void (*free_func)(void *) )
 {
-	uchar *q = (uchar *)p;
-	size_t original_nbytes;
-	void *fresh;	/* new memory block, if needed */
-
-	assert(family == 0);
-
-	if (p == NULL)
-		return _PyMalloc_DebugMalloc(nbytes, family);
-
-	check_family(p, family);
-	_PyMalloc_DebugCheckAddress(p);
-
-	original_nbytes = read4(q-8);
-	if (nbytes == original_nbytes) {
-		/* note that this case is likely to be common due to the
-		   way Python appends to lists */
-		bumpserialno();
-		write4(q + nbytes + 4, serialno);
-		return p;
-	}
-
-	if (nbytes < original_nbytes) {
-		/* shrinking -- leave the guts alone, except to
-		   fill the excess with DEADBYTE */
-		const size_t excess = original_nbytes - nbytes;
-		bumpserialno();
-		write4(q-8, nbytes);
-		/* kill the excess bytes plus the trailing 8 pad bytes */
-		memset(q + nbytes, PYMALLOC_DEADBYTE, excess + 8);
-		q += nbytes;
-		q[0] = q[1] = q[2] = q[3] = PYMALLOC_FORBIDDENBYTE;
-		write4(q+4, serialno);
-		return p;
-	}
-
-	/* More memory is needed:  get it, copy over the first original_nbytes
-	   of the original data, and free the original memory. */
-	fresh = _PyMalloc_DebugMalloc(nbytes, family);
-	if (fresh != NULL && original_nbytes > 0)
-		memcpy(fresh, p, original_nbytes);
-	_PyMalloc_DebugFree(p, family);
-	return fresh;
+	LOCK();
+	malloc_hook = malloc_func;
+	calloc_hook = calloc_func;
+	realloc_hook = realloc_func;
+	free_hook = free_func;
+	UNLOCK();
 }
 
 void
-_PyMalloc_DebugCheckAddress(const void *p)
+_FETCH_HOOKS( void *(**malloc_funcp)(size_t),
+	      void *(**calloc_funcp)(size_t, size_t),
+              void *(**realloc_funcp)(void *, size_t),
+              void (**free_funcp)(void *) )
 {
-	const uchar *q = (const uchar *)p;
-	char *msg = NULL;
-
-	if (p == NULL)
-		msg = "didn't expect a NULL pointer";
-
-	else if (*(q-3) != PYMALLOC_FORBIDDENBYTE ||
-	    	 *(q-2) != PYMALLOC_FORBIDDENBYTE ||
-	    	 *(q-1) != PYMALLOC_FORBIDDENBYTE)
-	    	msg = "bad leading pad byte";
-
-	else {
-		const ulong nbytes = read4(q-8);
-		const uchar *tail = q + nbytes;
-		int i;
-		for (i = 0; i < 4; ++i) {
-			if (tail[i] != PYMALLOC_FORBIDDENBYTE) {
-				msg = "bad trailing pad byte";
-				break;
-			}
-		}
-	}
-
-	if (msg != NULL) {
-		_PyMalloc_DebugDumpAddress(p);
-		Py_FatalError(msg);
-	}
+	LOCK();
+	*malloc_funcp = malloc_hook;
+	*calloc_funcp = calloc_hook;
+	*realloc_funcp = realloc_hook;
+	*free_funcp = free_hook;
+	UNLOCK();
 }
-
-void
-_PyMalloc_DebugDumpAddress(const void *p)
-{
-	const uchar *q = (const uchar *)p;
-	const uchar *tail;
-	ulong nbytes, serial;
-
-	fprintf(stderr, "Debug memory block at address p=%p:\n", p);
-	if (p == NULL)
-		return;
-
-	nbytes = read4(q-8);
-	fprintf(stderr, "    %lu bytes originally allocated\n", nbytes);
-	fprintf(stderr, "    from API family #%d\n", *(q-4));
-
-	/* In case this is nuts, check the pad bytes before trying to read up
-	   the serial number (the address deref could blow up). */
-
-	fputs("    the 3 pad bytes at p-3 are ", stderr);
-	if (*(q-3) == PYMALLOC_FORBIDDENBYTE &&
-	    *(q-2) == PYMALLOC_FORBIDDENBYTE &&
-	    *(q-1) == PYMALLOC_FORBIDDENBYTE) {
-		fputs("PYMALLOC_FORBIDDENBYTE, as expected\n", stderr);
-	}
-	else {
-		int i;
-		fprintf(stderr, "not all PYMALLOC_FORBIDDENBYTE (0x%02x):\n",
-			PYMALLOC_FORBIDDENBYTE);
-		for (i = 3; i >= 1; --i) {
-			const uchar byte = *(q-i);
-			fprintf(stderr, "        at p-%d: 0x%02x", i, byte);
-			if (byte != PYMALLOC_FORBIDDENBYTE)
-				fputs(" *** OUCH", stderr);
-			fputc('\n', stderr);
-		}
-	}
-
-	tail = q + nbytes;
-	fprintf(stderr, "    the 4 pad bytes at tail=%p are ", tail);
-	if (tail[0] == PYMALLOC_FORBIDDENBYTE &&
-	    tail[1] == PYMALLOC_FORBIDDENBYTE &&
-	    tail[2] == PYMALLOC_FORBIDDENBYTE &&
-	    tail[3] == PYMALLOC_FORBIDDENBYTE) {
-		fputs("PYMALLOC_FORBIDDENBYTE, as expected\n", stderr);
-	}
-	else {
-		int i;
-		fprintf(stderr, "not all PYMALLOC_FORBIDDENBYTE (0x%02x):\n",
-			PYMALLOC_FORBIDDENBYTE);
-		for (i = 0; i < 4; ++i) {
-			const uchar byte = tail[i];
-			fprintf(stderr, "        at tail+%d: 0x%02x",
-				i, byte);
-			if (byte != PYMALLOC_FORBIDDENBYTE)
-				fputs(" *** OUCH", stderr);
-			fputc('\n', stderr);
-		}
-	}
-
-	serial = read4(tail+4);
-	fprintf(stderr, "    the block was made by call #%lu to "
-	                "debug malloc/realloc\n", serial);
-
-	if (nbytes > 0) {
-		int i = 0;
-		fputs("    data at p:", stderr);
-		/* print up to 8 bytes at the start */
-		while (q < tail && i < 8) {
-			fprintf(stderr, " %02x", *q);
-			++i;
-			++q;
-		}
-		/* and up to 8 at the end */
-		if (q < tail) {
-			if (tail - q > 8) {
-				fputs(" ...", stderr);
-				q = tail - 8;
-			}
-			while (q < tail) {
-				fprintf(stderr, " %02x", *q);
-				++q;
-			}
-		}
-		fputc('\n', stderr);
-	}
-}
-
-#endif	/* PYMALLOC_DEBUG */
+#endif /* !WITH_MALLOC_HOOKS */

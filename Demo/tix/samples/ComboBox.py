@@ -1,11 +1,11 @@
-# -*-mode: python; fill-column: 75; tab-width: 8; coding: iso-latin-1-unix -*-
+#!/usr/local/bin/python
 # 
 # $Id$
 #
 # Tix Demostration Program
 #
 # This sample program is structured in such a way so that it can be
-# executed from the Tix demo program "tixwidgets.py": it must have a
+# executed from the Tix demo program "tixwidgets": it must have a
 # procedure called "RunSample". It should also have the "if" statment
 # at the end of this file so that it can be run as a standalone
 # program.
@@ -85,15 +85,13 @@ def RunSample(w):
     top.pack(side=Tix.TOP, fill=Tix.BOTH, expand=1)
 
 def select_month(event=None):
-    # tixDemo:Status "Month = %s" % demo_month.get()
-    pass
+    print "Month =", demo_month.get()
 
 def select_year(event=None):
-    # tixDemo:Status "Year = %s" % demo_year.get()
-    pass
+    print "Year =", demo_year.get()
 
 def ok_command(w):
-    # tixDemo:Status "Month = %s, Year= %s" % (demo_month.get(), demo_year.get())
+    print "Month =", demo_month.get(), ", Year=", demo_year.get()
     w.destroy()
 
 if __name__ == '__main__':

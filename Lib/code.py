@@ -133,7 +133,12 @@ class InteractiveInterpreter:
                 pass
             else:
                 # Stuff in the right filename
-                value = SyntaxError(msg, (filename, lineno, offset, line))
+                try:
+                    # Assume SyntaxError is a class exception
+                    value = SyntaxError(msg, (filename, lineno, offset, line))
+                except:
+                    # If that failed, assume SyntaxError is a string
+                    value = msg, (filename, lineno, offset, line)
                 sys.last_value = value
         list = traceback.format_exception_only(type, value)
         map(self.write, list)
@@ -216,7 +221,7 @@ class InteractiveConsole(InteractiveInterpreter):
             sys.ps2
         except AttributeError:
             sys.ps2 = "... "
-        cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+        cprt = 'Type "copyright", "credits" or "license" for more information.'
         if banner is None:
             self.write("Python %s on %s\n%s\n(%s)\n" %
                        (sys.version, sys.platform, cprt,
@@ -297,7 +302,7 @@ def interact(banner=None, readfunc=None, local=None):
     else:
         try:
             import readline
-        except ImportError:
+        except:
             pass
     console.interact(banner)
 

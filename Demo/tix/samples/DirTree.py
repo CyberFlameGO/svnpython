@@ -5,7 +5,7 @@
 # Tix Demostration Program
 #
 # This sample program is structured in such a way so that it can be
-# executed from the Tix demo program "tixwidgets.py":  it must have a
+# executed from the Tix demo program "widget": it must have a
 # procedure called "RunSample". It should also have the "if" statment
 # at the end of this file so that it can be run as a standalone
 # program using tixwish.
@@ -19,21 +19,16 @@
 import Tix, os, copy
 from Tkconstants import *
 
-TCL_ALL_EVENTS		= 0
-
-def RunSample (root):
-    dirtree = DemoDirTree(root)
-    dirtree.mainloop()
-    dirtree.destroy()
+def RunSample (w):
+    DemoDirTree(w)
 
 class DemoDirTree:
     def __init__(self, w):
         self.root = w
-        self.exit = -1
         
         z = w.winfo_toplevel()
-        z.wm_protocol("WM_DELETE_WINDOW", lambda self=self: self.quitcmd())
-
+        z.wm_title('Tix.DirTree Widget Demo')
+        
         # Create the tixDirTree and the tixLabelEntry widgets on the on the top
         # of the dialog box
 
@@ -95,24 +90,19 @@ class DemoDirTree:
         ent.entry.insert(0, self.dlist_dir)
 
     def okcmd (self):
-        # tixDemo:Status "You have selected the directory" + self.dlist_dir
+        # tixDemo:Status "You have selected the directory" + $self.dlist_dir
+
         self.quitcmd()
 
     def quitcmd (self):
-        # tixDemo:Status "You have selected the directory" + self.dlist_dir
-        self.exit = 0
-
-    def mainloop(self):
-        while self.exit < 0:
-            self.root.tk.dooneevent(TCL_ALL_EVENTS)
-
-    def destroy (self):
         self.root.destroy()
 
 # This "if" statement makes it possible to run this script file inside or
-# outside of the main demo program "tixwidgets.py".
+# outside of the main demo program "widget".
 #
 if __name__== '__main__' :
     root=Tix.Tk()
     RunSample(root)
+    root.mainloop()
+    root.destroy()
 

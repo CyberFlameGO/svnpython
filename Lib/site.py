@@ -88,7 +88,7 @@ for dir in sys.path:
         L.append(dir)
         _dirs_in_sys_path[dircase] = 1
 sys.path[:] = L
-del dir, dircase, L
+del dir, L
 
 # Append ./build/lib.<platform> in case we're running in the build dir
 # (especially for Guido :-)
@@ -164,9 +164,7 @@ if sys.exec_prefix != sys.prefix:
     prefixes.append(sys.exec_prefix)
 for prefix in prefixes:
     if prefix:
-        if sys.platform == 'os2emx':
-            sitedirs = [os.path.join(prefix, "Lib", "site-packages")]
-        elif os.sep == '/':
+        if os.sep == '/':
             sitedirs = [os.path.join(prefix,
                                      "lib",
                                      "python" + sys.version[:3],
@@ -177,7 +175,6 @@ for prefix in prefixes:
         for sitedir in sitedirs:
             if os.path.isdir(sitedir):
                 addsitedir(sitedir)
-del prefix, sitedir
 
 _dirs_in_sys_path = None
 

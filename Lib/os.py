@@ -95,27 +95,16 @@ elif 'dos' in _names:
 elif 'os2' in _names:
     name = 'os2'
     linesep = '\r\n'
-    curdir = '.'; pardir = '..'; pathsep = ';'
-    if sys.version.find('EMX GCC') == -1:
-        # standard OS/2 compiler (VACPP or Watcom?)
-        sep = '\\'; altsep = '/'
-    else:
-        # EMX
-        sep = '/'; altsep = '\\'
+    curdir = '.'; pardir = '..'; sep = '\\'; pathsep = ';'
     defpath = '.;C:\\bin'
     from os2 import *
     try:
         from os2 import _exit
     except ImportError:
         pass
-    if sys.version.find('EMX GCC') == -1:
-        import ntpath
-        path = ntpath
-        del ntpath
-    else:
-        import os2emxpath
-        path = os2emxpath
-        del os2emxpath
+    import ntpath
+    path = ntpath
+    del ntpath
 
     import os2
     __all__.extend(_get_exports_list(os2))

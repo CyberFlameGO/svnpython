@@ -6,7 +6,7 @@ AC_CONFIG_HEADER(pyconfig.h)
 
 # Set VERSION so we only need to edit in one place (i.e., here)
 AC_SUBST(VERSION)
-VERSION=2.3
+VERSION=2.2
 
 # Arguments passed to configure.
 AC_SUBST(CONFIG_ARGS)
@@ -294,9 +294,9 @@ then
 	AIX*)
 	   LINKCC="\$(srcdir)/Modules/makexp_aix Modules/python.exp \"\" \$(LIBRARY); $LINKCC";;
 	dgux*)
-	   LINKCC="LD_RUN_PATH=$libdir $LINKCC";;
+	   LINKCC="LD_RUN_PATH=$libdir $(LINKCC)";;
 	Monterey64*)
-	   LINKCC="$LINKCC -L/usr/lib/ia64l64";;
+	   LINKCC="$(LINKCC) -L/usr/lib/ia64l64";;
 	esac
 fi
 AC_MSG_RESULT($LINKCC)
@@ -398,7 +398,7 @@ then
     esac
     case $ac_sys_system in
     Darwin*)
-    	OPT="$OPT -Wno-long-double -no-cpp-precomp";;
+    	OPT="$OPT -no-cpp-precomp";;
     esac
 fi
 
@@ -799,7 +799,7 @@ then
 			BLDSHARED="$LDSHARED "'-bundle_loader $(BUILDPYTHON)'
 			LDSHARED="$LDSHARED "'-bundle_loader $(BINDIR)/$(PYTHON)'
 		fi ;;
-	Linux*|GNU*) LDSHARED="gcc -shared";;
+	Linux*) LDSHARED="gcc -shared";;
 	dgux*) LDSHARED="ld -G";;
 	BSD/OS*/4*) LDSHARED="gcc -shared";;
 	OpenBSD*|NetBSD*|FreeBSD*)
@@ -835,7 +835,7 @@ then
 		 then CCSHARED="-fPIC";
 		 else CCSHARED="+z";
 		 fi;;
-	Linux*|GNU*) CCSHARED="-fPIC";;
+	Linux*) CCSHARED="-fPIC";;
 	BSD/OS*/4*) CCSHARED="-fpic";;
 	FreeBSD*|NetBSD*|OpenBSD*) CCSHARED="-fPIC";;
 	OpenUNIX*|UnixWare*)
@@ -863,7 +863,7 @@ then
 	hp*|HP*)
 	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
 	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
-	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
+	Linux*) LINKFORSHARED="-Xlinker -export-dynamic";;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*) 
 		# -u __dummy makes the linker aware of the objc runtime
@@ -916,7 +916,6 @@ AC_MSG_RESULT($CFLAGSFORSHARED)
 # checks for libraries
 AC_CHECK_LIB(dl, dlopen)	# Dynamic linking for SunOS/Solaris and SYSV
 AC_CHECK_LIB(dld, shl_load)	# Dynamic linking for HP-UX
-AC_CHECK_LIB(rt, sem_init)	# 'Real Time' functions on Solaris
 
 # checks for system dependent C++ extensions support
 case "$ac_sys_system" in
@@ -1037,14 +1036,8 @@ else
     AC_MSG_RESULT($unistd_defines_pthreads)
 
     AC_DEFINE(_REENTRANT)
-    AC_CHECK_HEADER(cthreads.h, [AC_DEFINE(WITH_THREAD)
-    AC_DEFINE(C_THREADS)
-    AC_DEFINE(HURD_C_THREADS)
-    LIBS="$LIBS -lthreads"
-    LIBOBJS="$LIBOBJS thread.o"],[
     AC_CHECK_HEADER(mach/cthreads.h, [AC_DEFINE(WITH_THREAD)
     AC_DEFINE(C_THREADS)
-    AC_DEFINE(MACH_C_THREADS)
     LIBOBJS="$LIBOBJS thread.o"],[
     AC_MSG_CHECKING(for --with-pth)
     AC_ARG_WITH(pth,
@@ -1098,7 +1091,7 @@ pthread_create (NULL, NULL, start_routine, NULL)], [
     LIBS="$LIBS -lcma"
     LIBOBJS="$LIBOBJS thread.o"],[
     USE_THREAD_MODULE="#"])
-    ])])])])])])])])])])
+    ])])])])])])])])])
 
     if test "$posix_threads" = "yes"; then
       if test "$unistd_defines_pthreads" = "no"; then
@@ -1134,13 +1127,10 @@ pthread_create (NULL, NULL, start_routine, NULL)], [
     LIBS="$LIBS -lmpc"
     LIBOBJS="$LIBOBJS thread.o"
     USE_THREAD_MODULE=""])
-
-    if test $posix_threads != "yes"; then     
-      AC_CHECK_LIB(thread, thr_create, [AC_DEFINE(WITH_THREAD)
-      LIBS="$LIBS -lthread"
-      LIBOBJS="$LIBOBJS thread.o"
-      USE_THREAD_MODULE=""])
-    fi
+    AC_CHECK_LIB(thread, thr_create, [AC_DEFINE(WITH_THREAD)
+    LIBS="$LIBS -lthread"
+    LIBOBJS="$LIBOBJS thread.o"
+    USE_THREAD_MODULE=""])
 
     if test "$USE_THREAD_MODULE" != "#"
     then
@@ -1335,16 +1325,12 @@ AC_MSG_RESULT($with_cycle_gc)
 # Check for Python-specific malloc support
 AC_MSG_CHECKING(for --with-pymalloc)
 AC_ARG_WITH(pymalloc,
-[  --with(out)-pymalloc            disable/enable specialized mallocs])
-
-if test -z "$with_pymalloc"
-then with_pymalloc="yes"
-fi
-if test "$with_pymalloc" != "no"
-then
-    AC_DEFINE(WITH_PYMALLOC)
-fi
-AC_MSG_RESULT($with_pymalloc)
+[  --with(out)-pymalloc            disable/enable specialized mallocs], [
+if test "$withval" != no
+then AC_DEFINE(WITH_PYMALLOC) AC_MSG_RESULT(yes)
+else AC_MSG_RESULT(no)
+fi],
+[AC_MSG_RESULT(no)])
 
 # Check for --with-wctype-functions
 AC_MSG_CHECKING(for --with-wctype-functions)
@@ -1435,7 +1421,7 @@ AC_MSG_RESULT(MACHDEP_OBJS)
 AC_CHECK_FUNCS(alarm chown chroot clock confstr ctermid ctermid_r execv \
  flock fork fsync fdatasync fpathconf ftime ftruncate \
  gai_strerror getgroups getlogin getpeername getpid getpwent getwd \
- hstrerror inet_pton kill killpg link lstat mkfifo mktime mremap \
+ hstrerror inet_pton kill link lstat mkfifo mktime mremap \
  nice pathconf pause plock poll pthread_init \
  putenv readlink \
  select setegid seteuid setgid setgroups \

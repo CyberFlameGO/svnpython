@@ -61,7 +61,7 @@ class GzipFile:
                                              zlib.DEF_MEM_LEVEL,
                                              0)
         else:
-            raise IOError, "Mode " + mode + " not supported"
+            raise ValueError, "Mode " + mode + " not supported"
 
         self.fileobj = fileobj
         self.offset = 0
@@ -133,10 +133,6 @@ class GzipFile:
 
 
     def write(self,data):
-        if self.mode != WRITE:
-            import errno
-            raise IOError(errno.EBADF, "write() on read-only GzipFile object")
-        
         if self.fileobj is None:
             raise ValueError, "write() on closed GzipFile object"
         if len(data) > 0:
@@ -146,10 +142,6 @@ class GzipFile:
             self.offset += len(data)
 
     def read(self, size=-1):
-        if self.mode != READ:
-            import errno
-            raise IOError(errno.EBADF, "write() on read-only GzipFile object")
-            
         if self.extrasize <= 0 and self.fileobj is None:
             return ''
 
@@ -350,16 +342,6 @@ class GzipFile:
     def writelines(self, L):
         for line in L:
             self.write(line)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        line = self.readline()
-        if line:
-            return line
-        else:
-            raise StopIteration
 
 
 def _test():

@@ -2,34 +2,9 @@
 /* UNIX password file access module */
 
 #include "Python.h"
-#include "structseq.h"
 
 #include <sys/types.h>
 #include <pwd.h>
-
-static PyStructSequence_Field struct_pwd_type_fields[] = {
-	{"pw_name", "user name"},
-	{"pw_passwd", "password"},
-	{"pw_uid", "user id"},
-	{"pw_gid", "group id"}, 
-	{"pw_gecos", "real name"}, 
-	{"pw_dir", "home directory"},
-	{"pw_shell", "shell program"},
-	{0}
-};
-
-static char struct_passwd__doc__[] =
-"pwd.struct_passwd: Results from getpw*() routines.\n\n\
-This object may be accessed either as a tuple of\n\
-  (pw_name,pw_passwd,pw_uid,pw_gid,pw_gecos,pw_dir,pw_shell)\n\
-or via the object attributes as named in the above tuple.\n";
-
-static PyStructSequence_Desc struct_pwd_type_desc = {
-	"pwd.struct_passwd",
-	struct_passwd__doc__,
-	struct_pwd_type_fields,
-	7,
-};
 
 static char pwd__doc__ [] = "\
 This module provides access to the Unix password database.\n\
@@ -42,40 +17,29 @@ The uid and gid items are integers, all others are strings. An\n\
 exception is raised if the entry asked for cannot be found.";
 
       
-static PyTypeObject StructPwdType;
-
 static PyObject *
 mkpwent(struct passwd *p)
 {
-	int setIndex = 0;
-	PyObject *v = PyStructSequence_New(&StructPwdType);
-	if (v == NULL)
-		return NULL;
-
-#define SETI(i,val) PyStructSequence_SET_ITEM(v, i, PyInt_FromLong((long) val))
-#define SETS(i,val) PyStructSequence_SET_ITEM(v, i, PyString_FromString(val))
-
-	SETS(setIndex++, p->pw_name);
-	SETS(setIndex++, p->pw_passwd);
-	SETI(setIndex++, p->pw_uid);
-	SETI(setIndex++, p->pw_gid);
-	SETS(setIndex++, p->pw_gecos);
-	SETS(setIndex++, p->pw_dir);
-	SETS(setIndex++, p->pw_shell);
-
-#undef SETS
-#undef SETI
-
-	if (PyErr_Occurred()) {
-		Py_XDECREF(v);
-		return NULL;
-	}
-
-	return v;
+	return Py_BuildValue(
+		"(ssllsss)",
+		p->pw_name,
+		p->pw_passwd,
+#if defined(NeXT) && defined(_POSIX_SOURCE) && defined(__LITTLE_ENDIAN__)
+/* Correct a bug present on Intel machines in NextStep 3.2 and 3.3;
+   for later versions you may have to remove this */
+		(long)p->pw_short_pad1,	     /* ugh-NeXT broke the padding */
+		(long)p->pw_short_pad2,
+#else
+		(long)p->pw_uid,
+		(long)p->pw_gid,
+#endif
+		p->pw_gecos,
+		p->pw_dir,
+		p->pw_shell);
 }
 
 static char pwd_getpwuid__doc__[] = "\
-getpwuid(uid) -> (pw_name,pw_passwd,pw_uid,pw_gid,pw_gecos,pw_dir,pw_shell)\n\
+getpwuid(uid) -> entry\n\
 Return the password database entry for the given numeric user ID.\n\
 See pwd.__doc__ for more on password database entries.";
 
@@ -94,7 +58,7 @@ pwd_getpwuid(PyObject *self, PyObject *args)
 }
 
 static char pwd_getpwnam__doc__[] = "\
-getpwnam(name) -> (pw_name,pw_passwd,pw_uid,pw_gid,pw_gecos,pw_dir,pw_shell)\n\
+getpwnam(name) -> entry\n\
 Return the password database entry for the given user name.\n\
 See pwd.__doc__ for more on password database entries.";
 
@@ -120,18 +84,16 @@ in arbitrary order.\n\
 See pwd.__doc__ for more on password database entries.";
 
 static PyObject *
-pwd_getpwall(PyObject *self)
+pwd_getpwall(PyObject *self, PyObject *args)
 {
 	PyObject *d;
 	struct passwd *p;
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	if ((d = PyList_New(0)) == NULL)
 		return NULL;
-#if defined(PYOS_OS2) && defined(PYCC_GCC)
-	if ((p = getpwuid(0)) != NULL) {
-#else
 	setpwent();
 	while ((p = getpwent()) != NULL) {
-#endif
 		PyObject *v = mkpwent(p);
 		if (v == NULL || PyList_Append(d, v) != 0) {
 			Py_XDECREF(v);
@@ -149,7 +111,7 @@ static PyMethodDef pwd_methods[] = {
 	{"getpwuid",	pwd_getpwuid, METH_OLDARGS, pwd_getpwuid__doc__},
 	{"getpwnam",	pwd_getpwnam, METH_OLDARGS, pwd_getpwnam__doc__},
 #ifdef HAVE_GETPWENT
-	{"getpwall",	pwd_getpwall, METH_NOARGS,  pwd_getpwall__doc__},
+	{"getpwall",	pwd_getpwall, METH_OLDARGS, pwd_getpwall__doc__},
 #endif
 	{NULL,		NULL}		/* sentinel */
 };
@@ -157,10 +119,6 @@ static PyMethodDef pwd_methods[] = {
 DL_EXPORT(void)
 initpwd(void)
 {
-	PyObject *m, *d;
-	m = Py_InitModule4("pwd", pwd_methods, pwd__doc__,
+	Py_InitModule4("pwd", pwd_methods, pwd__doc__,
                        (PyObject *)NULL, PYTHON_API_VERSION);
-	d = PyModule_GetDict(m);
-	PyStructSequence_InitType(&StructPwdType, &struct_pwd_type_desc);
-	PyDict_SetItemString(d, "struct_pwent", (PyObject *) &StructPwdType);
 }

@@ -19,29 +19,32 @@ static PyStringObject *nullstring;
 #endif
 
 /*
-   For both PyString_FromString() and PyString_FromStringAndSize(), the 
-   parameter `size' denotes number of characters to allocate, not counting any 
-   null terminating character.
+   PyString_FromStringAndSize() and PyString_FromString() try in certain cases
+   to share string objects.  When the size of the string is zero, these 
+   routines always return a pointer to the same string object; when the size 
+   is one, they return a pointer to an already existing object if the contents
+   of the string is known.  For PyString_FromString() this is always the case,
+   for PyString_FromStringAndSize() this is the case when the first argument 
+   in not NULL.
 
-   For PyString_FromString(), the parameter `str' points to a null-terminated 
-   string containing exactly `size' bytes.
+   A common practice of allocating a string and then filling it in or changing
+   it must be done carefully.  It is only allowed to change the contents of 
+   the string if the object was gotten from PyString_FromStringAndSize() with 
+   a NULL first argument, because in the future these routines may try to do 
+   even more sharing of objects.
 
-   For PyString_FromStringAndSize(), the parameter the parameter `str' is 
-   either NULL or else points to a string containing at least `size' bytes.  For
-   PyString_FromStringAndSize(), the string in the `str' parameter does not 
-   have to be null-terminated.  (Therefore it is safe to construct a substring 
-   by calling `PyString_FromStringAndSize(origstring, substrlen)'.)  If `str' 
-   is NULL then PyString_FromStringAndSize() will allocate `size+1' bytes 
-   (setting the last byte to the null terminating character) and you can fill in 
-   the data yourself.  If `str' is non-NULL then the resulting PyString object 
-   must be treated as immutable and you must not fill in nor alter the data 
-   yourself, since the strings may be shared.
+   The string in the  `str' parameter does not have to be null-character 
+   terminated.  (Therefore it is safe to construct a substring by using 
+   `PyString_FromStringAndSize(origstring, substrlen)'.)
 
-   The PyObject member `op->ob_size', which denotes the number of "extra items" 
-   in a variable-size object, will contain the number of bytes allocated for 
-   string data, not counting the null terminating character.  It is therefore 
-   equal to the equal to the `size' parameter (for PyString_FromStringAndSize()) 
-   or the length of the string in the `str' parameter (for PyString_FromString()).
+   The parameter `size' denotes number of characters to allocate, not
+   counting the null terminating character.  If the `str' argument is
+   not NULL, then it points to a of length `size'. For
+   PyString_FromString, this string must be null-terminated.
+
+   The member `op->ob_size' denotes the number of bytes of data in the string, 
+   not counting the null terminating character, and is therefore equal to the 
+   `size' parameter.
 */
 PyObject *
 PyString_FromStringAndSize(const char *str, int size)
@@ -68,7 +71,7 @@ PyString_FromStringAndSize(const char *str, int size)
 
 	/* PyObject_NewVar is inlined */
 	op = (PyStringObject *)
-		_PyMalloc_MALLOC(sizeof(PyStringObject) + size * sizeof(char));
+		PyObject_MALLOC(sizeof(PyStringObject) + size * sizeof(char));
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -131,7 +134,7 @@ PyString_FromString(const char *str)
 
 	/* PyObject_NewVar is inlined */
 	op = (PyStringObject *)
-		_PyMalloc_MALLOC(sizeof(PyStringObject) + size * sizeof(char));
+		PyObject_MALLOC(sizeof(PyStringObject) + size * sizeof(char));
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -602,7 +605,7 @@ string_print(PyStringObject *op, FILE *fp, int flags)
 
 	/* figure out which quote to use; single is preferred */
 	quote = '\'';
-	if (memchr(op->ob_sval, '\'', op->ob_size) && !memchr(op->ob_sval, '"', op->ob_size))
+	if (strchr(op->ob_sval, '\'') && !strchr(op->ob_sval, '"'))
 		quote = '"';
 
 	fputc(quote, fp);
@@ -646,7 +649,7 @@ string_repr(register PyStringObject *op)
 
 		/* figure out which quote to use; single is preferred */
 		quote = '\'';
-		if (memchr(op->ob_sval, '\'', op->ob_size) && !memchr(op->ob_sval, '"', op->ob_size))
+		if (strchr(op->ob_sval, '\'') && !strchr(op->ob_sval, '"'))
 			quote = '"';
 
 		p = PyString_AS_STRING(v);
@@ -733,7 +736,7 @@ string_concat(register PyStringObject *a, register PyObject *bb)
 	size = a->ob_size + b->ob_size;
 	/* PyObject_NewVar is inlined */
 	op = (PyStringObject *)
-		_PyMalloc_MALLOC(sizeof(PyStringObject) + size * sizeof(char));
+		PyObject_MALLOC(sizeof(PyStringObject) + size * sizeof(char));
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -780,7 +783,7 @@ string_repeat(register PyStringObject *a, register int n)
 		return NULL;
 	}
 	op = (PyStringObject *)
-		_PyMalloc_MALLOC(sizeof(PyStringObject) + nbytes);
+		PyObject_MALLOC(sizeof(PyStringObject) + nbytes);
 	if (op == NULL)
 		return PyErr_NoMemory();
 	PyObject_INIT_VAR(op, &PyString_Type, size);
@@ -2789,7 +2792,7 @@ PyTypeObject PyString_Type = {
 	0,					/* tp_init */
 	0,					/* tp_alloc */
 	string_new,				/* tp_new */
-	_PyMalloc_Del,				/* tp_free */
+	_PyObject_Del,				/* tp_free */
 };
 
 void
@@ -2841,10 +2844,10 @@ _PyString_Resize(PyObject **pv, int newsize)
 #endif
 	_Py_ForgetReference(v);
 	*pv = (PyObject *)
-		_PyMalloc_REALLOC((char *)v,
+		PyObject_REALLOC((char *)v,
 			sizeof(PyStringObject) + newsize * sizeof(char));
 	if (*pv == NULL) {
-		PyMalloc_Del(v);
+		PyObject_DEL(v);
 		PyErr_NoMemory();
 		return -1;
 	}
@@ -3069,52 +3072,37 @@ formatint(char *buf, size_t buflen, int flags,
 	   + 1 + 1 = 24 */
 	char fmt[64];	/* plenty big enough! */
 	long x;
-
 	if (!PyArg_Parse(v, "l;int argument required", &x))
 		return -1;
 	if (prec < 0)
 		prec = 1;
-
-	if ((flags & F_ALT) &&
-	    (type == 'x' || type == 'X')) {
-		/* When converting under %#x or %#X, there are a number 
-		 * of issues that cause pain:
-		 * - when 0 is being converted, the C standard leaves off
-		 *   the '0x' or '0X', which is inconsistent with other
-		 *   %#x/%#X conversions and inconsistent with Python's
-		 *   hex() function
-		 * - there are platforms that violate the standard and
-		 *   convert 0 with the '0x' or '0X'
-		 *   (Metrowerks, Compaq Tru64)
-		 * - there are platforms that give '0x' when converting
-		 *   under %#X, but convert 0 in accordance with the 
-		 *   standard (OS/2 EMX)
-		 * 
-		 * We can achieve the desired consistency by inserting our
-		 * own '0x' or '0X' prefix, and substituting %x/%X in place
-		 * of %#x/%#X.
-		 *
-		 * Note that this is the same approach as used in
-		 * formatint() in unicodeobject.c
-		 */
-		PyOS_snprintf(fmt, sizeof(fmt), "0%c%%.%dl%c", 
-			      type, prec, type);
-	}
-	else {
-		PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%dl%c",
-			      (flags&F_ALT) ? "#" : "", 
-			      prec, type);
-	}
-
+	PyOS_snprintf(fmt, sizeof(fmt), "%%%s.%dl%c",
+		      (flags&F_ALT) ? "#" : "", 
+		      prec, type);
 	/* buf = '+'/'-'/'0'/'0x' + '[0-9]'*max(prec, len(x in octal))
-	 * worst case buf = '0x' + [0-9]*prec, where prec >= 11
-	 */
+	   worst case buf = '0x' + [0-9]*prec, where prec >= 11 */
 	if (buflen <= 13 || buflen <= (size_t)2 + (size_t)prec) {
 		PyErr_SetString(PyExc_OverflowError,
 			"formatted integer is too long (precision too large?)");
 		return -1;
 	}
 	PyOS_snprintf(buf, buflen, fmt, x);
+	/* When converting 0 under %#x or %#X, C leaves off the base marker,
+	 * but we want it (for consistency with other %#x conversions, and
+	 * for consistency with Python's hex() function).
+	 * BUG 28-Apr-2001 tim:  At least two platform Cs (Metrowerks &
+	 * Compaq Tru64) violate the std by converting 0 w/ leading 0x anyway.
+	 * So add it only if the platform didn't already.
+	 */
+	if (x == 0 &&
+	   (flags & F_ALT) &&
+	   (type == 'x' || type == 'X') &&
+	    buf[1] != (char)type)  /* this last always true under std C */
+		{
+		memmove(buf+2, buf, strlen(buf) + 1);
+		buf[0] = '0';
+		buf[1] = (char)type;
+	}
 	return strlen(buf);
 }
 

@@ -87,8 +87,11 @@ and the return value reflects whether the lock is acquired.\n\
 The blocking operation is not interruptible.";
 
 static PyObject *
-lock_PyThread_release_lock(lockobject *self)
+lock_PyThread_release_lock(lockobject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
+
 	/* Sanity check: the lock must be locked */
 	if (PyThread_acquire_lock(self->lock_lock, 0)) {
 		PyThread_release_lock(self->lock_lock);
@@ -110,8 +113,11 @@ the lock to acquire the lock.  The lock must be in the locked state,\n\
 but it needn't be locked by the same thread that unlocks it.";
 
 static PyObject *
-lock_locked_lock(lockobject *self)
+lock_locked_lock(lockobject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
+
 	if (PyThread_acquire_lock(self->lock_lock, 0)) {
 		PyThread_release_lock(self->lock_lock);
 		return PyInt_FromLong(0L);
@@ -131,13 +137,13 @@ static PyMethodDef lock_methods[] = {
 	{"acquire",      (PyCFunction)lock_PyThread_acquire_lock, 
 	 METH_OLDARGS, acquire_doc},
 	{"release_lock", (PyCFunction)lock_PyThread_release_lock, 
-	 METH_NOARGS, release_doc},
+	 METH_OLDARGS, release_doc},
 	{"release",      (PyCFunction)lock_PyThread_release_lock, 
-	 METH_NOARGS, release_doc},
+	 METH_OLDARGS, release_doc},
 	{"locked_lock",  (PyCFunction)lock_locked_lock,  
-	 METH_NOARGS, locked_doc},
+	 METH_OLDARGS, locked_doc},
 	{"locked",       (PyCFunction)lock_locked_lock,  
-	 METH_NOARGS, locked_doc},
+	 METH_OLDARGS, locked_doc},
 	{NULL,           NULL}		/* sentinel */
 };
 
@@ -261,8 +267,10 @@ when the function raises an unhandled exception; a stack trace will be\n\
 printed unless the exception is SystemExit.\n";
 
 static PyObject *
-thread_PyThread_exit_thread(PyObject *self)
+thread_PyThread_exit_thread(PyObject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	PyErr_SetNone(PyExc_SystemExit);
 	return NULL;
 }
@@ -287,8 +295,10 @@ thread_PyThread_exit_prog(PyObject *self, PyObject *args)
 #endif
 
 static PyObject *
-thread_PyThread_allocate_lock(PyObject *self)
+thread_PyThread_allocate_lock(PyObject *self, PyObject *args)
 {
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	return (PyObject *) newlockobject();
 }
 
@@ -299,9 +309,11 @@ static char allocate_doc[] =
 Create a new lock object.  See LockType.__doc__ for information about locks.";
 
 static PyObject *
-thread_get_ident(PyObject *self)
+thread_get_ident(PyObject *self, PyObject *args)
 {
 	long ident;
+	if (!PyArg_NoArgs(args))
+		return NULL;
 	ident = PyThread_get_thread_ident();
 	if (ident == -1) {
 		PyErr_SetString(ThreadError, "no current thread ident");
@@ -329,15 +341,15 @@ static PyMethodDef thread_methods[] = {
 	                        METH_VARARGS,
 				start_new_doc},
 	{"allocate_lock",	(PyCFunction)thread_PyThread_allocate_lock, 
-	 METH_NOARGS, allocate_doc},
+	 METH_OLDARGS, allocate_doc},
 	{"allocate",		(PyCFunction)thread_PyThread_allocate_lock, 
 	 METH_OLDARGS, allocate_doc},
 	{"exit_thread",		(PyCFunction)thread_PyThread_exit_thread, 
-	 METH_NOARGS, exit_doc},
+	 METH_OLDARGS, exit_doc},
 	{"exit",		(PyCFunction)thread_PyThread_exit_thread, 
 	 METH_OLDARGS, exit_doc},
 	{"get_ident",		(PyCFunction)thread_get_ident, 
-	 METH_NOARGS, get_ident_doc},
+	 METH_OLDARGS, get_ident_doc},
 #ifndef NO_EXIT_PROG
 	{"exit_prog",		(PyCFunction)thread_PyThread_exit_prog},
 #endif

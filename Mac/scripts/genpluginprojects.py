@@ -36,7 +36,7 @@ def genpluginproject(architecture, module,
 		sources=[], sourcedirs=[],
 		libraries=[], extradirs=[],
 		extraexportsymbols=[], outputdir=":::Lib:lib-dynload",
-		libraryflags=None, stdlibraryflags=None, prefixname=None):
+		libraryflags=None, stdlibraryflags=None):
 	if architecture == "all":
 		# For the time being we generate two project files. Not as nice as
 		# a single multitarget project, but easier to implement for now.
@@ -78,9 +78,7 @@ def genpluginproject(architecture, module,
 		else:
 			print "Warning: %s: sourcefile not found: %s"%(module, sources[0])
 			sourcedirs = []
-	if prefixname:
-		pass
-	elif architecture == "carbon":
+	if architecture == "carbon":
 		prefixname = "mwerks_carbonplugin_config.h"
 	else:
 		prefixname = "mwerks_plugin_config.h"
@@ -106,16 +104,10 @@ def	genallprojects(force=0):
 	global FORCEREBUILD
 	FORCEREBUILD = force
 	# Standard Python modules
-	genpluginproject("ppc", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_pyexpat_config.h"
-		)
-	genpluginproject("carbon", "pyexpat", 
-		sources=["pyexpat.c", "xmlparse.c", "xmlrole.c", "xmltok.c"],
-		extradirs=[":::Modules:expat"],
-		prefixname="mwerks_carbonpyexpat_config.h"
-		)
+	genpluginproject("all", "pyexpat", 
+		sources=["pyexpat.c"], 
+		libraries=["libexpat.ppc.lib"], 
+		extradirs=["::::expat:*"])
 	genpluginproject("all", "zlib", 
 		libraries=["zlib.ppc.Lib"], 
 		extradirs=["::::imglibs:zlib:mac", "::::imglibs:zlib"])

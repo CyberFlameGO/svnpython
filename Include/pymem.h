@@ -10,6 +10,51 @@
 extern "C" {
 #endif
 
+/*
+ * Core memory allocator
+ * =====================
+ */
+
+/* To make sure the interpreter is user-malloc friendly, all memory
+   APIs are implemented on top of this one.
+
+   The PyCore_* macros can be defined to make the interpreter use a
+   custom allocator. Note that they are for internal use only. Both
+   the core and extension modules should use the PyMem_* API.
+
+   See the comment block at the end of this file for two scenarios
+   showing how to use this to use a different allocator. */
+
+#ifndef PyCore_MALLOC_FUNC
+#undef PyCore_REALLOC_FUNC
+#undef PyCore_FREE_FUNC
+#define PyCore_MALLOC_FUNC      malloc
+#define PyCore_REALLOC_FUNC     realloc
+#define PyCore_FREE_FUNC        free
+#endif
+
+#ifndef PyCore_MALLOC_PROTO
+#undef PyCore_REALLOC_PROTO
+#undef PyCore_FREE_PROTO
+#define PyCore_MALLOC_PROTO    (size_t)
+#define PyCore_REALLOC_PROTO   (void *, size_t)
+#define PyCore_FREE_PROTO      (void *)
+#endif
+
+#ifdef NEED_TO_DECLARE_MALLOC_AND_FRIEND
+extern void *PyCore_MALLOC_FUNC PyCore_MALLOC_PROTO;
+extern void *PyCore_REALLOC_FUNC PyCore_REALLOC_PROTO;
+extern void PyCore_FREE_FUNC PyCore_FREE_PROTO;
+#endif
+
+#ifndef PyCore_MALLOC
+#undef PyCore_REALLOC
+#undef PyCore_FREE
+#define PyCore_MALLOC(n)        PyCore_MALLOC_FUNC(n)
+#define PyCore_REALLOC(p, n)    PyCore_REALLOC_FUNC((p), (n))
+#define PyCore_FREE(p)          PyCore_FREE_FUNC(p)
+#endif
+
 /* BEWARE:
 
    Each interface exports both functions and macros. Extension modules
@@ -31,12 +76,9 @@ extern "C" {
  * ====================
  */
 
-/* To make sure the interpreter is user-malloc friendly, all memory
-   APIs are implemented on top of this one. */
-
 /* Functions */
 
-/* Function wrappers around PyMem_MALLOC and friends; useful if you
+/* Function wrappers around PyCore_MALLOC and friends; useful if you
    need to be sure that you are using the same memory allocator as
    Python.  Note that the wrappers make sure that allocating 0 bytes
    returns a non-NULL pointer, even if the underlying malloc
@@ -49,12 +91,10 @@ extern DL_IMPORT(void) PyMem_Free(void *);
 /* Starting from Python 1.6, the wrappers Py_{Malloc,Realloc,Free} are
    no longer supported. They used to call PyErr_NoMemory() on failure. */
 
-/* Macros (override these if you want to a different malloc */
-#ifndef PyMem_MALLOC
-#define PyMem_MALLOC(n)         malloc(n)
-#define PyMem_REALLOC(p, n)     realloc((void *)(p), (n))
-#define PyMem_FREE(p)           free((void *)(p))
-#endif
+/* Macros */
+#define PyMem_MALLOC(n)         PyCore_MALLOC(n)
+#define PyMem_REALLOC(p, n)     PyCore_REALLOC((void *)(p), (n))
+#define PyMem_FREE(p)           PyCore_FREE((void *)(p))
 
 /*
  * Type-oriented memory interface
@@ -89,38 +129,47 @@ extern DL_IMPORT(void) PyMem_Free(void *);
    it is recommended to write the test explicitly in the code.
    Note that according to ANSI C, free(NULL) has no effect. */
 
-
-/* pymalloc (private to the interpreter) */
-#ifdef WITH_PYMALLOC
-DL_IMPORT(void *) _PyMalloc_Malloc(size_t nbytes);
-DL_IMPORT(void *) _PyMalloc_Realloc(void *p, size_t nbytes);
-DL_IMPORT(void) _PyMalloc_Free(void *p);
-
-#ifdef PYMALLOC_DEBUG
-DL_IMPORT(void *) _PyMalloc_DebugMalloc(size_t nbytes, int family);
-DL_IMPORT(void *) _PyMalloc_DebugRealloc(void *p, size_t nbytes, int family);
-DL_IMPORT(void) _PyMalloc_DebugFree(void *p, int family);
-DL_IMPORT(void) _PyMalloc_DebugDumpAddress(const void *p);
-DL_IMPORT(void) _PyMalloc_DebugCheckAddress(const void *p);
-#define _PyMalloc_MALLOC(N) _PyMalloc_DebugMalloc(N, 0)
-#define _PyMalloc_REALLOC(P, N) _PyMalloc_DebugRealloc(P, N, 0)
-#define _PyMalloc_FREE(P) _PyMalloc_DebugFree(P, 0)
-
-#else	/* WITH_PYMALLOC && ! PYMALLOC_DEBUG */
-#define _PyMalloc_MALLOC _PyMalloc_Malloc
-#define _PyMalloc_REALLOC _PyMalloc_Realloc
-#define _PyMalloc_FREE _PyMalloc_Free
-#endif
-
-#else	/* ! WITH_PYMALLOC */
-#define _PyMalloc_MALLOC PyMem_MALLOC
-#define _PyMalloc_REALLOC PyMem_REALLOC
-#define _PyMalloc_FREE PyMem_FREE
-#endif	/* WITH_PYMALLOC */
-
-
 #ifdef __cplusplus
 }
 #endif
+
+/* SCENARIOS
+
+   Here are two scenarios by Vladimir Marangozov (the author of the
+   memory allocation redesign).
+
+   1) Scenario A
+
+   Suppose you want to use a debugging malloc library that collects info on
+   where the malloc calls originate from. Assume the interface is:
+
+   d_malloc(size_t n, char* src_file, unsigned long src_line) c.s.
+
+   In this case, you would define (for example in pyconfig.h) :
+
+   #define PyCore_MALLOC_FUNC      d_malloc
+   ...
+   #define PyCore_MALLOC_PROTO	(size_t, char *, unsigned long)
+   ...
+   #define NEED_TO_DECLARE_MALLOC_AND_FRIEND
+
+   #define PyCore_MALLOC(n)	PyCore_MALLOC_FUNC((n), __FILE__, __LINE__)
+   ...
+
+   2) Scenario B
+
+   Suppose you want to use malloc hooks (defined & initialized in a 3rd party
+   malloc library) instead of malloc functions.  In this case, you would
+   define:
+
+   #define PyCore_MALLOC_FUNC	(*malloc_hook)
+   ...
+   #define NEED_TO_DECLARE_MALLOC_AND_FRIEND
+
+   and ignore the previous definitions about PyCore_MALLOC_FUNC, etc.
+
+
+*/
+
 
 #endif /* !Py_PYMEM_H */

@@ -100,14 +100,14 @@ typedef struct {
 static PyObject *
 gen_new(PyFrameObject *f)
 {
-	genobject *gen = PyObject_GC_New(genobject, &gentype);
+	genobject *gen = PyObject_New(genobject, &gentype);
 	if (gen == NULL) {
 		Py_DECREF(f);
 		return NULL;
 	}
 	gen->gi_frame = f;
 	gen->gi_running = 0;
-	_PyObject_GC_TRACK(gen);
+	PyObject_GC_Init(gen);
 	return (PyObject *)gen;
 }
 
@@ -120,9 +120,9 @@ gen_traverse(genobject *gen, visitproc visit, void *arg)
 static void
 gen_dealloc(genobject *gen)
 {
-	_PyObject_GC_UNTRACK(gen);
+	PyObject_GC_Fini(gen);
 	Py_DECREF(gen->gi_frame);
-	PyObject_GC_Del(gen);
+	PyObject_Del(gen);
 }
 
 static PyObject *
@@ -204,7 +204,7 @@ statichere PyTypeObject gentype = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,					/* ob_size */
 	"generator",				/* tp_name */
-	sizeof(genobject),			/* tp_basicsize */
+	sizeof(genobject) + PyGC_HEAD_SIZE,	/* tp_basicsize */
 	0,					/* tp_itemsize */
 	/* methods */
 	(destructor)gen_dealloc, 		/* tp_dealloc */
@@ -222,7 +222,7 @@ statichere PyTypeObject gentype = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC,	/* tp_flags */
  	0,					/* tp_doc */
  	(traverseproc)gen_traverse,		/* tp_traverse */
  	0,					/* tp_clear */
@@ -680,7 +680,6 @@ eval_frame(PyFrameObject *f)
 #endif
 		}
 
-	fast_next_opcode:
 		/* Extract opcode and argument */
 
 #if defined(Py_DEBUG) || defined(LLTRACE)
@@ -725,53 +724,10 @@ eval_frame(PyFrameObject *f)
 
 		/* case STOP_CODE: this is an error! */
 
-		case SET_LINENO:
-#ifdef LLTRACE
-			if (lltrace)
-				printf("--- %s:%d \n", filename, oparg);
-#endif
-			f->f_lineno = oparg;
-			if (tstate->c_tracefunc == NULL || tstate->tracing)
-				goto fast_next_opcode;
-			/* Trace each line of code reached */
-			f->f_lasti = INSTR_OFFSET();
-			/* Inline call_trace() for performance: */
-			tstate->tracing++;
-			tstate->use_tracing = 0;
-			err = (tstate->c_tracefunc)(tstate->c_traceobj, f,
-						    PyTrace_LINE, Py_None);
-			tstate->use_tracing = (tstate->c_tracefunc
-					       || tstate->c_profilefunc);
-			tstate->tracing--;
-			break;
-
-		case LOAD_FAST:
-			x = GETLOCAL(oparg);
-			if (x != NULL) {
-				Py_INCREF(x);
-				PUSH(x);
-				goto fast_next_opcode;
-			}
-			format_exc_check_arg(PyExc_UnboundLocalError,
-				UNBOUNDLOCAL_ERROR_MSG,
-				PyTuple_GetItem(co->co_varnames, oparg));
-			break;
-
-		case LOAD_CONST:
-			x = GETCONST(oparg);
-			Py_INCREF(x);
-			PUSH(x);
-			goto fast_next_opcode;
-
-		case STORE_FAST:
-			v = POP();
-			SETLOCAL(oparg, v);
-			goto fast_next_opcode;
-
 		case POP_TOP:
 			v = POP();
 			Py_DECREF(v);
-			goto fast_next_opcode;
+			continue;
 
 		case ROT_TWO:
 			v = POP();
@@ -1397,31 +1353,29 @@ eval_frame(PyFrameObject *f)
 					err = -1;
 				}
 			}
-			if (w != NULL && PyFile_SoftSpace(w, 0))
+			if (w != NULL && PyFile_SoftSpace(w, 1))
 				err = PyFile_WriteString(" ", w);
 			if (err == 0)
 				err = PyFile_WriteObject(v, w, Py_PRINT_RAW);
 			if (err == 0) {
-			    /* XXX move into writeobject() ? */
+				/* XXX move into writeobject() ? */
 			    if (PyString_Check(v)) {
 				char *s = PyString_AS_STRING(v);
 				int len = PyString_GET_SIZE(v);
-				if (len == 0 ||
-				    !isspace(Py_CHARMASK(s[len-1])) ||
-				    s[len-1] == ' ')
-					PyFile_SoftSpace(w, 1);
+				if (len > 0 &&
+				    isspace(Py_CHARMASK(s[len-1])) &&
+				    s[len-1] != ' ')
+					PyFile_SoftSpace(w, 0);
 			    } 
 #ifdef Py_USING_UNICODE
 			    else if (PyUnicode_Check(v)) {
 				Py_UNICODE *s = PyUnicode_AS_UNICODE(v);
 				int len = PyUnicode_GET_SIZE(v);
-				if (len == 0 ||
-				    !Py_UNICODE_ISSPACE(s[len-1]) ||
-				    s[len-1] == ' ')
-				    PyFile_SoftSpace(w, 1);
+				if (len > 0 &&
+				    Py_UNICODE_ISSPACE(s[len-1]) &&
+				    s[len-1] != ' ')
+				    PyFile_SoftSpace(w, 0);
 			    }
-			    else
-			    	PyFile_SoftSpace(w, 1);
 #endif
 			}
 			Py_DECREF(v);
@@ -1663,6 +1617,12 @@ eval_frame(PyFrameObject *f)
 				    PyExc_NameError, GLOBAL_NAME_ERROR_MSG, w);
 			break;
 
+		case LOAD_CONST:
+			x = GETCONST(oparg);
+			Py_INCREF(x);
+			PUSH(x);
+			break;
+
 		case LOAD_NAME:
 			w = GETNAMEV(oparg);
 			if ((x = f->f_locals) == NULL) {
@@ -1703,6 +1663,26 @@ eval_frame(PyFrameObject *f)
 			Py_INCREF(x);
 			PUSH(x);
 			break;
+
+		case LOAD_FAST:
+			x = GETLOCAL(oparg);
+			if (x == NULL) {
+				format_exc_check_arg(
+					PyExc_UnboundLocalError,
+					UNBOUNDLOCAL_ERROR_MSG,
+					PyTuple_GetItem(co->co_varnames, oparg)
+					);
+				break;
+			}
+			Py_INCREF(x);
+			PUSH(x);
+			if (x != NULL) continue;
+			break;
+
+		case STORE_FAST:
+			v = POP();
+			SETLOCAL(oparg, v);
+			continue;
 
 		case DELETE_FAST:
 			x = GETLOCAL(oparg);
@@ -1805,14 +1785,14 @@ eval_frame(PyFrameObject *f)
 				a = PyInt_AS_LONG(v);
 				b = PyInt_AS_LONG(w);
 				switch (oparg) {
-				case PyCmp_LT: res = a <  b; break;
-				case PyCmp_LE: res = a <= b; break;
-				case PyCmp_EQ: res = a == b; break;
-				case PyCmp_NE: res = a != b; break;
-				case PyCmp_GT: res = a >  b; break;
-				case PyCmp_GE: res = a >= b; break;
-				case PyCmp_IS: res = v == w; break;
-				case PyCmp_IS_NOT: res = v != w; break;
+				case LT: res = a <  b; break;
+				case LE: res = a <= b; break;
+				case EQ: res = a == b; break;
+				case NE: res = a != b; break;
+				case GT: res = a >  b; break;
+				case GE: res = a >= b; break;
+				case IS: res = v == w; break;
+				case IS_NOT: res = v != w; break;
 				default: goto slow_compare;
 				}
 				x = res ? Py_True : Py_False;
@@ -1971,6 +1951,26 @@ eval_frame(PyFrameObject *f)
 			PyFrame_BlockSetup(f, opcode, INSTR_OFFSET() + oparg,
 					   STACK_LEVEL());
 			continue;
+
+		case SET_LINENO:
+#ifdef LLTRACE
+			if (lltrace)
+				printf("--- %s:%d \n", filename, oparg);
+#endif
+			f->f_lineno = oparg;
+			if (tstate->c_tracefunc == NULL || tstate->tracing)
+				continue;
+			/* Trace each line of code reached */
+			f->f_lasti = INSTR_OFFSET();
+			/* Inline call_trace() for performance: */
+			tstate->tracing++;
+			tstate->use_tracing = 0;
+			err = (tstate->c_tracefunc)(tstate->c_traceobj, f,
+						    PyTrace_LINE, Py_None);
+			tstate->use_tracing = (tstate->c_tracefunc
+					       || tstate->c_profilefunc);
+			tstate->tracing--;
+			break;
 
 		case CALL_FUNCTION:
 		{
@@ -2986,12 +2986,6 @@ PyEval_MergeCompilerFlags(PyCompilerFlags *cf)
 			result = 1;
 			cf->cf_flags |= compilerflags;
 		}
-#if 0 /* future keyword */
-		if (codeflags & CO_GENERATOR_ALLOWED) {
-			result = 1;
-			cf->cf_flags |= CO_GENERATOR_ALLOWED;
-		}
-#endif
 	}
 	return result;
 }
@@ -3476,21 +3470,21 @@ cmp_outcome(int op, register PyObject *v, register PyObject *w)
 {
 	int res = 0;
 	switch (op) {
-	case PyCmp_IS:
-	case PyCmp_IS_NOT:
+	case IS:
+	case IS_NOT:
 		res = (v == w);
-		if (op == (int) PyCmp_IS_NOT)
+		if (op == (int) IS_NOT)
 			res = !res;
 		break;
-	case PyCmp_IN:
-	case PyCmp_NOT_IN:
+	case IN:
+	case NOT_IN:
 		res = PySequence_Contains(w, v);
 		if (res < 0)
 			return NULL;
-		if (op == (int) PyCmp_NOT_IN)
+		if (op == (int) NOT_IN)
 			res = !res;
 		break;
-	case PyCmp_EXC_MATCH:
+	case EXC_MATCH:
 		res = PyErr_GivenExceptionMatches(v, w);
 		break;
 	default:

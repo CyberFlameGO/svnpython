@@ -245,11 +245,14 @@ static char localeconv__doc__[] =
 ;
 
 static PyObject*
-PyLocale_localeconv(PyObject* self)
+PyLocale_localeconv(PyObject* self, PyObject* args)
 {
     PyObject* result;
     struct lconv *l;
     PyObject *x;
+
+    if (!PyArg_NoArgs(args))
+        return NULL;
 
     result = PyDict_New();
     if (!result)
@@ -365,10 +368,13 @@ PyLocale_strxfrm(PyObject* self, PyObject* args)
 
 #if defined(MS_WIN32)
 static PyObject*
-PyLocale_getdefaultlocale(PyObject* self)
+PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
 {
     char encoding[100];
     char locale[100];
+
+    if (!PyArg_NoArgs(args))
+        return NULL;
 
     PyOS_snprintf(encoding, sizeof(encoding), "cp%d", GetACP());
 
@@ -402,7 +408,7 @@ PyLocale_getdefaultlocale(PyObject* self)
 
 #if defined(macintosh)
 static PyObject*
-PyLocale_getdefaultlocale(PyObject* self)
+PyLocale_getdefaultlocale(PyObject* self, PyObject* args)
 {
     return Py_BuildValue("Os", Py_None, PyMac_getscript());
 }
@@ -524,13 +530,13 @@ static struct PyMethodDef PyLocale_Methods[] = {
   {"setlocale", (PyCFunction) PyLocale_setlocale, 
    METH_VARARGS, setlocale__doc__},
   {"localeconv", (PyCFunction) PyLocale_localeconv, 
-   METH_NOARGS, localeconv__doc__},
+   0, localeconv__doc__},
   {"strcoll", (PyCFunction) PyLocale_strcoll, 
    METH_VARARGS, strcoll__doc__},
   {"strxfrm", (PyCFunction) PyLocale_strxfrm, 
    METH_VARARGS, strxfrm__doc__},
 #if defined(MS_WIN32) || defined(macintosh)
-  {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, METH_NOARGS},
+  {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, 0},
 #endif
 #ifdef HAVE_LANGINFO_H
   {"nl_langinfo", (PyCFunction) PyLocale_nl_langinfo,

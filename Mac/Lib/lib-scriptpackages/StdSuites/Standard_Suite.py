@@ -1,7 +1,7 @@
 """Suite Standard Suite: Common terms for most applications
 Level 1, version 1
 
-Generated from Moes:Systeemmap:Extensies:AppleScript
+Generated from Macintosh HD:Systeemmap:Extensies:AppleScript
 AETE/AEUT resource version 1/0, language 0, script 0
 """
 
@@ -10,8 +10,7 @@ import MacOS
 
 _code = 'core'
 
-from _builtinSuites.builtin_Suite import *
-class Standard_Suite_Events(builtin_Suite_Events):
+class Standard_Suite_Events:
 
 	def open(self, _object, _attributes={}, **_arguments):
 		"""open: Open the specified object(s)
@@ -656,49 +655,49 @@ _Enum_styl = {
 # Indices of types declared in this module
 #
 _classdeclarations = {
-	'cwin' : window,
-	'file' : file,
-	'csel' : selection_2d_object,
-	'alis' : alias,
-	'capp' : application,
-	'cins' : insertion_point,
 	'docu' : document,
+	'cins' : insertion_point,
+	'capp' : application,
+	'alis' : alias,
+	'csel' : selection_2d_object,
+	'file' : file,
+	'cwin' : window,
 }
 
 _propdeclarations = {
-	'prsz' : resizable,
-	'vers' : version,
+	'ptit' : titled,
 	'pidx' : index,
-	'pvis' : visible,
-	'imod' : modified,
-	'pbnd' : bounds,
-	'sele' : selection,
-	'pisf' : frontmost,
-	'pspd' : stationery,
-	'isfl' : floating,
-	'iszm' : zoomable,
-	'hclb' : closeable,
-	'pcli' : clipboard,
-	'pmod' : modal,
-	'pcnt' : contents,
 	'pnam' : name,
 	'pzum' : zoomed,
-	'ptit' : titled,
+	'pcnt' : contents,
+	'pcli' : clipboard,
+	'hclb' : closeable,
+	'iszm' : zoomable,
+	'isfl' : floating,
+	'pspd' : stationery,
+	'pisf' : frontmost,
+	'sele' : selection,
+	'pbnd' : bounds,
+	'imod' : modified,
+	'pvis' : visible,
+	'pmod' : modal,
+	'vers' : version,
+	'prsz' : resizable,
 }
 
 _compdeclarations = {
-	'<   ' : _3c_,
-	'ends' : ends_with,
-	'>=  ' : _b3_,
-	'cont' : contains,
-	'<=  ' : _b2_,
-	'=   ' : _3d_,
-	'bgwt' : starts_with,
 	'>   ' : _3e_,
+	'bgwt' : starts_with,
+	'>=  ' : _b3_,
+	'=   ' : _3d_,
+	'<=  ' : _b2_,
+	'cont' : contains,
+	'ends' : ends_with,
+	'<   ' : _3c_,
 }
 
 _enumdeclarations = {
-	'savo' : _Enum_savo,
 	'styl' : _Enum_styl,
+	'savo' : _Enum_savo,
 	'kfrm' : _Enum_kfrm,
 }

@@ -34,10 +34,11 @@ You must first include "object.h".
    allocator) and initialize its object header fields.
 
 Note that objects created with PyObject_{New, NewVar} are allocated
-within the Python heap by the raw memory allocator (usually the system
-malloc).  If you want to use the specialized Python allocator use
-PyMalloc_New and PyMalloc_NewVar to allocate the objects and
-PyMalloc_Del to free them.
+within the Python heap by an object allocator, the latter being
+implemented (by default) on top of the Python raw memory
+allocator. This ensures that Python keeps control on the user's
+objects regarding their memory management; for instance, they may be
+subject to automatic garbage collection.
 
 In case a specific form of memory management is needed, implying that
 the objects would not reside in the Python heap (for example standard
@@ -54,6 +55,63 @@ form of memory management you're using).
 
 Unless you have specific memory management requirements, it is
 recommended to use PyObject_{New, NewVar, Del}. */
+
+/*
+ * Core object memory allocator
+ * ============================
+ */
+
+/* The purpose of the object allocator is to make the distinction
+   between "object memory" and the rest within the Python heap.
+
+   Object memory is the one allocated by PyObject_{New, NewVar}, i.e.
+   the one that holds the object's representation defined by its C
+   type structure, *excluding* any object-specific memory buffers that
+   might be referenced by the structure (for type structures that have
+   pointer fields).  By default, the object memory allocator is
+   implemented on top of the raw memory allocator.
+
+   The PyCore_* macros can be defined to make the interpreter use a
+   custom object memory allocator. They are reserved for internal
+   memory management purposes exclusively. Both the core and extension
+   modules should use the PyObject_* API. */
+
+#ifdef WITH_PYMALLOC
+#define PyCore_OBJECT_MALLOC_FUNC    _PyCore_ObjectMalloc
+#define PyCore_OBJECT_REALLOC_FUNC   _PyCore_ObjectRealloc
+#define PyCore_OBJECT_FREE_FUNC      _PyCore_ObjectFree
+#define NEED_TO_DECLARE_OBJECT_MALLOC_AND_FRIEND
+#endif /* !WITH_PYMALLOC */
+
+#ifndef PyCore_OBJECT_MALLOC_FUNC
+#undef PyCore_OBJECT_REALLOC_FUNC
+#undef PyCore_OBJECT_FREE_FUNC
+#define PyCore_OBJECT_MALLOC_FUNC    PyCore_MALLOC_FUNC
+#define PyCore_OBJECT_REALLOC_FUNC   PyCore_REALLOC_FUNC
+#define PyCore_OBJECT_FREE_FUNC      PyCore_FREE_FUNC
+#endif
+
+#ifndef PyCore_OBJECT_MALLOC_PROTO
+#undef PyCore_OBJECT_REALLOC_PROTO
+#undef PyCore_OBJECT_FREE_PROTO
+#define PyCore_OBJECT_MALLOC_PROTO   PyCore_MALLOC_PROTO
+#define PyCore_OBJECT_REALLOC_PROTO  PyCore_REALLOC_PROTO
+#define PyCore_OBJECT_FREE_PROTO     PyCore_FREE_PROTO
+#endif
+
+#ifdef NEED_TO_DECLARE_OBJECT_MALLOC_AND_FRIEND
+extern void *PyCore_OBJECT_MALLOC_FUNC PyCore_OBJECT_MALLOC_PROTO;
+extern void *PyCore_OBJECT_REALLOC_FUNC PyCore_OBJECT_REALLOC_PROTO;
+extern void PyCore_OBJECT_FREE_FUNC PyCore_OBJECT_FREE_PROTO;
+#endif
+
+#ifndef PyCore_OBJECT_MALLOC
+#undef PyCore_OBJECT_REALLOC
+#undef PyCore_OBJECT_FREE
+#define PyCore_OBJECT_MALLOC(n)      PyCore_OBJECT_MALLOC_FUNC(n)
+#define PyCore_OBJECT_REALLOC(p, n)  PyCore_OBJECT_REALLOC_FUNC((p), (n))
+#define PyCore_OBJECT_FREE(p)        PyCore_OBJECT_FREE_FUNC(p)
+#endif
 
 /*
  * Raw object memory interface
@@ -73,19 +131,19 @@ recommended to use PyObject_{New, NewVar, Del}. */
 
 /* Functions */
 
-/* Wrappers that useful if you need to be sure that you are using the
-   same object memory allocator as Python. These wrappers *do not* make
-   sure that allocating 0 bytes returns a non-NULL pointer. Returned
-   pointers must be checked for NULL explicitly; no action is performed
-   on failure. */
+/* Wrappers around PyCore_OBJECT_MALLOC and friends; useful if you
+   need to be sure that you are using the same object memory allocator
+   as Python. These wrappers *do not* make sure that allocating 0
+   bytes returns a non-NULL pointer. Returned pointers must be checked
+   for NULL explicitly; no action is performed on failure. */
 extern DL_IMPORT(void *) PyObject_Malloc(size_t);
 extern DL_IMPORT(void *) PyObject_Realloc(void *, size_t);
 extern DL_IMPORT(void) PyObject_Free(void *);
 
 /* Macros */
-#define PyObject_MALLOC(n)           PyMem_MALLOC(n)
-#define PyObject_REALLOC(op, n)      PyMem_REALLOC((void *)(op), (n))
-#define PyObject_FREE(op)            PyMem_FREE((void *)(op))
+#define PyObject_MALLOC(n)           PyCore_OBJECT_MALLOC(n)
+#define PyObject_REALLOC(op, n)      PyCore_OBJECT_REALLOC((void *)(op), (n))
+#define PyObject_FREE(op)            PyCore_OBJECT_FREE((void *)(op))
 
 /*
  * Generic object allocator interface
@@ -178,22 +236,6 @@ extern DL_IMPORT(void) _PyObject_Del(PyObject *);
    constructor you would start directly with PyObject_Init/InitVar. */
 
 /*
- * The PyMalloc Object Allocator
- * =============================
- */
-
-extern DL_IMPORT(PyObject *) _PyMalloc_New(PyTypeObject *);
-extern DL_IMPORT(PyVarObject *) _PyMalloc_NewVar(PyTypeObject *, int);
-extern DL_IMPORT(void) _PyMalloc_Del(PyObject *);
-
-#define PyMalloc_New(type, typeobj) \
-		( (type *) _PyMalloc_New(typeobj) )
-#define PyMalloc_NewVar(type, typeobj, n) \
-		( (type *) _PyMalloc_NewVar((typeobj), (n)) )
-#define PyMalloc_Del(op) _PyMalloc_Del((PyObject *)(op))
-
-
-/*
  * Garbage Collection Support
  * ==========================
  *
@@ -230,7 +272,7 @@ typedef union _gc_head {
 		union _gc_head *gc_prev;
 		int gc_refs;
 	} gc;
-	long double dummy;  /* force worst-case alignment */
+	double dummy;  /* force worst-case alignment */
 } PyGC_Head;
 
 extern PyGC_Head _PyGC_generation0;

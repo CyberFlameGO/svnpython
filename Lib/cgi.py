@@ -506,7 +506,7 @@ class FieldStorage:
         if self.headers.has_key('content-length'):
             try:
                 clen = int(self.headers['content-length'])
-            except ValueError:
+            except:
                 pass
             if maxlen and clen > maxlen:
                 raise ValueError, 'Maximum content length exceeded'
@@ -877,6 +877,7 @@ def test(environ=os.environ):
     the script in HTML form.
 
     """
+    import traceback
     print "Content-type: text/html"
     print
     sys.stderr = sys.stdout

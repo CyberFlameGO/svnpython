@@ -19,12 +19,6 @@
 /* Define if you have the Mach cthreads package */
 #undef C_THREADS
 
-/* Define if you are using Mach cthreads under mach / */
-#undef MACH_C_THREADS
-
-/* Define if you are using Mach cthreads directly under /include */
-#undef HURD_C_THREADS
-
 /* Define to `long' if <time.h> doesn't define.  */
 #undef clock_t
 
@@ -52,9 +46,6 @@
 
 /* struct addrinfo (netdb.h) */
 #undef HAVE_ADDRINFO
-
-/* Define if you have the getaddrinfo function. */
-#undef HAVE_GETADDRINFO
 
 /* struct sockaddr_storage (sys/socket.h) */
 #undef HAVE_SOCKADDR_STORAGE

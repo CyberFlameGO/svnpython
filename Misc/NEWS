@@ -1,12 +1,42 @@
-What's New in Python 2.3 alpha 1?
-XXX Release date: DD-MMM-2002 XXX
-=================================
+What's New in Python 2.2.1c2?
+Release date: 26-Mar-2002
+=============================
 
-Type/class unification and new-style classes
+There were a bunch of mostly minor fixes between 2.2.1c1 and 2.2.1c2,
+including:
+
+- I remembered to run autoconf before cutting the release tarball. 
 
 Core and builtins
 
-- The optional object allocator has been enabled by default.
+- The floating point behavior fix-up continued into complex_pow.
+
+Library
+
+- The email package bug #531966 was fixed.  This caused exceptions to
+  occur when flattening multipart/* messages with zero or one (scalar)
+  attachment.
+
+- Support for https: urls in httplib was broken (by the sendall patch
+  mentioned below).
+
+- Minor bugs in the calendar module were fixed.
+
+- A few minor bugs in pydoc were fixed (better url recognition, proper
+  quoting of some elements).
+
+- Some distutils commands didn't list all their "boolean options"
+  which made overriding them from .cfg files not work.
+
+
+What's New in Python 2.2.1c1?
+Release date: 18-Mar-2002
+=============================
+
+This is primarily a bugfix release.  Many bugs have been fixed since
+the release of 2.2 final.  Some of the more notable are listed here.
+
+Core and builtins
 
 - If you try to pickle an instance of a class that has __slots__ but
   doesn't define or override __getstate__, a TypeError is now raised.
@@ -14,138 +44,68 @@ Core and builtins
   raises TypeError.  (Before, this would appear to be pickled, but the
   state of the slots would be lost.)
 
-- PyErr_Display will provide file and line information for all exceptions
-  that have an attribute print_file_and_line, not just SyntaxErrors.
+- (1).__nonzero__() would dump core.
 
-- The UTF-8 codec will now encode and decode Unicode surrogates
-  correctly and without raising exceptions for unpaired ones.
+- Tim has had another go at getting sensible behaviour with respect to
+  floating point underflow/overflow.
 
-- file.xreadlines() now raises a ValueError if the file is closed:
-  Previously, an xreadlines object was returned which would raise
-  a ValueError when the xreadlines.next() method was called.
+- Adding an instance of subclass of int to, say, a string, could
+  erroneously return "NotImplemented" instead of raising a TypeError.
 
-- posix.killpg has been added where available.
+- Subclassing longs could cause core dumps in certain circumstances.
+
+- PyErr_Display will provide file and line information for all
+  exceptions that have an attribute print_file_and_line, not just
+  SyntaxErrors. This fixes the bug that no proper line number is given
+  for bad \x escapes.
+
+- sys.setprofile() and sys.settrace() would dump core if called with
+  no arguments.
+
+- An obscure & small memory overrun in wide unicode builds have been
+  fixed.
+
+- __doc__ can now be of arbitrary type (in particular, it can be a
+  unicode string).
+
+- complex objects are now immutable (as they should always have been).
 
 Extension modules
 
 - A security hole ("double free") was found in zlib-1.1.3, a popular
   third party compression library used by some Python modules.  The
   hole was quickly plugged in zlib-1.1.4, and the Windows build of
-  Python now ships with zlib-1.1.4.
+  Python 2.2.1 now ships with zlib-1.1.4.
 
-- pwd and grp return enhanced tuples now, with symbolic field names.
+- new.instancemethod no longer fails for new-style classes.
 
-- array.array is now a type object. A new format character
-  'u' indicates Py_UNICODE arrays. For those, .tounicode and
-  .fromunicode methods are available. Arrays now support __iadd__
-  and __imul__.
+- The "pseudo-sequences" returned by os.stat(), os.fstat(),
+  time.localtime() can now be pickled.
 
-- dl now builds on every system that has dlfcn.h.  Failure in case
-  of sizeof(int)!=sizeof(long)!=sizeof(void*) is delayed until dl.open
-  is called.
+- Due to a cut and paste error the object exported as
+  posix.statvfs_result was in fact posix.stat_result.
 
 Library
 
-- compileall now supports quiet operation.
+- The copy module can be used in restricted execution mode.
 
-- The BaseHTTPServer implements now optionally HTTP/1.1 persistent
-  connections.
+- A few bugs in the email package have been fixed.
 
-- socket module: the SSL support was broken out of the main
-  _socket module C helper and placed into a new _ssl helper
-  which now gets imported by socket.py if available and working.
-
-- encodings package: added aliases for all supported IANA character
-  sets
-
-- ftplib: to safeguard the user's privacy, anonymous login will use
-  "anonymous@" as default password, rather than the real user and host
-  name.
+- StringIO's attitude to unicode strings has been reverted to that of
+  the 2.1.x branch (note cStringIO still knows nothing about unicode).
 
 - webbrowser: tightened up the command passed to os.system() so that
   arbitrary shell code can't be executed because a bogus URL was
   passed in.
 
-- gettext.translation has an optional fallback argument, and
-  gettext.find an optional all argument. Translations will now fallback
-  on a per-message basis.
+- Recursive structures containing new-style classes can now by
+  deep-copied.
 
-- distutils bdist commands now offer a --skip-build option.
+- ftplib defaults to passive mode (again).
 
-- warnings.warn now accepts a Warning instance as first argument.
+Tools
 
-Tools/Demos
-
-Build
-
-C API
-
-- Objects allocated using the new PyMalloc_New and PyMalloc_NewVar
-  functions will be allocated using pymalloc if it is enabled.  These
-  objects should be deallocated using PyMalloc_Del.  The PyObject_{New,
-  NewVar,NEW_VAR,Del,DEL} APIs have been changed to always use
-  PyMem_MALLOC and PyMem_FREE, even if pymalloc is enabled.  The
-  PyCore_* family of APIs have been removed.
-
-- The "u#" parser marker will now pass through Unicode object as-is
-  without going through the buffer API.
-
-- The enumerators of cmp_op have been renamed to use the prefix PyCmp_.
-
-- An old #define of ANY as void has been removed from pyport.h.  This
-  hasn't been used since Python's pre-ANSI days, and the #define has
-  been marked as obsolete since then.  SF bug 495548 says it created
-  conflicts with other packages, so keeping it around wasn't harmless.
-
-- Because Python's magic number scheme broke on January 1st, we decided
-  to stop Python development.  Thanks for all the fish!
-
-- Some of us don't like fish, so we changed Python's magic number
-  scheme to a new one. See Python/import.c for details.
-
-New platforms
-
-- GNU/Hurd is now supported.
-
-Tests
-
-Windows
-
-- file.truncate([newsize]) now works on Windows for all newsize values.
-  It used to fail if newsize didn't fit in 32 bits, reflecting a
-  limitation of MS _chsize (which is no longer used).
-
-- os.waitpid() is now implemented for Windows, and can be used to block
-  until a specified process exits.  This is similar to, but not exactly
-  the same as, os.waitpid() on POSIX systems.  If you're waiting for
-  a specific process whose pid was obtained from one of the spawn()
-  functions, the same Python os.waitpid() code works across platforms.
-  See the docs for details.
-
-- New tempfile.TemporaryFile implementation for Windows:  this doesn't
-  need a TemproraryFileWrapper wrapper anymore, and should be immune
-  to a nasty problem:  before 2.3, if you got a temp file on Windows, it
-  got wrapped in an object whose close() method first closed the
-  underlying file, then deleted the file.  This usually worked fine.
-  However, the spawn family of functions on Windows create (at a low C
-  level) the same set of open files in the spawned process Q as were
-  open in the spawning process P.  If a temp file f was among them, then
-  doing f.close() in P first closed P's C-level file handle on f, but Q's
-  C-level file handle on f remained open, so the attempt in P to delete f
-  blew up with a "Permission denied" error (Windows doesn't allow
-  deleting open files).  This was surprising, subtle, and difficult to
-  work around.
-
-- The os module now exports all the symbolic constants usable with the
-  low-level os.open() on Windows:  the new constants in 2.3 are
-  O_NOINHERIT, O_SHORT_LIVED, O_TEMPORARY, O_RANDOM and O_SEQUENTIAL.
-  The others were also available in 2.2:  O_APPEND, O_BINARY, O_CREAT,
-  O_EXCL, O_RDONLY, O_RDWR, O_TEXT, O_TRUNC and O_WRONLY.  Contrary
-  to Microsoft docs, O_SHORT_LIVED does not seem to imply O_TEMPORARY
-  (so specify both if you want both; note that neither is useful unless
-  specified with O_CREAT too).
-
-Mac
+- Bugs in IDLE's autoindent when using new-style division were fixed.
 
 
 What's New in Python 2.2 final?

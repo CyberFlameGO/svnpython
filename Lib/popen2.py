@@ -62,7 +62,7 @@ class Popen3:
         for i in range(3, MAXFD):
             try:
                 os.close(i)
-            except OSError:
+            except:
                 pass
         try:
             os.execvp(cmd[0], cmd)
@@ -112,7 +112,7 @@ class Popen4(Popen3):
         _active.append(self)
 
 
-if sys.platform[:3] == "win" or sys.platform == "os2emx":
+if sys.platform[:3] == "win":
     # Some things don't make sense on non-Unix platforms.
     del Popen3, Popen4
 

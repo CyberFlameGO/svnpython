@@ -51,14 +51,9 @@ extern int ftime(struct timeb *);
 #if defined(MS_WIN32) && !defined(MS_WIN64) && !defined(__BORLANDC__)
 /* Win32 has better clock replacement
    XXX Win64 does not yet, but might when the platform matures. */
+#include <largeint.h>
 #undef HAVE_CLOCK /* We have our own version down below */
 #endif /* MS_WIN32 && !MS_WIN64 */
-
-#if defined(PYOS_OS2)
-#define INCL_DOS
-#define INCL_ERRORS
-#include <os2.h>
-#endif
 
 #if defined(PYCC_VACPP)
 #include <sys/time.h>
@@ -149,31 +144,36 @@ time_clock(PyObject *self, PyObject *args)
 #endif /* HAVE_CLOCK */
 
 #if defined(MS_WIN32) && !defined(MS_WIN64) && !defined(__BORLANDC__)
-/* Due to Mark Hammond and Tim Peters */
+/* Due to Mark Hammond */
 static PyObject *
 time_clock(PyObject *self, PyObject *args)
 {
 	static LARGE_INTEGER ctrStart;
-	static double divisor = 0.0;
-	LARGE_INTEGER now;
-	double diff;
+	static LARGE_INTEGER divisor = {0,0};
+	LARGE_INTEGER now, diff, rem;
 
 	if (!PyArg_ParseTuple(args, ":clock"))
 		return NULL;
 
-	if (divisor == 0.0) {
-		LARGE_INTEGER freq;
+	if (LargeIntegerEqualToZero(divisor)) {
 		QueryPerformanceCounter(&ctrStart);
-		if (!QueryPerformanceFrequency(&freq) || freq.QuadPart == 0) {
-			/* Unlikely to happen - this works on all intel
-			   machines at least!  Revert to clock() */
+		if (!QueryPerformanceFrequency(&divisor) ||
+		    LargeIntegerEqualToZero(divisor)) {
+				/* Unlikely to happen -
+				   this works on all intel machines at least!
+				   Revert to clock() */
 			return PyFloat_FromDouble(clock());
 		}
-		divisor = (double)freq.QuadPart;
 	}
 	QueryPerformanceCounter(&now);
-	diff = (double)(now.QuadPart - ctrStart.QuadPart);
-	return PyFloat_FromDouble(diff / divisor);
+	diff = LargeIntegerSubtract(now, ctrStart);
+	diff = LargeIntegerDivide(diff, divisor, &rem);
+	/* XXX - we assume both divide results fit in 32 bits.  This is
+	   true on Intels.  First person who can afford a machine that
+	   doesnt deserves to fix it :-)
+	*/
+	return PyFloat_FromDouble((double)diff.LowPart +
+		              ((double)rem.LowPart / (double)divisor.LowPart));
 }
 
 #define HAVE_CLOCK /* So it gets included in the methods */
@@ -224,7 +224,7 @@ static PyStructSequence_Desc struct_time_type_desc = {
 	struct_time_type_fields,
 	9,
 };
-
+	
 static PyTypeObject StructTimeType;
 
 static PyObject *
@@ -233,7 +233,7 @@ tmtotuple(struct tm *p)
 	PyObject *v = PyStructSequence_New(&StructTimeType);
 	if (v == NULL)
 		return NULL;
-
+	
 #define SET(i,val) PyStructSequence_SET_ITEM(v, i, PyInt_FromLong((long) val))
 
 	SET(0, p->tm_year + 1900);
@@ -759,7 +759,7 @@ static int
 floatsleep(double secs)
 {
 /* XXX Should test for MS_WIN32 first! */
-#if defined(HAVE_SELECT) && !defined(__BEOS__) && !defined(__EMX__)
+#if defined(HAVE_SELECT) && !defined(__BEOS__)
 	struct timeval t;
 	double frac;
 	frac = fmod(secs, 1.0);
@@ -779,7 +779,8 @@ floatsleep(double secs)
 		}
 	}
 	Py_END_ALLOW_THREADS
-#elif defined(macintosh)
+#else /* !HAVE_SELECT || __BEOS__ */
+#ifdef macintosh
 #define MacTicks	(* (long *)0x16A)
 	long deadline;
 	deadline = MacTicks + (long)(secs * 60.0);
@@ -788,12 +789,14 @@ floatsleep(double secs)
 		if (PyErr_CheckSignals())
 			return -1;
 	}
-#elif defined(__WATCOMC__) && !defined(__QNX__)
+#else /* !macintosh */
+#if defined(__WATCOMC__) && !defined(__QNX__)
 	/* XXX Can't interrupt this sleep */
 	Py_BEGIN_ALLOW_THREADS
 	delay((int)(secs * 1000 + 0.5));  /* delay() uses milliseconds */
 	Py_END_ALLOW_THREADS
-#elif defined(MSDOS)
+#else /* !__WATCOMC__ || __QNX__ */
+#ifdef MSDOS
 	struct timeb t1, t2;
 	double frac;
 	extern double fmod(double, double);
@@ -822,7 +825,8 @@ floatsleep(double secs)
 		    t1.time == t2.time && t1.millitm >= t2.millitm)
 			break;
 	}
-#elif defined(MS_WIN32)
+#else /* !MSDOS */
+#ifdef MS_WIN32
 	{
 		double millisecs = secs * 1000.0;
 		if (millisecs > (double)ULONG_MAX) {
@@ -834,7 +838,8 @@ floatsleep(double secs)
 		Sleep((unsigned long)millisecs);
 		Py_END_ALLOW_THREADS
 	}
-#elif defined(PYOS_OS2)
+#else /* !MS_WIN32 */
+#ifdef PYOS_OS2
 	/* This Sleep *IS* Interruptable by Exceptions */
 	Py_BEGIN_ALLOW_THREADS
 	if (DosSleep(secs * 1000) != NO_ERROR) {
@@ -843,7 +848,8 @@ floatsleep(double secs)
 		return -1;
 	}
 	Py_END_ALLOW_THREADS
-#elif defined(__BEOS__)
+#else /* !PYOS_OS2 */
+#ifdef __BEOS__
 	/* This sleep *CAN BE* interrupted. */
 	{
 		if( secs <= 0.0 ) {
@@ -859,7 +865,8 @@ floatsleep(double secs)
 		}
 		Py_END_ALLOW_THREADS
 	}
-#elif defined(RISCOS)
+#else /* !__BEOS__ */
+#ifdef RISCOS
 	if (secs <= 0.0)
 		return 0;
 	Py_BEGIN_ALLOW_THREADS
@@ -867,28 +874,19 @@ floatsleep(double secs)
 	if ( sleep(secs) )
 		return -1;
 	Py_END_ALLOW_THREADS
-#elif defined(PLAN9)
-	{
-		double millisecs = secs * 1000.0;
-		if (millisecs > (double)LONG_MAX) {
-			PyErr_SetString(PyExc_OverflowError, "sleep length is too large");
-			return -1;
-		}
-		/* This sleep *CAN BE* interrupted. */
-		Py_BEGIN_ALLOW_THREADS
-		if(sleep((long)millisecs) < 0){
-			Py_BLOCK_THREADS
-			PyErr_SetFromErrno(PyExc_IOError);
-			return -1;
-		}
-		Py_END_ALLOW_THREADS
-	}
-#else
+#else /* !RISCOS */
 	/* XXX Can't interrupt this sleep */
 	Py_BEGIN_ALLOW_THREADS
 	sleep((int)secs);
 	Py_END_ALLOW_THREADS
-#endif
+#endif /* !RISCOS */
+#endif /* !__BEOS__ */
+#endif /* !PYOS_OS2 */
+#endif /* !MS_WIN32 */
+#endif /* !MSDOS */
+#endif /* !__WATCOMC__ || __QNX__ */
+#endif /* !macintosh */
+#endif /* !HAVE_SELECT */
 
 	return 0;
 }
