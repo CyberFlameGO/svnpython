@@ -374,9 +374,9 @@ class TixWidget(Tkinter.Widget):
         if option == '':
             return
         elif not isinstance(option, StringType):
-            option = repr(option)
+            option = `option`
         if not isinstance(value, StringType):
-            value = repr(value)
+            value = `value`
         names = self._subwidget_names()
         for name in names:
             self.tk.call(name, 'configure', '-' + option, value)
@@ -1004,17 +1004,6 @@ class HList(TixWidget):
 
     def item_delete(self, entry, col):
         self.tk.call(self._w, 'item', 'delete', entry, col)
-
-    def entrycget(self, entry, opt):
-        return self.tk.call(self._w, 'entrycget', entry, opt)
-
-    def entryconfigure(self, entry, cnf={}, **kw):
-        if cnf is None:
-            return _lst2dict(
-                self.tk.split(
-                self.tk.call(self._w, 'entryconfigure', entry)))
-        self.tk.call(self._w, 'entryconfigure', entry,
-              *self._options(cnf, kw))
 
     def nearest(self, y):
         return self.tk.call(self._w, 'nearest', y)

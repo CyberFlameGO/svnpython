@@ -310,9 +310,10 @@ class _Helper:
 __builtin__.help = _Helper()
 
 
-# On Windows, some default encodings are not provided by Python,
-# while they are always available as "mbcs" in each locale. Make
-# them usable by aliasing to "mbcs" in such a case.
+# On Windows, some default encodings are not provided
+# by Python (e.g. "cp932" in Japanese locale), while they
+# are always available as "mbcs" in each locale.
+# Make them usable by aliasing to "mbcs" in such a case.
 
 if sys.platform == 'win32':
     import locale, codecs
@@ -366,7 +367,7 @@ if hasattr(sys, "setdefaultencoding"):
 def _test():
     print "sys.path = ["
     for dir in sys.path:
-        print "    %r," % (dir,)
+        print "    %s," % `dir`
     print "]"
 
 if __name__ == '__main__':

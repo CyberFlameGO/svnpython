@@ -275,7 +275,6 @@ OBJECT_OBJS=	\
 		Objects/object.o \
 		Objects/obmalloc.o \
 		Objects/rangeobject.o \
-                Objects/setobject.o \
 		Objects/sliceobject.o \
 		Objects/stringobject.o \
 		Objects/structseq.o \
@@ -380,14 +379,10 @@ $(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK): \
 	$(LN) -fsn Versions/Current/Headers $(PYTHONFRAMEWORKDIR)/Headers
 	$(LN) -fsn Versions/Current/Resources $(PYTHONFRAMEWORKDIR)/Resources
 
-# This rule builds the Cygwin Python DLL and import library if configured
-# for a shared core library; otherwise, this rule is a noop.
-$(DLLLIBRARY) libpython$(VERSION).dll.a: $(LIBRARY_OBJS)
-	if test -n "$(DLLLIBRARY)"; then \
-		$(LDSHARED) -Wl,--out-implib=$@ -o $(DLLLIBRARY) $^ \
-			$(LIBS) $(MODLIBS) $(SYSLIBS); \
-	else true; \
-	fi
+# This rule builds the Cygwin Python DLL
+libpython$(VERSION).dll.a: $(LIBRARY_OBJS)
+	$(LDSHARED) -Wl,--out-implib=$@ -o $(DLLLIBRARY) $^ \
+		$(LIBS) $(MODLIBS) $(SYSLIBS)
 
 
 oldsharedmods: $(SHAREDMODS)
@@ -501,7 +496,6 @@ PYTHON_HEADERS= \
 		Include/pystate.h \
 		Include/pythonrun.h \
 		Include/rangeobject.h \
-                Include/setobject.h \
 		Include/sliceobject.h \
 		Include/stringobject.h \
 		Include/structseq.h \
@@ -718,11 +712,11 @@ libinstall:	$(BUILDPYTHON) $(srcdir)/Lib/$(PLATDIR)
 		./$(BUILDPYTHON) -Wi -tt -O $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
 		-x 'badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
-	-PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
+	PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -t $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST)/site-packages -f \
 		-x badsyntax $(DESTDIR)$(LIBDEST)/site-packages
-	-PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
+	PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -t -O $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST)/site-packages -f \
 		-x badsyntax $(DESTDIR)$(LIBDEST)/site-packages

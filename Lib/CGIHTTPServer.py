@@ -117,21 +117,21 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         scriptname = dir + '/' + script
         scriptfile = self.translate_path(scriptname)
         if not os.path.exists(scriptfile):
-            self.send_error(404, "No such CGI script (%r)" % scriptname)
+            self.send_error(404, "No such CGI script (%s)" % `scriptname`)
             return
         if not os.path.isfile(scriptfile):
-            self.send_error(403, "CGI script is not a plain file (%r)" %
-                            scriptname)
+            self.send_error(403, "CGI script is not a plain file (%s)" %
+                            `scriptname`)
             return
         ispy = self.is_python(scriptname)
         if not ispy:
             if not (self.have_fork or self.have_popen2 or self.have_popen3):
-                self.send_error(403, "CGI script is not a Python script (%r)" %
-                                scriptname)
+                self.send_error(403, "CGI script is not a Python script (%s)" %
+                                `scriptname`)
                 return
             if not self.is_executable(scriptfile):
-                self.send_error(403, "CGI script is not executable (%r)" %
-                                scriptname)
+                self.send_error(403, "CGI script is not executable (%s)" %
+                                `scriptname`)
                 return
 
         # Reference: http://hoohoo.ncsa.uiuc.edu/cgi/env.html
@@ -272,7 +272,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             save_stdout = sys.stdout
             save_stderr = sys.stderr
             try:
-                save_cwd = os.getcwd()
                 try:
                     sys.argv = [scriptfile]
                     if '=' not in decoded_query:
@@ -285,7 +284,6 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                     sys.stdin = save_stdin
                     sys.stdout = save_stdout
                     sys.stderr = save_stderr
-                    os.chdir(save_cwd)
             except SystemExit, sts:
                 self.log_error("CGI script exit status %s", str(sts))
             else:

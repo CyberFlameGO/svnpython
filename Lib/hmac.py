@@ -12,11 +12,6 @@ def _strxor(s1, s2):
 # hashing module used.
 digest_size = None
 
-# A unique object passed by HMAC.copy() to the HMAC constructor, in order
-# that the latter return very quickly.  HMAC("") in contrast is quite
-# expensive.
-_secret_backdoor_key = []
-
 class HMAC:
     """RFC2104 HMAC class.
 
@@ -30,10 +25,6 @@ class HMAC:
         msg:       Initial input for the hash, if provided.
         digestmod: A module supporting PEP 247. Defaults to the md5 module.
         """
-
-        if key is _secret_backdoor_key: # cheap
-            return
-
         if digestmod is None:
             import md5
             digestmod = md5
@@ -69,9 +60,8 @@ class HMAC:
 
         An update to this copy won't affect the original object.
         """
-        other = HMAC(_secret_backdoor_key)
+        other = HMAC("")
         other.digestmod = self.digestmod
-        other.digest_size = self.digest_size
         other.inner = self.inner.copy()
         other.outer = self.outer.copy()
         return other

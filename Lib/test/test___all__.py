@@ -2,6 +2,7 @@ import unittest
 from test import test_support
 
 from test.test_support import verify, verbose
+from sets import Set
 import sys
 import warnings
 
@@ -42,8 +43,8 @@ class AllTest(unittest.TestCase):
         exec "from %s import *" % modname in names
         if names.has_key("__builtins__"):
             del names["__builtins__"]
-        keys = set(names)
-        all = set(sys.modules[modname].__all__)
+        keys = Set(names)
+        all = Set(sys.modules[modname].__all__)
         verify(keys==all, "%s != %s" % (keys, all))
 
     def test_all(self):
@@ -99,6 +100,7 @@ class AllTest(unittest.TestCase):
         self.check_all("glob")
         self.check_all("gopherlib")
         self.check_all("gzip")
+        self.check_all("heapq")
         self.check_all("htmllib")
         self.check_all("httplib")
         self.check_all("ihooks")

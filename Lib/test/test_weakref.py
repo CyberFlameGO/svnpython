@@ -5,6 +5,7 @@ import UserList
 import weakref
 
 from test import test_support
+from sets import Set
 
 
 class C:
@@ -176,7 +177,7 @@ class ReferencesTestCase(TestBase):
         L2 = UserList.UserList(L)
         p2 = weakref.proxy(L2)
         self.assertEqual(p, p2)
-        ## self.assertEqual(repr(L2), repr(p2))
+        ## self.assertEqual(`L2`, `p2`)
         L3 = UserList.UserList(range(10))
         p3 = weakref.proxy(L3)
         self.assertEqual(L3[:], p3[:])
@@ -618,7 +619,7 @@ class ReferencesTestCase(TestBase):
             # now make sure the object and the ref get labeled as
             # cyclic trash:
             a = A()
-            weakref.ref(referenced, callback)
+            a.wrc = weakref.ref(referenced, callback)
 
         finally:
             gc.set_threshold(*thresholds)
@@ -677,7 +678,7 @@ class MappingTestCase(TestBase):
                          "wrong object returned by weak dict!")
         items1 = dict.items()
         items2 = dict.copy().items()
-        self.assert_(set(items1) == set(items2),
+        self.assert_(Set(items1) == Set(items2),
                      "cloning of weak-keyed dictionary did not work!")
         del items1, items2
         self.assert_(len(dict) == self.COUNT)

@@ -137,24 +137,22 @@ class ScriptBinding:
             return
         flist = self.editwin.flist
         shell = flist.open_shell()
-        if not shell:
-            return  # couldn't open the shell
         interp = shell.interp
         if PyShell.use_subprocess:
             shell.restart_shell()
         dirname = os.path.dirname(filename)
         # XXX Too often this discards arguments the user just set...
         interp.runcommand("""if 1:
-            _filename = %r
+            _filename = %s
             import sys as _sys
             from os.path import basename as _basename
             if (not _sys.argv or
                 _basename(_sys.argv[0]) != _basename(_filename)):
                 _sys.argv = [_filename]
             import os as _os
-            _os.chdir(%r)
+            _os.chdir(%s)
             del _filename, _sys, _basename, _os
-            \n""" % (filename, dirname))
+            \n""" % (`filename`, `dirname`))
         interp.prepend_syspath(filename)
         interp.runcode(code)
 

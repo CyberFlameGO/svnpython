@@ -106,7 +106,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libfuncs.tex \
 	lib/libpython.tex \
 	lib/libsys.tex \
-	lib/libplatform.tex \
 	lib/libfpectl.tex \
 	lib/libgc.tex \
 	lib/libsets.tex \
@@ -284,7 +283,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libcalendar.tex \
 	lib/libpopen2.tex \
 	lib/libbisect.tex \
-	lib/libcollections.tex \
 	lib/libheapq.tex \
 	lib/libmimetypes.tex \
 	lib/libsmtplib.tex \

@@ -60,7 +60,7 @@ int Py_OptimizeFlag = 0;
 #define GLOBAL_AFTER_USE \
 "name '%.400s' is used prior to global declaration"
 
-#define PARAM_GLOBAL \
+#define LOCAL_GLOBAL \
 "name '%.400s' is a function parameter and declared global"
 
 #define LATE_FUTURE \
@@ -327,43 +327,6 @@ intern_strings(PyObject *tuple)
 #define ABSOLUTE_JUMP(op) (op==JUMP_ABSOLUTE || op==CONTINUE_LOOP)
 #define GETJUMPTGT(arr, i) (GETARG(arr,i) + (ABSOLUTE_JUMP(arr[i]) ? 0 : i+3))
 #define SETARG(arr, i, val) arr[i+2] = val>>8; arr[i+1] = val & 255
-#define CODESIZE(op)  (HAS_ARG(op) ? 3 : 1)
-#define ISBASICBLOCK(blocks, start, bytes) (blocks[start]==blocks[start+bytes-1])
-
-static unsigned int *
-markblocks(unsigned char *code, int len)
-{
-	unsigned int *blocks = PyMem_Malloc(len*sizeof(int));
-	int i,j, opcode, oldblock, newblock, blockcnt = 0;
-
-	if (blocks == NULL)
-		return NULL;
-	memset(blocks, 0, len*sizeof(int));
-	for (i=0 ; i<len ; i+=CODESIZE(opcode)) {
-		opcode = code[i];
-		switch (opcode) {
-			case FOR_ITER:
-			case JUMP_FORWARD:
-			case JUMP_IF_FALSE:
-			case JUMP_IF_TRUE:
-			case JUMP_ABSOLUTE:
-			case CONTINUE_LOOP:
-			case SETUP_LOOP:
-			case SETUP_EXCEPT:
-			case SETUP_FINALLY:
-				j = GETJUMPTGT(code, i);
-				oldblock = blocks[j];
-				newblock = ++blockcnt;
-				for (; j<len ; j++) {
-					if (blocks[j] != (unsigned)oldblock)
-						break;
-					blocks[j] = newblock;
-				}
-			break;
-		}
-	}
-	return blocks;
-}
 
 static PyObject *
 optimize_code(PyObject *code, PyObject* consts)
@@ -371,24 +334,18 @@ optimize_code(PyObject *code, PyObject* consts)
 	int i, j, codelen;
 	int tgt, tgttgt, opcode;
 	unsigned char *codestr;
-	unsigned int *blocks;
 
 	/* Make a modifiable copy of the code string */
 	if (!PyString_Check(code))
 		goto exitUnchanged;
 	codelen = PyString_Size(code);
 	codestr = PyMem_Malloc(codelen);
-	if (codestr == NULL)
+	if (codestr == NULL) 
 		goto exitUnchanged;
 	codestr = memcpy(codestr, PyString_AS_STRING(code), codelen);
-	blocks = markblocks(codestr, codelen);
-	if (blocks == NULL) {
-		PyMem_Free(codestr);
-		goto exitUnchanged;
-	}
 	assert(PyTuple_Check(consts));
 
-	for (i=0 ; i<codelen ; i += CODESIZE(codestr[i])) {
+	for (i=0 ; i<codelen-7 ; i += HAS_ARG(codestr[i]) ? 3 : 1) {
 		opcode = codestr[i];
 		switch (opcode) {
 
@@ -405,33 +362,6 @@ optimize_code(PyObject *code, PyObject* consts)
 			SETARG(codestr, i, 4);
 			break;
 
-		/* Replace BUILD_SEQN 2 UNPACK_SEQN 2 with ROT2 JMP+2 NOP NOP.
-		   Replace BUILD_SEQN 3 UNPACK_SEQN 3 with ROT3 ROT2 JMP+1 NOP. */
-		case BUILD_TUPLE:
-		case BUILD_LIST:
-			if (codestr[i+3] != UNPACK_SEQUENCE)
-				continue;
-			if (!ISBASICBLOCK(blocks,i,6))
-				continue;
-			if (GETARG(codestr, i) == 2 && \
-			    GETARG(codestr, i+3) == 2) {
-				codestr[i] = ROT_TWO;
-				codestr[i+1] = JUMP_FORWARD;
-				SETARG(codestr, i+1, 2);
-				codestr[i+4] = DUP_TOP;  /* Filler codes used as NOPs */
-				codestr[i+5] = POP_TOP;
-				continue;
-			} 
-			if (GETARG(codestr, i) == 3 && \
-			    GETARG(codestr, i+3) == 3) {
-				codestr[i] = ROT_THREE;
-				codestr[i+1] = ROT_TWO;
-				codestr[i+2] = JUMP_FORWARD;
-				SETARG(codestr, i+2, 1);
-				codestr[i+5] = DUP_TOP;
-			}
-			break;
-
 		/* Replace jumps to unconditional jumps */
 		case FOR_ITER:
 		case JUMP_FORWARD:
@@ -443,7 +373,7 @@ optimize_code(PyObject *code, PyObject* consts)
 		case SETUP_EXCEPT:
 		case SETUP_FINALLY:
 			tgt = GETJUMPTGT(codestr, i);
-			if (!UNCONDITIONAL_JUMP(codestr[tgt]))
+			if (!UNCONDITIONAL_JUMP(codestr[tgt])) 
 				continue;
 			tgttgt = GETJUMPTGT(codestr, tgt);
 			if (opcode == JUMP_FORWARD) /* JMP_ABS can go backwards */
@@ -463,7 +393,6 @@ optimize_code(PyObject *code, PyObject* consts)
 	}
 	code = PyString_FromStringAndSize((char *)codestr, codelen);
 	PyMem_Free(codestr);
-	PyMem_Free(blocks);
 	return code;
 
 exitUnchanged:
@@ -629,10 +558,7 @@ struct compiling {
 	int c_maxstacklevel;	/* Maximum stack level */
 	int c_firstlineno;
 	PyObject *c_lnotab;	/* Table mapping address to line number */
-	int c_last_addr;	/* last op addr seen and recorded in lnotab */
-	int c_last_line;	/* last line seen and recorded in lnotab */
-	int c_lnotab_next;	/* current length of lnotab */
-	int c_lnotab_last;	/* start of last lnotab record added */
+	int c_last_addr, c_last_line, c_lnotab_next;
 	char *c_private;	/* for private name mangling */
 	int c_tmpname;		/* temporary local name counter */
 	int c_nested;		/* Is block nested funcdef or lamdef? */
@@ -684,7 +610,7 @@ com_error(struct compiling *c, PyObject *exc, char *msg)
 				  Py_None, line);
 		if (t == NULL)
 			goto exit;
-		w = PyTuple_Pack(2, v, t);
+		w = Py_BuildValue("(OO)", v, t);
 		if (w == NULL)
 			goto exit;
 		PyErr_SetObject(exc, w);
@@ -851,7 +777,6 @@ com_init(struct compiling *c, const char *filename)
 	c->c_last_addr = 0;
 	c->c_last_line = 0;
 	c->c_lnotab_next = 0;
-	c->c_lnotab_last = 0;
 	c->c_tmpname = 0;
 	c->c_nested = 0;
 	c->c_closure = 0;
@@ -968,7 +893,6 @@ com_set_lineno(struct compiling *c, int lineno)
 	else {
 		int incr_addr = c->c_nexti - c->c_last_addr;
 		int incr_line = lineno - c->c_last_line;
-		c->c_lnotab_last = c->c_lnotab_next;
 		while (incr_addr > 255) {
 			com_add_lnotab(c, 255, 0);
 			incr_addr -= 255;
@@ -982,27 +906,6 @@ com_set_lineno(struct compiling *c, int lineno)
 			com_add_lnotab(c, incr_addr, incr_line);
 		c->c_last_addr = c->c_nexti;
 		c->c_last_line = lineno;
-	}
-}
-
-static void
-com_strip_lnotab(struct compiling *c)
-{
-	/* strip the last lnotab entry if no opcode were emitted.
-	 * This prevents a line number to be generated on a final
-	 * pass, like in the following example:
-	 *
-	 *    if a:
-	 *        print 5
-	 *    else:
-	 *        pass
-	 *
-	 * Without the fix, a line trace event would be generated
-	 * on the pass even if a is true (because of the implicit
-	 * return).
-	 */
-	if (c->c_nexti == c->c_last_addr && c->c_lnotab_last > 0) {
-		c->c_lnotab_next = c->c_lnotab_last;
 	}
 }
 
@@ -1066,7 +969,7 @@ com_add(struct compiling *c, PyObject *list, PyObject *dict, PyObject *v)
 	PyObject *w, *t, *np=NULL;
 	long n;
 	
-	t = PyTuple_Pack(2, v, v->ob_type);
+	t = Py_BuildValue("(OO)", v, v->ob_type);
 	if (t == NULL)
 	    goto fail;
 	w = PyDict_GetItem(dict, t);
@@ -1355,7 +1258,19 @@ parsenumber(struct compiling *c, char *s)
 	if (s[0] == '0') {
 		x = (long) PyOS_strtoul(s, &end, 0);
 		if (x < 0 && errno == 0) {
-			return PyLong_FromString(s, (char **)0, 0);
+			if (PyErr_WarnExplicit(
+				    PyExc_FutureWarning,
+				    "hex/oct constants > sys.maxint "
+				    "will return positive values "
+				    "in Python 2.4 and up",
+				    /* XXX: Give WarnExplicit
+				       a const char* argument. */
+				    (char*)c->c_filename,
+				    c->c_lineno,
+				    NULL,
+				    NULL) < 0)
+				return NULL;
+			errno = 0; /* Might be changed by PyErr_Warn() */
 		}
 	}
 	else
@@ -1649,7 +1564,8 @@ com_list_iter(struct compiling *c,
 		com_addop_varname(c, VAR_LOAD, t);
 		com_push(c, 1);
 		com_node(c, e);
-		com_addbyte(c, LIST_APPEND);
+		com_addoparg(c, CALL_FUNCTION, 1);
+		com_addbyte(c, POP_TOP);
 		com_pop(c, 2);
 	}
 }
@@ -1665,6 +1581,7 @@ com_list_comprehension(struct compiling *c, node *n)
 	com_addoparg(c, BUILD_LIST, 0);
 	com_addbyte(c, DUP_TOP); /* leave the result on the stack */
 	com_push(c, 2);
+	com_addop_name(c, LOAD_ATTR, "append");
 	com_addop_varname(c, VAR_STORE, tmpname);
 	com_pop(c, 1);
 	com_list_for(c, CHILD(n, 1), CHILD(n, 0), tmpname);
@@ -3748,16 +3665,10 @@ com_continue_stmt(struct compiling *c, node *n)
 	   XXX if we could pop the exception still on the stack */
 }
 
-/* Return the number of default values in the argument list.
-
-   If a non-default argument follows a default argument, set an
-   exception and return -1.
-*/
-
 static int
 com_argdefs(struct compiling *c, node *n)
 {
-	int i, nch, ndefs;
+	int i, nch, nargs, ndefs;
 	if (TYPE(n) == lambdef) {
 		/* lambdef: 'lambda' [varargslist] ':' test */
 		n = CHILD(n, 1);
@@ -3774,12 +3685,14 @@ com_argdefs(struct compiling *c, node *n)
 		(fpdef ['=' test] ',')* '*' ....... |
 		fpdef ['=' test] (',' fpdef ['=' test])* [','] */
 	nch = NCH(n);
+	nargs = 0;
 	ndefs = 0;
 	for (i = 0; i < nch; i++) {
 		int t;
 		if (TYPE(CHILD(n, i)) == STAR ||
 		    TYPE(CHILD(n, i)) == DOUBLESTAR)
 			break;
+		nargs++;
 		i++;
 		if (i >= nch)
 			t = RPAR; /* Anything except EQUAL or COMMA */
@@ -3796,11 +3709,9 @@ com_argdefs(struct compiling *c, node *n)
 		}
 		else {
 			/* Treat "(a=1, b)" as an error */
-			if (ndefs) {
+			if (ndefs)
 				com_error(c, PyExc_SyntaxError,
 			    "non-default argument follows default argument");
-				return -1;
-			}
 		}
 		if (t != COMMA)
 			break;
@@ -3815,8 +3726,6 @@ com_funcdef(struct compiling *c, node *n)
 	int ndefs;
 	REQ(n, funcdef); /* funcdef: 'def' NAME parameters ':' suite */
 	ndefs = com_argdefs(c, n);
-	if (ndefs < 0)
-		return;
 	symtable_enter_scope(c->c_symtable, STR(CHILD(n, 1)), TYPE(n),
 			     n->n_lineno);
 	co = (PyObject *)icompile(n, c);
@@ -4193,7 +4102,6 @@ compile_funcdef(struct compiling *c, node *n)
 	c->c_infunction = 1;
 	com_node(c, CHILD(n, 4));
 	c->c_infunction = 0;
-	com_strip_lnotab(c);
 	com_addoparg(c, LOAD_CONST, com_addconst(c, Py_None));
 	com_push(c, 1);
 	com_addbyte(c, RETURN_VALUE);
@@ -4245,7 +4153,6 @@ compile_classdef(struct compiling *c, node *n)
 	else
 		(void) com_addconst(c, Py_None);
 	com_node(c, ch);
-	com_strip_lnotab(c);
 	com_addbyte(c, LOAD_LOCALS);
 	com_push(c, 1);
 	com_addbyte(c, RETURN_VALUE);
@@ -4265,7 +4172,6 @@ compile_node(struct compiling *c, node *n)
 		n = CHILD(n, 0);
 		if (TYPE(n) != NEWLINE)
 			com_node(c, n);
-		com_strip_lnotab(c);
 		com_addoparg(c, LOAD_CONST, com_addconst(c, Py_None));
 		com_push(c, 1);
 		com_addbyte(c, RETURN_VALUE);
@@ -4275,7 +4181,6 @@ compile_node(struct compiling *c, node *n)
 	
 	case file_input: /* A whole file, or built-in function exec() */
 		com_file_input(c, n);
-		com_strip_lnotab(c);
 		com_addoparg(c, LOAD_CONST, com_addconst(c, Py_None));
 		com_push(c, 1);
 		com_addbyte(c, RETURN_VALUE);
@@ -4930,7 +4835,7 @@ symtable_load_symbols(struct compiling *c)
 			c->c_argcount--;
 		else if (flags & DEF_GLOBAL) {
 			if (flags & DEF_PARAM) {
-				PyErr_Format(PyExc_SyntaxError, PARAM_GLOBAL,
+				PyErr_Format(PyExc_SyntaxError, LOCAL_GLOBAL,
 					     PyString_AS_STRING(name));
 				symtable_error(st, 0);
 				goto fail;
@@ -5679,7 +5584,8 @@ symtable_global(struct symtable *st, node *n)
 		if (flags && flags != DEF_GLOBAL) {
 			char buf[500];
 			if (flags & DEF_PARAM) {
-				PyErr_Format(PyExc_SyntaxError, PARAM_GLOBAL,
+				PyErr_Format(PyExc_SyntaxError,
+				     "name '%.400s' is local and global",
 					     name);
 				symtable_error(st, 0);
 				return;

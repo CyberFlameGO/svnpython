@@ -2053,43 +2053,6 @@ always creates a tuple, and unpacking works for any sequence.
 % XXX Add a bit on the difference between tuples and lists.
 
 
-\section{Sets \label{sets}}
-
-Python also includes a data type for \emph{sets}.  A set is an unordered
-collection with no duplicate elements.  Basic uses include membership
-testing and eliminating duplicate entries.  Set objects also support
-mathematical operations like union, intersection, difference, and
-symmetric difference.
-
-Here is a brief demonstration:
-
-\begin{verbatim}
->>> basket = ['apple', 'orange', 'apple', 'pear', 'orange', 'banana']
->>> fruits = set(basket)               # create a set without duplicates
->>> fruits
-set(['orange', 'pear', 'apple', 'banana'])
->>> 'orange' in fruits                 # fast membership testing
-True
->>> 'crabgrass' in fruits
-False
-
->>> # Demonstrate set operations on unique letters from two words
-...
->>> a = set('abracadabra')
->>> b = set('alacazam')
->>> a                                  # unique letters in a
-set(['a', 'r', 'b', 'c', 'd'])
->>> a - b                              # letters in a but not in b
-set(['r', 'd', 'b'])
->>> a | b                              # letters in either a or b
-set(['a', 'c', 'r', 'd', 'b', 'm', 'z', 'l'])
->>> a & b                              # letters in both a and b
-set(['a', 'c'])
->>> a ^ b                              # letters in a or b but not both
-set(['r', 'd', 'b', 'm', 'z', 'l'])
-\end{verbatim}
-
-
 \section{Dictionaries \label{dictionaries}}
 
 Another useful data type built into Python is the
@@ -2199,35 +2162,6 @@ What is your quest?  It is the holy grail.
 What is your favorite color?  It is blue.
 \end{verbatim}
 
-To loop over a sequence in reverse, first specify the sequence
-in a forward direction and then call the \function{reversed()}
-function.
-
-\begin{verbatim}
->>> for i in reversed(xrange(1,10,2)):
-...     print i
-...
-9
-7
-5
-3
-1
-\end{verbatim}
-
-To loop over a sequence in sorted order, use the \function{sorted()}
-function which returns a new sorted list while leaving the source
-unaltered.
-
-\begin{verbatim}
->>> basket = ['apple', 'orange', 'apple', 'pear', 'orange', 'banana']
->>> for f in sorted(set(basket)):
-...     print f
-... 	
-apple
-banana
-orange
-pear
-\end{verbatim}
 
 \section{More on Conditions \label{conditions}}
 
@@ -4163,7 +4097,7 @@ not clear that these semantics are in any way useful.
 
 There is limited support for class-private
 identifiers.  Any identifier of the form \code{__spam} (at least two
-leading underscores, at most one trailing underscore) is textually
+leading underscores, at most one trailing underscore) is now textually
 replaced with \code{_classname__spam}, where \code{classname} is the
 current class name with leading underscore(s) stripped.  This mangling
 is done without regard of the syntactic position of the identifier, so
@@ -4637,14 +4571,14 @@ immediately.
 For example, it may be tempting to use the tuple packing and unpacking
 feature instead of the traditional approach to swapping arguments.
 The \ulink{\module{timeit}}{../lib/module-timeit.html} module
-quickly demonstrates a modest performance advantage:
+quickly demonstrates that the traditional approach is faster:
 
 \begin{verbatim}
 >>> from timeit import Timer
 >>> Timer('t=a; a=b; b=t', 'a=1; b=2').timeit()
-0.57535828626024577
+0.60864915603680925
 >>> Timer('a,b = b,a', 'a=1; b=2').timeit()
-0.54962537085770791
+0.8625194857439773
 \end{verbatim}
 
 In contrast to \module{timeit}'s fine level of granularity, the
@@ -4943,7 +4877,7 @@ be useful.
 
 
 \chapter{Floating Point Arithmetic:  Issues and Limitations\label{fp-issues}}
-\sectionauthor{Tim Peters}{tim_one@users.sourceforge.net}
+\sectionauthor{Tim Peters}{tim_one@email.msn.com}
 
 Floating-point numbers are represented in computer hardware as
 base 2 (binary) fractions.  For example, the decimal fraction

@@ -11,7 +11,6 @@ PyFunction_New(PyObject *code, PyObject *globals)
 {
 	PyFunctionObject *op = PyObject_GC_New(PyFunctionObject,
 					    &PyFunction_Type);
-	static PyObject *__name__ = 0;
 	if (op != NULL) {
 		PyObject *doc;
 		PyObject *consts;
@@ -41,14 +40,7 @@ PyFunction_New(PyObject *code, PyObject *globals)
 		/* __module__: If module name is in globals, use it.
 		   Otherwise, use None.
 		*/
-		if (!__name__) {
-			__name__ = PyString_InternFromString("__name__");
-			if (!__name__) {
-				Py_DECREF(op);
-				return NULL;
-			}
-		}
-		module = PyDict_GetItem(globals, __name__);
+		module = PyDict_GetItemString(globals, "__name__");
 		if (module) {
 		    Py_INCREF(module);
 		    op->func_module = module;

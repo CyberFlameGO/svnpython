@@ -86,7 +86,7 @@ class TestCopy(unittest.TestCase):
                  "hello", u"hello\u1234", f.func_code,
                  NewStyle, xrange(10), Classic, max]
         for x in tests:
-            self.assert_(copy.copy(x) is x, repr(x))
+            self.assert_(copy.copy(x) is x, `x`)
 
     def test_copy_list(self):
         x = [1, 2, 3]
@@ -259,7 +259,7 @@ class TestCopy(unittest.TestCase):
                  "hello", u"hello\u1234", f.func_code,
                  NewStyle, xrange(10), Classic, max]
         for x in tests:
-            self.assert_(copy.deepcopy(x) is x, repr(x))
+            self.assert_(copy.deepcopy(x) is x, `x`)
 
     def test_deepcopy_list(self):
         x = [[1, 2], 3]
@@ -272,10 +272,10 @@ class TestCopy(unittest.TestCase):
         x = []
         x.append(x)
         y = copy.deepcopy(x)
-        self.assertRaises(RuntimeError, cmp, y, x)
+        self.assertEqual(y, x)
         self.assert_(y is not x)
-        self.assert_(y[0] is y)
-        self.assertEqual(len(y), 1)
+        self.assert_(y[0] is not x[0])
+        self.assert_(y is y[0])
 
     def test_deepcopy_tuple(self):
         x = ([1, 2], 3)
@@ -288,7 +288,7 @@ class TestCopy(unittest.TestCase):
         x = ([],)
         x[0].append(x)
         y = copy.deepcopy(x)
-        self.assertRaises(RuntimeError, cmp, y, x)
+        self.assertEqual(y, x)
         self.assert_(y is not x)
         self.assert_(y[0] is not x[0])
         self.assert_(y[0][0] is y)
@@ -304,10 +304,10 @@ class TestCopy(unittest.TestCase):
         x = {}
         x['foo'] = x
         y = copy.deepcopy(x)
-        self.assertRaises(RuntimeError, cmp, y, x)
+        self.assertEqual(y, x)
         self.assert_(y is not x)
         self.assert_(y['foo'] is y)
-        self.assertEqual(len(y), 1)
+        self.assertEqual(y, {'foo': y})
 
     def test_deepcopy_keepalive(self):
         memo = {}

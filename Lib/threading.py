@@ -8,9 +8,9 @@ except ImportError:
     del _sys.modules[__name__]
     raise
 
+from StringIO import StringIO as _StringIO
 from time import time as _time, sleep as _sleep
-from traceback import format_exc as _format_exc
-from collections import deque
+from traceback import print_exc as _print_exc
 
 # Rename some stuff so "from threading import *" is safe
 __all__ = ['activeCount', 'Condition', 'currentThread', 'enumerate', 'Event',
@@ -193,6 +193,7 @@ class _Condition(_Verbose):
             return True
 
     def wait(self, timeout=None):
+        currentThread() # for side-effect
         assert self._is_owned(), "wait() of un-acquire()d lock"
         waiter = _allocate_lock()
         waiter.acquire()
@@ -234,6 +235,7 @@ class _Condition(_Verbose):
             self._acquire_restore(saved_state)
 
     def notify(self, n=1):
+        currentThread() # for side-effect
         assert self._is_owned(), "notify() of un-acquire()d lock"
         __waiters = self.__waiters
         waiters = __waiters[:n]
@@ -438,8 +440,10 @@ class Thread(_Verbose):
             except:
                 if __debug__:
                     self._note("%s.__bootstrap(): unhandled exception", self)
+                s = _StringIO()
+                _print_exc(file=s)
                 _sys.stderr.write("Exception in thread %s:\n%s\n" %
-                                  (self.getName(), _format_exc()))
+                                 (self.getName(), s.getvalue()))
             else:
                 if __debug__:
                     self._note("%s.__bootstrap(): normal return", self)
@@ -638,7 +642,7 @@ def _test():
             self.rc = Condition(self.mon)
             self.wc = Condition(self.mon)
             self.limit = limit
-            self.queue = deque()
+            self.queue = []
 
         def put(self, item):
             self.mon.acquire()
@@ -656,7 +660,7 @@ def _test():
             while not self.queue:
                 self._note("get(): queue empty")
                 self.rc.wait()
-            item = self.queue.popleft()
+            item = self.queue.pop(0)
             self._note("get(): got %s, %d left", item, len(self.queue))
             self.wc.notify()
             self.mon.release()

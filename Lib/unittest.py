@@ -27,7 +27,7 @@ Further information is available in the bundled documentation, and from
 
   http://pyunit.sourceforge.net/
 
-Copyright (c) 1999-2003 Steve Purcell
+Copyright (c) 1999, 2000, 2001 Steve Purcell
 This module is free software, and you may redistribute it and/or modify
 it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
@@ -46,11 +46,12 @@ SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 __author__ = "Steve Purcell"
 __email__ = "stephen_purcell at yahoo dot com"
-__version__ = "#Revision: 1.63 $"[11:-2]
+__version__ = "#Revision: 1.46 $"[11:-2]
 
 import time
 import sys
 import traceback
+import string
 import os
 import types
 
@@ -60,24 +61,8 @@ import types
 __all__ = ['TestResult', 'TestCase', 'TestSuite', 'TextTestRunner',
            'TestLoader', 'FunctionTestCase', 'main', 'defaultTestLoader']
 
-# Expose obsolete functions for backwards compatibility
+# Expose obsolete functions for backwards compatability
 __all__.extend(['getTestCaseNames', 'makeSuite', 'findTestCases'])
-
-
-##############################################################################
-# Backward compatibility
-##############################################################################
-if sys.version_info[:2] < (2, 2):
-    False, True = 0, 1
-    def isinstance(obj, clsinfo):
-        import __builtin__
-        if type(clsinfo) in (types.TupleType, types.ListType):
-            for cls in clsinfo:
-                if cls is type: cls = types.ClassType
-                if __builtin__.isinstance(obj, cls):
-                    return 1
-            return 0
-        else: return __builtin__.isinstance(obj, clsinfo)
 
 
 ##############################################################################
@@ -89,8 +74,6 @@ __metaclass__ = type
 
 def _strclass(cls):
     return "%s.%s" % (cls.__module__, cls.__name__)
-
-__unittest = 1
 
 class TestResult:
     """Holder for test result information.
@@ -121,12 +104,12 @@ class TestResult:
         """Called when an error has occurred. 'err' is a tuple of values as
         returned by sys.exc_info().
         """
-        self.errors.append((test, self._exc_info_to_string(err, test)))
+        self.errors.append((test, self._exc_info_to_string(err)))
 
     def addFailure(self, test, err):
         """Called when an error has occurred. 'err' is a tuple of values as
         returned by sys.exc_info()."""
-        self.failures.append((test, self._exc_info_to_string(err, test)))
+        self.failures.append((test, self._exc_info_to_string(err)))
 
     def addSuccess(self, test):
         "Called when a test has completed successfully"
@@ -138,34 +121,17 @@ class TestResult:
 
     def stop(self):
         "Indicates that the tests should be aborted"
-        self.shouldStop = True
+        self.shouldStop = 1
 
-    def _exc_info_to_string(self, err, test):
+    def _exc_info_to_string(self, err):
         """Converts a sys.exc_info()-style tuple of values into a string."""
-        exctype, value, tb = err
-        # Skip test runner traceback levels
-        while tb and self._is_relevant_tb_level(tb):
-            tb = tb.tb_next
-        if exctype is test.failureException:
-            # Skip assert*() traceback levels
-            length = self._count_relevant_tb_levels(tb)
-            return ''.join(traceback.format_exception(exctype, value, tb, length))
-        return ''.join(traceback.format_exception(exctype, value, tb))
-
-    def _is_relevant_tb_level(self, tb):
-        return tb.tb_frame.f_globals.has_key('__unittest')
-
-    def _count_relevant_tb_levels(self, tb):
-        length = 0
-        while tb and not self._is_relevant_tb_level(tb):
-            length += 1
-            tb = tb.tb_next
-        return length
+        return string.join(traceback.format_exception(*err), '')
 
     def __repr__(self):
         return "<%s run=%i errors=%i failures=%i>" % \
                (_strclass(self.__class__), self.testsRun, len(self.errors),
                 len(self.failures))
+
 
 class TestCase:
     """A class whose instances are single test cases.
@@ -230,7 +196,7 @@ class TestCase:
         the specified test method's docstring.
         """
         doc = self.__testMethodDoc
-        return doc and doc.split("\n")[0].strip() or None
+        return doc and string.strip(string.split(doc, "\n")[0]) or None
 
     def id(self):
         return "%s.%s" % (_strclass(self.__class__), self.__testMethodName)
@@ -243,6 +209,9 @@ class TestCase:
                (_strclass(self.__class__), self.__testMethodName)
 
     def run(self, result=None):
+        return self(result)
+
+    def __call__(self, result=None):
         if result is None: result = self.defaultTestResult()
         result.startTest(self)
         testMethod = getattr(self, self.__testMethodName)
@@ -255,10 +224,10 @@ class TestCase:
                 result.addError(self, self.__exc_info())
                 return
 
-            ok = False
+            ok = 0
             try:
                 testMethod()
-                ok = True
+                ok = 1
             except self.failureException:
                 result.addFailure(self, self.__exc_info())
             except KeyboardInterrupt:
@@ -272,12 +241,10 @@ class TestCase:
                 raise
             except:
                 result.addError(self, self.__exc_info())
-                ok = False
+                ok = 0
             if ok: result.addSuccess(self)
         finally:
             result.stopTest(self)
-
-    __call__ = run
 
     def debug(self):
         """Run the test without collecting errors in a TestResult"""
@@ -293,7 +260,10 @@ class TestCase:
         exctype, excvalue, tb = sys.exc_info()
         if sys.platform[:4] == 'java': ## tracebacks look different in Jython
             return (exctype, excvalue, tb)
-        return (exctype, excvalue, tb)
+        newtb = tb.tb_next
+        if newtb is None:
+            return (exctype, excvalue, tb)
+        return (exctype, excvalue, newtb)
 
     def fail(self, msg=None):
         """Fail immediately, with the given message."""
@@ -322,7 +292,7 @@ class TestCase:
         else:
             if hasattr(excClass,'__name__'): excName = excClass.__name__
             else: excName = str(excClass)
-            raise self.failureException, "%s not raised" % excName
+            raise self.failureException, excName
 
     def failUnlessEqual(self, first, second, msg=None):
         """Fail if the two objects are unequal as determined by the '=='
@@ -330,7 +300,7 @@ class TestCase:
         """
         if not first == second:
             raise self.failureException, \
-                  (msg or '%r != %r' % (first, second))
+                  (msg or '%s != %s' % (`first`, `second`))
 
     def failIfEqual(self, first, second, msg=None):
         """Fail if the two objects are equal as determined by the '=='
@@ -338,33 +308,31 @@ class TestCase:
         """
         if first == second:
             raise self.failureException, \
-                  (msg or '%r == %r' % (first, second))
+                  (msg or '%s == %s' % (`first`, `second`))
 
     def failUnlessAlmostEqual(self, first, second, places=7, msg=None):
         """Fail if the two objects are unequal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
 
-           Note that decimal places (from zero) are usually not the same
+           Note that decimal places (from zero) is usually not the same
            as significant digits (measured from the most signficant digit).
         """
         if round(second-first, places) != 0:
             raise self.failureException, \
-                  (msg or '%r != %r within %r places' % (first, second, places))
+                  (msg or '%s != %s within %s places' % (`first`, `second`, `places` ))
 
     def failIfAlmostEqual(self, first, second, places=7, msg=None):
         """Fail if the two objects are equal as determined by their
            difference rounded to the given number of decimal places
            (default 7) and comparing to zero.
 
-           Note that decimal places (from zero) are usually not the same
+           Note that decimal places (from zero) is usually not the same
            as significant digits (measured from the most signficant digit).
         """
         if round(second-first, places) == 0:
             raise self.failureException, \
-                  (msg or '%r == %r within %r places' % (first, second, places))
-
-    # Synonyms for assertion methods
+                  (msg or '%s == %s within %s places' % (`first`, `second`, `places`))
 
     assertEqual = assertEquals = failUnlessEqual
 
@@ -376,9 +344,7 @@ class TestCase:
 
     assertRaises = failUnlessRaises
 
-    assert_ = assertTrue = failUnless
-
-    assertFalse = failIf
+    assert_ = failUnless
 
 
 
@@ -403,7 +369,7 @@ class TestSuite:
     def countTestCases(self):
         cases = 0
         for test in self._tests:
-            cases += test.countTestCases()
+            cases = cases + test.countTestCases()
         return cases
 
     def addTest(self, test):
@@ -468,7 +434,7 @@ class FunctionTestCase(TestCase):
     def shortDescription(self):
         if self.__description is not None: return self.__description
         doc = self.__testFunc.__doc__
-        return doc and doc.split("\n")[0].strip() or None
+        return doc and string.strip(string.split(doc, "\n")[0]) or None
 
 
 
@@ -486,10 +452,8 @@ class TestLoader:
 
     def loadTestsFromTestCase(self, testCaseClass):
         """Return a suite of all tests cases contained in testCaseClass"""
-        testCaseNames = self.getTestCaseNames(testCaseClass)
-        if not testCaseNames and hasattr(testCaseClass, 'runTest'):
-            testCaseNames = ['runTest']
-        return self.suiteClass(map(testCaseClass, testCaseNames))
+        return self.suiteClass(map(testCaseClass,
+                                   self.getTestCaseNames(testCaseClass)))
 
     def loadTestsFromModule(self, module):
         """Return a suite of all tests cases contained in the given module"""
@@ -510,33 +474,36 @@ class TestLoader:
 
         The method optionally resolves the names relative to a given module.
         """
-        parts = name.split('.')
+        parts = string.split(name, '.')
         if module is None:
-            parts_copy = parts[:]
-            while parts_copy:
-                try:
-                    module = __import__('.'.join(parts_copy))
-                    break
-                except ImportError:
-                    del parts_copy[-1]
-                    if not parts_copy: raise
-            parts = parts[1:]
+            if not parts:
+                raise ValueError, "incomplete test name: %s" % name
+            else:
+                parts_copy = parts[:]
+                while parts_copy:
+                    try:
+                        module = __import__(string.join(parts_copy,'.'))
+                        break
+                    except ImportError:
+                        del parts_copy[-1]
+                        if not parts_copy: raise
+                parts = parts[1:]
         obj = module
         for part in parts:
-            parent, obj = obj, getattr(obj, part)
+            obj = getattr(obj, part)
 
+        import unittest
         if type(obj) == types.ModuleType:
             return self.loadTestsFromModule(obj)
         elif (isinstance(obj, (type, types.ClassType)) and
-              issubclass(obj, TestCase)):
+              issubclass(obj, unittest.TestCase)):
             return self.loadTestsFromTestCase(obj)
         elif type(obj) == types.UnboundMethodType:
-            return parent(obj.__name__)
-        elif isinstance(obj, TestSuite):
-            return obj
+            return obj.im_class(obj.__name__)
         elif callable(obj):
             test = obj()
-            if not isinstance(test, (TestCase, TestSuite)):
+            if not isinstance(test, unittest.TestCase) and \
+               not isinstance(test, unittest.TestSuite):
                 raise ValueError, \
                       "calling %s returned %s, not a test" % (obj,test)
             return test
@@ -547,15 +514,16 @@ class TestLoader:
         """Return a suite of all tests cases found using the given sequence
         of string specifiers. See 'loadTestsFromName()'.
         """
-        suites = [self.loadTestsFromName(name, module) for name in names]
+        suites = []
+        for name in names:
+            suites.append(self.loadTestsFromName(name, module))
         return self.suiteClass(suites)
 
     def getTestCaseNames(self, testCaseClass):
         """Return a sorted sequence of method names found within testCaseClass
         """
-        def isTestMethod(attrname, testCaseClass=testCaseClass, prefix=self.testMethodPrefix):
-            return attrname.startswith(prefix) and callable(getattr(testCaseClass, attrname))
-        testFnNames = filter(isTestMethod, dir(testCaseClass))
+        testFnNames = filter(lambda n,p=self.testMethodPrefix: n[:len(p)] == p,
+                             dir(testCaseClass))
         for baseclass in testCaseClass.__bases__:
             for testFnName in self.getTestCaseNames(baseclass):
                 if testFnName not in testFnNames:  # handle overridden methods
@@ -689,7 +657,7 @@ class TextTestRunner:
         startTime = time.time()
         test(result)
         stopTime = time.time()
-        timeTaken = stopTime - startTime
+        timeTaken = float(stopTime - startTime)
         result.printErrors()
         self.stream.writeln(result.separator2)
         run = result.testsRun
@@ -738,7 +706,7 @@ Examples:
                  argv=None, testRunner=None, testLoader=defaultTestLoader):
         if type(module) == type(''):
             self.module = __import__(module)
-            for part in module.split('.')[1:]:
+            for part in string.split(module,'.')[1:]:
                 self.module = getattr(self.module, part)
         else:
             self.module = module

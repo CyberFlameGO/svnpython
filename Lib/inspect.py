@@ -29,7 +29,6 @@ __author__ = 'Ka-Ping Yee <ping@lfw.org>'
 __date__ = '1 Jan 2001'
 
 import sys, os, types, string, re, dis, imp, tokenize, linecache
-from operator import attrgetter
 
 # ----------------------------------------------------------- type-checking
 def ismodule(object):
@@ -554,7 +553,7 @@ def getsource(object):
 def walktree(classes, children, parent):
     """Recursive helper function for getclasstree()."""
     results = []
-    classes.sort(key=attrgetter('__name__'))
+    classes.sort(lambda a, b: cmp(a.__name__, b.__name__))
     for c in classes:
         results.append((c, c.__bases__))
         if c in children:

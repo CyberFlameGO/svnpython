@@ -35,17 +35,15 @@ class ConfigDialog(Toplevel):
         self.themeElements={'Normal Text':('normal','00'),
             'Python Keywords':('keyword','01'),
             'Python Definitions':('definition','02'),
-            'Python Builtins':('builtin', '03'),
-            'Python Comments':('comment','04'),
-            'Python Strings':('string','05'),
-            'Selected Text':('hilite','06'),
-            'Found Text':('hit','07'),
-            'Cursor':('cursor','08'),
-            'Error Text':('error','09'),
-            'Shell Normal Text':('console','10'),
-            'Shell Stdout Text':('stdout','11'),
-            'Shell Stderr Text':('stderr','12'),
-            }
+            'Python Comments':('comment','03'),
+            'Python Strings':('string','04'),
+            'Selected Text':('hilite','05'),
+            'Found Text':('hit','06'),
+            'Cursor':('cursor','07'),
+            'Error Text':('error','08'),
+            'Shell Normal Text':('console','09'),
+            'Shell Stdout Text':('stdout','10'),
+            'Shell Stderr Text':('stderr','11')}
         self.ResetChangedItems() #load initial values in changed items dict
         self.CreateWidgets()
         self.resizable(height=FALSE,width=FALSE)
@@ -199,9 +197,7 @@ class ConfigDialog(Toplevel):
             (' ','normal'),('func','definition'),('(param):','normal'),
             ('\n  ','normal'),('"""string"""','string'),('\n  var0 = ','normal'),
             ("'string'",'string'),('\n  var1 = ','normal'),("'selected'",'hilite'),
-            ('\n  var2 = ','normal'),("'found'",'hit'),
-            ('\n  var3 = ','normal'),('list', 'builtin'), ('(','normal'),
-            ('None', 'builtin'),(')\n\n','normal'),
+            ('\n  var2 = ','normal'),("'found'",'hit'),('\n\n','normal'),
             (' error ','error'),(' ','normal'),('cursor |','cursor'),
             ('\n ','normal'),('shell','console'),(' ','normal'),('stdout','stdout'),
             (' ','normal'),('stderr','stderr'),('\n','normal'))
@@ -722,7 +718,7 @@ class ConfigDialog(Toplevel):
     def DeleteCustomKeys(self):
         keySetName=self.customKeys.get()
         if not tkMessageBox.askyesno('Delete Key Set','Are you sure you wish '+
-                                     'to delete the key set %r ?' % (keySetName),
+                                     'to delete the key set '+`keySetName`+' ?',
                                      parent=self):
             return
         #remove key set from config
@@ -749,7 +745,7 @@ class ConfigDialog(Toplevel):
     def DeleteCustomTheme(self):
         themeName=self.customTheme.get()
         if not tkMessageBox.askyesno('Delete Theme','Are you sure you wish '+
-                                     'to delete the theme %r ?' % (themeName,),
+                                     'to delete the theme '+`themeName`+' ?',
                                      parent=self):
             return
         #remove theme from config
@@ -1157,7 +1153,7 @@ class ConfigDialog(Toplevel):
         #update theme and repaint
         #update keybindings and re-bind
         #update user help sources menu
-        winInstances=self.parent.instance_dict.keys()
+        winInstances=self.parent.instanceDict.keys()
         for instance in winInstances:
             instance.ResetColorizer()
             instance.ResetFont()
@@ -1183,5 +1179,5 @@ if __name__ == '__main__':
     root=Tk()
     Button(root,text='Dialog',
             command=lambda:ConfigDialog(root,'Settings')).pack()
-    root.instance_dict={}
+    root.instanceDict={}
     root.mainloop()

@@ -1,7 +1,6 @@
 import unittest
 from test import test_support
 from bisect import bisect_right, bisect_left, insort_left, insort_right, insort, bisect
-from UserList import UserList
 
 class TestBisect(unittest.TestCase):
 
@@ -90,7 +89,6 @@ class TestBisect(unittest.TestCase):
     def test_precomputed(self):
         for func, data, elem, expected in self.precomputedCases:
             self.assertEqual(func(data, elem), expected)
-            self.assertEqual(func(UserList(data), elem), expected)
 
     def test_random(self, n=25):
         from random import randrange
@@ -134,17 +132,22 @@ class TestBisect(unittest.TestCase):
 
 class TestInsort(unittest.TestCase):
 
-    def test_vsBuiltinSort(self, n=500):
+    def test_vsListSort(self, n=500):
         from random import choice
-        for insorted in (list(), UserList()):
-            for i in xrange(n):
-                digit = choice("0123456789")
-                if digit in "02468":
-                    f = insort_left
-                else:
-                    f = insort_right
-                f(insorted, digit)
-        self.assertEqual(sorted(insorted), insorted)
+        digits = "0123456789"
+        raw = []
+        insorted = []
+        for i in range(n):
+            digit = choice(digits)
+            raw.append(digit)
+            if digit in "02468":
+                f = insort_left
+            else:
+                f = insort_right
+            f(insorted, digit)
+        sorted = raw[:]
+        sorted.sort()
+        self.assertEqual(sorted, insorted)
 
     def test_backcompatibility(self):
         self.assertEqual(insort, insort_right)
@@ -169,6 +172,23 @@ This example uses bisect() to look up a letter grade for an exam total
     'C'
     >>> map(grade, [33, 99, 77, 44, 12, 88])
     ['E', 'A', 'B', 'D', 'F', 'A']
+
+The bisect module can be used with the Queue module to implement
+a priority queue (example courtesy of Fredrik Lundh):
+
+>>> import Queue, bisect
+>>> class PriorityQueue(Queue.Queue):
+...     def _put(self, item):
+...         bisect.insort(self.queue, item)
+...
+>>> queue = PriorityQueue(0)
+>>> queue.put((2, "second"))
+>>> queue.put((1, "first"))
+>>> queue.put((3, "third"))
+>>> queue.get()
+(1, 'first')
+>>> queue.get()
+(2, 'second')
 
 """
 

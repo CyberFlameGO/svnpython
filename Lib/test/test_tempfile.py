@@ -49,8 +49,7 @@ class TC(unittest.TestCase):
         npre  = nbase[:len(pre)]
         nsuf  = nbase[len(nbase)-len(suf):]
 
-        # check for equality of the absolute paths!
-        self.assertEqual(os.path.abspath(ndir), os.path.abspath(dir),
+        self.assertEqual(ndir, dir,
                          "file '%s' not in directory '%s'" % (name, dir))
         self.assertEqual(npre, pre,
                          "file '%s' does not begin with '%s'" % (nbase, pre))
@@ -393,10 +392,6 @@ class test_mkstemp(TC):
             dir = tempfile.gettempdir()
         try:
             (fd, name) = tempfile.mkstemp(dir=dir, prefix=pre, suffix=suf)
-            (ndir, nbase) = os.path.split(name)
-            adir = os.path.abspath(dir)
-            self.assertEqual(adir, ndir,
-                "Directory '%s' incorrectly returned as '%s'" % (adir, ndir))
         except:
             self.failOnException("mkstemp")
 
@@ -413,7 +408,6 @@ class test_mkstemp(TC):
         self.do_create(suf="b")
         self.do_create(pre="a", suf="b")
         self.do_create(pre="aa", suf=".txt")
-        self.do_create(dir=".")
 
     def test_choose_directory(self):
         # mkstemp can create directories in a user-selected directory

@@ -13,9 +13,9 @@ A = 'spam and eggs'
 B = 'cheese shop'
 
 a = r.encrypt(A)
-print repr(a)
+print `a`
 b = r.encryptmore(B)
-print repr(b)
+print `b`
 
 A1 = r.decrypt(a)
 print A1

@@ -175,82 +175,19 @@ class CommonTest(unittest.TestCase):
     def test_split(self):
         self.checkequal(['this', 'is', 'the', 'split', 'function'],
             'this is the split function', 'split')
-
-        # by whitespace
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d ', 'split')
+        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|')
+        self.checkequal(['a', 'b', 'c|d'], 'a|b|c|d', 'split', '|', 2)
         self.checkequal(['a', 'b c d'], 'a b c d', 'split', None, 1)
         self.checkequal(['a', 'b', 'c d'], 'a b c d', 'split', None, 2)
         self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None, 3)
         self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'split', None, 4)
         self.checkequal(['a b c d'], 'a b c d', 'split', None, 0)
         self.checkequal(['a', 'b', 'c  d'], 'a  b  c  d', 'split', None, 2)
-
-        # by a char
-        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|')
-        self.checkequal(['a', 'b|c|d'], 'a|b|c|d', 'split', '|', 1)
-        self.checkequal(['a', 'b', 'c|d'], 'a|b|c|d', 'split', '|', 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|', 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'split', '|', 4)
-        self.checkequal(['a|b|c|d'], 'a|b|c|d', 'split', '|', 0)
-        self.checkequal(['a', '', 'b||c||d'], 'a||b||c||d', 'split', '|', 2)
-        self.checkequal(['endcase ', ''], 'endcase |', 'split', '|')
-        self.checkequal(['a', '', 'b\x00c\x00d'], 'a\x00\x00b\x00c\x00d', 'split', '\x00', 2)
-
-        # by string
+        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d ', 'split')
         self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'split', '//')
-        self.checkequal(['a', 'b//c//d'], 'a//b//c//d', 'split', '//', 1)
-        self.checkequal(['a', 'b', 'c//d'], 'a//b//c//d', 'split', '//', 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'split', '//', 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'split', '//', 4)
-        self.checkequal(['a//b//c//d'], 'a//b//c//d', 'split', '//', 0)
-        self.checkequal(['a', '', 'b////c////d'], 'a////b////c////d', 'split', '//', 2)
         self.checkequal(['endcase ', ''], 'endcase test', 'split', 'test')
 
-        # mixed use of str and unicode
-        self.checkequal([u'a', u'b', u'c d'], 'a b c d', 'split', u' ', 2)
-
-        # argument type
         self.checkraises(TypeError, 'hello', 'split', 42, 42, 42)
-
-    def test_rsplit(self):
-        self.checkequal(['this', 'is', 'the', 'rsplit', 'function'],
-                         'this is the rsplit function', 'rsplit')
-
-        # by whitespace
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d ', 'rsplit')
-        self.checkequal(['a b c', 'd'], 'a b c d', 'rsplit', None, 1)
-        self.checkequal(['a b', 'c', 'd'], 'a b c d', 'rsplit', None, 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a b c d', 'rsplit', None, 4)
-        self.checkequal(['a b c d'], 'a b c d', 'rsplit', None, 0)
-        self.checkequal(['a  b', 'c', 'd'], 'a  b  c  d', 'rsplit', None, 2)
-
-        # by a char
-        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|')
-        self.checkequal(['a|b|c', 'd'], 'a|b|c|d', 'rsplit', '|', 1)
-        self.checkequal(['a|b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|', 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|', 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a|b|c|d', 'rsplit', '|', 4)
-        self.checkequal(['a|b|c|d'], 'a|b|c|d', 'rsplit', '|', 0)
-        self.checkequal(['a||b||c', '', 'd'], 'a||b||c||d', 'rsplit', '|', 2)
-        self.checkequal(['', ' begincase'], '| begincase', 'rsplit', '|')
-        self.checkequal(['a\x00\x00b', 'c', 'd'], 'a\x00\x00b\x00c\x00d', 'rsplit', '\x00', 2)
-
-        # by string
-        self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'rsplit', '//')
-        self.checkequal(['a//b//c', 'd'], 'a//b//c//d', 'rsplit', '//', 1)
-        self.checkequal(['a//b', 'c', 'd'], 'a//b//c//d', 'rsplit', '//', 2)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'rsplit', '//', 3)
-        self.checkequal(['a', 'b', 'c', 'd'], 'a//b//c//d', 'rsplit', '//', 4)
-        self.checkequal(['a//b//c//d'], 'a//b//c//d', 'rsplit', '//', 0)
-        self.checkequal(['a////b////c', '', 'd'], 'a////b////c////d', 'rsplit', '//', 2)
-        self.checkequal(['', ' begincase'], 'test begincase', 'rsplit', 'test')
-
-        # mixed use of str and unicode
-        self.checkequal([u'a b', u'c', u'd'], 'a b c d', 'rsplit', u' ', 2)
-
-        # argument type
-        self.checkraises(TypeError, 'hello', 'rsplit', 42, 42, 42)
 
     def test_strip(self):
         self.checkequal('hello', '   hello   ', 'strip')
@@ -290,7 +227,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal('abc   ', 'abc', 'ljust', 6)
         self.checkequal('abc', 'abc', 'ljust', 3)
         self.checkequal('abc', 'abc', 'ljust', 2)
-        self.checkequal('abc*******', 'abc', 'ljust', 10, '*')
+
         self.checkraises(TypeError, 'abc', 'ljust')
 
     def test_rjust(self):
@@ -298,7 +235,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal('   abc', 'abc', 'rjust', 6)
         self.checkequal('abc', 'abc', 'rjust', 3)
         self.checkequal('abc', 'abc', 'rjust', 2)
-        self.checkequal('*******abc', 'abc', 'rjust', 10, '*')
+
         self.checkraises(TypeError, 'abc', 'rjust')
 
     def test_center(self):
@@ -306,7 +243,7 @@ class CommonTest(unittest.TestCase):
         self.checkequal(' abc  ', 'abc', 'center', 6)
         self.checkequal('abc', 'abc', 'center', 3)
         self.checkequal('abc', 'abc', 'center', 2)
-        self.checkequal('***abc****', 'abc', 'center', 10, '*')
+
         self.checkraises(TypeError, 'abc', 'center')
 
     def test_swapcase(self):

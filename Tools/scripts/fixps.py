@@ -23,7 +23,7 @@ def main():
         f.close()
         line = re.sub('/usr/local/bin/python',
                       '/usr/bin/env python', line)
-        print filename, ':', repr(line)
+        print filename, ':', `line`
         f = open(filename, "w")
         f.write(line)
         f.write(rest)

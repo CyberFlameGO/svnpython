@@ -48,8 +48,6 @@ class MyScanner(Scanner):
 			"err",
 			# OS8 only
 			'IconServicesTerminate',
-			# Lazy, right now.
-			"GetIconRefFromFileInfo"
 			]
 
 	def makeblacklisttypes(self):
@@ -57,7 +55,6 @@ class MyScanner(Scanner):
 			"IconActionUPP",
 			"IconGetterUPP",
 			"CFragInitBlockPtr",
-			"CGRect_ptr",
 			]
 
 	def makerepairinstructions(self):
@@ -66,7 +63,6 @@ class MyScanner(Scanner):
 
 	def writeinitialdefs(self):
 		self.defsfile.write("def FOUR_CHAR_CODE(x): return x\n")
-		self.defsfile.write("from Carbon.Files import *\n")
 			
 if __name__ == "__main__":
 	main()

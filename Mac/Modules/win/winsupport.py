@@ -58,7 +58,11 @@ PropertyCreator = OSTypeType("PropertyCreator")
 PropertyTag = OSTypeType("PropertyTag")
 
 includestuff = includestuff + """
+#ifdef WITHOUT_FRAMEWORKS
+#include <Windows.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
 extern PyObject *_WinObj_New(WindowRef);

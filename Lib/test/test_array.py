@@ -73,13 +73,6 @@ class BaseTest(unittest.TestCase):
             b.byteswap()
             self.assertEqual(a, b)
 
-    def test_copy(self):
-        import copy
-        a = array.array(self.typecode, self.example)
-        b = copy.copy(a)
-        self.assertNotEqual(id(a), id(b))
-        self.assertEqual(a, b)
-
     def test_insert(self):
         a = array.array(self.typecode, self.example)
         a.insert(0, self.example[0])
@@ -592,13 +585,6 @@ class BaseTest(unittest.TestCase):
         b = array.array(self.badtypecode())
         self.assertRaises(TypeError, a.extend, b)
 
-        a = array.array(self.typecode, self.example)
-        a.extend(self.example[::-1])
-        self.assertEqual(
-            a,
-            array.array(self.typecode, self.example+self.example[::-1])
-        )
-
     def test_coveritertraverse(self):
         try:
             import gc
@@ -613,16 +599,6 @@ class BaseTest(unittest.TestCase):
         a = array.array(self.typecode, self.example)
         b = buffer(a)
         self.assertEqual(b[0], a.tostring()[0])
-
-    def test_bug_782369(self):
-        import sys
-        if hasattr(sys, "getrefcount"):
-            for i in range(10):
-                b = array.array('B', range(64))
-            rc = sys.getrefcount(10)
-            for i in range(10):
-                b = array.array('B', range(64))
-            self.assertEqual(rc, sys.getrefcount(10))
 
 class StringTest(BaseTest):
 

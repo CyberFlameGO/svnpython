@@ -13,7 +13,9 @@
 #include "eval.h"
 #include "marshal.h"
 
+#ifdef HAVE_SIGNAL_H
 #include <signal.h>
+#endif
 
 #ifdef HAVE_LANGINFO_H
 #include <locale.h>
@@ -25,6 +27,9 @@
 #include "windows.h"
 #endif
 
+#ifdef macintosh
+#include "macglue.h"
+#endif
 extern char *Py_GetPath(void);
 
 extern grammar _PyParser_Grammar; /* From graminit.c */
@@ -316,7 +321,7 @@ Py_Finalize(void)
 	initialized = 0;
 
 	/* Get current thread state and interpreter pointer */
-	tstate = PyThreadState_GET();
+	tstate = PyThreadState_Get();
 	interp = tstate->interp;
 
 	/* Disable signal handling */
@@ -529,7 +534,7 @@ Py_EndInterpreter(PyThreadState *tstate)
 {
 	PyInterpreterState *interp = tstate->interp;
 
-	if (tstate != PyThreadState_GET())
+	if (tstate != PyThreadState_Get())
 		Py_FatalError("Py_EndInterpreter: thread is not current");
 	if (tstate->frame != NULL)
 		Py_FatalError("Py_EndInterpreter: thread still has a frame");
@@ -774,6 +779,13 @@ maybe_pyc_file(FILE *fp, const char* filename, const char* ext, int closeit)
 {
 	if (strcmp(ext, ".pyc") == 0 || strcmp(ext, ".pyo") == 0)
 		return 1;
+
+#ifdef macintosh
+	/* On a mac, we also assume a pyc file for types 'PYC ' and 'APPL' */
+	if (PyMac_getfiletype((char *)filename) == 'PYC '
+	    || PyMac_getfiletype((char *)filename) == 'APPL')
+		return 1;
+#endif /* macintosh */
 
 	/* Only look into the file if we are allowed to close it, since
 	   it then should also be seekable. */
@@ -1051,7 +1063,7 @@ PyErr_PrintEx(int set_sys_last_vars)
 	}
 	hook = PySys_GetObject("excepthook");
 	if (hook) {
-		PyObject *args = PyTuple_Pack(3,
+		PyObject *args = Py_BuildValue("(OOO)",
                     exception, v ? v : Py_None, tb ? tb : Py_None);
 		PyObject *result = PyEval_CallObject(hook, args);
 		if (result == NULL) {
@@ -1461,7 +1473,7 @@ err_input(perrdetail *err)
 		msg = "too many levels of indentation";
 		break;
 	case E_DECODE: {	/* XXX */
-		PyThreadState* tstate = PyThreadState_GET();
+		PyThreadState* tstate = PyThreadState_Get();
 		PyObject* value = tstate->curexc_value;
 		if (value != NULL) {
 			u = PyObject_Repr(value);
@@ -1557,12 +1569,17 @@ Py_Exit(int sts)
 {
 	Py_Finalize();
 
+#ifdef macintosh
+	PyMac_Exit(sts);
+#else
 	exit(sts);
+#endif
 }
 
 static void
 initsigs(void)
 {
+#ifdef HAVE_SIGNAL_H
 #ifdef SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 #endif
@@ -1572,9 +1589,22 @@ initsigs(void)
 #ifdef SIGXFSZ
 	signal(SIGXFSZ, SIG_IGN);
 #endif
+#endif /* HAVE_SIGNAL_H */
 	PyOS_InitInterrupts(); /* May imply initsignal() */
 }
 
+#ifdef MPW
+
+/* Check for file descriptor connected to interactive device.
+   Pretend that stdin is always interactive, other files never. */
+
+int
+isatty(int fd)
+{
+	return fd == fileno(stdin);
+}
+
+#endif
 
 /*
  * The file descriptor fd is considered ``interactive'' if either

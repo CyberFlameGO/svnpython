@@ -2,8 +2,9 @@
 
 import test.test_support, unittest
 from test.test_support import fcmp, have_unicode, TESTFN, unlink
+from sets import Set
 
-import sys, warnings, cStringIO, random
+import sys, warnings, cStringIO
 warnings.filterwarnings("ignore", "hex../oct.. of negative int",
                         FutureWarning, __name__)
 warnings.filterwarnings("ignore", "integer argument expected",
@@ -58,7 +59,7 @@ L = [
         (' 314', 314),
         ('314 ', 314),
         ('  \t\t  314  \t\t  ', 314),
-        (repr(sys.maxint), sys.maxint),
+        (`sys.maxint`, sys.maxint),
         ('  1x', ValueError),
         ('  1  ', 1),
         ('  1\02  ', ValueError),
@@ -166,16 +167,16 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(cmp(-1, 1), -1)
         self.assertEqual(cmp(1, -1), 1)
         self.assertEqual(cmp(1, 1), 0)
-        # verify that circular objects are not handled
+        # verify that circular objects are handled
         a = []; a.append(a)
         b = []; b.append(b)
         from UserList import UserList
         c = UserList(); c.append(c)
-        self.assertRaises(RuntimeError, cmp, a, b)
-        self.assertRaises(RuntimeError, cmp, b, c)
-        self.assertRaises(RuntimeError, cmp, c, a)
-        self.assertRaises(RuntimeError, cmp, a, c)
-       # okay, now break the cycles
+        self.assertEqual(cmp(a, b), 0)
+        self.assertEqual(cmp(b, c), 0)
+        self.assertEqual(cmp(c, a), 0)
+        self.assertEqual(cmp(a, c), 0)
+        # okay, now break the cycles
         a.pop(); b.pop(); c.pop()
         self.assertRaises(TypeError, cmp)
 
@@ -437,7 +438,8 @@ class BuiltinTest(unittest.TestCase):
     def test_hex(self):
         self.assertEqual(hex(16), '0x10')
         self.assertEqual(hex(16L), '0x10L')
-        self.assertEqual(hex(-16), '-0x10')
+        self.assertEqual(len(hex(-1)), len(hex(sys.maxint)))
+        self.assert_(hex(-16) in ('0xfffffff0', '0xfffffffffffffff0'))
         self.assertEqual(hex(-16L), '-0x10L')
         self.assertRaises(TypeError, hex, {})
 
@@ -480,7 +482,7 @@ class BuiltinTest(unittest.TestCase):
                     except v:
                         pass
 
-        s = repr(-1-sys.maxint)
+        s = `-1-sys.maxint`
         self.assertEqual(int(s)+1, -sys.maxint)
         # should return long
         int(s[1:])
@@ -756,7 +758,7 @@ class BuiltinTest(unittest.TestCase):
     def test_oct(self):
         self.assertEqual(oct(100), '0144')
         self.assertEqual(oct(100L), '0144L')
-        self.assertEqual(oct(-100), '-0144')
+        self.assert_(oct(-100) in ('037777777634', '01777777777777777777634'))
         self.assertEqual(oct(-100L), '-0144L')
         self.assertRaises(TypeError, oct, ())
 
@@ -931,19 +933,6 @@ class BuiltinTest(unittest.TestCase):
             self.assertEqual(input(), 'whitespace')
             sys.stdin = cStringIO.StringIO()
             self.assertRaises(EOFError, input)
-
-            # SF 876178: make sure input() respect future options.
-            sys.stdin = cStringIO.StringIO('1/2')
-            sys.stdout = cStringIO.StringIO()
-            exec compile('print input()', 'test_builtin_tmp', 'exec')
-            sys.stdin.seek(0, 0)
-            exec compile('from __future__ import division;print input()',
-                         'test_builtin_tmp', 'exec')
-            sys.stdin.seek(0, 0)
-            exec compile('print input()', 'test_builtin_tmp', 'exec')
-            self.assertEqual(sys.stdout.getvalue().splitlines(),
-                             ['0', '0.5', '0'])
-
             del sys.stdout
             self.assertRaises(RuntimeError, input, 'prompt')
             del sys.stdin
@@ -1115,9 +1104,9 @@ class BuiltinTest(unittest.TestCase):
     get_vars_f2 = staticmethod(get_vars_f2)
 
     def test_vars(self):
-        self.assertEqual(set(vars()), set(dir()))
+        self.assertEqual(Set(vars()), Set(dir()))
         import sys
-        self.assertEqual(set(vars(sys)), set(dir(sys)))
+        self.assertEqual(Set(vars(sys)), Set(dir(sys)))
         self.assertEqual(self.get_vars_f0(), {})
         self.assertEqual(self.get_vars_f2(), {'a': 1, 'b': 2})
         self.assertRaises(TypeError, vars, 42, 42)
@@ -1137,8 +1126,7 @@ class BuiltinTest(unittest.TestCase):
                 if i < 0 or i > 2: raise IndexError
                 return i + 4
         self.assertEqual(zip(a, I()), t)
-        self.assertEqual(zip(), [])
-        self.assertEqual(zip(*[]), [])
+        self.assertRaises(TypeError, zip)
         self.assertRaises(TypeError, zip, None)
         class G:
             pass
@@ -1166,41 +1154,8 @@ class BuiltinTest(unittest.TestCase):
                     return i
         self.assertRaises(ValueError, zip, BadSeq(), BadSeq())
 
-class TestSorted(unittest.TestCase):
-
-    def test_basic(self):
-        data = range(100)
-        copy = data[:]
-        random.shuffle(copy)
-        self.assertEqual(data, sorted(copy))
-        self.assertNotEqual(data, copy)
-
-        data.reverse()
-        random.shuffle(copy)
-        self.assertEqual(data, sorted(copy, cmp=lambda x, y: cmp(y,x)))
-        self.assertNotEqual(data, copy)
-        random.shuffle(copy)
-        self.assertEqual(data, sorted(copy, key=lambda x: -x))
-        self.assertNotEqual(data, copy)
-        random.shuffle(copy)
-        self.assertEqual(data, sorted(copy, reverse=1))
-        self.assertNotEqual(data, copy)
-
-    def test_inputtypes(self):
-        s = 'abracadabra'
-        for T in [unicode, list, tuple]:
-            self.assertEqual(sorted(s), sorted(T(s)))
-
-        s = ''.join(dict.fromkeys(s).keys())  # unique letters only
-        for T in [unicode, set, frozenset, list, tuple, dict.fromkeys]:
-            self.assertEqual(sorted(s), sorted(T(s)))
-
-    def test_baddecorator(self):
-        data = 'The quick Brown fox Jumped over The lazy Dog'.split()
-        self.assertRaises(TypeError, sorted, data, None, lambda x,y: 0)
-
 def test_main():
-    test.test_support.run_unittest(BuiltinTest, TestSorted)
+    test.test_support.run_unittest(BuiltinTest)
 
 if __name__ == "__main__":
     test_main()

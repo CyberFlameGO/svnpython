@@ -2418,11 +2418,6 @@ save(Picklerobject *self, PyObject *args, int pers_save)
         case 'f':
 		if (type == &PyFunction_Type) {
 			res = save_global(self, args, NULL);
-			if (res && PyErr_ExceptionMatches(PickleError)) {
-				/* fall back to reduce */
-				PyErr_Clear();
-				break;
-			}
 			goto finally;
 		}
 		break;
@@ -3632,7 +3627,7 @@ Instance_New(PyObject *cls, PyObject *args)
 		PyObject *tp, *v, *tb;
 
 		PyErr_Fetch(&tp, &v, &tb);
-		if ((r=PyTuple_Pack(3,v,cls,args))) {
+		if ((r=Py_BuildValue("OOO",v,cls,args))) {
 			Py_XDECREF(v);
 			v=r;
 		}

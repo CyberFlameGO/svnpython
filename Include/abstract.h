@@ -1016,12 +1016,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	  need to be corrected for a negative index
        */     
 
-#define PySequence_Fast_ITEMS(sf) \
-	(PyList_Check(sf) ? ((PyListObject *)(sf))->ob_item \
-			  : ((PyTupleObject *)(sf))->ob_item)
-	/* Return a pointer to the underlying item array for
-           an object retured by PySequence_Fast */
-
      PyAPI_FUNC(int) PySequence_Count(PyObject *o, PyObject *value);
 
        /*

@@ -85,7 +85,9 @@ typedef PY_LONG_LONG		Py_intptr_t;
 #   error "Python needs a typedef for Py_uintptr_t in pyport.h."
 #endif /* HAVE_UINTPTR_T */
 
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
 
 #include <math.h> /* Moved here from the math section, before extern "C" */
 
@@ -273,33 +275,20 @@ extern "C" {
 					 (X) == -Py_HUGE_VAL))
 #endif
 
-/* Py_SET_ERRNO_ON_MATH_ERROR(x)
+/* Py_SET_ERANGE_ON_OVERFLOW(x)
  * If a libm function did not set errno, but it looks like the result
- * overflowed or not-a-number, set errno to ERANGE or EDOM.  Set errno
- * to 0 before calling a libm function, and invoke this macro after,
- * passing the function result.
+ * overflowed, set errno to ERANGE.  Set errno to 0 before calling a libm
+ * function, and invoke this macro after, passing the function result.
  * Caution:
  *    This isn't reliable.  See Py_OVERFLOWED comments.
  *    X is evaluated more than once.
  */
-#if defined(__FreeBSD__) || defined(__OpenBSD__)
-#define _Py_SET_EDOM_FOR_NAN(X) if (isnan(X)) errno = EDOM;
-#else
-#define _Py_SET_EDOM_FOR_NAN(X) ;
-#endif
-#define Py_SET_ERRNO_ON_MATH_ERROR(X) \
+#define Py_SET_ERANGE_IF_OVERFLOW(X) \
 	do { \
-		if (errno == 0) { \
-			if ((X) == Py_HUGE_VAL || (X) == -Py_HUGE_VAL) \
-				errno = ERANGE; \
-			else _Py_SET_EDOM_FOR_NAN(X) \
-		} \
+		if (errno == 0 && ((X) == Py_HUGE_VAL ||  \
+				   (X) == -Py_HUGE_VAL))  \
+			errno = ERANGE; \
 	} while(0)
-
-/* Py_SET_ERANGE_ON_OVERFLOW(x)
- * An alias of Py_SET_ERRNO_ON_MATH_ERROR for backward-compatibility.
- */
-#define Py_SET_ERANGE_IF_OVERFLOW(X) Py_SET_ERRNO_ON_MATH_ERROR(X)
 
 /* Py_ADJUST_ERANGE1(x)
  * Py_ADJUST_ERANGE2(x, y)
@@ -400,6 +389,13 @@ extern int fclose(FILE *);
 
 /* From Modules/posixmodule.c */
 extern int fdatasync(int);
+/* XXX These are supposedly for SunOS4.1.3 but "shouldn't hurt elsewhere" */
+extern int rename(const char *, const char *);
+extern int pclose(FILE *);
+extern int lstat(const char *, struct stat *);
+extern int symlink(const char *, const char *);
+extern int fsync(int fd);
+
 #endif /* 0 */
 
 
@@ -434,19 +430,13 @@ extern double hypot(double, double);
 #	define HAVE_DECLSPEC_DLL
 #endif
 
-/* only get special linkage if built as shared or platform is Cygwin */
-#if defined(Py_ENABLE_SHARED) || defined(__CYGWIN__)
+#if defined(Py_ENABLE_SHARED) /* only get special linkage if built as shared */
 #	if defined(HAVE_DECLSPEC_DLL)
 #		ifdef Py_BUILD_CORE
 #			define PyAPI_FUNC(RTYPE) __declspec(dllexport) RTYPE
 #			define PyAPI_DATA(RTYPE) extern __declspec(dllexport) RTYPE
 			/* module init functions inside the core need no external linkage */
-			/* except for Cygwin to handle embedding (FIXME: BeOS too?) */
-#			if defined(__CYGWIN__)
-#				define PyMODINIT_FUNC __declspec(dllexport) void
-#			else /* __CYGWIN__ */
-#				define PyMODINIT_FUNC void
-#			endif /* __CYGWIN__ */
+#			define PyMODINIT_FUNC void
 #		else /* Py_BUILD_CORE */
 			/* Building an extension module, or an embedded situation */
 			/* public Python functions and data are imported */

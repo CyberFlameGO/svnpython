@@ -689,9 +689,9 @@ def get_close_matches(word, possibilities, n=3, cutoff=0.6):
     """
 
     if not n >  0:
-        raise ValueError("n must be > 0: %r" % (n,))
+        raise ValueError("n must be > 0: " + `n`)
     if not 0.0 <= cutoff <= 1.0:
-        raise ValueError("cutoff must be in [0.0, 1.0]: %r" % (cutoff,))
+        raise ValueError("cutoff must be in [0.0, 1.0]: " + `cutoff`)
     result = []
     s = SequenceMatcher()
     s.set_seq2(word)
@@ -701,11 +701,15 @@ def get_close_matches(word, possibilities, n=3, cutoff=0.6):
            s.quick_ratio() >= cutoff and \
            s.ratio() >= cutoff:
             result.append((s.ratio(), x))
+    # Sort by score.
+    result.sort()
+    # Retain only the best n.
+    result = result[-n:]
+    # Move best-scorer to head of list.
+    result.reverse()
+    # Strip scores.
+    return [x for score, x in result]
 
-    # Move the best scorers to head of list
-    result.sort(reverse=True)
-    # Strip scores for the best n matches
-    return [x for score, x in result[:n]]
 
 def _count_leading(line, ch):
     """
@@ -876,7 +880,7 @@ class Differ:
             elif tag == 'equal':
                 g = self._dump(' ', a, alo, ahi)
             else:
-                raise ValueError, 'unknown tag %r' % (tag,)
+                raise ValueError, 'unknown tag ' + `tag`
 
             for line in g:
                 yield line
@@ -988,7 +992,7 @@ class Differ:
                     atags += ' ' * la
                     btags += ' ' * lb
                 else:
-                    raise ValueError, 'unknown tag %r' % (tag,)
+                    raise ValueError, 'unknown tag ' + `tag`
             for line in self._qformat(aelt, belt, atags, btags):
                 yield line
         else:

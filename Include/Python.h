@@ -15,14 +15,10 @@
 #define WITH_CYCLE_GC 1
 #endif
 
+#ifdef HAVE_LIMITS_H
 #include <limits.h>
-
-#ifndef UCHAR_MAX
-#error "Something's broken.  UCHAR_MAX should be defined in limits.h."
-#endif
-
-#if UCHAR_MAX != 255
-#error "Python's source code assumes C's unsigned char is an 8-bit type."
+#else
+#error "limits.h is required by std C -- why isn't HAVE_LIMITS_H defined?"
 #endif
 
 #if defined(__sgi) && defined(WITH_THREAD) && !defined(_SGI_MP_SOURCE)
@@ -36,7 +32,9 @@
 
 #include <string.h>
 #include <errno.h>
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -88,7 +86,6 @@
 #include "listobject.h"
 #include "dictobject.h"
 #include "enumobject.h"
-#include "setobject.h"
 #include "methodobject.h"
 #include "moduleobject.h"
 #include "funcobject.h"
@@ -115,9 +112,6 @@
 #include "import.h"
 
 #include "abstract.h"
-
-#include "compile.h"
-#include "eval.h"
 
 /* _Py_Mangle is defined in compile.c */
 PyAPI_FUNC(int) _Py_Mangle(char *p, char *name, \

@@ -96,11 +96,7 @@ class BCPPCompiler(CCompiler) :
         else:
             compile_opts.extend (self.compile_options)
 
-        for obj in objects:
-            try:
-                src, ext = build[obj]
-            except KeyError:
-                continue
+        for obj, (src, ext) in build.items():
             # XXX why do the normpath here?
             src = os.path.normpath(src)
             obj = os.path.normpath(obj)

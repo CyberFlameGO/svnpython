@@ -5,17 +5,27 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Controls.h>
+#include <ControlDefinitions.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
 extern PyObject *_CtlObj_New(ControlHandle);
@@ -301,6 +311,8 @@ static PyObject *CtlObj_SetControlVisibility(ControlObject *_self, PyObject *_ar
 	return _res;
 }
 
+#if TARGET_API_MAC_OSX
+
 static PyObject *CtlObj_IsControlEnabled(ControlObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -315,6 +327,9 @@ static PyObject *CtlObj_IsControlEnabled(ControlObject *_self, PyObject *_args)
 	                     _rv);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_OSX
 
 static PyObject *CtlObj_EnableControl(ControlObject *_self, PyObject *_args)
 {
@@ -331,6 +346,9 @@ static PyObject *CtlObj_EnableControl(ControlObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_OSX
 
 static PyObject *CtlObj_DisableControl(ControlObject *_self, PyObject *_args)
 {
@@ -347,6 +365,7 @@ static PyObject *CtlObj_DisableControl(ControlObject *_self, PyObject *_args)
 	_res = Py_None;
 	return _res;
 }
+#endif
 
 static PyObject *CtlObj_Draw1Control(ControlObject *_self, PyObject *_args)
 {
@@ -1385,15 +1404,15 @@ static PyObject *CtlObj_SetControlDragTrackingEnabled(ControlObject *_self, PyOb
 {
 	PyObject *_res = NULL;
 	OSStatus _err;
-	Boolean inTracks;
+	Boolean tracks;
 #ifndef SetControlDragTrackingEnabled
 	PyMac_PRECHECK(SetControlDragTrackingEnabled);
 #endif
 	if (!PyArg_ParseTuple(_args, "b",
-	                      &inTracks))
+	                      &tracks))
 		return NULL;
 	_err = SetControlDragTrackingEnabled(_self->ob_itself,
-	                                     inTracks);
+	                                     tracks);
 	if (_err != noErr) return PyMac_Error(_err);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -1404,17 +1423,17 @@ static PyObject *CtlObj_IsControlDragTrackingEnabled(ControlObject *_self, PyObj
 {
 	PyObject *_res = NULL;
 	OSStatus _err;
-	Boolean outTracks;
+	Boolean tracks;
 #ifndef IsControlDragTrackingEnabled
 	PyMac_PRECHECK(IsControlDragTrackingEnabled);
 #endif
 	if (!PyArg_ParseTuple(_args, ""))
 		return NULL;
 	_err = IsControlDragTrackingEnabled(_self->ob_itself,
-	                                    &outTracks);
+	                                    &tracks);
 	if (_err != noErr) return PyMac_Error(_err);
 	_res = Py_BuildValue("b",
-	                     outTracks);
+	                     tracks);
 	return _res;
 }
 
@@ -2447,6 +2466,8 @@ static PyObject *CtlObj_SetDataBrowserEditText(ControlObject *_self, PyObject *_
 	return _res;
 }
 
+#if TARGET_API_MAC_OSX
+
 static PyObject *CtlObj_CopyDataBrowserEditText(ControlObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -2464,6 +2485,7 @@ static PyObject *CtlObj_CopyDataBrowserEditText(ControlObject *_self, PyObject *
 	                     CFStringRefObj_New, text);
 	return _res;
 }
+#endif
 
 static PyObject *CtlObj_GetDataBrowserEditText(ControlObject *_self, PyObject *_args)
 {
@@ -3491,12 +3513,21 @@ static PyMethodDef CtlObj_methods[] = {
 	 PyDoc_STR("() -> None")},
 	{"SetControlVisibility", (PyCFunction)CtlObj_SetControlVisibility, 1,
 	 PyDoc_STR("(Boolean inIsVisible, Boolean inDoDraw) -> None")},
+
+#if TARGET_API_MAC_OSX
 	{"IsControlEnabled", (PyCFunction)CtlObj_IsControlEnabled, 1,
 	 PyDoc_STR("() -> (Boolean _rv)")},
+#endif
+
+#if TARGET_API_MAC_OSX
 	{"EnableControl", (PyCFunction)CtlObj_EnableControl, 1,
 	 PyDoc_STR("() -> None")},
+#endif
+
+#if TARGET_API_MAC_OSX
 	{"DisableControl", (PyCFunction)CtlObj_DisableControl, 1,
 	 PyDoc_STR("() -> None")},
+#endif
 	{"Draw1Control", (PyCFunction)CtlObj_Draw1Control, 1,
 	 PyDoc_STR("() -> None")},
 	{"GetBestControlRect", (PyCFunction)CtlObj_GetBestControlRect, 1,
@@ -3608,9 +3639,9 @@ static PyMethodDef CtlObj_methods[] = {
 	{"HandleControlDragReceive", (PyCFunction)CtlObj_HandleControlDragReceive, 1,
 	 PyDoc_STR("(DragReference inDrag) -> None")},
 	{"SetControlDragTrackingEnabled", (PyCFunction)CtlObj_SetControlDragTrackingEnabled, 1,
-	 PyDoc_STR("(Boolean inTracks) -> None")},
+	 PyDoc_STR("(Boolean tracks) -> None")},
 	{"IsControlDragTrackingEnabled", (PyCFunction)CtlObj_IsControlDragTrackingEnabled, 1,
-	 PyDoc_STR("() -> (Boolean outTracks)")},
+	 PyDoc_STR("() -> (Boolean tracks)")},
 	{"GetControlBounds", (PyCFunction)CtlObj_GetControlBounds, 1,
 	 PyDoc_STR("() -> (Rect bounds)")},
 	{"IsControlHilited", (PyCFunction)CtlObj_IsControlHilited, 1,
@@ -3719,8 +3750,11 @@ static PyMethodDef CtlObj_methods[] = {
 	 PyDoc_STR("(UInt32 property) -> (UInt32 flags)")},
 	{"SetDataBrowserEditText", (PyCFunction)CtlObj_SetDataBrowserEditText, 1,
 	 PyDoc_STR("(CFStringRef text) -> None")},
+
+#if TARGET_API_MAC_OSX
 	{"CopyDataBrowserEditText", (PyCFunction)CtlObj_CopyDataBrowserEditText, 1,
 	 PyDoc_STR("() -> (CFStringRef text)")},
+#endif
 	{"GetDataBrowserEditText", (PyCFunction)CtlObj_GetDataBrowserEditText, 1,
 	 PyDoc_STR("(CFMutableStringRef text) -> None")},
 	{"SetDataBrowserEditItem", (PyCFunction)CtlObj_SetDataBrowserEditItem, 1,
@@ -3990,17 +4024,17 @@ static PyObject *Ctl_DrawControls(PyObject *_self, PyObject *_args)
 static PyObject *Ctl_UpdateControls(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
-	WindowPtr inWindow;
-	RgnHandle inUpdateRegion;
+	WindowPtr theWindow;
+	RgnHandle updateRegion;
 #ifndef UpdateControls
 	PyMac_PRECHECK(UpdateControls);
 #endif
 	if (!PyArg_ParseTuple(_args, "O&O&",
-	                      WinObj_Convert, &inWindow,
-	                      ResObj_Convert, &inUpdateRegion))
+	                      WinObj_Convert, &theWindow,
+	                      ResObj_Convert, &updateRegion))
 		return NULL;
-	UpdateControls(inWindow,
-	               inUpdateRegion);
+	UpdateControls(theWindow,
+	               updateRegion);
 	Py_INCREF(Py_None);
 	_res = Py_None;
 	return _res;
@@ -4231,17 +4265,17 @@ static PyObject *Ctl_SetAutomaticControlDragTrackingEnabledForWindow(PyObject *_
 {
 	PyObject *_res = NULL;
 	OSStatus _err;
-	WindowPtr inWindow;
-	Boolean inTracks;
+	WindowPtr theWindow;
+	Boolean tracks;
 #ifndef SetAutomaticControlDragTrackingEnabledForWindow
 	PyMac_PRECHECK(SetAutomaticControlDragTrackingEnabledForWindow);
 #endif
 	if (!PyArg_ParseTuple(_args, "O&b",
-	                      WinObj_Convert, &inWindow,
-	                      &inTracks))
+	                      WinObj_Convert, &theWindow,
+	                      &tracks))
 		return NULL;
-	_err = SetAutomaticControlDragTrackingEnabledForWindow(inWindow,
-	                                                       inTracks);
+	_err = SetAutomaticControlDragTrackingEnabledForWindow(theWindow,
+	                                                       tracks);
 	if (_err != noErr) return PyMac_Error(_err);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -4252,19 +4286,19 @@ static PyObject *Ctl_IsAutomaticControlDragTrackingEnabledForWindow(PyObject *_s
 {
 	PyObject *_res = NULL;
 	OSStatus _err;
-	WindowPtr inWindow;
-	Boolean outTracks;
+	WindowPtr theWindow;
+	Boolean tracks;
 #ifndef IsAutomaticControlDragTrackingEnabledForWindow
 	PyMac_PRECHECK(IsAutomaticControlDragTrackingEnabledForWindow);
 #endif
 	if (!PyArg_ParseTuple(_args, "O&",
-	                      WinObj_Convert, &inWindow))
+	                      WinObj_Convert, &theWindow))
 		return NULL;
-	_err = IsAutomaticControlDragTrackingEnabledForWindow(inWindow,
-	                                                      &outTracks);
+	_err = IsAutomaticControlDragTrackingEnabledForWindow(theWindow,
+	                                                      &tracks);
 	if (_err != noErr) return PyMac_Error(_err);
 	_res = Py_BuildValue("b",
-	                     outTracks);
+	                     tracks);
 	return _res;
 }
 
@@ -4362,33 +4396,33 @@ static PyObject *Ctl_CreateDisclosureTriangleControl(PyObject *_self, PyObject *
 {
 	PyObject *_res = NULL;
 	OSStatus _err;
-	WindowPtr inWindow;
-	Rect inBoundsRect;
-	UInt16 inOrientation;
-	CFStringRef inTitle;
-	SInt32 inInitialValue;
-	Boolean inDrawTitle;
-	Boolean inAutoToggles;
+	WindowPtr window;
+	Rect boundsRect;
+	UInt16 orientation;
+	CFStringRef title;
+	SInt32 initialValue;
+	Boolean drawTitle;
+	Boolean autoToggles;
 	ControlHandle outControl;
 #ifndef CreateDisclosureTriangleControl
 	PyMac_PRECHECK(CreateDisclosureTriangleControl);
 #endif
 	if (!PyArg_ParseTuple(_args, "O&O&HO&lbb",
-	                      WinObj_Convert, &inWindow,
-	                      PyMac_GetRect, &inBoundsRect,
-	                      &inOrientation,
-	                      CFStringRefObj_Convert, &inTitle,
-	                      &inInitialValue,
-	                      &inDrawTitle,
-	                      &inAutoToggles))
+	                      WinObj_Convert, &window,
+	                      PyMac_GetRect, &boundsRect,
+	                      &orientation,
+	                      CFStringRefObj_Convert, &title,
+	                      &initialValue,
+	                      &drawTitle,
+	                      &autoToggles))
 		return NULL;
-	_err = CreateDisclosureTriangleControl(inWindow,
-	                                       &inBoundsRect,
-	                                       inOrientation,
-	                                       inTitle,
-	                                       inInitialValue,
-	                                       inDrawTitle,
-	                                       inAutoToggles,
+	_err = CreateDisclosureTriangleControl(window,
+	                                       &boundsRect,
+	                                       orientation,
+	                                       title,
+	                                       initialValue,
+	                                       drawTitle,
+	                                       autoToggles,
 	                                       &outControl);
 	if (_err != noErr) return PyMac_Error(_err);
 	_res = Py_BuildValue("O&",
@@ -4431,6 +4465,8 @@ static PyObject *Ctl_CreateProgressBarControl(PyObject *_self, PyObject *_args)
 	return _res;
 }
 
+#if TARGET_API_MAC_OSX
+
 static PyObject *Ctl_CreateRelevanceBarControl(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -4462,6 +4498,7 @@ static PyObject *Ctl_CreateRelevanceBarControl(PyObject *_self, PyObject *_args)
 	                     CtlObj_New, outControl);
 	return _res;
 }
+#endif
 
 static PyObject *Ctl_CreateLittleArrowsControl(PyObject *_self, PyObject *_args)
 {
@@ -4882,24 +4919,24 @@ static PyObject *Ctl_CreateIconControl(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
 	OSStatus _err;
-	WindowPtr inWindow;
-	Rect inBoundsRect;
-	ControlButtonContentInfo inIconContent;
-	Boolean inDontTrack;
+	WindowPtr window;
+	Rect boundsRect;
+	ControlButtonContentInfo icon;
+	Boolean dontTrack;
 	ControlHandle outControl;
 #ifndef CreateIconControl
 	PyMac_PRECHECK(CreateIconControl);
 #endif
 	if (!PyArg_ParseTuple(_args, "O&O&O&b",
-	                      WinObj_Convert, &inWindow,
-	                      PyMac_GetRect, &inBoundsRect,
-	                      ControlButtonContentInfo_Convert, &inIconContent,
-	                      &inDontTrack))
+	                      WinObj_Convert, &window,
+	                      PyMac_GetRect, &boundsRect,
+	                      ControlButtonContentInfo_Convert, &icon,
+	                      &dontTrack))
 		return NULL;
-	_err = CreateIconControl(inWindow,
-	                         &inBoundsRect,
-	                         &inIconContent,
-	                         inDontTrack,
+	_err = CreateIconControl(window,
+	                         &boundsRect,
+	                         &icon,
+	                         dontTrack,
 	                         &outControl);
 	if (_err != noErr) return PyMac_Error(_err);
 	_res = Py_BuildValue("O&",
@@ -5200,6 +5237,8 @@ static PyObject *Ctl_CreateScrollingTextBoxControl(PyObject *_self, PyObject *_a
 	return _res;
 }
 
+#if TARGET_API_MAC_OSX
+
 static PyObject *Ctl_CreateDisclosureButtonControl(PyObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
@@ -5228,6 +5267,9 @@ static PyObject *Ctl_CreateDisclosureButtonControl(PyObject *_self, PyObject *_a
 	                     CtlObj_New, outControl);
 	return _res;
 }
+#endif
+
+#if TARGET_API_MAC_OSX
 
 static PyObject *Ctl_CreateRoundButtonControl(PyObject *_self, PyObject *_args)
 {
@@ -5257,6 +5299,7 @@ static PyObject *Ctl_CreateRoundButtonControl(PyObject *_self, PyObject *_args)
 	                     CtlObj_New, outControl);
 	return _res;
 }
+#endif
 
 static PyObject *Ctl_CreateDataBrowserControl(PyObject *_self, PyObject *_args)
 {
@@ -5283,6 +5326,8 @@ static PyObject *Ctl_CreateDataBrowserControl(PyObject *_self, PyObject *_args)
 	                     CtlObj_New, outControl);
 	return _res;
 }
+
+#if TARGET_API_MAC_OSX
 
 static PyObject *Ctl_CreateEditUnicodeTextControl(PyObject *_self, PyObject *_args)
 {
@@ -5315,6 +5360,7 @@ static PyObject *Ctl_CreateEditUnicodeTextControl(PyObject *_self, PyObject *_ar
 	                     CtlObj_New, outControl);
 	return _res;
 }
+#endif
 
 static PyObject *Ctl_FindControlUnderMouse(PyObject *_self, PyObject *_args)
 {
@@ -5422,7 +5468,7 @@ static PyMethodDef Ctl_methods[] = {
 	{"DrawControls", (PyCFunction)Ctl_DrawControls, 1,
 	 PyDoc_STR("(WindowPtr theWindow) -> None")},
 	{"UpdateControls", (PyCFunction)Ctl_UpdateControls, 1,
-	 PyDoc_STR("(WindowPtr inWindow, RgnHandle inUpdateRegion) -> None")},
+	 PyDoc_STR("(WindowPtr theWindow, RgnHandle updateRegion) -> None")},
 	{"FindControl", (PyCFunction)Ctl_FindControl, 1,
 	 PyDoc_STR("(Point testPoint, WindowPtr theWindow) -> (ControlPartCode _rv, ControlHandle theControl)")},
 	{"IdleControls", (PyCFunction)Ctl_IdleControls, 1,
@@ -5446,19 +5492,22 @@ static PyMethodDef Ctl_methods[] = {
 	{"ClearKeyboardFocus", (PyCFunction)Ctl_ClearKeyboardFocus, 1,
 	 PyDoc_STR("(WindowPtr inWindow) -> None")},
 	{"SetAutomaticControlDragTrackingEnabledForWindow", (PyCFunction)Ctl_SetAutomaticControlDragTrackingEnabledForWindow, 1,
-	 PyDoc_STR("(WindowPtr inWindow, Boolean inTracks) -> None")},
+	 PyDoc_STR("(WindowPtr theWindow, Boolean tracks) -> None")},
 	{"IsAutomaticControlDragTrackingEnabledForWindow", (PyCFunction)Ctl_IsAutomaticControlDragTrackingEnabledForWindow, 1,
-	 PyDoc_STR("(WindowPtr inWindow) -> (Boolean outTracks)")},
+	 PyDoc_STR("(WindowPtr theWindow) -> (Boolean tracks)")},
 	{"CreateBevelButtonControl", (PyCFunction)Ctl_CreateBevelButtonControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, CFStringRef title, UInt16 thickness, UInt16 behavior, ControlButtonContentInfo info, SInt16 menuID, UInt16 menuBehavior, UInt16 menuPlacement) -> (ControlHandle outControl)")},
 	{"CreateSliderControl", (PyCFunction)Ctl_CreateSliderControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, SInt32 value, SInt32 minimum, SInt32 maximum, UInt16 orientation, UInt16 numTickMarks, Boolean liveTracking, PyObject* liveTrackingProc) -> (ControlHandle outControl)")},
 	{"CreateDisclosureTriangleControl", (PyCFunction)Ctl_CreateDisclosureTriangleControl, 1,
-	 PyDoc_STR("(WindowPtr inWindow, Rect inBoundsRect, UInt16 inOrientation, CFStringRef inTitle, SInt32 inInitialValue, Boolean inDrawTitle, Boolean inAutoToggles) -> (ControlHandle outControl)")},
+	 PyDoc_STR("(WindowPtr window, Rect boundsRect, UInt16 orientation, CFStringRef title, SInt32 initialValue, Boolean drawTitle, Boolean autoToggles) -> (ControlHandle outControl)")},
 	{"CreateProgressBarControl", (PyCFunction)Ctl_CreateProgressBarControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, SInt32 value, SInt32 minimum, SInt32 maximum, Boolean indeterminate) -> (ControlHandle outControl)")},
+
+#if TARGET_API_MAC_OSX
 	{"CreateRelevanceBarControl", (PyCFunction)Ctl_CreateRelevanceBarControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, SInt32 value, SInt32 minimum, SInt32 maximum) -> (ControlHandle outControl)")},
+#endif
 	{"CreateLittleArrowsControl", (PyCFunction)Ctl_CreateLittleArrowsControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, SInt32 value, SInt32 minimum, SInt32 maximum, SInt32 increment) -> (ControlHandle outControl)")},
 	{"CreateChasingArrowsControl", (PyCFunction)Ctl_CreateChasingArrowsControl, 1,
@@ -5488,7 +5537,7 @@ static PyMethodDef Ctl_methods[] = {
 	{"CreatePictureControl", (PyCFunction)Ctl_CreatePictureControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, ControlButtonContentInfo content, Boolean dontTrack) -> (ControlHandle outControl)")},
 	{"CreateIconControl", (PyCFunction)Ctl_CreateIconControl, 1,
-	 PyDoc_STR("(WindowPtr inWindow, Rect inBoundsRect, ControlButtonContentInfo inIconContent, Boolean inDontTrack) -> (ControlHandle outControl)")},
+	 PyDoc_STR("(WindowPtr window, Rect boundsRect, ControlButtonContentInfo icon, Boolean dontTrack) -> (ControlHandle outControl)")},
 	{"CreateWindowHeaderControl", (PyCFunction)Ctl_CreateWindowHeaderControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, Boolean isListHeader) -> (ControlHandle outControl)")},
 	{"CreatePushButtonControl", (PyCFunction)Ctl_CreatePushButtonControl, 1,
@@ -5507,14 +5556,23 @@ static PyMethodDef Ctl_methods[] = {
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect) -> (ControlHandle outControl)")},
 	{"CreateScrollingTextBoxControl", (PyCFunction)Ctl_CreateScrollingTextBoxControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, SInt16 contentResID, Boolean autoScroll, UInt32 delayBeforeAutoScroll, UInt32 delayBetweenAutoScroll, UInt16 autoScrollAmount) -> (ControlHandle outControl)")},
+
+#if TARGET_API_MAC_OSX
 	{"CreateDisclosureButtonControl", (PyCFunction)Ctl_CreateDisclosureButtonControl, 1,
 	 PyDoc_STR("(WindowPtr inWindow, Rect inBoundsRect, SInt32 inValue, Boolean inAutoToggles) -> (ControlHandle outControl)")},
+#endif
+
+#if TARGET_API_MAC_OSX
 	{"CreateRoundButtonControl", (PyCFunction)Ctl_CreateRoundButtonControl, 1,
 	 PyDoc_STR("(WindowPtr inWindow, Rect inBoundsRect, SInt16 inSize, ControlButtonContentInfo inContent) -> (ControlHandle outControl)")},
+#endif
 	{"CreateDataBrowserControl", (PyCFunction)Ctl_CreateDataBrowserControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, OSType style) -> (ControlHandle outControl)")},
+
+#if TARGET_API_MAC_OSX
 	{"CreateEditUnicodeTextControl", (PyCFunction)Ctl_CreateEditUnicodeTextControl, 1,
 	 PyDoc_STR("(WindowPtr window, Rect boundsRect, CFStringRef text, Boolean isPassword, ControlFontStyleRec style) -> (ControlHandle outControl)")},
+#endif
 	{"FindControlUnderMouse", (PyCFunction)Ctl_FindControlUnderMouse, 1,
 	 PyDoc_STR("(Point inWhere, WindowPtr inWindow) -> (ControlHandle _rv, SInt16 outPart)")},
 	{"as_Control", (PyCFunction)Ctl_as_Control, 1,

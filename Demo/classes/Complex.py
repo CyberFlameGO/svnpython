@@ -117,15 +117,15 @@ class Complex:
 
     def __repr__(self):
         if not self.im:
-            return 'Complex(%r)' % (self.re,)
+            return 'Complex(%s)' % `self.re`
         else:
-            return 'Complex(%r, %r)' % (self.re, self.im)
+            return 'Complex(%s, %s)' % (`self.re`, `self.im`)
 
     def __str__(self):
         if not self.im:
-            return repr(self.re)
+            return `self.re`
         else:
-            return 'Complex(%r, %r)' % (self.re, self.im)
+            return 'Complex(%s, %s)' % (`self.re`, `self.im`)
 
     def __neg__(self):
         return Complex(-self.re, -self.im)

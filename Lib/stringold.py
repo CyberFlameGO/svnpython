@@ -312,7 +312,7 @@ def zfill(x, width):
 
     """
     if type(x) == type(''): s = x
-    else: s = repr(x)
+    else: s = `x`
     n = len(s)
     if n >= width: return s
     sign = ''

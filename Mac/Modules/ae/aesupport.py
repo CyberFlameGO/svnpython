@@ -82,7 +82,15 @@ AEMethod = OSErrWeakLinkMethodGenerator
 
 
 includestuff = includestuff + """
+#ifndef PyDoc_STR
+#define PyDoc_STR(x) (x)
+#endif
+#ifdef WITHOUT_FRAMEWORKS
+#include <AppleEvents.h>
+#include <AEObjects.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
 extern PyObject *_AEDesc_New(AEDesc *);
@@ -103,6 +111,12 @@ static pascal Boolean AEIdleProc(EventRecord *theEvent, long *sleepTime, RgnHand
 {
 	if ( PyOS_InterruptOccurred() )
 		return 1;
+#if !TARGET_API_MAC_OSX
+	if ( PyMac_HandleEvent(theEvent) < 0 ) {
+		PySys_WriteStderr("Exception in user event handler during AE processing\\n");
+		PyErr_Clear();
+	}
+#endif
 	return 0;
 }
 

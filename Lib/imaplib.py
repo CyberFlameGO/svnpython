@@ -69,7 +69,6 @@ Commands = {
         'STATUS':       ('AUTH', 'SELECTED'),
         'STORE':        ('SELECTED',),
         'SUBSCRIBE':    ('AUTH', 'SELECTED'),
-        'THREAD':       ('SELECTED',),
         'UID':          ('SELECTED',),
         'UNSUBSCRIBE':  ('AUTH', 'SELECTED'),
         }
@@ -192,7 +191,7 @@ class IMAP4:
 
         if __debug__:
             if self.debug >= 3:
-                self._mesg('CAPABILITIES: %r' % (self.capabilities,))
+                self._mesg('CAPABILITIES: %s' % `self.capabilities`)
 
         for version in AllowedVersions:
             if not version in self.capabilities:
@@ -621,7 +620,7 @@ class IMAP4:
     def setacl(self, mailbox, who, what):
         """Set a mailbox acl.
 
-        (typ, [data]) = <instance>.setacl(mailbox, who, what)
+        (typ, [data]) = <instance>.create(mailbox, who, what)
         """
         return self._simple_command('SETACL', mailbox, who, what)
 
@@ -678,16 +677,6 @@ class IMAP4:
         (typ, [data]) = <instance>.subscribe(mailbox)
         """
         return self._simple_command('SUBSCRIBE', mailbox)
-
-
-    def thread(self, threading_algorithm, charset, *search_criteria):
-        """IMAPrev1 extension THREAD command.
-
-        (type, [data]) = <instance>.thread(threading_alogrithm, charset, search_criteria, ...)
-        """
-        name = 'THREAD'
-        typ, dat = self._simple_command(name, threading_algorithm, charset, *search_criteria)
-        return self._untagged_response(typ, dat, name)
 
 
     def uid(self, command, *args):
@@ -972,7 +961,7 @@ class IMAP4:
         self.mo = cre.match(s)
         if __debug__:
             if self.mo is not None and self.debug >= 5:
-                self._mesg("\tmatched r'%s' => %r" % (cre.pattern, self.mo.groups()))
+                self._mesg("\tmatched r'%s' => %s" % (cre.pattern, `self.mo.groups()`))
         return self.mo is not None
 
 
@@ -1416,7 +1405,7 @@ if __name__ == '__main__':
         if M.state == 'AUTH':
             test_seq1 = test_seq1[1:]   # Login not needed
         M._mesg('PROTOCOL_VERSION = %s' % M.PROTOCOL_VERSION)
-        M._mesg('CAPABILITIES = %r' % (M.capabilities,))
+        M._mesg('CAPABILITIES = %s' % `M.capabilities`)
 
         for cmd,args in test_seq1:
             run(cmd, args)

@@ -4,8 +4,8 @@ import unittest
 import random
 import time
 import pickle
-import warnings
 from math import log, exp, sqrt, pi
+from sets import Set
 from test import test_support
 
 class TestBasicOps(unittest.TestCase):
@@ -63,9 +63,9 @@ class TestBasicOps(unittest.TestCase):
         for k in xrange(N+1):
             s = self.gen.sample(population, k)
             self.assertEqual(len(s), k)
-            uniq = set(s)
+            uniq = Set(s)
             self.assertEqual(len(uniq), k)
-            self.failUnless(uniq <= set(population))
+            self.failUnless(uniq <= Set(population))
         self.assertEqual(self.gen.sample([], 0), [])  # test edge case N==k==0
 
     def test_sample_distribution(self):
@@ -88,11 +88,13 @@ class TestBasicOps(unittest.TestCase):
 
     def test_sample_inputs(self):
         # SF bug #801342 -- population can be any iterable defining __len__()
-        self.gen.sample(set(range(20)), 2)
+        from sets import Set
+        self.gen.sample(Set(range(20)), 2)
         self.gen.sample(range(20), 2)
         self.gen.sample(xrange(20), 2)
         self.gen.sample(dict.fromkeys('abcdefghijklmnopqrst'), 2)
         self.gen.sample(str('abcdefghijklmnopqrst'), 2)
+        self.gen.sample(unicode('abcdefghijklmnopqrst'), 2)
         self.gen.sample(tuple('abcdefghijklmnopqrst'), 2)
 
     def test_gauss(self):
@@ -151,13 +153,6 @@ class WichmannHill_TestBasicOps(TestBasicOps):
 
             self.assertEqual(x1, x2)
             self.assertEqual(y1, y2)
-
-    def test_bigrand(self):
-        # Verify warnings are raised when randrange is too large for random()
-        oldfilters = warnings.filters[:]
-        warnings.filterwarnings("error", "Underlying random")
-        self.assertRaises(UserWarning, self.gen.randrange, 2**60)
-        warnings.filters[:] = oldfilters
 
 class MersenneTwister_TestBasicOps(TestBasicOps):
     gen = random.Random()
@@ -254,46 +249,8 @@ class MersenneTwister_TestBasicOps(TestBasicOps):
 
     def test_rangelimits(self):
         for start, stop in [(-2,0), (-(2**60)-2,-(2**60)), (2**60,2**60+2)]:
-            self.assertEqual(set(range(start,stop)),
-                set([self.gen.randrange(start,stop) for i in xrange(100)]))
-
-    def test_genrandbits(self):
-        # Verify cross-platform repeatability
-        self.gen.seed(1234567)
-        self.assertEqual(self.gen.getrandbits(100),
-                         97904845777343510404718956115L)
-        # Verify ranges
-        for k in xrange(1, 1000):
-            self.assert_(0 <= self.gen.getrandbits(k) < 2**k)
-
-        # Verify all bits active
-        getbits = self.gen.getrandbits
-        for span in [1, 2, 3, 4, 31, 32, 32, 52, 53, 54, 119, 127, 128, 129]:
-            cum = 0
-            for i in xrange(100):
-                cum |= getbits(span)
-            self.assertEqual(cum, 2**span-1)
-
-    def test_randbelow_logic(self, _log=log, int=int):
-        # check bitcount transition points:  2**i and 2**(i+1)-1
-        # show that: k = int(1.001 + _log(n, 2))
-        # is equal to or one greater than the number of bits in n
-        for i in xrange(1, 1000):
-            n = 1L << i # check an exact power of two
-            numbits = i+1
-            k = int(1.00001 + _log(n, 2))
-            self.assertEqual(k, numbits)
-            self.assert_(n == 2**(k-1))
-
-            n += n - 1      # check 1 below the next power of two
-            k = int(1.00001 + _log(n, 2))
-            self.assert_(k in [numbits, numbits+1])
-            self.assert_(2**k > n > 2**(k-2))
-
-            n -= n >> 15     # check a little farther below the next power of two
-            k = int(1.00001 + _log(n, 2))
-            self.assertEqual(k, numbits)        # note the stronger assertion
-            self.assert_(2**k > n > 2**(k-1))   # note the stronger assertion
+            self.assertEqual(Set(range(start,stop)),
+                Set([self.gen.randrange(start,stop) for i in xrange(100)]))
 
 _gammacoeff = (0.9999999999995183, 676.5203681218835, -1259.139216722289,
               771.3234287757674,  -176.6150291498386, 12.50734324009056,
@@ -362,7 +319,7 @@ class TestModule(unittest.TestCase):
 
     def test__all__(self):
         # tests validity but not completeness of the __all__ list
-        self.failUnless(set(random.__all__) <= set(dir(random)))
+        self.failUnless(Set(random.__all__) <= Set(dir(random)))
 
 def test_main(verbose=None):
     testclasses =    (WichmannHill_TestBasicOps,

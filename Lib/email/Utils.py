@@ -1,16 +1,17 @@
-# Copyright (C) 2001-2004 Python Software Foundation
-# Author: barry@python.org (Barry Warsaw)
+# Copyright (C) 2001,2002 Python Software Foundation
+# Author: barry@zope.com (Barry Warsaw)
 
-"""Miscellaneous utilities."""
+"""Miscellaneous utilities.
+"""
 
-import os
-import re
 import time
-import base64
-import random
 import socket
+import re
+import random
+import os
 import warnings
 from cStringIO import StringIO
+from types import ListType
 
 from email._parseaddr import quote
 from email._parseaddr import AddressList as _AddressList
@@ -20,7 +21,30 @@ from email._parseaddr import mktime_tz
 from email._parseaddr import parsedate as _parsedate
 from email._parseaddr import parsedate_tz as _parsedate_tz
 
-from quopri import decodestring as _qdecode
+try:
+    True, False
+except NameError:
+    True = 1
+    False = 0
+
+try:
+    from quopri import decodestring as _qdecode
+except ImportError:
+    # Python 2.1 doesn't have quopri.decodestring()
+    def _qdecode(s):
+        import quopri as _quopri
+
+        if not s:
+            return s
+        infp = StringIO(s)
+        outfp = StringIO()
+        _quopri.decode(infp, outfp)
+        value = outfp.getvalue()
+        if not s.endswith('\n') and value.endswith('\n'):
+            return value[:-1]
+        return value
+
+import base64
 
 # Intrapackage imports
 from email.Encoders import _bencode, _qencode
@@ -116,7 +140,7 @@ def decode(s):
     # Intra-package import here to avoid circular import problems.
     from email.Header import decode_header
     L = decode_header(s)
-    if not isinstance(L, list):
+    if not isinstance(L, ListType):
         # s wasn't decoded
         return s
 

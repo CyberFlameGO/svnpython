@@ -48,7 +48,7 @@ extern const char *PyWin_DLLVersionString;
 PyObject *
 PySys_GetObject(char *name)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
 	if (sd == NULL)
 		return NULL;
@@ -70,7 +70,7 @@ PySys_GetFile(char *name, FILE *def)
 int
 PySys_SetObject(char *name, PyObject *v)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
 	if (v == NULL) {
 		if (PyDict_GetItemString(sd, name) == NULL)
@@ -86,7 +86,7 @@ static PyObject *
 sys_displayhook(PyObject *self, PyObject *o)
 {
 	PyObject *outf;
-	PyInterpreterState *interp = PyThreadState_GET()->interp;
+	PyInterpreterState *interp = PyThreadState_Get()->interp;
 	PyObject *modules = interp->modules;
 	PyObject *builtins = PyDict_GetItemString(modules, "__builtin__");
 
@@ -149,7 +149,7 @@ static PyObject *
 sys_exc_info(PyObject *self, PyObject *noargs)
 {
 	PyThreadState *tstate;
-	tstate = PyThreadState_GET();
+	tstate = PyThreadState_Get();
 	return Py_BuildValue(
 		"(OOO)",
 		tstate->exc_type != NULL ? tstate->exc_type : Py_None,
@@ -168,7 +168,7 @@ clause in the current stack frame or in an older stack frame."
 static PyObject *
 sys_exc_clear(PyObject *self, PyObject *noargs)
 {
-	PyThreadState *tstate = PyThreadState_GET();
+	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *tmp_type, *tmp_value, *tmp_tb;
 	tmp_type = tstate->exc_type;
 	tmp_value = tstate->exc_value;
@@ -272,16 +272,15 @@ operating system filenames."
  * Cached interned string objects used for calling the profile and
  * trace functions.  Initialized by trace_init().
  */
-static PyObject *whatstrings[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static PyObject *whatstrings[4] = {NULL, NULL, NULL, NULL};
 
 static int
 trace_init(void)
 {
-	static char *whatnames[7] = {"call", "exception", "line", "return",
-					"c_call", "c_exception", "c_return"};
+	static char *whatnames[4] = {"call", "exception", "line", "return"};
 	PyObject *name;
 	int i;
-	for (i = 0; i < 7; ++i) {
+	for (i = 0; i < 4; ++i) {
 		if (whatstrings[i] == NULL) {
 			name = PyString_InternFromString(whatnames[i]);
 			if (name == NULL)
@@ -514,7 +513,7 @@ static PyObject *
 sys_setdlopenflags(PyObject *self, PyObject *args)
 {
 	int new_val;
-        PyThreadState *tstate = PyThreadState_GET();
+        PyThreadState *tstate = PyThreadState_Get();
 	if (!PyArg_ParseTuple(args, "i:setdlopenflags", &new_val))
 		return NULL;
         if (!tstate)
@@ -537,7 +536,7 @@ sys.setdlopenflags(dl.RTLD_NOW|dl.RTLD_GLOBAL)"
 static PyObject *
 sys_getdlopenflags(PyObject *self, PyObject *args)
 {
-        PyThreadState *tstate = PyThreadState_GET();
+        PyThreadState *tstate = PyThreadState_Get();
         if (!tstate)
 		return NULL;
         return PyInt_FromLong(tstate->interp->dlopenflags);
@@ -615,7 +614,7 @@ purposes only."
 static PyObject *
 sys_getframe(PyObject *self, PyObject *args)
 {
-	PyFrameObject *f = PyThreadState_GET()->frame;
+	PyFrameObject *f = PyThreadState_Get()->frame;
 	int depth = -1;
 
 	if (!PyArg_ParseTuple(args, "|i:_getframe", &depth))

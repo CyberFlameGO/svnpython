@@ -147,7 +147,9 @@ class TraceBack:
 			tbline = ""
 			if os.path.exists(filename):
 				filename = os.path.split(filename)[1]
-			tbline = 'File "%s", line %r, in %r' % (filename, lineno, func)
+				tbline = 'File "' + filename + '", line ' + `lineno` + ', in ' + func
+			else:
+				tbline = 'File "' + filename + '", line ' + `lineno` + ', in ' + func
 			if line:
 				tbline = tbline + '\r      ' + line
 			self.textlist.append(tbline[:255])
