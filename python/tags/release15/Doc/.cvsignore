@@ -1,0 +1,16 @@
+python-lib.info*
+lib.texi
+lib1.texi
+*.info*
+*.ind
+*.log
+*.aux
+*.dvi
+*.toc
+*.ps
+*.idx
+*.ilg
+api
+ext
+lib
+tut
