@@ -1,6 +1,5 @@
-# Copyright (C) 2001-2004 Python Software Foundation
-# Author: Barry Warsaw
-# Contact: email-sig@python.org
+# Copyright (C) 2001-2005 Python Software Foundation
+# Author: barry@python.org (Barry Warsaw)
 
 """Basic message object for the email package object model."""
 
@@ -9,6 +8,7 @@ import uu
 import binascii
 import warnings
 from cStringIO import StringIO
+from types import ListType, TupleType, StringType
 
 # Intrapackage imports
 from email import Utils
@@ -16,6 +16,12 @@ from email import Errors
 from email import Charset
 
 SEMISPACE = '; '
+
+try:
+    True, False
+except NameError:
+    True = 1
+    False = 0
 
 # Regular expression used to split header parameters.  BAW: this may be too
 # simple.  It isn't strictly RFC 2045 (section 5.1) compliant, but it catches
@@ -35,10 +41,10 @@ def _formatparam(param, value=None, quote=True):
     This will quote the value if needed or if quote is true.
     """
     if value is not None and len(value) > 0:
-        # A tuple is used for RFC 2231 encoded parameter values where items
+        # TupleType is used for RFC 2231 encoded parameter values where items
         # are (charset, language, value).  charset is a string, not a Charset
         # instance.
-        if isinstance(value, tuple):
+        if isinstance(value, TupleType):
             # Encode as per RFC 2231
             param += '*'
             value = Utils.encode_rfc2231(value[2], value[0], value[1])
@@ -70,11 +76,7 @@ def _parseparam(s):
 
 
 def _unquotevalue(value):
-    # This is different than Utils.collapse_rfc2231_value() because it doesn't
-    # try to convert the value to a unicode.  Message.get_param() and
-    # Message.get_params() are both currently defined to return the tuple in
-    # the face of RFC 2231 parameters.
-    if isinstance(value, tuple):
+    if isinstance(value, TupleType):
         return value[0], value[1], Utils.unquote(value[2])
     else:
         return Utils.unquote(value)
@@ -103,7 +105,6 @@ class Message:
         self._charset = None
         # Defaults for multipart messages
         self.preamble = self.epilogue = None
-        self.defects = []
         # Default content type
         self._default_type = 'text/plain'
 
@@ -119,8 +120,7 @@ class Message:
         header.
 
         This is a convenience method and may not generate the message exactly
-        as you intend because by default it mangles lines that begin with
-        "From ".  For more flexibility, use the flatten() method of a
+        as you intend.  For more flexibility, use the flatten() method of a
         Generator instance.
         """
         from email.Generator import Generator
@@ -131,7 +131,9 @@ class Message:
 
     def is_multipart(self):
         """Return True if the message consists of multiple parts."""
-        return isinstance(self._payload, list)
+        if isinstance(self._payload, ListType):
+            return True
+        return False
 
     #
     # Unix From_ line
@@ -145,6 +147,26 @@ class Message:
     #
     # Payload manipulation.
     #
+    def add_payload(self, payload):
+        """Add the given payload to the current payload.
+
+        If the current payload is empty, then the current payload will be made
+        a scalar, set to the given value.
+
+        Note: This method is deprecated.  Use .attach() instead.
+        """
+        warnings.warn('add_payload() is deprecated, use attach() instead.',
+                      DeprecationWarning, 2)
+        if self._payload is None:
+            self._payload = payload
+        elif isinstance(self._payload, ListType):
+            self._payload.append(payload)
+        elif self.get_main_type() not in (None, 'multipart'):
+            raise Errors.MultipartConversionError(
+                'Message main content type must be "multipart" or missing')
+        else:
+            self._payload = [self._payload, payload]
+
     def attach(self, payload):
         """Add the given payload to the current payload.
 
@@ -179,8 +201,8 @@ class Message:
         """
         if i is None:
             payload = self._payload
-        elif not isinstance(self._payload, list):
-            raise TypeError('Expected list, got %s' % type(self._payload))
+        elif not isinstance(self._payload, ListType):
+            raise TypeError, 'Expected list, got %s' % type(self._payload)
         else:
             payload = self._payload[i]
         if decode:
@@ -236,10 +258,10 @@ class Message:
             self.del_param('charset')
             self._charset = None
             return
-        if isinstance(charset, str):
+        if isinstance(charset, StringType):
             charset = Charset.Charset(charset)
         if not isinstance(charset, Charset.Charset):
-            raise TypeError(charset)
+            raise TypeError, charset
         # BAW: should we accept strings that can serve as arguments to the
         # Charset constructor?
         self._charset = charset
@@ -252,9 +274,9 @@ class Message:
             self.set_param('charset', charset.get_output_charset())
         if not self.has_key('Content-Transfer-Encoding'):
             cte = charset.get_body_encoding()
-            try:
+            if callable(cte):
                 cte(self)
-            except TypeError:
+            else:
                 self.add_header('Content-Transfer-Encoding', cte)
 
     def get_charset(self):
@@ -305,7 +327,7 @@ class Message:
 
     def has_key(self, name):
         """Return true if the message contains the header."""
-        missing = object()
+        missing = []
         return self.get(name, missing) is not missing
 
     def keys(self):
@@ -407,10 +429,11 @@ class Message:
                 self._headers[i] = (k, _value)
                 break
         else:
-            raise KeyError(_name)
+            raise KeyError, _name
 
     #
-    # Deprecated methods.  These will be removed in email 3.1.
+    # These methods are silently deprecated in favor of get_content_type() and
+    # friends (see below).  They will be noisily deprecated in email 3.0.
     #
 
     def get_type(self, failobj=None):
@@ -420,9 +443,7 @@ class Message:
         string of the form `maintype/subtype'.  If there was no Content-Type
         header in the message, failobj is returned (defaults to None).
         """
-        warnings.warn('get_type() deprecated; use get_content_type()',
-                      DeprecationWarning, 2)
-        missing = object()
+        missing = []
         value = self.get('content-type', missing)
         if value is missing:
             return failobj
@@ -430,9 +451,7 @@ class Message:
 
     def get_main_type(self, failobj=None):
         """Return the message's main content type if present."""
-        warnings.warn('get_main_type() deprecated; use get_content_maintype()',
-                      DeprecationWarning, 2)
-        missing = object()
+        missing = []
         ctype = self.get_type(missing)
         if ctype is missing:
             return failobj
@@ -442,9 +461,7 @@ class Message:
 
     def get_subtype(self, failobj=None):
         """Return the message's content subtype if present."""
-        warnings.warn('get_subtype() deprecated; use get_content_subtype()',
-                      DeprecationWarning, 2)
-        missing = object()
+        missing = []
         ctype = self.get_type(missing)
         if ctype is missing:
             return failobj
@@ -469,7 +486,7 @@ class Message:
         appears inside a multipart/digest container, in which case it would be
         message/rfc822.
         """
-        missing = object()
+        missing = []
         value = self.get('content-type', missing)
         if value is missing:
             # This should have no parameters
@@ -519,7 +536,7 @@ class Message:
     def _get_params_preserve(self, failobj, header):
         # Like get_params() but preserves the quoting of values.  BAW:
         # should this be part of the public interface?
-        missing = object()
+        missing = []
         value = self.get(header, missing)
         if value is missing:
             return failobj
@@ -550,7 +567,7 @@ class Message:
         header.  Optional header is the header to search instead of
         Content-Type.  If unquote is True, the value is unquoted.
         """
-        missing = object()
+        missing = []
         params = self._get_params_preserve(missing, header)
         if params is missing:
             return failobj
@@ -613,7 +630,7 @@ class Message:
         2231.  Optional language specifies the RFC 2231 language, defaulting
         to the empty string.  Both charset and language should be strings.
         """
-        if not isinstance(value, tuple) and charset:
+        if not isinstance(value, TupleType) and charset:
             value = (charset, language, value)
 
         if not self.has_key(header) and header.lower() == 'content-type':
@@ -703,11 +720,23 @@ class Message:
         The filename is extracted from the Content-Disposition header's
         `filename' parameter, and it is unquoted.
         """
-        missing = object()
+        missing = []
         filename = self.get_param('filename', missing, 'content-disposition')
         if filename is missing:
             return failobj
-        return Utils.collapse_rfc2231_value(filename).strip()
+        if isinstance(filename, TupleType):
+            # It's an RFC 2231 encoded parameter
+            newvalue = _unquotevalue(filename)
+            try:
+                return unicode(newvalue[2], newvalue[0] or 'us-ascii')
+            # LookupError can get raised if the charset isn't known to Python.
+            # UnicodeError can get raised if the encoded text contains a
+            # character not in the charset.
+            except (LookupError, UnicodeError):
+                return newvalue[2]
+        else:
+            newvalue = _unquotevalue(filename.strip())
+            return newvalue
 
     def get_boundary(self, failobj=None):
         """Return the boundary associated with the payload if present.
@@ -715,12 +744,16 @@ class Message:
         The boundary is extracted from the Content-Type header's `boundary'
         parameter, and it is unquoted.
         """
-        missing = object()
+        missing = []
         boundary = self.get_param('boundary', missing)
         if boundary is missing:
             return failobj
+        if isinstance(boundary, TupleType):
+            # RFC 2231 encoded, so decode.  It better end up as ascii
+            charset = boundary[0] or 'us-ascii'
+            return unicode(boundary[2], charset).encode('us-ascii')
         # RFC 2046 says that boundaries may begin but not end in w/s
-        return Utils.collapse_rfc2231_value(boundary).rstrip()
+        return _unquotevalue(boundary.rstrip())
 
     def set_boundary(self, boundary):
         """Set the boundary parameter in Content-Type to 'boundary'.
@@ -732,7 +765,7 @@ class Message:
 
         HeaderParseError is raised if the message has no Content-Type header.
         """
-        missing = object()
+        missing = []
         params = self._get_params_preserve(missing, 'content-type')
         if params is missing:
             # There was no Content-Type header, and we don't know what type
@@ -767,6 +800,12 @@ class Message:
                 newheaders.append((h, v))
         self._headers = newheaders
 
+    try:
+        from email._compat22 import walk
+    except SyntaxError:
+        # Must be using Python 2.1
+        from email._compat21 import walk
+
     def get_content_charset(self, failobj=None):
         """Return the charset parameter of the Content-Type header.
 
@@ -774,14 +813,25 @@ class Message:
         Content-Type header, or if that header has no charset parameter,
         failobj is returned.
         """
-        missing = object()
+        missing = []
         charset = self.get_param('charset', missing)
         if charset is missing:
             return failobj
-        if isinstance(charset, tuple):
+        if isinstance(charset, TupleType):
             # RFC 2231 encoded, so decode it, and it better end up as ascii.
             pcharset = charset[0] or 'us-ascii'
-            charset = unicode(charset[2], pcharset).encode('us-ascii')
+            try:
+                charset = unicode(charset[2], pcharset).encode('us-ascii')
+            # LookupError can get raised if the charset isn't known to Python.
+            # UnicodeError can get raised if the encoded text contains a
+            # character not in the charset.
+            except (LookupError, UnicodeError):
+                charset = charset[2]
+        # charset characters should be in us-ascii range
+        try:
+            charset = unicode(charset, 'us-ascii').encode('us-ascii')
+        except UnicodeError:
+            return failobj
         # RFC 2046, $4.1.2 says charsets are not case sensitive
         return charset.lower()
 
@@ -802,6 +852,3 @@ class Message:
         message will still return a list of length 1.
         """
         return [part.get_content_charset(failobj) for part in self.walk()]
-
-    # I.e. def walk(self): ...
-    from email.Iterators import walk
