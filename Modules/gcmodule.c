@@ -413,8 +413,10 @@ has_finalizer(PyObject *op)
 		assert(delstr != NULL);
 		return _PyInstance_Lookup(op, delstr) != NULL;
 	}
-	else 
+	else if (PyType_HasFeature(op->ob_type, Py_TPFLAGS_HEAPTYPE))
 		return op->ob_type->tp_del != NULL;
+	else
+		return 0;
 }
 
 /* Move the objects in unreachable with __del__ methods into `finalizers`.
@@ -1164,7 +1166,6 @@ initgc(void)
 		if (garbage == NULL)
 			return;
 	}
-	Py_INCREF(garbage);
 	if (PyModule_AddObject(m, "garbage", garbage) < 0)
 		return;
 #define ADD_INT(NAME) if (PyModule_AddIntConstant(m, #NAME, NAME) < 0) return

@@ -140,6 +140,8 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libstruct.tex \
 	lib/libmisc.tex \
 	lib/libmath.tex \
+	lib/librand.tex \
+	lib/libwhrandom.tex \
 	lib/libdecimal.tex \
 	lib/libarray.tex \
 	lib/liballos.tex \
@@ -164,7 +166,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libposix.tex \
 	lib/libposixpath.tex \
 	lib/libpwd.tex \
-	lib/libspwd.tex \
 	lib/libgrp.tex \
 	lib/libcrypt.tex \
 	lib/libdbm.tex \
@@ -202,7 +203,6 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/librgbimg.tex \
 	lib/libossaudiodev.tex \
 	lib/libcrypto.tex \
-	lib/libhashlib.tex \
 	lib/libmd5.tex \
 	lib/libsha.tex \
 	lib/libhmac.tex \
@@ -255,6 +255,7 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libre.tex \
 	lib/libuserdict.tex \
 	lib/libdis.tex \
+	lib/libxmllib.tex \
 	lib/libxmlrpclib.tex \
 	lib/libsimplexmlrpc.tex \
 	lib/libdocxmlrpc.tex \
@@ -321,6 +322,7 @@ LIBFILES= $(MANSTYLES) $(INDEXSTYLES) $(COMMONTEX) \
 	lib/libnew.tex \
 	lib/libdircache.tex \
 	lib/libfilecmp.tex \
+	lib/libstatcache.tex \
 	lib/libsunau.tex \
 	lib/libwave.tex \
 	lib/libchunk.tex \

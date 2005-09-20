@@ -13,8 +13,7 @@ ModeMask  = 3 # bits to keep for mode
 SelfMode   =  4+InMode  # this is 'self' -- don't declare it
 ReturnMode =  8+OutMode # this is the function return value
 ErrorMode  = 16+OutMode # this is an error status -- turn it into an exception
-RefMode    = 32
-ConstMode  = 64
+
 
 class Variable:
 
@@ -40,20 +39,8 @@ class Variable:
 
         If it is "self", it is not declared.
         """
-        if self.flags == ReturnMode+RefMode:
-            self.type.declare(self.name, reference=True)
-        elif self.flags != SelfMode:
+        if self.flags != SelfMode:
             self.type.declare(self.name)
-
-    def getArgDeclarations(self, constmode=False):
-        refmode = (self.flags & RefMode)
-        if constmode:
-            constmode = (self.flags & ConstMode)
-        return self.type.getArgDeclarations(self.name,
-                reference=refmode, constmode=constmode)
-
-    def getAuxDeclarations(self):
-        return self.type.getAuxDeclarations(self.name)
 
     def getargsFormat(self):
         """Call the type's getargsFormatmethod."""
@@ -66,9 +53,6 @@ class Variable:
     def getargsCheck(self):
         return self.type.getargsCheck(self.name)
 
-    def getargsPreCheck(self):
-        return self.type.getargsPreCheck(self.name)
-
     def passArgument(self):
         """Return the string required to pass the variable as argument.
 
@@ -78,8 +62,6 @@ class Variable:
         """
         if self.mode == InMode:
             return self.type.passInput(self.name)
-        if self.mode & RefMode:
-            return self.type.passReference(self.name)
         if self.mode in (OutMode, InOutMode):
             return self.type.passOutput(self.name)
         # XXX Shouldn't get here
@@ -100,9 +82,6 @@ class Variable:
     def mkvalueArgs(self):
         """Call the type's mkvalueArgs method."""
         return self.type.mkvalueArgs(self.name)
-
-    def mkvaluePreCheck(self):
-        return self.type.mkvaluePreCheck(self.name)
 
     def cleanup(self):
         """Call the type's cleanup method."""

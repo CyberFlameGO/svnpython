@@ -31,13 +31,16 @@ IDENTCHARS = string.ascii_letters + string.digits + "_"
 
 indent_message = """Error: Inconsistent indentation detected!
 
-1) Your indentation is outright incorrect (easy to fix), OR
+This means that either:
 
-2) Your indentation mixes tabs and spaces.
+1) your indentation is outright incorrect (easy to fix), or
 
-To fix case 2, change all tabs to spaces by using Edit->Select All followed \
-by Format->Untabify Region and specify the number of columns used by each tab.
-"""
+2) your indentation mixes tabs and spaces in a way that depends on \
+how many spaces a tab is worth.
+
+To fix case 2, change all tabs to spaces by using Select All followed \
+by Untabify Region (both in the Edit menu)."""
+
 
 class ScriptBinding:
 
@@ -135,8 +138,6 @@ class ScriptBinding:
         """
         filename = self.getfilename()
         if not filename:
-            return
-        if not self.tabnanny(filename):
             return
         code = self.checksyntax(filename)
         if not code:

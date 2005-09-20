@@ -29,7 +29,6 @@ __author__ = 'Ka-Ping Yee <ping@lfw.org>'
 __date__ = '1 Jan 2001'
 
 import sys, os, types, string, re, dis, imp, tokenize, linecache
-from operator import attrgetter
 
 # ----------------------------------------------------------- type-checking
 def ismodule(object):
@@ -347,7 +346,7 @@ def getmodulename(path):
 def getsourcefile(object):
     """Return the Python source file an object was defined in, if it exists."""
     filename = getfile(object)
-    if string.lower(filename[-4:]) in ('.pyc', '.pyo'):
+    if string.lower(filename[-4:]) in ['.pyc', '.pyo']:
         filename = filename[:-4] + '.py'
     for suffix, mode, kind in imp.get_suffixes():
         if 'b' in mode and string.lower(filename[-len(suffix):]) == suffix:
@@ -454,7 +453,7 @@ def getcomments(object):
         # Look for a comment block at the top of the file.
         start = 0
         if lines and lines[0][:2] == '#!': start = 1
-        while start < len(lines) and string.strip(lines[start]) in ('', '#'):
+        while start < len(lines) and string.strip(lines[start]) in ['', '#']:
             start = start + 1
         if start < len(lines) and lines[start][:1] == '#':
             comments = []
@@ -568,7 +567,7 @@ def getsource(object):
 def walktree(classes, children, parent):
     """Recursive helper function for getclasstree()."""
     results = []
-    classes.sort(key=attrgetter('__module__', '__name__'))
+    classes.sort(key=lambda c: (c.__module__, c.__name__))
     for c in classes:
         results.append((c, c.__bases__))
         if c in children:
@@ -622,7 +621,7 @@ def getargs(co):
 
     # The following acrobatics are for anonymous (tuple) arguments.
     for i in range(nargs):
-        if args[i][:1] in ('', '.'):
+        if args[i][:1] in ['', '.']:
             stack, remain, count = [], [], []
             while step < len(code):
                 op = ord(code[step])
@@ -631,7 +630,7 @@ def getargs(co):
                     opname = dis.opname[op]
                     value = ord(code[step]) + ord(code[step+1])*256
                     step = step + 2
-                    if opname in ('UNPACK_TUPLE', 'UNPACK_SEQUENCE'):
+                    if opname in ['UNPACK_TUPLE', 'UNPACK_SEQUENCE']:
                         remain.append(value)
                         count.append(value)
                     elif opname == 'STORE_FAST':
@@ -697,7 +696,7 @@ def joinseq(seq):
 
 def strseq(object, convert, join=joinseq):
     """Recursively walk a sequence, stringifying each element."""
-    if type(object) in (list, tuple):
+    if type(object) in [types.ListType, types.TupleType]:
         return join(map(lambda o, c=convert, j=join: strseq(o, c, j), object))
     else:
         return convert(object)

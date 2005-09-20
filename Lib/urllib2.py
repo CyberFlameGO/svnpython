@@ -277,8 +277,8 @@ class Request:
 
 class OpenerDirector:
     def __init__(self):
-        client_version = "Python-urllib/%s" % __version__
-        self.addheaders = [('User-agent', client_version)]
+        server_version = "Python-urllib/%s" % __version__
+        self.addheaders = [('User-agent', server_version)]
         # manage the individual handlers
         self.handlers = []
         self.handle_open = {}
@@ -304,13 +304,10 @@ class OpenerDirector:
                 self.handle_error[protocol] = lookup
             elif condition == "open":
                 kind = protocol
-                lookup = self.handle_open
-            elif condition == "response":
+                lookup = getattr(self, "handle_"+condition)
+            elif condition in ["response", "request"]:
                 kind = protocol
-                lookup = self.process_response
-            elif condition == "request":
-                kind = protocol
-                lookup = self.process_request
+                lookup = getattr(self, "process_"+condition)
             else:
                 continue
 
@@ -384,7 +381,7 @@ class OpenerDirector:
                                 'unknown_open', req)
 
     def error(self, proto, *args):
-        if proto in ('http', 'https'):
+        if proto in ['http', 'https']:
             # XXX http[s] protocols are special-cased
             dict = self.handle_error['http'] # https is not different than http
             proto = args[2]  # YUCK!
@@ -723,10 +720,7 @@ class AbstractBasicAuthHandler:
                     return self.retry_http_basic_auth(host, req, realm)
 
     def retry_http_basic_auth(self, host, req, realm):
-        # TODO(jhylton): Remove the host argument? It depends on whether
-        # retry_http_basic_auth() is consider part of the public API.
-        # It probably is.
-        user, pw = self.passwd.find_user_password(realm, req.get_full_url())
+        user,pw = self.passwd.find_user_password(realm, host)
         if pw is not None:
             raw = "%s:%s" % (user, pw)
             auth = 'Basic %s' % base64.encodestring(raw).strip()
@@ -883,12 +877,13 @@ class AbstractDigestAuthHandler:
                'response="%s"' % (user, realm, nonce, req.get_selector(),
                                   respdig)
         if opaque:
-            base += ', opaque="%s"' % opaque
+            base = base + ', opaque="%s"' % opaque
         if entdig:
-            base += ', digest="%s"' % entdig
-        base += ', algorithm="%s"' % algorithm
+            base = base + ', digest="%s"' % entdig
+        if algorithm != 'MD5':
+            base = base + ', algorithm="%s"' % algorithm
         if qop:
-            base += ', qop=auth, nc=%s, cnonce="%s"' % (ncvalue, cnonce)
+            base = base + ', qop=auth, nc=%s, cnonce="%s"' % (ncvalue, cnonce)
         return base
 
     def get_algorithm_impls(self, algorithm):
@@ -1069,7 +1064,7 @@ def parse_keqv_list(l):
 
 def parse_http_list(s):
     """Parse lists as described by RFC 2068 Section 2.
-
+    
     In particular, parse comma-separated lists where the elements of
     the list may include quoted-strings.  A quoted-string could
     contain a comma.  A non-quoted string could have quotes in the
@@ -1101,7 +1096,7 @@ def parse_http_list(s):
 
         if cur == '"':
             quote = True
-
+        
         part += cur
 
     # append last part
@@ -1290,52 +1285,3 @@ class OpenerFactory:
             if inspect.isclass(ph):
                 ph = ph()
             opener.add_handler(ph)
-
-# Mapping status codes to official W3C names
-httpresponses = {
-    100: 'Continue',
-    101: 'Switching Protocols',
-
-    200: 'OK',
-    201: 'Created',
-    202: 'Accepted',
-    203: 'Non-Authoritative Information',
-    204: 'No Content',
-    205: 'Reset Content',
-    206: 'Partial Content',
-
-    300: 'Multiple Choices',
-    301: 'Moved Permanently',
-    302: 'Found',
-    303: 'See Other',
-    304: 'Not Modified',
-    305: 'Use Proxy',
-    306: '(Unused)',
-    307: 'Temporary Redirect',
-
-    400: 'Bad Request',
-    401: 'Unauthorized',
-    402: 'Payment Required',
-    403: 'Forbidden',
-    404: 'Not Found',
-    405: 'Method Not Allowed',
-    406: 'Not Acceptable',
-    407: 'Proxy Authentication Required',
-    408: 'Request Timeout',
-    409: 'Conflict',
-    410: 'Gone',
-    411: 'Length Required',
-    412: 'Precondition Failed',
-    413: 'Request Entity Too Large',
-    414: 'Request-URI Too Long',
-    415: 'Unsupported Media Type',
-    416: 'Requested Range Not Satisfiable',
-    417: 'Expectation Failed',
-
-    500: 'Internal Server Error',
-    501: 'Not Implemented',
-    502: 'Bad Gateway',
-    503: 'Service Unavailable',
-    504: 'Gateway Timeout',
-    505: 'HTTP Version Not Supported',
-}

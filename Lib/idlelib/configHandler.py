@@ -579,9 +579,7 @@ class IdleConf:
             '<<tabify-region>>': ['<Alt-Key-5>'],
             '<<untabify-region>>': ['<Alt-Key-6>'],
             '<<toggle-tabs>>': ['<Alt-Key-t>'],
-            '<<change-indentwidth>>': ['<Alt-Key-u>'],
-            '<<del-word-left>>': ['<Control-Key-BackSpace>'],
-            '<<del-word-right>>': ['<Control-Key-Delete>']
+            '<<change-indentwidth>>': ['<Alt-Key-u>']
             }
         if keySetName:
             for event in keyBindings.keys():

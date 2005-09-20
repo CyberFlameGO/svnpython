@@ -91,9 +91,7 @@ resources to test.  Currently only the following are defined:
 
     compiler -  Test the compiler package by compiling all the source
                 in the standard library and test suite.  This takes
-                a long time.  Enabling this resource also allows
-                test_tokenize to verify round-trip lexing on every
-                file in the test library.
+                a long time.
 
     subprocess  Run all tests for the subprocess module.
 
@@ -491,7 +489,6 @@ def runtest(test, generate, verbose, quiet, testdir=None, huntrleaks=False):
                 import gc
                 def cleanup():
                     import _strptime, urlparse, warnings, dircache
-                    import linecache
                     from distutils.dir_util import _path_created
                     _path_created.clear()
                     warnings.filters[:] = fs
@@ -504,7 +501,6 @@ def runtest(test, generate, verbose, quiet, testdir=None, huntrleaks=False):
                     sys.path_importer_cache.clear()
                     sys.path_importer_cache.update(pic)
                     dircache.reset()
-                    linecache.clearcache()
                 if indirect_test:
                     def run_the_test():
                         indirect_test()
@@ -1101,7 +1097,6 @@ _expectations = {
 }
 _expectations['freebsd5'] = _expectations['freebsd4']
 _expectations['freebsd6'] = _expectations['freebsd4']
-_expectations['freebsd7'] = _expectations['freebsd4']
 
 class _ExpectedSkips:
     def __init__(self):
@@ -1117,9 +1112,6 @@ class _ExpectedSkips:
         if sys.platform in _expectations:
             s = _expectations[sys.platform]
             self.expected = set(s.split())
-
-            # this isn't a regularly run unit test, it is always skipped
-            self.expected.add('test_hashlib_speed')
 
             if not os.path.supports_unicode_filenames:
                 self.expected.add('test_pep277')

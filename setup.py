@@ -3,7 +3,7 @@
 
 __version__ = "$Revision$"
 
-import sys, os, imp, re, optparse
+import sys, os, getopt, imp, re
 
 from distutils import log
 from distutils import sysconfig
@@ -171,8 +171,8 @@ class PyBuildExt(build_ext):
         # unfortunately, distutils doesn't let us provide separate C and C++
         # compilers
         if compiler is not None:
-            (ccshared,cflags) = sysconfig.get_config_vars('CCSHARED','CFLAGS')
-            args['compiler_so'] = compiler + ' ' + ccshared + ' ' + cflags
+            (ccshared,opt,base) = sysconfig.get_config_vars('CCSHARED','OPT','BASECFLAGS')
+            args['compiler_so'] = compiler + ' ' + opt + ' ' + ccshared + ' ' + base
         self.compiler.set_executables(**args)
 
         build_ext.build_extensions(self)
@@ -242,37 +242,14 @@ class PyBuildExt(build_ext):
         add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
         add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
 
-        # Add paths specified in the environment variables LDFLAGS and
-        # CPPFLAGS for header and library files.
-        # We must get the values from the Makefile and not the environment
-        # directly since an inconsistently reproducible issue comes up where
-        # the environment variable is not set even though the value were passed
-        # into configure and stored in the Makefile (issue found on OS X 10.3).
-        for env_var, arg_name, dir_list in (
-                ('LDFLAGS', '-L', self.compiler.library_dirs),
-                ('CPPFLAGS', '-I', self.compiler.include_dirs)):
-            env_val = sysconfig.get_config_var(env_var)
-            if env_val:
-                # To prevent optparse from raising an exception about any
-                # options in env_val that is doesn't know about we strip out
-                # all double dashes and any dashes followed by a character
-                # that is not for the option we are dealing with.
-                #
-                # Please note that order of the regex is important!  We must
-                # strip out double-dashes first so that we don't end up with
-                # substituting "--Long" to "-Long" and thus lead to "ong" being
-                # used for a library directory.
-                env_val = re.sub(r'(^|\s+)-(-|(?!%s))' % arg_name[1], '', env_val)
-                parser = optparse.OptionParser()
-                # Make sure that allowing args interspersed with options is
-                # allowed
-                parser.allow_interspersed_args = True
-                parser.error = lambda msg: None
-                parser.add_option(arg_name, dest="dirs", action="append")
-                options = parser.parse_args(env_val.split())[0]
-                if options.dirs:
-                    for directory in options.dirs:
-                        add_dir_to_list(dir_list, directory)
+        # Add paths to popular package managers on OS X/darwin
+        if sys.platform == "darwin":
+            # Fink installs into /sw by default
+            add_dir_to_list(self.compiler.library_dirs, '/sw/lib')
+            add_dir_to_list(self.compiler.include_dirs, '/sw/include')
+            # DarwinPorts installs into /opt/local by default
+            add_dir_to_list(self.compiler.library_dirs, '/opt/local/lib')
+            add_dir_to_list(self.compiler.include_dirs, '/opt/local/include')
 
         if os.path.normpath(sys.prefix) != '/usr':
             add_dir_to_list(self.compiler.library_dirs,
@@ -294,9 +271,6 @@ class PyBuildExt(build_ext):
             ]
         inc_dirs = self.compiler.include_dirs + ['/usr/include']
         exts = []
-
-        config_h = sysconfig.get_config_h_filename()
-        config_h_vars = sysconfig.parse_config_h(open(config_h))
 
         platform = self.get_platform()
         (srcdir,) = sysconfig.get_config_vars('srcdir')
@@ -358,8 +332,6 @@ class PyBuildExt(build_ext):
         exts.append( Extension("_heapq", ["_heapqmodule.c"]) )
         # operator.add() and similar goodies
         exts.append( Extension('operator', ['operator.c']) )
-        # functional
-        exts.append( Extension("functional", ["functionalmodule.c"]) )
         # Python C API test module
         exts.append( Extension('_testcapi', ['_testcapimodule.c']) )
         # static Unicode character database
@@ -389,16 +361,21 @@ class PyBuildExt(build_ext):
         # fcntl(2) and ioctl(2)
         exts.append( Extension('fcntl', ['fcntlmodule.c']) )
         if platform not in ['mac']:
-            # pwd(3)
+                # pwd(3)
             exts.append( Extension('pwd', ['pwdmodule.c']) )
             # grp(3)
             exts.append( Extension('grp', ['grpmodule.c']) )
-            # spwd, shadow passwords
-            if (config_h_vars.get('HAVE_GETSPNAM', False) or
-                    config_h_vars.get('HAVE_GETSPENT', False)):
-                exts.append( Extension('spwd', ['spwdmodule.c']) )
         # select(2); not on ancient System V
         exts.append( Extension('select', ['selectmodule.c']) )
+
+        # The md5 module implements the RSA Data Security, Inc. MD5
+        # Message-Digest Algorithm, described in RFC 1321.  The
+        # necessary files md5c.c and md5.h are included here.
+        exts.append( Extension('md5', ['md5module.c', 'md5c.c']) )
+
+        # The sha module implements the SHA checksum algorithm.
+        # (NIST's Secure Hash Algorithm.)
+        exts.append( Extension('sha', ['shamodule.c']) )
 
         # Helper module for various ascii-encoders
         exts.append( Extension('binascii', ['binascii.c']) )
@@ -474,12 +451,10 @@ class PyBuildExt(build_ext):
         exts.append( Extension('_socket', ['socketmodule.c'],
                                depends = ['socketmodule.h']) )
         # Detect SSL support for the socket module (via _ssl)
-        search_for_ssl_incs_in = [
-                              '/usr/local/ssl/include',
+        ssl_incs = find_file('openssl/ssl.h', inc_dirs,
+                             ['/usr/local/ssl/include',
                               '/usr/contrib/ssl/include/'
                              ]
-        ssl_incs = find_file('openssl/ssl.h', inc_dirs,
-                             search_for_ssl_incs_in
                              )
         if ssl_incs is not None:
             krb5_h = find_file('krb5.h', inc_dirs,
@@ -498,52 +473,6 @@ class PyBuildExt(build_ext):
                                    library_dirs = ssl_libs,
                                    libraries = ['ssl', 'crypto'],
                                    depends = ['socketmodule.h']), )
-
-        # find out which version of OpenSSL we have
-        openssl_ver = 0
-        openssl_ver_re = re.compile(
-            '^\s*#\s*define\s+OPENSSL_VERSION_NUMBER\s+(0x[0-9a-fA-F]+)' )
-        for ssl_inc_dir in inc_dirs + search_for_ssl_incs_in:
-            name = os.path.join(ssl_inc_dir, 'openssl', 'opensslv.h')
-            if os.path.isfile(name):
-                try:
-                    incfile = open(name, 'r')
-                    for line in incfile:
-                        m = openssl_ver_re.match(line)
-                        if m:
-                            openssl_ver = eval(m.group(1))
-                            break
-                except IOError:
-                    pass
-
-            # first version found is what we'll use (as the compiler should)
-            if openssl_ver:
-                break
-
-        #print 'openssl_ver = 0x%08x' % openssl_ver
-
-        if (ssl_incs is not None and
-            ssl_libs is not None and
-            openssl_ver >= 0x00907000):
-            # The _hashlib module wraps optimized implementations
-            # of hash functions from the OpenSSL library.
-            exts.append( Extension('_hashlib', ['_hashopenssl.c'],
-                                   include_dirs = ssl_incs,
-                                   library_dirs = ssl_libs,
-                                   libraries = ['ssl', 'crypto']) )
-        else:
-            # The _sha module implements the SHA1 hash algorithm.
-            exts.append( Extension('_sha', ['shamodule.c']) )
-            # The _md5 module implements the RSA Data Security, Inc. MD5
-            # Message-Digest Algorithm, described in RFC 1321.  The
-            # necessary files md5c.c and md5.h are included here.
-            exts.append( Extension('_md5', ['md5module.c', 'md5c.c']) )
-
-        if (openssl_ver < 0x00908000):
-            # OpenSSL doesn't do these until 0.9.8 so we'll bring our own hash
-            exts.append( Extension('_sha256', ['sha256module.c']) )
-            exts.append( Extension('_sha512', ['sha512module.c']) )
-
 
         # Modules that provide persistent dictionary-like semantics.  You will
         # probably want to arrange for at least one of them to be available on
@@ -827,6 +756,8 @@ class PyBuildExt(build_ext):
             ('BYTEORDER', xmlbo),
             ('XML_CONTEXT_BYTES','1024'),
             ]
+        config_h = sysconfig.get_config_h_filename()
+        config_h_vars = sysconfig.parse_config_h(open(config_h))
         for feature_macro in ['HAVE_MEMMOVE', 'HAVE_BCOPY']:
             if config_h_vars.has_key(feature_macro):
                 define_macros.append((feature_macro, '1'))
@@ -860,8 +791,7 @@ class PyBuildExt(build_ext):
             # Linux-specific modules
             exts.append( Extension('linuxaudiodev', ['linuxaudiodev.c']) )
 
-        if platform in ('linux2', 'freebsd4', 'freebsd5', 'freebsd6',
-                        'freebsd7'):
+        if platform in ('linux2', 'freebsd4', 'freebsd5', 'freebsd6'):
             exts.append( Extension('ossaudiodev', ['ossaudiodev.c']) )
 
         if platform == 'sunos5':

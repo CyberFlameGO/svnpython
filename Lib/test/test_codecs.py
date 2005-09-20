@@ -24,6 +24,17 @@ class Queue(object):
             return s
 
 class ReadTest(unittest.TestCase):
+    def test_seek(self):
+        # all codecs should be able to encode these
+        s = u"%s\n%s\n" % (100*u"abc123", 100*u"def456")
+        encoding = self.encoding
+        reader = codecs.getreader(encoding)(StringIO.StringIO(s.encode(encoding)))
+        for t in xrange(5):
+            # Test that calling seek resets the internal codec state and buffers
+            reader.seek(0, 0)
+            line = reader.readline()
+            self.assertEqual(s[:len(line)], line)
+
     def check_partial(self, input, partialresults):
         # get a StreamReader for the encoding and feed the bytestring version
         # of input to the reader byte by byte. Read every available from
@@ -233,15 +244,6 @@ class UTF16Test(ReadTest):
         s = StringIO.StringIO(d)
         f = reader(s)
         self.assertEquals(f.read(), u"spamspam")
-
-    def test_badbom(self):
-        s = StringIO.StringIO("\xff\xff")
-        f = codecs.getreader(self.encoding)(s)
-        self.assertRaises(UnicodeError, f.read)
-
-        s = StringIO.StringIO("\xff\xff\xff\xff")
-        f = codecs.getreader(self.encoding)(s)
-        self.assertRaises(UnicodeError, f.read)
 
     def test_partial(self):
         self.check_partial(
@@ -733,197 +735,6 @@ class Str2StrTest(unittest.TestCase):
         self.assertEqual(sout, "\x80")
         self.assert_(isinstance(sout, str))
 
-all_unicode_encodings = [
-    "ascii",
-    "base64_codec",
-    "big5",
-    "big5hkscs",
-    "charmap",
-    "cp037",
-    "cp1006",
-    "cp1026",
-    "cp1140",
-    "cp1250",
-    "cp1251",
-    "cp1252",
-    "cp1253",
-    "cp1254",
-    "cp1255",
-    "cp1256",
-    "cp1257",
-    "cp1258",
-    "cp424",
-    "cp437",
-    "cp500",
-    "cp737",
-    "cp775",
-    "cp850",
-    "cp852",
-    "cp855",
-    "cp856",
-    "cp857",
-    "cp860",
-    "cp861",
-    "cp862",
-    "cp863",
-    "cp864",
-    "cp865",
-    "cp866",
-    "cp869",
-    "cp874",
-    "cp875",
-    "cp932",
-    "cp949",
-    "cp950",
-    "euc_jis_2004",
-    "euc_jisx0213",
-    "euc_jp",
-    "euc_kr",
-    "gb18030",
-    "gb2312",
-    "gbk",
-    "hex_codec",
-    "hp_roman8",
-    "hz",
-    "idna",
-    "iso2022_jp",
-    "iso2022_jp_1",
-    "iso2022_jp_2",
-    "iso2022_jp_2004",
-    "iso2022_jp_3",
-    "iso2022_jp_ext",
-    "iso2022_kr",
-    "iso8859_1",
-    "iso8859_10",
-    "iso8859_11",
-    "iso8859_13",
-    "iso8859_14",
-    "iso8859_15",
-    "iso8859_16",
-    "iso8859_2",
-    "iso8859_3",
-    "iso8859_4",
-    "iso8859_5",
-    "iso8859_6",
-    "iso8859_7",
-    "iso8859_8",
-    "iso8859_9",
-    "johab",
-    "koi8_r",
-    "koi8_u",
-    "latin_1",
-    "mac_cyrillic",
-    "mac_greek",
-    "mac_iceland",
-    "mac_latin2",
-    "mac_roman",
-    "mac_turkish",
-    "palmos",
-    "ptcp154",
-    "punycode",
-    "raw_unicode_escape",
-    "rot_13",
-    "shift_jis",
-    "shift_jis_2004",
-    "shift_jisx0213",
-    "tis_620",
-    "unicode_escape",
-    "unicode_internal",
-    "utf_16",
-    "utf_16_be",
-    "utf_16_le",
-    "utf_7",
-    "utf_8",
-]
-
-if hasattr(codecs, "mbcs_encode"):
-    all_unicode_encodings.append("mbcs")
-
-# The following encodings work only with str, not unicode
-all_string_encodings = [
-    "quopri_codec",
-    "string_escape",
-    "uu_codec",
-]
-
-# The following encoding is not tested, because it's not supposed
-# to work:
-#    "undefined"
-
-# The following encodings don't work in stateful mode
-broken_unicode_with_streams = [
-    "base64_codec",
-    "hex_codec",
-    "punycode",
-    "unicode_internal"
-]
-
-try:
-    import bz2
-except ImportError:
-    pass
-else:
-    all_unicode_encodings.append("bz2_codec")
-    broken_unicode_with_streams.append("bz2_codec")
-
-try:
-    import zlib
-except ImportError:
-    pass
-else:
-    all_unicode_encodings.append("zlib_codec")
-    broken_unicode_with_streams.append("zlib_codec")
-
-class BasicUnicodeTest(unittest.TestCase):
-    def test_basics(self):
-        s = u"abc123" # all codecs should be able to encode these
-        for encoding in all_unicode_encodings:
-            (bytes, size) = codecs.getencoder(encoding)(s)
-            if encoding != "unicode_internal":
-                self.assertEqual(size, len(s), "%r != %r (encoding=%r)" % (size, len(s), encoding))
-            (chars, size) = codecs.getdecoder(encoding)(bytes)
-            self.assertEqual(chars, s, "%r != %r (encoding=%r)" % (chars, s, encoding))
-
-            if encoding not in broken_unicode_with_streams:
-                # check stream reader/writer
-                q = Queue()
-                writer = codecs.getwriter(encoding)(q)
-                encodedresult = ""
-                for c in s:
-                    writer.write(c)
-                    encodedresult += q.read()
-                q = Queue()
-                reader = codecs.getreader(encoding)(q)
-                decodedresult = u""
-                for c in encodedresult:
-                    q.write(c)
-                    decodedresult += reader.read()
-                self.assertEqual(decodedresult, s, "%r != %r (encoding=%r)" % (decodedresult, s, encoding))
-
-    def test_seek(self):
-        # all codecs should be able to encode these
-        s = u"%s\n%s\n" % (100*u"abc123", 100*u"def456")
-        for encoding in all_unicode_encodings:
-            if encoding == "idna": # FIXME: See SF bug #1163178
-                continue
-            if encoding in broken_unicode_with_streams:
-                continue
-            reader = codecs.getreader(encoding)(StringIO.StringIO(s.encode(encoding)))
-            for t in xrange(5):
-                # Test that calling seek resets the internal codec state and buffers
-                reader.seek(0, 0)
-                line = reader.readline()
-                self.assertEqual(s[:len(line)], line)
-
-class BasicStrTest(unittest.TestCase):
-    def test_basics(self):
-        s = "abc123"
-        for encoding in all_string_encodings:
-            (bytes, size) = codecs.getencoder(encoding)(s)
-            self.assertEqual(size, len(s))
-            (chars, size) = codecs.getdecoder(encoding)(bytes)
-            self.assertEqual(chars, s, "%r != %r (encoding=%r)" % (chars, s, encoding))
-
 def test_main():
     test_support.run_unittest(
         UTF16Test,
@@ -938,9 +749,7 @@ def test_main():
         CodecTest,
         CodecsModuleTest,
         StreamReaderTest,
-        Str2StrTest,
-        BasicUnicodeTest,
-        BasicStrTest
+        Str2StrTest
     )
 
 

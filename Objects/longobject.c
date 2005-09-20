@@ -1090,7 +1090,7 @@ long_format(PyObject *aa, int base, int addL)
 			assert(accumbits >= basebits);
 			do {
 				char cdigit = (char)(accum & (base - 1));
-				cdigit += (cdigit < 10) ? '0' : 'a'-10;
+				cdigit += (cdigit < 10) ? '0' : 'A'-10;
 				assert(p > PyString_AS_STRING(str));
 				*--p = cdigit;
 				accumbits -= basebits;
@@ -1144,7 +1144,7 @@ long_format(PyObject *aa, int base, int addL)
 				digit nextrem = (digit)(rem / base);
 				char c = (char)(rem - nextrem * base);
 				assert(p > PyString_AS_STRING(str));
-				c += (c < 10) ? '0' : 'a'-10;
+				c += (c < 10) ? '0' : 'A'-10;
 				*--p = c;
 				rem = nextrem;
 				--ntostore;
@@ -2864,10 +2864,7 @@ long_coerce(PyObject **pv, PyObject **pw)
 static PyObject *
 long_long(PyObject *v)
 {
-	if (PyLong_CheckExact(v))
-		Py_INCREF(v);
-	else
-		v = _PyLong_Copy((PyLongObject *)v);
+	Py_INCREF(v);
 	return v;
 }
 

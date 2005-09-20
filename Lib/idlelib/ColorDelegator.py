@@ -237,9 +237,6 @@ class ColorDelegator(Delegator):
                     if DEBUG: print "colorizing stopped"
                     return
 
-    def removecolors(self):
-        for tag in self.tagdefs.keys():
-            self.tag_remove(tag, "1.0", "end")
 
 def main():
     from Percolator import Percolator

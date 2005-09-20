@@ -16,10 +16,8 @@ class HeapInputOutputBufferType(FixedInputOutputBufferType):
     def __init__(self, datatype = 'char', sizetype = 'int', sizeformat = None):
         FixedInputOutputBufferType.__init__(self, "0", datatype, sizetype, sizeformat)
 
-    def getOutputBufferDeclarations(self, name, constmode=False):
-        if constmode:
-            raise RuntimeError, "Cannot use const output buffer"
-        return ["%s *%s__out__" % (self.datatype, name)]
+    def declareOutputBuffer(self, name):
+        Output("%s *%s__out__;", self.datatype, name)
 
     def getargsCheck(self, name):
         Output("if ((%s__out__ = malloc(%s__in_len__)) == NULL)", name, name)
@@ -76,8 +74,8 @@ class HeapOutputBufferType(OutputOnlyMixIn, HeapInputOutputBufferType):
     Call from Python with buffer size.
     """
 
-    def getInputBufferDeclarations(self, name, constmode=False):
-        return []
+    def declareInputBuffer(self, name):
+        pass
 
     def getargsFormat(self):
         return "i"

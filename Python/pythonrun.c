@@ -172,8 +172,6 @@ Py_InitializeEx(int install_sigs)
 	if (!_PyInt_Init())
 		Py_FatalError("Py_Initialize: can't init ints");
 
-	_PyFloat_Init();
-
 	interp->modules = PyDict_New();
 	if (interp->modules == NULL)
 		Py_FatalError("Py_Initialize: can't make modules dictionary");
@@ -420,7 +418,6 @@ Py_Finalize(void)
 	PyCFunction_Fini();
 	PyTuple_Fini();
 	PyList_Fini();
-	PySet_Fini();
 	PyString_Fini();
 	PyInt_Fini();
 	PyFloat_Fini();
@@ -1490,9 +1487,6 @@ err_input(perrdetail *err)
 		Py_DECREF(tb);
 		break;
 	}
-	case E_LINECONT:
-		msg = "unexpected character after line continuation character";
-		break;
 	default:
 		fprintf(stderr, "error=%d\n", err->error);
 		msg = "unknown parsing error";

@@ -113,7 +113,7 @@ equally good collision statistics, needed less code & used less memory.
 */
 
 /* Object used as dummy key to fill deleted entries */
-static PyObject *dummy = NULL; /* Initialized by first call to newdictobject() */
+static PyObject *dummy; /* Initialized by first call to newdictobject() */
 
 /* forward declarations */
 static dictentry *
@@ -400,10 +400,8 @@ insertdict(register dictobject *mp, PyObject *key, long hash, PyObject *value)
 	else {
 		if (ep->me_key == NULL)
 			mp->ma_fill++;
-		else {
-			assert(ep->me_key == dummy);
-			Py_DECREF(dummy);
-		}
+		else
+			Py_DECREF(ep->me_key);
 		ep->me_key = key;
 		ep->me_hash = hash;
 		ep->me_value = value;
@@ -567,7 +565,7 @@ PyDict_SetItem(register PyObject *op, PyObject *key, PyObject *value)
 	 */
 	if (!(mp->ma_used > n_used && mp->ma_fill*3 >= (mp->ma_mask+1)*2))
 		return 0;
-	return dictresize(mp, (mp->ma_used>50000 ? mp->ma_used*2 : mp->ma_used*4));
+	return dictresize(mp, mp->ma_used*(mp->ma_used>50000 ? 2 : 4));
 }
 
 int
@@ -1203,12 +1201,6 @@ PyDict_Merge(PyObject *a, PyObject *b, int override)
 		if (other == mp || other->ma_used == 0)
 			/* a.update(a) or a.update({}); nothing to do */
 			return 0;
-		if (mp->ma_used == 0)
-			/* Since the target dict is empty, PyDict_GetItem()
-			 * always returns NULL.  Setting override to 1
-			 * skips the unnecessary test.
-			 */
-			override = 1;
 		/* Do one big resize at the start, rather than
 		 * incrementally resizing as we insert new items.  Expect
 		 * that there will be no (or few) overlapping keys.

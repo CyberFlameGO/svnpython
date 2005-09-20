@@ -280,13 +280,11 @@ class Transformer:
         return Lambda(names, defaults, flags, code, lineno=nodelist[1][2])
 
     def classdef(self, nodelist):
-        # classdef: 'class' NAME ['(' [testlist] ')'] ':' suite
+        # classdef: 'class' NAME ['(' testlist ')'] ':' suite
 
         name = nodelist[1][1]
         doc = self.get_docstring(nodelist[-1])
         if nodelist[2][0] == token.COLON:
-            bases = []
-        elif nodelist[3][0] == token.RPAR:
             bases = []
         else:
             bases = self.com_bases(nodelist[3])
@@ -403,15 +401,7 @@ class Transformer:
         return Return(self.com_node(nodelist[1]), lineno=nodelist[0][2])
 
     def yield_stmt(self, nodelist):
-        expr = self.com_node(nodelist[0])
-        return Discard(expr, lineno=expr.lineno)
-
-    def yield_expr(self, nodelist):
-        if len(nodelist)>1:
-            value = nodelist[1]
-        else:
-            value = Const(None)
-        return Yield(self.com_node(value), lineno=nodelist[0][2])
+        return Yield(self.com_node(nodelist[1]), lineno=nodelist[0][2])
 
     def raise_stmt(self, nodelist):
         # raise: [test [',' test [',' test]]]
@@ -1410,8 +1400,6 @@ _legal_node_types = [
 
 if hasattr(symbol, 'yield_stmt'):
     _legal_node_types.append(symbol.yield_stmt)
-if hasattr(symbol, 'yield_expr'):
-    _legal_node_types.append(symbol.yield_expr)
 
 _assign_types = [
     symbol.test,

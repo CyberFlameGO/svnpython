@@ -1338,8 +1338,8 @@ The following methods only apply to new-style classes.
 
 \begin{methoddesc}[object]{__getattribute__}{self, name}
 Called unconditionally to implement attribute accesses for instances
-of the class. If the class also defines \method{__getattr__()}, the latter 
-will not be called unless \method{__getattribute__()} either calls it 
+of the class. If the class also defines \method{__getattr__()}, the latter
+will not be called unless \method{__getattribute__()} either calls it
 explicitly or raises an \exception{AttributeError}.
 This method should return the (computed) attribute
 value or raise an \exception{AttributeError} exception.

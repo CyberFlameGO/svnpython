@@ -91,16 +91,6 @@ class ReadTest(BaseTest):
             self.assert_(lines1 == lines2,
                          "_FileObject.readline() does not work correctly")
 
-    def test_iter(self):
-        # Test iteration over ExFileObject.
-        if self.sep != "|":
-            filename = "0-REGTYPE-TEXT"
-            self.tar.extract(filename, dirname())
-            lines1 = file(os.path.join(dirname(), filename), "rU").readlines()
-            lines2 = [line for line in self.tar.extractfile(filename)]
-            self.assert_(lines1 == lines2,
-                         "ExFileObject iteration does not work correctly")
-
     def test_seek(self):
         """Test seek() method of _FileObject, incl. random reading.
         """
@@ -180,18 +170,6 @@ class ReadStreamTest(ReadTest):
             self.assert_(v1.read() == v2.read(), "stream extraction failed")
 
         stream.close()
-
-class ReadAsteriskTest(ReadTest):
-
-    def setUp(self):
-        mode = self.mode + self.sep + "*"
-        self.tar = tarfile.open(tarname(self.comp), mode)
-
-class ReadStreamAsteriskTest(ReadStreamTest):
-
-    def setUp(self):
-        mode = self.mode + self.sep + "*"
-        self.tar = tarfile.open(tarname(self.comp), mode)
 
 class WriteTest(BaseTest):
     mode = 'w'
@@ -382,11 +360,6 @@ class WriteTestGzip(WriteTest):
     comp = "gz"
 class WriteStreamTestGzip(WriteStreamTest):
     comp = "gz"
-class ReadAsteriskTestGzip(ReadAsteriskTest):
-    comp = "gz"
-class ReadStreamAsteriskTestGzip(ReadStreamAsteriskTest):
-    comp = "gz"
-
 
 # Filemode test cases
 
@@ -405,10 +378,6 @@ if bz2:
     class WriteTestBzip2(WriteTest):
         comp = "bz2"
     class WriteStreamTestBzip2(WriteStreamTestGzip):
-        comp = "bz2"
-    class ReadAsteriskTestBzip2(ReadAsteriskTest):
-        comp = "bz2"
-    class ReadStreamAsteriskTestBzip2(ReadStreamAsteriskTest):
         comp = "bz2"
 
 # If importing gzip failed, discard the Gzip TestCases.
@@ -430,8 +399,6 @@ def test_main():
         FileModeTest,
         ReadTest,
         ReadStreamTest,
-        ReadAsteriskTest,
-        ReadStreamAsteriskTest,
         WriteTest,
         WriteSize0Test,
         WriteStreamTest,
@@ -444,15 +411,13 @@ def test_main():
     if gzip:
         tests.extend([
             ReadTestGzip, ReadStreamTestGzip,
-            WriteTestGzip, WriteStreamTestGzip,
-            ReadAsteriskTestGzip, ReadStreamAsteriskTestGzip
+            WriteTestGzip, WriteStreamTestGzip
         ])
 
     if bz2:
         tests.extend([
             ReadTestBzip2, ReadStreamTestBzip2,
-            WriteTestBzip2, WriteStreamTestBzip2,
-            ReadAsteriskTestBzip2, ReadStreamAsteriskTestBzip2
+            WriteTestBzip2, WriteStreamTestBzip2
         ])
     try:
         test_support.run_unittest(*tests)

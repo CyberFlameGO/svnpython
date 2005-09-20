@@ -27,7 +27,7 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 """#"
 
-import codecs, types, aliases
+import codecs, exceptions, types, aliases
 
 _cache = {}
 _unknown = '--unknown--'
@@ -40,7 +40,8 @@ _norm_encoding_map = ('                                              . '
                       '                ')
 _aliases = aliases.aliases
 
-class CodecRegistryError(LookupError, SystemError):
+class CodecRegistryError(exceptions.LookupError,
+                         exceptions.SystemError):
     pass
 
 def normalize_encoding(encoding):
