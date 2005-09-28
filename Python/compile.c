@@ -397,9 +397,7 @@ intern_strings(PyObject *tuple)
    The consts table must still be in list form so that the
        new constant (c1, c2, ... cn) can be appended.
    Called with codestr pointing to the first LOAD_CONST.
-   Bails out with no change if one or more of the LOAD_CONSTs is missing. 
-   Also works for BUILD_LIST when followed by an "in" or "not in" test.
-*/
+   Bails out with no change if one or more of the LOAD_CONSTs is missing. */
 static int
 tuple_of_constants(unsigned char *codestr, int n, PyObject *consts)
 {
@@ -408,7 +406,7 @@ tuple_of_constants(unsigned char *codestr, int n, PyObject *consts)
 
 	/* Pre-conditions */
 	assert(PyList_CheckExact(consts));
-	assert(codestr[n*3] == BUILD_TUPLE || codestr[n*3] == BUILD_LIST);
+	assert(codestr[n*3] == BUILD_TUPLE);
 	assert(GETARG(codestr, (n*3)) == n);
 	for (i=0 ; i<n ; i++)
 		assert(codestr[i*3] == LOAD_CONST);
@@ -438,157 +436,6 @@ tuple_of_constants(unsigned char *codestr, int n, PyObject *consts)
 	memset(codestr, NOP, n*3);
 	codestr[n*3] = LOAD_CONST;
 	SETARG(codestr, (n*3), len_consts);
-	return 1;
-}
-
-/* Replace LOAD_CONST c1. LOAD_CONST c2 BINOP
-   with    LOAD_CONST binop(c1,c2)
-   The consts table must still be in list form so that the
-       new constant can be appended.
-   Called with codestr pointing to the first LOAD_CONST. 
-   Abandons the transformation if the folding fails (i.e.  1+'a').  
-   If the new constant is a sequence, only folds when the size
-	is below a threshold value.  That keeps pyc files from
-	becoming large in the presence of code like:  (None,)*1000.
-*/
-static int
-fold_binops_on_constants(unsigned char *codestr, PyObject *consts)
-{
-	PyObject *newconst, *v, *w;
-	int len_consts, opcode, size;
-
-	/* Pre-conditions */
-	assert(PyList_CheckExact(consts));
-	assert(codestr[0] == LOAD_CONST);
-	assert(codestr[3] == LOAD_CONST);
-
-	/* Create new constant */
-	v = PyList_GET_ITEM(consts, GETARG(codestr, 0));
-	w = PyList_GET_ITEM(consts, GETARG(codestr, 3));
-	opcode = codestr[6];
-	switch (opcode) {
-	case BINARY_POWER:
-		newconst = PyNumber_Power(v, w, Py_None);
-		break;
-	case BINARY_MULTIPLY:
-		newconst = PyNumber_Multiply(v, w);
-		break;
-	case BINARY_DIVIDE:
-		/* Cannot fold this operation statically since
-		the result can depend on the run-time presence of the -Qnew flag */
-		return 0;
-	case BINARY_TRUE_DIVIDE:
-		newconst = PyNumber_TrueDivide(v, w);
-		break;
-	case BINARY_FLOOR_DIVIDE:
-		newconst = PyNumber_FloorDivide(v, w);
-		break;
-	case BINARY_MODULO:
-		newconst = PyNumber_Remainder(v, w);
-		break;
-	case BINARY_ADD:
-		newconst = PyNumber_Add(v, w);
-		break;
-	case BINARY_SUBTRACT:
-		newconst = PyNumber_Subtract(v, w);
-		break;
-	case BINARY_SUBSCR:
-		newconst = PyObject_GetItem(v, w);
-		break;
-	case BINARY_LSHIFT:
-		newconst = PyNumber_Lshift(v, w);
-		break;
-	case BINARY_RSHIFT:
-		newconst = PyNumber_Rshift(v, w);
-		break;
-	case BINARY_AND:
-		newconst = PyNumber_And(v, w);
-		break;
-	case BINARY_XOR:
-		newconst = PyNumber_Xor(v, w);
-		break;
-	case BINARY_OR:
-		newconst = PyNumber_Or(v, w);
-		break;
-	default:
-		/* Called with an unknown opcode */
-		assert(0);
-		return 0;
-	}
-	if (newconst == NULL) {
-		PyErr_Clear();
-		return 0;
-	}
-	size = PyObject_Size(newconst);
-	if (size == -1)
-		PyErr_Clear();
-	else if (size > 20) {
-		Py_DECREF(newconst);
-		return 0;
-	}
-
-	/* Append folded constant into consts table */
-	len_consts = PyList_GET_SIZE(consts);
-	if (PyList_Append(consts, newconst)) {
-		Py_DECREF(newconst);
-		return 0;
-	}
-	Py_DECREF(newconst);
-
-	/* Write NOP NOP NOP NOP LOAD_CONST newconst */
-	memset(codestr, NOP, 4);
-	codestr[4] = LOAD_CONST;
-	SETARG(codestr, 4, len_consts);
-	return 1;
-}
-
-static int
-fold_unaryops_on_constants(unsigned char *codestr, PyObject *consts)
-{
-	PyObject *newconst=NULL, *v;
-	int len_consts, opcode;
-
-	/* Pre-conditions */
-	assert(PyList_CheckExact(consts));
-	assert(codestr[0] == LOAD_CONST);
-
-	/* Create new constant */
-	v = PyList_GET_ITEM(consts, GETARG(codestr, 0));
-	opcode = codestr[3];
-	switch (opcode) {
-	case UNARY_NEGATIVE:
-		/* Preserve the sign of -0.0 */
-		if (PyObject_IsTrue(v) == 1)
-			newconst = PyNumber_Negative(v);
-		break;
-	case UNARY_CONVERT:
-		newconst = PyObject_Repr(v);
-		break;
-	case UNARY_INVERT:
-		newconst = PyNumber_Invert(v);
-		break;
-	default:
-		/* Called with an unknown opcode */
-		assert(0);
-		return 0;
-	}
-	if (newconst == NULL) {
-		PyErr_Clear();
-		return 0;
-	}
-
-	/* Append folded constant into consts table */
-	len_consts = PyList_GET_SIZE(consts);
-	if (PyList_Append(consts, newconst)) {
-		Py_DECREF(newconst);
-		return 0;
-	}
-	Py_DECREF(newconst);
-
-	/* Write NOP LOAD_CONST newconst */
-	codestr[0] = NOP;
-	codestr[1] = LOAD_CONST;
-	SETARG(codestr, 1, len_consts);
 	return 1;
 }
 
@@ -662,7 +509,7 @@ optimize_code(PyObject *code, PyObject* consts, PyObject *names, PyObject *linen
 
 	/* Bypass optimization when the lineno table is too complex */
 	assert(PyString_Check(lineno_obj));
-	lineno = (unsigned char*)PyString_AS_STRING(lineno_obj);
+	lineno = PyString_AS_STRING(lineno_obj);
 	tabsiz = PyString_GET_SIZE(lineno_obj);
 	if (memchr(lineno, 255, tabsiz) != NULL)
 		goto exitUnchanged;
@@ -678,14 +525,6 @@ optimize_code(PyObject *code, PyObject* consts, PyObject *names, PyObject *linen
 	if (codestr == NULL)
 		goto exitUnchanged;
 	codestr = memcpy(codestr, PyString_AS_STRING(code), codelen);
-
-	/* Verify that RETURN_VALUE terminates the codestring.  This allows
-	   the various transformation patterns to look ahead several
-	   instructions without additional checks to make sure they are not
-	   looking beyond the end of the code string.
-	*/
-	if (codestr[codelen-1] != RETURN_VALUE)
-		goto exitUnchanged;
 
 	/* Mapping to new jump targets after NOPs are removed */
 	addrmap = PyMem_Malloc(codelen * sizeof(int));
@@ -725,8 +564,7 @@ optimize_code(PyObject *code, PyObject* consts, PyObject *names, PyObject *linen
 		/* not a is b -->  a is not b
 		   not a in b -->  a not in b
 		   not a is not b -->  a is b
-		   not a not in b -->  a in b
-		*/
+		   not a not in b -->  a in b */
 		case COMPARE_OP:
 			j = GETARG(codestr, i);
 			if (j < 6  ||  j > 9  ||
@@ -767,29 +605,25 @@ optimize_code(PyObject *code, PyObject* consts, PyObject *names, PyObject *linen
 			cumlc = 0;
 			break;
 
-		/* Try to fold tuples of constants (includes a case for lists
-		      which are only used for "in" and "not in" tests).
+		/* Try to fold tuples of constants.
 		   Skip over BUILD_SEQN 1 UNPACK_SEQN 1.
 		   Replace BUILD_SEQN 2 UNPACK_SEQN 2 with ROT2.
 		   Replace BUILD_SEQN 3 UNPACK_SEQN 3 with ROT3 ROT2. */
 		case BUILD_TUPLE:
-		case BUILD_LIST:
 			j = GETARG(codestr, i);
 			h = i - 3 * j;
 			if (h >= 0  &&
 			    j <= lastlc  &&
-			    ((opcode == BUILD_TUPLE && 
-			     ISBASICBLOCK(blocks, h, 3*(j+1))) ||
-			     (opcode == BUILD_LIST && 
-			     codestr[i+3]==COMPARE_OP && 
-			     ISBASICBLOCK(blocks, h, 3*(j+2)) &&
-			     (GETARG(codestr,i+3)==6 ||
-				      GETARG(codestr,i+3)==7))) &&
-			     tuple_of_constants(&codestr[h], j, consts)) {
+			    codestr[h] == LOAD_CONST  && 
+			    ISBASICBLOCK(blocks, h, 3*(j+1))  &&
+			    tuple_of_constants(&codestr[h], j, consts)) {
 				assert(codestr[i] == LOAD_CONST);
 				cumlc = 1;
 				break;
 			}
+			/* Intentional fallthrough */
+		case BUILD_LIST:
+			j = GETARG(codestr, i);
 			if (codestr[i+3] != UNPACK_SEQUENCE  ||
 			    !ISBASICBLOCK(blocks,i,6) ||
 			    j != GETARG(codestr, i+3))
@@ -803,44 +637,6 @@ optimize_code(PyObject *code, PyObject* consts, PyObject *names, PyObject *linen
 				codestr[i] = ROT_THREE;
 				codestr[i+1] = ROT_TWO;
 				memset(codestr+i+2, NOP, 4);
-			}
-			break;
-
-		/* Fold binary ops on constants.
-		   LOAD_CONST c1 LOAD_CONST c2 BINOP -->  LOAD_CONST binop(c1,c2) */
-		case BINARY_POWER:
-		case BINARY_MULTIPLY:
-		case BINARY_TRUE_DIVIDE:
-		case BINARY_FLOOR_DIVIDE:
-		case BINARY_MODULO:
-		case BINARY_ADD:
-		case BINARY_SUBTRACT:
-		case BINARY_SUBSCR:
-		case BINARY_LSHIFT:
-		case BINARY_RSHIFT:
-		case BINARY_AND:
-		case BINARY_XOR:
-		case BINARY_OR:
-			if (lastlc >= 2  &&
-			    ISBASICBLOCK(blocks, i-6, 7)  &&
-			    fold_binops_on_constants(&codestr[i-6], consts)) {
-				i -= 2;
-				assert(codestr[i] == LOAD_CONST);
-				cumlc = 1;
-			}
-			break;
-
-		/* Fold unary ops on constants.
-		   LOAD_CONST c1  UNARY_OP -->  LOAD_CONST unary_op(c) */
-		case UNARY_NEGATIVE:
-		case UNARY_CONVERT:
-		case UNARY_INVERT:
-			if (lastlc >= 1  &&
-			    ISBASICBLOCK(blocks, i-3, 4)  &&
-			    fold_unaryops_on_constants(&codestr[i-3], consts))  {
-				i -= 2;
-				assert(codestr[i] == LOAD_CONST);
-				cumlc = 1;
 			}
 			break;
 
@@ -2145,7 +1941,6 @@ com_gen_for(struct compiling *c, node *n, node *t, int is_outmost)
 	else {
 		com_test(c, t);
 		com_addbyte(c, YIELD_VALUE);
-		com_addbyte(c, POP_TOP);
 		com_pop(c, 1);
 	}
 
@@ -2194,7 +1989,6 @@ com_gen_if(struct compiling *c, node *n, node *t)
 	else {
 		com_test(c, t);
 		com_addbyte(c, YIELD_VALUE);
-		com_addbyte(c, POP_TOP);
 		com_pop(c, 1);
 	}
 	com_addfwref(c, JUMP_FORWARD, &anchor);
@@ -2356,10 +2150,6 @@ com_dictmaker(struct compiling *c, node *n)
 	}
 }
 
-
-/* forward reference */
-static void com_yield_expr(struct compiling *c, node *n);
-
 static void
 com_atom(struct compiling *c, node *n)
 {
@@ -2375,10 +2165,7 @@ com_atom(struct compiling *c, node *n)
 			com_push(c, 1);
 		}
 		else
-			if (TYPE(CHILD(n, 1)) == yield_expr)
-				com_yield_expr(c, CHILD(n, 1));
-			else
-				com_testlist_gexp(c, CHILD(n, 1));
+			com_testlist_gexp(c, CHILD(n, 1));
 		break;
 	case LSQB: /* '[' [listmaker] ']' */
 		if (TYPE(CHILD(n, 1)) == RSQB) {
@@ -3445,11 +3232,7 @@ com_assign(struct compiling *c, node *n, int assigning, node *augn)
 			}
 			n = CHILD(n, 0);
 			break;
-		case yield_expr:
-			com_error(c, PyExc_SyntaxError,
-			  "assignment to yield expression not possible");
-			return;
-					
+		
 		case test:
 		case and_test:
 		case not_test:
@@ -3506,7 +3289,7 @@ com_assign(struct compiling *c, node *n, int assigning, node *augn)
 				}
 				if (assigning > OP_APPLY) {
 					com_error(c, PyExc_SyntaxError,
-				  "augmented assign to tuple literal, yield, or generator expression not possible");
+				  "augmented assign to tuple literal or generator expression not possible");
 					return;
 				}
 				break;
@@ -3742,40 +3525,26 @@ com_return_stmt(struct compiling *c, node *n)
 }
 
 static void
-com_yield_expr(struct compiling *c, node *n)
+com_yield_stmt(struct compiling *c, node *n)
 {
-	REQ(n, yield_expr); /* 'yield' testlist */
+	int i;
+	REQ(n, yield_stmt); /* 'yield' testlist */
 	if (!c->c_infunction) {
 		com_error(c, PyExc_SyntaxError, "'yield' outside function");
 	}
 	
-	/* for (i = 0; i < c->c_nblocks; ++i) {
+	for (i = 0; i < c->c_nblocks; ++i) {
 		if (c->c_block[i] == SETUP_FINALLY) {
 			com_error(c, PyExc_SyntaxError,
 				  "'yield' not allowed in a 'try' block "
 				  "with a 'finally' clause");
 			return;
 		}
-	} */
-
-	if (NCH(n) < 2) {
-		com_addoparg(c, LOAD_CONST, com_addconst(c, Py_None));
-		com_push(c, 1);
 	}
-	else
-		com_node(c, CHILD(n, 1));
+	com_node(c, CHILD(n, 1));
 	com_addbyte(c, YIELD_VALUE);
-}
-
-static void
-com_yield_stmt(struct compiling *c, node *n)
-{
-	REQ(n, yield_stmt); /* yield_expr */
-	com_node(c, CHILD(n, 0));
-	com_addbyte(c, POP_TOP);
 	com_pop(c, 1);
 }
-
 
 static void
 com_raise_stmt(struct compiling *c, node *n)
@@ -4651,7 +4420,7 @@ com_classdef(struct compiling *c, node *n)
 	char *name;
 
 	REQ(n, classdef);
-	/* classdef: class NAME ['(' [testlist] ')'] ':' suite */
+	/* classdef: class NAME ['(' testlist ')'] ':' suite */
 	if ((v = PyString_InternFromString(STR(CHILD(n, 1)))) == NULL) {
 		c->c_errors++;
 		return;
@@ -4662,8 +4431,7 @@ com_classdef(struct compiling *c, node *n)
 	com_push(c, 1);
 	Py_DECREF(v);
 	/* Push the tuple of base classes on the stack */
-	if (TYPE(CHILD(n, 2)) != LPAR ||
-			TYPE(CHILD(n, 3)) == RPAR) {
+	if (TYPE(CHILD(n, 2)) != LPAR) {
 		com_addoparg(c, BUILD_TUPLE, 0);
 		com_push(c, 1);
 	}
@@ -4795,10 +4563,6 @@ com_node(struct compiling *c, node *n)
 	
 	/* Expression nodes */
 	
-	case yield_expr:
-		com_yield_expr(c, n);
-		break;
-
 	case testlist:
 	case testlist1:
 	case testlist_safe:
@@ -5058,9 +4822,7 @@ compile_generator_expression(struct compiling *c, node *n)
 	REQ(CHILD(n, 1), gen_for); 
 
 	c->c_name = "<generator expression>";
-	c->c_infunction = 1;
 	com_gen_for(c, CHILD(n, 1), CHILD(n, 0), 1);
-	c->c_infunction = 0;
 
 	com_addoparg(c, LOAD_CONST, com_addconst(c, Py_None));
 	com_push(c, 1);
@@ -6148,7 +5910,7 @@ symtable_add_def_o(struct symtable *st, PyObject *dict,
 
 #define symtable_add_use(ST, NAME) symtable_add_def((ST), (NAME), USE)
 
-/* Look for a yield stmt or expr under n.  Return 1 if found, else 0.
+/* Look for a yield stmt under n.  Return 1 if found, else 0.
    This hack is used to look inside "if 0:" blocks (which are normally
    ignored) in case those are the only places a yield occurs (so that this
    function is a generator). */
@@ -6170,7 +5932,6 @@ look_for_yield(node *n)
 			return 0;
 
 		case yield_stmt:
-		case yield_expr:
 			return GENERATOR;
 
 		default:
@@ -6281,10 +6042,8 @@ symtable_node(struct symtable *st, node *n)
 	case del_stmt:
 		symtable_assign(st, CHILD(n, 1), 0);
 		break;
-	case yield_expr:
+	case yield_stmt:
 		st->st_cur->ste_generator = 1;
-		if (NCH(n)==1) 
-			break;
 		n = CHILD(n, 1);
 		goto loop;
 	case expr_stmt:
@@ -6377,15 +6136,9 @@ symtable_node(struct symtable *st, node *n)
 		/* fall through */
 
 	case atom:
-		if (TYPE(n) == atom) {
-			if (TYPE(CHILD(n, 0)) == NAME) {
-				symtable_add_use(st, STR(CHILD(n, 0)));
-				break;
-			}
-			else if (TYPE(CHILD(n,0)) == LPAR) {
-				n = CHILD(n,1);
-				goto loop;
-			}
+		if (TYPE(n) == atom && TYPE(CHILD(n, 0)) == NAME) {
+			symtable_add_use(st, STR(CHILD(n, 0)));
+			break;
 		}
 		/* fall through */
 	default:
@@ -6781,15 +6534,6 @@ symtable_assign(struct symtable *st, node *n, int def_flag)
 			symtable_add_def(st, STR(tmp), DEF_LOCAL | def_flag);
 		}
 		return;
-
-	case yield_expr:
-		st->st_cur->ste_generator = 1;
-		if (NCH(n)==2) {
-			n = CHILD(n, 1);
-			goto loop;
-		}
-		return;
-
 	case dotted_as_name:
 		if (NCH(n) == 3)
 			symtable_add_def(st, STR(CHILD(n, 2)),

@@ -73,11 +73,7 @@ class FloatTestCase(unittest.TestCase):
             n /= 123.4567
 
         f = 0.0
-        s = marshal.dumps(f, 2)
-        got = marshal.loads(s)
-        self.assertEqual(f, got)
-        # and with version <= 1 (floats marshalled differently then)
-        s = marshal.dumps(f, 1)
+        s = marshal.dumps(f)
         got = marshal.loads(s)
         self.assertEqual(f, got)
 
@@ -85,20 +81,10 @@ class FloatTestCase(unittest.TestCase):
         while n < small:
             for expected in (-n, n):
                 f = float(expected)
-
                 s = marshal.dumps(f)
                 got = marshal.loads(s)
                 self.assertEqual(f, got)
-
-                s = marshal.dumps(f, 1)
-                got = marshal.loads(s)
-                self.assertEqual(f, got)
-
                 marshal.dump(f, file(test_support.TESTFN, "wb"))
-                got = marshal.load(file(test_support.TESTFN, "rb"))
-                self.assertEqual(f, got)
-
-                marshal.dump(f, file(test_support.TESTFN, "wb"), 1)
                 got = marshal.load(file(test_support.TESTFN, "rb"))
                 self.assertEqual(f, got)
             n *= 123.4567
@@ -111,7 +97,7 @@ class StringTestCase(unittest.TestCase):
             self.assertEqual(s, new)
             self.assertEqual(type(s), type(new))
             marshal.dump(s, file(test_support.TESTFN, "wb"))
-            new = marshal.load(file(test_support.TESTFN, "rb"))
+            marshal.load(file(test_support.TESTFN, "rb"))
             self.assertEqual(s, new)
             self.assertEqual(type(s), type(new))
         os.unlink(test_support.TESTFN)
@@ -122,7 +108,7 @@ class StringTestCase(unittest.TestCase):
             self.assertEqual(s, new)
             self.assertEqual(type(s), type(new))
             marshal.dump(s, file(test_support.TESTFN, "wb"))
-            new = marshal.load(file(test_support.TESTFN, "rb"))
+            marshal.load(file(test_support.TESTFN, "rb"))
             self.assertEqual(s, new)
             self.assertEqual(type(s), type(new))
         os.unlink(test_support.TESTFN)
@@ -133,7 +119,7 @@ class StringTestCase(unittest.TestCase):
             new = marshal.loads(marshal.dumps(b))
             self.assertEqual(s, new)
             marshal.dump(b, file(test_support.TESTFN, "wb"))
-            new = marshal.load(file(test_support.TESTFN, "rb"))
+            marshal.load(file(test_support.TESTFN, "rb"))
             self.assertEqual(s, new)
         os.unlink(test_support.TESTFN)
 
@@ -162,7 +148,7 @@ class ContainerTestCase(unittest.TestCase):
         new = marshal.loads(marshal.dumps(self.d))
         self.assertEqual(self.d, new)
         marshal.dump(self.d, file(test_support.TESTFN, "wb"))
-        new = marshal.load(file(test_support.TESTFN, "rb"))
+        marshal.load(file(test_support.TESTFN, "rb"))
         self.assertEqual(self.d, new)
         os.unlink(test_support.TESTFN)
 
@@ -171,7 +157,7 @@ class ContainerTestCase(unittest.TestCase):
         new = marshal.loads(marshal.dumps(lst))
         self.assertEqual(lst, new)
         marshal.dump(lst, file(test_support.TESTFN, "wb"))
-        new = marshal.load(file(test_support.TESTFN, "rb"))
+        marshal.load(file(test_support.TESTFN, "rb"))
         self.assertEqual(lst, new)
         os.unlink(test_support.TESTFN)
 
@@ -180,21 +166,9 @@ class ContainerTestCase(unittest.TestCase):
         new = marshal.loads(marshal.dumps(t))
         self.assertEqual(t, new)
         marshal.dump(t, file(test_support.TESTFN, "wb"))
-        new = marshal.load(file(test_support.TESTFN, "rb"))
+        marshal.load(file(test_support.TESTFN, "rb"))
         self.assertEqual(t, new)
         os.unlink(test_support.TESTFN)
-
-    def test_sets(self):
-        for constructor in (set, frozenset):
-            t = constructor(self.d.keys())
-            new = marshal.loads(marshal.dumps(t))
-            self.assertEqual(t, new)
-            self.assert_(isinstance(new, constructor))
-            self.assertNotEqual(id(t), id(new))
-            marshal.dump(t, file(test_support.TESTFN, "wb"))
-            new = marshal.load(file(test_support.TESTFN, "rb"))
-            self.assertEqual(t, new)
-            os.unlink(test_support.TESTFN)
 
 class BugsTestCase(unittest.TestCase):
     def test_bug_5888452(self):
@@ -210,15 +184,6 @@ class BugsTestCase(unittest.TestCase):
         # Python 2.4.0 crashes for any call to marshal.dumps(x, y)
         self.assertEquals(marshal.loads(marshal.dumps(5, 0)), 5)
         self.assertEquals(marshal.loads(marshal.dumps(5, 1)), 5)
-
-    def test_fuzz(self):
-        # simple test that it's at least not *totally* trivial to
-        # crash from bad marshal data
-        for c in [chr(i) for i in range(256)]:
-            try:
-                marshal.loads(c)
-            except Exception:
-                pass
 
 def test_main():
     test_support.run_unittest(IntTestCase,

@@ -455,6 +455,7 @@ O_writelines(Oobject *self, PyObject *args) {
 
        Py_RETURN_NONE;
 }
+
 static struct PyMethodDef O_methods[] = {
   /* Common methods: */
   {"flush",     (PyCFunction)IO_flush,    METH_NOARGS,  IO_flush__doc__},

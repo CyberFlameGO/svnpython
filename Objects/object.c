@@ -331,46 +331,20 @@ PyObject_Repr(PyObject *v)
 }
 
 PyObject *
-_PyObject_Str(PyObject *v)
+PyObject_Str(PyObject *v)
 {
 	PyObject *res;
-	int type_ok;
+
 	if (v == NULL)
 		return PyString_FromString("<NULL>");
 	if (PyString_CheckExact(v)) {
 		Py_INCREF(v);
 		return v;
 	}
-#ifdef Py_USING_UNICODE
-	if (PyUnicode_CheckExact(v)) {
-		Py_INCREF(v);
-		return v;
-	}
-#endif
 	if (v->ob_type->tp_str == NULL)
 		return PyObject_Repr(v);
 
 	res = (*v->ob_type->tp_str)(v);
-	if (res == NULL)
-		return NULL;
-	type_ok = PyString_Check(res);
-#ifdef Py_USING_UNICODE
-	type_ok = type_ok || PyUnicode_Check(res);
-#endif
-	if (!type_ok) {
-		PyErr_Format(PyExc_TypeError,
-			     "__str__ returned non-string (type %.200s)",
-			     res->ob_type->tp_name);
-		Py_DECREF(res);
-		return NULL;
-	}
-	return res;
-}
-
-PyObject *
-PyObject_Str(PyObject *v)
-{
-	PyObject *res = _PyObject_Str(v);
 	if (res == NULL)
 		return NULL;
 #ifdef Py_USING_UNICODE
@@ -384,7 +358,13 @@ PyObject_Str(PyObject *v)
 		    	return NULL;
 	}
 #endif
-	assert(PyString_Check(res));
+	if (!PyString_Check(res)) {
+		PyErr_Format(PyExc_TypeError,
+			     "__str__ returned non-string (type %.200s)",
+			     res->ob_type->tp_name);
+		Py_DECREF(res);
+		return NULL;
+	}
 	return res;
 }
 
@@ -393,8 +373,6 @@ PyObject *
 PyObject_Unicode(PyObject *v)
 {
 	PyObject *res;
-	PyObject *func;
-	static PyObject *unicodestr;
 
 	if (v == NULL)
 		res = PyString_FromString("<NULL>");
@@ -402,32 +380,35 @@ PyObject_Unicode(PyObject *v)
 		Py_INCREF(v);
 		return v;
 	}
-	/* XXX As soon as we have a tp_unicode slot, we should
-	   check this before trying the __unicode__
-	   method. */
-	if (unicodestr == NULL) {
-		unicodestr= PyString_InternFromString("__unicode__");
-		if (unicodestr == NULL)
-			return NULL;
+	if (PyUnicode_Check(v)) {
+		/* For a Unicode subtype that's not a Unicode object,
+		   return a true Unicode object with the same data. */
+		return PyUnicode_FromUnicode(PyUnicode_AS_UNICODE(v),
+					     PyUnicode_GET_SIZE(v));
 	}
-	func = PyObject_GetAttr(v, unicodestr);
-	if (func != NULL) {
-		res = PyEval_CallObject(func, (PyObject *)NULL);
-		Py_DECREF(func);
-	}
+	if (PyString_Check(v)) {
+		Py_INCREF(v);
+	    	res = v;
+    	}
 	else {
-		PyErr_Clear();
-		if (PyUnicode_Check(v)) {
-			/* For a Unicode subtype that's didn't overwrite __unicode__,
-			   return a true Unicode object with the same data. */
-			return PyUnicode_FromUnicode(PyUnicode_AS_UNICODE(v),
-			                             PyUnicode_GET_SIZE(v));
+		PyObject *func;
+		static PyObject *unicodestr;
+		/* XXX As soon as we have a tp_unicode slot, we should
+		       check this before trying the __unicode__
+		       method. */
+		if (unicodestr == NULL) {
+			unicodestr= PyString_InternFromString(
+						       "__unicode__");
+			if (unicodestr == NULL)
+				return NULL;
 		}
-		if (PyString_CheckExact(v)) {
-			Py_INCREF(v);
-			res = v;
+		func = PyObject_GetAttr(v, unicodestr);
+		if (func != NULL) {
+		    	res = PyEval_CallObject(func, (PyObject *)NULL);
+			Py_DECREF(func);
 		}
 		else {
+			PyErr_Clear();
 			if (v->ob_type->tp_str != NULL)
 				res = (*v->ob_type->tp_str)(v);
 			else
@@ -443,7 +424,7 @@ PyObject_Unicode(PyObject *v)
 		if (str)
 			res = str;
 		else
-			return NULL;
+		    	return NULL;
 	}
 	return res;
 }
@@ -625,26 +606,31 @@ try_3way_compare(PyObject *v, PyObject *w)
 	    w->ob_type->tp_compare == _PyObject_SlotCompare)
 		return _PyObject_SlotCompare(v, w);
 
-	/* If we're here, v and w,
-	    a) are not instances;
-	    b) have different types or a type without tp_compare; and
-	    c) don't have a user-defined tp_compare.
-	   tp_compare implementations in C assume that both arguments
-	   have their type, so we give up if the coercion fails or if
-	   it yields types which are still incompatible (which can
-	   happen with a user-defined nb_coerce).
-	*/
+	/* Try coercion; if it fails, give up */
 	c = PyNumber_CoerceEx(&v, &w);
 	if (c < 0)
 		return -2;
 	if (c > 0)
 		return 2;
-	f = v->ob_type->tp_compare;
-	if (f != NULL && f == w->ob_type->tp_compare) {
+
+	/* Try v's comparison, if defined */
+	if ((f = v->ob_type->tp_compare) != NULL) {
 		c = (*f)(v, w);
 		Py_DECREF(v);
 		Py_DECREF(w);
 		return adjust_tp_compare(c);
+	}
+
+	/* Try w's comparison, if defined */
+	if ((f = w->ob_type->tp_compare) != NULL) {
+		c = (*f)(w, v); /* swapped! */
+		Py_DECREF(v);
+		Py_DECREF(w);
+		c = adjust_tp_compare(c);
+		if (c >= -1)
+			return -c; /* Swapped! */
+		else
+			return c;
 	}
 
 	/* No comparison defined */

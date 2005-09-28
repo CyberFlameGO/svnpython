@@ -50,7 +50,6 @@ def suite():
         'test_associate',
         'test_basics',
         'test_compat',
-        'test_compare',
         'test_dbobj',
         'test_dbshelve',
         'test_dbtables',

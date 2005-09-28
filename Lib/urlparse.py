@@ -243,11 +243,8 @@ def test():
         else:
             fp = open(fn)
     else:
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
-        fp = StringIO(test_input)
+        import StringIO
+        fp = StringIO.StringIO(test_input)
     while 1:
         line = fp.readline()
         if not line: break

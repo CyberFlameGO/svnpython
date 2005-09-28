@@ -775,7 +775,7 @@ listextend(PyListObject *self, PyObject *b)
 	iternext = *it->ob_type->tp_iternext;
 
 	/* Guess a result list size. */
-	n = _PyObject_LengthCue(b);
+	n = PyObject_Size(b);
 	if (n < 0) {
 		if (!PyErr_ExceptionMatches(PyExc_TypeError)  &&
 		    !PyErr_ExceptionMatches(PyExc_AttributeError)) {
@@ -2764,23 +2764,21 @@ listiter_next(listiterobject *it)
 	return NULL;
 }
 
-static PyObject *
+static int
 listiter_len(listiterobject *it)
 {
 	int len;
 	if (it->it_seq) {
 		len = PyList_GET_SIZE(it->it_seq) - it->it_index;
 		if (len >= 0)
-			return PyInt_FromLong((long)len);
+			return len;
 	}
-	return PyInt_FromLong(0);
+	return 0;
 }
 
-PyDoc_STRVAR(length_cue_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef listiter_methods[] = {
-	{"_length_cue", (PyCFunction)listiter_len, METH_NOARGS, length_cue_doc},
- 	{NULL,		NULL}		/* sentinel */
+static PySequenceMethods listiter_as_sequence = {
+	(inquiry)listiter_len,		/* sq_length */
+	0,				/* sq_concat */
 };
 
 PyTypeObject PyListIter_Type = {
@@ -2797,7 +2795,7 @@ PyTypeObject PyListIter_Type = {
 	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
+	&listiter_as_sequence,			/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	0,					/* tp_hash */
 	0,					/* tp_call */
@@ -2813,8 +2811,13 @@ PyTypeObject PyListIter_Type = {
 	0,					/* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)listiter_next,		/* tp_iternext */
-	listiter_methods,			/* tp_methods */
+	0,					/* tp_methods */
 	0,					/* tp_members */
+	0,					/* tp_getset */
+	0,					/* tp_base */
+	0,					/* tp_dict */
+	0,					/* tp_descr_get */
+	0,					/* tp_descr_set */
 };
 
 /*********************** List Reverse Iterator **************************/

@@ -99,14 +99,24 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	int ret;
 	char *str;
 	int len;
-	int mutate_arg = 1;
+	int mutate_arg = 0;
 	char buf[1024];
 
-	if (PyArg_ParseTuple(args, "O&Iw#|i:ioctl",
+	if (PyArg_ParseTuple(args, "O&iw#|i:ioctl",
                              conv_descriptor, &fd, &code, 
 			     &str, &len, &mutate_arg)) {
 		char *arg;
 
+		if (PyTuple_Size(args) == 3) {
+#if (PY_MAJOR_VERSION>2) || (PY_MINOR_VERSION>=5)
+#error Remove the warning, change mutate_arg to 1
+#endif
+			if (PyErr_Warn(PyExc_FutureWarning,
+       "ioctl with mutable buffer will mutate the buffer by default in 2.5"
+				    ) < 0)
+				return NULL;
+			mutate_arg = 0;
+		}
 	       	if (mutate_arg) {
 			if (len <= sizeof buf) {
 				memcpy(buf, str, len);
@@ -151,7 +161,7 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	}
 
 	PyErr_Clear();
-	if (PyArg_ParseTuple(args, "O&Is#:ioctl",
+	if (PyArg_ParseTuple(args, "O&is#:ioctl",
                              conv_descriptor, &fd, &code, &str, &len)) {
 		if (len > sizeof buf) {
 			PyErr_SetString(PyExc_ValueError,
@@ -172,8 +182,8 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	PyErr_Clear();
 	arg = 0;
 	if (!PyArg_ParseTuple(args,
-	     "O&I|i;ioctl requires a file or file descriptor,"
-	     " an integer and optionally an integer or buffer argument",
+	     "O&i|i;ioctl requires a file or file descriptor,"
+	     " an integer and optionally a integer or buffer argument",
 			      conv_descriptor, &fd, &code, &arg)) {
 	  return NULL;
 	}

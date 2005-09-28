@@ -691,13 +691,13 @@ def metaclass():
     class _instance(object):
         pass
     class M2(object):
-        @staticmethod
         def __new__(cls, name, bases, dict):
             self = object.__new__(cls)
             self.name = name
             self.bases = bases
             self.dict = dict
             return self
+        __new__ = staticmethod(__new__)
         def __call__(self):
             it = _instance()
             # Early binding of methods
@@ -2071,9 +2071,9 @@ def supers():
         aProp = property(lambda self: "foo")
 
     class Sub(Base):
-        @classmethod
         def test(klass):
             return super(Sub,klass).aProp
+        test = classmethod(test)
 
     veris(Sub.test(), Base.aProp)
 
@@ -2712,7 +2712,7 @@ def setdict():
     def cant(x, dict):
         try:
             x.__dict__ = dict
-        except (AttributeError, TypeError):
+        except TypeError:
             pass
         else:
             raise TestFailed, "shouldn't allow %r.__dict__ = %r" % (x, dict)
@@ -3965,17 +3965,26 @@ def vicious_descriptor_nonsense():
     import gc; gc.collect()
     vereq(hasattr(c, 'attr'), False)
 
+import warnings
+
 def test_init():
     # SF 1155938
     class Foo(object):
         def __init__(self):
             return 10
+
+    oldfilters = warnings.filters[:]
     try:
-        Foo()
-    except TypeError:
         pass
-    else:
-        raise TestFailed, "did not test __init__() for None return"
+        warnings.filterwarnings("error", category=RuntimeWarning)
+        try:
+            Foo()
+        except RuntimeWarning:
+            pass
+        else:
+            raise TestFailed, "did not test __init__() for None return"
+    finally:
+        warnings.filters = oldfilters
 
 
 def test_main():

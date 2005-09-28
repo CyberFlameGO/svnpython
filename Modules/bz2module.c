@@ -719,7 +719,7 @@ BZ2File_readlines(BZ2FileObject *self, PyObject *args)
 				_PyString_Resize(&big_buffer, buffersize);
 				buffer = PyString_AS_STRING(big_buffer);
 			}
-			continue;			
+			continue;
 		}
 		end = buffer+nfilled+nread;
 		q = buffer;

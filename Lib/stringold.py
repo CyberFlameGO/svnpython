@@ -363,6 +363,7 @@ def capitalize(s):
     return s.capitalize()
 
 # Capitalize the words in a string, e.g. " aBc  dEf " -> "Abc Def".
+# See also regsub.capwords().
 def capwords(s, sep=None):
     """capwords(s, [sep]) -> string
 

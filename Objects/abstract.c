@@ -81,31 +81,6 @@ PyObject_Length(PyObject *o)
 }
 #define PyObject_Length PyObject_Size
 
-int
-_PyObject_LengthCue(PyObject *o)
-{
-	int rv = PyObject_Size(o);
-	if (rv != -1)
-		return rv;
-	if (PyErr_ExceptionMatches(PyExc_TypeError) ||
-	    PyErr_ExceptionMatches(PyExc_AttributeError)) {
-		PyObject *err_type, *err_value, *err_tb, *ro;
-
-		PyErr_Fetch(&err_type, &err_value, &err_tb);
-		ro = PyObject_CallMethod(o, "_length_cue", NULL);
-		if (ro != NULL) {
-			rv = (int)PyInt_AsLong(ro);
-			Py_DECREF(ro);
-			Py_XDECREF(err_type);
-			Py_XDECREF(err_value);
-			Py_XDECREF(err_tb);
-			return rv;
-		}
-		PyErr_Restore(err_type, err_value, err_tb);
-	}
-	return -1;
-}
-
 PyObject *
 PyObject_GetItem(PyObject *o, PyObject *key)
 {
@@ -976,19 +951,7 @@ PyNumber_Int(PyObject *o)
 		Py_INCREF(o);
 		return o;
 	}
-	m = o->ob_type->tp_as_number;
-	if (m && m->nb_int) { /* This should include subclasses of int */
-		PyObject *res = m->nb_int(o);
-		if (res && (!PyInt_Check(res) && !PyLong_Check(res))) {
-			PyErr_Format(PyExc_TypeError,
-				     "__int__ returned non-int (type %.200s)",
-				     res->ob_type->tp_name);
-			Py_DECREF(res);
-			return NULL;
-		}
-		return res;
-	}
-	if (PyInt_Check(o)) { /* A int subclass without nb_int */
+	if (PyInt_Check(o)) {
 		PyIntObject *io = (PyIntObject*)o;
 		return PyInt_FromLong(io->ob_ival);
 	}
@@ -1001,6 +964,18 @@ PyNumber_Int(PyObject *o)
 					 PyUnicode_GET_SIZE(o),
 					 10);
 #endif
+	m = o->ob_type->tp_as_number;
+	if (m && m->nb_int) {
+		PyObject *res = m->nb_int(o);
+		if (res && (!PyInt_Check(res) && !PyLong_Check(res))) {
+			PyErr_Format(PyExc_TypeError,
+				     "__int__ returned non-int (type %.200s)",
+				     res->ob_type->tp_name);
+			Py_DECREF(res);
+			return NULL;
+		}
+		return res;
+	}
 	if (!PyObject_AsCharBuffer(o, &buffer, &buffer_len))
 		return int_from_string((char*)buffer, buffer_len);
 
@@ -1035,19 +1010,11 @@ PyNumber_Long(PyObject *o)
 
 	if (o == NULL)
 		return null_error();
-	m = o->ob_type->tp_as_number;
-	if (m && m->nb_long) { /* This should include subclasses of long */
-		PyObject *res = m->nb_long(o);
-		if (res && (!PyInt_Check(res) && !PyLong_Check(res))) {
-			PyErr_Format(PyExc_TypeError,
-				     "__long__ returned non-long (type %.200s)",
-				     res->ob_type->tp_name);
-			Py_DECREF(res);
-			return NULL;
-		}
-		return res;
+	if (PyLong_CheckExact(o)) {
+		Py_INCREF(o);
+		return o;
 	}
-	if (PyLong_Check(o)) /* A long subclass without nb_long */
+	if (PyLong_Check(o))
 		return _PyLong_Copy((PyLongObject *)o);
 	if (PyString_Check(o))
 		/* need to do extra error checking that PyLong_FromString()
@@ -1063,6 +1030,18 @@ PyNumber_Long(PyObject *o)
 					  PyUnicode_GET_SIZE(o),
 					  10);
 #endif
+	m = o->ob_type->tp_as_number;
+	if (m && m->nb_long) {
+		PyObject *res = m->nb_long(o);
+		if (res && (!PyInt_Check(res) && !PyLong_Check(res))) {
+			PyErr_Format(PyExc_TypeError,
+				     "__long__ returned non-long (type %.200s)",
+				     res->ob_type->tp_name);
+			Py_DECREF(res);
+			return NULL;
+		}
+		return res;
+	}
 	if (!PyObject_AsCharBuffer(o, &buffer, &buffer_len))
 		return long_from_string(buffer, buffer_len);
 
@@ -1076,21 +1055,27 @@ PyNumber_Float(PyObject *o)
 
 	if (o == NULL)
 		return null_error();
-	m = o->ob_type->tp_as_number;
-	if (m && m->nb_float) { /* This should include subclasses of float */
-		PyObject *res = m->nb_float(o);
-		if (res && !PyFloat_Check(res)) {
-			PyErr_Format(PyExc_TypeError,
-		          "__float__ returned non-float (type %.200s)",
-		          res->ob_type->tp_name);
-			Py_DECREF(res);
-			return NULL;
-		}
-		return res;
+	if (PyFloat_CheckExact(o)) {
+		Py_INCREF(o);
+		return o;
 	}
-	if (PyFloat_Check(o)) { /* A float subclass with nb_float == NULL */
+	if (PyFloat_Check(o)) {
 		PyFloatObject *po = (PyFloatObject *)o;
 		return PyFloat_FromDouble(po->ob_fval);
+	}
+	if (!PyString_Check(o)) {
+		m = o->ob_type->tp_as_number;
+		if (m && m->nb_float) {
+			PyObject *res = m->nb_float(o);
+			if (res && !PyFloat_Check(res)) {
+				PyErr_Format(PyExc_TypeError,
+			          "__float__ returned non-float (type %.200s)",
+			          res->ob_type->tp_name);
+				Py_DECREF(res);
+				return NULL;
+			}
+			return res;
+		}
 	}
 	return PyFloat_FromString(o, NULL);
 }
@@ -1424,7 +1409,7 @@ PySequence_Tuple(PyObject *v)
 		return NULL;
 
 	/* Guess result size and allocate space. */
-	n = _PyObject_LengthCue(v);
+	n = PyObject_Size(v);
 	if (n < 0) {
 		if (!PyErr_ExceptionMatches(PyExc_TypeError)  &&
 		    !PyErr_ExceptionMatches(PyExc_AttributeError)) {
@@ -1448,12 +1433,6 @@ PySequence_Tuple(PyObject *v)
 		}
 		if (j >= n) {
 			int oldn = n;
-			/* The over-allocation strategy can grow a bit faster
-			   than for lists because unlike lists the 
-			   over-allocation isn't permanent -- we reclaim
-			   the excess before the end of this routine.
-			   So, grow by ten and then add 25%.
-			*/
 			n += 10;
 			n += n >> 2;
 			if (n < oldn) {
@@ -1526,7 +1505,7 @@ PySequence_Fast(PyObject *v, const char *m)
 		return NULL;
 	}
 
-	v = PySequence_List(it);
+	v = PySequence_Tuple(it);
 	Py_DECREF(it);
 
 	return v;
@@ -1827,9 +1806,7 @@ PyObject *
 PyObject_CallMethod(PyObject *o, char *name, char *format, ...)
 {
 	va_list va;
-	PyObject *args = NULL;
-	PyObject *func = NULL;
-	PyObject *retval = NULL;
+	PyObject *args, *func = 0, *retval;
 
 	if (o == NULL || name == NULL)
 		return null_error();
@@ -1840,10 +1817,8 @@ PyObject_CallMethod(PyObject *o, char *name, char *format, ...)
 		return 0;
 	}
 
-	if (!PyCallable_Check(func)) {
-		type_error("call of non-callable attribute"); 
-		goto exit;
-	}
+	if (!PyCallable_Check(func))
+		return type_error("call of non-callable attribute");
 
 	if (format && *format) {
 		va_start(va, format);
@@ -1854,24 +1829,23 @@ PyObject_CallMethod(PyObject *o, char *name, char *format, ...)
 		args = PyTuple_New(0);
 
 	if (!args)
-		goto exit;
+		return NULL;
 
 	if (!PyTuple_Check(args)) {
 		PyObject *a;
 
 		a = PyTuple_New(1);
 		if (a == NULL)
-			goto exit;
+			return NULL;
 		if (PyTuple_SetItem(a, 0, args) < 0)
-			goto exit;
+			return NULL;
 		args = a;
 	}
 
 	retval = PyObject_Call(func, args, NULL);
 
-  exit:
-	Py_XDECREF(args);
-	Py_XDECREF(func);
+	Py_DECREF(args);
+	Py_DECREF(func);
 
 	return retval;
 }

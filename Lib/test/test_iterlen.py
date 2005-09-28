@@ -43,21 +43,11 @@ enumerate(iter('abc')).
 
 import unittest
 from test import test_support
-from itertools import repeat
+from itertools import repeat, count
 from collections import deque
 from UserList import UserList
-from __builtin__ import len as _len
 
 n = 10
-
-def len(obj):
-    try:
-        return _len(obj)
-    except TypeError:
-        try:
-            return obj._length_cue()
-        except AttributeError:
-            raise TypeError
 
 class TestInvariantWithoutMutations(unittest.TestCase):
 

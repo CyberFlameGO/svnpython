@@ -2522,7 +2522,7 @@ slotnames(PyObject *cls)
 
 	clsdict = ((PyTypeObject *)cls)->tp_dict;
 	slotnames = PyDict_GetItemString(clsdict, "__slotnames__");
-	if (slotnames != NULL && PyList_Check(slotnames)) {
+	if (slotnames != NULL) {
 		Py_INCREF(slotnames);
 		return slotnames;
 	}
@@ -4764,10 +4764,11 @@ slot_tp_init(PyObject *self, PyObject *args, PyObject *kwds)
 	if (res == NULL)
 		return -1;
 	if (res != Py_None) {
-		PyErr_SetString(PyExc_TypeError,
-			   "__init__() should return None");
-		Py_DECREF(res);
-		return -1;
+		if (PyErr_Warn(PyExc_RuntimeWarning, 
+			"__init__() should return None") == -1) {
+			Py_DECREF(res);
+			return -1;
+		}
 	}
 	Py_DECREF(res);
 	return 0;
@@ -5664,7 +5665,7 @@ super_descr_get(PyObject *self, PyObject *obj, PyObject *type)
 		return self;
 	}
 	if (su->ob_type != &PySuper_Type)
-		/* If su is an instance of a (strict) subclass of super,
+		/* If su is not an instance of a subclass of super,
 		   call its type */
 		return PyObject_CallFunction((PyObject *)su->ob_type,
 					     "OO", su->type, obj);
