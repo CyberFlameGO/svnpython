@@ -1150,8 +1150,7 @@ class TarFile(object):
         stmd = statres.st_mode
         if stat.S_ISREG(stmd):
             inode = (statres.st_ino, statres.st_dev)
-            if not self.dereference and \
-                    statres.st_nlink > 1 and inode in self.inodes:
+            if inode in self.inodes and not self.dereference:
                 # Is it a hardlink to an already
                 # archived file?
                 type = LNKTYPE
