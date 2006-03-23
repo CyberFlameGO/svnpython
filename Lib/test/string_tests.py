@@ -114,33 +114,6 @@ class CommonTest(unittest.TestCase):
         self.checkraises(TypeError, 'hello', 'count')
         self.checkraises(TypeError, 'hello', 'count', 42)
 
-        # For a variety of combinations,
-        #    verify that str.count() matches an equivalent function
-        #    replacing all occurrences and then differencing the string lengths
-        charset = ['', 'a', 'b']
-        digits = 7
-        base = len(charset)
-        teststrings = set()
-        for i in xrange(base ** digits):
-            entry = []
-            for j in xrange(digits):
-                i, m = divmod(i, base)
-                entry.append(charset[m])
-            teststrings.add(''.join(entry))
-        teststrings = list(teststrings)
-        for i in teststrings:
-            i = self.fixtype(i)
-            n = len(i)
-            for j in teststrings:
-                r1 = i.count(j)
-                if j:
-                    r2, rem = divmod(n - len(i.replace(j, '')), len(j))
-                else:
-                    r2, rem = len(i)+1, 0
-                if rem or r1 != r2:
-                    self.assertEqual(rem, 0)
-                    self.assertEqual(r1, r2)
-
     def test_find(self):
         self.checkequal(0, 'abcdefghiabc', 'find', 'abc')
         self.checkequal(9, 'abcdefghiabc', 'find', 'abc', 1)
@@ -148,31 +121,6 @@ class CommonTest(unittest.TestCase):
 
         self.checkraises(TypeError, 'hello', 'find')
         self.checkraises(TypeError, 'hello', 'find', 42)
-
-        # For a variety of combinations,
-        #    verify that str.find() matches __contains__
-        #    and that the found substring is really at that location
-        charset = ['', 'a', 'b', 'c']
-        digits = 5
-        base = len(charset)
-        teststrings = set()
-        for i in xrange(base ** digits):
-            entry = []
-            for j in xrange(digits):
-                i, m = divmod(i, base)
-                entry.append(charset[m])
-            teststrings.add(''.join(entry))
-        teststrings = list(teststrings)
-        for i in teststrings:
-            i = self.fixtype(i)
-            for j in teststrings:
-                loc = i.find(j)
-                r1 = (loc != -1)
-                r2 = j in i
-                if r1 != r2:
-                    self.assertEqual(r1, r2)
-                if loc != -1:
-                    self.assertEqual(i[loc:loc+len(j)], j)
 
     def test_rfind(self):
         self.checkequal(9,  'abcdefghiabc', 'rfind', 'abc')
@@ -627,9 +575,7 @@ class MixinStrUnicodeUserStringTest:
         self.checkequal('abcabcabc', 'abc', '__mul__', 3)
         self.checkraises(TypeError, 'abc', '__mul__')
         self.checkraises(TypeError, 'abc', '__mul__', '')
-        # XXX: on a 64-bit system, this doesn't raise an overflow error,
-        # but either raises a MemoryError, or succeeds (if you have 54TiB)
-        #self.checkraises(OverflowError, 10000*'abc', '__mul__', 2000000000)
+        self.checkraises(OverflowError, 10000*'abc', '__mul__', 2000000000)
 
     def test_join(self):
         # join now works with any sequence type
@@ -659,15 +605,6 @@ class MixinStrUnicodeUserStringTest:
         self.checkraises(TypeError, ' ', 'join')
         self.checkraises(TypeError, ' ', 'join', 7)
         self.checkraises(TypeError, ' ', 'join', Sequence([7, 'hello', 123L]))
-        try:
-            def f():
-                yield 4 + ""
-            self.fixtype(' ').join(f())
-        except TypeError, e:
-            if '+' not in str(e):
-                self.fail('join() ate exception message')
-        else:
-            self.fail('exception not raised')
 
     def test_formatting(self):
         self.checkequal('+hello+', '+%s+', '__mod__', 'hello')
@@ -748,27 +685,26 @@ class MixinStrUserStringTest:
     # Additional tests that only work with
     # 8bit compatible object, i.e. str and UserString
 
-    if test_support.have_unicode:
-        def test_encoding_decoding(self):
-            codecs = [('rot13', 'uryyb jbeyq'),
-                      ('base64', 'aGVsbG8gd29ybGQ=\n'),
-                      ('hex', '68656c6c6f20776f726c64'),
-                      ('uu', 'begin 666 <data>\n+:&5L;&\\@=V]R;&0 \n \nend\n')]
-            for encoding, data in codecs:
-                self.checkequal(data, 'hello world', 'encode', encoding)
-                self.checkequal('hello world', data, 'decode', encoding)
-            # zlib is optional, so we make the test optional too...
-            try:
-                import zlib
-            except ImportError:
-                pass
-            else:
-                data = 'x\x9c\xcbH\xcd\xc9\xc9W(\xcf/\xcaI\x01\x00\x1a\x0b\x04]'
-                self.checkequal(data, 'hello world', 'encode', 'zlib')
-                self.checkequal('hello world', data, 'decode', 'zlib')
+    def test_encoding_decoding(self):
+        codecs = [('rot13', 'uryyb jbeyq'),
+                  ('base64', 'aGVsbG8gd29ybGQ=\n'),
+                  ('hex', '68656c6c6f20776f726c64'),
+                  ('uu', 'begin 666 <data>\n+:&5L;&\\@=V]R;&0 \n \nend\n')]
+        for encoding, data in codecs:
+            self.checkequal(data, 'hello world', 'encode', encoding)
+            self.checkequal('hello world', data, 'decode', encoding)
+        # zlib is optional, so we make the test optional too...
+        try:
+            import zlib
+        except ImportError:
+            pass
+        else:
+            data = 'x\x9c\xcbH\xcd\xc9\xc9W(\xcf/\xcaI\x01\x00\x1a\x0b\x04]'
+            self.checkequal(data, 'hello world', 'encode', 'zlib')
+            self.checkequal('hello world', data, 'decode', 'zlib')
 
-            self.checkraises(TypeError, 'xyz', 'decode', 42)
-            self.checkraises(TypeError, 'xyz', 'encode', 42)
+        self.checkraises(TypeError, 'xyz', 'decode', 42)
+        self.checkraises(TypeError, 'xyz', 'encode', 42)
 
 
 class MixinStrUnicodeTest:

@@ -1278,8 +1278,7 @@ that do not apply to immutable instances of \class{frozenset}:
   \lineiii{\var{s}.add(\var{x})}{}
          {add element \var{x} to set \var{s}}
   \lineiii{\var{s}.remove(\var{x})}{}
-         {remove \var{x} from set \var{s}; raises \exception{KeyError}
-	  if not present}
+         {remove \var{x} from set \var{s}; raises KeyError if not present}
   \lineiii{\var{s}.discard(\var{x})}{}
          {removes \var{x} from set \var{s} if present}
   \lineiii{\var{s}.pop()}{}
@@ -1305,7 +1304,7 @@ The design of the set types was based on lessons learned from the
 \end{seealso}
      
 
-\subsection{Mapping Types --- \class{dict} \label{typesmapping}}
+\subsection{Mapping Types --- class{dict} \label{typesmapping}}
 \obindex{mapping}
 \obindex{dictionary}
 
@@ -1351,7 +1350,7 @@ arbitrary objects):
 
 \begin{tableiii}{c|l|c}{code}{Operation}{Result}{Notes}
   \lineiii{len(\var{a})}{the number of items in \var{a}}{}
-  \lineiii{\var{a}[\var{k}]}{the item of \var{a} with key \var{k}}{(1), (10)}
+  \lineiii{\var{a}[\var{k}]}{the item of \var{a} with key \var{k}}{(1)}
   \lineiii{\var{a}[\var{k}] = \var{v}}
           {set \code{\var{a}[\var{k}]} to \var{v}}
           {}
@@ -1454,17 +1453,6 @@ then is updated with those key/value pairs:
 \samp{d.update(red=1, blue=2)}.
 \versionchanged[Allowed the argument to be an iterable of key/value
                 pairs and allowed keyword arguments]{2.4}
-
-\item[(10)] If a subclass of dict defines a method \method{__missing__},
-if the key \var{k} is not present, the \var{a}[\var{k}] operation calls
-that method with the key \var{k} as argument.  The \var{a}[\var{k}]
-operation then returns or raises whatever is returned or raised by the
-\function{__missing__}(\var{k}) call if the key is not present.
-No other operations or methods invoke \method{__missing__}().
-If \method{__missing__} is not defined, \exception{KeyError} is raised.
-\method{__missing__} must be a method; it cannot be an instance variable.
-For an example, see \module{collections}.\class{defaultdict}.
-\versionadded{2.5}
 
 \end{description}
 
@@ -1790,14 +1778,14 @@ class, respectively.  When a method is unbound, its \code{im_self}
 attribute will be \code{None} and if called, an explicit \code{self}
 object must be passed as the first argument.  In this case,
 \code{self} must be an instance of the unbound method's class (or a
-subclass of that class), otherwise a \exception{TypeError} is raised.
+subclass of that class), otherwise a \code{TypeError} is raised.
 
 Like function objects, methods objects support getting
 arbitrary attributes.  However, since method attributes are actually
 stored on the underlying function object (\code{meth.im_func}),
 setting method attributes on either bound or unbound methods is
 disallowed.  Attempting to set a method attribute results in a
-\exception{TypeError} being raised.  In order to set a method attribute,
+\code{TypeError} being raised.  In order to set a method attribute,
 you need to explicitly set it on the underlying function object:
 
 \begin{verbatim}

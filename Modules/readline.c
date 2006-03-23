@@ -1,7 +1,9 @@
 /* This module makes GNU readline available to Python.  It has ideas
  * contributed by Lee Busby, LLNL, and William Magro, Cornell Theory
- * Center.  The completer interface was inspired by Lele Gaifax.  More
- * recently, it was largely rewritten by Guido van Rossum.
+ * Center.  The completer interface was inspired by Lele Gaifax.
+ *
+ * More recently, it was largely rewritten by Guido van Rossum who is
+ * now maintaining it.
  */
 
 /* Standard definitions */
@@ -925,8 +927,6 @@ initreadline(void)
 
 	m = Py_InitModule4("readline", readline_methods, doc_module,
 			   (PyObject *)NULL, PYTHON_API_VERSION);
-	if (m == NULL)
-		return;
 
 	PyOS_ReadlineFunctionPointer = call_readline;
 	setup_readline();

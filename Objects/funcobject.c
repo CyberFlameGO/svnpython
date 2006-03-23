@@ -2,7 +2,7 @@
 /* Function object implementation */
 
 #include "Python.h"
-#include "code.h"
+#include "compile.h"
 #include "eval.h"
 #include "structmember.h"
 
@@ -144,9 +144,7 @@ PyFunction_SetClosure(PyObject *op, PyObject *closure)
 		Py_XINCREF(closure);
 	}
 	else {
-		PyErr_Format(PyExc_SystemError, 
-			     "expected tuple for closure, got '%.100s'",
-			     closure->ob_type->tp_name);
+		PyErr_SetString(PyExc_SystemError, "non-tuple closure");
 		return -1;
 	}
 	Py_XDECREF(((PyFunctionObject *) op) -> func_closure);
@@ -232,7 +230,7 @@ static int
 func_set_code(PyFunctionObject *op, PyObject *value)
 {
 	PyObject *tmp;
-	Py_ssize_t nfree, nclosure;
+	int nfree, nclosure;
 
 	if (restricted())
 		return -1;
@@ -248,8 +246,8 @@ func_set_code(PyFunctionObject *op, PyObject *value)
 		    PyTuple_GET_SIZE(op->func_closure));
 	if (nclosure != nfree) {
 		PyErr_Format(PyExc_ValueError,
-			     "%s() requires a code object with %zd free vars,"
-			     " not %zd",
+			     "%s() requires a code object with %d free vars,"
+			     " not %d",
 			     PyString_AsString(op->func_name),
 			     nclosure, nfree);
 		return -1;
@@ -363,7 +361,7 @@ func_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 	PyObject *defaults = Py_None;
 	PyObject *closure = Py_None;
 	PyFunctionObject *newfunc;
-	Py_ssize_t nfree, nclosure;
+	int nfree, nclosure;
 	static char *kwlist[] = {"code", "globals", "name",
 				 "argdefs", "closure", 0};
 
@@ -401,11 +399,11 @@ func_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 	nclosure = closure == Py_None ? 0 : PyTuple_GET_SIZE(closure);
 	if (nfree != nclosure)
 		return PyErr_Format(PyExc_ValueError,
-				    "%s requires closure of length %zd, not %zd",
+				    "%s requires closure of length %d, not %d",
 				    PyString_AS_STRING(code->co_name),
 				    nfree, nclosure);
 	if (nclosure) {
-		Py_ssize_t i;
+		int i;
 		for (i = 0; i < nclosure; i++) {
 			PyObject *o = PyTuple_GET_ITEM(closure, i);
 			if (!PyCell_Check(o)) {
@@ -516,7 +514,7 @@ function_call(PyObject *func, PyObject *arg, PyObject *kw)
 	PyObject *result;
 	PyObject *argdefs;
 	PyObject **d, **k;
-	Py_ssize_t nk, nd;
+	int nk, nd;
 
 	argdefs = PyFunction_GET_DEFAULTS(func);
 	if (argdefs != NULL && PyTuple_Check(argdefs)) {
@@ -529,7 +527,7 @@ function_call(PyObject *func, PyObject *arg, PyObject *kw)
 	}
 
 	if (kw != NULL && PyDict_Check(kw)) {
-		Py_ssize_t pos, i;
+		int pos, i;
 		nk = PyDict_Size(kw);
 		k = PyMem_NEW(PyObject *, 2*nk);
 		if (k == NULL) {
@@ -686,8 +684,6 @@ cm_init(PyObject *self, PyObject *args, PyObject *kwds)
 
 	if (!PyArg_UnpackTuple(args, "classmethod", 1, 1, &callable))
 		return -1;
-	if (!_PyArg_NoKeywords("classmethod", kwds))
-		return -1;
 	if (!PyCallable_Check(callable)) {
 		PyErr_Format(PyExc_TypeError, "'%s' object is not callable",
 		     callable->ob_type->tp_name);
@@ -843,8 +839,6 @@ sm_init(PyObject *self, PyObject *args, PyObject *kwds)
 	PyObject *callable;
 
 	if (!PyArg_UnpackTuple(args, "staticmethod", 1, 1, &callable))
-		return -1;
-	if (!_PyArg_NoKeywords("staticmethod", kwds))
 		return -1;
 	Py_INCREF(callable);
 	sm->sm_callable = callable;

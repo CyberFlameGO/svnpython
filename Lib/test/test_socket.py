@@ -312,7 +312,7 @@ class GeneralModuleTests(unittest.TestCase):
         # I've ordered this by protocols that have both a tcp and udp
         # protocol, at least for modern Linuxes.
         if sys.platform in ('linux2', 'freebsd4', 'freebsd5', 'freebsd6',
-                            'freebsd7', 'darwin'):
+                            'darwin'):
             # avoid the 'echo' service on this platform, as there is an
             # assumption breaking non-standard port/protocol entry
             services = ('daytime', 'qotd', 'domain')
@@ -468,14 +468,6 @@ class GeneralModuleTests(unittest.TestCase):
         sock.settimeout(1)
         sock.close()
         self.assertRaises(socket.error, sock.send, "spam")
-
-    def testNewAttributes(self):
-        # testing .family, .type and .protocol
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.assertEqual(sock.family, socket.AF_INET)
-        self.assertEqual(sock.type, socket.SOCK_STREAM)
-        self.assertEqual(sock.proto, 0)
-        sock.close()
 
 class BasicTCPTest(SocketConnectedTest):
 

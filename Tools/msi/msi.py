@@ -8,6 +8,8 @@ from win32com.client import constants
 from distutils.spawn import find_executable
 
 # Settings can be overridden in config.py below
+# 1 for Itanium build
+msilib.Win64 = 0
 # 0 for official python.org releases
 # 1 for intermediate releases by anybody, with
 # a new product code for every package.
@@ -101,20 +103,23 @@ extensions = [
     'select.pyd',
     'unicodedata.pyd',
     'winsound.pyd',
-    '_elementtree.pyd',
+    'zlib.pyd',
     '_bsddb.pyd',
     '_socket.pyd',
     '_ssl.pyd',
     '_testcapi.pyd',
     '_tkinter.pyd',
-    '_msi.pyd',
-    '_ctypes.pyd',
-    '_ctypes_test.pyd'
 ]
 
-if major+minor <= "24":
+if major+minor <= "23":
     extensions.extend([
-    'zlib.pyd',
+    '_csv.pyd',
+    '_sre.pyd',
+    '_symtable.pyd',
+    '_winreg.pyd',
+    'datetime.pyd'
+    'mmap.pyd',
+    'parser.pyd',
     ])
 
 # Well-known component UUIDs
@@ -129,6 +134,7 @@ pythondll_uuid = {
     "24":"{9B81E618-2301-4035-AC77-75D9ABEB7301}",
     "25":"{2e41b118-38bd-4c1b-a840-6977efd1b911}"
     } [major+minor]
+    
 
 # Build the mingw import library, libpythonXY.a
 # This requires 'nm' and 'dlltool' executables on your PATH
@@ -176,12 +182,6 @@ mingw_lib = os.path.join(srcdir, "PCBuild", "libpython%s%s.a" % (major, minor))
 
 have_mingw = build_mingw_lib(lib_file, def_file, dll_file, mingw_lib)
 
-# Determine the target architechture
-dll_path = os.path.join(srcdir, "PCBuild", dll_file)
-msilib.set_arch_from_file(dll_path)
-if msilib.pe_type(dll_path) != msilib.pe_type("msisupport.dll"):
-    raise SystemError, "msisupport.dll for incorrect architecture"
-
 if testpackage:
     ext = 'px'
     testprefix = 'x'
@@ -211,7 +211,11 @@ def build_database():
     # schema represents the installer 2.0 database schema.
     # sequence is the set of standard sequences
     # (ui/execute, admin/advt/install)
-    db = msilib.init_database("python-%s%s.msi" % (full_current_version, msilib.arch_ext),
+    if msilib.Win64:
+        w64 = ".ia64"
+    else:
+        w64 = ""
+    db = msilib.init_database("python-%s%s.msi" % (full_current_version, w64),
                   schema, ProductName="Python "+full_current_version,
                   ProductCode=product_code,
                   ProductVersion=current_version,
@@ -364,7 +368,7 @@ def add_ui(db):
     # See "Custom Action Type 1"
     if msilib.Win64:
         CheckDir = "CheckDir"
-        UpdateEditIDLE = "UpdateEditIDLE"
+        UpdateEditIdle = "UpdateEditIDLE"
     else:
         CheckDir =  "_CheckDir@4"
         UpdateEditIDLE = "_UpdateEditIDLE@4"
@@ -487,11 +491,6 @@ def add_ui(db):
       "    Mark Hammond, without whose years of freely \n"
       "    shared Windows expertise, Python for Windows \n"
       "    would still be Python for DOS.")
-
-    c = exit_dialog.text("warning", 135, 200, 220, 40, 0x30003,
-            "{\\VerdanaRed9}Warning: Python 2.5.x is the last "
-            "Python release for Windows 9x.")
-    c.condition("Hide", "NOT Version9x")
 
     exit_dialog.text("Description", 135, 235, 220, 20, 0x30003,
                "Click the Finish button to exit the Installer.")

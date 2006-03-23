@@ -157,8 +157,7 @@ def format_exception_only(etype, value):
     which exception occurred is the always last string in the list.
     """
     list = []
-    if (type(etype) == types.ClassType
-        or issubclass(etype, Exception)):
+    if type(etype) == types.ClassType:
         stype = etype.__name__
     else:
         stype = etype

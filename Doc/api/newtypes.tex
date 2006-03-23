@@ -11,7 +11,7 @@ defining new object types.
 \begin{cfuncdesc}{PyObject*}{_PyObject_New}{PyTypeObject *type}
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{PyVarObject*}{_PyObject_NewVar}{PyTypeObject *type, Py_ssize_t size}
+\begin{cfuncdesc}{PyVarObject*}{_PyObject_NewVar}{PyTypeObject *type, int size}
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{void}{_PyObject_Del}{PyObject *op}
@@ -27,7 +27,7 @@ defining new object types.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyVarObject*}{PyObject_InitVar}{PyVarObject *op,
-						  PyTypeObject *type, Py_ssize_t size}
+						  PyTypeObject *type, int size}
   This does everything \cfunction{PyObject_Init()} does, and also
   initializes the length information for a variable-size object.
 \end{cfuncdesc}
@@ -42,7 +42,7 @@ defining new object types.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{\var{TYPE}*}{PyObject_NewVar}{TYPE, PyTypeObject *type,
-                                                Py_ssize_t size}
+                                                int size}
   Allocate a new Python object using the C structure type \var{TYPE}
   and the Python type object \var{type}.  Fields not defined by the
   Python object header are not initialized.  The allocated memory
@@ -69,7 +69,7 @@ defining new object types.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{\var{TYPE}*}{PyObject_NEW_VAR}{TYPE, PyTypeObject *type,
-                                                Py_ssize_t size}
+                                                int size}
   Macro version of \cfunction{PyObject_NewVar()}, to gain performance
   at the expense of safety.  This does not check \var{type} for a
   \NULL{} value.
@@ -170,13 +170,13 @@ These macros are used in the definition of \ctype{PyObject} and
   \csimplemacro{Py_TRACE_REFS}.  By default, that macro is not
   defined, and \csimplemacro{PyObject_HEAD} expands to:
   \begin{verbatim}
-    Py_ssize_t ob_refcnt;
+    int ob_refcnt;
     PyTypeObject *ob_type;
   \end{verbatim}
   When \csimplemacro{Py_TRACE_REFS} is defined, it expands to:
   \begin{verbatim}
     PyObject *_ob_next, *_ob_prev;
-    Py_ssize_t ob_refcnt;
+    int ob_refcnt;
     PyTypeObject *ob_type;
   \end{verbatim}
 \end{csimplemacrodesc}
@@ -188,10 +188,10 @@ These macros are used in the definition of \ctype{PyObject} and
   instance.  This macro always expands to:
   \begin{verbatim}
     PyObject_HEAD
-    Py_ssize_t ob_size;
+    int ob_size;
   \end{verbatim}
   Note that \csimplemacro{PyObject_HEAD} is part of the expansion, and
-  that its own expansion varies depending on the definition of
+  that it's own expansion varies depending on the definition of
   \csimplemacro{Py_TRACE_REFS}.
 \end{csimplemacrodesc}
 
@@ -383,7 +383,7 @@ objects) \emph{must} have the \member{ob_size} field.
   These fields are not inherited by subtypes.
 \end{cmemberdesc}
 
-\begin{cmemberdesc}{PyObject}{Py_ssize_t}{ob_refcnt}
+\begin{cmemberdesc}{PyObject}{int}{ob_refcnt}
   This is the type object's reference count, initialized to \code{1}
   by the \code{PyObject_HEAD_INIT} macro.  Note that for statically
   allocated type objects, the type's instances (objects whose
@@ -421,7 +421,7 @@ Foo_Type.ob_type = &PyType_Type;
   and in 2.3 and beyond, it is inherited by subtypes.
 \end{cmemberdesc}
 
-\begin{cmemberdesc}{PyVarObject}{Py_ssize_t}{ob_size}
+\begin{cmemberdesc}{PyVarObject}{int}{ob_size}
   For statically allocated type objects, this should be initialized
   to zero.  For dynamically allocated type objects, this field has a
   special internal meaning.
@@ -457,8 +457,8 @@ Foo_Type.ob_type = &PyType_Type;
   This field is not inherited by subtypes.
 \end{cmemberdesc}
 
-\begin{cmemberdesc}{PyTypeObject}{Py_ssize_t}{tp_basicsize}
-\cmemberline{PyTypeObject}{Py_ssize_t}{tp_itemsize}
+\begin{cmemberdesc}{PyTypeObject}{int}{tp_basicsize}
+\cmemberline{PyTypeObject}{int}{tp_itemsize}
   These fields allow calculating the size in bytes of instances of
   the type.
 
@@ -525,7 +525,7 @@ Foo_Type.ob_type = &PyType_Type;
   \member{tp_free}.  The object deallocator should be the one used to
   allocate the instance; this is normally \cfunction{PyObject_Del()}
   if the instance was allocated using \cfunction{PyObject_New()} or
-  \cfunction{PyObject_VarNew()}, or \cfunction{PyObject_GC_Del()} if
+  \cfunction{PyOject_VarNew()}, or \cfunction{PyObject_GC_Del()} if
   the instance was allocated using \cfunction{PyObject_GC_New()} or
   \cfunction{PyObject_GC_VarNew()}.
 
@@ -1106,13 +1106,6 @@ typedef struct PyGetSetDef {
 \begin{cmemberdesc}{PyTypeObject}{descrgetfunc}{tp_descr_get}
   An optional pointer to a "descriptor get" function.
 
-
-  The function signature is
-
-\begin{verbatim}
-PyObject * tp_descr_get(PyObject *self, PyObject *obj, PyObject *type);
-\end{verbatim}
-
   XXX blah, blah.
 
   This field is inherited by subtypes.
@@ -1121,16 +1114,9 @@ PyObject * tp_descr_get(PyObject *self, PyObject *obj, PyObject *type);
 \begin{cmemberdesc}{PyTypeObject}{descrsetfunc}{tp_descr_set}
   An optional pointer to a "descriptor set" function.
 
-  The function signature is
-
-\begin{verbatim}
-int tp_descr_set(PyObject *self, PyObject *obj, PyObject *value);
-\end{verbatim}
-
-  This field is inherited by subtypes.
-
   XXX blah, blah.
 
+  This field is inherited by subtypes.
 \end{cmemberdesc}
 
 \begin{cmemberdesc}{PyTypeObject}{long}{tp_dictoffset}
@@ -1234,7 +1220,7 @@ int tp_init(PyObject *self, PyObject *args, PyObject *kwds)
   The function signature is
 
 \begin{verbatim}
-PyObject *tp_alloc(PyTypeObject *self, Py_ssize_t nitems)
+PyObject *tp_alloc(PyTypeObject *self, int nitems)
 \end{verbatim}
 
   The purpose of this function is to separate memory allocation from
@@ -1386,15 +1372,15 @@ The remaining fields are only defined if the feature test macro
 They are documented here for completeness.  None of these fields are
 inherited by subtypes.
 
-\begin{cmemberdesc}{PyTypeObject}{Py_ssize_t}{tp_allocs}
+\begin{cmemberdesc}{PyTypeObject}{int}{tp_allocs}
   Number of allocations.
 \end{cmemberdesc}
 
-\begin{cmemberdesc}{PyTypeObject}{Py_ssize_t}{tp_frees}
+\begin{cmemberdesc}{PyTypeObject}{int}{tp_frees}
   Number of frees.
 \end{cmemberdesc}
 
-\begin{cmemberdesc}{PyTypeObject}{Py_ssize_t}{tp_maxalloc}
+\begin{cmemberdesc}{PyTypeObject}{int}{tp_maxalloc}
   Maximum simultaneously allocated objects.
 \end{cmemberdesc}
 
@@ -1509,8 +1495,8 @@ to be able to test for its presence before using it.}
   \member{bf_getcharbuffer} slot is non-\NULL.
 \end{datadesc}
 
-\begin{ctypedesc}[getreadbufferproc]{Py_ssize_t (*readbufferproc)
-                            (PyObject *self, Py_ssize_t segment, void **ptrptr)}
+\begin{ctypedesc}[getreadbufferproc]{int (*getreadbufferproc)
+                            (PyObject *self, int segment, void **ptrptr)}
   Return a pointer to a readable segment of the buffer.  This function
   is allowed to raise an exception, in which case it must return
   \code{-1}.  The \var{segment} which is passed must be zero or
@@ -1520,8 +1506,8 @@ to be able to test for its presence before using it.}
   pointer to that memory.
 \end{ctypedesc}
 
-\begin{ctypedesc}[getwritebufferproc]{Py_ssize_t (*writebufferproc)
-                            (PyObject *self, Py_ssize_t segment, void **ptrptr)}
+\begin{ctypedesc}[getwritebufferproc]{int (*getwritebufferproc)
+                            (PyObject *self, int segment, void **ptrptr)}
   Return a pointer to a writable memory buffer in
   \code{*\var{ptrptr}}, and the length of that segment as the function
   return value.  The memory buffer must correspond to buffer segment
@@ -1535,16 +1521,16 @@ to be able to test for its presence before using it.}
 %      code.
 \end{ctypedesc}
 
-\begin{ctypedesc}[getsegcountproc]{Py_ssize_t (*segcountproc)
-                            (PyObject *self, Py_ssize_t *lenp)}
+\begin{ctypedesc}[getsegcountproc]{int (*getsegcountproc)
+                            (PyObject *self, int *lenp)}
   Return the number of memory segments which comprise the buffer.  If
   \var{lenp} is not \NULL, the implementation must report the sum of
   the sizes (in bytes) of all segments in \code{*\var{lenp}}.
   The function cannot fail.
 \end{ctypedesc}
 
-\begin{ctypedesc}[getcharbufferproc]{Py_ssize_t (*charbufferproc)
-                            (PyObject *self, Py_ssize_t segment, const char **ptrptr)}
+\begin{ctypedesc}[getcharbufferproc]{int (*getcharbufferproc)
+                            (PyObject *self, int segment, const char **ptrptr)}
   Return the size of the memory buffer in \var{ptrptr} for segment
   \var{segment}.  \code{*\var{ptrptr}} is set to the memory buffer.
 \end{ctypedesc}
@@ -1599,12 +1585,12 @@ Constructors for container types must conform to two rules:
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{\var{TYPE}*}{PyObject_GC_NewVar}{TYPE, PyTypeObject *type,
-                                                   Py_ssize_t size}
+                                                   int size}
   Analogous to \cfunction{PyObject_NewVar()} but for container objects
   with the \constant{Py_TPFLAGS_HAVE_GC} flag set.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{PyVarObject *}{PyObject_GC_Resize}{PyVarObject *op, Py_ssize_t}
+\begin{cfuncdesc}{PyVarObject *}{PyObject_GC_Resize}{PyVarObject *op, int}
   Resize an object allocated by \cfunction{PyObject_NewVar()}.  Returns
   the resized object or \NULL{} on failure.
 \end{cfuncdesc}
@@ -1633,12 +1619,12 @@ pair of rules:
        \cfunction{PyObject_GC_Del()}.
 \end{enumerate}
 
-\begin{cfuncdesc}{void}{PyObject_GC_Del}{void *op}
+\begin{cfuncdesc}{void}{PyObject_GC_Del}{PyObject *op}
   Releases memory allocated to an object using
   \cfunction{PyObject_GC_New()} or \cfunction{PyObject_GC_NewVar()}.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{void}{PyObject_GC_UnTrack}{void *op}
+\begin{cfuncdesc}{void}{PyObject_GC_UnTrack}{PyObject *op}
   Remove the object \var{op} from the set of container objects tracked
   by the collector.  Note that \cfunction{PyObject_GC_Track()} can be
   called again on this object to add it back to the set of tracked

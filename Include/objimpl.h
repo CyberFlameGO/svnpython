@@ -146,9 +146,9 @@ PyAPI_FUNC(void) _PyObject_DebugMallocStats(void);
 /* Functions */
 PyAPI_FUNC(PyObject *) PyObject_Init(PyObject *, PyTypeObject *);
 PyAPI_FUNC(PyVarObject *) PyObject_InitVar(PyVarObject *,
-                                                 PyTypeObject *, Py_ssize_t);
+                                                 PyTypeObject *, int);
 PyAPI_FUNC(PyObject *) _PyObject_New(PyTypeObject *);
-PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
+PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, int);
 
 #define PyObject_New(type, typeobj) \
 		( (type *) _PyObject_New(typeobj) )
@@ -229,7 +229,7 @@ PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
  */
 
 /* C equivalent of gc.collect(). */
-PyAPI_FUNC(Py_ssize_t) PyGC_Collect(void);
+PyAPI_FUNC(long) PyGC_Collect(void);
 
 /* Test if a type has a GC head */
 #define PyType_IS_GC(t) PyType_HasFeature((t), Py_TPFLAGS_HAVE_GC)
@@ -238,7 +238,7 @@ PyAPI_FUNC(Py_ssize_t) PyGC_Collect(void);
 #define PyObject_IS_GC(o) (PyType_IS_GC((o)->ob_type) && \
 	((o)->ob_type->tp_is_gc == NULL || (o)->ob_type->tp_is_gc(o)))
 
-PyAPI_FUNC(PyVarObject *) _PyObject_GC_Resize(PyVarObject *, Py_ssize_t);
+PyAPI_FUNC(PyVarObject *) _PyObject_GC_Resize(PyVarObject *, int);
 #define PyObject_GC_Resize(type, op, n) \
 		( (type *) _PyObject_GC_Resize((PyVarObject *)(op), (n)) )
 
@@ -250,7 +250,7 @@ typedef union _gc_head {
 	struct {
 		union _gc_head *gc_next;
 		union _gc_head *gc_prev;
-		Py_ssize_t gc_refs;
+		int gc_refs;
 	} gc;
 	long double dummy;  /* force worst-case alignment */
 } PyGC_Head;
@@ -291,7 +291,7 @@ extern PyGC_Head *_PyGC_generation0;
 
 PyAPI_FUNC(PyObject *) _PyObject_GC_Malloc(size_t);
 PyAPI_FUNC(PyObject *) _PyObject_GC_New(PyTypeObject *);
-PyAPI_FUNC(PyVarObject *) _PyObject_GC_NewVar(PyTypeObject *, Py_ssize_t);
+PyAPI_FUNC(PyVarObject *) _PyObject_GC_NewVar(PyTypeObject *, int);
 PyAPI_FUNC(void) PyObject_GC_Track(void *);
 PyAPI_FUNC(void) PyObject_GC_UnTrack(void *);
 PyAPI_FUNC(void) PyObject_GC_Del(void *);

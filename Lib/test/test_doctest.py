@@ -1559,11 +1559,11 @@ Run the debugger on the docstring, and then restore sys.stdin.
 
     >>> try: doctest.debug_src(s)
     ... finally: sys.stdin = real_stdin
-    > <string>(1)<module>()
+    > <string>(1)?()
     (Pdb) next
     12
     --Return--
-    > <string>(1)<module>()->None
+    > <string>(1)?()->None
     (Pdb) print x
     12
     (Pdb) continue
@@ -1601,7 +1601,7 @@ def test_pdb_set_trace():
       >>> try: runner.run(test)
       ... finally: sys.stdin = real_stdin
       --Return--
-      > <doctest foo[1]>(1)<module>()->None
+      > <doctest foo[1]>(1)?()->None
       -> import pdb; pdb.set_trace()
       (Pdb) print x
       42
@@ -1637,7 +1637,7 @@ def test_pdb_set_trace():
       (Pdb) print y
       2
       (Pdb) up
-      > <doctest foo[1]>(1)<module>()
+      > <doctest foo[1]>(1)?()
       -> calls_set_trace()
       (Pdb) print x
       1
@@ -1686,7 +1686,7 @@ def test_pdb_set_trace():
       [EOF]
       (Pdb) next
       --Return--
-      > <doctest foo[2]>(1)<module>()->None
+      > <doctest foo[2]>(1)?()->None
       -> f(3)
       (Pdb) list
         1  -> f(3)
@@ -1779,7 +1779,7 @@ def test_pdb_set_trace_nested():
     (Pdb) print y
     1
     (Pdb) up
-    > <doctest foo[1]>(1)<module>()
+    > <doctest foo[1]>(1)?()
     -> calls_set_trace()
     (Pdb) print foo
     *** NameError: name 'foo' is not defined
@@ -2012,14 +2012,6 @@ def test_DocFileSuite():
        Here, we didn't need to use a tearDown function because we
        modified the test globals.  The test globals are
        automatically cleared for us after a test.
-
-       Tests in a file run using `DocFileSuite` can also access the
-       `__file__` global, which is set to the name of the file
-       containing the tests:
-
-         >>> suite = doctest.DocFileSuite('test_doctest3.txt')
-         >>> suite.run(unittest.TestResult())
-         <unittest.TestResult run=1 errors=0 failures=0>
 
        """
 

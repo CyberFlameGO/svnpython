@@ -1053,17 +1053,17 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	PyObject *seq;
 	long start=0, stop=-1, step=1;
-	PyObject *it, *a1=NULL, *a2=NULL, *a3=NULL;
-	Py_ssize_t numargs;
+	PyObject *it, *a1=NULL, *a2=NULL;
+	int numargs;
 	isliceobject *lz;
 
 	if (!_PyArg_NoKeywords("islice()", kwds))
 		return NULL;
 
-	if (!PyArg_UnpackTuple(args, "islice", 2, 4, &seq, &a1, &a2, &a3))
+	numargs = PyTuple_Size(args);
+	if (!PyArg_ParseTuple(args, "OO|Ol:islice", &seq, &a1, &a2, &step))
 		return NULL;
 
-	numargs = PyTuple_Size(args);
 	if (numargs == 2) {
 		if (a1 != Py_None) {
 			stop = PyInt_AsLong(a1);
@@ -1071,41 +1071,39 @@ islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 				if (PyErr_Occurred())
 					PyErr_Clear();
 				PyErr_SetString(PyExc_ValueError,
-				   "Stop argument for islice() must be a non-negative integer or None.");
+				   "Stop argument must be a non-negative integer or None.");
 				return NULL;
 			}
 		}
 	} else {
-		if (a1 != Py_None)
-			start = PyInt_AsLong(a1);
-		if (start == -1 && PyErr_Occurred())
+		start = PyInt_AsLong(a1);
+		if (start == -1 && PyErr_Occurred()) {
 			PyErr_Clear();
+			PyErr_SetString(PyExc_ValueError,
+			   "Start argument must be a non-negative integer.");
+			return NULL;
+		}
 		if (a2 != Py_None) {
 			stop = PyInt_AsLong(a2);
 			if (stop == -1) {
 				if (PyErr_Occurred())
 					PyErr_Clear();
 				PyErr_SetString(PyExc_ValueError,
-				   "Stop argument for islice() must be a non-negative integer or None.");
+				   "Stop argument must be a non-negative integer or None.");
 				return NULL;
 			}
 		}
 	}
+
 	if (start<0 || stop<-1) {
 		PyErr_SetString(PyExc_ValueError,
-		   "Indices for islice() must be non-negative integers or None.");
+		   "Indices for islice() must be non-negative integers.");
 		return NULL;
 	}
 
-	if (a3 != NULL) {
-		if (a3 != Py_None)
-			step = PyInt_AsLong(a3);
-		if (step == -1 && PyErr_Occurred())
-			PyErr_Clear();
-	}
 	if (step<1) {
 		PyErr_SetString(PyExc_ValueError,
-		   "Step for islice() must be a positive integer or None.");
+		   "Step must be one or larger for islice().");
 		return NULL;
 	}
 
@@ -1378,7 +1376,7 @@ imap_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	PyObject *it, *iters, *func;
 	imapobject *lz;
-	Py_ssize_t numargs, i;
+	int numargs, i;
 
 	if (!_PyArg_NoKeywords("imap()", kwds))
 		return NULL;
@@ -1466,7 +1464,7 @@ imap_next(imapobject *lz)
 	PyObject *val;
 	PyObject *argtuple;
 	PyObject *result;
-	Py_ssize_t numargs, i;
+	int numargs, i;
 
 	numargs = PyTuple_Size(lz->iters);
 	argtuple = PyTuple_New(numargs);
@@ -1547,7 +1545,7 @@ static PyTypeObject imap_type = {
 
 typedef struct {
 	PyObject_HEAD
-	Py_ssize_t	tuplesize;
+	long	tuplesize;
 	long	iternum;		/* which iterator is active */
 	PyObject *ittuple;		/* tuple of iterators */
 } chainobject;
@@ -1558,7 +1556,7 @@ static PyObject *
 chain_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	chainobject *lz;
-	Py_ssize_t tuplesize = PySequence_Length(args);
+	int tuplesize = PySequence_Length(args);
 	int i;
 	PyObject *ittuple;
 
@@ -2074,7 +2072,7 @@ static PyTypeObject count_type = {
 
 typedef struct {
 	PyObject_HEAD
-	Py_ssize_t	tuplesize;
+	long	tuplesize;
 	PyObject *ittuple;		/* tuple of iterators */
 	PyObject *result;
 } izipobject;
@@ -2088,7 +2086,7 @@ izip_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	int i;
 	PyObject *ittuple;  /* tuple of iterators */
 	PyObject *result;
-	Py_ssize_t tuplesize = PySequence_Length(args);
+	int tuplesize = PySequence_Length(args);
 
 	if (!_PyArg_NoKeywords("izip()", kwds))
 		return NULL;
@@ -2160,7 +2158,7 @@ static PyObject *
 izip_next(izipobject *lz)
 {
 	int i;
-	Py_ssize_t tuplesize = lz->tuplesize;
+	long tuplesize = lz->tuplesize;
 	PyObject *result = lz->result;
 	PyObject *it;
 	PyObject *item;
@@ -2336,21 +2334,17 @@ repeat_repr(repeatobject *ro)
 	return result;
 }	
 
-static PyObject *
+static int
 repeat_len(repeatobject *ro)
 {
-        if (ro->cnt == -1) {
+        if (ro->cnt == -1)
                 PyErr_SetString(PyExc_TypeError, "len() of unsized object");
-		return NULL;
-	}
-        return PyInt_FromLong(ro->cnt);
+        return (int)(ro->cnt);
 }
 
-PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef repeat_methods[] = {
-	{"__length_hint__", (PyCFunction)repeat_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
+static PySequenceMethods repeat_as_sequence = {
+	(inquiry)repeat_len,		/* sq_length */
+	0,				/* sq_concat */
 };
 
 PyDoc_STRVAR(repeat_doc,
@@ -2372,7 +2366,7 @@ static PyTypeObject repeat_type = {
 	0,				/* tp_compare */
 	(reprfunc)repeat_repr,		/* tp_repr */
 	0,				/* tp_as_number */
-	0,				/* tp_as_sequence */
+	&repeat_as_sequence,		/* tp_as_sequence */
 	0,				/* tp_as_mapping */
 	0,				/* tp_hash */
 	0,				/* tp_call */
@@ -2389,7 +2383,7 @@ static PyTypeObject repeat_type = {
 	0,				/* tp_weaklistoffset */
 	PyObject_SelfIter,		/* tp_iter */
 	(iternextfunc)repeat_next,	/* tp_iternext */
-	repeat_methods,			/* tp_methods */
+	0,				/* tp_methods */
 	0,				/* tp_members */
 	0,				/* tp_getset */
 	0,				/* tp_base */
@@ -2460,8 +2454,6 @@ inititertools(void)
 
 	teedataobject_type.ob_type = &PyType_Type;
 	m = Py_InitModule3("itertools", module_methods, module_doc);
-	if (m == NULL)
-		return;
 
 	for (i=0 ; typelist[i] != NULL ; i++) {
 		if (PyType_Ready(typelist[i]) < 0)

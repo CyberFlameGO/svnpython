@@ -7,7 +7,7 @@ This module provides an interface to Berkeley socket IPC.
 Limitations:
 
 - Only AF_INET, AF_INET6 and AF_UNIX address families are supported in a
-  portable manner, though AF_PACKET and AF_NETLINK are supported under Linux.
+  portable manner, though AF_PACKET is supported under Linux.
 - No read/write operations (use sendall/recv or makefile instead).
 - Additional restrictions apply on some non-Unix platforms (compensated
   for by socket.py).
@@ -62,7 +62,6 @@ Local naming conventions:
 */
 
 #include "Python.h"
-#include "structmember.h"
 
 #undef MAX
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
@@ -141,14 +140,9 @@ shutdown(how) -- shut down traffic in one or both directions\n\
 # define USE_GETHOSTBYNAME_LOCK
 #endif
 
-/* To use __FreeBSD_version */
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
-#endif
 /* On systems on which getaddrinfo() is believed to not be thread-safe,
    (this includes the getaddrinfo emulation) protect access with a lock. */
-#if defined(WITH_THREAD) && (defined(__APPLE__) || \
-    (defined(__FreeBSD__) && __FreeBSD_version+0 < 503000) || \
+#if defined(WITH_THREAD) && (defined(__APPLE__) || defined(__FreeBSD__) || \
     defined(__OpenBSD__) || defined(__NetBSD__) || !defined(HAVE_GETADDRINFO))
 #define USE_GETADDRINFO_LOCK
 #endif
@@ -524,8 +518,7 @@ set_error(void)
 			if (strlen(outbuf) > 0) {
 				/* If non-empty msg, trim CRLF */
 				char *lastc = &outbuf[ strlen(outbuf)-1 ];
-				while (lastc > outbuf &&
-				       isspace(Py_CHARMASK(*lastc))) {
+				while (lastc > outbuf && isspace(*lastc)) {
 					/* Trim trailing whitespace (CRLF) */
 					*lastc-- = '\0';
 				}
@@ -972,14 +965,6 @@ makesockaddr(int sockfd, struct sockaddr *addr, int addrlen, int proto)
 	}
 #endif /* AF_UNIX */
 
-#if defined(AF_NETLINK)
-       case AF_NETLINK:
-       {
-               struct sockaddr_nl *a = (struct sockaddr_nl *) addr;
-               return Py_BuildValue("II", a->nl_pid, a->nl_groups);
-       }
-#endif /* AF_NETLINK */
-
 #ifdef ENABLE_IPV6
 	case AF_INET6:
 	{
@@ -1115,31 +1100,6 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
 		return 1;
 	}
 #endif /* AF_UNIX */
-
-#if defined(AF_NETLINK)
-	case AF_NETLINK:
-	{
-		struct sockaddr_nl* addr;
-		int pid, groups;
-		addr = (struct sockaddr_nl *)&(s->sock_addr).nl;
-		if (!PyTuple_Check(args)) {
-			PyErr_Format(
-				PyExc_TypeError,
-				"getsockaddrarg: "
-				"AF_NETLINK address must be tuple, not %.500s",
-				args->ob_type->tp_name);
-			return 0;
-		}
-		if (!PyArg_ParseTuple(args, "II:getsockaddrarg", &pid, &groups))
-			return 0;
-		addr->nl_family = AF_NETLINK;
-		addr->nl_pid = pid;
-		addr->nl_groups = groups;
-		*addr_ret = (struct sockaddr *) addr;
-		*len_ret = sizeof(*addr);
-		return 1;
-	}
-#endif
 
 	case AF_INET:
 	{
@@ -1337,13 +1297,6 @@ getsockaddrlen(PySocketSockObject *s, socklen_t *len_ret)
 		return 1;
 	}
 #endif /* AF_UNIX */
-#if defined(AF_NETLINK)
-       case AF_NETLINK:
-       {
-               *len_ret = sizeof (struct sockaddr_nl);
-               return 1;
-       }
-#endif
 
 	case AF_INET:
 	{
@@ -2503,14 +2456,6 @@ static PyMethodDef sock_methods[] = {
 	{NULL,			NULL}		/* sentinel */
 };
 
-/* SockObject members */
-static PyMemberDef sock_memberlist[] = {
-       {"family", T_INT, offsetof(PySocketSockObject, sock_family), READONLY, "the socket family"},
-       {"type", T_INT, offsetof(PySocketSockObject, sock_type), READONLY, "the socket type"},
-       {"proto", T_INT, offsetof(PySocketSockObject, sock_proto), READONLY, "the socket protocol"},
-       {"timeout", T_DOUBLE, offsetof(PySocketSockObject, sock_timeout), READONLY, "the socket timeout"},
-       {0},
-};
 
 /* Deallocate a socket object in response to the last Py_DECREF().
    First close the file description. */
@@ -2634,7 +2579,7 @@ static PyTypeObject sock_type = {
 	0,					/* tp_iter */
 	0,					/* tp_iternext */
 	sock_methods,				/* tp_methods */
-	sock_memberlist,			/* tp_members */
+	0,					/* tp_members */
 	0,					/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
@@ -3916,8 +3861,6 @@ init_socket(void)
 	m = Py_InitModule3(PySocket_MODULE_NAME,
 			   socket_methods,
 			   socket_doc);
-	if (m == NULL)
-		return;
 
 	socket_error = PyErr_NewException("socket.error", NULL, NULL);
 	if (socket_error == NULL)
@@ -4034,24 +3977,6 @@ init_socket(void)
 #ifdef AF_NETLINK
 	/*  */
 	PyModule_AddIntConstant(m, "AF_NETLINK", AF_NETLINK);
-	PyModule_AddIntConstant(m, "NETLINK_ROUTE", NETLINK_ROUTE);
-	PyModule_AddIntConstant(m, "NETLINK_SKIP", NETLINK_SKIP);
-	PyModule_AddIntConstant(m, "NETLINK_USERSOCK", NETLINK_USERSOCK);
-	PyModule_AddIntConstant(m, "NETLINK_FIREWALL", NETLINK_FIREWALL);
-#ifdef NETLINK_TCPDIAG
-	PyModule_AddIntConstant(m, "NETLINK_TCPDIAG", NETLINK_TCPDIAG);
-#endif
-#ifdef NETLINK_NFLOG
-	PyModule_AddIntConstant(m, "NETLINK_NFLOG", NETLINK_NFLOG);
-#endif
-#ifdef NETLINK_XFRM
-	PyModule_AddIntConstant(m, "NETLINK_XFRM", NETLINK_XFRM);
-#endif
-	PyModule_AddIntConstant(m, "NETLINK_ARPD", NETLINK_ARPD);
-	PyModule_AddIntConstant(m, "NETLINK_ROUTE6", NETLINK_ROUTE6);
-	PyModule_AddIntConstant(m, "NETLINK_IP6_FW", NETLINK_IP6_FW);
-	PyModule_AddIntConstant(m, "NETLINK_DNRTMSG", NETLINK_DNRTMSG);
-	PyModule_AddIntConstant(m, "NETLINK_TAPBASE", NETLINK_TAPBASE);
 #endif
 #ifdef AF_ROUTE
 	/* Alias to emulate 4.4BSD */

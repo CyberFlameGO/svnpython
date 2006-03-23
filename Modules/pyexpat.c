@@ -1,10 +1,9 @@
 #include "Python.h"
 #include <ctype.h>
 
+#include "compile.h"
 #include "frameobject.h"
 #include "expat.h"
-
-#include "pyexpat.h"
 
 #define XML_COMBINED_VERSION (10000*XML_MAJOR_VERSION+100*XML_MINOR_VERSION+XML_MICRO_VERSION)
 
@@ -1507,7 +1506,7 @@ xmlparse_getattr(xmlparseobject *self, char *name)
             return self->intern;
         }
     }
-
+    
 #define APPEND(list, str)				\
         do {						\
                 PyObject *o = PyString_FromString(str);	\
@@ -1729,7 +1728,7 @@ pyexpat_ParserCreate(PyObject *notused, PyObject *args, PyObject *kw)
     PyObject *result;
     int intern_decref = 0;
     static char *kwlist[] = {"encoding", "namespace_separator",
-                                   "intern", NULL};
+			     "intern", NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, "|zzO:ParserCreate", kwlist,
                                      &encoding, &namespace_separator, &intern))
@@ -1805,7 +1804,7 @@ get_version_string(void)
     char *rev = rcsid;
     int i = 0;
 
-    while (!isdigit(Py_CHARMASK(*rev)))
+    while (!isdigit((int)*rev))
         ++rev;
     while (rev[i] != ' ' && rev[i] != '\0')
         ++i;
@@ -1842,8 +1841,6 @@ MODULE_INITFUNC(void)
     PyObject *modelmod_name;
     PyObject *model_module;
     PyObject *sys_modules;
-    static struct PyExpat_CAPI capi;
-    PyObject* capi_object;
 
     if (errmod_name == NULL)
         return;
@@ -1856,8 +1853,6 @@ MODULE_INITFUNC(void)
     /* Create the module and add the functions */
     m = Py_InitModule3(MODULE_NAME, pyexpat_methods,
                        pyexpat_module_documentation);
-    if (m == NULL)
-	return;
 
     /* Add some symbolic constants to the module */
     if (ErrorObject == NULL) {
@@ -2019,33 +2014,6 @@ MODULE_INITFUNC(void)
     MYCONST(XML_CQUANT_REP);
     MYCONST(XML_CQUANT_PLUS);
 #undef MYCONST
-
-    /* initialize pyexpat dispatch table */
-    capi.size = sizeof(capi);
-    capi.magic = PyExpat_CAPI_MAGIC;
-    capi.MAJOR_VERSION = XML_MAJOR_VERSION;
-    capi.MINOR_VERSION = XML_MINOR_VERSION;
-    capi.MICRO_VERSION = XML_MICRO_VERSION;
-    capi.ErrorString = XML_ErrorString;
-    capi.GetErrorCode = XML_GetErrorCode;
-    capi.GetErrorColumnNumber = XML_GetErrorColumnNumber;
-    capi.GetErrorLineNumber = XML_GetErrorLineNumber;
-    capi.Parse = XML_Parse;
-    capi.ParserCreate_MM = XML_ParserCreate_MM;
-    capi.ParserFree = XML_ParserFree;
-    capi.SetCharacterDataHandler = XML_SetCharacterDataHandler;
-    capi.SetCommentHandler = XML_SetCommentHandler;
-    capi.SetDefaultHandlerExpand = XML_SetDefaultHandlerExpand;
-    capi.SetElementHandler = XML_SetElementHandler;
-    capi.SetNamespaceDeclHandler = XML_SetNamespaceDeclHandler;
-    capi.SetProcessingInstructionHandler = XML_SetProcessingInstructionHandler;
-    capi.SetUnknownEncodingHandler = XML_SetUnknownEncodingHandler;
-    capi.SetUserData = XML_SetUserData;
-    
-    /* export as cobject */
-    capi_object = PyCObject_FromVoidPtr(&capi, NULL);
-    if (capi_object)
-        PyModule_AddObject(m, "expat_CAPI", capi_object);
 }
 
 static void

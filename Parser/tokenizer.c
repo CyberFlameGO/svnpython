@@ -127,6 +127,7 @@ tok_new(void)
 	tok->decoding_state = 0;
 	tok->decoding_erred = 0;
 	tok->read_coding_spec = 0;
+	tok->issued_encoding_warning = 0;
 	tok->encoding = NULL;
         tok->cont_line = 0;
 #ifndef PGEN
@@ -169,7 +170,7 @@ error_ret(struct tok_state *tok) /* XXX */
 }
 
 static char *
-new_string(const char *s, Py_ssize_t len)
+new_string(const char *s, int len)
 {
 	char* result = PyMem_NEW(char, len + 1);
 	if (result != NULL) {
@@ -205,9 +206,9 @@ get_normal_name(char *s)	/* for utf-8 and latin-1 */
 /* Return the coding spec in S, or NULL if none is found.  */
 
 static char *
-get_coding_spec(const char *s, Py_ssize_t size)
+get_coding_spec(const char *s, int size)
 {
-	Py_ssize_t i;
+	int i;
 	/* Coding spec must be in a comment, and that comment must be
          * the only statement on the source code line. */
         for (i = 0; i < size - 6; i++) {
@@ -228,7 +229,7 @@ get_coding_spec(const char *s, Py_ssize_t size)
 			} while (t[0] == '\x20' || t[0] == '\t');
 
 			begin = t;
-			while (isalnum(Py_CHARMASK(t[0])) ||
+			while (isalnum((int)t[0]) ||
 			       t[0] == '-' || t[0] == '_' || t[0] == '.')
 				t++;
 
@@ -252,7 +253,7 @@ get_coding_spec(const char *s, Py_ssize_t size)
    Return 1 on success, 0 on failure.  */
 
 static int
-check_coding_spec(const char* line, Py_ssize_t size, struct tok_state *tok,
+check_coding_spec(const char* line, int size, struct tok_state *tok,
 		  int set_readline(struct tok_state *, const char *))
 {
 	char * cs;
@@ -276,14 +277,11 @@ check_coding_spec(const char* line, Py_ssize_t size, struct tok_state *tok,
 					tok->encoding = cs;
 					tok->decoding_state = -1;
 				}
-				else
-					PyMem_DEL(cs);
 #else
                                 /* Without Unicode support, we cannot
                                    process the coding spec. Since there
                                    won't be any Unicode literals, that
                                    won't matter. */
-				PyMem_DEL(cs);
 #endif
 			}
 		} else {	/* then, compare cs with BOM */
@@ -333,8 +331,6 @@ check_bom(int get_char(struct tok_state *),
 		unget_char(ch, tok);
 		return 1;
 	}
-	if (tok->encoding != NULL)
-		PyMem_DEL(tok->encoding);
 	tok->encoding = new_string("utf-8", 5);	/* resulting is in utf-8 */
 	return 1;
   NON_BOM:
@@ -369,7 +365,7 @@ fp_readl(char *s, int size, struct tok_state *tok)
 	PyObject* utf8 = NULL;
 	PyObject* buf = tok->decoding_buffer;
 	char *str;
-	Py_ssize_t utf8len;
+	int utf8len;
 
 	/* Ask for one less byte so we can terminate it */
 	assert(size > 0);
@@ -461,7 +457,7 @@ static char *
 decoding_fgets(char *s, int size, struct tok_state *tok)
 {
 	char *line = NULL;
-	int badchar = 0;
+	int warn = 0, badchar = 0;
 	for (;;) {
 		if (tok->decoding_state < 0) {
 			/* We already have a codec associated with
@@ -472,6 +468,7 @@ decoding_fgets(char *s, int size, struct tok_state *tok)
 			/* We want a 'raw' read. */
 			line = Py_UniversalNewlineFgets(s, size, 
 							tok->fp, NULL);
+			warn = 1;
 			break;
 		} else {
 			/* We have not yet determined the encoding.
@@ -488,9 +485,7 @@ decoding_fgets(char *s, int size, struct tok_state *tok)
 		}
 	}
 #ifndef PGEN
-	/* The default encoding is ASCII, so make sure we don't have any
-           non-ASCII bytes in it. */
-	if (line && !tok->encoding) {
+	if (warn && line && !tok->issued_encoding_warning && !tok->encoding) {
 		unsigned char *c;
 		for (c = (unsigned char *)line; *c; c++)
 			if (*c > 127) {
@@ -508,8 +503,12 @@ decoding_fgets(char *s, int size, struct tok_state *tok)
 			"but no encoding declared; "
 			"see http://www.python.org/peps/pep-0263.html for details", 
 			badchar, tok->filename, tok->lineno + 1);
-		PyErr_SetString(PyExc_SyntaxError, buf);
-		return error_ret(tok);
+		/* We don't use PyErr_WarnExplicit() here because
+		   printing the line in question to e.g. a log file
+		   could result in sensitive information being
+		   exposed. */
+		PyErr_Warn(PyExc_DeprecationWarning, buf);
+		tok->issued_encoding_warning = 1;
 	}
 #endif
 	return line;
@@ -585,14 +584,14 @@ decode_str(const char *str, struct tok_state *tok)
 	tok->enc = NULL;
 	tok->str = str;
 	if (!check_bom(buf_getc, buf_ungetc, buf_setreadl, tok))
-		return error_ret(tok);
+		return NULL;
 	str = tok->str;		/* string after BOM if any */
 	assert(str);
 #ifdef Py_USING_UNICODE
 	if (tok->enc != NULL) {
 		utf8 = translate_into_utf8(str, tok->enc);
 		if (utf8 == NULL)
-			return error_ret(tok);
+			return NULL;
 		str = PyString_AsString(utf8);
 	}
 #endif
@@ -605,16 +604,13 @@ decode_str(const char *str, struct tok_state *tok)
 	}
 	tok->enc = NULL;
 	if (!check_coding_spec(str, s - str, tok, buf_setreadl))
-		return error_ret(tok);
+		return NULL;
 #ifdef Py_USING_UNICODE
 	if (tok->enc != NULL) {
 		assert(utf8 == NULL);
 		utf8 = translate_into_utf8(str, tok->enc);
-		if (utf8 == NULL) {
-			PyErr_Format(PyExc_SyntaxError,
-				"unknown encoding: %s", tok->enc);
-			return error_ret(tok);
-		}
+		if (utf8 == NULL)
+			return NULL;
 		str = PyString_AsString(utf8);
 	}
 #endif
@@ -634,11 +630,8 @@ PyTokenizer_FromString(const char *str)
 	if (tok == NULL)
 		return NULL;
 	str = (char *)decode_str(str, tok);
-	if (str == NULL) {
-		PyTokenizer_Free(tok);
+	if (str == NULL)
 		return NULL;
-	}
-
 	/* XXX: constify members. */
 	tok->buf = tok->cur = tok->end = tok->inp = (char*)str;
 	return tok;
@@ -654,7 +647,7 @@ PyTokenizer_FromFile(FILE *fp, char *ps1, char *ps2)
 	if (tok == NULL)
 		return NULL;
 	if ((tok->buf = PyMem_NEW(char, BUFSIZ)) == NULL) {
-		PyTokenizer_Free(tok);
+		PyMem_DEL(tok);
 		return NULL;
 	}
 	tok->cur = tok->inp = tok->buf;
@@ -711,9 +704,7 @@ tok_stdin_decode(struct tok_state *tok, char **inp)
 	if (utf8 == NULL)
 		goto error_clear;
 
-	assert(PyString_Check(utf8));
-	converted = new_string(PyString_AS_STRING(utf8),
-			       PyString_GET_SIZE(utf8));
+	converted = new_string(PyString_AsString(utf8), PyString_Size(utf8));
 	Py_DECREF(utf8);
 	if (converted == NULL)
 		goto error_nomem;
@@ -766,7 +757,6 @@ tok_nextc(register struct tok_state *tok)
 			}
 			if (tok->start == NULL)
 				tok->buf = tok->cur;
-			tok->line_start = tok->cur;
 			tok->lineno++;
 			tok->inp = end;
 			return Py_CHARMASK(*tok->cur++);
@@ -801,7 +791,6 @@ tok_nextc(register struct tok_state *tok)
 				}
 				tok->buf = buf;
 				tok->cur = tok->buf + oldlen;
-				tok->line_start = tok->cur;
 				strcpy(tok->buf + oldlen, new);
 				PyMem_FREE(new);
 				tok->inp = tok->buf + newlen;
@@ -813,16 +802,14 @@ tok_nextc(register struct tok_state *tok)
 				if (tok->buf != NULL)
 					PyMem_DEL(tok->buf);
 				tok->buf = new;
-				tok->line_start = tok->buf;
 				tok->cur = tok->buf;
-				tok->line_start = tok->buf;
 				tok->inp = strchr(tok->buf, '\0');
 				tok->end = tok->inp + 1;
 			}
 		}
 		else {
 			int done = 0;
-			Py_ssize_t cur = 0;
+			int cur = 0;
 			char *pt;
 			if (tok->start == NULL) {
 				if (tok->buf == NULL) {
@@ -856,10 +843,10 @@ tok_nextc(register struct tok_state *tok)
 			tok->lineno++;
 			/* Read until '\n' or EOF */
 			while (!done) {
-				Py_ssize_t curstart = tok->start == NULL ? -1 :
-					          tok->start - tok->buf;
-				Py_ssize_t curvalid = tok->inp - tok->buf;
-				Py_ssize_t newsize = curvalid + BUFSIZ;
+				int curstart = tok->start == NULL ? -1 :
+					       tok->start - tok->buf;
+				int curvalid = tok->inp - tok->buf;
+				int newsize = curvalid + BUFSIZ;
 				char *newbuf = tok->buf;
 				PyMem_RESIZE(newbuf, char, newsize);
 				if (newbuf == NULL) {
@@ -875,11 +862,6 @@ tok_nextc(register struct tok_state *tok)
 				if (decoding_fgets(tok->inp,
 					       (int)(tok->end - tok->inp),
 					       tok) == NULL) {
-					/* Break out early on decoding
-					   errors, as tok->buf will be NULL
-					 */
-					if (tok->decoding_erred)
-						return EOF;
 					/* Last line does not end in \n,
 					   fake one */
 					strcpy(tok->inp, "\n");
@@ -888,7 +870,6 @@ tok_nextc(register struct tok_state *tok)
 				done = tok->inp[-1] == '\n';
 			}
 			tok->cur = tok->buf + cur;
-			tok->line_start = tok->cur;
 			/* replace "\r\n" with "\n" */
 			/* For Mac we leave the \r, giving a syntax error */
 			pt = tok->inp - 2;
@@ -1398,7 +1379,7 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
   letter_quote:
 	/* String */
 	if (c == '\'' || c == '"') {
-		Py_ssize_t quote2 = tok->cur - tok->start + 1;
+		int quote2 = tok->cur - tok->start + 1;
 		int quote = c;
 		int triple = 0;
 		int tripcount = 0;
@@ -1456,7 +1437,7 @@ tok_get(register struct tok_state *tok, char **p_start, char **p_end)
 	if (c == '\\') {
 		c = tok_nextc(tok);
 		if (c != '\n') {
-			tok->done = E_LINECONT;
+			tok->done = E_TOKEN;
 			tok->cur = tok->inp;
 			return ERRORTOKEN;
 		}

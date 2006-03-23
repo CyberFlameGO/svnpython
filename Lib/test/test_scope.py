@@ -1,4 +1,4 @@
-from test.test_support import verify, TestFailed, check_syntax, vereq
+from test.test_support import verify, TestFailed, check_syntax
 
 import warnings
 warnings.filterwarnings("ignore", r"import \*", SyntaxWarning, "<string>")
@@ -13,8 +13,8 @@ def make_adder(x):
 inc = make_adder(1)
 plus10 = make_adder(10)
 
-vereq(inc(1), 2)
-vereq(plus10(-2), 8)
+verify(inc(1) == 2)
+verify(plus10(-2) == 8)
 
 print "2. extra nesting"
 
@@ -28,8 +28,8 @@ def make_adder2(x):
 inc = make_adder2(1)
 plus10 = make_adder2(10)
 
-vereq(inc(1), 2)
-vereq(plus10(-2), 8)
+verify(inc(1) == 2)
+verify(plus10(-2) == 8)
 
 print "3. simple nesting + rebinding"
 
@@ -42,8 +42,8 @@ def make_adder3(x):
 inc = make_adder3(0)
 plus10 = make_adder3(9)
 
-vereq(inc(1), 2)
-vereq(plus10(-2), 8)
+verify(inc(1) == 2)
+verify(plus10(-2) == 8)
 
 print "4. nesting with global but no free"
 
@@ -58,10 +58,10 @@ def make_adder4(): # XXX add exta level of indirection
 
 global_x = 1
 adder = make_adder4()
-vereq(adder(1), 2)
+verify(adder(1) == 2)
 
 global_x = 10
-vereq(adder(-2), 8)
+verify(adder(-2) == 8)
 
 print "5. nesting through class"
 
@@ -74,8 +74,8 @@ def make_adder5(x):
 inc = make_adder5(1)
 plus10 = make_adder5(10)
 
-vereq(inc(1), 2)
-vereq(plus10(-2), 8)
+verify(inc(1) == 2)
+verify(plus10(-2) == 8)
 
 print "6. nesting plus free ref to global"
 
@@ -89,8 +89,8 @@ def make_adder6(x):
 inc = make_adder6(1)
 plus10 = make_adder6(10)
 
-vereq(inc(1), 11) # there's only one global
-vereq(plus10(-2), 8)
+verify(inc(1) == 11) # there's only one global
+verify(plus10(-2) == 8)
 
 print "7. nearest enclosing scope"
 
@@ -103,7 +103,7 @@ def f(x):
     return g(2)
 
 test_func = f(10)
-vereq(test_func(5), 47)
+verify(test_func(5) == 47)
 
 print "8. mixed freevars and cellvars"
 
@@ -123,7 +123,7 @@ def f(x, y, z):
 
 g = f(1, 2, 3)
 h = g(2, 4, 6)
-vereq(h(), 39)
+verify(h() == 39)
 
 print "9. free variable in method"
 
@@ -141,9 +141,9 @@ def test():
     return Test()
 
 t = test()
-vereq(t.test(), "var")
-vereq(t.method_and_var(), "method")
-vereq(t.actual_global(), "global")
+verify(t.test() == "var")
+verify(t.method_and_var() == "method")
+verify(t.actual_global() == "global")
 
 method_and_var = "var"
 class Test:
@@ -158,9 +158,9 @@ class Test:
         return str(self)
 
 t = Test()
-vereq(t.test(), "var")
-vereq(t.method_and_var(), "method")
-vereq(t.actual_global(), "global")
+verify(t.test() == "var")
+verify(t.method_and_var() == "method")
+verify(t.actual_global() == "global")
 
 print "10. recursion"
 
@@ -175,7 +175,7 @@ def f(x):
     else:
         raise ValueError, "x must be >= 0"
 
-vereq(f(6), 720)
+verify(f(6) == 720)
 
 
 print "11. unoptimized namespaces"
@@ -252,24 +252,24 @@ print "12. lambdas"
 f1 = lambda x: lambda y: x + y
 inc = f1(1)
 plus10 = f1(10)
-vereq(inc(1), 2)
-vereq(plus10(5), 15)
+verify(inc(1) == 2)
+verify(plus10(5) == 15)
 
 f2 = lambda x: (lambda : lambda y: x + y)()
 inc = f2(1)
 plus10 = f2(10)
-vereq(inc(1), 2)
-vereq(plus10(5), 15)
+verify(inc(1) == 2)
+verify(plus10(5) == 15)
 
 f3 = lambda x: lambda y: global_x + y
 global_x = 1
 inc = f3(None)
-vereq(inc(2), 3)
+verify(inc(2) == 3)
 
 f8 = lambda x, y, z: lambda a, b, c: lambda : z * (b + y)
 g = f8(1, 2, 3)
 h = g(2, 4, 6)
-vereq(h(), 18)
+verify(h() == 18)
 
 print "13. UnboundLocal"
 
@@ -306,21 +306,21 @@ def makeReturner(*lst):
         return lst
     return returner
 
-vereq(makeReturner(1,2,3)(), (1,2,3))
+verify(makeReturner(1,2,3)() == (1,2,3))
 
 def makeReturner2(**kwargs):
     def returner():
         return kwargs
     return returner
 
-vereq(makeReturner2(a=11)()['a'], 11)
+verify(makeReturner2(a=11)()['a'] == 11)
 
 def makeAddPair((a, b)):
     def addPair((c, d)):
         return (a + c, b + d)
     return addPair
 
-vereq(makeAddPair((1, 2))((100, 200)), (101,202))
+verify(makeAddPair((1, 2))((100, 200)) == (101,202))
 
 print "15. scope of global statements"
 # Examples posted by Samuele Pedroni to python-dev on 3/1/2001
@@ -337,8 +337,8 @@ def f():
             return h()
         return i()
     return g()
-vereq(f(), 7)
-vereq(x, 7)
+verify(f() == 7)
+verify(x == 7)
 
 # II
 x = 7
@@ -352,8 +352,8 @@ def f():
             return h()
         return i()
     return g()
-vereq(f(), 2)
-vereq(x, 7)
+verify(f() == 2)
+verify(x == 7)
 
 # III
 x = 7
@@ -368,8 +368,8 @@ def f():
             return h()
         return i()
     return g()
-vereq(f(), 2)
-vereq(x, 2)
+verify(f() == 2)
+verify(x == 2)
 
 # IV
 x = 7
@@ -384,25 +384,8 @@ def f():
             return h()
         return i()
     return g()
-vereq(f(), 2)
-vereq(x, 2)
-
-# XXX what about global statements in class blocks?
-# do they affect methods?
-
-x = 12
-class Global:
-    global x
-    x = 13
-    def set(self, val):
-        x = val
-    def get(self):
-        return x
-
-g = Global()
-vereq(g.get(), 13)
-g.set(15)
-vereq(g.get(), 13)
+verify(f() == 2)
+verify(x == 2)
 
 print "16. check leaks"
 
@@ -424,7 +407,7 @@ def f1():
 for i in range(100):
     f1()
 
-vereq(Foo.count, 0)
+verify(Foo.count == 0)
 
 print "17. class and global"
 
@@ -436,18 +419,9 @@ def test(x):
     return Foo()
 
 x = 0
-vereq(test(6)(2), 8)
+verify(test(6)(2) == 8)
 x = -1
-vereq(test(3)(2), 5)
-
-looked_up_by_load_name = False
-class X:
-    # Implicit globals inside classes are be looked up by LOAD_NAME, not
-    # LOAD_GLOBAL.
-    locals()['looked_up_by_load_name'] = True
-    passed = looked_up_by_load_name
-
-verify(X.passed)
+verify(test(3)(2) == 5)
 
 print "18. verify that locals() works"
 
@@ -463,7 +437,7 @@ def f(x):
 d = f(2)(4)
 verify(d.has_key('h'))
 del d['h']
-vereq(d, {'x': 2, 'y': 7, 'w': 6})
+verify(d == {'x': 2, 'y': 7, 'w': 6})
 
 print "19. var is bound and free in class"
 
@@ -475,7 +449,7 @@ def f(x):
     return C
 
 inst = f(3)()
-vereq(inst.a, inst.m())
+verify(inst.a == inst.m())
 
 print "20. interaction with trace function"
 

@@ -32,9 +32,6 @@ try:
 except (ImportError, locale.Error):
     pass
 
-# Encoding for file names
-filesystemencoding = sys.getfilesystemencoding()
-
 encoding = "ascii"
 if sys.platform == 'win32':
     # On Windows, we could use "mbcs". However, to give the user
@@ -521,10 +518,7 @@ class IOBinding:
         if not self.opendialog:
             self.opendialog = tkFileDialog.Open(master=self.text,
                                                 filetypes=self.filetypes)
-        filename = self.opendialog.show(initialdir=dir, initialfile=base)
-        if isinstance(filename, unicode):
-            filename = filename.encode(filesystemencoding)
-        return filename
+        return self.opendialog.show(initialdir=dir, initialfile=base)
 
     def defaultfilename(self, mode="open"):
         if self.filename:
@@ -543,10 +537,7 @@ class IOBinding:
         if not self.savedialog:
             self.savedialog = tkFileDialog.SaveAs(master=self.text,
                                                   filetypes=self.filetypes)
-        filename = self.savedialog.show(initialdir=dir, initialfile=base)
-        if isinstance(filename, unicode):
-            filename = filename.encode(filesystemencoding)
-        return filename
+        return self.savedialog.show(initialdir=dir, initialfile=base)
 
     def updaterecentfileslist(self,filename):
         "Update recent file list on all editor windows"

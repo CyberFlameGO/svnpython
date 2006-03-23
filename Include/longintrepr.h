@@ -52,7 +52,7 @@ struct _longobject {
 	digit ob_digit[1];
 };
 
-PyAPI_FUNC(PyLongObject *) _PyLong_New(Py_ssize_t);
+PyAPI_FUNC(PyLongObject *) _PyLong_New(int);
 
 /* Return a copy of src. */
 PyAPI_FUNC(PyObject *) _PyLong_Copy(PyLongObject *src);

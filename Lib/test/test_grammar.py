@@ -8,7 +8,7 @@
 # regression test, the filterwarnings() call has been added to
 # regrtest.py.
 
-from test.test_support import TestFailed, verify, vereq, check_syntax
+from test.test_support import TestFailed, verify, check_syntax
 import sys
 
 print '1. Parser'
@@ -157,31 +157,28 @@ def f2(one_argument): pass
 def f3(two, arguments): pass
 def f4(two, (compound, (argument, list))): pass
 def f5((compound, first), two): pass
-vereq(f2.func_code.co_varnames, ('one_argument',))
-vereq(f3.func_code.co_varnames, ('two', 'arguments'))
+verify(f2.func_code.co_varnames == ('one_argument',))
+verify(f3.func_code.co_varnames == ('two', 'arguments'))
 if sys.platform.startswith('java'):
-    vereq(f4.func_code.co_varnames,
+    verify(f4.func_code.co_varnames ==
            ('two', '(compound, (argument, list))', 'compound', 'argument',
                         'list',))
-    vereq(f5.func_code.co_varnames,
+    verify(f5.func_code.co_varnames ==
            ('(compound, first)', 'two', 'compound', 'first'))
 else:
-    vereq(f4.func_code.co_varnames,
-          ('two', '.1', 'compound', 'argument',  'list'))
-    vereq(f5.func_code.co_varnames,
-          ('.0', 'two', 'compound', 'first'))
+    verify(f4.func_code.co_varnames == ('two', '.2', 'compound',
+                                        'argument',  'list'))
+    verify(f5.func_code.co_varnames == ('.0', 'two', 'compound', 'first'))
 def a1(one_arg,): pass
 def a2(two, args,): pass
 def v0(*rest): pass
 def v1(a, *rest): pass
 def v2(a, b, *rest): pass
 def v3(a, (b, c), *rest): return a, b, c, rest
-# ceval unpacks the formal arguments into the first argcount names;
-# thus, the names nested inside tuples must appear after these names.
 if sys.platform.startswith('java'):
     verify(v3.func_code.co_varnames == ('a', '(b, c)', 'rest', 'b', 'c'))
 else:
-    vereq(v3.func_code.co_varnames, ('a', '.1', 'rest', 'b', 'c'))
+    verify(v3.func_code.co_varnames == ('a', '.2', 'rest', 'b', 'c'))
 verify(v3(1, (2, 3), 4) == (1, 2, 3, (4,)))
 def d01(a=1): pass
 d01()
@@ -276,10 +273,6 @@ check_syntax("lambda x: x = 2")
 ### simple_stmt: small_stmt (';' small_stmt)* [';']
 print 'simple_stmt'
 x = 1; pass; del x
-def foo():
-    # verify statments that end with semi-colons
-    x = 1; pass; del x;
-foo()
 
 ### small_stmt: expr_stmt | print_stmt  | pass_stmt | del_stmt | flow_stmt | import_stmt | global_stmt | access_stmt | exec_stmt
 # Tested below
@@ -417,10 +410,6 @@ def g1(): return
 def g2(): return 1
 g1()
 x = g2()
-check_syntax("class foo:return 1")
-
-print 'yield_stmt'
-check_syntax("class foo:yield 1")
 
 print 'raise_stmt' # 'raise' test [',' test]
 try: raise RuntimeError, 'just testing'
@@ -663,18 +652,6 @@ s = a[:]
 s = a[-5:]
 s = a[:-1]
 s = a[-4:-3]
-# A rough test of SF bug 1333982.  http://python.org/sf/1333982
-# The testing here is fairly incomplete.
-# Test cases should include: commas with 1 and 2 colons
-d = {}
-d[1] = 1
-d[1,] = 2
-d[1,2] = 3
-d[1,2,3] = 4
-L = list(d)
-L.sort()
-print L
-
 
 print 'atoms'
 ### atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictmaker] '}' | '`' testlist '`' | NAME | NUMBER | STRING
@@ -708,9 +685,8 @@ x = 123
 ### testlist: test (',' test)* [',']
 # These have been exercised enough above
 
-print 'classdef' # 'class' NAME ['(' [testlist] ')'] ':' suite
+print 'classdef' # 'class' NAME ['(' testlist ')'] ':' suite
 class B: pass
-class B2(): pass
 class C1(B): pass
 class C2(B): pass
 class D(C1, C2, B): pass
@@ -810,28 +786,3 @@ verify(len(list(g)) == 10)
 x = 10; t = False; g = ((i,j) for i in range(x) if t for j in range(x))
 x = 5; t = True;
 verify([(i,j) for i in range(10) for j in range(5)] == list(g))
-
-# Test ifelse expressions in various cases
-def _checkeval(msg, ret):
-    "helper to check that evaluation of expressions is done correctly"
-    print x
-    return ret
-
-verify([ x() for x in lambda: True, lambda: False if x() ] == [True])
-verify([ x() for x in (lambda: True, lambda: False) if x() ] == [True])
-verify([ x(False) for x in (lambda x: False if x else True, lambda x: True if x else False) if x(False) ] == [True])
-verify((5 if 1 else _checkeval("check 1", 0)) == 5)
-verify((_checkeval("check 2", 0) if 0 else 5) == 5)
-verify((5 and 6 if 0 else 1) == 1)
-verify(((5 and 6) if 0 else 1) == 1)
-verify((5 and (6 if 1 else 1)) == 6)
-verify((0 or _checkeval("check 3", 2) if 0 else 3) == 3)
-verify((1 or _checkeval("check 4", 2) if 1 else _checkeval("check 5", 3)) == 1)
-verify((0 or 5 if 1 else _checkeval("check 6", 3)) == 5)
-verify((not 5 if 1 else 1) == False)
-verify((not 5 if 0 else 1) == 1)
-verify((6 + 1 if 1 else 2) == 7)
-verify((6 - 1 if 1 else 2) == 5)
-verify((6 * 2 if 1 else 4) == 12)
-verify((6 / 2 if 1 else 3) == 3)
-verify((6 < 4 if 0 else 2) == 2)

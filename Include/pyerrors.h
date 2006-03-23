@@ -15,46 +15,16 @@ PyAPI_FUNC(void) PyErr_Clear(void);
 PyAPI_FUNC(void) PyErr_Fetch(PyObject **, PyObject **, PyObject **);
 PyAPI_FUNC(void) PyErr_Restore(PyObject *, PyObject *, PyObject *);
 
-#ifdef Py_DEBUG
-#define _PyErr_OCCURRED() PyErr_Occurred()
-#else
-#define _PyErr_OCCURRED() (_PyThreadState_Current->curexc_type)
-#endif
-
 /* Error testing and normalization */
 PyAPI_FUNC(int) PyErr_GivenExceptionMatches(PyObject *, PyObject *);
 PyAPI_FUNC(int) PyErr_ExceptionMatches(PyObject *);
 PyAPI_FUNC(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 
-/* */
 
-#define PyExceptionClass_Check(x)					\
-	(PyClass_Check((x))						\
-	 || (PyType_Check((x)) && PyType_IsSubtype(			\
-		     (PyTypeObject*)(x), (PyTypeObject*)PyExc_BaseException)))
-
-
-#define PyExceptionInstance_Check(x)			\
-	(PyInstance_Check((x)) ||			\
-	 (PyType_IsSubtype((x)->ob_type, (PyTypeObject*)PyExc_BaseException)))
-
-#define PyExceptionClass_Name(x)				   \
-	(PyClass_Check((x))					   \
-	 ? PyString_AS_STRING(((PyClassObject*)(x))->cl_name)	   \
-	 : (char *)(((PyTypeObject*)(x))->tp_name))
-
-#define PyExceptionInstance_Class(x)					\
-	((PyInstance_Check((x))						\
-	  ? (PyObject*)((PyInstanceObject*)(x))->in_class		\
-	  : (PyObject*)((x)->ob_type)))
-
-	
 /* Predefined exceptions */
 
-PyAPI_DATA(PyObject *) PyExc_BaseException;
 PyAPI_DATA(PyObject *) PyExc_Exception;
 PyAPI_DATA(PyObject *) PyExc_StopIteration;
-PyAPI_DATA(PyObject *) PyExc_GeneratorExit;
 PyAPI_DATA(PyObject *) PyExc_StandardError;
 PyAPI_DATA(PyObject *) PyExc_ArithmeticError;
 PyAPI_DATA(PyObject *) PyExc_LookupError;
@@ -179,15 +149,15 @@ PyAPI_FUNC(PyObject *) PyErr_ProgramText(const char *, int);
 
 /* create a UnicodeDecodeError object */
 PyAPI_FUNC(PyObject *) PyUnicodeDecodeError_Create(
-	const char *, const char *, Py_ssize_t, Py_ssize_t, Py_ssize_t, const char *);
+	const char *, const char *, int, int, int, const char *);
 
 /* create a UnicodeEncodeError object */
 PyAPI_FUNC(PyObject *) PyUnicodeEncodeError_Create(
-	const char *, const Py_UNICODE *, Py_ssize_t, Py_ssize_t, Py_ssize_t, const char *);
+	const char *, const Py_UNICODE *, int, int, int, const char *);
 
 /* create a UnicodeTranslateError object */
 PyAPI_FUNC(PyObject *) PyUnicodeTranslateError_Create(
-	const Py_UNICODE *, Py_ssize_t, Py_ssize_t, Py_ssize_t, const char *);
+	const Py_UNICODE *, int, int, int, const char *);
 
 /* get the encoding attribute */
 PyAPI_FUNC(PyObject *) PyUnicodeEncodeError_GetEncoding(PyObject *);
@@ -200,27 +170,27 @@ PyAPI_FUNC(PyObject *) PyUnicodeTranslateError_GetObject(PyObject *);
 
 /* get the value of the start attribute (the int * may not be NULL)
    return 0 on success, -1 on failure */
-PyAPI_FUNC(int) PyUnicodeEncodeError_GetStart(PyObject *, Py_ssize_t *);
-PyAPI_FUNC(int) PyUnicodeDecodeError_GetStart(PyObject *, Py_ssize_t *);
-PyAPI_FUNC(int) PyUnicodeTranslateError_GetStart(PyObject *, Py_ssize_t *);
+PyAPI_FUNC(int) PyUnicodeEncodeError_GetStart(PyObject *, int *);
+PyAPI_FUNC(int) PyUnicodeDecodeError_GetStart(PyObject *, int *);
+PyAPI_FUNC(int) PyUnicodeTranslateError_GetStart(PyObject *, int *);
 
 /* assign a new value to the start attribute
    return 0 on success, -1 on failure */
-PyAPI_FUNC(int) PyUnicodeEncodeError_SetStart(PyObject *, Py_ssize_t);
-PyAPI_FUNC(int) PyUnicodeDecodeError_SetStart(PyObject *, Py_ssize_t);
-PyAPI_FUNC(int) PyUnicodeTranslateError_SetStart(PyObject *, Py_ssize_t);
+PyAPI_FUNC(int) PyUnicodeEncodeError_SetStart(PyObject *, int);
+PyAPI_FUNC(int) PyUnicodeDecodeError_SetStart(PyObject *, int);
+PyAPI_FUNC(int) PyUnicodeTranslateError_SetStart(PyObject *, int);
 
 /* get the value of the end attribute (the int *may not be NULL)
  return 0 on success, -1 on failure */
-PyAPI_FUNC(int) PyUnicodeEncodeError_GetEnd(PyObject *, Py_ssize_t *);
-PyAPI_FUNC(int) PyUnicodeDecodeError_GetEnd(PyObject *, Py_ssize_t *);
-PyAPI_FUNC(int) PyUnicodeTranslateError_GetEnd(PyObject *, Py_ssize_t *);
+PyAPI_FUNC(int) PyUnicodeEncodeError_GetEnd(PyObject *, int *);
+PyAPI_FUNC(int) PyUnicodeDecodeError_GetEnd(PyObject *, int *);
+PyAPI_FUNC(int) PyUnicodeTranslateError_GetEnd(PyObject *, int *);
 
 /* assign a new value to the end attribute
    return 0 on success, -1 on failure */
-PyAPI_FUNC(int) PyUnicodeEncodeError_SetEnd(PyObject *, Py_ssize_t);
-PyAPI_FUNC(int) PyUnicodeDecodeError_SetEnd(PyObject *, Py_ssize_t);
-PyAPI_FUNC(int) PyUnicodeTranslateError_SetEnd(PyObject *, Py_ssize_t);
+PyAPI_FUNC(int) PyUnicodeEncodeError_SetEnd(PyObject *, int);
+PyAPI_FUNC(int) PyUnicodeDecodeError_SetEnd(PyObject *, int);
+PyAPI_FUNC(int) PyUnicodeTranslateError_SetEnd(PyObject *, int);
 
 /* get the value of the reason attribute */
 PyAPI_FUNC(PyObject *) PyUnicodeEncodeError_GetReason(PyObject *);

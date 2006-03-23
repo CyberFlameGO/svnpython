@@ -3,14 +3,14 @@ import os
 import marshal
 import struct
 import sys
+import types
 from cStringIO import StringIO
 
 from compiler import ast, parse, walk, syntax
 from compiler import pyassem, misc, future, symbols
 from compiler.consts import SC_LOCAL, SC_GLOBAL, SC_FREE, SC_CELL
-from compiler.consts import (CO_VARARGS, CO_VARKEYWORDS, CO_NEWLOCALS,
-     CO_NESTED, CO_GENERATOR, CO_FUTURE_DIVISION,
-     CO_FUTURE_ABSIMPORT, CO_FUTURE_WITH_STATEMENT)
+from compiler.consts import CO_VARARGS, CO_VARKEYWORDS, CO_NEWLOCALS,\
+     CO_NESTED, CO_GENERATOR, CO_GENERATOR_ALLOWED, CO_FUTURE_DIVISION
 from compiler.pyassem import TupleArg
 
 # XXX The version-specific code can go, since this code only works with 2.x.
@@ -214,10 +214,8 @@ class CodeGenerator:
             if feature == "division":
                 self.graph.setFlag(CO_FUTURE_DIVISION)
                 self._div_op = "BINARY_TRUE_DIVIDE"
-            elif feature == "absolute_import":
-                self.graph.setFlag(CO_FUTURE_ABSIMPORT)
-            elif feature == "with_statement":
-                self.graph.setFlag(CO_FUTURE_WITH_STATEMENT)
+            elif feature == "generators":
+                self.graph.setFlag(CO_GENERATOR_ALLOWED)
 
     def initClass(self):
         """This method is called once for each class"""
@@ -546,19 +544,6 @@ class CodeGenerator:
     def visitOr(self, node):
         self.visitTest(node, 'JUMP_IF_TRUE')
 
-    def visitIfExp(self, node):
-        endblock = self.newBlock()
-        elseblock = self.newBlock()
-        self.visit(node.test)
-        self.emit('JUMP_IF_FALSE', elseblock)
-        self.emit('POP_TOP')
-        self.visit(node.then)
-        self.emit('JUMP_FORWARD', endblock)
-        self.nextBlock(elseblock)
-        self.emit('POP_TOP')
-        self.visit(node.else_)
-        self.nextBlock(endblock)
-
     def visitCompare(self, node):
         self.visit(node.expr)
         cleanup = self.newBlock()
@@ -823,45 +808,6 @@ class CodeGenerator:
         self.emit('END_FINALLY')
         self.setups.pop()
 
-    __with_count = 0
-
-    def visitWith(self, node):
-        body = self.newBlock()
-        final = self.newBlock()
-        exitvar = "$exit%d" % self.__with_count
-        valuevar = "$value%d" % self.__with_count
-        self.__with_count += 1
-        self.set_lineno(node)
-        self.visit(node.expr)
-        self.emit('LOAD_ATTR', '__context__')
-        self.emit('CALL_FUNCTION', 0)
-        self.emit('DUP_TOP')
-        self.emit('LOAD_ATTR', '__exit__')
-        self._implicitNameOp('STORE', exitvar)
-        self.emit('LOAD_ATTR', '__enter__')
-        self.emit('CALL_FUNCTION', 0)
-        if node.vars is None:
-            self.emit('POP_TOP')
-        else:
-            self._implicitNameOp('STORE', valuevar)
-        self.emit('SETUP_FINALLY', final)
-        self.nextBlock(body)
-        self.setups.push((TRY_FINALLY, body))
-        if node.vars is not None:
-            self._implicitNameOp('LOAD', valuevar)
-            self._implicitNameOp('DELETE', valuevar)
-            self.visit(node.vars)
-        self.visit(node.body)
-        self.emit('POP_BLOCK')
-        self.setups.pop()
-        self.emit('LOAD_CONST', None)
-        self.nextBlock(final)
-        self.setups.push((END_FINALLY, final))
-        self.emit('WITH_CLEANUP')
-        self.emit('END_FINALLY')
-        self.setups.pop()
-        self.__with_count -= 1
-
     # misc
 
     def visitDiscard(self, node):
@@ -889,10 +835,8 @@ class CodeGenerator:
 
     def visitImport(self, node):
         self.set_lineno(node)
-        level = 0 if self.graph.checkFlag(CO_FUTURE_ABSIMPORT) else -1
         for name, alias in node.names:
             if VERSION > 1:
-                self.emit('LOAD_CONST', level)
                 self.emit('LOAD_CONST', None)
             self.emit('IMPORT_NAME', name)
             mod = name.split(".")[0]
@@ -904,12 +848,8 @@ class CodeGenerator:
 
     def visitFrom(self, node):
         self.set_lineno(node)
-        level = node.level
-        if level == 0 and not self.graph.checkFlag(CO_FUTURE_ABSIMPORT):
-            level = -1
         fromlist = map(lambda (name, alias): name, node.names)
         if VERSION > 1:
-            self.emit('LOAD_CONST', level)
             self.emit('LOAD_CONST', tuple(fromlist))
         self.emit('IMPORT_NAME', node.modname)
         for name, alias in node.names:
@@ -1045,6 +985,8 @@ class CodeGenerator:
             self.emit('STORE_SLICE+%d' % slice)
 
     def visitAugSubscript(self, node, mode):
+        if len(node.subs) > 1:
+            raise SyntaxError, "augmented assignment to tuple is not possible"
         if mode == "load":
             self.visitSubscript(node, 1)
         elif mode == "store":
@@ -1149,10 +1091,10 @@ class CodeGenerator:
         self.visit(node.expr)
         for sub in node.subs:
             self.visit(sub)
-        if len(node.subs) > 1:
-            self.emit('BUILD_TUPLE', len(node.subs))
         if aug_flag:
             self.emit('DUP_TOPX', 2)
+        if len(node.subs) > 1:
+            self.emit('BUILD_TUPLE', len(node.subs))
         if node.flags == 'OP_APPLY':
             self.emit('BINARY_SUBSCR')
         elif node.flags == 'OP_ASSIGN':
@@ -1370,7 +1312,7 @@ class AbstractFunctionCode:
     def generateArgUnpack(self, args):
         for i in range(len(args)):
             arg = args[i]
-            if isinstance(arg, tuple):
+            if type(arg) == types.TupleType:
                 self.emit('LOAD_FAST', '.%d' % (i * 2))
                 self.unpackSequence(arg)
 
@@ -1380,7 +1322,7 @@ class AbstractFunctionCode:
         else:
             self.emit('UNPACK_TUPLE', len(tup))
         for elt in tup:
-            if isinstance(elt, tuple):
+            if type(elt) == types.TupleType:
                 self.unpackSequence(elt)
             else:
                 self._nameOp('STORE', elt)
@@ -1466,9 +1408,9 @@ def generateArgList(arglist):
     count = 0
     for i in range(len(arglist)):
         elt = arglist[i]
-        if isinstance(elt, str):
+        if type(elt) == types.StringType:
             args.append(elt)
-        elif isinstance(elt, tuple):
+        elif type(elt) == types.TupleType:
             args.append(TupleArg(i * 2, elt))
             extra.extend(misc.flatten(elt))
             count = count + 1

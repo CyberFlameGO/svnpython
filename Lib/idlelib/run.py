@@ -9,8 +9,6 @@ import threading
 import Queue
 
 import CallTips
-import AutoComplete
-
 import RemoteDebugger
 import RemoteObjectBrowser
 import StackViewer
@@ -84,8 +82,9 @@ def main(del_exitfunc=False):
                     # exiting but got an extra KBI? Try again!
                     continue
             try:
-                seq, request = rpc.request_queue.get(block=True, timeout=0.05)
+                seq, request = rpc.request_queue.get(0)
             except Queue.Empty:
+                time.sleep(0.05)
                 continue
             method, args, kwargs = request
             ret = method(*args, **kwargs)
@@ -271,13 +270,12 @@ class MyHandler(rpc.RPCHandler):
         thread.interrupt_main()
 
 
-class Executive(object):
+class Executive:
 
     def __init__(self, rpchandler):
         self.rpchandler = rpchandler
         self.locals = __main__.__dict__
         self.calltip = CallTips.CallTips()
-        self.autocomplete = AutoComplete.AutoComplete()
 
     def runcode(self, code):
         try:
@@ -307,9 +305,6 @@ class Executive(object):
 
     def get_the_calltip(self, name):
         return self.calltip.fetch_tip(name)
-
-    def get_the_completion_list(self, what, mode):
-        return self.autocomplete.fetch_completions(what, mode)
 
     def stackviewer(self, flist_oid=None):
         if self.usr_exc_info:

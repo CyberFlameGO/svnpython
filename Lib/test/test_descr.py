@@ -691,13 +691,13 @@ def metaclass():
     class _instance(object):
         pass
     class M2(object):
-        @staticmethod
         def __new__(cls, name, bases, dict):
             self = object.__new__(cls)
             self.name = name
             self.bases = bases
             self.dict = dict
             return self
+        __new__ = staticmethod(__new__)
         def __call__(self):
             it = _instance()
             # Early binding of methods
@@ -1493,14 +1493,6 @@ def classmethods():
     else:
         raise TestFailed, "classmethod should check for callability"
 
-    # Verify that classmethod() doesn't allow keyword args
-    try:
-        classmethod(f, kw=1)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "classmethod shouldn't accept keyword args"
-
 def classmethods_in_c():
     if verbose: print "Testing C-based class methods..."
     import xxsubtype as spam
@@ -1642,37 +1634,6 @@ def altmro():
         __metaclass__ = PerverseMetaType
     vereq(X.__mro__, (object, A, C, B, D, X))
     vereq(X().f(), "A")
-
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [self, dict, object]
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "devious mro() return not caught"
-
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [1]
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "non-class mro() return not caught"
-
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return 1
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "non-sequence mro() return not caught"
-
 
 def overloading():
     if verbose: print "Testing operator overloading..."
@@ -2008,18 +1969,6 @@ def properties():
     else:
         raise TestFailed, "expected ZeroDivisionError from bad property"
 
-    class E(object):
-        def getter(self):
-            "getter method"
-            return 0
-        def setter(self, value):
-            "setter method"
-            pass
-        prop = property(getter)
-        vereq(prop.__doc__, "getter method")
-        prop2 = property(fset=setter)
-        vereq(prop2.__doc__, None)
-
 def supers():
     if verbose: print "Testing super..."
 
@@ -2122,9 +2071,9 @@ def supers():
         aProp = property(lambda self: "foo")
 
     class Sub(Base):
-        @classmethod
         def test(klass):
             return super(Sub,klass).aProp
+        test = classmethod(test)
 
     veris(Sub.test(), Base.aProp)
 
@@ -2763,7 +2712,7 @@ def setdict():
     def cant(x, dict):
         try:
             x.__dict__ = dict
-        except (AttributeError, TypeError):
+        except TypeError:
             pass
         else:
             raise TestFailed, "shouldn't allow %r.__dict__ = %r" % (x, dict)
@@ -3366,6 +3315,31 @@ def docdescriptor():
     vereq(OldClass().__doc__, 'object=OldClass instance; type=OldClass')
     vereq(NewClass.__doc__, 'object=None; type=NewClass')
     vereq(NewClass().__doc__, 'object=NewClass instance; type=NewClass')
+
+def string_exceptions():
+    if verbose:
+        print "Testing string exceptions ..."
+
+    # Ensure builtin strings work OK as exceptions.
+    astring = "An exception string."
+    try:
+        raise astring
+    except astring:
+        pass
+    else:
+        raise TestFailed, "builtin string not usable as exception"
+
+    # Ensure string subclass instances do not.
+    class MyStr(str):
+        pass
+
+    newstring = MyStr("oops -- shouldn't work")
+    try:
+        raise newstring
+    except TypeError:
+        pass
+    except:
+        raise TestFailed, "string subclass allowed as exception"
 
 def copy_setstate():
     if verbose:
@@ -3991,30 +3965,27 @@ def vicious_descriptor_nonsense():
     import gc; gc.collect()
     vereq(hasattr(c, 'attr'), False)
 
+import warnings
+
 def test_init():
     # SF 1155938
     class Foo(object):
         def __init__(self):
             return 10
+
+    oldfilters = warnings.filters[:]
     try:
-        Foo()
-    except TypeError:
         pass
-    else:
-        raise TestFailed, "did not test __init__() for None return"
+        warnings.filterwarnings("error", category=RuntimeWarning)
+        try:
+            Foo()
+        except RuntimeWarning:
+            pass
+        else:
+            raise TestFailed, "did not test __init__() for None return"
+    finally:
+        warnings.filters = oldfilters
 
-def methodwrapper():
-    # <type 'method-wrapper'> did not support any reflection before 2.5
-    if verbose:
-        print "Testing method-wrapper objects..."
-
-    l = []
-    vereq(l.__add__, l.__add__)
-    verify(l.__add__ != [].__add__)
-    verify(l.__add__.__name__ == '__add__')
-    verify(l.__add__.__self__ is l)
-    verify(l.__add__.__objclass__ is list)
-    vereq(l.__add__.__doc__, list.__add__.__doc__)
 
 def notimplemented():
     # all binary methods should be able to return a NotImplemented
@@ -4159,6 +4130,7 @@ def test_main():
     funnynew()
     imulbug()
     docdescriptor()
+    string_exceptions()
     copy_setstate()
     slices()
     subtype_resurrection()
@@ -4179,7 +4151,6 @@ def test_main():
     filefault()
     vicious_descriptor_nonsense()
     test_init()
-    methodwrapper()
     notimplemented()
 
     if verbose: print "All OK"

@@ -1,18 +1,13 @@
 # Python test set -- built-in functions
 
 import test.test_support, unittest
-from test.test_support import fcmp, have_unicode, TESTFN, unlink, run_unittest
-from operator import neg
+from test.test_support import fcmp, have_unicode, TESTFN, unlink
 
 import sys, warnings, cStringIO, random, UserDict
 warnings.filterwarnings("ignore", "hex../oct.. of negative int",
                         FutureWarning, __name__)
 warnings.filterwarnings("ignore", "integer argument expected",
                         DeprecationWarning, "unittest")
-
-# count the number of test runs.
-# used to skip running test_execfile() multiple times
-numruns = 0
 
 class Squares:
 
@@ -92,14 +87,6 @@ if have_unicode:
         (unichr(0x200), ValueError),
 ]
 
-class TestFailingBool:
-    def __nonzero__(self):
-        raise RuntimeError
-
-class TestFailingIter:
-    def __iter__(self):
-        raise RuntimeError
-
 class BuiltinTest(unittest.TestCase):
 
     def test_import(self):
@@ -124,34 +111,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(abs(-1234L), 1234L)
         # str
         self.assertRaises(TypeError, abs, 'a')
-
-    def test_all(self):
-        self.assertEqual(all([2, 4, 6]), True)
-        self.assertEqual(all([2, None, 6]), False)
-        self.assertRaises(RuntimeError, all, [2, TestFailingBool(), 6])
-        self.assertRaises(RuntimeError, all, TestFailingIter())
-        self.assertRaises(TypeError, all, 10)               # Non-iterable
-        self.assertRaises(TypeError, all)                   # No args
-        self.assertRaises(TypeError, all, [2, 4, 6], [])    # Too many args
-        self.assertEqual(all([]), True)                     # Empty iterator
-        S = [50, 60]
-        self.assertEqual(all(x > 42 for x in S), True)
-        S = [50, 40, 60]
-        self.assertEqual(all(x > 42 for x in S), False)
-
-    def test_any(self):
-        self.assertEqual(any([None, None, None]), False)
-        self.assertEqual(any([None, 4, None]), True)
-        self.assertRaises(RuntimeError, any, [None, TestFailingBool(), 6])
-        self.assertRaises(RuntimeError, all, TestFailingIter())
-        self.assertRaises(TypeError, any, 10)               # Non-iterable
-        self.assertRaises(TypeError, any)                   # No args
-        self.assertRaises(TypeError, any, [2, 4, 6], [])    # Too many args
-        self.assertEqual(any([]), False)                    # Empty iterator
-        S = [40, 60, 30]
-        self.assertEqual(any(x > 42 for x in S), True)
-        S = [10, 20, 30]
-        self.assertEqual(any(x > 42 for x in S), False)
 
     def test_apply(self):
         def f0(*args):
@@ -238,11 +197,8 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(TypeError, compile)
         self.assertRaises(ValueError, compile, 'print 42\n', '<string>', 'badmode')
         self.assertRaises(ValueError, compile, 'print 42\n', '<string>', 'single', 0xff)
-        self.assertRaises(TypeError, compile, chr(0), 'f', 'exec')
         if have_unicode:
             compile(unicode('print u"\xc3\xa5"\n', 'utf8'), '', 'exec')
-            self.assertRaises(TypeError, compile, unichr(0), 'f', 'exec')
-            self.assertRaises(ValueError, compile, unicode('a = 1'), 'f', 'bad')
 
     def test_delattr(self):
         import sys
@@ -387,11 +343,6 @@ class BuiltinTest(unittest.TestCase):
     execfile(TESTFN)
 
     def test_execfile(self):
-        global numruns
-        if numruns:
-            return
-        numruns += 1
-
         globals = {'a': 1, 'b': 2}
         locals = {'b': 200, 'c': 300}
 
@@ -424,7 +375,6 @@ class BuiltinTest(unittest.TestCase):
 
         unlink(TESTFN)
         self.assertRaises(TypeError, execfile)
-        self.assertRaises(TypeError, execfile, TESTFN, {}, ())
         import os
         self.assertRaises(IOError, execfile, os.curdir)
         self.assertRaises(IOError, execfile, "I_dont_exist")
@@ -545,72 +495,9 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(float(314), 314.0)
         self.assertEqual(float(314L), 314.0)
         self.assertEqual(float("  3.14  "), 3.14)
-        self.assertRaises(ValueError, float, "  0x3.1  ")
-        self.assertRaises(ValueError, float, "  -0x3.p-1  ")
         if have_unicode:
             self.assertEqual(float(unicode("  3.14  ")), 3.14)
             self.assertEqual(float(unicode("  \u0663.\u0661\u0664  ",'raw-unicode-escape')), 3.14)
-            # Implementation limitation in PyFloat_FromString()
-            self.assertRaises(ValueError, float, unicode("1"*10000))
-
-    def test_float_with_comma(self):
-        # set locale to something that doesn't use '.' for the decimal point
-        try:
-            import locale
-            orig_locale = locale.setlocale(locale.LC_NUMERIC)
-            locale.setlocale(locale.LC_NUMERIC, 'fr_FR')
-        except:
-            # if we can't set the locale, just ignore this test
-            return
-
-        try:
-            self.assertEqual(locale.localeconv()['decimal_point'], ',')
-        except:
-            # this test is worthless, just skip it and reset the locale
-            locale.setlocale(locale.LC_NUMERIC, orig_locale)
-            return
-
-        try:
-            self.assertEqual(float("  3,14  "), 3.14)
-            self.assertEqual(float("  +3,14  "), 3.14)
-            self.assertEqual(float("  -3,14  "), -3.14)
-            self.assertRaises(ValueError, float, "  0x3.1  ")
-            self.assertRaises(ValueError, float, "  -0x3.p-1  ")
-            self.assertEqual(float("  25.e-1  "), 2.5)
-            self.assertEqual(fcmp(float("  .25e-1  "), .025), 0)
-        finally:
-            locale.setlocale(locale.LC_NUMERIC, orig_locale)
-
-    def test_floatconversion(self):
-        # Make sure that calls to __float__() work properly
-        class Foo0:
-            def __float__(self):
-                return 42.
-
-        class Foo1(object):
-            def __float__(self):
-                return 42.
-
-        class Foo2(float):
-            def __float__(self):
-                return 42.
-
-        class Foo3(float):
-            def __new__(cls, value=0.):
-                return float.__new__(cls, 2*value)
-
-            def __float__(self):
-                return self
-
-        class Foo4(float):
-            def __float__(self):
-                return 42
-
-        self.assertAlmostEqual(float(Foo0()), 42.)
-        self.assertAlmostEqual(float(Foo1()), 42.)
-        self.assertAlmostEqual(float(Foo2()), 42.)
-        self.assertAlmostEqual(float(Foo3(21)), 42.)
-        self.assertRaises(TypeError, float, Foo4(42))
 
     def test_getattr(self):
         import sys
@@ -618,16 +505,14 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(TypeError, getattr, sys, 1)
         self.assertRaises(TypeError, getattr, sys, 1, "foo")
         self.assertRaises(TypeError, getattr)
-        if have_unicode:
-            self.assertRaises(UnicodeError, getattr, sys, unichr(sys.maxunicode))
+        self.assertRaises(UnicodeError, getattr, sys, unichr(sys.maxunicode))
 
     def test_hasattr(self):
         import sys
         self.assert_(hasattr(sys, 'stdout'))
         self.assertRaises(TypeError, hasattr, sys, 1)
         self.assertRaises(TypeError, hasattr)
-        if have_unicode:
-            self.assertRaises(UnicodeError, hasattr, sys, unichr(sys.maxunicode))
+        self.assertRaises(UnicodeError, hasattr, sys, unichr(sys.maxunicode))
 
     def test_hash(self):
         hash(None)
@@ -718,40 +603,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(TypeError, int, 1, 12)
 
         self.assertEqual(int('0123', 0), 83)
-        self.assertEqual(int('0x123', 16), 291)
-
-    def test_intconversion(self):
-        # Test __int__()
-        class Foo0:
-            def __int__(self):
-                return 42
-
-        class Foo1(object):
-            def __int__(self):
-                return 42
-
-        class Foo2(int):
-            def __int__(self):
-                return 42
-
-        class Foo3(int):
-            def __int__(self):
-                return self
-
-        class Foo4(int):
-            def __int__(self):
-                return 42L
-
-        class Foo5(int):
-            def __int__(self):
-                return 42.
-
-        self.assertEqual(int(Foo0()), 42)
-        self.assertEqual(int(Foo1()), 42)
-        self.assertEqual(int(Foo2()), 42)
-        self.assertEqual(int(Foo3()), 0)
-        self.assertEqual(int(Foo4()), 42L)
-        self.assertRaises(TypeError, int, Foo5())
 
     def test_intern(self):
         self.assertRaises(TypeError, intern)
@@ -913,39 +764,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(ValueError, long, '53', 40)
         self.assertRaises(TypeError, long, 1, 12)
 
-    def test_longconversion(self):
-        # Test __long__()
-        class Foo0:
-            def __long__(self):
-                return 42L
-
-        class Foo1(object):
-            def __long__(self):
-                return 42L
-
-        class Foo2(long):
-            def __long__(self):
-                return 42L
-
-        class Foo3(long):
-            def __long__(self):
-                return self
-
-        class Foo4(long):
-            def __long__(self):
-                return 42
-
-        class Foo5(long):
-            def __long__(self):
-                return 42.
-
-        self.assertEqual(long(Foo0()), 42L)
-        self.assertEqual(long(Foo1()), 42L)
-        self.assertEqual(long(Foo2()), 42L)
-        self.assertEqual(long(Foo3()), 0)
-        self.assertEqual(long(Foo4()), 42)
-        self.assertRaises(TypeError, long, Foo5())
-
     def test_map(self):
         self.assertEqual(
             map(None, 'hello world'),
@@ -1016,9 +834,6 @@ class BuiltinTest(unittest.TestCase):
             def __getitem__(self, index):
                 raise ValueError
         self.assertRaises(ValueError, map, lambda x: x, BadSeq())
-        def badfunc(x):
-            raise RuntimeError
-        self.assertRaises(RuntimeError, map, badfunc, range(5))
 
     def test_max(self):
         self.assertEqual(max('123123'), '3')
@@ -1029,30 +844,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(max(1, 2L, 3.0), 3.0)
         self.assertEqual(max(1L, 2.0, 3), 3)
         self.assertEqual(max(1.0, 2, 3L), 3L)
-
-        for stmt in (
-            "max(key=int)",                 # no args
-            "max(1, key=int)",              # single arg not iterable
-            "max(1, 2, keystone=int)",      # wrong keyword
-            "max(1, 2, key=int, abc=int)",  # two many keywords
-            "max(1, 2, key=1)",             # keyfunc is not callable
-            ):
-            try:
-                exec(stmt) in globals()
-            except TypeError:
-                pass
-            else:
-                self.fail(stmt)
-
-        self.assertEqual(max((1,), key=neg), 1)     # one elem iterable
-        self.assertEqual(max((1,2), key=neg), 1)    # two elem iterable
-        self.assertEqual(max(1, 2, key=neg), 1)     # two elems
-
-        data = [random.randrange(200) for i in range(100)]
-        keys = dict((elem, random.randrange(50)) for elem in data)
-        f = keys.__getitem__
-        self.assertEqual(max(data, key=f),
-                         sorted(reversed(data), key=f)[-1])
 
     def test_min(self):
         self.assertEqual(min('123123'), '1')
@@ -1075,30 +866,6 @@ class BuiltinTest(unittest.TestCase):
             def __cmp__(self, other):
                 raise ValueError
         self.assertRaises(ValueError, min, (42, BadNumber()))
-
-        for stmt in (
-            "min(key=int)",                 # no args
-            "min(1, key=int)",              # single arg not iterable
-            "min(1, 2, keystone=int)",      # wrong keyword
-            "min(1, 2, key=int, abc=int)",  # two many keywords
-            "min(1, 2, key=1)",             # keyfunc is not callable
-            ):
-            try:
-                exec(stmt) in globals()
-            except TypeError:
-                pass
-            else:
-                self.fail(stmt)
-
-        self.assertEqual(min((1,), key=neg), 1)     # one elem iterable
-        self.assertEqual(min((1,2), key=neg), 2)    # two elem iterable
-        self.assertEqual(min(1, 2, key=neg), 2)     # two elems
-
-        data = [random.randrange(200) for i in range(100)]
-        keys = dict((elem, random.randrange(50)) for elem in data)
-        f = keys.__getitem__
-        self.assertEqual(min(data, key=f),
-                         sorted(data, key=f)[0])
 
     def test_oct(self):
         self.assertEqual(oct(100), '0144')
@@ -1143,8 +910,7 @@ class BuiltinTest(unittest.TestCase):
         if have_unicode:
             self.assertEqual(ord(unichr(sys.maxunicode)), sys.maxunicode)
         self.assertRaises(TypeError, ord, 42)
-        if have_unicode:
-            self.assertRaises(TypeError, ord, unicode("12"))
+        self.assertRaises(TypeError, ord, unicode("12"))
 
     def test_pow(self):
         self.assertEqual(pow(0,0), 1)
@@ -1250,12 +1016,6 @@ class BuiltinTest(unittest.TestCase):
         self.assertRaises(TypeError, range)
         self.assertRaises(TypeError, range, 1, 2, 3, 4)
         self.assertRaises(ValueError, range, 1, 2, 0)
-        self.assertRaises(ValueError, range, a, a + 1, long(0))
-
-        class badzero(int):
-            def __cmp__(self, other):
-                raise RuntimeError
-        self.assertRaises(RuntimeError, range, a, a + 1, badzero(1))
 
         # Reject floats when it would require PyLongs to represent.
         # (smaller floats still accepted, but deprecated)
@@ -1456,18 +1216,17 @@ class BuiltinTest(unittest.TestCase):
             self.assertRaises(ValueError, unichr, sys.maxunicode+1)
             self.assertRaises(TypeError, unichr)
 
-    # We don't want self in vars(), so these are static methods
-
-    @staticmethod
     def get_vars_f0():
         return vars()
+    # we don't want self in vars(), so use staticmethod
+    get_vars_f0 = staticmethod(get_vars_f0)
 
-    @staticmethod
     def get_vars_f2():
         BuiltinTest.get_vars_f0()
         a = 1
         b = 2
         return vars()
+    get_vars_f2 = staticmethod(get_vars_f2)
 
     def test_vars(self):
         self.assertEqual(set(vars()), set(dir()))
@@ -1543,38 +1302,19 @@ class TestSorted(unittest.TestCase):
 
     def test_inputtypes(self):
         s = 'abracadabra'
-        types = [list, tuple]
-        if have_unicode:
-            types.insert(0, unicode)
-        for T in types:
+        for T in [unicode, list, tuple]:
             self.assertEqual(sorted(s), sorted(T(s)))
 
         s = ''.join(dict.fromkeys(s).keys())  # unique letters only
-        types = [set, frozenset, list, tuple, dict.fromkeys]
-        if have_unicode:
-            types.insert(0, unicode)
-        for T in types:
+        for T in [unicode, set, frozenset, list, tuple, dict.fromkeys]:
             self.assertEqual(sorted(s), sorted(T(s)))
 
     def test_baddecorator(self):
         data = 'The quick Brown fox Jumped over The lazy Dog'.split()
         self.assertRaises(TypeError, sorted, data, None, lambda x,y: 0)
 
-def test_main(verbose=None):
-    test_classes = (BuiltinTest, TestSorted)
-
-    run_unittest(*test_classes)
-
-    # verify reference counting
-    if verbose and hasattr(sys, "gettotalrefcount"):
-        import gc
-        counts = [None] * 5
-        for i in xrange(len(counts)):
-            run_unittest(*test_classes)
-            gc.collect()
-            counts[i] = sys.gettotalrefcount()
-        print counts
-
+def test_main():
+    test.test_support.run_unittest(BuiltinTest, TestSorted)
 
 if __name__ == "__main__":
-    test_main(verbose=True)
+    test_main()

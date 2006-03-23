@@ -2130,8 +2130,6 @@ PyMODINIT_FUNC
 initfl(void)
 {
 	Py_InitModule("fl", forms_methods);
-	if (m == NULL)
-		return;
 	foreground();
 	fl_init();
 }

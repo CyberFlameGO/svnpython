@@ -267,7 +267,7 @@ newPySSLObject(PySocketSockObject *Sock, char *key_file, char *cert_file)
 		} else {
 			sockstate = SOCKET_OPERATION_OK;
 		}
-	        if (sockstate == SOCKET_HAS_TIMED_OUT) {
+	    if (sockstate == SOCKET_HAS_TIMED_OUT) {
 			PyErr_SetString(PySSLErrorObject, "The connect operation timed out");
 			goto fail;
 		} else if (sockstate == SOCKET_HAS_BEEN_CLOSED) {
@@ -439,7 +439,7 @@ static PyObject *PySSL_SSLwrite(PySSLObject *self, PyObject *args)
 		} else {
 			sockstate = SOCKET_OPERATION_OK;
 		}
-	        if (sockstate == SOCKET_HAS_TIMED_OUT) {
+	    if (sockstate == SOCKET_HAS_TIMED_OUT) {
 			PyErr_SetString(PySSLErrorObject, "The write operation timed out");
 			return NULL;
 		} else if (sockstate == SOCKET_HAS_BEEN_CLOSED) {
@@ -501,7 +501,7 @@ static PyObject *PySSL_SSLread(PySSLObject *self, PyObject *args)
 		} else {
 			sockstate = SOCKET_OPERATION_OK;
 		}
-	        if (sockstate == SOCKET_HAS_TIMED_OUT) {
+	    if (sockstate == SOCKET_HAS_TIMED_OUT) {
 			PyErr_SetString(PySSLErrorObject, "The read operation timed out");
 			Py_DECREF(buf);
 			return NULL;
@@ -650,8 +650,6 @@ init_ssl(void)
 	PySSL_Type.ob_type = &PyType_Type;
 
 	m = Py_InitModule3("_ssl", PySSL_methods, module_doc);
-	if (m == NULL)
-		return;
 	d = PyModule_GetDict(m);
 
 	/* Load _socket module and its C API */

@@ -67,17 +67,14 @@ for name, prefix in PKG_TYPES:
     have_tgz = isfile(tgz_fn)
     have_bz2 = isfile(bz2_fn)
 
-    have_some = have_zip or have_tgz or have_bz2
+    if have_zip or have_tgz or have_bz2:
+        print "    <tr><td>%s</td>" % name
 
-    if not have_some:
-        print "    <!--"
-    print "    <tr><td>%s</td>" % name
-    print get_file_cell(prefix, ".zip", have_zip)
-    print get_file_cell(prefix, ".tgz", have_tgz)
-    print get_file_cell(prefix, ".tar.bz2", have_bz2)
-    print "      </tr>"
-    if not have_some:
-        print "      -->"
+        print get_file_cell(prefix, ".zip", have_zip)
+        print get_file_cell(prefix, ".tgz", have_tgz)
+        print get_file_cell(prefix, ".tar.bz2", have_bz2)
+
+        print "      </tr>"
 
 print '''\
     </tbody>

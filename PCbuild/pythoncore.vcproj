@@ -3,8 +3,6 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="pythoncore"
-	ProjectGUID="{7AFA1F0B-A8A1-455A-A832-BF263404BBEF}"
-	RootNamespace="pythoncore"
 	SccProjectName="pythoncore"
 	SccLocalPath="..">
 	<Platforms>
@@ -30,6 +28,10 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="2"
+				PrecompiledHeaderFile=".\x86-temp-release\pythoncore/pythoncore.pch"
+				AssemblerListingLocation=".\x86-temp-release\pythoncore/"
+				ObjectFile=".\x86-temp-release\pythoncore/"
+				ProgramDataBaseFileName=".\x86-temp-release\pythoncore/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
 				DebugInformationFormat="3"
@@ -38,27 +40,30 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="getbuildinfo.o"
-				OutputFile="./python25.dll"
+				OutputFile="./python24.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="libc"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\./python25.pdb"
+				ProgramDatabaseFile=".\./python24.pdb"
 				SubSystem="2"
 				BaseAddress="0x1e000000"
-				ImportLibrary=".\./python25.lib"
+				ImportLibrary=".\./python24.lib"
 				TargetMachine="1"/>
 			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName=".\./pythoncore.tlb"
+				HeaderFileName=""/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCPreLinkEventTool"
-				Description="generate buildinfo"
-				CommandLine="make_buildinfo.exe $(ConfigurationName)"/>
+				Name="VCPreLinkEventTool"/>
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
@@ -90,6 +95,10 @@
 				PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
+				PrecompiledHeaderFile=".\x86-temp-debug\pythoncore/pythoncore.pch"
+				AssemblerListingLocation=".\x86-temp-debug\pythoncore/"
+				ObjectFile=".\x86-temp-debug\pythoncore/"
+				ProgramDataBaseFileName=".\x86-temp-debug\pythoncore/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
 				DebugInformationFormat="3"
@@ -98,27 +107,30 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="getbuildinfo.o"
-				OutputFile="./python25_d.dll"
+				OutputFile="./python24_d.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				IgnoreDefaultLibraryNames="libc"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\./python25_d.pdb"
+				ProgramDatabaseFile=".\./python24_d.pdb"
 				SubSystem="2"
 				BaseAddress="0x1e000000"
-				ImportLibrary=".\./python25_d.lib"
+				ImportLibrary=".\./python24_d.lib"
 				TargetMachine="1"/>
 			<Tool
-				Name="VCMIDLTool"/>
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName=".\./pythoncore.tlb"
+				HeaderFileName=""/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCPreLinkEventTool"
-				Description="generate buildinfo"
-				CommandLine="make_buildinfo.exe $(ConfigurationName)"/>
+				Name="VCPreLinkEventTool"/>
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
@@ -155,6 +167,10 @@
 				BufferSecurityCheck="FALSE"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="2"
+				PrecompiledHeaderFile=".\ia64-temp-release\pythoncore/pythoncore.pch"
+				AssemblerListingLocation=".\ia64-temp-release\pythoncore/"
+				ObjectFile=".\ia64-temp-release\pythoncore/"
+				ProgramDataBaseFileName=".\ia64-temp-release\pythoncore/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
 				Detect64BitPortabilityProblems="TRUE"
@@ -165,94 +181,30 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions=" /MACHINE:IA64 /USELINK:MS_SDK"
-				AdditionalDependencies="getbuildinfo.o"
-				OutputFile="./python25.dll"
+				OutputFile="./python24.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="FALSE"
 				IgnoreDefaultLibraryNames="libc"
 				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\./python25.pdb"
+				ProgramDatabaseFile=".\./python24.pdb"
 				SubSystem="2"
 				BaseAddress="0x1e000000"
-				ImportLibrary=".\./python25.lib"
+				ImportLibrary=".\./python24.lib"
 				TargetMachine="0"/>
 			<Tool
-				Name="VCMIDLTool"/>
-			<Tool
-				Name="VCPostBuildEventTool"/>
-			<Tool
-				Name="VCPreBuildEventTool"/>
-			<Tool
-				Name="VCPreLinkEventTool"
-				Description="generate buildinfo"
-				CommandLine="make_buildinfo.exe $(ConfigurationName)"/>
-			<Tool
-				Name="VCResourceCompilerTool"
+				Name="VCMIDLTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-				AdditionalIncludeDirectories="..\Include"/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"/>
-			<Tool
-				Name="VCWebDeploymentTool"/>
-			<Tool
-				Name="VCManagedWrapperGeneratorTool"/>
-			<Tool
-				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
-		</Configuration>
-		<Configuration
-			Name="ReleaseAMD64|Win32"
-			OutputDirectory="./."
-			IntermediateDirectory=".\amd64-temp-release\pythoncore"
-			ConfigurationType="2"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE">
-			<Tool
-				Name="VCCLCompilerTool"
-				AdditionalOptions="/Zm200  /USECL:MS_OPTERON"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="{MSSDKPATH}\include\Win64\atl\amd64;{MSSDKPATH}\include\Win64\crt\amd64;{MSSDKPATH}\include\Win64\crt\amd64\sys;{MSSDKPATH}\include\Win64\mfc\amd64;..\Include,..\PC"
-				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT"
-				StringPooling="TRUE"
-				BasicRuntimeChecks="0"
-				RuntimeLibrary="2"
-				BufferSecurityCheck="FALSE"
-				EnableFunctionLevelLinking="TRUE"
-				UsePrecompiledHeader="2"
-				WarningLevel="3"
+				MkTypLibCompatible="TRUE"
 				SuppressStartupBanner="TRUE"
-				Detect64BitPortabilityProblems="TRUE"
-				DebugInformationFormat="3"
-				CompileAs="0"/>
-			<Tool
-				Name="VCCustomBuildTool"/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalOptions=" /MACHINE:AMD64 /USELINK:MS_SDK"
-				AdditionalDependencies="getbuildinfo.o"
-				OutputFile="./python25.dll"
-				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames="libc"
-				GenerateDebugInformation="TRUE"
-				ProgramDatabaseFile=".\./python25.pdb"
-				SubSystem="2"
-				BaseAddress="0x1e000000"
-				ImportLibrary=".\./python25.lib"
-				TargetMachine="0"/>
-			<Tool
-				Name="VCMIDLTool"/>
+				TargetEnvironment="1"
+				TypeLibraryName=".\./pythoncore.tlb"
+				HeaderFileName=""/>
 			<Tool
 				Name="VCPostBuildEventTool"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
-				Name="VCPreLinkEventTool"
-				Description="generate buildinfo"
-				CommandLine="make_buildinfo.exe $(ConfigurationName)"/>
+				Name="VCPreLinkEventTool"/>
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
@@ -273,73 +225,6 @@
 	<References>
 	</References>
 	<Files>
-		<Filter
-			Name="zlib"
-			Filter="">
-			<File
-				RelativePath="..\Modules\zlib\adler32.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\compress.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\crc32.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\deflate.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\gzio.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\infback.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\inffast.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\inflate.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\inftrees.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\trees.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\uncompr.c">
-			</File>
-			<File
-				RelativePath="..\Modules\zlibmodule.c">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\Modules\zlib"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\Modules\zlib"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="ReleaseItanium|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\Modules\zlib"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="ReleaseAMD64|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\Modules\zlib"/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\Modules\zlib\zutil.c">
-			</File>
-		</Filter>
 		<File
 			RelativePath="..\Modules\_bisectmodule.c">
 		</File>
@@ -363,6 +248,30 @@
 		</File>
 		<File
 			RelativePath="..\Modules\_codecsmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\_csv.c">
@@ -372,15 +281,84 @@
 		</File>
 		<File
 			RelativePath="..\Modules\_hotshot.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\_localemodule.c">
-		</File>
-		<File
-			RelativePath="..\Modules\_lsprof.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\_randommodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\_sre.c">
@@ -390,180 +368,1338 @@
 		</File>
 		<File
 			RelativePath="..\Modules\_weakref.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Pc\_winreg.c">
 		</File>
 		<File
 			RelativePath="..\Objects\abstract.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\acceler.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\arraymodule.c">
-		</File>
-		<File
-			RelativePath="..\Python\asdl.c">
-		</File>
-		<File
-			RelativePath="..\Python\ast.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\audioop.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\binascii.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\bitset.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\bltinmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\boolobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\bufferobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\cellobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\ceval.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\classobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\cmathmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\cobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\codecs.c">
-		</File>
-		<File
-			RelativePath="..\Objects\codeobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\collectionsmodule.c">
 		</File>
 		<File
 			RelativePath="..\Python\compile.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\complexobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\PC\config.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\cPickle.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\cStringIO.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\datetimemodule.c">
 		</File>
 		<File
 			RelativePath="..\Objects\descrobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\dictobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\PC\dl_nt.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\dynload_win.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\enumobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\errnomodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\errors.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\exceptions.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\fileobject.c">
-		</File>
-		<File
-			RelativePath="..\Parser\firstsets.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\floatobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\frameobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\frozen.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\funcobject.c">
-		</File>
-		<File
-			RelativePath="..\Modules\functionalmodule.c">
-		</File>
-		<File
-			RelativePath="..\Modules\functionalmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\future.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\gcmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\genobject.c">
 		</File>
 		<File
 			RelativePath="..\Python\getargs.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\Modules\getbuildinfo.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="BUILD=68"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="BUILD=68"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="BUILD=68"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\getcompiler.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\getcopyright.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\getmtime.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\getopt.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\PC\getpathp.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\getplatform.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\getversion.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\graminit.c">
-		</File>
-		<File
-			RelativePath="..\Parser\grammar.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\grammar1.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\imageop.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\import.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\PC\import_nt.c">
@@ -571,233 +1707,1631 @@
 				Name="Release|Win32">
 				<Tool
 					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories="..\Python"/>
+					Optimization="2"
+					AdditionalIncludeDirectories="..\Python"
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Debug|Win32">
 				<Tool
 					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories="..\Python"/>
+					Optimization="0"
+					AdditionalIncludeDirectories="..\Python"
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
 			</FileConfiguration>
 			<FileConfiguration
 				Name="ReleaseItanium|Win32">
 				<Tool
 					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories="..\Python"/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="ReleaseAMD64|Win32">
-				<Tool
-					Name="VCCLCompilerTool"
-					AdditionalIncludeDirectories="..\Python"/>
+					Optimization="2"
+					AdditionalIncludeDirectories="..\Python"
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
 			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\importdl.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\intobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\iterobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\itertoolsmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\listnode.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\listobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\longobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\main.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\marshal.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\mathmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\md5c.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\md5module.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\metagrammar.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\methodobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\mmapmodule.c">
 		</File>
 		<File
 			RelativePath="..\Python\modsupport.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\moduleobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\PC\msvcrtmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\cjkcodecs\multibytecodec.c">
 		</File>
 		<File
 			RelativePath="..\Parser\myreadline.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\mysnprintf.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\mystrtoul.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\node.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\object.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\obmalloc.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\operator.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\parser.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\parsermodule.c">
 		</File>
 		<File
 			RelativePath="..\Parser\parsetok.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\posixmodule.c">
-		</File>
-		<File
-			RelativePath="..\Python\pyarena.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\pyfpe.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\pystate.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\pystrtod.c">
 		</File>
 		<File
-			RelativePath="..\Python\Python-ast.c">
-		</File>
-		<File
 			RelativePath="..\PC\python_nt.rc">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCResourceCompilerTool"
+					PreprocessorDefinitions=""
+					AdditionalIncludeDirectories="\Pyinst\python\PC"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCResourceCompilerTool"
+					PreprocessorDefinitions=""
+					AdditionalIncludeDirectories="\Pyinst\python\PC"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCResourceCompilerTool"
+					PreprocessorDefinitions=""
+					AdditionalIncludeDirectories="\Pyinst\python\PC"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\pythonrun.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\rangeobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\Modules\regexmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\Modules\regexpr.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\rgbimgmodule.c">
-		</File>
-		<File
-			RelativePath="..\Modules\rotatingtree.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\setobject.c">
-		</File>
-		<File
-			RelativePath="..\Modules\sha256module.c">
-		</File>
-		<File
-			RelativePath="..\Modules\sha512module.c">
-		</File>
-		<File
-			RelativePath="..\Modules\sha512module.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\shamodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\signalmodule.c">
-		</File>
-		<File
-			RelativePath="..\Modules\signalmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\sliceobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\stringobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\stropmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\structmember.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\structmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\structseq.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\symtable.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\symtablemodule.c">
 		</File>
 		<File
 			RelativePath="..\Python\sysmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\thread.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\threadmodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\timemodule.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Parser\tokenizer.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Python\traceback.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\tupleobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\typeobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\unicodectype.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\unicodeobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Objects\weakrefobject.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\xxsubtype.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\yuvconvert.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath="..\Modules\zipimport.c">
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="_DEBUG;USE_DL_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="ReleaseItanium|Win32">
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;USE_DL_EXPORT;$(NoInherit)"/>
+			</FileConfiguration>
 		</File>
 	</Files>
 	<Globals>

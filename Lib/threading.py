@@ -90,9 +90,6 @@ class _RLock(_Verbose):
                 self.__owner and self.__owner.getName(),
                 self.__count)
 
-    def __context__(self):
-        return self
-
     def acquire(self, blocking=1):
         me = currentThread()
         if self.__owner is me:
@@ -111,8 +108,6 @@ class _RLock(_Verbose):
                 self._note("%s.acquire(%s): failure", self, blocking)
         return rc
 
-    __enter__ = acquire
-
     def release(self):
         me = currentThread()
         assert self.__owner is me, "release() of un-acquire()d lock"
@@ -125,9 +120,6 @@ class _RLock(_Verbose):
         else:
             if __debug__:
                 self._note("%s.release(): non-final release", self)
-
-    def __exit__(self, t, v, tb):
-        self.release()
 
     # Internal methods used by condition variables
 
@@ -164,7 +156,6 @@ class _Condition(_Verbose):
         self.__lock = lock
         # Export the lock's acquire() and release() methods
         self.acquire = lock.acquire
-        self.__enter__ = self.acquire
         self.release = lock.release
         # If the lock defines _release_save() and/or _acquire_restore(),
         # these override the default implementations (which just call
@@ -182,12 +173,6 @@ class _Condition(_Verbose):
         except AttributeError:
             pass
         self.__waiters = []
-
-    def __context__(self):
-        return self
-
-    def __exit__(self, t, v, tb):
-        self.release()
 
     def __repr__(self):
         return "<Condition(%s, %d)>" % (self.__lock, len(self.__waiters))
@@ -282,9 +267,6 @@ class _Semaphore(_Verbose):
         self.__cond = Condition(Lock())
         self.__value = value
 
-    def __context__(self):
-        return self
-
     def acquire(self, blocking=1):
         rc = False
         self.__cond.acquire()
@@ -304,8 +286,6 @@ class _Semaphore(_Verbose):
         self.__cond.release()
         return rc
 
-    __enter__ = acquire
-
     def release(self):
         self.__cond.acquire()
         self.__value = self.__value + 1
@@ -314,9 +294,6 @@ class _Semaphore(_Verbose):
                        self, self.__value)
         self.__cond.notify()
         self.__cond.release()
-
-    def __exit__(self, t, v, tb):
-        self.release()
 
 
 def BoundedSemaphore(*args, **kwargs):
@@ -381,7 +358,7 @@ def _newname(template="Thread-%d"):
 
 # Active thread administration
 _active_limbo_lock = _allocate_lock()
-_active = {}    # maps thread id to Thread object
+_active = {}
 _limbo = {}
 
 
@@ -397,11 +374,9 @@ class Thread(_Verbose):
     __exc_info = _sys.exc_info
 
     def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs=None, verbose=None):
+                 args=(), kwargs={}, verbose=None):
         assert group is None, "group argument must be None for now"
         _Verbose.__init__(self, verbose)
-        if kwargs is None:
-            kwargs = {}
         self.__target = target
         self.__name = str(name or _newname())
         self.__args = args
@@ -670,9 +645,8 @@ def _pickSomeNonDaemonThread():
 
 
 # Dummy thread class to represent threads not started here.
-# These aren't garbage collected when they die, nor can they be waited for.
-# If they invoke anything in threading.py that calls currentThread(), they
-# leave an entry in the _active dict forever after.
+# These aren't garbage collected when they die,
+# nor can they be waited for.
 # Their purpose is to return *something* from currentThread().
 # They are marked as daemon threads so we won't wait for them
 # when we exit (conform previous semantics).
@@ -681,12 +655,6 @@ class _DummyThread(Thread):
 
     def __init__(self):
         Thread.__init__(self, name=_newname("Dummy-%d"))
-
-        # Thread.__block consumes an OS-level locking primitive, which
-        # can never be used by a _DummyThread.  Since a _DummyThread
-        # instance is immortal, that's bad, so release this resource.
-        del self._Thread__block
-
         self._Thread__started = True
         _active_limbo_lock.acquire()
         _active[_get_ident()] = self

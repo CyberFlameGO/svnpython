@@ -12,7 +12,7 @@ the "Standard" toolbar"), and build the projects.
 The proper order to build subprojects:
 
 1) pythoncore (this builds the main Python DLL and library files,
-               python25.{dll, lib} in Release mode)
+               python21.{dll, lib} in Release mode)
               NOTE:  in previous releases, this subproject was
               named after the release number, e.g. python20.
 
@@ -22,11 +22,10 @@ The proper order to build subprojects:
 3) the other subprojects, as desired or needed (note:  you probably don't
    want to build most of the other subprojects, unless you're building an
    entire Python distribution from scratch, or specifically making changes
-   to the subsystems they implement, or are running a Python core buildbot
-   test slave; see SUBPROJECTS below)
+   to the subsystems they implement; see SUBPROJECTS below)
 
 When using the Debug setting, the output files have a _d added to
-their name:  python25_d.dll, python_d.exe, parser_d.pyd, and so on.
+their name:  python24_d.dll, python_d.exe, parser_d.pyd, and so on.
 
 SUBPROJECTS
 -----------
@@ -64,21 +63,27 @@ unpack into new subdirectories of dist\.
 
 _tkinter
     Python wrapper for the Tk windowing system.  Requires building
-    Tcl/Tk first.  Following are instructions for Tcl/Tk 8.4.12.
+    Tcl/Tk first.  Following are instructions for Tcl/Tk 8.4.7; these
+    should work for version 8.4.6 too, with suitable substitutions:
 
     Get source
     ----------
-    In the dist directory, run
-    svn export http://svn.python.org/projects/external/tcl8.4.12
-    svn export http://svn.python.org/projects/external/tk8.4.12
-    svn export http://svn.python.org/projects/external/tix-8.4.0
+    Go to
+        http://prdownloads.sourceforge.net/tcl/
+    and download
+        tcl847-src.zip
+        tk847-src.zip
+    Unzip into
+        dist\tcl8.4.7\
+        dist\tk8.4.7\
+    respectively.
 
     Build Tcl first (done here w/ MSVC 7.1 on Windows XP)
     ---------------
     Use "Start -> All Programs -> Microsoft Visual Studio .NET 2003
          -> Visual Studio .NET Tools -> Visual Studio .NET 2003 Command Prompt"
     to get a shell window with the correct environment settings
-    cd dist\tcl8.4.12\win
+    cd dist\tcl8.4.7\win
     nmake -f makefile.vc
     nmake -f makefile.vc INSTALLDIR=..\..\tcltk install
 
@@ -93,9 +98,9 @@ _tkinter
 
     Build Tk
     --------
-    cd dist\tk8.4.12\win
-    nmake -f makefile.vc TCLDIR=..\..\tcl8.4.12
-    nmake -f makefile.vc TCLDIR=..\..\tcl8.4.12 INSTALLDIR=..\..\tcltk install
+    cd dist\tk8.4.7\win
+    nmake -f makefile.vc TCLDIR=..\..\tcl8.4.7
+    nmake -f makefile.vc TCLDIR=..\..\tcl8.4.7 INSTALLDIR=..\..\tcltk install
 
     XXX Should we compile with OPTS=threads?
 
@@ -103,29 +108,42 @@ _tkinter
     XXX directory.  Is all of that really needed for Python use of Tcl/Tk?
 
     Optional:  run tests, via
-        nmake -f makefile.vc TCLDIR=..\..\tcl8.4.12 test
+        nmake -f makefile.vc TCLDIR=..\..\tcl8.4.7 test
 
         On WinXP Pro, wholly up to date as of 30-Aug-2004:
         all.tcl:        Total   8420    Passed  6826    Skipped 1581    Failed  13
         Sourced 91 Test Files.
         Files with failing tests: canvImg.test scrollbar.test textWind.test winWm.test
-
+        
    Built Tix
    ---------
-   cd dist\tix-8.4.0\win
-   nmake -f python.mak
-   nmake -f python.mak install
+   Download from http://prdownloads.sourceforge.net/tix/tix-8.1.4.tar.gz
+   cd dist\tix-8.1.4
+   [cygwin]patch -p1 < ..\..\python\PC\tix.diff
+   cd win
+   nmake -f makefile.vc
+   nmake -f makefile.vc install
+
+zlib
+    Python wrapper for the zlib compression library.  Get the source code
+    for version 1.2.3 from a convenient mirror at:
+        http://www.gzip.org/zlib/
+    Unpack into dist\zlib-1.2.3.
+    A custom pre-link step in the zlib project settings should manage to
+    build zlib-1.2.3\zlib.lib by magic before zlib.pyd (or zlib_d.pyd) is
+    linked in PCbuild\.
+    However, the zlib project is not smart enough to remove anything under
+    zlib-1.2.3\ when you do a clean, so if you want to rebuild zlib.lib
+    you need to clean up zlib-1.2.3\ by hand.
 
 bz2
     Python wrapper for the libbz2 compression library.  Homepage
         http://sources.redhat.com/bzip2/
-    Download the source from the python.org copy into the dist
-    directory:
-
+    Download the source from the python.org copy:
     svn export http://svn.python.org/projects/external/bzip2-1.0.3
 
     A custom pre-link step in the bz2 project settings should manage to
-    build bzip2-1.0.3\libbz2.lib by magic before bz2.pyd (or bz2_d.pyd) is
+    build bzip2-1.0.2\libbz2.lib by magic before bz2.pyd (or bz2_d.pyd) is
     linked in PCbuild\.
     However, the bz2 project is not smart enough to remove anything under
     bzip2-1.0.3\ when you do a clean, so if you want to rebuild bzip2.lib
@@ -134,48 +152,60 @@ bz2
     The build step shouldn't yield any warnings or errors, and should end
     by displaying 6 blocks each terminated with
         FC: no differences encountered
+    If FC finds differences, see the warning abou WinZip above (when I
+    first tried it, sample3.ref failed due to CRLF conversion).
 
     All of this managed to build bzip2-1.0.3\libbz2.lib, which the Python
     project links in.
 
 
 _bsddb
-    To use the version of bsddb that Python is built with by default, invoke
-    (in the dist directory)
+    Go to Sleepycat's download page:
+        http://www.sleepycat.com/download/
 
-     svn export http://svn.python.org/projects/external/db-4.4.20
-
-
-    Then open a VS.NET 2003 shell, and invoke:
-
-       devenv db-4.4.20\build_win32\Berkeley_DB.sln /build Release /project db_static
-
-    and do that a second time for a Debug build too:
-
-       devenv db-4.4.20\build_win32\Berkeley_DB.sln /build Debug /project db_static
-
-    Alternatively, if you want to start with the original sources,
-    go to Sleepycat's download page:
-        http://www.sleepycat.com/downloads/releasehistorybdb.html
-
-    and download version 4.4.20.
+    and download version 4.2.52.
 
     With or without strong cryptography? You can choose either with or
     without strong cryptography, as per the instructions below.  By
     default, Python is built and distributed WITHOUT strong crypto.
 
-    Unpack the sources; if you downloaded the non-crypto version, rename
-    the directory from db-4.4.20.NC to db-4.4.20.
+    Unpack into the dist\. directory, ensuring you expand with folder names.
 
-    Now apply any patches that apply to your version.
+    If you downloaded with strong crypto, this will create a dist\db-4.2.52
+    directory, and is ready to use.
+
+    If you downloaded WITHOUT strong crypto, this will create a
+    dist\db-4.2.52.NC directory - this directory should be renamed to
+    dist\db-4.2.52 before use.
+
+    As of 11-Apr-2004, you also need to download and manually apply two
+    patches before proceeding (and the sleepycat download page tells you
+    about this).  Cygwin patch worked for me.  cd to dist\db-4.2.52 and
+    use "patch -p0 < patchfile" once for each downloaded patchfile.
 
     Open
-        dist\db-4.4.20\docs\index.html
+        dist\db-4.2.52\docs\index.html
 
     and follow the "Windows->Building Berkeley DB with Visual C++ .NET"
     instructions for building the Sleepycat
     software.  Note that Berkeley_DB.dsw is in the build_win32 subdirectory.
-    Build the "db_static" project, for "Release" mode.
+    Build the "Release Static" version.
+
+    XXX We're linking against Release_static\libdb42s.lib.
+    XXX This yields the following warnings:
+"""
+Compiling...
+_bsddb.c
+Linking...
+   Creating library ./_bsddb.lib and object ./_bsddb.exp
+_bsddb.obj : warning LNK4217: locally defined symbol _malloc imported in function __db_associateCallback
+_bsddb.obj : warning LNK4217: locally defined symbol _free imported in function __DB_consume
+_bsddb.obj : warning LNK4217: locally defined symbol _fclose imported in function _DB_verify
+_bsddb.obj : warning LNK4217: locally defined symbol _fopen imported in function _DB_verify
+_bsddb.obj : warning LNK4217: locally defined symbol _strncpy imported in function _init_pybsddb
+__bsddb - 0 error(s), 5 warning(s)
+"""
+    XXX This isn't encouraging, but I don't know what to do about it.
 
     To run extensive tests, pass "-u bsddb" to regrtest.py.  test_bsddb3.py
     is then enabled.  Running in verbose mode may be helpful.
@@ -206,23 +236,32 @@ _bsddb
     XXX doesn't cause a test to fail when it happens (exceptions in
     XXX threads are invisible to unittest).
 
-    Building for Win64:
-    - open a VS.NET 2003 command prompt
-    - run the SDK setenv.cmd script, passing /RETAIL and the target
-      architecture (/SRV64 for Itanium, /X64 for AMD64)
-    - build BerkeleyDB with the solution configuration matching the
-      target ("Release IA64" for Itanium, "Release AMD64" for AMD64), e.g.
-    devenv db-4.4.20\build_win32\Berkeley_DB.sln /build "Release AMD64" /project db_static /useenv
-
+    XXX 11-Apr-2004 tim
+    XXX On WinXP Pro, I got one failure from test_bsddb3:
+    XXX
+    XXX ERROR: test04_n_flag (bsddb.test.test_compat.CompatibilityTestCase)
+    XXX Traceback (most recent call last):
+    XXX  File "C:\Code\python\lib\bsddb\test\test_compat.py", line 86, in test04_n_flag
+    XXX    f = hashopen(self.filename, 'n')
+    XXX File "C:\Code\python\lib\bsddb\__init__.py", line 293, in hashopen
+    XXX    d.open(file, db.DB_HASH, flags, mode)
+    XXX DBInvalidArgError: (22, 'Invalid argument -- DB_TRUNCATE illegal with locking specified')
 
 _ssl
     Python wrapper for the secure sockets library.
 
-    Get the source code through
+    Get the latest source code for OpenSSL from
+        http://www.openssl.org
 
-    svn export http://svn.python.org/projects/external/openssl-0.9.8a
+    You (probably) don't want the "engine" code.  For example, get
+        openssl-0.9.7d.tar.gz
+    not
+        openssl-engine-0.9.7d.tar.gz
 
-    Alternatively, get the latest version from http://www.openssl.org.
+    Unpack into the "dist" directory, retaining the folder name from
+    the archive - for example, the latest stable OpenSSL will install as
+        dist/openssl-0.9.7d
+
     You can (theoretically) use any version of OpenSSL you like - the
     build process will automatically select the latest version.
 
@@ -257,12 +296,9 @@ from http://sf.net/projects/vsextcomp. The plugin will wrap cl.exe, to
 locate the proper target compiler, and convert compiler options
 accordingly.
 
-Building for AMD64
-------------------
-
-The build process for the ReleaseAMD64 configuration is very similar
-to the Itanium configuration; make sure you use the latest version of
-vsextcomp.
+The Itanium build has seen little testing. The SDK compiler reports a lot
+of warnings about conversion from size_t to int, which will be fixed in
+future Python releases.
 
 YOUR OWN EXTENSION DLLs
 -----------------------

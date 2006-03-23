@@ -5,51 +5,44 @@ import sys
 from test import test_support
 import _testcapi
 
-def test_main():
-
-    for name in dir(_testcapi):
-        if name.startswith('test_'):
-            test = getattr(_testcapi, name)
-            if test_support.verbose:
-                print "internal", name
-            try:
-                test()
-            except _testcapi.error:
-                raise test_support.TestFailed, sys.exc_info()[1]
-
-    # some extra thread-state tests driven via _testcapi
-    def TestThreadState():
-        import thread
-        import time
-
+for name in dir(_testcapi):
+    if name.startswith('test_'):
+        test = getattr(_testcapi, name)
         if test_support.verbose:
-            print "auto-thread-state"
+            print "internal", name
+        try:
+            test()
+        except _testcapi.error:
+            raise test_support.TestFailed, sys.exc_info()[1]
 
-        idents = []
+# some extra thread-state tests driven via _testcapi
+def TestThreadState():
+    import thread
+    import time
 
-        def callback():
-            idents.append(thread.get_ident())
+    if test_support.verbose:
+        print "auto-thread-state"
 
-        _testcapi._test_thread_state(callback)
-        a = b = callback
-        time.sleep(1)
-        # Check our main thread is in the list exactly 3 times.
-        if idents.count(thread.get_ident()) != 3:
-            raise test_support.TestFailed, \
-                  "Couldn't find main thread correctly in the list"
+    idents = []
 
-    try:
-        _testcapi._test_thread_state
-        have_thread_state = True
-    except AttributeError:
-        have_thread_state = False
+    def callback():
+        idents.append(thread.get_ident())
 
-    if have_thread_state:
-        TestThreadState()
-        import threading
-        t=threading.Thread(target=TestThreadState)
-        t.start()
-        t.join()
+    _testcapi._test_thread_state(callback)
+    time.sleep(1)
+    # Check our main thread is in the list exactly 3 times.
+    if idents.count(thread.get_ident()) != 3:
+        raise test_support.TestFailed, \
+              "Couldn't find main thread correctly in the list"
 
-if __name__ == "__main__":
-    test_main()
+try:
+    _testcapi._test_thread_state
+    have_thread_state = True
+except AttributeError:
+    have_thread_state = False
+
+if have_thread_state:
+    TestThreadState()
+    import threading
+    t=threading.Thread(target=TestThreadState)
+    t.start()

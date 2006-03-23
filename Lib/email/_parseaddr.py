@@ -6,13 +6,6 @@
 Lifted directly from rfc822.py.  This should eventually be rewritten.
 """
 
-__all__ = [
-    'mktime_tz',
-    'parsedate',
-    'parsedate_tz',
-    'quote',
-    ]
-
 import time
 
 SPACE = ' '

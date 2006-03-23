@@ -9,6 +9,51 @@ typedef struct {
 	long	len;
 } rangeobject;
 
+/* XXX PyRange_New should be deprecated.  It's not documented.  It's not
+ * used in the core.  Its error-checking is akin to Swiss cheese:  accepts
+ * step == 0; accepts len < 0; ignores that (len - 1) * step may overflow;
+ * raises a baffling "integer addition" exception if it thinks the last
+ * item is "too big"; and doesn't compute whether "last item is too big"
+ * correctly even if the multiplication doesn't overflow.
+ */
+PyObject *
+PyRange_New(long start, long len, long step, int reps)
+{
+	rangeobject *obj;
+
+	if (reps != 1) {
+		PyErr_SetString(PyExc_ValueError,
+			"PyRange_New's 'repetitions' argument must be 1");
+		return NULL;
+	}
+
+	obj = PyObject_New(rangeobject, &PyRange_Type);
+	if (obj == NULL)
+		return NULL;
+
+	if (len == 0) {
+		start = 0;
+		len = 0;
+		step = 1;
+	}
+	else {
+		long last = start + (len - 1) * step;
+		if ((step > 0) ?
+		    (last > (PyInt_GetMax() - step)) :
+		    (last < (-1 - PyInt_GetMax() - step))) {
+			PyErr_SetString(PyExc_OverflowError,
+					"integer addition");
+			Py_DECREF(obj);
+			return NULL;
+		}
+	}
+	obj->start = start;
+	obj->len   = len;
+	obj->step  = step;
+
+	return (PyObject *) obj;
+}
+
 /* Return number of items in range/xrange (lo, hi, step).  step > 0
  * required.  Return a value < 0 if & only if the true value is too
  * large to fit in a signed long.
@@ -91,27 +136,27 @@ generates the numbers in the range on demand.  For looping, this is \n\
 slightly faster than range() and more memory efficient.");
 
 static PyObject *
-range_item(rangeobject *r, Py_ssize_t i)
+range_item(rangeobject *r, int i)
 {
 	if (i < 0 || i >= r->len) {
 		PyErr_SetString(PyExc_IndexError,
 				"xrange object index out of range");
 		return NULL;
 	}
-	return PyInt_FromSsize_t(r->start + (i % r->len) * r->step);
+	return PyInt_FromLong(r->start + (i % r->len) * r->step);
 }
 
-static Py_ssize_t
+static int
 range_length(rangeobject *r)
 {
-#if LONG_MAX != INT_MAX /* XXX ssize_t_max */
+#if LONG_MAX != INT_MAX
 	if (r->len > INT_MAX) {
 		PyErr_SetString(PyExc_ValueError,
 				"xrange object size cannot be reported");
 		return -1;
 	}
 #endif
-	return (Py_ssize_t)(r->len);
+	return (int)(r->len);
 }
 
 static PyObject *
@@ -137,10 +182,10 @@ range_repr(rangeobject *r)
 }
 
 static PySequenceMethods range_as_sequence = {
-	(lenfunc)range_length,	/* sq_length */
+	(inquiry)range_length,	/* sq_length */
 	0,			/* sq_concat */
 	0,			/* sq_repeat */
-	(ssizeargfunc)range_item, /* sq_item */
+	(intargfunc)range_item, /* sq_item */
 	0,			/* sq_slice */
 };
 
@@ -262,18 +307,17 @@ rangeiter_next(rangeiterobject *r)
 	return NULL;
 }
 
-static PyObject *
+static int
 rangeiter_len(rangeiterobject *r)
 {
-	return PyInt_FromLong(r->len - r->index);
+	return r->len - r->index;
 }
 
-PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef rangeiter_methods[] = {
-	{"__length_hint__", (PyCFunction)rangeiter_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
+static PySequenceMethods rangeiter_as_sequence = {
+	(inquiry)rangeiter_len,		/* sq_length */
+	0,				/* sq_concat */
 };
+
 
 static PyTypeObject Pyrangeiter_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
@@ -289,7 +333,7 @@ static PyTypeObject Pyrangeiter_Type = {
 	0,                                      /* tp_compare */
 	0,                                      /* tp_repr */
 	0,                                      /* tp_as_number */
-	0,					/* tp_as_sequence */
+	&rangeiter_as_sequence,			/* tp_as_sequence */
 	0,                                      /* tp_as_mapping */
 	0,                                      /* tp_hash */
 	0,                                      /* tp_call */
@@ -305,6 +349,5 @@ static PyTypeObject Pyrangeiter_Type = {
 	0,                                      /* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)rangeiter_next,		/* tp_iternext */
-	rangeiter_methods,			/* tp_methods */
-	0,
+	0,					/* tp_methods */
 };

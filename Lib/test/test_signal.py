@@ -1,5 +1,5 @@
 # Test the signal module
-from test.test_support import verbose, TestSkipped, TestFailed, vereq
+from test.test_support import verbose, TestSkipped, TestFailed
 import signal
 import os, sys, time
 
@@ -42,28 +42,6 @@ hup = signal.signal(signal.SIGHUP, handlerA)
 usr1 = signal.signal(signal.SIGUSR1, handlerB)
 usr2 = signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 alrm = signal.signal(signal.SIGALRM, signal.default_int_handler)
-
-vereq(signal.getsignal(signal.SIGHUP), handlerA)
-vereq(signal.getsignal(signal.SIGUSR1), handlerB)
-vereq(signal.getsignal(signal.SIGUSR2), signal.SIG_IGN)
-
-try:
-    signal.signal(4242, handlerB)
-    raise TestFailed, 'expected ValueError for invalid signal # to signal()'
-except ValueError:
-    pass
-
-try:
-    signal.getsignal(4242)
-    raise TestFailed, 'expected ValueError for invalid signal # to getsignal()'
-except ValueError:
-    pass
-
-try:
-    signal.signal(signal.SIGUSR1, None)
-    raise TestFailed, 'expected TypeError for non-callable'
-except TypeError:
-    pass
 
 try:
     os.system(script)

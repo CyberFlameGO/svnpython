@@ -3,7 +3,7 @@
  */
 
 #include "Python.h"
-#include "code.h"
+#include "compile.h"
 #include "eval.h"
 #include "frameobject.h"
 #include "structmember.h"
@@ -71,7 +71,7 @@ typedef struct {
     PyObject_HEAD
     PyObject *filemap;
     PyObject *logfilename;
-    Py_ssize_t index;
+    int index;
     unsigned char buffer[BUFFERSIZE];
     FILE *logfp;
     int lineevents;
@@ -528,7 +528,7 @@ logreader_dealloc(LogReaderObject *self)
 }
 
 static PyObject *
-logreader_sq_item(LogReaderObject *self, Py_ssize_t index)
+logreader_sq_item(LogReaderObject *self, int index)
 {
     PyObject *result = logreader_tp_iternext(self);
     if (result == NULL && !PyErr_Occurred()) {
@@ -612,14 +612,13 @@ pack_modified_packed_int(ProfilerObject *self, int value,
 }
 
 static int
-pack_string(ProfilerObject *self, const char *s, Py_ssize_t len)
+pack_string(ProfilerObject *self, const char *s, int len)
 {
     if (len + PISIZE + self->index >= BUFFERSIZE) {
         if (flush_data(self) < 0)
             return -1;
     }
-    assert(len < INT_MAX);
-    if (pack_packed_int(self, (int)len) < 0)
+    if (pack_packed_int(self, len) < 0)
         return -1;
     memcpy(self->buffer + self->index, s, len);
     self->index += len;
@@ -629,8 +628,8 @@ pack_string(ProfilerObject *self, const char *s, Py_ssize_t len)
 static int
 pack_add_info(ProfilerObject *self, const char *s1, const char *s2)
 {
-    Py_ssize_t len1 = strlen(s1);
-    Py_ssize_t len2 = strlen(s2);
+    int len1 = strlen(s1);
+    int len2 = strlen(s2);
 
     if (len1 + len2 + PISIZE*2 + 1 + self->index >= BUFFERSIZE) {
         if (flush_data(self) < 0)
@@ -646,7 +645,7 @@ pack_add_info(ProfilerObject *self, const char *s1, const char *s2)
 static int
 pack_define_file(ProfilerObject *self, int fileno, const char *filename)
 {
-    Py_ssize_t len = strlen(filename);
+    int len = strlen(filename);
 
     if (len + PISIZE*2 + 1 + self->index >= BUFFERSIZE) {
         if (flush_data(self) < 0)
@@ -663,7 +662,7 @@ static int
 pack_define_func(ProfilerObject *self, int fileno, int lineno,
                  const char *funcname)
 {
-    Py_ssize_t len = strlen(funcname);
+    int len = strlen(funcname);
 
     if (len + PISIZE*3 + 1 + self->index >= BUFFERSIZE) {
         if (flush_data(self) < 0)
@@ -1272,7 +1271,7 @@ static PySequenceMethods logreader_as_sequence = {
     0,					/* sq_length */
     0,					/* sq_concat */
     0,					/* sq_repeat */
-    (ssizeargfunc)logreader_sq_item,	/* sq_item */
+    (intargfunc)logreader_sq_item,	/* sq_item */
     0,					/* sq_slice */
     0,					/* sq_ass_item */
     0,					/* sq_ass_slice */
@@ -1399,7 +1398,7 @@ get_version_string(void)
     char *buffer;
     int i = 0;
 
-    while (*rev && !isdigit(Py_CHARMASK(*rev)))
+    while (*rev && !isdigit((int)*rev))
         ++rev;
     while (rev[i] != ' ' && rev[i] != '\0')
         ++i;
@@ -1458,8 +1457,8 @@ write_header(ProfilerObject *self)
 
     temp = PySys_GetObject("path");
     if (temp == NULL || !PyList_Check(temp)) {
-	PyErr_SetString(PyExc_RuntimeError, "sys.path must be a list");
-    	return -1;
+        PyErr_SetString(PyExc_RuntimeError, "sys.path must be a list");
+        return -1;
     }
     len = PyList_GET_SIZE(temp);
     for (i = 0; i < len; ++i) {

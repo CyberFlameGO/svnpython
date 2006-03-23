@@ -196,11 +196,11 @@ gc_list_merge(PyGC_Head *from, PyGC_Head *to)
 	gc_list_init(from);
 }
 
-static Py_ssize_t
+static long
 gc_list_size(PyGC_Head *list)
 {
 	PyGC_Head *gc;
-	Py_ssize_t n = 0;
+	long n = 0;
 	for (gc = list->gc.gc_next; gc != list; gc = gc->gc.gc_next) {
 		n++;
 	}
@@ -303,7 +303,7 @@ visit_reachable(PyObject *op, PyGC_Head *reachable)
 {
 	if (PyObject_IS_GC(op)) {
 		PyGC_Head *gc = AS_GC(op);
-		const Py_ssize_t gc_refs = gc->gc.gc_refs;
+		const int gc_refs = gc->gc.gc_refs;
 
 		if (gc_refs == 0) {
 			/* This is in move_unreachable's 'young' list, but
@@ -413,8 +413,10 @@ has_finalizer(PyObject *op)
 		assert(delstr != NULL);
 		return _PyInstance_Lookup(op, delstr) != NULL;
 	}
-	else 
+	else if (PyType_HasFeature(op->ob_type, Py_TPFLAGS_HEAPTYPE))
 		return op->ob_type->tp_del != NULL;
+	else
+		return 0;
 }
 
 /* Move the objects in unreachable with __del__ methods into `finalizers`.
@@ -719,12 +721,12 @@ delete_garbage(PyGC_Head *collectable, PyGC_Head *old)
 
 /* This is the main function.  Read this to understand how the
  * collection process works. */
-static Py_ssize_t
+static long
 collect(int generation)
 {
 	int i;
-	Py_ssize_t m = 0; /* # objects collected */
-	Py_ssize_t n = 0; /* # unreachable objects that couldn't be collected */
+	long m = 0;	/* # objects collected */
+	long n = 0;	/* # unreachable objects that couldn't be collected */
 	PyGC_Head *young; /* the generation we are examining */
 	PyGC_Head *old; /* next older generation */
 	PyGC_Head unreachable; /* non-problematic unreachable trash */
@@ -742,13 +744,7 @@ collect(int generation)
 				  generation);
 		PySys_WriteStderr("gc: objects in each generation:");
 		for (i = 0; i < NUM_GENERATIONS; i++) {
-#ifdef MS_WIN64
-			PySys_WriteStderr(" %Id", gc_list_size(GEN_HEAD(i)));
-#else
-			PySys_WriteStderr(" %ld",
-				Py_SAFE_DOWNCAST(gc_list_size(GEN_HEAD(i)),
-						 Py_ssize_t, long));
-#endif
+			PySys_WriteStderr(" %ld", gc_list_size(GEN_HEAD(i)));
 		}
 		PySys_WriteStderr("\n");
 	}
@@ -841,16 +837,9 @@ collect(int generation)
 			PySys_WriteStderr("gc: done.\n");
 		}
 		else {
-#ifdef MS_WIN64
-			PySys_WriteStderr(
-			    "gc: done, %Id unreachable, %Id uncollectable.\n",
-			    n+m, n);
-#else
 			PySys_WriteStderr(
 			    "gc: done, %ld unreachable, %ld uncollectable.\n",
-			    Py_SAFE_DOWNCAST(n+m, Py_ssize_t, long),
-			    Py_SAFE_DOWNCAST(n, Py_ssize_t, long));
-#endif
+			    n+m, n);
 		}
 	}
 
@@ -869,11 +858,11 @@ collect(int generation)
 	return n+m;
 }
 
-static Py_ssize_t
+static long
 collect_generations(void)
 {
 	int i;
-	Py_ssize_t n = 0;
+	long n = 0;
 
 	/* Find the oldest generation (higest numbered) where the count
 	 * exceeds the threshold.  Objects in the that generation and
@@ -925,37 +914,24 @@ gc_isenabled(PyObject *self, PyObject *noargs)
 }
 
 PyDoc_STRVAR(gc_collect__doc__,
-"collect([generation]) -> n\n"
+"collect() -> n\n"
 "\n"
-"With no arguments, run a full collection.  The optional argument\n"
-"may be an integer specifying which generation to collect.  A ValueError\n"
-"is raised if the generation number is invalid.\n\n"
-"The number of unreachable objects is returned.\n");
+"Run a full collection.  The number of unreachable objects is returned.\n");
 
 static PyObject *
-gc_collect(PyObject *self, PyObject *args, PyObject *kws)
+gc_collect(PyObject *self, PyObject *noargs)
 {
-	static char *keywords[] = {"generation", NULL};
-	int genarg = NUM_GENERATIONS - 1;
-	Py_ssize_t n;
-
-	if (!PyArg_ParseTupleAndKeywords(args, kws, "|i", keywords, &genarg))
-		return NULL;
-
-	else if (genarg < 0 || genarg >= NUM_GENERATIONS) {
-		PyErr_SetString(PyExc_ValueError, "invalid generation");
-		return NULL;
-	}
+	long n;
 
 	if (collecting)
 		n = 0; /* already collecting, don't do anything */
 	else {
 		collecting = 1;
-		n = collect(genarg);
+		n = collect(NUM_GENERATIONS - 1);
 		collecting = 0;
 	}
 
-	return PyInt_FromSsize_t(n);
+	return Py_BuildValue("l", n);
 }
 
 PyDoc_STRVAR(gc_set_debug__doc__,
@@ -1033,20 +1009,6 @@ gc_get_thresh(PyObject *self, PyObject *noargs)
 			     generations[2].threshold);
 }
 
-PyDoc_STRVAR(gc_get_count__doc__,
-"get_count() -> (count0, count1, count2)\n"
-"\n"
-"Return the current collection counts\n");
-
-static PyObject *
-gc_get_count(PyObject *self, PyObject *noargs)
-{
-	return Py_BuildValue("(iii)",
-			     generations[0].count,
-			     generations[1].count,
-			     generations[2].count);
-}
-
 static int
 referrersvisit(PyObject* obj, PyObject *objs)
 {
@@ -1086,7 +1048,6 @@ gc_get_referrers(PyObject *self, PyObject *args)
 	int i;
 	PyObject *result = PyList_New(0);
 	if (!result) return NULL;
-
 	for (i = 0; i < NUM_GENERATIONS; i++) {
 		if (!(gc_referrers_for(args, GEN_HEAD(i), result))) {
 			Py_DECREF(result);
@@ -1179,11 +1140,9 @@ static PyMethodDef GcMethods[] = {
 	{"isenabled",	   gc_isenabled,  METH_NOARGS,  gc_isenabled__doc__},
 	{"set_debug",	   gc_set_debug,  METH_VARARGS, gc_set_debug__doc__},
 	{"get_debug",	   gc_get_debug,  METH_NOARGS,  gc_get_debug__doc__},
-	{"get_count",	   gc_get_count,  METH_NOARGS,  gc_get_count__doc__},
 	{"set_threshold",  gc_set_thresh, METH_VARARGS, gc_set_thresh__doc__},
 	{"get_threshold",  gc_get_thresh, METH_NOARGS,  gc_get_thresh__doc__},
-	{"collect",	   (PyCFunction)gc_collect,
-         	METH_VARARGS | METH_KEYWORDS,           gc_collect__doc__},
+	{"collect",	   gc_collect,	  METH_NOARGS,  gc_collect__doc__},
 	{"get_objects",    gc_get_objects,METH_NOARGS,  gc_get_objects__doc__},
 	{"get_referrers",  gc_get_referrers, METH_VARARGS,
 		gc_get_referrers__doc__},
@@ -1202,15 +1161,12 @@ initgc(void)
 			      gc__doc__,
 			      NULL,
 			      PYTHON_API_VERSION);
-	if (m == NULL)
-		return;
 
 	if (garbage == NULL) {
 		garbage = PyList_New(0);
 		if (garbage == NULL)
 			return;
 	}
-	Py_INCREF(garbage);
 	if (PyModule_AddObject(m, "garbage", garbage) < 0)
 		return;
 #define ADD_INT(NAME) if (PyModule_AddIntConstant(m, #NAME, NAME) < 0) return
@@ -1225,10 +1181,10 @@ initgc(void)
 }
 
 /* API to invoke gc.collect() from C */
-Py_ssize_t
+long
 PyGC_Collect(void)
 {
-	Py_ssize_t n;
+	long n;
 
 	if (collecting)
 		n = 0; /* already collecting, don't do anything */
@@ -1318,7 +1274,7 @@ _PyObject_GC_New(PyTypeObject *tp)
 }
 
 PyVarObject *
-_PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
+_PyObject_GC_NewVar(PyTypeObject *tp, int nitems)
 {
 	const size_t size = _PyObject_VAR_SIZE(tp, nitems);
 	PyVarObject *op = (PyVarObject *) _PyObject_GC_Malloc(size);
@@ -1328,7 +1284,7 @@ _PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
 }
 
 PyVarObject *
-_PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)
+_PyObject_GC_Resize(PyVarObject *op, int nitems)
 {
 	const size_t basicsize = _PyObject_VAR_SIZE(op->ob_type, nitems);
 	PyGC_Head *g = AS_GC(op);

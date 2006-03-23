@@ -382,11 +382,11 @@ PyLocale_getdefaultlocale(PyObject* self)
     if (GetLocaleInfo(LOCALE_USER_DEFAULT,
                       LOCALE_SISO639LANGNAME,
                       locale, sizeof(locale))) {
-        Py_ssize_t i = strlen(locale);
+        int i = strlen(locale);
         locale[i++] = '_';
         if (GetLocaleInfo(LOCALE_USER_DEFAULT,
                           LOCALE_SISO3166CTRYNAME,
-                          locale+i, (int)(sizeof(locale)-i)))
+                          locale+i, sizeof(locale)-i))
             return Py_BuildValue("ss", locale, encoding);
     }
 
@@ -426,7 +426,7 @@ static char *mac_getscript(void)
     /* XXX which one is mac-latin2? */
     }
     if (!name) {
-        /* This leaks an object. */
+        /* This leaks a an object. */
         name = CFStringConvertEncodingToIANACharSetName(enc);
     }
     return (char *)CFStringGetCStringPtr(name, 0); 
@@ -715,8 +715,6 @@ init_locale(void)
 #endif
 
     m = Py_InitModule("_locale", PyLocale_Methods);
-    if (m == NULL)
-    	return;
 
     d = PyModule_GetDict(m);
 

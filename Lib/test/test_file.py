@@ -3,7 +3,7 @@ import os
 from array import array
 from weakref import proxy
 
-from test.test_support import verify, TESTFN, TestFailed, findfile
+from test.test_support import verify, TESTFN, TestFailed
 from UserList import UserList
 
 # verify weak references
@@ -34,21 +34,11 @@ f.softspace = softspace    # merely shouldn't blow up
 for attr in 'name', 'mode', 'closed':
     try:
         setattr(f, attr, 'oops')
-    except (AttributeError, TypeError):
+    except TypeError:
         pass
     else:
-        raise TestFailed('expected exception setting file attr %r' % attr)
+        raise TestFailed('expected TypeError setting file attr %r' % attr)
 f.close()
-
-# check invalid mode strings
-for mode in ("", "aU", "wU+"):
-    try:
-        f = file(TESTFN, mode)
-    except ValueError:
-        pass
-    else:
-        f.close()
-        raise TestFailed('%r is an invalid file mode' % mode)
 
 # verify writelines with instance sequence
 l = UserList(['1', '2'])
@@ -98,32 +88,6 @@ except TypeError:
     pass
 else:
     print "writelines accepted sequence of non-string objects"
-f.close()
-
-try:
-    sys.stdin.seek(-1)
-except IOError:
-    pass
-else:
-    print "should not be able to seek on sys.stdin"
-
-try:
-    sys.stdin.truncate()
-except IOError:
-    pass
-else:
-    print "should not be able to truncate on sys.stdin"
-
-# verify repr works
-f = open(TESTFN)
-if not repr(f).startswith("<open file '" + TESTFN):
-    print "repr(file) failed"
-f.close()
-
-# verify repr works for unicode too
-f = open(unicode(TESTFN))
-if not repr(f).startswith("<open file u'" + TESTFN):
-    print "repr(file with unicode name) failed"
 f.close()
 
 # verify that we get a sensible error message for bad mode argument
@@ -226,114 +190,5 @@ def bug801631():
 
 try:
     bug801631()
-finally:
-    os.unlink(TESTFN)
-
-# Test the complex interaction when mixing file-iteration and the various
-# read* methods. Ostensibly, the mixture could just be tested to work
-# when it should work according to the Python language, instead of fail
-# when it should fail according to the current CPython implementation.
-# People don't always program Python the way they should, though, and the
-# implemenation might change in subtle ways, so we explicitly test for
-# errors, too; the test will just have to be updated when the
-# implementation changes.
-dataoffset = 16384
-filler = "ham\n"
-assert not dataoffset % len(filler), \
-    "dataoffset must be multiple of len(filler)"
-nchunks = dataoffset // len(filler)
-testlines = [
-    "spam, spam and eggs\n",
-    "eggs, spam, ham and spam\n",
-    "saussages, spam, spam and eggs\n",
-    "spam, ham, spam and eggs\n",
-    "spam, spam, spam, spam, spam, ham, spam\n",
-    "wonderful spaaaaaam.\n"
-]
-methods = [("readline", ()), ("read", ()), ("readlines", ()),
-           ("readinto", (array("c", " "*100),))]
-
-try:
-    # Prepare the testfile
-    bag = open(TESTFN, "w")
-    bag.write(filler * nchunks)
-    bag.writelines(testlines)
-    bag.close()
-    # Test for appropriate errors mixing read* and iteration
-    for methodname, args in methods:
-        f = open(TESTFN)
-        if f.next() != filler:
-            raise TestFailed, "Broken testfile"
-        meth = getattr(f, methodname)
-        try:
-            meth(*args)
-        except ValueError:
-            pass
-        else:
-            raise TestFailed("%s%r after next() didn't raise ValueError" %
-                             (methodname, args))
-        f.close()
-
-    # Test to see if harmless (by accident) mixing of read* and iteration
-    # still works. This depends on the size of the internal iteration
-    # buffer (currently 8192,) but we can test it in a flexible manner.
-    # Each line in the bag o' ham is 4 bytes ("h", "a", "m", "\n"), so
-    # 4096 lines of that should get us exactly on the buffer boundary for
-    # any power-of-2 buffersize between 4 and 16384 (inclusive).
-    f = open(TESTFN)
-    for i in range(nchunks):
-        f.next()
-    testline = testlines.pop(0)
-    try:
-        line = f.readline()
-    except ValueError:
-        raise TestFailed("readline() after next() with supposedly empty "
-                         "iteration-buffer failed anyway")
-    if line != testline:
-        raise TestFailed("readline() after next() with empty buffer "
-                         "failed. Got %r, expected %r" % (line, testline))
-    testline = testlines.pop(0)
-    buf = array("c", "\x00" * len(testline))
-    try:
-        f.readinto(buf)
-    except ValueError:
-        raise TestFailed("readinto() after next() with supposedly empty "
-                         "iteration-buffer failed anyway")
-    line = buf.tostring()
-    if line != testline:
-        raise TestFailed("readinto() after next() with empty buffer "
-                         "failed. Got %r, expected %r" % (line, testline))
-
-    testline = testlines.pop(0)
-    try:
-        line = f.read(len(testline))
-    except ValueError:
-        raise TestFailed("read() after next() with supposedly empty "
-                         "iteration-buffer failed anyway")
-    if line != testline:
-        raise TestFailed("read() after next() with empty buffer "
-                         "failed. Got %r, expected %r" % (line, testline))
-    try:
-        lines = f.readlines()
-    except ValueError:
-        raise TestFailed("readlines() after next() with supposedly empty "
-                         "iteration-buffer failed anyway")
-    if lines != testlines:
-        raise TestFailed("readlines() after next() with empty buffer "
-                         "failed. Got %r, expected %r" % (line, testline))
-    # Reading after iteration hit EOF shouldn't hurt either
-    f = open(TESTFN)
-    try:
-        for line in f:
-            pass
-        try:
-            f.readline()
-            f.readinto(buf)
-            f.read()
-            f.readlines()
-        except ValueError:
-            raise TestFailed("read* failed after next() consumed file")
-    finally:
-        f.close()
 finally:
     os.unlink(TESTFN)

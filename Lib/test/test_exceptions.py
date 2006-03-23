@@ -29,7 +29,10 @@ def test_raise_catch(exc):
 
 def r(thing):
     test_raise_catch(thing)
-    print getattr(thing, '__name__', thing)
+    if isinstance(thing, ClassType):
+        print thing.__name__
+    else:
+        print thing
 
 r(AttributeError)
 import sys

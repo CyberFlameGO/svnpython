@@ -219,8 +219,6 @@ initdl(void)
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("dl", dl_methods);
-	if (m == NULL)
-		return;
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);

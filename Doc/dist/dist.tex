@@ -634,83 +634,7 @@ is not needed when building compiled extensions: Distutils
 will automatically add \code{initmodule}
 to the list of exported symbols.
 
-\section{Relationships between Distributions and Packages}
-
-A distribution may relate to packages in three specific ways:
-
-\begin{enumerate}
-  \item It can require packages or modules.
-
-  \item It can provide packages or modules.
-
-  \item It can obsolete packages or modules.
-\end{enumerate}
-
-These relationships can be specified using keyword arguments to the
-\function{distutils.core.setup()} function.
-
-Dependencies on other Python modules and packages can be specified by
-supplying the \var{requires} keyword argument to \function{setup()}.
-The value must be a list of strings.  Each string specifies a package
-that is required, and optionally what versions are sufficient.
-
-To specify that any version of a module or package is required, the
-string should consist entirely of the module or package name.
-Examples include \code{'mymodule'} and \code{'xml.parsers.expat'}.
-
-If specific versions are required, a sequence of qualifiers can be
-supplied in parentheses.  Each qualifier may consist of a comparison
-operator and a version number.  The accepted comparison operators are:
-
-\begin{verbatim}
-<    >    ==
-<=   >=   !=
-\end{verbatim}
-
-These can be combined by using multiple qualifiers separated by commas
-(and optional whitespace).  In this case, all of the qualifiers must
-be matched; a logical AND is used to combine the evaluations.
-
-Let's look at a bunch of examples:
-
-\begin{tableii}{l|l}{code}{Requires Expression}{Explanation}
-  \lineii{==1.0}               {Only version \code{1.0} is compatible}
-  \lineii{>1.0, !=1.5.1, <2.0} {Any version after \code{1.0} and before
-                                \code{2.0} is compatible, except
-                                \code{1.5.1}}
-\end{tableii}
-
-Now that we can specify dependencies, we also need to be able to
-specify what we provide that other distributions can require.  This is
-done using the \var{provides} keyword argument to \function{setup()}.
-The value for this keyword is a list of strings, each of which names a
-Python module or package, and optionally identifies the version.  If
-the version is not specified, it is assumed to match that of the
-distribution.
-
-Some examples:
-
-\begin{tableii}{l|l}{code}{Provides Expression}{Explanation}
-  \lineii{mypkg}      {Provide \code{mypkg}, using the distribution version}
-  \lineii{mypkg (1.1} {Provide \code{mypkg} version 1.1, regardless of the
-                       distribution version}
-\end{tableii}
-
-A package can declare that it obsoletes other packages using the
-\var{obsoletes} keyword argument.  The value for this is similar to
-that of the \var{requires} keyword: a list of strings giving module or
-package specifiers.  Each specifier consists of a module or package
-name optionally followed by one or more version qualifiers.  Version
-qualifiers are given in parentheses after the module or package name.
-
-The versions identified by the qualifiers are those that are obsoleted
-by the distribution being described.  If no qualifiers are given, all
-versions of the named module or package are understood to be
-obsoleted.
-
-
 \section{Installing Scripts}
-
 So far we have been dealing with pure and non-pure Python modules,
 which are usually not run by themselves but imported by scripts.
 
@@ -1719,43 +1643,7 @@ By default PyPI will list all versions of a given package. To hide certain
 versions, the Hidden property should be set to yes. This must be edited
 through the web interface.
 
-\section{The .pypirc file}
-\label{pypirc}
 
-The format of the \file{.pypirc} file is formated as follows:
-
-\begin{verbatim}
-[server-login]
-repository: <repository-url>
-username: <username>
-password: <password>
-\end{verbatim}
-
-\var{repository} can be ommitted and defaults to
-\code{http://www.python.org/pypi}.
-
-\chapter{Uploading Packages to the Package Index}
-\label{package-upload}
-
-The Python Package Index (PyPI) not only stores the package info, but also 
-the package data if the author of the package wishes to. The distutils
-command \command{upload} pushes the distribution files to PyPI.
-
-The command is invoked immediately after building one or more distribution
-files.  For example, the command
-
-\begin{verbatim}
-python setup.py sdist bdist_wininst upload
-\end{verbatim}
-
-will cause the source distribution and the Windows installer to be
-uploaded to PyPI.  Note that these will be uploaded even if they are
-built using an earlier invocation of \file{setup.py}, but that only
-distributions named on the command line for the invocation including
-the \command{upload} command are uploaded.
-
-The \command{upload} command uses the username and password stored in
-the file \file{\$HOME/.pypirc}, see section~\ref{pypirc}.
 
 \chapter{Examples}
 \label{examples}
@@ -2095,14 +1983,6 @@ line option above, the command \command{bdist\_openpkg} could be
 implemented by the class \class{distcmds.bdist_openpkg.bdist_openpkg}
 or \class{buildcmds.bdist_openpkg.bdist_openpkg}.
 
-\section{Adding new distribution types}
-
-Commands that create distributions (files in the \file{dist/}
-directory) need to add \code{(\var{command}, \var{filename})} pairs to
-\code{self.distribution.dist_files} so that \command{upload} can
-upload it to PyPI.  The \var{filename} in the pair contains no path
-information, only the name of the file itself.  In dry-run mode, pairs
-should still be added to represent what would have been created.
 
 \chapter{Command Reference}
 \label{reference}

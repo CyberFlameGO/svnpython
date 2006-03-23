@@ -43,6 +43,7 @@ del l
 # Functions which aren't available as string methods.
 
 # Capitalize the words in a string, e.g. " aBc  dEf " -> "Abc Def".
+# See also regsub.capwords().
 def capwords(s, sep=None):
     """capwords(s, [sep]) -> string
 
@@ -77,7 +78,7 @@ def maketrans(fromstr, tostr):
     return ''.join(L)
 
 
-
+
 ####################################################################
 import re as _re
 
@@ -204,7 +205,7 @@ class Template:
         return self.pattern.sub(convert, self.template)
 
 
-
+
 ####################################################################
 # NOTE: Everything below here is deprecated.  Use string methods instead.
 # This stuff will go away in Python 3.0.

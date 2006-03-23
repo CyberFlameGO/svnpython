@@ -9,24 +9,6 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 import unittest, sys, string, codecs, new
 from test import test_support, string_tests
 
-# Error handling (bad decoder return)
-def search_function(encoding):
-    def decode1(input, errors="strict"):
-        return 42 # not a tuple
-    def encode1(input, errors="strict"):
-        return 42 # not a tuple
-    def encode2(input, errors="strict"):
-        return (42, 42) # no unicode
-    def decode2(input, errors="strict"):
-        return (42, 42) # no unicode
-    if encoding=="test.unicode1":
-        return (encode1, decode1, None, None)
-    elif encoding=="test.unicode2":
-        return (encode2, decode2, None, None)
-    else:
-        return None
-codecs.register(search_function)
-
 class UnicodeTest(
     string_tests.CommonTest,
     string_tests.MixinStrUnicodeUserStringTest,
@@ -406,10 +388,7 @@ class UnicodeTest(
         self.assertEqual('%i %*.*s' % (10, 5,3,u'abc',), u'10   abc')
         self.assertEqual('%i%s %*.*s' % (10, 3, 5, 3, u'abc',), u'103   abc')
         self.assertEqual('%c' % u'a', u'a')
-        class Wrapper:
-            def __str__(self):
-                return u'\u1234'
-        self.assertEqual('%s' % Wrapper(), u'\u1234')
+
 
     def test_format_float(self):
         try:
@@ -599,6 +578,23 @@ class UnicodeTest(
         # Error handling (truncated escape sequence)
         self.assertRaises(UnicodeError, "\\".decode, "unicode-escape")
 
+        # Error handling (bad decoder return)
+        def search_function(encoding):
+            def decode1(input, errors="strict"):
+                return 42 # not a tuple
+            def encode1(input, errors="strict"):
+                return 42 # not a tuple
+            def encode2(input, errors="strict"):
+                return (42, 42) # no unicode
+            def decode2(input, errors="strict"):
+                return (42, 42) # no unicode
+            if encoding=="test.unicode1":
+                return (encode1, decode1, None, None)
+            elif encoding=="test.unicode2":
+                return (encode2, decode2, None, None)
+            else:
+                return None
+        codecs.register(search_function)
         self.assertRaises(TypeError, "hello".decode, "test.unicode1")
         self.assertRaises(TypeError, unicode, "hello", "test.unicode2")
         self.assertRaises(TypeError, u"hello".encode, "test.unicode1")
@@ -746,69 +742,6 @@ class UnicodeTest(
         x = u'\U00100000'
         y = x.encode("raw-unicode-escape").decode("raw-unicode-escape")
         self.assertEqual(x, y)
-
-    def test_conversion(self):
-        # Make sure __unicode__() works properly
-        class Foo0:
-            def __str__(self):
-                return "foo"
-
-        class Foo1:
-            def __unicode__(self):
-                return u"foo"
-
-        class Foo2(object):
-            def __unicode__(self):
-                return u"foo"
-
-        class Foo3(object):
-            def __unicode__(self):
-                return "foo"
-
-        class Foo4(str):
-            def __unicode__(self):
-                return "foo"
-
-        class Foo5(unicode):
-            def __unicode__(self):
-                return "foo"
-
-        class Foo6(str):
-            def __str__(self):
-                return "foos"
-
-            def __unicode__(self):
-                return u"foou"
-
-        class Foo7(unicode):
-            def __str__(self):
-                return "foos"
-            def __unicode__(self):
-                return u"foou"
-
-        class Foo8(unicode):
-            def __new__(cls, content=""):
-                return unicode.__new__(cls, 2*content)
-            def __unicode__(self):
-                return self
-
-        class Foo9(unicode):
-            def __str__(self):
-                return "string"
-            def __unicode__(self):
-                return "not unicode"
-
-        self.assertEqual(unicode(Foo0()), u"foo")
-        self.assertEqual(unicode(Foo1()), u"foo")
-        self.assertEqual(unicode(Foo2()), u"foo")
-        self.assertEqual(unicode(Foo3()), u"foo")
-        self.assertEqual(unicode(Foo4("bar")), u"foo")
-        self.assertEqual(unicode(Foo5("bar")), u"foo")
-        self.assertEqual(unicode(Foo6("bar")), u"foou")
-        self.assertEqual(unicode(Foo7("bar")), u"foou")
-        self.assertEqual(unicode(Foo8("foo")), u"foofoo")
-        self.assertEqual(str(Foo9("foo")), "string")
-        self.assertEqual(unicode(Foo9("foo")), u"not unicode")
 
 def test_main():
     test_support.run_unittest(UnicodeTest)

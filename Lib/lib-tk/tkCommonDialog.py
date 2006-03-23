@@ -1,3 +1,7 @@
+#
+# Instant Python
+# $Id$
+#
 # base class for tk common dialogues
 #
 # this module provides a base class for accessing the common

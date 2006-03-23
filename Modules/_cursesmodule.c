@@ -1889,7 +1889,7 @@ PyCurses_setupterm(PyObject* self, PyObject *args, PyObject* keywds)
 	static char *kwlist[] = {"term", "fd", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(
-		args, keywds, "|zi:setupterm", kwlist, &termstr, &fd)) {
+		args,keywds,"|zi:setupterm",kwlist,&termstr,&fd)) {
 		return NULL;
 	}
 	
@@ -2481,8 +2481,6 @@ init_curses(void)
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("_curses", PyCurses_methods);
-	if (m == NULL)
-    		return;
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);

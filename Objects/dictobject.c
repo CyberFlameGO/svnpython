@@ -2,7 +2,7 @@
 /* Dictionary object implementation using a hash table */
 
 /* The distribution includes a separate file, Objects/dictnotes.txt,
-   describing explorations into dictionary design and optimization.
+   describing explorations into dictionary design and optimization.  
    It covers typical dictionary use patterns, the parameters for
    tuning dictionaries, and several ideas for possible optimizations.
 */
@@ -113,7 +113,7 @@ equally good collision statistics, needed less code & used less memory.
 */
 
 /* Object used as dummy key to fill deleted entries */
-static PyObject *dummy = NULL; /* Initialized by first call to newdictobject() */
+static PyObject *dummy; /* Initialized by first call to newdictobject() */
 
 /* forward declarations */
 static dictentry *
@@ -217,8 +217,8 @@ reported by this function, and outstanding exceptions are maintained.
 static dictentry *
 lookdict(dictobject *mp, PyObject *key, register long hash)
 {
-	register Py_ssize_t i;
-	register size_t perturb;
+	register int i;
+	register unsigned int perturb;
 	register dictentry *freeslot;
 	register unsigned int mask = mp->ma_mask;
 	dictentry *ep0 = mp->ma_table;
@@ -328,8 +328,8 @@ Done:
 static dictentry *
 lookdict_string(dictobject *mp, PyObject *key, register long hash)
 {
-	register Py_ssize_t i;
-	register size_t perturb;
+	register int i;
+	register unsigned int perturb;
 	register dictentry *freeslot;
 	register unsigned int mask = mp->ma_mask;
 	dictentry *ep0 = mp->ma_table;
@@ -400,10 +400,8 @@ insertdict(register dictobject *mp, PyObject *key, long hash, PyObject *value)
 	else {
 		if (ep->me_key == NULL)
 			mp->ma_fill++;
-		else {
-			assert(ep->me_key == dummy);
-			Py_DECREF(dummy);
-		}
+		else
+			Py_DECREF(ep->me_key);
 		ep->me_key = key;
 		ep->me_hash = hash;
 		ep->me_value = value;
@@ -519,10 +517,10 @@ PyDict_GetItem(PyObject *op, PyObject *key)
 }
 
 /* CAUTION: PyDict_SetItem() must guarantee that it won't resize the
- * dictionary if it's merely replacing the value for an existing key.
- * This means that it's safe to loop over a dictionary with PyDict_Next()
- * and occasionally replace a value -- but you can't insert new keys or
- * remove them.
+ * dictionary if it is merely replacing the value for an existing key.
+ * This is means that it's safe to loop over a dictionary with
+ * PyDict_Next() and occasionally replace a value -- but you can't
+ * insert new keys or remove them.
  */
 int
 PyDict_SetItem(register PyObject *op, PyObject *key, PyObject *value)
@@ -554,20 +552,20 @@ PyDict_SetItem(register PyObject *op, PyObject *key, PyObject *value)
 	/* If we added a key, we can safely resize.  Otherwise just return!
 	 * If fill >= 2/3 size, adjust size.  Normally, this doubles or
 	 * quaduples the size, but it's also possible for the dict to shrink
-	 * (if ma_fill is much larger than ma_used, meaning a lot of dict
+	 * (if ma_fill is much larger than ma_used, meaning a lot of dict 
 	 * keys have been * deleted).
-	 *
+	 * 
 	 * Quadrupling the size improves average dictionary sparseness
 	 * (reducing collisions) at the cost of some memory and iteration
 	 * speed (which loops over every possible entry).  It also halves
 	 * the number of expensive resize operations in a growing dictionary.
-	 *
-	 * Very large dictionaries (over 50K items) use doubling instead.
+	 * 
+	 * Very large dictionaries (over 50K items) use doubling instead.  
 	 * This may help applications with severe memory constraints.
 	 */
 	if (!(mp->ma_used > n_used && mp->ma_fill*3 >= (mp->ma_mask+1)*2))
 		return 0;
-	return dictresize(mp, (mp->ma_used>50000 ? mp->ma_used*2 : mp->ma_used*4));
+	return dictresize(mp, mp->ma_used*(mp->ma_used>50000 ? 2 : 4));
 }
 
 int
@@ -690,10 +688,9 @@ PyDict_Clear(PyObject *op)
  * delete keys), via PyDict_SetItem().
  */
 int
-PyDict_Next(PyObject *op, Py_ssize_t *ppos, PyObject **pkey, PyObject **pvalue)
+PyDict_Next(PyObject *op, int *ppos, PyObject **pkey, PyObject **pvalue)
 {
-	register Py_ssize_t i;
-	register int mask;
+	register int i, mask;
 	register dictentry *ep;
 
 	if (!PyDict_Check(op))
@@ -735,7 +732,7 @@ dict_dealloc(register dictobject *mp)
 		PyMem_DEL(mp->ma_table);
 	if (num_free_dicts < MAXFREEDICTS && mp->ob_type == &PyDict_Type)
 		free_dicts[num_free_dicts++] = mp;
-	else
+	else 
 		mp->ob_type->tp_free((PyObject *)mp);
 	Py_TRASHCAN_SAFE_END(mp)
 }
@@ -787,7 +784,7 @@ dict_print(register dictobject *mp, register FILE *fp, register int flags)
 static PyObject *
 dict_repr(dictobject *mp)
 {
-	Py_ssize_t i;
+	int i;
 	PyObject *s, *temp, *colon = NULL;
 	PyObject *pieces = NULL, *result = NULL;
 	PyObject *key, *value;
@@ -863,7 +860,7 @@ Done:
 	return result;
 }
 
-static Py_ssize_t
+static int
 dict_length(dictobject *mp)
 {
 	return mp->ma_used;
@@ -882,22 +879,8 @@ dict_subscript(dictobject *mp, register PyObject *key)
 			return NULL;
 	}
 	v = (mp->ma_lookup)(mp, key, hash) -> me_value;
-	if (v == NULL) {
-		if (!PyDict_CheckExact(mp)) {
-			/* Look up __missing__ method if we're a subclass. */
-		    	PyObject *missing;
-			static PyObject *missing_str = NULL;
-			if (missing_str == NULL)
-				missing_str = 
-				  PyString_InternFromString("__missing__");
-			missing = _PyType_Lookup(mp->ob_type, missing_str);
-			if (missing != NULL)
-				return PyObject_CallFunctionObjArgs(missing,
-					(PyObject *)mp, key, NULL);
-		}
+	if (v == NULL)
 		PyErr_SetObject(PyExc_KeyError, key);
-		return NULL;
-	}
 	else
 		Py_INCREF(v);
 	return v;
@@ -913,7 +896,7 @@ dict_ass_sub(dictobject *mp, PyObject *v, PyObject *w)
 }
 
 static PyMappingMethods dict_as_mapping = {
-	(lenfunc)dict_length, /*mp_length*/
+	(inquiry)dict_length, /*mp_length*/
 	(binaryfunc)dict_subscript, /*mp_subscript*/
 	(objobjargproc)dict_ass_sub, /*mp_ass_subscript*/
 };
@@ -1124,7 +1107,7 @@ int
 PyDict_MergeFromSeq2(PyObject *d, PyObject *seq2, int override)
 {
 	PyObject *it;	/* iter(seq2) */
-	int i;	/* index into seq2 of current element */
+	int i;		/* index into seq2 of current element */
 	PyObject *item;	/* seq2[i] */
 	PyObject *fast;	/* item as a 2-tuple or 2-list */
 
@@ -1138,7 +1121,7 @@ PyDict_MergeFromSeq2(PyObject *d, PyObject *seq2, int override)
 
 	for (i = 0; ; ++i) {
 		PyObject *key, *value;
-		Py_ssize_t n;
+		int n;
 
 		fast = NULL;
 		item = PyIter_Next(it);
@@ -1162,7 +1145,7 @@ PyDict_MergeFromSeq2(PyObject *d, PyObject *seq2, int override)
 		if (n != 2) {
 			PyErr_Format(PyExc_ValueError,
 				     "dictionary update sequence element #%d "
-				     "has length %zd; 2 is required",
+				     "has length %d; 2 is required",
 				     i, n);
 			goto Fail;
 		}
@@ -1218,12 +1201,6 @@ PyDict_Merge(PyObject *a, PyObject *b, int override)
 		if (other == mp || other->ma_used == 0)
 			/* a.update(a) or a.update({}); nothing to do */
 			return 0;
-		if (mp->ma_used == 0)
-			/* Since the target dict is empty, PyDict_GetItem()
-			 * always returns NULL.  Setting override to 1
-			 * skips the unnecessary test.
-			 */
-			override = 1;
 		/* Do one big resize at the start, rather than
 		 * incrementally resizing as we insert new items.  Expect
 		 * that there will be no (or few) overlapping keys.
@@ -1315,7 +1292,7 @@ PyDict_Copy(PyObject *o)
 	return NULL;
 }
 
-Py_ssize_t
+int
 PyDict_Size(PyObject *mp)
 {
 	if (mp == NULL || !PyDict_Check(mp)) {
@@ -1723,8 +1700,7 @@ dict_popitem(dictobject *mp)
 static int
 dict_traverse(PyObject *op, visitproc visit, void *arg)
 {
-	Py_ssize_t i = 0;
-	int err;
+	int i = 0, err;
 	PyObject *pk;
 	PyObject *pv;
 
@@ -2070,20 +2046,17 @@ dictiter_dealloc(dictiterobject *di)
 	PyObject_Del(di);
 }
 
-static PyObject *
+static int
 dictiter_len(dictiterobject *di)
 {
-	long len = 0;
 	if (di->di_dict != NULL && di->di_used == di->di_dict->ma_used)
-		len = di->len;
-	return PyInt_FromLong(len);
+		return di->len;
+	return 0;
 }
 
-PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef dictiter_methods[] = {
-	{"__length_hint__", (PyCFunction)dictiter_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
+static PySequenceMethods dictiter_as_sequence = {
+	(inquiry)dictiter_len,		/* sq_length */
+	0,				/* sq_concat */
 };
 
 static PyObject *dictiter_iternextkey(dictiterobject *di)
@@ -2139,7 +2112,7 @@ PyTypeObject PyDictIterKey_Type = {
 	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
+	&dictiter_as_sequence,			/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	0,					/* tp_hash */
 	0,					/* tp_call */
@@ -2155,8 +2128,6 @@ PyTypeObject PyDictIterKey_Type = {
 	0,					/* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)dictiter_iternextkey,	/* tp_iternext */
-	dictiter_methods,			/* tp_methods */
-	0,
 };
 
 static PyObject *dictiter_iternextvalue(dictiterobject *di)
@@ -2212,7 +2183,7 @@ PyTypeObject PyDictIterValue_Type = {
 	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
+	&dictiter_as_sequence,			/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	0,					/* tp_hash */
 	0,					/* tp_call */
@@ -2228,8 +2199,6 @@ PyTypeObject PyDictIterValue_Type = {
 	0,					/* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)dictiter_iternextvalue,	/* tp_iternext */
-	dictiter_methods,			/* tp_methods */
-	0,
 };
 
 static PyObject *dictiter_iternextitem(dictiterobject *di)
@@ -2267,7 +2236,7 @@ static PyObject *dictiter_iternextitem(dictiterobject *di)
 		Py_DECREF(PyTuple_GET_ITEM(result, 1));
 	} else {
 		result = PyTuple_New(2);
-		if (result == NULL)
+		if (result == NULL) 
 			return NULL;
 	}
 	di->len--;
@@ -2299,7 +2268,7 @@ PyTypeObject PyDictIterItem_Type = {
 	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
+	&dictiter_as_sequence,			/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	0,					/* tp_hash */
 	0,					/* tp_call */
@@ -2315,6 +2284,4 @@ PyTypeObject PyDictIterItem_Type = {
 	0,					/* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)dictiter_iternextitem,	/* tp_iternext */
-	dictiter_methods,			/* tp_methods */
-	0,
 };

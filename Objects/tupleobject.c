@@ -24,10 +24,10 @@ int tuple_zero_allocs;
 #endif
 
 PyObject *
-PyTuple_New(register Py_ssize_t size)
+PyTuple_New(register int size)
 {
 	register PyTupleObject *op;
-	Py_ssize_t i;
+	int i;
 	if (size < 0) {
 		PyErr_BadInternalCall();
 		return NULL;
@@ -57,7 +57,7 @@ PyTuple_New(register Py_ssize_t size)
 	else
 #endif
 	{
-		Py_ssize_t nbytes = size * sizeof(PyObject *);
+		int nbytes = size * sizeof(PyObject *);
 		/* Check for overflow */
 		if (nbytes / sizeof(PyObject *) != (size_t)size ||
 		    (nbytes += sizeof(PyTupleObject) - sizeof(PyObject *))
@@ -82,7 +82,7 @@ PyTuple_New(register Py_ssize_t size)
 	return (PyObject *) op;
 }
 
-Py_ssize_t
+int
 PyTuple_Size(register PyObject *op)
 {
 	if (!PyTuple_Check(op)) {
@@ -94,7 +94,7 @@ PyTuple_Size(register PyObject *op)
 }
 
 PyObject *
-PyTuple_GetItem(register PyObject *op, register Py_ssize_t i)
+PyTuple_GetItem(register PyObject *op, register int i)
 {
 	if (!PyTuple_Check(op)) {
 		PyErr_BadInternalCall();
@@ -108,7 +108,7 @@ PyTuple_GetItem(register PyObject *op, register Py_ssize_t i)
 }
 
 int
-PyTuple_SetItem(register PyObject *op, register Py_ssize_t i, PyObject *newitem)
+PyTuple_SetItem(register PyObject *op, register int i, PyObject *newitem)
 {
 	register PyObject *olditem;
 	register PyObject **p;
@@ -131,9 +131,9 @@ PyTuple_SetItem(register PyObject *op, register Py_ssize_t i, PyObject *newitem)
 }
 
 PyObject *
-PyTuple_Pack(Py_ssize_t n, ...)
+PyTuple_Pack(int n, ...)
 {
-	Py_ssize_t i;
+	int i;
 	PyObject *o;
 	PyObject *result;
 	PyObject **items;
@@ -159,8 +159,8 @@ PyTuple_Pack(Py_ssize_t n, ...)
 static void
 tupledealloc(register PyTupleObject *op)
 {
-	register Py_ssize_t i;
-	register Py_ssize_t len =  op->ob_size;
+	register int i;
+	register int len =  op->ob_size;
 	PyObject_GC_UnTrack(op);
 	Py_TRASHCAN_SAFE_BEGIN(op)
 	if (len > 0) {
@@ -187,7 +187,7 @@ done:
 static int
 tupleprint(PyTupleObject *op, FILE *fp, int flags)
 {
-	Py_ssize_t i;
+	int i;
 	fprintf(fp, "(");
 	for (i = 0; i < op->ob_size; i++) {
 		if (i > 0)
@@ -204,7 +204,7 @@ tupleprint(PyTupleObject *op, FILE *fp, int flags)
 static PyObject *
 tuplerepr(PyTupleObject *v)
 {
-	Py_ssize_t i, n;
+	int i, n;
 	PyObject *s, *temp;
 	PyObject *pieces, *result = NULL;
 
@@ -268,7 +268,7 @@ static long
 tuplehash(PyTupleObject *v)
 {
 	register long x, y;
-	register Py_ssize_t len = v->ob_size;
+	register int len = v->ob_size;
 	register PyObject **p;
 	long mult = 1000003L;
 	x = 0x345678L;
@@ -278,8 +278,7 @@ tuplehash(PyTupleObject *v)
 		if (y == -1)
 			return -1;
 		x = (x ^ y) * mult;
-		/* the cast might truncate len; that doesn't change hash stability */
-		mult += (long)(82520L + len + len);
+		mult += 82520L + len + len;
 	}
 	x += 97531L;
 	if (x == -1)
@@ -287,7 +286,7 @@ tuplehash(PyTupleObject *v)
 	return x;
 }
 
-static Py_ssize_t
+static int
 tuplelength(PyTupleObject *a)
 {
 	return a->ob_size;
@@ -296,8 +295,7 @@ tuplelength(PyTupleObject *a)
 static int
 tuplecontains(PyTupleObject *a, PyObject *el)
 {
-	Py_ssize_t i;
-	int cmp;
+	int i, cmp;
 
 	for (i = 0, cmp = 0 ; cmp == 0 && i < a->ob_size; ++i)
 		cmp = PyObject_RichCompareBool(el, PyTuple_GET_ITEM(a, i),
@@ -306,7 +304,7 @@ tuplecontains(PyTupleObject *a, PyObject *el)
 }
 
 static PyObject *
-tupleitem(register PyTupleObject *a, register Py_ssize_t i)
+tupleitem(register PyTupleObject *a, register int i)
 {
 	if (i < 0 || i >= a->ob_size) {
 		PyErr_SetString(PyExc_IndexError, "tuple index out of range");
@@ -317,13 +315,12 @@ tupleitem(register PyTupleObject *a, register Py_ssize_t i)
 }
 
 static PyObject *
-tupleslice(register PyTupleObject *a, register Py_ssize_t ilow, 
-	   register Py_ssize_t ihigh)
+tupleslice(register PyTupleObject *a, register int ilow, register int ihigh)
 {
 	register PyTupleObject *np;
 	PyObject **src, **dest;
-	register Py_ssize_t i;
-	Py_ssize_t len;
+	register int i;
+	int len;
 	if (ilow < 0)
 		ilow = 0;
 	if (ihigh > a->ob_size)
@@ -349,7 +346,7 @@ tupleslice(register PyTupleObject *a, register Py_ssize_t ilow,
 }
 
 PyObject *
-PyTuple_GetSlice(PyObject *op, Py_ssize_t i, Py_ssize_t j)
+PyTuple_GetSlice(PyObject *op, int i, int j)
 {
 	if (op == NULL || !PyTuple_Check(op)) {
 		PyErr_BadInternalCall();
@@ -361,8 +358,8 @@ PyTuple_GetSlice(PyObject *op, Py_ssize_t i, Py_ssize_t j)
 static PyObject *
 tupleconcat(register PyTupleObject *a, register PyObject *bb)
 {
-	register Py_ssize_t size;
-	register Py_ssize_t i;
+	register int size;
+	register int i;
 	PyObject **src, **dest;
 	PyTupleObject *np;
 	if (!PyTuple_Check(bb)) {
@@ -398,10 +395,10 @@ tupleconcat(register PyTupleObject *a, register PyObject *bb)
 }
 
 static PyObject *
-tuplerepeat(PyTupleObject *a, Py_ssize_t n)
+tuplerepeat(PyTupleObject *a, int n)
 {
-	Py_ssize_t i, j;
-	Py_ssize_t size;
+	int i, j;
+	int size;
 	PyTupleObject *np;
 	PyObject **p, **items;
 	if (n < 0)
@@ -437,13 +434,13 @@ tuplerepeat(PyTupleObject *a, Py_ssize_t n)
 static int
 tupletraverse(PyTupleObject *o, visitproc visit, void *arg)
 {
-	Py_ssize_t i;
+	int i, err;
 	PyObject *x;
 
 	for (i = o->ob_size; --i >= 0; ) {
 		x = o->ob_item[i];
 		if (x != NULL) {
-			int err = visit(x, arg);
+			err = visit(x, arg);
 			if (err)
 				return err;
 		}
@@ -455,8 +452,8 @@ static PyObject *
 tuplerichcompare(PyObject *v, PyObject *w, int op)
 {
 	PyTupleObject *vt, *wt;
-	Py_ssize_t i;
-	Py_ssize_t vlen, wlen;
+	int i;
+	int vlen, wlen;
 
 	if (!PyTuple_Check(v) || !PyTuple_Check(w)) {
 		Py_INCREF(Py_NotImplemented);
@@ -548,7 +545,7 @@ static PyObject *
 tuple_subtype_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	PyObject *tmp, *new, *item;
-	Py_ssize_t i, n;
+	int i, n;
 
 	assert(PyType_IsSubtype(type, &PyTuple_Type));
 	tmp = tuple_new(&PyTuple_Type, args, kwds);
@@ -574,24 +571,27 @@ PyDoc_STRVAR(tuple_doc,
 "If the argument is a tuple, the return value is the same object.");
 
 static PySequenceMethods tuple_as_sequence = {
-	(lenfunc)tuplelength,			/* sq_length */
+	(inquiry)tuplelength,			/* sq_length */
 	(binaryfunc)tupleconcat,		/* sq_concat */
-	(ssizeargfunc)tuplerepeat,		/* sq_repeat */
-	(ssizeargfunc)tupleitem,		/* sq_item */
-	(ssizessizeargfunc)tupleslice,		/* sq_slice */
+	(intargfunc)tuplerepeat,		/* sq_repeat */
+	(intargfunc)tupleitem,			/* sq_item */
+	(intintargfunc)tupleslice,		/* sq_slice */
 	0,					/* sq_ass_item */
 	0,					/* sq_ass_slice */
 	(objobjproc)tuplecontains,		/* sq_contains */
 };
 
-#define HASINDEX(o) PyType_HasFeature((o)->ob_type, Py_TPFLAGS_HAVE_INDEX)
-
 static PyObject*
 tuplesubscript(PyTupleObject* self, PyObject* item)
 {
-	PyNumberMethods *nb = item->ob_type->tp_as_number;
-	if (nb != NULL && HASINDEX(item) && nb->nb_index != NULL) {
-		Py_ssize_t i = nb->nb_index(item);
+	if (PyInt_Check(item)) {
+		long i = PyInt_AS_LONG(item);
+		if (i < 0)
+			i += PyTuple_GET_SIZE(self);
+		return tupleitem(self, i);
+	}
+	else if (PyLong_Check(item)) {
+		long i = PyLong_AsLong(item);
 		if (i == -1 && PyErr_Occurred())
 			return NULL;
 		if (i < 0)
@@ -599,7 +599,7 @@ tuplesubscript(PyTupleObject* self, PyObject* item)
 		return tupleitem(self, i);
 	}
 	else if (PySlice_Check(item)) {
-		Py_ssize_t start, stop, step, slicelength, cur, i;
+		int start, stop, step, slicelength, cur, i;
 		PyObject* result;
 		PyObject* it;
 		PyObject **src, **dest;
@@ -649,7 +649,7 @@ static PyMethodDef tuple_methods[] = {
 };
 
 static PyMappingMethods tuple_as_mapping = {
-	(lenfunc)tuplelength,
+	(inquiry)tuplelength,
 	(binaryfunc)tuplesubscript,
 	0
 };
@@ -708,12 +708,12 @@ PyTypeObject PyTuple_Type = {
    known to some other part of the code. */
 
 int
-_PyTuple_Resize(PyObject **pv, Py_ssize_t newsize)
+_PyTuple_Resize(PyObject **pv, int newsize)
 {
 	register PyTupleObject *v;
 	register PyTupleObject *sv;
-	Py_ssize_t i;
-	Py_ssize_t oldsize;
+	int i;
+	int oldsize;
 
 	v = (PyTupleObject *) *pv;
 	if (v == NULL || v->ob_type != &PyTuple_Type ||
@@ -852,20 +852,17 @@ tupleiter_next(tupleiterobject *it)
 	return NULL;
 }
 
-static PyObject *
+static int
 tupleiter_len(tupleiterobject *it)
 {
-	Py_ssize_t len = 0;
 	if (it->it_seq)
-		len = PyTuple_GET_SIZE(it->it_seq) - it->it_index;
-	return PyInt_FromSsize_t(len);
+		return PyTuple_GET_SIZE(it->it_seq) - it->it_index;
+	return 0;
 }
 
-PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef tupleiter_methods[] = {
-	{"__length_hint__", (PyCFunction)tupleiter_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
+static PySequenceMethods tupleiter_as_sequence = {
+	(inquiry)tupleiter_len,		/* sq_length */
+	0,				/* sq_concat */
 };
 
 PyTypeObject PyTupleIter_Type = {
@@ -882,7 +879,7 @@ PyTypeObject PyTupleIter_Type = {
 	0,					/* tp_compare */
 	0,					/* tp_repr */
 	0,					/* tp_as_number */
-	0,					/* tp_as_sequence */
+	&tupleiter_as_sequence,			/* tp_as_sequence */
 	0,					/* tp_as_mapping */
 	0,					/* tp_hash */
 	0,					/* tp_call */
@@ -898,6 +895,4 @@ PyTypeObject PyTupleIter_Type = {
 	0,					/* tp_weaklistoffset */
 	PyObject_SelfIter,			/* tp_iter */
 	(iternextfunc)tupleiter_next,		/* tp_iternext */
-	tupleiter_methods,			/* tp_methods */
-	0,
 };

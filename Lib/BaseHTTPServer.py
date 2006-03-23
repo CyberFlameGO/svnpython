@@ -436,11 +436,10 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         """Return the server software version string."""
         return self.server_version + ' ' + self.sys_version
 
-    def date_time_string(self, timestamp=None):
+    def date_time_string(self):
         """Return the current date and time formatted for a message header."""
-        if timestamp is None:
-            timestamp = time.time()
-        year, month, day, hh, mm, ss, wd, y, z = time.gmtime(timestamp)
+        now = time.time()
+        year, month, day, hh, mm, ss, wd, y, z = time.gmtime(now)
         s = "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
                 self.weekdayname[wd],
                 day, self.monthname[month], year,
@@ -483,7 +482,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
 
     # Table mapping response codes to messages; entries have the
     # form {code: (shortmessage, longmessage)}.
-    # See RFC 2616.
+    # See http://www.w3.org/hypertext/WWW/Protocols/HTTP/HTRESP.html
     responses = {
         100: ('Continue', 'Request received, please continue'),
         101: ('Switching Protocols',
@@ -494,7 +493,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         202: ('Accepted',
               'Request accepted, processing continues off-line'),
         203: ('Non-Authoritative Information', 'Request fulfilled from cache'),
-        204: ('No Content', 'Request fulfilled, nothing follows'),
+        204: ('No response', 'Request fulfilled, nothing follows'),
         205: ('Reset Content', 'Clear input form for further input.'),
         206: ('Partial Content', 'Partial content follows.'),
 
@@ -503,7 +502,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         301: ('Moved Permanently', 'Object moved permanently -- see URI list'),
         302: ('Found', 'Object moved temporarily -- see URI list'),
         303: ('See Other', 'Object moved -- see Method and URL list'),
-        304: ('Not Modified',
+        304: ('Not modified',
               'Document has not changed since given time'),
         305: ('Use Proxy',
               'You must use proxy specified in Location to access this '
@@ -511,11 +510,11 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         307: ('Temporary Redirect',
               'Object moved temporarily -- see URI list'),
 
-        400: ('Bad Request',
+        400: ('Bad request',
               'Bad request syntax or unsupported method'),
         401: ('Unauthorized',
               'No permission -- see authorization schemes'),
-        402: ('Payment Required',
+        402: ('Payment required',
               'No payment -- see charging schemes'),
         403: ('Forbidden',
               'Request forbidden -- authorization will not help'),
@@ -525,7 +524,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         406: ('Not Acceptable', 'URI not available in preferred format.'),
         407: ('Proxy Authentication Required', 'You must authenticate with '
               'this proxy before proceeding.'),
-        408: ('Request Timeout', 'Request timed out; try again later.'),
+        408: ('Request Time-out', 'Request timed out; try again later.'),
         409: ('Conflict', 'Request conflict.'),
         410: ('Gone',
               'URI no longer exists and has been permanently removed.'),
@@ -539,15 +538,15 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         417: ('Expectation Failed',
               'Expect condition could not be satisfied.'),
 
-        500: ('Internal Server Error', 'Server got itself in trouble'),
+        500: ('Internal error', 'Server got itself in trouble'),
         501: ('Not Implemented',
               'Server does not support this operation'),
         502: ('Bad Gateway', 'Invalid responses from another server/proxy.'),
-        503: ('Service Unavailable',
+        503: ('Service temporarily overloaded',
               'The server cannot process the request due to a high load'),
-        504: ('Gateway Timeout',
+        504: ('Gateway timeout',
               'The gateway server did not receive a timely response'),
-        505: ('HTTP Version Not Supported', 'Cannot fulfill request.'),
+        505: ('HTTP Version not supported', 'Cannot fulfill request.'),
         }
 
 

@@ -116,13 +116,6 @@ getgrammar(char *filename)
 	return g;
 }
 
-/* Can't happen in pgen */
-PyObject*
-PyErr_Occurred()
-{
-	return 0;
-}
-
 void
 Py_FatalError(const char *msg)
 {

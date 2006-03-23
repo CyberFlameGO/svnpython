@@ -55,7 +55,7 @@ class GzipFile:
     """
 
     myfileobj = None
-    max_read_chunk = 10 * 1024 * 1024   # 10Mb
+    max_read_chunk = 10 * 1024 * 1024
 
     def __init__(self, filename=None, mode=None,
                  compresslevel=9, fileobj=None):
@@ -332,10 +332,7 @@ class GzipFile:
             return
         self.close()
 
-    def flush(self,zlib_mode=zlib.Z_SYNC_FLUSH):
-        if self.mode == WRITE:
-            # Ensure the compressor's buffer is flushed
-            self.fileobj.write(self.compress.flush(zlib_mode))
+    def flush(self):
         self.fileobj.flush()
 
     def fileno(self):

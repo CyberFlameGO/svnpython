@@ -4,7 +4,7 @@
 #include "Python.h"
 
 #ifdef Py_REF_DEBUG
-Py_ssize_t _Py_RefTotal;
+long _Py_RefTotal;
 #endif
 
 int Py_DivisionWarningFlag;
@@ -138,11 +138,9 @@ _Py_NegativeRefcount(const char *fname, int lineno, PyObject *op)
 {
 	char buf[300];
 
-	/* XXX(twouters) cast refcount to long until %zd is universally
-	   available */
 	PyOS_snprintf(buf, sizeof(buf),
-		      "%s:%i object at %p has negative ref count %ld",
-		      fname, lineno, op, (long)op->ob_refcnt);
+		      "%s:%i object at %p has negative ref count %i",
+		      fname, lineno, op, op->ob_refcnt);
 	Py_FatalError(buf);
 }
 
@@ -172,7 +170,7 @@ PyObject_Init(PyObject *op, PyTypeObject *tp)
 }
 
 PyVarObject *
-PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)
+PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, int size)
 {
 	if (op == NULL)
 		return (PyVarObject *) PyErr_NoMemory();
@@ -194,7 +192,7 @@ _PyObject_New(PyTypeObject *tp)
 }
 
 PyVarObject *
-_PyObject_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
+_PyObject_NewVar(PyTypeObject *tp, int nitems)
 {
 	PyVarObject *op;
 	const size_t size = _PyObject_VAR_SIZE(tp, nitems);
@@ -235,10 +233,8 @@ internal_print(PyObject *op, FILE *fp, int flags, int nesting)
 	}
 	else {
 		if (op->ob_refcnt <= 0)
-			/* XXX(twouters) cast refcount to long until %zd is
-			   universally available */
-			fprintf(fp, "<refcnt %ld at %p>",
-				(long)op->ob_refcnt, op);
+			fprintf(fp, "<refcnt %u at %p>",
+				op->ob_refcnt, op);
 		else if (op->ob_type->tp_print == NULL) {
 			PyObject *s;
 			if (flags & Py_PRINT_RAW)
@@ -281,14 +277,12 @@ void _PyObject_Dump(PyObject* op)
 	else {
 		fprintf(stderr, "object  : ");
 		(void)PyObject_Print(op, stderr, 0);
-		/* XXX(twouters) cast refcount to long until %zd is
-		   universally available */
 		fprintf(stderr, "\n"
 			"type    : %s\n"
-			"refcount: %ld\n"
+			"refcount: %d\n"
 			"address : %p\n",
 			op->ob_type==NULL ? "NULL" : op->ob_type->tp_name,
-			(long)op->ob_refcnt,
+			op->ob_refcnt,
 			op);
 	}
 }
@@ -337,46 +331,20 @@ PyObject_Repr(PyObject *v)
 }
 
 PyObject *
-_PyObject_Str(PyObject *v)
+PyObject_Str(PyObject *v)
 {
 	PyObject *res;
-	int type_ok;
+
 	if (v == NULL)
 		return PyString_FromString("<NULL>");
 	if (PyString_CheckExact(v)) {
 		Py_INCREF(v);
 		return v;
 	}
-#ifdef Py_USING_UNICODE
-	if (PyUnicode_CheckExact(v)) {
-		Py_INCREF(v);
-		return v;
-	}
-#endif
 	if (v->ob_type->tp_str == NULL)
 		return PyObject_Repr(v);
 
 	res = (*v->ob_type->tp_str)(v);
-	if (res == NULL)
-		return NULL;
-	type_ok = PyString_Check(res);
-#ifdef Py_USING_UNICODE
-	type_ok = type_ok || PyUnicode_Check(res);
-#endif
-	if (!type_ok) {
-		PyErr_Format(PyExc_TypeError,
-			     "__str__ returned non-string (type %.200s)",
-			     res->ob_type->tp_name);
-		Py_DECREF(res);
-		return NULL;
-	}
-	return res;
-}
-
-PyObject *
-PyObject_Str(PyObject *v)
-{
-	PyObject *res = _PyObject_Str(v);
 	if (res == NULL)
 		return NULL;
 #ifdef Py_USING_UNICODE
@@ -390,7 +358,13 @@ PyObject_Str(PyObject *v)
 		    	return NULL;
 	}
 #endif
-	assert(PyString_Check(res));
+	if (!PyString_Check(res)) {
+		PyErr_Format(PyExc_TypeError,
+			     "__str__ returned non-string (type %.200s)",
+			     res->ob_type->tp_name);
+		Py_DECREF(res);
+		return NULL;
+	}
 	return res;
 }
 
@@ -399,9 +373,7 @@ PyObject *
 PyObject_Unicode(PyObject *v)
 {
 	PyObject *res;
-	PyObject *func;
 	PyObject *str;
-	static PyObject *unicodestr;
 
 	if (v == NULL) {
 		res = PyString_FromString("<NULL>");
@@ -414,32 +386,35 @@ PyObject_Unicode(PyObject *v)
 		Py_INCREF(v);
 		return v;
 	}
-	/* XXX As soon as we have a tp_unicode slot, we should
-	   check this before trying the __unicode__
-	   method. */
-	if (unicodestr == NULL) {
-		unicodestr= PyString_InternFromString("__unicode__");
-		if (unicodestr == NULL)
-			return NULL;
+	if (PyUnicode_Check(v)) {
+		/* For a Unicode subtype that's not a Unicode object,
+		   return a true Unicode object with the same data. */
+		return PyUnicode_FromUnicode(PyUnicode_AS_UNICODE(v),
+					     PyUnicode_GET_SIZE(v));
 	}
-	func = PyObject_GetAttr(v, unicodestr);
-	if (func != NULL) {
-		res = PyEval_CallObject(func, (PyObject *)NULL);
-		Py_DECREF(func);
-	}
+	if (PyString_Check(v)) {
+		Py_INCREF(v);
+	    	res = v;
+    	}
 	else {
-		PyErr_Clear();
-		if (PyUnicode_Check(v)) {
-			/* For a Unicode subtype that's didn't overwrite __unicode__,
-			   return a true Unicode object with the same data. */
-			return PyUnicode_FromUnicode(PyUnicode_AS_UNICODE(v),
-			                             PyUnicode_GET_SIZE(v));
+		PyObject *func;
+		static PyObject *unicodestr;
+		/* XXX As soon as we have a tp_unicode slot, we should
+		       check this before trying the __unicode__
+		       method. */
+		if (unicodestr == NULL) {
+			unicodestr= PyString_InternFromString(
+						       "__unicode__");
+			if (unicodestr == NULL)
+				return NULL;
 		}
-		if (PyString_CheckExact(v)) {
-			Py_INCREF(v);
-			res = v;
+		func = PyObject_GetAttr(v, unicodestr);
+		if (func != NULL) {
+		    	res = PyEval_CallObject(func, (PyObject *)NULL);
+			Py_DECREF(func);
 		}
 		else {
+			PyErr_Clear();
 			if (v->ob_type->tp_str != NULL)
 				res = (*v->ob_type->tp_str)(v);
 			else
@@ -633,26 +608,31 @@ try_3way_compare(PyObject *v, PyObject *w)
 	    w->ob_type->tp_compare == _PyObject_SlotCompare)
 		return _PyObject_SlotCompare(v, w);
 
-	/* If we're here, v and w,
-	    a) are not instances;
-	    b) have different types or a type without tp_compare; and
-	    c) don't have a user-defined tp_compare.
-	   tp_compare implementations in C assume that both arguments
-	   have their type, so we give up if the coercion fails or if
-	   it yields types which are still incompatible (which can
-	   happen with a user-defined nb_coerce).
-	*/
+	/* Try coercion; if it fails, give up */
 	c = PyNumber_CoerceEx(&v, &w);
 	if (c < 0)
 		return -2;
 	if (c > 0)
 		return 2;
-	f = v->ob_type->tp_compare;
-	if (f != NULL && f == w->ob_type->tp_compare) {
+
+	/* Try v's comparison, if defined */
+	if ((f = v->ob_type->tp_compare) != NULL) {
 		c = (*f)(v, w);
 		Py_DECREF(v);
 		Py_DECREF(w);
 		return adjust_tp_compare(c);
+	}
+
+	/* Try w's comparison, if defined */
+	if ((f = w->ob_type->tp_compare) != NULL) {
+		c = (*f)(w, v); /* swapped! */
+		Py_DECREF(v);
+		Py_DECREF(w);
+		c = adjust_tp_compare(c);
+		if (c >= -1)
+			return -c; /* Swapped! */
+		else
+			return c;
 	}
 
 	/* No comparison defined */
@@ -671,7 +651,7 @@ static int
 default_3way_compare(PyObject *v, PyObject *w)
 {
 	int c;
-	const char *vname, *wname;
+	char *vname, *wname;
 
 	if (v->ob_type == w->ob_type) {
 		/* When comparing these pointers, they must be cast to
@@ -1026,12 +1006,12 @@ PyObject_Hash(PyObject *v)
 }
 
 PyObject *
-PyObject_GetAttrString(PyObject *v, const char *name)
+PyObject_GetAttrString(PyObject *v, char *name)
 {
 	PyObject *w, *res;
 
 	if (v->ob_type->tp_getattr != NULL)
-		return (*v->ob_type->tp_getattr)(v, (char*)name);
+		return (*v->ob_type->tp_getattr)(v, name);
 	w = PyString_InternFromString(name);
 	if (w == NULL)
 		return NULL;
@@ -1041,7 +1021,7 @@ PyObject_GetAttrString(PyObject *v, const char *name)
 }
 
 int
-PyObject_HasAttrString(PyObject *v, const char *name)
+PyObject_HasAttrString(PyObject *v, char *name)
 {
 	PyObject *res = PyObject_GetAttrString(v, name);
 	if (res != NULL) {
@@ -1053,13 +1033,13 @@ PyObject_HasAttrString(PyObject *v, const char *name)
 }
 
 int
-PyObject_SetAttrString(PyObject *v, const char *name, PyObject *w)
+PyObject_SetAttrString(PyObject *v, char *name, PyObject *w)
 {
 	PyObject *s;
 	int res;
 
 	if (v->ob_type->tp_setattr != NULL)
-		return (*v->ob_type->tp_setattr)(v, (char*)name, w);
+		return (*v->ob_type->tp_setattr)(v, name, w);
 	s = PyString_InternFromString(name);
 	if (s == NULL)
 		return -1;
@@ -1174,7 +1154,7 @@ PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)
 PyObject **
 _PyObject_GetDictPtr(PyObject *obj)
 {
-	Py_ssize_t dictoffset;
+	long dictoffset;
 	PyTypeObject *tp = obj->ob_type;
 
 	if (!(tp->tp_flags & Py_TPFLAGS_HAVE_CLASS))
@@ -1183,7 +1163,7 @@ _PyObject_GetDictPtr(PyObject *obj)
 	if (dictoffset == 0)
 		return NULL;
 	if (dictoffset < 0) {
-		Py_ssize_t tsize;
+		int tsize;
 		size_t size;
 
 		tsize = ((PyVarObject *)obj)->ob_size;
@@ -1214,7 +1194,7 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 	PyObject *descr = NULL;
 	PyObject *res = NULL;
 	descrgetfunc f;
-	Py_ssize_t dictoffset;
+	long dictoffset;
 	PyObject **dictptr;
 
 	if (!PyString_Check(name)){
@@ -1245,7 +1225,7 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 
 	/* Inline _PyType_Lookup */
 	{
-		Py_ssize_t i, n;
+		int i, n;
 		PyObject *mro, *base, *dict;
 
 		/* Look in tp_dict of types in MRO */
@@ -1286,7 +1266,7 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 	if (dictoffset != 0) {
 		PyObject *dict;
 		if (dictoffset < 0) {
-			Py_ssize_t tsize;
+			int tsize;
 			size_t size;
 
 			tsize = ((PyVarObject *)obj)->ob_size;
@@ -1422,7 +1402,7 @@ PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)
 int
 PyObject_IsTrue(PyObject *v)
 {
-	Py_ssize_t res;
+	int res;
 	if (v == Py_True)
 		return 1;
 	if (v == Py_False)
@@ -1440,8 +1420,7 @@ PyObject_IsTrue(PyObject *v)
 		res = (*v->ob_type->tp_as_sequence->sq_length)(v);
 	else
 		return 1;
-	/* if it is negative, it should be either -1 or -2 */
-	return (res > 0) ? 1 : Py_SAFE_DOWNCAST(res, Py_ssize_t, int);
+	return (res > 0) ? 1 : res;
 }
 
 /* equivalent of 'not v'
@@ -1565,7 +1544,7 @@ merge_class_dict(PyObject* dict, PyObject* aclass)
 		PyErr_Clear();
 	else {
 		/* We have no guarantee that bases is a real tuple */
-		Py_ssize_t i, n;
+		int i, n;
 		n = PySequence_Size(bases); /* This better be right */
 		if (n < 0)
 			PyErr_Clear();
@@ -1598,7 +1577,7 @@ merge_class_dict(PyObject* dict, PyObject* aclass)
 */
 
 static int
-merge_list_attr(PyObject* dict, PyObject* obj, const char *attrname)
+merge_list_attr(PyObject* dict, PyObject* obj, char *attrname)
 {
 	PyObject *list;
 	int result = 0;
@@ -1901,9 +1880,7 @@ _Py_PrintReferences(FILE *fp)
 	PyObject *op;
 	fprintf(fp, "Remaining objects:\n");
 	for (op = refchain._ob_next; op != &refchain; op = op->_ob_next) {
-		/* XXX(twouters) cast refcount to long until %zd is
-		   universally available */
-		fprintf(fp, "%p [%ld] ", op, (long)op->ob_refcnt);
+		fprintf(fp, "%p [%d] ", op, op->ob_refcnt);
 		if (PyObject_Print(op, fp, 0) != 0)
 			PyErr_Clear();
 		putc('\n', fp);
@@ -1919,9 +1896,7 @@ _Py_PrintReferenceAddresses(FILE *fp)
 	PyObject *op;
 	fprintf(fp, "Remaining object addresses:\n");
 	for (op = refchain._ob_next; op != &refchain; op = op->_ob_next)
-		/* XXX(twouters) cast refcount to long until %zd is
-		   universally available */
-		fprintf(fp, "%p [%ld] %s\n", op, (long)op->ob_refcnt,
+		fprintf(fp, "%p [%d] %s\n", op, op->ob_refcnt,
 					    op->ob_type->tp_name);
 }
 
@@ -1962,7 +1937,7 @@ PyTypeObject *_Py_cobject_hack = &PyCObject_Type;
 
 
 /* Hack to force loading of abstract.o */
-Py_ssize_t (*_Py_abstract_hack)(PyObject *) = PyObject_Size;
+int (*_Py_abstract_hack)(PyObject *) = PyObject_Size;
 
 
 /* Python's malloc wrappers (see pymem.h) */
@@ -2005,7 +1980,7 @@ Py_ReprEnter(PyObject *obj)
 {
 	PyObject *dict;
 	PyObject *list;
-	Py_ssize_t i;
+	int i;
 
 	dict = PyThreadState_GetDict();
 	if (dict == NULL)
@@ -2033,7 +2008,7 @@ Py_ReprLeave(PyObject *obj)
 {
 	PyObject *dict;
 	PyObject *list;
-	Py_ssize_t i;
+	int i;
 
 	dict = PyThreadState_GetDict();
 	if (dict == NULL)

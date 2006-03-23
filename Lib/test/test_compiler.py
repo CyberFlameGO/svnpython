@@ -1,5 +1,4 @@
 import compiler
-from compiler.ast import flatten
 import os
 import test.test_support
 import unittest
@@ -28,23 +27,11 @@ class CompilerTest(unittest.TestCase):
                 f = open(path, "U")
                 buf = f.read()
                 f.close()
-                if "badsyntax" in basename or "bad_coding" in basename:
+                if "badsyntax" in basename:
                     self.assertRaises(SyntaxError, compiler.compile,
                                       buf, basename, "exec")
                 else:
-                    try:
-                        compiler.compile(buf, basename, "exec")
-                    except Exception, e:
-                        args = list(e.args)
-                        args[0] += "[in file %s]" % basename
-                        e.args = tuple(args)
-                        raise
-
-    def testNewClassSyntax(self):
-        compiler.compile("class foo():pass\n\n","<string>","exec")
-
-    def testYieldExpr(self):
-        compiler.compile("def g(): yield\n\n", "<string>", "exec")
+                    compiler.compile(buf, basename, "exec")
 
     def testLineNo(self):
         # Test that all nodes except Module have a correct lineno attribute.
@@ -69,10 +56,6 @@ class CompilerTest(unittest.TestCase):
                 "lineno=%s on %s" % (node.lineno, node.__class__))
         for child in node.getChildNodes():
             self.check_lineno(child)
-
-    def testFlatten(self):
-        self.assertEquals(flatten([1, [2]]), [1, 2])
-        self.assertEquals(flatten((1, (2,))), [1, 2])
 
 NOLINENO = (compiler.ast.Module, compiler.ast.Stmt, compiler.ast.Discard)
 

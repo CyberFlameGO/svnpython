@@ -307,7 +307,7 @@ class test__mkstemp_inner(TC):
         retval = os.spawnl(os.P_WAIT, sys.executable, decorated, tester, v, fd)
         self.failIf(retval < 0,
                     "child process caught fatal signal %d" % -retval)
-        self.failIf(retval > 0, "child process reports failure %d"%retval)
+        self.failIf(retval > 0, "child process reports failure")
 
     def test_textmode(self):
         # _mkstemp_inner can create files in text mode

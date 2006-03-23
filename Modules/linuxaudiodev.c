@@ -40,7 +40,7 @@ typedef unsigned long uint32_t;
 #endif
 
 typedef struct {
-    PyObject_HEAD
+    PyObject_HEAD;
     int		x_fd;		/* The open file */
     int         x_mode;           /* file mode */
     int		x_icount;	/* Input count */
@@ -332,6 +332,7 @@ _ssize(lad_t *self, int *nchannels, int *ssize)
     default:
         return -EOPNOTSUPP;
     }
+    *nchannels = 0;
     if (ioctl(self->x_fd, SNDCTL_DSP_CHANNELS, nchannels) < 0)
         return -errno;
     return 0;
@@ -344,11 +345,11 @@ static PyObject *
 lad_bufsize(lad_t *self, PyObject *args)
 {
     audio_buf_info ai;
-    int nchannels=0, ssize=0;
+    int nchannels, ssize;
 
     if (!PyArg_ParseTuple(args, ":bufsize")) return NULL;
 
-    if (_ssize(self, &nchannels, &ssize) < 0 || !ssize || !nchannels) {
+    if (_ssize(self, &nchannels, &ssize) < 0) {
         PyErr_SetFromErrno(LinuxAudioError);
         return NULL;
     }
@@ -365,12 +366,12 @@ static PyObject *
 lad_obufcount(lad_t *self, PyObject *args)
 {
     audio_buf_info ai;
-    int nchannels=0, ssize=0;
+    int nchannels, ssize;
 
     if (!PyArg_ParseTuple(args, ":obufcount"))
         return NULL;
 
-    if (_ssize(self, &nchannels, &ssize) < 0 || !ssize || !nchannels) {
+    if (_ssize(self, &nchannels, &ssize) < 0) {
         PyErr_SetFromErrno(LinuxAudioError);
         return NULL;
     }
@@ -388,12 +389,12 @@ static PyObject *
 lad_obuffree(lad_t *self, PyObject *args)
 {
     audio_buf_info ai;
-    int nchannels=0, ssize=0;
+    int nchannels, ssize;
 
     if (!PyArg_ParseTuple(args, ":obuffree"))
         return NULL;
 
-    if (_ssize(self, &nchannels, &ssize) < 0 || !ssize || !nchannels) {
+    if (_ssize(self, &nchannels, &ssize) < 0) {
         PyErr_SetFromErrno(LinuxAudioError);
         return NULL;
     }
@@ -490,8 +491,6 @@ initlinuxaudiodev(void)
     PyObject *m;
   
     m = Py_InitModule("linuxaudiodev", linuxaudiodev_methods);
-    if (m == NULL)
-	return;
 
     LinuxAudioError = PyErr_NewException("linuxaudiodev.error", NULL, NULL);
     if (LinuxAudioError)

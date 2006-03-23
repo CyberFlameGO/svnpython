@@ -15,7 +15,7 @@ static PyMemberDef module_members[] = {
 };
 
 PyObject *
-PyModule_New(const char *name)
+PyModule_New(char *name)
 {
 	PyModuleObject *m;
 	PyObject *nameobj;
@@ -104,7 +104,7 @@ _PyModule_Clear(PyObject *m)
 	   None, rather than deleting them from the dictionary, to
 	   avoid rehashing the dictionary (to some extent). */
 
-	Py_ssize_t pos;
+	int pos;
 	PyObject *key, *value;
 	PyObject *d;
 
@@ -151,8 +151,8 @@ module_init(PyModuleObject *m, PyObject *args, PyObject *kwds)
 {
 	static char *kwlist[] = {"name", "doc", NULL};
 	PyObject *dict, *name = Py_None, *doc = Py_None;
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "S|O:module.__init__",
-                                         kwlist, &name, &doc))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "S|O:module.__init__", kwlist,
+					 &name, &doc))
 		return -1;
 	dict = m->md_dict;
 	if (dict == NULL) {

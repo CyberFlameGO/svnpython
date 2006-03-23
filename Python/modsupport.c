@@ -26,7 +26,7 @@ static char api_version_warning[] =
  This Python has API version %d, module %.100s has version %d.";
 
 PyObject *
-Py_InitModule4(const char *name, PyMethodDef *methods, const char *doc,
+Py_InitModule4(char *name, PyMethodDef *methods, char *doc,
 	       PyObject *passthrough, int module_api_version)
 {
 	PyObject *m, *d, *v, *n;
@@ -103,7 +103,7 @@ Py_InitModule4(const char *name, PyMethodDef *methods, const char *doc,
 /* Helper for mkvalue() to scan the length of a format */
 
 static int
-countformat(const char *format, int endchar)
+countformat(char *format, int endchar)
 {
 	int count = 0;
 	int level = 0;
@@ -146,14 +146,14 @@ countformat(const char *format, int endchar)
 /* Generic function to create a value -- the inverse of getargs() */
 /* After an original idea and first implementation by Steven Miale */
 
-static PyObject *do_mktuple(const char**, va_list *, int, int);
-static PyObject *do_mklist(const char**, va_list *, int, int);
-static PyObject *do_mkdict(const char**, va_list *, int, int);
-static PyObject *do_mkvalue(const char**, va_list *);
+static PyObject *do_mktuple(char**, va_list *, int, int);
+static PyObject *do_mklist(char**, va_list *, int, int);
+static PyObject *do_mkdict(char**, va_list *, int, int);
+static PyObject *do_mkvalue(char**, va_list *);
 
 
 static PyObject *
-do_mkdict(const char **p_format, va_list *p_va, int endchar, int n)
+do_mkdict(char **p_format, va_list *p_va, int endchar, int n)
 {
 	PyObject *d;
 	int i;
@@ -199,15 +199,14 @@ do_mkdict(const char **p_format, va_list *p_va, int endchar, int n)
 }
 
 static PyObject *
-do_mklist(const char **p_format, va_list *p_va, int endchar, int n)
+do_mklist(char **p_format, va_list *p_va, int endchar, int n)
 {
 	PyObject *v;
 	int i;
 	int itemfailed = 0;
 	if (n < 0)
 		return NULL;
-	v = PyList_New(n);
-	if (v == NULL)
+	if ((v = PyList_New(n)) == NULL)
 		return NULL;
 	/* Note that we can't bail immediately on error as this will leak
 	   refcounts on any 'N' arguments. */
@@ -218,22 +217,20 @@ do_mklist(const char **p_format, va_list *p_va, int endchar, int n)
 			Py_INCREF(Py_None);
 			w = Py_None;
 		}
-		PyList_SET_ITEM(v, i, w);
+		PyList_SetItem(v, i, w);
 	}
-
-	if (itemfailed) {
-		/* do_mkvalue() should have already set an error */
+	if (v != NULL && **p_format != endchar) {
 		Py_DECREF(v);
-		return NULL;
-	}
-	if (**p_format != endchar) {
-		Py_DECREF(v);
+		v = NULL;
 		PyErr_SetString(PyExc_SystemError,
 				"Unmatched paren in format");
-		return NULL;
 	}
-	if (endchar)
+	else if (endchar)
 		++*p_format;
+	if (itemfailed) {
+		Py_DECREF(v);
+		v = NULL;
+	}
 	return v;
 }
 
@@ -249,7 +246,7 @@ _ustrlen(Py_UNICODE *u)
 #endif
 
 static PyObject *
-do_mktuple(const char **p_format, va_list *p_va, int endchar, int n)
+do_mktuple(char **p_format, va_list *p_va, int endchar, int n)
 {
 	PyObject *v;
 	int i;
@@ -267,26 +264,25 @@ do_mktuple(const char **p_format, va_list *p_va, int endchar, int n)
 			Py_INCREF(Py_None);
 			w = Py_None;
 		}
-		PyTuple_SET_ITEM(v, i, w);
+		PyTuple_SetItem(v, i, w);
 	}
-	if (itemfailed) {
-		/* do_mkvalue() should have already set an error */
+	if (v != NULL && **p_format != endchar) {
 		Py_DECREF(v);
-		return NULL;
-	}
-	if (**p_format != endchar) {
-		Py_DECREF(v);
+		v = NULL;
 		PyErr_SetString(PyExc_SystemError,
 				"Unmatched paren in format");
-		return NULL;
 	}
-	if (endchar)
+	else if (endchar)
 		++*p_format;
+	if (itemfailed) {
+		Py_DECREF(v);
+		v = NULL;
+	}
 	return v;
 }
 
 static PyObject *
-do_mkvalue(const char **p_format, va_list *p_va)
+do_mkvalue(char **p_format, va_list *p_va)
 {
 	for (;;) {
 		switch (*(*p_format)++) {
@@ -321,11 +317,6 @@ do_mkvalue(const char **p_format, va_list *p_va)
 				return PyInt_FromLong(n);
 		}
 		
-		case 'n':
-#if SIZEOF_SIZE_T!=SIZEOF_LONG
-			return PyInt_FromSsize_t(va_arg(*p_va, Py_ssize_t));
-#endif
-			/* Fall through from 'n' to 'l' if Py_ssize_t is long */
 		case 'l':
 			return PyInt_FromLong(va_arg(*p_va, long));
 
@@ -384,7 +375,7 @@ do_mkvalue(const char **p_format, va_list *p_va)
 		case 'c':
 		{
 			char p[1];
-			p[0] = (char)va_arg(*p_va, int);
+			p[0] = va_arg(*p_va, int);
 			return PyString_FromStringAndSize(p, 1);
 		}
 
@@ -467,7 +458,7 @@ do_mkvalue(const char **p_format, va_list *p_va)
 
 
 PyObject *
-Py_BuildValue(const char *format, ...)
+Py_BuildValue(char *format, ...)
 {
 	va_list va;
 	PyObject* retval;
@@ -478,9 +469,9 @@ Py_BuildValue(const char *format, ...)
 }
 
 PyObject *
-Py_VaBuildValue(const char *format, va_list va)
+Py_VaBuildValue(char *format, va_list va)
 {
-	const char *f = format;
+	char *f = format;
 	int n = countformat(f, '\0');
 	va_list lva;
 
@@ -507,7 +498,7 @@ Py_VaBuildValue(const char *format, va_list va)
 
 
 PyObject *
-PyEval_CallFunction(PyObject *obj, const char *format, ...)
+PyEval_CallFunction(PyObject *obj, char *format, ...)
 {
 	va_list vargs;
 	PyObject *args;
@@ -529,7 +520,7 @@ PyEval_CallFunction(PyObject *obj, const char *format, ...)
 
 
 PyObject *
-PyEval_CallMethod(PyObject *obj, const char *methodname, const char *format, ...)
+PyEval_CallMethod(PyObject *obj, char *methodname, char *format, ...)
 {
 	va_list vargs;
 	PyObject *meth;
@@ -558,7 +549,7 @@ PyEval_CallMethod(PyObject *obj, const char *methodname, const char *format, ...
 }
 
 int
-PyModule_AddObject(PyObject *m, const char *name, PyObject *o)
+PyModule_AddObject(PyObject *m, char *name, PyObject *o)
 {
 	PyObject *dict;
 	if (!PyModule_Check(m)) {
@@ -587,13 +578,13 @@ PyModule_AddObject(PyObject *m, const char *name, PyObject *o)
 }
 
 int 
-PyModule_AddIntConstant(PyObject *m, const char *name, long value)
+PyModule_AddIntConstant(PyObject *m, char *name, long value)
 {
 	return PyModule_AddObject(m, name, PyInt_FromLong(value));
 }
 
 int 
-PyModule_AddStringConstant(PyObject *m, const char *name, const char *value)
+PyModule_AddStringConstant(PyObject *m, char *name, char *value)
 {
 	return PyModule_AddObject(m, name, PyString_FromString(value));
 }

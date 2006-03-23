@@ -70,7 +70,7 @@ dbm_dealloc(register dbmobject *dp)
 	PyObject_Del(dp);
 }
 
-static Py_ssize_t
+static int
 dbm_length(dbmobject *dp)
 {
         if (dp->di_dbm == NULL) {
@@ -162,7 +162,7 @@ dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
 }
 
 static PyMappingMethods dbm_as_mapping = {
-	(lenfunc)dbm_length,		/*mp_length*/
+	(inquiry)dbm_length,		/*mp_length*/
 	(binaryfunc)dbm_subscript,	/*mp_subscript*/
 	(objobjargproc)dbm_ass_sub,	/*mp_ass_subscript*/
 };
@@ -359,8 +359,6 @@ initdbm(void) {
 
 	Dbmtype.ob_type = &PyType_Type;
 	m = Py_InitModule("dbm", dbmmodule_methods);
-	if (m == NULL)
-		return;
 	d = PyModule_GetDict(m);
 	if (DbmError == NULL)
 		DbmError = PyErr_NewException("dbm.error", NULL, NULL);

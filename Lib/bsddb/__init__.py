@@ -111,10 +111,11 @@ class _iter_mixin(UserDict.DictMixin):
             return
 
     def iteritems(self):
-        if not self.db:
-            return
         try:
-            cur = self._make_iter_cursor()
+            try:
+                cur = self._make_iter_cursor()
+            except AttributeError:
+                return
 
             # FIXME-20031102-greg: race condition.  cursor could
             # be closed by another thread before this call.
@@ -194,7 +195,7 @@ class _DBWithCursor(_iter_mixin):
                 try:
                     self.saved_dbc_key = c.current(0,0,0)[0]
                 except db.DBError:
-                    pass
+                    pass                    
             c.close()
             del c
         for cref in self._cursor_refs.values():
