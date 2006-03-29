@@ -79,30 +79,10 @@ PySlice_New(PyObject *start, PyObject *stop, PyObject *step)
 	return (PyObject *) obj;
 }
 
-PyObject *
-_PySlice_FromIndices(Py_ssize_t istart, Py_ssize_t istop)
-{
-	PyObject *start, *end, *slice;
-	start = PyInt_FromSsize_t(istart);
-	if (!start)
-		return NULL;
-	end = PyInt_FromSsize_t(istop);
-	if (!end) {
-		Py_DECREF(start);
-		return NULL;
-	}
-
-	slice = PySlice_New(start, end, NULL);
-	Py_DECREF(start);
-	Py_DECREF(end);
-	return slice;
-}
-
 int
-PySlice_GetIndices(PySliceObject *r, Py_ssize_t length,
-                   Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step)
+PySlice_GetIndices(PySliceObject *r, int length,
+                   int *start, int *stop, int *step)
 {
-	/* XXX support long ints */
 	if (r->step == Py_None) {
 		*step = 1;
 	} else {
@@ -130,12 +110,12 @@ PySlice_GetIndices(PySliceObject *r, Py_ssize_t length,
 }
 
 int
-PySlice_GetIndicesEx(PySliceObject *r, Py_ssize_t length,
-		     Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step, Py_ssize_t *slicelength)
+PySlice_GetIndicesEx(PySliceObject *r, int length,
+		     int *start, int *stop, int *step, int *slicelength)
 {
 	/* this is harder to get right than you might think */
 
-	Py_ssize_t defstart, defstop;
+	int defstart, defstop;
 
 	if (r->step == Py_None) {
 		*step = 1;
@@ -250,7 +230,7 @@ static PyMemberDef slice_members[] = {
 static PyObject*
 slice_indices(PySliceObject* self, PyObject* len)
 {
-	Py_ssize_t ilen, start, stop, step, slicelength;
+	int ilen, start, stop, step, slicelength;
 
 	ilen = PyInt_AsLong(len);
 

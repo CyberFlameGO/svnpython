@@ -85,14 +85,6 @@ def test():
                 os.unlink(os.path.join(testdir, f))
             os.rmdir(testdir)
 
-    def test_members(self):
-        # Covers Python/structmember.c::listmembers()
-        try:
-            1/0
-        except:
-            import sys
-            sys.exc_traceback.__members__
-
 def test_main():
     run_unittest(TracebackCases)
 

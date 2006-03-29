@@ -604,7 +604,7 @@ DocTestFinder finds the line number of each example:
     ...     >>> for x in range(10):
     ...     ...     print x,
     ...     0 1 2 3 4 5 6 7 8 9
-    ...     >>> x//2
+    ...     >>> x/2
     ...     6
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -679,7 +679,7 @@ statistics.  Here's a simple DocTest case we can use:
     ...     >>> x = 12
     ...     >>> print x
     ...     12
-    ...     >>> x//2
+    ...     >>> x/2
     ...     6
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -700,7 +700,7 @@ the failure and proceeds to the next example:
     ...     >>> x = 12
     ...     >>> print x
     ...     14
-    ...     >>> x//2
+    ...     >>> x/2
     ...     6
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -723,7 +723,7 @@ the failure and proceeds to the next example:
     Got:
         12
     Trying:
-        x//2
+        x/2
     Expecting:
         6
     ok
@@ -738,7 +738,7 @@ output:
     ...     >>> x = 12
     ...     >>> print x
     ...     12
-    ...     >>> x//2
+    ...     >>> x/2
     ...     6
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -754,7 +754,7 @@ output:
         12
     ok
     Trying:
-        x//2
+        x/2
     Expecting:
         6
     ok
@@ -784,7 +784,7 @@ iff `-v` appears in sys.argv:
         12
     ok
     Trying:
-        x//2
+        x/2
     Expecting:
         6
     ok
@@ -806,7 +806,7 @@ replaced with any other string:
     >>> def f(x):
     ...     '''
     ...     >>> x = 12
-    ...     >>> print x//0
+    ...     >>> print x/0
     ...     Traceback (most recent call last):
     ...     ZeroDivisionError: integer division or modulo by zero
     ...     '''
@@ -822,7 +822,7 @@ unexpected exception:
     >>> def f(x):
     ...     '''
     ...     >>> x = 12
-    ...     >>> print 'pre-exception output', x//0
+    ...     >>> print 'pre-exception output', x/0
     ...     pre-exception output
     ...     Traceback (most recent call last):
     ...     ZeroDivisionError: integer division or modulo by zero
@@ -833,7 +833,7 @@ unexpected exception:
     **********************************************************************
     File ..., line 4, in f
     Failed example:
-        print 'pre-exception output', x//0
+        print 'pre-exception output', x/0
     Exception raised:
         ...
         ZeroDivisionError: integer division or modulo by zero
@@ -920,7 +920,7 @@ unexpected exception:
 
     >>> def f(x):
     ...     r'''
-    ...     >>> 1//0
+    ...     >>> 1/0
     ...     0
     ...     '''
     >>> test = doctest.DocTestFinder().find(f)[0]
@@ -929,7 +929,7 @@ unexpected exception:
     **********************************************************************
     File ..., line 3, in f
     Failed example:
-        1//0
+        1/0
     Exception raised:
         Traceback (most recent call last):
         ...
@@ -1559,11 +1559,11 @@ Run the debugger on the docstring, and then restore sys.stdin.
 
     >>> try: doctest.debug_src(s)
     ... finally: sys.stdin = real_stdin
-    > <string>(1)<module>()
+    > <string>(1)?()
     (Pdb) next
     12
     --Return--
-    > <string>(1)<module>()->None
+    > <string>(1)?()->None
     (Pdb) print x
     12
     (Pdb) continue
@@ -1601,7 +1601,7 @@ def test_pdb_set_trace():
       >>> try: runner.run(test)
       ... finally: sys.stdin = real_stdin
       --Return--
-      > <doctest foo[1]>(1)<module>()->None
+      > <doctest foo[1]>(1)?()->None
       -> import pdb; pdb.set_trace()
       (Pdb) print x
       42
@@ -1637,7 +1637,7 @@ def test_pdb_set_trace():
       (Pdb) print y
       2
       (Pdb) up
-      > <doctest foo[1]>(1)<module>()
+      > <doctest foo[1]>(1)?()
       -> calls_set_trace()
       (Pdb) print x
       1
@@ -1686,7 +1686,7 @@ def test_pdb_set_trace():
       [EOF]
       (Pdb) next
       --Return--
-      > <doctest foo[2]>(1)<module>()->None
+      > <doctest foo[2]>(1)?()->None
       -> f(3)
       (Pdb) list
         1  -> f(3)
@@ -1779,7 +1779,7 @@ def test_pdb_set_trace_nested():
     (Pdb) print y
     1
     (Pdb) up
-    > <doctest foo[1]>(1)<module>()
+    > <doctest foo[1]>(1)?()
     -> calls_set_trace()
     (Pdb) print foo
     *** NameError: name 'foo' is not defined
@@ -2012,14 +2012,6 @@ def test_DocFileSuite():
        Here, we didn't need to use a tearDown function because we
        modified the test globals.  The test globals are
        automatically cleared for us after a test.
-
-       Tests in a file run using `DocFileSuite` can also access the
-       `__file__` global, which is set to the name of the file
-       containing the tests:
-
-         >>> suite = doctest.DocFileSuite('test_doctest3.txt')
-         >>> suite.run(unittest.TestResult())
-         <unittest.TestResult run=1 errors=0 failures=0>
 
        """
 

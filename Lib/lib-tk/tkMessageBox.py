@@ -1,3 +1,7 @@
+#
+# Instant Python
+# $Id$
+#
 # tk common message boxes
 #
 # this module provides an interface to the native message boxes

@@ -32,9 +32,6 @@
  *
  */
 
-/* Licensed to PSF under a Contributor Agreement. */
-/* See http://www.python.org/2.4/license for licensing details. */
-
 /* TODO: handle unicode command lines? */
 /* TODO: handle unicode environment? */
 
@@ -104,7 +101,7 @@ sp_handle_dealloc(sp_handle_object* self)
 {
 	if (self->handle != INVALID_HANDLE_VALUE)
 		CloseHandle(self->handle);
-	PyObject_FREE(self);
+	PyMem_DEL(self);
 }
 
 static PyMethodDef sp_handle_methods[] = {
@@ -336,9 +333,6 @@ getenvironment(PyObject* environment)
 
 	/* PyObject_Print(out, stdout, 0); */
 
-	Py_XDECREF(keys);
-	Py_XDECREF(values);
-
 	return out;
 
  error:
@@ -388,9 +382,6 @@ sp_CreateProcess(PyObject* self, PyObject* args)
 	si.hStdOutput = gethandle(startup_info, "hStdOutput");
 	si.hStdError = gethandle(startup_info, "hStdError");
 
-	if (PyErr_Occurred())
-		return NULL;
-
 	if (env_mapping == Py_None)
 		environment = NULL;
 	else {
@@ -422,26 +413,6 @@ sp_CreateProcess(PyObject* self, PyObject* args)
 			     sp_handle_new(pi.hThread),
 			     pi.dwProcessId,
 			     pi.dwThreadId);
-}
-
-static PyObject *
-sp_TerminateProcess(PyObject* self, PyObject* args)
-{
-	BOOL result;
-
-	long process;
-	int exit_code;
-	if (! PyArg_ParseTuple(args, "li:TerminateProcess", &process,
-			       &exit_code))
-		return NULL;
-
-	result = TerminateProcess((HANDLE) process, exit_code);
-
-	if (! result)
-		return PyErr_SetFromWindowsErr(GetLastError());
-
-	Py_INCREF(Py_None);
-	return Py_None;
 }
 
 static PyObject *
@@ -518,7 +489,6 @@ static PyMethodDef sp_functions[] = {
 	{"DuplicateHandle",	sp_DuplicateHandle,	METH_VARARGS},
 	{"CreatePipe",		sp_CreatePipe,		METH_VARARGS},
 	{"CreateProcess",	sp_CreateProcess,	METH_VARARGS},
-	{"TerminateProcess",	sp_TerminateProcess,	METH_VARARGS},
 	{"GetExitCodeProcess",	sp_GetExitCodeProcess,	METH_VARARGS},
 	{"WaitForSingleObject",	sp_WaitForSingleObject, METH_VARARGS},
 	{"GetVersion",		sp_GetVersion,		METH_VARARGS},
@@ -553,8 +523,6 @@ init_subprocess()
 	sp_handle_as_number.nb_int = (unaryfunc) sp_handle_as_int;
 
 	m = Py_InitModule("_subprocess", sp_functions);
-	if (m == NULL)
-		return;
 	d = PyModule_GetDict(m);
 
 	/* constants */

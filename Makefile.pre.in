@@ -33,7 +33,6 @@ CXX=		@CXX@
 LINKCC=		@LINKCC@
 AR=		@AR@
 RANLIB=		@RANLIB@
-SVNVERSION=	@SVNVERSION@
 
 # Shell used by make (some versions default to the login shell, which is bad)
 SHELL=		/bin/sh
@@ -56,11 +55,8 @@ MAKESETUP=      $(srcdir)/Modules/makesetup
 # Compiler options
 OPT=		@OPT@
 BASECFLAGS=	@BASECFLAGS@
-CFLAGS=		$(BASECFLAGS) $(OPT) $(EXTRA_CFLAGS)
-# Both CPPFLAGS and LDFLAGS need to contain the shell's value for setup.py to
-# be able to build extension modules using the directories specified in the
-# environment variables
-CPPFLAGS=	-I. -I$(srcdir)/Include @CPPFLAGS@
+CFLAGS=		$(BASECFLAGS) $(OPT)
+CPPFLAGS=	-I. -I$(srcdir)/Include
 LDFLAGS=	@LDFLAGS@
 LDLAST=		@LDLAST@
 SGI_ABI=	@SGI_ABI@
@@ -217,22 +213,10 @@ PGOBJS=		\
 
 PGENOBJS=	$(PGENMAIN) $(POBJS) $(PGOBJS)
 
-##########################################################################
-# AST
-AST_H=		$(srcdir)/Include/Python-ast.h
-AST_C=		$(srcdir)/Python/Python-ast.c
-AST_ASDL=	$(srcdir)/Parser/Python.asdl
-
-ASDLGEN_FILES=	$(srcdir)/Parser/asdl.py $(srcdir)/Parser/asdl_c.py
-# XXX Note that a build now requires Python exist before the build starts
-ASDLGEN=	$(srcdir)/Parser/asdl_c.py -h $(srcdir)/Include -c $(srcdir)/Python
 
 ##########################################################################
 # Python
 PYTHON_OBJS=	\
-		Python/Python-ast.o \
-		Python/asdl.o \
-		Python/ast.o \
 		Python/bltinmodule.o \
 		Python/exceptions.o \
 		Python/ceval.o \
@@ -255,7 +239,6 @@ PYTHON_OBJS=	\
 		Python/modsupport.o \
 		Python/mystrtoul.o \
 		Python/mysnprintf.o \
-		Python/pyarena.o \
 		Python/pyfpe.o \
 		Python/pystate.o \
 		Python/pythonrun.o \
@@ -279,7 +262,6 @@ OBJECT_OBJS=	\
 		Objects/cellobject.o \
 		Objects/classobject.o \
 		Objects/cobject.o \
-		Objects/codeobject.o \
 		Objects/complexobject.o \
 		Objects/descrobject.o \
 		Objects/enumobject.o \
@@ -341,6 +323,19 @@ sharedmods: $(BUILDPYTHON)
 	*-s*) $(RUNSHARED) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py -q build;; \
 	*) $(RUNSHARED) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py build;; \
 	esac
+
+# buildno should really depend on something like LIBRARY_SRC
+buildno: $(PARSER_OBJS) \
+		$(OBJECT_OBJS) \
+		$(PYTHON_OBJS) \
+		$(MODULE_OBJS) \
+		$(SIGNAL_OBJS) \
+		$(MODOBJS) \
+		$(srcdir)/Modules/getbuildinfo.c
+	if test -f buildno; then \
+		expr `cat buildno` + 1 >buildno1; \
+		mv -f buildno1 buildno; \
+	else echo 1 >buildno; fi
 
 # Build static library
 # avoid long command lines, same as LIBRARY_OBJS
@@ -431,14 +426,8 @@ Modules/Setup: $(srcdir)/Modules/Setup.dist
 ############################################################################
 # Special rules for object files
 
-Modules/getbuildinfo.o: $(PARSER_OBJS) \
-		$(OBJECT_OBJS) \
-		$(PYTHON_OBJS) \
-		$(MODULE_OBJS) \
-		$(SIGNAL_OBJS) \
-		$(MODOBJS) \
-		$(srcdir)/Modules/getbuildinfo.c
-	$(CC) -c $(PY_CFLAGS) -DSVNVERSION=\"`LANG=C $(SVNVERSION)`\" -o $@ $(srcdir)/Modules/getbuildinfo.c
+Modules/getbuildinfo.o: $(srcdir)/Modules/getbuildinfo.c buildno
+	$(CC) -c $(PY_CFLAGS) -DBUILD=`cat buildno` -o $@ $(srcdir)/Modules/getbuildinfo.c
 
 Modules/getpath.o: $(srcdir)/Modules/getpath.c Makefile
 	$(CC) -c $(PY_CFLAGS) -DPYTHONPATH='"$(PYTHONPATH)"' \
@@ -465,10 +454,8 @@ Parser/metagrammar.o:	$(srcdir)/Parser/metagrammar.c
 
 Parser/tokenizer_pgen.o:	$(srcdir)/Parser/tokenizer.c
 
-$(AST_H) $(AST_C): $(AST_ASDL) $(ASDLGEN_FILES)
-	$(ASDLGEN) $(AST_ASDL)
 
-Python/compile.o Python/symtable.o: $(GRAMMAR_H) $(AST_H)
+Python/compile.o Python/symtable.o: $(GRAMMAR_H)
 
 Python/getplatform.o: $(srcdir)/Python/getplatform.c
 		$(CC) -c $(PY_CFLAGS) -DPLATFORM='"$(MACHDEP)"' -o $@ $(srcdir)/Python/getplatform.c
@@ -484,15 +471,12 @@ Objects/unicodectype.o:	$(srcdir)/Objects/unicodectype.c \
 
 PYTHON_HEADERS= \
 		Include/Python.h \
-		Include/Python-ast.h \
-		Include/asdl.h \
 		Include/abstract.h \
 		Include/boolobject.h \
 		Include/bufferobject.h \
 		Include/ceval.h \
 		Include/classobject.h \
 		Include/cobject.h \
-		Include/code.h \
 		Include/codecs.h \
 		Include/compile.h \
 		Include/complexobject.h \
@@ -515,7 +499,6 @@ PYTHON_HEADERS= \
 		Include/object.h \
 		Include/objimpl.h \
 		Include/patchlevel.h \
-		Include/pyarena.h \
 		Include/pydebug.h \
 		Include/pyerrors.h \
 		Include/pyfpe.h \
@@ -667,7 +650,7 @@ PLATDIR=	plat-$(MACHDEP)
 EXTRAPLATDIR= @EXTRAPLATDIR@
 EXTRAMACHDEPPATH=@EXTRAMACHDEPPATH@
 MACHDEPS=	$(PLATDIR) $(EXTRAPLATDIR)
-XMLLIBSUBDIRS=  xmlcore xmlcore/dom xmlcore/etree xmlcore/parsers xmlcore/sax
+XMLLIBSUBDIRS=  xml xml/dom xml/parsers xml/sax
 PLATMACDIRS= plat-mac plat-mac/Carbon plat-mac/lib-scriptpackages \
 	plat-mac/lib-scriptpackages/_builtinSuites \
 	plat-mac/lib-scriptpackages/CodeWarrior \
@@ -680,10 +663,8 @@ PLATMACDIRS= plat-mac plat-mac/Carbon plat-mac/lib-scriptpackages \
 PLATMACPATH=:plat-mac:plat-mac/lib-scriptpackages
 LIBSUBDIRS=	lib-old lib-tk site-packages test test/output test/data \
 		test/decimaltestdata \
-		encodings compiler hotshot \
-		email email/mime email/test email/test/data \
-		logging bsddb bsddb/test csv \
-		ctypes ctypes/test idlelib idlelib/Icons \
+		encodings email email/test email/test/data compiler hotshot \
+		logging bsddb bsddb/test csv idlelib idlelib/Icons \
 		distutils distutils/command distutils/tests $(XMLLIBSUBDIRS) \
 		curses $(MACHDEPS)
 libinstall:	$(BUILDPYTHON) $(srcdir)/Lib/$(PLATDIR)
@@ -720,7 +701,6 @@ libinstall:	$(BUILDPYTHON) $(srcdir)/Lib/$(PLATDIR)
 	do \
 		a=$(srcdir)/Lib/$$d; \
 		if test ! -d $$a; then continue; else true; fi; \
-		if test `ls $$a | wc -l` -lt 1; then continue; fi; \
 		b=$(LIBDEST)/$$d; \
 		for i in $$a/*; \
 		do \
@@ -745,11 +725,11 @@ libinstall:	$(BUILDPYTHON) $(srcdir)/Lib/$(PLATDIR)
 	PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -tt $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
-		-x 'bad_coding|badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
+		-x 'badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
 	PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -tt -O $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
-		-x 'bad_coding|badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
+		-x 'badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
 	-PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -t $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST)/site-packages -f \
@@ -977,8 +957,6 @@ clean:
 	find . -name '*.o' -exec rm -f {} ';'
 	find . -name '*.s[ol]' -exec rm -f {} ';'
 	find $(srcdir) -name '*.py[co]' -exec rm -f {} ';'
-	find $(srcdir)/build -name 'fficonfig.h' -exec rm -f {} ';' || true
-	find $(srcdir)/build -name 'fficonfig.py' -exec rm -f {} ';' || true
 
 clobber: clean
 	-rm -f $(BUILDPYTHON) $(PGEN) $(LIBRARY) $(LDLIBRARY) $(DLLLIBRARY) \
@@ -989,9 +967,8 @@ clobber: clean
 
 # Make things extra clean, before making a distribution:
 # remove all generated files, even Makefile[.pre]
-# Keep configure and Python-ast.[ch], it's possible they can't be generated
 distclean: clobber
-	-rm -f core Makefile Makefile.pre config.status \
+	-rm -f core Makefile Makefile.pre buildno config.status \
 		Modules/Setup Modules/Setup.local Modules/Setup.config
 	find $(srcdir) '(' -name '*.fdc' -o -name '*~' \
 			   -o -name '[@,#]*' -o -name '*.old' \

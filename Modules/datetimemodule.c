@@ -596,7 +596,7 @@ normalize_datetime(int *year, int *month, int *day,
  */
 
 static PyObject *
-time_alloc(PyTypeObject *type, Py_ssize_t aware)
+time_alloc(PyTypeObject *type, int aware)
 {
 	PyObject *self;
 
@@ -611,7 +611,7 @@ time_alloc(PyTypeObject *type, Py_ssize_t aware)
 }
 
 static PyObject *
-datetime_alloc(PyTypeObject *type, Py_ssize_t aware)
+datetime_alloc(PyTypeObject *type, int aware)
 {
 	PyObject *self;
 
@@ -971,7 +971,7 @@ typedef enum {
 	      OFFSET_NAIVE,
 
 	      /* time or datetime where utcoffset() doesn't return None */
-	      OFFSET_AWARE
+	      OFFSET_AWARE,
 } naivety;
 
 /* Classify an object as to whether it's naive or offset-aware.  See
@@ -1073,10 +1073,10 @@ append_keyword_tzinfo(PyObject *repr, PyObject *tzinfo)
 static PyObject *
 format_ctime(PyDateTime_Date *date, int hours, int minutes, int seconds)
 {
-	static const char *DayNames[] = {
+	static char *DayNames[] = {
 		"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
 	};
-	static const char *MonthNames[] = {
+	static char *MonthNames[] = {
 		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 	};
@@ -2411,7 +2411,7 @@ static PyObject *
 date_repr(PyDateTime_Date *self)
 {
 	char buffer[1028];
-	const char *typename;
+	char *typename;
 
 	typename = self->ob_type->tp_name;
 	PyOS_snprintf(buffer, sizeof(buffer), "%s(%d, %d, %d)",
@@ -3051,8 +3051,7 @@ time_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	if (PyTuple_GET_SIZE(args) >= 1 &&
 	    PyTuple_GET_SIZE(args) <= 2 &&
 	    PyString_Check(state = PyTuple_GET_ITEM(args, 0)) &&
-	    PyString_GET_SIZE(state) == _PyDateTime_TIME_DATASIZE &&
-	    ((unsigned char) (PyString_AS_STRING(state)[0])) < 24)
+	    PyString_GET_SIZE(state) == _PyDateTime_TIME_DATASIZE)
 	{
 		PyDateTime_Time *me;
 		char aware;
@@ -3138,7 +3137,7 @@ static PyObject *
 time_repr(PyDateTime_Time *self)
 {
 	char buffer[100];
-	const char *typename = self->ob_type->tp_name;
+	char *typename = self->ob_type->tp_name;
 	int h = TIME_GET_HOUR(self);
 	int m = TIME_GET_MINUTE(self);
 	int s = TIME_GET_SECOND(self);
@@ -3804,46 +3803,6 @@ datetime_utcfromtimestamp(PyObject *cls, PyObject *args)
 	return result;
 }
 
-/* Return new datetime from time.strptime(). */
-static PyObject *
-datetime_strptime(PyObject *cls, PyObject *args)
-{
-	PyObject *result = NULL, *obj, *module;
-	const char *string, *format;
-
-	if (!PyArg_ParseTuple(args, "ss:strptime", &string, &format))
-		return NULL;
-
-	if ((module = PyImport_ImportModule("time")) == NULL)
-		return NULL;
-	obj = PyObject_CallMethod(module, "strptime", "ss", string, format);
-	Py_DECREF(module);
-
-	if (obj != NULL) {
-		int i, good_timetuple = 1;
-		long int ia[6];
-		if (PySequence_Check(obj) && PySequence_Size(obj) >= 6)
-			for (i=0; i < 6; i++) {
-				PyObject *p = PySequence_GetItem(obj, i);
-				if (PyInt_Check(p))
-					ia[i] = PyInt_AsLong(p);
-				else
-					good_timetuple = 0;
-				Py_DECREF(p);
-			}
-		else
-			good_timetuple = 0;
-		if (good_timetuple)
-			result = PyObject_CallFunction(cls, "iiiiii",
-				ia[0], ia[1], ia[2], ia[3], ia[4], ia[5]);
-		else
-			PyErr_SetString(PyExc_ValueError,
-				"unexpected value from time.strptime");
-		Py_DECREF(obj);
-	}
-	return result;
-}
-
 /* Return new datetime from date/datetime and time arguments. */
 static PyObject *
 datetime_combine(PyObject *cls, PyObject *args, PyObject *kw)
@@ -4032,7 +3991,7 @@ static PyObject *
 datetime_repr(PyDateTime_DateTime *self)
 {
 	char buffer[1000];
-	const char *typename = self->ob_type->tp_name;
+	char *typename = self->ob_type->tp_name;
 	PyObject *baserepr;
 
 	if (DATE_GET_MICROSECOND(self)) {
@@ -4465,11 +4424,6 @@ static PyMethodDef datetime_methods[] = {
 	 PyDoc_STR("timestamp -> UTC datetime from a POSIX timestamp "
 	 	   "(like time.time()).")},
 
-	{"strptime", (PyCFunction)datetime_strptime,
-	 METH_VARARGS | METH_CLASS,
-	 PyDoc_STR("string, format -> new datetime parsed from a string "
-	 	   "(like time.strptime()).")},
-
 	{"combine", (PyCFunction)datetime_combine,
 	 METH_VARARGS | METH_KEYWORDS | METH_CLASS,
 	 PyDoc_STR("date, time -> datetime with same date and time fields")},
@@ -4620,8 +4574,6 @@ initdatetime(void)
 
 	m = Py_InitModule3("datetime", module_methods,
 			   "Fast implementation of the datetime type.");
-	if (m == NULL)
-		return;
 
 	if (PyType_Ready(&PyDateTime_DateType) < 0)
 		return;

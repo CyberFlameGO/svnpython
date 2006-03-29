@@ -86,7 +86,7 @@ dbm_dealloc(register dbmobject *dp)
     PyObject_Del(dp);
 }
 
-static Py_ssize_t
+static int
 dbm_length(dbmobject *dp)
 {
     if (dp->di_dbm == NULL) {
@@ -97,7 +97,6 @@ dbm_length(dbmobject *dp)
         datum key,okey;
         int size;
         okey.dsize=0;
-        okey.dptr=NULL;
 
         size = 0;
         for (key=gdbm_firstkey(dp->di_dbm); key.dptr;
@@ -179,7 +178,7 @@ dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
 }
 
 static PyMappingMethods dbm_as_mapping = {
-    (lenfunc)dbm_length,		/*mp_length*/
+    (inquiry)dbm_length,		/*mp_length*/
     (binaryfunc)dbm_subscript,          /*mp_subscript*/
     (objobjargproc)dbm_ass_sub,         /*mp_ass_subscript*/
 };
@@ -513,8 +512,6 @@ initgdbm(void) {
     m = Py_InitModule4("gdbm", dbmmodule_methods,
                        gdbmmodule__doc__, (PyObject *)NULL,
                        PYTHON_API_VERSION);
-    if (m == NULL)
-	return;
     d = PyModule_GetDict(m);
     DbmError = PyErr_NewException("gdbm.error", NULL, NULL);
     if (DbmError != NULL) {

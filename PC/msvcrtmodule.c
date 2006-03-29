@@ -220,11 +220,8 @@ static struct PyMethodDef msvcrt_functions[] = {
 PyMODINIT_FUNC
 initmsvcrt(void)
 {
-	PyObject *d;
 	PyObject *m = Py_InitModule("msvcrt", msvcrt_functions);
-	if (m == NULL)
-		return;
-	d = PyModule_GetDict(m);
+	PyObject *d = PyModule_GetDict(m);
 
 	/* constants for the locking() function's mode argument */
 	insertint(d, "LK_LOCK", _LK_LOCK);

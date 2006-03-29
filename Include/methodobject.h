@@ -35,15 +35,15 @@ PyAPI_FUNC(int) PyCFunction_GetFlags(PyObject *);
 PyAPI_FUNC(PyObject *) PyCFunction_Call(PyObject *, PyObject *, PyObject *);
 
 struct PyMethodDef {
-    const char	*ml_name;	/* The name of the built-in function/method */
+    char	*ml_name;	/* The name of the built-in function/method */
     PyCFunction  ml_meth;	/* The C function that implements it */
     int		 ml_flags;	/* Combination of METH_xxx flags, which mostly
 				   describe the args expected by the C func */
-    const char	*ml_doc;	/* The __doc__ attribute, or NULL */
+    char	*ml_doc;	/* The __doc__ attribute, or NULL */
 };
 typedef struct PyMethodDef PyMethodDef;
 
-PyAPI_FUNC(PyObject *) Py_FindMethod(PyMethodDef[], PyObject *, const char *);
+PyAPI_FUNC(PyObject *) Py_FindMethod(PyMethodDef[], PyObject *, char *);
 
 #define PyCFunction_New(ML, SELF) PyCFunction_NewEx((ML), (SELF), NULL)
 PyAPI_FUNC(PyObject *) PyCFunction_NewEx(PyMethodDef *, PyObject *, 
@@ -76,7 +76,7 @@ typedef struct PyMethodChain {
 } PyMethodChain;
 
 PyAPI_FUNC(PyObject *) Py_FindMethodInChain(PyMethodChain *, PyObject *,
-                                            const char *);
+                                                  char *);
 
 typedef struct {
     PyObject_HEAD

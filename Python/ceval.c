@@ -8,7 +8,7 @@
 
 #include "Python.h"
 
-#include "code.h"
+#include "compile.h"
 #include "frameobject.h"
 #include "eval.h"
 #include "opcode.h"
@@ -17,10 +17,8 @@
 #include <ctype.h>
 
 #ifndef WITH_TSC 
-
-#define READ_TIMESTAMP(var)
-
-#else
+#define rdtscll(var)
+#else /*WITH_TSC defined*/
 
 typedef unsigned long long uint64;
 
@@ -28,7 +26,7 @@ typedef unsigned long long uint64;
 			   section should work for GCC on any PowerPC platform,
 			   irrespective of OS.  POWER?  Who knows :-) */
 
-#define READ_TIMESTAMP(var) ppc_getcounter(&var)
+#define rdtscll(var) ppc_getcounter(&var)
 
 static void
 ppc_getcounter(uint64 *v)
@@ -47,10 +45,9 @@ ppc_getcounter(uint64 *v)
 	((long*)(v))[1] = tb;
 }
 
-#else /* this is for linux/x86 (and probably any other GCC/x86 combo) */
+#else /* this section is for linux/x86 */
 
-#define READ_TIMESTAMP(val) \
-     __asm__ __volatile__("rdtsc" : "=A" (val))
+#include <asm/msr.h>
 
 #endif
 
@@ -97,7 +94,6 @@ static PyObject *load_args(PyObject ***, int);
 #define CALL_FLAG_KW 2
 
 #ifdef LLTRACE
-static int lltrace;
 static int prtrace(PyObject *, char *);
 #endif
 static int call_trace(Py_tracefunc, PyObject *, PyFrameObject *,
@@ -418,11 +414,8 @@ Py_MakePendingCalls(void)
 
 /* The interpreter's recursion limit */
 
-#ifndef Py_DEFAULT_RECURSION_LIMIT
-#define Py_DEFAULT_RECURSION_LIMIT 1000
-#endif
-static int recursion_limit = Py_DEFAULT_RECURSION_LIMIT;
-int _Py_CheckRecursionLimit = Py_DEFAULT_RECURSION_LIMIT;
+static int recursion_limit = 1000;
+int _Py_CheckRecursionLimit = 1000;
 
 int
 Py_GetRecursionLimit(void)
@@ -500,14 +493,7 @@ PyEval_EvalCode(PyCodeObject *co, PyObject *globals, PyObject *locals)
 /* Interpreter main loop */
 
 PyObject *
-PyEval_EvalFrame(PyFrameObject *f) {
-	/* This is for backward compatibility with extension modules that
-           used this API; core interpreter code should call PyEval_EvalFrameEx() */
-	return PyEval_EvalFrameEx(f, 0);
-}
-
-PyObject *
-PyEval_EvalFrameEx(PyFrameObject *f, int throw)
+PyEval_EvalFrame(PyFrameObject *f)
 {
 #ifdef DXPAIRS
 	int lastopcode = 0;
@@ -541,6 +527,9 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 	unsigned char *first_instr;
 	PyObject *names;
 	PyObject *consts;
+#ifdef LLTRACE
+	int lltrace;
+#endif
 #if defined(Py_DEBUG) || defined(LLTRACE)
 	/* Make it easier to find out where we are with a debugger */
 	char *filename;
@@ -586,10 +575,10 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 	uint64 inst0, inst1, loop0, loop1, intr0 = 0, intr1 = 0;
 	int ticked = 0;
 
-	READ_TIMESTAMP(inst0);
-	READ_TIMESTAMP(inst1);
-	READ_TIMESTAMP(loop0);
-	READ_TIMESTAMP(loop1);
+	rdtscll(inst0);
+	rdtscll(inst1);
+	rdtscll(loop0);
+	rdtscll(loop1);
 
 	/* shut up the compiler */
 	opcode = 0;
@@ -597,7 +586,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 
 /* Code access macros */
 
-#define INSTR_OFFSET()	((int)(next_instr - first_instr))
+#define INSTR_OFFSET()	(next_instr - first_instr)
 #define NEXTOP()	(*next_instr++)
 #define NEXTARG()	(next_instr += 2, (next_instr[-1]<<8) + next_instr[-2])
 #define PEEKARG()	((next_instr[2]<<8) + next_instr[1])
@@ -635,9 +624,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 
 /* Stack manipulation macros */
 
-/* The stack can grow at most MAXINT deep, as co_nlocals and
-   co_stacksize are ints. */
-#define STACK_LEVEL()	((int)(stack_pointer - f->f_valuestack))
+#define STACK_LEVEL()	(stack_pointer - f->f_valuestack)
 #define EMPTY()		(STACK_LEVEL() == 0)
 #define TOP()		(stack_pointer[-1])
 #define SECOND()	(stack_pointer[-2])
@@ -659,12 +646,10 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 #define STACKADJ(n)	{ (void)(BASIC_STACKADJ(n), \
                                lltrace && prtrace(TOP(), "stackadj")); \
                                assert(STACK_LEVEL() <= f->f_stacksize); }
-#define EXT_POP(STACK_POINTER) (lltrace && prtrace(*(STACK_POINTER), "ext_pop"), *--(STACK_POINTER))
 #else
 #define PUSH(v)		BASIC_PUSH(v)
 #define POP()		BASIC_POP()
 #define STACKADJ(n)	BASIC_STACKADJ(n)
-#define EXT_POP(STACK_POINTER) (*--(STACK_POINTER))
 #endif
 
 /* Local variable macros */
@@ -730,7 +715,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 	consts = co->co_consts;
 	fastlocals = f->f_localsplus;
 	freevars = f->f_localsplus + f->f_nlocals;
-	first_instr = (unsigned char*) PyString_AS_STRING(co->co_code);
+	first_instr = (unsigned char *)PyString_AS_STRING(co->co_code);
 	/* An explanation is in order for the next line.
 
 	   f->f_lasti now refers to the index of the last instruction
@@ -745,7 +730,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 	f->f_stacktop = NULL;	/* remains NULL unless yield suspends frame */
 
 #ifdef LLTRACE
-	lltrace = PyDict_GetItemString(f->f_globals, "__lltrace__") != NULL;
+	lltrace = PyDict_GetItemString(f->f_globals,"__lltrace__") != NULL;
 #endif
 #if defined(Py_DEBUG) || defined(LLTRACE)
 	filename = PyString_AsString(co->co_filename);
@@ -756,11 +741,6 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 	x = Py_None;	/* Not a reference, just anything non-NULL */
 	w = NULL;
 
-	if (throw) { /* support for generator.throw() */
-		why = WHY_EXCEPTION;
-		goto on_error;
-	}
-		
 	for (;;) {
 #ifdef WITH_TSC
 		if (inst1 == 0) {
@@ -768,7 +748,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 			   or a continue, preventing inst1 from being set
 			   on the way out of the loop.
 			*/
-			READ_TIMESTAMP(inst1);
+			rdtscll(inst1);
 			loop1 = inst1;
 		}
 		dump_tsc(opcode, ticked, inst0, inst1, loop0, loop1,
@@ -777,7 +757,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 		inst1 = 0;
 		intr0 = 0;
 		intr1 = 0;
-		READ_TIMESTAMP(loop0);
+		rdtscll(loop0);
 #endif
 		assert(stack_pointer >= f->f_valuestack); /* else underflow */
 		assert(STACK_LEVEL() <= f->f_stacksize);  /* else overflow */
@@ -899,7 +879,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 #endif
 
 		/* Main switch on opcode */
-		READ_TIMESTAMP(inst0);
+		rdtscll(inst0);
 
 		switch (opcode) {
 
@@ -1174,7 +1154,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 			v = TOP();
 			if (PyList_CheckExact(v) && PyInt_CheckExact(w)) {
 				/* INLINE: list[int] */
-				Py_ssize_t i = PyInt_AsSsize_t(w);
+				long i = PyInt_AsLong(w);
 				if (i < 0)
 					i += PyList_GET_SIZE(v);
 				if (i >= 0 && i < PyList_GET_SIZE(v)) {
@@ -1658,9 +1638,9 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 			v = SECOND();
 			u = THIRD();
 			STACKADJ(-3);
-			READ_TIMESTAMP(intr0);
+			rdtscll(intr0);
 			err = exec_statement(f, u, v, w);
-			READ_TIMESTAMP(intr1);
+			rdtscll(intr1);
 			Py_DECREF(u);
 			Py_DECREF(v);
 			Py_DECREF(w);
@@ -1685,7 +1665,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 				    why == WHY_CONTINUE)
 					retval = POP();
 			}
-			else if (PyExceptionClass_Check(v) || PyString_Check(v)) {
+			else if (PyClass_Check(v) || PyString_Check(v)) {
 				w = POP();
 				u = POP();
 				PyErr_Restore(v, w, u);
@@ -2023,33 +2003,22 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 						"__import__ not found");
 				break;
 			}
-			v = POP();
 			u = TOP();
-			if (PyInt_AsLong(u) != -1 || PyErr_Occurred())
-				w = PyTuple_Pack(5,
-					    w,
-					    f->f_globals,
-					    f->f_locals == NULL ?
-						  Py_None : f->f_locals,
-					    v,
-					    u);
-			else
-				w = PyTuple_Pack(4,
-					    w,
-					    f->f_globals,
-					    f->f_locals == NULL ?
-						  Py_None : f->f_locals,
-					    v);
-			Py_DECREF(v);
+			w = PyTuple_Pack(4,
+				    w,
+				    f->f_globals,
+				    f->f_locals == NULL ?
+					  Py_None : f->f_locals,
+				    u);
 			Py_DECREF(u);
 			if (w == NULL) {
 				u = POP();
 				x = NULL;
 				break;
 			}
-			READ_TIMESTAMP(intr0);
+			rdtscll(intr0);
 			x = PyEval_CallObject(x, w);
-			READ_TIMESTAMP(intr1);
+			rdtscll(intr1);
 			Py_DECREF(w);
 			SET_TOP(x);
 			if (x != NULL) continue;
@@ -2063,9 +2032,9 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 					"no locals found during 'import *'");
 				break;
 			}
-			READ_TIMESTAMP(intr0);
+			rdtscll(intr0);
 			err = import_all_from(x, v);
-			READ_TIMESTAMP(intr1);
+			rdtscll(intr1);
 			PyFrame_LocalsToFast(f, 0);
 			Py_DECREF(v);
 			if (err == 0) continue;
@@ -2074,9 +2043,9 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 		case IMPORT_FROM:
 			w = GETITEM(names, oparg);
 			v = TOP();
-			READ_TIMESTAMP(intr0);
+			rdtscll(intr0);
 			x = import_from(v, w);
-			READ_TIMESTAMP(intr1);
+			rdtscll(intr1);
 			PUSH(x);
 			if (x != NULL) continue;
 			break;
@@ -2183,60 +2152,6 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 					   STACK_LEVEL());
 			continue;
 
-		case WITH_CLEANUP:
-		{
-			/* TOP is the context.__exit__ bound method.
-			   Below that are 1-3 values indicating how/why
-			   we entered the finally clause:
-			   - SECOND = None
-			   - (SECOND, THIRD) = (WHY_{RETURN,CONTINUE}), retval
-			   - SECOND = WHY_*; no retval below it
-			   - (SECOND, THIRD, FOURTH) = exc_info()
-			   In the last case, we must call
-			     TOP(SECOND, THIRD, FOURTH)
-			   otherwise we must call
-			     TOP(None, None, None)
-
-			   In addition, if the stack represents an exception,
-			   *and* the function call returns a 'true' value, we
-			   "zap" this information, to prevent END_FINALLY from
-			   re-raising the exception.  (But non-local gotos
-			   should still be resumed.)
-			*/
-			
-			x = TOP();
-			u = SECOND();
-			if (PyInt_Check(u) || u == Py_None) {
-				u = v = w = Py_None;
-			}
-			else {
-				v = THIRD();
-				w = FOURTH();
-			}
-			/* XXX Not the fastest way to call it... */
-			x = PyObject_CallFunctionObjArgs(x, u, v, w, NULL);
-			if (x == NULL)
-				break; /* Go to error exit */
-			if (u != Py_None && PyObject_IsTrue(x)) {
-				/* There was an exception and a true return */
-				Py_DECREF(x);
-				x = TOP(); /* Again */
-				STACKADJ(-3);
-				Py_INCREF(Py_None);
-				SET_TOP(Py_None);
-				Py_DECREF(x);
-				Py_DECREF(u);
-				Py_DECREF(v);
-				Py_DECREF(w);
-			} else {
-				/* Let END_FINALLY do its thing */
-				Py_DECREF(x);
-				x = POP();
-				Py_DECREF(x);
-			}
-			break;
-		}
-
 		case CALL_FUNCTION:
 		{
 			PyObject **sp;
@@ -2284,9 +2199,9 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 		    } else
 			    Py_INCREF(func);
 		    sp = stack_pointer;
-		    READ_TIMESTAMP(intr0);
+		    rdtscll(intr0);
 		    x = ext_do_call(func, &sp, flags, na, nk);
-		    READ_TIMESTAMP(intr1);
+		    rdtscll(intr1);
 		    stack_pointer = sp;
 		    Py_DECREF(func);
 
@@ -2324,11 +2239,23 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 
 		case MAKE_CLOSURE:
 		{
+			int nfree;
 			v = POP(); /* code object */
 			x = PyFunction_New(v, f->f_globals);
+			nfree = PyCode_GetNumFree((PyCodeObject *)v);
 			Py_DECREF(v);
-			if (x != NULL) {
-				v = POP();
+			/* XXX Maybe this should be a separate opcode? */
+			if (x != NULL && nfree > 0) {
+				v = PyTuple_New(nfree);
+				if (v == NULL) {
+					Py_DECREF(x);
+					x = NULL;
+					break;
+				}
+				while (--nfree >= 0) {
+					w = POP();
+					PyTuple_SET_ITEM(v, nfree, w);
+				}
 				err = PyFunction_SetClosure(x, v);
 				Py_DECREF(v);
 			}
@@ -2387,7 +2314,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 
 	    on_error:
 
-		READ_TIMESTAMP(inst1);
+		rdtscll(inst1);
 
 		/* Quickly continue if no error occurred */
 
@@ -2400,7 +2327,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throw)
 						"XXX undetected error\n");
 				else {
 #endif
-					READ_TIMESTAMP(loop1);
+					rdtscll(loop1);
 					continue; /* Normal, fast path */
 #ifdef CHECKEXC
 				}
@@ -2519,7 +2446,7 @@ fast_block_end:
 
 		if (why != WHY_NOT)
 			break;
-		READ_TIMESTAMP(loop1);
+		rdtscll(loop1);
 
 	} /* main loop */
 
@@ -2576,9 +2503,9 @@ fast_yield:
 	return retval;
 }
 
-/* This is gonna seem *real weird*, but if you put some other code between
+/* this is gonna seem *real weird*, but if you put some other code between
    PyEval_EvalFrame() and PyEval_EvalCodeEx() you will need to adjust
-   the test in the if statements in Misc/gdbinit (pystack and pystackv). */
+	the test in the if statement in Misc/gdbinit:ppystack */
 
 PyObject *
 PyEval_EvalCodeEx(PyCodeObject *co, PyObject *globals, PyObject *locals,
@@ -2750,18 +2677,12 @@ PyEval_EvalCodeEx(PyCodeObject *co, PyObject *globals, PyObject *locals,
 		if (co->co_flags & CO_VARKEYWORDS)
 			nargs++;
 
-		/* Initialize each cell var, taking into account
-		   cell vars that are initialized from arguments.
-
-		   Should arrange for the compiler to put cellvars
-		   that are arguments at the beginning of the cellvars
-		   list so that we can march over it more efficiently?
-		*/
-		for (i = 0; i < f->f_ncells; ++i) {
+		/* Check for cells that shadow args */
+		for (i = 0; i < f->f_ncells && j < nargs; ++i) {
 			cellname = PyString_AS_STRING(
 				PyTuple_GET_ITEM(co->co_cellvars, i));
 			found = 0;
-			for (j = 0; j < nargs; j++) {
+			while (j < nargs) {
 				argname = PyString_AS_STRING(
 					PyTuple_GET_ITEM(co->co_varnames, j));
 				if (strcmp(cellname, argname) == 0) {
@@ -2772,6 +2693,7 @@ PyEval_EvalCodeEx(PyCodeObject *co, PyObject *globals, PyObject *locals,
 					found = 1;
 					break;
 				}
+				j++;
 			}
 			if (found == 0) {
 				c = PyCell_New(NULL);
@@ -2779,6 +2701,14 @@ PyEval_EvalCodeEx(PyCodeObject *co, PyObject *globals, PyObject *locals,
 					goto fail;
 				SETLOCAL(f->f_nlocals + i, c);
 			}
+		}
+		/* Initialize any that are left */
+		while (i < f->f_ncells) {
+			c = PyCell_New(NULL);
+			if (c == NULL)
+				goto fail;
+			SETLOCAL(f->f_nlocals + i, c);
+			i++;
 		}
 	}
 	if (f->f_nfreevars) {
@@ -2803,7 +2733,7 @@ PyEval_EvalCodeEx(PyCodeObject *co, PyObject *globals, PyObject *locals,
 		return PyGen_New(f);
 	}
 
-        retval = PyEval_EvalFrameEx(f,0);
+        retval = PyEval_EvalFrame(f);
 
   fail: /* Jump here from prelude on failure */
 
@@ -3029,14 +2959,15 @@ do_raise(PyObject *type, PyObject *value, PyObject *tb)
 		/* Raising builtin string is deprecated but still allowed --
 		 * do nothing.  Raising an instance of a new-style str
 		 * subclass is right out. */
-		if (PyErr_Warn(PyExc_DeprecationWarning,
+		if (PyErr_Warn(PyExc_PendingDeprecationWarning,
 			   "raising a string exception is deprecated"))
 			goto raise_error;
 	}
-	else if (PyExceptionClass_Check(type))
+
+	else if (PyClass_Check(type))
 		PyErr_NormalizeException(&type, &value, &tb);
 
-	else if (PyExceptionInstance_Check(type)) {
+	else if (PyInstance_Check(type)) {
 		/* Raising an instance.  The value should be a dummy. */
 		if (value != Py_None) {
 			PyErr_SetString(PyExc_TypeError,
@@ -3047,7 +2978,7 @@ do_raise(PyObject *type, PyObject *value, PyObject *tb)
 			/* Normalize to raise <class>, <instance> */
 			Py_DECREF(value);
 			value = type;
-			type = PyExceptionInstance_Class(type);
+			type = (PyObject*) ((PyInstanceObject*)type)->in_class;
 			Py_INCREF(type);
 		}
 	}
@@ -3355,12 +3286,10 @@ PyEval_SetProfile(Py_tracefunc func, PyObject *arg)
 	Py_XINCREF(arg);
 	tstate->c_profilefunc = NULL;
 	tstate->c_profileobj = NULL;
-	/* Must make sure that tracing is not ignored if 'temp' is freed */
 	tstate->use_tracing = tstate->c_tracefunc != NULL;
 	Py_XDECREF(temp);
 	tstate->c_profilefunc = func;
 	tstate->c_profileobj = arg;
-	/* Flag that tracing or profiling is turned on */
 	tstate->use_tracing = (func != NULL) || (tstate->c_tracefunc != NULL);
 }
 
@@ -3372,12 +3301,10 @@ PyEval_SetTrace(Py_tracefunc func, PyObject *arg)
 	Py_XINCREF(arg);
 	tstate->c_tracefunc = NULL;
 	tstate->c_traceobj = NULL;
-	/* Must make sure that profiling is not ignored if 'temp' is freed */
 	tstate->use_tracing = tstate->c_profilefunc != NULL;
 	Py_XDECREF(temp);
 	tstate->c_tracefunc = func;
 	tstate->c_traceobj = arg;
-	/* Flag that tracing or profiling is turned on */
 	tstate->use_tracing = ((func != NULL)
 			       || (tstate->c_profilefunc != NULL));
 }
@@ -3505,7 +3432,7 @@ PyEval_CallObjectWithKeywords(PyObject *func, PyObject *arg, PyObject *kw)
 	return result;
 }
 
-const char *
+char *
 PyEval_GetFuncName(PyObject *func)
 {
 	if (PyMethod_Check(func))
@@ -3524,7 +3451,7 @@ PyEval_GetFuncName(PyObject *func)
 	}
 }
 
-const char *
+char *
 PyEval_GetFuncDesc(PyObject *func)
 {
 	if (PyMethod_Check(func))
@@ -3541,6 +3468,8 @@ PyEval_GetFuncDesc(PyObject *func)
 		return " object";
 	}
 }
+
+#define EXT_POP(STACK_POINTER) (*--(STACK_POINTER))
 
 static void
 err_args(PyObject *func, int flags, int nargs)
@@ -3630,9 +3559,9 @@ call_function(PyObject ***pp_stack, int oparg
 		else {
 			PyObject *callargs;
 			callargs = load_args(pp_stack, na);
-			READ_TIMESTAMP(*pintr0);
+			rdtscll(*pintr0);
 			C_TRACE(x, PyCFunction_Call(func,callargs,NULL));
-			READ_TIMESTAMP(*pintr1);
+			rdtscll(*pintr1);
 			Py_XDECREF(callargs);
 		}
 	} else {
@@ -3650,19 +3579,16 @@ call_function(PyObject ***pp_stack, int oparg
 			n++;
 		} else
 			Py_INCREF(func);
-		READ_TIMESTAMP(*pintr0);
+		rdtscll(*pintr0);
 		if (PyFunction_Check(func))
 			x = fast_function(func, pp_stack, n, na, nk);
 		else
 			x = do_call(func, pp_stack, na, nk);
-		READ_TIMESTAMP(*pintr1);
+		rdtscll(*pintr1);
 		Py_DECREF(func);
 	}
 
-	/* Clear the stack of the function object.  Also removes
-           the arguments in case they weren't consumed already
-           (fast_function() and err_args() leave them on the stack).
-	 */
+	/* What does this do? */
 	while ((*pp_stack) > pfunc) {
 		w = EXT_POP(*pp_stack);
 		Py_DECREF(w);
@@ -3716,7 +3642,7 @@ fast_function(PyObject *func, PyObject ***pp_stack, int n, int na, int nk)
 			Py_INCREF(*stack);
 			fastlocals[i] = *stack++;
 		}
-		retval = PyEval_EvalFrameEx(f,0);
+		retval = PyEval_EvalFrame(f);
 		assert(tstate != NULL);
 		++tstate->recursion_depth;
 		Py_DECREF(f);
@@ -3919,47 +3845,75 @@ ext_do_call(PyObject *func, PyObject ***pp_stack, int flags, int na, int nk)
 	return result;
 }
 
-/* Extract a slice index from a PyInt or PyLong or an object with the
-   nb_index slot defined, and store in *pi.
-   Silently reduce values larger than PY_SSIZE_T_MAX to PY_SSIZE_T_MAX,
-   and silently boost values less than -PY_SSIZE_T_MAX-1 to -PY_SSIZE_T_MAX-1.
-   Return 0 on error, 1 on success.
+/* Extract a slice index from a PyInt or PyLong, and store in *pi.
+   Silently reduce values larger than INT_MAX to INT_MAX, and silently
+   boost values less than -INT_MAX to 0.  Return 0 on error, 1 on success.
 */
 /* Note:  If v is NULL, return success without storing into *pi.  This
    is because_PyEval_SliceIndex() is called by apply_slice(), which can be
    called by the SLICE opcode with v and/or w equal to NULL.
 */
 int
-_PyEval_SliceIndex(PyObject *v, Py_ssize_t *pi)
+_PyEval_SliceIndex(PyObject *v, int *pi)
 {
 	if (v != NULL) {
-		Py_ssize_t x;
+		long x;
 		if (PyInt_Check(v)) {
-			x = PyInt_AsSsize_t(v);
-		} 
-		else if (v->ob_type->tp_as_number &&
-			 PyType_HasFeature(v->ob_type, Py_TPFLAGS_HAVE_INDEX)
-			 && v->ob_type->tp_as_number->nb_index) {
-			x = v->ob_type->tp_as_number->nb_index(v);
-			if (x == -1 && PyErr_Occurred())
-				return 0;
-		}
-		else {
+			x = PyInt_AsLong(v);
+		} else if (PyLong_Check(v)) {
+			x = PyLong_AsLong(v);
+			if (x==-1 && PyErr_Occurred()) {
+				PyObject *long_zero;
+				int cmp;
+
+				if (!PyErr_ExceptionMatches(
+					PyExc_OverflowError)) {
+					/* It's not an overflow error, so just
+					   signal an error */
+					return 0;
+				}
+
+				/* Clear the OverflowError */
+				PyErr_Clear();
+
+				/* It's an overflow error, so we need to
+				   check the sign of the long integer,
+				   set the value to INT_MAX or -INT_MAX,
+				   and clear the error. */
+
+				/* Create a long integer with a value of 0 */
+				long_zero = PyLong_FromLong(0L);
+				if (long_zero == NULL)
+					return 0;
+
+				/* Check sign */
+				cmp = PyObject_RichCompareBool(v, long_zero,
+							       Py_GT);
+				Py_DECREF(long_zero);
+				if (cmp < 0)
+					return 0;
+				else if (cmp)
+					x = INT_MAX;
+				else
+					x = -INT_MAX;
+			}
+		} else {
 			PyErr_SetString(PyExc_TypeError,
-					"slice indices must be integers or "
-					"None or have an __index__ method");
+					"slice indices must be integers or None");
 			return 0;
 		}
+		/* Truncate -- very long indices are truncated anyway */
+		if (x > INT_MAX)
+			x = INT_MAX;
+		else if (x < -INT_MAX)
+			x = -INT_MAX;
 		*pi = x;
 	}
 	return 1;
 }
 
-#undef ISINDEX
-#define ISINDEX(x) ((x) == NULL || PyInt_Check(x) || PyLong_Check(x) || \
-		    ((x)->ob_type->tp_as_number && \
-                     PyType_HasFeature((x)->ob_type, Py_TPFLAGS_HAVE_INDEX) \
-		     && (x)->ob_type->tp_as_number->nb_index))
+#undef ISINT
+#define ISINT(x) ((x) == NULL || PyInt_Check(x) || PyLong_Check(x))
 
 static PyObject *
 apply_slice(PyObject *u, PyObject *v, PyObject *w) /* return u[v:w] */
@@ -3967,8 +3921,8 @@ apply_slice(PyObject *u, PyObject *v, PyObject *w) /* return u[v:w] */
 	PyTypeObject *tp = u->ob_type;
 	PySequenceMethods *sq = tp->tp_as_sequence;
 
-	if (sq && sq->sq_slice && ISINDEX(v) && ISINDEX(w)) {
-		Py_ssize_t ilow = 0, ihigh = PY_SSIZE_T_MAX;
+	if (sq && sq->sq_slice && ISINT(v) && ISINT(w)) {
+		int ilow = 0, ihigh = INT_MAX;
 		if (!_PyEval_SliceIndex(v, &ilow))
 			return NULL;
 		if (!_PyEval_SliceIndex(w, &ihigh))
@@ -3994,8 +3948,8 @@ assign_slice(PyObject *u, PyObject *v, PyObject *w, PyObject *x)
 	PyTypeObject *tp = u->ob_type;
 	PySequenceMethods *sq = tp->tp_as_sequence;
 
-	if (sq && sq->sq_slice && ISINDEX(v) && ISINDEX(w)) {
-		Py_ssize_t ilow = 0, ihigh = PY_SSIZE_T_MAX;
+	if (sq && sq->sq_slice && ISINT(v) && ISINT(w)) {
+		int ilow = 0, ihigh = INT_MAX;
 		if (!_PyEval_SliceIndex(v, &ilow))
 			return -1;
 		if (!_PyEval_SliceIndex(w, &ihigh))

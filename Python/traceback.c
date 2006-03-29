@@ -3,7 +3,7 @@
 
 #include "Python.h"
 
-#include "code.h"
+#include "compile.h"
 #include "frameobject.h"
 #include "structmember.h"
 #include "osdefs.h"
@@ -153,8 +153,7 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 			tail++;
 		path = PySys_GetObject("path");
 		if (path != NULL && PyList_Check(path)) {
-			Py_ssize_t _npath = PyList_Size(path);
-			int npath = Py_SAFE_DOWNCAST(_npath, Py_ssize_t, int);
+			int npath = PyList_Size(path);
 			size_t taillen = strlen(tail);
 			char namebuf[MAXPATHLEN+1];
 			for (i = 0; i < npath; i++) {
@@ -165,7 +164,7 @@ tb_displayline(PyObject *f, char *filename, int lineno, char *name)
 				}
 				if (PyString_Check(v)) {
 					size_t len;
-					len = PyString_GET_SIZE(v);
+					len = PyString_Size(v);
 					if (len + 1 + taillen >= MAXPATHLEN)
 						continue; /* Too long */
 					strcpy(namebuf, PyString_AsString(v));

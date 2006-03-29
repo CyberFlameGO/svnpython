@@ -1,8 +1,6 @@
 
 /* fcntl module */
 
-#define PY_SSIZE_T_CLEAN
-
 #include "Python.h"
 
 #ifdef HAVE_SYS_FILE_H
@@ -37,7 +35,7 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 	int arg;
 	int ret;
 	char *str;
-	Py_ssize_t len;
+	int len;
 	char buf[1024];
 
 	if (PyArg_ParseTuple(args, "O&is#:fcntl",
@@ -96,23 +94,29 @@ static PyObject *
 fcntl_ioctl(PyObject *self, PyObject *args)
 {
 	int fd;
-	/* In PyArg_ParseTuple below, use the unsigned int 'I' format for
-	   the signed int 'code' variable, because Python turns 0x8000000
-	   into a large positive number (PyLong, or PyInt on 64-bit
-	   platforms,) whereas C expects it to be a negative int */
 	int code;
 	int arg;
 	int ret;
 	char *str;
-	Py_ssize_t len;
-	int mutate_arg = 1;
+	int len;
+	int mutate_arg = 0;
 	char buf[1024];
 
-	if (PyArg_ParseTuple(args, "O&Iw#|i:ioctl",
+	if (PyArg_ParseTuple(args, "O&iw#|i:ioctl",
                              conv_descriptor, &fd, &code, 
 			     &str, &len, &mutate_arg)) {
 		char *arg;
 
+		if (PyTuple_Size(args) == 3) {
+#if (PY_MAJOR_VERSION>2) || (PY_MINOR_VERSION>=5)
+#error Remove the warning, change mutate_arg to 1
+#endif
+			if (PyErr_Warn(PyExc_FutureWarning,
+       "ioctl with mutable buffer will mutate the buffer by default in 2.5"
+				    ) < 0)
+				return NULL;
+			mutate_arg = 0;
+		}
 	       	if (mutate_arg) {
 			if (len <= sizeof buf) {
 				memcpy(buf, str, len);
@@ -157,7 +161,7 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	}
 
 	PyErr_Clear();
-	if (PyArg_ParseTuple(args, "O&Is#:ioctl",
+	if (PyArg_ParseTuple(args, "O&is#:ioctl",
                              conv_descriptor, &fd, &code, &str, &len)) {
 		if (len > sizeof buf) {
 			PyErr_SetString(PyExc_ValueError,
@@ -178,8 +182,8 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 	PyErr_Clear();
 	arg = 0;
 	if (!PyArg_ParseTuple(args,
-	     "O&I|i;ioctl requires a file or file descriptor,"
-	     " an integer and optionally an integer or buffer argument",
+	     "O&i|i;ioctl requires a file or file descriptor,"
+	     " an integer and optionally a integer or buffer argument",
 			      conv_descriptor, &fd, &code, &arg)) {
 	  return NULL;
 	}
@@ -589,8 +593,6 @@ initfcntl(void)
 
 	/* Create the module and add the functions and documentation */
 	m = Py_InitModule3("fcntl", fcntl_methods, module_doc);
-	if (m == NULL)
-		return;
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);

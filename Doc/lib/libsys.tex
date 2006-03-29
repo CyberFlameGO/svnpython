@@ -27,22 +27,6 @@ It is always available.
   \versionadded{2.0}
 \end{datadesc}
 
-\begin{datadesc}{subversion}
-  A triple (repo, branch, version) representing the Subversion
-  information of the Python interpreter.
-  \var{repo} is the name of the repository, \code{'CPython'}.
-  \var{branch} is a string of one of the forms \code{'trunk'},
-  \code{'branches/name'} or \code{'tags/name'}.
-  \var{version} is the output of \code{svnversion}, if the
-  interpreter was built from a Subversion checkout; it contains
-  the revision number (range) and possibly a trailing 'M' if
-  there were local modifications. If the tree was exported
-  (or svnversion was not available), it is the revision of
-  \code{Include/patchlevel.h} if the branch is a tag. Otherwise,
-  it is \code{None}.
-  \versionadded{2.5}
-\end{datadesc}  
-
 \begin{datadesc}{builtin_module_names}
   A tuple of strings giving the names of all modules that are compiled
   into this Python interpreter.  (This information is not available in

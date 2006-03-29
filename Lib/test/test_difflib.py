@@ -2,7 +2,6 @@ import difflib
 from test.test_support import run_unittest, findfile
 import unittest
 import doctest
-import sys
 
 class TestSFbugs(unittest.TestCase):
 
@@ -143,14 +142,6 @@ class TestSFpatches(unittest.TestCase):
 
 
         self.assertEqual(actual,expect)
-
-    def test_recursion_limit(self):
-        # Check if the problem described in patch #1413711 exists.
-        limit = sys.getrecursionlimit()
-        old = [(i%2 and "K:%d" or "V:A:%d") % i for i in range(limit*2)]
-        new = [(i%2 and "K:%d" or "V:B:%d") % i for i in range(limit*2)]
-        difflib.SequenceMatcher(None, old, new).get_opcodes()
-
 
 Doctests = doctest.DocTestSuite(difflib)
 

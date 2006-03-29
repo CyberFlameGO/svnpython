@@ -172,20 +172,6 @@ def get_build_version():
     # else we don't know what version of the compiler this is
     return None
 
-def get_build_architecture():
-    """Return the processor architecture.
-
-    Possible results are "Intel", "Itanium", or "AMD64".
-    """
-
-    prefix = " bit ("
-    i = string.find(sys.version, prefix)
-    if i == -1:
-        return "Intel"
-    j = string.find(sys.version, ")", i)
-    return sys.version[i+len(prefix):j]
-
-
 
 class MSVCCompiler (CCompiler) :
     """Concrete class that implements an interface to Microsoft Visual C++,
@@ -220,47 +206,29 @@ class MSVCCompiler (CCompiler) :
     def __init__ (self, verbose=0, dry_run=0, force=0):
         CCompiler.__init__ (self, verbose, dry_run, force)
         self.__version = get_build_version()
-        self.__arch = get_build_architecture()
-        if self.__arch == "Intel":
-            # x86
-            if self.__version >= 7:
-                self.__root = r"Software\Microsoft\VisualStudio"
-                self.__macros = MacroExpander(self.__version)
-            else:
-                self.__root = r"Software\Microsoft\Devstudio"
-            self.__product = "Visual Studio version %s" % self.__version
+        if self.__version >= 7:
+            self.__root = r"Software\Microsoft\VisualStudio"
+            self.__macros = MacroExpander(self.__version)
         else:
-            # Win64. Assume this was built with the platform SDK
-            self.__product = "Microsoft SDK compiler %s" % (self.__version + 6)
-
+            self.__root = r"Software\Microsoft\Devstudio"
         self.initialized = False
 
     def initialize(self):
-        self.__paths = []
-        if os.environ.has_key("MSSdk") and self.find_exe("cl.exe"):
-            # Assume that the SDK set up everything alright; don't try to be
-            # smarter
-            self.cc = "cl.exe"
-            self.linker = "link.exe"
-            self.lib = "lib.exe"
-            self.rc = "rc.exe"
-            self.mc = "mc.exe"
-        else:
-            self.__paths = self.get_msvc_paths("path")
+        self.__paths = self.get_msvc_paths("path")
 
-            if len (self.__paths) == 0:
-                raise DistutilsPlatformError, \
-                      ("Python was built with %s, "
-                       "and extensions need to be built with the same "
-                       "version of the compiler, but it isn't installed." % self.__product)
+        if len (self.__paths) == 0:
+            raise DistutilsPlatformError, \
+                  ("Python was built with version %s of Visual Studio, "
+                   "and extensions need to be built with the same "
+                   "version of the compiler, but it isn't installed." % self.__version)
 
-            self.cc = self.find_exe("cl.exe")
-            self.linker = self.find_exe("link.exe")
-            self.lib = self.find_exe("lib.exe")
-            self.rc = self.find_exe("rc.exe")   # resource compiler
-            self.mc = self.find_exe("mc.exe")   # message compiler
-            self.set_path_env_var('lib')
-            self.set_path_env_var('include')
+        self.cc = self.find_exe("cl.exe")
+        self.linker = self.find_exe("link.exe")
+        self.lib = self.find_exe("lib.exe")
+        self.rc = self.find_exe("rc.exe")   # resource compiler
+        self.mc = self.find_exe("mc.exe")   # message compiler
+        self.set_path_env_var('lib')
+        self.set_path_env_var('include')
 
         # extend the MSVC path with the current path
         try:
@@ -271,17 +239,10 @@ class MSVCCompiler (CCompiler) :
         os.environ['path'] = string.join(self.__paths, ';')
 
         self.preprocess_options = None
-        if self.__arch == "Intel":
-            self.compile_options = [ '/nologo', '/Ox', '/MD', '/W3', '/GX' ,
-                                     '/DNDEBUG']
-            self.compile_options_debug = ['/nologo', '/Od', '/MDd', '/W3', '/GX',
-                                          '/Z7', '/D_DEBUG']
-        else:
-            # Win64
-            self.compile_options = [ '/nologo', '/Ox', '/MD', '/W3', '/GS-' ,
-                                     '/DNDEBUG']
-            self.compile_options_debug = ['/nologo', '/Od', '/MDd', '/W3', '/GS-',
-                                          '/Z7', '/D_DEBUG']
+        self.compile_options = [ '/nologo', '/Ox', '/MD', '/W3', '/GX' ,
+                                 '/DNDEBUG']
+        self.compile_options_debug = ['/nologo', '/Od', '/MDd', '/W3', '/GX',
+                                      '/Z7', '/D_DEBUG']
 
         self.ldflags_shared = ['/DLL', '/nologo', '/INCREMENTAL:NO']
         if self.__version >= 7:
@@ -295,6 +256,7 @@ class MSVCCompiler (CCompiler) :
         self.ldflags_static = [ '/nologo']
 
         self.initialized = True
+
 
     # -- Worker methods ------------------------------------------------
 

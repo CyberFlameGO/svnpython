@@ -50,7 +50,7 @@ stream server is the address family, which is simply repeated in both
 unix server classes.
 
 Forking and threading versions of each type of server can be created
-using the ForkingMixIn and ThreadingMixIn mix-in classes.  For
+using the ForkingServer and ThreadingServer mix-in classes.  For
 instance, a threading UDP server class is created as follows:
 
         class ThreadingUDPServer(ThreadingMixIn, UDPServer): pass
@@ -575,13 +575,10 @@ class DatagramRequestHandler(BaseRequestHandler):
     """Define self.rfile and self.wfile for datagram sockets."""
 
     def setup(self):
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        import StringIO
         self.packet, self.socket = self.request
-        self.rfile = StringIO(self.packet)
-        self.wfile = StringIO()
+        self.rfile = StringIO.StringIO(self.packet)
+        self.wfile = StringIO.StringIO()
 
     def finish(self):
         self.socket.sendto(self.wfile.getvalue(), self.client_address)

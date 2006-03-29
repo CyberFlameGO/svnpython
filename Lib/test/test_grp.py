@@ -42,8 +42,6 @@ class GroupDatabaseTestCase(unittest.TestCase):
         bynames = {}
         bygids = {}
         for (n, p, g, mem) in grp.getgrall():
-            if not n or n == '+':
-                continue # skip NIS entries etc.
             bynames[n] = g
             bygids[g] = n
 

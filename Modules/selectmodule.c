@@ -340,7 +340,7 @@ static PyTypeObject poll_Type;
 static int
 update_ufd_array(pollObject *self)
 {
-	Py_ssize_t i, pos;
+	int i, pos;
 	PyObject *key, *value;
 
 	self->ufd_len = PyDict_Size(self->dict);
@@ -662,8 +662,6 @@ initselect(void)
 {
 	PyObject *m;
 	m = Py_InitModule3("select", select_methods, module_doc);
-	if (m == NULL)
-		return;
 
 	SelectError = PyErr_NewException("select.error", NULL, NULL);
 	Py_INCREF(SelectError);

@@ -17,16 +17,15 @@ extern void initgc(void);
 extern void initimageop(void);
 #endif
 extern void initmath(void);
-extern void init_md5(void);
+extern void initmd5(void);
 extern void initnt(void);
 extern void initoperator(void);
+extern void initregex(void);
 #ifndef MS_WIN64
 extern void initrgbimg(void);
 #endif
 extern void initsignal(void);
-extern void init_sha(void);
-extern void init_sha256(void);
-extern void init_sha512(void);
+extern void initsha(void);
 extern void initstrop(void);
 extern void initstruct(void);
 extern void inittime(void);
@@ -54,8 +53,6 @@ extern void init_sre(void);
 extern void initparser(void);
 extern void init_winreg(void);
 extern void initdatetime(void);
-extern void initfunctional(void);
-extern void initzlib(void);
 
 extern void init_multibytecodec(void);
 extern void init_codecs_cn(void);
@@ -65,8 +62,6 @@ extern void init_codecs_jp(void);
 extern void init_codecs_kr(void);
 extern void init_codecs_tw(void);
 extern void init_subprocess(void);
-extern void init_lsprof(void);
-extern void init_ast(void);
 
 /* tools/freeze/makeconfig.py marker for additional "extern" */
 /* -- ADDMODULE MARKER 1 -- */
@@ -77,7 +72,6 @@ extern void initimp(void);
 struct _inittab _PyImport_Inittab[] = {
 
         {"array", initarray},
-	{"_ast", init_ast},
 #ifdef MS_WINDOWS
 #ifndef MS_WIN64
         {"audioop", initaudioop},
@@ -91,16 +85,15 @@ struct _inittab _PyImport_Inittab[] = {
         {"imageop", initimageop},
 #endif
         {"math", initmath},
-        {"_md5", init_md5},
+        {"md5", initmd5},
         {"nt", initnt}, /* Use the NT os functions, not posix */
         {"operator", initoperator},
+        {"regex", initregex},
 #ifndef MS_WIN64
         {"rgbimg", initrgbimg},
 #endif
         {"signal", initsignal},
-        {"_sha", init_sha},
-        {"_sha256", init_sha256},
-        {"_sha512", init_sha512},
+        {"sha", initsha},
         {"strop", initstrop},
         {"struct", initstruct},
         {"time", inittime},
@@ -122,7 +115,6 @@ struct _inittab _PyImport_Inittab[] = {
 	{"_random", init_random},
         {"_bisect", init_bisect},
         {"_heapq", init_heapq},
-	{"_lsprof", init_lsprof},
 	{"itertools", inititertools},
         {"collections", initcollections},
 	{"_symtable", init_symtable},
@@ -132,12 +124,10 @@ struct _inittab _PyImport_Inittab[] = {
 	{"parser", initparser},
 	{"_winreg", init_winreg},
 	{"datetime", initdatetime},
-	{"functional", initfunctional},
 
 	{"xxsubtype", initxxsubtype},
 	{"zipimport", initzipimport},
-	{"zlib", initzlib},
-	
+
 	/* CJK codecs */
 	{"_multibytecodec", init_multibytecodec},
 	{"_codecs_cn", init_codecs_cn},

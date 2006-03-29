@@ -6,7 +6,6 @@
 \moduleauthor{Brian Quinlan}{brianq@activestate.com}
 \sectionauthor{Fred L. Drake, Jr.}{fdrake@acm.org}
 
-\versionadded{2.2}
 
 The \module{SimpleXMLRPCServer} module provides a basic server
 framework for XML-RPC servers written in Python.  Servers can either
@@ -14,32 +13,22 @@ be free standing, using \class{SimpleXMLRPCServer}, or embedded in a
 CGI environment, using \class{CGIXMLRPCRequestHandler}.
 
 \begin{classdesc}{SimpleXMLRPCServer}{addr\optional{,
-                                      requestHandler\optional{,
-					logRequests\optional{allow_none\optional{, encoding}}}}}
+                                      requestHandler\optional{, logRequests}}}
 
-  Create a new server instance.  This class
-  provides methods for registration of functions that can be called by
-  the XML-RPC protocol.  The \var{requestHandler} parameter
+  Create a new server instance.  The \var{requestHandler} parameter
   should be a factory for request handler instances; it defaults to
   \class{SimpleXMLRPCRequestHandler}.  The \var{addr} and
   \var{requestHandler} parameters are passed to the
   \class{\refmodule{SocketServer}.TCPServer} constructor.  If
   \var{logRequests} is true (the default), requests will be logged;
-  setting this parameter to false will turn off logging.  
-  The \var{allow_none} and \var{encoding} parameters are passed on to 
-  \module{xmlrpclib} and control the XML-RPC responses that will be returned 
-  from the server.
-  \versionchanged[The \var{allow_none} and \var{encoding} parameters were added]{2.5}
+  setting this parameter to false will turn off logging.  This class
+  provides methods for registration of functions that can be called by
+  the XML-RPC protocol.
 \end{classdesc}
 
-\begin{classdesc}{CGIXMLRPCRequestHandler}{\optional{allow_none\optional{, encoding}}}
+\begin{classdesc}{CGIXMLRPCRequestHandler}{}
   Create a new instance to handle XML-RPC requests in a CGI
-  environment. 
-  The \var{allow_none} and \var{encoding} parameters are passed on to 
-  \module{xmlrpclib} and control the XML-RPC responses that will be returned 
-  from the server.
-  \versionadded{2.3}
-  \versionchanged[The \var{allow_none} and \var{encoding} parameters were added]{2.5}
+  environment. \versionadded{2.3}
 \end{classdesc}
 
 \begin{classdesc}{SimpleXMLRPCRequestHandler}{}
@@ -114,48 +103,17 @@ simple, stand alone XML-RPC servers.
 Example:
 
 \begin{verbatim}
-from SimpleXMLRPCServer import SimpleXMLRPCServer
-
-# Create server
-server = SimpleXMLRPCServer(("localhost", 8000))
-server.register_introspection_functions()
-
-# Register pow() function; this will use the value of 
-# pow.__name__ as the name, which is just 'pow'.
-server.register_function(pow)
-
-# Register a function under a different name
-def adder_function(x,y):
-    return x + y
-server.register_function(adder_function, 'add')
-
-# Register an instance; all the methods of the instance are 
-# published as XML-RPC methods (in this case, just 'div').
 class MyFuncs:
-    def div(self, x, y): 
-        return x // y
-    
-server.register_instance(MyFuncs())
+    def div(self, x, y) : return x // y
 
-# Run the server's main loop
+
+server = SimpleXMLRPCServer(("localhost", 8000))
+server.register_function(pow)
+server.register_function(lambda x,y: x+y, 'add')
+server.register_introspection_functions()
+server.register_instance(MyFuncs())
 server.serve_forever()
 \end{verbatim}
-
-The following client code will call the methods made available by 
-the preceding server:
-
-\begin{verbatim}
-import xmlrpclib
-
-s = xmlrpclib.Server('http://localhost:8000')
-print s.pow(2,3)  # Returns 2**3 = 8
-print s.add(2,3)  # Returns 5
-print s.div(5,2)  # Returns 5//2 = 2
-
-# Print list of available methods
-print s.system.listMethods()
-\end{verbatim}
-
 
 \subsection{CGIXMLRPCRequestHandler}
 
@@ -207,7 +165,7 @@ Example:
 
 \begin{verbatim}
 class MyFuncs:
-    def div(self, x, y) : return x // y
+    def div(self, x, y) : return div(x,y)
 
 
 handler = CGIXMLRPCRequestHandler()

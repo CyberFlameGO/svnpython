@@ -68,7 +68,7 @@ PyClass_New(PyObject *bases, PyObject *dict, PyObject *name)
 			return NULL;
 	}
 	else {
-		Py_ssize_t i, n;
+		int i, n;
 		PyObject *base;
 		if (!PyTuple_Check(bases)) {
 			PyErr_SetString(PyExc_TypeError,
@@ -185,7 +185,7 @@ class_dealloc(PyClassObject *op)
 static PyObject *
 class_lookup(PyClassObject *cp, PyObject *name, PyClassObject **pclass)
 {
-	Py_ssize_t i, n;
+	int i, n;
 	PyObject *value = PyDict_GetItem(cp->cl_dict, name);
 	if (value != NULL) {
 		*pclass = cp;
@@ -281,7 +281,7 @@ set_dict(PyClassObject *c, PyObject *v)
 static char *
 set_bases(PyClassObject *c, PyObject *v)
 {
-	Py_ssize_t i, n;
+	int i, n;
 
 	if (v == NULL || !PyTuple_Check(v))
 		return "__bases__ must be a tuple object";
@@ -388,15 +388,15 @@ class_str(PyClassObject *op)
 		Py_INCREF(name);
 		return name;
 	}
-	m = PyString_GET_SIZE(mod);
-	n = PyString_GET_SIZE(name);
+	m = PyString_Size(mod);
+	n = PyString_Size(name);
 	res = PyString_FromStringAndSize((char *)NULL, m+1+n);
 	if (res != NULL) {
-		char *s = PyString_AS_STRING(res);
-		memcpy(s, PyString_AS_STRING(mod), m);
+		char *s = PyString_AsString(res);
+		memcpy(s, PyString_AsString(mod), m);
 		s += m;
 		*s++ = '.';
-		memcpy(s, PyString_AS_STRING(name), n);
+		memcpy(s, PyString_AsString(name), n);
 	}
 	return res;
 }
@@ -483,7 +483,7 @@ PyTypeObject PyClass_Type = {
 int
 PyClass_IsSubclass(PyObject *class, PyObject *base)
 {
-	Py_ssize_t i, n;
+	int i, n;
 	PyClassObject *cp;
 	if (class == base)
 		return 1;
@@ -996,12 +996,12 @@ instance_traverse(PyInstanceObject *o, visitproc visit, void *arg)
 static PyObject *getitemstr, *setitemstr, *delitemstr, *lenstr;
 static PyObject *iterstr, *nextstr;
 
-static Py_ssize_t
+static int
 instance_length(PyInstanceObject *inst)
 {
 	PyObject *func;
 	PyObject *res;
-	Py_ssize_t outcome;
+	int outcome;
 
 	if (lenstr == NULL)
 		lenstr = PyString_InternFromString("__len__");
@@ -1013,13 +1013,9 @@ instance_length(PyInstanceObject *inst)
 	if (res == NULL)
 		return -1;
 	if (PyInt_Check(res)) {
-		Py_ssize_t temp = PyInt_AsSsize_t(res);
-		if (temp == -1 && PyErr_Occurred()) {
-			Py_DECREF(res);
-			return -1;
-		}
-		outcome = (Py_ssize_t)temp;
-#if SIZEOF_SIZE_T < SIZEOF_LONG
+		long temp = PyInt_AsLong(res);
+		outcome = (int)temp;
+#if SIZEOF_INT < SIZEOF_LONG
 		/* Overflow check -- range of PyInt is more than C int */
 		if (outcome != temp) {
 			PyErr_SetString(PyExc_OverflowError,
@@ -1101,13 +1097,13 @@ instance_ass_subscript(PyInstanceObject *inst, PyObject *key, PyObject *value)
 }
 
 static PyMappingMethods instance_as_mapping = {
-	(lenfunc)instance_length,		/* mp_length */
+	(inquiry)instance_length,		/* mp_length */
 	(binaryfunc)instance_subscript,		/* mp_subscript */
 	(objobjargproc)instance_ass_subscript,	/* mp_ass_subscript */
 };
 
 static PyObject *
-instance_item(PyInstanceObject *inst, Py_ssize_t i)
+instance_item(PyInstanceObject *inst, int i)
 {
 	PyObject *func, *arg, *res;
 
@@ -1116,7 +1112,7 @@ instance_item(PyInstanceObject *inst, Py_ssize_t i)
 	func = instance_getattr(inst, getitemstr);
 	if (func == NULL)
 		return NULL;
-	arg = Py_BuildValue("(n)", i);
+	arg = Py_BuildValue("(i)", i);
 	if (arg == NULL) {
 		Py_DECREF(func);
 		return NULL;
@@ -1128,7 +1124,28 @@ instance_item(PyInstanceObject *inst, Py_ssize_t i)
 }
 
 static PyObject *
-instance_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j)
+sliceobj_from_intint(int i, int j)
+{
+	PyObject *start, *end, *res;
+
+	start = PyInt_FromLong((long)i);
+	if (!start)
+		return NULL;
+
+	end = PyInt_FromLong((long)j);
+	if (!end) {
+		Py_DECREF(start);
+		return NULL;
+	}
+	res = PySlice_New(start, end, NULL);
+	Py_DECREF(start);
+	Py_DECREF(end);
+	return res;
+}
+
+
+static PyObject *
+instance_slice(PyInstanceObject *inst, int i, int j)
 {
 	PyObject *func, *arg, *res;
 	static PyObject *getslicestr;
@@ -1147,9 +1164,9 @@ instance_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j)
 		func = instance_getattr(inst, getitemstr);
 		if (func == NULL)
 			return NULL;
-		arg = Py_BuildValue("(N)", _PySlice_FromIndices(i, j));
+		arg = Py_BuildValue("(N)", sliceobj_from_intint(i, j));
 	} else
-		arg = Py_BuildValue("(nn)", i, j);
+		arg = Py_BuildValue("(ii)", i, j);
 
 	if (arg == NULL) {
 		Py_DECREF(func);
@@ -1162,7 +1179,7 @@ instance_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j)
 }
 
 static int
-instance_ass_item(PyInstanceObject *inst, Py_ssize_t i, PyObject *item)
+instance_ass_item(PyInstanceObject *inst, int i, PyObject *item)
 {
 	PyObject *func, *arg, *res;
 
@@ -1196,7 +1213,7 @@ instance_ass_item(PyInstanceObject *inst, Py_ssize_t i, PyObject *item)
 }
 
 static int
-instance_ass_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j, PyObject *value)
+instance_ass_slice(PyInstanceObject *inst, int i, int j, PyObject *value)
 {
 	PyObject *func, *arg, *res;
 	static PyObject *setslicestr, *delslicestr;
@@ -1218,9 +1235,9 @@ instance_ass_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j, PyObject 
 				return -1;
 
 			arg = Py_BuildValue("(N)",
-					    _PySlice_FromIndices(i, j));
+					    sliceobj_from_intint(i, j));
 		} else
-			arg = Py_BuildValue("(nn)", i, j);
+			arg = Py_BuildValue("(ii)", i, j);
 	}
 	else {
 		if (setslicestr == NULL)
@@ -1239,9 +1256,9 @@ instance_ass_slice(PyInstanceObject *inst, Py_ssize_t i, Py_ssize_t j, PyObject 
 				return -1;
 
 			arg = Py_BuildValue("(NO)",
-					    _PySlice_FromIndices(i, j), value);
+					    sliceobj_from_intint(i, j), value);
 		} else
-			arg = Py_BuildValue("(nnO)", i, j, value);
+			arg = Py_BuildValue("(iiO)", i, j, value);
 	}
 	if (arg == NULL) {
 		Py_DECREF(func);
@@ -1305,13 +1322,13 @@ instance_contains(PyInstanceObject *inst, PyObject *member)
 
 static PySequenceMethods
 instance_as_sequence = {
-	(lenfunc)instance_length,		/* sq_length */
+	(inquiry)instance_length,		/* sq_length */
 	0,					/* sq_concat */
 	0,					/* sq_repeat */
-	(ssizeargfunc)instance_item,		/* sq_item */
-	(ssizessizeargfunc)instance_slice,	/* sq_slice */
-	(ssizeobjargproc)instance_ass_item,	/* sq_ass_item */
-	(ssizessizeobjargproc)instance_ass_slice,/* sq_ass_slice */
+	(intargfunc)instance_item,		/* sq_item */
+	(intintargfunc)instance_slice,		/* sq_slice */
+	(intobjargproc)instance_ass_item,	/* sq_ass_item */
+	(intintobjargproc)instance_ass_slice,	/* sq_ass_slice */
 	(objobjproc)instance_contains,		/* sq_contains */
 };
 
@@ -1712,43 +1729,6 @@ instance_nonzero(PyInstanceObject *self)
 	return outcome > 0;
 }
 
-static Py_ssize_t
-instance_index(PyInstanceObject *self)
-{
-	PyObject *func, *res;
-	Py_ssize_t outcome;
-	static PyObject *indexstr = NULL;
-
-	if (indexstr == NULL) {
-		indexstr = PyString_InternFromString("__index__");
-		if (indexstr == NULL)
-			return -1;
-	}	
-	if ((func = instance_getattr(self, indexstr)) == NULL) {
-		if (!PyErr_ExceptionMatches(PyExc_AttributeError))
-			return -1;
-		PyErr_Clear();
-		PyErr_SetString(PyExc_TypeError, 
-				"object cannot be interpreted as an index");
-		return -1;
-	}
-	res = PyEval_CallObject(func, (PyObject *)NULL);
-	Py_DECREF(func);
-	if (res == NULL)
-		return -1;
-	if (PyInt_Check(res) || PyLong_Check(res)) {
-		outcome = res->ob_type->tp_as_number->nb_index(res);
-	}
-	else {
-		PyErr_SetString(PyExc_TypeError, 
-				"__index__ must return an int or a long");
-		outcome = -1;
-	}
-	Py_DECREF(res);
-	return outcome;
-}
-
-
 UNARY(instance_invert, "__invert__")
 UNARY(instance_int, "__int__")
 UNARY(instance_long, "__long__")
@@ -2068,7 +2048,6 @@ static PyNumberMethods instance_as_number = {
 	(binaryfunc)instance_truediv,		/* nb_true_divide */
 	(binaryfunc)instance_ifloordiv,		/* nb_inplace_floor_divide */
 	(binaryfunc)instance_itruediv,		/* nb_inplace_true_divide */
-	(lenfunc)instance_index,		/* nb_index */
 };
 
 PyTypeObject PyInstance_Type = {
@@ -2451,7 +2430,7 @@ instancemethod_call(PyObject *func, PyObject *arg, PyObject *kw)
 		Py_INCREF(arg);
 	}
 	else {
-		Py_ssize_t argcount = PyTuple_Size(arg);
+		int argcount = PyTuple_Size(arg);
 		PyObject *newarg = PyTuple_New(argcount + 1);
 		int i;
 		if (newarg == NULL)
@@ -2517,7 +2496,7 @@ PyTypeObject PyMethod_Type = {
 	(getattrofunc)instancemethod_getattro,	/* tp_getattro */
 	PyObject_GenericSetAttr,		/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC  | Py_TPFLAGS_HAVE_WEAKREFS, /* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,/* tp_flags */
 	instancemethod_doc,			/* tp_doc */
 	(traverseproc)instancemethod_traverse,	/* tp_traverse */
 	0,					/* tp_clear */

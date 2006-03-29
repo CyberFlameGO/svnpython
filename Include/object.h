@@ -77,7 +77,7 @@ whose size is determined when the object is allocated.
 /* PyObject_HEAD defines the initial segment of every PyObject. */
 #define PyObject_HEAD			\
 	_PyObject_HEAD_EXTRA		\
-	Py_ssize_t ob_refcnt;		\
+	int ob_refcnt;			\
 	struct _typeobject *ob_type;
 
 #define PyObject_HEAD_INIT(type)	\
@@ -92,8 +92,7 @@ whose size is determined when the object is allocated.
  */
 #define PyObject_VAR_HEAD		\
 	PyObject_HEAD			\
-	Py_ssize_t ob_size; /* Number of items in variable part */
-#define Py_INVALID_SIZE (Py_ssize_t)-1
+	int ob_size; /* Number of items in variable part */
 
 /* Nothing is actually declared to be a PyObject, but every pointer to
  * a Python object can be cast to a PyObject*.  This is inheritance built
@@ -128,29 +127,16 @@ typedef PyObject * (*unaryfunc)(PyObject *);
 typedef PyObject * (*binaryfunc)(PyObject *, PyObject *);
 typedef PyObject * (*ternaryfunc)(PyObject *, PyObject *, PyObject *);
 typedef int (*inquiry)(PyObject *);
-typedef Py_ssize_t (*lenfunc)(PyObject *);
 typedef int (*coercion)(PyObject **, PyObject **);
-typedef PyObject *(*intargfunc)(PyObject *, int) Py_DEPRECATED(2.5);
-typedef PyObject *(*intintargfunc)(PyObject *, int, int) Py_DEPRECATED(2.5);
-typedef PyObject *(*ssizeargfunc)(PyObject *, Py_ssize_t);
-typedef PyObject *(*ssizessizeargfunc)(PyObject *, Py_ssize_t, Py_ssize_t);
+typedef PyObject *(*intargfunc)(PyObject *, int);
+typedef PyObject *(*intintargfunc)(PyObject *, int, int);
 typedef int(*intobjargproc)(PyObject *, int, PyObject *);
 typedef int(*intintobjargproc)(PyObject *, int, int, PyObject *);
-typedef int(*ssizeobjargproc)(PyObject *, Py_ssize_t, PyObject *);
-typedef int(*ssizessizeobjargproc)(PyObject *, Py_ssize_t, Py_ssize_t, PyObject *);
 typedef int(*objobjargproc)(PyObject *, PyObject *, PyObject *);
-
-/* int-based buffer interface */
 typedef int (*getreadbufferproc)(PyObject *, int, void **);
 typedef int (*getwritebufferproc)(PyObject *, int, void **);
 typedef int (*getsegcountproc)(PyObject *, int *);
-typedef int (*getcharbufferproc)(PyObject *, int, char **);
-/* ssize_t-based buffer interface */
-typedef Py_ssize_t (*readbufferproc)(PyObject *, Py_ssize_t, void **);
-typedef Py_ssize_t (*writebufferproc)(PyObject *, Py_ssize_t, void **);
-typedef Py_ssize_t (*segcountproc)(PyObject *, Py_ssize_t *);
-typedef Py_ssize_t (*charbufferproc)(PyObject *, Py_ssize_t, char **);
-
+typedef int (*getcharbufferproc)(PyObject *, int, const char **);
 typedef int (*objobjproc)(PyObject *, PyObject *);
 typedef int (*visitproc)(PyObject *, void *);
 typedef int (*traverseproc)(PyObject *, visitproc, void *);
@@ -206,36 +192,33 @@ typedef struct {
 	binaryfunc nb_true_divide;
 	binaryfunc nb_inplace_floor_divide;
 	binaryfunc nb_inplace_true_divide;
-
-	/* Added in release 2.5 */
-	lenfunc nb_index;
 } PyNumberMethods;
 
 typedef struct {
-	lenfunc sq_length;
+	inquiry sq_length;
 	binaryfunc sq_concat;
-	ssizeargfunc sq_repeat;
-	ssizeargfunc sq_item;
-	ssizessizeargfunc sq_slice;
-	ssizeobjargproc sq_ass_item;
-	ssizessizeobjargproc sq_ass_slice;
+	intargfunc sq_repeat;
+	intargfunc sq_item;
+	intintargfunc sq_slice;
+	intobjargproc sq_ass_item;
+	intintobjargproc sq_ass_slice;
 	objobjproc sq_contains;
 	/* Added in release 2.0 */
 	binaryfunc sq_inplace_concat;
-	ssizeargfunc sq_inplace_repeat;
+	intargfunc sq_inplace_repeat;
 } PySequenceMethods;
 
 typedef struct {
-	lenfunc mp_length;
+	inquiry mp_length;
 	binaryfunc mp_subscript;
 	objobjargproc mp_ass_subscript;
 } PyMappingMethods;
 
 typedef struct {
-	readbufferproc bf_getreadbuffer;
-	writebufferproc bf_getwritebuffer;
-	segcountproc bf_getsegcount;
-	charbufferproc bf_getcharbuffer;
+	getreadbufferproc bf_getreadbuffer;
+	getwritebufferproc bf_getwritebuffer;
+	getsegcountproc bf_getsegcount;
+	getcharbufferproc bf_getcharbuffer;
 } PyBufferProcs;
 
 
@@ -256,12 +239,12 @@ typedef PyObject *(*descrgetfunc) (PyObject *, PyObject *, PyObject *);
 typedef int (*descrsetfunc) (PyObject *, PyObject *, PyObject *);
 typedef int (*initproc)(PyObject *, PyObject *, PyObject *);
 typedef PyObject *(*newfunc)(struct _typeobject *, PyObject *, PyObject *);
-typedef PyObject *(*allocfunc)(struct _typeobject *, Py_ssize_t);
+typedef PyObject *(*allocfunc)(struct _typeobject *, int);
 
 typedef struct _typeobject {
 	PyObject_VAR_HEAD
-	const char *tp_name; /* For printing, in format "<module>.<name>" */
-	Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
+	char *tp_name; /* For printing, in format "<module>.<name>" */
+	int tp_basicsize, tp_itemsize; /* For allocation */
 
 	/* Methods to implement standard operations */
 
@@ -292,7 +275,7 @@ typedef struct _typeobject {
 	/* Flags to define presence of optional/expanded features */
 	long tp_flags;
 
-	const char *tp_doc; /* Documentation string */
+	char *tp_doc; /* Documentation string */
 
 	/* Assigned meaning in release 2.0 */
 	/* call function for all accessible objects */
@@ -306,7 +289,7 @@ typedef struct _typeobject {
 	richcmpfunc tp_richcompare;
 
 	/* weak reference enabler */
-	Py_ssize_t tp_weaklistoffset;
+	long tp_weaklistoffset;
 
 	/* Added in release 2.2 */
 	/* Iterators */
@@ -321,7 +304,7 @@ typedef struct _typeobject {
 	PyObject *tp_dict;
 	descrgetfunc tp_descr_get;
 	descrsetfunc tp_descr_set;
-	Py_ssize_t tp_dictoffset;
+	long tp_dictoffset;
 	initproc tp_init;
 	allocfunc tp_alloc;
 	newfunc tp_new;
@@ -336,9 +319,9 @@ typedef struct _typeobject {
 
 #ifdef COUNT_ALLOCS
 	/* these must be last and never explicitly initialized */
-	Py_ssize_t tp_allocs;
-	Py_ssize_t tp_frees;
-	Py_ssize_t tp_maxalloc;
+	int tp_allocs;
+	int tp_frees;
+	int tp_maxalloc;
 	struct _typeobject *tp_next;
 #endif
 } PyTypeObject;
@@ -348,7 +331,7 @@ typedef struct _typeobject {
 typedef struct _heaptypeobject {
 	/* Note: there's a dependency on the order of these members
 	   in slotptr() in typeobject.c . */
-	PyTypeObject ht_type;
+	PyTypeObject type;
 	PyNumberMethods as_number;
 	PyMappingMethods as_mapping;
 	PySequenceMethods as_sequence; /* as_sequence comes after as_mapping,
@@ -357,13 +340,13 @@ typedef struct _heaptypeobject {
 					  a given operator (e.g. __getitem__).
 					  see add_operators() in typeobject.c . */
 	PyBufferProcs as_buffer;
-	PyObject *ht_name, *ht_slots;
+	PyObject *name, *slots;
 	/* here are optional user slots, followed by the members. */
 } PyHeapTypeObject;
 
 /* access macro to the members which are floating "behind" the object */
 #define PyHeapType_GET_MEMBERS(etype) \
-    ((PyMemberDef *)(((char *)etype) + (etype)->ht_type.ob_type->tp_basicsize))
+    ((PyMemberDef *)(((char *)etype) + (etype)->type.ob_type->tp_basicsize))
 
 
 /* Generic type check */
@@ -379,7 +362,7 @@ PyAPI_DATA(PyTypeObject) PySuper_Type; /* built-in 'super' */
 #define PyType_CheckExact(op) ((op)->ob_type == &PyType_Type)
 
 PyAPI_FUNC(int) PyType_Ready(PyTypeObject *);
-PyAPI_FUNC(PyObject *) PyType_GenericAlloc(PyTypeObject *, Py_ssize_t);
+PyAPI_FUNC(PyObject *) PyType_GenericAlloc(PyTypeObject *, int);
 PyAPI_FUNC(PyObject *) PyType_GenericNew(PyTypeObject *,
 					       PyObject *, PyObject *);
 PyAPI_FUNC(PyObject *) _PyType_Lookup(PyTypeObject *, PyObject *);
@@ -388,7 +371,6 @@ PyAPI_FUNC(PyObject *) _PyType_Lookup(PyTypeObject *, PyObject *);
 PyAPI_FUNC(int) PyObject_Print(PyObject *, FILE *, int);
 PyAPI_FUNC(void) _PyObject_Dump(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_Repr(PyObject *);
-PyAPI_FUNC(PyObject *) _PyObject_Str(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_Str(PyObject *);
 #ifdef Py_USING_UNICODE
 PyAPI_FUNC(PyObject *) PyObject_Unicode(PyObject *);
@@ -396,9 +378,9 @@ PyAPI_FUNC(PyObject *) PyObject_Unicode(PyObject *);
 PyAPI_FUNC(int) PyObject_Compare(PyObject *, PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_RichCompare(PyObject *, PyObject *, int);
 PyAPI_FUNC(int) PyObject_RichCompareBool(PyObject *, PyObject *, int);
-PyAPI_FUNC(PyObject *) PyObject_GetAttrString(PyObject *, const char *);
-PyAPI_FUNC(int) PyObject_SetAttrString(PyObject *, const char *, PyObject *);
-PyAPI_FUNC(int) PyObject_HasAttrString(PyObject *, const char *);
+PyAPI_FUNC(PyObject *) PyObject_GetAttrString(PyObject *, char *);
+PyAPI_FUNC(int) PyObject_SetAttrString(PyObject *, char *, PyObject *);
+PyAPI_FUNC(int) PyObject_HasAttrString(PyObject *, char *);
 PyAPI_FUNC(PyObject *) PyObject_GetAttr(PyObject *, PyObject *);
 PyAPI_FUNC(int) PyObject_SetAttr(PyObject *, PyObject *, PyObject *);
 PyAPI_FUNC(int) PyObject_HasAttr(PyObject *, PyObject *);
@@ -506,15 +488,12 @@ given type object has a specified feature.
 /* Objects support garbage collection (see objimp.h) */
 #define Py_TPFLAGS_HAVE_GC (1L<<14)
 
-/* These two bits are preserved for Stackless Python, next after this is 17 */
+/* These two bits are preserved for Stackless Python, next after this is 16 */
 #ifdef STACKLESS
 #define Py_TPFLAGS_HAVE_STACKLESS_EXTENSION (3L<<15)
 #else
 #define Py_TPFLAGS_HAVE_STACKLESS_EXTENSION 0
 #endif
-
-/* Objects support nb_index in PyNumberMethods */
-#define Py_TPFLAGS_HAVE_INDEX (1L<<17)
 
 #define Py_TPFLAGS_DEFAULT  ( \
                              Py_TPFLAGS_HAVE_GETCHARBUFFER | \
@@ -525,7 +504,6 @@ given type object has a specified feature.
                              Py_TPFLAGS_HAVE_ITER | \
                              Py_TPFLAGS_HAVE_CLASS | \
                              Py_TPFLAGS_HAVE_STACKLESS_EXTENSION | \
-                             Py_TPFLAGS_HAVE_INDEX | \
                             0)
 
 #define PyType_HasFeature(t,f)  (((t)->tp_flags & (f)) != 0)
@@ -575,7 +553,7 @@ environment the global variable trick is not safe.)
  * #ifdefs (we used to do that -- it was impenetrable).
  */
 #ifdef Py_REF_DEBUG
-PyAPI_DATA(Py_ssize_t) _Py_RefTotal;
+PyAPI_DATA(long) _Py_RefTotal;
 PyAPI_FUNC(void) _Py_NegativeRefcount(const char *fname,
 					    int lineno, PyObject *op);
 #define _Py_INC_REFTOTAL	_Py_RefTotal++

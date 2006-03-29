@@ -4,7 +4,7 @@ import os
 import fnmatch
 import re
 
-__all__ = ["glob", "iglob"]
+__all__ = ["glob"]
 
 def glob(pathname):
     """Return a list of paths matching a pathname pattern.
@@ -12,42 +12,35 @@ def glob(pathname):
     The pattern may contain simple shell-style wildcards a la fnmatch.
 
     """
-    return list(iglob(pathname))
-
-def iglob(pathname):
-    """Return a list of paths matching a pathname pattern.
-
-    The pattern may contain simple shell-style wildcards a la fnmatch.
-
-    """
     if not has_magic(pathname):
         if os.path.lexists(pathname):
-            yield pathname
-        return
+            return [pathname]
+        else:
+            return []
     dirname, basename = os.path.split(pathname)
     if not dirname:
-        for name in glob1(os.curdir, basename):
-            yield name
-        return
-    if has_magic(dirname):
-        dirs = iglob(dirname)
+        return glob1(os.curdir, basename)
+    elif has_magic(dirname):
+        list = glob(dirname)
     else:
-        dirs = [dirname]
-    if has_magic(basename):
-        glob_in_dir = glob1
+        list = [dirname]
+    if not has_magic(basename):
+        result = []
+        for dirname in list:
+            if basename or os.path.isdir(dirname):
+                name = os.path.join(dirname, basename)
+                if os.path.lexists(name):
+                    result.append(name)
     else:
-        glob_in_dir = glob0
-    for dirname in dirs:
-        for name in glob_in_dir(dirname, basename):
-            yield os.path.join(dirname, name)
-
-# These 2 helper functions non-recursively glob inside a literal directory.
-# They return a list of basenames. `glob1` accepts a pattern while `glob0`
-# takes a literal basename (so it only has to check for its existence).
+        result = []
+        for dirname in list:
+            sublist = glob1(dirname, basename)
+            for name in sublist:
+                result.append(os.path.join(dirname, name))
+    return result
 
 def glob1(dirname, pattern):
-    if not dirname:
-        dirname = os.curdir
+    if not dirname: dirname = os.curdir
     try:
         names = os.listdir(dirname)
     except os.error:
@@ -55,17 +48,6 @@ def glob1(dirname, pattern):
     if pattern[0]!='.':
         names=filter(lambda x: x[0]!='.',names)
     return fnmatch.filter(names,pattern)
-
-def glob0(dirname, basename):
-    if basename == '':
-        # `os.path.split()` returns an empty basename for paths ending with a
-        # directory separator.  'q*x/' should match only directories.
-        if os.isdir(dirname):
-            return [basename]
-    else:
-        if os.path.lexists(os.path.join(dirname, basename)):
-            return [basename]
-    return []
 
 
 magic_check = re.compile('[*?[]')

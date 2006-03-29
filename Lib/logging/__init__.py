@@ -41,8 +41,8 @@ except ImportError:
 
 __author__  = "Vinay Sajip <vinay_sajip@red-dove.com>"
 __status__  = "beta"
-__version__ = "0.4.9.9"
-__date__    = "06 February 2006"
+__version__ = "0.4.9.7"
+__date__    = "07 October 2005"
 
 #---------------------------------------------------------------------------
 #   Miscellaneous module data
@@ -88,16 +88,6 @@ _startTime = time.time()
 #propagated
 #
 raiseExceptions = 1
-
-#
-# If you don't want threading information in the log, set this to zero
-#
-logThreads = 1
-
-#
-# If you don't want process information in the log, set this to zero
-#
-logProcesses = 1
 
 #---------------------------------------------------------------------------
 #   Level related stuff
@@ -213,8 +203,7 @@ class LogRecord:
     the source line where the logging call was made, and any exception
     information to be logged.
     """
-    def __init__(self, name, level, pathname, lineno,
-                 msg, args, exc_info, func):
+    def __init__(self, name, level, pathname, lineno, msg, args, exc_info):
         """
         Initialize a logging record with interesting information.
         """
@@ -249,17 +238,16 @@ class LogRecord:
         self.exc_info = exc_info
         self.exc_text = None      # used to cache the traceback text
         self.lineno = lineno
-        self.funcName = func
         self.created = ct
         self.msecs = (ct - long(ct)) * 1000
         self.relativeCreated = (self.created - _startTime) * 1000
-        if logThreads and thread:
+        if thread:
             self.thread = thread.get_ident()
             self.threadName = threading.currentThread().getName()
         else:
             self.thread = None
             self.threadName = None
-        if logProcesses and hasattr(os, 'getpid'):
+        if hasattr(os, 'getpid'):
             self.process = os.getpid()
         else:
             self.process = None
@@ -295,7 +283,7 @@ def makeLogRecord(dict):
     a socket connection (which is sent as a dictionary) into a LogRecord
     instance.
     """
-    rv = LogRecord(None, None, "", 0, "", (), None, None)
+    rv = LogRecord(None, None, "", 0, "", (), None)
     rv.__dict__.update(dict)
     return rv
 
@@ -330,7 +318,6 @@ class Formatter:
     %(module)s          Module (name portion of filename)
     %(lineno)d          Source line number where the logging call was issued
                         (if available)
-    %(funcName)s        Function name
     %(created)f         Time when the LogRecord was created (time.time()
                         return value)
     %(asctime)s         Textual time when the LogRecord was created
@@ -1069,20 +1056,14 @@ class Logger(Filterer):
             break
         return rv
 
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None):
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info):
         """
         A factory method which can be overridden in subclasses to create
         specialized LogRecords.
         """
-        rv = LogRecord(name, level, fn, lno, msg, args, exc_info, func)
-        if extra:
-            for key in extra:
-                if (key in ["message", "asctime"]) or (key in rv.__dict__):
-                    raise KeyError("Attempt to overwrite %r in LogRecord" % key)
-                rv.__dict__[key] = extra[key]
-        return rv
+        return LogRecord(name, level, fn, lno, msg, args, exc_info)
 
-    def _log(self, level, msg, args, exc_info=None, extra=None):
+    def _log(self, level, msg, args, exc_info=None):
         """
         Low-level logging routine which creates a LogRecord and then calls
         all the handlers of this logger to handle the record.
@@ -1094,7 +1075,7 @@ class Logger(Filterer):
         if exc_info:
             if type(exc_info) != types.TupleType:
                 exc_info = sys.exc_info()
-        record = self.makeRecord(self.name, level, fn, lno, msg, args, exc_info, func, extra)
+        record = self.makeRecord(self.name, level, fn, lno, msg, args, exc_info)
         self.handle(record)
 
     def handle(self, record):

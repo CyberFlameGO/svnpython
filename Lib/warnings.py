@@ -145,8 +145,7 @@ def filterwarnings(action, message="", category=Warning, module="", lineno=0,
     assert action in ("error", "ignore", "always", "default", "module",
                       "once"), "invalid action: %r" % (action,)
     assert isinstance(message, basestring), "message must be a string"
-    assert isinstance(category, (type, types.ClassType)), \
-           "category must be a class"
+    assert isinstance(category, types.ClassType), "category must be a class"
     assert issubclass(category, Warning), "category must be a Warning subclass"
     assert isinstance(module, basestring), "module must be a string"
     assert isinstance(lineno, int) and lineno >= 0, \
@@ -221,7 +220,7 @@ def _getaction(action):
     if not action:
         return "default"
     if action == "all": return "always" # Alias
-    for a in ('default', 'always', 'ignore', 'module', 'once', 'error'):
+    for a in ['default', 'always', 'ignore', 'module', 'once', 'error']:
         if a.startswith(action):
             return a
     raise _OptionError("invalid action: %r" % (action,))

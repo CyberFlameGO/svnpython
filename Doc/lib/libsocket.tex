@@ -68,9 +68,6 @@ depending on the results from DNS resolution and/or the host
 configuration.  For deterministic behavior use a numeric address in
 \var{host} portion.
 
-\versionadded[AF_NETLINK sockets are represented as 
-pairs \code{\var{pid}, \var{groups}}]{2.5}
-
 All errors raise exceptions.  The normal exceptions for invalid
 argument types and out-of-memory conditions can be raised; errors
 related to socket or address semantics raise the error
@@ -626,7 +623,7 @@ timeouts on socket operations.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{gettimeout}{}
-Return the timeout in floating seconds associated with socket
+Returns the timeout in floating seconds associated with socket
 operations, or \code{None} if no timeout is set.  This reflects
 the last call to \method{setblocking()} or \method{settimeout()}.
 \versionadded{2.3}
@@ -675,25 +672,6 @@ and receives are disallowed.
 Note that there are no methods \method{read()} or \method{write()};
 use \method{recv()} and \method{send()} without \var{flags} argument
 instead.
-
-
-Socket objects also have these (read-only) attributes that correspond
-to the values given to the \class{socket} constructor.
-
-\begin{memberdesc}[socket]{family}
-The socket family.
-\versionadded{2.5}
-\end{memberdesc}
-
-\begin{memberdesc}[socket]{type}
-The socket type.
-\versionadded{2.5}
-\end{memberdesc}
-
-\begin{memberdesc}[socket]{proto}
-The socket protocol.
-\versionadded{2.5}
-\end{memberdesc}
 
 
 \subsection{SSL Objects \label{ssl-objects}}

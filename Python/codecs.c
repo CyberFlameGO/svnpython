@@ -200,65 +200,24 @@ PyObject *args_tuple(PyObject *object,
     return args;
 }
 
-/* Helper function to get a codec item */
+/* Build a codec by calling factory(stream[,errors]) or just
+   factory(errors) depending on whether the given parameters are
+   non-NULL. */
 
 static
-PyObject *codec_getitem(const char *encoding, int index)
+PyObject *build_stream_codec(PyObject *factory,
+			     PyObject *stream,
+			     const char *errors)
 {
-    PyObject *codecs;
-    PyObject *v;
+    PyObject *args, *codec;
 
-    codecs = _PyCodec_Lookup(encoding);
-    if (codecs == NULL)
+    args = args_tuple(stream, errors);
+    if (args == NULL)
 	return NULL;
-    v = PyTuple_GET_ITEM(codecs, index);
-    Py_DECREF(codecs);
-    Py_INCREF(v);
-    return v;
-}
-
-/* Helper function to create an incremental codec. */
-
-static
-PyObject *codec_getincrementalcodec(const char *encoding,
-				    const char *errors,
-				    const char *attrname)
-{
-    PyObject *codecs, *ret, *inccodec;
-
-    codecs = _PyCodec_Lookup(encoding);
-    if (codecs == NULL)
-	return NULL;
-    inccodec = PyObject_GetAttrString(codecs, attrname);
-    Py_DECREF(codecs);
-    if (inccodec == NULL)
-	return NULL;
-    if (errors)
-	ret = PyObject_CallFunction(inccodec, "s", errors);
-    else
-	ret = PyObject_CallFunction(inccodec, NULL);
-    Py_DECREF(inccodec);
-    return ret;
-}
-
-/* Helper function to create a stream codec. */
-
-static
-PyObject *codec_getstreamcodec(const char *encoding,
-			       PyObject *stream,
-			       const char *errors,
-			       const int index)
-{
-    PyObject *codecs, *streamcodec;
-
-    codecs = _PyCodec_Lookup(encoding);
-    if (codecs == NULL)
-	return NULL;
-
-    streamcodec = PyEval_CallFunction(
-	PyTuple_GET_ITEM(codecs, index), "Os", stream, errors);
-    Py_DECREF(codecs);
-    return streamcodec;
+    
+    codec = PyEval_CallObject(factory, args);
+    Py_DECREF(args);
+    return codec;
 }
 
 /* Convenience APIs to query the Codec registry. 
@@ -269,38 +228,70 @@ PyObject *codec_getstreamcodec(const char *encoding,
 
 PyObject *PyCodec_Encoder(const char *encoding)
 {
-    return codec_getitem(encoding, 0);
+    PyObject *codecs;
+    PyObject *v;
+
+    codecs = _PyCodec_Lookup(encoding);
+    if (codecs == NULL)
+	goto onError;
+    v = PyTuple_GET_ITEM(codecs,0);
+    Py_DECREF(codecs);
+    Py_INCREF(v);
+    return v;
+
+ onError:
+    return NULL;
 }
 
 PyObject *PyCodec_Decoder(const char *encoding)
 {
-    return codec_getitem(encoding, 1);
-}
+    PyObject *codecs;
+    PyObject *v;
 
-PyObject *PyCodec_IncrementalEncoder(const char *encoding,
-				     const char *errors)
-{
-    return codec_getincrementalcodec(encoding, errors, "incrementalencoder");
-}
+    codecs = _PyCodec_Lookup(encoding);
+    if (codecs == NULL)
+	goto onError;
+    v = PyTuple_GET_ITEM(codecs,1);
+    Py_DECREF(codecs);
+    Py_INCREF(v);
+    return v;
 
-PyObject *PyCodec_IncrementalDecoder(const char *encoding,
-				     const char *errors)
-{
-    return codec_getincrementalcodec(encoding, errors, "incrementaldecoder");
+ onError:
+    return NULL;
 }
 
 PyObject *PyCodec_StreamReader(const char *encoding,
 			       PyObject *stream,
 			       const char *errors)
 {
-    return codec_getstreamcodec(encoding, stream, errors, 2);
+    PyObject *codecs, *ret;
+
+    codecs = _PyCodec_Lookup(encoding);
+    if (codecs == NULL)
+	goto onError;
+    ret = build_stream_codec(PyTuple_GET_ITEM(codecs,2),stream,errors);
+    Py_DECREF(codecs);
+    return ret;
+
+ onError:
+    return NULL;
 }
 
 PyObject *PyCodec_StreamWriter(const char *encoding,
 			       PyObject *stream,
 			       const char *errors)
 {
-    return codec_getstreamcodec(encoding, stream, errors, 3);
+    PyObject *codecs, *ret;
+
+    codecs = _PyCodec_Lookup(encoding);
+    if (codecs == NULL)
+	goto onError;
+    ret = build_stream_codec(PyTuple_GET_ITEM(codecs,3),stream,errors);
+    Py_DECREF(codecs);
+    return ret;
+
+ onError:
+    return NULL;
 }
 
 /* Encode an object (e.g. an Unicode object) using the given encoding
@@ -457,8 +448,9 @@ static void wrong_exception_type(PyObject *exc)
 
 PyObject *PyCodec_StrictErrors(PyObject *exc)
 {
-    if (PyExceptionInstance_Check(exc))
-        PyErr_SetObject(PyExceptionInstance_Class(exc), exc);
+    if (PyInstance_Check(exc))
+	PyErr_SetObject((PyObject*)((PyInstanceObject*)exc)->in_class,
+	    exc);
     else
 	PyErr_SetString(PyExc_TypeError, "codec must pass exception instance");
     return NULL;
@@ -468,7 +460,7 @@ PyObject *PyCodec_StrictErrors(PyObject *exc)
 #ifdef Py_USING_UNICODE
 PyObject *PyCodec_IgnoreErrors(PyObject *exc)
 {
-    Py_ssize_t end;
+    int end;
     if (PyObject_IsInstance(exc, PyExc_UnicodeEncodeError)) {
 	if (PyUnicodeEncodeError_GetEnd(exc, &end))
 	    return NULL;
@@ -486,16 +478,16 @@ PyObject *PyCodec_IgnoreErrors(PyObject *exc)
 	return NULL;
     }
     /* ouch: passing NULL, 0, pos gives None instead of u'' */
-    return Py_BuildValue("(u#n)", &end, 0, end);
+    return Py_BuildValue("(u#i)", &end, 0, end);
 }
 
 
 PyObject *PyCodec_ReplaceErrors(PyObject *exc)
 {
     PyObject *restuple;
-    Py_ssize_t start;
-    Py_ssize_t end;
-    Py_ssize_t i;
+    int start;
+    int end;
+    int i;
 
     if (PyObject_IsInstance(exc, PyExc_UnicodeEncodeError)) {
 	PyObject *res;
@@ -510,7 +502,7 @@ PyObject *PyCodec_ReplaceErrors(PyObject *exc)
 	for (p = PyUnicode_AS_UNICODE(res), i = start;
 	    i<end; ++p, ++i)
 	    *p = '?';
-	restuple = Py_BuildValue("(On)", res, end);
+	restuple = Py_BuildValue("(Oi)", res, end);
 	Py_DECREF(res);
 	return restuple;
     }
@@ -518,7 +510,7 @@ PyObject *PyCodec_ReplaceErrors(PyObject *exc)
 	Py_UNICODE res = Py_UNICODE_REPLACEMENT_CHARACTER;
 	if (PyUnicodeDecodeError_GetEnd(exc, &end))
 	    return NULL;
-	return Py_BuildValue("(u#n)", &res, 1, end);
+	return Py_BuildValue("(u#i)", &res, 1, end);
     }
     else if (PyObject_IsInstance(exc, PyExc_UnicodeTranslateError)) {
 	PyObject *res;
@@ -533,7 +525,7 @@ PyObject *PyCodec_ReplaceErrors(PyObject *exc)
 	for (p = PyUnicode_AS_UNICODE(res), i = start;
 	    i<end; ++p, ++i)
 	    *p = Py_UNICODE_REPLACEMENT_CHARACTER;
-	restuple = Py_BuildValue("(On)", res, end);
+	restuple = Py_BuildValue("(Oi)", res, end);
 	Py_DECREF(res);
 	return restuple;
     }
@@ -548,8 +540,8 @@ PyObject *PyCodec_XMLCharRefReplaceErrors(PyObject *exc)
     if (PyObject_IsInstance(exc, PyExc_UnicodeEncodeError)) {
 	PyObject *restuple;
 	PyObject *object;
-	Py_ssize_t start;
-	Py_ssize_t end;
+	int start;
+	int end;
 	PyObject *res;
 	Py_UNICODE *p;
 	Py_UNICODE *startp;
@@ -639,7 +631,7 @@ PyObject *PyCodec_XMLCharRefReplaceErrors(PyObject *exc)
 	    }
 	    *outp++ = ';';
 	}
-	restuple = Py_BuildValue("(On)", res, end);
+	restuple = Py_BuildValue("(Oi)", res, end);
 	Py_DECREF(res);
 	Py_DECREF(object);
 	return restuple;
@@ -660,8 +652,8 @@ PyObject *PyCodec_BackslashReplaceErrors(PyObject *exc)
     if (PyObject_IsInstance(exc, PyExc_UnicodeEncodeError)) {
 	PyObject *restuple;
 	PyObject *object;
-	Py_ssize_t start;
-	Py_ssize_t end;
+	int start;
+	int end;
 	PyObject *res;
 	Py_UNICODE *p;
 	Py_UNICODE *startp;
@@ -716,7 +708,7 @@ PyObject *PyCodec_BackslashReplaceErrors(PyObject *exc)
 	    *outp++ = hexdigits[c&0xf];
 	}
 
-	restuple = Py_BuildValue("(On)", res, end);
+	restuple = Py_BuildValue("(Oi)", res, end);
 	Py_DECREF(res);
 	Py_DECREF(object);
 	return restuple;
@@ -839,7 +831,7 @@ static int _PyCodecRegistry_Init(void)
 	interp->codec_error_registry == NULL)
 	Py_FatalError("can't initialize codec registry");
 
-    mod = PyImport_ImportModuleLevel("encodings", NULL, NULL, NULL, 0);
+    mod = PyImport_ImportModuleEx("encodings", NULL, NULL, NULL);
     if (mod == NULL) {
 	if (PyErr_ExceptionMatches(PyExc_ImportError)) {
 	    /* Ignore ImportErrors... this is done so that

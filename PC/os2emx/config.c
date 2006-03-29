@@ -64,6 +64,7 @@ extern void inititertools();
 extern void initmath();
 extern void initmd5();
 extern void initoperator();
+extern void initregex();
 extern void initrgbimg();
 extern void initsha();
 extern void initstrop();
@@ -127,6 +128,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"math", initmath},
 	{"md5", initmd5},
 	{"operator", initoperator},
+	{"regex", initregex},
 	{"rgbimg", initrgbimg},
 	{"sha", initsha},
 	{"strop", initstrop},

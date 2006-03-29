@@ -33,9 +33,9 @@
 #################################
 
 %define name python
-%define version 2.4
+%define version 2.4.3
 %define libvers 2.4
-%define release 2pydotorg
+%define release 1pydotorg
 %define __prefix /usr
 
 #  kludge to get around rpm <percent>define weirdness
@@ -131,7 +131,7 @@ formats.
 %endif
 
 %changelog
-* Mon Dec 20 2004 Sean Reifschneider <jafo-rpms@tummy.com> [2.4-2pydotorg]
+* Wed Jan 05 2004 Sean Reifschneider <jafo-rpms@tummy.com> [2.4-3pydotorg]
 - Changing the idle wrapper so that it passes arguments to idle.
 
 * Tue Oct 19 2004 Sean Reifschneider <jafo-rpms@tummy.com> [2.4b1-1pydotorg]

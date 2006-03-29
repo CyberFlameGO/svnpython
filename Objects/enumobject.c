@@ -33,6 +33,7 @@ enum_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	}
 	en->en_result = PyTuple_Pack(2, Py_None, Py_None);
 	if (en->en_result == NULL) {
+		Py_DECREF(en->en_sit);
 		Py_DECREF(en);
 		return NULL;
 	}
@@ -159,14 +160,14 @@ PyTypeObject PyEnum_Type = {
 
 typedef struct {
 	PyObject_HEAD
-	Py_ssize_t      index;
+	long      index;
 	PyObject* seq;
 } reversedobject;
 
 static PyObject *
 reversed_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	Py_ssize_t n;
+	long n;
 	PyObject *seq;
 	reversedobject *ro;
 
@@ -216,7 +217,7 @@ static PyObject *
 reversed_next(reversedobject *ro)
 {
 	PyObject *item;
-	Py_ssize_t index = ro->index;
+	long index = ro->index;
 
 	if (index >= 0) {
 		item = PySequence_GetItem(ro->seq, index);
@@ -238,25 +239,23 @@ PyDoc_STRVAR(reversed_doc,
 "\n"
 "Return a reverse iterator");
 
-static PyObject *
+static int
 reversed_len(reversedobject *ro)
 {
-	Py_ssize_t position, seqsize;
+	int position, seqsize;
 
 	if (ro->seq == NULL)
-		return PyInt_FromLong(0);
+		return 0;
 	seqsize = PySequence_Size(ro->seq);
 	if (seqsize == -1)
-		return NULL;
+		return -1;
 	position = ro->index + 1;
-	return PyInt_FromSsize_t((seqsize < position)  ?  0  :  position);
+	return (seqsize < position)  ?  0  :  position;
 }
 
-PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef reversediter_methods[] = {
-	{"__length_hint__", (PyCFunction)reversed_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
+static PySequenceMethods reversed_as_sequence = {
+	(inquiry)reversed_len,		/* sq_length */
+	0,				/* sq_concat */
 };
 
 PyTypeObject PyReversed_Type = {
@@ -273,7 +272,7 @@ PyTypeObject PyReversed_Type = {
 	0,                              /* tp_compare */
 	0,                              /* tp_repr */
 	0,                              /* tp_as_number */
-	0,				/* tp_as_sequence */
+	&reversed_as_sequence,          /* tp_as_sequence */
 	0,                              /* tp_as_mapping */
 	0,                              /* tp_hash */
 	0,                              /* tp_call */
@@ -290,7 +289,7 @@ PyTypeObject PyReversed_Type = {
 	0,                              /* tp_weaklistoffset */
 	PyObject_SelfIter,		/* tp_iter */
 	(iternextfunc)reversed_next,    /* tp_iternext */
-	reversediter_methods,		/* tp_methods */
+	0,				/* tp_methods */
 	0,                              /* tp_members */
 	0,                              /* tp_getset */
 	0,                              /* tp_base */

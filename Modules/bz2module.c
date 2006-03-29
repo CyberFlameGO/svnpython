@@ -719,7 +719,7 @@ BZ2File_readlines(BZ2FileObject *self, PyObject *args)
 				_PyString_Resize(&big_buffer, buffersize);
 				buffer = PyString_AS_STRING(big_buffer);
 			}
-			continue;			
+			continue;
 		}
 		end = buffer+nfilled+nread;
 		q = buffer;
@@ -908,7 +908,7 @@ BZ2File_writelines(BZ2FileObject *self, PyObject *seq)
 			PyObject *v = PyList_GET_ITEM(list, i);
 			if (!PyString_Check(v)) {
 			    	const char *buffer;
-			    	Py_ssize_t len;
+			    	int len;
 				if (PyObject_AsCharBuffer(v, &buffer, &len)) {
 					PyErr_SetString(PyExc_TypeError,
 							"writelines() "
@@ -985,6 +985,7 @@ BZ2File_seek(BZ2FileObject *self, PyObject *args)
 	size_t readsize;
 	int chunksize;
 	int bzerror;
+	int rewind = 0;
 	PyObject *ret = NULL;
 
 	if (!PyArg_ParseTuple(args, "O|i:seek", &offobj, &where))
@@ -1276,7 +1277,7 @@ static int
 BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 {
 	static char *kwlist[] = {"filename", "mode", "buffering",
-                                       "compresslevel", 0};
+				 "compresslevel", 0};
 	PyObject *name;
 	char *mode = "r";
 	int buffering = -1;
@@ -2182,8 +2183,6 @@ initbz2(void)
 	BZ2Decomp_Type.ob_type = &PyType_Type;
 
 	m = Py_InitModule3("bz2", bz2_methods, bz2__doc__);
-	if (m == NULL)
-		return;
 
 	PyModule_AddObject(m, "__author__", PyString_FromString(__author__));
 

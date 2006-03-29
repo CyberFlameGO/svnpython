@@ -50,7 +50,7 @@ getset_repr(PyGetSetDescrObject *descr)
 }
 
 static PyObject *
-wrapperdescr_repr(PyWrapperDescrObject *descr)
+wrapper_repr(PyWrapperDescrObject *descr)
 {
 	return descr_repr((PyDescrObject *)descr, 
 			  "<slot wrapper '%s' of '%s' objects>");
@@ -144,7 +144,7 @@ getset_get(PyGetSetDescrObject *descr, PyObject *obj, PyObject *type)
 		return res;
 	if (descr->d_getset->get != NULL)
 		return descr->d_getset->get(obj, descr->d_getset->closure);
-	PyErr_Format(PyExc_AttributeError,
+	PyErr_Format(PyExc_TypeError,
 		     "attribute '%.300s' of '%.100s' objects is not readable",
 		     descr_name((PyDescrObject *)descr),
 		     descr->d_type->tp_name);
@@ -152,7 +152,7 @@ getset_get(PyGetSetDescrObject *descr, PyObject *obj, PyObject *type)
 }
 
 static PyObject *
-wrapperdescr_get(PyWrapperDescrObject *descr, PyObject *obj, PyObject *type)
+wrapper_get(PyWrapperDescrObject *descr, PyObject *obj, PyObject *type)
 {
 	PyObject *res;
 
@@ -199,7 +199,7 @@ getset_set(PyGetSetDescrObject *descr, PyObject *obj, PyObject *value)
 	if (descr->d_getset->set != NULL)
 		return descr->d_getset->set(obj, value,
 					    descr->d_getset->closure);
-	PyErr_Format(PyExc_AttributeError,
+	PyErr_Format(PyExc_TypeError,
 		     "attribute '%.300s' of '%.100s' objects is not writable",
 		     descr_name((PyDescrObject *)descr),
 		     descr->d_type->tp_name);
@@ -209,7 +209,7 @@ getset_set(PyGetSetDescrObject *descr, PyObject *obj, PyObject *value)
 static PyObject *
 methoddescr_call(PyMethodDescrObject *descr, PyObject *args, PyObject *kwds)
 {
-	Py_ssize_t argc;
+	int argc;
 	PyObject *self, *func, *result;
 
 	/* Make sure that the first argument is acceptable as 'self' */
@@ -267,7 +267,7 @@ classmethoddescr_call(PyMethodDescrObject *descr, PyObject *args,
 static PyObject *
 wrapperdescr_call(PyWrapperDescrObject *descr, PyObject *args, PyObject *kwds)
 {
-	Py_ssize_t argc;
+	int argc;
 	PyObject *self, *func, *result;
 
 	/* Make sure that the first argument is acceptable as 'self' */
@@ -359,7 +359,7 @@ static PyGetSetDef getset_getset[] = {
 };
 
 static PyObject *
-wrapperdescr_get_doc(PyWrapperDescrObject *descr, void *closure)
+wrapper_get_doc(PyWrapperDescrObject *descr, void *closure)
 {
 	if (descr->d_base->doc == NULL) {
 		Py_INCREF(Py_None);
@@ -368,8 +368,8 @@ wrapperdescr_get_doc(PyWrapperDescrObject *descr, void *closure)
 	return PyString_FromString(descr->d_base->doc);
 }
 
-static PyGetSetDef wrapperdescr_getset[] = {
-	{"__doc__", (getter)wrapperdescr_get_doc},
+static PyGetSetDef wrapper_getset[] = {
+	{"__doc__", (getter)wrapper_get_doc},
 	{0}
 };
 
@@ -551,7 +551,7 @@ PyTypeObject PyWrapperDescr_Type = {
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */
-	(reprfunc)wrapperdescr_repr,		/* tp_repr */
+	(reprfunc)wrapper_repr,			/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
 	0,					/* tp_as_mapping */
@@ -571,15 +571,15 @@ PyTypeObject PyWrapperDescr_Type = {
 	0,					/* tp_iternext */
 	0,					/* tp_methods */
 	descr_members,				/* tp_members */
-	wrapperdescr_getset,			/* tp_getset */
+	wrapper_getset,				/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
-	(descrgetfunc)wrapperdescr_get,		/* tp_descr_get */
+	(descrgetfunc)wrapper_get,		/* tp_descr_get */
 	0,					/* tp_descr_set */
 };
 
 static PyDescrObject *
-descr_new(PyTypeObject *descrtype, PyTypeObject *type, const char *name)
+descr_new(PyTypeObject *descrtype, PyTypeObject *type, char *name)
 {
 	PyDescrObject *descr;
 
@@ -669,7 +669,7 @@ typedef struct {
 	PyObject *dict;
 } proxyobject;
 
-static Py_ssize_t
+static int
 proxy_len(proxyobject *pp)
 {
 	return PyObject_Size(pp->dict);
@@ -682,7 +682,7 @@ proxy_getitem(proxyobject *pp, PyObject *key)
 }
 
 static PyMappingMethods proxy_as_mapping = {
-	(lenfunc)proxy_len,			/* mp_length */
+	(inquiry)proxy_len,			/* mp_length */
 	(binaryfunc)proxy_getitem,		/* mp_subscript */
 	0,					/* mp_ass_subscript */
 };
@@ -910,41 +910,9 @@ wrapper_dealloc(wrapperobject *wp)
 	PyObject_GC_Del(wp);
 }
 
-static int
-wrapper_compare(wrapperobject *a, wrapperobject *b)
-{
-	if (a->descr == b->descr) {
-		if (a->self == b->self)
-			return 0;
-		else
-			return (a->self < b->self) ? -1 : 1;
-	}
-	else
-		return (a->descr < b->descr) ? -1 : 1;
-}
-
-static PyObject *
-wrapper_repr(wrapperobject *wp)
-{
-	return PyString_FromFormat("<method-wrapper '%s' of %s object at %p>",
-				   wp->descr->d_base->name,
-				   wp->self->ob_type->tp_name,
-				   wp->self);
-}
-
-static PyMemberDef wrapper_members[] = {
-	{"__self__", T_OBJECT, offsetof(wrapperobject, self), READONLY},
+static PyMethodDef wrapper_methods[] = {
 	{0}
 };
-
-static PyObject *
-wrapper_objclass(wrapperobject *wp)
-{
-	PyObject *c = (PyObject *)wp->descr->d_type;
-
-	Py_INCREF(c);
-	return c;
-}
 
 static PyObject *
 wrapper_name(wrapperobject *wp)
@@ -969,7 +937,6 @@ wrapper_doc(wrapperobject *wp)
 }
 
 static PyGetSetDef wrapper_getsets[] = {
-	{"__objclass__", (getter)wrapper_objclass},
 	{"__name__", (getter)wrapper_name},
 	{"__doc__", (getter)wrapper_doc},
 	{0}
@@ -1025,8 +992,8 @@ static PyTypeObject wrappertype = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	(cmpfunc)wrapper_compare,		/* tp_compare */
-	(reprfunc)wrapper_repr,			/* tp_repr */
+	0,					/* tp_compare */
+	0,					/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
 	0,		       			/* tp_as_mapping */
@@ -1044,8 +1011,8 @@ static PyTypeObject wrappertype = {
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */
-	0,					/* tp_methods */
-	wrapper_members,			/* tp_members */
+	wrapper_methods,			/* tp_methods */
+	0,					/* tp_members */
 	wrapper_getsets,			/* tp_getset */
 	0,					/* tp_base */
 	0,					/* tp_dict */
@@ -1081,8 +1048,6 @@ PyWrapper_New(PyObject *d, PyObject *self)
     class property(object):
 
         def __init__(self, fget=None, fset=None, fdel=None, doc=None):
-            if doc is None and fget is not None and hasattr(fget, "__doc__"):
-                doc = fget.__doc__
             self.__get = fget
             self.__set = fset
             self.__del = fdel
@@ -1184,7 +1149,6 @@ static int
 property_init(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyObject *get = NULL, *set = NULL, *del = NULL, *doc = NULL;
-	PyObject *get_doc = NULL;
 	static char *kwlist[] = {"fget", "fset", "fdel", "doc", 0};
 	propertyobject *gs = (propertyobject *)self;
 
@@ -1198,15 +1162,6 @@ property_init(PyObject *self, PyObject *args, PyObject *kwds)
 		set = NULL;
 	if (del == Py_None)
 		del = NULL;
-
-	/* if no docstring given and the getter has one, use that one */
-	if ((doc == NULL || doc == Py_None) && get != NULL && 
-	    PyObject_HasAttrString(get, "__doc__")) {
-		if (!(get_doc = PyObject_GetAttrString(get, "__doc__")))
-			return -1;
-		Py_DECREF(get_doc); /* it is INCREF'd again below */
-		doc = get_doc;
-	}
 
 	Py_XINCREF(get);
 	Py_XINCREF(set);

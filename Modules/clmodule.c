@@ -963,8 +963,6 @@ initcl(void)
 	PyObject *m, *d, *x;
 
 	m = Py_InitModule("cl", cl_methods);
-	if (m == NULL)
-		return;
 	d = PyModule_GetDict(m);
 
 	ClError = PyErr_NewException("cl.error", NULL, NULL);

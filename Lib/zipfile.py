@@ -1,6 +1,6 @@
 "Read and write ZIP files."
 
-import struct, os, time, sys
+import struct, os, time
 import binascii
 
 try:
@@ -131,11 +131,7 @@ class ZipInfo:
         self.compress_type = ZIP_STORED # Type of compression for the file
         self.comment = ""               # Comment for each file
         self.extra = ""                 # ZIP extra data
-        if sys.platform == 'win32':
-            self.create_system = 0          # System which created ZIP archive
-        else:
-            # Assume everything else is unix-y
-            self.create_system = 3          # System which created ZIP archive
+        self.create_system = 0          # System which created ZIP archive
         self.create_version = 20        # Version which created ZIP archive
         self.extract_version = 20       # Version needed to extract archive
         self.reserved = 0               # Must be zero
@@ -397,11 +393,9 @@ class ZipFile:
         date_time = mtime[0:6]
         # Create ZipInfo instance to store file information
         if arcname is None:
-            arcname = filename
-        arcname = os.path.normpath(os.path.splitdrive(arcname)[1])
-        while arcname[0] in (os.sep, os.altsep):
-            arcname = arcname[1:]
-        zinfo = ZipInfo(arcname, date_time)
+            zinfo = ZipInfo(filename, date_time)
+        else:
+            zinfo = ZipInfo(arcname, date_time)
         zinfo.external_attr = (st[0] & 0xFFFF) << 16L      # Unix attributes
         if compress_type is None:
             zinfo.compress_type = self.compression

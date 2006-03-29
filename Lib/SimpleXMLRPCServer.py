@@ -104,7 +104,7 @@ from xmlrpclib import Fault
 import SocketServer
 import BaseHTTPServer
 import sys
-import os, fcntl
+import os
 
 def resolve_dotted_attribute(obj, attr, allow_dotted_names=True):
     """resolve_dotted_attribute(a, 'b.c.d') => a.b.c.d
@@ -159,11 +159,9 @@ class SimpleXMLRPCDispatcher:
     reason to instantiate this class directly.
     """
 
-    def __init__(self, allow_none, encoding):
+    def __init__(self):
         self.funcs = {}
         self.instance = None
-        self.allow_none = allow_none
-        self.encoding = encoding
 
     def register_instance(self, instance, allow_dotted_names=False):
         """Registers an instance to respond to XML-RPC requests.
@@ -253,16 +251,13 @@ class SimpleXMLRPCDispatcher:
                 response = self._dispatch(method, params)
             # wrap response in a singleton tuple
             response = (response,)
-            response = xmlrpclib.dumps(response, methodresponse=1,
-                                       allow_none=self.allow_none, encoding=self.encoding)
+            response = xmlrpclib.dumps(response, methodresponse=1)
         except Fault, fault:
-            response = xmlrpclib.dumps(fault, allow_none=self.allow_none,
-                                       encoding=self.encoding)
+            response = xmlrpclib.dumps(fault)
         except:
             # report exception back to server
             response = xmlrpclib.dumps(
-                xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value)),
-                encoding=self.encoding, allow_none=self.allow_none,
+                xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value))
                 )
 
         return response
@@ -427,19 +422,8 @@ class SimpleXMLRPCRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """
 
         try:
-            # Get arguments by reading body of request.
-            # We read this in chunks to avoid straining
-            # socket.read(); around the 10 or 15Mb mark, some platforms
-            # begin to have problems (bug #792570).
-            max_chunk_size = 10*1024*1024
-            size_remaining = int(self.headers["content-length"])
-            L = []
-            while size_remaining:
-                chunk_size = min(size_remaining, max_chunk_size)
-                L.append(self.rfile.read(chunk_size))
-                size_remaining -= len(L[-1])
-            data = ''.join(L)
-
+            # get arguments
+            data = self.rfile.read(int(self.headers["content-length"]))
             # In previous versions of SimpleXMLRPCServer, _dispatch
             # could be overridden in this class, instead of in
             # SimpleXMLRPCDispatcher. To maintain backwards compatibility,
@@ -481,28 +465,18 @@ class SimpleXMLRPCServer(SocketServer.TCPServer,
     from SimpleXMLRPCDispatcher to change this behavior.
     """
 
-    allow_reuse_address = True
-
     def __init__(self, addr, requestHandler=SimpleXMLRPCRequestHandler,
-                 logRequests=True, allow_none=False, encoding=None):
+                 logRequests=1):
         self.logRequests = logRequests
 
-        SimpleXMLRPCDispatcher.__init__(self, allow_none, encoding)
+        SimpleXMLRPCDispatcher.__init__(self)
         SocketServer.TCPServer.__init__(self, addr, requestHandler)
-
-        # [Bug #1222790] If possible, set close-on-exec flag; if a
-        # method spawns a subprocess, the subprocess shouldn't have
-        # the listening socket open.
-        if hasattr(fcntl, 'FD_CLOEXEC'):
-            flags = fcntl.fcntl(self.fileno(), fcntl.F_GETFD)
-            flags |= fcntl.FD_CLOEXEC
-            fcntl.fcntl(self.fileno(), fcntl.F_SETFD, flags)
 
 class CGIXMLRPCRequestHandler(SimpleXMLRPCDispatcher):
     """Simple handler for XML-RPC data passed through CGI."""
 
-    def __init__(self, allow_none=False, encoding=None):
-        SimpleXMLRPCDispatcher.__init__(self, allow_none, encoding)
+    def __init__(self):
+        SimpleXMLRPCDispatcher.__init__(self)
 
     def handle_xmlrpc(self, request_text):
         """Handle a single XML-RPC request"""

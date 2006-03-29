@@ -26,16 +26,6 @@
 #endif
 #endif
 
-/* Before FreeBSD 5.4, system scope threads was very limited resource
-   in default setting.  So the process scope is preferred to get
-   enough number of threads to work. */
-#ifdef __FreeBSD__
-#include <osreldate.h>
-#if __FreeBSD_version >= 500000 && __FreeBSD_version < 504101
-#undef PTHREAD_SYSTEM_SCHED_SUPPORTED
-#endif
-#endif
-
 #if !defined(pthread_attr_default)
 #  define pthread_attr_default ((pthread_attr_t *)NULL)
 #endif
@@ -148,7 +138,7 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 #ifdef THREAD_STACK_SIZE
 	pthread_attr_setstacksize(&attrs, THREAD_STACK_SIZE);
 #endif
-#if defined(PTHREAD_SYSTEM_SCHED_SUPPORTED)
+#if defined(PTHREAD_SYSTEM_SCHED_SUPPORTED) && !defined(__FreeBSD__)
         pthread_attr_setscope(&attrs, PTHREAD_SCOPE_SYSTEM);
 #endif
 
@@ -365,8 +355,8 @@ PyThread_allocate_lock(void)
 		PyThread_init_thread();
 
 	lock = (pthread_lock *) malloc(sizeof(pthread_lock));
+	memset((void *)lock, '\0', sizeof(pthread_lock));
 	if (lock) {
-		memset((void *)lock, '\0', sizeof(pthread_lock));
 		lock->locked = 0;
 
 		status = pthread_mutex_init(&lock->mut,

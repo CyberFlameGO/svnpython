@@ -9,11 +9,10 @@ annotated by François Pinard, and converted to C by Raymond Hettinger.
 #include "Python.h"
 
 static int
-_siftdown(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
+_siftdown(PyListObject *heap, int startpos, int pos)
 {
 	PyObject *newitem, *parent;
-	int cmp;
-	Py_ssize_t parentpos;
+	int cmp, parentpos;
 
 	assert(PyList_Check(heap));
 	if (pos >= PyList_GET_SIZE(heap)) {
@@ -46,9 +45,9 @@ _siftdown(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
 }
 
 static int
-_siftup(PyListObject *heap, Py_ssize_t pos)
+_siftup(PyListObject *heap, int pos)
 {
-	Py_ssize_t startpos, endpos, childpos, rightpos;
+	int startpos, endpos, childpos, rightpos;
 	int cmp;
 	PyObject *newitem, *tmp;
 
@@ -124,7 +123,7 @@ static PyObject *
 heappop(PyObject *self, PyObject *heap)
 {
 	PyObject *lastelt, *returnitem;
-	Py_ssize_t n;
+	int n;
 
 	if (!PyList_Check(heap)) {
 		PyErr_SetString(PyExc_TypeError, "heap argument must be a list");
@@ -198,7 +197,7 @@ this routine unless written as part of a conditional replacement:\n\n\
 static PyObject *
 heapify(PyObject *self, PyObject *heap)
 {
-	Py_ssize_t i, n;
+	int i, n;
 
 	if (!PyList_Check(heap)) {
 		PyErr_SetString(PyExc_TypeError, "heap argument must be a list");
@@ -227,9 +226,9 @@ static PyObject *
 nlargest(PyObject *self, PyObject *args)
 {
 	PyObject *heap=NULL, *elem, *iterable, *sol, *it, *oldelem;
-	Py_ssize_t i, n;
+	int i, n;
 
-	if (!PyArg_ParseTuple(args, "nO:nlargest", &n, &iterable))
+	if (!PyArg_ParseTuple(args, "iO:nlargest", &n, &iterable))
 		return NULL;
 
 	it = PyObject_GetIter(iterable);
@@ -301,11 +300,10 @@ PyDoc_STRVAR(nlargest_doc,
 Equivalent to:  sorted(iterable, reverse=True)[:n]\n");
 
 static int
-_siftdownmax(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
+_siftdownmax(PyListObject *heap, int startpos, int pos)
 {
 	PyObject *newitem, *parent;
-	int cmp;
-	Py_ssize_t parentpos;
+	int cmp, parentpos;
 
 	assert(PyList_Check(heap));
 	if (pos >= PyList_GET_SIZE(heap)) {
@@ -338,9 +336,9 @@ _siftdownmax(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
 }
 
 static int
-_siftupmax(PyListObject *heap, Py_ssize_t pos)
+_siftupmax(PyListObject *heap, int pos)
 {
-	Py_ssize_t startpos, endpos, childpos, rightpos;
+	int startpos, endpos, childpos, rightpos;
 	int cmp;
 	PyObject *newitem, *tmp;
 
@@ -391,9 +389,9 @@ static PyObject *
 nsmallest(PyObject *self, PyObject *args)
 {
 	PyObject *heap=NULL, *elem, *iterable, *los, *it, *oldelem;
-	Py_ssize_t i, n;
+	int i, n;
 
-	if (!PyArg_ParseTuple(args, "nO:nsmallest", &n, &iterable))
+	if (!PyArg_ParseTuple(args, "iO:nsmallest", &n, &iterable))
 		return NULL;
 
 	it = PyObject_GetIter(iterable);
@@ -612,8 +610,6 @@ init_heapq(void)
 	PyObject *m;
 
 	m = Py_InitModule3("_heapq", heapq_methods, module_doc);
-	if (m == NULL)
-    		return;
 	PyModule_AddObject(m, "__about__", PyString_FromString(__about__));
 }
 

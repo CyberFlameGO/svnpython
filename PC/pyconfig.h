@@ -27,16 +27,6 @@ MS_CORE_DLL.
 
 */
 
-/* Visual Studio 2005 introduces deprecation warnings for
-   "insecure" and POSIX functions. The insecure functions should
-   be replaced by *_s versions (according to Microsoft); the
-   POSIX functions by _* versions (which, according to Microsoft,
-   would be ISO C conforming). Neither renaming is feasible, so
-   we just silence the warnings. */
-
-#define _CRT_SECURE_NO_DEPRECATE 1
-#define _CRT_NONSTDC_NO_DEPRECATE 1
-
 #include <io.h>
 #define HAVE_SYS_UTIME_H
 #define HAVE_HYPOT
@@ -116,14 +106,6 @@ MS_CORE_DLL.
 #define COMPILER _Py_PASTE_VERSION("64 bit (Unknown)")
 #endif
 #endif /* MS_WIN64 */
-
-/* Define like size_t, omitting the "unsigned" */
-#ifdef MS_WIN64
-typedef __int64 ssize_t;
-#else
-typedef _W64 int ssize_t;
-#endif
-#define HAVE_SSIZE_T 1
 
 #if defined(MS_WIN32) && !defined(MS_WIN64)
 #ifdef _M_IX86
@@ -243,9 +225,9 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 			their Makefile (other compilers are generally
 			taken care of by distutils.) */
 #			ifdef _DEBUG
-#				pragma comment(lib,"python25_d.lib")
+#				pragma comment(lib,"python24_d.lib")
 #			else
-#				pragma comment(lib,"python25.lib")
+#				pragma comment(lib,"python24.lib")
 #			endif /* _DEBUG */
 #		endif /* _MSC_VER */
 #	endif /* Py_BUILD_CORE */
@@ -261,7 +243,6 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 #	define SIZEOF_OFF_T 4
 #	define SIZEOF_FPOS_T 8
 #	define SIZEOF_HKEY 8
-#	define SIZEOF_SIZE_T 8
 /* configure.in defines HAVE_LARGEFILE_SUPPORT iff HAVE_LONG_LONG,
    sizeof(off_t) > sizeof(long), and sizeof(PY_LONG_LONG) >= sizeof(off_t).
    On Win64 the second condition is not true, but if fpos_t replaces off_t
@@ -272,16 +253,10 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 #	define PLATFORM "win32"
 #	define HAVE_LARGEFILE_SUPPORT
 #	define SIZEOF_VOID_P 4
+#	define SIZEOF_TIME_T 4
 #	define SIZEOF_OFF_T 4
 #	define SIZEOF_FPOS_T 8
 #	define SIZEOF_HKEY 4
-#	define SIZEOF_SIZE_T 4
-	/* MS VS2005 changes time_t to an 64-bit type on all platforms */
-#	if defined(_MSC_VER) && _MSC_VER >= 1400
-#	define SIZEOF_TIME_T 8
-#	else
-#	define SIZEOF_TIME_T 4
-#	endif
 #endif
 
 #ifdef _DEBUG

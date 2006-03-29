@@ -15,22 +15,14 @@ def is_future(stmt):
 
 class FutureParser:
 
-    features = ("nested_scopes", "generators", "division",
-                "absolute_import", "with_statement")
+    features = ("nested_scopes", "generators", "division")
 
     def __init__(self):
         self.found = {} # set
 
     def visitModule(self, node):
         stmt = node.node
-        found_docstring = False
         for s in stmt.nodes:
-            # Skip over docstrings
-            if not found_docstring and isinstance(s, ast.Discard) \
-               and isinstance(s.expr, ast.Const) \
-               and isinstance(s.expr.value, str):
-                found_docstring = True
-                continue
             if not self.check_stmt(s):
                 break
 
@@ -58,7 +50,7 @@ class BadFutureParser:
             return
         if node.modname != "__future__":
             return
-        raise SyntaxError, "invalid future statement " + repr(node)
+        raise SyntaxError, "invalid future statement"
 
 def find_futures(node):
     p1 = FutureParser()

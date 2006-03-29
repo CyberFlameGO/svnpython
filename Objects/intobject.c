@@ -62,7 +62,7 @@ fill_free_list(void)
 }
 
 #ifndef NSMALLPOSINTS
-#define NSMALLPOSINTS		257
+#define NSMALLPOSINTS		100
 #endif
 #ifndef NSMALLNEGINTS
 #define NSMALLNEGINTS		5
@@ -106,22 +106,6 @@ PyInt_FromLong(long ival)
 	PyObject_INIT(v, &PyInt_Type);
 	v->ob_ival = ival;
 	return (PyObject *) v;
-}
-
-PyObject *
-PyInt_FromSize_t(size_t ival)
-{
-	if (ival <= LONG_MAX)
-		return PyInt_FromLong((long)ival);
-	return _PyLong_FromSize_t(ival);
-}
-
-PyObject *
-PyInt_FromSsize_t(Py_ssize_t ival)
-{
-	if (ival >= LONG_MIN && ival <= LONG_MAX)
-		return PyInt_FromLong((long)ival);
-	return _PyLong_FromSsize_t(ival);
 }
 
 static void
@@ -183,61 +167,6 @@ PyInt_AsLong(register PyObject *op)
 	Py_DECREF(io);
 
 	return val;
-}
-
-Py_ssize_t
-PyInt_AsSsize_t(register PyObject *op)
-{
-#if SIZEOF_SIZE_T != SIZEOF_LONG
-	PyNumberMethods *nb;
-	PyIntObject *io;
-	Py_ssize_t val;
-#endif
-	if (op && !PyInt_CheckExact(op) && PyLong_Check(op))
-		return _PyLong_AsSsize_t(op);
-#if SIZEOF_SIZE_T == SIZEOF_LONG
-	return PyInt_AsLong(op);
-#else
-
-	if (op && PyInt_Check(op))
-		return PyInt_AS_LONG((PyIntObject*) op);
-
-	if (op == NULL || (nb = op->ob_type->tp_as_number) == NULL ||
-	    (nb->nb_int == NULL && nb->nb_long == 0)) {
-		PyErr_SetString(PyExc_TypeError, "an integer is required");
-		return -1;
-	}
-
-	if (nb->nb_long != 0) {
-		io = (PyIntObject*) (*nb->nb_long) (op);
-	} else {
-		io = (PyIntObject*) (*nb->nb_int) (op);
-	}
-	if (io == NULL)
-		return -1;
-	if (!PyInt_Check(io)) {
-		if (PyLong_Check(io)) {
-			/* got a long? => retry int conversion */
-			val = _PyLong_AsSsize_t((PyObject *)io);
-			Py_DECREF(io);
-			if ((val == -1) && PyErr_Occurred())
-				return -1;
-			return val;
-		}
-		else
-		{
-			Py_DECREF(io);
-			PyErr_SetString(PyExc_TypeError,
-					"nb_int should return int object");
-			return -1;
-		}
-	}
-
-	val = PyInt_AS_LONG(io);
-	Py_DECREF(io);
-
-	return val;
-#endif
 }
 
 unsigned long
@@ -373,7 +302,7 @@ PyInt_FromString(char *s, char **pend, int base)
 
 #ifdef Py_USING_UNICODE
 PyObject *
-PyInt_FromUnicode(Py_UNICODE *s, Py_ssize_t length, int base)
+PyInt_FromUnicode(Py_UNICODE *s, int length, int base)
 {
 	PyObject *result;
 	char *buffer = PyMem_MALLOC(length+1);
@@ -897,10 +826,7 @@ int_coerce(PyObject **pv, PyObject **pw)
 static PyObject *
 int_int(PyIntObject *v)
 {
-	if (PyInt_CheckExact(v))
-		Py_INCREF(v);
-	else
-		v = (PyIntObject *)PyInt_FromLong(v->ob_ival);
+	Py_INCREF(v);
 	return (PyObject *)v;
 }
 
@@ -1069,7 +995,6 @@ static PyNumberMethods int_as_number = {
 	int_true_divide,	/* nb_true_divide */
 	0,			/* nb_inplace_floor_divide */
 	0,			/* nb_inplace_true_divide */
-	(lenfunc)PyInt_AsSsize_t, /* nb_index */
 };
 
 PyTypeObject PyInt_Type = {
@@ -1221,14 +1146,9 @@ PyInt_Fini(void)
 			     i < N_INTOBJECTS;
 			     i++, p++) {
 				if (PyInt_CheckExact(p) && p->ob_refcnt != 0)
-					/* XXX(twouters) cast refcount to
-					   long until %zd is universally
-					   available
-					 */
 					fprintf(stderr,
-				"#   <int at %p, refcnt=%ld, val=%ld>\n",
-						p, (long)p->ob_refcnt,
-						p->ob_ival);
+				"#   <int at %p, refcnt=%d, val=%ld>\n",
+						p, p->ob_refcnt, p->ob_ival);
 			}
 			list = list->next;
 		}

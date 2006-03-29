@@ -65,7 +65,7 @@ PyCFunction_Call(PyObject *func, PyObject *arg, PyObject *kw)
 	PyCFunctionObject* f = (PyCFunctionObject*)func;
 	PyCFunction meth = PyCFunction_GET_FUNCTION(func);
 	PyObject *self = PyCFunction_GET_SELF(func);
-	Py_ssize_t size;
+	int size;
 
 	switch (PyCFunction_GET_FLAGS(func) & ~(METH_CLASS | METH_STATIC | METH_COEXIST)) {
 	case METH_VARARGS:
@@ -81,7 +81,7 @@ PyCFunction_Call(PyObject *func, PyObject *arg, PyObject *kw)
 			if (size == 0)
 				return (*meth)(self, NULL);
 			PyErr_Format(PyExc_TypeError,
-			    "%.200s() takes no arguments (%zd given)",
+			    "%.200s() takes no arguments (%d given)",
 			    f->m_ml->ml_name, size);
 			return NULL;
 		}
@@ -92,7 +92,7 @@ PyCFunction_Call(PyObject *func, PyObject *arg, PyObject *kw)
 			if (size == 1)
 				return (*meth)(self, PyTuple_GET_ITEM(arg, 0));
 			PyErr_Format(PyExc_TypeError,
-			    "%.200s() takes exactly one argument (%zd given)",
+			    "%.200s() takes exactly one argument (%d given)",
 			    f->m_ml->ml_name, size);
 			return NULL;
 		}
@@ -132,7 +132,7 @@ meth_dealloc(PyCFunctionObject *m)
 static PyObject *
 meth_get__doc__(PyCFunctionObject *m, void *closure)
 {
-	const char *doc = m->m_ml->ml_doc;
+	char *doc = m->m_ml->ml_doc;
 
 	if (doc != NULL)
 		return PyString_FromString(doc);
@@ -311,13 +311,13 @@ listmethodchain(PyMethodChain *chain)
 /* Find a method in a method chain */
 
 PyObject *
-Py_FindMethodInChain(PyMethodChain *chain, PyObject *self, const char *name)
+Py_FindMethodInChain(PyMethodChain *chain, PyObject *self, char *name)
 {
 	if (name[0] == '_' && name[1] == '_') {
 		if (strcmp(name, "__methods__") == 0)
 			return listmethodchain(chain);
 		if (strcmp(name, "__doc__") == 0) {
-			const char *doc = self->ob_type->tp_doc;
+			char *doc = self->ob_type->tp_doc;
 			if (doc != NULL)
 				return PyString_FromString(doc);
 		}
@@ -339,7 +339,7 @@ Py_FindMethodInChain(PyMethodChain *chain, PyObject *self, const char *name)
 /* Find a method in a single method list */
 
 PyObject *
-Py_FindMethod(PyMethodDef *methods, PyObject *self, const char *name)
+Py_FindMethod(PyMethodDef *methods, PyObject *self, char *name)
 {
 	PyMethodChain chain;
 	chain.methods = methods;

@@ -2,6 +2,7 @@
 
 from test import test_support
 import socket
+import time
 
 # Optionally test SSL support.  This requires the 'network' resource as given
 # on the regrtest command line.
@@ -28,46 +29,34 @@ def test_basic():
 
 def test_rude_shutdown():
     try:
-        import threading
+        import thread
     except ImportError:
         return
 
-    # Some random port to connect to.
+    # some random port to connect to
     PORT = 9934
-
-    listener_ready = threading.Event()
-    listener_gone = threading.Event()
-
-    # `listener` runs in a thread.  It opens a socket listening on PORT, and
-    # sits in an accept() until the main thread connects.  Then it rudely
-    # closes the socket, and sets Event `listener_gone` to let the main thread
-    # know the socket is gone.
     def listener():
-        s = socket.socket()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('', PORT))
         s.listen(5)
-        listener_ready.set()
         s.accept()
-        s = None # reclaim the socket object, which also closes it
-        listener_gone.set()
+        del s
+        thread.exit()
 
     def connector():
-        listener_ready.wait()
-        s = socket.socket()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('localhost', PORT))
-        listener_gone.wait()
         try:
             ssl_sock = socket.ssl(s)
         except socket.sslerror:
             pass
         else:
-            raise test_support.TestFailed(
-                      'connecting to closed SSL socket should have failed')
+            raise test_support.TestFailed, \
+                        'connecting to closed SSL socket failed'
 
-    t = threading.Thread(target=listener)
-    t.start()
+    thread.start_new_thread(listener, ())
+    time.sleep(1)
     connector()
-    t.join()
 
 def test_main():
     if not hasattr(socket, "ssl"):

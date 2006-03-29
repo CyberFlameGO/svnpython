@@ -45,25 +45,18 @@ DIR=`dirname $DIR`
 ## Configurable options
 
 FAILURE_SUBJECT="Python Regression Test Failures"
-#FAILURE_MAILTO="YOUR_ACCOUNT@gmail.com"
 FAILURE_MAILTO="python-checkins@python.org"
+FAILURE_CC="nnorwitz@gmail.com"
 
 REMOTE_SYSTEM="neal@dinsdale.python.org"
-REMOTE_DIR="/data/ftp.python.org/pub/docs.python.org/dev/"
+REMOTE_DIR="/data/ftp.python.org/pub/docs.python.org/dev/2.4"
 RESULT_FILE="$DIR/build/index.html"
 INSTALL_DIR="/tmp/python-test/local"
 RSYNC_OPTS="-aC -e ssh"
 
 REFLOG="build/reflog.txt.out"
-# These tests are not stable and often falsely report leaks.
-# The entire leak report will be mailed if any test not in this list leaks.
-# Note: test_ctypes and test_generators really leak, but are disabled
-# so we don't send spam.  Any test which really leaks should only 
-# be listed here if there are also test cases under Lib/test/leakers.
-LEAKY_TESTS="test_(capi|cfgparser|charmapcodec|cmd_line|compiler|ctypes|filecmp|generators|quopri|socket|threaded_import|threadedtempfile|threading|threading_local|urllib2)"
-
-# Change this flag to "yes" for old releases to only update/build the docs.
-BUILD_DISABLED="no"
+# Change this flag to "yes" for old releases to just update/build the docs.
+BUILD_DISABLED="yes"
 
 ## utility functions
 current_time() {
@@ -78,7 +71,7 @@ update_status() {
 
 mail_on_failure() {
     if [ "$NUM_FAILURES" != "0" ]; then
-        mutt -s "$FAILURE_SUBJECT $1 ($NUM_FAILURES)" $FAILURE_MAILTO < $2
+        mutt -s "$FAILURE_SUBJECT $1 ($NUM_FAILURES)" $FAILURE_MAILTO -c $FAILURE_CC < $2
     fi
 }
 
@@ -152,7 +145,7 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             F=make-test.out
             start=`current_time`
             make test >& build/$F
-            NUM_FAILURES=`grep -ic " failed:" build/$F`
+            NUM_FAILURES=`grep -ic " test failed:" build/$F`
             update_status "Testing basics ($NUM_FAILURES failures)" "$F" $start
             ## FIXME: should mail since -uall below should find same problems
             mail_on_failure "basics" build/$F
@@ -161,7 +154,7 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             F=make-test-refleak.out
             start=`current_time`
             ./python ./Lib/test/regrtest.py -R 4:3:$REFLOG -u network >& build/$F
-            NUM_FAILURES=`egrep -vc "$LEAKY_TESTS" $REFLOG`
+            NUM_FAILURES=`grep -ic leak $REFLOG`
             update_status "Testing refleaks ($NUM_FAILURES failures)" "$F" $start
             mail_on_failure "refleak" $REFLOG
 
@@ -171,7 +164,7 @@ if [ $err = 0 -a "$BUILD_DISABLED" != "yes" ]; then
             ## skip curses when running from cron since there's no terminal
             ## skip sound since it's not setup on the PSF box (/dev/dsp)
             ./python -E -tt ./Lib/test/regrtest.py -uall -x test_curses test_linuxaudiodev test_ossaudiodev >& build/$F
-            NUM_FAILURES=`grep -ic " failed:" build/$F`
+            NUM_FAILURES=`grep -ic fail build/$F`
             update_status "Testing all except curses and sound ($NUM_FAILURES failures)" "$F" $start
             mail_on_failure "all" build/$F
         fi

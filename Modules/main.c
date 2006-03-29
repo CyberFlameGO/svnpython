@@ -2,7 +2,7 @@
 
 #include "Python.h"
 #include "osdefs.h"
-#include "code.h" /* For CO_FUTURE_DIVISION */
+#include "compile.h" /* For CO_FUTURE_DIVISION */
 #include "import.h"
 
 #ifdef __VMS
@@ -132,42 +132,27 @@ static void RunStartupFile(PyCompilerFlags *cf)
 	}
 }
 
-
-static int RunModule(char *module)
+/* Get the path to a top-level module */
+static struct filedescr * FindModule(const char *module,
+				     FILE **fp, char **filename)
 {
-	PyObject *runpy, *runmodule, *runargs, *result;
-	runpy = PyImport_ImportModule("runpy");
-	if (runpy == NULL) {
-		fprintf(stderr, "Could not import runpy module\n");
-		return -1;
+	struct filedescr *fdescr = NULL;
+	*fp = NULL;
+	*filename = malloc(MAXPATHLEN);
+
+	if (*filename == NULL)
+		return NULL;
+
+	/* Find the actual module source code */
+	fdescr = _PyImport_FindModule(module, NULL,
+					*filename, MAXPATHLEN, fp, NULL);
+
+	if (fdescr == NULL) {
+		free(*filename);
+		*filename = NULL;
 	}
-	runmodule = PyObject_GetAttrString(runpy, "run_module");
-	if (runmodule == NULL) {
-		fprintf(stderr, "Could not access runpy.run_module\n");
-		Py_DECREF(runpy);
-		return -1;
-	}
-	runargs = Py_BuildValue("sOsO", module,
-							Py_None, "__main__", Py_True);
-	if (runargs == NULL) {
-		fprintf(stderr,
-				"Could not create arguments for runpy.run_module\n");
-		Py_DECREF(runpy);
-		Py_DECREF(runmodule);
-		return -1;
-	}
-	result = PyObject_Call(runmodule, runargs, NULL);
-	if (result == NULL) {
-		PyErr_Print();
-	}
-	Py_DECREF(runpy);
-	Py_DECREF(runmodule);
-	Py_DECREF(runargs);
-	if (result == NULL) {
-		return -1;
-	}
-	Py_DECREF(result);
-	return 0;
+
+	return fdescr;
 }
 
 /* Main program */
@@ -456,9 +441,28 @@ Py_Main(int argc, char **argv)
 	}
 
 	if (module != NULL) {
-		/* Backup _PyOS_optind and force sys.arv[0] = module */
+		/* Backup _PyOS_optind and find the real file */
+                struct filedescr *fdescr = NULL;
 		_PyOS_optind--;
-        argv[_PyOS_optind] = module;
+		if ((fdescr = FindModule(module, &fp, &filename))) {
+			argv[_PyOS_optind] = filename;
+		} else {
+			fprintf(stderr, "%s: module %s not found\n",
+				argv[0], module);
+			return 2;
+		}
+		if (!fp) {
+			fprintf(stderr,
+				"%s: module %s has no associated file\n",
+				argv[0], module);
+			return 2;
+		}
+		if (!_PyImport_IsScript(fdescr)) {
+			fprintf(stderr,
+				"%s: module %s not usable as script\n  (%s)\n",
+				argv[0], module, filename);
+			return 2;
+		}
 	}
 
 	PySys_SetArgv(argc-_PyOS_optind, argv+_PyOS_optind);
@@ -477,8 +481,9 @@ Py_Main(int argc, char **argv)
 		sts = PyRun_SimpleStringFlags(command, &cf) != 0;
 		free(command);
 	} else if (module) {
-		sts = RunModule(module);
+		sts = PyRun_AnyFileExFlags(fp, filename, 1, &cf) != 0;
 		free(module);
+		free(filename);
 	}
 	else {
 		if (filename == NULL && stdin_is_interactive) {

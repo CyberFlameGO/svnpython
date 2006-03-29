@@ -2,6 +2,7 @@
  * _codecs_kr.c: Codecs collection for Korean encodings
  *
  * Written by Hye-Shik Chang <perky@FreeBSD.org>
+ * $CJKCodecs: _codecs_kr.c,v 1.8 2004/07/07 14:59:26 perky Exp $
  */
 
 #include "cjkcodecs.h"

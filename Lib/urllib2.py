@@ -89,6 +89,7 @@ f = urllib2.urlopen('http://www.python.org/')
 
 import base64
 import ftplib
+import gopherlib
 import httplib
 import inspect
 import md5
@@ -112,7 +113,7 @@ except ImportError:
     from StringIO import StringIO
 
 # not sure how many of these need to be gotten rid of
-from urllib import (unwrap, unquote, splittype, splithost, quote,
+from urllib import (unwrap, unquote, splittype, splithost,
      addinfourl, splitport, splitgophertype, splitquery,
      splitattr, ftpwrapper, noheaders, splituser, splitpasswd, splitvalue)
 
@@ -276,8 +277,8 @@ class Request:
 
 class OpenerDirector:
     def __init__(self):
-        client_version = "Python-urllib/%s" % __version__
-        self.addheaders = [('User-agent', client_version)]
+        server_version = "Python-urllib/%s" % __version__
+        self.addheaders = [('User-agent', server_version)]
         # manage the individual handlers
         self.handlers = []
         self.handle_open = {}
@@ -303,13 +304,10 @@ class OpenerDirector:
                 self.handle_error[protocol] = lookup
             elif condition == "open":
                 kind = protocol
-                lookup = self.handle_open
-            elif condition == "response":
+                lookup = getattr(self, "handle_"+condition)
+            elif condition in ["response", "request"]:
                 kind = protocol
-                lookup = self.process_response
-            elif condition == "request":
-                kind = protocol
-                lookup = self.process_request
+                lookup = getattr(self, "process_"+condition)
             else:
                 continue
 
@@ -383,7 +381,7 @@ class OpenerDirector:
                                 'unknown_open', req)
 
     def error(self, proto, *args):
-        if proto in ('http', 'https'):
+        if proto in ['http', 'https']:
             # XXX http[s] protocols are special-cased
             dict = self.handle_error['http'] # https is not different than http
             proto = args[2]  # YUCK!
@@ -507,8 +505,6 @@ class HTTPRedirectHandler(BaseHandler):
             # from the user (of urllib2, in this case).  In practice,
             # essentially all clients do redirect in this case, so we
             # do the same.
-            # be conciliant with URIs containing a space
-            newurl = newurl.replace(' ', '%20')
             return Request(newurl,
                            headers=req.headers,
                            origin_req_host=req.get_origin_req_host(),
@@ -580,19 +576,14 @@ class ProxyHandler(BaseHandler):
     def proxy_open(self, req, proxy, type):
         orig_type = req.get_type()
         type, r_type = splittype(proxy)
-        if not type or r_type.isdigit():
-            # proxy is specified without protocol
-            type = orig_type
-            host = proxy
-        else:
-            host, r_host = splithost(r_type)
-        user_pass, host = splituser(host)
-        user, password = splitpasswd(user_pass)
-        if user and password:
-            user, password = user_pass.split(':', 1)
-            user_pass = base64.encodestring('%s:%s' % (unquote(user),
-                                            unquote(password))).strip()
-            req.add_header('Proxy-authorization', 'Basic ' + user_pass)
+        host, XXX = splithost(r_type)
+        if '@' in host:
+            user_pass, host = host.split('@', 1)
+            if ':' in user_pass:
+                user, password = user_pass.split(':', 1)
+                user_pass = base64.encodestring('%s:%s' % (unquote(user),
+                                                unquote(password))).strip()
+                req.add_header('Proxy-authorization', 'Basic ' + user_pass)
         host = unquote(host)
         req.set_proxy(host, type)
         if orig_type == type:
@@ -729,9 +720,6 @@ class AbstractBasicAuthHandler:
                     return self.retry_http_basic_auth(host, req, realm)
 
     def retry_http_basic_auth(self, host, req, realm):
-        # TODO(jhylton): Remove the host argument? It depends on whether
-        # retry_http_basic_auth() is consider part of the public API.
-        # It probably is.
         user, pw = self.passwd.find_user_password(realm, req.get_full_url())
         if pw is not None:
             raw = "%s:%s" % (user, pw)
@@ -889,12 +877,13 @@ class AbstractDigestAuthHandler:
                'response="%s"' % (user, realm, nonce, req.get_selector(),
                                   respdig)
         if opaque:
-            base += ', opaque="%s"' % opaque
+            base = base + ', opaque="%s"' % opaque
         if entdig:
-            base += ', digest="%s"' % entdig
-        base += ', algorithm="%s"' % algorithm
+            base = base + ', digest="%s"' % entdig
+        if algorithm != 'MD5':
+            base = base + ', algorithm="%s"' % algorithm
         if qop:
-            base += ', qop=auth, nc=%s, cnonce="%s"' % (ncvalue, cnonce)
+            base = base + ', qop=auth, nc=%s, cnonce="%s"' % (ncvalue, cnonce)
         return base
 
     def get_algorithm_impls(self, algorithm):
@@ -1260,7 +1249,6 @@ class CacheFTPHandler(FTPHandler):
 
 class GopherHandler(BaseHandler):
     def gopher_open(self, req):
-        import gopherlib  # this raises DeprecationWarning in 2.5
         host = req.get_host()
         if not host:
             raise GopherError('no host given')
