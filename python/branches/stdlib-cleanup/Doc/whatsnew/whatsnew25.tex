@@ -1,0 +1,1283 @@
+\documentclass{howto}
+\usepackage{distutils}
+% $Id$
+
+% Fix XXX comments
+% Distutils upload (PEP 243)
+% The easy_install stuff
+% xml.etree section
+% added sqlite3
+
+\title{What's New in Python 2.5}
+\release{0.1}
+\author{A.M. Kuchling}
+\authoraddress{\email{amk@amk.ca}}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+This article explains the new features in Python 2.5.  No release date
+for Python 2.5 has been set; it will probably be released in the
+autumn of 2006.  \pep{356} describes the planned release schedule.
+
+(This is still an early draft, and some sections are still skeletal or
+completely missing.  Comments on the present material will still be
+welcomed.)
+
+% XXX Compare with previous release in 2 - 3 sentences here.
+
+This article doesn't attempt to provide a complete specification of
+the new features, but instead provides a convenient overview.  For
+full details, you should refer to the documentation for Python 2.5.
+% XXX add hyperlink when the documentation becomes available online.
+If you want to understand the complete implementation and design
+rationale, refer to the PEP for a particular new feature.
+
+
+%======================================================================
+\section{PEP 308: Conditional Expressions}
+
+For a long time, people have been requesting a way to write
+conditional expressions, expressions that return value A or value B
+depending on whether a Boolean value is true or false.  A conditional
+expression lets you write a single assignment statement that has the
+same effect as the following:
+
+\begin{verbatim}
+if condition:
+    x = true_value
+else:
+    x = false_value
+\end{verbatim}
+
+There have been endless tedious discussions of syntax on both
+python-dev and comp.lang.python.  A vote was even held that found the
+majority of voters wanted conditional expressions in some form,
+but there was no syntax that was preferred by a clear majority.
+Candidates included C's \code{cond ? true_v : false_v},
+\code{if cond then true_v else false_v}, and 16 other variations.
+
+GvR eventually chose a surprising syntax:
+
+\begin{verbatim}
+x = true_value if condition else false_value
+\end{verbatim}
+
+Evaluation is still lazy as in existing Boolean expressions, so the
+order of evaluation jumps around a bit.  The \var{condition}
+expression in the middle is evaluated first, and the \var{true_value}
+expression is evaluated only if the condition was true.  Similarly,
+the \var{false_value} expression is only evaluated when the condition
+is false.
+
+This syntax may seem strange and backwards; why does the condition go
+in the \emph{middle} of the expression, and not in the front as in C's
+\code{c ? x : y}?  The decision was checked by applying the new syntax
+to the modules in the standard library and seeing how the resulting
+code read.  In many cases where a conditional expression is used, one
+value seems to be the 'common case' and one value is an 'exceptional
+case', used only on rarer occasions when the condition isn't met.  The
+conditional syntax makes this pattern a bit more obvious:
+
+\begin{verbatim}
+contents = ((doc + '\n') if doc else '')
+\end{verbatim}
+
+I read the above statement as meaning ``here \var{contents} is 
+usually assigned a value of \code{doc+'\e n'}; sometimes 
+\var{doc} is empty, in which special case an empty string is returned.''  
+I doubt I will use conditional expressions very often where there 
+isn't a clear common and uncommon case.
+
+There was some discussion of whether the language should require
+surrounding conditional expressions with parentheses.  The decision
+was made to \emph{not} require parentheses in the Python language's
+grammar, but as a matter of style I think you should always use them.
+Consider these two statements:
+
+\begin{verbatim}
+# First version -- no parens
+level = 1 if logging else 0
+
+# Second version -- with parens
+level = (1 if logging else 0)
+\end{verbatim}
+
+In the first version, I think a reader's eye might group the statement
+into 'level = 1', 'if logging', 'else 0', and think that the condition
+decides whether the assignment to \var{level} is performed.  The
+second version reads better, in my opinion, because it makes it clear
+that the assignment is always performed and the choice is being made
+between two values.
+
+Another reason for including the brackets: a few odd combinations of
+list comprehensions and lambdas could look like incorrect conditional
+expressions. See \pep{308} for some examples.  If you put parentheses
+around your conditional expressions, you won't run into this case.
+
+
+\begin{seealso}
+
+\seepep{308}{Conditional Expressions}{PEP written by
+Guido van Rossum and Raymond D. Hettinger; implemented by Thomas
+Wouters.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 309: Partial Function Application}
+
+The \module{functional} module is intended to contain tools for
+functional-style programming.  Currently it only contains a
+\class{partial()} function, but new functions will probably be added
+in future versions of Python.
+
+For programs written in a functional style, it can be useful to
+construct variants of existing functions that have some of the
+parameters filled in.  Consider a Python function \code{f(a, b, c)};
+you could create a new function \code{g(b, c)} that was equivalent to
+\code{f(1, b, c)}.  This is called ``partial function application'',
+and is provided by the \class{partial} class in the new
+\module{functional} module.
+
+The constructor for \class{partial} takes the arguments
+\code{(\var{function}, \var{arg1}, \var{arg2}, ...
+\var{kwarg1}=\var{value1}, \var{kwarg2}=\var{value2})}.  The resulting
+object is callable, so you can just call it to invoke \var{function}
+with the filled-in arguments.
+
+Here's a small but realistic example:
+
+\begin{verbatim}
+import functional
+
+def log (message, subsystem):
+    "Write the contents of 'message' to the specified subsystem."
+    print '%s: %s' % (subsystem, message)
+    ...
+
+server_log = functional.partial(log, subsystem='server')
+server_log('Unable to open socket')
+\end{verbatim}
+
+Here's another example, from a program that uses PyGTk.  Here a
+context-sensitive pop-up menu is being constructed dynamically.  The
+callback provided for the menu option is a partially applied version
+of the \method{open_item()} method, where the first argument has been
+provided.
+
+\begin{verbatim}
+...
+class Application:
+    def open_item(self, path):
+       ...
+    def init (self):
+        open_func = functional.partial(self.open_item, item_path)
+        popup_menu.append( ("Open", open_func, 1) )
+\end{verbatim}
+
+
+\begin{seealso}
+
+\seepep{309}{Partial Function Application}{PEP proposed and written by
+Peter Harris; implemented by Hye-Shik Chang, with adaptations by
+Raymond Hettinger.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 314: Metadata for Python Software Packages v1.1}
+
+Some simple dependency support was added to Distutils.  The
+\function{setup()} function now has \code{requires}, \code{provides},
+and \code{obsoletes} keyword parameters.  When you build a source
+distribution using the \code{sdist} command, the dependency
+information will be recorded in the \file{PKG-INFO} file.
+
+Another new keyword parameter is \code{download_url}, which should be
+set to a URL for the package's source code.  This means it's now
+possible to look up an entry in the package index, determine the
+dependencies for a package, and download the required packages.
+
+% XXX put example here
+ 
+\begin{seealso}
+
+\seepep{314}{Metadata for Python Software Packages v1.1}{PEP proposed
+and written by A.M. Kuchling, Richard Jones, and Fred Drake; 
+implemented by Richard Jones and Fred Drake.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 328: Absolute and Relative Imports}
+
+The simpler part of PEP 328 was implemented in Python 2.4: parentheses
+could now be used to enclose the names imported from a module using
+the \code{from ... import ...} statement, making it easier to import
+many different names.
+
+The more complicated part has been implemented in Python 2.5:
+importing a module can be specified to use absolute or
+package-relative imports.  The plan is to move toward making absolute
+imports the default in future versions of Python.
+
+Let's say you have a package directory like this:
+\begin{verbatim}
+pkg/
+pkg/__init__.py
+pkg/main.py
+pkg/string.py
+\end{verbatim}
+
+This defines a package named \module{pkg} containing the
+\module{pkg.main} and \module{pkg.string} submodules.  
+
+Consider the code in the \file{main.py} module.  What happens if it
+executes the statement \code{import string}?  In Python 2.4 and
+earlier, it will first look in the package's directory to perform a
+relative import, finds \file{pkg/string.py}, imports the contents of
+that file as the \module{pkg.string} module, and that module is bound
+to the name \samp{string} in the \module{pkg.main} module's namespace.
+
+That's fine if \module{pkg.string} was what you wanted.  But what if
+you wanted Python's standard \module{string} module?  There's no clean
+way to ignore \module{pkg.string} and look for the standard module;
+generally you had to look at the contents of \code{sys.modules}, which
+is slightly unclean.   
+Holger Krekel's \module{py.std} package provides a tidier way to perform
+imports from the standard library, \code{import py ; py.std.string.join()},
+but that package isn't available on all Python installations.
+
+Reading code which relies on relative imports is also less clear,
+because a reader may be confused about which module, \module{string}
+or \module{pkg.string}, is intended to be used.  Python users soon
+learned not to duplicate the names of standard library modules in the
+names of their packages' submodules, but you can't protect against
+having your submodule's name being used for a new module added in a
+future version of Python.
+
+In Python 2.5, you can switch \keyword{import}'s behaviour to 
+absolute imports using a \code{from __future__ import absolute_import}
+directive.  This absolute-import behaviour will become the default in
+a future version (probably Python 2.7).  Once absolute imports 
+are the default, \code{import string} will
+always find the standard library's version.
+It's suggested that users should begin using absolute imports as much
+as possible, so it's preferable to begin writing \code{from pkg import
+string} in your code.  
+
+Relative imports are still possible by adding a leading period 
+to the module name when using the \code{from ... import} form:
+
+\begin{verbatim}
+# Import names from pkg.string
+from .string import name1, name2
+# Import pkg.string
+from . import string
+\end{verbatim}
+
+This imports the \module{string} module relative to the current
+package, so in \module{pkg.main} this will import \var{name1} and
+\var{name2} from \module{pkg.string}.  Additional leading periods
+perform the relative import starting from the parent of the current
+package.  For example, code in the \module{A.B.C} module can do:
+
+\begin{verbatim}
+from . import D   		# Imports A.B.D
+from .. import E                # Imports A.E
+from ..F import G               # Imports A.F.G
+\end{verbatim}
+
+Leading periods cannot be used with the \code{import \var{modname}} 
+form of the import statement, only the \code{from ... import} form.
+
+\begin{seealso}
+
+\seepep{328}{Imports: Multi-Line and Absolute/Relative}
+{PEP written by Aahz; implemented by Thomas Wouters.}
+
+\seeurl{http://codespeak.net/py/current/doc/index.html}
+{The py library by Holger Krekel, which contains the \module{py.std} package.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 338: Executing Modules as Scripts}
+
+The \programopt{-m} switch added in Python 2.4 to execute a module as
+a script gained a few more abilities.  Instead of being implemented in
+C code inside the Python interpreter, the switch now uses an
+implementation in a new module, \module{runpy}.
+
+The \module{runpy} module implements a more sophisticated import
+mechanism so that it's now possible to run modules in a package such
+as \module{pychecker.checker}.  The module also supports alternative
+import mechanisms such as the \module{zipimport} module.  (This means
+you can add a .zip archive's path to \code{sys.path} and then use the
+\programopt{-m} switch to execute code from the archive.
+
+
+\begin{seealso}
+
+\seepep{338}{Executing modules as scripts}{PEP written and 
+implemented by Nick Coghlan.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 341: Unified try/except/finally}
+
+Until Python 2.5, the \keyword{try} statement came in two
+flavours. You could use a \keyword{finally} block to ensure that code
+is always executed, or a number of \keyword{except} blocks to catch an
+exception.  You couldn't combine both \keyword{except} blocks and a
+\keyword{finally} block, because generating the right bytecode for the
+combined version was complicated and it wasn't clear what the
+semantics of the combined should be.  
+
+GvR spent some time working with Java, which does support the
+equivalent of combining \keyword{except} blocks and a
+\keyword{finally} block, and this clarified what the statement should
+mean.  In Python 2.5, you can now write:
+
+\begin{verbatim}
+try:
+    block-1 ...
+except Exception1:
+    handler-1 ...
+except Exception2:
+    handler-2 ...
+else:
+    else-block
+finally:
+    final-block 
+\end{verbatim}
+
+The code in \var{block-1} is executed.  If the code raises an
+exception, the handlers are tried in order: \var{handler-1},
+\var{handler-2}, ...  If no exception is raised, the \var{else-block}
+is executed.  No matter what happened previously, the
+\var{final-block} is executed once the code block is complete and any
+raised exceptions handled.  Even if there's an error in an exception
+handler or the \var{else-block} and a new exception is raised, the
+\var{final-block} is still executed.
+
+\begin{seealso}
+
+\seepep{341}{Unifying try-except and try-finally}{PEP written by Georg Brandl; 
+implementation by Thomas Lee.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 342: New Generator Features}
+
+Python 2.5 adds a simple way to pass values \emph{into} a generator.
+As introduced in Python 2.3, generators only produce output; once a
+generator's code is invoked to create an iterator, there's no way to
+pass any new information into the function when its execution is
+resumed.  Sometimes the ability to pass in some information would be
+useful.  Hackish solutions to this include making the generator's code
+look at a global variable and then changing the global variable's
+value, or passing in some mutable object that callers then modify.
+
+To refresh your memory of basic generators, here's a simple example:
+
+\begin{verbatim}
+def counter (maximum):
+    i = 0
+    while i < maximum:
+        yield i
+	i += 1
+\end{verbatim}
+
+When you call \code{counter(10)}, the result is an iterator that
+returns the values from 0 up to 9.  On encountering the
+\keyword{yield} statement, the iterator returns the provided value and
+suspends the function's execution, preserving the local variables.
+Execution resumes on the following call to the iterator's 
+\method{next()} method, picking up after the \keyword{yield} statement.
+
+In Python 2.3, \keyword{yield} was a statement; it didn't return any
+value.  In 2.5, \keyword{yield} is now an expression, returning a
+value that can be assigned to a variable or otherwise operated on:
+
+\begin{verbatim}
+val = (yield i)
+\end{verbatim}
+
+I recommend that you always put parentheses around a \keyword{yield}
+expression when you're doing something with the returned value, as in
+the above example.  The parentheses aren't always necessary, but it's
+easier to always add them instead of having to remember when they're
+needed.\footnote{The exact rules are that a \keyword{yield}-expression must
+always be parenthesized except when it occurs at the top-level
+expression on the right-hand side of an assignment, meaning you can
+write \code{val = yield i} but have to use parentheses when there's an
+operation, as in \code{val = (yield i) + 12}.}
+
+Values are sent into a generator by calling its
+\method{send(\var{value})} method.  The generator's code is then
+resumed and the \keyword{yield} expression returns the specified
+\var{value}.  If the regular \method{next()} method is called, the
+\keyword{yield} returns \constant{None}.
+
+Here's the previous example, modified to allow changing the value of
+the internal counter.
+
+\begin{verbatim}
+def counter (maximum):
+    i = 0
+    while i < maximum:
+        val = (yield i)
+	# If value provided, change counter
+        if val is not None:
+            i = val
+	else:
+  	    i += 1
+\end{verbatim}
+
+And here's an example of changing the counter:
+
+\begin{verbatim}
+>>> it = counter(10)
+>>> print it.next()
+0
+>>> print it.next()
+1
+>>> print it.send(8)
+8
+>>> print it.next()
+9
+>>> print it.next()
+Traceback (most recent call last):
+  File ``t.py'', line 15, in ?
+    print it.next()
+StopIteration
+\end{verbatim}
+
+Because \keyword{yield} will often be returning \constant{None}, you
+should always check for this case.  Don't just use its value in
+expressions unless you're sure that the \method{send()} method
+will be the only method used resume your generator function.
+
+In addition to \method{send()}, there are two other new methods on
+generators:
+
+\begin{itemize}
+
+  \item \method{throw(\var{type}, \var{value}=None,
+  \var{traceback}=None)} is used to raise an exception inside the
+  generator; the exception is raised by the \keyword{yield} expression
+  where the generator's execution is paused.
+
+  \item \method{close()} raises a new \exception{GeneratorExit}
+  exception inside the generator to terminate the iteration.  
+  On receiving this
+  exception, the generator's code must either raise
+  \exception{GeneratorExit} or \exception{StopIteration}; catching the 
+  exception and doing anything else is illegal and will trigger
+  a \exception{RuntimeError}.  \method{close()} will also be called by 
+  Python's garbage collection when the generator is garbage-collected.
+
+  If you need to run cleanup code in case of a \exception{GeneratorExit},
+  I suggest using a \code{try: ... finally:} suite instead of 
+  catching \exception{GeneratorExit}.
+
+\end{itemize}
+
+The cumulative effect of these changes is to turn generators from
+one-way producers of information into both producers and consumers.
+
+Generators also become \emph{coroutines}, a more generalized form of
+subroutines.  Subroutines are entered at one point and exited at
+another point (the top of the function, and a \keyword{return
+statement}), but coroutines can be entered, exited, and resumed at
+many different points (the \keyword{yield} statements).  We'll have to
+figure out patterns for using coroutines effectively in Python.
+
+The addition of the \method{close()} method has one side effect that
+isn't obvious.  \method{close()} is called when a generator is
+garbage-collected, so this means the generator's code gets one last
+chance to run before the generator is destroyed, and this last chance
+means that \code{try...finally} statements in generators can now be
+guaranteed to work; the \keyword{finally} clause will now always get a
+chance to run.  The syntactic restriction that you couldn't mix
+\keyword{yield} statements with a \code{try...finally} suite has
+therefore been removed.  This seems like a minor bit of language
+trivia, but using generators and \code{try...finally} is actually
+necessary in order to implement the  \keyword{with} statement
+described by PEP 343.  We'll look at this new statement in the following 
+section.
+
+\begin{seealso}
+
+\seepep{342}{Coroutines via Enhanced Generators}{PEP written by 
+Guido van Rossum and Phillip J. Eby;
+implemented by Phillip J. Eby.  Includes examples of 
+some fancier uses of generators as coroutines.}
+
+\seeurl{http://en.wikipedia.org/wiki/Coroutine}{The Wikipedia entry for 
+coroutines.}
+
+\seeurl{http://www.sidhe.org/\~{}dan/blog/archives/000178.html}{An
+explanation of coroutines from a Perl point of view, written by Dan
+Sugalski.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 343: The 'with' statement}
+
+The \keyword{with} statement allows a clearer 
+version of code that uses \code{try...finally} blocks
+
+First, I'll discuss the statement as it will commonly be used, and
+then I'll discuss the detailed implementation and how to write objects
+(called ``context managers'') that can be used with this statement.
+Most people, who will only use \keyword{with} in company with an
+existing object, don't need to know these details and can 
+just use objects that are documented to work as context managers.
+Authors of new context managers will need to understand the details of
+the underlying implementation.
+
+The \keyword{with} statement is a new control-flow structure whose
+basic structure is:
+
+\begin{verbatim}
+with expression as variable:
+    with-block
+\end{verbatim}
+
+The expression is evaluated, and it should result in a type of object
+that's called a context manager.  The context manager can return a
+value that will be bound to the name \var{variable}.  (Note carefully:
+\var{variable} is \emph{not} assigned the result of \var{expression}.
+One method of the context manager is run before \var{with-block} is
+executed, and another method is run after the block is done, even if
+the block raised an exception.
+
+To enable the statement in Python 2.5, you need 
+to add the following directive to your module:
+
+\begin{verbatim}
+from __future__ import with_statement
+\end{verbatim}
+
+Some standard Python objects can now behave as context managers.  For
+example, file objects:
+
+\begin{verbatim}
+with open('/etc/passwd', 'r') as f:
+    for line in f:
+        print line
+
+# f has been automatically closed at this point.
+\end{verbatim}
+
+The \module{threading} module's locks and condition variables 
+also support the \keyword{with} statement:
+
+\begin{verbatim}
+lock = threading.Lock()
+with lock:
+    # Critical section of code
+    ...
+\end{verbatim}
+
+The lock is acquired before the block is executed, and released once 
+the block is complete.
+
+The \module{decimal} module's contexts, which encapsulate the desired
+precision and rounding characteristics for computations, can also be
+used as context managers.
+
+\begin{verbatim}
+import decimal
+
+v1 = decimal.Decimal('578')
+
+# Displays with default precision of 28 digits
+print v1.sqrt()
+
+with decimal.Context(prec=16):
+    # All code in this block uses a precision of 16 digits.
+    # The original context is restored on exiting the block.
+    print v1.sqrt()
+\end{verbatim}
+
+\subsection{Writing Context Managers}
+
+% XXX write this
+
+This section still needs to be written.
+
+The new \module{contextlib} module provides some functions and a
+decorator that are useful for writing context managers.  
+Future versions will go into more detail.
+
+% XXX describe further
+
+\begin{seealso}
+
+\seepep{343}{The ``with'' statement}{PEP written by 
+Guido van Rossum and Nick Coghlan. }
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 352: Exceptions as New-Style Classes}
+
+Exception classes can now be new-style classes, not just classic
+classes, and the built-in \exception{Exception} class and all the
+standard built-in exceptions (\exception{NameError},
+\exception{ValueError}, etc.) are now new-style classes.
+
+The inheritance hierarchy for exceptions has been rearranged a bit.
+In 2.5, the inheritance relationships are:
+
+\begin{verbatim}
+BaseException       # New in Python 2.5
+|- KeyboardInterrupt
+|- SystemExit
+|- Exception
+   |- (all other current built-in exceptions)
+\end{verbatim}
+
+This rearrangement was done because people often want to catch all
+exceptions that indicate program errors.  \exception{KeyboardInterrupt} and
+\exception{SystemExit} aren't errors, though, and usually represent an explicit
+action such as the user hitting Control-C or code calling
+\function{sys.exit()}.  A bare \code{except:} will catch all exceptions,
+so you commonly need to list \exception{KeyboardInterrupt} and
+\exception{SystemExit} in order to re-raise them.  The usual pattern is:
+
+\begin{verbatim}
+try:
+    ...
+except (KeyboardInterrupt, SystemExit):
+    raise
+except: 
+    # Log error...  
+    # Continue running program...
+\end{verbatim}
+
+In Python 2.5, you can now write \code{except Exception} to achieve
+the same result, catching all the exceptions that usually indicate errors 
+but leaving \exception{KeyboardInterrupt} and
+\exception{SystemExit} alone.  As in previous versions,
+a bare \code{except:} still catches all exceptions.
+
+The goal for Python 3.0 is to require any class raised as an exception
+to derive from \exception{BaseException} or some descendant of
+\exception{BaseException}, and future releases in the
+Python 2.x series may begin to enforce this constraint.  Therefore, I
+suggest you begin making all your exception classes derive from
+\exception{Exception} now.  It's been suggested that the bare
+\code{except:} form should be removed in Python 3.0, but Guido van~Rossum
+hasn't decided whether to do this or not.
+
+Raising of strings as exceptions, as in the statement \code{raise
+"Error occurred"}, is deprecated in Python 2.5 and will trigger a
+warning.  The aim is to be able to remove the string-exception feature
+in a few releases.
+
+
+\begin{seealso}
+
+\seepep{352}{Required Superclass for Exceptions}{PEP written by 
+Brett Cannon and Guido van Rossum; implemented by Brett Cannon.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 353: Using ssize_t as the index type\label{section-353}}
+
+A wide-ranging change to Python's C API, using a new 
+\ctype{Py_ssize_t} type definition instead of \ctype{int}, 
+will permit the interpreter to handle more data on 64-bit platforms.
+This change doesn't affect Python's capacity on 32-bit platforms.
+
+Various pieces of the Python interpreter used C's \ctype{int} type to
+store sizes or counts; for example, the number of items in a list or
+tuple were stored in an \ctype{int}.  The C compilers for most 64-bit
+platforms still define \ctype{int} as a 32-bit type, so that meant
+that lists could only hold up to \code{2**31 - 1} = 2147483647 items.
+(There are actually a few different programming models that 64-bit C
+compilers can use -- see
+\url{http://www.unix.org/version2/whatsnew/lp64_wp.html} for a
+discussion -- but the most commonly available model leaves \ctype{int}
+as 32 bits.)
+
+A limit of 2147483647 items doesn't really matter on a 32-bit platform
+because you'll run out of memory before hitting the length limit.
+Each list item requires space for a pointer, which is 4 bytes, plus
+space for a \ctype{PyObject} representing the item.  2147483647*4 is
+already more bytes than a 32-bit address space can contain.
+
+It's possible to address that much memory on a 64-bit platform,
+however.  The pointers for a list that size would only require 16GiB
+of space, so it's not unreasonable that Python programmers might
+construct lists that large.  Therefore, the Python interpreter had to
+be changed to use some type other than \ctype{int}, and this will be a
+64-bit type on 64-bit platforms.  The change will cause
+incompatibilities on 64-bit machines, so it was deemed worth making
+the transition now, while the number of 64-bit users is still
+relatively small.  (In 5 or 10 years, we may \emph{all} be on 64-bit
+machines, and the transition would be more painful then.)
+
+This change most strongly affects authors of C extension modules.  
+Python strings and container types such as lists and tuples 
+now use \ctype{Py_ssize_t} to store their size.  
+Functions such as \cfunction{PyList_Size()} 
+now return \ctype{Py_ssize_t}.  Code in extension modules
+may therefore need to have some variables changed to
+\ctype{Py_ssize_t}.  
+
+The \cfunction{PyArg_ParseTuple()} and \cfunction{Py_BuildValue()} functions
+have a new conversion code, \samp{n}, for \ctype{Py_ssize_t}.  
+\cfunction{PyArg_ParseTuple()}'s \samp{s\#} and \samp{t\#} still output
+\ctype{int} by default, but you can define the macro 
+\csimplemacro{PY_SSIZE_T_CLEAN} before including \file{Python.h} 
+to make them return \ctype{Py_ssize_t}.
+
+\pep{353} has a section on conversion guidelines that 
+extension authors should read to learn about supporting 64-bit
+platforms.
+
+\begin{seealso}
+
+\seepep{353}{Using ssize_t as the index type}{PEP written and implemented by Martin von L\"owis.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{PEP 357: The '__index__' method}
+
+The NumPy developers had a problem that could only be solved by adding
+a new special method, \method{__index__}.  When using slice notation,
+as in \code{[\var{start}:\var{stop}:\var{step}]}, the values of the
+\var{start}, \var{stop}, and \var{step} indexes must all be either
+integers or long integers.  NumPy defines a variety of specialized
+integer types corresponding to unsigned and signed integers of 8, 16,
+32, and 64 bits, but there was no way to signal that these types could
+be used as slice indexes.
+
+Slicing can't just use the existing \method{__int__} method because
+that method is also used to implement coercion to integers.  If
+slicing used \method{__int__}, floating-point numbers would also
+become legal slice indexes and that's clearly an undesirable
+behaviour.
+
+Instead, a new special method called \method{__index__} was added.  It
+takes no arguments and returns an integer giving the slice index to
+use.  For example:
+
+\begin{verbatim}
+class C:
+    def __index__ (self):
+        return self.value  
+\end{verbatim}
+
+The return value must be either a Python integer or long integer.
+The interpreter will check that the type returned is correct, and
+raises a \exception{TypeError} if this requirement isn't met.
+
+A corresponding \member{nb_index} slot was added to the C-level
+\ctype{PyNumberMethods} structure to let C extensions implement this
+protocol.  \cfunction{PyNumber_Index(\var{obj})} can be used in
+extension code to call the \method{__index__} function and retrieve
+its result.
+
+\begin{seealso}
+
+\seepep{357}{Allowing Any Object to be Used for Slicing}{PEP written 
+and implemented by Travis Oliphant.}
+
+\end{seealso}
+
+
+%======================================================================
+\section{Other Language Changes}
+
+Here are all of the changes that Python 2.5 makes to the core Python
+language.
+
+\begin{itemize}
+
+\item The \function{min()} and \function{max()} built-in functions
+gained a \code{key} keyword argument analogous to the \code{key}
+argument for \method{sort()}.  This argument supplies a function
+that takes a single argument and is called for every value in the list; 
+\function{min()}/\function{max()} will return the element with the 
+smallest/largest return value from this function.
+For example, to find the longest string in a list, you can do:
+
+\begin{verbatim}
+L = ['medium', 'longest', 'short']
+# Prints 'longest'
+print max(L, key=len)		   
+# Prints 'short', because lexicographically 'short' has the largest value
+print max(L)         
+\end{verbatim}
+
+(Contributed by Steven Bethard and Raymond Hettinger.)
+
+\item Two new built-in functions, \function{any()} and
+\function{all()}, evaluate whether an iterator contains any true or
+false values.  \function{any()} returns \constant{True} if any value
+returned by the iterator is true; otherwise it will return
+\constant{False}.  \function{all()} returns \constant{True} only if
+all of the values returned by the iterator evaluate as being true.
+(Suggested by GvR, and implemented by Raymond Hettinger.)
+
+\item The list of base classes in a class definition can now be empty.  
+As an example, this is now legal:
+
+\begin{verbatim}
+class C():
+    pass
+\end{verbatim}
+(Implemented by Brett Cannon.)
+
+% XXX __missing__ hook in dictionaries
+
+\end{itemize}
+
+
+%======================================================================
+\subsection{Interactive Interpreter Changes}
+
+In the interactive interpreter, \code{quit} and \code{exit} 
+have long been strings so that new users get a somewhat helpful message
+when they try to quit:
+
+\begin{verbatim}
+>>> quit
+'Use Ctrl-D (i.e. EOF) to exit.'
+\end{verbatim}
+
+In Python 2.5, \code{quit} and \code{exit} are now objects that still
+produce string representations of themselves, but are also callable.
+Newbies who try \code{quit()} or \code{exit()} will now exit the
+interpreter as they expect.  (Implemented by Georg Brandl.)
+
+
+%======================================================================
+\subsection{Optimizations}
+
+\begin{itemize}
+
+\item When they were introduced 
+in Python 2.4, the built-in \class{set} and \class{frozenset} types
+were built on top of Python's dictionary type.  
+In 2.5 the internal data structure has been customized for implementing sets,
+and as a result sets will use a third less memory and are somewhat faster.
+(Implemented by Raymond Hettinger.)
+
+\item The performance of some Unicode operations has been improved.
+% XXX provide details?
+
+\item The code generator's peephole optimizer now performs
+simple constant folding in expressions.  If you write something like
+\code{a = 2+3}, the code generator will do the arithmetic and produce
+code corresponding to \code{a = 5}.
+
+\end{itemize}
+
+The net result of the 2.5 optimizations is that Python 2.5 runs the
+pystone benchmark around XXX\% faster than Python 2.4.
+
+
+%======================================================================
+\section{New, Improved, and Deprecated Modules}
+
+As usual, Python's standard library received a number of enhancements and
+bug fixes.  Here's a partial list of the most notable changes, sorted
+alphabetically by module name. Consult the
+\file{Misc/NEWS} file in the source tree for a more
+complete list of changes, or look through the SVN logs for all the
+details.
+
+\begin{itemize}
+
+% collections.deque now has .remove()
+% collections.defaultdict
+
+% the cPickle module no longer accepts the deprecated None option in the
+% args tuple returned by __reduce__().
+
+% csv module improvements
+
+% datetime.datetime() now has a strptime class method which can be used to
+% create datetime object using a string and format.
+
+% fileinput: opening hook used to control how files are opened.
+% .input() now has a mode parameter
+% now has a fileno() function
+% accepts Unicode filenames
+
+\item In the \module{gc} module, the new \function{get_count()} function
+returns a 3-tuple containing the current collection counts for the
+three GC generations.  This is accounting information for the garbage
+collector; when these counts reach a specified threshold, a garbage
+collection sweep will be made.  The existing \function{gc.collect()}
+function now takes an optional \var{generation} argument of 0, 1, or 2
+to specify which generation to collect.
+
+\item The \function{nsmallest()} and 
+\function{nlargest()} functions in the \module{heapq} module 
+now support a \code{key} keyword argument similar to the one
+provided by the \function{min()}/\function{max()} functions
+and the \method{sort()} methods.  For example:
+Example:
+
+\begin{verbatim}
+>>> import heapq
+>>> L = ["short", 'medium', 'longest', 'longer still']
+>>> heapq.nsmallest(2, L)  # Return two lowest elements, lexicographically
+['longer still', 'longest']
+>>> heapq.nsmallest(2, L, key=len)   # Return two shortest elements
+['short', 'medium']
+\end{verbatim}
+
+(Contributed by Raymond Hettinger.)
+
+\item The \function{itertools.islice()} function now accepts
+\code{None} for the start and step arguments.  This makes it more
+compatible with the attributes of slice objects, so that you can now write
+the following:
+
+\begin{verbatim}
+s = slice(5)     # Create slice object
+itertools.islice(iterable, s.start, s.stop, s.step)
+\end{verbatim}
+
+(Contributed by Raymond Hettinger.)
+
+\item The \module{operator} module's \function{itemgetter()} 
+and \function{attrgetter()} functions now support multiple fields.  
+A call such as \code{operator.attrgetter('a', 'b')}
+will return a function 
+that retrieves the \member{a} and \member{b} attributes.  Combining 
+this new feature with the \method{sort()} method's \code{key} parameter 
+lets you easily sort lists using multiple fields.
+(Contributed by Raymond Hettinger.)
+
+
+\item The \module{os} module underwent a number of changes.  The
+\member{stat_float_times} variable now defaults to true, meaning that
+\function{os.stat()} will now return time values as floats.  (This
+doesn't necessarily mean that \function{os.stat()} will return times
+that are precise to fractions of a second; not all systems support
+such precision.)
+
+Constants named \member{os.SEEK_SET}, \member{os.SEEK_CUR}, and
+\member{os.SEEK_END} have been added; these are the parameters to the
+\function{os.lseek()} function.  Two new constants for locking are
+\member{os.O_SHLOCK} and \member{os.O_EXLOCK}.
+
+Two new functions, \function{wait3()} and \function{wait4()}, were
+added.  They're similar the \function{waitpid()} function which waits
+for a child process to exit and returns a tuple of the process ID and
+its exit status, but \function{wait3()} and \function{wait4()} return
+additional information.  \function{wait3()} doesn't take a process ID
+as input, so it waits for any child process to exit and returns a
+3-tuple of \var{process-id}, \var{exit-status}, \var{resource-usage}
+as returned from the \function{resource.getrusage()} function.
+\function{wait4(\var{pid})} does take a process ID.
+(Contributed by Chad J. Schroeder.)
+
+On FreeBSD, the \function{os.stat()} function now returns 
+times with nanosecond resolution, and the returned object
+now has \member{st_gen} and \member{st_birthtime}.
+The \member{st_flags} member is also available, if the platform supports it.
+(Contributed by Antti Louko and  Diego Petten\`o.)
+% (Patch 1180695, 1212117)
+
+\item The old \module{regex} and \module{regsub} modules, which have been 
+deprecated ever since Python 2.0, have finally been deleted.  
+Other deleted modules: \module{statcache}, \module{tzparse},
+\module{whrandom}.
+
+\item The \file{lib-old} directory,
+which includes ancient modules such as \module{dircmp} and
+\module{ni}, was also deleted.  \file{lib-old} wasn't on the default
+\code{sys.path}, so unless your programs explicitly added the directory to 
+\code{sys.path}, this removal shouldn't affect your code.
+
+\item The \module{socket} module now supports \constant{AF_NETLINK}
+sockets on Linux, thanks to a patch from Philippe Biondi.  
+Netlink sockets are a Linux-specific mechanism for communications
+between a user-space process and kernel code; an introductory 
+article about them is at \url{http://www.linuxjournal.com/article/7356}.
+In Python code, netlink addresses are represented as a tuple of 2 integers, 
+\code{(\var{pid}, \var{group_mask})}.
+
+Socket objects also gained accessor methods \method{getfamily()}, 
+\method{gettype()}, and \method{getproto()} methods to retrieve the
+family, type, and protocol values for the socket.
+
+\item New module: \module{spwd} provides functions for accessing the
+shadow password database on systems that support it.  
+% XXX give example
+
+% XXX patch #1382163: sys.subversion,  Py_GetBuildNumber()
+
+\item The \class{TarFile} class in the \module{tarfile} module now has
+an \method{extractall()} method that extracts all members from the
+archive into the current working directory.  It's also possible to set
+a different directory as the extraction target, and to unpack only a
+subset of the archive's members.  
+
+A tarfile's compression can be autodetected by 
+using the mode \code{'r|*'}.
+% patch 918101
+(Contributed by Lars Gust\"abel.)
+
+\item The \module{unicodedata} module has been updated to use version 4.1.0
+of the Unicode character database.  Version 3.2.0 is required 
+by some specifications, so it's still available as 
+\member{unicodedata.db_3_2_0}.
+
+% patch #754022: Greatly enhanced webbrowser.py (by Oleg Broytmann).
+
+
+\item The \module{xmlrpclib} module now supports returning 
+      \class{datetime} objects for the XML-RPC date type.  Supply 
+      \code{use_datetime=True} to the \function{loads()} function
+      or the \class{Unmarshaller} class to enable this feature.
+      (Contributed by Skip Montanaro.)
+% Patch 1120353
+
+
+\end{itemize}
+
+
+
+%======================================================================
+% whole new modules get described in subsections here
+
+% XXX new distutils features: upload
+
+\subsection{The ctypes package}
+
+The \module{ctypes} package, written by Thomas Heller, has been added 
+to the standard library.  \module{ctypes} lets you call arbitrary functions 
+in shared libraries or DLLs.
+
+In subsequent alpha releases of Python 2.5, I'll add a brief 
+introduction that shows some basic usage of the module.
+
+% XXX write introduction
+
+
+\subsection{The ElementTree package}
+
+A subset of Fredrik Lundh's ElementTree library for processing XML has
+been added to the standard library as \module{xml.etree}.  The
+vailable modules are
+\module{ElementTree}, \module{ElementPath}, and
+\module{ElementInclude} from ElementTree 1.2.6.   
+The \module{cElementTree} accelerator module is also included. 
+
+In subsequent alpha releases of Python 2.5, I'll add a brief
+introduction that will provide a page-long overview of using
+ElementTree.  Full documentation for
+ElementTree is available at \url{http://effbot.org/zone/element-index.htm}.
+
+% XXX write introduction
+
+
+\subsection{The hashlib package}
+
+A new \module{hashlib} module has been added to replace the
+\module{md5} and \module{sha} modules.  \module{hashlib} adds support
+for additional secure hashes (SHA-224, SHA-256, SHA-384, and SHA-512).
+When available, the module uses OpenSSL for fast platform optimized
+implementations of algorithms.  
+
+The old \module{md5} and \module{sha} modules still exist as wrappers
+around hashlib to preserve backwards compatibility.  The new module's
+interface is very close to that of the old modules, but not identical.
+The most significant difference is that the constructor functions
+for creating new hashing objects are named differently.
+
+\begin{verbatim}
+# Old versions
+h = md5.md5()	
+h = md5.new()	
+
+# New version 
+h = hashlib.md5()
+
+# Old versions
+h = sha.sha()	
+h = sha.new()	
+
+# New version 
+h = hashlib.sha1()
+
+# Hash that weren't previously available
+h = hashlib.sha224()
+h = hashlib.sha256()
+h = hashlib.sha384()
+h = hashlib.sha512()
+
+# Alternative form
+h = hashlib.new('md5')		# Provide algorithm as a string
+\end{verbatim}
+
+Once a hash object has been created, its methods are the same as before:
+\method{update(\var{string})} hashes the specified string into the 
+current digest state, \method{digest()} and \method{hexdigest()}
+return the digest value as a binary string or a string of hex digits,
+and \method{copy()} returns a new hashing object with the same digest state.
+
+This module was contributed by Gregory P. Smith.
+
+
+\subsection{The sqlite3 package}
+
+The pysqlite module (\url{http://www.pysqlite.org}), a wrapper for the
+SQLite embedded database, has been added to the standard library under
+the package name \module{sqlite3}.  SQLite is a C library that
+provides a SQL-language database that stores data in disk files
+without requiring a separate server process.  pysqlite was written by
+Gerhard H\"aring, and provides a SQL interface that complies with the
+DB-API 2.0 specification.  This means that it should be possible to
+write the first version of your applications using SQLite for data
+storage and, if switching to a larger database such as PostgreSQL or
+Oracle is necessary, the switch should be relatively easy.
+
+If you're compiling the Python source yourself, note that the source
+tree doesn't include the SQLite code itself, only the wrapper module.
+You'll need to have the SQLite libraries and headers installed before
+compiling Python, and the build process will compile the module when
+the necessary headers are available.
+
+In subsequent alpha releases of Python 2.5, I'll add a brief 
+introduction that shows some basic usage of the module.
+
+% XXX write introduction
+
+
+% ======================================================================
+\section{Build and C API Changes}
+
+Changes to Python's build process and to the C API include:
+
+\begin{itemize}
+
+\item The largest change to the C API came from \pep{353},
+which modifies the interpreter to use a \ctype{Py_ssize_t} type
+definition instead of \ctype{int}.  See the earlier
+section~ref{section-353} for a discussion of this change.
+
+\item The design of the bytecode compiler has changed a great deal, to
+no longer generate bytecode by traversing the parse tree.  Instead
+the parse tree is converted to an abstract syntax tree (or AST), and it is 
+the abstract syntax tree that's traversed to produce the bytecode.
+
+No documentation has been written for the AST code yet.  To start
+learning about it, read the definition of the various AST nodes in
+\file{Parser/Python.asdl}.  A Python script reads this file and
+generates a set of C structure definitions in
+\file{Include/Python-ast.h}.  The \cfunction{PyParser_ASTFromString()}
+and \cfunction{PyParser_ASTFromFile()}, defined in
+\file{Include/pythonrun.h}, take Python source as input and return the
+root of an AST representing the contents.  This AST can then be turned
+into a code object by \cfunction{PyAST_Compile()}.  For more
+information, read the source code, and then ask questions on
+python-dev.
+
+% List of names taken from Jeremy's python-dev post at 
+% http://mail.python.org/pipermail/python-dev/2005-October/057500.html
+The AST code was developed under Jeremy Hylton's management, and
+implemented by (in alphabetical order) Brett Cannon, Nick Coghlan,
+Grant Edwards, John Ehresman, Kurt Kaiser, Neal Norwitz, Tim Peters,
+Armin Rigo, and Neil Schemenauer, plus the participants in a number of
+AST sprints at conferences such as PyCon.
+ 
+\item The built-in set types now have an official C API.  Call
+\cfunction{PySet_New()} and \cfunction{PyFrozenSet_New()} to create a
+new set, \cfunction{PySet_Add()} and \cfunction{PySet_Discard()} to
+add and remove elements, and \cfunction{PySet_Contains} and
+\cfunction{PySet_Size} to examine the set's state.
+
+\item The \cfunction{PyRange_New()} function was removed.  It was
+never documented, never used in the core code, and had dangerously lax
+error checking.
+
+\end{itemize}
+
+
+%======================================================================
+%\subsection{Port-Specific Changes}
+
+%Platform-specific changes go here.
+
+
+%======================================================================
+\section{Other Changes and Fixes \label{section-other}}
+
+As usual, there were a bunch of other improvements and bugfixes
+scattered throughout the source tree.  A search through the SVN change
+logs finds there were XXX patches applied and YYY bugs fixed between
+Python 2.4 and 2.5.  Both figures are likely to be underestimates.
+
+Some of the more notable changes are:
+
+\begin{itemize}
+
+\item Evan Jones's patch to obmalloc, first described in a talk
+at PyCon DC 2005, was applied.  Python 2.4 allocated small objects in
+256K-sized arenas, but never freed arenas.  With this patch, Python
+will free arenas when they're empty.  The net effect is that on some
+platforms, when you allocate many objects, Python's memory usage may
+actually drop when you delete them, and the memory may be returned to
+the operating system.  (Implemented by Evan Jones, and reworked by Tim
+Peters.)
+
+\item Coverity, a company that markets a source code analysis tool
+  called Prevent, provided the results of their examination of the Python
+  source code.  The analysis found a number of refcounting bugs, often
+  in error-handling code.  These bugs have been fixed.
+  % XXX provide reference?
+
+\end{itemize}
+
+
+%======================================================================
+\section{Porting to Python 2.5}
+
+This section lists previously described changes that may require
+changes to your code:
+
+\begin{itemize}
+
+\item The \module{pickle} module no longer uses the deprecated \var{bin} parameter.
+
+\end{itemize}
+
+
+%======================================================================
+\section{Acknowledgements \label{acks}}
+
+The author would like to thank the following people for offering
+suggestions, corrections and assistance with various drafts of this
+article: Thomas Wouters.
+
+\end{document}
