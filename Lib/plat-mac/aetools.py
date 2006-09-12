@@ -233,7 +233,7 @@ class TalkTo:
         """Send 'activate' command"""
         self.send('misc', 'actv')
 
-    def _get(self, _object, asfile=None, _attributes={}):
+    def _get(self, _object, as=None, _attributes={}):
         """_get: get data from an object
         Required argument: the object
         Keyword argument _attributes: AppleEvent attribute dictionary
@@ -243,8 +243,8 @@ class TalkTo:
         _subcode = 'getd'
 
         _arguments = {'----':_object}
-        if asfile:
-            _arguments['rtyp'] = mktype(asfile)
+        if as:
+            _arguments['rtyp'] = mktype(as)
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
@@ -253,8 +253,8 @@ class TalkTo:
 
         if _arguments.has_key('----'):
             return _arguments['----']
-            if asfile:
-                item.__class__ = asfile
+            if as:
+                item.__class__ = as
             return item
 
     get = _get
