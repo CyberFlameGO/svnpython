@@ -4,16 +4,26 @@ Python News
 
 (editors: check NEWS.help for information about editing NEWS using ReST.)
 
-What's New in Python 2.6 alpha 1?
-=================================
+What's New in Python 2.5 (final)
+================================
 
-*Release date: XX-XXX-200X*
+*Release date: 19-SEP-2006*
+
+No changes since release candidate 2.
+
+What's New in Python 2.5 release candidate 2?
+=============================================
+
+*Release date: 12-SEP-2006*
 
 Core and builtins
 -----------------
 
 - Make _PyGILState_NoteThreadState() static, it was not used anywhere
   outside of pystate.c and should not be necessary.
+
+- Bug #1551432: Exceptions do not define an explicit __unicode__ method.  This
+  allows calling unicode() on exceptions classes directly to succeed.
 
 - Bug #1542051: Exceptions now correctly call PyObject_GC_UnTrack.
   Also make sure that every exception class has __module__ set to
@@ -25,7 +35,8 @@ Core and builtins
 - Overflow checking code in integer division ran afoul of new gcc
   optimizations.  Changed to be more standard-conforming.
 
-- Patch #1542451: disallow continue anywhere under a finally.
+- Patch #1541585: fix buffer overrun when performing repr() on
+  a unicode string in a build with wide unicode (UCS-4) support.
 
 - Patch #1546288: fix seg fault in dict_equal due to ref counting bug.
 
@@ -37,16 +48,14 @@ Core and builtins
   required changing the .pyc magic number.  This means that .pyc files
   generated before 2.5c2 will be regenerated.
 
-- with and as are now keywords.
-
 
 Library
 -------
 
-- Reverted patch #1504333 to sgmllib because it introduced an infinite loop.
+- Reverted patch #1504333 because it introduced an infinite loop.
 
 - Patch #1553314: Fix the inspect.py slowdown that was hurting IPython & SAGE
-  by adding smarter caching in inspect.getmodule()
+  by adding smarter caching in inspect.getmodule().
 
 - Fix missing import of the types module in logging.config.
 
@@ -56,13 +65,17 @@ Library
 - Bug #1541863: uuid.uuid1 failed to generate unique identifiers
   on systems with low clock resolution.
 
+- Bug #1543303, patch #1543897: remove NUL padding from tarfiles.
+
 - Bug #1531862: Do not close standard file descriptors in subprocess.
 
 
 Extension Modules
 -----------------
 
-- RLIMIT_SBSIZE was added to the resource module where available.
+- Fix bugs in ctypes:
+  - anonymous structure fields that have a bit-width specified did not work
+  - cast function did not accept c_char_p or c_wchar_p instances as first arg
 
 - Bug #1551427: fix a wrong NULL pointer check in the win32 version
   of os.urandom().
@@ -105,16 +118,16 @@ Build
 
 - Patch #1540470, for OpenBSD 4.0.
 
+- Patch #1545507: Exclude ctypes package in Win64 MSI file.
+
+- Fix OpenSSL debug build process.
+
 
 C API
 -----
 
 - Bug #1542693: remove semi-colon at end of PyImport_ImportModuleEx macro
   so it can be used as an expression.
-
-
-Mac
----
 
 
 What's New in Python 2.5 release candidate 1?
@@ -124,6 +137,10 @@ What's New in Python 2.5 release candidate 1?
 
 Core and builtins
 -----------------
+
+- Fix infinite recursion when subclassing long and overriding __hash__.
+
+- Fix concatenation (+=) of long strings.
 
 - Unicode objects will no longer raise an exception when being
   compared equal or unequal to a string and a UnicodeDecodeError
@@ -220,6 +237,8 @@ Library
 
 Extension Modules
 -----------------
+
+- Ignore data that arrives before the opening start tag in C etree.
 
 - Patch #1511317: don't crash on invalid hostname (alias) info.
 

@@ -264,9 +264,8 @@ class SimpleXMLRPCDispatcher:
                                        encoding=self.encoding)
         except:
             # report exception back to server
-            exc_type, exc_value, exc_tb = sys.exc_info()
             response = xmlrpclib.dumps(
-                xmlrpclib.Fault(1, "%s:%s" % (exc_type, exc_value)),
+                xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value)),
                 encoding=self.encoding, allow_none=self.allow_none,
                 )
 
@@ -365,10 +364,9 @@ class SimpleXMLRPCDispatcher:
                      'faultString' : fault.faultString}
                     )
             except:
-                exc_type, exc_value, exc_tb = sys.exc_info()
                 results.append(
                     {'faultCode' : 1,
-                     'faultString' : "%s:%s" % (exc_type, exc_value)}
+                     'faultString' : "%s:%s" % (sys.exc_type, sys.exc_value)}
                     )
         return results
 
