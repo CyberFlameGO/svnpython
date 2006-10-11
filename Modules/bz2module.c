@@ -719,7 +719,7 @@ BZ2File_readlines(BZ2FileObject *self, PyObject *args)
 				_PyString_Resize(&big_buffer, buffersize);
 				buffer = PyString_AS_STRING(big_buffer);
 			}
-			continue;			
+			continue;
 		}
 		end = buffer+nfilled+nread;
 		q = buffer;
@@ -923,7 +923,7 @@ BZ2File_writelines(BZ2FileObject *self, PyObject *seq)
 			PyObject *v = PyList_GET_ITEM(list, i);
 			if (!PyString_Check(v)) {
 			    	const char *buffer;
-			    	Py_ssize_t len;
+			    	int len;
 				if (PyObject_AsCharBuffer(v, &buffer, &len)) {
 					PyErr_SetString(PyExc_TypeError,
 							"writelines() "
@@ -1023,12 +1023,12 @@ BZ2File_seek(BZ2FileObject *self, PyObject *args)
 		case MODE_CLOSED:
 			PyErr_SetString(PyExc_ValueError,
 					"I/O operation on closed file");
-			goto cleanup;
+			goto cleanup;;
 
 		default:
 			PyErr_SetString(PyExc_IOError,
 					"seek works only while reading");
-			goto cleanup;
+			goto cleanup;;
 	}
 
 	if (where == 2) {
@@ -1291,7 +1291,7 @@ static int
 BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 {
 	static char *kwlist[] = {"filename", "mode", "buffering",
-                                       "compresslevel", 0};
+				 "compresslevel", 0};
 	PyObject *name;
 	char *mode = "r";
 	int buffering = -1;
@@ -1326,11 +1326,7 @@ BZ2File_init(BZ2FileObject *self, PyObject *args, PyObject *kwargs)
 				break;
 
 			case 'U':
-#ifdef __VMS
-				self->f_univ_newline = 0;
-#else
 				self->f_univ_newline = 1;
-#endif
 				break;
 
 			default:
@@ -1593,7 +1589,7 @@ BZ2Comp_compress(BZ2CompObject *self, PyObject *args)
 		}
 	}
 
-	_PyString_Resize(&ret, (Py_ssize_t)(BZS_TOTAL_OUT(bzs) - totalout));
+	_PyString_Resize(&ret, (int)(BZS_TOTAL_OUT(bzs) - totalout));
 
 	RELEASE_LOCK(self);
 	return ret;
@@ -1659,7 +1655,7 @@ BZ2Comp_flush(BZ2CompObject *self)
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)(BZS_TOTAL_OUT(bzs) - totalout));
+		_PyString_Resize(&ret, (int)(BZS_TOTAL_OUT(bzs) - totalout));
 
 	RELEASE_LOCK(self);
 	return ret;
@@ -1887,7 +1883,7 @@ BZ2Decomp_decompress(BZ2DecompObject *self, PyObject *args)
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)(BZS_TOTAL_OUT(bzs) - totalout));
+		_PyString_Resize(&ret, (int)(BZS_TOTAL_OUT(bzs) - totalout));
 
 	RELEASE_LOCK(self);
 	return ret;
@@ -2100,7 +2096,7 @@ bz2_compress(PyObject *self, PyObject *args, PyObject *kwargs)
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)BZS_TOTAL_OUT(bzs));
+		_PyString_Resize(&ret, (int)BZS_TOTAL_OUT(bzs));
 	BZ2_bzCompressEnd(bzs);
 
 	return ret;
@@ -2179,7 +2175,7 @@ bz2_decompress(PyObject *self, PyObject *args)
 	}
 
 	if (bzs->avail_out != 0)
-		_PyString_Resize(&ret, (Py_ssize_t)BZS_TOTAL_OUT(bzs));
+		_PyString_Resize(&ret, (int)BZS_TOTAL_OUT(bzs));
 	BZ2_bzDecompressEnd(bzs);
 
 	return ret;

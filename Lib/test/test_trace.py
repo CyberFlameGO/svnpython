@@ -13,15 +13,7 @@ basic.events = [(0, 'call'),
                 (1, 'line'),
                 (1, 'return')]
 
-# Many of the tests below are tricky because they involve pass statements.
-# If there is implicit control flow around a pass statement (in an except
-# clause or else caluse) under what conditions do you set a line number
-# following that clause?
-
-
-# The entire "while 0:" statement is optimized away.  No code
-# exists for it, so the line numbers skip directly from "del x"
-# to "x = 1".
+# Armin Rigo's failing example:
 def arigo_example():
     x = 1
     del x
@@ -32,6 +24,7 @@ def arigo_example():
 arigo_example.events = [(0, 'call'),
                         (1, 'line'),
                         (2, 'line'),
+                        (3, 'line'),
                         (5, 'line'),
                         (5, 'return')]
 
@@ -67,16 +60,14 @@ no_pop_tops.events = [(0, 'call'),
                       (2, 'return')]
 
 def no_pop_blocks():
-    y = 1
-    while not y:
+    while 0:
         bla
     x = 1
 
 no_pop_blocks.events = [(0, 'call'),
                         (1, 'line'),
-                        (2, 'line'),
-                        (4, 'line'),
-                        (4, 'return')]
+                        (3, 'line'),
+                        (3, 'return')]
 
 def called(): # line -3
     x = 1
@@ -136,13 +127,6 @@ settrace_and_raise.events = [(2, 'exception'),
                              (4, 'return')]
 
 # implicit return example
-# This test is interesting because of the else: pass
-# part of the code.  The code generate for the true
-# part of the if contains a jump past the else branch.
-# The compiler then generates an implicit "return None"
-# Internally, the compiler visits the pass statement
-# and stores its line number for use on the next instruction.
-# The next instruction is the implicit return None.
 def ireturn_example():
     a = 5
     b = 5
@@ -156,8 +140,7 @@ ireturn_example.events = [(0, 'call'),
                           (2, 'line'),
                           (3, 'line'),
                           (4, 'line'),
-                          (6, 'line'),
-                          (6, 'return')]
+                          (4, 'return')]
 
 # Tight loop with while(1) example (SF #765624)
 def tightloop_example():

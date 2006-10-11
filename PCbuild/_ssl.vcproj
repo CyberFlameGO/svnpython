@@ -3,7 +3,6 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="_ssl"
-	RootNamespace="_ssl"
 	SccProjectName=""
 	SccLocalPath=""
 	Keyword="MakeFileProj">
@@ -21,8 +20,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="build_ssl.bat $(ConfigurationName)"
-				ReBuildCommandLine="build_ssl.bat $(ConfigurationName) -a"
+				BuildCommandLine="python build_ssl.py"
+				ReBuildCommandLine="python build_ssl.py -a"
 				CleanCommandLine="echo Nothing to do"
 				Output="_ssl.pyd"/>
 		</Configuration>
@@ -35,8 +34,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="build_ssl.bat $(ConfigurationName)"
-				ReBuildCommandLine="build_ssl.bat $(ConfigurationName) -a"
+				BuildCommandLine="python_d -u build_ssl.py -d"
+				ReBuildCommandLine="python_d -u build_ssl.py -d -a"
 				CleanCommandLine="echo Nothing to do"
 				Output="_ssl_d.pyd"/>
 		</Configuration>
@@ -49,22 +48,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="build_ssl.bat $(ConfigurationName)"
-				ReBuildCommandLine="build_ssl.bat $(ConfigurationName) -a"
-				CleanCommandLine="echo Nothing to do"
-				Output="_ssl.pyd"/>
-		</Configuration>
-		<Configuration
-			Name="ReleaseAMD64|Win32"
-			OutputDirectory="."
-			IntermediateDirectory="amd64-temp-release\_ssl"
-			ConfigurationType="0"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE">
-			<Tool
-				Name="VCNMakeTool"
-				BuildCommandLine="build_ssl.bat $(ConfigurationName)"
-				ReBuildCommandLine="build_ssl.bat $(ConfigurationName) -a"
+				BuildCommandLine="python build_ssl.py"
+				ReBuildCommandLine="python build_ssl.py -a"
 				CleanCommandLine="echo Nothing to do"
 				Output="_ssl.pyd"/>
 		</Configuration>
@@ -74,9 +59,6 @@
 	<Files>
 		<File
 			RelativePath="..\Modules\_ssl.c">
-		</File>
-		<File
-			RelativePath="..\Modules\_hashopenssl.c">
 		</File>
 	</Files>
 	<Globals>

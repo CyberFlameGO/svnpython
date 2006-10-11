@@ -24,9 +24,6 @@ term = os.environ.get('TERM')
 if not term or term == 'unknown':
     raise TestSkipped, "$TERM=%r, calling initscr() may cause exit" % term
 
-if sys.platform == "cygwin":
-    raise TestSkipped("cygwin's curses mostly just hangs")
-
 def window_funcs(stdscr):
     "Test the methods of windows"
     win = curses.newwin(10,10)
@@ -211,13 +208,6 @@ def module_funcs(stdscr):
             # just verify these don't cause errors
             m = curses.getmouse()
             curses.ungetmouse(*m)
-
-    if hasattr(curses, 'is_term_resized'):
-        curses.is_term_resized(*stdscr.getmaxyx())
-    if hasattr(curses, 'resizeterm'):
-        curses.resizeterm(*stdscr.getmaxyx())
-    if hasattr(curses, 'resize_term'):
-        curses.resize_term(*stdscr.getmaxyx())
 
 def unit_tests():
     from curses import ascii

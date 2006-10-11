@@ -102,7 +102,7 @@ def getfqdn(name=''):
 
     First the hostname returned by gethostbyaddr() is checked, then
     possibly existing aliases. In case no FQDN is available, hostname
-    from gethostname() is returned.
+    as returned by gethostname() is returned.
     """
     name = name.strip()
     if not name or name == '0.0.0.0':
@@ -130,40 +130,31 @@ _socketmethods = (
 if sys.platform == "riscos":
     _socketmethods = _socketmethods + ('sleeptaskw',)
 
-# All the method names that must be delegated to either the real socket
-# object or the _closedsocket object.
-_delegate_methods = ("recv", "recvfrom", "recv_into", "recvfrom_into",
-                     "send", "sendto")
-
 class _closedsocket(object):
     __slots__ = []
     def _dummy(*args):
         raise error(EBADF, 'Bad file descriptor')
-    def close(self):
-        pass
-    # All _delegate_methods must also be initialized here.
-    send = recv = recv_into = sendto = recvfrom = recvfrom_into = _dummy
-    __getattr__ = _dummy
+    send = recv = sendto = recvfrom = __getattr__ = _dummy
 
 class _socketobject(object):
 
     __doc__ = _realsocket.__doc__
 
-    __slots__ = ["_sock", "__weakref__"] + list(_delegate_methods)
+    __slots__ = ["_sock", "send", "recv", "sendto", "recvfrom",
+                 "__weakref__"]
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
         if _sock is None:
             _sock = _realsocket(family, type, proto)
         self._sock = _sock
-        for method in _delegate_methods:
-            setattr(self, method, getattr(_sock, method))
+        self.send = self._sock.send
+        self.recv = self._sock.recv
+        self.sendto = self._sock.sendto
+        self.recvfrom = self._sock.recvfrom
 
     def close(self):
-        self._sock.close()
         self._sock = _closedsocket()
-        dummy = self._sock._dummy
-        for method in _delegate_methods:
-            setattr(self, method, dummy)
+        self.send = self.recv = self.sendto = self.recvfrom = self._sock._dummy
     close.__doc__ = _realsocket.close.__doc__
 
     def accept(self):
@@ -183,10 +174,6 @@ class _socketobject(object):
         Return a regular file object corresponding to the socket.  The mode
         and bufsize arguments are as for the built-in open() function."""
         return _fileobject(self._sock, mode, bufsize)
-
-    family = property(lambda self: self._sock.family, doc="the socket family")
-    type = property(lambda self: self._sock.type, doc="the socket type")
-    proto = property(lambda self: self._sock.proto, doc="the socket protocol")
 
     _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
           "%s.__doc__ = _realsocket.%s.__doc__\n")

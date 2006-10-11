@@ -47,45 +47,45 @@ extern int _MediaObj_Convert(PyObject *, Media *);
 #endif
 
 /* Macro to allow us to GetNextInterestingTime without duration */
-#define GetMediaNextInterestingTimeOnly(media, flags, time, rate, rv)                         GetMediaNextInterestingTime(media, flags, time, rate, rv, NULL)
-
+#define GetMediaNextInterestingTimeOnly(media, flags, time, rate, rv) 			GetMediaNextInterestingTime(media, flags, time, rate, rv, NULL)
+			
 /*
 ** Parse/generate time records
 */
 static PyObject *
 QtTimeRecord_New(TimeRecord *itself)
 {
-        if (itself->base)
-                return Py_BuildValue("O&lO&", PyMac_Buildwide, &itself->value, itself->scale,
-                        TimeBaseObj_New, itself->base);
-        else
-                return  Py_BuildValue("O&lO", PyMac_Buildwide, &itself->value, itself->scale,
-                        Py_None);
+	if (itself->base)
+		return Py_BuildValue("O&lO&", PyMac_Buildwide, &itself->value, itself->scale, 
+			TimeBaseObj_New, itself->base);
+	else
+		return  Py_BuildValue("O&lO", PyMac_Buildwide, &itself->value, itself->scale, 
+			Py_None);
 }
 
 static int
 QtTimeRecord_Convert(PyObject *v, TimeRecord *p_itself)
 {
-        PyObject *base = NULL;
-        if( !PyArg_ParseTuple(v, "O&l|O", PyMac_Getwide, &p_itself->value, &p_itself->scale,
-                        &base) )
-                return 0;
-        if ( base == NULL || base == Py_None )
-                p_itself->base = NULL;
-        else
-                if ( !TimeBaseObj_Convert(base, &p_itself->base) )
-                        return 0;
-        return 1;
+	PyObject *base = NULL;
+	if( !PyArg_ParseTuple(v, "O&l|O", PyMac_Getwide, &p_itself->value, &p_itself->scale,
+			&base) )
+		return 0;
+	if ( base == NULL || base == Py_None )
+		p_itself->base = NULL;
+	else
+		if ( !TimeBaseObj_Convert(base, &p_itself->base) )
+			return 0;
+	return 1;
 }
 
 static int
 QtMusicMIDIPacket_Convert(PyObject *v, MusicMIDIPacket *p_itself)
 {
-        int dummy;
-
-        if( !PyArg_ParseTuple(v, "hls#", &p_itself->length, &p_itself->reserved, p_itself->data, dummy) )
-                return 0;
-        return 1;
+	int dummy;
+	
+	if( !PyArg_ParseTuple(v, "hls#", &p_itself->length, &p_itself->reserved, p_itself->data, dummy) )
+		return 0;
+	return 1;
 }
 
 
@@ -108,15 +108,14 @@ PyObject *IdleManagerObj_New(IdleManager itself)
 {
 	IdleManagerObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create IdleManager from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create IdleManager from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(IdleManagerObject, &IdleManager_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int IdleManagerObj_Convert(PyObject *v, IdleManager *p_itself)
 {
 	if (v == Py_None)
@@ -155,16 +154,16 @@ static PyMethodDef IdleManagerObj_methods[] = {
 
 #define IdleManagerObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *IdleManagerObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *IdleManagerObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	IdleManager itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, IdleManagerObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((IdleManagerObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, IdleManagerObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((IdleManagerObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define IdleManagerObj_tp_free PyObject_Del
@@ -232,15 +231,14 @@ PyObject *MovieCtlObj_New(MovieController itself)
 {
 	MovieControllerObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create MovieController from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create MovieController from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(MovieControllerObject, &MovieController_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int MovieCtlObj_Convert(PyObject *v, MovieController *p_itself)
 {
 	if (v == Py_None)
@@ -1275,16 +1273,16 @@ static PyMethodDef MovieCtlObj_methods[] = {
 
 #define MovieCtlObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *MovieCtlObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *MovieCtlObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	MovieController itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, MovieCtlObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((MovieControllerObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, MovieCtlObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((MovieControllerObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define MovieCtlObj_tp_free PyObject_Del
@@ -1352,15 +1350,14 @@ PyObject *TimeBaseObj_New(TimeBase itself)
 {
 	TimeBaseObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create TimeBase from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create TimeBase from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(TimeBaseObject, &TimeBase_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int TimeBaseObj_Convert(PyObject *v, TimeBase *p_itself)
 {
 	if (v == Py_None)
@@ -1769,16 +1766,16 @@ static PyMethodDef TimeBaseObj_methods[] = {
 
 #define TimeBaseObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *TimeBaseObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *TimeBaseObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	TimeBase itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, TimeBaseObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TimeBaseObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TimeBaseObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((TimeBaseObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define TimeBaseObj_tp_free PyObject_Del
@@ -1846,15 +1843,14 @@ PyObject *UserDataObj_New(UserData itself)
 {
 	UserDataObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create UserData from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create UserData from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(UserDataObject, &UserData_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int UserDataObj_Convert(PyObject *v, UserData *p_itself)
 {
 	if (v == Py_None)
@@ -2140,16 +2136,16 @@ static PyMethodDef UserDataObj_methods[] = {
 
 #define UserDataObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *UserDataObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *UserDataObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	UserData itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, UserDataObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((UserDataObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, UserDataObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((UserDataObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define UserDataObj_tp_free PyObject_Del
@@ -2217,15 +2213,14 @@ PyObject *MediaObj_New(Media itself)
 {
 	MediaObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create Media from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create Media from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(MediaObject, &Media_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int MediaObj_Convert(PyObject *v, Media *p_itself)
 {
 	if (v == Py_None)
@@ -3382,16 +3377,16 @@ static PyMethodDef MediaObj_methods[] = {
 
 #define MediaObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *MediaObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *MediaObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	Media itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, MediaObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((MediaObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, MediaObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((MediaObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define MediaObj_tp_free PyObject_Del
@@ -3459,15 +3454,14 @@ PyObject *TrackObj_New(Track itself)
 {
 	TrackObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create Track from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create Track from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(TrackObject, &Track_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int TrackObj_Convert(PyObject *v, Track *p_itself)
 {
 	if (v == Py_None)
@@ -4730,16 +4724,16 @@ static PyMethodDef TrackObj_methods[] = {
 
 #define TrackObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *TrackObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *TrackObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	Track itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, TrackObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TrackObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TrackObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((TrackObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define TrackObj_tp_free PyObject_Del
@@ -4807,15 +4801,14 @@ PyObject *MovieObj_New(Movie itself)
 {
 	MovieObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create Movie from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create Movie from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(MovieObject, &Movie_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int MovieObj_Convert(PyObject *v, Movie *p_itself)
 {
 	if (v == Py_None)
@@ -7283,16 +7276,16 @@ static PyMethodDef MovieObj_methods[] = {
 
 #define MovieObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *MovieObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *MovieObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	Movie itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, MovieObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((MovieObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, MovieObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((MovieObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define MovieObj_tp_free PyObject_Del
@@ -7360,15 +7353,14 @@ PyObject *SGOutputObj_New(SGOutput itself)
 {
 	SGOutputObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(Qt_Error,"Cannot create SGOutput from NULL pointer");
-	                                return NULL;
-	                        }
+						PyErr_SetString(Qt_Error,"Cannot create SGOutput from NULL pointer");
+						return NULL;
+					}
 	it = PyObject_NEW(SGOutputObject, &SGOutput_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int SGOutputObj_Convert(PyObject *v, SGOutput *p_itself)
 {
 	if (v == Py_None)
@@ -7407,16 +7399,16 @@ static PyMethodDef SGOutputObj_methods[] = {
 
 #define SGOutputObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *SGOutputObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *SGOutputObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	SGOutput itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, SGOutputObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((SGOutputObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, SGOutputObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((SGOutputObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define SGOutputObj_tp_free PyObject_Del
@@ -28001,18 +27993,18 @@ void init_Qt(void)
 
 
 
-	        PyMac_INIT_TOOLBOX_OBJECT_NEW(Track, TrackObj_New);
-	        PyMac_INIT_TOOLBOX_OBJECT_CONVERT(Track, TrackObj_Convert);
-	        PyMac_INIT_TOOLBOX_OBJECT_NEW(Movie, MovieObj_New);
-	        PyMac_INIT_TOOLBOX_OBJECT_CONVERT(Movie, MovieObj_Convert);
-	        PyMac_INIT_TOOLBOX_OBJECT_NEW(MovieController, MovieCtlObj_New);
-	        PyMac_INIT_TOOLBOX_OBJECT_CONVERT(MovieController, MovieCtlObj_Convert);
-	        PyMac_INIT_TOOLBOX_OBJECT_NEW(TimeBase, TimeBaseObj_New);
-	        PyMac_INIT_TOOLBOX_OBJECT_CONVERT(TimeBase, TimeBaseObj_Convert);
-	        PyMac_INIT_TOOLBOX_OBJECT_NEW(UserData, UserDataObj_New);
-	        PyMac_INIT_TOOLBOX_OBJECT_CONVERT(UserData, UserDataObj_Convert);
-	        PyMac_INIT_TOOLBOX_OBJECT_NEW(Media, MediaObj_New);
-	        PyMac_INIT_TOOLBOX_OBJECT_CONVERT(Media, MediaObj_Convert);
+		PyMac_INIT_TOOLBOX_OBJECT_NEW(Track, TrackObj_New);
+		PyMac_INIT_TOOLBOX_OBJECT_CONVERT(Track, TrackObj_Convert);
+		PyMac_INIT_TOOLBOX_OBJECT_NEW(Movie, MovieObj_New);
+		PyMac_INIT_TOOLBOX_OBJECT_CONVERT(Movie, MovieObj_Convert);
+		PyMac_INIT_TOOLBOX_OBJECT_NEW(MovieController, MovieCtlObj_New);
+		PyMac_INIT_TOOLBOX_OBJECT_CONVERT(MovieController, MovieCtlObj_Convert);
+		PyMac_INIT_TOOLBOX_OBJECT_NEW(TimeBase, TimeBaseObj_New);
+		PyMac_INIT_TOOLBOX_OBJECT_CONVERT(TimeBase, TimeBaseObj_Convert);
+		PyMac_INIT_TOOLBOX_OBJECT_NEW(UserData, UserDataObj_New);
+		PyMac_INIT_TOOLBOX_OBJECT_CONVERT(UserData, UserDataObj_Convert);
+		PyMac_INIT_TOOLBOX_OBJECT_NEW(Media, MediaObj_New);
+		PyMac_INIT_TOOLBOX_OBJECT_CONVERT(Media, MediaObj_Convert);
 
 
 	m = Py_InitModule("_Qt", Qt_methods);

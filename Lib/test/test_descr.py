@@ -691,13 +691,13 @@ def metaclass():
     class _instance(object):
         pass
     class M2(object):
-        @staticmethod
         def __new__(cls, name, bases, dict):
             self = object.__new__(cls)
             self.name = name
             self.bases = bases
             self.dict = dict
             return self
+        __new__ = staticmethod(__new__)
         def __call__(self):
             it = _instance()
             # Early binding of methods
@@ -1493,14 +1493,6 @@ def classmethods():
     else:
         raise TestFailed, "classmethod should check for callability"
 
-    # Verify that classmethod() doesn't allow keyword args
-    try:
-        classmethod(f, kw=1)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "classmethod shouldn't accept keyword args"
-
 def classmethods_in_c():
     if verbose: print "Testing C-based class methods..."
     import xxsubtype as spam
@@ -1643,37 +1635,6 @@ def altmro():
     vereq(X.__mro__, (object, A, C, B, D, X))
     vereq(X().f(), "A")
 
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [self, dict, object]
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "devious mro() return not caught"
-
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [1]
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "non-class mro() return not caught"
-
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return 1
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "non-sequence mro() return not caught"
-
-
 def overloading():
     if verbose: print "Testing operator overloading..."
 
@@ -1763,9 +1724,7 @@ def specials():
     c1 = C()
     c2 = C()
     verify(not not c1)
-    verify(id(c1) != id(c2))
-    hash(c1)
-    hash(c2)
+    vereq(hash(c1), id(c1))
     vereq(cmp(c1, c2), cmp(id(c1), id(c2)))
     vereq(c1, c1)
     verify(c1 != c2)
@@ -1787,9 +1746,7 @@ def specials():
     d1 = D()
     d2 = D()
     verify(not not d1)
-    verify(id(d1) != id(d2))
-    hash(d1)
-    hash(d2)
+    vereq(hash(d1), id(d1))
     vereq(cmp(d1, d2), cmp(id(d1), id(d2)))
     vereq(d1, d1)
     verify(d1 != d2)
@@ -2012,28 +1969,6 @@ def properties():
     else:
         raise TestFailed, "expected ZeroDivisionError from bad property"
 
-    class E(object):
-        def getter(self):
-            "getter method"
-            return 0
-        def setter(self, value):
-            "setter method"
-            pass
-        prop = property(getter)
-        vereq(prop.__doc__, "getter method")
-        prop2 = property(fset=setter)
-        vereq(prop2.__doc__, None)
-
-    # this segfaulted in 2.5b2
-    try:
-        import _testcapi
-    except ImportError:
-        pass
-    else:
-        class X(object):
-            p = property(_testcapi.test_with_docstring)
-
-
 def supers():
     if verbose: print "Testing super..."
 
@@ -2136,9 +2071,9 @@ def supers():
         aProp = property(lambda self: "foo")
 
     class Sub(Base):
-        @classmethod
         def test(klass):
             return super(Sub,klass).aProp
+        test = classmethod(test)
 
     veris(Sub.test(), Base.aProp)
 
@@ -2784,7 +2719,7 @@ def setdict():
     def cant(x, dict):
         try:
             x.__dict__ = dict
-        except (AttributeError, TypeError):
+        except TypeError:
             pass
         else:
             raise TestFailed, "shouldn't allow %r.__dict__ = %r" % (x, dict)
@@ -3060,7 +2995,7 @@ def subclasspropagation():
     class D(B, C):
         pass
     d = D()
-    orig_hash = hash(d) # related to id(d) in platform-dependent ways
+    vereq(hash(d), id(d))
     A.__hash__ = lambda self: 42
     vereq(hash(d), 42)
     C.__hash__ = lambda self: 314
@@ -3076,7 +3011,7 @@ def subclasspropagation():
     del C.__hash__
     vereq(hash(d), 42)
     del A.__hash__
-    vereq(hash(d), orig_hash)
+    vereq(hash(d), id(d))
     d.foo = 42
     d.bar = 42
     vereq(d.foo, 42)
@@ -3402,6 +3337,31 @@ def docdescriptor():
     vereq(OldClass().__doc__, 'object=OldClass instance; type=OldClass')
     vereq(NewClass.__doc__, 'object=None; type=NewClass')
     vereq(NewClass().__doc__, 'object=NewClass instance; type=NewClass')
+
+def string_exceptions():
+    if verbose:
+        print "Testing string exceptions ..."
+
+    # Ensure builtin strings work OK as exceptions.
+    astring = "An exception string."
+    try:
+        raise astring
+    except astring:
+        pass
+    else:
+        raise TestFailed, "builtin string not usable as exception"
+
+    # Ensure string subclass instances do not.
+    class MyStr(str):
+        pass
+
+    newstring = MyStr("oops -- shouldn't work")
+    try:
+        raise newstring
+    except TypeError:
+        pass
+    except:
+        raise TestFailed, "string subclass allowed as exception"
 
 def copy_setstate():
     if verbose:
@@ -4034,43 +3994,27 @@ def vicious_descriptor_nonsense():
     import gc; gc.collect()
     vereq(hasattr(c, 'attr'), False)
 
+import warnings
+
 def test_init():
     # SF 1155938
     class Foo(object):
         def __init__(self):
             return 10
+
+    oldfilters = warnings.filters[:]
     try:
-        Foo()
-    except TypeError:
         pass
-    else:
-        raise TestFailed, "did not test __init__() for None return"
+        warnings.filterwarnings("error", category=RuntimeWarning)
+        try:
+            Foo()
+        except RuntimeWarning:
+            pass
+        else:
+            raise TestFailed, "did not test __init__() for None return"
+    finally:
+        warnings.filters = oldfilters
 
-def methodwrapper():
-    # <type 'method-wrapper'> did not support any reflection before 2.5
-    if verbose:
-        print "Testing method-wrapper objects..."
-
-    l = []
-    vereq(l.__add__, l.__add__)
-    vereq(l.__add__, [].__add__)
-    verify(l.__add__ != [5].__add__)
-    verify(l.__add__ != l.__mul__)
-    verify(l.__add__.__name__ == '__add__')
-    verify(l.__add__.__self__ is l)
-    verify(l.__add__.__objclass__ is list)
-    vereq(l.__add__.__doc__, list.__add__.__doc__)
-    try:
-        hash(l.__add__)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed("no TypeError from hash([].__add__)")
-
-    t = ()
-    t += (7,)
-    vereq(t.__add__, (7,).__add__)
-    vereq(hash(t.__add__), hash((7,).__add__))
 
 def notimplemented():
     # all binary methods should be able to return a NotImplemented
@@ -4217,6 +4161,7 @@ def test_main():
     funnynew()
     imulbug()
     docdescriptor()
+    string_exceptions()
     copy_setstate()
     slices()
     subtype_resurrection()
@@ -4237,7 +4182,6 @@ def test_main():
     filefault()
     vicious_descriptor_nonsense()
     test_init()
-    methodwrapper()
     notimplemented()
 
     if verbose: print "All OK"

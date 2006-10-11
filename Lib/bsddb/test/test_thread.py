@@ -24,12 +24,6 @@ try:
 except ImportError:
     have_threads = False
 
-try:
-    WindowsError
-except NameError:
-    class WindowsError(Exception):
-        pass
-
 import unittest
 from test_all import verbose
 

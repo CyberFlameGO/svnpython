@@ -44,7 +44,7 @@ unsupported functions:
 	mcprint mvaddchnstr mvaddchstr mvchgat mvcur mvinchnstr
 	mvinchstr mvinnstr mmvwaddchnstr mvwaddchstr mvwchgat
 	mvwinchnstr mvwinchstr mvwinnstr newterm
-	restartterm ripoffline scr_dump
+	resizeterm restartterm ripoffline scr_dump
 	scr_init scr_restore scr_set scrl set_curterm set_term setterm
 	tgetent tgetflag tgetnum tgetstr tgoto timeout tputs
 	vidattr vidputs waddchnstr waddchstr wchgat
@@ -1892,7 +1892,7 @@ PyCurses_setupterm(PyObject* self, PyObject *args, PyObject* keywds)
 	static char *kwlist[] = {"term", "fd", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(
-		args, keywds, "|zi:setupterm", kwlist, &termstr, &fd)) {
+		args,keywds,"|zi:setupterm",kwlist,&termstr,&fd)) {
 		return NULL;
 	}
 	
@@ -1952,29 +1952,6 @@ PyCurses_IntrFlush(PyObject *self, PyObject *args)
 
   return PyCursesCheckERR(intrflush(NULL,ch), "intrflush");
 }
-
-#ifdef HAVE_CURSES_IS_TERM_RESIZED
-static PyObject *
-PyCurses_Is_Term_Resized(PyObject *self, PyObject *args)
-{
-  int lines;
-  int columns;
-  int result;
-
-  PyCursesInitialised
-
-  if (!PyArg_ParseTuple(args,"ii:is_term_resized", &lines, &columns))
-    return NULL;
-  result = is_term_resized(lines, columns);
-  if (result == TRUE) {
-    Py_INCREF(Py_True);
-    return Py_True;
-  } else {
-    Py_INCREF(Py_False);
-    return Py_False;
-  }
-}
-#endif /* HAVE_CURSES_IS_TERM_RESIZED */
 
 #if !defined(__NetBSD__)
 static PyObject *
@@ -2195,39 +2172,6 @@ PyCurses_QiFlush(PyObject *self, PyObject *args)
     return NULL;
   }
 }
-
-#ifdef HAVE_CURSES_RESIZETERM
-static PyObject *
-PyCurses_ResizeTerm(PyObject *self, PyObject *args)
-{
-  int lines;
-  int columns;
-
-  PyCursesInitialised
-
-  if (!PyArg_ParseTuple(args,"ii:resizeterm", &lines, &columns))
-    return NULL;
-
-  return PyCursesCheckERR(resizeterm(lines, columns), "resizeterm");
-}
-
-#endif
-
-#ifdef HAVE_CURSES_RESIZE_TERM
-static PyObject *
-PyCurses_Resize_Term(PyObject *self, PyObject *args)
-{
-  int lines;
-  int columns;
-
-  PyCursesInitialised
-
-  if (!PyArg_ParseTuple(args,"ii:resize_term", &lines, &columns))
-    return NULL;
-
-  return PyCursesCheckERR(resize_term(lines, columns), "resize_term");
-}
-#endif /* HAVE_CURSES_RESIZE_TERM */
 
 static PyObject *
 PyCurses_setsyx(PyObject *self, PyObject *args)
@@ -2477,9 +2421,6 @@ static PyMethodDef PyCurses_methods[] = {
   {"initscr",             (PyCFunction)PyCurses_InitScr, METH_NOARGS},
   {"intrflush",           (PyCFunction)PyCurses_IntrFlush, METH_VARARGS},
   {"isendwin",            (PyCFunction)PyCurses_isendwin, METH_NOARGS},
-#ifdef HAVE_CURSES_IS_TERM_RESIZED
-  {"is_term_resized",     (PyCFunction)PyCurses_Is_Term_Resized, METH_VARARGS},
-#endif
 #if !defined(__NetBSD__)
   {"keyname",             (PyCFunction)PyCurses_KeyName, METH_VARARGS},
 #endif
@@ -2507,12 +2448,6 @@ static PyMethodDef PyCurses_methods[] = {
   {"reset_prog_mode",     (PyCFunction)PyCurses_reset_prog_mode, METH_NOARGS},
   {"reset_shell_mode",    (PyCFunction)PyCurses_reset_shell_mode, METH_NOARGS},
   {"resetty",             (PyCFunction)PyCurses_resetty, METH_NOARGS},
-#ifdef HAVE_CURSES_RESIZETERM
-  {"resizeterm",          (PyCFunction)PyCurses_ResizeTerm, METH_VARARGS},
-#endif
-#ifdef HAVE_CURSES_RESIZE_TERM
-  {"resize_term",         (PyCFunction)PyCurses_Resize_Term, METH_VARARGS},
-#endif
   {"savetty",             (PyCFunction)PyCurses_savetty, METH_NOARGS},
   {"setsyx",              (PyCFunction)PyCurses_setsyx, METH_VARARGS},
   {"setupterm",           (PyCFunction)PyCurses_setupterm,

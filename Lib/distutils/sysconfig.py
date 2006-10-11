@@ -16,7 +16,7 @@ import re
 import string
 import sys
 
-from distutils.errors import DistutilsPlatformError
+from errors import DistutilsPlatformError
 
 # These are needed in a couple of spots, so just compute them once.
 PREFIX = os.path.normpath(sys.prefix)
@@ -31,10 +31,10 @@ landmark = os.path.join(argv0_path, "Modules", "Setup")
 
 python_build = os.path.isfile(landmark)
 
-del landmark
+del argv0_path, landmark
 
 
-def get_python_version():
+def get_python_version ():
     """Return a string containing the major and minor Python version,
     leaving off the patchlevel.  Sample return values could be '1.5'
     or '2.2'.
@@ -65,7 +65,7 @@ def get_python_inc(plat_specific=0, prefix=None):
                 if not os.path.exists(inc_dir):
                     inc_dir = os.path.join(os.path.dirname(base), "Include")
             return inc_dir
-        return os.path.join(prefix, "include", "python" + get_python_version())
+        return os.path.join(prefix, "include", "python" + sys.version[:3])
     elif os.name == "nt":
         return os.path.join(prefix, "include")
     elif os.name == "mac":
@@ -110,7 +110,7 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
         if standard_lib:
             return os.path.join(prefix, "Lib")
         else:
-            if get_python_version() < "2.2":
+            if sys.version < "2.2":
                 return prefix
             else:
                 return os.path.join(PREFIX, "Lib", "site-packages")
@@ -146,9 +146,8 @@ def customize_compiler(compiler):
     varies across Unices and is stored in Python's Makefile.
     """
     if compiler.compiler_type == "unix":
-        (cc, cxx, opt, cflags, ccshared, ldshared, so_ext) = \
-            get_config_vars('CC', 'CXX', 'OPT', 'CFLAGS',
-                            'CCSHARED', 'LDSHARED', 'SO')
+        (cc, cxx, opt, basecflags, ccshared, ldshared, so_ext) = \
+            get_config_vars('CC', 'CXX', 'OPT', 'BASECFLAGS', 'CCSHARED', 'LDSHARED', 'SO')
 
         if os.environ.has_key('CC'):
             cc = os.environ['CC']
@@ -162,15 +161,17 @@ def customize_compiler(compiler):
             cpp = cc + " -E"           # not always
         if os.environ.has_key('LDFLAGS'):
             ldshared = ldshared + ' ' + os.environ['LDFLAGS']
+        if basecflags:
+            opt = basecflags + ' ' + opt
         if os.environ.has_key('CFLAGS'):
-            cflags = opt + ' ' + os.environ['CFLAGS']
+            opt = opt + ' ' + os.environ['CFLAGS']
             ldshared = ldshared + ' ' + os.environ['CFLAGS']
         if os.environ.has_key('CPPFLAGS'):
             cpp = cpp + ' ' + os.environ['CPPFLAGS']
-            cflags = cflags + ' ' + os.environ['CPPFLAGS']
+            opt = opt + ' ' + os.environ['CPPFLAGS']
             ldshared = ldshared + ' ' + os.environ['CPPFLAGS']
 
-        cc_cmd = cc + ' ' + cflags
+        cc_cmd = cc + ' ' + opt
         compiler.set_executables(
             preprocessor=cpp,
             compiler=cc_cmd,
@@ -185,10 +186,10 @@ def customize_compiler(compiler):
 def get_config_h_filename():
     """Return full pathname of installed pyconfig.h file."""
     if python_build:
-        inc_dir = argv0_path
+        inc_dir = os.curdir
     else:
         inc_dir = get_python_inc(plat_specific=1)
-    if get_python_version() < '2.2':
+    if sys.version < '2.2':
         config_h = 'config.h'
     else:
         # The name of the config.h file changed in 2.2
@@ -213,8 +214,8 @@ def parse_config_h(fp, g=None):
     """
     if g is None:
         g = {}
-    define_rx = re.compile("#define ([A-Z][A-Za-z0-9_]+) (.*)\n")
-    undef_rx = re.compile("/[*] #undef ([A-Z][A-Za-z0-9_]+) [*]/\n")
+    define_rx = re.compile("#define ([A-Z][A-Z0-9_]+) (.*)\n")
+    undef_rx = re.compile("/[*] #undef ([A-Z][A-Z0-9_]+) [*]/\n")
     #
     while 1:
         line = fp.readline()
@@ -276,20 +277,25 @@ def parse_makefile(fn, g=None):
             m = _findvar1_rx.search(value) or _findvar2_rx.search(value)
             if m:
                 n = m.group(1)
-                found = True
                 if done.has_key(n):
-                    item = str(done[n])
+                    after = value[m.end():]
+                    value = value[:m.start()] + str(done[n]) + after
+                    if "$" in after:
+                        notdone[name] = value
+                    else:
+                        try: value = int(value)
+                        except ValueError:
+                            done[name] = string.strip(value)
+                        else:
+                            done[name] = value
+                        del notdone[name]
                 elif notdone.has_key(n):
                     # get it on a subsequent round
-                    found = False
-                elif os.environ.has_key(n):
-                    # do it like make: fall back to environment
-                    item = os.environ[n]
+                    pass
                 else:
-                    done[n] = item = ""
-                if found:
+                    done[n] = ""
                     after = value[m.end():]
-                    value = value[:m.start()] + item + after
+                    value = value[:m.start()] + after
                     if "$" in after:
                         notdone[name] = value
                     else:
@@ -351,17 +357,6 @@ def _init_posix():
 
         raise DistutilsPlatformError(my_msg)
 
-    # load the installed pyconfig.h:
-    try:
-        filename = get_config_h_filename()
-        parse_config_h(file(filename), g)
-    except IOError, msg:
-        my_msg = "invalid Python installation: unable to open %s" % filename
-        if hasattr(msg, "strerror"):
-            my_msg = my_msg + " (%s)" % msg.strerror
-
-        raise DistutilsPlatformError(my_msg)
-
     # On MacOSX we need to check the setting of the environment variable
     # MACOSX_DEPLOYMENT_TARGET: configure bases some choices on it so
     # it needs to be compatible.
@@ -372,7 +367,7 @@ def _init_posix():
         if cur_target == '':
             cur_target = cfg_target
             os.putenv('MACOSX_DEPLOYMENT_TARGET', cfg_target)
-        elif map(int, cfg_target.split('.')) > map(int, cur_target.split('.')):
+        if cfg_target != cur_target:
             my_msg = ('$MACOSX_DEPLOYMENT_TARGET mismatch: now "%s" but "%s" during configure'
                 % (cur_target, cfg_target))
             raise DistutilsPlatformError(my_msg)
@@ -383,7 +378,7 @@ def _init_posix():
     if python_build:
         g['LDSHARED'] = g['BLDSHARED']
 
-    elif get_python_version() < '2.1':
+    elif sys.version < '2.1':
         # The following two branches are for 1.5.2 compatibility.
         if sys.platform == 'aix4':          # what about AIX 3.x ?
             # Linker script is in the config directory, not in Modules as the
@@ -410,7 +405,7 @@ def _init_posix():
             # it's taken care of for them by the 'build_ext.get_libraries()'
             # method.)
             g['LDSHARED'] = ("%s -L%s/lib -lpython%s" %
-                             (linkerscript, PREFIX, get_python_version()))
+                             (linkerscript, PREFIX, sys.version[0:3]))
 
     global _config_vars
     _config_vars = g
@@ -510,8 +505,8 @@ def get_config_vars(*args):
                 # This is needed when building extensions on a 10.3 system
                 # using a universal build of python.
                 for key in ('LDFLAGS', 'BASECFLAGS',
-                        # a number of derived variables. These need to be
-                        # patched up as well.
+                        # The values below are derived from the earlier ones,
+                        # but subsitution has been by now.
                         'CFLAGS', 'PY_CFLAGS', 'BLDSHARED'):
                     flags = _config_vars[key]
                     flags = re.sub('-arch\s+\w+\s', ' ', flags)

@@ -377,7 +377,7 @@ right type (but even this is determined by the sliced object).
 \begin{productionlist}
   \production{print_stmt}
              {"print" ( \optional{\token{expression} ("," \token{expression})* \optional{","}}}
-  \productioncont{| ">>" \token{expression}
+  \productioncont{| ">\code{>}" \token{expression}
                   \optional{("," \token{expression})+ \optional{","}} )}
 \end{productionlist}
 
@@ -417,7 +417,7 @@ exception is raised.
 \keyword{print} also has an extended\index{extended print statement}
 form, defined by the second portion of the syntax described above.
 This form is sometimes referred to as ``\keyword{print} chevron.''
-In this form, the first expression after the \code{>>} must
+In this form, the first expression after the \code{>}\code{>} must
 evaluate to a ``file-like'' object, specifically an object that has a
 \method{write()} method as described above.  With this extended form,
 the subsequent expressions are printed to this file object.  If the
@@ -488,12 +488,11 @@ enough information is saved so that the next time \method{next()} is
 invoked, the function can proceed exactly as if the \keyword{yield}
 statement were just another external call.
 
-As of Python version 2.5, the \keyword{yield} statement is now
-allowed in the \keyword{try} clause of a \keyword{try} ...\ 
-\keyword{finally} construct.  If the generator is not resumed before
-it is finalized (by reaching a zero reference count or by being garbage
-collected), the generator-iterator's \method{close()} method will be
-called, allowing any pending \keyword{finally} clauses to execute.
+The \keyword{yield} statement is not allowed in the \keyword{try}
+clause of a \keyword{try} ...\ \keyword{finally} construct.  The
+difficulty is that there's no guarantee the generator will ever be
+resumed, hence no guarantee that the \keyword{finally} block will ever
+get executed.
 
 \begin{notice}
 In Python 2.2, the \keyword{yield} statement is only allowed
@@ -511,11 +510,6 @@ from __future__ import generators
   \seepep{0255}{Simple Generators}
          {The proposal for adding generators and the \keyword{yield}
           statement to Python.}
-
-  \seepep{0342}{Coroutines via Enhanced Generators}
-         {The proposal that, among other generator enhancements,
-          proposed allowing \keyword{yield} to appear inside a
-          \keyword{try} ... \keyword{finally} block.}
 \end{seealso}
 
 
@@ -882,7 +876,7 @@ a code object.  If it is a string, the string is parsed as a suite of
 Python statements which is then executed (unless a syntax error
 occurs).  If it is an open file, the file is parsed until \EOF{} and
 executed.  If it is a code object, it is simply executed.  In all
-cases, the code that's executed is expected to be valid as file
+cases, the code that's executed is expected to be be valid as file
 input (see section~\ref{file-input}, ``File input'').  Be aware that
 the \keyword{return} and \keyword{yield} statements may not be used
 outside of function definitions even within the context of code passed

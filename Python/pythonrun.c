@@ -3,23 +3,17 @@
 
 #include "Python.h"
 
-#include "Python-ast.h"
 #include "grammar.h"
 #include "node.h"
 #include "token.h"
 #include "parsetok.h"
 #include "errcode.h"
-#include "code.h"
 #include "compile.h"
 #include "symtable.h"
-#include "pyarena.h"
-#include "ast.h"
 #include "eval.h"
 #include "marshal.h"
 
-#ifdef HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 
 #ifdef HAVE_LANGINFO_H
 #include <locale.h>
@@ -31,18 +25,6 @@
 #include "windows.h"
 #endif
 
-#ifndef Py_REF_DEBUG
-#define PRINT_TOTAL_REFS()
-#else /* Py_REF_DEBUG */
-#define PRINT_TOTAL_REFS() fprintf(stderr,				\
-				   "[%" PY_FORMAT_SIZE_T "d refs]\n",	\
-				   _Py_GetRefTotal())
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 extern char *Py_GetPath(void);
 
 extern grammar _PyParser_Grammar; /* From graminit.c */
@@ -50,8 +32,10 @@ extern grammar _PyParser_Grammar; /* From graminit.c */
 /* Forward */
 static void initmain(void);
 static void initsite(void);
-static PyObject *run_mod(mod_ty, const char *, PyObject *, PyObject *,
-			  PyCompilerFlags *, PyArena *);
+static PyObject *run_err_node(node *, const char *, PyObject *, PyObject *,
+			      PyCompilerFlags *);
+static PyObject *run_node(node *, const char *, PyObject *, PyObject *,
+			  PyCompilerFlags *);
 static PyObject *run_pyc_file(FILE *, const char *, PyObject *, PyObject *,
 			      PyCompilerFlags *);
 static void err_input(perrdetail *);
@@ -188,8 +172,6 @@ Py_InitializeEx(int install_sigs)
 	if (!_PyInt_Init())
 		Py_FatalError("Py_Initialize: can't init ints");
 
-	_PyFloat_Init();
-
 	interp->modules = PyDict_New();
 	if (interp->modules == NULL)
 		Py_FatalError("Py_Initialize: can't make modules dictionary");
@@ -291,16 +273,6 @@ Py_InitializeEx(int install_sigs)
 		}
 		Py_XDECREF(sys_isatty);
 
-		sys_stream = PySys_GetObject("stderr");
-		sys_isatty = PyObject_CallMethod(sys_stream, "isatty", "");
-		if (!sys_isatty)
-			PyErr_Clear();
-		if(sys_isatty && PyObject_IsTrue(sys_isatty)) {
-			if (!PyFile_SetEncoding(sys_stream, codeset))
-				Py_FatalError("Cannot set codeset of stderr");
-		}
-		Py_XDECREF(sys_isatty);
-
 		if (!Py_FileSystemDefaultEncoding)
 			Py_FileSystemDefaultEncoding = codeset;
 		else
@@ -317,7 +289,7 @@ Py_Initialize(void)
 
 
 #ifdef COUNT_ALLOCS
-extern void dump_counts(FILE*);
+extern void dump_counts(void);
 #endif
 
 /* Undo the effect of Py_Initialize().
@@ -377,15 +349,8 @@ Py_Finalize(void)
 	 * XXX         in <function callback at 0x008F5718> ignored
 	 * XXX but I'm unclear on exactly how that one happens.  In any case,
 	 * XXX I haven't seen a real-life report of either of these.
-	 */
+         */
 	PyGC_Collect();
-#ifdef COUNT_ALLOCS
-	/* With COUNT_ALLOCS, it helps to run GC multiple times:
-	   each collection might release some types from the type
-	   list, so they become garbage. */
-	while (PyGC_Collect() > 0)
-		/* nothing */;
-#endif
 
 	/* Destroy all modules */
 	PyImport_Cleanup();
@@ -414,10 +379,12 @@ Py_Finalize(void)
 
 	/* Debugging stuff */
 #ifdef COUNT_ALLOCS
-	dump_counts(stdout);
+	dump_counts();
 #endif
 
-	PRINT_TOTAL_REFS();
+#ifdef Py_REF_DEBUG
+	fprintf(stderr, "[%ld refs]\n", _Py_GetRefTotal());
+#endif
 
 #ifdef Py_TRACE_REFS
 	/* Display all objects still alive -- this can invoke arbitrary
@@ -455,7 +422,6 @@ Py_Finalize(void)
 	PyCFunction_Fini();
 	PyTuple_Fini();
 	PyList_Fini();
-	PySet_Fini();
 	PyString_Fini();
 	PyInt_Fini();
 	PyFloat_Fini();
@@ -674,6 +640,24 @@ initsite(void)
 /* Parse input from a file and execute it */
 
 int
+PyRun_AnyFile(FILE *fp, const char *filename)
+{
+	return PyRun_AnyFileExFlags(fp, filename, 0, NULL);
+}
+
+int
+PyRun_AnyFileFlags(FILE *fp, const char *filename, PyCompilerFlags *flags)
+{
+	return PyRun_AnyFileExFlags(fp, filename, 0, flags);
+}
+
+int
+PyRun_AnyFileEx(FILE *fp, const char *filename, int closeit)
+{
+	return PyRun_AnyFileExFlags(fp, filename, closeit, NULL);
+}
+
+int
 PyRun_AnyFileExFlags(FILE *fp, const char *filename, int closeit,
 		     PyCompilerFlags *flags)
 {
@@ -687,6 +671,12 @@ PyRun_AnyFileExFlags(FILE *fp, const char *filename, int closeit,
 	}
 	else
 		return PyRun_SimpleFileExFlags(fp, filename, closeit, flags);
+}
+
+int
+PyRun_InteractiveLoop(FILE *fp, const char *filename)
+{
+	return PyRun_InteractiveLoopFlags(fp, filename, NULL);
 }
 
 int
@@ -712,7 +702,9 @@ PyRun_InteractiveLoopFlags(FILE *fp, const char *filename, PyCompilerFlags *flag
 	}
 	for (;;) {
 		ret = PyRun_InteractiveOneFlags(fp, filename, flags);
-		PRINT_TOTAL_REFS();
+#ifdef Py_REF_DEBUG
+		fprintf(stderr, "[%ld refs]\n", _Py_GetRefTotal());
+#endif
 		if (ret == E_EOF)
 			return 0;
 		/*
@@ -722,28 +714,24 @@ PyRun_InteractiveLoopFlags(FILE *fp, const char *filename, PyCompilerFlags *flag
 	}
 }
 
+int
+PyRun_InteractiveOne(FILE *fp, const char *filename)
+{
+	return PyRun_InteractiveOneFlags(fp, filename, NULL);
+}
+
 /* compute parser flags based on compiler flags */
 #define PARSER_FLAGS(flags) \
-	((flags) ? ((((flags)->cf_flags & PyCF_DONT_IMPLY_DEDENT) ? \
-		      PyPARSE_DONT_IMPLY_DEDENT : 0)) : 0)
-
-#if 0
-/* Keep an example of flags with future keyword support. */
-#define PARSER_FLAGS(flags) \
-	((flags) ? ((((flags)->cf_flags & PyCF_DONT_IMPLY_DEDENT) ? \
-		      PyPARSE_DONT_IMPLY_DEDENT : 0) \
-		    | ((flags)->cf_flags & CO_FUTURE_WITH_STATEMENT ? \
-		       PyPARSE_WITH_IS_KEYWORD : 0)) : 0)
-#endif
+	(((flags) && (flags)->cf_flags & PyCF_DONT_IMPLY_DEDENT) ? \
+		PyPARSE_DONT_IMPLY_DEDENT : 0)
 
 int
 PyRun_InteractiveOneFlags(FILE *fp, const char *filename, PyCompilerFlags *flags)
 {
 	PyObject *m, *d, *v, *w;
-	mod_ty mod;
-	PyArena *arena;
+	node *n;
+	perrdetail err;
 	char *ps1 = "", *ps2 = "";
-	int errcode = 0;
 
 	v = PySys_GetObject("ps1");
 	if (v != NULL) {
@@ -761,34 +749,26 @@ PyRun_InteractiveOneFlags(FILE *fp, const char *filename, PyCompilerFlags *flags
 		else if (PyString_Check(w))
 			ps2 = PyString_AsString(w);
 	}
-	arena = PyArena_New();
-	if (arena == NULL) {
-		Py_XDECREF(v);
-		Py_XDECREF(w);
-		return -1;
-	}
-	mod = PyParser_ASTFromFile(fp, filename,
-				   Py_single_input, ps1, ps2,
-				   flags, &errcode, arena);
+	n = PyParser_ParseFileFlags(fp, filename, &_PyParser_Grammar,
+			    	    Py_single_input, ps1, ps2, &err,
+			    	    PARSER_FLAGS(flags));
 	Py_XDECREF(v);
 	Py_XDECREF(w);
-	if (mod == NULL) {
-		PyArena_Free(arena);
-		if (errcode == E_EOF) {
-			PyErr_Clear();
+	if (n == NULL) {
+		if (err.error == E_EOF) {
+			if (err.text)
+				PyMem_DEL(err.text);
 			return E_EOF;
 		}
+		err_input(&err);
 		PyErr_Print();
-		return -1;
+		return err.error;
 	}
 	m = PyImport_AddModule("__main__");
-	if (m == NULL) {
-		PyArena_Free(arena);
+	if (m == NULL)
 		return -1;
-	}
 	d = PyModule_GetDict(m);
-	v = run_mod(mod, filename, d, d, flags, arena);
-	PyArena_Free(arena);
+	v = run_node(n, filename, d, d, flags);
 	if (v == NULL) {
 		PyErr_Print();
 		return -1;
@@ -797,6 +777,12 @@ PyRun_InteractiveOneFlags(FILE *fp, const char *filename, PyCompilerFlags *flags
 	if (Py_FlushLine())
 		PyErr_Clear();
 	return 0;
+}
+
+int
+PyRun_SimpleFile(FILE *fp, const char *filename)
+{
+	return PyRun_SimpleFileEx(fp, filename, 0);
 }
 
 /* Check whether a file maybe a pyc file: Look at the extension,
@@ -837,6 +823,12 @@ maybe_pyc_file(FILE *fp, const char* filename, const char* ext, int closeit)
 		return ispyc;
 	}
 	return 0;
+}
+
+int
+PyRun_SimpleFileEx(FILE *fp, const char *filename, int closeit)
+{
+	return PyRun_SimpleFileExFlags(fp, filename, closeit, NULL);
 }
 
 int
@@ -888,6 +880,12 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 }
 
 int
+PyRun_SimpleString(const char *command)
+{
+	return PyRun_SimpleStringFlags(command, NULL);
+}
+
+int
 PyRun_SimpleStringFlags(const char *command, PyCompilerFlags *flags)
 {
 	PyObject *m, *d, *v;
@@ -916,7 +914,7 @@ parse_syntax_error(PyObject *err, PyObject **message, const char **filename,
 	/* old style errors */
 	if (PyTuple_Check(err))
 		return PyArg_ParseTuple(err, "O(ziiz)", message, filename,
-					lineno, offset, text);
+				        lineno, offset, text);
 
 	/* new style errors.  `err' is an instance */
 
@@ -987,7 +985,7 @@ print_error_text(PyObject *f, int offset, const char *text)
 			nl = strchr(text, '\n');
 			if (nl == NULL || nl-text >= offset)
 				break;
-			offset -= (int)(nl+1-text);
+			offset -= (nl+1-text);
 			text = nl+1;
 		}
 		while (*text == ' ' || *text == '\t') {
@@ -1013,8 +1011,8 @@ print_error_text(PyObject *f, int offset, const char *text)
 static void
 handle_system_exit(void)
 {
-	PyObject *exception, *value, *tb;
-	int exitcode = 0;
+        PyObject *exception, *value, *tb;
+        int exitcode = 0;
 
 	PyErr_Fetch(&exception, &value, &tb);
 	if (Py_FlushLine())
@@ -1022,7 +1020,7 @@ handle_system_exit(void)
 	fflush(stdout);
 	if (value == NULL || value == Py_None)
 		goto done;
-	if (PyExceptionInstance_Check(value)) {
+	if (PyInstance_Check(value)) {
 		/* The error code should be in the `code' attribute. */
 		PyObject *code = PyObject_GetAttrString(value, "code");
 		if (code) {
@@ -1042,11 +1040,11 @@ handle_system_exit(void)
 		exitcode = 1;
 	}
  done:
-	/* Restore and clear the exception info, in order to properly decref
-	 * the exception, value, and traceback.	 If we just exit instead,
-	 * these leak, which confuses PYTHONDUMPREFS output, and may prevent
-	 * some finalizers from running.
-	 */
+ 	/* Restore and clear the exception info, in order to properly decref
+ 	 * the exception, value, and traceback.  If we just exit instead,
+ 	 * these leak, which confuses PYTHONDUMPREFS output, and may prevent
+ 	 * some finalizers from running.
+ 	 */
 	PyErr_Restore(exception, value, tb);
 	PyErr_Clear();
 	Py_Exit(exitcode);
@@ -1062,12 +1060,9 @@ PyErr_PrintEx(int set_sys_last_vars)
 		handle_system_exit();
 	}
 	PyErr_Fetch(&exception, &v, &tb);
-	if (exception == NULL)
-		return;
 	PyErr_NormalizeException(&exception, &v, &tb);
 	if (exception == NULL)
 		return;
-        /* Now we know v != NULL too */
 	if (set_sys_last_vars) {
 		PySys_SetObject("last_type", exception);
 		PySys_SetObject("last_value", v);
@@ -1076,7 +1071,7 @@ PyErr_PrintEx(int set_sys_last_vars)
 	hook = PySys_GetObject("excepthook");
 	if (hook) {
 		PyObject *args = PyTuple_Pack(3,
-		    exception, v, tb ? tb : Py_None);
+                    exception, v ? v : Py_None, tb ? tb : Py_None);
 		PyObject *result = PyEval_CallObject(hook, args);
 		if (result == NULL) {
 			PyObject *exception2, *v2, *tb2;
@@ -1118,8 +1113,7 @@ PyErr_PrintEx(int set_sys_last_vars)
 	Py_XDECREF(tb);
 }
 
-void
-PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
+void PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 {
 	int err = 0;
 	PyObject *f = PySys_GetObject("stderr");
@@ -1165,16 +1159,12 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 		if (err) {
 			/* Don't do anything else */
 		}
-		else if (PyExceptionClass_Check(exception)) {
-			PyObject* moduleName;
-			char* className = PyExceptionClass_Name(exception);
-			if (className != NULL) {
-				char *dot = strrchr(className, '.');
-				if (dot != NULL)
-					className = dot+1;
-			}
+		else if (PyClass_Check(exception)) {
+			PyClassObject* exc = (PyClassObject*)exception;
+			PyObject* className = exc->cl_name;
+			PyObject* moduleName =
+			      PyDict_GetItemString(exc->cl_dict, "__module__");
 
-			moduleName = PyObject_GetAttrString(exception, "__module__");
 			if (moduleName == NULL)
 				err = PyFile_WriteString("<unknown>", f);
 			else {
@@ -1184,30 +1174,32 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 					err = PyFile_WriteString(modstr, f);
 					err += PyFile_WriteString(".", f);
 				}
-				Py_DECREF(moduleName);
 			}
 			if (err == 0) {
 				if (className == NULL)
 				      err = PyFile_WriteString("<unknown>", f);
 				else
-				      err = PyFile_WriteString(className, f);
+				      err = PyFile_WriteObject(className, f,
+							       Py_PRINT_RAW);
 			}
 		}
 		else
 			err = PyFile_WriteObject(exception, f, Py_PRINT_RAW);
-		if (err == 0 && (value != Py_None)) {
-			PyObject *s = PyObject_Str(value);
-			/* only print colon if the str() of the
-			   object is not the empty string
-			*/
-			if (s == NULL)
-				err = -1;
-			else if (!PyString_Check(s) ||
-				 PyString_GET_SIZE(s) != 0)
-				err = PyFile_WriteString(": ", f);
-			if (err == 0)
-			  err = PyFile_WriteObject(s, f, Py_PRINT_RAW);
-			Py_XDECREF(s);
+		if (err == 0) {
+			if (value != Py_None) {
+				PyObject *s = PyObject_Str(value);
+				/* only print colon if the str() of the
+				   object is not the empty string
+				*/
+				if (s == NULL)
+					err = -1;
+				else if (!PyString_Check(s) ||
+					 PyString_GET_SIZE(s) != 0)
+					err = PyFile_WriteString(": ", f);
+				if (err == 0)
+				  err = PyFile_WriteObject(s, f, Py_PRINT_RAW);
+				Py_XDECREF(s);
+			}
 		}
 		if (err == 0)
 			err = PyFile_WriteString("\n", f);
@@ -1220,52 +1212,74 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 }
 
 PyObject *
-PyRun_StringFlags(const char *str, int start, PyObject *globals,
-		  PyObject *locals, PyCompilerFlags *flags)
+PyRun_String(const char *str, int start, PyObject *globals, PyObject *locals)
 {
-	PyObject *ret = NULL;
-	mod_ty mod;
-	PyArena *arena = PyArena_New();
-	if (arena == NULL)
-		return NULL;
-	
-	mod = PyParser_ASTFromString(str, "<string>", start, flags, arena);
-	if (mod != NULL)
-		ret = run_mod(mod, "<string>", globals, locals, flags, arena);
-	PyArena_Free(arena);
-	return ret;
+	return run_err_node(PyParser_SimpleParseString(str, start),
+			    "<string>", globals, locals, NULL);
+}
+
+PyObject *
+PyRun_File(FILE *fp, const char *filename, int start, PyObject *globals,
+	   PyObject *locals)
+{
+	return PyRun_FileEx(fp, filename, start, globals, locals, 0);
+}
+
+PyObject *
+PyRun_FileEx(FILE *fp, const char *filename, int start, PyObject *globals,
+	     PyObject *locals, int closeit)
+{
+	node *n = PyParser_SimpleParseFile(fp, filename, start);
+	if (closeit)
+		fclose(fp);
+	return run_err_node(n, filename, globals, locals, NULL);
+}
+
+PyObject *
+PyRun_StringFlags(const char *str, int start, PyObject *globals, PyObject *locals,
+		  PyCompilerFlags *flags)
+{
+	return run_err_node(PyParser_SimpleParseStringFlags(
+				    str, start, PARSER_FLAGS(flags)),
+			    "<string>", globals, locals, flags);
+}
+
+PyObject *
+PyRun_FileFlags(FILE *fp, const char *filename, int start, PyObject *globals,
+		PyObject *locals, PyCompilerFlags *flags)
+{
+	return PyRun_FileExFlags(fp, filename, start, globals, locals, 0,
+				 flags);
 }
 
 PyObject *
 PyRun_FileExFlags(FILE *fp, const char *filename, int start, PyObject *globals,
 		  PyObject *locals, int closeit, PyCompilerFlags *flags)
 {
-	PyObject *ret;
-	mod_ty mod;
-	PyArena *arena = PyArena_New();
-	if (arena == NULL)
-		return NULL;
-	
-	mod = PyParser_ASTFromFile(fp, filename, start, 0, 0,
-				   flags, NULL, arena);
-	if (mod == NULL) {
-		PyArena_Free(arena);
-		return NULL;
-	}
+	node *n = PyParser_SimpleParseFileFlags(fp, filename, start,
+						PARSER_FLAGS(flags));
 	if (closeit)
 		fclose(fp);
-	ret = run_mod(mod, filename, globals, locals, flags, arena);
-	PyArena_Free(arena);
-	return ret;
+	return run_err_node(n, filename, globals, locals, flags);
 }
 
 static PyObject *
-run_mod(mod_ty mod, const char *filename, PyObject *globals, PyObject *locals,
-	 PyCompilerFlags *flags, PyArena *arena)
+run_err_node(node *n, const char *filename, PyObject *globals, PyObject *locals,
+	     PyCompilerFlags *flags)
+{
+	if (n == NULL)
+		return  NULL;
+	return run_node(n, filename, globals, locals, flags);
+}
+
+static PyObject *
+run_node(node *n, const char *filename, PyObject *globals, PyObject *locals,
+	 PyCompilerFlags *flags)
 {
 	PyCodeObject *co;
 	PyObject *v;
-	co = PyAST_Compile(mod, filename, flags, arena);
+	co = PyNode_CompileFlags(n, filename, flags);
+	PyNode_Free(n);
 	if (co == NULL)
 		return NULL;
 	v = PyEval_EvalCode(co, globals, locals);
@@ -1274,8 +1288,8 @@ run_mod(mod_ty mod, const char *filename, PyObject *globals, PyObject *locals,
 }
 
 static PyObject *
-run_pyc_file(FILE *fp, const char *filename, PyObject *globals,
-	     PyObject *locals, PyCompilerFlags *flags)
+run_pyc_file(FILE *fp, const char *filename, PyObject *globals, PyObject *locals,
+	     PyCompilerFlags *flags)
 {
 	PyCodeObject *co;
 	PyObject *v;
@@ -1306,90 +1320,39 @@ run_pyc_file(FILE *fp, const char *filename, PyObject *globals,
 }
 
 PyObject *
+Py_CompileString(const char *str, const char *filename, int start)
+{
+	return Py_CompileStringFlags(str, filename, start, NULL);
+}
+
+PyObject *
 Py_CompileStringFlags(const char *str, const char *filename, int start,
 		      PyCompilerFlags *flags)
 {
+	node *n;
 	PyCodeObject *co;
-	mod_ty mod;
-	PyArena *arena = PyArena_New();
-	if (arena == NULL)
-		return NULL;
 
-	mod = PyParser_ASTFromString(str, filename, start, flags, arena);
-	if (mod == NULL) {
-		PyArena_Free(arena);
+	n = PyParser_SimpleParseStringFlagsFilename(str, filename, start,
+						    PARSER_FLAGS(flags));
+	if (n == NULL)
 		return NULL;
-	}
-	if (flags && (flags->cf_flags & PyCF_ONLY_AST)) {
-		PyObject *result = PyAST_mod2obj(mod);
-		PyArena_Free(arena);
-		return result;
-	}
-	co = PyAST_Compile(mod, filename, flags, arena);
-	PyArena_Free(arena);
+	co = PyNode_CompileFlags(n, filename, flags);
+	PyNode_Free(n);
 	return (PyObject *)co;
 }
 
 struct symtable *
 Py_SymtableString(const char *str, const char *filename, int start)
 {
+	node *n;
 	struct symtable *st;
-	mod_ty mod;
-	PyArena *arena = PyArena_New();
-	if (arena == NULL)
+	n = PyParser_SimpleParseStringFlagsFilename(str, filename,
+						    start, 0);
+	if (n == NULL)
 		return NULL;
-
-	mod = PyParser_ASTFromString(str, filename, start, NULL, arena);
-	if (mod == NULL) {
-		PyArena_Free(arena);
-		return NULL;
-	}
-	st = PySymtable_Build(mod, filename, 0);
-	PyArena_Free(arena);
+	st = PyNode_CompileSymtable(n, filename);
+	PyNode_Free(n);
 	return st;
-}
-
-/* Preferred access to parser is through AST. */
-mod_ty
-PyParser_ASTFromString(const char *s, const char *filename, int start,
-		       PyCompilerFlags *flags, PyArena *arena)
-{
-	mod_ty mod;
-	perrdetail err;
-	node *n = PyParser_ParseStringFlagsFilename(s, filename,
-					&_PyParser_Grammar, start, &err,
-					PARSER_FLAGS(flags));
-	if (n) {
-		mod = PyAST_FromNode(n, flags, filename, arena);
-		PyNode_Free(n);
-		return mod;
-	}
-	else {
-		err_input(&err);
-		return NULL;
-	}
-}
-
-mod_ty
-PyParser_ASTFromFile(FILE *fp, const char *filename, int start, char *ps1,
-		     char *ps2, PyCompilerFlags *flags, int *errcode,
-		     PyArena *arena)
-{
-	mod_ty mod;
-	perrdetail err;
-	node *n = PyParser_ParseFileFlags(fp, filename, &_PyParser_Grammar,
-				start, ps1, ps2, &err, PARSER_FLAGS(flags));
-	if (n) {
-		mod = PyAST_FromNode(n, flags, filename, arena);
-		PyNode_Free(n);
-		return mod;
-	}
-	else {
-		err_input(&err);
-		if (errcode)
-			*errcode = err.error;
-		return NULL;
-	}
 }
 
 /* Simplified interface to parsefile -- return node or set exception */
@@ -1397,13 +1360,19 @@ PyParser_ASTFromFile(FILE *fp, const char *filename, int start, char *ps1,
 node *
 PyParser_SimpleParseFileFlags(FILE *fp, const char *filename, int start, int flags)
 {
+	node *n;
 	perrdetail err;
-	node *n = PyParser_ParseFileFlags(fp, filename, &_PyParser_Grammar,
-					  start, NULL, NULL, &err, flags);
+	n = PyParser_ParseFileFlags(fp, filename, &_PyParser_Grammar, start,
+					(char *)0, (char *)0, &err, flags);
 	if (n == NULL)
 		err_input(&err);
-
 	return n;
+}
+
+node *
+PyParser_SimpleParseFile(FILE *fp, const char *filename, int start)
+{
+	return PyParser_SimpleParseFileFlags(fp, filename, start, 0);
 }
 
 /* Simplified interface to parsestring -- return node or set exception */
@@ -1411,21 +1380,31 @@ PyParser_SimpleParseFileFlags(FILE *fp, const char *filename, int start, int fla
 node *
 PyParser_SimpleParseStringFlags(const char *str, int start, int flags)
 {
+	node *n;
 	perrdetail err;
-	node *n = PyParser_ParseStringFlags(str, &_PyParser_Grammar,
-					    start, &err, flags);
+	n = PyParser_ParseStringFlags(str, &_PyParser_Grammar, start, &err,
+				      flags);
 	if (n == NULL)
 		err_input(&err);
 	return n;
 }
 
 node *
+PyParser_SimpleParseString(const char *str, int start)
+{
+	return PyParser_SimpleParseStringFlags(str, start, 0);
+}
+
+node *
 PyParser_SimpleParseStringFlagsFilename(const char *str, const char *filename,
 					int start, int flags)
 {
+	node *n;
 	perrdetail err;
-	node *n = PyParser_ParseStringFlagsFilename(str, filename,
-				&_PyParser_Grammar, start, &err, flags);
+
+	n = PyParser_ParseStringFlagsFilename(str, filename,
+					      &_PyParser_Grammar,
+					      start, &err, flags);
 	if (n == NULL)
 		err_input(&err);
 	return n;
@@ -1434,7 +1413,8 @@ PyParser_SimpleParseStringFlagsFilename(const char *str, const char *filename,
 node *
 PyParser_SimpleParseStringFilename(const char *str, const char *filename, int start)
 {
-	return PyParser_SimpleParseStringFlagsFilename(str, filename, start, 0);
+	return PyParser_SimpleParseStringFlagsFilename(str, filename,
+						       start, 0);
 }
 
 /* May want to move a more generalized form of this to parsetok.c or
@@ -1455,6 +1435,12 @@ err_input(perrdetail *err)
 	PyObject* u = NULL;
 	char *msg = NULL;
 	errtype = PyExc_SyntaxError;
+	v = Py_BuildValue("(ziiz)", err->filename,
+			    err->lineno, err->offset, err->text);
+	if (err->text != NULL) {
+		PyMem_DEL(err->text);
+		err->text = NULL;
+	}
 	switch (err->error) {
 	case E_SYNTAX:
 		errtype = PyExc_IndentationError;
@@ -1481,9 +1467,11 @@ err_input(perrdetail *err)
 	case E_INTR:
 		if (!PyErr_Occurred())
 			PyErr_SetNone(PyExc_KeyboardInterrupt);
+		Py_XDECREF(v);
 		return;
 	case E_NOMEM:
 		PyErr_NoMemory();
+		Py_XDECREF(v);
 		return;
 	case E_EOF:
 		msg = "unexpected EOF while parsing";
@@ -1514,28 +1502,17 @@ err_input(perrdetail *err)
 		}
 		if (msg == NULL)
 			msg = "unknown decode error";
-		Py_XDECREF(type);
-		Py_XDECREF(value);
+		Py_DECREF(type);
+		Py_DECREF(value);
 		Py_XDECREF(tb);
 		break;
 	}
-	case E_LINECONT:
-		msg = "unexpected character after line continuation character";
-		break;
 	default:
 		fprintf(stderr, "error=%d\n", err->error);
 		msg = "unknown parsing error";
 		break;
 	}
-	v = Py_BuildValue("(ziiz)", err->filename,
-			  err->lineno, err->offset, err->text);
-	if (err->text != NULL) {
-		PyObject_FREE(err->text);
-		err->text = NULL;
-	}
-	w = NULL;
-	if (v != NULL)
-		w = Py_BuildValue("(sO)", msg, v);
+	w = Py_BuildValue("(sO)", msg, v);
 	Py_XDECREF(u);
 	Py_XDECREF(v);
 	PyErr_SetObject(errtype, w);
@@ -1697,23 +1674,6 @@ PyOS_getsig(int sig)
 	return context.sa_handler;
 #else
 	PyOS_sighandler_t handler;
-/* Special signal handling for the secure CRT in Visual Studio 2005 */
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-	switch (sig) {
-	/* Only these signals are valid */
-	case SIGINT:
-	case SIGILL:
-	case SIGFPE:
-	case SIGSEGV:
-	case SIGTERM:
-	case SIGBREAK:
-	case SIGABRT:
-		break;
-	/* Don't call signal() with other values or it will assert */
-	default:
-		return SIG_ERR;
-	}
-#endif /* _MSC_VER && _MSC_VER >= 1400 */
 	handler = signal(sig, SIG_IGN);
 	if (handler != SIG_ERR)
 		signal(sig, handler);
@@ -1741,117 +1701,3 @@ PyOS_setsig(int sig, PyOS_sighandler_t handler)
 	return oldhandler;
 #endif
 }
-
-/* Deprecated C API functions still provided for binary compatiblity */
-
-#undef PyParser_SimpleParseFile
-PyAPI_FUNC(node *)
-PyParser_SimpleParseFile(FILE *fp, const char *filename, int start)
-{
-	return PyParser_SimpleParseFileFlags(fp, filename, start, 0);
-}
-
-#undef PyParser_SimpleParseString
-PyAPI_FUNC(node *)
-PyParser_SimpleParseString(const char *str, int start)
-{
-	return PyParser_SimpleParseStringFlags(str, start, 0);
-}
-
-#undef PyRun_AnyFile
-PyAPI_FUNC(int)
-PyRun_AnyFile(FILE *fp, const char *name)
-{
-	return PyRun_AnyFileExFlags(fp, name, 0, NULL);
-}
-
-#undef PyRun_AnyFileEx
-PyAPI_FUNC(int)
-PyRun_AnyFileEx(FILE *fp, const char *name, int closeit)
-{
-	return PyRun_AnyFileExFlags(fp, name, closeit, NULL);
-}
-
-#undef PyRun_AnyFileFlags
-PyAPI_FUNC(int)
-PyRun_AnyFileFlags(FILE *fp, const char *name, PyCompilerFlags *flags)
-{
-	return PyRun_AnyFileExFlags(fp, name, 0, flags);
-}
-
-#undef PyRun_File
-PyAPI_FUNC(PyObject *)
-PyRun_File(FILE *fp, const char *p, int s, PyObject *g, PyObject *l)
-{
-        return PyRun_FileExFlags(fp, p, s, g, l, 0, NULL);
-}
-
-#undef PyRun_FileEx
-PyAPI_FUNC(PyObject *)
-PyRun_FileEx(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, int c)
-{
-        return PyRun_FileExFlags(fp, p, s, g, l, c, NULL);
-}
-
-#undef PyRun_FileFlags
-PyAPI_FUNC(PyObject *)
-PyRun_FileFlags(FILE *fp, const char *p, int s, PyObject *g, PyObject *l,
-		PyCompilerFlags *flags)
-{
-        return PyRun_FileExFlags(fp, p, s, g, l, 0, flags);
-}
-
-#undef PyRun_SimpleFile
-PyAPI_FUNC(int)
-PyRun_SimpleFile(FILE *f, const char *p)
-{
-	return PyRun_SimpleFileExFlags(f, p, 0, NULL);
-}
-
-#undef PyRun_SimpleFileEx
-PyAPI_FUNC(int)
-PyRun_SimpleFileEx(FILE *f, const char *p, int c)
-{
-	return PyRun_SimpleFileExFlags(f, p, c, NULL);
-}
-
-
-#undef PyRun_String
-PyAPI_FUNC(PyObject *)
-PyRun_String(const char *str, int s, PyObject *g, PyObject *l)
-{
-	return PyRun_StringFlags(str, s, g, l, NULL);
-}
-
-#undef PyRun_SimpleString
-PyAPI_FUNC(int)
-PyRun_SimpleString(const char *s)
-{
-	return PyRun_SimpleStringFlags(s, NULL);
-}
-
-#undef Py_CompileString
-PyAPI_FUNC(PyObject *)
-Py_CompileString(const char *str, const char *p, int s)
-{
-	return Py_CompileStringFlags(str, p, s, NULL);
-}
-
-#undef PyRun_InteractiveOne
-PyAPI_FUNC(int)
-PyRun_InteractiveOne(FILE *f, const char *p)
-{
-	return PyRun_InteractiveOneFlags(f, p, NULL);
-}
-
-#undef PyRun_InteractiveLoop
-PyAPI_FUNC(int)
-PyRun_InteractiveLoop(FILE *f, const char *p)
-{
-	return PyRun_InteractiveLoopFlags(f, p, NULL);
-}
-
-#ifdef __cplusplus
-}
-#endif
-

@@ -2,8 +2,8 @@
 import smtplib
 
 # Here are the email package modules we'll need
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
+from email.MIMEImage import MIMEImage
+from email.MIMEMultipart import MIMEMultipart
 
 COMMASPACE = ', '
 
@@ -15,6 +15,8 @@ msg['Subject'] = 'Our family reunion'
 msg['From'] = me
 msg['To'] = COMMASPACE.join(family)
 msg.preamble = 'Our family reunion'
+# Guarantees the message ends in a newline
+msg.epilogue = ''
 
 # Assume we know that the image files are all in PNG format
 for file in pngfiles:

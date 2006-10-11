@@ -57,7 +57,7 @@ def getFullVersion():
     raise RuntimeError, "Cannot find full version??"
 
 # The directory we'll use to create the build, will be erased and recreated
-WORKDIR="/tmp/_py"
+WORKDIR="/tmp/_py24"
 
 # The directory we'll use to store third-party sources, set this to something
 # else if you don't want to re-fetch required libraries every time.
@@ -125,19 +125,6 @@ LIBRARY_RECIPES=[
             'http://ftp.gnu.org/pub/gnu/readline/readline-5.1-patches/readline51-002',
             'http://ftp.gnu.org/pub/gnu/readline/readline-5.1-patches/readline51-003',
             'http://ftp.gnu.org/pub/gnu/readline/readline-5.1-patches/readline51-004',
-        ]
-    ),
-
-    dict(
-        name="SQLite 3.3.5",
-        url="http://www.sqlite.org/sqlite-3.3.5.tar.gz",
-        checksum='93f742986e8bc2dfa34792e16df017a6feccf3a2',
-        configure_pre=[
-            '--enable-threadsafe',
-            '--enable-tempstore',
-            '--enable-shared=no',
-            '--enable-static=yes',
-            '--disable-tcl',
         ]
     ),
 
@@ -260,7 +247,7 @@ PKG_RECIPES=[
             using that copy of python after installing this version of
             python.
             """,
-        postflight="../Tools/fixapplepython23.py",
+        postflight="../OSX/fixapplepython23.py",
         topdir="/Library/Frameworks/Python.framework",
         source="/empty-dir",
         required=False,
@@ -657,14 +644,12 @@ def buildPython():
                 'lib'))))
 
     print "Fix file modes"
-    frmDir = os.path.join(rootDir, 'Library', 'Frameworks', 'Python.framework')
     gid = grp.getgrnam('admin').gr_gid
-
+    frmDir = os.path.join(rootDir, 'Library', 'Frameworks', 'Python.framework')
     for dirpath, dirnames, filenames in os.walk(frmDir):
         for dn in dirnames:
             os.chmod(os.path.join(dirpath, dn), 0775)
             os.chown(os.path.join(dirpath, dn), -1, gid)
-            
 
         for fn in filenames:
             if os.path.islink(fn):
@@ -923,6 +908,7 @@ def buildDMG():
     imagepath = imagepath + '.dmg'
 
     os.mkdir(outdir)
+    time.sleep(1)
     runCommand("hdiutil create -volname 'Univeral MacPython %s' -srcfolder %s %s"%(
             getFullVersion(),
             shellQuote(os.path.join(WORKDIR, 'installer')),
@@ -1036,7 +1022,7 @@ def main():
     folder = os.path.join(WORKDIR, "_root", "Applications", "MacPython %s"%(
         getVersion(),))
     os.chmod(folder, 0755)
-    setIcon(folder, "../Icons/Python Folder.icns")
+    #setIcon(folder, "../Icons/Python Folder.icns")
 
     # Create the installer
     buildInstaller()
@@ -1054,10 +1040,10 @@ def main():
     fp.close()
 
     # Custom icon for the DMG, shown when the DMG is mounted.
-    shutil.copy("../Icons/Disk Image.icns",
-            os.path.join(WORKDIR, "installer", ".VolumeIcon.icns"))
-    os.system("/Developer/Tools/SetFile -a C %s"%(
-            os.path.join(WORKDIR, "installer", ".VolumeIcon.icns")))
+    #shutil.copy("../Icons/Disk Image.icns",
+    #        os.path.join(WORKDIR, "installer", ".VolumeIcon.icns"))
+    #os.system("/Developer/Tools/SetFile -a C %s"%(
+    #        os.path.join(WORKDIR, "installer", ".VolumeIcon.icns")))
 
 
     # And copy it to a DMG

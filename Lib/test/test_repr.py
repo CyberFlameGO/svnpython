@@ -5,7 +5,6 @@
 
 import sys
 import os
-import shutil
 import unittest
 
 from test.test_support import run_unittest
@@ -199,10 +198,8 @@ class LongReprTest(unittest.TestCase):
         self.pkgname = os.path.join(longname)
         self.subpkgname = os.path.join(longname, longname)
         # Make the package and subpackage
-        shutil.rmtree(self.pkgname, ignore_errors=True)
         os.mkdir(self.pkgname)
         touch(os.path.join(self.pkgname, '__init__'+os.extsep+'py'))
-        shutil.rmtree(self.subpkgname, ignore_errors=True)
         os.mkdir(self.subpkgname)
         touch(os.path.join(self.subpkgname, '__init__'+os.extsep+'py'))
         # Remember where we are

@@ -28,33 +28,27 @@ class HMAC:
 
         key:       key for the keyed hash object.
         msg:       Initial input for the hash, if provided.
-        digestmod: A module supporting PEP 247.  *OR*
-                   A hashlib constructor returning a new hash object.
-                   Defaults to hashlib.md5.
+        digestmod: A module supporting PEP 247. Defaults to the md5 module.
         """
 
         if key is _secret_backdoor_key: # cheap
             return
 
         if digestmod is None:
-            import hashlib
-            digestmod = hashlib.md5
+            import md5
+            digestmod = md5
 
-        if callable(digestmod):
-            self.digest_cons = digestmod
-        else:
-            self.digest_cons = lambda d='': digestmod.new(d)
-
-        self.outer = self.digest_cons()
-        self.inner = self.digest_cons()
-        self.digest_size = self.inner.digest_size
+        self.digestmod = digestmod
+        self.outer = digestmod.new()
+        self.inner = digestmod.new()
+        self.digest_size = digestmod.digest_size
 
         blocksize = 64
         ipad = "\x36" * blocksize
         opad = "\x5C" * blocksize
 
         if len(key) > blocksize:
-            key = self.digest_cons(key).digest()
+            key = digestmod.new(key).digest()
 
         key = key + chr(0) * (blocksize - len(key))
         self.outer.update(_strxor(key, opad))
@@ -76,7 +70,7 @@ class HMAC:
         An update to this copy won't affect the original object.
         """
         other = HMAC(_secret_backdoor_key)
-        other.digest_cons = self.digest_cons
+        other.digestmod = self.digestmod
         other.digest_size = self.digest_size
         other.inner = self.inner.copy()
         other.outer = self.outer.copy()

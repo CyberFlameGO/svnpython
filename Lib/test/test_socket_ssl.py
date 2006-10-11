@@ -3,7 +3,7 @@
 import sys
 from test import test_support
 import socket
-import errno
+import time
 
 # Optionally test SSL support.  This requires the 'network' resource as given
 # on the regrtest command line.
@@ -34,13 +34,6 @@ def test_basic():
 def test_timeout():
     test_support.requires('network')
 
-    def error_msg(extra_msg):
-        print >> sys.stderr, """\
-    WARNING:  an attempt to connect to %r %s, in
-    test_timeout.  That may be legitimate, but is not the outcome we hoped
-    for.  If this message is seen often, test_timeout should be changed to
-    use a more reliable address.""" % (ADDR, extra_msg)
-
     if test_support.verbose:
         print "test_timeout ..."
 
@@ -56,14 +49,12 @@ def test_timeout():
     try:
         s.connect(ADDR)
     except socket.timeout:
-        error_msg('timed out')
+        print >> sys.stderr, """\
+    WARNING:  an attempt to connect to %r timed out, in
+    test_timeout.  That may be legitimate, but is not the outcome we hoped
+    for.  If this message is seen often, test_timeout should be changed to
+    use a more reliable address.""" % (ADDR,)
         return
-    except socket.error, exc:  # In case connection is refused.
-        if exc.args[0] == errno.ECONNREFUSED:
-            error_msg('was refused')
-            return
-        else:
-            raise
 
     ss = socket.ssl(s)
     # Read part of return welcome banner twice.
@@ -76,46 +67,34 @@ def test_rude_shutdown():
         print "test_rude_shutdown ..."
 
     try:
-        import threading
+        import thread
     except ImportError:
         return
 
-    # Some random port to connect to.
+    # some random port to connect to
     PORT = [9934]
-
-    listener_ready = threading.Event()
-    listener_gone = threading.Event()
-
-    # `listener` runs in a thread.  It opens a socket listening on PORT, and
-    # sits in an accept() until the main thread connects.  Then it rudely
-    # closes the socket, and sets Event `listener_gone` to let the main thread
-    # know the socket is gone.
     def listener():
-        s = socket.socket()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         PORT[0] = test_support.bind_port(s, '', PORT[0])
         s.listen(5)
-        listener_ready.set()
         s.accept()
-        s = None # reclaim the socket object, which also closes it
-        listener_gone.set()
+        del s
+        thread.exit()
 
     def connector():
-        listener_ready.wait()
-        s = socket.socket()
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('localhost', PORT[0]))
-        listener_gone.wait()
         try:
             ssl_sock = socket.ssl(s)
         except socket.sslerror:
             pass
         else:
-            raise test_support.TestFailed(
-                      'connecting to closed SSL socket should have failed')
+            raise test_support.TestFailed, \
+                        'connecting to closed SSL socket failed'
 
-    t = threading.Thread(target=listener)
-    t.start()
+    thread.start_new_thread(listener, ())
+    time.sleep(1)
     connector()
-    t.join()
 
 def test_main():
     if not hasattr(socket, "ssl"):

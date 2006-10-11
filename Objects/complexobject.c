@@ -188,7 +188,7 @@ complex_subtype_from_c_complex(PyTypeObject *type, Py_complex cval)
 {
 	PyObject *op;
 
-	op = type->tp_alloc(type, 0);
+	op = PyType_GenericAlloc(type, 0);
 	if (op != NULL)
 		((PyComplexObject *)op)->cval = cval;
 	return op;
@@ -680,7 +680,7 @@ complex_subtype_from_string(PyTypeObject *type, PyObject *v)
 #ifdef Py_USING_UNICODE
 	char s_buffer[256];
 #endif
-	Py_ssize_t len;
+	int len;
 
 	if (PyString_Check(v)) {
 		s = PyString_AS_STRING(v);
@@ -688,7 +688,7 @@ complex_subtype_from_string(PyTypeObject *type, PyObject *v)
 	}
 #ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(v)) {
-		if (PyUnicode_GET_SIZE(v) >= (Py_ssize_t)sizeof(s_buffer)) {
+		if (PyUnicode_GET_SIZE(v) >= sizeof(s_buffer)) {
 			PyErr_SetString(PyExc_ValueError,
 				 "complex() literal too large to convert");
 			return NULL;
@@ -699,7 +699,7 @@ complex_subtype_from_string(PyTypeObject *type, PyObject *v)
 					    NULL))
 			return NULL;
 		s = s_buffer;
-		len = strlen(s);
+		len = (int)strlen(s);
 	}
 #endif
 	else if (PyObject_AsCharBuffer(v, &s, &len)) {
@@ -962,10 +962,10 @@ static PyNumberMethods complex_as_number = {
 	0,					/* nb_and */
 	0,					/* nb_xor */
 	0,					/* nb_or */
-	complex_coerce,				/* nb_coerce */
-	complex_int,				/* nb_int */
-	complex_long,				/* nb_long */
-	complex_float,				/* nb_float */
+	(coercion)complex_coerce,		/* nb_coerce */
+	(unaryfunc)complex_int,			/* nb_int */
+	(unaryfunc)complex_long,		/* nb_long */
+	(unaryfunc)complex_float,		/* nb_float */
 	0,					/* nb_oct */
 	0,					/* nb_hex */
 	0,					/* nb_inplace_add */
@@ -991,7 +991,7 @@ PyTypeObject PyComplex_Type = {
 	"complex",
 	sizeof(PyComplexObject),
 	0,
-	complex_dealloc,			/* tp_dealloc */
+	(destructor)complex_dealloc,		/* tp_dealloc */
 	(printfunc)complex_print,		/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
@@ -1023,7 +1023,7 @@ PyTypeObject PyComplex_Type = {
 	0,					/* tp_descr_set */
 	0,					/* tp_dictoffset */
 	0,					/* tp_init */
-	PyType_GenericAlloc,			/* tp_alloc */
+	0,					/* tp_alloc */
 	complex_new,				/* tp_new */
 	PyObject_Del,           		/* tp_free */
 };
