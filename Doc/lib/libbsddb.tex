@@ -12,32 +12,26 @@ library.  Users can create hash, btree or record based library files
 using the appropriate open call. Bsddb objects behave generally like
 dictionaries.  Keys and values must be strings, however, so to use
 other objects as keys or to store other kinds of objects the user must
-serialize them somehow, typically using \function{marshal.dumps()} or 
-\function{pickle.dumps()}.
+serialize them somehow, typically using marshal.dumps or pickle.dumps.
 
-The \module{bsddb} module requires a Berkeley DB library version from
-3.3 thru 4.4.
+Starting with Python 2.3 the \module{bsddb} module requires the
+Berkeley DB library version 3.2 or later (it is known to work with 3.2
+through 4.3 at the time of this writing).
 
 \begin{seealso}
   \seeurl{http://pybsddb.sourceforge.net/}
-         {The website with documentation for the \module{bsddb.db}
-          Python Berkeley DB interface that closely mirrors the object
-          oriented interface provided in Berkeley DB 3 and 4.}
+         {Website with documentation for the new Python Berkeley DB
+          interface that closely mirrors the object oriented interface
+          provided in Berkeley DB 3 and 4.}
 
   \seeurl{http://www.oracle.com/database/berkeley-db/}
          {The Berkeley DB library.}
 \end{seealso}
 
-A more modern DB, DBEnv and DBSequence object interface is available in the
-\module{bsddb.db} module which closely matches the Berkeley DB C API
-documented at the above URLs.  Additional features provided by the
-\module{bsddb.db} API include fine tuning, transactions, logging, and
-multiprocess concurrent database access.
-
 The following is a description of the legacy \module{bsddb} interface
-compatible with the old Python bsddb module.  Starting in Python 2.5 this
-interface should be safe for multithreaded access.  The \module{bsddb.db}
-API is recommended for threading users as it provides better control.
+compatible with the old Python bsddb module.  For details about the more
+modern Db and DbEnv object oriented interface see the above mentioned
+pybsddb URL.
 
 The \module{bsddb} module defines the following functions that create
 objects that access the appropriate type of Berkeley DB file.  The
@@ -96,7 +90,7 @@ interpretation.
 
 
 \begin{notice}
-Beginning in 2.3 some \UNIX{} versions of Python may have a \module{bsddb185}
+Beginning in 2.3 some Unix versions of Python may have a \module{bsddb185}
 module.  This is present \emph{only} to allow backwards compatibility with
 systems which ship with the old Berkeley DB 1.85 database library.  The
 \module{bsddb185} module should never be used directly in new code.

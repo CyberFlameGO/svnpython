@@ -197,20 +197,10 @@ class StrptimeTests(unittest.TestCase):
         """Create testing time tuple."""
         self.time_tuple = time.gmtime()
 
-    def test_ValueError(self):
-        # Make sure ValueError is raised when match fails or format is bad
+    def test_TypeError(self):
+        # Make sure ValueError is raised when match fails
         self.assertRaises(ValueError, _strptime.strptime, data_string="%d",
                           format="%A")
-        for bad_format in ("%", "% ", "%e"):
-            try:
-                _strptime.strptime("2005", bad_format)
-            except ValueError:
-                continue
-            except Exception, err:
-                self.fail("'%s' raised %s, not ValueError" %
-                            (bad_format, err.__class__.__name__))
-            else:
-                self.fail("'%s' did not raise ValueError" % bad_format)
 
     def test_unconverteddata(self):
         # Check ValueError is raised when there is unconverted data

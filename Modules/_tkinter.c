@@ -98,16 +98,6 @@ Copyright (C) 1994 Steen Lumholt.
 
 #ifdef HAVE_CREATEFILEHANDLER
 
-/* This bit is to ensure that TCL_UNIX_FD is defined and doesn't interfere
-   with the proper calculation of FHANDLETYPE == TCL_UNIX_FD below. */
-#ifndef TCL_UNIX_FD
-#  ifdef TCL_WIN_SOCKET
-#    define TCL_UNIX_FD (! TCL_WIN_SOCKET)
-#  else
-#    define TCL_UNIX_FD 1
-#  endif
-#endif
-
 /* Tcl_CreateFileHandler() changed several times; these macros deal with the
    messiness.  In Tcl 8.0 and later, it is not available on Windows (and on
    Unix, only because Jack added it back); when available on Windows, it only
@@ -646,8 +636,8 @@ Tkapp_New(char *screenName, char *baseName, char *className,
 	}
 
 	strcpy(argv0, className);
-	if (isupper(Py_CHARMASK(argv0[0])))
-		argv0[0] = tolower(Py_CHARMASK(argv0[0]));
+	if (isupper((int)(argv0[0])))
+		argv0[0] = tolower(argv0[0]);
 	Tcl_SetVar(v->interp, "argv0", argv0, TCL_GLOBAL_ONLY);
 	ckfree(argv0);
 
@@ -932,13 +922,12 @@ AsObj(PyObject *value)
 #ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(value)) {
 		Py_UNICODE *inbuf = PyUnicode_AS_UNICODE(value);
-		Py_ssize_t size = PyUnicode_GET_SIZE(value);
+		int size = PyUnicode_GET_SIZE(value);
 		/* This #ifdef assumes that Tcl uses UCS-2.
 		   See TCL_UTF_MAX test above. */
 #if defined(Py_UNICODE_WIDE) && TCL_UTF_MAX == 3
 		Tcl_UniChar *outbuf;
-		Py_ssize_t i;
-		assert(size < size * sizeof(Tcl_UniChar));
+		int i;
 		outbuf = (Tcl_UniChar*)ckalloc(size * sizeof(Tcl_UniChar));
 		if (!outbuf) {
 			PyErr_NoMemory();
@@ -2104,8 +2093,8 @@ Tkapp_CreateCommand(PyObject *selfptr, PyObject *args)
 	data = PyMem_NEW(PythonCmd_ClientData, 1);
 	if (!data)
 		return PyErr_NoMemory();
-	Py_INCREF(self);
-	Py_INCREF(func);
+	Py_XINCREF(self);
+	Py_XINCREF(func);
 	data->self = selfptr;
 	data->func = func;
 	

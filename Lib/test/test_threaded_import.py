@@ -30,10 +30,11 @@ def test_import_hangers():
     if verbose:
         print "testing import hangers ...",
 
-    import test.threaded_import_hangers
+    from test import threaded_import_hangers
+
     try:
-        if test.threaded_import_hangers.errors:
-            raise TestFailed(test.threaded_import_hangers.errors)
+        if threaded_import_hangers.errors:
+            raise TestFailed(threaded_import_hangers.errors)
         elif verbose:
             print "OK."
     finally:

@@ -22,9 +22,9 @@ are the same as for \code{othername}.
 
 When a description of an arithmetic operator below uses the phrase
 ``the numeric arguments are converted to a common type,'' the
-arguments are coerced using the coercion rules listed at
-~\ref{coercion-rules}.  If both arguments are standard numeric types,
-the following coercions are applied:
+arguments are coerced using the coercion rules listed at the end of
+chapter \ref{datamodel}.  If both arguments are standard numeric
+types, the following coercions are applied:
 
 \begin{itemize}
 \item	If either argument is a complex number, the other is converted
@@ -155,7 +155,8 @@ square brackets:
 
 \begin{productionlist}
   \production{test}
-             {\token{or_test} | \token{lambda_form}}
+             {\token{and_test} ( "or" \token{and_test} )*
+              | \token{lambda_form}}
   \production{testlist}
              {\token{test} ( "," \token{test} )* [ "," ]}
   \production{list_display}
@@ -1021,8 +1022,7 @@ Boolean operations have the lowest priority of all Python operations:
 
 \begin{productionlist}
   \production{expression}
-             {\token{or_test} [\token{if} \token{or_test} \token{else}
-              \token{test}] | \token{lambda_form}}
+             {\token{or_test} | \token{lambda_form}}
   \production{or_test}
              {\token{and_test} | \token{or_test} "or" \token{and_test}}
   \production{and_test}
@@ -1040,11 +1040,6 @@ sets and frozensets).  All other values are interpreted as true.
 The operator \keyword{not} yields \code{True} if its argument is false,
 \code{False} otherwise.
 \opindex{not}
-
-The expression \code{\var{x} if \var{C} else \var{y}} first evaluates
-\var{C} (\emph{not} \var{x}); if \var{C} is true, \var{x} is evaluated and
-its value is returned; otherwise, \var{y} is evaluated and its value is
-returned.  \versionadded{2.5}
 
 The expression \code{\var{x} and \var{y}} first evaluates \var{x}; if
 \var{x} is false, its value is returned; otherwise, \var{y} is
@@ -1163,7 +1158,7 @@ have the same precedence and chain from left to right --- see section
   \hline
     \lineii{\code{\&}}				{Bitwise AND}
   \hline
-    \lineii{\code{<<}, \code{>>}}		{Shifts}
+    \lineii{\code{<}\code{<}, \code{>}\code{>}}	{Shifts}
   \hline
     \lineii{\code{+}, \code{-}}{Addition and subtraction}
   \hline

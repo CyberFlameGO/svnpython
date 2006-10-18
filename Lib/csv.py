@@ -6,10 +6,8 @@ csv.py - read/write/investigate CSV files
 import re
 from _csv import Error, __version__, writer, reader, register_dialect, \
                  unregister_dialect, get_dialect, list_dialects, \
-                 field_size_limit, \
                  QUOTE_MINIMAL, QUOTE_ALL, QUOTE_NONNUMERIC, QUOTE_NONE, \
                  __doc__
-from _csv import Dialect as _Dialect
 
 try:
     from cStringIO import StringIO
@@ -22,13 +20,6 @@ __all__ = [ "QUOTE_MINIMAL", "QUOTE_ALL", "QUOTE_NONNUMERIC", "QUOTE_NONE",
             "unregister_dialect", "__version__", "DictReader", "DictWriter" ]
 
 class Dialect:
-    """Describe an Excel dialect.
-
-    This must be subclassed (see csv.excel).  Valid attributes are:
-    delimiter, quotechar, escapechar, doublequote, skipinitialspace,
-    lineterminator, quoting.
-
-    """
     _name = ""
     _valid = False
     # placeholders
@@ -43,17 +34,50 @@ class Dialect:
     def __init__(self):
         if self.__class__ != Dialect:
             self._valid = True
-        self._validate()
+        errors = self._validate()
+        if errors != []:
+            raise Error, "Dialect did not validate: %s" % ", ".join(errors)
 
     def _validate(self):
-        try:
-            _Dialect(self)
-        except TypeError, e:
-            # We do this for compatibility with py2.3
-            raise Error(str(e))
+        errors = []
+        if not self._valid:
+            errors.append("can't directly instantiate Dialect class")
+
+        if self.delimiter is None:
+            errors.append("delimiter character not set")
+        elif (not isinstance(self.delimiter, str) or
+              len(self.delimiter) > 1):
+            errors.append("delimiter must be one-character string")
+
+        if self.quotechar is None:
+            if self.quoting != QUOTE_NONE:
+                errors.append("quotechar not set")
+        elif (not isinstance(self.quotechar, str) or
+              len(self.quotechar) > 1):
+            errors.append("quotechar must be one-character string")
+
+        if self.lineterminator is None:
+            errors.append("lineterminator not set")
+        elif not isinstance(self.lineterminator, str):
+            errors.append("lineterminator must be a string")
+
+        if self.doublequote not in (True, False):
+            errors.append("doublequote parameter must be True or False")
+
+        if self.skipinitialspace not in (True, False):
+            errors.append("skipinitialspace parameter must be True or False")
+
+        if self.quoting is None:
+            errors.append("quoting parameter not set")
+
+        if self.quoting is QUOTE_NONE:
+            if (not isinstance(self.escapechar, (unicode, str)) or
+                len(self.escapechar) > 1):
+                errors.append("escapechar must be a one-character string or unicode object")
+
+        return errors
 
 class excel(Dialect):
-    """Describe the usual properties of Excel-generated CSV files."""
     delimiter = ','
     quotechar = '"'
     doublequote = True
@@ -63,7 +87,6 @@ class excel(Dialect):
 register_dialect("excel", excel)
 
 class excel_tab(excel):
-    """Describe the usual properties of Excel-generated TAB-delimited files."""
     delimiter = '\t'
 register_dialect("excel-tab", excel_tab)
 
@@ -152,12 +175,9 @@ class Sniffer:
 
         quotechar, delimiter, skipinitialspace = \
                    self._guess_quote_and_delimiter(sample, delimiters)
-        if not delimiter:
+        if delimiter is None:
             delimiter, skipinitialspace = self._guess_delimiter(sample,
                                                                 delimiters)
-
-        if not delimiter:
-            raise Error, "Could not determine delimiter"
 
         class dialect(Dialect):
             _name = "sniffed"
@@ -332,12 +352,8 @@ class Sniffer:
                                         data[0].count("%c " % d))
                     return (d, skipinitialspace)
 
-        # nothing else indicates a preference, pick the character that
-        # dominates(?)
-        items = [(v,k) for (k,v) in delims.items()]
-        items.sort()
-        delim = items[-1][1]
-
+        # finally, just return the first damn character in the list
+        delim = delims.keys()[0]
         skipinitialspace = (data[0].count(delim) ==
                             data[0].count("%c " % delim))
         return (delim, skipinitialspace)

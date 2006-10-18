@@ -119,8 +119,8 @@ def decode(infile, outpath, resonly=False, verbose=False):
             infile = infile.as_pathname()
         infile = open(infile, 'rb')
 
-    asfile = AppleSingle(infile, verbose=verbose)
-    asfile.tofile(outpath, resonly=resonly)
+    as = AppleSingle(infile, verbose=verbose)
+    as.tofile(outpath, resonly=resonly)
 
 def _test():
     if len(sys.argv) < 3 or sys.argv[1] == '-r' and len(sys.argv) != 4:

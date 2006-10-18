@@ -21,7 +21,7 @@ import urlparse
 import plistlib
 import distutils.util
 import distutils.sysconfig
-import hashlib
+import md5
 import tarfile
 import tempfile
 import shutil
@@ -693,7 +693,7 @@ class PimpPackage:
             sys.stderr.write("Warning: no MD5Sum for %s\n" % self.fullname())
             return 1
         data = open(self.archiveFilename, 'rb').read()
-        checksum = hashlib.md5(data).hexdigest()
+        checksum = md5.new(data).hexdigest()
         return checksum == self._dict['MD5Sum']
 
     def unpackPackageOnly(self, output=None):

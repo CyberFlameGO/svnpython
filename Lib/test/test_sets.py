@@ -819,8 +819,7 @@ Set(['Jack', 'Jane', 'Janice', 'John', 'Marvin', 'Sam', 'Zack'])
 __test__ = {'libreftest' : libreftest}
 
 def test_main(verbose=None):
-    import doctest
-    from test import test_sets
+    import test_sets, doctest
     test_support.run_unittest(
         TestSetOfSets,
         TestExceptionPropagation,

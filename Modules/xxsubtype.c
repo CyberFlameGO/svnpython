@@ -79,6 +79,8 @@ static PyMethodDef spamlist_methods[] = {
 	{NULL,	NULL},
 };
 
+static PyTypeObject spamlist_type;
+
 static int
 spamlist_init(spamlistobject *self, PyObject *args, PyObject *kwds)
 {
@@ -176,6 +178,8 @@ static PyMethodDef spamdict_methods[] = {
 	 	PyDoc_STR("setstate(state)")},
 	{NULL,	NULL},
 };
+
+static PyTypeObject spamdict_type;
 
 static int
 spamdict_init(spamdictobject *self, PyObject *args, PyObject *kwds)

@@ -61,6 +61,7 @@ typedef struct {
 	SSL_CTX* 	ctx;
 	SSL*     	ssl;
 	X509*    	server_cert;
+	BIO*		sbio;
 	char    	server[X509_NAME_MAXLEN];
 	char		issuer[X509_NAME_MAXLEN];
 
@@ -189,8 +190,10 @@ newPySSLObject(PySocketSockObject *Sock, char *key_file, char *cert_file)
 	int sockstate;
 
 	self = PyObject_New(PySSLObject, &PySSL_Type); /* Create new object */
-	if (self == NULL)
+	if (self == NULL) {
+		PyErr_SetString(PySSLErrorObject, "newPySSLObject error");
 		return NULL;
+	}
 	memset(self->server, '\0', sizeof(char) * X509_NAME_MAXLEN);
 	memset(self->issuer, '\0', sizeof(char) * X509_NAME_MAXLEN);
 	self->server_cert = NULL;
@@ -270,7 +273,7 @@ newPySSLObject(PySocketSockObject *Sock, char *key_file, char *cert_file)
 		} else {
 			sockstate = SOCKET_OPERATION_OK;
 		}
-	        if (sockstate == SOCKET_HAS_TIMED_OUT) {
+	    if (sockstate == SOCKET_HAS_TIMED_OUT) {
 			PyErr_SetString(PySSLErrorObject, "The connect operation timed out");
 			goto fail;
 		} else if (sockstate == SOCKET_HAS_BEEN_CLOSED) {
@@ -463,7 +466,7 @@ static PyObject *PySSL_SSLwrite(PySSLObject *self, PyObject *args)
 		} else {
 			sockstate = SOCKET_OPERATION_OK;
 		}
-	        if (sockstate == SOCKET_HAS_TIMED_OUT) {
+	    if (sockstate == SOCKET_HAS_TIMED_OUT) {
 			PyErr_SetString(PySSLErrorObject, "The write operation timed out");
 			return NULL;
 		} else if (sockstate == SOCKET_HAS_BEEN_CLOSED) {
@@ -532,7 +535,7 @@ static PyObject *PySSL_SSLread(PySSLObject *self, PyObject *args)
 		} else {
 			sockstate = SOCKET_OPERATION_OK;
 		}
-	        if (sockstate == SOCKET_HAS_TIMED_OUT) {
+	    if (sockstate == SOCKET_HAS_TIMED_OUT) {
 			PyErr_SetString(PySSLErrorObject, "The read operation timed out");
 			Py_DECREF(buf);
 			return NULL;
