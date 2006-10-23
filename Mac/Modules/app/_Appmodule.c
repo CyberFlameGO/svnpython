@@ -5,22 +5,32 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Appearance.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
+
 
 
 int ThemeButtonDrawInfo_Convert(PyObject *v, ThemeButtonDrawInfo *p_itself)
 {
-        return PyArg_Parse(v, "(iHH)", &p_itself->state, &p_itself->value, &p_itself->adornment);
+	return PyArg_Parse(v, "(iHH)", &p_itself->state, &p_itself->value, &p_itself->adornment);
 }
 
 
@@ -45,7 +55,6 @@ PyObject *ThemeDrawingStateObj_New(ThemeDrawingState itself)
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int ThemeDrawingStateObj_Convert(PyObject *v, ThemeDrawingState *p_itself)
 {
 	if (!ThemeDrawingStateObj_Check(v))
@@ -116,16 +125,16 @@ static PyMethodDef ThemeDrawingStateObj_methods[] = {
 
 #define ThemeDrawingStateObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *ThemeDrawingStateObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *ThemeDrawingStateObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	ThemeDrawingState itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, ThemeDrawingStateObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((ThemeDrawingStateObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, ThemeDrawingStateObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((ThemeDrawingStateObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define ThemeDrawingStateObj_tp_free PyObject_Del

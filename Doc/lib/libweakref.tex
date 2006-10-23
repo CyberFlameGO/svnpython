@@ -10,8 +10,6 @@
 
 \versionadded{2.1}
 
-% When making changes to the examples in this file, be sure to update
-% Lib/test/test_weakref.py::libreftest too!
 
 The \module{weakref} module allows the Python programmer to create
 \dfn{weak references} to objects.
@@ -50,37 +48,18 @@ by the \module{weakref} module for the benefit of advanced uses.
 
 Not all objects can be weakly referenced; those objects which can
 include class instances, functions written in Python (but not in C),
-methods (both bound and unbound), sets, frozensets, file objects,
-generators, type objects, DBcursor objects from the \module{bsddb} module,
-sockets, arrays, deques, and regular expression pattern objects.
-\versionchanged[Added support for files, sockets, arrays, and patterns]{2.4}
+and methods (both bound and unbound).  Extension types can easily
+be made to support weak references; see section \ref{weakref-extension},
+``Weak References in Extension Types,'' for more information.
 
-Several builtin types such as \class{list} and \class{dict} do not
-directly support weak references but can add support through subclassing:
 
-\begin{verbatim}
-class Dict(dict):
-    pass
-
-obj = Dict(red=1, green=2, blue=3)   # this object is weak referencable
-\end{verbatim}
-
-Extension types can easily be made to support weak references; see
-``\ulink{Weak Reference Support}{../ext/weakref-support.html}'' in
-\citetitle[../ext/ext.html]{Extending and Embedding the Python
-Interpreter}.
-% The referenced section used to appear in this document with the
-% \label weakref-extension.  It would be good to be able to generate a
-% redirect for the corresponding HTML page (weakref-extension.html)
-% for on-line versions of this document.
-
-\begin{classdesc}{ref}{object\optional{, callback}}
+\begin{funcdesc}{ref}{object\optional{, callback}}
   Return a weak reference to \var{object}.  The original object can be
   retrieved by calling the reference object if the referent is still
   alive; if the referent is no longer alive, calling the reference
   object will cause \constant{None} to be returned.  If \var{callback} is
-  provided and not \constant{None}, and the returned weakref object is
-  still alive, the callback will be called when the object is about to be
+  provided and not \constant{None},
+  it will be called when the object is about to be
   finalized; the weak reference object will be passed as the only
   parameter to the callback; the referent will no longer be available.
 
@@ -106,11 +85,7 @@ Interpreter}.
   \var{callback}).  If either referent has been deleted, the
   references are equal only if the reference objects are the same
   object.
-
-  \versionchanged[This is now a subclassable type rather than a
-                  factory function; it derives from \class{object}]
-                  {2.4}
-\end{classdesc}
+\end{funcdesc}
 
 \begin{funcdesc}{proxy}{object\optional{, callback}}
   Return a proxy to \var{object} which uses a weak reference.  This
@@ -151,24 +126,6 @@ Interpreter}.
         to vanish "by magic" (as a side effect of garbage collection).}
 \end{classdesc}
 
-\class{WeakKeyDictionary} objects have the following additional
-methods.  These expose the internal references directly.  The
-references are not guaranteed to be ``live'' at the time they are
-used, so the result of calling the references needs to be checked
-before being used.  This can be used to avoid creating references that
-will cause the garbage collector to keep the keys around longer than
-needed.
-
-\begin{methoddesc}{iterkeyrefs}{}
-  Return an iterator that yields the weak references to the keys.
-  \versionadded{2.5}
-\end{methoddesc}
-
-\begin{methoddesc}{keyrefs}{}
-  Return a list of weak references to the keys.
-  \versionadded{2.5}
-\end{methoddesc}
-
 \begin{classdesc}{WeakValueDictionary}{\optional{dict}}
   Mapping class that references values weakly.  Entries in the
   dictionary will be discarded when no strong reference to the value
@@ -181,21 +138,6 @@ needed.
         program during iteration may cause items in the dictionary
         to vanish "by magic" (as a side effect of garbage collection).}
 \end{classdesc}
-
-\class{WeakValueDictionary} objects have the following additional
-methods.  These method have the same issues as the
-\method{iterkeyrefs()} and \method{keyrefs()} methods of
-\class{WeakKeyDictionary} objects.
-
-\begin{methoddesc}{itervaluerefs}{}
-  Return an iterator that yields the weak references to the values.
-  \versionadded{2.5}
-\end{methoddesc}
-
-\begin{methoddesc}{valuerefs}{}
-  Return a list of weak references to the values.
-  \versionadded{2.5}
-\end{methoddesc}
 
 \begin{datadesc}{ReferenceType}
   The type object for weak references objects.
@@ -267,7 +209,7 @@ this pattern:
 o = r()
 if o is None:
     # referent has been garbage collected
-    print "Object has been deallocated; can't frobnicate."
+    print "Object has been allocated; can't frobnicate."
 else:
     print "Object is still live!"
     o.do_something_useful()
@@ -279,38 +221,6 @@ become invalidated before the weak reference is called; the
 idiom shown above is safe in threaded applications as well as
 single-threaded applications.
 
-Specialized versions of \class{ref} objects can be created through
-subclassing.  This is used in the implementation of the
-\class{WeakValueDictionary} to reduce the memory overhead for each
-entry in the mapping.  This may be most useful to associate additional
-information with a reference, but could also be used to insert
-additional processing on calls to retrieve the referent.
-
-This example shows how a subclass of \class{ref} can be used to store
-additional information about an object and affect the value that's
-returned when the referent is accessed:
-
-\begin{verbatim}
-import weakref
-
-class ExtendedRef(weakref.ref):
-    def __init__(self, ob, callback=None, **annotations):
-        super(ExtendedRef, self).__init__(ob, callback)
-        self.__counter = 0
-        for k, v in annotations.iteritems():
-            setattr(self, k, v)
-
-    def __call__(self):
-        """Return a pair containing the referent and the number of
-        times the reference has been called.
-        """
-        ob = super(ExtendedRef, self).__call__()
-        if ob is not None:
-            self.__counter += 1
-            ob = (ob, self.__counter)
-        return ob
-\end{verbatim}
-
 
 \subsection{Example \label{weakref-example}}
 
@@ -320,7 +230,7 @@ then be used in other data structures without forcing the objects to
 remain alive, but the objects can still be retrieved by ID if they
 do.
 
-% Example contributed by Tim Peters.
+% Example contributed by Tim Peters <tim_one@msn.com>.
 \begin{verbatim}
 import weakref
 
@@ -333,4 +243,84 @@ def remember(obj):
 
 def id2obj(oid):
     return _id2obj_dict[oid]
+\end{verbatim}
+
+
+\subsection{Weak References in Extension Types
+            \label{weakref-extension}}
+
+One of the goals of the implementation is to allow any type to
+participate in the weak reference mechanism without incurring the
+overhead on those objects which do not benefit by weak referencing
+(such as numbers).
+
+For an object to be weakly referencable, the extension must include a
+\ctype{PyObject*} field in the instance structure for the use of the
+weak reference mechanism; it must be initialized to \NULL{} by the
+object's constructor.  It must also set the \member{tp_weaklistoffset}
+field of the corresponding type object to the offset of the field.
+Also, it needs to add \constant{Py_TPFLAGS_HAVE_WEAKREFS} to the
+tp_flags slot.  For example, the instance type is defined with the
+following structure:
+
+\begin{verbatim}
+typedef struct {
+    PyObject_HEAD
+    PyClassObject *in_class;       /* The class object */
+    PyObject      *in_dict;        /* A dictionary */
+    PyObject      *in_weakreflist; /* List of weak references */
+} PyInstanceObject;
+\end{verbatim}
+
+The statically-declared type object for instances is defined this way:
+
+\begin{verbatim}
+PyTypeObject PyInstance_Type = {
+    PyObject_HEAD_INIT(&PyType_Type)
+    0,
+    "module.instance",
+
+    /* Lots of stuff omitted for brevity... */
+
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_WEAKREFS   /* tp_flags */
+    0,                                          /* tp_doc */
+    0,                                          /* tp_traverse */
+    0,                                          /* tp_clear */
+    0,                                          /* tp_richcompare */
+    offsetof(PyInstanceObject, in_weakreflist), /* tp_weaklistoffset */
+};
+\end{verbatim}
+
+The type constructor is responsible for initializing the weak reference
+list to \NULL{}:
+
+\begin{verbatim}
+static PyObject *
+instance_new() {
+    /* Other initialization stuff omitted for brevity */
+
+    self->in_weakreflist = NULL;
+
+    return (PyObject *) self;
+}
+\end{verbatim}
+
+The only further addition is that the destructor needs to call the
+weak reference manager to clear any weak references.  This should be
+done before any other parts of the destruction have occurred, but is
+only required if the weak reference list is non-\NULL{}:
+
+\begin{verbatim}
+static void
+instance_dealloc(PyInstanceObject *inst)
+{
+    /* Allocate temporaries if needed, but do not begin
+       destruction just yet.
+     */
+
+    if (inst->in_weakreflist != NULL)
+        PyObject_ClearWeakRefs((PyObject *) inst);
+
+    /* Proceed with object destruction normally. */
+}
 \end{verbatim}

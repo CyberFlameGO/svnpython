@@ -9,11 +9,10 @@
 The \module{binascii} module contains a number of methods to convert
 between binary and various \ASCII-encoded binary
 representations. Normally, you will not use these functions directly
-but use wrapper modules like \refmodule{uu}\refstmodindex{uu},
-\refmodule{base64}\refstmodindex{base64}, or
-\refmodule{binhex}\refstmodindex{binhex} instead. The \module{binascii} module
-contains low-level functions written in C for greater speed
-that are used by the higher-level modules.
+but use wrapper modules like \refmodule{uu}\refstmodindex{uu} or
+\refmodule{binhex}\refstmodindex{binhex} instead, this module solely
+exists because bit-manipulation of large amounts of data is slow in
+Python.
 
 The \module{binascii} module defines the following functions:
 
@@ -52,13 +51,10 @@ will be decoded as spaces.
 Convert binary data to a line(s) of \ASCII{} characters in
 quoted-printable encoding.  The return value is the converted line(s).
 If the optional argument \var{quotetabs} is present and true, all tabs
-and spaces will be encoded.  
-If the optional argument \var{istext} is present and true,
-newlines are not encoded but trailing whitespace will be encoded.
-If the optional argument \var{header} is
+and spaces will be encoded.  If the optional argument \var{header} is
 present and true, spaces will be encoded as underscores per RFC1522.
 If the optional argument \var{header} is present and false, newline
-characters will be encoded as well; otherwise linefeed conversion might
+characters will be encoded as well, otherwise linefeed conversion might
 corrupt the binary data stream.
 \end{funcdesc}
 

@@ -12,27 +12,14 @@ PyAPI_FUNC(PyObject *) PyImport_ExecCodeModule(char *name, PyObject *co);
 PyAPI_FUNC(PyObject *) PyImport_ExecCodeModuleEx(
 	char *name, PyObject *co, char *pathname);
 PyAPI_FUNC(PyObject *) PyImport_GetModuleDict(void);
-PyAPI_FUNC(PyObject *) PyImport_AddModule(const char *name);
-PyAPI_FUNC(PyObject *) PyImport_ImportModule(const char *name);
-PyAPI_FUNC(PyObject *) PyImport_ImportModuleLevel(char *name,
-	PyObject *globals, PyObject *locals, PyObject *fromlist, int level);
-
-/* For DLL compatibility */
-#undef PyImport_ImportModuleEx
+PyAPI_FUNC(PyObject *) PyImport_AddModule(char *name);
+PyAPI_FUNC(PyObject *) PyImport_ImportModule(char *name);
 PyAPI_FUNC(PyObject *) PyImport_ImportModuleEx(
 	char *name, PyObject *globals, PyObject *locals, PyObject *fromlist);
-#define PyImport_ImportModuleEx(n, g, l, f) \
-	PyImport_ImportModuleLevel(n, g, l, f, -1)
-
 PyAPI_FUNC(PyObject *) PyImport_Import(PyObject *name);
 PyAPI_FUNC(PyObject *) PyImport_ReloadModule(PyObject *m);
 PyAPI_FUNC(void) PyImport_Cleanup(void);
 PyAPI_FUNC(int) PyImport_ImportFrozenModule(char *);
-
-PyAPI_FUNC(struct filedescr *) _PyImport_FindModule(
-	const char *, PyObject *, char *, size_t, FILE **, PyObject **);
-PyAPI_FUNC(int) _PyImport_IsScript(struct filedescr *);
-PyAPI_FUNC(void) _PyImport_ReInitLock(void);
 
 PyAPI_FUNC(PyObject *)_PyImport_FindExtension(char *, char *);
 PyAPI_FUNC(PyObject *)_PyImport_FixupExtension(char *, char *);

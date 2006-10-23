@@ -7,13 +7,19 @@ The interface consists of a single function:
         readmodule_ex(module [, path])
 where module is the name of a Python module, and path is an optional
 list of directories where the module is to be searched.  If present,
-path is prepended to the system search path sys.path.  The return
-value is a dictionary.  The keys of the dictionary are the names of
-the classes defined in the module (including classes that are defined
-via the from XXX import YYY construct).  The values are class
-instances of the class Class defined here.  One special key/value pair
-is present for packages: the key '__path__' has a list as its value
-which contains the package search path.
+path is prepended to the system search path sys.path.  The return value
+is a dictionary.  The keys of the dictionary are the names of the
+classes and top-level functions defined in the module (including ones
+that are defined via the from XXX import YYY construct).  The values are
+instances of the classes Class and Function defined here.  One special
+key/value pair is present for packages: the key '__path__' has as its
+value a list which contains the package search path.
+
+(For compatibility, a function readmodule is also defined: it works just
+like readmodule_ex, but the dictionary it returns has only key/value
+pairs whose value is an instance of class Class, _not_ ones for which it
+would be an instance of Function. nor the special key/value pair for key
+'__path__' as described in the previous paragraph).
 
 A class is described by the class Class in this module.  Instances
 of this class have the following instance variables:
@@ -34,16 +40,15 @@ shouldn't happen often.
 A function is described by the class Function in this module.
 Instances of this class have the following instance variables:
         module -- the module name
-        name -- the name of the class
-        file -- the file in which the class was defined
-        lineno -- the line in the file on which the class statement occurred
+        name -- the name of the function
+        file -- the file in which the function was defined
+        lineno -- the line in the file on which the def statement occurred
 """
 
 import sys
 import imp
 import tokenize # Python tokenizer
-from token import NAME, DEDENT, NEWLINE, OP
-from operator import itemgetter
+from token import NAME, DEDENT, NEWLINE
 
 __all__ = ["readmodule", "readmodule_ex", "Class", "Function"]
 
@@ -172,7 +177,7 @@ def _readmodule(module, path, inpackage=None):
                     # else it's a nested def
                 else:
                     # it's a function
-                    dict[meth_name] = Function(fullmodule, meth_name, file, lineno)
+                    dict[meth_name] = Function(module, meth_name, file, lineno)
                 stack.append((None, thisindent)) # Marker for nested fns
             elif token == 'class':
                 lineno, thisindent = start
@@ -219,12 +224,10 @@ def _readmodule(module, path, inpackage=None):
                                 break
                         elif token == ',' and level == 1:
                             pass
-                        # only use NAME and OP (== dot) tokens for type name
-                        elif tokentype in (NAME, OP) and level == 1:
+                        else:
                             super.append(token)
-                        # expressions in the base list are not supported
                     inherit = names
-                cur_class = Class(fullmodule, class_name, inherit, file, lineno)
+                cur_class = Class(module, class_name, inherit, file, lineno)
                 if not stack:
                     dict[class_name] = cur_class
                 stack.append((cur_class, thisindent))
@@ -329,7 +332,8 @@ def _main():
     for obj in objs:
         if isinstance(obj, Class):
             print "class", obj.name, obj.super, obj.lineno
-            methods = sorted(obj.methods.iteritems(), key=itemgetter(1))
+            methods = obj.methods.items()
+            methods.sort(lambda a, b: cmp(a[1], b[1]))
             for name, lineno in methods:
                 if name != "__path__":
                     print "  def", name, lineno

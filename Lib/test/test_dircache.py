@@ -5,12 +5,13 @@
 
 import unittest
 from test.test_support import run_unittest, TESTFN
-import dircache, os, time, sys, tempfile
+import dircache, os, time, sys
 
 
 class DircacheTests(unittest.TestCase):
     def setUp(self):
-        self.tempdir = tempfile.mkdtemp()
+        self.tempdir = TESTFN+"_dir"
+        os.mkdir(self.tempdir)
 
     def tearDown(self):
         for fname in os.listdir(self.tempdir):
@@ -46,7 +47,7 @@ class DircacheTests(unittest.TestCase):
 
         if sys.platform[:3] not in ('win', 'os2'):
             # Sadly, dircache has the same granularity as stat.mtime, and so
-            # can't notice any changes that occurred within 1 sec of the last
+            # can't notice any changes that occured within 1 sec of the last
             # time it examined a directory.
             time.sleep(1)
             self.writeTemp("test1")
@@ -55,7 +56,7 @@ class DircacheTests(unittest.TestCase):
             self.assert_(dircache.listdir(self.tempdir) is entries)
 
         ## UNSUCCESSFUL CASES
-        self.assertRaises(OSError, dircache.listdir, self.tempdir+"_nonexistent")
+        self.assertEquals(dircache.listdir(self.tempdir+"_nonexistent"), [])
 
     def test_annotate(self):
         self.writeTemp("test2")

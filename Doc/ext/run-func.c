@@ -20,8 +20,11 @@ main(int argc, char *argv[])
     Py_DECREF(pName);
 
     if (pModule != NULL) {
-        pFunc = PyObject_GetAttrString(pModule, argv[2]);
-        /* pFunc is a new reference */
+        pDict = PyModule_GetDict(pModule);
+        /* pDict is a borrowed reference */
+
+        pFunc = PyDict_GetItemString(pDict, argv[2]);
+        /* pFun: Borrowed reference */
 
         if (pFunc && PyCallable_Check(pFunc)) {
             pArgs = PyTuple_New(argc - 3);
@@ -43,19 +46,18 @@ main(int argc, char *argv[])
                 Py_DECREF(pValue);
             }
             else {
-                Py_DECREF(pFunc);
                 Py_DECREF(pModule);
                 PyErr_Print();
                 fprintf(stderr,"Call failed\n");
                 return 1;
             }
+            /* pDict and pFunc are borrowed and must not be Py_DECREF-ed */
         }
         else {
             if (PyErr_Occurred())
                 PyErr_Print();
             fprintf(stderr, "Cannot find function \"%s\"\n", argv[2]);
         }
-        Py_XDECREF(pFunc);
         Py_DECREF(pModule);
     }
     else {

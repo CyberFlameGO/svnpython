@@ -1,5 +1,5 @@
 f = Function(void, 'SetPort',
-        (GrafPtr, 'thePort', InMode),
+	(GrafPtr, 'thePort', InMode),
 )
 functions.append(f)
 
@@ -156,3 +156,4 @@ f = Function(void, 'DrawText',
     (short, 'byteCount', InMode),
 )
 functions.append(f)
+

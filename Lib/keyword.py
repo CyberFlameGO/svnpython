@@ -15,7 +15,6 @@ __all__ = ["iskeyword", "kwlist"]
 kwlist = [
 #--start keywords--
         'and',
-        'as',
         'assert',
         'break',
         'class',
@@ -43,12 +42,15 @@ kwlist = [
         'return',
         'try',
         'while',
-        'with',
         'yield',
 #--end keywords--
         ]
 
-iskeyword = frozenset(kwlist).__contains__
+kwdict = {}
+for keyword in kwlist:
+    kwdict[keyword] = 1
+
+iskeyword = kwdict.has_key
 
 def main():
     import sys, re
@@ -65,7 +67,7 @@ def main():
     while 1:
         line = fp.readline()
         if not line: break
-        if '{1, "' in line:
+        if line.find('{1, "') > -1:
             match = strprog.search(line)
             if match:
                 lines.append("        '" + match.group(1) + "',\n")

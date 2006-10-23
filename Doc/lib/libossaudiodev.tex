@@ -68,7 +68,7 @@ raises \exception{IOError}.  Errors detected directly by
 Open an audio device and return an OSS audio device object.  This
 object supports many file-like methods, such as \method{read()},
 \method{write()}, and \method{fileno()} (although there are subtle
-differences between conventional \UNIX{} read/write semantics and those of
+differences between conventional Unix read/write semantics and those of
 OSS audio devices).  It also supports a number of audio-specific
 methods; see below for the complete list of methods.
 
@@ -115,7 +115,7 @@ three audio parameters at once.  This is more convenient, but may not be
 as flexible in all cases.
 
 The audio device objects returned by \function{open()} define the
-following methods and (read-only) attributes:
+following methods:
 
 \begin{methoddesc}[audio device]{close}{}
 Explicitly close the audio device.  When you are done writing to or
@@ -166,7 +166,7 @@ is no way to return it to blocking mode.
 
 \begin{methoddesc}[audio device]{getfmts}{}
 Return a bitmask of the audio output formats supported by the
-soundcard.  Some of the formats supported by OSS are:
+soundcard.  On a typical Linux system, these formats are:
 
 \begin{tableii}{l|l}{constant}{Format}{Description}
 \lineii{AFMT_MU_LAW}
@@ -180,22 +180,21 @@ soundcard.  Some of the formats supported by OSS are:
 \lineii{AFMT_U8}
        {Unsigned, 8-bit audio}
 \lineii{AFMT_S16_LE}
-       {Signed, 16-bit audio, little-endian byte order (as used by
+       {Unsigned, 16-bit audio, little-endian byte order (as used by
         Intel processors)}
 \lineii{AFMT_S16_BE}
-       {Signed, 16-bit audio, big-endian byte order (as used by 68k,
+       {Unsigned, 16-bit audio, big-endian byte order (as used by 68k,
         PowerPC, Sparc)}
 \lineii{AFMT_S8}
        {Signed, 8 bit audio}
 \lineii{AFMT_U16_LE}
-       {Unsigned, 16-bit little-endian audio}
+       {Signed, 16-bit little-endian audio}
 \lineii{AFMT_U16_BE}
-       {Unsigned, 16-bit big-endian audio}
+       {Signed, 16-bit big-endian audio}
 \end{tableii}
-Consult the OSS documentation for a full list of audio formats, and note
-that most devices support only a subset of these formats.  Some older
-devices only support \constant{AFMT_U8}; the most common format used
-today is \constant{AFMT_S16_LE}.
+Most systems support only a subset of these formats.  Many devices only
+support \constant{AFMT_U8}; the most common format used today is
+\constant{AFMT_S16_LE}.
 \end{methoddesc}
 
 \begin{methoddesc}[audio device]{setfmt}{format}
@@ -262,7 +261,7 @@ see if each parameter was actually set to the requested value, and
 raises \exception{OSSAudioError} if not.  Returns a tuple (\var{format},
 \var{nchannels}, \var{samplerate}) indicating the parameter values that
 were actually set by the device driver (i.e., the same as the return
-values of \method{setfmt()}, \method{channels()}, and \method{speed()}).
+valus of \method{setfmt()}, \method{channels()}, and \method{speed()}).
 
 For example,
 \begin{verbatim}
@@ -290,28 +289,13 @@ Returns the number of samples that could be queued into the hardware
 buffer to be played without blocking.
 \end{methoddesc}
 
-Audio device objects also support several read-only attributes:
-
-\begin{memberdesc}[audio device]{closed}{}
-Boolean indicating whether the device has been closed.
-\end{memberdesc}
-
-\begin{memberdesc}[audio device]{name}{}
-String containing the name of the device file.
-\end{memberdesc}
-
-\begin{memberdesc}[audio device]{mode}{}
-The I/O mode for the file, either \code{"r"}, \code{"rw"}, or \code{"w"}.
-\end{memberdesc}
-
-
 \subsection{Mixer Device Objects \label{mixer-device-objects}}
 
 The mixer object provides two file-like methods:
 
 \begin{methoddesc}[mixer device]{close}{}
 This method closes the open mixer device file.  Any further attempts to
-use the mixer after this file is closed will raise an \exception{IOError}.
+use the mixer after this file is closed will raise an IOError.
 \end{methoddesc}
 
 \begin{methoddesc}[mixer device]{fileno}{}

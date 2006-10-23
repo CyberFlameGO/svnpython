@@ -500,15 +500,15 @@ def complexes():
         __str__ = __repr__
 
     a = Number(3.14, prec=6)
-    vereq(repr(a), "3.14")
+    vereq(`a`, "3.14")
     vereq(a.prec, 6)
 
     a = Number(a, prec=2)
-    vereq(repr(a), "3.1")
+    vereq(`a`, "3.1")
     vereq(a.prec, 2)
 
     a = Number(234.5)
-    vereq(repr(a), "234.5")
+    vereq(`a`, "234.5")
     vereq(a.prec, 12)
 
 def spamlists():
@@ -691,13 +691,13 @@ def metaclass():
     class _instance(object):
         pass
     class M2(object):
-        @staticmethod
         def __new__(cls, name, bases, dict):
             self = object.__new__(cls)
             self.name = name
             self.bases = bases
             self.dict = dict
             return self
+        __new__ = staticmethod(__new__)
         def __call__(self):
             it = _instance()
             # Early binding of methods
@@ -1493,14 +1493,6 @@ def classmethods():
     else:
         raise TestFailed, "classmethod should check for callability"
 
-    # Verify that classmethod() doesn't allow keyword args
-    try:
-        classmethod(f, kw=1)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "classmethod shouldn't accept keyword args"
-
 def classmethods_in_c():
     if verbose: print "Testing C-based class methods..."
     import xxsubtype as spam
@@ -1643,37 +1635,6 @@ def altmro():
     vereq(X.__mro__, (object, A, C, B, D, X))
     vereq(X().f(), "A")
 
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [self, dict, object]
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "devious mro() return not caught"
-
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [1]
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "non-class mro() return not caught"
-
-    try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return 1
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "non-sequence mro() return not caught"
-
-
 def overloading():
     if verbose: print "Testing operator overloading..."
 
@@ -1763,9 +1724,7 @@ def specials():
     c1 = C()
     c2 = C()
     verify(not not c1)
-    verify(id(c1) != id(c2))
-    hash(c1)
-    hash(c2)
+    vereq(hash(c1), id(c1))
     vereq(cmp(c1, c2), cmp(id(c1), id(c2)))
     vereq(c1, c1)
     verify(c1 != c2)
@@ -1787,9 +1746,7 @@ def specials():
     d1 = D()
     d2 = D()
     verify(not not d1)
-    verify(id(d1) != id(d2))
-    hash(d1)
-    hash(d2)
+    vereq(hash(d1), id(d1))
     vereq(cmp(d1, d2), cmp(id(d1), id(d2)))
     vereq(d1, d1)
     verify(d1 != d2)
@@ -2012,28 +1969,6 @@ def properties():
     else:
         raise TestFailed, "expected ZeroDivisionError from bad property"
 
-    class E(object):
-        def getter(self):
-            "getter method"
-            return 0
-        def setter(self, value):
-            "setter method"
-            pass
-        prop = property(getter)
-        vereq(prop.__doc__, "getter method")
-        prop2 = property(fset=setter)
-        vereq(prop2.__doc__, None)
-
-    # this segfaulted in 2.5b2
-    try:
-        import _testcapi
-    except ImportError:
-        pass
-    else:
-        class X(object):
-            p = property(_testcapi.test_with_docstring)
-
-
 def supers():
     if verbose: print "Testing super..."
 
@@ -2136,19 +2071,12 @@ def supers():
         aProp = property(lambda self: "foo")
 
     class Sub(Base):
-        @classmethod
         def test(klass):
             return super(Sub,klass).aProp
+        test = classmethod(test)
 
     veris(Sub.test(), Base.aProp)
 
-    # Verify that super() doesn't allow keyword args
-    try:
-        super(Base, kw=1)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "super shouldn't accept keyword args"
 
 def inherits():
     if verbose: print "Testing inheritance from basic types..."
@@ -2364,6 +2292,22 @@ def inherits():
     vereq(s.center(len(s)), base)
     verify(s.lower().__class__ is str)
     vereq(s.lower(), base)
+
+    s = madstring("x y")
+    vereq(s, "x y")
+    verify(intern(s).__class__ is str)
+    verify(intern(s) is intern("x y"))
+    vereq(intern(s), "x y")
+
+    i = intern("y x")
+    s = madstring("y x")
+    vereq(s, i)
+    verify(intern(s).__class__ is str)
+    verify(intern(s) is i)
+
+    s = madstring(i)
+    verify(intern(s).__class__ is str)
+    verify(intern(s) is i)
 
     class madunicode(unicode):
         _rev = None
@@ -2784,7 +2728,7 @@ def setdict():
     def cant(x, dict):
         try:
             x.__dict__ = dict
-        except (AttributeError, TypeError):
+        except TypeError:
             pass
         else:
             raise TestFailed, "shouldn't allow %r.__dict__ = %r" % (x, dict)
@@ -2871,8 +2815,8 @@ def pickles():
             vereq(sorteditems(x.__dict__), sorteditems(a.__dict__))
             vereq(y.__class__, b.__class__)
             vereq(sorteditems(y.__dict__), sorteditems(b.__dict__))
-            vereq(repr(x), repr(a))
-            vereq(repr(y), repr(b))
+            vereq(`x`, `a`)
+            vereq(`y`, `b`)
             if verbose:
                 print "a = x =", a
                 print "b = y =", b
@@ -2905,8 +2849,8 @@ def pickles():
     vereq(sorteditems(x.__dict__), sorteditems(a.__dict__))
     vereq(y.__class__, b.__class__)
     vereq(sorteditems(y.__dict__), sorteditems(b.__dict__))
-    vereq(repr(x), repr(a))
-    vereq(repr(y), repr(b))
+    vereq(`x`, `a`)
+    vereq(`y`, `b`)
     if verbose:
         print "a = x =", a
         print "b = y =", b
@@ -3038,13 +2982,13 @@ def binopoverride():
             else:
                 return I(pow(int(other), int(self), int(mod)))
 
-    vereq(repr(I(1) + I(2)), "I(3)")
-    vereq(repr(I(1) + 2), "I(3)")
-    vereq(repr(1 + I(2)), "I(3)")
-    vereq(repr(I(2) ** I(3)), "I(8)")
-    vereq(repr(2 ** I(3)), "I(8)")
-    vereq(repr(I(2) ** 3), "I(8)")
-    vereq(repr(pow(I(2), I(3), I(5))), "I(3)")
+    vereq(`I(1) + I(2)`, "I(3)")
+    vereq(`I(1) + 2`, "I(3)")
+    vereq(`1 + I(2)`, "I(3)")
+    vereq(`I(2) ** I(3)`, "I(8)")
+    vereq(`2 ** I(3)`, "I(8)")
+    vereq(`I(2) ** 3`, "I(8)")
+    vereq(`pow(I(2), I(3), I(5))`, "I(3)")
     class S(str):
         def __eq__(self, other):
             return self.lower() == other.lower()
@@ -3060,7 +3004,7 @@ def subclasspropagation():
     class D(B, C):
         pass
     d = D()
-    orig_hash = hash(d) # related to id(d) in platform-dependent ways
+    vereq(hash(d), id(d))
     A.__hash__ = lambda self: 42
     vereq(hash(d), 42)
     C.__hash__ = lambda self: 314
@@ -3076,7 +3020,7 @@ def subclasspropagation():
     del C.__hash__
     vereq(hash(d), 42)
     del A.__hash__
-    vereq(hash(d), orig_hash)
+    vereq(hash(d), id(d))
     d.foo = 42
     d.bar = 42
     vereq(d.foo, 42)
@@ -3187,21 +3131,6 @@ def kwdargs():
     a = []
     list.__init__(a, sequence=[0, 1, 2])
     vereq(a, [0, 1, 2])
-
-def recursive__call__():
-    if verbose: print ("Testing recursive __call__() by setting to instance of "
-                        "class ...")
-    class A(object):
-        pass
-
-    A.__call__ = A()
-    try:
-        A()()
-    except RuntimeError:
-        pass
-    else:
-        raise TestFailed("Recursion limit should have been reached for "
-                         "__call__()")
 
 def delhook():
     if verbose: print "Testing __del__ hook..."
@@ -3402,6 +3331,31 @@ def docdescriptor():
     vereq(OldClass().__doc__, 'object=OldClass instance; type=OldClass')
     vereq(NewClass.__doc__, 'object=None; type=NewClass')
     vereq(NewClass().__doc__, 'object=NewClass instance; type=NewClass')
+
+def string_exceptions():
+    if verbose:
+        print "Testing string exceptions ..."
+
+    # Ensure builtin strings work OK as exceptions.
+    astring = "An exception string."
+    try:
+        raise astring
+    except astring:
+        pass
+    else:
+        raise TestFailed, "builtin string not usable as exception"
+
+    # Ensure string subclass instances do not.
+    class MyStr(str):
+        pass
+
+    newstring = MyStr("oops -- shouldn't work")
+    try:
+        raise newstring
+    except TypeError:
+        pass
+    except:
+        raise TestFailed, "string subclass allowed as exception"
 
 def copy_setstate():
     if verbose:
@@ -3983,13 +3937,6 @@ def weakref_segfault():
     o.whatever = Provoker(o)
     del o
 
-def wrapper_segfault():
-    # SF 927248: deeply nested wrappers could cause stack overflow
-    f = lambda:None
-    for i in xrange(1000000):
-        f = f.__call__
-    f = None
-
 # Fix SF #762455, segfault when sys.stdout is changed in getattr
 def filefault():
     if verbose:
@@ -4005,147 +3952,8 @@ def filefault():
     except RuntimeError:
         pass
 
-def vicious_descriptor_nonsense():
-    # A potential segfault spotted by Thomas Wouters in mail to
-    # python-dev 2003-04-17, turned into an example & fixed by Michael
-    # Hudson just less than four months later...
-    if verbose:
-        print "Testing vicious_descriptor_nonsense..."
-
-    class Evil(object):
-        def __hash__(self):
-            return hash('attr')
-        def __eq__(self, other):
-            del C.attr
-            return 0
-
-    class Descr(object):
-        def __get__(self, ob, type=None):
-            return 1
-
-    class C(object):
-        attr = Descr()
-
-    c = C()
-    c.__dict__[Evil()] = 0
-
-    vereq(c.attr, 1)
-    # this makes a crash more likely:
-    import gc; gc.collect()
-    vereq(hasattr(c, 'attr'), False)
-
-def test_init():
-    # SF 1155938
-    class Foo(object):
-        def __init__(self):
-            return 10
-    try:
-        Foo()
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "did not test __init__() for None return"
-
-def methodwrapper():
-    # <type 'method-wrapper'> did not support any reflection before 2.5
-    if verbose:
-        print "Testing method-wrapper objects..."
-
-    l = []
-    vereq(l.__add__, l.__add__)
-    vereq(l.__add__, [].__add__)
-    verify(l.__add__ != [5].__add__)
-    verify(l.__add__ != l.__mul__)
-    verify(l.__add__.__name__ == '__add__')
-    verify(l.__add__.__self__ is l)
-    verify(l.__add__.__objclass__ is list)
-    vereq(l.__add__.__doc__, list.__add__.__doc__)
-    try:
-        hash(l.__add__)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed("no TypeError from hash([].__add__)")
-
-    t = ()
-    t += (7,)
-    vereq(t.__add__, (7,).__add__)
-    vereq(hash(t.__add__), hash((7,).__add__))
-
-def notimplemented():
-    # all binary methods should be able to return a NotImplemented
-    if verbose:
-        print "Testing NotImplemented..."
-
-    import sys
-    import types
-    import operator
-
-    def specialmethod(self, other):
-        return NotImplemented
-
-    def check(expr, x, y):
-        try:
-            exec expr in {'x': x, 'y': y, 'operator': operator}
-        except TypeError:
-            pass
-        else:
-            raise TestFailed("no TypeError from %r" % (expr,))
-
-    N1 = sys.maxint + 1L    # might trigger OverflowErrors instead of TypeErrors
-    N2 = sys.maxint         # if sizeof(int) < sizeof(long), might trigger
-                            #   ValueErrors instead of TypeErrors
-    for metaclass in [type, types.ClassType]:
-        for name, expr, iexpr in [
-                ('__add__',      'x + y',                   'x += y'),
-                ('__sub__',      'x - y',                   'x -= y'),
-                ('__mul__',      'x * y',                   'x *= y'),
-                ('__truediv__',  'operator.truediv(x, y)',  None),
-                ('__floordiv__', 'operator.floordiv(x, y)', None),
-                ('__div__',      'x / y',                   'x /= y'),
-                ('__mod__',      'x % y',                   'x %= y'),
-                ('__divmod__',   'divmod(x, y)',            None),
-                ('__pow__',      'x ** y',                  'x **= y'),
-                ('__lshift__',   'x << y',                  'x <<= y'),
-                ('__rshift__',   'x >> y',                  'x >>= y'),
-                ('__and__',      'x & y',                   'x &= y'),
-                ('__or__',       'x | y',                   'x |= y'),
-                ('__xor__',      'x ^ y',                   'x ^= y'),
-                ('__coerce__',   'coerce(x, y)',            None)]:
-            if name == '__coerce__':
-                rname = name
-            else:
-                rname = '__r' + name[2:]
-            A = metaclass('A', (), {name: specialmethod})
-            B = metaclass('B', (), {rname: specialmethod})
-            a = A()
-            b = B()
-            check(expr, a, a)
-            check(expr, a, b)
-            check(expr, b, a)
-            check(expr, b, b)
-            check(expr, a, N1)
-            check(expr, a, N2)
-            check(expr, N1, b)
-            check(expr, N2, b)
-            if iexpr:
-                check(iexpr, a, a)
-                check(iexpr, a, b)
-                check(iexpr, b, a)
-                check(iexpr, b, b)
-                check(iexpr, a, N1)
-                check(iexpr, a, N2)
-                iname = '__i' + name[2:]
-                C = metaclass('C', (), {iname: specialmethod})
-                c = C()
-                check(iexpr, c, a)
-                check(iexpr, c, b)
-                check(iexpr, c, N1)
-                check(iexpr, c, N2)
-
 def test_main():
     weakref_segfault() # Must be first, somehow
-    wrapper_segfault()
     do_this_first()
     class_docstrings()
     lists()
@@ -4204,7 +4012,6 @@ def test_main():
     buffer_inherit()
     str_of_str_subclass()
     kwdargs()
-    recursive__call__()
     delhook()
     hashinherit()
     strops()
@@ -4217,6 +4024,7 @@ def test_main():
     funnynew()
     imulbug()
     docdescriptor()
+    string_exceptions()
     copy_setstate()
     slices()
     subtype_resurrection()
@@ -4235,10 +4043,6 @@ def test_main():
     proxysuper()
     carloverre()
     filefault()
-    vicious_descriptor_nonsense()
-    test_init()
-    methodwrapper()
-    notimplemented()
 
     if verbose: print "All OK"
 

@@ -18,13 +18,12 @@ Public functions:       Internaldate2tuple
 # IMAP4_SSL contributed by Tino Lange <Tino.Lange@isg.de> March 2002.
 # GET/SETQUOTA contributed by Andreas Zeidler <az@kreativkombinat.de> June 2002.
 # PROXYAUTH contributed by Rick Holbert <holbert.13@osu.edu> November 2002.
-# GET/SETANNOTATION contributed by Tomas Lindroos <skitta@abo.fi> June 2005.
 
-__version__ = "2.58"
+__version__ = "2.54"
 
 import binascii, os, random, re, socket, sys, time
 
-__all__ = ["IMAP4", "IMAP4_SSL", "IMAP4_stream", "Internaldate2tuple",
+__all__ = ["IMAP4", "IMAP4_SSL", "Internaldate2tuple",
            "Int2AP", "ParseFlags", "Time2Internaldate"]
 
 #       Globals
@@ -47,15 +46,12 @@ Commands = {
         'COPY':         ('SELECTED',),
         'CREATE':       ('AUTH', 'SELECTED'),
         'DELETE':       ('AUTH', 'SELECTED'),
-        'DELETEACL':    ('AUTH', 'SELECTED'),
         'EXAMINE':      ('AUTH', 'SELECTED'),
         'EXPUNGE':      ('SELECTED',),
         'FETCH':        ('SELECTED',),
         'GETACL':       ('AUTH', 'SELECTED'),
-        'GETANNOTATION':('AUTH', 'SELECTED'),
         'GETQUOTA':     ('AUTH', 'SELECTED'),
         'GETQUOTAROOT': ('AUTH', 'SELECTED'),
-        'MYRIGHTS':     ('AUTH', 'SELECTED'),
         'LIST':         ('AUTH', 'SELECTED'),
         'LOGIN':        ('NONAUTH',),
         'LOGOUT':       ('NONAUTH', 'AUTH', 'SELECTED', 'LOGOUT'),
@@ -68,13 +64,11 @@ Commands = {
         'SEARCH':       ('SELECTED',),
         'SELECT':       ('AUTH', 'SELECTED'),
         'SETACL':       ('AUTH', 'SELECTED'),
-        'SETANNOTATION':('AUTH', 'SELECTED'),
         'SETQUOTA':     ('AUTH', 'SELECTED'),
         'SORT':         ('SELECTED',),
         'STATUS':       ('AUTH', 'SELECTED'),
         'STORE':        ('SELECTED',),
         'SUBSCRIBE':    ('AUTH', 'SELECTED'),
-        'THREAD':       ('SELECTED',),
         'UID':          ('SELECTED',),
         'UNSUBSCRIBE':  ('AUTH', 'SELECTED'),
         }
@@ -84,7 +78,7 @@ Commands = {
 Continuation = re.compile(r'\+( (?P<data>.*))?')
 Flags = re.compile(r'.*FLAGS \((?P<flags>[^\)]*)\)')
 InternalDate = re.compile(r'.*INTERNALDATE "'
-        r'(?P<day>[ 0123][0-9])-(?P<mon>[A-Z][a-z][a-z])-(?P<year>[0-9][0-9][0-9][0-9])'
+        r'(?P<day>[ 123][0-9])-(?P<mon>[A-Z][a-z][a-z])-(?P<year>[0-9][0-9][0-9][0-9])'
         r' (?P<hour>[0-9][0-9]):(?P<min>[0-9][0-9]):(?P<sec>[0-9][0-9])'
         r' (?P<zonen>[-+])(?P<zoneh>[0-9][0-9])(?P<zonem>[0-9][0-9])'
         r'"')
@@ -136,10 +130,10 @@ class IMAP4:
             the command re-tried.
     "readonly" exceptions imply the command should be re-tried.
 
-    Note: to use this module, you must read the RFCs pertaining to the
-    IMAP4 protocol, as the semantics of the arguments to each IMAP4
-    command are left to the invoker, not to mention the results. Also,
-    most IMAP servers implement a sub-set of the commands available here.
+    Note: to use this module, you must read the RFCs pertaining
+    to the IMAP4 protocol, as the semantics of the arguments to
+    each IMAP4 command are left to the invoker, not to mention
+    the results.
     """
 
     class error(Exception): pass    # Logical errors - debug required
@@ -155,7 +149,7 @@ class IMAP4:
         self.tagged_commands = {}       # Tagged commands awaiting response
         self.untagged_responses = {}    # {typ: [data, ...], ...}
         self.continuation_response = '' # Last continuation response
-        self.is_readonly = False        # READ-ONLY desired state
+        self.is_readonly = None         # READ-ONLY desired state
         self.tagnum = 0
 
         # Open socket to server.
@@ -165,7 +159,7 @@ class IMAP4:
         # Create unique tag for this session,
         # and compile tagged response matcher.
 
-        self.tagpre = Int2AP(random.randint(4096, 65535))
+        self.tagpre = Int2AP(random.randint(0, 31999))
         self.tagre = re.compile(r'(?P<tag>'
                         + self.tagpre
                         + r'\d+) (?P<type>[A-Z]+) (?P<data>.*)')
@@ -189,14 +183,15 @@ class IMAP4:
         else:
             raise self.error(self.welcome)
 
-        typ, dat = self.capability()
-        if dat == [None]:
+        cap = 'CAPABILITY'
+        self._simple_command(cap)
+        if not cap in self.untagged_responses:
             raise self.error('no CAPABILITY response from server')
-        self.capabilities = tuple(dat[-1].upper().split())
+        self.capabilities = tuple(self.untagged_responses[cap][-1].upper().split())
 
         if __debug__:
             if self.debug >= 3:
-                self._mesg('CAPABILITIES: %r' % (self.capabilities,))
+                self._mesg('CAPABILITIES: %s' % `self.capabilities`)
 
         for version in AllowedVersions:
             if not version in self.capabilities:
@@ -347,15 +342,6 @@ class IMAP4:
         return typ, dat
 
 
-    def capability(self):
-        """(typ, [data]) = <instance>.capability()
-        Fetch capabilities list from server."""
-
-        name = 'CAPABILITY'
-        typ, dat = self._simple_command(name)
-        return self._untagged_response(typ, dat, name)
-
-
     def check(self):
         """Checkpoint mailbox on server.
 
@@ -402,12 +388,6 @@ class IMAP4:
         """
         return self._simple_command('DELETE', mailbox)
 
-    def deleteacl(self, mailbox, who):
-        """Delete the ACLs (remove any rights) set for who on mailbox.
-
-        (typ, [data]) = <instance>.deleteacl(mailbox, who)
-        """
-        return self._simple_command('DELETEACL', mailbox, who)
 
     def expunge(self):
         """Permanently remove deleted items from selected mailbox.
@@ -447,14 +427,6 @@ class IMAP4:
         return self._untagged_response(typ, dat, 'ACL')
 
 
-    def getannotation(self, mailbox, entry, attribute):
-        """(typ, [data]) = <instance>.getannotation(mailbox, entry, attribute)
-        Retrieve ANNOTATIONs."""
-
-        typ, dat = self._simple_command('GETANNOTATION', mailbox, entry, attribute)
-        return self._untagged_response(typ, dat, 'ANNOTATION')
-
-
     def getquota(self, root):
         """Get the quota root's resource usage and limits.
 
@@ -471,7 +443,7 @@ class IMAP4:
 
         (typ, [[QUOTAROOT responses...], [QUOTA responses]]) = <instance>.getquotaroot(mailbox)
         """
-        typ, dat = self._simple_command('GETQUOTAROOT', mailbox)
+        typ, dat = self._simple_command('GETQUOTA', mailbox)
         typ, quota = self._untagged_response(typ, dat, 'QUOTA')
         typ, quotaroot = self._untagged_response(typ, dat, 'QUOTAROOT')
         return typ, [quotaroot, quota]
@@ -545,13 +517,6 @@ class IMAP4:
         typ, dat = self._simple_command(name, directory, pattern)
         return self._untagged_response(typ, dat, name)
 
-    def myrights(self, mailbox):
-        """Show my ACLs for a mailbox (i.e. the rights that I have on mailbox).
-
-        (typ, [data]) = <instance>.myrights(mailbox)
-        """
-        typ,dat = self._simple_command('MYRIGHTS', mailbox)
-        return self._untagged_response(typ, dat, 'MYRIGHTS')
 
     def namespace(self):
         """ Returns IMAP namespaces ala rfc2342
@@ -622,21 +587,19 @@ class IMAP4:
         return self._untagged_response(typ, dat, name)
 
 
-    def select(self, mailbox='INBOX', readonly=False):
+    def select(self, mailbox='INBOX', readonly=None):
         """Select a mailbox.
 
         Flush all untagged responses.
 
-        (typ, [data]) = <instance>.select(mailbox='INBOX', readonly=False)
+        (typ, [data]) = <instance>.select(mailbox='INBOX', readonly=None)
 
         'data' is count of messages in mailbox ('EXISTS' response).
-
-        Mandated responses are ('FLAGS', 'EXISTS', 'RECENT', 'UIDVALIDITY'), so
-        other responses should be obtained via <instance>.response('FLAGS') etc.
         """
+        # Mandated responses are ('FLAGS', 'EXISTS', 'RECENT', 'UIDVALIDITY')
         self.untagged_responses = {}    # Flush old responses.
         self.is_readonly = readonly
-        if readonly:
+        if readonly is not None:
             name = 'EXAMINE'
         else:
             name = 'SELECT'
@@ -657,17 +620,9 @@ class IMAP4:
     def setacl(self, mailbox, who, what):
         """Set a mailbox acl.
 
-        (typ, [data]) = <instance>.setacl(mailbox, who, what)
+        (typ, [data]) = <instance>.create(mailbox, who, what)
         """
         return self._simple_command('SETACL', mailbox, who, what)
-
-
-    def setannotation(self, *args):
-        """(typ, [data]) = <instance>.setannotation(mailbox[, entry, attribute]+)
-        Set ANNOTATIONs."""
-
-        typ, dat = self._simple_command('SETANNOTATION', *args)
-        return self._untagged_response(typ, dat, 'ANNOTATION')
 
 
     def setquota(self, root, limits):
@@ -722,16 +677,6 @@ class IMAP4:
         (typ, [data]) = <instance>.subscribe(mailbox)
         """
         return self._simple_command('SUBSCRIBE', mailbox)
-
-
-    def thread(self, threading_algorithm, charset, *search_criteria):
-        """IMAPrev1 extension THREAD command.
-
-        (type, [data]) = <instance>.thread(threading_alogrithm, charset, search_criteria, ...)
-        """
-        name = 'THREAD'
-        typ, dat = self._simple_command(name, threading_algorithm, charset, *search_criteria)
-        return self._untagged_response(typ, dat, name)
 
 
     def uid(self, command, *args):
@@ -1016,7 +961,7 @@ class IMAP4:
         self.mo = cre.match(s)
         if __debug__:
             if self.mo is not None and self.debug >= 5:
-                self._mesg("\tmatched r'%s' => %r" % (cre.pattern, self.mo.groups()))
+                self._mesg("\tmatched r'%s' => %s" % (cre.pattern, `self.mo.groups()`))
         return self.mo is not None
 
 
@@ -1035,9 +980,9 @@ class IMAP4:
 
         if type(arg) is not type(''):
             return arg
-        if len(arg) >= 2 and (arg[0],arg[-1]) in (('(',')'),('"','"')):
+        if (arg[0],arg[-1]) in (('(',')'),('"','"')):
             return arg
-        if arg and self.mustquote.search(arg) is None:
+        if self.mustquote.search(arg) is None:
             return arg
         return self._quote(arg)
 
@@ -1144,24 +1089,21 @@ class IMAP4_SSL(IMAP4):
     def read(self, size):
         """Read 'size' bytes from remote."""
         # sslobj.read() sometimes returns < size bytes
-        chunks = []
-        read = 0
-        while read < size:
-            data = self.sslobj.read(size-read)
-            read += len(data)
-            chunks.append(data)
+        data = self.sslobj.read(size)
+        while len(data) < size:
+            data += self.sslobj.read(size-len(data))
 
-        return ''.join(chunks)
+        return data
 
 
     def readline(self):
         """Read line from remote."""
         # NB: socket.ssl needs a "readline" method, or perhaps a "makefile" method.
-        line = []
+        line = ""
         while 1:
             char = self.sslobj.read(1)
-            line.append(char)
-            if char == "\n": return ''.join(line)
+            line += char
+            if char == "\n": return line
 
 
     def send(self, data):
@@ -1388,7 +1330,7 @@ def Time2Internaldate(date_time):
         zone = -time.altzone
     else:
         zone = -time.timezone
-    return '"' + dt + " %+03d%02d" % divmod(zone//60, 60) + '"'
+    return '"' + dt + " %+03d%02d" % divmod(zone/60, 60) + '"'
 
 
 
@@ -1463,7 +1405,7 @@ if __name__ == '__main__':
         if M.state == 'AUTH':
             test_seq1 = test_seq1[1:]   # Login not needed
         M._mesg('PROTOCOL_VERSION = %s' % M.PROTOCOL_VERSION)
-        M._mesg('CAPABILITIES = %r' % (M.capabilities,))
+        M._mesg('CAPABILITIES = %s' % `M.capabilities`)
 
         for cmd,args in test_seq1:
             run(cmd, args)

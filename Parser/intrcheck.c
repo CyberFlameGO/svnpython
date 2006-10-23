@@ -92,6 +92,14 @@ PyOS_InterruptOccurred(void)
 #endif /* MSDOS && !QUICKWIN */
 
 
+#ifdef macintosh
+
+/* The Mac interrupt code has moved to macglue.c */
+#define OK
+
+#endif /* macintosh */
+
+
 #ifndef OK
 
 /* Default version -- for real operating systems and for Standard C */
@@ -137,7 +145,7 @@ intcatcher(int sig)
 		Py_Exit(1);
 		break;
 	}
-	PyOS_setsig(SIGINT, intcatcher);
+	signal(SIGINT, intcatcher);
 	Py_AddPendingCall(checksignals_witharg, NULL);
 }
 
@@ -146,14 +154,23 @@ static void (*old_siginthandler)(int) = SIG_DFL;
 void
 PyOS_InitInterrupts(void)
 {
-	if ((old_siginthandler = PyOS_setsig(SIGINT, SIG_IGN)) != SIG_IGN)
-		PyOS_setsig(SIGINT, intcatcher);
+	if ((old_siginthandler = signal(SIGINT, SIG_IGN)) != SIG_IGN)
+		signal(SIGINT, intcatcher);
+#ifdef HAVE_SIGINTERRUPT
+	/* This is for SunOS and other modern BSD derivatives.
+	   It means that system calls (like read()) are not restarted
+	   after an interrupt.  This is necessary so interrupting a
+	   read() or readline() call works as expected.
+	   XXX On old BSD (pure 4.2 or older) you may have to do this
+	   differently! */
+	siginterrupt(SIGINT, 1);
+#endif /* HAVE_SIGINTERRUPT */
 }
 
 void
 PyOS_FiniInterrupts(void)
 {
-	PyOS_setsig(SIGINT, old_siginthandler);
+	signal(SIGINT, old_siginthandler);
 }
 
 int

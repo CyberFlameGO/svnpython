@@ -101,7 +101,7 @@ class BinASCIITest(unittest.TestCase):
         self.assertEqual(binascii.a2b_uu("\xff"), "\x00"*31)
         self.assertRaises(binascii.Error, binascii.a2b_uu, "\xff\x00")
         self.assertRaises(binascii.Error, binascii.a2b_uu, "!!!!")
-
+        
         self.assertRaises(binascii.Error, binascii.b2a_uu, 46*"!")
 
     def test_crc32(self):
@@ -147,16 +147,6 @@ class BinASCIITest(unittest.TestCase):
             binascii.b2a_qp("0"*75+"\xff\r\n\xff\r\n\xff"),
             "0"*75+"=\r\n=FF\r\n=FF\r\n=FF"
         )
-
-    def test_empty_string(self):
-        # A test for SF bug #1022953.  Make sure SystemError is not raised.
-        for n in ['b2a_qp', 'a2b_hex', 'b2a_base64', 'a2b_uu', 'a2b_qp',
-                  'b2a_hex', 'unhexlify', 'hexlify', 'crc32', 'b2a_hqx',
-                  'a2b_hqx', 'a2b_base64', 'rlecode_hqx', 'b2a_uu',
-                  'rledecode_hqx']:
-            f = getattr(binascii, n)
-            f('')
-        binascii.crc_hqx('', 0)
 
 def test_main():
     test_support.run_unittest(BinASCIITest)

@@ -5,7 +5,7 @@
 import unittest
 import os, tempfile, re
 
-from test.test_support import TestSkipped, run_unittest, reap_children
+from test.test_support import TestSkipped, run_unittest
 from commands import *
 
 # The module says:
@@ -58,7 +58,6 @@ class CommandTests(unittest.TestCase):
 
 def test_main():
     run_unittest(CommandTests)
-    reap_children()
 
 
 if __name__ == "__main__":

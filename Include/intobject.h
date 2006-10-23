@@ -11,7 +11,7 @@ returns -1 and sets errno to EBADF if the object is not an PyIntObject.
 None of the functions should be applied to nil objects.
 
 The type PyIntObject is (unfortunately) exposed here so we can declare
-_Py_TrueStruct and _Py_ZeroStruct in boolobject.h; don't use this.
+_Py_TrueStruct and _Py_ZeroStruct below; don't use this.
 */
 
 #ifndef Py_INTOBJECT_H
@@ -32,13 +32,10 @@ PyAPI_DATA(PyTypeObject) PyInt_Type;
 
 PyAPI_FUNC(PyObject *) PyInt_FromString(char*, char**, int);
 #ifdef Py_USING_UNICODE
-PyAPI_FUNC(PyObject *) PyInt_FromUnicode(Py_UNICODE*, Py_ssize_t, int);
+PyAPI_FUNC(PyObject *) PyInt_FromUnicode(Py_UNICODE*, int, int);
 #endif
 PyAPI_FUNC(PyObject *) PyInt_FromLong(long);
-PyAPI_FUNC(PyObject *) PyInt_FromSize_t(size_t);
-PyAPI_FUNC(PyObject *) PyInt_FromSsize_t(Py_ssize_t);
 PyAPI_FUNC(long) PyInt_AsLong(PyObject *);
-PyAPI_FUNC(Py_ssize_t) PyInt_AsSsize_t(PyObject *);
 PyAPI_FUNC(unsigned long) PyInt_AsUnsignedLongMask(PyObject *);
 #ifdef HAVE_LONG_LONG
 PyAPI_FUNC(unsigned PY_LONG_LONG) PyInt_AsUnsignedLongLongMask(PyObject *);

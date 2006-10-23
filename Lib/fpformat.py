@@ -88,7 +88,7 @@ def fix(x, digs):
     """Format x as [-]ddd.ddd with 'digs' digits after the point
     and at least one digit before.
     If digs <= 0, the point is suppressed."""
-    if type(x) != type(''): x = repr(x)
+    if type(x) != type(''): x = `x`
     try:
         sign, intpart, fraction, expo = extract(x)
     except NotANumber:
@@ -104,7 +104,7 @@ def sci(x, digs):
     """Format x as [-]d.dddE[+-]ddd with 'digs' digits after the point
     and exactly one digit before.
     If digs is <= 0, one digit is kept and the point is suppressed."""
-    if type(x) != type(''): x = repr(x)
+    if type(x) != type(''): x = `x`
     sign, intpart, fraction, expo = extract(x)
     if not intpart:
         while fraction and fraction[0] == '0':
@@ -126,7 +126,7 @@ def sci(x, digs):
             expo + len(intpart) - 1
     s = sign + intpart
     if digs > 0: s = s + '.' + fraction
-    e = repr(abs(expo))
+    e = `abs(expo)`
     e = '0'*(3-len(e)) + e
     if expo < 0: e = '-' + e
     else: e = '+' + e

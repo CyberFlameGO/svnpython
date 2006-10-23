@@ -76,5 +76,4 @@ def linknames(old, new, link):
             else:
                 os.symlink(linkname, newname)
 
-if __name__ == '__main__':
-    sys.exit(main())
+sys.exit(main())

@@ -24,7 +24,6 @@ Ross Andrus
 Jason Asbahr
 David Ascher
 Peter Åstrand
-Chris AtLee
 John Aycock
 Donovan Baarda
 Attila Babo
@@ -34,13 +33,10 @@ Greg Ball
 Luigi Ballabio
 Michael J. Barber
 Chris Barker
-Quentin Barnes
 Cesar Eduardo Barros
 Des Barry
 Ulf Bartelt
-Nick Bastin
 Jeff Bauer
-Michael R Bax
 Anthony Baxter
 Samuel L. Bayer
 Donald Beaudry
@@ -49,41 +45,31 @@ Neal Becker
 Robin Becker
 Bill Bedford
 Reimer Behrends
-Ben Bell
 Thomas Bellman
 Juan M. Bello Rivas
-Alexander Belopolsky
-Andrew Bennetts
 Andy Bensky
 Michel Van den Bergh
 Eric Beser
-Steven Bethard
 Stephen Bevan
 Ron Bickers
 Dominic Binks
-Philippe Biondi
 Stuart Bishop
 Roy Bixler
-Mike Bland
 Martin Bless
 Pablo Bleyer
 Erik van Blokland
-Eric Blossom
 Finn Bock
 Paul Boddie
 Matthew Boedicker
 David Bolen
-Gregory Bond
 Jurjen Bos
 Peter Bosch
 Eric Bouck
 Thierry Bousch
 Monty Brandenberg
-Georg Brandl
 Terrence Brannon
 Dave Brennan
 Tom Bridgman
-Richard Brodie
 Gary S. Brown
 Daniel Brotsky
 Oleg Broytmann
@@ -93,7 +79,6 @@ Erik de Bueger
 Jan-Hein B"uhrman
 Dick Bulterman
 Bill Bumgarner
-Jimmy Burgett
 Tommy Burnette
 Roger Burnham
 Alastair Burt
@@ -102,7 +87,6 @@ Lee Busby
 Ralph Butler
 Jp Calderone
 Daniel Calvelo
-Tony Campbell
 Brett Cannon
 Mike Carlton
 Terry Carroll
@@ -119,14 +103,12 @@ David Chaum
 Nicolas Chauvat
 Michael Chermside
 Albert Chin-A-Young
-Adal Chiriliuc
 Tom Christiansen
 Vadim Chugunov
 David Cinege
 Mike Clarkson
 Brad Clements
 Steve Clift
-Nick Coghlan
 Josh Cogliati
 Dave Cole
 Benjamin Collar
@@ -134,7 +116,6 @@ Jeffery Collins
 Matt Conway
 David M. Cooke
 Greg Copeland
-Aldo Cortesi
 David Costanzo
 Scott Cotton
 Greg Couch
@@ -156,11 +137,9 @@ John DeGood
 Vincent Delft
 Roger Dev
 Toby Dickenson
-Yves Dionne
 Daniel Dittmar
 Walter Dörwald
 Jaromir Dolecek
-Dima Dorfman
 Cesar Douady
 Dean Draayer
 Fred L. Drake, Jr.
@@ -168,21 +147,17 @@ John DuBois
 Paul Dubois
 Quinn Dunkan
 Robin Dunn
-Luke Dunstan
 Andy Dustman
 Gary Duzan
 Eugene Dvurechenski
 Maxim Dzumanenko
 Hans Eckardt
 Grant Edwards
-John Ehresman
-Andrew Eland
 Lance Ellinghaus
 David Ely
 Jeff Epler
 Tom Epperly
 Stoffel Erasmus
-Jürgen A. Erhard
 Michael Ernst
 Ben Escoto
 Andy Eskilsson
@@ -191,7 +166,6 @@ Carey Evans
 Stephen D Evans
 Tim Everett
 Paul Everitt
-David Everly
 Greg Ewing
 Martijn Faassen
 Andreas Faerber
@@ -202,11 +176,8 @@ Sebastian Fernandez
 Vincent Fiack
 Russell Finn
 Nils Fischbeck
-Frederik Fix
-Matt Fleming
 Hernán Martínez Foffani
 Doug Fort
-John Fouhy
 Martin Franklin
 Robin Friedrich
 Ivan Frohne
@@ -216,13 +187,10 @@ Gyro Funch
 Peter Funk
 Geoff Furnish
 Lele Gaifax
-Yitzchak Gale
 Raymund Galvin
 Nitin Ganatra
 Fred Gansevles
 Lars Marius Garshol
-Dan Gass
-Andrew Gaul
 Stephen M. Gava
 Harry Henry Gebel
 Marius Gedminas
@@ -242,7 +210,6 @@ Dag Gruneau
 Michael Guravage
 Lars Gustäbel
 Barry Haddow
-Václav Haisman
 Paul ten Hagen
 Rasmus Hahn
 Peter Haight
@@ -285,7 +252,6 @@ Chris Hoffman
 Albert Hofkamp
 Jonathan Hogg
 Gerrit Holl
-Rune Holm
 Philip Homburg
 Naofumi Honda
 Jeffrey Honig
@@ -300,19 +266,15 @@ Lawrence Hudson
 Michael Hudson
 Jim Hugunin
 Greg Humphreys
-Eric Huss
 Jeremy Hylton
 Mihai Ibanescu
 Juan David Ibáñez Palomar
-Lars Immisch
 Tony Ingraldi
 John Interrante
-Bob Ippolito
 Ben Jackson
 Paul Jackson
 David Jacobs
 Kevin Jacobs
-Kjetil Jacobsen
 Geert Jansen
 Jack Jansen
 Bill Janssen
@@ -320,11 +282,8 @@ Drew Jenkins
 Flemming Kjær Jensen
 Jiba
 Orjan Johansen
-Gregory K. Johnson
 Simon Johnston
-Evan Jones
 Richard Jones
-Irmen de Jong
 Lucas de Jonge
 Jens B. Jorgensen
 John Jorgensen
@@ -333,7 +292,6 @@ Tattoo Mabonzo K.
 Bob Kahn
 Kurt B. Kaiser
 Tamito Kajiyama
-Peter van Kampen
 Jacob Kaplan-Moss
 Lou Kates
 Sebastien Keim
@@ -358,23 +316,17 @@ Holger Krekel
 Hannu Krosing
 Andrew Kuchling
 Vladimir Kushnir
-Arnaud Mazin
 Cameron Laird
-Tino Lange
-Andrew Langmead
 Detlef Lannert
 Soren Larsen
 Piers Lauder
 Ben Laurie
-Simon Law
 Chris Lawrence
 Christopher Lee
 Inyeol Lee
 John J. Lee
-Thomas Lee
 Luc Lefebvre
 Kip Lehman
-Joerg Lehmann
 Marc-Andre Lemburg
 William Lewis
 Robert van Liere
@@ -390,12 +342,11 @@ Tom Loredo
 Jason Lowe
 Tony Lownds
 Ray Loyzaga
-Loren Luke
 Fredrik Lundh
+Loren Luke
 Mark Lutz
 Jim Lynch
 Mikael Lyngvig
-Alan McIntyre
 Andrew I MacIntyre
 Tim MacKenzie
 Nick Maclaren
@@ -414,17 +365,14 @@ Greg McFarlane
 Michael McLay
 Gordon McMillan
 Jay T. Miller
-Chris McDonough
 Andrew McNamara
 Caolan McNamara
 Craig McPheeters
 Lambert Meertens
 Bill van Melle
-Luke Mewburn
 Mike Meyer
 Steven Miale
 Trent Mick
-Chad Miller
 Roman Milner
 Dom Mitchell
 Doug Moen
@@ -438,12 +386,9 @@ Michael Muller
 Takahiro Nakayama
 Travers Naran
 Fredrik Nehr
-Tony Nelson
 Chad Netzer
 Max Neunhöffer
 George Neville-Neil
-Johannes Nicolai
-Samuel Nicolary
 Gustavo Niemeyer
 Oscar Nierstrasz
 Hrvoje Niksic
@@ -463,9 +408,7 @@ Jason Orendorff
 Douglas Orr
 Denis S. Otkidach
 Russel Owen
-Mike Pall
 Todd R. Palmer
-Jan Palus
 Alexandre Parenteau
 Dan Parisien
 Harri Pasanen
@@ -478,10 +421,8 @@ Steven Pemberton
 Eduardo Pérez
 Fernando Pérez
 Mark Perrego
-Trevor Perrin
 Tim Peters
 Chris Petrilli
-Bjorn Pettersen
 Geoff Philbrick
 Gavrie Philipson
 Adrian Phillips
@@ -491,9 +432,7 @@ Jean-François Piéronne
 Dan Pierson
 Martijn Pieters
 François Pinard
-Zach Pincus
 Michael Piotrowski
-Iustin Pop
 John Popplewell
 Amrit Prem
 Paul Prescod
@@ -533,15 +472,10 @@ Just van Rossum
 Hugo van Rossum
 Saskia van Rossum
 Donald Wallace Rouse II
-Liam Routt
-Sam Ruby
-Paul Rubin
 Audun S. Runde
 Jeff Rush
 Sam Rushing
-Mark Russell
 Nick Russo
-Hajime Saitou
 Rich Salz
 Kevin Samborn
 Ty Sarna
@@ -550,16 +484,13 @@ Michael Scharf
 Neil Schemenauer
 David Scherer
 Gregor Schmid
-Ralf Schmitt
 Peter Schneider-Kamp
-Chad J. Schroeder
 Sam Schulenburg
 Stefan Schwarzer
 Dietmar Schwertberger
 Barry Scott
 Steven Scott
 Nick Seidenman
-Å½iga Seilnach
 Fred Sells
 Jiwon Seo
 Denis Severson
@@ -576,7 +507,6 @@ Kirill Simonov
 Nathan Paul Simons
 Janne Sinkkonen
 George Sipe
-J. Sipprell
 Kragen Sitaker
 Christopher Smith
 Gregory P. Smith
@@ -585,29 +515,28 @@ Dirk Soede
 Paul Sokolovsky
 Clay Spence
 Per Spilling
-Joshua Spoerri
 Noah Spurrier
+Oliver Steele
+Greg Stein
+Chris Stern
+Dan Stromberg
+Nathan Sullivan
+Mark Summerfield
+Hisao Suzuki
+Kalle Svensson
+Hajime Saitou
 Nathan Srebro
 RajGopal Srinivasan
 Jim St. Pierre
 Quentin Stafford-Fraser
 Frank Stajano
-Oliver Steele
-Greg Stein
-Chris Stern
 Richard Stoakley
-Peter Stoehr
 Casper Stoel
+Peter Stoehr
 Michael Stone
 Ken Stox
-Dan Stromberg
 Daniel Stutzbach
-Nathan Sullivan
-Mark Summerfield
-Hisao Suzuki
-Kalle Svensson
 Paul Swartz
-Thenault Sylvain
 Geoff Talvola
 William Tanksley
 Christian Tanzer
@@ -627,15 +556,10 @@ Richard Townsend
 Laurence Tratt
 John Tromp
 Jason Trowbridge
-Anthony Tuininga
-Christopher Tur Lesniewski-Laas
 Stephen Turner
 Bill Tutt
 Doobee R. Tzeck
 Lionel Ulmer
-Michael Urman
-Hector Urtubia
-Dmitry Vasiliev
 Frank Vercruesse
 Jaap Vermeulen
 Al Vezza
@@ -645,16 +569,14 @@ Kannan Vijayan
 Kurt Vile
 Norman Vine
 Frank Visser
-Niki W. Waibel
-Wojtek Walczak
 Charles Waldman
 Richard Walker
 Larry Wall
 Greg Ward
 Barry Warsaw
 Steve Waterbury
-Bob Watson
 Aaron Watters
+Bob Watson
 Henrik Weber
 Corran Webster
 Zack Weinberg
@@ -663,7 +585,6 @@ Cliff Wells
 Rickard Westman
 Mats Wichmann
 Truida Wiedijk
-Felix Wiemann
 Gerry Wiener
 Bryce "Zooko" Wilcox-O'Hearn
 Gerald S. Williams
@@ -672,7 +593,6 @@ Sue Williams
 Frank Willison
 Greg V. Wilson
 Jody Winston
-Collin Winter
 Dik Winter
 Blake Winton
 Jean-Claude Wippler
@@ -686,9 +606,8 @@ Thomas Wouters
 Doug Wyatt
 Ka-Ping Yee
 Bob Yodlowski
-Danny Yoo
-George Yoshida
 Masazumi Yoshikawa
+Danny Yoo
 Bernard Yue
 Moshe Zadka
 Milan Zamazal

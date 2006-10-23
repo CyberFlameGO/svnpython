@@ -231,13 +231,7 @@ Your selection [default 1]: ''',
             'platform': meta.get_platforms(),
             'classifiers': meta.get_classifiers(),
             'download_url': meta.get_download_url(),
-            # PEP 314
-            'provides': meta.get_provides(),
-            'requires': meta.get_requires(),
-            'obsoletes': meta.get_obsoletes(),
         }
-        if data['provides'] or data['requires'] or data['obsoletes']:
-            data['metadata_version'] = '1.1'
         return data
 
     def post_to_server(self, data, auth=None):
@@ -251,10 +245,10 @@ Your selection [default 1]: ''',
         body = StringIO.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
-            if type(value) not in (type([]), type( () )):
+            if type(value) != type([]):
                 value = [value]
             for value in value:
-                value = unicode(value).encode("utf-8")
+                value = str(value)
                 body.write(sep_boundary)
                 body.write('\nContent-Disposition: form-data; name="%s"'%key)
                 body.write("\n\n")
@@ -267,7 +261,7 @@ Your selection [default 1]: ''',
 
         # build the Request
         headers = {
-            'Content-type': 'multipart/form-data; boundary=%s; charset=utf-8'%boundary,
+            'Content-type': 'multipart/form-data; boundary=%s'%boundary,
             'Content-length': str(len(body))
         }
         req = urllib2.Request(self.repository, body, headers)
@@ -292,3 +286,4 @@ Your selection [default 1]: ''',
         if self.show_response:
             print '-'*75, data, '-'*75
         return result
+

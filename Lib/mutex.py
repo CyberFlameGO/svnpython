@@ -12,13 +12,11 @@ Of course, no multi-threading is implied -- hence the funny interface
 for lock, where a function is called once the lock is aquired.
 """
 
-from collections import deque
-
 class mutex:
     def __init__(self):
         """Create a new mutex -- initially unlocked."""
         self.locked = 0
-        self.queue = deque()
+        self.queue = []
 
     def test(self):
         """Test the locked bit of the mutex."""
@@ -46,7 +44,7 @@ class mutex:
         """Unlock a mutex.  If the queue is not empty, call the next
         function with its argument."""
         if self.queue:
-            function, argument = self.queue.popleft()
+            function, argument = self.queue.pop(0)
             function(argument)
         else:
             self.locked = 0

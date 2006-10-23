@@ -7,7 +7,9 @@ extern "C" {
 
 /* Interface to map C struct members to Python object attributes */
 
+#ifdef HAVE_STDDEF_H
 #include <stddef.h> /* For offsetof */
+#endif
 
 /* The offsetof() macro calculates the offset of a structure member
    in its structure.  Unfortunately this cannot be written down
@@ -37,7 +39,7 @@ typedef struct PyMemberDef {
 	/* Current version, use this */
 	char *name;
 	int type;
-	Py_ssize_t offset;
+	int offset;
 	int flags;
 	char *doc;
 } PyMemberDef;
@@ -61,14 +63,14 @@ typedef struct PyMemberDef {
 
 /* Added by Jack: strings contained in the structure */
 #define T_STRING_INPLACE	13
+#ifdef macintosh
+#define T_PSTRING	14	/* macintosh pascal-style counted string */
+#define T_PSTRING_INPLACE	15
+#endif /* macintosh */
 
 #define T_OBJECT_EX	16	/* Like T_OBJECT, but raises AttributeError
 				   when the value is NULL, instead of
 				   converting to None. */
-#ifdef HAVE_LONG_LONG
-#define T_LONGLONG      17  
-#define T_ULONGLONG      18
-#endif /* HAVE_LONG_LONG */
 
 /* Flags */
 #define READONLY	1
@@ -79,11 +81,11 @@ typedef struct PyMemberDef {
 
 
 /* Obsolete API, for binary backwards compatibility */
-PyAPI_FUNC(PyObject *) PyMember_Get(const char *, struct memberlist *, const char *);
-PyAPI_FUNC(int) PyMember_Set(char *, struct memberlist *, const char *, PyObject *);
+PyAPI_FUNC(PyObject *) PyMember_Get(char *, struct memberlist *, char *);
+PyAPI_FUNC(int) PyMember_Set(char *, struct memberlist *, char *, PyObject *);
 
 /* Current API, use this */
-PyAPI_FUNC(PyObject *) PyMember_GetOne(const char *, struct PyMemberDef *);
+PyAPI_FUNC(PyObject *) PyMember_GetOne(char *, struct PyMemberDef *);
 PyAPI_FUNC(int) PyMember_SetOne(char *, struct PyMemberDef *, PyObject *);
 
 

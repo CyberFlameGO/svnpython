@@ -109,9 +109,8 @@ def askyesno(prompt):
     s = raw_input(prompt)
     return s in ['y', 'yes']
 
-if __name__ == '__main__':
-    try:
-        setup()
-        go(getargs())
-    except KeyboardInterrupt:
-        print '[Intr]'
+try:
+    setup()
+    go(getargs())
+except KeyboardInterrupt:
+    print '[Intr]'

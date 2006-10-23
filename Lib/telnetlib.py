@@ -1,4 +1,4 @@
-r"""TELNET client class.
+"""TELNET client class.
 
 Based on RFC 854: TELNET Protocol Specification, by J. Postel and
 J. Reynolds
@@ -288,7 +288,7 @@ class Telnet:
         """
         if IAC in buffer:
             buffer = buffer.replace(IAC, IAC+IAC)
-        self.msg("send %r", buffer)
+        self.msg("send %s", `buffer`)
         self.sock.sendall(buffer)
 
     def read_until(self, match, timeout=None):
@@ -311,8 +311,6 @@ class Telnet:
         s_args = s_reply
         if timeout is not None:
             s_args = s_args + (timeout,)
-            from time import time
-            time_start = time()
         while not self.eof and select.select(*s_args) == s_reply:
             i = max(0, len(self.cookedq)-n)
             self.fill_rawq()
@@ -323,11 +321,6 @@ class Telnet:
                 buf = self.cookedq[:i]
                 self.cookedq = self.cookedq[i:]
                 return buf
-            if timeout is not None:
-                elapsed = time() - time_start
-                if elapsed >= timeout:
-                    break
-                s_args = s_reply + (timeout-elapsed,)
         return self.read_very_lazy()
 
     def read_all(self):
@@ -445,7 +438,7 @@ class Telnet:
                     else:
                         self.iacseq += c
                 elif len(self.iacseq) == 1:
-                    # 'IAC: IAC CMD [OPTION only for WILL/WONT/DO/DONT]'
+                    'IAC: IAC CMD [OPTION only for WILL/WONT/DO/DONT]'
                     if c in (DO, DONT, WILL, WONT):
                         self.iacseq += c
                         continue
@@ -526,7 +519,7 @@ class Telnet:
         # The buffer size should be fairly small so as to avoid quadratic
         # behavior in process_rawq() above
         buf = self.sock.recv(50)
-        self.msg("recv %r", buf)
+        self.msg("recv %s", `buf`)
         self.eof = (not buf)
         self.rawq = self.rawq + buf
 
@@ -608,9 +601,6 @@ class Telnet:
             if not hasattr(list[i], "search"):
                 if not re: import re
                 list[i] = re.compile(list[i])
-        if timeout is not None:
-            from time import time
-            time_start = time()
         while 1:
             self.process_rawq()
             for i in indices:
@@ -623,11 +613,7 @@ class Telnet:
             if self.eof:
                 break
             if timeout is not None:
-                elapsed = time() - time_start
-                if elapsed >= timeout:
-                    break
-                s_args = ([self.fileno()], [], [], timeout-elapsed)
-                r, w, x = select.select(*s_args)
+                r, w, x = select.select([self.fileno()], [], [], timeout)
                 if not r:
                     break
             self.fill_rawq()

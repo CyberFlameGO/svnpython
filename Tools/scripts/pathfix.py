@@ -20,7 +20,7 @@
 # into a program for a different change to Python programs...
 
 import sys
-import re
+import regex
 import os
 from stat import *
 import getopt
@@ -59,17 +59,17 @@ def main():
             if fix(arg): bad = 1
     sys.exit(bad)
 
-ispythonprog = re.compile('^[a-zA-Z0-9_]+\.py$')
+ispythonprog = regex.compile('^[a-zA-Z0-9_]+\.py$')
 def ispython(name):
     return ispythonprog.match(name) >= 0
 
 def recursedown(dirname):
-    dbg('recursedown(%r)\n' % (dirname,))
+    dbg('recursedown(' + `dirname` + ')\n')
     bad = 0
     try:
         names = os.listdir(dirname)
     except os.error, msg:
-        err('%s: cannot list directory: %r\n' % (dirname, msg))
+        err(dirname + ': cannot list directory: ' + `msg` + '\n')
         return 1
     names.sort()
     subdirs = []
@@ -86,11 +86,11 @@ def recursedown(dirname):
     return bad
 
 def fix(filename):
-##  dbg('fix(%r)\n' % (filename,))
+##  dbg('fix(' + `filename` + ')\n')
     try:
         f = open(filename, 'r')
     except IOError, msg:
-        err('%s: cannot open: %r\n' % (filename, msg))
+        err(filename + ': cannot open: ' + `msg` + '\n')
         return 1
     line = f.readline()
     fixed = fixline(line)
@@ -104,7 +104,7 @@ def fix(filename):
         g = open(tempname, 'w')
     except IOError, msg:
         f.close()
-        err('%s: cannot create: %r\n' % (tempname, msg))
+        err(tempname+': cannot create: '+`msg`+'\n')
         return 1
     rep(filename + ': updating\n')
     g.write(fixed)
@@ -123,17 +123,17 @@ def fix(filename):
         statbuf = os.stat(filename)
         os.chmod(tempname, statbuf[ST_MODE] & 07777)
     except os.error, msg:
-        err('%s: warning: chmod failed (%r)\n' % (tempname, msg))
+        err(tempname + ': warning: chmod failed (' + `msg` + ')\n')
     # Then make a backup of the original file as filename~
     try:
         os.rename(filename, filename + '~')
     except os.error, msg:
-        err('%s: warning: backup failed (%r)\n' % (filename, msg))
+        err(filename + ': warning: backup failed (' + `msg` + ')\n')
     # Now move the temp file to the original file
     try:
         os.rename(tempname, filename)
     except os.error, msg:
-        err('%s: rename failed (%r)\n' % (filename, msg))
+        err(filename + ': rename failed (' + `msg` + ')\n')
         return 1
     # Return succes
     return 0
@@ -145,5 +145,4 @@ def fixline(line):
         return line
     return '#! %s\n' % new_interpreter
 
-if __name__ == '__main__':
-    main()
+main()

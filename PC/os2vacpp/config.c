@@ -27,7 +27,9 @@ extern void initnt(void);
 extern void initos2(void);
 extern void initoperator(void);
 extern void initposix(void);
+extern void initregex(void);
 extern void initrgbimg(void);
+extern void initrotor(void);
 extern void initsignal(void);
 extern void initselect(void);
 extern void init_socket(void);
@@ -69,7 +71,9 @@ struct _inittab _PyImport_Inittab[] = {
 #endif
 #endif
         {"operator", initoperator},
+        {"regex", initregex},
 //        {"rgbimg", initrgbimg},
+//        {"rotor", initrotor},
         {"signal", initsignal},
 #ifdef USE_SOCKET
         {"_socket", init_socket},

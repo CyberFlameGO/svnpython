@@ -1,5 +1,5 @@
 # Testing select module
-from test.test_support import verbose, reap_children
+from test.test_support import verbose
 import select
 import os
 
@@ -57,7 +57,7 @@ def test():
         if (rfd, wfd, xfd) == ([p], [], []):
             line = p.readline()
             if verbose:
-                print repr(line)
+                print `line`
             if not line:
                 if verbose:
                     print 'EOF'
@@ -65,6 +65,5 @@ def test():
             continue
         print 'Unexpected return values from select():', rfd, wfd, xfd
     p.close()
-    reap_children()
 
 test()

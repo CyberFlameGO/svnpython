@@ -1,4 +1,4 @@
-r"""OS routines for Mac, NT, or Posix depending on what system we're on.
+r"""OS routines for Mac, DOS, NT, or Posix depending on what system we're on.
 
 This exports:
   - all functions from posix, nt, os2, mac, or ce, e.g. unlink, stat, etc.
@@ -12,7 +12,6 @@ This exports:
   - os.pathsep is the component separator used in $PATH etc
   - os.linesep is the line separator in text files ('\r' or '\n' or '\r\n')
   - os.defpath is the default search path for executables
-  - os.devnull is the file path of the null device ('/dev/null', etc.)
 
 Programs that import and use 'os' stand a better chance of being
 portable between different platforms.  Of course, they must then
@@ -29,8 +28,7 @@ _names = sys.builtin_module_names
 
 # Note:  more names are added to __all__ later.
 __all__ = ["altsep", "curdir", "pardir", "sep", "pathsep", "linesep",
-           "defpath", "name", "path", "devnull",
-           "SEEK_SET", "SEEK_CUR", "SEEK_END"]
+           "defpath", "name", "path"]
 
 def _get_exports_list(module):
     try:
@@ -78,7 +76,6 @@ elif 'os2' in _names:
         import ntpath as path
     else:
         import os2emxpath as path
-        from _emx_link import link
 
     import os2
     __all__.extend(_get_exports_list(os2))
@@ -131,16 +128,9 @@ else:
     raise ImportError, 'no os specific module found'
 
 sys.modules['os.path'] = path
-from os.path import (curdir, pardir, sep, pathsep, defpath, extsep, altsep,
-    devnull)
+from os.path import curdir, pardir, sep, pathsep, defpath, extsep, altsep
 
 del _names
-
-# Python uses fixed values for the SEEK_ constants; they are mapped
-# to native constants if necessary in posixmodule.c
-SEEK_SET = 0
-SEEK_CUR = 1
-SEEK_END = 2
 
 #'
 
@@ -161,14 +151,12 @@ def makedirs(name, mode=0777):
         head, tail = path.split(head)
     if head and tail and not path.exists(head):
         makedirs(head, mode)
-        if tail == curdir:           # xxx/newdir/. exists if xxx/newdir exists
-            return
     mkdir(name, mode)
 
 def removedirs(name):
     """removedirs(path)
 
-    Super-rmdir; remove a leaf directory and all empty intermediate
+    Super-rmdir; remove a leaf directory and empty all intermediate
     ones.  Works like rmdir except that, if the leaf directory is
     successfully removed, directories corresponding to rightmost path
     segments will be pruned away until either the whole path is
@@ -442,22 +430,9 @@ else:
                 return key.upper() in self.data
             def get(self, key, failobj=None):
                 return self.data.get(key.upper(), failobj)
-            def update(self, dict=None, **kwargs):
-                if dict:
-                    try:
-                        keys = dict.keys()
-                    except AttributeError:
-                        # List of (key, value)
-                        for k, v in dict:
-                            self[k] = v
-                    else:
-                        # got keys
-                        # cannot use items(), since mappings
-                        # may not have them.
-                        for k in keys:
-                            self[k] = dict[k]
-                if kwargs:
-                    self.update(kwargs)
+            def update(self, dict):
+                for k, v in dict.items():
+                    self[k] = v
             def copy(self):
                 return dict(self)
 
@@ -469,22 +444,9 @@ else:
             def __setitem__(self, key, item):
                 putenv(key, item)
                 self.data[key] = item
-            def update(self,  dict=None, **kwargs):
-                if dict:
-                    try:
-                        keys = dict.keys()
-                    except AttributeError:
-                        # List of (key, value)
-                        for k, v in dict:
-                            self[k] = v
-                    else:
-                        # got keys
-                        # cannot use items(), since mappings
-                        # may not have them.
-                        for k in keys:
-                            self[k] = dict[k]
-                if kwargs:
-                    self.update(kwargs)
+            def update(self, dict):
+                for k, v in dict.items():
+                    self[k] = v
             try:
                 unsetenv
             except NameError:
@@ -650,12 +612,6 @@ otherwise return -SIG, where SIG is the signal that killed it. """
 if _exists("fork"):
     if not _exists("popen2"):
         def popen2(cmd, mode="t", bufsize=-1):
-            """Execute the shell command 'cmd' in a sub-process.  On UNIX, 'cmd'
-            may be a sequence, in which case arguments will be passed directly to
-            the program without shell intervention (as with os.spawnv()).  If 'cmd'
-            is a string it will be passed to the shell (as with os.system()). If
-            'bufsize' is specified, it sets the buffer size for the I/O pipes.  The
-            file objects (child_stdin, child_stdout) are returned."""
             import popen2
             stdout, stdin = popen2.popen2(cmd, bufsize)
             return stdin, stdout
@@ -663,12 +619,6 @@ if _exists("fork"):
 
     if not _exists("popen3"):
         def popen3(cmd, mode="t", bufsize=-1):
-            """Execute the shell command 'cmd' in a sub-process.  On UNIX, 'cmd'
-            may be a sequence, in which case arguments will be passed directly to
-            the program without shell intervention (as with os.spawnv()).  If 'cmd'
-            is a string it will be passed to the shell (as with os.system()). If
-            'bufsize' is specified, it sets the buffer size for the I/O pipes.  The
-            file objects (child_stdin, child_stdout, child_stderr) are returned."""
             import popen2
             stdout, stdin, stderr = popen2.popen3(cmd, bufsize)
             return stdin, stdout, stderr
@@ -676,12 +626,6 @@ if _exists("fork"):
 
     if not _exists("popen4"):
         def popen4(cmd, mode="t", bufsize=-1):
-            """Execute the shell command 'cmd' in a sub-process.  On UNIX, 'cmd'
-            may be a sequence, in which case arguments will be passed directly to
-            the program without shell intervention (as with os.spawnv()).  If 'cmd'
-            is a string it will be passed to the shell (as with os.system()). If
-            'bufsize' is specified, it sets the buffer size for the I/O pipes.  The
-            file objects (child_stdin, child_stdout_stderr) are returned."""
             import popen2
             stdout, stdin = popen2.popen4(cmd, bufsize)
             return stdin, stdout
@@ -713,20 +657,3 @@ try:
                      _make_statvfs_result)
 except NameError: # statvfs_result may not exist
     pass
-
-if not _exists("urandom"):
-    def urandom(n):
-        """urandom(n) -> str
-
-        Return a string of n random bytes suitable for cryptographic use.
-
-        """
-        try:
-            _urandomfd = open("/dev/urandom", O_RDONLY)
-        except (OSError, IOError):
-            raise NotImplementedError("/dev/urandom (or equivalent) not found")
-        bytes = ""
-        while len(bytes) < n:
-            bytes += read(_urandomfd, n - len(bytes))
-        close(_urandomfd)
-        return bytes

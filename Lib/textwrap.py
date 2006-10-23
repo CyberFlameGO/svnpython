@@ -78,10 +78,9 @@ class TextWrapper:
     # splits into
     #   Hello/ /there/ /--/ /you/ /goof-/ball,/ /use/ /the/ /-b/ /option!
     # (after stripping out empty strings).
-    wordsep_re = re.compile(
-        r'(\s+|'                                  # any whitespace
-        r'[^\s\w]*\w+[a-zA-Z]-(?=\w+[a-zA-Z])|'   # hyphenated words
-        r'(?<=[\w\!\"\'\&\.\,\?])-{2,}(?=\w))')   # em-dash
+    wordsep_re = re.compile(r'(\s+|'                  # any whitespace
+                            r'[^\s\w]*\w{2,}-(?=\w{2,})|' # hyphenated words
+                            r'(?<=[\w\!\"\'\&\.\,\?])-{2,}(?=\w))')   # em-dash
 
     # XXX this is not locale- or charset-aware -- string.lowercase
     # is US-ASCII only (and therefore English-only)
@@ -161,7 +160,7 @@ class TextWrapper:
             else:
                 i += 1
 
-    def _handle_long_word(self, reversed_chunks, cur_line, cur_len, width):
+    def _handle_long_word(self, chunks, cur_line, cur_len, width):
         """_handle_long_word(chunks : [string],
                              cur_line : [string],
                              cur_len : int, width : int)
@@ -174,14 +173,14 @@ class TextWrapper:
         # If we're allowed to break long words, then do so: put as much
         # of the next chunk onto the current line as will fit.
         if self.break_long_words:
-            cur_line.append(reversed_chunks[-1][:space_left])
-            reversed_chunks[-1] = reversed_chunks[-1][space_left:]
+            cur_line.append(chunks[0][0:space_left])
+            chunks[0] = chunks[0][space_left:]
 
         # Otherwise, we have to preserve the long word intact.  Only add
         # it to the current line if there's nothing already there --
         # that minimizes how much we violate the width constraint.
         elif not cur_line:
-            cur_line.append(reversed_chunks.pop())
+            cur_line.append(chunks.pop(0))
 
         # If we're not allowed to break long words, and there's already
         # text on the current line, do nothing.  Next time through the
@@ -206,10 +205,6 @@ class TextWrapper:
         if self.width <= 0:
             raise ValueError("invalid width %r (must be > 0)" % self.width)
 
-        # Arrange in reverse order so items can be efficiently popped
-        # from a stack of chucks.
-        chunks.reverse()
-
         while chunks:
 
             # Start the list of chunks that will make up the current line.
@@ -228,15 +223,15 @@ class TextWrapper:
 
             # First chunk on line is whitespace -- drop it, unless this
             # is the very beginning of the text (ie. no lines started yet).
-            if chunks[-1].strip() == '' and lines:
-                del chunks[-1]
+            if chunks[0].strip() == '' and lines:
+                del chunks[0]
 
             while chunks:
-                l = len(chunks[-1])
+                l = len(chunks[0])
 
                 # Can at least squeeze this chunk onto the current line.
                 if cur_len + l <= width:
-                    cur_line.append(chunks.pop())
+                    cur_line.append(chunks.pop(0))
                     cur_len += l
 
                 # Nope, this line is full.
@@ -245,7 +240,7 @@ class TextWrapper:
 
             # The current line is full, and the next chunk is too big to
             # fit on *any* line (not just this one).
-            if chunks and len(chunks[-1]) > width:
+            if chunks and len(chunks[0]) > width:
                 self._handle_long_word(chunks, cur_line, cur_len, width)
 
             # If the last chunk on this line is all whitespace, drop it.
@@ -272,6 +267,7 @@ class TextWrapper:
         converted to space.
         """
         text = self._munge_whitespace(text)
+        indent = self.initial_indent
         chunks = self._split(text)
         if self.fix_sentence_endings:
             self._fix_sentence_endings(chunks)
@@ -317,58 +313,41 @@ def fill(text, width=70, **kwargs):
 
 # -- Loosely related functionality -------------------------------------
 
-_whitespace_only_re = re.compile('^[ \t]+$', re.MULTILINE)
-_leading_whitespace_re = re.compile('(^[ \t]*)(?:[^ \t\n])', re.MULTILINE)
-
 def dedent(text):
-    """Remove any common leading whitespace from every line in `text`.
+    """dedent(text : string) -> string
 
-    This can be used to make triple-quoted strings line up with the left
-    edge of the display, while still presenting them in the source code
-    in indented form.
+    Remove any whitespace than can be uniformly removed from the left
+    of every line in `text`.
 
-    Note that tabs and spaces are both treated as whitespace, but they
-    are not equal: the lines "  hello" and "\thello" are
-    considered to have no common leading whitespace.  (This behaviour is
-    new in Python 2.5; older versions of this module incorrectly
-    expanded tabs before searching for common leading whitespace.)
+    This can be used e.g. to make triple-quoted strings line up with
+    the left edge of screen/whatever, while still presenting it in the
+    source code in indented form.
+
+    For example:
+
+        def test():
+            # end first line with \ to avoid the empty line!
+            s = '''\
+            hello
+              world
+            '''
+            print repr(s)          # prints '    hello\n      world\n    '
+            print repr(dedent(s))  # prints 'hello\n  world\n'
     """
-    # Look for the longest leading string of spaces and tabs common to
-    # all lines.
+    lines = text.expandtabs().split('\n')
     margin = None
-    text = _whitespace_only_re.sub('', text)
-    indents = _leading_whitespace_re.findall(text)
-    for indent in indents:
+    for line in lines:
+        content = line.lstrip()
+        if not content:
+            continue
+        indent = len(line) - len(content)
         if margin is None:
             margin = indent
-
-        # Current line more deeply indented than previous winner:
-        # no change (previous winner is still on top).
-        elif indent.startswith(margin):
-            pass
-
-        # Current line consistent with and no deeper than previous winner:
-        # it's the new winner.
-        elif margin.startswith(indent):
-            margin = indent
-
-        # Current line and previous winner have no common whitespace:
-        # there is no margin.
         else:
-            margin = ""
-            break
+            margin = min(margin, indent)
 
-    # sanity check (testing/debugging only)
-    if 0 and margin:
-        for line in text.split("\n"):
-            assert not line or line.startswith(margin), \
-                   "line = %r, margin = %r" % (line, margin)
+    if margin is not None and margin > 0:
+        for i in range(len(lines)):
+            lines[i] = lines[i][margin:]
 
-    if margin:
-        text = re.sub(r'(?m)^' + margin, '', text)
-    return text
-
-if __name__ == "__main__":
-    #print dedent("\tfoo\n\tbar")
-    #print dedent("  \thello there\n  \t  how are you?")
-    print dedent("Hello there.\n  This is indented.")
+    return '\n'.join(lines)

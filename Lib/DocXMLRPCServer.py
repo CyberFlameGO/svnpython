@@ -12,13 +12,14 @@ modules.
 
 import pydoc
 import inspect
+import types
 import re
 import sys
 
-from SimpleXMLRPCServer import (SimpleXMLRPCServer,
-            SimpleXMLRPCRequestHandler,
-            CGIXMLRPCRequestHandler,
-            resolve_dotted_attribute)
+from SimpleXMLRPCServer import SimpleXMLRPCServer,\
+            SimpleXMLRPCRequestHandler,\
+            CGIXMLRPCRequestHandler,\
+            resolve_dotted_attribute
 
 class ServerHTMLDoc(pydoc.HTMLDoc):
     """Class used to generate pydoc HTML document for a server"""
@@ -91,7 +92,7 @@ class ServerHTMLDoc(pydoc.HTMLDoc):
         else:
             argspec = '(...)'
 
-        if isinstance(object, tuple):
+        if isinstance(object, types.TupleType):
             argspec = object[0] or argspec
             docstring = object[1] or ""
         else:
@@ -227,10 +228,6 @@ class DocXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
         Interpret all HTTP GET requests as requests for server
         documentation.
         """
-        # Check that the path is legal
-        if not self.is_rpc_path_valid():
-            self.report_404()
-            return
 
         response = self.server.generate_html_documentation()
         self.send_response(200)

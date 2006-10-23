@@ -760,8 +760,6 @@ initcd(void)
 	PyObject *m, *d;
 
 	m = Py_InitModule("cd", CD_methods);
-	if (m == NULL)
-		return;
 	d = PyModule_GetDict(m);
 
 	CdError = PyErr_NewException("cd.error", NULL, NULL);

@@ -13,15 +13,7 @@ basic.events = [(0, 'call'),
                 (1, 'line'),
                 (1, 'return')]
 
-# Many of the tests below are tricky because they involve pass statements.
-# If there is implicit control flow around a pass statement (in an except
-# clause or else caluse) under what conditions do you set a line number
-# following that clause?
-
-
-# The entire "while 0:" statement is optimized away.  No code
-# exists for it, so the line numbers skip directly from "del x"
-# to "x = 1".
+# Armin Rigo's failing example:
 def arigo_example():
     x = 1
     del x
@@ -32,6 +24,7 @@ def arigo_example():
 arigo_example.events = [(0, 'call'),
                         (1, 'line'),
                         (2, 'line'),
+                        (3, 'line'),
                         (5, 'line'),
                         (5, 'return')]
 
@@ -67,16 +60,14 @@ no_pop_tops.events = [(0, 'call'),
                       (2, 'return')]
 
 def no_pop_blocks():
-    y = 1
-    while not y:
+    while 0:
         bla
     x = 1
 
 no_pop_blocks.events = [(0, 'call'),
                         (1, 'line'),
-                        (2, 'line'),
-                        (4, 'line'),
-                        (4, 'return')]
+                        (3, 'line'),
+                        (3, 'return')]
 
 def called(): # line -3
     x = 1
@@ -106,7 +97,6 @@ test_raise.events = [(0, 'call'),
                      (-3, 'call'),
                      (-2, 'line'),
                      (-2, 'exception'),
-                     (-2, 'return'),
                      (2, 'exception'),
                      (3, 'line'),
                      (4, 'line'),
@@ -134,75 +124,6 @@ settrace_and_raise.events = [(2, 'exception'),
                              (3, 'line'),
                              (4, 'line'),
                              (4, 'return')]
-
-# implicit return example
-# This test is interesting because of the else: pass
-# part of the code.  The code generate for the true
-# part of the if contains a jump past the else branch.
-# The compiler then generates an implicit "return None"
-# Internally, the compiler visits the pass statement
-# and stores its line number for use on the next instruction.
-# The next instruction is the implicit return None.
-def ireturn_example():
-    a = 5
-    b = 5
-    if a == b:
-        b = a+1
-    else:
-        pass
-
-ireturn_example.events = [(0, 'call'),
-                          (1, 'line'),
-                          (2, 'line'),
-                          (3, 'line'),
-                          (4, 'line'),
-                          (6, 'line'),
-                          (6, 'return')]
-
-# Tight loop with while(1) example (SF #765624)
-def tightloop_example():
-    items = range(0, 3)
-    try:
-        i = 0
-        while 1:
-            b = items[i]; i+=1
-    except IndexError:
-        pass
-
-tightloop_example.events = [(0, 'call'),
-                            (1, 'line'),
-                            (2, 'line'),
-                            (3, 'line'),
-                            (4, 'line'),
-                            (5, 'line'),
-                            (5, 'line'),
-                            (5, 'line'),
-                            (5, 'line'),
-                            (5, 'exception'),
-                            (6, 'line'),
-                            (7, 'line'),
-                            (7, 'return')]
-
-def tighterloop_example():
-    items = range(1, 4)
-    try:
-        i = 0
-        while 1: i = items[i]
-    except IndexError:
-        pass
-
-tighterloop_example.events = [(0, 'call'),
-                            (1, 'line'),
-                            (2, 'line'),
-                            (3, 'line'),
-                            (4, 'line'),
-                            (4, 'line'),
-                            (4, 'line'),
-                            (4, 'line'),
-                            (4, 'exception'),
-                            (5, 'line'),
-                            (6, 'line'),
-                            (6, 'return')]
 
 class Tracer:
     def __init__(self):
@@ -236,31 +157,25 @@ class TraceTestCase(unittest.TestCase):
         self.compare_events(func.func_code.co_firstlineno,
                             tracer.events, func.events)
 
-    def test_01_basic(self):
+    def test_1_basic(self):
         self.run_test(basic)
-    def test_02_arigo(self):
+    def test_2_arigo(self):
         self.run_test(arigo_example)
-    def test_03_one_instr(self):
+    def test_3_one_instr(self):
         self.run_test(one_instr_line)
-    def test_04_no_pop_blocks(self):
+    def test_4_no_pop_blocks(self):
         self.run_test(no_pop_blocks)
-    def test_05_no_pop_tops(self):
+    def test_5_no_pop_tops(self):
         self.run_test(no_pop_tops)
-    def test_06_call(self):
+    def test_6_call(self):
         self.run_test(call)
-    def test_07_raise(self):
+    def test_7_raise(self):
         self.run_test(test_raise)
 
-    def test_08_settrace_and_return(self):
+    def test_8_settrace_and_return(self):
         self.run_test2(settrace_and_return)
-    def test_09_settrace_and_raise(self):
+    def test_9_settrace_and_raise(self):
         self.run_test2(settrace_and_raise)
-    def test_10_ireturn(self):
-        self.run_test(ireturn_example)
-    def test_11_tightloop(self):
-        self.run_test(tightloop_example)
-    def test_12_tighterloop(self):
-        self.run_test(tighterloop_example)
 
 class RaisingTraceFuncTestCase(unittest.TestCase):
     def trace(self, frame, event, arg):

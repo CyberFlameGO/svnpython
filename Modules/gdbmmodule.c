@@ -86,7 +86,7 @@ dbm_dealloc(register dbmobject *dp)
     PyObject_Del(dp);
 }
 
-static Py_ssize_t
+static int
 dbm_length(dbmobject *dp)
 {
     if (dp->di_dbm == NULL) {
@@ -97,7 +97,6 @@ dbm_length(dbmobject *dp)
         datum key,okey;
         int size;
         okey.dsize=0;
-        okey.dptr=NULL;
 
         size = 0;
         for (key=gdbm_firstkey(dp->di_dbm); key.dptr;
@@ -179,7 +178,7 @@ dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
 }
 
 static PyMappingMethods dbm_as_mapping = {
-    (lenfunc)dbm_length,		/*mp_length*/
+    (inquiry)dbm_length,		/*mp_length*/
     (binaryfunc)dbm_subscript,          /*mp_subscript*/
     (objobjargproc)dbm_ass_sub,         /*mp_ass_subscript*/
 };
@@ -189,8 +188,10 @@ PyDoc_STRVAR(dbm_close__doc__,
 Closes the database.");
 
 static PyObject *
-dbm_close(register dbmobject *dp, PyObject *unused)
+dbm_close(register dbmobject *dp, PyObject *args)
 {
+    if (!PyArg_ParseTuple(args, ":close"))
+        return NULL;
     if (dp->di_dbm)
         gdbm_close(dp->di_dbm);
     dp->di_dbm = NULL;
@@ -203,7 +204,7 @@ PyDoc_STRVAR(dbm_keys__doc__,
 Get a list of all keys in the database.");
 
 static PyObject *
-dbm_keys(register dbmobject *dp, PyObject *unused)
+dbm_keys(register dbmobject *dp, PyObject *args)
 {
     register PyObject *v, *item;
     datum key, nextkey;
@@ -213,6 +214,9 @@ dbm_keys(register dbmobject *dp, PyObject *unused)
         PyErr_BadInternalCall();
         return NULL;
     }
+    if (!PyArg_ParseTuple(args, ":keys"))
+        return NULL;
+
     check_dbmobject_open(dp);
 
     v = PyList_New(0);
@@ -264,11 +268,13 @@ hash values, and won't be sorted by the key values. This method\n\
 returns the starting key.");
 
 static PyObject *
-dbm_firstkey(register dbmobject *dp, PyObject *unused)
+dbm_firstkey(register dbmobject *dp, PyObject *args)
 {
     register PyObject *v;
     datum key;
 
+    if (!PyArg_ParseTuple(args, ":firstkey"))
+        return NULL;
     check_dbmobject_open(dp);
     key = gdbm_firstkey(dp->di_dbm);
     if (key.dptr) {
@@ -323,8 +329,10 @@ by using this reorganization; otherwise, deleted file space will be\n\
 kept and reused as new (key,value) pairs are added.");
 
 static PyObject *
-dbm_reorganize(register dbmobject *dp, PyObject *unused)
+dbm_reorganize(register dbmobject *dp, PyObject *args)
 {
+    if (!PyArg_ParseTuple(args, ":reorganize"))
+        return NULL;
     check_dbmobject_open(dp);
     errno = 0;
     if (gdbm_reorganize(dp->di_dbm) < 0) {
@@ -344,8 +352,10 @@ When the database has been opened in fast mode, this method forces\n\
 any unwritten data to be written to the disk.");
 
 static PyObject *
-dbm_sync(register dbmobject *dp, PyObject *unused)
+dbm_sync(register dbmobject *dp, PyObject *args)
 {
+    if (!PyArg_ParseTuple(args, ":sync"))
+        return NULL;
     check_dbmobject_open(dp);
     gdbm_sync(dp->di_dbm);
     Py_INCREF(Py_None);
@@ -353,13 +363,13 @@ dbm_sync(register dbmobject *dp, PyObject *unused)
 }
 
 static PyMethodDef dbm_methods[] = {
-    {"close",	  (PyCFunction)dbm_close,   METH_NOARGS, dbm_close__doc__},
-    {"keys",	  (PyCFunction)dbm_keys,    METH_NOARGS, dbm_keys__doc__},
+    {"close",	  (PyCFunction)dbm_close,   METH_VARARGS, dbm_close__doc__},
+    {"keys",	  (PyCFunction)dbm_keys,    METH_VARARGS, dbm_keys__doc__},
     {"has_key",   (PyCFunction)dbm_has_key, METH_VARARGS, dbm_has_key__doc__},
-    {"firstkey",  (PyCFunction)dbm_firstkey,METH_NOARGS, dbm_firstkey__doc__},
+    {"firstkey",  (PyCFunction)dbm_firstkey,METH_VARARGS, dbm_firstkey__doc__},
     {"nextkey",	  (PyCFunction)dbm_nextkey, METH_VARARGS, dbm_nextkey__doc__},
-    {"reorganize",(PyCFunction)dbm_reorganize,METH_NOARGS, dbm_reorganize__doc__},
-    {"sync",      (PyCFunction)dbm_sync,    METH_NOARGS, dbm_sync__doc__},
+    {"reorganize",(PyCFunction)dbm_reorganize,METH_VARARGS, dbm_reorganize__doc__},
+    {"sync",      (PyCFunction)dbm_sync,    METH_VARARGS, dbm_sync__doc__},
     {NULL,		NULL}		/* sentinel */
 };
 
@@ -502,8 +512,6 @@ initgdbm(void) {
     m = Py_InitModule4("gdbm", dbmmodule_methods,
                        gdbmmodule__doc__, (PyObject *)NULL,
                        PYTHON_API_VERSION);
-    if (m == NULL)
-	return;
     d = PyModule_GetDict(m);
     DbmError = PyErr_NewException("gdbm.error", NULL, NULL);
     if (DbmError != NULL) {

@@ -46,6 +46,7 @@ many of the difficult problems for you, making the task of building
 sophisticated high-performance network servers and clients a snap.
 """
 
+import exceptions
 import select
 import socket
 import sys
@@ -53,14 +54,14 @@ import time
 
 import os
 from errno import EALREADY, EINPROGRESS, EWOULDBLOCK, ECONNRESET, \
-     ENOTCONN, ESHUTDOWN, EINTR, EISCONN, errorcode
+     ENOTCONN, ESHUTDOWN, EINTR, EISCONN
 
 try:
     socket_map
 except NameError:
     socket_map = {}
 
-class ExitNow(Exception):
+class ExitNow(exceptions.Exception):
     pass
 
 def read(obj):
@@ -79,22 +80,12 @@ def write(obj):
     except:
         obj.handle_error()
 
-def _exception (obj):
-    try:
-        obj.handle_expt_event()
-    except ExitNow:
-        raise
-    except:
-        obj.handle_error()
-
 def readwrite(obj, flags):
     try:
-        if flags & (select.POLLIN | select.POLLPRI):
+        if flags & select.POLLIN:
             obj.handle_read_event()
         if flags & select.POLLOUT:
             obj.handle_write_event()
-        if flags & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
-            obj.handle_expt_event()
     except ExitNow:
         raise
     except:
@@ -106,14 +97,10 @@ def poll(timeout=0.0, map=None):
     if map:
         r = []; w = []; e = []
         for fd, obj in map.items():
-            is_r = obj.readable()
-            is_w = obj.writable()
-            if is_r:
+            if obj.readable():
                 r.append(fd)
-            if is_w:
+            if obj.writable():
                 w.append(fd)
-            if is_r or is_w:
-                e.append(fd)
         if [] == r == w == e:
             time.sleep(timeout)
         else:
@@ -137,13 +124,31 @@ def poll(timeout=0.0, map=None):
                 continue
             write(obj)
 
-        for fd in e:
+def poll2(timeout=0.0, map=None):
+    import poll
+    if map is None:
+        map = socket_map
+    if timeout is not None:
+        # timeout is in milliseconds
+        timeout = int(timeout*1000)
+    if map:
+        l = []
+        for fd, obj in map.items():
+            flags = 0
+            if obj.readable():
+                flags = poll.POLLIN
+            if obj.writable():
+                flags = flags | poll.POLLOUT
+            if flags:
+                l.append((fd, flags))
+        r = poll.poll(l, timeout)
+        for fd, flags in r:
             obj = map.get(fd)
             if obj is None:
                 continue
-            _exception(obj)
+            readwrite(obj, flags)
 
-def poll2(timeout=0.0, map=None):
+def poll3(timeout=0.0, map=None):
     # Use the poll() support added to the select module in Python 2.0
     if map is None:
         map = socket_map
@@ -155,13 +160,10 @@ def poll2(timeout=0.0, map=None):
         for fd, obj in map.items():
             flags = 0
             if obj.readable():
-                flags |= select.POLLIN | select.POLLPRI
+                flags = select.POLLIN
             if obj.writable():
-                flags |= select.POLLOUT
+                flags = flags | select.POLLOUT
             if flags:
-                # Only check for exceptions if object was either readable
-                # or writable.
-                flags |= select.POLLERR | select.POLLHUP | select.POLLNVAL
                 pollster.register(fd, flags)
         try:
             r = pollster.poll(timeout)
@@ -175,45 +177,35 @@ def poll2(timeout=0.0, map=None):
                 continue
             readwrite(obj, flags)
 
-poll3 = poll2                           # Alias for backward compatibility
-
-def loop(timeout=30.0, use_poll=False, map=None, count=None):
+def loop(timeout=30.0, use_poll=0, map=None):
     if map is None:
         map = socket_map
 
-    if use_poll and hasattr(select, 'poll'):
-        poll_fun = poll2
+    if use_poll:
+        if hasattr(select, 'poll'):
+            poll_fun = poll3
+        else:
+            poll_fun = poll2
     else:
         poll_fun = poll
 
-    if count is None:
-        while map:
-            poll_fun(timeout, map)
-
-    else:
-        while map and count > 0:
-            poll_fun(timeout, map)
-            count = count - 1
+    while map:
+        poll_fun(timeout, map)
 
 class dispatcher:
 
-    debug = False
-    connected = False
-    accepting = False
-    closing = False
+    debug = 0
+    connected = 0
+    accepting = 0
+    closing = 0
     addr = None
 
     def __init__(self, sock=None, map=None):
-        if map is None:
-            self._map = socket_map
-        else:
-            self._map = map
-
         if sock:
             self.set_socket(sock, map)
             # I think it should inherit this anyway
             self.socket.setblocking(0)
-            self.connected = True
+            self.connected = 1
             # XXX Does the constructor require that the socket passed
             # be connected?
             try:
@@ -235,22 +227,24 @@ class dispatcher:
                 status.append('%s:%d' % self.addr)
             except TypeError:
                 status.append(repr(self.addr))
-        return '<%s at %#x>' % (' '.join(status), id(self))
+        # On some systems (RH10) id() can be a negative number. 
+        # work around this.
+        MAX = 2L*sys.maxint+1
+        return '<%s at %#x>' % (' '.join(status), id(self)&MAX)
 
     def add_channel(self, map=None):
         #self.log_info('adding channel %s' % self)
         if map is None:
-            map = self._map
+            map = socket_map
         map[self._fileno] = self
 
     def del_channel(self, map=None):
         fd = self._fileno
         if map is None:
-            map = self._map
+            map = socket_map
         if map.has_key(fd):
             #self.log_info('closing channel %d:%s' % (fd, self))
             del map[fd]
-        self._fileno = None
 
     def create_socket(self, family, type):
         self.family_and_type = family, type
@@ -285,15 +279,21 @@ class dispatcher:
     def readable(self):
         return True
 
-    def writable(self):
-        return True
+    if os.name == 'mac':
+        # The macintosh will select a listening socket for
+        # write if you let it.  What might this mean?
+        def writable(self):
+            return not self.accepting
+    else:
+        def writable(self):
+            return True
 
     # ==================================================
     # socket object methods.
     # ==================================================
 
     def listen(self, num):
-        self.accepting = True
+        self.accepting = 1
         if os.name == 'nt' and num > 5:
             num = 1
         return self.socket.listen(num)
@@ -303,17 +303,17 @@ class dispatcher:
         return self.socket.bind(addr)
 
     def connect(self, address):
-        self.connected = False
+        self.connected = 0
         err = self.socket.connect_ex(address)
         # XXX Should interpret Winsock return values
         if err in (EINPROGRESS, EALREADY, EWOULDBLOCK):
             return
         if err in (0, EISCONN):
             self.addr = address
-            self.connected = True
+            self.connected = 1
             self.handle_connect()
         else:
-            raise socket.error, (err, errorcode[err])
+            raise socket.error, err
 
     def accept(self):
         # XXX can return either an address pair or None
@@ -324,7 +324,7 @@ class dispatcher:
             if why[0] == EWOULDBLOCK:
                 pass
             else:
-                raise
+                raise socket.error, why
 
     def send(self, data):
         try:
@@ -334,7 +334,7 @@ class dispatcher:
             if why[0] == EWOULDBLOCK:
                 return 0
             else:
-                raise
+                raise socket.error, why
             return 0
 
     def recv(self, buffer_size):
@@ -353,7 +353,7 @@ class dispatcher:
                 self.handle_close()
                 return ''
             else:
-                raise
+                raise socket.error, why
 
     def close(self):
         self.del_channel()
@@ -380,11 +380,11 @@ class dispatcher:
             # for an accepting socket, getting a read implies
             # that we are connected
             if not self.connected:
-                self.connected = True
+                self.connected = 1
             self.handle_accept()
         elif not self.connected:
             self.handle_connect()
-            self.connected = True
+            self.connected = 1
             self.handle_read()
         else:
             self.handle_read()
@@ -393,7 +393,7 @@ class dispatcher:
         # getting a write implies that we are connected
         if not self.connected:
             self.handle_connect()
-            self.connected = True
+            self.connected = 1
         self.handle_write()
 
     def handle_expt_event(self):
@@ -445,8 +445,8 @@ class dispatcher:
 
 class dispatcher_with_send(dispatcher):
 
-    def __init__(self, sock=None, map=None):
-        dispatcher.__init__(self, sock, map)
+    def __init__(self, sock=None):
+        dispatcher.__init__(self, sock)
         self.out_buffer = ''
 
     def initiate_send(self):
@@ -529,21 +529,21 @@ if os.name == 'posix':
         write = send
 
         def close(self):
-            os.close(self.fd)
+            return os.close(self.fd)
 
         def fileno(self):
             return self.fd
 
     class file_dispatcher(dispatcher):
 
-        def __init__(self, fd, map=None):
-            dispatcher.__init__(self, None, map)
-            self.connected = True
-            self.set_file(fd)
+        def __init__(self, fd):
+            dispatcher.__init__(self)
+            self.connected = 1
             # set it to non-blocking mode
             flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
             flags = flags | os.O_NONBLOCK
             fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+            self.set_file(fd)
 
         def set_file(self, fd):
             self._fileno = fd
