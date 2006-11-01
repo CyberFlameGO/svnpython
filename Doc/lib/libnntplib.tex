@@ -54,62 +54,57 @@ The module itself defines the following items:
 
 \begin{classdesc}{NNTP}{host\optional{, port
                         \optional{, user\optional{, password
-			\optional{, readermode}
-			\optional{, usenetrc}}}}}
+			\optional{, readermode}}}}}
 Return a new instance of the \class{NNTP} class, representing a
 connection to the NNTP server running on host \var{host}, listening at
 port \var{port}.  The default \var{port} is 119.  If the optional
 \var{user} and \var{password} are provided, 
-or if suitable credentials are present in \file{~/.netrc} and the
-optional flag \var{usenetrc} is true (the default),
+or if suitable credentials are present in \file{~/.netrc},
 the \samp{AUTHINFO USER} and \samp{AUTHINFO PASS} commands are used to
 identify and authenticate the user to the server.  If the optional
 flag \var{readermode} is true, then a \samp{mode reader} command is
 sent before authentication is performed.  Reader mode is sometimes
 necessary if you are connecting to an NNTP server on the local machine
 and intend to call reader-specific commands, such as \samp{group}.  If
-you get unexpected \exception{NNTPPermanentError}s, you might need to set
+you get unexpected \code{NNTPPermanentError}s, you might need to set
 \var{readermode}.  \var{readermode} defaults to \code{None}.
-\var{usenetrc} defaults to \code{True}.
-
-\versionchanged[\var{usenetrc} argument added]{2.4}
 \end{classdesc}
 
-\begin{excdesc}{NNTPError}
-Derived from the standard exception \exception{Exception}, this is the
-base class for all exceptions raised by the \module{nntplib} module.
-\end{excdesc}
+\begin{classdesc}{NNTPError}{}
+Derived from the standard exception \code{Exception}, this is the base
+class for all exceptions raised by the \code{nntplib} module.
+\end{classdesc}
 
-\begin{excdesc}{NNTPReplyError}
+\begin{classdesc}{NNTPReplyError}{}
 Exception raised when an unexpected reply is received from the
 server.  For backwards compatibility, the exception \code{error_reply}
 is equivalent to this class.
-\end{excdesc}
+\end{classdesc}
 
-\begin{excdesc}{NNTPTemporaryError}
+\begin{classdesc}{NNTPTemporaryError}{}
 Exception raised when an error code in the range 400--499 is
 received.  For backwards compatibility, the exception
 \code{error_temp} is equivalent to this class.
-\end{excdesc}
+\end{classdesc}
 
-\begin{excdesc}{NNTPPermanentError}
+\begin{classdesc}{NNTPPermanentError}{}
 Exception raised when an error code in the range 500--599 is
 received.  For backwards compatibility, the exception
 \code{error_perm} is equivalent to this class.
-\end{excdesc}
+\end{classdesc}
 
-\begin{excdesc}{NNTPProtocolError}
+\begin{classdesc}{NNTPProtocolError}{}
 Exception raised when a reply is received from the server that does
 not begin with a digit in the range 1--5.  For backwards
 compatibility, the exception \code{error_proto} is equivalent to this
 class.
-\end{excdesc}
+\end{classdesc}
 
-\begin{excdesc}{NNTPDataError}
+\begin{classdesc}{NNTPDataError}{}
 Exception raised when there is some error in the response data.  For
 backwards compatibility, the exception \code{error_data} is
 equivalent to this class.
-\end{excdesc}
+\end{classdesc}
 
 
 \subsection{NNTP Objects \label{nntp-objects}}
@@ -156,7 +151,7 @@ If \var{file} is supplied, then the returned \var{list} is an empty list.
 Send a \samp{NEWNEWS} command.  Here, \var{group} is a group name or
 \code{'*'}, and \var{date} and \var{time} have the same meaning as for
 \method{newgroups()}.  Return a pair \code{(\var{response},
-\var{articles})} where \var{articles} is a list of message ids.
+\var{articles})} where \var{articles} is a list of article ids.
 If the \var{file} parameter is supplied, then the output of the 
 \samp{NEWNEWS} command is stored in a file.  If \var{file} is a string, 
 then the method will open a file object with that name, write to it 
@@ -180,27 +175,6 @@ then the method will open a file object with that name, write to it
 then close it.  If \var{file} is a file object, then it will start
 calling \method{write()} on it to store the lines of the command output.
 If \var{file} is supplied, then the returned \var{list} is an empty list.
-\end{methoddesc}
-
-\begin{methoddesc}{descriptions}{grouppattern}
-Send a \samp{LIST NEWSGROUPS} command, where \var{grouppattern} is a wildmat
-string as specified in RFC2980 (it's essentially the same as DOS or UNIX
-shell wildcard strings).  Return a pair \code{(\var{response},
-\var{list})}, where \var{list} is a list of tuples containing
-\code{(\var{name}, \var{title})}.
-
-\versionadded{2.4}
-\end{methoddesc}
-
-\begin{methoddesc}{description}{group}
-Get a description for a single group \var{group}.  If more than one group
-matches (if 'group' is a real wildmat string), return the first match.  
-If no group matches, return an empty string.
-
-This elides the response code from the server.  If the response code is
-needed, use \method{descriptions()}.
-
-\versionadded{2.4}
 \end{methoddesc}
 
 \begin{methoddesc}{group}{name}
@@ -228,7 +202,7 @@ Send a \samp{STAT} command, where \var{id} is the message id (enclosed
 in \character{<} and \character{>}) or an article number (as a string).
 Return a triple \code{(\var{response}, \var{number}, \var{id})} where
 \var{number} is the article number (as a string) and \var{id} is the
-message id  (enclosed in \character{<} and \character{>}).
+article id  (enclosed in \character{<} and \character{>}).
 \end{methoddesc}
 
 \begin{methoddesc}{next}{}
@@ -275,7 +249,7 @@ keyword, e.g. \code{'subject'}.  The \var{string} argument should have
 the form \code{'\var{first}-\var{last}'} where \var{first} and
 \var{last} are the first and last article numbers to search.  Return a
 pair \code{(\var{response}, \var{list})}, where \var{list} is a list of
-pairs \code{(\var{id}, \var{text})}, where \var{id} is an article number
+pairs \code{(\var{id}, \var{text})}, where \var{id} is an article id
 (as a string) and \var{text} is the text of the requested header for
 that article.
 If the \var{file} parameter is supplied, then the output of the 
@@ -295,9 +269,7 @@ automatically escapes lines beginning with \samp{.}.
 \end{methoddesc}
 
 \begin{methoddesc}{ihave}{id, file}
-Send an \samp{IHAVE} command. \var{id} is a message id (enclosed in 
-\character{<} and \character{>}).
-If the response is not an error, treat
+Send an \samp{IHAVE} command.  If the response is not an error, treat
 \var{file} exactly as for the \method{post()} method.
 \end{methoddesc}
 
@@ -322,9 +294,6 @@ calling \method{write()} on it to store the lines of the command output.
 If \var{file} is supplied, then the returned \var{list} is an empty list.
 This is an optional NNTP extension, and may not be supported by all
 servers.
-
-RFC2980 says ``It is suggested that this extension be deprecated''.  Use
-\method{descriptions()} or \method{description()} instead.
 \end{methoddesc}
 
 \begin{methoddesc}{xover}{start, end, \optional{file}}

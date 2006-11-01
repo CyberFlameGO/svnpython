@@ -51,7 +51,6 @@ use python -O for the older versions to avoid timing SET_LINENO
 instructions.
 """
 
-import gc
 import sys
 import time
 try:
@@ -156,12 +155,7 @@ class Timer:
             it = itertools.repeat(None, number)
         else:
             it = [None] * number
-        gcold = gc.isenabled()
-        gc.disable()
-        timing = self.inner(it, self.timer)
-        if gcold:
-            gc.enable()
-        return timing
+        return self.inner(it, self.timer)
 
     def repeat(self, repeat=default_repeat, number=default_number):
         """Call timeit() a few times.
@@ -270,15 +264,7 @@ def main(args=None):
         print "raw times:", " ".join(["%.*g" % (precision, x) for x in r])
     print "%d loops," % number,
     usec = best * 1e6 / number
-    if usec < 1000:
-        print "best of %d: %.*g usec per loop" % (repeat, precision, usec)
-    else:
-        msec = usec / 1000
-        if msec < 1000:
-            print "best of %d: %.*g msec per loop" % (repeat, precision, msec)
-        else:
-            sec = msec / 1000
-            print "best of %d: %.*g sec per loop" % (repeat, precision, sec)
+    print "best of %d: %.*g usec per loop" % (repeat, precision, usec)
     return None
 
 if __name__ == "__main__":

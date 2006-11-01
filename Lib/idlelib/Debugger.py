@@ -4,7 +4,6 @@ import types
 from Tkinter import *
 from WindowList import ListedToplevel
 from ScrolledList import ScrolledList
-import macosxSupport
 
 
 class Idb(bdb.Bdb):
@@ -85,7 +84,7 @@ class Debugger:
         pyshell = self.pyshell
         self.flist = pyshell.flist
         self.root = root = pyshell.root
-        self.top = top = ListedToplevel(root)
+        self.top = top =ListedToplevel(root)
         self.top.wm_title("Debug Control")
         self.top.wm_iconname("Debug")
         top.wm_protocol("WM_DELETE_WINDOW", self.close)
@@ -156,6 +155,7 @@ class Debugger:
         if self.vglobals.get():
             self.show_globals()
 
+
     def interaction(self, message, frame, info=None):
         self.frame = frame
         self.status.configure(text=message)
@@ -191,7 +191,7 @@ class Debugger:
         for b in self.buttons:
             b.configure(state="normal")
         #
-        self.top.wakeup()
+        self.top.tkraise()
         self.root.mainloop()
         #
         for b in self.buttons:
@@ -323,13 +323,7 @@ class Debugger:
 class StackViewer(ScrolledList):
 
     def __init__(self, master, flist, gui):
-        if macosxSupport.runningAsOSXApp():
-            # At least on with the stock AquaTk version on OSX 10.4 you'll
-            # get an shaking GUI that eventually kills IDLE if the width
-            # argument is specified.
-            ScrolledList.__init__(self, master)
-        else:
-            ScrolledList.__init__(self, master, width=80)
+        ScrolledList.__init__(self, master, width=80)
         self.flist = flist
         self.gui = gui
         self.stack = []

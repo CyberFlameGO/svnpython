@@ -1,36 +1,44 @@
 """plistlib.py -- a tool to generate and parse MacOSX .plist files.
 
-The PropertList (.plist) file format is a simple XML pickle supporting
-basic object types, like dictionaries, lists, numbers and strings.
-Usually the top level object is a dictionary.
+The main class in this module is Plist. It takes a set of arbitrary
+keyword arguments, which will be the top level elements of the plist
+dictionary. After instantiation you can add more elements by assigning
+new attributes to the Plist instance.
 
-To write out a plist file, use the writePlist(rootObject, pathOrFile)
-function. 'rootObject' is the top level object, 'pathOrFile' is a
-filename or a (writable) file object.
+To write out a plist file, call the write() method of the Plist
+instance with a filename or a file object.
 
-To parse a plist from a file, use the readPlist(pathOrFile) function,
-with a file name or a (readable) file object as the only argument. It
-returns the top level object (again, usually a dictionary).
-
-To work with plist data in strings, you can use readPlistFromString()
-and writePlistToString().
+To parse a plist from a file, use the Plist.fromFile(pathOrFile)
+classmethod, with a file name or a file object as the only argument.
+(Warning: you need pyexpat installed for this to work, ie. it doesn't
+work with a vanilla Python 2.2 as shipped with MacOS X.2.)
 
 Values can be strings, integers, floats, booleans, tuples, lists,
-dictionaries, Data or datetime.datetime objects. String values (including
-dictionary keys) may be unicode strings -- they will be written out as
-UTF-8.
+dictionaries, Data or Date objects. String values (including dictionary
+keys) may be unicode strings -- they will be written out as UTF-8.
+
+For convenience, this module exports a class named Dict(), which
+allows you to easily construct (nested) dicts using keyword arguments.
+But regular dicts work, too.
+
+To support Boolean values in plists with Python < 2.3, "bool", "True"
+and "False" are exported. Use these symbols from this module if you
+want to be compatible with Python 2.2.x (strongly recommended).
 
 The <data> plist type is supported through the Data class. This is a
 thin wrapper around a Python string.
 
+The <date> plist data has (limited) support through the Date class.
+(Warning: Dates are only supported if the PyXML package is installed.)
+
 Generate Plist example:
 
-    pl = dict(
+    pl = Plist(
         aString="Doodah",
         aList=["A", "B", 12, 32.1, [1, 2, 3]],
         aFloat = 0.1,
         anInt = 728,
-        aDict=dict(
+        aDict=Dict(
             anotherString="<hello & hi there!>",
             aUnicodeValue=u'M\xe4ssig, Ma\xdf',
             aTrueValue=True,
@@ -38,119 +46,35 @@ Generate Plist example:
         ),
         someData = Data("<binary gunk>"),
         someMoreData = Data("<lots of binary gunk>" * 10),
-        aDate = datetime.datetime.fromtimestamp(time.mktime(time.gmtime())),
+        aDate = Date(time.mktime(time.gmtime())),
     )
     # unicode keys are possible, but a little awkward to use:
     pl[u'\xc5benraa'] = "That was a unicode key."
-    writePlist(pl, fileName)
+    pl.write(fileName)
 
 Parse Plist example:
 
-    pl = readPlist(pathOrFile)
-    print pl["aKey"]
+    pl = Plist.fromFile(pathOrFile)
+    print pl.aKey
+
+
 """
 
-
-__all__ = [
-    "readPlist", "writePlist", "readPlistFromString", "writePlistToString",
-    "readPlistFromResource", "writePlistToResource",
-    "Plist", "Data", "Dict"
-]
-# Note: the Plist and Dict classes have been deprecated.
-
-import binascii
-import datetime
-from cStringIO import StringIO
-import re
+# written by Just van Rossum (just@letterror.com), 2002-11-19
 
 
-def readPlist(pathOrFile):
-    """Read a .plist file. 'pathOrFile' may either be a file name or a
-    (readable) file object. Return the unpacked root object (which
-    usually is a dictionary).
-    """
-    didOpen = 0
-    if isinstance(pathOrFile, (str, unicode)):
-        pathOrFile = open(pathOrFile)
-        didOpen = 1
-    p = PlistParser()
-    rootObject = p.parse(pathOrFile)
-    if didOpen:
-        pathOrFile.close()
-    return rootObject
+__all__ = ["Plist", "Data", "Date", "Dict", "False", "True", "bool"]
 
 
-def writePlist(rootObject, pathOrFile):
-    """Write 'rootObject' to a .plist file. 'pathOrFile' may either be a
-    file name or a (writable) file object.
-    """
-    didOpen = 0
-    if isinstance(pathOrFile, (str, unicode)):
-        pathOrFile = open(pathOrFile, "w")
-        didOpen = 1
-    writer = PlistWriter(pathOrFile)
-    writer.writeln("<plist version=\"1.0\">")
-    writer.writeValue(rootObject)
-    writer.writeln("</plist>")
-    if didOpen:
-        pathOrFile.close()
-
-
-def readPlistFromString(data):
-    """Read a plist data from a string. Return the root object.
-    """
-    return readPlist(StringIO(data))
-
-
-def writePlistToString(rootObject):
-    """Return 'rootObject' as a plist-formatted string.
-    """
-    f = StringIO()
-    writePlist(rootObject, f)
-    return f.getvalue()
-
-
-def readPlistFromResource(path, restype='plst', resid=0):
-    """Read plst resource from the resource fork of path.
-    """
-    from Carbon.File import FSRef, FSGetResourceForkName
-    from Carbon.Files import fsRdPerm
-    from Carbon import Res
-    fsRef = FSRef(path)
-    resNum = Res.FSOpenResourceFile(fsRef, FSGetResourceForkName(), fsRdPerm)
-    Res.UseResFile(resNum)
-    plistData = Res.Get1Resource(restype, resid).data
-    Res.CloseResFile(resNum)
-    return readPlistFromString(plistData)
-
-
-def writePlistToResource(rootObject, path, restype='plst', resid=0):
-    """Write 'rootObject' as a plst resource to the resource fork of path.
-    """
-    from Carbon.File import FSRef, FSGetResourceForkName
-    from Carbon.Files import fsRdWrPerm
-    from Carbon import Res
-    plistData = writePlistToString(rootObject)
-    fsRef = FSRef(path)
-    resNum = Res.FSOpenResourceFile(fsRef, FSGetResourceForkName(), fsRdWrPerm)
-    Res.UseResFile(resNum)
-    try:
-        Res.Get1Resource(restype, resid).RemoveResource()
-    except Res.Error:
-        pass
-    res = Res.Resource(plistData)
-    res.AddResource(restype, resid, '')
-    res.WriteResource()
-    Res.CloseResFile(resNum)
+INDENT = "\t"
 
 
 class DumbXMLWriter:
 
-    def __init__(self, file, indentLevel=0, indent="\t"):
+    def __init__(self, file):
         self.file = file
         self.stack = []
-        self.indentLevel = indentLevel
-        self.indent = indent
+        self.indentLevel = 0
 
     def beginElement(self, element):
         self.stack.append(element)
@@ -165,57 +89,22 @@ class DumbXMLWriter:
 
     def simpleElement(self, element, value=None):
         if value is not None:
-            value = _escapeAndEncode(value)
+            value = _encode(value)
             self.writeln("<%s>%s</%s>" % (element, value, element))
         else:
             self.writeln("<%s/>" % element)
 
     def writeln(self, line):
         if line:
-            self.file.write(self.indentLevel * self.indent + line + "\n")
+            self.file.write(self.indentLevel * INDENT + line + "\n")
         else:
             self.file.write("\n")
 
 
-# Contents should conform to a subset of ISO 8601
-# (in particular, YYYY '-' MM '-' DD 'T' HH ':' MM ':' SS 'Z'.  Smaller units may be omitted with
-#  a loss of precision)
-_dateParser = re.compile(r"(?P<year>\d\d\d\d)(?:-(?P<month>\d\d)(?:-(?P<day>\d\d)(?:T(?P<hour>\d\d)(?::(?P<minute>\d\d)(?::(?P<second>\d\d))?)?)?)?)?Z")
-
-def _dateFromString(s):
-    order = ('year', 'month', 'day', 'hour', 'minute', 'second')
-    gd = _dateParser.match(s).groupdict()
-    lst = []
-    for key in order:
-        val = gd[key]
-        if val is None:
-            break
-        lst.append(int(val))
-    return datetime.datetime(*lst)
-
-def _dateToString(d):
-    return '%04d-%02d-%02dT%02d:%02d:%02dZ' % (
-        d.year, d.month, d.day,
-        d.hour, d.minute, d.second
-    )
-
-
-# Regex to find any control chars, except for \t \n and \r
-_controlCharPat = re.compile(
-    r"[\x00\x01\x02\x03\x04\x05\x06\x07\x08\x0b\x0c\x0e\x0f"
-    r"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f]")
-
-def _escapeAndEncode(text):
-    m = _controlCharPat.search(text)
-    if m is not None:
-        raise ValueError("strings can't contains control characters; "
-                         "use plistlib.Data instead")
-    text = text.replace("\r\n", "\n")       # convert DOS line endings
-    text = text.replace("\r", "\n")         # convert Mac line endings
-    text = text.replace("&", "&amp;")       # escape '&'
-    text = text.replace("<", "&lt;")        # escape '<'
-    text = text.replace(">", "&gt;")        # escape '>'
-    return text.encode("utf-8")             # encode as UTF-8
+def _encode(text):
+    text = text.replace("&", "&amp;")
+    text = text.replace("<", "&lt;")
+    return text.encode("utf-8")
 
 
 PLISTHEADER = """\
@@ -225,10 +114,9 @@ PLISTHEADER = """\
 
 class PlistWriter(DumbXMLWriter):
 
-    def __init__(self, file, indentLevel=0, indent="\t", writeHeader=1):
-        if writeHeader:
-            file.write(PLISTHEADER)
-        DumbXMLWriter.__init__(self, file, indentLevel, indent)
+    def __init__(self, file):
+        file.write(PLISTHEADER)
+        DumbXMLWriter.__init__(self, file)
 
     def writeValue(self, value):
         if isinstance(value, (str, unicode)):
@@ -243,13 +131,14 @@ class PlistWriter(DumbXMLWriter):
         elif isinstance(value, int):
             self.simpleElement("integer", str(value))
         elif isinstance(value, float):
-            self.simpleElement("real", repr(value))
-        elif isinstance(value, dict):
+            # should perhaps use repr() for better precision?
+            self.simpleElement("real", str(value))
+        elif isinstance(value, (dict, Dict)):
             self.writeDict(value)
         elif isinstance(value, Data):
             self.writeData(value)
-        elif isinstance(value, datetime.datetime):
-            self.simpleElement("date", _dateToString(value))
+        elif isinstance(value, Date):
+            self.simpleElement("date", value.toString())
         elif isinstance(value, (tuple, list)):
             self.writeArray(value)
         else:
@@ -257,13 +146,9 @@ class PlistWriter(DumbXMLWriter):
 
     def writeData(self, data):
         self.beginElement("data")
-        self.indentLevel -= 1
-        maxlinelength = 76 - len(self.indent.replace("\t", " " * 8) *
-                                 self.indentLevel)
-        for line in data.asBase64(maxlinelength).split("\n"):
+        for line in data.asBase64().split("\n"):
             if line:
                 self.writeln(line)
-        self.indentLevel += 1
         self.endElement("data")
 
     def writeDict(self, d):
@@ -284,79 +169,67 @@ class PlistWriter(DumbXMLWriter):
         self.endElement("array")
 
 
-class _InternalDict(dict):
+class Dict:
 
-    # This class is needed while Dict is scheduled for deprecation:
-    # we only need to warn when a *user* instantiates Dict or when
-    # the "attribute notation for dict keys" is used.
+    """Dict wrapper for convenient access of values through attributes."""
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __cmp__(self, other):
+        if isinstance(other, self.__class__):
+            return cmp(self.__dict__, other.__dict__)
+        elif isinstance(other, dict):
+            return cmp(self.__dict__, other)
+        else:
+            return cmp(id(self), id(other))
+
+    def __str__(self):
+        return "%s(**%s)" % (self.__class__.__name__, self.__dict__)
+    __repr__ = __str__
+
+    def copy(self):
+        return self.__class__(**self.__dict__)
 
     def __getattr__(self, attr):
-        try:
-            value = self[attr]
-        except KeyError:
-            raise AttributeError, attr
-        from warnings import warn
-        warn("Attribute access from plist dicts is deprecated, use d[key] "
-             "notation instead", PendingDeprecationWarning)
-        return value
-
-    def __setattr__(self, attr, value):
-        from warnings import warn
-        warn("Attribute access from plist dicts is deprecated, use d[key] "
-             "notation instead", PendingDeprecationWarning)
-        self[attr] = value
-
-    def __delattr__(self, attr):
-        try:
-            del self[attr]
-        except KeyError:
-            raise AttributeError, attr
-        from warnings import warn
-        warn("Attribute access from plist dicts is deprecated, use d[key] "
-             "notation instead", PendingDeprecationWarning)
-
-class Dict(_InternalDict):
-
-    def __init__(self, **kwargs):
-        from warnings import warn
-        warn("The plistlib.Dict class is deprecated, use builtin dict instead",
-             PendingDeprecationWarning)
-        super(Dict, self).__init__(**kwargs)
+        """Delegate everything else to the dict object."""
+        return getattr(self.__dict__, attr)
 
 
-class Plist(_InternalDict):
+class Plist(Dict):
 
-    """This class has been deprecated. Use readPlist() and writePlist()
-    functions instead, together with regular dict objects.
+    """The main Plist object. Basically a dict (the toplevel object
+    of a plist is a dict) with two additional methods to read from
+    and write to files.
     """
 
-    def __init__(self, **kwargs):
-        from warnings import warn
-        warn("The Plist class is deprecated, use the readPlist() and "
-             "writePlist() functions instead", PendingDeprecationWarning)
-        super(Plist, self).__init__(**kwargs)
-
     def fromFile(cls, pathOrFile):
-        """Deprecated. Use the readPlist() function instead."""
-        rootObject = readPlist(pathOrFile)
-        plist = cls()
-        plist.update(rootObject)
+        didOpen = 0
+        if isinstance(pathOrFile, (str, unicode)):
+            pathOrFile = open(pathOrFile)
+            didOpen = 1
+        p = PlistParser()
+        plist = p.parse(pathOrFile)
+        if didOpen:
+            pathOrFile.close()
         return plist
     fromFile = classmethod(fromFile)
 
     def write(self, pathOrFile):
-        """Deprecated. Use the writePlist() function instead."""
-        writePlist(self, pathOrFile)
+        if isinstance(pathOrFile, (str, unicode)):
+            pathOrFile = open(pathOrFile, "w")
+            didOpen = 1
+        else:
+            didOpen = 0
 
+        writer = PlistWriter(pathOrFile)
+        writer.writeln("<plist version=\"1.0\">")
+        writer.writeDict(self.__dict__)
+        writer.writeln("</plist>")
 
-def _encodeBase64(s, maxlinelength=76):
-    # copied from base64.encodestring(), with added maxlinelength argument
-    maxbinsize = (maxlinelength//4)*3
-    pieces = []
-    for i in range(0, len(s), maxbinsize):
-        chunk = s[i : i + maxbinsize]
-        pieces.append(binascii.b2a_base64(chunk))
-    return "".join(pieces)
+        if didOpen:
+            pathOrFile.close()
+
 
 class Data:
 
@@ -366,13 +239,13 @@ class Data:
         self.data = data
 
     def fromBase64(cls, data):
-        # base64.decodestring just calls binascii.a2b_base64;
-        # it seems overkill to use both base64 and binascii.
-        return cls(binascii.a2b_base64(data))
+        import base64
+        return cls(base64.decodestring(data))
     fromBase64 = classmethod(fromBase64)
 
-    def asBase64(self, maxlinelength=76):
-        return _encodeBase64(self.data, maxlinelength)
+    def asBase64(self):
+        import base64
+        return base64.encodestring(self.data)
 
     def __cmp__(self, other):
         if isinstance(other, self.__class__):
@@ -386,6 +259,34 @@ class Data:
         return "%s(%s)" % (self.__class__.__name__, repr(self.data))
 
 
+class Date:
+
+    """Primitive date wrapper, uses time floats internally, is agnostic
+    about time zones.
+    """
+
+    def __init__(self, date):
+        if isinstance(date, str):
+            from xml.utils.iso8601 import parse
+            date = parse(date)
+        self.date = date
+
+    def toString(self):
+        from xml.utils.iso8601 import tostring
+        return tostring(self.date)
+
+    def __cmp__(self, other):
+        if isinstance(other, self.__class__):
+            return cmp(self.date, other.date)
+        elif isinstance(other, (int, float)):
+            return cmp(self.date, other)
+        else:
+            return cmp(id(self), id(other))
+
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, repr(self.toString()))
+
+
 class PlistParser:
 
     def __init__(self):
@@ -393,13 +294,13 @@ class PlistParser:
         self.currentKey = None
         self.root = None
 
-    def parse(self, fileobj):
+    def parse(self, file):
         from xml.parsers.expat import ParserCreate
         parser = ParserCreate()
         parser.StartElementHandler = self.handleBeginElement
         parser.EndElementHandler = self.handleEndElement
         parser.CharacterDataHandler = self.handleData
-        parser.ParseFile(fileobj)
+        parser.ParseFile(file)
         return self.root
 
     def handleBeginElement(self, element, attrs):
@@ -422,7 +323,7 @@ class PlistParser:
             self.currentKey = None
         elif not self.stack:
             # this is the root object
-            self.root = value
+            assert self.root is value
         else:
             self.stack[-1].append(value)
 
@@ -438,7 +339,10 @@ class PlistParser:
     # element handlers
 
     def begin_dict(self, attrs):
-        d = _InternalDict()
+        if self.root is None:
+            self.root = d = Plist()
+        else:
+            d = Dict()
         self.addObject(d)
         self.stack.append(d)
     def end_dict(self):
@@ -467,4 +371,67 @@ class PlistParser:
     def end_data(self):
         self.addObject(Data.fromBase64(self.getData()))
     def end_date(self):
-        self.addObject(_dateFromString(self.getData()))
+        self.addObject(Date(self.getData()))
+
+
+# cruft to support booleans in Python <= 2.3
+import sys
+if sys.version_info[:2] < (2, 3):
+    # Python 2.2 and earlier: no booleans
+    # Python 2.2.x: booleans are ints
+    class bool(int):
+        """Imitation of the Python 2.3 bool object."""
+        def __new__(cls, value):
+            return int.__new__(cls, not not value)
+        def __repr__(self):
+            if self:
+                return "True"
+            else:
+                return "False"
+    True = bool(1)
+    False = bool(0)
+else:
+    # Bind the boolean builtins to local names
+    True = True
+    False = False
+    bool = bool
+
+
+if __name__ == "__main__":
+    from StringIO import StringIO
+    import time
+    if len(sys.argv) == 1:
+        pl = Plist(
+            aString="Doodah",
+            aList=["A", "B", 12, 32.1, [1, 2, 3]],
+            aFloat = 0.1,
+            anInt = 728,
+            aDict=Dict(
+                anotherString="<hello & hi there!>",
+                aUnicodeValue=u'M\xe4ssig, Ma\xdf',
+                aTrueValue=True,
+                aFalseValue=False,
+            ),
+            someData = Data("<binary gunk>"),
+            someMoreData = Data("<lots of binary gunk>" * 10),
+            aDate = Date(time.mktime(time.gmtime())),
+        )
+    elif len(sys.argv) == 2:
+        pl = Plist.fromFile(sys.argv[1])
+    else:
+        print "Too many arguments: at most 1 plist file can be given."
+        sys.exit(1)
+
+    # unicode keys are possible, but a little awkward to use:
+    pl[u'\xc5benraa'] = "That was a unicode key."
+    f = StringIO()
+    pl.write(f)
+    xml = f.getvalue()
+    print xml
+    f.seek(0)
+    pl2 = Plist.fromFile(f)
+    assert pl == pl2
+    f = StringIO()
+    pl2.write(f)
+    assert xml == f.getvalue()
+    #print repr(pl2)

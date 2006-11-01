@@ -6,11 +6,11 @@ import sys
 import unittest
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db, dbshelve, hashopen
-except ImportError:
     # For Python 2.3
-    from bsddb import db, dbshelve, hashopen
+    from bsddb import db, dbshelve
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3 import db, dbshelve
 
 #----------------------------------------------------------------------
 
@@ -45,12 +45,6 @@ class MiscTestCase(unittest.TestCase):
         assert env.db_home is None
         env.open(self.homeDir, db.DB_CREATE)
         assert self.homeDir == env.db_home
-
-    def test03_repr_closed_db(self):
-        db = hashopen(self.filename)
-        db.close()
-        rp = repr(db)
-        self.assertEquals(rp, "{}")
 
 
 #----------------------------------------------------------------------

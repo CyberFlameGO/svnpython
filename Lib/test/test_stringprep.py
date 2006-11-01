@@ -2,6 +2,7 @@
 # Since we don't have them, this test checks only a few codepoints.
 
 from test.test_support import verify, vereq
+import sha
 
 import stringprep
 from stringprep import *
@@ -72,7 +73,6 @@ verify(not in_table_d2(u"\u0040"))
 # unicode database. Instead, stringprep.py asserts the version of
 # the database.
 
-# import hashlib
 # predicates = [k for k in dir(stringprep) if k.startswith("in_table")]
 # predicates.sort()
 # for p in predicates:
@@ -83,6 +83,6 @@ verify(not in_table_d2(u"\u0040"))
 #         if f(unichr(i)):
 #             data[i] = "1"
 #     data = "".join(data)
-#     h = hashlib.sha1()
+#     h = sha.sha()
 #     h.update(data)
-#     print p, h.hexdigest()
+#     print p,h.hexdigest()

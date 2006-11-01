@@ -11,14 +11,14 @@ http://python.sourceforge.net/peps/pep-0205.html
 
 import UserDict
 
-from _weakref import (
-     getweakrefcount,
-     getweakrefs,
-     ref,
-     proxy,
-     CallableProxyType,
-     ProxyType,
-     ReferenceType)
+from _weakref import \
+     getweakrefcount, \
+     getweakrefs, \
+     ref, \
+     proxy, \
+     CallableProxyType, \
+     ProxyType, \
+     ReferenceType
 
 from exceptions import ReferenceError
 
@@ -42,14 +42,6 @@ class WeakValueDictionary(UserDict.UserDict):
     # objects are unwrapped on the way out, and we always wrap on the
     # way in).
 
-    def __init__(self, *args, **kw):
-        def remove(wr, selfref=ref(self)):
-            self = selfref()
-            if self is not None:
-                del self.data[wr.key]
-        self._remove = remove
-        UserDict.UserDict.__init__(self, *args, **kw)
-
     def __getitem__(self, key):
         o = self.data[key]()
         if o is None:
@@ -57,25 +49,11 @@ class WeakValueDictionary(UserDict.UserDict):
         else:
             return o
 
-    def __contains__(self, key):
-        try:
-            o = self.data[key]()
-        except KeyError:
-            return False
-        return o is not None
-
-    def has_key(self, key):
-        try:
-            o = self.data[key]()
-        except KeyError:
-            return False
-        return o is not None
-
     def __repr__(self):
         return "<WeakValueDictionary at %s>" % id(self)
 
     def __setitem__(self, key, value):
-        self.data[key] = KeyedRef(value, self._remove, key)
+        self.data[key] = ref(value, self.__makeremove(key))
 
     def copy(self):
         new = WeakValueDictionary()
@@ -107,34 +85,14 @@ class WeakValueDictionary(UserDict.UserDict):
         return L
 
     def iteritems(self):
-        for wr in self.data.itervalues():
-            value = wr()
-            if value is not None:
-                yield wr.key, value
+        return WeakValuedItemIterator(self)
 
     def iterkeys(self):
         return self.data.iterkeys()
-
-    def __iter__(self):
-        return self.data.iterkeys()
-
-    def itervaluerefs(self):
-        """Return an iterator that yields the weak references to the values.
-
-        The references are not guaranteed to be 'live' at the time
-        they are used, so the result of calling the references needs
-        to be checked before being used.  This can be used to avoid
-        creating references that will cause the garbage collector to
-        keep the values around longer than needed.
-
-        """
-        return self.data.itervalues()
+    __iter__ = iterkeys
 
     def itervalues(self):
-        for wr in self.data.itervalues():
-            obj = wr()
-            if obj is not None:
-                yield obj
+        return WeakValuedValueIterator(self)
 
     def popitem(self):
         while 1:
@@ -155,36 +113,19 @@ class WeakValueDictionary(UserDict.UserDict):
         else:
             return o
 
-    def setdefault(self, key, default=None):
+    def setdefault(self, key, default):
         try:
             wr = self.data[key]
         except KeyError:
-            self.data[key] = KeyedRef(default, self._remove, key)
+            self.data[key] = ref(default, self.__makeremove(key))
             return default
         else:
             return wr()
 
-    def update(self, dict=None, **kwargs):
+    def update(self, dict):
         d = self.data
-        if dict is not None:
-            if not hasattr(dict, "items"):
-                dict = type({})(dict)
-            for key, o in dict.items():
-                d[key] = KeyedRef(o, self._remove, key)
-        if len(kwargs):
-            self.update(kwargs)
-
-    def valuerefs(self):
-        """Return a list of weak references to the values.
-
-        The references are not guaranteed to be 'live' at the time
-        they are used, so the result of calling the references needs
-        to be checked before being used.  This can be used to avoid
-        creating references that will cause the garbage collector to
-        keep the values around longer than needed.
-
-        """
-        return self.data.values()
+        for key, o in dict.items():
+            d[key] = ref(o, self.__makeremove(key))
 
     def values(self):
         L = []
@@ -194,26 +135,12 @@ class WeakValueDictionary(UserDict.UserDict):
                 L.append(o)
         return L
 
-
-class KeyedRef(ref):
-    """Specialized reference that includes a key corresponding to the value.
-
-    This is used in the WeakValueDictionary to avoid having to create
-    a function object for each key stored in the mapping.  A shared
-    callback object can use the 'key' attribute of a KeyedRef instead
-    of getting a reference to the key from an enclosing scope.
-
-    """
-
-    __slots__ = "key",
-
-    def __new__(type, ob, callback, key):
-        self = ref.__new__(type, ob, callback)
-        self.key = key
-        return self
-
-    def __init__(self, ob, callback, key):
-        super(KeyedRef,  self).__init__(ob, callback)
+    def __makeremove(self, key):
+        def remove(o, selfref=ref(self), key=key):
+            self = selfref()
+            if self is not None:
+                del self.data[key]
+        return remove
 
 
 class WeakKeyDictionary(UserDict.UserDict):
@@ -282,46 +209,14 @@ class WeakKeyDictionary(UserDict.UserDict):
         return L
 
     def iteritems(self):
-        for wr, value in self.data.iteritems():
-            key = wr()
-            if key is not None:
-                yield key, value
-
-    def iterkeyrefs(self):
-        """Return an iterator that yields the weak references to the keys.
-
-        The references are not guaranteed to be 'live' at the time
-        they are used, so the result of calling the references needs
-        to be checked before being used.  This can be used to avoid
-        creating references that will cause the garbage collector to
-        keep the keys around longer than needed.
-
-        """
-        return self.data.iterkeys()
+        return WeakKeyedItemIterator(self)
 
     def iterkeys(self):
-        for wr in self.data.iterkeys():
-            obj = wr()
-            if obj is not None:
-                yield obj
-
-    def __iter__(self):
-        return self.iterkeys()
+        return WeakKeyedKeyIterator(self)
+    __iter__ = iterkeys
 
     def itervalues(self):
         return self.data.itervalues()
-
-    def keyrefs(self):
-        """Return a list of weak references to the keys.
-
-        The references are not guaranteed to be 'live' at the time
-        they are used, so the result of calling the references needs
-        to be checked before being used.  This can be used to avoid
-        creating references that will cause the garbage collector to
-        keep the keys around longer than needed.
-
-        """
-        return self.data.keys()
 
     def keys(self):
         L = []
@@ -341,15 +236,67 @@ class WeakKeyDictionary(UserDict.UserDict):
     def pop(self, key, *args):
         return self.data.pop(ref(key), *args)
 
-    def setdefault(self, key, default=None):
+    def setdefault(self, key, default):
         return self.data.setdefault(ref(key, self._remove),default)
 
-    def update(self, dict=None, **kwargs):
+    def update(self, dict):
         d = self.data
-        if dict is not None:
-            if not hasattr(dict, "items"):
-                dict = type({})(dict)
-            for key, value in dict.items():
-                d[ref(key, self._remove)] = value
-        if len(kwargs):
-            self.update(kwargs)
+        for key, value in dict.items():
+            d[ref(key, self._remove)] = value
+
+
+class BaseIter:
+    def __iter__(self):
+        return self
+
+
+class WeakKeyedKeyIterator(BaseIter):
+    def __init__(self, weakdict):
+        self._next = weakdict.data.iterkeys().next
+
+    def next(self):
+        while 1:
+            wr = self._next()
+            obj = wr()
+            if obj is not None:
+                return obj
+
+
+class WeakKeyedItemIterator(BaseIter):
+    def __init__(self, weakdict):
+        self._next = weakdict.data.iteritems().next
+
+    def next(self):
+        while 1:
+            wr, value = self._next()
+            key = wr()
+            if key is not None:
+                return key, value
+
+
+class WeakValuedValueIterator(BaseIter):
+    def __init__(self, weakdict):
+        self._next = weakdict.data.itervalues().next
+
+    def next(self):
+        while 1:
+            wr = self._next()
+            obj = wr()
+            if obj is not None:
+                return obj
+
+
+class WeakValuedItemIterator(BaseIter):
+    def __init__(self, weakdict):
+        self._next = weakdict.data.iteritems().next
+
+    def next(self):
+        while 1:
+            key, wr = self._next()
+            value = wr()
+            if value is not None:
+                return key, value
+
+
+# no longer needed
+del UserDict

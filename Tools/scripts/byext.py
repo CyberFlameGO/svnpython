@@ -17,7 +17,7 @@ class Stats:
             elif os.path.isfile(arg):
                 self.statfile(arg)
             else:
-                sys.stderr.write("Can't find %s\n" % arg)
+                sys.stderr.write("Can't find %s\n" % file)
                 self.addstats("<???>", "unknown", 1)
 
     def statdir(self, dir):
@@ -25,8 +25,8 @@ class Stats:
         try:
             names = os.listdir(dir)
         except os.error, err:
-            sys.stderr.write("Can't list %s: %s\n" % (dir, err))
-            self.addstats("<dir>", "unlistable", 1)
+            sys.stderr.write("Can't list %s: %s\n" % (file, err))
+            self.addstats(ext, "unlistable", 1)
             return
         names.sort()
         for name in names:
@@ -42,9 +42,9 @@ class Stats:
             else:
                 self.statfile(full)
 
-    def statfile(self, filename):
-        head, ext = os.path.splitext(filename)
-        head, base = os.path.split(filename)
+    def statfile(self, file):
+        head, ext = os.path.splitext(file)
+        head, base = os.path.split(file)
         if ext == base:
             ext = "" # E.g. .cvsignore is deemed not to have an extension
         ext = os.path.normcase(ext)
@@ -52,9 +52,9 @@ class Stats:
             ext = "<none>"
         self.addstats(ext, "files", 1)
         try:
-            f = open(filename, "rb")
+            f = open(file, "rb")
         except IOError, err:
-            sys.stderr.write("Can't open %s: %s\n" % (filename, err))
+            sys.stderr.write("Can't open %s: %s\n" % (file, err))
             self.addstats(ext, "unopenable", 1)
             return
         data = f.read()

@@ -16,13 +16,8 @@
 % Finally, it might be useful to include all the material from my "Care
 % and Feeding of a Python Installation" talk in here somewhere.  Yow!
 
-\input{boilerplate}
-
 \author{Greg Ward}
-\authoraddress{
-	\strong{Python Software Foundation}\\
-	Email: \email{distutils-sig@python.org}
-}
+\authoraddress{Email: \email{distutils-sig@python.org}}
 
 \makeindex
 
@@ -44,7 +39,7 @@
 %\end{abstract}
 
 
-% The ugly "%begin{latexonly}" pseudo-environment suppresses the table
+% The ugly "%begin{latexonly}" pseudo-environment supresses the table
 % of contents for HTML generation.
 %
 %begin{latexonly}
@@ -142,7 +137,7 @@ python setup.py install
 
 On \UNIX, you'd run this command from a shell prompt; on Windows, you
 have to open a command prompt window (``DOS box'') and do it there; on
-Mac OS X, you open a \command{Terminal} window to get a shell prompt.
+Mac OS, things are a tad more complicated (see below).
 
 
 \subsection{Platform variations}
@@ -172,6 +167,12 @@ window (``DOS box''), and run:
 cd c:\Temp\foo-1.0
 python setup.py install
 \end{verbatim}
+
+On Mac OS 9, you double-click the \file{setup.py} script. It will bring
+up a dialog where you can select the \command{install} command. Then
+selecting the \command{run} button will install your distribution.
+The dialog is built dynamically, so all commands and options for this
+specific distribution are listed.
 
 \subsection{Splitting the job up}
 \label{splitting-up}
@@ -262,23 +263,30 @@ If you don't choose an installation directory---i.e., if you just run
 \code{setup.py install}---then the \command{install} command installs to
 the standard location for third-party Python modules.  This location
 varies by platform and by how you built/installed Python itself.  On
-\UNIX{} (and Mac OS X, which is also \UNIX-based),
-it also depends on whether the module distribution
+\UNIX{} and Mac OS, it also depends on whether the module distribution
 being installed is pure Python or contains extensions (``non-pure''):
 \begin{tableiv}{l|l|l|c}{textrm}%
   {Platform}{Standard installation location}{Default value}{Notes}
   \lineiv{\UNIX{} (pure)}
-          {\filenq{\filevar{prefix}/lib/python\shortversion/site-packages}}
-          {\filenq{/usr/local/lib/python\shortversion/site-packages}}
+          {\filenq{\filevar{prefix}/lib/python2.0/site-packages}}
+          {\filenq{/usr/local/lib/python2.0/site-packages}}
           {(1)}
   \lineiv{\UNIX{} (non-pure)}
-          {\filenq{\filevar{exec-prefix}/lib/python\shortversion/site-packages}}
-          {\filenq{/usr/local/lib/python\shortversion/site-packages}}
+          {\filenq{\filevar{exec-prefix}/lib/python2.0/site-packages}}
+          {\filenq{/usr/local/lib/python2.0/site-packages}}
           {(1)}
   \lineiv{Windows}
           {\filenq{\filevar{prefix}}}
           {\filenq{C:\textbackslash{}Python}}
           {(2)}
+  \lineiv{Mac OS (pure)}
+          {\filenq{\filevar{prefix}:Lib:site-packages}}
+          {\filenq{Python:Lib:site-packages}}
+          {}
+  \lineiv{Mac OS (non-pure)}
+          {\filenq{\filevar{prefix}:Lib:site-packages}}
+          {\filenq{Python:Lib:site-packages}}
+          {}
 \end{tableiv}
 
 \noindent Notes:
@@ -295,21 +303,21 @@ being installed is pure Python or contains extensions (``non-pure''):
 
 \filevar{prefix} and \filevar{exec-prefix} stand for the directories
 that Python is installed to, and where it finds its libraries at
-run-time.  They are always the same under Windows, and very
-often the same under \UNIX and Mac OS X.  You can find out what your Python
+run-time.  They are always the same under Windows and Mac OS, and very
+often the same under \UNIX.  You can find out what your Python
 installation uses for \filevar{prefix} and \filevar{exec-prefix} by
 running Python in interactive mode and typing a few simple commands.
 Under \UNIX, just type \code{python} at the shell prompt.  Under
 Windows, choose \menuselection{Start \sub Programs \sub Python
-\shortversion \sub Python (command line)}.  
+2.1 \sub Python (command line)}.  Under Mac OS 9, start \file{PythonInterpreter}.
 Once the interpreter is started, you type Python code at the
 prompt.  For example, on my Linux system, I type the three Python
 statements shown below, and get the output as shown, to find out my
 \filevar{prefix} and \filevar{exec-prefix}:
 
 \begin{verbatim}
-Python 2.4 (#26, Aug  7 2004, 17:19:02) 
-Type "help", "copyright", "credits" or "license" for more information.
+Python 1.5.2 (#1, Apr 18 1999, 16:03:16)  [GCC pgcc-2.91.60 19981201 (egcs-1.1.1  on linux2
+Copyright 1991-1995 Stichting Mathematisch Centrum, Amsterdam
 >>> import sys
 >>> sys.prefix
 '/usr'
@@ -371,26 +379,26 @@ install files.  The details differ across platforms, so read whichever
 of the following sections applies to you.
 
 
-\subsection{Alternate installation: the home scheme}
+\subsection{Alternate installation: \UNIX{} (the home scheme)}
 \label{alt-install-prefix}
 
-The idea behind the ``home scheme'' is that you build and maintain a
-personal stash of Python modules.  This scheme's name is derived from
-the idea of a ``home'' directory on \UNIX, since it's not unusual for
-a \UNIX{} user to make their home directory have a layout similar to
-\file{/usr/} or \file{/usr/local/}.  This scheme can be used by
-anyone, regardless of the operating system their installing for.
+Under \UNIX, there are two ways to perform an alternate installation.
+The ``prefix scheme'' is similar to how alternate installation works
+under Windows and Mac OS, but is not necessarily the most useful way to
+maintain a personal Python library.  Hence, we document the more
+convenient and commonly useful ``home scheme'' first.
 
+The idea behind the ``home scheme'' is that you build and maintain a
+personal stash of Python modules, probably under your home directory.
 Installing a new module distribution is as simple as
 
 \begin{verbatim}
 python setup.py install --home=<dir>
 \end{verbatim}
 
-where you can supply any directory you like for the
-\longprogramopt{home} option.  On \UNIX, lazy typists can just type a
-tilde (\code{\textasciitilde}); the \command{install} command will
-expand this to your home directory:
+where you can supply any directory you like for the \longprogramopt{home}
+option.  Lazy typists can just type a tilde (\code{\textasciitilde}); the
+\command{install} command will expand this to your home directory:
 
 \begin{verbatim}
 python setup.py install --home=~
@@ -403,11 +411,6 @@ installation base as follows:
               {home}{/lib/python}
               {home}{/bin}
               {home}{/share}
-
-
-\versionchanged[The \longprogramopt{home} option used to be supported
-                only on \UNIX]{2.4}
-
 
 \subsection{Alternate installation: \UNIX{} (the prefix scheme)}
 \label{alt-install-home}
@@ -483,13 +486,14 @@ your \longprogramopt{prefix} and \longprogramopt{exec-prefix} don't even
 point to an alternate Python installation, this is immaterial.)
 
 
-\subsection{Alternate installation: Windows (the prefix scheme)}
+\subsection{Alternate installation: Windows}
 \label{alt-install-windows}
 
-Windows has no concept of a user's home directory, and since the
-standard Python installation under Windows is simpler than under
-\UNIX, the \longprogramopt{prefix} option has traditionally been used
-to install additional packages in separate locations on Windows.
+Since Windows has no conception of a user's home directory, and since
+the standard Python installation under Windows is simpler than that
+under \UNIX, there's no point in having separate \longprogramopt{prefix}
+and \longprogramopt{home} options.  Just use the \longprogramopt{prefix}
+option to specify a base directory, e.g.
 
 \begin{verbatim}
 python setup.py install --prefix="\Temp\Python"
@@ -507,6 +511,24 @@ Files are installed as follows:
               {prefix}{\textbackslash{}Scripts}
               {prefix}{\textbackslash{}Data}
 
+
+\subsection{Alternate installation: Mac OS 9}
+\label{alt-install-macos}
+
+% XXX Mac OS X?
+
+Like Windows, Mac OS has no notion of home directories (or even of
+users), and a fairly simple standard Python installation.  Thus, only a
+\longprogramopt{prefix} option is needed.  It defines the installation
+base, and files are installed under it as follows:
+
+\installscheme{prefix}{:Lib:site-packages}
+              {prefix}{:Lib:site-packages}
+              {prefix}{:Scripts}
+              {prefix}{:Data}
+
+See section~\ref{platform-variations} for information on supplying
+command-line arguments to the setup script with MacPython.
 
 
 \section{Custom Installation}
@@ -632,7 +654,7 @@ Note that these two are \emph{not} equivalent if you supply a different
 installation base directory when you run the setup script.  For example,
 
 \begin{verbatim}
-python setup.py install --install-base=/tmp
+python setup.py --install-base=/tmp
 \end{verbatim}
 
 would install pure modules to \filevar{/tmp/python/lib} in the first
@@ -651,7 +673,7 @@ environment variables, such as Mac OS 9, the configuration
 variables supplied by the Distutils are the only ones you can use.)
 See section~\ref{config-files} for details.
 
-% XXX need some Windows examples---when would custom
+% XXX need some Windows and Mac OS examples---when would custom
 % installation schemes be needed on those platforms?
 
 
@@ -703,8 +725,8 @@ for installing fixed versions of standard modules.)
 Paths can be absolute or relative, in which case they're relative to
 the directory containing the \file{.pth} file.  Any directories added
 to the search path will be scanned in turn for \file{.pth} files.  See
-\citetitle[http://www.python.org/dev/doc/devel/lib/module-site.html]
-{site module documentation} for more information.
+\citetitle[http://www.python.org/dev/doc/devel/lib/module-site.html]{the
+documentation for the \module{site} module} for more information.
 
 A slightly less convenient way is to edit the \file{site.py} file in
 Python's standard library, and modify \code{sys.path}.  \file{site.py}
@@ -726,8 +748,8 @@ There are two environment variables that can modify \code{sys.path}.
 \envvar{PYTHONHOME} sets an alternate value for the prefix of the
 Python installation.  For example, if \envvar{PYTHONHOME} is set to
 \samp{/www/python}, the search path will be set to \code{['',
-'/www/python/lib/python\shortversion/',
-'/www/python/lib/python\shortversion/plat-linux2', ...]}.  
+'/www/python/lib/python2.2/', '/www/python/lib/python2.3/plat-linux2',
+...]}.  
 
 The \envvar{PYTHONPATH} variable can be set to a list of paths that
 will be added to the beginning of \code{sys.path}.  For example, if
@@ -757,8 +779,8 @@ apply, values from ``earlier'' files are overridden by ``later'' files.
 \label{config-filenames}
 
 The names and locations of the configuration files vary slightly across
-platforms.  On \UNIX{} and Mac OS X, the three configuration files (in
-the order they are processed) are:
+platforms.  On \UNIX, the three configuration files (in the order they
+are processed) are:
 \begin{tableiii}{l|l|c}{textrm}
   {Type of file}{Location and filename}{Notes}
   \lineiii{system}{\filenq{\filevar{prefix}/lib/python\filevar{ver}/distutils/distutils.cfg}}{(1)}
@@ -766,11 +788,19 @@ the order they are processed) are:
   \lineiii{local}{\filenq{setup.cfg}}{(3)}
 \end{tableiii}
 
-And on Windows, the configuration files are:
+On Windows, the configuration files are:
 \begin{tableiii}{l|l|c}{textrm}
   {Type of file}{Location and filename}{Notes}
   \lineiii{system}{\filenq{\filevar{prefix}\textbackslash{}Lib\textbackslash{}distutils\textbackslash{}distutils.cfg}}{(4)}
   \lineiii{personal}{\filenq{\%HOME\%\textbackslash{}pydistutils.cfg}}{(5)}
+  \lineiii{local}{\filenq{setup.cfg}}{(3)}
+\end{tableiii}
+
+And on Mac OS, they are:
+\begin{tableiii}{l|l|c}{textrm}
+  {Type of file}{Location and filename}{Notes}
+  \lineiii{system}{\filenq{\filevar{prefix}:Lib:distutils:distutils.cfg}}{(6)}
+  \lineiii{personal}{N/A}{}
   \lineiii{local}{\filenq{setup.cfg}}{(3)}
 \end{tableiii}
 
@@ -780,7 +810,7 @@ And on Windows, the configuration files are:
   in the directory where the Distutils are installed; under Python 1.6
   and later on \UNIX, this is as shown. For Python 1.5.2, the Distutils
   will normally be installed to
-  \file{\filevar{prefix}/lib/python1.5/site-packages/distutils},
+  \file{\filevar{prefix}/lib/site-packages/python1.5/distutils},
   so the system configuration file should be put there under Python
   1.5.2.
 \item[(2)] On \UNIX, if the \envvar{HOME} environment variable is not
@@ -803,6 +833,9 @@ And on Windows, the configuration files are:
   defined, no personal configuration file will be found or used.  (In
   other words, the Distutils make no attempt to guess your home
   directory on Windows.)
+\item[(6)] (See also notes (1) and (4).)  The default installation
+  prefix is just \file{Python:}, so under Python 1.6 and later this is
+  normally\file{Python:Lib:distutils:distutils.cfg}.  
 \end{description}
 
 
@@ -884,7 +917,7 @@ override the usual Distutils behaviour.
 \subsection{Tweaking compiler/linker flags}
 \label{tweak-flags}
 
-Compiling a Python extension written in C or \Cpp{} will sometimes
+Compiling a Python extension written in C or \Cpp will sometimes
 require specifying custom flags for the compiler and linker in order
 to use a particular library or produce a special kind of object code.
 This is especially true if the extension hasn't been tested on your 
@@ -981,15 +1014,15 @@ different from the format used by the Python version you can download
 from the Python or ActiveState Web site.  (Python is built with
 Microsoft Visual \Cpp, which uses COFF as the object file format.)
 For this reason you have to convert Python's library
-\file{python25.lib} into the Borland format.  You can do this as
+\file{python20.lib} into the Borland format.  You can do this as
 follows:
 
 \begin{verbatim}
-coff2omf python25.lib python25_bcpp.lib
+coff2omf python20.lib python20_bcpp.lib
 \end{verbatim}
 
 The \file{coff2omf} program comes with the Borland compiler.  The file
-\file{python25.lib} is in the \file{Libs} directory of your Python
+\file{python20.lib} is in the \file{Libs} directory of your Python
 installation.  If your extension uses other libraries (zlib,...) you
 have to convert them too.
 
@@ -1030,9 +1063,6 @@ for Distutils (see section~\ref{config-files}.)
 
 \subsubsection{GNU C / Cygwin / MinGW}
 
-These instructions only apply if you're using a version of Python prior 
-to 2.4.1 with a MinGW prior to 3.0.0 (with binutils-2.13.90-20030111-1).
-
 This section describes the necessary steps to use Distutils with the
 GNU C/\Cpp{} compilers in their Cygwin and MinGW
 distributions.\footnote{Check
@@ -1053,23 +1083,17 @@ First you have to create a list of symbols which the Python DLL exports.
 PExports 0.42h there.)
 
 \begin{verbatim}
-pexports python25.dll >python25.def
+pexports python20.dll >python20.def
 \end{verbatim}
-
-The location of an installed \file{python25.dll} will depend on the
-installation options and the version and language of Windows.  In a
-``just for me'' installation, it will appear in the root of the
-installation directory.  In a shared installation, it will be located
-in the system directory.
 
 Then you can create from these information an import library for gcc.
  
 \begin{verbatim}
-/cygwin/bin/dlltool --dllname python25.dll --def python25.def --output-lib libpython25.a
+dlltool --dllname python20.dll --def python20.def --output-lib libpython20.a
 \end{verbatim}
 
 The resulting library has to be placed in the same directory as 
-\file{python25.lib}. (Should be the \file{libs} directory under your
+\file{python20.lib}. (Should be the \file{libs} directory under your
 Python installation directory.)
 
 If your extension uses other libraries (zlib,...) you might 

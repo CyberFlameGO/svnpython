@@ -9,6 +9,8 @@ typedef struct {
 	PyObject* en_result;	   /* result tuple  */
 } enumobject;
 
+PyTypeObject PyEnum_Type;
+
 static PyObject *
 enum_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
@@ -29,11 +31,16 @@ enum_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		Py_DECREF(en);
 		return NULL;
 	}
-	en->en_result = PyTuple_Pack(2, Py_None, Py_None);
+	en->en_result = PyTuple_New(2);
 	if (en->en_result == NULL) {
+		Py_DECREF(en->en_sit);
 		Py_DECREF(en);
 		return NULL;
 	}
+	Py_INCREF(Py_None);
+	PyTuple_SET_ITEM(en->en_result, 0, Py_None);
+	Py_INCREF(Py_None);
+	PyTuple_SET_ITEM(en->en_result, 1, Py_None);
 	return (PyObject *)en;
 }
 
@@ -49,8 +56,18 @@ enum_dealloc(enumobject *en)
 static int
 enum_traverse(enumobject *en, visitproc visit, void *arg)
 {
-	Py_VISIT(en->en_sit);
-	Py_VISIT(en->en_result);
+	int err;
+
+	if (en->en_sit) {
+		err = visit(en->en_sit, arg);
+		if (err)
+			return err;
+	}
+	if (en->en_result) {
+		err = visit(en->en_result, arg);
+		if (err)
+			return err;
+	}
 	return 0;
 }
 
@@ -140,153 +157,5 @@ PyTypeObject PyEnum_Type = {
 	0,                              /* tp_init */
 	PyType_GenericAlloc,            /* tp_alloc */
 	enum_new,                       /* tp_new */
-	PyObject_GC_Del,                /* tp_free */
-};
-
-/* Reversed Object ***************************************************************/
-
-typedef struct {
-	PyObject_HEAD
-	Py_ssize_t      index;
-	PyObject* seq;
-} reversedobject;
-
-static PyObject *
-reversed_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-	Py_ssize_t n;
-	PyObject *seq;
-	reversedobject *ro;
-
-	if (!PyArg_UnpackTuple(args, "reversed", 1, 1, &seq))
-		return NULL;
-
-	if (PyObject_HasAttrString(seq, "__reversed__"))
-		return PyObject_CallMethod(seq, "__reversed__", NULL);
-
-	if (!PySequence_Check(seq)) {
-		PyErr_SetString(PyExc_TypeError,
-				"argument to reversed() must be a sequence");
-		return NULL;
-	}
-
-	n = PySequence_Size(seq);
-	if (n == -1)
-		return NULL;
-
-	ro = (reversedobject *)type->tp_alloc(type, 0);
-	if (ro == NULL)
-		return NULL;
-
-	ro->index = n-1;
-	Py_INCREF(seq);
-	ro->seq = seq;
-	return (PyObject *)ro;
-}
-
-static void
-reversed_dealloc(reversedobject *ro)
-{
-	PyObject_GC_UnTrack(ro);
-	Py_XDECREF(ro->seq);
-	ro->ob_type->tp_free(ro);
-}
-
-static int
-reversed_traverse(reversedobject *ro, visitproc visit, void *arg)
-{
-	Py_VISIT(ro->seq);
-	return 0;
-}
-
-static PyObject *
-reversed_next(reversedobject *ro)
-{
-	PyObject *item;
-	Py_ssize_t index = ro->index;
-
-	if (index >= 0) {
-		item = PySequence_GetItem(ro->seq, index);
-		if (item != NULL) {
-			ro->index--;
-			return item;
-		}
-		if (PyErr_ExceptionMatches(PyExc_IndexError) ||
-		    PyErr_ExceptionMatches(PyExc_StopIteration))
-			PyErr_Clear();
-	}
-	ro->index = -1;
-	Py_CLEAR(ro->seq);
-	return NULL;
-}
-
-PyDoc_STRVAR(reversed_doc,
-"reversed(sequence) -> reverse iterator over values of the sequence\n"
-"\n"
-"Return a reverse iterator");
-
-static PyObject *
-reversed_len(reversedobject *ro)
-{
-	Py_ssize_t position, seqsize;
-
-	if (ro->seq == NULL)
-		return PyInt_FromLong(0);
-	seqsize = PySequence_Size(ro->seq);
-	if (seqsize == -1)
-		return NULL;
-	position = ro->index + 1;
-	return PyInt_FromSsize_t((seqsize < position)  ?  0  :  position);
-}
-
-PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
-
-static PyMethodDef reversediter_methods[] = {
-	{"__length_hint__", (PyCFunction)reversed_len, METH_NOARGS, length_hint_doc},
- 	{NULL,		NULL}		/* sentinel */
-};
-
-PyTypeObject PyReversed_Type = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,                              /* ob_size */
-	"reversed",                     /* tp_name */
-	sizeof(reversedobject),         /* tp_basicsize */
-	0,                              /* tp_itemsize */
-	/* methods */
-	(destructor)reversed_dealloc,   /* tp_dealloc */
-	0,                              /* tp_print */
-	0,                              /* tp_getattr */
-	0,                              /* tp_setattr */
-	0,                              /* tp_compare */
-	0,                              /* tp_repr */
-	0,                              /* tp_as_number */
-	0,				/* tp_as_sequence */
-	0,                              /* tp_as_mapping */
-	0,                              /* tp_hash */
-	0,                              /* tp_call */
-	0,                              /* tp_str */
-	PyObject_GenericGetAttr,        /* tp_getattro */
-	0,                              /* tp_setattro */
-	0,                              /* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
-		Py_TPFLAGS_BASETYPE,    /* tp_flags */
-	reversed_doc,                   /* tp_doc */
-	(traverseproc)reversed_traverse,/* tp_traverse */
-	0,                              /* tp_clear */
-	0,                              /* tp_richcompare */
-	0,                              /* tp_weaklistoffset */
-	PyObject_SelfIter,		/* tp_iter */
-	(iternextfunc)reversed_next,    /* tp_iternext */
-	reversediter_methods,		/* tp_methods */
-	0,                              /* tp_members */
-	0,                              /* tp_getset */
-	0,                              /* tp_base */
-	0,                              /* tp_dict */
-	0,                              /* tp_descr_get */
-	0,                              /* tp_descr_set */
-	0,                              /* tp_dictoffset */
-	0,                              /* tp_init */
-	PyType_GenericAlloc,            /* tp_alloc */
-	reversed_new,                   /* tp_new */
 	PyObject_GC_Del,                /* tp_free */
 };

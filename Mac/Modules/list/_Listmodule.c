@@ -5,17 +5,26 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <Lists.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
 extern PyObject *_ListObj_New(ListHandle);
@@ -23,6 +32,31 @@ extern int _ListObj_Convert(PyObject *, ListHandle *);
 
 #define ListObj_New _ListObj_New
 #define ListObj_Convert _ListObj_Convert
+#endif
+
+#if !ACCESSOR_CALLS_ARE_FUNCTIONS
+#define GetListPort(list) ((CGrafPtr)(*(list))->port)
+#define GetListVerticalScrollBar(list) ((*(list))->vScroll)
+#define GetListHorizontalScrollBar(list) ((*(list))->hScroll)
+#define GetListActive(list) ((*(list))->lActive)
+#define GetListClickTime(list) ((*(list))->clikTime)
+#define GetListRefCon(list) ((*(list))->refCon)
+#define GetListDefinition(list) ((*(list))->listDefProc) /* XXX Is this indeed the same? */
+#define GetListUserHandle(list) ((*(list))->userHandle)
+#define GetListDataHandle(list) ((*(list))->cells)
+#define GetListFlags(list) ((*(list))->listFlags)
+#define GetListSelectionFlags(list) ((*(list))->selFlags)
+#define SetListViewBounds(list, bounds) (((*(list))->rView) = *(bounds))
+
+#define SetListPort(list, port) (((*(list))->port) = (GrafPtr)(port))
+#define SetListCellIndent(list, ind) (((*(list))->indent) = *(ind))
+#define SetListClickTime(list, time) (((*(list))->clikTime) = (time))
+#define SetListLastClick(list, click) (((*(list)->lastClick) = *(click))
+#define SetListRefCon(list, refcon) (((*(list))->refCon) = (refcon))
+#define SetListUserHandle(list, handle) (((*(list))->userHandle) = (handle))
+#define SetListFlags(list, flags) (((*(list))->listFlags) = (flags))
+#define SetListSelectionFlags(list, flags) (((*(list))->selFlags) = (flags))
+
 #endif
 
 #define as_List(x) ((ListHandle)x)
@@ -50,9 +84,9 @@ PyObject *ListObj_New(ListHandle itself)
 {
 	ListObject *it;
 	if (itself == NULL) {
-	                                PyErr_SetString(List_Error,"Cannot create null List");
-	                                return NULL;
-	                        }
+						PyErr_SetString(List_Error,"Cannot create null List");
+						return NULL;
+					}
 	it = PyObject_NEW(ListObject, &List_Type);
 	if (it == NULL) return NULL;
 	it->ob_itself = itself;
@@ -61,7 +95,6 @@ PyObject *ListObj_New(ListHandle itself)
 	SetListRefCon(itself, (long)it);
 	return (PyObject *)it;
 }
-
 int ListObj_Convert(PyObject *v, ListHandle *p_itself)
 {
 	if (!ListObj_Check(v))
@@ -739,16 +772,16 @@ static PyGetSetDef ListObj_getsetlist[] = {
 
 #define ListObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *ListObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *ListObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	ListHandle itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, ListObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((ListObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, ListObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((ListObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define ListObj_tp_free PyObject_Del
@@ -827,10 +860,10 @@ static PyObject *List_CreateCustomList(PyObject *_self, PyObject *_args)
 	                      &hasGrow,
 	                      &scrollHoriz,
 	                      &scrollVert))
-	        return NULL;
+		return NULL;
 
 
-	/* Carbon applications use the CreateCustomList API */
+	/* Carbon applications use the CreateCustomList API */ 
 	theSpec.u.userProc = myListDefFunctionUPP;
 	CreateCustomList(&rView,
 	                 &dataBounds,
@@ -846,7 +879,7 @@ static PyObject *List_CreateCustomList(PyObject *_self, PyObject *_args)
 
 	_res = ListObj_New(outList);
 	if (_res == NULL)
-	        return NULL;
+		return NULL;
 	Py_INCREF(listDefFunc);
 	((ListObject*)_res)->ob_ldef_func = listDefFunc;
 	return _res;
@@ -1025,7 +1058,7 @@ static PyObject *List_as_List(PyObject *_self, PyObject *_args)
 	Handle h;
 	ListObject *l;
 	if (!PyArg_ParseTuple(_args, "O&", ResObj_Convert, &h))
-	        return NULL;
+		return NULL;
 	l = (ListObject *)ListObj_New(as_List(h));
 	l->ob_must_be_disposed = 0;
 	_res = Py_BuildValue("O", l);
@@ -1067,34 +1100,34 @@ static void myListDefFunction(SInt16 message,
                        Cell theCell,
                        SInt16 dataOffset,
                        SInt16 dataLen,
-                       ListHandle theList)
+                       ListHandle theList)  
 {
-        PyObject *listDefFunc, *args, *rv=NULL;
-        ListObject *self;
-
-        self = (ListObject*)GetListRefCon(theList);
-        if (self == NULL || self->ob_itself != theList)
-                return;  /* nothing we can do */
-        listDefFunc = self->ob_ldef_func;
-        if (listDefFunc == NULL)
-                return;  /* nothing we can do */
-        args = Py_BuildValue("hbO&O&hhO", message,
-                                          selected,
-                                          PyMac_BuildRect, cellRect,
-                                          PyMac_BuildPoint, theCell,
-                                          dataOffset,
-                                          dataLen,
-                                          self);
-        if (args != NULL) {
-                rv = PyEval_CallObject(listDefFunc, args);
-                Py_DECREF(args);
-        }
-        if (rv == NULL) {
-                PySys_WriteStderr("error in list definition callback:\n");
-                PyErr_Print();
-        } else {
-                Py_DECREF(rv);
-        }
+	PyObject *listDefFunc, *args, *rv=NULL;
+	ListObject *self;
+	
+	self = (ListObject*)GetListRefCon(theList);
+	if (self == NULL || self->ob_itself != theList)
+		return;  /* nothing we can do */
+	listDefFunc = self->ob_ldef_func;
+	if (listDefFunc == NULL)
+		return;  /* nothing we can do */
+	args = Py_BuildValue("hbO&O&hhO", message,
+	                                  selected,
+	                                  PyMac_BuildRect, cellRect,
+	                                  PyMac_BuildPoint, theCell,
+	                                  dataOffset,
+	                                  dataLen,
+	                                  self);
+	if (args != NULL) {
+		rv = PyEval_CallObject(listDefFunc, args);
+		Py_DECREF(args);
+	}
+	if (rv == NULL) {
+		PySys_WriteStderr("error in list definition callback:\n");
+		PyErr_Print();
+	} else {
+		Py_DECREF(rv);
+	}
 }
 
 

@@ -175,14 +175,11 @@ def test_xmlgen_attr_escape():
     gen.endElement("e")
     gen.startElement("e", {"a": "'\""})
     gen.endElement("e")
-    gen.startElement("e", {"a": "\n\r\t"})
-    gen.endElement("e")
     gen.endElement("doc")
     gen.endDocument()
 
-    return result.getvalue() == start + ("<doc a='\"'><e a=\"'\"></e>"
-                                         "<e a=\"'&quot;\"></e>"
-                                         "<e a=\"&#10;&#13;&#9;\"></e></doc>")
+    return result.getvalue() == start \
+           + "<doc a='\"'><e a=\"'\"></e><e a=\"'&quot;\"></e></doc>"
 
 def test_xmlgen_ignorable():
     result = StringIO()
@@ -492,41 +489,6 @@ def test_expat_incomplete():
     else:
         return 0
 
-def test_sax_parse_exception_str():
-    # pass various values from a locator to the SAXParseException to
-    # make sure that the __str__() doesn't fall apart when None is
-    # passed instead of an integer line and column number
-    #
-    # use "normal" values for the locator:
-    str(SAXParseException("message", None,
-                          DummyLocator(1, 1)))
-    # use None for the line number:
-    str(SAXParseException("message", None,
-                          DummyLocator(None, 1)))
-    # use None for the column number:
-    str(SAXParseException("message", None,
-                          DummyLocator(1, None)))
-    # use None for both:
-    str(SAXParseException("message", None,
-                          DummyLocator(None, None)))
-    return 1
-
-class DummyLocator:
-    def __init__(self, lineno, colno):
-        self._lineno = lineno
-        self._colno = colno
-
-    def getPublicId(self):
-        return "pubid"
-
-    def getSystemId(self):
-        return "sysid"
-
-    def getLineNumber(self):
-        return self._lineno
-
-    def getColumnNumber(self):
-        return self._colno
 
 # ===========================================================================
 #
@@ -671,55 +633,6 @@ def test_nsattrs_wattr():
            attrs.getQNameByName((ns_uri, "attr")) == "ns:attr"
 
 
-# During the development of Python 2.5, an attempt to move the "xml"
-# package implementation to a new package ("xmlcore") proved painful.
-# The goal of this change was to allow applications to be able to
-# obtain and rely on behavior in the standard library implementation
-# of the XML support without needing to be concerned about the
-# availability of the PyXML implementation.
-#
-# While the existing import hackery in Lib/xml/__init__.py can cause
-# PyXML's _xmlpus package to supplant the "xml" package, that only
-# works because either implementation uses the "xml" package name for
-# imports.
-#
-# The move resulted in a number of problems related to the fact that
-# the import machinery's "package context" is based on the name that's
-# being imported rather than the __name__ of the actual package
-# containment; it wasn't possible for the "xml" package to be replaced
-# by a simple module that indirected imports to the "xmlcore" package.
-#
-# The following two tests exercised bugs that were introduced in that
-# attempt.  Keeping these tests around will help detect problems with
-# other attempts to provide reliable access to the standard library's
-# implementation of the XML support.
-
-def test_sf_1511497():
-    # Bug report: http://www.python.org/sf/1511497
-    import sys
-    old_modules = sys.modules.copy()
-    for modname in sys.modules.keys():
-        if modname.startswith("xml."):
-            del sys.modules[modname]
-    try:
-        import xml.sax.expatreader
-        module = xml.sax.expatreader
-        return module.__name__ == "xml.sax.expatreader"
-    finally:
-        sys.modules.update(old_modules)
-
-def test_sf_1513611():
-    # Bug report: http://www.python.org/sf/1513611
-    sio = StringIO("invalid")
-    parser = make_parser()
-    from xml.sax import SAXParseException
-    try:
-        parser.parse(sio)
-    except SAXParseException:
-        return True
-    else:
-        return False
-
 # ===== Main program
 
 def make_test_output():
@@ -739,10 +652,6 @@ items.sort()
 for (name, value) in items:
     if name[ : 5] == "test_":
         confirm(value(), name)
-# We delete the items variable so that the assignment to items above
-# doesn't pick up the old value of items (which messes with attempts
-# to find reference leaks).
-del items
 
 if verbose:
     print "%d tests, %d failures" % (tests, len(failures))

@@ -201,8 +201,6 @@ def _write_long(f, x):
     f.write(struct.pack('>L', x))
 
 def _write_string(f, s):
-    if len(s) > 255:
-        raise ValueError("string exceeds maximum pstring length")
     f.write(chr(len(s)))
     f.write(s)
     if len(s) & 1 == 0:
@@ -394,7 +392,7 @@ class Aifc_read:
         for marker in self._markers:
             if id == marker[0]:
                 return marker
-        raise Error, 'marker %r does not exist' % (id,)
+        raise Error, 'marker ' + `id` + ' does not exist'
 
     def setpos(self, pos):
         if pos < 0 or pos > self._nframes:
@@ -699,7 +697,7 @@ class Aifc_write:
         for marker in self._markers:
             if id == marker[0]:
                 return marker
-        raise Error, 'marker %r does not exist' % (id,)
+        raise Error, 'marker ' + `id` + ' does not exist'
 
     def getmarkers(self):
         if len(self._markers) == 0:

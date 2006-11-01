@@ -29,7 +29,7 @@ listmembers(struct memberlist *mlist)
 }
 
 PyObject *
-PyMember_Get(const char *addr, struct memberlist *mlist, const char *name)
+PyMember_Get(char *addr, struct memberlist *mlist, char *name)
 {
 	struct memberlist *l;
 
@@ -51,7 +51,7 @@ PyMember_Get(const char *addr, struct memberlist *mlist, const char *name)
 }
 
 PyObject *
-PyMember_GetOne(const char *addr, PyMemberDef *l)
+PyMember_GetOne(char *addr, PyMemberDef *l)
 {
 	PyObject *v;
 	if ((l->flags & READ_RESTRICTED) &&
@@ -62,28 +62,29 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 	addr += l->offset;
 	switch (l->type) {
 	case T_BYTE:
-		v = PyInt_FromLong(*(char*)addr);
+		v = PyInt_FromLong(
+			(long) (((*(char*)addr & 0xff) ^ 0x80) - 0x80));
 		break;
 	case T_UBYTE:
-		v = PyLong_FromUnsignedLong(*(unsigned char*)addr);
+		v = PyInt_FromLong((long) *(char*)addr & 0xff);
 		break;
 	case T_SHORT:
-		v = PyInt_FromLong(*(short*)addr);
+		v = PyInt_FromLong((long) *(short*)addr);
 		break;
 	case T_USHORT:
-		v = PyLong_FromUnsignedLong(*(unsigned short*)addr);
+		v = PyInt_FromLong((long) *(unsigned short*)addr);
 		break;
 	case T_INT:
-		v = PyInt_FromLong(*(int*)addr);
+		v = PyInt_FromLong((long) *(int*)addr);
 		break;
 	case T_UINT:
-		v = PyLong_FromUnsignedLong(*(unsigned int*)addr);
+		v = PyInt_FromLong((long) *(unsigned int*)addr);
 		break;
 	case T_LONG:
 		v = PyInt_FromLong(*(long*)addr);
 		break;
 	case T_ULONG:
-		v = PyLong_FromUnsignedLong(*(unsigned long*)addr);
+		v = PyLong_FromDouble((double) *(unsigned long*)addr);
 		break;
 	case T_FLOAT:
 		v = PyFloat_FromDouble((double)*(float*)addr);
@@ -102,6 +103,23 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 	case T_STRING_INPLACE:
 		v = PyString_FromString((char*)addr);
 		break;
+#ifdef macintosh
+	case T_PSTRING:
+		if (*(char**)addr == NULL) {
+			Py_INCREF(Py_None);
+			v = Py_None;
+		}
+		else
+			v = PyString_FromStringAndSize(
+				(*(char**)addr)+1,
+				**(unsigned char**)addr);
+		break;
+	case T_PSTRING_INPLACE:
+		v = PyString_FromStringAndSize(
+			((char*)addr)+1,
+			*(unsigned char*)addr);
+		break;
+#endif /* macintosh */
 	case T_CHAR:
 		v = PyString_FromStringAndSize((char*)addr, 1);
 		break;
@@ -117,14 +135,6 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 			PyErr_SetString(PyExc_AttributeError, l->name);
 		Py_XINCREF(v);
 		break;
-#ifdef HAVE_LONG_LONG
-	case T_LONGLONG:
-		v = PyLong_FromLongLong(*(PY_LONG_LONG *)addr);
-		break;
-	case T_ULONGLONG:
-		v = PyLong_FromUnsignedLongLong(*(unsigned PY_LONG_LONG *)addr);
-		break;
-#endif /* HAVE_LONG_LONG */
 	default:
 		PyErr_SetString(PyExc_SystemError, "bad memberdescr type");
 		v = NULL;
@@ -133,7 +143,7 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 }
 
 int
-PyMember_Set(char *addr, struct memberlist *mlist, const char *name, PyObject *v)
+PyMember_Set(char *addr, struct memberlist *mlist, char *name, PyObject *v)
 {
 	struct memberlist *l;
 
@@ -158,7 +168,11 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 {
 	PyObject *oldv;
 
-	if ((l->flags & READONLY) || l->type == T_STRING)
+	if ((l->flags & READONLY) || l->type == T_STRING
+#ifdef macintosh
+	    || l->type == T_PSTRING
+#endif
+		)
 	{
 		PyErr_SetString(PyExc_TypeError, "readonly attribute");
 		return -1;
@@ -174,107 +188,68 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 	}
 	addr += l->offset;
 	switch (l->type) {
-	case T_BYTE:{
-		long long_val;
-		long_val = PyInt_AsLong(v);
-		if ((long_val == -1) && PyErr_Occurred())
+	case T_BYTE:
+	case T_UBYTE:
+		if (!PyInt_Check(v)) {
+			PyErr_BadArgument();
 			return -1;
-		/* XXX: For compatibility, only warn about truncations
-		   for now. */
-		if ((long_val > CHAR_MAX) || (long_val < CHAR_MIN))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to char");
-		*(char*)addr = (char)long_val;
-		break;
 		}
-	case T_UBYTE:{
-		long long_val;
-		long_val = PyInt_AsLong(v);
-		if ((long_val == -1) && PyErr_Occurred())
+		*(char*)addr = (char) PyInt_AsLong(v);
+		break;
+	case T_SHORT:
+	case T_USHORT:
+		if (!PyInt_Check(v)) {
+			PyErr_BadArgument();
 			return -1;
-		if ((long_val > UCHAR_MAX) || (long_val < 0))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to unsigned char");
-		*(unsigned char*)addr = (unsigned char)long_val;
-		break;
 		}
-	case T_SHORT:{
-		long long_val;
-		long_val = PyInt_AsLong(v);
-		if ((long_val == -1) && PyErr_Occurred())
+		*(short*)addr = (short) PyInt_AsLong(v);
+		break;
+	case T_UINT:
+	case T_INT:
+		if (!PyInt_Check(v)) {
+			PyErr_BadArgument();
 			return -1;
-		if ((long_val > SHRT_MAX) || (long_val < SHRT_MIN))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to short");
-		*(short*)addr = (short)long_val;
-		break;
 		}
-	case T_USHORT:{
-		long long_val;
-		long_val = PyInt_AsLong(v);
-		if ((long_val == -1) && PyErr_Occurred())
+		*(int*)addr = (int) PyInt_AsLong(v);
+		break;
+	case T_LONG:
+		if (!PyInt_Check(v)) {
+			PyErr_BadArgument();
 			return -1;
-		if ((long_val > USHRT_MAX) || (long_val < 0))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to unsigned short");
-		*(unsigned short*)addr = (unsigned short)long_val;
-		break;
 		}
-  	case T_INT:{
-		long long_val;
-		long_val = PyInt_AsLong(v);
-		if ((long_val == -1) && PyErr_Occurred())
+		*(long*)addr = PyInt_AsLong(v);
+		break;
+	case T_ULONG:
+		if (PyInt_Check(v))
+			*(long*)addr = PyInt_AsLong(v);
+		else if (PyLong_Check(v))
+			*(long*)addr = PyLong_AsLong(v);
+		else {
+			PyErr_BadArgument();
 			return -1;
-		if ((long_val > INT_MAX) || (long_val < INT_MIN))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to int");
-		*(int *)addr = (int)long_val;
+		}
 		break;
-		}
-	case T_UINT:{
-		unsigned long ulong_val;
-		ulong_val = PyLong_AsUnsignedLong(v);
-		if ((ulong_val == (unsigned int)-1) && PyErr_Occurred()) {
-			/* XXX: For compatibility, accept negative int values
-			   as well. */
-			PyErr_Clear();
-			ulong_val = PyLong_AsLong(v);
-			if ((ulong_val == (unsigned int)-1) && PyErr_Occurred())
-				return -1;
-			PyErr_Warn(PyExc_RuntimeWarning, "Writing negative value into unsigned field");
-		}
-		if (ulong_val > UINT_MAX)
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to unsigned int");
-		*(unsigned int *)addr = (unsigned int)ulong_val;
-		break;
-		}
-	case T_LONG:{
-		*(long*)addr = PyLong_AsLong(v);
-		if ((*(long*)addr == -1) && PyErr_Occurred())
+	case T_FLOAT:
+		if (PyInt_Check(v))
+			*(float*)addr =
+				(float) PyInt_AsLong(v);
+		else if (PyFloat_Check(v))
+			*(float*)addr =
+				(float) PyFloat_AsDouble(v);
+		else {
+			PyErr_BadArgument();
 			return -1;
-		break;
-		}
-	case T_ULONG:{
-		*(unsigned long*)addr = PyLong_AsUnsignedLong(v);
-		if ((*(unsigned long*)addr == (unsigned long)-1)
-		    && PyErr_Occurred()) {
-			/* XXX: For compatibility, accept negative int values
-			   as well. */
-			PyErr_Clear();
-			*(unsigned long*)addr = PyLong_AsLong(v);
-			if ((*(unsigned long*)addr == (unsigned int)-1) && PyErr_Occurred())
-				return -1;
-			PyErr_Warn(PyExc_RuntimeWarning, "Writing negative value into unsigned field");
 		}
 		break;
-		}
-	case T_FLOAT:{
-		double double_val;
-		double_val = PyFloat_AsDouble(v);
-		if ((double_val == -1) && PyErr_Occurred())
-			return -1;
-		*(float*)addr = (float)double_val;
-		break;
-		}
 	case T_DOUBLE:
-		*(double*)addr = PyFloat_AsDouble(v);
-		if ((*(double*)addr == -1) && PyErr_Occurred())
+		if (PyInt_Check(v))
+			*(double*)addr = (double) PyInt_AsLong(v);
+		else if (PyFloat_Check(v))
+			*(double*)addr = PyFloat_AsDouble(v);
+		else {
+			PyErr_BadArgument();
 			return -1;
+		}
 		break;
 	case T_OBJECT:
 	case T_OBJECT_EX:
@@ -292,33 +267,6 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 			return -1;
 		}
 		break;
-#ifdef HAVE_LONG_LONG
-	case T_LONGLONG:
-		if (!PyLong_Check(v)) {
-			PyErr_BadArgument();
-			return -1;
-		} else {
-                        PY_LONG_LONG value;
-                        *(PY_LONG_LONG*)addr = value = PyLong_AsLongLong(v);
-                        if ((value == -1) && PyErr_Occurred()) {
-                                return -1;
-                        }
-                }
-                break;
-	case T_ULONGLONG:
-                if (!PyLong_Check(v)) {
-                        PyErr_BadArgument();
-                        return -1;
-                } else {
-                        unsigned PY_LONG_LONG value;
-                        *(unsigned PY_LONG_LONG*)addr = value = PyLong_AsUnsignedLongLong(v);
-                        if ((value == (unsigned PY_LONG_LONG)-1) &&
-			    PyErr_Occurred()) {
-                                return -1;
-                        }
-                }
-                break;
-#endif /* HAVE_LONG_LONG */
 	default:
 		PyErr_Format(PyExc_SystemError,
 			     "bad memberdescr type for %s", l->name);

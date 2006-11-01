@@ -110,7 +110,7 @@ class BundleBuilder(Defaults):
 
     # Verbosity level.
     verbosity = 1
-
+    
     # Destination root directory
     destroot = ""
 
@@ -145,24 +145,11 @@ class BundleBuilder(Defaults):
         self.message("Building %s" % repr(self.bundlepath), 1)
         if os.path.exists(self.bundlepath):
             shutil.rmtree(self.bundlepath)
-        if os.path.exists(self.bundlepath + '~'):
-            shutil.rmtree(self.bundlepath + '~')
-        bp = self.bundlepath
-
-        # Create the app bundle in a temporary location and then
-        # rename the completed bundle. This way the Finder will
-        # never see an incomplete bundle (where it might pick up
-        # and cache the wrong meta data)
-        self.bundlepath = bp + '~'
-        try:
-            os.mkdir(self.bundlepath)
-            self.preProcess()
-            self._copyFiles()
-            self._addMetaFiles()
-            self.postProcess()
-            os.rename(self.bundlepath, bp)
-        finally:
-            self.bundlepath = bp
+        os.mkdir(self.bundlepath)
+        self.preProcess()
+        self._copyFiles()
+        self._addMetaFiles()
+        self.postProcess()
         self.message("Done.", 1)
 
     def preProcess(self):

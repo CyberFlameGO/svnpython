@@ -13,7 +13,6 @@ extern "C" {
 #define ROT_THREE	3
 #define DUP_TOP		4
 #define ROT_FOUR	5
-#define NOP		9
 
 #define UNARY_POSITIVE	10
 #define UNARY_NEGATIVE	11
@@ -22,7 +21,6 @@ extern "C" {
 
 #define UNARY_INVERT	15
 
-#define LIST_APPEND	18
 #define BINARY_POWER	19
 
 #define BINARY_MULTIPLY	20
@@ -72,12 +70,13 @@ extern "C" {
 #define INPLACE_XOR	78
 #define INPLACE_OR	79
 #define BREAK_LOOP	80
-#define WITH_CLEANUP    81
+
 #define LOAD_LOCALS	82
 #define RETURN_VALUE	83
 #define IMPORT_STAR	84
 #define EXEC_STMT	85
 #define YIELD_VALUE	86
+
 #define POP_BLOCK	87
 #define END_FINALLY	88
 #define BUILD_CLASS	89

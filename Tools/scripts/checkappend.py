@@ -65,7 +65,7 @@ def main():
 def check(file):
     if os.path.isdir(file) and not os.path.islink(file):
         if verbose:
-            print "%r: listing directory" % (file,)
+            print "%s: listing directory" % `file`
         names = os.listdir(file)
         for name in names:
             fullname = os.path.join(file, name)
@@ -78,15 +78,15 @@ def check(file):
     try:
         f = open(file)
     except IOError, msg:
-        errprint("%r: I/O Error: %s" % (file, msg))
+        errprint("%s: I/O Error: %s" % (`file`, str(msg)))
         return
 
     if verbose > 1:
-        print "checking %r ..." % (file,)
+        print "checking", `file`, "..."
 
     ok = AppendChecker(file, f).run()
     if verbose and ok:
-        print "%r: Clean bill of health." % (file,)
+        print "%s: Clean bill of health." % `file`
 
 [FIND_DOT,
  FIND_APPEND,
@@ -105,7 +105,7 @@ class AppendChecker:
         try:
             tokenize.tokenize(self.file.readline, self.tokeneater)
         except tokenize.TokenError, msg:
-            errprint("%r: Token Error: %s" % (self.fname, msg))
+            errprint("%s: Token Error: %s" % (`self.fname`, str(msg)))
             self.nerrors = self.nerrors + 1
         return self.nerrors == 0
 
@@ -159,7 +159,7 @@ class AppendChecker:
                 state = FIND_DOT
 
         else:
-            raise SystemError("unknown internal state '%r'" % (state,))
+            raise SystemError("unknown internal state '%s'" % `state`)
 
         self.state = state
 

@@ -1,19 +1,18 @@
 # Copyright (C) 2002-2006 Python Software Foundation
-# Contact: email-sig@python.org
 
 """Email address parsing code.
 
 Lifted directly from rfc822.py.  This should eventually be rewritten.
 """
 
-__all__ = [
-    'mktime_tz',
-    'parsedate',
-    'parsedate_tz',
-    'quote',
-    ]
-
 import time
+from types import TupleType
+
+try:
+    True, False
+except NameError:
+    True = 1
+    False = 0
 
 SPACE = ' '
 EMPTYSTRING = ''
@@ -123,15 +122,14 @@ def parsedate_tz(data):
             tzoffset = -tzoffset
         else:
             tzsign = 1
-        tzoffset = tzsign * ( (tzoffset//100)*3600 + (tzoffset % 100)*60)
-    # Daylight Saving Time flag is set to -1, since DST is unknown.
-    return yy, mm, dd, thh, tmm, tss, 0, 1, -1, tzoffset
+        tzoffset = tzsign * ( (tzoffset/100)*3600 + (tzoffset % 100)*60)
+    return yy, mm, dd, thh, tmm, tss, 0, 1, 0, tzoffset
 
 
 def parsedate(data):
     """Convert a time string to a time tuple."""
     t = parsedate_tz(data)
-    if isinstance(t, tuple):
+    if isinstance(t, TupleType):
         return t[:9]
     else:
         return t

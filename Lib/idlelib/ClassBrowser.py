@@ -17,7 +17,6 @@ import pyclbr
 import PyShell
 from WindowList import ListedToplevel
 from TreeWidget import TreeNode, TreeItem, ScrolledCanvas
-from configHandler import idleConf
 
 class ClassBrowser:
 
@@ -43,9 +42,7 @@ class ClassBrowser:
         self.settitle()
         top.focus_set()
         # create scrolled canvas
-        theme = idleConf.GetOption('main','Theme','name')
-        background = idleConf.GetHighlight(theme, 'normal')['background']
-        sc = ScrolledCanvas(top, bg=background, highlightthickness=0, takefocus=1)
+        sc = ScrolledCanvas(top, bg="white", highlightthickness=0, takefocus=1)
         sc.frame.pack(expand=1, fill="both")
         item = self.rootnode()
         self.node = node = TreeNode(sc.canvas, None, item)

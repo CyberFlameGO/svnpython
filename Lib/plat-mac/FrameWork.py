@@ -373,7 +373,7 @@ class Application:
             # else it wasn't for us, sigh...
 
     def do_char(self, c, event):
-        if DEBUG: print "Character", repr(c)
+        if DEBUG: print "Character", `c`
 
     def do_updateEvt(self, event):
         (what, message, when, where, modifiers) = event
@@ -431,13 +431,13 @@ class Application:
 
     def printevent(self, event):
         (what, message, when, where, modifiers) = event
-        nicewhat = repr(what)
+        nicewhat = `what`
         if eventname.has_key(what):
             nicewhat = eventname[what]
         print nicewhat,
         if what == kHighLevelEvent:
             h, v = where
-            print repr(ostypecode(message)), hex(when), repr(ostypecode(h | (v<<16))),
+            print `ostypecode(message)`, hex(when), `ostypecode(h | (v<<16))`,
         else:
             print hex(message), hex(when), where,
         print hex(modifiers)
@@ -635,7 +635,7 @@ class Menu:
             if self._parent:
                 self._parent.menu.DisableMenuItem(self._parent_item)
         if self.bar and self.bar.parent:
-            self.bar.parent.needmenubarredraw = 1
+                self.bar.parent.needmenubarredraw = 1
 
 class PopupMenu(Menu):
     def __init__(self, bar):

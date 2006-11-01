@@ -161,7 +161,7 @@ class FTP:
             while i > 5 and s[i-1] in '\r\n':
                 i = i-1
             s = s[:5] + '*'*(i-5) + s[i:]
-        return repr(s)
+        return `s`
 
     # Internal: send one line to the server, appending CRLF
     def putline(self, line):
@@ -208,13 +208,13 @@ class FTP:
         if self.debugging: print '*resp*', self.sanitize(resp)
         self.lastresp = resp[:3]
         c = resp[:1]
-        if c in ('1', '2', '3'):
-            return resp
         if c == '4':
             raise error_temp, resp
         if c == '5':
             raise error_perm, resp
-        raise error_proto, resp
+        if c not in '123':
+            raise error_proto, resp
+        return resp
 
     def voidresp(self):
         """Expect a response beginning with '2'."""
@@ -250,7 +250,7 @@ class FTP:
         port number.
         '''
         hbytes = host.split('.')
-        pbytes = [repr(port/256), repr(port%256)]
+        pbytes = [`port/256`, `port%256`]
         bytes = hbytes + pbytes
         cmd = 'PORT ' + ','.join(bytes)
         return self.voidcmd(cmd)
@@ -264,7 +264,7 @@ class FTP:
             af = 2
         if af == 0:
             raise error_proto, 'unsupported address family'
-        fields = ['', repr(af), host, repr(port), '']
+        fields = ['', `af`, host, `port`, '']
         cmd = 'EPRT ' + '|'.join(fields)
         return self.voidcmd(cmd)
 
@@ -397,7 +397,7 @@ class FTP:
         fp = conn.makefile('rb')
         while 1:
             line = fp.readline()
-            if self.debugging > 2: print '*retr*', repr(line)
+            if self.debugging > 2: print '*retr*', `line`
             if not line:
                 break
             if line[-2:] == CRLF:
@@ -582,17 +582,17 @@ def parse229(resp, peer):
     Raises error_proto if it does not contain '(|||port|)'
     Return ('host.addr.as.numbers', port#) tuple.'''
 
-    if resp[:3] != '229':
+    if resp[:3] <> '229':
         raise error_reply, resp
     left = resp.find('(')
     if left < 0: raise error_proto, resp
     right = resp.find(')', left + 1)
     if right < 0:
         raise error_proto, resp # should contain '(|||port|)'
-    if resp[left + 1] != resp[right - 1]:
+    if resp[left + 1] <> resp[right - 1]:
         raise error_proto, resp
     parts = resp[left + 1:right].split(resp[left+1])
-    if len(parts) != 5:
+    if len(parts) <> 5:
         raise error_proto, resp
     host = peer[0]
     port = int(parts[3])
@@ -755,16 +755,7 @@ class Netrc:
 
 def test():
     '''Test program.
-    Usage: ftp [-d] [-r[file]] host [-l[dir]] [-d[dir]] [-p] [file] ...
-
-    -d dir
-    -l list
-    -p password
-    '''
-
-    if len(sys.argv) < 2:
-        print test.__doc__
-        sys.exit(0)
+    Usage: ftp [-d] [-r[file]] host [-l[dir]] [-d[dir]] [-p] [file] ...'''
 
     debugging = 0
     rcfile = None

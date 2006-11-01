@@ -24,14 +24,12 @@ class TestGenericStringIO(unittest.TestCase):
 
     def test_reads(self):
         eq = self.assertEqual
-        self.assertRaises(TypeError, self._fp.seek)
         eq(self._fp.read(10), self._line[:10])
         eq(self._fp.readline(), self._line[10:] + '\n')
         eq(len(self._fp.readlines(60)), 2)
 
     def test_writes(self):
         f = self.MODULE.StringIO()
-        self.assertRaises(TypeError, f.seek)
         f.write(self._line[:6])
         f.seek(3)
         f.write(self._line[20:26])
@@ -44,13 +42,6 @@ class TestGenericStringIO(unittest.TestCase):
         f.seek(0)
         self.assertEqual(f.getvalue(), 'abc')
 
-    def test_writelines_error(self):
-        def errorGen():
-            yield 'a'
-            raise KeyboardInterrupt()
-        f = self.MODULE.StringIO()
-        self.assertRaises(KeyboardInterrupt, f.writelines, errorGen())
-
     def test_truncate(self):
         eq = self.assertEqual
         f = self.MODULE.StringIO()
@@ -58,10 +49,9 @@ class TestGenericStringIO(unittest.TestCase):
         f.seek(10)
         f.truncate()
         eq(f.getvalue(), 'abcdefghij')
+        f.seek(0)
         f.truncate(5)
         eq(f.getvalue(), 'abcde')
-        f.write('xyz')
-        eq(f.getvalue(), 'abcdexyz')
         f.close()
         self.assertRaises(ValueError, f.write, 'frobnitz')
 
@@ -75,13 +65,6 @@ class TestGenericStringIO(unittest.TestCase):
         f.close()
         self.assertEqual(f.closed, True)
 
-    def test_isatty(self):
-        f = self.MODULE.StringIO()
-        self.assertRaises(TypeError, f.isatty, None)
-        self.assertEqual(f.isatty(), False)
-        f.close()
-        self.assertRaises(ValueError, f.isatty)
-
     def test_iterator(self):
         eq = self.assertEqual
         unless = self.failUnless
@@ -94,8 +77,6 @@ class TestGenericStringIO(unittest.TestCase):
             eq(line, self._line + '\n')
             i += 1
         eq(i, 5)
-        self._fp.close()
-        self.assertRaises(ValueError, self._fp.next)
 
 class TestStringIO(TestGenericStringIO):
     MODULE = StringIO
@@ -119,28 +100,6 @@ class TestStringIO(TestGenericStringIO):
 
 class TestcStringIO(TestGenericStringIO):
     MODULE = cStringIO
-
-    def test_unicode(self):
-
-        if not test_support.have_unicode: return
-
-        # The cStringIO module converts Unicode strings to character
-        # strings when writing them to cStringIO objects.
-        # Check that this works.
-
-        f = self.MODULE.StringIO()
-        f.write(unicode(self._line[:5]))
-        s = f.getvalue()
-        self.assertEqual(s, 'abcde')
-        self.assertEqual(type(s), types.StringType)
-
-        f = self.MODULE.StringIO(unicode(self._line[:5]))
-        s = f.getvalue()
-        self.assertEqual(s, 'abcde')
-        self.assertEqual(type(s), types.StringType)
-
-        self.assertRaises(UnicodeEncodeError, self.MODULE.StringIO,
-                          unicode('\xf4', 'latin-1'))
 
 import sys
 if sys.platform.startswith('java'):

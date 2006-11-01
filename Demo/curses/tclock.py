@@ -14,8 +14,7 @@ def sign(_x):
     return 1
 
 def A2XY(angle, radius):
-    return (int(round(ASPECT * radius * sin(angle))),
-            int(round(radius * cos(angle))))
+    return int(round(ASPECT * radius * sin(angle))), int(round(radius * cos(angle)))
 
 def plot(x, y, col):
     stdscr.addch(y, x, col)
@@ -38,9 +37,9 @@ def dline(pair, from_x, from_y, x2, y2, ch):
     y = from_y
 
     if ax > ay:
-        d = ay - ax // 2
+        d = ay - ax / 2
 
-        while True:
+        while 1:
             plot(x, y, ch)
             if x == x2:
                 return
@@ -51,9 +50,9 @@ def dline(pair, from_x, from_y, x2, y2, ch):
             x += sx
             d += ay
     else:
-        d = ax - ay // 2
+        d = ax - ay / 2
 
-        while True:
+        while 1:
             plot(x, y, ch)
             if y == y2:
                 return
@@ -67,7 +66,7 @@ def dline(pair, from_x, from_y, x2, y2, ch):
 def main(win):
     global stdscr
     stdscr = win
-
+    
     lastbeep = -1
     my_bg = curses.COLOR_BLACK
 
@@ -79,12 +78,12 @@ def main(win):
         curses.init_pair(2, curses.COLOR_MAGENTA, my_bg)
         curses.init_pair(3, curses.COLOR_GREEN, my_bg)
 
-    cx = (curses.COLS - 1) // 2
-    cy = curses.LINES // 2
-    ch = min( cy-1, int(cx // ASPECT) - 1)
-    mradius = (3 * ch) // 4
-    hradius = ch // 2
-    sradius = 5 * ch // 6
+    cx = (curses.COLS - 1) / 2
+    cy = curses.LINES / 2
+    ch = min( cy-1, int(cx / ASPECT) - 1) 
+    mradius = (3 * ch) / 4
+    hradius = ch / 2
+    sradius = 5 * ch / 6
 
     for i in range(0, 12):
         sangle = (i + 1) * 2.0 * pi / 12.0
@@ -96,8 +95,8 @@ def main(win):
                   "ASCII Clock by Howard Jones <ha.jones@ic.ac.uk>, 1994")
 
     sradius = max(sradius-4, 8)
-
-    while True:
+    
+    while 1:
         curses.napms(1000)
 
         tim = time.time()
@@ -126,7 +125,7 @@ def main(win):
             stdscr.attrset(curses.color_pair(1))
 
         plot(cx + sdx, cy - sdy, ord('O'))
-
+        
         if curses.has_colors():
             stdscr.attrset(curses.color_pair(0))
 

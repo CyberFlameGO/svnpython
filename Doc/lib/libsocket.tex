@@ -7,8 +7,7 @@
 
 This module provides access to the BSD \emph{socket} interface.
 It is available on all modern \UNIX{} systems, Windows, MacOS, BeOS,
-OS/2, and probably additional platforms.  \note{Some behavior may be
-platform dependent, since calls are made to the operating system socket APIs.}
+OS/2, and probably additional platforms.
 
 For an introduction to socket programming (in C), see the following
 papers: \citetitle{An Introductory 4.3BSD Interprocess Communication
@@ -67,9 +66,6 @@ address will be resolved differently into an actual IPv4/v6 address,
 depending on the results from DNS resolution and/or the host
 configuration.  For deterministic behavior use a numeric address in
 \var{host} portion.
-
-\versionadded[AF_NETLINK sockets are represented as 
-pairs \code{\var{pid}, \var{groups}}]{2.5}
 
 All errors raise exceptions.  The normal exceptions for invalid
 argument types and out-of-memory conditions can be raised; errors
@@ -206,8 +202,8 @@ If \var{name} is omitted or empty, it is interpreted as the local
 host.  To find the fully qualified name, the hostname returned by
 \function{gethostbyaddr()} is checked, then aliases for the host, if
 available.  The first name which includes a period is selected.  In
-case no fully qualified domain name is available, the hostname as
-returned by \function{gethostname()} is returned.
+case no fully qualified domain name is available, the hostname is
+returned.
 \versionadded{2.0}
 \end{funcdesc}
 
@@ -276,26 +272,18 @@ modes, the correct protocol is chosen automatically if the protocol is
 omitted or zero.
 \end{funcdesc}
 
-\begin{funcdesc}{getservbyname}{servicename\optional{, protocolname}}
+\begin{funcdesc}{getservbyname}{servicename, protocolname}
 Translate an Internet service name and protocol name to a port number
-for that service.  The optional protocol name, if given, should be
-\code{'tcp'} or \code{'udp'}, otherwise any protocol will match.
+for that service.  The protocol name should be \code{'tcp'} or
+\code{'udp'}.
 \end{funcdesc}
 
-\begin{funcdesc}{getservbyport}{port\optional{, protocolname}}
-Translate an Internet port number and protocol name to a service name
-for that service.  The optional protocol name, if given, should be
-\code{'tcp'} or \code{'udp'}, otherwise any protocol will match.
-\end{funcdesc}
-
-\begin{funcdesc}{socket}{\optional{family\optional{,
-                         type\optional{, proto}}}}
+\begin{funcdesc}{socket}{family, type\optional{, proto}}
 Create a new socket using the given address family, socket type and
-protocol number.  The address family should be \constant{AF_INET} (the
-default), \constant{AF_INET6} or \constant{AF_UNIX}.  The socket type
-should be \constant{SOCK_STREAM} (the default), \constant{SOCK_DGRAM}
-or perhaps one of the other \samp{SOCK_} constants.  The protocol
-number is usually zero and may be omitted in that case.
+protocol number.  The address family should be \constant{AF_INET}, \constant{AF_INET6} or
+\constant{AF_UNIX}.  The socket type should be \constant{SOCK_STREAM},
+\constant{SOCK_DGRAM} or perhaps one of the other \samp{SOCK_} constants.
+The protocol number is usually zero and may be omitted in that case.
 \end{funcdesc}
 
 \begin{funcdesc}{ssl}{sock\optional{, keyfile, certfile}}
@@ -307,21 +295,11 @@ success, a new \class{SSLObject} is returned.
 \warning{This does not do any certificate verification!}
 \end{funcdesc}
 
-\begin{funcdesc}{socketpair}{\optional{family\optional{, type\optional{, proto}}}}
-Build a pair of connected socket objects using the given address
-family, socket type, and protocol number.  Address family, socket type,
-and protocol number are as for the \function{socket()} function above.
-The default family is \constant{AF_UNIX} if defined on the platform;
-otherwise, the default is \constant{AF_INET}.
-Availability: \UNIX.  \versionadded{2.4}
-\end{funcdesc}
-
 \begin{funcdesc}{fromfd}{fd, family, type\optional{, proto}}
-Duplicate the file descriptor \var{fd} (an integer as returned by a file
-object's \method{fileno()} method) and build a socket object from the
-result.  Address family, socket type and protocol number are as for the
-\function{socket()} function above.
-The file descriptor should refer to a socket, but this is not
+Build a socket object from an existing file descriptor (an integer as
+returned by a file object's \method{fileno()} method).  Address family,
+socket type and protocol number are as for the \function{socket()} function
+above.  The file descriptor should refer to a socket, but this is not
 checked --- subsequent operations on the object may fail if the file
 descriptor is invalid.  This function is rarely needed, but can be
 used to get or set socket options on a socket passed to a program as
@@ -504,10 +482,6 @@ This was never intentional and is no longer available in Python
 \begin{methoddesc}[socket]{fileno}{}
 Return the socket's file descriptor (a small integer).  This is useful
 with \function{select.select()}.
-
-Under Windows the small integer returned by this method cannot be used where
-a file descriptor can be used (such as \function{os.fdopen()}).  \UNIX{} does
-not have this limitation.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{getpeername}{}
@@ -548,7 +522,7 @@ are described in \ref{bltin-file-objects}, ``File Objects.'')
 The file object references a \cfunction{dup()}ped version of the
 socket file descriptor, so the file object and socket object may be
 closed or garbage-collected independently.
-The socket must be in blocking mode.
+The socket should be in blocking mode.
 \index{I/O control!buffering}The optional \var{mode}
 and \var{bufsize} arguments are interpreted the same way as by the
 built-in \function{file()} function; see ``Built-in Functions''
@@ -561,8 +535,6 @@ the data received.  The maximum amount of data to be received
 at once is specified by \var{bufsize}.  See the \UNIX{} manual page
 \manpage{recv}{2} for the meaning of the optional argument
 \var{flags}; it defaults to zero.
-\note{For best match with hardware and network realities, the value of 
-\var{bufsize} should be a relatively small power of 2, for example, 4096.}
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{recvfrom}{bufsize\optional{, flags}}
@@ -627,7 +599,7 @@ timeouts on socket operations.
 \end{methoddesc}
 
 \begin{methoddesc}[socket]{gettimeout}{}
-Return the timeout in floating seconds associated with socket
+Returns the timeout in floating seconds associated with socket
 operations, or \code{None} if no timeout is set.  This reflects
 the last call to \method{setblocking()} or \method{settimeout()}.
 \versionadded{2.3}
@@ -647,13 +619,9 @@ Timeout mode internally sets the socket in non-blocking mode.  The
 blocking and timeout modes are shared between file descriptors and
 socket objects that refer to the same network endpoint.  A consequence
 of this is that file objects returned by the \method{makefile()}
-method must only be used when the socket is in blocking mode; in
+method should only be used when the socket is in blocking mode; in
 timeout or non-blocking mode file operations that cannot be completed
 immediately will fail.
-
-Note that the \method{connect()} operation is subject to the timeout
-setting, and in general it is recommended to call
-\method{settimeout()} before calling \method{connect()}.
 
 \begin{methoddesc}[socket]{setsockopt}{level, optname, value}
 Set the value of the given socket option (see the \UNIX{} manual page
@@ -668,33 +636,14 @@ structures as strings).
 
 \begin{methoddesc}[socket]{shutdown}{how}
 Shut down one or both halves of the connection.  If \var{how} is
-\constant{SHUT_RD}, further receives are disallowed.  If \var{how} is \constant{SHUT_WR},
-further sends are disallowed.  If \var{how} is \constant{SHUT_RDWR}, further sends
+\code{0}, further receives are disallowed.  If \var{how} is \code{1},
+further sends are disallowed.  If \var{how} is \code{2}, further sends
 and receives are disallowed.
 \end{methoddesc}
 
 Note that there are no methods \method{read()} or \method{write()};
 use \method{recv()} and \method{send()} without \var{flags} argument
 instead.
-
-
-Socket objects also have these (read-only) attributes that correspond
-to the values given to the \class{socket} constructor.
-
-\begin{memberdesc}[socket]{family}
-The socket family.
-\versionadded{2.5}
-\end{memberdesc}
-
-\begin{memberdesc}[socket]{type}
-The socket type.
-\versionadded{2.5}
-\end{memberdesc}
-
-\begin{memberdesc}[socket]{proto}
-The socket protocol.
-\versionadded{2.5}
-\end{memberdesc}
 
 
 \subsection{SSL Objects \label{ssl-objects}}
@@ -709,18 +658,6 @@ The return value is the number of bytes written.
 \begin{methoddesc}{read}{\optional{n}}
 If \var{n} is provided, read \var{n} bytes from the SSL connection, otherwise
 read until EOF. The return value is a string of the bytes read.
-\end{methoddesc}
-
-\begin{methoddesc}{server}{}
-Returns a string describing the server's certificate.
-Useful for debugging purposes; do not parse the content of this string
-because its format can't be parsed unambiguously.
-\end{methoddesc}
-
-\begin{methoddesc}{issuer}{}
-Returns a string describing the issuer of the server's certificate.
-Useful for debugging purposes; do not parse the content of this string
-because its format can't be parsed unambiguously.
 \end{methoddesc}
 
 \subsection{Example \label{socket-example}}
@@ -767,7 +704,7 @@ s.connect((HOST, PORT))
 s.send('Hello, world')
 data = s.recv(1024)
 s.close()
-print 'Received', repr(data)
+print 'Received', `data`
 \end{verbatim}
 
 The next two examples are identical to the above two, but support both
@@ -843,46 +780,5 @@ if s is None:
 s.send('Hello, world')
 data = s.recv(1024)
 s.close()
-print 'Received', repr(data)
-\end{verbatim}
-
-This example connects to an SSL server, prints the 
-server and issuer's distinguished names, sends some bytes,
-and reads part of the response:
-
-\begin{verbatim}
-import socket
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(('www.verisign.com', 443))
-
-ssl_sock = socket.ssl(s)
-
-print repr(ssl_sock.server())
-print repr(ssl_sock.issuer())
-
-# Set a simple HTTP request -- use httplib in actual code.
-ssl_sock.write("""GET / HTTP/1.0\r
-Host: www.verisign.com\r\n\r\n""")
-
-# Read a chunk of data.  Will not necessarily
-# read all the data returned by the server.
-data = ssl_sock.read()
-
-# Note that you need to close the underlying socket, not the SSL object.
-del ssl_sock
-s.close()
-\end{verbatim}
-
-At this writing, this SSL example prints the following output (line
-breaks inserted for readability):
-
-\begin{verbatim}
-'/C=US/ST=California/L=Mountain View/
- O=VeriSign, Inc./OU=Production Services/
- OU=Terms of use at www.verisign.com/rpa (c)00/
- CN=www.verisign.com'
-'/O=VeriSign Trust Network/OU=VeriSign, Inc./
- OU=VeriSign International Server CA - Class 3/
- OU=www.verisign.com/CPS Incorp.by Ref. LIABILITY LTD.(c)97 VeriSign'
+print 'Received', `data`
 \end{verbatim}

@@ -28,13 +28,9 @@
 #      Betancourt, Randall Hopper, Karl Putland, John Farrell, Greg
 #      Andruk, Just van Rossum, Thomas Heller, Mark R. Levinson, Mark
 #      Hammond, Bill Tutt, Hans Nowak, Uwe Zessin (OpenVMS support),
-#      Colin Kong, Trent Mick, Guido van Rossum
+#      Colin Kong, Trent Mick
 #
 #    History:
-#
-#    <see CVS and SVN checkin messages for history>
-#
-#    1.0.3 - added normalization of Windows system name
 #    1.0.2 - added more Windows support
 #    1.0.1 - reformatted to make doc.py happy
 #    1.0.0 - reformatted a bit and checked into Python CVS
@@ -107,7 +103,7 @@ __copyright__ = """
 
 """
 
-__version__ = '1.0.4'
+__version__ = '1.0.2'
 
 import sys,string,os,re
 
@@ -220,12 +216,9 @@ def _dist_try_harder(distname,version,id):
 _release_filename = re.compile(r'(\w+)[-_](release|version)')
 _release_version = re.compile(r'([\d.]+)[^(]*(?:\((.+)\))?')
 
-# Note:In supported_dists below we need 'fedora' before 'redhat' as in
-# Fedora redhat-release is a link to fedora-release.
-
 def dist(distname='',version='',id='',
 
-         supported_dists=('SuSE', 'debian', 'fedora', 'redhat', 'mandrake')):
+         supported_dists=('SuSE','debian','redhat','mandrake')):
 
     """ Tries to determine the name of the Linux OS distribution name.
 
@@ -360,7 +353,7 @@ def popen(cmd, mode='r', bufsize=None):
 def _norm_version(version,build=''):
 
     """ Normalize the version and build strings and return a single
-        version string using the format major.minor.build (or patchlevel).
+        vesion string using the format major.minor.build (or patchlevel).
     """
     l = string.split(version,'.')
     if build:
@@ -607,8 +600,7 @@ def mac_ver(release='',versioninfo=('','',''),machine=''):
         versioninfo = (version,stage,nonrel)
     if sysa:
         machine = {0x1: '68k',
-                   0x2: 'PowerPC',
-                   0xa: 'i386'}.get(sysa,'')
+                   0x2: 'PowerPC'}.get(sysa,'')
     return release,versioninfo,machine
 
 def _java_getprop(name,default):
@@ -965,10 +957,6 @@ def uname():
         # platforms
         if use_syscmd_ver:
             system,release,version = _syscmd_ver(system)
-            # Normalize system to what win32_ver() normally returns
-            # (_syscmd_ver() tends to return the vendor name as well)
-            if system == 'Microsoft Windows':
-                system = 'Windows'
 
         # In case we still don't know anything useful, we'll try to
         # help ourselves
@@ -1093,7 +1081,7 @@ def processor():
 ### Various APIs for extracting information from sys.version
 
 _sys_version_parser = re.compile(r'([\w.+]+)\s*'
-                                  '\(#?([^,]+),\s*([\w ]+),\s*([\w :]+)\)\s*'
+                                  '\(#(\d+),\s*([\w ]+),\s*([\w :]+)\)\s*'
                                   '\[([^\]]+)\]?')
 _sys_version_cache = None
 
@@ -1115,6 +1103,7 @@ def _sys_version():
         return _sys_version_cache
     version, buildno, builddate, buildtime, compiler = \
              _sys_version_parser.match(sys.version).groups()
+    buildno = int(buildno)
     builddate = builddate + ' ' + buildtime
     l = string.split(version, '.')
     if len(l) == 2:

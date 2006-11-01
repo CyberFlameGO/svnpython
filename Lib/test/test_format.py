@@ -183,12 +183,12 @@ testboth("%#X", 0, "0X0")
 testboth("%#X", 0L, "0X0")
 
 testboth("%x", 0x42, "42")
-testboth("%x", -0x42, "-42")
+# testboth("%x", -0x42, "ffffffbe") # specific to 32-bit boxes; see below
 testboth("%x", 0x42L, "42")
 testboth("%x", -0x42L, "-42")
 
 testboth("%o", 042, "42")
-testboth("%o", -042, "-42")
+# testboth("%o", -042, "37777777736") # specific to 32-bit boxes; see below
 testboth("%o", 042L, "42")
 testboth("%o", -042L, "-42")
 
@@ -230,14 +230,6 @@ test_exc(u'no format', '1', TypeError,
 test_exc(u'no format', u'1', TypeError,
          "not all arguments converted during string formatting")
 
-class Foobar(long):
-    def __oct__(self):
-        # Returning a non-string should not blow up.
-        return self + 1
-
-test_exc('%o', Foobar(), TypeError,
-         "expected string or Unicode object, long found")
-
 if sys.maxint == 2**31-1:
     # crashes 2.2.1 and earlier:
     try:
@@ -246,3 +238,6 @@ if sys.maxint == 2**31-1:
         pass
     else:
         raise TestFailed, '"%*d"%(sys.maxint, -127) should fail'
+    # (different things go wrong on a 64 bit box...)
+    testboth("%x", -0x42, "ffffffbe")
+    testboth("%o", -042, "37777777736")

@@ -211,7 +211,7 @@ class MiscTest(unittest.TestCase):
         # Check that exceptions in __nonzero__ are properly
         # propagated by the not operator
         import operator
-        class Exc(Exception):
+        class Exc:
             pass
         class Bad:
             def __nonzero__(self):
@@ -224,43 +224,64 @@ class MiscTest(unittest.TestCase):
             self.assertRaises(Exc, func, Bad())
 
     def test_recursion(self):
-        # Check that comparison for recursive objects fails gracefully
+        # Check comparison for recursive objects
         from UserList import UserList
+        a = UserList(); a.append(a)
+        b = UserList(); b.append(b)
+
+        self.assert_(a == b)
+        self.assert_(not a != b)
+        a.append(1)
+        self.assert_(a == a[0])
+        self.assert_(not a != a[0])
+        self.assert_(a != b)
+        self.assert_(not a == b)
+        b.append(0)
+        self.assert_(a != b)
+        self.assert_(not a == b)
+        a[1] = -1
+        self.assert_(a != b)
+        self.assert_(not a == b)
+
         a = UserList()
         b = UserList()
         a.append(b)
         b.append(a)
-        self.assertRaises(RuntimeError, operator.eq, a, b)
-        self.assertRaises(RuntimeError, operator.ne, a, b)
-        self.assertRaises(RuntimeError, operator.lt, a, b)
-        self.assertRaises(RuntimeError, operator.le, a, b)
-        self.assertRaises(RuntimeError, operator.gt, a, b)
-        self.assertRaises(RuntimeError, operator.ge, a, b)
+        self.assert_(a == b)
+        self.assert_(not a != b)
 
         b.append(17)
-        # Even recursive lists of different lengths are different,
-        # but they cannot be ordered
-        self.assert_(not (a == b))
         self.assert_(a != b)
-        self.assertRaises(RuntimeError, operator.lt, a, b)
-        self.assertRaises(RuntimeError, operator.le, a, b)
-        self.assertRaises(RuntimeError, operator.gt, a, b)
-        self.assertRaises(RuntimeError, operator.ge, a, b)
+        self.assert_(not a == b)
         a.append(17)
-        self.assertRaises(RuntimeError, operator.eq, a, b)
-        self.assertRaises(RuntimeError, operator.ne, a, b)
-        a.insert(0, 11)
-        b.insert(0, 12)
-        self.assert_(not (a == b))
-        self.assert_(a != b)
-        self.assert_(a < b)
+        self.assert_(a == b)
+        self.assert_(not a != b)
+
+    def test_recursion2(self):
+        # This test exercises the circular structure handling code
+        # in PyObject_RichCompare()
+        class Weird(object):
+            def __eq__(self, other):
+                return self != other
+            def __ne__(self, other):
+                return self == other
+            def __lt__(self, other):
+                return self > other
+            def __gt__(self, other):
+                return self < other
+
+        self.assert_(Weird() == Weird())
+        self.assert_(not (Weird() != Weird()))
+
+        for op in opmap["lt"]:
+            self.assertRaises(ValueError, op, Weird(), Weird())
 
 class DictTest(unittest.TestCase):
 
     def test_dicts(self):
         # Verify that __eq__ and __ne__ work for dicts even if the keys and
-        # values don't support anything other than __eq__ and __ne__ (and
-        # __hash__).  Complex numbers are a fine example of that.
+        # values don't support anything other than __eq__ and __ne__.  Complex
+        # numbers are a fine example of that.
         import random
         imag1a = {}
         for i in range(50):
@@ -305,7 +326,7 @@ class ListTest(unittest.TestCase):
     def test_badentry(self):
         # make sure that exceptions for item comparison are properly
         # propagated in list comparisons
-        class Exc(Exception):
+        class Exc:
             pass
         class Bad:
             def __eq__(self, other):

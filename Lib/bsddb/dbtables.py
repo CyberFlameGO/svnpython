@@ -21,23 +21,17 @@ import re
 import sys
 import copy
 import xdrlib
-import random
+import whrandom
 from types import ListType, StringType
 import cPickle as pickle
 
 try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3.db import *
-except ImportError:
     # For Python 2.3
     from bsddb.db import *
+except ImportError:
+    # For earlier Pythons w/distutils pybsddb
+    from bsddb3.db import *
 
-# XXX(nnorwitz): is this correct? DBIncompleteError is conditional in _bsddb.c
-try:
-    DBIncompleteError
-except NameError:
-    class DBIncompleteError(Exception):
-        pass
 
 class TableDBError(StandardError):
     pass
@@ -137,8 +131,7 @@ def contains_metastrings(s) :
 class bsdTableDB :
     def __init__(self, filename, dbhome, create=0, truncate=0, mode=0600,
                  recover=0, dbflags=0):
-        """bsdTableDB(filename, dbhome, create=0, truncate=0, mode=0600)
-
+        """bsdTableDB.open(filename, dbhome, create=0, truncate=0, mode=0600)
         Open database name in the dbhome BerkeleyDB directory.
         Use keyword arguments when calling this constructor.
         """
@@ -213,7 +206,7 @@ class bsdTableDB :
         try:
             key, data = cur.first()
             while 1:
-                print repr({key: data})
+                print `{key: data}`
                 next = cur.next()
                 if next:
                     key, data = next
@@ -225,8 +218,7 @@ class bsdTableDB :
 
 
     def CreateTable(self, table, columns):
-        """CreateTable(table, columns) - Create a new table in the database.
-
+        """CreateTable(table, columns) - Create a new table in the database
         raises TableDBError if it already exists or for other DB errors.
         """
         assert isinstance(columns, ListType)
@@ -294,8 +286,7 @@ class bsdTableDB :
     def CreateOrExtendTable(self, table, columns):
         """CreateOrExtendTable(table, columns)
 
-        Create a new table in the database.
-
+        - Create a new table in the database.
         If a table of this name already exists, extend it to have any
         additional columns present in the given list as well as
         all of its current columns.
@@ -350,9 +341,9 @@ class bsdTableDB :
         try:
             tcolpickles = self.db.get(_columns_key(table))
         except DBNotFoundError:
-            raise TableDBError, "unknown table: %r" % (table,)
+            raise TableDBError, "unknown table: " + `table`
         if not tcolpickles:
-            raise TableDBError, "unknown table: %r" % (table,)
+            raise TableDBError, "unknown table: " + `table`
         self.__tablecolumns[table] = pickle.loads(tcolpickles)
 
     def __new_rowid(self, table, txn) :
@@ -363,8 +354,8 @@ class bsdTableDB :
             # (note: this code has <64 bits of randomness
             # but it's plenty for our database id needs!)
             p = xdrlib.Packer()
-            p.pack_int(int(random.random()*2147483647))
-            p.pack_int(int(random.random()*2147483647))
+            p.pack_int(int(whrandom.random()*2147483647))
+            p.pack_int(int(whrandom.random()*2147483647))
             newid = p.get_buffer()
 
             # Guarantee uniqueness by adding this key to the database
@@ -393,7 +384,7 @@ class bsdTableDB :
                 self.__load_column_info(table)
             for column in rowdict.keys() :
                 if not self.__tablecolumns[table].count(column):
-                    raise TableDBError, "unknown column: %r" % (column,)
+                    raise TableDBError, "unknown column: "+`column`
 
             # get a unique row identifier for this row
             txn = self.env.txn_begin()
@@ -420,15 +411,14 @@ class bsdTableDB :
 
 
     def Modify(self, table, conditions={}, mappings={}):
-        """Modify(table, conditions={}, mappings={}) - Modify items in rows matching 'conditions' using mapping functions in 'mappings'
-
-        * table - the table name
-        * conditions - a dictionary keyed on column names containing
-          a condition callable expecting the data string as an
-          argument and returning a boolean.
-        * mappings - a dictionary keyed on column names containing a
-          condition callable expecting the data string as an argument and
-          returning the new string for that column.
+        """Modify(table, conditions) - Modify in rows matching 'conditions'
+        using mapping functions in 'mappings'
+        * conditions is a dictionary keyed on column names
+        containing condition functions expecting the data string as an
+        argument and returning a boolean.
+        * mappings is a dictionary keyed on column names containint condition
+        functions expecting the data string as an argument and returning the
+        new string for that column.
         """
         try:
             matching_rowids = self.__Select(table, [], conditions)
@@ -460,8 +450,7 @@ class bsdTableDB :
                         txn.commit()
                         txn = None
 
-                # catch all exceptions here since we call unknown callables
-                except:
+                except DBError, dberror:
                     if txn:
                         txn.abort()
                     raise
@@ -472,10 +461,9 @@ class bsdTableDB :
     def Delete(self, table, conditions={}):
         """Delete(table, conditions) - Delete items matching the given
         conditions from the table.
-
-        * conditions - a dictionary keyed on column names containing
-          condition functions expecting the data string as an
-          argument and returning a boolean.
+        * conditions is a dictionary keyed on column names
+        containing condition functions expecting the data string as an
+        argument and returning a boolean.
         """
         try:
             matching_rowids = self.__Select(table, [], conditions)
@@ -511,12 +499,11 @@ class bsdTableDB :
 
 
     def Select(self, table, columns, conditions={}):
-        """Select(table, columns, conditions) - retrieve specific row data
+        """Select(table, conditions) - retrieve specific row data
         Returns a list of row column->value mapping dictionaries.
-
-        * columns - a list of which column data to return.  If
+        * columns is a list of which column data to return.  If
           columns is None, all columns will be returned.
-        * conditions - a dictionary keyed on column names
+        * conditions is a dictionary keyed on column names
           containing callable conditions expecting the data string as an
           argument and returning a boolean.
         """
@@ -548,7 +535,7 @@ class bsdTableDB :
             columns = self.tablecolumns[table]
         for column in (columns + conditions.keys()):
             if not self.__tablecolumns[table].count(column):
-                raise TableDBError, "unknown column: %r" % (column,)
+                raise TableDBError, "unknown column: "+`column`
 
         # keyed on rows that match so far, containings dicts keyed on
         # column names containing the data for that row and column.

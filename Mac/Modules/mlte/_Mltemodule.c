@@ -5,17 +5,26 @@
 
 
 
+#ifdef _WIN32
+#include "pywintoolbox.h"
+#else
+#include "macglue.h"
 #include "pymactoolbox.h"
+#endif
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-        PyErr_SetString(PyExc_NotImplementedError, \
-        "Not available in this shared library/OS version"); \
-        return NULL; \
+    	PyErr_SetString(PyExc_NotImplementedError, \
+    	"Not available in this shared library/OS version"); \
+    	return NULL; \
     }} while(0)
 
 
+#ifdef WITHOUT_FRAMEWORKS
+#include <MacTextEditor.h>
+#else
 #include <Carbon/Carbon.h>
+#endif
 
 /* For now we declare them forward here. They'll go to mactoolbox later */
 static PyObject *TXNObj_New(TXNObject);
@@ -38,14 +47,31 @@ static int TXNFontMenuObj_Convert(PyObject *, TXNFontMenuObject *);
 static int
 OptFSSpecPtr_Convert(PyObject *v, FSSpec **p_itself)
 {
-        static FSSpec fss;
-        if (v == Py_None)
-        {
-                *p_itself = NULL;
-                return 1;
-        }
-        *p_itself = &fss;
-        return PyMac_GetFSSpec(v, *p_itself);
+	static FSSpec fss;
+	if (v == Py_None)
+	{
+		*p_itself = NULL;
+		return 1;
+	}
+	*p_itself = &fss;
+	return PyMac_GetFSSpec(v, *p_itself);
+}
+
+/*
+** Parse an optional rect
+*/
+static int
+OptRectPtr_Convert(PyObject *v, Rect **p_itself)
+{
+	static Rect r;
+	
+	if (v == Py_None)
+	{
+		*p_itself = NULL;
+		return 1;
+	}
+	*p_itself = &r;
+	return PyMac_GetRect(v, *p_itself);
 }
 
 /*
@@ -53,13 +79,13 @@ OptFSSpecPtr_Convert(PyObject *v, FSSpec **p_itself)
 */
 static int
 OptGWorldObj_Convert(PyObject *v, GWorldPtr *p_itself)
-{
-        if (v == Py_None)
-        {
-                *p_itself = NULL;
-                return 1;
-        }
-        return GWorldObj_Convert(v, p_itself);
+{	
+	if (v == Py_None)
+	{
+		*p_itself = NULL;
+		return 1;
+	}
+	return GWorldObj_Convert(v, p_itself);
 }
 
 
@@ -85,7 +111,6 @@ PyObject *TXNObj_New(TXNObject itself)
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int TXNObj_Convert(PyObject *v, TXNObject *p_itself)
 {
 	if (!TXNObj_Check(v))
@@ -345,7 +370,7 @@ static PyObject *TXNObj_TXNGrowWindow(TXNObjectObject *_self, PyObject *_args)
 static PyObject *TXNObj_TXNZoomWindow(TXNObjectObject *_self, PyObject *_args)
 {
 	PyObject *_res = NULL;
-	SInt16 iPart;
+	short iPart;
 #ifndef TXNZoomWindow
 	PyMac_PRECHECK(TXNZoomWindow);
 #endif
@@ -675,6 +700,37 @@ static PyObject *TXNObj_TXNSetDataFromFile(TXNObjectObject *_self, PyObject *_ar
 	                          iFileLength,
 	                          iStartOffset,
 	                          iEndOffset);
+	if (_err != noErr) return PyMac_Error(_err);
+	Py_INCREF(Py_None);
+	_res = Py_None;
+	return _res;
+}
+
+static PyObject *TXNObj_TXNSetData(TXNObjectObject *_self, PyObject *_args)
+{
+	PyObject *_res = NULL;
+	OSStatus _err;
+	TXNDataType iDataType;
+	void * *iDataPtr__in__;
+	ByteCount iDataPtr__len__;
+	int iDataPtr__in_len__;
+	TXNOffset iStartOffset;
+	TXNOffset iEndOffset;
+#ifndef TXNSetData
+	PyMac_PRECHECK(TXNSetData);
+#endif
+	if (!PyArg_ParseTuple(_args, "O&s#ll",
+	                      PyMac_GetOSType, &iDataType,
+	                      &iDataPtr__in__, &iDataPtr__in_len__,
+	                      &iStartOffset,
+	                      &iEndOffset))
+		return NULL;
+	iDataPtr__len__ = iDataPtr__in_len__;
+	_err = TXNSetData(_self->ob_itself,
+	                  iDataType,
+	                  iDataPtr__in__, iDataPtr__len__,
+	                  iStartOffset,
+	                  iEndOffset);
 	if (_err != noErr) return PyMac_Error(_err);
 	Py_INCREF(Py_None);
 	_res = Py_None;
@@ -1103,20 +1159,6 @@ static PyObject *TXNObj_TXNIsObjectAttachedToSpecificWindow(TXNObjectObject *_se
 	return _res;
 }
 
-static PyObject *TXNObj_TXNRecalcTextLayout(TXNObjectObject *_self, PyObject *_args)
-{
-	PyObject *_res = NULL;
-#ifndef TXNRecalcTextLayout
-	PyMac_PRECHECK(TXNRecalcTextLayout);
-#endif
-	if (!PyArg_ParseTuple(_args, ""))
-		return NULL;
-	TXNRecalcTextLayout(_self->ob_itself);
-	Py_INCREF(Py_None);
-	_res = Py_None;
-	return _res;
-}
-
 static PyMethodDef TXNObj_methods[] = {
 	{"TXNDeleteObject", (PyCFunction)TXNObj_TXNDeleteObject, 1,
 	 PyDoc_STR("() -> None")},
@@ -1147,7 +1189,7 @@ static PyMethodDef TXNObj_methods[] = {
 	{"TXNGrowWindow", (PyCFunction)TXNObj_TXNGrowWindow, 1,
 	 PyDoc_STR("(EventRecord iEvent) -> None")},
 	{"TXNZoomWindow", (PyCFunction)TXNObj_TXNZoomWindow, 1,
-	 PyDoc_STR("(SInt16 iPart) -> None")},
+	 PyDoc_STR("(short iPart) -> None")},
 	{"TXNCanUndo", (PyCFunction)TXNObj_TXNCanUndo, 1,
 	 PyDoc_STR("() -> (Boolean _rv, TXNActionKey oTXNActionKey)")},
 	{"TXNUndo", (PyCFunction)TXNObj_TXNUndo, 1,
@@ -1182,6 +1224,8 @@ static PyMethodDef TXNObj_methods[] = {
 	 PyDoc_STR("(TXNOffset iStartOffset, TXNOffset iEndOffset, TXNDataType iEncoding) -> (Handle oDataHandle)")},
 	{"TXNSetDataFromFile", (PyCFunction)TXNObj_TXNSetDataFromFile, 1,
 	 PyDoc_STR("(SInt16 iFileRefNum, OSType iFileType, ByteCount iFileLength, TXNOffset iStartOffset, TXNOffset iEndOffset) -> None")},
+	{"TXNSetData", (PyCFunction)TXNObj_TXNSetData, 1,
+	 PyDoc_STR("(TXNDataType iDataType, Buffer iDataPtr, TXNOffset iStartOffset, TXNOffset iEndOffset) -> None")},
 	{"TXNGetChangeCount", (PyCFunction)TXNObj_TXNGetChangeCount, 1,
 	 PyDoc_STR("() -> (ItemCount _rv)")},
 	{"TXNSave", (PyCFunction)TXNObj_TXNSave, 1,
@@ -1222,8 +1266,6 @@ static PyMethodDef TXNObj_methods[] = {
 	 PyDoc_STR("(UInt32 iLineNumber) -> (Fixed oLineWidth, Fixed oLineHeight)")},
 	{"TXNIsObjectAttachedToSpecificWindow", (PyCFunction)TXNObj_TXNIsObjectAttachedToSpecificWindow, 1,
 	 PyDoc_STR("(WindowPtr iWindow) -> (Boolean oAttached)")},
-	{"TXNRecalcTextLayout", (PyCFunction)TXNObj_TXNRecalcTextLayout, 1,
-	 PyDoc_STR("() -> None")},
 	{NULL, NULL, 0}
 };
 
@@ -1239,16 +1281,16 @@ static PyMethodDef TXNObj_methods[] = {
 
 #define TXNObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *TXNObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *TXNObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	TXNObject itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, TXNObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TXNObjectObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TXNObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((TXNObjectObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define TXNObj_tp_free PyObject_Del
@@ -1321,7 +1363,6 @@ PyObject *TXNFontMenuObj_New(TXNFontMenuObject itself)
 	it->ob_itself = itself;
 	return (PyObject *)it;
 }
-
 int TXNFontMenuObj_Convert(PyObject *v, TXNFontMenuObject *p_itself)
 {
 	if (!TXNFontMenuObj_Check(v))
@@ -1393,16 +1434,16 @@ static PyMethodDef TXNFontMenuObj_methods[] = {
 
 #define TXNFontMenuObj_tp_alloc PyType_GenericAlloc
 
-static PyObject *TXNFontMenuObj_tp_new(PyTypeObject *type, PyObject *_args, PyObject *_kwds)
+static PyObject *TXNFontMenuObj_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	PyObject *_self;
+	PyObject *self;
 	TXNFontMenuObject itself;
 	char *kw[] = {"itself", 0};
 
-	if (!PyArg_ParseTupleAndKeywords(_args, _kwds, "O&", kw, TXNFontMenuObj_Convert, &itself)) return NULL;
-	if ((_self = type->tp_alloc(type, 0)) == NULL) return NULL;
-	((TXNFontMenuObjectObject *)_self)->ob_itself = itself;
-	return _self;
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O&", kw, TXNFontMenuObj_Convert, &itself)) return NULL;
+	if ((self = type->tp_alloc(type, 0)) == NULL) return NULL;
+	((TXNFontMenuObjectObject *)self)->ob_itself = itself;
+	return self;
 }
 
 #define TXNFontMenuObj_tp_free PyObject_Del
@@ -1461,7 +1502,7 @@ static PyObject *Mlte_TXNNewObject(PyObject *_self, PyObject *_args)
 	OSStatus _err;
 	FSSpec * iFileSpec;
 	WindowPtr iWindow;
-	Rect iFrame;
+	Rect * iFrame;
 	TXNFrameOptions iFrameOptions;
 	TXNFrameType iFrameType;
 	TXNFileType iFileType;
@@ -1474,7 +1515,7 @@ static PyObject *Mlte_TXNNewObject(PyObject *_self, PyObject *_args)
 	if (!PyArg_ParseTuple(_args, "O&O&O&llO&l",
 	                      OptFSSpecPtr_Convert, &iFileSpec,
 	                      WinObj_Convert, &iWindow,
-	                      PyMac_GetRect, &iFrame,
+	                      OptRectPtr_Convert, &iFrame,
 	                      &iFrameOptions,
 	                      &iFrameType,
 	                      PyMac_GetOSType, &iFileType,
@@ -1482,7 +1523,7 @@ static PyObject *Mlte_TXNNewObject(PyObject *_self, PyObject *_args)
 		return NULL;
 	_err = TXNNewObject(iFileSpec,
 	                    iWindow,
-	                    &iFrame,
+	                    iFrame,
 	                    iFrameOptions,
 	                    iFrameType,
 	                    iFileType,
@@ -1611,7 +1652,7 @@ static PyObject *Mlte_TXNInitTextension(PyObject *_self, PyObject *_args)
 	TXNInitOptions iUsageFlags;
 	PyMac_PRECHECK(TXNInitTextension);
 	if (!PyArg_ParseTuple(_args, "l", &iUsageFlags))
-	        return NULL;
+		return NULL;
 	_err = TXNInitTextension(iDefaultFonts,
 	                         iCountDefaultFonts,
 	                         iUsageFlags);
@@ -1624,7 +1665,7 @@ static PyObject *Mlte_TXNInitTextension(PyObject *_self, PyObject *_args)
 
 static PyMethodDef Mlte_methods[] = {
 	{"TXNNewObject", (PyCFunction)Mlte_TXNNewObject, 1,
-	 PyDoc_STR("(FSSpec * iFileSpec, WindowPtr iWindow, Rect iFrame, TXNFrameOptions iFrameOptions, TXNFrameType iFrameType, TXNFileType iFileType, TXNPermanentTextEncodingType iPermanentEncoding) -> (TXNObject oTXNObject, TXNFrameID oTXNFrameID)")},
+	 PyDoc_STR("(FSSpec * iFileSpec, WindowPtr iWindow, Rect * iFrame, TXNFrameOptions iFrameOptions, TXNFrameType iFrameType, TXNFileType iFileType, TXNPermanentTextEncodingType iPermanentEncoding) -> (TXNObject oTXNObject, TXNFrameID oTXNFrameID)")},
 	{"TXNTerminateTextension", (PyCFunction)Mlte_TXNTerminateTextension, 1,
 	 PyDoc_STR("() -> None")},
 	{"TXNIsScrapPastable", (PyCFunction)Mlte_TXNIsScrapPastable, 1,
@@ -1652,7 +1693,7 @@ void init_Mlte(void)
 
 
 
-	//      PyMac_INIT_TOOLBOX_OBJECT_NEW(xxxx);
+	//	PyMac_INIT_TOOLBOX_OBJECT_NEW(xxxx);
 
 
 	m = Py_InitModule("_Mlte", Mlte_methods);

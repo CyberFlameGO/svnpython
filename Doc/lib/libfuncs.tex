@@ -6,7 +6,7 @@ are always available.  They are listed here in alphabetical order.
 
 \setindexsubitem{(built-in function)}
 
-\begin{funcdesc}{__import__}{name\optional{, globals\optional{, locals\optional{, fromlist\optional{, level}}}}}
+\begin{funcdesc}{__import__}{name\optional{, globals\optional{, locals\optional{, fromlist}}}}
   This function is invoked by the \keyword{import}\stindex{import}
   statement.  It mainly exists so that you can replace it with another
   function that has a compatible interface, in order to change the
@@ -20,9 +20,9 @@ are always available.  They are listed here in alphabetical order.
 
   For example, the statement \samp{import spam} results in the
   following call: \code{__import__('spam',} \code{globals(),}
-  \code{locals(), [], -1)}; the statement \samp{from spam.ham import eggs}
+  \code{locals(), [])}; the statement \samp{from spam.ham import eggs}
   results in \samp{__import__('spam.ham', globals(), locals(),
-  ['eggs'], -1)}.  Note that even though \code{locals()} and
+  ['eggs'])}.  Note that even though \code{locals()} and
   \code{['eggs']} are passed in as arguments, the
   \function{__import__()} function does not set the local variable
   named \code{eggs}; this is done by subsequent code that is generated
@@ -52,47 +52,12 @@ def my_import(name):
         mod = getattr(mod, comp)
     return mod
 \end{verbatim}
-
-  \var{level} specifies whether to use absolute or relative imports.
-  The default is \code{-1} which indicates both absolute and relative
-  imports will be attempted.  \code{0} means only perform absolute imports.
-  Positive values for \var{level} indicate the number of parent directories
-  to search relative to the directory of the module calling
-  \function{__import__}.
-\versionchanged[The level parameter was added]{2.5}
-\versionchanged[Keyword support for parameters was added]{2.5}
 \end{funcdesc}
 
 \begin{funcdesc}{abs}{x}
   Return the absolute value of a number.  The argument may be a plain
   or long integer or a floating point number.  If the argument is a
   complex number, its magnitude is returned.
-\end{funcdesc}
-
-\begin{funcdesc}{all}{iterable}
-  Return True if all elements of the \var{iterable} are true.
-  Equivalent to:
-  \begin{verbatim}
-     def all(iterable):
-         for element in iterable:
-             if not element:
-                 return False
-         return True
-  \end{verbatim}
-  \versionadded{2.5}
-\end{funcdesc}
-
-\begin{funcdesc}{any}{iterable}
-  Return True if any element of the \var{iterable} is true.
-  Equivalent to:
-  \begin{verbatim}
-     def any(iterable):
-         for element in iterable:
-             if element:
-                 return True
-         return False
-  \end{verbatim}
-  \versionadded{2.5}
 \end{funcdesc}
 
 \begin{funcdesc}{basestring}{}
@@ -114,7 +79,7 @@ def my_import(name):
 
   \indexii{Boolean}{type}
   \versionadded{2.2.1}
-  \versionchanged[If no argument is given, this function returns
+  \versionchanged[If no argument is given, this function returns 
                   \constant{False}]{2.3}
 \end{funcdesc}
 
@@ -144,13 +109,9 @@ def my_import(name):
 
 \begin{verbatim}
 class C:
-    @classmethod
     def f(cls, arg1, arg2, ...): ...
+    f = classmethod(f)
 \end{verbatim}
-
-  The \code{@classmethod} form is a function decorator -- see the description
-  of function definitions in chapter 7 of the
-  \citetitle[../ref/ref.html]{Python Reference Manual} for details.
 
   It can be called either on the class (such as \code{C.f()}) or on an
   instance (such as \code{C().f()}).  The instance is ignored except for
@@ -160,12 +121,7 @@ class C:
 
   Class methods are different than \Cpp{} or Java static methods.
   If you want those, see \function{staticmethod()} in this section.
-  
-  For more information on class methods, consult the documentation on the
-  standard type hierarchy in chapter 3 of the
-  \citetitle[../ref/types.html]{Python Reference Manual} (at the bottom).
   \versionadded{2.2}
-  \versionchanged[Function decorator syntax added]{2.4}
 \end{funcdesc}
 
 \begin{funcdesc}{cmp}{x, y}
@@ -187,7 +143,7 @@ class C:
   sequence of statements, \code{'eval'} if it consists of a single
   expression, or \code{'single'} if it consists of a single
   interactive statement (in the latter case, expression statements
-  that evaluate to something else than \code{None} will be printed).
+  that evaluate to something else than \code{None} will printed).
 
   When compiling multi-line statements, two caveats apply: line
   endings must be represented by a single newline character
@@ -208,7 +164,7 @@ class C:
   argument is it -- the future statements in effect around the call to
   compile are ignored.
 
-  Future statements are specified by bits which can be bitwise or-ed
+  Future statemants are specified by bits which can be bitwise or-ed
   together to specify multiple statements.  The bitfield required to
   specify a given feature can be found as the \member{compiler_flag}
   attribute on the \class{_Feature} instance in the
@@ -310,7 +266,7 @@ class C:
   consisting of their quotient and remainder when using long division.  With
   mixed operand types, the rules for binary arithmetic operators apply.  For
   plain and long integers, the result is the same as
-  \code{(\var{a} // \var{b}, \var{a} \%{} \var{b})}.
+  \code{(\var{a} / \var{b}, \var{a} \%{} \var{b})}.
   For floating point numbers the result is \code{(\var{q}, \var{a} \%{}
   \var{b})}, where \var{q} is usually \code{math.floor(\var{a} /
   \var{b})} but may be 1 less than that.  In any case \code{\var{q} *
@@ -335,12 +291,8 @@ class C:
 \end{funcdesc}
 
 \begin{funcdesc}{eval}{expression\optional{, globals\optional{, locals}}}
-  The arguments are a string and optional globals and locals.  If provided,
-  \var{globals} must be a dictionary.  If provided, \var{locals} can be
-  any mapping object.  \versionchanged[formerly \var{locals} was required
-  to be a dictionary]{2.4}
-
-  The \var{expression} argument is parsed and evaluated as a Python
+  The arguments are a string and two optional dictionaries.  The
+  \var{expression} argument is parsed and evaluated as a Python
   expression (technically speaking, a condition list) using the
   \var{globals} and \var{locals} dictionaries as global and local name
   space.  If the \var{globals} dictionary is present and lacks
@@ -382,14 +334,13 @@ class C:
   and does not create a new module.\footnote{It is used relatively
   rarely so does not warrant being made into a statement.}
 
-  The arguments are a file name and two optional dictionaries.  The file is
-  parsed and evaluated as a sequence of Python statements (similarly to a
-  module) using the \var{globals} and \var{locals} dictionaries as global and
-  local namespace. If provided, \var{locals} can be any mapping object.
-  \versionchanged[formerly \var{locals} was required to be a dictionary]{2.4}
-  If the \var{locals} dictionary is omitted it defaults to the \var{globals}
-  dictionary. If both dictionaries are omitted, the expression is executed in
-  the environment where \function{execfile()} is called.  The return value is
+  The arguments are a file name and two optional dictionaries.  The
+  file is parsed and evaluated as a sequence of Python statements
+  (similarly to a module) using the \var{globals} and \var{locals}
+  dictionaries as global and local namespace.  If the \var{locals}
+  dictionary is omitted it defaults to the \var{globals} dictionary.
+  If both dictionaries are omitted, the expression is executed in the
+  environment where \function{execfile()} is called.  The return value is
   \code{None}.
 
   \warning{The default \var{locals} act as described for function
@@ -401,27 +352,73 @@ class C:
 \end{funcdesc}
 
 \begin{funcdesc}{file}{filename\optional{, mode\optional{, bufsize}}}
-  Constructor function for the \class{file} type, described further 
-  in section~\ref{bltin-file-objects}, ``\ulink{File
-  Objects}{bltin-file-objects.html}''.  The constructor's arguments
-  are the same as those of the \function{open()} built-in function
-  described below.
+  Return a new file object (described in
+  section~\ref{bltin-file-objects}, ``\ulink{File
+  Objects}{bltin-file-objects.html}'').
+  The first two arguments are the same as for \code{stdio}'s
+  \cfunction{fopen()}: \var{filename} is the file name to be opened,
+  \var{mode} indicates how the file is to be opened: \code{'r'} for
+  reading, \code{'w'} for writing (truncating an existing file), and
+  \code{'a'} opens it for appending (which on \emph{some} \UNIX{}
+  systems means that \emph{all} writes append to the end of the file,
+  regardless of the current seek position).
 
-  When opening a file, it's preferable to use \function{open()} instead of 
-  invoking this constructor directly.  \class{file} is more suited to
-  type testing (for example, writing \samp{isinstance(f, file)}).
+  Modes \code{'r+'}, \code{'w+'} and \code{'a+'} open the file for
+  updating (note that \code{'w+'} truncates the file).  Append
+  \code{'b'} to the mode to open the file in binary mode, on systems
+  that differentiate between binary and text files (else it is
+  ignored).  If the file cannot be opened, \exception{IOError} is
+  raised.
+  
+  In addition to the standard \cfunction{fopen()} values \var{mode}
+  may be \code{'U'} or \code{'rU'}. If Python is built with universal
+  newline support (the default) the file is opened as a text file, but
+  lines may be terminated by any of \code{'\e n'}, the Unix end-of-line
+  convention,
+  \code{'\e r'}, the Macintosh convention or \code{'\e r\e n'}, the Windows
+  convention. All of these external representations are seen as
+  \code{'\e n'}
+  by the Python program. If Python is built without universal newline support
+  \var{mode} \code{'U'} is the same as normal text mode.  Note that
+  file objects so opened also have an attribute called
+  \member{newlines} which has a value of \code{None} (if no newlines
+  have yet been seen), \code{'\e n'}, \code{'\e r'}, \code{'\e r\e n'}, 
+  or a tuple containing all the newline types seen.
 
-  \versionadded{2.2}
+  If \var{mode} is omitted, it defaults to \code{'r'}.  When opening a
+  binary file, you should append \code{'b'} to the \var{mode} value
+  for improved portability.  (It's useful even on systems which don't
+  treat binary and text files differently, where it serves as
+  documentation.)
+  \index{line-buffered I/O}\index{unbuffered I/O}\index{buffer size, I/O}
+  \index{I/O control!buffering}
+  The optional \var{bufsize} argument specifies the
+  file's desired buffer size: 0 means unbuffered, 1 means line
+  buffered, any other positive value means use a buffer of
+  (approximately) that size.  A negative \var{bufsize} means to use
+  the system default, which is usually line buffered for tty
+  devices and fully buffered for other files.  If omitted, the system
+  default is used.\footnote{
+    Specifying a buffer size currently has no effect on systems that
+    don't have \cfunction{setvbuf()}.  The interface to specify the
+    buffer size is not done using a method that calls
+    \cfunction{setvbuf()}, because that may dump core when called
+    after any I/O has been performed, and there's no reliable way to
+    determine whether this is the case.}
+
+  The \function{file()} constructor is new in Python 2.2.  The previous
+  spelling, \function{open()}, is retained for compatibility, and is an
+  alias for \function{file()}.
 \end{funcdesc}
 
 \begin{funcdesc}{filter}{function, list}
   Construct a list from those elements of \var{list} for which
   \var{function} returns true.  \var{list} may be either a sequence, a
   container which supports iteration, or an iterator,  If \var{list}
-  is a string or a tuple, the result
-  also has that type; otherwise it is always a list.  If \var{function} is
-  \code{None}, the identity function is assumed, that is, all elements of
-  \var{list} that are false are removed.
+  is a string or a tuple, the result also has that type; otherwise it
+  is always a list.  If \var{function} is \code{None}, the identity
+  function is assumed, that is, all elements of \var{list} that are false
+  (zero or empty) are removed.
 
   Note that \code{filter(function, \var{list})} is equivalent to
   \code{[item for item in \var{list} if function(item)]} if function is
@@ -432,7 +429,8 @@ class C:
 \begin{funcdesc}{float}{\optional{x}}
   Convert a string or a number to floating point.  If the argument is a
   string, it must contain a possibly signed decimal or floating point
-  number, possibly embedded in whitespace. Otherwise, the argument may be a plain
+  number, possibly embedded in whitespace; this behaves identical to
+  \code{string.atof(\var{x})}.  Otherwise, the argument may be a plain
   or long integer or a floating point number, and a floating point
   number with the same value (within Python's floating point
   precision) is returned.  If no argument is given, returns \code{0.0}.
@@ -442,17 +440,6 @@ class C:
   underlying C library.  The specific set of strings accepted which
   cause these values to be returned depends entirely on the C library
   and is known to vary.}
-\end{funcdesc}
-
-\begin{funcdesc}{frozenset}{\optional{iterable}}
-  Return a frozenset object whose elements are taken from \var{iterable}.
-  Frozensets are sets that have no update methods but can be hashed and
-  used as members of other sets or as dictionary keys.  The elements of
-  a frozenset must be immutable themselves.  To represent sets of sets,
-  the inner sets should also be \class{frozenset} objects.  If
-  \var{iterable} is not specified, returns a new empty set,
-  \code{frozenset([])}.
-  \versionadded{2.4}
 \end{funcdesc}
 
 \begin{funcdesc}{getattr}{object, name\optional{, default}}
@@ -499,15 +486,19 @@ class C:
 
 \begin{funcdesc}{hex}{x}
   Convert an integer number (of any size) to a hexadecimal string.
-  The result is a valid Python expression.
-  \versionchanged[Formerly only returned an unsigned literal]{2.4}
+  The result is a valid Python expression.  Note: this always yields
+  an unsigned literal.  For example, on a 32-bit machine,
+  \code{hex(-1)} yields \code{'0xffffffff'}.  When evaluated on a
+  machine with the same word size, this literal is evaluated as -1; at
+  a different word size, it may turn up as a large positive number or
+  raise an \exception{OverflowError} exception.
 \end{funcdesc}
 
 \begin{funcdesc}{id}{object}
-  Return the ``identity'' of an object.  This is an integer (or long
+  Return the `identity' of an object.  This is an integer (or long
   integer) which is guaranteed to be unique and constant for this
-  object during its lifetime.  Two objects with non-overlapping lifetimes
-  may have the same \function{id()} value.  (Implementation
+  object during its lifetime.  Two objects whose lifetimes are
+  disjunct may have the same \function{id()} value.  (Implementation
   note: this is the address of the object.)
 \end{funcdesc}
 
@@ -612,7 +603,8 @@ class C:
 \begin{funcdesc}{long}{\optional{x\optional{, radix}}}
   Convert a string or number to a long integer.  If the argument is a
   string, it must contain a possibly signed number of
-  arbitrary size, possibly embedded in whitespace. The
+  arbitrary size, possibly embedded in whitespace;
+  this behaves identical to \code{string.atol(\var{x})}.  The
   \var{radix} argument is interpreted in the same way as for
   \function{int()}, and may only be given when \var{x} is a string.
   Otherwise, the argument may be a plain or
@@ -635,32 +627,20 @@ class C:
   of sequence; the result is always a list.
 \end{funcdesc}
 
-\begin{funcdesc}{max}{s\optional{, args...}\optional{key}}
+\begin{funcdesc}{max}{s\optional{, args...}}
   With a single argument \var{s}, return the largest item of a
   non-empty sequence (such as a string, tuple or list).  With more
   than one argument, return the largest of the arguments.
-
-  The optional \var{key} argument specifies a one-argument ordering
-  function like that used for \method{list.sort()}.  The \var{key}
-  argument, if supplied, must be in keyword form (for example,
-  \samp{max(a,b,c,key=func)}).
-  \versionchanged[Added support for the optional \var{key} argument]{2.5}
 \end{funcdesc}
 
-\begin{funcdesc}{min}{s\optional{, args...}\optional{key}}
+\begin{funcdesc}{min}{s\optional{, args...}}
   With a single argument \var{s}, return the smallest item of a
   non-empty sequence (such as a string, tuple or list).  With more
   than one argument, return the smallest of the arguments.
-
-  The optional \var{key} argument specifies a one-argument ordering
-  function like that used for \method{list.sort()}.  The \var{key}
-  argument, if supplied, must be in keyword form (for example,
-  \samp{min(a,b,c,key=func)}).
-  \versionchanged[Added support for the optional \var{key} argument]{2.5}           
 \end{funcdesc}
 
 \begin{funcdesc}{object}{}
-  Return a new featureless object.  \class{object} is a base
+  Return a new featureless object.  \function{object()} is a base 
   for all new style classes.  It has the methods that are common
   to all instances of new style classes.
   \versionadded{2.2}
@@ -671,99 +651,31 @@ class C:
 
 \begin{funcdesc}{oct}{x}
   Convert an integer number (of any size) to an octal string.  The
-  result is a valid Python expression.
-  \versionchanged[Formerly only returned an unsigned literal]{2.4}
+  result is a valid Python expression.  Note: this always yields an
+  unsigned literal.  For example, on a 32-bit machine, \code{oct(-1)}
+  yields \code{'037777777777'}.  When evaluated on a machine with the
+  same word size, this literal is evaluated as -1; at a different word
+  size, it may turn up as a large positive number or raise an
+  \exception{OverflowError} exception.
 \end{funcdesc}
 
 \begin{funcdesc}{open}{filename\optional{, mode\optional{, bufsize}}}
-  Open a file, returning an object of the \class{file} type described
-  in section~\ref{bltin-file-objects}, ``\ulink{File
-  Objects}{bltin-file-objects.html}''.  If the file cannot be opened,
-  \exception{IOError} is raised.  When opening a file, it's
-  preferable to use \function{open()} instead of invoking the
-  \class{file} constructor directly.
-
-  The first two arguments are the same as for \code{stdio}'s
-  \cfunction{fopen()}: \var{filename} is the file name to be opened,
-  and \var{mode} is a string indicating how the file is to be opened.
-
-  The most commonly-used values of \var{mode} are \code{'r'} for
-  reading, \code{'w'} for writing (truncating the file if it already
-  exists), and \code{'a'} for appending (which on \emph{some} \UNIX{}
-  systems means that \emph{all} writes append to the end of the file
-  regardless of the current seek position).  If \var{mode} is omitted,
-  it defaults to \code{'r'}.  When opening a binary file, you should
-  append \code{'b'} to the \var{mode} value to open the file in binary
-  mode, which will improve portability.  (Appending \code{'b'} is
-  useful even on systems that don't treat binary and text files
-  differently, where it serves as documentation.)  See below for more
-  possible values of \var{mode}.
-
-  \index{line-buffered I/O}\index{unbuffered I/O}\index{buffer size, I/O}
-  \index{I/O control!buffering}
-  The optional \var{bufsize} argument specifies the
-  file's desired buffer size: 0 means unbuffered, 1 means line
-  buffered, any other positive value means use a buffer of
-  (approximately) that size.  A negative \var{bufsize} means to use
-  the system default, which is usually line buffered for tty
-  devices and fully buffered for other files.  If omitted, the system
-  default is used.\footnote{
-    Specifying a buffer size currently has no effect on systems that
-    don't have \cfunction{setvbuf()}.  The interface to specify the
-    buffer size is not done using a method that calls
-    \cfunction{setvbuf()}, because that may dump core when called
-    after any I/O has been performed, and there's no reliable way to
-    determine whether this is the case.}
-
-  Modes \code{'r+'}, \code{'w+'} and \code{'a+'} open the file for
-  updating (note that \code{'w+'} truncates the file).  Append
-  \code{'b'} to the mode to open the file in binary mode, on systems
-  that differentiate between binary and text files; on systems
-  that don't have this distinction, adding the \code{'b'} has no effect.
-  
-  In addition to the standard \cfunction{fopen()} values \var{mode}
-  may be \code{'U'} or \code{'rU'}.  Python is usually built with universal
-  newline support; supplying \code{'U'} opens the file as a text file, but
-  lines may be terminated by any of the following: the \UNIX{} end-of-line
-  convention \code{'\e n'}, 
-  the Macintosh convention \code{'\e r'}, or the Windows
-  convention \code{'\e r\e n'}. All of these external representations are seen as
-  \code{'\e n'}
-  by the Python program. If Python is built without universal newline support
-  a \var{mode} with \code{'U'} is the same as normal text mode.  Note that
-  file objects so opened also have an attribute called
-  \member{newlines} which has a value of \code{None} (if no newlines
-  have yet been seen), \code{'\e n'}, \code{'\e r'}, \code{'\e r\e n'},
-  or a tuple containing all the newline types seen.
-
-  Python enforces that the mode, after stripping \code{'U'}, begins with
-  \code{'r'}, \code{'w'} or \code{'a'}.
-
-  \versionchanged[Restriction on first letter of mode string
-                  introduced]{2.5}
+  An alias for the \function{file()} function above.
 \end{funcdesc}
 
 \begin{funcdesc}{ord}{c}
-  Given a string of length one, return an integer representing the
-  Unicode code point of the character when the argument is a unicode object,
-  or the value of the byte when the argument is an 8-bit string.
-  For example, \code{ord('a')} returns the integer \code{97},
+  Return the \ASCII{} value of a string of one character or a Unicode
+  character.  E.g., \code{ord('a')} returns the integer \code{97},
   \code{ord(u'\e u2020')} returns \code{8224}.  This is the inverse of
-  \function{chr()} for 8-bit strings and of \function{unichr()} for unicode
-  objects.  If a unicode argument is given and Python was built with
-  UCS2 Unicode, then the character's code point must be in the range
-  [0..65535] inclusive; otherwise the string length is two, and a
-  \exception{TypeError} will be raised.
+  \function{chr()} for strings and of \function{unichr()} for Unicode
+  characters.
 \end{funcdesc}
 
 \begin{funcdesc}{pow}{x, y\optional{, z}}
   Return \var{x} to the power \var{y}; if \var{z} is present, return
   \var{x} to the power \var{y}, modulo \var{z} (computed more
-  efficiently than \code{pow(\var{x}, \var{y}) \%\ \var{z}}).
-  The two-argument form \code{pow(\var{x}, \var{y})} is equivalent to using
-  the power operator: \code{\var{x}**\var{y}}.
-  
-  The arguments must have numeric types.  With mixed operand types, the
+  efficiently than \code{pow(\var{x}, \var{y}) \%\ \var{z}}).  The
+  arguments must have numeric types.  With mixed operand types, the
   coercion rules for binary arithmetic operators apply.  For int and
   long int operands, the result has the same type as the operands
   (after coercion) unless the second argument is negative; in that
@@ -791,34 +703,13 @@ class C:
 
 \begin{verbatim}
 class C(object):
-    def __init__(self): self._x = None
-    def getx(self): return self._x
-    def setx(self, value): self._x = value
-    def delx(self): del self._x
+    def getx(self): return self.__x
+    def setx(self, value): self.__x = value
+    def delx(self): del self.__x
     x = property(getx, setx, delx, "I'm the 'x' property.")
 \end{verbatim}
 
-  If given, \var{doc} will be the docstring of the property attribute.
-  Otherwise, the property will copy \var{fget}'s docstring (if it
-  exists).  This makes it possible to create read-only properties
-  easily using \function{property()} as a decorator:
-
-\begin{verbatim}
-class Parrot(object):
-    def __init__(self):
-        self._voltage = 100000
-
-    @property
-    def voltage(self):
-        """Get the current voltage."""
-        return self._voltage
-\end{verbatim}
-
-  turns the \method{voltage()} method into a ``getter'' for a read-only
-  attribute with the same name.
-
   \versionadded{2.2}
-  \versionchanged[Use \var{fget}'s docstring if no \var{doc} given]{2.5}
 \end{funcdesc}
 
 \begin{funcdesc}{range}{\optional{start,} stop\optional{, step}}
@@ -831,7 +722,7 @@ class Parrot(object):
   \var{start} + 2 * \var{step}, \ldots]}.  If \var{step} is positive,
   the last element is the largest \code{\var{start} + \var{i} *
   \var{step}} less than \var{stop}; if \var{step} is negative, the last
-  element is the smallest \code{\var{start} + \var{i} * \var{step}}
+  element is the largest \code{\var{start} + \var{i} * \var{step}}
   greater than \var{stop}.  \var{step} must not be zero (or else
   \exception{ValueError} is raised).  Example:
 
@@ -885,36 +776,14 @@ class Parrot(object):
 \end{funcdesc}
 
 \begin{funcdesc}{reload}{module}
-  Reload a previously imported \var{module}.  The
+  Re-parse and re-initialize an already imported \var{module}.  The
   argument must be a module object, so it must have been successfully
   imported before.  This is useful if you have edited the module
   source file using an external editor and want to try out the new
   version without leaving the Python interpreter.  The return value is
   the module object (the same as the \var{module} argument).
 
-  When \code{reload(module)} is executed:
-
-\begin{itemize}
-
-    \item Python modules' code is recompiled and the module-level code
-    reexecuted, defining a new set of objects which are bound to names in
-    the module's dictionary.  The \code{init} function of extension
-    modules is not called a second time.
-
-    \item As with all other objects in Python the old objects are only
-    reclaimed after their reference counts drop to zero.
-
-    \item The names in the module namespace are updated to point to
-    any new or changed objects.
-
-    \item Other references to the old objects (such as names external
-    to the module) are not rebound to refer to the new objects and
-    must be updated in each namespace where they occur if that is
-    desired.
-
-\end{itemize}
-
-  There are a number of other caveats:
+  There are a number of caveats:
 
   If a module is syntactically correct but its initialization fails,
   the first \keyword{import} statement for it does not bind its name
@@ -930,15 +799,7 @@ class Parrot(object):
   old version, the old definition remains.  This feature can be used
   to the module's advantage if it maintains a global table or cache of
   objects --- with a \keyword{try} statement it can test for the
-  table's presence and skip its initialization if desired:
-
-\begin{verbatim}
-try:
-    cache
-except NameError:
-    cache = {}
-\end{verbatim}
-
+  table's presence and skip its initialization if desired.
 
   It is legal though generally not very useful to reload built-in or
   dynamically loaded modules, except for \refmodule{sys},
@@ -969,14 +830,6 @@ except NameError:
   when passed to \function{eval()}.
 \end{funcdesc}
 
-\begin{funcdesc}{reversed}{seq}
-  Return a reverse iterator.  \var{seq} must be an object which
-  supports the sequence protocol (the __len__() method and the
-  \method{__getitem__()} method with integer arguments starting at
-  \code{0}).
-  \versionadded{2.4}
-\end{funcdesc}
-
 \begin{funcdesc}{round}{x\optional{, n}}
   Return the floating point value \var{x} rounded to \var{n} digits
   after the decimal point.  If \var{n} is omitted, it defaults to zero.
@@ -984,14 +837,6 @@ except NameError:
   closest multiple of 10 to the power minus \var{n}; if two multiples
   are equally close, rounding is done away from 0 (so. for example,
   \code{round(0.5)} is \code{1.0} and \code{round(-0.5)} is \code{-1.0}).
-\end{funcdesc}
-
-\begin{funcdesc}{set}{\optional{iterable}}
-  Return a set whose elements are taken from \var{iterable}.  The elements
-  must be immutable.  To represent sets of sets, the inner sets should
-  be \class{frozenset} objects.  If \var{iterable} is not specified,
-  returns a new empty set, \code{set([])}.
-  \versionadded{2.4}
 \end{funcdesc}
 
 \begin{funcdesc}{setattr}{object, name, value}
@@ -1016,36 +861,6 @@ except NameError:
   \samp{a[start:stop, i]}.
 \end{funcdesc}
 
-\begin{funcdesc}{sorted}{iterable\optional{, cmp\optional{,
-                         key\optional{, reverse}}}}
-  Return a new sorted list from the items in \var{iterable}.
-
-  The optional arguments \var{cmp}, \var{key}, and \var{reverse} have
-  the same meaning as those for the \method{list.sort()} method
-  (described in section~\ref{typesseq-mutable}).
-
-  \var{cmp} specifies a custom comparison function of two arguments
-  (iterable elements) which should return a negative, zero or positive
-  number depending on whether the first argument is considered smaller
-  than, equal to, or larger than the second argument:
-  \samp{\var{cmp}=\keyword{lambda} \var{x},\var{y}:
-  \function{cmp}(x.lower(), y.lower())}
-     
-  \var{key} specifies a function of one argument that is used to
-     extract a comparison key from each list element:
-     \samp{\var{key}=\function{str.lower}}
-
-  \var{reverse} is a boolean value.  If set to \code{True}, then the
-     list elements are sorted as if each comparison were reversed.
-
-  In general, the \var{key} and \var{reverse} conversion processes are
-  much faster than specifying an equivalent \var{cmp} function.  This is
-  because \var{cmp} is called multiple times for each list element while
-  \var{key} and \var{reverse} touch each element only once.
-
-  \versionadded{2.4}
-\end{funcdesc}
-
 \begin{funcdesc}{staticmethod}{function}
   Return a static method for \var{function}.
 
@@ -1054,13 +869,9 @@ except NameError:
 
 \begin{verbatim}
 class C:
-    @staticmethod
     def f(arg1, arg2, ...): ...
+    f = staticmethod(f)
 \end{verbatim}
-
-  The \code{@staticmethod} form is a function decorator -- see the description
-  of function definitions in chapter 7 of the
-  \citetitle[../ref/function.html]{Python Reference Manual} for details.
 
   It can be called either on the class (such as \code{C.f()}) or on an
   instance (such as \code{C().f()}).  The instance is ignored except
@@ -1069,12 +880,7 @@ class C:
   Static methods in Python are similar to those found in Java or \Cpp.
   For a more advanced concept, see \function{classmethod()} in this
   section.
-  
-  For more information on static methods, consult the documentation on the
-  standard type hierarchy in chapter 3 of the
-  \citetitle[../ref/types.html]{Python Reference Manual} (at the bottom).
   \versionadded{2.2}
-  \versionchanged[Function decorator syntax added]{2.4}
 \end{funcdesc}
 
 \begin{funcdesc}{str}{\optional{object}}
@@ -1112,12 +918,6 @@ class C(B):
     def meth(self, arg):
         super(C, self).meth(arg)
 \end{verbatim}
-
-  Note that \function{super} is implemented as part of the binding process for
-  explicit dotted attribute lookups such as
-  \samp{super(C, self).__getitem__(name)}.  Accordingly, \function{super} is
-  undefined for implicit lookups using statements or operators such as
-  \samp{super(C, self)[name]}.
 \versionadded{2.2}
 \end{funcdesc}
 
@@ -1134,38 +934,33 @@ class C(B):
 
 \begin{funcdesc}{type}{object}
   Return the type of an \var{object}.  The return value is a
-  type\obindex{type} object.  The \function{isinstance()} built-in
-  function is recommended for testing the type of an object.
-
-  With three arguments, \function{type} functions as a constructor
-  as detailed below.
-\end{funcdesc}
-
-\begin{funcdesc}{type}{name, bases, dict}
-  Return a new type object.  This is essentially a dynamic form of the
-  \keyword{class} statement. The \var{name} string is the class name
-  and becomes the \member{__name__} attribute; the \var{bases} tuple
-  itemizes the base classes and becomes the \member{__bases__}
-  attribute; and the \var{dict} dictionary is the namespace containing
-  definitions for class body and becomes the \member{__dict__}
-  attribute.  For example, the following two statements create
-  identical \class{type} objects:
+  type\obindex{type} object.  The standard module
+  \module{types}\refstmodindex{types} defines names for all built-in
+  types that don't already have built-in names.
+  For instance:
 
 \begin{verbatim}
-  >>> class X(object):
-  ...     a = 1
-  ...     
-  >>> X = type('X', (object,), dict(a=1))
+>>> import types
+>>> x = 'abc'
+>>> if type(x) is str: print "It's a string"
+...
+It's a string
+>>> def f(): pass
+...
+>>> if type(f) is types.FunctionType: print "It's a function"
+...
+It's a function
 \end{verbatim}
-\versionadded{2.2}          
+
+  The \function{isinstance()} built-in function is recommended for
+  testing the type of an object.
 \end{funcdesc}
 
 \begin{funcdesc}{unichr}{i}
   Return the Unicode string of one character whose Unicode code is the
   integer \var{i}.  For example, \code{unichr(97)} returns the string
   \code{u'a'}.  This is the inverse of \function{ord()} for Unicode
-  strings.  The valid range for the argument depends how Python was
-  configured -- it may be either UCS2 [0..0xFFFF] or UCS4 [0..0x10FFFF].
+  strings.  The argument must be in the range [0..65535], inclusive.
   \exception{ValueError} is raised otherwise.
   \versionadded{2.0}
 \end{funcdesc}
@@ -1227,39 +1022,29 @@ class C(B):
   them) except when a very large range is used on a memory-starved
   machine or when all of the range's elements are never used (such as
   when the loop is usually terminated with \keyword{break}).
-
-  \note{\function{xrange()} is intended to be simple and fast.
-        Implementations may impose restrictions to achieve this.
-        The C implementation of Python restricts all arguments to
-        native C longs ("short" Python integers), and also requires
-        that the number of elements fit in a native C long.}
 \end{funcdesc}
 
-\begin{funcdesc}{zip}{\optional{iterable, \moreargs}}
+\begin{funcdesc}{zip}{seq1, \moreargs}
   This function returns a list of tuples, where the \var{i}-th tuple contains
-  the \var{i}-th element from each of the argument sequences or iterables.
-  The returned list is truncated in length to the length of
-  the shortest argument sequence.  When there are multiple arguments
-  which are all of the same length, \function{zip()} is
+  the \var{i}-th element from each of the argument sequences.  At
+  least one sequence is required, otherwise a \exception{TypeError} is
+  raised.  The returned list is truncated in length to the length of
+  the shortest argument sequence.  When there are multiple argument
+  sequences which are all of the same length, \function{zip()} is
   similar to \function{map()} with an initial argument of \code{None}.
   With a single sequence argument, it returns a list of 1-tuples.
-  With no arguments, it returns an empty list.
   \versionadded{2.0}
-
-  \versionchanged[Formerly, \function{zip()} required at least one argument
-  and \code{zip()} raised a \exception{TypeError} instead of returning
-  an empty list]{2.4}
 \end{funcdesc}
 
 
-% ---------------------------------------------------------------------------
+% ---------------------------------------------------------------------------	
 
 
 \section{Non-essential Built-in Functions \label{non-essential-built-in-funcs}}
 
 There are several built-in functions that are no longer essential to learn,
 know or use in modern Python programming.  They have been kept here to
-maintain backwards compatibility with programs written for older versions
+maintain backwards compatability with programs written for older versions
 of Python.
 
 Python programmers, trainers, students and bookwriters should feel free to

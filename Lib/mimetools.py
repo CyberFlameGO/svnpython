@@ -127,16 +127,13 @@ def choose_boundary():
     import time
     if _prefix is None:
         import socket
+        hostid = socket.gethostbyname(socket.gethostname())
         try:
-            hostid = socket.gethostbyname(socket.gethostname())
-        except socket.gaierror:
-            hostid = '127.0.0.1'
-        try:
-            uid = repr(os.getuid())
+            uid = `os.getuid()`
         except AttributeError:
             uid = '1'
         try:
-            pid = repr(os.getpid())
+            pid = `os.getpid()`
         except AttributeError:
             pid = '1'
         _prefix = hostid + '.' + uid + '.' + pid

@@ -60,7 +60,6 @@ class ListedToplevel(Toplevel):
     def __init__(self, master, **kw):
         Toplevel.__init__(self, master, kw)
         registry.add(self)
-        self.focused_widget = self
 
     def destroy(self):
         registry.delete(self)
@@ -80,10 +79,10 @@ class ListedToplevel(Toplevel):
     def wakeup(self):
         try:
             if self.wm_state() == "iconic":
-                self.wm_withdraw()
                 self.wm_deiconify()
-            self.tkraise()
-            self.focused_widget.focus_set()
+            else:
+                self.tkraise()
+            self.focus_set()
         except TclError:
             # This can happen when the window menu was torn off.
             # Simply ignore it.

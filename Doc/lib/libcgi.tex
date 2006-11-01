@@ -36,7 +36,8 @@ the ``query string'' part of the URL.  This module is intended
 to take care of the different cases and provide a simpler interface to
 the Python script.  It also provides a number of utilities that help
 in debugging scripts, and the latest addition is support for file
-uploads from a form (if your browser supports it).
+uploads from a form (if your browser supports it --- Grail 0.3 and
+Netscape 2.0 do).
 
 The output of a CGI script should consist of two sections, separated
 by a blank line.  The first section contains a number of headers,
@@ -240,7 +241,7 @@ A more convenient approach is to use the methods \method{getfirst()}
 and \method{getlist()} provided by this higher level interface.
 
 \begin{methoddesc}[FieldStorage]{getfirst}{name\optional{, default}}
-  This method always returns only one value associated with form field
+  Thin method always returns only one value associated with form field
   \var{name}.  The method returns only the first value in case that
   more values were posted under such name.  Please note that the order
   in which the values are received may vary from browser to browser
@@ -323,7 +324,7 @@ not included.
 
 The optional argument \var{strict_parsing} is a flag indicating what
 to do with parsing errors.  If false (the default), errors
-are silently ignored.  If true, errors raise a \exception{ValueError}
+are silently ignored.  If true, errors raise a ValueError
 exception.
 
 Use the \function{\refmodule{urllib}.urlencode()} function to convert
@@ -347,7 +348,7 @@ not included.
 
 The optional argument \var{strict_parsing} is a flag indicating what
 to do with parsing errors.  If false (the default), errors
-are silently ignored.  If true, errors raise a \exception{ValueError}
+are silently ignored.  If true, errors raise a ValueError
 exception.
 
 Use the \function{\refmodule{urllib}.urlencode()} function to convert
@@ -403,7 +404,7 @@ Convert the characters
 \character{\&}, \character{<} and \character{>} in string \var{s} to
 HTML-safe sequences.  Use this if you need to display text that might
 contain such characters in HTML.  If the optional flag \var{quote} is
-true, the quotation mark character (\character{"}) is also translated;
+true, the double-quote character (\character{"}) is also translated;
 this helps for inclusion in an HTML attribute value, as in \code{<A
 HREF="...">}.  If the value to be quoted might include single- or
 double-quote characters, or both, consider using the

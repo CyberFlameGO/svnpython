@@ -1,10 +1,10 @@
 r"""Utilities to compile possibly incomplete Python source code.
 
 This module provides two interfaces, broadly similar to the builtin
-function compile(), which take program text, a filename and a 'mode'
+function compile(), which takes program text, a filename and a 'mode'
 and:
 
-- Return code object if the command is complete and valid
+- Return a code object if the command is complete and valid
 - Return None if the command is incomplete
 - Raise SyntaxError, ValueError or OverflowError if the command is a
   syntax error (OverflowError and ValueError can be produced by
@@ -95,7 +95,15 @@ def _maybe_compile(compiler, source, filename, symbol):
 
     if code:
         return code
-    if not code1 and repr(err1) == repr(err2):
+    try:
+        e1 = err1.__dict__
+    except AttributeError:
+        e1 = err1
+    try:
+        e2 = err2.__dict__
+    except AttributeError:
+        e2 = err2
+    if not code1 and e1 == e2:
         raise SyntaxError, err1
 
 def _compile(source, filename, symbol):

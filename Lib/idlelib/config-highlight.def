@@ -6,8 +6,6 @@ normal-foreground= #000000
 normal-background= #ffffff
 keyword-foreground= #ff7700
 keyword-background= #ffffff
-builtin-foreground= #900090
-builtin-background= #ffffff
 comment-foreground= #dd0000
 comment-background= #ffffff
 string-foreground= #00aa00
@@ -22,7 +20,7 @@ hit-foreground= #ffffff
 hit-background= #000000
 error-foreground= #000000
 error-background= #ff7777
-#cursor (only foreground can be set, restart IDLE)
+#cursor (only foreground can be set)
 cursor-foreground= black
 #shell window
 stdout-foreground= blue
@@ -37,8 +35,6 @@ normal-foreground= #000000
 normal-background= #ffffff
 keyword-foreground= #ff7700
 keyword-background= #ffffff
-builtin-foreground= #900090
-builtin-background= #ffffff
 comment-foreground= #dd0000
 comment-background= #ffffff
 string-foreground= #00aa00
@@ -53,7 +49,7 @@ hit-foreground= #ffffff
 hit-background= #000000
 error-foreground= #000000
 error-background= #ff7777
-#cursor (only foreground can be set, restart IDLE)
+#cursor (only foreground can be set)
 cursor-foreground= black
 #shell window
 stdout-foreground= blue

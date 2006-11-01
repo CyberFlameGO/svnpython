@@ -11,15 +11,11 @@
 The \module{getpass} module provides two functions:
 
 
-\begin{funcdesc}{getpass}{\optional{prompt\optional{, stream}}}
+\begin{funcdesc}{getpass}{\optional{prompt}}
   Prompt the user for a password without echoing.  The user is
   prompted using the string \var{prompt}, which defaults to
-  \code{'Password: '}. On \UNIX, the prompt is written to the
-  file-like object \var{stream}, which defaults to
-  \code{sys.stdout} (this argument is ignored on Windows).
-
+  \code{'Password: '}.
   Availability: Macintosh, \UNIX, Windows.
-  \versionchanged[The \var{stream} parameter was added]{2.5}
 \end{funcdesc}
 
 

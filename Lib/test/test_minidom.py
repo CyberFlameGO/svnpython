@@ -413,18 +413,11 @@ def testAttributeRepr():
 def testTextNodeRepr(): pass
 
 def testWriteXML():
-    str = '<?xml version="1.0" ?><a b="c"/>'
+    str = '<?xml version="1.0" ?>\n<a b="c"/>'
     dom = parseString(str)
     domstr = dom.toxml()
     dom.unlink()
     confirm(str == domstr)
-
-def testAltNewline():
-    str = '<?xml version="1.0" ?>\n<a b="c"/>\n'
-    dom = parseString(str)
-    domstr = dom.toprettyxml(newl="\r\n")
-    dom.unlink()
-    confirm(domstr == str.replace("\n", "\r\n"))
 
 def testProcessingInstruction():
     dom = parseString('<e><?mypi \t\n data \t\n ?></e>')
@@ -885,19 +878,10 @@ def testSAX2DOM():
 
 def testEncodings():
     doc = parseString('<foo>&#x20ac;</foo>')
-    confirm(doc.toxml() == u'<?xml version="1.0" ?><foo>\u20ac</foo>'
-            and doc.toxml('utf-8') == '<?xml version="1.0" encoding="utf-8"?><foo>\xe2\x82\xac</foo>'
-            and doc.toxml('iso-8859-15') == '<?xml version="1.0" encoding="iso-8859-15"?><foo>\xa4</foo>',
+    confirm(doc.toxml() == u'<?xml version="1.0" ?>\n<foo>\u20ac</foo>'
+            and doc.toxml('utf-8') == '<?xml version="1.0" encoding="utf-8"?>\n<foo>\xe2\x82\xac</foo>'
+            and doc.toxml('iso-8859-15') == '<?xml version="1.0" encoding="iso-8859-15"?>\n<foo>\xa4</foo>',
             "testEncodings - encoding EURO SIGN")
-
-    # Verify that character decoding errors throw exceptions instead of crashing
-    try:
-        doc = parseString('<fran\xe7ais>Comment \xe7a va ? Tr\xe8s bien ?</fran\xe7ais>')
-    except UnicodeDecodeError:
-        pass
-    else:
-        print 'parsing with bad encoding should raise a UnicodeDecodeError'
-
     doc.unlink()
 
 class UserDataHandler:
@@ -1127,17 +1111,6 @@ def testWholeText():
     checkWholeText(text, "cabd")
     checkWholeText(text2, "cabd")
 
-def testPatch1094164 ():
-    doc = parseString("<doc><e/></doc>")
-    elem = doc.documentElement
-    e = elem.firstChild
-    confirm(e.parentNode is elem, "Before replaceChild()")
-    # Check that replacing a child with itself leaves the tree unchanged
-    elem.replaceChild(e, e)
-    confirm(e.parentNode is elem, "After replaceChild()")
-
-
-
 def testReplaceWholeText():
     def setup():
         doc = parseString("<doc>a<e/>d</doc>")
@@ -1226,7 +1199,7 @@ def testSetIdAttribute():
             and not a1.isId
             and a2.isId
             and not a3.isId)
-    # renaming an attribute should not affect its ID-ness:
+    # renaming an attribute should not affect it's ID-ness:
     doc.renameNode(a2, xml.dom.EMPTY_NAMESPACE, "an")
     confirm(e.isSameNode(doc.getElementById("w"))
             and a2.isId)
@@ -1262,7 +1235,7 @@ def testSetIdAttributeNS():
     confirm(a2.isId)
     confirm(not a3.isId)
     confirm(doc.getElementById("v") is None)
-    # renaming an attribute should not affect its ID-ness:
+    # renaming an attribute should not affect it's ID-ness:
     doc.renameNode(a2, xml.dom.EMPTY_NAMESPACE, "an")
     confirm(e.isSameNode(doc.getElementById("w"))
             and a2.isId)
@@ -1298,7 +1271,7 @@ def testSetIdAttributeNode():
     confirm(a2.isId)
     confirm(not a3.isId)
     confirm(doc.getElementById("v") is None)
-    # renaming an attribute should not affect its ID-ness:
+    # renaming an attribute should not affect it's ID-ness:
     doc.renameNode(a2, xml.dom.EMPTY_NAMESPACE, "an")
     confirm(e.isSameNode(doc.getElementById("w"))
             and a2.isId)
@@ -1388,7 +1361,7 @@ for name in names:
             print "Test Failed: ", name
             sys.stdout.flush()
             traceback.print_exception(*sys.exc_info())
-            print repr(sys.exc_info()[1])
+            print `sys.exc_info()[1]`
             Node.allnodes = {}
 
 if failed:

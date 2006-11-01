@@ -15,7 +15,7 @@ the formatted traceback.
 
 The \module{linecache} module defines the following functions:
 
-\begin{funcdesc}{getline}{filename, lineno\optional{, module_globals}}
+\begin{funcdesc}{getline}{filename, lineno}
 Get line \var{lineno} from file named \var{filename}. This function
 will never throw an exception --- it will return \code{''} on errors
 (the terminating newline character will be included for lines that are
@@ -23,11 +23,7 @@ found).
 
 If a file named \var{filename} is not found, the function will look
 for it in the module\indexiii{module}{search}{path} search path,
-\code{sys.path}, after first checking for a \pep{302} \code{__loader__}
-in \var{module_globals}, in case the module was imported from a zipfile
-or other non-filesystem import source. 
-
-\versionadded[The \var{module_globals} parameter was added]{2.5}
+\code{sys.path}.
 \end{funcdesc}
 
 \begin{funcdesc}{clearcache}{}
@@ -35,10 +31,9 @@ Clear the cache.  Use this function if you no longer need lines from
 files previously read using \function{getline()}.
 \end{funcdesc}
 
-\begin{funcdesc}{checkcache}{\optional{filename}}
+\begin{funcdesc}{checkcache}{}
 Check the cache for validity.  Use this function if files in the cache 
-may have changed on disk, and you require the updated version.  If
-\var{filename} is omitted, it will check all the entries in the cache.
+may have changed on disk, and you require the updated version.
 \end{funcdesc}
 
 Example:

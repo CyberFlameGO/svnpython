@@ -2,17 +2,12 @@ import httplib
 import StringIO
 import sys
 
-from unittest import TestCase
-
-from test import test_support
+from test.test_support import verify,verbose
 
 class FakeSocket:
     def __init__(self, text, fileclass=StringIO.StringIO):
         self.text = text
         self.fileclass = fileclass
-
-    def sendall(self, data):
-        self.data = data
 
     def makefile(self, mode, bufsize=None):
         if mode != 'r' and mode != 'rb':
@@ -37,109 +32,94 @@ class NoEOFStringIO(StringIO.StringIO):
             raise AssertionError('caller tried to read past EOF')
         return data
 
+# Collect output to a buffer so that we don't have to cope with line-ending
+# issues across platforms.  Specifically, the headers will have \r\n pairs
+# and some platforms will strip them from the output file.
 
-class HeaderTests(TestCase):
-    def test_auto_headers(self):
-        # Some headers are added automatically, but should not be added by
-        # .request() if they are explicitly set.
+def test():
+    buf = StringIO.StringIO()
+    _stdout = sys.stdout
+    try:
+        sys.stdout = buf
+        _test()
+    finally:
+        sys.stdout = _stdout
 
-        import httplib
+    # print individual lines with endings stripped
+    s = buf.getvalue()
+    for line in s.split("\n"):
+        print line.strip()
 
-        class HeaderCountingBuffer(list):
-            def __init__(self):
-                self.count = {}
-            def append(self, item):
-                kv = item.split(':')
-                if len(kv) > 1:
-                    # item is a 'Key: Value' header string
-                    lcKey = kv[0].lower()
-                    self.count.setdefault(lcKey, 0)
-                    self.count[lcKey] += 1
-                list.append(self, item)
+def _test():
+    # Test HTTP status lines
 
-        for explicit_header in True, False:
-            for header in 'Content-length', 'Host', 'Accept-encoding':
-                conn = httplib.HTTPConnection('example.com')
-                conn.sock = FakeSocket('blahblahblah')
-                conn._buffer = HeaderCountingBuffer()
+    body = "HTTP/1.1 200 Ok\r\n\r\nText"
+    sock = FakeSocket(body)
+    resp = httplib.HTTPResponse(sock, 1)
+    resp.begin()
+    print resp.read()
+    resp.close()
 
-                body = 'spamspamspam'
-                headers = {}
-                if explicit_header:
-                    headers[header] = str(len(body))
-                conn.request('POST', '/', body, headers)
-                self.assertEqual(conn._buffer.count[header.lower()], 1)
-
-class BasicTest(TestCase):
-    def test_status_lines(self):
-        # Test HTTP status lines
-
-        body = "HTTP/1.1 200 Ok\r\n\r\nText"
-        sock = FakeSocket(body)
-        resp = httplib.HTTPResponse(sock)
+    body = "HTTP/1.1 400.100 Not Ok\r\n\r\nText"
+    sock = FakeSocket(body)
+    resp = httplib.HTTPResponse(sock, 1)
+    try:
         resp.begin()
-        self.assertEqual(resp.read(), 'Text')
-        resp.close()
+    except httplib.BadStatusLine:
+        print "BadStatusLine raised as expected"
+    else:
+        print "Expect BadStatusLine"
 
-        body = "HTTP/1.1 400.100 Not Ok\r\n\r\nText"
-        sock = FakeSocket(body)
-        resp = httplib.HTTPResponse(sock)
-        self.assertRaises(httplib.BadStatusLine, resp.begin)
+    # Check invalid host_port
 
-    def test_host_port(self):
-        # Check invalid host_port
+    for hp in ("www.python.org:abc", "www.python.org:"):
+        try:
+            h = httplib.HTTP(hp)
+        except httplib.InvalidURL:
+            print "InvalidURL raised as expected"
+        else:
+            print "Expect InvalidURL"
 
-        for hp in ("www.python.org:abc", "www.python.org:"):
-            self.assertRaises(httplib.InvalidURL, httplib.HTTP, hp)
-
-        for hp, h, p in (("[fe80::207:e9ff:fe9b]:8000", "fe80::207:e9ff:fe9b", 8000),
-                         ("www.python.org:80", "www.python.org", 80),
-                         ("www.python.org", "www.python.org", 80),
-                         ("[fe80::207:e9ff:fe9b]", "fe80::207:e9ff:fe9b", 80)):
+    for hp,h,p in (("[fe80::207:e9ff:fe9b]:8000", "fe80::207:e9ff:fe9b", 8000),
+                   ("www.python.org:80", "www.python.org", 80),
+                   ("www.python.org", "www.python.org", 80),
+                   ("[fe80::207:e9ff:fe9b]", "fe80::207:e9ff:fe9b", 80)):
+        try:
             http = httplib.HTTP(hp)
-            c = http._conn
-            if h != c.host: self.fail("Host incorrectly parsed: %s != %s" % (h, c.host))
-            if p != c.port: self.fail("Port incorrectly parsed: %s != %s" % (p, c.host))
+        except httplib.InvalidURL:
+            print "InvalidURL raised erroneously"
+        c = http._conn
+        if h != c.host: raise AssertionError, ("Host incorrectly parsed", h, c.host)
+        if p != c.port: raise AssertionError, ("Port incorrectly parsed", p, c.host)
 
-    def test_response_headers(self):
-        # test response with multiple message headers with the same field name.
-        text = ('HTTP/1.1 200 OK\r\n'
-                'Set-Cookie: Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"\r\n'
-                'Set-Cookie: Part_Number="Rocket_Launcher_0001"; Version="1";'
-                ' Path="/acme"\r\n'
-                '\r\n'
-                'No body\r\n')
-        hdr = ('Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"'
-               ', '
-               'Part_Number="Rocket_Launcher_0001"; Version="1"; Path="/acme"')
-        s = FakeSocket(text)
-        r = httplib.HTTPResponse(s)
-        r.begin()
-        cookies = r.getheader("Set-Cookie")
-        if cookies != hdr:
-            self.fail("multiple headers not combined properly")
+    # test response with multiple message headers with the same field name.
+    text = ('HTTP/1.1 200 OK\r\n'
+            'Set-Cookie: Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"\r\n'
+            'Set-Cookie: Part_Number="Rocket_Launcher_0001"; Version="1";'
+            ' Path="/acme"\r\n'
+            '\r\n'
+            'No body\r\n')
+    hdr = ('Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"'
+           ', '
+           'Part_Number="Rocket_Launcher_0001"; Version="1"; Path="/acme"')
+    s = FakeSocket(text)
+    r = httplib.HTTPResponse(s, 1)
+    r.begin()
+    cookies = r.getheader("Set-Cookie")
+    if cookies != hdr:
+        raise AssertionError, "multiple headers not combined properly"
 
-    def test_read_head(self):
-        # Test that the library doesn't attempt to read any data
-        # from a HEAD request.  (Tickles SF bug #622042.)
-        sock = FakeSocket(
-            'HTTP/1.1 200 OK\r\n'
-            'Content-Length: 14432\r\n'
-            '\r\n',
-            NoEOFStringIO)
-        resp = httplib.HTTPResponse(sock, method="HEAD")
-        resp.begin()
-        if resp.read() != "":
-            self.fail("Did not expect response from HEAD request")
-        resp.close()
+    # Test that the library doesn't attempt to read any data
+    # from a HEAD request.  (Tickles SF bug #622042.)
+    sock = FakeSocket(
+        'HTTP/1.1 200 OK\r\n'
+        'Content-Length: 14432\r\n'
+        '\r\n',
+        NoEOFStringIO)
+    resp = httplib.HTTPResponse(sock, 1, method="HEAD")
+    resp.begin()
+    if resp.read() != "":
+        raise AssertionError, "Did not expect response from HEAD request"
+    resp.close()
 
-
-class OfflineTest(TestCase):
-    def test_responses(self):
-        self.assertEquals(httplib.responses[httplib.NOT_FOUND], "Not Found")
-
-def test_main(verbose=None):
-    test_support.run_unittest(HeaderTests, OfflineTest, BasicTest)
-
-if __name__ == '__main__':
-    test_main()
+test()

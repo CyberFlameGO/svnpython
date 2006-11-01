@@ -86,11 +86,6 @@ BROWSE='browse'
 MULTIPLE='multiple'
 EXTENDED='extended'
 
-# Activestyle for list boxes
-# NONE='none' is also valid
-DOTBOX='dotbox'
-UNDERLINE='underline'
-
 # Various canvas styles
 PIESLICE='pieslice'
 CHORD='chord'

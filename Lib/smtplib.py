@@ -43,19 +43,17 @@ Example:
 
 import socket
 import re
-import email.Utils
+import rfc822
 import base64
 import hmac
 from email.base64MIME import encode as encode_base64
-from sys import stderr
 
 __all__ = ["SMTPException","SMTPServerDisconnected","SMTPResponseException",
            "SMTPSenderRefused","SMTPRecipientsRefused","SMTPDataError",
            "SMTPConnectError","SMTPHeloError","SMTPAuthenticationError",
-           "quoteaddr","quotedata","SMTP","SMTP_SSL"]
+           "quoteaddr","quotedata","SMTP"]
 
 SMTP_PORT = 25
-SMTP_SSL_PORT = 465
 CRLF="\r\n"
 
 OLDSTYLE_AUTH = re.compile(r"auth=(.*)", re.I)
@@ -151,7 +149,7 @@ class SSLFakeFile:
 
     It only supports what is needed in smtplib.
     """
-    def __init__(self, sslobj):
+    def __init__( self, sslobj):
         self.sslobj = sslobj
 
     def readline(self):
@@ -172,15 +170,12 @@ def quoteaddr(addr):
     """
     m = (None, None)
     try:
-        m = email.Utils.parseaddr(addr)[1]
+        m=rfc822.parseaddr(addr)[1]
     except AttributeError:
         pass
     if m == (None, None): # Indicates parse failure or AttributeError
-        # something weird here.. punt -ddm
+        #something weird here.. punt -ddm
         return "<%s>" % addr
-    elif m is None:
-        # the sender wants an empty return address
-        return "<>"
     else:
         return "<%s>" % m
 
@@ -241,7 +236,6 @@ class SMTP:
 
         """
         self.esmtp_features = {}
-        self.default_port = SMTP_PORT
         if host:
             (code, msg) = self.connect(host, port)
             if code != 220:
@@ -257,11 +251,7 @@ class SMTP:
                 self.local_hostname = fqdn
             else:
                 # We can't find an fqdn hostname, so use a domain literal
-                addr = '127.0.0.1'
-                try:
-                    addr = socket.gethostbyname(socket.gethostname())
-                except socket.gaierror:
-                    pass
+                addr = socket.gethostbyname(socket.gethostname())
                 self.local_hostname = '[%s]' % addr
 
     def set_debuglevel(self, debuglevel):
@@ -272,13 +262,6 @@ class SMTP:
 
         """
         self.debuglevel = debuglevel
-
-    def _get_socket(self,af, socktype, proto,sa):
-        # This makes it simpler for SMTP_SSL to use the SMTP connect code
-        # and just alter the socket connection bit.
-        self.sock = socket.socket(af, socktype, proto)
-        if self.debuglevel > 0: print>>stderr, 'connect:', (host, port)
-        self.sock.connect(sa)
 
     def connect(self, host='localhost', port = 0):
         """Connect to a host on a given port.
@@ -298,16 +281,18 @@ class SMTP:
                 try: port = int(port)
                 except ValueError:
                     raise socket.error, "nonnumeric port"
-        if not port: port = self.default_port
-        if self.debuglevel > 0: print>>stderr, 'connect:', (host, port)
+        if not port: port = SMTP_PORT
+        if self.debuglevel > 0: print 'connect:', (host, port)
         msg = "getaddrinfo returns an empty list"
         self.sock = None
         for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
             af, socktype, proto, canonname, sa = res
             try:
-                self._get_socket(af,socktype,proto,sa)
+                self.sock = socket.socket(af, socktype, proto)
+                if self.debuglevel > 0: print 'connect:', (host, port)
+                self.sock.connect(sa)
             except socket.error, msg:
-                if self.debuglevel > 0: print>>stderr, 'connect fail:', msg
+                if self.debuglevel > 0: print 'connect fail:', (host, port)
                 if self.sock:
                     self.sock.close()
                 self.sock = None
@@ -316,12 +301,12 @@ class SMTP:
         if not self.sock:
             raise socket.error, msg
         (code, msg) = self.getreply()
-        if self.debuglevel > 0: print>>stderr, "connect:", msg
+        if self.debuglevel > 0: print "connect:", msg
         return (code, msg)
 
     def send(self, str):
         """Send `str' to the server."""
-        if self.debuglevel > 0: print>>stderr, 'send:', repr(str)
+        if self.debuglevel > 0: print 'send:', `str`
         if self.sock:
             try:
                 self.sock.sendall(str)
@@ -360,7 +345,7 @@ class SMTP:
             if line == '':
                 self.close()
                 raise SMTPServerDisconnected("Connection unexpectedly closed")
-            if self.debuglevel > 0: print>>stderr, 'reply:', repr(line)
+            if self.debuglevel > 0: print 'reply:', `line`
             resp.append(line[4:].strip())
             code=line[:3]
             # Check that the error code is syntactically correct.
@@ -376,7 +361,7 @@ class SMTP:
 
         errmsg = "\n".join(resp)
         if self.debuglevel > 0:
-            print>>stderr, 'reply: retcode (%s); Msg: %s' % (errcode,errmsg)
+            print 'reply: retcode (%s); Msg: %s' % (errcode,errmsg)
         return errcode, errmsg
 
     def docmd(self, cmd, args=""):
@@ -453,7 +438,7 @@ class SMTP:
         """SMTP 'help' command.
         Returns help text from server."""
         self.putcmd("help", args)
-        return self.getreply()[1]
+        return self.getreply()
 
     def rset(self):
         """SMTP 'rset' command -- resets session."""
@@ -489,7 +474,7 @@ class SMTP:
         """
         self.putcmd("data")
         (code,repl)=self.getreply()
-        if self.debuglevel >0 : print>>stderr, "data:", (code,repl)
+        if self.debuglevel >0 : print "data:", (code,repl)
         if code != 354:
             raise SMTPDataError(code,repl)
         else:
@@ -499,7 +484,7 @@ class SMTP:
             q = q + "." + CRLF
             self.send(q)
             (code,msg)=self.getreply()
-            if self.debuglevel >0 : print>>stderr, "data:", (code,msg)
+            if self.debuglevel >0 : print "data:", (code,msg)
             return (code,msg)
 
     def verify(self, address):
@@ -544,7 +529,7 @@ class SMTP:
             return encode_base64(response, eol="")
 
         def encode_plain(user, password):
-            return encode_base64("\0%s\0%s" % (user, password), eol="")
+            return encode_base64("%s\0%s\0%s" % (user, user, password), eol="")
 
 
         AUTH_PLAIN = "PLAIN"
@@ -592,7 +577,7 @@ class SMTP:
             (code, resp) = self.docmd(encode_base64(password, eol=""))
         elif authmethod is None:
             raise SMTPException("No suitable authentication method found.")
-        if code not in (235, 503):
+        if code not in [235, 503]:
             # 235 == 'Authentication successful'
             # 503 == 'Error: already authenticated'
             raise SMTPAuthenticationError(code, resp)
@@ -681,7 +666,7 @@ class SMTP:
             # Hmmm? what's this? -ddm
             # self.esmtp_features['7bit']=""
             if self.has_extn('size'):
-                esmtp_opts.append("size=%d" % len(msg))
+                esmtp_opts.append("size=" + `len(msg)`)
             for option in mail_options:
                 esmtp_opts.append(option)
 
@@ -723,28 +708,6 @@ class SMTP:
         self.docmd("quit")
         self.close()
 
-class SMTP_SSL(SMTP):
-    """ This is a subclass derived from SMTP that connects over an SSL encrypted
-    socket (to use this class you need a socket module that was compiled with SSL
-    support). If host is not specified, '' (the local host) is used. If port is
-    omitted, the standard SMTP-over-SSL port (465) is used. keyfile and certfile
-    are also optional - they can contain a PEM formatted private key and
-    certificate chain file for the SSL connection.   
-    """
-    def __init__(self, host = '', port = 0, local_hostname = None,
-                 keyfile = None, certfile = None):
-        self.keyfile = keyfile
-        self.certfile = certfile
-        SMTP.__init__(self,host,port,local_hostname)
-        self.default_port = SMTP_SSL_PORT
-
-    def _get_socket(self,af, socktype, proto,sa):
-        self.sock = socket.socket(af, socktype, proto)
-        if self.debuglevel > 0: print>>stderr, 'connect:', (host, port)
-        self.sock.connect(sa)
-        sslobj = socket.ssl(self.sock, self.keyfile, self.certfile)
-        self.sock = SSLFakeSocket(self.sock, sslobj)
-        self.file = SSLFakeFile(sslobj)
 
 # Test the sendmail method, which tests most of the others.
 # Note: This always sends to localhost.
@@ -764,7 +727,7 @@ if __name__ == '__main__':
         if not line:
             break
         msg = msg + line
-    print "Message length is %d" % len(msg)
+    print "Message length is " + `len(msg)`
 
     server = SMTP('localhost')
     server.set_debuglevel(1)

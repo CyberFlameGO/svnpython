@@ -157,7 +157,7 @@ svc_GetFields(captureobject *self, PyObject *args)
 	if (!(f2 = PyString_FromStringAndSize(obcapture + fieldsize,
 					      fieldsize)))
 		goto finally;
-	ret = PyTuple_Pack(2, f1, f2);
+	ret = Py_BuildValue("(OO)", f1, f2);
 
   finally:
 	Py_XDECREF(f1);
@@ -956,8 +956,6 @@ initsv(void)
 	PyObject *m, *d;
 
 	m = Py_InitModule("sv", sv_methods);
-	if (m == NULL)
-		return;
 	d = PyModule_GetDict(m);
 
 	SvError = PyErr_NewException("sv.error", NULL, NULL);

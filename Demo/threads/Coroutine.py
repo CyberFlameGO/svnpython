@@ -138,9 +138,10 @@ class Coroutine:
 
     def tran(self, target, data=None):
         if not self.invokedby.has_key(target):
-            raise TypeError, '.tran target %r is not an active coroutine' % (target,)
+            raise TypeError, '.tran target ' + `target` + \
+                             ' is not an active coroutine'
         if self.killed:
-            raise TypeError, '.tran target %r is killed' % (target,)
+            raise TypeError, '.tran target ' + `target` + ' is killed'
         self.value = data
         me = self.active
         self.invokedby[target] = me
@@ -152,7 +153,7 @@ class Coroutine:
             if self.main is not me:
                 raise Killed
             if self.terminated_by is not None:
-                raise EarlyExit, '%r terminated early' % (self.terminated_by,)
+                raise EarlyExit, `self.terminated_by` + ' terminated early'
 
         return self.value
 

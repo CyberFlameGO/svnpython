@@ -12,44 +12,83 @@
 #endif
 #include <signal.h>
 
-/* The POSIX spec requires that use of pthread_attr_setstacksize
-   be conditional on _POSIX_THREAD_ATTR_STACKSIZE being defined. */
-#ifdef _POSIX_THREAD_ATTR_STACKSIZE
-#ifndef THREAD_STACK_SIZE
-#define	THREAD_STACK_SIZE	0	/* use default stack size */
-#endif
-/* for safety, ensure a viable minimum stacksize */
-#define	THREAD_STACK_MIN	0x8000	/* 32kB */
-#else  /* !_POSIX_THREAD_ATTR_STACKSIZE */
-#ifdef THREAD_STACK_SIZE
-#error "THREAD_STACK_SIZE defined but _POSIX_THREAD_ATTR_STACKSIZE undefined"
-#endif
-#endif
-
 /* The POSIX spec says that implementations supporting the sem_*
    family of functions must indicate this by defining
    _POSIX_SEMAPHORES. */   
 #ifdef _POSIX_SEMAPHORES
-/* On FreeBSD 4.x, _POSIX_SEMAPHORES is defined empty, so 
-   we need to add 0 to make it work there as well. */
-#if (_POSIX_SEMAPHORES+0) == -1
-#define HAVE_BROKEN_POSIX_SEMAPHORES
-#else
 #include <semaphore.h>
 #include <errno.h>
 #endif
+
+
+/* try to determine what version of the Pthread Standard is installed.
+ * this is important, since all sorts of parameter types changed from
+ * draft to draft and there are several (incompatible) drafts in
+ * common use.  these macros are a start, at least. 
+ * 12 May 1997 -- david arnold <davida@pobox.com>
+ */
+
+#if defined(__ultrix) && defined(__mips) && defined(_DECTHREADS_)
+/* _DECTHREADS_ is defined in cma.h which is included by pthread.h */
+#  define PY_PTHREAD_D4
+#  error Systems with PY_PTHREAD_D4 are unsupported. See README.
+
+#elif defined(__osf__) && defined (__alpha)
+/* _DECTHREADS_ is defined in cma.h which is included by pthread.h */
+#  if !defined(_PTHREAD_ENV_ALPHA) || defined(_PTHREAD_USE_D4) || defined(PTHREAD_USE_D4)
+#    define PY_PTHREAD_D4
+#    error Systems with PY_PTHREAD_D4 are unsupported. See README.
+#  else
+#    define PY_PTHREAD_STD
+#  endif
+
+#elif defined(_AIX)
+/* SCHED_BG_NP is defined if using AIX DCE pthreads
+ * but it is unsupported by AIX 4 pthreads. Default
+ * attributes for AIX 4 pthreads equal to NULL. For
+ * AIX DCE pthreads they should be left unchanged.
+ */
+#  if !defined(SCHED_BG_NP)
+#    define PY_PTHREAD_STD
+#  else
+#    define PY_PTHREAD_D7
+#    error Systems with PY_PTHREAD_D7 are unsupported. See README.
+#  endif
+
+#elif defined(__DGUX)
+#  define PY_PTHREAD_D6
+#  error Systems with PY_PTHREAD_D6 are unsupported. See README.
+
+#elif defined(__hpux) && defined(_DECTHREADS_)
+#  define PY_PTHREAD_D4
+#  error Systems with PY_PTHREAD_D4 are unsupported. See README.
+
+#else /* Default case */
+#  define PY_PTHREAD_STD
+
 #endif
 
-/* Before FreeBSD 5.4, system scope threads was very limited resource
-   in default setting.  So the process scope is preferred to get
-   enough number of threads to work. */
-#ifdef __FreeBSD__
-#include <osreldate.h>
-#if __FreeBSD_version >= 500000 && __FreeBSD_version < 504101
-#undef PTHREAD_SYSTEM_SCHED_SUPPORTED
-#endif
+#ifdef USE_GUSI
+/* The Macintosh GUSI I/O library sets the stackspace to
+** 20KB, much too low. We up it to 64K.
+*/
+#define THREAD_STACK_SIZE 0x10000
 #endif
 
+
+/* set default attribute object for different versions */
+
+#if defined(PY_PTHREAD_D4) || defined(PY_PTHREAD_D7)
+#if !defined(pthread_attr_default)
+#  define pthread_attr_default pthread_attr_default
+#endif
+#if !defined(pthread_mutexattr_default)
+#  define pthread_mutexattr_default pthread_mutexattr_default
+#endif
+#if !defined(pthread_condattr_default)
+#  define pthread_condattr_default pthread_condattr_default
+#endif
+#elif defined(PY_PTHREAD_STD) || defined(PY_PTHREAD_D6)
 #if !defined(pthread_attr_default)
 #  define pthread_attr_default ((pthread_attr_t *)NULL)
 #endif
@@ -58,6 +97,7 @@
 #endif
 #if !defined(pthread_condattr_default)
 #  define pthread_condattr_default ((pthread_condattr_t *)NULL)
+#endif
 #endif
 
 
@@ -149,36 +189,45 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 {
 	pthread_t th;
 	int status;
+ 	sigset_t oldmask, newmask;
 #if defined(THREAD_STACK_SIZE) || defined(PTHREAD_SYSTEM_SCHED_SUPPORTED)
 	pthread_attr_t attrs;
 #endif
-#if defined(THREAD_STACK_SIZE)
-	size_t	tss;
-#endif
-
 	dprintf(("PyThread_start_new_thread called\n"));
 	if (!initialized)
 		PyThread_init_thread();
 
 #if defined(THREAD_STACK_SIZE) || defined(PTHREAD_SYSTEM_SCHED_SUPPORTED)
-	if (pthread_attr_init(&attrs) != 0)
-		return -1;
+	pthread_attr_init(&attrs);
 #endif
-#if defined(THREAD_STACK_SIZE)
-	tss = (_pythread_stacksize != 0) ? _pythread_stacksize
-					 : THREAD_STACK_SIZE;
-	if (tss != 0) {
-		if (pthread_attr_setstacksize(&attrs, tss) != 0) {
-			pthread_attr_destroy(&attrs);
-			return -1;
-		}
-	}
+#ifdef THREAD_STACK_SIZE
+	pthread_attr_setstacksize(&attrs, THREAD_STACK_SIZE);
 #endif
-#if defined(PTHREAD_SYSTEM_SCHED_SUPPORTED)
+#ifdef PTHREAD_SYSTEM_SCHED_SUPPORTED
         pthread_attr_setscope(&attrs, PTHREAD_SCOPE_SYSTEM);
 #endif
 
+	/* Mask all signals in the current thread before creating the new
+	 * thread.  This causes the new thread to start with all signals
+	 * blocked.
+	 */
+	sigfillset(&newmask);
+	SET_THREAD_SIGMASK(SIG_BLOCK, &newmask, &oldmask);
+
 	status = pthread_create(&th, 
+#if defined(PY_PTHREAD_D4)
+				 pthread_attr_default,
+				 (pthread_startroutine_t)func, 
+				 (pthread_addr_t)arg
+#elif defined(PY_PTHREAD_D6)
+				 pthread_attr_default,
+				 (void* (*)(void *))func,
+				 arg
+#elif defined(PY_PTHREAD_D7)
+				 pthread_attr_default,
+				 func,
+				 arg
+#elif defined(PY_PTHREAD_STD)
 #if defined(THREAD_STACK_SIZE) || defined(PTHREAD_SYSTEM_SCHED_SUPPORTED)
 				 &attrs,
 #else
@@ -186,7 +235,11 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 #endif
 				 (void* (*)(void *))func,
 				 (void *)arg
+#endif
 				 );
+
+	/* Restore signal mask for original thread */
+	SET_THREAD_SIGMASK(SIG_SETMASK, &oldmask, NULL);
 
 #if defined(THREAD_STACK_SIZE) || defined(PTHREAD_SYSTEM_SCHED_SUPPORTED)
 	pthread_attr_destroy(&attrs);
@@ -194,7 +247,11 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 	if (status != 0)
             return -1;
 
+#if defined(PY_PTHREAD_D4) || defined(PY_PTHREAD_D6) || defined(PY_PTHREAD_D7)
+        pthread_detach(&th);
+#elif defined(PY_PTHREAD_STD)
         pthread_detach(th);
+#endif
 
 #if SIZEOF_PTHREAD_T <= SIZEOF_LONG
 	return (long) th;
@@ -205,7 +262,7 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
 
 /* XXX This implementation is considered (to quote Tim Peters) "inherently
    hosed" because:
-     - It does not guarantee the promise that a non-zero integer is returned.
+     - It does not guanrantee the promise that a non-zero integer is returned.
      - The cast to long is inherently unsafe.
      - It is not clear that the 'volatile' (for AIX?) and ugly casting in the
        latter return statement (for Alpha OSF/1) are any longer necessary.
@@ -391,8 +448,8 @@ PyThread_allocate_lock(void)
 		PyThread_init_thread();
 
 	lock = (pthread_lock *) malloc(sizeof(pthread_lock));
+	memset((void *)lock, '\0', sizeof(pthread_lock));
 	if (lock) {
-		memset((void *)lock, '\0', sizeof(pthread_lock));
 		lock->locked = 0;
 
 		status = pthread_mutex_init(&lock->mut,
@@ -486,48 +543,3 @@ PyThread_release_lock(PyThread_type_lock lock)
 }
 
 #endif /* USE_SEMAPHORES */
-
-/* set the thread stack size.
- * Return 0 if size is valid, -1 if size is invalid,
- * -2 if setting stack size is not supported.
- */
-static int
-_pythread_pthread_set_stacksize(size_t size)
-{
-#if defined(THREAD_STACK_SIZE)
-	pthread_attr_t attrs;
-	size_t tss_min;
-	int rc = 0;
-#endif
-
-	/* set to default */
-	if (size == 0) {
-		_pythread_stacksize = 0;
-		return 0;
-	}
-
-#if defined(THREAD_STACK_SIZE)
-#if defined(PTHREAD_STACK_MIN)
-	tss_min = PTHREAD_STACK_MIN > THREAD_STACK_MIN ? PTHREAD_STACK_MIN
-						       : THREAD_STACK_MIN;
-#else
-	tss_min = THREAD_STACK_MIN;
-#endif
-	if (size >= tss_min) {
-		/* validate stack size by setting thread attribute */
-		if (pthread_attr_init(&attrs) == 0) {
-			rc = pthread_attr_setstacksize(&attrs, size);
-			pthread_attr_destroy(&attrs);
-			if (rc == 0) {
-				_pythread_stacksize = size;
-				return 0;
-			}
-		}
-	}
-	return -1;
-#else
-	return -2;
-#endif
-}
-
-#define THREAD_SET_STACKSIZE(x)	_pythread_pthread_set_stacksize(x)

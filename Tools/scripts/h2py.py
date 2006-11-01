@@ -171,5 +171,4 @@ def process(fp, outfp, env = {}):
                     sys.stderr.write('Warning - could not find file %s\n' %
                                      filename)
 
-if __name__ == '__main__':
-    main()
+main()

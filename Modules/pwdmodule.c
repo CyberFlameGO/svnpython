@@ -42,7 +42,6 @@ The uid and gid items are integers, all others are strings. An\n\
 exception is raised if the entry asked for cannot be found.");
 
       
-static int initialized;
 static PyTypeObject StructPwdType;
 
 static void
@@ -103,9 +102,9 @@ See pwd.__doc__ for more on password database entries.");
 static PyObject *
 pwd_getpwuid(PyObject *self, PyObject *args)
 {
-	unsigned int uid;
+	int uid;
 	struct passwd *p;
-	if (!PyArg_ParseTuple(args, "I:getpwuid", &uid))
+	if (!PyArg_ParseTuple(args, "i:getpwuid", &uid))
 		return NULL;
 	if ((p = getpwuid(uid)) == NULL) {
 		PyErr_Format(PyExc_KeyError,
@@ -184,15 +183,8 @@ initpwd(void)
 {
 	PyObject *m;
 	m = Py_InitModule3("pwd", pwd_methods, pwd__doc__);
-	if (m == NULL)
-    		return;
 
-	if (!initialized)
-		PyStructSequence_InitType(&StructPwdType, 
-					  &struct_pwd_type_desc);
+	PyStructSequence_InitType(&StructPwdType, &struct_pwd_type_desc);
 	Py_INCREF((PyObject *) &StructPwdType);
-	PyModule_AddObject(m, "struct_passwd", (PyObject *) &StructPwdType);
-	/* And for b/w compatibility (this was defined by mistake): */
 	PyModule_AddObject(m, "struct_pwent", (PyObject *) &StructPwdType);
-	initialized = 1;
 }
