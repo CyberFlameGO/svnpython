@@ -1500,16 +1500,8 @@ class TestHelp(BaseTest):
         self.assertHelpEquals(_expected_help_long_opts_first)
 
     def test_help_title_formatter(self):
-        save = os.environ.get("COLUMNS")
-        try:
-            os.environ["COLUMNS"] = "80"
-            self.parser.formatter = TitledHelpFormatter()
-            self.assertHelpEquals(_expected_help_title_formatter)
-        finally:
-            if save is not None:
-                os.environ["COLUMNS"] = save
-            else:
-                del os.environ["COLUMNS"]
+        self.parser.formatter = TitledHelpFormatter()
+        self.assertHelpEquals(_expected_help_title_formatter)
 
     def test_wrap_columns(self):
         # Ensure that wrapping respects $COLUMNS environment variable.

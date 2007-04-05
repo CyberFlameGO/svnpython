@@ -741,16 +741,7 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
 	   this wasn't always true before 2.3!  PyFrame_New now sets
 	   f->f_lasti to -1 (i.e. the index *before* the first instruction)
 	   and YIELD_VALUE doesn't fiddle with f_lasti any more.  So this
-	   does work.  Promise. 
-
-	   When the PREDICT() macros are enabled, some opcode pairs follow in
-           direct succession without updating f->f_lasti.  A successful 
-           prediction effectively links the two codes together as if they
-           were a single new opcode; accordingly,f->f_lasti will point to
-           the first code in the pair (for instance, GET_ITER followed by
-           FOR_ITER is effectively a single opcode and f->f_lasti will point
-           at to the beginning of the combined pair.)
-	*/
+	   does work.  Promise. */
 	next_instr = first_instr + f->f_lasti + 1;
 	stack_pointer = f->f_stacktop;
 	assert(stack_pointer != NULL);
@@ -2204,9 +2195,8 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
 		case SETUP_LOOP:
 		case SETUP_EXCEPT:
 		case SETUP_FINALLY:
-			/* NOTE: If you add any new block-setup opcodes that are
-		           not try/except/finally handlers, you may need to
-			   update the PyGen_NeedsFinalizing() function. */
+			/* NOTE: If you add any new block-setup opcodes that are not try/except/finally
+			   handlers, you may need to update the PyGen_NeedsFinalizing() function. */
 
 			PyFrame_BlockSetup(f, opcode, INSTR_OFFSET() + oparg,
 					   STACK_LEVEL());
@@ -3068,7 +3058,15 @@ do_raise(PyObject *type, PyObject *value, PyObject *tb)
 		Py_DECREF(tmp);
 	}
 
-	if (PyExceptionClass_Check(type))
+	if (PyString_CheckExact(type)) {
+		/* Raising builtin string is deprecated but still allowed --
+		 * do nothing.  Raising an instance of a new-style str
+		 * subclass is right out. */
+		if (PyErr_Warn(PyExc_DeprecationWarning,
+			   "raising a string exception is deprecated"))
+			goto raise_error;
+	}
+	else if (PyExceptionClass_Check(type))
 		PyErr_NormalizeException(&type, &value, &tb);
 
 	else if (PyExceptionInstance_Check(type)) {
@@ -3090,7 +3088,8 @@ do_raise(PyObject *type, PyObject *value, PyObject *tb)
 		/* Not something you can raise.  You get an exception
 		   anyway, just not what you specified :-) */
 		PyErr_Format(PyExc_TypeError,
-			     "exceptions must be classes or instances, not %s",
+			     "exceptions must be classes, instances, or "
+			     "strings (deprecated), not %s",
 			     type->ob_type->tp_name);
 		goto raise_error;
 	}
@@ -3975,35 +3974,6 @@ cmp_outcome(int op, register PyObject *v, register PyObject *w)
 		res = !res;
 		break;
 	case PyCmp_EXC_MATCH:
-		if (PyTuple_Check(w)) {
-			Py_ssize_t i, length;
-			length = PyTuple_Size(w);
-			for (i = 0; i < length; i += 1) {
-				PyObject *exc = PyTuple_GET_ITEM(w, i);
-				if (PyString_Check(exc)) {
-					int ret_val;
-					ret_val = PyErr_WarnEx(
-							PyExc_DeprecationWarning,
-							"catching of string "
-							"exceptions is "
-							"deprecated", 1);
-					if (ret_val == -1)
-						return NULL;
-				}
-			}
-		}
-		else {
-			if (PyString_Check(w)) {
-				int ret_val;
-				ret_val = PyErr_WarnEx(
-						PyExc_DeprecationWarning,
-						"catching of string "
-						"exceptions is deprecated",
-						1);
-				if (ret_val == -1)
-					return NULL;
-			}
-		}
 		res = PyErr_GivenExceptionMatches(v, w);
 		break;
 	default:
@@ -4113,8 +4083,7 @@ build_class(PyObject *methods, PyObject *bases, PyObject *name)
 			metaclass = (PyObject *) &PyClass_Type;
 		Py_INCREF(metaclass);
 	}
-	result = PyObject_CallFunctionObjArgs(metaclass, name, bases, methods,
-                                              NULL);
+	result = PyObject_CallFunctionObjArgs(metaclass, name, bases, methods, NULL);
 	Py_DECREF(metaclass);
 	if (result == NULL && PyErr_ExceptionMatches(PyExc_TypeError)) {
 		/* A type error here likely means that the user passed
@@ -4128,8 +4097,7 @@ build_class(PyObject *methods, PyObject *bases, PyObject *name)
 		if (PyString_Check(pvalue)) {
 			PyObject *newmsg;
 			newmsg = PyString_FromFormat(
-				"Error when calling the metaclass bases\n"
-                                "    %s",
+				"Error when calling the metaclass bases\n    %s",
 				PyString_AS_STRING(pvalue));
 			if (newmsg != NULL) {
 				Py_DECREF(pvalue);
@@ -4203,8 +4171,8 @@ exec_statement(PyFrameObject *f, PyObject *prog, PyObject *globals,
 		FILE *fp = PyFile_AsFile(prog);
 		char *name = PyString_AsString(PyFile_Name(prog));
 		PyCompilerFlags cf;
-                if (name == NULL)
-                        return -1;
+		if (name == NULL)
+			return -1;
 		cf.cf_flags = 0;
 		if (PyEval_MergeCompilerFlags(&cf))
 			v = PyRun_FileFlags(fp, name, Py_file_input, globals,

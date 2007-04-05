@@ -30,10 +30,10 @@ typedef struct _Row
     PyObject_HEAD
     PyObject* data;
     PyObject* description;
-} pysqlite_Row;
+} Row;
 
-extern PyTypeObject pysqlite_RowType;
+extern PyTypeObject RowType;
 
-int pysqlite_row_setup_types(void);
+int row_setup_types(void);
 
 #endif

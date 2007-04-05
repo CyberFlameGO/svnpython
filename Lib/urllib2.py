@@ -14,36 +14,36 @@ non-error returns.  The HTTPRedirectHandler automatically deals with
 HTTP 301, 302, 303 and 307 redirect errors, and the HTTPDigestAuthHandler
 deals with digest authentication.
 
-urlopen(url, data=None) -- Basic usage is the same as original
+urlopen(url, data=None) -- basic usage is the same as original
 urllib.  pass the url and optionally data to post to an HTTP URL, and
 get a file-like object back.  One difference is that you can also pass
 a Request instance instead of URL.  Raises a URLError (subclass of
 IOError); for HTTP errors, raises an HTTPError, which can also be
 treated as a valid response.
 
-build_opener -- Function that creates a new OpenerDirector instance.
-Will install the default handlers.  Accepts one or more Handlers as
+build_opener -- function that creates a new OpenerDirector instance.
+will install the default handlers.  accepts one or more Handlers as
 arguments, either instances or Handler classes that it will
-instantiate.  If one of the argument is a subclass of the default
+instantiate.  if one of the argument is a subclass of the default
 handler, the argument will be installed instead of the default.
 
-install_opener -- Installs a new opener as the default opener.
+install_opener -- installs a new opener as the default opener.
 
 objects of interest:
 OpenerDirector --
 
-Request -- An object that encapsulates the state of a request.  The
-state can be as simple as the URL.  It can also include extra HTTP
+Request -- an object that encapsulates the state of a request.  the
+state can be a simple as the URL.  it can also include extra HTTP
 headers, e.g. a User-Agent.
 
 BaseHandler --
 
 exceptions:
-URLError -- A subclass of IOError, individual protocols have their own
-specific subclass.
+URLError-- a subclass of IOError, individual protocols have their own
+specific subclass
 
-HTTPError -- Also a valid HTTP response, so you can treat an HTTP error
-as an exceptional event or valid response.
+HTTPError-- also a valid HTTP response, so you can treat an HTTP error
+as an exceptional event or valid response
 
 internals:
 BaseHandler and parent
@@ -334,8 +334,7 @@ class OpenerDirector:
             added = True
 
         if added:
-            # the handlers must work in an specific order, the order
-            # is specified in a Handler attribute
+            # XXX why does self.handlers need to be sorted?
             bisect.insort(self.handlers, handler)
             handler.add_parent(self)
 
@@ -1209,28 +1208,24 @@ class FileHandler(BaseHandler):
 
     # not entirely sure what the rules are here
     def open_local_file(self, req):
-        import email.utils
+        import email.Utils
         import mimetypes
         host = req.get_host()
         file = req.get_selector()
         localfile = url2pathname(file)
-        try:
-            stats = os.stat(localfile)
-            size = stats.st_size
-            modified = email.utils.formatdate(stats.st_mtime, usegmt=True)
-            mtype = mimetypes.guess_type(file)[0]
-            headers = mimetools.Message(StringIO(
-                'Content-type: %s\nContent-length: %d\nLast-modified: %s\n' %
-                (mtype or 'text/plain', size, modified)))
-            if host:
-                host, port = splitport(host)
-            if not host or \
-                (not port and socket.gethostbyname(host) in self.get_names()):
-                return addinfourl(open(localfile, 'rb'),
-                                  headers, 'file:'+file)
-        except OSError, msg:
-            # urllib2 users shouldn't expect OSErrors coming from urlopen()
-            raise URLError(msg)
+        stats = os.stat(localfile)
+        size = stats.st_size
+        modified = email.Utils.formatdate(stats.st_mtime, usegmt=True)
+        mtype = mimetypes.guess_type(file)[0]
+        headers = mimetools.Message(StringIO(
+            'Content-type: %s\nContent-length: %d\nLast-modified: %s\n' %
+            (mtype or 'text/plain', size, modified)))
+        if host:
+            host, port = splitport(host)
+        if not host or \
+           (not port and socket.gethostbyname(host) in self.get_names()):
+            return addinfourl(open(localfile, 'rb'),
+                              headers, 'file:'+file)
         raise URLError('file not on local host')
 
 class FTPHandler(BaseHandler):

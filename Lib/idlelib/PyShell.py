@@ -706,37 +706,33 @@ class ModifiedInterpreter(InteractiveInterpreter):
         debugger = self.debugger
         try:
             self.tkconsole.beginexecuting()
-            if not debugger and self.rpcclt is not None:
-                self.active_seq = self.rpcclt.asyncqueue("exec", "runcode",
-                                                        (code,), {})
-            elif debugger:
-                debugger.run(code, self.locals)
-            else:
-                exec code in self.locals
-        except SystemExit:
-            if not self.tkconsole.closing:
-                if tkMessageBox.askyesno(
-                    "Exit?",
-                    "Do you want to exit altogether?",
-                    default="yes",
-                    master=self.tkconsole.text):
+            try:
+                if not debugger and self.rpcclt is not None:
+                    self.active_seq = self.rpcclt.asyncqueue("exec", "runcode",
+                                                            (code,), {})
+                elif debugger:
+                    debugger.run(code, self.locals)
+                else:
+                    exec code in self.locals
+            except SystemExit:
+                if not self.tkconsole.closing:
+                    if tkMessageBox.askyesno(
+                        "Exit?",
+                        "Do you want to exit altogether?",
+                        default="yes",
+                        master=self.tkconsole.text):
+                        raise
+                    else:
+                        self.showtraceback()
+                else:
                     raise
-                else:
-                    self.showtraceback()
-            else:
-                raise
-        except:
-            if use_subprocess:
-                print >>self.tkconsole.stderr, \
-                         "IDLE internal error in runcode()"
+            except:
+                if use_subprocess:
+                    print >> self.tkconsole.stderr, \
+                             "IDLE internal error in runcode()"
                 self.showtraceback()
-                self.tkconsole.endexecuting()
-            else:
-                if self.tkconsole.canceled:
-                    self.tkconsole.canceled = False
-                    print >>self.tkconsole.stderr, "KeyboardInterrupt"
-                else:
-                    self.showtraceback()
+                if use_subprocess:
+                    self.tkconsole.endexecuting()
         finally:
             if not use_subprocess:
                 try:

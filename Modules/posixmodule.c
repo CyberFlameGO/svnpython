@@ -1724,57 +1724,6 @@ posix_chmod(PyObject *self, PyObject *args)
 }
 
 
-#ifdef HAVE_CHFLAGS
-PyDoc_STRVAR(posix_chflags__doc__,
-"chflags(path, flags)\n\n\
-Set file flags.");
-
-static PyObject *
-posix_chflags(PyObject *self, PyObject *args)
-{
-	char *path;
-	unsigned long flags;
-	int res;
-	if (!PyArg_ParseTuple(args, "etk:chflags",
-			      Py_FileSystemDefaultEncoding, &path, &flags))
-		return NULL;
-	Py_BEGIN_ALLOW_THREADS
-	res = chflags(path, flags);
-	Py_END_ALLOW_THREADS
-	if (res < 0)
-		return posix_error_with_allocated_filename(path);
-	PyMem_Free(path);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-#endif /* HAVE_CHFLAGS */
-
-#ifdef HAVE_LCHFLAGS
-PyDoc_STRVAR(posix_lchflags__doc__,
-"lchflags(path, flags)\n\n\
-Set file flags.\n\
-This function will not follow symbolic links.");
-
-static PyObject *
-posix_lchflags(PyObject *self, PyObject *args)
-{
-	char *path;
-	unsigned long flags;
-	int res;
-	if (!PyArg_ParseTuple(args, "etk:lchflags",
-			      Py_FileSystemDefaultEncoding, &path, &flags))
-		return NULL;
-	Py_BEGIN_ALLOW_THREADS
-	res = lchflags(path, flags);
-	Py_END_ALLOW_THREADS
-	if (res < 0)
-		return posix_error_with_allocated_filename(path);
-	PyMem_Free(path);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-#endif /* HAVE_LCHFLAGS */
-
 #ifdef HAVE_CHROOT
 PyDoc_STRVAR(posix_chroot__doc__,
 "chroot(path)\n\n\
@@ -2641,8 +2590,7 @@ posix_utime(PyObject *self, PyObject *args)
 			wpath = PyUnicode_AS_UNICODE(obwpath);
 			Py_BEGIN_ALLOW_THREADS
 			hFile = CreateFileW(wpath, FILE_WRITE_ATTRIBUTES, 0,
-					    NULL, OPEN_EXISTING,
-					    FILE_FLAG_BACKUP_SEMANTICS, NULL);
+					    NULL, OPEN_EXISTING, 0, NULL);
 			Py_END_ALLOW_THREADS
 			if (hFile == INVALID_HANDLE_VALUE)
 				return win32_error_unicode("utime", wpath);
@@ -2657,8 +2605,7 @@ posix_utime(PyObject *self, PyObject *args)
 			return NULL;
 		Py_BEGIN_ALLOW_THREADS
 		hFile = CreateFileA(apath, FILE_WRITE_ATTRIBUTES, 0,
-				    NULL, OPEN_EXISTING,
-				    FILE_FLAG_BACKUP_SEMANTICS, NULL);
+				    NULL, OPEN_EXISTING, 0, NULL);
 		Py_END_ALLOW_THREADS
 		if (hFile == INVALID_HANDLE_VALUE) {
 			win32_error("utime", apath);
@@ -5770,53 +5717,17 @@ Return a string representing the path to which the symbolic link points.");
 static PyObject *
 posix_readlink(PyObject *self, PyObject *args)
 {
-	PyObject* v;
 	char buf[MAXPATHLEN];
 	char *path;
 	int n;
-#ifdef Py_USING_UNICODE
-	int arg_is_unicode = 0;
-#endif
-
-	if (!PyArg_ParseTuple(args, "et:readlink", 
-				Py_FileSystemDefaultEncoding, &path))
+	if (!PyArg_ParseTuple(args, "s:readlink", &path))
 		return NULL;
-#ifdef Py_USING_UNICODE
-	v = PySequence_GetItem(args, 0);
-	if (v == NULL) return NULL;
-
-	if (PyUnicode_Check(v)) {
-		arg_is_unicode = 1;
-	}
-	Py_DECREF(v);
-#endif
-
 	Py_BEGIN_ALLOW_THREADS
 	n = readlink(path, buf, (int) sizeof buf);
 	Py_END_ALLOW_THREADS
 	if (n < 0)
 		return posix_error_with_filename(path);
-
-	v = PyString_FromStringAndSize(buf, n);
-#ifdef Py_USING_UNICODE
-	if (arg_is_unicode) {
-		PyObject *w;
-
-		w = PyUnicode_FromEncodedObject(v,
-				Py_FileSystemDefaultEncoding,
-				"strict");
-		if (w != NULL) {
-			Py_DECREF(v);
-			v = w;
-		}
-		else {
-			/* fall back to the original byte string, as
-			   discussed in patch #683592 */
-			PyErr_Clear();
-		}
-	}
-#endif
-	return v;
+	return PyString_FromStringAndSize(buf, n);
 }
 #endif /* HAVE_READLINK */
 
@@ -8164,16 +8075,10 @@ static PyMethodDef posix_methods[] = {
 	{"ttyname",	posix_ttyname, METH_VARARGS, posix_ttyname__doc__},
 #endif
 	{"chdir",	posix_chdir, METH_VARARGS, posix_chdir__doc__},
-#ifdef HAVE_CHFLAGS
-	{"chflags",	posix_chflags, METH_VARARGS, posix_chflags__doc__},
-#endif /* HAVE_CHFLAGS */
 	{"chmod",	posix_chmod, METH_VARARGS, posix_chmod__doc__},
 #ifdef HAVE_CHOWN
 	{"chown",	posix_chown, METH_VARARGS, posix_chown__doc__},
 #endif /* HAVE_CHOWN */
-#ifdef HAVE_LCHFLAGS
-	{"lchflags",	posix_lchflags, METH_VARARGS, posix_lchflags__doc__},
-#endif /* HAVE_LCHFLAGS */
 #ifdef HAVE_LCHOWN
 	{"lchown",	posix_lchown, METH_VARARGS, posix_lchown__doc__},
 #endif /* HAVE_LCHOWN */

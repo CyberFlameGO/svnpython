@@ -4,7 +4,7 @@ from _testcapi import test_structmembersType, \
     INT_MAX, INT_MIN, UINT_MAX, \
     LONG_MAX, LONG_MIN, ULONG_MAX
 
-import warnings, exceptions, unittest
+import warnings, exceptions, unittest, test.test_warnings
 from test import test_support
 
 ts=test_structmembersType(1,2,3,4,5,6,7,8,9.99999,10.1010101010)
@@ -39,46 +39,9 @@ class ReadWriteTests(unittest.TestCase):
         ts.T_ULONG=ULONG_MAX
         self.assertEquals(ts.T_ULONG, ULONG_MAX)
 
-class TestWarnings(unittest.TestCase):
-    def has_warned(self, w):
-        self.assert_(w.category is RuntimeWarning)
-
-    def test_byte_max(self):
-        with test_support.catch_warning() as w:
-            ts.T_BYTE=CHAR_MAX+1
-            self.has_warned(w)
-
-    def test_byte_min(self):
-        with test_support.catch_warning() as w:
-            ts.T_BYTE=CHAR_MIN-1
-            self.has_warned(w)
-
-    def test_ubyte_max(self):
-        with test_support.catch_warning() as w:
-            ts.T_UBYTE=UCHAR_MAX+1
-            self.has_warned(w)
-
-    def test_short_max(self):
-        with test_support.catch_warning() as w:
-            ts.T_SHORT=SHRT_MAX+1
-            self.has_warned(w)
-
-    def test_short_min(self):
-        with test_support.catch_warning() as w:
-            ts.T_SHORT=SHRT_MIN-1
-            self.has_warned(w)
-
-    def test_ushort_max(self):
-        with test_support.catch_warning() as w:
-            ts.T_USHORT=USHRT_MAX+1
-            self.has_warned(w)
-
-
-
 def test_main(verbose=None):
     test_support.run_unittest(
-        ReadWriteTests,
-        TestWarnings
+        ReadWriteTests
         )
 
 if __name__ == "__main__":

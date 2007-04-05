@@ -48,25 +48,25 @@ information).
 
 Profile objects have the following methods:
 
-\begin{methoddesc}[Profile]{addinfo}{key, value}
+\begin{methoddesc}{addinfo}{key, value}
 Add an arbitrary labelled value to the profile output.
 \end{methoddesc}
 
-\begin{methoddesc}[Profile]{close}{}
+\begin{methoddesc}{close}{}
 Close the logfile and terminate the profiler.
 \end{methoddesc}
 
-\begin{methoddesc}[Profile]{fileno}{}
+\begin{methoddesc}{fileno}{}
 Return the file descriptor of the profiler's log file.
 \end{methoddesc}
 
-\begin{methoddesc}[Profile]{run}{cmd}
+\begin{methoddesc}{run}{cmd}
 Profile an \keyword{exec}-compatible string in the script environment.
 The globals from the \refmodule[main]{__main__} module are used as
 both the globals and locals for the script.
 \end{methoddesc}
 
-\begin{methoddesc}[Profile]{runcall}{func, *args, **keywords}
+\begin{methoddesc}{runcall}{func, *args, **keywords}
 Profile a single call of a callable.
 Additional positional and keyword arguments may be passed
 along; the result of the call is returned, and exceptions are
@@ -75,16 +75,16 @@ disabled on the way out.
 \end{methoddesc}
 
 
-\begin{methoddesc}[Profile]{runctx}{cmd, globals, locals}
+\begin{methoddesc}{runctx}{cmd, globals, locals}
 Evaluate an \keyword{exec}-compatible string in a specific environment.
 The string is compiled before profiling begins.
 \end{methoddesc}
 
-\begin{methoddesc}[Profile]{start}{}
+\begin{methoddesc}{start}{}
 Start the profiler.
 \end{methoddesc}
 
-\begin{methoddesc}[Profile]{stop}{}
+\begin{methoddesc}{stop}{}
 Stop the profiler.
 \end{methoddesc}
 

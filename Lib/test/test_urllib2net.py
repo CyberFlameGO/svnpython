@@ -264,8 +264,7 @@ class OtherNetworkTests(unittest.TestCase):
                            (expected_err, url, req, err))
                     self.assert_(isinstance(err, expected_err), msg)
             else:
-                with test_support.transient_internet():
-                    buf = f.read()
+                buf = f.read()
                 f.close()
                 debug("read %d bytes" % len(buf))
             debug("******** next url coming up...")

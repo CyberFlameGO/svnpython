@@ -260,7 +260,6 @@ PYTHON_OBJS=	\
 		Python/modsupport.o \
 		Python/mystrtoul.o \
 		Python/mysnprintf.o \
-		Python/peephole.o \
 		Python/pyarena.o \
 		Python/pyfpe.o \
 		Python/pystate.o \
@@ -345,7 +344,7 @@ platform: $(BUILDPYTHON)
 
 # Build the shared modules
 sharedmods: $(BUILDPYTHON)
-	@case $$MAKEFLAGS in \
+	case $$MAKEFLAGS in \
 	*-s*) $(RUNSHARED) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py -q build;; \
 	*) $(RUNSHARED) CC='$(CC)' LDSHARED='$(BLDSHARED)' OPT='$(OPT)' ./$(BUILDPYTHON) -E $(srcdir)/setup.py build;; \
 	esac
@@ -483,8 +482,6 @@ Parser/metagrammar.o:	$(srcdir)/Parser/metagrammar.c
 
 Parser/tokenizer_pgen.o:	$(srcdir)/Parser/tokenizer.c
 
-Parser/pgenmain.o:	$(srcdir)/Include/parsetok.h
-
 $(AST_H): $(AST_ASDL) $(ASDLGEN_FILES)
 	$(ASDLGEN) -h $(AST_H_DIR) $(AST_ASDL)
 
@@ -537,7 +534,6 @@ PYTHON_HEADERS= \
 		Include/moduleobject.h \
 		Include/object.h \
 		Include/objimpl.h \
-		Include/parsetok.h \
 		Include/patchlevel.h \
 		Include/pyarena.h \
 		Include/pydebug.h \

@@ -725,35 +725,6 @@ vBOOL_get(void *ptr, unsigned size)
 }
 #endif
 
-#ifdef HAVE_C99_BOOL
-#define BOOL_TYPE _Bool
-#else
-#define BOOL_TYPE char
-#undef SIZEOF__BOOL
-#define SIZEOF__BOOL 1
-#endif
-
-static PyObject *
-t_set(void *ptr, PyObject *value, unsigned size)
-{
-	switch (PyObject_IsTrue(value)) {
-	case -1:
-		return NULL;
-	case 0:
-		*(BOOL_TYPE *)ptr = 0;
-		_RET(value);
-	default:
-		*(BOOL_TYPE *)ptr = 1;
-		_RET(value);
-	}
-}
-
-static PyObject *
-t_get(void *ptr, unsigned size)
-{
-	return PyBool_FromLong((long)*(BOOL_TYPE *)ptr);
-}
-
 static PyObject *
 I_set(void *ptr, PyObject *value, unsigned size)
 {
@@ -1344,11 +1315,7 @@ z_set(void *ptr, PyObject *value, unsigned size)
 		*(char **)ptr = PyString_AS_STRING(str);
 		return str;
 	} else if (PyInt_Check(value) || PyLong_Check(value)) {
-#if SIZEOF_VOID_P == SIZEOF_LONG_LONG
-		*(char **)ptr = (char *)PyInt_AsUnsignedLongLongMask(value);
-#else
 		*(char **)ptr = (char *)PyInt_AsUnsignedLongMask(value);
-#endif
 		_RET(value);
 	}
 	PyErr_Format(PyExc_TypeError,
@@ -1393,11 +1360,7 @@ Z_set(void *ptr, PyObject *value, unsigned size)
 		if (!value)
 			return NULL;
 	} else if (PyInt_Check(value) || PyLong_Check(value)) {
-#if SIZEOF_VOID_P == SIZEOF_LONG_LONG
-		*(wchar_t **)ptr = (wchar_t *)PyInt_AsUnsignedLongLongMask(value);
-#else
 		*(wchar_t **)ptr = (wchar_t *)PyInt_AsUnsignedLongMask(value);
-#endif
 		Py_INCREF(Py_None);
 		return Py_None;
 	} else if (!PyUnicode_Check(value)) {
@@ -1601,17 +1564,6 @@ static struct fielddesc formattable[] = {
 	{ 'X', BSTR_set, BSTR_get, &ffi_type_pointer},
 	{ 'v', vBOOL_set, vBOOL_get, &ffi_type_sshort},
 #endif
-#if SIZEOF__BOOL == 1
-	{ 't', t_set, t_get, &ffi_type_uchar}, /* Also fallback for no native _Bool support */
-#elif SIZEOF__BOOL == SIZEOF_SHORT
-	{ 't', t_set, t_get, &ffi_type_ushort},
-#elif SIZEOF__BOOL == SIZEOF_INT
-	{ 't', t_set, t_get, &ffi_type_uint, I_set_sw, I_get_sw},
-#elif SIZEOF__BOOL == SIZEOF_LONG
-	{ 't', t_set, t_get, &ffi_type_ulong, L_set_sw, L_get_sw},
-#elif SIZEOF__BOOL == SIZEOF_LONG_LONG
-	{ 't', t_set, t_get, &ffi_type_ulong, Q_set_sw, Q_get_sw},
-#endif /* SIZEOF__BOOL */
 	{ 'O', O_set, O_get, &ffi_type_pointer},
 	{ 0, NULL, NULL, NULL},
 };

@@ -43,19 +43,18 @@ Example:
 
 import socket
 import re
-import email.utils
+import email.Utils
 import base64
 import hmac
-from email.base64mime import encode as encode_base64
+from email.base64MIME import encode as encode_base64
 from sys import stderr
 
 __all__ = ["SMTPException","SMTPServerDisconnected","SMTPResponseException",
            "SMTPSenderRefused","SMTPRecipientsRefused","SMTPDataError",
            "SMTPConnectError","SMTPHeloError","SMTPAuthenticationError",
-           "quoteaddr","quotedata","SMTP","SMTP_SSL"]
+           "quoteaddr","quotedata","SMTP"]
 
 SMTP_PORT = 25
-SMTP_SSL_PORT = 465
 CRLF="\r\n"
 
 OLDSTYLE_AUTH = re.compile(r"auth=(.*)", re.I)
@@ -172,7 +171,7 @@ def quoteaddr(addr):
     """
     m = (None, None)
     try:
-        m = email.utils.parseaddr(addr)[1]
+        m = email.Utils.parseaddr(addr)[1]
     except AttributeError:
         pass
     if m == (None, None): # Indicates parse failure or AttributeError
@@ -226,11 +225,10 @@ class SMTP:
     debuglevel = 0
     file = None
     helo_resp = None
-    ehlo_msg = "ehlo"
     ehlo_resp = None
     does_esmtp = 0
 
-    def __init__(self, host='', port=0, local_hostname=None, timeout=None):
+    def __init__(self, host = '', port = 0, local_hostname = None):
         """Initialize a new instance.
 
         If specified, `host' is the name of the remote host to which to
@@ -241,9 +239,7 @@ class SMTP:
         the local hostname is found using socket.getfqdn().
 
         """
-        self.timeout = timeout
         self.esmtp_features = {}
-        self.default_port = SMTP_PORT
         if host:
             (code, msg) = self.connect(host, port)
             if code != 220:
@@ -275,12 +271,6 @@ class SMTP:
         """
         self.debuglevel = debuglevel
 
-    def _get_socket(self, port, host, timeout):
-        # This makes it simpler for SMTP_SSL to use the SMTP connect code
-        # and just alter the socket connection bit.
-        if self.debuglevel > 0: print>>stderr, 'connect:', (host, port)
-        return socket.create_connection((port, host), timeout)
-
     def connect(self, host='localhost', port = 0):
         """Connect to a host on a given port.
 
@@ -299,9 +289,25 @@ class SMTP:
                 try: port = int(port)
                 except ValueError:
                     raise socket.error, "nonnumeric port"
-        if not port: port = self.default_port
+        if not port: port = SMTP_PORT
         if self.debuglevel > 0: print>>stderr, 'connect:', (host, port)
-        self.sock = self._get_socket(host, port, self.timeout)
+        msg = "getaddrinfo returns an empty list"
+        self.sock = None
+        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+            af, socktype, proto, canonname, sa = res
+            try:
+                self.sock = socket.socket(af, socktype, proto)
+                if self.debuglevel > 0: print>>stderr, 'connect:', sa
+                self.sock.connect(sa)
+            except socket.error, msg:
+                if self.debuglevel > 0: print>>stderr, 'connect fail:', msg
+                if self.sock:
+                    self.sock.close()
+                self.sock = None
+                continue
+            break
+        if not self.sock:
+            raise socket.error, msg
         (code, msg) = self.getreply()
         if self.debuglevel > 0: print>>stderr, "connect:", msg
         return (code, msg)
@@ -388,7 +394,7 @@ class SMTP:
         host.
         """
         self.esmtp_features = {}
-        self.putcmd(self.ehlo_msg, name or self.local_hostname)
+        self.putcmd("ehlo", name or self.local_hostname)
         (code,msg)=self.getreply()
         # According to RFC1869 some (badly written)
         # MTA's will disconnect on an ehlo. Toss an exception if
@@ -709,71 +715,6 @@ class SMTP:
         """Terminate the SMTP session."""
         self.docmd("quit")
         self.close()
-
-class SMTP_SSL(SMTP):
-    """ This is a subclass derived from SMTP that connects over an SSL encrypted
-    socket (to use this class you need a socket module that was compiled with SSL
-    support). If host is not specified, '' (the local host) is used. If port is
-    omitted, the standard SMTP-over-SSL port (465) is used. keyfile and certfile
-    are also optional - they can contain a PEM formatted private key and
-    certificate chain file for the SSL connection.
-    """
-    def __init__(self, host='', port=0, local_hostname=None,
-                 keyfile=None, certfile=None, timeout=None):
-        self.keyfile = keyfile
-        self.certfile = certfile
-        SMTP.__init__(self, host, port, local_hostname, timeout)
-        self.default_port = SMTP_SSL_PORT
-
-    def _get_socket(self, host, port, timeout):
-        if self.debuglevel > 0: print>>stderr, 'connect:', (host, port)
-        self.sock = socket.create_connection((host, port), timeout)
-        sslobj = socket.ssl(self.sock, self.keyfile, self.certfile)
-        self.sock = SSLFakeSocket(self.sock, sslobj)
-        self.file = SSLFakeFile(sslobj)
-
-#
-# LMTP extension
-#
-LMTP_PORT = 2003
-
-class LMTP(SMTP):
-    """LMTP - Local Mail Transfer Protocol
-
-    The LMTP protocol, which is very similar to ESMTP, is heavily based
-    on the standard SMTP client. It's common to use Unix sockets for LMTP,
-    so our connect() method must support that as well as a regular
-    host:port server. To specify a Unix socket, you must use an absolute
-    path as the host, starting with a '/'.
-
-    Authentication is supported, using the regular SMTP mechanism. When
-    using a Unix socket, LMTP generally don't support or require any
-    authentication, but your mileage might vary."""
-
-    ehlo_msg = "lhlo"
-
-    def __init__(self, host = '', port = LMTP_PORT, local_hostname = None):
-        """Initialize a new instance."""
-        SMTP.__init__(self, host, port, local_hostname)
-
-    def connect(self, host = 'localhost', port = 0):
-        """Connect to the LMTP daemon, on either a Unix or a TCP socket."""
-        if host[0] != '/':
-            return SMTP.connect(self, host, port)
-
-        # Handle Unix-domain sockets.
-        try:
-            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock.connect(host)
-        except socket.error, msg:
-            if self.debuglevel > 0: print>>stderr, 'connect fail:', host
-            if self.sock:
-                self.sock.close()
-            self.sock = None
-            raise socket.error, msg
-        (code, msg) = self.getreply()
-        if self.debuglevel > 0: print>>stderr, "connect:", msg
-        return (code, msg)
 
 
 # Test the sendmail method, which tests most of the others.

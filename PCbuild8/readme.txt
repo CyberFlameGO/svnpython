@@ -5,14 +5,15 @@ This directory is used to build Python for Win32 platforms, e.g. Windows
 (a.k.a. Visual Studio 2005).
 (For other Windows platforms and compilers, see ../PC/readme.txt.)
 
-All you need to do is open the workspace "pcbuild.sln" in MSVC++, select
-the Debug or Release setting (using "Solution Configuration" from
-the "Standard" toolbar"), and build the projects.
+All you need to do is open the workspace "pcbuild.sln" in VisualStudio 2005,
+select the platform, select the Debug or Release setting
+(using "Solution Configuration" from the "Standard" toolbar"), and build the
+solution.
 
 The proper order to build subprojects:
 
 1) pythoncore (this builds the main Python DLL and library files,
-               python26.{dll, lib} in Release mode)
+               python25.{dll, lib} in Release mode)
               NOTE:  in previous releases, this subproject was
               named after the release number, e.g. python20.
 
@@ -29,17 +30,27 @@ Binary files go into PCBuild8\Win32 or \x64 directories and don't
 interfere with each other.
 
 When using the Debug setting, the output files have a _d added to
-their name:  python26_d.dll, python_d.exe, parser_d.pyd, and so on.
+their name:  python25_d.dll, python_d.exe, parser_d.pyd, and so on.
+
+Profile guided Optimization:
 
 There are two special configurations for the pythoncore project and
 the solution.  These are PGIRelease and PGORelease.  They are for
-createing profile-guided optimized versions of python.dll.
+creating profile-guided optimized versions of python.dll.
 The former creates the instrumented binaries, and the latter
 runs python.exe with the instrumented python.dll on the performance
 testsuite, and creates a new, optimized, python.dll in
 PCBuild8\Win32\PGORelease, or in the x64 folder.  Note that although
 we can cross-compile x64 binaries on a 32 bit machine, we cannot
 create the PGO binaries, since they require actually running the code.
+
+To create the PGO binaries, first build the Release configuration, then
+build the PGIRelease configuration and finally build the PGORelease
+configuration.  The last stage can take a while to complete as the
+testsuite runs.
+Note that the profile runs are stored in files such as
+Win32\PGIRelease\pythoncore\python25!1.pgc which may
+need to be cleared for fresh builds.
 
 SUBPROJECTS
 -----------

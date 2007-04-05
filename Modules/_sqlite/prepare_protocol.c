@@ -23,23 +23,23 @@
 
 #include "prepare_protocol.h"
 
-int pysqlite_prepare_protocol_init(pysqlite_PrepareProtocol* self, PyObject* args, PyObject* kwargs)
+int prepare_protocol_init(SQLitePrepareProtocol* self, PyObject* args, PyObject* kwargs)
 {
     return 0;
 }
 
-void pysqlite_prepare_protocol_dealloc(pysqlite_PrepareProtocol* self)
+void prepare_protocol_dealloc(SQLitePrepareProtocol* self)
 {
     self->ob_type->tp_free((PyObject*)self);
 }
 
-PyTypeObject pysqlite_PrepareProtocolType= {
+PyTypeObject SQLitePrepareProtocolType= {
         PyObject_HEAD_INIT(NULL)
         0,                                              /* ob_size */
         MODULE_NAME ".PrepareProtocol",                 /* tp_name */
-        sizeof(pysqlite_PrepareProtocol),               /* tp_basicsize */
+        sizeof(SQLitePrepareProtocol),                  /* tp_basicsize */
         0,                                              /* tp_itemsize */
-        (destructor)pysqlite_prepare_protocol_dealloc,  /* tp_dealloc */
+        (destructor)prepare_protocol_dealloc,           /* tp_dealloc */
         0,                                              /* tp_print */
         0,                                              /* tp_getattr */
         0,                                              /* tp_setattr */
@@ -70,15 +70,15 @@ PyTypeObject pysqlite_PrepareProtocolType= {
         0,                                              /* tp_descr_get */
         0,                                              /* tp_descr_set */
         0,                                              /* tp_dictoffset */
-        (initproc)pysqlite_prepare_protocol_init,       /* tp_init */
+        (initproc)prepare_protocol_init,                /* tp_init */
         0,                                              /* tp_alloc */
         0,                                              /* tp_new */
         0                                               /* tp_free */
 };
 
-extern int pysqlite_prepare_protocol_setup_types(void)
+extern int prepare_protocol_setup_types(void)
 {
-    pysqlite_PrepareProtocolType.tp_new = PyType_GenericNew;
-    pysqlite_PrepareProtocolType.ob_type= &PyType_Type;
-    return PyType_Ready(&pysqlite_PrepareProtocolType);
+    SQLitePrepareProtocolType.tp_new = PyType_GenericNew;
+    SQLitePrepareProtocolType.ob_type= &PyType_Type;
+    return PyType_Ready(&SQLitePrepareProtocolType);
 }

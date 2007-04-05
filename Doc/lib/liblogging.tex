@@ -364,13 +364,13 @@ Loggers have the following attributes and methods. Note that Loggers are
 never instantiated directly, but always through the module-level function
 \function{logging.getLogger(name)}.
 
-\begin{memberdesc}[Logger]{propagate}
+\begin{datadesc}{propagate}
 If this evaluates to false, logging messages are not passed by this
 logger or by child loggers to higher level (ancestor) loggers. The
 constructor sets this attribute to 1.
-\end{memberdesc}
+\end{datadesc}
 
-\begin{methoddesc}[Logger]{setLevel}{lvl}
+\begin{methoddesc}{setLevel}{lvl}
 Sets the threshold for this logger to \var{lvl}. Logging messages
 which are less severe than \var{lvl} will be ignored. When a logger is
 created, the level is set to \constant{NOTSET} (which causes all messages
@@ -393,21 +393,21 @@ messages will be processed. Otherwise, the root's level will be used
 as the effective level.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{isEnabledFor}{lvl}
+\begin{methoddesc}{isEnabledFor}{lvl}
 Indicates if a message of severity \var{lvl} would be processed by
 this logger.  This method checks first the module-level level set by
 \function{logging.disable(lvl)} and then the logger's effective level as
 determined by \method{getEffectiveLevel()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{getEffectiveLevel}{}
+\begin{methoddesc}{getEffectiveLevel}{}
 Indicates the effective level for this logger. If a value other than
 \constant{NOTSET} has been set using \method{setLevel()}, it is returned.
 Otherwise, the hierarchy is traversed towards the root until a value
 other than \constant{NOTSET} is found, and that value is returned.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{debug}{msg\optional{, *args\optional{, **kwargs}}}
+\begin{methoddesc}{debug}{msg\optional{, *args\optional{, **kwargs}}}
 Logs a message with level \constant{DEBUG} on this logger.
 The \var{msg} is the message format string, and the \var{args} are the
 arguments which are merged into \var{msg} using the string formatting
@@ -462,67 +462,67 @@ above example). In such circumstances, it is likely that specialized
 
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{info}{msg\optional{, *args\optional{, **kwargs}}}
+\begin{methoddesc}{info}{msg\optional{, *args\optional{, **kwargs}}}
 Logs a message with level \constant{INFO} on this logger.
 The arguments are interpreted as for \method{debug()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{warning}{msg\optional{, *args\optional{, **kwargs}}}
+\begin{methoddesc}{warning}{msg\optional{, *args\optional{, **kwargs}}}
 Logs a message with level \constant{WARNING} on this logger.
 The arguments are interpreted as for \method{debug()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{error}{msg\optional{, *args\optional{, **kwargs}}}
+\begin{methoddesc}{error}{msg\optional{, *args\optional{, **kwargs}}}
 Logs a message with level \constant{ERROR} on this logger.
 The arguments are interpreted as for \method{debug()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{critical}{msg\optional{, *args\optional{, **kwargs}}}
+\begin{methoddesc}{critical}{msg\optional{, *args\optional{, **kwargs}}}
 Logs a message with level \constant{CRITICAL} on this logger.
 The arguments are interpreted as for \method{debug()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{log}{lvl, msg\optional{, *args\optional{, **kwargs}}}
+\begin{methoddesc}{log}{lvl, msg\optional{, *args\optional{, **kwargs}}}
 Logs a message with integer level \var{lvl} on this logger.
 The other arguments are interpreted as for \method{debug()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{exception}{msg\optional{, *args}}
+\begin{methoddesc}{exception}{msg\optional{, *args}}
 Logs a message with level \constant{ERROR} on this logger.
 The arguments are interpreted as for \method{debug()}. Exception info
 is added to the logging message. This method should only be called
 from an exception handler.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{addFilter}{filt}
+\begin{methoddesc}{addFilter}{filt}
 Adds the specified filter \var{filt} to this logger.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{removeFilter}{filt}
+\begin{methoddesc}{removeFilter}{filt}
 Removes the specified filter \var{filt} from this logger.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{filter}{record}
+\begin{methoddesc}{filter}{record}
 Applies this logger's filters to the record and returns a true value if
 the record is to be processed.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{addHandler}{hdlr}
+\begin{methoddesc}{addHandler}{hdlr}
 Adds the specified handler \var{hdlr} to this logger.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{removeHandler}{hdlr}
+\begin{methoddesc}{removeHandler}{hdlr}
 Removes the specified handler \var{hdlr} from this logger.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{findCaller}{}
+\begin{methoddesc}{findCaller}{}
 Finds the caller's source filename and line number. Returns the filename,
 line number and function name as a 3-element tuple.
 \versionchanged[The function name was added. In earlier versions, the
 filename and line number were returned as a 2-element tuple.]{2.5}
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{handle}{record}
+\begin{methoddesc}{handle}{record}
 Handles a record by passing it to all handlers associated with this logger
 and its ancestors (until a false value of \var{propagate} is found).
 This method is used for unpickled records received from a socket, as well
@@ -530,8 +530,8 @@ as those created locally. Logger-level filtering is applied using
 \method{filter()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Logger]{makeRecord}{name, lvl, fn, lno, msg, args, exc_info
-                                       \optional{, func, extra}}
+\begin{methoddesc}{makeRecord}{name, lvl, fn, lno, msg, args, exc_info
+                               \optional{, func, extra}}
 This is a factory method which can be overridden in subclasses to create
 specialized \class{LogRecord} instances.
 \versionchanged[\var{func} and \var{extra} were added]{2.5}
@@ -875,66 +875,66 @@ Handlers have the following attributes and methods. Note that
 base for more useful subclasses. However, the \method{__init__()}
 method in subclasses needs to call \method{Handler.__init__()}.
 
-\begin{methoddesc}[Handler]{__init__}{level=\constant{NOTSET}}
+\begin{methoddesc}{__init__}{level=\constant{NOTSET}}
 Initializes the \class{Handler} instance by setting its level, setting
 the list of filters to the empty list and creating a lock (using
 \method{createLock()}) for serializing access to an I/O mechanism.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{createLock}{}
+\begin{methoddesc}{createLock}{}
 Initializes a thread lock which can be used to serialize access to
 underlying I/O functionality which may not be threadsafe.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{acquire}{}
+\begin{methoddesc}{acquire}{}
 Acquires the thread lock created with \method{createLock()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{release}{}
+\begin{methoddesc}{release}{}
 Releases the thread lock acquired with \method{acquire()}.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{setLevel}{lvl}
+\begin{methoddesc}{setLevel}{lvl}
 Sets the threshold for this handler to \var{lvl}. Logging messages which are
 less severe than \var{lvl} will be ignored. When a handler is created, the
 level is set to \constant{NOTSET} (which causes all messages to be processed).
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{setFormatter}{form}
+\begin{methoddesc}{setFormatter}{form}
 Sets the \class{Formatter} for this handler to \var{form}.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{addFilter}{filt}
+\begin{methoddesc}{addFilter}{filt}
 Adds the specified filter \var{filt} to this handler.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{removeFilter}{filt}
+\begin{methoddesc}{removeFilter}{filt}
 Removes the specified filter \var{filt} from this handler.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{filter}{record}
+\begin{methoddesc}{filter}{record}
 Applies this handler's filters to the record and returns a true value if
 the record is to be processed.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{flush}{}
+\begin{methoddesc}{flush}{}
 Ensure all logging output has been flushed. This version does
 nothing and is intended to be implemented by subclasses.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{close}{}
+\begin{methoddesc}{close}{}
 Tidy up any resources used by the handler. This version does
 nothing and is intended to be implemented by subclasses.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{handle}{record}
+\begin{methoddesc}{handle}{record}
 Conditionally emits the specified logging record, depending on
 filters which may have been added to the handler. Wraps the actual
 emission of the record with acquisition/release of the I/O thread
 lock.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{handleError}{record}
+\begin{methoddesc}{handleError}{record}
 This method should be called from handlers when an exception is
 encountered during an \method{emit()} call. By default it does nothing,
 which means that exceptions get silently ignored. This is what is
@@ -945,12 +945,12 @@ handler if you wish. The specified record is the one which was being
 processed when the exception occurred.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{format}{record}
+\begin{methoddesc}{format}{record}
 Do formatting for a record - if a formatter is set, use it.
 Otherwise, use the default formatter for the module.
 \end{methoddesc}
 
-\begin{methoddesc}[Handler]{emit}{record}
+\begin{methoddesc}{emit}{record}
 Do whatever it takes to actually log the specified logging record.
 This version is intended to be implemented by subclasses and so
 raises a \exception{NotImplementedError}.
@@ -989,11 +989,10 @@ The \class{FileHandler} class, located in the core \module{logging}
 package, sends logging output to a disk file.  It inherits the output
 functionality from \class{StreamHandler}.
 
-\begin{classdesc}{FileHandler}{filename\optional{, mode\optional{, encoding}}}
+\begin{classdesc}{FileHandler}{filename\optional{, mode}}
 Returns a new instance of the \class{FileHandler} class. The specified
 file is opened and used as the stream for logging. If \var{mode} is
-not specified, \constant{'a'} is used.  If \var{encoding} is not \var{None},
-it is used to open the file with that encoding.  By default, the file grows
+not specified, \constant{'a'} is used. By default, the file grows
 indefinitely.
 \end{classdesc}
 
@@ -1003,41 +1002,6 @@ Closes the file.
 
 \begin{methoddesc}{emit}{record}
 Outputs the record to the file.
-\end{methoddesc}
-
-\subsubsection{WatchedFileHandler}
-
-\versionadded{2.6}
-The \class{WatchedFileHandler} class, located in the \module{logging.handlers}
-module, is a \class{FileHandler} which watches the file it is logging to.
-If the file changes, it is closed and reopened using the file name.
-
-A file change can happen because of usage of programs such as \var{newsyslog}
-and \var{logrotate} which perform log file rotation. This handler, intended
-for use under Unix/Linux, watches the file to see if it has changed since the
-last emit. (A file is deemed to have changed if its device or inode have
-changed.) If the file has changed, the old file stream is closed, and the file
-opened to get a new stream.
-
-This handler is not appropriate for use under Windows, because under Windows
-open log files cannot be moved or renamed - logging opens the files with
-exclusive locks - and so there is no need for such a handler. Furthermore,
-\var{ST_INO} is not supported under Windows; \function{stat()} always returns
-zero for this value.
-
-\begin{classdesc}{WatchedFileHandler}{filename\optional{,mode\optional{,
-                                      encoding}}}
-Returns a new instance of the \class{WatchedFileHandler} class. The specified
-file is opened and used as the stream for logging. If \var{mode} is
-not specified, \constant{'a'} is used.  If \var{encoding} is not \var{None},
-it is used to open the file with that encoding.  By default, the file grows
-indefinitely.
-\end{classdesc}
-
-\begin{methoddesc}{emit}{record}
-Outputs the record to the file, but first checks to see if the file has
-changed. If it has, the existing stream is flushed and closed and the file
-opened again, before outputting the record to the file.
 \end{methoddesc}
 
 \subsubsection{RotatingFileHandler}
@@ -1136,6 +1100,9 @@ and \var{port}.
 
 \begin{methoddesc}{close}{}
 Closes the socket.
+\end{methoddesc}
+
+\begin{methoddesc}{handleError}{}
 \end{methoddesc}
 
 \begin{methoddesc}{emit}{}

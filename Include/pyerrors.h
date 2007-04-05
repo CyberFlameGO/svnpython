@@ -95,12 +95,14 @@ PyAPI_FUNC(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 /* */
 
 #define PyExceptionClass_Check(x)					\
-	(PyClass_Check((x)) || (PyType_Check((x)) &&			\
-	  PyType_FastSubclass((PyTypeObject*)(x), Py_TPFLAGS_BASE_EXC_SUBCLASS)))
+	(PyClass_Check((x))						\
+	 || (PyType_Check((x)) && PyType_IsSubtype(			\
+		     (PyTypeObject*)(x), (PyTypeObject*)PyExc_BaseException)))
+
 
 #define PyExceptionInstance_Check(x)			\
 	(PyInstance_Check((x)) ||			\
-	 PyType_FastSubclass((x)->ob_type, Py_TPFLAGS_BASE_EXC_SUBCLASS))
+	 (PyType_IsSubtype((x)->ob_type, (PyTypeObject*)PyExc_BaseException)))
 
 #define PyExceptionClass_Name(x)				   \
 	(PyClass_Check((x))					   \

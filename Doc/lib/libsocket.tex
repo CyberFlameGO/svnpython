@@ -14,7 +14,7 @@ For an introduction to socket programming (in C), see the following
 papers: \citetitle{An Introductory 4.3BSD Interprocess Communication
 Tutorial}, by Stuart Sechrest and \citetitle{An Advanced 4.3BSD
 Interprocess Communication Tutorial}, by Samuel J.  Leffler et al,
-both in the \citetitle{UNIX Programmer's Manual, Supplementary Documents 1}
+both in the \citetitle{\UNIX{} Programmer's Manual, Supplementary Documents 1}
 (sections PS1:7 and PS1:8).  The platform-specific reference material
 for the various socket-related system calls are also a valuable source
 of information on the details of socket semantics.  For \UNIX, refer
@@ -169,15 +169,6 @@ This constant contains a boolean value which indicates if IPv6 is
 supported on this platform.
 \versionadded{2.3}
 \end{datadesc}
-
-\begin{funcdesc}{create_connection}{address\optional{, timeout}}
-Connects to the \var{address} received (as usual, a \code{(host, port)}
-pair), with an optional timeout for the connection.  Specially useful for
-higher-level protocols, it is not normally used directly from
-application-level code.  Passing the optional \var{timeout} parameter
-will set the timeout on the socket instance (if it is not given or
-\code{None}, the global default timeout setting is used).
-\end{funcdesc}
 
 \begin{funcdesc}{getaddrinfo}{host, port\optional{, family\optional{,
                               socktype\optional{, proto\optional{,
@@ -340,25 +331,25 @@ Availability: \UNIX.
 \end{funcdesc}
 
 \begin{funcdesc}{ntohl}{x}
-Convert 32-bit positive integers from network to host byte order.  On machines
+Convert 32-bit integers from network to host byte order.  On machines
 where the host byte order is the same as network byte order, this is a
 no-op; otherwise, it performs a 4-byte swap operation.
 \end{funcdesc}
 
 \begin{funcdesc}{ntohs}{x}
-Convert 16-bit positive integers from network to host byte order.  On machines
+Convert 16-bit integers from network to host byte order.  On machines
 where the host byte order is the same as network byte order, this is a
 no-op; otherwise, it performs a 2-byte swap operation.
 \end{funcdesc}
 
 \begin{funcdesc}{htonl}{x}
-Convert 32-bit positive integers from host to network byte order.  On machines
+Convert 32-bit integers from host to network byte order.  On machines
 where the host byte order is the same as network byte order, this is a
 no-op; otherwise, it performs a 4-byte swap operation.
 \end{funcdesc}
 
 \begin{funcdesc}{htons}{x}
-Convert 16-bit positive integers from host to network byte order.  On machines
+Convert 16-bit integers from host to network byte order.  On machines
 where the host byte order is the same as network byte order, this is a
 no-op; otherwise, it performs a 2-byte swap operation.
 \end{funcdesc}
@@ -557,7 +548,7 @@ are described in \ref{bltin-file-objects}, ``File Objects.'')
 The file object references a \cfunction{dup()}ped version of the
 socket file descriptor, so the file object and socket object may be
 closed or garbage-collected independently.
-The socket must be in blocking mode (it can not have a timeout).
+The socket must be in blocking mode.
 \index{I/O control!buffering}The optional \var{mode}
 and \var{bufsize} arguments are interpreted the same way as by the
 built-in \function{file()} function; see ``Built-in Functions''
@@ -578,9 +569,8 @@ at once is specified by \var{bufsize}.  See the \UNIX{} manual page
 Receive data from the socket.  The return value is a pair
 \code{(\var{string}, \var{address})} where \var{string} is a string
 representing the data received and \var{address} is the address of the
-socket sending the data.  See the \UNIX{} manual page
-\manpage{recv}{2} for the meaning of the optional argument
-\var{flags}; it defaults to zero.
+socket sending the data.  The optional \var{flags} argument has the
+same meaning as for \method{recv()} above.
 (The format of \var{address} depends on the address family --- see above.)
 \end{methoddesc}
 
@@ -733,23 +723,23 @@ The socket protocol.
 
 SSL objects have the following methods.
 
-\begin{methoddesc}[SSL]{write}{s}
+\begin{methoddesc}{write}{s}
 Writes the string \var{s} to the on the object's SSL connection.
 The return value is the number of bytes written.
 \end{methoddesc}
 
-\begin{methoddesc}[SSL]{read}{\optional{n}}
+\begin{methoddesc}{read}{\optional{n}}
 If \var{n} is provided, read \var{n} bytes from the SSL connection, otherwise
 read until EOF. The return value is a string of the bytes read.
 \end{methoddesc}
 
-\begin{methoddesc}[SSL]{server}{}
+\begin{methoddesc}{server}{}
 Returns a string describing the server's certificate.
 Useful for debugging purposes; do not parse the content of this string
 because its format can't be parsed unambiguously.
 \end{methoddesc}
 
-\begin{methoddesc}[SSL]{issuer}{}
+\begin{methoddesc}{issuer}{}
 Returns a string describing the issuer of the server's certificate.
 Useful for debugging purposes; do not parse the content of this string
 because its format can't be parsed unambiguously.

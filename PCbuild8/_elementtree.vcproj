@@ -213,7 +213,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				InlineFunctionExpansion="1"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="..\Include,..\PC,..\Modules\expat"
 				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;XML_NS;XML_DTD;BYTEORDER=1234;XML_CONTEXT_BYTES=1024;USE_PYEXPAT_CAPI;XML_STATIC;HAVE_MEMMOVE"
 				StringPooling="true"
@@ -244,6 +244,7 @@
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=""
 				SubSystem="2"
+				LinkTimeCodeGeneration="1"
 				BaseAddress="0x1D100000"
 				ImportLibrary=""
 				TargetMachine="1"
@@ -301,7 +302,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				InlineFunctionExpansion="1"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="..\Include,..\PC,..\Modules\expat"
 				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;XML_NS;XML_DTD;BYTEORDER=1234;XML_CONTEXT_BYTES=1024;USE_PYEXPAT_CAPI;XML_STATIC;HAVE_MEMMOVE"
 				StringPooling="true"
@@ -333,6 +334,7 @@
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=""
 				SubSystem="2"
+				LinkTimeCodeGeneration="1"
 				BaseAddress="0x1D100000"
 				ImportLibrary=""
 				TargetMachine="17"

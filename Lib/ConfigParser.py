@@ -199,11 +199,11 @@ class MissingSectionHeaderError(ParsingError):
         self.line = line
 
 
+
 class RawConfigParser:
-    def __init__(self, defaults=None, dict_type=dict):
-        self._dict = dict_type
-        self._sections = self._dict()
-        self._defaults = self._dict()
+    def __init__(self, defaults=None):
+        self._sections = {}
+        self._defaults = {}
         if defaults:
             for key, value in defaults.items():
                 self._defaults[self.optionxform(key)] = value
@@ -224,7 +224,7 @@ class RawConfigParser:
         """
         if section in self._sections:
             raise DuplicateSectionError(section)
-        self._sections[section] = self._dict()
+        self._sections[section] = {}
 
     def has_section(self, section):
         """Indicate whether the named section is present in the configuration.
@@ -307,7 +307,7 @@ class RawConfigParser:
         except KeyError:
             if section != DEFAULTSECT:
                 raise NoSectionError(section)
-            d2 = self._dict()
+            d2 = {}
         d = self._defaults.copy()
         d.update(d2)
         if "__name__" in d:
@@ -453,8 +453,7 @@ class RawConfigParser:
                     elif sectname == DEFAULTSECT:
                         cursect = self._defaults
                     else:
-                        cursect = self._dict()
-                        cursect['__name__'] = sectname
+                        cursect = {'__name__': sectname}
                         self._sections[sectname] = cursect
                     # So sections can't start with a continuation line
                     optname = None
@@ -594,8 +593,7 @@ class SafeConfigParser(ConfigParser):
         self._interpolate_some(option, L, rawval, section, vars, 1)
         return ''.join(L)
 
-    _interpvar_re = re.compile(r"%\(([^)]+)\)s")
-    _badpercent_re = re.compile(r"%[^%]|%$")
+    _interpvar_match = re.compile(r"%\(([^)]+)\)s").match
 
     def _interpolate_some(self, option, accum, rest, section, map, depth):
         if depth > MAX_INTERPOLATION_DEPTH:
@@ -614,7 +612,7 @@ class SafeConfigParser(ConfigParser):
                 accum.append("%")
                 rest = rest[2:]
             elif c == "(":
-                m = self._interpvar_re.match(rest)
+                m = self._interpvar_match(rest)
                 if m is None:
                     raise InterpolationSyntaxError(option, section,
                         "bad interpolation variable reference %r" % rest)
@@ -639,12 +637,4 @@ class SafeConfigParser(ConfigParser):
         """Set an option.  Extend ConfigParser.set: check for string values."""
         if not isinstance(value, basestring):
             raise TypeError("option values must be strings")
-        # check for bad percent signs:
-        # first, replace all "good" interpolations
-        tmp_value = self._interpvar_re.sub('', value)
-        # then, check if there's a lone percent sign left
-        m = self._badpercent_re.search(tmp_value)
-        if m:
-            raise ValueError("invalid interpolation syntax in %r at "
-                             "position %d" % (value, m.start()))
         ConfigParser.set(self, section, option, value)

@@ -5,7 +5,7 @@
 
 import os as _os, sys as _sys
 
-__version__ = "1.1.0"
+__version__ = "1.0.2"
 
 from _ctypes import Union, Structure, Array
 from _ctypes import _Pointer
@@ -233,9 +233,6 @@ class c_void_p(_SimpleCData):
 c_voidp = c_void_p # backwards compatibility (to a bug)
 _check_size(c_void_p)
 
-class c_bool(_SimpleCData):
-	_type_ = "t"
-
 # This cache maps types to pointers to them.
 _pointer_type_cache = {}
 
@@ -458,8 +455,6 @@ if sizeof(c_uint) == sizeof(c_void_p):
     c_size_t = c_uint
 elif sizeof(c_ulong) == sizeof(c_void_p):
     c_size_t = c_ulong
-elif sizeof(c_ulonglong) == sizeof(c_void_p):
-    c_size_t = c_ulonglong
 
 # functions
 

@@ -264,9 +264,8 @@ class SimpleXMLRPCDispatcher:
                                        encoding=self.encoding)
         except:
             # report exception back to server
-            exc_type, exc_value, exc_tb = sys.exc_info()
             response = xmlrpclib.dumps(
-                xmlrpclib.Fault(1, "%s:%s" % (exc_type, exc_value)),
+                xmlrpclib.Fault(1, "%s:%s" % (sys.exc_type, sys.exc_value)),
                 encoding=self.encoding, allow_none=self.allow_none,
                 )
 
@@ -365,10 +364,9 @@ class SimpleXMLRPCDispatcher:
                      'faultString' : fault.faultString}
                     )
             except:
-                exc_type, exc_value, exc_tb = sys.exc_info()
                 results.append(
                     {'faultCode' : 1,
-                     'faultString' : "%s:%s" % (exc_type, exc_value)}
+                     'faultString' : "%s:%s" % (sys.exc_type, sys.exc_value)}
                     )
         return results
 
@@ -518,11 +516,11 @@ class SimpleXMLRPCServer(SocketServer.TCPServer,
     allow_reuse_address = True
 
     def __init__(self, addr, requestHandler=SimpleXMLRPCRequestHandler,
-                 logRequests=True, allow_none=False, encoding=None, bind_and_activate=True):
+                 logRequests=True, allow_none=False, encoding=None):
         self.logRequests = logRequests
 
         SimpleXMLRPCDispatcher.__init__(self, allow_none, encoding)
-        SocketServer.TCPServer.__init__(self, addr, requestHandler, bind_and_activate)
+        SocketServer.TCPServer.__init__(self, addr, requestHandler)
 
         # [Bug #1222790] If possible, set close-on-exec flag; if a
         # method spawns a subprocess, the subprocess shouldn't have

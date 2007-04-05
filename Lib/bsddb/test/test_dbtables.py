@@ -26,7 +26,6 @@ try:
     pickle = cPickle
 except ImportError:
     import pickle
-import tempfile
 
 import unittest
 from test_all import verbose
@@ -47,7 +46,7 @@ class TableDBTestCase(unittest.TestCase):
     db_name = 'test-table.db'
 
     def setUp(self):
-        homeDir = os.path.join(tempfile.gettempdir(), 'db_home')
+        homeDir = os.path.join(os.path.dirname(sys.argv[0]), 'db_home')
         self.homeDir = homeDir
         try: os.mkdir(homeDir)
         except os.error: pass

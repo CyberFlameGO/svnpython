@@ -596,7 +596,7 @@ class Popen(object):
         # either have to redirect all three or none. If the subprocess
         # user has only redirected one or two handles, we are
         # automatically creating PIPEs for the rest. We should close
-        # these after the process is started. See bug #1124861.
+        # these after the process is started. See bug #1124861. 
         if mswindows:
             if stdin is None and p2cwrite is not None:
                 os.close(p2cwrite)
@@ -608,14 +608,14 @@ class Popen(object):
                 os.close(errread)
                 errread = None
 
-        if p2cwrite is not None:
+        if p2cwrite:
             self.stdin = os.fdopen(p2cwrite, 'wb', bufsize)
-        if c2pread is not None:
+        if c2pread:
             if universal_newlines:
                 self.stdout = os.fdopen(c2pread, 'rU', bufsize)
             else:
                 self.stdout = os.fdopen(c2pread, 'rb', bufsize)
-        if errread is not None:
+        if errread:
             if universal_newlines:
                 self.stderr = os.fdopen(errread, 'rU', bufsize)
             else:
@@ -1008,29 +1008,29 @@ class Popen(object):
                 # Child
                 try:
                     # Close parent's pipe ends
-                    if p2cwrite is not None:
+                    if p2cwrite:
                         os.close(p2cwrite)
-                    if c2pread is not None:
+                    if c2pread:
                         os.close(c2pread)
-                    if errread is not None:
+                    if errread:
                         os.close(errread)
                     os.close(errpipe_read)
 
                     # Dup fds for child
-                    if p2cread is not None:
+                    if p2cread:
                         os.dup2(p2cread, 0)
-                    if c2pwrite is not None:
+                    if c2pwrite:
                         os.dup2(c2pwrite, 1)
-                    if errwrite is not None:
+                    if errwrite:
                         os.dup2(errwrite, 2)
 
                     # Close pipe fds.  Make sure we don't close the same
                     # fd more than once, or standard fds.
-                    if p2cread is not None and p2cread not in (0,):
+                    if p2cread and p2cread not in (0,):
                         os.close(p2cread)
-                    if c2pwrite is not None and c2pwrite not in (p2cread, 1):
+                    if c2pwrite and c2pwrite not in (p2cread, 1):
                         os.close(c2pwrite)
-                    if errwrite is not None and errwrite not in (p2cread, c2pwrite, 2):
+                    if errwrite and errwrite not in (p2cread, c2pwrite, 2):
                         os.close(errwrite)
 
                     # Close all other fds, if asked for
@@ -1063,11 +1063,11 @@ class Popen(object):
 
             # Parent
             os.close(errpipe_write)
-            if p2cread is not None and p2cwrite is not None:
+            if p2cread and p2cwrite:
                 os.close(p2cread)
-            if c2pwrite is not None and c2pread is not None:
+            if c2pwrite and c2pread:
                 os.close(c2pwrite)
-            if errwrite is not None and errread is not None:
+            if errwrite and errread:
                 os.close(errwrite)
 
             # Wait for exec to fail or succeed; possibly raising exception
@@ -1142,7 +1142,7 @@ class Popen(object):
                     # we can write up to PIPE_BUF bytes without risk
                     # blocking.  POSIX defines PIPE_BUF >= 512
                     bytes_written = os.write(self.stdin.fileno(), buffer(input, input_offset, 512))
-                    input_offset += bytes_written
+                    input_offset += bytes_written 
                     if input_offset >= len(input):
                         self.stdin.close()
                         write_set.remove(self.stdin)

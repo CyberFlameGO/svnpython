@@ -208,13 +208,11 @@ dbm_keys(register dbmobject *dp, PyObject *unused)
 static PyObject *
 dbm_has_key(register dbmobject *dp, PyObject *args)
 {
-	char *tmp_ptr;
 	datum key, val;
 	int tmp_size;
 	
-	if (!PyArg_ParseTuple(args, "s#:has_key", &tmp_ptr, &tmp_size))
+	if (!PyArg_ParseTuple(args, "s#:has_key", &key.dptr, &tmp_size))
 		return NULL;
-	key.dptr = tmp_ptr;
 	key.dsize = tmp_size;
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);
@@ -226,13 +224,11 @@ dbm_get(register dbmobject *dp, PyObject *args)
 {
 	datum key, val;
 	PyObject *defvalue = Py_None;
-	char *tmp_ptr;
 	int tmp_size;
 
 	if (!PyArg_ParseTuple(args, "s#|O:get",
-                              &tmp_ptr, &tmp_size, &defvalue))
+                              &key.dptr, &tmp_size, &defvalue))
 		return NULL;
-	key.dptr = tmp_ptr;
 	key.dsize = tmp_size;
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);
@@ -249,13 +245,11 @@ dbm_setdefault(register dbmobject *dp, PyObject *args)
 {
 	datum key, val;
 	PyObject *defvalue = NULL;
-	char *tmp_ptr;
 	int tmp_size;
 
 	if (!PyArg_ParseTuple(args, "s#|S:setdefault",
-                              &tmp_ptr, &tmp_size, &defvalue))
+                              &key.dptr, &tmp_size, &defvalue))
 		return NULL;
-	key.dptr = tmp_ptr;
 	key.dsize = tmp_size;
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);

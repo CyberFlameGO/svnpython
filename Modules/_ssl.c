@@ -317,7 +317,7 @@ PySocket_ssl(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "O!|zz:ssl",
 			      PySocketModule.Sock_Type,
-			      &Sock,
+			      (PyObject*)&Sock,
 			      &key_file, &cert_file))
 		return NULL;
 

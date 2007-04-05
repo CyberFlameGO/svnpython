@@ -946,10 +946,9 @@ islt(PyObject *x, PyObject *y, PyObject *compare)
 	if (res == NULL)
 		return -1;
 	if (!PyInt_Check(res)) {
-		PyErr_Format(PyExc_TypeError,
-			     "comparison function must return int, not %.200s",
-			     res->ob_type->tp_name);
 		Py_DECREF(res);
+		PyErr_SetString(PyExc_TypeError,
+				"comparison function must return int");
 		return -1;
 	}
 	i = PyInt_AsLong(res);
@@ -1394,7 +1393,7 @@ merge_lo(MergeState *ms, PyObject **pa, Py_ssize_t na,
 	PyObject *compare;
 	PyObject **dest;
 	int result = -1;	/* guilty until proved innocent */
-	Py_ssize_t min_gallop;
+	Py_ssize_t min_gallop = ms->min_gallop;
 
 	assert(ms && pa && pb && na > 0 && nb > 0 && pa + na == pb);
 	if (MERGE_GETMEM(ms, na) < 0)
@@ -1410,7 +1409,6 @@ merge_lo(MergeState *ms, PyObject **pa, Py_ssize_t na,
 	if (na == 1)
 		goto CopyB;
 
-	min_gallop = ms->min_gallop;
 	compare = ms->compare;
 	for (;;) {
 		Py_ssize_t acount = 0;	/* # of times A won in a row */
@@ -1528,7 +1526,7 @@ merge_hi(MergeState *ms, PyObject **pa, Py_ssize_t na, PyObject **pb, Py_ssize_t
 	int result = -1;	/* guilty until proved innocent */
 	PyObject **basea;
 	PyObject **baseb;
-	Py_ssize_t min_gallop;
+	Py_ssize_t min_gallop = ms->min_gallop;
 
 	assert(ms && pa && pb && na > 0 && nb > 0 && pa + na == pb);
 	if (MERGE_GETMEM(ms, nb) < 0)
@@ -1547,7 +1545,6 @@ merge_hi(MergeState *ms, PyObject **pa, Py_ssize_t na, PyObject **pb, Py_ssize_t
 	if (nb == 1)
 		goto CopyA;
 
-	min_gallop = ms->min_gallop;
 	compare = ms->compare;
 	for (;;) {
 		Py_ssize_t acount = 0;	/* # of times A won in a row */
@@ -2492,9 +2489,8 @@ list_subscript(PyListObject* self, PyObject* item)
 		}
 	}
 	else {
-		PyErr_Format(PyExc_TypeError,
-			     "list indices must be integers, not %.200s",
-			     item->ob_type->tp_name);
+		PyErr_SetString(PyExc_TypeError,
+				"list indices must be integers");
 		return NULL;
 	}
 }
@@ -2637,9 +2633,8 @@ list_ass_subscript(PyListObject* self, PyObject* item, PyObject* value)
 		}
 	}
 	else {
-		PyErr_Format(PyExc_TypeError,
-			     "list indices must be integers, not %.200s",
-			     item->ob_type->tp_name);
+		PyErr_SetString(PyExc_TypeError,
+				"list indices must be integers");
 		return -1;
 	}
 }
@@ -2672,7 +2667,7 @@ PyTypeObject PyList_Type = {
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
-		Py_TPFLAGS_BASETYPE | Py_TPFLAGS_LIST_SUBCLASS,	/* tp_flags */
+		Py_TPFLAGS_BASETYPE,		/* tp_flags */
  	list_doc,				/* tp_doc */
  	(traverseproc)list_traverse,		/* tp_traverse */
  	(inquiry)list_clear,			/* tp_clear */

@@ -1107,7 +1107,7 @@ _type_ attribute.
 
 */
 
-static char *SIMPLE_TYPE_CHARS = "cbBhHiIlLdfuzZqQPXOvt";
+static char *SIMPLE_TYPE_CHARS = "cbBhHiIlLdfuzZqQPXOv";
 
 static PyObject *
 c_wchar_p_from_param(PyObject *type, PyObject *value)
@@ -2594,22 +2594,16 @@ static PPROC FindAddress(void *handle, char *name, PyObject *type)
 	PPROC address;
 	char *mangled_name;
 	int i;
-	StgDictObject *dict;
+	StgDictObject *dict = PyType_stgdict((PyObject *)type);
 
 	address = (PPROC)GetProcAddress(handle, name);
-#ifdef _WIN64
-	/* win64 has no stdcall calling conv, so it should
-	   also not have the name mangling of it.
-	*/
-	return address;
-#else
 	if (address)
 		return address;
+
 	if (((size_t)name & ~0xFFFF) == 0) {
 		return NULL;
 	}
 
-	dict = PyType_stgdict((PyObject *)type);
 	/* It should not happen that dict is NULL, but better be safe */
 	if (dict==NULL || dict->flags & FUNCFLAG_CDECL)
 		return address;
@@ -2628,7 +2622,6 @@ static PPROC FindAddress(void *handle, char *name, PyObject *type)
 			return address;
 	}
 	return NULL;
-#endif
 }
 #endif
 
@@ -4756,7 +4749,7 @@ init_ctypes(void)
 #endif
 	PyModule_AddObject(m, "FUNCFLAG_CDECL", PyInt_FromLong(FUNCFLAG_CDECL));
 	PyModule_AddObject(m, "FUNCFLAG_PYTHONAPI", PyInt_FromLong(FUNCFLAG_PYTHONAPI));
-	PyModule_AddStringConstant(m, "__version__", "1.1.0");
+	PyModule_AddStringConstant(m, "__version__", "1.0.2");
 
 	PyModule_AddObject(m, "_memmove_addr", PyLong_FromVoidPtr(memmove));
 	PyModule_AddObject(m, "_memset_addr", PyLong_FromVoidPtr(memset));

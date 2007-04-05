@@ -37,8 +37,7 @@ def requires(resource, msg=None):
 
 def find_package_modules(package, mask):
     import fnmatch
-    if (hasattr(package, "__loader__") and
-            hasattr(package.__loader__, '_files')):
+    if hasattr(package, "__loader__"):
         path = package.__name__.replace(".", os.path.sep)
         mask = os.path.join(path, mask)
         for fnm in package.__loader__._files.iterkeys():

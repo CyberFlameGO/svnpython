@@ -15,7 +15,6 @@ pictures can easily be drawn.
 """
 
 from math import * # Also for export
-from time import sleep
 import Tkinter
 
 speeds = ['fastest', 'fast', 'normal', 'slow', 'slowest']
@@ -950,6 +949,7 @@ def demo2():
 
 
 if __name__ == '__main__':
+    from time import sleep
     demo()
     sleep(3)
     demo2()

@@ -214,7 +214,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				InlineFunctionExpansion="1"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="..\Include,..\PC,..\Modules\_ctypes\libffi_msvc"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
 				StringPooling="true"
@@ -247,6 +247,7 @@
 				SubSystem="0"
 				OptimizeReferences="0"
 				EnableCOMDATFolding="0"
+				LinkTimeCodeGeneration="1"
 				BaseAddress="0x1D1A0000"
 				ImportLibrary=""
 				TargetMachine="1"
@@ -302,7 +303,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				InlineFunctionExpansion="1"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="..\Include,..\PC,..\Modules\_ctypes\libffi_msvc"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
 				StringPooling="true"
@@ -335,6 +336,7 @@
 				SubSystem="0"
 				OptimizeReferences="0"
 				EnableCOMDATFolding="0"
+				LinkTimeCodeGeneration="1"
 				BaseAddress="0x1D1A0000"
 				ImportLibrary=""
 				TargetMachine="17"

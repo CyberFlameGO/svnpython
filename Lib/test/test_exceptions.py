@@ -3,6 +3,7 @@
 import os
 import sys
 import unittest
+import warnings
 import pickle, cPickle
 
 from test.test_support import TESTFN, unlink, run_unittest
@@ -225,9 +226,6 @@ class ExceptionTests(unittest.TestCase):
             (EnvironmentError, (1, 'strErrorStr', 'filenameStr'),
                 {'message' : '', 'args' : (1, 'strErrorStr'), 'errno' : 1,
                  'strerror' : 'strErrorStr', 'filename' : 'filenameStr'}),
-            (SyntaxError, (), {'message' : '', 'msg' : None, 'text' : None,
-                'filename' : None, 'lineno' : None, 'offset' : None,
-                'print_file_and_line' : None}),
             (SyntaxError, ('msgStr',),
                 {'message' : 'msgStr', 'args' : ('msgStr',), 'text' : None,
                  'print_file_and_line' : None, 'msg' : 'msgStr',

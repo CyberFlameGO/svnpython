@@ -28,7 +28,7 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 
 """#"
 
-import codecs
+import codecs, types
 from encodings import aliases
 
 _cache = {}
@@ -60,7 +60,7 @@ def normalize_encoding(encoding):
     """
     # Make sure we have an 8-bit string, because .translate() works
     # differently for Unicode strings.
-    if isinstance(encoding, unicode):
+    if type(encoding) is types.UnicodeType:
         # Note that .encode('latin-1') does *not* use the codec
         # registry, so this call doesn't recurse. (See unicodeobject.c
         # PyUnicode_AsEncodedString() for details)
@@ -93,10 +93,8 @@ def search_function(encoding):
         if not modname or '.' in modname:
             continue
         try:
-            # Import is absolute to prevent the possibly malicious import of a
-            # module with side-effects that is not in the 'encodings' package.
-            mod = __import__('encodings.' + modname, fromlist=_import_tail,
-                             level=0)
+            mod = __import__('encodings.' + modname,
+                             globals(), locals(), _import_tail)
         except ImportError:
             pass
         else:
