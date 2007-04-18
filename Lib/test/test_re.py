@@ -1,7 +1,7 @@
 import sys
 sys.path = ['.'] + sys.path
 
-from test.test_support import verbose, run_unittest, guard_warnings_filter
+from test.test_support import verbose, run_unittest
 import re
 from re import Scanner
 import sys, os, traceback
@@ -416,10 +416,13 @@ class ReTests(unittest.TestCase):
         self.pickle_test(cPickle)
         # old pickles expect the _compile() reconstructor in sre module
         import warnings
-        with guard_warnings_filter():
+        original_filters = warnings.filters[:]
+        try:
             warnings.filterwarnings("ignore", "The sre module is deprecated",
                                     DeprecationWarning)
             from sre import _compile
+        finally:
+            warnings.filters = original_filters
 
     def pickle_test(self, pickle):
         oldpat = re.compile('a(?:b|(c|e){1,2}?|d)+?(.)')

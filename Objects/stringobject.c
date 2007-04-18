@@ -1071,9 +1071,8 @@ string_contains(PyObject *str_obj, PyObject *sub_obj)
 			return PyUnicode_Contains(str_obj, sub_obj);
 #endif
 		if (!PyString_Check(sub_obj)) {
-			PyErr_Format(PyExc_TypeError,
-			    "'in <string>' requires string as left operand, "
-			    "not %.200s", sub_obj->ob_type->tp_name);
+			PyErr_SetString(PyExc_TypeError,
+			    "'in <string>' requires string as left operand");
 			return -1;
 		}
 	}
@@ -1131,7 +1130,8 @@ string_richcompare(PyStringObject *a, PyStringObject *b, int op)
 		   much time, since Py_NE is rarely used.  */
 		if (a->ob_size == b->ob_size
 		    && (a->ob_sval[0] == b->ob_sval[0]
-			&& memcmp(a->ob_sval, b->ob_sval, a->ob_size) == 0)) {
+			&& memcmp(a->ob_sval, b->ob_sval,
+				  a->ob_size) == 0)) {
 			result = Py_True;
 		} else {
 			result = Py_False;
@@ -1144,7 +1144,7 @@ string_richcompare(PyStringObject *a, PyStringObject *b, int op)
 		c = Py_CHARMASK(*a->ob_sval) - Py_CHARMASK(*b->ob_sval);
 		if (c==0)
 			c = memcmp(a->ob_sval, b->ob_sval, min_len);
-	} else
+	}else
 		c = 0;
 	if (c == 0)
 		c = (len_a < len_b) ? -1 : (len_a > len_b) ? 1 : 0;
@@ -1240,9 +1240,8 @@ string_subscript(PyStringObject* self, PyObject* item)
 		}
 	}
 	else {
-		PyErr_Format(PyExc_TypeError,
-			     "string indices must be integers, not %.200s",
-			     item->ob_type->tp_name);
+		PyErr_SetString(PyExc_TypeError,
+				"string indices must be integers");
 		return NULL;
 	}
 }
@@ -2344,10 +2343,10 @@ static PyObject *
 string_translate(PyStringObject *self, PyObject *args)
 {
 	register char *input, *output;
-	const char *table;
+	register const char *table;
 	register Py_ssize_t i, c, changed = 0;
 	PyObject *input_obj = (PyObject*)self;
-	const char *output_start, *del_table=NULL;
+	const char *table1, *output_start, *del_table=NULL;
 	Py_ssize_t inlen, tablen, dellen = 0;
 	PyObject *result;
 	int trans_table[256];
@@ -2358,12 +2357,8 @@ string_translate(PyStringObject *self, PyObject *args)
 		return NULL;
 
 	if (PyString_Check(tableobj)) {
-		table = PyString_AS_STRING(tableobj);
+		table1 = PyString_AS_STRING(tableobj);
 		tablen = PyString_GET_SIZE(tableobj);
-	}
-	else if (tableobj == Py_None) {
-		table = NULL;
-		tablen = 256;
 	}
 #ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(tableobj)) {
@@ -2378,7 +2373,7 @@ string_translate(PyStringObject *self, PyObject *args)
 		return PyUnicode_Translate((PyObject *)self, tableobj, NULL);
 	}
 #endif
-	else if (PyObject_AsCharBuffer(tableobj, &table, &tablen))
+	else if (PyObject_AsCharBuffer(tableobj, &table1, &tablen))
 		return NULL;
 
 	if (tablen != 256) {
@@ -2407,6 +2402,7 @@ string_translate(PyStringObject *self, PyObject *args)
 		dellen = 0;
 	}
 
+	table = table1;
 	inlen = PyString_GET_SIZE(input_obj);
 	result = PyString_FromStringAndSize((char *)NULL, inlen);
 	if (result == NULL)
@@ -2414,7 +2410,7 @@ string_translate(PyStringObject *self, PyObject *args)
 	output_start = output = PyString_AsString(result);
 	input = PyString_AS_STRING(input_obj);
 
-	if (dellen == 0 && table != NULL) {
+	if (dellen == 0) {
 		/* If no deletions are required, use faster code */
 		for (i = inlen; --i >= 0; ) {
 			c = Py_CHARMASK(*input++);
@@ -2428,13 +2424,8 @@ string_translate(PyStringObject *self, PyObject *args)
 		return input_obj;
 	}
 
-	if (table == NULL) {
-		for (i = 0; i < 256; i++)
-			trans_table[i] = Py_CHARMASK(i);
-	} else {
-		for (i = 0; i < 256; i++)
-			trans_table[i] = Py_CHARMASK(table[i]);
-	}
+	for (i = 0; i < 256; i++)
+		trans_table[i] = Py_CHARMASK(table[i]);
 
 	for (i = 0; i < dellen; i++)
 		trans_table[(int) Py_CHARMASK(del_table[i])] = -1;
@@ -4025,7 +4016,7 @@ PyTypeObject PyString_Type = {
 	0,					/* tp_setattro */
 	&string_as_buffer,			/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES |
-		Py_TPFLAGS_BASETYPE | Py_TPFLAGS_STRING_SUBCLASS,		/* tp_flags */
+		Py_TPFLAGS_BASETYPE,		/* tp_flags */
 	string_doc,				/* tp_doc */
 	0,					/* tp_traverse */
 	0,					/* tp_clear */
@@ -4157,8 +4148,7 @@ formatfloat(char *buf, size_t buflen, int flags,
 	double x;
 	x = PyFloat_AsDouble(v);
 	if (x == -1.0 && PyErr_Occurred()) {
-		PyErr_Format(PyExc_TypeError, "float argument required, "
-			     "not %.200s", v->ob_type->tp_name);
+		PyErr_SetString(PyExc_TypeError, "float argument required");
 		return -1;
 	}
 	if (prec < 0)
@@ -4353,8 +4343,7 @@ formatint(char *buf, size_t buflen, int flags,
 
 	x = PyInt_AsLong(v);
 	if (x == -1 && PyErr_Occurred()) {
-		PyErr_Format(PyExc_TypeError, "int argument required, not %.200s",
-			     v->ob_type->tp_name);
+		PyErr_SetString(PyExc_TypeError, "int argument required");
 		return -1;
 	}
 	if (x < 0 && type == 'u') {
@@ -4980,7 +4969,6 @@ void _Py_ReleaseInternedStrings(void)
 	PyObject *keys;
 	PyStringObject *s;
 	Py_ssize_t i, n;
-	Py_ssize_t immortal_size = 0, mortal_size = 0;
 
 	if (interned == NULL || !PyDict_Check(interned))
 		return;
@@ -4995,9 +4983,8 @@ void _Py_ReleaseInternedStrings(void)
 	   give them their stolen references back, and then clear and DECREF
 	   the interned dict. */
 
+	fprintf(stderr, "releasing interned strings\n");
 	n = PyList_GET_SIZE(keys);
-	fprintf(stderr, "releasing %" PY_FORMAT_SIZE_T "d interned strings\n",
-		n);
 	for (i = 0; i < n; i++) {
 		s = (PyStringObject *) PyList_GET_ITEM(keys, i);
 		switch (s->ob_sstate) {
@@ -5006,20 +4993,15 @@ void _Py_ReleaseInternedStrings(void)
 			break;
 		case SSTATE_INTERNED_IMMORTAL:
 			s->ob_refcnt += 1;
-			immortal_size += s->ob_size;
 			break;
 		case SSTATE_INTERNED_MORTAL:
 			s->ob_refcnt += 2;
-			mortal_size += s->ob_size;
 			break;
 		default:
 			Py_FatalError("Inconsistent interned string state.");
 		}
 		s->ob_sstate = SSTATE_NOT_INTERNED;
 	}
-	fprintf(stderr, "total size of all interned strings: "
-			"%" PY_FORMAT_SIZE_T "d/%" PY_FORMAT_SIZE_T "d "
-			"mortal/immortal\n", mortal_size, immortal_size);
 	Py_DECREF(keys);
 	PyDict_Clear(interned);
 	Py_DECREF(interned);

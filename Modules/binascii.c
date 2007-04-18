@@ -1160,14 +1160,12 @@ binascii_b2a_qp (PyObject *self, PyObject *args, PyObject *kwargs)
 		if ((data[in] > 126) ||
 		    (data[in] == '=') ||
 		    (header && data[in] == '_') ||
-		    ((data[in] == '.') && (linelen == 0) &&
-		     (data[in+1] == '\n' || data[in+1] == '\r' || data[in+1] == 0)) ||
+		    ((data[in] == '.') && (linelen == 1)) ||
 		    (!istext && ((data[in] == '\r') || (data[in] == '\n'))) ||
 		    ((data[in] == '\t' || data[in] == ' ') && (in + 1 == datalen)) ||
 		    ((data[in] < 33) &&
 		     (data[in] != '\r') && (data[in] != '\n') &&
-		     (quotetabs ||
-		     	(!quotetabs && ((data[in] != '\t') && (data[in] != ' '))))))
+		     (quotetabs && ((data[in] != '\t') || (data[in] != ' ')))))
 		{
 			if ((linelen + 3) >= MAXLINESIZE) {
 				linelen = 0;
@@ -1232,14 +1230,12 @@ binascii_b2a_qp (PyObject *self, PyObject *args, PyObject *kwargs)
 		if ((data[in] > 126) ||
 		    (data[in] == '=') ||
 		    (header && data[in] == '_') ||
-		    ((data[in] == '.') && (linelen == 0) &&
-		     (data[in+1] == '\n' || data[in+1] == '\r' || data[in+1] == 0)) ||
+		    ((data[in] == '.') && (linelen == 1)) ||
 		    (!istext && ((data[in] == '\r') || (data[in] == '\n'))) ||
 		    ((data[in] == '\t' || data[in] == ' ') && (in + 1 == datalen)) ||
 		    ((data[in] < 33) &&
 		     (data[in] != '\r') && (data[in] != '\n') &&
-		     (quotetabs ||
-		     	(!quotetabs && ((data[in] != '\t') && (data[in] != ' '))))))
+		     (quotetabs && ((data[in] != '\t') || (data[in] != ' ')))))
 		{
 			if ((linelen + 3 )>= MAXLINESIZE) {
 				odata[out++] = '=';

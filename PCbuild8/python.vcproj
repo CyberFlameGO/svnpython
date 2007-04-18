@@ -340,7 +340,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbccp32.lib python26_d.lib"
+				AdditionalDependencies="odbccp32.lib python25_d.lib"
 				OutputFile="$(OutDir)\python_d.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"

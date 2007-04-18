@@ -1,7 +1,7 @@
 dnl Process this file with autoconf 2.0 or later to make a configure script.
 
 # Set VERSION so we only need to edit in one place (i.e., here)
-m4_define(PYTHON_VERSION, 2.6)
+m4_define(PYTHON_VERSION, 2.5)
 
 AC_REVISION($Revision$)
 AC_PREREQ(2.59)
@@ -895,22 +895,6 @@ else
   fi
 fi
 
-# Check whether GCC supports PyArg_ParseTuple format
-if test "$GCC" = "yes"
-then
-  AC_MSG_CHECKING(whether gcc supports ParseTuple __format__)
-  save_CFLAGS=$CFLAGS
-  CFLAGS="$CFLAGS -Werror"
-  AC_TRY_COMPILE([
-    void f(char*,...)__attribute((format(PyArg_ParseTuple, 1, 2)));
-  ],,
-  AC_DEFINE(HAVE_ATTRIBUTE_FORMAT_PARSETUPLE, 1, [Define if GCC supports __attribute__((format(PyArg_ParseTuple, 2, 3)))])
-  AC_MSG_RESULT(yes),
-  AC_MSG_RESULT(no)
-  )
-  CFLAGS=$save_CFLAGS
-fi
-
 # On some compilers, pthreads are available without further options
 # (e.g. MacOS X). On some of these systems, the compiler will not
 # complain if unaccepted options are passed (e.g. gcc on Mac OS X).
@@ -1216,17 +1200,6 @@ AC_TRY_COMPILE([], [long long x; x = (long long)0;], [
 AC_MSG_RESULT($have_long_long)
 if test "$have_long_long" = yes ; then
 AC_CHECK_SIZEOF(long long, 8)
-fi
-
-AC_MSG_CHECKING(for _Bool support)
-have_c99_bool=no
-AC_TRY_COMPILE([], [_Bool x; x = (_Bool)0;], [
-  AC_DEFINE(HAVE_C99_BOOL, 1, [Define this if you have the type _Bool.]) 
-  have_c99_bool=yes
-])
-AC_MSG_RESULT($have_c99_bool)
-if test "$have_c99_bool" = yes ; then
-AC_CHECK_SIZEOF(_Bool, 1)
 fi
 
 AC_CHECK_TYPES(uintptr_t, 
@@ -2284,11 +2257,11 @@ fi
 AC_MSG_RESULT(MACHDEP_OBJS)
 
 # checks for library functions
-AC_CHECK_FUNCS(alarm bind_textdomain_codeset chflags chown clock confstr \
- ctermid execv fork fpathconf ftime ftruncate \
+AC_CHECK_FUNCS(alarm bind_textdomain_codeset chown clock confstr ctermid \
+ execv fork fpathconf ftime ftruncate \
  gai_strerror getgroups getlogin getloadavg getpeername getpgid getpid \
  getpriority getpwent getspnam getspent getsid getwd \
- kill killpg lchflags lchown lstat mkfifo mknod mktime \
+ kill killpg lchown lstat mkfifo mknod mktime \
  mremap nice pathconf pause plock poll pthread_init \
  putenv readlink realpath \
  select setegid seteuid setgid \

@@ -2040,10 +2040,6 @@ PyObject *unicodeescape_string(const Py_UNICODE *s,
 
     static const char *hexdigit = "0123456789abcdef";
 
-    /* XXX(nnorwitz): rather than over-allocating, it would be
-       better to choose a different scheme.  Perhaps scan the
-       first N-chars of the string and allocate based on that size.
-    */
     /* Initial allocation is based on the longest-possible unichr
        escape.
 
@@ -7967,7 +7963,7 @@ PyTypeObject PyUnicode_Type = {
     0,			 		/* tp_setattro */
     &unicode_as_buffer,			/* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_CHECKTYPES |
-	    Py_TPFLAGS_BASETYPE | Py_TPFLAGS_UNICODE_SUBCLASS,	/* tp_flags */
+	    Py_TPFLAGS_BASETYPE,	/* tp_flags */
     unicode_doc,			/* tp_doc */
     0,					/* tp_traverse */
     0,					/* tp_clear */

@@ -69,7 +69,6 @@ extern void _PyGILState_Fini(void);
 int Py_DebugFlag; /* Needed by parser.c */
 int Py_VerboseFlag; /* Needed by import.c */
 int Py_InteractiveFlag; /* Needed by Py_FdIsInteractive() below */
-int Py_InspectFlag; /* Needed to determine whether to exit at SystemError */
 int Py_NoSiteFlag; /* Suppress 'import site' */
 int Py_UseClassExceptionsFlag = 1; /* Needed by bltinmodule.c: deprecated */
 int Py_FrozenFlag; /* Needed by getpath.c */
@@ -733,16 +732,9 @@ PyRun_InteractiveLoopFlags(FILE *fp, const char *filename, PyCompilerFlags *flag
 /* compute parser flags based on compiler flags */
 #define PARSER_FLAGS(flags) \
 	((flags) ? ((((flags)->cf_flags & PyCF_DONT_IMPLY_DEDENT) ? \
-		      PyPARSE_DONT_IMPLY_DEDENT : 0)) : 0)
-
-#if 0
-/* Keep an example of flags with future keyword support. */
-#define PARSER_FLAGS(flags) \
-	((flags) ? ((((flags)->cf_flags & PyCF_DONT_IMPLY_DEDENT) ? \
 		      PyPARSE_DONT_IMPLY_DEDENT : 0) \
 		    | ((flags)->cf_flags & CO_FUTURE_WITH_STATEMENT ? \
 		       PyPARSE_WITH_IS_KEYWORD : 0)) : 0)
-#endif
 
 int
 PyRun_InteractiveOneFlags(FILE *fp, const char *filename, PyCompilerFlags *flags)
@@ -853,7 +845,6 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 {
 	PyObject *m, *d, *v;
 	const char *ext;
-	int set_file_name = 0, ret;
 
 	m = PyImport_AddModule("__main__");
 	if (m == NULL)
@@ -867,7 +858,6 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 			Py_DECREF(f);
 			return -1;
 		}
-		set_file_name = 1;
 		Py_DECREF(f);
 	}
 	ext = filename + strlen(filename) - 4;
@@ -877,8 +867,7 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 			fclose(fp);
 		if ((fp = fopen(filename, "rb")) == NULL) {
 			fprintf(stderr, "python: Can't reopen .pyc file\n");
-			ret = -1;
-			goto done;
+			return -1;
 		}
 		/* Turn on optimization if a .pyo file is given */
 		if (strcmp(ext, ".pyo") == 0)
@@ -890,17 +879,12 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 	}
 	if (v == NULL) {
 		PyErr_Print();
-		ret = -1;
-		goto done;
+		return -1;
 	}
 	Py_DECREF(v);
 	if (Py_FlushLine())
 		PyErr_Clear();
-	ret = 0;
-  done:
-	if (set_file_name && PyDict_DelItemString(d, "__file__"))
-		PyErr_Clear();
-	return ret;
+	return 0;
 }
 
 int
@@ -1031,11 +1015,6 @@ handle_system_exit(void)
 {
 	PyObject *exception, *value, *tb;
 	int exitcode = 0;
-
-	if (Py_InspectFlag)
-		/* Don't exit if -i flag was given. This flag is set to 0
-		 * when entering interactive mode for inspecting. */
-		return;
 
 	PyErr_Fetch(&exception, &value, &tb);
 	if (Py_FlushLine())
@@ -1230,8 +1209,8 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 			  err = PyFile_WriteObject(s, f, Py_PRINT_RAW);
 			Py_XDECREF(s);
 		}
-		/* try to write a newline in any case */
-		err += PyFile_WriteString("\n", f);
+		if (err == 0)
+			err = PyFile_WriteString("\n", f);
 	}
 	Py_DECREF(value);
 	/* If an error happened here, don't show it.

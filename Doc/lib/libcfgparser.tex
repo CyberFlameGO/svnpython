@@ -48,20 +48,11 @@ Default values can be specified by passing them into the
 may be passed into the \method{get()} method which will override all
 others.
 
-Sections are normally stored in a builtin dictionary. An alternative
-dictionary type can be passed to the \class{ConfigParser} constructor.
-For example, if a dictionary type is passed that sorts its keys,
-the sections will be sorted on write-back, as will be the keys within
-each section.
-
-\begin{classdesc}{RawConfigParser}{\optional{defaults\optional{, dict_type}}}
+\begin{classdesc}{RawConfigParser}{\optional{defaults}}
 The basic configuration object.  When \var{defaults} is given, it is
-initialized into the dictionary of intrinsic defaults.  When \var{dict_type}
-is given, it will be used to create the dictionary objects for the list
-of sections, for the options within a section, and for the default values.
-This class does not support the magical interpolation behavior.
+initialized into the dictionary of intrinsic defaults.  This class
+does not support the magical interpolation behavior.
 \versionadded{2.3}
-\versionchanged[\var{dict_type} was added]{2.6}
 \end{classdesc}
 
 \begin{classdesc}{ConfigParser}{\optional{defaults}}
@@ -155,37 +146,37 @@ the \var{raw} parameter is false.  This is relevant only for the
 
 \class{RawConfigParser} instances have the following methods:
 
-\begin{methoddesc}[RawConfigParser]{defaults}{}
+\begin{methoddesc}{defaults}{}
 Return a dictionary containing the instance-wide defaults.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{sections}{}
+\begin{methoddesc}{sections}{}
 Return a list of the sections available; \code{DEFAULT} is not
 included in the list.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{add_section}{section}
+\begin{methoddesc}{add_section}{section}
 Add a section named \var{section} to the instance.  If a section by
 the given name already exists, \exception{DuplicateSectionError} is
 raised.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{has_section}{section}
+\begin{methoddesc}{has_section}{section}
 Indicates whether the named section is present in the
 configuration. The \code{DEFAULT} section is not acknowledged.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{options}{section}
+\begin{methoddesc}{options}{section}
 Returns a list of options available in the specified \var{section}.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{has_option}{section, option}
+\begin{methoddesc}{has_option}{section, option}
 If the given section exists, and contains the given option,
 return \constant{True}; otherwise return \constant{False}.
 \versionadded{1.6}
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{read}{filenames}
+\begin{methoddesc}{read}{filenames}
 Attempt to read and parse a list of filenames, returning a list of filenames
 which were successfully parsed.  If \var{filenames} is a string or
 Unicode string, it is treated as a single filename.
@@ -210,28 +201,28 @@ config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
 \versionchanged[Returns list of successfully parsed filenames]{2.4}
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{readfp}{fp\optional{, filename}}
+\begin{methoddesc}{readfp}{fp\optional{, filename}}
 Read and parse configuration data from the file or file-like object in
 \var{fp} (only the \method{readline()} method is used).  If
 \var{filename} is omitted and \var{fp} has a \member{name} attribute,
 that is used for \var{filename}; the default is \samp{<???>}.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{get}{section, option}
+\begin{methoddesc}{get}{section, option}
 Get an \var{option} value for the named \var{section}.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{getint}{section, option}
+\begin{methoddesc}{getint}{section, option}
 A convenience method which coerces the \var{option} in the specified
 \var{section} to an integer.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{getfloat}{section, option}
+\begin{methoddesc}{getfloat}{section, option}
 A convenience method which coerces the \var{option} in the specified
 \var{section} to a floating point number.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{getboolean}{section, option}
+\begin{methoddesc}{getboolean}{section, option}
 A convenience method which coerces the \var{option} in the specified
 \var{section} to a Boolean value.  Note that the accepted values
 for the option are \code{"1"}, \code{"yes"}, \code{"true"}, and \code{"on"},
@@ -241,12 +232,12 @@ string values are checked in a case-insensitive manner.  Any other value will
 cause it to raise \exception{ValueError}.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{items}{section}
+\begin{methoddesc}{items}{section}
 Return a list of \code{(\var{name}, \var{value})} pairs for each
 option in the given \var{section}.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{set}{section, option, value}
+\begin{methoddesc}{set}{section, option, value}
 If the given section exists, set the given option to the specified
 value; otherwise raise \exception{NoSectionError}.  While it is
 possible to use \class{RawConfigParser} (or \class{ConfigParser} with
@@ -256,14 +247,14 @@ output to files) can only be achieved using string values.
 \versionadded{1.6}
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{write}{fileobject}
+\begin{methoddesc}{write}{fileobject}
 Write a representation of the configuration to the specified file
 object.  This representation can be parsed by a future \method{read()}
 call.
 \versionadded{1.6}
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{remove_option}{section, option}
+\begin{methoddesc}{remove_option}{section, option}
 Remove the specified \var{option} from the specified \var{section}.
 If the section does not exist, raise \exception{NoSectionError}. 
 If the option existed to be removed, return \constant{True};
@@ -271,13 +262,13 @@ otherwise return \constant{False}.
 \versionadded{1.6}
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{remove_section}{section}
+\begin{methoddesc}{remove_section}{section}
 Remove the specified \var{section} from the configuration.
 If the section in fact existed, return \code{True}.
 Otherwise return \code{False}.
 \end{methoddesc}
 
-\begin{methoddesc}[RawConfigParser]{optionxform}{option}
+\begin{methoddesc}{optionxform}{option}
 Transforms the option name \var{option} as found in an input file or
 as passed in by  client code to the form that should be used in the
 internal structures.  The default implementation returns a lower-case
@@ -293,14 +284,14 @@ option names case sensitive.
 The \class{ConfigParser} class extends some methods of the
 \class{RawConfigParser} interface, adding some optional arguments.
 
-\begin{methoddesc}[ConfigParser]{get}{section, option\optional{, raw\optional{, vars}}}
+\begin{methoddesc}{get}{section, option\optional{, raw\optional{, vars}}}
 Get an \var{option} value for the named \var{section}.  All the
 \character{\%} interpolations are expanded in the return values, based
 on the defaults passed into the constructor, as well as the options
 \var{vars} provided, unless the \var{raw} argument is true.
 \end{methoddesc}
 
-\begin{methoddesc}[ConfigParser]{items}{section\optional{, raw\optional{, vars}}}
+\begin{methoddesc}{items}{section\optional{, raw\optional{, vars}}}
 Return a list of \code{(\var{name}, \var{value})} pairs for each
 option in the given \var{section}. Optional arguments have the
 same meaning as for the \method{get()} method.
@@ -313,7 +304,7 @@ same meaning as for the \method{get()} method.
 The \class{SafeConfigParser} class implements the same extended
 interface as \class{ConfigParser}, with the following addition:
 
-\begin{methoddesc}[SafeConfigParser]{set}{section, option, value}
+\begin{methoddesc}{set}{section, option, value}
 If the given section exists, set the given option to the specified
 value; otherwise raise \exception{NoSectionError}.  \var{value} must
 be a string (\class{str} or \class{unicode}); if not,

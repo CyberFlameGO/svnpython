@@ -134,7 +134,7 @@ def addpackage(sitedir, name, known_paths):
         for line in f:
             if line.startswith("#"):
                 continue
-            if line.startswith("import ") or line.startswith("import\t"):
+            if line.startswith("import"):
                 exec line
                 continue
             line = line.rstrip()

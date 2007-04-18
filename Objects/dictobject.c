@@ -1352,7 +1352,7 @@ PyDict_Merge(PyObject *a, PyObject *b, int override)
 		return -1;
 	}
 	mp = (dictobject*)a;
-	if (PyDict_CheckExact(b)) {
+	if (PyDict_Check(b)) {
 		other = (dictobject*)b;
 		if (other == mp || other->ma_used == 0)
 			/* a.update(a) or a.update({}); nothing to do */
@@ -2130,7 +2130,7 @@ PyTypeObject PyDict_Type = {
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
-		Py_TPFLAGS_BASETYPE | Py_TPFLAGS_DICT_SUBCLASS,	/* tp_flags */
+		Py_TPFLAGS_BASETYPE,		/* tp_flags */
 	dictionary_doc,				/* tp_doc */
 	dict_traverse,				/* tp_traverse */
 	dict_tp_clear,				/* tp_clear */

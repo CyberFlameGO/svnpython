@@ -65,10 +65,9 @@ extern time_t PyOS_GetLastModificationTime(char *, FILE *);
        Python 2.5c1: 62121 (fix wrong lnotab with for loops and
        			    storing constants that should have been removed)
        Python 2.5c2: 62131 (fix wrong code: for x, in ... in listcomp/genexp)
-       Python 2.6a0: 62141 (peephole optimizations)
 .
 */
-#define MAGIC (62141 | ((long)'\r'<<16) | ((long)'\n'<<24))
+#define MAGIC (62131 | ((long)'\r'<<16) | ((long)'\n'<<24))
 
 /* Magic word as global; note that _PyImport_Init() can change the
    value of this global to accommodate for alterations of how the
@@ -341,11 +340,13 @@ imp_release_lock(PyObject *self, PyObject *noargs)
 }
 
 static void
-imp_modules_reloading_clear(void)
+imp_modules_reloading_clear (void)
 {
 	PyInterpreterState *interp = PyThreadState_Get()->interp;
-	if (interp->modules_reloading != NULL)
-		PyDict_Clear(interp->modules_reloading);
+	if (interp->modules_reloading == NULL)
+		return;
+	PyDict_Clear(interp->modules_reloading);
+	return;
 }
 
 /* Helper for sys */
@@ -1039,7 +1040,7 @@ is_builtin(char *name)
 
 /* Return an importer object for a sys.path/pkg.__path__ item 'p',
    possibly by fetching it from the path_importer_cache dict. If it
-   wasn't yet cached, traverse path_hooks until a hook is found
+   wasn't yet cached, traverse path_hooks until it a hook is found
    that can handle the path item. Return None if no hook could;
    this tells our caller it should fall back to the builtin
    import mechanism. Cache the result in path_importer_cache.
@@ -1811,7 +1812,7 @@ load_module(char *name, FILE *fp, char *buf, int type, PyObject *loader)
 
 
 /* Initialize a built-in module.
-   Return 1 for success, 0 if the module is not found, and -1 with
+   Return 1 for succes, 0 if the module is not found, and -1 with
    an exception set if the initialization failed. */
 
 static int
@@ -2440,15 +2441,12 @@ PyImport_ReloadModule(PyObject *m)
 			     name);
 		return NULL;
 	}
-	existing_m = PyDict_GetItemString(modules_reloading, name);
-	if (existing_m != NULL) {
-		/* Due to a recursive reload, this module is already
-		   being reloaded. */
+	if ((existing_m = PyDict_GetItemString(modules_reloading, name)) != NULL) {
+		/* Due to a recursive reload, this module is already being reloaded. */
 		Py_INCREF(existing_m);
 		return existing_m;
- 	}
- 	if (PyDict_SetItemString(modules_reloading, name, m) < 0)
-		return NULL;
+	}
+ 	PyDict_SetItemString(modules_reloading, name, m);
 
 	subname = strrchr(name, '.');
 	if (subname == NULL)
@@ -2459,14 +2457,14 @@ PyImport_ReloadModule(PyObject *m)
 		if (parentname == NULL) {
 			imp_modules_reloading_clear();
 			return NULL;
-        	}
+		}
 		parent = PyDict_GetItem(modules, parentname);
 		if (parent == NULL) {
 			PyErr_Format(PyExc_ImportError,
 			    "reload(): parent %.200s not in sys.modules",
 			    PyString_AS_STRING(parentname));
 			Py_DECREF(parentname);
-            imp_modules_reloading_clear();
+			imp_modules_reloading_clear();
 			return NULL;
 		}
 		Py_DECREF(parentname);
@@ -2568,7 +2566,7 @@ PyImport_Import(PyObject *module_name)
 	if (import == NULL)
 		goto err;
 
-	/* Call the __import__ function with the proper argument list */
+	/* Call the _import__ function with the proper argument list */
 	r = PyObject_CallFunctionObjArgs(import, module_name, globals,
 					 globals, silly_list, NULL);
 

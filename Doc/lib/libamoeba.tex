@@ -89,24 +89,25 @@ aa:1c:95:52:6a:fa/14(ff)/8e:ba:5b:8:11:1a
 %
 The following methods are defined for capability objects.
 
-\begin{methoddesc}[capability]{dir_list}{}
+\setindexsubitem{(capability method)}
+\begin{funcdesc}{dir_list}{}
 Returns a list of the names of the entries in an Amoeba directory.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[capability]{b_read}{offset, maxsize}
+\begin{funcdesc}{b_read}{offset, maxsize}
 Reads (at most)
 \var{maxsize}
 bytes from a bullet file at offset
 \var{offset.}
 The data is returned as a string.
 EOF is reported as an empty string.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[capability]{b_size}{}
+\begin{funcdesc}{b_size}{}
 Returns the size of a bullet file.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[capability]{dir_append}{}
+\begin{funcdesc}{dir_append}{}
 \funcline{dir_delete}{}
 \funcline{dir_lookup}{}
 \funcline{dir_replace}{}
@@ -115,17 +116,17 @@ Like the corresponding
 functions, but with a path relative to the capability.
 (For paths beginning with a slash the capability is ignored, since this
 is the defined semantics for Amoeba.)
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[capability]{std_info}{}
+\begin{funcdesc}{std_info}{}
 Returns the standard info string of the object.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[capability]{tod_gettime}{}
+\begin{funcdesc}{tod_gettime}{}
 Returns the time (in seconds since the Epoch, in UCT, as for \POSIX) from
 a time server.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[capability]{tod_settime}{t}
+\begin{funcdesc}{tod_settime}{t}
 Sets the time kept by a time server.
-\end{methoddesc}
+\end{funcdesc}

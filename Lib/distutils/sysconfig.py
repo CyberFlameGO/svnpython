@@ -513,6 +513,7 @@ def get_config_vars(*args):
                         # a number of derived variables. These need to be
                         # patched up as well.
                         'CFLAGS', 'PY_CFLAGS', 'BLDSHARED'):
+
                     flags = _config_vars[key]
                     flags = re.sub('-arch\s+\w+\s', ' ', flags)
                     flags = re.sub('-isysroot [^ \t]*', ' ', flags)

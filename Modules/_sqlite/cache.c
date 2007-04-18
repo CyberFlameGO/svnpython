@@ -25,11 +25,11 @@
 #include <limits.h>
 
 /* only used internally */
-pysqlite_Node* pysqlite_new_node(PyObject* key, PyObject* data)
+Node* new_node(PyObject* key, PyObject* data)
 {
-    pysqlite_Node* node;
+    Node* node;
 
-    node = (pysqlite_Node*) (pysqlite_NodeType.tp_alloc(&pysqlite_NodeType, 0));
+    node = (Node*) (NodeType.tp_alloc(&NodeType, 0));
     if (!node) {
         return NULL;
     }
@@ -46,7 +46,7 @@ pysqlite_Node* pysqlite_new_node(PyObject* key, PyObject* data)
     return node;
 }
 
-void pysqlite_node_dealloc(pysqlite_Node* self)
+void node_dealloc(Node* self)
 {
     Py_DECREF(self->key);
     Py_DECREF(self->data);
@@ -54,7 +54,7 @@ void pysqlite_node_dealloc(pysqlite_Node* self)
     self->ob_type->tp_free((PyObject*)self);
 }
 
-int pysqlite_cache_init(pysqlite_Cache* self, PyObject* args, PyObject* kwargs)
+int cache_init(Cache* self, PyObject* args, PyObject* kwargs)
 {
     PyObject* factory;
     int size = 10;
@@ -86,10 +86,10 @@ int pysqlite_cache_init(pysqlite_Cache* self, PyObject* args, PyObject* kwargs)
     return 0;
 }
 
-void pysqlite_cache_dealloc(pysqlite_Cache* self)
+void cache_dealloc(Cache* self)
 {
-    pysqlite_Node* node;
-    pysqlite_Node* delete_node;
+    Node* node;
+    Node* delete_node;
 
     if (!self->factory) {
         /* constructor failed, just get out of here */
@@ -112,14 +112,14 @@ void pysqlite_cache_dealloc(pysqlite_Cache* self)
     self->ob_type->tp_free((PyObject*)self);
 }
 
-PyObject* pysqlite_cache_get(pysqlite_Cache* self, PyObject* args)
+PyObject* cache_get(Cache* self, PyObject* args)
 {
     PyObject* key = args;
-    pysqlite_Node* node;
-    pysqlite_Node* ptr;
+    Node* node;
+    Node* ptr;
     PyObject* data;
 
-    node = (pysqlite_Node*)PyDict_GetItem(self->mapping, key);
+    node = (Node*)PyDict_GetItem(self->mapping, key);
     if (node) {
         /* an entry for this key already exists in the cache */
 
@@ -186,7 +186,7 @@ PyObject* pysqlite_cache_get(pysqlite_Cache* self, PyObject* args)
             return NULL;
         }
 
-        node = pysqlite_new_node(key, data);
+        node = new_node(key, data);
         if (!node) {
             return NULL;
         }
@@ -211,9 +211,9 @@ PyObject* pysqlite_cache_get(pysqlite_Cache* self, PyObject* args)
     return node->data;
 }
 
-PyObject* pysqlite_cache_display(pysqlite_Cache* self, PyObject* args)
+PyObject* cache_display(Cache* self, PyObject* args)
 {
-    pysqlite_Node* ptr;
+    Node* ptr;
     PyObject* prevkey;
     PyObject* nextkey;
     PyObject* fmt_args;
@@ -265,20 +265,20 @@ PyObject* pysqlite_cache_display(pysqlite_Cache* self, PyObject* args)
 }
 
 static PyMethodDef cache_methods[] = {
-    {"get", (PyCFunction)pysqlite_cache_get, METH_O,
+    {"get", (PyCFunction)cache_get, METH_O,
         PyDoc_STR("Gets an entry from the cache or calls the factory function to produce one.")},
-    {"display", (PyCFunction)pysqlite_cache_display, METH_NOARGS,
+    {"display", (PyCFunction)cache_display, METH_NOARGS,
         PyDoc_STR("For debugging only.")},
     {NULL, NULL}
 };
 
-PyTypeObject pysqlite_NodeType = {
+PyTypeObject NodeType = {
         PyObject_HEAD_INIT(NULL)
         0,                                              /* ob_size */
         MODULE_NAME "Node",                             /* tp_name */
-        sizeof(pysqlite_Node),                          /* tp_basicsize */
+        sizeof(Node),                                   /* tp_basicsize */
         0,                                              /* tp_itemsize */
-        (destructor)pysqlite_node_dealloc,              /* tp_dealloc */
+        (destructor)node_dealloc,                       /* tp_dealloc */
         0,                                              /* tp_print */
         0,                                              /* tp_getattr */
         0,                                              /* tp_setattr */
@@ -315,13 +315,13 @@ PyTypeObject pysqlite_NodeType = {
         0                                               /* tp_free */
 };
 
-PyTypeObject pysqlite_CacheType = {
+PyTypeObject CacheType = {
         PyObject_HEAD_INIT(NULL)
         0,                                              /* ob_size */
         MODULE_NAME ".Cache",                           /* tp_name */
-        sizeof(pysqlite_Cache),                         /* tp_basicsize */
+        sizeof(Cache),                                  /* tp_basicsize */
         0,                                              /* tp_itemsize */
-        (destructor)pysqlite_cache_dealloc,             /* tp_dealloc */
+        (destructor)cache_dealloc,                      /* tp_dealloc */
         0,                                              /* tp_print */
         0,                                              /* tp_getattr */
         0,                                              /* tp_setattr */
@@ -352,24 +352,24 @@ PyTypeObject pysqlite_CacheType = {
         0,                                              /* tp_descr_get */
         0,                                              /* tp_descr_set */
         0,                                              /* tp_dictoffset */
-        (initproc)pysqlite_cache_init,                  /* tp_init */
+        (initproc)cache_init,                           /* tp_init */
         0,                                              /* tp_alloc */
         0,                                              /* tp_new */
         0                                               /* tp_free */
 };
 
-extern int pysqlite_cache_setup_types(void)
+extern int cache_setup_types(void)
 {
     int rc;
 
-    pysqlite_NodeType.tp_new = PyType_GenericNew;
-    pysqlite_CacheType.tp_new = PyType_GenericNew;
+    NodeType.tp_new = PyType_GenericNew;
+    CacheType.tp_new = PyType_GenericNew;
 
-    rc = PyType_Ready(&pysqlite_NodeType);
+    rc = PyType_Ready(&NodeType);
     if (rc < 0) {
         return rc;
     }
 
-    rc = PyType_Ready(&pysqlite_CacheType);
+    rc = PyType_Ready(&CacheType);
     return rc;
 }

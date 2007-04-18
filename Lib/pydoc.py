@@ -1448,9 +1448,6 @@ def locate(path, forceload=0):
 text = TextDoc()
 html = HTMLDoc()
 
-class _OldStyleClass: pass
-_OLD_INSTANCE_TYPE = type(_OldStyleClass())
-
 def resolve(thing, forceload=0):
     """Given an object or a path to an object, get the object and its name."""
     if isinstance(thing, str):
@@ -1461,35 +1458,27 @@ def resolve(thing, forceload=0):
     else:
         return thing, getattr(thing, '__name__', None)
 
-def render_doc(thing, title='Python Library Documentation: %s', forceload=0):
-    """Render text documentation, given an object or a path to an object."""
-    object, name = resolve(thing, forceload)
-    desc = describe(object)
-    module = inspect.getmodule(object)
-    if name and '.' in name:
-        desc += ' in ' + name[:name.rfind('.')]
-    elif module and module is not object:
-        desc += ' in module ' + module.__name__
-    if type(object) is _OLD_INSTANCE_TYPE:
-        # If the passed object is an instance of an old-style class,
-        # document its available methods instead of its value.
-        object = object.__class__
-    elif not (inspect.ismodule(object) or
-              inspect.isclass(object) or
-              inspect.isroutine(object) or
-              inspect.isgetsetdescriptor(object) or
-              inspect.ismemberdescriptor(object) or
-              isinstance(object, property)):
-        # If the passed object is a piece of data or an instance,
-        # document its available methods instead of its value.
-        object = type(object)
-        desc += ' object'
-    return title % desc + '\n\n' + text.document(object, name)
-
 def doc(thing, title='Python Library Documentation: %s', forceload=0):
     """Display text documentation, given an object or a path to an object."""
     try:
-        pager(render_doc(thing, title, forceload))
+        object, name = resolve(thing, forceload)
+        desc = describe(object)
+        module = inspect.getmodule(object)
+        if name and '.' in name:
+            desc += ' in ' + name[:name.rfind('.')]
+        elif module and module is not object:
+            desc += ' in module ' + module.__name__
+        if not (inspect.ismodule(object) or
+                inspect.isclass(object) or
+                inspect.isroutine(object) or
+                inspect.isgetsetdescriptor(object) or
+                inspect.ismemberdescriptor(object) or
+                isinstance(object, property)):
+            # If the passed object is a piece of data or an instance,
+            # document its available methods instead of its value.
+            object = type(object)
+            desc += ' object'
+        pager(title % desc + '\n\n' + text.document(object, name))
     except (ImportError, ErrorDuringImport), value:
         print value
 
@@ -1634,21 +1623,16 @@ class Helper:
         self.docdir = None
         execdir = os.path.dirname(sys.executable)
         homedir = os.environ.get('PYTHONHOME')
-        join = os.path.join
         for dir in [os.environ.get('PYTHONDOCS'),
                     homedir and os.path.join(homedir, 'doc'),
-                    join(execdir, 'doc'), # for Windows
-                    join(sys.prefix, 'doc/python-docs-' + split(sys.version)[0]),
-                    join(sys.prefix, 'doc/python-' + split(sys.version)[0]),
-                    join(sys.prefix, 'doc/python-docs-' + sys.version[:3]),
-                    join(sys.prefix, 'doc/python-' + sys.version[:3]),
-                    join(sys.prefix, 'Resources/English.lproj/Documentation')]:
-            if dir and os.path.isdir(join(dir, 'lib')):
+                    os.path.join(execdir, 'doc'),
+                    '/usr/doc/python-docs-' + split(sys.version)[0],
+                    '/usr/doc/python-' + split(sys.version)[0],
+                    '/usr/doc/python-docs-' + sys.version[:3],
+                    '/usr/doc/python-' + sys.version[:3],
+                    os.path.join(sys.prefix, 'Resources/English.lproj/Documentation')]:
+            if dir and os.path.isdir(os.path.join(dir, 'lib')):
                 self.docdir = dir
-                break
-            if dir and os.path.isdir(join(dir, 'html', 'lib')):
-                self.docdir = join(dir, 'html')
-                break
 
     def __repr__(self):
         if inspect.stack()[1][3] == '?':

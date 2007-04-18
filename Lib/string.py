@@ -487,7 +487,7 @@ def translate(s, table, deletions=""):
     deletions argument is not allowed for Unicode strings.
 
     """
-    if deletions or table is None:
+    if deletions:
         return s.translate(table, deletions)
     else:
         # Add s[:0] so that if s is Unicode and table is an 8-bit string,

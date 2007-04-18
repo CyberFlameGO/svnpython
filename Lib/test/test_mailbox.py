@@ -4,7 +4,7 @@ import time
 import stat
 import socket
 import email
-import email.message
+import email.Message
 import rfc822
 import re
 import StringIO
@@ -22,7 +22,7 @@ class TestBase(unittest.TestCase):
 
     def _check_sample(self, msg):
         # Inspect a mailbox.Message representation of the sample message
-        self.assert_(isinstance(msg, email.message.Message))
+        self.assert_(isinstance(msg, email.Message.Message))
         self.assert_(isinstance(msg, mailbox.Message))
         for key, value in _sample_headers.iteritems():
             self.assert_(value in msg.get_all(key))
@@ -30,7 +30,7 @@ class TestBase(unittest.TestCase):
         self.assert_(len(msg.get_payload()) == len(_sample_payloads))
         for i, payload in enumerate(_sample_payloads):
             part = msg.get_payload(i)
-            self.assert_(isinstance(part, email.message.Message))
+            self.assert_(isinstance(part, email.Message.Message))
             self.assert_(not isinstance(part, mailbox.Message))
             self.assert_(part.get_payload() == payload)
 
@@ -54,7 +54,6 @@ class TestMailbox(TestBase):
 
     def setUp(self):
         self._path = test_support.TESTFN
-        self._delete_recursively(self._path)
         self._box = self._factory(self._path)
 
     def tearDown(self):
@@ -682,11 +681,11 @@ class TestMaildir(TestMailbox):
         box = self._factory(self._path, factory=dummy_factory)
         folder = box.add_folder('folder1')
         self.assert_(folder._factory is dummy_factory)
-
+        
         folder1_alias = box.get_folder('folder1')
         self.assert_(folder1_alias._factory is dummy_factory)
 
-
+        
 
 class _TestMboxMMDF(TestMailbox):
 
@@ -694,7 +693,7 @@ class _TestMboxMMDF(TestMailbox):
         self._box.close()
         self._delete_recursively(self._path)
         for lock_remnant in glob.glob(self._path + '.*'):
-            test_support.unlink(lock_remnant)
+            os.remove(lock_remnant)
 
     def test_add_from_string(self):
         # Add a string starting with 'From ' to the mailbox
@@ -768,15 +767,15 @@ class _TestMboxMMDF(TestMailbox):
         key1 = self._box.add(msg)
         self._box.flush()
         self._box.close()
-
+        
         self._box = self._factory(self._path)
         self._box.lock()
         key2 = self._box.add(msg)
         self._box.flush()
         self.assert_(self._box._locked)
         self._box.close()
-
-
+        
+        
 
 class TestMbox(_TestMboxMMDF):
 
@@ -806,7 +805,7 @@ class TestMH(TestMailbox):
         def dummy_factory (s):
             return None
         self._box = self._factory(self._path, dummy_factory)
-
+        
         new_folder = self._box.add_folder('foo.bar')
         folder0 = self._box.get_folder('foo.bar')
         folder0.add(self._template % 'bar')
@@ -902,7 +901,7 @@ class TestMH(TestMailbox):
         self.assert_(self._box.get_sequences() ==
                      {'foo':[1, 2, 3, 4, 5],
                       'unseen':[1], 'bar':[3], 'replied':[3]})
-
+        
     def _get_lock_path(self):
         return os.path.join(self._path, '.mh_sequences.lock')
 
@@ -915,7 +914,7 @@ class TestBabyl(TestMailbox):
         self._box.close()
         self._delete_recursively(self._path)
         for lock_remnant in glob.glob(self._path + '.*'):
-            test_support.unlink(lock_remnant)
+            os.remove(lock_remnant)
 
     def test_labels(self):
         # Get labels from the mailbox
@@ -947,7 +946,7 @@ class TestMessage(TestBase):
         self._delete_recursively(self._path)
 
     def test_initialize_with_eMM(self):
-        # Initialize based on email.message.Message instance
+        # Initialize based on email.Message.Message instance
         eMM = email.message_from_string(_sample_message)
         msg = self._factory(eMM)
         self._post_initialize_hook(msg)
@@ -973,7 +972,7 @@ class TestMessage(TestBase):
         # Initialize without arguments
         msg = self._factory()
         self._post_initialize_hook(msg)
-        self.assert_(isinstance(msg, email.message.Message))
+        self.assert_(isinstance(msg, email.Message.Message))
         self.assert_(isinstance(msg, mailbox.Message))
         self.assert_(isinstance(msg, self._factory))
         self.assert_(msg.keys() == [])
@@ -1000,7 +999,7 @@ class TestMessage(TestBase):
                        mailbox.BabylMessage, mailbox.MMDFMessage):
             other_msg = class_()
             msg._explain_to(other_msg)
-        other_msg = email.message.Message()
+        other_msg = email.Message.Message()
         self.assertRaises(TypeError, lambda: msg._explain_to(other_msg))
 
     def _post_initialize_hook(self, msg):
@@ -1740,11 +1739,11 @@ class MaildirTestCase(unittest.TestCase):
 
     def test_unix_mbox(self):
         ### should be better!
-        import email.parser
+        import email.Parser
         fname = self.createMessage("cur", True)
         n = 0
         for msg in mailbox.PortableUnixMailbox(open(fname),
-                                               email.parser.Parser().parse):
+                                               email.Parser.Parser().parse):
             n += 1
             self.assertEqual(msg["subject"], "Simple Test")
             self.assertEqual(len(str(msg)), len(FROM_)+len(DUMMY_MESSAGE))

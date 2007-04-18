@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from test import test_support
 import unittest
 import codecs
@@ -428,11 +429,6 @@ class UTF8SigTest(ReadTest):
     def test_bug1601501(self):
         # SF bug #1601501: check that the codec works with a buffer
         unicode("\xef\xbb\xbf", "utf-8-sig")
-
-    def test_bom(self):
-        d = codecs.getincrementaldecoder("utf-8-sig")()
-        s = u"spam"
-        self.assertEqual(d.decode(s.encode("utf-8-sig")), s)
 
 class EscapeDecodeTest(unittest.TestCase):
     def test_empty(self):
@@ -920,7 +916,7 @@ class StreamReaderTest(unittest.TestCase):
         self.assertEquals(f.readlines(), [u'\ud55c\n', u'\uae00'])
 
 class EncodedFileTest(unittest.TestCase):
-
+    
     def test_basic(self):
         f = StringIO.StringIO('\xed\x95\x9c\n\xea\xb8\x80')
         ef = codecs.EncodedFile(f, 'utf-16-le', 'utf-8')
@@ -1073,13 +1069,6 @@ broken_unicode_with_streams = [
 ]
 broken_incremental_coders = broken_unicode_with_streams[:]
 
-# The following encodings only support "strict" mode
-only_strict_mode = [
-    "idna",
-    "zlib_codec",
-    "bz2_codec",
-]
-
 try:
     import bz2
 except ImportError:
@@ -1168,24 +1157,6 @@ class BasicUnicodeTest(unittest.TestCase):
                     # check iterencode()/iterdecode() with empty string
                     result = u"".join(codecs.iterdecode(codecs.iterencode(u"", encoding), encoding))
                     self.assertEqual(result, u"")
-
-                if encoding not in only_strict_mode:
-                    # check incremental decoder/encoder with errors argument
-                    try:
-                        encoder = codecs.getincrementalencoder(encoding)("ignore")
-                        cencoder = _testcapi.codec_incrementalencoder(encoding, "ignore")
-                    except LookupError: # no IncrementalEncoder
-                        pass
-                    else:
-                        encodedresult = "".join(encoder.encode(c) for c in s)
-                        decoder = codecs.getincrementaldecoder(encoding)("ignore")
-                        decodedresult = u"".join(decoder.decode(c) for c in encodedresult)
-                        self.assertEqual(decodedresult, s, "%r != %r (encoding=%r)" % (decodedresult, s, encoding))
-
-                        encodedresult = "".join(cencoder.encode(c) for c in s)
-                        cdecoder = _testcapi.codec_incrementaldecoder(encoding, "ignore")
-                        decodedresult = u"".join(cdecoder.decode(c) for c in encodedresult)
-                        self.assertEqual(decodedresult, s, "%r != %r (encoding=%r)" % (decodedresult, s, encoding))
 
     def test_seek(self):
         # all codecs should be able to encode these

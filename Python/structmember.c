@@ -179,10 +179,6 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
-		/* XXX: For compatibility, only warn about truncations
-		   for now. */
-		if ((long_val > CHAR_MAX) || (long_val < CHAR_MIN))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to char");
 		*(char*)addr = (char)long_val;
 		break;
 		}
@@ -191,8 +187,6 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
-		if ((long_val > UCHAR_MAX) || (long_val < 0))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to unsigned char");
 		*(unsigned char*)addr = (unsigned char)long_val;
 		break;
 		}
@@ -201,8 +195,6 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
-		if ((long_val > SHRT_MAX) || (long_val < SHRT_MIN))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to short");
 		*(short*)addr = (short)long_val;
 		break;
 		}
@@ -211,8 +203,6 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
-		if ((long_val > USHRT_MAX) || (long_val < 0))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to unsigned short");
 		*(unsigned short*)addr = (unsigned short)long_val;
 		break;
 		}
@@ -221,8 +211,6 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 		long_val = PyInt_AsLong(v);
 		if ((long_val == -1) && PyErr_Occurred())
 			return -1;
-		if ((long_val > INT_MAX) || (long_val < INT_MIN))
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to int");
 		*(int *)addr = (int)long_val;
 		break;
 		}
@@ -236,10 +224,7 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 			ulong_val = PyLong_AsLong(v);
 			if ((ulong_val == (unsigned int)-1) && PyErr_Occurred())
 				return -1;
-			PyErr_Warn(PyExc_RuntimeWarning, "Writing negative value into unsigned field");
 		}
-		if (ulong_val > UINT_MAX)
-			PyErr_Warn(PyExc_RuntimeWarning, "Truncation of value to unsigned int");
 		*(unsigned int *)addr = (unsigned int)ulong_val;
 		break;
 		}
@@ -259,7 +244,6 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 			*(unsigned long*)addr = PyLong_AsLong(v);
 			if ((*(unsigned long*)addr == (unsigned int)-1) && PyErr_Occurred())
 				return -1;
-			PyErr_Warn(PyExc_RuntimeWarning, "Writing negative value into unsigned field");
 		}
 		break;
 		}

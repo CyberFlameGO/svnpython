@@ -1,6 +1,6 @@
 # Test enhancements related to descriptors and new-style classes
 
-from test.test_support import verify, vereq, verbose, TestFailed, TESTFN, get_original_stdout, run_doctest
+from test.test_support import verify, vereq, verbose, TestFailed, TESTFN, get_original_stdout
 from copy import deepcopy
 import warnings
 
@@ -820,22 +820,6 @@ def metaclass():
     except TypeError: pass
     else: raise TestFailed, "calling object w/o call method should raise TypeError"
 
-    # Testing code to find most derived baseclass
-    class A(type):
-        def __new__(*args, **kwargs):
-            return type.__new__(*args, **kwargs)
-
-    class B(object):
-        pass
-
-    class C(object):
-        __metaclass__ = A
-
-    # The most derived metaclass of D is A rather than type.
-    class D(B, C):
-        pass
-
-
 def pymods():
     if verbose: print "Testing Python subclass of module..."
     log = []
@@ -1225,29 +1209,13 @@ def slots():
         raise TestFailed, "[''] slots not caught"
     class C(object):
         __slots__ = ["a", "a_b", "_a", "A0123456789Z"]
-    # XXX(nnorwitz): was there supposed to be something tested
-    # from the class above?
-
-    # Test a single string is not expanded as a sequence.
-    class C(object):
-        __slots__ = "abc"
-    c = C()
-    c.abc = 5
-    vereq(c.abc, 5)
 
     # Test unicode slot names
     try:
-        unicode
+        unichr
     except NameError:
         pass
     else:
-        # Test a single unicode string is not expanded as a sequence.
-        class C(object):
-            __slots__ = unicode("abc")
-        c = C()
-        c.abc = 5
-        vereq(c.abc, 5)
-
         # _unicode_to_string used to modify slots in certain circumstances 
         slots = (unicode("foo"), unicode("bar"))
         class C(object):
@@ -1466,89 +1434,49 @@ def dynamics():
     verify(someclass != object)
 
 def errors():
-    """Test that type can't be placed after an instance of type in bases.
+    if verbose: print "Testing errors..."
 
-    >>> class C(list, dict):
-    ...     pass
-    Traceback (most recent call last):
-    TypeError: Error when calling the metaclass bases
-        multiple bases have instance lay-out conflict
+    try:
+        class C(list, dict):
+            pass
+    except TypeError:
+        pass
+    else:
+        verify(0, "inheritance from both list and dict should be illegal")
 
-    >>> class C(object, None):
-    ...     pass
-    Traceback (most recent call last):
-    TypeError: Error when calling the metaclass bases
-        bases must be types
+    try:
+        class C(object, None):
+            pass
+    except TypeError:
+        pass
+    else:
+        verify(0, "inheritance from non-type should be illegal")
+    class Classic:
+        pass
 
-    >>> class C(type(len)):
-    ...     pass
-    Traceback (most recent call last):
-    TypeError: Error when calling the metaclass bases
-        type 'builtin_function_or_method' is not an acceptable base type
+    try:
+        class C(type(len)):
+            pass
+    except TypeError:
+        pass
+    else:
+        verify(0, "inheritance from CFunction should be illegal")
 
-    >>> class Classic:
-    ...     def __init__(*args): pass
-    >>> class C(object):
-    ...     __metaclass__ = Classic
+    try:
+        class C(object):
+            __slots__ = 1
+    except TypeError:
+        pass
+    else:
+        verify(0, "__slots__ = 1 should be illegal")
 
-    >>> class C(object):
-    ...     __slots__ = 1
-    Traceback (most recent call last):
-    TypeError: Error when calling the metaclass bases
-        'int' object is not iterable
-
-    >>> class C(object):
-    ...     __slots__ = [1]
-    Traceback (most recent call last):
-    TypeError: Error when calling the metaclass bases
-        __slots__ items must be strings, not 'int'
-
-    >>> class A(object):
-    ...     pass
-
-    >>> class B(A, type):
-    ...     pass
-    Traceback (most recent call last):
-    TypeError: Error when calling the metaclass bases
-        metaclass conflict: type must occur in bases before other non-classic base classes
-
-    Create two different metaclasses in order to setup an error where
-    there is no inheritance relationship between the metaclass of a class
-    and the metaclass of its bases.
-
-    >>> class M1(type):
-    ...     pass
-    >>> class M2(type):
-    ...     pass
-    >>> class A1(object):
-    ...     __metaclass__ = M1
-    >>> class A2(object):
-    ...     __metaclass__ = M2
-    >>> class B(A1, A2):
-    ...     pass
-    Traceback (most recent call last):
-    TypeError: Error when calling the metaclass bases
-        metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
-    >>> class B(A1):
-    ...     pass
-
-    Also check that assignment to bases is safe.
-
-    >>> B.__bases__ = A1, A2
-    Traceback (most recent call last):
-    TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
-    >>> B.__bases__ = A2,
-    Traceback (most recent call last):
-    TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
-
-    >>> class M3(M1):
-    ...     pass
-    >>> class C(object):
-    ...     __metaclass__ = M3
-    >>> B.__bases__ = C,
-    Traceback (most recent call last):
-    TypeError: assignment to __bases__ may not change metatype
-    """
+    try:
+        class C(object):
+            __slots__ = [1]
+    except TypeError:
+        pass
+    else:
+        verify(0, "__slots__ = [1] should be illegal")
 
 def classmethods():
     if verbose: print "Testing class methods..."
@@ -2321,6 +2249,7 @@ def inherits():
         __slots__ = ['prec']
         def __init__(self, value=0.0, prec=12):
             self.prec = int(prec)
+            float.__init__(value)
         def __repr__(self):
             return "%.*g" % (self.prec, self)
     vereq(repr(precfloat(1.1)), "1.1")
@@ -2868,51 +2797,6 @@ def setclass():
     cant(o, type(1))
     cant(o, type(None))
     del o
-    class G(object):
-        __slots__ = ["a", "b"]
-    class H(object):
-        __slots__ = ["b", "a"]
-    try:
-        unicode
-    except NameError:
-        class I(object):
-            __slots__ = ["a", "b"]
-    else:
-        class I(object):
-            __slots__ = [unicode("a"), unicode("b")]
-    class J(object):
-        __slots__ = ["c", "b"]
-    class K(object):
-        __slots__ = ["a", "b", "d"]
-    class L(H):
-        __slots__ = ["e"]
-    class M(I):
-        __slots__ = ["e"]
-    class N(J):
-        __slots__ = ["__weakref__"]
-    class P(J):
-        __slots__ = ["__dict__"]
-    class Q(J):
-        pass
-    class R(J):
-        __slots__ = ["__dict__", "__weakref__"]
-
-    for cls, cls2 in ((G, H), (G, I), (I, H), (Q, R), (R, Q)):
-        x = cls()
-        x.a = 1
-        x.__class__ = cls2
-        verify(x.__class__ is cls2,
-               "assigning %r as __class__ for %r silently failed" % (cls2, x))
-        vereq(x.a, 1)
-        x.__class__ = cls
-        verify(x.__class__ is cls,
-               "assigning %r as __class__ for %r silently failed" % (cls, x))
-        vereq(x.a, 1)
-    for cls in G, J, K, L, M, N, P, R, list, Int:
-        for cls2 in G, J, K, L, M, N, P, R, list, Int:
-            if cls is cls2:
-                continue
-            cant(cls(), cls2)
 
 def setdict():
     if verbose: print "Testing __dict__ assignment..."
@@ -3762,13 +3646,6 @@ def test_mutable_bases():
         raise TestFailed, "shouldn't be able to assign to list.__bases__"
 
     try:
-        D.__bases__ = (C2, list)
-    except TypeError:
-        pass
-    else:
-        assert 0, "best_base calculation found wanting"
-
-    try:
         del D.__bases__
     except TypeError:
         pass
@@ -4331,6 +4208,7 @@ def test_main():
     slots()
     slotspecials()
     dynamics()
+    errors()
     classmethods()
     classmethods_in_c()
     staticmethods()
@@ -4398,9 +4276,6 @@ def test_main():
     methodwrapper()
     notimplemented()
     test_assign_slice()
-
-    from test import test_descr
-    run_doctest(test_descr, verbosity=True)
 
     if verbose: print "All OK"
 

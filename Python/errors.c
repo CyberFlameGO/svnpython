@@ -590,9 +590,12 @@ PyErr_WriteUnraisable(PyObject *obj)
 		PyFile_WriteString("Exception ", f);
 		if (t) {
 			PyObject* moduleName;
-			char* className;
-			assert(PyExceptionClass_Check(t));
-			className = PyExceptionClass_Name(t);
+			char* className = NULL;
+			if (PyExceptionClass_Check(t))
+				className = PyExceptionClass_Name(t);
+			else if (PyString_Check(t))
+				className = PyString_AS_STRING(t);
+
 			if (className != NULL) {
 				char *dot = strrchr(className, '.');
 				if (dot != NULL)
@@ -604,8 +607,7 @@ PyErr_WriteUnraisable(PyObject *obj)
 				PyFile_WriteString("<unknown>", f);
 			else {
 				char* modstr = PyString_AsString(moduleName);
-				if (modstr &&
-				    strcmp(modstr, "exceptions") != 0)
+				if (modstr)
 				{
 					PyFile_WriteString(modstr, f);
 					PyFile_WriteString(".", f);

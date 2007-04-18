@@ -55,39 +55,40 @@ Returns the current font search path.
 
 Font handle objects support the following operations:
 
-\begin{methoddesc}[font handle]{scalefont}{factor}
+\setindexsubitem{(font handle method)}
+\begin{funcdesc}{scalefont}{factor}
 Returns a handle for a scaled version of this font.
 Calls \code{fmscalefont(\var{fh}, \var{factor})}.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[font handle]{setfont}{}
+\begin{funcdesc}{setfont}{}
 Makes this font the current font.
 Note: the effect is undone silently when the font handle object is
 deleted.
 Calls \code{fmsetfont(\var{fh})}.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[font handle]{getfontname}{}
+\begin{funcdesc}{getfontname}{}
 Returns this font's name.
 Calls \code{fmgetfontname(\var{fh})}.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[font handle]{getcomment}{}
+\begin{funcdesc}{getcomment}{}
 Returns the comment string associated with this font.
 Raises an exception if there is none.
 Calls \code{fmgetcomment(\var{fh})}.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[font handle]{getfontinfo}{}
+\begin{funcdesc}{getfontinfo}{}
 Returns a tuple giving some pertinent data about this font.
 This is an interface to \code{fmgetfontinfo()}.
 The returned tuple contains the following numbers:
 \code{(}\var{printermatched}, \var{fixed_width}, \var{xorig},
 \var{yorig}, \var{xsize}, \var{ysize}, \var{height},
 \var{nglyphs}\code{)}.
-\end{methoddesc}
+\end{funcdesc}
 
-\begin{methoddesc}[font handle]{getstrwidth}{string}
+\begin{funcdesc}{getstrwidth}{string}
 Returns the width, in pixels, of \var{string} when drawn in this font.
 Calls \code{fmgetstrwidth(\var{fh}, \var{string})}.
-\end{methoddesc}
+\end{funcdesc}

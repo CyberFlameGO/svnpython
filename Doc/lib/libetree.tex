@@ -38,7 +38,10 @@ element that will be serialized as an XML comment.
 The comment string can be either an 8-bit ASCII string or a Unicode
 string.
 \var{text} is a string containing the comment string.
-Returns an element instance representing a comment.
+
+\begin{datadescni}{Returns:}
+An element instance, representing a comment.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{dump}{elem}
@@ -62,19 +65,28 @@ either 8-bit ASCII strings or Unicode strings.
 \var{tag} is the element name.
 \var{attrib} is an optional dictionary, containing element attributes.
 \var{extra} contains additional attributes, given as keyword arguments.
-Returns an element instance.
+
+\begin{datadescni}{Returns:}
+An element instance.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{fromstring}{text}
 Parses an XML section from a string constant.  Same as XML.
 \var{text} is a string containing XML data.
-Returns an Element instance.
+
+\begin{datadescni}{Returns:}
+An Element instance.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{iselement}{element}
 Checks if an object appears to be a valid element object.
 \var{element} is an element instance.
-Returns a true value if this is an element object.
+
+\begin{datadescni}{Returns:}
+A true value if this is an element object.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{iterparse}{source\optional{, events}}
@@ -83,7 +95,10 @@ what's going on to the user.
 \var{source} is a filename or file object containing XML data.
 \var{events} is a list of events to report back.  If omitted, only ``end''
 events are reported.
-Returns an iterator providing \code{(\var{event}, \var{elem})} pairs.
+
+\begin{datadescni}{Returns:}
+A (event, elem) iterator.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{parse}{source\optional{, parser}}
@@ -91,7 +106,10 @@ Parses an XML section into an element tree.
 \var{source} is a filename or file object containing XML data.
 \var{parser} is an optional parser instance.  If not given, the
 standard XMLTreeBuilder parser is used.
-Returns an ElementTree instance.
+
+\begin{datadescni}{Returns:}
+An ElementTree instance
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{ProcessingInstruction}{target\optional{, text}}
@@ -99,11 +117,13 @@ PI element factory.  This factory function creates a special element
 that will be serialized as an XML processing instruction.
 \var{target} is a string containing the PI target.
 \var{text} is a string containing the PI contents, if given.
-Returns an element instance, representing a processing instruction.
+
+\begin{datadescni}{Returns:}
+An element instance, representing a PI.
+\end{datadescni}
 \end{funcdesc}
 
-\begin{funcdesc}{SubElement}{parent, tag\optional{,
-                             attrib\optional{,  **extra}}}
+\begin{funcdesc}{SubElement}{parent, tag\optional{, attrib} \optional{, **extra}}
 Subelement factory.  This function creates an element instance, and
 appends it to an existing element.
 
@@ -113,7 +133,10 @@ either 8-bit ASCII strings or Unicode strings.
 \var{tag} is the subelement name.
 \var{attrib} is an optional dictionary, containing element attributes.
 \var{extra} contains additional attributes, given as keyword arguments.
-Returns an element instance.
+
+\begin{datadescni}{Returns:}
+An element instance.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{tostring}{element\optional{, encoding}}
@@ -121,160 +144,31 @@ Generates a string representation of an XML element, including all
 subelements.
 \var{element} is an Element instance.
 \var{encoding} is the output encoding (default is US-ASCII).
-Returns an encoded string containing the XML data.
+
+\begin{datadescni}{Returns:}
+An encoded string containing the XML data.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{XML}{text}
 Parses an XML section from a string constant.  This function can
 be used to embed ``XML literals'' in Python code.
 \var{text} is a string containing XML data.
-Returns an Element instance.
+
+\begin{datadescni}{Returns:}
+An Element instance.
+\end{datadescni}
 \end{funcdesc}
 
 \begin{funcdesc}{XMLID}{text}
 Parses an XML section from a string constant, and also returns
 a dictionary which maps from element id:s to elements.
 \var{text} is a string containing XML data.
-Returns a tuple containing an Element instance and a dictionary.
+
+\begin{datadescni}{Returns:}
+A tuple containing an Element instance and a dictionary.
+\end{datadescni}
 \end{funcdesc}
-
-
-\subsection{The Element Interface\label{elementtree-element-interface}}
-
-Element objects returned by Element or SubElement have the 
-following methods and attributes.
-
-\begin{memberdesc}[Element]{tag}
-A string identifying what kind of data this element represents
-(the element type, in other words).
-\end{memberdesc}
-
-\begin{memberdesc}[Element]{text}
-The \var{text} attribute can be used to hold additional data
-associated with the element.
-As the name implies this attribute is usually a string but may be any
-application-specific object.
-If the element is created from an XML file the attribute will contain
-any text found between the element tags.
-\end{memberdesc}
-
-\begin{memberdesc}[Element]{tail}
-The \var{tail} attribute can be used to hold additional data
-associated with the element.
-This attribute is usually a string but may be any application-specific object.
-If the element is created from an XML file the attribute will contain
-any text found after the element's end tag and before the next tag.
-\end{memberdesc}
-
-\begin{memberdesc}[Element]{attrib}
-A dictionary containing the element's attributes.
-Note that while the \var{attrib} value is always a real mutable Python
-dictionary, an ElementTree implementation may choose to use another
-internal representation, and create the dictionary only if someone
-asks for it. To take advantage of such implementations, use the
-dictionary methods below whenever possible.
-\end{memberdesc}
-
-The following dictionary-like methods work on the element attributes.
-
-\begin{methoddesc}[Element]{clear}{}
-Resets an element.  This function removes all subelements, clears
-all attributes, and sets the text and tail attributes to None.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{get}{key\optional{, default=None}}
-Gets the element attribute named \var{key}.
-
-Returns the attribute value, or \var{default} if the
-attribute was not found.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{items}{}
-Returns the element attributes as a sequence of (name, value) pairs.
-The attributes are returned in an arbitrary order.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{keys}{}
-Returns the elements attribute names as a list.
-The names are returned in an arbitrary order.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{set}{key, value}
-Set the attribute \var{key} on the element to \var{value}.  
-\end{methoddesc}
-
-The following methods work on the element's children (subelements).
-
-\begin{methoddesc}[Element]{append}{subelement}
-Adds the element \var{subelement} to the end of this elements internal list
-of subelements.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{find}{match}
-Finds the first subelement matching \var{match}. 
-\var{match} may be a tag name or path.
-Returns an element instance or \code{None}.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{findall}{match}
-Finds all subelements matching \var{match}. 
-\var{match} may be a tag name or path.
-Returns an iterable yielding all matching elements in document order.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{findtext}{condition\optional{, default=None}}
-Finds text for the first subelement matching \var{condition}. 
-\var{condition} may be a tag name or path.
-Returns the text content of the first matching element, or
-\var{default} if no element was found.  Note that if the
-matching element has no text content an empty string is returned.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{getchildren}{}
-Returns all subelements.  The elements are returned in document order.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{getiterator}{\optional{tag=None}}
-Creates a tree iterator with the current element as the root.  
-The iterator iterates over this element and all elements below it 
-that match the given tag. If tag
-is \code{None} or \code{'*'} then all elements are iterated over.
-Returns an iterable that provides element objects in document (depth first)
-order.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{insert}{index, element}
-Inserts a subelement at the given position in this element.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{makeelement}{tag, attrib}
-Creates a new element object of the same type as this element.
-Do not call this method, use the SubElement factory function instead.
-\end{methoddesc}
-
-\begin{methoddesc}[Element]{remove}{subelement}
-Removes \var{subelement} from the element.  
-Unlike the findXXX methods this method compares elements based on 
-the instance identity, not on tag value or contents.
-\end{methoddesc}
-
-Element objects also support the following sequence type methods for
-working with subelements: \method{__delitem__()},
-\method{__getitem__()}, \method{__setitem__()}, \method{__len__()}.
-
-Caution: Because Element objects do not define a
-\method{__nonzero__()} method, elements with no subelements will test
-as \code{False}.
-
-\begin{verbatim}
-element = root.find('foo')
-
-if not element: # careful!
-    print "element not found, or element has no subelements"
-
-if element is None:
-    print "element not found"
-\end{verbatim}
 
 
 \subsection{ElementTree Objects\label{elementtree-elementtree-objects}}
@@ -299,15 +193,21 @@ element.  Use with care.
 Finds the first toplevel element with given tag.
 Same as getroot().find(path).
 \var{path} is the element to look for.
-Returns the first matching element, or \code{None} if no element was found.
+
+\begin{datadescni}{Returns:}
+The first matching element, or None if no element was found.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{findall}{path}
 Finds all toplevel elements with the given tag.
 Same as getroot().findall(path).
 \var{path} is the element to look for.
-Returns a list or iterator containing all matching elements,
-in document order.
+
+\begin{datadescni}{Returns:}
+A list or iterator containing all matching elements,
+in section order.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{findtext}{path\optional{, default}}
@@ -315,20 +215,31 @@ Finds the element text for the first toplevel element with given
 tag.  Same as getroot().findtext(path).
 \var{path} is the toplevel element to look for.
 \var{default} is the value to return if the element was not found.
-Returns the text content of the first matching element, or the
+
+\begin{datadescni}{Returns:}
+The text content of the first matching element, or the
 default value no element was found.  Note that if the element
 has is found, but has no text content, this method returns an
 empty string.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{getiterator}{\optional{tag}}
-Creates and returns a tree iterator for the root element.  The iterator loops
+Creates a tree iterator for the root element.  The iterator loops
 over all elements in this tree, in section order.
 \var{tag} is the tag to look for (default is to return all elements)
+
+\begin{datadescni}{Returns:}
+An iterator.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{getroot}{}
-Returns the root element for this tree.
+Gets the root element for this tree.
+
+\begin{datadescni}{Returns:}
+An element instance.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{parse}{source\optional{, parser}}
@@ -336,7 +247,10 @@ Loads an external XML section into this element tree.
 \var{source} is a file name or file object.
 \var{parser} is an optional parser instance.  If not given, the
 standard XMLTreeBuilder parser is used.
-Returns the section root element.
+
+\begin{datadescni}{Returns:}
+The section root element.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{write}{file\optional{, encoding}}
@@ -356,7 +270,10 @@ in the form {\{}uri{\}}local, or, if the tag argument is given,
 the URI part of a QName.
 If \var{tag} is given, the first argument is interpreted as
 an URI, and this argument is interpreted as a local name.
-\class{QName} instances are opaque.
+
+\begin{datadescni}{Returns:}
+An opaque object, representing the QName.
+\end{datadescni}
 \end{classdesc}
 
 
@@ -374,7 +291,10 @@ given.
 \begin{methoddesc}{close}{}
 Flushes the parser buffers, and returns the toplevel documen
 element.
-Returns an Element instance.
+
+\begin{datadescni}{Returns:}
+An Element instance.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{data}{data}
@@ -386,14 +306,20 @@ containing ASCII text, or a Unicode string.
 \begin{methoddesc}{end}{tag}
 Closes the current element.
 \var{tag} is the element name.
-Returns the closed element.
+
+\begin{datadescni}{Returns:}
+The closed element.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{start}{tag, attrs}
 Opens a new element.
 \var{tag} is the element name.
 \var{attrs} is a dictionary containing element attributes.
-Returns the opened element.
+
+\begin{datadescni}{Returns:}
+The opened element.
+\end{datadescni}
 \end{methoddesc}
 
 
@@ -410,7 +336,10 @@ instance of the standard TreeBuilder class.
 
 \begin{methoddesc}{close}{}
 Finishes feeding data to the parser.
-Returns an element structure.
+
+\begin{datadescni}{Returns:}
+An element structure.
+\end{datadescni}
 \end{methoddesc}
 
 \begin{methoddesc}{doctype}{name, pubid, system}
@@ -422,5 +351,6 @@ Handles a doctype declaration.
 
 \begin{methoddesc}{feed}{data}
 Feeds data to the parser.
+
 \var{data} is encoded data.
 \end{methoddesc}

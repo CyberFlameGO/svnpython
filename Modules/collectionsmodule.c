@@ -1341,11 +1341,11 @@ PyDoc_STRVAR(module_doc,
 ");
 
 PyMODINIT_FUNC
-init_collections(void)
+initcollections(void)
 {
 	PyObject *m;
 
-	m = Py_InitModule3("_collections", NULL, module_doc);
+	m = Py_InitModule3("collections", NULL, module_doc);
 	if (m == NULL)
 		return;
 

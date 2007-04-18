@@ -57,7 +57,7 @@ microprotocols_add(PyTypeObject *type, PyObject *proto, PyObject *cast)
     PyObject* key;
     int rc;
 
-    if (proto == NULL) proto = (PyObject*)&pysqlite_PrepareProtocolType;
+    if (proto == NULL) proto = (PyObject*)&SQLitePrepareProtocolType;
 
     key = Py_BuildValue("(OO)", (PyObject*)type, proto);
     if (!key) {
@@ -78,7 +78,7 @@ microprotocols_adapt(PyObject *obj, PyObject *proto, PyObject *alt)
     PyObject *adapter, *key;
 
     /* we don't check for exact type conformance as specified in PEP 246
-       because the pysqlite_PrepareProtocolType type is abstract and there is no
+       because the SQLitePrepareProtocolType type is abstract and there is no
        way to get a quotable object to be its instance */
 
     /* look for an adapter in the registry */
@@ -125,17 +125,17 @@ microprotocols_adapt(PyObject *obj, PyObject *proto, PyObject *alt)
     }
 
     /* else set the right exception and return NULL */
-    PyErr_SetString(pysqlite_ProgrammingError, "can't adapt");
+    PyErr_SetString(ProgrammingError, "can't adapt");
     return NULL;
 }
 
 /** module-level functions **/
 
 PyObject *
-psyco_microprotocols_adapt(pysqlite_Cursor *self, PyObject *args)
+psyco_microprotocols_adapt(Cursor *self, PyObject *args)
 {
     PyObject *obj, *alt = NULL;
-    PyObject *proto = (PyObject*)&pysqlite_PrepareProtocolType;
+    PyObject *proto = (PyObject*)&SQLitePrepareProtocolType;
 
     if (!PyArg_ParseTuple(args, "O|OO", &obj, &proto, &alt)) return NULL;
     return microprotocols_adapt(obj, proto, alt);

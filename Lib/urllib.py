@@ -326,12 +326,11 @@ class URLopener:
         if data is not None:
             h.send(data)
         errcode, errmsg, headers = h.getreply()
-        fp = h.getfile()
         if errcode == -1:
-            if fp: fp.close()
             # something went wrong with the HTTP status line
             raise IOError, ('http protocol error', 0,
                             'got a bad status line', None)
+        fp = h.getfile()
         if errcode == 200:
             return addinfourl(fp, headers, "http:" + url)
         else:
@@ -418,12 +417,11 @@ class URLopener:
             if data is not None:
                 h.send(data)
             errcode, errmsg, headers = h.getreply()
-            fp = h.getfile()
             if errcode == -1:
-                if fp: fp.close()
                 # something went wrong with the HTTP status line
                 raise IOError, ('http protocol error', 0,
                                 'got a bad status line', None)
+            fp = h.getfile()
             if errcode == 200:
                 return addinfourl(fp, headers, "https:" + url)
             else:
@@ -462,7 +460,7 @@ class URLopener:
 
     def open_local_file(self, url):
         """Use local file."""
-        import mimetypes, mimetools, email.utils
+        import mimetypes, mimetools, email.Utils
         try:
             from cStringIO import StringIO
         except ImportError:
@@ -474,7 +472,7 @@ class URLopener:
         except OSError, e:
             raise IOError(e.errno, e.strerror, e.filename)
         size = stats.st_size
-        modified = email.utils.formatdate(stats.st_mtime, usegmt=True)
+        modified = email.Utils.formatdate(stats.st_mtime, usegmt=True)
         mtype = mimetypes.guess_type(url)[0]
         headers = mimetools.Message(StringIO(
             'Content-Type: %s\nContent-Length: %d\nLast-modified: %s\n' %

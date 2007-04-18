@@ -63,8 +63,6 @@ class TextWrapper:
       break_long_words (default: true)
         Break words longer than 'width'.  If false, those words will not
         be broken, and some lines might be longer than 'width'.
-      drop_whitespace (default: true)
-        Drop leading and trailing whitespace from lines.
     """
 
     whitespace_trans = string.maketrans(_whitespace, ' ' * len(_whitespace))
@@ -100,8 +98,7 @@ class TextWrapper:
                  expand_tabs=True,
                  replace_whitespace=True,
                  fix_sentence_endings=False,
-                 break_long_words=True,
-                 drop_whitespace=True):
+                 break_long_words=True):
         self.width = width
         self.initial_indent = initial_indent
         self.subsequent_indent = subsequent_indent
@@ -109,7 +106,6 @@ class TextWrapper:
         self.replace_whitespace = replace_whitespace
         self.fix_sentence_endings = fix_sentence_endings
         self.break_long_words = break_long_words
-        self.drop_whitespace = drop_whitespace
 
 
     # -- Private methods -----------------------------------------------
@@ -144,7 +140,7 @@ class TextWrapper:
           'use', ' ', 'the', ' ', '-b', ' ', 'option!'
         """
         chunks = self.wordsep_re.split(text)
-        chunks = filter(None, chunks)  # remove empty chunks
+        chunks = filter(None, chunks)
         return chunks
 
     def _fix_sentence_endings(self, chunks):
@@ -232,7 +228,7 @@ class TextWrapper:
 
             # First chunk on line is whitespace -- drop it, unless this
             # is the very beginning of the text (ie. no lines started yet).
-            if self.drop_whitespace and chunks[-1].strip() == '' and lines:
+            if chunks[-1].strip() == '' and lines:
                 del chunks[-1]
 
             while chunks:
@@ -253,7 +249,7 @@ class TextWrapper:
                 self._handle_long_word(chunks, cur_line, cur_len, width)
 
             # If the last chunk on this line is all whitespace, drop it.
-            if self.drop_whitespace and cur_line and cur_line[-1].strip() == '':
+            if cur_line and cur_line[-1].strip() == '':
                 del cur_line[-1]
 
             # Convert current line back to a string and store it in list
