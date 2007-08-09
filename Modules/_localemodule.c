@@ -96,21 +96,18 @@ copy_grouping(char* s)
 static void
 fixup_ulcase(void)
 {
-    PyObject *mods, *strop, *string, *ulo;
+    PyObject *mods, *string, *ulo;
     unsigned char ul[256];
     int n, c;
 
-    /* find the string and strop modules */
+    /* find the string module */
     mods = PyImport_GetModuleDict();
     if (!mods)
         return;
     string = PyDict_GetItemString(mods, "string");
     if (string)
         string = PyModule_GetDict(string);
-    strop=PyDict_GetItemString(mods, "strop");
-    if (strop)
-        strop = PyModule_GetDict(strop);
-    if (!string && !strop)
+    if (!string)
         return;
 
     /* create uppercase map string */
@@ -124,8 +121,6 @@ fixup_ulcase(void)
         return;
     if (string)
         PyDict_SetItemString(string, "uppercase", ulo);
-    if (strop)
-        PyDict_SetItemString(strop, "uppercase", ulo);
     Py_DECREF(ulo);
 
     /* create lowercase string */
@@ -139,8 +134,6 @@ fixup_ulcase(void)
         return;
     if (string)
         PyDict_SetItemString(string, "lowercase", ulo);
-    if (strop)
-        PyDict_SetItemString(strop, "lowercase", ulo);
     Py_DECREF(ulo);
 
     /* create letters string */
@@ -270,7 +263,7 @@ PyDoc_STRVAR(strcoll__doc__,
 static PyObject*
 PyLocale_strcoll(PyObject* self, PyObject* args)
 {
-#if !defined(HAVE_WCSCOLL) || !defined(Py_USING_UNICODE)
+#if !defined(HAVE_WCSCOLL)
     char *s1,*s2;
     
     if (!PyArg_ParseTuple(args, "ss:strcoll", &s1, &s2))

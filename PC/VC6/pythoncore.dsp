@@ -431,10 +431,6 @@ SOURCE=..\..\Modules\zlib\inftrees.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Objects\intobject.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\Objects\iterobject.c
 # End Source File
 # Begin Source File
@@ -616,10 +612,6 @@ SOURCE=..\..\Objects\sliceobject.c
 # Begin Source File
 
 SOURCE=..\..\Objects\stringobject.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\stropmodule.c
 # End Source File
 # Begin Source File
 

@@ -97,7 +97,7 @@ class FancyGetopt:
         self._build_index()
 
     def add_option (self, long_option, short_option=None, help_string=None):
-        if self.option_index.has_key(long_option):
+        if long_option in self.option_index:
             raise DistutilsGetoptError, \
                   "option conflict: already an option '%s'" % long_option
         else:
@@ -109,23 +109,23 @@ class FancyGetopt:
     def has_option (self, long_option):
         """Return true if the option table for this parser has an
         option with long name 'long_option'."""
-        return self.option_index.has_key(long_option)
+        return long_option in self.option_index
 
     def get_attr_name (self, long_option):
         """Translate long option name 'long_option' to the form it
         has as an attribute of some object: ie., translate hyphens
         to underscores."""
-        return string.translate(long_option, longopt_xlate)
+        return long_option.translate(longopt_xlate)
 
 
     def _check_alias_dict (self, aliases, what):
         assert type(aliases) is DictionaryType
         for (alias, opt) in aliases.items():
-            if not self.option_index.has_key(alias):
+            if alias not in self.option_index:
                 raise DistutilsGetoptError, \
                       ("invalid %s '%s': "
                        "option '%s' not defined") % (what, alias, alias)
-            if not self.option_index.has_key(opt):
+            if opt not in self.option_index:
                 raise DistutilsGetoptError, \
                       ("invalid %s '%s': "
                        "aliased option '%s' not defined") % (what, alias, opt)
@@ -166,13 +166,13 @@ class FancyGetopt:
                 raise ValueError, "invalid option tuple: %r" % (option,)
 
             # Type- and value-check the option names
-            if type(long) is not StringType or len(long) < 2:
+            if not isinstance(long, basestring) or len(long) < 2:
                 raise DistutilsGetoptError, \
                       ("invalid long option '%s': "
                        "must be a string of length >= 2") % long
 
             if (not ((short is None) or
-                     (type(short) is StringType and len(short) == 1))):
+                     (isinstance(short, basestring) and len(short) == 1))):
                 raise DistutilsGetoptError, \
                       ("invalid short option '%s': "
                        "must a single character or None") % short
@@ -253,10 +253,10 @@ class FancyGetopt:
 
         self._grok_option_table()
 
-        short_opts = string.join(self.short_opts)
+        short_opts = ' '.join(self.short_opts)
         try:
             opts, args = getopt.getopt(args, short_opts, self.long_opts)
-        except getopt.error, msg:
+        except getopt.error as msg:
             raise DistutilsArgError, msg
 
         for opt, val in opts:
@@ -420,8 +420,8 @@ def wrap_text (text, width):
     if len(text) <= width:
         return [text]
 
-    text = string.expandtabs(text)
-    text = string.translate(text, WS_TRANS)
+    text = text.expandtabs()
+    text = text.translate(WS_TRANS)
     chunks = re.split(r'( +|-+)', text)
     chunks = filter(None, chunks)      # ' - ' results in empty strings
     lines = []
@@ -460,7 +460,7 @@ def wrap_text (text, width):
 
         # and store this line in the list-of-all-lines -- as a single
         # string, of course!
-        lines.append(string.join(cur_line, ''))
+        lines.append(''.join(cur_line))
 
     # while chunks
 
@@ -473,7 +473,7 @@ def translate_longopt (opt):
     """Convert a long option name to a valid Python identifier by
     changing "-" to "_".
     """
-    return string.translate(opt, longopt_xlate)
+    return opt.translate(longopt_xlate)
 
 
 class OptionDummy:
@@ -497,6 +497,6 @@ How *do* you spell that odd word, anyways?
 say, "How should I know?"].)"""
 
     for w in (10, 20, 30, 40):
-        print "width: %d" % w
-        print string.join(wrap_text(text, w), "\n")
-        print
+        print("width: %d" % w)
+        print("\n".join(wrap_text(text, w)))
+        print()

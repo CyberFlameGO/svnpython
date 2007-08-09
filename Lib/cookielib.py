@@ -58,7 +58,7 @@ def _warn_unhandled_exception():
     # catching input that's bad in unexpected ways.  Warn if any
     # exceptions are caught there.
     import warnings, traceback, StringIO
-    f = StringIO.StringIO()
+    f = io.StringIO()
     traceback.print_exc(None, f)
     msg = f.getvalue()
     warnings.warn("cookielib bug!\n%s" % msg, stacklevel=2)
@@ -644,8 +644,6 @@ def escape_path(path):
     # And here, kind of: draft-fielding-uri-rfc2396bis-03
     # (And in draft IRI specification: draft-duerst-iri-05)
     # (And here, for new URI schemes: RFC 2718)
-    if isinstance(path, unicode):
-        path = path.encode("utf-8")
     path = urllib.quote(path, HTTP_PATH_SAFE)
     path = ESCAPED_CHAR_RE.sub(uppercase_escaped_char, path)
     return path
@@ -1171,8 +1169,7 @@ class DefaultCookiePolicy(CookiePolicy):
 
 
 def vals_sorted_by_key(adict):
-    keys = adict.keys()
-    keys.sort()
+    keys = sorted(adict.keys())
     return map(adict.get, keys)
 
 def deepvalues(mapping):

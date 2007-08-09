@@ -6,6 +6,7 @@ import random
 import sys
 import py_compile
 import warnings
+from test.test_support import unlink
 
 
 def remove_files(name):
@@ -45,17 +46,17 @@ class ImportTest(unittest.TestCase):
                 pyc = TESTFN + os.extsep + "pyc"
 
             f = open(source, "w")
-            print >> f, "# This tests Python's ability to import a", ext, "file."
+            print("# This tests Python's ability to import a", ext, "file.", file=f)
             a = random.randrange(1000)
             b = random.randrange(1000)
-            print >> f, "a =", a
-            print >> f, "b =", b
+            print("a =", a, file=f)
+            print("b =", b, file=f)
             f.close()
 
             try:
                 try:
                     mod = __import__(TESTFN)
-                except ImportError, err:
+                except ImportError as err:
                     self.fail("import from %s failed: %s" % (ext, err))
 
                 self.assertEquals(mod.a, a,
@@ -63,22 +64,9 @@ class ImportTest(unittest.TestCase):
                 self.assertEquals(mod.b, b,
                     "module loaded (%s) but contents invalid" % mod)
             finally:
-                os.unlink(source)
-
-            try:
-                try:
-                    reload(mod)
-                except ImportError, err:
-                    self.fail("import from .pyc/.pyo failed: %s" % err)
-            finally:
-                try:
-                    os.unlink(pyc)
-                except OSError:
-                    pass
-                try:
-                    os.unlink(pyo)
-                except OSError:
-                    pass
+                unlink(source)
+                unlink(pyc)
+                unlink(pyo)
                 del sys.modules[TESTFN]
 
         sys.path.insert(0, os.curdir)
@@ -118,7 +106,7 @@ class ImportTest(unittest.TestCase):
         sys.path.append('')
 
         # this used to crash
-        exec 'import ' + module
+        exec('import ' + module)
 
         # cleanup
         del sys.path[-1]
@@ -130,12 +118,14 @@ class ImportTest(unittest.TestCase):
     def test_failing_import_sticks(self):
         source = TESTFN + os.extsep + "py"
         f = open(source, "w")
-        print >> f, "a = 1/0"
+        print("a = 1/0", file=f)
         f.close()
 
         # New in 2.4, we shouldn't be able to import that no matter how often
         # we try.
         sys.path.insert(0, os.curdir)
+        if TESTFN in sys.modules:
+            del sys.modules[TESTFN]
         try:
             for i in 1, 2, 3:
                 try:
@@ -148,60 +138,6 @@ class ImportTest(unittest.TestCase):
         finally:
             sys.path.pop(0)
             remove_files(TESTFN)
-
-    def test_failing_reload(self):
-        # A failing reload should leave the module object in sys.modules.
-        source = TESTFN + os.extsep + "py"
-        f = open(source, "w")
-        print >> f, "a = 1"
-        print >> f, "b = 2"
-        f.close()
-
-        sys.path.insert(0, os.curdir)
-        try:
-            mod = __import__(TESTFN)
-            self.assert_(TESTFN in sys.modules, "expected module in sys.modules")
-            self.assertEquals(mod.a, 1, "module has wrong attribute values")
-            self.assertEquals(mod.b, 2, "module has wrong attribute values")
-
-            # On WinXP, just replacing the .py file wasn't enough to
-            # convince reload() to reparse it.  Maybe the timestamp didn't
-            # move enough.  We force it to get reparsed by removing the
-            # compiled file too.
-            remove_files(TESTFN)
-
-            # Now damage the module.
-            f = open(source, "w")
-            print >> f, "a = 10"
-            print >> f, "b = 20//0"
-            f.close()
-
-            self.assertRaises(ZeroDivisionError, reload, mod)
-
-            # But we still expect the module to be in sys.modules.
-            mod = sys.modules.get(TESTFN)
-            self.failIf(mod is None, "expected module to still be in sys.modules")
-
-            # We should have replaced a w/ 10, but the old b value should
-            # stick.
-            self.assertEquals(mod.a, 10, "module has wrong attribute values")
-            self.assertEquals(mod.b, 2, "module has wrong attribute values")
-
-        finally:
-            sys.path.pop(0)
-            remove_files(TESTFN)
-            if TESTFN in sys.modules:
-                del sys.modules[TESTFN]
-
-    def test_infinite_reload(self):
-        # Bug #742342 reports that Python segfaults (infinite recursion in C)
-        #  when faced with self-recursive reload()ing.
-
-        sys.path.insert(0, os.path.dirname(__file__))
-        try:
-            import infinite_reload
-        finally:
-            sys.path.pop(0)
 
     def test_import_name_binding(self):
         # import x.y.z binds x in the current namespace

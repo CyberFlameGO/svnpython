@@ -8,7 +8,8 @@ import unittest
 from test.test_support import run_unittest, TestSkipped, TESTFN_UNICODE
 from test.test_support import TESTFN_ENCODING, TESTFN_UNICODE_UNENCODEABLE
 try:
-    TESTFN_ENCODED = TESTFN_UNICODE.encode(TESTFN_ENCODING)
+    TESTFN_ENCODED = TESTFN_UNICODE
+    TESTFN_UNICODE.encode(TESTFN_ENCODING)
 except (UnicodeError, TypeError):
     # Either the file system encoding is None, or the file name
     # cannot be encoded in the file system encoding.
@@ -20,7 +21,7 @@ if TESTFN_ENCODED.decode(TESTFN_ENCODING) != TESTFN_UNICODE:
     # encoding instead.
     import sys
     try:
-        TESTFN_UNICODE = unicode("@test-\xe0\xf2", sys.getfilesystemencoding())
+        TESTFN_UNICODE = str("@test-\xe0\xf2", sys.getfilesystemencoding())
         TESTFN_ENCODED = TESTFN_UNICODE.encode(TESTFN_ENCODING)
         if '?' in TESTFN_ENCODED:
             # MBCS will not report the error properly
@@ -48,7 +49,7 @@ class TestUnicodeFiles(unittest.TestCase):
         self.failUnless(os.path.exists(os.path.abspath(filename)))
         self.failUnless(os.path.isfile(os.path.abspath(filename)))
         self.failUnless(os.access(os.path.abspath(filename), os.R_OK))
-        os.chmod(filename, 0777)
+        os.chmod(filename, 0o777)
         os.utime(filename, None)
         os.utime(filename, (time.time(), time.time()))
         # Copy/rename etc tests using the same filename
@@ -76,6 +77,7 @@ class TestUnicodeFiles(unittest.TestCase):
     # Do as many "equivalancy' tests as we can - ie, check that although we
     # have different types for the filename, they refer to the same file.
     def _do_equivilent(self, filename1, filename2):
+        filename2 = str8(filename2)
         # Note we only check "filename1 against filename2" - we don't bother
         # checking "filename2 against 1", as we assume we are called again with
         # the args reversed.
@@ -152,7 +154,7 @@ class TestUnicodeFiles(unittest.TestCase):
     # top-level 'test' functions would be if they could take params
     def _test_single(self, filename):
         remove_if_exists(filename)
-        f = file(filename, "w")
+        f = open(filename, "w")
         f.close()
         try:
             self._do_single(filename)
@@ -170,7 +172,7 @@ class TestUnicodeFiles(unittest.TestCase):
     def _test_equivalent(self, filename1, filename2):
         remove_if_exists(filename1)
         self.failUnless(not os.path.exists(filename2))
-        f = file(filename1, "w")
+        f = open(filename1, "w")
         f.close()
         try:
             self._do_equivilent(filename1, filename2)

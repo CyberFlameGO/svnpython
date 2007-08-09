@@ -1,5 +1,5 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright (C) 2005, 2006 Martin v. Löwis
+# -*- coding: utf-8 -*-
+# Copyright (C) 2005, 2006 Martin v. LÃ¶wis
 # Licensed to PSF under a Contributor Agreement.
 # The bdist_wininst command proper
 # based on bdist_wininst
@@ -7,7 +7,7 @@
 Implements the bdist_msi command.
 """
 
-import sys, os, string
+import sys, os
 from distutils.core import Command
 from distutils.util import get_platform
 from distutils.dir_util import remove_tree

@@ -38,7 +38,6 @@ if sys.platform == "win32":
 import _tkinter # If this fails your Python may not be configured for Tk
 tkinter = _tkinter # b/w compat for export
 TclError = _tkinter.TclError
-from types import *
 from Tkconstants import *
 try:
     import MacOS; _MacOS = MacOS; del MacOS
@@ -61,11 +60,11 @@ try: _tkinter.deletefilehandler
 except AttributeError: _tkinter.deletefilehandler = None
 
 
-def _flatten(tuple):
+def _flatten(seq):
     """Internal function."""
     res = ()
-    for item in tuple:
-        if type(item) in (TupleType, ListType):
+    for item in seq:
+        if isinstance(item, (tuple, list)):
             res = res + _flatten(item)
         elif item is not None:
             res = res + (item,)
@@ -76,17 +75,17 @@ except AttributeError: pass
 
 def _cnfmerge(cnfs):
     """Internal function."""
-    if type(cnfs) is DictionaryType:
+    if isinstance(cnfs, dict):
         return cnfs
-    elif type(cnfs) in (NoneType, StringType):
+    elif isinstance(cnfs, (type(None), str)):
         return cnfs
     else:
         cnf = {}
         for c in _flatten(cnfs):
             try:
                 cnf.update(c)
-            except (AttributeError, TypeError), msg:
-                print "_cnfmerge: fallback due to:", msg
+            except (AttributeError, TypeError) as msg:
+                print("_cnfmerge: fallback due to:", msg)
                 for k, v in c.items():
                     cnf[k] = v
         return cnf
@@ -550,7 +549,7 @@ class Misc:
 
         A widget specified for the optional displayof keyword
         argument specifies the target display."""
-        if not kw.has_key('displayof'): kw['displayof'] = self._w
+        if 'displayof' not in kw: kw['displayof'] = self._w
         self.tk.call(('clipboard', 'clear') + self._options(kw))
     def clipboard_append(self, string, **kw):
         """Append STRING to the Tk clipboard.
@@ -558,7 +557,7 @@ class Misc:
         A widget specified at the optional displayof keyword
         argument specifies the target display. The clipboard
         can be retrieved with selection_get."""
-        if not kw.has_key('displayof'): kw['displayof'] = self._w
+        if 'displayof' not in kw: kw['displayof'] = self._w
         self.tk.call(('clipboard', 'append') + self._options(kw)
               + ('--', string))
     # XXX grab current w/o window argument
@@ -619,7 +618,7 @@ class Misc:
         self.tk.call('option', 'readfile', fileName, priority)
     def selection_clear(self, **kw):
         """Clear the current X selection."""
-        if not kw.has_key('displayof'): kw['displayof'] = self._w
+        if 'displayof' not in kw: kw['displayof'] = self._w
         self.tk.call(('selection', 'clear') + self._options(kw))
     def selection_get(self, **kw):
         """Return the contents of the current X selection.
@@ -628,7 +627,7 @@ class Misc:
         the selection and defaults to PRIMARY.  A keyword
         parameter displayof specifies a widget on the display
         to use."""
-        if not kw.has_key('displayof'): kw['displayof'] = self._w
+        if 'displayof' not in kw: kw['displayof'] = self._w
         return self.tk.call(('selection', 'get') + self._options(kw))
     def selection_handle(self, command, **kw):
         """Specify a function COMMAND to call if the X
@@ -659,7 +658,7 @@ class Misc:
         be provided:
         selection - name of the selection (default PRIMARY),
         type - type of the selection (e.g. STRING, FILE_NAME)."""
-        if not kw.has_key('displayof'): kw['displayof'] = self._w
+        if 'displayof' not in kw: kw['displayof'] = self._w
         name = self.tk.call(('selection', 'own') + self._options(kw))
         if not name: return None
         return self._nametowidget(name)
@@ -867,7 +866,7 @@ class Misc:
         data = self.tk.split(
             self.tk.call('winfo', 'visualsavailable', self._w,
                      includeids and 'includeids' or None))
-        if type(data) is StringType:
+        if isinstance(data, str):
             data = [self.tk.split(data)]
         return map(self.__winfo_parseitem, data)
     def __winfo_parseitem(self, t):
@@ -934,7 +933,7 @@ class Misc:
             self.tk.call('bindtags', self._w, tagList)
     def _bind(self, what, sequence, func, add, needcleanup=1):
         """Internal function."""
-        if type(func) is StringType:
+        if isinstance(func, str):
             self.tk.call(what + (sequence, func))
         elif func:
             funcid = self._register(func, self._substitute,
@@ -1053,7 +1052,7 @@ class Misc:
         for k, v in cnf.items():
             if v is not None:
                 if k[-1] == '_': k = k[:-1]
-                if callable(v):
+                if hasattr(v, '__call__'):
                     v = self._register(v)
                 res = res + ('-'+k, v)
         return res
@@ -1166,7 +1165,7 @@ class Misc:
     def _report_exception(self):
         """Internal function."""
         import sys
-        exc, val, tb = sys.exc_type, sys.exc_value, sys.exc_traceback
+        exc, val, tb = sys.exc_info()
         root = self._root()
         root.report_callback_exception(exc, val, tb)
     def _configure(self, cmd, cnf, kw):
@@ -1181,7 +1180,7 @@ class Misc:
                     self.tk.call(_flatten((self._w, cmd)))):
                 cnf[x[0][1:]] = (x[0][1:],) + x[1:]
             return cnf
-        if type(cnf) is StringType:
+        if isinstance(cnf, str):
             x = self.tk.split(
                     self.tk.call(_flatten((self._w, cmd, '-'+cnf))))
             return (x[0][1:],) + x[1:]
@@ -1262,7 +1261,7 @@ class Misc:
     bbox = grid_bbox
     def _grid_configure(self, command, index, cnf, kw):
         """Internal function."""
-        if type(cnf) is StringType and not kw:
+        if isinstance(cnf, str) and not kw:
             if cnf[-1:] == '_':
                 cnf = cnf[:-1]
             if cnf[:1] != '-':
@@ -1401,7 +1400,7 @@ class CallWrapper:
             if self.subst:
                 args = self.subst(*args)
             return self.func(*args)
-        except SystemExit, msg:
+        except SystemExit as msg:
             raise SystemExit, msg
         except:
             self.widget._report_exception()
@@ -1570,7 +1569,7 @@ class Wm:
         """Bind function FUNC to command NAME for this widget.
         Return the function bound to NAME if None is given. NAME could be
         e.g. "WM_SAVE_YOURSELF" or "WM_DELETE_WINDOW"."""
-        if callable(func):
+        if hasattr(func, '__call__'):
             command = self._register(func)
         else:
             command = func
@@ -1681,7 +1680,7 @@ class Tk(Misc, Wm):
     def destroy(self):
         """Destroy this and all descendants widgets. This will
         end the application of this Tcl interpreter."""
-        for c in self.children.values(): c.destroy()
+        for c in list(self.children.values()): c.destroy()
         self.tk.call('destroy', self._w)
         Misc.destroy(self)
         global _default_root
@@ -1692,14 +1691,14 @@ class Tk(Misc, Wm):
         the Tcl Interpreter and calls execfile on BASENAME.py and CLASSNAME.py if
         such a file exists in the home directory."""
         import os
-        if os.environ.has_key('HOME'): home = os.environ['HOME']
+        if 'HOME' in os.environ: home = os.environ['HOME']
         else: home = os.curdir
         class_tcl = os.path.join(home, '.%s.tcl' % className)
         class_py = os.path.join(home, '.%s.py' % className)
         base_tcl = os.path.join(home, '.%s.tcl' % baseName)
         base_py = os.path.join(home, '.%s.py' % baseName)
         dir = {'self': self}
-        exec 'from Tkinter import *' in dir
+        exec('from Tkinter import *', dir)
         if os.path.isfile(class_tcl):
             self.tk.call('source', class_tcl)
         if os.path.isfile(class_py):
@@ -1808,7 +1807,7 @@ class Place:
                                                into account
             """
         for k in ['in_']:
-            if kw.has_key(k):
+            if k in kw:
                 kw[k[:-1]] = kw[k]
                 del kw[k]
         self.tk.call(
@@ -1900,7 +1899,7 @@ class BaseWidget(Misc):
         self.master = master
         self.tk = master.tk
         name = None
-        if cnf.has_key('name'):
+        if 'name' in cnf:
             name = cnf['name']
             del cnf['name']
         if not name:
@@ -1911,7 +1910,7 @@ class BaseWidget(Misc):
         else:
             self._w = master._w + '.' + name
         self.children = {}
-        if self.master.children.has_key(self._name):
+        if self._name in self.master.children:
             self.master.children[self._name].destroy()
         self.master.children[self._name] = self
     def __init__(self, master, widgetName, cnf={}, kw={}, extra=()):
@@ -1923,7 +1922,7 @@ class BaseWidget(Misc):
         BaseWidget._setup(self, master, cnf)
         classes = []
         for k in cnf.keys():
-            if type(k) is ClassType:
+            if isinstance(k, type):
                 classes.append((k, cnf[k]))
                 del cnf[k]
         self.tk.call(
@@ -1932,9 +1931,9 @@ class BaseWidget(Misc):
             k.configure(self, v)
     def destroy(self):
         """Destroy this and all descendants widgets."""
-        for c in self.children.values(): c.destroy()
+        for c in list(self.children.values()): c.destroy()
         self.tk.call('destroy', self._w)
-        if self.master.children.has_key(self._name):
+        if self._name in self.master.children:
             del self.master.children[self._name]
         Misc.destroy(self)
     def _do(self, name, args=()):
@@ -1962,7 +1961,7 @@ class Toplevel(BaseWidget, Wm):
         extra = ()
         for wmkey in ['screen', 'class_', 'class', 'visual',
                   'colormap']:
-            if cnf.has_key(wmkey):
+            if wmkey in cnf:
                 val = cnf[wmkey]
                 # TBD: a hack needed because some keys
                 # are not valid as keyword arguments
@@ -2136,7 +2135,7 @@ class Canvas(Widget):
         """Internal function."""
         args = _flatten(args)
         cnf = args[-1]
-        if type(cnf) in (DictionaryType, TupleType):
+        if isinstance(cnf, (dict, tuple)):
             args = args[:-1]
         else:
             cnf = {}
@@ -2433,10 +2432,10 @@ class Frame(Widget):
         highlightcolor, highlightthickness, relief, takefocus, visual, width."""
         cnf = _cnfmerge((cnf, kw))
         extra = ()
-        if cnf.has_key('class_'):
+        if 'class_' in cnf:
             extra = ('-class', cnf['class_'])
             del cnf['class_']
-        elif cnf.has_key('class'):
+        elif 'class' in cnf:
             extra = ('-class', cnf['class'])
             del cnf['class']
         Widget.__init__(self, master, 'frame', cnf, {}, extra)
@@ -3180,7 +3179,7 @@ class OptionMenu(Menubutton):
         self.menuname = menu._w
         # 'command' is the only supported keyword
         callback = kwargs.get('command')
-        if kwargs.has_key('command'):
+        if 'command' in kwargs:
             del kwargs['command']
         if kwargs:
             raise TclError, 'unknown option -'+kwargs.keys()[0]
@@ -3221,7 +3220,7 @@ class Image:
         elif kw: cnf = kw
         options = ()
         for k, v in cnf.items():
-            if callable(v):
+            if hasattr(v, '__call__'):
                 v = self._register(v)
             options = options + ('-'+k, v)
         self.tk.call(('image', 'create', imgtype, name,) + options)
@@ -3244,7 +3243,7 @@ class Image:
         for k, v in _cnfmerge(kw).items():
             if v is not None:
                 if k[-1] == '_': k = k[:-1]
-                if callable(v):
+                if hasattr(v, '__call__'):
                     v = self._register(v)
                 res = res + ('-'+k, v)
         self.tk.call((self.name, 'config') + res)
@@ -3695,7 +3694,7 @@ class PanedWindow(Widget):
                          'paneconfigure', tagOrId)):
                 cnf[x[0][1:]] = (x[0][1:],) + x[1:]
             return cnf
-        if type(cnf) == StringType and not kw:
+        if isinstance(cnf, str) and not kw:
             x = self.tk.split(self.tk.call(
                 self._w, 'paneconfigure', tagOrId, '-'+cnf))
             return (x[0][1:],) + x[1:]
@@ -3735,11 +3734,7 @@ def _test():
     root = Tk()
     text = "This is Tcl/Tk version %s" % TclVersion
     if TclVersion >= 8.1:
-        try:
-            text = text + unicode("\nThis should be a cedilla: \347",
-                                  "iso-8859-1")
-        except NameError:
-            pass # no unicode support
+        text += "\nThis should be a cedilla: \xe7"
     label = Label(root, text=text)
     label.pack()
     test = Button(root, text="Click me!",

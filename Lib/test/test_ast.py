@@ -2,7 +2,7 @@ import sys, itertools
 import _ast
 
 def to_tuple(t):
-    if t is None or isinstance(t, (basestring, int, long, complex)):
+    if t is None or isinstance(t, (basestring, int, int, complex)):
         return t
     elif isinstance(t, list):
         return [to_tuple(e) for e in t]
@@ -30,8 +30,6 @@ exec_tests = [
     "v = 1",
     # AugAssign
     "v += 1",
-    # Print
-    "print >>f, 1, ",
     # For
     "for v in v:pass",
     # While
@@ -50,8 +48,6 @@ exec_tests = [
     "import sys",
     # ImportFrom
     "from sys import v",
-    # Exec
-    "exec 'v'",
     # Global
     "global v",
     # Expr
@@ -94,10 +90,8 @@ eval_tests = [
   "1 < 2 < 3",
   # Call
   "f(1,2,c=3,*d,**e)",
-  # Repr
-  "`v`",
   # Num
-  "10L",
+  "10",
   # Str
   "'string'",
   # Attribute
@@ -121,11 +115,11 @@ eval_tests = [
 if __name__=='__main__' and sys.argv[1:] == ['-g']:
     for statements, kind in ((exec_tests, "exec"), (single_tests, "single"),
                              (eval_tests, "eval")):
-        print kind+"_results = ["
+        print(kind+"_results = [")
         for s in statements:
-            print repr(to_tuple(compile(s, "?", kind, 0x400)))+","
-        print "]"
-    print "run_tests()"
+            print(repr(to_tuple(compile(s, "?", kind, 0x400)))+",")
+        print("]")
+    print("run_tests()")
     raise SystemExit
 
 def test_order(ast_node, parent_pos):
@@ -150,18 +144,19 @@ def run_tests():
                                 (eval_tests, eval_results, "eval")):
         for i, o in itertools.izip(input, output):
             ast_tree = compile(i, "?", kind, 0x400)
-            assert to_tuple(ast_tree) == o
+            tup = to_tuple(ast_tree)
+            assert tup == o, ("kind=%r\ninput=%r\nexpected=%r\ngot=%r" %
+                              (kind, i, o, tup))
             test_order(ast_tree, (0, 0))
 
 #### EVERYTHING BELOW IS GENERATED #####
 exec_results = [
-('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, []), [('Pass', (1, 9))], [])]),
-('Module', [('ClassDef', (1, 0), 'C', [], [('Pass', (1, 8))])]),
-('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, []), [('Return', (1, 8), ('Num', (1, 15), 1))], [])]),
+('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, [], None, None, [], []), [('Pass', (1, 9))], [], None)]),
+('Module', [('ClassDef', (1, 0), 'C', [], [], None, None, [('Pass', (1, 8))], [], )]),
+('Module', [('FunctionDef', (1, 0), 'f', ('arguments', [], None, None, [], None, None, [], []), [('Return', (1, 8), ('Num', (1, 15), 1))], [], None)]),
 ('Module', [('Delete', (1, 0), [('Name', (1, 4), 'v', ('Del',))])]),
 ('Module', [('Assign', (1, 0), [('Name', (1, 0), 'v', ('Store',))], ('Num', (1, 4), 1))]),
 ('Module', [('AugAssign', (1, 0), ('Name', (1, 0), 'v', ('Store',)), ('Add',), ('Num', (1, 5), 1))]),
-('Module', [('Print', (1, 0), ('Name', (1, 8), 'f', ('Load',)), [('Num', (1, 11), 1)], False)]),
 ('Module', [('For', (1, 0), ('Name', (1, 4), 'v', ('Store',)), ('Name', (1, 9), 'v', ('Load',)), [('Pass', (1, 11))], [])]),
 ('Module', [('While', (1, 0), ('Name', (1, 6), 'v', ('Load',)), [('Pass', (1, 8))], [])]),
 ('Module', [('If', (1, 0), ('Name', (1, 3), 'v', ('Load',)), [('Pass', (1, 5))], [])]),
@@ -171,7 +166,6 @@ exec_results = [
 ('Module', [('Assert', (1, 0), ('Name', (1, 7), 'v', ('Load',)), None)]),
 ('Module', [('Import', (1, 0), [('alias', 'sys', None)])]),
 ('Module', [('ImportFrom', (1, 0), 'sys', [('alias', 'v', None)], 0)]),
-('Module', [('Exec', (1, 0), ('Str', (1, 5), 'v'), None, None)]),
 ('Module', [('Global', (1, 0), ['v'])]),
 ('Module', [('Expr', (1, 0), ('Num', (1, 0), 1))]),
 ('Module', [('Pass', (1, 0))]),
@@ -185,14 +179,13 @@ eval_results = [
 ('Expression', ('BoolOp', (1, 0), ('And',), [('Name', (1, 0), 'a', ('Load',)), ('Name', (1, 6), 'b', ('Load',))])),
 ('Expression', ('BinOp', (1, 0), ('Name', (1, 0), 'a', ('Load',)), ('Add',), ('Name', (1, 4), 'b', ('Load',)))),
 ('Expression', ('UnaryOp', (1, 0), ('Not',), ('Name', (1, 4), 'v', ('Load',)))),
-('Expression', ('Lambda', (1, 0), ('arguments', [], None, None, []), ('Name', (1, 7), 'None', ('Load',)))),
+('Expression', ('Lambda', (1, 0), ('arguments', [], None, None, [], None, None, [], []), ('Name', (1, 7), 'None', ('Load',)))),
 ('Expression', ('Dict', (1, 0), [('Num', (1, 2), 1)], [('Num', (1, 4), 2)])),
 ('Expression', ('ListComp', (1, 1), ('Name', (1, 1), 'a', ('Load',)), [('comprehension', ('Name', (1, 7), 'b', ('Store',)), ('Name', (1, 12), 'c', ('Load',)), [('Name', (1, 17), 'd', ('Load',))])])),
 ('Expression', ('GeneratorExp', (1, 1), ('Name', (1, 1), 'a', ('Load',)), [('comprehension', ('Name', (1, 7), 'b', ('Store',)), ('Name', (1, 12), 'c', ('Load',)), [('Name', (1, 17), 'd', ('Load',))])])),
 ('Expression', ('Compare', (1, 0), ('Num', (1, 0), 1), [('Lt',), ('Lt',)], [('Num', (1, 4), 2), ('Num', (1, 8), 3)])),
 ('Expression', ('Call', (1, 0), ('Name', (1, 0), 'f', ('Load',)), [('Num', (1, 2), 1), ('Num', (1, 4), 2)], [('keyword', 'c', ('Num', (1, 8), 3))], ('Name', (1, 11), 'd', ('Load',)), ('Name', (1, 15), 'e', ('Load',)))),
-('Expression', ('Repr', (1, 0), ('Name', (1, 1), 'v', ('Load',)))),
-('Expression', ('Num', (1, 0), 10L)),
+('Expression', ('Num', (1, 0), 10)),
 ('Expression', ('Str', (1, 0), 'string')),
 ('Expression', ('Attribute', (1, 0), ('Name', (1, 0), 'a', ('Load',)), 'b', ('Load',))),
 ('Expression', ('Subscript', (1, 0), ('Name', (1, 0), 'a', ('Load',)), ('Slice', ('Name', (1, 2), 'b', ('Load',)), ('Name', (1, 4), 'c', ('Load',)), None), ('Load',))),

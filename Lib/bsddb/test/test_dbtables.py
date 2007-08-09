@@ -21,15 +21,11 @@
 # $Id$
 
 import sys, os, re
-try:
-    import cPickle
-    pickle = cPickle
-except ImportError:
-    import pickle
+import pickle
 import tempfile
 
 import unittest
-from test_all import verbose
+from .test_all import verbose
 
 try:
     # For Pythons w/distutils pybsddb
@@ -76,6 +72,7 @@ class TableDBTestCase(unittest.TestCase):
 
         values = self.tdb.Select(
             tabname, [colname], conditions={colname: None})
+        values = list(values)
 
         colval = pickle.loads(values[0][colname])
         assert(colval > 3.141 and colval < 3.142)
@@ -102,6 +99,7 @@ class TableDBTestCase(unittest.TestCase):
 
         values = self.tdb.Select(tabname, [col2],
             conditions={col0: lambda x: pickle.loads(x) >= 8})
+        values = list(values)
 
         assert len(values) == 2
         if values[0]['Species'] == 'Penguin' :
@@ -110,7 +108,7 @@ class TableDBTestCase(unittest.TestCase):
             assert values[1]['Species'] == 'Penguin'
         else :
             if verbose:
-                print "values= %r" % (values,)
+                print("values= %r" % (values,))
             raise "Wrong values returned!"
 
     def test03(self):
@@ -120,15 +118,15 @@ class TableDBTestCase(unittest.TestCase):
         except dbtables.TableDBError:
             pass
         if verbose:
-            print '...before CreateTable...'
+            print('...before CreateTable...')
             self.tdb._db_print()
         self.tdb.CreateTable(tabname, ['a', 'b', 'c', 'd', 'e'])
         if verbose:
-            print '...after CreateTable...'
+            print('...after CreateTable...')
             self.tdb._db_print()
         self.tdb.Drop(tabname)
         if verbose:
-            print '...after Drop...'
+            print('...after Drop...')
             self.tdb._db_print()
         self.tdb.CreateTable(tabname, ['a', 'b', 'c', 'd', 'e'])
 
@@ -179,11 +177,13 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(
             tabname, ['a', 'd', 'b'],
             conditions={'e': dbtables.PrefixCond('Fuzzy')})
+        values = list(values)
         assert len(values) == 1
         assert values[0]['d'] == None
 
         values = self.tdb.Select(tabname, ['b'],
             conditions={'c': lambda c: c == 'meep'})
+        values = list(values)
         assert len(values) == 1
         assert values[0]['b'] == "bad"
 
@@ -272,6 +272,7 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(
             tabname, ['p', 'e'],
             conditions={'e': dbtables.PrefixCond('the l')})
+        values = list(values)
         assert len(values) == 2, values
         assert values[0]['e'] == values[1]['e'], values
         assert values[0]['p'] != values[1]['p'], values
@@ -279,6 +280,7 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(
             tabname, ['d', 'a'],
             conditions={'a': dbtables.LikeCond('%aardvark%')})
+        values = list(values)
         assert len(values) == 1, values
         assert values[0]['d'] == "is for dog", values
         assert values[0]['a'] == "is for aardvark", values
@@ -290,6 +292,7 @@ class TableDBTestCase(unittest.TestCase):
                                   'd':dbtables.ExactCond('is for dog'),
                                   'c':dbtables.PrefixCond('is for'),
                                   'p':lambda s: not s})
+        values = list(values)
         assert len(values) == 1, values
         assert values[0]['d'] == "is for dog", values
         assert values[0]['a'] == "is for aardvark", values
@@ -354,6 +357,7 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(
             tabname, None,
             conditions={'Type': dbtables.ExactCond('Unknown')})
+        values = list(values)
         assert len(values) == 1, values
         assert values[0]['Name'] == None, values
         assert values[0]['Access'] == None, values
@@ -362,6 +366,7 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(
             tabname, None,
             conditions={'Name': dbtables.ExactCond('Nifty.MP3')})
+        values = list(values)
         assert len(values) == 1, values
         assert values[0]['Type'] == "MP3", values
         assert values[0]['Access'] == "2", values
@@ -369,6 +374,7 @@ class TableDBTestCase(unittest.TestCase):
         # Make sure change applied only to select conditions
         values = self.tdb.Select(
             tabname, None, conditions={'Name': dbtables.LikeCond('%doc%')})
+        values = list(values)
         assert len(values) == 1, values
         assert values[0]['Type'] == "Word", values
         assert values[0]['Access'] == "9", values

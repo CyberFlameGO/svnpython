@@ -58,12 +58,8 @@ static char copyright[] =
 /* defining this one enables tracing */
 #undef VERBOSE
 
-#if PY_VERSION_HEX >= 0x01060000
-#if PY_VERSION_HEX  < 0x02020000 || defined(Py_USING_UNICODE)
 /* defining this enables unicode support (default under 1.6a1 and later) */
 #define HAVE_UNICODE
-#endif
-#endif
 
 /* -------------------------------------------------------------------- */
 /* optional features */
@@ -2632,9 +2628,9 @@ pattern_getattr(PatternObject* self, char* name)
     return NULL;
 }
 
-statichere PyTypeObject Pattern_Type = {
-    PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Pattern",
+static PyTypeObject Pattern_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "_" SRE_MODULE ".SRE_Pattern",
     sizeof(PatternObject), sizeof(SRE_CODE),
     (destructor)pattern_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -2651,7 +2647,7 @@ statichere PyTypeObject Pattern_Type = {
     0,					/* tp_getattro */
     0,					/* tp_setattro */
     0,					/* tp_as_buffer */
-    Py_TPFLAGS_HAVE_WEAKREFS,		/* tp_flags */
+    Py_TPFLAGS_DEFAULT,			/* tp_flags */
     pattern_doc,			/* tp_doc */
     0,					/* tp_traverse */
     0,					/* tp_clear */
@@ -2688,8 +2684,7 @@ _compile(PyObject* self_, PyObject* args)
 
     for (i = 0; i < n; i++) {
         PyObject *o = PyList_GET_ITEM(code, i);
-        unsigned long value = PyInt_Check(o) ? (unsigned long)PyInt_AsLong(o)
-                                              : PyLong_AsUnsignedLong(o);
+        unsigned long value = PyLong_AsUnsignedLong(o);
         self->code[i] = (SRE_CODE) value;
         if ((unsigned long) self->code[i] != value) {
             PyErr_SetString(PyExc_OverflowError,
@@ -2762,6 +2757,10 @@ static Py_ssize_t
 match_getindex(MatchObject* self, PyObject* index)
 {
     Py_ssize_t i;
+
+    if (index == NULL)
+	/* Default value */
+	return 0;
 
     if (PyInt_Check(index))
         return PyInt_AsSsize_t(index);
@@ -2913,7 +2912,7 @@ match_start(MatchObject* self, PyObject* args)
 {
     Py_ssize_t index;
 
-    PyObject* index_ = Py_False; /* zero */
+    PyObject* index_ = NULL;
     if (!PyArg_UnpackTuple(args, "start", 0, 1, &index_))
         return NULL;
 
@@ -2936,7 +2935,7 @@ match_end(MatchObject* self, PyObject* args)
 {
     Py_ssize_t index;
 
-    PyObject* index_ = Py_False; /* zero */
+    PyObject* index_ = NULL;
     if (!PyArg_UnpackTuple(args, "end", 0, 1, &index_))
         return NULL;
 
@@ -2986,7 +2985,7 @@ match_span(MatchObject* self, PyObject* args)
 {
     Py_ssize_t index;
 
-    PyObject* index_ = Py_False; /* zero */
+    PyObject* index_ = NULL;
     if (!PyArg_UnpackTuple(args, "span", 0, 1, &index_))
         return NULL;
 
@@ -3164,9 +3163,9 @@ match_getattr(MatchObject* self, char* name)
 /* FIXME: implement setattr("string", None) as a special case (to
    detach the associated string, if any */
 
-statichere PyTypeObject Match_Type = {
-    PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Match",
+static PyTypeObject Match_Type = {
+    PyVarObject_HEAD_INIT(NULL,0)
+    "_" SRE_MODULE ".SRE_Match",
     sizeof(MatchObject), sizeof(Py_ssize_t),
     (destructor)match_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -3339,9 +3338,9 @@ scanner_getattr(ScannerObject* self, char* name)
     return NULL;
 }
 
-statichere PyTypeObject Scanner_Type = {
-    PyObject_HEAD_INIT(NULL)
-    0, "_" SRE_MODULE ".SRE_Scanner",
+static PyTypeObject Scanner_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "_" SRE_MODULE ".SRE_Scanner",
     sizeof(ScannerObject), 0,
     (destructor)scanner_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
@@ -3385,19 +3384,19 @@ static PyMethodDef _functions[] = {
     {NULL, NULL}
 };
 
-#if PY_VERSION_HEX < 0x02030000
-DL_EXPORT(void) init_sre(void)
-#else
 PyMODINIT_FUNC init_sre(void)
-#endif
 {
     PyObject* m;
     PyObject* d;
     PyObject* x;
 
-    /* Patch object types */
-    Pattern_Type.ob_type = Match_Type.ob_type =
-        Scanner_Type.ob_type = &PyType_Type;
+    /* Initialize object types */
+    if (PyType_Ready(&Pattern_Type) < 0)
+        return;
+    if (PyType_Ready(&Match_Type) < 0)
+        return;
+    if (PyType_Ready(&Scanner_Type) < 0)
+        return;
 
     m = Py_InitModule("_" SRE_MODULE, _functions);
     if (m == NULL)

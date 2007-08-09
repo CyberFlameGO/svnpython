@@ -52,7 +52,6 @@ Option                                  Effect
 -W arg : warning control (arg is action:message:category:module:lineno)
 -x      Skip first line of source, allowing use of non-unix Forms of #!cmd
 -?      Help!
--3      warn about Python 3.x incompatibilities
 -c      Specify the command to execute (see next section). This terminates the
 command option list (following options are passed as arguments to the command).
         the name of a python file (.py) to execute read from stdin.
@@ -217,7 +216,6 @@ Highest             Operator                             Comment
         x^y                               Bitwise exclusive or
         x|y                               Bitwise or
         x<y  x<=y  x>y  x>=y  x==y x!=y   Comparison,
-        x<>y                              identity,
         x is y   x is not y               membership
         x in s   x not in s
         not x                             boolean negation
@@ -243,7 +241,7 @@ Comparison         Meaning          Notes
 >          strictly greater than
 >=         greater than or equal to
 ==         equal to
-!= or <>   not equal to
+!=         not equal to
 is         object identity           (2)
 is not     negated object identity   (2)
 
@@ -272,7 +270,7 @@ x and y                                       if x is False then x, else   (1)
 
 Notes :
     Truth testing behavior can be overridden for a given class by defining
-special method __nonzero__.
+special method __bool__.
     (1) Evaluate second arg only if necessary to determine outcome.
 
 None
@@ -724,7 +722,7 @@ File Exceptions
     return [result] -- Exits from function (or method) and returns result (use a tuple to
                        return more than one value). If no result given, then returns None.
     yield result    -- Freezes the execution frame of a generator and returns the result
-                       to the iterator's .next() method.  Upon the next call to next(),
+                       to the iterator's .__next__() method.  Upon the next call to __next__(),
                        resumes execution at the frozen point with all of the local variables
                        still intact.
 
@@ -781,8 +779,8 @@ When an error message is printed for an unhandled exception which is a
 class, the class name is printed, then a colon and a space, and
 finally the instance converted to a string using the built-in function
 str().
-All built-in exception classes derives from StandardError, itself
-derived from Exception.
+All built-in exception classes derives from Exception, itself
+derived from BaseException.
 
 Name Space Statements
 
@@ -903,7 +901,7 @@ lambda [param_list]: returnedExpr
                 -- Creates an anonymous function. returnedExpr must be
                    an expression, not a statement (e.g., not "if xx:...",
                    "print xxx", etc.) and thus can't contain newlines.
-                   Used mostly for filter(), map(), reduce() functions, and GUI callbacks..
+                   Used mostly for filter(), map() functions, and GUI callbacks..
 List comprehensions
 result = [expression for item1 in sequence1  [if condition1]
                         [for item2 in sequence2 ... for itemN in sequenceN]
@@ -927,30 +925,23 @@ __import__(name[,   Imports module within the given context (see lib ref for
 globals[, locals[,  more details)
 fromlist]]])
 abs(x)              Return the absolute value of number x.
-apply(f, args[,     Calls func/method f with arguments args and optional
-keywords])          keywords.
 bool(x)             Returns True when the argument x is true and False otherwise.
 buffer(obj)         Creates a buffer reference to an object.
-callable(x)         Returns True if x callable, else False.
 chr(i)              Returns one-character string whose ASCII code isinteger i
 classmethod(f)      Converts a function f, into a method with the class as the
                     first argument.  Useful for creating alternative constructors.
 cmp(x,y)            Returns negative, 0, positive if x <, ==, > to y
-coerce(x,y)         Returns a tuple of the two numeric arguments converted to a
-                    common type.
-                    Compiles string into a code object.filename is used in
-                    error message, can be any string. It isusually the file
 compile(string,     from which the code was read, or eg. '<string>'if not read
 filename, kind)     from file.kind can be 'eval' if string is a single stmt, or
                     'single' which prints the output of expression statements
-                    thatevaluate to something else than None, or be 'exec'.
+                    that evaluate to something else than None, or be 'exec'.
 complex(real[,      Builds a complex object (can also be done using J or j
 image])             suffix,e.g. 1+3J)
 delattr(obj, name)  deletes attribute named name of object obj <=> del obj.name
                     If no args, returns the list of names in current
 dict([items])       Create a new dictionary from the specified item list.
-dir([object])       localsymbol table. With a module, class or class
-                    instanceobject as arg, returns list of names in its attr.
+dir([object])       local symbol table. With a module, class or class
+                    instance object as arg, returns list of names in its attr.
                     dict.
 divmod(a,b)         Returns tuple of (a/b, a%b)
 enumerate(seq)      Return a iterator giving:  (0, seq[0]), (1, seq[1]), ...
@@ -965,7 +956,7 @@ sequence)           function returns true. function takes one parameter.
 float(x)            Converts a number or a string to floating point.
 getattr(object,     [<default> arg added in 1.5.2]Gets attribute called name
 name[, default]))   from object,e.g. getattr(x, 'f') <=> x.f). If not found,
-                    raisesAttributeError or returns default if specified.
+                    raises AttributeError or returns default if specified.
 globals()           Returns a dictionary containing current global variables.
 hasattr(object,     Returns true if object has attr called name.
 name)
@@ -973,13 +964,9 @@ hash(object)        Returns the hash value of the object (if it has one)
 help(f)             Display documentation on object f.
 hex(x)              Converts a number x to a hexadecimal string.
 id(object)          Returns a unique 'identity' integer for an object.
-input([prompt])     Prints prompt if given. Reads input and evaluates it.
-                    Converts a number or a string to a plain integer. Optional
 int(x[, base])      base paramenter specifies base from which to convert string
                     values.
-intern(aString)     Enters aString in the table of "interned strings"
-                    andreturns the string. Interned strings are 'immortals'.
-isinstance(obj,     returns true if obj is an instance of class. Ifissubclass
+isinstance(obj,     Returns true if obj is an instance of class. Ifissubclass
 class)              (A,B) then isinstance(x,A) => isinstance(x,B)
 issubclass(class1,  returns true if class1 is derived from class2
 class2)
@@ -1012,34 +999,24 @@ open(name           Open a file.
   [, buffering]])
 pow(x, y [, z])     Returns x to power y [modulo z]. See also ** operator.
 property()          Created a property with access controlled by functions.
-range(start [,end   Returns list of ints from >= start and < end.With 1 arg,
-[, step]])          list from 0..arg-1With 2 args, list from start..end-1With 3
-                    args, list from start up to end by step
-raw_input([prompt]) Prints prompt if given, then reads string from stdinput (no
-                    trailing \n). See also input().
-reduce(f, list [,   Applies the binary function f to the items oflist so as to
-init])              reduce the list to a single value.If init given, it is
-                    "prepended" to list.
-                    Re-parses and re-initializes an already imported module.
-                    Useful in interactive mode, if you want to reload amodule
-reload(module)      after fixing it. If module was syntacticallycorrect but had
-                    an error in initialization, mustimport it one more time
-                    before calling reload().
-                    Returns a string containing a printable and if possible
-repr(object)        evaluable representation of an object. <=> `object`
-                    (usingbackquotes). Class redefinissable (__repr__). See
-                    also str()
+range(start [,end   Returns list of ints from >= start and < end. With 1 arg,
+[, step]])          list from 0..arg-1. With 2 args, list from start..end-1.
+                    With 3 args, list from start up to end by step
+                    after fixing it.
+repr(object)        Returns a string containing a printable and if possible
+                    evaluable representation of an object. 
+                    Class redefinable (__repr__). See also str().
 round(x, n=0)       Returns the floating point value x rounded to n digitsafter
                     the decimal point.
-setattr(object,     This is the counterpart of getattr().setattr(o, 'foobar',
-name, value)        3) <=> o.foobar = 3Creates attribute if it doesn't exist!
+setattr(object,     This is the counterpart of getattr(). setattr(o, 'foobar',
+name, value)        3) <=> o.foobar = 3. Creates attribute if it doesn't exist!
 slice([start,] stop Returns a slice object representing a range, with R/
-[, step])           Oattributes: start, stop, step.
-                    Returns a string containing a nicely
+[, step])           O attributes: start, stop, step.
 staticmethod()      Convert a function to method with no self or class
                     argument.  Useful for methods associated with a class that
                     do not need access to an object's internal state.
-str(object)         printablerepresentation of an object. Class overridable
+str(object)         Returns a string containing a nicely
+                    printable representation of an object. Class overridable
                     (__str__).See also repr().
 super(type)         Create an unbound super object.  Used to call cooperative
                     superclass methods.
@@ -1061,12 +1038,8 @@ encoding[, error    thegiven encoding name and error treatment ('strict',
 vars([object])      instance object as argumentreturns a dictionary
                     corresponding to the object'ssymbol table. Useful with "%"
                     formatting operator.
-xrange(start [, end Like range(), but doesn't actually store entire listall at
-[, step]])          once. Good to use in "for" loops when there is abig range
-                    and little memory.
-zip(seq1[, seq2,    Returns a list of tuples where each tuple contains the nth
-...])               element of each of the argument sequences.
-
+zip(seq1[, seq2,    Returns an iterator of tuples where each tuple contains
+...])               the nth element of each of the argument sequences.
 
 
 
@@ -1077,10 +1050,7 @@ Exception>
     SystemExit
          On 'sys.exit()'
     StopIteration
-         Signal the end from iterator.next()
-    StandardError
-                 Base class for all built-in exceptions; derived from Exception
-    root class.
+         Signal the end from iterator.__next__()
         ArithmeticError
                  Base class for OverflowError, ZeroDivisionError,
     FloatingPointError
@@ -1162,7 +1132,7 @@ Special methods for any class
         __cmp__(s, o)     Compares s to o and returns <0, 0, or >0.
                           Implements >, <, == etc...
         __hash__(s)       Compute a 32 bit hash code; hash() and dictionary ops
-        __nonzero__(s)    Returns False or True for truth value testing
+        __bool__(s)    Returns False or True for truth value testing
         __getattr__(s, name)  called when attr lookup doesn't find <name>
         __setattr__(s, name, val) called when setting an attr
                                   (inside, don't use "self.name = value"
@@ -1186,7 +1156,7 @@ Operators
         s&o       =  __and__(s,o)
         s^o       =  __xor__(s,o)         s|o        =  __or__(s,o)
         s<<o      =  __lshift__(s,o)      s>>o       =  __rshift__(s,o)
-        nonzero(s) = __nonzero__(s) (used in boolean testing)
+        bool(s) = __bool__(s) (used in boolean testing)
         -s        =  __neg__(s)           +s         =  __pos__(s)
         abs(s)    =  __abs__(s)           ~s         =  __invert__(s)  (bitwise)
         s+=o      =  __iadd__(s,o)        s-=o       =  __isub__(s,o)
@@ -1200,7 +1170,6 @@ Operators
         int(s)    =  __int__(s)           long(s)    =  __long__(s)
         float(s)  =  __float__(s)         complex(s)    =  __complex__(s)
         oct(s)    =  __oct__(s)           hex(s)     =  __hex__(s)
-        coerce(s,o) = __coerce__(s,o)
         Right-hand-side equivalents for all binary operators exist;
         are called when class instance is on r-h-s of operator:
         a + 3  calls __add__(a, 3)
@@ -1334,10 +1303,6 @@ builtin_module_names A list of strings giving the names of all moduleswritten
                      in C that are linked into this interpreter.
 check_interval       How often to check for thread switches or signals(measured
                      in number of virtual machine instructions)
-exc_type, exc_value, Deprecated since release 1.5. Use exc_info() instead.
-exc_traceback
-exitfunc             User can set to a parameterless fcn. It will getcalled
-                     before interpreter exits.
 last_type,           Set only when an exception not handled andinterpreter
 last_value,          prints an error. Used by debuggers.
 last_traceback
@@ -1843,7 +1808,6 @@ anydbm           Generic interface to all dbm clones. (dbhash, gdbm,
 asynchat         Support for 'chat' style protocols
 asyncore         Asynchronous File I/O (in select style)
 atexit           Register functions to be called at exit of Python interpreter.
-audiodev         Audio support for a few platforms.
 base64           Conversions to/from base64 RFC-MIME transport encoding .
 BaseHTTPServer   Base class forhttp services.
 Bastion          "Bastionification" utility (control access to instance vars)
@@ -1877,7 +1841,6 @@ dospath          Common operations on DOS pathnames.
 dumbdbm          A dumb and slow but simple dbm clone.
 [DEL:dump:DEL]   [DEL:Print python code that reconstructs a variable.:DEL]
 email            Comprehensive support for internet email.
-exceptions       Class based built-in exception hierarchy.
 filecmp          File comparison.
 fileinput        Helper class to quickly write a loop over all standard input
                  files.
@@ -1892,7 +1855,6 @@ getopt           Standard command line processing. See also ftp://
                  www.pauahtun.org/pub/getargspy.zip
 getpass          Utilities to get a password and/or the current user name.
 glob             filename globbing.
-gopherlib        Gopher protocol client interface.
 [DEL:grep:DEL]   [DEL:'grep' utilities.:DEL]
 gzip             Read & write gzipped files.
 heapq            Priority queue implemented using lists organized as heaps.
@@ -1907,9 +1869,7 @@ imghdr           Recognizing image files based on their first few bytes.
 imputil          Privides a way of writing customised import hooks.
 inspect          Tool for probing live Python objects.
 keyword          List of Python keywords.
-knee             A Python re-implementation of hierarchical module import.
 linecache        Cache lines from files.
-linuxaudiodev    Lunix /dev/audio support.
 locale           Support for number formatting using the current locale
                  settings.
 logging          Python logging facility.
@@ -1920,8 +1880,6 @@ mailcap          Mailcap file handling (RFC 1524).
 mhlib            MH (mailbox) interface.
 mimetools        Various tools used by MIME-reading or MIME-writing programs.
 mimetypes        Guess the MIME type of a file.
-MimeWriter       Generic MIME writer.
-mimify           Mimification and unmimification of mail messages.
 mmap             Interface to memory-mapped files - they behave like mutable
                  strings./font>
 multifile        Class to make multi-file messages easier to handle.
@@ -1939,9 +1897,7 @@ pickle           Pickling (save and restore) of Python objects (a faster
                  Cimplementation exists in built-in module: cPickle).
 pipes            Conversion pipeline templates.
 pkgunil          Utilities for working with Python packages.
-popen2           variations on pipe open.
 poplib           A POP3 client class. Based on the J. Myers POP3 draft.
-posixfile        Extended (posix) file operations.
 posixpath        Common operations on POSIX pathnames.
 pprint           Support to pretty-print lists, tuples, & dictionaries
                  recursively.
@@ -1954,7 +1910,6 @@ py_compile       Routine to "compile" a .py file to a .pyc file.
 pyclbr           Parse a Python file and retrieve classes and methods.
 Queue            A multi-producer, multi-consumer queue.
 quopri           Conversions to/from quoted-printable transport encoding.
-rand             Don't use unless you want compatibility with C's rand().
 random           Random variable generators
 re               Regular Expressions.
 repr             Redo repr() but with limits on most sizes.
@@ -1963,7 +1918,6 @@ rfc822           RFC-822 message manipulation class.
 rlcompleter      Word completion for GNU readline 2.0.
 robotparser      Parse robots.txt files, useful for web spiders.
 sched            A generally useful event scheduler class.
-sets             Module for a set datatype.
 sgmllib          A parser for SGML.
 shelve           Manage shelves of pickled objects.
 shlex            Lexical analyzer class for simple shell-like syntaxes.
@@ -1975,7 +1929,6 @@ smtplib          SMTP Client class (RFC 821)
 sndhdr           Several routines that help recognizing sound.
 SocketServer     Generic socket server classes.
 stat             Constants and functions for interpreting stat/lstat struct.
-statcache        Maintain a cache of file stats.
 statvfs          Constants for interpreting statvfs struct as returned by
                  os.statvfs()and os.fstatvfs() (if they exist).
 string           A collection of string operations.
@@ -1991,7 +1944,6 @@ tempfile         Temporary file name allocation.
 textwrap         Object for wrapping and filling text.
 threading        Proposed new higher-level threading interfaces
 threading_api    (doc of the threading module)
-toaiff           Convert "arbitrary" sound files to AIFF files .
 token            Tokens (from "token.h").
 tokenize         Compiles a regular expression that recognizes Python tokens.
 traceback        Format and print Python stack traces.
@@ -2086,10 +2038,6 @@ zipfile          Read & write PK zipped files.
             GL          Constants for gl
             DEVICE      More constants for gl
             imgfile     Imglib image file interface
-
-* Suns *
-
-            sunaudiodev Access to sun audio interface
 
 
 Workspace exploration and idiom hints

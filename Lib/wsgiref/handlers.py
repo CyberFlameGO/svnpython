@@ -1,29 +1,11 @@
 """Base classes for server/gateway implementations"""
 
-from types import StringType
-from util import FileWrapper, guess_scheme, is_hop_by_hop
-from headers import Headers
+from .util import FileWrapper, guess_scheme, is_hop_by_hop
+from .headers import Headers
 
 import sys, os, time
 
 __all__ = ['BaseHandler', 'SimpleHandler', 'BaseCGIHandler', 'CGIHandler']
-
-try:
-    dict
-except NameError:
-    def dict(items):
-        d = {}
-        for k,v in items:
-            d[k] = v
-        return d
-
-try:
-    True
-    False
-except NameError:
-    True = not None
-    False = not True
-
 
 # Weekday and month names for HTTP date/time formatting; always English!
 _weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -159,7 +141,7 @@ class BaseHandler:
 
         Subclasses can extend this to add other defaults.
         """
-        if not self.headers.has_key('Content-Length'):
+        if 'Content-Length' not in self.headers:
             self.set_content_length()
 
     def start_response(self, status, headers,exc_info=None):
@@ -175,14 +157,14 @@ class BaseHandler:
         elif self.headers is not None:
             raise AssertionError("Headers already set!")
 
-        assert type(status) is StringType,"Status must be a string"
+        assert type(status) is str,"Status must be a string"
         assert len(status)>=4,"Status must be at least 4 characters"
         assert int(status[:3]),"Status message must begin w/3-digit code"
         assert status[3]==" ", "Status message must have a space after code"
         if __debug__:
             for name,val in headers:
-                assert type(name) is StringType,"Header names must be strings"
-                assert type(val) is StringType,"Header values must be strings"
+                assert type(name) is str,"Header names must be strings"
+                assert type(val) is str,"Header values must be strings"
                 assert not is_hop_by_hop(name),"Hop-by-hop headers not allowed"
         self.status = status
         self.headers = self.headers_class(headers)
@@ -194,11 +176,11 @@ class BaseHandler:
         if self.origin_server:
             if self.client_is_modern():
                 self._write('HTTP/%s %s\r\n' % (self.http_version,self.status))
-                if not self.headers.has_key('Date'):
+                if 'Date' not in self.headers:
                     self._write(
                         'Date: %s\r\n' % format_date_time(time.time())
                     )
-                if self.server_software and not self.headers.has_key('Server'):
+                if self.server_software and 'Server' not in self.headers:
                     self._write('Server: %s\r\n' % self.server_software)
         else:
             self._write('Status: %s\r\n' % self.status)
@@ -206,7 +188,7 @@ class BaseHandler:
     def write(self, data):
         """'write()' callable as specified by PEP 333"""
 
-        assert type(data) is StringType,"write() argument must be string"
+        assert type(data) is str,"write() argument must be string"
 
         if not self.status:
             raise AssertionError("write() before start_response()")

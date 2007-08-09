@@ -90,6 +90,7 @@ f = urllib2.urlopen('http://www.python.org/')
 import base64
 import hashlib
 import httplib
+import io
 import mimetools
 import os
 import posixpath
@@ -101,10 +102,7 @@ import time
 import urlparse
 import bisect
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO
 
 from urllib import (unwrap, unquote, splittype, splithost, quote,
      addinfourl, splitport, splitquery,
@@ -281,7 +279,7 @@ class Request:
     def header_items(self):
         hdrs = self.unredirected_hdrs.copy()
         hdrs.update(self.headers)
-        return hdrs.items()
+        return list(hdrs.items())
 
 class OpenerDirector:
     def __init__(self):
@@ -436,9 +434,8 @@ def build_opener(*handlers):
     If any of the handlers passed as arguments are subclasses of the
     default handlers, the default handlers will not be used.
     """
-    import types
     def isclass(obj):
-        return isinstance(obj, types.ClassType) or hasattr(obj, "__bases__")
+        return isinstance(obj, type) or hasattr(obj, "__bases__")
 
     opener = OpenerDirector()
     default_classes = [ProxyHandler, UnknownHandler, HTTPHandler,
@@ -668,7 +665,7 @@ class ProxyHandler(BaseHandler):
     def __init__(self, proxies=None):
         if proxies is None:
             proxies = getproxies()
-        assert hasattr(proxies, 'has_key'), "proxies must be a mapping"
+        assert hasattr(proxies, 'keys'), "proxies must be a mapping"
         self.proxies = proxies
         for type, url in proxies.items():
             setattr(self, '%s_open' % type,
@@ -682,7 +679,7 @@ class ProxyHandler(BaseHandler):
             proxy_type = orig_type
         if user and password:
             user_pass = '%s:%s' % (unquote(user), unquote(password))
-            creds = base64.b64encode(user_pass).strip()
+            creds = str(base64.b64encode(user_pass)).strip()
             req.add_header('Proxy-authorization', 'Basic ' + creds)
         hostport = unquote(hostport)
         req.set_proxy(hostport, proxy_type)
@@ -718,7 +715,7 @@ class HTTPPasswordMgr:
         domains = self.passwd.get(realm, {})
         for default_port in True, False:
             reduced_authuri = self.reduce_uri(authuri, default_port)
-            for uris, authinfo in domains.iteritems():
+            for uris, authinfo in domains.items():
                 for uri in uris:
                     if self.is_suburi(uri, reduced_authuri):
                         return authinfo
@@ -805,7 +802,7 @@ class AbstractBasicAuthHandler:
         user, pw = self.passwd.find_user_password(realm, host)
         if pw is not None:
             raw = "%s:%s" % (user, pw)
-            auth = 'Basic %s' % base64.b64encode(raw).strip()
+            auth = 'Basic %s' % str(base64.b64encode(raw)).strip()
             if req.headers.get(self.auth_header, None) == auth:
                 return None
             req.add_header(self.auth_header, auth)
@@ -840,17 +837,7 @@ class ProxyBasicAuthHandler(AbstractBasicAuthHandler, BaseHandler):
 
 def randombytes(n):
     """Return n random bytes."""
-    # Use /dev/urandom if it is available.  Fall back to random module
-    # if not.  It might be worthwhile to extend this function to use
-    # other platform-specific mechanisms for getting random bytes.
-    if os.path.exists("/dev/urandom"):
-        f = open("/dev/urandom")
-        s = f.read(n)
-        f.close()
-        return s
-    else:
-        L = [chr(random.randrange(0, 256)) for i in range(n)]
-        return "".join(L)
+    return str(os.urandom(n), "latin-1")
 
 class AbstractDigestAuthHandler:
     # Digest authentication is specified in RFC 2617.
@@ -1079,22 +1066,20 @@ class AbstractHTTPHandler(BaseHandler):
         try:
             h.request(req.get_method(), req.get_selector(), req.data, headers)
             r = h.getresponse()
-        except socket.error, err: # XXX what error?
+        except socket.error as err: # XXX what error?
             raise URLError(err)
 
         # Pick apart the HTTPResponse object to get the addinfourl
         # object initialized properly.
 
-        # Wrap the HTTPResponse object in socket's file object adapter
-        # for Windows.  That adapter calls recv(), so delegate recv()
-        # to read().  This weird wrapping allows the returned object to
-        # have readline() and readlines() methods.
+        # XXX Should an HTTPResponse object really be passed to
+        # BufferedReader?  If so, we should change httplib to support
+        # this use directly.
 
-        # XXX It might be better to extract the read buffering code
-        # out of socket._fileobject() and into a base class.
-
-        r.recv = r.read
-        fp = socket._fileobject(r, close=True)
+        # Add some fake methods to the reader to satisfy BufferedReader.
+        r.readable = lambda: True
+        r.writable = r.seekable = lambda: False
+        fp = io.BufferedReader(r)
 
         resp = addinfourl(fp, r.msg, req.get_full_url())
         resp.code = r.status
@@ -1232,13 +1217,19 @@ class FileHandler(BaseHandler):
             if host:
                 host, port = splitport(host)
             if not host or \
-                (not port and socket.gethostbyname(host) in self.get_names()):
+                (not port and _safe_gethostbyname(host) in self.get_names()):
                 return addinfourl(open(localfile, 'rb'),
                                   headers, 'file:'+file)
-        except OSError, msg:
+        except OSError as msg:
             # urllib2 users shouldn't expect OSErrors coming from urlopen()
             raise URLError(msg)
         raise URLError('file not on local host')
+
+def _safe_gethostbyname(host):
+    try:
+        return socket.gethostbyname(host)
+    except socket.gaierror:
+        return None
 
 class FTPHandler(BaseHandler):
     def ftp_open(self, req):
@@ -1265,11 +1256,11 @@ class FTPHandler(BaseHandler):
 
         try:
             host = socket.gethostbyname(host)
-        except socket.error, msg:
+        except socket.error as msg:
             raise URLError(msg)
         path, attrs = splitattr(req.get_selector())
         dirs = path.split('/')
-        dirs = map(unquote, dirs)
+        dirs = list(map(unquote, dirs))
         dirs, file = dirs[:-1], dirs[-1]
         if dirs and not dirs[0]:
             dirs = dirs[1:]
@@ -1291,12 +1282,11 @@ class FTPHandler(BaseHandler):
             sf = StringIO(headers)
             headers = mimetools.Message(sf)
             return addinfourl(fp, headers, req.get_full_url())
-        except ftplib.all_errors, msg:
+        except ftplib.all_errors as msg:
             raise IOError, ('ftp error', msg), sys.exc_info()[2]
 
     def connect_ftp(self, user, passwd, host, port, dirs, timeout):
         fw = ftpwrapper(user, passwd, host, port, dirs, timeout)
-##        fw.ftp.set_debuglevel(1)
         return fw
 
 class CacheFTPHandler(FTPHandler):
@@ -1329,18 +1319,18 @@ class CacheFTPHandler(FTPHandler):
         # first check for old ones
         t = time.time()
         if self.soonest <= t:
-            for k, v in self.timeout.items():
+            for k, v in list(self.timeout.items()):
                 if v < t:
                     self.cache[k].close()
                     del self.cache[k]
                     del self.timeout[k]
-        self.soonest = min(self.timeout.values())
+        self.soonest = min(list(self.timeout.values()))
 
         # then check the size
         if len(self.cache) == self.max_conns:
-            for k, v in self.timeout.items():
+            for k, v in list(self.timeout.items()):
                 if v == self.soonest:
                     del self.cache[k]
                     del self.timeout[k]
                     break
-            self.soonest = min(self.timeout.values())
+            self.soonest = min(list(self.timeout.values()))

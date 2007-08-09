@@ -26,10 +26,10 @@ class BoolTest(unittest.TestCase):
 
     def test_print(self):
         try:
-            fo = open(test_support.TESTFN, "wb")
-            print >> fo, False, True
+            fo = open(test_support.TESTFN, "w")
+            print(False, True, file=fo)
             fo.close()
-            fo = open(test_support.TESTFN, "rb")
+            fo = open(test_support.TESTFN, "r")
             self.assertEqual(fo.read(), 'False True\n')
         finally:
             fo.close()
@@ -168,8 +168,8 @@ class BoolTest(unittest.TestCase):
         self.assertIs(hasattr([], "wobble"), False)
 
     def test_callable(self):
-        self.assertIs(callable(len), True)
-        self.assertIs(callable(1), False)
+        self.assertIs(hasattr(len, '__call__'), True)
+        self.assertIs(hasattr(1, '__call__'), False)
 
     def test_isinstance(self):
         self.assertIs(isinstance(True, bool), True)
@@ -183,9 +183,9 @@ class BoolTest(unittest.TestCase):
         self.assertIs(issubclass(bool, int), True)
         self.assertIs(issubclass(int, bool), False)
 
-    def test_haskey(self):
-        self.assertIs({}.has_key(1), False)
-        self.assertIs({1:1}.has_key(1), True)
+    def test_contains(self):
+        self.assertIs(1 in {}, False)
+        self.assertIs(1 in {1:1}, True)
 
     def test_string(self):
         self.assertIs("xyz".endswith("z"), True)
@@ -198,7 +198,13 @@ class BoolTest(unittest.TestCase):
         self.assertIs("xyz".isdigit(), False)
         self.assertIs("xyz".islower(), True)
         self.assertIs("XYZ".islower(), False)
+        self.assertIs("0123".isdecimal(), True)
+        self.assertIs("xyz".isdecimal(), False)
+        self.assertIs("0123".isnumeric(), True)
+        self.assertIs("xyz".isnumeric(), False)
         self.assertIs(" ".isspace(), True)
+        self.assertIs("\xa0".isspace(), True)
+        self.assertIs("\u3000".isspace(), True)
         self.assertIs("XYZ".isspace(), False)
         self.assertIs("X".istitle(), True)
         self.assertIs("x".istitle(), False)
@@ -206,30 +212,6 @@ class BoolTest(unittest.TestCase):
         self.assertIs("xyz".isupper(), False)
         self.assertIs("xyz".startswith("x"), True)
         self.assertIs("xyz".startswith("z"), False)
-
-        if test_support.have_unicode:
-            self.assertIs(unicode("xyz", 'ascii').endswith(unicode("z", 'ascii')), True)
-            self.assertIs(unicode("xyz", 'ascii').endswith(unicode("x", 'ascii')), False)
-            self.assertIs(unicode("xyz0123", 'ascii').isalnum(), True)
-            self.assertIs(unicode("@#$%", 'ascii').isalnum(), False)
-            self.assertIs(unicode("xyz", 'ascii').isalpha(), True)
-            self.assertIs(unicode("@#$%", 'ascii').isalpha(), False)
-            self.assertIs(unicode("0123", 'ascii').isdecimal(), True)
-            self.assertIs(unicode("xyz", 'ascii').isdecimal(), False)
-            self.assertIs(unicode("0123", 'ascii').isdigit(), True)
-            self.assertIs(unicode("xyz", 'ascii').isdigit(), False)
-            self.assertIs(unicode("xyz", 'ascii').islower(), True)
-            self.assertIs(unicode("XYZ", 'ascii').islower(), False)
-            self.assertIs(unicode("0123", 'ascii').isnumeric(), True)
-            self.assertIs(unicode("xyz", 'ascii').isnumeric(), False)
-            self.assertIs(unicode(" ", 'ascii').isspace(), True)
-            self.assertIs(unicode("XYZ", 'ascii').isspace(), False)
-            self.assertIs(unicode("X", 'ascii').istitle(), True)
-            self.assertIs(unicode("x", 'ascii').istitle(), False)
-            self.assertIs(unicode("XYZ", 'ascii').isupper(), True)
-            self.assertIs(unicode("xyz", 'ascii').isupper(), False)
-            self.assertIs(unicode("xyz", 'ascii').startswith(unicode("x", 'ascii')), True)
-            self.assertIs(unicode("xyz", 'ascii').startswith(unicode("z", 'ascii')), False)
 
     def test_boolean(self):
         self.assertEqual(True & 1, 1)
@@ -246,7 +228,7 @@ class BoolTest(unittest.TestCase):
 
     def test_fileclosed(self):
         try:
-            f = file(test_support.TESTFN, "w")
+            f = open(test_support.TESTFN, "w")
             self.assertIs(f.closed, False)
             f.close()
             self.assertIs(f.closed, True)
@@ -257,8 +239,6 @@ class BoolTest(unittest.TestCase):
         import operator
         self.assertIs(operator.truth(0), False)
         self.assertIs(operator.truth(1), True)
-        self.assertIs(operator.isCallable(0), False)
-        self.assertIs(operator.isCallable(len), True)
         self.assertIs(operator.isNumberType(None), False)
         self.assertIs(operator.isNumberType(0), True)
         self.assertIs(operator.not_(1), False)
@@ -288,58 +268,61 @@ class BoolTest(unittest.TestCase):
         self.assertIs(pickle.loads(pickle.dumps(True, True)), True)
         self.assertIs(pickle.loads(pickle.dumps(False, True)), False)
 
-    def test_cpickle(self):
-        import cPickle
-        self.assertIs(cPickle.loads(cPickle.dumps(True)), True)
-        self.assertIs(cPickle.loads(cPickle.dumps(False)), False)
-        self.assertIs(cPickle.loads(cPickle.dumps(True, True)), True)
-        self.assertIs(cPickle.loads(cPickle.dumps(False, True)), False)
-
-    def test_mixedpickle(self):
-        import pickle, cPickle
-        self.assertIs(pickle.loads(cPickle.dumps(True)), True)
-        self.assertIs(pickle.loads(cPickle.dumps(False)), False)
-        self.assertIs(pickle.loads(cPickle.dumps(True, True)), True)
-        self.assertIs(pickle.loads(cPickle.dumps(False, True)), False)
-
-        self.assertIs(cPickle.loads(pickle.dumps(True)), True)
-        self.assertIs(cPickle.loads(pickle.dumps(False)), False)
-        self.assertIs(cPickle.loads(pickle.dumps(True, True)), True)
-        self.assertIs(cPickle.loads(pickle.dumps(False, True)), False)
-
     def test_picklevalues(self):
-        import pickle, cPickle
-
         # Test for specific backwards-compatible pickle values
-        self.assertEqual(pickle.dumps(True), "I01\n.")
-        self.assertEqual(pickle.dumps(False), "I00\n.")
-        self.assertEqual(cPickle.dumps(True), "I01\n.")
-        self.assertEqual(cPickle.dumps(False), "I00\n.")
-        self.assertEqual(pickle.dumps(True, True), "I01\n.")
-        self.assertEqual(pickle.dumps(False, True), "I00\n.")
-        self.assertEqual(cPickle.dumps(True, True), "I01\n.")
-        self.assertEqual(cPickle.dumps(False, True), "I00\n.")
+        import pickle
+        self.assertEqual(pickle.dumps(True, protocol=0), b"I01\n.")
+        self.assertEqual(pickle.dumps(False, protocol=0), b"I00\n.")
+        self.assertEqual(pickle.dumps(True, protocol=1), b"I01\n.")
+        self.assertEqual(pickle.dumps(False, protocol=1), b"I00\n.")
+        self.assertEqual(pickle.dumps(True, protocol=2), b'\x80\x02\x88.')
+        self.assertEqual(pickle.dumps(False, protocol=2), b'\x80\x02\x89.')
 
     def test_convert_to_bool(self):
         # Verify that TypeError occurs when bad things are returned
-        # from __nonzero__().  This isn't really a bool test, but
+        # from __bool__().  This isn't really a bool test, but
         # it's related.
         check = lambda o: self.assertRaises(TypeError, bool, o)
         class Foo(object):
-            def __nonzero__(self):
+            def __bool__(self):
                 return self
         check(Foo())
 
         class Bar(object):
-            def __nonzero__(self):
+            def __bool__(self):
                 return "Yes"
         check(Bar())
 
         class Baz(int):
-            def __nonzero__(self):
+            def __bool__(self):
                 return self
         check(Baz())
 
+        # __bool__() must return a bool not an int
+        class Spam(int):
+            def __bool__(self):
+                return 1
+        check(Spam())
+
+        class Eggs:
+            def __len__(self):
+                return -1
+        self.assertRaises(ValueError, bool, Eggs())
+
+    def test_sane_len(self):
+        # this test just tests our assumptions about __len__
+        # this will start failing if __len__ changes assertions
+        for badval in ['illegal', -1, 1 << 32]:
+            class A:
+                def __len__(self):
+                    return badval
+            try:
+                bool(A())
+            except (Exception) as e_bool:
+                try:
+                    len(A())
+                except (Exception) as e_len:
+                    self.assertEqual(str(e_bool), str(e_len))
 
 def test_main():
     test_support.run_unittest(BoolTest)

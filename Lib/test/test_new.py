@@ -19,20 +19,12 @@ class NewTest(unittest.TestCase):
         # new.classobj()
         C = new.classobj('Spam', (Spam.Eggs,), {'get_more_yolks': get_more_yolks})
 
-        # new.instance()
-        c = new.instance(C, {'yolks': 3})
-
-        o = new.instance(C)
-        self.assertEqual(o.__dict__, {}, "new __dict__ should be empty")
-        del o
-        o = new.instance(C, None)
-        self.assertEqual(o.__dict__, {}, "new __dict__ should be empty")
-        del o
-
         def break_yolks(self):
             self.yolks = self.yolks - 2
 
         # new.instancemethod()
+        c = C()
+        c.yolks = 3
         im = new.instancemethod(break_yolks, c, C)
 
         self.assertEqual(c.get_yolks(), 3,
@@ -87,18 +79,18 @@ class NewTest(unittest.TestCase):
                 return x + y
             return g
         g = f(4)
-        new.function(f.func_code, {}, "blah")
-        g2 = new.function(g.func_code, {}, "blah", (2,), g.func_closure)
+        new.function(f.__code__, {}, "blah")
+        g2 = new.function(g.__code__, {}, "blah", (2,), g.__closure__)
         self.assertEqual(g2(), 6)
-        g3 = new.function(g.func_code, {}, "blah", None, g.func_closure)
+        g3 = new.function(g.__code__, {}, "blah", None, g.__closure__)
         self.assertEqual(g3(5), 9)
         def test_closure(func, closure, exc):
-            self.assertRaises(exc, new.function, func.func_code, {}, "", None, closure)
+            self.assertRaises(exc, new.function, func.__code__, {}, "", None, closure)
 
         test_closure(g, None, TypeError) # invalid closure
         test_closure(g, (1,), TypeError) # non-cell in closure
         test_closure(g, (1, 1), ValueError) # closure is wrong size
-        test_closure(f, g.func_closure, ValueError) # no closure needed
+        test_closure(f, g.__closure__, ValueError) # no closure needed
 
     # Note: Jython will never have new.code()
     if hasattr(new, 'code'):
@@ -106,8 +98,9 @@ class NewTest(unittest.TestCase):
             # bogus test of new.code()
             def f(a): pass
 
-            c = f.func_code
+            c = f.__code__
             argcount = c.co_argcount
+            kwonlyargcount = c.co_kwonlyargcount
             nlocals = c.co_nlocals
             stacksize = c.co_stacksize
             flags = c.co_flags
@@ -122,37 +115,40 @@ class NewTest(unittest.TestCase):
             freevars = c.co_freevars
             cellvars = c.co_cellvars
 
-            d = new.code(argcount, nlocals, stacksize, flags, codestring,
-                         constants, names, varnames, filename, name,
-                         firstlineno, lnotab, freevars, cellvars)
+            d = new.code(argcount, kwonlyargcount, nlocals, stacksize, flags,
+                         codestring, constants, names, varnames, filename,
+                         name, firstlineno, lnotab, freevars, cellvars)
 
             # test backwards-compatibility version with no freevars or cellvars
-            d = new.code(argcount, nlocals, stacksize, flags, codestring,
-                         constants, names, varnames, filename, name,
-                         firstlineno, lnotab)
+            d = new.code(argcount, kwonlyargcount, nlocals, stacksize,
+                         flags, codestring, constants, names, varnames,
+                         filename, name, firstlineno, lnotab)
 
             # negative co_argcount used to trigger a SystemError
             self.assertRaises(ValueError, new.code,
-                -argcount, nlocals, stacksize, flags, codestring,
-                constants, names, varnames, filename, name, firstlineno, lnotab)
+                -argcount, kwonlyargcount, nlocals, stacksize, flags,
+                codestring, constants, names, varnames, filename, name,
+                firstlineno, lnotab)
 
             # negative co_nlocals used to trigger a SystemError
             self.assertRaises(ValueError, new.code,
-                argcount, -nlocals, stacksize, flags, codestring,
-                constants, names, varnames, filename, name, firstlineno, lnotab)
+                argcount, kwonlyargcount, -nlocals, stacksize, flags,
+                codestring, constants, names, varnames, filename, name,
+                firstlineno, lnotab)
 
             # non-string co_name used to trigger a Py_FatalError
             self.assertRaises(TypeError, new.code,
-                argcount, nlocals, stacksize, flags, codestring,
-                constants, (5,), varnames, filename, name, firstlineno, lnotab)
+                argcount, kwonlyargcount, nlocals, stacksize, flags,
+                codestring, constants, (5,), varnames, filename, name,
+                firstlineno, lnotab)
 
             # new.code used to be a way to mutate a tuple...
             class S(str):
                 pass
             t = (S("ab"),)
-            d = new.code(argcount, nlocals, stacksize, flags, codestring,
-                         constants, t, varnames, filename, name,
-                         firstlineno, lnotab)
+            d = new.code(argcount, kwonlyargcount, nlocals, stacksize,
+                         flags, codestring, constants, t, varnames,
+                         filename, name, firstlineno, lnotab)
             self.assert_(type(t[0]) is S, "eek, tuple changed under us!")
 
 def test_main():

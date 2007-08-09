@@ -187,35 +187,26 @@ class ScopeTests(unittest.TestCase):
         check_syntax_error(self, """\
 def unoptimized_clash1(strip):
     def f(s):
-        from string import *
-        return strip(s) # ambiguity: free or local
+        from sys import *
+        return getrefcount(s) # ambiguity: free or local
     return f
 """)
 
         check_syntax_error(self, """\
 def unoptimized_clash2():
-    from string import *
+    from sys import *
     def f(s):
-        return strip(s) # ambiguity: global or local
+        return getrefcount(s) # ambiguity: global or local
     return f
 """)
 
         check_syntax_error(self, """\
 def unoptimized_clash2():
-    from string import *
+    from sys import *
     def g():
         def f(s):
-            return strip(s) # ambiguity: global or local
+            return getrefcount(s) # ambiguity: global or local
         return f
-""")
-
-        # XXX could allow this for exec with const argument, but what's the point
-        check_syntax_error(self, """\
-def error(y):
-    exec "a = 1"
-    def f(x):
-        return x + y
-    return f
 """)
 
         check_syntax_error(self, """\
@@ -228,28 +219,9 @@ def f(x):
         check_syntax_error(self, """\
 def f():
     def g():
-        from string import *
-        return strip # global or local?
+        from sys import *
+        return getrefcount # global or local?
 """)
-
-        # and verify a few cases that should work
-
-        exec """
-def noproblem1():
-    from string import *
-    f = lambda x:x
-
-def noproblem2():
-    from string import *
-    def f(x):
-        return x + 1
-
-def noproblem3():
-    from string import *
-    def f(x):
-        global y
-        y = x
-"""
 
     def testLambdas(self):
 
@@ -278,7 +250,7 @@ def noproblem3():
     def testUnboundLocal(self):
 
         def errorInOuter():
-            print y
+            print(y)
             def inner():
                 return y
             y = 1
@@ -304,7 +276,7 @@ def noproblem3():
             self.fail()
 
         # test for bug #1501934: incorrect LOAD/STORE_GLOBAL generation
-        exec """
+        exec("""
 global_x = 1
 def f():
     global_x += 1
@@ -314,7 +286,7 @@ except UnboundLocalError:
     pass
 else:
     fail('scope of global_x not correctly determined')
-""" in {'fail': self.fail}
+""", {'fail': self.fail})
 
     def testComplexDefinitions(self):
 
@@ -332,17 +304,10 @@ else:
 
         self.assertEqual(makeReturner2(a=11)()['a'], 11)
 
-        def makeAddPair((a, b)):
-            def addPair((c, d)):
-                return (a + c, b + d)
-            return addPair
-
-        self.assertEqual(makeAddPair((1, 2))((100, 200)), (101,202))
-
     def testScopeOfGlobalStmt(self):
 # Examples posted by Samuele Pedroni to python-dev on 3/1/2001
 
-        exec """\
+        exec("""\
 # I
 x = 7
 def f():
@@ -421,7 +386,7 @@ g = Global()
 self.assertEqual(g.get(), 13)
 g.set(15)
 self.assertEqual(g.get(), 13)
-"""
+""")
 
     def testLeaks(self):
 
@@ -447,7 +412,7 @@ self.assertEqual(g.get(), 13)
 
     def testClassAndGlobal(self):
 
-        exec """\
+        exec("""\
 def test(x):
     class Foo:
         global x
@@ -468,7 +433,7 @@ class X:
     passed = looked_up_by_load_name
 
 self.assert_(X.passed)
-"""
+""")
 
     def testLocalsFunction(self):
 
@@ -482,7 +447,7 @@ self.assert_(X.passed)
             return g
 
         d = f(2)(4)
-        self.assert_(d.has_key('h'))
+        self.assert_('h' in d)
         del d['h']
         self.assertEqual(d, {'x': 2, 'y': 7, 'w': 6})
 
@@ -560,10 +525,10 @@ self.assert_(X.passed)
             return lambda: x + 1
 
         g = f(3)
-        self.assertRaises(TypeError, eval, g.func_code)
+        self.assertRaises(TypeError, eval, g.__code__)
 
         try:
-            exec g.func_code in {}
+            exec(g.__code__, {})
         except TypeError:
             pass
         else:
@@ -572,18 +537,18 @@ self.assert_(X.passed)
     def testListCompLocalVars(self):
 
         try:
-            print bad
+            print(bad)
         except NameError:
             pass
         else:
-            print "bad should not be defined"
+            print("bad should not be defined")
 
         def x():
             [bad for s in 'a b' for bad in s.split()]
 
         x()
         try:
-            print bad
+            print(bad)
         except NameError:
             pass
 
@@ -596,6 +561,90 @@ self.assert_(X.passed)
             return g
 
         f(4)()
+
+    def testNonLocalFunction(self):
+
+        def f(x):
+            def inc():
+                nonlocal x
+                x += 1
+                return x
+            def dec():
+                nonlocal x
+                x -= 1
+                return x
+            return inc, dec
+
+        inc, dec = f(0)
+        self.assertEqual(inc(), 1)
+        self.assertEqual(inc(), 2)
+        self.assertEqual(dec(), 1)
+        self.assertEqual(dec(), 0)
+
+    def testNonLocalMethod(self):
+
+        def f(x):
+            class c:
+                def inc(self):
+                    nonlocal x
+                    x += 1
+                    return x
+                def dec(self):
+                    nonlocal x
+                    x -= 1
+                    return x
+            return c()
+
+        c = f(0)
+        self.assertEqual(c.inc(), 1)
+        self.assertEqual(c.inc(), 2)
+        self.assertEqual(c.dec(), 1)
+        self.assertEqual(c.dec(), 0)
+
+    def testNonLocalClass(self):
+
+        def f(x):
+            class c:
+                nonlocal x
+                x += 1
+                def get(self):
+                    return x
+            return c()
+
+        c = f(0)
+        self.assertEqual(c.get(), 1)
+        self.assert_("x" not in c.__class__.__dict__)
+
+
+    def testNonLocalGenerator(self):
+
+        def f(x):
+            def g(y):
+                nonlocal x
+                for i in range(y):
+                    x += 1
+                    yield x
+            return g
+
+        g = f(0)
+        self.assertEqual(list(g(5)), [1, 2, 3, 4, 5])
+
+    def testNestedNonLocal(self):
+
+        def f(x):
+            def g():
+                nonlocal x
+                x -= 2
+                def h():
+                    nonlocal x
+                    x += 4
+                    return x
+                return h
+            return g
+
+        g = f(1)
+        h = g()
+        self.assertEqual(h(), 3)
 
 
 def test_main():

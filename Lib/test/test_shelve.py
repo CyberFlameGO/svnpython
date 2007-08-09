@@ -1,4 +1,3 @@
-import os
 import unittest
 import shelve
 import glob
@@ -6,37 +5,35 @@ from test import test_support
 
 class TestCase(unittest.TestCase):
 
-    fn = "shelftemp" + os.extsep + "db"
+    fn = "shelftemp.db"
+
+    def tearDown(self):
+        for f in glob.glob(self.fn+"*"):
+            test_support.unlink(f)
 
     def test_ascii_file_shelf(self):
+        s = shelve.open(self.fn, protocol=0)
         try:
-            s = shelve.open(self.fn, protocol=0)
             s['key1'] = (1,2,3,4)
             self.assertEqual(s['key1'], (1,2,3,4))
-            s.close()
         finally:
-            for f in glob.glob(self.fn+"*"):
-                os.unlink(f)
+            s.close()
 
     def test_binary_file_shelf(self):
+        s = shelve.open(self.fn, protocol=1)
         try:
-            s = shelve.open(self.fn, protocol=1)
             s['key1'] = (1,2,3,4)
             self.assertEqual(s['key1'], (1,2,3,4))
-            s.close()
         finally:
-            for f in glob.glob(self.fn+"*"):
-                os.unlink(f)
+            s.close()
 
     def test_proto2_file_shelf(self):
+        s = shelve.open(self.fn, protocol=2)
         try:
-            s = shelve.open(self.fn, protocol=2)
             s['key1'] = (1,2,3,4)
             self.assertEqual(s['key1'], (1,2,3,4))
-            s.close()
         finally:
-            for f in glob.glob(self.fn+"*"):
-                os.unlink(f)
+            s.close()
 
     def test_in_memory_shelf(self):
         d1 = {}
@@ -99,7 +96,7 @@ class TestShelveBase(mapping_tests.BasicTestMappingProtocol):
         self._db = []
         if not self._in_mem:
             for f in glob.glob(self.fn+"*"):
-                os.unlink(f)
+                test_support.unlink(f)
 
 class TestAsciiFileShelve(TestShelveBase):
     _args={'protocol':0}

@@ -36,10 +36,10 @@ class SqliteTypeTests(unittest.TestCase):
         self.con.close()
 
     def CheckString(self):
-        self.cur.execute("insert into test(s) values (?)", (u"Österreich",))
+        self.cur.execute("insert into test(s) values (?)", ("Österreich",))
         self.cur.execute("select s from test")
         row = self.cur.fetchone()
-        self.failUnlessEqual(row[0], u"Österreich")
+        self.failUnlessEqual(row[0], "Österreich")
 
     def CheckSmallInt(self):
         self.cur.execute("insert into test(i) values (?)", (42,))
@@ -69,9 +69,9 @@ class SqliteTypeTests(unittest.TestCase):
         self.failUnlessEqual(row[0], val)
 
     def CheckUnicodeExecute(self):
-        self.cur.execute(u"select 'Österreich'")
+        self.cur.execute("select 'Österreich'")
         row = self.cur.fetchone()
-        self.failUnlessEqual(row[0], u"Österreich")
+        self.failUnlessEqual(row[0], "Österreich")
 
 class DeclTypesTests(unittest.TestCase):
     class Foo:
@@ -85,6 +85,12 @@ class DeclTypesTests(unittest.TestCase):
                 return 0
             else:
                 return 1
+
+        def __eq__(self, other):
+            c = self.__cmp__(other)
+            if c is NotImplemented:
+                return c
+            return c == 0
 
         def __conform__(self, protocol):
             if protocol is sqlite.PrepareProtocol:
@@ -160,7 +166,7 @@ class DeclTypesTests(unittest.TestCase):
 
     def CheckUnicode(self):
         # default
-        val = u"\xd6sterreich"
+        val = "\xd6sterreich"
         self.cur.execute("insert into test(u) values (?)", (val,))
         self.cur.execute("select u from test")
         row = self.cur.fetchone()

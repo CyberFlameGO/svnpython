@@ -1,5 +1,5 @@
 import httplib
-import StringIO
+import io
 import sys
 import socket
 
@@ -8,10 +8,12 @@ from unittest import TestCase
 from test import test_support
 
 class FakeSocket:
-    def __init__(self, text, fileclass=StringIO.StringIO):
+    def __init__(self, text, fileclass=io.BytesIO):
+        if isinstance(text, str):
+            text = bytes(text)
         self.text = text
         self.fileclass = fileclass
-        self.data = ''
+        self.data = b''
 
     def sendall(self, data):
         self.data += data
@@ -21,20 +23,20 @@ class FakeSocket:
             raise httplib.UnimplementedFileMode()
         return self.fileclass(self.text)
 
-class NoEOFStringIO(StringIO.StringIO):
+class NoEOFStringIO(io.BytesIO):
     """Like StringIO, but raises AssertionError on EOF.
 
     This is used below to test that httplib doesn't try to read
     more from the underlying file than it should.
     """
     def read(self, n=-1):
-        data = StringIO.StringIO.read(self, n)
+        data = io.BytesIO.read(self, n)
         if data == '':
             raise AssertionError('caller tried to read past EOF')
         return data
 
     def readline(self, length=None):
-        data = StringIO.StringIO.readline(self, length)
+        data = io.BytesIO.readline(self, length)
         if data == '':
             raise AssertionError('caller tried to read past EOF')
         return data
@@ -54,7 +56,7 @@ class HeaderTests(TestCase):
                 kv = item.split(':')
                 if len(kv) > 1:
                     # item is a 'Key: Value' header string
-                    lcKey = kv[0].lower()
+                    lcKey = kv[0].decode('ascii').lower()
                     self.count.setdefault(lcKey, 0)
                     self.count[lcKey] += 1
                 list.append(self, item)
@@ -80,7 +82,7 @@ class BasicTest(TestCase):
         sock = FakeSocket(body)
         resp = httplib.HTTPResponse(sock)
         resp.begin()
-        self.assertEqual(resp.read(), 'Text')
+        self.assertEqual(resp.read(), b"Text")
         resp.close()
 
         body = "HTTP/1.1 400.100 Not Ok\r\n\r\nText"

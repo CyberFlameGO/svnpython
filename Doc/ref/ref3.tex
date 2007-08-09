@@ -148,9 +148,8 @@ fallback, depending on the operator.)  Its truth value is true.
 
 \item[Ellipsis]
 This type has a single value.  There is a single object with this value.
-This object is accessed through the built-in name \code{Ellipsis}.
-It is used to indicate the presence of the \samp{...} syntax in a
-slice.  Its truth value is true.
+This object is accessed through the literal \code{...} or the
+built-in name \code{Ellipsis}.  Its truth value is true.
 \obindex{Ellipsis}
 
 \item[Numbers]
@@ -474,42 +473,43 @@ parameter list.
 Special attributes:
 
 \begin{tableiii}{lll}{member}{Attribute}{Meaning}{}
-  \lineiii{func_doc}{The function's documentation string, or
+  \lineiii{__doc__}{The function's documentation string, or
     \code{None} if unavailable}{Writable}
 
-  \lineiii{__doc__}{Another way of spelling
-    \member{func_doc}}{Writable}
-
-  \lineiii{func_name}{The function's name}{Writable}
-
-  \lineiii{__name__}{Another way of spelling
-    \member{func_name}}{Writable}
+  \lineiii{__name__}{The function's name}{Writable}
 
   \lineiii{__module__}{The name of the module the function was defined
     in, or \code{None} if unavailable.}{Writable}
 
-  \lineiii{func_defaults}{A tuple containing default argument values
+  \lineiii{__defaults__}{A tuple containing default argument values
     for those arguments that have defaults, or \code{None} if no
     arguments have a default value}{Writable}
 
-  \lineiii{func_code}{The code object representing the compiled
+  \lineiii{__code__}{The code object representing the compiled
     function body.}{Writable}
 
-  \lineiii{func_globals}{A reference to the dictionary that holds the
+  \lineiii{__globals__}{A reference to the dictionary that holds the
     function's global variables --- the global namespace of the module
     in which the function was defined.}{Read-only}
 
-  \lineiii{func_dict}{The namespace supporting arbitrary function
+  \lineiii{__dict__}{The namespace supporting arbitrary function
     attributes.}{Writable}
 
-  \lineiii{func_closure}{\code{None} or a tuple of cells that contain
+  \lineiii{__closure__}{\code{None} or a tuple of cells that contain
     bindings for the function's free variables.}{Read-only}
+
+  \lineiii{__annotations__}{A dict containing annotations of parameters. 
+    The keys of the dict are the parameter names, or \code{'return'}
+    for the return annotation, if provided.}{Writable}
+
+  \lineiii{__kwdefaults__}{A dict containing defaults for keyword-only
+    parameters.}{Writable}
 \end{tableiii}
 
 Most of the attributes labelled ``Writable'' check the type of the
 assigned value.
 
-\versionchanged[\code{func_name} is now writable]{2.4}
+\versionchanged[\code{__name__} is now writable]{2.4}
 
 Function objects also support getting and setting arbitrary
 attributes, which can be used, for example, to attach metadata to
@@ -522,16 +522,16 @@ Additional information about a function's definition can be retrieved
 from its code object; see the description of internal types below.
 
 \withsubitem{(function attribute)}{
-  \ttindex{func_doc}
   \ttindex{__doc__}
   \ttindex{__name__}
   \ttindex{__module__}
   \ttindex{__dict__}
-  \ttindex{func_defaults}
-  \ttindex{func_closure}
-  \ttindex{func_code}
-  \ttindex{func_globals}
-  \ttindex{func_dict}}
+  \ttindex{__defaults__}
+  \ttindex{__closure__}
+  \ttindex{__code__}
+  \ttindex{__globals__}
+  \ttindex{__annotations__}
+  \ttindex{__kwdefaults__}}
 \indexii{global}{namespace}
 
 \item[User-defined methods]
@@ -634,7 +634,7 @@ A function or method which uses the \keyword{yield} statement (see
 section~\ref{yield}, ``The \keyword{yield} statement'') is called a
 \dfn{generator function}.  Such a function, when called, always
 returns an iterator object which can be used to execute the body of
-the function:  calling the iterator's \method{next()} method will
+the function:  calling the iterator's \method{__next__()} method will
 cause the function to execute until it provides a value using the
 \keyword{yield} statement.  When the function executes a
 \keyword{return} statement or falls off the end, a
@@ -701,7 +701,7 @@ Modules are imported by the \keyword{import} statement (see
 section~\ref{import}, ``The \keyword{import} statement'').%
 \stindex{import}\obindex{module}
 A module object has a namespace implemented by a dictionary object
-(this is the dictionary referenced by the func_globals attribute of
+(this is the dictionary referenced by the __globals__ attribute of
 functions defined in the module).  Attribute references are translated
 to lookups in this dictionary, e.g., \code{m.x} is equivalent to
 \code{m.__dict__["x"]}.
@@ -942,18 +942,15 @@ stack frame; \member{f_code} is the code object being executed in this
 frame; \member{f_locals} is the dictionary used to look up local
 variables; \member{f_globals} is used for global variables;
 \member{f_builtins} is used for built-in (intrinsic) names;
-\member{f_restricted} is a flag indicating whether the function is
-executing in restricted execution mode; \member{f_lasti} gives the
-precise instruction (this is an index into the bytecode string of
-the code object).
+ \member{f_lasti} gives the precise instruction (this is an index into
+ the bytecode string of the code object).
 \withsubitem{(frame attribute)}{
   \ttindex{f_back}
   \ttindex{f_code}
   \ttindex{f_globals}
   \ttindex{f_locals}
   \ttindex{f_lasti}
-  \ttindex{f_builtins}
-  \ttindex{f_restricted}}
+  \ttindex{f_builtins}}
 
 Special writable attributes: \member{f_trace}, if not \code{None}, is
 a function called at the start of each source code line (this is used
@@ -980,10 +977,8 @@ level a traceback object is inserted in front of the current
 traceback.  When an exception handler is entered, the stack trace is
 made available to the program.
 (See section~\ref{try}, ``The \code{try} statement.'')
-It is accessible as \code{sys.exc_traceback}, and also as the third
-item of the tuple returned by \code{sys.exc_info()}.  The latter is
-the preferred interface, since it works correctly when the program is
-using multiple threads.
+It is accessible as the third
+item of the tuple returned by \code{sys.exc_info()}.
 When the program contains no suitable handler, the stack trace is written
 (nicely formatted) to the standard error stream; if the interpreter is
 interactive, it is also made available to the user as
@@ -997,7 +992,6 @@ interactive, it is also made available to the user as
   \ttindex{exc_traceback}
   \ttindex{last_traceback}}
 \ttindex{sys.exc_info}
-\ttindex{sys.exc_traceback}
 \ttindex{sys.last_traceback}
 
 Special read-only attributes: \member{tb_next} is the next level in the
@@ -1201,13 +1195,13 @@ reference count of an object from going to zero include: circular
 references between objects (e.g., a doubly-linked list or a tree data
 structure with parent and child pointers); a reference to the object
 on the stack frame of a function that caught an exception (the
-traceback stored in \code{sys.exc_traceback} keeps the stack frame
+traceback stored in \code{sys.exc_info()[2]} keeps the stack frame
 alive); or a reference to the object on the stack frame that raised an
 unhandled exception in interactive mode (the traceback stored in
 \code{sys.last_traceback} keeps the stack frame alive).  The first
 situation can only be remedied by explicitly breaking the cycles; the
 latter two situations can be resolved by storing \code{None} in
-\code{sys.exc_traceback} or \code{sys.last_traceback}.  Circular
+\code{sys.last_traceback}.  Circular
 references which are garbage are detected when the option cycle
 detector is enabled (it's on by default), but can only be cleaned up
 if there are no Python-level \method{__del__()} methods involved.
@@ -1278,8 +1272,7 @@ follows:
 \code{\var{x}<\var{y}} calls \code{\var{x}.__lt__(\var{y})},
 \code{\var{x}<=\var{y}} calls \code{\var{x}.__le__(\var{y})},
 \code{\var{x}==\var{y}} calls \code{\var{x}.__eq__(\var{y})},
-\code{\var{x}!=\var{y}} and \code{\var{x}<>\var{y}} call
-\code{\var{x}.__ne__(\var{y})},
+\code{\var{x}!=\var{y}} calls \code{\var{x}.__ne__(\var{y})},
 \code{\var{x}>\var{y}} calls \code{\var{x}.__gt__(\var{y})}, and
 \code{\var{x}>=\var{y}} calls \code{\var{x}.__ge__(\var{y})}.
 
@@ -1352,13 +1345,13 @@ of that object]{2.5}
 \withsubitem{(object method)}{\ttindex{__cmp__()}}
 \end{methoddesc}
 
-\begin{methoddesc}[object]{__nonzero__}{self}
+\begin{methoddesc}[object]{__bool__}{self}
 Called to implement truth value testing, and the built-in operation
-\code{bool()}; should return \code{False} or \code{True}, or their
-integer equivalents \code{0} or \code{1}.
+\code{bool()}; should return \code{False} or \code{True}.
 When this method is not defined, \method{__len__()} is
-called, if it is defined (see below).  If a class defines neither
-\method{__len__()} nor \method{__nonzero__()}, all its instances are
+called, if it is defined (see below) and \code{True} is returned when
+the length is not zero.  If a class defines neither
+\method{__len__()} nor \method{__bool__()}, all its instances are
 considered true.
 \withsubitem{(mapping object method)}{\ttindex{__len__()}}
 \end{methoddesc}
@@ -1687,7 +1680,7 @@ sequence types should implement addition (meaning concatenation) and
 multiplication (meaning repetition) by defining the methods
 \method{__add__()}, \method{__radd__()}, \method{__iadd__()},
 \method{__mul__()}, \method{__rmul__()} and \method{__imul__()} described
-below; they should not define \method{__coerce__()} or other numerical
+below; they should not define other numerical
 operators.  It is recommended that both mappings and sequences
 implement the \method{__contains__()} method to allow efficient use of
 the \code{in} operator; for mappings, \code{in} should be equivalent
@@ -1731,15 +1724,14 @@ through the values.
   \ttindex{__imul__()}
   \ttindex{__contains__()}
   \ttindex{__iter__()}}
-\withsubitem{(numeric object method)}{\ttindex{__coerce__()}}
 
 \begin{methoddesc}[container object]{__len__}{self}
 Called to implement the built-in function
 \function{len()}\bifuncindex{len}.  Should return the length of the
 object, an integer \code{>=} 0.  Also, an object that doesn't define a
-\method{__nonzero__()} method and whose \method{__len__()} method
+\method{__bool__()} method and whose \method{__len__()} method
 returns zero is considered to be false in a Boolean context.
-\withsubitem{(object method)}{\ttindex{__nonzero__()}}
+\withsubitem{(object method)}{\ttindex{__bool__()}}
 \end{methoddesc}
 
 \begin{methoddesc}[container object]{__getitem__}{self, key}
@@ -2040,142 +2032,13 @@ and \function{float()}\bifuncindex{float}.  Should return a value of
 the appropriate type.
 \end{methoddesc}
 
-\begin{methoddesc}[numeric object]{__oct__}{self}
-\methodline[numeric object]{__hex__}{self}
-Called to implement the built-in functions
-\function{oct()}\bifuncindex{oct} and
-\function{hex()}\bifuncindex{hex}.  Should return a string value.
-\end{methoddesc}
-
 \begin{methoddesc}[numeric object]{__index__}{self}
 Called to implement \function{operator.index()}.  Also called whenever
-Python needs an integer object (such as in slicing).  Must return an
-integer (int or long).
+Python needs an integer object (such as in slicing, or in the built-in
+\function{bin()}, \function{hex()} and \function{oct()} functions).
+Must return an integer (int or long).
 \versionadded{2.5}
 \end{methoddesc}
-
-\begin{methoddesc}[numeric object]{__coerce__}{self, other}
-Called to implement ``mixed-mode'' numeric arithmetic.  Should either
-return a 2-tuple containing \var{self} and \var{other} converted to
-a common numeric type, or \code{None} if conversion is impossible.  When
-the common type would be the type of \code{other}, it is sufficient to
-return \code{None}, since the interpreter will also ask the other
-object to attempt a coercion (but sometimes, if the implementation of
-the other type cannot be changed, it is useful to do the conversion to
-the other type here).  A return value of \code{NotImplemented} is
-equivalent to returning \code{None}.
-\end{methoddesc}
-
-\subsection{Coercion rules\label{coercion-rules}}
-
-This section used to document the rules for coercion.  As the language
-has evolved, the coercion rules have become hard to document
-precisely; documenting what one version of one particular
-implementation does is undesirable.  Instead, here are some informal
-guidelines regarding coercion.  In Python 3.0, coercion will not be
-supported.
-
-\begin{itemize}
-
-\item
-
-If the left operand of a \% operator is a string or Unicode object, no
-coercion takes place and the string formatting operation is invoked
-instead.
-
-\item
-
-It is no longer recommended to define a coercion operation.
-Mixed-mode operations on types that don't define coercion pass the
-original arguments to the operation.
-
-\item
-
-New-style classes (those derived from \class{object}) never invoke the
-\method{__coerce__()} method in response to a binary operator; the only
-time \method{__coerce__()} is invoked is when the built-in function
-\function{coerce()} is called.
-
-\item
-
-For most intents and purposes, an operator that returns
-\code{NotImplemented} is treated the same as one that is not
-implemented at all.
-
-\item
-
-Below, \method{__op__()} and \method{__rop__()} are used to signify
-the generic method names corresponding to an operator;
-\method{__iop__()} is used for the corresponding in-place operator.  For
-example, for the operator `\code{+}', \method{__add__()} and
-\method{__radd__()} are used for the left and right variant of the
-binary operator, and \method{__iadd__()} for the in-place variant.
-
-\item
-
-For objects \var{x} and \var{y}, first \code{\var{x}.__op__(\var{y})}
-is tried.  If this is not implemented or returns \code{NotImplemented},
-\code{\var{y}.__rop__(\var{x})} is tried.  If this is also not
-implemented or returns \code{NotImplemented}, a \exception{TypeError}
-exception is raised.  But see the following exception:
-
-\item
-
-Exception to the previous item: if the left operand is an instance of
-a built-in type or a new-style class, and the right operand is an instance
-of a proper subclass of that type or class and overrides the base's
-\method{__rop__()} method, the right operand's \method{__rop__()} method
-is tried \emph{before} the left operand's \method{__op__()} method.
-
-This is done so that a subclass can completely override binary operators.
-Otherwise, the left operand's \method{__op__()} method would always
-accept the right operand: when an instance of a given class is expected,
-an instance of a subclass of that class is always acceptable.
-
-\item
-
-When either operand type defines a coercion, this coercion is called
-before that type's \method{__op__()} or \method{__rop__()} method is
-called, but no sooner.  If the coercion returns an object of a
-different type for the operand whose coercion is invoked, part of the
-process is redone using the new object.
-
-\item
-
-When an in-place operator (like `\code{+=}') is used, if the left
-operand implements \method{__iop__()}, it is invoked without any
-coercion.  When the operation falls back to \method{__op__()} and/or
-\method{__rop__()}, the normal coercion rules apply.
-
-\item
-
-In \var{x}\code{+}\var{y}, if \var{x} is a sequence that implements
-sequence concatenation, sequence concatenation is invoked.
-
-\item
-
-In \var{x}\code{*}\var{y}, if one operator is a sequence that
-implements sequence repetition, and the other is an integer
-(\class{int} or \class{long}), sequence repetition is invoked.
-
-\item
-
-Rich comparisons (implemented by methods \method{__eq__()} and so on)
-never use coercion.  Three-way comparison (implemented by
-\method{__cmp__()}) does use coercion under the same conditions as
-other binary operations use it.
-
-\item
-
-In the current implementation, the built-in numeric types \class{int},
-\class{long} and \class{float} do not use coercion; the type
-\class{complex} however does use it.  The difference can become
-apparent when subclassing these types.  Over time, the type
-\class{complex} may be fixed to avoid coercion.  All these types
-implement a \method{__coerce__()} method, for use by the built-in
-\function{coerce()} function.
-
-\end{itemize}
 
 \subsection{With Statement Context Managers\label{context-managers}}
 

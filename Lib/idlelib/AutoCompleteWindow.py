@@ -2,8 +2,8 @@
 An auto-completion window for IDLE, used by the AutoComplete extension
 """
 from Tkinter import *
-from MultiCall import MC_SHIFT
-import AutoComplete
+from .MultiCall import MC_SHIFT
+import idlelib.AutoComplete
 
 HIDE_VIRTUAL_EVENT_NAME = "<<autocompletewindow-hide>>"
 HIDE_SEQUENCES = ("<FocusOut>", "<ButtonPress>")
@@ -355,10 +355,8 @@ class AutoCompleteWindow:
                 self.lastkey_was_tab = True
                 return
 
-        elif reduce(lambda x, y: x or y,
-                    [keysym.find(s) != -1 for s in ("Shift", "Control", "Alt",
-                                                    "Meta", "Command", "Option")
-                     ]):
+        elif any(s in keysym for s in ("Shift", "Control", "Alt",
+                                       "Meta", "Command", "Option")):
             # A modifier key, so ignore
             return
 

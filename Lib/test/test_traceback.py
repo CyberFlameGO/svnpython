@@ -12,7 +12,7 @@ class TracebackCases(unittest.TestCase):
     def get_exception_format(self, func, exc):
         try:
             func()
-        except exc, value:
+        except exc as value:
             return traceback.format_exception_only(exc, value)
         else:
             raise ValueError, "call did not raise exception"
@@ -25,15 +25,15 @@ class TracebackCases(unittest.TestCase):
         import test.badsyntax_nocaret
 
     def syntax_error_bad_indentation(self):
-        compile("def spam():\n  print 1\n print 2", "?", "exec")
+        compile("def spam():\n  print(1)\n print(2)", "?", "exec")
 
     def test_caret(self):
         err = self.get_exception_format(self.syntax_error_with_caret,
                                         SyntaxError)
-        self.assert_(len(err) == 4)
+        self.assertEqual(len(err), 4)
         self.assert_(err[1].strip() == "return x!")
         self.assert_("^" in err[2]) # third line has caret
-        self.assert_(err[1].find("!") == err[2].find("^")) # in the right place
+        self.assertEqual(err[1].find("!"), err[2].find("^")) # in the right place
 
     def test_nocaret(self):
         if is_jython:
@@ -41,61 +41,16 @@ class TracebackCases(unittest.TestCase):
             return
         err = self.get_exception_format(self.syntax_error_without_caret,
                                         SyntaxError)
-        self.assert_(len(err) == 3)
+        self.assertEqual(len(err), 3)
         self.assert_(err[1].strip() == "[x for x in x] = x")
 
     def test_bad_indentation(self):
         err = self.get_exception_format(self.syntax_error_bad_indentation,
                                         IndentationError)
-        self.assert_(len(err) == 4)
-        self.assert_(err[1].strip() == "print 2")
+        self.assertEqual(len(err), 4)
+        self.assertEqual(err[1].strip(), "print(2)")
         self.assert_("^" in err[2])
-        self.assert_(err[1].find("2") == err[2].find("^"))
-
-    def test_bug737473(self):
-        import sys, os, tempfile, time
-
-        savedpath = sys.path[:]
-        testdir = tempfile.mkdtemp()
-        try:
-            sys.path.insert(0, testdir)
-            testfile = os.path.join(testdir, 'test_bug737473.py')
-            print >> open(testfile, 'w'), """
-def test():
-    raise ValueError"""
-
-            if 'test_bug737473' in sys.modules:
-                del sys.modules['test_bug737473']
-            import test_bug737473
-
-            try:
-                test_bug737473.test()
-            except ValueError:
-                # this loads source code to linecache
-                traceback.extract_tb(sys.exc_traceback)
-
-            # If this test runs too quickly, test_bug737473.py's mtime
-            # attribute will remain unchanged even if the file is rewritten.
-            # Consequently, the file would not reload.  So, added a sleep()
-            # delay to assure that a new, distinct timestamp is written.
-            # Since WinME with FAT32 has multisecond resolution, more than
-            # three seconds are needed for this test to pass reliably :-(
-            time.sleep(4)
-
-            print >> open(testfile, 'w'), """
-def test():
-    raise NotImplementedError"""
-            reload(test_bug737473)
-            try:
-                test_bug737473.test()
-            except NotImplementedError:
-                src = traceback.extract_tb(sys.exc_traceback)[-1][-1]
-                self.failUnlessEqual(src, 'raise NotImplementedError')
-        finally:
-            sys.path[:] = savedpath
-            for f in os.listdir(testdir):
-                os.unlink(os.path.join(testdir, f))
-            os.rmdir(testdir)
+        self.assertEqual(err[1].find(")"), err[2].find("^"))
 
     def test_members(self):
         # Covers Python/structmember.c::listmembers()
@@ -103,42 +58,13 @@ def test():
             1/0
         except:
             import sys
-            sys.exc_traceback.__members__
+            sys.exc_info()[2].__members__
 
     def test_base_exception(self):
         # Test that exceptions derived from BaseException are formatted right
         e = KeyboardInterrupt()
         lst = traceback.format_exception_only(e.__class__, e)
         self.assertEqual(lst, ['KeyboardInterrupt\n'])
-
-    # String exceptions are deprecated, but legal.  The quirky form with
-    # separate "type" and "value" tends to break things, because
-    #     not isinstance(value, type)
-    # and a string cannot be the first argument to issubclass.
-    #
-    # Note that sys.last_type and sys.last_value do not get set if an
-    # exception is caught, so we sort of cheat and just emulate them.
-    #
-    # test_string_exception1 is equivalent to
-    #
-    # >>> raise "String Exception"
-    #
-    # test_string_exception2 is equivalent to
-    #
-    # >>> raise "String Exception", "String Value"
-    #
-    def test_string_exception1(self):
-        str_type = "String Exception"
-        err = traceback.format_exception_only(str_type, None)
-        self.assertEqual(len(err), 1)
-        self.assertEqual(err[0], str_type + '\n')
-
-    def test_string_exception2(self):
-        str_type = "String Exception"
-        str_value = "String Value"
-        err = traceback.format_exception_only(str_type, str_value)
-        self.assertEqual(len(err), 1)
-        self.assertEqual(err[0], str_type + ': ' + str_value + '\n')
 
     def test_format_exception_only_bad__str__(self):
         class X(Exception):
@@ -147,7 +73,11 @@ def test():
         err = traceback.format_exception_only(X, X())
         self.assertEqual(len(err), 1)
         str_value = '<unprintable %s object>' % X.__name__
-        self.assertEqual(err[0], X.__name__ + ': ' + str_value + '\n')
+        if X.__module__ in ('__main__', '__builtin__'):
+            str_name = X.__name__
+        else:
+            str_name = '.'.join([X.__module__, X.__name__])
+        self.assertEqual(err[0], "%s: %s\n" % (str_name, str_value))
 
     def test_without_exception(self):
         err = traceback.format_exception_only(None, None)

@@ -6,8 +6,7 @@ lines, and joining lines with backslashes."""
 
 __revision__ = "$Id$"
 
-from types import *
-import sys, os, string
+import sys, os, io
 
 
 class TextFile:
@@ -34,7 +33,7 @@ class TextFile:
        something that provides 'readline()' and 'close()' methods).  It is
        recommended that you supply at least 'filename', so that TextFile
        can include it in warning messages.  If 'file' is not supplied,
-       TextFile creates its own using the 'open()' builtin.
+       TextFile creates its own using 'io.open()'.
 
        The options are all boolean, and affect the value returned by
        'readline()':
@@ -89,7 +88,7 @@ class TextFile:
         # set values for all options -- either from client option hash
         # or fallback to default_options
         for opt in self.default_options.keys():
-            if options.has_key (opt):
+            if opt in options:
                 setattr (self, opt, options[opt])
 
             else:
@@ -97,7 +96,7 @@ class TextFile:
 
         # sanity check client option hash
         for opt in options.keys():
-            if not self.default_options.has_key (opt):
+            if opt not in self.default_options:
                 raise KeyError, "invalid TextFile option '%s'" % opt
 
         if file is None:
@@ -118,7 +117,7 @@ class TextFile:
            'filename' and 'file' arguments to the constructor."""
 
         self.filename = filename
-        self.file = open (self.filename, 'r')
+        self.file = io.open (self.filename, 'r')
         self.current_line = 0
 
 
@@ -137,12 +136,12 @@ class TextFile:
         if line is None:
             line = self.current_line
         outmsg.append(self.filename + ", ")
-        if type (line) in (ListType, TupleType):
+        if isinstance (line, (list, tuple)):
             outmsg.append("lines %d-%d: " % tuple (line))
         else:
             outmsg.append("line %d: " % line)
         outmsg.append(str(msg))
-        return string.join(outmsg, "")
+        return "".join(outmsg)
 
 
     def error (self, msg, line=None):
@@ -196,7 +195,7 @@ class TextFile:
                 # unescape it (and any other escaped "#"'s that might be
                 # lurking in there) and otherwise leave the line alone.
 
-                pos = string.find (line, "#")
+                pos = line.find ("#")
                 if pos == -1:           # no "#" -- no comments
                     pass
 
@@ -219,11 +218,11 @@ class TextFile:
                     #   # comment that should be ignored
                     #   there
                     # result in "hello there".
-                    if string.strip(line) == "":
+                    if line.strip () == "":
                         continue
 
                 else:                   # it's an escaped "#"
-                    line = string.replace (line, "\\#", "#")
+                    line = line.replace("\\#", "#")
 
 
             # did previous line end with a backslash? then accumulate
@@ -235,11 +234,11 @@ class TextFile:
                     return buildup_line
 
                 if self.collapse_join:
-                    line = string.lstrip (line)
+                    line = line.lstrip ()
                 line = buildup_line + line
 
                 # careful: pay attention to line number when incrementing it
-                if type (self.current_line) is ListType:
+                if isinstance (self.current_line, list):
                     self.current_line[1] = self.current_line[1] + 1
                 else:
                     self.current_line = [self.current_line,
@@ -250,7 +249,7 @@ class TextFile:
                     return None
 
                 # still have to be careful about incrementing the line number!
-                if type (self.current_line) is ListType:
+                if isinstance (self.current_line, list):
                     self.current_line = self.current_line[1] + 1
                 else:
                     self.current_line = self.current_line + 1
@@ -259,11 +258,11 @@ class TextFile:
             # strip whitespace however the client wants (leading and
             # trailing, or one or the other, or neither)
             if self.lstrip_ws and self.rstrip_ws:
-                line = string.strip (line)
+                line = line.strip ()
             elif self.lstrip_ws:
-                line = string.lstrip (line)
+                line = line.lstrip ()
             elif self.rstrip_ws:
-                line = string.rstrip (line)
+                line = line.rstrip ()
 
             # blank line (whether we rstrip'ed or not)? skip to next line
             # if appropriate
@@ -313,7 +312,7 @@ line 3 \\
   continues on next line
 """
     # result 1: no fancy options
-    result1 = map (lambda x: x + "\n", string.split (test_data, "\n")[0:-1])
+    result1 = map (lambda x: x + "\n", test_data.split ("\n")[0:-1])
 
     # result 2: just strip comments
     result2 = ["\n",
@@ -340,15 +339,15 @@ line 3 \\
 
     def test_input (count, description, file, expected_result):
         result = file.readlines ()
-        # result = string.join (result, '')
+        # result = ''.join (result)
         if result == expected_result:
-            print "ok %d (%s)" % (count, description)
+            print("ok %d (%s)" % (count, description))
         else:
-            print "not ok %d (%s):" % (count, description)
-            print "** expected:"
-            print expected_result
-            print "** received:"
-            print result
+            print("not ok %d (%s):" % (count, description))
+            print("** expected:")
+            print(expected_result)
+            print("** received:")
+            print(result)
 
 
     filename = "test.txt"

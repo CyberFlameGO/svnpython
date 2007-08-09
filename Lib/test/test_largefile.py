@@ -19,7 +19,7 @@ except (ImportError, AttributeError):
 
 
 # create >2GB file (2GB = 2147483648 bytes)
-size = 2500000000L
+size = 2500000000
 name = test_support.TESTFN
 
 
@@ -37,7 +37,7 @@ else:
     f = open(test_support.TESTFN, 'wb')
     try:
         # 2**31 == 2147483648
-        f.seek(2147483649L)
+        f.seek(2147483649)
         # Seeking is not enough of a test: you must write and flush, too!
         f.write("x")
         f.flush()
@@ -52,22 +52,22 @@ else:
 
 def expect(got_this, expect_this):
     if test_support.verbose:
-        print '%r =?= %r ...' % (got_this, expect_this),
+        print('%r =?= %r ...' % (got_this, expect_this), end=' ')
     if got_this != expect_this:
         if test_support.verbose:
-            print 'no'
+            print('no')
         raise test_support.TestFailed, 'got %r, but expected %r' %\
               (got_this, expect_this)
     else:
         if test_support.verbose:
-            print 'yes'
+            print('yes')
 
 
 # test that each file function works as expected for a large (i.e. >2GB, do
 # we have to check >4GB) files
 
 if test_support.verbose:
-    print 'create large file via seek (may be sparse file) ...'
+    print('create large file via seek (may be sparse file) ...')
 f = open(name, 'wb')
 try:
     f.write('z')
@@ -76,20 +76,20 @@ try:
     f.write('a')
     f.flush()
     if test_support.verbose:
-        print 'check file size with os.fstat'
+        print('check file size with os.fstat')
     expect(os.fstat(f.fileno())[stat.ST_SIZE], size+1)
 finally:
     f.close()
 if test_support.verbose:
-    print 'check file size with os.stat'
+    print('check file size with os.stat')
 expect(os.stat(name)[stat.ST_SIZE], size+1)
 
 if test_support.verbose:
-    print 'play around with seek() and read() with the built largefile'
+    print('play around with seek() and read() with the built largefile')
 f = open(name, 'rb')
 try:
     expect(f.tell(), 0)
-    expect(f.read(1), 'z')
+    expect(f.read(1), b'z')
     expect(f.tell(), 1)
     f.seek(0)
     expect(f.tell(), 0)
@@ -111,15 +111,15 @@ try:
     expect(f.tell(), 0)
     f.seek(size)
     expect(f.tell(), size)
-    expect(f.read(1), 'a') # the 'a' that was written at the end of file above
+    expect(f.read(1), b'a') # the 'a' that was written at the end of file above
     f.seek(-size-1, 1)
-    expect(f.read(1), 'z')
+    expect(f.read(1), b'z')
     expect(f.tell(), 1)
 finally:
     f.close()
 
 if test_support.verbose:
-    print 'play around with os.lseek() with the built largefile'
+    print('play around with os.lseek() with the built largefile')
 f = open(name, 'rb')
 try:
     expect(os.lseek(f.fileno(), 0, 0), 0)
@@ -130,13 +130,13 @@ try:
     expect(os.lseek(f.fileno(), -10, 2), size+1-10)
     expect(os.lseek(f.fileno(), -size-1, 2), 0)
     expect(os.lseek(f.fileno(), size, 0), size)
-    expect(f.read(1), 'a') # the 'a' that was written at the end of file above
+    expect(f.read(1), b'a') # the 'a' that was written at the end of file above
 finally:
     f.close()
 
 if hasattr(f, 'truncate'):
     if test_support.verbose:
-        print 'try truncate'
+        print('try truncate')
     f = open(name, 'r+b')
     try:
         f.seek(0, 2)

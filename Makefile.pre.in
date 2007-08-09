@@ -282,6 +282,7 @@ OBJECT_OBJS=	\
 		Objects/abstract.o \
 		Objects/boolobject.o \
 		Objects/bufferobject.o \
+		Objects/bytesobject.o \
 		Objects/cellobject.o \
 		Objects/classobject.o \
 		Objects/cobject.o \
@@ -295,7 +296,6 @@ OBJECT_OBJS=	\
 		Objects/floatobject.o \
 		Objects/frameobject.o \
 		Objects/funcobject.o \
-		Objects/intobject.o \
 		Objects/iterobject.o \
 		Objects/listobject.o \
 		Objects/longobject.o \
@@ -340,7 +340,7 @@ $(BUILDPYTHON):	Modules/python.o $(LIBRARY) $(LDLIBRARY)
 			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
 
 platform: $(BUILDPYTHON)
-	$(RUNSHARED) ./$(BUILDPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print get_platform()+"-"+sys.version[0:3]' >platform
+	$(RUNSHARED) ./$(BUILDPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print(get_platform()+"-"+sys.version[0:3])' >platform
 
 
 # Build the shared modules
@@ -512,6 +512,7 @@ PYTHON_HEADERS= \
 		Include/abstract.h \
 		Include/boolobject.h \
 		Include/bufferobject.h \
+		Include/bytesobject.h \
 		Include/ceval.h \
 		Include/classobject.h \
 		Include/cobject.h \
@@ -606,7 +607,7 @@ buildbottest:	all platform
 
 QUICKTESTOPTS=	$(TESTOPTS) -x test_thread test_signal test_strftime \
 		test_unicodedata test_re test_sre test_select test_poll \
-		test_linuxaudiodev test_struct test_sunaudiodev test_zlib
+		test_struct test_zlib
 quicktest:	all platform
 		-find $(srcdir)/Lib -name '*.py[co]' -print | xargs rm -f
 		-$(TESTPYTHON) $(TESTPROG) $(QUICKTESTOPTS)
@@ -712,7 +713,7 @@ PLATMACDIRS= plat-mac plat-mac/Carbon plat-mac/lib-scriptpackages \
 PLATMACPATH=:plat-mac:plat-mac/lib-scriptpackages
 LIBSUBDIRS=	lib-tk site-packages test test/output test/data \
 		test/decimaltestdata \
-		encodings compiler hotshot \
+		encodings hotshot \
 		email email/mime email/test email/test/data \
 		sqlite3 sqlite3/test \
 		logging bsddb bsddb/test csv wsgiref \
@@ -776,11 +777,11 @@ libinstall:	$(BUILDPYTHON) $(srcdir)/Lib/$(PLATDIR)
 		done; \
 	done
 	$(INSTALL_DATA) $(srcdir)/LICENSE $(DESTDIR)$(LIBDEST)/LICENSE.txt
-	PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
+	-PYTHONPATH=$(DESTDIR)$(LIBDEST)  $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -tt $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
 		-x 'bad_coding|badsyntax|site-packages' $(DESTDIR)$(LIBDEST)
-	PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
+	-PYTHONPATH=$(DESTDIR)$(LIBDEST) $(RUNSHARED) \
 		./$(BUILDPYTHON) -Wi -tt -O $(DESTDIR)$(LIBDEST)/compileall.py \
 		-d $(LIBDEST) -f \
 		-x 'bad_coding|badsyntax|site-packages' $(DESTDIR)$(LIBDEST)

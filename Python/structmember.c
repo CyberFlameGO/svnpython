@@ -54,11 +54,7 @@ PyObject *
 PyMember_GetOne(const char *addr, PyMemberDef *l)
 {
 	PyObject *v;
-	if ((l->flags & READ_RESTRICTED) &&
-	    PyEval_GetRestricted()) {
-		PyErr_SetString(PyExc_RuntimeError, "restricted attribute");
-		return NULL;
-	}
+
 	addr += l->offset;
 	switch (l->type) {
 	case T_BYTE:
@@ -128,6 +124,10 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 		v = PyLong_FromUnsignedLongLong(*(unsigned PY_LONG_LONG *)addr);
 		break;
 #endif /* HAVE_LONG_LONG */
+        case T_NONE:
+		v = Py_None;
+		Py_INCREF(v);
+		break;
 	default:
 		PyErr_SetString(PyExc_SystemError, "bad memberdescr type");
 		v = NULL;
@@ -169,11 +169,7 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 
 	if ((l->flags & READONLY) || l->type == T_STRING)
 	{
-		PyErr_SetString(PyExc_TypeError, "readonly attribute");
-		return -1;
-	}
-	if ((l->flags & WRITE_RESTRICTED) && PyEval_GetRestricted()) {
-		PyErr_SetString(PyExc_RuntimeError, "restricted attribute");
+		PyErr_SetString(PyExc_AttributeError, "readonly attribute");
 		return -1;
 	}
 	if (v == NULL && l->type != T_OBJECT_EX && l->type != T_OBJECT) {

@@ -52,6 +52,13 @@ PyErr_Restore(PyObject *type, PyObject *value, PyObject *traceback)
 void
 PyErr_SetObject(PyObject *exception, PyObject *value)
 {
+	if (exception != NULL &&
+	    !PyExceptionClass_Check(exception)) {
+		PyErr_Format(PyExc_SystemError,
+			     "exception %R not a BaseException subclass",
+			     exception);
+		return;
+	}
 	Py_XINCREF(exception);
 	Py_XINCREF(value);
 	PyErr_Restore(exception, value, (PyObject *)NULL);
@@ -66,7 +73,7 @@ PyErr_SetNone(PyObject *exception)
 void
 PyErr_SetString(PyObject *exception, const char *string)
 {
-	PyObject *value = PyString_FromString(string);
+	PyObject *value = PyUnicode_FromString(string);
 	PyErr_SetObject(exception, value);
 	Py_XDECREF(value);
 }
@@ -326,9 +333,9 @@ PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
 #endif /* Unix/Windows */
 #endif /* PLAN 9*/
 	if (filenameObject != NULL)
-		v = Py_BuildValue("(isO)", i, s, filenameObject);
+		v = Py_BuildValue("(iUO)", i, s, filenameObject);
 	else
-		v = Py_BuildValue("(is)", i, s);
+		v = Py_BuildValue("(iU)", i, s);
 	if (v != NULL) {
 		PyErr_SetObject(exc, v);
 		Py_DECREF(v);
@@ -406,9 +413,9 @@ PyObject *PyErr_SetExcFromWindowsErrWithFilenameObject(
 			s[--len] = '\0';
 	}
 	if (filenameObject != NULL)
-		v = Py_BuildValue("(isO)", err, s, filenameObject);
+		v = Py_BuildValue("(iUO)", err, s, filenameObject);
 	else
-		v = Py_BuildValue("(is)", err, s);
+		v = Py_BuildValue("(iU)", err, s);
 	if (v != NULL) {
 		PyErr_SetObject(exc, v);
 		Py_DECREF(v);
@@ -519,7 +526,7 @@ PyErr_Format(PyObject *exception, const char *format, ...)
 	va_start(vargs);
 #endif
 
-	string = PyString_FromFormatV(format, vargs);
+	string = PyUnicode_FromFormatV(format, vargs);
 	PyErr_SetObject(exception, string);
 	Py_XDECREF(string);
 	va_end(vargs);
@@ -605,7 +612,7 @@ PyErr_WriteUnraisable(PyObject *obj)
 			else {
 				char* modstr = PyString_AsString(moduleName);
 				if (modstr &&
-				    strcmp(modstr, "exceptions") != 0)
+				    strcmp(modstr, "__builtin__") != 0)
 				{
 					PyFile_WriteString(modstr, f);
 					PyFile_WriteString(".", f);
@@ -817,4 +824,3 @@ PyErr_ProgramText(const char *filename, int lineno)
 #ifdef __cplusplus
 }
 #endif
-

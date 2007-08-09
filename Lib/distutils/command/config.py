@@ -13,7 +13,7 @@ this header file lives".
 
 __revision__ = "$Id$"
 
-import sys, os, string, re
+import sys, os, re
 from types import *
 from distutils.core import Command
 from distutils.errors import DistutilsExecError
@@ -73,18 +73,18 @@ class config (Command):
     def finalize_options (self):
         if self.include_dirs is None:
             self.include_dirs = self.distribution.include_dirs or []
-        elif type(self.include_dirs) is StringType:
-            self.include_dirs = string.split(self.include_dirs, os.pathsep)
+        elif isinstance(self.include_dirs, basestring):
+            self.include_dirs = self.include_dirs.split(os.pathsep)
 
         if self.libraries is None:
             self.libraries = []
-        elif type(self.libraries) is StringType:
+        elif isinstance(self.libraries, basestring):
             self.libraries = [self.libraries]
 
         if self.library_dirs is None:
             self.library_dirs = []
-        elif type(self.library_dirs) is StringType:
-            self.library_dirs = string.split(self.library_dirs, os.pathsep)
+        elif isinstance(self.library_dirs, basestring):
+            self.library_dirs = self.library_dirs.split(os.pathsep)
 
 
     def run (self):
@@ -163,7 +163,7 @@ class config (Command):
         if not filenames:
             filenames = self.temp_files
             self.temp_files = []
-        log.info("removing: %s", string.join(filenames))
+        log.info("removing: %s", ' '.join(filenames))
         for filename in filenames:
             try:
                 os.remove(filename)
@@ -212,7 +212,7 @@ class config (Command):
         self._check_compiler()
         (src, out) = self._preprocess(body, headers, include_dirs, lang)
 
-        if type(pattern) is StringType:
+        if isinstance(pattern, basestring):
             pattern = re.compile(pattern)
 
         file = open(out)
@@ -322,7 +322,7 @@ class config (Command):
         else:
             body.append("  %s;" % func)
         body.append("}")
-        body = string.join(body, "\n") + "\n"
+        body = "\n".join(body) + "\n"
 
         return self.try_link(body, headers, include_dirs,
                              libraries, library_dirs)
@@ -359,9 +359,9 @@ class config (Command):
 
 def dump_file (filename, head=None):
     if head is None:
-        print filename + ":"
+        print(filename + ":")
     else:
-        print head
+        print(head)
 
     file = open(filename)
     sys.stdout.write(file.read())

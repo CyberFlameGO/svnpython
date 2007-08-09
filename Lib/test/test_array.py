@@ -6,8 +6,8 @@
 import unittest
 from test import test_support
 from weakref import proxy
-import array, cStringIO, math
-from cPickle import loads, dumps
+import array, io, math
+from pickle import loads, dumps
 
 class ArraySubclass(array.array):
     pass
@@ -17,7 +17,7 @@ class ArraySubclassWithKwargs(array.array):
         array.array.__init__(typecode)
 
 tests = [] # list to accumulate all tests
-typecodes = "cubBhHiIlLfd"
+typecodes = "ubBhHiIlLfd"
 
 class BadConstructorTest(unittest.TestCase):
 
@@ -65,7 +65,7 @@ class BaseTest(unittest.TestCase):
         bi = a.buffer_info()
         self.assert_(isinstance(bi, tuple))
         self.assertEqual(len(bi), 2)
-        self.assert_(isinstance(bi[0], (int, long)))
+        self.assert_(isinstance(bi[0], int))
         self.assert_(isinstance(bi[1], int))
         self.assertEqual(bi[1], len(a))
 
@@ -162,7 +162,6 @@ class BaseTest(unittest.TestCase):
     def test_tofromfile(self):
         a = array.array(self.typecode, 2*self.example)
         self.assertRaises(TypeError, a.tofile)
-        self.assertRaises(TypeError, a.tofile, cStringIO.StringIO())
         f = open(test_support.TESTFN, 'wb')
         try:
             a.tofile(f)
@@ -170,11 +169,6 @@ class BaseTest(unittest.TestCase):
             b = array.array(self.typecode)
             f = open(test_support.TESTFN, 'rb')
             self.assertRaises(TypeError, b.fromfile)
-            self.assertRaises(
-                TypeError,
-                b.fromfile,
-                cStringIO.StringIO(), len(self.example)
-            )
             b.fromfile(f, len(self.example))
             self.assertEqual(b, array.array(self.typecode, self.example))
             self.assertNotEqual(a, b)
@@ -342,9 +336,9 @@ class BaseTest(unittest.TestCase):
     def test_getitem(self):
         a = array.array(self.typecode, self.example)
         self.assertEntryEqual(a[0], self.example[0])
-        self.assertEntryEqual(a[0L], self.example[0])
+        self.assertEntryEqual(a[0], self.example[0])
         self.assertEntryEqual(a[-1], self.example[-1])
-        self.assertEntryEqual(a[-1L], self.example[-1])
+        self.assertEntryEqual(a[-1], self.example[-1])
         self.assertEntryEqual(a[len(self.example)-1], self.example[-1])
         self.assertEntryEqual(a[-len(self.example)], self.example[0])
         self.assertRaises(TypeError, a.__getitem__)
@@ -357,7 +351,7 @@ class BaseTest(unittest.TestCase):
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
-        a[0L] = a[-1]
+        a[0] = a[-1]
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
@@ -365,7 +359,7 @@ class BaseTest(unittest.TestCase):
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
-        a[-1L] = a[0]
+        a[-1] = a[0]
         self.assertEntryEqual(a[0], a[-1])
 
         a = array.array(self.typecode, self.example)
@@ -682,7 +676,7 @@ class BaseTest(unittest.TestCase):
 
     def test_buffer(self):
         a = array.array(self.typecode, self.example)
-        b = buffer(a)
+        b = bytes(buffer(a))
         self.assertEqual(b[0], a.tostring()[0])
 
     def test_weakref(self):
@@ -706,85 +700,46 @@ class BaseTest(unittest.TestCase):
         # SF bug #1486663 -- this used to erroneously raise a TypeError
         ArraySubclassWithKwargs('b', newarg=1)
 
+    def test_create_from_bytes(self):
+        a = array.array('H', b"1234")
+        self.assertEqual(len(a) * a.itemsize, 4)
+
 
 class StringTest(BaseTest):
 
     def test_setitem(self):
-        super(StringTest, self).test_setitem()
+        super().test_setitem()
         a = array.array(self.typecode, self.example)
         self.assertRaises(TypeError, a.__setitem__, 0, self.example[:2])
 
-class CharacterTest(StringTest):
-    typecode = 'c'
-    example = '\x01azAZ\x00\xfe'
-    smallerexample = '\x01azAY\x00\xfe'
-    biggerexample = '\x01azAZ\x00\xff'
-    outside = '\x33'
-    minitemsize = 1
+class UnicodeTest(StringTest):
+    typecode = 'u'
+    example = '\x01\u263a\x00\ufeff'
+    smallerexample = '\x01\u263a\x00\ufefe'
+    biggerexample = '\x01\u263a\x01\ufeff'
+    outside = str('\x33')
+    minitemsize = 2
 
-    def test_subbclassing(self):
-        class EditableString(array.array):
-            def __new__(cls, s, *args, **kwargs):
-                return array.array.__new__(cls, 'c', s)
+    def test_unicode(self):
+        self.assertRaises(TypeError, array.array, 'b', 'foo')
 
-            def __init__(self, s, color='blue'):
-                self.color = color
+        a = array.array('u', '\xa0\xc2\u1234')
+        a.fromunicode(' ')
+        a.fromunicode('')
+        a.fromunicode('')
+        a.fromunicode('\x11abc\xff\u1234')
+        s = a.tounicode()
+        self.assertEqual(s, '\xa0\xc2\u1234 \x11abc\xff\u1234')
 
-            def strip(self):
-                self[:] = array.array('c', self.tostring().strip())
+        s = '\x00="\'a\\b\x80\xff\u0000\u0001\u1234'
+        a = array.array('u', s)
+        self.assertEqual(
+            repr(a),
+            "array('u', '\\x00=\"\\'a\\\\b\\x80\\xff\\x00\\x01\\u1234')")
 
-            def __repr__(self):
-                return 'EditableString(%r)' % self.tostring()
+        self.assertRaises(TypeError, a.fromunicode)
 
-        s = EditableString("\ttest\r\n")
-        s.strip()
-        self.assertEqual(s.tostring(), "test")
-
-        self.assertEqual(s.color, "blue")
-        s.color = "red"
-        self.assertEqual(s.color, "red")
-        self.assertEqual(s.__dict__.keys(), ["color"])
-
-    def test_nounicode(self):
-        a = array.array(self.typecode, self.example)
-        self.assertRaises(ValueError, a.fromunicode, unicode(''))
-        self.assertRaises(ValueError, a.tounicode)
-
-tests.append(CharacterTest)
-
-if test_support.have_unicode:
-    class UnicodeTest(StringTest):
-        typecode = 'u'
-        example = unicode(r'\x01\u263a\x00\ufeff', 'unicode-escape')
-        smallerexample = unicode(r'\x01\u263a\x00\ufefe', 'unicode-escape')
-        biggerexample = unicode(r'\x01\u263a\x01\ufeff', 'unicode-escape')
-        outside = unicode('\x33')
-        minitemsize = 2
-
-        def test_unicode(self):
-            self.assertRaises(TypeError, array.array, 'b', unicode('foo', 'ascii'))
-
-            a = array.array('u', unicode(r'\xa0\xc2\u1234', 'unicode-escape'))
-            a.fromunicode(unicode(' ', 'ascii'))
-            a.fromunicode(unicode('', 'ascii'))
-            a.fromunicode(unicode('', 'ascii'))
-            a.fromunicode(unicode(r'\x11abc\xff\u1234', 'unicode-escape'))
-            s = a.tounicode()
-            self.assertEqual(
-                s,
-                unicode(r'\xa0\xc2\u1234 \x11abc\xff\u1234', 'unicode-escape')
-            )
-
-            s = unicode(r'\x00="\'a\\b\x80\xff\u0000\u0001\u1234', 'unicode-escape')
-            a = array.array('u', s)
-            self.assertEqual(
-                repr(a),
-                r"""array('u', u'\x00="\'a\\b\x80\xff\x00\x01\u1234')"""
-            )
-
-            self.assertRaises(TypeError, a.fromunicode)
-
-    tests.append(UnicodeTest)
+tests.append(UnicodeTest)
 
 class NumberTest(BaseTest):
 
@@ -798,7 +753,7 @@ class NumberTest(BaseTest):
         self.assertEqual(a[3::-2], array.array(self.typecode, [3,1]))
         self.assertEqual(a[-100:100:], a)
         self.assertEqual(a[100:-100:-1], a[::-1])
-        self.assertEqual(a[-100L:100L:2L], array.array(self.typecode, [0,2,4]))
+        self.assertEqual(a[-100:100:2], array.array(self.typecode, [0,2,4]))
         self.assertEqual(a[1000:2000:2], array.array(self.typecode, []))
         self.assertEqual(a[-1000:-2000:-2], array.array(self.typecode, []))
 
@@ -836,7 +791,7 @@ class NumberTest(BaseTest):
 
     def test_iterationcontains(self):
         a = array.array(self.typecode, range(10))
-        self.assertEqual(list(a), range(10))
+        self.assertEqual(list(a), list(range(10)))
         b = array.array(self.typecode, [20])
         self.assertEqual(a[-1] in a, True)
         self.assertEqual(b[0] not in a, True)
@@ -884,8 +839,8 @@ class SignedNumberTest(NumberTest):
 
     def test_overflow(self):
         a = array.array(self.typecode)
-        lower = -1 * long(pow(2, a.itemsize * 8 - 1))
-        upper = long(pow(2, a.itemsize * 8 - 1)) - 1L
+        lower = -1 * int(pow(2, a.itemsize * 8 - 1))
+        upper = int(pow(2, a.itemsize * 8 - 1)) - 1
         self.check_overflow(lower, upper)
 
 class UnsignedNumberTest(NumberTest):
@@ -897,7 +852,7 @@ class UnsignedNumberTest(NumberTest):
     def test_overflow(self):
         a = array.array(self.typecode)
         lower = 0
-        upper = long(pow(2, a.itemsize * 8)) - 1L
+        upper = int(pow(2, a.itemsize * 8)) - 1
         self.check_overflow(lower, upper)
 
 
@@ -985,11 +940,11 @@ def test_main(verbose=None):
     if verbose and hasattr(sys, "gettotalrefcount"):
         import gc
         counts = [None] * 5
-        for i in xrange(len(counts)):
+        for i in range(len(counts)):
             test_support.run_unittest(*tests)
             gc.collect()
             counts[i] = sys.gettotalrefcount()
-        print counts
+        print(counts)
 
 if __name__ == "__main__":
     test_main(verbose=True)

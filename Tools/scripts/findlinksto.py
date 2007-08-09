@@ -14,10 +14,10 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:], '')
         if len(args) < 2:
             raise getopt.GetoptError('not enough arguments', None)
-    except getopt.GetoptError, msg:
+    except getopt.GetoptError as msg:
         sys.stdout = sys.stderr
-        print msg
-        print 'usage: findlinksto pattern directory ...'
+        print(msg)
+        print('usage: findlinksto pattern directory ...')
         sys.exit(2)
     pat, dirs = args[0], args[1:]
     prog = re.compile(pat)
@@ -29,13 +29,13 @@ def visit(prog, dirname, names):
         names[:] = []
         return
     if os.path.ismount(dirname):
-        print 'descend into', dirname
+        print('descend into', dirname)
     for name in names:
         name = os.path.join(dirname, name)
         try:
             linkto = os.readlink(name)
             if prog.search(linkto) is not None:
-                print name, '->', linkto
+                print(name, '->', linkto)
         except os.error:
             pass
 

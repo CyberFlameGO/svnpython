@@ -1,23 +1,25 @@
 import sys
 import os
 import re
+import string
 import imp
 from itertools import count
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
-from MultiCall import MultiCallCreator
-
+import traceback
 import webbrowser
-import idlever
-import WindowList
-import SearchDialog
-import GrepDialog
-import ReplaceDialog
-import PyParse
-from configHandler import idleConf
-import aboutDialog, textView, configDialog
-import macosxSupport
+
+from .MultiCall import MultiCallCreator
+from . import idlever
+from . import WindowList
+from . import SearchDialog
+from . import GrepDialog
+from . import ReplaceDialog
+from . import PyParse
+from .configHandler import idleConf
+from . import aboutDialog, textView, configDialog
+from . import macosxSupport
 
 # The default tab setting for a Text widget, in average-width characters.
 TK_TABWIDTH_DEFAULT = 8
@@ -40,13 +42,13 @@ def _find_module(fullname, path=None):
     return file, filename, descr
 
 class EditorWindow(object):
-    from Percolator import Percolator
-    from ColorDelegator import ColorDelegator
-    from UndoDelegator import UndoDelegator
-    from IOBinding import IOBinding, filesystemencoding, encoding
-    import Bindings
+    from .Percolator import Percolator
+    from .ColorDelegator import ColorDelegator
+    from .UndoDelegator import UndoDelegator
+    from .IOBinding import IOBinding, filesystemencoding, encoding
+    from . import Bindings
     from Tkinter import Toplevel
-    from MultiStatusBar import MultiStatusBar
+    from .MultiStatusBar import MultiStatusBar
 
     help_url = None
 
@@ -276,7 +278,7 @@ class EditorWindow(object):
 
     def _filename_to_unicode(self, filename):
         """convert filename to unicode in order to display it in Tk"""
-        if isinstance(filename, unicode) or not filename:
+        if isinstance(filename, str) or not filename:
             return filename
         else:
             try:
@@ -505,7 +507,7 @@ class EditorWindow(object):
         # XXX Ought to insert current file's directory in front of path
         try:
             (f, file, (suffix, mode, type)) = _find_module(name)
-        except (NameError, ImportError), msg:
+        except (NameError, ImportError) as msg:
             tkMessageBox.showerror("Import error", str(msg), parent=self.text)
             return
         if type != imp.PY_SOURCE:
@@ -530,11 +532,11 @@ class EditorWindow(object):
             return None
         head, tail = os.path.split(filename)
         base, ext = os.path.splitext(tail)
-        import ClassBrowser
+        from . import ClassBrowser
         ClassBrowser.ClassBrowser(self.flist, base, [head])
 
     def open_path_browser(self, event=None):
-        import PathBrowser
+        from . import PathBrowser
         PathBrowser.PathBrowser(self.flist)
 
     def gotoline(self, lineno):
@@ -601,6 +603,19 @@ class EditorWindow(object):
         theme = idleConf.GetOption('main','Theme','name')
         self.text.config(idleConf.GetHighlight(theme, "normal"))
 
+    IDENTCHARS = string.ascii_letters + string.digits + "_"
+
+    def colorize_syntax_error(self, text, pos):
+        text.tag_add("ERROR", pos)
+        char = text.get(pos)
+        if char and char in self.IDENTCHARS:
+            text.tag_add("ERROR", pos + " wordstart", pos)
+        if '\n' == text.get(pos):   # error at line end
+            text.mark_set("insert", pos)
+        else:
+            text.mark_set("insert", pos + "+1c")
+        text.see(pos)
+
     def ResetFont(self):
         "Update the text widgets' font if it is changed"
         # Called from configDialog.py
@@ -648,8 +663,8 @@ class EditorWindow(object):
                     if accel:
                         itemName = menu.entrycget(index, 'label')
                         event = ''
-                        if menuEventDict.has_key(menubarItem):
-                            if menuEventDict[menubarItem].has_key(itemName):
+                        if menubarItem in menuEventDict:
+                            if itemName in menuEventDict[menubarItem]:
                                 event = menuEventDict[menubarItem][itemName]
                         if event:
                             accel = get_accelerator(keydefs, event)
@@ -859,8 +874,7 @@ class EditorWindow(object):
             try:
                 self.load_extension(name)
             except:
-                print "Failed to load extension", repr(name)
-                import traceback
+                print("Failed to load extension", repr(name))
                 traceback.print_exc()
 
     def get_standard_extension_names(self):
@@ -870,8 +884,8 @@ class EditorWindow(object):
         try:
             mod = __import__(name, globals(), locals(), [])
         except ImportError:
-            print "\nFailed to import extension: ", name
-            return
+            print("\nFailed to import extension: ", name)
+            raise
         cls = getattr(mod, name)
         keydefs = idleConf.GetExtensionBindings(name)
         if hasattr(cls, "menudefs"):
@@ -1003,6 +1017,8 @@ class EditorWindow(object):
                                   "-displayof", text.master,
                                   "n" * newtabwidth)
             text.configure(tabs=pixels)
+
+### begin autoindent code ###  (configuration was moved to beginning of class)
 
     # If ispythonsource and guess are true, guess a good value for
     # indentwidth based on file content (if possible), and if
@@ -1138,7 +1154,7 @@ class EditorWindow(object):
             if not self.context_use_ps1:
                 for context in self.num_context_lines:
                     startat = max(lno - context, 1)
-                    startatindex = `startat` + ".0"
+                    startatindex = repr(startat) + ".0"
                     rawtext = text.get(startatindex, "insert")
                     y.set_str(rawtext)
                     bod = y.find_good_parse_start(

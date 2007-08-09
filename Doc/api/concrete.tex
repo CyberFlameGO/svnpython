@@ -431,10 +431,9 @@ booleans.  The following macros are available, however.
   \versionadded{2.2}
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{PyObject*}{PyFloat_FromString}{PyObject *str, char **pend}
+\begin{cfuncdesc}{PyObject*}{PyFloat_FromString}{PyObject *str}
   Create a \ctype{PyFloatObject} object based on the string value in
-  \var{str}, or \NULL{} on failure.  The \var{pend} argument is ignored.  It
-  remains only for backward compatibility.
+  \var{str}, or \NULL{} on failure.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyFloat_FromDouble}{double v}
@@ -995,6 +994,74 @@ use these APIs:
   not \NULL{}, the return value might be a shared object. Therefore,
   modification of the resulting Unicode object is only allowed when
   \var{u} is \NULL{}.
+\end{cfuncdesc}
+
+\begin{cfuncdesc}{PyObject*}{PyUnicode_FromStringAndSize}{const char *u,
+                                                       Py_ssize_t size}
+  Create a Unicode Object from the char buffer \var{u}.
+  The bytes will be interpreted as being UTF-8 encoded. 
+  \var{u} may also be \NULL{} which causes the
+  contents to be undefined. It is the user's responsibility to fill
+  in the needed data.  The buffer is copied into the new object.
+  If the buffer is not \NULL{}, the return value might be a shared object.
+  Therefore, modification of the resulting Unicode object is only allowed
+  when \var{u} is \NULL{}.
+  \versionadded{3.0}
+\end{cfuncdesc}
+
+\begin{cfuncdesc}{PyObject*}{PyUnicode_FromString}{const char*u}
+   Create a Unicode object from an UTF-8 encoded null-terminated
+   char buffer \var{u}.
+   \versionadded{3.0}
+\end{funcdesc}
+
+\begin{cfuncdesc}{PyObject*}{PyUnicode_FromFormat}{const char *format, ...}
+  Take a C \cfunction{printf()}-style \var{format} string and a
+  variable number of arguments, calculate the size of the resulting
+  Python unicode string and return a string with the values formatted into
+  it.  The variable arguments must be C types and must correspond
+  exactly to the format characters in the \var{format} string.  The
+  following format characters are allowed:
+
+  % The descriptions for %zd and %zu are wrong, but the truth is complicated
+  % because not all compilers support the %z width modifier -- we fake it
+  % when necessary via interpolating PY_FORMAT_SIZE_T.
+
+  \begin{tableiii}{l|l|l}{member}{Format Characters}{Type}{Comment}
+    \lineiii{\%\%}{\emph{n/a}}{The literal \% character.}
+    \lineiii{\%c}{int}{A single character, represented as an C int.}
+    \lineiii{\%d}{int}{Exactly equivalent to \code{printf("\%d")}.}
+    \lineiii{\%u}{unsigned int}{Exactly equivalent to \code{printf("\%u")}.}
+    \lineiii{\%ld}{long}{Exactly equivalent to \code{printf("\%ld")}.}
+    \lineiii{\%lu}{unsigned long}{Exactly equivalent to \code{printf("\%lu")}.}
+    \lineiii{\%zd}{Py_ssize_t}{Exactly equivalent to \code{printf("\%zd")}.}
+    \lineiii{\%zu}{size_t}{Exactly equivalent to \code{printf("\%zu")}.}
+    \lineiii{\%i}{int}{Exactly equivalent to \code{printf("\%i")}.}
+    \lineiii{\%x}{int}{Exactly equivalent to \code{printf("\%x")}.}
+    \lineiii{\%s}{char*}{A null-terminated C character array.}
+    \lineiii{\%p}{void*}{The hex representation of a C pointer.
+	Mostly equivalent to \code{printf("\%p")} except that it is
+	guaranteed to start with the literal \code{0x} regardless of
+	what the platform's \code{printf} yields.}
+    \lineiii{\%U}{PyObject*}{A unicode object.}
+    \lineiii{\%V}{PyObject*, char *}{A unicode object (which may be \NULL{})
+	and a null-terminated C character array as a second parameter (which
+	will be used, if the first parameter is \NULL{}).}
+    \lineiii{\%S}{PyObject*}{The result of calling \function{PyObject_Unicode()}.}
+    \lineiii{\%R}{PyObject*}{The result of calling \function{PyObject_Repr()}.}
+  \end{tableiii}
+
+  An unrecognized format character causes all the rest of the format
+  string to be copied as-is to the result string, and any extra
+  arguments discarded.
+  \versionadded{3.0}
+\end{cfuncdesc}
+
+\begin{cfuncdesc}{PyObject*}{PyUnicode_FromFormatV}{const char *format,
+                                                   va_list vargs}
+  Identical to \function{PyUnicode_FromFormat()} except that it takes
+  exactly two arguments.
+  \versionadded{3.0}
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{Py_UNICODE*}{PyUnicode_AsUnicode}{PyObject *unicode}
@@ -1600,6 +1667,27 @@ They all return \NULL{} or \code{-1} if an exception occurs.
 
   \var{element} has to coerce to a one element Unicode
   string. \code{-1} is returned if there was an error.
+\end{cfuncdesc}
+
+\begin{cfuncdesc}{void}{PyUnicode_InternInPlace}{PyObject **string}
+  Intern the argument \var{*string} in place.  The argument must be
+  the address of a pointer variable pointing to a Python unicode string
+  object.  If there is an existing interned string that is the same as
+  \var{*string}, it sets \var{*string} to it (decrementing the
+  reference count of the old string object and incrementing the
+  reference count of the interned string object), otherwise it leaves
+  \var{*string} alone and interns it (incrementing its reference
+  count).  (Clarification: even though there is a lot of talk about
+  reference counts, think of this function as reference-count-neutral;
+  you own the object after the call if and only if you owned it before
+  the call.)
+\end{cfuncdesc}
+
+\begin{cfuncdesc}{PyObject*}{PyUnicode_InternFromString}{const char *v}
+  A combination of \cfunction{PyUnicode_FromString()} and
+  \cfunction{PyUnicode_InternInPlace()}, returning either a new unicode
+  string object that has been interned, or a new (``owned'') reference to
+  an earlier interned string object with the same value.
 \end{cfuncdesc}
 
 

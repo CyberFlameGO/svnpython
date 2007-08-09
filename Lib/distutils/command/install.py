@@ -8,7 +8,7 @@ from distutils import log
 
 __revision__ = "$Id$"
 
-import sys, os, string
+import sys, os
 from types import *
 from distutils.core import Command
 from distutils.debug import DEBUG
@@ -269,7 +269,7 @@ class install (Command):
         # $platbase in the other installation directories and not worry
         # about needing recursive variable expansion (shudder).
 
-        py_version = (string.split(sys.version))[0]
+        py_version = sys.version.split()[0]
         (prefix, exec_prefix) = get_config_vars('prefix', 'exec_prefix')
         self.config_vars = {'dist_name': self.distribution.get_name(),
                             'dist_version': self.distribution.get_version(),
@@ -292,7 +292,7 @@ class install (Command):
 
         if DEBUG:
             from pprint import pprint
-            print "config vars:"
+            print("config vars:")
             pprint(self.config_vars)
 
         # Expand "~" and configuration variables in the installation
@@ -347,19 +347,19 @@ class install (Command):
     def dump_dirs (self, msg):
         if DEBUG:
             from distutils.fancy_getopt import longopt_xlate
-            print msg + ":"
+            print(msg + ":")
             for opt in self.user_options:
                 opt_name = opt[0]
                 if opt_name[-1] == "=":
                     opt_name = opt_name[0:-1]
                 if self.negative_opt.has_key(opt_name):
-                    opt_name = string.translate(self.negative_opt[opt_name],
-                                                longopt_xlate)
+                    opt_name = self.negative_opt[opt_name].translate(
+                                                               longopt_xlate)
                     val = not getattr(self, opt_name)
                 else:
-                    opt_name = string.translate(opt_name, longopt_xlate)
+                    opt_name = opt_name.translate(longopt_xlate)
                     val = getattr(self, opt_name)
-                print "  %s: %s" % (opt_name, val)
+                print("  %s: %s" % (opt_name, val))
 
 
     def finalize_unix (self):
@@ -463,8 +463,8 @@ class install (Command):
             self.extra_path = self.distribution.extra_path
 
         if self.extra_path is not None:
-            if type(self.extra_path) is StringType:
-                self.extra_path = string.split(self.extra_path, ',')
+            if isinstance(self.extra_path, basestring):
+                self.extra_path = self.extra_path.split(',')
 
             if len(self.extra_path) == 1:
                 path_file = extra_dirs = self.extra_path[0]
@@ -517,7 +517,7 @@ class install (Command):
             outputs = self.get_outputs()
             if self.root:               # strip any package prefix
                 root_len = len(self.root)
-                for counter in xrange(len(outputs)):
+                for counter in range(len(outputs)):
                     outputs[counter] = outputs[counter][root_len:]
             self.execute(write_file,
                          (self.record, outputs),

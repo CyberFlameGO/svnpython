@@ -1,4 +1,4 @@
-from test.test_support import TestFailed, have_unicode
+from test.test_support import TestFailed
 
 class base_set:
 
@@ -55,38 +55,8 @@ except TypeError:
     pass
 
 
-if have_unicode:
-
-    # Test char in Unicode
-
-    check('c' in unicode('abc'), "'c' not in u'abc'")
-    check('d' not in unicode('abc'), "'d' in u'abc'")
-
-    check('' in unicode(''), "'' not in u''")
-    check(unicode('') in '', "u'' not in ''")
-    check(unicode('') in unicode(''), "u'' not in u''")
-    check('' in unicode('abc'), "'' not in u'abc'")
-    check(unicode('') in 'abc', "u'' not in 'abc'")
-    check(unicode('') in unicode('abc'), "u'' not in u'abc'")
-
-    try:
-        None in unicode('abc')
-        check(0, "None in u'abc' did not raise error")
-    except TypeError:
-        pass
-
-    # Test Unicode char in Unicode
-
-    check(unicode('c') in unicode('abc'), "u'c' not in u'abc'")
-    check(unicode('d') not in unicode('abc'), "u'd' in u'abc'")
-
-    # Test Unicode char in string
-
-    check(unicode('c') in 'abc', "u'c' not in 'abc'")
-    check(unicode('d') not in 'abc', "u'd' in 'abc'")
-
 # A collection of tests on builtin sequence types
-a = range(10)
+a = list(range(10))
 for i in a:
     check(i in a, "%r not in %r" % (i, a))
 check(16 not in a, "16 not in %r" % (a,))
@@ -105,7 +75,7 @@ class Deviant1:
     works when the list is modified during the check.
     """
 
-    aList = range(15)
+    aList = list(range(15))
 
     def __cmp__(self, other):
         if other == 12:

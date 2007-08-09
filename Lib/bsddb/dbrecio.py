@@ -29,7 +29,6 @@ From:
 """
 
 import errno
-import string
 
 class DBRecIO:
     def __init__(self, db, key, txn=None):
@@ -39,7 +38,6 @@ class DBRecIO:
         self.len = None
         self.pos = 0
         self.closed = 0
-        self.softspace = 0
 
     def close(self):
         if not self.closed:
@@ -84,9 +82,9 @@ class DBRecIO:
         if self.closed:
             raise ValueError, "I/O operation on closed file"
         if self.buflist:
-            self.buf = self.buf + string.joinfields(self.buflist, '')
+            self.buf = self.buf + ''.join(self.buflist)
             self.buflist = []
-        i = string.find(self.buf, '\n', self.pos)
+        i = self.buf.find('\n', self.pos)
         if i < 0:
             newpos = self.len
         else:
@@ -135,7 +133,7 @@ class DBRecIO:
         self.pos = newpos
 
     def writelines(self, list):
-        self.write(string.joinfields(list, ''))
+        self.write(''.join(list))
 
     def flush(self):
         if self.closed:

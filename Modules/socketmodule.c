@@ -19,15 +19,14 @@ Module interface:
 	a subclass of socket.error
 - socket.herror: exception raised for gethostby* errors,
 	a subclass of socket.error
-- socket.fromfd(fd, family, type[, proto]) --> new socket object (created
-        from an existing file descriptor)
 - socket.gethostbyname(hostname) --> host IP address (string: 'dd.dd.dd.dd')
 - socket.gethostbyaddr(IP address) --> (hostname, [alias, ...], [IP addr, ...])
 - socket.gethostname() --> host name (string: 'spam' or 'spam.domain.com')
 - socket.getprotobyname(protocolname) --> protocol number
 - socket.getservbyname(servicename[, protocolname]) --> port number
 - socket.getservbyport(portnumber[, protocolname]) --> service name
-- socket.socket([family[, type [, proto]]]) --> new socket object
+- socket.socket([family[, type [, proto, fileno]]]) --> new socket object
+        (fileno specifies a pre-existing socket file descriptor)
 - socket.socketpair([family[, type [, proto]]]) --> (socket, socket)
 - socket.ntohs(16 bit value) --> new int object
 - socket.ntohl(32 bit value) --> new int object
@@ -102,7 +101,6 @@ getsockname() -- return local address\n\
 getsockopt(level, optname[, buflen]) -- get socket options\n\
 gettimeout() -- return timeout or None\n\
 listen(n) -- start listening for incoming connections\n\
-makefile([mode, [bufsize]]) -- return a file object for the socket [*]\n\
 recv(buflen[, flags]) -- receive data\n\
 recv_into(buffer[, nbytes[, flags]]) -- receive data (into a buffer)\n\
 recvfrom(buflen[, flags]) -- receive data and sender\'s address\n\
@@ -403,6 +401,10 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 #endif
 #if !defined(NI_MAXSERV)
 #define NI_MAXSERV 32
+#endif
+
+#ifndef INVALID_SOCKET /* MS defines this */
+#define INVALID_SOCKET (-1)
 #endif
 
 /* XXX There's a problem here: *static* functions are not supposed to have
@@ -1554,7 +1556,7 @@ static PyObject *
 sock_accept(PySocketSockObject *s)
 {
 	sock_addr_t addrbuf;
-	SOCKET_T newfd;
+	SOCKET_T newfd = INVALID_SOCKET;
 	socklen_t addrlen;
 	PyObject *sock = NULL;
 	PyObject *addr = NULL;
@@ -1564,12 +1566,6 @@ sock_accept(PySocketSockObject *s)
 	if (!getsockaddrlen(s, &addrlen))
 		return NULL;
 	memset(&addrbuf, 0, addrlen);
-
-#ifdef MS_WINDOWS
-	newfd = INVALID_SOCKET;
-#else
-	newfd = -1;
-#endif
 
 	if (!IS_SELECTABLE(s))
 		return select_error();
@@ -1585,11 +1581,7 @@ sock_accept(PySocketSockObject *s)
 		return NULL;
 	}
 
-#ifdef MS_WINDOWS
 	if (newfd == INVALID_SOCKET)
-#else
-	if (newfd < 0)
-#endif
 		return s->errorhandler();
 
 	/* Create the new object with unspecified family,
@@ -1817,16 +1809,19 @@ sock_getsockopt(PySocketSockObject *s, PyObject *args)
 				"getsockopt buflen out of range");
 		return NULL;
 	}
-	buf = PyString_FromStringAndSize((char *)NULL, buflen);
+	buf = PyBytes_FromStringAndSize((char *)NULL, buflen);
 	if (buf == NULL)
 		return NULL;
 	res = getsockopt(s->sock_fd, level, optname,
-			 (void *)PyString_AS_STRING(buf), &buflen);
+			 (void *)PyBytes_AS_STRING(buf), &buflen);
 	if (res < 0) {
 		Py_DECREF(buf);
 		return s->errorhandler();
 	}
-	_PyString_Resize(&buf, buflen);
+	if (PyBytes_Resize(buf, buflen) < 0) {
+		Py_DECREF(buf);
+		return NULL;
+	}
 	return buf;
 #endif /* __BEOS__ */
 }
@@ -2176,69 +2171,6 @@ least 1; it specifies the number of unaccepted connection that the system\n\
 will allow before refusing new connections.");
 
 
-#ifndef NO_DUP
-/* s.makefile(mode) method.
-   Create a new open file object referring to a dupped version of
-   the socket's file descriptor.  (The dup() call is necessary so
-   that the open file and socket objects may be closed independent
-   of each other.)
-   The mode argument specifies 'r' or 'w' passed to fdopen(). */
-
-static PyObject *
-sock_makefile(PySocketSockObject *s, PyObject *args)
-{
-	extern int fclose(FILE *);
-	char *mode = "r";
-	int bufsize = -1;
-#ifdef MS_WIN32
-	Py_intptr_t fd;
-#else
-	int fd;
-#endif
-	FILE *fp;
-	PyObject *f;
-#ifdef __VMS
-	char *mode_r = "r";
-	char *mode_w = "w";
-#endif
-
-	if (!PyArg_ParseTuple(args, "|si:makefile", &mode, &bufsize))
-		return NULL;
-#ifdef __VMS
-	if (strcmp(mode,"rb") == 0) {
-	    mode = mode_r;
-	}
-	else {
-		if (strcmp(mode,"wb") == 0) {
-			mode = mode_w;
-		}
-	}
-#endif
-#ifdef MS_WIN32
-	if (((fd = _open_osfhandle(s->sock_fd, _O_BINARY)) < 0) ||
-	    ((fd = dup(fd)) < 0) || ((fp = fdopen(fd, mode)) == NULL))
-#else
-	if ((fd = dup(s->sock_fd)) < 0 || (fp = fdopen(fd, mode)) == NULL)
-#endif
-	{
-		if (fd >= 0)
-			SOCKETCLOSE(fd);
-		return s->errorhandler();
-	}
-	f = PyFile_FromFile(fp, "<socket>", mode, fclose);
-	if (f != NULL)
-		PyFile_SetBufSize(f, bufsize);
-	return f;
-}
-
-PyDoc_STRVAR(makefile_doc,
-"makefile([mode[, buffersize]]) -> file object\n\
-\n\
-Return a regular file object corresponding to the socket.\n\
-The mode and buffersize arguments are as for the built-in open() function.");
-
-#endif /* NO_DUP */
-
 /*
  * This is the guts of the recv() and recv_into() methods, which reads into a
  * char buffer.  If you have any inc/dec ref to do to the objects that contain
@@ -2260,6 +2192,10 @@ sock_recv_guts(PySocketSockObject *s, char* cbuf, int len, int flags)
 	if (!IS_SELECTABLE(s)) {
 		select_error();
 		return -1;
+	}
+        if (len == 0) {
+		/* If 0 bytes were requested, do nothing. */
+		return 0;
 	}
 
 #ifndef __VMS
@@ -2342,12 +2278,12 @@ sock_recv(PySocketSockObject *s, PyObject *args)
 	}
 
 	/* Allocate a new string. */
-	buf = PyString_FromStringAndSize((char *) 0, recvlen);
+	buf = PyBytes_FromStringAndSize((char *) 0, recvlen);
 	if (buf == NULL)
 		return NULL;
 
 	/* Call the guts */
-	outlen = sock_recv_guts(s, PyString_AS_STRING(buf), recvlen, flags);
+	outlen = sock_recv_guts(s, PyBytes_AS_STRING(buf), recvlen, flags);
 	if (outlen < 0) {
 		/* An error occurred, release the string and return an
 		   error. */
@@ -2357,7 +2293,7 @@ sock_recv(PySocketSockObject *s, PyObject *args)
 	if (outlen != recvlen) {
 		/* We did not read as many bytes as we anticipated, resize the
 		   string if possible and be succesful. */
-		if (_PyString_Resize(&buf, outlen) < 0)
+		if (PyBytes_Resize(buf, outlen) < 0)
 			/* Oopsy, not so succesful after all. */
 			return NULL;
 	}
@@ -2390,7 +2326,6 @@ sock_recv_into(PySocketSockObject *s, PyObject *args, PyObject *kwds)
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "w#|ii:recv_into", kwlist,
 					 &buf, &buflen, &recvlen, &flags))
 		return NULL;
-	assert(buf != 0 && buflen > 0);
 
 	if (recvlen < 0) {
 		PyErr_SetString(PyExc_ValueError,
@@ -2516,11 +2451,11 @@ sock_recvfrom(PySocketSockObject *s, PyObject *args)
 		return NULL;
 	}
 
-	buf = PyString_FromStringAndSize((char *) 0, recvlen);
+	buf = PyBytes_FromStringAndSize((char *) 0, recvlen);
 	if (buf == NULL)
 		return NULL;
 
-	outlen = sock_recvfrom_guts(s, PyString_AS_STRING(buf),
+	outlen = sock_recvfrom_guts(s, PyBytes_AS_STRING(buf),
 				    recvlen, flags, &addr);
 	if (outlen < 0) {
 		goto finally;
@@ -2529,7 +2464,7 @@ sock_recvfrom(PySocketSockObject *s, PyObject *args)
 	if (outlen != recvlen) {
 		/* We did not read as many bytes as we anticipated, resize the
 		   string if possible and be succesful. */
-		if (_PyString_Resize(&buf, outlen) < 0)
+		if (PyBytes_Resize(buf, outlen) < 0)
 			/* Oopsy, not so succesful after all. */
 			goto finally;
 	}
@@ -2791,10 +2726,6 @@ static PyMethodDef sock_methods[] = {
 			  getsockopt_doc},
 	{"listen",	  (PyCFunction)sock_listen, METH_O,
 			  listen_doc},
-#ifndef NO_DUP
-	{"makefile",	  (PyCFunction)sock_makefile, METH_VARARGS,
-			  makefile_doc},
-#endif
 	{"recv",	  (PyCFunction)sock_recv, METH_VARARGS,
 			  recv_doc},
 	{"recv_into",	  (PyCFunction)sock_recv_into, METH_VARARGS | METH_KEYWORDS,
@@ -2850,7 +2781,6 @@ sock_dealloc(PySocketSockObject *s)
 static PyObject *
 sock_repr(PySocketSockObject *s)
 {
-	char buf[512];
 #if SIZEOF_SOCKET_T > SIZEOF_LONG
 	if (s->sock_fd > LONG_MAX) {
 		/* this can occur on Win64, and actually there is a special
@@ -2862,13 +2792,11 @@ sock_repr(PySocketSockObject *s)
 		return NULL;
 	}
 #endif
-	PyOS_snprintf(
-		buf, sizeof(buf),
-		"<socket object, fd=%ld, family=%d, type=%d, protocol=%d>",
+	return PyUnicode_FromFormat(
+		"<socket object, fd=%ld, family=%d, type=%d, proto=%d>",
 		(long)s->sock_fd, s->sock_family,
 		s->sock_type,
 		s->sock_proto);
-	return PyString_FromString(buf);
 }
 
 
@@ -2896,27 +2824,35 @@ static int
 sock_initobj(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PySocketSockObject *s = (PySocketSockObject *)self;
-	SOCKET_T fd;
+	PyObject *fdobj = NULL;
+	SOCKET_T fd = INVALID_SOCKET;
 	int family = AF_INET, type = SOCK_STREAM, proto = 0;
-	static char *keywords[] = {"family", "type", "proto", 0};
+	static char *keywords[] = {"family", "type", "proto", "fileno", 0};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds,
-					 "|iii:socket", keywords,
-					 &family, &type, &proto))
+					 "|iiiO:socket", keywords,
+					 &family, &type, &proto, &fdobj))
 		return -1;
 
-	Py_BEGIN_ALLOW_THREADS
-	fd = socket(family, type, proto);
-	Py_END_ALLOW_THREADS
+	if (fdobj != NULL) {
+		fd = PyLong_AsLongLong(fdobj);
+		if (fd == (SOCKET_T)(-1) && PyErr_Occurred())
+			return -1;
+		if (fd == INVALID_SOCKET) {
+			PyErr_SetString(PyExc_ValueError,
+					"can't use invalid socket value");
+			return -1;
+		}
+	}
+	else {
+		Py_BEGIN_ALLOW_THREADS
+		fd = socket(family, type, proto);
+		Py_END_ALLOW_THREADS
 
-#ifdef MS_WINDOWS
-	if (fd == INVALID_SOCKET)
-#else
-	if (fd < 0)
-#endif
-	{
-		set_error();
-		return -1;
+		if (fd == INVALID_SOCKET) {
+			set_error();
+			return -1;
+		}
 	}
 	init_sockobject(s, fd, family, type, proto);
 
@@ -3464,39 +3400,6 @@ AF_UNIX if defined on the platform; otherwise, the default is AF_INET.");
 #endif /* HAVE_SOCKETPAIR */
 
 
-#ifndef NO_DUP
-/* Create a socket object from a numeric file description.
-   Useful e.g. if stdin is a socket.
-   Additional arguments as for socket(). */
-
-/*ARGSUSED*/
-static PyObject *
-socket_fromfd(PyObject *self, PyObject *args)
-{
-	PySocketSockObject *s;
-	SOCKET_T fd;
-	int family, type, proto = 0;
-	if (!PyArg_ParseTuple(args, "iii|i:fromfd",
-			      &fd, &family, &type, &proto))
-		return NULL;
-	/* Dup the fd so it and the socket can be closed independently */
-	fd = dup(fd);
-	if (fd < 0)
-		return set_error();
-	s = new_sockobject(fd, family, type, proto);
-	return (PyObject *) s;
-}
-
-PyDoc_STRVAR(fromfd_doc,
-"fromfd(fd, family, type[, proto]) -> socket object\n\
-\n\
-Create a socket object from a duplicate of the given\n\
-file descriptor.\n\
-The remaining arguments are the same as for socket().");
-
-#endif /* NO_DUP */
-
-
 static PyObject *
 socket_ntohs(PyObject *self, PyObject *args)
 {
@@ -3525,17 +3428,7 @@ socket_ntohl(PyObject *self, PyObject *arg)
 {
 	unsigned long x;
 
-	if (PyInt_Check(arg)) {
-		x = PyInt_AS_LONG(arg);
-		if (x == (unsigned long) -1 && PyErr_Occurred())
-			return NULL;
-		if ((long)x < 0) {
-			PyErr_SetString(PyExc_OverflowError,
-			  "can't convert negative number to unsigned long");
-			return NULL;
-		}
-	}
-	else if (PyLong_Check(arg)) {
+	if (PyLong_Check(arg)) {
 		x = PyLong_AsUnsignedLong(arg);
 		if (x == (unsigned long) -1 && PyErr_Occurred())
 			return NULL;
@@ -3594,17 +3487,7 @@ socket_htonl(PyObject *self, PyObject *arg)
 {
 	unsigned long x;
 
-	if (PyInt_Check(arg)) {
-		x = PyInt_AS_LONG(arg);
-		if (x == (unsigned long) -1 && PyErr_Occurred())
-			return NULL;
-		if ((long)x < 0) {
-			PyErr_SetString(PyExc_OverflowError,
-			  "can't convert negative number to unsigned long");
-			return NULL;
-		}
-	}
-	else if (PyLong_Check(arg)) {
+	if (PyLong_Check(arg)) {
 		x = PyLong_AsUnsignedLong(arg);
 		if (x == (unsigned long) -1 && PyErr_Occurred())
 			return NULL;
@@ -3635,7 +3518,7 @@ Convert a 32-bit integer from host to network byte order.");
 /* socket.inet_aton() and socket.inet_ntoa() functions. */
 
 PyDoc_STRVAR(inet_aton_doc,
-"inet_aton(string) -> packed 32-bit IP representation\n\
+"inet_aton(string) -> bytes giving packed 32-bit IP representation\n\
 \n\
 Convert an IP address in string format (123.45.67.89) to the 32-bit packed\n\
 binary format used in low-level network functions.");
@@ -3666,7 +3549,7 @@ socket_inet_aton(PyObject *self, PyObject *args)
     if (inet_aton != NULL) {
 #endif
 	if (inet_aton(ip_addr, &buf))
-		return PyString_FromStringAndSize((char *)(&buf),
+		return PyBytes_FromStringAndSize((char *)(&buf),
 						  sizeof(buf));
 
 	PyErr_SetString(socket_error,
@@ -3695,8 +3578,8 @@ socket_inet_aton(PyObject *self, PyObject *args)
 			return NULL;
 		}
 	}
-	return PyString_FromStringAndSize((char *) &packed_addr,
-					  sizeof(packed_addr));
+	return PyBytes_FromStringAndSize((char *) &packed_addr,
+					 sizeof(packed_addr));
 
 #ifdef USE_INET_ATON_WEAKLINK
    }
@@ -3876,7 +3759,8 @@ socket_getaddrinfo(PyObject *self, PyObject *args)
 		idna = PyObject_CallMethod(hobj, "encode", "s", "idna");
 		if (!idna)
 			return NULL;
-		hptr = PyString_AsString(idna);
+		assert(PyBytes_Check(idna));
+		hptr = PyBytes_AsString(idna);
 	} else if (PyString_Check(hobj)) {
 		hptr = PyString_AsString(hobj);
 	} else {
@@ -3884,7 +3768,7 @@ socket_getaddrinfo(PyObject *self, PyObject *args)
 				"getaddrinfo() argument 1 must be string or None");
 		return NULL;
 	}
-	if (PyInt_Check(pobj)) {
+	if (PyInt_CheckExact(pobj)) {
 		PyOS_snprintf(pbuf, sizeof(pbuf), "%ld", PyInt_AsLong(pobj));
 		pptr = pbuf;
 	} else if (PyString_Check(pobj)) {
@@ -4098,10 +3982,6 @@ static PyMethodDef socket_methods[] = {
 	 METH_VARARGS, getservbyport_doc},
 	{"getprotobyname",	socket_getprotobyname,
 	 METH_VARARGS, getprotobyname_doc},
-#ifndef NO_DUP
-	{"fromfd",		socket_fromfd,
-	 METH_VARARGS, fromfd_doc},
-#endif
 #ifdef HAVE_SOCKETPAIR
 	{"socketpair",		socket_socketpair,
 	 METH_VARARGS, socketpair_doc},
@@ -4170,7 +4050,6 @@ os_init(void)
 {
 	WSADATA WSAData;
 	int ret;
-	char buf[100];
 	ret = WSAStartup(0x0101, &WSAData);
 	switch (ret) {
 	case 0:	/* No error */
@@ -4187,9 +4066,7 @@ os_init(void)
 			"WSAStartup failed: requested version not supported");
 		break;
 	default:
-		PyOS_snprintf(buf, sizeof(buf),
-			      "WSAStartup failed: error code %d", ret);
-		PyErr_SetString(PyExc_ImportError, buf);
+		PyErr_Format(PyExc_ImportError, "WSAStartup failed: error code %d", ret);
 		break;
 	}
 	return 0; /* Failure */
@@ -4207,16 +4084,13 @@ static int
 os_init(void)
 {
 #ifndef PYCC_GCC
-	char reason[64];
 	int rc = sock_init();
 
 	if (rc == 0) {
 		return 1; /* Success */
 	}
 
-	PyOS_snprintf(reason, sizeof(reason),
-		      "OS/2 TCP/IP Error# %d", sock_errno());
-	PyErr_SetString(PyExc_ImportError, reason);
+	PyErr_Format(PyExc_ImportError, "OS/2 TCP/IP Error# %d", sock_errno());
 
 	return 0;  /* Failure */
 #else
@@ -4250,14 +4124,11 @@ PySocketModule_APIObject PySocketModuleAPI =
 /* Initialize the _socket module.
 
    This module is actually called "_socket", and there's a wrapper
-   "socket.py" which implements some additional functionality.  On some
-   platforms (e.g. Windows and OS/2), socket.py also implements a
-   wrapper for the socket type that provides missing functionality such
-   as makefile(), dup() and fromfd().  The import of "_socket" may fail
-   with an ImportError exception if os-specific initialization fails.
-   On Windows, this does WINSOCK initialization.  When WINSOCK is
-   initialized succesfully, a call to WSACleanup() is scheduled to be
-   made at exit time.
+   "socket.py" which implements some additional functionality.
+   The import of "_socket" may fail with an ImportError exception if
+   os-specific initialization fails.  On Windows, this does WINSOCK
+   initialization.  When WINSOCK is initialized succesfully, a call to
+   WSACleanup() is scheduled to be made at exit time.
 */
 
 PyDoc_STRVAR(socket_doc,

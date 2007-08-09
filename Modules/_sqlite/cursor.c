@@ -36,10 +36,10 @@
 
 PyObject* pysqlite_cursor_iternext(pysqlite_Cursor* self);
 
-static pysqlite_StatementKind detect_statement_type(char* statement)
+static pysqlite_StatementKind detect_statement_type(const char* statement)
 {
     char buf[20];
-    char* src;
+    const char* src;
     char* dst;
 
     src = statement;
@@ -409,8 +409,8 @@ PyObject* _pysqlite_fetch_one_row(pysqlite_Cursor* self)
 PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject* args)
 {
     PyObject* operation;
-    PyObject* operation_bytestr = NULL;
-    char* operation_cstr;
+    const char* operation_cstr;
+    Py_ssize_t operation_len;
     PyObject* parameters_list = NULL;
     PyObject* parameters_iter = NULL;
     PyObject* parameters = NULL;
@@ -495,16 +495,8 @@ PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject*
         rc = pysqlite_statement_reset(self->statement);
     }
 
-    if (PyString_Check(operation)) {
-        operation_cstr = PyString_AsString(operation);
-    } else {
-        operation_bytestr = PyUnicode_AsUTF8String(operation);
-        if (!operation_bytestr) {
-            goto error;
-        }
-
-        operation_cstr = PyString_AsString(operation_bytestr);
-    }
+    if (PyObject_AsCharBuffer(operation, &operation_cstr, &operation_len) < 0)
+        goto error;
 
     /* reset description and rowcount */
     Py_DECREF(self->description);
@@ -714,7 +706,6 @@ PyObject* _pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject*
     }
 
 error:
-    Py_XDECREF(operation_bytestr);
     Py_XDECREF(parameters);
     Py_XDECREF(parameters_iter);
     Py_XDECREF(parameters_list);
@@ -1039,7 +1030,7 @@ PyTypeObject pysqlite_CursorType = {
         0,                                              /* tp_getattro */
         0,                                              /* tp_setattro */
         0,                                              /* tp_as_buffer */
-        Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_ITER|Py_TPFLAGS_BASETYPE, /* tp_flags */
+        Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,	/* tp_flags */
         cursor_doc,                                     /* tp_doc */
         0,                                              /* tp_traverse */
         0,                                              /* tp_clear */

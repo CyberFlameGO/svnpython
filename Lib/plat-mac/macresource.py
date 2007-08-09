@@ -48,7 +48,7 @@ def need(restype, resid, filename=None, modname=None):
     if modname == '__main__':
         # If we're main we look in the current directory
         searchdirs = [os.curdir]
-    if sys.modules.has_key(modname):
+    if modname in sys.modules:
         mod = sys.modules[modname]
         if hasattr(mod, '__file__'):
             searchdirs = [os.path.dirname(mod.__file__)]
@@ -76,14 +76,14 @@ def open_pathname(pathname, verbose=0):
     AppleSingle file"""
     try:
         refno = Res.FSpOpenResFile(pathname, 1)
-    except Res.Error, arg:
+    except Res.Error as arg:
         if arg[0] in (-37, -39):
             # No resource fork. We may be on OSX, and this may be either
             # a data-fork based resource file or a AppleSingle file
             # from the CVS repository.
             try:
-                refno = Res.FSOpenResourceFile(pathname, u'', 1)
-            except Res.Error, arg:
+                refno = Res.FSOpenResourceFile(pathname, '', 1)
+            except Res.Error as arg:
                 if arg[0] != -199:
                     # -199 is "bad resource map"
                     raise
@@ -91,7 +91,7 @@ def open_pathname(pathname, verbose=0):
                 return refno
             # Finally try decoding an AppleSingle file
             pathname = _decode(pathname, verbose=verbose)
-            refno = Res.FSOpenResourceFile(pathname, u'', 1)
+            refno = Res.FSOpenResourceFile(pathname, '', 1)
         else:
             raise
     return refno
@@ -103,14 +103,14 @@ def resource_pathname(pathname, verbose=0):
     try:
         refno = Res.FSpOpenResFile(pathname, 1)
         Res.CloseResFile(refno)
-    except Res.Error, arg:
+    except Res.Error as arg:
         if arg[0] in (-37, -39):
             # No resource fork. We may be on OSX, and this may be either
             # a data-fork based resource file or a AppleSingle file
             # from the CVS repository.
             try:
-                refno = Res.FSOpenResourceFile(pathname, u'', 1)
-            except Res.Error, arg:
+                refno = Res.FSOpenResourceFile(pathname, '', 1)
+            except Res.Error as arg:
                 if arg[0] != -199:
                     # -199 is "bad resource map"
                     raise
@@ -140,7 +140,7 @@ def _decode(pathname, verbose=0):
         import tempfile
         fd, newpathname = tempfile.mkstemp(".rsrc")
     if verbose:
-        print 'Decoding', pathname, 'to', newpathname
+        print('Decoding', pathname, 'to', newpathname)
     import applesingle
     applesingle.decode(pathname, newpathname, resonly=1)
     return newpathname

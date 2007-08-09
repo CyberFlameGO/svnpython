@@ -103,10 +103,10 @@ class ReprTests(unittest.TestCase):
     def test_numbers(self):
         eq = self.assertEquals
         eq(r(123), repr(123))
-        eq(r(123L), repr(123L))
+        eq(r(123), repr(123))
         eq(r(1.0/3), repr(1.0/3))
 
-        n = 10L**100
+        n = 10**100
         expected = repr(n)[:18] + "..." + repr(n)[-19:]
         eq(r(n), expected)
 
@@ -125,15 +125,7 @@ class ReprTests(unittest.TestCase):
         s = r(ClassWithFailingRepr)
         self.failUnless(s.startswith("<class "))
         self.failUnless(s.endswith(">"))
-        self.failUnless(s.find("...") == 8)
-
-    def test_file(self):
-        fp = open(unittest.__file__)
-        self.failUnless(repr(fp).startswith(
-            "<open file '%s', mode 'r' at 0x" % unittest.__file__))
-        fp.close()
-        self.failUnless(repr(fp).startswith(
-            "<closed file '%s', mode 'r' at 0x" % unittest.__file__))
+        self.failUnless(s.find("...") in [12, 13])
 
     def test_lambda(self):
         self.failUnless(repr(lambda x: x).startswith(
@@ -148,11 +140,11 @@ class ReprTests(unittest.TestCase):
         self.failUnless(repr(''.split).startswith(
             '<built-in method split of str object at 0x'))
 
-    def test_xrange(self):
+    def test_range(self):
         eq = self.assertEquals
-        eq(repr(xrange(1)), 'xrange(1)')
-        eq(repr(xrange(1, 2)), 'xrange(1, 2)')
-        eq(repr(xrange(1, 2, 3)), 'xrange(1, 4, 3)')
+        eq(repr(range(1)), 'range(0, 1)')
+        eq(repr(range(1, 2)), 'range(1, 2)')
+        eq(repr(range(1, 4, 3)), 'range(1, 4, 3)')
 
     def test_nesting(self):
         eq = self.assertEquals
@@ -264,8 +256,7 @@ class bar:
 ''')
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import bar
         # Module name may be prefixed with "test.", depending on how run.
-        self.failUnless(repr(bar.bar).startswith(
-            "<class %s.bar at 0x" % bar.__name__))
+        self.assertEquals(repr(bar.bar), "<class '%s.bar'>" % bar.__name__)
 
     def test_instance(self):
         touch(os.path.join(self.subpkgname, 'baz'+os.extsep+'py'), '''\
@@ -275,7 +266,7 @@ class baz:
         from areallylongpackageandmodulenametotestreprtruncation.areallylongpackageandmodulenametotestreprtruncation import baz
         ibaz = baz.baz()
         self.failUnless(repr(ibaz).startswith(
-            "<%s.baz instance at 0x" % baz.__name__))
+            "<%s.baz object at 0x" % baz.__name__))
 
     def test_method(self):
         eq = self.assertEquals
@@ -290,7 +281,7 @@ class aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
         # Bound method next
         iqux = qux.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa()
         self.failUnless(repr(iqux.amethod).startswith(
-            '<bound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod of <%s.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa instance at 0x' \
+            '<bound method aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.amethod of <%s.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa object at 0x' \
             % (qux.__name__,) ))
 
     def test_builtin_function(self):
@@ -301,7 +292,7 @@ class ClassWithRepr:
     def __init__(self, s):
         self.s = s
     def __repr__(self):
-        return "ClassWithLongRepr(%r)" % self.s
+        return "ClassWithRepr(%r)" % self.s
 
 
 class ClassWithFailingRepr:

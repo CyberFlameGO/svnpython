@@ -565,59 +565,56 @@ set_dealloc(PySetObject *so)
 	Py_TRASHCAN_SAFE_END(so)
 }
 
-static int
-set_tp_print(PySetObject *so, FILE *fp, int flags)
-{
-	setentry *entry;
-	Py_ssize_t pos=0;
-	char *emit = "";	/* No separator emitted on first pass */
-	char *separator = ", ";
-	int status = Py_ReprEnter((PyObject*)so);
-
-	if (status != 0) {
-		if (status < 0)
-			return status;
-		fprintf(fp, "%s(...)", so->ob_type->tp_name);
-		return 0;
-	}        
-
-	fprintf(fp, "%s([", so->ob_type->tp_name);
-	while (set_next(so, &pos, &entry)) {
-		fputs(emit, fp);
-		emit = separator;
-		if (PyObject_Print(entry->key, fp, 0) != 0) {
-			Py_ReprLeave((PyObject*)so);
-			return -1;
-		}
-	}
-	fputs("])", fp);
-	Py_ReprLeave((PyObject*)so);        
-	return 0;
-}
-
 static PyObject *
 set_repr(PySetObject *so)
 {
-	PyObject *keys, *result=NULL, *listrepr;
+	PyObject *keys, *result=NULL;
+	Py_UNICODE *u;
 	int status = Py_ReprEnter((PyObject*)so);
+	PyObject *listrepr;
+	Py_ssize_t newsize;
 
 	if (status != 0) {
 		if (status < 0)
 			return NULL;
-		return PyString_FromFormat("%s(...)", so->ob_type->tp_name);
+		return PyUnicode_FromFormat("%s(...)", Py_Type(so)->tp_name);
+	}
+
+	/* shortcut for the empty set */
+	if (!so->used) {
+		Py_ReprLeave((PyObject*)so);
+		return PyUnicode_FromFormat("%s()", Py_Type(so)->tp_name);
 	}
 
 	keys = PySequence_List((PyObject *)so);
 	if (keys == NULL)
 		goto done;
+
 	listrepr = PyObject_Repr(keys);
 	Py_DECREF(keys);
-	if (listrepr == NULL)
+	if (listrepr == NULL) {
+		Py_DECREF(keys);
 		goto done;
-
-	result = PyString_FromFormat("%s(%s)", so->ob_type->tp_name,
-		PyString_AS_STRING(listrepr));
+	}
+	newsize = PyUnicode_GET_SIZE(listrepr);
+	result = PyUnicode_FromUnicode(NULL, newsize);
+	if (result) {
+		u = PyUnicode_AS_UNICODE(result);
+		*u++ = '{';
+		/* Omit the brackets from the listrepr */
+		Py_UNICODE_COPY(u, PyUnicode_AS_UNICODE(listrepr)+1,
+				   PyUnicode_GET_SIZE(listrepr)-2);
+		u += newsize-2;
+		*u++ = '}';
+	}
 	Py_DECREF(listrepr);
+	if (Py_Type(so) != &PySet_Type) {
+		PyObject *tmp = PyUnicode_FromFormat("%s(%U)",
+						     Py_Type(so)->tp_name,
+						     result);
+		Py_DECREF(result);
+		result = tmp;
+	}
 done:
 	Py_ReprLeave((PyObject*)so);
 	return result;
@@ -779,13 +776,6 @@ frozenset_hash(PyObject *self)
 		hash = 590923713L;
 	so->hash = hash;
 	return hash;
-}
-
-static long
-set_nohash(PyObject *self)
-{
-	PyErr_SetString(PyExc_TypeError, "set objects are unhashable");
-	return -1;
 }
 
 /***** Set iterator type ***********************************************/
@@ -1882,14 +1872,13 @@ static PyNumberMethods set_as_number = {
 	0,				/*nb_add*/
 	(binaryfunc)set_sub,		/*nb_subtract*/
 	0,				/*nb_multiply*/
-	0,				/*nb_divide*/
 	0,				/*nb_remainder*/
 	0,				/*nb_divmod*/
 	0,				/*nb_power*/
 	0,				/*nb_negative*/
 	0,				/*nb_positive*/
 	0,				/*nb_absolute*/
-	0,				/*nb_nonzero*/
+	0,				/*nb_bool*/
 	0,				/*nb_invert*/
 	0,				/*nb_lshift*/
 	0,				/*nb_rshift*/
@@ -1905,7 +1894,6 @@ static PyNumberMethods set_as_number = {
 	0,				/*nb_inplace_add*/
 	(binaryfunc)set_isub,		/*nb_inplace_subtract*/
 	0,				/*nb_inplace_multiply*/
-	0,				/*nb_inplace_divide*/
 	0,				/*nb_inplace_remainder*/
 	0,				/*nb_inplace_power*/
 	0,				/*nb_inplace_lshift*/
@@ -1927,7 +1915,7 @@ PyTypeObject PySet_Type = {
 	0,				/* tp_itemsize */
 	/* methods */
 	(destructor)set_dealloc,	/* tp_dealloc */
-	(printfunc)set_tp_print,	/* tp_print */
+	0,				/* tp_print */
 	0,				/* tp_getattr */
 	0,				/* tp_setattr */
 	set_nocmp,			/* tp_compare */
@@ -1935,13 +1923,13 @@ PyTypeObject PySet_Type = {
 	&set_as_number,			/* tp_as_number */
 	&set_as_sequence,		/* tp_as_sequence */
 	0,				/* tp_as_mapping */
-	set_nohash,			/* tp_hash */
+	0,				/* tp_hash */
 	0,				/* tp_call */
 	0,				/* tp_str */
 	PyObject_GenericGetAttr,	/* tp_getattro */
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_CHECKTYPES |
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
 		Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	set_doc,			/* tp_doc */
 	(traverseproc)set_traverse,	/* tp_traverse */
@@ -1993,14 +1981,13 @@ static PyNumberMethods frozenset_as_number = {
 	0,				/*nb_add*/
 	(binaryfunc)set_sub,		/*nb_subtract*/
 	0,				/*nb_multiply*/
-	0,				/*nb_divide*/
 	0,				/*nb_remainder*/
 	0,				/*nb_divmod*/
 	0,				/*nb_power*/
 	0,				/*nb_negative*/
 	0,				/*nb_positive*/
 	0,				/*nb_absolute*/
-	0,				/*nb_nonzero*/
+	0,				/*nb_bool*/
 	0,				/*nb_invert*/
 	0,				/*nb_lshift*/
 	0,				/*nb_rshift*/
@@ -2021,7 +2008,7 @@ PyTypeObject PyFrozenSet_Type = {
 	0,				/* tp_itemsize */
 	/* methods */
 	(destructor)set_dealloc,	/* tp_dealloc */
-	(printfunc)set_tp_print,	/* tp_print */
+	0,				/* tp_print */
 	0,				/* tp_getattr */
 	0,				/* tp_setattr */
 	set_nocmp,			/* tp_compare */
@@ -2035,7 +2022,7 @@ PyTypeObject PyFrozenSet_Type = {
 	PyObject_GenericGetAttr,	/* tp_getattro */
 	0,				/* tp_setattro */
 	0,				/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_CHECKTYPES |
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
 		Py_TPFLAGS_BASETYPE,	/* tp_flags */
 	frozenset_doc,			/* tp_doc */
 	(traverseproc)set_traverse,	/* tp_traverse */

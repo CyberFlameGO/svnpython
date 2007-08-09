@@ -22,7 +22,6 @@ used to query various info about the object, if available.
 (mimetools.Message objects are queried with the getheader() method.)
 """
 
-import string
 import socket
 import os
 import time
@@ -82,11 +81,13 @@ def urlopen(url, data=None, proxies=None):
         return opener.open(url)
     else:
         return opener.open(url, data)
+
 def urlretrieve(url, filename=None, reporthook=None, data=None):
     global _urlopener
     if not _urlopener:
         _urlopener = FancyURLopener()
     return _urlopener.retrieve(url, filename, reporthook, data)
+
 def urlcleanup():
     if _urlopener:
         _urlopener.cleanup()
@@ -114,7 +115,7 @@ class URLopener:
     def __init__(self, proxies=None, **x509):
         if proxies is None:
             proxies = getproxies()
-        assert hasattr(proxies, 'has_key'), "proxies must be a mapping"
+        assert hasattr(proxies, 'keys'), "proxies must be a mapping"
         self.proxies = proxies
         self.key_file = x509.get('key_file')
         self.cert_file = x509.get('cert_file')
@@ -190,7 +191,7 @@ class URLopener:
                 return getattr(self, name)(url)
             else:
                 return getattr(self, name)(url, data)
-        except socket.error, msg:
+        except socket.error as msg:
             raise IOError, ('socket error', msg), sys.exc_info()[2]
 
     def open_unknown(self, fullurl, data=None):
@@ -217,7 +218,7 @@ class URLopener:
                 hdrs = fp.info()
                 del fp
                 return url2pathname(splithost(url1)[1]), hdrs
-            except IOError, msg:
+            except IOError as msg:
                 pass
         fp = self.open(url, data)
         headers = fp.info()
@@ -246,7 +247,7 @@ class URLopener:
             reporthook(blocknum, bs, size)
         while 1:
             block = fp.read(bs)
-            if block == "":
+            if not block:
                 break
             read += len(block)
             tfp.write(block)
@@ -311,37 +312,44 @@ class URLopener:
             auth = base64.b64encode(user_passwd).strip()
         else:
             auth = None
-        h = httplib.HTTP(host)
+        http_conn = httplib.HTTPConnection(host)
+        # XXX We should fix urllib so that it works with HTTP/1.1.
+        http_conn._http_vsn = 10
+        http_conn._http_vsn_str = "HTTP/1.0"
+
+        headers = {}
+        if proxy_auth:
+            headers["Proxy-Authorization"] = "Basic %s" % proxy_auth
+        if auth:
+            headers["Authorization"] =  "Basic %s" % auth
+        if realhost:
+            headers["Host"] = realhost
+        for header, value in self.addheaders:
+            headers[header] = value
+
         if data is not None:
-            h.putrequest('POST', selector)
-            h.putheader('Content-Type', 'application/x-www-form-urlencoded')
-            h.putheader('Content-Length', '%d' % len(data))
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            http_conn.request("POST", selector, data, headers)
         else:
-            h.putrequest('GET', selector)
-        if proxy_auth: h.putheader('Proxy-Authorization', 'Basic %s' % proxy_auth)
-        if auth: h.putheader('Authorization', 'Basic %s' % auth)
-        if realhost: h.putheader('Host', realhost)
-        for args in self.addheaders: h.putheader(*args)
-        h.endheaders()
-        if data is not None:
-            h.send(data)
-        errcode, errmsg, headers = h.getreply()
-        fp = h.getfile()
-        if errcode == -1:
-            if fp: fp.close()
+            http_conn.request("GET", selector, headers=headers)
+
+        try:
+            response = http_conn.getresponse()
+        except httplib.BadStatusLine:
             # something went wrong with the HTTP status line
-            raise IOError, ('http protocol error', 0,
-                            'got a bad status line', None)
-        if errcode == 200:
-            return addinfourl(fp, headers, "http:" + url)
+            raise IOError('http protocol error', 0,
+                          'got a bad status line', None)
+
+        if response.status == 200:
+            return addinfourl(response.fp, response.msg, "http:" + url)
         else:
-            if data is None:
-                return self.http_error(url, fp, errcode, errmsg, headers)
-            else:
-                return self.http_error(url, fp, errcode, errmsg, headers, data)
+            return self.http_error(
+                url, response.fp,
+                response.status, response.reason, response.msg, data)
 
     def http_error(self, url, fp, errcode, errmsg, headers, data=None):
         """Handle http errors.
+
         Derived class can override this, or provide specific handlers
         named http_error_DDD where DDD is the 3-digit error code."""
         # First check if there's a specific handler for this error
@@ -445,15 +453,12 @@ class URLopener:
     def open_local_file(self, url):
         """Use local file."""
         import mimetypes, mimetools, email.utils
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        from io import StringIO
         host, file = splithost(url)
         localname = url2pathname(file)
         try:
             stats = os.stat(localname)
-        except OSError, e:
+        except OSError as e:
             raise IOError(e.errno, e.strerror, e.filename)
         size = stats.st_size
         modified = email.utils.formatdate(stats.st_mtime, usegmt=True)
@@ -482,10 +487,7 @@ class URLopener:
         if not isinstance(url, str):
             raise IOError, ('ftp error', 'proxy support for ftp protocol currently not implemented')
         import mimetypes, mimetools
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        from io import StringIO
         host, path = splithost(url)
         if not host: raise IOError, ('ftp error', 'no host given')
         host, port = splitport(host)
@@ -536,7 +538,7 @@ class URLopener:
                 headers += "Content-Length: %d\n" % retrlen
             headers = mimetools.Message(StringIO(headers))
             return addinfourl(fp, headers, "ftp:" + url)
-        except ftperrors(), msg:
+        except ftperrors() as msg:
             raise IOError, ('ftp error', msg), sys.exc_info()[2]
 
     def open_data(self, url, data=None):
@@ -551,10 +553,7 @@ class URLopener:
         # data      := *urlchar
         # parameter := attribute "=" value
         import mimetools
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        from io import StringIO
         try:
             [type, data] = url.split(',', 1)
         except ValueError:
@@ -762,13 +761,12 @@ class FancyURLopener(URLopener):
         """Override this in a GUI environment!"""
         import getpass
         try:
-            user = raw_input("Enter username for %s at %s: " % (realm,
-                                                                host))
+            user = input("Enter username for %s at %s: " % (realm, host))
             passwd = getpass.getpass("Enter password for %s in %s at %s: " %
                 (user, realm, host))
             return user, passwd
         except KeyboardInterrupt:
-            print
+            print()
             return None, None
 
 
@@ -805,10 +803,7 @@ def noheaders():
     global _noheaders
     if _noheaders is None:
         import mimetools
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        from io import StringIO
         _noheaders = mimetools.Message(StringIO(), 0)
         _noheaders.fp.close()   # Recycle file descriptor
     return _noheaders
@@ -853,7 +848,7 @@ class ftpwrapper:
             try:
                 cmd = 'RETR ' + file
                 conn = self.ftp.ntransfercmd(cmd)
-            except ftplib.error_perm, reason:
+            except ftplib.error_perm as reason:
                 if str(reason)[:3] != '550':
                     raise IOError, ('ftp error', reason), sys.exc_info()[2]
         if not conn:
@@ -886,6 +881,8 @@ class ftpwrapper:
 class addbase:
     """Base class for addinfo and addclosehook."""
 
+    # XXX Add a method to expose the timeout on the underlying socket?
+
     def __init__(self, fp):
         self.fp = fp
         self.read = self.fp.read
@@ -897,8 +894,8 @@ class addbase:
             self.fileno = lambda: None
         if hasattr(self.fp, "__iter__"):
             self.__iter__ = self.fp.__iter__
-            if hasattr(self.fp, "next"):
-                self.next = self.fp.next
+            if hasattr(self.fp, "__next__"):
+                self.__next__ = self.fp.__next__
 
     def __repr__(self):
         return '<%s at %r whose fp = %r>' % (self.__class__.__name__,
@@ -968,13 +965,13 @@ class addinfourl(addbase):
 # quote('abc def') -> 'abc%20def')
 
 try:
-    unicode
+    str
 except NameError:
     def _is_unicode(x):
         return 0
 else:
     def _is_unicode(x):
-        return isinstance(x, unicode)
+        return isinstance(x, str)
 
 def toBytes(url):
     """toBytes(u"URL") --> 'URL'."""
@@ -990,7 +987,7 @@ def toBytes(url):
 
 def unwrap(url):
     """unwrap('<URL:type://host/path>') --> 'type://host/path'."""
-    url = url.strip()
+    url = str(url).strip()
     if url[:1] == '<' and url[-1:] == '>':
         url = url[1:-1].strip()
     if url[:4] == 'URL:': url = url[4:].strip()
@@ -1129,14 +1126,14 @@ _hextochr.update(('%02X' % i, chr(i)) for i in range(256))
 def unquote(s):
     """unquote('abc%20def') -> 'abc def'."""
     res = s.split('%')
-    for i in xrange(1, len(res)):
+    for i in range(1, len(res)):
         item = res[i]
         try:
             res[i] = _hextochr[item[:2]] + item[2:]
         except KeyError:
             res[i] = '%' + item
         except UnicodeDecodeError:
-            res[i] = unichr(int(item[:2], 16)) + item[2:]
+            res[i] = chr(int(item[:2], 16)) + item[2:]
     return "".join(res)
 
 def unquote_plus(s):
@@ -1147,7 +1144,23 @@ def unquote_plus(s):
 always_safe = ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'
                'abcdefghijklmnopqrstuvwxyz'
                '0123456789' '_.-')
-_safemaps = {}
+_safe_quoters= {}
+
+class Quoter:
+    def __init__(self, safe):
+        self.cache = {}
+        self.safe = safe + always_safe
+
+    def __call__(self, c):
+        try:
+            return self.cache[c]
+        except KeyError:
+            if ord(c) < 256:
+                res = (c in self.safe) and c or ('%%%02X' % ord(c))
+                self.cache[c] = res
+                return res
+            else:
+                return "".join(['%%%02X' % i for i in c.encode("utf-8")])
 
 def quote(s, safe = '/'):
     """quote('abc def') -> 'abc%20def'
@@ -1172,15 +1185,11 @@ def quote(s, safe = '/'):
     """
     cachekey = (safe, always_safe)
     try:
-        safe_map = _safemaps[cachekey]
+        quoter = _safe_quoters[cachekey]
     except KeyError:
-        safe += always_safe
-        safe_map = {}
-        for i in range(256):
-            c = chr(i)
-            safe_map[c] = (c in safe) and c or ('%%%02X' % i)
-        _safemaps[cachekey] = safe_map
-    res = map(safe_map.__getitem__, s)
+        quoter = Quoter(safe)
+        _safe_quoters[cachekey] = quoter
+    res = map(quoter, s)
     return ''.join(res)
 
 def quote_plus(s, safe = ''):
@@ -1438,20 +1447,21 @@ def test1():
     uqs = unquote(qs)
     t1 = time.time()
     if uqs != s:
-        print 'Wrong!'
-    print repr(s)
-    print repr(qs)
-    print repr(uqs)
-    print round(t1 - t0, 3), 'sec'
+        print('Wrong!')
+    print(repr(s))
+    print(repr(qs))
+    print(repr(uqs))
+    print(round(t1 - t0, 3), 'sec')
 
 
 def reporthook(blocknum, blocksize, totalsize):
     # Report during remote transfers
-    print "Block number: %d, Block size: %d, Total size: %d" % (
-        blocknum, blocksize, totalsize)
+    print("Block number: %d, Block size: %d, Total size: %d" % (
+        blocknum, blocksize, totalsize))
 
 # Test program
 def test(args=[]):
+    import string
     if not args:
         args = [
             '/etc/passwd',
@@ -1464,22 +1474,22 @@ def test(args=[]):
             args.append('https://synergy.as.cmu.edu/~geek/')
     try:
         for url in args:
-            print '-'*10, url, '-'*10
+            print('-'*10, url, '-'*10)
             fn, h = urlretrieve(url, None, reporthook)
-            print fn
+            print(fn)
             if h:
-                print '======'
-                for k in h.keys(): print k + ':', h[k]
-                print '======'
+                print('======')
+                for k in h.keys(): print(k + ':', h[k])
+                print('======')
             fp = open(fn, 'rb')
             data = fp.read()
             del fp
             if '\r' in data:
                 table = string.maketrans("", "")
                 data = data.translate(table, "\r")
-            print data
+            print(data)
             fn, h = None, None
-        print '-'*40
+        print('-'*40)
     finally:
         urlcleanup()
 
@@ -1487,18 +1497,18 @@ def main():
     import getopt, sys
     try:
         opts, args = getopt.getopt(sys.argv[1:], "th")
-    except getopt.error, msg:
-        print msg
-        print "Use -h for help"
+    except getopt.error as msg:
+        print(msg)
+        print("Use -h for help")
         return
     t = 0
     for o, a in opts:
         if o == '-t':
             t = t + 1
         if o == '-h':
-            print "Usage: python urllib.py [-t] [url ...]"
-            print "-t runs self-test;",
-            print "otherwise, contents of urls are printed"
+            print("Usage: python urllib.py [-t] [url ...]")
+            print("-t runs self-test;", end=' ')
+            print("otherwise, contents of urls are printed")
             return
     if t:
         if t > 1:
@@ -1506,9 +1516,9 @@ def main():
         test(args)
     else:
         if not args:
-            print "Use -h for help"
+            print("Use -h for help")
         for url in args:
-            print urlopen(url).read(),
+            print(urlopen(url).read(), end=' ')
 
 # Run test program when run as a script
 if __name__ == '__main__':

@@ -58,11 +58,7 @@ import tokenize
 import types
 import gc
 
-try:
-    import cPickle
-    pickle = cPickle
-except ImportError:
-    import pickle
+import pickle
 
 def usage(outfile):
     outfile.write("""Usage: %s [OPTIONS] <file> [ARGS]
@@ -120,7 +116,7 @@ class Ignore:
         self._ignore = { '<string>': 1 }
 
     def names(self, filename, modulename):
-        if self._ignore.has_key(modulename):
+        if modulename in self._ignore:
             return self._ignore[modulename]
 
         # haven't seen this one before, so see if the module name is
@@ -220,9 +216,9 @@ class CoverageResults:
                 counts, calledfuncs, callers = \
                         pickle.load(open(self.infile, 'rb'))
                 self.update(self.__class__(counts, calledfuncs, callers))
-            except (IOError, EOFError, ValueError), err:
-                print >> sys.stderr, ("Skipping counts file %r: %s"
-                                      % (self.infile, err))
+            except (IOError, EOFError, ValueError) as err:
+                print(("Skipping counts file %r: %s"
+                                      % (self.infile, err)), file=sys.stderr)
 
     def update(self, other):
         """Merge in the data from another CoverageResults"""
@@ -247,30 +243,30 @@ class CoverageResults:
         @param coverdir
         """
         if self.calledfuncs:
-            print
-            print "functions called:"
+            print()
+            print("functions called:")
             calls = self.calledfuncs.keys()
             calls.sort()
             for filename, modulename, funcname in calls:
-                print ("filename: %s, modulename: %s, funcname: %s"
-                       % (filename, modulename, funcname))
+                print(("filename: %s, modulename: %s, funcname: %s"
+                       % (filename, modulename, funcname)))
 
         if self.callers:
-            print
-            print "calling relationships:"
+            print()
+            print("calling relationships:")
             calls = self.callers.keys()
             calls.sort()
             lastfile = lastcfile = ""
             for ((pfile, pmod, pfunc), (cfile, cmod, cfunc)) in calls:
                 if pfile != lastfile:
-                    print
-                    print "***", pfile, "***"
+                    print()
+                    print("***", pfile, "***")
                     lastfile = pfile
                     lastcfile = ""
                 if cfile != pfile and lastcfile != cfile:
-                    print "  -->", cfile
+                    print("  -->", cfile)
                     lastcfile = cfile
-                print "    %s.%s -> %s.%s" % (pmod, pfunc, cmod, cfunc)
+                print("    %s.%s -> %s.%s" % (pmod, pfunc, cmod, cfunc))
 
         # turn the counts data ("(filename, lineno) = count") into something
         # accessible on a per-file basis
@@ -282,7 +278,7 @@ class CoverageResults:
         # accumulate summary info, if needed
         sums = {}
 
-        for filename, count in per_file.iteritems():
+        for filename, count in per_file.items():
             # skip some "files" we don't care about...
             if filename == "<string>":
                 continue
@@ -318,27 +314,27 @@ class CoverageResults:
         if summary and sums:
             mods = sums.keys()
             mods.sort()
-            print "lines   cov%   module   (path)"
+            print("lines   cov%   module   (path)")
             for m in mods:
                 n_lines, percent, modulename, filename = sums[m]
-                print "%5d   %3d%%   %s   (%s)" % sums[m]
+                print("%5d   %3d%%   %s   (%s)" % sums[m])
 
         if self.outfile:
             # try and store counts and module info into self.outfile
             try:
                 pickle.dump((self.counts, self.calledfuncs, self.callers),
                             open(self.outfile, 'wb'), 1)
-            except IOError, err:
-                print >> sys.stderr, "Can't save counts files because %s" % err
+            except IOError as err:
+                print("Can't save counts files because %s" % err, file=sys.stderr)
 
     def write_results_file(self, path, lines, lnotab, lines_hit):
         """Return a coverage results file in path."""
 
         try:
             outfile = open(path, "w")
-        except IOError, err:
-            print >> sys.stderr, ("trace: Could not open %r for writing: %s"
-                                  "- skipping" % (path, err))
+        except IOError as err:
+            print(("trace: Could not open %r for writing: %s"
+                                  "- skipping" % (path, err)), file=sys.stderr)
             return 0, 0
 
         n_lines = 0
@@ -422,9 +418,9 @@ def find_executable_linenos(filename):
     """Return dict where keys are line numbers in the line number table."""
     try:
         prog = open(filename, "rU").read()
-    except IOError, err:
-        print >> sys.stderr, ("Not printing coverage data for %r: %s"
-                              % (filename, err))
+    except IOError as err:
+        print(("Not printing coverage data for %r: %s"
+                              % (filename, err)), file=sys.stderr)
         return {}
     code = compile(prog, filename, "exec")
     strs = find_strings(filename)
@@ -484,7 +480,7 @@ class Trace:
             sys.settrace(self.globaltrace)
             threading.settrace(self.globaltrace)
         try:
-            exec cmd in dict, dict
+            exec(cmd, dict, dict)
         finally:
             if not self.donothing:
                 sys.settrace(None)
@@ -497,7 +493,7 @@ class Trace:
             sys.settrace(self.globaltrace)
             threading.settrace(self.globaltrace)
         try:
-            exec cmd in globals, locals
+            exec(cmd, globals, locals)
         finally:
             if not self.donothing:
                 sys.settrace(None)
@@ -532,7 +528,7 @@ class Trace:
             ## use of gc.get_referrers() was suggested by Michael Hudson
             # all functions which refer to this code object
             funcs = [f for f in gc.get_referrers(code)
-                         if hasattr(f, "func_doc")]
+                         if hasattr(f, "__doc__")]
             # require len(func) == 1 to avoid ambiguity caused by calls to
             # new.function(): "In the face of ambiguity, refuse the
             # temptation to guess."
@@ -596,8 +592,8 @@ class Trace:
                     ignore_it = self.ignore.names(filename, modulename)
                     if not ignore_it:
                         if self.trace:
-                            print (" --- modulename: %s, funcname: %s"
-                                   % (modulename, code.co_name))
+                            print((" --- modulename: %s, funcname: %s"
+                                   % (modulename, code.co_name)))
                         return self.localtrace
             else:
                 return None
@@ -611,8 +607,8 @@ class Trace:
             self.counts[key] = self.counts.get(key, 0) + 1
 
             bname = os.path.basename(filename)
-            print "%s(%d): %s" % (bname, lineno,
-                                  linecache.getline(filename, lineno)),
+            print("%s(%d): %s" % (bname, lineno,
+                                  linecache.getline(filename, lineno)), end=' ')
         return self.localtrace
 
     def localtrace_trace(self, frame, why, arg):
@@ -622,8 +618,8 @@ class Trace:
             lineno = frame.f_lineno
 
             bname = os.path.basename(filename)
-            print "%s(%d): %s" % (bname, lineno,
-                                  linecache.getline(filename, lineno)),
+            print("%s(%d): %s" % (bname, lineno,
+                                  linecache.getline(filename, lineno)), end=' ')
         return self.localtrace
 
     def localtrace_count(self, frame, why, arg):
@@ -658,7 +654,7 @@ def main(argv=None):
                                          "coverdir=", "listfuncs",
                                          "trackcalls"])
 
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stderr.write("%s: %s\n" % (sys.argv[0], msg))
         sys.stderr.write("Try `%s --help' for more information\n"
                          % sys.argv[0])
@@ -778,7 +774,7 @@ def main(argv=None):
                   outfile=counts_file)
         try:
             t.run('execfile(%r)' % (progname,))
-        except IOError, err:
+        except IOError as err:
             _err_exit("Cannot run file %r because: %s" % (sys.argv[0], err))
         except SystemExit:
             pass

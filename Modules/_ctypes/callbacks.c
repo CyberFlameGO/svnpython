@@ -1,9 +1,4 @@
-/*****************************************************************
-  This file should be kept compatible with Python 2.3, see PEP 291.
- *****************************************************************/
-
 #include "Python.h"
-#include "compile.h" /* required only for 2.3, as it seems */
 #include "frameobject.h"
 
 #include <ffi.h>
@@ -51,6 +46,7 @@ void _AddTraceback(char *funcname, char *filename, int lineno)
 	if (!empty_string) goto bad;
 	py_code = PyCode_New(
 		0,            /*int argcount,*/
+		0,            /*int kwonlyargcount,*/
 		0,            /*int nlocals,*/
 		0,            /*int stacksize,*/
 		0,            /*int flags,*/

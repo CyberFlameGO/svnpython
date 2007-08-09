@@ -25,7 +25,7 @@ Copyright (C) 2001-2002 Vinay Sajip. All Rights Reserved.
 """
 
 import select
-import os, sys, string, struct, types, cPickle, cStringIO
+import os, sys, struct, pickle, io
 import socket, tempfile, threading, time
 import logging, logging.handlers, logging.config
 from test.test_support import run_with_locale
@@ -70,7 +70,7 @@ class LogRecordStreamHandler(StreamRequestHandler):
                 raise
 
     def unPickle(self, data):
-        return cPickle.loads(data)
+        return pickle.loads(data)
 
     def handleLogRecord(self, record):
         logname = "logrecv.tcp." + record.name
@@ -355,7 +355,7 @@ def test2():
     logger.info("Info message")
     message("-- logging at WARNING, 3 messages should be seen --")
     logger.warn("Warn message")
-    for i in xrange(102):
+    for i in range(102):
         message(MSG % i)
         logger.info("Info index = %d", i)
     mh.close()
@@ -455,11 +455,10 @@ datefmt=
 """
 
 # config2 has a subtle configuration error that should be reported
-config2 = string.replace(config1, "sys.stdout", "sys.stbout")
+config2 = config1.replace("sys.stdout", "sys.stbout")
 
 # config3 has a less subtle configuration error
-config3 = string.replace(
-    config1, "formatter=form1", "formatter=misspelled_name")
+config3 = config1.replace("formatter=form1", "formatter=misspelled_name")
 
 def test4():
     for i in range(4):
@@ -607,7 +606,7 @@ def test_main_inner():
     #Configure the logger for logrecv so events do not propagate beyond it.
     #The sockLogger output is buffered in memory until the end of the test,
     #and printed at the end.
-    sockOut = cStringIO.StringIO()
+    sockOut = io.StringIO()
     sockLogger = logging.getLogger("logrecv")
     sockLogger.setLevel(logging.DEBUG)
     sockhdlr = logging.StreamHandler(sockOut)

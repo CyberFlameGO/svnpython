@@ -139,9 +139,9 @@ def _setcomment(object_alias, comment):
     args['----'] = aeobj_01
     args["data"] = comment
     _reply, args, attrs = finder.send("core", "setd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def _getcomment(object_alias):
@@ -152,9 +152,9 @@ def _getcomment(object_alias):
     aeobj_01 = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('comt'), fr=aeobj_00)
     args['----'] = aeobj_01
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 
@@ -174,10 +174,10 @@ def processes():
     ## get the processnames or else the processnumbers
     args['----'] = aetypes.ObjectSpecifier(want=aetypes.Type('prcs'), form="indx", seld=aetypes.Unknown('abso', "all "), fr=None)
     _reply, args, attrs = finder.send('core', 'getd', args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
     p = []
-    if args.has_key('----'):
+    if '----' in args:
         p =  args['----']
         for proc in p:
             if hasattr(proc, 'seld'):
@@ -193,9 +193,9 @@ def processes():
     aeobj_0 = aetypes.ObjectSpecifier(want=aetypes.Type('prcs'), form="indx", seld=aetypes.Unknown('abso', "all "), fr=None)
     args['----'] =  aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('fcrt'), fr=aeobj_0)
     _reply, args, attrs = finder.send('core', 'getd', args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(_arg)
-    if args.has_key('----'):
+    if '----' in args:
         p =  args['----']
         creators = p[:]
     ## concatenate in one dict
@@ -248,9 +248,9 @@ def _processproperty(processname, property):
     aeobj_01 = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type(property), fr=aeobj_00)
     args['----'] = aeobj_01
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 
@@ -269,7 +269,7 @@ def openwindow(object):
     aeobj_0 = aetypes.ObjectSpecifier(want=aetypes.Type('cfol'), form="alis", seld=object_alias, fr=None)
     args['----'] = aeobj_0
     _reply, args, attrs = finder.send(_code, _subcode, args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
 
 def closewindow(object):
@@ -284,7 +284,7 @@ def closewindow(object):
     aeobj_0 = aetypes.ObjectSpecifier(want=aetypes.Type('cfol'), form="alis", seld=object_alias, fr=None)
     args['----'] = aeobj_0
     _reply, args, attrs = finder.send(_code, _subcode, args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
 
 def location(object, pos=None):
@@ -296,8 +296,9 @@ def location(object, pos=None):
         return _getlocation(object_alias)
     return _setlocation(object_alias, pos)
 
-def _setlocation(object_alias, (x, y)):
+def _setlocation(object_alias, location):
     """_setlocation: Set the location of the icon for the object."""
+    x, y = location
     finder = _getfinder()
     args = {}
     attrs = {}
@@ -306,7 +307,7 @@ def _setlocation(object_alias, (x, y)):
     args['----'] = aeobj_01
     args["data"] = [x, y]
     _reply, args, attrs = finder.send("core", "setd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
     return (x,y)
 
@@ -319,9 +320,9 @@ def _getlocation(object_alias):
     aeobj_01 = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('posn'), fr=aeobj_00)
     args['----'] = aeobj_01
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         pos = args['----']
         return pos.h, pos.v
 
@@ -344,9 +345,9 @@ def _getlabel(object_alias):
     aeobj_01 = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('labi'), fr=aeobj_00)
     args['----'] = aeobj_01
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def _setlabel(object_alias, index):
@@ -363,7 +364,7 @@ def _setlabel(object_alias, index):
     args['----'] = aeobj_1
     args["data"] = index
     _reply, args, attrs = finder.send(_code, _subcode, args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
     return index
 
@@ -403,9 +404,9 @@ def _setwindowview(folder_alias, view=0):
     args['----'] = aeobj_2
     args['data'] = aeobj_3
     _reply, args, attrs = finder.send(_code, _subcode, args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def _getwindowview(folder_alias):
@@ -420,10 +421,10 @@ def _getwindowview(folder_alias):
     aeobj_02 = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('pvew'), fr=aeobj_01)
     args['----'] = aeobj_02
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
     views = {'iimg':0, 'pnam':1, 'lgbu':2}
-    if args.has_key('----'):
+    if '----' in args:
         return views[args['----'].enum]
 
 def windowsize(folder, size=None):
@@ -438,8 +439,9 @@ def windowsize(folder, size=None):
         return _getwindowsize(folder_alias)
     return _setwindowsize(folder_alias, size)
 
-def _setwindowsize(folder_alias, (w, h)):
+def _setwindowsize(folder_alias, size):
     """Set the size of a Finder window for folder to (w, h)"""
+    w, h = size
     finder = _getfinder()
     args = {}
     attrs = {}
@@ -455,7 +457,7 @@ def _setwindowsize(folder_alias, (w, h)):
     args['----'] = aeobj_2
     args["data"] = aevar00
     _reply, args, attrs = finder.send(_code, _subcode, args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
     return (w, h)
 
@@ -472,9 +474,9 @@ def _getwindowsize(folder_alias):
             form="prop", seld=aetypes.Type('posn'), fr=aeobj_1)
     args['----'] = aeobj_2
     _reply, args, attrs = finder.send('core', 'getd', args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def windowposition(folder, pos=None):
@@ -484,13 +486,14 @@ def windowposition(folder, pos=None):
     openwindow(fsr)
     if not pos:
         return _getwindowposition(folder_alias)
-    if type(pos) == InstanceType:
-        # pos might be a QDPoint object as returned by _getwindowposition
+    if aetypes.IsQDPoint(pos):
+        # QDPoint object as returned by _getwindowposition
         pos = (pos.h, pos.v)
     return _setwindowposition(folder_alias, pos)
 
-def _setwindowposition(folder_alias, (x, y)):
+def _setwindowposition(folder_alias, position):
     """Set the size of a Finder window for folder to (w, h)."""
+    x, y = position
     finder = _getfinder()
     args = {}
     attrs = {}
@@ -503,9 +506,9 @@ def _setwindowposition(folder_alias, (x, y)):
     args['----'] = aeobj_2
     args["data"] = [x, y]
     _reply, args, attrs = finder.send('core', 'setd', args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def _getwindowposition(folder_alias):
@@ -521,9 +524,9 @@ def _getwindowposition(folder_alias):
             form="prop", seld=aetypes.Type('ptsz'), fr=aeobj_1)
     args['----'] = aeobj_2
     _reply, args, attrs = finder.send('core', 'getd', args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def icon(object, icondata=None):
@@ -548,9 +551,9 @@ def _geticon(object_alias):
             form="prop", seld=aetypes.Type('iimg'), fr=aeobj_00)
     args['----'] = aeobj_01
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def _seticon(object_alias, icondata):
@@ -565,9 +568,9 @@ def _seticon(object_alias, icondata):
     args['----'] = aeobj_01
     args["data"] = icondata
     _reply, args, attrs = finder.send("core", "setd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----'].data
 
 
@@ -590,9 +593,9 @@ def mountvolume(volume, server=None, username=None, password=None):
         args["SRVR"] = server
     args['----'] = volume
     _reply, args, attrs = finder.send("aevt", "mvol", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def unmountvolume(volume):
@@ -606,9 +609,9 @@ def putaway(object):
     attrs = {}
     args['----'] = aetypes.ObjectSpecifier(want=aetypes.Type('cdis'), form="name", seld=object, fr=None)
     _reply, args, attrs = talker.send("fndr", "ptwy", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 
@@ -627,9 +630,9 @@ def volumelevel(level):
         level = 7
     args['----'] = level
     _reply, args, attrs = finder.send("aevt", "stvl", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def OSversion():
@@ -640,9 +643,9 @@ def OSversion():
     aeobj_00 = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('ver2'), fr=None)
     args['----'] = aeobj_00
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         return args['----']
 
 def filesharing():
@@ -657,9 +660,9 @@ def filesharing():
     attrs = {}
     args['----'] = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('fshr'), fr=None)
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         if args['----'] == 0:
             status = -1
         else:
@@ -669,9 +672,9 @@ def filesharing():
     attrs = {}
     args['----'] = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('fsup'), fr=None)
     _reply, args, attrs = finder.send("core", "getd", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise Error, aetools.decodeerror(args)
-    if args.has_key('----'):
+    if '----' in args:
         if args['----'] == 1:
             status = 0
     return status
@@ -689,82 +692,82 @@ def emptytrash():
     attrs = {}
     args['----'] = aetypes.ObjectSpecifier(want=aetypes.Type('prop'), form="prop", seld=aetypes.Type('trsh'), fr=None)
     _reply, args, attrs = finder.send("fndr", "empt", args, attrs)
-    if args.has_key('errn'):
+    if 'errn' in args:
         raise aetools.Error, aetools.decodeerror(args)
 
 
 def _test():
     import EasyDialogs
-    print 'Original findertools functionality test...'
-    print 'Testing launch...'
+    print('Original findertools functionality test...')
+    print('Testing launch...')
     pathname = EasyDialogs.AskFileForOpen('File to launch:')
     if pathname:
         result = launch(pathname)
         if result:
-            print 'Result: ', result
-        print 'Press return-',
+            print('Result: ', result)
+        print('Press return-', end=' ')
         sys.stdin.readline()
-    print 'Testing print...'
+    print('Testing print...')
     pathname = EasyDialogs.AskFileForOpen('File to print:')
     if pathname:
         result = Print(pathname)
         if result:
-            print 'Result: ', result
-        print 'Press return-',
+            print('Result: ', result)
+        print('Press return-', end=' ')
         sys.stdin.readline()
-    print 'Testing copy...'
+    print('Testing copy...')
     pathname = EasyDialogs.AskFileForOpen('File to copy:')
     if pathname:
         destdir = EasyDialogs.AskFolder('Destination:')
         if destdir:
             result = copy(pathname, destdir)
             if result:
-                print 'Result:', result
-            print 'Press return-',
+                print('Result:', result)
+            print('Press return-', end=' ')
             sys.stdin.readline()
-    print 'Testing move...'
+    print('Testing move...')
     pathname = EasyDialogs.AskFileForOpen('File to move:')
     if pathname:
         destdir = EasyDialogs.AskFolder('Destination:')
         if destdir:
             result = move(pathname, destdir)
             if result:
-                print 'Result:', result
-            print 'Press return-',
+                print('Result:', result)
+            print('Press return-', end=' ')
             sys.stdin.readline()
-    print 'Testing sleep...'
+    print('Testing sleep...')
     if EasyDialogs.AskYesNoCancel('Sleep?') > 0:
         result = sleep()
         if result:
-            print 'Result:', result
-        print 'Press return-',
+            print('Result:', result)
+        print('Press return-', end=' ')
         sys.stdin.readline()
-    print 'Testing shutdown...'
+    print('Testing shutdown...')
     if EasyDialogs.AskYesNoCancel('Shut down?') > 0:
         result = shutdown()
         if result:
-            print 'Result:', result
-        print 'Press return-',
+            print('Result:', result)
+        print('Press return-', end=' ')
         sys.stdin.readline()
-    print 'Testing restart...'
+    print('Testing restart...')
     if EasyDialogs.AskYesNoCancel('Restart?') > 0:
         result = restart()
         if result:
-            print 'Result:', result
-        print 'Press return-',
+            print('Result:', result)
+        print('Press return-', end=' ')
         sys.stdin.readline()
 
 def _test2():
-    print '\nmorefindertools version %s\nTests coming up...' %__version__
+    print('\nmorefindertools version %s\nTests coming up...' %__version__)
     import os
     import random
 
     # miscellaneous
-    print '\tfilesharing on?',  filesharing()       # is file sharing on, off, starting up?
-    print '\tOS version',       OSversion()     # the version of the system software
+    print('\tfilesharing on?',  filesharing())       # is file sharing on, off, starting up?
+    print('\tOS version',       OSversion())     # the version of the system software
 
     # set the soundvolume in a simple way
-    print '\tSystem beep volume'
+    print('\tSystem beep volume')
     for i in range(0, 7):
         volumelevel(i)
         MacOS.SysBeep()
@@ -781,10 +784,10 @@ def _test2():
     windowview(base, 1) # set the view by list
 
     label(f, 2)             # set the label of this file to something orange
-    print '\tlabel', label(f)   # get the label of this file
+    print('\tlabel', label(f))   # get the label of this file
 
     # the file location only works in a window with icon view!
-    print 'Random locations for an icon'
+    print('Random locations for an icon')
     windowview(base, 0)     # set the view by icon
     windowsize(base, (600, 600))
     for i in range(50):
@@ -794,36 +797,36 @@ def _test2():
     windowview(base, 1)     # set the view by icon
 
     orgpos = windowposition(base)
-    print 'Animated window location'
+    print('Animated window location')
     for i in range(10):
         pos = (100+i*10, 100+i*10)
         windowposition(base, pos)
-        print '\twindow position', pos
+        print('\twindow position', pos)
     windowposition(base, orgpos)    # park it where it was before
 
-    print 'Put a comment in file', f, ':'
-    print '\t', comment(f)      # print the Finder comment this file has
+    print('Put a comment in file', f, ':')
+    print('\t', comment(f))      # print the Finder comment this file has
     s = 'This is a comment no one reads!'
     comment(f, s)           # set the Finder comment
 
 def _test3():
-    print 'MacOS9 or better specific functions'
+    print('MacOS9 or better specific functions')
     # processes
     pr = processes()        # return a list of tuples with (active_processname, creatorcode)
-    print 'Return a list of current active processes:'
+    print('Return a list of current active processes:')
     for p in pr:
-        print '\t', p
+        print('\t', p)
 
     # get attributes of the first process in the list
-    print 'Attributes of the first process in the list:'
+    print('Attributes of the first process in the list:')
     pinfo = processinfo(pr[0][0])
-    print '\t', pr[0][0]
-    print '\t\tmemory partition', pinfo.partition       # the memory allocated to this process
-    print '\t\tmemory used', pinfo.used         # the memory actuall used by this process
-    print '\t\tis visible', pinfo.visible           # is the process visible to the user
-    print '\t\tis frontmost', pinfo.frontmost       # is the process the front most one?
-    print '\t\thas scripting', pinfo.hasscripting       # is the process scriptable?
-    print '\t\taccepts high level events',  pinfo.accepthighlevel   # does the process accept high level appleevents?
+    print('\t', pr[0][0])
+    print('\t\tmemory partition', pinfo.partition)       # the memory allocated to this process
+    print('\t\tmemory used', pinfo.used)         # the memory actuall used by this process
+    print('\t\tis visible', pinfo.visible)           # is the process visible to the user
+    print('\t\tis frontmost', pinfo.frontmost)       # is the process the front most one?
+    print('\t\thas scripting', pinfo.hasscripting)       # is the process scriptable?
+    print('\t\taccepts high level events',  pinfo.accepthighlevel)   # does the process accept high level appleevents?
 
 if __name__ == '__main__':
     _test()

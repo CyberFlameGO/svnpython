@@ -12,7 +12,7 @@ import os
 import string
 import sys
 import types
-import StringIO
+import io
 import keyword
 import macresource
 import aetools
@@ -114,9 +114,9 @@ def main_interactive(interact=0, basepkgname='StdSuites'):
     try:
         processfile(filename, edit_modnames=edit_modnames, basepkgname=basepkgname,
         verbose=sys.stderr)
-    except MacOS.Error, arg:
-        print "Error getting terminology:", arg
-        print "Retry, manually parsing resources"
+    except MacOS.Error as arg:
+        print("Error getting terminology:", arg)
+        print("Retry, manually parsing resources")
         processfile_fromresource(filename, edit_modnames=edit_modnames,
             basepkgname=basepkgname, verbose=sys.stderr)
 
@@ -145,10 +145,10 @@ def processfile_fromresource(fullname, output=None, basepkgname=None,
         edit_modnames=None, creatorsignature=None, dump=None, verbose=None):
     """Process all resources in a single file"""
     if not is_scriptable(fullname) and verbose:
-        print >>verbose, "Warning: app does not seem scriptable: %s" % fullname
+        print("Warning: app does not seem scriptable: %s" % fullname, file=verbose)
     cur = CurResFile()
     if verbose:
-        print >>verbose, "Processing", fullname
+        print("Processing", fullname, file=verbose)
     rf = macresource.open_pathname(fullname)
     try:
         UseResFile(rf)
@@ -160,16 +160,16 @@ def processfile_fromresource(fullname, output=None, basepkgname=None,
             res = Get1IndResource('aeut', 1+i)
             resources.append(res)
         if verbose:
-            print >>verbose, "\nLISTING aete+aeut RESOURCES IN", repr(fullname)
+            print("\nLISTING aete+aeut RESOURCES IN", repr(fullname), file=verbose)
         aetelist = []
         for res in resources:
             if verbose:
-                print >>verbose, "decoding", res.GetResInfo(), "..."
+                print("decoding", res.GetResInfo(), "...", file=verbose)
             data = res.data
             aete = decode(data, verbose)
             aetelist.append((aete, res.GetResInfo()))
     finally:
-        if rf <> cur:
+        if rf != cur:
             CloseResFile(rf)
             UseResFile(cur)
     # switch back (needed for dialogs in Python)
@@ -185,15 +185,15 @@ def processfile(fullname, output=None, basepkgname=None,
         verbose=None):
     """Ask an application for its terminology and process that"""
     if not is_scriptable(fullname) and verbose:
-        print >>verbose, "Warning: app does not seem scriptable: %s" % fullname
+        print("Warning: app does not seem scriptable: %s" % fullname, file=verbose)
     if verbose:
-        print >>verbose, "\nASKING FOR aete DICTIONARY IN", repr(fullname)
+        print("\nASKING FOR aete DICTIONARY IN", repr(fullname), file=verbose)
     try:
         aedescobj, launched = OSATerminology.GetAppTerminology(fullname)
-    except MacOS.Error, arg:
+    except MacOS.Error as arg:
         if arg[0] in (-1701, -192): # errAEDescNotFound, resNotFound
             if verbose:
-                print >>verbose, "GetAppTerminology failed with errAEDescNotFound/resNotFound, trying manually"
+                print("GetAppTerminology failed with errAEDescNotFound/resNotFound, trying manually", file=verbose)
             aedata, sig = getappterminology(fullname, verbose=verbose)
             if not creatorsignature:
                 creatorsignature = sig
@@ -202,15 +202,15 @@ def processfile(fullname, output=None, basepkgname=None,
     else:
         if launched:
             if verbose:
-                print >>verbose, "Launched", fullname
+                print("Launched", fullname, file=verbose)
         raw = aetools.unpack(aedescobj)
         if not raw:
             if verbose:
-                print >>verbose, 'Unpack returned empty value:', raw
+                print('Unpack returned empty value:', raw, file=verbose)
             return
         if not raw[0].data:
             if verbose:
-                print >>verbose, 'Unpack returned value without data:', raw
+                print('Unpack returned value without data:', raw, file=verbose)
             return
         aedata = raw[0]
     aete = decode(aedata.data, verbose)
@@ -244,9 +244,9 @@ def getappterminology(fullname, verbose=None):
     talker = aetools.TalkTo(cr)
     try:
         talker._start()
-    except (MacOS.Error, aetools.Error), arg:
+    except (MacOS.Error, aetools.Error) as arg:
         if verbose:
-            print >>verbose, 'Warning: start() failed, continuing anyway:', arg
+            print('Warning: start() failed, continuing anyway:', arg, file=verbose)
     reply = talker.send("ascr", "gdte")
     #reply2 = talker.send("ascr", "gdut")
     # Now pick the bits out of the return that we need.
@@ -266,7 +266,7 @@ def dumpaetelist(aetelist, output):
 
 def decode(data, verbose=None):
     """Decode a resource into a python data structure"""
-    f = StringIO.StringIO(data)
+    f = io.StringIO(data)
     aete = generic(getaete, f)
     aete = simplify(aete)
     processed = f.tell()
@@ -279,9 +279,9 @@ def decode(data, verbose=None):
 
 def simplify(item):
     """Recursively replace singleton tuples by their constituent item"""
-    if type(item) is types.ListType:
+    if isinstance(item, list):
         return map(simplify, item)
-    elif type(item) == types.TupleType and len(item) == 2:
+    elif isinstance(item, tuple) and len(item) == 2:
         return simplify(item[1])
     else:
         return item
@@ -332,7 +332,7 @@ def getpstr(f, *args):
 def getalign(f):
     if f.tell() & 1:
         c = f.read(1)
-        ##if c <> '\0':
+        ##if c != '\0':
         ##  print align:', repr(c)
 
 def getlist(f, description, getitem):
@@ -344,18 +344,18 @@ def getlist(f, description, getitem):
     return list
 
 def alt_generic(what, f, *args):
-    print "generic", repr(what), args
+    print("generic", repr(what), args)
     res = vageneric(what, f, args)
-    print '->', repr(res)
+    print('->', repr(res))
     return res
 
 def generic(what, f, *args):
     if type(what) == types.FunctionType:
-        return apply(what, (f,) + args)
-    if type(what) == types.ListType:
+        return what(f, *args)
+    if isinstance(what, list):
         record = []
         for thing in what:
-            item = apply(generic, thing[:1] + (f,) + thing[1:])
+            item = generic(thing[:1], f, *thing[1:])
             record.append((thing[1], item))
         return record
     return "BAD GENERIC ARGS: %r" % (what,)
@@ -589,7 +589,7 @@ class SuiteCompiler:
 
         self.modname = os.path.splitext(os.path.split(self.pathname)[1])[0]
 
-        if self.basepackage and self.basepackage._code_to_module.has_key(code):
+        if self.basepackage and code in self.basepackage._code_to_module:
             # We are an extension of a baseclass (usually an application extending
             # Standard_Suite or so). Import everything from our base module
             basemodule = self.basepackage._code_to_module[code]
@@ -656,12 +656,12 @@ class SuiteCompiler:
         fp.write('import aetools\n')
         fp.write('import MacOS\n\n')
         fp.write("_code = %r\n\n"% (code,))
-        if self.basepackage and self.basepackage._code_to_module.has_key(code):
+        if self.basepackage and code in self.basepackage._code_to_module:
             # We are an extension of a baseclass (usually an application extending
             # Standard_Suite or so). Import everything from our base module
             fp.write('from %s import *\n'%self.basepackage._code_to_fullname[code][0])
             basemodule = self.basepackage._code_to_module[code]
-        elif self.basepackage and self.basepackage._code_to_module.has_key(code.lower()):
+        elif self.basepackage and code.lower() in self.basepackage._code_to_module:
             # This is needed by CodeWarrior and some others.
             fp.write('from %s import *\n'%self.basepackage._code_to_fullname[code.lower()][0])
             basemodule = self.basepackage._code_to_module[code.lower()]
@@ -698,7 +698,7 @@ class SuiteCompiler:
         """Generate class boilerplate"""
         classname = '%s_Events'%self.modname
         if self.basemodule:
-            modshortname = string.split(self.basemodule.__name__, '.')[-1]
+            modshortname = self.basemodule.__name__.split('.')[-1]
             baseclassname = '%s_Events'%modshortname
             self.fp.write("class %s(%s):\n\n"%(classname, baseclassname))
         else:
@@ -779,7 +779,7 @@ class SuiteCompiler:
             if is_enum(a[2]):
                 kname = a[1]
                 ename = a[2][0]
-                if ename <> '****':
+                if ename != '****':
                     fp.write("        aetools.enumsubst(_arguments, %r, _Enum_%s)\n" %
                         (kname, identify(ename)))
                     self.enumsneeded[ename] = 1
@@ -798,7 +798,7 @@ class SuiteCompiler:
         #
         # Decode result
         #
-        fp.write("        if _arguments.has_key('----'):\n")
+        fp.write("        if '----' in _arguments:\n")
         if is_enum(returns):
             fp.write("            # XXXX Should do enum remapping here...\n")
         fp.write("            return _arguments['----']\n")
@@ -810,7 +810,7 @@ class SuiteCompiler:
         for a in arguments:
             if is_enum(a[2]):
                 ename = a[2][0]
-                if ename <> '****':
+                if ename != '****':
                     self.enumsneeded[ename] = 1
 
 #
@@ -842,17 +842,17 @@ class CodeNameMapper:
 
     def addnamecode(self, type, name, code):
         self.name2code[type][name] = code
-        if not self.code2name[type].has_key(code):
+        if code not in self.code2name[type]:
             self.code2name[type][code] = name
 
     def hasname(self, name):
         for dict in self.name2code.values():
-            if dict.has_key(name):
+            if name in dict:
                 return True
         return False
 
     def hascode(self, type, code):
-        return self.code2name[type].has_key(code)
+        return code in self.code2name[type]
 
     def findcodename(self, type, code):
         if not self.hascode(type, code):
@@ -940,14 +940,14 @@ class ObjectCompiler:
         for mapper in self.othernamemappers:
             if mapper.hasname(name) and mapper.modulename != self.modulename:
                 if self.verbose:
-                    print >>self.verbose, "Duplicate Python identifier:", name, self.modulename, mapper.modulename
+                    print("Duplicate Python identifier:", name, self.modulename, mapper.modulename, file=self.verbose)
                 return True
         return False
 
     def askdefinitionmodule(self, type, code):
         if not self.can_interact:
             if self.verbose:
-                print >>self.verbose, "** No definition for %s '%s' found" % (type, code)
+                print("** No definition for %s '%s' found" % (type, code), file=self.verbose)
             return None
         path = EasyDialogs.AskFileForSave(message='Where is %s %s declared?'%(type, code))
         if not path: return
@@ -1018,7 +1018,7 @@ class ObjectCompiler:
             if self.fp and (elements or len(properties) > 1 or (len(properties) == 1 and
                 properties[0][1] != 'c@#!')):
                 if self.verbose:
-                    print >>self.verbose, '** Skip multiple %s of %s (code %r)' % (cname, self.namemappers[0].findcodename('class', code)[0], code)
+                    print('** Skip multiple %s of %s (code %r)' % (cname, self.namemappers[0].findcodename('class', code)[0], code), file=self.verbose)
                 raise RuntimeError, "About to skip non-empty class"
             return
         plist = []
@@ -1169,7 +1169,7 @@ def compiledataflags(flags):
                 bits.append(dataflagdict[i])
             else:
                 bits.append(repr(i))
-    return '[%s]' % string.join(bits)
+    return '[%s]' % ' '.join(bits)
 
 def ascii(str):
     """Return a string with all non-ascii characters hex-encoded"""

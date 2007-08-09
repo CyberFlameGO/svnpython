@@ -94,7 +94,7 @@ class FTP:
     below for details).
     The download/upload functions first issue appropriate TYPE
     and PORT or PASV commands.
-'''
+    '''
 
     debugging = 0
     host = ''
@@ -103,6 +103,7 @@ class FTP:
     file = None
     welcome = None
     passiveserver = 1
+    encoding = "ASCII"
 
     # Initialization method (called by class instantiation).
     # Initialize host to localhost, port to standard ftp port
@@ -128,7 +129,7 @@ class FTP:
             self.timeout = timeout
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
         self.af = self.sock.family
-        self.file = self.sock.makefile('rb')
+        self.file = self.sock.makefile('r', encoding=self.encoding)
         self.welcome = self.getresp()
         return self.welcome
 
@@ -136,7 +137,7 @@ class FTP:
         '''Get the welcome message from the server.
         (this is read and squirreled away by connect())'''
         if self.debugging:
-            print '*welcome*', self.sanitize(self.welcome)
+            print('*welcome*', self.sanitize(self.welcome))
         return self.welcome
 
     def set_debuglevel(self, level):
@@ -166,12 +167,12 @@ class FTP:
     # Internal: send one line to the server, appending CRLF
     def putline(self, line):
         line = line + CRLF
-        if self.debugging > 1: print '*put*', self.sanitize(line)
-        self.sock.sendall(line)
+        if self.debugging > 1: print('*put*', self.sanitize(line))
+        self.sock.sendall(line.encode(self.encoding))
 
     # Internal: send one command to the server (through putline())
     def putcmd(self, line):
-        if self.debugging: print '*cmd*', self.sanitize(line)
+        if self.debugging: print('*cmd*', self.sanitize(line))
         self.putline(line)
 
     # Internal: return one line from the server, stripping CRLF.
@@ -179,7 +180,7 @@ class FTP:
     def getline(self):
         line = self.file.readline()
         if self.debugging > 1:
-            print '*get*', self.sanitize(line)
+            print('*get*', self.sanitize(line))
         if not line: raise EOFError
         if line[-2:] == CRLF: line = line[:-2]
         elif line[-1:] in CRLF: line = line[:-1]
@@ -205,7 +206,7 @@ class FTP:
     # Raise various errors if the response indicates an error
     def getresp(self):
         resp = self.getmultiline()
-        if self.debugging: print '*resp*', self.sanitize(resp)
+        if self.debugging: print('*resp*', self.sanitize(resp))
         self.lastresp = resp[:3]
         c = resp[:1]
         if c in ('1', '2', '3'):
@@ -229,7 +230,7 @@ class FTP:
         IP and Synch; that doesn't seem to work with the servers I've
         tried.  Instead, just send the ABOR command as OOB data.'''
         line = 'ABOR' + CRLF
-        if self.debugging > 1: print '*put urgent*', self.sanitize(line)
+        if self.debugging > 1: print('*put urgent*', self.sanitize(line))
         self.sock.sendall(line, MSG_OOB)
         resp = self.getmultiline()
         if resp[:3] not in ('426', '226'):
@@ -277,7 +278,7 @@ class FTP:
             try:
                 sock = socket.socket(af, socktype, proto)
                 sock.bind(sa)
-            except socket.error, msg:
+            except socket.error as msg:
                 if sock:
                     sock.close()
                 sock = None
@@ -403,10 +404,10 @@ class FTP:
         if callback is None: callback = print_line
         resp = self.sendcmd('TYPE A')
         conn = self.transfercmd(cmd)
-        fp = conn.makefile('rb')
+        fp = conn.makefile('r', encoding=self.encoding)
         while 1:
             line = fp.readline()
-            if self.debugging > 2: print '*retr*', repr(line)
+            if self.debugging > 2: print('*retr*', repr(line))
             if not line:
                 break
             if line[-2:] == CRLF:
@@ -494,7 +495,7 @@ class FTP:
         if dirname == '..':
             try:
                 return self.voidcmd('CDUP')
-            except error_perm, msg:
+            except error_perm as msg:
                 if msg.args[0][:3] != '500':
                     raise
         elif dirname == '':
@@ -511,7 +512,7 @@ class FTP:
             try:
                 return int(s)
             except (OverflowError, ValueError):
-                return long(s)
+                return int(s)
 
     def mkd(self, dirname):
         '''Make a directory, return its full pathname.'''
@@ -561,7 +562,7 @@ def parse150(resp):
     try:
         return int(s)
     except (OverflowError, ValueError):
-        return long(s)
+        return int(s)
 
 
 _227_re = None
@@ -633,7 +634,7 @@ def parse257(resp):
 
 def print_line(line):
     '''Default retrlines callback to print a line.'''
-    print line
+    print(line)
 
 
 def ftpcp(source, sourcename, target, targetname = '', type = 'I'):
@@ -772,7 +773,7 @@ def test():
     '''
 
     if len(sys.argv) < 2:
-        print test.__doc__
+        print(test.__doc__)
         sys.exit(0)
 
     debugging = 0

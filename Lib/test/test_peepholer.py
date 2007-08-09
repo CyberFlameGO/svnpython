@@ -1,6 +1,6 @@
 import dis
 import sys
-from cStringIO import StringIO
+from io import StringIO
 import unittest
 
 def disassemble(func):
@@ -39,16 +39,24 @@ class TestTranforms(unittest.TestCase):
             asm = dis_single(line)
             self.assert_(elem in asm)
 
-    def test_none_as_constant(self):
-        # LOAD_GLOBAL None  -->  LOAD_CONST None
+    def test_global_as_constant(self):
+        # LOAD_GLOBAL None/True/False  -->  LOAD_CONST None/True/False
         def f(x):
             None
+            None
             return x
-        asm = disassemble(f)
-        for elem in ('LOAD_GLOBAL',):
-            self.assert_(elem not in asm)
-        for elem in ('LOAD_CONST', '(None)'):
-            self.assert_(elem in asm)
+        def g(x):
+            True
+            return x
+        def h(x):
+            False
+            return x
+        for func, name in ((f, 'None'), (g, 'True'), (h, 'False')):
+            asm = disassemble(func)
+            for elem in ('LOAD_GLOBAL',):
+                self.assert_(elem not in asm)
+            for elem in ('LOAD_CONST', '('+name+')'):
+                self.assert_(elem in asm)
         def f():
             'Adding a docstring made this test fail in Py2.5.0'
             return None
@@ -140,7 +148,6 @@ class TestTranforms(unittest.TestCase):
 
     def test_folding_of_unaryops_on_constants(self):
         for line, elem in (
-            ('`1`', "('1')"),                       # unary convert
             ('-0.5', '(-0.5)'),                     # unary negative
             ('~-2', '(1)'),                         # unary invert
         ):
@@ -202,6 +209,14 @@ class TestTranforms(unittest.TestCase):
         self.assertEqual(asm.split().count('JUMP_ABSOLUTE'), 1)
         self.assertEqual(asm.split().count('RETURN_VALUE'), 2)
 
+    def test_make_function_doesnt_bail(self):
+        def f():
+            def g()->1+1:
+                pass
+            return g
+        asm = disassemble(f)
+        self.assert_('BINARY_ADD' not in asm)
+
 
 def test_main(verbose=None):
     import sys
@@ -213,11 +228,11 @@ def test_main(verbose=None):
     if verbose and hasattr(sys, "gettotalrefcount"):
         import gc
         counts = [None] * 5
-        for i in xrange(len(counts)):
+        for i in range(len(counts)):
             test_support.run_unittest(*test_classes)
             gc.collect()
             counts[i] = sys.gettotalrefcount()
-        print counts
+        print(counts)
 
 if __name__ == "__main__":
     test_main(verbose=True)

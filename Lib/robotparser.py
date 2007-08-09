@@ -16,7 +16,7 @@ __all__ = ["RobotFileParser"]
 debug = 0
 
 def _debug(msg):
-    if debug: print msg
+    if debug: print(msg)
 
 
 class RobotFileParser:
@@ -241,10 +241,10 @@ def _check(a,b):
     else:
         ac = "access allowed"
     if a!=b:
-        print "failed"
+        print("failed")
     else:
-        print "ok (%s)" % ac
-    print
+        print("ok (%s)" % ac)
+    print()
 
 def _test():
     global debug

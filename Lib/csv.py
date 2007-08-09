@@ -11,10 +11,7 @@ from _csv import Error, __version__, writer, reader, register_dialect, \
                  __doc__
 from _csv import Dialect as _Dialect
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO
 
 __all__ = [ "QUOTE_MINIMAL", "QUOTE_ALL", "QUOTE_NONNUMERIC", "QUOTE_NONE",
             "Error", "Dialect", "excel", "excel_tab", "reader", "writer",
@@ -48,7 +45,7 @@ class Dialect:
     def _validate(self):
         try:
             _Dialect(self)
-        except TypeError, e:
+        except TypeError as e:
             # We do this for compatibility with py2.3
             raise Error(str(e))
 
@@ -79,17 +76,17 @@ class DictReader:
     def __iter__(self):
         return self
 
-    def next(self):
-        row = self.reader.next()
+    def __next__(self):
+        row = next(self.reader)
         if self.fieldnames is None:
             self.fieldnames = row
-            row = self.reader.next()
+            row = next(self.reader)
 
         # unlike the basic reader, we prefer not to return blanks,
         # because we will typically wind up with a dict full of None
         # values
         while row == []:
-            row = self.reader.next()
+            row = next(self.reader)
         d = dict(zip(self.fieldnames, row))
         lf = len(self.fieldnames)
         lr = len(row)
@@ -222,12 +219,10 @@ class Sniffer:
             if m[n]:
                 spaces += 1
 
-        quotechar = reduce(lambda a, b, quotes = quotes:
-                           (quotes[a] > quotes[b]) and a or b, quotes.keys())
+        quotechar = max(quotes, key=quotes.get)
 
         if delims:
-            delim = reduce(lambda a, b, delims = delims:
-                           (delims[a] > delims[b]) and a or b, delims.keys())
+            delim = max(delims, key=delims.get)
             skipinitialspace = delims[delim] == spaces
             if delim == '\n': # most likely a file with a single column
                 delim = ''
@@ -258,7 +253,7 @@ class Sniffer:
         additional chunks as necessary.
         """
 
-        data = filter(None, data.split('\n'))
+        data = list(filter(None, data.split('\n')))
 
         ascii = [chr(c) for c in range(127)] # 7-bit ASCII
 
@@ -281,19 +276,17 @@ class Sniffer:
                     charFrequency[char] = metaFrequency
 
             for char in charFrequency.keys():
-                items = charFrequency[char].items()
+                items = list(charFrequency[char].items())
                 if len(items) == 1 and items[0][0] == 0:
                     continue
                 # get the mode of the frequencies
                 if len(items) > 1:
-                    modes[char] = reduce(lambda a, b: a[1] > b[1] and a or b,
-                                         items)
+                    modes[char] = max(items, key=lambda x: x[1])
                     # adjust the mode - subtract the sum of all
                     # other frequencies
                     items.remove(modes[char])
                     modes[char] = (modes[char][0], modes[char][1]
-                                   - reduce(lambda a, b: (0, a[1] + b[1]),
-                                            items)[1])
+                                   - sum(item[1] for item in items))
                 else:
                     modes[char] = items[0]
 
@@ -313,7 +306,7 @@ class Sniffer:
                 consistency -= 0.01
 
             if len(delims) == 1:
-                delim = delims.keys()[0]
+                delim = list(delims.keys())[0]
                 skipinitialspace = (data[0].count(delim) ==
                                     data[0].count("%c " % delim))
                 return (delim, skipinitialspace)
@@ -356,7 +349,7 @@ class Sniffer:
 
         rdr = reader(StringIO(sample), self.sniff(sample))
 
-        header = rdr.next() # assume first row is header
+        header = next(rdr) # assume first row is header
 
         columns = len(header)
         columnTypes = {}
@@ -372,9 +365,9 @@ class Sniffer:
             if len(row) != columns:
                 continue # skip rows that have irregular number of columns
 
-            for col in columnTypes.keys():
+            for col in list(columnTypes.keys()):
 
-                for thisType in [int, long, float, complex]:
+                for thisType in [int, int, float, complex]:
                     try:
                         thisType(row[col])
                         break
@@ -385,7 +378,7 @@ class Sniffer:
                     thisType = len(row[col])
 
                 # treat longs as ints
-                if thisType == long:
+                if thisType == int:
                     thisType = int
 
                 if thisType != columnTypes[col]:

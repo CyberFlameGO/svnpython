@@ -21,15 +21,14 @@ server.serve_forever()
 
 class MyFuncs:
     def __init__(self):
-        # make all of the string functions available through
-        # string.func_name
-        import string
-        self.string = string
+        # make all of the sys functions available through sys.func_name
+        import sys
+        self.sys = sys
     def _listMethods(self):
         # implement this method so that system.listMethods
-        # knows to advertise the strings methods
+        # knows to advertise the sys methods
         return list_public_methods(self) + \
-                ['string.' + method for method in list_public_methods(self.string)]
+                ['sys.' + method for method in list_public_methods(self.sys)]
     def pow(self, x, y): return pow(x, y)
     def add(self, x, y) : return x + y
 
@@ -140,7 +139,7 @@ def list_public_methods(obj):
 
     return [member for member in dir(obj)
                 if not member.startswith('_') and
-                    callable(getattr(obj, member))]
+                    hasattr(getattr(obj, member), '__call__')]
 
 def remove_duplicates(lst):
     """remove_duplicates([2,2,2,1,3,3]) => [3,1,2]
@@ -259,7 +258,7 @@ class SimpleXMLRPCDispatcher:
             response = (response,)
             response = xmlrpclib.dumps(response, methodresponse=1,
                                        allow_none=self.allow_none, encoding=self.encoding)
-        except Fault, fault:
+        except Fault as fault:
             response = xmlrpclib.dumps(fault, allow_none=self.allow_none,
                                        encoding=self.encoding)
         except:
@@ -314,7 +313,7 @@ class SimpleXMLRPCDispatcher:
         Returns a string containing documentation for the specified method."""
 
         method = None
-        if self.funcs.has_key(method_name):
+        if method_name in self.funcs:
             method = self.funcs[method_name]
         elif self.instance is not None:
             # Instance can implement _methodHelp to return help for a method
@@ -359,7 +358,7 @@ class SimpleXMLRPCDispatcher:
                 # XXX A marshalling error in any response will fail the entire
                 # multicall. If someone cares they should fix this.
                 results.append([self._dispatch(method_name, params)])
-            except Fault, fault:
+            except Fault as fault:
                 results.append(
                     {'faultCode' : fault.faultCode,
                      'faultString' : fault.faultString}
@@ -543,9 +542,9 @@ class CGIXMLRPCRequestHandler(SimpleXMLRPCDispatcher):
 
         response = self._marshaled_dispatch(request_text)
 
-        print 'Content-Type: text/xml'
-        print 'Content-Length: %d' % len(response)
-        print
+        print('Content-Type: text/xml')
+        print('Content-Length: %d' % len(response))
+        print()
         sys.stdout.write(response)
 
     def handle_get(self):
@@ -565,10 +564,10 @@ class CGIXMLRPCRequestHandler(SimpleXMLRPCDispatcher):
              'message' : message,
              'explain' : explain
             }
-        print 'Status: %d %s' % (code, message)
-        print 'Content-Type: text/html'
-        print 'Content-Length: %d' % len(response)
-        print
+        print('Status: %d %s' % (code, message))
+        print('Content-Type: text/html')
+        print('Content-Length: %d' % len(response))
+        print()
         sys.stdout.write(response)
 
     def handle_request(self, request_text = None):
@@ -590,7 +589,7 @@ class CGIXMLRPCRequestHandler(SimpleXMLRPCDispatcher):
             self.handle_xmlrpc(request_text)
 
 if __name__ == '__main__':
-    print 'Running XML-RPC server on port 8000'
+    print('Running XML-RPC server on port 8000')
     server = SimpleXMLRPCServer(("localhost", 8000))
     server.register_function(pow)
     server.register_function(lambda x,y: x+y, 'add')

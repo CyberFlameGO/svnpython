@@ -337,7 +337,6 @@ AsString(PyObject *value, PyObject *tmp)
 {
 	if (PyString_Check(value))
 		return PyString_AsString(value);
-#ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(value)) {
 		PyObject *v = PyUnicode_AsUTF8String(value);
 		if (v == NULL)
@@ -349,7 +348,6 @@ AsString(PyObject *value, PyObject *tmp)
 		Py_DECREF(v);
 		return PyString_AsString(v);
 	}
-#endif
 	else {
 		PyObject *v = PyObject_Str(value);
 		if (v == NULL)
@@ -720,7 +718,7 @@ typedef struct {
 	PyObject *string; /* This cannot cause cycles. */
 } PyTclObject;
 
-staticforward PyTypeObject PyTclObject_Type;
+static PyTypeObject PyTclObject_Type;
 #define PyTclObject_Check(v)	((v)->ob_type == &PyTclObject_Type)
 
 static PyObject *
@@ -744,17 +742,6 @@ PyTclObject_dealloc(PyTclObject *self)
 	PyObject_Del(self);
 }
 
-static PyObject *
-PyTclObject_str(PyTclObject *self)
-{
-	if (self->string && PyString_Check(self->string)) {
-		Py_INCREF(self->string);
-		return self->string;
-	}
-	/* XXX Could cache value if it is an ASCII string. */
-	return PyString_FromString(Tcl_GetString(self->value));
-}
-
 static char*
 PyTclObject_TclString(PyObject *self)
 {
@@ -763,7 +750,7 @@ PyTclObject_TclString(PyObject *self)
 
 /* Like _str, but create Unicode if necessary. */
 PyDoc_STRVAR(PyTclObject_string__doc__, 
-"the string representation of this object, either as string or Unicode");
+"the string representation of this object, either as str8 or str");
 
 static PyObject *
 PyTclObject_string(PyTclObject *self, void *ignored)
@@ -775,7 +762,6 @@ PyTclObject_string(PyTclObject *self, void *ignored)
 		for (i = 0; i < len; i++)
 			if (s[i] & 0x80)
 				break;
-#ifdef Py_USING_UNICODE
 		if (i == len)
 			/* It is an ASCII string. */
 			self->string = PyString_FromStringAndSize(s, len);
@@ -786,9 +772,6 @@ PyTclObject_string(PyTclObject *self, void *ignored)
 				self->string = PyString_FromStringAndSize(s, len);
 			}
 		}
-#else
-		self->string = PyString_FromStringAndSize(s, len);
-#endif
 		if (!self->string)
 			return NULL;
 	}
@@ -796,11 +779,8 @@ PyTclObject_string(PyTclObject *self, void *ignored)
 	return self->string;
 }
 
-#ifdef Py_USING_UNICODE
-PyDoc_STRVAR(PyTclObject_unicode__doc__, "convert argument to unicode");
-
 static PyObject *
-PyTclObject_unicode(PyTclObject *self, void *ignored)
+PyTclObject_str(PyTclObject *self, void *ignored)
 {
 	char *s;
 	int len;
@@ -812,15 +792,12 @@ PyTclObject_unicode(PyTclObject *self, void *ignored)
 	s = Tcl_GetStringFromObj(self->value, &len);
 	return PyUnicode_DecodeUTF8(s, len, "strict");
 }
-#endif
 
 static PyObject *
 PyTclObject_repr(PyTclObject *self)
 {
-	char buf[50];
-	PyOS_snprintf(buf, 50, "<%s object at %p>",
-		      self->value->typePtr->name, self->value);
-	return PyString_FromString(buf);
+	return PyUnicode_FromFormat("<%s object at %p>",
+	                            self->value->typePtr->name, self->value);
 }
 
 static int
@@ -850,17 +827,8 @@ static PyGetSetDef PyTclObject_getsetlist[] = {
 	{0},
 };
 
-static PyMethodDef PyTclObject_methods[] = {
-#ifdef Py_USING_UNICODE
-	{"__unicode__",	(PyCFunction)PyTclObject_unicode, METH_NOARGS,
-	PyTclObject_unicode__doc__},
-#endif
-	{0}
-};
-
-statichere PyTypeObject PyTclObject_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0,			/*ob_size*/
+static PyTypeObject PyTclObject_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_tkinter.Tcl_Obj",		/*tp_name*/
 	sizeof(PyTclObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
@@ -888,7 +856,7 @@ statichere PyTypeObject PyTclObject_Type = {
         0,                      /*tp_weaklistoffset*/
         0,                      /*tp_iter*/
         0,                      /*tp_iternext*/
-        PyTclObject_methods,    /*tp_methods*/
+        0,    /*tp_methods*/
         0,			/*tp_members*/
         PyTclObject_getsetlist, /*tp_getset*/
         0,                      /*tp_base*/
@@ -913,7 +881,7 @@ AsObj(PyObject *value)
 					PyString_GET_SIZE(value));
 	else if (PyBool_Check(value))
 		return Tcl_NewBooleanObj(PyObject_IsTrue(value));
-	else if (PyInt_Check(value))
+	else if (PyInt_CheckExact(value))
 		return Tcl_NewLongObj(PyInt_AS_LONG(value));
 	else if (PyFloat_Check(value))
 		return Tcl_NewDoubleObj(PyFloat_AS_DOUBLE(value));
@@ -929,7 +897,6 @@ AsObj(PyObject *value)
 		ckfree(FREECAST argv);
 		return result;
 	}
-#ifdef Py_USING_UNICODE
 	else if (PyUnicode_Check(value)) {
 		Py_UNICODE *inbuf = PyUnicode_AS_UNICODE(value);
 		Py_ssize_t size = PyUnicode_GET_SIZE(value);
@@ -962,7 +929,6 @@ AsObj(PyObject *value)
 #endif
 
 	}
-#endif
 	else if(PyTclObject_Check(value)) {
 		Tcl_Obj *v = ((PyTclObject*)value)->value;
 		Tcl_IncrRefCount(v);
@@ -987,7 +953,6 @@ FromObj(PyObject* tkapp, Tcl_Obj *value)
 	if (value->typePtr == NULL) {
 		/* If the result contains any bytes with the top bit set,
 		   it's UTF-8 and we should decode it to Unicode */
-#ifdef Py_USING_UNICODE
 		int i;
 		char *s = value->bytes;
 		int len = value->length;
@@ -1006,9 +971,6 @@ FromObj(PyObject* tkapp, Tcl_Obj *value)
 				result = PyString_FromStringAndSize(s, len);
 			}
 		}
-#else
-		result = PyString_FromStringAndSize(value->bytes, value->length);
-#endif
 		return result;
 	}
 
@@ -1066,7 +1028,6 @@ FromObj(PyObject* tkapp, Tcl_Obj *value)
 	}
 
 	if (value->typePtr == app->StringType) {
-#ifdef Py_USING_UNICODE
 #if defined(Py_UNICODE_WIDE) && TCL_UTF_MAX==3
 		PyObject *result;
 		int size;
@@ -1085,12 +1046,6 @@ FromObj(PyObject* tkapp, Tcl_Obj *value)
 #else
 		return PyUnicode_FromUnicode(Tcl_GetUnicode(value),
 					     Tcl_GetCharLength(value));
-#endif
-#else
-		int size;
-		char *c;
-		c = Tcl_GetStringFromObj(value, &size);
-		return PyString_FromStringAndSize(c, size);
 #endif
 	}
 
@@ -1194,7 +1149,6 @@ Tkapp_CallResult(TkappObject *self)
 
 		/* If the result contains any bytes with the top bit set,
 		   it's UTF-8 and we should decode it to Unicode */
-#ifdef Py_USING_UNICODE
 		while (*p != '\0') {
 			if (*p & 0x80)
 				break;
@@ -1212,10 +1166,6 @@ Tkapp_CallResult(TkappObject *self)
 				res = PyString_FromStringAndSize(s, (int)(p-s));
 			}
 		}
-#else
-		p = strchr(p, '\0');
-		res = PyString_FromStringAndSize(s, (int)(p-s));
-#endif
 	}
 	return res;
 }
@@ -1511,6 +1461,10 @@ varname_converter(PyObject *in, void *_out)
 	char **out = (char**)_out;
 	if (PyString_Check(in)) {
 		*out = PyString_AsString(in);
+		return 1;
+	}
+        if (PyUnicode_Check(in)) {
+		*out = PyUnicode_AsString(in);
 		return 1;
 	}
 	if (PyTclObject_Check(in)) {
@@ -2409,7 +2363,7 @@ Tktt_Repr(PyObject *self)
 
 	PyOS_snprintf(buf, sizeof(buf), "<tktimertoken at %p%s>", v,
 	                v->func == NULL ? ", handler deleted" : "");
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static PyObject *

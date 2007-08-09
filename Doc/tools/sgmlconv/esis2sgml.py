@@ -44,8 +44,7 @@ def null_map_gi(sgmlgi, map):
 
 
 def format_attrs(attrs, xml=0):
-    attrs = attrs.items()
-    attrs.sort()
+    attrs = sorted(attrs.items())
     parts = []
     append = parts.append
     for name, value in attrs:
@@ -149,7 +148,7 @@ def convert(ifp, ofp, xml=0, autoclose=(), verbatims=()):
             ofp.write("&%s;" % data)
             knownempty = 0
         else:
-            raise RuntimeError, "unrecognized ESIS event type: '%s'" % type
+            raise RuntimeError("unrecognized ESIS event type: '%s'" % type)
 
     if LIST_EMPTIES:
         dump_empty_element_names(knownempties)
@@ -170,8 +169,7 @@ def dump_empty_element_names(knownempties):
             if gi:
                 d[gi] = gi
     fp = open(EMPTIES_FILENAME, "w")
-    gilist = d.keys()
-    gilist.sort()
+    gilist = sorted(d.keys())
     fp.write("\n".join(gilist))
     fp.write("\n")
     fp.close()
@@ -255,7 +253,8 @@ def main():
         if xml and xmldecl:
             opf.write('<?xml version="1.0" encoding="iso8859-1"?>\n')
         convert(ifp, ofp, xml=xml, autoclose=autoclose, verbatims=verbatims)
-    except IOError, (err, msg):
+    except IOError as e:
+        (err, msg) = e
         if err != errno.EPIPE:
             raise
 

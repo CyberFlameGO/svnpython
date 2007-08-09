@@ -226,7 +226,7 @@ class FileInput:
         self._mode = mode
         if inplace and openhook:
             raise ValueError("FileInput cannot use an opening hook in inplace mode")
-        elif openhook and not callable(openhook):
+        elif openhook and not hasattr(openhook, '__call__'):
             raise ValueError("FileInput openhook must be callable")
         self._openhook = openhook
 
@@ -240,7 +240,7 @@ class FileInput:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         try:
             line = self._buffer[self._bufindex]
         except IndexError:
@@ -259,7 +259,7 @@ class FileInput:
         if i != self._lineno:
             raise RuntimeError, "accessing lines out of order"
         try:
-            return self.next()
+            return self.__next__()
         except StopIteration:
             raise IndexError, "end of input reached"
 
@@ -405,9 +405,9 @@ def _test():
     for line in input(args, inplace=inplace, backup=backup):
         if line[-1:] == '\n': line = line[:-1]
         if line[-1:] == '\r': line = line[:-1]
-        print "%d: %s[%d]%s %s" % (lineno(), filename(), filelineno(),
-                                   isfirstline() and "*" or "", line)
-    print "%d: %s[%d]" % (lineno(), filename(), filelineno())
+        print("%d: %s[%d]%s %s" % (lineno(), filename(), filelineno(),
+                                   isfirstline() and "*" or "", line))
+    print("%d: %s[%d]" % (lineno(), filename(), filelineno()))
 
 if __name__ == '__main__':
     _test()

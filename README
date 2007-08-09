@@ -1,5 +1,5 @@
-This is Python version 2.6 alpha 0
-==================================
+This is Python 3000 -- unversioned (branched off 2.5 in various beta stages)
+=================================================================
 
 Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007 
 Python Software Foundation.
@@ -29,6 +29,14 @@ are entirely optional.
 
 All trademarks referenced herein are property of their respective
 holders.
+
+
+Python 3000 disclaimer
+----------------------
+
+This README hasn't been updated for Python 3000 yet.  If you see
+anything that should clearly be deleted, let me know (guido@python.org)
+or submit a patch to the Python 3000 category in SourceForge.
 
 
 What's new in this release?
@@ -282,19 +290,9 @@ on these platforms without the special directions mentioned here,
 submit a documentation bug report to SourceForge (see Bug Reports
 above) so we can remove them!)
 
-Unix platforms: If your vendor still ships (and you still use) Berkeley DB
-        1.85 you will need to edit Modules/Setup to build the bsddb185
-        module and add a line to sitecustomize.py which makes it the
-        default.  In Modules/Setup a line like
-
-            bsddb185 bsddbmodule.c
-
-        should work.  (You may need to add -I, -L or -l flags to direct the
-        compiler and linker to your include files and libraries.)
-
 XXX I think this next bit is out of date:
 
-64-bit platforms: The modules audioop, and imageop don't work.
+64-bit platforms: The audioop module doesn't work.
         The setup.py script disables them on 64-bit installations.
         Don't try to enable them in the Modules/Setup file.  They
         contain code that is quite wordsize sensitive.  (If you have a
@@ -464,11 +462,11 @@ QNX:    Chris Herborth (chrish@qnx.com) writes:
            your system... tested here at QNX with the following modules:
 
                 array, audioop, binascii, cPickle, cStringIO, cmath,
-                crypt, curses, errno, fcntl, gdbm, grp, imageop,
-                _locale, math, md5, new, operator, parser, pcre,
-                posix, pwd, readline, regex, reop,
-                select, signal, socket, soundex, strop, struct,
-                syslog, termios, time, timing, zlib, audioop, imageop
+                crypt, curses, errno, fcntl, gdbm, grp,
+                _locale, math, new, operator, parser,
+                posix, pwd, readline, regex,
+                select, signal, socket, struct,
+                syslog, termios, time, zlib, audioop
 
         3) make SHELL=/usr/local/bin/bash
 
@@ -520,11 +518,10 @@ Cray T3E: Mark Hadfield (m.hadfield@niwa.co.nz) writes:
            On NIWA's vanilla T3E system the following have also been
            included successfully:
 
-             _codecs, _locale, _socket, _symtable, _testcapi, _weakref
-             array, binascii, cmath, cPickle, crypt, cStringIO, dbm
-             errno, fcntl, grp, math, md5, operator, parser, pcre, pwd
-             regex, rotor, select, struct, strop, syslog, termios
-             time, timing, xreadlines
+	     _codecs, _locale, _socket, _symtable, _testcapi, _weakref
+	     array, binascii, cmath, cPickle, crypt, cStringIO, dbm
+	     errno, fcntl, grp, math, operator, parser, pwd
+	     rotor, select, struct, syslog, termios, time
 
         4) Once the python executable and library have been built, make
            will execute setup.py, which will attempt to build remaining
@@ -748,9 +745,7 @@ Beginning with Python version 2.3, the PyBsddb package
 exposing a set of package-level functions which provide
 backwards-compatible behavior.  Only versions 3.3 through 4.4 of
 Sleepycat's libraries provide the necessary API, so older versions
-aren't supported through this interface.  The old bsddb module has
-been retained as bsddb185, though it is not built by default.  Users
-wishing to use it will have to tweak Modules/Setup to build it.  The
+aren't supported through this interface.  The
 dbm module will still be built against the Sleepycat libraries if
 other preferred alternatives (ndbm, gdbm) are not found.
 
@@ -867,10 +862,6 @@ determine whether a particular module works or not is to see if it
 will build: enable it in Setup, then if you get compilation or link
 errors, disable it -- you're either missing support or need to adjust
 the compilation and linking parameters for that module.
-
-On SGI IRIX, there are modules that interface to many SGI specific
-system libraries, e.g. the GL library and the audio hardware.  These
-modules will not be built by the setup.py script.
 
 In addition to the file Setup, you can also edit the file Setup.local.
 (the makesetup script processes both).  You may find it more

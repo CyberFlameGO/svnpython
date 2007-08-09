@@ -14,14 +14,14 @@ def url2pathname(url):
     """OS-specific conversion from a relative URL of the 'file' scheme
     to a file system path; not recommended for general use."""
     tp = urllib.splittype(url)[0]
-    if tp and tp <> 'file':
+    if tp and tp != 'file':
         raise RuntimeError, 'Cannot convert non-local URL to pathname'
     # Turn starting /// into /, an empty hostname means current host
     if url[:3] == '///':
         url = url[2:]
     elif url[:2] == '//':
         raise RuntimeError, 'Cannot convert non-local URL to pathname'
-    components = string.split(url, '/')
+    components = url.split('/')
     if not components[0]:
         if '$' in components:
             del components[0]
@@ -39,7 +39,7 @@ def url2pathname(url):
         elif components[i] == '..':
             components[i] = '^'
             i += 1
-        elif components[i] == '' and i > 0 and components[i-1] <> '':
+        elif components[i] == '' and i > 0 and components[i-1] != '':
             del components[i]
         else:
             i += 1
@@ -60,12 +60,12 @@ def test():
                 "/foo/bar/index.html",
                 "/foo/bar/",
                 "/"]:
-        print '%r -> %r' % (url, url2pathname(url))
-    print "*******************************************************"
+        print('%r -> %r' % (url, url2pathname(url)))
+    print("*******************************************************")
     for path in ["SCSI::SCSI4.$.Anwendung",
                  "PythonApp:Lib",
                  "PythonApp:Lib.rourl2path/py"]:
-        print '%r -> %r' % (path, pathname2url(path))
+        print('%r -> %r' % (path, pathname2url(path)))
 
 if __name__ == '__main__':
     test()

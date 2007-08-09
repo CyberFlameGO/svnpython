@@ -28,11 +28,11 @@ future_check_features(PyFutureFeatures *ff, stmt_ty s, const char *filename)
 		} else if (strcmp(feature, FUTURE_GENERATORS) == 0) {
 			continue;
 		} else if (strcmp(feature, FUTURE_DIVISION) == 0) {
-			ff->ff_features |= CO_FUTURE_DIVISION;
+			continue;
 		} else if (strcmp(feature, FUTURE_ABSOLUTE_IMPORT) == 0) {
-			ff->ff_features |= CO_FUTURE_ABSOLUTE_IMPORT;
+			continue;
 		} else if (strcmp(feature, FUTURE_WITH_STATEMENT) == 0) {
-			ff->ff_features |= CO_FUTURE_WITH_STATEMENT;
+			continue;
 		} else if (strcmp(feature, "braces") == 0) {
 			PyErr_SetString(PyExc_SyntaxError,
 					"not a chance");
@@ -55,7 +55,7 @@ future_parse(PyFutureFeatures *ff, mod_ty mod, const char *filename)
 
 	static PyObject *future;
 	if (!future) {
-		future = PyString_InternFromString("__future__");
+		future = PyUnicode_InternFromString("__future__");
 		if (!future)
 			return 0;
 	}

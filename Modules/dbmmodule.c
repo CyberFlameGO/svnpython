@@ -94,7 +94,7 @@ static PyObject *
 dbm_subscript(dbmobject *dp, register PyObject *key)
 {
 	datum drec, krec;
-	int tmp_size;
+	Py_ssize_t tmp_size;
 	
 	if (!PyArg_Parse(key, "s#", &krec.dptr, &tmp_size) )
 		return NULL;
@@ -103,8 +103,7 @@ dbm_subscript(dbmobject *dp, register PyObject *key)
         check_dbmobject_open(dp);
 	drec = dbm_fetch(dp->di_dbm, krec);
 	if ( drec.dptr == 0 ) {
-		PyErr_SetString(PyExc_KeyError,
-				PyString_AS_STRING((PyStringObject *)key));
+		PyErr_SetObject(PyExc_KeyError, key);
 		return NULL;
 	}
 	if ( dbm_error(dp->di_dbm) ) {
@@ -112,18 +111,18 @@ dbm_subscript(dbmobject *dp, register PyObject *key)
 		PyErr_SetString(DbmError, "");
 		return NULL;
 	}
-	return PyString_FromStringAndSize(drec.dptr, drec.dsize);
+	return PyBytes_FromStringAndSize(drec.dptr, drec.dsize);
 }
 
 static int
 dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
 {
         datum krec, drec;
-	int tmp_size;
+	Py_ssize_t tmp_size;
 	
         if ( !PyArg_Parse(v, "s#", &krec.dptr, &tmp_size) ) {
 		PyErr_SetString(PyExc_TypeError,
-				"dbm mappings have string indices only");
+				"dbm mappings have string keys only");
 		return -1;
 	}
 	krec.dsize = tmp_size;
@@ -135,14 +134,13 @@ dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
 	if (w == NULL) {
 		if ( dbm_delete(dp->di_dbm, krec) < 0 ) {
 			dbm_clearerr(dp->di_dbm);
-			PyErr_SetString(PyExc_KeyError,
-				      PyString_AS_STRING((PyStringObject *)v));
+			PyErr_SetObject(PyExc_KeyError, v);
 			return -1;
 		}
 	} else {
 		if ( !PyArg_Parse(w, "s#", &drec.dptr, &tmp_size) ) {
 			PyErr_SetString(PyExc_TypeError,
-				     "dbm mappings have string elements only");
+			     "dbm mappings have byte string elements only");
 			return -1;
 		}
 		drec.dsize = tmp_size;
@@ -205,21 +203,46 @@ dbm_keys(register dbmobject *dp, PyObject *unused)
 	return v;
 }
 
-static PyObject *
-dbm_has_key(register dbmobject *dp, PyObject *args)
+static int
+dbm_contains(PyObject *self, PyObject *arg)
 {
-	char *tmp_ptr;
+	dbmobject *dp = (dbmobject *)self;
 	datum key, val;
-	int tmp_size;
-	
-	if (!PyArg_ParseTuple(args, "s#:has_key", &tmp_ptr, &tmp_size))
-		return NULL;
-	key.dptr = tmp_ptr;
-	key.dsize = tmp_size;
-        check_dbmobject_open(dp);
+
+	if ((dp)->di_dbm == NULL) {
+		PyErr_SetString(DbmError,
+				"DBM object has already been closed");
+                 return -1;
+	}
+	if (PyUnicode_Check(arg)) {
+		arg = _PyUnicode_AsDefaultEncodedString(arg, NULL);
+		if (arg == NULL)
+			return -1;
+	}
+	if (!PyString_Check(arg)) {
+		PyErr_Format(PyExc_TypeError,
+			     "dbm key must be string, not %.100s",
+			     arg->ob_type->tp_name);
+		return -1;
+	}
+	key.dptr = PyString_AS_STRING(arg);
+	key.dsize = PyString_GET_SIZE(arg);
 	val = dbm_fetch(dp->di_dbm, key);
-	return PyInt_FromLong(val.dptr != NULL);
+	return val.dptr != NULL;
 }
+
+static PySequenceMethods dbm_as_sequence = {
+	0,			/* sq_length */
+	0,			/* sq_concat */
+	0,			/* sq_repeat */
+	0,			/* sq_item */
+	0,			/* sq_slice */
+	0,			/* sq_ass_item */
+	0,			/* sq_ass_slice */
+	dbm_contains,		/* sq_contains */
+	0,			/* sq_inplace_concat */
+	0,			/* sq_inplace_repeat */
+};
 
 static PyObject *
 dbm_get(register dbmobject *dp, PyObject *args)
@@ -227,7 +250,7 @@ dbm_get(register dbmobject *dp, PyObject *args)
 	datum key, val;
 	PyObject *defvalue = Py_None;
 	char *tmp_ptr;
-	int tmp_size;
+	Py_ssize_t tmp_size;
 
 	if (!PyArg_ParseTuple(args, "s#|O:get",
                               &tmp_ptr, &tmp_size, &defvalue))
@@ -237,7 +260,7 @@ dbm_get(register dbmobject *dp, PyObject *args)
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);
 	if (val.dptr != NULL)
-		return PyString_FromStringAndSize(val.dptr, val.dsize);
+		return PyBytes_FromStringAndSize(val.dptr, val.dsize);
 	else {
 		Py_INCREF(defvalue);
 		return defvalue;
@@ -250,9 +273,9 @@ dbm_setdefault(register dbmobject *dp, PyObject *args)
 	datum key, val;
 	PyObject *defvalue = NULL;
 	char *tmp_ptr;
-	int tmp_size;
+	Py_ssize_t tmp_size;
 
-	if (!PyArg_ParseTuple(args, "s#|S:setdefault",
+	if (!PyArg_ParseTuple(args, "s#|O:setdefault",
                               &tmp_ptr, &tmp_size, &defvalue))
 		return NULL;
 	key.dptr = tmp_ptr;
@@ -260,19 +283,27 @@ dbm_setdefault(register dbmobject *dp, PyObject *args)
         check_dbmobject_open(dp);
 	val = dbm_fetch(dp->di_dbm, key);
 	if (val.dptr != NULL)
-		return PyString_FromStringAndSize(val.dptr, val.dsize);
+		return PyBytes_FromStringAndSize(val.dptr, val.dsize);
 	if (defvalue == NULL) {
-		defvalue = PyString_FromStringAndSize(NULL, 0);
+		defvalue = PyBytes_FromStringAndSize(NULL, 0);
 		if (defvalue == NULL)
 			return NULL;
+		val.dptr = NULL;
+		val.dsize = 0;
 	}
-	else
+	else {
+		if ( !PyArg_Parse(defvalue, "s#", &val.dptr, &tmp_size) ) {
+			PyErr_SetString(PyExc_TypeError,
+				"dbm mappings have byte string elements only");
+			return NULL;
+		}
+		val.dsize = tmp_size;
 		Py_INCREF(defvalue);
-	val.dptr = PyString_AS_STRING(defvalue);
-	val.dsize = PyString_GET_SIZE(defvalue);
+	}
 	if (dbm_store(dp->di_dbm, key, val, DBM_INSERT) < 0) {
 		dbm_clearerr(dp->di_dbm);
 		PyErr_SetString(DbmError, "cannot add item to database");
+		Py_DECREF(defvalue);
 		return NULL;
 	}
 	return defvalue;
@@ -283,8 +314,6 @@ static PyMethodDef dbm_methods[] = {
 	 "close()\nClose the database."},
 	{"keys",	(PyCFunction)dbm_keys,		METH_NOARGS,
 	 "keys() -> list\nReturn a list of all keys in the database."},
-	{"has_key",	(PyCFunction)dbm_has_key,	METH_VARARGS,
-	 "has_key(key} -> boolean\nReturn true iff key is in the database."},
 	{"get",		(PyCFunction)dbm_get,		METH_VARARGS,
 	 "get(key[, default]) -> value\n"
 	 "Return the value for key if present, otherwise default."},
@@ -313,7 +342,7 @@ static PyTypeObject Dbmtype = {
 	0,			  /*tp_compare*/
 	0,			  /*tp_repr*/
 	0,			  /*tp_as_number*/
-	0,			  /*tp_as_sequence*/
+	&dbm_as_sequence,	  /*tp_as_sequence*/
 	&dbm_as_mapping,	  /*tp_as_mapping*/
 };
 
@@ -358,7 +387,8 @@ PyMODINIT_FUNC
 initdbm(void) {
 	PyObject *m, *d, *s;
 
-	Dbmtype.ob_type = &PyType_Type;
+	if (PyType_Ready(&Dbmtype) < 0)
+		return;
 	m = Py_InitModule("dbm", dbmmodule_methods);
 	if (m == NULL)
 		return;

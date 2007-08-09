@@ -463,8 +463,8 @@ def test(args = None):
     else:
         try:
             f = open(file, 'r')
-        except IOError, msg:
-            print file, ":", msg
+        except IOError as msg:
+            print(file, ":", msg)
             sys.exit(1)
 
     data = f.read()

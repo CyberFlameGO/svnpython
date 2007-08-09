@@ -51,7 +51,7 @@ The following values are considered false:
 \item	any empty mapping, for example, \code{\{\}}.
 
 \item	instances of user-defined classes, if the class defines a
-        \method{__nonzero__()} or \method{__len__()} method, when that
+        \method{__bool__()} or \method{__len__()} method, when that
         method returns the integer zero or \class{bool} value
         \code{False}.\footnote{Additional 
 information on these special methods may be found in the
@@ -126,8 +126,7 @@ This table summarizes the comparison operations:
   \lineiii{>}{strictly greater than}{}
   \lineiii{>=}{greater than or equal}{}
   \lineiii{==}{equal}{}
-  \lineiii{!=}{not equal}{(1)}
-  \lineiii{<>}{not equal}{(1)}
+  \lineiii{!=}{not equal}{}
   \lineiii{is}{object identity}{}
   \lineiii{is not}{negated object identity}{}
 \end{tableiii}
@@ -135,17 +134,6 @@ This table summarizes the comparison operations:
 \opindex{==} % XXX *All* others have funny characters < ! >
 \opindex{is}
 \opindex{is not}
-
-\noindent
-Notes:
-
-\begin{description}
-
-\item[(1)]
-\code{<>} and \code{!=} are alternate spellings for the same operator.
-\code{!=} is the preferred spelling; \code{<>} is obsolescent.
-
-\end{description}
 
 Objects of different types, except different numeric types and different string types, never
 compare equal; such objects are ordered consistently but arbitrarily
@@ -400,27 +388,26 @@ general and specific sequence types, dictionaries, and other more
 specialized forms.  The specific types are not important beyond their
 implementation of the iterator protocol.
 
-The intention of the protocol is that once an iterator's
-\method{next()} method raises \exception{StopIteration}, it will
-continue to do so on subsequent calls.  Implementations that
-do not obey this property are deemed broken.  (This constraint
-was added in Python 2.3; in Python 2.2, various iterators are
-broken according to this rule.)
+The intention of the protocol is that once an iterator's \method{__next__()}
+method raises \exception{StopIteration}, it will continue to do so on subsequent
+calls.  Implementations that do not obey this property are deemed broken.  (This
+constraint was added in Python 2.3; in Python 2.2, various iterators are broken
+according to this rule.)
 
-Python's generators provide a convenient way to implement the
-iterator protocol.  If a container object's \method{__iter__()}
-method is implemented as a generator, it will automatically
-return an iterator object (technically, a generator object)
-supplying the \method{__iter__()} and \method{next()} methods.
+Python's generators provide a convenient way to implement the iterator protocol.
+If a container object's \method{__iter__()} method is implemented as a
+generator, it will automatically return an iterator object (technically, a
+generator object) supplying the \method{__iter__()} and \method{__next__()}
+methods.
 
 
 \section{Sequence Types ---
 	    \class{str}, \class{unicode}, \class{list},
-	    \class{tuple}, \class{buffer}, \class{xrange}
+	    \class{tuple}, \class{buffer}, \class{range}
 	    \label{typesseq}}
 
 There are six sequence types: strings, Unicode strings, lists,
-tuples, buffers, and xrange objects.
+tuples, buffers, and range objects.
 
 String literals are written in single or double quotes:
 \code{'xyzzy'}, \code{"frobozz"}.  See chapter 2 of the
@@ -446,11 +433,11 @@ concatenation or repetition.
 \obindex{buffer}
 
 Xrange objects are similar to buffers in that there is no specific
-syntax to create them, but they are created using the \function{xrange()}
-function.\bifuncindex{xrange}  They don't support slicing,
+syntax to create them, but they are created using the \function{range()}
+function.\bifuncindex{range}  They don't support slicing,
 concatenation or repetition, and using \code{in}, \code{not in},
 \function{min()} or \function{max()} on them is inefficient.
-\obindex{xrange}
+\obindex{range}
 
 Most sequence types support the following operations.  The \samp{in} and
 \samp{not in} operations have the same priorities as the comparison
@@ -1082,11 +1069,11 @@ Additional string operations are defined in standard modules
 \refmodule{re}.\refstmodindex{re}
 
 
-\subsection{XRange Type \label{typesseq-xrange}}
+\subsection{XRange Type \label{typesseq-range}}
 
-The \class{xrange}\obindex{xrange} type is an immutable sequence which
-is commonly used for looping.  The advantage of the \class{xrange}
-type is that an \class{xrange} object will always take the same amount
+The \class{range}\obindex{range} type is an immutable sequence which
+is commonly used for looping.  The advantage of the \class{range}
+type is that an \class{range} object will always take the same amount
 of memory, no matter the size of the range it represents.  There are
 no consistent performance advantages.
 
@@ -1353,16 +1340,6 @@ Note, the non-operator versions of the \method{update()},
 \method{intersection_update()}, \method{difference_update()}, and
 \method{symmetric_difference_update()} methods will accept any iterable
 as an argument.
-
-The design of the set types was based on lessons learned from the
-\module{sets} module.
-     
-\begin{seealso}     
-  \seelink{comparison-to-builtin-set.html}
-          {Comparison to the built-in set types}
-          {Differences between the \module{sets} module and the
-           built-in set types.}					      
-\end{seealso}
      
 
 \section{Mapping Types --- \class{dict} \label{typesmapping}}
@@ -1616,18 +1593,18 @@ finally:
   with a real file, this method should \emph{not} be implemented.}
 \end{methoddesc}
 
-\begin{methoddesc}[file]{next}{}
+\begin{methoddesc}[file]{__next__}{}
 A file object is its own iterator, for example \code{iter(\var{f})} returns
 \var{f} (unless \var{f} is closed).  When a file is used as an
 iterator, typically in a \keyword{for} loop (for example,
-\code{for line in f: print line}), the \method{next()} method is
+\code{for line in f: print line}), the \method{__next__()} method is
 called repeatedly.  This method returns the next input line, or raises
 \exception{StopIteration} when \EOF{} is hit when the file is open for
 reading (behavior is undefined when the file is open for writing).  In
 order to make a \keyword{for} loop the most efficient way of looping
 over the lines of a file (a very common operation), the
-\method{next()} method uses a hidden read-ahead buffer.  As a
-consequence of using a read-ahead buffer, combining \method{next()}
+\method{__next__()} method uses a hidden read-ahead buffer.  As a
+consequence of using a read-ahead buffer, combining \method{__next__()}
 with other file methods (like \method{readline()}) does not work
 right.  However, using \method{seek()} to reposition the file to an
 absolute position will flush the read-ahead buffer.
@@ -1676,12 +1653,6 @@ absolute position will flush the read-ahead buffer.
   internal buffer size) are read.  Objects implementing a file-like
   interface may choose to ignore \var{sizehint} if it cannot be
   implemented, or cannot be implemented efficiently.
-\end{methoddesc}
-
-\begin{methoddesc}[file]{xreadlines}{}
-  This method returns the same thing as \code{iter(f)}.
-  \versionadded{2.1}
-  \deprecated{2.3}{Use \samp{for \var{line} in \var{file}} instead.}
 \end{methoddesc}
 
 \begin{methoddesc}[file]{seek}{offset\optional{, whence}}
@@ -2000,15 +1971,15 @@ Code objects are used by the implementation to represent
 They differ from function objects because they don't contain a
 reference to their global execution environment.  Code objects are
 returned by the built-in \function{compile()} function and can be
-extracted from function objects through their \member{func_code}
+extracted from function objects through their \member{__code__}
 attribute.
 \bifuncindex{compile}
-\withsubitem{(function object attribute)}{\ttindex{func_code}}
+\withsubitem{(function object attribute)}{\ttindex{__code__}}
 
 A code object can be executed or evaluated by passing it (instead of a
-source string) to the \keyword{exec} statement or the built-in
-\function{eval()} function.
-\stindex{exec}
+source string) to the \function{exec()} or \function{eval()} 
+built-in functions.
+\bifuncindex{exec}
 \bifuncindex{eval}
 
 See the \citetitle[../ref/ref.html]{Python Reference Manual} for more
@@ -2038,12 +2009,12 @@ It is written as \code{None}.
 
 \subsection{The Ellipsis Object \label{bltin-ellipsis-object}}
 
-This object is used by extended slice notation (see the
+This object is mostly used by extended slice notation (see the
 \citetitle[../ref/ref.html]{Python Reference Manual}).  It supports no
 special operations.  There is exactly one ellipsis object, named
 \constant{Ellipsis} (a built-in name).
 
-It is written as \code{Ellipsis}.
+It is written as \code{Ellipsis} or \code{...}.
 
 \subsection{Boolean Values}
 

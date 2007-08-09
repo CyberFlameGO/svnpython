@@ -29,18 +29,18 @@ storage.
 
 #------------------------------------------------------------------------
 
-import cPickle
+import pickle
 try:
     from UserDict import DictMixin
 except ImportError:
     # DictMixin is new in Python 2.3
     class DictMixin: pass
-import db
+from . import db
 
 #------------------------------------------------------------------------
 
 
-def open(filename, flags=db.DB_CREATE, mode=0660, filetype=db.DB_HASH,
+def open(filename, flags=db.DB_CREATE, mode=0o660, filetype=db.DB_HASH,
          dbenv=None, dbname=None):
     """
     A simple factory function for compatibility with the standard
@@ -104,11 +104,11 @@ class DBShelf(DictMixin):
 
     def __getitem__(self, key):
         data = self.db[key]
-        return cPickle.loads(data)
+        return pickle.loads(data)
 
 
     def __setitem__(self, key, value):
-        data = cPickle.dumps(value, self.binary)
+        data = pickle.dumps(value, self.binary)
         self.db[key] = data
 
 
@@ -131,7 +131,7 @@ class DBShelf(DictMixin):
         newitems = []
 
         for k, v in items:
-            newitems.append( (k, cPickle.loads(v)) )
+            newitems.append( (k, pickle.loads(v)) )
         return newitems
 
     def values(self, txn=None):
@@ -140,13 +140,13 @@ class DBShelf(DictMixin):
         else:
             values = self.db.values()
 
-        return map(cPickle.loads, values)
+        return map(pickle.loads, values)
 
     #-----------------------------------
     # Other methods
 
     def __append(self, value, txn=None):
-        data = cPickle.dumps(value, self.binary)
+        data = pickle.dumps(value, self.binary)
         return self.db.append(data, txn)
 
     def append(self, value, txn=None):
@@ -158,7 +158,7 @@ class DBShelf(DictMixin):
 
     def associate(self, secondaryDB, callback, flags=0):
         def _shelf_callback(priKey, priData, realCallback=callback):
-            data = cPickle.loads(priData)
+            data = pickle.loads(priData)
             return realCallback(priKey, data)
         return self.db.associate(secondaryDB, _shelf_callback, flags)
 
@@ -169,17 +169,17 @@ class DBShelf(DictMixin):
         # given nothing is passed to the extension module.  That way
         # an exception can be raised if set_get_returns_none is turned
         # off.
-        data = apply(self.db.get, args, kw)
+        data = self.db.get(*args, **kw)
         try:
-            return cPickle.loads(data)
-        except (TypeError, cPickle.UnpicklingError):
+            return pickle.loads(data)
+        except (TypeError, pickle.UnpicklingError, EOFError):
             return data  # we may be getting the default value, or None,
                          # so it doesn't need unpickled.
 
     def get_both(self, key, value, txn=None, flags=0):
-        data = cPickle.dumps(value, self.binary)
+        data = pickle.dumps(value, self.binary)
         data = self.db.get(key, data, txn, flags)
-        return cPickle.loads(data)
+        return pickle.loads(data)
 
 
     def cursor(self, txn=None, flags=0):
@@ -189,12 +189,16 @@ class DBShelf(DictMixin):
 
 
     def put(self, key, value, txn=None, flags=0):
-        data = cPickle.dumps(value, self.binary)
+        data = pickle.dumps(value, self.binary)
         return self.db.put(key, data, txn, flags)
 
 
     def join(self, cursorList, flags=0):
         raise NotImplementedError
+
+
+    def __contains__(self, key):
+        return self.db.has_key(key)
 
 
     #----------------------------------------------
@@ -229,14 +233,14 @@ class DBShelfCursor:
 
 
     def put(self, key, value, flags=0):
-        data = cPickle.dumps(value, self.binary)
+        data = pickle.dumps(value, self.binary)
         return self.dbc.put(key, data, flags)
 
 
     def get(self, *args):
         count = len(args)  # a method overloading hack
         method = getattr(self, 'get_%d' % count)
-        apply(method, args)
+        method(*args)
 
     def get_1(self, flags):
         rec = self.dbc.get(flags)
@@ -247,7 +251,7 @@ class DBShelfCursor:
         return self._extract(rec)
 
     def get_3(self, key, value, flags):
-        data = cPickle.dumps(value, self.binary)
+        data = pickle.dumps(value, self.binary)
         rec = self.dbc.get(key, flags)
         return self._extract(rec)
 
@@ -264,7 +268,7 @@ class DBShelfCursor:
 
 
     def get_both(self, key, value, flags=0):
-        data = cPickle.dumps(value, self.binary)
+        data = pickle.dumps(value, self.binary)
         rec = self.dbc.get_both(key, flags)
         return self._extract(rec)
 
@@ -288,7 +292,7 @@ class DBShelfCursor:
             return None
         else:
             key, data = rec
-            return key, cPickle.loads(data)
+            return key, pickle.loads(data)
 
     #----------------------------------------------
     # Methods allowed to pass-through to self.dbc

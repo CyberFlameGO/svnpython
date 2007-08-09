@@ -19,9 +19,9 @@ configuration problem notification and resolution.
 """
 import os
 import sys
-import string
-import macosxSupport
-from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+
+from . import macosxSupport
+from .ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
 class InvalidConfigType(Exception): pass
 class InvalidConfigSet(Exception): pass
@@ -632,7 +632,7 @@ class IdleConf:
                 menuItem='' #make these empty
                 helpPath='' #so value won't be added to list
             else: #config entry contains ';' as expected
-                value=string.split(value,';')
+                value=value.split(';')
                 menuItem=value[0].strip()
                 helpPath=value[1].strip()
             if menuItem and helpPath: #neither are empty strings
@@ -678,18 +678,18 @@ idleConf=IdleConf()
 ### module test
 if __name__ == '__main__':
     def dumpCfg(cfg):
-        print '\n',cfg,'\n'
+        print('\n',cfg,'\n')
         for key in cfg.keys():
             sections=cfg[key].sections()
-            print key
-            print sections
+            print(key)
+            print(sections)
             for section in sections:
                 options=cfg[key].options(section)
-                print section
-                print options
+                print(section)
+                print(options)
                 for option in options:
-                    print option, '=', cfg[key].Get(section,option)
+                    print(option, '=', cfg[key].Get(section,option))
     dumpCfg(idleConf.defaultCfg)
     dumpCfg(idleConf.userCfg)
-    print idleConf.userCfg['main'].Get('Theme','name')
+    print(idleConf.userCfg['main'].Get('Theme','name'))
     #print idleConf.userCfg['highlight'].GetDefHighlight('Foo','normal')

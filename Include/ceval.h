@@ -33,14 +33,11 @@ PyAPI_FUNC(PyObject *) PyEval_GetBuiltins(void);
 PyAPI_FUNC(PyObject *) PyEval_GetGlobals(void);
 PyAPI_FUNC(PyObject *) PyEval_GetLocals(void);
 PyAPI_FUNC(struct _frame *) PyEval_GetFrame(void);
-PyAPI_FUNC(int) PyEval_GetRestricted(void);
 
 /* Look at the current frame's (if any) code's co_flags, and turn on
    the corresponding compiler flags in cf->cf_flags.  Return 1 if any
    flag was set, else return 0. */
 PyAPI_FUNC(int) PyEval_MergeCompilerFlags(PyCompilerFlags *cf);
-
-PyAPI_FUNC(int) Py_FlushLine(void);
 
 PyAPI_FUNC(int) Py_AddPendingCall(int (*func)(void *), void *arg);
 PyAPI_FUNC(int) Py_MakePendingCalls(void);
@@ -53,7 +50,10 @@ PyAPI_FUNC(int) Py_GetRecursionLimit(void);
 	    (_Py_MakeRecCheck(PyThreadState_GET()->recursion_depth) &&  \
 	     _Py_CheckRecursiveCall(where))
 #define Py_LeaveRecursiveCall()				\
-	    (--PyThreadState_GET()->recursion_depth)
+    do{ if((--PyThreadState_GET()->recursion_depth) <   \
+	   _Py_CheckRecursionLimit - 50);               \
+	  PyThreadState_GET()->overflowed = 0;          \
+    } while(0)
 PyAPI_FUNC(int) _Py_CheckRecursiveCall(char *where);
 PyAPI_DATA(int) _Py_CheckRecursionLimit;
 #ifdef USE_STACKCHECK
@@ -61,6 +61,14 @@ PyAPI_DATA(int) _Py_CheckRecursionLimit;
 #else
 #  define _Py_MakeRecCheck(x)  (++(x) > _Py_CheckRecursionLimit)
 #endif
+
+#define Py_ALLOW_RECURSION \
+  do { unsigned char _old = PyThreadState_GET()->recursion_critical;\
+    PyThreadState_GET()->recursion_critical = 1;
+
+#define Py_END_ALLOW_RECURSION \
+    PyThreadState_GET()->recursion_critical = _old; \
+  } while(0);
 
 PyAPI_FUNC(const char *) PyEval_GetFuncName(PyObject *);
 PyAPI_FUNC(const char *) PyEval_GetFuncDesc(PyObject *);

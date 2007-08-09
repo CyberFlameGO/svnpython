@@ -101,21 +101,21 @@ def setup (**attrs):
     else:
         klass = Distribution
 
-    if not attrs.has_key('script_name'):
+    if 'script_name' not in attrs:
         attrs['script_name'] = os.path.basename(sys.argv[0])
-    if not attrs.has_key('script_args'):
+    if 'script_args'  not in attrs:
         attrs['script_args'] = sys.argv[1:]
 
     # Create the Distribution instance, using the remaining arguments
     # (ie. everything except distclass) to initialize it
     try:
         _setup_distribution = dist = klass(attrs)
-    except DistutilsSetupError, msg:
-        if attrs.has_key('name'):
+    except DistutilsSetupError as msg:
+        if 'name' not in attrs:
+            raise SystemExit, "error in setup command: %s" % msg
+        else:
             raise SystemExit, "error in %s setup command: %s" % \
                   (attrs['name'], msg)
-        else:
-            raise SystemExit, "error in setup command: %s" % msg
 
     if _setup_stop_after == "init":
         return dist
@@ -125,7 +125,7 @@ def setup (**attrs):
     dist.parse_config_files()
 
     if DEBUG:
-        print "options (after parsing config files):"
+        print("options (after parsing config files):")
         dist.dump_option_dicts()
 
     if _setup_stop_after == "config":
@@ -135,11 +135,11 @@ def setup (**attrs):
     # fault, so turn them into SystemExit to suppress tracebacks.
     try:
         ok = dist.parse_command_line()
-    except DistutilsArgError, msg:
+    except DistutilsArgError as msg:
         raise SystemExit, gen_usage(dist.script_name) + "\nerror: %s" % msg
 
     if DEBUG:
-        print "options (after parsing command line):"
+        print("options (after parsing command line):")
         dist.dump_option_dicts()
 
     if _setup_stop_after == "commandline":
@@ -151,7 +151,7 @@ def setup (**attrs):
             dist.run_commands()
         except KeyboardInterrupt:
             raise SystemExit, "interrupted"
-        except (IOError, os.error), exc:
+        except (IOError, os.error) as exc:
             error = grok_environment_error(exc)
 
             if DEBUG:
@@ -161,7 +161,7 @@ def setup (**attrs):
                 raise SystemExit, error
 
         except (DistutilsError,
-                CCompilerError), msg:
+                CCompilerError) as msg:
             if DEBUG:
                 raise
             else:

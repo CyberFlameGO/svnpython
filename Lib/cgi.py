@@ -41,10 +41,7 @@ import urllib
 import mimetools
 import rfc822
 import UserDict
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO
 
 __all__ = ["MiniFieldStorage", "FieldStorage", "FormContentDict",
            "SvFormContentDict", "InterpFormContentDict", "FormContent",
@@ -575,7 +572,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return [x.value for x in value]
             else:
                 return value.value
         else:
@@ -597,7 +594,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return [x.value for x in value]
             else:
                 return [value.value]
         else:
@@ -611,14 +608,6 @@ class FieldStorage:
         for item in self.list:
             if item.name not in keys: keys.append(item.name)
         return keys
-
-    def has_key(self, key):
-        """Dictionary style has_key() method."""
-        if self.list is None:
-            raise TypeError, "not indexable"
-        for item in self.list:
-            if item.name == key: return True
-        return False
 
     def __contains__(self, key):
         """Dictionary style __contains__ method."""
@@ -909,8 +898,8 @@ def test(environ=os.environ):
     the script in HTML form.
 
     """
-    print "Content-type: text/html"
-    print
+    print("Content-type: text/html")
+    print()
     sys.stderr = sys.stdout
     try:
         form = FieldStorage()   # Replace with other classes to test those
@@ -920,15 +909,15 @@ def test(environ=os.environ):
         print_environ(environ)
         print_environ_usage()
         def f():
-            exec "testing print_exception() -- <I>italics?</I>"
+            exec("testing print_exception() -- <I>italics?</I>")
         def g(f=f):
             f()
-        print "<H3>What follows is a test, not an actual exception:</H3>"
+        print("<H3>What follows is a test, not an actual exception:</H3>")
         g()
     except:
         print_exception()
 
-    print "<H1>Second try with a small maxlen...</H1>"
+    print("<H1>Second try with a small maxlen...</H1>")
 
     global maxlen
     maxlen = 50
@@ -945,67 +934,67 @@ def print_exception(type=None, value=None, tb=None, limit=None):
     if type is None:
         type, value, tb = sys.exc_info()
     import traceback
-    print
-    print "<H3>Traceback (most recent call last):</H3>"
+    print()
+    print("<H3>Traceback (most recent call last):</H3>")
     list = traceback.format_tb(tb, limit) + \
            traceback.format_exception_only(type, value)
-    print "<PRE>%s<B>%s</B></PRE>" % (
+    print("<PRE>%s<B>%s</B></PRE>" % (
         escape("".join(list[:-1])),
         escape(list[-1]),
-        )
+        ))
     del tb
 
 def print_environ(environ=os.environ):
     """Dump the shell environment as HTML."""
     keys = environ.keys()
     keys.sort()
-    print
-    print "<H3>Shell Environment:</H3>"
-    print "<DL>"
+    print()
+    print("<H3>Shell Environment:</H3>")
+    print("<DL>")
     for key in keys:
-        print "<DT>", escape(key), "<DD>", escape(environ[key])
-    print "</DL>"
-    print
+        print("<DT>", escape(key), "<DD>", escape(environ[key]))
+    print("</DL>")
+    print()
 
 def print_form(form):
     """Dump the contents of a form as HTML."""
     keys = form.keys()
     keys.sort()
-    print
-    print "<H3>Form Contents:</H3>"
+    print()
+    print("<H3>Form Contents:</H3>")
     if not keys:
-        print "<P>No form fields."
-    print "<DL>"
+        print("<P>No form fields.")
+    print("<DL>")
     for key in keys:
-        print "<DT>" + escape(key) + ":",
+        print("<DT>" + escape(key) + ":", end=' ')
         value = form[key]
-        print "<i>" + escape(repr(type(value))) + "</i>"
-        print "<DD>" + escape(repr(value))
-    print "</DL>"
-    print
+        print("<i>" + escape(repr(type(value))) + "</i>")
+        print("<DD>" + escape(repr(value)))
+    print("</DL>")
+    print()
 
 def print_directory():
     """Dump the current directory as HTML."""
-    print
-    print "<H3>Current Working Directory:</H3>"
+    print()
+    print("<H3>Current Working Directory:</H3>")
     try:
         pwd = os.getcwd()
-    except os.error, msg:
-        print "os.error:", escape(str(msg))
+    except os.error as msg:
+        print("os.error:", escape(str(msg)))
     else:
-        print escape(pwd)
-    print
+        print(escape(pwd))
+    print()
 
 def print_arguments():
-    print
-    print "<H3>Command Line Arguments:</H3>"
-    print
-    print sys.argv
-    print
+    print()
+    print("<H3>Command Line Arguments:</H3>")
+    print()
+    print(sys.argv)
+    print()
 
 def print_environ_usage():
     """Dump a list of environment variables used by CGI as HTML."""
-    print """
+    print("""
 <H3>These environment variables could have been set:</H3>
 <UL>
 <LI>AUTH_TYPE
@@ -1044,7 +1033,7 @@ environment as well.  Here are some common variable names:
 <LI>HTTP_REFERER
 <LI>HTTP_USER_AGENT
 </UL>
-"""
+""")
 
 
 # Utilities

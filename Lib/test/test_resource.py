@@ -70,7 +70,7 @@ class ResourceTest(unittest.TestCase):
 
     def test_fsize_toobig(self):
         # Be sure that setrlimit is checking for really large values
-        too_big = 10L**50
+        too_big = 10**50
         try:
             (cur, max) = resource.getrlimit(resource.RLIMIT_FSIZE)
         except AttributeError:

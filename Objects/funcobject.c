@@ -24,6 +24,7 @@ PyFunction_New(PyObject *code, PyObject *globals)
 		op->func_name = ((PyCodeObject *)code)->co_name;
 		Py_INCREF(op->func_name);
 		op->func_defaults = NULL; /* No default arguments */
+		op->func_kwdefaults = NULL; /* No keyword only defaults */
 		op->func_closure = NULL;
 		consts = ((PyCodeObject *)code)->co_consts;
 		if (PyTuple_Size(consts) >= 1) {
@@ -37,6 +38,7 @@ PyFunction_New(PyObject *code, PyObject *globals)
 		op->func_doc = doc;
 		op->func_dict = NULL;
 		op->func_module = NULL;
+		op->func_annotations = NULL;
 
 		/* __module__: If module name is in globals, use it.
 		   Otherwise, use None.
@@ -122,6 +124,38 @@ PyFunction_SetDefaults(PyObject *op, PyObject *defaults)
 }
 
 PyObject *
+PyFunction_GetKwDefaults(PyObject *op)
+{
+	if (!PyFunction_Check(op)) {
+		PyErr_BadInternalCall();
+		return NULL;
+	}
+	return ((PyFunctionObject *) op) -> func_kwdefaults;
+}
+
+int
+PyFunction_SetKwDefaults(PyObject *op, PyObject *defaults)
+{
+	if (!PyFunction_Check(op)) {
+		PyErr_BadInternalCall();
+		return -1;
+	}
+	if (defaults == Py_None)
+		defaults = NULL;
+	else if (defaults && PyDict_Check(defaults)) {
+		Py_INCREF(defaults);
+	}
+	else {
+		PyErr_SetString(PyExc_SystemError,
+				"non-dict keyword only default args");
+		return -1;
+	}
+	Py_XDECREF(((PyFunctionObject *)op) -> func_kwdefaults);
+	((PyFunctionObject *) op) -> func_kwdefaults = defaults;
+	return 0;
+}
+
+PyObject *
 PyFunction_GetClosure(PyObject *op)
 {
 	if (!PyFunction_Check(op)) {
@@ -154,40 +188,55 @@ PyFunction_SetClosure(PyObject *op, PyObject *closure)
 	return 0;
 }
 
+PyObject *
+PyFunction_GetAnnotations(PyObject *op)
+{
+	if (!PyFunction_Check(op)) {
+		PyErr_BadInternalCall();
+		return NULL;
+	}
+	return ((PyFunctionObject *) op) -> func_annotations;
+}
+
+int
+PyFunction_SetAnnotations(PyObject *op, PyObject *annotations)
+{
+	if (!PyFunction_Check(op)) {
+		PyErr_BadInternalCall();
+		return -1;
+	}
+	if (annotations == Py_None)
+		annotations = NULL;
+	else if (annotations && PyDict_Check(annotations)) {
+		Py_INCREF(annotations);
+	}
+	else {
+		PyErr_SetString(PyExc_SystemError,
+				"non-dict annotations");
+		return -1;
+	}
+	Py_XDECREF(((PyFunctionObject *)op) -> func_annotations);
+	((PyFunctionObject *) op) -> func_annotations = annotations;
+	return 0;
+}
+
 /* Methods */
 
 #define OFF(x) offsetof(PyFunctionObject, x)
 
 static PyMemberDef func_memberlist[] = {
-        {"func_closure",  T_OBJECT,     OFF(func_closure),
+        {"__closure__",   T_OBJECT,     OFF(func_closure),
 	 RESTRICTED|READONLY},
-        {"__closure__",  T_OBJECT,      OFF(func_closure),
-	 RESTRICTED|READONLY},
-        {"func_doc",      T_OBJECT,     OFF(func_doc), WRITE_RESTRICTED},
         {"__doc__",       T_OBJECT,     OFF(func_doc), WRITE_RESTRICTED},
-        {"func_globals",  T_OBJECT,     OFF(func_globals),
-	 RESTRICTED|READONLY},
-        {"__globals__",  T_OBJECT,      OFF(func_globals),
+        {"__globals__",   T_OBJECT,     OFF(func_globals),
 	 RESTRICTED|READONLY},
         {"__module__",    T_OBJECT,     OFF(func_module), WRITE_RESTRICTED},
         {NULL}  /* Sentinel */
 };
 
-static int
-restricted(void)
-{
-	if (!PyEval_GetRestricted())
-		return 0;
-	PyErr_SetString(PyExc_RuntimeError,
-		"function attributes not accessible in restricted mode");
-	return 1;
-}
-
 static PyObject *
 func_get_dict(PyFunctionObject *op)
 {
-	if (restricted())
-		return NULL;
 	if (op->func_dict == NULL) {
 		op->func_dict = PyDict_New();
 		if (op->func_dict == NULL)
@@ -202,8 +251,6 @@ func_set_dict(PyFunctionObject *op, PyObject *value)
 {
 	PyObject *tmp;
 
-	if (restricted())
-		return -1;
 	/* It is illegal to del f.func_dict */
 	if (value == NULL) {
 		PyErr_SetString(PyExc_TypeError,
@@ -226,8 +273,6 @@ func_set_dict(PyFunctionObject *op, PyObject *value)
 static PyObject *
 func_get_code(PyFunctionObject *op)
 {
-	if (restricted())
-		return NULL;
 	Py_INCREF(op->func_code);
 	return op->func_code;
 }
@@ -238,8 +283,6 @@ func_set_code(PyFunctionObject *op, PyObject *value)
 	PyObject *tmp;
 	Py_ssize_t nfree, nclosure;
 
-	if (restricted())
-		return -1;
 	/* Not legal to del f.func_code or to set it to anything
 	 * other than a code object. */
 	if (value == NULL || !PyCode_Check(value)) {
@@ -277,11 +320,9 @@ func_set_name(PyFunctionObject *op, PyObject *value)
 {
 	PyObject *tmp;
 
-	if (restricted())
-		return -1;
 	/* Not legal to del f.func_name or to set it to anything
 	 * other than a string object. */
-	if (value == NULL || !PyString_Check(value)) {
+	if (value == NULL || (!PyString_Check(value) && !PyUnicode_Check(value))) {
 		PyErr_SetString(PyExc_TypeError,
 				"__name__ must be set to a string object");
 		return -1;
@@ -296,8 +337,6 @@ func_set_name(PyFunctionObject *op, PyObject *value)
 static PyObject *
 func_get_defaults(PyFunctionObject *op)
 {
-	if (restricted())
-		return NULL;
 	if (op->func_defaults == NULL) {
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -311,8 +350,6 @@ func_set_defaults(PyFunctionObject *op, PyObject *value)
 {
 	PyObject *tmp;
 
-	if (restricted())
-		return -1;
 	/* Legal to del f.func_defaults.
 	 * Can only set func_defaults to NULL or a tuple. */
 	if (value == Py_None)
@@ -329,16 +366,81 @@ func_set_defaults(PyFunctionObject *op, PyObject *value)
 	return 0;
 }
 
+static PyObject *
+func_get_kwdefaults(PyFunctionObject *op)
+{
+	if (op->func_kwdefaults == NULL) {
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	Py_INCREF(op->func_kwdefaults);
+	return op->func_kwdefaults;
+}
+
+static int
+func_set_kwdefaults(PyFunctionObject *op, PyObject *value)
+{
+	PyObject *tmp;
+
+	if (value == Py_None)
+		value = NULL;
+	/* Legal to del f.func_kwdefaults.
+	 * Can only set func_kwdefaults to NULL or a dict. */
+	if (value != NULL && !PyDict_Check(value)) {
+		PyErr_SetString(PyExc_TypeError,
+			"__kwdefaults__ must be set to a dict object");
+		return -1;
+	}
+	tmp = op->func_kwdefaults;
+	Py_XINCREF(value);
+	op->func_kwdefaults = value;
+	Py_XDECREF(tmp);
+	return 0;
+}
+
+static PyObject *
+func_get_annotations(PyFunctionObject *op)
+{
+	if (op->func_annotations == NULL) {
+		op->func_annotations = PyDict_New();
+		if (op->func_annotations == NULL)
+			return NULL;
+	}
+	Py_INCREF(op->func_annotations);
+	return op->func_annotations;
+}
+
+static int
+func_set_annotations(PyFunctionObject *op, PyObject *value)
+{
+	PyObject *tmp;
+
+	if (value == Py_None)
+		value = NULL;
+	/* Legal to del f.func_annotations.
+	 * Can only set func_annotations to NULL (through C api)
+	 * or a dict. */
+	if (value != NULL && !PyDict_Check(value)) {
+		PyErr_SetString(PyExc_TypeError,
+			"__annotations__ must be set to a dict object");
+		return -1;
+	}
+	tmp = op->func_annotations;
+	Py_XINCREF(value);
+	op->func_annotations = value;
+	Py_XDECREF(tmp);
+	return 0;
+}
+
 static PyGetSetDef func_getsetlist[] = {
-        {"func_code", (getter)func_get_code, (setter)func_set_code},
         {"__code__", (getter)func_get_code, (setter)func_set_code},
-        {"func_defaults", (getter)func_get_defaults,
-	 (setter)func_set_defaults},
         {"__defaults__", (getter)func_get_defaults,
 	 (setter)func_set_defaults},
-	{"func_dict", (getter)func_get_dict, (setter)func_set_dict},
+	{"__kwdefaults__", (getter)func_get_kwdefaults,
+	 (setter)func_set_kwdefaults},
+	{"__annotations__", (getter)func_get_annotations,
+	 (setter)func_set_annotations},
 	{"__dict__", (getter)func_get_dict, (setter)func_set_dict},
-	{"func_name", (getter)func_get_name, (setter)func_set_name},
 	{"__name__", (getter)func_get_name, (setter)func_set_name},
 	{NULL} /* Sentinel */
 };
@@ -380,6 +482,11 @@ func_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 			      &PyDict_Type, &globals,
 			      &name, &defaults, &closure))
 		return NULL;
+        if (PyUnicode_Check(name)) {
+		name = _PyUnicode_AsDefaultEncodedString(name, NULL);
+		if (name == NULL)
+			return NULL;
+	}
 	if (name != Py_None && !PyString_Check(name)) {
 		PyErr_SetString(PyExc_TypeError,
 				"arg 3 (name) must be None or string");
@@ -408,9 +515,8 @@ func_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 	nclosure = closure == Py_None ? 0 : PyTuple_GET_SIZE(closure);
 	if (nfree != nclosure)
 		return PyErr_Format(PyExc_ValueError,
-				    "%s requires closure of length %zd, not %zd",
-				    PyString_AS_STRING(code->co_name),
-				    nfree, nclosure);
+		                    "%U requires closure of length %zd, not %zd",
+		                    code->co_name, nfree, nclosure);
 	if (nclosure) {
 		Py_ssize_t i;
 		for (i = 0; i < nclosure; i++) {
@@ -456,16 +562,18 @@ func_dealloc(PyFunctionObject *op)
 	Py_XDECREF(op->func_module);
 	Py_DECREF(op->func_name);
 	Py_XDECREF(op->func_defaults);
+	Py_XDECREF(op->func_kwdefaults);
 	Py_XDECREF(op->func_doc);
 	Py_XDECREF(op->func_dict);
 	Py_XDECREF(op->func_closure);
+	Py_XDECREF(op->func_annotations);
 	PyObject_GC_Del(op);
 }
 
 static PyObject*
 func_repr(PyFunctionObject *op)
 {
-	return PyString_FromFormat("<function %s at %p>",
+	return PyUnicode_FromFormat("<function %s at %p>",
 				   PyString_AsString(op->func_name),
 				   op);
 }
@@ -477,10 +585,12 @@ func_traverse(PyFunctionObject *f, visitproc visit, void *arg)
 	Py_VISIT(f->func_globals);
 	Py_VISIT(f->func_module);
 	Py_VISIT(f->func_defaults);
+	Py_VISIT(f->func_kwdefaults);
 	Py_VISIT(f->func_doc);
 	Py_VISIT(f->func_name);
 	Py_VISIT(f->func_dict);
 	Py_VISIT(f->func_closure);
+	Py_VISIT(f->func_annotations);
 	return 0;
 }
 
@@ -526,6 +636,7 @@ function_call(PyObject *func, PyObject *arg, PyObject *kw)
 		PyFunction_GET_GLOBALS(func), (PyObject *)NULL,
 		&PyTuple_GET_ITEM(arg, 0), PyTuple_Size(arg),
 		k, nk, d, nd,
+		PyFunction_GET_KW_DEFAULTS(func),
 		PyFunction_GET_CLOSURE(func));
 
 	if (k != NULL)

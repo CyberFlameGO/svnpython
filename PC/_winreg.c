@@ -305,7 +305,7 @@ PyDoc_STRVAR(PyHKEY_doc,
 "handle - The integer Win32 handle.\n"
 "\n"
 "Operations:\n"
-"__nonzero__ - Handles with an open object return true, otherwise false.\n"
+"__bool__ - Handles with an open object return true, otherwise false.\n"
 "__int__ - Converting a handle to an integer returns the Win32 handle.\n"
 "__cmp__ - Handle objects are compared using the handle value.");
 
@@ -375,7 +375,7 @@ PyHKEY_deallocFunc(PyObject *ob)
 }
 
 static int
-PyHKEY_nonzeroFunc(PyObject *ob)
+PyHKEY_boolFunc(PyObject *ob)
 {
 	return ((PyHKEYObject *)ob)->hkey != 0;
 }
@@ -387,24 +387,13 @@ PyHKEY_intFunc(PyObject *ob)
 	return PyLong_FromVoidPtr(pyhkey->hkey);
 }
 
-static int
-PyHKEY_printFunc(PyObject *ob, FILE *fp, int flags)
-{
-	PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
-	char resBuf[160];
-	wsprintf(resBuf, "<PyHKEY at %p (%p)>",
-		 ob, pyhkey->hkey);
-	fputs(resBuf, fp);
-	return 0;
-}
-
 static PyObject *
 PyHKEY_strFunc(PyObject *ob)
 {
 	PyHKEYObject *pyhkey = (PyHKEYObject *)ob;
 	char resBuf[160];
 	wsprintf(resBuf, "<PyHKEY:%p>", pyhkey->hkey);
-	return PyString_FromString(resBuf);
+	return PyUnicode_FromString(resBuf);
 }
 
 static int
@@ -431,21 +420,20 @@ static PyNumberMethods PyHKEY_NumberMethods =
 	PyHKEY_binaryFailureFunc,	/* nb_add */
 	PyHKEY_binaryFailureFunc,	/* nb_subtract */
 	PyHKEY_binaryFailureFunc,	/* nb_multiply */
-	PyHKEY_binaryFailureFunc,	/* nb_divide */
 	PyHKEY_binaryFailureFunc,	/* nb_remainder */
 	PyHKEY_binaryFailureFunc,	/* nb_divmod */
 	PyHKEY_ternaryFailureFunc,	/* nb_power */
 	PyHKEY_unaryFailureFunc,	/* nb_negative */
 	PyHKEY_unaryFailureFunc,	/* nb_positive */
 	PyHKEY_unaryFailureFunc,	/* nb_absolute */
-	PyHKEY_nonzeroFunc,		/* nb_nonzero */
+	PyHKEY_boolFunc,		/* nb_bool */
 	PyHKEY_unaryFailureFunc,	/* nb_invert */
 	PyHKEY_binaryFailureFunc,	/* nb_lshift */
 	PyHKEY_binaryFailureFunc,	/* nb_rshift */
 	PyHKEY_binaryFailureFunc,	/* nb_and */
 	PyHKEY_binaryFailureFunc,	/* nb_xor */
 	PyHKEY_binaryFailureFunc,	/* nb_or */
-	0,		/* nb_coerce (allowed to be zero) */
+	NULL,				/* nb_coerce */
 	PyHKEY_intFunc,			/* nb_int */
 	PyHKEY_unaryFailureFunc,	/* nb_long */
 	PyHKEY_unaryFailureFunc,	/* nb_float */
@@ -465,7 +453,7 @@ PyTypeObject PyHKEY_Type =
 	sizeof(PyHKEYObject),
 	0,
 	PyHKEY_deallocFunc,		/* tp_dealloc */
-	PyHKEY_printFunc,		/* tp_print */
+	0,				/* tp_print */
 	PyHKEY_getattr,			/* tp_getattr */
 	0,				/* tp_setattr */
 	PyHKEY_compareFunc,		/* tp_compare */
@@ -694,9 +682,10 @@ static BOOL
 Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 {
 	int i,j;
+	DWORD d;
 	switch (typ) {
 		case REG_DWORD:
-			if (value != Py_None && !PyInt_Check(value))
+			if (value != Py_None && !PyLong_Check(value))
 				return FALSE;
 			*retDataBuf = (BYTE *)PyMem_NEW(DWORD, 1);
 			if (*retDataBuf==NULL){
@@ -708,10 +697,10 @@ Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 				DWORD zero = 0;
 				memcpy(*retDataBuf, &zero, sizeof(DWORD));
 			}
-			else
-				memcpy(*retDataBuf,
-				       &PyInt_AS_LONG((PyIntObject *)value),
-				       sizeof(DWORD));
+			else {
+				d = PyLong_AsLong(value);
+				memcpy(*retDataBuf, &d, sizeof(DWORD));
+			}
 			break;
 		case REG_SZ:
 		case REG_EXPAND_SZ:
@@ -729,11 +718,10 @@ Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 						return FALSE;
 					need_decref = 1;
 				}
-				if (!PyString_Check(value))
+				if (!PyBytes_Check(value))
 					return FALSE;
 				*retDataSize = 1 + strlen(
-					PyString_AS_STRING(
-						(PyStringObject *)value));
+					PyBytes_AS_STRING(value));
 			}
 			*retDataBuf = (BYTE *)PyMem_NEW(DWORD, *retDataSize);
 			if (*retDataBuf==NULL){
@@ -744,8 +732,7 @@ Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 				strcpy((char *)*retDataBuf, "");
 			else
 				strcpy((char *)*retDataBuf,
-				       PyString_AS_STRING(
-				       		(PyStringObject *)value));
+				       PyBytes_AS_STRING(value));
 			if (need_decref)
 				Py_DECREF(value);
 			break;
@@ -770,7 +757,7 @@ Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 					PyObject *t;
 					t = PyList_GET_ITEM(
 						(PyListObject *)value,j);
-					if (PyString_Check(t)) {
+					if (PyBytes_Check(t)) {
 						obs[j] = t;
 						Py_INCREF(t);
 					} else if (PyUnicode_Check(t)) {
@@ -783,8 +770,7 @@ Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 					} else
 						goto reg_multi_fail;
 					size += 1 + strlen(
-						PyString_AS_STRING(
-							(PyStringObject *)obs[j]));
+						PyBytes_AS_STRING(obs[j]));
 				}
 
 				*retDataSize = size + 1;
@@ -800,12 +786,9 @@ Py2Reg(PyObject *value, DWORD typ, BYTE **retDataBuf, DWORD *retDataSize)
 				{
 					PyObject *t;
 					t = obs[j];
-					strcpy(P,
-					       PyString_AS_STRING(
-					       		(PyStringObject *)t));
+					strcpy(P, PyBytes_AS_STRING(t));
 					P += 1 + strlen(
-						PyString_AS_STRING(
-							(PyStringObject *)t));
+						PyBytes_AS_STRING(t));
 					Py_DECREF(obs[j]);
 				}
 				/* And doubly-terminate the list... */
@@ -922,7 +905,7 @@ Reg2Py(char *retDataBuf, DWORD retDataSize, DWORD typ)
 				obData = Py_None;
 			}
 			else
-				obData = Py_BuildValue("s#",
+				obData = Py_BuildValue("y#",
 					 	       (char *)retDataBuf,
 					 	       retDataSize);
 			break;
@@ -1047,7 +1030,7 @@ PyEnumKey(PyObject *self, PyObject *args)
 	if (rc != ERROR_SUCCESS)
 		return PyErr_SetFromWindowsErrWithFunction(rc, "RegEnumKeyEx");
 
-	retStr = PyString_FromStringAndSize(tmpbuf, len);
+	retStr = PyUnicode_FromStringAndSize(tmpbuf, len);
 	return retStr;  /* can be NULL */
 }
 
@@ -1109,7 +1092,7 @@ PyEnumValue(PyObject *self, PyObject *args)
 		retVal = NULL;
 		goto fail;
 	}
-	retVal = Py_BuildValue("sOi", retValueBuf, obData, typ);
+	retVal = Py_BuildValue("UOi", retValueBuf, obData, typ);
 	Py_DECREF(obData);
   fail:
 	PyMem_Free(retValueBuf);
@@ -1232,17 +1215,19 @@ PyQueryValue(PyObject *self, PyObject *args)
 	    != ERROR_SUCCESS)
 		return PyErr_SetFromWindowsErrWithFunction(rc,
 							   "RegQueryValue");
-	retStr = PyString_FromStringAndSize(NULL, bufSize);
-	if (retStr == NULL)
-		return NULL;
-	retBuf = PyString_AS_STRING(retStr);
+	retBuf = (char *)PyMem_Malloc(bufSize);
+	if (retBuf == NULL)
+		return PyErr_NoMemory();
+
 	if ((rc = RegQueryValue(hKey, subKey, retBuf, &bufSize))
 	    != ERROR_SUCCESS) {
-		Py_DECREF(retStr);
+		PyMem_Free(retBuf);
 		return PyErr_SetFromWindowsErrWithFunction(rc,
 							   "RegQueryValue");
 	}
-	_PyString_Resize(&retStr, strlen(retBuf));
+
+	retStr = PyUnicode_DecodeMBCS(retBuf, strlen(retBuf), NULL);
+	PyMem_Free(retBuf);
 	return retStr;
 }
 
@@ -1454,7 +1439,7 @@ PyMODINIT_FUNC init_winreg(void)
 	if (m == NULL)
 		return;
 	d = PyModule_GetDict(m);
-	PyHKEY_Type.ob_type = &PyType_Type;
+	Py_Type(&PyHKEY_Type) = &PyType_Type;
 	PyHKEY_Type.tp_doc = PyHKEY_doc;
 	Py_INCREF(&PyHKEY_Type);
 	if (PyDict_SetItemString(d, "HKEYType",

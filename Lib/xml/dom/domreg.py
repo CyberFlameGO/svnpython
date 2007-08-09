@@ -57,7 +57,7 @@ def getDOMImplementation(name = None, features = ()):
         return mod.getDOMImplementation()
     elif name:
         return registered[name]()
-    elif os.environ.has_key("PYTHON_DOM"):
+    elif "PYTHON_DOM" in os.environ:
         return getDOMImplementation(name = os.environ["PYTHON_DOM"])
 
     # User did not specify a name, try implementations in arbitrary
@@ -72,7 +72,7 @@ def getDOMImplementation(name = None, features = ()):
     for creator in well_known_implementations.keys():
         try:
             dom = getDOMImplementation(name = creator)
-        except StandardError: # typically ImportError, or AttributeError
+        except Exception: # typically ImportError, or AttributeError
             continue
         if _good_enough(dom, features):
             return dom

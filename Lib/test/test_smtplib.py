@@ -3,7 +3,7 @@ import socket
 import threading
 import smtpd
 import smtplib
-import StringIO
+import io
 import sys
 import time
 import select
@@ -158,7 +158,7 @@ class DebuggingServerTests(TestCase):
     def setUp(self):
         # temporarily replace sys.stdout to capture DebuggingServer output
         self.old_stdout = sys.stdout
-        self.output = StringIO.StringIO()
+        self.output = io.StringIO()
         sys.stdout = self.output
 
         self.serv_evt = threading.Event()
@@ -191,13 +191,13 @@ class DebuggingServerTests(TestCase):
 
     def testEHLO(self):
         smtp = smtplib.SMTP(HOST, PORT, local_hostname='localhost', timeout=3)
-        expected = (502, 'Error: command "EHLO" not implemented')
+        expected = (502, b'Error: command "EHLO" not implemented')
         self.assertEqual(smtp.ehlo(), expected)
         smtp.quit()
 
     def testHELP(self):
         smtp = smtplib.SMTP(HOST, PORT, local_hostname='localhost', timeout=3)
-        self.assertEqual(smtp.help(), 'Error: command "HELP" not implemented')
+        self.assertEqual(smtp.help(), b'Error: command "HELP" not implemented')
         smtp.quit()
 
     def testSend(self):
@@ -218,11 +218,11 @@ class BadHELOServerTests(TestCase):
 
     def setUp(self):
         self.old_stdout = sys.stdout
-        self.output = StringIO.StringIO()
+        self.output = io.StringIO()
         sys.stdout = self.output
 
         self.evt = threading.Event()
-        servargs = (self.evt, "199 no hello for you!\n")
+        servargs = (self.evt, b"199 no hello for you!\n")
         threading.Thread(target=server, args=servargs).start()
 
         # wait until server thread has assigned a port number

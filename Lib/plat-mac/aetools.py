@@ -21,7 +21,6 @@ files: the pack stuff from aepack, the objects from aetypes.
 """
 
 
-from types import *
 from Carbon import AE
 from Carbon import Evt
 from Carbon import AppleEvents
@@ -57,7 +56,7 @@ aekeywords = [
 def missed(ae):
     try:
         desc = ae.AEGetAttributeDesc('miss', 'keyw')
-    except AE.Error, msg:
+    except AE.Error as msg:
         return None
     return desc.data
 
@@ -86,7 +85,7 @@ def unpackevent(ae, formodulename=""):
     for key in aekeywords:
         try:
             desc = ae.AEGetAttributeDesc(key, '****')
-        except (AE.Error, MacOS.Error), msg:
+        except (AE.Error, MacOS.Error) as msg:
             if msg[0] != -1701 and msg[0] != -1704:
                 raise
             continue
@@ -107,7 +106,7 @@ def keysubst(arguments, keydict):
     """Replace long name keys by their 4-char counterparts, and check"""
     ok = keydict.values()
     for k in arguments.keys():
-        if keydict.has_key(k):
+        if k in keydict:
             v = arguments[k]
             del arguments[k]
             arguments[keydict[k]] = v
@@ -116,11 +115,11 @@ def keysubst(arguments, keydict):
 
 def enumsubst(arguments, key, edict):
     """Substitute a single enum keyword argument, if it occurs"""
-    if not arguments.has_key(key) or edict is None:
+    if key not in arguments or edict is None:
         return
     v = arguments[key]
     ok = edict.values()
-    if edict.has_key(v):
+    if v in edict:
         arguments[key] = Enum(edict[v])
     elif not v in ok:
         raise TypeError, 'Unknown enumerator: %s'%v
@@ -129,11 +128,11 @@ def decodeerror(arguments):
     """Create the 'best' argument for a raise MacOS.Error"""
     errn = arguments['errn']
     err_a1 = errn
-    if arguments.has_key('errs'):
+    if 'errs' in arguments:
         err_a2 = arguments['errs']
     else:
         err_a2 = MacOS.GetErrorString(errn)
-    if arguments.has_key('erob'):
+    if 'erob' in arguments:
         err_a3 = arguments['erob']
     else:
         err_a3 = None
@@ -167,11 +166,11 @@ class TalkTo:
         self.target_signature = None
         if signature is None:
             signature = self._signature
-        if type(signature) == AEDescType:
+        if isinstance(signature, AEDescType):
             self.target = signature
-        elif type(signature) == InstanceType and hasattr(signature, '__aepack__'):
+        elif hasattr(signature, '__aepack__'):
             self.target = signature.__aepack__()
-        elif type(signature) == StringType and len(signature) == 4:
+        elif isinstance(signature, str) and len(signature) == 4:
             self.target = AE.AECreateDesc(AppleEvents.typeApplSignature, signature)
             self.target_signature = signature
         else:
@@ -248,10 +247,10 @@ class TalkTo:
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
-        if _arguments.has_key('errn'):
+        if 'errn' in _arguments:
             raise Error, decodeerror(_arguments)
 
-        if _arguments.has_key('----'):
+        if '----' in _arguments:
             return _arguments['----']
             if asfile:
                 item.__class__ = asfile
@@ -281,7 +280,7 @@ class TalkTo:
         if _arguments.get('errn', 0):
             raise Error, decodeerror(_arguments)
         # XXXX Optionally decode result
-        if _arguments.has_key('----'):
+        if '----' in _arguments:
             return _arguments['----']
 
     set = _set
@@ -290,10 +289,10 @@ class TalkTo:
     # like the "application" class in OSA.
 
     def __getattr__(self, name):
-        if self._elemdict.has_key(name):
+        if name in self._elemdict:
             cls = self._elemdict[name]
             return DelayedComponentItem(cls, None)
-        if self._propdict.has_key(name):
+        if name in self._propdict:
             cls = self._propdict[name]
             return cls()
         raise AttributeError, name
@@ -315,10 +314,10 @@ class _miniFinder(TalkTo):
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
-        if _arguments.has_key('errn'):
+        if 'errn' in _arguments:
             raise Error, decodeerror(_arguments)
         # XXXX Optionally decode result
-        if _arguments.has_key('----'):
+        if '----' in _arguments:
             return _arguments['----']
 #pass
 
@@ -342,17 +341,22 @@ _application_file._elemdict = {
 # XXXX Should test more, really...
 
 def test():
+    def raw_input(prompt):
+        sys.stdout.write(prompt)
+        sys.stdout.flush()
+        return sys.stdin.readline()
+
     target = AE.AECreateDesc('sign', 'quil')
     ae = AE.AECreateAppleEvent('aevt', 'oapp', target, -1, 0)
-    print unpackevent(ae)
+    print(unpackevent(ae))
     raw_input(":")
     ae = AE.AECreateAppleEvent('core', 'getd', target, -1, 0)
     obj = Character(2, Word(1, Document(1)))
-    print obj
-    print repr(obj)
+    print(obj)
+    print(repr(obj))
     packevent(ae, {'----': obj})
     params, attrs = unpackevent(ae)
-    print params['----']
+    print(params['----'])
     raw_input(":")
 
 if __name__ == '__main__':

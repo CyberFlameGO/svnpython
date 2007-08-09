@@ -57,10 +57,12 @@ static PyObject *run_pyc_file(FILE *, const char *, PyObject *, PyObject *,
 			      PyCompilerFlags *);
 static void err_input(perrdetail *);
 static void initsigs(void);
-static void call_sys_exitfunc(void);
+static void call_py_exitfuncs(void);
 static void call_ll_exitfuncs(void);
 extern void _PyUnicode_Init(void);
 extern void _PyUnicode_Fini(void);
+extern int _PyLong_Init(void);
+extern void PyLong_Fini(void);
 
 #ifdef WITH_THREAD
 extern void _PyGILState_Init(PyInterpreterState *, PyThreadState *);
@@ -74,12 +76,7 @@ int Py_InspectFlag; /* Needed to determine whether to exit at SystemError */
 int Py_NoSiteFlag; /* Suppress 'import site' */
 int Py_UseClassExceptionsFlag = 1; /* Needed by bltinmodule.c: deprecated */
 int Py_FrozenFlag; /* Needed by getpath.c */
-int Py_UnicodeFlag = 0; /* Needed by compile.c */
 int Py_IgnoreEnvironmentFlag; /* e.g. PYTHONPATH, PYTHONHOME */
-/* _XXX Py_QnewFlag should go away in 2.3.  It's true iff -Qnew is passed,
-  on the command line, and is used in 2.2 by ceval.c to make all "/" divisions
-  true divisions (which they will be in 2.3). */
-int _Py_QnewFlag = 0;
 
 /* Reference to 'warnings' module, to avoid importing it
    on the fly when the import lock may be held.  See 683658/771097
@@ -155,10 +152,9 @@ Py_InitializeEx(int install_sigs)
 	PyThreadState *tstate;
 	PyObject *bimod, *sysmod;
 	char *p;
-#if defined(Py_USING_UNICODE) && defined(HAVE_LANGINFO_H) && defined(CODESET)
+#if defined(HAVE_LANGINFO_H) && defined(CODESET)
 	char *codeset;
 	char *saved_locale;
-	PyObject *sys_stream, *sys_isatty;
 #endif
 	extern void _Py_ReadyTypes(void);
 
@@ -187,8 +183,11 @@ Py_InitializeEx(int install_sigs)
 	if (!_PyFrame_Init())
 		Py_FatalError("Py_Initialize: can't init frames");
 
-	if (!_PyInt_Init())
-		Py_FatalError("Py_Initialize: can't init ints");
+	if (!_PyLong_Init())
+		Py_FatalError("Py_Initialize: can't init longs");
+
+	if (!PyBytes_Init())
+		Py_FatalError("Py_Initialize: can't init bytes");
 
 	_PyFloat_Init();
 
@@ -199,10 +198,8 @@ Py_InitializeEx(int install_sigs)
 	if (interp->modules_reloading == NULL)
 		Py_FatalError("Py_Initialize: can't make modules_reloading dictionary");
 
-#ifdef Py_USING_UNICODE
 	/* Init Unicode implementation; relies on the codec registry */
 	_PyUnicode_Init();
-#endif
 
 	bimod = _PyBuiltin_Init();
 	if (bimod == NULL)
@@ -228,7 +225,6 @@ Py_InitializeEx(int install_sigs)
 
 	/* initialize builtin exceptions */
 	_PyExc_Init();
-	_PyImport_FixupExtension("exceptions", "exceptions");
 
 	/* phase 2 of builtins */
 	_PyImport_FixupExtension("__builtin__", "__builtin__");
@@ -251,7 +247,7 @@ Py_InitializeEx(int install_sigs)
 	if (!warnings_module)
 		PyErr_Clear();
 
-#if defined(Py_USING_UNICODE) && defined(HAVE_LANGINFO_H) && defined(CODESET)
+#if defined(HAVE_LANGINFO_H) && defined(CODESET)
 	/* On Unix, set the file system encoding according to the
 	   user's preference, if the CODESET names a well-known
 	   Python codec, and Py_FileSystemDefaultEncoding isn't
@@ -276,39 +272,6 @@ Py_InitializeEx(int install_sigs)
 	free(saved_locale);
 
 	if (codeset) {
-		sys_stream = PySys_GetObject("stdin");
-		sys_isatty = PyObject_CallMethod(sys_stream, "isatty", "");
-		if (!sys_isatty)
-			PyErr_Clear();
-		if(sys_isatty && PyObject_IsTrue(sys_isatty) &&
-		   PyFile_Check(sys_stream)) {
-			if (!PyFile_SetEncoding(sys_stream, codeset))
-				Py_FatalError("Cannot set codeset of stdin");
-		}
-		Py_XDECREF(sys_isatty);
-
-		sys_stream = PySys_GetObject("stdout");
-		sys_isatty = PyObject_CallMethod(sys_stream, "isatty", "");
-		if (!sys_isatty)
-			PyErr_Clear();
-		if(sys_isatty && PyObject_IsTrue(sys_isatty) &&
-		   PyFile_Check(sys_stream)) {
-			if (!PyFile_SetEncoding(sys_stream, codeset))
-				Py_FatalError("Cannot set codeset of stdout");
-		}
-		Py_XDECREF(sys_isatty);
-
-		sys_stream = PySys_GetObject("stderr");
-		sys_isatty = PyObject_CallMethod(sys_stream, "isatty", "");
-		if (!sys_isatty)
-			PyErr_Clear();
-		if(sys_isatty && PyObject_IsTrue(sys_isatty) &&
-		   PyFile_Check(sys_stream)) {
-			if (!PyFile_SetEncoding(sys_stream, codeset))
-				Py_FatalError("Cannot set codeset of stderr");
-		}
-		Py_XDECREF(sys_isatty);
-
 		if (!Py_FileSystemDefaultEncoding)
 			Py_FileSystemDefaultEncoding = codeset;
 		else
@@ -327,6 +290,32 @@ Py_Initialize(void)
 #ifdef COUNT_ALLOCS
 extern void dump_counts(FILE*);
 #endif
+
+/* Flush stdout and stderr */
+
+void
+flush_std_files(void)
+{
+	PyObject *fout = PySys_GetObject("stdout");
+	PyObject *ferr = PySys_GetObject("stderr");
+	PyObject *tmp;
+
+	if (fout != NULL) {
+		tmp = PyObject_CallMethod(fout, "flush", "");
+		if (tmp == NULL)
+			PyErr_Clear();
+		else
+			Py_DECREF(tmp);
+	}
+
+	if (ferr != NULL) {
+		tmp = PyObject_CallMethod(ferr, "flush", "");
+		if (tmp == NULL)
+			PyErr_Clear();
+		else
+			Py_DECREF(tmp);
+	}
+}
 
 /* Undo the effect of Py_Initialize().
 
@@ -360,8 +349,11 @@ Py_Finalize(void)
 	 * threads created thru it, so this also protects pending imports in
 	 * the threads created via Threading.
 	 */
-	call_sys_exitfunc();
+	call_py_exitfuncs();
 	initialized = 0;
+
+	/* Flush stdout+stderr */
+	flush_std_files();
 
 	/* Get current thread state and interpreter pointer */
 	tstate = PyThreadState_GET();
@@ -397,6 +389,9 @@ Py_Finalize(void)
 
 	/* Destroy all modules */
 	PyImport_Cleanup();
+
+	/* Flush stdout+stderr (again, in case more was printed) */
+	flush_std_files();
 
 	/* Collect final garbage.  This disposes of cycles created by
 	 * new-style class definitions, for example.
@@ -465,13 +460,12 @@ Py_Finalize(void)
 	PyList_Fini();
 	PySet_Fini();
 	PyString_Fini();
-	PyInt_Fini();
+	PyBytes_Fini();
+	PyLong_Fini();
 	PyFloat_Fini();
 
-#ifdef Py_USING_UNICODE
 	/* Cleanup Unicode implementation */
 	_PyUnicode_Fini();
-#endif
 
 	/* XXX Still allocated:
 	   - various static ad-hoc pointers to interned strings
@@ -803,8 +797,6 @@ PyRun_InteractiveOneFlags(FILE *fp, const char *filename, PyCompilerFlags *flags
 		return -1;
 	}
 	Py_DECREF(v);
-	if (Py_FlushLine())
-		PyErr_Clear();
 	return 0;
 }
 
@@ -895,8 +887,6 @@ PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit,
 		goto done;
 	}
 	Py_DECREF(v);
-	if (Py_FlushLine())
-		PyErr_Clear();
 	ret = 0;
   done:
 	if (set_file_name && PyDict_DelItemString(d, "__file__"))
@@ -918,8 +908,6 @@ PyRun_SimpleStringFlags(const char *command, PyCompilerFlags *flags)
 		return -1;
 	}
 	Py_DECREF(v);
-	if (Py_FlushLine())
-		PyErr_Clear();
 	return 0;
 }
 
@@ -1039,8 +1027,6 @@ handle_system_exit(void)
 		return;
 
 	PyErr_Fetch(&exception, &value, &tb);
-	if (Py_FlushLine())
-		PyErr_Clear();
 	fflush(stdout);
 	if (value == NULL || value == Py_None)
 		goto done;
@@ -1118,8 +1104,6 @@ PyErr_PrintEx(int set_sys_last_vars)
 				v2 = Py_None;
 				Py_INCREF(v2);
 			}
-			if (Py_FlushLine())
-				PyErr_Clear();
 			fflush(stdout);
 			PySys_WriteStderr("Error in sys.excepthook:\n");
 			PyErr_Display(exception2, v2, tb2);
@@ -1147,10 +1131,10 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 	PyObject *f = PySys_GetObject("stderr");
 	Py_INCREF(value);
 	if (f == NULL)
+		_PyObject_Dump(value);
+	if (f == NULL)
 		fprintf(stderr, "lost sys.stderr\n");
 	else {
-		if (Py_FlushLine())
-			PyErr_Clear();
 		fflush(stdout);
 		if (tb && tb != Py_None)
 			err = PyTraceBack_Print(tb, f);
@@ -1201,7 +1185,7 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
 				err = PyFile_WriteString("<unknown>", f);
 			else {
 				char* modstr = PyString_AsString(moduleName);
-				if (modstr && strcmp(modstr, "exceptions"))
+				if (modstr && strcmp(modstr, "__builtin__"))
 				{
 					err = PyFile_WriteString(modstr, f);
 					err += PyFile_WriteString(".", f);
@@ -1587,6 +1571,23 @@ Py_FatalError(const char *msg)
 #include "pythread.h"
 #endif
 
+static void (*pyexitfunc)(void) = NULL;
+/* For the atexit module. */
+void _Py_PyAtExit(void (*func)(void))
+{
+	pyexitfunc = func;
+}
+
+static void
+call_py_exitfuncs(void)
+{
+	if (pyexitfunc == NULL) 
+		return;
+
+	(*pyexitfunc)();
+	PyErr_Clear();
+}
+
 #define NEXITFUNCS 32
 static void (*exitfuncs[NEXITFUNCS])(void);
 static int nexitfuncs = 0;
@@ -1597,29 +1598,6 @@ int Py_AtExit(void (*func)(void))
 		return -1;
 	exitfuncs[nexitfuncs++] = func;
 	return 0;
-}
-
-static void
-call_sys_exitfunc(void)
-{
-	PyObject *exitfunc = PySys_GetObject("exitfunc");
-
-	if (exitfunc) {
-		PyObject *res;
-		Py_INCREF(exitfunc);
-		PySys_SetObject("exitfunc", (PyObject *)NULL);
-		res = PyEval_CallObject(exitfunc, (PyObject *)NULL);
-		if (res == NULL) {
-			if (!PyErr_ExceptionMatches(PyExc_SystemExit)) {
-				PySys_WriteStderr("Error in sys.exitfunc:\n");
-			}
-			PyErr_Print();
-		}
-		Py_DECREF(exitfunc);
-	}
-
-	if (Py_FlushLine())
-		PyErr_Clear();
 }
 
 static void
@@ -1876,4 +1854,3 @@ PyRun_InteractiveLoop(FILE *f, const char *p)
 #ifdef __cplusplus
 }
 #endif
-

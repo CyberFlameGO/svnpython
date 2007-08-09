@@ -7,7 +7,7 @@ from wsgiref import util
 from wsgiref.validate import validator
 from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, demo_app
 from wsgiref.simple_server import make_server
-from StringIO import StringIO
+from io import StringIO, BytesIO
 from SocketServer import BaseServer
 import re, sys
 
@@ -47,9 +47,9 @@ def hello_app(environ,start_response):
     ])
     return ["Hello, world!"]
 
-def run_amock(app=hello_app, data="GET / HTTP/1.0\n\n"):
+def run_amock(app=hello_app, data=b"GET / HTTP/1.0\n\n"):
     server = make_server("", 80, app, MockServer, MockHandler)
-    inp, out, err, olderr = StringIO(data), StringIO(), StringIO(), sys.stderr
+    inp, out, err, olderr = BytesIO(data), StringIO(), StringIO(), sys.stderr
     sys.stderr = err
 
     try:
@@ -109,13 +109,13 @@ def compare_generic_iter(make_it,match):
         it = make_it()
         if not iter(it) is it: raise AssertionError
         for item in match:
-            if not it.next()==item: raise AssertionError
+            if not next(it) == item: raise AssertionError
         try:
-            it.next()
+            next(it)
         except StopIteration:
             pass
         else:
-            raise AssertionError("Too many items from .next()",it)
+            raise AssertionError("Too many items from .__next__()", it)
 
 
 
@@ -342,7 +342,7 @@ class HeaderTests(TestCase):
         del h['foo']   # should not raise an error
 
         h['Foo'] = 'bar'
-        for m in h.has_key, h.__contains__, h.get, h.get_all, h.__getitem__:
+        for m in h.__contains__, h.get, h.get_all, h.__getitem__:
             self.failUnless(m('foo'))
             self.failUnless(m('Foo'))
             self.failUnless(m('FOO'))
@@ -425,10 +425,10 @@ class HandlerTests(TestCase):
         env = handler.environ
         from os import environ
         for k,v in environ.items():
-            if not empty.has_key(k):
+            if k not in empty:
                 self.assertEqual(env[k],v)
         for k,v in empty.items():
-            self.failUnless(env.has_key(k))
+            self.failUnless(k in env)
 
     def testEnviron(self):
         h = TestHandler(X="Y")
@@ -441,7 +441,7 @@ class HandlerTests(TestCase):
         h = BaseCGIHandler(None,None,None,{})
         h.setup_environ()
         for key in 'wsgi.url_scheme', 'wsgi.input', 'wsgi.errors':
-            self.assert_(h.environ.has_key(key))
+            self.assert_(key in h.environ)
 
     def testScheme(self):
         h=TestHandler(HTTPS="on"); h.setup_environ()
@@ -516,7 +516,7 @@ class HandlerTests(TestCase):
             "Content-Length: %d\r\n"
             "\r\n%s" % (h.error_status,len(h.error_body),h.error_body))
 
-        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
+        self.failUnless("AssertionError" in h.stderr.getvalue())
 
     def testErrorAfterOutput(self):
         MSG = "Some output has been sent"
@@ -529,7 +529,7 @@ class HandlerTests(TestCase):
         self.assertEqual(h.stdout.getvalue(),
             "Status: 200 OK\r\n"
             "\r\n"+MSG)
-        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
+        self.failUnless("AssertionError" in h.stderr.getvalue())
 
 
     def testHeaderFormats(self):

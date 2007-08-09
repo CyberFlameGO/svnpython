@@ -15,11 +15,11 @@
 #define OFF(x) offsetof(PyFrameObject, x)
 
 static PyMemberDef frame_memberlist[] = {
-	{"f_back",	T_OBJECT,	OFF(f_back),	RO},
-	{"f_code",	T_OBJECT,	OFF(f_code),	RO},
-	{"f_builtins",	T_OBJECT,	OFF(f_builtins),RO},
-	{"f_globals",	T_OBJECT,	OFF(f_globals),	RO},
-	{"f_lasti",	T_INT,		OFF(f_lasti),	RO},
+	{"f_back",	T_OBJECT,	OFF(f_back),	READONLY},
+	{"f_code",	T_OBJECT,	OFF(f_code),	READONLY},
+	{"f_builtins",	T_OBJECT,	OFF(f_builtins),READONLY},
+	{"f_globals",	T_OBJECT,	OFF(f_globals),	READONLY},
+	{"f_lasti",	T_INT,		OFF(f_lasti),	READONLY},
 	{"f_exc_type",	T_OBJECT,	OFF(f_exc_type)},
 	{"f_exc_value",	T_OBJECT,	OFF(f_exc_value)},
 	{"f_exc_traceback", T_OBJECT,	OFF(f_exc_traceback)},
@@ -88,7 +88,7 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno)
 	unsigned char setup_op = 0;	/* (ditto) */
 
 	/* f_lineno must be an integer. */
-	if (!PyInt_Check(p_new_lineno)) {
+	if (!PyInt_CheckExact(p_new_lineno)) {
 		PyErr_SetString(PyExc_ValueError,
 				"lineno must be an integer");
 		return -1;
@@ -340,18 +340,12 @@ frame_settrace(PyFrameObject *f, PyObject* v, void *closure)
 	return 0;
 }
 
-static PyObject *
-frame_getrestricted(PyFrameObject *f, void *closure)
-{
-	return PyBool_FromLong(PyFrame_IsRestricted(f));
-}
 
 static PyGetSetDef frame_getsetlist[] = {
 	{"f_locals",	(getter)frame_getlocals, NULL, NULL},
 	{"f_lineno",	(getter)frame_getlineno,
 			(setter)frame_setlineno, NULL},
 	{"f_trace",	(getter)frame_gettrace, (setter)frame_settrace, NULL},
-	{"f_restricted",(getter)frame_getrestricted,NULL, NULL},
 	{0}
 };
 
@@ -547,7 +541,7 @@ static PyObject *builtin_object;
 
 int _PyFrame_Init()
 {
-	builtin_object = PyString_InternFromString("__builtins__");
+	builtin_object = PyUnicode_InternFromString("__builtins__");
 	return (builtin_object != NULL);
 }
 
@@ -727,7 +721,7 @@ map_to_dict(PyObject *map, Py_ssize_t nmap, PyObject *dict, PyObject **values,
 	for (j = nmap; --j >= 0; ) {
 		PyObject *key = PyTuple_GET_ITEM(map, j);
 		PyObject *value = values[j];
-		assert(PyString_Check(key));
+		assert(PyString_Check(key)/*XXX this should go*/ || PyUnicode_Check(key));
 		if (deref) {
 			assert(PyCell_Check(value));
 			value = PyCell_GET(value);
@@ -775,7 +769,7 @@ dict_to_map(PyObject *map, Py_ssize_t nmap, PyObject *dict, PyObject **values,
 	for (j = nmap; --j >= 0; ) {
 		PyObject *key = PyTuple_GET_ITEM(map, j);
 		PyObject *value = PyObject_GetItem(dict, key);
-		assert(PyString_Check(key));
+		assert(PyUnicode_Check(key));
 		/* We only care about NULLs if clear is true. */
 		if (value == NULL) {
 			PyErr_Clear();

@@ -11,9 +11,9 @@ not open blocks are not shown in the context hints pane.
 """
 import Tkinter
 from Tkconstants import TOP, LEFT, X, W, SUNKEN
-from configHandler import idleConf
 import re
 from sys import maxint as INFINITY
+from .configHandler import idleConf
 
 BLOCKOPENERS = set(["class", "def", "elif", "else", "except", "finally", "for",
                     "if", "try", "while", "with"])
@@ -117,7 +117,7 @@ class CodeContext:
         lastindent = INFINITY
         # For a line to be interesting, it must begin with a block opening
         # keyword, and have less indentation than lastindent.
-        for linenum in xrange(new_topvisible, stopline-1, -1):
+        for linenum in range(new_topvisible, stopline-1, -1):
             indent, text, opener = self.get_line_info(linenum)
             if indent < lastindent:
                 lastindent = indent

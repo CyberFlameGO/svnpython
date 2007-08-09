@@ -1,6 +1,3 @@
-######################################################################
-#  This file should be kept compatible with Python 2.3, see PEP 291. #
-######################################################################
 """create and manipulate C data types in Python"""
 
 import os as _os, sys as _sys
@@ -59,14 +56,14 @@ def create_string_buffer(init, size=None):
     create_string_buffer(anInteger) -> character array
     create_string_buffer(aString, anInteger) -> character array
     """
-    if isinstance(init, (str, unicode)):
+    if isinstance(init, str):
         if size is None:
             size = len(init)+1
         buftype = c_char * size
         buf = buftype()
         buf.value = init
         return buf
-    elif isinstance(init, (int, long)):
+    elif isinstance(init, int):
         buftype = c_char * init
         buf = buftype()
         return buf
@@ -149,7 +146,7 @@ class py_object(_SimpleCData):
     _type_ = "O"
     def __repr__(self):
         try:
-            return super(py_object, self).__repr__()
+            return super().__repr__()
         except ValueError:
             return "%s(<NULL>)" % type(self).__name__
 _check_size(py_object, "P")
@@ -289,14 +286,14 @@ else:
         create_unicode_buffer(anInteger) -> character array
         create_unicode_buffer(aString, anInteger) -> character array
         """
-        if isinstance(init, (str, unicode)):
+        if isinstance(init, (str, bytes)):
             if size is None:
                 size = len(init)+1
             buftype = c_wchar * size
             buf = buftype()
             buf.value = init
             return buf
-        elif isinstance(init, (int, long)):
+        elif isinstance(init, int):
             buftype = c_wchar * init
             buf = buftype()
             return buf
@@ -309,7 +306,7 @@ def SetPointerType(pointer, cls):
     if _pointer_type_cache.get(cls, None) is not None:
         raise RuntimeError, \
               "This type already exists in the cache"
-    if not _pointer_type_cache.has_key(id(pointer)):
+    if id(pointer) not in _pointer_type_cache:
         raise RuntimeError, \
               "What's this???"
     pointer.set_type(cls)
@@ -367,7 +364,7 @@ class CDLL(object):
 
     def __getitem__(self, name_or_ordinal):
         func = self._FuncPtr((name_or_ordinal, self))
-        if not isinstance(name_or_ordinal, (int, long)):
+        if not isinstance(name_or_ordinal, int):
             func.__name__ = name_or_ordinal
         return func
 

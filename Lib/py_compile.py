@@ -7,6 +7,7 @@ import __builtin__
 import imp
 import marshal
 import os
+import re
 import sys
 import traceback
 
@@ -72,10 +73,25 @@ else:
 
 def wr_long(f, x):
     """Internal; write a 32-bit int to a file in little-endian order."""
-    f.write(chr( x        & 0xff))
-    f.write(chr((x >> 8)  & 0xff))
-    f.write(chr((x >> 16) & 0xff))
-    f.write(chr((x >> 24) & 0xff))
+    f.write(bytes([x        & 0xff,
+                   (x >> 8)  & 0xff,
+                   (x >> 16) & 0xff,
+                   (x >> 24) & 0xff]))
+
+def read_encoding(file, default):
+    """Read the first two lines of the file looking for coding: xyzzy."""
+    f = open(file, "rb")
+    try:
+        for i in range(2):
+            line = f.readline()
+            if not line:
+                break
+            m = re.match(r".*\bcoding:\s*(\S+)\b", line)
+            if m:
+                return str(m.group(1))
+        return default
+    finally:
+        f.close()
 
 def compile(file, cfile=None, dfile=None, doraise=False):
     """Byte-compile one Python source file to Python bytecode.
@@ -112,18 +128,19 @@ def compile(file, cfile=None, dfile=None, doraise=False):
     directories).
 
     """
-    f = open(file, 'U')
+    encoding = read_encoding(file, "utf-8")
+    f = open(file, 'U', encoding=encoding)
     try:
-        timestamp = long(os.fstat(f.fileno()).st_mtime)
+        timestamp = int(os.fstat(f.fileno()).st_mtime)
     except AttributeError:
-        timestamp = long(os.stat(file).st_mtime)
+        timestamp = int(os.stat(file).st_mtime)
     codestring = f.read()
     f.close()
     if codestring and codestring[-1] != '\n':
         codestring = codestring + '\n'
     try:
         codeobject = __builtin__.compile(codestring, dfile or file,'exec')
-    except Exception,err:
+    except Exception as err:
         py_exc = PyCompileError(err.__class__,err.args,dfile or file)
         if doraise:
             raise py_exc
@@ -133,7 +150,7 @@ def compile(file, cfile=None, dfile=None, doraise=False):
     if cfile is None:
         cfile = file + (__debug__ and 'c' or 'o')
     fc = open(cfile, 'wb')
-    fc.write('\0\0\0\0')
+    fc.write(b'\0\0\0\0')
     wr_long(fc, timestamp)
     marshal.dump(codeobject, fc)
     fc.flush()
@@ -157,7 +174,7 @@ def main(args=None):
     for filename in args:
         try:
             compile(filename, doraise=True)
-        except PyCompileError,err:
+        except PyCompileError as err:
             sys.stderr.write(err.msg)
 
 if __name__ == "__main__":

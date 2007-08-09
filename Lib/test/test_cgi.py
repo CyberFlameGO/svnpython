@@ -4,7 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
-from StringIO import StringIO
+from io import StringIO
 
 class HackedSysModule:
     # The regression test will have real values in sys.argv, which
@@ -15,9 +15,9 @@ class HackedSysModule:
 cgi.sys = HackedSysModule()
 
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 
 class ComparableException:
     def __init__(self, err):
@@ -26,13 +26,11 @@ class ComparableException:
     def __str__(self):
         return str(self.err)
 
-    def __cmp__(self, anExc):
+    def __eq__(self, anExc):
         if not isinstance(anExc, Exception):
-            return -1
-        x = cmp(self.err.__class__, anExc.__class__)
-        if x != 0:
-            return x
-        return cmp(self.err.args, anExc.args)
+            return NotImplemented
+        return (self.err.__class__ == anExc.__class__ and
+                self.err.args == anExc.args)
 
     def __getattr__(self, attr):
         return getattr(self.err, attr)
@@ -52,7 +50,7 @@ def do_test(buf, method):
         raise ValueError, "unknown method: %s" % method
     try:
         return cgi.parse(fp, env, strict_parsing=1)
-    except StandardError, err:
+    except Exception as err:
         return ComparableException(err)
 
 # A list of test cases.  Each test case is a a two-tuple that contains
@@ -119,16 +117,15 @@ parse_strict_test_cases = [
       })
     ]
 
-def norm(list):
-    if type(list) == type([]):
-        list.sort()
-    return list
+def norm(seq):
+    return sorted(seq, key=repr)
 
 def first_elts(list):
-    return map(lambda x:x[0], list)
+    return [p[0] for p in list]
 
 def first_second_elts(list):
-    return map(lambda p:(p[0], p[1][0]), list)
+    return [(p[0], p[1][0]) for p in list]
+
 
 class CgiTests(unittest.TestCase):
 
@@ -162,10 +159,10 @@ class CgiTests(unittest.TestCase):
                 # test individual fields
                 for key in expect.keys():
                     expect_val = expect[key]
-                    self.assert_(fcd.has_key(key))
+                    self.assert_(key in fcd)
                     self.assertEqual(norm(fcd[key]), norm(expect[key]))
                     self.assertEqual(fcd.get(key, "default"), fcd[key])
-                    self.assert_(fs.has_key(key))
+                    self.assert_(key in fs)
                     if len(expect_val) > 1:
                         single_value = 0
                     else:

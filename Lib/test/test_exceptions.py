@@ -3,33 +3,23 @@
 import os
 import sys
 import unittest
-import pickle, cPickle
+import pickle
 
 from test.test_support import (TESTFN, unlink, run_unittest,
                                 guard_warnings_filter)
-from test.test_pep352 import ignore_message_warning
 
 # XXX This is not really enough, each *operation* should be tested!
 
 class ExceptionTests(unittest.TestCase):
 
-    def testReload(self):
-        # Reloading the built-in exceptions module failed prior to Py2.2, while it
-        # should act the same as reloading built-in sys.
-        try:
-            import exceptions
-            reload(exceptions)
-        except ImportError, e:
-            self.fail("reloading exceptions: %s" % e)
-
     def raise_catch(self, exc, excname):
         try:
             raise exc, "spam"
-        except exc, err:
+        except exc as err:
             buf1 = str(err)
         try:
             raise exc("spam")
-        except exc, err:
+        except exc as err:
             buf2 = str(err)
         self.assertEquals(buf1, buf2)
         self.assertEquals(exc.__name__, excname)
@@ -45,8 +35,8 @@ class ExceptionTests(unittest.TestCase):
         savestdin = sys.stdin
         try:
             try:
-                sys.stdin = fp
-                x = raw_input()
+                import marshal
+                marshal.loads('')
             except EOFError:
                 pass
         finally:
@@ -84,7 +74,7 @@ class ExceptionTests(unittest.TestCase):
         self.raise_catch(RuntimeError, "RuntimeError")
 
         self.raise_catch(SyntaxError, "SyntaxError")
-        try: exec '/\n'
+        try: exec('/\n')
         except SyntaxError: pass
 
         self.raise_catch(IndentationError, "IndentationError")
@@ -105,7 +95,7 @@ class ExceptionTests(unittest.TestCase):
         except TypeError: pass
 
         self.raise_catch(ValueError, "ValueError")
-        self.assertRaises(ValueError, chr, 10000)
+        self.assertRaises(ValueError, chr, 17<<16)
 
         self.raise_catch(ZeroDivisionError, "ZeroDivisionError")
         try: x = 1/0
@@ -113,7 +103,7 @@ class ExceptionTests(unittest.TestCase):
 
         self.raise_catch(Exception, "Exception")
         try: x = 1/0
-        except Exception, e: pass
+        except Exception as e: pass
 
     def testSyntaxErrorMessage(self):
         # make sure the right exception message is raised for each of
@@ -122,7 +112,7 @@ class ExceptionTests(unittest.TestCase):
         def ckmsg(src, msg):
             try:
                 compile(src, '<fragment>', 'exec')
-            except SyntaxError, e:
+            except SyntaxError as e:
                 if e.msg != msg:
                     self.fail("expected %s, got %s" % (msg, e.msg))
             else:
@@ -150,15 +140,18 @@ class ExceptionTests(unittest.TestCase):
         # test that setting an exception at the C level works even if the
         # exception object can't be constructed.
 
-        class BadException:
+        class BadException(Exception):
             def __init__(self_):
                 raise RuntimeError, "can't instantiate BadException"
+
+        class InvalidException:
+            pass
 
         def test_capi1():
             import _testcapi
             try:
                 _testcapi.raise_exception(BadException, 1)
-            except TypeError, err:
+            except TypeError as err:
                 exc, err, tb = sys.exc_info()
                 co = tb.tb_frame.f_code
                 self.assertEquals(co.co_name, "test_capi1")
@@ -170,7 +163,7 @@ class ExceptionTests(unittest.TestCase):
             import _testcapi
             try:
                 _testcapi.raise_exception(BadException, 0)
-            except RuntimeError, err:
+            except RuntimeError as err:
                 exc, err, tb = sys.exc_info()
                 co = tb.tb_frame.f_code
                 self.assertEquals(co.co_name, "__init__")
@@ -180,9 +173,15 @@ class ExceptionTests(unittest.TestCase):
             else:
                 self.fail("Expected exception")
 
+        def test_capi3():
+            import _testcapi
+            self.assertRaises(SystemError, _testcapi.raise_exception,
+                              InvalidException, 1)
+
         if not sys.platform.startswith('java'):
             test_capi1()
             test_capi2()
+            test_capi3()
 
     def test_WindowsError(self):
         try:
@@ -201,114 +200,111 @@ class ExceptionTests(unittest.TestCase):
         # test that exception attributes are happy
 
         exceptionList = [
-            (BaseException, (), {'message' : '', 'args' : ()}),
-            (BaseException, (1, ), {'message' : 1, 'args' : (1,)}),
+            (BaseException, (), {'args' : ()}),
+            (BaseException, (1, ), {'args' : (1,)}),
             (BaseException, ('foo',),
-                {'message' : 'foo', 'args' : ('foo',)}),
+                {'args' : ('foo',)}),
             (BaseException, ('foo', 1),
-                {'message' : '', 'args' : ('foo', 1)}),
+                {'args' : ('foo', 1)}),
             (SystemExit, ('foo',),
-                {'message' : 'foo', 'args' : ('foo',), 'code' : 'foo'}),
+                {'args' : ('foo',), 'code' : 'foo'}),
             (IOError, ('foo',),
-                {'message' : 'foo', 'args' : ('foo',), 'filename' : None,
+                {'args' : ('foo',), 'filename' : None,
                  'errno' : None, 'strerror' : None}),
             (IOError, ('foo', 'bar'),
-                {'message' : '', 'args' : ('foo', 'bar'), 'filename' : None,
+                {'args' : ('foo', 'bar'), 'filename' : None,
                  'errno' : 'foo', 'strerror' : 'bar'}),
             (IOError, ('foo', 'bar', 'baz'),
-                {'message' : '', 'args' : ('foo', 'bar'), 'filename' : 'baz',
+                {'args' : ('foo', 'bar'), 'filename' : 'baz',
                  'errno' : 'foo', 'strerror' : 'bar'}),
             (IOError, ('foo', 'bar', 'baz', 'quux'),
-                {'message' : '', 'args' : ('foo', 'bar', 'baz', 'quux')}),
+                {'args' : ('foo', 'bar', 'baz', 'quux')}),
             (EnvironmentError, ('errnoStr', 'strErrorStr', 'filenameStr'),
-                {'message' : '', 'args' : ('errnoStr', 'strErrorStr'),
+                {'args' : ('errnoStr', 'strErrorStr'),
                  'strerror' : 'strErrorStr', 'errno' : 'errnoStr',
                  'filename' : 'filenameStr'}),
             (EnvironmentError, (1, 'strErrorStr', 'filenameStr'),
-                {'message' : '', 'args' : (1, 'strErrorStr'), 'errno' : 1,
+                {'args' : (1, 'strErrorStr'), 'errno' : 1,
                  'strerror' : 'strErrorStr', 'filename' : 'filenameStr'}),
-            (SyntaxError, (), {'message' : '', 'msg' : None, 'text' : None,
+            (SyntaxError, (), {'msg' : None, 'text' : None,
                 'filename' : None, 'lineno' : None, 'offset' : None,
                 'print_file_and_line' : None}),
             (SyntaxError, ('msgStr',),
-                {'message' : 'msgStr', 'args' : ('msgStr',), 'text' : None,
+                {'args' : ('msgStr',), 'text' : None,
                  'print_file_and_line' : None, 'msg' : 'msgStr',
                  'filename' : None, 'lineno' : None, 'offset' : None}),
             (SyntaxError, ('msgStr', ('filenameStr', 'linenoStr', 'offsetStr',
                            'textStr')),
-                {'message' : '', 'offset' : 'offsetStr', 'text' : 'textStr',
+                {'offset' : 'offsetStr', 'text' : 'textStr',
                  'args' : ('msgStr', ('filenameStr', 'linenoStr',
                                       'offsetStr', 'textStr')),
                  'print_file_and_line' : None, 'msg' : 'msgStr',
                  'filename' : 'filenameStr', 'lineno' : 'linenoStr'}),
             (SyntaxError, ('msgStr', 'filenameStr', 'linenoStr', 'offsetStr',
                            'textStr', 'print_file_and_lineStr'),
-                {'message' : '', 'text' : None,
+                {'text' : None,
                  'args' : ('msgStr', 'filenameStr', 'linenoStr', 'offsetStr',
                            'textStr', 'print_file_and_lineStr'),
                  'print_file_and_line' : None, 'msg' : 'msgStr',
                  'filename' : None, 'lineno' : None, 'offset' : None}),
-            (UnicodeError, (), {'message' : '', 'args' : (),}),
-            (UnicodeEncodeError, ('ascii', u'a', 0, 1, 'ordinal not in range'),
-                {'message' : '', 'args' : ('ascii', u'a', 0, 1,
+            (UnicodeError, (), {'args' : (),}),
+            (UnicodeEncodeError, ('ascii', 'a', 0, 1,
+                                  'ordinal not in range'),
+                {'args' : ('ascii', 'a', 0, 1,
                                            'ordinal not in range'),
-                 'encoding' : 'ascii', 'object' : u'a',
+                 'encoding' : 'ascii', 'object' : 'a',
                  'start' : 0, 'reason' : 'ordinal not in range'}),
-            (UnicodeDecodeError, ('ascii', '\xff', 0, 1, 'ordinal not in range'),
-                {'message' : '', 'args' : ('ascii', '\xff', 0, 1,
+            (UnicodeDecodeError, ('ascii', b'\xff', 0, 1,
+                                  'ordinal not in range'),
+                {'args' : ('ascii', b'\xff', 0, 1,
                                            'ordinal not in range'),
-                 'encoding' : 'ascii', 'object' : '\xff',
+                 'encoding' : 'ascii', 'object' : b'\xff',
                  'start' : 0, 'reason' : 'ordinal not in range'}),
-            (UnicodeTranslateError, (u"\u3042", 0, 1, "ouch"),
-                {'message' : '', 'args' : (u'\u3042', 0, 1, 'ouch'),
-                 'object' : u'\u3042', 'reason' : 'ouch',
+            (UnicodeTranslateError, ("\u3042", 0, 1, "ouch"),
+                {'args' : ('\u3042', 0, 1, 'ouch'),
+                 'object' : '\u3042', 'reason' : 'ouch',
                  'start' : 0, 'end' : 1}),
         ]
         try:
             exceptionList.append(
                 (WindowsError, (1, 'strErrorStr', 'filenameStr'),
-                    {'message' : '', 'args' : (1, 'strErrorStr'),
+                    {'args' : (1, 'strErrorStr'),
                      'strerror' : 'strErrorStr', 'winerror' : 1,
                      'errno' : 22, 'filename' : 'filenameStr'})
             )
         except NameError:
             pass
 
-        with guard_warnings_filter():
-            ignore_message_warning()
-            for exc, args, expected in exceptionList:
-                try:
-                    raise exc(*args)
-                except BaseException, e:
-                    if type(e) is not exc:
-                        raise
-                    # Verify module name
-                    self.assertEquals(type(e).__module__, 'exceptions')
-                    # Verify no ref leaks in Exc_str()
-                    s = str(e)
-                    for checkArgName in expected:
-                        self.assertEquals(repr(getattr(e, checkArgName)),
-                                          repr(expected[checkArgName]),
-                                          'exception "%s", attribute "%s"' %
-                                           (repr(e), checkArgName))
+        for exc, args, expected in exceptionList:
+            try:
+                e = exc(*args)
+            except:
+                print("\nexc=%r, args=%r" % (exc, args))
+                raise
+            else:
+                # Verify module name
+                self.assertEquals(type(e).__module__, '__builtin__')
+                # Verify no ref leaks in Exc_str()
+                s = str(e)
+                for checkArgName in expected:
+                    value = getattr(e, checkArgName)
+                    self.assertEquals(repr(value),
+                                      repr(expected[checkArgName]),
+                                      '%r.%s == %r, expected %r' % (
+                                      e, checkArgName,
+                                      value, expected[checkArgName]))
 
-                    # test for pickling support
-                    for p in pickle, cPickle:
-                        for protocol in range(p.HIGHEST_PROTOCOL + 1):
-                            new = p.loads(p.dumps(e, protocol))
-                            for checkArgName in expected:
-                                got = repr(getattr(new, checkArgName))
-                                want = repr(expected[checkArgName])
-                                self.assertEquals(got, want,
-                                                  'pickled "%r", attribute "%s' %
-                                                  (e, checkArgName))
-
-    def testSlicing(self):
-        # Test that you can slice an exception directly instead of requiring
-        # going through the 'args' attribute.
-        args = (1, 2, 3)
-        exc = BaseException(*args)
-        self.failUnlessEqual(exc[:], args)
+                # test for pickling support
+                for p in [pickle]:
+                    for protocol in range(p.HIGHEST_PROTOCOL + 1):
+                        s = p.dumps(e, protocol)
+                        new = p.loads(s)
+                        for checkArgName in expected:
+                            got = repr(getattr(new, checkArgName))
+                            want = repr(expected[checkArgName])
+                            self.assertEquals(got, want,
+                                              'pickled "%r", attribute "%s' %
+                                              (e, checkArgName))
 
     def testKeywordArgs(self):
         # test that builtin exception don't take keyword args,
@@ -339,13 +335,23 @@ class ExceptionTests(unittest.TestCase):
         # Make sure both instances and classes have a str and unicode
         # representation.
         self.failUnless(str(Exception))
-        self.failUnless(unicode(Exception))
+        self.failUnless(str(Exception))
         self.failUnless(str(Exception('a')))
-        self.failUnless(unicode(Exception(u'a')))
+        self.failUnless(str(Exception('a')))
+
+    def testExceptionCleanup(self):
+        # Make sure "except V as N" exceptions are cleaned up properly
+
+        try:
+            raise Exception()
+        except Exception as e:
+            self.failUnless(e)
+            del e
+        self.failIf('e' in locals())
 
 
 def test_main():
     run_unittest(ExceptionTests)
 
 if __name__ == '__main__':
-    test_main()
+    unittest.main()

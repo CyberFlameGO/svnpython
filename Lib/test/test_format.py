@@ -1,4 +1,4 @@
-from test.test_support import verbose, have_unicode, TestFailed
+from test.test_support import verbose, TestFailed
 import sys
 from test.test_support import MAX_Py_ssize_t
 maxsize = MAX_Py_ssize_t
@@ -14,36 +14,34 @@ overflowrequired = 0
 def testformat(formatstr, args, output=None):
     if verbose:
         if output:
-            print "%s %% %s =? %s ..." %\
-                (repr(formatstr), repr(args), repr(output)),
+            print("%r %% %r =? %r ..." %\
+                (formatstr, args, output), end=' ')
         else:
-            print "%s %% %s works? ..." % (repr(formatstr), repr(args)),
+            print("%r %% %r works? ..." % (formatstr, args), end=' ')
     try:
         result = formatstr % args
     except OverflowError:
         if not overflowok:
             raise
         if verbose:
-            print 'overflow (this is fine)'
+            print('overflow (this is fine)')
     else:
         if overflowrequired:
             if verbose:
-                print 'no'
-            print "overflow expected on %s %% %s" % \
-                  (repr(formatstr), repr(args))
+                print('no')
+            print("overflow expected on %r %% %r" % (formatstr, args))
         elif output and result != output:
             if verbose:
-                print 'no'
-            print "%s %% %s == %s != %s" % \
-                  (repr(formatstr), repr(args), repr(result), repr(output))
+                print('no')
+            print("%r %% %r == %r != %r" %\
+                (formatstr, args, result, output))
         else:
             if verbose:
-                print 'yes'
+                print('yes')
 
 def testboth(formatstr, *args):
+    testformat(str8(formatstr), *args)
     testformat(formatstr, *args)
-    if have_unicode:
-        testformat(unicode(formatstr), *args)
 
 
 testboth("%.1d", (1,), "1")
@@ -73,14 +71,14 @@ overflowrequired = 0
 
 # Formatting of long integers. Overflow is not ok
 overflowok = 0
-testboth("%x", 10L, "a")
-testboth("%x", 100000000000L, "174876e800")
-testboth("%o", 10L, "12")
-testboth("%o", 100000000000L, "1351035564000")
-testboth("%d", 10L, "10")
-testboth("%d", 100000000000L, "100000000000")
+testboth("%x", 10, "a")
+testboth("%x", 100000000000, "174876e800")
+testboth("%o", 10, "12")
+testboth("%o", 100000000000, "1351035564000")
+testboth("%d", 10, "10")
+testboth("%d", 100000000000, "100000000000")
 
-big = 123456789012345678901234567890L
+big = 123456789012345678901234567890
 testboth("%d", big, "123456789012345678901234567890")
 testboth("%d", -big, "-123456789012345678901234567890")
 testboth("%5d", -big, "-123456789012345678901234567890")
@@ -99,7 +97,7 @@ testboth("%.30d", big, "123456789012345678901234567890")
 testboth("%.31d", big, "0123456789012345678901234567890")
 testboth("%32.31d", big, " 0123456789012345678901234567890")
 
-big = 0x1234567890abcdef12345L  # 21 hex digits
+big = 0x1234567890abcdef12345  # 21 hex digits
 testboth("%x", big, "1234567890abcdef12345")
 testboth("%x", -big, "-1234567890abcdef12345")
 testboth("%5x", -big, "-1234567890abcdef12345")
@@ -136,7 +134,7 @@ testboth("%#+027.23X", big, "+0X0001234567890ABCDEF12345")
 # same, except no 0 flag
 testboth("%#+27.23X", big, " +0X001234567890ABCDEF12345")
 
-big = 012345670123456701234567012345670L  # 32 octal digits
+big = 0o12345670123456701234567012345670  # 32 octal digits
 testboth("%o", big, "12345670123456701234567012345670")
 testboth("%o", -big, "-12345670123456701234567012345670")
 testboth("%5o", -big, "-12345670123456701234567012345670")
@@ -156,103 +154,85 @@ testboth("%.33o", big, "012345670123456701234567012345670")
 testboth("%34.33o", big, " 012345670123456701234567012345670")
 testboth("%-34.33o", big, "012345670123456701234567012345670 ")
 testboth("%o", big, "12345670123456701234567012345670")
-testboth("%#o", big, "012345670123456701234567012345670")
-testboth("%#o", -big, "-012345670123456701234567012345670")
-testboth("%#.34o", -big, "-0012345670123456701234567012345670")
-testboth("%#+.34o", big, "+0012345670123456701234567012345670")
-testboth("%# .34o", big, " 0012345670123456701234567012345670")
-testboth("%#+.34o", big, "+0012345670123456701234567012345670")
-testboth("%#-+.34o", big, "+0012345670123456701234567012345670")
-testboth("%#-+37.34o", big, "+0012345670123456701234567012345670  ")
-testboth("%#+37.34o", big, "  +0012345670123456701234567012345670")
+testboth("%#o", big, "0o12345670123456701234567012345670")
+testboth("%#o", -big, "-0o12345670123456701234567012345670")
+testboth("%#.34o", -big, "-0o0012345670123456701234567012345670")
+testboth("%#+.34o", big, "+0o0012345670123456701234567012345670")
+testboth("%# .34o", big, " 0o0012345670123456701234567012345670")
+testboth("%#-+.34o", big, "+0o0012345670123456701234567012345670")
+testboth("%#-+39.34o", big, "+0o0012345670123456701234567012345670  ")
+testboth("%#+39.34o", big, "  +0o0012345670123456701234567012345670")
 # next one gets one leading zero from precision
 testboth("%.33o", big, "012345670123456701234567012345670")
-# base marker shouldn't change that, since "0" is redundant
-testboth("%#.33o", big, "012345670123456701234567012345670")
-# but reduce precision, and base marker should add a zero
-testboth("%#.32o", big, "012345670123456701234567012345670")
-# one leading zero from precision, and another from "0" flag & width
+# one leading zero from precision
+testboth("%#.33o", big, "0o012345670123456701234567012345670")
+# leading zero vanishes
+testboth("%#.32o", big, "0o12345670123456701234567012345670")
+# one leading zero from precision, and another from '0' flag & width
 testboth("%034.33o", big, "0012345670123456701234567012345670")
-# base marker shouldn't change that
-testboth("%0#34.33o", big, "0012345670123456701234567012345670")
+# max width includes base marker; padding zeroes come after marker
+testboth("%0#38.33o", big, "0o000012345670123456701234567012345670")
+# padding spaces come before marker
+testboth("%#36.33o", big, " 0o012345670123456701234567012345670")
 
 # Some small ints, in both Python int and long flavors).
 testboth("%d", 42, "42")
 testboth("%d", -42, "-42")
-testboth("%d", 42L, "42")
-testboth("%d", -42L, "-42")
 testboth("%#x", 1, "0x1")
-testboth("%#x", 1L, "0x1")
 testboth("%#X", 1, "0X1")
-testboth("%#X", 1L, "0X1")
-testboth("%#o", 1, "01")
-testboth("%#o", 1L, "01")
-testboth("%#o", 0, "0")
-testboth("%#o", 0L, "0")
+testboth("%#o", 1, "0o1")
+testboth("%#o", 1, "0o1")
+testboth("%#o", 0, "0o0")
+testboth("%#o", 0, "0o0")
 testboth("%o", 0, "0")
-testboth("%o", 0L, "0")
 testboth("%d", 0, "0")
-testboth("%d", 0L, "0")
 testboth("%#x", 0, "0x0")
-testboth("%#x", 0L, "0x0")
 testboth("%#X", 0, "0X0")
-testboth("%#X", 0L, "0X0")
 
 testboth("%x", 0x42, "42")
 testboth("%x", -0x42, "-42")
-testboth("%x", 0x42L, "42")
-testboth("%x", -0x42L, "-42")
 
-testboth("%o", 042, "42")
-testboth("%o", -042, "-42")
-testboth("%o", 042L, "42")
-testboth("%o", -042L, "-42")
+testboth("%o", 0o42, "42")
+testboth("%o", -0o42, "-42")
+testboth("%o", 0o42, "42")
+testboth("%o", -0o42, "-42")
 
 # Test exception for unknown format characters
 if verbose:
-    print 'Testing exceptions'
+    print('Testing exceptions')
 
 def test_exc(formatstr, args, exception, excmsg):
     try:
         testformat(formatstr, args)
-    except exception, exc:
+    except exception as exc:
         if str(exc) == excmsg:
             if verbose:
-                print "yes"
+                print("yes")
         else:
-            if verbose: print 'no'
-            print 'Unexpected ', exception, ':', repr(str(exc))
+            if verbose: print('no')
+            print('Unexpected ', exception, ':', repr(str(exc)))
     except:
-        if verbose: print 'no'
-        print 'Unexpected exception'
+        if verbose: print('no')
+        print('Unexpected exception')
         raise
     else:
         raise TestFailed, 'did not get expected exception: %s' % excmsg
 
 test_exc('abc %a', 1, ValueError,
          "unsupported format character 'a' (0x61) at index 5")
-if have_unicode:
-    test_exc(unicode('abc %\u3000','raw-unicode-escape'), 1, ValueError,
-             "unsupported format character '?' (0x3000) at index 5")
+test_exc(str(b'abc %\u3000', 'raw-unicode-escape'), 1, ValueError,
+         "unsupported format character '?' (0x3000) at index 5")
 
-test_exc('%d', '1', TypeError, "int argument required, not str")
-test_exc('%g', '1', TypeError, "float argument required, not str")
+test_exc('%d', '1', TypeError, "an integer is required")
+test_exc('%g', '1', TypeError, "a float is required")
 test_exc('no format', '1', TypeError,
          "not all arguments converted during string formatting")
-test_exc('no format', u'1', TypeError,
+test_exc('no format', '1', TypeError,
          "not all arguments converted during string formatting")
-test_exc(u'no format', '1', TypeError,
+test_exc('no format', '1', TypeError,
          "not all arguments converted during string formatting")
-test_exc(u'no format', u'1', TypeError,
+test_exc('no format', '1', TypeError,
          "not all arguments converted during string formatting")
-
-class Foobar(long):
-    def __oct__(self):
-        # Returning a non-string should not blow up.
-        return self + 1
-
-test_exc('%o', Foobar(), TypeError,
-         "expected string or Unicode object, long found")
 
 if maxsize == 2**31-1:
     # crashes 2.2.1 and earlier:

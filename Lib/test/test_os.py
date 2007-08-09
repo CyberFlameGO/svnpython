@@ -53,7 +53,7 @@ class TemporaryFileTests(unittest.TestCase):
         self.check_tempfile(name)
 
         name = os.tempnam(test_support.TESTFN, "pfx")
-        self.assert_(os.path.basename(name)[:3] == "pfx")
+        self.assertEqual(os.path.basename(name)[:3], "pfx")
         self.check_tempfile(name)
 
     def test_tmpfile(self):
@@ -61,10 +61,10 @@ class TemporaryFileTests(unittest.TestCase):
             return
         fp = os.tmpfile()
         fp.write("foobar")
-        fp.seek(0,0)
+        fp.seek(0)
         s = fp.read()
         fp.close()
-        self.assert_(s == "foobar")
+        self.assertEquals(s, b"foobar")
 
     def test_tmpnam(self):
         import sys
@@ -143,7 +143,7 @@ class StatAttributeTests(unittest.TestCase):
         try:
             result.st_mode = 1
             self.fail("No exception thrown")
-        except TypeError:
+        except AttributeError:
             pass
 
         try:
@@ -179,7 +179,7 @@ class StatAttributeTests(unittest.TestCase):
         import statvfs
         try:
             result = os.statvfs(self.fname)
-        except OSError, e:
+        except OSError as e:
             # On AtheOS, glibc always returns ENOSYS
             import errno
             if e.errno == errno.ENOSYS:
@@ -201,7 +201,7 @@ class StatAttributeTests(unittest.TestCase):
         try:
             result.f_bfree = 1
             self.fail("No exception thrown")
-        except TypeError:
+        except AttributeError:
             pass
 
         try:
@@ -244,7 +244,7 @@ class StatAttributeTests(unittest.TestCase):
             # Verify that an open file can be stat'ed
             try:
                 os.stat(r"c:\pagefile.sys")
-            except WindowsError, e:
+            except WindowsError as e:
                 if e == 2: # file does not exist; cannot run test
                     return
                 self.fail("Could not stat pagefile.sys")
@@ -272,6 +272,13 @@ class EnvironTests(mapping_tests.BasicTestMappingProtocol):
             os.environ.update(HELLO="World")
             value = os.popen("/bin/sh -c 'echo $HELLO'").read().strip()
             self.assertEquals(value, "World")
+
+    # Verify environ keys and values from the OS are of the
+    # correct str type.
+    def test_keyvalue_types(self):
+        for key, val in os.environ.items():
+            self.assertEquals(type(key), str)
+            self.assertEquals(type(val), str)
 
 class WalkTests(unittest.TestCase):
     """Tests for os.walk()."""
@@ -308,7 +315,7 @@ class WalkTests(unittest.TestCase):
         os.makedirs(sub2_path)
         os.makedirs(t2_path)
         for path in tmp1_path, tmp2_path, tmp3_path, tmp4_path:
-            f = file(path, "w")
+            f = open(path, "w")
             f.write("I'm " + path + " and proud of it.  Blame test_os.\n")
             f.close()
         if hasattr(os, "symlink"):
@@ -381,7 +388,7 @@ class WalkTests(unittest.TestCase):
                     os.remove(dirname)
         os.rmdir(test_support.TESTFN)
 
-class MakedirTests (unittest.TestCase):
+class MakedirTests(unittest.TestCase):
     def setUp(self):
         os.mkdir(test_support.TESTFN)
 
@@ -400,9 +407,6 @@ class MakedirTests (unittest.TestCase):
                             'dir5', 'dir6')
         os.makedirs(path)
 
-
-
-
     def tearDown(self):
         path = os.path.join(test_support.TESTFN, 'dir1', 'dir2', 'dir3',
                             'dir4', 'dir5', 'dir6')
@@ -414,16 +418,16 @@ class MakedirTests (unittest.TestCase):
 
         os.removedirs(path)
 
-class DevNullTests (unittest.TestCase):
+class DevNullTests(unittest.TestCase):
     def test_devnull(self):
-        f = file(os.devnull, 'w')
+        f = open(os.devnull, 'w')
         f.write('hello')
         f.close()
-        f = file(os.devnull, 'r')
+        f = open(os.devnull, 'r')
         self.assertEqual(f.read(), '')
         f.close()
 
-class URandomTests (unittest.TestCase):
+class URandomTests(unittest.TestCase):
     def test_urandom(self):
         try:
             self.assertEqual(len(os.urandom(1)), 1)
@@ -432,6 +436,10 @@ class URandomTests (unittest.TestCase):
             self.assertEqual(len(os.urandom(1000)), 1000)
         except NotImplementedError:
             pass
+
+class ExecTests(unittest.TestCase):
+    def test_execvpe_with_bad_program(self):
+        self.assertRaises(OSError, os.execvpe, 'no such app-', [], None)
 
 class Win32ErrorTests(unittest.TestCase):
     def test_rename(self):
@@ -469,6 +477,7 @@ def test_main():
         MakedirTests,
         DevNullTests,
         URandomTests,
+        ExecTests,
         Win32ErrorTests
     )
 

@@ -29,6 +29,7 @@ __all__ = [
 
 # Imports.
 
+import io as _io
 import os as _os
 import errno as _errno
 from random import Random as _Random
@@ -36,11 +37,6 @@ from random import Random as _Random
 if _os.name == 'mac':
     import Carbon.Folder as _Folder
     import Carbon.Folders as _Folders
-
-try:
-    from cStringIO import StringIO as _StringIO
-except:
-    from StringIO import StringIO as _StringIO
 
 try:
     import fcntl as _fcntl
@@ -130,7 +126,7 @@ class _RandomNameSequence:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         m = self.mutex
         c = self.characters
         choose = self.rng.choice
@@ -196,18 +192,18 @@ def _get_default_tempdir():
         if dir != _os.curdir:
             dir = _os.path.normcase(_os.path.abspath(dir))
         # Try only a few names per directory.
-        for seq in xrange(100):
-            name = namer.next()
+        for seq in range(100):
+            name = next(namer)
             filename = _os.path.join(dir, name)
             try:
-                fd = _os.open(filename, flags, 0600)
-                fp = _os.fdopen(fd, 'w')
+                fd = _os.open(filename, flags, 0o600)
+                fp = _io.open(fd, 'w')
                 fp.write('blat')
                 fp.close()
                 _os.unlink(filename)
                 del fp, fd
                 return dir
-            except (OSError, IOError), e:
+            except (OSError, IOError) as e:
                 if e[0] != _errno.EEXIST:
                     break # no point trying more names in this directory
                 pass
@@ -235,14 +231,14 @@ def _mkstemp_inner(dir, pre, suf, flags):
 
     names = _get_candidate_names()
 
-    for seq in xrange(TMP_MAX):
-        name = names.next()
+    for seq in range(TMP_MAX):
+        name = next(names)
         file = _os.path.join(dir, pre + name + suf)
         try:
-            fd = _os.open(file, flags, 0600)
+            fd = _os.open(file, flags, 0o600)
             _set_cloexec(fd)
             return (fd, _os.path.abspath(file))
-        except OSError, e:
+        except OSError as e:
             if e.errno == _errno.EEXIST:
                 continue # try again
             raise
@@ -327,13 +323,13 @@ def mkdtemp(suffix="", prefix=template, dir=None):
 
     names = _get_candidate_names()
 
-    for seq in xrange(TMP_MAX):
-        name = names.next()
+    for seq in range(TMP_MAX):
+        name = next(names)
         file = _os.path.join(dir, prefix + name + suffix)
         try:
-            _os.mkdir(file, 0700)
+            _os.mkdir(file, 0o700)
             return file
-        except OSError, e:
+        except OSError as e:
             if e.errno == _errno.EEXIST:
                 continue # try again
             raise
@@ -362,8 +358,8 @@ def mktemp(suffix="", prefix=template, dir=None):
         dir = gettempdir()
 
     names = _get_candidate_names()
-    for seq in xrange(TMP_MAX):
-        name = names.next()
+    for seq in range(TMP_MAX):
+        name = next(names)
         file = _os.path.join(dir, prefix + name + suffix)
         if not _exists(file):
             return file
@@ -442,7 +438,7 @@ def NamedTemporaryFile(mode='w+b', bufsize=-1, suffix="",
         flags |= _os.O_TEMPORARY
 
     (fd, name) = _mkstemp_inner(dir, prefix, suffix, flags)
-    file = _os.fdopen(fd, mode, bufsize)
+    file = _io.open(fd, mode, bufsize)
     return _TemporaryFileWrapper(file, name, delete)
 
 if _os.name != 'posix' or _os.sys.platform == 'cygwin':
@@ -475,7 +471,7 @@ else:
         (fd, name) = _mkstemp_inner(dir, prefix, suffix, flags)
         try:
             _os.unlink(name)
-            return _os.fdopen(fd, mode, bufsize)
+            return _io.open(fd, mode, bufsize)
         except:
             _os.close(fd)
             raise
@@ -489,7 +485,10 @@ class SpooledTemporaryFile:
 
     def __init__(self, max_size=0, mode='w+b', bufsize=-1,
                  suffix="", prefix=template, dir=None):
-        self._file = _StringIO()
+        if 'b' in mode:
+            self._file = _io.BytesIO()
+        else:
+            self._file = _io.StringIO()
         self._max_size = max_size
         self._rolled = False
         self._TemporaryFileArgs = (mode, bufsize, suffix, prefix, dir)

@@ -223,7 +223,7 @@ class UnixBrowser(BaseBrowser):
         cmdline = [self.name] + raise_opt + args
 
         if remote or self.background:
-            inout = file(os.devnull, "r+")
+            inout = open(os.devnull, "r+")
         else:
             # for TTY browsers, we need stdin/out
             inout = None
@@ -347,7 +347,7 @@ class Konqueror(BaseBrowser):
         else:
             action = "openURL"
 
-        devnull = file(os.devnull, "r+")
+        devnull = open(os.devnull, "r+")
         # if possible, put browser in separate process group, so
         # keyboard interrupts don't affect browser as well as Python
         setsid = getattr(os, 'setsid', None)
@@ -640,22 +640,22 @@ def main():
     -t: open new tab""" % sys.argv[0]
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'ntd')
-    except getopt.error, msg:
-        print >>sys.stderr, msg
-        print >>sys.stderr, usage
+    except getopt.error as msg:
+        print(msg, file=sys.stderr)
+        print(usage, file=sys.stderr)
         sys.exit(1)
     new_win = 0
     for o, a in opts:
         if o == '-n': new_win = 1
         elif o == '-t': new_win = 2
-    if len(args) <> 1:
-        print >>sys.stderr, usage
+    if len(args) != 1:
+        print(usage, file=sys.stderr)
         sys.exit(1)
 
     url = args[0]
     open(url, new_win)
 
-    print "\a"
+    print("\a")
 
 if __name__ == "__main__":
     main()

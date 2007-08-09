@@ -86,14 +86,14 @@ class POP3:
 
 
     def _putline(self, line):
-        if self._debugging > 1: print '*put*', repr(line)
+        if self._debugging > 1: print('*put*', repr(line))
         self.sock.sendall('%s%s' % (line, CRLF))
 
 
     # Internal: send one command to the server (through _putline())
 
     def _putcmd(self, line):
-        if self._debugging: print '*cmd*', repr(line)
+        if self._debugging: print('*cmd*', repr(line))
         self._putline(line)
 
 
@@ -103,7 +103,7 @@ class POP3:
 
     def _getline(self):
         line = self.file.readline()
-        if self._debugging > 1: print '*get*', repr(line)
+        if self._debugging > 1: print('*get*', repr(line))
         if not line: raise error_proto('-ERR EOF')
         octets = len(line)
         # server can send any combination of CR & LF
@@ -121,9 +121,9 @@ class POP3:
 
     def _getresp(self):
         resp, o = self._getline()
-        if self._debugging > 1: print '*resp*', repr(resp)
+        if self._debugging > 1: print('*resp*', repr(resp))
         c = resp[:1]
-        if c != '+':
+        if c != b'+':
             raise error_proto(resp)
         return resp
 
@@ -195,7 +195,7 @@ class POP3:
         """
         retval = self._shortcmd('STAT')
         rets = retval.split()
-        if self._debugging: print '*stat*', repr(rets)
+        if self._debugging: print('*stat*', repr(rets))
         numMessages = int(rets[1])
         sizeMessages = int(rets[2])
         return (numMessages, sizeMessages)
@@ -248,7 +248,7 @@ class POP3:
         """Signoff: commit changes on server, unlock mailbox, close connection."""
         try:
             resp = self._shortcmd('QUIT')
-        except error_proto, val:
+        except error_proto as val:
             resp = val
         self.file.close()
         self.sock.close()
@@ -333,7 +333,7 @@ class POP3_SSL(POP3):
             try:
                 self.sock = socket.socket(af, socktype, proto)
                 self.sock.connect(sa)
-            except socket.error, msg:
+            except socket.error as msg:
                 if self.sock:
                     self.sock.close()
                 self.sock = None
@@ -361,7 +361,7 @@ class POP3_SSL(POP3):
             match = renewline.match(self.buffer)
         line = match.group(0)
         self.buffer = renewline.sub('' ,self.buffer, 1)
-        if self._debugging > 1: print '*get*', repr(line)
+        if self._debugging > 1: print('*get*', repr(line))
 
         octets = len(line)
         if line[-2:] == CRLF:
@@ -371,7 +371,7 @@ class POP3_SSL(POP3):
         return line[:-1], octets
 
     def _putline(self, line):
-        if self._debugging > 1: print '*put*', repr(line)
+        if self._debugging > 1: print('*put*', repr(line))
         line += CRLF
         bytes = len(line)
         while bytes > 0:
@@ -385,7 +385,7 @@ class POP3_SSL(POP3):
         """Signoff: commit changes on server, unlock mailbox, close connection."""
         try:
             resp = self._shortcmd('QUIT')
-        except error_proto, val:
+        except error_proto as val:
             resp = val
         self.sock.close()
         del self.sslobj, self.sock
@@ -395,15 +395,15 @@ class POP3_SSL(POP3):
 if __name__ == "__main__":
     import sys
     a = POP3(sys.argv[1])
-    print a.getwelcome()
+    print(a.getwelcome())
     a.user(sys.argv[2])
     a.pass_(sys.argv[3])
     a.list()
     (numMsgs, totalSize) = a.stat()
     for i in range(1, numMsgs + 1):
         (header, msg, octets) = a.retr(i)
-        print "Message %d:" % i
+        print("Message %d:" % i)
         for line in msg:
-            print '   ' + line
-        print '-----------------------'
+            print('   ' + line)
+        print('-----------------------')
     a.quit()

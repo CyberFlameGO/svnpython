@@ -272,33 +272,6 @@ list_dealloc(PyListObject *op)
 	Py_TRASHCAN_SAFE_END(op)
 }
 
-static int
-list_print(PyListObject *op, FILE *fp, int flags)
-{
-	int rc;
-	Py_ssize_t i;
-
-	rc = Py_ReprEnter((PyObject*)op);
-	if (rc != 0) {
-		if (rc < 0)
-			return rc;
-		fprintf(fp, "[...]");
-		return 0;
-	}
-	fprintf(fp, "[");
-	for (i = 0; i < Py_Size(op); i++) {
-		if (i > 0)
-			fprintf(fp, ", ");
-		if (PyObject_Print(op->ob_item[i], fp, 0) != 0) {
-			Py_ReprLeave((PyObject *)op);
-			return -1;
-		}
-	}
-	fprintf(fp, "]");
-	Py_ReprLeave((PyObject *)op);
-	return 0;
-}
-
 static PyObject *
 list_repr(PyListObject *v)
 {
@@ -308,11 +281,11 @@ list_repr(PyListObject *v)
 
 	i = Py_ReprEnter((PyObject*)v);
 	if (i != 0) {
-		return i > 0 ? PyString_FromString("[...]") : NULL;
+		return i > 0 ? PyUnicode_FromString("[...]") : NULL;
 	}
 
 	if (Py_Size(v) == 0) {
-		result = PyString_FromString("[]");
+		result = PyUnicode_FromString("[]");
 		goto Done;
 	}
 
@@ -335,29 +308,29 @@ list_repr(PyListObject *v)
 
 	/* Add "[]" decorations to the first and last items. */
 	assert(PyList_GET_SIZE(pieces) > 0);
-	s = PyString_FromString("[");
+	s = PyUnicode_FromString("[");
 	if (s == NULL)
 		goto Done;
 	temp = PyList_GET_ITEM(pieces, 0);
-	PyString_ConcatAndDel(&s, temp);
+	PyUnicode_AppendAndDel(&s, temp);
 	PyList_SET_ITEM(pieces, 0, s);
 	if (s == NULL)
 		goto Done;
 
-	s = PyString_FromString("]");
+	s = PyUnicode_FromString("]");
 	if (s == NULL)
 		goto Done;
 	temp = PyList_GET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1);
-	PyString_ConcatAndDel(&temp, s);
+	PyUnicode_AppendAndDel(&temp, s);
 	PyList_SET_ITEM(pieces, PyList_GET_SIZE(pieces) - 1, temp);
 	if (temp == NULL)
 		goto Done;
 
 	/* Paste them all together with ", " between. */
-	s = PyString_FromString(", ");
+	s = PyUnicode_FromString(", ");
 	if (s == NULL)
 		goto Done;
-	result = _PyString_Join(s, pieces);
+	result = PyUnicode_Join(s, pieces);
 	Py_DECREF(s);
 
 Done:
@@ -945,7 +918,7 @@ islt(PyObject *x, PyObject *y, PyObject *compare)
 	Py_DECREF(args);
 	if (res == NULL)
 		return -1;
-	if (!PyInt_Check(res)) {
+	if (!PyInt_CheckExact(res)) {
 		PyErr_Format(PyExc_TypeError,
 			     "comparison function must return int, not %.200s",
 			     res->ob_type->tp_name);
@@ -1832,8 +1805,7 @@ static PyTypeObject sortwrapper_type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT |
-	Py_TPFLAGS_HAVE_RICHCOMPARE, 		/* tp_flags */
+	Py_TPFLAGS_DEFAULT,	 		/* tp_flags */
 	sortwrapper_doc,			/* tp_doc */
 	0,					/* tp_traverse */
 	0,					/* tp_clear */
@@ -1966,6 +1938,26 @@ build_cmpwrapper(PyObject *cmpfunc)
 	return (PyObject *)co;
 }
 
+static int
+is_default_cmp(PyObject *cmpfunc)
+{
+	PyCFunctionObject *f;
+	if (cmpfunc == NULL || cmpfunc == Py_None)
+		return 1;
+	if (!PyCFunction_Check(cmpfunc))
+		return 0;
+	f = (PyCFunctionObject *)cmpfunc;
+	if (f->m_self != NULL)
+		return 0;
+	if (!PyString_Check(f->m_module))
+		return 0;
+	if (strcmp(PyString_AS_STRING(f->m_module), "__builtin__") != 0)
+		return 0;
+	if (strcmp(f->m_ml->ml_name, "cmp") != 0)
+		return 0;
+	return 1;
+}
+
 /* An adaptive, stable, natural mergesort.  See listsort.txt.
  * Returns Py_None on success, NULL on error.  Even in case of error, the
  * list will be some permutation of its input state (nothing is lost or
@@ -1996,7 +1988,7 @@ listsort(PyListObject *self, PyObject *args, PyObject *kwds)
 			kwlist, &compare, &keyfunc, &reverse))
 			return NULL;
 	}
-	if (compare == Py_None)
+	if (is_default_cmp(compare))
 		compare = NULL;
 	if (keyfunc == Py_None)
 		keyfunc = NULL;
@@ -2378,13 +2370,6 @@ list_init(PyListObject *self, PyObject *args, PyObject *kw)
 	return 0;
 }
 
-static long
-list_nohash(PyObject *self)
-{
-	PyErr_SetString(PyExc_TypeError, "list objects are unhashable");
-	return -1;
-}
-
 static PyObject *list_iter(PyObject *seq);
 static PyObject *list_reversed(PyListObject* seq, PyObject* unused);
 
@@ -2445,7 +2430,6 @@ static PySequenceMethods list_as_sequence = {
 PyDoc_STRVAR(list_doc,
 "list() -> new list\n"
 "list(sequence) -> new list initialized from sequence's items");
-
 
 static PyObject *
 list_subscript(PyListObject* self, PyObject* item)
@@ -2654,7 +2638,7 @@ PyTypeObject PyList_Type = {
 	sizeof(PyListObject),
 	0,
 	(destructor)list_dealloc,		/* tp_dealloc */
-	(printfunc)list_print,			/* tp_print */
+	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */
@@ -2662,7 +2646,7 @@ PyTypeObject PyList_Type = {
 	0,					/* tp_as_number */
 	&list_as_sequence,			/* tp_as_sequence */
 	&list_as_mapping,			/* tp_as_mapping */
-	list_nohash,				/* tp_hash */
+	0,					/* tp_hash */
 	0,					/* tp_call */
 	0,					/* tp_str */
 	PyObject_GenericGetAttr,		/* tp_getattro */

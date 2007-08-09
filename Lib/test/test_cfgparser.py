@@ -1,5 +1,5 @@
 import ConfigParser
-import StringIO
+import io
 import unittest
 import UserDict
 
@@ -7,18 +7,13 @@ from test import test_support
 
 class SortedDict(UserDict.UserDict):
     def items(self):
-        result = self.data.items()
-        result.sort()
-        return result
+        return sorted(self.data.items())
 
     def keys(self):
-        result = self.data.keys()
-        result.sort()
-        return result
+        return sorted(self.data.keys())
 
     def values(self):
-        result = self.items()
-        return [i[1] for i in values]
+        return [i[1] for i in self.items()]
 
     def iteritems(self): return iter(self.items())
     def iterkeys(self): return iter(self.keys())
@@ -35,7 +30,7 @@ class TestCaseBase(unittest.TestCase):
 
     def fromstring(self, string, defaults=None):
         cf = self.newconfig(defaults)
-        sio = StringIO.StringIO(string)
+        sio = io.StringIO(string)
         cf.readfp(sio)
         return cf
 
@@ -161,7 +156,7 @@ class TestCaseBase(unittest.TestCase):
                          "No Section!\n")
 
     def parse_error(self, exc, src):
-        sio = StringIO.StringIO(src)
+        sio = io.StringIO(src)
         self.assertRaises(exc, self.cf.readfp, sio)
 
     def test_query_errors(self):
@@ -181,7 +176,7 @@ class TestCaseBase(unittest.TestCase):
     def get_error(self, exc, section, option):
         try:
             self.cf.get(section, option)
-        except exc, e:
+        except exc as e:
             return e
         else:
             self.fail("expected exception type %s.%s"
@@ -227,7 +222,7 @@ class TestCaseBase(unittest.TestCase):
             "foo: another very\n"
             " long line"
             )
-        output = StringIO.StringIO()
+        output = io.StringIO()
         cf.write(output)
         self.assertEqual(
             output.getvalue(),
@@ -252,13 +247,8 @@ class TestCaseBase(unittest.TestCase):
         cf.set("sect", "option1", mystr("splat"))
         cf.set("sect", "option2", "splat")
         cf.set("sect", "option2", mystr("splat"))
-        try:
-            unicode
-        except NameError:
-            pass
-        else:
-            cf.set("sect", "option1", unicode("splat"))
-            cf.set("sect", "option2", unicode("splat"))
+        cf.set("sect", "option1", "splat")
+        cf.set("sect", "option2", "splat")
 
     def test_read_returns_file_list(self):
         file1 = test_support.findfile("cfgparser.1")
@@ -459,7 +449,7 @@ class SortedTestCase(RawConfigParserTestCase):
                         "o1=4\n"
                         "[a]\n"
                         "k=v\n")
-        output = StringIO.StringIO()
+        output = io.StringIO()
         self.cf.write(output)
         self.assertEquals(output.getvalue(),
                           "[a]\n"

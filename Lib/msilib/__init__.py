@@ -1,8 +1,8 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright (C) 2005 Martin v. Löwis
+# -*- coding: utf-8 -*-
+# Copyright (C) 2005 Martin v. LÃ¶wis
 # Licensed to PSF under a Contributor Agreement.
 from _msi import *
-import sets, os, string, re
+import os, string, re
 
 Win64=0
 
@@ -40,7 +40,7 @@ class Table:
             index -= 1
             unk = type & ~knownbits
             if unk:
-                print "%s.%s unknown bits %x" % (self.name, name, unk)
+                print("%s.%s unknown bits %x" % (self.name, name, unk))
             size = type & datasizemask
             dtype = type & typemask
             if dtype == type_string:
@@ -59,7 +59,7 @@ class Table:
                 tname="OBJECT"
             else:
                 tname="unknown"
-                print "%s.%sunknown integer type %d" % (self.name, name, size)
+                print("%s.%sunknown integer type %d" % (self.name, name, size))
             if type & type_nullable:
                 flags = ""
             else:
@@ -99,7 +99,7 @@ def add_data(db, table, values):
         assert len(value) == count, value
         for i in range(count):
             field = value[i]
-            if isinstance(field, (int, long)):
+            if isinstance(field, int):
                 r.SetInteger(i+1,field)
             elif isinstance(field, basestring):
                 r.SetString(i+1,field)
@@ -111,7 +111,7 @@ def add_data(db, table, values):
                 raise TypeError, "Unsupported type %s" % field.__class__.__name__
         try:
             v.Modify(MSIMODIFY_INSERT, r)
-        except Exception, e:
+        except Exception as e:
             raise MSIError("Could not insert "+repr(values)+" into "+table)
 
         r.ClearData()
@@ -184,7 +184,7 @@ class CAB:
     def __init__(self, name):
         self.name = name
         self.files = []
-        self.filenames = sets.Set()
+        self.filenames = set()
         self.index = 0
 
     def gen_id(self, file):
@@ -215,7 +215,7 @@ class CAB:
         os.unlink(filename)
         db.Commit()
 
-_directories = sets.Set()
+_directories = set()
 class Directory:
     def __init__(self, db, cab, basedir, physical, _logical, default, componentflags=None):
         """Create a new directory in the Directory table. There is a current component
@@ -239,8 +239,8 @@ class Directory:
         self.physical = physical
         self.logical = logical
         self.component = None
-        self.short_names = sets.Set()
-        self.ids = sets.Set()
+        self.short_names = set()
+        self.ids = set()
         self.keyfiles = {}
         self.componentflags = componentflags
         if basedir:
@@ -326,7 +326,7 @@ class Directory:
             file = os.path.basename(file)
         absolute = os.path.join(self.absolute, src)
         assert not re.search(r'[\?|><:/*]"', file) # restrictions on long names
-        if self.keyfiles.has_key(file):
+        if file in self.keyfiles:
             logical = self.keyfiles[file]
         else:
             logical = None

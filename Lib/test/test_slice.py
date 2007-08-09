@@ -2,7 +2,7 @@
 
 import unittest
 from test import test_support
-from cPickle import loads, dumps
+from pickle import loads, dumps
 
 import sys
 
@@ -36,18 +36,18 @@ class SliceTest(unittest.TestCase):
 
         s1 = slice(BadCmp())
         s2 = slice(BadCmp())
-        self.assertRaises(Exc, cmp, s1, s2)
         self.assertEqual(s1, s1)
+        self.assertRaises(Exc, lambda: s1 == s2)
 
         s1 = slice(1, BadCmp())
         s2 = slice(1, BadCmp())
         self.assertEqual(s1, s1)
-        self.assertRaises(Exc, cmp, s1, s2)
+        self.assertRaises(Exc, lambda: s1 == s2)
 
         s1 = slice(1, 2, BadCmp())
         s2 = slice(1, 2, BadCmp())
         self.assertEqual(s1, s1)
-        self.assertRaises(Exc, cmp, s1, s2)
+        self.assertRaises(Exc, lambda: s1 == s2)
 
     def test_members(self):
         s = slice(1)
@@ -87,11 +87,11 @@ class SliceTest(unittest.TestCase):
             slice(100,  -100,  -1).indices(10),
             slice(None, None, -1).indices(10)
         )
-        self.assertEqual(slice(-100L, 100L, 2L).indices(10), (0, 10,  2))
+        self.assertEqual(slice(-100, 100, 2).indices(10), (0, 10,  2))
 
-        self.assertEqual(range(10)[::sys.maxint - 1], [0])
+        self.assertEqual(list(range(10))[::sys.maxint - 1], [0])
 
-        self.assertRaises(OverflowError, slice(None).indices, 1L<<100)
+        self.assertRaises(OverflowError, slice(None).indices, 1<<100)
 
     def test_setslice_without_getslice(self):
         tmp = []

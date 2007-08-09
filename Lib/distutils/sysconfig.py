@@ -11,12 +11,12 @@ Email:        <fdrake@acm.org>
 
 __revision__ = "$Id$"
 
+import io
 import os
 import re
-import string
 import sys
 
-from distutils.errors import DistutilsPlatformError
+from .errors import DistutilsPlatformError
 
 # These are needed in a couple of spots, so just compute them once.
 PREFIX = os.path.normpath(sys.prefix)
@@ -150,22 +150,22 @@ def customize_compiler(compiler):
             get_config_vars('CC', 'CXX', 'OPT', 'CFLAGS',
                             'CCSHARED', 'LDSHARED', 'SO')
 
-        if os.environ.has_key('CC'):
+        if 'CC' in os.environ:
             cc = os.environ['CC']
-        if os.environ.has_key('CXX'):
+        if 'CXX' in os.environ:
             cxx = os.environ['CXX']
-        if os.environ.has_key('LDSHARED'):
+        if 'LDSHARED' in os.environ:
             ldshared = os.environ['LDSHARED']
-        if os.environ.has_key('CPP'):
+        if 'CPP' in os.environ:
             cpp = os.environ['CPP']
         else:
             cpp = cc + " -E"           # not always
-        if os.environ.has_key('LDFLAGS'):
+        if 'LDFLAGS' in os.environ:
             ldshared = ldshared + ' ' + os.environ['LDFLAGS']
-        if os.environ.has_key('CFLAGS'):
+        if 'CFLAGS' in os.environ:
             cflags = opt + ' ' + os.environ['CFLAGS']
             ldshared = ldshared + ' ' + os.environ['CFLAGS']
-        if os.environ.has_key('CPPFLAGS'):
+        if 'CPPFLAGS' in os.environ:
             cpp = cpp + ' ' + os.environ['CPPFLAGS']
             cflags = cflags + ' ' + os.environ['CPPFLAGS']
             ldshared = ldshared + ' ' + os.environ['CPPFLAGS']
@@ -261,7 +261,7 @@ def parse_makefile(fn, g=None):
         m = _variable_rx.match(line)
         if m:
             n, v = m.group(1, 2)
-            v = string.strip(v)
+            v = v.strip()
             if "$" in v:
                 notdone[n] = v
             else:
@@ -271,18 +271,18 @@ def parse_makefile(fn, g=None):
 
     # do variable interpolation here
     while notdone:
-        for name in notdone.keys():
+        for name in list(notdone):
             value = notdone[name]
             m = _findvar1_rx.search(value) or _findvar2_rx.search(value)
             if m:
                 n = m.group(1)
                 found = True
-                if done.has_key(n):
+                if n in done:
                     item = str(done[n])
-                elif notdone.has_key(n):
+                elif n in notdone:
                     # get it on a subsequent round
                     found = False
-                elif os.environ.has_key(n):
+                elif n in os.environ:
                     # do it like make: fall back to environment
                     item = os.environ[n]
                 else:
@@ -295,7 +295,7 @@ def parse_makefile(fn, g=None):
                     else:
                         try: value = int(value)
                         except ValueError:
-                            done[name] = string.strip(value)
+                            done[name] = value.strip()
                         else:
                             done[name] = value
                         del notdone[name]
@@ -344,7 +344,7 @@ def _init_posix():
     try:
         filename = get_makefile_filename()
         parse_makefile(filename, g)
-    except IOError, msg:
+    except IOError as msg:
         my_msg = "invalid Python installation: unable to open %s" % filename
         if hasattr(msg, "strerror"):
             my_msg = my_msg + " (%s)" % msg.strerror
@@ -354,8 +354,8 @@ def _init_posix():
     # load the installed pyconfig.h:
     try:
         filename = get_config_h_filename()
-        parse_config_h(file(filename), g)
-    except IOError, msg:
+        parse_config_h(io.open(filename), g)
+    except IOError as msg:
         my_msg = "invalid Python installation: unable to open %s" % filename
         if hasattr(msg, "strerror"):
             my_msg = my_msg + " (%s)" % msg.strerror
@@ -366,13 +366,13 @@ def _init_posix():
     # MACOSX_DEPLOYMENT_TARGET: configure bases some choices on it so
     # it needs to be compatible.
     # If it isn't set we set it to the configure-time value
-    if sys.platform == 'darwin' and g.has_key('MACOSX_DEPLOYMENT_TARGET'):
+    if sys.platform == 'darwin' and 'MACOSX_DEPLOYMENT_TARGET' in g:
         cfg_target = g['MACOSX_DEPLOYMENT_TARGET']
         cur_target = os.getenv('MACOSX_DEPLOYMENT_TARGET', '')
         if cur_target == '':
             cur_target = cfg_target
             os.putenv('MACOSX_DEPLOYMENT_TARGET', cfg_target)
-        elif map(int, cfg_target.split('.')) > map(int, cur_target.split('.')):
+        elif [int(x) for x in cfg_target.split('.')] > [int(x) for x in cur_target.split('.')]:
             my_msg = ('$MACOSX_DEPLOYMENT_TARGET mismatch: now "%s" but "%s" during configure'
                 % (cur_target, cfg_target))
             raise DistutilsPlatformError(my_msg)
@@ -399,7 +399,7 @@ def _init_posix():
             # relative to the srcdir, which after installation no longer makes
             # sense.
             python_lib = get_python_lib(standard_lib=1)
-            linkerscript_path = string.split(g['LDSHARED'])[0]
+            linkerscript_path = g['LDSHARED'].split()[0]
             linkerscript_name = os.path.basename(linkerscript_path)
             linkerscript = os.path.join(python_lib, 'config',
                                         linkerscript_name)

@@ -369,7 +369,7 @@ support for features needed by `python-mode'.")
 			  "NotImplementedError" "OSError" "OverflowError"
 			  "OverflowWarning" "PendingDeprecationWarning"
 			  "ReferenceError" "RuntimeError" "RuntimeWarning"
-			  "StandardError" "StopIteration" "SyntaxError"
+			  "StopIteration" "SyntaxError"
 			  "SyntaxWarning" "SystemError" "SystemExit"
 			  "TabError" "True" "TypeError" "UnboundLocalError"
 			  "UnicodeDecodeError" "UnicodeEncodeError"
@@ -378,18 +378,18 @@ support for features needed by `python-mode'.")
 			  "ZeroDivisionError" "__debug__"
 			  "__import__" "__name__" "abs" "apply" "basestring"
 			  "bool" "buffer" "callable" "chr" "classmethod"
-			  "cmp" "coerce" "compile" "complex" "copyright"
+			  "cmp" "compile" "complex" "copyright"
 			  "delattr" "dict" "dir" "divmod"
 			  "enumerate" "eval" "execfile" "exit" "file"
 			  "filter" "float" "getattr" "globals" "hasattr"
-			  "hash" "hex" "id" "input" "int" "intern"
+			  "hash" "hex" "id" "int"
 			  "isinstance" "issubclass" "iter" "len" "license"
 			  "list" "locals" "long" "map" "max" "min" "object"
 			  "oct" "open" "ord" "pow" "property" "range"
-			  "raw_input" "reduce" "reload" "repr" "round"
+			  "reload" "repr" "round"
 			  "setattr" "slice" "staticmethod" "str" "sum"
 			  "super" "tuple" "type" "unichr" "unicode" "vars"
-			  "xrange" "zip")
+			  "zip")
 			"\\|"))
 	)
     (list
@@ -690,8 +690,6 @@ prospect as debugging continues.")
   ;; Both single quote and double quote are string delimiters
   (modify-syntax-entry ?\' "\"" py-mode-syntax-table)
   (modify-syntax-entry ?\" "\"" py-mode-syntax-table)
-  ;; backquote is open and close paren
-  (modify-syntax-entry ?\` "$"  py-mode-syntax-table)
   ;; comment delimiters
   (modify-syntax-entry ?\# "<"  py-mode-syntax-table)
   (modify-syntax-entry ?\n ">"  py-mode-syntax-table)

@@ -20,7 +20,7 @@ object):
                         # access returns a *copy* of the entry!
         del d[key]      # delete data stored at key (raises KeyError
                         # if no such key)
-        flag = d.has_key(key)   # true if the key exists; same as "key in d"
+        flag = key in d # true if the key exists
         list = d.keys() # a list of all existing keys (slow!)
 
         d.close()       # close it
@@ -56,17 +56,8 @@ entries in the cache, and empty the cache (d.sync() also synchronizes
 the persistent dictionary on disk, if feasible).
 """
 
-# Try using cPickle and cStringIO if available.
-
-try:
-    from cPickle import Pickler, Unpickler
-except ImportError:
-    from pickle import Pickler, Unpickler
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from pickle import Pickler, Unpickler
+from io import BytesIO
 
 import UserDict
 import warnings
@@ -94,14 +85,11 @@ class Shelf(UserDict.DictMixin):
     def __len__(self):
         return len(self.dict)
 
-    def has_key(self, key):
-        return self.dict.has_key(key)
-
     def __contains__(self, key):
-        return self.dict.has_key(key)
+        return key in self.dict
 
     def get(self, key, default=None):
-        if self.dict.has_key(key):
+        if key in self.dict:
             return self[key]
         return default
 
@@ -109,7 +97,7 @@ class Shelf(UserDict.DictMixin):
         try:
             value = self.cache[key]
         except KeyError:
-            f = StringIO(self.dict[key])
+            f = BytesIO(self.dict[key])
             value = Unpickler(f).load()
             if self.writeback:
                 self.cache[key] = value
@@ -118,7 +106,7 @@ class Shelf(UserDict.DictMixin):
     def __setitem__(self, key, value):
         if self.writeback:
             self.cache[key] = value
-        f = StringIO()
+        f = BytesIO()
         p = Pickler(f, self._protocol)
         p.dump(value)
         self.dict[key] = f.getvalue()
@@ -147,7 +135,7 @@ class Shelf(UserDict.DictMixin):
     def sync(self):
         if self.writeback and self.cache:
             self.writeback = False
-            for key, entry in self.cache.iteritems():
+            for key, entry in self.cache.items():
                 self[key] = entry
             self.writeback = True
             self.cache = {}
@@ -173,27 +161,27 @@ class BsdDbShelf(Shelf):
 
     def set_location(self, key):
         (key, value) = self.dict.set_location(key)
-        f = StringIO(value)
+        f = BytesIO(value)
         return (key, Unpickler(f).load())
 
     def next(self):
-        (key, value) = self.dict.next()
-        f = StringIO(value)
+        (key, value) = next(self.dict)
+        f = BytesIO(value)
         return (key, Unpickler(f).load())
 
     def previous(self):
         (key, value) = self.dict.previous()
-        f = StringIO(value)
+        f = BytesIO(value)
         return (key, Unpickler(f).load())
 
     def first(self):
         (key, value) = self.dict.first()
-        f = StringIO(value)
+        f = BytesIO(value)
         return (key, Unpickler(f).load())
 
     def last(self):
         (key, value) = self.dict.last()
-        f = StringIO(value)
+        f = BytesIO(value)
         return (key, Unpickler(f).load())
 
 

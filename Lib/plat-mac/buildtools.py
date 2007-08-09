@@ -2,7 +2,6 @@
 
 import sys
 import os
-import string
 import imp
 import marshal
 from Carbon import Res
@@ -81,7 +80,7 @@ def process(template, filename, destname, copy_codefragment=0,
     fp.close()
     try:
         code = compile(text + '\n', filename, "exec")
-    except SyntaxError, arg:
+    except SyntaxError as arg:
         raise BuildError, "Syntax error in script %s: %s" % (filename, arg)
     except EOFError:
         raise BuildError, "End-of-file in script %s" % (filename,)
@@ -89,7 +88,7 @@ def process(template, filename, destname, copy_codefragment=0,
     # Set the destination file name. Note that basename
     # does contain the whole filepath, only a .py is stripped.
 
-    if string.lower(filename[-3:]) == ".py":
+    if filename[-3:].lower() == ".py":
         basename = filename[:-3]
         if MacOS.runtimemodel != 'macho' and not destname:
             destname = basename
@@ -168,7 +167,7 @@ def process_common(template, progress, code, rsrcname, destname, is_update,
         output = Res.FSOpenResourceFile(destname, RESOURCE_FORK_NAME, WRITE)
     except MacOS.Error:
         destdir, destfile = os.path.split(destname)
-        Res.FSCreateResourceFile(destdir, unicode(destfile), RESOURCE_FORK_NAME)
+        Res.FSCreateResourceFile(destdir, str(destfile), RESOURCE_FORK_NAME)
         output = Res.FSOpenResourceFile(destname, RESOURCE_FORK_NAME, WRITE)
 
     # Copy the resources from the target specific resource template, if any
@@ -195,7 +194,7 @@ def process_common(template, progress, code, rsrcname, destname, is_update,
             'icl8', 'ics4', 'ics8', 'ICN#', 'ics#']
     if not copy_codefragment:
         skiptypes.append('cfrg')
-##  skipowner = (ownertype <> None)
+##  skipowner = (ownertype != None)
 
     # Copy the resources from the template
 
@@ -350,7 +349,7 @@ def copyres(input, output, skiptypes, skipowner, progress=None):
         for ires in range(1, 1+nresources):
             res = Res.Get1IndResource(type, ires)
             id, type, name = res.GetResInfo()
-            lcname = string.lower(name)
+            lcname = name.lower()
 
             if lcname == OWNERNAME and id == 0:
                 if skipowner:

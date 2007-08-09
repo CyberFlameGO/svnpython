@@ -36,28 +36,28 @@ test_1 = """
 
 Here's the new type at work:
 
-    >>> print defaultdict               # show our type
+    >>> print(defaultdict)              # show our type
     <class 'test.test_descrtut.defaultdict'>
-    >>> print type(defaultdict)         # its metatype
+    >>> print(type(defaultdict))        # its metatype
     <type 'type'>
     >>> a = defaultdict(default=0.0)    # create an instance
-    >>> print a                         # show the instance
+    >>> print(a)                        # show the instance
     {}
-    >>> print type(a)                   # show its type
+    >>> print(type(a))                  # show its type
     <class 'test.test_descrtut.defaultdict'>
-    >>> print a.__class__               # show its class
+    >>> print(a.__class__)              # show its class
     <class 'test.test_descrtut.defaultdict'>
-    >>> print type(a) is a.__class__    # its type is its class
+    >>> print(type(a) is a.__class__)   # its type is its class
     True
     >>> a[1] = 3.25                     # modify the instance
-    >>> print a                         # show the new value
+    >>> print(a)                        # show the new value
     {1: 3.25}
-    >>> print a[1]                      # show the new item
+    >>> print(a[1])                     # show the new item
     3.25
-    >>> print a[0]                      # a non-existant item
+    >>> print(a[0])                     # a non-existant item
     0.0
     >>> a.merge({1:100, 2:200})         # use a dict method
-    >>> print sortdict(a)               # show the result
+    >>> print(sortdict(a))              # show the result
     {1: 3.25, 2: 200}
     >>>
 
@@ -65,16 +65,14 @@ We can also use the new type in contexts where classic only allows "real"
 dictionaries, such as the locals/globals dictionaries for the exec
 statement or the built-in function eval():
 
-    >>> def sorted(seq):
-    ...     seq.sort()
-    ...     return seq
-    >>> print sorted(a.keys())
+    >>> print(sorted(a.keys()))
     [1, 2]
-    >>> exec "x = 3; print x" in a
+    >>> a['print'] = print              # need the print function here
+    >>> exec("x = 3; print(x)", a)
     3
-    >>> print sorted(a.keys())
-    [1, 2, '__builtins__', 'x']
-    >>> print a['x']
+    >>> print(sorted(a.keys(), key=lambda x: (str(type(x)), x)))
+    [1, 2, '__builtins__', 'print', 'x']
+    >>> print(a['x'])
     3
     >>>
 
@@ -82,21 +80,21 @@ Now I'll show that defaultdict instances have dynamic instance variables,
 just like classic classes:
 
     >>> a.default = -1
-    >>> print a["noway"]
+    >>> print(a["noway"])
     -1
     >>> a.default = -1000
-    >>> print a["noway"]
+    >>> print(a["noway"])
     -1000
     >>> 'default' in dir(a)
     True
     >>> a.x1 = 100
     >>> a.x2 = 200
-    >>> print a.x1
+    >>> print(a.x1)
     100
     >>> d = dir(a)
     >>> 'default' in d and 'x1' in d and 'x2' in d
     True
-    >>> print sortdict(a.__dict__)
+    >>> print(sortdict(a.__dict__))
     {'default': -1000, 'x1': 100, 'x2': 200}
     >>>
 """
@@ -248,7 +246,7 @@ static methods in C++ or Java. Here's an example:
     ...
     ...     @staticmethod
     ...     def foo(x, y):
-    ...         print "staticmethod", x, y
+    ...         print("staticmethod", x, y)
 
     >>> C.foo(1, 2)
     staticmethod 1 2
@@ -262,22 +260,22 @@ implicit first argument that is the *class* for which they are invoked.
     >>> class C:
     ...     @classmethod
     ...     def foo(cls, y):
-    ...         print "classmethod", cls, y
+    ...         print("classmethod", cls, y)
 
     >>> C.foo(1)
-    classmethod test.test_descrtut.C 1
+    classmethod <class 'test.test_descrtut.C'> 1
     >>> c = C()
     >>> c.foo(1)
-    classmethod test.test_descrtut.C 1
+    classmethod <class 'test.test_descrtut.C'> 1
 
     >>> class D(C):
     ...     pass
 
     >>> D.foo(1)
-    classmethod test.test_descrtut.D 1
+    classmethod <class 'test.test_descrtut.D'> 1
     >>> d = D()
     >>> d.foo(1)
-    classmethod test.test_descrtut.D 1
+    classmethod <class 'test.test_descrtut.D'> 1
 
 This prints "classmethod __main__.D 1" both times; in other words, the
 class passed as the first argument of foo() is the class involved in the
@@ -288,16 +286,16 @@ But notice this:
     >>> class E(C):
     ...     @classmethod
     ...     def foo(cls, y): # override C.foo
-    ...         print "E.foo() called"
+    ...         print("E.foo() called")
     ...         C.foo(y)
 
     >>> E.foo(1)
     E.foo() called
-    classmethod test.test_descrtut.C 1
+    classmethod <class 'test.test_descrtut.C'> 1
     >>> e = E()
     >>> e.foo(1)
     E.foo() called
-    classmethod test.test_descrtut.C 1
+    classmethod <class 'test.test_descrtut.C'> 1
 
 In this example, the call to C.foo() from E.foo() will see class C as its
 first argument, not class E. This is to be expected, since the call
@@ -346,10 +344,10 @@ Here's a small demonstration:
 
     >>> a = C()
     >>> a.x = 10
-    >>> print a.x
+    >>> print(a.x)
     10
     >>> a.x = -10
-    >>> print a.x
+    >>> print(a.x)
     0
     >>>
 
@@ -372,10 +370,10 @@ Hmm -- property is builtin now, so let's try it that way too.
 
     >>> a = C()
     >>> a.x = 10
-    >>> print a.x
+    >>> print(a.x)
     10
     >>> a.x = -10
-    >>> print a.x
+    >>> print(a.x)
     0
     >>>
 """
@@ -386,28 +384,28 @@ Method resolution order
 
 This example is implicit in the writeup.
 
->>> class A:    # classic class
+>>> class A:    # implicit new-style class
 ...     def save(self):
-...         print "called A.save()"
+...         print("called A.save()")
 >>> class B(A):
 ...     pass
 >>> class C(A):
 ...     def save(self):
-...         print "called C.save()"
+...         print("called C.save()")
 >>> class D(B, C):
 ...     pass
 
 >>> D().save()
-called A.save()
+called C.save()
 
->>> class A(object):  # new class
+>>> class A(object):  # explicit new-style class
 ...     def save(self):
-...         print "called A.save()"
+...         print("called A.save()")
 >>> class B(A):
 ...     pass
 >>> class C(A):
 ...     def save(self):
-...         print "called C.save()"
+...         print("called C.save()")
 >>> class D(B, C):
 ...     pass
 
@@ -436,7 +434,7 @@ test_7 = """
 
 Cooperative methods and "super"
 
->>> print D().m() # "DCBA"
+>>> print(D().m()) # "DCBA"
 DCBA
 """
 
@@ -446,7 +444,7 @@ Backwards incompatibilities
 
 >>> class A:
 ...     def foo(self):
-...         print "called A.foo()"
+...         print("called A.foo()")
 
 >>> class B(A):
 ...     pass

@@ -103,7 +103,7 @@ class test__RandomNameSequence(TC):
 
     def test_get_six_char_str(self):
         # _RandomNameSequence returns a six-character string
-        s = self.r.next()
+        s = next(self.r)
         self.nameCheck(s, '', '', '')
 
     def test_many(self):
@@ -111,8 +111,8 @@ class test__RandomNameSequence(TC):
 
         dict = {}
         r = self.r
-        for i in xrange(TEST_FILES):
-            s = r.next()
+        for i in range(TEST_FILES):
+            s = next(r)
             self.nameCheck(s, '', '', '')
             self.failIf(s in dict)
             dict[s] = 1
@@ -245,7 +245,7 @@ class test__mkstemp_inner(TC):
 
     def test_basic_many(self):
         # _mkstemp_inner can create many files (stochastic)
-        extant = range(TEST_FILES)
+        extant = list(range(TEST_FILES))
         for i in extant:
             extant[i] = self.do_create(pre="aa")
 
@@ -264,7 +264,7 @@ class test__mkstemp_inner(TC):
 
         file = self.do_create()
         mode = stat.S_IMODE(os.stat(file.name).st_mode)
-        expected = 0600
+        expected = 0o600
         if sys.platform in ('win32', 'os2emx', 'mac'):
             # There's no distinction among 'user', 'group' and 'world';
             # replicate the 'user' bits.
@@ -457,7 +457,7 @@ class test_mkdtemp(TC):
 
     def test_basic_many(self):
         # mkdtemp can create many directories (stochastic)
-        extant = range(TEST_FILES)
+        extant = list(range(TEST_FILES))
         try:
             for i in extant:
                 extant[i] = self.do_create(pre="aa")
@@ -482,8 +482,8 @@ class test_mkdtemp(TC):
         dir = self.do_create()
         try:
             mode = stat.S_IMODE(os.stat(dir).st_mode)
-            mode &= 0777 # Mask off sticky bits inherited from /tmp
-            expected = 0700
+            mode &= 0o777 # Mask off sticky bits inherited from /tmp
+            expected = 0o700
             if sys.platform in ('win32', 'os2emx', 'mac'):
                 # There's no distinction among 'user', 'group' and 'world';
                 # replicate the 'user' bits.
@@ -517,7 +517,7 @@ class test_mktemp(TC):
             self.name = tempfile.mktemp(dir=dir, prefix=pre, suffix=suf)
             # Create the file.  This will raise an exception if it's
             # mysteriously appeared in the meanwhile.
-            os.close(os.open(self.name, self._bflags, 0600))
+            os.close(os.open(self.name, self._bflags, 0o600))
 
         def __del__(self):
             self._unlink(self.name)
@@ -541,7 +541,7 @@ class test_mktemp(TC):
 
     def test_many(self):
         # mktemp can choose many usable file names (stochastic)
-        extant = range(TEST_FILES)
+        extant = list(range(TEST_FILES))
         for i in extant:
             extant[i] = self.do_create(pre="aa")
 
@@ -664,7 +664,7 @@ class test_SpooledTemporaryFile(TC):
             self.failUnless(f._rolled)
             filename = f.name
             f.close()
-            self.failIf(os.path.exists(filename),
+            self.failIf(isinstance(filename, str) and os.path.exists(filename),
                         "SpooledTemporaryFile %s exists after close" % filename)
         finally:
             os.rmdir(dir)
@@ -730,7 +730,22 @@ class test_SpooledTemporaryFile(TC):
         write("a" * 35)
         write("b" * 35)
         seek(0, 0)
-        self.failUnless(read(70) == 'a'*35 + 'b'*35)
+        self.assertEqual(read(70), b'a'*35 + b'b'*35)
+
+    def test_text_mode(self):
+        # Creating a SpooledTemporaryFile with a text mode should produce
+        # a file object reading and writing (Unicode) text strings.
+        f = tempfile.SpooledTemporaryFile(mode='w+', max_size=10)
+        f.write("abc\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "abc\n")
+        f.write("def\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "abc\ndef\n")
+        f.write("xyzzy\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "abc\ndef\nxyzzy\n")
+
 
 test_classes.append(test_SpooledTemporaryFile)
 
