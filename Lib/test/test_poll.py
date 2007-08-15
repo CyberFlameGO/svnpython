@@ -25,7 +25,7 @@ class PollTests(unittest.TestCase):
         p = select.poll()
 
         NUM_PIPES = 12
-        MSG = " This is a test."
+        MSG = b" This is a test."
         MSG_LEN = len(MSG)
         readers = []
         writers = []
@@ -143,7 +143,7 @@ class PollTests(unittest.TestCase):
         pollster = select.poll()
         pollster.register(1)
 
-        self.assertRaises(OverflowError, pollster.poll, 1L << 64)
+        self.assertRaises(OverflowError, pollster.poll, 1 << 64)
 
         x = 2 + 3
         if x != 5:

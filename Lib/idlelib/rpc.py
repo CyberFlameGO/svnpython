@@ -33,7 +33,7 @@ import socket
 import select
 import SocketServer
 import struct
-import cPickle as pickle
+import pickle
 import threading
 import Queue
 import traceback
@@ -104,14 +104,14 @@ class RPCServer(SocketServer.TCPServer):
             raise
         except:
             erf = sys.__stderr__
-            print>>erf, '\n' + '-'*40
-            print>>erf, 'Unhandled server exception!'
-            print>>erf, 'Thread: %s' % threading.currentThread().getName()
-            print>>erf, 'Client Address: ', client_address
-            print>>erf, 'Request: ', repr(request)
+            print('\n' + '-'*40, file=erf)
+            print('Unhandled server exception!', file=erf)
+            print('Thread: %s' % threading.currentThread().getName(), file=erf)
+            print('Client Address: ', client_address, file=erf)
+            print('Request: ', repr(request), file=erf)
             traceback.print_exc(file=erf)
-            print>>erf, '\n*** Unrecoverable, server exiting!'
-            print>>erf, '-'*40
+            print('\n*** Unrecoverable, server exiting!', file=erf)
+            print('-'*40, file=erf)
             os._exit(0)
 
 #----------------- end class RPCServer --------------------
@@ -152,7 +152,7 @@ class SocketIO(object):
         s = self.location + " " + str(threading.currentThread().getName())
         for a in args:
             s = s + " " + str(a)
-        print>>sys.__stderr__, s
+        print(s, file=sys.__stderr__)
 
     def register(self, oid, object):
         self.objtable[oid] = object
@@ -169,7 +169,7 @@ class SocketIO(object):
             how, (oid, methodname, args, kwargs) = request
         except TypeError:
             return ("ERROR", "Bad request format")
-        if not self.objtable.has_key(oid):
+        if oid not in self.objtable:
             return ("ERROR", "Unknown object id: %r" % (oid,))
         obj = self.objtable[oid]
         if methodname == "__methods__":
@@ -201,7 +201,7 @@ class SocketIO(object):
         except:
             msg = "*** Internal Error: rpc.py:SocketIO.localcall()\n\n"\
                   " Object: %s \n Method: %s \n Args: %s\n"
-            print>>sys.__stderr__, msg % (oid, method, args)
+            print(msg % (oid, method, args), file=sys.__stderr__)
             traceback.print_exc(file=sys.__stderr__)
             return ("EXCEPTION", None)
 
@@ -287,8 +287,8 @@ class SocketIO(object):
     def _proxify(self, obj):
         if isinstance(obj, RemoteProxy):
             return RPCProxy(self, obj.oid)
-        if isinstance(obj, types.ListType):
-            return map(self._proxify, obj)
+        if isinstance(obj, list):
+            return list(map(self._proxify, obj))
         # XXX Check for other types -- not currently needed
         return obj
 
@@ -304,7 +304,7 @@ class SocketIO(object):
             # wait for notification from socket handling thread
             cvar = self.cvars[myseq]
             cvar.acquire()
-            while not self.responses.has_key(myseq):
+            while myseq not in self.responses:
                 cvar.wait()
             response = self.responses[myseq]
             self.debug("_getresponse:%s: thread woke up: response: %s" %
@@ -323,7 +323,7 @@ class SocketIO(object):
         try:
             s = pickle.dumps(message)
         except pickle.PicklingError:
-            print >>sys.__stderr__, "Cannot pickle:", repr(message)
+            print("Cannot pickle:", repr(message), file=sys.__stderr__)
             raise
         s = struct.pack("<i", len(s)) + s
         while len(s) > 0:
@@ -379,10 +379,10 @@ class SocketIO(object):
         try:
             message = pickle.loads(packet)
         except pickle.UnpicklingError:
-            print >>sys.__stderr__, "-----------------------"
-            print >>sys.__stderr__, "cannot unpickle packet:", repr(packet)
+            print("-----------------------", file=sys.__stderr__)
+            print("cannot unpickle packet:", repr(packet), file=sys.__stderr__)
             traceback.print_stack(file=sys.__stderr__)
-            print >>sys.__stderr__, "-----------------------"
+            print("-----------------------", file=sys.__stderr__)
             raise
         return message
 
@@ -526,11 +526,11 @@ class RPCClient(SocketIO):
     def accept(self):
         working_sock, address = self.listening_sock.accept()
         if self.debugging:
-            print>>sys.__stderr__, "****** Connection request from ", address
+            print("****** Connection request from ", address, file=sys.__stderr__)
         if address[0] == LOCALHOST:
             SocketIO.__init__(self, working_sock)
         else:
-            print>>sys.__stderr__, "** Invalid host: ", address
+            print("** Invalid host: ", address, file=sys.__stderr__)
             raise socket.error
 
     def get_remote_proxy(self, oid):
@@ -552,7 +552,7 @@ class RPCProxy(object):
             return MethodProxy(self.sockio, self.oid, name)
         if self.__attributes is None:
             self.__getattributes()
-        if self.__attributes.has_key(name):
+        if name in self.__attributes:
             value = self.sockio.remotecall(self.oid, '__getattribute__',
                                            (name,), {})
             return value
@@ -572,18 +572,16 @@ def _getmethods(obj, methods):
     # Adds names to dictionary argument 'methods'
     for name in dir(obj):
         attr = getattr(obj, name)
-        if callable(attr):
+        if hasattr(attr, '__call__'):
             methods[name] = 1
-    if type(obj) == types.InstanceType:
-        _getmethods(obj.__class__, methods)
-    if type(obj) == types.ClassType:
+    if isinstance(obj, type):
         for super in obj.__bases__:
             _getmethods(super, methods)
 
 def _getattributes(obj, attributes):
     for name in dir(obj):
         attr = getattr(obj, name)
-        if not callable(attr):
+        if not hasattr(attr, '__call__'):
             attributes[name] = 1
 
 class MethodProxy(object):

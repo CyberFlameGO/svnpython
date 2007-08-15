@@ -55,18 +55,6 @@ PySys_GetObject(char *name)
 	return PyDict_GetItemString(sd, name);
 }
 
-FILE *
-PySys_GetFile(char *name, FILE *def)
-{
-	FILE *fp = NULL;
-	PyObject *v = PySys_GetObject(name);
-	if (v != NULL && PyFile_Check(v))
-		fp = PyFile_AsFile(v);
-	if (fp == NULL)
-		fp = def;
-	return fp;
-}
-
 int
 PySys_SetObject(char *name, PyObject *v)
 {
@@ -104,8 +92,6 @@ sys_displayhook(PyObject *self, PyObject *o)
 	}
 	if (PyObject_SetAttrString(builtins, "_", Py_None) != 0)
 		return NULL;
-	if (Py_FlushLine() != 0)
-		return NULL;
 	outf = PySys_GetObject("stdout");
 	if (outf == NULL) {
 		PyErr_SetString(PyExc_RuntimeError, "lost sys.stdout");
@@ -113,8 +99,7 @@ sys_displayhook(PyObject *self, PyObject *o)
 	}
 	if (PyFile_WriteObject(o, outf, 0) != 0)
 		return NULL;
-	PyFile_SoftSpace(outf, 1);
-	if (Py_FlushLine() != 0)
+	if (PyFile_WriteString("\n", outf) != 0)
 		return NULL;
 	if (PyObject_SetAttrString(builtins, "_", o) != 0)
 		return NULL;
@@ -166,37 +151,6 @@ clause in the current stack frame or in an older stack frame."
 );
 
 static PyObject *
-sys_exc_clear(PyObject *self, PyObject *noargs)
-{
-	PyThreadState *tstate = PyThreadState_GET();
-	PyObject *tmp_type, *tmp_value, *tmp_tb;
-	tmp_type = tstate->exc_type;
-	tmp_value = tstate->exc_value;
-	tmp_tb = tstate->exc_traceback;
-	tstate->exc_type = NULL;
-	tstate->exc_value = NULL;
-	tstate->exc_traceback = NULL;
-	Py_XDECREF(tmp_type);
-	Py_XDECREF(tmp_value);
-	Py_XDECREF(tmp_tb);
-	/* For b/w compatibility */
-	PySys_SetObject("exc_type", Py_None);
-	PySys_SetObject("exc_value", Py_None);
-	PySys_SetObject("exc_traceback", Py_None);
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-PyDoc_STRVAR(exc_clear_doc,
-"exc_clear() -> None\n\
-\n\
-Clear global information on the current exception.  Subsequent calls to\n\
-exc_info() will return (None,None,None) until another exception is raised\n\
-in the current thread or the execution stack returns to a frame where\n\
-another exception is being handled."
-);
-
-static PyObject *
 sys_exit(PyObject *self, PyObject *args)
 {
 	PyObject *exit_code = 0;
@@ -217,12 +171,11 @@ If it is another kind of object, it will be printed and the system\n\
 exit status will be one (i.e., failure)."
 );
 
-#ifdef Py_USING_UNICODE
 
 static PyObject *
 sys_getdefaultencoding(PyObject *self)
 {
-	return PyString_FromString(PyUnicode_GetDefaultEncoding());
+	return PyUnicode_FromString(PyUnicode_GetDefaultEncoding());
 }
 
 PyDoc_STRVAR(getdefaultencoding_doc,
@@ -254,7 +207,7 @@ static PyObject *
 sys_getfilesystemencoding(PyObject *self)
 {
 	if (Py_FileSystemDefaultEncoding)
-		return PyString_FromString(Py_FileSystemDefaultEncoding);
+		return PyUnicode_FromString(Py_FileSystemDefaultEncoding);
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -266,7 +219,39 @@ Return the encoding used to convert Unicode filenames in\n\
 operating system filenames."
 );
 
-#endif
+
+
+static PyObject *
+sys_intern(PyObject *self, PyObject *args)
+{
+	PyObject *s;
+	if (!PyArg_ParseTuple(args, "S:intern", &s))
+		return NULL;
+	if (PyString_CheckExact(s)) {
+		Py_INCREF(s);
+		PyString_InternInPlace(&s);
+		return s;
+	}
+	else if (PyUnicode_CheckExact(s)) {
+		Py_INCREF(s);
+		PyUnicode_InternInPlace(&s);
+		return s;
+	}
+	else {
+		PyErr_Format(PyExc_TypeError,
+				"can't intern %.400s", s->ob_type->tp_name);
+		return NULL;
+	}
+}
+
+PyDoc_STRVAR(intern_doc,
+"intern(string) -> string\n\
+\n\
+``Intern'' the given string.  This enters the string in the (global)\n\
+table of interned strings whose purpose is to speed up dictionary lookups.\n\
+Return the string itself or the previously interned string object with the\n\
+same value.");
+
 
 /*
  * Cached interned string objects used for calling the profile and
@@ -283,7 +268,7 @@ trace_init(void)
 	int i;
 	for (i = 0; i < 7; ++i) {
 		if (whatstrings[i] == NULL) {
-			name = PyString_InternFromString(whatnames[i]);
+			name = PyUnicode_InternFromString(whatnames[i]);
 			if (name == NULL)
 				return -1;
 			whatstrings[i] = name;
@@ -741,13 +726,10 @@ static PyMethodDef sys_methods[] = {
 	 current_frames_doc},
 	{"displayhook",	sys_displayhook, METH_O, displayhook_doc},
 	{"exc_info",	sys_exc_info, METH_NOARGS, exc_info_doc},
-	{"exc_clear",	sys_exc_clear, METH_NOARGS, exc_clear_doc},
 	{"excepthook",	sys_excepthook, METH_VARARGS, excepthook_doc},
 	{"exit",	sys_exit, METH_VARARGS, exit_doc},
-#ifdef Py_USING_UNICODE
 	{"getdefaultencoding", (PyCFunction)sys_getdefaultencoding,
 	 METH_NOARGS, getdefaultencoding_doc},
-#endif
 #ifdef HAVE_DLOPEN
 	{"getdlopenflags", (PyCFunction)sys_getdlopenflags, METH_NOARGS,
 	 getdlopenflags_doc},
@@ -758,10 +740,8 @@ static PyMethodDef sys_methods[] = {
 #ifdef DYNAMIC_EXECUTION_PROFILE
 	{"getdxp",	_Py_GetDXProfile, METH_VARARGS},
 #endif
-#ifdef Py_USING_UNICODE
 	{"getfilesystemencoding", (PyCFunction)sys_getfilesystemencoding,
 	 METH_NOARGS, getfilesystemencoding_doc},
-#endif
 #ifdef Py_TRACE_REFS
 	{"getobjects",	_Py_GetObjects, METH_VARARGS},
 #endif
@@ -776,13 +756,12 @@ static PyMethodDef sys_methods[] = {
 	{"getwindowsversion", (PyCFunction)sys_getwindowsversion, METH_NOARGS,
 	 getwindowsversion_doc},
 #endif /* MS_WINDOWS */
+ 	{"intern",	sys_intern,     METH_VARARGS, intern_doc},
 #ifdef USE_MALLOPT
 	{"mdebug",	sys_mdebug, METH_VARARGS},
 #endif
-#ifdef Py_USING_UNICODE
 	{"setdefaultencoding", sys_setdefaultencoding, METH_VARARGS,
 	 setdefaultencoding_doc},
-#endif
 	{"setcheckinterval",	sys_setcheckinterval, METH_VARARGS,
 	 setcheckinterval_doc},
 	{"getcheckinterval",	sys_getcheckinterval, METH_NOARGS,
@@ -810,7 +789,7 @@ list_builtin_module_names(void)
 	if (list == NULL)
 		return NULL;
 	for (i = 0; PyImport_Inittab[i].name != NULL; i++) {
-		PyObject *name = PyString_FromString(
+		PyObject *name = PyUnicode_FromString(
 			PyImport_Inittab[i].name);
 		if (name == NULL)
 			break;
@@ -877,11 +856,8 @@ excepthook -- called to handle any uncaught exception other than SystemExit\n\
   To customize printing in an interactive session or to install a custom\n\
   top-level exception handler, assign other functions to replace these.\n\
 \n\
-exitfunc -- if sys.exitfunc exists, this routine is called when Python exits\n\
-  Assigning to sys.exitfunc is deprecated; use the atexit module instead.\n\
-\n\
 stdin -- standard input file object; used by raw_input() and input()\n\
-stdout -- standard output file object; used by the print statement\n\
+stdout -- standard output file object; used by print()\n\
 stderr -- standard error object; used for error messages\n\
   By assigning other file objects (or objects that behave like files)\n\
   to these, it is possible to redirect all of the interpreter's I/O.\n\
@@ -891,12 +867,6 @@ last_value -- value of last uncaught exception\n\
 last_traceback -- traceback of last uncaught exception\n\
   These three are only available in an interactive session after a\n\
   traceback has been printed.\n\
-\n\
-exc_type -- type of exception currently being handled\n\
-exc_value -- value of exception currently being handled\n\
-exc_traceback -- traceback of exception currently being handled\n\
-  The function exc_info() should be used instead of these three,\n\
-  because it is thread-safe.\n\
 "
 )
 /* concatenating string here */
@@ -937,7 +907,6 @@ Functions:\n\
 displayhook() -- print an object to the screen, and save it in __builtin__._\n\
 excepthook() -- print an exception and its traceback to sys.stderr\n\
 exc_info() -- return thread-safe information about the current exception\n\
-exc_clear() -- clear the exception state for the current thread\n\
 exit() -- exit the interpreter by raising SystemExit\n\
 getdlopenflags() -- returns flags to be used for dlopen() calls\n\
 getrefcount() -- return the reference count for an object (plus one :-)\n\
@@ -950,13 +919,6 @@ settrace() -- set the global debug tracing function\n\
 "
 )
 /* end of sys_doc */ ;
-
-static int
-_check_and_flush (FILE *stream)
-{
-  int prev_fail = ferror (stream);
-  return fflush (stream) || prev_fail ? EOF : 0;
-}
 
 /* Subversion branch and revision management */
 static const char _patchlevel_revision[] = PY_PATCHLEVEL_REVISION;
@@ -1049,11 +1011,7 @@ PyObject *
 _PySys_Init(void)
 {
 	PyObject *m, *v, *sysdict;
-	PyObject *sysin, *sysout, *syserr;
 	char *s;
-#ifdef MS_WINDOWS
-	char buf[128];
-#endif
 
 	m = Py_InitModule3("sys", sys_methods, sys_doc);
 	if (m == NULL)
@@ -1072,60 +1030,20 @@ _PySys_Init(void)
 		}
 	}
 
-	/* Closing the standard FILE* if sys.std* goes aways causes problems
-	 * for embedded Python usages. Closing them when somebody explicitly
-	 * invokes .close() might be possible, but the FAQ promises they get
-	 * never closed. However, we still need to get write errors when
-	 * writing fails (e.g. because stdout is redirected), so we flush the
-	 * streams and check for errors before the file objects are deleted.
-	 * On OS X, fflush()ing stdin causes an error, so we exempt stdin
-	 * from that procedure.
-	 */
-	sysin = PyFile_FromFile(stdin, "<stdin>", "r", NULL);
-	sysout = PyFile_FromFile(stdout, "<stdout>", "w", _check_and_flush);
-	syserr = PyFile_FromFile(stderr, "<stderr>", "w", _check_and_flush);
-	if (PyErr_Occurred())
-		return NULL;
-#ifdef MS_WINDOWS
-	if(isatty(_fileno(stdin)) && PyFile_Check(sysin)) {
-		sprintf(buf, "cp%d", GetConsoleCP());
-		if (!PyFile_SetEncoding(sysin, buf))
-			return NULL;
-	}
-	if(isatty(_fileno(stdout)) && PyFile_Check(sysout)) {
-		sprintf(buf, "cp%d", GetConsoleOutputCP());
-		if (!PyFile_SetEncoding(sysout, buf))
-			return NULL;
-	}
-	if(isatty(_fileno(stderr)) && PyFile_Check(syserr)) {
-		sprintf(buf, "cp%d", GetConsoleOutputCP());
-		if (!PyFile_SetEncoding(syserr, buf))
-			return NULL;
-	}
-#endif
+        /* stdin/stdout/stderr are now set by site.py. */
 
-	PyDict_SetItemString(sysdict, "stdin", sysin);
-	PyDict_SetItemString(sysdict, "stdout", sysout);
-	PyDict_SetItemString(sysdict, "stderr", syserr);
-	/* Make backup copies for cleanup */
-	PyDict_SetItemString(sysdict, "__stdin__", sysin);
-	PyDict_SetItemString(sysdict, "__stdout__", sysout);
-	PyDict_SetItemString(sysdict, "__stderr__", syserr);
 	PyDict_SetItemString(sysdict, "__displayhook__",
                              PyDict_GetItemString(sysdict, "displayhook"));
 	PyDict_SetItemString(sysdict, "__excepthook__",
                              PyDict_GetItemString(sysdict, "excepthook"));
-	Py_XDECREF(sysin);
-	Py_XDECREF(sysout);
-	Py_XDECREF(syserr);
 	PyDict_SetItemString(sysdict, "version",
-			     v = PyString_FromString(Py_GetVersion()));
+			     v = PyUnicode_FromString(Py_GetVersion()));
 	Py_XDECREF(v);
 	PyDict_SetItemString(sysdict, "hexversion",
 			     v = PyInt_FromLong(PY_VERSION_HEX));
 	Py_XDECREF(v);
 	svnversion_init();
-	v = Py_BuildValue("(ssz)", "CPython", branch, svn_revision);
+	v = Py_BuildValue("(UUU)", "CPython", branch, svn_revision);
 	PyDict_SetItemString(sysdict, "subversion", v);
 	Py_XDECREF(v);
 	/*
@@ -1149,16 +1067,16 @@ _PySys_Init(void)
 	Py_XDECREF(v)
 
 	SET_SYS_FROM_STRING("version_info",
-			    Py_BuildValue("iiisi", PY_MAJOR_VERSION,
+			    Py_BuildValue("iiiUi", PY_MAJOR_VERSION,
 					       PY_MINOR_VERSION,
 					       PY_MICRO_VERSION, s,
 					       PY_RELEASE_SERIAL));
 	SET_SYS_FROM_STRING("api_version",
 			    PyInt_FromLong(PYTHON_API_VERSION));
 	SET_SYS_FROM_STRING("copyright",
-			    PyString_FromString(Py_GetCopyright()));
+			    PyUnicode_FromString(Py_GetCopyright()));
 	SET_SYS_FROM_STRING("platform",
-			    PyString_FromString(Py_GetPlatform()));
+			    PyUnicode_FromString(Py_GetPlatform()));
 	SET_SYS_FROM_STRING("executable",
 			    PyString_FromString(Py_GetProgramFullPath()));
 	SET_SYS_FROM_STRING("prefix",
@@ -1167,10 +1085,8 @@ _PySys_Init(void)
 		   	    PyString_FromString(Py_GetExecPrefix()));
 	SET_SYS_FROM_STRING("maxint",
 			    PyInt_FromLong(PyInt_GetMax()));
-#ifdef Py_USING_UNICODE
 	SET_SYS_FROM_STRING("maxunicode",
 			    PyInt_FromLong(PyUnicode_GetMax()));
-#endif
 	SET_SYS_FROM_STRING("builtin_module_names",
 			    list_builtin_module_names());
 	{
@@ -1185,13 +1101,13 @@ _PySys_Init(void)
 		else
 			value = "little";
 		SET_SYS_FROM_STRING("byteorder",
-				    PyString_FromString(value));
+				    PyUnicode_FromString(value));
 	}
 #ifdef MS_COREDLL
 	SET_SYS_FROM_STRING("dllhandle",
 			    PyLong_FromVoidPtr(PyWin_DLLhModule));
 	SET_SYS_FROM_STRING("winver",
-			    PyString_FromString(PyWin_DLLVersionString));
+			    PyUnicode_FromString(PyWin_DLLVersionString));
 #endif
 #undef SET_SYS_FROM_STRING
 	if (warnoptions == NULL) {
@@ -1229,7 +1145,7 @@ makepathobject(char *path, int delim)
 		p = strchr(path, delim);
 		if (p == NULL)
 			p = strchr(path, '\0'); /* End of string */
-		w = PyString_FromStringAndSize(path, (Py_ssize_t) (p - path));
+		w = PyUnicode_FromStringAndSize(path, (Py_ssize_t) (p - path));
 		if (w == NULL) {
 			Py_DECREF(v);
 			return NULL;
@@ -1274,14 +1190,14 @@ makeargvobject(int argc, char **argv)
 			if (i == 0) {
 				char* fn = decc$translate_vms(argv[0]);
 				if ((fn == (char *)0) || fn == (char *)-1)
-					v = PyString_FromString(argv[0]);
+					v = PyUnicode_FromString(argv[0]);
 				else
-					v = PyString_FromString(
+					v = PyUnicode_FromString(
 						decc$translate_vms(argv[0]));
 			} else
-				v = PyString_FromString(argv[i]);
+				v = PyUnicode_FromString(argv[i]);
 #else
-			PyObject *v = PyString_FromString(argv[i]);
+			PyObject *v = PyUnicode_FromString(argv[i]);
 #endif
 			if (v == NULL) {
 				Py_DECREF(av);
@@ -1385,7 +1301,7 @@ PySys_SetArgv(int argc, char **argv)
 #endif /* Unix */
 		}
 #endif /* All others */
-		a = PyString_FromStringAndSize(argv0, n);
+		a = PyUnicode_FromStringAndSize(argv0, n);
 		if (a == NULL)
 			Py_FatalError("no mem for sys.path insertion");
 		if (PyList_Insert(path, 0, a) < 0)
@@ -1425,25 +1341,21 @@ mywrite(char *name, FILE *fp, const char *format, va_list va)
 {
 	PyObject *file;
 	PyObject *error_type, *error_value, *error_traceback;
+	char buffer[1001];
+	int written;
 
 	PyErr_Fetch(&error_type, &error_value, &error_traceback);
 	file = PySys_GetObject(name);
-	if (file == NULL || PyFile_AsFile(file) == fp)
-		vfprintf(fp, format, va);
-	else {
-		char buffer[1001];
-		const int written = PyOS_vsnprintf(buffer, sizeof(buffer),
-						   format, va);
-		if (PyFile_WriteString(buffer, file) != 0) {
+	written = PyOS_vsnprintf(buffer, sizeof(buffer), format, va);
+	if (PyFile_WriteString(buffer, file) != 0) {
+		PyErr_Clear();
+		fputs(buffer, fp);
+	}
+	if (written < 0 || (size_t)written >= sizeof(buffer)) {
+		const char *truncated = "... truncated";
+		if (PyFile_WriteString(truncated, file) != 0) {
 			PyErr_Clear();
-			fputs(buffer, fp);
-		}
-		if (written < 0 || (size_t)written >= sizeof(buffer)) {
-			const char *truncated = "... truncated";
-			if (PyFile_WriteString(truncated, file) != 0) {
-				PyErr_Clear();
-				fputs(truncated, fp);
-			}
+			fputs(truncated, fp);
 		}
 	}
 	PyErr_Restore(error_type, error_value, error_traceback);

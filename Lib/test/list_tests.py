@@ -37,7 +37,7 @@ class CommonTest(seq_tests.CommonTest):
 
         self.assertEqual(str(a0), str(l0))
         self.assertEqual(repr(a0), repr(l0))
-        self.assertEqual(`a2`, `l2`)
+        self.assertEqual(repr(a2), repr(l2))
         self.assertEqual(str(a2), "[0, 1, 2]")
         self.assertEqual(repr(a2), "[0, 1, 2]")
 
@@ -47,16 +47,16 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(repr(a2), "[0, 1, 2, [...], 3]")
 
     def test_print(self):
-        d = self.type2test(xrange(200))
+        d = self.type2test(range(200))
         d.append(d)
-        d.extend(xrange(200,400))
+        d.extend(range(200,400))
         d.append(d)
         d.append(400)
         try:
-            fo = open(test_support.TESTFN, "wb")
-            print >> fo, d,
+            fo = open(test_support.TESTFN, "w")
+            fo.write(str(d))
             fo.close()
-            fo = open(test_support.TESTFN, "rb")
+            fo = open(test_support.TESTFN, "r")
             self.assertEqual(fo.read(), repr(d))
         finally:
             fo.close()
@@ -77,7 +77,7 @@ class CommonTest(seq_tests.CommonTest):
         a = self.type2test(range(20))
         r = reversed(a)
         self.assertEqual(list(r), self.type2test(range(19, -1, -1)))
-        self.assertRaises(StopIteration, r.next)
+        self.assertRaises(StopIteration, next, r)
         self.assertEqual(list(reversed(self.type2test())),
                          self.type2test())
 
@@ -99,16 +99,16 @@ class CommonTest(seq_tests.CommonTest):
         self.assertRaises(TypeError, a.__setitem__)
 
         a = self.type2test([0,1,2,3,4])
-        a[0L] = 1
-        a[1L] = 2
-        a[2L] = 3
+        a[0] = 1
+        a[1] = 2
+        a[2] = 3
         self.assertEqual(a, self.type2test([1,2,3,3,4]))
         a[0] = 5
         a[1] = 6
         a[2] = 7
         self.assertEqual(a, self.type2test([5,6,7,3,4]))
-        a[-2L] = 88
-        a[-1L] = 99
+        a[-2] = 88
+        a[-1] = 99
         self.assertEqual(a, self.type2test([5,6,7,88,99]))
         a[-2] = 8
         a[-1] = 9
@@ -189,8 +189,8 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
-        del a[1L:2L]
-        del a[0L:1L]
+        del a[1:2]
+        del a[0:1]
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
@@ -198,7 +198,7 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([1]))
 
         a = self.type2test([0, 1])
-        del a[-2L:-1L]
+        del a[-2:-1]
         self.assertEqual(a, self.type2test([1]))
 
         a = self.type2test([0, 1])
@@ -207,8 +207,8 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
-        del a[1L:]
-        del a[:1L]
+        del a[1:]
+        del a[:1]
         self.assertEqual(a, self.type2test([]))
 
         a = self.type2test([0, 1])
@@ -216,7 +216,7 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(a, self.type2test([0]))
 
         a = self.type2test([0, 1])
-        del a[-1L:]
+        del a[-1:]
         self.assertEqual(a, self.type2test([0]))
 
         a = self.type2test([0, 1])
@@ -398,7 +398,7 @@ class CommonTest(seq_tests.CommonTest):
                 del self.victim[:]
                 return False
         a = self.type2test()
-        a[:] = [EvilCmp(a) for _ in xrange(100)]
+        a[:] = [EvilCmp(a) for _ in range(100)]
         # This used to seg fault before patch #1005778
         self.assertRaises(ValueError, a.index, None)
 
@@ -451,7 +451,7 @@ class CommonTest(seq_tests.CommonTest):
         self.assertEqual(u, list("ham"))
 
     def test_iadd(self):
-        super(CommonTest, self).test_iadd()
+        super().test_iadd()
         u = self.type2test([0, 1])
         u2 = u
         u += [2, 3]

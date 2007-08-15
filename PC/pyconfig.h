@@ -317,9 +317,9 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 			their Makefile (other compilers are generally
 			taken care of by distutils.) */
 #			ifdef _DEBUG
-#				pragma comment(lib,"python26_d.lib")
+#				pragma comment(lib,"python30_d.lib")
 #			else
-#				pragma comment(lib,"python26.lib")
+#				pragma comment(lib,"python30.lib")
 #			endif /* _DEBUG */
 #		endif /* _MSC_VER */
 #	endif /* Py_BUILD_CORE */
@@ -507,9 +507,6 @@ Py_NO_ENABLE_SHARED to find out.  Also support MS_NO_COREDLL for b/w compat */
 
 /* Define if you want to use the GNU readline library */
 /* #define WITH_READLINE 1 */
-
-/* Define if you want to have a Unicode type. */
-#define Py_USING_UNICODE
 
 /* Define as the size of the unicode type. */
 /* This is enough for unicodeobject.h to do the "right thing" on Windows. */

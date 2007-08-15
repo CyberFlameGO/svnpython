@@ -21,8 +21,9 @@ hexbin(inputfilename, outputfilename)
 # input. The resulting code (xx 90 90) would appear to be interpreted as an
 # escaped *value* of 0x90. All coders I've seen appear to ignore this nicety...
 #
-import sys
+import io
 import os
+import sys
 import struct
 import binascii
 
@@ -52,7 +53,7 @@ try:
         finfo = FSSpec(name).FSpGetFInfo()
         dir, file = os.path.split(name)
         # XXX Get resource/data sizes
-        fp = open(name, 'rb')
+        fp = io.open(name, 'rb')
         fp.seek(0, 2)
         dlen = fp.tell()
         fp = openrf(name, '*rb')
@@ -80,13 +81,10 @@ except ImportError:
 
     def getfileinfo(name):
         finfo = FInfo()
+        fp = io.open(name, 'rb')
         # Quick check for textfile
-        fp = open(name)
-        data = open(name).read(256)
-        for c in data:
-            if not c.isspace() and (c<' ' or ord(c) > 0x7f):
-                break
-        else:
+        data = fp.read(512)
+        if 0 not in data:
             finfo.Type = 'TEXT'
         fp.seek(0, 2)
         dsize = fp.tell()
@@ -100,7 +98,7 @@ except ImportError:
             pass
 
         def read(self, *args):
-            return ''
+            return b''
 
         def write(self, *args):
             pass
@@ -113,8 +111,8 @@ class _Hqxcoderengine:
 
     def __init__(self, ofp):
         self.ofp = ofp
-        self.data = ''
-        self.hqxdata = ''
+        self.data = b''
+        self.hqxdata = b''
         self.linelen = LINELEN-1
 
     def write(self, data):
@@ -132,12 +130,12 @@ class _Hqxcoderengine:
         first = 0
         while first <= len(self.hqxdata)-self.linelen:
             last = first + self.linelen
-            self.ofp.write(self.hqxdata[first:last]+'\n')
+            self.ofp.write(self.hqxdata[first:last]+b'\n')
             self.linelen = LINELEN
             first = last
         self.hqxdata = self.hqxdata[first:]
         if force:
-            self.ofp.write(self.hqxdata + ':\n')
+            self.ofp.write(self.hqxdata + b':\n')
 
     def close(self):
         if self.data:
@@ -152,7 +150,7 @@ class _Rlecoderengine:
 
     def __init__(self, ofp):
         self.ofp = ofp
-        self.data = ''
+        self.data = b''
 
     def write(self, data):
         self.data = self.data + data
@@ -160,7 +158,7 @@ class _Rlecoderengine:
             return
         rledata = binascii.rlecode_hqx(self.data)
         self.ofp.write(rledata)
-        self.data = ''
+        self.data = b''
 
     def close(self):
         if self.data:
@@ -170,14 +168,15 @@ class _Rlecoderengine:
         del self.ofp
 
 class BinHex:
-    def __init__(self, (name, finfo, dlen, rlen), ofp):
-        if type(ofp) == type(''):
+    def __init__(self, name_finfo_dlen_rlen, ofp):
+        name, finfo, dlen, rlen = name_finfo_dlen_rlen
+        if isinstance(ofp, basestring):
             ofname = ofp
-            ofp = open(ofname, 'w')
+            ofp = io.open(ofname, 'wb')
             if os.name == 'mac':
                 fss = FSSpec(ofname)
                 fss.SetCreatorType('BnHq', 'TEXT')
-        ofp.write('(This file must be converted with BinHex 4.0)\n\n:')
+        ofp.write(b'(This file must be converted with BinHex 4.0)\r\r:')
         hqxer = _Hqxcoderengine(ofp)
         self.ofp = _Rlecoderengine(hqxer)
         self.crc = 0
@@ -192,8 +191,8 @@ class BinHex:
         nl = len(name)
         if nl > 63:
             raise Error, 'Filename too long'
-        d = chr(nl) + name + '\0'
-        d2 = finfo.Type + finfo.Creator
+        d = bytes([nl]) + bytes(name) + b'\0'
+        d2 = bytes(finfo.Type) + bytes(finfo.Creator)
 
         # Force all structs to be packed with big-endian
         d3 = struct.pack('>h', finfo.Flags)
@@ -254,7 +253,7 @@ def binhex(inp, out):
     finfo = getfileinfo(inp)
     ofp = BinHex(finfo, out)
 
-    ifp = open(inp, 'rb')
+    ifp = io.open(inp, 'rb')
     # XXXX Do textfile translation on non-mac systems
     while 1:
         d = ifp.read(128000)
@@ -280,7 +279,7 @@ class _Hqxdecoderengine:
 
     def read(self, totalwtd):
         """Read at least wtd bytes (or until EOF)"""
-        decdata = ''
+        decdata = b''
         wtd = totalwtd
         #
         # The loop here is convoluted, since we don't really now how
@@ -320,8 +319,8 @@ class _Rledecoderengine:
 
     def __init__(self, ifp):
         self.ifp = ifp
-        self.pre_buffer = ''
-        self.post_buffer = ''
+        self.pre_buffer = b''
+        self.post_buffer = b''
         self.eof = 0
 
     def read(self, wtd):
@@ -336,7 +335,7 @@ class _Rledecoderengine:
         if self.ifp.eof:
             self.post_buffer = self.post_buffer + \
                 binascii.rledecode_hqx(self.pre_buffer)
-            self.pre_buffer = ''
+            self.pre_buffer = b''
             return
 
         #
@@ -371,8 +370,8 @@ class _Rledecoderengine:
 
 class HexBin:
     def __init__(self, ifp):
-        if type(ifp) == type(''):
-            ifp = open(ifp)
+        if isinstance(ifp, basestring):
+            ifp = io.open(ifp, 'rb')
         #
         # Find initial colon.
         #
@@ -382,12 +381,10 @@ class HexBin:
                 raise Error, "No binhex data found"
             # Cater for \r\n terminated lines (which show up as \n\r, hence
             # all lines start with \r)
-            if ch == '\r':
+            if ch == b'\r':
                 continue
-            if ch == ':':
+            if ch == b':':
                 break
-            if ch != '\n':
-                dummy = ifp.readline()
 
         hqxifp = _Hqxdecoderengine(ifp)
         self.ifp = _Rledecoderengine(hqxifp)
@@ -423,8 +420,8 @@ class HexBin:
 
         self.FName = fname
         self.FInfo = FInfo()
-        self.FInfo.Creator = creator
-        self.FInfo.Type = type
+        self.FInfo.Creator = str8(creator)
+        self.FInfo.Type = str8(type)
         self.FInfo.Flags = flags
 
         self.state = _DID_HEADER
@@ -437,7 +434,7 @@ class HexBin:
             n = min(n, self.dlen)
         else:
             n = self.dlen
-        rv = ''
+        rv = b''
         while len(rv) < n:
             rv = rv + self._read(n-len(rv))
         self.dlen = self.dlen - n
@@ -481,7 +478,7 @@ def hexbin(inp, out):
         ofss = FSSpec(out)
         out = ofss.as_pathname()
 
-    ofp = open(out, 'wb')
+    ofp = io.open(out, 'wb')
     # XXXX Do translation on non-mac systems
     while 1:
         d = ifp.read(128000)

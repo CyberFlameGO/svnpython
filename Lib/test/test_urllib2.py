@@ -2,7 +2,7 @@ import unittest
 from test import test_support
 
 import os, socket
-import StringIO
+import io
 
 import urllib2
 from urllib2 import Request, OpenerDirector
@@ -90,8 +90,7 @@ def test_request_headers_methods():
     >>> r.header_items()
     [('Spam-eggs', 'blah')]
     >>> r.add_header("Foo-Bar", "baz")
-    >>> items = r.header_items()
-    >>> items.sort()
+    >>> items = sorted(r.header_items())
     >>> items
     [('Foo-bar', 'baz'), ('Spam-eggs', 'blah')]
 
@@ -101,7 +100,7 @@ def test_request_headers_methods():
 
     >>> r.has_header("Not-there")
     False
-    >>> print r.get_header("Not-there")
+    >>> print(r.get_header("Not-there"))
     None
     >>> r.get_header("Not-there", "default")
     'default'
@@ -235,11 +234,11 @@ class MockFile:
 
 class MockHeaders(dict):
     def getheaders(self, name):
-        return self.values()
+        return list(self.values())
 
-class MockResponse(StringIO.StringIO):
+class MockResponse(io.StringIO):
     def __init__(self, code, msg, headers, data, url=None):
-        StringIO.StringIO.__init__(self, data)
+        io.StringIO.__init__(self, data)
         self.code, self.msg, self.headers, self.url = code, msg, headers, url
     def info(self):
         return self.headers
@@ -354,7 +353,7 @@ class MockHTTPHandler(urllib2.BaseHandler):
         self.requests = []
     def http_open(self, req):
         import mimetools, httplib, copy
-        from StringIO import StringIO
+        from io import StringIO
         self.requests.append(copy.deepcopy(req))
         if self._count == 0:
             self._count = self._count + 1
@@ -547,7 +546,7 @@ class HandlerTests(unittest.TestCase):
             def __init__(self, data): self.data = data
             def retrfile(self, filename, filetype):
                 self.filename, self.filetype = filename, filetype
-                return StringIO.StringIO(self.data), len(self.data)
+                return io.StringIO(self.data), len(self.data)
 
         class NullFTPHandler(urllib2.FTPHandler):
             def __init__(self, data): self.data = data
@@ -595,7 +594,7 @@ class HandlerTests(unittest.TestCase):
 
         TESTFN = test_support.TESTFN
         urlpath = sanepathname2url(os.path.abspath(TESTFN))
-        towrite = "hello, world\n"
+        towrite = b"hello, world\n"
         urls = [
             "file://localhost%s" % urlpath,
             "file://%s" % urlpath,
@@ -726,7 +725,7 @@ class HandlerTests(unittest.TestCase):
             r.info; r.geturl  # addinfourl methods
             r.code, r.msg == 200, "OK"  # added from MockHTTPClass.getreply()
             hdrs = r.info()
-            hdrs.get; hdrs.has_key  # r.info() gives dict from .getreply()
+            hdrs.get; hdrs.__contains__  # r.info() gives dict from .getreply()
             self.assertEqual(r.geturl(), url)
 
             self.assertEqual(http.host, "example.com")
@@ -1004,7 +1003,7 @@ class HandlerTests(unittest.TestCase):
         self.assertEqual(len(http_handler.requests), 2)
         self.assertFalse(http_handler.requests[0].has_header(auth_header))
         userpass = '%s:%s' % (user, password)
-        auth_hdr_value = 'Basic '+base64.encodestring(userpass).strip()
+        auth_hdr_value = 'Basic ' + str(base64.encodestring(userpass)).strip()
         self.assertEqual(http_handler.requests[1].get_header(auth_header),
                          auth_hdr_value)
 

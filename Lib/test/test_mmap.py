@@ -21,106 +21,103 @@ class MmapTests(unittest.TestCase):
         # Test mmap module on Unix systems and Windows
 
         # Create a file to be mmap'ed.
-        f = open(TESTFN, 'w+')
+        f = open(TESTFN, 'bw+')
         try:
             # Write 2 pages worth of data to the file
-            f.write('\0'* PAGESIZE)
-            f.write('foo')
-            f.write('\0'* (PAGESIZE-3) )
+            f.write(b'\0'* PAGESIZE)
+            f.write(b'foo')
+            f.write(b'\0'* (PAGESIZE-3) )
             f.flush()
             m = mmap.mmap(f.fileno(), 2 * PAGESIZE)
+        finally:
             f.close()
 
-            # Simple sanity checks
+        # Simple sanity checks
 
-            tp = str(type(m))  # SF bug 128713:  segfaulted on Linux
-            self.assertEqual(m.find('foo'), PAGESIZE)
+        tp = str(type(m))  # SF bug 128713:  segfaulted on Linux
+        self.assertEqual(m.find('foo'), PAGESIZE)
 
-            self.assertEqual(len(m), 2*PAGESIZE)
+        self.assertEqual(len(m), 2*PAGESIZE)
 
-            self.assertEqual(m[0], '\0')
-            self.assertEqual(m[0:3], '\0\0\0')
+        self.assertEqual(m[0], b'\0')
+        self.assertEqual(m[0:3], b'\0\0\0')
 
-            # Modify the file's content
-            m[0] = '3'
-            m[PAGESIZE +3: PAGESIZE +3+3] = 'bar'
+        # Modify the file's content
+        m[0] = b'3'
+        m[PAGESIZE +3: PAGESIZE +3+3] = b'bar'
 
-            # Check that the modification worked
-            self.assertEqual(m[0], '3')
-            self.assertEqual(m[0:3], '3\0\0')
-            self.assertEqual(m[PAGESIZE-1 : PAGESIZE + 7], '\0foobar\0')
+        # Check that the modification worked
+        self.assertEqual(m[0], b'3')
+        self.assertEqual(m[0:3], b'3\0\0')
+        self.assertEqual(m[PAGESIZE-1 : PAGESIZE + 7], b'\0foobar\0')
 
-            m.flush()
+        m.flush()
 
-            # Test doing a regular expression match in an mmap'ed file
-            match = re.search('[A-Za-z]+', m)
-            if match is None:
-                self.fail('regex match on mmap failed!')
-            else:
-                start, end = match.span(0)
-                length = end - start
+        # Test doing a regular expression match in an mmap'ed file
+        match = re.search('[A-Za-z]+', m)
+        if match is None:
+            self.fail('regex match on mmap failed!')
+        else:
+            start, end = match.span(0)
+            length = end - start
 
-                self.assertEqual(start, PAGESIZE)
-                self.assertEqual(end, PAGESIZE + 6)
+            self.assertEqual(start, PAGESIZE)
+            self.assertEqual(end, PAGESIZE + 6)
 
-            # test seeking around (try to overflow the seek implementation)
-            m.seek(0,0)
-            self.assertEqual(m.tell(), 0)
-            m.seek(42,1)
-            self.assertEqual(m.tell(), 42)
-            m.seek(0,2)
-            self.assertEqual(m.tell(), len(m))
+        # test seeking around (try to overflow the seek implementation)
+        m.seek(0,0)
+        self.assertEqual(m.tell(), 0)
+        m.seek(42,1)
+        self.assertEqual(m.tell(), 42)
+        m.seek(0,2)
+        self.assertEqual(m.tell(), len(m))
 
-            # Try to seek to negative position...
-            self.assertRaises(ValueError, m.seek, -1)
+        # Try to seek to negative position...
+        self.assertRaises(ValueError, m.seek, -1)
 
-            # Try to seek beyond end of mmap...
-            self.assertRaises(ValueError, m.seek, 1, 2)
+        # Try to seek beyond end of mmap...
+        self.assertRaises(ValueError, m.seek, 1, 2)
 
-            # Try to seek to negative position...
-            self.assertRaises(ValueError, m.seek, -len(m)-1, 2)
+        # Try to seek to negative position...
+        self.assertRaises(ValueError, m.seek, -len(m)-1, 2)
 
-            # Try resizing map
+        # Try resizing map
+        try:
+            m.resize(512)
+        except SystemError:
+            # resize() not supported
+            # No messages are printed, since the output of this test suite
+            # would then be different across platforms.
+            pass
+        else:
+            # resize() is supported
+            self.assertEqual(len(m), 512)
+            # Check that we can no longer seek beyond the new size.
+            self.assertRaises(ValueError, m.seek, 513, 0)
+
+            # Check that the underlying file is truncated too
+            # (bug #728515)
+            f = open(TESTFN)
             try:
-                m.resize(512)
-            except SystemError:
-                # resize() not supported
-                # No messages are printed, since the output of this test suite
-                # would then be different across platforms.
-                pass
-            else:
-                # resize() is supported
-                self.assertEqual(len(m), 512)
-                # Check that we can no longer seek beyond the new size.
-                self.assertRaises(ValueError, m.seek, 513, 0)
-
-                # Check that the underlying file is truncated too
-                # (bug #728515)
-                f = open(TESTFN)
                 f.seek(0, 2)
                 self.assertEqual(f.tell(), 512)
+            finally:
                 f.close()
-                self.assertEqual(m.size(), 512)
+            self.assertEqual(m.size(), 512)
 
-            m.close()
-
-        finally:
-            try:
-                f.close()
-            except OSError:
-                pass
+        m.close()
 
     def test_access_parameter(self):
         # Test for "access" keyword parameter
         mapsize = 10
-        open(TESTFN, "wb").write("a"*mapsize)
+        open(TESTFN, "wb").write(b"a"*mapsize)
         f = open(TESTFN, "rb")
         m = mmap.mmap(f.fileno(), mapsize, access=mmap.ACCESS_READ)
-        self.assertEqual(m[:], 'a'*mapsize, "Readonly memory map data incorrect.")
+        self.assertEqual(m[:], b'a'*mapsize, "Readonly memory map data incorrect.")
 
         # Ensuring that readonly mmap can't be slice assigned
         try:
-            m[:] = 'b'*mapsize
+            m[:] = b'b'*mapsize
         except TypeError:
             pass
         else:
@@ -128,7 +125,7 @@ class MmapTests(unittest.TestCase):
 
         # Ensuring that readonly mmap can't be item assigned
         try:
-            m[0] = 'b'
+            m[0] = b'b'
         except TypeError:
             pass
         else:
@@ -137,7 +134,7 @@ class MmapTests(unittest.TestCase):
         # Ensuring that readonly mmap can't be write() to
         try:
             m.seek(0,0)
-            m.write('abc')
+            m.write(b'abc')
         except TypeError:
             pass
         else:
@@ -146,7 +143,7 @@ class MmapTests(unittest.TestCase):
         # Ensuring that readonly mmap can't be write_byte() to
         try:
             m.seek(0,0)
-            m.write_byte('d')
+            m.write_byte(b'd')
         except TypeError:
             pass
         else:
@@ -162,7 +159,7 @@ class MmapTests(unittest.TestCase):
         else:
             self.fail("Able to resize readonly memory map")
         del m, f
-        self.assertEqual(open(TESTFN, "rb").read(), 'a'*mapsize,
+        self.assertEqual(open(TESTFN, "rb").read(), b'a'*mapsize,
                "Readonly memory map data file was modified")
 
         # Opening mmap with size too big
@@ -193,8 +190,8 @@ class MmapTests(unittest.TestCase):
         f = open(TESTFN, "r+b")
         m = mmap.mmap(f.fileno(), mapsize, access=mmap.ACCESS_WRITE)
         # Modifying write-through memory map
-        m[:] = 'c'*mapsize
-        self.assertEqual(m[:], 'c'*mapsize,
+        m[:] = b'c'*mapsize
+        self.assertEqual(m[:], b'c'*mapsize,
                "Write-through memory map memory not updated properly.")
         m.flush()
         m.close()
@@ -202,18 +199,18 @@ class MmapTests(unittest.TestCase):
         f = open(TESTFN, 'rb')
         stuff = f.read()
         f.close()
-        self.assertEqual(stuff, 'c'*mapsize,
+        self.assertEqual(stuff, b'c'*mapsize,
                "Write-through memory map data file not updated properly.")
 
         # Opening mmap with access=ACCESS_COPY
         f = open(TESTFN, "r+b")
         m = mmap.mmap(f.fileno(), mapsize, access=mmap.ACCESS_COPY)
         # Modifying copy-on-write memory map
-        m[:] = 'd'*mapsize
-        self.assertEqual(m[:], 'd' * mapsize,
+        m[:] = b'd'*mapsize
+        self.assertEqual(m[:], b'd' * mapsize,
                "Copy-on-write memory map data not written correctly.")
         m.flush()
-        self.assertEqual(open(TESTFN, "rb").read(), 'c'*mapsize,
+        self.assertEqual(open(TESTFN, "rb").read(), b'c'*mapsize,
                "Copy-on-write test data file should not be modified.")
         # Ensuring copy-on-write maps cannot be resized
         self.assertRaises(TypeError, m.resize, 2*mapsize)
@@ -239,9 +236,9 @@ class MmapTests(unittest.TestCase):
     def test_tougher_find(self):
         # Do a tougher .find() test.  SF bug 515943 pointed out that, in 2.2,
         # searching for data with embedded \0 bytes didn't work.
-        f = open(TESTFN, 'w+')
+        f = open(TESTFN, 'wb+')
 
-        data = 'aabaac\x00deef\x00\x00aa\x00'
+        data = b'aabaac\x00deef\x00\x00aa\x00'
         n = len(data)
         f.write(data)
         f.flush()
@@ -252,14 +249,14 @@ class MmapTests(unittest.TestCase):
             for finish in range(start, n+1):
                 slice = data[start : finish]
                 self.assertEqual(m.find(slice), data.find(slice))
-                self.assertEqual(m.find(slice + 'x'), -1)
+                self.assertEqual(m.find(slice + b'x'), -1)
         m.close()
 
     def test_double_close(self):
         # make sure a double close doesn't crash on Solaris (Bug# 665913)
-        f = open(TESTFN, 'w+')
+        f = open(TESTFN, 'wb+')
 
-        f.write(2**16 * 'a') # Arbitrary character
+        f.write(2**16 * b'a') # Arbitrary character
         f.close()
 
         f = open(TESTFN)
@@ -271,40 +268,42 @@ class MmapTests(unittest.TestCase):
     def test_entire_file(self):
         # test mapping of entire file by passing 0 for map length
         if hasattr(os, "stat"):
-            f = open(TESTFN, "w+")
+            f = open(TESTFN, "wb+")
 
-            f.write(2**16 * 'm') # Arbitrary character
+            f.write(2**16 * b'm') # Arbitrary character
             f.close()
 
             f = open(TESTFN, "rb+")
             mf = mmap.mmap(f.fileno(), 0)
             self.assertEqual(len(mf), 2**16, "Map size should equal file size.")
-            self.assertEqual(mf.read(2**16), 2**16 * "m")
+            self.assertEqual(mf.read(2**16), 2**16 * b"m")
             mf.close()
             f.close()
 
     def test_move(self):
         # make move works everywhere (64-bit format problem earlier)
-        f = open(TESTFN, 'w+')
+        f = open(TESTFN, 'wb+')
 
-        f.write("ABCDEabcde") # Arbitrary character
+        f.write(b"ABCDEabcde") # Arbitrary character
         f.flush()
 
         mf = mmap.mmap(f.fileno(), 10)
         mf.move(5, 0, 5)
-        self.assertEqual(mf[:], "ABCDEABCDE", "Map move should have duplicated front 5")
+        self.assertEqual(mf[:], b"ABCDEABCDE", "Map move should have duplicated front 5")
         mf.close()
         f.close()
 
     def test_anonymous(self):
         # anonymous mmap.mmap(-1, PAGE)
         m = mmap.mmap(-1, PAGESIZE)
-        for x in xrange(PAGESIZE):
-            self.assertEqual(m[x], '\0', "anonymously mmap'ed contents should be zero")
+        for x in range(PAGESIZE):
+            self.assertEqual(m[x], b'\0', "anonymously mmap'ed contents should be zero")
 
-        for x in xrange(PAGESIZE):
-            m[x] = ch = chr(x & 255)
-            self.assertEqual(m[x], ch)
+        b = bytes(1)
+        for x in range(PAGESIZE):
+            b[0] = x & 255
+            m[x] = b
+            self.assertEqual(m[x], b)
 
 def test_main():
     run_unittest(MmapTests)

@@ -29,9 +29,9 @@ class LogReader:
         self._funcmap = {}
 
         self._reader = _hotshot.logreader(logfn)
-        self._nextitem = self._reader.next
+        self._nextitem = self._reader.__next__
         self._info = self._reader.info
-        if self._info.has_key('current-directory'):
+        if 'current-directory' in self._info:
             self.cwd = self._info['current-directory']
         else:
             self.cwd = None
@@ -93,7 +93,7 @@ class LogReader:
     # same bound method can be used as the __getitem__() method -- this
     # avoids using an additional method call which kills the performance.
 
-    def next(self, index=0):
+    def __next__(self, index=0):
         while 1:
             # This call may raise StopIteration:
             what, tdelta, fileno, lineno = self._nextitem()
@@ -159,7 +159,7 @@ class LogReader:
         try:
             filename = self._filemap[fileno]
         except KeyError:
-            print "Could not identify fileId", fileno
+            print("Could not identify fileId", fileno)
             return 1
         if filename is None:
             return 1

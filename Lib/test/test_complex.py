@@ -55,20 +55,16 @@ class ComplexTest(unittest.TestCase):
         if x != 0:
             q = z / x
             self.assertClose(q, y)
-            q = z.__div__(x)
-            self.assertClose(q, y)
             q = z.__truediv__(x)
             self.assertClose(q, y)
         if y != 0:
             q = z / y
             self.assertClose(q, x)
-            q = z.__div__(y)
-            self.assertClose(q, x)
             q = z.__truediv__(y)
             self.assertClose(q, x)
 
-    def test_div(self):
-        simple_real = [float(i) for i in xrange(-5, 6)]
+    def test_truediv(self):
+        simple_real = [float(i) for i in range(-5, 6)]
         simple_complex = [complex(x, y) for x in simple_real for y in simple_real]
         for x in simple_complex:
             for y in simple_complex:
@@ -80,11 +76,11 @@ class ComplexTest(unittest.TestCase):
         self.check_div(complex(1e-200, 1e-200), 1+0j)
 
         # Just for fun.
-        for i in xrange(100):
+        for i in range(100):
             self.check_div(complex(random(), random()),
                            complex(random(), random()))
 
-        self.assertRaises(ZeroDivisionError, complex.__div__, 1+1j, 0+0j)
+        self.assertRaises(ZeroDivisionError, complex.__truediv__, 1+1j, 0+0j)
         # FIXME: The following currently crashes on Alpha
         # self.assertRaises(OverflowError, pow, 1e200+1j, 1e200+1j)
 
@@ -93,14 +89,11 @@ class ComplexTest(unittest.TestCase):
         self.assertRaises(ZeroDivisionError, complex.__truediv__, 1+1j, 0+0j)
 
     def test_floordiv(self):
-        self.assertAlmostEqual(complex.__floordiv__(3+0j, 1.5+0j), 2)
-        self.assertRaises(ZeroDivisionError, complex.__floordiv__, 3+0j, 0+0j)
-
-    def test_coerce(self):
-        self.assertRaises(OverflowError, complex.__coerce__, 1+1j, 1L<<10000)
+        self.assertRaises(TypeError, complex.__floordiv__, 3+0j, 1.5+0j)
+        self.assertRaises(TypeError, complex.__floordiv__, 3+0j, 0+0j)
 
     def test_richcompare(self):
-        self.assertRaises(OverflowError, complex.__eq__, 1+1j, 1L<<10000)
+        self.assertRaises(OverflowError, complex.__eq__, 1+1j, 1<<10000)
         self.assertEqual(complex.__lt__(1+1j, None), NotImplemented)
         self.assertIs(complex.__eq__(1+1j, 1+1j), True)
         self.assertIs(complex.__eq__(1+1j, 2+2j), False)
@@ -112,18 +105,13 @@ class ComplexTest(unittest.TestCase):
         self.assertRaises(TypeError, complex.__ge__, 1+1j, 2+2j)
 
     def test_mod(self):
-        self.assertRaises(ZeroDivisionError, (1+1j).__mod__, 0+0j)
-
-        a = 3.33+4.43j
-        try:
-            a % 0
-        except ZeroDivisionError:
-            pass
-        else:
-            self.fail("modulo parama can't be 0")
+        # % is no longer supported on complex numbers
+        self.assertRaises(TypeError, (1+1j).__mod__, 0+0j)
+        self.assertRaises(TypeError, lambda: (3.33+4.43j) % 0)
 
     def test_divmod(self):
-        self.assertRaises(ZeroDivisionError, divmod, 1+1j, 0+0j)
+        self.assertRaises(TypeError, divmod, 1+1j, 1+0j)
+        self.assertRaises(TypeError, divmod, 1+1j, 0+0j)
 
     def test_pow(self):
         self.assertAlmostEqual(pow(1+1j, 0+0j), 1.0)
@@ -165,7 +153,7 @@ class ComplexTest(unittest.TestCase):
         self.assertRaises(ValueError, pow, a, b, 0)
 
     def test_boolcontext(self):
-        for i in xrange(100):
+        for i in range(100):
             self.assert_(complex(random() + 1e-6, random() + 1e-6))
         self.assert_(not complex(0.0, 0.0))
 
@@ -187,25 +175,25 @@ class ComplexTest(unittest.TestCase):
         self.assertAlmostEqual(complex("1+10j"), 1+10j)
         self.assertAlmostEqual(complex(10), 10+0j)
         self.assertAlmostEqual(complex(10.0), 10+0j)
-        self.assertAlmostEqual(complex(10L), 10+0j)
+        self.assertAlmostEqual(complex(10), 10+0j)
         self.assertAlmostEqual(complex(10+0j), 10+0j)
         self.assertAlmostEqual(complex(1,10), 1+10j)
-        self.assertAlmostEqual(complex(1,10L), 1+10j)
+        self.assertAlmostEqual(complex(1,10), 1+10j)
         self.assertAlmostEqual(complex(1,10.0), 1+10j)
-        self.assertAlmostEqual(complex(1L,10), 1+10j)
-        self.assertAlmostEqual(complex(1L,10L), 1+10j)
-        self.assertAlmostEqual(complex(1L,10.0), 1+10j)
+        self.assertAlmostEqual(complex(1,10), 1+10j)
+        self.assertAlmostEqual(complex(1,10), 1+10j)
+        self.assertAlmostEqual(complex(1,10.0), 1+10j)
         self.assertAlmostEqual(complex(1.0,10), 1+10j)
-        self.assertAlmostEqual(complex(1.0,10L), 1+10j)
+        self.assertAlmostEqual(complex(1.0,10), 1+10j)
         self.assertAlmostEqual(complex(1.0,10.0), 1+10j)
         self.assertAlmostEqual(complex(3.14+0j), 3.14+0j)
         self.assertAlmostEqual(complex(3.14), 3.14+0j)
         self.assertAlmostEqual(complex(314), 314.0+0j)
-        self.assertAlmostEqual(complex(314L), 314.0+0j)
+        self.assertAlmostEqual(complex(314), 314.0+0j)
         self.assertAlmostEqual(complex(3.14+0j, 0j), 3.14+0j)
         self.assertAlmostEqual(complex(3.14, 0.0), 3.14+0j)
         self.assertAlmostEqual(complex(314, 0), 314.0+0j)
-        self.assertAlmostEqual(complex(314L, 0L), 314.0+0j)
+        self.assertAlmostEqual(complex(314, 0), 314.0+0j)
         self.assertAlmostEqual(complex(0j, 3.14j), -3.14+0j)
         self.assertAlmostEqual(complex(0.0, 3.14j), -3.14+0j)
         self.assertAlmostEqual(complex(0j, 3.14), 3.14j)
@@ -233,15 +221,13 @@ class ComplexTest(unittest.TestCase):
         self.assertRaises(TypeError, complex, 1, "1")
 
         self.assertEqual(complex("  3.14+J  "), 3.14+1j)
-        if test_support.have_unicode:
-            self.assertEqual(complex(unicode("  3.14+J  ")), 3.14+1j)
 
         # SF bug 543840:  complex(string) accepts strings with \0
         # Fixed in 2.3.
         self.assertRaises(ValueError, complex, '1+1j\0j')
 
         self.assertRaises(TypeError, int, 5+3j)
-        self.assertRaises(TypeError, long, 5+3j)
+        self.assertRaises(TypeError, int, 5+3j)
         self.assertRaises(TypeError, float, 5+3j)
         self.assertRaises(ValueError, complex, "")
         self.assertRaises(TypeError, complex, None)
@@ -257,9 +243,8 @@ class ComplexTest(unittest.TestCase):
         self.assertRaises(ValueError, complex, "1+2j)")
         self.assertRaises(ValueError, complex, "1+(2j)")
         self.assertRaises(ValueError, complex, "(1+2j)123")
-        if test_support.have_unicode:
-            self.assertRaises(ValueError, complex, unicode("1"*500))
-            self.assertRaises(ValueError, complex, unicode("x"))
+        self.assertRaises(ValueError, complex, "1"*500)
+        self.assertRaises(ValueError, complex, "x")
 
         class EvilExc(Exception):
             pass
@@ -303,13 +288,13 @@ class ComplexTest(unittest.TestCase):
         self.assertRaises(TypeError, complex, complex2(1j))
 
     def test_hash(self):
-        for x in xrange(-30, 30):
+        for x in range(-30, 30):
             self.assertEqual(hash(x), hash(complex(x, 0)))
             x /= 3.0    # now check against floating point
             self.assertEqual(hash(x), hash(complex(x, 0.)))
 
     def test_abs(self):
-        nums = [complex(x/3., y/7.) for x in xrange(-9,9) for y in xrange(-9,9)]
+        nums = [complex(x/3., y/7.) for x in range(-9,9) for y in range(-9,9)]
         for num in nums:
             self.assertAlmostEqual((num.real**2 + num.imag**2)  ** 0.5, abs(num))
 
@@ -334,10 +319,10 @@ class ComplexTest(unittest.TestCase):
         fo = None
         try:
             fo = open(test_support.TESTFN, "wb")
-            print >>fo, a, b
+            print(a, b, file=fo)
             fo.close()
             fo = open(test_support.TESTFN, "rb")
-            self.assertEqual(fo.read(), "%s %s\n" % (a, b))
+            self.assertEqual(fo.read(), bytes("%s %s\n" % (a, b)))
         finally:
             if (fo is not None) and (not fo.closed):
                 fo.close()

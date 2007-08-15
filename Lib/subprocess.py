@@ -17,8 +17,6 @@ intends to replace several other, older modules and functions, like:
 
 os.system
 os.spawn*
-os.popen*
-popen2.*
 commands.*
 
 Information about how the subprocess module can be used to replace these
@@ -248,11 +246,11 @@ A more real-world example would look like this:
 try:
     retcode = call("mycmd" + " myarg", shell=True)
     if retcode < 0:
-        print >>sys.stderr, "Child was terminated by signal", -retcode
+        print("Child was terminated by signal", -retcode, file=sys.stderr)
     else:
-        print >>sys.stderr, "Child returned", retcode
-except OSError, e:
-    print >>sys.stderr, "Execution failed:", e
+        print("Child returned", retcode, file=sys.stderr)
+except OSError as e:
+    print("Execution failed:", e, file=sys.stderr)
 
 
 Replacing os.spawn*
@@ -283,78 +281,13 @@ Environment example:
 os.spawnlpe(os.P_NOWAIT, "/bin/mycmd", "mycmd", "myarg", env)
 ==>
 Popen(["/bin/mycmd", "myarg"], env={"PATH": "/usr/bin"})
-
-
-Replacing os.popen*
--------------------
-pipe = os.popen(cmd, mode='r', bufsize)
-==>
-pipe = Popen(cmd, shell=True, bufsize=bufsize, stdout=PIPE).stdout
-
-pipe = os.popen(cmd, mode='w', bufsize)
-==>
-pipe = Popen(cmd, shell=True, bufsize=bufsize, stdin=PIPE).stdin
-
-
-(child_stdin, child_stdout) = os.popen2(cmd, mode, bufsize)
-==>
-p = Popen(cmd, shell=True, bufsize=bufsize,
-          stdin=PIPE, stdout=PIPE, close_fds=True)
-(child_stdin, child_stdout) = (p.stdin, p.stdout)
-
-
-(child_stdin,
- child_stdout,
- child_stderr) = os.popen3(cmd, mode, bufsize)
-==>
-p = Popen(cmd, shell=True, bufsize=bufsize,
-          stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-(child_stdin,
- child_stdout,
- child_stderr) = (p.stdin, p.stdout, p.stderr)
-
-
-(child_stdin, child_stdout_and_stderr) = os.popen4(cmd, mode, bufsize)
-==>
-p = Popen(cmd, shell=True, bufsize=bufsize,
-          stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-(child_stdin, child_stdout_and_stderr) = (p.stdin, p.stdout)
-
-
-Replacing popen2.*
-------------------
-Note: If the cmd argument to popen2 functions is a string, the command
-is executed through /bin/sh.  If it is a list, the command is directly
-executed.
-
-(child_stdout, child_stdin) = popen2.popen2("somestring", bufsize, mode)
-==>
-p = Popen(["somestring"], shell=True, bufsize=bufsize
-          stdin=PIPE, stdout=PIPE, close_fds=True)
-(child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-
-(child_stdout, child_stdin) = popen2.popen2(["mycmd", "myarg"], bufsize, mode)
-==>
-p = Popen(["mycmd", "myarg"], bufsize=bufsize,
-          stdin=PIPE, stdout=PIPE, close_fds=True)
-(child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-The popen2.Popen3 and popen2.Popen4 basically works as subprocess.Popen,
-except that:
-
-* subprocess.Popen raises an exception if the execution fails
-* the capturestderr argument is replaced with the stderr argument.
-* stdin=PIPE and stdout=PIPE must be specified.
-* popen2 closes all filedescriptors by default, but you have to specify
-  close_fds=True with subprocess.Popen.
 """
 
 import sys
 mswindows = (sys.platform == "win32")
 
+import io
 import os
-import types
 import traceback
 
 # Exception classes used by this module.
@@ -407,18 +340,12 @@ try:
 except:
     MAXFD = 256
 
-# True/False does not exist on 2.2.0
-try:
-    False
-except NameError:
-    False = 0
-    True = 1
-
 _active = []
 
 def _cleanup():
     for inst in _active[:]:
-        if inst.poll(_deadstate=sys.maxint) >= 0:
+        res = inst.poll(_deadstate=sys.maxint)
+        if res is not None and res >= 0:
             try:
                 _active.remove(inst)
             except ValueError:
@@ -538,7 +465,9 @@ class Popen(object):
         _cleanup()
 
         self._child_created = False
-        if not isinstance(bufsize, (int, long)):
+        if bufsize is None:
+            bufsize = 0  # Restore default
+        if not isinstance(bufsize, int):
             raise TypeError("bufsize must be an integer")
 
         if mswindows:
@@ -607,24 +536,26 @@ class Popen(object):
                 os.close(errread)
                 errread = None
 
+        if bufsize == 0:
+            bufsize = 1  # Nearly unbuffered (XXX for now)
         if p2cwrite is not None:
-            self.stdin = os.fdopen(p2cwrite, 'wb', bufsize)
+            self.stdin = io.open(p2cwrite, 'wb', bufsize)
+            if self.universal_newlines:
+                self.stdin = io.TextIOWrapper(self.stdin)
         if c2pread is not None:
+            self.stdout = io.open(c2pread, 'rb', bufsize)
             if universal_newlines:
-                self.stdout = os.fdopen(c2pread, 'rU', bufsize)
-            else:
-                self.stdout = os.fdopen(c2pread, 'rb', bufsize)
+                self.stdout = io.TextIOWrapper(self.stdout)
         if errread is not None:
+            self.stderr = io.open(errread, 'rb', bufsize)
             if universal_newlines:
-                self.stderr = os.fdopen(errread, 'rU', bufsize)
-            else:
-                self.stderr = os.fdopen(errread, 'rb', bufsize)
+                self.stderr = io.TextIOWrapper(self.stderr)
 
 
     def _translate_newlines(self, data):
         data = data.replace("\r\n", "\n")
         data = data.replace("\r", "\n")
-        return data
+        return str(data)
 
 
     def __del__(self, sys=sys):
@@ -767,7 +698,7 @@ class Popen(object):
                            errread, errwrite):
             """Execute program (MS Windows version)"""
 
-            if not isinstance(args, types.StringTypes):
+            if not isinstance(args, basestring):
                 args = list2cmdline(args)
 
             # Process startup details
@@ -784,7 +715,7 @@ class Popen(object):
                 startupinfo.wShowWindow = SW_HIDE
                 comspec = os.environ.get("COMSPEC", "cmd.exe")
                 args = comspec + " /c " + args
-                if (GetVersion() >= 0x80000000L or
+                if (GetVersion() >= 0x80000000 or
                         os.path.basename(comspec).lower() == "command.com"):
                     # Win9x, or using command.com on NT. We need to
                     # use the w9xpopen intermediate program. For more
@@ -810,7 +741,7 @@ class Popen(object):
                                          env,
                                          cwd,
                                          startupinfo)
-            except pywintypes.error, e:
+            except pywintypes.error as e:
                 # Translate pywintypes.error to WindowsError, which is
                 # a subclass of OSError.  FIXME: We should really
                 # translate errno using _sys_errlist (or simliar), but
@@ -896,10 +827,10 @@ class Popen(object):
             # object do the translation: It is based on stdio, which is
             # impossible to combine with select (unless forcing no
             # buffering).
-            if self.universal_newlines and hasattr(file, 'newlines'):
-                if stdout:
+            if self.universal_newlines:
+                if stdout is not None:
                     stdout = self._translate_newlines(stdout)
-                if stderr:
+                if stderr is not None:
                     stderr = self._translate_newlines(stderr)
 
             self.wait()
@@ -965,7 +896,7 @@ class Popen(object):
 
 
         def _close_fds(self, but):
-            for i in xrange(3, MAXFD):
+            for i in range(3, MAXFD):
                 if i == but:
                     continue
                 try:
@@ -982,7 +913,7 @@ class Popen(object):
                            errread, errwrite):
             """Execute program (POSIX version)"""
 
-            if isinstance(args, types.StringTypes):
+            if isinstance(args, basestring):
                 args = [args]
             else:
                 args = list(args)
@@ -1038,7 +969,7 @@ class Popen(object):
                         os.chdir(cwd)
 
                     if preexec_fn:
-                        apply(preexec_fn)
+                        preexec_fn()
 
                     if env is None:
                         os.execvp(executable, args)
@@ -1070,7 +1001,7 @@ class Popen(object):
             # Wait for exec to fail or succeed; possibly raising exception
             data = os.read(errpipe_read, 1048576) # Exceptions limited to 1 MB
             os.close(errpipe_read)
-            if data != "":
+            if data:
                 os.waitpid(self.pid, 0)
                 child_exception = pickle.loads(data)
                 raise child_exception
@@ -1110,6 +1041,8 @@ class Popen(object):
 
 
         def _communicate(self, input):
+            if isinstance(input, str): # Unicode
+                input = input.encode("utf-8") # XXX What else?
             read_set = []
             write_set = []
             stdout = None # Return
@@ -1146,32 +1079,32 @@ class Popen(object):
 
                 if self.stdout in rlist:
                     data = os.read(self.stdout.fileno(), 1024)
-                    if data == "":
+                    if not data:
                         self.stdout.close()
                         read_set.remove(self.stdout)
                     stdout.append(data)
 
                 if self.stderr in rlist:
                     data = os.read(self.stderr.fileno(), 1024)
-                    if data == "":
+                    if not data:
                         self.stderr.close()
                         read_set.remove(self.stderr)
                     stderr.append(data)
 
             # All data exchanged.  Translate lists into strings.
             if stdout is not None:
-                stdout = ''.join(stdout)
+                stdout = b''.join(stdout)
             if stderr is not None:
-                stderr = ''.join(stderr)
+                stderr = b''.join(stderr)
 
             # Translate newlines, if requested.  We cannot let the file
             # object do the translation: It is based on stdio, which is
             # impossible to combine with select (unless forcing no
             # buffering).
-            if self.universal_newlines and hasattr(file, 'newlines'):
-                if stdout:
+            if self.universal_newlines:
+                if stdout is not None:
                     stdout = self._translate_newlines(stdout)
-                if stderr:
+                if stderr is not None:
                     stderr = self._translate_newlines(stderr)
 
             self.wait()
@@ -1183,8 +1116,8 @@ def _demo_posix():
     # Example 1: Simple redirection: Get process list
     #
     plist = Popen(["ps"], stdout=PIPE).communicate()[0]
-    print "Process list:"
-    print plist
+    print("Process list:")
+    print(plist)
 
     #
     # Example 2: Change uid before executing child
@@ -1196,42 +1129,42 @@ def _demo_posix():
     #
     # Example 3: Connecting several subprocesses
     #
-    print "Looking for 'hda'..."
+    print("Looking for 'hda'...")
     p1 = Popen(["dmesg"], stdout=PIPE)
     p2 = Popen(["grep", "hda"], stdin=p1.stdout, stdout=PIPE)
-    print repr(p2.communicate()[0])
+    print(repr(p2.communicate()[0]))
 
     #
     # Example 4: Catch execution error
     #
-    print
-    print "Trying a weird file..."
+    print()
+    print("Trying a weird file...")
     try:
-        print Popen(["/this/path/does/not/exist"]).communicate()
-    except OSError, e:
+        print(Popen(["/this/path/does/not/exist"]).communicate())
+    except OSError as e:
         if e.errno == errno.ENOENT:
-            print "The file didn't exist.  I thought so..."
-            print "Child traceback:"
-            print e.child_traceback
+            print("The file didn't exist.  I thought so...")
+            print("Child traceback:")
+            print(e.child_traceback)
         else:
-            print "Error", e.errno
+            print("Error", e.errno)
     else:
-        print >>sys.stderr, "Gosh.  No error."
+        print("Gosh.  No error.", file=sys.stderr)
 
 
 def _demo_windows():
     #
     # Example 1: Connecting several subprocesses
     #
-    print "Looking for 'PROMPT' in set output..."
+    print("Looking for 'PROMPT' in set output...")
     p1 = Popen("set", stdout=PIPE, shell=True)
     p2 = Popen('find "PROMPT"', stdin=p1.stdout, stdout=PIPE)
-    print repr(p2.communicate()[0])
+    print(repr(p2.communicate()[0]))
 
     #
     # Example 2: Simple execution of program
     #
-    print "Executing calc..."
+    print("Executing calc...")
     p = Popen("calc")
     p.wait()
 

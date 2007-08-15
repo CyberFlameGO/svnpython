@@ -8,7 +8,7 @@ and building lists of files.
 
 __revision__ = "$Id$"
 
-import os, string, re
+import os, re
 import fnmatch
 from types import *
 from glob import glob
@@ -53,7 +53,7 @@ class FileList:
         """
         from distutils.debug import DEBUG
         if DEBUG:
-            print msg
+            print(msg)
 
     # -- List-like methods ---------------------------------------------
 
@@ -65,11 +65,10 @@ class FileList:
 
     def sort (self):
         # Not a strict lexical sort!
-        sortable_files = map(os.path.split, self.files)
-        sortable_files.sort()
+        sortable_files = sorted(map(os.path.split, self.files))
         self.files = []
         for sort_tuple in sortable_files:
-            self.files.append(apply(os.path.join, sort_tuple))
+            self.files.append(os.path.join(*sort_tuple))
 
 
     # -- Other miscellaneous utility methods ---------------------------
@@ -84,7 +83,7 @@ class FileList:
     # -- "File template" methods ---------------------------------------
 
     def _parse_template_line (self, line):
-        words = string.split(line)
+        words = line.split()
         action = words[0]
 
         patterns = dir = dir_pattern = None
@@ -133,28 +132,28 @@ class FileList:
         # right number of words on the line for that action -- so we
         # can proceed with minimal error-checking.
         if action == 'include':
-            self.debug_print("include " + string.join(patterns))
+            self.debug_print("include " + ' '.join(patterns))
             for pattern in patterns:
                 if not self.include_pattern(pattern, anchor=1):
                     log.warn("warning: no files found matching '%s'",
                              pattern)
 
         elif action == 'exclude':
-            self.debug_print("exclude " + string.join(patterns))
+            self.debug_print("exclude " + ' '.join(patterns))
             for pattern in patterns:
                 if not self.exclude_pattern(pattern, anchor=1):
                     log.warn(("warning: no previously-included files "
                               "found matching '%s'"), pattern)
 
         elif action == 'global-include':
-            self.debug_print("global-include " + string.join(patterns))
+            self.debug_print("global-include " + ' '.join(patterns))
             for pattern in patterns:
                 if not self.include_pattern(pattern, anchor=0):
                     log.warn(("warning: no files found matching '%s' " +
                               "anywhere in distribution"), pattern)
 
         elif action == 'global-exclude':
-            self.debug_print("global-exclude " + string.join(patterns))
+            self.debug_print("global-exclude " + ' '.join(patterns))
             for pattern in patterns:
                 if not self.exclude_pattern(pattern, anchor=0):
                     log.warn(("warning: no previously-included files matching "
@@ -163,7 +162,7 @@ class FileList:
 
         elif action == 'recursive-include':
             self.debug_print("recursive-include %s %s" %
-                             (dir, string.join(patterns)))
+                             (dir, ' '.join(patterns)))
             for pattern in patterns:
                 if not self.include_pattern(pattern, prefix=dir):
                     log.warn(("warning: no files found matching '%s' " +
@@ -172,7 +171,7 @@ class FileList:
 
         elif action == 'recursive-exclude':
             self.debug_print("recursive-exclude %s %s" %
-                             (dir, string.join(patterns)))
+                             (dir, ' '.join(patterns)))
             for pattern in patterns:
                 if not self.exclude_pattern(pattern, prefix=dir):
                     log.warn(("warning: no previously-included files matching "
@@ -333,7 +332,7 @@ def translate_pattern (pattern, anchor=1, prefix=None, is_regex=0):
     or just returned as-is (assumes it's a regex object).
     """
     if is_regex:
-        if type(pattern) is StringType:
+        if isinstance(pattern, basestring):
             return re.compile(pattern)
         else:
             return pattern

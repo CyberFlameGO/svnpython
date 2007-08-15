@@ -5,7 +5,7 @@ import tkMessageBox
 
 class FileList:
 
-    from EditorWindow import EditorWindow  # class variable, may be overridden
+    from .EditorWindow import EditorWindow  # class variable, may be overridden
                                            # e.g. by PyShellFileList
 
     def __init__(self, root):
@@ -25,7 +25,7 @@ class FileList:
                 master=self.root)
             return None
         key = os.path.normcase(filename)
-        if self.dict.has_key(key):
+        if key in self.dict:
             edit = self.dict[key]
             edit.top.wakeup()
             return edit
@@ -44,7 +44,7 @@ class FileList:
         return self.EditorWindow(self, filename)
 
     def close_all_callback(self, event):
-        for edit in self.inversedict.keys():
+        for edit in list(self.inversedict):
             reply = edit.close()
             if reply == "cancel":
                 break
@@ -54,7 +54,7 @@ class FileList:
         try:
             key = self.inversedict[edit]
         except KeyError:
-            print "Don't know this EditorWindow object.  (close)"
+            print("Don't know this EditorWindow object.  (close)")
             return
         if key:
             del self.dict[key]
@@ -67,7 +67,7 @@ class FileList:
         try:
             key = self.inversedict[edit]
         except KeyError:
-            print "Don't know this EditorWindow object.  (rename)"
+            print("Don't know this EditorWindow object.  (rename)")
             return
         filename = edit.io.filename
         if not filename:
@@ -79,7 +79,7 @@ class FileList:
         newkey = os.path.normcase(filename)
         if newkey == key:
             return
-        if self.dict.has_key(newkey):
+        if newkey in self.dict:
             conflict = self.dict[newkey]
             self.inversedict[conflict] = None
             tkMessageBox.showerror(
@@ -106,7 +106,7 @@ class FileList:
 
 
 def _test():
-    from EditorWindow import fixwordbreaks
+    from .EditorWindow import fixwordbreaks
     import sys
     root = Tk()
     fixwordbreaks(root)

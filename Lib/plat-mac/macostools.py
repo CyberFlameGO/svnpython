@@ -42,7 +42,7 @@ def mkalias(src, dst, relative=None):
     else:
         alias = srcfsr.FSNewAliasMinimal()
 
-    dstfsr, dstfss = Res.FSCreateResourceFile(dstdirfsr, unicode(dstname),
+    dstfsr, dstfss = Res.FSCreateResourceFile(dstdirfsr, str(dstname),
         File.FSGetResourceForkName())
     h = Res.FSOpenResourceFile(dstfsr, File.FSGetResourceForkName(), 3)
     resource = Res.Resource(alias.data)
@@ -61,7 +61,7 @@ def mkdirs(dst):
     if os.sep == ':' and not ':' in head:
         head = head + ':'
     mkdirs(head)
-    os.mkdir(dst, 0777)
+    os.mkdir(dst, 0o777)
 
 def touched(dst):
     """Tell the finder a file has changed. No-op on MacOSX."""

@@ -20,7 +20,7 @@ class ShellWindow(ScrolledText):
         args = string.split(shell)
         shell = args[0]
 
-        apply(ScrolledText.__init__, (self, master), cnf)
+        ScrolledText.__init__(self, master, **cnf)
         self.pos = '1.0'
         self.bind('<Return>', self.inputhandler)
         self.bind('<Control-c>', self.sigint)
@@ -37,7 +37,7 @@ class ShellWindow(ScrolledText):
         if not data:
             self.tk.deletefilehandler(file)
             pid, sts = os.waitpid(self.pid, 0)
-            print 'pid', pid, 'status', sts
+            print('pid', pid, 'status', sts)
             self.pid = None
             detail = sts>>8
             cause = sts & 0xff
@@ -115,11 +115,11 @@ def spawn(prog, args):
                 os.close(i)
             except os.error:
                 pass
-        if os.dup(p2cread) <> 0:
+        if os.dup(p2cread) != 0:
             sys.stderr.write('popen2: bad read dup\n')
-        if os.dup(c2pwrite) <> 1:
+        if os.dup(c2pwrite) != 1:
             sys.stderr.write('popen2: bad write dup\n')
-        if os.dup(c2pwrite) <> 2:
+        if os.dup(c2pwrite) != 2:
             sys.stderr.write('popen2: bad write dup\n')
         for i in range(3, MAXFD):
             try:

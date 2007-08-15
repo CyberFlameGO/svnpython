@@ -8,7 +8,7 @@ Windows."""
 
 __revision__ = "$Id$"
 
-import sys, os, string
+import sys, os
 from types import *
 from distutils.errors import \
      DistutilsExecError, DistutilsPlatformError, \
@@ -159,9 +159,9 @@ class MWerksCompiler (CCompiler) :
         settings['libraries'] = libraries
         settings['extrasearchdirs'] = sourcefiledirs + include_dirs + library_dirs
         if self.dry_run:
-            print 'CALLING LINKER IN', os.getcwd()
+            print('CALLING LINKER IN', os.getcwd())
             for key, value in settings.items():
-                print '%20.20s %s'%(key, value)
+                print('%20.20s %s'%(key, value))
             return
         # Build the export file
         exportfilename = os.path.join(build_temp, exportname)
@@ -213,11 +213,11 @@ class MWerksCompiler (CCompiler) :
             curdir = os.getcwd()
             filename = os.path.join(curdir, filename)
         # Finally remove .. components
-        components = string.split(filename, ':')
+        components = filename.split(':')
         for i in range(1, len(components)):
             if components[i] == '..':
                 components[i] = ''
-        return string.join(components, ':')
+        return ':'.join(components)
 
     def library_dir_option (self, dir):
         """Return the compiler option to add 'dir' to the list of

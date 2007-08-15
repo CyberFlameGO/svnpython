@@ -103,7 +103,7 @@ EVP_digest(EVPobject *self, PyObject *unused)
     digest_size = EVP_MD_CTX_size(&temp_ctx);
     EVP_DigestFinal(&temp_ctx, digest, NULL);
 
-    retval = PyString_FromStringAndSize((const char *)digest, digest_size);
+    retval = PyBytes_FromStringAndSize((const char *)digest, digest_size);
     EVP_MD_CTX_cleanup(&temp_ctx);
     return retval;
 }
@@ -127,17 +127,10 @@ EVP_hexdigest(EVPobject *self, PyObject *unused)
 
     EVP_MD_CTX_cleanup(&temp_ctx);
 
-    /* Create a new string */
-    /* NOTE: not thread safe! modifying an already created string object */
-    /* (not a problem because we hold the GIL by default) */
-    retval = PyString_FromStringAndSize(NULL, digest_size * 2);
-    if (!retval)
-	    return NULL;
-    hex_digest = PyString_AsString(retval);
-    if (!hex_digest) {
-	    Py_DECREF(retval);
-	    return NULL;
-    }
+    /* Allocate a new buffer */
+    hex_digest = PyMem_Malloc(digest_size * 2 + 1);
+    if (!hex_digest)
+	return PyErr_NoMemory();
 
     /* Make hex version of the digest */
     for(i=j=0; i<digest_size; i++) {
@@ -149,6 +142,8 @@ EVP_hexdigest(EVPobject *self, PyObject *unused)
 	c = (c>9) ? c+'a'-10 : c + '0';
         hex_digest[j++] = c;
     }
+    retval = PyUnicode_FromStringAndSize(hex_digest, digest_size * 2);
+    PyMem_Free(hex_digest);
     return retval;
 }
 
@@ -221,7 +216,7 @@ EVP_repr(PyObject *self)
     char buf[100];
     PyOS_snprintf(buf, sizeof(buf), "<%s HASH object @ %p>",
             PyString_AsString(((EVPobject *)self)->name), self);
-    return PyString_FromString(buf);
+    return PyUnicode_FromString(buf);
 }
 
 #if HASH_OBJ_CONSTRUCTOR

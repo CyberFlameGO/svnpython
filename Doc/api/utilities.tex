@@ -140,10 +140,7 @@ values from C values.
 \end{cfuncdesc}
 
 \begin{cfuncdesc}{PyObject*}{PyImport_ReloadModule}{PyObject *m}
-  Reload a module.  This is best described by referring to the
-  built-in Python function \function{reload()}\bifuncindex{reload}, as
-  the standard \function{reload()} function calls this function
-  directly.  Return a new reference to the reloaded module, or \NULL{}
+  Reload a module.  Return a new reference to the reloaded module, or \NULL{}
   with an exception set on failure (the module still exists in this
   case).
 \end{cfuncdesc}
@@ -423,6 +420,18 @@ whose address should be passed.
   the object if such a conversion is possible.  All other read-buffer
   compatible objects pass back a reference to the raw internal data
   representation.
+
+  \item[\samp{y} (bytes object)
+  {[const char *]}]
+  This variant on \samp{s} convert a Python bytes object to a C pointer to a
+  character string. The bytes object must not contain embedded NUL bytes;
+  if it does, a \exception{TypeError} exception is raised.
+
+  \item[\samp{y\#} (bytes object)
+  {[const char *, int]}]
+  This variant on \samp{s\#} stores into two C variables, the first one
+  a pointer to a character string, the second one its length.  This only
+  accepts bytes objects.
 
   \item[\samp{z} (string or \code{None}) {[const char *]}]
   Like \samp{s}, but the Python object may also be \code{None}, in
@@ -836,6 +845,15 @@ PyArg_ParseTuple(args, "O|O:ref", &object, &callback)
     to a Python Unicode object.   If the Unicode buffer pointer
     is \NULL, the length is ignored and \code{None} is returned.
 
+    \item[\samp{U} (string) {[char *]}]
+    Convert a null-terminated C string to a Python unicode object.
+    If the C string pointer is \NULL, \code{None} is used.
+
+    \item[\samp{U\#} (string) {[char *, int]}]
+    Convert a C string and its length to a Python unicode object.
+    If the C string pointer is \NULL, the length is ignored and \code{None}
+    is returned.
+
     \item[\samp{i} (integer) {[int]}]
     Convert a plain C \ctype{int} to a Python integer object.
 
@@ -956,7 +974,7 @@ behavior in corner cases, which the Standard C functions do not.
 
 The wrappers ensure that \var{str}[\var{size}-1] is always
 \character{\textbackslash0} upon return. They never write more than
-\var{size} bytes (including the trailing \character{\textbackslash0}
+\var{size} bytes (including the trailing \character{\textbackslash0})
 into str. Both functions require that \code{\var{str} != NULL},
 \code{\var{size} > 0} and \code{\var{format} != NULL}.
 

@@ -358,7 +358,7 @@ gettmarg(PyObject *args, struct tm *p)
 	if (y < 1900) {
 		PyObject *accept = PyDict_GetItemString(moddict,
 							"accept2dyear");
-		if (accept == NULL || !PyInt_Check(accept) ||
+		if (accept == NULL || !PyInt_CheckExact(accept) ||
 		    PyInt_AsLong(accept) == 0) {
 			PyErr_SetString(PyExc_ValueError,
 					"year >= 1900 required");
@@ -475,7 +475,7 @@ time_strftime(PyObject *self, PyObject *args)
 	 * will be ahead of time...
 	 */
 	for (i = 1024; ; i += i) {
-		outbuf = (char *)malloc(i);
+		outbuf = (char *)PyMem_Malloc(i);
 		if (outbuf == NULL) {
 			return PyErr_NoMemory();
 		}
@@ -487,11 +487,11 @@ time_strftime(PyObject *self, PyObject *args)
 			   e.g. an empty format, or %Z when the timezone
 			   is unknown. */
 			PyObject *ret;
-			ret = PyString_FromStringAndSize(outbuf, buflen);
-			free(outbuf);
+			ret = PyUnicode_FromStringAndSize(outbuf, buflen);
+			PyMem_Free(outbuf);
 			return ret;
 		}
-		free(outbuf);
+		PyMem_Free(outbuf);
 #if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
 		/* VisualStudio .NET 2005 does this properly */
 		if (buflen == 0 && errno == EINVAL) {
@@ -499,7 +499,6 @@ time_strftime(PyObject *self, PyObject *args)
 			return 0;
 		}
 #endif
-		
 	}
 }
 

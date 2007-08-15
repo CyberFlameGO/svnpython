@@ -18,7 +18,7 @@ __revision__ = "$Id$"
 # two modules, mainly because a number of subtle details changed in the
 # cut 'n paste.  Sigh.
 
-import os, string
+import os
 from types import *
 from distutils.core import Command
 from distutils.errors import *
@@ -92,9 +92,8 @@ class build_clib (Command):
 
         if self.include_dirs is None:
             self.include_dirs = self.distribution.include_dirs or []
-        if type(self.include_dirs) is StringType:
-            self.include_dirs = string.split(self.include_dirs,
-                                             os.pathsep)
+        if isinstance(self.include_dirs, basestring):
+            self.include_dirs = self.include_dirs.split(os.pathsep)
 
         # XXX same as for build_ext -- what about 'self.define' and
         # 'self.undef' ?
@@ -148,7 +147,7 @@ class build_clib (Command):
                 raise DistutilsSetupError, \
                       "each element of 'libraries' must a 2-tuple"
 
-            if type(lib[0]) is not StringType:
+            if isinstance(lib[0], basestring):
                 raise DistutilsSetupError, \
                       "first element of each tuple in 'libraries' " + \
                       "must be a string (the library name)"

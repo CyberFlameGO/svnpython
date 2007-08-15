@@ -5,60 +5,11 @@
 
 #include "structmember.h"
 
-static PyObject *
-listmembers(struct memberlist *mlist)
-{
-	int i, n;
-	PyObject *v;
-	for (n = 0; mlist[n].name != NULL; n++)
-		;
-	v = PyList_New(n);
-	if (v != NULL) {
-		for (i = 0; i < n; i++)
-			PyList_SetItem(v, i,
-				       PyString_FromString(mlist[i].name));
-		if (PyErr_Occurred()) {
-			Py_DECREF(v);
-			v = NULL;
-		}
-		else {
-			PyList_Sort(v);
-		}
-	}
-	return v;
-}
-
-PyObject *
-PyMember_Get(const char *addr, struct memberlist *mlist, const char *name)
-{
-	struct memberlist *l;
-
-	if (strcmp(name, "__members__") == 0)
-		return listmembers(mlist);
-	for (l = mlist; l->name != NULL; l++) {
-		if (strcmp(l->name, name) == 0) {
-			PyMemberDef copy;
-			copy.name = l->name;
-			copy.type = l->type;
-			copy.offset = l->offset;
-			copy.flags = l->flags;
-			copy.doc = NULL;
-			return PyMember_GetOne(addr, &copy);
-		}
-	}
-	PyErr_SetString(PyExc_AttributeError, name);
-	return NULL;
-}
-
 PyObject *
 PyMember_GetOne(const char *addr, PyMemberDef *l)
 {
 	PyObject *v;
-	if ((l->flags & READ_RESTRICTED) &&
-	    PyEval_GetRestricted()) {
-		PyErr_SetString(PyExc_RuntimeError, "restricted attribute");
-		return NULL;
-	}
+
 	addr += l->offset;
 	switch (l->type) {
 	case T_BYTE:
@@ -128,6 +79,10 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 		v = PyLong_FromUnsignedLongLong(*(unsigned PY_LONG_LONG *)addr);
 		break;
 #endif /* HAVE_LONG_LONG */
+        case T_NONE:
+		v = Py_None;
+		Py_INCREF(v);
+		break;
 	default:
 		PyErr_SetString(PyExc_SystemError, "bad memberdescr type");
 		v = NULL;
@@ -135,31 +90,10 @@ PyMember_GetOne(const char *addr, PyMemberDef *l)
 	return v;
 }
 
-int
-PyMember_Set(char *addr, struct memberlist *mlist, const char *name, PyObject *v)
-{
-	struct memberlist *l;
-
-	for (l = mlist; l->name != NULL; l++) {
-		if (strcmp(l->name, name) == 0) {
-			PyMemberDef copy;
-			copy.name = l->name;
-			copy.type = l->type;
-			copy.offset = l->offset;
-			copy.flags = l->flags;
-			copy.doc = NULL;
-			return PyMember_SetOne(addr, &copy, v);
-		}
-	}
-
-	PyErr_SetString(PyExc_AttributeError, name);
-	return -1;
-}
-
-#define WARN(msg)					\
-    do {						\
-	if (PyErr_Warn(PyExc_RuntimeWarning, msg) < 0)	\
-		return -1;				\
+#define WARN(msg)						\
+    do {							\
+	if (PyErr_WarnEx(PyExc_RuntimeWarning, msg, 1) < 0)	\
+		return -1;					\
     } while (0)
 
 int
@@ -169,11 +103,7 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
 
 	if ((l->flags & READONLY) || l->type == T_STRING)
 	{
-		PyErr_SetString(PyExc_TypeError, "readonly attribute");
-		return -1;
-	}
-	if ((l->flags & WRITE_RESTRICTED) && PyEval_GetRestricted()) {
-		PyErr_SetString(PyExc_RuntimeError, "restricted attribute");
+		PyErr_SetString(PyExc_AttributeError, "readonly attribute");
 		return -1;
 	}
 	if (v == NULL && l->type != T_OBJECT_EX && l->type != T_OBJECT) {

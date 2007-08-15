@@ -143,7 +143,7 @@ meth_get__doc__(PyCFunctionObject *m, void *closure)
 static PyObject *
 meth_get__name__(PyCFunctionObject *m, void *closure)
 {
-	return PyString_FromString(m->m_ml->ml_name);
+	return PyUnicode_FromString(m->m_ml->ml_name);
 }
 
 static int
@@ -158,11 +158,7 @@ static PyObject *
 meth_get__self__(PyCFunctionObject *m, void *closure)
 {
 	PyObject *self;
-	if (PyEval_GetRestricted()) {
-		PyErr_SetString(PyExc_RuntimeError,
-			"method.__self__ not accessible in restricted mode");
-		return NULL;
-	}
+
 	self = m->m_self;
 	if (self == NULL)
 		self = Py_None;
@@ -188,25 +184,39 @@ static PyObject *
 meth_repr(PyCFunctionObject *m)
 {
 	if (m->m_self == NULL)
-		return PyString_FromFormat("<built-in function %s>",
+		return PyUnicode_FromFormat("<built-in function %s>",
 					   m->m_ml->ml_name);
-	return PyString_FromFormat("<built-in method %s of %s object at %p>",
+	return PyUnicode_FromFormat("<built-in method %s of %s object at %p>",
 				   m->m_ml->ml_name,
 				   m->m_self->ob_type->tp_name,
 				   m->m_self);
 }
 
-static int
-meth_compare(PyCFunctionObject *a, PyCFunctionObject *b)
+static PyObject *
+meth_richcompare(PyObject *self, PyObject *other, int op)
 {
-	if (a->m_self != b->m_self)
-		return (a->m_self < b->m_self) ? -1 : 1;
-	if (a->m_ml->ml_meth == b->m_ml->ml_meth)
-		return 0;
-	if (strcmp(a->m_ml->ml_name, b->m_ml->ml_name) < 0)
-		return -1;
+	PyCFunctionObject *a, *b;
+	PyObject *res;
+	int eq;
+
+	if ((op != Py_EQ && op != Py_NE) ||
+	    !PyCFunction_Check(self) ||
+	    !PyCFunction_Check(other))
+	{
+		Py_INCREF(Py_NotImplemented);
+		return Py_NotImplemented;
+	}
+	a = (PyCFunctionObject *)self;
+	b = (PyCFunctionObject *)other;
+	eq = a->m_self == b->m_self;
+	if (eq)
+		eq = a->m_ml->ml_meth == b->m_ml->ml_meth;
+	if (op == Py_EQ)
+		res = eq ? Py_True : Py_False;
 	else
-		return 1;
+		res = eq ? Py_False : Py_True;
+	Py_INCREF(res);
+	return res;
 }
 
 static long
@@ -239,7 +249,7 @@ PyTypeObject PyCFunction_Type = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	(cmpfunc)meth_compare,			/* tp_compare */
+	0,					/* tp_compare */
 	(reprfunc)meth_repr,			/* tp_repr */
 	0,					/* tp_as_number */
 	0,					/* tp_as_sequence */
@@ -254,7 +264,7 @@ PyTypeObject PyCFunction_Type = {
  	0,					/* tp_doc */
  	(traverseproc)meth_traverse,		/* tp_traverse */
 	0,					/* tp_clear */
-	0,					/* tp_richcompare */
+	meth_richcompare,			/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */
@@ -265,47 +275,12 @@ PyTypeObject PyCFunction_Type = {
 	0,					/* tp_dict */
 };
 
-/* List all methods in a chain -- helper for findmethodinchain */
-
-static PyObject *
-listmethodchain(PyMethodChain *chain)
-{
-	PyMethodChain *c;
-	PyMethodDef *ml;
-	int i, n;
-	PyObject *v;
-
-	n = 0;
-	for (c = chain; c != NULL; c = c->link) {
-		for (ml = c->methods; ml->ml_name != NULL; ml++)
-			n++;
-	}
-	v = PyList_New(n);
-	if (v == NULL)
-		return NULL;
-	i = 0;
-	for (c = chain; c != NULL; c = c->link) {
-		for (ml = c->methods; ml->ml_name != NULL; ml++) {
-			PyList_SetItem(v, i, PyString_FromString(ml->ml_name));
-			i++;
-		}
-	}
-	if (PyErr_Occurred()) {
-		Py_DECREF(v);
-		return NULL;
-	}
-	PyList_Sort(v);
-	return v;
-}
-
 /* Find a method in a method chain */
 
 PyObject *
 Py_FindMethodInChain(PyMethodChain *chain, PyObject *self, const char *name)
 {
 	if (name[0] == '_' && name[1] == '_') {
-		if (strcmp(name, "__methods__") == 0)
-			return listmethodchain(chain);
 		if (strcmp(name, "__doc__") == 0) {
 			const char *doc = self->ob_type->tp_doc;
 			if (doc != NULL)

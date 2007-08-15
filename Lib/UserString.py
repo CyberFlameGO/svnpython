@@ -20,16 +20,42 @@ class UserString:
     def __str__(self): return str(self.data)
     def __repr__(self): return repr(self.data)
     def __int__(self): return int(self.data)
-    def __long__(self): return long(self.data)
+    def __long__(self): return int(self.data)
     def __float__(self): return float(self.data)
     def __complex__(self): return complex(self.data)
     def __hash__(self): return hash(self.data)
 
-    def __cmp__(self, string):
+    def __eq__(self, string):
         if isinstance(string, UserString):
-            return cmp(self.data, string.data)
+            return self.data == string.data
         else:
-            return cmp(self.data, string)
+            return self.data == string
+    def __ne__(self, string):
+        if isinstance(string, UserString):
+            return self.data != string.data
+        else:
+            return self.data != string
+    def __lt__(self, string):
+        if isinstance(string, UserString):
+            return self.data < string.data
+        else:
+            return self.data < string
+    def __le__(self, string):
+        if isinstance(string, UserString):
+            return self.data <= string.data
+        else:
+            return self.data <= string
+    def __gt__(self, string):
+        if isinstance(string, UserString):
+            return self.data > string.data
+        else:
+            return self.data > string
+    def __ge__(self, string):
+        if isinstance(string, UserString):
+            return self.data >= string.data
+        else:
+            return self.data >= string
+
     def __contains__(self, char):
         return char in self.data
 

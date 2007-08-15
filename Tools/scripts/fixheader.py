@@ -12,7 +12,7 @@ def main():
 def process(filename):
     try:
         f = open(filename, 'r')
-    except IOError, msg:
+    except IOError as msg:
         sys.stderr.write('%s: can\'t open: %s\n' % (filename, str(msg)))
         return
     data = f.read()
@@ -22,7 +22,7 @@ def process(filename):
         return
     try:
         f = open(filename, 'w')
-    except IOError, msg:
+    except IOError as msg:
         sys.stderr.write('%s: can\'t write: %s\n' % (filename, str(msg)))
         return
     sys.stderr.write('Processing %s ...\n' % filename)
@@ -32,18 +32,18 @@ def process(filename):
             magic = magic + c.upper()
         else: magic = magic + '_'
     sys.stdout = f
-    print '#ifndef', magic
-    print '#define', magic
-    print '#ifdef __cplusplus'
-    print 'extern "C" {'
-    print '#endif'
-    print
+    print('#ifndef', magic)
+    print('#define', magic)
+    print('#ifdef __cplusplus')
+    print('extern "C" {')
+    print('#endif')
+    print()
     f.write(data)
-    print
-    print '#ifdef __cplusplus'
-    print '}'
-    print '#endif'
-    print '#endif /*', '!'+magic, '*/'
+    print()
+    print('#ifdef __cplusplus')
+    print('}')
+    print('#endif')
+    print('#endif /*', '!'+magic, '*/')
 
 if __name__ == '__main__':
     main()

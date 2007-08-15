@@ -19,7 +19,7 @@ whether the line contains the completion of a statement.
 
 >>> dump_tokens("if False:\\n"
 ...             "    # NL\\n"
-...             "    True = False # NEWLINE\\n")
+...             "    a    = False # NEWLINE\\n")
 NAME        'if'          (1, 0) (1, 2)
 NAME        'False'       (1, 3) (1, 8)
 OP          ':'           (1, 8) (1, 9)
@@ -27,13 +27,14 @@ NEWLINE     '\\n'          (1, 9) (1, 10)
 COMMENT     '# NL'        (2, 4) (2, 8)
 NL          '\\n'          (2, 8) (2, 9)
 INDENT      '    '        (3, 0) (3, 4)
-NAME        'True'        (3, 4) (3, 8)
+NAME        'a'           (3, 4) (3, 5)
 OP          '='           (3, 9) (3, 10)
 NAME        'False'       (3, 11) (3, 16)
 COMMENT     '# NEWLINE'   (3, 17) (3, 26)
 NEWLINE     '\\n'          (3, 26) (3, 27)
 DEDENT      ''            (4, 0) (4, 0)
 
+' # Emacs hint
 
 There will be a bunch more tests of specific source patterns.
 
@@ -43,9 +44,9 @@ regenerate the original program text from the tokens.
 There are some standard formatting practices that are easy to get right.
 
 >>> roundtrip("if x == 1:\\n"
-...           "    print x\\n")
+...           "    print(x)\\n")
 if x == 1:
-    print x
+    print(x)
 
 Some people use different formatting conventions, which makes
 untokenize a little trickier.  Note that this test involves trailing
@@ -53,34 +54,37 @@ whitespace after the colon.  Note that we use hex escapes to make the
 two trailing blanks apparent in the expected output.
 
 >>> roundtrip("if   x  ==  1  :  \\n"
-...           "  print x\\n")
+...           "  print(x)\\n")
 if   x  ==  1  :\x20\x20
-  print x
+  print(x)
 
 Comments need to go in the right place.
 
 >>> roundtrip("if x == 1:\\n"
 ...           "    # A comment by itself.\\n"
-...           "    print x  # Comment here, too.\\n"
+...           "    print(x)  # Comment here, too.\\n"
 ...           "    # Another comment.\\n"
 ...           "after_if = True\\n")
 if x == 1:
     # A comment by itself.
-    print x  # Comment here, too.
+    print(x)  # Comment here, too.
     # Another comment.
 after_if = True
 
 >>> roundtrip("if (x  # The comments need to go in the right place\\n"
 ...           "    == 1):\\n"
-...           "    print 'x == 1'\\n")
+...           "    print('x == 1')\\n")
 if (x  # The comments need to go in the right place
     == 1):
-    print 'x == 1'
+    print('x == 1')
 
 """
 
+# ' Emacs hint
+
 import os, glob, random, time, sys
-from cStringIO import StringIO
+import re
+from io import StringIO
 from test.test_support import (verbose, findfile, is_resource_enabled,
                                TestFailed)
 from tokenize import (tokenize, generate_tokens, untokenize, tok_name,
@@ -94,8 +98,18 @@ _PRINT_WORKING_MSG_INTERVAL = 5 * 60
 # and tokenized again from the latter.  The test fails if the second
 # tokenization doesn't match the first.
 def test_roundtrip(f):
-    ## print 'Testing:', f
-    fobj = open(f)
+    ## print('Testing:', f)
+    # Get the encoding first
+    fobj = open(f, encoding="latin-1")
+    first2lines = fobj.readline() + fobj.readline()
+    fobj.close()
+    m = re.search(r"coding:\s*(\S+)", first2lines)
+    if m:
+        encoding = m.group(1)
+        ## print("    coding:", encoding)
+    else:
+        encoding = "utf-8"
+    fobj = open(f, encoding=encoding)
     try:
         fulltok = list(generate_tokens(fobj.readline))
     finally:
@@ -103,7 +117,7 @@ def test_roundtrip(f):
 
     t1 = [tok[:2] for tok in fulltok]
     newtext = untokenize(t1)
-    readline = iter(newtext.splitlines(1)).next
+    readline = iter(newtext.splitlines(1)).__next__
     t2 = [tok[:2] for tok in generate_tokens(readline)]
     if t1 != t2:
         raise TestFailed("untokenize() roundtrip failed for %r" % f)
@@ -118,21 +132,21 @@ def dump_tokens(s):
         if type == ENDMARKER:
             break
         type = tok_name[type]
-        print "%(type)-10.10s  %(token)-13.13r %(start)s %(end)s" % locals()
+        print("%(type)-10.10s  %(token)-13.13r %(start)s %(end)s" % locals())
 
 def roundtrip(s):
     f = StringIO(s)
     source = untokenize(generate_tokens(f.readline))
-    print source,
+    print(source, end="")
 
 # This is an example from the docs, set up as a doctest.
 def decistmt(s):
     """Substitute Decimals for floats in a string of statements.
 
     >>> from decimal import Decimal
-    >>> s = 'print +21.3e-5*-.1234/81.7'
+    >>> s = 'print(+21.3e-5*-.1234/81.7)'
     >>> decistmt(s)
-    "print +Decimal ('21.3e-5')*-Decimal ('.1234')/Decimal ('81.7')"
+    "print (+Decimal ('21.3e-5')*-Decimal ('.1234')/Decimal ('81.7'))"
 
     The format of the exponent is inherited from the platform C library.
     Known cases are "e-007" (Windows) and "e-07" (not Windows).  Since
@@ -165,7 +179,7 @@ def decistmt(s):
 
 def test_main():
     if verbose:
-        print 'starting...'
+        print('starting...')
 
     next_time = time.time() + _PRINT_WORKING_MSG_INTERVAL
 
@@ -189,9 +203,11 @@ def test_main():
 
     for f in testfiles:
         # Print still working message since this test can be really slow
+        if verbose:
+            print('    round trip: ', f, file=sys.__stdout__)
         if next_time <= time.time():
             next_time = time.time() + _PRINT_WORKING_MSG_INTERVAL
-            print >>sys.__stdout__, '  test_main still working, be patient...'
+            print('  test_main still working, be patient...', file=sys.__stdout__)
             sys.__stdout__.flush()
 
         test_roundtrip(f)
@@ -217,7 +233,17 @@ def foo():
     run_doctest(test_tokenize, verbose)
 
     if verbose:
-        print 'finished'
+        print('finished')
+
+def test_rarrow():
+    """
+    This function exists solely to test the tokenization of the RARROW
+    operator.
+
+    >>> tokenize(iter(['->']).__next__)   #doctest: +NORMALIZE_WHITESPACE
+    1,0-1,2:\tOP\t'->'
+    2,0-2,0:\tENDMARKER\t''
+    """
 
 if __name__ == "__main__":
     test_main()

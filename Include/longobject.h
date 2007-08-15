@@ -17,15 +17,16 @@ PyAPI_DATA(PyTypeObject) PyLong_Type;
 
 PyAPI_FUNC(PyObject *) PyLong_FromLong(long);
 PyAPI_FUNC(PyObject *) PyLong_FromUnsignedLong(unsigned long);
+PyAPI_FUNC(PyObject *) PyLong_FromSize_t(size_t);
+PyAPI_FUNC(PyObject *) PyLong_FromSsize_t(Py_ssize_t);
 PyAPI_FUNC(PyObject *) PyLong_FromDouble(double);
 PyAPI_FUNC(long) PyLong_AsLong(PyObject *);
+PyAPI_FUNC(Py_ssize_t) PyLong_AsSsize_t(PyObject *);
+PyAPI_FUNC(size_t) PyLong_AsSize_t(PyObject *);
 PyAPI_FUNC(unsigned long) PyLong_AsUnsignedLong(PyObject *);
 PyAPI_FUNC(unsigned long) PyLong_AsUnsignedLongMask(PyObject *);
 
 /* For use by intobject.c only */
-PyAPI_FUNC(Py_ssize_t) _PyLong_AsSsize_t(PyObject *);
-PyAPI_FUNC(PyObject *) _PyLong_FromSize_t(size_t);
-PyAPI_FUNC(PyObject *) _PyLong_FromSsize_t(Py_ssize_t);
 PyAPI_DATA(int) _PyLong_DigitValue[256];
 
 /* _PyLong_AsScaledDouble returns a double x and an exponent e such that
@@ -35,6 +36,7 @@ PyAPI_DATA(int) _PyLong_DigitValue[256];
    be multiplied by SHIFT!  There may not be enough room in an int to store
    e*SHIFT directly. */
 PyAPI_FUNC(double) _PyLong_AsScaledDouble(PyObject *vv, int *e);
+  PyAPI_FUNC(int) _PyLong_FitsInLong(PyObject* vv);
 
 PyAPI_FUNC(double) PyLong_AsDouble(PyObject *);
 PyAPI_FUNC(PyObject *) PyLong_FromVoidPtr(void *);
@@ -49,9 +51,7 @@ PyAPI_FUNC(unsigned PY_LONG_LONG) PyLong_AsUnsignedLongLongMask(PyObject *);
 #endif /* HAVE_LONG_LONG */
 
 PyAPI_FUNC(PyObject *) PyLong_FromString(char *, char **, int);
-#ifdef Py_USING_UNICODE
 PyAPI_FUNC(PyObject *) PyLong_FromUnicode(Py_UNICODE*, Py_ssize_t, int);
-#endif
 
 /* _PyLong_Sign.  Return 0 if v is 0, -1 if v < 0, +1 if v > 0.
    v must not be NULL, and must be a normalized long.
@@ -108,6 +108,11 @@ PyAPI_FUNC(PyObject *) _PyLong_FromByteArray(
 PyAPI_FUNC(int) _PyLong_AsByteArray(PyLongObject* v,
 	unsigned char* bytes, size_t n,
 	int little_endian, int is_signed);
+
+
+/* _PyLong_Format: Convert the long to a string object with given base,
+   appending a base prefix of 0[box] if base is 2, 8 or 16. */
+PyAPI_FUNC(PyObject *) _PyLong_Format(PyObject *aa, int base);
 
 #ifdef __cplusplus
 }

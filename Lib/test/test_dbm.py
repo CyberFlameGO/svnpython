@@ -16,7 +16,8 @@ def cleanup():
     for suffix in ['', '.pag', '.dir', '.db']:
         try:
             os.unlink(filename + suffix)
-        except OSError, (errno, strerror):
+        except OSError as e:
+            (errno, strerror) = e.errno, e.strerror
             # if we can't delete the file because of permissions,
             # nothing will work, so skip the test
             if errno == 1:
@@ -25,12 +26,12 @@ def cleanup():
 def test_keys():
     d = dbm.open(filename, 'c')
     verify(d.keys() == [])
-    d['a'] = 'b'
-    d['12345678910'] = '019237410982340912840198242'
+    d[b'a'] = b'b'
+    d[b'12345678910'] = b'019237410982340912840198242'
     d.keys()
-    if d.has_key('a'):
+    if b'a' in d:
         if verbose:
-            print 'Test dbm keys: ', d.keys()
+            print('Test dbm keys: ', d.keys())
 
     d.close()
 

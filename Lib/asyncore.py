@@ -119,7 +119,7 @@ def poll(timeout=0.0, map=None):
         else:
             try:
                 r, w, e = select.select(r, w, e, timeout)
-            except select.error, err:
+            except select.error as err:
                 if err[0] != EINTR:
                     raise
                 else:
@@ -165,7 +165,7 @@ def poll2(timeout=0.0, map=None):
                 pollster.register(fd, flags)
         try:
             r = pollster.poll(timeout)
-        except select.error, err:
+        except select.error as err:
             if err[0] != EINTR:
                 raise
             r = []
@@ -247,7 +247,7 @@ class dispatcher:
         fd = self._fileno
         if map is None:
             map = self._map
-        if map.has_key(fd):
+        if fd in map:
             #self.log_info('closing channel %d:%s' % (fd, self))
             del map[fd]
         self._fileno = None
@@ -320,7 +320,7 @@ class dispatcher:
         try:
             conn, addr = self.socket.accept()
             return conn, addr
-        except socket.error, why:
+        except socket.error as why:
             if why[0] == EWOULDBLOCK:
                 pass
             else:
@@ -330,7 +330,7 @@ class dispatcher:
         try:
             result = self.socket.send(data)
             return result
-        except socket.error, why:
+        except socket.error as why:
             if why[0] == EWOULDBLOCK:
                 return 0
             else:
@@ -344,14 +344,14 @@ class dispatcher:
                 # a closed connection is indicated by signaling
                 # a read condition, and having recv() return 0.
                 self.handle_close()
-                return ''
+                return b''
             else:
                 return data
-        except socket.error, why:
+        except socket.error as why:
             # winsock sometimes throws ENOTCONN
             if why[0] in [ECONNRESET, ENOTCONN, ESHUTDOWN]:
                 self.handle_close()
-                return ''
+                return b''
             else:
                 raise
 
@@ -373,7 +373,7 @@ class dispatcher:
 
     def log_info(self, message, type='info'):
         if __debug__ or type != 'info':
-            print '%s: %s' % (type, message)
+            print('%s: %s' % (type, message))
 
     def handle_read_event(self):
         if self.accepting:
@@ -447,7 +447,7 @@ class dispatcher_with_send(dispatcher):
 
     def __init__(self, sock=None, map=None):
         dispatcher.__init__(self, sock, map)
-        self.out_buffer = ''
+        self.out_buffer = b''
 
     def initiate_send(self):
         num_sent = 0
@@ -461,6 +461,7 @@ class dispatcher_with_send(dispatcher):
         return (not self.connected) or len(self.out_buffer)
 
     def send(self, data):
+        assert isinstance(data, bytes)
         if self.debug:
             self.log_info('sending %s' % repr(data))
         self.out_buffer = self.out_buffer + data

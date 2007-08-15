@@ -69,7 +69,7 @@ def makepath(*paths):
 
 def abs__file__():
     """Set all module' __file__ attribute to an absolute path"""
-    for m in sys.modules.values():
+    for m in set(sys.modules.values()):
         if hasattr(m, '__loader__'):
             continue   # don't mess with a PEP 302-supplied __file__
         try:
@@ -137,7 +137,7 @@ def addpackage(sitedir, name, known_paths):
             if line.startswith("#"):
                 continue
             if line.startswith("import ") or line.startswith("import\t"):
-                exec line
+                exec(line)
                 continue
             line = line.rstrip()
             dir, dircase = makepath(sitedir, line)
@@ -276,7 +276,7 @@ class _Printer(object):
             for filename in self.__files:
                 filename = os.path.join(dir, filename)
                 try:
-                    fp = file(filename, "rU")
+                    fp = open(filename, "rU")
                     data = fp.read()
                     fp.close()
                     break
@@ -303,14 +303,16 @@ class _Printer(object):
         while 1:
             try:
                 for i in range(lineno, lineno + self.MAXLINES):
-                    print self.__lines[i]
+                    print(self.__lines[i])
             except IndexError:
                 break
             else:
                 lineno += self.MAXLINES
                 key = None
                 while key is None:
-                    key = raw_input(prompt)
+                    sys.stdout.write(prompt)
+                    sys.stdout.flush()
+                    key = sys.stdin.readline()
                     if key not in ('', 'q'):
                         key = None
                 if key == 'q':
@@ -391,6 +393,30 @@ def execsitecustomize():
         import sitecustomize
     except ImportError:
         pass
+    except Exception as err:
+        if os.environ.get("PYTHONVERBOSE"):
+            raise
+        sys.stderr.write(
+            "Error in sitecustomize; set PYTHONVERBOSE for traceback:\n"
+            "%s: %s\n" %
+            (err.__class__.__name__, err))
+
+
+def installnewio():
+    """Install new I/O library as default."""
+    import io
+    # Hack to avoid a nasty recursion issue when Python is invoked
+    # in verbose mode: pre-import the Latin-1 and UTF-8 codecs
+    from encodings import latin_1, utf_8
+    # Trick so that open won't become a bound method when stored
+    # as a class variable (as dumbdbm does)
+    class open:
+        def __new__(cls, *args, **kwds):
+            return io.open(*args, **kwds)
+    __builtin__.open = open
+    sys.__stdin__ = sys.stdin = io.open(0, "r")
+    sys.__stdout__ = sys.stdout = io.open(1, "w")
+    sys.__stderr__ = sys.stderr = io.open(2, "w")
 
 
 def main():
@@ -407,6 +433,7 @@ def main():
     sethelper()
     aliasmbcs()
     setencoding()
+    installnewio()
     execsitecustomize()
     # Remove sys.setdefaultencoding() so that users cannot change the
     # encoding after initialization.  The test for presence is needed when
@@ -417,10 +444,10 @@ def main():
 main()
 
 def _test():
-    print "sys.path = ["
+    print("sys.path = [")
     for dir in sys.path:
-        print "    %r," % (dir,)
-    print "]"
+        print("    %r," % (dir,))
+    print("]")
 
 if __name__ == '__main__':
     _test()

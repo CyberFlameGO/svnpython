@@ -3,9 +3,10 @@
 """
 
 from Tkinter import *
-import string, os
-import textView
-import idlever
+import os
+
+from . import textView
+from . import idlever
 
 class AboutDialog(Toplevel):
     """Modal about dialog for idle
@@ -70,7 +71,7 @@ class AboutDialog(Toplevel):
         tkVer[len(tkVer)-1] = str('%.3g' % (float('.'+tkVer[len(tkVer)-1])))[2:]
         if tkVer[len(tkVer)-1] == '':
             tkVer[len(tkVer)-1] = '0'
-        tkVer = string.join(tkVer,'.')
+        tkVer = '.'.join(tkVer)
         labelTkVer = Label(frameBg, text='Tk version:  '+
                            tkVer, fg=self.fg, bg=self.bg)
         labelTkVer.grid(row=9, column=1, sticky=W, padx=2, pady=0)
@@ -157,7 +158,7 @@ if __name__ == '__main__':
     # test the dialog
     root = Tk()
     def run():
-        import aboutDialog
+        from . import aboutDialog
         aboutDialog.AboutDialog(root, 'About')
     Button(root, text='Dialog', command=run).pack()
     root.mainloop()

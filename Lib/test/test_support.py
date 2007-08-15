@@ -105,34 +105,33 @@ def bind_port(sock, host='', preferred_port=54321):
         try:
             sock.bind((host, port))
             return port
-        except socket.error, (err, msg):
+        except socket.error as e:
+            (err, msg) = e.args
             if err != errno.EADDRINUSE:
                 raise
-            print >>sys.__stderr__, \
-                '  WARNING: failed to listen on port %d, trying another' % port
+            print('  WARNING: failed to listen on port %d, trying another' % port, file=sys.__stderr__)
     raise TestFailed('unable to find port to listen on')
 
 FUZZ = 1e-6
 
 def fcmp(x, y): # fuzzy comparison function
-    if type(x) == type(0.0) or type(y) == type(0.0):
+    if isinstance(x, float) or isinstance(y, float):
         try:
-            x, y = coerce(x, y)
             fuzz = (abs(x) + abs(y)) * FUZZ
             if abs(x-y) <= fuzz:
                 return 0
         except:
             pass
-    elif type(x) == type(y) and type(x) in (type(()), type([])):
+    elif type(x) == type(y) and isinstance(x, (tuple, list)):
         for i in range(min(len(x), len(y))):
             outcome = fcmp(x[i], y[i])
             if outcome != 0:
                 return outcome
-        return cmp(len(x), len(y))
-    return cmp(x, y)
+        return (len(x) > len(y)) - (len(x) < len(y))
+    return (x > y) - (x < y)
 
 try:
-    unicode
+    str
     have_unicode = True
 except NameError:
     have_unicode = False
@@ -147,43 +146,35 @@ elif os.name == 'riscos':
     TESTFN = 'testfile'
 else:
     TESTFN = '@test'
-    # Unicode name only used if TEST_FN_ENCODING exists for the platform.
-    if have_unicode:
-        # Assuming sys.getfilesystemencoding()!=sys.getdefaultencoding()
-        # TESTFN_UNICODE is a filename that can be encoded using the
-        # file system encoding, but *not* with the default (ascii) encoding
-        if isinstance('', unicode):
-            # python -U
-            # XXX perhaps unicode() should accept Unicode strings?
-            TESTFN_UNICODE = "@test-\xe0\xf2"
+
+    # Assuming sys.getfilesystemencoding()!=sys.getdefaultencoding()
+    # TESTFN_UNICODE is a filename that can be encoded using the
+    # file system encoding, but *not* with the default (ascii) encoding
+    TESTFN_UNICODE = "@test-\xe0\xf2"
+    TESTFN_ENCODING = sys.getfilesystemencoding()
+    # TESTFN_UNICODE_UNENCODEABLE is a filename that should *not* be
+    # able to be encoded by *either* the default or filesystem encoding.
+    # This test really only makes sense on Windows NT platforms
+    # which have special Unicode support in posixmodule.
+    if (not hasattr(sys, "getwindowsversion") or
+            sys.getwindowsversion()[3] < 2): #  0=win32s or 1=9x/ME
+        TESTFN_UNICODE_UNENCODEABLE = None
+    else:
+        # Japanese characters (I think - from bug 846133)
+        TESTFN_UNICODE_UNENCODEABLE = "@test-\u5171\u6709\u3055\u308c\u308b"
+        try:
+            # XXX - Note - should be using TESTFN_ENCODING here - but for
+            # Windows, "mbcs" currently always operates as if in
+            # errors=ignore' mode - hence we get '?' characters rather than
+            # the exception.  'Latin1' operates as we expect - ie, fails.
+            # See [ 850997 ] mbcs encoding ignores errors
+            TESTFN_UNICODE_UNENCODEABLE.encode("Latin1")
+        except UnicodeEncodeError:
+            pass
         else:
-            # 2 latin characters.
-            TESTFN_UNICODE = unicode("@test-\xe0\xf2", "latin-1")
-        TESTFN_ENCODING = sys.getfilesystemencoding()
-        # TESTFN_UNICODE_UNENCODEABLE is a filename that should *not* be
-        # able to be encoded by *either* the default or filesystem encoding.
-        # This test really only makes sense on Windows NT platforms
-        # which have special Unicode support in posixmodule.
-        if (not hasattr(sys, "getwindowsversion") or
-                sys.getwindowsversion()[3] < 2): #  0=win32s or 1=9x/ME
-            TESTFN_UNICODE_UNENCODEABLE = None
-        else:
-            # Japanese characters (I think - from bug 846133)
-            TESTFN_UNICODE_UNENCODEABLE = eval('u"@test-\u5171\u6709\u3055\u308c\u308b"')
-            try:
-                # XXX - Note - should be using TESTFN_ENCODING here - but for
-                # Windows, "mbcs" currently always operates as if in
-                # errors=ignore' mode - hence we get '?' characters rather than
-                # the exception.  'Latin1' operates as we expect - ie, fails.
-                # See [ 850997 ] mbcs encoding ignores errors
-                TESTFN_UNICODE_UNENCODEABLE.encode("Latin1")
-            except UnicodeEncodeError:
-                pass
-            else:
-                print \
-                'WARNING: The filename %r CAN be encoded by the filesystem.  ' \
-                'Unicode filename tests may not be effective' \
-                % TESTFN_UNICODE_UNENCODEABLE
+            print('WARNING: The filename %r CAN be encoded by the filesystem.  ' \
+            'Unicode filename tests may not be effective' \
+            % TESTFN_UNICODE_UNENCODEABLE)
 
 # Make sure we can write to TESTFN, try in /tmp if we can't
 fp = None
@@ -196,8 +187,8 @@ except IOError:
         TESTFN = TMP_TESTFN
         del TMP_TESTFN
     except IOError:
-        print ('WARNING: tests will fail, unable to write to: %s or %s' %
-                (TESTFN, TMP_TESTFN))
+        print(('WARNING: tests will fail, unable to write to: %s or %s' %
+                (TESTFN, TMP_TESTFN)))
 if fp is not None:
     fp.close()
     unlink(TESTFN)
@@ -242,8 +233,7 @@ def vereq(a, b):
 
 def sortdict(dict):
     "Like repr(dict), but in sorted order."
-    items = dict.items()
-    items.sort()
+    items = sorted(dict.items())
     reprpairs = ["%r: %r" % pair for pair in items]
     withcommas = ", ".join(reprpairs)
     return "{%s}" % withcommas
@@ -267,10 +257,18 @@ def open_urlresource(url):
         if os.path.exists(fn):
             return open(fn)
 
-    print >> get_original_stdout(), '\tfetching %s ...' % url
+    print('\tfetching %s ...' % url, file=get_original_stdout())
     fn, _ = urllib.urlretrieve(url, filename)
     return open(fn)
 
+@contextlib.contextmanager
+def guard_warnings_filter():
+    """Guard the warnings filter from being permanently changed."""
+    original_filters = warnings.filters[:]
+    try:
+        yield
+    finally:
+        warnings.filters = original_filters
 
 class WarningMessage(object):
     "Holds the result of the latest showwarning() call"
@@ -294,7 +292,7 @@ def catch_warning():
 
     Use like this:
 
-        with catch_warning() as w:
+        with catch_warning as w:
             warnings.warn("foo")
             assert str(w.message) == "foo"
     """
@@ -334,7 +332,7 @@ class EnvironmentVarGuard(object):
         return self
 
     def __exit__(self, *ignore_exc):
-        for envvar, value in self._reset.iteritems():
+        for envvar, value in self._reset.items():
             self._environ[envvar] = value
         for unset in self._unset:
             del self._environ[unset]
@@ -356,7 +354,7 @@ class TransientResource(object):
         self.attrs, raise ResourceDenied.  Otherwise let the exception
         propagate (if any)."""
         if type_ is not None and issubclass(self.exc, type_):
-            for attr, attr_value in self.attrs.iteritems():
+            for attr, attr_value in self.attrs.items():
                 if not hasattr(value, attr):
                     break
                 if getattr(value, attr) != attr_value:
@@ -405,7 +403,7 @@ def run_with_locale(catstr, *locales):
             finally:
                 if locale and orig_locale:
                     locale.setlocale(category, orig_locale)
-        inner.func_name = func.func_name
+        inner.__name__ = func.__name__
         inner.__doc__ = func.__doc__
         return inner
     return decorator
@@ -529,7 +527,7 @@ def run_unittest(*classes):
     valid_types = (unittest.TestSuite, unittest.TestCase)
     suite = unittest.TestSuite()
     for cls in classes:
-        if isinstance(cls, str):
+        if isinstance(cls, basestring):
             if cls in sys.modules:
                 suite.addTest(unittest.findTestCases(sys.modules[cls]))
             else:
@@ -570,7 +568,7 @@ def run_doctest(module, verbosity=None):
     finally:
         sys.stdout = save_stdout
     if verbose:
-        print 'doctest (%s) ... %d tests with zero failures' % (module.__name__, t)
+        print('doctest (%s) ... %d tests with zero failures' % (module.__name__, t))
     return f, t
 
 #=======================================================================

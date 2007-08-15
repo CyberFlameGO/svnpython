@@ -4,6 +4,13 @@ from _collections import deque, defaultdict
 from operator import itemgetter as _itemgetter
 import sys as _sys
 
+# For bootstrapping reasons, the collection ABCs are defined in _abcoll.py.
+# They should however be considered an integral part of collections.py.
+from _abcoll import *
+import _abcoll
+__all__ += _abcoll.__all__
+
+
 def NamedTuple(typename, s):
     """Returns a new subclass of tuple with named fields.
 
@@ -39,7 +46,7 @@ def NamedTuple(typename, s):
     for i, name in enumerate(field_names):
         template += '\n        %s = property(itemgetter(%d))\n' % (name, i)
     m = dict(itemgetter=_itemgetter)
-    exec template in m
+    exec(template, m)
     result = m[typename]
     if hasattr(_sys, '_getframe'):
         result.__module__ = _sys._getframe(1).f_globals['__name__']
@@ -49,14 +56,13 @@ def NamedTuple(typename, s):
 
 
 
-
 if __name__ == '__main__':
     # verify that instances are pickable
-    from cPickle import loads, dumps
+    from pickle import loads, dumps
     Point = NamedTuple('Point', 'x y')
     p = Point(x=10, y=20)
     assert p == loads(dumps(p))
 
     import doctest
     TestResults = NamedTuple('TestResults', 'failed attempted')
-    print TestResults(*doctest.testmod())
+    print(TestResults(*doctest.testmod()))

@@ -23,7 +23,7 @@ class ConnectedTests(unittest.TestCase):
         except TypeError:
             pass
         else:
-            print "didn't raise TypeError"
+            print("didn't raise TypeError")
         socket.RAND_add("this is a random string", 75.0)
 
         with test_support.transient_internet():
@@ -33,11 +33,11 @@ class ConnectedTests(unittest.TestCase):
 
     def testTimeout(self):
         def error_msg(extra_msg):
-            print >> sys.stderr, """\
+            print("""\
         WARNING:  an attempt to connect to %r %s, in
         test_timeout.  That may be legitimate, but is not the outcome we
         hoped for.  If this message is seen often, test_timeout should be
-        changed to use a more reliable address.""" % (ADDR, extra_msg)
+        changed to use a more reliable address.""" % (ADDR, extra_msg), file=sys.stderr)
 
         # A service which issues a welcome banner (without need to write
         # anything).
@@ -53,7 +53,7 @@ class ConnectedTests(unittest.TestCase):
         except socket.timeout:
             error_msg('timed out')
             return
-        except socket.error, exc:  # In case connection is refused.
+        except socket.error as exc:  # In case connection is refused.
             if exc.args[0] == errno.ECONNREFUSED:
                 error_msg('was refused')
                 return
@@ -108,13 +108,13 @@ class BasicTests(unittest.TestCase):
 
     def test_978833(self):
         if test_support.verbose:
-            print "test_978833 ..."
+            print("test_978833 ...")
 
         import os, httplib
         with test_support.transient_internet():
             s = socket.socket(socket.AF_INET)
             s.connect(("www.sf.net", 443))
-            fd = s._sock.fileno()
+            fd = s.fileno()
             sock = httplib.FakeSocket(s, socket.ssl(s))
             s = None
             sock.close()

@@ -98,7 +98,7 @@ import __future__
 import sys, traceback, inspect, linecache, os, re
 import unittest, difflib, pdb, tempfile
 import warnings
-from StringIO import StringIO
+from io import StringIO
 
 # There are 4 basic classes:
 #  - Example: a <source, want> pair, plus an intra-docstring line number.
@@ -196,7 +196,7 @@ def _normalize_module(module, depth=2):
     """
     if inspect.ismodule(module):
         return module
-    elif isinstance(module, (str, unicode)):
+    elif isinstance(module, str):
         return __import__(module, globals(), locals(), ["*"])
     elif module is None:
         return sys.modules[sys._getframe(depth).f_globals['__name__']]
@@ -209,8 +209,8 @@ def _load_testfile(filename, package, module_relative):
         filename = _module_relative_path(package, filename)
         if hasattr(package, '__loader__'):
             if hasattr(package.__loader__, 'get_data'):
-                return package.__loader__.get_data(filename), filename
-    return open(filename).read(), filename
+                return package.__loader__.get_data(filename).decode('utf-8'), filename
+    return open(filename, encoding="utf-8").read(), filename
 
 def _indent(s, indent=4):
     """
@@ -240,16 +240,10 @@ class _SpoofOut(StringIO):
         # that a trailing newline is missing.
         if result and not result.endswith("\n"):
             result += "\n"
-        # Prevent softspace from screwing up the next test case, in
-        # case they used print with a trailing comma in an example.
-        if hasattr(self, "softspace"):
-            del self.softspace
         return result
 
-    def truncate(self,   size=None):
+    def truncate(self, size=None):
         StringIO.truncate(self, size)
-        if hasattr(self, "softspace"):
-            del self.softspace
 
 # Worst-case linear-time ellipsis matching.
 def _ellipsis_match(want, got):
@@ -469,11 +463,12 @@ class DocTest:
 
 
     # This lets us sort tests by name:
-    def __cmp__(self, other):
+    def __lt__(self, other):
         if not isinstance(other, DocTest):
-            return -1
-        return cmp((self.name, self.filename, self.lineno, id(self)),
-                   (other.name, other.filename, other.lineno, id(other)))
+            return NotImplemented
+        return ((self.name, self.filename, self.lineno, id(self))
+                <
+                (other.name, other.filename, other.lineno, id(other)))
 
 ######################################################################
 ## 3. DocTestParser
@@ -836,7 +831,7 @@ class DocTestFinder:
         if module is None:
             return True
         elif inspect.isfunction(object):
-            return module.__dict__ is object.func_globals
+            return module.__dict__ is object.__globals__
         elif inspect.isclass(object):
             return module.__name__ == object.__module__
         elif inspect.getmodule(object) is not None:
@@ -854,7 +849,7 @@ class DocTestFinder:
         add them to `tests`.
         """
         if self._verbose:
-            print 'Finding tests in %s' % name
+            print('Finding tests in %s' % name)
 
         # If we've already processed this object, then ignore it.
         if id(obj) in seen:
@@ -974,7 +969,7 @@ class DocTestFinder:
 
         # Find the line number for functions & methods.
         if inspect.ismethod(obj): obj = obj.im_func
-        if inspect.isfunction(obj): obj = obj.func_code
+        if inspect.isfunction(obj): obj = obj.__code__
         if inspect.istraceback(obj): obj = obj.tb_frame
         if inspect.isframe(obj): obj = obj.f_code
         if inspect.iscode(obj):
@@ -1011,7 +1006,7 @@ class DocTestRunner:
         >>> runner = DocTestRunner(verbose=False)
         >>> tests.sort(key = lambda test: test.name)
         >>> for test in tests:
-        ...     print test.name, '->', runner.run(test)
+        ...     print(test.name, '->', runner.run(test))
         _TestClass -> (0, 2)
         _TestClass.__init__ -> (0, 2)
         _TestClass.get -> (0, 2)
@@ -1208,8 +1203,8 @@ class DocTestRunner:
             # keyboard interrupts.)
             try:
                 # Don't blink!  This is where the user's code gets run.
-                exec compile(example.source, filename, "single",
-                             compileflags, 1) in test.globs
+                exec(compile(example.source, filename, "single",
+                             compileflags, 1), test.globs)
                 self.debugger.set_continue() # ==== Example Finished ====
                 exception = None
             except KeyboardInterrupt:
@@ -1383,28 +1378,28 @@ class DocTestRunner:
                 failed.append(x)
         if verbose:
             if notests:
-                print len(notests), "items had no tests:"
+                print(len(notests), "items had no tests:")
                 notests.sort()
                 for thing in notests:
-                    print "   ", thing
+                    print("   ", thing)
             if passed:
-                print len(passed), "items passed all tests:"
+                print(len(passed), "items passed all tests:")
                 passed.sort()
                 for thing, count in passed:
-                    print " %3d tests in %s" % (count, thing)
+                    print(" %3d tests in %s" % (count, thing))
         if failed:
-            print self.DIVIDER
-            print len(failed), "items had failures:"
+            print(self.DIVIDER)
+            print(len(failed), "items had failures:")
             failed.sort()
             for thing, (f, t) in failed:
-                print " %3d of %3d in %s" % (f, t, thing)
+                print(" %3d of %3d in %s" % (f, t, thing))
         if verbose:
-            print totalt, "tests in", len(self._name2ft), "items."
-            print totalt - totalf, "passed and", totalf, "failed."
+            print(totalt, "tests in", len(self._name2ft), "items.")
+            print(totalt - totalf, "passed and", totalf, "failed.")
         if totalf:
-            print "***Test Failed***", totalf, "failures."
+            print("***Test Failed***", totalf, "failures.")
         elif verbose:
-            print "Test passed."
+            print("Test passed.")
         return totalf, totalt
 
     #/////////////////////////////////////////////////////////////////
@@ -1414,8 +1409,8 @@ class DocTestRunner:
         d = self._name2ft
         for name, (f, t) in other._name2ft.items():
             if name in d:
-                print "*** DocTestRunner.merge: '" + name + "' in both" \
-                    " testers; summing outcomes."
+                print("*** DocTestRunner.merge: '" + name + "' in both" \
+                    " testers; summing outcomes.")
                 f2, t2 = d[name]
                 f = f + f2
                 t = t + t2
@@ -1603,8 +1598,8 @@ class DebugRunner(DocTestRunner):
          ...                                    {}, 'foo', 'foo.py', 0)
          >>> try:
          ...     runner.run(test)
-         ... except UnexpectedException, failure:
-         ...     pass
+         ... except UnexpectedException as f:
+         ...     failure = f
 
          >>> failure.test is test
          True
@@ -1631,8 +1626,8 @@ class DebugRunner(DocTestRunner):
 
          >>> try:
          ...    runner.run(test)
-         ... except DocTestFailure, failure:
-         ...    pass
+         ... except DocTestFailure as f:
+         ...    failure = f
 
        DocTestFailure objects provide access to the test:
 
@@ -1663,7 +1658,7 @@ class DebugRunner(DocTestRunner):
          >>> runner.run(test)
          Traceback (most recent call last):
          ...
-         UnexpectedException: <DocTest foo from foo.py:0 (2 examples)>
+         doctest.UnexpectedException: <DocTest foo from foo.py:0 (2 examples)>
 
          >>> del test.globs['__builtins__']
          >>> test.globs
@@ -1984,10 +1979,10 @@ class Tester:
     def runstring(self, s, name):
         test = DocTestParser().get_doctest(s, self.globs, name, None, None)
         if self.verbose:
-            print "Running string", name
+            print("Running string", name)
         (f,t) = self.testrunner.run(test)
         if self.verbose:
-            print f, "of", t, "examples failed in string", name
+            print(f, "of", t, "examples failed in string", name)
         return (f,t)
 
     def rundoc(self, object, name=None, module=None):
@@ -2140,8 +2135,8 @@ class DocTestCase(unittest.TestCase):
              >>> case = DocTestCase(test)
              >>> try:
              ...     case.debug()
-             ... except UnexpectedException, failure:
-             ...     pass
+             ... except UnexpectedException as f:
+             ...     failure = f
 
            The UnexpectedException contains the test, the example, and
            the original exception:
@@ -2169,8 +2164,8 @@ class DocTestCase(unittest.TestCase):
 
              >>> try:
              ...    case.debug()
-             ... except DocTestFailure, failure:
-             ...    pass
+             ... except DocTestFailure as f:
+             ...    failure = f
 
            DocTestFailure objects provide access to the test:
 
@@ -2418,7 +2413,7 @@ def script_from_examples(s):
        ...           Ho hum
        ...           '''
 
-       >>> print script_from_examples(text)
+       >>> print(script_from_examples(text))
        # Here are examples of simple math.
        #
        #     Python has super accurate integer addition
@@ -2495,7 +2490,7 @@ def debug_script(src, pm=False, globs=None):
 
     # Note that tempfile.NameTemporaryFile() cannot be used.  As the
     # docs say, a file so created cannot be opened by name a second time
-    # on modern Windows boxes, and execfile() needs to open it.
+    # on modern Windows boxes, and exec() needs to open and read it.
     srcfilename = tempfile.mktemp(".py", "doctestdebug")
     f = open(srcfilename, 'w')
     f.write(src)
@@ -2509,14 +2504,17 @@ def debug_script(src, pm=False, globs=None):
 
         if pm:
             try:
-                execfile(srcfilename, globs, globs)
+                exec(open(srcfilename).read(), globs, globs)
             except:
-                print sys.exc_info()[1]
+                print(sys.exc_info()[1])
                 pdb.post_mortem(sys.exc_info()[2])
         else:
-            # Note that %r is vital here.  '%s' instead can, e.g., cause
-            # backslashes to get treated as metacharacters on Windows.
-            pdb.run("execfile(%r)" % srcfilename, globs, globs)
+            fp = open(srcfilename)
+            try:
+                script = fp.read()
+            finally:
+                fp.close()
+            pdb.run("exec(%r)" % script, globs, globs)
 
     finally:
         os.remove(srcfilename)
@@ -2553,7 +2551,7 @@ class _TestClass:
         """val -> _TestClass object with associated value val.
 
         >>> t = _TestClass(123)
-        >>> print t.get()
+        >>> print(t.get())
         123
         """
 
@@ -2573,7 +2571,7 @@ class _TestClass:
         """get() -> return TestClass's associated value.
 
         >>> x = _TestClass(-42)
-        >>> print x.get()
+        >>> print(x.get())
         -42
         """
 
@@ -2605,7 +2603,7 @@ __test__ = {"_TestClass": _TestClass,
 
             "blank lines": r"""
                 Blank lines can be marked with <BLANKLINE>:
-                    >>> print 'foo\n\nbar\n'
+                    >>> print('foo\n\nbar\n')
                     foo
                     <BLANKLINE>
                     bar
@@ -2615,14 +2613,14 @@ __test__ = {"_TestClass": _TestClass,
             "ellipsis": r"""
                 If the ellipsis flag is used, then '...' can be used to
                 elide substrings in the desired output:
-                    >>> print range(1000) #doctest: +ELLIPSIS
+                    >>> print(list(range(1000))) #doctest: +ELLIPSIS
                     [0, 1, 2, ..., 999]
             """,
 
             "whitespace normalization": r"""
                 If the whitespace normalization flag is used, then
                 differences in whitespace are ignored.
-                    >>> print range(30) #doctest: +NORMALIZE_WHITESPACE
+                    >>> print(list(range(30))) #doctest: +NORMALIZE_WHITESPACE
                     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
                      15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
                      27, 28, 29]

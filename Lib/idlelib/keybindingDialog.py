@@ -163,7 +163,7 @@ class GetKeysDialog(Toplevel):
         if finalKey:
             finalKey = self.TranslateKey(finalKey, modifiers)
             keyList.append(finalKey)
-        self.keyString.set('<' + string.join(keyList,'-') + '>')
+        self.keyString.set('<' + '-'.join(keyList) + '>')
 
     def GetModifiers(self):
         modList = [variable.get() for variable in self.modifier_vars]
@@ -263,6 +263,6 @@ if __name__ == '__main__':
     def run():
         keySeq=''
         dlg=GetKeysDialog(root,'Get Keys','find-again',[])
-        print dlg.result
+        print(dlg.result)
     Button(root,text='Dialog',command=run).pack()
     root.mainloop()

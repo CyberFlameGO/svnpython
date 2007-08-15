@@ -322,7 +322,12 @@ ARGV_EMULATOR = """\
 import argvemulator, os
 
 argvemulator.ArgvCollector().mainloop()
-execfile(os.path.join(os.path.split(__file__)[0], "%(realmainprogram)s"))
+fp = os.path.join(os.path.split(__file__)[0], "%(realmainprogram)s")
+try:
+    script = fp.read()
+finally:
+    fp.close()
+exec(script)
 """
 
 #
@@ -481,7 +486,7 @@ class AppBuilder(BundleBuilder):
                 if self.standalone or self.semi_standalone:
                     self.includeModules.append("argvemulator")
                     self.includeModules.append("os")
-                if not self.plist.has_key("CFBundleDocumentTypes"):
+                if "CFBundleDocumentTypes" not in self.plist:
                     self.plist["CFBundleDocumentTypes"] = [
                         { "CFBundleTypeOSTypes" : [
                             "****",
@@ -504,7 +509,7 @@ class AppBuilder(BundleBuilder):
             standalone = self.standalone
             semi_standalone = self.semi_standalone
             open(bootstrappath, "w").write(BOOTSTRAP_SCRIPT % locals())
-            os.chmod(bootstrappath, 0775)
+            os.chmod(bootstrappath, 0o775)
 
         if self.iconfile is not None:
             iconbase = os.path.basename(self.iconfile)
@@ -603,7 +608,7 @@ class AppBuilder(BundleBuilder):
                         walk(path)
                     else:
                         mod = os.stat(path)[stat.ST_MODE]
-                        if not (mod & 0100):
+                        if not (mod & 0o100):
                             continue
                         relpath = path[len(self.bundlepath):]
                         self.message("Stripping %s" % relpath, 2)
@@ -764,7 +769,7 @@ def makedirs(dir):
     directory. Don't moan if any path element already exists."""
     try:
         os.makedirs(dir)
-    except OSError, why:
+    except OSError as why:
         if why.errno != errno.EEXIST:
             raise
 
@@ -831,8 +836,8 @@ Options:
 
 def usage(msg=None):
     if msg:
-        print msg
-    print cmdline_doc
+        print(msg)
+    print(cmdline_doc)
     sys.exit(1)
 
 def main(builder=None):

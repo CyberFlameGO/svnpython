@@ -75,17 +75,14 @@ whose size is determined when the object is allocated.
 #endif
 
 /* PyObject_HEAD defines the initial segment of every PyObject. */
-#define PyObject_HEAD			\
-	_PyObject_HEAD_EXTRA		\
-	Py_ssize_t ob_refcnt;		\
-	struct _typeobject *ob_type;
+#define PyObject_HEAD		        PyObject ob_base;
 
 #define PyObject_HEAD_INIT(type)	\
-	_PyObject_EXTRA_INIT		\
-	1, type,
+	{ _PyObject_EXTRA_INIT		\
+	1, type },
 
 #define PyVarObject_HEAD_INIT(type, size)	\
-	PyObject_HEAD_INIT(type) size,
+	{ PyObject_HEAD_INIT(type) size },
 
 /* PyObject_VAR_HEAD defines the initial segment of all variable-size
  * container objects.  These end with a declaration of an array with 1
@@ -93,9 +90,7 @@ whose size is determined when the object is allocated.
  * has room for ob_size elements.  Note that ob_size is an element count,
  * not necessarily a byte count.
  */
-#define PyObject_VAR_HEAD		\
-	PyObject_HEAD			\
-	Py_ssize_t ob_size; /* Number of items in variable part */
+#define PyObject_VAR_HEAD      PyVarObject ob_base;
 #define Py_INVALID_SIZE (Py_ssize_t)-1
 
 /* Nothing is actually declared to be a PyObject, but every pointer to
@@ -104,11 +99,14 @@ whose size is determined when the object is allocated.
  * in addition, be cast to PyVarObject*.
  */
 typedef struct _object {
-	PyObject_HEAD
+	_PyObject_HEAD_EXTRA
+	Py_ssize_t ob_refcnt;
+	struct _typeobject *ob_type;
 } PyObject;
 
 typedef struct {
-	PyObject_VAR_HEAD
+	PyObject ob_base;
+	Py_ssize_t ob_size; /* Number of items in variable part */
 } PyVarObject;
 
 #define Py_Refcnt(ob)		(((PyObject*)(ob))->ob_refcnt)
@@ -136,21 +134,12 @@ typedef PyObject * (*ternaryfunc)(PyObject *, PyObject *, PyObject *);
 typedef int (*inquiry)(PyObject *);
 typedef Py_ssize_t (*lenfunc)(PyObject *);
 typedef int (*coercion)(PyObject **, PyObject **);
-typedef PyObject *(*intargfunc)(PyObject *, int) Py_DEPRECATED(2.5);
-typedef PyObject *(*intintargfunc)(PyObject *, int, int) Py_DEPRECATED(2.5);
 typedef PyObject *(*ssizeargfunc)(PyObject *, Py_ssize_t);
 typedef PyObject *(*ssizessizeargfunc)(PyObject *, Py_ssize_t, Py_ssize_t);
-typedef int(*intobjargproc)(PyObject *, int, PyObject *);
-typedef int(*intintobjargproc)(PyObject *, int, int, PyObject *);
 typedef int(*ssizeobjargproc)(PyObject *, Py_ssize_t, PyObject *);
 typedef int(*ssizessizeobjargproc)(PyObject *, Py_ssize_t, Py_ssize_t, PyObject *);
 typedef int(*objobjargproc)(PyObject *, PyObject *, PyObject *);
 
-/* int-based buffer interface */
-typedef int (*getreadbufferproc)(PyObject *, int, void **);
-typedef int (*getwritebufferproc)(PyObject *, int, void **);
-typedef int (*getsegcountproc)(PyObject *, int *);
-typedef int (*getcharbufferproc)(PyObject *, int, char **);
 /* ssize_t-based buffer interface */
 typedef Py_ssize_t (*readbufferproc)(PyObject *, Py_ssize_t, void **);
 typedef Py_ssize_t (*writebufferproc)(PyObject *, Py_ssize_t, void **);
@@ -162,25 +151,20 @@ typedef int (*visitproc)(PyObject *, void *);
 typedef int (*traverseproc)(PyObject *, visitproc, void *);
 
 typedef struct {
-	/* For numbers without flag bit Py_TPFLAGS_CHECKTYPES set, all
-	   arguments are guaranteed to be of the object's type (modulo
-	   coercion hacks -- i.e. if the type's coercion function
-	   returns other types, then these are allowed as well).  Numbers that
-	   have the Py_TPFLAGS_CHECKTYPES flag bit set should check *both*
+	/* Number implementations must check *both*
 	   arguments for proper type and implement the necessary conversions
 	   in the slot functions themselves. */
 
 	binaryfunc nb_add;
 	binaryfunc nb_subtract;
 	binaryfunc nb_multiply;
-	binaryfunc nb_divide;
 	binaryfunc nb_remainder;
 	binaryfunc nb_divmod;
 	ternaryfunc nb_power;
 	unaryfunc nb_negative;
 	unaryfunc nb_positive;
 	unaryfunc nb_absolute;
-	inquiry nb_nonzero;
+	inquiry nb_bool;
 	unaryfunc nb_invert;
 	binaryfunc nb_lshift;
 	binaryfunc nb_rshift;
@@ -191,13 +175,13 @@ typedef struct {
 	unaryfunc nb_int;
 	unaryfunc nb_long;
 	unaryfunc nb_float;
+	/* NB: nb_oct and nb_hex are not used anymore. */
 	unaryfunc nb_oct;
 	unaryfunc nb_hex;
-	/* Added in release 2.0 */
+
 	binaryfunc nb_inplace_add;
 	binaryfunc nb_inplace_subtract;
 	binaryfunc nb_inplace_multiply;
-	binaryfunc nb_inplace_divide;
 	binaryfunc nb_inplace_remainder;
 	ternaryfunc nb_inplace_power;
 	binaryfunc nb_inplace_lshift;
@@ -206,14 +190,11 @@ typedef struct {
 	binaryfunc nb_inplace_xor;
 	binaryfunc nb_inplace_or;
 
-	/* Added in release 2.2 */
-	/* The following require the Py_TPFLAGS_HAVE_CLASS flag */
 	binaryfunc nb_floor_divide;
 	binaryfunc nb_true_divide;
 	binaryfunc nb_inplace_floor_divide;
 	binaryfunc nb_inplace_true_divide;
 
-	/* Added in release 2.5 */
 	unaryfunc nb_index;
 } PyNumberMethods;
 
@@ -226,7 +207,7 @@ typedef struct {
 	ssizeobjargproc sq_ass_item;
 	ssizessizeobjargproc sq_ass_slice;
 	objobjproc sq_contains;
-	/* Added in release 2.0 */
+
 	binaryfunc sq_inplace_concat;
 	ssizeargfunc sq_inplace_repeat;
 } PySequenceMethods;
@@ -314,7 +295,6 @@ typedef struct _typeobject {
 	/* weak reference enabler */
 	Py_ssize_t tp_weaklistoffset;
 
-	/* Added in release 2.2 */
 	/* Iterators */
 	getiterfunc tp_iter;
 	iternextfunc tp_iternext;
@@ -394,16 +374,17 @@ PyAPI_FUNC(PyObject *) _PyType_Lookup(PyTypeObject *, PyObject *);
 
 /* Generic operations on objects */
 PyAPI_FUNC(int) PyObject_Print(PyObject *, FILE *, int);
+PyAPI_FUNC(void) _Py_BreakPoint(void);
 PyAPI_FUNC(void) _PyObject_Dump(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_Repr(PyObject *);
+PyAPI_FUNC(PyObject *) PyObject_ReprStr8(PyObject *);
 PyAPI_FUNC(PyObject *) _PyObject_Str(PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_Str(PyObject *);
-#ifdef Py_USING_UNICODE
 PyAPI_FUNC(PyObject *) PyObject_Unicode(PyObject *);
-#endif
 PyAPI_FUNC(int) PyObject_Compare(PyObject *, PyObject *);
 PyAPI_FUNC(PyObject *) PyObject_RichCompare(PyObject *, PyObject *, int);
 PyAPI_FUNC(int) PyObject_RichCompareBool(PyObject *, PyObject *, int);
+PyAPI_FUNC(PyObject *) Py_CmpToRich(int op, int cmp);
 PyAPI_FUNC(PyObject *) PyObject_GetAttrString(PyObject *, const char *);
 PyAPI_FUNC(int) PyObject_SetAttrString(PyObject *, const char *, PyObject *);
 PyAPI_FUNC(int) PyObject_HasAttrString(PyObject *, const char *);
@@ -419,8 +400,6 @@ PyAPI_FUNC(long) PyObject_Hash(PyObject *);
 PyAPI_FUNC(int) PyObject_IsTrue(PyObject *);
 PyAPI_FUNC(int) PyObject_Not(PyObject *);
 PyAPI_FUNC(int) PyCallable_Check(PyObject *);
-PyAPI_FUNC(int) PyNumber_Coerce(PyObject **, PyObject **);
-PyAPI_FUNC(int) PyNumber_CoerceEx(PyObject **, PyObject **);
 
 PyAPI_FUNC(void) PyObject_ClearWeakRefs(PyObject *);
 
@@ -445,7 +424,7 @@ PyAPI_FUNC(long) _Py_HashDouble(double);
 PyAPI_FUNC(long) _Py_HashPointer(void*);
 
 /* Helper for passing objects to printf and the like */
-#define PyObject_REPR(obj) PyString_AS_STRING(PyObject_Repr(obj))
+#define PyObject_REPR(obj) PyString_AS_STRING(PyObject_ReprStr8(obj))
 
 /* Flag bits for printing: */
 #define Py_PRINT_RAW	1	/* No string quotes etc. */
@@ -463,41 +442,15 @@ Arbitration of the flag bit positions will need to be coordinated among
 all extension writers who publically release their extensions (this will
 be fewer than you might expect!)..
 
-Python 1.5.2 introduced the bf_getcharbuffer slot into PyBufferProcs.
+Most flags were removed as of Python 3.0 to make room for new flags.  (Some
+flags are not for backwards compatibility but to indicate the presence of an
+optional feature; these flags remain of course.)
 
 Type definitions should use Py_TPFLAGS_DEFAULT for their tp_flags value.
 
 Code can use PyType_HasFeature(type_ob, flag_value) to test whether the
 given type object has a specified feature.
 */
-
-/* PyBufferProcs contains bf_getcharbuffer */
-#define Py_TPFLAGS_HAVE_GETCHARBUFFER  (1L<<0)
-
-/* PySequenceMethods contains sq_contains */
-#define Py_TPFLAGS_HAVE_SEQUENCE_IN (1L<<1)
-
-/* This is here for backwards compatibility.  Extensions that use the old GC
- * API will still compile but the objects will not be tracked by the GC. */
-#define Py_TPFLAGS_GC 0 /* used to be (1L<<2) */
-
-/* PySequenceMethods and PyNumberMethods contain in-place operators */
-#define Py_TPFLAGS_HAVE_INPLACEOPS (1L<<3)
-
-/* PyNumberMethods do their own coercion */
-#define Py_TPFLAGS_CHECKTYPES (1L<<4)
-
-/* tp_richcompare is defined */
-#define Py_TPFLAGS_HAVE_RICHCOMPARE (1L<<5)
-
-/* Objects which are weakly referencable if their tp_weaklistoffset is >0 */
-#define Py_TPFLAGS_HAVE_WEAKREFS (1L<<6)
-
-/* tp_iter is defined */
-#define Py_TPFLAGS_HAVE_ITER (1L<<7)
-
-/* New members introduced by Python 2.2 exist */
-#define Py_TPFLAGS_HAVE_CLASS (1L<<8)
 
 /* Set if the type object is dynamically allocated */
 #define Py_TPFLAGS_HEAPTYPE (1L<<9)
@@ -521,9 +474,6 @@ given type object has a specified feature.
 #define Py_TPFLAGS_HAVE_STACKLESS_EXTENSION 0
 #endif
 
-/* Objects support nb_index in PyNumberMethods */
-#define Py_TPFLAGS_HAVE_INDEX (1L<<17)
-
 /* These flags are used to determine if a type is a subclass. */
 #define Py_TPFLAGS_INT_SUBCLASS		(1L<<23)
 #define Py_TPFLAGS_LONG_SUBCLASS	(1L<<24)
@@ -536,15 +486,7 @@ given type object has a specified feature.
 #define Py_TPFLAGS_TYPE_SUBCLASS	(1L<<31)
 
 #define Py_TPFLAGS_DEFAULT  ( \
-                             Py_TPFLAGS_HAVE_GETCHARBUFFER | \
-                             Py_TPFLAGS_HAVE_SEQUENCE_IN | \
-                             Py_TPFLAGS_HAVE_INPLACEOPS | \
-                             Py_TPFLAGS_HAVE_RICHCOMPARE | \
-                             Py_TPFLAGS_HAVE_WEAKREFS | \
-                             Py_TPFLAGS_HAVE_ITER | \
-                             Py_TPFLAGS_HAVE_CLASS | \
                              Py_TPFLAGS_HAVE_STACKLESS_EXTENSION | \
-                             Py_TPFLAGS_HAVE_INDEX | \
                             0)
 
 #define PyType_HasFeature(t,f)  (((t)->tp_flags & (f)) != 0)
@@ -751,21 +693,6 @@ PyAPI_DATA(PyObject) _Py_NotImplementedStruct; /* Don't use this directly */
  * Defined in object.c.
  */
 PyAPI_DATA(int) _Py_SwappedOp[];
-
-/*
-Define staticforward and statichere for source compatibility with old
-C extensions.
-
-The staticforward define was needed to support certain broken C
-compilers (notably SCO ODT 3.0, perhaps early AIX as well) botched the
-static keyword when it was used with a forward declaration of a static
-initialized structure.  Standard C allows the forward declaration with
-static, and we've decided to stop catering to broken C compilers.
-(In fact, we expect that the compilers are all fixed eight years later.)
-*/
-
-#define staticforward static
-#define statichere static
 
 
 /*

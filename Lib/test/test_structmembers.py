@@ -5,7 +5,7 @@ from _testcapi import test_structmembersType, \
     LONG_MAX, LONG_MIN, ULONG_MAX, \
     LLONG_MAX, LLONG_MIN, ULLONG_MAX
 
-import warnings, exceptions, unittest
+import warnings, unittest
 from test import test_support
 
 ts=test_structmembersType(1,2,3,4,5,6,7,8,9.99999,10.1010101010)

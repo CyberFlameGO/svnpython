@@ -7,7 +7,7 @@ def wrap(foo=None):
 # line 7
 def replace(func):
     def insteadfunc():
-        print 'hello'
+        print('hello')
     return insteadfunc
 
 # line 13
@@ -60,8 +60,8 @@ def with_comment():  # hello
 
 # line 61
 multiline_sig = [
-    lambda (x,
-            y): x+y,
+    lambda x, \
+            y: x+y,
     None,
     ]
 

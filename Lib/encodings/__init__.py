@@ -29,17 +29,11 @@ Written by Marc-Andre Lemburg (mal@lemburg.com).
 """#"
 
 import codecs
-from encodings import aliases
+from . import aliases
 
 _cache = {}
 _unknown = '--unknown--'
 _import_tail = ['*']
-_norm_encoding_map = ('                                              . '
-                      '0123456789       ABCDEFGHIJKLMNOPQRSTUVWXYZ     '
-                      ' abcdefghijklmnopqrstuvwxyz                     '
-                      '                                                '
-                      '                                                '
-                      '                ')
 _aliases = aliases.aliases
 
 class CodecRegistryError(LookupError, SystemError):
@@ -58,14 +52,17 @@ def normalize_encoding(encoding):
         non-ASCII characters, these must be Latin-1 compatible.
 
     """
-    # Make sure we have an 8-bit string, because .translate() works
-    # differently for Unicode strings.
-    if isinstance(encoding, unicode):
-        # Note that .encode('latin-1') does *not* use the codec
-        # registry, so this call doesn't recurse. (See unicodeobject.c
-        # PyUnicode_AsEncodedString() for details)
-        encoding = encoding.encode('latin-1')
-    return '_'.join(encoding.translate(_norm_encoding_map).split())
+    chars = []
+    punct = False
+    for c in encoding:
+        if c.isalnum() or c == '.':
+            if punct and chars:
+                chars.append('_')
+            chars.append(c)
+            punct = False
+        else:
+            punct = True
+    return ''.join(chars)
 
 def search_function(encoding):
 
@@ -122,12 +119,12 @@ def search_function(encoding):
             raise CodecRegistryError,\
                  'module "%s" (%s) failed to register' % \
                   (mod.__name__, mod.__file__)
-        if not callable(entry[0]) or \
-           not callable(entry[1]) or \
-           (entry[2] is not None and not callable(entry[2])) or \
-           (entry[3] is not None and not callable(entry[3])) or \
-           (len(entry) > 4 and entry[4] is not None and not callable(entry[4])) or \
-           (len(entry) > 5 and entry[5] is not None and not callable(entry[5])):
+        if not hasattr(entry[0], '__call__') or \
+           not hasattr(entry[1], '__call__') or \
+           (entry[2] is not None and not hasattr(entry[2], '__call__')) or \
+           (entry[3] is not None and not hasattr(entry[3], '__call__')) or \
+           (len(entry) > 4 and entry[4] is not None and not hasattr(entry[4], '__call__')) or \
+           (len(entry) > 5 and entry[5] is not None and not hasattr(entry[5], '__call__')):
             raise CodecRegistryError,\
                 'incompatible codecs in module "%s" (%s)' % \
                 (mod.__name__, mod.__file__)
@@ -146,7 +143,7 @@ def search_function(encoding):
         pass
     else:
         for alias in codecaliases:
-            if not _aliases.has_key(alias):
+            if alias not in _aliases:
                 _aliases[alias] = modname
 
     # Return the registry entry

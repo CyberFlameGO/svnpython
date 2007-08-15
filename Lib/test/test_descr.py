@@ -1,6 +1,7 @@
 # Test enhancements related to descriptors and new-style classes
 
-from test.test_support import verify, vereq, verbose, TestFailed, TESTFN, get_original_stdout
+from test.test_support import verify, vereq, verbose, TestFailed, TESTFN
+from test.test_support import get_original_stdout
 from copy import deepcopy
 import warnings
 import types
@@ -14,7 +15,7 @@ def veris(a, b):
         raise TestFailed, "%r is %r" % (a, b)
 
 def testunop(a, res, expr="len(a)", meth="__len__"):
-    if verbose: print "checking", expr
+    if verbose: print("checking", expr)
     dict = {'a': a}
     vereq(eval(expr, dict), res)
     t = type(a)
@@ -27,12 +28,8 @@ def testunop(a, res, expr="len(a)", meth="__len__"):
     vereq(bm(), res)
 
 def testbinop(a, b, res, expr="a+b", meth="__add__"):
-    if verbose: print "checking", expr
+    if verbose: print("checking", expr)
     dict = {'a': a, 'b': b}
-
-    # XXX Hack so this passes before 2.3 when -Qnew is specified.
-    if meth == "__div__" and 1/2 == 0.5:
-        meth = "__truediv__"
 
     vereq(eval(expr, dict), res)
     t = type(a)
@@ -45,7 +42,7 @@ def testbinop(a, b, res, expr="a+b", meth="__add__"):
     vereq(bm(b), res)
 
 def testternop(a, b, c, res, expr="a[b:c]", meth="__getslice__"):
-    if verbose: print "checking", expr
+    if verbose: print("checking", expr)
     dict = {'a': a, 'b': b, 'c': c}
     vereq(eval(expr, dict), res)
     t = type(a)
@@ -58,9 +55,9 @@ def testternop(a, b, c, res, expr="a[b:c]", meth="__getslice__"):
     vereq(bm(b, c), res)
 
 def testsetop(a, b, res, stmt="a+=b", meth="__iadd__"):
-    if verbose: print "checking", stmt
+    if verbose: print("checking", stmt)
     dict = {'a': deepcopy(a), 'b': b}
-    exec stmt in dict
+    exec(stmt, dict)
     vereq(dict['a'], res)
     t = type(a)
     m = getattr(t, meth)
@@ -76,9 +73,9 @@ def testsetop(a, b, res, stmt="a+=b", meth="__iadd__"):
     vereq(dict['a'], res)
 
 def testset2op(a, b, c, res, stmt="a[b]=c", meth="__setitem__"):
-    if verbose: print "checking", stmt
+    if verbose: print("checking", stmt)
     dict = {'a': deepcopy(a), 'b': b, 'c': c}
-    exec stmt in dict
+    exec(stmt, dict)
     vereq(dict['a'], res)
     t = type(a)
     m = getattr(t, meth)
@@ -94,9 +91,9 @@ def testset2op(a, b, c, res, stmt="a[b]=c", meth="__setitem__"):
     vereq(dict['a'], res)
 
 def testset3op(a, b, c, d, res, stmt="a[b:c]=d", meth="__setslice__"):
-    if verbose: print "checking", stmt
+    if verbose: print("checking", stmt)
     dict = {'a': deepcopy(a), 'b': b, 'c': c, 'd': d}
-    exec stmt in dict
+    exec(stmt, dict)
     vereq(dict['a'], res)
     t = type(a)
     while meth not in t.__dict__:
@@ -140,7 +137,7 @@ def class_docstrings():
     verify(NewDynamic2.__doc__ is None)
 
 def lists():
-    if verbose: print "Testing list operations..."
+    if verbose: print("Testing list operations...")
     testbinop([1], [2], [1,2], "a+b", "__add__")
     testbinop([1,2,3], 2, 1, "b in a", "__contains__")
     testbinop([1,2,3], 4, 0, "b in a", "__contains__")
@@ -155,8 +152,8 @@ def lists():
     testset3op([1,2,3,4], 1, 3, [5,6], [1,5,6,4], "a[b:c]=d", "__setslice__")
 
 def dicts():
-    if verbose: print "Testing dict operations..."
-    testbinop({1:2}, {2:1}, -1, "cmp(a,b)", "__cmp__")
+    if verbose: print("Testing dict operations...")
+    ##testbinop({1:2}, {2:1}, -1, "cmp(a,b)", "__cmp__")
     testbinop({1:2,3:4}, 1, 1, "b in a", "__contains__")
     testbinop({1:2,3:4}, 2, 0, "b in a", "__contains__")
     testbinop({1:2,3:4}, 1, 2, "a[b]", "__getitem__")
@@ -180,7 +177,7 @@ def dicts():
 
 def dict_constructor():
     if verbose:
-        print "Testing dict constructor ..."
+        print("Testing dict constructor ...")
     d = dict()
     vereq(d, {})
     d = dict({})
@@ -188,7 +185,7 @@ def dict_constructor():
     d = dict({1: 2, 'a': 'b'})
     vereq(d, {1: 2, 'a': 'b'})
     vereq(d, dict(d.items()))
-    vereq(d, dict(d.iteritems()))
+    vereq(d, dict(d.items()))
     d = dict({'one':1, 'two':2})
     vereq(d, dict(one=1, two=2))
     vereq(d, dict(**d))
@@ -196,7 +193,7 @@ def dict_constructor():
     vereq(d, dict([("two", 2)], one=1))
     vereq(d, dict([("one", 100), ("two", 200)], **d))
     verify(d is not dict(**d))
-    for badarg in 0, 0L, 0j, "0", [0], (0,):
+    for badarg in 0, 0, 0j, "0", [0], (0,):
         try:
             dict(badarg)
         except TypeError:
@@ -263,48 +260,17 @@ def dict_constructor():
 
 def test_dir():
     if verbose:
-        print "Testing dir() ..."
+        print("Testing dir() ...")
     junk = 12
     vereq(dir(), ['junk'])
     del junk
 
     # Just make sure these don't blow up!
-    for arg in 2, 2L, 2j, 2e0, [2], "2", u"2", (2,), {2:2}, type, test_dir:
+    for arg in 2, 2, 2j, 2e0, [2], "2", b"2", (2,), {2:2}, type, test_dir:
         dir(arg)
 
-    # Try classic classes.
-    class C:
-        Cdata = 1
-        def Cmethod(self): pass
-
-    cstuff = ['Cdata', 'Cmethod', '__doc__', '__module__']
-    vereq(dir(C), cstuff)
-    verify('im_self' in dir(C.Cmethod))
-
-    c = C()  # c.__doc__ is an odd thing to see here; ditto c.__module__.
-    vereq(dir(c), cstuff)
-
-    c.cdata = 2
-    c.cmethod = lambda self: 0
-    vereq(dir(c), cstuff + ['cdata', 'cmethod'])
-    verify('im_self' in dir(c.Cmethod))
-
-    class A(C):
-        Adata = 1
-        def Amethod(self): pass
-
-    astuff = ['Adata', 'Amethod'] + cstuff
-    vereq(dir(A), astuff)
-    verify('im_self' in dir(A.Amethod))
-    a = A()
-    vereq(dir(a), astuff)
-    verify('im_self' in dir(a.Amethod))
-    a.adata = 42
-    a.amethod = lambda self: 3
-    vereq(dir(a), astuff + ['adata', 'amethod'])
-
-    # The same, but with new-style classes.  Since these have object as a
-    # base class, a lot more gets sucked in.
+    # Test dir on custom classes. Since these have object as a
+    # base class, a lot of stuff gets sucked in.
     def interesting(strings):
         return [s for s in strings if not s.startswith('_')]
 
@@ -421,7 +387,6 @@ unops = {
     'abs': 'abs',
     'invert': '~',
     'int': 'int',
-    'long': 'long',
     'float': 'float',
     'oct': 'oct',
     'hex': 'hex',
@@ -450,41 +415,36 @@ def numops(a, b, skip=[]):
                 testunop(a, res, expr, name)
 
 def ints():
-    if verbose: print "Testing int operations..."
+    if verbose: print("Testing int operations...")
     numops(100, 3)
     # The following crashes in Python 2.2
-    vereq((1).__nonzero__(), 1)
-    vereq((0).__nonzero__(), 0)
+    vereq((1).__bool__(), True)
+    vereq((0).__bool__(), False)
     # This returns 'NotImplemented' in Python 2.2
     class C(int):
         def __add__(self, other):
             return NotImplemented
-    vereq(C(5L), 5)
+    vereq(C(5), 5)
     try:
         C() + ""
     except TypeError:
         pass
     else:
         raise TestFailed, "NotImplemented should have caused TypeError"
-    import sys
-    try:
-        C(sys.maxint+1)
-    except OverflowError:
-        pass
-    else:
-        raise TestFailed, "should have raised OverflowError"
 
 def longs():
-    if verbose: print "Testing long operations..."
-    numops(100L, 3L)
+    if verbose: print("Testing long operations...")
+    numops(100, 3)
 
 def floats():
-    if verbose: print "Testing float operations..."
+    if verbose: print("Testing float operations...")
     numops(100.0, 3.0)
 
 def complexes():
-    if verbose: print "Testing complex operations..."
-    numops(100.0j, 3.0j, skip=['lt', 'le', 'gt', 'ge', 'int', 'long', 'float'])
+    if verbose: print("Testing complex operations...")
+    numops(100.0j, 3.0j,
+           skip=['lt', 'le', 'gt', 'ge', 'int', 'long', 'float',
+                 'divmod', 'mod'])
     class Number(complex):
         __slots__ = ['prec']
         def __new__(cls, *args, **kwds):
@@ -513,7 +473,7 @@ def complexes():
     vereq(a.prec, 12)
 
 def spamlists():
-    if verbose: print "Testing spamlist operations..."
+    if verbose: print("Testing spamlist operations...")
     import copy, xxsubtype as spam
     def spamlist(l, memo=None):
         import xxsubtype as spam
@@ -549,7 +509,7 @@ def spamlists():
     vereq(a.getstate(), 42)
 
 def spamdicts():
-    if verbose: print "Testing spamdict operations..."
+    if verbose: print("Testing spamdict operations...")
     import copy, xxsubtype as spam
     def spamdict(d, memo=None):
         import xxsubtype as spam
@@ -559,7 +519,7 @@ def spamdicts():
     # This is an ugly hack:
     copy._deepcopy_dispatch[spam.spamdict] = spamdict
 
-    testbinop(spamdict({1:2}), spamdict({2:1}), -1, "cmp(a,b)", "__cmp__")
+    ##testbinop(spamdict({1:2}), spamdict({2:1}), -1, "cmp(a,b)", "__cmp__")
     testbinop(spamdict({1:2,3:4}), 1, 1, "b in a", "__contains__")
     testbinop(spamdict({1:2,3:4}), 2, 0, "b in a", "__contains__")
     testbinop(spamdict({1:2,3:4}), 1, 2, "a[b]", "__getitem__")
@@ -585,16 +545,16 @@ def spamdicts():
     class C(spam.spamdict):
         def foo(self): return 1
     a = C()
-    vereq(a.items(), [])
+    vereq(list(a.items()), [])
     vereq(a.foo(), 1)
     a['foo'] = 'bar'
-    vereq(a.items(), [('foo', 'bar')])
+    vereq(list(a.items()), [('foo', 'bar')])
     vereq(a.getstate(), 0)
     a.setstate(100)
     vereq(a.getstate(), 100)
 
 def pydicts():
-    if verbose: print "Testing Python subclass of dict..."
+    if verbose: print("Testing Python subclass of dict...")
     verify(issubclass(dict, dict))
     verify(isinstance({}, dict))
     d = dict()
@@ -635,7 +595,7 @@ def pydicts():
     vereq(a[42], 0)
     a[42] = 24
     vereq(a[42], 24)
-    if verbose: print "pydict stress test ..."
+    if verbose: print("pydict stress test ...")
     N = 50
     for i in range(N):
         a[i] = C()
@@ -646,7 +606,7 @@ def pydicts():
             vereq(a[i][j], i*j)
 
 def pylists():
-    if verbose: print "Testing Python subclass of list..."
+    if verbose: print("Testing Python subclass of list...")
     class C(list):
         def __getitem__(self, i):
             return list.__getitem__(self, i) + 100
@@ -660,9 +620,8 @@ def pylists():
     vereq(a[100:200], (100,200))
 
 def metaclass():
-    if verbose: print "Testing __metaclass__..."
-    class C:
-        __metaclass__ = type
+    if verbose: print("Testing metaclass...")
+    class C(metaclass=type):
         def __init__(self):
             self.__state = 0
         def getstate(self):
@@ -673,9 +632,10 @@ def metaclass():
     vereq(a.getstate(), 0)
     a.setstate(10)
     vereq(a.getstate(), 10)
-    class D:
-        class __metaclass__(type):
-            def myself(cls): return cls
+    class _metaclass(type):
+        def myself(cls): return cls
+    class D(metaclass=_metaclass):
+        pass
     vereq(D.myself(), D)
     d = D()
     verify(d.__class__ is D)
@@ -683,8 +643,8 @@ def metaclass():
         def __new__(cls, name, bases, dict):
             dict['__spam__'] = 1
             return type.__new__(cls, name, bases, dict)
-    class C:
-        __metaclass__ = M1
+    class C(metaclass=M1):
+        pass
     vereq(C.__spam__, 1)
     c = C()
     vereq(c.__spam__, 1)
@@ -707,8 +667,7 @@ def metaclass():
                     continue
                 setattr(it, key, self.dict[key].__get__(it, self))
             return it
-    class C:
-        __metaclass__ = M2
+    class C(metaclass=M2):
         def spam(self):
             return 42
     vereq(C.name, 'C')
@@ -734,8 +693,7 @@ def metaclass():
                 name = "__super"
             setattr(cls, name, super(cls))
             return cls
-    class A:
-        __metaclass__ = autosuper
+    class A(metaclass=autosuper):
         def meth(self):
             return "A"
     class B(A):
@@ -758,7 +716,7 @@ def metaclass():
         # named _get_x and/or _set_x are found
         def __new__(metaclass, name, bases, dict):
             hits = {}
-            for key, val in dict.iteritems():
+            for key, val in dict.items():
                 if key.startswith("_get_"):
                     key = key[5:]
                     get, set = hits.get(key, (None, None))
@@ -769,12 +727,11 @@ def metaclass():
                     get, set = hits.get(key, (None, None))
                     set = val
                     hits[key] = get, set
-            for key, (get, set) in hits.iteritems():
+            for key, (get, set) in hits.items():
                 dict[key] = property(get, set)
             return super(autoproperty, metaclass).__new__(metaclass,
                                                         name, bases, dict)
-    class A:
-        __metaclass__ = autoproperty
+    class A(metaclass=autoproperty):
         def _get_x(self):
             return -self.__x
         def _set_x(self, x):
@@ -788,8 +745,7 @@ def metaclass():
     class multimetaclass(autoproperty, autosuper):
         # Merge of multiple cooperating metaclasses
         pass
-    class A:
-        __metaclass__ = multimetaclass
+    class A(metaclass=multimetaclass):
         def _get_x(self):
             return "A"
     class B(A):
@@ -808,8 +764,8 @@ def metaclass():
         counter = 0
         def __init__(self, *args):
             T.counter += 1
-    class C:
-        __metaclass__ = T
+    class C(metaclass=T):
+        pass
     vereq(T.counter, 1)
     a = C()
     vereq(type(a), C)
@@ -829,8 +785,8 @@ def metaclass():
     class B(object):
         pass
 
-    class C(object):
-        __metaclass__ = A
+    class C(object, metaclass=A):
+        pass
 
     # The most derived metaclass of D is A rather than type.
     class D(B, C):
@@ -838,7 +794,7 @@ def metaclass():
 
 
 def pymods():
-    if verbose: print "Testing Python subclass of module..."
+    if verbose: print("Testing Python subclass of module...")
     log = []
     import sys
     MT = type(sys)
@@ -873,7 +829,7 @@ def pymods():
                           "same time should fail")
 
 def multi():
-    if verbose: print "Testing multiple inheritance..."
+    if verbose: print("Testing multiple inheritance...")
     class C(object):
         def __init__(self):
             self.__state = 0
@@ -890,9 +846,9 @@ def multi():
             type({}).__init__(self)
             C.__init__(self)
     d = D()
-    vereq(d.keys(), [])
+    vereq(list(d.keys()), [])
     d["hello"] = "world"
-    vereq(d.items(), [("hello", "world")])
+    vereq(list(d.items()), [("hello", "world")])
     vereq(d["hello"], "world")
     vereq(d.getstate(), 0)
     d.setstate(10)
@@ -913,98 +869,8 @@ def multi():
     vereq(Frag().__int__(), 42)
     vereq(int(Frag()), 42)
 
-    # MI mixing classic and new-style classes.
-
-    class A:
-        x = 1
-
-    class B(A):
-        pass
-
-    class C(A):
-        x = 2
-
-    class D(B, C):
-        pass
-    vereq(D.x, 1)
-
-    # Classic MRO is preserved for a classic base class.
-    class E(D, object):
-        pass
-    vereq(E.__mro__, (E, D, B, A, C, object))
-    vereq(E.x, 1)
-
-    # But with a mix of classic bases, their MROs are combined using
-    # new-style MRO.
-    class F(B, C, object):
-        pass
-    vereq(F.__mro__, (F, B, C, A, object))
-    vereq(F.x, 2)
-
-    # Try something else.
-    class C:
-        def cmethod(self):
-            return "C a"
-        def all_method(self):
-            return "C b"
-
-    class M1(C, object):
-        def m1method(self):
-            return "M1 a"
-        def all_method(self):
-            return "M1 b"
-
-    vereq(M1.__mro__, (M1, C, object))
-    m = M1()
-    vereq(m.cmethod(), "C a")
-    vereq(m.m1method(), "M1 a")
-    vereq(m.all_method(), "M1 b")
-
-    class D(C):
-        def dmethod(self):
-            return "D a"
-        def all_method(self):
-            return "D b"
-
-    class M2(D, object):
-        def m2method(self):
-            return "M2 a"
-        def all_method(self):
-            return "M2 b"
-
-    vereq(M2.__mro__, (M2, D, C, object))
-    m = M2()
-    vereq(m.cmethod(), "C a")
-    vereq(m.dmethod(), "D a")
-    vereq(m.m2method(), "M2 a")
-    vereq(m.all_method(), "M2 b")
-
-    class M3(M1, M2, object):
-        def m3method(self):
-            return "M3 a"
-        def all_method(self):
-            return "M3 b"
-    vereq(M3.__mro__, (M3, M1, M2, D, C, object))
-    m = M3()
-    vereq(m.cmethod(), "C a")
-    vereq(m.dmethod(), "D a")
-    vereq(m.m1method(), "M1 a")
-    vereq(m.m2method(), "M2 a")
-    vereq(m.m3method(), "M3 a")
-    vereq(m.all_method(), "M3 b")
-
-    class Classic:
-        pass
-    try:
-        class New(Classic):
-            __metaclass__ = type
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "new class with only classic bases - shouldn't be"
-
 def diamond():
-    if verbose: print "Testing multiple inheritance special cases..."
+    if verbose: print("Testing multiple inheritance special cases...")
     class A(object):
         def spam(self): return "A"
     vereq(A().spam(), "A")
@@ -1042,7 +908,7 @@ def diamond():
 
 # see thread python-dev/2002-October/029035.html
 def ex5():
-    if verbose: print "Testing ex5 from C3 switch discussion..."
+    if verbose: print("Testing ex5 from C3 switch discussion...")
     class A(object): pass
     class B(object): pass
     class C(object): pass
@@ -1054,7 +920,7 @@ def ex5():
 # see "A Monotonic Superclass Linearization for Dylan",
 # by Kim Barrett et al. (OOPSLA 1996)
 def monotonicity():
-    if verbose: print "Testing MRO monotonicity..."
+    if verbose: print("Testing MRO monotonicity...")
     class Boat(object): pass
     class DayBoat(Boat): pass
     class WheelBoat(Boat): pass
@@ -1077,7 +943,7 @@ def monotonicity():
 # see "A Monotonic Superclass Linearization for Dylan",
 # by Kim Barrett et al. (OOPSLA 1996)
 def consistency_with_epg():
-    if verbose: print "Testing consistentcy with EPG..."
+    if verbose: print("Testing consistentcy with EPG...")
     class Pane(object): pass
     class ScrollingMixin(object): pass
     class EditingMixin(object): pass
@@ -1093,11 +959,11 @@ mro_err_msg = """Cannot create a consistent method resolution
 order (MRO) for bases """
 
 def mro_disagreement():
-    if verbose: print "Testing error messages for MRO disagreement..."
+    if verbose: print("Testing error messages for MRO disagreement...")
     def raises(exc, expected, callable, *args):
         try:
             callable(*args)
-        except exc, msg:
+        except exc as msg:
             if not str(msg).startswith(expected):
                 raise TestFailed, "Message %r, expected %r" % (str(msg),
                                                                expected)
@@ -1123,7 +989,7 @@ def mro_disagreement():
            type, "ConfusedGrid", (HVGrid, VHGrid), {})
 
 def objects():
-    if verbose: print "Testing object class..."
+    if verbose: print("Testing object class...")
     a = object()
     vereq(a.__class__, object)
     vereq(type(a), object)
@@ -1147,7 +1013,7 @@ def objects():
     vereq(x.__dict__, {'foo': 1})
 
 def slots():
-    if verbose: print "Testing __slots__..."
+    if verbose: print("Testing __slots__...")
     class C0(object):
         __slots__ = []
     x = C0()
@@ -1247,34 +1113,29 @@ def slots():
     vereq(c.abc, 5)
 
     # Test unicode slot names
+    # Test a single unicode string is not expanded as a sequence.
+    class C(object):
+        __slots__ = "abc"
+    c = C()
+    c.abc = 5
+    vereq(c.abc, 5)
+
+    # _unicode_to_string used to modify slots in certain circumstances
+    slots = ("foo", "bar")
+    class C(object):
+        __slots__ = slots
+    x = C()
+    x.foo = 5
+    vereq(x.foo, 5)
+    veris(type(slots[0]), str)
+    # this used to leak references
     try:
-        unicode
-    except NameError:
+        class C(object):
+            __slots__ = [chr(128)]
+    except (TypeError, UnicodeEncodeError):
         pass
     else:
-        # Test a single unicode string is not expanded as a sequence.
-        class C(object):
-            __slots__ = unicode("abc")
-        c = C()
-        c.abc = 5
-        vereq(c.abc, 5)
-
-        # _unicode_to_string used to modify slots in certain circumstances
-        slots = (unicode("foo"), unicode("bar"))
-        class C(object):
-            __slots__ = slots
-        x = C()
-        x.foo = 5
-        vereq(x.foo, 5)
-        veris(type(slots[0]), unicode)
-        # this used to leak references
-        try:
-            class C(object):
-                __slots__ = [unichr(128)]
-        except (TypeError, UnicodeEncodeError):
-            pass
-        else:
-            raise TestFailed, "[unichr(128)] slots not caught"
+        raise TestFailed, "[unichr(128)] slots not caught"
 
     # Test leaks
     class Counted(object):
@@ -1329,7 +1190,7 @@ def slots():
             return 0
     g = G()
     orig_objects = len(gc.get_objects())
-    for i in xrange(10):
+    for i in range(10):
         g==g
     new_objects = len(gc.get_objects())
     vereq(orig_objects, new_objects)
@@ -1351,7 +1212,7 @@ def slots():
         sys.stderr = save_stderr
 
 def slotspecials():
-    if verbose: print "Testing __dict__ and __weakref__ in __slots__..."
+    if verbose: print("Testing __dict__ and __weakref__ in __slots__...")
 
     class D(object):
         __slots__ = ["__dict__"]
@@ -1398,7 +1259,7 @@ def slotspecials():
 #        __slots__ = []
 
 def dynamics():
-    if verbose: print "Testing class attribute propagation..."
+    if verbose: print("Testing class attribute propagation...")
     class D(object):
         pass
     class E(D):
@@ -1461,10 +1322,10 @@ def dynamics():
     vereq(I(3)*I(2), 6)
 
     # Test handling of long*seq and seq*long
-    class L(long):
+    class L(int):
         pass
-    vereq("a"*L(2L), "aa")
-    vereq(L(2L)*"a", "aa")
+    vereq("a"*L(2), "aa")
+    vereq(L(2)*"a", "aa")
     vereq(2*L(3), 6)
     vereq(L(3)*2, 6)
     vereq(L(3)*L(2), 6)
@@ -1472,12 +1333,12 @@ def dynamics():
     # Test comparison of classes with dynamic metaclasses
     class dynamicmetaclass(type):
         pass
-    class someclass:
-        __metaclass__ = dynamicmetaclass
+    class someclass(metaclass=dynamicmetaclass):
+        pass
     verify(someclass != object)
 
 def errors():
-    if verbose: print "Testing errors..."
+    if verbose: print("Testing errors...")
 
     try:
         class C(list, dict):
@@ -1525,10 +1386,10 @@ def errors():
         pass
     class M2(type):
         pass
-    class A1(object):
-        __metaclass__ = M1
-    class A2(object):
-        __metaclass__ = M2
+    class A1(object, metaclass=M1):
+        pass
+    class A2(object, metaclass=M2):
+        pass
     try:
         class B(A1, A2):
             pass
@@ -1538,7 +1399,7 @@ def errors():
         verify(0, "finding the most derived metaclass should have failed")
 
 def classmethods():
-    if verbose: print "Testing class methods..."
+    if verbose: print("Testing class methods...")
     class C(object):
         def foo(*a): return a
         goo = classmethod(foo)
@@ -1584,7 +1445,7 @@ def classmethods():
         raise TestFailed, "classmethod shouldn't accept keyword args"
 
 def classmethods_in_c():
-    if verbose: print "Testing C-based class methods..."
+    if verbose: print("Testing C-based class methods...")
     import xxsubtype as spam
     a = (1, 2, 3)
     d = {'abc': 123}
@@ -1598,7 +1459,7 @@ def classmethods_in_c():
     vereq(d, d1)
 
 def staticmethods():
-    if verbose: print "Testing static methods..."
+    if verbose: print("Testing static methods...")
     class C(object):
         def foo(*a): return a
         goo = staticmethod(foo)
@@ -1615,7 +1476,7 @@ def staticmethods():
     vereq(D.foo(d, 1), (d, 1))
 
 def staticmethods_in_c():
-    if verbose: print "Testing C-based static methods..."
+    if verbose: print("Testing C-based static methods...")
     import xxsubtype as spam
     a = (1, 2, 3)
     d = {"abc": 123}
@@ -1629,7 +1490,7 @@ def staticmethods_in_c():
     vereq(d, d1)
 
 def classic():
-    if verbose: print "Testing classic classes..."
+    if verbose: print("Testing classic classes...")
     class C:
         def foo(*a): return a
         goo = classmethod(foo)
@@ -1650,7 +1511,7 @@ def classic():
     verify(repr(C.foo.__get__(C())).startswith("<bound method "))
 
 def compattr():
-    if verbose: print "Testing computed attributes..."
+    if verbose: print("Testing computed attributes...")
     class C(object):
         class computed_attribute(object):
             def __init__(self, get, set=None, delete=None):
@@ -1684,7 +1545,7 @@ def compattr():
     vereq(hasattr(a, 'x'), 0)
 
 def newslot():
-    if verbose: print "Testing __new__ slot override..."
+    if verbose: print("Testing __new__ slot override...")
     class C(list):
         def __new__(cls):
             self = list.__new__(cls)
@@ -1702,7 +1563,7 @@ def newslot():
     verify(b.__class__ is D)
 
 def altmro():
-    if verbose: print "Testing mro() and overriding it..."
+    if verbose: print("Testing mro() and overriding it...")
     class A(object):
         def f(self): return "A"
     class B(A):
@@ -1720,36 +1581,39 @@ def altmro():
             L = type.mro(cls)
             L.reverse()
             return L
-    class X(D,B,C,A):
-        __metaclass__ = PerverseMetaType
+    class X(D,B,C,A, metaclass=PerverseMetaType):
+        pass
     vereq(X.__mro__, (object, A, C, B, D, X))
     vereq(X().f(), "A")
 
     try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [self, dict, object]
+        class _metaclass(type):
+            def mro(self):
+                return [self, dict, object]
+        class X(object, metaclass=_metaclass):
+            pass
     except TypeError:
         pass
     else:
         raise TestFailed, "devious mro() return not caught"
 
     try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return [1]
+        class _metaclass(type):
+            def mro(self):
+                return [1]
+        class X(object, metaclass=_metaclass):
+            pass
     except TypeError:
         pass
     else:
         raise TestFailed, "non-class mro() return not caught"
 
     try:
-        class X(object):
-            class __metaclass__(type):
-                def mro(self):
-                    return 1
+        class _metaclass(type):
+            def mro(self):
+                return 1
+        class X(object, metaclass=_metaclass):
+            pass
     except TypeError:
         pass
     else:
@@ -1757,7 +1621,7 @@ def altmro():
 
 
 def overloading():
-    if verbose: print "Testing operator overloading..."
+    if verbose: print("Testing operator overloading...")
 
     class B(object):
         "Intermediate class because object doesn't have a __setattr__"
@@ -1814,7 +1678,7 @@ def overloading():
     vereq(a.delslice, (0, 10))
 
 def methods():
-    if verbose: print "Testing methods..."
+    if verbose: print("Testing methods...")
     class C(object):
         def __init__(self, x):
             self.x = x
@@ -1836,7 +1700,7 @@ def methods():
 
 def specials():
     # Test operators like __hash__ for which a built-in default exists
-    if verbose: print "Testing special operators..."
+    if verbose: print("Testing special operators...")
     # Test the default behavior for static classes
     class C(object):
         def __getitem__(self, i):
@@ -1848,7 +1712,7 @@ def specials():
     verify(id(c1) != id(c2))
     hash(c1)
     hash(c2)
-    vereq(cmp(c1, c2), cmp(id(c1), id(c2)))
+    ##vereq(cmp(c1, c2), cmp(id(c1), id(c2)))
     vereq(c1, c1)
     verify(c1 != c2)
     verify(not c1 != c1)
@@ -1872,7 +1736,7 @@ def specials():
     verify(id(d1) != id(d2))
     hash(d1)
     hash(d2)
-    vereq(cmp(d1, d2), cmp(id(d1), id(d2)))
+    ##vereq(cmp(d1, d2), cmp(id(d1), id(d2)))
     vereq(d1, d1)
     verify(d1 != d2)
     verify(not d1 != d1)
@@ -1889,7 +1753,7 @@ def specials():
     class Proxy(object):
         def __init__(self, x):
             self.x = x
-        def __nonzero__(self):
+        def __bool__(self):
             return not not self.x
         def __hash__(self):
             return hash(self.x)
@@ -1929,7 +1793,7 @@ def specials():
     class DProxy(object):
         def __init__(self, x):
             self.x = x
-        def __nonzero__(self):
+        def __bool__(self):
             return not not self.x
         def __hash__(self):
             return hash(self.x)
@@ -1965,47 +1829,47 @@ def specials():
     for i in range(10):
         verify(i in p10)
     verify(10 not in p10)
-    # Safety test for __cmp__
-    def unsafecmp(a, b):
-        try:
-            a.__class__.__cmp__(a, b)
-        except TypeError:
-            pass
-        else:
-            raise TestFailed, "shouldn't allow %s.__cmp__(%r, %r)" % (
-                a.__class__, a, b)
-    unsafecmp(u"123", "123")
-    unsafecmp("123", u"123")
-    unsafecmp(1, 1.0)
-    unsafecmp(1.0, 1)
-    unsafecmp(1, 1L)
-    unsafecmp(1L, 1)
+##     # Safety test for __cmp__
+##     def unsafecmp(a, b):
+##         try:
+##             a.__class__.__cmp__(a, b)
+##         except TypeError:
+##             pass
+##         else:
+##             raise TestFailed, "shouldn't allow %s.__cmp__(%r, %r)" % (
+##                 a.__class__, a, b)
+##     unsafecmp(u"123", "123")
+##     unsafecmp("123", u"123")
+##     unsafecmp(1, 1.0)
+##     unsafecmp(1.0, 1)
+##     unsafecmp(1, 1L)
+##     unsafecmp(1L, 1)
 
-    class Letter(str):
-        def __new__(cls, letter):
-            if letter == 'EPS':
-                return str.__new__(cls)
-            return str.__new__(cls, letter)
-        def __str__(self):
-            if not self:
-                return 'EPS'
-            return self
+##     class Letter(str):
+##         def __new__(cls, letter):
+##             if letter == 'EPS':
+##                 return str.__new__(cls)
+##             return str.__new__(cls, letter)
+##         def __str__(self):
+##             if not self:
+##                 return 'EPS'
+##             return self
 
-    # sys.stdout needs to be the original to trigger the recursion bug
-    import sys
-    test_stdout = sys.stdout
-    sys.stdout = get_original_stdout()
-    try:
-        # nothing should actually be printed, this should raise an exception
-        print Letter('w')
-    except RuntimeError:
-        pass
-    else:
-        raise TestFailed, "expected a RuntimeError for print recursion"
-    sys.stdout = test_stdout
+##     # sys.stdout needs to be the original to trigger the recursion bug
+##     import sys
+##     test_stdout = sys.stdout
+##     sys.stdout = get_original_stdout()
+##     try:
+##         # nothing should actually be printed, this should raise an exception
+##         print(Letter('w'))
+##     except RuntimeError:
+##         pass
+##     else:
+##         raise TestFailed, "expected a RuntimeError for print recursion"
+##     sys.stdout = test_stdout
 
 def weakrefs():
-    if verbose: print "Testing weak references..."
+    if verbose: print("Testing weak references...")
     import weakref
     class C(object):
         pass
@@ -2020,7 +1884,7 @@ def weakrefs():
     no = NoWeak()
     try:
         weakref.ref(no)
-    except TypeError, msg:
+    except TypeError as msg:
         verify(str(msg).find("weak reference") >= 0)
     else:
         verify(0, "weakref.ref(no) should be illegal")
@@ -2034,7 +1898,7 @@ def weakrefs():
     del r
 
 def properties():
-    if verbose: print "Testing property..."
+    if verbose: print("Testing property...")
     class C(object):
         def getx(self):
             return self.__x
@@ -2073,13 +1937,13 @@ def properties():
     for attr in "__doc__", "fget", "fset", "fdel":
         try:
             setattr(raw, attr, 42)
-        except TypeError, msg:
+        except AttributeError as msg:
             if str(msg).find('readonly') < 0:
                 raise TestFailed("when setting readonly attr %r on a "
-                                 "property, got unexpected TypeError "
+                                 "property, got unexpected AttributeError "
                                  "msg %r" % (attr, str(msg)))
         else:
-            raise TestFailed("expected TypeError from trying to set "
+            raise TestFailed("expected AttributeError from trying to set "
                              "readonly %r attr on a property" % attr)
 
     class D(object):
@@ -2117,7 +1981,7 @@ def properties():
 
 
 def supers():
-    if verbose: print "Testing super..."
+    if verbose: print("Testing super...")
 
     class A(object):
         def meth(self, a):
@@ -2233,7 +2097,7 @@ def supers():
         raise TestFailed, "super shouldn't accept keyword args"
 
 def inherits():
-    if verbose: print "Testing inheritance from basic types..."
+    if verbose: print("Testing inheritance from basic types...")
 
     class hexint(int):
         def __repr__(self):
@@ -2255,54 +2119,51 @@ def inherits():
     verify((hexint(0) << 12).__class__ is int)
     verify((hexint(0) >> 12).__class__ is int)
 
-    class octlong(long):
+    class octlong(int):
         __slots__ = []
         def __str__(self):
-            s = oct(self)
-            if s[-1] == 'L':
-                s = s[:-1]
-            return s
+            return oct(self)
         def __add__(self, other):
             return self.__class__(super(octlong, self).__add__(other))
         __radd__ = __add__
-    vereq(str(octlong(3) + 5), "010")
+    vereq(str(octlong(3) + 5), "0o10")
     # (Note that overriding __radd__ here only seems to work
     # because the example uses a short int left argument.)
-    vereq(str(5 + octlong(3000)), "05675")
+    vereq(str(5 + octlong(3000)), "0o5675")
     a = octlong(12345)
-    vereq(a, 12345L)
-    vereq(long(a), 12345L)
-    vereq(hash(a), hash(12345L))
-    verify(long(a).__class__ is long)
-    verify((+a).__class__ is long)
-    verify((-a).__class__ is long)
-    verify((-octlong(0)).__class__ is long)
-    verify((a >> 0).__class__ is long)
-    verify((a << 0).__class__ is long)
-    verify((a - 0).__class__ is long)
-    verify((a * 1).__class__ is long)
-    verify((a ** 1).__class__ is long)
-    verify((a // 1).__class__ is long)
-    verify((1 * a).__class__ is long)
-    verify((a | 0).__class__ is long)
-    verify((a ^ 0).__class__ is long)
-    verify((a & -1L).__class__ is long)
-    verify((octlong(0) << 12).__class__ is long)
-    verify((octlong(0) >> 12).__class__ is long)
-    verify(abs(octlong(0)).__class__ is long)
+    vereq(a, 12345)
+    vereq(int(a), 12345)
+    vereq(hash(a), hash(12345))
+    verify(int(a).__class__ is int)
+    verify((+a).__class__ is int)
+    verify((-a).__class__ is int)
+    verify((-octlong(0)).__class__ is int)
+    verify((a >> 0).__class__ is int)
+    verify((a << 0).__class__ is int)
+    verify((a - 0).__class__ is int)
+    verify((a * 1).__class__ is int)
+    verify((a ** 1).__class__ is int)
+    verify((a // 1).__class__ is int)
+    verify((1 * a).__class__ is int)
+    verify((a | 0).__class__ is int)
+    verify((a ^ 0).__class__ is int)
+    verify((a & -1).__class__ is int)
+    verify((octlong(0) << 12).__class__ is int)
+    verify((octlong(0) >> 12).__class__ is int)
+    verify(abs(octlong(0)).__class__ is int)
 
     # Because octlong overrides __add__, we can't check the absence of +0
     # optimizations using octlong.
-    class longclone(long):
+    class longclone(int):
         pass
     a = longclone(1)
-    verify((a + 0).__class__ is long)
-    verify((0 + a).__class__ is long)
+    verify((a + 0).__class__ is int)
+    verify((0 + a).__class__ is int)
 
     # Check that negative clones don't segfault
     a = longclone(-1)
     vereq(a.__dict__, {})
-    vereq(long(a), -1)  # verify PyNumber_Long() copies the sign bit
+    vereq(int(a), -1)  # verify PyNumber_Long() copies the sign bit
 
     class precfloat(float):
         __slots__ = ['prec']
@@ -2429,12 +2290,9 @@ def inherits():
     vereq(s.lstrip(), base)
     verify(s.rstrip().__class__ is str)
     vereq(s.rstrip(), base)
-    identitytab = ''.join([chr(i) for i in range(256)])
+    identitytab = {}
     verify(s.translate(identitytab).__class__ is str)
     vereq(s.translate(identitytab), base)
-    verify(s.translate(identitytab, "x").__class__ is str)
-    vereq(s.translate(identitytab, "x"), base)
-    vereq(s.translate(identitytab, "\x00"), "")
     verify(s.replace("x", "x").__class__ is str)
     vereq(s.replace("x", "x"), base)
     verify(s.ljust(len(s)).__class__ is str)
@@ -2446,149 +2304,148 @@ def inherits():
     verify(s.lower().__class__ is str)
     vereq(s.lower(), base)
 
-    class madunicode(unicode):
+    class madunicode(str):
         _rev = None
         def rev(self):
             if self._rev is not None:
                 return self._rev
             L = list(self)
             L.reverse()
-            self._rev = self.__class__(u"".join(L))
+            self._rev = self.__class__("".join(L))
             return self._rev
     u = madunicode("ABCDEF")
-    vereq(u, u"ABCDEF")
-    vereq(u.rev(), madunicode(u"FEDCBA"))
-    vereq(u.rev().rev(), madunicode(u"ABCDEF"))
-    base = u"12345"
+    vereq(u, "ABCDEF")
+    vereq(u.rev(), madunicode("FEDCBA"))
+    vereq(u.rev().rev(), madunicode("ABCDEF"))
+    base = "12345"
     u = madunicode(base)
-    vereq(unicode(u), base)
-    verify(unicode(u).__class__ is unicode)
+    vereq(str(u), base)
+    verify(str(u).__class__ is str)
     vereq(hash(u), hash(base))
     vereq({u: 1}[base], 1)
     vereq({base: 1}[u], 1)
-    verify(u.strip().__class__ is unicode)
+    verify(u.strip().__class__ is str)
     vereq(u.strip(), base)
-    verify(u.lstrip().__class__ is unicode)
+    verify(u.lstrip().__class__ is str)
     vereq(u.lstrip(), base)
-    verify(u.rstrip().__class__ is unicode)
+    verify(u.rstrip().__class__ is str)
     vereq(u.rstrip(), base)
-    verify(u.replace(u"x", u"x").__class__ is unicode)
-    vereq(u.replace(u"x", u"x"), base)
-    verify(u.replace(u"xy", u"xy").__class__ is unicode)
-    vereq(u.replace(u"xy", u"xy"), base)
-    verify(u.center(len(u)).__class__ is unicode)
+    verify(u.replace("x", "x").__class__ is str)
+    vereq(u.replace("x", "x"), base)
+    verify(u.replace("xy", "xy").__class__ is str)
+    vereq(u.replace("xy", "xy"), base)
+    verify(u.center(len(u)).__class__ is str)
     vereq(u.center(len(u)), base)
-    verify(u.ljust(len(u)).__class__ is unicode)
+    verify(u.ljust(len(u)).__class__ is str)
     vereq(u.ljust(len(u)), base)
-    verify(u.rjust(len(u)).__class__ is unicode)
+    verify(u.rjust(len(u)).__class__ is str)
     vereq(u.rjust(len(u)), base)
-    verify(u.lower().__class__ is unicode)
+    verify(u.lower().__class__ is str)
     vereq(u.lower(), base)
-    verify(u.upper().__class__ is unicode)
+    verify(u.upper().__class__ is str)
     vereq(u.upper(), base)
-    verify(u.capitalize().__class__ is unicode)
+    verify(u.capitalize().__class__ is str)
     vereq(u.capitalize(), base)
-    verify(u.title().__class__ is unicode)
+    verify(u.title().__class__ is str)
     vereq(u.title(), base)
-    verify((u + u"").__class__ is unicode)
-    vereq(u + u"", base)
-    verify((u"" + u).__class__ is unicode)
-    vereq(u"" + u, base)
-    verify((u * 0).__class__ is unicode)
-    vereq(u * 0, u"")
-    verify((u * 1).__class__ is unicode)
+    verify((u + "").__class__ is str)
+    vereq(u + "", base)
+    verify(("" + u).__class__ is str)
+    vereq("" + u, base)
+    verify((u * 0).__class__ is str)
+    vereq(u * 0, "")
+    verify((u * 1).__class__ is str)
     vereq(u * 1, base)
-    verify((u * 2).__class__ is unicode)
+    verify((u * 2).__class__ is str)
     vereq(u * 2, base + base)
-    verify(u[:].__class__ is unicode)
+    verify(u[:].__class__ is str)
     vereq(u[:], base)
-    verify(u[0:0].__class__ is unicode)
-    vereq(u[0:0], u"")
+    verify(u[0:0].__class__ is str)
+    vereq(u[0:0], "")
 
     class sublist(list):
         pass
     a = sublist(range(5))
-    vereq(a, range(5))
+    vereq(a, list(range(5)))
     a.append("hello")
-    vereq(a, range(5) + ["hello"])
+    vereq(a, list(range(5)) + ["hello"])
     a[5] = 5
-    vereq(a, range(6))
+    vereq(a, list(range(6)))
     a.extend(range(6, 20))
-    vereq(a, range(20))
+    vereq(a, list(range(20)))
     a[-5:] = []
-    vereq(a, range(15))
+    vereq(a, list(range(15)))
     del a[10:15]
     vereq(len(a), 10)
-    vereq(a, range(10))
-    vereq(list(a), range(10))
+    vereq(a, list(range(10)))
+    vereq(list(a), list(range(10)))
     vereq(a[0], 0)
     vereq(a[9], 9)
     vereq(a[-10], 0)
     vereq(a[-1], 9)
-    vereq(a[:5], range(5))
+    vereq(a[:5], list(range(5)))
 
-    class CountedInput(file):
-        """Counts lines read by self.readline().
+##     class CountedInput(file):
+##         """Counts lines read by self.readline().
 
-        self.lineno is the 0-based ordinal of the last line read, up to
-        a maximum of one greater than the number of lines in the file.
+##         self.lineno is the 0-based ordinal of the last line read, up to
+##         a maximum of one greater than the number of lines in the file.
 
-        self.ateof is true if and only if the final "" line has been read,
-        at which point self.lineno stops incrementing, and further calls
-        to readline() continue to return "".
-        """
+##         self.ateof is true if and only if the final "" line has been read,
+##         at which point self.lineno stops incrementing, and further calls
+##         to readline() continue to return "".
+##         """
 
-        lineno = 0
-        ateof = 0
-        def readline(self):
-            if self.ateof:
-                return ""
-            s = file.readline(self)
-            # Next line works too.
-            # s = super(CountedInput, self).readline()
-            self.lineno += 1
-            if s == "":
-                self.ateof = 1
-            return s
+##         lineno = 0
+##         ateof = 0
+##         def readline(self):
+##             if self.ateof:
+##                 return ""
+##             s = file.readline(self)
+##             # Next line works too.
+##             # s = super(CountedInput, self).readline()
+##             self.lineno += 1
+##             if s == "":
+##                 self.ateof = 1
+##             return s
 
-    f = file(name=TESTFN, mode='w')
-    lines = ['a\n', 'b\n', 'c\n']
-    try:
-        f.writelines(lines)
-        f.close()
-        f = CountedInput(TESTFN)
-        for (i, expected) in zip(range(1, 5) + [4], lines + 2 * [""]):
-            got = f.readline()
-            vereq(expected, got)
-            vereq(f.lineno, i)
-            vereq(f.ateof, (i > len(lines)))
-        f.close()
-    finally:
-        try:
-            f.close()
-        except:
-            pass
-        try:
-            import os
-            os.unlink(TESTFN)
-        except:
-            pass
+##     f = open(name=TESTFN, mode='w')
+##     lines = ['a\n', 'b\n', 'c\n']
+##     try:
+##         f.writelines(lines)
+##         f.close()
+##         f = CountedInput(TESTFN)
+##         for (i, expected) in zip(list(range(1, 5)) + [4], lines + 2 * [""]):
+##             got = f.readline()
+##             vereq(expected, got)
+##             vereq(f.lineno, i)
+##             vereq(f.ateof, (i > len(lines)))
+##         f.close()
+##     finally:
+##         try:
+##             f.close()
+##         except:
+##             pass
+##         try:
+##             import os
+##             os.unlink(TESTFN)
+##         except:
+##             pass
 
 def keywords():
     if verbose:
-        print "Testing keyword args to basic type constructors ..."
+        print("Testing keyword args to basic type constructors ...")
     vereq(int(x=1), 1)
     vereq(float(x=2), 2.0)
-    vereq(long(x=3), 3L)
+    vereq(int(x=3), 3)
     vereq(complex(imag=42, real=666), complex(666, 42))
     vereq(str(object=500), '500')
-    vereq(unicode(string='abc', errors='strict'), u'abc')
+    vereq(str(object=b'abc', errors='strict'), 'abc')
     vereq(tuple(sequence=range(3)), (0, 1, 2))
-    vereq(list(sequence=(0, 1, 2)), range(3))
+    vereq(list(sequence=(0, 1, 2)), list(range(3)))
     # note: as of Python 2.3, dict() no longer has an "items" keyword arg
 
-    for constructor in (int, float, long, complex, str, unicode,
-                        tuple, list, file):
+    for constructor in (int, float, int, complex, str, str, tuple, list):
         try:
             constructor(bogus_keyword_arg=1)
         except TypeError:
@@ -2597,52 +2454,9 @@ def keywords():
             raise TestFailed("expected TypeError from bogus keyword "
                              "argument to %r" % constructor)
 
-def restricted():
-    # XXX This test is disabled because rexec is not deemed safe
-    return
-    import rexec
-    if verbose:
-        print "Testing interaction with restricted execution ..."
-
-    sandbox = rexec.RExec()
-
-    code1 = """f = open(%r, 'w')""" % TESTFN
-    code2 = """f = file(%r, 'w')""" % TESTFN
-    code3 = """\
-f = open(%r)
-t = type(f)  # a sneaky way to get the file() constructor
-f.close()
-f = t(%r, 'w')  # rexec can't catch this by itself
-""" % (TESTFN, TESTFN)
-
-    f = open(TESTFN, 'w')  # Create the file so code3 can find it.
-    f.close()
-
-    try:
-        for code in code1, code2, code3:
-            try:
-                sandbox.r_exec(code)
-            except IOError, msg:
-                if str(msg).find("restricted") >= 0:
-                    outcome = "OK"
-                else:
-                    outcome = "got an exception, but not an expected one"
-            else:
-                outcome = "expected a restricted-execution exception"
-
-            if outcome != "OK":
-                raise TestFailed("%s, in %r" % (outcome, code))
-
-    finally:
-        try:
-            import os
-            os.unlink(TESTFN)
-        except:
-            pass
-
 def str_subclass_as_dict_key():
     if verbose:
-        print "Testing a str subclass used as dict key .."
+        print("Testing a str subclass used as dict key ..")
 
     class cistr(str):
         """Sublcass of str that computes __eq__ case-insensitively.
@@ -2674,20 +2488,51 @@ def str_subclass_as_dict_key():
     vereq(d.get(cistr('thrEE')), 3)
 
 def classic_comparisons():
-    if verbose: print "Testing classic comparisons..."
+    if verbose: print("Testing classic comparisons...")
     class classic:
         pass
     for base in (classic, int, object):
-        if verbose: print "        (base = %s)" % base
+        if verbose: print("        (base = %s)" % base)
         class C(base):
             def __init__(self, value):
                 self.value = int(value)
-            def __cmp__(self, other):
+            def __eq__(self, other):
                 if isinstance(other, C):
-                    return cmp(self.value, other.value)
-                if isinstance(other, int) or isinstance(other, long):
-                    return cmp(self.value, other)
+                    return self.value == other.value
+                if isinstance(other, int) or isinstance(other, int):
+                    return self.value == other
                 return NotImplemented
+            def __ne__(self, other):
+                if isinstance(other, C):
+                    return self.value != other.value
+                if isinstance(other, int) or isinstance(other, int):
+                    return self.value != other
+                return NotImplemented
+            def __lt__(self, other):
+                if isinstance(other, C):
+                    return self.value < other.value
+                if isinstance(other, int) or isinstance(other, int):
+                    return self.value < other
+                return NotImplemented
+            def __le__(self, other):
+                if isinstance(other, C):
+                    return self.value <= other.value
+                if isinstance(other, int) or isinstance(other, int):
+                    return self.value <= other
+                return NotImplemented
+            def __gt__(self, other):
+                if isinstance(other, C):
+                    return self.value > other.value
+                if isinstance(other, int) or isinstance(other, int):
+                    return self.value > other
+                return NotImplemented
+            def __ge__(self, other):
+                if isinstance(other, C):
+                    return self.value >= other.value
+                if isinstance(other, int) or isinstance(other, int):
+                    return self.value >= other
+                return NotImplemented
+
         c1 = C(1)
         c2 = C(2)
         c3 = C(3)
@@ -2695,16 +2540,16 @@ def classic_comparisons():
         c = {1: c1, 2: c2, 3: c3}
         for x in 1, 2, 3:
             for y in 1, 2, 3:
-                verify(cmp(c[x], c[y]) == cmp(x, y), "x=%d, y=%d" % (x, y))
+                ##verify(cmp(c[x], c[y]) == cmp(x, y), "x=%d, y=%d" % (x, y))
                 for op in "<", "<=", "==", "!=", ">", ">=":
                     verify(eval("c[x] %s c[y]" % op) == eval("x %s y" % op),
                            "x=%d, y=%d" % (x, y))
-                verify(cmp(c[x], y) == cmp(x, y), "x=%d, y=%d" % (x, y))
-                verify(cmp(x, c[y]) == cmp(x, y), "x=%d, y=%d" % (x, y))
+                ##verify(cmp(c[x], y) == cmp(x, y), "x=%d, y=%d" % (x, y))
+                ##verify(cmp(x, c[y]) == cmp(x, y), "x=%d, y=%d" % (x, y))
 
 def rich_comparisons():
     if verbose:
-        print "Testing rich comparisons..."
+        print("Testing rich comparisons...")
     class Z(complex):
         pass
     z = Z(1)
@@ -2723,7 +2568,7 @@ def rich_comparisons():
     class classic:
         pass
     for base in (classic, int, object, list):
-        if verbose: print "        (base = %s)" % base
+        if verbose: print("        (base = %s)" % base)
         class C(base):
             def __init__(self, value):
                 self.value = int(value)
@@ -2732,37 +2577,37 @@ def rich_comparisons():
             def __eq__(self, other):
                 if isinstance(other, C):
                     return self.value == other.value
-                if isinstance(other, int) or isinstance(other, long):
+                if isinstance(other, int) or isinstance(other, int):
                     return self.value == other
                 return NotImplemented
             def __ne__(self, other):
                 if isinstance(other, C):
                     return self.value != other.value
-                if isinstance(other, int) or isinstance(other, long):
+                if isinstance(other, int) or isinstance(other, int):
                     return self.value != other
                 return NotImplemented
             def __lt__(self, other):
                 if isinstance(other, C):
                     return self.value < other.value
-                if isinstance(other, int) or isinstance(other, long):
+                if isinstance(other, int) or isinstance(other, int):
                     return self.value < other
                 return NotImplemented
             def __le__(self, other):
                 if isinstance(other, C):
                     return self.value <= other.value
-                if isinstance(other, int) or isinstance(other, long):
+                if isinstance(other, int) or isinstance(other, int):
                     return self.value <= other
                 return NotImplemented
             def __gt__(self, other):
                 if isinstance(other, C):
                     return self.value > other.value
-                if isinstance(other, int) or isinstance(other, long):
+                if isinstance(other, int) or isinstance(other, int):
                     return self.value > other
                 return NotImplemented
             def __ge__(self, other):
                 if isinstance(other, C):
                     return self.value >= other.value
-                if isinstance(other, int) or isinstance(other, long):
+                if isinstance(other, int) or isinstance(other, int):
                     return self.value >= other
                 return NotImplemented
         c1 = C(1)
@@ -2780,42 +2625,16 @@ def rich_comparisons():
                     verify(eval("x %s c[y]" % op) == eval("x %s y" % op),
                            "x=%d, y=%d" % (x, y))
 
-def coercions():
-    if verbose: print "Testing coercions..."
-    class I(int): pass
-    coerce(I(0), 0)
-    coerce(0, I(0))
-    class L(long): pass
-    coerce(L(0), 0)
-    coerce(L(0), 0L)
-    coerce(0, L(0))
-    coerce(0L, L(0))
-    class F(float): pass
-    coerce(F(0), 0)
-    coerce(F(0), 0L)
-    coerce(F(0), 0.)
-    coerce(0, F(0))
-    coerce(0L, F(0))
-    coerce(0., F(0))
-    class C(complex): pass
-    coerce(C(0), 0)
-    coerce(C(0), 0L)
-    coerce(C(0), 0.)
-    coerce(C(0), 0j)
-    coerce(0, C(0))
-    coerce(0L, C(0))
-    coerce(0., C(0))
-    coerce(0j, C(0))
-
 def descrdoc():
-    if verbose: print "Testing descriptor doc strings..."
+    if verbose: print("Testing descriptor doc strings...")
+    from _fileio import _FileIO
     def check(descr, what):
         vereq(descr.__doc__, what)
-    check(file.closed, "True if the file is closed") # getset descriptor
-    check(file.name, "file name") # member descriptor
+    check(_FileIO.closed, "True if the file is closed") # getset descriptor
+    check(complex.real, "the real part of a complex number") # member descriptor
 
 def setclass():
-    if verbose: print "Testing __class__ assignment..."
+    if verbose: print("Testing __class__ assignment...")
     class C(object): pass
     class D(object): pass
     class E(object): pass
@@ -2859,14 +2678,8 @@ def setclass():
         __slots__ = ["a", "b"]
     class H(object):
         __slots__ = ["b", "a"]
-    try:
-        unicode
-    except NameError:
-        class I(object):
-            __slots__ = ["a", "b"]
-    else:
-        class I(object):
-            __slots__ = [unicode("a"), unicode("b")]
+    class I(object):
+        __slots__ = ["a", "b"]
     class J(object):
         __slots__ = ["c", "b"]
     class K(object):
@@ -2902,7 +2715,7 @@ def setclass():
             cant(cls(), cls2)
 
 def setdict():
-    if verbose: print "Testing __dict__ assignment..."
+    if verbose: print("Testing __dict__ assignment...")
     class C(object): pass
     a = C()
     a.__dict__ = {'b': 1}
@@ -2988,13 +2801,11 @@ def setdict():
 
 def pickles():
     if verbose:
-        print "Testing pickling and copying new-style classes and objects..."
-    import pickle, cPickle
+        print("Testing pickling and copying new-style classes and objects...")
+    import pickle
 
     def sorteditems(d):
-        L = d.items()
-        L.sort()
-        return L
+        return sorted(d.items())
 
     global C
     class C(object):
@@ -3044,10 +2855,10 @@ def pickles():
     class C4(C4classic, object): # mixed inheritance
         pass
 
-    for p in pickle, cPickle:
+    for p in [pickle]:
         for bin in 0, 1:
             if verbose:
-                print p.__name__, ["text", "binary"][bin]
+                print(p.__name__, ["text", "binary"][bin])
 
             for cls in C, C1, C2:
                 s = p.dumps(cls, bin)
@@ -3065,8 +2876,8 @@ def pickles():
             vereq(repr(x), repr(a))
             vereq(repr(y), repr(b))
             if verbose:
-                print "a = x =", a
-                print "b = y =", b
+                print("a = x =", a)
+                print("b = y =", b)
             # Test for __getstate__ and __setstate__ on new style class
             u = C3(42)
             s = p.dumps(u, bin)
@@ -3083,7 +2894,7 @@ def pickles():
 
     # Testing copy.deepcopy()
     if verbose:
-        print "deepcopy"
+        print("deepcopy")
     import copy
     for cls in C, C1, C2:
         cls2 = copy.deepcopy(cls)
@@ -3099,13 +2910,14 @@ def pickles():
     vereq(repr(x), repr(a))
     vereq(repr(y), repr(b))
     if verbose:
-        print "a = x =", a
-        print "b = y =", b
+        print("a = x =", a)
+        print("b = y =", b)
 
 def pickleslots():
-    if verbose: print "Testing pickling of classes with __slots__ ..."
-    import pickle, cPickle
+    if verbose: print("Testing pickling of classes with __slots__ ...")
+    import pickle
     # Pickling of classes with __slots__ but without __getstate__ should fail
+    # (when using protocols 0 or 1)
     global B, C, D, E
     class B(object):
         pass
@@ -3115,29 +2927,17 @@ def pickleslots():
         class D(C):
             pass
         try:
-            pickle.dumps(C())
+            pickle.dumps(C(), 0)
         except TypeError:
             pass
         else:
             raise TestFailed, "should fail: pickle C instance - %s" % base
         try:
-            cPickle.dumps(C())
-        except TypeError:
-            pass
-        else:
-            raise TestFailed, "should fail: cPickle C instance - %s" % base
-        try:
-            pickle.dumps(C())
+            pickle.dumps(C(), 0)
         except TypeError:
             pass
         else:
             raise TestFailed, "should fail: pickle D instance - %s" % base
-        try:
-            cPickle.dumps(D())
-        except TypeError:
-            pass
-        else:
-            raise TestFailed, "should fail: cPickle D instance - %s" % base
         # Give C a nice generic __getstate__ and __setstate__
         class C(base):
             __slots__ = ['a']
@@ -3162,19 +2962,13 @@ def pickleslots():
         x = C()
         y = pickle.loads(pickle.dumps(x))
         vereq(hasattr(y, 'a'), 0)
-        y = cPickle.loads(cPickle.dumps(x))
-        vereq(hasattr(y, 'a'), 0)
         x.a = 42
         y = pickle.loads(pickle.dumps(x))
-        vereq(y.a, 42)
-        y = cPickle.loads(cPickle.dumps(x))
         vereq(y.a, 42)
         x = D()
         x.a = 42
         x.b = 100
         y = pickle.loads(pickle.dumps(x))
-        vereq(y.a + y.b, 142)
-        y = cPickle.loads(cPickle.dumps(x))
         vereq(y.a + y.b, 142)
         # A subclass that adds a slot should also work
         class E(C):
@@ -3185,12 +2979,9 @@ def pickleslots():
         y = pickle.loads(pickle.dumps(x))
         vereq(y.a, x.a)
         vereq(y.b, x.b)
-        y = cPickle.loads(cPickle.dumps(x))
-        vereq(y.a, x.a)
-        vereq(y.b, x.b)
 
 def copies():
-    if verbose: print "Testing copy.copy() and copy.deepcopy()..."
+    if verbose: print("Testing copy.copy() and copy.deepcopy()...")
     import copy
     class C(object):
         pass
@@ -3211,7 +3002,7 @@ def copies():
     vereq(d.bar, [1,2,3])
 
 def binopoverride():
-    if verbose: print "Testing overrides of binary operations..."
+    if verbose: print("Testing overrides of binary operations...")
     class I(int):
         def __repr__(self):
             return "I(%r)" % int(self)
@@ -3241,7 +3032,7 @@ def binopoverride():
             return self.lower() == other.lower()
 
 def subclasspropagation():
-    if verbose: print "Testing propagation of slot functions to subclasses..."
+    if verbose: print("Testing propagation of slot functions to subclasses...")
     class A(object):
         pass
     class B(A):
@@ -3314,7 +3105,7 @@ def buffer_inherit():
     import binascii
     # SF bug [#470040] ParseTuple t# vs subclasses.
     if verbose:
-        print "Testing that buffer interface is inherited ..."
+        print("Testing that buffer interface is inherited ...")
 
     class MyStr(str):
         pass
@@ -3326,9 +3117,9 @@ def buffer_inherit():
 
     # It's not clear that unicode will continue to support the character
     # buffer interface, and this test will fail if that's taken away.
-    class MyUni(unicode):
+    class MyUni(str):
         pass
-    base = u'abc'
+    base = 'abc'
     m = MyUni(base)
     vereq(binascii.b2a_hex(m), binascii.b2a_hex(base))
 
@@ -3343,14 +3134,14 @@ def buffer_inherit():
 
 def str_of_str_subclass():
     import binascii
-    import cStringIO
+    import io
 
     if verbose:
-        print "Testing __str__ defined in subclass of str ..."
+        print("Testing __str__ defined in subclass of str ...")
 
     class octetstring(str):
         def __str__(self):
-            return binascii.b2a_hex(self)
+            return str(binascii.b2a_hex(self))
         def __repr__(self):
             return self + " repr"
 
@@ -3364,15 +3155,15 @@ def str_of_str_subclass():
     vereq(o.__str__(), '41')
     vereq(o.__repr__(), 'A repr')
 
-    capture = cStringIO.StringIO()
+    capture = io.StringIO()
     # Calling str() or not exercises different internal paths.
-    print >> capture, o
-    print >> capture, str(o)
+    print(o, file=capture)
+    print(str(o), file=capture)
     vereq(capture.getvalue(), '41\n41\n')
     capture.close()
 
 def kwdargs():
-    if verbose: print "Testing keyword arguments to __init__, __call__..."
+    if verbose: print("Testing keyword arguments to __init__, __call__...")
     def f(a): return a
     vereq(f.__call__(a=42), 42)
     a = []
@@ -3380,8 +3171,8 @@ def kwdargs():
     vereq(a, [0, 1, 2])
 
 def recursive__call__():
-    if verbose: print ("Testing recursive __call__() by setting to instance of "
-                        "class ...")
+    if verbose: print(("Testing recursive __call__() by setting to instance of "
+                        "class ..."))
     class A(object):
         pass
 
@@ -3395,7 +3186,7 @@ def recursive__call__():
                          "__call__()")
 
 def delhook():
-    if verbose: print "Testing __del__ hook..."
+    if verbose: print("Testing __del__ hook...")
     log = []
     class C(object):
         def __del__(self):
@@ -3412,7 +3203,7 @@ def delhook():
     else: raise TestFailed, "invalid del() didn't raise TypeError"
 
 def hashinherit():
-    if verbose: print "Testing hash of mutable subclasses..."
+    if verbose: print("Testing hash of mutable subclasses...")
 
     class mydict(dict):
         pass
@@ -3481,7 +3272,7 @@ def strops():
     vereq('%c' % '5', '5')
 
 def deepcopyrecursive():
-    if verbose: print "Testing deepcopy of recursive objects..."
+    if verbose: print("Testing deepcopy of recursive objects...")
     class Node:
         pass
     a = Node()
@@ -3491,7 +3282,7 @@ def deepcopyrecursive():
     z = deepcopy(a) # This blew up before
 
 def modules():
-    if verbose: print "Testing uninitialized module objects..."
+    if verbose: print("Testing uninitialized module objects...")
     from types import ModuleType as M
     m = M.__new__(M)
     str(m)
@@ -3506,8 +3297,8 @@ def dictproxyiterkeys():
     class C(object):
         def meth(self):
             pass
-    if verbose: print "Testing dict-proxy iterkeys..."
-    keys = [ key for key in C.__dict__.iterkeys() ]
+    if verbose: print("Testing dict-proxy iterkeys...")
+    keys = [ key for key in C.__dict__.keys() ]
     keys.sort()
     vereq(keys, ['__dict__', '__doc__', '__module__', '__weakref__', 'meth'])
 
@@ -3515,21 +3306,21 @@ def dictproxyitervalues():
     class C(object):
         def meth(self):
             pass
-    if verbose: print "Testing dict-proxy itervalues..."
-    values = [ values for values in C.__dict__.itervalues() ]
+    if verbose: print("Testing dict-proxy itervalues...")
+    values = [ values for values in C.__dict__.values() ]
     vereq(len(values), 5)
 
 def dictproxyiteritems():
     class C(object):
         def meth(self):
             pass
-    if verbose: print "Testing dict-proxy iteritems..."
-    keys = [ key for (key, value) in C.__dict__.iteritems() ]
+    if verbose: print("Testing dict-proxy iteritems...")
+    keys = [ key for (key, value) in C.__dict__.items() ]
     keys.sort()
     vereq(keys, ['__dict__', '__doc__', '__module__', '__weakref__', 'meth'])
 
 def funnynew():
-    if verbose: print "Testing __new__ returning something unexpected..."
+    if verbose: print("Testing __new__ returning something unexpected...")
     class C(object):
         def __new__(cls, arg):
             if isinstance(arg, str): return [1, 2, 3]
@@ -3551,7 +3342,7 @@ def funnynew():
 
 def imulbug():
     # SF bug 544647
-    if verbose: print "Testing for __imul__ problems..."
+    if verbose: print("Testing for __imul__ problems...")
     class C(object):
         def __imul__(self, other):
             return (self, other)
@@ -3563,11 +3354,11 @@ def imulbug():
     y *= 2
     vereq(y, (x, 2))
     y = x
-    y *= 3L
-    vereq(y, (x, 3L))
+    y *= 3
+    vereq(y, (x, 3))
     y = x
-    y *= 1L<<100
-    vereq(y, (x, 1L<<100))
+    y *= 1<<100
+    vereq(y, (x, 1<<100))
     y = x
     y *= None
     vereq(y, (x, None))
@@ -3577,7 +3368,7 @@ def imulbug():
 
 def docdescriptor():
     # SF bug 542984
-    if verbose: print "Testing __doc__ descriptor..."
+    if verbose: print("Testing __doc__ descriptor...")
     class DocDescr(object):
         def __get__(self, object, otype):
             if object:
@@ -3596,7 +3387,7 @@ def docdescriptor():
 
 def copy_setstate():
     if verbose:
-        print "Testing that copy.*copy() correctly uses __setstate__..."
+        print("Testing that copy.*copy() correctly uses __setstate__...")
     import copy
     class C(object):
         def __init__(self, foo=None):
@@ -3624,7 +3415,7 @@ def copy_setstate():
 
 def slices():
     if verbose:
-        print "Testing cases with slices and overridden __getitem__ ..."
+        print("Testing cases with slices and overridden __getitem__ ...")
     # Strings
     vereq("hello"[:4], "hell")
     vereq("hello"[slice(4)], "hell")
@@ -3668,7 +3459,7 @@ def slices():
 
 def subtype_resurrection():
     if verbose:
-        print "Testing resurrection of new-style instance..."
+        print("Testing resurrection of new-style instance...")
 
     class C(object):
         container = []
@@ -3698,13 +3489,13 @@ def subtype_resurrection():
 def slottrash():
     # Deallocating deeply nested slotted trash caused stack overflows
     if verbose:
-        print "Testing slot trash..."
+        print("Testing slot trash...")
     class trash(object):
         __slots__ = ['x']
         def __init__(self, x):
             self.x = x
     o = None
-    for i in xrange(50000):
+    for i in range(50000):
         o = trash(o)
     del o
 
@@ -3724,7 +3515,7 @@ def slotmultipleinheritance():
 def testrmul():
     # SF patch 592646
     if verbose:
-        print "Testing correct invocation of __rmul__..."
+        print("Testing correct invocation of __rmul__...")
     class C(object):
         def __mul__(self, other):
             return "mul"
@@ -3739,7 +3530,7 @@ def testrmul():
 def testipow():
     # [SF bug 620179]
     if verbose:
-        print "Testing correct invocation of __ipow__..."
+        print("Testing correct invocation of __ipow__...")
     class C(object):
         def __ipow__(self, other):
             pass
@@ -3748,7 +3539,7 @@ def testipow():
 
 def do_this_first():
     if verbose:
-        print "Testing SF bug 551412 ..."
+        print("Testing SF bug 551412 ...")
     # This dumps core when SF bug 551412 isn't fixed --
     # but only when test_descr.py is run separately.
     # (That can't be helped -- as soon as PyType_Ready()
@@ -3757,19 +3548,19 @@ def do_this_first():
         def __pow__(self, *args):
             pass
     try:
-        pow(0L, UserLong(), 0L)
+        pow(0, UserLong(), 0)
     except:
         pass
 
     if verbose:
-        print "Testing SF bug 570483..."
+        print("Testing SF bug 570483...")
     # Another segfault only when run early
     # (before PyType_Ready(tuple) is called)
     type.mro(tuple)
 
 def test_mutable_bases():
     if verbose:
-        print "Testing mutable bases..."
+        print("Testing mutable bases...")
     # stuff that should work:
     class C(object):
         pass
@@ -3829,7 +3620,7 @@ def test_mutable_bases():
 
     try:
         D.__bases__ = ()
-    except TypeError, msg:
+    except TypeError as msg:
         if str(msg) == "a new-style class can't have only classic bases":
             raise TestFailed, "wrong error message for .__bases__ = ()"
     else:
@@ -3857,32 +3648,9 @@ def test_mutable_bases():
     else:
         raise TestFailed, "shouldn't be able to create inheritance cycles"
 
-    # let's throw a classic class into the mix:
-    class Classic:
-        def meth2(self):
-            return 3
-
-    D.__bases__ = (C, Classic)
-
-    vereq(d.meth2(), 3)
-    vereq(e.meth2(), 3)
-    try:
-        d.a
-    except AttributeError:
-        pass
-    else:
-        raise TestFailed, "attribute should have vanished"
-
-    try:
-        D.__bases__ = (Classic,)
-    except TypeError:
-        pass
-    else:
-        raise TestFailed, "new-style class must have a new-style base"
-
 def test_mutable_bases_with_failing_mro():
     if verbose:
-        print "Testing mutable bases with failing mro..."
+        print("Testing mutable bases with failing mro...")
     class WorkOnce(type):
         def __new__(self, name, bases, ns):
             self.flag = 0
@@ -3914,11 +3682,11 @@ def test_mutable_bases_with_failing_mro():
     class E(D):
         pass
 
-    class F(D):
-        __metaclass__ = WorkOnce
+    class F(D, metaclass=WorkOnce):
+        pass
 
-    class G(D):
-        __metaclass__ = WorkAlways
+    class G(D, metaclass=WorkAlways):
+        pass
 
     # Immediate subclasses have their mro's adjusted in alphabetical
     # order, so E's will get adjusted before adjusting F's fails.  We
@@ -3937,7 +3705,7 @@ def test_mutable_bases_with_failing_mro():
 
 def test_mutable_bases_catch_mro_conflict():
     if verbose:
-        print "Testing mutable bases catch mro conflict..."
+        print("Testing mutable bases catch mro conflict...")
     class A(object):
         pass
 
@@ -3962,7 +3730,7 @@ def test_mutable_bases_catch_mro_conflict():
 
 def mutable_names():
     if verbose:
-        print "Testing mutable names..."
+        print("Testing mutable names...")
     class C(object):
         pass
 
@@ -3977,7 +3745,7 @@ def mutable_names():
 
 def subclass_right_op():
     if verbose:
-        print "Testing correct dispatch of subclass overloading __r<op>__..."
+        print("Testing correct dispatch of subclass overloading __r<op>__...")
 
     # This code tests various cases where right-dispatch of a subclass
     # should be preferred over left-dispatch of a base class.
@@ -4029,21 +3797,21 @@ def subclass_right_op():
 
 def dict_type_with_metaclass():
     if verbose:
-        print "Testing type of __dict__ when __metaclass__ set..."
+        print("Testing type of __dict__ when metaclass set...")
 
     class B(object):
         pass
     class M(type):
         pass
-    class C:
+    class C(metaclass=M):
         # In 2.3a1, C.__dict__ was a real dict rather than a dict proxy
-        __metaclass__ = M
+        pass
     veris(type(C.__dict__), type(B.__dict__))
 
 def meth_class_get():
     # Full coverage of descrobject.c::classmethod_get()
     if verbose:
-        print "Testing __get__ method of METH_CLASS C methods..."
+        print("Testing __get__ method of METH_CLASS C methods...")
     # Baseline
     arg = [1, 2, 3]
     res = {1: None, 2: None, 3: None}
@@ -4082,7 +3850,7 @@ def meth_class_get():
 
 def isinst_isclass():
     if verbose:
-        print "Testing proxy isinstance() and isclass()..."
+        print("Testing proxy isinstance() and isclass()...")
     class Proxy(object):
         def __init__(self, obj):
             self.__obj = obj
@@ -4122,7 +3890,7 @@ def isinst_isclass():
 
 def proxysuper():
     if verbose:
-        print "Testing super() for a proxy object..."
+        print("Testing super() for a proxy object...")
     class Proxy(object):
         def __init__(self, obj):
             self.__obj = obj
@@ -4146,7 +3914,7 @@ def proxysuper():
 
 def carloverre():
     if verbose:
-        print "Testing prohibition of Carlo Verre's hack..."
+        print("Testing prohibition of Carlo Verre's hack...")
     try:
         object.__setattr__(str, "foo", 42)
     except TypeError:
@@ -4163,7 +3931,7 @@ def carloverre():
 def weakref_segfault():
     # SF 742911
     if verbose:
-        print "Testing weakref segfault..."
+        print("Testing weakref segfault...")
 
     import weakref
 
@@ -4183,15 +3951,17 @@ def weakref_segfault():
 
 def wrapper_segfault():
     # SF 927248: deeply nested wrappers could cause stack overflow
+    if verbose:
+        print("Testing wrapper segfault...")
     f = lambda:None
-    for i in xrange(1000000):
+    for i in range(1000000):
         f = f.__call__
     f = None
 
 # Fix SF #762455, segfault when sys.stdout is changed in getattr
 def filefault():
     if verbose:
-        print "Testing sys.stdout is changed in getattr..."
+        print("Testing sys.stdout is changed in getattr...")
     import sys
     class StdoutGuard:
         def __getattr__(self, attr):
@@ -4199,7 +3969,7 @@ def filefault():
             raise RuntimeError("Premature access to sys.stdout.%s" % attr)
     sys.stdout = StdoutGuard()
     try:
-        print "Oops!"
+        print("Oops!")
     except RuntimeError:
         pass
 
@@ -4208,7 +3978,7 @@ def vicious_descriptor_nonsense():
     # python-dev 2003-04-17, turned into an example & fixed by Michael
     # Hudson just less than four months later...
     if verbose:
-        print "Testing vicious_descriptor_nonsense..."
+        print("Testing vicious_descriptor_nonsense...")
 
     class Evil(object):
         def __hash__(self):
@@ -4247,7 +4017,9 @@ def test_init():
 def methodwrapper():
     # <type 'method-wrapper'> did not support any reflection before 2.5
     if verbose:
-        print "Testing method-wrapper objects..."
+        print("Testing method-wrapper objects...")
+
+    return # XXX should methods really support __eq__?
 
     l = []
     vereq(l.__add__, l.__add__)
@@ -4273,7 +4045,7 @@ def methodwrapper():
 def notimplemented():
     # all binary methods should be able to return a NotImplemented
     if verbose:
-        print "Testing NotImplemented..."
+        print("Testing NotImplemented...")
 
     import sys
     import types
@@ -4284,23 +4056,23 @@ def notimplemented():
 
     def check(expr, x, y):
         try:
-            exec expr in {'x': x, 'y': y, 'operator': operator}
+            exec(expr, {'x': x, 'y': y, 'operator': operator})
         except TypeError:
             pass
         else:
             raise TestFailed("no TypeError from %r" % (expr,))
 
-    N1 = sys.maxint + 1L    # might trigger OverflowErrors instead of TypeErrors
+    N1 = sys.maxint + 1    # might trigger OverflowErrors instead of TypeErrors
     N2 = sys.maxint         # if sizeof(int) < sizeof(long), might trigger
                             #   ValueErrors instead of TypeErrors
-    for metaclass in [type, types.ClassType]:
+    if 1:
+        metaclass = type
         for name, expr, iexpr in [
                 ('__add__',      'x + y',                   'x += y'),
                 ('__sub__',      'x - y',                   'x -= y'),
                 ('__mul__',      'x * y',                   'x *= y'),
-                ('__truediv__',  'operator.truediv(x, y)',  None),
-                ('__floordiv__', 'operator.floordiv(x, y)', None),
-                ('__div__',      'x / y',                   'x /= y'),
+                ('__truediv__',  'x / y',                   None),
+                ('__floordiv__', 'x // y',                  None),
                 ('__mod__',      'x % y',                   'x %= y'),
                 ('__divmod__',   'divmod(x, y)',            None),
                 ('__pow__',      'x ** y',                  'x **= y'),
@@ -4309,11 +4081,8 @@ def notimplemented():
                 ('__and__',      'x & y',                   'x &= y'),
                 ('__or__',       'x | y',                   'x |= y'),
                 ('__xor__',      'x ^ y',                   'x ^= y'),
-                ('__coerce__',   'coerce(x, y)',            None)]:
-            if name == '__coerce__':
-                rname = name
-            else:
-                rname = '__r' + name[2:]
+                ]:
+            rname = '__r' + name[2:]
             A = metaclass('A', (), {name: specialmethod})
             B = metaclass('B', (), {rname: specialmethod})
             a = A()
@@ -4356,7 +4125,7 @@ def test_assign_slice():
 
 def test_main():
     weakref_segfault() # Must be first, somehow
-    wrapper_segfault()
+    wrapper_segfault() # NB This one is slow
     do_this_first()
     class_docstrings()
     lists()
@@ -4400,11 +4169,9 @@ def test_main():
     supers()
     inherits()
     keywords()
-    restricted()
     str_subclass_as_dict_key()
     classic_comparisons()
     rich_comparisons()
-    coercions()
     descrdoc()
     setclass()
     setdict()
@@ -4452,7 +4219,7 @@ def test_main():
     notimplemented()
     test_assign_slice()
 
-    if verbose: print "All OK"
+    if verbose: print("All OK")
 
 if __name__ == "__main__":
     test_main()

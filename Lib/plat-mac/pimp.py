@@ -76,7 +76,7 @@ def getDefaultDatabase(experimental=False):
         url = DEFAULT_PIMPDATABASE_FMT % (PIMP_VERSION, status, pyvers, osname, rel, machine)
         try:
             urllib2.urlopen(url)
-        except urllib2.HTTPError, arg:
+        except urllib2.HTTPError as arg:
             pass
         else:
             break
@@ -148,8 +148,8 @@ class PimpUrllibDownloader(PimpDownloader):
         self.update("Downloading %s: opening connection" % url)
         keepgoing = True
         download = urllib2.urlopen(url)
-        if download.headers.has_key("content-length"):
-            length = long(download.headers['content-length'])
+        if "content-length" in download.headers:
+            length = int(download.headers['content-length'])
         else:
             length = -1
 
@@ -230,7 +230,7 @@ class PimpTarUnpacker(PimpUnpacker):
                             #print 'SKIP', member.name
                         else:
                             member.name = newprefix + member.name[len(oldprefix):]
-                            print '    ', member.name
+                            print('    ', member.name)
                         break
                     elif oldprefix2 and member.name[:len(oldprefix2)] == oldprefix2:
                         if newprefix is None:
@@ -416,7 +416,7 @@ class PimpDatabase:
 
         for p in packages:
             p = dict(p)
-            if p.has_key('Download-URL'):
+            if 'Download-URL' in p:
                 p['Download-URL'] = urllib.basejoin(url, p['Download-URL'])
             flavor = p.get('Flavor')
             if flavor == 'source':
@@ -548,9 +548,9 @@ class PimpPackage:
         installed through pimp, return the name in (parentheses)."""
 
         rv = self._dict['Name']
-        if self._dict.has_key('Version'):
+        if 'Version' in self._dict:
             rv = rv + '-%s' % self._dict['Version']
-        if self._dict.has_key('Flavor'):
+        if 'Flavor' in self._dict:
             rv = rv + '-%s' % self._dict['Flavor']
         if self._dict.get('Flavor') == 'hidden':
             # Pseudo-package, show in parentheses
@@ -589,14 +589,14 @@ class PimpPackage:
             }
         installTest = self._dict['Install-test'].strip() + '\n'
         try:
-            exec installTest in namespace
-        except ImportError, arg:
+            exec(installTest, namespace)
+        except ImportError as arg:
             return "no", str(arg)
-        except _scriptExc_NotInstalled, arg:
+        except _scriptExc_NotInstalled as arg:
             return "no", str(arg)
-        except _scriptExc_OldInstalled, arg:
+        except _scriptExc_OldInstalled as arg:
             return "old", str(arg)
-        except _scriptExc_BadInstalled, arg:
+        except _scriptExc_BadInstalled as arg:
             return "bad", str(arg)
         except:
             sys.stderr.write("-------------------------------------\n")
@@ -643,9 +643,9 @@ class PimpPackage:
                 descr = str(item)
             else:
                 name = item['Name']
-                if item.has_key('Version'):
+                if 'Version' in item:
                     name = name + '-' + item['Version']
-                if item.has_key('Flavor'):
+                if 'Flavor' in item:
                     name = name + '-' + item['Flavor']
                 pkg = self._db.find(name)
                 if not pkg:
@@ -758,7 +758,7 @@ class PimpPackage:
                 if line[0] == '#':
                     continue
                 if line[:6] == 'import':
-                    exec line
+                    exec(line)
                     continue
                 if line[-1] == '\n':
                     line = line[:-1]
@@ -796,10 +796,10 @@ class PimpPackage_binary(PimpPackage):
         If output is given it should be a file-like object and it
         will receive a log of what happened."""
 
-        if self._dict.has_key('Install-command'):
+        if 'Install-command' in self._dict:
             return "%s: Binary package cannot have Install-command" % self.fullname()
 
-        if self._dict.has_key('Pre-install-command'):
+        if 'Pre-install-command' in self._dict:
             if _cmd(output, '/tmp', self._dict['Pre-install-command']):
                 return "pre-install %s: running \"%s\" failed" % \
                     (self.fullname(), self._dict['Pre-install-command'])
@@ -832,7 +832,7 @@ class PimpPackage_binary(PimpPackage):
 
         self.afterInstall()
 
-        if self._dict.has_key('Post-install-command'):
+        if 'Post-install-command' in self._dict:
             if _cmd(output, '/tmp', self._dict['Post-install-command']):
                 return "%s: post-install: running \"%s\" failed" % \
                     (self.fullname(), self._dict['Post-install-command'])
@@ -857,7 +857,7 @@ class PimpPackage_source(PimpPackage):
         If output is given it should be a file-like object and it
         will receive a log of what happened."""
 
-        if self._dict.has_key('Pre-install-command'):
+        if 'Pre-install-command' in self._dict:
             if _cmd(output, self._buildDirname, self._dict['Pre-install-command']):
                 return "pre-install %s: running \"%s\" failed" % \
                     (self.fullname(), self._dict['Pre-install-command'])
@@ -894,7 +894,7 @@ class PimpPackage_source(PimpPackage):
 
         self.afterInstall()
 
-        if self._dict.has_key('Post-install-command'):
+        if 'Post-install-command' in self._dict:
             if _cmd(output, self._buildDirname, self._dict['Post-install-command']):
                 return "post-install %s: running \"%s\" failed" % \
                     (self.fullname(), self._dict['Post-install-command'])
@@ -912,10 +912,10 @@ class PimpPackage_installer(PimpPackage):
         If output is given it should be a file-like object and it
         will receive a log of what happened."""
 
-        if self._dict.has_key('Post-install-command'):
+        if 'Post-install-command' in self._dict:
             return "%s: Installer package cannot have Post-install-command" % self.fullname()
 
-        if self._dict.has_key('Pre-install-command'):
+        if 'Pre-install-command' in self._dict:
             if _cmd(output, '/tmp', self._dict['Pre-install-command']):
                 return "pre-install %s: running \"%s\" failed" % \
                     (self.fullname(), self._dict['Pre-install-command'])
@@ -1021,8 +1021,8 @@ def _run(mode, verbose, force, args, prefargs, watcher):
     elif mode =='list':
         if not args:
             args = db.listnames()
-        print "%-20.20s\t%s" % ("Package", "Description")
-        print
+        print("%-20.20s\t%s" % ("Package", "Description"))
+        print()
         for pkgname in args:
             pkg = db.find(pkgname)
             if pkg:
@@ -1030,21 +1030,21 @@ def _run(mode, verbose, force, args, prefargs, watcher):
                 pkgname = pkg.fullname()
             else:
                 description = 'Error: no such package'
-            print "%-20.20s\t%s" % (pkgname, description)
+            print("%-20.20s\t%s" % (pkgname, description))
             if verbose:
-                print "\tHome page:\t", pkg.homepage()
+                print("\tHome page:\t", pkg.homepage())
                 try:
-                    print "\tDownload URL:\t", pkg.downloadURL()
+                    print("\tDownload URL:\t", pkg.downloadURL())
                 except KeyError:
                     pass
                 description = pkg.description()
                 description = '\n\t\t\t\t\t'.join(description.splitlines())
-                print "\tDescription:\t%s" % description
+                print("\tDescription:\t%s" % description)
     elif mode =='status':
         if not args:
             args = db.listnames()
-            print "%-20.20s\t%s\t%s" % ("Package", "Installed", "Message")
-            print
+            print("%-20.20s\t%s\t%s" % ("Package", "Installed", "Message"))
+            print()
         for pkgname in args:
             pkg = db.find(pkgname)
             if pkg:
@@ -1053,7 +1053,7 @@ def _run(mode, verbose, force, args, prefargs, watcher):
             else:
                 status = 'error'
                 msg = 'No such package'
-            print "%-20.20s\t%-9.9s\t%s" % (pkgname, status, msg)
+            print("%-20.20s\t%-9.9s\t%s" % (pkgname, status, msg))
             if verbose and status == "no":
                 prereq = pkg.prerequisites()
                 for pkg, msg in prereq:
@@ -1061,22 +1061,22 @@ def _run(mode, verbose, force, args, prefargs, watcher):
                         pkg = ''
                     else:
                         pkg = pkg.fullname()
-                    print "%-20.20s\tRequirement: %s %s" % ("", pkg, msg)
+                    print("%-20.20s\tRequirement: %s %s" % ("", pkg, msg))
     elif mode == 'install':
         if not args:
-            print 'Please specify packages to install'
+            print('Please specify packages to install')
             sys.exit(1)
         inst = PimpInstaller(db)
         for pkgname in args:
             pkg = db.find(pkgname)
             if not pkg:
-                print '%s: No such package' % pkgname
+                print('%s: No such package' % pkgname)
                 continue
             list, messages = inst.prepareInstall(pkg, force)
             if messages and not force:
-                print "%s: Not installed:" % pkgname
+                print("%s: Not installed:" % pkgname)
                 for m in messages:
-                    print "\t", m
+                    print("\t", m)
             else:
                 if verbose:
                     output = sys.stdout
@@ -1084,26 +1084,26 @@ def _run(mode, verbose, force, args, prefargs, watcher):
                     output = None
                 messages = inst.install(list, output)
                 if messages:
-                    print "%s: Not installed:" % pkgname
+                    print("%s: Not installed:" % pkgname)
                     for m in messages:
-                        print "\t", m
+                        print("\t", m)
 
 def main():
     """Minimal commandline tool to drive pimp."""
 
     import getopt
     def _help():
-        print "Usage: pimp [options] -s [package ...]  List installed status"
-        print "       pimp [options] -l [package ...]  Show package information"
-        print "       pimp [options] -i package ...    Install packages"
-        print "       pimp -d                          Dump database to stdout"
-        print "       pimp -V                          Print version number"
-        print "Options:"
-        print "       -v     Verbose"
-        print "       -f     Force installation"
-        print "       -D dir Set destination directory"
-        print "              (default: %s)" % DEFAULT_INSTALLDIR
-        print "       -u url URL for database"
+        print("Usage: pimp [options] -s [package ...]  List installed status")
+        print("       pimp [options] -l [package ...]  Show package information")
+        print("       pimp [options] -i package ...    Install packages")
+        print("       pimp -d                          Dump database to stdout")
+        print("       pimp -V                          Print version number")
+        print("Options:")
+        print("       -v     Verbose")
+        print("       -f     Force installation")
+        print("       -D dir Set destination directory")
+        print("              (default: %s)" % DEFAULT_INSTALLDIR)
+        print("       -u url URL for database")
         sys.exit(1)
 
     class _Watcher:
@@ -1153,7 +1153,7 @@ def main():
     if not mode:
         _help()
     if mode == 'version':
-        print 'Pimp version %s; module name is %s' % (PIMP_VERSION, __name__)
+        print('Pimp version %s; module name is %s' % (PIMP_VERSION, __name__))
     else:
         _run(mode, verbose, force, args, prefargs, watcher)
 

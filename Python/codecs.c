@@ -167,7 +167,10 @@ PyObject *_PyCodec_Lookup(const char *encoding)
     }
 
     /* Cache and return the result */
-    PyDict_SetItem(interp->codec_search_cache, v, result);
+    if (PyDict_SetItem(interp->codec_search_cache, v, result) < 0) {
+	Py_DECREF(result);
+	goto onError;
+    }
     Py_DECREF(args);
     return result;
 
@@ -443,18 +446,13 @@ static void wrong_exception_type(PyObject *exc)
 {
     PyObject *type = PyObject_GetAttrString(exc, "__class__");
     if (type != NULL) {
-	PyObject *name = PyObject_GetAttrString(type, "__name__");
-	Py_DECREF(type);
-	if (name != NULL) {
-	    PyObject *string = PyObject_Str(name);
-	    Py_DECREF(name);
-	    if (string != NULL) {
-	        PyErr_Format(PyExc_TypeError,
-		    "don't know how to handle %.400s in error callback",
-		    PyString_AS_STRING(string));
-	        Py_DECREF(string);
-	    }
-	}
+        PyObject *name = PyObject_GetAttrString(type, "__name__");
+        Py_DECREF(type);
+        if (name != NULL) {
+            PyErr_Format(PyExc_TypeError,
+                         "don't know how to handle %S in error callback", name);
+            Py_DECREF(name);
+        }
     }
 }
 
@@ -468,7 +466,6 @@ PyObject *PyCodec_StrictErrors(PyObject *exc)
 }
 
 
-#ifdef Py_USING_UNICODE
 PyObject *PyCodec_IgnoreErrors(PyObject *exc)
 {
     Py_ssize_t end;
@@ -729,7 +726,6 @@ PyObject *PyCodec_BackslashReplaceErrors(PyObject *exc)
 	return NULL;
     }
 }
-#endif
 
 static PyObject *strict_errors(PyObject *self, PyObject *exc)
 {
@@ -737,7 +733,6 @@ static PyObject *strict_errors(PyObject *self, PyObject *exc)
 }
 
 
-#ifdef Py_USING_UNICODE
 static PyObject *ignore_errors(PyObject *self, PyObject *exc)
 {
     return PyCodec_IgnoreErrors(exc);
@@ -760,7 +755,6 @@ static PyObject *backslashreplace_errors(PyObject *self, PyObject *exc)
 {
     return PyCodec_BackslashReplaceErrors(exc);
 }
-#endif
 
 static int _PyCodecRegistry_Init(void)
 {
@@ -777,7 +771,6 @@ static int _PyCodecRegistry_Init(void)
 		METH_O
 	    }
 	},
-#ifdef Py_USING_UNICODE
 	{
 	    "ignore",
 	    {
@@ -810,7 +803,6 @@ static int _PyCodecRegistry_Init(void)
 		METH_O
 	    }
 	}
-#endif
     };
 
     PyInterpreterState *interp = PyThreadState_GET()->interp;

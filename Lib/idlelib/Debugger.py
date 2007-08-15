@@ -2,9 +2,9 @@ import os
 import bdb
 import types
 from Tkinter import *
-from WindowList import ListedToplevel
-from ScrolledList import ScrolledList
-import macosxSupport
+from .WindowList import ListedToplevel
+from .ScrolledList import ScrolledList
+from . import macosxSupport
 
 
 class Idb(bdb.Bdb):
@@ -253,7 +253,8 @@ class Debugger:
         if self.vsource.get():
             self.sync_source_line()
 
-    def show_frame(self, (frame, lineno)):
+    def show_frame(self, stackitem):
+        frame, lineno = stackitem
         self.frame = frame
         self.show_variables()
 
@@ -348,8 +349,7 @@ class StackViewer(ScrolledList):
             funcname = code.co_name
             import linecache
             sourceline = linecache.getline(filename, lineno)
-            import string
-            sourceline = string.strip(sourceline)
+            sourceline = sourceline.strip()
             if funcname in ("?", "", None):
                 item = "%s, line %d: %s" % (modname, lineno, sourceline)
             else:
@@ -440,15 +440,14 @@ class NamespaceViewer:
             return
         subframe = self.subframe
         frame = self.frame
-        for c in subframe.children.values():
+        for c in list(subframe.children.values()):
             c.destroy()
         self.dict = None
         if not dict:
             l = Label(subframe, text="None")
             l.grid(row=0, column=0)
         else:
-            names = dict.keys()
-            names.sort()
+            names = sorted(dict)
             row = 0
             for name in names:
                 value = dict[name]

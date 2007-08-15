@@ -1,5 +1,5 @@
 import httplib
-import StringIO
+import io
 import sys
 import socket
 
@@ -8,10 +8,12 @@ from unittest import TestCase
 from test import test_support
 
 class FakeSocket:
-    def __init__(self, text, fileclass=StringIO.StringIO):
+    def __init__(self, text, fileclass=io.BytesIO):
+        if isinstance(text, str):
+            text = bytes(text)
         self.text = text
         self.fileclass = fileclass
-        self.data = ''
+        self.data = b''
 
     def sendall(self, data):
         self.data += data
@@ -21,20 +23,20 @@ class FakeSocket:
             raise httplib.UnimplementedFileMode()
         return self.fileclass(self.text)
 
-class NoEOFStringIO(StringIO.StringIO):
+class NoEOFStringIO(io.BytesIO):
     """Like StringIO, but raises AssertionError on EOF.
 
     This is used below to test that httplib doesn't try to read
     more from the underlying file than it should.
     """
     def read(self, n=-1):
-        data = StringIO.StringIO.read(self, n)
+        data = io.BytesIO.read(self, n)
         if data == '':
             raise AssertionError('caller tried to read past EOF')
         return data
 
     def readline(self, length=None):
-        data = StringIO.StringIO.readline(self, length)
+        data = io.BytesIO.readline(self, length)
         if data == '':
             raise AssertionError('caller tried to read past EOF')
         return data
@@ -54,7 +56,7 @@ class HeaderTests(TestCase):
                 kv = item.split(':')
                 if len(kv) > 1:
                     # item is a 'Key: Value' header string
-                    lcKey = kv[0].lower()
+                    lcKey = kv[0].decode('ascii').lower()
                     self.count.setdefault(lcKey, 0)
                     self.count[lcKey] += 1
                 list.append(self, item)
@@ -80,7 +82,7 @@ class BasicTest(TestCase):
         sock = FakeSocket(body)
         resp = httplib.HTTPResponse(sock)
         resp.begin()
-        self.assertEqual(resp.read(), 'Text')
+        self.assertEqual(resp.read(), b"Text")
         resp.close()
 
         body = "HTTP/1.1 400.100 Not Ok\r\n\r\nText"
@@ -92,21 +94,22 @@ class BasicTest(TestCase):
         # Check invalid host_port
 
         for hp in ("www.python.org:abc", "www.python.org:"):
-            self.assertRaises(httplib.InvalidURL, httplib.HTTP, hp)
+            self.assertRaises(httplib.InvalidURL, httplib.HTTPConnection, hp)
 
-        for hp, h, p in (("[fe80::207:e9ff:fe9b]:8000", "fe80::207:e9ff:fe9b", 8000),
+        for hp, h, p in (("[fe80::207:e9ff:fe9b]:8000",
+                          "fe80::207:e9ff:fe9b", 8000),
                          ("www.python.org:80", "www.python.org", 80),
                          ("www.python.org", "www.python.org", 80),
                          ("[fe80::207:e9ff:fe9b]", "fe80::207:e9ff:fe9b", 80)):
-            http = httplib.HTTP(hp)
-            c = http._conn
-            if h != c.host: self.fail("Host incorrectly parsed: %s != %s" % (h, c.host))
-            if p != c.port: self.fail("Port incorrectly parsed: %s != %s" % (p, c.host))
+            c = httplib.HTTPConnection(hp)
+            self.assertEqual(h, c.host)
+            self.assertEqual(p, c.port)
 
     def test_response_headers(self):
         # test response with multiple message headers with the same field name.
         text = ('HTTP/1.1 200 OK\r\n'
-                'Set-Cookie: Customer="WILE_E_COYOTE"; Version="1"; Path="/acme"\r\n'
+                'Set-Cookie: Customer="WILE_E_COYOTE"; '
+                'Version="1"; Path="/acme"\r\n'
                 'Set-Cookie: Part_Number="Rocket_Launcher_0001"; Version="1";'
                 ' Path="/acme"\r\n'
                 '\r\n'
@@ -118,8 +121,7 @@ class BasicTest(TestCase):
         r = httplib.HTTPResponse(s)
         r.begin()
         cookies = r.getheader("Set-Cookie")
-        if cookies != hdr:
-            self.fail("multiple headers not combined properly")
+        self.assertEqual(cookies, hdr)
 
     def test_read_head(self):
         # Test that the library doesn't attempt to read any data
@@ -136,8 +138,8 @@ class BasicTest(TestCase):
         resp.close()
 
     def test_send_file(self):
-        expected = 'GET /foo HTTP/1.1\r\nHost: example.com\r\n' \
-                   'Accept-Encoding: identity\r\nContent-Length:'
+        expected = ('GET /foo HTTP/1.1\r\nHost: example.com\r\n'
+                   'Accept-Encoding: identity\r\nContent-Length:')
 
         body = open(__file__, 'rb')
         conn = httplib.HTTPConnection('example.com')
@@ -167,9 +169,9 @@ class TimeoutTest(TestCase):
         self.serv = None
 
     def testTimeoutAttribute(self):
-        '''This will prove that the timeout gets through
-        HTTPConnection and into the socket.
-        '''
+        # This will prove that the timeout gets through HTTPConnection
+        # and into the socket.
+
         # default
         httpConn = httplib.HTTPConnection(HOST, PORT)
         httpConn.connect()

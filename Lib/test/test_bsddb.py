@@ -12,10 +12,14 @@ from test import test_support
 class TestBSDDB(unittest.TestCase):
     openflag = 'c'
 
+    def do_open(self, *args, **kw):
+        # openmethod is a list so that it's not mistaken as an instance method
+        return bsddb.StringValues(bsddb.StringKeys(self.openmethod[0](*args, **kw)))
+
     def setUp(self):
-        self.f = self.openmethod[0](self.fname, self.openflag, cachesize=32768)
+        self.f = self.do_open(self.fname, self.openflag, cachesize=32768)
         self.d = dict(q='Guido', w='van', e='Rossum', r='invented', t='Python', y='')
-        for k, v in self.d.iteritems():
+        for k, v in self.d.items():
             self.f[k] = v
 
     def tearDown(self):
@@ -29,7 +33,7 @@ class TestBSDDB(unittest.TestCase):
             pass
 
     def test_getitem(self):
-        for k, v in self.d.iteritems():
+        for k, v in self.d.items():
             self.assertEqual(self.f[k], v)
 
     def test_len(self):
@@ -47,8 +51,8 @@ class TestBSDDB(unittest.TestCase):
             # so finish here.
             return
         self.f.close()
-        self.f = self.openmethod[0](self.fname, 'w')
-        for k, v in self.d.iteritems():
+        self.f = self.do_open(self.fname, 'w')
+        for k, v in self.d.items():
             self.assertEqual(self.f[k], v)
 
     def assertSetEquals(self, seqn1, seqn2):
@@ -61,9 +65,9 @@ class TestBSDDB(unittest.TestCase):
         self.assertSetEquals(d.keys(), f.keys())
         self.assertSetEquals(d.values(), f.values())
         self.assertSetEquals(d.items(), f.items())
-        self.assertSetEquals(d.iterkeys(), f.iterkeys())
-        self.assertSetEquals(d.itervalues(), f.itervalues())
-        self.assertSetEquals(d.iteritems(), f.iteritems())
+        self.assertSetEquals(d.keys(), f.keys())
+        self.assertSetEquals(d.values(), f.values())
+        self.assertSetEquals(d.items(), f.items())
 
     def test_iter_while_modifying_values(self):
         if not hasattr(self.f, '__iter__'):
@@ -72,7 +76,7 @@ class TestBSDDB(unittest.TestCase):
         di = iter(self.d)
         while 1:
             try:
-                key = di.next()
+                key = next(di)
                 self.d[key] = 'modified '+key
             except StopIteration:
                 break
@@ -83,7 +87,7 @@ class TestBSDDB(unittest.TestCase):
         fi = iter(self.f)
         while 1:
             try:
-                key = fi.next()
+                key = next(fi)
                 self.f[key] = 'modified '+key
             except StopIteration:
                 break
@@ -94,10 +98,10 @@ class TestBSDDB(unittest.TestCase):
         if not hasattr(self.f, 'iteritems'):
             return
 
-        di = self.d.iteritems()
+        di = iter(self.d.items())
         while 1:
             try:
-                k, v = di.next()
+                k, v = next(di)
                 self.d[k] = 'modified '+v
             except StopIteration:
                 break
@@ -105,10 +109,10 @@ class TestBSDDB(unittest.TestCase):
         # it should behave the same as a dict.  modifying values
         # of existing keys should not break iteration.  (adding
         # or removing keys should)
-        fi = self.f.iteritems()
+        fi = iter(self.f.items())
         while 1:
             try:
-                k, v = fi.next()
+                k, v = next(fi)
                 self.f[k] = 'modified '+v
             except StopIteration:
                 break
@@ -117,13 +121,13 @@ class TestBSDDB(unittest.TestCase):
 
     def test_first_next_looping(self):
         items = [self.f.first()]
-        for i in xrange(1, len(self.f)):
+        for i in range(1, len(self.f)):
             items.append(self.f.next())
         self.assertSetEquals(items, self.d.items())
 
     def test_previous_last_looping(self):
         items = [self.f.last()]
-        for i in xrange(1, len(self.f)):
+        for i in range(1, len(self.f)):
             items.append(self.f.previous())
         self.assertSetEquals(items, self.d.items())
 
@@ -134,11 +138,6 @@ class TestBSDDB(unittest.TestCase):
         for k in self.d:
             self.assert_(k in self.f)
         self.assert_('not here' not in self.f)
-
-    def test_has_key(self):
-        for k in self.d:
-            self.assert_(self.f.has_key(k))
-        self.assert_(not self.f.has_key('not here'))
 
     def test_clear(self):
         self.f.clear()
@@ -152,42 +151,42 @@ class TestBSDDB(unittest.TestCase):
         # in pybsddb's _DBWithCursor this causes an internal DBCursor
         # object is created.  Other test_ methods in this class could
         # inadvertently cause the deadlock but an explicit test is needed.
-        if debug: print "A"
+        if debug: print("A")
         k,v = self.f.first()
-        if debug: print "B", k
+        if debug: print("B", k)
         self.f[k] = "deadlock.  do not pass go.  do not collect $200."
-        if debug: print "C"
+        if debug: print("C")
         # if the bsddb implementation leaves the DBCursor open during
         # the database write and locking+threading support is enabled
         # the cursor's read lock will deadlock the write lock request..
 
         # test the iterator interface (if present)
         if hasattr(self.f, 'iteritems'):
-            if debug: print "D"
-            i = self.f.iteritems()
-            k,v = i.next()
-            if debug: print "E"
+            if debug: print("D")
+            i = iter(self.f.items())
+            k,v = next(i)
+            if debug: print("E")
             self.f[k] = "please don't deadlock"
-            if debug: print "F"
+            if debug: print("F")
             while 1:
                 try:
-                    k,v = i.next()
+                    k,v = next(i)
                 except StopIteration:
                     break
-            if debug: print "F2"
+            if debug: print("F2")
 
             i = iter(self.f)
-            if debug: print "G"
+            if debug: print("G")
             while i:
                 try:
-                    if debug: print "H"
-                    k = i.next()
-                    if debug: print "I"
+                    if debug: print("H")
+                    k = next(i)
+                    if debug: print("I")
                     self.f[k] = "deadlocks-r-us"
-                    if debug: print "J"
+                    if debug: print("J")
                 except StopIteration:
                     i = None
-            if debug: print "K"
+            if debug: print("K")
 
         # test the legacy cursor interface mixed with writes
         self.assert_(self.f.first()[0] in self.d)
@@ -203,10 +202,10 @@ class TestBSDDB(unittest.TestCase):
         # do the bsddb._DBWithCursor _iter_mixin internals leak cursors?
         nc1 = len(self.f._cursor_refs)
         # create iterator
-        i = self.f.iteritems()
+        i = iter(self.f.iteritems())
         nc2 = len(self.f._cursor_refs)
         # use the iterator (should run to the first yield, creating the cursor)
-        k, v = i.next()
+        k, v = next(i)
         nc3 = len(self.f._cursor_refs)
         # destroy the iterator; this should cause the weakref callback
         # to remove the cursor object from self.f._cursor_refs
@@ -215,7 +214,7 @@ class TestBSDDB(unittest.TestCase):
 
         self.assertEqual(nc1, nc2)
         self.assertEqual(nc1, nc4)
-        self.assert_(nc3 == nc1+1)
+        self.assertEqual(nc3, nc1+1)
 
     def test_popitem(self):
         k, v = self.f.popitem()
@@ -245,14 +244,13 @@ class TestBSDDB(unittest.TestCase):
         new = dict(y='life', u='of', i='brian')
         self.f.update(new)
         self.d.update(new)
-        for k, v in self.d.iteritems():
+        for k, v in self.d.items():
             self.assertEqual(self.f[k], v)
 
     def test_keyordering(self):
         if self.openmethod[0] is not bsddb.btopen:
             return
-        keys = self.d.keys()
-        keys.sort()
+        keys = sorted(self.d.keys())
         self.assertEqual(self.f.first()[0], keys[0])
         self.assertEqual(self.f.next()[0], keys[1])
         self.assertEqual(self.f.last()[0], keys[-1])

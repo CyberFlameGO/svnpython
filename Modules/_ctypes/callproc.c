@@ -1,8 +1,3 @@
-/*****************************************************************
-  This file should be kept compatible with Python 2.3, see PEP 291.
- *****************************************************************/
-
-
 /*
  * History: First version dated from 3/97, derived from my SCMLIB version
  * for win16.
@@ -370,7 +365,7 @@ PyCArg_repr(PyCArgObject *self)
 			self->tag, self);
 		break;
 	}
-	return PyString_FromString(buffer);
+	return PyUnicode_FromString(buffer);
 }
 
 static PyMemberDef PyCArgType_members[] = {
@@ -496,12 +491,6 @@ static int ConvParam(PyObject *obj, Py_ssize_t index, struct argument *pa)
 		return 0;
 	}
 
-	if (PyInt_Check(obj)) {
-		pa->ffi_type = &ffi_type_sint;
-		pa->value.i = PyInt_AS_LONG(obj);
-		return 0;
-	}
-
 	if (PyLong_Check(obj)) {
 		pa->ffi_type = &ffi_type_sint;
 		pa->value.i = (long)PyLong_AsUnsignedLong(obj);
@@ -517,9 +506,9 @@ static int ConvParam(PyObject *obj, Py_ssize_t index, struct argument *pa)
 		return 0;
 	}
 
-	if (PyString_Check(obj)) {
+	if (PyBytes_Check(obj)) {
 		pa->ffi_type = &ffi_type_pointer;
-		pa->value.p = PyString_AS_STRING(obj);
+		pa->value.p = PyBytes_AsString(obj);
 		Py_INCREF(obj);
 		pa->keep = obj;
 		return 0;
@@ -1521,11 +1510,7 @@ resize(PyObject *self, PyObject *args)
 	Py_ssize_t size;
 
 	if (!PyArg_ParseTuple(args,
-#if (PY_VERSION_HEX < 0x02050000)
-			      "Oi:resize",
-#else
 			      "On:resize",
-#endif
 			      &obj, &size))
 		return NULL;
 
@@ -1537,11 +1522,7 @@ resize(PyObject *self, PyObject *args)
 	}
 	if (size < dict->size) {
 		PyErr_Format(PyExc_ValueError,
-#if PY_VERSION_HEX < 0x02050000
-			     "minimum size is %d",
-#else
 			     "minimum size is %zd",
-#endif
 			     dict->size);
 		return NULL;
 	}

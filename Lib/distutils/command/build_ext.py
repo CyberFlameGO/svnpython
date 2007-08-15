@@ -8,7 +8,7 @@ extensions ASAP)."""
 
 __revision__ = "$Id$"
 
-import sys, os, string, re
+import sys, os, re
 from types import *
 from distutils.core import Command
 from distutils.errors import *
@@ -137,8 +137,8 @@ class build_ext (Command):
         plat_py_include = sysconfig.get_python_inc(plat_specific=1)
         if self.include_dirs is None:
             self.include_dirs = self.distribution.include_dirs or []
-        if type(self.include_dirs) is StringType:
-            self.include_dirs = string.split(self.include_dirs, os.pathsep)
+        if isinstance(self.include_dirs, basestring):
+            self.include_dirs = self.include_dirs.split(os.pathsep)
 
         # Put the Python "system" include dir at the end, so that
         # any local include dirs take precedence.
@@ -146,7 +146,7 @@ class build_ext (Command):
         if plat_py_include != py_include:
             self.include_dirs.append(plat_py_include)
 
-        if type(self.libraries) is StringType:
+        if isinstance(self.libraries, basestring):
             self.libraries = [self.libraries]
 
         # Life is easier if we're not forever checking for None, so
@@ -155,13 +155,13 @@ class build_ext (Command):
             self.libraries = []
         if self.library_dirs is None:
             self.library_dirs = []
-        elif type(self.library_dirs) is StringType:
-            self.library_dirs = string.split(self.library_dirs, os.pathsep)
+        elif isinstance(self.library_dirs, basestring):
+            self.library_dirs = self.library_dirs.split(os.pathsep)
 
         if self.rpath is None:
             self.rpath = []
-        elif type(self.rpath) is StringType:
-            self.rpath = string.split(self.rpath, os.pathsep)
+        elif isinstance(self.rpath, basestring):
+            self.rpath = self.rpath.split(os.pathsep)
 
         # for extensions under windows use different directories
         # for Release and Debug builds.
@@ -212,14 +212,14 @@ class build_ext (Command):
         # symbols can be separated with commas.
 
         if self.define:
-            defines = string.split(self.define, ',')
+            defines = self.define.split(',')
             self.define = map(lambda symbol: (symbol, '1'), defines)
 
         # The option for macros to undefine is also a string from the
         # option parsing, but has to be a list.  Multiple symbols can also
         # be separated with commas here.
         if self.undef:
-            self.undef = string.split(self.undef, ',')
+            self.undef = self.undef.split(',')
 
         if self.swig_opts is None:
             self.swig_opts = []
@@ -321,7 +321,7 @@ class build_ext (Command):
                       ("each element of 'ext_modules' option must be an "
                        "Extension instance or 2-tuple")
 
-            if not (type(ext_name) is StringType and
+            if not (isinstance(ext_name, basestring) and
                     extension_name_re.match(ext_name)):
                 raise DistutilsSetupError, \
                       ("first element of each tuple in 'ext_modules' "
@@ -350,7 +350,7 @@ class build_ext (Command):
 
             # Medium-easy stuff: same syntax/semantics, different names.
             ext.runtime_library_dirs = build_info.get('rpath')
-            if build_info.has_key('def_file'):
+            if 'def_file' in build_info:
                 log.warn("'def_file' element of build info dict "
                          "no longer supported")
 
@@ -429,8 +429,8 @@ class build_ext (Command):
             # ignore build-lib -- put the compiled extension into
             # the source tree along with pure Python modules
 
-            modpath = string.split(fullname, '.')
-            package = string.join(modpath[0:-1], '.')
+            modpath = fullname.split('.')
+            package = '.'.join(modpath[0:-1])
             base = modpath[-1]
 
             build_py = self.get_finalized_command('build_py')
@@ -618,15 +618,15 @@ class build_ext (Command):
         """
 
         from distutils.sysconfig import get_config_var
-        ext_path = string.split(ext_name, '.')
+        ext_path = ext_name.split('.')
         # OS/2 has an 8 character module (extension) limit :-(
         if os.name == "os2":
             ext_path[len(ext_path) - 1] = ext_path[len(ext_path) - 1][:8]
         # extensions in debug_mode are named 'module_d.pyd' under windows
         so_ext = get_config_var('SO')
         if os.name == 'nt' and self.debug:
-            return apply(os.path.join, ext_path) + '_d' + so_ext
-        return apply(os.path.join, ext_path) + so_ext
+            return os.path.join(*ext_path) + '_d' + so_ext
+        return os.path.join(*ext_path) + so_ext
 
     def get_export_symbols (self, ext):
         """Return the list of symbols that a shared extension has to
@@ -635,7 +635,7 @@ class build_ext (Command):
         the .pyd file (DLL) must export the module "init" function.
         """
 
-        initfunc_name = "init" + string.split(ext.name,'.')[-1]
+        initfunc_name = "init" + ext.name.split('.')[-1]
         if initfunc_name not in ext.export_symbols:
             ext.export_symbols.append(initfunc_name)
         return ext.export_symbols

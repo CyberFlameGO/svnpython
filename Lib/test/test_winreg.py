@@ -4,7 +4,7 @@
 from _winreg import *
 import os, sys
 
-from test.test_support import verify, have_unicode
+from test.test_support import verify
 
 test_key_name = "SOFTWARE\\Python Registry Test Key - Delete Me"
 
@@ -13,17 +13,10 @@ test_data = [
     ("String Val",    "A string value",                        REG_SZ),
     ("StringExpand",  "The path is %path%",                    REG_EXPAND_SZ),
     ("Multi-string",  ["Lots", "of", "string", "values"],      REG_MULTI_SZ),
-    ("Raw Data",      ("binary"+chr(0)+"data"),                REG_BINARY),
+    ("Raw Data",      bytes("binary"+chr(0)+"data"),           REG_BINARY),
     ("Big String",    "x"*(2**14-1),                           REG_SZ),
-    ("Big Binary",    "x"*(2**14),                             REG_BINARY),
+    ("Big Binary",    b"x"*(2**14),                            REG_BINARY),
 ]
-if have_unicode:
-    test_data+=[
-    (unicode("Unicode Val"),  unicode("A Unicode value"),                      REG_SZ,),
-    ("UnicodeExpand", unicode("The path is %path%"),                   REG_EXPAND_SZ),
-    ("Multi-unicode", [unicode("Lots"), unicode("of"), unicode("unicode"), unicode("values")], REG_MULTI_SZ),
-    ("Multi-mixed",   [unicode("Unicode"), unicode("and"), "string", "values"],REG_MULTI_SZ),
-    ]
 
 def WriteTestData(root_key):
     # Set the default value for this key.
@@ -65,7 +58,7 @@ def WriteTestData(root_key):
 def ReadTestData(root_key):
     # Check we can get default value for this key.
     val = QueryValue(root_key, test_key_name)
-    verify(val=="Default value", "Registry didn't give back the correct value")
+    verify(type(val) is str and val=="Default value", "Registry didn't give back the correct value")
 
     key = OpenKey(root_key, test_key_name)
     # Read the sub-keys
@@ -133,7 +126,7 @@ def TestAll(root_key):
 
 # Test on my local machine.
 TestAll(HKEY_CURRENT_USER)
-print "Local registry tests worked"
+print("Local registry tests worked")
 try:
     remote_name = sys.argv[sys.argv.index("--remote")+1]
 except (IndexError, ValueError):
@@ -142,15 +135,15 @@ except (IndexError, ValueError):
 if remote_name is not None:
     try:
         remote_key = ConnectRegistry(remote_name, HKEY_CURRENT_USER)
-    except EnvironmentError, exc:
-        print "Could not connect to the remote machine -", exc.strerror
+    except EnvironmentError as exc:
+        print("Could not connect to the remote machine -", exc.strerror)
         remote_key = None
     if remote_key is not None:
         TestAll(remote_key)
-        print "Remote registry tests worked"
+        print("Remote registry tests worked")
 else:
-    print "Remote registry calls can be tested using",
-    print "'test_winreg.py --remote \\\\machine_name'"
+    print("Remote registry calls can be tested using", end=' ')
+    print("'test_winreg.py --remote \\\\machine_name'")
     # perform minimal ConnectRegistry test which just invokes it
     h = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
     h.Close()

@@ -96,12 +96,20 @@ def my_import(name):
 \end{funcdesc}
 
 \begin{funcdesc}{basestring}{}
-  This abstract type is the superclass for \class{str} and \class{unicode}.
+  This abstract type is the superclass for \class{str}.
   It cannot be called or instantiated, but it can be used to test whether
-  an object is an instance of \class{str} or \class{unicode}.
+  an object is an instance of \class{str}.
   \code{isinstance(obj, basestring)} is equivalent to
-  \code{isinstance(obj, (str, unicode))}.
+  \code{isinstance(obj, str)}.
   \versionadded{2.3}
+\end{funcdesc}
+
+\begin{funcdesc}{bin}{x}
+  Convert an integer number to a binary string.
+  The result is a valid Python expression.  If \var{x} is not a Python
+  \class{int} object, it has to define an \method{__index__} method
+  that returns an integer.
+  \versionadded{3.0}
 \end{funcdesc}
 
 \begin{funcdesc}{bool}{\optional{x}}
@@ -118,21 +126,13 @@ def my_import(name):
                   \constant{False}]{2.3}
 \end{funcdesc}
 
-\begin{funcdesc}{callable}{object}
-  Return true if the \var{object} argument appears callable, false if
-  not.  If this returns true, it is still possible that a call fails,
-  but if it is false, calling \var{object} will never succeed.  Note
-  that classes are callable (calling a class returns a new instance);
-  class instances are callable if they have a \method{__call__()}
-  method.
-\end{funcdesc}
-
 \begin{funcdesc}{chr}{i}
-  Return a string of one character whose \ASCII{} code is the integer
-  \var{i}.  For example, \code{chr(97)} returns the string \code{'a'}.
-  This is the inverse of \function{ord()}.  The argument must be in
-  the range [0..255], inclusive; \exception{ValueError} will be raised
-  if \var{i} is outside that range.
+  Return the Unicode string of one character whose Unicode code is the
+  integer \var{i}.  For example, \code{unichr(97)} returns the string
+  \code{u'a'}.  This is the inverse of \function{ord()} for Unicode
+  strings.  The valid range for the argument depends how Python was
+  configured -- it may be either UCS2 [0..0xFFFF] or UCS4 [0..0x10FFFF].
+  \exception{ValueError} is raised otherwise.
 \end{funcdesc}
 
 \begin{funcdesc}{classmethod}{function}
@@ -178,7 +178,7 @@ class C:
 \begin{funcdesc}{compile}{source, filename, mode\optional{,
                           flags\optional{, dont_inherit}}}
   Compile the \var{source} into a code object.  Code objects can be
-  executed by an \keyword{exec} statement or evaluated by a call to
+  executed by a call to \function{exec()} or evaluated by a call to
   \function{eval()}.  The \var{filename} argument should
   give the file from which the code was read; pass some recognizable value
   if it wasn't read from a file (\code{'<string>'} is commonly used).
@@ -342,14 +342,12 @@ class C:
 \end{funcdesc}
 
 \begin{funcdesc}{enumerate}{iterable}
-  Return an enumerate object. \var{iterable} must be a sequence, an
-  iterator, or some other object which supports iteration.  The
-  \method{next()} method of the iterator returned by
-  \function{enumerate()} returns a tuple containing a count (from
-  zero) and the corresponding value obtained from iterating over
-  \var{iterable}.  \function{enumerate()} is useful for obtaining an
-  indexed series: \code{(0, seq[0])}, \code{(1, seq[1])}, \code{(2,
-  seq[2])}, \ldots.
+  Return an enumerate object. \var{iterable} must be a sequence, an iterator, or
+  some other object which supports iteration.  The \method{__next__()} method of
+  the iterator returned by \function{enumerate()} returns a tuple containing a
+  count (from zero) and the corresponding value obtained from iterating over
+  \var{iterable}.  \function{enumerate()} is useful for obtaining an indexed
+  series: \code{(0, seq[0])}, \code{(1, seq[1])}, \code{(2, seq[2])}, \ldots.
   \versionadded{2.3}
 \end{funcdesc}
 
@@ -385,52 +383,45 @@ class C:
   compiled passing \code{'eval'} as the \var{kind} argument.
 
   Hints: dynamic execution of statements is supported by the
-  \keyword{exec} statement.  Execution of statements from a file is
-  supported by the \function{execfile()} function.  The
+  \function{exec()} function.  The
   \function{globals()} and \function{locals()} functions returns the
   current global and local dictionary, respectively, which may be
   useful to pass around for use by \function{eval()} or
-  \function{execfile()}.
+  \function{exec()}.
 \end{funcdesc}
 
-\begin{funcdesc}{execfile}{filename\optional{, globals\optional{, locals}}}
-  This function is similar to the
-  \keyword{exec} statement, but parses a file instead of a string.  It
-  is different from the \keyword{import} statement in that it does not
-  use the module administration --- it reads the file unconditionally
-  and does not create a new module.\footnote{It is used relatively
-  rarely so does not warrant being made into a statement.}
+\begin{funcdesc}{exec}{object\optional{, globals\optional{, locals}}}
+  This function supports dynamic execution of Python code.
+  \var{object} must be either a string, an open file object, or
+  a code object.  If it is a string, the string is parsed as a suite of
+  Python statements which is then executed (unless a syntax error
+  occurs).  If it is an open file, the file is parsed until \EOF{} and
+  executed.  If it is a code object, it is simply executed.  In all
+  cases, the code that's executed is expected to be valid as file
+  input (see the section ``File input'' in the Reference Manual).
+  Be aware that the \keyword{return} and \keyword{yield} statements may
+  not be used outside of function definitions even within the context of
+  code passed to the \function{exec()} function.
+  The return value is \code{None}.
 
-  The arguments are a file name and two optional dictionaries.  The file is
-  parsed and evaluated as a sequence of Python statements (similarly to a
-  module) using the \var{globals} and \var{locals} dictionaries as global and
-  local namespace. If provided, \var{locals} can be any mapping object.
-  \versionchanged[formerly \var{locals} was required to be a dictionary]{2.4}
-  If the \var{locals} dictionary is omitted it defaults to the \var{globals}
-  dictionary. If both dictionaries are omitted, the expression is executed in
-  the environment where \function{execfile()} is called.  The return value is
-  \code{None}.
+  In all cases, if the optional parts are omitted, the code is executed
+  in the current scope.  If only \var{globals} is provided, it must be
+  a dictionary, which will be used for both the global and the local
+  variables.  If \var{globals} and \var{locals} are given, they are used
+  for the global and local variables, respectively.  If provided,
+  \var{locals} can be any mapping object.
 
-  \warning{The default \var{locals} act as described for function
-  \function{locals()} below:  modifications to the default \var{locals}
-  dictionary should not be attempted.  Pass an explicit \var{locals}
-  dictionary if you need to see effects of the code on \var{locals} after
-  function \function{execfile()} returns.  \function{execfile()} cannot
-  be used reliably to modify a function's locals.}
-\end{funcdesc}
+  If the \var{globals} dictionary does not contain a value for the
+  key \code{__builtins__}, a reference to the dictionary of the built-in
+  module \module{__builtin__} is inserted under that key.  That way you
+  can control what builtins are available to the executed code by
+  inserting your own \code{__builtins__} dictionary into \var{globals}
+  before passing it to \function{exec()}.
 
-\begin{funcdesc}{file}{filename\optional{, mode\optional{, bufsize}}}
-  Constructor function for the \class{file} type, described further 
-  in section~\ref{bltin-file-objects}, ``\ulink{File
-  Objects}{bltin-file-objects.html}''.  The constructor's arguments
-  are the same as those of the \function{open()} built-in function
-  described below.
-
-  When opening a file, it's preferable to use \function{open()} instead of 
-  invoking this constructor directly.  \class{file} is more suited to
-  type testing (for example, writing \samp{isinstance(f, file)}).
-
-  \versionadded{2.2}
+  \note{The built-in functions \function{globals()} and \function{locals()}
+        return the current global and local dictionary, respectively, which
+	may be useful to pass around for use as the second and third
+	argument to \function{exec()}.}
 \end{funcdesc}
 
 \begin{funcdesc}{filter}{function, iterable}
@@ -517,8 +508,10 @@ class C:
 \end{funcdesc}
 
 \begin{funcdesc}{hex}{x}
-  Convert an integer number (of any size) to a hexadecimal string.
-  The result is a valid Python expression.
+  Convert an integer number to a hexadecimal string.
+  The result is a valid Python expression.  If \var{x} is not a Python
+  \class{int} object, it has to define an \method{__index__} method
+  that returns an integer.
   \versionchanged[Formerly only returned an unsigned literal]{2.4}
 \end{funcdesc}
 
@@ -530,38 +523,17 @@ class C:
   note: this is the address of the object.)
 \end{funcdesc}
 
-\begin{funcdesc}{input}{\optional{prompt}}
-  Equivalent to \code{eval(raw_input(\var{prompt}))}.
-  \warning{This function is not safe from user errors!  It
-  expects a valid Python expression as input; if the input is not
-  syntactically valid, a \exception{SyntaxError} will be raised.
-  Other exceptions may be raised if there is an error during
-  evaluation.  (On the other hand, sometimes this is exactly what you
-  need when writing a quick script for expert use.)}
-
-  If the \refmodule{readline} module was loaded, then
-  \function{input()} will use it to provide elaborate line editing and
-  history features.
-
-  Consider using the \function{raw_input()} function for general input
-  from users.
-\end{funcdesc}
-
 \begin{funcdesc}{int}{\optional{x\optional{, radix}}}
-  Convert a string or number to a plain integer.  If the argument is a
-  string, it must contain a possibly signed decimal number
-  representable as a Python integer, possibly embedded in whitespace.
-  The \var{radix} parameter gives the base for the
-  conversion and may be any integer in the range [2, 36], or zero.  If
-  \var{radix} is zero, the proper radix is guessed based on the
-  contents of string; the interpretation is the same as for integer
-  literals.  If \var{radix} is specified and \var{x} is not a string,
-  \exception{TypeError} is raised.
-  Otherwise, the argument may be a plain or
-  long integer or a floating point number.  Conversion of floating
-  point numbers to integers truncates (towards zero).
-  If the argument is outside the integer range a long object will
-  be returned instead.  If no arguments are given, returns \code{0}.
+  Convert a string or number to a long integer.  If the argument is a
+  string, it must contain a possibly signed number of
+  arbitrary size, possibly embedded in whitespace. The
+  \var{radix} argument is interpreted in the same way as for
+  \function{int()}, and may only be given when \var{x} is a string.
+  Otherwise, the argument may be another
+  integer or a floating point number, and an integer with
+  the same value is returned.    Conversion of floating
+  point numbers to integers truncates (towards zero).  If no arguments
+  are given, returns \code{0}.
 \end{funcdesc}
 
 \begin{funcdesc}{isinstance}{object, classinfo}
@@ -599,7 +571,7 @@ class C:
   support either of those protocols, \exception{TypeError} is raised.
   If the second argument, \var{sentinel}, is given, then \var{o} must
   be a callable object.  The iterator created in this case will call
-  \var{o} with no arguments for each call to its \method{next()}
+  \var{o} with no arguments for each call to its \method{__next__()}
   method; if the value returned is equal to \var{sentinel},
   \exception{StopIteration} will be raised, otherwise the value will
   be returned.
@@ -632,19 +604,6 @@ class C:
   a function block.  Modifications of free variables may not affect
   the values used by the interpreter.  Free variables are not
   returned in class blocks.
-\end{funcdesc}
-
-\begin{funcdesc}{long}{\optional{x\optional{, radix}}}
-  Convert a string or number to a long integer.  If the argument is a
-  string, it must contain a possibly signed number of
-  arbitrary size, possibly embedded in whitespace. The
-  \var{radix} argument is interpreted in the same way as for
-  \function{int()}, and may only be given when \var{x} is a string.
-  Otherwise, the argument may be a plain or
-  long integer or a floating point number, and a long integer with
-  the same value is returned.    Conversion of floating
-  point numbers to integers truncates (towards zero).  If no arguments
-  are given, returns \code{0L}.
 \end{funcdesc}
 
 \begin{funcdesc}{map}{function, iterable, ...}
@@ -684,6 +643,12 @@ class C:
   \versionchanged[Added support for the optional \var{key} argument]{2.5}
 \end{funcdesc}
 
+\begin{funcdesc}{next}{iterator\optional{, default}}
+  Retrieve the next item from the \var{iterable} by calling its
+  \method{__next__()} method.  If \var{default} is given, it is returned if the
+  iterator is exhausted, otherwise \exception{StopIteration} is raised.
+\end{funcdesc}
+
 \begin{funcdesc}{object}{}
   Return a new featureless object.  \class{object} is a base
   for all new style classes.  It has the methods that are common
@@ -695,8 +660,10 @@ class C:
 \end{funcdesc}
 
 \begin{funcdesc}{oct}{x}
-  Convert an integer number (of any size) to an octal string.  The
-  result is a valid Python expression.
+  Convert an integer number to an octal string.  The
+  result is a valid Python expression.  If \var{x} is not a Python
+  \class{int} object, it has to define an \method{__index__} method
+  that returns an integer.
   \versionchanged[Formerly only returned an unsigned literal]{2.4}
 \end{funcdesc}
 
@@ -774,8 +741,8 @@ class C:
   or the value of the byte when the argument is an 8-bit string.
   For example, \code{ord('a')} returns the integer \code{97},
   \code{ord(u'\e u2020')} returns \code{8224}.  This is the inverse of
-  \function{chr()} for 8-bit strings and of \function{unichr()} for unicode
-  objects.  If a unicode argument is given and Python was built with
+  \function{chr()} for strings.
+  If Python was built with
   UCS2 Unicode, then the character's code point must be in the range
   [0..65535] inclusive; otherwise the string length is two, and a
   \exception{TypeError} will be raised.
@@ -847,7 +814,7 @@ class Parrot(object):
 \end{funcdesc}
 
 \begin{funcdesc}{range}{\optional{start,} stop\optional{, step}}
-  This is a versatile function to create lists containing arithmetic
+  This is a versatile function to create sequences containing arithmetic
   progressions.  It is most often used in \keyword{for} loops.  The
   arguments must be plain integers.  If the \var{step} argument is
   omitted, it defaults to \code{1}.  If the \var{start} argument is
@@ -861,128 +828,21 @@ class Parrot(object):
   \exception{ValueError} is raised).  Example:
 
 \begin{verbatim}
->>> range(10)
+>>> list(range(10))
 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
->>> range(1, 11)
+>>> list(range(1, 11))
 [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
->>> range(0, 30, 5)
+>>> list(range(0, 30, 5))
 [0, 5, 10, 15, 20, 25]
->>> range(0, 10, 3)
+>>> list(range(0, 10, 3))
 [0, 3, 6, 9]
->>> range(0, -10, -1)
+>>> list(range(0, -10, -1))
 [0, -1, -2, -3, -4, -5, -6, -7, -8, -9]
->>> range(0)
+>>> list(range(0))
 []
->>> range(1, 0)
+>>> list(range(1, 0))
 []
 \end{verbatim}
-\end{funcdesc}
-
-\begin{funcdesc}{raw_input}{\optional{prompt}}
-  If the \var{prompt} argument is present, it is written to standard output
-  without a trailing newline.  The function then reads a line from input,
-  converts it to a string (stripping a trailing newline), and returns that.
-  When \EOF{} is read, \exception{EOFError} is raised. Example:
-
-\begin{verbatim}
->>> s = raw_input('--> ')
---> Monty Python's Flying Circus
->>> s
-"Monty Python's Flying Circus"
-\end{verbatim}
-
-  If the \refmodule{readline} module was loaded, then
-  \function{raw_input()} will use it to provide elaborate
-  line editing and history features.
-\end{funcdesc}
-
-\begin{funcdesc}{reduce}{function, iterable\optional{, initializer}}
-  Apply \var{function} of two arguments cumulatively to the items of
-  \var{iterable}, from left to right, so as to reduce the iterable to
-  a single value.  For example, \code{reduce(lambda x, y: x+y, [1, 2,
-  3, 4, 5])} calculates \code{((((1+2)+3)+4)+5)}.  The left argument,
-  \var{x}, is the accumulated value and the right argument, \var{y},
-  is the update value from the \var{iterable}.  If the optional
-  \var{initializer} is present, it is placed before the items of the
-  iterable in the calculation, and serves as a default when the
-  iterable is empty.  If \var{initializer} is not given and
-  \var{iterable} contains only one item, the first item is returned.
-\end{funcdesc}
-
-\begin{funcdesc}{reload}{module}
-  Reload a previously imported \var{module}.  The
-  argument must be a module object, so it must have been successfully
-  imported before.  This is useful if you have edited the module
-  source file using an external editor and want to try out the new
-  version without leaving the Python interpreter.  The return value is
-  the module object (the same as the \var{module} argument).
-
-  When \code{reload(module)} is executed:
-
-\begin{itemize}
-
-    \item Python modules' code is recompiled and the module-level code
-    reexecuted, defining a new set of objects which are bound to names in
-    the module's dictionary.  The \code{init} function of extension
-    modules is not called a second time.
-
-    \item As with all other objects in Python the old objects are only
-    reclaimed after their reference counts drop to zero.
-
-    \item The names in the module namespace are updated to point to
-    any new or changed objects.
-
-    \item Other references to the old objects (such as names external
-    to the module) are not rebound to refer to the new objects and
-    must be updated in each namespace where they occur if that is
-    desired.
-
-\end{itemize}
-
-  There are a number of other caveats:
-
-  If a module is syntactically correct but its initialization fails,
-  the first \keyword{import} statement for it does not bind its name
-  locally, but does store a (partially initialized) module object in
-  \code{sys.modules}.  To reload the module you must first
-  \keyword{import} it again (this will bind the name to the partially
-  initialized module object) before you can \function{reload()} it.
-
-  When a module is reloaded, its dictionary (containing the module's
-  global variables) is retained.  Redefinitions of names will override
-  the old definitions, so this is generally not a problem.  If the new
-  version of a module does not define a name that was defined by the
-  old version, the old definition remains.  This feature can be used
-  to the module's advantage if it maintains a global table or cache of
-  objects --- with a \keyword{try} statement it can test for the
-  table's presence and skip its initialization if desired:
-
-\begin{verbatim}
-try:
-    cache
-except NameError:
-    cache = {}
-\end{verbatim}
-
-
-  It is legal though generally not very useful to reload built-in or
-  dynamically loaded modules, except for \refmodule{sys},
-  \refmodule[main]{__main__} and \refmodule[builtin]{__builtin__}.  In
-  many cases, however, extension modules are not designed to be
-  initialized more than once, and may fail in arbitrary ways when
-  reloaded.
-
-  If a module imports objects from another module using \keyword{from}
-  \ldots{} \keyword{import} \ldots{}, calling \function{reload()} for
-  the other module does not redefine the objects imported from it ---
-  one way around this is to re-execute the \keyword{from} statement,
-  another is to use \keyword{import} and qualified names
-  (\var{module}.\var{name}) instead.
-
-  If a module instantiates instances of a class, reloading the module
-  that defines the class does not affect the method definitions of the
-  instances --- they continue to use the old class definition.  The
-  same is true for derived classes.
 \end{funcdesc}
 
 \begin{funcdesc}{repr}{object}
@@ -1102,14 +962,39 @@ class C:
   \versionchanged[Function decorator syntax added]{2.4}
 \end{funcdesc}
 
-\begin{funcdesc}{str}{\optional{object}}
-  Return a string containing a nicely printable representation of an
-  object.  For strings, this returns the string itself.  The
-  difference with \code{repr(\var{object})} is that
-  \code{str(\var{object})} does not always attempt to return a string
-  that is acceptable to \function{eval()}; its goal is to return a
-  printable string.  If no argument is given, returns the empty
-  string, \code{''}.
+\begin{funcdesc}{str}{\optional{object\optional{, encoding
+				\optional{, errors}}}}
+  Return the Unicode string version of \var{object} using one of the
+  following modes:
+
+  If \var{encoding} and/or \var{errors} are given, \code{unicode()}
+  will decode the object which can either be an 8-bit string or a
+  character buffer using the codec for \var{encoding}. The
+  \var{encoding} parameter is a string giving the name of an encoding;
+  if the encoding is not known, \exception{LookupError} is raised.
+  Error handling is done according to \var{errors}; this specifies the
+  treatment of characters which are invalid in the input encoding.  If
+  \var{errors} is \code{'strict'} (the default), a
+  \exception{ValueError} is raised on errors, while a value of
+  \code{'ignore'} causes errors to be silently ignored, and a value of
+  \code{'replace'} causes the official Unicode replacement character,
+  \code{U+FFFD}, to be used to replace input characters which cannot
+  be decoded.  See also the \refmodule{codecs} module.
+
+  If no optional parameters are given, \code{unicode()} will mimic the
+  behaviour of \code{str()} except that it returns Unicode strings
+  instead of 8-bit strings. More precisely, if \var{object} is a
+  Unicode string or subclass it will return that Unicode string without
+  any additional decoding applied.
+
+  For objects which provide a \method{__unicode__()} method, it will
+  call this method without arguments to create a Unicode string. For
+  all other objects, the 8-bit string version or representation is
+  requested and then converted to a Unicode string using the codec for
+  the default encoding in \code{'strict'} mode.
+
+  \versionadded{2.0}
+  \versionchanged[Support for \method{__unicode__()} added]{2.2}
 \end{funcdesc}
 
 \begin{funcdesc}{sum}{iterable\optional{, start}}
@@ -1118,8 +1003,6 @@ class C:
   The \var{iterable}'s items are normally numbers, and are not allowed
   to be strings.  The fast, correct way to concatenate a sequence of
   strings is by calling \code{''.join(\var{sequence})}.
-  Note that \code{sum(range(\var{n}), \var{m})} is equivalent to
-  \code{reduce(operator.add, range(\var{n}), \var{m})}
   \versionadded{2.3}
 \end{funcdesc}
 
@@ -1185,51 +1068,6 @@ class C(B):
 \versionadded{2.2}          
 \end{funcdescni}
 
-\begin{funcdesc}{unichr}{i}
-  Return the Unicode string of one character whose Unicode code is the
-  integer \var{i}.  For example, \code{unichr(97)} returns the string
-  \code{u'a'}.  This is the inverse of \function{ord()} for Unicode
-  strings.  The valid range for the argument depends how Python was
-  configured -- it may be either UCS2 [0..0xFFFF] or UCS4 [0..0x10FFFF].
-  \exception{ValueError} is raised otherwise.
-  \versionadded{2.0}
-\end{funcdesc}
-
-\begin{funcdesc}{unicode}{\optional{object\optional{, encoding
-				    \optional{, errors}}}}
-  Return the Unicode string version of \var{object} using one of the
-  following modes:
-
-  If \var{encoding} and/or \var{errors} are given, \code{unicode()}
-  will decode the object which can either be an 8-bit string or a
-  character buffer using the codec for \var{encoding}. The
-  \var{encoding} parameter is a string giving the name of an encoding;
-  if the encoding is not known, \exception{LookupError} is raised.
-  Error handling is done according to \var{errors}; this specifies the
-  treatment of characters which are invalid in the input encoding.  If
-  \var{errors} is \code{'strict'} (the default), a
-  \exception{ValueError} is raised on errors, while a value of
-  \code{'ignore'} causes errors to be silently ignored, and a value of
-  \code{'replace'} causes the official Unicode replacement character,
-  \code{U+FFFD}, to be used to replace input characters which cannot
-  be decoded.  See also the \refmodule{codecs} module.
-
-  If no optional parameters are given, \code{unicode()} will mimic the
-  behaviour of \code{str()} except that it returns Unicode strings
-  instead of 8-bit strings. More precisely, if \var{object} is a
-  Unicode string or subclass it will return that Unicode string without
-  any additional decoding applied.
-
-  For objects which provide a \method{__unicode__()} method, it will
-  call this method without arguments to create a Unicode string. For
-  all other objects, the 8-bit string version or representation is
-  requested and then converted to a Unicode string using the codec for
-  the default encoding in \code{'strict'} mode.
-
-  \versionadded{2.0}
-  \versionchanged[Support for \method{__unicode__()} added]{2.2}
-\end{funcdesc}
-
 \begin{funcdesc}{vars}{\optional{object}}
   Without arguments, return a dictionary corresponding to the current
   local symbol table.  With a module, class or class instance object
@@ -1240,24 +1078,6 @@ class C(B):
     In the current implementation, local variable bindings cannot
     normally be affected this way, but variables retrieved from
     other scopes (such as modules) can be.  This may change.}
-\end{funcdesc}
-
-\begin{funcdesc}{xrange}{\optional{start,} stop\optional{, step}}
-  This function is very similar to \function{range()}, but returns an
-  ``xrange object'' instead of a list.  This is an opaque sequence
-  type which yields the same values as the corresponding list, without
-  actually storing them all simultaneously.  The advantage of
-  \function{xrange()} over \function{range()} is minimal (since
-  \function{xrange()} still has to create the values when asked for
-  them) except when a very large range is used on a memory-starved
-  machine or when all of the range's elements are never used (such as
-  when the loop is usually terminated with \keyword{break}).
-
-  \note{\function{xrange()} is intended to be simple and fast.
-        Implementations may impose restrictions to achieve this.
-        The C implementation of Python restricts all arguments to
-        native C longs ("short" Python integers), and also requires
-        that the number of elements fit in a native C long.}
 \end{funcdesc}
 
 \begin{funcdesc}{zip}{\optional{iterable, \moreargs}}
@@ -1293,26 +1113,6 @@ bypass these functions without concerns about missing something important.
 
 \setindexsubitem{(non-essential built-in functions)}
 
-\begin{funcdesc}{apply}{function, args\optional{, keywords}}
-  The \var{function} argument must be a callable object (a
-  user-defined or built-in function or method, or a class object) and
-  the \var{args} argument must be a sequence.  The \var{function} is
-  called with \var{args} as the argument list; the number of arguments
-  is the length of the tuple.
-  If the optional \var{keywords} argument is present, it must be a
-  dictionary whose keys are strings.  It specifies keyword arguments
-  to be added to the end of the argument list.
-  Calling \function{apply()} is different from just calling
-  \code{\var{function}(\var{args})}, since in that case there is always
-  exactly one argument.  The use of \function{apply()} is equivalent
-  to \code{\var{function}(*\var{args}, **\var{keywords})}.
-  Use of \function{apply()} is not necessary since the ``extended call
-  syntax,'' as used in the last example, is completely equivalent.
-
-  \deprecated{2.3}{Use the extended call syntax instead, as described
-                   above.}
-\end{funcdesc}
-
 \begin{funcdesc}{buffer}{object\optional{, offset\optional{, size}}}
   The \var{object} argument must be an object that supports the buffer
   call interface (such as strings, arrays, and buffers).  A new buffer
@@ -1323,23 +1123,3 @@ bypass these functions without concerns about missing something important.
   argument).
 \end{funcdesc}
 
-\begin{funcdesc}{coerce}{x, y}
-  Return a tuple consisting of the two numeric arguments converted to
-  a common type, using the same rules as used by arithmetic
-  operations. If coercion is not possible, raise \exception{TypeError}.
-\end{funcdesc}
-
-\begin{funcdesc}{intern}{string}
-  Enter \var{string} in the table of ``interned'' strings and return
-  the interned string -- which is \var{string} itself or a copy.
-  Interning strings is useful to gain a little performance on
-  dictionary lookup -- if the keys in a dictionary are interned, and
-  the lookup key is interned, the key comparisons (after hashing) can
-  be done by a pointer compare instead of a string compare.  Normally,
-  the names used in Python programs are automatically interned, and
-  the dictionaries used to hold module, class or instance attributes
-  have interned keys.  \versionchanged[Interned strings are not
-  immortal (like they used to be in Python 2.2 and before);
-  you must keep a reference to the return value of \function{intern()}
-  around to benefit from it]{2.3}
-\end{funcdesc}

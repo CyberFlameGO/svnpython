@@ -6,6 +6,12 @@ READ = 1
 WRITE = 2
 smAllScripts = -3
 
+def raw_input(prompt):
+    import sys
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    return sys.stdin.readline()
+
 def copyres(src, dst):
     """Copy resource from src file to dst file."""
 
@@ -33,7 +39,7 @@ def copyres(src, dst):
             UseResFile(output)
             try:
                 res2 = Get1Resource(type, id)
-            except (RuntimeError, Res.Error), msg:
+            except (RuntimeError, Res.Error) as msg:
                 res2 = None
             if res2:
                 print "Duplicate type+id, not copied"

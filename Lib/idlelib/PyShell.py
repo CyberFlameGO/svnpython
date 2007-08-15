@@ -3,7 +3,6 @@
 import os
 import os.path
 import sys
-import string
 import getopt
 import re
 import socket
@@ -11,7 +10,6 @@ import time
 import threading
 import traceback
 import types
-import macosxSupport
 
 import linecache
 from code import InteractiveInterpreter
@@ -19,24 +17,23 @@ from code import InteractiveInterpreter
 try:
     from Tkinter import *
 except ImportError:
-    print>>sys.__stderr__, "** IDLE can't import Tkinter.  " \
-                           "Your Python may not be configured for Tk. **"
+    print("** IDLE can't import Tkinter.  " \
+                           "Your Python may not be configured for Tk. **", file=sys.__stderr__)
     sys.exit(1)
 import tkMessageBox
 
-from EditorWindow import EditorWindow, fixwordbreaks
-from FileList import FileList
-from ColorDelegator import ColorDelegator
-from UndoDelegator import UndoDelegator
-from OutputWindow import OutputWindow
-from configHandler import idleConf
-import idlever
+from .EditorWindow import EditorWindow, fixwordbreaks
+from .FileList import FileList
+from .ColorDelegator import ColorDelegator
+from .UndoDelegator import UndoDelegator
+from .OutputWindow import OutputWindow
+from .configHandler import idleConf
+from . import idlever
+from . import rpc
+from . import Debugger
+from . import RemoteDebugger
+from . import macosxSupport
 
-import rpc
-import Debugger
-import RemoteDebugger
-
-IDENTCHARS = string.ascii_letters + string.digits + "_"
 LOCALHOST = '127.0.0.1'
 
 try:
@@ -299,7 +296,9 @@ class ModifiedColorDelegator(ColorDelegator):
             "stdout": idleConf.GetHighlight(theme, "stdout"),
             "stderr": idleConf.GetHighlight(theme, "stderr"),
             "console": idleConf.GetHighlight(theme, "console"),
-            None: idleConf.GetHighlight(theme, "normal"),
+            ### KBK 10Aug07: None tag doesn't seem to serve a purpose and
+            ### breaks in py3k.  Comment out for now.
+            #None: idleConf.GetHighlight(theme, "normal"),
         })
 
 class ModifiedUndoDelegator(UndoDelegator):
@@ -351,8 +350,6 @@ class ModifiedInterpreter(InteractiveInterpreter):
 
     def build_subprocess_arglist(self):
         w = ['-W' + s for s in sys.warnoptions]
-        if 1/2 > 0: # account for new division
-            w.append('-Qnew')
         # Maybe IDLE is installed and is being accessed via sys.path,
         # or maybe it's not installed and the idle.py script is being
         # run from the IDLE source directory.
@@ -380,7 +377,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
             try:
                 self.rpcclt = MyRPCClient(addr)
                 break
-            except socket.error, err:
+            except socket.error as err:
                 pass
         else:
             self.display_port_binding_error()
@@ -389,7 +386,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         self.rpcclt.listening_sock.settimeout(10)
         try:
             self.rpcclt.accept()
-        except socket.timeout, err:
+        except socket.timeout as err:
             self.display_no_subprocess_error()
             return None
         self.rpcclt.register("stdin", self.tkconsole)
@@ -423,7 +420,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         self.spawn_subprocess()
         try:
             self.rpcclt.accept()
-        except socket.timeout, err:
+        except socket.timeout as err:
             self.display_no_subprocess_error()
             return None
         self.transfer_path()
@@ -504,14 +501,14 @@ class ModifiedInterpreter(InteractiveInterpreter):
             console = self.tkconsole.console
             if how == "OK":
                 if what is not None:
-                    print >>console, repr(what)
+                    print(repr(what), file=console)
             elif how == "EXCEPTION":
                 if self.tkconsole.getvar("<<toggle-jit-stack-viewer>>"):
                     self.remote_stack_viewer()
             elif how == "ERROR":
                 errmsg = "PyShell.ModifiedInterpreter: Subprocess ERROR:\n"
-                print >>sys.__stderr__, errmsg, what
-                print >>console, errmsg, what
+                print(errmsg, what, file=sys.__stderr__)
+                print(errmsg, what, file=console)
             # we received a response to the currently active seq number:
             try:
                 self.tkconsole.endexecuting()
@@ -544,13 +541,13 @@ class ModifiedInterpreter(InteractiveInterpreter):
         return
 
     def remote_stack_viewer(self):
-        import RemoteObjectBrowser
+        from . import RemoteObjectBrowser
         oid = self.rpcclt.remotequeue("exec", "stackviewer", ("flist",), {})
         if oid is None:
             self.tkconsole.root.bell()
             return
         item = RemoteObjectBrowser.StubObjectTreeItem(self.rpcclt, oid)
-        from TreeWidget import ScrolledCanvas, TreeNode
+        from .TreeWidget import ScrolledCanvas, TreeNode
         top = Toplevel(self.tkconsole.root)
         theme = idleConf.GetOption('main','Theme','name')
         background = idleConf.GetHighlight(theme, 'normal')['background']
@@ -576,8 +573,8 @@ class ModifiedInterpreter(InteractiveInterpreter):
         except (OverflowError, SyntaxError):
             self.tkconsole.resetoutput()
             tkerr = self.tkconsole.stderr
-            print>>tkerr, '*** Error in script or command!\n'
-            print>>tkerr, 'Traceback (most recent call last):'
+            print('*** Error in script or command!\n', file=tkerr)
+            print('Traceback (most recent call last):', file=tkerr)
             InteractiveInterpreter.showsyntaxerror(self, filename)
             self.tkconsole.showprompt()
         else:
@@ -589,14 +586,16 @@ class ModifiedInterpreter(InteractiveInterpreter):
         self.more = 0
         self.save_warnings_filters = warnings.filters[:]
         warnings.filterwarnings(action="error", category=SyntaxWarning)
-        if isinstance(source, types.UnicodeType):
-            import IOBinding
-            try:
-                source = source.encode(IOBinding.encoding)
-            except UnicodeError:
-                self.tkconsole.resetoutput()
-                self.write("Unsupported characters in input\n")
-                return
+        # at the moment, InteractiveInterpreter expects str
+        assert isinstance(source, str)
+        #if isinstance(source, str):
+        #    from . import IOBinding
+        #    try:
+        #        source = source.encode(IOBinding.encoding)
+        #    except UnicodeError:
+        #        self.tkconsole.resetoutput()
+        #        self.write("Unsupported characters in input\n")
+        #        return
         try:
             # InteractiveInterpreter.runsource() calls its runcode() method,
             # which is overridden (see below)
@@ -627,47 +626,30 @@ class ModifiedInterpreter(InteractiveInterpreter):
             \n""" % (filename,))
 
     def showsyntaxerror(self, filename=None):
-        """Extend base class method: Add Colorizing
+        """Override Interactive Interpreter method: Use Colorizing
 
         Color the offending position instead of printing it and pointing at it
         with a caret.
 
         """
-        text = self.tkconsole.text
-        stuff = self.unpackerror()
-        if stuff:
-            msg, lineno, offset, line = stuff
-            if lineno == 1:
-                pos = "iomark + %d chars" % (offset-1)
-            else:
-                pos = "iomark linestart + %d lines + %d chars" % \
-                      (lineno-1, offset-1)
-            text.tag_add("ERROR", pos)
-            text.see(pos)
-            char = text.get(pos)
-            if char and char in IDENTCHARS:
-                text.tag_add("ERROR", pos + " wordstart", pos)
-            self.tkconsole.resetoutput()
-            self.write("SyntaxError: %s\n" % str(msg))
-        else:
-            self.tkconsole.resetoutput()
-            InteractiveInterpreter.showsyntaxerror(self, filename)
-        self.tkconsole.showprompt()
-
-    def unpackerror(self):
+        tkconsole = self.tkconsole
+        text = tkconsole.text
+        text.tag_remove("ERROR", "1.0", "end")
         type, value, tb = sys.exc_info()
-        ok = type is SyntaxError
-        if ok:
-            try:
-                msg, (dummy_filename, lineno, offset, line) = value
-                if not offset:
-                    offset = 0
-            except:
-                ok = 0
-        if ok:
-            return msg, lineno, offset, line
+        msg = value.msg or "<no detail available>"
+        lineno = value.lineno or 1
+        offset = value.offset or 0
+        if offset == 0:
+            lineno += 1 #mark end of offending line
+        if lineno == 1:
+            pos = "iomark + %d chars" % (offset-1)
         else:
-            return None
+            pos = "iomark linestart + %d lines + %d chars" % \
+                  (lineno-1, offset-1)
+        tkconsole.colorize_syntax_error(text, pos)
+        tkconsole.resetoutput()
+        self.write("SyntaxError: %s\n" % msg)
+        tkconsole.showprompt()
 
     def showtraceback(self):
         "Extend base class method to reset output properly"
@@ -679,7 +661,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
 
     def checklinecache(self):
         c = linecache.cache
-        for key in c.keys():
+        for key in list(c.keys()):
             if key[:1] + key[-1:] != "<>":
                 del c[key]
 
@@ -692,7 +674,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
         if self.rpcclt:
             self.rpcclt.remotequeue("exec", "runcode", (code,), {})
         else:
-            exec code in self.locals
+            exec(code, self.locals)
         return 1
 
     def runcode(self, code):
@@ -712,7 +694,7 @@ class ModifiedInterpreter(InteractiveInterpreter):
             elif debugger:
                 debugger.run(code, self.locals)
             else:
-                exec code in self.locals
+                exec(code, self.locals)
         except SystemExit:
             if not self.tkconsole.closing:
                 if tkMessageBox.askyesno(
@@ -727,14 +709,14 @@ class ModifiedInterpreter(InteractiveInterpreter):
                 raise
         except:
             if use_subprocess:
-                print >>self.tkconsole.stderr, \
-                         "IDLE internal error in runcode()"
+                print("IDLE internal error in runcode()",
+                      file=self.tkconsole.stderr)
                 self.showtraceback()
                 self.tkconsole.endexecuting()
             else:
                 if self.tkconsole.canceled:
                     self.tkconsole.canceled = False
-                    print >>self.tkconsole.stderr, "KeyboardInterrupt"
+                    print("KeyboardInterrupt", file=self.tkconsole.stderr)
                 else:
                     self.showtraceback()
         finally:
@@ -800,7 +782,7 @@ class PyShell(OutputWindow):
 
 
     # New classes
-    from IdleHistory import History
+    from .IdleHistory import History
 
     def __init__(self, flist=None):
         if use_subprocess:
@@ -839,13 +821,13 @@ class PyShell(OutputWindow):
         self.save_stdout = sys.stdout
         self.save_stderr = sys.stderr
         self.save_stdin = sys.stdin
-        import IOBinding
+        from . import IOBinding
         self.stdout = PseudoFile(self, "stdout", IOBinding.encoding)
         self.stderr = PseudoFile(self, "stderr", IOBinding.encoding)
         self.console = PseudoFile(self, "console", IOBinding.encoding)
         if not use_subprocess:
             sys.stdout = self.stdout
-            sys.stderr = self.stderr
+###            sys.stderr = self.stderr # Don't redirect exceptions, pyshell NG
             sys.stdin = self
         #
         self.history = self.History(self.text)
@@ -981,6 +963,7 @@ class PyShell(OutputWindow):
     """
 
     def begin(self):
+        self.text.mark_set("iomark", "insert")
         self.resetoutput()
         if use_subprocess:
             nosub = ''
@@ -1008,8 +991,8 @@ class PyShell(OutputWindow):
         line = self.text.get("iomark", "end-1c")
         if len(line) == 0:  # may be EOF if we quit our mainloop with Ctrl-C
             line = "\n"
-        if isinstance(line, unicode):
-            import IOBinding
+        if isinstance(line, str):
+            from . import IOBinding
             try:
                 line = line.encode(IOBinding.encoding)
             except UnicodeError:
@@ -1141,7 +1124,7 @@ class PyShell(OutputWindow):
         self.text.tag_add("stdin", "iomark", "end-1c")
         self.text.update_idletasks()
         if self.reading:
-            self.top.quit() # Break out of recursive mainloop() in raw_input()
+            self.top.quit() # Break out of recursive mainloop()
         else:
             self.runit()
         return "break"
@@ -1197,7 +1180,7 @@ class PyShell(OutputWindow):
                 "(sys.last_traceback is not defined)",
                 master=self.text)
             return
-        from StackViewer import StackBrowser
+        from .StackViewer import StackBrowser
         sv = StackBrowser(self.root, self.flist)
 
     def view_restart_mark(self, event=None):
@@ -1226,7 +1209,6 @@ class PyShell(OutputWindow):
             self.text.insert("end-1c", "\n")
         self.text.mark_set("iomark", "end-1c")
         self.set_line_and_column()
-        sys.stdout.softspace = 0
 
     def write(self, s, tags=()):
         try:
@@ -1234,7 +1216,8 @@ class PyShell(OutputWindow):
             OutputWindow.write(self, s, tags, "iomark")
             self.text.mark_gravity("iomark", "left")
         except:
-            pass
+            raise ###pass  # ### 11Aug07 KBK if we are expecting exceptions
+                           # let's find out what they are and be specific.
         if self.canceled:
             self.canceled = 0
             if not use_subprocess:
@@ -1245,14 +1228,14 @@ class PseudoFile(object):
     def __init__(self, shell, tags, encoding=None):
         self.shell = shell
         self.tags = tags
-        self.softspace = 0
         self.encoding = encoding
 
     def write(self, s):
         self.shell.write(s, self.tags)
 
-    def writelines(self, l):
-        map(self.write, l)
+    def writelines(self, lines):
+        for line in lines:
+            self.write(line)
 
     def flush(self):
         pass
@@ -1326,7 +1309,7 @@ def main():
     startup = False
     try:
         opts, args = getopt.getopt(sys.argv[1:], "c:deihnr:st:")
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stderr.write("Error: %s\n" % str(msg))
         sys.stderr.write(usage_msg)
         sys.exit(2)
@@ -1351,7 +1334,7 @@ def main():
             if os.path.isfile(script):
                 pass
             else:
-                print "No script file: ", script
+                print("No script file: ", script)
                 sys.exit()
             enable_shell = True
         if o == '-s':

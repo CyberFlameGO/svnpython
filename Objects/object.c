@@ -2,6 +2,7 @@
 /* Generic object operations; and implementation of None (NoObject) */
 
 #include "Python.h"
+#include "sliceobject.h" /* For PyEllipsis_Type */
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +30,6 @@ _Py_GetRefTotal(void)
 #endif /* Py_REF_DEBUG */
 
 int Py_DivisionWarningFlag;
-int Py_Py3kWarningFlag;
 
 /* Object allocation routines used by NEWOBJ and NEWVAROBJ macros.
    These are used by the individual routines for object creation.
@@ -252,14 +252,6 @@ _PyObject_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
 	return PyObject_INIT_VAR(op, tp, nitems);
 }
 
-/* for binary compatibility with 2.2 */
-#undef _PyObject_Del
-void
-_PyObject_Del(PyObject *op)
-{
-	PyObject_FREE(op);
-}
-
 /* Implementation of PyObject_Print with recursion checking */
 static int
 internal_print(PyObject *op, FILE *fp, int flags, int nesting)
@@ -287,7 +279,7 @@ internal_print(PyObject *op, FILE *fp, int flags, int nesting)
 			   universally available */
 			fprintf(fp, "<refcnt %ld at %p>",
 				(long)op->ob_refcnt, op);
-		else if (Py_Type(op)->tp_print == NULL) {
+		else {
 			PyObject *s;
 			if (flags & Py_PRINT_RAW)
 				s = PyObject_Str(op);
@@ -295,14 +287,28 @@ internal_print(PyObject *op, FILE *fp, int flags, int nesting)
 				s = PyObject_Repr(op);
 			if (s == NULL)
 				ret = -1;
+                        else if (PyString_Check(s)) {
+				fwrite(PyString_AS_STRING(s), 1,
+				       PyString_GET_SIZE(s), fp);
+			}
+			else if (PyUnicode_Check(s)) {
+				PyObject *t;
+				t = _PyUnicode_AsDefaultEncodedString(s, NULL);
+				if (t == NULL)
+					ret = 0;
+				else {
+					fwrite(PyString_AS_STRING(t), 1,
+					       PyString_GET_SIZE(t), fp);
+				}
+			}
 			else {
-				ret = internal_print(s, fp, Py_PRINT_RAW,
-						     nesting+1);
+				PyErr_Format(PyExc_TypeError,
+					     "str() or repr() returned '%.100s'",
+					     s->ob_type->tp_name);
+				ret = -1;
 			}
 			Py_XDECREF(s);
 		}
-		else
-			ret = (*Py_Type(op)->tp_print)(op, fp, flags);
 	}
 	if (ret == 0) {
 		if (ferror(fp)) {
@@ -320,9 +326,16 @@ PyObject_Print(PyObject *op, FILE *fp, int flags)
 	return internal_print(op, fp, flags, 0);
 }
 
+/* For debugging convenience.  Set a breakpoint here and call it from your DLL */
+void
+_Py_BreakPoint(void)
+{
+}
+
 
 /* For debugging convenience.  See Misc/gdbinit for some useful gdb hooks */
-void _PyObject_Dump(PyObject* op)
+void
+_PyObject_Dump(PyObject* op)
 {
 	if (op == NULL)
 		fprintf(stderr, "NULL\n");
@@ -344,6 +357,7 @@ void _PyObject_Dump(PyObject* op)
 PyObject *
 PyObject_Repr(PyObject *v)
 {
+	PyObject *ress, *resu;
 	if (PyErr_CheckSignals())
 		return NULL;
 #ifdef USE_STACKCHECK
@@ -353,65 +367,68 @@ PyObject_Repr(PyObject *v)
 	}
 #endif
 	if (v == NULL)
-		return PyString_FromString("<NULL>");
+		return PyUnicode_FromString("<NULL>");
 	else if (Py_Type(v)->tp_repr == NULL)
-		return PyString_FromFormat("<%s object at %p>",
-					   Py_Type(v)->tp_name, v);
+		return PyUnicode_FromFormat("<%s object at %p>", v->ob_type->tp_name, v);
 	else {
-		PyObject *res;
-		res = (*Py_Type(v)->tp_repr)(v);
-		if (res == NULL)
+		ress = (*v->ob_type->tp_repr)(v);
+		if (!ress)
 			return NULL;
-#ifdef Py_USING_UNICODE
-		if (PyUnicode_Check(res)) {
-			PyObject* str;
-			str = PyUnicode_AsEncodedString(res, NULL, NULL);
-			Py_DECREF(res);
-			if (str)
-				res = str;
-			else
-				return NULL;
-		}
-#endif
-		if (!PyString_Check(res)) {
+		if (PyUnicode_Check(ress))
+			return ress;
+		if (!PyString_Check(ress)) {
 			PyErr_Format(PyExc_TypeError,
 				     "__repr__ returned non-string (type %.200s)",
-				     Py_Type(res)->tp_name);
-			Py_DECREF(res);
+				     ress->ob_type->tp_name);
+			Py_DECREF(ress);
 			return NULL;
 		}
-		return res;
+		resu = PyUnicode_FromObject(ress);
+		Py_DECREF(ress);
+		return resu;
 	}
+}
+
+PyObject *
+PyObject_ReprStr8(PyObject *v)
+{
+	PyObject *resu = PyObject_Repr(v);
+	if (resu) {
+		PyObject *resb = PyUnicode_AsEncodedString(resu, NULL, NULL);
+		Py_DECREF(resu);
+		if (resb) {
+			PyObject *ress = PyString_FromStringAndSize(
+				PyBytes_AS_STRING(resb),
+				PyBytes_GET_SIZE(resb)
+			);
+			Py_DECREF(resb);
+			return ress;
+		}
+	}
+	return NULL;
 }
 
 PyObject *
 _PyObject_Str(PyObject *v)
 {
 	PyObject *res;
-	int type_ok;
 	if (v == NULL)
 		return PyString_FromString("<NULL>");
 	if (PyString_CheckExact(v)) {
 		Py_INCREF(v);
 		return v;
 	}
-#ifdef Py_USING_UNICODE
 	if (PyUnicode_CheckExact(v)) {
 		Py_INCREF(v);
 		return v;
 	}
-#endif
 	if (Py_Type(v)->tp_str == NULL)
 		return PyObject_Repr(v);
 
 	res = (*Py_Type(v)->tp_str)(v);
 	if (res == NULL)
 		return NULL;
-	type_ok = PyString_Check(res);
-#ifdef Py_USING_UNICODE
-	type_ok = type_ok || PyUnicode_Check(res);
-#endif
-	if (!type_ok) {
+	if (!(PyString_Check(res) || PyUnicode_Check(res))) {
 		PyErr_Format(PyExc_TypeError,
 			     "__str__ returned non-string (type %.200s)",
 			     Py_Type(res)->tp_name);
@@ -427,22 +444,20 @@ PyObject_Str(PyObject *v)
 	PyObject *res = _PyObject_Str(v);
 	if (res == NULL)
 		return NULL;
-#ifdef Py_USING_UNICODE
 	if (PyUnicode_Check(res)) {
 		PyObject* str;
-		str = PyUnicode_AsEncodedString(res, NULL, NULL);
+		str = _PyUnicode_AsDefaultEncodedString(res, NULL);
+		Py_XINCREF(str);
 		Py_DECREF(res);
 		if (str)
 			res = str;
 		else
 		    	return NULL;
 	}
-#endif
 	assert(PyString_Check(res));
 	return res;
 }
 
-#ifdef Py_USING_UNICODE
 PyObject *
 PyObject_Unicode(PyObject *v)
 {
@@ -451,14 +466,9 @@ PyObject_Unicode(PyObject *v)
 	PyObject *str;
 	static PyObject *unicodestr;
 
-	if (v == NULL) {
-		res = PyString_FromString("<NULL>");
-		if (res == NULL)
-			return NULL;
-		str = PyUnicode_FromEncodedObject(res, NULL, "strict");
-		Py_DECREF(res);
-		return str;
-	} else if (PyUnicode_CheckExact(v)) {
+	if (v == NULL)
+		return PyUnicode_FromString("<NULL>");
+	else if (PyUnicode_CheckExact(v)) {
 		Py_INCREF(v);
 		return v;
 	}
@@ -466,7 +476,7 @@ PyObject_Unicode(PyObject *v)
 	   check this before trying the __unicode__
 	   method. */
 	if (unicodestr == NULL) {
-		unicodestr= PyString_InternFromString("__unicode__");
+		unicodestr= PyUnicode_InternFromString("__unicode__");
 		if (unicodestr == NULL)
 			return NULL;
 	}
@@ -477,8 +487,10 @@ PyObject_Unicode(PyObject *v)
 	}
 	else {
 		PyErr_Clear();
-		if (PyUnicode_Check(v)) {
-			/* For a Unicode subtype that's didn't overwrite __unicode__,
+		if (PyUnicode_Check(v) &&
+		    v->ob_type->tp_str == PyUnicode_Type.tp_str) {
+			/* For a Unicode subtype that's didn't overwrite
+			   __unicode__ or __str__,
 			   return a true Unicode object with the same data. */
 			return PyUnicode_FromUnicode(PyUnicode_AS_UNICODE(v),
 			                             PyUnicode_GET_SIZE(v));
@@ -503,448 +515,202 @@ PyObject_Unicode(PyObject *v)
 	}
 	return res;
 }
-#endif
 
 
-/* Helper to warn about deprecated tp_compare return values.  Return:
-   -2 for an exception;
-   -1 if v <  w;
-    0 if v == w;
-    1 if v  > w.
-   (This function cannot return 2.)
+/* The new comparison philosophy is: we completely separate three-way
+   comparison from rich comparison.  That is, PyObject_Compare() and
+   PyObject_Cmp() *just* use the tp_compare slot.  And PyObject_RichCompare()
+   and PyObject_RichCompareBool() *just* use the tp_richcompare slot.
+   
+   See (*) below for practical amendments.
+
+   IOW, only cmp() uses tp_compare; the comparison operators (==, !=, <=, <,
+   >=, >) only use tp_richcompare.  Note that list.sort() only uses <.
+
+   (And yes, eventually we'll rip out cmp() and tp_compare.)
+
+   The calling conventions are different: tp_compare only gets called with two
+   objects of the appropriate type; tp_richcompare gets called with a first
+   argument of the appropriate type and a second object of an arbitrary type.
+   We never do any kind of coercion.
+
+   The return conventions are also different.
+
+   The tp_compare slot should return a C int, as follows:
+
+     -1 if a < b or if an exception occurred
+      0 if a == b
+     +1 if a > b
+
+   No other return values are allowed.  PyObject_Compare() has the same
+   calling convention.
+
+  The tp_richcompare slot should return an object, as follows:
+
+    NULL if an exception occurred
+    NotImplemented if the requested comparison is not implemented
+    any other false value if the requested comparison is false
+    any other true value if the requested comparison is true
+
+  The PyObject_RichCompare[Bool]() wrappers raise TypeError when they get
+  NotImplemented.
+
+  (*) Practical amendments:
+
+  - If rich comparison returns NotImplemented, == and != are decided by
+    comparing the object pointer (i.e. falling back to the base object
+    implementation).
+
+  - If three-way comparison is not implemented, it falls back on rich
+    comparison (but not the other way around!).
+
 */
+
+/* Forward */
+static PyObject *do_richcompare(PyObject *v, PyObject *w, int op);
+
+/* Perform a three-way comparison, raising TypeError if three-way comparison
+   is not supported.  */
 static int
-adjust_tp_compare(int c)
+do_compare(PyObject *v, PyObject *w)
 {
-	if (PyErr_Occurred()) {
-		if (c != -1 && c != -2) {
-			PyObject *t, *v, *tb;
-			PyErr_Fetch(&t, &v, &tb);
-			if (PyErr_Warn(PyExc_RuntimeWarning,
-				       "tp_compare didn't return -1 or -2 "
-				       "for exception") < 0) {
-				Py_XDECREF(t);
-				Py_XDECREF(v);
-				Py_XDECREF(tb);
-			}
-			else
-				PyErr_Restore(t, v, tb);
-		}
-		return -2;
+	cmpfunc f;
+	int ok;
+
+	if (v->ob_type == w->ob_type && 
+	    (f = v->ob_type->tp_compare) != NULL) {
+		return (*f)(v, w);
 	}
-	else if (c < -1 || c > 1) {
-		if (PyErr_Warn(PyExc_RuntimeWarning,
-			       "tp_compare didn't return -1, 0 or 1") < 0)
-			return -2;
-		else
-			return c < -1 ? -1 : 1;
-	}
-	else {
-		assert(c >= -1 && c <= 1);
-		return c;
-	}
+
+	/* Now try three-way compare before giving up.  This is intentionally
+	   elaborate; if you have a it will raise TypeError if it detects two
+	   objects that aren't ordered with respect to each other. */
+	ok = PyObject_RichCompareBool(v, w, Py_LT);
+	if (ok < 0)
+		return -1; /* Error */
+	if (ok)
+		return -1; /* Less than */
+	ok = PyObject_RichCompareBool(v, w, Py_GT);
+	if (ok < 0)
+		return -1; /* Error */
+	if (ok)
+		return 1; /* Greater than */
+	ok = PyObject_RichCompareBool(v, w, Py_EQ);
+	if (ok < 0)
+		return -1; /* Error */
+	if (ok)
+		return 0; /* Equal */
+
+	/* Give up */
+	PyErr_Format(PyExc_TypeError,
+		     "unorderable types: '%.100s' != '%.100s'",
+		     v->ob_type->tp_name,
+		     w->ob_type->tp_name);
+	return -1;
 }
 
+/* Perform a three-way comparison.  This wraps do_compare() with a check for
+   NULL arguments and a recursion check. */
+int
+PyObject_Compare(PyObject *v, PyObject *w)
+{
+	int res;
 
-/* Macro to get the tp_richcompare field of a type if defined */
-#define RICHCOMPARE(t) (PyType_HasFeature((t), Py_TPFLAGS_HAVE_RICHCOMPARE) \
-                         ? (t)->tp_richcompare : NULL)
+	if (v == NULL || w == NULL) {
+		if (!PyErr_Occurred())
+			PyErr_BadInternalCall();
+		return -1;
+	}
+	if (Py_EnterRecursiveCall(" in cmp"))
+		return -1;
+	res = do_compare(v, w);
+	Py_LeaveRecursiveCall();
+	return res < 0 ? -1 : res;
+}
 
-/* Map rich comparison operators to their swapped version, e.g. LT --> GT */
+/* Map rich comparison operators to their swapped version, e.g. LT <--> GT */
 int _Py_SwappedOp[] = {Py_GT, Py_GE, Py_EQ, Py_NE, Py_LT, Py_LE};
 
-/* Try a genuine rich comparison, returning an object.  Return:
-   NULL for exception;
-   NotImplemented if this particular rich comparison is not implemented or
-     undefined;
-   some object not equal to NotImplemented if it is implemented
-     (this latter object may not be a Boolean).
-*/
+static char *opstrings[] = {"<", "<=", "==", "!=", ">", ">="};
+
+/* Perform a rich comparison, raising TypeError when the requested comparison
+   operator is not supported. */
 static PyObject *
-try_rich_compare(PyObject *v, PyObject *w, int op)
+do_richcompare(PyObject *v, PyObject *w, int op)
 {
 	richcmpfunc f;
 	PyObject *res;
 
 	if (v->ob_type != w->ob_type &&
 	    PyType_IsSubtype(w->ob_type, v->ob_type) &&
-	    (f = RICHCOMPARE(w->ob_type)) != NULL) {
+	    (f = w->ob_type->tp_richcompare) != NULL) {
 		res = (*f)(w, v, _Py_SwappedOp[op]);
 		if (res != Py_NotImplemented)
 			return res;
 		Py_DECREF(res);
 	}
-	if ((f = RICHCOMPARE(v->ob_type)) != NULL) {
+	if ((f = v->ob_type->tp_richcompare) != NULL) {
 		res = (*f)(v, w, op);
 		if (res != Py_NotImplemented)
 			return res;
 		Py_DECREF(res);
 	}
-	if ((f = RICHCOMPARE(w->ob_type)) != NULL) {
-		return (*f)(w, v, _Py_SwappedOp[op]);
+	if ((f = w->ob_type->tp_richcompare) != NULL) {
+		res = (*f)(w, v, _Py_SwappedOp[op]);
+		if (res != Py_NotImplemented)
+			return res;
+		Py_DECREF(res);
 	}
-	res = Py_NotImplemented;
+	/* If neither object implements it, provide a sensible default
+	   for == and !=, but raise an exception for ordering. */
+	switch (op) {
+	case Py_EQ:
+		res = (v == w) ? Py_True : Py_False;
+		break;
+	case Py_NE:
+		res = (v != w) ? Py_True : Py_False;
+		break;
+	default:
+		/* XXX Special-case None so it doesn't show as NoneType() */
+		PyErr_Format(PyExc_TypeError,
+			     "unorderable types: %.100s() %s %.100s()",
+			     v->ob_type->tp_name,
+			     opstrings[op],
+			     w->ob_type->tp_name);
+		return NULL;
+	}
 	Py_INCREF(res);
 	return res;
 }
 
-/* Try a genuine rich comparison, returning an int.  Return:
-   -1 for exception (including the case where try_rich_compare() returns an
-      object that's not a Boolean);
-    0 if the outcome is false;
-    1 if the outcome is true;
-    2 if this particular rich comparison is not implemented or undefined.
-*/
-static int
-try_rich_compare_bool(PyObject *v, PyObject *w, int op)
-{
-	PyObject *res;
-	int ok;
+/* Perform a rich comparison with object result.  This wraps do_richcompare()
+   with a check for NULL arguments and a recursion check. */
 
-	if (RICHCOMPARE(v->ob_type) == NULL && RICHCOMPARE(w->ob_type) == NULL)
-		return 2; /* Shortcut, avoid INCREF+DECREF */
-	res = try_rich_compare(v, w, op);
-	if (res == NULL)
-		return -1;
-	if (res == Py_NotImplemented) {
-		Py_DECREF(res);
-		return 2;
-	}
-	ok = PyObject_IsTrue(res);
-	Py_DECREF(res);
-	return ok;
-}
-
-/* Try rich comparisons to determine a 3-way comparison.  Return:
-   -2 for an exception;
-   -1 if v  < w;
-    0 if v == w;
-    1 if v  > w;
-    2 if this particular rich comparison is not implemented or undefined.
-*/
-static int
-try_rich_to_3way_compare(PyObject *v, PyObject *w)
-{
-	static struct { int op; int outcome; } tries[3] = {
-		/* Try this operator, and if it is true, use this outcome: */
-		{Py_EQ, 0},
-		{Py_LT, -1},
-		{Py_GT, 1},
-	};
-	int i;
-
-	if (RICHCOMPARE(v->ob_type) == NULL && RICHCOMPARE(w->ob_type) == NULL)
-		return 2; /* Shortcut */
-
-	for (i = 0; i < 3; i++) {
-		switch (try_rich_compare_bool(v, w, tries[i].op)) {
-		case -1:
-			return -2;
-		case 1:
-			return tries[i].outcome;
-		}
-	}
-
-	return 2;
-}
-
-/* Try a 3-way comparison, returning an int.  Return:
-   -2 for an exception;
-   -1 if v <  w;
-    0 if v == w;
-    1 if v  > w;
-    2 if this particular 3-way comparison is not implemented or undefined.
-*/
-static int
-try_3way_compare(PyObject *v, PyObject *w)
-{
-	int c;
-	cmpfunc f;
-
-	/* Comparisons involving instances are given to instance_compare,
-	   which has the same return conventions as this function. */
-
-	f = v->ob_type->tp_compare;
-	if (PyInstance_Check(v))
-		return (*f)(v, w);
-	if (PyInstance_Check(w))
-		return (*w->ob_type->tp_compare)(v, w);
-
-	/* If both have the same (non-NULL) tp_compare, use it. */
-	if (f != NULL && f == w->ob_type->tp_compare) {
-		c = (*f)(v, w);
-		return adjust_tp_compare(c);
-	}
-
-	/* If either tp_compare is _PyObject_SlotCompare, that's safe. */
-	if (f == _PyObject_SlotCompare ||
-	    w->ob_type->tp_compare == _PyObject_SlotCompare)
-		return _PyObject_SlotCompare(v, w);
-
-	/* If we're here, v and w,
-	    a) are not instances;
-	    b) have different types or a type without tp_compare; and
-	    c) don't have a user-defined tp_compare.
-	   tp_compare implementations in C assume that both arguments
-	   have their type, so we give up if the coercion fails or if
-	   it yields types which are still incompatible (which can
-	   happen with a user-defined nb_coerce).
-	*/
-	c = PyNumber_CoerceEx(&v, &w);
-	if (c < 0)
-		return -2;
-	if (c > 0)
-		return 2;
-	f = v->ob_type->tp_compare;
-	if (f != NULL && f == w->ob_type->tp_compare) {
-		c = (*f)(v, w);
-		Py_DECREF(v);
-		Py_DECREF(w);
-		return adjust_tp_compare(c);
-	}
-
-	/* No comparison defined */
-	Py_DECREF(v);
-	Py_DECREF(w);
-	return 2;
-}
-
-/* Final fallback 3-way comparison, returning an int.  Return:
-   -2 if an error occurred;
-   -1 if v <  w;
-    0 if v == w;
-    1 if v >  w.
-*/
-static int
-default_3way_compare(PyObject *v, PyObject *w)
-{
-	int c;
-	const char *vname, *wname;
-
-	if (v->ob_type == w->ob_type) {
-		/* When comparing these pointers, they must be cast to
-		 * integer types (i.e. Py_uintptr_t, our spelling of C9X's
-		 * uintptr_t).  ANSI specifies that pointer compares other
-		 * than == and != to non-related structures are undefined.
-		 */
-		Py_uintptr_t vv = (Py_uintptr_t)v;
-		Py_uintptr_t ww = (Py_uintptr_t)w;
-		return (vv < ww) ? -1 : (vv > ww) ? 1 : 0;
-	}
-
-	/* None is smaller than anything */
-	if (v == Py_None)
-		return -1;
-	if (w == Py_None)
-		return 1;
-
-	/* different type: compare type names; numbers are smaller */
-	if (PyNumber_Check(v))
-		vname = "";
-	else
-		vname = v->ob_type->tp_name;
-	if (PyNumber_Check(w))
-		wname = "";
-	else
-		wname = w->ob_type->tp_name;
-	c = strcmp(vname, wname);
-	if (c < 0)
-		return -1;
-	if (c > 0)
-		return 1;
-	/* Same type name, or (more likely) incomparable numeric types */
-	return ((Py_uintptr_t)(v->ob_type) < (
-		Py_uintptr_t)(w->ob_type)) ? -1 : 1;
-}
-
-/* Do a 3-way comparison, by hook or by crook.  Return:
-   -2 for an exception (but see below);
-   -1 if v <  w;
-    0 if v == w;
-    1 if v >  w;
-   BUT: if the object implements a tp_compare function, it returns
-   whatever this function returns (whether with an exception or not).
-*/
-static int
-do_cmp(PyObject *v, PyObject *w)
-{
-	int c;
-	cmpfunc f;
-
-	if (v->ob_type == w->ob_type
-	    && (f = v->ob_type->tp_compare) != NULL) {
-		c = (*f)(v, w);
-		if (PyInstance_Check(v)) {
-			/* Instance tp_compare has a different signature.
-			   But if it returns undefined we fall through. */
-			if (c != 2)
-				return c;
-			/* Else fall through to try_rich_to_3way_compare() */
-		}
-		else
-			return adjust_tp_compare(c);
-	}
-	/* We only get here if one of the following is true:
-	   a) v and w have different types
-	   b) v and w have the same type, which doesn't have tp_compare
-	   c) v and w are instances, and either __cmp__ is not defined or
-	      __cmp__ returns NotImplemented
-	*/
-	c = try_rich_to_3way_compare(v, w);
-	if (c < 2)
-		return c;
-	c = try_3way_compare(v, w);
-	if (c < 2)
-		return c;
-	return default_3way_compare(v, w);
-}
-
-/* Compare v to w.  Return
-   -1 if v <  w or exception (PyErr_Occurred() true in latter case).
-    0 if v == w.
-    1 if v > w.
-   XXX The docs (C API manual) say the return value is undefined in case
-   XXX of error.
-*/
-int
-PyObject_Compare(PyObject *v, PyObject *w)
-{
-	int result;
-
-	if (v == NULL || w == NULL) {
-		PyErr_BadInternalCall();
-		return -1;
-	}
-	if (v == w)
-		return 0;
-	if (Py_EnterRecursiveCall(" in cmp"))
-		return -1;
-	result = do_cmp(v, w);
-	Py_LeaveRecursiveCall();
-	return result < 0 ? -1 : result;
-}
-
-/* Return (new reference to) Py_True or Py_False. */
-static PyObject *
-convert_3way_to_object(int op, int c)
-{
-	PyObject *result;
-	switch (op) {
-	case Py_LT: c = c <  0; break;
-	case Py_LE: c = c <= 0; break;
-	case Py_EQ: c = c == 0; break;
-	case Py_NE: c = c != 0; break;
-	case Py_GT: c = c >  0; break;
-	case Py_GE: c = c >= 0; break;
-	}
-	result = c ? Py_True : Py_False;
-	Py_INCREF(result);
-	return result;
-}
-
-/* We want a rich comparison but don't have one.  Try a 3-way cmp instead.
-   Return
-   NULL      if error
-   Py_True   if v op w
-   Py_False  if not (v op w)
-*/
-static PyObject *
-try_3way_to_rich_compare(PyObject *v, PyObject *w, int op)
-{
-	int c;
-
-	c = try_3way_compare(v, w);
-	if (c >= 2)
-		c = default_3way_compare(v, w);
-	if (c <= -2)
-		return NULL;
-	return convert_3way_to_object(op, c);
-}
-
-/* Do rich comparison on v and w.  Return
-   NULL      if error
-   Else a new reference to an object other than Py_NotImplemented, usually(?):
-   Py_True   if v op w
-   Py_False  if not (v op w)
-*/
-static PyObject *
-do_richcmp(PyObject *v, PyObject *w, int op)
-{
-	PyObject *res;
-
-	res = try_rich_compare(v, w, op);
-	if (res != Py_NotImplemented)
-		return res;
-	Py_DECREF(res);
-
-	return try_3way_to_rich_compare(v, w, op);
-}
-
-/* Return:
-   NULL for exception;
-   some object not equal to NotImplemented if it is implemented
-     (this latter object may not be a Boolean).
-*/
 PyObject *
 PyObject_RichCompare(PyObject *v, PyObject *w, int op)
 {
 	PyObject *res;
 
 	assert(Py_LT <= op && op <= Py_GE);
+	if (v == NULL || w == NULL) {
+		if (!PyErr_Occurred())
+			PyErr_BadInternalCall();
+		return NULL;
+	}
 	if (Py_EnterRecursiveCall(" in cmp"))
 		return NULL;
-
-	/* If the types are equal, and not old-style instances, try to
-	   get out cheap (don't bother with coercions etc.). */
-	if (v->ob_type == w->ob_type && !PyInstance_Check(v)) {
-		cmpfunc fcmp;
-		richcmpfunc frich = RICHCOMPARE(v->ob_type);
-		/* If the type has richcmp, try it first.  try_rich_compare
-		   tries it two-sided, which is not needed since we've a
-		   single type only. */
-		if (frich != NULL) {
-			res = (*frich)(v, w, op);
-			if (res != Py_NotImplemented)
-				goto Done;
-			Py_DECREF(res);
-		}
-		/* No richcmp, or this particular richmp not implemented.
-		   Try 3-way cmp. */
-		fcmp = v->ob_type->tp_compare;
-		if (fcmp != NULL) {
-			int c = (*fcmp)(v, w);
-			c = adjust_tp_compare(c);
-			if (c == -2) {
-				res = NULL;
-				goto Done;
-			}
-			res = convert_3way_to_object(op, c);
-			goto Done;
-		}
-	}
-
-	/* Fast path not taken, or couldn't deliver a useful result. */
-	res = do_richcmp(v, w, op);
-Done:
+	res = do_richcompare(v, w, op);
 	Py_LeaveRecursiveCall();
 	return res;
 }
 
-/* Return -1 if error; 1 if v op w; 0 if not (v op w). */
+/* Perform a rich comparison with integer result.  This wraps
+   PyObject_RichCompare(), returning -1 for error, 0 for false, 1 for true. */
 int
 PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)
 {
 	PyObject *res;
 	int ok;
-
-	/* Quick result when objects are the same.
-	   Guarantees that identity implies equality. */
-	if (v == w) {
-		if (op == Py_EQ)
-			return 1;
-		else if (op == Py_NE)
-			return 0;
-	}
 
 	res = PyObject_RichCompare(v, w, op);
 	if (res == NULL)
@@ -955,6 +721,44 @@ PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)
 		ok = PyObject_IsTrue(res);
 	Py_DECREF(res);
 	return ok;
+}
+
+/* Turn the result of a three-way comparison into the result expected by a
+   rich comparison. */
+PyObject *
+Py_CmpToRich(int op, int cmp)
+{
+	PyObject *res;
+	int ok;
+
+	if (PyErr_Occurred())
+		return NULL;
+	switch (op) {
+	case Py_LT:
+		ok = cmp <  0; 
+		break;
+	case Py_LE:
+		ok = cmp <= 0; 
+		break;
+	case Py_EQ:
+		ok = cmp == 0; 
+		break;
+	case Py_NE:
+		ok = cmp != 0; 
+		break;
+	case Py_GT: 
+		ok = cmp >  0; 
+		break;
+	case Py_GE:
+		ok = cmp >= 0; 
+		break;
+	default:
+		PyErr_BadArgument(); 
+		return NULL;
+	}
+	res = ok ? Py_True : Py_False;
+	Py_INCREF(res);
+	return res;
 }
 
 /* Set of hash utility functions to help maintaining the invariant that
@@ -1048,10 +852,7 @@ PyObject_Hash(PyObject *v)
 	PyTypeObject *tp = v->ob_type;
 	if (tp->tp_hash != NULL)
 		return (*tp->tp_hash)(v);
-	if (tp->tp_compare == NULL && RICHCOMPARE(tp) == NULL) {
-		return _Py_HashPointer(v); /* Use address as hash value */
-	}
-	/* If there's a cmp but no hash defined, the object can't be hashed */
+	/* Otherwise, the object can't be hashed */
 	PyErr_Format(PyExc_TypeError, "unhashable type: '%.200s'",
 		     v->ob_type->tp_name);
 	return -1;
@@ -1064,7 +865,7 @@ PyObject_GetAttrString(PyObject *v, const char *name)
 
 	if (Py_Type(v)->tp_getattr != NULL)
 		return (*Py_Type(v)->tp_getattr)(v, (char*)name);
-	w = PyString_InternFromString(name);
+	w = PyUnicode_InternFromString(name);
 	if (w == NULL)
 		return NULL;
 	res = PyObject_GetAttr(v, w);
@@ -1092,7 +893,7 @@ PyObject_SetAttrString(PyObject *v, const char *name, PyObject *w)
 
 	if (Py_Type(v)->tp_setattr != NULL)
 		return (*Py_Type(v)->tp_setattr)(v, (char*)name, w);
-	s = PyString_InternFromString(name);
+	s = PyUnicode_InternFromString(name);
 	if (s == NULL)
 		return -1;
 	res = PyObject_SetAttr(v, s, w);
@@ -1105,32 +906,19 @@ PyObject_GetAttr(PyObject *v, PyObject *name)
 {
 	PyTypeObject *tp = Py_Type(v);
 
-	if (!PyString_Check(name)) {
-#ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_getattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = _PyUnicode_AsDefaultEncodedString(name, NULL);
-			if (name == NULL)
-				return NULL;
-		}
-		else
-#endif
-		{
-			PyErr_Format(PyExc_TypeError,
-				     "attribute name must be string, not '%.200s'",
-				     Py_Type(name)->tp_name);
-			return NULL;
-		}
+ 	if (!PyUnicode_Check(name)) {
+		PyErr_Format(PyExc_TypeError,
+			     "attribute name must be string, not '%.200s'",
+			     name->ob_type->tp_name);
+		return NULL;
 	}
 	if (tp->tp_getattro != NULL)
 		return (*tp->tp_getattro)(v, name);
 	if (tp->tp_getattr != NULL)
-		return (*tp->tp_getattr)(v, PyString_AS_STRING(name));
+		return (*tp->tp_getattr)(v, PyUnicode_AsString(name));
 	PyErr_Format(PyExc_AttributeError,
-		     "'%.50s' object has no attribute '%.400s'",
-		     tp->tp_name, PyString_AS_STRING(name));
+		     "'%.50s' object has no attribute '%U'",
+		     tp->tp_name, name);
 	return NULL;
 }
 
@@ -1152,54 +940,41 @@ PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)
 	PyTypeObject *tp = Py_Type(v);
 	int err;
 
-	if (!PyString_Check(name)){
-#ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_setattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = PyUnicode_AsEncodedString(name, NULL, NULL);
-			if (name == NULL)
-				return -1;
-		}
-		else
-#endif
-		{
-			PyErr_Format(PyExc_TypeError,
-				     "attribute name must be string, not '%.200s'",
-				     Py_Type(name)->tp_name);
-			return -1;
-		}
+	if (!PyUnicode_Check(name)) {
+		PyErr_Format(PyExc_TypeError,
+			     "attribute name must be string, not '%.200s'",
+			     name->ob_type->tp_name);
+		return -1;
 	}
-	else
-		Py_INCREF(name);
+	Py_INCREF(name);
 
-	PyString_InternInPlace(&name);
+	PyUnicode_InternInPlace(&name);
 	if (tp->tp_setattro != NULL) {
 		err = (*tp->tp_setattro)(v, name, value);
 		Py_DECREF(name);
 		return err;
 	}
 	if (tp->tp_setattr != NULL) {
-		err = (*tp->tp_setattr)(v, PyString_AS_STRING(name), value);
+		err = (*tp->tp_setattr)(v, PyUnicode_AsString(name), value);
 		Py_DECREF(name);
 		return err;
 	}
 	Py_DECREF(name);
+	assert(name->ob_refcnt >= 1);
 	if (tp->tp_getattr == NULL && tp->tp_getattro == NULL)
 		PyErr_Format(PyExc_TypeError,
 			     "'%.100s' object has no attributes "
-			     "(%s .%.100s)",
+			     "(%s .%U)",
 			     tp->tp_name,
 			     value==NULL ? "del" : "assign to",
-			     PyString_AS_STRING(name));
+			     name);
 	else
 		PyErr_Format(PyExc_TypeError,
 			     "'%.100s' object has only read-only attributes "
-			     "(%s .%.100s)",
+			     "(%s .%U)",
 			     tp->tp_name,
 			     value==NULL ? "del" : "assign to",
-			     PyString_AS_STRING(name));
+			     name);
 	return -1;
 }
 
@@ -1211,8 +986,6 @@ _PyObject_GetDictPtr(PyObject *obj)
 	Py_ssize_t dictoffset;
 	PyTypeObject *tp = Py_Type(obj);
 
-	if (!(tp->tp_flags & Py_TPFLAGS_HAVE_CLASS))
-		return NULL;
 	dictoffset = tp->tp_dictoffset;
 	if (dictoffset == 0)
 		return NULL;
@@ -1251,24 +1024,11 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 	Py_ssize_t dictoffset;
 	PyObject **dictptr;
 
-	if (!PyString_Check(name)){
-#ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_setattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = PyUnicode_AsEncodedString(name, NULL, NULL);
-			if (name == NULL)
-				return NULL;
-		}
-		else
-#endif
-		{
-			PyErr_Format(PyExc_TypeError,
-				     "attribute name must be string, not '%.200s'",
-				     Py_Type(name)->tp_name);
-			return NULL;
-		}
+	if (!PyUnicode_Check(name)){
+		PyErr_Format(PyExc_TypeError,
+			     "attribute name must be string, not '%.200s'",
+			     name->ob_type->tp_name);
+		return NULL;
 	}
 	else
 		Py_INCREF(name);
@@ -1290,12 +1050,8 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 		n = PyTuple_GET_SIZE(mro);
 		for (i = 0; i < n; i++) {
 			base = PyTuple_GET_ITEM(mro, i);
-			if (PyClass_Check(base))
-				dict = ((PyClassObject *)base)->cl_dict;
-			else {
-				assert(PyType_Check(base));
-				dict = ((PyTypeObject *)base)->tp_dict;
-			}
+			assert(PyType_Check(base));
+			dict = ((PyTypeObject *)base)->tp_dict;
 			assert(dict && PyDict_Check(dict));
 			descr = PyDict_GetItem(dict, name);
 			if (descr != NULL)
@@ -1306,8 +1062,7 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 	Py_XINCREF(descr);
 
 	f = NULL;
-	if (descr != NULL &&
-	    PyType_HasFeature(descr->ob_type, Py_TPFLAGS_HAVE_CLASS)) {
+	if (descr != NULL) {
 		f = descr->ob_type->tp_descr_get;
 		if (f != NULL && PyDescr_IsData(descr)) {
 			res = f(descr, obj, (PyObject *)obj->ob_type);
@@ -1359,7 +1114,7 @@ PyObject_GenericGetAttr(PyObject *obj, PyObject *name)
 
 	PyErr_Format(PyExc_AttributeError,
 		     "'%.50s' object has no attribute '%.400s'",
-		     tp->tp_name, PyString_AS_STRING(name));
+		     tp->tp_name, PyUnicode_AsString(name));
   done:
 	Py_DECREF(name);
 	return res;
@@ -1374,24 +1129,11 @@ PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)
 	PyObject **dictptr;
 	int res = -1;
 
-	if (!PyString_Check(name)){
-#ifdef Py_USING_UNICODE
-		/* The Unicode to string conversion is done here because the
-		   existing tp_setattro slots expect a string object as name
-		   and we wouldn't want to break those. */
-		if (PyUnicode_Check(name)) {
-			name = PyUnicode_AsEncodedString(name, NULL, NULL);
-			if (name == NULL)
-				return -1;
-		}
-		else
-#endif
-		{
-			PyErr_Format(PyExc_TypeError,
-				     "attribute name must be string, not '%.200s'",
-				     Py_Type(name)->tp_name);
-			return -1;
-		}
+	if (!PyUnicode_Check(name)){
+		PyErr_Format(PyExc_TypeError,
+			     "attribute name must be string, not '%.200s'",
+			     name->ob_type->tp_name);
+		return -1;
 	}
 	else
 		Py_INCREF(name);
@@ -1403,8 +1145,7 @@ PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)
 
 	descr = _PyType_Lookup(tp, name);
 	f = NULL;
-	if (descr != NULL &&
-	    PyType_HasFeature(descr->ob_type, Py_TPFLAGS_HAVE_CLASS)) {
+	if (descr != NULL) {
 		f = descr->ob_type->tp_descr_set;
 		if (f != NULL && PyDescr_IsData(descr)) {
 			res = f(descr, obj, value);
@@ -1439,14 +1180,14 @@ PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)
 
 	if (descr == NULL) {
 		PyErr_Format(PyExc_AttributeError,
-			     "'%.100s' object has no attribute '%.200s'",
-			     tp->tp_name, PyString_AS_STRING(name));
+			     "'%.100s' object has no attribute '%U'",
+			     tp->tp_name, name);
 		goto done;
 	}
 
 	PyErr_Format(PyExc_AttributeError,
-		     "'%.50s' object attribute '%.400s' is read-only",
-		     tp->tp_name, PyString_AS_STRING(name));
+		     "'%.50s' object attribute '%U' is read-only",
+		     tp->tp_name, name);
   done:
 	Py_DECREF(name);
 	return res;
@@ -1466,8 +1207,8 @@ PyObject_IsTrue(PyObject *v)
 	if (v == Py_None)
 		return 0;
 	else if (v->ob_type->tp_as_number != NULL &&
-		 v->ob_type->tp_as_number->nb_nonzero != NULL)
-		res = (*v->ob_type->tp_as_number->nb_nonzero)(v);
+		 v->ob_type->tp_as_number->nb_bool != NULL)
+		res = (*v->ob_type->tp_as_number->nb_bool)(v);
 	else if (v->ob_type->tp_as_mapping != NULL &&
 		 v->ob_type->tp_as_mapping->mp_length != NULL)
 		res = (*v->ob_type->tp_as_mapping->mp_length)(v);
@@ -1493,57 +1234,6 @@ PyObject_Not(PyObject *v)
 	return res == 0;
 }
 
-/* Coerce two numeric types to the "larger" one.
-   Increment the reference count on each argument.
-   Return value:
-   -1 if an error occurred;
-   0 if the coercion succeeded (and then the reference counts are increased);
-   1 if no coercion is possible (and no error is raised).
-*/
-int
-PyNumber_CoerceEx(PyObject **pv, PyObject **pw)
-{
-	register PyObject *v = *pv;
-	register PyObject *w = *pw;
-	int res;
-
-	/* Shortcut only for old-style types */
-	if (v->ob_type == w->ob_type &&
-	    !PyType_HasFeature(v->ob_type, Py_TPFLAGS_CHECKTYPES))
-	{
-		Py_INCREF(v);
-		Py_INCREF(w);
-		return 0;
-	}
-	if (v->ob_type->tp_as_number && v->ob_type->tp_as_number->nb_coerce) {
-		res = (*v->ob_type->tp_as_number->nb_coerce)(pv, pw);
-		if (res <= 0)
-			return res;
-	}
-	if (w->ob_type->tp_as_number && w->ob_type->tp_as_number->nb_coerce) {
-		res = (*w->ob_type->tp_as_number->nb_coerce)(pw, pv);
-		if (res <= 0)
-			return res;
-	}
-	return 1;
-}
-
-/* Coerce two numeric types to the "larger" one.
-   Increment the reference count on each argument.
-   Return -1 and raise an exception if no coercion is possible
-   (and then no reference count is incremented).
-*/
-int
-PyNumber_Coerce(PyObject **pv, PyObject **pw)
-{
-	int err = PyNumber_CoerceEx(pv, pw);
-	if (err <= 0)
-		return err;
-	PyErr_SetString(PyExc_TypeError, "number coercion failed");
-	return -1;
-}
-
-
 /* Test whether an object can be called */
 
 int
@@ -1551,20 +1241,7 @@ PyCallable_Check(PyObject *x)
 {
 	if (x == NULL)
 		return 0;
-	if (PyInstance_Check(x)) {
-		PyObject *call = PyObject_GetAttrString(x, "__call__");
-		if (call == NULL) {
-			PyErr_Clear();
-			return 0;
-		}
-		/* Could test recursively but don't, for fear of endless
-		   recursion if some joker sets self.__call__ = self */
-		Py_DECREF(call);
-		return 1;
-	}
-	else {
-		return x->ob_type->tp_call != NULL;
-	}
+	return x->ob_type->tp_call != NULL;
 }
 
 /* ------------------------- PyObject_Dir() helpers ------------------------- */
@@ -1626,43 +1303,6 @@ merge_class_dict(PyObject* dict, PyObject* aclass)
 		Py_DECREF(bases);
 	}
 	return 0;
-}
-
-/* Helper for PyObject_Dir.
-   If obj has an attr named attrname that's a list, merge its string
-   elements into keys of dict.
-   Return 0 on success, -1 on error.  Errors due to not finding the attr,
-   or the attr not being a list, are suppressed.
-*/
-
-static int
-merge_list_attr(PyObject* dict, PyObject* obj, const char *attrname)
-{
-	PyObject *list;
-	int result = 0;
-
-	assert(PyDict_Check(dict));
-	assert(obj);
-	assert(attrname);
-
-	list = PyObject_GetAttrString(obj, attrname);
-	if (list == NULL)
-		PyErr_Clear();
-
-	else if (PyList_Check(list)) {
-		int i;
-		for (i = 0; i < PyList_GET_SIZE(list); ++i) {
-			PyObject *item = PyList_GET_ITEM(list, i);
-			if (PyString_Check(item)) {
-				result = PyDict_SetItem(dict, item, Py_None);
-				if (result < 0)
-					break;
-			}
-		}
-	}
-
-	Py_XDECREF(list);
-	return result;
 }
 
 /* Helper for PyObject_Dir without arguments: returns the local scope. */
@@ -1759,13 +1399,6 @@ _generic_dir(PyObject *obj)
 	if (dict == NULL)
 		goto error;
 
-	/* Merge in __members__ and __methods__ (if any).
-	 * This is removed in Python 3000. */
-	if (merge_list_attr(dict, obj, "__members__") < 0)
-		goto error;
-	if (merge_list_attr(dict, obj, "__methods__") < 0)
-		goto error;
-
 	/* Merge in attrs reachable from its class. */
 	itsclass = PyObject_GetAttrString(obj, "__class__");
 	if (itsclass == NULL)
@@ -1791,9 +1424,9 @@ error:
 static PyObject *
 _dir_object(PyObject *obj)
 {
-	PyObject *result = NULL;
-	PyObject *dirfunc = PyObject_GetAttrString((PyObject *)obj->ob_type,
-						   "__dir__");
+	PyObject * result = NULL;
+	PyObject * dirfunc = PyObject_GetAttrString((PyObject*)obj->ob_type,
+						    "__dir__");
 
 	assert(obj);
 	if (dirfunc == NULL) {
@@ -1801,7 +1434,7 @@ _dir_object(PyObject *obj)
 		PyErr_Clear();
 		if (PyModule_Check(obj))
 			result = _specialized_dir_module(obj);
-		else if (PyType_Check(obj) || PyClass_Check(obj))
+		else if (PyType_Check(obj))
 			result = _specialized_dir_type(obj);
 		else
 			result = _generic_dir(obj);
@@ -1865,7 +1498,7 @@ so there is exactly one (which is indestructible, by the way).
 static PyObject *
 none_repr(PyObject *op)
 {
-	return PyString_FromString("None");
+	return PyUnicode_FromString("None");
 }
 
 /* ARGUSED */
@@ -1907,7 +1540,7 @@ PyObject _Py_NoneStruct = {
 static PyObject *
 NotImplemented_repr(PyObject *op)
 {
-	return PyString_FromString("NotImplemented");
+	return PyUnicode_FromString("NotImplemented");
 }
 
 static PyTypeObject PyNotImplemented_Type = {
@@ -1944,6 +1577,9 @@ _Py_ReadyTypes(void)
 	if (PyType_Ready(&PyBool_Type) < 0)
 		Py_FatalError("Can't initialize 'bool'");
 
+	if (PyType_Ready(&PyBytes_Type) < 0)
+		Py_FatalError("Can't initialize 'bytes'");
+
 	if (PyType_Ready(&PyString_Type) < 0)
 		Py_FatalError("Can't initialize 'str'");
 
@@ -1953,8 +1589,14 @@ _Py_ReadyTypes(void)
 	if (PyType_Ready(&PyNone_Type) < 0)
 		Py_FatalError("Can't initialize type(None)");
 
+	if (PyType_Ready(Py_Ellipsis->ob_type) < 0)
+		Py_FatalError("Can't initialize type(Ellipsis)");
+
 	if (PyType_Ready(&PyNotImplemented_Type) < 0)
 		Py_FatalError("Can't initialize type(NotImplemented)");
+
+	if (PyType_Ready(&PyCode_Type) < 0)
+		Py_FatalError("Can't initialize 'code'");
 }
 
 

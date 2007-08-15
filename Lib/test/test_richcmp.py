@@ -51,7 +51,7 @@ class Vector:
     def __hash__(self):
         raise TypeError, "Vectors cannot be hashed"
 
-    def __nonzero__(self):
+    def __bool__(self):
         raise TypeError, "Vectors cannot be used in Boolean contexts"
 
     def __cmp__(self, other):
@@ -105,7 +105,7 @@ class VectorTest(unittest.TestCase):
             realres = op(a, b)
             # can't use assertEqual(realres, expres) here
             self.assertEqual(len(realres), len(expres))
-            for i in xrange(len(realres)):
+            for i in range(len(realres)):
                 # results are bool, so we can use "is" here
                 self.assert_(realres[i] is expres[i])
 
@@ -119,7 +119,7 @@ class VectorTest(unittest.TestCase):
         for opname in opmap:
             self.checkfail(ValueError, opname, a, b)
 
-        a = range(5)
+        a = list(range(5))
         b = 5 * [2]
         # try mixed arguments (but not (a, b) as that won't return a bool vector)
         args = [(a, Vector(b)), (Vector(a), b), (Vector(a), Vector(b))]
@@ -131,9 +131,9 @@ class VectorTest(unittest.TestCase):
             self.checkequal("gt", a, b, [False, False, False, True,  True ])
             self.checkequal("ge", a, b, [False, False, True,  True,  True ])
 
-            for ops in opmap.itervalues():
+            for ops in opmap.values():
                 for op in ops:
-                    # calls __nonzero__, which should fail
+                    # calls __bool__, which should fail
                     self.assertRaises(TypeError, bool, op(a, b))
 
 class NumberTest(unittest.TestCase):
@@ -142,15 +142,15 @@ class NumberTest(unittest.TestCase):
         # Check that comparisons involving Number objects
         # give the same results give as comparing the
         # corresponding ints
-        for a in xrange(3):
-            for b in xrange(3):
+        for a in range(3):
+            for b in range(3):
                 for typea in (int, Number):
                     for typeb in (int, Number):
                         if typea==typeb==int:
                             continue # the combination int, int is useless
                         ta = typea(a)
                         tb = typeb(b)
-                        for ops in opmap.itervalues():
+                        for ops in opmap.values():
                             for op in ops:
                                 realoutcome = op(a, b)
                                 testoutcome = op(ta, tb)
@@ -208,13 +208,13 @@ class MiscTest(unittest.TestCase):
         self.assertRaises(RuntimeError, cmp, a, b)
 
     def test_not(self):
-        # Check that exceptions in __nonzero__ are properly
+        # Check that exceptions in __bool__ are properly
         # propagated by the not operator
         import operator
         class Exc(Exception):
             pass
         class Bad:
-            def __nonzero__(self):
+            def __bool__(self):
                 raise Exc
 
         def do(bad):
@@ -265,16 +265,16 @@ class DictTest(unittest.TestCase):
         imag1a = {}
         for i in range(50):
             imag1a[random.randrange(100)*1j] = random.randrange(100)*1j
-        items = imag1a.items()
+        items = list(imag1a.items())
         random.shuffle(items)
         imag1b = {}
         for k, v in items:
             imag1b[k] = v
         imag2 = imag1b.copy()
         imag2[k] = v + 1.0
-        self.assert_(imag1a == imag1a)
-        self.assert_(imag1a == imag1b)
-        self.assert_(imag2 == imag2)
+        self.assertEqual(imag1a, imag1a)
+        self.assertEqual(imag1a, imag1b)
+        self.assertEqual(imag2, imag2)
         self.assert_(imag1a != imag2)
         for opname in ("lt", "le", "gt", "ge"):
             for op in opmap[opname]:

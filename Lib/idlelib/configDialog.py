@@ -11,14 +11,14 @@ Refer to comments in EditorWindow autoindent code for details.
 """
 from Tkinter import *
 import tkMessageBox, tkColorChooser, tkFont
-import string, copy
+import copy
 
-from configHandler import idleConf
-from dynOptionMenuWidget import DynOptionMenu
-from tabpage import TabPageSet
-from keybindingDialog import GetKeysDialog
-from configSectionNameDialog import GetCfgSectionNameDialog
-from configHelpSourceEdit import GetHelpSourceDialog
+from .configHandler import idleConf
+from .dynOptionMenuWidget import DynOptionMenu
+from .tabpage import TabPageSet
+from .keybindingDialog import GetKeysDialog
+from .configSectionNameDialog import GetCfgSectionNameDialog
+from .configHelpSourceEdit import GetHelpSourceDialog
 
 class ConfigDialog(Toplevel):
 
@@ -550,7 +550,7 @@ class ConfigDialog(Toplevel):
 
     def AddChangedItem(self,type,section,item,value):
         value=str(value) #make sure we use a string
-        if not self.changedItems[type].has_key(section):
+        if section not in self.changedItems[type]:
             self.changedItems[type][section]={}
         self.changedItems[type][section][item]=value
 
@@ -650,7 +650,7 @@ class ConfigDialog(Toplevel):
         newKeys={}
         for event in prevKeys.keys(): #add key set to changed items
             eventName=event[2:-2] #trim off the angle brackets
-            binding=string.join(prevKeys[event])
+            binding=' '.join(prevKeys[event])
             newKeys[eventName]=binding
         #handle any unsaved changes to prev key set
         if prevKeySetName in self.changedItems['keys'].keys():
@@ -677,7 +677,7 @@ class ConfigDialog(Toplevel):
         bindNames.sort()
         self.listBindings.delete(0,END)
         for bindName in bindNames:
-            key=string.join(keySet[bindName]) #make key(s) into a string
+            key=' '.join(keySet[bindName]) #make key(s) into a string
             bindName=bindName[2:-2] #trim off the angle brackets
             if keySetName in self.changedItems['keys'].keys():
                 #handle any unsaved changes to this key set
@@ -697,7 +697,7 @@ class ConfigDialog(Toplevel):
             return
         #remove key set from config
         idleConf.userCfg['keys'].remove_section(keySetName)
-        if self.changedItems['keys'].has_key(keySetName):
+        if keySetName in self.changedItems['keys']:
             del(self.changedItems['keys'][keySetName])
         #write changes
         idleConf.userCfg['keys'].Save()
@@ -724,7 +724,7 @@ class ConfigDialog(Toplevel):
             return
         #remove theme from config
         idleConf.userCfg['highlight'].remove_section(themeName)
-        if self.changedItems['highlight'].has_key(themeName):
+        if themeName in self.changedItems['highlight']:
             del(self.changedItems['highlight'][themeName])
         #write changes
         idleConf.userCfg['highlight'].Save()
@@ -859,9 +859,9 @@ class ConfigDialog(Toplevel):
             #handle any unsaved changes to this theme
             if theme in self.changedItems['highlight'].keys():
                 themeDict=self.changedItems['highlight'][theme]
-                if themeDict.has_key(element+'-foreground'):
+                if element+'-foreground' in themeDict:
                     colours['foreground']=themeDict[element+'-foreground']
-                if themeDict.has_key(element+'-background'):
+                if element+'-background' in themeDict:
                     colours['background']=themeDict[element+'-background']
             self.textHighlightSample.tag_config(element, **colours)
         self.SetColourSample()
@@ -914,7 +914,7 @@ class ConfigDialog(Toplevel):
         self.changedItems['main']['HelpFiles'] = {}
         for num in range(1,len(self.userHelpList)+1):
             self.AddChangedItem('main','HelpFiles',str(num),
-                    string.join(self.userHelpList[num-1][:2],';'))
+                    ';'.join(self.userHelpList[num-1][:2]))
 
     def LoadFontCfg(self):
         ##base editor font selection list

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for cookielib.py."""
 
 import re, os, time
@@ -103,7 +102,7 @@ class HeaderTests(TestCase):
         from cookielib import parse_ns_headers
 
         # quotes should be stripped
-        expected = [[('foo', 'bar'), ('expires', 2209069412L), ('version', '0')]]
+        expected = [[('foo', 'bar'), ('expires', 2209069412), ('version', '0')]]
         for hdr in [
             'foo=bar; expires=01 Jan 2040 22:23:32 GMT',
             'foo=bar; expires="01 Jan 2040 22:23:32 GMT"',
@@ -154,8 +153,8 @@ class HeaderTests(TestCase):
             try:
                 result = split_header_words([arg])
             except:
-                import traceback, StringIO
-                f = StringIO.StringIO()
+                import traceback, io
+                f = io.StringIO()
                 traceback.print_exc(None, f)
                 result = "(error -- traceback follows)\n\n%s" % f.getvalue()
             self.assertEquals(result,  expect, """
@@ -205,8 +204,8 @@ class FakeResponse:
         """
         headers: list of RFC822-style 'Key: value' strings
         """
-        import mimetools, StringIO
-        f = StringIO.StringIO("\n".join(headers))
+        import mimetools, io
+        f = io.StringIO("\n".join(headers))
         self._headers = mimetools.Message(f)
         self._url = url
     def info(self): return self._headers
@@ -257,7 +256,7 @@ class FileCookieJarTests(TestCase):
             try:
                 c.load(filename="for this test to work, a file with this "
                                 "filename should not exist")
-            except IOError, exc:
+            except IOError as exc:
                 # exactly IOError, not LoadError
                 self.assertEqual(exc.__class__, IOError)
             else:
@@ -570,7 +569,7 @@ class CookieTests(TestCase):
             ("/foo\031/bar", "/foo%19/bar"),
             ("/\175foo/bar", "/%7Dfoo/bar"),
             # unicode
-            (u"/foo/bar\uabcd", "/foo/bar%EA%AF%8D"),  # UTF-8 encoded
+            ("/foo/bar\uabcd", "/foo/bar%EA%AF%8D"),  # UTF-8 encoded
             ]
         for arg, result in cases:
             self.assertEquals(escape_path(arg), result)
@@ -1530,17 +1529,17 @@ class LWPCookieTests(TestCase):
                       "foo  =   bar; version    =   1")
 
         cookie = interact_2965(
-            c, "http://www.acme.com/foo%2f%25/<<%0anewå/æøå",
+            c, "http://www.acme.com/foo%2f%25/<<%0anew\345/\346\370\345",
             'bar=baz; path="/foo/"; version=1');
         version_re = re.compile(r'^\$version=\"?1\"?', re.I)
         self.assert_("foo=bar" in cookie and version_re.search(cookie))
 
         cookie = interact_2965(
-            c, "http://www.acme.com/foo/%25/<<%0anewå/æøå")
+            c, "http://www.acme.com/foo/%25/<<%0anew\345/\346\370\345")
         self.assert_(not cookie)
 
         # unicode URL doesn't raise exception
-        cookie = interact_2965(c, u"http://www.acme.com/\xfc")
+        cookie = interact_2965(c, "http://www.acme.com/\xfc")
 
     def test_mozilla(self):
         # Save / load Mozilla/Netscape cookie file format.
@@ -1723,7 +1722,6 @@ class LWPCookieTests(TestCase):
 
 
 def test_main(verbose=None):
-    from test import test_sets
     test_support.run_unittest(
         DateTimeTests,
         HeaderTests,

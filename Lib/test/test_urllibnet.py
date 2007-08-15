@@ -54,8 +54,8 @@ class urlopenNetworkTests(unittest.TestCase):
         # Test both readline and readlines.
         open_url = urllib.urlopen("http://www.python.org/")
         try:
-            self.assert_(isinstance(open_url.readline(), basestring),
-                         "readline did not return a string")
+            self.assert_(isinstance(open_url.readline(), bytes),
+                         "readline did not return bytes")
             self.assert_(isinstance(open_url.readlines(), list),
                          "readlines did not return a list")
         finally:
@@ -120,7 +120,7 @@ class urlretrieveNetworkTests(unittest.TestCase):
         file_location,info = urllib.urlretrieve("http://www.python.org/")
         self.assert_(os.path.exists(file_location), "file location returned by"
                         " urlretrieve is not a valid path")
-        FILE = file(file_location)
+        FILE = open(file_location)
         try:
             self.assert_(FILE.read(), "reading from the file location returned"
                          " by urlretrieve failed")
@@ -134,7 +134,7 @@ class urlretrieveNetworkTests(unittest.TestCase):
                                                 test_support.TESTFN)
         self.assertEqual(file_location, test_support.TESTFN)
         self.assert_(os.path.exists(file_location))
-        FILE = file(file_location)
+        FILE = open(file_location)
         try:
             self.assert_(FILE.read(), "reading from temporary file failed")
         finally:

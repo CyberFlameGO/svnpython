@@ -30,7 +30,6 @@ from Carbon import Menu
 from Carbon import AE
 import Nav
 import MacOS
-import string
 from Carbon.ControlAccessor import *    # Also import Controls constants
 import Carbon.File
 import macresource
@@ -54,12 +53,12 @@ def _interact():
 
 def cr2lf(text):
     if '\r' in text:
-        text = string.join(string.split(text, '\r'), '\n')
+        text = '\n'.join(text.split('\r'))
     return text
 
 def lf2cr(text):
     if '\n' in text:
-        text = string.join(string.split(text, '\n'), '\r')
+        text = '\r'.join(text.split('\n'))
     if len(text) > 253:
         text = text[:253] + '\311'
     return text
@@ -75,7 +74,7 @@ def Message(msg, id=260, ok=None):
     _interact()
     d = GetNewDialog(id, -1)
     if not d:
-        print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+        print("EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)")
         return
     h = d.GetDialogItemAsControl(2)
     SetDialogItemText(h, lf2cr(msg))
@@ -108,7 +107,7 @@ def AskString(prompt, default = "", id=261, ok=None, cancel=None):
     _interact()
     d = GetNewDialog(id, -1)
     if not d:
-        print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+        print("EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)")
         return
     h = d.GetDialogItemAsControl(3)
     SetDialogItemText(h, lf2cr(prompt))
@@ -150,7 +149,7 @@ def AskPassword(prompt,  default='', id=264, ok=None, cancel=None):
     _interact()
     d = GetNewDialog(id, -1)
     if not d:
-        print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+        print("EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)")
         return
     h = d.GetDialogItemAsControl(3)
     SetDialogItemText(h, lf2cr(prompt))
@@ -194,7 +193,7 @@ def AskYesNoCancel(question, default = 0, yes=None, no=None, cancel=None, id=262
     _interact()
     d = GetNewDialog(id, -1)
     if not d:
-        print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+        print("EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)")
         return
     # Button assignments:
     # 1 = default (invisible)
@@ -429,7 +428,7 @@ def GetArgv(optionlist=None, commandlist=None, addoldfile=1, addnewfile=1, addfo
     _interact()
     d = GetNewDialog(id, -1)
     if not d:
-        print "EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)"
+        print("EasyDialogs: Can't get DLOG resource with id =", id, " (missing resource file?)")
         return
 #       h = d.GetDialogItemAsControl(3)
 #       SetDialogItemText(h, lf2cr(prompt))
@@ -543,7 +542,7 @@ def GetArgv(optionlist=None, commandlist=None, addoldfile=1, addnewfile=1, addfo
                 d.SelectDialogItemText(ARGV_CMDLINE_DATA, 0x7fff, 0x7fff)
         h = d.GetDialogItemAsControl(ARGV_CMDLINE_DATA)
         oldstr = GetDialogItemText(h)
-        tmplist = string.split(oldstr)
+        tmplist = oldstr.split()
         newlist = []
         while tmplist:
             item = tmplist[0]
@@ -577,9 +576,9 @@ def _process_Nav_args(dftflags, **args):
         if args[k] is None:
             del args[k]
     # Set some defaults, and modify some arguments
-    if not args.has_key('dialogOptionFlags'):
+    if 'dialogOptionFlags' not in args:
         args['dialogOptionFlags'] = dftflags
-    if args.has_key('defaultLocation') and \
+    if 'defaultLocation' in args and \
             not isinstance(args['defaultLocation'], Carbon.AE.AEDesc):
         defaultLocation = args['defaultLocation']
         if isinstance(defaultLocation, (Carbon.File.FSSpec, Carbon.File.FSRef)):
@@ -587,7 +586,7 @@ def _process_Nav_args(dftflags, **args):
         else:
             defaultLocation = Carbon.File.FSRef(defaultLocation)
             args['defaultLocation'] = aepack.pack(defaultLocation)
-    if args.has_key('typeList') and not isinstance(args['typeList'], Carbon.Res.ResourceType):
+    if 'typeList' in args and not isinstance(args['typeList'], Carbon.Res.ResourceType):
         typeList = args['typeList'][:]
         # Workaround for OSX typeless files:
         if 'TEXT' in typeList and not '\0\0\0\0' in typeList:
@@ -597,7 +596,7 @@ def _process_Nav_args(dftflags, **args):
             data = data+type
         args['typeList'] = Carbon.Res.Handle(data)
     tpwanted = str
-    if args.has_key('wanted'):
+    if 'wanted' in args:
         tpwanted = args['wanted']
         del args['wanted']
     return args, tpwanted
@@ -651,7 +650,7 @@ def AskFileForOpen(
     try:
         rr = Nav.NavChooseFile(args)
         good = 1
-    except Nav.error, arg:
+    except Nav.error as arg:
         if arg[0] != -128: # userCancelledErr
             raise Nav.error, arg
         return None
@@ -663,7 +662,7 @@ def AskFileForOpen(
         return tpwanted(rr.selection[0])
     if issubclass(tpwanted, str):
         return tpwanted(rr.selection_fsr[0].as_pathname())
-    if issubclass(tpwanted, unicode):
+    if issubclass(tpwanted, str):
         return tpwanted(rr.selection_fsr[0].as_pathname(), 'utf8')
     raise TypeError, "Unknown value for argument 'wanted': %s" % repr(tpwanted)
 
@@ -704,7 +703,7 @@ def AskFileForSave(
     try:
         rr = Nav.NavPutFile(args)
         good = 1
-    except Nav.error, arg:
+    except Nav.error as arg:
         if arg[0] != -128: # userCancelledErr
             raise Nav.error, arg
         return None
@@ -714,7 +713,7 @@ def AskFileForSave(
         raise TypeError, "Cannot pass wanted=FSRef to AskFileForSave"
     if issubclass(tpwanted, Carbon.File.FSSpec):
         return tpwanted(rr.selection[0])
-    if issubclass(tpwanted, (str, unicode)):
+    if issubclass(tpwanted, str):
         if sys.platform == 'mac':
             fullpath = rr.selection[0].as_pathname()
         else:
@@ -723,10 +722,10 @@ def AskFileForSave(
             pardir_fss = Carbon.File.FSSpec((vrefnum, dirid, ''))
             pardir_fsr = Carbon.File.FSRef(pardir_fss)
             pardir_path = pardir_fsr.FSRefMakePath()  # This is utf-8
-            name_utf8 = unicode(name, 'macroman').encode('utf8')
+            name_utf8 = str(name, 'macroman').encode('utf8')
             fullpath = os.path.join(pardir_path, name_utf8)
-        if issubclass(tpwanted, unicode):
-            return unicode(fullpath, 'utf8')
+        if issubclass(tpwanted, str):
+            return str(fullpath, 'utf8')
         return tpwanted(fullpath)
     raise TypeError, "Unknown value for argument 'wanted': %s" % repr(tpwanted)
 
@@ -764,7 +763,7 @@ def AskFolder(
     try:
         rr = Nav.NavChooseFolder(args)
         good = 1
-    except Nav.error, arg:
+    except Nav.error as arg:
         if arg[0] != -128: # userCancelledErr
             raise Nav.error, arg
         return None
@@ -776,7 +775,7 @@ def AskFolder(
         return tpwanted(rr.selection[0])
     if issubclass(tpwanted, str):
         return tpwanted(rr.selection_fsr[0].as_pathname())
-    if issubclass(tpwanted, unicode):
+    if issubclass(tpwanted, str):
         return tpwanted(rr.selection_fsr[0].as_pathname(), 'utf8')
     raise TypeError, "Unknown value for argument 'wanted': %s" % repr(tpwanted)
 
@@ -791,7 +790,7 @@ def test():
     argv = GetArgv(optionlist=optionlist, commandlist=commandlist, addoldfile=0)
     Message("Command line: %s"%' '.join(argv))
     for i in range(len(argv)):
-        print 'arg[%d] = %r' % (i, argv[i])
+        print('arg[%d] = %r' % (i, argv[i]))
     ok = AskYesNoCancel("Do you want to proceed?")
     ok = AskYesNoCancel("Do you want to identify?", yes="Identify", no="No")
     if ok > 0:
@@ -815,11 +814,11 @@ def test():
     try:
         if hasattr(MacOS, 'SchedParams'):
             appsw = MacOS.SchedParams(1, 0)
-        for i in xrange(20):
+        for i in range(20):
             bar.inc()
             time.sleep(0.05)
         bar.set(0,100)
-        for i in xrange(100):
+        for i in range(100):
             bar.set(i)
             time.sleep(0.05)
             if i % 10 == 0:

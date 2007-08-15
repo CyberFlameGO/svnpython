@@ -67,7 +67,7 @@ s = m.getbodytext(0)    # text of message's body, not decoded
 MH_PROFILE = '~/.mh_profile'
 PATH = '~/Mail'
 MH_SEQUENCES = '.mh_sequences'
-FOLDER_PROTECT = 0700
+FOLDER_PROTECT = 0o700
 
 
 # Imported modules
@@ -282,8 +282,7 @@ class Folder:
         for name in os.listdir(self.getfullname()):
             if match(name):
                 append(name)
-        messages = map(int, messages)
-        messages.sort()
+        messages = sorted(map(int, messages))
         if messages:
             self.last = messages[-1]
         else:
@@ -314,7 +313,7 @@ class Folder:
         """Write the set of sequences back to the folder."""
         fullname = self.getsequencesfilename()
         f = None
-        for key, seq in sequences.iteritems():
+        for key, seq in sequences.items():
             s = IntSet('', ' ')
             s.fromlist(seq)
             if not f: f = open(fullname, 'w')
@@ -370,7 +369,7 @@ class Folder:
                 count = len(all)
             try:
                 anchor = self._parseindex(head, all)
-            except Error, msg:
+            except Error as msg:
                 seqs = self.getsequences()
                 if not head in seqs:
                     if not msg:
@@ -407,7 +406,7 @@ class Folder:
         # Neither X:Y nor X-Y; must be a number or a (pseudo-)sequence
         try:
             n = self._parseindex(seq, all)
-        except Error, msg:
+        except Error as msg:
             seqs = self.getsequences()
             if not seq in seqs:
                 if not msg:
@@ -471,7 +470,7 @@ class Folder:
                 pass
             try:
                 os.rename(path, commapath)
-            except os.error, msg:
+            except os.error as msg:
                 errors.append(msg)
             else:
                 deleted.append(n)
@@ -499,7 +498,7 @@ class Folder:
                 try:
                     shutil.copy2(path, topath)
                     os.unlink(path)
-                except (IOError, os.error), msg:
+                except (IOError, os.error) as msg:
                     errors.append(msg)
                     try:
                         os.unlink(topath)
@@ -697,10 +696,7 @@ class Message(mimetools.Message):
         encoding = self.getencoding()
         if not decode or encoding in ('', '7bit', '8bit', 'binary'):
             return self.fp.read()
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        from io import StringIO
         output = StringIO()
         mimetools.decode(self.fp, output, encoding)
         return output.getvalue()
@@ -828,7 +824,7 @@ class IntSet:
     def tolist(self):
         l = []
         for lo, hi in self.pairs:
-            m = range(lo, hi+1)
+            m = list(range(lo, hi+1))
             l = l + m
         return l
 
@@ -959,7 +955,7 @@ def test():
     global mh, f
     os.system('rm -rf $HOME/Mail/@test')
     mh = MH()
-    def do(s): print s; print eval(s)
+    def do(s): print(s); print(eval(s))
     do('mh.listfolders()')
     do('mh.listallfolders()')
     testfolders = ['@test', '@test/test1', '@test/test2',
@@ -974,7 +970,7 @@ def test():
     do('f.getsequences()')
     seqs = f.getsequences()
     seqs['foo'] = IntSet('1-10 12-20', ' ').tolist()
-    print seqs
+    print(seqs)
     f.putsequences(seqs)
     do('f.getsequences()')
     for t in reversed(testfolders): do('mh.deletefolder(%r)' % (t,))
@@ -989,11 +985,11 @@ def test():
                 'all'):
         try:
             do('f.parsesequence(%r)' % (seq,))
-        except Error, msg:
-            print "Error:", msg
+        except Error as msg:
+            print("Error:", msg)
         stuff = os.popen("pick %r 2>/dev/null" % (seq,)).read()
         list = map(int, stuff.split())
-        print list, "<-- pick"
+        print(list, "<-- pick")
     do('f.listmessages()')
 
 

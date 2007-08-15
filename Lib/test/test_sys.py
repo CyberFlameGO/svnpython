@@ -1,13 +1,13 @@
 # -*- coding: iso-8859-1 -*-
 import unittest, test.test_support
-import sys, cStringIO
+import sys, io
 
 class SysModuleTest(unittest.TestCase):
 
     def test_original_displayhook(self):
         import __builtin__
         savestdout = sys.stdout
-        out = cStringIO.StringIO()
+        out = io.StringIO()
         sys.stdout = out
 
         dh = sys.__displayhook__
@@ -46,7 +46,7 @@ class SysModuleTest(unittest.TestCase):
 
     def test_original_excepthook(self):
         savestderr = sys.stderr
-        err = cStringIO.StringIO()
+        err = io.StringIO()
         sys.stderr = err
 
         eh = sys.__excepthook__
@@ -54,7 +54,7 @@ class SysModuleTest(unittest.TestCase):
         self.assertRaises(TypeError, eh)
         try:
             raise ValueError(42)
-        except ValueError, exc:
+        except ValueError as exc:
             eh(*sys.exc_info())
 
         sys.stderr = savestderr
@@ -63,57 +63,13 @@ class SysModuleTest(unittest.TestCase):
     # FIXME: testing the code for a lost or replaced excepthook in
     # Python/pythonrun.c::PyErr_PrintEx() is tricky.
 
-    def test_exc_clear(self):
-        self.assertRaises(TypeError, sys.exc_clear, 42)
-
-        # Verify that exc_info is present and matches exc, then clear it, and
-        # check that it worked.
-        def clear_check(exc):
-            typ, value, traceback = sys.exc_info()
-            self.assert_(typ is not None)
-            self.assert_(value is exc)
-            self.assert_(traceback is not None)
-
-            sys.exc_clear()
-
-            typ, value, traceback = sys.exc_info()
-            self.assert_(typ is None)
-            self.assert_(value is None)
-            self.assert_(traceback is None)
-
-        def clear():
-            try:
-                raise ValueError, 42
-            except ValueError, exc:
-                clear_check(exc)
-
-        # Raise an exception and check that it can be cleared
-        clear()
-
-        # Verify that a frame currently handling an exception is
-        # unaffected by calling exc_clear in a nested frame.
-        try:
-            raise ValueError, 13
-        except ValueError, exc:
-            typ1, value1, traceback1 = sys.exc_info()
-            clear()
-            typ2, value2, traceback2 = sys.exc_info()
-
-            self.assert_(typ1 is typ2)
-            self.assert_(value1 is exc)
-            self.assert_(value1 is value2)
-            self.assert_(traceback1 is traceback2)
-
-        # Check that an exception can be cleared outside of an except block
-        clear_check(exc)
-
     def test_exit(self):
         self.assertRaises(TypeError, sys.exit, 42, 42)
 
         # call without argument
         try:
             sys.exit(0)
-        except SystemExit, exc:
+        except SystemExit as exc:
             self.assertEquals(exc.code, 0)
         except:
             self.fail("wrong exception")
@@ -124,7 +80,7 @@ class SysModuleTest(unittest.TestCase):
         # entry will be unpacked
         try:
             sys.exit(42)
-        except SystemExit, exc:
+        except SystemExit as exc:
             self.assertEquals(exc.code, 42)
         except:
             self.fail("wrong exception")
@@ -134,7 +90,7 @@ class SysModuleTest(unittest.TestCase):
         # call with integer argument
         try:
             sys.exit((42,))
-        except SystemExit, exc:
+        except SystemExit as exc:
             self.assertEquals(exc.code, 42)
         except:
             self.fail("wrong exception")
@@ -144,7 +100,7 @@ class SysModuleTest(unittest.TestCase):
         # call with string argument
         try:
             sys.exit("exit")
-        except SystemExit, exc:
+        except SystemExit as exc:
             self.assertEquals(exc.code, "exit")
         except:
             self.fail("wrong exception")
@@ -154,7 +110,7 @@ class SysModuleTest(unittest.TestCase):
         # call with tuple argument with two entries
         try:
             sys.exit((17, 23))
-        except SystemExit, exc:
+        except SystemExit as exc:
             self.assertEquals(exc.code, (17, 23))
         except:
             self.fail("wrong exception")
@@ -172,12 +128,10 @@ class SysModuleTest(unittest.TestCase):
                               "raise SystemExit(47)"])
         self.assertEqual(rc, 47)
 
-
     def test_getdefaultencoding(self):
-        if test.test_support.have_unicode:
-            self.assertRaises(TypeError, sys.getdefaultencoding, 42)
-            # can't check more than the type, as the user might have changed it
-            self.assert_(isinstance(sys.getdefaultencoding(), str))
+        self.assertRaises(TypeError, sys.getdefaultencoding, 42)
+        # can't check more than the type, as the user might have changed it
+        self.assert_(isinstance(sys.getdefaultencoding(), basestring))
 
     # testing sys.settrace() is done in test_trace.py
     # testing sys.setprofile() is done in test_profile.py
@@ -233,7 +187,7 @@ class SysModuleTest(unittest.TestCase):
         self.assertRaises(TypeError, sys._getframe, 42, 42)
         self.assertRaises(ValueError, sys._getframe, 2000000000)
         self.assert_(
-            SysModuleTest.test_getframe.im_func.func_code \
+            SysModuleTest.test_getframe.im_func.__code__ \
             is sys._getframe().f_code
         )
 
@@ -331,8 +285,7 @@ class SysModuleTest(unittest.TestCase):
         self.assert_(isinstance(sys.executable, basestring))
         self.assert_(isinstance(sys.hexversion, int))
         self.assert_(isinstance(sys.maxint, int))
-        if test.test_support.have_unicode:
-            self.assert_(isinstance(sys.maxunicode, int))
+        self.assert_(isinstance(sys.maxunicode, int))
         self.assert_(isinstance(sys.platform, basestring))
         self.assert_(isinstance(sys.prefix, basestring))
         self.assert_(isinstance(sys.version, basestring))
@@ -348,7 +301,43 @@ class SysModuleTest(unittest.TestCase):
     def test_43581(self):
         # Can't use sys.stdout, as this is a cStringIO object when
         # the test runs under regrtest.
-        self.assert_(sys.__stdout__.encoding == sys.__stderr__.encoding)
+        self.assertEqual(sys.__stdout__.encoding, sys.__stderr__.encoding)
+
+    def test_intern(self):
+        self.assertRaises(TypeError, sys.intern)
+        s = str8("never interned before")
+        self.assert_(sys.intern(s) is s)
+        s2 = s.swapcase().swapcase()
+        self.assert_(sys.intern(s2) is s)
+
+        # Subclasses of string can't be interned, because they
+        # provide too much opportunity for insane things to happen.
+        # We don't want them in the interned dict and if they aren't
+        # actually interned, we don't want to create the appearance
+        # that they are by allowing intern() to succeeed.
+        class S(str8):
+            def __hash__(self):
+                return 123
+
+        self.assertRaises(TypeError, sys.intern, S("abc"))
+
+        s = "never interned as unicode before"
+        self.assert_(sys.intern(s) is s)
+        s2 = s.swapcase().swapcase()
+        self.assert_(sys.intern(s2) is s)
+
+        class U(str):
+            def __hash__(self):
+                return 123
+
+        self.assertRaises(TypeError, sys.intern, U("abc"))
+
+        # It's still safe to pass these strings to routines that
+        # call intern internally, e.g. PyObject_SetAttr().
+        s = U("abc")
+        setattr(s, s, s)
+        self.assertEqual(getattr(s, s), s)
+
 
 def test_main():
     test.test_support.run_unittest(SysModuleTest)

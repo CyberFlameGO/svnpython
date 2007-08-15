@@ -70,6 +70,7 @@ __version__ = "0.3"
 
 __all__ = ["HTTPServer", "BaseHTTPRequestHandler"]
 
+import io
 import sys
 import time
 import socket # For gethostbyaddr()
@@ -230,7 +231,7 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         self.command = None  # set in case of error on the first line
         self.request_version = version = "HTTP/0.9" # Default
         self.close_connection = 1
-        requestline = self.raw_requestline
+        requestline = str(self.raw_requestline, 'iso-8859-1')
         if requestline[-2:] == '\r\n':
             requestline = requestline[:-2]
         elif requestline[-1:] == '\n':
@@ -278,7 +279,13 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         self.command, self.path, self.request_version = command, path, version
 
         # Examine the headers and look for a Connection directive
-        self.headers = self.MessageClass(self.rfile, 0)
+        # MessageClass == rfc822 expects ascii, so use a text wrapper.
+        text = io.TextIOWrapper(self.rfile)
+        self.headers = self.MessageClass(text, 0)
+        # The text wrapper does buffering (as does self.rfile).  We
+        # don't want to leave any data in the buffer of the text
+        # wrapper.
+        assert not text.buffer.peek()
 
         conntype = self.headers.get('Connection', "")
         if conntype.lower() == 'close':
@@ -331,12 +338,12 @@ class BaseHTTPRequestHandler(SocketServer.StreamRequestHandler):
         """
 
         try:
-            short, long = self.responses[code]
+            shortmsg, longmsg = self.responses[code]
         except KeyError:
-            short, long = '???', '???'
+            shortmsg, longmsg = '???', '???'
         if message is None:
-            message = short
-        explain = long
+            message = shortmsg
+        explain = longmsg
         self.log_error("code %d, message %s", code, message)
         # using _quote_html to prevent Cross Site Scripting attacks (see bug #1100201)
         content = (self.error_message_format %
@@ -570,7 +577,7 @@ def test(HandlerClass = BaseHTTPRequestHandler,
     httpd = ServerClass(server_address, HandlerClass)
 
     sa = httpd.socket.getsockname()
-    print "Serving HTTP on", sa[0], "port", sa[1], "..."
+    print("Serving HTTP on", sa[0], "port", sa[1], "...")
     httpd.serve_forever()
 
 

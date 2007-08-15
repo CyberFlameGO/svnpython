@@ -65,27 +65,8 @@ __all__.extend(['getTestCaseNames', 'makeSuite', 'findTestCases'])
 
 
 ##############################################################################
-# Backward compatibility
-##############################################################################
-if sys.version_info[:2] < (2, 2):
-    False, True = 0, 1
-    def isinstance(obj, clsinfo):
-        import __builtin__
-        if type(clsinfo) in (tuple, list):
-            for cls in clsinfo:
-                if cls is type: cls = types.ClassType
-                if __builtin__.isinstance(obj, cls):
-                    return 1
-            return 0
-        else: return __builtin__.isinstance(obj, clsinfo)
-
-
-##############################################################################
 # Test framework core
 ##############################################################################
-
-# All classes defined herein are 'new-style' classes, allowing use of 'super()'
-__metaclass__ = type
 
 def _strclass(cls):
     return "%s.%s" % (cls.__module__, cls.__name__)
@@ -153,7 +134,7 @@ class TestResult:
         return ''.join(traceback.format_exception(exctype, value, tb))
 
     def _is_relevant_tb_level(self, tb):
-        return tb.tb_frame.f_globals.has_key('__unittest')
+        return '__unittest' in tb.tb_frame.f_globals
 
     def _count_relevant_tb_levels(self, tb):
         length = 0
@@ -330,9 +311,10 @@ class TestCase:
         except excClass:
             return
         else:
-            if hasattr(excClass,'__name__'): excName = excClass.__name__
-            else: excName = str(excClass)
-            raise self.failureException, "%s not raised" % excName
+            excName = str(getattr(excClass, '__name__', excClass))
+            objName = str(getattr(callableObj, '__name__', callableObj))
+            raise self.failureException, "%s not raised by %s" % (excName,
+                                                                  objName)
 
     def failUnlessEqual(self, first, second, msg=None):
         """Fail if the two objects are unequal as determined by the '=='
@@ -429,10 +411,9 @@ class TestSuite:
 
     def addTest(self, test):
         # sanity checks
-        if not callable(test):
+        if not hasattr(test, '__call__'):
             raise TypeError("the test to add must be callable")
-        if (isinstance(test, (type, types.ClassType)) and
-            issubclass(test, (TestCase, TestSuite))):
+        if isinstance(test, type) and issubclass(test, (TestCase, TestSuite)):
             raise TypeError("TestCases and TestSuites must be instantiated "
                             "before passing them to addTest()")
         self._tests.append(test)
@@ -544,8 +525,7 @@ class TestLoader:
         tests = []
         for name in dir(module):
             obj = getattr(module, name)
-            if (isinstance(obj, (type, types.ClassType)) and
-                issubclass(obj, TestCase)):
+            if isinstance(obj, type) and issubclass(obj, TestCase):
                 tests.append(self.loadTestsFromTestCase(obj))
         return self.suiteClass(tests)
 
@@ -575,16 +555,15 @@ class TestLoader:
 
         if type(obj) == types.ModuleType:
             return self.loadTestsFromModule(obj)
-        elif (isinstance(obj, (type, types.ClassType)) and
-              issubclass(obj, TestCase)):
+        elif isinstance(obj, type) and issubclass(obj, TestCase):
             return self.loadTestsFromTestCase(obj)
-        elif (type(obj) == types.UnboundMethodType and
-              isinstance(parent, (type, types.ClassType)) and
+        elif (isinstance(obj, types.UnboundMethodType) and
+              isinstance(parent, type) and
               issubclass(parent, TestCase)):
             return TestSuite([parent(obj.__name__)])
         elif isinstance(obj, TestSuite):
             return obj
-        elif callable(obj):
+        elif hasattr(obj, '__call__'):
             test = obj()
             if isinstance(test, TestSuite):
                 return test
@@ -607,8 +586,8 @@ class TestLoader:
         """Return a sorted sequence of method names found within testCaseClass
         """
         def isTestMethod(attrname, testCaseClass=testCaseClass, prefix=self.testMethodPrefix):
-            return attrname.startswith(prefix) and callable(getattr(testCaseClass, attrname))
-        testFnNames = filter(isTestMethod, dir(testCaseClass))
+            return attrname.startswith(prefix) and hasattr(getattr(testCaseClass, attrname), '__call__')
+        testFnNames = list(filter(isTestMethod, dir(testCaseClass)))
         if self.sortTestMethodsUsing:
             testFnNames.sort(self.sortTestMethodsUsing)
         return testFnNames
@@ -747,7 +726,7 @@ class TextTestRunner:
         self.stream.writeln()
         if not result.wasSuccessful():
             self.stream.write("FAILED (")
-            failed, errored = map(len, (result.failures, result.errors))
+            failed, errored = len(result.failures), len(result.errors)
             if failed:
                 self.stream.write("failures=%d" % failed)
             if errored:
@@ -803,8 +782,8 @@ Examples:
         self.runTests()
 
     def usageExit(self, msg=None):
-        if msg: print msg
-        print self.USAGE % self.__dict__
+        if msg: print(msg)
+        print(self.USAGE % self.__dict__)
         sys.exit(2)
 
     def parseArgs(self, argv):
@@ -827,7 +806,7 @@ Examples:
             else:
                 self.testNames = (self.defaultTest,)
             self.createTests()
-        except getopt.error, msg:
+        except getopt.error as msg:
             self.usageExit(msg)
 
     def createTests(self):
@@ -835,7 +814,7 @@ Examples:
                                                        self.module)
 
     def runTests(self):
-        if isinstance(self.testRunner, (type, types.ClassType)):
+        if isinstance(self.testRunner, type):
             try:
                 testRunner = self.testRunner(verbosity=self.verbosity)
             except TypeError:

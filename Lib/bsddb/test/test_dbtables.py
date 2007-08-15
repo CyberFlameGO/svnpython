@@ -21,15 +21,11 @@
 # $Id$
 
 import sys, os, re
-try:
-    import cPickle
-    pickle = cPickle
-except ImportError:
-    import pickle
+import pickle
 import tempfile
 
 import unittest
-from test_all import verbose
+from .test_all import verbose
 
 try:
     # For Pythons w/distutils pybsddb
@@ -69,16 +65,21 @@ class TableDBTestCase(unittest.TestCase):
         except dbtables.TableDBError:
             pass
         self.tdb.CreateTable(tabname, [colname])
-        self.tdb.Insert(tabname, {colname: pickle.dumps(3.14159, 1)})
+        try:
+            self.tdb.Insert(tabname, {colname: pickle.dumps(3.14159, 1)})
+        except Exception:
+            import traceback
+            traceback.print_exc()
 
         if verbose:
             self.tdb._db_print()
 
         values = self.tdb.Select(
             tabname, [colname], conditions={colname: None})
+        values = list(values)
 
         colval = pickle.loads(values[0][colname])
-        assert(colval > 3.141 and colval < 3.142)
+        self.assertTrue(colval > 3.141 and colval < 3.142)
 
 
     def test02(self):
@@ -102,16 +103,17 @@ class TableDBTestCase(unittest.TestCase):
 
         values = self.tdb.Select(tabname, [col2],
             conditions={col0: lambda x: pickle.loads(x) >= 8})
+        values = list(values)
 
-        assert len(values) == 2
-        if values[0]['Species'] == 'Penguin' :
-            assert values[1]['Species'] == 'SR-71A Blackbird'
-        elif values[0]['Species'] == 'SR-71A Blackbird' :
-            assert values[1]['Species'] == 'Penguin'
+        self.assertEquals(len(values), 2)
+        if values[0]['Species'] == b'Penguin' :
+            self.assertEquals(values[1]['Species'], b'SR-71A Blackbird')
+        elif values[0]['Species'] == b'SR-71A Blackbird' :
+            self.assertEquals(values[1]['Species'], b'Penguin')
         else :
             if verbose:
-                print "values= %r" % (values,)
-            raise "Wrong values returned!"
+                print("values= %r" % (values,))
+            self.fail("Wrong values returned!")
 
     def test03(self):
         tabname = "test03"
@@ -120,15 +122,15 @@ class TableDBTestCase(unittest.TestCase):
         except dbtables.TableDBError:
             pass
         if verbose:
-            print '...before CreateTable...'
+            print('...before CreateTable...')
             self.tdb._db_print()
         self.tdb.CreateTable(tabname, ['a', 'b', 'c', 'd', 'e'])
         if verbose:
-            print '...after CreateTable...'
+            print('...after CreateTable...')
             self.tdb._db_print()
         self.tdb.Drop(tabname)
         if verbose:
-            print '...after Drop...'
+            print('...after Drop...')
             self.tdb._db_print()
         self.tdb.CreateTable(tabname, ['a', 'b', 'c', 'd', 'e'])
 
@@ -137,13 +139,13 @@ class TableDBTestCase(unittest.TestCase):
                             {'a': "",
                              'e': pickle.dumps([{4:5, 6:7}, 'foo'], 1),
                              'f': "Zero"})
-            assert 0
+            self.fail("exception not raised")
         except dbtables.TableDBError:
             pass
 
         try:
             self.tdb.Select(tabname, [], conditions={'foo': '123'})
-            assert 0
+            self.fail("exception not raised")
         except dbtables.TableDBError:
             pass
 
@@ -172,20 +174,22 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(tabname, ['b', 'a', 'd'],
             conditions={'e': re.compile('wuzzy').search,
                         'a': re.compile('^[0-9]+$').match})
-        assert len(values) == 2
+        self.assertEquals(len(values), 2)
 
         # now lets delete one of them and try again
         self.tdb.Delete(tabname, conditions={'b': dbtables.ExactCond('good')})
         values = self.tdb.Select(
             tabname, ['a', 'd', 'b'],
             conditions={'e': dbtables.PrefixCond('Fuzzy')})
-        assert len(values) == 1
-        assert values[0]['d'] == None
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['d'], None)
 
         values = self.tdb.Select(tabname, ['b'],
-            conditions={'c': lambda c: c == 'meep'})
-        assert len(values) == 1
-        assert values[0]['b'] == "bad"
+            conditions={'c': lambda c: c.decode("ascii") == 'meep'})
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['b'], b"bad")
 
 
     def test04_MultiCondSelect(self):
@@ -201,7 +205,7 @@ class TableDBTestCase(unittest.TestCase):
                             {'a': "",
                              'e': pickle.dumps([{4:5, 6:7}, 'foo'], 1),
                              'f': "Zero"})
-            assert 0
+            self.fail("exception not raised")
         except dbtables.TableDBError:
             pass
 
@@ -225,7 +229,7 @@ class TableDBTestCase(unittest.TestCase):
                         'a': dbtables.ExactCond('A'),
                         'd': dbtables.PrefixCond('-')
                        } )
-        assert len(values) == 0, values
+        self.assertEquals(len(values), 0, values)
 
 
     def test_CreateOrExtend(self):
@@ -238,7 +242,7 @@ class TableDBTestCase(unittest.TestCase):
                             {'taste': 'crap',
                              'filling': 'no',
                              'is it Guinness?': 'no'})
-            assert 0, "Insert should've failed due to bad column name"
+            self.fail("Insert should've failed due to bad column name")
         except:
             pass
         self.tdb.CreateOrExtendTable(tabname,
@@ -272,16 +276,18 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(
             tabname, ['p', 'e'],
             conditions={'e': dbtables.PrefixCond('the l')})
-        assert len(values) == 2, values
-        assert values[0]['e'] == values[1]['e'], values
-        assert values[0]['p'] != values[1]['p'], values
+        values = list(values)
+        self.assertEquals(len(values), 2)
+        self.assertEquals(values[0]['e'], values[1]['e'])
+        self.assertNotEquals(values[0]['p'], values[1]['p'])
 
         values = self.tdb.Select(
             tabname, ['d', 'a'],
             conditions={'a': dbtables.LikeCond('%aardvark%')})
-        assert len(values) == 1, values
-        assert values[0]['d'] == "is for dog", values
-        assert values[0]['a'] == "is for aardvark", values
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['d'], b"is for dog")
+        self.assertEquals(values[0]['a'], b"is for aardvark")
 
         values = self.tdb.Select(tabname, None,
                                  {'b': dbtables.Cond(),
@@ -290,9 +296,10 @@ class TableDBTestCase(unittest.TestCase):
                                   'd':dbtables.ExactCond('is for dog'),
                                   'c':dbtables.PrefixCond('is for'),
                                   'p':lambda s: not s})
-        assert len(values) == 1, values
-        assert values[0]['d'] == "is for dog", values
-        assert values[0]['a'] == "is for aardvark", values
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['d'], b"is for dog")
+        self.assertEquals(values[0]['a'], b"is for aardvark")
 
     def test_Delete(self):
         tabname = "test_Delete"
@@ -308,7 +315,7 @@ class TableDBTestCase(unittest.TestCase):
         self.tdb.Delete(tabname, conditions={'x': dbtables.PrefixCond('X')})
         values = self.tdb.Select(tabname, ['y'],
                                  conditions={'x': dbtables.PrefixCond('X')})
-        assert len(values) == 0
+        self.assertEquals(len(values), 0)
 
     def test_Modify(self):
         tabname = "test_Modify"
@@ -354,24 +361,27 @@ class TableDBTestCase(unittest.TestCase):
         values = self.tdb.Select(
             tabname, None,
             conditions={'Type': dbtables.ExactCond('Unknown')})
-        assert len(values) == 1, values
-        assert values[0]['Name'] == None, values
-        assert values[0]['Access'] == None, values
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['Name'], None)
+        self.assertEquals(values[0]['Access'], None)
 
         # Modify value by select conditions
         values = self.tdb.Select(
             tabname, None,
             conditions={'Name': dbtables.ExactCond('Nifty.MP3')})
-        assert len(values) == 1, values
-        assert values[0]['Type'] == "MP3", values
-        assert values[0]['Access'] == "2", values
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['Type'], b"MP3")
+        self.assertEquals(values[0]['Access'], b"2")
 
         # Make sure change applied only to select conditions
         values = self.tdb.Select(
             tabname, None, conditions={'Name': dbtables.LikeCond('%doc%')})
-        assert len(values) == 1, values
-        assert values[0]['Type'] == "Word", values
-        assert values[0]['Access'] == "9", values
+        values = list(values)
+        self.assertEquals(len(values), 1)
+        self.assertEquals(values[0]['Type'], b"Word")
+        self.assertEquals(values[0]['Access'], b"9")
 
 
 def test_suite():

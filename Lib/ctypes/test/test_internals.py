@@ -23,16 +23,16 @@ class ObjectsTestCase(unittest.TestCase):
 
     def test_ints(self):
         i = 42000123
-        self.failUnlessEqual(3, grc(i))
+        rc = grc(i)
         ci = c_int(i)
-        self.failUnlessEqual(3, grc(i))
+        self.failUnlessEqual(rc, grc(i))
         self.failUnlessEqual(ci._objects, None)
 
     def test_c_char_p(self):
-        s = "Hello, World"
-        self.failUnlessEqual(3, grc(s))
+        s = b"Hello, World"
+        rc = grc(s)
         cs = c_char_p(s)
-        self.failUnlessEqual(4, grc(s))
+        self.failUnlessEqual(rc + 1, grc(s))
         self.failUnlessSame(cs._objects, s)
 
     def test_simple_struct(self):
@@ -76,11 +76,11 @@ class ObjectsTestCase(unittest.TestCase):
         x = X()
         x.a = s1
         x.b = s2
-        self.failUnlessEqual(x._objects, {"0": s1, "1": s2})
+        self.failUnlessEqual(x._objects, {"0": bytes(s1), "1": bytes(s2)})
 
         y = Y()
         y.x = x
-        self.failUnlessEqual(y._objects, {"0": {"0": s1, "1": s2}})
+        self.failUnlessEqual(y._objects, {"0": {"0": bytes(s1), "1": bytes(s2)}})
 ##        x = y.x
 ##        del y
 ##        print x._b_base_._objects

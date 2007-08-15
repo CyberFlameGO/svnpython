@@ -24,7 +24,7 @@ def randfloats(n):
         fp = open(fn, "rb")
     except IOError:
         r = random.random
-        result = [r() for i in xrange(n)]
+        result = [r() for i in range(n)]
         try:
             try:
                 fp = open(fn, "wb")
@@ -37,8 +37,8 @@ def randfloats(n):
                         os.unlink(fn)
                     except os.error:
                         pass
-        except IOError, msg:
-            print "can't write", fn, ":", msg
+        except IOError as msg:
+            print("can't write", fn, ":", msg)
     else:
         result = marshal.load(fp)
         fp.close()
@@ -60,7 +60,7 @@ def doit(L):
     t0 = time.clock()
     L.sort()
     t1 = time.clock()
-    print "%6.2f" % (t1-t0),
+    print("%6.2f" % (t1-t0), end=' ')
     flush()
 
 def tabulate(r):
@@ -84,11 +84,11 @@ def tabulate(r):
     """
     cases = tuple([ch + "sort" for ch in r"*\/3+%~=!"])
     fmt = ("%2s %7s" + " %6s"*len(cases))
-    print fmt % (("i", "2**i") + cases)
+    print(fmt % (("i", "2**i") + cases))
     for i in r:
         n = 1 << i
         L = randfloats(n)
-        print "%2d %7d" % (i, n),
+        print("%2d %7d" % (i, n), end=' ')
         flush()
         doit(L) # *sort
         L.reverse()
@@ -108,7 +108,7 @@ def tabulate(r):
         doit(L) # +sort
 
         # Replace 1% of the elements at random.
-        for dummy in xrange(n // 100):
+        for dummy in range(n // 100):
             L[random.randrange(n)] = random.random()
         doit(L) # %sort
 
@@ -137,7 +137,7 @@ def tabulate(r):
         # significantly faster if we leave tham as ints.
         L = map(float, L)
         doit(L) # !sort
-        print
+        print()
 
 def main():
     """Main program when invoked as a script.

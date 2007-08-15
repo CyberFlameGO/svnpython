@@ -46,13 +46,13 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         # Test __repr__
         self.assertEqual(str(u0), str(d0))
         self.assertEqual(repr(u1), repr(d1))
-        self.assertEqual(`u2`, `d2`)
+        self.assertEqual(repr(u2), repr(d2))
 
         # Test __cmp__ and __len__
         all = [d0, d1, d2, u, u0, u1, u2, uu, uu0, uu1, uu2]
         for a in all:
             for b in all:
-                self.assertEqual(cmp(a, b), cmp(len(a), len(b)))
+                self.assertEqual(a == b, len(a) == len(b))
 
         # Test __getitem__
         self.assertEqual(u2["one"], 1)
@@ -79,7 +79,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         self.assertEqual(u2b, u2c)
 
         class MyUserDict(UserDict.UserDict):
-            def display(self): print self
+            def display(self): print(self)
 
         m2 = MyUserDict(u2)
         m2a = m2.copy()
@@ -92,15 +92,12 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         # Test keys, items, values
         self.assertEqual(u2.keys(), d2.keys())
         self.assertEqual(u2.items(), d2.items())
-        self.assertEqual(u2.values(), d2.values())
+        self.assertEqual(list(u2.values()), list(d2.values()))
 
-        # Test has_key and "in".
+        # Test "in".
         for i in u2.keys():
-            self.assert_(u2.has_key(i))
             self.assert_(i in u2)
-            self.assertEqual(u1.has_key(i), d1.has_key(i))
             self.assertEqual(i in u1, i in d1)
-            self.assertEqual(u0.has_key(i), d0.has_key(i))
             self.assertEqual(i in u0, i in d0)
 
         # Test update
@@ -121,7 +118,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
             self.assertEqual(u0.get(i), d0.get(i))
 
         # Test "in" iteration.
-        for i in xrange(20):
+        for i in range(20):
             u2[i] = str(i)
         ikeys = []
         for k in u2:
@@ -132,7 +129,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         # Test setdefault
         t = UserDict.UserDict()
         self.assertEqual(t.setdefault("x", 42), 42)
-        self.assert_(t.has_key("x"))
+        self.assert_("x" in t)
         self.assertEqual(t.setdefault("x", 23), 42)
 
         # Test pop
@@ -171,7 +168,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         e = E()
         try:
             e[42]
-        except RuntimeError, err:
+        except RuntimeError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("e[42] didn't raise RuntimeError")
@@ -183,7 +180,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         f = F()
         try:
             f[42]
-        except KeyError, err:
+        except KeyError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("f[42] didn't raise KeyError")
@@ -192,7 +189,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         g = G()
         try:
             g[42]
-        except KeyError, err:
+        except KeyError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("g[42] didn't raise KeyError")
@@ -211,7 +208,7 @@ class SeqDict(UserDict.DictMixin):
         if other is not None:
             for (key, value) in other:
                 self[key] = value
-        for (key, value) in kwargs.iteritems():
+        for (key, value) in kwargs.items():
             self[key] = value
     def __getitem__(self, key):
         try:
@@ -237,7 +234,7 @@ class SeqDict(UserDict.DictMixin):
         return list(self.keylist)
     def copy(self):
         d = self.__class__()
-        for key, value in self.iteritems():
+        for key, value in self.items():
             d[key] = value
         return d
     @classmethod
@@ -269,9 +266,6 @@ class UserDictMixinTest(mapping_tests.TestMappingProtocol):
         self.assertEqual(s.keys(), [10, 30])
 
         ## Now, test the DictMixin methods one by one
-        # has_key
-        self.assert_(s.has_key(10))
-        self.assert_(not s.has_key(20))
 
         # __contains__
         self.assert_(10 in s)
@@ -284,13 +278,13 @@ class UserDictMixinTest(mapping_tests.TestMappingProtocol):
         self.assertEqual(len(s), 2)
 
         # iteritems
-        self.assertEqual(list(s.iteritems()), [(10,'ten'), (30, 'thirty')])
+        self.assertEqual(list(s.items()), [(10,'ten'), (30, 'thirty')])
 
         # iterkeys
-        self.assertEqual(list(s.iterkeys()), [10, 30])
+        self.assertEqual(list(s.keys()), [10, 30])
 
         # itervalues
-        self.assertEqual(list(s.itervalues()), ['ten', 'thirty'])
+        self.assertEqual(list(s.values()), ['ten', 'thirty'])
 
         # values
         self.assertEqual(s.values(), ['ten', 'thirty'])

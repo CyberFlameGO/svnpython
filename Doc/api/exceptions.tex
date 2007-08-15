@@ -23,12 +23,9 @@ carefully propagated, additional calls into the Python/C API may not
 behave as intended and may fail in mysterious ways.
 
 The error indicator consists of three Python objects corresponding to
-\withsubitem{(in module sys)}{
-  \ttindex{exc_type}\ttindex{exc_value}\ttindex{exc_traceback}}
-the Python variables \code{sys.exc_type}, \code{sys.exc_value} and
-\code{sys.exc_traceback}.  API functions exist to interact with the
-error indicator in various ways.  There is a separate error indicator
-for each thread.
+the result of \code{sys.exc_info()}.  API functions exist to interact
+with the error indicator in various ways.  There is a separate
+error indicator for each thread.
 
 % XXX Order of these should be more thoughtful.
 % Either alphabetical or some kind of structure.
@@ -299,16 +296,6 @@ for each thread.
   command line documentation.  There is no C API for warning control.
 \end{cfuncdesc}
 
-\begin{cfuncdesc}{int}{PyErr_Warn}{PyObject *category, char *message}
-  Issue a warning message.  The \var{category} argument is a warning
-  category (see below) or \NULL; the \var{message} argument is a
-  message string.  The warning will appear to be issued from the function
-  calling \cfunction{PyErr_Warn()}, equivalent to calling
-  \cfunction{PyErr_WarnEx()} with a \var{stacklevel} of 1.
-  
-  Deprecated; use \cfunction{PyErr_WarnEx()} instead.
-\end{cfuncdesc}
-
 \begin{cfuncdesc}{int}{PyErr_WarnExplicit}{PyObject *category,
                 const char *message, const char *filename, int lineno,
                 const char *module, PyObject *registry}
@@ -384,7 +371,6 @@ completeness, here are all the variables:
 \begin{tableiii}{l|l|c}{cdata}{C Name}{Python Name}{Notes}
   \lineiii{PyExc_BaseException\ttindex{PyExc_BaseException}}{\exception{BaseException}}{(1), (4)}
   \lineiii{PyExc_Exception\ttindex{PyExc_Exception}}{\exception{Exception}}{(1)}
-  \lineiii{PyExc_StandardError\ttindex{PyExc_StandardError}}{\exception{StandardError}}{(1)}
   \lineiii{PyExc_ArithmeticError\ttindex{PyExc_ArithmeticError}}{\exception{ArithmeticError}}{(1)}
   \lineiii{PyExc_LookupError\ttindex{PyExc_LookupError}}{\exception{LookupError}}{(1)}
   \lineiii{PyExc_AssertionError\ttindex{PyExc_AssertionError}}{\exception{AssertionError}}{}

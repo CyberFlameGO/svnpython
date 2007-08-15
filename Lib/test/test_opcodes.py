@@ -23,9 +23,9 @@ class OpcodeTest(unittest.TestCase):
 
     def test_raise_class_exceptions(self):
 
-        class AClass: pass
+        class AClass(Exception): pass
         class BClass(AClass): pass
-        class CClass: pass
+        class CClass(Exception): pass
         class DClass(AClass):
             def __init__(self, ignore):
                 pass
@@ -47,23 +47,23 @@ class OpcodeTest(unittest.TestCase):
         b = BClass()
 
         try: raise AClass, b
-        except BClass, v:
+        except BClass as v:
             if v != b: self.fail("v!=b")
         else: self.fail("no exception")
 
         try: raise b
-        except AClass, v:
+        except AClass as v:
             if v != b: self.fail("v!=b AClass")
         else:
             self.fail("no exception")
 
         # not enough arguments
-        try:  raise BClass, a
-        except TypeError: pass
-        else: self.fail("no exception")
+        ##try:  raise BClass, a
+        ##except TypeError: pass
+        ##else: self.fail("no exception")
 
         try:  raise DClass, a
-        except DClass, v:
+        except DClass as v:
             self.assert_(isinstance(v, DClass))
         else:
             self.fail("no exception")

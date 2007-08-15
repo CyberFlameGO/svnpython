@@ -296,35 +296,30 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 object is callable and 0 otherwise.
 
 	 This function always succeeds.
-
        */
 
-
-
      PyAPI_FUNC(PyObject *) PyObject_Call(PyObject *callable_object,
-					 PyObject *args, PyObject *kw);
+					  PyObject *args, PyObject *kw);
 
        /*
 	 Call a callable Python object, callable_object, with
 	 arguments and keywords arguments.  The 'args' argument can not be
 	 NULL, but the 'kw' argument can be NULL.
-
        */
      
      PyAPI_FUNC(PyObject *) PyObject_CallObject(PyObject *callable_object,
-                                               PyObject *args);
+                                                PyObject *args);
 
        /*
 	 Call a callable Python object, callable_object, with
 	 arguments given by the tuple, args.  If no arguments are
 	 needed, then args may be NULL.  Returns the result of the
 	 call on success, or NULL on failure.  This is the equivalent
-	 of the Python expression: apply(o,args).
-
+	 of the Python expression: o(*args).
        */
 
      PyAPI_FUNC(PyObject *) PyObject_CallFunction(PyObject *callable_object,
-                                                 char *format, ...);
+                                                  char *format, ...);
 
        /*
 	 Call a callable Python object, callable_object, with a
@@ -332,13 +327,12 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 using a mkvalue-style format string. The format may be NULL,
 	 indicating that no arguments are provided.  Returns the
 	 result of the call on success, or NULL on failure.  This is
-	 the equivalent of the Python expression: apply(o,args).
-
+	 the equivalent of the Python expression: o(*args).
        */
 
 
-     PyAPI_FUNC(PyObject *) PyObject_CallMethod(PyObject *o, char *m,
-                                               char *format, ...);
+     PyAPI_FUNC(PyObject *) PyObject_CallMethod(PyObject *o, char *method,
+                                                char *format, ...);
 
        /*
 	 Call the method named m of object o with a variable number of
@@ -356,19 +350,19 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 						       char *format, ...);
 
      PyAPI_FUNC(PyObject *) PyObject_CallFunctionObjArgs(PyObject *callable,
-                                                        ...);
+                                                         ...);
 
        /*
 	 Call a callable Python object, callable_object, with a
 	 variable number of C arguments.  The C arguments are provided
 	 as PyObject * values, terminated by a NULL.  Returns the
 	 result of the call on success, or NULL on failure.  This is
-	 the equivalent of the Python expression: apply(o,args).
+	 the equivalent of the Python expression: o(*args).
        */
 
 
      PyAPI_FUNC(PyObject *) PyObject_CallMethodObjArgs(PyObject *o,
-                                                      PyObject *m, ...);
+                                                       PyObject *method, ...);
 
        /*
 	 Call the method named m of object o with a variable number of
@@ -386,7 +380,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
          Compute and return the hash, hash_value, of an object, o.  On
 	 failure, return -1.  This is the equivalent of the Python
 	 expression: hash(o).
-
        */
 
 
@@ -397,7 +390,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns 1 if the object, o, is considered to be true, 0 if o is
 	 considered to be false and -1 on failure. This is equivalent to the
 	 Python expression: not not o
-
        */
 
      /* Implemented elsewhere:
@@ -407,7 +399,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns 0 if the object, o, is considered to be true, 1 if o is
 	 considered to be false and -1 on failure. This is equivalent to the
 	 Python expression: not o
-
        */
 
      PyAPI_FUNC(PyObject *) PyObject_Type(PyObject *o);
@@ -425,7 +416,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 both sequence and mapping protocols, the sequence size is
 	 returned. On error, -1 is returned.  This is the equivalent
 	 to the Python expression: len(o).
-
        */
 
        /* For DLL compatibility */
@@ -460,7 +450,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Return element of o corresponding to the object, key, or NULL
 	 on failure. This is the equivalent of the Python expression:
 	 o[key].
-
        */
 
      PyAPI_FUNC(int) PyObject_SetItem(PyObject *o, PyObject *key, PyObject *v);
@@ -487,8 +476,8 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        */
 
      PyAPI_FUNC(int) PyObject_AsCharBuffer(PyObject *obj,
-					  const char **buffer,
-					  Py_ssize_t *buffer_len);
+					   const char **buffer,
+					   Py_ssize_t *buffer_len);
 
        /* 
 	  Takes an arbitrary object which must support the (character,
@@ -499,7 +488,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	  0 is returned on success.  buffer and buffer_len are only
 	  set in case no error occurs. Otherwise, -1 is returned and
 	  an exception set.
-
        */
 
      PyAPI_FUNC(int) PyObject_CheckReadBuffer(PyObject *obj);
@@ -508,12 +496,11 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	  Checks whether an arbitrary object supports the (character,
 	  single segment) buffer interface.  Returns 1 on success, 0
 	  on failure.
-
       */
 
      PyAPI_FUNC(int) PyObject_AsReadBuffer(PyObject *obj,
-					  const void **buffer,
-					  Py_ssize_t *buffer_len);
+					   const void **buffer,
+					   Py_ssize_t *buffer_len);
 
        /* 
 	  Same as PyObject_AsCharBuffer() except that this API expects
@@ -524,12 +511,11 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	  0 is returned on success.  buffer and buffer_len are only
 	  set in case no error occurrs.  Otherwise, -1 is returned and
 	  an exception set.
-
        */
 
      PyAPI_FUNC(int) PyObject_AsWriteBuffer(PyObject *obj,
-					   void **buffer,
-					   Py_ssize_t *buffer_len);
+					    void **buffer,
+					    Py_ssize_t *buffer_len);
 
        /* 
 	  Takes an arbitrary object which must support the (writeable,
@@ -539,7 +525,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	  0 is returned on success.  buffer and buffer_len are only
 	  set in case no error occurrs. Otherwise, -1 is returned and
 	  an exception set.
-
        */
 
 /* Iterators */
@@ -550,8 +535,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	is an iterator, this returns itself. */
 
 #define PyIter_Check(obj) \
-    (PyType_HasFeature((obj)->ob_type, Py_TPFLAGS_HAVE_ITER) && \
-     (obj)->ob_type->tp_iternext != NULL)
+    ((obj)->ob_type->tp_iternext != NULL)
 
      PyAPI_FUNC(PyObject *) PyIter_Next(PyObject *);
      /* Takes an iterator object and calls its tp_iternext slot,
@@ -568,7 +552,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 false otherwise. 
 
 	 This function always succeeds.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Add(PyObject *o1, PyObject *o2);
@@ -576,8 +559,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
 	 Returns the result of adding o1 and o2, or null on failure.
 	 This is the equivalent of the Python expression: o1+o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Subtract(PyObject *o1, PyObject *o2);
@@ -586,7 +567,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of subtracting o2 from o1, or null on
 	 failure.  This is the equivalent of the Python expression:
 	 o1-o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Multiply(PyObject *o1, PyObject *o2);
@@ -595,8 +575,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of multiplying o1 and o2, or null on
 	 failure.  This is the equivalent of the Python expression:
 	 o1*o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Divide(PyObject *o1, PyObject *o2);
@@ -604,8 +582,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
 	 Returns the result of dividing o1 by o2, or null on failure.
 	 This is the equivalent of the Python expression: o1/o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_FloorDivide(PyObject *o1, PyObject *o2);
@@ -614,8 +590,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of dividing o1 by o2 giving an integral result,
 	 or null on failure.
 	 This is the equivalent of the Python expression: o1//o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_TrueDivide(PyObject *o1, PyObject *o2);
@@ -624,8 +598,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of dividing o1 by o2 giving a float result,
 	 or null on failure.
 	 This is the equivalent of the Python expression: o1/o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Remainder(PyObject *o1, PyObject *o2);
@@ -634,8 +606,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the remainder of dividing o1 by o2, or null on
 	 failure.  This is the equivalent of the Python expression:
 	 o1%o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Divmod(PyObject *o1, PyObject *o2);
@@ -644,18 +614,15 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 See the built-in function divmod.  Returns NULL on failure.
 	 This is the equivalent of the Python expression:
 	 divmod(o1,o2).
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Power(PyObject *o1, PyObject *o2,
-                                          PyObject *o3);
+                                           PyObject *o3);
 
        /*
 	 See the built-in function pow.  Returns NULL on failure.
 	 This is the equivalent of the Python expression:
 	 pow(o1,o2,o3), where o3 is optional.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Negative(PyObject *o);
@@ -663,7 +630,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
 	 Returns the negation of o on success, or null on failure.
 	 This is the equivalent of the Python expression: -o.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Positive(PyObject *o);
@@ -671,7 +637,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
          Returns the (what?) of o on success, or NULL on failure.
 	 This is the equivalent of the Python expression: +o.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Absolute(PyObject *o);
@@ -679,7 +644,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
 	 Returns the absolute value of o, or null on failure.  This is
 	 the equivalent of the Python expression: abs(o).
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Invert(PyObject *o);
@@ -688,8 +652,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the bitwise negation of o on success, or NULL on
 	 failure.  This is the equivalent of the Python expression:
 	 ~o.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Lshift(PyObject *o1, PyObject *o2);
@@ -698,8 +660,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of left shifting o1 by o2 on success, or
 	 NULL on failure.  This is the equivalent of the Python
 	 expression: o1 << o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Rshift(PyObject *o1, PyObject *o2);
@@ -708,7 +668,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of right shifting o1 by o2 on success, or
 	 NULL on failure.  This is the equivalent of the Python
 	 expression: o1 >> o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_And(PyObject *o1, PyObject *o2);
@@ -718,7 +677,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 NULL on failure. This is the equivalent of the Python
 	 expression: o1&o2.
 
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Xor(PyObject *o1, PyObject *o2);
@@ -727,8 +685,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the bitwise exclusive or of o1 by o2 on success, or
 	 NULL on failure.  This is the equivalent of the Python
 	 expression: o1^o2.
-
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Or(PyObject *o1, PyObject *o2);
@@ -737,31 +693,10 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of bitwise or on o1 and o2 on success, or
 	 NULL on failure.  This is the equivalent of the Python
 	 expression: o1|o2.
-
-       */
-
-     /* Implemented elsewhere:
-
-     int PyNumber_Coerce(PyObject **p1, PyObject **p2);
-
-	 This function takes the addresses of two variables of type
-	 PyObject*.
-
-	 If the objects pointed to by *p1 and *p2 have the same type,
-	 increment their reference count and return 0 (success).
-	 If the objects can be converted to a common numeric type,
-	 replace *p1 and *p2 by their converted value (with 'new'
-	 reference counts), and return 0.
-	 If no conversion is possible, or if some other error occurs,
-	 return -1 (failure) and don't increment the reference counts.
-	 The call PyNumber_Coerce(&o1, &o2) is equivalent to the Python
-	 statement o1, o2 = coerce(o1, o2).
-
        */
 
 #define PyIndex_Check(obj) \
    ((obj)->ob_type->tp_as_number != NULL && \
-    PyType_HasFeature((obj)->ob_type, Py_TPFLAGS_HAVE_INDEX) && \
     (obj)->ob_type->tp_as_number->nb_index != NULL)
         
      PyAPI_FUNC(PyObject *) PyNumber_Index(PyObject *o);
@@ -781,13 +716,12 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
         is cleared and the value is clipped. 
        */
 
-     PyAPI_FUNC(PyObject *) PyNumber_Int(PyObject *o);
+     #define PyNumber_Int PyNumber_Long
 
        /*
 	 Returns the o converted to an integer object on success, or
 	 NULL on failure.  This is the equivalent of the Python
 	 expression: int(o).
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Long(PyObject *o);
@@ -796,7 +730,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the o converted to a long integer object on success,
 	 or NULL on failure.  This is the equivalent of the Python
 	 expression: long(o).
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_Float(PyObject *o);
@@ -815,7 +748,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of adding o2 to o1, possibly in-place, or null
 	 on failure.  This is the equivalent of the Python expression:
 	 o1 += o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceSubtract(PyObject *o1, PyObject *o2);
@@ -824,7 +756,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of subtracting o2 from o1, possibly in-place or
 	 null on failure.  This is the equivalent of the Python expression:
 	 o1 -= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceMultiply(PyObject *o1, PyObject *o2);
@@ -833,7 +764,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of multiplying o1 by o2, possibly in-place, or
 	 null on failure.  This is the equivalent of the Python expression:
 	 o1 *= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceDivide(PyObject *o1, PyObject *o2);
@@ -842,29 +772,26 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of dividing o1 by o2, possibly in-place, or null
 	 on failure.  This is the equivalent of the Python expression:
 	 o1 /= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceFloorDivide(PyObject *o1,
-						       PyObject *o2);
+						        PyObject *o2);
 
        /*
 	 Returns the result of dividing o1 by o2 giving an integral result,
 	 possibly in-place, or null on failure.
 	 This is the equivalent of the Python expression:
 	 o1 /= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceTrueDivide(PyObject *o1,
-						      PyObject *o2);
+						       PyObject *o2);
 
        /*
 	 Returns the result of dividing o1 by o2 giving a float result,
 	 possibly in-place, or null on failure.
 	 This is the equivalent of the Python expression:
 	 o1 /= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceRemainder(PyObject *o1, PyObject *o2);
@@ -873,17 +800,15 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the remainder of dividing o1 by o2, possibly in-place, or
 	 null on failure.  This is the equivalent of the Python expression:
 	 o1 %= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlacePower(PyObject *o1, PyObject *o2,
-     						 PyObject *o3);
+     						  PyObject *o3);
 
        /*
 	 Returns the result of raising o1 to the power of o2, possibly
 	 in-place, or null on failure.  This is the equivalent of the Python
 	 expression: o1 **= o2, or pow(o1, o2, o3) if o3 is present.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceLshift(PyObject *o1, PyObject *o2);
@@ -892,7 +817,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of left shifting o1 by o2, possibly in-place, or
 	 null on failure.  This is the equivalent of the Python expression:
 	 o1 <<= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceRshift(PyObject *o1, PyObject *o2);
@@ -901,7 +825,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of right shifting o1 by o2, possibly in-place or
 	 null on failure.  This is the equivalent of the Python expression:
 	 o1 >>= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceAnd(PyObject *o1, PyObject *o2);
@@ -910,7 +833,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of bitwise and of o1 and o2, possibly in-place,
 	 or null on failure. This is the equivalent of the Python
 	 expression: o1 &= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceXor(PyObject *o1, PyObject *o2);
@@ -919,7 +841,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the bitwise exclusive or of o1 by o2, possibly in-place, or
 	 null on failure.  This is the equivalent of the Python expression:
 	 o1 ^= o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PyNumber_InPlaceOr(PyObject *o1, PyObject *o2);
@@ -928,7 +849,14 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Returns the result of bitwise or of o1 and o2, possibly in-place,
 	 or null on failure.  This is the equivalent of the Python
 	 expression: o1 |= o2.
+       */
 
+     PyAPI_FUNC(PyObject *) PyNumber_ToBase(PyObject *n, int base);
+
+       /*
+	 Returns the integer n converted to a string with a base, with a base
+	 marker of 0b, 0o or 0x prefixed if applicable.
+	 If n is not an int object, it is converted with PyNumber_Index first.
        */
 
 
@@ -941,14 +869,12 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 otherwise.  
 
 	 This function always succeeds.
-
        */
 
      PyAPI_FUNC(Py_ssize_t) PySequence_Size(PyObject *o);
 
        /*
          Return the size of sequence object o, or -1 on failure.
-
        */
 
        /* For DLL compatibility */
@@ -963,7 +889,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Return the concatenation of o1 and o2 on success, and NULL on
 	 failure.   This is the equivalent of the Python
 	 expression: o1+o2.
-
        */
 
      PyAPI_FUNC(PyObject *) PySequence_Repeat(PyObject *o, Py_ssize_t count);
@@ -972,7 +897,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Return the result of repeating sequence object o count times,
 	 or NULL on failure.  This is the equivalent of the Python
 	 expression: o1*count.
-
        */
 
      PyAPI_FUNC(PyObject *) PySequence_GetItem(PyObject *o, Py_ssize_t i);
@@ -988,7 +912,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Return the slice of sequence object o between i1 and i2, or
 	 NULL on failure. This is the equivalent of the Python
 	 expression: o[i1:i2].
-
        */
 
      PyAPI_FUNC(int) PySequence_SetItem(PyObject *o, Py_ssize_t i, PyObject *v);
@@ -997,7 +920,6 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
 	 Assign object v to the ith element of o.  Returns
 	 -1 on failure.  This is the equivalent of the Python
 	 statement: o[i]=v.
-
        */
 
      PyAPI_FUNC(int) PySequence_DelItem(PyObject *o, Py_ssize_t i);
@@ -1009,7 +931,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        */
 
      PyAPI_FUNC(int) PySequence_SetSlice(PyObject *o, Py_ssize_t i1, Py_ssize_t i2,
-                                        PyObject *v);
+                                         PyObject *v);
 
        /*
          Assign the sequence object, v, to the slice in sequence
@@ -1197,7 +1119,7 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
 	 On success, return 1 if the mapping object has the key, key,
 	 and 0 otherwise.  This is equivalent to the Python expression:
-	 o.has_key(key). 
+	 key in o. 
 
 	 This function always succeeds.
        */
@@ -1207,43 +1129,34 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*/
        /*
 	 Return 1 if the mapping object has the key, key,
 	 and 0 otherwise.  This is equivalent to the Python expression:
-	 o.has_key(key). 
+	 key in o. 
 
 	 This function always succeeds.
 
        */
 
-     /* Implemented as macro:
+     PyAPI_FUNC(PyObject *) PyMapping_Keys(PyObject *o);
 
-     PyObject *PyMapping_Keys(PyObject *o);
-
-         On success, return a list of the keys in object o.  On
-	 failure, return NULL. This is equivalent to the Python
-	 expression: o.keys().
+       /*
+         On success, return a list or tuple of the keys in object o.
+	 On failure, return NULL.
        */
-#define PyMapping_Keys(O) PyObject_CallMethod(O,"keys",NULL)
 
-     /* Implemented as macro:
+     PyAPI_FUNC(PyObject *) PyMapping_Values(PyObject *o);
 
-     PyObject *PyMapping_Values(PyObject *o);
-
-         On success, return a list of the values in object o.  On
-	 failure, return NULL. This is equivalent to the Python
-	 expression: o.values().
+       /*
+         On success, return a list or tuple of the values in object o.
+	 On failure, return NULL.
        */
-#define PyMapping_Values(O) PyObject_CallMethod(O,"values",NULL)
 
-     /* Implemented as macro:
+     PyAPI_FUNC(PyObject *) PyMapping_Items(PyObject *o);
 
-     PyObject *PyMapping_Items(PyObject *o);
-
-         On success, return a list of the items in object o, where
-	 each item is a tuple containing a key-value pair.  On
-	 failure, return NULL. This is equivalent to the Python
-	 expression: o.items().
+       /*
+         On success, return a list or tuple of the items in object o,
+	 where each item is a tuple containing a key-value pair.  
+	 On failure, return NULL.
 
        */
-#define PyMapping_Items(O) PyObject_CallMethod(O,"items",NULL)
 
      PyAPI_FUNC(PyObject *) PyMapping_GetItemString(PyObject *o, char *key);
 

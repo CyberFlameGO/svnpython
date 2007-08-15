@@ -67,13 +67,12 @@ def win_getpass(prompt='Password: ', stream=None):
 
 
 def default_getpass(prompt='Password: ', stream=None):
-    print >>sys.stderr, "Warning: Problem with getpass. Passwords may be echoed."
+    print("Warning: Problem with getpass. Passwords may be echoed.", file=sys.stderr)
     return _raw_input(prompt, stream)
 
 
 def _raw_input(prompt="", stream=None):
-    # A raw_input() replacement that doesn't save the string in the
-    # GNU readline history.
+    # This doesn't save the string in the GNU readline history.
     if stream is None:
         stream = sys.stdout
     prompt = str(prompt)

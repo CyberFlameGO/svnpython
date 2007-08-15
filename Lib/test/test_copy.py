@@ -82,9 +82,9 @@ class TestCopy(unittest.TestCase):
             pass
         def f():
             pass
-        tests = [None, 42, 2L**100, 3.14, True, False, 1j,
-                 "hello", u"hello\u1234", f.func_code,
-                 NewStyle, xrange(10), Classic, max]
+        tests = [None, 42, 2**100, 3.14, True, False, 1j,
+                 "hello", "hello\u1234", f.__code__,
+                 NewStyle, range(10), Classic, max]
         for x in tests:
             self.assert_(copy.copy(x) is x, repr(x))
 
@@ -104,8 +104,8 @@ class TestCopy(unittest.TestCase):
         class C:
             def __init__(self, foo):
                 self.foo = foo
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C(42)
         self.assertEqual(copy.copy(x), x)
 
@@ -115,8 +115,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __copy__(self):
                 return C(self.foo)
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C(42)
         self.assertEqual(copy.copy(x), x)
 
@@ -126,8 +126,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __getinitargs__(self):
                 return (self.foo,)
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C(42)
         self.assertEqual(copy.copy(x), x)
 
@@ -137,8 +137,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __getstate__(self):
                 return {"foo": self.foo}
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C(42)
         self.assertEqual(copy.copy(x), x)
 
@@ -148,8 +148,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __setstate__(self, state):
                 self.foo = state["foo"]
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C(42)
         self.assertEqual(copy.copy(x), x)
 
@@ -161,8 +161,8 @@ class TestCopy(unittest.TestCase):
                 return self.foo
             def __setstate__(self, state):
                 self.foo = state
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C(42)
         self.assertEqual(copy.copy(x), x)
 
@@ -191,8 +191,8 @@ class TestCopy(unittest.TestCase):
         # type.
         class Meta(type):
             pass
-        class C:
-            __metaclass__ = Meta
+        class C(metaclass=Meta):
+            pass
         self.assertEqual(copy.deepcopy(C), C)
 
     def test_deepcopy_deepcopy(self):
@@ -255,9 +255,9 @@ class TestCopy(unittest.TestCase):
             pass
         def f():
             pass
-        tests = [None, 42, 2L**100, 3.14, True, False, 1j,
-                 "hello", u"hello\u1234", f.func_code,
-                 NewStyle, xrange(10), Classic, max]
+        tests = [None, 42, 2**100, 3.14, True, False, 1j,
+                 "hello", "hello\u1234", f.__code__,
+                 NewStyle, range(10), Classic, max]
         for x in tests:
             self.assert_(copy.deepcopy(x) is x, repr(x))
 
@@ -304,7 +304,7 @@ class TestCopy(unittest.TestCase):
         x = {}
         x['foo'] = x
         y = copy.deepcopy(x)
-        self.assertRaises(RuntimeError, cmp, y, x)
+        self.assertRaises(TypeError, cmp, y, x)
         self.assert_(y is not x)
         self.assert_(y['foo'] is y)
         self.assertEqual(len(y), 1)
@@ -319,8 +319,8 @@ class TestCopy(unittest.TestCase):
         class C:
             def __init__(self, foo):
                 self.foo = foo
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C([42])
         y = copy.deepcopy(x)
         self.assertEqual(y, x)
@@ -332,8 +332,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __deepcopy__(self, memo):
                 return C(copy.deepcopy(self.foo, memo))
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C([42])
         y = copy.deepcopy(x)
         self.assertEqual(y, x)
@@ -346,8 +346,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __getinitargs__(self):
                 return (self.foo,)
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C([42])
         y = copy.deepcopy(x)
         self.assertEqual(y, x)
@@ -360,8 +360,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __getstate__(self):
                 return {"foo": self.foo}
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C([42])
         y = copy.deepcopy(x)
         self.assertEqual(y, x)
@@ -374,8 +374,8 @@ class TestCopy(unittest.TestCase):
                 self.foo = foo
             def __setstate__(self, state):
                 self.foo = state["foo"]
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C([42])
         y = copy.deepcopy(x)
         self.assertEqual(y, x)
@@ -390,8 +390,8 @@ class TestCopy(unittest.TestCase):
                 return self.foo
             def __setstate__(self, state):
                 self.foo = state
-            def __cmp__(self, other):
-                return cmp(self.foo, other.foo)
+            def __eq__(self, other):
+                return self.foo == other.foo
         x = C([42])
         y = copy.deepcopy(x)
         self.assertEqual(y, x)
@@ -434,8 +434,8 @@ class TestCopy(unittest.TestCase):
         class C(object):
             def __reduce__(self):
                 return (C, (), self.__dict__)
-            def __cmp__(self, other):
-                return cmp(self.__dict__, other.__dict__)
+            def __eq__(self, other):
+                return self.__dict__ == other.__dict__
         x = C()
         x.foo = [42]
         y = copy.copy(x)
@@ -450,8 +450,8 @@ class TestCopy(unittest.TestCase):
                 return (C, (), self.__dict__)
             def __setstate__(self, state):
                 self.__dict__.update(state)
-            def __cmp__(self, other):
-                return cmp(self.__dict__, other.__dict__)
+            def __eq__(self, other):
+                return self.__dict__ == other.__dict__
         x = C()
         x.foo = [42]
         y = copy.copy(x)
@@ -475,9 +475,9 @@ class TestCopy(unittest.TestCase):
         class C(list):
             def __reduce__(self):
                 return (C, (), self.__dict__, iter(self))
-            def __cmp__(self, other):
-                return (cmp(list(self), list(other)) or
-                        cmp(self.__dict__, other.__dict__))
+            def __eq__(self, other):
+                return (list(self) == list(other) and
+                        self.__dict__ == other.__dict__)
         x = C([[1, 2], 3])
         y = copy.copy(x)
         self.assertEqual(x, y)
@@ -491,10 +491,10 @@ class TestCopy(unittest.TestCase):
     def test_reduce_5tuple(self):
         class C(dict):
             def __reduce__(self):
-                return (C, (), self.__dict__, None, self.iteritems())
-            def __cmp__(self, other):
-                return (cmp(dict(self), list(dict)) or
-                        cmp(self.__dict__, other.__dict__))
+                return (C, (), self.__dict__, None, self.items())
+            def __eq__(self, other):
+                return (dict(self) == dict(other) and
+                        self.__dict__ == other.__dict__)
         x = C([("foo", [1, 2]), ("bar", 3)])
         y = copy.copy(x)
         self.assertEqual(x, y)

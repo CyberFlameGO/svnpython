@@ -1,17 +1,13 @@
 
-import sys, os, string
+import sys, os
 import pickle
-try:
-    import cPickle
-except ImportError:
-    cPickle = None
 import unittest
 import glob
 
 try:
     # For Pythons w/distutils pybsddb
     from bsddb3 import db
-except ImportError, e:
+except ImportError as e:
     # For Python 2.3
     from bsddb import db
 
@@ -47,7 +43,7 @@ class pickleTestCase(unittest.TestCase):
         assert self.db['spam'] == 'eggs'
         try:
             self.db.put('spam', 'ham', flags=db.DB_NOOVERWRITE)
-        except db.DBError, egg:
+        except db.DBError as egg:
             pickledEgg = pickle.dumps(egg)
             #print repr(pickledEgg)
             rottenEgg = pickle.loads(pickledEgg)
@@ -61,10 +57,6 @@ class pickleTestCase(unittest.TestCase):
 
     def test01_pickle_DBError(self):
         self._base_test_pickle_DBError(pickle=pickle)
-
-    if cPickle:
-        def test02_cPickle_DBError(self):
-            self._base_test_pickle_DBError(pickle=cPickle)
 
 #----------------------------------------------------------------------
 

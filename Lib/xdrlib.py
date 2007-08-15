@@ -5,10 +5,7 @@ See: RFC 1014
 """
 
 import struct
-try:
-    from cStringIO import StringIO as _StringIO
-except ImportError:
-    from StringIO import StringIO as _StringIO
+from io import BytesIO
 
 __all__ = ["Error", "Packer", "Unpacker", "ConversionError"]
 
@@ -43,7 +40,7 @@ class Packer:
         self.reset()
 
     def reset(self):
-        self.__buf = _StringIO()
+        self.__buf = BytesIO()
 
     def get_buffer(self):
         return self.__buf.getvalue()
@@ -57,23 +54,23 @@ class Packer:
     pack_enum = pack_int
 
     def pack_bool(self, x):
-        if x: self.__buf.write('\0\0\0\1')
-        else: self.__buf.write('\0\0\0\0')
+        if x: self.__buf.write(b'\0\0\0\1')
+        else: self.__buf.write(b'\0\0\0\0')
 
     def pack_uhyper(self, x):
-        self.pack_uint(x>>32 & 0xffffffffL)
-        self.pack_uint(x & 0xffffffffL)
+        self.pack_uint(x>>32 & 0xffffffff)
+        self.pack_uint(x & 0xffffffff)
 
     pack_hyper = pack_uhyper
 
     def pack_float(self, x):
         try: self.__buf.write(struct.pack('>f', x))
-        except struct.error, msg:
+        except struct.error as msg:
             raise ConversionError, msg
 
     def pack_double(self, x):
         try: self.__buf.write(struct.pack('>d', x))
-        except struct.error, msg:
+        except struct.error as msg:
             raise ConversionError, msg
 
     def pack_fstring(self, n, s):
@@ -81,7 +78,7 @@ class Packer:
             raise ValueError, 'fstring size must be nonnegative'
         data = s[:n]
         n = ((n+3)//4)*4
-        data = data + (n - len(data)) * '\0'
+        data = data + (n - len(data)) * b'\0'
         self.__buf.write(data)
 
     pack_fopaque = pack_fstring
@@ -164,12 +161,12 @@ class Unpacker:
     def unpack_uhyper(self):
         hi = self.unpack_uint()
         lo = self.unpack_uint()
-        return long(hi)<<32 | lo
+        return int(hi)<<32 | lo
 
     def unpack_hyper(self):
         x = self.unpack_uhyper()
-        if x >= 0x8000000000000000L:
-            x = x - 0x10000000000000000L
+        if x >= 0x8000000000000000:
+            x = x - 0x10000000000000000
         return x
 
     def unpack_float(self):

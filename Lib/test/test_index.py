@@ -18,7 +18,7 @@ class TrapInt(int):
     def __index__(self):
         return self
 
-class TrapLong(long):
+class TrapLong(int):
     def __index__(self):
         return self
 
@@ -47,12 +47,12 @@ class BaseTestCase(unittest.TestCase):
         self.o.ind = 4
         self.n.ind = 5
         self.assertEqual(6 .__index__(), 6)
-        self.assertEqual(-7L.__index__(), -7)
+        self.assertEqual(-7 .__index__(), -7)
         self.assertEqual(self.o.__index__(), 4)
         self.assertEqual(self.n.__index__(), 5)
 
     def test_subclasses(self):
-        r = range(10)
+        r = list(range(10))
         self.assertEqual(r[TrapInt(5):TrapInt(10)], r[5:10])
         self.assertEqual(r[TrapLong(5):TrapLong(10)], r[5:10])
         self.assertEqual(slice(TrapInt()).indices(0), (0,0,1))
@@ -164,16 +164,8 @@ class StringTestCase(SeqTestCase):
     seq = "this is a test"
 
 class UnicodeTestCase(SeqTestCase):
-    seq = u"this is a test"
+    seq = "this is a test"
 
-
-class XRangeTestCase(unittest.TestCase):
-
-    def test_xrange(self):
-        n = newstyle()
-        n.ind = 5
-        self.assertEqual(xrange(1, 20)[n], 6)
-        self.assertEqual(xrange(1, 20).__getitem__(n), 6)
 
 class OverflowTestCase(unittest.TestCase):
 
@@ -218,7 +210,6 @@ def test_main():
         TupleTestCase,
         StringTestCase,
         UnicodeTestCase,
-        XRangeTestCase,
         OverflowTestCase,
     )
 

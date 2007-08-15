@@ -28,7 +28,6 @@ DATA_CRLF = "\r\n".join(DATA_TEMPLATE) + "\r\n"
 # before end-of-file.
 DATA_MIXED = "\n".join(DATA_TEMPLATE) + "\r"
 DATA_SPLIT = [x + "\n" for x in DATA_TEMPLATE]
-del x
 
 class TestGenericUnivNewlines(unittest.TestCase):
     # use a class variable DATA to define the data to write to the file
@@ -78,13 +77,6 @@ class TestGenericUnivNewlines(unittest.TestCase):
         fp.seek(pos)
         data = fp.readlines()
         self.assertEqual(data, DATA_SPLIT[1:])
-
-    def test_execfile(self):
-        namespace = {}
-        execfile(test_support.TESTFN, namespace)
-        func = namespace['line3']
-        self.assertEqual(func.func_code.co_firstlineno, 3)
-        self.assertEqual(namespace['line4'], FATX)
 
 
 class TestNativeNewlines(TestGenericUnivNewlines):

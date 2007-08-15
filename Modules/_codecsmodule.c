@@ -94,15 +94,8 @@ codec_encode(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "O|ss:encode", &v, &encoding, &errors))
         return NULL;
 
-#ifdef Py_USING_UNICODE
     if (encoding == NULL)
 	encoding = PyUnicode_GetDefaultEncoding();
-#else
-    if (encoding == NULL) {
-	PyErr_SetString(PyExc_ValueError, "no encoding specified");
-	return NULL;
-    }
-#endif
 
     /* Encode via the codec registry */
     return PyCodec_Encode(v, encoding, errors);
@@ -128,15 +121,8 @@ codec_decode(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "O|ss:decode", &v, &encoding, &errors))
         return NULL;
 
-#ifdef Py_USING_UNICODE
     if (encoding == NULL)
 	encoding = PyUnicode_GetDefaultEncoding();
-#else
-    if (encoding == NULL) {
-	PyErr_SetString(PyExc_ValueError, "no encoding specified");
-	return NULL;
-    }
-#endif
 
     /* Decode via the codec registry */
     return PyCodec_Decode(v, encoding, errors);
@@ -176,30 +162,65 @@ static PyObject *
 escape_encode(PyObject *self,
 	      PyObject *args)
 {
+	static const char *hexdigits = "0123456789abcdef";
 	PyObject *str;
+	Py_ssize_t size;
+	Py_ssize_t newsize;
 	const char *errors = NULL;
-	char *buf;
-	Py_ssize_t len;
+	PyObject *v;
 
 	if (!PyArg_ParseTuple(args, "O!|z:escape_encode",
 			      &PyString_Type, &str, &errors))
 		return NULL;
 
-	str = PyString_Repr(str, 0);
-	if (!str)
-		return NULL;
+	size = PyString_GET_SIZE(str);
+	newsize = 4*size;
+	if (newsize > PY_SSIZE_T_MAX || newsize / 4 != size) {
+		PyErr_SetString(PyExc_OverflowError,
+			"string is too large to encode");
+			return NULL;
+	}
+	v = PyBytes_FromStringAndSize(NULL, newsize);
 
-	/* The string will be quoted. Unquote, similar to unicode-escape. */
-	buf = PyString_AS_STRING (str);
-	len = PyString_GET_SIZE (str);
-	memmove(buf, buf+1, len-2);
-	if (_PyString_Resize(&str, len-2) < 0)
+	if (v == NULL) {
 		return NULL;
+	}
+	else {
+		register Py_ssize_t i;
+		register char c;
+		register char *p = PyBytes_AS_STRING(v);
+
+		for (i = 0; i < size; i++) {
+			/* There's at least enough room for a hex escape */
+			assert(newsize - (p - PyBytes_AS_STRING(v)) >= 4);
+			c = PyString_AS_STRING(str)[i];
+			if (c == '\'' || c == '\\')
+				*p++ = '\\', *p++ = c;
+			else if (c == '\t')
+				*p++ = '\\', *p++ = 't';
+			else if (c == '\n')
+				*p++ = '\\', *p++ = 'n';
+			else if (c == '\r')
+				*p++ = '\\', *p++ = 'r';
+			else if (c < ' ' || c >= 0x7f) {
+				*p++ = '\\';
+				*p++ = 'x';
+				*p++ = hexdigits[(c & 0xf0) >> 4];
+				*p++ = hexdigits[c & 0xf];
+			}
+			else
+				*p++ = c;
+		}
+		*p = '\0';
+		if (PyBytes_Resize(v, (p - PyBytes_AS_STRING(v)))) {
+			Py_DECREF(v);
+			return NULL;
+		}
+	}
 	
-	return codec_tuple(str, PyString_Size(str));
+	return codec_tuple(v, PyBytes_Size(v));
 }
 
-#ifdef Py_USING_UNICODE
 /* --- Decoder ------------------------------------------------------------ */
 
 static PyObject *
@@ -513,8 +534,7 @@ readbuffer_encode(PyObject *self,
 			  &data, &size, &errors))
 	return NULL;
 
-    return codec_tuple(PyString_FromStringAndSize(data, size),
-		       size);
+    return codec_tuple(PyBytes_FromStringAndSize(data, size), size);
 }
 
 static PyObject *
@@ -529,8 +549,7 @@ charbuffer_encode(PyObject *self,
 			  &data, &size, &errors))
 	return NULL;
 
-    return codec_tuple(PyString_FromStringAndSize(data, size),
-		       size);
+    return codec_tuple(PyBytes_FromStringAndSize(data, size), size);
 }
 
 static PyObject *
@@ -549,14 +568,12 @@ unicode_internal_encode(PyObject *self,
     if (PyUnicode_Check(obj)) {
 	data = PyUnicode_AS_DATA(obj);
 	size = PyUnicode_GET_DATA_SIZE(obj);
-	return codec_tuple(PyString_FromStringAndSize(data, size),
-			   size);
+	return codec_tuple(PyBytes_FromStringAndSize(data, size), size);
     }
     else {
 	if (PyObject_AsReadBuffer(obj, (const void **)&data, &size))
 	    return NULL;
-	return codec_tuple(PyString_FromStringAndSize(data, size),
-			   size);
+	return codec_tuple(PyBytes_FromStringAndSize(data, size), size);
     }
 }
 
@@ -834,7 +851,6 @@ mbcs_encode(PyObject *self,
 }
 
 #endif /* MS_WINDOWS */
-#endif /* Py_USING_UNICODE */
 
 /* --- Error handler registry --------------------------------------------- */
 
@@ -889,7 +905,6 @@ static PyMethodDef _codecs_functions[] = {
 	decode__doc__},
     {"escape_encode",		escape_encode,			METH_VARARGS},
     {"escape_decode",		escape_decode,			METH_VARARGS},
-#ifdef Py_USING_UNICODE
     {"utf_8_encode",		utf_8_encode,			METH_VARARGS},
     {"utf_8_decode",		utf_8_decode,			METH_VARARGS},
     {"utf_7_encode",		utf_7_encode,			METH_VARARGS},
@@ -920,7 +935,6 @@ static PyMethodDef _codecs_functions[] = {
     {"mbcs_encode", 		mbcs_encode,			METH_VARARGS},
     {"mbcs_decode", 		mbcs_decode,			METH_VARARGS},
 #endif
-#endif /* Py_USING_UNICODE */
     {"register_error", 		register_error,			METH_VARARGS,
         register_error__doc__},
     {"lookup_error", 		lookup_error,			METH_VARARGS,

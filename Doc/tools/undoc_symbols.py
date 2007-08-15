@@ -50,7 +50,7 @@ import os, glob, re, sys
 
 def findnames(file, prefixes=()):
     names = {}
-    for line in file.xreadlines():
+    for line in file:
         if line[0] == '!':
             continue
         fields = line.split()
@@ -80,11 +80,10 @@ def print_undoc_symbols(prefix, docdir, incdir):
     fp = os.popen("ctags -IPyAPI_FUNC -IPy_GCC_ATTRIBUTE --c-types=%s -f - %s"
                   % (TAG_KINDS, incfiles))
     dict = findnames(fp, prefix)
-    names = dict.keys()
-    names.sort()
+    names = sorted(dict.keys())
     for name in names:
         if not re.search("%s\\W" % name, docs):
-            print dict[name], name
+            print(dict[name], name)
 
 if __name__ == '__main__':
     srcdir = os.path.dirname(sys.argv[0])

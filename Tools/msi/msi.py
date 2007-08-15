@@ -104,7 +104,6 @@ msvcr71_uuid = "{8666C8DD-D0B4-4B42-928E-A69E32FA5D4D}"
 pythondll_uuid = {
     "24":"{9B81E618-2301-4035-AC77-75D9ABEB7301}",
     "25":"{2e41b118-38bd-4c1b-a840-6977efd1b911}"
-    "26":"{34ebecac-f046-4e1c-b0e3-9bac3cdaacfa}",
     } [major+minor]
 
 # Build the mingw import library, libpythonXY.a
@@ -115,7 +114,7 @@ def build_mingw_lib(lib_file, def_file, dll_file, mingw_lib):
     dlltool = find_executable('dlltool')
 
     if not nm or not dlltool:
-        print warning % "nm and/or dlltool were not found"
+        print(warning % "nm and/or dlltool were not found")
         return False
 
     nm_command = '%s -Cs %s' % (nm, lib_file)
@@ -124,23 +123,23 @@ def build_mingw_lib(lib_file, def_file, dll_file, mingw_lib):
     export_match = re.compile(r"^_imp__(.*) in python\d+\.dll").match
 
     f = open(def_file,'w')
-    print >>f, "LIBRARY %s" % dll_file
-    print >>f, "EXPORTS"
+    print("LIBRARY %s" % dll_file, file=f)
+    print("EXPORTS", file=f)
 
     nm_pipe = os.popen(nm_command)
     for line in nm_pipe.readlines():
         m = export_match(line)
         if m:
-            print >>f, m.group(1)
+            print(m.group(1), file=f)
     f.close()
     exit = nm_pipe.close()
 
     if exit:
-        print warning % "nm did not run successfully"
+        print(warning % "nm did not run successfully")
         return False
 
     if os.system(dlltool_command) != 0:
-        print warning % "dlltool did not run successfully"
+        print(warning % "dlltool did not run successfully")
         return False
 
     return True
@@ -876,7 +875,7 @@ def add_files(db):
     # Check if _ctypes.pyd exists
     have_ctypes = os.path.exists(srcdir+"/PCBuild/_ctypes.pyd")
     if not have_ctypes:
-        print "WARNING: _ctypes.pyd not found, ctypes will not be included"
+        print("WARNING: _ctypes.pyd not found, ctypes will not be included")
         extensions.remove("_ctypes.pyd")
 
     # Add all .py files in Lib, except lib-tk, test
@@ -954,7 +953,7 @@ def add_files(db):
                 if f.endswith(".au") or f.endswith(".gif"):
                     lib.add_file(f)
                 else:
-                    print "WARNING: New file %s in email/test/data" % f
+                    print("WARNING: New file %s in email/test/data" % f)
         for f in os.listdir(lib.absolute):
             if os.path.isdir(os.path.join(lib.absolute, f)):
                 pydirs.append((lib, f))
@@ -969,7 +968,7 @@ def add_files(db):
         if f=="_tkinter.pyd":
             continue
         if not os.path.exists(srcdir+"/PCBuild/"+f):
-            print "WARNING: Missing extension", f
+            print("WARNING: Missing extension", f)
             continue
         dlls.append(f)
         lib.add_file(f)
@@ -983,7 +982,7 @@ def add_files(db):
     lib.add_file(srcdir+"/"+sqlite_dir+sqlite_arch+"/sqlite3.dll")
     if have_tcl:
         if not os.path.exists(srcdir+"/PCBuild/_tkinter.pyd"):
-            print "WARNING: Missing _tkinter.pyd"
+            print("WARNING: Missing _tkinter.pyd")
         else:
             lib.start_component("TkDLLs", tcltk)
             lib.add_file("_tkinter.pyd")
@@ -995,7 +994,7 @@ def add_files(db):
     for f in glob.glob1(srcdir+"/PCBuild", "*.pyd"):
         if f.endswith("_d.pyd"): continue # debug version
         if f in dlls: continue
-        print "WARNING: Unknown extension", f
+        print("WARNING: Unknown extension", f)
 
     # Add headers
     default_feature.set_current()

@@ -3,6 +3,7 @@
    Original by Roger E. Masse
 """
 
+import io
 import os
 import unittest
 import dumbdbm
@@ -18,13 +19,13 @@ def _delete_files():
             pass
 
 class DumbDBMTestCase(unittest.TestCase):
-    _dict = {'0': '',
-             'a': 'Python:',
-             'b': 'Programming',
-             'c': 'the',
-             'd': 'way',
-             'f': 'Guido',
-             'g': 'intended'
+    _dict = {'0': b'',
+             'a': b'Python:',
+             'b': b'Programming',
+             'c': b'the',
+             'd': b'way',
+             'f': b'Guido',
+             'g': b'intended',
              }
 
     def __init__(self, *args):
@@ -32,9 +33,9 @@ class DumbDBMTestCase(unittest.TestCase):
 
     def test_dumbdbm_creation(self):
         f = dumbdbm.open(_fname, 'c')
-        self.assertEqual(f.keys(), [])
+        self.assertEqual(list(f.keys()), [])
         for key in self._dict:
-            f[key] = self._dict[key]
+            f[key.encode("ascii")] = self._dict[key]
         self.read_helper(f)
         f.close()
 
@@ -44,17 +45,17 @@ class DumbDBMTestCase(unittest.TestCase):
             return
 
         try:
-            old_umask = os.umask(0002)
-            f = dumbdbm.open(_fname, 'c', 0637)
+            old_umask = os.umask(0o002)
+            f = dumbdbm.open(_fname, 'c', 0o637)
             f.close()
         finally:
             os.umask(old_umask)
 
-        expected_mode = 0635
+        expected_mode = 0o635
         if os.name != 'posix':
             # Windows only supports setting the read-only attribute.
             # This shouldn't fail, but doesn't work like Unix either.
-            expected_mode = 0666
+            expected_mode = 0o666
 
         import stat
         st = os.stat(_fname + '.dat')
@@ -64,15 +65,15 @@ class DumbDBMTestCase(unittest.TestCase):
 
     def test_close_twice(self):
         f = dumbdbm.open(_fname)
-        f['a'] = 'b'
-        self.assertEqual(f['a'], 'b')
+        f[b'a'] = b'b'
+        self.assertEqual(f[b'a'], b'b')
         f.close()
         f.close()
 
     def test_dumbdbm_modification(self):
         self.init_db()
         f = dumbdbm.open(_fname, 'w')
-        self._dict['g'] = f['g'] = "indented"
+        self._dict['g'] = f[b'g'] = b"indented"
         self.read_helper(f)
         f.close()
 
@@ -91,47 +92,45 @@ class DumbDBMTestCase(unittest.TestCase):
     def test_write_write_read(self):
         # test for bug #482460
         f = dumbdbm.open(_fname)
-        f['1'] = 'hello'
-        f['1'] = 'hello2'
+        f[b'1'] = b'hello'
+        f[b'1'] = b'hello2'
         f.close()
         f = dumbdbm.open(_fname)
-        self.assertEqual(f['1'], 'hello2')
+        self.assertEqual(f['1'], b'hello2')
         f.close()
 
     def test_line_endings(self):
         # test for bug #1172763: dumbdbm would die if the line endings
         # weren't what was expected.
         f = dumbdbm.open(_fname)
-        f['1'] = 'hello'
-        f['2'] = 'hello2'
+        f[b'1'] = b'hello'
+        f[b'2'] = b'hello2'
         f.close()
 
         # Mangle the file by adding \r before each newline
-        data = open(_fname + '.dir').read()
-        data = data.replace('\n', '\r\n')
-        open(_fname + '.dir', 'wb').write(data)
+        data = io.open(_fname + '.dir', 'rb').read()
+        data = data.replace(b'\n', b'\r\n')
+        io.open(_fname + '.dir', 'wb').write(data)
 
         f = dumbdbm.open(_fname)
-        self.assertEqual(f['1'], 'hello')
-        self.assertEqual(f['2'], 'hello2')
+        self.assertEqual(f[b'1'], b'hello')
+        self.assertEqual(f[b'2'], b'hello2')
 
 
     def read_helper(self, f):
         keys = self.keys_helper(f)
         for key in self._dict:
-            self.assertEqual(self._dict[key], f[key])
+            self.assertEqual(self._dict[key], f[key.encode("ascii")])
 
     def init_db(self):
         f = dumbdbm.open(_fname, 'w')
         for k in self._dict:
-            f[k] = self._dict[k]
+            f[k.encode("ascii")] = self._dict[k]
         f.close()
 
     def keys_helper(self, f):
-        keys = f.keys()
-        keys.sort()
-        dkeys = self._dict.keys()
-        dkeys.sort()
+        keys = sorted(k.decode("ascii") for k in f.keys())
+        dkeys = sorted(self._dict.keys())
         self.assertEqual(keys, dkeys)
         return keys
 
@@ -147,19 +146,17 @@ class DumbDBMTestCase(unittest.TestCase):
                 if random.random() < 0.2:
                     if k in d:
                         del d[k]
-                        del f[k]
+                        del f[k.encode("ascii")]
                 else:
-                    v = random.choice('abc') * random.randrange(10000)
+                    v = random.choice((b'a', b'b', b'c')) * random.randrange(10000)
                     d[k] = v
-                    f[k] = v
+                    f[k.encode("ascii")] = v
                     self.assertEqual(f[k], v)
             f.close()
 
             f = dumbdbm.open(_fname)
-            expected = d.items()
-            expected.sort()
-            got = f.items()
-            got.sort()
+            expected = sorted(d.items())
+            got = sorted(f.items())
             self.assertEqual(expected, got)
             f.close()
 

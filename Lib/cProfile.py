@@ -58,8 +58,8 @@ def runctx(statement, globals, locals, filename=None):
 
 # Backwards compatibility.
 def help():
-    print "Documentation for the profile/cProfile modules can be found "
-    print "in the Python Library Reference, section 'The Python Profiler'."
+    print("Documentation for the profile/cProfile modules can be found ")
+    print("in the Python Library Reference, section 'The Python Profiler'.")
 
 # ____________________________________________________________
 
@@ -137,7 +137,7 @@ class Profile(_lsprof.Profiler):
     def runctx(self, cmd, globals, locals):
         self.enable()
         try:
-            exec cmd in globals, locals
+            exec(cmd, globals, locals)
         finally:
             self.disable()
         return self
@@ -153,7 +153,7 @@ class Profile(_lsprof.Profiler):
 # ____________________________________________________________
 
 def label(code):
-    if isinstance(code, str):
+    if isinstance(code, basestring):
         return ('~', 0, code)    # built-in functions ('~' sorts at the end)
     else:
         return (code.co_filename, code.co_firstlineno, code.co_name)
@@ -180,7 +180,12 @@ def main():
 
     if (len(sys.argv) > 0):
         sys.path.insert(0, os.path.dirname(sys.argv[0]))
-        run('execfile(%r)' % (sys.argv[0],), options.outfile, options.sort)
+        fp = open(sys.argv[0])
+        try:
+            script = fp.read()
+        finally:
+            fp.close()
+        run('exec(%r)' % script, options.outfile, options.sort)
     else:
         parser.print_usage()
     return parser

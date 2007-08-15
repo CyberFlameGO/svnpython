@@ -26,7 +26,7 @@
 #
 from time import sleep as _sleep
 
-import db
+from . import db
 
 # always sleep at least N seconds between retrys
 _deadlock_MinSleepTime = 1.0/128
@@ -55,7 +55,7 @@ def DeadlockWrap(function, *_args, **_kwargs):
     """
     sleeptime = _deadlock_MinSleepTime
     max_retries = _kwargs.get('max_retries', -1)
-    if _kwargs.has_key('max_retries'):
+    if 'max_retries' in _kwargs:
         del _kwargs['max_retries']
     while True:
         try:

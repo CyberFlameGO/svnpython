@@ -10,14 +10,12 @@ typedef struct {
     PyObject_HEAD
     PyObject *dict;
     PyObject *args;
-    PyObject *message;
 } PyBaseExceptionObject;
 
 typedef struct {
     PyObject_HEAD
     PyObject *dict;
     PyObject *args;
-    PyObject *message;
     PyObject *msg;
     PyObject *filename;
     PyObject *lineno;
@@ -26,25 +24,21 @@ typedef struct {
     PyObject *print_file_and_line;
 } PySyntaxErrorObject;
 
-#ifdef Py_USING_UNICODE
 typedef struct {
     PyObject_HEAD
     PyObject *dict;
     PyObject *args;
-    PyObject *message;
     PyObject *encoding;
     PyObject *object;
     Py_ssize_t start;
     Py_ssize_t end;
     PyObject *reason;
 } PyUnicodeErrorObject;
-#endif
 
 typedef struct {
     PyObject_HEAD
     PyObject *dict;
     PyObject *args;
-    PyObject *message;
     PyObject *code;
 } PySystemExitObject;
 
@@ -52,7 +46,6 @@ typedef struct {
     PyObject_HEAD
     PyObject *dict;
     PyObject *args;
-    PyObject *message;
     PyObject *myerrno;
     PyObject *strerror;
     PyObject *filename;
@@ -63,7 +56,6 @@ typedef struct {
     PyObject_HEAD
     PyObject *dict;
     PyObject *args;
-    PyObject *message;
     PyObject *myerrno;
     PyObject *strerror;
     PyObject *filename;
@@ -95,22 +87,16 @@ PyAPI_FUNC(void) PyErr_NormalizeException(PyObject**, PyObject**, PyObject**);
 /* */
 
 #define PyExceptionClass_Check(x)					\
-	(PyClass_Check((x)) || (PyType_Check((x)) &&			\
-	  PyType_FastSubclass((PyTypeObject*)(x), Py_TPFLAGS_BASE_EXC_SUBCLASS)))
+	(PyType_Check((x)) &&						\
+	 PyType_FastSubclass((PyTypeObject*)(x), Py_TPFLAGS_BASE_EXC_SUBCLASS))
 
 #define PyExceptionInstance_Check(x)			\
-	(PyInstance_Check((x)) ||			\
-	 PyType_FastSubclass((x)->ob_type, Py_TPFLAGS_BASE_EXC_SUBCLASS))
+	PyType_FastSubclass((x)->ob_type, Py_TPFLAGS_BASE_EXC_SUBCLASS)
 
-#define PyExceptionClass_Name(x)				   \
-	(PyClass_Check((x))					   \
-	 ? PyString_AS_STRING(((PyClassObject*)(x))->cl_name)	   \
-	 : (char *)(((PyTypeObject*)(x))->tp_name))
+#define PyExceptionClass_Name(x) \
+	 ((char *)(((PyTypeObject*)(x))->tp_name))
 
-#define PyExceptionInstance_Class(x)					\
-	((PyInstance_Check((x))						\
-	  ? (PyObject*)((PyInstanceObject*)(x))->in_class		\
-	  : (PyObject*)((x)->ob_type)))
+#define PyExceptionInstance_Class(x) ((PyObject*)((x)->ob_type))
 
 	
 /* Predefined exceptions */
@@ -119,7 +105,6 @@ PyAPI_DATA(PyObject *) PyExc_BaseException;
 PyAPI_DATA(PyObject *) PyExc_Exception;
 PyAPI_DATA(PyObject *) PyExc_StopIteration;
 PyAPI_DATA(PyObject *) PyExc_GeneratorExit;
-PyAPI_DATA(PyObject *) PyExc_StandardError;
 PyAPI_DATA(PyObject *) PyExc_ArithmeticError;
 PyAPI_DATA(PyObject *) PyExc_LookupError;
 
@@ -187,8 +172,7 @@ PyAPI_FUNC(PyObject *) PyErr_SetFromErrnoWithUnicodeFilename(
 	PyObject *, Py_UNICODE *);
 #endif /* Py_WIN_WIDE_FILENAMES */
 
-PyAPI_FUNC(PyObject *) PyErr_Format(PyObject *, const char *, ...)
-			Py_GCC_ATTRIBUTE((format(printf, 2, 3)));
+PyAPI_FUNC(PyObject *) PyErr_Format(PyObject *, const char *, ...);
 
 #ifdef MS_WINDOWS
 PyAPI_FUNC(PyObject *) PyErr_SetFromWindowsErrWithFilenameObject(
@@ -229,9 +213,6 @@ PyAPI_FUNC(int) PyErr_WarnEx(PyObject *category, const char *msg,
 PyAPI_FUNC(int) PyErr_WarnExplicit(PyObject *, const char *,
 				   const char *, int, 
 				   const char *, PyObject *);
-/* PyErr_Warn is only for backwards compatability and will be removed.
-   Use PyErr_WarnEx instead. */
-#define PyErr_Warn(category, msg) PyErr_WarnEx(category, msg, 1)
 
 /* In sigcheck.c or signalmodule.c */
 PyAPI_FUNC(int) PyErr_CheckSignals(void);
@@ -241,7 +222,6 @@ PyAPI_FUNC(void) PyErr_SetInterrupt(void);
 PyAPI_FUNC(void) PyErr_SyntaxLocation(const char *, int);
 PyAPI_FUNC(PyObject *) PyErr_ProgramText(const char *, int);
 
-#ifdef Py_USING_UNICODE
 /* The following functions are used to create and modify unicode
    exceptions from C */
 
@@ -303,7 +283,6 @@ PyAPI_FUNC(int) PyUnicodeDecodeError_SetReason(
 	PyObject *, const char *);
 PyAPI_FUNC(int) PyUnicodeTranslateError_SetReason(
 	PyObject *, const char *);
-#endif
 
 
 /* These APIs aren't really part of the error implementation, but

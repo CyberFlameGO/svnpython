@@ -9,14 +9,6 @@ __revision__ = "$Id$"
 
 import string, re
 
-# Do the right thing with boolean values for all known Python versions
-# (so this module can be copied to projects that don't depend on Python
-# 2.3, e.g. Optik and Docutils).
-try:
-    True, False
-except NameError:
-    (True, False) = (1, 0)
-
 __all__ = ['TextWrapper', 'wrap', 'fill']
 
 # Hardcode the recognized whitespace characters to the US-ASCII
@@ -70,9 +62,9 @@ class TextWrapper:
     whitespace_trans = string.maketrans(_whitespace, ' ' * len(_whitespace))
 
     unicode_whitespace_trans = {}
-    uspace = ord(u' ')
-    for x in map(ord, _whitespace):
-        unicode_whitespace_trans[x] = uspace
+    uspace = ord(' ')
+    for x in _whitespace:
+        unicode_whitespace_trans[ord(x)] = uspace
 
     # This funky little regex is just the trick for splitting
     # text up into word-wrappable chunks.  E.g.
@@ -85,12 +77,11 @@ class TextWrapper:
         r'[^\s\w]*\w+[a-zA-Z]-(?=\w+[a-zA-Z])|'   # hyphenated words
         r'(?<=[\w\!\"\'\&\.\,\?])-{2,}(?=\w))')   # em-dash
 
-    # XXX this is not locale- or charset-aware -- string.lowercase
-    # is US-ASCII only (and therefore English-only)
-    sentence_end_re = re.compile(r'[%s]'              # lowercase letter
+    # XXX this is not locale-aware
+    sentence_end_re = re.compile(r'[a-z]'             # lowercase letter
                                  r'[\.\!\?]'          # sentence-ending punct.
                                  r'[\"\']?'           # optional end-of-quote
-                                 % string.lowercase)
+                                 )
 
 
     def __init__(self,
@@ -125,9 +116,9 @@ class TextWrapper:
         if self.expand_tabs:
             text = text.expandtabs()
         if self.replace_whitespace:
-            if isinstance(text, str):
+            if isinstance(text, str8):
                 text = text.translate(self.whitespace_trans)
-            elif isinstance(text, unicode):
+            elif isinstance(text, str):
                 text = text.translate(self.unicode_whitespace_trans)
         return text
 
@@ -144,7 +135,7 @@ class TextWrapper:
           'use', ' ', 'the', ' ', '-b', ' ', 'option!'
         """
         chunks = self.wordsep_re.split(text)
-        chunks = filter(None, chunks)  # remove empty chunks
+        chunks = [c for c in chunks if c]
         return chunks
 
     def _fix_sentence_endings(self, chunks):
@@ -375,4 +366,4 @@ def dedent(text):
 if __name__ == "__main__":
     #print dedent("\tfoo\n\tbar")
     #print dedent("  \thello there\n  \t  how are you?")
-    print dedent("Hello there.\n  This is indented.")
+    print(dedent("Hello there.\n  This is indented."))

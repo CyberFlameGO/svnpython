@@ -19,7 +19,7 @@ assert _sre.MAGIC == MAGIC, "SRE module mismatch"
 if _sre.CODESIZE == 2:
     MAXCODE = 65535
 else:
-    MAXCODE = 0xFFFFFFFFL
+    MAXCODE = 0xFFFFFFFF
 
 def _identityfunction(x):
     return x
@@ -267,7 +267,7 @@ def _mk_bitmap(bits):
     if _sre.CODESIZE == 2:
         start = (1, 0)
     else:
-        start = (1L, 0L)
+        start = (1, 0)
     m, v = start
     for c in bits:
         if c:
@@ -318,7 +318,7 @@ def _optimize_unicode(charset, fixup):
             elif op is LITERAL:
                 charmap[fixup(av)] = 1
             elif op is RANGE:
-                for i in xrange(fixup(av[0]), fixup(av[1])+1):
+                for i in range(fixup(av[0]), fixup(av[1])+1):
                     charmap[i] = 1
             elif op is CATEGORY:
                 # XXX: could expand category
@@ -330,13 +330,13 @@ def _optimize_unicode(charset, fixup):
         if sys.maxunicode != 65535:
             # XXX: negation does not work with big charsets
             return charset
-        for i in xrange(65536):
+        for i in range(65536):
             charmap[i] = not charmap[i]
     comps = {}
     mapping = [0]*256
     block = 0
     data = []
-    for i in xrange(256):
+    for i in range(256):
         chunk = tuple(charmap[i*256:(i+1)*256])
         new = comps.setdefault(chunk, block)
         mapping[i] = new
@@ -353,6 +353,7 @@ def _optimize_unicode(charset, fixup):
     # Convert byte array to word array
     mapping = array.array(code, mapping)
     assert mapping.itemsize == _sre.CODESIZE
+    assert len(mapping) * mapping.itemsize == 256
     header = header + mapping.tolist()
     data[0:0] = header
     return [(BIGCHARSET, data)]
@@ -461,7 +462,7 @@ def _compile_info(code, pattern, flags):
         code.extend(prefix)
         # generate overlap table
         table = [-1] + ([0]*len(prefix))
-        for i in xrange(len(prefix)):
+        for i in range(len(prefix)):
             table[i+1] = table[i]+1
             while table[i+1] > 0 and prefix[i] != prefix[table[i+1]-1]:
                 table[i+1] = table[table[i+1]-1]+1
@@ -470,18 +471,8 @@ def _compile_info(code, pattern, flags):
         _compile_charset(charset, flags, code)
     code[skip] = len(code) - skip
 
-try:
-    unicode
-except NameError:
-    STRING_TYPES = (type(""),)
-else:
-    STRING_TYPES = (type(""), type(unicode("")))
-
 def isstring(obj):
-    for tp in STRING_TYPES:
-        if isinstance(obj, tp):
-            return 1
-    return 0
+    return isinstance(obj, basestring)
 
 def _code(p, flags):
 

@@ -8,8 +8,14 @@
 #define GLOBAL_AFTER_ASSIGN \
 "name '%.400s' is assigned to before global declaration"
 
+#define NONLOCAL_AFTER_ASSIGN \
+"name '%.400s' is assigned to before nonlocal declaration"
+
 #define GLOBAL_AFTER_USE \
 "name '%.400s' is used prior to global declaration"
+
+#define NONLOCAL_AFTER_USE \
+"name '%.400s' is used prior to nonlocal declaration"
 
 #define IMPORT_STAR_WARNING "import * only allowed at module level"
 
@@ -70,7 +76,7 @@ PySTEntry_New(struct symtable *st, identifier name, _Py_block_ty block,
 	ste->ste_generator = 0;
 	ste->ste_returns_value = 0;
 
-	if (PyDict_SetItem(st->st_symbols, ste->ste_id, (PyObject *)ste) < 0)
+	if (PyDict_SetItem(st->st_blocks, ste->ste_id, (PyObject *)ste) < 0)
 	    goto fail;
 	
 	return ste;
@@ -82,13 +88,9 @@ PySTEntry_New(struct symtable *st, identifier name, _Py_block_ty block,
 static PyObject *
 ste_repr(PySTEntryObject *ste)
 {
-	char buf[256];
-
-	PyOS_snprintf(buf, sizeof(buf),
-		      "<symtable entry %.100s(%ld), line %d>",
-		      PyString_AS_STRING(ste->ste_name),
-		      PyInt_AS_LONG(ste->ste_id), ste->ste_lineno);
-	return PyString_FromString(buf);
+	return PyUnicode_FromFormat("<symtable entry %U(%ld), line %d>",
+	                            ste->ste_name,
+	                            PyInt_AS_LONG(ste->ste_id), ste->ste_lineno);
 }
 
 static void
@@ -165,21 +167,26 @@ static int symtable_exit_block(struct symtable *st, void *ast);
 static int symtable_visit_stmt(struct symtable *st, stmt_ty s);
 static int symtable_visit_expr(struct symtable *st, expr_ty s);
 static int symtable_visit_genexp(struct symtable *st, expr_ty s);
+static int symtable_visit_listcomp(struct symtable *st, expr_ty s);
+static int symtable_visit_setcomp(struct symtable *st, expr_ty s);
+static int symtable_visit_dictcomp(struct symtable *st, expr_ty s);
 static int symtable_visit_arguments(struct symtable *st, arguments_ty);
 static int symtable_visit_excepthandler(struct symtable *st, excepthandler_ty);
 static int symtable_visit_alias(struct symtable *st, alias_ty);
 static int symtable_visit_comprehension(struct symtable *st, comprehension_ty);
 static int symtable_visit_keyword(struct symtable *st, keyword_ty);
 static int symtable_visit_slice(struct symtable *st, slice_ty);
-static int symtable_visit_params(struct symtable *st, asdl_seq *args, int top);
-static int symtable_visit_params_nested(struct symtable *st, asdl_seq *args);
+static int symtable_visit_params(struct symtable *st, asdl_seq *args);
+static int symtable_visit_argannotations(struct symtable *st, asdl_seq *args);
 static int symtable_implicit_arg(struct symtable *st, int pos);
+static int symtable_visit_annotations(struct symtable *st, stmt_ty s);
 
 
-static identifier top = NULL, lambda = NULL, genexpr = NULL;
+static identifier top = NULL, lambda = NULL, genexpr = NULL,
+    listcomp = NULL, setcomp = NULL, dictcomp = NULL, __class__ = NULL;
 
 #define GET_IDENTIFIER(VAR) \
-	((VAR) ? (VAR) : ((VAR) = PyString_InternFromString(# VAR)))
+	((VAR) ? (VAR) : ((VAR) = PyUnicode_InternFromString(# VAR)))
 
 #define DUPLICATE_ARGUMENT \
 "duplicate argument '%s' in function definition"
@@ -194,14 +201,13 @@ symtable_new(void)
 		return NULL;
 
 	st->st_filename = NULL;
-	st->st_symbols = NULL;
+	st->st_blocks = NULL;
 
 	if ((st->st_stack = PyList_New(0)) == NULL)
 		goto fail;
-	if ((st->st_symbols = PyDict_New()) == NULL)
+	if ((st->st_blocks = PyDict_New()) == NULL)
 		goto fail; 
 	st->st_cur = NULL;
-	st->st_tmpname = 0;
 	st->st_private = NULL;
 	return st;
  fail:
@@ -220,6 +226,7 @@ PySymtable_Build(mod_ty mod, const char *filename, PyFutureFeatures *future)
 		return st;
 	st->st_filename = filename;
 	st->st_future = future;
+	/* Make the initial symbol information gathering pass */
 	if (!GET_IDENTIFIER(top) ||
 	    !symtable_enter_block(st, top, ModuleBlock, (void *)mod, 0)) {
 		PySymtable_Free(st);
@@ -228,7 +235,6 @@ PySymtable_Build(mod_ty mod, const char *filename, PyFutureFeatures *future)
 
 	st->st_top = st->st_cur;
 	st->st_cur->ste_unoptimized = OPT_TOPLEVEL;
-	/* Any other top-level initialization? */
 	switch (mod->kind) {
 	case Module_kind:
 		seq = mod->v.Module.body;
@@ -257,6 +263,7 @@ PySymtable_Build(mod_ty mod, const char *filename, PyFutureFeatures *future)
 		PySymtable_Free(st);
 		return NULL;
 	}
+	/* Make the second symbol analysis pass */
 	if (symtable_analyze(st))
 		return st;
 	PySymtable_Free(st);
@@ -270,7 +277,7 @@ PySymtable_Build(mod_ty mod, const char *filename, PyFutureFeatures *future)
 void
 PySymtable_Free(struct symtable *st)
 {
-	Py_XDECREF(st->st_symbols);
+	Py_XDECREF(st->st_blocks);
 	Py_XDECREF(st->st_stack);
 	PyMem_Free((void *)st);
 }
@@ -283,7 +290,7 @@ PySymtable_Lookup(struct symtable *st, void *key)
 	k = PyLong_FromVoidPtr(key);
 	if (k == NULL)
 		return NULL;
-	v = PyDict_GetItem(st->st_symbols, k);
+	v = PyDict_GetItem(st->st_blocks, k);
 	if (v) {
 		assert(PySTEntry_Check(v));
 		Py_INCREF(v);
@@ -304,18 +311,18 @@ PyST_GetScope(PySTEntryObject *ste, PyObject *name)
 	if (!v)
 		return 0;
 	assert(PyInt_Check(v));
-	return (PyInt_AS_LONG(v) >> SCOPE_OFF) & SCOPE_MASK;
+	return (PyInt_AS_LONG(v) >> SCOPE_OFFSET) & SCOPE_MASK;
 }
 
 
 /* Analyze raw symbol information to determine scope of each name.
 
-   The next several functions are helpers for PySymtable_Analyze(),
+   The next several functions are helpers for symtable_analyze(),
    which determines whether a name is local, global, or free.  In addition, 
    it determines which local variables are cell variables; they provide
    bindings that are used for free variables in enclosed blocks.  
 
-   There are also two kinds of free variables, implicit and explicit.  An 
+   There are also two kinds of global variables, implicit and explicit.  An 
    explicit global is declared with the global statement.  An implicit
    global is a free variable for which the compiler has found no binding
    in an enclosing function scope.  The implicit global is either a global
@@ -325,24 +332,32 @@ PyST_GetScope(PySTEntryObject *ste, PyObject *name)
    is treated as a local.
 
    The symbol table requires two passes to determine the scope of each name.
-   The first pass collects raw facts from the AST: the name is a parameter 
-   here, the name is used by not defined here, etc.  The second pass analyzes
-   these facts during a pass over the PySTEntryObjects created during pass 1.
+   The first pass collects raw facts from the AST via the symtable_visit_*
+   functions: the name is a parameter here, the name is used but not defined
+   here, etc.  The second pass analyzes these facts during a pass over the
+   PySTEntryObjects created during pass 1.
 
    When a function is entered during the second pass, the parent passes
    the set of all name bindings visible to its children.  These bindings 
-   are used to determine if the variable is free or an implicit global.
-   After doing the local analysis, it analyzes each of its child blocks
-   using an updated set of name bindings.  
+   are used to determine if non-local variables are free or implicit globals.
+   Names which are explicitly declared nonlocal must exist in this set of
+   visible names - if they do not, a syntax error is raised. After doing
+   the local analysis, it analyzes each of its child blocks using an
+   updated set of name bindings.
 
-   The children update the free variable set.  If a local variable is free 
-   in a child, the variable is marked as a cell.  The current function must 
-   provide runtime storage for the variable that may outlive the function's 
-   frame.  Cell variables are removed from the free set before the analyze
-   function returns to its parent.
-   
-   The sets of bound and free variables are implemented as dictionaries
-   mapping strings to None.
+   The children update the free variable set.  If a local variable is added to
+   the free variable set by the child, the variable is marked as a cell.  The
+   function object being defined must provide runtime storage for the variable
+   that may outlive the function's frame.  Cell variables are removed from the
+   free set before the analyze function returns to its parent.
+
+   During analysis, the names are:
+      symbols: dict mapping from symbol names to flag values (including offset scope values)
+      scopes: dict mapping from symbol names to scope values (no offset)
+      local: set of all symbol names local to the current scope
+      bound: set of all symbol names local to a containing function scope
+      free: set of all symbol names referenced but not bound in child scopes
+      global: set of all symbol names explicitly declared as global
 */
 
 #define SET_SCOPE(DICT, NAME, I) { \
@@ -363,34 +378,59 @@ PyST_GetScope(PySTEntryObject *ste, PyObject *name)
 */
 
 static int 
-analyze_name(PySTEntryObject *ste, PyObject *dict, PyObject *name, long flags,
+analyze_name(PySTEntryObject *ste, PyObject *scopes, PyObject *name, long flags,
 	     PyObject *bound, PyObject *local, PyObject *free, 
 	     PyObject *global)
 {
 	if (flags & DEF_GLOBAL) {
 		if (flags & DEF_PARAM) {
 			PyErr_Format(PyExc_SyntaxError,
-				     "name '%s' is local and global",
-				     PyString_AS_STRING(name));
+			            "name '%U' is parameter and global",
+			            name);
 			return 0;
 		}
-		SET_SCOPE(dict, name, GLOBAL_EXPLICIT);
-		if (PyDict_SetItem(global, name, Py_None) < 0)
+                if (flags & DEF_NONLOCAL) {
+			PyErr_Format(PyExc_SyntaxError,
+			             "name '%U' is nonlocal and global",
+			             name);
 			return 0;
-		if (bound && PyDict_GetItem(bound, name)) {
-			if (PyDict_DelItem(bound, name) < 0)
-				return 0;
-		}
+                }
+		SET_SCOPE(scopes, name, GLOBAL_EXPLICIT);
+		if (PySet_Add(global, name) < 0)
+			return 0;
+		if (bound && (PySet_Discard(bound, name) < 0))
+			return 0;
 		return 1;
 	}
-	if (flags & DEF_BOUND) {
-		SET_SCOPE(dict, name, LOCAL);
-		if (PyDict_SetItem(local, name, Py_None) < 0)
+        if (flags & DEF_NONLOCAL) {
+		if (flags & DEF_PARAM) {
+			PyErr_Format(PyExc_SyntaxError,
+			             "name '%U' is parameter and nonlocal",
+			             name);
 			return 0;
-		if (PyDict_GetItem(global, name)) {
-			if (PyDict_DelItem(global, name) < 0)
-				return 0;
 		}
+		if (!bound) {
+			PyErr_Format(PyExc_SyntaxError,
+				     "nonlocal declaration not allowed at module level");
+                        return 0;
+		}
+                if (!PySet_Contains(bound, name)) {
+                        PyErr_Format(PyExc_SyntaxError,
+                                     "no binding for nonlocal '%U' found",
+                                     name);
+                                     
+                        return 0;
+                }
+                SET_SCOPE(scopes, name, FREE);
+                ste->ste_free = 1;
+                return PySet_Add(free, name) >= 0;
+        }
+	if (flags & DEF_BOUND) {
+		SET_SCOPE(scopes, name, LOCAL);
+		if (PySet_Add(local, name) < 0)
+			return 0;
+		if (PySet_Discard(global, name) < 0)
+			return 0;
 		return 1;
 	}
 	/* If an enclosing block has a binding for this name, it
@@ -398,27 +438,22 @@ analyze_name(PySTEntryObject *ste, PyObject *dict, PyObject *name, long flags,
 	   Note that having a non-NULL bound implies that the block
 	   is nested.
 	*/
-	if (bound && PyDict_GetItem(bound, name)) {
-		SET_SCOPE(dict, name, FREE);
+	if (bound && PySet_Contains(bound, name)) {
+		SET_SCOPE(scopes, name, FREE);
 		ste->ste_free = 1;
-		if (PyDict_SetItem(free, name, Py_None) < 0)
-			return 0;
-		return 1;
+		return PySet_Add(free, name) >= 0;
 	}
 	/* If a parent has a global statement, then call it global
 	   explicit?  It could also be global implicit.
 	 */
-	else if (global && PyDict_GetItem(global, name)) {
-		SET_SCOPE(dict, name, GLOBAL_EXPLICIT);
+	if (global && PySet_Contains(global, name)) {
+		SET_SCOPE(scopes, name, GLOBAL_EXPLICIT);
 		return 1;
 	}
-	else {
-		if (ste->ste_nested)
-			ste->ste_free = 1;
-		SET_SCOPE(dict, name, GLOBAL_IMPLICIT);
-		return 1;
-	}
-	return 0; /* Can't get here */
+	if (ste->ste_nested)
+		ste->ste_free = 1;
+	SET_SCOPE(scopes, name, GLOBAL_IMPLICIT);
+	return 1;
 }
 
 #undef SET_SCOPE
@@ -429,45 +464,50 @@ analyze_name(PySTEntryObject *ste, PyObject *dict, PyObject *name, long flags,
 
    Note that the current block's free variables are included in free.
    That's safe because no name can be free and local in the same scope.
+
+   The 'restrict' argument may be set to a string to restrict the analysis
+   to the one variable whose name equals that string (e.g. "__class__").
 */
 
 static int
-analyze_cells(PyObject *scope, PyObject *free)
+analyze_cells(PyObject *scopes, PyObject *free, const char *restrict)
 {
-        PyObject *name, *v, *w;
+        PyObject *name, *v, *v_cell;
 	int success = 0;
 	Py_ssize_t pos = 0;
 
-	w = PyInt_FromLong(CELL);
-	if (!w)
+	v_cell = PyInt_FromLong(CELL);
+	if (!v_cell)
 		return 0;
-	while (PyDict_Next(scope, &pos, &name, &v)) {
-		long flags;
+	while (PyDict_Next(scopes, &pos, &name, &v)) {
+		long scope;
 		assert(PyInt_Check(v));
-		flags = PyInt_AS_LONG(v);
-		if (flags != LOCAL)
+		scope = PyInt_AS_LONG(v);
+		if (scope != LOCAL)
 			continue;
-		if (!PyDict_GetItem(free, name))
+		if (!PySet_Contains(free, name))
+			continue;
+		if (restrict != NULL &&
+                    PyUnicode_CompareWithASCIIString(name, restrict))
 			continue;
 		/* Replace LOCAL with CELL for this name, and remove
 		   from free. It is safe to replace the value of name 
 		   in the dict, because it will not cause a resize.
 		 */
-		if (PyDict_SetItem(scope, name, w) < 0)
+		if (PyDict_SetItem(scopes, name, v_cell) < 0)
 			goto error;
-		if (!PyDict_DelItem(free, name) < 0)
+		if (PySet_Discard(free, name) < 0)
 			goto error;
 	}
 	success = 1;
  error:
-	Py_DECREF(w);
+	Py_DECREF(v_cell);
 	return success;
 }
 
 /* Check for illegal statements in unoptimized namespaces */
 static int
 check_unoptimized(const PySTEntryObject* ste) {
-	char buf[300];
 	const char* trailer;
 
 	if (ste->ste_type != FunctionBlock || !ste->ste_unoptimized
@@ -479,106 +519,105 @@ check_unoptimized(const PySTEntryObject* ste) {
 			       "is a nested function");
 
 	switch (ste->ste_unoptimized) {
-	case OPT_TOPLEVEL: /* exec / import * at top-level is fine */
-	case OPT_EXEC: /* qualified exec is fine */
+	case OPT_TOPLEVEL: /* import * at top-level is fine */
 		return 1;
 	case OPT_IMPORT_STAR:
-		PyOS_snprintf(buf, sizeof(buf), 
-			      "import * is not allowed in function '%.100s' "
-			      "because it is %s",
-			      PyString_AS_STRING(ste->ste_name), trailer);
-		break;
-	case OPT_BARE_EXEC:
-		PyOS_snprintf(buf, sizeof(buf),
-			      "unqualified exec is not allowed in function "
-			      "'%.100s' it %s",
-			      PyString_AS_STRING(ste->ste_name), trailer);
-		break;
-	default:
-		PyOS_snprintf(buf, sizeof(buf), 
-			      "function '%.100s' uses import * and bare exec, "
-			      "which are illegal because it %s",
-			      PyString_AS_STRING(ste->ste_name), trailer);
+		PyErr_Format(PyExc_SyntaxError,
+		             "import * is not allowed in function '%U' because it %s",
+		             ste->ste_name, trailer);
 		break;
 	}
 
-	PyErr_SetString(PyExc_SyntaxError, buf);
 	PyErr_SyntaxLocation(ste->ste_table->st_filename, 
 			     ste->ste_opt_lineno);
 	return 0;
 }
 
-/* Enter the final scope information into the st_symbols dict. 
+/* Enter the final scope information into the ste_symbols dict. 
  * 
  * All arguments are dicts.  Modifies symbols, others are read-only.
 */
 static int
-update_symbols(PyObject *symbols, PyObject *scope, 
+update_symbols(PyObject *symbols, PyObject *scopes, 
                PyObject *bound, PyObject *free, int classflag)
 {
-	PyObject *name, *v, *u, *w, *free_value = NULL;
+	PyObject *name = NULL, *itr = NULL;
+	PyObject *v = NULL, *v_scope = NULL, *v_new = NULL, *v_free = NULL;
 	Py_ssize_t pos = 0;
 
+	/* Update scope information for all symbols in this scope */
 	while (PyDict_Next(symbols, &pos, &name, &v)) {
-		long i, flags;
+		long scope, flags;
 		assert(PyInt_Check(v));
 		flags = PyInt_AS_LONG(v);
-		w = PyDict_GetItem(scope, name);
-		assert(w && PyInt_Check(w));
-		i = PyInt_AS_LONG(w);
-		flags |= (i << SCOPE_OFF);
-		u = PyInt_FromLong(flags);
-		if (!u)
+		v_scope = PyDict_GetItem(scopes, name);
+		assert(v_scope && PyInt_Check(v_scope));
+		scope = PyInt_AS_LONG(v_scope);
+		flags |= (scope << SCOPE_OFFSET);
+		v_new = PyInt_FromLong(flags);
+		if (!v_new)
 			return 0;
-		if (PyDict_SetItem(symbols, name, u) < 0) {
-			Py_DECREF(u);
+		if (PyDict_SetItem(symbols, name, v_new) < 0) {
+			Py_DECREF(v_new);
 			return 0;
 		}
-		Py_DECREF(u);
+		Py_DECREF(v_new);
 	}
 
-        free_value = PyInt_FromLong(FREE << SCOPE_OFF);
-        if (!free_value)
+	/* Record not yet resolved free variables from children (if any) */
+        v_free = PyInt_FromLong(FREE << SCOPE_OFFSET);
+        if (!v_free)
 		return 0;
 
-        /* add a free variable when it's only use is for creating a closure */
-        pos = 0;
-	while (PyDict_Next(free, &pos, &name, &v)) {
-		PyObject *o = PyDict_GetItem(symbols, name);
+	itr = PyObject_GetIter(free);
+	if (!itr)
+		goto error;
 
-		if (o) {
-			/* It could be a free variable in a method of
+	while ((name = PyIter_Next(itr))) {
+		v = PyDict_GetItem(symbols, name);
+
+		/* Handle symbol that already exists in this scope */
+		if (v) {
+			/* Handle a free variable in a method of
 			   the class that has the same name as a local
 			   or global in the class scope.
 			*/
 			if  (classflag && 
-			     PyInt_AS_LONG(o) & (DEF_BOUND | DEF_GLOBAL)) {
-				long i = PyInt_AS_LONG(o) | DEF_FREE_CLASS;
-				o = PyInt_FromLong(i);
-				if (!o) {
-					Py_DECREF(free_value);
-					return 0;
+			     PyInt_AS_LONG(v) & (DEF_BOUND | DEF_GLOBAL)) {
+				long flags = PyInt_AS_LONG(v) | DEF_FREE_CLASS;
+				v_new = PyInt_FromLong(flags);
+				if (!v_new) {
+					goto error;
 				}
-				if (PyDict_SetItem(symbols, name, o) < 0) {
-					Py_DECREF(o);
-					Py_DECREF(free_value);
-					return 0;
+				if (PyDict_SetItem(symbols, name, v_new) < 0) {
+					Py_DECREF(v_new);
+					goto error;
 				}
-				Py_DECREF(o);
+				Py_DECREF(v_new);
 			}
-			/* else it's not free, probably a cell */
+			/* It's a cell, or already free in this scope */
+			Py_DECREF(name);
 			continue;
 		}
-		if (!PyDict_GetItem(bound, name))
+		/* Handle global symbol */
+		if (!PySet_Contains(bound, name)) {
+			Py_DECREF(name);
 			continue;       /* it's a global */
-
-		if (PyDict_SetItem(symbols, name, free_value) < 0) {
-			Py_DECREF(free_value);
-			return 0;
 		}
+		/* Propagate new free symbol up the lexical stack */
+		if (PyDict_SetItem(symbols, name, v_free) < 0) {
+			goto error;
+		}
+		Py_DECREF(name);
         }
-        Py_DECREF(free_value);
+	Py_DECREF(itr);
+        Py_DECREF(v_free);
 	return 1;
+error:
+	Py_XDECREF(v_free);
+	Py_XDECREF(itr);
+	Py_XDECREF(name);
+	return 0;
 }   
 
 /* Make final symbol table decisions for block of ste.
@@ -593,58 +632,80 @@ static int
 analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free, 
 	      PyObject *global)
 {
-	PyObject *name, *v, *local = NULL, *scope = NULL, *newbound = NULL;
+	PyObject *name, *v, *local = NULL, *scopes = NULL, *newbound = NULL;
 	PyObject *newglobal = NULL, *newfree = NULL;
 	int i, success = 0;
 	Py_ssize_t pos = 0;
 
-	local = PyDict_New();
+	scopes = PyDict_New();
+	if (!scopes)
+		goto error;
+	local = PySet_New(NULL);
 	if (!local)
 		goto error;
-	scope = PyDict_New();
-	if (!scope)
-		goto error;
-	newglobal = PyDict_New();
+	newglobal = PySet_New(NULL);
 	if (!newglobal)
 		goto error;
-	newfree = PyDict_New();
+	newfree = PySet_New(NULL);
 	if (!newfree)
 		goto error;
-	newbound = PyDict_New();
+	newbound = PySet_New(NULL);
 	if (!newbound)
 		goto error;
 
+	/* Class namespace has no effect on names visible in
+	   nested functions, so populate the global and bound
+	   sets to be passed to child blocks before analyzing
+	   this one.
+	 */
 	if (ste->ste_type == ClassBlock) {
-		/* make a copy of globals before calling analyze_name(),
-		   because global statements in the class have no effect
-		   on nested functions.
-		*/
-		if (PyDict_Update(newglobal, global) < 0)
-			goto error;
-		if (bound)
-			if (PyDict_Update(newbound, bound) < 0)
+		/* Pass down previously bound symbols */
+		if (bound) {
+			if (!PyNumber_InPlaceOr(newbound, bound))
 				goto error;
+			Py_DECREF(newbound);
+		}
+		/* Pass down known globals */
+		if (!PyNumber_InPlaceOr(newglobal, global))
+			goto error;
+		Py_DECREF(newglobal);
 	}
 
+	/* Analyze symbols in current scope */
 	assert(PySTEntry_Check(ste));
 	assert(PyDict_Check(ste->ste_symbols));
 	while (PyDict_Next(ste->ste_symbols, &pos, &name, &v)) {
 		long flags = PyInt_AS_LONG(v);
-		if (!analyze_name(ste, scope, name, flags, bound, local, free,
+		if (!analyze_name(ste, scopes, name, flags, bound, local, free,
 				  global))
 			goto error;
 	}
 
+	/* Populate global and bound sets to be passed to children. */
 	if (ste->ste_type != ClassBlock) {
+		/* Add function locals to bound set */
 		if (ste->ste_type == FunctionBlock) {
-			if (PyDict_Update(newbound, local) < 0)
+			if (!PyNumber_InPlaceOr(newbound, local))
 				goto error;
+			Py_DECREF(newbound);
 		}
+		/* Pass down previously bound symbols */
 		if (bound) {
-			if (PyDict_Update(newbound, bound) < 0)
+			if (!PyNumber_InPlaceOr(newbound, bound))
 				goto error;
+			Py_DECREF(newbound);
 		}
-		if (PyDict_Update(newglobal, global) < 0)
+		/* Pass down known globals */
+		if (!PyNumber_InPlaceOr(newglobal, global))
+			goto error;
+		Py_DECREF(newglobal);
+	}
+	else {
+		/* Special-case __class__ */
+		if (!GET_IDENTIFIER(__class__))
+			goto error;
+		assert(PySet_Contains(local, __class__) == 1);
+		if (PySet_Add(newbound, __class__) < 0)
 			goto error;
 	}
 
@@ -656,24 +717,32 @@ analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
 		entry = (PySTEntryObject*)c;
 		if (!analyze_block(entry, newbound, newfree, newglobal))
 			goto error;
+		/* Check if any children have free variables */
 		if (entry->ste_free || entry->ste_child_free)
 			ste->ste_child_free = 1;
 	}
 
-	if (ste->ste_type == FunctionBlock && !analyze_cells(scope, newfree))
+	/* Check if any local variables must be converted to cell variables */
+	if (ste->ste_type == FunctionBlock && !analyze_cells(scopes, newfree,
+							     NULL))
 		goto error;
-	if (!update_symbols(ste->ste_symbols, scope, bound, newfree,
+        else if (ste->ste_type == ClassBlock && !analyze_cells(scopes, newfree,
+							       "__class__"))
+		goto error;
+	/* Records the results of the analysis in the symbol table entry */
+	if (!update_symbols(ste->ste_symbols, scopes, bound, newfree,
 			    ste->ste_type == ClassBlock))
 		goto error;
 	if (!check_unoptimized(ste))
 		goto error;
 
-	if (PyDict_Update(free, newfree) < 0)
+	if (!PyNumber_InPlaceOr(free, newfree))
 		goto error;
+	Py_DECREF(free);
 	success = 1;
  error:
+	Py_XDECREF(scopes);
 	Py_XDECREF(local);
-	Py_XDECREF(scope);
 	Py_XDECREF(newbound);
 	Py_XDECREF(newglobal);
 	Py_XDECREF(newfree);
@@ -688,10 +757,10 @@ symtable_analyze(struct symtable *st)
 	PyObject *free, *global;
 	int r;
 
-	free = PyDict_New();
+	free = PySet_New(NULL);
 	if (!free)
 	    return 0;
-	global = PyDict_New();
+	global = PySet_New(NULL);
 	if (!global) {
 	    Py_DECREF(free);
 	    return 0;
@@ -790,6 +859,7 @@ symtable_add_def(struct symtable *st, PyObject *name, int flag)
 	PyObject *dict;
 	long val;
 	PyObject *mangled = _Py_Mangle(st->st_private, name);
+
 
 	if (!mangled)
 		return 0;
@@ -905,6 +975,17 @@ error:
 	} \
 }
 
+#define VISIT_KWONLYDEFAULTS(ST, KW_DEFAULTS) { \
+	int i = 0; \
+	asdl_seq *seq = (KW_DEFAULTS); /* avoid variable capture */ \
+	for (i = 0; i < asdl_seq_LEN(seq); i++) { \
+		expr_ty elt = (expr_ty)asdl_seq_GET(seq, i); \
+		if (!elt) continue; /* can be NULL */ \
+		if (!symtable_visit_expr((ST), elt)) \
+			return 0; \
+	} \
+}
+
 static int
 symtable_new_tmpname(struct symtable *st)
 {
@@ -913,7 +994,7 @@ symtable_new_tmpname(struct symtable *st)
 
 	PyOS_snprintf(tmpname, sizeof(tmpname), "_[%d]",
 		      ++st->st_cur->ste_tmpname);
-	tmp = PyString_InternFromString(tmpname);
+	tmp = PyUnicode_InternFromString(tmpname);
 	if (!tmp)
 		return 0;
 	if (!symtable_add_def(st, tmp, DEF_LOCAL))
@@ -921,6 +1002,8 @@ symtable_new_tmpname(struct symtable *st)
 	Py_DECREF(tmp);
 	return 1;
 }
+
+
 
 static int
 symtable_visit_stmt(struct symtable *st, stmt_ty s)
@@ -931,8 +1014,13 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 			return 0;
 		if (s->v.FunctionDef.args->defaults)
 			VISIT_SEQ(st, expr, s->v.FunctionDef.args->defaults);
-		if (s->v.FunctionDef.decorators)
-			VISIT_SEQ(st, expr, s->v.FunctionDef.decorators);
+		if (s->v.FunctionDef.args->kw_defaults)
+			VISIT_KWONLYDEFAULTS(st, 
+					   s->v.FunctionDef.args->kw_defaults);
+		if (!symtable_visit_annotations(st, s))
+			return 0;
+		if (s->v.FunctionDef.decorator_list)
+			VISIT_SEQ(st, expr, s->v.FunctionDef.decorator_list);
 		if (!symtable_enter_block(st, s->v.FunctionDef.name, 
 					  FunctionBlock, (void *)s, s->lineno))
 			return 0;
@@ -946,9 +1034,21 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 		if (!symtable_add_def(st, s->v.ClassDef.name, DEF_LOCAL))
 			return 0;
 		VISIT_SEQ(st, expr, s->v.ClassDef.bases);
+		VISIT_SEQ(st, keyword, s->v.ClassDef.keywords);
+		if (s->v.ClassDef.starargs)
+			VISIT(st, expr, s->v.ClassDef.starargs);
+		if (s->v.ClassDef.kwargs)
+			VISIT(st, expr, s->v.ClassDef.kwargs);
+		if (s->v.ClassDef.decorator_list)
+			VISIT_SEQ(st, expr, s->v.ClassDef.decorator_list);
 		if (!symtable_enter_block(st, s->v.ClassDef.name, ClassBlock, 
 					  (void *)s, s->lineno))
 			return 0;
+		if (!GET_IDENTIFIER(__class__) ||
+		    !symtable_add_def(st, __class__, DEF_LOCAL)) {
+			symtable_exit_block(st, s);
+			return 0;
+		}
 		tmp = st->st_private;
 		st->st_private = s->v.ClassDef.name;
 		VISIT_SEQ_IN_BLOCK(st, stmt, s->v.ClassDef.body, s);
@@ -980,11 +1080,6 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
         case AugAssign_kind:
 		VISIT(st, expr, s->v.AugAssign.target);
 		VISIT(st, expr, s->v.AugAssign.value);
-		break;
-        case Print_kind:
-		if (s->v.Print.dest)
-			VISIT(st, expr, s->v.Print.dest);
-		VISIT_SEQ(st, expr, s->v.Print.values);
 		break;
         case For_kind:
 		VISIT(st, expr, s->v.For.target);
@@ -1044,25 +1139,12 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
 		if (st->st_cur->ste_unoptimized && !st->st_cur->ste_opt_lineno)
 			st->st_cur->ste_opt_lineno = s->lineno;
 		break;
-        case Exec_kind:
-		VISIT(st, expr, s->v.Exec.body);
-		if (!st->st_cur->ste_opt_lineno)
-			st->st_cur->ste_opt_lineno = s->lineno;
-		if (s->v.Exec.globals) {
-			st->st_cur->ste_unoptimized |= OPT_EXEC;
-			VISIT(st, expr, s->v.Exec.globals);
-			if (s->v.Exec.locals) 
-				VISIT(st, expr, s->v.Exec.locals);
-		} else {
-			st->st_cur->ste_unoptimized |= OPT_BARE_EXEC;
-		}
-		break;
         case Global_kind: {
 		int i;
 		asdl_seq *seq = s->v.Global.names;
 		for (i = 0; i < asdl_seq_LEN(seq); i++) {
 			identifier name = (identifier)asdl_seq_GET(seq, i);
-			char *c_name = PyString_AS_STRING(name);
+			char *c_name = PyUnicode_AsString(name);
 			long cur = symtable_lookup(st, name);
 			if (cur < 0)
 				return 0;
@@ -1080,6 +1162,33 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
                                     return 0;
 			}
 			if (!symtable_add_def(st, name, DEF_GLOBAL))
+				return 0;
+		}
+		break;
+	}
+        case Nonlocal_kind: {
+		int i;
+		asdl_seq *seq = s->v.Nonlocal.names;
+		for (i = 0; i < asdl_seq_LEN(seq); i++) {
+			identifier name = (identifier)asdl_seq_GET(seq, i);
+			char *c_name = PyUnicode_AsString(name);
+			long cur = symtable_lookup(st, name);
+			if (cur < 0)
+				return 0;
+			if (cur & (DEF_LOCAL | USE)) {
+				char buf[256];
+				if (cur & DEF_LOCAL) 
+					PyOS_snprintf(buf, sizeof(buf),
+						      NONLOCAL_AFTER_ASSIGN,
+						      c_name);
+				else
+					PyOS_snprintf(buf, sizeof(buf),
+						      NONLOCAL_AFTER_USE,
+						      c_name);
+				if (!symtable_warn(st, buf, s->lineno))
+                                    return 0;
+			}
+			if (!symtable_add_def(st, name, DEF_NONLOCAL))
 				return 0;
 		}
 		break;
@@ -1146,14 +1255,23 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
 		VISIT_SEQ(st, expr, e->v.Dict.keys);
 		VISIT_SEQ(st, expr, e->v.Dict.values);
 		break;
-        case ListComp_kind:
-		if (!symtable_new_tmpname(st))
-			return 0;
-		VISIT(st, expr, e->v.ListComp.elt);
-		VISIT_SEQ(st, comprehension, e->v.ListComp.generators);
+	case Set_kind:
+		VISIT_SEQ(st, expr, e->v.Set.elts);
 		break;
         case GeneratorExp_kind:
 		if (!symtable_visit_genexp(st, e))
+			return 0;
+		break;
+        case ListComp_kind:
+		if (!symtable_visit_listcomp(st, e))
+			return 0;
+		break;
+	case SetComp_kind:
+		if (!symtable_visit_setcomp(st, e))
+			return 0;
+		break;
+	case DictComp_kind:
+		if (!symtable_visit_dictcomp(st, e))
 			return 0;
 		break;
         case Yield_kind:
@@ -1181,11 +1299,10 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
 		if (e->v.Call.kwargs)
 			VISIT(st, expr, e->v.Call.kwargs);
 		break;
-        case Repr_kind:
-		VISIT(st, expr, e->v.Repr.value);
-		break;
         case Num_kind:
         case Str_kind:
+        case Bytes_kind:
+        case Ellipsis_kind:
 		/* Nothing to do here. */
 		break;
 	/* The following exprs can be assignment targets. */
@@ -1196,10 +1313,21 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
 		VISIT(st, expr, e->v.Subscript.value);
 		VISIT(st, slice, e->v.Subscript.slice);
 		break;
+        case Starred_kind:
+		VISIT(st, expr, e->v.Starred.value);
+		break;
         case Name_kind:
 		if (!symtable_add_def(st, e->v.Name.id, 
 				      e->v.Name.ctx == Load ? USE : DEF_LOCAL))
 			return 0;
+		/* Special-case super: it counts as a use of __class__ */
+                if (e->v.Name.ctx == Load &&
+		    st->st_cur->ste_type == FunctionBlock &&
+                    !PyUnicode_CompareWithASCIIString(e->v.Name.id, "super")) {
+			if (!GET_IDENTIFIER(__class__) ||
+			    !symtable_add_def(st, __class__, USE))
+				return 0;
+                }
 		break;
 	/* child nodes of List and Tuple will have expr_context set */
         case List_kind:
@@ -1215,7 +1343,7 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
 static int
 symtable_implicit_arg(struct symtable *st, int pos)
 {
-	PyObject *id = PyString_FromFormat(".%d", pos);
+	PyObject *id = PyUnicode_FromFormat(".%d", pos);
 	if (id == NULL)
 		return 0;
 	if (!symtable_add_def(st, id, DEF_PARAM)) {
@@ -1227,54 +1355,54 @@ symtable_implicit_arg(struct symtable *st, int pos)
 }
 
 static int 
-symtable_visit_params(struct symtable *st, asdl_seq *args, int toplevel)
+symtable_visit_params(struct symtable *st, asdl_seq *args)
 {
 	int i;
-	
-        /* go through all the toplevel arguments first */
-	for (i = 0; i < asdl_seq_LEN(args); i++) {
-		expr_ty arg = (expr_ty)asdl_seq_GET(args, i);
-		if (arg->kind == Name_kind) {
-			assert(arg->v.Name.ctx == Param ||
-                               (arg->v.Name.ctx == Store && !toplevel));
-			if (!symtable_add_def(st, arg->v.Name.id, DEF_PARAM))
-				return 0;
-		}
-		else if (arg->kind == Tuple_kind) {
-			assert(arg->v.Tuple.ctx == Store);
-			if (toplevel) {
-				if (!symtable_implicit_arg(st, i))
-					return 0;
-			}
-		}
-		else {
-		        PyErr_SetString(PyExc_SyntaxError,
-					"invalid expression in parameter list");
-		        PyErr_SyntaxLocation(st->st_filename,
-				             st->st_cur->ste_lineno);
-			return 0;
-		}
-	}
 
-	if (!toplevel) {
-		if (!symtable_visit_params_nested(st, args))
+	if (!args)
+		return -1;
+	
+	for (i = 0; i < asdl_seq_LEN(args); i++) {
+		arg_ty arg = (arg_ty)asdl_seq_GET(args, i);
+		if (!symtable_add_def(st, arg->arg, DEF_PARAM))
 			return 0;
 	}
 
 	return 1;
 }
 
-static int
-symtable_visit_params_nested(struct symtable *st, asdl_seq *args)
+static int 
+symtable_visit_argannotations(struct symtable *st, asdl_seq *args)
 {
 	int i;
-	for (i = 0; i < asdl_seq_LEN(args); i++) {
-		expr_ty arg = (expr_ty)asdl_seq_GET(args, i);
-		if (arg->kind == Tuple_kind &&
-		    !symtable_visit_params(st, arg->v.Tuple.elts, 0))
-			return 0;
-	}
+
+	if (!args)
+		return -1;
 	
+	for (i = 0; i < asdl_seq_LEN(args); i++) {
+		arg_ty arg = (arg_ty)asdl_seq_GET(args, i);
+		if (arg->annotation)
+			VISIT(st, expr, arg->annotation);
+	}
+
+	return 1;
+}
+
+static int
+symtable_visit_annotations(struct symtable *st, stmt_ty s)
+{
+	arguments_ty a = s->v.FunctionDef.args;
+	
+	if (a->args && !symtable_visit_argannotations(st, a->args))
+		return 0;
+	if (a->varargannotation)
+		VISIT(st, expr, a->varargannotation);
+	if (a->kwargannotation)
+		VISIT(st, expr, a->kwargannotation);
+	if (a->kwonlyargs && !symtable_visit_argannotations(st, a->kwonlyargs))
+		return 0;
+	if (s->v.FunctionDef.returns)
+		VISIT(st, expr, s->v.FunctionDef.returns);
 	return 1;
 }
 
@@ -1284,7 +1412,9 @@ symtable_visit_arguments(struct symtable *st, arguments_ty a)
 	/* skip default arguments inside function block
 	   XXX should ast be different?
 	*/
-	if (a->args && !symtable_visit_params(st, a->args, 1))
+	if (a->args && !symtable_visit_params(st, a->args))
+		return 0;
+	if (a->kwonlyargs && !symtable_visit_params(st, a->kwonlyargs))
 		return 0;
 	if (a->vararg) {
 		if (!symtable_add_def(st, a->vararg, DEF_PARAM))
@@ -1296,8 +1426,6 @@ symtable_visit_arguments(struct symtable *st, arguments_ty a)
 			return 0;
 		st->st_cur->ste_varkeywords = 1;
 	}
-	if (a->args && !symtable_visit_params_nested(st, a->args))
-		return 0;
 	return 1;
 }
 
@@ -1308,7 +1436,8 @@ symtable_visit_excepthandler(struct symtable *st, excepthandler_ty eh)
 	if (eh->type)
 		VISIT(st, expr, eh->type);
 	if (eh->name)
-		VISIT(st, expr, eh->name);
+        if (!symtable_add_def(st, eh->name, DEF_LOCAL))
+			return 0;
 	VISIT_SEQ(st, stmt, eh->body);
 	return 1;
 }
@@ -1323,10 +1452,10 @@ symtable_visit_alias(struct symtable *st, alias_ty a)
 	*/
 	PyObject *store_name;
 	PyObject *name = (a->asname == NULL) ? a->name : a->asname;
-	const char *base = PyString_AS_STRING(name);
-	char *dot = strchr(base, '.');
+	const Py_UNICODE *base = PyUnicode_AS_UNICODE(name);
+	Py_UNICODE *dot = Py_UNICODE_strchr(base, '.');
 	if (dot) {
-		store_name = PyString_FromStringAndSize(base, dot - base);
+		store_name = PyUnicode_FromUnicode(base, dot - base);
 		if (!store_name)
 			return 0;
 	}
@@ -1334,7 +1463,7 @@ symtable_visit_alias(struct symtable *st, alias_ty a)
 		store_name = name;
 		Py_INCREF(store_name);
 	}
-	if (strcmp(PyString_AS_STRING(name), "*")) {
+	if (PyUnicode_CompareWithASCIIString(name, "*")) {
 		int r = symtable_add_def(st, store_name, DEF_IMPORT); 
 		Py_DECREF(store_name);
 		return r;
@@ -1342,10 +1471,10 @@ symtable_visit_alias(struct symtable *st, alias_ty a)
 	else {
             if (st->st_cur->ste_type != ModuleBlock) {
                 int lineno = st->st_cur->ste_lineno;
-                if (!symtable_warn(st, IMPORT_STAR_WARNING, lineno)) {
-                    Py_DECREF(store_name);
-                    return 0;
-		}
+                PyErr_SetString(PyExc_SyntaxError, IMPORT_STAR_WARNING);
+                PyErr_SyntaxLocation(st->st_filename, lineno);
+                Py_DECREF(store_name);
+                return 0;
             }
 	    st->st_cur->ste_unoptimized |= OPT_IMPORT_STAR;
 	    Py_DECREF(store_name);
@@ -1390,34 +1519,76 @@ symtable_visit_slice(struct symtable *st, slice_ty s)
 	case Index_kind:
 		VISIT(st, expr, s->v.Index.value)
 		break;
-	case Ellipsis_kind:
-		break;
 	}
 	return 1;
 }
 
 static int 
-symtable_visit_genexp(struct symtable *st, expr_ty e)
+symtable_handle_comprehension(struct symtable *st, expr_ty e,
+                              identifier scope_name, asdl_seq *generators,
+                              expr_ty elt, expr_ty value)
 {
+	int is_generator = (e->kind == GeneratorExp_kind);
+	int needs_tmp = !is_generator;
 	comprehension_ty outermost = ((comprehension_ty)
-			 (asdl_seq_GET(e->v.GeneratorExp.generators, 0)));
+                                        asdl_seq_GET(generators, 0));
 	/* Outermost iterator is evaluated in current scope */
 	VISIT(st, expr, outermost->iter);
-	/* Create generator scope for the rest */
-	if (!GET_IDENTIFIER(genexpr) ||
-	    !symtable_enter_block(st, genexpr, FunctionBlock, (void *)e, 0)) {
+	/* Create comprehension scope for the rest */
+	if (!scope_name ||
+	    !symtable_enter_block(st, scope_name, FunctionBlock, (void *)e, 0)) {
 		return 0;
 	}
-	st->st_cur->ste_generator = 1;
+	st->st_cur->ste_generator = is_generator;
 	/* Outermost iter is received as an argument */
 	if (!symtable_implicit_arg(st, 0)) {
+		symtable_exit_block(st, (void *)e);
+		return 0;
+	}
+	/* Allocate temporary name if needed */
+	if (needs_tmp && !symtable_new_tmpname(st)) {
 		symtable_exit_block(st, (void *)e);
 		return 0;
 	}
 	VISIT_IN_BLOCK(st, expr, outermost->target, (void*)e);
 	VISIT_SEQ_IN_BLOCK(st, expr, outermost->ifs, (void*)e);
 	VISIT_SEQ_TAIL_IN_BLOCK(st, comprehension,
-				e->v.GeneratorExp.generators, 1, (void*)e);
-	VISIT_IN_BLOCK(st, expr, e->v.GeneratorExp.elt, (void*)e);
+				generators, 1, (void*)e);
+	if (value)
+		VISIT_IN_BLOCK(st, expr, value, (void*)e);
+	VISIT_IN_BLOCK(st, expr, elt, (void*)e);
 	return symtable_exit_block(st, (void *)e);
+}
+
+static int 
+symtable_visit_genexp(struct symtable *st, expr_ty e)
+{
+	return symtable_handle_comprehension(st, e, GET_IDENTIFIER(genexpr),
+                                             e->v.GeneratorExp.generators,
+                                             e->v.GeneratorExp.elt, NULL);
+}
+
+static int 
+symtable_visit_listcomp(struct symtable *st, expr_ty e)
+{
+	return symtable_handle_comprehension(st, e, GET_IDENTIFIER(listcomp),
+                                             e->v.ListComp.generators,
+                                             e->v.ListComp.elt, NULL);
+}
+
+static int
+symtable_visit_setcomp(struct symtable *st, expr_ty e)
+{
+	return symtable_handle_comprehension(st, e, GET_IDENTIFIER(setcomp),
+					     e->v.SetComp.generators,
+					     e->v.SetComp.elt, NULL);
+}
+
+static int
+symtable_visit_dictcomp(struct symtable *st, expr_ty e)
+{
+	return symtable_handle_comprehension(st, e, GET_IDENTIFIER(dictcomp),
+					     e->v.DictComp.generators,
+					     e->v.DictComp.key,
+					     e->v.DictComp.value);
 }

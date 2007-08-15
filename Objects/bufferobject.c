@@ -47,12 +47,6 @@ get_buf(PyBufferObject *self, void **ptr, Py_ssize_t *size,
 			(buffer_type == ANY_BUFFER))
     		    proc = (readbufferproc)bp->bf_getwritebuffer;
 		else if (buffer_type == CHAR_BUFFER) {
-		    if (!PyType_HasFeature(self->ob_type,
-				Py_TPFLAGS_HAVE_GETCHARBUFFER)) {
-			PyErr_SetString(PyExc_TypeError,
-				"Py_TPFLAGS_HAVE_GETCHARBUFFER needed");
-			return 0;
-		    }
 		    proc = (readbufferproc)bp->bf_getcharbuffer;
 		}
 		if (!proc) {
@@ -258,23 +252,65 @@ buffer_dealloc(PyBufferObject *self)
 }
 
 static int
-buffer_compare(PyBufferObject *self, PyBufferObject *other)
+get_bufx(PyObject *obj, void **ptr, Py_ssize_t *size)
+{
+	PyBufferProcs *bp;
+
+	if (PyBuffer_Check(obj)) {
+		if (!get_buf((PyBufferObject *)obj, ptr, size, ANY_BUFFER)) {
+			PyErr_Clear();
+			return 0;
+		}
+		else
+			return 1;
+	}
+	bp = obj->ob_type->tp_as_buffer;
+	if (bp == NULL ||
+	    bp->bf_getreadbuffer == NULL ||
+	    bp->bf_getsegcount == NULL)
+		return 0;
+	if ((*bp->bf_getsegcount)(obj, NULL) != 1)
+		return 0;
+	*size = (*bp->bf_getreadbuffer)(obj, 0, ptr);
+	if (*size < 0) {
+		PyErr_Clear();
+		return 0;
+	}
+	return 1;
+}
+
+static PyObject *
+buffer_richcompare(PyObject *self, PyObject *other, int op)
 {
 	void *p1, *p2;
-	Py_ssize_t len_self, len_other, min_len;
-	int cmp;
+	Py_ssize_t len1, len2, min_len;
+	int cmp, ok;
 
-	if (!get_buf(self, &p1, &len_self, ANY_BUFFER))
-		return -1;
-	if (!get_buf(other, &p2, &len_other, ANY_BUFFER))
-		return -1;
-	min_len = (len_self < len_other) ? len_self : len_other;
-	if (min_len > 0) {
-		cmp = memcmp(p1, p2, min_len);
-		if (cmp != 0)
-			return cmp < 0 ? -1 : 1;
+	ok = 1;
+	if (!get_bufx(self, &p1, &len1))
+		ok = 0;
+	if (!get_bufx(other, &p2, &len2))
+		ok = 0;
+	if (!ok) {
+		/* If we can't get the buffers,
+		   == and != are still defined
+		   (and the objects are unequal) */
+		PyObject *result;
+		if (op == Py_EQ)
+			result = Py_False;
+		else if (op == Py_NE)
+			result = Py_True;
+		else
+			result = Py_NotImplemented;
+		Py_INCREF(result);
+		return result;
 	}
-	return (len_self < len_other) ? -1 : (len_self > len_other) ? 1 : 0;
+	min_len = (len1 < len2) ? len1 : len2;
+	cmp = memcmp(p1, p2, min_len);
+	if (cmp == 0)
+		cmp = (len1 < len2) ? -1 :
+		      (len1 > len2) ? 1 : 0;
+	return Py_CmpToRich(op, cmp);
 }
 
 static PyObject *
@@ -283,13 +319,13 @@ buffer_repr(PyBufferObject *self)
 	const char *status = self->b_readonly ? "read-only" : "read-write";
 
 	if ( self->b_base == NULL )
-		return PyString_FromFormat("<%s buffer ptr %p, size %zd at %p>",
+		return PyUnicode_FromFormat("<%s buffer ptr %p, size %zd at %p>",
 					   status,
 					   self->b_ptr,
 					   self->b_size,
 					   self);
 	else
-		return PyString_FromFormat(
+		return PyUnicode_FromFormat(
 			"<%s buffer for %p, size %zd, offset %zd at %p>",
 			status,
 			self->b_base,
@@ -388,15 +424,25 @@ buffer_concat(PyBufferObject *self, PyObject *other)
  		return NULL;
  
 	/* optimize special case */
+        /* XXX bad idea type-wise */
 	if ( size == 0 )
 	{
 	    Py_INCREF(other);
 	    return other;
 	}
 
-	if ( (count = (*pb->bf_getreadbuffer)(other, 0, &ptr2)) < 0 )
-		return NULL;
+        if (PyUnicode_Check(other)) {
+		/* XXX HACK */
+		if ( (count = (*pb->bf_getcharbuffer)(other, 0,
+                                                      (char **)&ptr2)) < 0 )
+			return NULL;
+	}
+	else {
+		if ( (count = (*pb->bf_getreadbuffer)(other, 0, &ptr2)) < 0 )
+			return NULL;
+	}
 
+        /* XXX Should return a bytes object, really */
  	ob = PyString_FromStringAndSize(NULL, size + count);
 	if ( ob == NULL )
 		return NULL;
@@ -672,7 +718,7 @@ PyTypeObject PyBuffer_Type = {
 	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
-	(cmpfunc)buffer_compare,		/* tp_compare */
+	0,					/* tp_compare */
 	(reprfunc)buffer_repr,			/* tp_repr */
 	0,					/* tp_as_number */
 	&buffer_as_sequence,			/* tp_as_sequence */
@@ -683,11 +729,11 @@ PyTypeObject PyBuffer_Type = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	&buffer_as_buffer,			/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GETCHARBUFFER, /* tp_flags */
+	Py_TPFLAGS_DEFAULT,			/* tp_flags */
 	buffer_doc,				/* tp_doc */
 	0,					/* tp_traverse */
 	0,					/* tp_clear */
-	0,					/* tp_richcompare */
+	buffer_richcompare,			/* tp_richcompare */
 	0,					/* tp_weaklistoffset */
 	0,					/* tp_iter */
 	0,					/* tp_iternext */

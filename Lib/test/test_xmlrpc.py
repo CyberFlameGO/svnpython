@@ -4,33 +4,24 @@ import sys
 import time
 import unittest
 import xmlrpclib
-import SimpleXMLRPCServer
-import threading
 from test import test_support
-
-try:
-    unicode
-except NameError:
-    have_unicode = False
-else:
-    have_unicode = True
 
 alist = [{'astring': 'foo@bar.baz.spam',
           'afloat': 7283.43,
           'anint': 2**20,
-          'ashortlong': 2L,
+          'ashortlong': 2,
           'anotherlist': ['.zyx.41'],
           'abase64': xmlrpclib.Binary("my dog has fleas"),
-          'boolean': xmlrpclib.False,
-          'unicode': u'\u4000\u6000\u8000',
-          u'ukey\u4000': 'regular value',
+          'boolean': False,
+          'unicode': '\u4000\u6000\u8000',
+          'ukey\u4000': 'regular value',
           'datetime1': xmlrpclib.DateTime('20050210T11:41:23'),
           'datetime2': xmlrpclib.DateTime(
-                        (2005, 02, 10, 11, 41, 23, 0, 1, -1)),
+                        (2005, 2, 10, 11, 41, 23, 0, 1, -1)),
           'datetime3': xmlrpclib.DateTime(
-                        datetime.datetime(2005, 02, 10, 11, 41, 23)),
+                        datetime.datetime(2005, 2, 10, 11, 41, 23)),
           'datetime4': xmlrpclib.DateTime(
-                        datetime.date(2005, 02, 10)),
+                        datetime.date(2005, 2, 10)),
           'datetime5': xmlrpclib.DateTime(
                         datetime.time(11, 41, 23)),
           }]
@@ -46,7 +37,7 @@ class XMLRPCTestCase(unittest.TestCase):
         # by the marshalling code.  This can't be done via test_dump_load()
         # since with use_datetime set to 1 the unmarshaller would create
         # datetime objects for the 'datetime[123]' keys as well
-        dt = datetime.datetime(2005, 02, 10, 11, 41, 23)
+        dt = datetime.datetime(2005, 2, 10, 11, 41, 23)
         s = xmlrpclib.dumps((dt,))
         (newdt,), m = xmlrpclib.loads(s, use_datetime=1)
         self.assertEquals(newdt, dt)
@@ -59,7 +50,7 @@ class XMLRPCTestCase(unittest.TestCase):
         # This checks that an unwrapped datetime.date object can be handled
         # by the marshalling code.  This can't be done via test_dump_load()
         # since the unmarshaller produces a datetime object
-        d = datetime.datetime(2005, 02, 10, 11, 41, 23).date()
+        d = datetime.datetime(2005, 2, 10, 11, 41, 23).date()
         s = xmlrpclib.dumps((d,))
         (newd,), m = xmlrpclib.loads(s, use_datetime=1)
         self.assertEquals(newd.date(), d)
@@ -73,7 +64,7 @@ class XMLRPCTestCase(unittest.TestCase):
         # This checks that an unwrapped datetime.time object can be handled
         # by the marshalling code.  This can't be done via test_dump_load()
         # since the unmarshaller produces a datetime object
-        t = datetime.datetime(2005, 02, 10, 11, 41, 23).time()
+        t = datetime.datetime(2005, 2, 10, 11, 41, 23).time()
         s = xmlrpclib.dumps((t,))
         (newt,), m = xmlrpclib.loads(s, use_datetime=1)
         today = datetime.datetime.now().date().strftime("%Y%m%d")
@@ -104,7 +95,7 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertEquals(t2, t.__dict__)
 
     def test_dump_big_long(self):
-        self.assertRaises(OverflowError, xmlrpclib.dumps, (2L**99,))
+        self.assertRaises(OverflowError, xmlrpclib.dumps, (2**99,))
 
     def test_dump_bad_dict(self):
         self.assertRaises(TypeError, xmlrpclib.dumps, ({(1,2,3): 1},))
@@ -122,9 +113,9 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertRaises(TypeError, xmlrpclib.dumps, (d,))
 
     def test_dump_big_int(self):
-        if sys.maxint > 2L**31-1:
+        if sys.maxint > 2**31-1:
             self.assertRaises(OverflowError, xmlrpclib.dumps,
-                              (int(2L**34),))
+                              (int(2**34),))
 
         xmlrpclib.dumps((xmlrpclib.MAXINT, xmlrpclib.MININT))
         self.assertRaises(OverflowError, xmlrpclib.dumps, (xmlrpclib.MAXINT+1,))
@@ -147,48 +138,6 @@ class XMLRPCTestCase(unittest.TestCase):
         self.assertEquals(value,
                           xmlrpclib.loads(strg)[0][0])
         self.assertRaises(TypeError, xmlrpclib.dumps, (arg1,))
-
-    def test_default_encoding_issues(self):
-        # SF bug #1115989: wrong decoding in '_stringify'
-        utf8 = """<?xml version='1.0' encoding='iso-8859-1'?>
-                  <params>
-                    <param><value>
-                      <string>abc \x95</string>
-                      </value></param>
-                    <param><value>
-                      <struct>
-                        <member>
-                          <name>def \x96</name>
-                          <value><string>ghi \x97</string></value>
-                          </member>
-                        </struct>
-                      </value></param>
-                  </params>
-                  """
-
-        # sys.setdefaultencoding() normally doesn't exist after site.py is
-        # loaded.  reload(sys) is the way to get it back.
-        old_encoding = sys.getdefaultencoding()
-        setdefaultencoding_existed = hasattr(sys, "setdefaultencoding")
-        reload(sys) # ugh!
-        sys.setdefaultencoding("iso-8859-1")
-        try:
-            (s, d), m = xmlrpclib.loads(utf8)
-        finally:
-            sys.setdefaultencoding(old_encoding)
-            if not setdefaultencoding_existed:
-                del sys.setdefaultencoding
-
-        items = d.items()
-        if have_unicode:
-            self.assertEquals(s, u"abc \x95")
-            self.assert_(isinstance(s, unicode))
-            self.assertEquals(items, [(u"def \x96", u"ghi \x97")])
-            self.assert_(isinstance(items[0][0], unicode))
-            self.assert_(isinstance(items[0][1], unicode))
-        else:
-            self.assertEquals(s, "abc \xc2\x95")
-            self.assertEquals(items, [("def \xc2\x96", "ghi \xc2\x97")])
 
 
 class HelperTestCase(unittest.TestCase):
@@ -290,108 +239,10 @@ class BinaryTestCase(unittest.TestCase):
         self.assertEqual(str(t2), d)
 
 
-PORT = None
-
-def http_server(evt, numrequests):
-    class TestInstanceClass:
-        def div(self, x, y):
-            '''This is the div function'''
-            return x // y
-
-
-    serv = SimpleXMLRPCServer.SimpleXMLRPCServer(("localhost", 0),
-                    logRequests=False, bind_and_activate=False)
-
-    try:
-        serv.socket.settimeout(3)
-        serv.server_bind()
-        global PORT
-        PORT = serv.socket.getsockname()[1]
-        serv.server_activate()
-        serv.register_introspection_functions()
-        serv.register_multicall_functions()
-        serv.register_function(pow)
-        serv.register_function(lambda x,y: x+y, 'add')
-        serv.register_instance(TestInstanceClass())
-
-        # handle up to 'numrequests' requests
-        while numrequests > 0:
-            serv.handle_request()
-            numrequests -= 1
-
-    except socket.timeout:
-        pass
-    finally:
-        serv.socket.close()
-        PORT = None
-        evt.set()
-
-
-class HTTPTestCase(unittest.TestCase):
-    def setUp(self):
-        self.evt = threading.Event()
-        # start server thread to handle just one request
-        threading.Thread(target=http_server, args=(self.evt,2)).start()
-
-        # wait for port to be assigned to server
-        n = 1000
-        while n > 0 and PORT is None:
-            time.sleep(0.001)
-            n -= 1
-
-        time.sleep(0.5)
-
-    def tearDown(self):
-        # wait on the server thread to terminate
-        self.evt.wait()
-
-    def test_simple1(self):
-        p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
-        self.assertEqual(p.pow(6,8), 6**8)
-
-    def test_introspection1(self):
-        p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
-        meth = p.system.listMethods()
-        expected_methods = set(['pow', 'div', 'add', 'system.listMethods',
-            'system.methodHelp', 'system.methodSignature', 'system.multicall'])
-        self.assertEqual(set(meth), expected_methods)
-
-    def test_introspection2(self):
-        p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
-        divhelp = p.system.methodHelp('div')
-        self.assertEqual(divhelp, 'This is the div function')
-
-    def test_introspection3(self):
-        # the SimpleXMLRPCServer doesn't support signatures, but
-        # at least check that we can try
-        p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
-        divsig = p.system.methodSignature('div')
-        self.assertEqual(divsig, 'signatures not supported')
-
-    def test_multicall(self):
-        p = xmlrpclib.ServerProxy('http://localhost:%d' % PORT)
-        multicall = xmlrpclib.MultiCall(p)
-        multicall.add(2,3)
-        multicall.pow(6,8)
-        multicall.div(127,42)
-        add_result, pow_result, div_result = multicall()
-        self.assertEqual(add_result, 2+3)
-        self.assertEqual(pow_result, 6**8)
-        self.assertEqual(div_result, 127//42)
-
-
 def test_main():
-    xmlrpc_tests = [XMLRPCTestCase, HelperTestCase, DateTimeTestCase,
-         BinaryTestCase, FaultTestCase]
+    test_support.run_unittest(XMLRPCTestCase, HelperTestCase,
+            DateTimeTestCase, BinaryTestCase, FaultTestCase)
 
-    # The test cases against a SimpleXMLRPCServer raise a socket error
-    # 10035 (WSAEWOULDBLOCK) in the server thread handle_request call when
-    # run on Windows. This only happens on the first test to run, but it
-    # fails every time and so these tests are skipped on win32 platforms.
-    if sys.platform != 'win32':
-        xmlrpc_tests.append(HTTPTestCase)
-
-    test_support.run_unittest(*xmlrpc_tests)
 
 if __name__ == "__main__":
     test_main()

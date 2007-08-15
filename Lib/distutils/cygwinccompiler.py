@@ -142,13 +142,13 @@ class CygwinCCompiler (UnixCCompiler):
             # gcc needs '.res' and '.rc' compiled to object files !!!
             try:
                 self.spawn(["windres", "-i", src, "-o", obj])
-            except DistutilsExecError, msg:
+            except DistutilsExecError as msg:
                 raise CompileError, msg
         else: # for other files use the C-compiler
             try:
                 self.spawn(self.compiler_so + cc_args + [src, '-o', obj] +
                            extra_postargs)
-            except DistutilsExecError, msg:
+            except DistutilsExecError as msg:
                 raise CompileError, msg
 
     def link (self,
@@ -365,10 +365,9 @@ def check_config_h():
     # "pyconfig.h" check -- should probably be renamed...
 
     from distutils import sysconfig
-    import string
     # if sys.version contains GCC then python was compiled with
     # GCC, and the pyconfig.h file should be OK
-    if string.find(sys.version,"GCC") >= 0:
+    if sys.version.find("GCC") >= 0:
         return (CONFIG_H_OK, "sys.version mentions 'GCC'")
 
     fn = sysconfig.get_config_h_filename()
@@ -379,7 +378,7 @@ def check_config_h():
         s = f.read()
         f.close()
 
-    except IOError, exc:
+    except IOError as exc:
         # if we can't read this file, we cannot say it is wrong
         # the compiler will complain later about this file as missing
         return (CONFIG_H_UNCERTAIN,
@@ -387,7 +386,7 @@ def check_config_h():
 
     else:
         # "pyconfig.h" contains an "#ifdef __GNUC__" or something similar
-        if string.find(s,"__GNUC__") >= 0:
+        if s.find("__GNUC__") >= 0:
             return (CONFIG_H_OK, "'%s' mentions '__GNUC__'" % fn)
         else:
             return (CONFIG_H_NOTOK, "'%s' does not mention '__GNUC__'" % fn)

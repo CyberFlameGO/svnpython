@@ -22,7 +22,7 @@ PyModule_New(const char *name)
 	m = PyObject_GC_New(PyModuleObject, &PyModule_Type);
 	if (m == NULL)
 		return NULL;
-	nameobj = PyString_FromString(name);
+	nameobj = PyUnicode_FromString(name);
 	m->md_dict = PyDict_New();
 	if (m->md_dict == NULL || nameobj == NULL)
 		goto fail;
@@ -66,10 +66,15 @@ PyModule_GetName(PyObject *m)
 	d = ((PyModuleObject *)m)->md_dict;
 	if (d == NULL ||
 	    (nameobj = PyDict_GetItemString(d, "__name__")) == NULL ||
-	    !PyString_Check(nameobj))
+	    !(PyString_Check(nameobj) || PyUnicode_Check(nameobj)))
 	{
 		PyErr_SetString(PyExc_SystemError, "nameless module");
 		return NULL;
+	}
+        if (PyUnicode_Check(nameobj)) {
+		nameobj = _PyUnicode_AsDefaultEncodedString(nameobj, NULL);
+		if (nameobj == NULL)
+			return NULL;
 	}
 	return PyString_AsString(nameobj);
 }
@@ -193,9 +198,9 @@ module_repr(PyModuleObject *m)
 	filename = PyModule_GetFilename((PyObject *)m);
 	if (filename == NULL) {
 		PyErr_Clear();
-		return PyString_FromFormat("<module '%s' (built-in)>", name);
+		return PyUnicode_FromFormat("<module '%s' (built-in)>", name);
 	}
-	return PyString_FromFormat("<module '%s' from '%s'>", name, filename);
+	return PyUnicode_FromFormat("<module '%s' from '%s'>", name, filename);
 }
 
 /* We only need a traverse function, no clear function: If the module

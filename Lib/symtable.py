@@ -4,7 +4,7 @@ import _symtable
 from _symtable import USE, DEF_GLOBAL, DEF_LOCAL, DEF_PARAM, \
      DEF_STAR, DEF_DOUBLESTAR, DEF_INTUPLE, DEF_FREE, \
      DEF_FREE_GLOBAL, DEF_FREE_CLASS, DEF_IMPORT, DEF_BOUND, \
-     OPT_IMPORT_STAR, OPT_EXEC, OPT_BARE_EXEC
+     OPT_IMPORT_STAR
 
 import weakref
 
@@ -13,7 +13,7 @@ __all__ = ["symtable", "SymbolTable", "newSymbolTable", "Class",
 
 def symtable(code, filename, compile_type):
     raw = _symtable.symtable(code, filename, compile_type)
-    for top in raw.itervalues():
+    for top in raw.values():
         if top.name == 'top':
             break
     return newSymbolTable(top, filename)
@@ -94,8 +94,8 @@ class SymbolTable:
         return bool(self._table.children)
 
     def has_exec(self):
-        """Return true if the scope uses exec"""
-        return bool(self._table.optimized & (OPT_EXEC | OPT_BARE_EXEC))
+        """Return true if the scope uses exec.  Deprecated method."""
+        return False
 
     def has_import_star(self):
         """Return true if the scope uses import *"""
@@ -249,4 +249,4 @@ if __name__ == "__main__":
     mod = symtable(src, os.path.split(sys.argv[0])[1], "exec")
     for ident in mod.get_identifiers():
         info = mod.lookup(ident)
-        print info, info.is_local(), info.is_namespace()
+        print(info, info.is_local(), info.is_namespace())

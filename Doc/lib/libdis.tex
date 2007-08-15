@@ -165,10 +165,6 @@ Implements \code{TOS = -TOS}.
 Implements \code{TOS = not TOS}.
 \end{opcodedesc}
 
-\begin{opcodedesc}{UNARY_CONVERT}{}
-Implements \code{TOS = `TOS`}.
-\end{opcodedesc}
-
 \begin{opcodedesc}{UNARY_INVERT}{}
 Implements \code{TOS = \~{}TOS}.
 \end{opcodedesc}
@@ -187,11 +183,6 @@ Implements \code{TOS = TOS1 ** TOS}.
 
 \begin{opcodedesc}{BINARY_MULTIPLY}{}
 Implements \code{TOS = TOS1 * TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{BINARY_DIVIDE}{}
-Implements \code{TOS = TOS1 / TOS} when
-\code{from __future__ import division} is not in effect.
 \end{opcodedesc}
 
 \begin{opcodedesc}{BINARY_FLOOR_DIVIDE}{}
@@ -250,11 +241,6 @@ Implements in-place \code{TOS = TOS1 ** TOS}.
 
 \begin{opcodedesc}{INPLACE_MULTIPLY}{}
 Implements in-place \code{TOS = TOS1 * TOS}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{INPLACE_DIVIDE}{}
-Implements in-place \code{TOS = TOS1 / TOS} when
-\code{from __future__ import division} is not in effect.
 \end{opcodedesc}
 
 \begin{opcodedesc}{INPLACE_FLOOR_DIVIDE}{}
@@ -367,27 +353,6 @@ removed from the stack and printed.  In non-interactive mode, an
 expression statement is terminated with \code{POP_STACK}.
 \end{opcodedesc}
 
-\begin{opcodedesc}{PRINT_ITEM}{}
-Prints TOS to the file-like object bound to \code{sys.stdout}.  There
-is one such instruction for each item in the \keyword{print} statement.
-\end{opcodedesc}
-
-\begin{opcodedesc}{PRINT_ITEM_TO}{}
-Like \code{PRINT_ITEM}, but prints the item second from TOS to the
-file-like object at TOS.  This is used by the extended print statement.
-\end{opcodedesc}
-
-\begin{opcodedesc}{PRINT_NEWLINE}{}
-Prints a new line on \code{sys.stdout}.  This is generated as the
-last operation of a \keyword{print} statement, unless the statement
-ends with a comma.
-\end{opcodedesc}
-
-\begin{opcodedesc}{PRINT_NEWLINE_TO}{}
-Like \code{PRINT_NEWLINE}, but prints the new line on the file-like
-object on the TOS.  This is used by the extended print statement.
-\end{opcodedesc}
-
 \begin{opcodedesc}{BREAK_LOOP}{}
 Terminates a loop due to a \keyword{break} statement.
 \end{opcodedesc}
@@ -396,6 +361,10 @@ Terminates a loop due to a \keyword{break} statement.
 Continues a loop due to a \keyword{continue} statement.  \var{target}
 is the address to jump to (which should be a \code{FOR_ITER}
 instruction).
+\end{opcodedesc}
+
+\begin{opcodedesc}{SET_ADD}{}
+Calls \code{set.add(TOS1, TOS)}.  Used to implement set comprehensions.
 \end{opcodedesc}
 
 \begin{opcodedesc}{LIST_APPEND}{}
@@ -420,11 +389,6 @@ Pops \code{TOS} and yields it from a generator.
 Loads all symbols not starting with \character{_} directly from the module TOS
 to the local namespace. The module is popped after loading all names.
 This opcode implements \code{from module import *}.
-\end{opcodedesc}
-
-\begin{opcodedesc}{EXEC_STMT}{}
-Implements \code{exec TOS2,TOS1,TOS}.  The compiler fills
-missing optional parameters with \code{None}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{POP_BLOCK}{}
@@ -515,6 +479,10 @@ the resulting tuple onto the stack.
 Works as \code{BUILD_TUPLE}, but creates a list.
 \end{opcodedesc}
 
+\begin{opcodedesc}{BUILD_SET}{count}
+Works as \code{BUILD_TUPLE}, but creates a set.
+\end{opcodedesc}
+
 \begin{opcodedesc}{BUILD_MAP}{zero}
 Pushes a new empty dictionary object onto the stack.  The argument is
 ignored and set to zero by the compiler.
@@ -561,10 +529,10 @@ Set byte code counter to \var{target}.
 \end{opcodedesc}
 
 \begin{opcodedesc}{FOR_ITER}{delta}
-\code{TOS} is an iterator.  Call its \method{next()} method.  If this
-yields a new value, push it on the stack (leaving the iterator below
-it).  If the iterator indicates it is exhausted  \code{TOS} is
-popped, and the byte code counter is incremented by \var{delta}.
+  \code{TOS} is an iterator.  Call its \method{__next__()} method.  If this
+  yields a new value, push it on the stack (leaving the iterator below it).  If
+  the iterator indicates it is exhausted \code{TOS} is popped, and the byte code
+  counter is incremented by \var{delta}.
 \end{opcodedesc}
 
 %\begin{opcodedesc}{FOR_LOOP}{delta}
@@ -658,7 +626,7 @@ default parameters, which are found below TOS.
 \end{opcodedesc}
 
 \begin{opcodedesc}{MAKE_CLOSURE}{argc}
-Creates a new function object, sets its \var{func_closure} slot, and
+Creates a new function object, sets its \var{__closure__} slot, and
 pushes it on the stack.  TOS is the code associated with the function.
 If the code object has N free variables, the next N items on the stack
 are the cells for these variables.  The function also has \var{argc}

@@ -4,9 +4,9 @@ import unittest
 from test import test_support
 
 try:
-    from cStringIO import StringIO
+    from io import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 
 
 class MessageTestCase(unittest.TestCase):
@@ -25,14 +25,14 @@ class MessageTestCase(unittest.TestCase):
     def test_setdefault(self):
         msg = self.create_message(
             'To: "last, first" <userid@foo.net>\n\ntest\n')
-        self.assert_(not msg.has_key("New-Header"))
+        self.assert_("New-Header" not in msg)
         self.assert_(msg.setdefault("New-Header", "New-Value") == "New-Value")
         self.assert_(msg.setdefault("New-Header", "Different-Value")
                      == "New-Value")
-        self.assert_(msg["new-header"] == "New-Value")
+        self.assertEqual(msg["new-header"], "New-Value")
 
-        self.assert_(msg.setdefault("Another-Header") == "")
-        self.assert_(msg["another-header"] == "")
+        self.assertEqual(msg.setdefault("Another-Header"), "")
+        self.assertEqual(msg["another-header"], "")
 
     def check(self, msg, results):
         """Check addresses and the date."""
@@ -42,17 +42,17 @@ class MessageTestCase(unittest.TestCase):
             try:
                 mn, ma = results[i][0], results[i][1]
             except IndexError:
-                print 'extra parsed address:', repr(n), repr(a)
+                print('extra parsed address:', repr(n), repr(a))
                 continue
             i = i + 1
             self.assertEqual(mn, n,
-                             "Un-expected name: %s != %s" % (`mn`, `n`))
+                             "Un-expected name: %r != %r" % (mn, n))
             self.assertEqual(ma, a,
-                             "Un-expected address: %s != %s" % (`ma`, `a`))
+                             "Un-expected address: %r != %r" % (ma, a))
             if mn == n and ma == a:
                 pass
             else:
-                print 'not found:', repr(n), repr(a)
+                print('not found:', repr(n), repr(a))
 
         out = m.getdate('date')
         if out:

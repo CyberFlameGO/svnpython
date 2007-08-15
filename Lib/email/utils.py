@@ -27,7 +27,7 @@ import random
 import socket
 import urllib
 import warnings
-from cStringIO import StringIO
+from io import StringIO
 
 from email._parseaddr import quote
 from email._parseaddr import AddressList as _AddressList
@@ -44,7 +44,7 @@ from email.encoders import _bencode, _qencode
 
 COMMASPACE = ', '
 EMPTYSTRING = ''
-UEMPTYSTRING = u''
+UEMPTYSTRING = ''
 CRLF = '\r\n'
 TICK = "'"
 
@@ -315,9 +315,9 @@ def collapse_rfc2231_value(value, errors='replace',
         rawval = unquote(value[2])
         charset = value[0] or 'us-ascii'
         try:
-            return unicode(rawval, charset, errors)
+            return str(rawval, charset, errors)
         except LookupError:
             # XXX charset is unknown to Python.
-            return unicode(rawval, fallback_charset, errors)
+            return str(rawval, fallback_charset, errors)
     else:
         return unquote(value)

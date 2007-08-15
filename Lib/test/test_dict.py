@@ -1,10 +1,11 @@
 import unittest
 from test import test_support
 
-import sys, UserDict, cStringIO
+import sys, UserDict
 
 
 class DictTest(unittest.TestCase):
+
     def test_constructor(self):
         # calling built-in types without argument must return empty
         self.assertEqual(dict(), {})
@@ -18,40 +19,30 @@ class DictTest(unittest.TestCase):
 
     def test_keys(self):
         d = {}
-        self.assertEqual(d.keys(), [])
+        self.assertEqual(set(d.keys()), set())
         d = {'a': 1, 'b': 2}
         k = d.keys()
-        self.assert_(d.has_key('a'))
-        self.assert_(d.has_key('b'))
+        self.assert_('a' in d)
+        self.assert_('b' in d)
 
         self.assertRaises(TypeError, d.keys, None)
 
     def test_values(self):
         d = {}
-        self.assertEqual(d.values(), [])
+        self.assertEqual(set(d.values()), set())
         d = {1:2}
-        self.assertEqual(d.values(), [2])
+        self.assertEqual(set(d.values()), {2})
 
         self.assertRaises(TypeError, d.values, None)
 
     def test_items(self):
         d = {}
-        self.assertEqual(d.items(), [])
+        self.assertEqual(set(d.items()), set())
 
         d = {1:2}
-        self.assertEqual(d.items(), [(1, 2)])
+        self.assertEqual(set(d.items()), {(1, 2)})
 
         self.assertRaises(TypeError, d.items, None)
-
-    def test_has_key(self):
-        d = {}
-        self.assert_(not d.has_key('a'))
-        d = {'a': 1, 'b': 2}
-        k = d.keys()
-        k.sort()
-        self.assertEqual(k, ['a', 'b'])
-
-        self.assertRaises(TypeError, d.has_key)
 
     def test_contains(self):
         d = {}
@@ -86,6 +77,8 @@ class DictTest(unittest.TestCase):
         class BadEq(object):
             def __eq__(self, other):
                 raise Exc()
+            def __hash__(self):
+                return 24
 
         d = {}
         d[BadEq()] = 42
@@ -151,7 +144,7 @@ class DictTest(unittest.TestCase):
                         self.i = 1
                     def __iter__(self):
                         return self
-                    def next(self):
+                    def __next__(self):
                         if self.i:
                             self.i = 0
                             return 'a'
@@ -168,7 +161,7 @@ class DictTest(unittest.TestCase):
                         self.i = ord('a')
                     def __iter__(self):
                         return self
-                    def next(self):
+                    def __next__(self):
                         if self.i <= ord('z'):
                             rtn = chr(self.i)
                             self.i += 1
@@ -182,7 +175,7 @@ class DictTest(unittest.TestCase):
         class badseq(object):
             def __iter__(self):
                 return self
-            def next(self):
+            def __next__(self):
                 raise Exc()
 
         self.assertRaises(Exc, {}.update, badseq())
@@ -232,7 +225,7 @@ class DictTest(unittest.TestCase):
         class BadSeq(object):
             def __iter__(self):
                 return self
-            def next(self):
+            def __next__(self):
                 raise Exc()
 
         self.assertRaises(Exc, dict.fromkeys, BadSeq())
@@ -329,7 +322,7 @@ class DictTest(unittest.TestCase):
 
         # verify longs/ints get same value when key > 32 bits (for 64-bit archs)
         # see SF bug #689659
-        x = 4503599627370496L
+        x = 4503599627370496
         y = 4503599627370496
         h = {x: 'anything', y: 'something else'}
         self.assertEqual(h[x], h[y])
@@ -384,20 +377,22 @@ class DictTest(unittest.TestCase):
         d = {1: BadRepr()}
         self.assertRaises(Exc, repr, d)
 
-    def test_le(self):
-        self.assert_(not ({} < {}))
-        self.assert_(not ({1: 2} < {1L: 2L}))
+    def test_eq(self):
+        self.assertEqual({}, {})
+        self.assertEqual({1: 2}, {1: 2})
 
         class Exc(Exception): pass
 
         class BadCmp(object):
             def __eq__(self, other):
                 raise Exc()
+            def __hash__(self):
+                return 1
 
         d1 = {BadCmp(): 1}
         d2 = {1: 1}
         try:
-            d1 < d2
+            d1 == d2
         except Exc:
             pass
         else:
@@ -427,7 +422,7 @@ class DictTest(unittest.TestCase):
         e = E()
         try:
             e[42]
-        except RuntimeError, err:
+        except RuntimeError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("e[42] didn't raise RuntimeError")
@@ -438,7 +433,7 @@ class DictTest(unittest.TestCase):
         f = F()
         try:
             f[42]
-        except KeyError, err:
+        except KeyError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("f[42] didn't raise KeyError")
@@ -447,7 +442,7 @@ class DictTest(unittest.TestCase):
         g = G()
         try:
             g[42]
-        except KeyError, err:
+        except KeyError as err:
             self.assertEqual(err.args, (42,))
         else:
             self.fail("g[42] didn't raise KeyError")
@@ -457,7 +452,7 @@ class DictTest(unittest.TestCase):
         d = {}
         try:
             d[(1,)]
-        except KeyError, e:
+        except KeyError as e:
             self.assertEqual(e.args, ((1,),))
         else:
             self.fail("missing KeyError")
@@ -471,7 +466,7 @@ class DictTest(unittest.TestCase):
             def __hash__(self):
                 return hash(self.__class__)
 
-            def __cmp__(self, other):
+            def __eq__(self, other):
                 if isinstance(other, self.__class__):
                     raise CustomException
                 return other
@@ -483,17 +478,16 @@ class DictTest(unittest.TestCase):
         for stmt in ['d[x2] = 2',
                      'z = d[x2]',
                      'x2 in d',
-                     'd.has_key(x2)',
                      'd.get(x2)',
                      'd.setdefault(x2, 42)',
                      'd.pop(x2)',
                      'd.update({x2: 2})']:
             try:
-                exec stmt in locals()
+                exec(stmt, locals())
             except CustomException:
                 pass
             else:
-                self.fail("Statement didn't raise exception")
+                self.fail("Statement %r didn't raise exception" % stmt)
 
     def test_resize1(self):
         # Dict resizing bug, found by Jack Jansen in 2.2 CVS development.

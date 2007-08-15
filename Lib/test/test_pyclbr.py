@@ -4,16 +4,12 @@
 '''
 from test.test_support import run_unittest
 import unittest, sys
-from types import ClassType, FunctionType, MethodType, BuiltinFunctionType
+from types import FunctionType, MethodType, BuiltinFunctionType
 import pyclbr
 from unittest import TestCase
 
 StaticMethodType = type(staticmethod(lambda: None))
 ClassMethodType = type(classmethod(lambda c: None))
-
-# This next line triggers an error on old versions of pyclbr.
-
-from commands import getstatus
 
 # Here we test the python class browser code.
 #
@@ -28,23 +24,23 @@ class PyclbrTest(TestCase):
         ''' succeed iff {l1} - {ignore} == {l2} - {ignore} '''
         missing = (set(l1) ^ set(l2)) - set(ignore)
         if missing:
-            print >>sys.stderr, "l1=%r\nl2=%r\nignore=%r" % (l1, l2, ignore)
+            print("l1=%r\nl2=%r\nignore=%r" % (l1, l2, ignore), file=sys.stderr)
             self.fail("%r missing" % missing.pop())
 
     def assertHasattr(self, obj, attr, ignore):
         ''' succeed iff hasattr(obj,attr) or attr in ignore. '''
         if attr in ignore: return
-        if not hasattr(obj, attr): print "???", attr
+        if not hasattr(obj, attr): print("???", attr)
         self.failUnless(hasattr(obj, attr),
                         'expected hasattr(%r, %r)' % (obj, attr))
 
 
     def assertHaskey(self, obj, key, ignore):
-        ''' succeed iff obj.has_key(key) or key in ignore. '''
+        ''' succeed iff key in obj or key in ignore. '''
         if key in ignore: return
-        if not obj.has_key(key):
-            print >>sys.stderr, "***",key
-        self.failUnless(obj.has_key(key))
+        if key not in obj:
+            print("***",key, file=sys.stderr)
+        self.failUnless(key in obj)
 
     def assertEqualsOrIgnored(self, a, b, ignore):
         ''' succeed iff a == b or a in ignore or b in ignore '''
@@ -56,6 +52,8 @@ class PyclbrTest(TestCase):
             to the actual module object, module.  Any identifiers in
             ignore are ignored.   If no module is provided, the appropriate
             module is loaded with __import__.'''
+
+        ignore = set(ignore) | set(['object'])
 
         if module == None:
             # Import it.
@@ -97,7 +95,7 @@ class PyclbrTest(TestCase):
                     continue   # skip functions that came from somewhere else
                 self.assertEquals(py_item.__module__, value.module)
             else:
-                self.failUnless(isinstance(py_item, (ClassType, type)))
+                self.failUnless(isinstance(py_item, type))
                 if py_item.__module__ != moduleName:
                     continue   # skip classes that came from somewhere else
 
@@ -108,7 +106,7 @@ class PyclbrTest(TestCase):
                 try:
                     self.assertListEq(real_bases, pyclbr_bases, ignore)
                 except:
-                    print >>sys.stderr, "class=%s" % py_item
+                    print("class=%s" % py_item, file=sys.stderr)
                     raise
 
                 actualMethods = []
@@ -130,19 +128,19 @@ class PyclbrTest(TestCase):
                                                ignore)
                     # can't check file or lineno
                 except:
-                    print >>sys.stderr, "class=%s" % py_item
+                    print("class=%s" % py_item, file=sys.stderr)
                     raise
 
         # Now check for missing stuff.
         def defined_in(item, module):
-            if isinstance(item, ClassType):
+            if isinstance(item, type):
                 return item.__module__ == module.__name__
             if isinstance(item, FunctionType):
-                return item.func_globals is module.__dict__
+                return item.__globals__ is module.__dict__
             return False
         for name in dir(module):
             item = getattr(module, name)
-            if isinstance(item,  (ClassType, FunctionType)):
+            if isinstance(item,  (type, FunctionType)):
                 if defined_in(item, module):
                     self.assertHaskey(dict, name, ignore)
 
@@ -170,7 +168,7 @@ class PyclbrTest(TestCase):
                              'getproxies_internetconfig',)) # not on all platforms
         cm('pickle')
         cm('aifc', ignore=('openfp',))  # set with = in module
-        cm('Cookie')
+        cm('Cookie', ignore=('Cookie',)) # Cookie is an alias for SmartCookie
         cm('sre_parse', ignore=('dump',)) # from sre_constants import *
         cm('pdb')
         cm('pydoc')

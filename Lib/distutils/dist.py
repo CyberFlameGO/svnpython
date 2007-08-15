@@ -8,8 +8,7 @@ being built/installed/distributed.
 
 __revision__ = "$Id$"
 
-import sys, os, string, re
-from types import *
+import sys, os, re
 from copy import copy
 
 try:
@@ -113,8 +112,7 @@ Common commands: (see '--help-commands' for more)
         ('obsoletes', None,
          "print the list of packages/modules made obsolete")
         ]
-    display_option_names = map(lambda x: translate_longopt(x[0]),
-                               display_options)
+    display_option_names = [translate_longopt(x[0]) for x in display_options]
 
     # negative options are options that exclude other options
     negative_opt = {'quiet': 'verbose'}
@@ -239,7 +237,7 @@ Common commands: (see '--help-commands' for more)
                     for (opt, val) in cmd_options.items():
                         opt_dict[opt] = ("setup script", val)
 
-            if attrs.has_key('licence'):
+            if 'licence' in attrs:
                 attrs['license'] = attrs['licence']
                 del attrs['licence']
                 msg = "'licence' distribution option is deprecated; use 'license'"
@@ -290,22 +288,22 @@ Common commands: (see '--help-commands' for more)
             commands.sort()
 
         if header is not None:
-            print indent + header
+            print(indent + header)
             indent = indent + "  "
 
         if not commands:
-            print indent + "no commands known yet"
+            print(indent + "no commands known yet")
             return
 
         for cmd_name in commands:
             opt_dict = self.command_options.get(cmd_name)
             if opt_dict is None:
-                print indent + "no option dict for '%s' command" % cmd_name
+                print(indent + "no option dict for '%s' command" % cmd_name)
             else:
-                print indent + "option dict for '%s' command:" % cmd_name
+                print(indent + "option dict for '%s' command:" % cmd_name)
                 out = pformat(opt_dict)
-                for line in string.split(out, "\n"):
-                    print indent + "  " + line
+                for line in out.split("\n"):
+                    print(indent + "  " + line)
 
     # dump_option_dicts ()
 
@@ -343,7 +341,7 @@ Common commands: (see '--help-commands' for more)
             user_filename = "pydistutils.cfg"
 
         # And look for the user config file
-        if os.environ.has_key('HOME'):
+        if 'HOME' in os.environ:
             user_file = os.path.join(os.environ.get('HOME'), user_filename)
             if os.path.isfile(user_file):
                 files.append(user_file)
@@ -365,11 +363,11 @@ Common commands: (see '--help-commands' for more)
         if filenames is None:
             filenames = self.find_config_files()
 
-        if DEBUG: print "Distribution.parse_config_files():"
+        if DEBUG: print("Distribution.parse_config_files():")
 
         parser = ConfigParser()
         for filename in filenames:
-            if DEBUG: print "  reading", filename
+            if DEBUG: print("  reading", filename)
             parser.read(filename)
             for section in parser.sections():
                 options = parser.options(section)
@@ -378,7 +376,7 @@ Common commands: (see '--help-commands' for more)
                 for opt in options:
                     if opt != '__name__':
                         val = parser.get(section,opt)
-                        opt = string.replace(opt, '-', '_')
+                        opt = opt.replace('-', '_')
                         opt_dict[opt] = (filename, val)
 
             # Make the ConfigParser forget everything (so we retain
@@ -388,7 +386,7 @@ Common commands: (see '--help-commands' for more)
         # If there was a "global" section in the config file, use it
         # to set Distribution options.
 
-        if self.command_options.has_key('global'):
+        if 'global' in self.command_options:
             for (opt, (src, val)) in self.command_options['global'].items():
                 alias = self.negative_opt.get(opt)
                 try:
@@ -398,7 +396,7 @@ Common commands: (see '--help-commands' for more)
                         setattr(self, opt, strtobool(val))
                     else:
                         setattr(self, opt, val)
-                except ValueError, msg:
+                except ValueError as msg:
                     raise DistutilsOptionError, msg
 
     # parse_config_files ()
@@ -515,7 +513,7 @@ Common commands: (see '--help-commands' for more)
         # it takes.
         try:
             cmd_class = self.get_command_class(command)
-        except DistutilsModuleError, msg:
+        except DistutilsModuleError as msg:
             raise DistutilsArgError, msg
 
         # Require that the command class be derived from Command -- want
@@ -527,7 +525,7 @@ Common commands: (see '--help-commands' for more)
         # Also make sure that the command object provides a list of its
         # known options.
         if not (hasattr(cmd_class, 'user_options') and
-                type(cmd_class.user_options) is ListType):
+                isinstance(cmd_class.user_options, list)):
             raise DistutilsClassError, \
                   ("command class %s must provide " +
                    "'user_options' attribute (a list of tuples)") % \
@@ -543,7 +541,7 @@ Common commands: (see '--help-commands' for more)
         # Check for help_options in command class.  They have a different
         # format (tuple of four) so we need to preprocess them here.
         if (hasattr(cmd_class, 'help_options') and
-            type(cmd_class.help_options) is ListType):
+            isinstance(cmd_class.help_options, list)):
             help_options = fix_help_options(cmd_class.help_options)
         else:
             help_options = []
@@ -561,7 +559,7 @@ Common commands: (see '--help-commands' for more)
             return
 
         if (hasattr(cmd_class, 'help_options') and
-            type(cmd_class.help_options) is ListType):
+            isinstance(cmd_class.help_options, list)):
             help_option_found=0
             for (help_option, short, desc, func) in cmd_class.help_options:
                 if hasattr(opts, parser.get_attr_name(help_option)):
@@ -569,7 +567,7 @@ Common commands: (see '--help-commands' for more)
                     #print "showing help for option %s of command %s" % \
                     #      (help_option[0],cmd_class)
 
-                    if callable(func):
+                    if hasattr(func, '__call__'):
                         func()
                     else:
                         raise DistutilsClassError(
@@ -598,15 +596,15 @@ Common commands: (see '--help-commands' for more)
 
         keywords = self.metadata.keywords
         if keywords is not None:
-            if type(keywords) is StringType:
-                keywordlist = string.split(keywords, ',')
-                self.metadata.keywords = map(string.strip, keywordlist)
+            if isinstance(keywords, basestring):
+                keywordlist = keywords.split(',')
+                self.metadata.keywords = [x.strip() for x in keywordlist]
 
         platforms = self.metadata.platforms
         if platforms is not None:
-            if type(platforms) is StringType:
-                platformlist = string.split(platforms, ',')
-                self.metadata.platforms = map(string.strip, platformlist)
+            if isinstance(platforms, basestring):
+                platformlist = platforms.split(',')
+                self.metadata.platforms = [x.strip() for x in platformlist]
 
     def _show_help (self,
                     parser,
@@ -636,30 +634,30 @@ Common commands: (see '--help-commands' for more)
                 options = self.global_options
             parser.set_option_table(options)
             parser.print_help(self.common_usage + "\nGlobal options:")
-            print
+            print()
 
         if display_options:
             parser.set_option_table(self.display_options)
             parser.print_help(
                 "Information display options (just display " +
                 "information, ignore any commands)")
-            print
+            print()
 
         for command in self.commands:
-            if type(command) is ClassType and issubclass(command, Command):
+            if isinstance(command, type) and issubclass(command, Command):
                 klass = command
             else:
                 klass = self.get_command_class(command)
             if (hasattr(klass, 'help_options') and
-                type(klass.help_options) is ListType):
+                isinstance(klass.help_options, list)):
                 parser.set_option_table(klass.user_options +
                                         fix_help_options(klass.help_options))
             else:
                 parser.set_option_table(klass.user_options)
             parser.print_help("Options for '%s' command:" % klass.__name__)
-            print
+            print()
 
-        print gen_usage(self.script_name)
+        print(gen_usage(self.script_name))
         return
 
     # _show_help ()
@@ -678,8 +676,8 @@ Common commands: (see '--help-commands' for more)
         # we ignore "foo bar").
         if self.help_commands:
             self.print_commands()
-            print
-            print gen_usage(self.script_name)
+            print()
+            print(gen_usage(self.script_name))
             return 1
 
         # If user supplied any of the "display metadata" options, then
@@ -695,12 +693,12 @@ Common commands: (see '--help-commands' for more)
                 opt = translate_longopt(opt)
                 value = getattr(self.metadata, "get_"+opt)()
                 if opt in ['keywords', 'platforms']:
-                    print string.join(value, ',')
+                    print(','.join(value))
                 elif opt in ('classifiers', 'provides', 'requires',
                              'obsoletes'):
-                    print string.join(value, '\n')
+                    print('\n'.join(value))
                 else:
-                    print value
+                    print(value)
                 any_display_options = 1
 
         return any_display_options
@@ -712,7 +710,7 @@ Common commands: (see '--help-commands' for more)
         'print_commands()'.
         """
 
-        print header + ":"
+        print(header + ":")
 
         for cmd in commands:
             klass = self.cmdclass.get(cmd)
@@ -723,7 +721,7 @@ Common commands: (see '--help-commands' for more)
             except AttributeError:
                 description = "(no description available)"
 
-            print "  %-*s  %s" % (max_length, cmd, description)
+            print("  %-*s  %s" % (max_length, cmd, description))
 
     # print_command_list ()
 
@@ -757,7 +755,7 @@ Common commands: (see '--help-commands' for more)
                                 "Standard commands",
                                 max_length)
         if extra_commands:
-            print
+            print()
             self.print_command_list(extra_commands,
                                     "Extra commands",
                                     max_length)
@@ -803,10 +801,10 @@ Common commands: (see '--help-commands' for more)
         """Return a list of packages from which commands are loaded."""
         pkgs = self.command_packages
         if not isinstance(pkgs, type([])):
-            pkgs = string.split(pkgs or "", ",")
+            pkgs = (pkgs or "").split(",")
             for i in range(len(pkgs)):
-                pkgs[i] = string.strip(pkgs[i])
-            pkgs = filter(None, pkgs)
+                pkgs[i] = pkgs[i].strip()
+            pkgs = [p for p in pkgs if p]
             if "distutils.command" not in pkgs:
                 pkgs.insert(0, "distutils.command")
             self.command_packages = pkgs
@@ -862,8 +860,8 @@ Common commands: (see '--help-commands' for more)
         cmd_obj = self.command_obj.get(command)
         if not cmd_obj and create:
             if DEBUG:
-                print "Distribution.get_command_obj(): " \
-                      "creating '%s' command object" % command
+                print("Distribution.get_command_obj(): " \
+                      "creating '%s' command object" % command)
 
             klass = self.get_command_class(command)
             cmd_obj = self.command_obj[command] = klass(self)
@@ -893,9 +891,9 @@ Common commands: (see '--help-commands' for more)
         if option_dict is None:
             option_dict = self.get_option_dict(command_name)
 
-        if DEBUG: print "  setting options for '%s' command:" % command_name
+        if DEBUG: print("  setting options for '%s' command:" % command_name)
         for (option, (source, value)) in option_dict.items():
-            if DEBUG: print "    %s = %s (from %s)" % (option, value, source)
+            if DEBUG: print("    %s = %s (from %s)" % (option, value, source))
             try:
                 bool_opts = map(translate_longopt, command_obj.boolean_options)
             except AttributeError:
@@ -906,8 +904,8 @@ Common commands: (see '--help-commands' for more)
                 neg_opt = {}
 
             try:
-                is_string = type(value) is StringType
-                if neg_opt.has_key(option) and is_string:
+                is_string = isinstance(value, basestring)
+                if option in neg_opt and is_string:
                     setattr(command_obj, neg_opt[option], not strtobool(value))
                 elif option in bool_opts and is_string:
                     setattr(command_obj, option, strtobool(value))
@@ -917,7 +915,7 @@ Common commands: (see '--help-commands' for more)
                     raise DistutilsOptionError, \
                           ("error in %s: command '%s' has no such option '%s'"
                            % (source, command_name, option))
-            except ValueError, msg:
+            except ValueError as msg:
                 raise DistutilsOptionError, msg
 
     def reinitialize_command (self, command, reinit_subcommands=0):
@@ -1100,7 +1098,7 @@ class DistributionMetadata:
         long_desc = rfc822_escape( self.get_long_description() )
         file.write('Description: %s\n' % long_desc)
 
-        keywords = string.join( self.get_keywords(), ',')
+        keywords = ','.join(self.get_keywords())
         if keywords:
             file.write('Keywords: %s\n' % keywords )
 
@@ -1219,4 +1217,4 @@ def fix_help_options (options):
 
 if __name__ == "__main__":
     dist = Distribution()
-    print "ok"
+    print("ok")

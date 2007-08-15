@@ -109,7 +109,7 @@ __version__ = "$Revision$"
 import sys
 import os
 from types import *
-import StringIO
+import io
 import getopt
 import pickle
 
@@ -153,10 +153,10 @@ def main():
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'Rd:m:nqr:t:vxa')
-    except getopt.error, msg:
+    except getopt.error as msg:
         sys.stdout = sys.stderr
-        print msg
-        print __doc__%globals()
+        print(msg)
+        print(__doc__%globals())
         sys.exit(2)
 
     # The extra_roots variable collects extra roots.
@@ -186,7 +186,7 @@ def main():
             checkext = not checkext
 
     if verbose > 0:
-        print AGENTNAME, "version", __version__
+        print(AGENTNAME, "version", __version__)
 
     if restart:
         c = load_pickle(dumpfile=dumpfile, verbose=verbose)
@@ -222,32 +222,32 @@ def main():
                 c.run()
             except KeyboardInterrupt:
                 if verbose > 0:
-                    print "[run interrupted]"
+                    print("[run interrupted]")
 
         try:
             c.report()
         except KeyboardInterrupt:
             if verbose > 0:
-                print "[report interrupted]"
+                print("[report interrupted]")
 
     finally:
         if c.save_pickle(dumpfile):
             if dumpfile == DUMPFILE:
-                print "Use ``%s -R'' to restart." % sys.argv[0]
+                print("Use ``%s -R'' to restart." % sys.argv[0])
             else:
-                print "Use ``%s -R -d %s'' to restart." % (sys.argv[0],
-                                                           dumpfile)
+                print("Use ``%s -R -d %s'' to restart." % (sys.argv[0],
+                                                           dumpfile))
 
 
 def load_pickle(dumpfile=DUMPFILE, verbose=VERBOSE):
     if verbose > 0:
-        print "Loading checkpoint from %s ..." % dumpfile
+        print("Loading checkpoint from %s ..." % dumpfile)
     f = open(dumpfile, "rb")
     c = pickle.load(f)
     f.close()
     if verbose > 0:
-        print "Done."
-        print "Root:", "\n      ".join(c.roots)
+        print("Done.")
+        print("Root:", "\n      ".join(c.roots))
     return c
 
 
@@ -297,7 +297,7 @@ class Checker:
     def message(self, format, *args):
         if args:
             format = format%args
-        print format
+        print(format)
 
     def __getstate__(self):
         return (self.roots, self.todo, self.done, self.bad, self.round)
@@ -335,7 +335,7 @@ class Checker:
         rp.set_url(url)
         try:
             rp.read()
-        except (OSError, IOError), msg:
+        except (OSError, IOError) as msg:
             self.note(1, "I/O error parsing %s: %s", url, msg)
 
     def run(self):
@@ -402,7 +402,7 @@ class Checker:
             return
         try:
             page = self.getpage(url_pair)
-        except sgmllib.SGMLParseError, msg:
+        except sgmllib.SGMLParseError as msg:
             msg = self.sanitize(msg)
             self.note(0, "Error parsing %s: %s",
                           self.format_url(url_pair), msg)
@@ -541,7 +541,7 @@ class Checker:
         url, fragment = url_pair
         try:
             return self.urlopener.open(url)
-        except (OSError, IOError), msg:
+        except (OSError, IOError) as msg:
             msg = self.sanitize(msg)
             self.note(0, "Error %s", msg)
             if self.verbose > 0:
@@ -684,12 +684,12 @@ class Page:
 
     def note(self, level, msg, *args):
         if self.checker:
-            apply(self.checker.note, (level, msg) + args)
+            self.checker.note(level, msg, *args)
         else:
             if self.verbose >= level:
                 if args:
                     msg = msg%args
-                print msg
+                print(msg)
 
     # Method to retrieve names.
     def getnames(self):
@@ -721,12 +721,12 @@ class Page:
         return infos
 
 
-class MyStringIO(StringIO.StringIO):
+class MyStringIO(io.StringIO):
 
     def __init__(self, url, info):
         self.__url = url
         self.__info = info
-        StringIO.StringIO.__init__(self)
+        super(MyStringIO, self).__init__(self)
 
     def info(self):
         return self.__info
@@ -741,7 +741,7 @@ class MyURLopener(urllib.FancyURLopener):
 
     def __init__(*args):
         self = args[0]
-        apply(urllib.FancyURLopener.__init__, args)
+        urllib.FancyURLopener.__init__(*args)
         self.addheaders = [
             ('User-agent', 'Python-webchecker/%s' % __version__),
             ]
@@ -759,7 +759,7 @@ class MyURLopener(urllib.FancyURLopener):
                 return self.open_file(url + "index.html")
             try:
                 names = os.listdir(path)
-            except os.error, msg:
+            except os.error as msg:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 raise IOError, msg, exc_tb
             names.sort()

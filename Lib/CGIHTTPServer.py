@@ -316,14 +316,14 @@ class CGIHTTPRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                         sys.argv.append(decoded_query)
                     sys.stdout = self.wfile
                     sys.stdin = self.rfile
-                    execfile(scriptfile, {"__name__": "__main__"})
+                    exec(open(scriptfile).read(), {"__name__": "__main__"})
                 finally:
                     sys.argv = save_argv
                     sys.stdin = save_stdin
                     sys.stdout = save_stdout
                     sys.stderr = save_stderr
                     os.chdir(save_cwd)
-            except SystemExit, sts:
+            except SystemExit as sts:
                 self.log_error("CGI script exit status %s", str(sts))
             else:
                 self.log_message("CGI script exited OK")
@@ -353,7 +353,7 @@ def executable(path):
         st = os.stat(path)
     except os.error:
         return False
-    return st.st_mode & 0111 != 0
+    return st.st_mode & 0o111 != 0
 
 
 def test(HandlerClass = CGIHTTPRequestHandler,

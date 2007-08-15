@@ -184,23 +184,6 @@ done:
 	Py_TRASHCAN_SAFE_END(op)
 }
 
-static int
-tupleprint(PyTupleObject *op, FILE *fp, int flags)
-{
-	Py_ssize_t i;
-	fprintf(fp, "(");
-	for (i = 0; i < Py_Size(op); i++) {
-		if (i > 0)
-			fprintf(fp, ", ");
-		if (PyObject_Print(op->ob_item[i], fp, 0) != 0)
-			return -1;
-	}
-	if (Py_Size(op) == 1)
-		fprintf(fp, ",");
-	fprintf(fp, ")");
-	return 0;
-}
-
 static PyObject *
 tuplerepr(PyTupleObject *v)
 {
@@ -210,7 +193,7 @@ tuplerepr(PyTupleObject *v)
 
 	n = Py_Size(v);
 	if (n == 0)
-		return PyString_FromString("()");
+		return PyUnicode_FromString("()");
 
 	pieces = PyTuple_New(n);
 	if (pieces == NULL)
@@ -226,29 +209,29 @@ tuplerepr(PyTupleObject *v)
 
 	/* Add "()" decorations to the first and last items. */
 	assert(n > 0);
-	s = PyString_FromString("(");
+	s = PyUnicode_FromString("(");
 	if (s == NULL)
 		goto Done;
 	temp = PyTuple_GET_ITEM(pieces, 0);
-	PyString_ConcatAndDel(&s, temp);
+	PyUnicode_AppendAndDel(&s, temp);
 	PyTuple_SET_ITEM(pieces, 0, s);
 	if (s == NULL)
 		goto Done;
 
-	s = PyString_FromString(n == 1 ? ",)" : ")");
+	s = PyUnicode_FromString(n == 1 ? ",)" : ")");
 	if (s == NULL)
 		goto Done;
 	temp = PyTuple_GET_ITEM(pieces, n-1);
-	PyString_ConcatAndDel(&temp, s);
+	PyUnicode_AppendAndDel(&temp, s);
 	PyTuple_SET_ITEM(pieces, n-1, temp);
 	if (temp == NULL)
 		goto Done;
 
 	/* Paste them all together with ", " between. */
-	s = PyString_FromString(", ");
+	s = PyUnicode_FromString(", ");
 	if (s == NULL)
 		goto Done;
-	result = _PyString_Join(s, pieces);
+	result = PyUnicode_Join(s, pieces);
 	Py_DECREF(s);	
 
 Done:
@@ -653,7 +636,7 @@ PyTypeObject PyTuple_Type = {
 	sizeof(PyTupleObject) - sizeof(PyObject *),
 	sizeof(PyObject *),
 	(destructor)tupledealloc,		/* tp_dealloc */
-	(printfunc)tupleprint,			/* tp_print */
+	0,					/* tp_print */
 	0,					/* tp_getattr */
 	0,					/* tp_setattr */
 	0,					/* tp_compare */

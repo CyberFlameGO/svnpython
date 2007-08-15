@@ -1,7 +1,8 @@
 import sys
 import string
 from Tkinter import *
-from Delegator import Delegator
+
+from .Delegator import Delegator
 
 #$ event <<redo>>
 #$ win <Control-y>
@@ -38,10 +39,10 @@ class UndoDelegator(Delegator):
     def dump_event(self, event):
         from pprint import pprint
         pprint(self.undolist[:self.pointer])
-        print "pointer:", self.pointer,
-        print "saved:", self.saved,
-        print "can_merge:", self.can_merge,
-        print "get_saved():", self.get_saved()
+        print("pointer:", self.pointer, end=' ')
+        print("saved:", self.saved, end=' ')
+        print("can_merge:", self.can_merge, end=' ')
+        print("get_saved():", self.get_saved())
         pprint(self.undolist[self.pointer:])
         return "break"
 
@@ -337,7 +338,7 @@ class CommandSequence(Command):
         return self.depth
 
 def main():
-    from Percolator import Percolator
+    from .Percolator import Percolator
     root = Tk()
     root.wm_protocol("WM_DELETE_WINDOW", root.quit)
     text = Text()

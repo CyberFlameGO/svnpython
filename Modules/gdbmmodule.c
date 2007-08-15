@@ -90,8 +90,8 @@ static Py_ssize_t
 dbm_length(dbmobject *dp)
 {
     if (dp->di_dbm == NULL) {
-        PyErr_SetString(DbmError, "GDBM object has already been closed"); 
-        return -1; 
+        PyErr_SetString(DbmError, "GDBM object has already been closed");
+        return -1;
     }
     if (dp->di_size < 0) {
         datum key,okey;
@@ -127,11 +127,10 @@ dbm_subscript(dbmobject *dp, register PyObject *key)
     }
     drec = gdbm_fetch(dp->di_dbm, krec);
     if (drec.dptr == 0) {
-        PyErr_SetString(PyExc_KeyError,
-                        PyString_AS_STRING((PyStringObject *)key));
+        PyErr_SetObject(PyExc_KeyError, key);
         return NULL;
     }
-    v = PyString_FromStringAndSize(drec.dptr, drec.dsize);
+    v = PyBytes_FromStringAndSize(drec.dptr, drec.dsize);
     free(drec.dptr);
     return v;
 }
@@ -148,21 +147,20 @@ dbm_ass_sub(dbmobject *dp, PyObject *v, PyObject *w)
     }
     if (dp->di_dbm == NULL) {
         PyErr_SetString(DbmError,
-                        "GDBM object has already been closed"); 
-        return -1; 
+                        "GDBM object has already been closed");
+        return -1;
     }
     dp->di_size = -1;
     if (w == NULL) {
         if (gdbm_delete(dp->di_dbm, krec) < 0) {
-            PyErr_SetString(PyExc_KeyError,
-                            PyString_AS_STRING((PyStringObject *)v));
+            PyErr_SetObject(PyExc_KeyError, v);
             return -1;
         }
     }
     else {
         if (!PyArg_Parse(w, "s#", &drec.dptr, &drec.dsize)) {
             PyErr_SetString(PyExc_TypeError,
-                            "gdbm mappings have string elements only");
+                            "gdbm mappings have byte string elements only");
             return -1;
         }
         errno = 0;
@@ -198,6 +196,7 @@ dbm_close(register dbmobject *dp, PyObject *unused)
     return Py_None;
 }
 
+/* XXX Should return a set or a set view */
 PyDoc_STRVAR(dbm_keys__doc__,
 "keys() -> list_of_keys\n\
 Get a list of all keys in the database.");
@@ -221,7 +220,7 @@ dbm_keys(register dbmobject *dp, PyObject *unused)
 
     key = gdbm_firstkey(dp->di_dbm);
     while (key.dptr) {
-        item = PyString_FromStringAndSize(key.dptr, key.dsize);
+        item = PyBytes_FromStringAndSize(key.dptr, key.dsize);
         if (item == NULL) {
             free(key.dptr);
             Py_DECREF(v);
@@ -241,20 +240,40 @@ dbm_keys(register dbmobject *dp, PyObject *unused)
     return v;
 }
 
-PyDoc_STRVAR(dbm_has_key__doc__,
-"has_key(key) -> boolean\n\
-Find out whether or not the database contains a given key.");
-
-static PyObject *
-dbm_has_key(register dbmobject *dp, PyObject *args)
+static int
+dbm_contains(PyObject *self, PyObject *arg)
 {
+    dbmobject *dp = (dbmobject *)self;
     datum key;
 
-    if (!PyArg_ParseTuple(args, "s#:has_key", &key.dptr, &key.dsize))
-        return NULL;
-    check_dbmobject_open(dp);
-    return PyInt_FromLong((long) gdbm_exists(dp->di_dbm, key));
+    if ((dp)->di_dbm == NULL) {
+	PyErr_SetString(DbmError,
+			"GDBM object has already been closed");
+	return -1;
+    }
+    if (!PyBytes_Check(arg)) {
+	PyErr_Format(PyExc_TypeError,
+		     "gdbm key must be bytes, not %.100s",
+		     arg->ob_type->tp_name);
+	return -1;
+    }
+    key.dptr = PyBytes_AsString(arg);
+    key.dsize = PyBytes_Size(arg);
+    return gdbm_exists(dp->di_dbm, key);
 }
+
+static PySequenceMethods dbm_as_sequence = {
+	0,			/* sq_length */
+	0,			/* sq_concat */
+	0,			/* sq_repeat */
+	0,			/* sq_item */
+	0,			/* sq_slice */
+	0,			/* sq_ass_item */
+	0,			/* sq_ass_slice */
+	dbm_contains,		/* sq_contains */
+	0,			/* sq_inplace_concat */
+	0,			/* sq_inplace_repeat */
+};
 
 PyDoc_STRVAR(dbm_firstkey__doc__,
 "firstkey() -> key\n\
@@ -272,7 +291,7 @@ dbm_firstkey(register dbmobject *dp, PyObject *unused)
     check_dbmobject_open(dp);
     key = gdbm_firstkey(dp->di_dbm);
     if (key.dptr) {
-        v = PyString_FromStringAndSize(key.dptr, key.dsize);
+        v = PyBytes_FromStringAndSize(key.dptr, key.dsize);
         free(key.dptr);
         return v;
     }
@@ -304,7 +323,7 @@ dbm_nextkey(register dbmobject *dp, PyObject *args)
     check_dbmobject_open(dp);
     nextkey = gdbm_nextkey(dp->di_dbm, key);
     if (nextkey.dptr) {
-        v = PyString_FromStringAndSize(nextkey.dptr, nextkey.dsize);
+        v = PyBytes_FromStringAndSize(nextkey.dptr, nextkey.dsize);
         free(nextkey.dptr);
         return v;
     }
@@ -355,7 +374,6 @@ dbm_sync(register dbmobject *dp, PyObject *unused)
 static PyMethodDef dbm_methods[] = {
     {"close",	  (PyCFunction)dbm_close,   METH_NOARGS, dbm_close__doc__},
     {"keys",	  (PyCFunction)dbm_keys,    METH_NOARGS, dbm_keys__doc__},
-    {"has_key",   (PyCFunction)dbm_has_key, METH_VARARGS, dbm_has_key__doc__},
     {"firstkey",  (PyCFunction)dbm_firstkey,METH_NOARGS, dbm_firstkey__doc__},
     {"nextkey",	  (PyCFunction)dbm_nextkey, METH_VARARGS, dbm_nextkey__doc__},
     {"reorganize",(PyCFunction)dbm_reorganize,METH_NOARGS, dbm_reorganize__doc__},
@@ -381,7 +399,7 @@ static PyTypeObject Dbmtype = {
     0,                                  /*tp_compare*/
     0,                                  /*tp_repr*/
     0,                                  /*tp_as_number*/
-    0,                                  /*tp_as_sequence*/
+    &dbm_as_sequence,                   /*tp_as_sequence*/
     &dbm_as_mapping,                    /*tp_as_mapping*/
     0,                                  /*tp_hash*/
     0,                                  /*tp_call*/
@@ -497,7 +515,8 @@ PyMODINIT_FUNC
 initgdbm(void) {
     PyObject *m, *d, *s;
 
-    Dbmtype.ob_type = &PyType_Type;
+    if (PyType_Ready(&Dbmtype) < 0)
+	    return;
     m = Py_InitModule4("gdbm", dbmmodule_methods,
                        gdbmmodule__doc__, (PyObject *)NULL,
                        PYTHON_API_VERSION);
@@ -507,7 +526,7 @@ initgdbm(void) {
     DbmError = PyErr_NewException("gdbm.error", NULL, NULL);
     if (DbmError != NULL) {
         PyDict_SetItemString(d, "error", DbmError);
-        s = PyString_FromString(dbmmodule_open_flags);
+        s = PyUnicode_FromString(dbmmodule_open_flags);
         PyDict_SetItemString(d, "open_flags", s);
         Py_DECREF(s);
     }

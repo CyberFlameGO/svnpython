@@ -856,10 +856,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Objects\intobject.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\Objects\iterobject.c"
 				>
 			</File>
@@ -1539,10 +1535,6 @@
 			</File>
 			<File
 				RelativePath="..\..\Modules\signalmodule.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Modules\stropmodule.c"
 				>
 			</File>
 			<File

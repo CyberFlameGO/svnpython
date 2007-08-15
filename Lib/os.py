@@ -147,8 +147,8 @@ SEEK_END = 2
 # Super directory utilities.
 # (Inspired by Eric Raymond; the doc strings are mostly his)
 
-def makedirs(name, mode=0777):
-    """makedirs(path [, mode=0777])
+def makedirs(name, mode=0o777):
+    """makedirs(path [, mode=0o777])
 
     Super-mkdir; create a leaf directory and all intermediate ones.
     Works like mkdir, except that any intermediate path segment (not
@@ -163,7 +163,7 @@ def makedirs(name, mode=0777):
     if head and tail and not path.exists(head):
         try:
             makedirs(head, mode)
-        except OSError, e:
+        except OSError as e:
             # be happy if someone already created the path
             if e.errno != EEXIST:
                 raise
@@ -288,7 +288,7 @@ def walk(top, topdown=True, onerror=None, followlinks=False):
         # Note that listdir and error are globals in this module due
         # to earlier import-*.
         names = listdir(top)
-    except error, err:
+    except error as err:
         if onerror is not None:
             onerror(err)
         return
@@ -388,13 +388,14 @@ def _execvpe(file, args, env=None):
     else:
         envpath = defpath
     PATH = envpath.split(pathsep)
-    saved_exc = None
+    last_exc = saved_exc = None
     saved_tb = None
     for dir in PATH:
         fullname = path.join(dir, file)
         try:
             func(fullname, *argrest)
-        except error, e:
+        except error as e:
+            last_exc = e
             tb = sys.exc_info()[2]
             if (e.errno != ENOENT and e.errno != ENOTDIR
                 and saved_exc is None):
@@ -402,112 +403,66 @@ def _execvpe(file, args, env=None):
                 saved_tb = tb
     if saved_exc:
         raise error, saved_exc, saved_tb
-    raise error, e, tb
+    raise error, last_exc, tb
 
-# Change environ to automatically call putenv() if it exists
-try:
-    # This will fail if there's no putenv
-    putenv
-except NameError:
-    pass
+
+if name == "riscos":
+    # On RISC OS, all env access goes through getenv and putenv
+    from riscosenviron import _Environ
 else:
-    import UserDict
+    # Change environ to automatically call putenv(), unsetenv if they exist.
+    from _abcoll import MutableMapping  # Can't use collections (bootstrap)
 
-    # Fake unsetenv() for Windows
-    # not sure about os2 here but
-    # I'm guessing they are the same.
+    class _Environ(MutableMapping):
+        def __init__(self, environ, keymap, putenv, unsetenv):
+            self.keymap = keymap
+            self.putenv = putenv
+            self.unsetenv = unsetenv
+            self.data = data = {}
+            for key, value in environ.items():
+                data[keymap(key)] = str(value)
+        def __getitem__(self, key):
+            return self.data[self.keymap(key)]
+        def __setitem__(self, key, value):
+            value = str(value)
+            self.putenv(key, value)
+            self.data[self.keymap(key)] = value
+        def __delitem__(self, key):
+            self.unsetenv(key)
+            del self.data[self.keymap(key)]
+        def __iter__(self):
+            for key in self.data:
+                yield key
+        def __len__(self):
+            return len(self.data)
+        def copy(self):
+            return dict(self)
+        def setdefault(self, key, value):
+            if key not in self:
+                self[key] = value
+            return self[key]
 
-    if name in ('os2', 'nt'):
-        def unsetenv(key):
-            putenv(key, "")
+    try:
+        _putenv = putenv
+    except NameError:
+        _putenv = lambda key, value: None
+    else:
+        __all__.append("putenv")
 
-    if name == "riscos":
-        # On RISC OS, all env access goes through getenv and putenv
-        from riscosenviron import _Environ
-    elif name in ('os2', 'nt'):  # Where Env Var Names Must Be UPPERCASE
-        # But we store them as upper case
-        class _Environ(UserDict.IterableUserDict):
-            def __init__(self, environ):
-                UserDict.UserDict.__init__(self)
-                data = self.data
-                for k, v in environ.items():
-                    data[k.upper()] = v
-            def __setitem__(self, key, item):
-                putenv(key, item)
-                self.data[key.upper()] = item
-            def __getitem__(self, key):
-                return self.data[key.upper()]
-            try:
-                unsetenv
-            except NameError:
-                def __delitem__(self, key):
-                    del self.data[key.upper()]
-            else:
-                def __delitem__(self, key):
-                    unsetenv(key)
-                    del self.data[key.upper()]
-            def has_key(self, key):
-                return key.upper() in self.data
-            def __contains__(self, key):
-                return key.upper() in self.data
-            def get(self, key, failobj=None):
-                return self.data.get(key.upper(), failobj)
-            def update(self, dict=None, **kwargs):
-                if dict:
-                    try:
-                        keys = dict.keys()
-                    except AttributeError:
-                        # List of (key, value)
-                        for k, v in dict:
-                            self[k] = v
-                    else:
-                        # got keys
-                        # cannot use items(), since mappings
-                        # may not have them.
-                        for k in keys:
-                            self[k] = dict[k]
-                if kwargs:
-                    self.update(kwargs)
-            def copy(self):
-                return dict(self)
+    try:
+        _unsetenv = unsetenv
+    except NameError:
+        _unsetenv = lambda key: _putenv(key, "")
+    else:
+        __all__.append("unsetenv")
 
+    if name in ('os2', 'nt'): # Where Env Var Names Must Be UPPERCASE
+        _keymap = lambda key: str(key.upper())
     else:  # Where Env Var Names Can Be Mixed Case
-        class _Environ(UserDict.IterableUserDict):
-            def __init__(self, environ):
-                UserDict.UserDict.__init__(self)
-                self.data = environ
-            def __setitem__(self, key, item):
-                putenv(key, item)
-                self.data[key] = item
-            def update(self,  dict=None, **kwargs):
-                if dict:
-                    try:
-                        keys = dict.keys()
-                    except AttributeError:
-                        # List of (key, value)
-                        for k, v in dict:
-                            self[k] = v
-                    else:
-                        # got keys
-                        # cannot use items(), since mappings
-                        # may not have them.
-                        for k in keys:
-                            self[k] = dict[k]
-                if kwargs:
-                    self.update(kwargs)
-            try:
-                unsetenv
-            except NameError:
-                pass
-            else:
-                def __delitem__(self, key):
-                    unsetenv(key)
-                    del self.data[key]
-            def copy(self):
-                return dict(self)
+        _keymap = lambda key: str(key)
 
+    environ = _Environ(environ, _keymap, _putenv, _unsetenv)
 
-    environ = _Environ(environ)
 
 def getenv(key, default=None):
     """Get an environment variable, return None if it doesn't exist.
@@ -655,68 +610,6 @@ otherwise return -SIG, where SIG is the signal that killed it. """
 
     __all__.extend(["spawnvp", "spawnvpe", "spawnlp", "spawnlpe",])
 
-
-# Supply popen2 etc. (for Unix)
-if _exists("fork"):
-    if not _exists("popen2"):
-        def popen2(cmd, mode="t", bufsize=-1):
-            """Execute the shell command 'cmd' in a sub-process.  On UNIX, 'cmd'
-            may be a sequence, in which case arguments will be passed directly to
-            the program without shell intervention (as with os.spawnv()).  If 'cmd'
-            is a string it will be passed to the shell (as with os.system()). If
-            'bufsize' is specified, it sets the buffer size for the I/O pipes.  The
-            file objects (child_stdin, child_stdout) are returned."""
-            import warnings
-            msg = "os.popen2 is deprecated.  Use the subprocess module."
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-            import subprocess
-            PIPE = subprocess.PIPE
-            p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                                 stdin=PIPE, stdout=PIPE, close_fds=True)
-            return p.stdin, p.stdout
-        __all__.append("popen2")
-
-    if not _exists("popen3"):
-        def popen3(cmd, mode="t", bufsize=-1):
-            """Execute the shell command 'cmd' in a sub-process.  On UNIX, 'cmd'
-            may be a sequence, in which case arguments will be passed directly to
-            the program without shell intervention (as with os.spawnv()).  If 'cmd'
-            is a string it will be passed to the shell (as with os.system()). If
-            'bufsize' is specified, it sets the buffer size for the I/O pipes.  The
-            file objects (child_stdin, child_stdout, child_stderr) are returned."""
-            import warnings
-            msg = "os.popen3 is deprecated.  Use the subprocess module."
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-            import subprocess
-            PIPE = subprocess.PIPE
-            p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                                 stdin=PIPE, stdout=PIPE, stderr=PIPE,
-                                 close_fds=True)
-            return p.stdin, p.stdout, p.stderr
-        __all__.append("popen3")
-
-    if not _exists("popen4"):
-        def popen4(cmd, mode="t", bufsize=-1):
-            """Execute the shell command 'cmd' in a sub-process.  On UNIX, 'cmd'
-            may be a sequence, in which case arguments will be passed directly to
-            the program without shell intervention (as with os.spawnv()).  If 'cmd'
-            is a string it will be passed to the shell (as with os.system()). If
-            'bufsize' is specified, it sets the buffer size for the I/O pipes.  The
-            file objects (child_stdin, child_stdout_stderr) are returned."""
-            import warnings
-            msg = "os.popen4 is deprecated.  Use the subprocess module."
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-            import subprocess
-            PIPE = subprocess.PIPE
-            p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
-                                 stdin=PIPE, stdout=PIPE,
-                                 stderr=subprocess.STDOUT, close_fds=True)
-            return p.stdin, p.stdout
-        __all__.append("popen4")
-
 import copy_reg as _copy_reg
 
 def _make_stat_result(tup, dict):
@@ -755,8 +648,46 @@ if not _exists("urandom"):
             _urandomfd = open("/dev/urandom", O_RDONLY)
         except (OSError, IOError):
             raise NotImplementedError("/dev/urandom (or equivalent) not found")
-        bytes = ""
-        while len(bytes) < n:
-            bytes += read(_urandomfd, n - len(bytes))
+        bs = b""
+        while len(bs) < n:
+            bs += read(_urandomfd, n - len(bs))
         close(_urandomfd)
-        return bytes
+        return bs
+
+# Supply os.popen()
+def popen(cmd, mode="r", buffering=None):
+    if not isinstance(cmd, basestring):
+        raise TypeError("invalid cmd type (%s, expected string)" % type(cmd))
+    if mode not in ("r", "w"):
+        raise ValueError("invalid mode %r" % mode)
+    import subprocess, io
+    if mode == "r":
+        proc = subprocess.Popen(cmd,
+                                shell=True,
+                                stdout=subprocess.PIPE,
+                                bufsize=buffering)
+        return _wrap_close(io.TextIOWrapper(proc.stdout), proc)
+    else:
+        proc = subprocess.Popen(cmd,
+                                shell=True,
+                                stdin=subprocess.PIPE,
+                                bufsize=buffering)
+        return _wrap_close(io.TextIOWrapper(proc.stdin), proc)
+
+# Helper for popen() -- a proxy for a file whose close waits for the process
+class _wrap_close:
+    def __init__(self, stream, proc):
+        self._stream = stream
+        self._proc = proc
+    def close(self):
+        self._stream.close()
+        return self._proc.wait() << 8  # Shift left to match old behavior
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+# Supply os.fdopen() (used by subprocess!)
+def fdopen(fd, mode="r", buffering=-1):
+    if not isinstance(fd, int):
+        raise TypeError("invalid fd type (%s, expected integer)" % type(fd))
+    import io
+    return io.open(fd, mode, buffering)

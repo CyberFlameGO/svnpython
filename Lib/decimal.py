@@ -56,61 +56,61 @@ Decimal("2.60")
 >>> Decimal("12.34") + Decimal("3.87") - Decimal("18.41")
 Decimal("-2.20")
 >>> dig = Decimal(1)
->>> print dig / Decimal(3)
+>>> print(dig / Decimal(3))
 0.333333333
 >>> getcontext().prec = 18
->>> print dig / Decimal(3)
+>>> print(dig / Decimal(3))
 0.333333333333333333
->>> print dig.sqrt()
+>>> print(dig.sqrt())
 1
->>> print Decimal(3).sqrt()
+>>> print(Decimal(3).sqrt())
 1.73205080756887729
->>> print Decimal(3) ** 123
+>>> print(Decimal(3) ** 123)
 4.85192780976896427E+58
 >>> inf = Decimal(1) / Decimal(0)
->>> print inf
+>>> print(inf)
 Infinity
 >>> neginf = Decimal(-1) / Decimal(0)
->>> print neginf
+>>> print(neginf)
 -Infinity
->>> print neginf + inf
+>>> print(neginf + inf)
 NaN
->>> print neginf * inf
+>>> print(neginf * inf)
 -Infinity
->>> print dig / 0
+>>> print(dig / 0)
 Infinity
 >>> getcontext().traps[DivisionByZero] = 1
->>> print dig / 0
+>>> print(dig / 0)
 Traceback (most recent call last):
   ...
   ...
   ...
-DivisionByZero: x / 0
+decimal.DivisionByZero: x / 0
 >>> c = Context()
 >>> c.traps[InvalidOperation] = 0
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 0
 >>> c.divide(Decimal(0), Decimal(0))
 Decimal("NaN")
 >>> c.traps[InvalidOperation] = 1
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 1
 >>> c.flags[InvalidOperation] = 0
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 0
->>> print c.divide(Decimal(0), Decimal(0))
+>>> print(c.divide(Decimal(0), Decimal(0)))
 Traceback (most recent call last):
   ...
   ...
   ...
-InvalidOperation: 0 / 0
->>> print c.flags[InvalidOperation]
+decimal.InvalidOperation: 0 / 0
+>>> print(c.flags[InvalidOperation])
 1
 >>> c.flags[InvalidOperation] = 0
 >>> c.traps[InvalidOperation] = 0
->>> print c.divide(Decimal(0), Decimal(0))
+>>> print(c.divide(Decimal(0), Decimal(0)))
 NaN
->>> print c.flags[InvalidOperation]
+>>> print(c.flags[InvalidOperation])
 1
 >>>
 """
@@ -483,19 +483,19 @@ def localcontext(ctx=None):
     # as the doctest module doesn't understand __future__ statements
     """
     >>> from __future__ import with_statement
-    >>> print getcontext().prec
+    >>> print(getcontext().prec)
     28
     >>> with localcontext():
     ...     ctx = getcontext()
     ...     ctx.prec += 2
-    ...     print ctx.prec
+    ...     print(ctx.prec)
     ...
     30
     >>> with localcontext(ExtendedContext):
-    ...     print getcontext().prec
+    ...     print(getcontext().prec)
     ...
     9
-    >>> print getcontext().prec
+    >>> print(getcontext().prec)
     28
     """
     if ctx is None: ctx = getcontext()
@@ -545,7 +545,7 @@ class Decimal(object):
             return self
 
         # From an integer
-        if isinstance(value, (int,long)):
+        if isinstance(value, (int,int)):
             if value >= 0:
                 self._sign = 0
             else:
@@ -561,7 +561,7 @@ class Decimal(object):
             if value[0] not in (0,1):
                 raise ValueError('Invalid sign')
             for digit in value[1]:
-                if not isinstance(digit, (int,long)) or digit < 0:
+                if not isinstance(digit, (int,int)) or digit < 0:
                     raise ValueError("The second value in the tuple must be"
                                 "composed of non negative integer elements.")
             self._sign = value[0]
@@ -677,14 +677,14 @@ class Decimal(object):
             return other
         return 0
 
-    def __nonzero__(self):
-        """Is the number non-zero?
+    def __bool__(self):
+        """return True if the number is non-zero.
 
-        0 if self == 0
-        1 if self != 0
+        False if self == 0
+        True if self != 0
         """
         if self._is_special:
-            return 1
+            return True
         return sum(self._int) != 0
 
     def __cmp__(self, other, context=None):
@@ -741,14 +741,34 @@ class Decimal(object):
         return 1
 
     def __eq__(self, other):
-        if not isinstance(other, (Decimal, int, long)):
+        if not isinstance(other, (Decimal, int)):
             return NotImplemented
         return self.__cmp__(other) == 0
 
     def __ne__(self, other):
-        if not isinstance(other, (Decimal, int, long)):
+        if not isinstance(other, (Decimal, int)):
             return NotImplemented
         return self.__cmp__(other) != 0
+
+    def __lt__(self, other):
+        if not isinstance(other, (Decimal, int)):
+            return NotImplemented
+        return self.__cmp__(other) < 0
+
+    def __le__(self, other):
+        if not isinstance(other, (Decimal, int)):
+            return NotImplemented
+        return self.__cmp__(other) <= 0
+
+    def __gt__(self, other):
+        if not isinstance(other, (Decimal, int)):
+            return NotImplemented
+        return self.__cmp__(other) > 0
+
+    def __ge__(self, other):
+        if not isinstance(other, (Decimal, int)):
+            return NotImplemented
+        return self.__cmp__(other) >= 0
 
     def compare(self, other, context=None):
         """Compares one to another.
@@ -783,7 +803,7 @@ class Decimal(object):
         i = int(self)
         if self == Decimal(i):
             return hash(i)
-        assert self.__nonzero__()   # '-0' handled by integer case
+        assert self.__bool__()   # '-0' handled by integer case
         return hash(str(self.normalize()))
 
     def as_tuple(self):
@@ -821,7 +841,7 @@ class Decimal(object):
         if context is None:
             context = getcontext()
 
-        tmp = map(str, self._int)
+        tmp = list(map(str, self._int))
         numdigits = len(self._int)
         leftdigits = self._exp + numdigits
         if eng and not self:  # self = 0eX wants 0[.0[0]]eY, not [[0]0]0eY
@@ -1173,17 +1193,18 @@ class Decimal(object):
         op1 = _WorkRep(self)
         op2 = _WorkRep(other)
 
-        ans = Decimal((resultsign, map(int, str(op1.int * op2.int)), resultexp))
+        ans = Decimal((resultsign,
+                       tuple(map(int, str(op1.int * op2.int))),
+                       resultexp))
         if shouldround:
             ans = ans._fix(context)
 
         return ans
     __rmul__ = __mul__
 
-    def __div__(self, other, context=None):
+    def __truediv__(self, other, context=None):
         """Return self / other."""
         return self._divide(other, context=context)
-    __truediv__ = __div__
 
     def _divide(self, other, divmod = 0, context=None):
         """Return a / b, to context.prec precision.
@@ -1350,13 +1371,12 @@ class Decimal(object):
             ans = ans._fix(context)
         return ans
 
-    def __rdiv__(self, other, context=None):
-        """Swaps self/other and returns __div__."""
+    def __rtruediv__(self, other, context=None):
+        """Swaps self/other and returns __truediv__."""
         other = _convert_other(other)
         if other is NotImplemented:
             return other
-        return other.__div__(self, context=context)
-    __rtruediv__ = __rdiv__
+        return other.__truediv__(self, context=context)
 
     def __divmod__(self, other, context=None):
         """
@@ -1428,9 +1448,9 @@ class Decimal(object):
         rounding = context._set_rounding_decision(NEVER_ROUND)
 
         if other._sign:
-            comparison = other.__div__(Decimal(-2), context=context)
+            comparison = other.__truediv__(Decimal(-2), context=context)
         else:
-            comparison = other.__div__(Decimal(2), context=context)
+            comparison = other.__truediv__(Decimal(2), context=context)
 
         context._set_rounding_decision(rounding)
         context._regard_flags(*flags)
@@ -1513,7 +1533,7 @@ class Decimal(object):
 
         Equivalent to long(int(self))
         """
-        return long(self.__int__())
+        return int(self.__int__())
 
     def _fix(self, context):
         """Round if it is necessary to keep self within prec precision.
@@ -1798,7 +1818,7 @@ class Decimal(object):
         if n < 0:
             # n is a long now, not Decimal instance
             n = -n
-            mul = Decimal(1).__div__(mul, context=context)
+            mul = Decimal(1).__truediv__(mul, context=context)
 
         spot = 1
         while spot <= n:
@@ -1943,6 +1963,7 @@ class Decimal(object):
             ans = self._check_nans(context=context)
             if ans:
                 return ans
+            return self
         if self._exp >= 0:
             return self
         if context is None:
@@ -2018,7 +2039,7 @@ class Decimal(object):
         rounding = context._set_rounding(ROUND_HALF_EVEN)
         while 1:
             context.prec = min(2*context.prec - 2, maxp)
-            ans = half.__mul__(ans.__add__(tmp.__div__(ans, context=context),
+            ans = half.__mul__(ans.__add__(tmp.__truediv__(ans, context=context),
                                            context=context), context=context)
             if context.prec == maxp:
                 break
@@ -2267,10 +2288,8 @@ class Context(object):
             _ignored_flags = []
         if not isinstance(flags, dict):
             flags = dict([(s,s in flags) for s in _signals])
-            del s
         if traps is not None and not isinstance(traps, dict):
             traps = dict([(s,s in traps) for s in _signals])
-            del s
         for name, val in locals().items():
             if val is None:
                 setattr(self, name, _copy.copy(getattr(DefaultContext, name)))
@@ -2493,7 +2512,7 @@ class Context(object):
         >>> ExtendedContext.divide(Decimal('2.40E+6'), Decimal('2'))
         Decimal("1.20E+6")
         """
-        return a.__div__(b, context=self)
+        return a.__truediv__(b, context=self)
 
     def divide_int(self, a, b):
         """Divides two numbers and returns the integer part of the result.
@@ -2976,7 +2995,7 @@ def _convert_other(other):
     """
     if isinstance(other, Decimal):
         return other
-    if isinstance(other, (int, long)):
+    if isinstance(other, int):
         return Decimal(other)
     return NotImplemented
 
@@ -3128,7 +3147,7 @@ def _string2exact(s):
     exp -= len(fracpart)
 
     mantissa = intpart + fracpart
-    tmp = map(int, mantissa)
+    tmp = list(map(int, mantissa))
     backup = tmp
     while tmp and tmp[0] == 0:
         del tmp[0]
