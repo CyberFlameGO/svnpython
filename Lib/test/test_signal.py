@@ -30,11 +30,12 @@ class InterProcessSignalTests(unittest.TestCase):
             # time for the normal sequence of events to occur.  This is
             # just a stop-gap to try to prevent the test from hanging.
             time.sleep(self.MAX_DURATION + 5)
-            print >> sys.__stdout__, "  child should not have to kill parent"
+            print("  child should not have to kill parent",
+                  file=sys.__stdout__)
             for signame in "SIGHUP", "SIGUSR1", "SIGUSR2", "SIGALRM":
                 os.kill(parent_pid, getattr(signal, signame))
-                print >> sys.__stdout__, "    child sent", signame, "to", \
-                      parent_pid
+                print("    child sent", signame, "to",
+                      parent_pid, file=sys.__stdout__)
                 time.sleep(1)
         finally:
             os._exit(0)
@@ -42,12 +43,12 @@ class InterProcessSignalTests(unittest.TestCase):
     def handlerA(self, *args):
         self.a_called = True
         if test_support.verbose:
-            print "handlerA invoked", args
+            print("handlerA invoked", args)
 
     def handlerB(self, *args):
         self.b_called = True
         if test_support.verbose:
-            print "handlerB invoked", args
+            print("handlerB invoked", args)
         raise HandlerBCalled(*args)
 
     def test_main(self):
@@ -74,7 +75,7 @@ class InterProcessSignalTests(unittest.TestCase):
 
         pid = self.pid
         if test_support.verbose:
-            print "test runner's pid is", pid
+            print("test runner's pid is", pid)
 
         # Shell script that will send us asynchronous signals
         script = """
@@ -96,22 +97,22 @@ class InterProcessSignalTests(unittest.TestCase):
         os.system(script)
         try:
             if test_support.verbose:
-                print "starting pause() loop..."
+                print("starting pause() loop...")
             while 1:
                 try:
                     if test_support.verbose:
-                        print "call pause()..."
+                        print("call pause()...")
                     signal.pause()
                     if test_support.verbose:
-                        print "pause() returned"
+                        print("pause() returned")
                 except HandlerBCalled:
                     handler_b_exception_raised = True
                     if test_support.verbose:
-                        print "HandlerBCalled exception caught"
+                        print("HandlerBCalled exception caught")
 
         except KeyboardInterrupt:
             if test_support.verbose:
-                print "KeyboardInterrupt (the alarm() went off)"
+                print("KeyboardInterrupt (the alarm() went off)")
 
         self.assert_(self.a_called)
         self.assert_(self.b_called)
@@ -166,7 +167,7 @@ class BasicSignalTests(unittest.TestCase):
                           signal.SIGUSR1, None)
 
 def test_main():
-    if sys.platform[:3] in ('win', 'os2') or sys.platform == 'riscos':
+    if sys.platform[:3] in ('win', 'os2'):
         raise test_support.TestSkipped("Can't test signal on %s" % \
                                        sys.platform)
 

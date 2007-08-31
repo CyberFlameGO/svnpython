@@ -210,40 +210,33 @@ is considered sufficient for this determination.
 
 .. cfunction:: PyObject* PyObject_Call(PyObject *callable_object, PyObject *args, PyObject *kw)
 
-   .. index:: builtin: apply
-
    Call a callable Python object *callable_object*, with arguments given by the
    tuple *args*, and named arguments given by the dictionary *kw*. If no named
    arguments are needed, *kw* may be *NULL*. *args* must not be *NULL*, use an
    empty tuple if no arguments are needed. Returns the result of the call on
    success, or *NULL* on failure.  This is the equivalent of the Python expression
-   ``apply(callable_object, args, kw)`` or ``callable_object(*args, **kw)``.
+   ``callable_object(*args, **kw)``.
 
    .. versionadded:: 2.2
 
 
 .. cfunction:: PyObject* PyObject_CallObject(PyObject *callable_object, PyObject *args)
 
-   .. index:: builtin: apply
-
    Call a callable Python object *callable_object*, with arguments given by the
    tuple *args*.  If no arguments are needed, then *args* may be *NULL*.  Returns
    the result of the call on success, or *NULL* on failure.  This is the equivalent
-   of the Python expression ``apply(callable_object, args)`` or
-   ``callable_object(*args)``.
+   of the Python expression ``callable_object(*args)``.
 
 
 .. cfunction:: PyObject* PyObject_CallFunction(PyObject *callable, char *format, ...)
-
-   .. index:: builtin: apply
 
    Call a callable Python object *callable*, with a variable number of C arguments.
    The C arguments are described using a :cfunc:`Py_BuildValue` style format
    string.  The format may be *NULL*, indicating that no arguments are provided.
    Returns the result of the call on success, or *NULL* on failure.  This is the
-   equivalent of the Python expression ``apply(callable, args)`` or
-   ``callable(*args)``. Note that if you only pass :ctype:`PyObject \*` args,
-   :cfunc:`PyObject_CallFunctionObjArgs` is a faster alternative.
+   equivalent of the Python expression ``callable(*args)``. Note that if you only
+   pass :ctype:`PyObject \*` args, :cfunc:`PyObject_CallFunctionObjArgs` is a
+   faster alternative.
 
 
 .. cfunction:: PyObject* PyObject_CallMethod(PyObject *o, char *method, char *format, ...)
@@ -608,20 +601,6 @@ Number Protocol
    Returns the "bitwise or" of *o1* and *o2* on success, or *NULL* on failure.  The
    operation is done *in-place* when *o1* supports it.  This is the equivalent of
    the Python statement ``o1 |= o2``.
-
-
-.. cfunction:: int PyNumber_Coerce(PyObject **p1, PyObject **p2)
-
-   .. index:: builtin: coerce
-
-   This function takes the addresses of two variables of type :ctype:`PyObject\*`.
-   If the objects pointed to by ``*p1`` and ``*p2`` have the same type, increment
-   their reference count and return ``0`` (success). If the objects can be
-   converted to a common numeric type, replace ``*p1`` and ``*p2`` by their
-   converted value (with 'new' reference counts), and return ``0``. If no
-   conversion is possible, or if some other error occurs, return ``-1`` (failure)
-   and don't increment the reference counts.  The call ``PyNumber_Coerce(&o1,
-   &o2)`` is equivalent to the Python statement ``o1, o2 = coerce(o1, o2)``.
 
 
 .. cfunction:: PyObject* PyNumber_Int(PyObject *o)

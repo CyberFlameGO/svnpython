@@ -299,10 +299,6 @@ PyErr_Format:PyObject*:exception:+1:
 PyErr_Format:char*:format::
 PyErr_Format::...::
 
-PyErr_Warn:int:::
-PyErr_Warn:PyObject*:category:0:
-PyErr_Warn:char*:message::
-
 PyErr_WarnEx:int:::
 PyErr_WarnEx:PyObject*:category:0:
 PyErr_WarnEx:const char*:message::
@@ -385,7 +381,6 @@ PyFloat_FromDouble:double:v::
 
 PyFloat_FromString:PyObject*::+1:
 PyFloat_FromString:PyObject*:str:0:
-PyFloat_FromString:char**:pend:0:ignored
 
 PyFrozenSet_New:PyObject*::+1:
 PyFrozenSet_New:PyObject*:iterable:0:
@@ -711,10 +706,6 @@ PyNumber_And:PyObject*:o2:0:
 
 PyNumber_Check:PyObject*:o:0:
 PyNumber_Check:int:::
-
-PyNumber_Coerce:int:::
-PyNumber_Coerce:PyObject**:p1:+1:
-PyNumber_Coerce:PyObject**:p2:+1:
 
 PyNumber_Divide:PyObject*::+1:
 PyNumber_Divide:PyObject*:o1:0:
@@ -1713,9 +1704,6 @@ _PyImport_FixupExtension:char*:::
 _PyImport_FixupExtension:char*:::
 
 _PyImport_Init:void:::
-
-_PyObject_Del:void:::
-_PyObject_Del:PyObject*:op:0:
 
 _PyObject_New:PyObject*::+1:
 _PyObject_New:PyTypeObject*:type:0:

@@ -14,20 +14,10 @@ test_data = [
     ("String Val",    "A string value",                        REG_SZ),
     ("StringExpand",  "The path is %path%",                    REG_EXPAND_SZ),
     ("Multi-string",  ["Lots", "of", "string", "values"],      REG_MULTI_SZ),
-    ("Raw Data",      ("binary"+chr(0)+"data"),                REG_BINARY),
+    ("Raw Data",      b"binary\x00data",                       REG_BINARY),
     ("Big String",    "x"*(2**14-1),                           REG_SZ),
-    ("Big Binary",    "x"*(2**14),                             REG_BINARY),
+    ("Big Binary",    b"x"*(2**14),                            REG_BINARY),
 ]
-
-if test_support.have_unicode:
-    test_data += [
-        (unicode("Unicode Val"),  unicode("A Unicode value"), REG_SZ,),
-        ("UnicodeExpand", unicode("The path is %path%"), REG_EXPAND_SZ),
-        ("Multi-unicode", [unicode("Lots"), unicode("of"), unicode("unicode"),
-                           unicode("values")], REG_MULTI_SZ),
-        ("Multi-mixed",   [unicode("Unicode"), unicode("and"), "string",
-                           "values"], REG_MULTI_SZ),
-    ]
 
 class WinregTests(unittest.TestCase):
     remote_name = None
@@ -168,7 +158,7 @@ if __name__ == "__main__":
     try:
         WinregTests.remote_name = sys.argv[sys.argv.index("--remote")+1]
     except (IndexError, ValueError):
-        print "Remote registry calls can be tested using",
-        print "'test_winreg.py --remote \\\\machine_name'"
+        print("Remote registry calls can be tested using",
+              "'test_winreg.py --remote \\\\machine_name'")
         WinregTests.remote_name = None
     test_main()

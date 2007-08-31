@@ -79,32 +79,32 @@ An explanation of some terminology and conventions is in order.
 
 * The time value as returned by :func:`gmtime`, :func:`localtime`, and
   :func:`strptime`, and accepted by :func:`asctime`, :func:`mktime` and
-  :func:`strftime`, may be considered as a sequence of 9 integers.  The return
-  values of :func:`gmtime`, :func:`localtime`, and :func:`strptime` also offer
-  attribute names for individual fields.
+  :func:`strftime`, is a sequence of 9 integers.  The return values of
+  :func:`gmtime`, :func:`localtime`, and :func:`strptime` also offer attribute
+  names for individual fields.
 
-  +-------+-------------------+---------------------------------+
-  | Index | Attribute         | Values                          |
-  +=======+===================+=================================+
-  | 0     | :attr:`tm_year`   | (for example, 1993)             |
-  +-------+-------------------+---------------------------------+
-  | 1     | :attr:`tm_mon`    | range [1,12]                    |
-  +-------+-------------------+---------------------------------+
-  | 2     | :attr:`tm_mday`   | range [1,31]                    |
-  +-------+-------------------+---------------------------------+
-  | 3     | :attr:`tm_hour`   | range [0,23]                    |
-  +-------+-------------------+---------------------------------+
-  | 4     | :attr:`tm_min`    | range [0,59]                    |
-  +-------+-------------------+---------------------------------+
-  | 5     | :attr:`tm_sec`    | range [0,61]; see **(1)** in    |
-  |       |                   | :func:`strftime` description    |
-  +-------+-------------------+---------------------------------+
-  | 6     | :attr:`tm_wday`   | range [0,6], Monday is 0        |
-  +-------+-------------------+---------------------------------+
-  | 7     | :attr:`tm_yday`   | range [1,366]                   |
-  +-------+-------------------+---------------------------------+
-  | 8     | :attr:`tm_isdst`  | 0, 1 or -1; see below           |
-  +-------+-------------------+---------------------------------+
+  +-------+------------------+------------------------------+
+  | Index | Attribute        | Values                       |
+  +=======+==================+==============================+
+  | 0     | :attr:`tm_year`  | (for example, 1993)          |
+  +-------+------------------+------------------------------+
+  | 1     | :attr:`tm_mon`   | range [1,12]                 |
+  +-------+------------------+------------------------------+
+  | 2     | :attr:`tm_mday`  | range [1,31]                 |
+  +-------+------------------+------------------------------+
+  | 3     | :attr:`tm_hour`  | range [0,23]                 |
+  +-------+------------------+------------------------------+
+  | 4     | :attr:`tm_min`   | range [0,59]                 |
+  +-------+------------------+------------------------------+
+  | 5     | :attr:`tm_sec`   | range [0,61]; see **(1)** in |
+  |       |                  | :func:`strftime` description |
+  +-------+------------------+------------------------------+
+  | 6     | :attr:`tm_wday`  | range [0,6], Monday is 0     |
+  +-------+------------------+------------------------------+
+  | 7     | :attr:`tm_yday`  | range [1,366]                |
+  +-------+------------------+------------------------------+
+  | 8     | :attr:`tm_isdst` | 0, 1 or -1; see below        |
+  +-------+------------------+------------------------------+
 
   Note that unlike the C structure, the month value is a range of 1-12, not 0-11.
   A year value will be handled as described under "Year 2000 (Y2K) issues" above.
@@ -119,8 +119,8 @@ An explanation of some terminology and conventions is in order.
      The time value sequence was changed from a tuple to a :class:`struct_time`, with
      the addition of attribute names for the fields.
 
-
 The module defines the following functions and data items:
+
 
 .. data:: accept2dyear
 

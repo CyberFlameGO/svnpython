@@ -29,10 +29,6 @@ Any files may be present in the ZIP archive, but only files :file:`.py` and
 corresponding :file:`.pyc` or :file:`.pyo` file, meaning that if a ZIP archive
 doesn't contain :file:`.pyc` files, importing may be rather slow.
 
-Using the built-in :func:`reload` function will fail if called on a module
-loaded from a ZIP archive; it is unlikely that :func:`reload` would be needed,
-since this would imply that the ZIP has been altered during runtime.
-
 The available attributes of this module are:
 
 

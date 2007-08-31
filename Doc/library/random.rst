@@ -168,9 +168,9 @@ Functions for sequences:
    Members of the population need not be hashable or unique.  If the population
    contains repeats, then each occurrence is a possible selection in the sample.
 
-   To choose a sample from a range of integers, use an :func:`xrange` object as an
+   To choose a sample from a range of integers, use an :func:`range` object as an
    argument.  This is especially fast and space efficient for sampling from a large
-   population:  ``sample(xrange(10000000), 60)``.
+   population:  ``sample(range(10000000), 60)``.
 
 The following functions generate specific real-valued distributions. Function
 parameters are named after the corresponding variables in the distribution's

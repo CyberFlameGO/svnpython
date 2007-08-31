@@ -200,7 +200,7 @@ the tasklist if the input stream is not exhausted::
    ...     while pending:
    ...         task = pending.popleft()
    ...         try:
-   ...             yield task.next()
+   ...             yield next(task)
    ...         except StopIteration:
    ...             continue
    ...         pending.append(task)
@@ -336,11 +336,11 @@ zero.  The increment operation then builds up the count for each letter.
 
 The function :func:`int` which always returns zero is just a special case of
 constant functions.  A faster and more flexible way to create constant functions
-is to use :func:`itertools.repeat` which can supply any constant value (not just
+is to use a lambda function which can supply any constant value (not just
 zero)::
 
    >>> def constant_factory(value):
-   ...     return itertools.repeat(value).next
+   ...     return lambda: value
    >>> d = defaultdict(constant_factory('<missing>'))
    >>> d.update(name='John', action='ran')
    >>> '%(name)s %(action)s to %(object)s' % d

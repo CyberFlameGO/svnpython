@@ -1,4 +1,4 @@
-# Copyright (C) 2001,2002 Python Software Foundation
+# Copyright (C) 2001-2007 Python Software Foundation
 # email package unit tests
 
 import unittest

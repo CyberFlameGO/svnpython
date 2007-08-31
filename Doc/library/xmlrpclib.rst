@@ -190,7 +190,7 @@ Boolean Objects
 
 This class may be initialized from any Python value; the instance returned
 depends only on its truth value.  It supports various Python operators through
-:meth:`__cmp__`, :meth:`__repr__`, :meth:`__int__`, and :meth:`__nonzero__`
+:meth:`__cmp__`, :meth:`__repr__`, :meth:`__int__`, and :meth:`__bool__`
 methods, all implemented in the obvious ways.
 
 It also has the following method, supported mainly for internal use by the
@@ -305,7 +305,7 @@ does not exist).  It has the following members:
 
 .. attribute:: ProtocolError.headers
 
-   A string containing the headers of the HTTP/HTTPS request that triggered the
+   A dict containing the headers of the HTTP/HTTPS request that triggered the
    error.
 
 
@@ -389,7 +389,7 @@ Example of Client Usage
 
    try:
        print server.examples.getStateName(41)
-   except Error, v:
+   except Error as v:
        print "ERROR", v
 
 To access an XML-RPC server through a proxy, you need to define  a custom

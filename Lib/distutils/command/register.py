@@ -7,11 +7,16 @@ Implements the Distutils 'register' command (register with the repository).
 
 __revision__ = "$Id$"
 
-import sys, os, string, urllib2, getpass, urlparse
-import StringIO, ConfigParser
+import sys, os, urllib2, getpass, urlparse
+import io, ConfigParser
 
 from distutils.core import Command
 from distutils.errors import *
+
+def raw_input(prompt):
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    return sys.stdin.readline()
 
 class register(Command):
 
@@ -62,7 +67,7 @@ class register(Command):
 
         if missing:
             self.warn("missing required meta-data: " +
-                      string.join(missing, ", "))
+                      ", ".join(missing))
 
         if metadata.author:
             if not metadata.author_email:
@@ -81,14 +86,14 @@ class register(Command):
         ''' Fetch the list of classifiers from the server.
         '''
         response = urllib2.urlopen(self.repository+'?:action=list_classifiers')
-        print response.read()
+        print(response.read())
 
     def verify_metadata(self):
         ''' Send the metadata to the package index server to be checked.
         '''
         # send the info to the server and report the result
         (code, result) = self.post_to_server(self.build_post_data('verify'))
-        print 'Server response (%s): %s'%(code, result)
+        print('Server response (%s): %s'%(code, result))
 
     def send_metadata(self):
         ''' Send the metadata to the package index server.
@@ -123,7 +128,7 @@ class register(Command):
         if os.environ.has_key('HOME'):
             rc = os.path.join(os.environ['HOME'], '.pypirc')
             if os.path.exists(rc):
-                print 'Using PyPI login from %s'%rc
+                print('Using PyPI login from %s'%rc)
                 config = ConfigParser.ConfigParser()
                 config.read(rc)
                 username = config.get('server-login', 'username')
@@ -133,17 +138,17 @@ class register(Command):
         # get the user's login info
         choices = '1 2 3 4'.split()
         while choice not in choices:
-            print '''We need to know who you are, so please choose either:
+            print('''We need to know who you are, so please choose either:
  1. use your existing login,
  2. register as a new user,
  3. have the server generate a new password for you (and email it to you), or
  4. quit
-Your selection [default 1]: ''',
+Your selection [default 1]: ''', end=' ')
             choice = raw_input()
             if not choice:
                 choice = '1'
             elif choice not in choices:
-                print 'Please choose one of the four options!'
+                print('Please choose one of the four options!')
 
         if choice == '1':
             # get the username and password
@@ -160,13 +165,13 @@ Your selection [default 1]: ''',
             # send the info to the server and report the result
             code, result = self.post_to_server(self.build_post_data('submit'),
                 auth)
-            print 'Server response (%s): %s'%(code, result)
+            print('Server response (%s): %s'%(code, result))
 
             # possibly save the login
             if os.environ.has_key('HOME') and config is None and code == 200:
                 rc = os.path.join(os.environ['HOME'], '.pypirc')
-                print 'I can store your PyPI login so future submissions will be faster.'
-                print '(the login will be stored in %s)'%rc
+                print('I can store your PyPI login so future submissions will be faster.')
+                print('(the login will be stored in %s)'%rc)
                 choice = 'X'
                 while choice.lower() not in 'yn':
                     choice = raw_input('Save your login (y/N)?')
@@ -178,7 +183,7 @@ Your selection [default 1]: ''',
                         username, password))
                     f.close()
                     try:
-                        os.chmod(rc, 0600)
+                        os.chmod(rc, 0o600)
                     except:
                         pass
         elif choice == '2':
@@ -195,22 +200,22 @@ Your selection [default 1]: ''',
                 if data['password'] != data['confirm']:
                     data['password'] = ''
                     data['confirm'] = None
-                    print "Password and confirm don't match!"
+                    print("Password and confirm don't match!")
             while not data['email']:
                 data['email'] = raw_input('   EMail: ')
             code, result = self.post_to_server(data)
             if code != 200:
-                print 'Server response (%s): %s'%(code, result)
+                print('Server response (%s): %s'%(code, result))
             else:
-                print 'You will receive an email shortly.'
-                print 'Follow the instructions in it to complete registration.'
+                print('You will receive an email shortly.')
+                print('Follow the instructions in it to complete registration.')
         elif choice == '3':
             data = {':action': 'password_reset'}
             data['email'] = ''
             while not data['email']:
                 data['email'] = raw_input('Your email address: ')
             code, result = self.post_to_server(data)
-            print 'Server response (%s): %s'%(code, result)
+            print('Server response (%s): %s'%(code, result))
 
     def build_post_data(self, action):
         # figure the data to send - the metadata plus some additional
@@ -248,13 +253,13 @@ Your selection [default 1]: ''',
         boundary = '--------------GHSKFJDLGDS7543FJKLFHRE75642756743254'
         sep_boundary = '\n--' + boundary
         end_boundary = sep_boundary + '--'
-        body = StringIO.StringIO()
+        body = io.StringIO()
         for key, value in data.items():
             # handle multiple entries for the same name
             if type(value) not in (type([]), type( () )):
                 value = [value]
             for value in value:
-                value = unicode(value).encode("utf-8")
+                value = str(value).encode("utf-8")
                 body.write(sep_boundary)
                 body.write('\nContent-Disposition: form-data; name="%s"'%key)
                 body.write("\n\n")
@@ -279,16 +284,16 @@ Your selection [default 1]: ''',
         data = ''
         try:
             result = opener.open(req)
-        except urllib2.HTTPError, e:
+        except urllib2.HTTPError as e:
             if self.show_response:
                 data = e.fp.read()
             result = e.code, e.msg
-        except urllib2.URLError, e:
+        except urllib2.URLError as e:
             result = 500, str(e)
         else:
             if self.show_response:
                 data = result.read()
             result = 200, 'OK'
         if self.show_response:
-            print '-'*75, data, '-'*75
+            print('-'*75, data, '-'*75)
         return result

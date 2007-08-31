@@ -67,7 +67,7 @@ s = m.getbodytext(0)    # text of message's body, not decoded
 MH_PROFILE = '~/.mh_profile'
 PATH = '~/Mail'
 MH_SEQUENCES = '.mh_sequences'
-FOLDER_PROTECT = 0700
+FOLDER_PROTECT = 0o700
 
 
 # Imported modules
@@ -104,7 +104,7 @@ class MH:
         if not os.path.isabs(path) and path[0] != '~':
             path = os.path.join('~', path)
         path = os.path.expanduser(path)
-        if not os.path.isdir(path): raise Error, 'MH() path not found'
+        if not os.path.isdir(path): raise Error('MH() path not found')
         self.path = path
 
     def __repr__(self):
@@ -243,7 +243,7 @@ class Folder:
         self.mh = mh
         self.name = name
         if not os.path.isdir(self.getfullname()):
-            raise Error, 'no folder %s' % name
+            raise Error('no folder %s' % name)
 
     def __repr__(self):
         """String representation."""
@@ -282,8 +282,7 @@ class Folder:
         for name in os.listdir(self.getfullname()):
             if match(name):
                 append(name)
-        messages = map(int, messages)
-        messages.sort()
+        messages = sorted(map(int, messages))
         if messages:
             self.last = messages[-1]
         else:
@@ -314,7 +313,7 @@ class Folder:
         """Write the set of sequences back to the folder."""
         fullname = self.getsequencesfilename()
         f = None
-        for key, seq in sequences.iteritems():
+        for key, seq in sequences.items():
             s = IntSet('', ' ')
             s.fromlist(seq)
             if not f: f = open(fullname, 'w')
@@ -333,7 +332,7 @@ class Folder:
         try:
             return max(seqs['cur'])
         except (ValueError, KeyError):
-            raise Error, "no cur message"
+            raise Error("no cur message")
 
     def setcurrent(self, n):
         """Set the current message."""
@@ -351,7 +350,7 @@ class Folder:
         all = self.listmessages()
         # Observed behavior: test for empty folder is done first
         if not all:
-            raise Error, "no messages in %s" % self.name
+            raise Error("no messages in %s" % self.name)
         # Common case first: all is frequently the default
         if seq == 'all':
             return all
@@ -362,7 +361,7 @@ class Folder:
             if tail[:1] in '-+':
                 dir, tail = tail[:1], tail[1:]
             if not isnumeric(tail):
-                raise Error, "bad message list %s" % seq
+                raise Error("bad message list %s" % seq)
             try:
                 count = int(tail)
             except (ValueError, OverflowError):
@@ -370,15 +369,15 @@ class Folder:
                 count = len(all)
             try:
                 anchor = self._parseindex(head, all)
-            except Error, msg:
+            except Error as msg:
                 seqs = self.getsequences()
                 if not head in seqs:
                     if not msg:
                         msg = "bad message list %s" % seq
-                    raise Error, msg, sys.exc_info()[2]
+                    raise Error(msg).with_traceback(sys.exc_info()[2])
                 msgs = seqs[head]
                 if not msgs:
-                    raise Error, "sequence %s empty" % head
+                    raise Error("sequence %s empty" % head)
                 if dir == '-':
                     return msgs[-count:]
                 else:
@@ -402,24 +401,24 @@ class Folder:
             j = bisect(all, end)
             r = all[i:j]
             if not r:
-                raise Error, "bad message list %s" % seq
+                raise Error("bad message list %s" % seq)
             return r
         # Neither X:Y nor X-Y; must be a number or a (pseudo-)sequence
         try:
             n = self._parseindex(seq, all)
-        except Error, msg:
+        except Error as msg:
             seqs = self.getsequences()
             if not seq in seqs:
                 if not msg:
                     msg = "bad message list %s" % seq
-                raise Error, msg
+                raise Error(msg)
             return seqs[seq]
         else:
             if n not in all:
                 if isnumeric(seq):
-                    raise Error, "message %d doesn't exist" % n
+                    raise Error("message %d doesn't exist" % n)
                 else:
-                    raise Error, "no %s message" % seq
+                    raise Error("no %s message" % seq)
             else:
                 return [n]
 
@@ -442,17 +441,17 @@ class Folder:
             try:
                 return all[i]
             except IndexError:
-                raise Error, "no next message"
+                raise Error("no next message")
         if seq == 'prev':
             n = self.getcurrent()
             i = bisect(all, n-1)
             if i == 0:
-                raise Error, "no prev message"
+                raise Error("no prev message")
             try:
                 return all[i-1]
             except IndexError:
-                raise Error, "no prev message"
-        raise Error, None
+                raise Error("no prev message")
+        raise Error()
 
     def openmessage(self, n):
         """Open a message -- returns a Message object."""
@@ -471,7 +470,7 @@ class Folder:
                 pass
             try:
                 os.rename(path, commapath)
-            except os.error, msg:
+            except os.error as msg:
                 errors.append(msg)
             else:
                 deleted.append(n)
@@ -479,9 +478,9 @@ class Folder:
             self.removefromallsequences(deleted)
         if errors:
             if len(errors) == 1:
-                raise os.error, errors[0]
+                raise os.error(errors[0])
             else:
-                raise os.error, ('multiple errors:', errors)
+                raise os.error('multiple errors:', errors)
 
     def refilemessages(self, list, tofolder, keepsequences=0):
         """Refile one or more messages -- may raise os.error.
@@ -499,7 +498,7 @@ class Folder:
                 try:
                     shutil.copy2(path, topath)
                     os.unlink(path)
-                except (IOError, os.error), msg:
+                except (IOError, os.error) as msg:
                     errors.append(msg)
                     try:
                         os.unlink(topath)
@@ -514,9 +513,9 @@ class Folder:
             self.removefromallsequences(refiled.keys())
         if errors:
             if len(errors) == 1:
-                raise os.error, errors[0]
+                raise os.error(errors[0])
             else:
-                raise os.error, ('multiple errors:', errors)
+                raise os.error('multiple errors:', errors)
 
     def _copysequences(self, fromfolder, refileditems):
         """Helper for refilemessages() to copy sequences."""
@@ -697,10 +696,7 @@ class Message(mimetools.Message):
         encoding = self.getencoding()
         if not decode or encoding in ('', '7bit', '8bit', 'binary'):
             return self.fp.read()
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from StringIO import StringIO
+        from io import StringIO
         output = StringIO()
         mimetools.decode(self.fp, output, encoding)
         return output.getvalue()
@@ -710,10 +706,10 @@ class Message(mimetools.Message):
         list of SubMessage objects.  Each submessage object behaves
         (almost) as a Message object."""
         if self.getmaintype() != 'multipart':
-            raise Error, 'Content-Type is not multipart/*'
+            raise Error('Content-Type is not multipart/*')
         bdry = self.getparam('boundary')
         if not bdry:
-            raise Error, 'multipart/* without boundary param'
+            raise Error('multipart/* without boundary param')
         self.fp.seek(self.startofbody)
         mf = multifile.MultiFile(self.fp)
         mf.push(bdry)
@@ -828,7 +824,7 @@ class IntSet:
     def tolist(self):
         l = []
         for lo, hi in self.pairs:
-            m = range(lo, hi+1)
+            m = list(range(lo, hi+1))
             l = l + m
         return l
 
@@ -894,7 +890,7 @@ class IntSet:
             elif len(list) == 2 and list[0] <= list[1]:
                 new.append((list[0], list[1]))
             else:
-                raise ValueError, 'bad data passed to IntSet'
+                raise ValueError('bad data passed to IntSet')
         self.pairs = self.pairs + new
         self.normalize()
 
@@ -959,7 +955,7 @@ def test():
     global mh, f
     os.system('rm -rf $HOME/Mail/@test')
     mh = MH()
-    def do(s): print s; print eval(s)
+    def do(s): print(s); print(eval(s))
     do('mh.listfolders()')
     do('mh.listallfolders()')
     testfolders = ['@test', '@test/test1', '@test/test2',
@@ -974,7 +970,7 @@ def test():
     do('f.getsequences()')
     seqs = f.getsequences()
     seqs['foo'] = IntSet('1-10 12-20', ' ').tolist()
-    print seqs
+    print(seqs)
     f.putsequences(seqs)
     do('f.getsequences()')
     for t in reversed(testfolders): do('mh.deletefolder(%r)' % (t,))
@@ -989,11 +985,11 @@ def test():
                 'all'):
         try:
             do('f.parsesequence(%r)' % (seq,))
-        except Error, msg:
-            print "Error:", msg
+        except Error as msg:
+            print("Error:", msg)
         stuff = os.popen("pick %r 2>/dev/null" % (seq,)).read()
         list = map(int, stuff.split())
-        print list, "<-- pick"
+        print(list, "<-- pick")
     do('f.listmessages()')
 
 

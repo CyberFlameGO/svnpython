@@ -83,8 +83,7 @@ slightly different way:
    ``next`` (all these commands are explained below).  The optional *globals* and
    *locals* arguments specify the environment in which the code is executed; by
    default the dictionary of the module :mod:`__main__` is used.  (See the
-   explanation of the :keyword:`exec` statement or the :func:`eval` built-in
-   function.)
+   explanation of the built-in :func:`exec` or :func:`eval` functions.)
 
 
 .. function:: runeval(expression[, globals[, locals]])

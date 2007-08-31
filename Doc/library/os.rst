@@ -64,7 +64,7 @@ module.
 
    The name of the operating system dependent module imported.  The following names
    have currently been registered: ``'posix'``, ``'nt'``, ``'mac'``, ``'os2'``,
-   ``'ce'``, ``'java'``, ``'riscos'``.
+   ``'ce'``, ``'java'``.
 
 
 .. data:: path
@@ -398,82 +398,6 @@ These functions create new file objects. (See also :func:`open`.)
    directory entries associated with it and will be automatically deleted once
    there are no file descriptors for the file. Availability: Macintosh, Unix,
    Windows.
-
-There are a number of different :func:`popen\*` functions that provide slightly
-different ways to create subprocesses.
-
-.. deprecated:: 2.6
-   All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-   module.
-
-For each of the :func:`popen\*` variants, if *bufsize* is specified, it
-specifies the buffer size for the I/O pipes. *mode*, if provided, should be the
-string ``'b'`` or ``'t'``; on Windows this is needed to determine whether the
-file objects should be opened in binary or text mode.  The default value for
-*mode* is ``'t'``.
-
-Also, for each of these variants, on Unix, *cmd* may be a sequence, in which
-case arguments will be passed directly to the program without shell intervention
-(as with :func:`os.spawnv`). If *cmd* is a string it will be passed to the shell
-(as with :func:`os.system`).
-
-These methods do not make it possible to retrieve the exit status from the child
-processes.  The only way to control the input and output streams and also
-retrieve the return codes is to use the :mod:`subprocess` module; these are only
-available on Unix.
-
-For a discussion of possible deadlock conditions related to the use of these
-functions, see :ref:`popen2-flow-control`.
-
-
-.. function:: popen2(cmd[, mode[, bufsize]])
-
-   Executes *cmd* as a sub-process.  Returns the file objects ``(child_stdin,
-   child_stdout)``.
-
-   .. deprecated:: 2.6
-      All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-      module.
-
-   Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 2.0
-
-
-.. function:: popen3(cmd[, mode[, bufsize]])
-
-   Executes *cmd* as a sub-process.  Returns the file objects ``(child_stdin,
-   child_stdout, child_stderr)``.
-
-   .. deprecated:: 2.6
-      All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-      module.
-
-   Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 2.0
-
-
-.. function:: popen4(cmd[, mode[, bufsize]])
-
-   Executes *cmd* as a sub-process.  Returns the file objects ``(child_stdin,
-   child_stdout_and_stderr)``.
-
-   .. deprecated:: 2.6
-      All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-      module.
-
-   Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 2.0
-
-(Note that ``child_stdin, child_stdout, and child_stderr`` are named from the
-point of view of the child process, so *child_stdin* is the child's standard
-input.)
-
-This functionality is also available in the :mod:`popen2` module using functions
-of the same names, but the return values of those functions have a different
-order.
 
 
 .. _os-fd-ops:
@@ -844,7 +768,6 @@ Files and Directories
    following values (as defined in the :mod:`stat` module) or bitwise or-ed
    combinations of them:
 
-
    * ``stat.S_ISUID``
    * ``stat.S_ISGID``
    * ``stat.S_ENFMT``
@@ -1134,9 +1057,6 @@ Files and Directories
 
    On Mac OS systems, the following attributes may also be available:
    :attr:`st_rsize`, :attr:`st_creator`, :attr:`st_type`.
-
-   On RISCOS systems, the following attributes are also available: :attr:`st_ftype`
-   (file type), :attr:`st_attrs` (attributes), :attr:`st_obtype` (object type).
 
    .. index:: module: stat
 
@@ -1656,9 +1576,6 @@ written in Python, such as a mail server's external command delivery program.
 
 
 .. function:: popen(...)
-              popen2(...)
-              popen3(...)
-              popen4(...)
    :noindex:
 
    Run child processes, returning opened pipes for communications.  These functions

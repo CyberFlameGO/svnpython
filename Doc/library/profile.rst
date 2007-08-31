@@ -295,13 +295,13 @@ reading the source code for these modules.
 
 .. function:: run(command[, filename])
 
-   This function takes a single argument that can be passed to the
-   :keyword:`exec` statement, and an optional file name.  In all cases this
-   routine attempts to :keyword:`exec` its first argument, and gather profiling
-   statistics from the execution. If no file name is present, then this function
-   automatically prints a simple profiling report, sorted by the standard name
-   string (file/line/function-name) that is presented in each line.  The
-   following is a typical output from such a call::
+   This function takes a single argument that can be passed to the :func:`exec`
+   function, and an optional file name.  In all cases this routine attempts to
+   :func:`exec` its first argument, and gather profiling statistics from the
+   execution. If no file name is present, then this function automatically
+   prints a simple profiling report, sorted by the standard name string
+   (file/line/function-name) that is presented in each line.  The following is a
+   typical output from such a call::
 
             2706 function calls (2004 primitive calls) in 4.504 CPU seconds
 

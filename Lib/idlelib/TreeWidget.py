@@ -19,8 +19,8 @@ import sys
 from Tkinter import *
 import imp
 
-import ZoomHeight
-from configHandler import idleConf
+from idlelib import ZoomHeight
+from idlelib.configHandler import idleConf
 
 ICONDIR = "Icons"
 
@@ -32,7 +32,7 @@ except NameError:
 if os.path.isdir(_icondir):
     ICONDIR = _icondir
 elif not os.path.isdir(ICONDIR):
-    raise RuntimeError, "can't find icon directory (%r)" % (ICONDIR,)
+    raise RuntimeError("can't find icon directory (%r)" % (ICONDIR,))
 
 def listicons(icondir=ICONDIR):
     """Utility to display the available icons."""
@@ -410,7 +410,7 @@ class FileTreeItem(TreeItem):
 
 class ScrolledCanvas:
     def __init__(self, master, **opts):
-        if not opts.has_key('yscrollincrement'):
+        if 'yscrollincrement' not in opts:
             opts['yscrollincrement'] = 17
         self.master = master
         self.frame = Frame(master)
@@ -453,7 +453,7 @@ class ScrolledCanvas:
 # Testing functions
 
 def test():
-    import PyShell
+    from idlelib import PyShell
     root = Toplevel(PyShell.root)
     root.configure(bd=0, bg="yellow")
     root.focus_set()

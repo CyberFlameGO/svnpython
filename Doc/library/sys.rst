@@ -134,10 +134,6 @@ always available.
    gets a traceback object (see the Reference Manual) which encapsulates the call
    stack at the point where the exception originally occurred.
 
-   If :func:`exc_clear` is called, this function will return three ``None`` values
-   until either another exception is raised in the current thread or the execution
-   stack returns to a frame where another exception is being handled.
-
    .. warning::
 
       Assigning the *traceback* return value to a local variable in a function that is
@@ -155,35 +151,6 @@ always available.
       Beginning with Python 2.2, such cycles are automatically reclaimed when garbage
       collection is enabled and they become unreachable, but it remains more efficient
       to avoid creating cycles.
-
-
-.. function:: exc_clear()
-
-   This function clears all information relating to the current or last exception
-   that occurred in the current thread.  After calling this function,
-   :func:`exc_info` will return three ``None`` values until another exception is
-   raised in the current thread or the execution stack returns to a frame where
-   another exception is being handled.
-
-   This function is only needed in only a few obscure situations.  These include
-   logging and error handling systems that report information on the last or
-   current exception.  This function can also be used to try to free resources and
-   trigger object finalization, though no guarantee is made as to what objects will
-   be freed, if any.
-
-   .. versionadded:: 2.3
-
-
-.. data:: exc_type
-          exc_value
-          exc_traceback
-
-   .. deprecated:: 1.5
-      Use :func:`exc_info` instead.
-
-   Since they are global variables, they are not specific to the current thread, so
-   their use is not safe in a multi-threaded program.  When no exception is being
-   handled, ``exc_type`` is set to ``None`` and the other two are undefined.
 
 
 .. data:: exec_prefix
@@ -221,23 +188,6 @@ always available.
    ``sys.stderr`` and results in an exit code of 1.  In particular,
    ``sys.exit("some error message")`` is a quick way to exit a program when an
    error occurs.
-
-
-.. data:: exitfunc
-
-   This value is not actually defined by the module, but can be set by the user (or
-   by a program) to specify a clean-up action at program exit.  When set, it should
-   be a parameterless function.  This function will be called when the interpreter
-   exits.  Only one function may be installed in this way; to allow multiple
-   functions which will be called at termination, use the :mod:`atexit` module.
-
-   .. note::
-
-      The exit function is not called when the program is killed by a signal, when a
-      Python fatal internal error is detected, or when ``os._exit()`` is called.
-
-   .. deprecated:: 2.4
-      Use :mod:`atexit` instead.
 
 
 .. function:: getcheckinterval()
@@ -359,6 +309,22 @@ always available.
    .. versionadded:: 1.5.2
 
 
+.. function:: intern(string)
+
+   Enter *string* in the table of "interned" strings and return the interned string
+   -- which is *string* itself or a copy. Interning strings is useful to gain a
+   little performance on dictionary lookup -- if the keys in a dictionary are
+   interned, and the lookup key is interned, the key comparisons (after hashing)
+   can be done by a pointer compare instead of a string compare.  Normally, the
+   names used in Python programs are automatically interned, and the dictionaries
+   used to hold module, class or instance attributes have interned keys.
+
+   .. versionchanged:: 2.3
+      Interned strings are not immortal (like they used to be in Python 2.2 and
+      before); you must keep a reference to the return value of :func:`intern` around
+      to benefit from it.
+
+
 .. data:: last_type
           last_value
           last_traceback
@@ -393,12 +359,8 @@ always available.
 
 .. data:: modules
 
-   .. index:: builtin: reload
-
    This is a dictionary that maps module names to modules which have already been
    loaded.  This can be manipulated to force reloading of modules and other tricks.
-   Note that removing a module from this dictionary is *not* the same as calling
-   :func:`reload` on the corresponding module object.
 
 
 .. data:: path
@@ -560,21 +522,15 @@ always available.
           stdout
           stderr
 
-   .. index::
-      builtin: input
-      builtin: raw_input
-
    File objects corresponding to the interpreter's standard input, output and error
-   streams.  ``stdin`` is used for all interpreter input except for scripts but
-   including calls to :func:`input` and :func:`raw_input`.  ``stdout`` is used for
-   the output of :keyword:`print` and expression statements and for the prompts of
-   :func:`input` and :func:`raw_input`. The interpreter's own prompts and (almost
-   all of) its error messages go to ``stderr``.  ``stdout`` and ``stderr`` needn't
-   be built-in file objects: any object is acceptable as long as it has a
-   :meth:`write` method that takes a string argument.  (Changing these objects
-   doesn't affect the standard I/O streams of processes executed by
-   :func:`os.popen`, :func:`os.system` or the :func:`exec\*` family of functions in
-   the :mod:`os` module.)
+   streams.  ``stdin`` is used for all interpreter input except for scripts.
+   ``stdout`` is used for the output of :keyword:`print` and expression statements.
+   The interpreter's own prompts and (almost all of) its error messages go to
+   ``stderr``.  ``stdout`` and ``stderr`` needn't be built-in file objects: any
+   object is acceptable as long as it has a :meth:`write` method that takes a
+   string argument.  (Changing these objects doesn't affect the standard I/O
+   streams of processes executed by :func:`os.popen`, :func:`os.system` or the
+   :func:`exec\*` family of functions in the :mod:`os` module.)
 
 
 .. data:: __stdin__

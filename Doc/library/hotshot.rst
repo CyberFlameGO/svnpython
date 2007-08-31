@@ -68,7 +68,7 @@ Profile objects have the following methods:
 
 .. method:: Profile.run(cmd)
 
-   Profile an :keyword:`exec`\ -compatible string in the script environment. The
+   Profile an :func:`exec`\ -compatible string in the script environment. The
    globals from the :mod:`__main__` module are used as both the globals and locals
    for the script.
 
@@ -83,7 +83,7 @@ Profile objects have the following methods:
 
 .. method:: Profile.runctx(cmd, globals, locals)
 
-   Evaluate an :keyword:`exec`\ -compatible string in a specific environment. The
+   Profile an :func:`exec`\ -compatible string in a specific environment. The
    string is compiled before profiling begins.
 
 

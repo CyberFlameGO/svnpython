@@ -6,7 +6,7 @@
 :Release: |release|
 :Date: |today|
 
-.. % $Id: whatsnew26.tex 55746 2007-06-02 18:33:53Z neal.norwitz $
+.. % $Id: whatsnew26.tex 55963 2007-06-13 18:07:49Z guido.van.rossum $
 .. % Rules for maintenance:
 .. % 
 .. % * Anyone can add text to this document.  Do not spend very much time

@@ -71,15 +71,11 @@ over 2500 additional components available from the `Python Package Index
    trace.rst
    python.rst
    custominterp.rst
-   restricted.rst
    modules.rst
    language.rst
-   compiler.rst
    misc.rst
    windows.rst
    unix.rst
    mac.rst
    macosa.rst
-   sgi.rst
-   sun.rst
    undoc.rst

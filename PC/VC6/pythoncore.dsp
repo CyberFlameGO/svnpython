@@ -273,10 +273,6 @@ SOURCE=..\config.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\Modules\cPickle.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\Modules\zlib\crc32.c
 # End Source File
 # Begin Source File
@@ -428,10 +424,6 @@ SOURCE=..\..\Modules\zlib\inflate.c
 # Begin Source File
 
 SOURCE=..\..\Modules\zlib\inftrees.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Objects\intobject.c
 # End Source File
 # Begin Source File
 
@@ -616,10 +608,6 @@ SOURCE=..\..\Objects\sliceobject.c
 # Begin Source File
 
 SOURCE=..\..\Objects\stringobject.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\Modules\stropmodule.c
 # End Source File
 # Begin Source File
 

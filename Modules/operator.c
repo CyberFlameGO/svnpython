@@ -65,13 +65,11 @@ used for special class methods; variants without leading and trailing\n\
   if(! PyArg_UnpackTuple(a,#OP,2,2,&a1,&a2)) return NULL; \
   return PyObject_RichCompare(a1,a2,A); }
 
-spami(isCallable       , PyCallable_Check)
 spami(isNumberType     , PyNumber_Check)
 spami(truth            , PyObject_IsTrue)
 spam2(op_add           , PyNumber_Add)
 spam2(op_sub           , PyNumber_Subtract)
 spam2(op_mul           , PyNumber_Multiply)
-spam2(op_div           , PyNumber_Divide)
 spam2(op_floordiv      , PyNumber_FloorDivide)
 spam2(op_truediv       , PyNumber_TrueDivide)
 spam2(op_mod           , PyNumber_Remainder)
@@ -89,7 +87,6 @@ spam2(op_or_           , PyNumber_Or)
 spam2(op_iadd          , PyNumber_InPlaceAdd)
 spam2(op_isub          , PyNumber_InPlaceSubtract)
 spam2(op_imul          , PyNumber_InPlaceMultiply)
-spam2(op_idiv          , PyNumber_InPlaceDivide)
 spam2(op_ifloordiv     , PyNumber_InPlaceFloorDivide)
 spam2(op_itruediv      , PyNumber_InPlaceTrueDivide)
 spam2(op_imod          , PyNumber_InPlaceRemainder)
@@ -104,7 +101,6 @@ spamoi(op_repeat       , PySequence_Repeat)
 spam2(op_iconcat       , PySequence_InPlaceConcat)
 spamoi(op_irepeat      , PySequence_InPlaceRepeat)
 spami2b(op_contains     , PySequence_Contains)
-spami2b(sequenceIncludes, PySequence_Contains)
 spamn2(indexOf         , PySequence_Index)
 spamn2(countOf         , PySequence_Count)
 spami(isMappingType    , PyMapping_Check)
@@ -218,8 +214,6 @@ op_delslice(PyObject *s, PyObject *a)
 
 static struct PyMethodDef operator_methods[] = {
 
-spam1o(isCallable,
- "isCallable(a) -- Same as callable(a).")
 spam1o(isNumberType,
  "isNumberType(a) -- Return True if a has a numeric type, False otherwise.")
 spam1o(isSequenceType,
@@ -228,8 +222,6 @@ spam1o(truth,
  "truth(a) -- Return True if a is true, False otherwise.")
 spam2(contains,__contains__,
  "contains(a, b) -- Same as b in a (note reversed operands).")
-spam1(sequenceIncludes,
- "sequenceIncludes(a, b) -- Same as b in a (note reversed operands; deprecated).")
 spam1(indexOf,
  "indexOf(a, b) -- Return the first index of b in a.")
 spam1(countOf,
@@ -243,9 +235,8 @@ spam2o(index, __index__, "index(a) -- Same as a.__index__()")
 spam2(add,__add__, "add(a, b) -- Same as a + b.")
 spam2(sub,__sub__, "sub(a, b) -- Same as a - b.")
 spam2(mul,__mul__, "mul(a, b) -- Same as a * b.")
-spam2(div,__div__, "div(a, b) -- Same as a / b when __future__.division is not in effect.")
 spam2(floordiv,__floordiv__, "floordiv(a, b) -- Same as a // b.")
-spam2(truediv,__truediv__, "truediv(a, b) -- Same as a / b when __future__.division is in effect.")
+spam2(truediv,__truediv__, "truediv(a, b) -- Same as a / b.")
 spam2(mod,__mod__, "mod(a, b) -- Same as a % b.")
 spam2o(neg,__neg__, "neg(a) -- Same as -a.")
 spam2o(pos,__pos__, "pos(a) -- Same as +a.")
@@ -261,9 +252,8 @@ spam2(or_,__or__, "or_(a, b) -- Same as a | b.")
 spam2(iadd,__iadd__, "iadd(a, b) -- Same as a += b.")
 spam2(isub,__isub__, "isub(a, b) -- Same as a -= b.")
 spam2(imul,__imul__, "imul(a, b) -- Same as a *= b.")
-spam2(idiv,__idiv__, "idiv(a, b) -- Same as a /= b when __future__.division is not in effect.")
 spam2(ifloordiv,__ifloordiv__, "ifloordiv(a, b) -- Same as a //= b.")
-spam2(itruediv,__itruediv__, "itruediv(a, b) -- Same as a /= b when __future__.division is in effect.")
+spam2(itruediv,__itruediv__, "itruediv(a, b) -- Same as a /= b.")
 spam2(imod,__imod__, "imod(a, b) -- Same as a %= b.")
 spam2(ilshift,__ilshift__, "ilshift(a, b) -- Same as a <<= b.")
 spam2(irshift,__irshift__, "irshift(a, b) -- Same as a >>= b.")

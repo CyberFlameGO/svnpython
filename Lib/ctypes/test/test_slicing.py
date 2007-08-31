@@ -5,8 +5,8 @@ import _ctypes_test
 
 class SlicesTestCase(unittest.TestCase):
     def test_getslice_cint(self):
-        a = (c_int * 100)(*xrange(1100, 1200))
-        b = range(1100, 1200)
+        a = (c_int * 100)(*range(1100, 1200))
+        b = list(range(1100, 1200))
         self.failUnlessEqual(a[0:2], b[0:2])
         self.failUnlessEqual(a[0:2:], b[0:2:])
         self.failUnlessEqual(len(a), len(b))
@@ -21,20 +21,20 @@ class SlicesTestCase(unittest.TestCase):
         self.failUnlessEqual(a[2:6:4], b[2:6:4])
 
         a[0:5] = range(5, 10)
-        self.failUnlessEqual(a[0:5], range(5, 10))
-        self.failUnlessEqual(a[0:5:], range(5, 10))
-        self.failUnlessEqual(a[4::-1], range(9, 4, -1))
+        self.failUnlessEqual(a[0:5], list(range(5, 10)))
+        self.failUnlessEqual(a[0:5:], list(range(5, 10)))
+        self.failUnlessEqual(a[4::-1], list(range(9, 4, -1)))
 
     def test_setslice_cint(self):
-        a = (c_int * 100)(*xrange(1100, 1200))
-        b = range(1100, 1200)
+        a = (c_int * 100)(*range(1100, 1200))
+        b = list(range(1100, 1200))
 
-        a[32:47] = range(32, 47)
-        self.failUnlessEqual(a[32:47], range(32, 47))
+        a[32:47] = list(range(32, 47))
+        self.failUnlessEqual(a[32:47], list(range(32, 47)))
         a[32:47] = range(132, 147)
-        self.failUnlessEqual(a[32:47:], range(132, 147))
+        self.failUnlessEqual(a[32:47:], list(range(132, 147)))
         a[46:31:-1] = range(232, 247)
-        self.failUnlessEqual(a[32:47:1], range(246, 231, -1))
+        self.failUnlessEqual(a[32:47:1], list(range(246, 231, -1)))
 
         a[32:47] = range(1132, 1147)
         self.failUnlessEqual(a[:], b)
@@ -63,7 +63,7 @@ class SlicesTestCase(unittest.TestCase):
         self.assertRaises(ValueError, setitem, a, slice(0, 5), range(32))
 
     def test_char_ptr(self):
-        s = "abcdefghijklmnopqrstuvwxyz"
+        s = b"abcdefghijklmnopqrstuvwxyz"
 
         dll = CDLL(_ctypes_test.__file__)
         dll.my_strdup.restype = POINTER(c_char)
@@ -87,20 +87,20 @@ class SlicesTestCase(unittest.TestCase):
                           res, slice(-5, None, None))
 
         self.assertRaises(TypeError, operator.setslice,
-                          res, 0, 5, u"abcde")
+                          res, 0, 5, "abcde")
         self.assertRaises(TypeError, operator.setitem,
-                          res, slice(0, 5), u"abcde")
+                          res, slice(0, 5), "abcde")
         dll.my_free(res)
 
         dll.my_strdup.restype = POINTER(c_byte)
         res = dll.my_strdup(s)
-        self.failUnlessEqual(res[:len(s)], range(ord("a"), ord("z")+1))
-        self.failUnlessEqual(res[:len(s):], range(ord("a"), ord("z")+1))
+        self.failUnlessEqual(res[:len(s)], list(range(ord("a"), ord("z")+1)))
+        self.failUnlessEqual(res[:len(s):], list(range(ord("a"), ord("z")+1)))
         dll.my_free(res)
 
     def test_char_ptr_with_free(self):
         dll = CDLL(_ctypes_test.__file__)
-        s = "abcdefghijklmnopqrstuvwxyz"
+        s = b"abcdefghijklmnopqrstuvwxyz"
 
         class allocated_c_char_p(c_char_p):
             pass
@@ -115,7 +115,7 @@ class SlicesTestCase(unittest.TestCase):
         dll.my_strdup.errcheck = errcheck
         try:
             res = dll.my_strdup(s)
-            self.failUnlessEqual(res, s)
+            self.failUnlessEqual(res, str(s))
         finally:
             del dll.my_strdup.errcheck
 
@@ -137,7 +137,7 @@ class SlicesTestCase(unittest.TestCase):
         pass
     else:
         def test_wchar_ptr(self):
-            s = u"abcdefghijklmnopqrstuvwxyz\0"
+            s = "abcdefghijklmnopqrstuvwxyz\0"
 
             dll = CDLL(_ctypes_test.__file__)
             dll.my_wcsdup.restype = POINTER(c_wchar)
@@ -151,9 +151,9 @@ class SlicesTestCase(unittest.TestCase):
 
             import operator
             self.assertRaises(TypeError, operator.setslice,
-                              res, 0, 5, u"abcde")
+                              res, 0, 5, "abcde")
             self.assertRaises(TypeError, operator.setitem,
-                              res, slice(0, 5), u"abcde")
+                              res, slice(0, 5), "abcde")
             dll.my_free(res)
 
             if sizeof(c_wchar) == sizeof(c_short):
@@ -165,7 +165,7 @@ class SlicesTestCase(unittest.TestCase):
             else:
                 return
             res = dll.my_wcsdup(s)
-            tmpl = range(ord("a"), ord("z")+1)
+            tmpl = list(range(ord("a"), ord("z")+1))
             self.failUnlessEqual(res[:len(s)-1], tmpl)
             self.failUnlessEqual(res[:len(s)-1:], tmpl)
             self.failUnlessEqual(res[len(s)-2:-1:-1], tmpl[::-1])

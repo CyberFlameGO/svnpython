@@ -14,7 +14,8 @@ multiple base classes, a derived class can override any methods of its base
 class or classes, and a method can call the method of a base class with the same
 name.  Objects can contain an arbitrary amount of private data.
 
-In C++ terminology, all class members (including the data members) are *public*,
+In C++ terminology, normally class members (including the data members) are 
+*public* (except see below :ref:`tut-private`),
 and all member functions are *virtual*.  There are no special constructors or
 destructors.  As in Modula-3, there are no shorthands for referencing the
 object's members from its methods: the method function is declared with an
@@ -273,7 +274,7 @@ code will print the value ``16``, without leaving a trace::
    x.counter = 1
    while x.counter < 10:
        x.counter = x.counter * 2
-   print x.counter
+   print(x.counter)
    del x.counter
 
 The other kind of instance attribute reference is a *method*. A method is a
@@ -308,7 +309,7 @@ object, and can be stored away and called at a later time.  For example::
 
    xf = x.f
    while True:
-       print xf()
+       print(xf())
 
 will continue to print ``hello world`` until the end of time.
 
@@ -541,7 +542,7 @@ as in the debugger, and that's one reason why this loophole is not closed.
 (Buglet: derivation of a class with the same name as the base class makes use of
 private variables of the base class possible.)
 
-Notice that code passed to ``exec``, ``eval()`` or ``execfile()`` does not
+Notice that code passed to ``exec()`` or ``eval()`` does not
 consider the classname of the invoking  class to be the current class; this is
 similar to the effect of the  ``global`` statement, the effect of which is
 likewise restricted to  code that is byte-compiled together.  The same
@@ -621,11 +622,11 @@ following code will print B, C, D in that order::
        try:
            raise c()
        except D:
-           print "D"
+           print("D")
        except C:
-           print "C"
+           print("C")
        except B:
-           print "B"
+           print("B")
 
 Note that if the except clauses were reversed (with ``except B`` first), it
 would have printed B, B, B --- the first matching except clause is triggered.
@@ -644,45 +645,46 @@ By now you have probably noticed that most container objects can be looped over
 using a :keyword:`for` statement::
 
    for element in [1, 2, 3]:
-       print element
+       print(element)
    for element in (1, 2, 3):
-       print element
+       print(element)
    for key in {'one':1, 'two':2}:
-       print key
+       print(key)
    for char in "123":
-       print char
+       print(char)
    for line in open("myfile.txt"):
-       print line
+       print(line)
 
 This style of access is clear, concise, and convenient.  The use of iterators
 pervades and unifies Python.  Behind the scenes, the :keyword:`for` statement
 calls :func:`iter` on the container object.  The function returns an iterator
-object that defines the method :meth:`next` which accesses elements in the
-container one at a time.  When there are no more elements, :meth:`next` raises a
-:exc:`StopIteration` exception which tells the :keyword:`for` loop to terminate.
-This example shows how it all works::
+object that defines the method :meth:`__next__` which accesses elements in the
+container one at a time.  When there are no more elements, :meth:`__next__`
+raises a :exc:`StopIteration` exception which tells the :keyword:`for` loop to
+terminate.  You can call the :meth:`__next__` method using the :func:`next`
+builtin; this example shows how it all works::
 
    >>> s = 'abc'
    >>> it = iter(s)
    >>> it
    <iterator object at 0x00A1DB50>
-   >>> it.next()
+   >>> next(it)
    'a'
-   >>> it.next()
+   >>> next(it)
    'b'
-   >>> it.next()
+   >>> next(it)
    'c'
-   >>> it.next()
+   >>> next(it)
 
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
-       it.next()
+       next(it)
    StopIteration
 
 Having seen the mechanics behind the iterator protocol, it is easy to add
 iterator behavior to your classes.  Define a :meth:`__iter__` method which
-returns an object with a :meth:`next` method.  If the class defines
-:meth:`next`, then :meth:`__iter__` can just return ``self``::
+returns an object with a :meth:`__next__` method.  If the class defines
+:meth:`__next__`, then :meth:`__iter__` can just return ``self``::
 
    class Reverse:
        "Iterator for looping over a sequence backwards"
@@ -691,14 +693,14 @@ returns an object with a :meth:`next` method.  If the class defines
            self.index = len(data)
        def __iter__(self):
            return self
-       def next(self):
+       def __next__(self):
            if self.index == 0:
                raise StopIteration
            self.index = self.index - 1
            return self.data[self.index]
 
    >>> for char in Reverse('spam'):
-   ...     print char
+   ...     print(char)
    ...
    m
    a
@@ -713,7 +715,7 @@ Generators
 
 Generators are a simple and powerful tool for creating iterators.  They are
 written like regular functions but use the :keyword:`yield` statement whenever
-they want to return data.  Each time :meth:`next` is called, the generator
+they want to return data.  Each time :func:`next` is called on it, the generator
 resumes where it left-off (it remembers all the data values and which statement
 was last executed).  An example shows that generators can be trivially easy to
 create::
@@ -723,7 +725,7 @@ create::
            yield data[index]
 
    >>> for char in reverse('golf'):
-   ...     print char
+   ...     print(char)
    ...
    f
    l
@@ -732,7 +734,7 @@ create::
 
 Anything that can be done with generators can also be done with class based
 iterators as described in the previous section.  What makes generators so
-compact is that the :meth:`__iter__` and :meth:`next` methods are created
+compact is that the :meth:`__iter__` and :meth:`__next__` methods are created
 automatically.
 
 Another key feature is that the local variables and execution state are

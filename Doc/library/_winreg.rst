@@ -382,7 +382,7 @@ All registry functions in this module return one of these objects.
 All registry functions in this module which accept a handle object  also accept
 an integer, however, use of the handle object is  encouraged.
 
-Handle objects provide semantics for :meth:`__nonzero__` - thus  ::
+Handle objects provide semantics for :meth:`__bool__` - thus  ::
 
    if handle:
        print "Yes"

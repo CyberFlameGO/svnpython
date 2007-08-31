@@ -53,7 +53,7 @@ truth tests, identity tests, and boolean operations:
 
    Return the outcome of :keyword:`not` *o*.  (Note that there is no
    :meth:`__not__` method for object instances; only the interpreter core defines
-   this operation.  The result is affected by the :meth:`__nonzero__` and
+   this operation.  The result is affected by the :meth:`__bool__` and
    :meth:`__len__` methods.)
 
 

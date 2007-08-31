@@ -1,10 +1,3 @@
-# changes by dscherer@cmu.edu
-#   - IOBinding.open() replaces the current window with the opened file,
-#     if the current window is both unmodified and unnamed
-#   - IOBinding.loadfile() interprets Windows, UNIX, and Macintosh
-#     end-of-line conventions, instead of relying on the standard library,
-#     which will only understand the local convention.
-
 import os
 import types
 import sys
@@ -16,7 +9,7 @@ import re
 from Tkinter import *
 from SimpleDialog import SimpleDialog
 
-from configHandler import idleConf
+from idlelib.configHandler import idleConf
 
 try:
     from codecs import BOM_UTF8
@@ -123,6 +116,8 @@ def coding_spec(str):
 
     Raise LookupError if the encoding is declared but unknown.
     """
+    # perform string manipulation in latin-1
+    str = str.decode("latin-1")
     # Only consider the first two lines
     str = str.split("\n")[:2]
     str = "\n".join(str)
@@ -137,7 +132,7 @@ def coding_spec(str):
         codecs.lookup(name)
     except LookupError:
         # The standard encoding error does not indicate the encoding
-        raise LookupError, "Unknown encoding "+name
+        raise LookupError("Unknown encoding "+name)
     return name
 
 
@@ -242,24 +237,19 @@ class IOBinding:
     def loadfile(self, filename):
         try:
             # open the file in binary mode so that we can handle
-            #   end-of-line convention ourselves.
+            # end-of-line convention ourselves.
             f = open(filename,'rb')
             chars = f.read()
             f.close()
-        except IOError, msg:
+        except IOError as msg:
             tkMessageBox.showerror("I/O Error", str(msg), master=self.text)
             return False
-
         chars = self.decode(chars)
         # We now convert all end-of-lines to '\n's
         firsteol = self.eol_re.search(chars)
         if firsteol:
             self.eol_convention = firsteol.group(0)
-            if isinstance(self.eol_convention, unicode):
-                # Make sure it is an ASCII string
-                self.eol_convention = self.eol_convention.encode("ascii")
             chars = self.eol_re.sub(r"\n", chars)
-
         self.text.delete("1.0", "end")
         self.set_filename(None)
         self.text.insert("1.0", chars)
@@ -289,7 +279,7 @@ class IOBinding:
         # Next look for coding specification
         try:
             enc = coding_spec(chars)
-        except LookupError, name:
+        except LookupError as name:
             tkMessageBox.showerror(
                 title="Error loading the file",
                 message="The encoding '%s' is not known to this Python "\
@@ -298,18 +288,18 @@ class IOBinding:
             enc = None
         if enc:
             try:
-                return unicode(chars, enc)
+                return str(chars, enc)
             except UnicodeError:
                 pass
         # If it is ASCII, we need not to record anything
         try:
-            return unicode(chars, 'ascii')
+            return str(chars, 'ascii')
         except UnicodeError:
             pass
         # Finally, try the locale's encoding. This is deprecated;
         # the user should declare a non-ASCII encoding
         try:
-            chars = unicode(chars, encoding)
+            chars = str(chars, encoding)
             self.fileencoding = encoding
         except UnicodeError:
             pass
@@ -380,13 +370,13 @@ class IOBinding:
             f.flush()
             f.close()
             return True
-        except IOError, msg:
+        except IOError as msg:
             tkMessageBox.showerror("I/O Error", str(msg),
                                    master=self.text)
             return False
 
     def encode(self, chars):
-        if isinstance(chars, types.StringType):
+        if isinstance(chars, bytes):
             # This is either plain ASCII, or Tk was returning mixed-encoding
             # text to us. Don't try to guess further.
             return chars
@@ -400,7 +390,7 @@ class IOBinding:
         try:
             enc = coding_spec(chars)
             failed = None
-        except LookupError, msg:
+        except LookupError as msg:
             failed = msg
             enc = None
         if enc:
@@ -522,8 +512,7 @@ class IOBinding:
             self.opendialog = tkFileDialog.Open(master=self.text,
                                                 filetypes=self.filetypes)
         filename = self.opendialog.show(initialdir=dir, initialfile=base)
-        if isinstance(filename, unicode):
-            filename = filename.encode(filesystemencoding)
+        assert isinstance(filename, str)
         return filename
 
     def defaultfilename(self, mode="open"):
@@ -544,13 +533,12 @@ class IOBinding:
             self.savedialog = tkFileDialog.SaveAs(master=self.text,
                                                   filetypes=self.filetypes)
         filename = self.savedialog.show(initialdir=dir, initialfile=base)
-        if isinstance(filename, unicode):
-            filename = filename.encode(filesystemencoding)
         return filename
 
     def updaterecentfileslist(self,filename):
         "Update recent file list on all editor windows"
-        self.editwin.update_recent_files_list(filename)
+        if self.editwin.flist:
+            self.editwin.update_recent_files_list(filename)
 
 def test():
     root = Tk()

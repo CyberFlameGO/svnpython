@@ -174,7 +174,7 @@ class XMLRPCDocGenerator:
         methods = {}
 
         for method_name in self.system_listMethods():
-            if self.funcs.has_key(method_name):
+            if method_name in self.funcs:
                 method = self.funcs[method_name]
             elif self.instance is not None:
                 method_info = [None, None] # argspec, documentation
@@ -272,9 +272,9 @@ class DocCGIXMLRPCRequestHandler(   CGIXMLRPCRequestHandler,
 
         response = self.generate_html_documentation()
 
-        print 'Content-Type: text/html'
-        print 'Content-Length: %d' % len(response)
-        print
+        print('Content-Type: text/html')
+        print('Content-Length: %d' % len(response))
+        print()
         sys.stdout.write(response)
 
     def __init__(self):

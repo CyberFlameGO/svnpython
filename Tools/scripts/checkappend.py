@@ -50,7 +50,7 @@ def main():
     global verbose
     try:
         opts, args = getopt.getopt(sys.argv[1:], "v")
-    except getopt.error, msg:
+    except getopt.error as msg:
         errprint(str(msg) + "\n\n" + __doc__)
         return
     for opt, optarg in opts:
@@ -65,7 +65,7 @@ def main():
 def check(file):
     if os.path.isdir(file) and not os.path.islink(file):
         if verbose:
-            print "%r: listing directory" % (file,)
+            print("%r: listing directory" % (file,))
         names = os.listdir(file)
         for name in names:
             fullname = os.path.join(file, name)
@@ -77,16 +77,16 @@ def check(file):
 
     try:
         f = open(file)
-    except IOError, msg:
+    except IOError as msg:
         errprint("%r: I/O Error: %s" % (file, msg))
         return
 
     if verbose > 1:
-        print "checking %r ..." % (file,)
+        print("checking %r ..." % (file,))
 
     ok = AppendChecker(file, f).run()
     if verbose and ok:
-        print "%r: Clean bill of health." % (file,)
+        print("%r: Clean bill of health." % (file,))
 
 [FIND_DOT,
  FIND_APPEND,
@@ -104,7 +104,7 @@ class AppendChecker:
     def run(self):
         try:
             tokenize.tokenize(self.file.readline, self.tokeneater)
-        except tokenize.TokenError, msg:
+        except tokenize.TokenError as msg:
             errprint("%r: Token Error: %s" % (self.fname, msg))
             self.nerrors = self.nerrors + 1
         return self.nerrors == 0
@@ -149,8 +149,8 @@ class AppendChecker:
                         state = FIND_DOT
                 elif token == "," and self.level == 1:
                     self.nerrors = self.nerrors + 1
-                    print "%s(%d):\n%s" % (self.fname, self.lineno,
-                                           self.line)
+                    print("%s(%d):\n%s" % (self.fname, self.lineno,
+                                           self.line))
                     # don't gripe about this stmt again
                     state = FIND_STMT
 

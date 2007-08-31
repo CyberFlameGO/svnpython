@@ -844,7 +844,7 @@ condition.
 
 The following table summarizes the hierarchy of signals::
 
-   exceptions.ArithmeticError(exceptions.StandardError)
+   exceptions.ArithmeticError(exceptions.Exception)
        DecimalException
            Clamped
            DivisionByZero(DecimalException, exceptions.ZeroDivisionError)

@@ -6,18 +6,18 @@ Let's try a simple generator:
     ...    yield 2
 
     >>> for i in f():
-    ...     print i
+    ...     print(i)
     1
     2
     >>> g = f()
-    >>> g.next()
+    >>> next(g)
     1
-    >>> g.next()
+    >>> next(g)
     2
 
 "Falling off the end" stops the generator:
 
-    >>> g.next()
+    >>> next(g)
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
       File "<stdin>", line 2, in g
@@ -31,14 +31,14 @@ Let's try a simple generator:
     ...     yield 2 # never reached
     ...
     >>> g = f()
-    >>> g.next()
+    >>> next(g)
     1
-    >>> g.next()
+    >>> next(g)
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
       File "<stdin>", line 3, in f
     StopIteration
-    >>> g.next() # once stopped, can't be resumed
+    >>> next(g) # once stopped, can't be resumed
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
     StopIteration
@@ -51,13 +51,13 @@ Let's try a simple generator:
     ...     yield 2 # never reached
     ...
     >>> g = f()
-    >>> g.next()
+    >>> next(g)
     1
-    >>> g.next()
+    >>> next(g)
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
     StopIteration
-    >>> g.next()
+    >>> next(g)
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
     StopIteration
@@ -78,7 +78,7 @@ However, they are not exactly equivalent:
     ...         raise StopIteration
     ...     except:
     ...         yield 42
-    >>> print list(g2())
+    >>> print(list(g2()))
     [42]
 
 This may be surprising at first:
@@ -105,13 +105,13 @@ Generators always return to the most recent caller:
 
     >>> def creator():
     ...     r = yrange(5)
-    ...     print "creator", r.next()
+    ...     print("creator", next(r))
     ...     return r
     ...
     >>> def caller():
     ...     r = creator()
     ...     for i in r:
-    ...             print "caller", i
+    ...             print("caller", i)
     ...
     >>> caller()
     creator 0
@@ -141,10 +141,10 @@ Specification:  Yield
     running:
 
     >>> def g():
-    ...     i = me.next()
+    ...     i = next(me)
     ...     yield i
     >>> me = g()
-    >>> me.next()
+    >>> next(me)
     Traceback (most recent call last):
      ...
       File "<string>", line 2, in g
@@ -161,7 +161,7 @@ Specification: Return
         ...         return
         ...     except:
         ...        yield 1
-        >>> print list(f1())
+        >>> print(list(f1()))
         []
 
     because, as in any function, return simply exits, but
@@ -171,7 +171,7 @@ Specification: Return
         ...         raise StopIteration
         ...     except:
         ...         yield 42
-        >>> print list(f2())
+        >>> print(list(f2()))
         [42]
 
     because StopIteration is captured by a bare "except", as is any
@@ -185,13 +185,13 @@ Specification: Generators and Exception Propagation
     ...     yield f()  # the zero division exception propagates
     ...     yield 42   # and we'll never get here
     >>> k = g()
-    >>> k.next()
+    >>> next(k)
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
       File "<stdin>", line 2, in g
       File "<stdin>", line 2, in f
     ZeroDivisionError: integer division or modulo by zero
-    >>> k.next()  # and the generator cannot be resumed
+    >>> next(k)  # and the generator cannot be resumed
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
     StopIteration
@@ -221,7 +221,7 @@ Specification: Try/Except/Finally
     ...     finally:
     ...         yield 10
     ...     yield 11
-    >>> print list(f())
+    >>> print(list(f()))
     [1, 2, 4, 5, 8, 9, 10, 11]
     >>>
 
@@ -270,8 +270,8 @@ Guido's binary tree example.
     >>> t = tree("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
     >>> # Print the nodes of the tree in in-order.
     >>> for x in t:
-    ...     print x,
-    A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+    ...     print(' '+x, end='')
+     A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 
     >>> # A non-recursive generator.
     >>> def inorder(node):
@@ -291,8 +291,8 @@ Guido's binary tree example.
 
     >>> # Exercise the non-recursive generator.
     >>> for x in t:
-    ...     print x,
-    A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+    ...     print(' '+x, end='')
+     A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
 
 """
 
@@ -343,11 +343,11 @@ Next one was posted to c.l.py.
 ...         for c in gcomb(rest, k):
 ...             yield c
 
->>> seq = range(1, 5)
+>>> seq = list(range(1, 5))
 >>> for k in range(len(seq) + 2):
-...     print "%d-combs of %s:" % (k, seq)
+...     print("%d-combs of %s:" % (k, seq))
 ...     for c in gcomb(seq, k):
-...         print "   ", c
+...         print("   ", c)
 0-combs of [1, 2, 3, 4]:
     []
 1-combs of [1, 2, 3, 4]:
@@ -382,9 +382,9 @@ From the Iterators list, about the types of these things.
 >>> type(i)
 <type 'generator'>
 >>> [s for s in dir(i) if not s.startswith('_')]
-['close', 'gi_frame', 'gi_running', 'next', 'send', 'throw']
->>> print i.next.__doc__
-x.next() -> the next value, or raise StopIteration
+['close', 'gi_frame', 'gi_running', 'send', 'throw']
+>>> print(i.__next__.__doc__)
+x.__next__() <==> next(x)
 >>> iter(i) is i
 True
 >>> import types
@@ -400,13 +400,13 @@ And more, added later.
 >>> i.gi_running = 42
 Traceback (most recent call last):
   ...
-TypeError: readonly attribute
+AttributeError: readonly attribute
 >>> def g():
 ...     yield me.gi_running
 >>> me = g()
 >>> me.gi_running
 0
->>> me.next()
+>>> next(me)
 1
 >>> me.gi_running
 0
@@ -429,7 +429,7 @@ Subject: Re: PEP 255: Simple Generators
 ...             yield x
 ...
 ...     def find(self):
-...         return self.generator.next()
+...         return next(self.generator)
 ...
 ...     def union(self, parent):
 ...         if self.parent:
@@ -447,41 +447,41 @@ Subject: Re: PEP 255: Simple Generators
 >>> gen = random.WichmannHill(42)
 >>> while 1:
 ...     for s in sets:
-...         print "%s->%s" % (s, s.find()),
-...     print
+...         print(" %s->%s" % (s, s.find()), end='')
+...     print()
 ...     if len(roots) > 1:
 ...         s1 = gen.choice(roots)
 ...         roots.remove(s1)
 ...         s2 = gen.choice(roots)
 ...         s1.union(s2)
-...         print "merged", s1, "into", s2
+...         print("merged", s1, "into", s2)
 ...     else:
 ...         break
-A->A B->B C->C D->D E->E F->F G->G H->H I->I J->J K->K L->L M->M
+ A->A B->B C->C D->D E->E F->F G->G H->H I->I J->J K->K L->L M->M
 merged D into G
-A->A B->B C->C D->G E->E F->F G->G H->H I->I J->J K->K L->L M->M
+ A->A B->B C->C D->G E->E F->F G->G H->H I->I J->J K->K L->L M->M
 merged C into F
-A->A B->B C->F D->G E->E F->F G->G H->H I->I J->J K->K L->L M->M
+ A->A B->B C->F D->G E->E F->F G->G H->H I->I J->J K->K L->L M->M
 merged L into A
-A->A B->B C->F D->G E->E F->F G->G H->H I->I J->J K->K L->A M->M
+ A->A B->B C->F D->G E->E F->F G->G H->H I->I J->J K->K L->A M->M
 merged H into E
-A->A B->B C->F D->G E->E F->F G->G H->E I->I J->J K->K L->A M->M
+ A->A B->B C->F D->G E->E F->F G->G H->E I->I J->J K->K L->A M->M
 merged B into E
-A->A B->E C->F D->G E->E F->F G->G H->E I->I J->J K->K L->A M->M
+ A->A B->E C->F D->G E->E F->F G->G H->E I->I J->J K->K L->A M->M
 merged J into G
-A->A B->E C->F D->G E->E F->F G->G H->E I->I J->G K->K L->A M->M
+ A->A B->E C->F D->G E->E F->F G->G H->E I->I J->G K->K L->A M->M
 merged E into G
-A->A B->G C->F D->G E->G F->F G->G H->G I->I J->G K->K L->A M->M
+ A->A B->G C->F D->G E->G F->F G->G H->G I->I J->G K->K L->A M->M
 merged M into G
-A->A B->G C->F D->G E->G F->F G->G H->G I->I J->G K->K L->A M->G
+ A->A B->G C->F D->G E->G F->F G->G H->G I->I J->G K->K L->A M->G
 merged I into K
-A->A B->G C->F D->G E->G F->F G->G H->G I->K J->G K->K L->A M->G
+ A->A B->G C->F D->G E->G F->F G->G H->G I->K J->G K->K L->A M->G
 merged K into A
-A->A B->G C->F D->G E->G F->F G->G H->G I->A J->G K->A L->A M->G
+ A->A B->G C->F D->G E->G F->F G->G H->G I->A J->G K->A L->A M->G
 merged F into A
-A->A B->G C->A D->G E->G F->A G->G H->G I->A J->G K->A L->A M->G
+ A->A B->G C->A D->G E->G F->A G->G H->G I->A J->G K->A L->A M->G
 merged A into G
-A->G B->G C->G D->G E->G F->G G->G H->G I->G J->G K->G L->G M->G
+ A->G B->G C->G D->G E->G F->G G->G H->G I->G J->G K->G L->G M->G
 
 """
 # Emacs turd '
@@ -493,7 +493,7 @@ fun_tests = """
 Build up to a recursive Sieve of Eratosthenes generator.
 
 >>> def firstn(g, n):
-...     return [g.next() for i in range(n)]
+...     return [next(g) for i in range(n)]
 
 >>> def intsfrom(i):
 ...     while 1:
@@ -512,7 +512,7 @@ Build up to a recursive Sieve of Eratosthenes generator.
 [1, 2, 4, 5, 7, 8]
 
 >>> def sieve(ints):
-...     prime = ints.next()
+...     prime = next(ints)
 ...     yield prime
 ...     not_divisible_by_prime = exclude_multiples(prime, ints)
 ...     for p in sieve(not_divisible_by_prime):
@@ -536,19 +536,19 @@ Try writing it without generators, and correctly, and without generating
 [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
 >>> def merge(g, h):
-...     ng = g.next()
-...     nh = h.next()
+...     ng = next(g)
+...     nh = next(h)
 ...     while 1:
 ...         if ng < nh:
 ...             yield ng
-...             ng = g.next()
+...             ng = next(g)
 ...         elif ng > nh:
 ...             yield nh
-...             nh = h.next()
+...             nh = next(h)
 ...         else:
 ...             yield ng
-...             ng = g.next()
-...             nh = h.next()
+...             ng = next(g)
+...             nh = next(h)
 
 The following works, but is doing a whale of a lot of redundant work --
 it's not clear how to get the internal uses of m235 to share a single
@@ -576,7 +576,7 @@ address space, and it *looked* like a very slow leak.
 
 >>> result = m235()
 >>> for i in range(3):
-...     print firstn(result, 15)
+...     print(firstn(result, 15))
 [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24]
 [25, 27, 30, 32, 36, 40, 45, 48, 50, 54, 60, 64, 72, 75, 80]
 [81, 90, 96, 100, 108, 120, 125, 128, 135, 144, 150, 160, 162, 180, 192]
@@ -589,7 +589,7 @@ arguments are iterable -- a LazyList is the same as a generator to times().
 >>> class LazyList:
 ...     def __init__(self, g):
 ...         self.sofar = []
-...         self.fetch = g.next
+...         self.fetch = g.__next__
 ...
 ...     def __getitem__(self, i):
 ...         sofar, fetch = self.sofar, self.fetch
@@ -613,7 +613,7 @@ efficient.
 
 >>> m235 = LazyList(m235())
 >>> for i in range(5):
-...     print [m235[j] for j in range(15*i, 15*(i+1))]
+...     print([m235[j] for j in range(15*i, 15*(i+1))])
 [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24]
 [25, 27, 30, 32, 36, 40, 45, 48, 50, 54, 60, 64, 72, 75, 80]
 [81, 90, 96, 100, 108, 120, 125, 128, 135, 144, 150, 160, 162, 180, 192]
@@ -626,10 +626,10 @@ Ye olde Fibonacci generator, LazyList style.
 ...
 ...     def sum(g, h):
 ...         while 1:
-...             yield g.next() + h.next()
+...             yield next(g) + next(h)
 ...
 ...     def tail(g):
-...         g.next()    # throw first away
+...         next(g)    # throw first away
 ...         for x in g:
 ...             yield x
 ...
@@ -684,7 +684,7 @@ m235 to share a single generator".
 
 >>> it = m235()
 >>> for i in range(5):
-...     print firstn(it, 15)
+...     print(firstn(it, 15))
 [1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24]
 [25, 27, 30, 32, 36, 40, 45, 48, 50, 54, 60, 64, 72, 75, 80]
 [81, 90, 96, 100, 108, 120, 125, 128, 135, 144, 150, 160, 162, 180, 192]
@@ -705,12 +705,12 @@ Ye olde Fibonacci generator, tee style.
 ...
 ...     def _isum(g, h):
 ...         while 1:
-...             yield g.next() + h.next()
+...             yield next(g) + next(h)
 ...
 ...     def _fib():
 ...         yield 1
 ...         yield 2
-...         fibTail.next() # throw first away
+...         next(fibTail) # throw first away
 ...         for res in _isum(fibHead, fibTail):
 ...             yield res
 ...
@@ -733,14 +733,14 @@ syntax_tests = """
 ...     yield 1
 Traceback (most recent call last):
   ..
-SyntaxError: 'return' with argument inside generator (<doctest test.test_generators.__test__.syntax[0]>, line 3)
+SyntaxError: 'return' with argument inside generator
 
 >>> def f():
 ...     yield 1
 ...     return 22
 Traceback (most recent call last):
   ..
-SyntaxError: 'return' with argument inside generator (<doctest test.test_generators.__test__.syntax[1]>, line 3)
+SyntaxError: 'return' with argument inside generator
 
 "return None" is not the same as "return" in a generator:
 
@@ -749,7 +749,7 @@ SyntaxError: 'return' with argument inside generator (<doctest test.test_generat
 ...     return None
 Traceback (most recent call last):
   ..
-SyntaxError: 'return' with argument inside generator (<doctest test.test_generators.__test__.syntax[2]>, line 3)
+SyntaxError: 'return' with argument inside generator
 
 These are fine:
 
@@ -878,7 +878,7 @@ These are fine:
 ...     if 0:
 ...         yield 2             # because it's a generator (line 10)
 Traceback (most recent call last):
-SyntaxError: 'return' with argument inside generator (<doctest test.test_generators.__test__.syntax[24]>, line 10)
+SyntaxError: 'return' with argument inside generator
 
 This one caused a crash (see SF bug 567538):
 
@@ -890,13 +890,13 @@ This one caused a crash (see SF bug 567538):
 ...             yield i
 ...
 >>> g = f()
->>> print g.next()
+>>> print(next(g))
 0
->>> print g.next()
+>>> print(next(g))
 1
->>> print g.next()
+>>> print(next(g))
 2
->>> print g.next()
+>>> print(next(g))
 Traceback (most recent call last):
 StopIteration
 """
@@ -1013,7 +1013,7 @@ def flat_conjoin(gs):  # rename to conjoin to run tests with this instead
         # Descend.
         try:
             while i < n:
-                it = iters[i] = gs[i]().next
+                it = iters[i] = gs[i]().__next__
                 values[i] = it()
                 i += 1
         except _StopIteration:
@@ -1057,9 +1057,9 @@ class Queens:
         # generates the possiblities for the columns in that row.
         self.rowgenerators = []
         for i in rangen:
-            rowuses = [(1L << j) |                  # column ordinal
-                       (1L << (n + i-j + n-1)) |    # NW-SE ordinal
-                       (1L << (n + 2*n-1 + i+j))    # NE-SW ordinal
+            rowuses = [(1 << j) |                  # column ordinal
+                       (1 << (n + i-j + n-1)) |    # NW-SE ordinal
+                       (1 << (n + 2*n-1 + i+j))    # NE-SW ordinal
                             for j in rangen]
 
             def rowgen(rowuses=rowuses):
@@ -1082,12 +1082,12 @@ class Queens:
         n = self.n
         assert n == len(row2col)
         sep = "+" + "-+" * n
-        print sep
+        print(sep)
         for i in range(n):
             squares = [" " for j in range(n)]
             squares[row2col[i]] = "Q"
-            print "|" + "|".join(squares) + "|"
-            print sep
+            print("|" + "|".join(squares) + "|")
+            print(sep)
 
 # A conjoin-based Knight's Tour solver.  This is pretty sophisticated
 # (e.g., when used with flat_conjoin above, and passing hard=1 to the
@@ -1279,11 +1279,11 @@ class Knights:
             k += 1
 
         sep = "+" + ("-" * w + "+") * n
-        print sep
+        print(sep)
         for i in range(m):
             row = squares[i]
-            print "|" + "|".join(row) + "|"
-            print sep
+            print("|" + "|".join(row) + "|")
+            print(sep)
 
 conjoin_tests = """
 
@@ -1291,7 +1291,7 @@ Generate the 3-bit binary numbers in order.  This illustrates dumbest-
 possible use of conjoin, just to generate the full cross-product.
 
 >>> for c in conjoin([lambda: iter((0, 1))] * 3):
-...     print c
+...     print(c)
 [0, 0, 0]
 [0, 0, 1]
 [0, 1, 0]
@@ -1311,7 +1311,7 @@ generated sequence, you need to copy its results.
 
 >>> for n in range(10):
 ...     all = list(gencopy(conjoin([lambda: iter((0, 1))] * n)))
-...     print n, len(all), all[0] == [0] * n, all[-1] == [1] * n
+...     print(n, len(all), all[0] == [0] * n, all[-1] == [1] * n)
 0 1 True True
 1 2 True True
 2 4 True True
@@ -1331,7 +1331,7 @@ And run an 8-queens solver.
 >>> for row2col in q.solve():
 ...     count += 1
 ...     if count <= LIMIT:
-...         print "Solution", count
+...         print("Solution", count)
 ...         q.printsolution(row2col)
 Solution 1
 +-+-+-+-+-+-+-+-+
@@ -1370,7 +1370,7 @@ Solution 2
 | | | | |Q| | | |
 +-+-+-+-+-+-+-+-+
 
->>> print count, "solutions in all."
+>>> print(count, "solutions in all.")
 92 solutions in all.
 
 And run a Knight's Tour on a 10x10 board.  Note that there are about
@@ -1382,7 +1382,7 @@ And run a Knight's Tour on a 10x10 board.  Note that there are about
 >>> for x in k.solve():
 ...     count += 1
 ...     if count <= LIMIT:
-...         print "Solution", count
+...         print("Solution", count)
 ...         k.printsolution(x)
 ...     else:
 ...         break
@@ -1460,10 +1460,10 @@ coroutine_tests = """\
 Sending a value into a started generator:
 
 >>> def f():
-...     print (yield 1)
+...     print((yield 1))
 ...     yield 2
 >>> g = f()
->>> g.next()
+>>> next(g)
 1
 >>> g.send(42)
 42
@@ -1506,17 +1506,17 @@ A yield expression with augmented assignment.
 ...         seq.append(count)
 >>> seq = []
 >>> c = coroutine(seq)
->>> c.next()
->>> print seq
+>>> next(c)
+>>> print(seq)
 []
 >>> c.send(10)
->>> print seq
+>>> print(seq)
 [10]
 >>> c.send(10)
->>> print seq
+>>> print(seq)
 [10, 20]
 >>> c.send(10)
->>> print seq
+>>> print(seq)
 [10, 20, 30]
 
 
@@ -1525,27 +1525,27 @@ Check some syntax errors for yield expressions:
 >>> f=lambda: (yield 1),(yield 2)
 Traceback (most recent call last):
   ...
-SyntaxError: 'yield' outside function (<doctest test.test_generators.__test__.coroutine[21]>, line 1)
+SyntaxError: 'yield' outside function
 
 >>> def f(): return lambda x=(yield): 1
 Traceback (most recent call last):
   ...
-SyntaxError: 'return' with argument inside generator (<doctest test.test_generators.__test__.coroutine[22]>, line 1)
+SyntaxError: 'return' with argument inside generator
 
 >>> def f(): x = yield = y
 Traceback (most recent call last):
   ...
-SyntaxError: assignment to yield expression not possible (<doctest test.test_generators.__test__.coroutine[23]>, line 1)
+SyntaxError: assignment to yield expression not possible
 
 >>> def f(): (yield bar) = y
 Traceback (most recent call last):
   ...
-SyntaxError: can't assign to yield expression (<doctest test.test_generators.__test__.coroutine[24]>, line 1)
+SyntaxError: can't assign to yield expression
 
 >>> def f(): (yield bar) += y
 Traceback (most recent call last):
   ...
-SyntaxError: augmented assignment to yield expression not possible (<doctest test.test_generators.__test__.coroutine[25]>, line 1)
+SyntaxError: augmented assignment to yield expression not possible
 
 
 Now check some throw() conditions:
@@ -1553,12 +1553,12 @@ Now check some throw() conditions:
 >>> def f():
 ...     while True:
 ...         try:
-...             print (yield)
-...         except ValueError,v:
-...             print "caught ValueError (%s)" % (v),
+...             print((yield))
+...         except ValueError as v:
+...             print("caught ValueError (%s)" % (v))
 >>> import sys
 >>> g = f()
->>> g.next()
+>>> next(g)
 
 >>> g.throw(ValueError) # type only
 caught ValueError ()
@@ -1585,6 +1585,21 @@ Traceback (most recent call last):
   ...
 TypeError: throw() third argument must be a traceback object
 
+>>> g.throw("abc")
+Traceback (most recent call last):
+  ...
+TypeError: exceptions must be classes or instances deriving from BaseException, not str
+
+>>> g.throw(0)
+Traceback (most recent call last):
+  ...
+TypeError: exceptions must be classes or instances deriving from BaseException, not int
+
+>>> g.throw(list)
+Traceback (most recent call last):
+  ...
+TypeError: exceptions must be classes or instances deriving from BaseException, not type
+
 >>> def throw(g,exc):
 ...     try:
 ...         raise exc
@@ -1601,7 +1616,7 @@ Traceback (most recent call last):
   ...
 TypeError
 
->>> print g.gi_frame
+>>> print(g.gi_frame)
 None
 
 >>> g.send(2)
@@ -1619,20 +1634,15 @@ Traceback (most recent call last):
   ...
 ValueError: 7
 
->>> f().throw("abc")     # throw on just-opened generator
-Traceback (most recent call last):
-  ...
-abc
-
 Now let's try closing a generator:
 
 >>> def f():
 ...     try: yield
 ...     except GeneratorExit:
-...         print "exiting"
+...         print("exiting")
 
 >>> g = f()
->>> g.next()
+>>> next(g)
 >>> g.close()
 exiting
 >>> g.close()  # should be no-op now
@@ -1642,7 +1652,7 @@ exiting
 >>> def f(): yield      # an even simpler generator
 >>> f().close()         # close before opening
 >>> g = f()
->>> g.next()
+>>> next(g)
 >>> g.close()           # close normally
 
 And finalization:
@@ -1650,10 +1660,10 @@ And finalization:
 >>> def f():
 ...     try: yield
 ...     finally:
-...         print "exiting"
+...         print("exiting")
 
 >>> g = f()
->>> g.next()
+>>> next(g)
 >>> del g
 exiting
 
@@ -1665,7 +1675,7 @@ Now let's try some ill-behaved generators:
 ...     except GeneratorExit:
 ...         yield "foo!"
 >>> g = f()
->>> g.next()
+>>> next(g)
 >>> g.close()
 Traceback (most recent call last):
   ...
@@ -1675,10 +1685,10 @@ RuntimeError: generator ignored GeneratorExit
 
 Our ill-behaved code should be invoked during GC:
 
->>> import sys, StringIO
->>> old, sys.stderr = sys.stderr, StringIO.StringIO()
+>>> import sys, io
+>>> old, sys.stderr = sys.stderr, io.StringIO()
 >>> g = f()
->>> g.next()
+>>> next(g)
 >>> del g
 >>> sys.stderr.getvalue().startswith(
 ...     "Exception RuntimeError: 'generator ignored GeneratorExit' in "
@@ -1694,7 +1704,7 @@ And errors thrown during closing should propagate:
 ...     except GeneratorExit:
 ...         raise TypeError("fie!")
 >>> g = f()
->>> g.next()
+>>> next(g)
 >>> g.close()
 Traceback (most recent call last):
   ...
@@ -1750,7 +1760,7 @@ would trigger if it starts being uncleanable again.
 ...     class gen:
 ...         def __iter__(self):
 ...             return self
-...         def next(self):
+...         def __next__(self):
 ...             return self.item
 ...     g = gen()
 ...     head, tail = itertools.tee(g)
@@ -1761,7 +1771,7 @@ would trigger if it starts being uncleanable again.
 Make sure to also test the involvement of the tee-internal teedataobject,
 which stores returned items.
 
->>> item = it.next()
+>>> item = next(it)
 
 
 
@@ -1786,10 +1796,10 @@ explicitly, without generators. We do have to redirect stderr to avoid
 printing warnings and to doublecheck that we actually tested what we wanted
 to test.
 
->>> import sys, StringIO
+>>> import sys, io
 >>> old = sys.stderr
 >>> try:
-...     sys.stderr = StringIO.StringIO()
+...     sys.stderr = io.StringIO()
 ...     class Leaker:
 ...         def __del__(self):
 ...             raise RuntimeError

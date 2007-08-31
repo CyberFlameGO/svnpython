@@ -8,11 +8,10 @@ from test import test_support, string_tests
 class StrTest(
     string_tests.CommonTest,
     string_tests.MixinStrUnicodeUserStringTest,
-    string_tests.MixinStrUserStringTest,
     string_tests.MixinStrUnicodeTest,
     ):
 
-    type2test = str
+    type2test = str8
 
     # We don't need to propagate to str
     def fixtype(self, obj):
@@ -20,13 +19,18 @@ class StrTest(
 
     def test_formatting(self):
         string_tests.MixinStrUnicodeUserStringTest.test_formatting(self)
-        self.assertRaises(OverflowError, '%c'.__mod__, 0x1234)
+        self.assertRaises(OverflowError, '%c'.__mod__, 0x12341234)
+
+    def test_iterators(self):
+        # Make sure str objects have an __iter__ method
+        it = "abc".__iter__()
+        self.assertEqual(next(it), "a")
+        self.assertEqual(next(it), "b")
+        self.assertEqual(next(it), "c")
+        self.assertRaises(StopIteration, next, it)
 
     def test_conversion(self):
         # Make sure __str__() behaves properly
-        class Foo0:
-            def __unicode__(self):
-                return u"foo"
 
         class Foo1:
             def __str__(self):
@@ -38,28 +42,28 @@ class StrTest(
 
         class Foo3(object):
             def __str__(self):
-                return u"foo"
+                return "foo"
 
-        class Foo4(unicode):
+        class Foo4(str8):
             def __str__(self):
-                return u"foo"
+                return "foo"
 
         class Foo5(str):
-            def __str__(self):
-                return u"foo"
+            def __unicode__(self):
+                return "foo"
 
-        class Foo6(str):
+        class Foo6(str8):
             def __str__(self):
                 return "foos"
 
             def __unicode__(self):
-                return u"foou"
+                return "foou"
 
-        class Foo7(unicode):
+        class Foo7(str):
             def __str__(self):
                 return "foos"
             def __unicode__(self):
-                return u"foou"
+                return "foou"
 
         class Foo8(str):
             def __new__(cls, content=""):
@@ -67,23 +71,24 @@ class StrTest(
             def __str__(self):
                 return self
 
-        class Foo9(str):
+        class Foo9(str8):
             def __str__(self):
                 return "string"
             def __unicode__(self):
                 return "not unicode"
 
-        self.assert_(str(Foo0()).startswith("<")) # this is different from __unicode__
         self.assertEqual(str(Foo1()), "foo")
         self.assertEqual(str(Foo2()), "foo")
         self.assertEqual(str(Foo3()), "foo")
         self.assertEqual(str(Foo4("bar")), "foo")
         self.assertEqual(str(Foo5("bar")), "foo")
-        self.assertEqual(str(Foo6("bar")), "foos")
-        self.assertEqual(str(Foo7("bar")), "foos")
+        self.assertEqual(str8(Foo6("bar")), "foos")
+        self.assertEqual(str(Foo6("bar")), "foou")
+        self.assertEqual(str8(Foo7("bar")), "foos")
+        self.assertEqual(str(Foo7("bar")), "foou")
         self.assertEqual(str(Foo8("foo")), "foofoo")
-        self.assertEqual(str(Foo9("foo")), "string")
-        self.assertEqual(unicode(Foo9("foo")), u"not unicode")
+        self.assertEqual(str8(Foo9("foo")), "string")
+        self.assertEqual(str(Foo9("foo")), "not unicode")
 
     def test_expandtabs_overflows_gracefully(self):
         # This test only affects 32-bit platforms because expandtabs can only take

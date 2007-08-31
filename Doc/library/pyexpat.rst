@@ -156,8 +156,8 @@ XMLParser Objects
    referred to by content parsed by the parent parser.  The *context* parameter
    should be the string passed to the :meth:`ExternalEntityRefHandler` handler
    function, described below. The child parser is created with the
-   :attr:`ordered_attributes`, :attr:`returns_unicode` and
-   :attr:`specified_attributes` set to the values of this parser.
+   :attr:`ordered_attributes` and :attr:`specified_attributes` set to the values of
+   this parser.
 
 
 .. method:: xmlparser.UseForeignDTD([flag])
@@ -221,17 +221,6 @@ XMLParser Objects
    changed at any time.
 
    .. versionadded:: 2.1
-
-
-.. attribute:: xmlparser.returns_unicode
-
-   If this attribute is set to a non-zero integer, the handler functions will be
-   passed Unicode strings.  If :attr:`returns_unicode` is :const:`False`, 8-bit
-   strings containing UTF-8 encoded data will be passed to the handlers.  This is
-   :const:`True` by default when Python is built with Unicode support.
-
-   .. versionchanged:: 1.6
-      Can be changed at any time to affect the result type.
 
 
 .. attribute:: xmlparser.specified_attributes
@@ -308,8 +297,7 @@ otherwise stated.
    Called when the XML declaration is parsed.  The XML declaration is the
    (optional) declaration of the applicable version of the XML recommendation, the
    encoding of the document text, and an optional "standalone" declaration.
-   *version* and *encoding* will be strings of the type dictated by the
-   :attr:`returns_unicode` attribute, and *standalone* will be ``1`` if the
+   *version* and *encoding* will be strings, and *standalone* will be ``1`` if the
    document is declared standalone, ``0`` if it is declared not to be standalone,
    or ``-1`` if the standalone clause was omitted. This is only available with
    Expat version 1.95.0 or newer.

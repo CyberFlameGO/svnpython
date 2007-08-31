@@ -85,16 +85,6 @@ Handling of compressed files is offered by the :class:`BZ2File` class.
    approximate bound on the total number of bytes in the lines returned.
 
 
-.. method:: BZ2File.xreadlines()
-
-   For backward compatibility. :class:`BZ2File` objects now include the performance
-   optimizations previously implemented in the :mod:`xreadlines` module.
-
-   .. deprecated:: 2.3
-      This exists only for compatibility with the method by this name on :class:`file`
-      objects, which is deprecated.  Use ``for line in file`` instead.
-
-
 .. method:: BZ2File.seek(offset[, whence])
 
    Move to new file position. Argument *offset* is a byte count. Optional argument

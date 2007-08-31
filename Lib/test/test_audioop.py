@@ -3,27 +3,27 @@ import audioop
 from test.test_support import verbose
 
 def gendata1():
-    return '\0\1\2'
+    return b'\0\1\2'
 
 def gendata2():
     if verbose:
-        print 'getsample'
-    if audioop.getsample('\0\1', 2, 0) == 1:
-        return '\0\0\0\1\0\2'
+        print('getsample')
+    if audioop.getsample(b'\0\1', 2, 0) == 1:
+        return b'\0\0\0\1\0\2'
     else:
-        return '\0\0\1\0\2\0'
+        return b'\0\0\1\0\2\0'
 
 def gendata4():
     if verbose:
-        print 'getsample'
-    if audioop.getsample('\0\0\0\1', 4, 0) == 1:
-        return '\0\0\0\0\0\0\0\1\0\0\0\2'
+        print('getsample')
+    if audioop.getsample(b'\0\0\0\1', 4, 0) == 1:
+        return b'\0\0\0\0\0\0\0\1\0\0\0\2'
     else:
-        return '\0\0\0\0\1\0\0\0\2\0\0\0'
+        return b'\0\0\0\0\1\0\0\0\2\0\0\0'
 
 def testmax(data):
     if verbose:
-        print 'max'
+        print('max')
     if audioop.max(data[0], 1) != 2 or \
               audioop.max(data[1], 2) != 2 or \
               audioop.max(data[2], 4) != 2:
@@ -32,7 +32,7 @@ def testmax(data):
 
 def testminmax(data):
     if verbose:
-        print 'minmax'
+        print('minmax')
     if audioop.minmax(data[0], 1) != (0, 2) or \
               audioop.minmax(data[1], 2) != (0, 2) or \
               audioop.minmax(data[2], 4) != (0, 2):
@@ -41,7 +41,7 @@ def testminmax(data):
 
 def testmaxpp(data):
     if verbose:
-        print 'maxpp'
+        print('maxpp')
     if audioop.maxpp(data[0], 1) != 0 or \
               audioop.maxpp(data[1], 2) != 0 or \
               audioop.maxpp(data[2], 4) != 0:
@@ -50,7 +50,7 @@ def testmaxpp(data):
 
 def testavg(data):
     if verbose:
-        print 'avg'
+        print('avg')
     if audioop.avg(data[0], 1) != 1 or \
               audioop.avg(data[1], 2) != 1 or \
               audioop.avg(data[2], 4) != 1:
@@ -59,7 +59,7 @@ def testavg(data):
 
 def testavgpp(data):
     if verbose:
-        print 'avgpp'
+        print('avgpp')
     if audioop.avgpp(data[0], 1) != 0 or \
               audioop.avgpp(data[1], 2) != 0 or \
               audioop.avgpp(data[2], 4) != 0:
@@ -75,7 +75,7 @@ def testrms(data):
 
 def testcross(data):
     if verbose:
-        print 'cross'
+        print('cross')
     if audioop.cross(data[0], 1) != 0 or \
               audioop.cross(data[1], 2) != 0 or \
               audioop.cross(data[2], 4) != 0:
@@ -84,12 +84,12 @@ def testcross(data):
 
 def testadd(data):
     if verbose:
-        print 'add'
+        print('add')
     data2 = []
     for d in data:
-        str = ''
-        for s in d:
-            str = str + chr(ord(s)*2)
+        str = bytes(len(d))
+        for i,b in enumerate(d):
+            str[i] = 2*b
         data2.append(str)
     if audioop.add(data[0], data[0], 1) != data2[0] or \
               audioop.add(data[1], data[1], 2) != data2[1] or \
@@ -99,7 +99,7 @@ def testadd(data):
 
 def testbias(data):
     if verbose:
-        print 'bias'
+        print('bias')
     # Note: this test assumes that avg() works
     d1 = audioop.bias(data[0], 1, 100)
     d2 = audioop.bias(data[1], 2, 100)
@@ -112,7 +112,7 @@ def testbias(data):
 
 def testlin2lin(data):
     if verbose:
-        print 'lin2lin'
+        print('lin2lin')
     # too simple: we test only the size
     for d1 in data:
         for d2 in data:
@@ -124,30 +124,30 @@ def testlin2lin(data):
 
 def testadpcm2lin(data):
     # Very cursory test
-    if audioop.adpcm2lin('\0\0', 1, None) != ('\0\0\0\0', (0,0)):
+    if audioop.adpcm2lin(b'\0\0', 1, None) != (b'\0\0\0\0', (0,0)):
         return 0
     return 1
 
 def testlin2adpcm(data):
     if verbose:
-        print 'lin2adpcm'
+        print('lin2adpcm')
     # Very cursory test
-    if audioop.lin2adpcm('\0\0\0\0', 1, None) != ('\0\0', (0,0)):
+    if audioop.lin2adpcm(b'\0\0\0\0', 1, None) != (b'\0\0', (0,0)):
         return 0
     return 1
 
 def testlin2alaw(data):
     if verbose:
-        print 'lin2alaw'
-    if audioop.lin2alaw(data[0], 1) != '\xd5\xc5\xf5' or \
-              audioop.lin2alaw(data[1], 2) != '\xd5\xd5\xd5' or \
-              audioop.lin2alaw(data[2], 4) != '\xd5\xd5\xd5':
+        print('lin2alaw')
+    if audioop.lin2alaw(data[0], 1) != b'\xd5\xc5\xf5' or \
+              audioop.lin2alaw(data[1], 2) != b'\xd5\xd5\xd5' or \
+              audioop.lin2alaw(data[2], 4) != b'\xd5\xd5\xd5':
         return 0
     return 1
 
 def testalaw2lin(data):
     if verbose:
-        print 'alaw2lin'
+        print('alaw2lin')
     # Cursory
     d = audioop.lin2alaw(data[0], 1)
     if audioop.alaw2lin(d, 1) != data[0]:
@@ -156,16 +156,16 @@ def testalaw2lin(data):
 
 def testlin2ulaw(data):
     if verbose:
-        print 'lin2ulaw'
-    if audioop.lin2ulaw(data[0], 1) != '\xff\xe7\xdb' or \
-              audioop.lin2ulaw(data[1], 2) != '\xff\xff\xff' or \
-              audioop.lin2ulaw(data[2], 4) != '\xff\xff\xff':
+        print('lin2ulaw')
+    if audioop.lin2ulaw(data[0], 1) != b'\xff\xe7\xdb' or \
+              audioop.lin2ulaw(data[1], 2) != b'\xff\xff\xff' or \
+              audioop.lin2ulaw(data[2], 4) != b'\xff\xff\xff':
         return 0
     return 1
 
 def testulaw2lin(data):
     if verbose:
-        print 'ulaw2lin'
+        print('ulaw2lin')
     # Cursory
     d = audioop.lin2ulaw(data[0], 1)
     if audioop.ulaw2lin(d, 1) != data[0]:
@@ -174,12 +174,12 @@ def testulaw2lin(data):
 
 def testmul(data):
     if verbose:
-        print 'mul'
+        print('mul')
     data2 = []
     for d in data:
-        str = ''
-        for s in d:
-            str = str + chr(ord(s)*2)
+        str = bytes(len(d))
+        for i,b in enumerate(d):
+            str[i] = 2*b
         data2.append(str)
     if audioop.mul(data[0], 1, 2) != data2[0] or \
               audioop.mul(data[1],2, 2) != data2[1] or \
@@ -189,65 +189,67 @@ def testmul(data):
 
 def testratecv(data):
     if verbose:
-        print 'ratecv'
+        print('ratecv')
     state = None
     d1, state = audioop.ratecv(data[0], 1, 1, 8000, 16000, state)
     d2, state = audioop.ratecv(data[0], 1, 1, 8000, 16000, state)
-    if d1 + d2 != '\000\000\001\001\002\001\000\000\001\001\002':
+    if d1 + d2 != b'\000\000\001\001\002\001\000\000\001\001\002':
         return 0
     return 1
 
 def testreverse(data):
     if verbose:
-        print 'reverse'
-    if audioop.reverse(data[0], 1) != '\2\1\0':
+        print('reverse')
+    if audioop.reverse(data[0], 1) != b'\2\1\0':
         return 0
     return 1
 
 def testtomono(data):
     if verbose:
-        print 'tomono'
-    data2 = ''
+        print('tomono')
+    data2 = b''
     for d in data[0]:
-        data2 = data2 + d + d
+        data2.append(d)
+        data2.append(d)
     if audioop.tomono(data2, 1, 0.5, 0.5) != data[0]:
         return 0
     return 1
 
 def testtostereo(data):
     if verbose:
-        print 'tostereo'
-    data2 = ''
+        print('tostereo')
+    data2 = b''
     for d in data[0]:
-        data2 = data2 + d + d
+        data2.append(d)
+        data2.append(d)
     if audioop.tostereo(data[0], 1, 1, 1) != data2:
         return 0
     return 1
 
 def testfindfactor(data):
     if verbose:
-        print 'findfactor'
+        print('findfactor')
     if audioop.findfactor(data[1], data[1]) != 1.0:
         return 0
     return 1
 
 def testfindfit(data):
     if verbose:
-        print 'findfit'
+        print('findfit')
     if audioop.findfit(data[1], data[1]) != (0, 1.0):
         return 0
     return 1
 
 def testfindmax(data):
     if verbose:
-        print 'findmax'
+        print('findmax')
     if audioop.findmax(data[1], 1) != 2:
         return 0
     return 1
 
 def testgetsample(data):
     if verbose:
-        print 'getsample'
+        print('getsample')
     for i in range(3):
         if audioop.getsample(data[0], 1, i) != i or \
                   audioop.getsample(data[1], 2, i) != i or \
@@ -259,15 +261,15 @@ def testone(name, data):
     try:
         func = eval('test'+name)
     except NameError:
-        print 'No test found for audioop.'+name+'()'
+        print('No test found for audioop.'+name+'()')
         return
     try:
         rv = func(data)
-    except 'xx':
-        print 'Test FAILED for audioop.'+name+'() (with an exception)'
+    except Exception as e:
+        print('Test FAILED for audioop.'+name+'() (with %s)' % repr(e))
         return
     if not rv:
-        print 'Test FAILED for audioop.'+name+'()'
+        print('Test FAILED for audioop.'+name+'()')
 
 def testall():
     data = [gendata1(), gendata2(), gendata4()]

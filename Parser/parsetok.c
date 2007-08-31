@@ -47,11 +47,8 @@ PyParser_ParseStringFlagsFilename(const char *s, const char *filename,
 	}
 
         tok->filename = filename ? filename : "<string>";
-	if (Py_TabcheckFlag || Py_VerboseFlag) {
-		tok->altwarning = (tok->filename != NULL);
-		if (Py_TabcheckFlag >= 2)
-			tok->alterror++;
-	}
+	if (Py_TabcheckFlag >= 3)
+		tok->alterror = 0;
 
 	return parsetok(tok, g, start, err_ret, flags);
 }
@@ -79,17 +76,13 @@ PyParser_ParseFileFlags(FILE *fp, const char *filename, grammar *g, int start,
 		return NULL;
 	}
 	tok->filename = filename;
-	if (Py_TabcheckFlag || Py_VerboseFlag) {
-		tok->altwarning = (filename != NULL);
-		if (Py_TabcheckFlag >= 2)
-			tok->alterror++;
-	}
-
+	if (Py_TabcheckFlag >= 3)
+		tok->alterror = 0;
 
 	return parsetok(tok, g, start, err_ret, flags);
 }
 
-#if 0
+#ifdef PY_PARSER_REQUIRES_FUTURE_KEYWORD
 static char with_msg[] =
 "%s:%d: Warning: 'with' will become a reserved keyword in Python 2.6\n";
 
@@ -194,7 +187,8 @@ parsetok(struct tok_state *tok, grammar *g, int start, perrdetail *err_ret,
 			col_offset = -1;
 			
 		if ((err_ret->error =
-		     PyParser_AddToken(ps, (int)type, str, tok->lineno, col_offset,
+		     PyParser_AddToken(ps, (int)type, str, 
+                                       tok->lineno, col_offset,
 				       &(err_ret->expected))) != E_OK) {
 			if (err_ret->error != E_DONE) {
 				PyObject_FREE(str);

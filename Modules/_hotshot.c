@@ -810,7 +810,7 @@ get_fileno(ProfilerObject *self, PyCodeObject *fcode)
         PyObject *name = PyDict_GetItem(dict, obj);
         if (name == NULL) {
             if (pack_define_func(self, fileno, fcode->co_firstlineno,
-                                 PyString_AS_STRING(fcode->co_name)) < 0) {
+                                 PyUnicode_AsString(fcode->co_name)) < 0) {
                 Py_DECREF(obj);
                 return -1;
             }
@@ -1266,7 +1266,7 @@ static PyMethodDef logreader_methods[] = {
 };
 
 static PyMemberDef logreader_members[] = {
-    {"info", T_OBJECT, offsetof(LogReaderObject, info), RO,
+    {"info", T_OBJECT, offsetof(LogReaderObject, info), READONLY,
      PyDoc_STR("Dictionary mapping informational keys to lists of values.")},
     {NULL}
 };

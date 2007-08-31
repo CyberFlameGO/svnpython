@@ -240,10 +240,7 @@ present, must be last; it matches any exception.  For an except clause with an
 expression, that expression is evaluated, and the clause matches the exception
 if the resulting object is "compatible" with the exception.  An object is
 compatible with an exception if it is the class or a base class of the exception
-object, a tuple containing an item compatible with the exception, or, in the
-(deprecated) case of string exceptions, is the raised string itself (note that
-the object identities must match, i.e. it must be the same string object, not
-just a string with the same value).
+object or a tuple containing an item compatible with the exception.
 
 If no except clause matches the exception, the search for an exception handler
 continues in the surrounding code and on the invocation stack.  [#]_
@@ -264,21 +261,15 @@ outer handler will not handle the exception.)
 .. index::
    module: sys
    object: traceback
-   single: exc_type (in module sys)
-   single: exc_value (in module sys)
-   single: exc_traceback (in module sys)
 
 Before an except clause's suite is executed, details about the exception are
-assigned to three variables in the :mod:`sys` module: ``sys.exc_type`` receives
-the object identifying the exception; ``sys.exc_value`` receives the exception's
-parameter; ``sys.exc_traceback`` receives a traceback object (see section
+stored in the :mod:`sys` module and can be access via :func:`sys.exc_info`.
+:func:`sys.exc_info` returns a 3-tuple consisting of: ``exc_type`` receives the
+object identifying the exception; ``exc_value`` receives the exception's
+parameter; ``exc_traceback`` receives a traceback object (see section
 :ref:`types`) identifying the point in the program where the exception
-occurred. These details are also available through the :func:`sys.exc_info`
-function, which returns a tuple ``(exc_type, exc_value, exc_traceback)``.  Use
-of the corresponding variables is deprecated in favor of this function, since
-their use is unsafe in a threaded program.  As of Python 1.5, the variables are
-restored to their previous values (before the call) when returning from a
-function that handled an exception.
+occurred. :func:`sys.exc_info` values are restored to their previous values
+(before the call) when returning from a function that handled an exception.
 
 .. index::
    keyword: else
@@ -402,17 +393,17 @@ A function definition defines a user-defined function object (see section
 :ref:`types`):
 
 .. productionlist::
-   funcdef: [`decorators`] "def" `funcname` "(" [`parameter_list`] ")" ":" `suite`
+   funcdef: [`decorators`] "def" `funcname` "(" [`parameter_list`] ")" ["->" `expression`]? ":" `suite`
    decorators: `decorator`+
    decorator: "@" `dotted_name` ["(" [`argument_list` [","]] ")"] NEWLINE
    dotted_name: `identifier` ("." `identifier`)*
    parameter_list: (`defparameter` ",")*
-                 : (  "*" `identifier` [, "**" `identifier`]
-                 : | "**" `identifier`
+                 : (  "*" [`parameter`] ("," `defparameter`)*
+                 : [, "**" `parameter`]
+                 : | "**" `parameter`
                  : | `defparameter` [","] )
+   parameter: `identifier` [":" `expression`]
    defparameter: `parameter` ["=" `expression`]
-   sublist: `parameter` ("," `parameter`)* [","]
-   parameter: `identifier` | "(" `sublist` ")"
    funcname: `identifier`
 
 .. index::
@@ -446,12 +437,12 @@ is equivalent to::
 
 .. index:: triple: default; parameter; value
 
-When one or more top-level parameters have the form *parameter* ``=``
-*expression*, the function is said to have "default parameter values."  For a
-parameter with a default value, the corresponding argument may be omitted from a
-call, in which case the parameter's default value is substituted.  If a
-parameter has a default value, all following parameters must also have a default
-value --- this is a syntactic restriction that is not expressed by the grammar.
+When one or more parameters have the form *parameter* ``=`` *expression*, the
+function is said to have "default parameter values."  For a parameter with a
+default value, the corresponding argument may be omitted from a call, in which
+case the parameter's default value is substituted.  If a parameter has a default
+value, all following parameters up until the  "``*``" must also have a default
+value --- this is a syntactic  restriction that is not expressed by the grammar.
 
 **Default parameter values are evaluated when the function definition is
 executed.**  This means that the expression is evaluated once, when the function
@@ -475,6 +466,21 @@ values.  If the form "``*identifier``" is present, it is initialized to a tuple
 receiving any excess positional parameters, defaulting to the empty tuple.  If
 the form "``**identifier``" is present, it is initialized to a new dictionary
 receiving any excess keyword arguments, defaulting to a new empty dictionary.
+Parameters after "``*``" or "``*identifier``" are keyword-only parameters and
+may only be passed used keyword arguments.
+
+.. index:: pair: function; annotations
+
+Parameters may have annotations of the form "``: expression``" following the
+parameter name. Any parameter may have an annotation even those of the form
+``*identifier`` or ``**identifier``. Functions may have "return" annotation of
+the form "``-> expression``" after the parameter list. These annotations can be
+any valid Python expression and are evaluated when the function definition is
+executed. Annotations may be evaluated in a different order than they appear in
+the source code. The presence of annotations does not change the semantics of a
+function. The annotation values are available as values of a dictionary  keyed
+by the parameters' names in the :attr:`__annotations__` attribute of the
+function object.
 
 .. index:: pair: lambda; form
 
@@ -484,7 +490,7 @@ section :ref:`lambda`.  Note that the lambda form is merely a shorthand for a
 simplified function definition; a function defined in a ":keyword:`def`"
 statement can be passed around or assigned to another name just like a function
 defined by a lambda form.  The ":keyword:`def`" form is actually more powerful
-since it allows the execution of multiple statements.
+since it allows the execution of multiple statements and annotations.
 
 **Programmer's note:** Functions are first-class objects.  A "``def``" form
 executed inside a function definition defines a local function that can be

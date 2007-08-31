@@ -94,7 +94,7 @@ The module defines the following public class:
       the performance of the function being measured.  If so, GC can be re-enabled as
       the first statement in the *setup* string.  For example::
 
-         timeit.Timer('for i in xrange(10): oct(i)', 'gc.enable()').timeit()
+         timeit.Timer('for i in range(10): oct(i)', 'gc.enable()').timeit()
 
 Starting with version 2.6, the module also defines two convenience functions:
 
@@ -184,13 +184,13 @@ interface) that compare the cost of using :func:`hasattr` vs.
 :keyword:`try`/:keyword:`except` to test for missing and present object
 attributes. ::
 
-   % timeit.py 'try:' '  str.__nonzero__' 'except AttributeError:' '  pass'
+   % timeit.py 'try:' '  str.__bool__' 'except AttributeError:' '  pass'
    100000 loops, best of 3: 15.7 usec per loop
-   % timeit.py 'if hasattr(str, "__nonzero__"): pass'
+   % timeit.py 'if hasattr(str, "__bool__"): pass'
    100000 loops, best of 3: 4.26 usec per loop
-   % timeit.py 'try:' '  int.__nonzero__' 'except AttributeError:' '  pass'
+   % timeit.py 'try:' '  int.__bool__' 'except AttributeError:' '  pass'
    1000000 loops, best of 3: 1.43 usec per loop
-   % timeit.py 'if hasattr(int, "__nonzero__"): pass'
+   % timeit.py 'if hasattr(int, "__bool__"): pass'
    100000 loops, best of 3: 2.23 usec per loop
 
 ::
@@ -198,7 +198,7 @@ attributes. ::
    >>> import timeit
    >>> s = """\
    ... try:
-   ...     str.__nonzero__
+   ...     str.__bool__
    ... except AttributeError:
    ...     pass
    ... """
@@ -206,14 +206,14 @@ attributes. ::
    >>> print "%.2f usec/pass" % (1000000 * t.timeit(number=100000)/100000)
    17.09 usec/pass
    >>> s = """\
-   ... if hasattr(str, '__nonzero__'): pass
+   ... if hasattr(str, '__bool__'): pass
    ... """
    >>> t = timeit.Timer(stmt=s)
    >>> print "%.2f usec/pass" % (1000000 * t.timeit(number=100000)/100000)
    4.85 usec/pass
    >>> s = """\
    ... try:
-   ...     int.__nonzero__
+   ...     int.__bool__
    ... except AttributeError:
    ...     pass
    ... """
@@ -221,7 +221,7 @@ attributes. ::
    >>> print "%.2f usec/pass" % (1000000 * t.timeit(number=100000)/100000)
    1.97 usec/pass
    >>> s = """\
-   ... if hasattr(int, '__nonzero__'): pass
+   ... if hasattr(int, '__bool__'): pass
    ... """
    >>> t = timeit.Timer(stmt=s)
    >>> print "%.2f usec/pass" % (1000000 * t.timeit(number=100000)/100000)

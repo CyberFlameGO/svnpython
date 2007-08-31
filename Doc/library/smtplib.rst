@@ -313,6 +313,12 @@ example doesn't do any processing of the :rfc:`822` headers.  In particular, the
 
    import smtplib
 
+   def raw_input(prompt):
+       import sys
+       sys.stdout.write(prompt)
+       sys.stdout.flush()
+       return sys.stdin.readline()
+
    def prompt(prompt):
        return raw_input(prompt).strip()
 

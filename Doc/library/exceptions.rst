@@ -68,13 +68,6 @@ The following exceptions are only used as base classes for other exceptions.
       Changed to inherit from :exc:`BaseException`.
 
 
-.. exception:: StandardError
-
-   The base class for all built-in exceptions except :exc:`StopIteration`,
-   :exc:`GeneratorExit`, :exc:`KeyboardInterrupt` and :exc:`SystemExit`.
-   :exc:`StandardError` itself is derived from :exc:`Exception`.
-
-
 .. exception:: ArithmeticError
 
    The base class for those built-in exceptions that are raised for various
@@ -133,10 +126,9 @@ The following exceptions are the exceptions that are actually raised.
 
 .. exception:: EOFError
 
-   Raised when one of the built-in functions (:func:`input` or :func:`raw_input`)
-   hits an end-of-file condition (EOF) without reading any data. (N.B.: the
-   :meth:`read` and :meth:`readline` methods of file objects return an empty string
-   when they hit EOF.)
+   Raised when attempting to read beyond the end of a file. (N.B.: the :meth:`read`
+   and :meth:`readline` methods of file objects return an empty string when they
+   hit EOF.)
 
    .. % XXXJH xrefs here
    .. % XXXJH xrefs here
@@ -152,11 +144,12 @@ The following exceptions are the exceptions that are actually raised.
 
 .. exception:: GeneratorExit
 
-   Raise when a generator's :meth:`close` method is called. It directly inherits
-   from :exc:`Exception` instead of :exc:`StandardError` since it is technically
-   not an error.
+   Raise when a generator's :meth:`close` method is called.
 
    .. versionadded:: 2.5
+
+   .. versionchanged:: 3.0
+      Changed to inherit from Exception instead of StandardError.
 
 
 .. exception:: IOError
@@ -198,11 +191,10 @@ The following exceptions are the exceptions that are actually raised.
 .. exception:: KeyboardInterrupt
 
    Raised when the user hits the interrupt key (normally :kbd:`Control-C` or
-   :kbd:`Delete`).  During execution, a check for interrupts is made regularly.
-   Interrupts typed when a built-in function :func:`input` or :func:`raw_input` is
-   waiting for input also raise this exception. The exception inherits from
-   :exc:`BaseException` so as to not be accidentally caught by code that catches
-   :exc:`Exception` and thus prevent the interpreter from exiting.
+   :kbd:`Delete`).  During execution, a check for interrupts is made regularly. The
+   exception inherits from :exc:`BaseException` so as to not be accidentally caught
+   by code that catches :exc:`Exception` and thus prevent the interpreter from
+   exiting.
 
    .. % XXX(hylton) xrefs here
 
@@ -282,19 +274,21 @@ The following exceptions are the exceptions that are actually raised.
 
 .. exception:: StopIteration
 
-   Raised by an iterator's :meth:`next` method to signal that there are no further
-   values. This is derived from :exc:`Exception` rather than :exc:`StandardError`,
-   since this is not considered an error in its normal application.
+   Raised by builtin :func:`next` and an iterator's :meth:`__next__` method to
+   signal that there are no further values.
 
    .. versionadded:: 2.2
+
+   .. versionchanged:: 3.0
+      Changed to inherit from Exception instead of StandardError.
 
 
 .. exception:: SyntaxError
 
    Raised when the parser encounters a syntax error.  This may occur in an
-   :keyword:`import` statement, in an :keyword:`exec` statement, in a call to the
-   built-in function :func:`eval` or :func:`input`, or when reading the initial
-   script or standard input (also interactively).
+   :keyword:`import` statement, in a call to the built-in functions :func:`exec`
+   or :func:`eval`, or when reading the initial script or standard input
+   (also interactively).
 
    .. % XXXJH xref to these functions?
 
@@ -329,7 +323,7 @@ The following exceptions are the exceptions that are actually raised.
 
    Instances have an attribute :attr:`code` which is set to the proposed exit
    status or error message (defaulting to ``None``). Also, this exception derives
-   directly from :exc:`BaseException` and not :exc:`StandardError`, since it is not
+   directly from :exc:`BaseException` and not :exc:`Exception`, since it is not
    technically an error.
 
    A call to :func:`sys.exit` is translated into an exception so that clean-up
@@ -339,10 +333,9 @@ The following exceptions are the exceptions that are actually raised.
    absolutely positively necessary to exit immediately (for example, in the child
    process after a call to :func:`fork`).
 
-   The exception inherits from :exc:`BaseException` instead of :exc:`StandardError`
-   or :exc:`Exception` so that it is not accidentally caught by code that catches
-   :exc:`Exception`.  This allows the exception to properly propagate up and cause
-   the interpreter to exit.
+   The exception inherits from :exc:`BaseException` instead of :exc:`Exception` so
+   that it is not accidentally caught by code that catches :exc:`Exception`.  This
+   allows the exception to properly propagate up and cause the interpreter to exit.
 
    .. versionchanged:: 2.5
       Changed to inherit from :exc:`BaseException`.

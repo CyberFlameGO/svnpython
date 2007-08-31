@@ -7,15 +7,11 @@ import tempfile
 from pprint import pprint
 import unittest
 
-try:
-    # For Pythons w/distutils pybsddb
-    from bsddb3 import db
-except ImportError:
-    # For Python 2.3
-    from bsddb import db
+from bsddb import db
 
-from test_all import verbose
+from bsddb.test.test_all import verbose
 
+letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 #----------------------------------------------------------------------
 
@@ -35,14 +31,15 @@ class GetReturnsNoneTestCase(unittest.TestCase):
         d.open(self.filename, db.DB_BTREE, db.DB_CREATE)
         d.set_get_returns_none(1)
 
-        for x in string.letters:
+        for x in letters:
+            x = x.encode("ascii")
             d.put(x, x * 40)
 
-        data = d.get('bad key')
+        data = d.get(b'bad key')
         assert data == None
 
-        data = d.get('a')
-        assert data == 'a'*40
+        data = d.get(b'a')
+        assert data == b'a'*40
 
         count = 0
         c = d.cursor()
@@ -63,14 +60,15 @@ class GetReturnsNoneTestCase(unittest.TestCase):
         d.open(self.filename, db.DB_BTREE, db.DB_CREATE)
         d.set_get_returns_none(0)
 
-        for x in string.letters:
+        for x in letters:
+            x = x.encode("ascii")
             d.put(x, x * 40)
 
-        self.assertRaises(db.DBNotFoundError, d.get, 'bad key')
-        self.assertRaises(KeyError, d.get, 'bad key')
+        self.assertRaises(db.DBNotFoundError, d.get, b'bad key')
+        self.assertRaises(KeyError, d.get, b'bad key')
 
-        data = d.get('a')
-        assert data == 'a'*40
+        data = d.get(b'a')
+        assert data == b'a'*40
 
         count = 0
         exceptionHappened = 0

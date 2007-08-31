@@ -427,7 +427,7 @@ A slightly more advanced use of the reader --- catching and reporting errors::
    try:
        for row in reader:
            print row
-   except csv.Error, e:
+   except csv.Error as e:
        sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
 
 And while the module doesn't directly support parsing strings, it can easily be
@@ -479,8 +479,8 @@ reader or writer encoded as UTF-8::
        def __iter__(self):
            return self
 
-       def next(self):
-           return self.reader.next().encode("utf-8")
+       def __next__(self):
+           return next(self.reader).encode("utf-8")
 
    class UnicodeReader:
        """
@@ -492,8 +492,8 @@ reader or writer encoded as UTF-8::
            f = UTF8Recoder(f, encoding)
            self.reader = csv.reader(f, dialect=dialect, **kwds)
 
-       def next(self):
-           row = self.reader.next()
+       def __next__(self):
+           row = next(self.reader)
            return [unicode(s, "utf-8") for s in row]
 
        def __iter__(self):

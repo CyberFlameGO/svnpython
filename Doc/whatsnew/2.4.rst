@@ -6,7 +6,7 @@
 
 .. |release| replace:: 1.02
 
-.. % $Id: whatsnew24.tex 54632 2007-03-31 11:59:54Z georg.brandl $
+.. % $Id: whatsnew24.tex 55005 2007-04-27 19:54:29Z guido.van.rossum $
 .. % Don't write extensive text for new sections; I'll do that.
 .. % Feel free to add commented-out reminders of things that need
 .. % to be covered.  --amk

@@ -15,8 +15,8 @@ interpreter.
 .. index:: object: traceback
 
 The module uses traceback objects --- this is the object type that is stored in
-the variables ``sys.exc_traceback`` (deprecated) and ``sys.last_traceback`` and
-returned as the third item from :func:`sys.exc_info`.
+the ``sys.last_traceback`` variable and returned as the third item from
+:func:`sys.exc_info`.
 
 The module defines the following functions:
 
@@ -42,10 +42,7 @@ The module defines the following functions:
 
 .. function:: print_exc([limit[, file]])
 
-   This is a shorthand for ``print_exception(sys.exc_type, sys.exc_value,
-   sys.exc_traceback, limit, file)``.  (In fact, it uses :func:`sys.exc_info` to
-   retrieve the same information in a thread-safe way instead of using the
-   deprecated variables.)
+   This is a shorthand for ``print_exception(*sys.exc_info()``.
 
 
 .. function:: format_exc([limit])
@@ -150,7 +147,7 @@ module. ::
    def run_user_code(envdir):
        source = raw_input(">>> ")
        try:
-           exec source in envdir
+           exec(source, envdir)
        except:
            print "Exception in user code:"
            print '-'*60

@@ -26,6 +26,7 @@ struct arraydescr {
 	int itemsize;
 	PyObject * (*getitem)(struct arrayobject *, Py_ssize_t);
 	int (*setitem)(struct arrayobject *, Py_ssize_t, PyObject *);
+        char *formats;
 };
 
 typedef struct arrayobject {
@@ -34,9 +35,18 @@ typedef struct arrayobject {
 	Py_ssize_t allocated;
 	struct arraydescr *ob_descr;
 	PyObject *weakreflist; /* List of weak references */
+        int ob_exports;  /* Number of exported buffers */
 } arrayobject;
 
 static PyTypeObject Arraytype;
+
+#ifdef Py_UNICODE_WIDE
+#define PyArr_UNI 'w'
+#define PyArr_UNISTR "w"
+#else
+#define PyArr_UNI 'u'
+#define PyArr_UNISTR "u"
+#endif
 
 #define array_Check(op) PyObject_TypeCheck(op, &Arraytype)
 #define array_CheckExact(op) (Py_Type(op) == &Arraytype)
@@ -58,6 +68,12 @@ array_resize(arrayobject *self, Py_ssize_t newsize)
 		Py_Size(self) = newsize;
 		return 0;
 	}
+
+        if (self->ob_exports > 0) {
+                PyErr_SetString(PyExc_BufferError, 
+                                "cannot resize an array that is exporting data");
+                return -1;
+        }
 
 	/* This over-allocates proportional to the array size, making room
 	 * for additional growth.  The over-allocation is mild, but is
@@ -100,23 +116,6 @@ appropriate type or value).
 Note that the basic Get and Set functions do NOT check that the index is
 in bounds; that's the responsibility of the caller.
 ****************************************************************************/
-
-static PyObject *
-c_getitem(arrayobject *ap, Py_ssize_t i)
-{
-	return PyString_FromStringAndSize(&((char *)ap->ob_item)[i], 1);
-}
-
-static int
-c_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)
-{
-	char x;
-	if (!PyArg_Parse(v, "c;array item must be char", &x))
-		return -1;
-	if (i >= 0)
-		((char *)ap->ob_item)[i] = x;
-	return 0;
-}
 
 static PyObject *
 b_getitem(arrayobject *ap, Py_ssize_t i)
@@ -170,7 +169,6 @@ BB_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)
 	return 0;
 }
 
-#ifdef Py_USING_UNICODE
 static PyObject *
 u_getitem(arrayobject *ap, Py_ssize_t i)
 {
@@ -194,7 +192,6 @@ u_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)
 		((Py_UNICODE *)ap->ob_item)[i] = p[0];
 	return 0;
 }
-#endif
 
 static PyObject *
 h_getitem(arrayobject *ap, Py_ssize_t i)
@@ -389,23 +386,21 @@ d_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)
 	return 0;
 }
 
+
 /* Description of types */
 static struct arraydescr descriptors[] = {
-	{'c', sizeof(char), c_getitem, c_setitem},
-	{'b', sizeof(char), b_getitem, b_setitem},
-	{'B', sizeof(char), BB_getitem, BB_setitem},
-#ifdef Py_USING_UNICODE
-	{'u', sizeof(Py_UNICODE), u_getitem, u_setitem},
-#endif
-	{'h', sizeof(short), h_getitem, h_setitem},
-	{'H', sizeof(short), HH_getitem, HH_setitem},
-	{'i', sizeof(int), i_getitem, i_setitem},
-	{'I', sizeof(int), II_getitem, II_setitem},
-	{'l', sizeof(long), l_getitem, l_setitem},
-	{'L', sizeof(long), LL_getitem, LL_setitem},
-	{'f', sizeof(float), f_getitem, f_setitem},
-	{'d', sizeof(double), d_getitem, d_setitem},
-	{'\0', 0, 0, 0} /* Sentinel */
+	{'b', sizeof(char), b_getitem, b_setitem, "b"},
+	{'B', sizeof(char), BB_getitem, BB_setitem, "B"},
+	{PyArr_UNI, sizeof(Py_UNICODE), u_getitem, u_setitem, PyArr_UNISTR},
+	{'h', sizeof(short), h_getitem, h_setitem, "h"},
+	{'H', sizeof(short), HH_getitem, HH_setitem, "H"},
+	{'i', sizeof(int), i_getitem, i_setitem, "i"},
+	{'I', sizeof(int), II_getitem, II_setitem, "I"},
+	{'l', sizeof(long), l_getitem, l_setitem, "l"},
+	{'L', sizeof(long), LL_getitem, LL_setitem, "L"},
+	{'f', sizeof(float), f_getitem, f_setitem, "f"},
+	{'d', sizeof(double), d_getitem, d_setitem, "d"},
+	{'\0', 0, 0, 0, 0} /* Sentinel */
 };
 
 /****************************************************************************
@@ -446,6 +441,7 @@ newarrayobject(PyTypeObject *type, Py_ssize_t size, struct arraydescr *descr)
 	op->ob_descr = descr;
 	op->allocated = size;
 	op->weakreflist = NULL;
+        op->ob_exports = 0;
 	return (PyObject *) op;
 }
 
@@ -1148,7 +1144,7 @@ array_reduce(arrayobject *array)
 		Py_INCREF(dict);
 	}
 	if (Py_Size(array) > 0) {
-		result = Py_BuildValue("O(cs#)O", 
+		result = Py_BuildValue("O(cy#)O", 
 			Py_Type(array), 
 			array->ob_descr->typecode,
 			array->ob_item,
@@ -1198,53 +1194,53 @@ PyDoc_STRVAR(reverse_doc,
 \n\
 Reverse the order of the items in the array.");
 
+
+/* Forward */
+static PyObject *array_fromstring(arrayobject *self, PyObject *args);
+
 static PyObject *
 array_fromfile(arrayobject *self, PyObject *args)
 {
-	PyObject *f;
-	Py_ssize_t n;
-	FILE *fp;
+	PyObject *f, *b, *res;
+	Py_ssize_t itemsize = self->ob_descr->itemsize;
+	Py_ssize_t n, nbytes;
+
         if (!PyArg_ParseTuple(args, "On:fromfile", &f, &n))
 		return NULL;
-	fp = PyFile_AsFile(f);
-	if (fp == NULL) {
-		PyErr_SetString(PyExc_TypeError, "arg1 must be open file");
+
+	nbytes = n * itemsize;
+	if (nbytes < 0 || nbytes/itemsize != n) {
+		PyErr_NoMemory();
 		return NULL;
 	}
-	if (n > 0) {
-		char *item = self->ob_item;
-		Py_ssize_t itemsize = self->ob_descr->itemsize;
-		size_t nread;
-		Py_ssize_t newlength;
-		size_t newbytes;
-		/* Be careful here about overflow */
-		if ((newlength = Py_Size(self) + n) <= 0 ||
-		    (newbytes = newlength * itemsize) / itemsize !=
-		    (size_t)newlength)
-			goto nomem;
-		PyMem_RESIZE(item, char, newbytes);
-		if (item == NULL) {
-		  nomem:
-			PyErr_NoMemory();
-			return NULL;
-		}
-		self->ob_item = item;
-		Py_Size(self) += n;
-		self->allocated = Py_Size(self);
-		nread = fread(item + (Py_Size(self) - n) * itemsize,
-			      itemsize, n, fp);
-		if (nread < (size_t)n) {
-		  Py_Size(self) -= (n - nread);
-			PyMem_RESIZE(item, char, Py_Size(self)*itemsize);
-			self->ob_item = item;
-			self->allocated = Py_Size(self);
-			PyErr_SetString(PyExc_EOFError,
-				         "not enough items in file");
-			return NULL;
-		}
+
+	b = PyObject_CallMethod(f, "read", "n", nbytes);
+	if (b == NULL)
+		return NULL;
+
+	if (!PyBytes_Check(b)) {
+		PyErr_SetString(PyExc_TypeError,
+				"read() didn't return bytes");
+		Py_DECREF(b);
+		return NULL;
 	}
-	Py_INCREF(Py_None);
-	return Py_None;
+
+	if (PyBytes_GET_SIZE(b) != nbytes) {
+		PyErr_SetString(PyExc_EOFError,
+				"read() didn't return enough bytes");
+		Py_DECREF(b);
+		return NULL;
+	}
+
+	args = Py_BuildValue("(O)", b);
+	Py_DECREF(b);
+	if (args == NULL)
+		return NULL;
+
+	res = array_fromstring(self, args);
+	Py_DECREF(args);
+
+	return res;
 }
 
 PyDoc_STRVAR(fromfile_doc,
@@ -1257,21 +1253,33 @@ array.  Also called as read.");
 static PyObject *
 array_tofile(arrayobject *self, PyObject *f)
 {
-	FILE *fp;
+	Py_ssize_t nbytes = Py_Size(self) * self->ob_descr->itemsize;
+	/* Write 64K blocks at a time */
+	/* XXX Make the block size settable */
+	int BLOCKSIZE = 64*1024;
+	Py_ssize_t nblocks = (nbytes + BLOCKSIZE - 1) / BLOCKSIZE;
+	Py_ssize_t i;
 
-	fp = PyFile_AsFile(f);
-	if (fp == NULL) {
-		PyErr_SetString(PyExc_TypeError, "arg must be open file");
-		return NULL;
-	}
-	if (self->ob_size > 0) {
-		if (fwrite(self->ob_item, self->ob_descr->itemsize,
-			   self->ob_size, fp) != (size_t)self->ob_size) {
-			PyErr_SetFromErrno(PyExc_IOError);
-			clearerr(fp);
+        if (Py_Size(self) == 0)
+		goto done;
+
+	for (i = 0; i < nblocks; i++) {
+		char* ptr = self->ob_item + i*BLOCKSIZE;
+		Py_ssize_t size = BLOCKSIZE;
+		PyObject *bytes, *res;
+		if (i*BLOCKSIZE + size > nbytes)
+			size = nbytes - i*BLOCKSIZE;
+		bytes = PyBytes_FromStringAndSize(ptr, size);
+		if (bytes == NULL)
 			return NULL;
-		}
+		res = PyObject_CallMethod(f, "write", "O", bytes);
+		Py_DECREF(bytes);
+		if (res == NULL)
+			return NULL;
+		Py_DECREF(res); /* drop write result */
 	}
+
+  done:
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -1326,7 +1334,6 @@ PyDoc_STRVAR(fromlist_doc,
 "fromlist(list)\n\
 \n\
 Append items to array from list.");
-
 
 static PyObject *
 array_tolist(arrayobject *self, PyObject *unused)
@@ -1388,14 +1395,14 @@ PyDoc_STRVAR(fromstring_doc,
 "fromstring(string)\n\
 \n\
 Appends items from the string, interpreting it as an array of machine\n\
-values,as if it had been read from a file using the fromfile() method).");
+values, as if it had been read from a file using the fromfile() method).");
 
 
 static PyObject *
 array_tostring(arrayobject *self, PyObject *unused)
 {
-	return PyString_FromStringAndSize(self->ob_item,
-				    Py_Size(self) * self->ob_descr->itemsize);
+	return PyBytes_FromStringAndSize(self->ob_item,
+                                         Py_Size(self) * self->ob_descr->itemsize);
 }
 
 PyDoc_STRVAR(tostring_doc,
@@ -1406,7 +1413,6 @@ representation.");
 
 
 
-#ifdef Py_USING_UNICODE
 static PyObject *
 array_fromunicode(arrayobject *self, PyObject *args)
 {
@@ -1415,10 +1421,10 @@ array_fromunicode(arrayobject *self, PyObject *args)
 
         if (!PyArg_ParseTuple(args, "u#:fromunicode", &ustr, &n))
 		return NULL;
-	if (self->ob_descr->typecode != 'u') {
+	if (self->ob_descr->typecode != PyArr_UNI) {
 		PyErr_SetString(PyExc_ValueError,
 			"fromunicode() may only be called on "
-			"type 'u' arrays");
+			"unicode type arrays");
 		return NULL;
 	}
 	if (n > 0) {
@@ -1443,7 +1449,7 @@ PyDoc_STRVAR(fromunicode_doc,
 "fromunicode(ustr)\n\
 \n\
 Extends this array with data from the unicode string ustr.\n\
-The array must be a type 'u' array; otherwise a ValueError\n\
+The array must be a unicode type array; otherwise a ValueError\n\
 is raised.  Use array.fromstring(ustr.decode(...)) to\n\
 append Unicode data to an array of some other type.");
 
@@ -1451,9 +1457,9 @@ append Unicode data to an array of some other type.");
 static PyObject *
 array_tounicode(arrayobject *self, PyObject *unused)
 {
-	if (self->ob_descr->typecode != 'u') {
+	if (self->ob_descr->typecode != PyArr_UNI) {
 		PyErr_SetString(PyExc_ValueError,
-			"tounicode() may only be called on type 'u' arrays");
+			"tounicode() may only be called on unicode type arrays");
 		return NULL;
 	}
 	return PyUnicode_FromUnicode((Py_UNICODE *) self->ob_item, Py_Size(self));
@@ -1463,18 +1469,17 @@ PyDoc_STRVAR(tounicode_doc,
 "tounicode() -> unicode\n\
 \n\
 Convert the array to a unicode string.  The array must be\n\
-a type 'u' array; otherwise a ValueError is raised.  Use\n\
+a unicode type array; otherwise a ValueError is raised.  Use\n\
 array.tostring().decode() to obtain a unicode string from\n\
 an array of some other type.");
 
-#endif /* Py_USING_UNICODE */
 
 
 static PyObject *
 array_get_typecode(arrayobject *a, void *closure)
 {
 	char tc = a->ob_descr->typecode;
-	return PyString_FromStringAndSize(&tc, 1);
+	return PyUnicode_FromStringAndSize(&tc, 1);
 }
 
 static PyObject *
@@ -1512,10 +1517,8 @@ PyMethodDef array_methods[] = {
 	 fromlist_doc},
 	{"fromstring",	(PyCFunction)array_fromstring,	METH_VARARGS,
 	 fromstring_doc},
-#ifdef Py_USING_UNICODE
 	{"fromunicode",	(PyCFunction)array_fromunicode,	METH_VARARGS,
 	 fromunicode_doc},
-#endif
 	{"index",	(PyCFunction)array_index,	METH_O,
 	 index_doc},
 	{"insert",	(PyCFunction)array_insert,	METH_VARARGS,
@@ -1538,10 +1541,8 @@ PyMethodDef array_methods[] = {
 	 tolist_doc},
 	{"tostring",	(PyCFunction)array_tostring,	METH_NOARGS,
 	 tostring_doc},
-#ifdef Py_USING_UNICODE
 	{"tounicode",   (PyCFunction)array_tounicode,	METH_NOARGS,
 	 tounicode_doc},
-#endif
 	{"write",	(PyCFunction)array_tofile,	METH_O,
 	 tofile_doc},
 	{NULL,		NULL}		/* sentinel */
@@ -1550,32 +1551,22 @@ PyMethodDef array_methods[] = {
 static PyObject *
 array_repr(arrayobject *a)
 {
-	char buf[256], typecode;
-	PyObject *s, *t, *v = NULL;
+	char typecode;
+	PyObject *s, *v = NULL;
 	Py_ssize_t len;
 
 	len = Py_Size(a);
 	typecode = a->ob_descr->typecode;
 	if (len == 0) {
-		PyOS_snprintf(buf, sizeof(buf), "array('%c')", typecode);
-		return PyString_FromString(buf);
+		return PyUnicode_FromFormat("array('%c')", typecode);
 	}
-		
-	if (typecode == 'c')
-		v = array_tostring(a, NULL);
-#ifdef Py_USING_UNICODE
-	else if (typecode == 'u')
+        if (typecode == PyArr_UNI)
 		v = array_tounicode(a, NULL);
-#endif
 	else
 		v = array_tolist(a, NULL);
-	t = PyObject_Repr(v);
-	Py_XDECREF(v);
 
-	PyOS_snprintf(buf, sizeof(buf), "array('%c', ", typecode);
-	s = PyString_FromString(buf);
-	PyString_ConcatAndDel(&s, t);
-	PyString_ConcatAndDel(&s, PyString_FromString(")"));
+	s = PyUnicode_FromFormat("array('%c', %R)", typecode, v);
+	Py_DECREF(v);
 	return s;
 }
 
@@ -1791,40 +1782,52 @@ static PyMappingMethods array_as_mapping = {
 
 static const void *emptybuf = "";
 
-static Py_ssize_t
-array_buffer_getreadbuf(arrayobject *self, Py_ssize_t index, const void **ptr)
+
+static int
+array_buffer_getbuf(arrayobject *self, PyBuffer *view, int flags)
 {
-	if ( index != 0 ) {
-		PyErr_SetString(PyExc_SystemError,
-				"Accessing non-existent array segment");
-		return -1;
-	}
-	*ptr = (void *)self->ob_item;
-	if (*ptr == NULL)
-		*ptr = emptybuf;
-	return Py_Size(self)*self->ob_descr->itemsize;
+        if ((flags & PyBUF_CHARACTER)) {
+                PyErr_SetString(PyExc_TypeError,
+                                "Cannot be a character buffer");
+                return -1;
+        }
+        if ((flags & PyBUF_LOCKDATA)) {
+                PyErr_SetString(PyExc_BufferError,
+                                "Cannot lock data");
+                return -1;
+        }
+        if (view==NULL) goto finish;
+
+        view->buf = (void *)self->ob_item;
+        if (view->buf == NULL)
+                view->buf = (void *)emptybuf;
+        view->len = (Py_Size(self)) * self->ob_descr->itemsize;
+        view->readonly = 0;
+        view->ndim = 1;
+        view->itemsize = self->ob_descr->itemsize;
+        view->suboffsets = NULL;
+        view->shape = NULL;
+        if ((flags & PyBUF_ND)==PyBUF_ND) {
+                view->shape = &((Py_Size(self)));
+        }
+        view->strides = NULL;
+        if ((flags & PyBUF_STRIDES)==PyBUF_STRIDES)
+                view->strides = &(view->itemsize);
+        view->format = NULL;
+        view->internal = NULL;
+        if ((flags & PyBUF_FORMAT) == PyBUF_FORMAT) {
+                view->format = self->ob_descr->formats;
+        }
+
+ finish:
+        self->ob_exports++;
+        return 0;
 }
 
-static Py_ssize_t
-array_buffer_getwritebuf(arrayobject *self, Py_ssize_t index, const void **ptr)
+static void
+array_buffer_relbuf(arrayobject *self, PyBuffer *view)
 {
-	if ( index != 0 ) {
-		PyErr_SetString(PyExc_SystemError,
-				"Accessing non-existent array segment");
-		return -1;
-	}
-	*ptr = (void *)self->ob_item;
-	if (*ptr == NULL)
-		*ptr = emptybuf;
-	return Py_Size(self)*self->ob_descr->itemsize;
-}
-
-static Py_ssize_t
-array_buffer_getsegcount(arrayobject *self, Py_ssize_t *lenp)
-{
-	if ( lenp )
-		*lenp = Py_Size(self)*self->ob_descr->itemsize;
-	return 1;
+        self->ob_exports--;
 }
 
 static PySequenceMethods array_as_sequence = {
@@ -1832,37 +1835,36 @@ static PySequenceMethods array_as_sequence = {
 	(binaryfunc)array_concat,               /*sq_concat*/
 	(ssizeargfunc)array_repeat,		/*sq_repeat*/
 	(ssizeargfunc)array_item,		        /*sq_item*/
-	(ssizessizeargfunc)array_slice,		/*sq_slice*/
+	0,					/*sq_slice*/
 	(ssizeobjargproc)array_ass_item,		/*sq_ass_item*/
-	(ssizessizeobjargproc)array_ass_slice,	/*sq_ass_slice*/
+	0,					/*sq_ass_slice*/
 	(objobjproc)array_contains,		/*sq_contains*/
 	(binaryfunc)array_inplace_concat,	/*sq_inplace_concat*/
 	(ssizeargfunc)array_inplace_repeat	/*sq_inplace_repeat*/
 };
 
 static PyBufferProcs array_as_buffer = {
-	(readbufferproc)array_buffer_getreadbuf,
-	(writebufferproc)array_buffer_getwritebuf,
-	(segcountproc)array_buffer_getsegcount,
-	NULL,
+        (getbufferproc)array_buffer_getbuf,
+        (releasebufferproc)array_buffer_relbuf
 };
 
 static PyObject *
 array_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-	char c;
+	int c;
 	PyObject *initial = NULL, *it = NULL;
 	struct arraydescr *descr;
 	
 	if (type == &Arraytype && !_PyArg_NoKeywords("array.array()", kwds))
 		return NULL;
 
-	if (!PyArg_ParseTuple(args, "c|O:array", &c, &initial))
+	if (!PyArg_ParseTuple(args, "C|O:array", &c, &initial))
 		return NULL;
 
 	if (!(initial == NULL || PyList_Check(initial)
-	      || PyString_Check(initial) || PyTuple_Check(initial)
-	      || (c == 'u' && PyUnicode_Check(initial)))) {
+	      || PyBytes_Check(initial)
+	      || PyTuple_Check(initial)
+	      || (c == PyArr_UNI && PyUnicode_Check(initial)))) {
 		it = PyObject_GetIter(initial);
 		if (it == NULL)
 			return NULL;
@@ -1904,7 +1906,7 @@ array_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 					}
 					Py_DECREF(v);
 				}
-			} else if (initial != NULL && PyString_Check(initial)) {
+			} else if (initial != NULL && PyBytes_Check(initial)) {
 				PyObject *t_initial, *v;
 				t_initial = PyTuple_Pack(1, initial);
 				if (t_initial == NULL) {
@@ -1919,7 +1921,6 @@ array_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 					return NULL;
 				}
 				Py_DECREF(v);
-#ifdef Py_USING_UNICODE
 			} else if (initial != NULL && PyUnicode_Check(initial))  {
 				Py_ssize_t n = PyUnicode_GET_DATA_SIZE(initial);
 				if (n > 0) {
@@ -1936,7 +1937,6 @@ array_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 					memcpy(item, PyUnicode_AS_DATA(initial), n);
 					self->allocated = Py_Size(self);
 				}
-#endif
 			}
 			if (it != NULL) {
 				if (array_iter_extend((arrayobject *)a, it) == -1) {
@@ -1950,7 +1950,7 @@ array_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		}
 	}
 	PyErr_SetString(PyExc_ValueError,
-		"bad typecode (must be c, b, B, u, h, H, i, I, l, L, f or d)");
+		"bad typecode (must be b, B, u, h, H, i, I, l, L, f or d)");
 	return NULL;
 }
 
@@ -1964,7 +1964,6 @@ type is specified at object creation time by using a type code, which\n\
 is a single character.  The following type codes are defined:\n\
 \n\
     Type code   C Type             Minimum size in bytes \n\
-    'c'         character          1 \n\
     'b'         signed integer     1 \n\
     'B'         unsigned integer   1 \n\
     'u'         Unicode character  2 \n\
@@ -1972,6 +1971,7 @@ is a single character.  The following type codes are defined:\n\
     'H'         unsigned integer   2 \n\
     'i'         signed integer     2 \n\
     'I'         unsigned integer   2 \n\
+    'w'         unicode character  4 \n\
     'l'         signed integer     4 \n\
     'L'         unsigned integer   4 \n\
     'f'         floating point     4 \n\
@@ -2041,7 +2041,7 @@ static PyTypeObject Arraytype = {
 	PyObject_GenericGetAttr,		/* tp_getattro */
 	0,					/* tp_setattro */
 	&array_as_buffer,			/* tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_WEAKREFS,  /* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
 	arraytype_doc,				/* tp_doc */
  	0,					/* tp_traverse */
 	0,					/* tp_clear */
@@ -2169,8 +2169,9 @@ initarray(void)
 {
 	PyObject *m;
 
-	Arraytype.ob_type = &PyType_Type;
-	PyArrayIter_Type.ob_type = &PyType_Type;
+	if (PyType_Ready(&Arraytype) < 0)
+            return;
+	Py_Type(&PyArrayIter_Type) = &PyType_Type;
 	m = Py_InitModule3("array", a_methods, module_doc);
 	if (m == NULL)
 		return;

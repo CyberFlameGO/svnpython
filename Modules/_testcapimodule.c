@@ -456,7 +456,6 @@ test_k_code(PyObject *self)
 	return Py_None;
 }
 
-#ifdef Py_USING_UNICODE
 
 /* Test the u and u# codes for PyArg_ParseTuple. May leak memory in case
    of an error.
@@ -498,6 +497,59 @@ test_u_code(PyObject *self)
 	return Py_None;
 }
 
+/* Test Z and Z# codes for PyArg_ParseTuple */
+static PyObject *
+test_Z_code(PyObject *self)
+{
+	PyObject *tuple, *obj;
+	Py_UNICODE *value1, *value2;
+	int len1, len2;
+
+        tuple = PyTuple_New(2);
+        if (tuple == NULL)
+        	return NULL;
+
+	obj = PyUnicode_FromString("test");
+	PyTuple_SET_ITEM(tuple, 0, obj);
+	Py_INCREF(Py_None);
+	PyTuple_SET_ITEM(tuple, 1, Py_None);
+
+	/* swap values on purpose */
+        value1 = NULL;
+	value2 = PyUnicode_AS_UNICODE(obj);
+
+	/* Test Z for both values */
+        if (PyArg_ParseTuple(tuple, "ZZ:test_Z_code", &value1, &value2) < 0)
+		return NULL;
+        if (value1 != PyUnicode_AS_UNICODE(obj))
+        	return raiseTestError("test_Z_code",
+			"Z code returned wrong value for 'test'");
+        if (value2 != NULL)
+        	return raiseTestError("test_Z_code",
+			"Z code returned wrong value for None");
+
+        value1 = NULL;
+	value2 = PyUnicode_AS_UNICODE(obj);
+	len1 = -1;
+	len2 = -1;
+
+	/* Test Z# for both values */
+        if (PyArg_ParseTuple(tuple, "Z#Z#:test_Z_code", &value1, &len1, 
+			     &value2, &len2) < 0)
+        	return NULL;
+        if (value1 != PyUnicode_AS_UNICODE(obj) ||
+	    len1 != PyUnicode_GET_SIZE(obj))
+        	return raiseTestError("test_Z_code",
+			"Z# code returned wrong values for 'test'");
+        if (value2 != NULL ||
+	    len2 != 0)
+        	return raiseTestError("test_Z_code",
+			"Z# code returned wrong values for None'");
+
+	Py_DECREF(tuple);
+	Py_RETURN_NONE;
+}
+
 static PyObject *
 codec_incrementalencoder(PyObject *self, PyObject *args)
 {
@@ -518,7 +570,6 @@ codec_incrementaldecoder(PyObject *self, PyObject *args)
 	return PyCodec_IncrementalDecoder(encoding, errors);
 }
 
-#endif
 
 /* Simple test of _PyLong_NumBits and _PyLong_Sign. */
 static PyObject *
@@ -675,7 +726,7 @@ test_thread_state(PyObject *self, PyObject *args)
 }
 #endif
 
-/* Some tests of PyString_FromFormat().  This needs more tests. */
+/* Some tests of PyUnicode_FromFormat().  This needs more tests. */
 static PyObject *
 test_string_from_format(PyObject *self, PyObject *args)
 {
@@ -683,10 +734,10 @@ test_string_from_format(PyObject *self, PyObject *args)
 	char *msg;
 
 #define CHECK_1_FORMAT(FORMAT, TYPE) 			\
-	result = PyString_FromFormat(FORMAT, (TYPE)1);	\
+	result = PyUnicode_FromFormat(FORMAT, (TYPE)1);	\
 	if (result == NULL)				\
 		return NULL;				\
-	if (strcmp(PyString_AsString(result), "1")) {	\
+	if (strcmp(PyUnicode_AsString(result), "1")) {	\
 		msg = FORMAT " failed at 1";		\
 		goto Fail;				\
 	}						\
@@ -717,6 +768,119 @@ test_with_docstring(PyObject *self)
 {
 	Py_RETURN_NONE;
 }
+
+#ifdef HAVE_GETTIMEOFDAY
+/* Profiling of integer performance */
+void print_delta(int test, struct timeval *s, struct timeval *e)
+{
+	e->tv_sec -= s->tv_sec;
+	e->tv_usec -= s->tv_usec;
+	if (e->tv_usec < 0) {
+		e->tv_sec -=1;
+		e->tv_usec += 1000000;
+	}
+	printf("Test %d: %d.%06ds\n", test, (int)e->tv_sec, (int)e->tv_usec);
+}
+
+static PyObject *
+profile_int(PyObject *self, PyObject* args)
+{
+	int i, k;
+	struct timeval start, stop;
+	PyObject *single, **multiple, *op1, *result;
+
+	/* Test 1: Allocate and immediately deallocate
+	   many small integers */
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20000; k++)
+		for(i=0; i < 1000; i++) {
+			single = PyInt_FromLong(i);
+			Py_DECREF(single);
+		}
+	gettimeofday(&stop, NULL);
+	print_delta(1, &start, &stop);
+
+	/* Test 2: Allocate and immediately deallocate
+	   many large integers */
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20000; k++)
+		for(i=0; i < 1000; i++) {
+			single = PyInt_FromLong(i+1000000);
+			Py_DECREF(single);
+		}
+	gettimeofday(&stop, NULL);
+	print_delta(2, &start, &stop);
+
+	/* Test 3: Allocate a few integers, then release
+	   them all simultaneously. */
+	multiple = malloc(sizeof(PyObject*) * 1000);
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20000; k++) {
+		for(i=0; i < 1000; i++) {
+			multiple[i] = PyInt_FromLong(i+1000000);
+		}
+		for(i=0; i < 1000; i++) {
+			Py_DECREF(multiple[i]);
+		}
+	}
+	gettimeofday(&stop, NULL);
+	print_delta(3, &start, &stop);
+
+	/* Test 4: Allocate many integers, then release
+	   them all simultaneously. */
+	multiple = malloc(sizeof(PyObject*) * 1000000);
+	gettimeofday(&start, NULL);
+	for(k=0; k < 20; k++) {
+		for(i=0; i < 1000000; i++) {
+			multiple[i] = PyInt_FromLong(i+1000000);
+		}
+		for(i=0; i < 1000000; i++) {
+			Py_DECREF(multiple[i]);
+		}
+	}
+	gettimeofday(&stop, NULL);
+	print_delta(4, &start, &stop);
+
+	/* Test 5: Allocate many integers < 32000 */
+	multiple = malloc(sizeof(PyObject*) * 1000000);
+	gettimeofday(&start, NULL);
+	for(k=0; k < 10; k++) {
+		for(i=0; i < 1000000; i++) {
+			multiple[i] = PyInt_FromLong(i+1000);
+		}
+		for(i=0; i < 1000000; i++) {
+			Py_DECREF(multiple[i]);
+		}
+	}
+	gettimeofday(&stop, NULL);
+	print_delta(5, &start, &stop);
+
+	/* Test 6: Perform small int addition */
+	op1 = PyInt_FromLong(1);
+	gettimeofday(&start, NULL);
+	for(i=0; i < 10000000; i++) {
+		result = PyNumber_Add(op1, op1);
+		Py_DECREF(result);
+	}
+	gettimeofday(&stop, NULL);
+	Py_DECREF(op1);
+	print_delta(6, &start, &stop);
+
+	/* Test 7: Perform medium int addition */
+	op1 = PyInt_FromLong(1000);
+	gettimeofday(&start, NULL);
+	for(i=0; i < 10000000; i++) {
+		result = PyNumber_Add(op1, op1);
+		Py_DECREF(result);
+	}
+	gettimeofday(&stop, NULL);
+	Py_DECREF(op1);
+	print_delta(7, &start, &stop);
+
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+#endif
 
 static PyMethodDef TestMethods[] = {
 	{"raise_exception",	raise_exception,		 METH_VARARGS},
@@ -750,11 +914,13 @@ static PyMethodDef TestMethods[] = {
 	{"codec_incrementaldecoder",
 	 (PyCFunction)codec_incrementaldecoder,	 METH_VARARGS},
 #endif
-#ifdef Py_USING_UNICODE
 	{"test_u_code",		(PyCFunction)test_u_code,	 METH_NOARGS},
-#endif
+	{"test_Z_code",		(PyCFunction)test_Z_code,	 METH_NOARGS},
 #ifdef WITH_THREAD
 	{"_test_thread_state",  test_thread_state, 		 METH_VARARGS},
+#endif
+#ifdef HAVE_GETTIMEOFDAY
+	{"profile_int",		profile_int,			METH_NOARGS},
 #endif
 	{NULL, NULL} /* sentinel */
 };

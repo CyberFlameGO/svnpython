@@ -77,12 +77,21 @@ arguments should be used in most instances.
    arguments are rarely used and are just passed to the low-level dbopen function.
    Consult the Berkeley DB documentation for their use and interpretation.
 
-.. note::
 
-   Beginning in 2.3 some Unix versions of Python may have a :mod:`bsddb185` module.
-   This is present *only* to allow backwards compatibility with systems which ship
-   with the old Berkeley DB 1.85 database library.  The :mod:`bsddb185` module
-   should never be used directly in new code.
+.. class:: StringKeys(db)
+
+   Wrapper class around a DB object that supports string keys (rather than bytes).
+   All keys are encoded as UTF-8, then passed to the underlying object.
+   
+   .. versionadded:: 3.0
+
+
+.. class:: StringValues(db)
+
+   Wrapper class around a DB object that supports string values (rather than bytes).
+   All values are encoded as UTF-8, then passed to the underlying object.
+
+   .. versionadded:: 3.0
 
 
 .. seealso::

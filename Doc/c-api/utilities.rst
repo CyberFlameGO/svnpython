@@ -173,12 +173,8 @@ Importing Modules
 
 .. cfunction:: PyObject* PyImport_ReloadModule(PyObject *m)
 
-   .. index:: builtin: reload
-
-   Reload a module.  This is best described by referring to the built-in Python
-   function :func:`reload`, as the standard :func:`reload` function calls this
-   function directly.  Return a new reference to the reloaded module, or *NULL*
-   with an exception set on failure (the module still exists in this case).
+   Reload a module.  Return a new reference to the reloaded module, or *NULL* with
+   an exception set on failure (the module still exists in this case).
 
 
 .. cfunction:: PyObject* PyImport_AddModule(const char *name)
@@ -460,6 +456,15 @@ variable(s) whose address should be passed.
    other read-buffer compatible objects pass back a reference to the raw internal
    data representation.
 
+``y`` (bytes object) [const char \*]
+   This variant on ``s`` convert a Python bytes object to a C pointer to a
+   character string. The bytes object must not contain embedded NUL bytes; if it
+   does, a :exc:`TypeError` exception is raised.
+
+``y#`` (bytes object) [const char \*, int]
+   This variant on ``s#`` stores into two C variables, the first one a pointer to a
+   character string, the second one its length.  This only accepts bytes objects.
+
 ``z`` (string or ``None``) [const char \*]
    Like ``s``, but the Python object may also be ``None``, in which case the C
    pointer is set to *NULL*.
@@ -478,6 +483,13 @@ variable(s) whose address should be passed.
    Unicode data buffer, the second one its length. Non-Unicode objects are handled
    by interpreting their read-buffer pointer as pointer to a :ctype:`Py_UNICODE`
    array.
+
+``Z`` (Unicode or ``None``) [Py_UNICODE \*]
+   Like ``s``, but the Python object may also be ``None``, in which case the C
+   pointer is set to *NULL*.
+
+``Z#`` (Unicode or ``None``) [Py_UNICODE \*, int]
+   This is to ``u#`` as ``Z`` is to ``u``.
 
 ``es`` (string, Unicode object or character buffer compatible object) [const char \*encoding, char \*\*buffer]
    This variant on ``s`` is used for encoding Unicode and objects convertible to
@@ -840,6 +852,14 @@ return true, otherwise they return false and raise an appropriate exception.
       Unicode object.   If the Unicode buffer pointer is *NULL*, the length is ignored
       and ``None`` is returned.
 
+   ``U`` (string) [char \*]
+      Convert a null-terminated C string to a Python unicode object. If the C string
+      pointer is *NULL*, ``None`` is used.
+
+   ``U#`` (string) [char \*, int]
+      Convert a C string and its length to a Python unicode object. If the C string
+      pointer is *NULL*, the length is ignored and ``None`` is returned.
+
    ``i`` (integer) [int]
       Convert a plain C :ctype:`int` to a Python integer object.
 
@@ -955,7 +975,7 @@ guarantee consistent behavior in corner cases, which the Standard C functions do
 not.
 
 The wrappers ensure that *str*[*size*-1] is always ``'\0'`` upon return. They
-never write more than *size* bytes (including the trailing ``'\0'`` into str.
+never write more than *size* bytes (including the trailing ``'\0'``) into str.
 Both functions require that ``str != NULL``, ``size > 0`` and ``format !=
 NULL``.
 

@@ -18,7 +18,6 @@ simple statements is:
               : | `augmented_assignment_stmt`
               : | `pass_stmt`
               : | `del_stmt`
-              : | `print_stmt`
               : | `return_stmt`
               : | `yield_stmt`
               : | `raise_stmt`
@@ -26,7 +25,6 @@ simple statements is:
               : | `continue_stmt`
               : | `import_stmt`
               : | `global_stmt`
-              : | `exec_stmt`
 
 
 .. _exprstmts:
@@ -61,7 +59,7 @@ expression).
 
 In interactive mode, if the value is not ``None``, it is converted to a string
 using the built-in :func:`repr` function and the resulting string is written to
-standard output (see section :ref:`print`) on a line by itself.  (Expression
+standard output (see :func:`print`) on a line by itself.  (Expression
 statements yielding ``None`` are not written, so that procedure calls do not
 cause any output.)
 
@@ -370,67 +368,6 @@ assignment of an empty slice of the right type (but even this is determined by
 the sliced object).
 
 
-.. _print:
-
-The :keyword:`print` statement
-==============================
-
-.. index:: statement: print
-
-.. productionlist::
-   print_stmt: "print" ([`expression` ("," `expression`)* [","]
-             : | ">>" `expression` [("," `expression`)+ [","])
-
-:keyword:`print` evaluates each expression in turn and writes the resulting
-object to standard output (see below).  If an object is not a string, it is
-first converted to a string using the rules for string conversions.  The
-(resulting or original) string is then written.  A space is written before each
-object is (converted and) written, unless the output system believes it is
-positioned at the beginning of a line.  This is the case (1) when no characters
-have yet been written to standard output, (2) when the last character written to
-standard output is ``'\n'``, or (3) when the last write operation on standard
-output was not a :keyword:`print` statement.  (In some cases it may be
-functional to write an empty string to standard output for this reason.)
-
-.. note::
-
-   Objects which act like file objects but which are not the built-in file objects
-   often do not properly emulate this aspect of the file object's behavior, so it
-   is best not to rely on this.
-
-.. index::
-   single: output
-   pair: writing; values
-
-.. index::
-   pair: trailing; comma
-   pair: newline; suppression
-
-A ``'\n'`` character is written at the end, unless the :keyword:`print`
-statement ends with a comma.  This is the only action if the statement contains
-just the keyword :keyword:`print`.
-
-.. index::
-   pair: standard; output
-   module: sys
-   single: stdout (in module sys)
-   exception: RuntimeError
-
-Standard output is defined as the file object named ``stdout`` in the built-in
-module :mod:`sys`.  If no such object exists, or if it does not have a
-:meth:`write` method, a :exc:`RuntimeError` exception is raised.
-
-.. index:: single: extended print statement
-
-:keyword:`print` also has an extended form, defined by the second portion of the
-syntax described above. This form is sometimes referred to as ":keyword:`print`
-chevron." In this form, the first expression after the ``>>`` must evaluate to a
-"file-like" object, specifically an object that has a :meth:`write` method as
-described above.  With this extended form, the subsequent expressions are
-printed to this file object.  If the first expression evaluates to ``None``,
-then ``sys.stdout`` is used as the file for output.
-
-
 .. _return:
 
 The :keyword:`return` statement
@@ -488,16 +425,16 @@ create a generator function instead of a normal function.
 
 When a generator function is called, it returns an iterator known as a generator
 iterator, or more commonly, a generator.  The body of the generator function is
-executed by calling the generator's :meth:`next` method repeatedly until it
+executed by calling the generator's :meth:`__next__` method repeatedly until it
 raises an exception.
 
 When a :keyword:`yield` statement is executed, the state of the generator is
-frozen and the value of :token:`expression_list` is returned to :meth:`next`'s
-caller.  By "frozen" we mean that all local state is retained, including the
-current bindings of local variables, the instruction pointer, and the internal
-evaluation stack: enough information is saved so that the next time :meth:`next`
-is invoked, the function can proceed exactly as if the :keyword:`yield`
-statement were just another external call.
+frozen and the value of :token:`expression_list` is returned to
+:meth:`__next__`'s caller.  By "frozen" we mean that all local state is
+retained, including the current bindings of local variables, the instruction
+pointer, and the internal evaluation stack: enough information is saved so that
+the next time :meth:`__next__` is invoked, the function can proceed exactly as
+if the :keyword:`yield` statement were just another external call.
 
 As of Python version 2.5, the :keyword:`yield` statement is now allowed in the
 :keyword:`try` clause of a :keyword:`try` ...  :keyword:`finally` construct.  If
@@ -824,11 +761,11 @@ Note that there is nothing special about the statement::
 That is not a future statement; it's an ordinary import statement with no
 special semantics or syntax restrictions.
 
-Code compiled by an :keyword:`exec` statement or calls to the builtin functions
-:func:`compile` and :func:`execfile` that occur in a module :mod:`M` containing
-a future statement will, by default, use the new  syntax or semantics associated
-with the future statement.  This can, starting with Python 2.2 be controlled by
-optional arguments to :func:`compile` --- see the documentation of that function
+Code compiled by calls to the builtin functions :func:`exec` and :func:`compile`
+that occur in a module :mod:`M` containing a future
+statement will, by default, use the new  syntax or semantics associated with the
+future statement.  This can, starting with Python 2.2 be controlled by optional
+arguments to :func:`compile` --- see the documentation of that function
 for details.
 
 A future statement typed at an interactive interpreter prompt will take effect
@@ -868,70 +805,17 @@ programs should not abuse this freedom, as future implementations may enforce
 them or silently change the meaning of the program.)
 
 .. index::
-   statement: exec
+   builtin: exec
    builtin: eval
-   builtin: execfile
    builtin: compile
 
 **Programmer's note:** the :keyword:`global` is a directive to the parser.  It
 applies only to code parsed at the same time as the :keyword:`global` statement.
-In particular, a :keyword:`global` statement contained in an :keyword:`exec`
-statement does not affect the code block *containing* the :keyword:`exec`
-statement, and code contained in an :keyword:`exec` statement is unaffected by
-:keyword:`global` statements in the code containing the :keyword:`exec`
-statement.  The same applies to the :func:`eval`, :func:`execfile` and
-:func:`compile` functions.
-
-
-.. _exec:
-
-The :keyword:`exec` statement
-=============================
-
-.. index:: statement: exec
-
-.. productionlist::
-   exec_stmt: "exec" `or_expr` ["in" `expression` ["," `expression`]]
-
-This statement supports dynamic execution of Python code.  The first expression
-should evaluate to either a string, an open file object, or a code object.  If
-it is a string, the string is parsed as a suite of Python statements which is
-then executed (unless a syntax error occurs).  If it is an open file, the file
-is parsed until EOF and executed.  If it is a code object, it is simply
-executed.  In all cases, the code that's executed is expected to be valid as
-file input (see section :ref:`file-input`).  Be aware that the
-:keyword:`return` and :keyword:`yield` statements may not be used outside of
-function definitions even within the context of code passed to the
-:keyword:`exec` statement.
-
-In all cases, if the optional parts are omitted, the code is executed in the
-current scope.  If only the first expression after :keyword:`in` is specified,
-it should be a dictionary, which will be used for both the global and the local
-variables.  If two expressions are given, they are used for the global and local
-variables, respectively. If provided, *locals* can be any mapping object.
-
-.. versionchanged:: 2.4
-   formerly *locals* was required to be a dictionary.
-
-.. index::
-   single: __builtins__
-   module: __builtin__
-
-As a side effect, an implementation may insert additional keys into the
-dictionaries given besides those corresponding to variable names set by the
-executed code.  For example, the current implementation may add a reference to
-the dictionary of the built-in module :mod:`__builtin__` under the key
-``__builtins__`` (!).
-
-.. index::
-   builtin: eval
-   builtin: globals
-   builtin: locals
-
-**Programmer's hints:** dynamic evaluation of expressions is supported by the
-built-in function :func:`eval`.  The built-in functions :func:`globals` and
-:func:`locals` return the current global and local dictionary, respectively,
-which may be useful to pass around for use by :keyword:`exec`.
+In particular, a :keyword:`global` statement contained in a string or code
+object supplied to the builtin :func:`exec` function does not affect the code
+block *containing* the function call, and code contained in such a string is
+unaffected by :keyword:`global` statements in the code containing the function
+call.  The same applies to the :func:`eval` and :func:`compile` functions.
 
 .. rubric:: Footnotes
 

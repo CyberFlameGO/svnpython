@@ -532,11 +532,10 @@ Floating Point Objects
    .. versionadded:: 2.2
 
 
-.. cfunction:: PyObject* PyFloat_FromString(PyObject *str, char **pend)
+.. cfunction:: PyObject* PyFloat_FromString(PyObject *str)
 
    Create a :ctype:`PyFloatObject` object based on the string value in *str*, or
-   *NULL* on failure.  The *pend* argument is ignored.  It remains only for
-   backward compatibility.
+   *NULL* on failure.
 
 
 .. cfunction:: PyObject* PyFloat_FromDouble(double v)
@@ -1001,7 +1000,7 @@ this in mind when writing extensions or interfaces.
 .. cvar:: PyTypeObject PyUnicode_Type
 
    This instance of :ctype:`PyTypeObject` represents the Python Unicode type.  It
-   is exposed to Python code as ``unicode`` and ``types.UnicodeType``.
+   is exposed to Python code as ``str``.
 
 The following APIs are really C macros and can be used to do fast checks and to
 access internal read-only data of Unicode objects:
@@ -1152,6 +1151,111 @@ APIs:
    object. If the buffer is not *NULL*, the return value might be a shared object.
    Therefore, modification of the resulting Unicode object is only allowed when *u*
    is *NULL*.
+
+
+.. cfunction:: PyObject* PyUnicode_FromStringAndSize(const char *u, Py_ssize_t size)
+
+   Create a Unicode Object from the char buffer *u*.  The bytes will be interpreted
+   as being UTF-8 encoded.  *u* may also be *NULL* which
+   causes the contents to be undefined. It is the user's responsibility to fill in
+   the needed data.  The buffer is copied into the new object. If the buffer is not
+   *NULL*, the return value might be a shared object. Therefore, modification of
+   the resulting Unicode object is only allowed when *u* is *NULL*.
+
+   .. versionadded:: 3.0
+
+
+.. cfunction:: PyObject *PyUnicode_FromString(const char *u)
+
+   Create a Unicode object from an UTF-8 encoded null-terminated char buffer
+   *u*.
+
+   .. versionadded:: 3.0
+
+
+.. cfunction:: PyObject* PyUnicode_FromFormat(const char *format, ...)
+
+   Take a C :cfunc:`printf`\ -style *format* string and a variable number of
+   arguments, calculate the size of the resulting Python unicode string and return
+   a string with the values formatted into it.  The variable arguments must be C
+   types and must correspond exactly to the format characters in the *format*
+   string.  The following format characters are allowed:
+
+   .. % The descriptions for %zd and %zu are wrong, but the truth is complicated
+   .. % because not all compilers support the %z width modifier -- we fake it
+   .. % when necessary via interpolating PY_FORMAT_SIZE_T.
+
+   +-------------------+---------------------+--------------------------------+
+   | Format Characters | Type                | Comment                        |
+   +===================+=====================+================================+
+   | :attr:`%%`        | *n/a*               | The literal % character.       |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%c`        | int                 | A single character,            |
+   |                   |                     | represented as an C int.       |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%d`        | int                 | Exactly equivalent to          |
+   |                   |                     | ``printf("%d")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%u`        | unsigned int        | Exactly equivalent to          |
+   |                   |                     | ``printf("%u")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%ld`       | long                | Exactly equivalent to          |
+   |                   |                     | ``printf("%ld")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%lu`       | unsigned long       | Exactly equivalent to          |
+   |                   |                     | ``printf("%lu")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%zd`       | Py_ssize_t          | Exactly equivalent to          |
+   |                   |                     | ``printf("%zd")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%zu`       | size_t              | Exactly equivalent to          |
+   |                   |                     | ``printf("%zu")``.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%i`        | int                 | Exactly equivalent to          |
+   |                   |                     | ``printf("%i")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%x`        | int                 | Exactly equivalent to          |
+   |                   |                     | ``printf("%x")``.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%s`        | char\*              | A null-terminated C character  |
+   |                   |                     | array.                         |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%p`        | void\*              | The hex representation of a C  |
+   |                   |                     | pointer. Mostly equivalent to  |
+   |                   |                     | ``printf("%p")`` except that   |
+   |                   |                     | it is guaranteed to start with |
+   |                   |                     | the literal ``0x`` regardless  |
+   |                   |                     | of what the platform's         |
+   |                   |                     | ``printf`` yields.             |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%U`        | PyObject\*          | A unicode object.              |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%V`        | PyObject\*, char \* | A unicode object (which may be |
+   |                   |                     | *NULL*) and a null-terminated  |
+   |                   |                     | C character array as a second  |
+   |                   |                     | parameter (which will be used, |
+   |                   |                     | if the first parameter is      |
+   |                   |                     | *NULL*).                       |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%S`        | PyObject\*          | The result of calling          |
+   |                   |                     | :func:`PyObject_Unicode`.      |
+   +-------------------+---------------------+--------------------------------+
+   | :attr:`%R`        | PyObject\*          | The result of calling          |
+   |                   |                     | :func:`PyObject_Repr`.         |
+   +-------------------+---------------------+--------------------------------+
+
+   An unrecognized format character causes all the rest of the format string to be
+   copied as-is to the result string, and any extra arguments discarded.
+
+   .. versionadded:: 3.0
+
+
+.. cfunction:: PyObject* PyUnicode_FromFormatV(const char *format, va_list vargs)
+
+   Identical to :func:`PyUnicode_FromFormat` except that it takes exactly two
+   arguments.
+
+   .. versionadded:: 3.0
 
 
 .. cfunction:: Py_UNICODE* PyUnicode_AsUnicode(PyObject *unicode)
@@ -1395,7 +1499,7 @@ These are the UTF-16 codec APIs:
    and then switches if the first two bytes of the input data are a byte order mark
    (BOM) and the specified byte order is native order.  This BOM is not copied into
    the resulting Unicode string.  After completion, *\*byteorder* is set to the
-   current byte order at the.
+   current byte order at the end of input data.
 
    If *byteorder* is *NULL*, the codec starts in native order mode.
 
@@ -1760,6 +1864,27 @@ They all return *NULL* or ``-1`` if an exception occurs.
 
    *element* has to coerce to a one element Unicode string. ``-1`` is returned if
    there was an error.
+
+
+.. cfunction:: void PyUnicode_InternInPlace(PyObject **string)
+
+   Intern the argument *\*string* in place.  The argument must be the address of a
+   pointer variable pointing to a Python unicode string object.  If there is an
+   existing interned string that is the same as *\*string*, it sets *\*string* to
+   it (decrementing the reference count of the old string object and incrementing
+   the reference count of the interned string object), otherwise it leaves
+   *\*string* alone and interns it (incrementing its reference count).
+   (Clarification: even though there is a lot of talk about reference counts, think
+   of this function as reference-count-neutral; you own the object after the call
+   if and only if you owned it before the call.)
+
+
+.. cfunction:: PyObject* PyUnicode_InternFromString(const char *v)
+
+   A combination of :cfunc:`PyUnicode_FromString` and
+   :cfunc:`PyUnicode_InternInPlace`, returning either a new unicode string object
+   that has been interned, or a new ("owned") reference to an earlier interned
+   string object with the same value.
 
 
 .. _bufferobjects:

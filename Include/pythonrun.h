@@ -7,9 +7,8 @@
 extern "C" {
 #endif
 
-#define PyCF_MASK (CO_FUTURE_DIVISION | CO_FUTURE_ABSOLUTE_IMPORT | \
-                   CO_FUTURE_WITH_STATEMENT)
-#define PyCF_MASK_OBSOLETE (CO_NESTED)
+#define PyCF_MASK 0
+#define PyCF_MASK_OBSOLETE 0
 #define PyCF_SOURCE_IS_UTF8  0x0100
 #define PyCF_DONT_IMPLY_DEDENT 0x0200
 #define PyCF_ONLY_AST 0x0400
@@ -70,6 +69,10 @@ PyAPI_FUNC(void) PyErr_Print(void);
 PyAPI_FUNC(void) PyErr_PrintEx(int);
 PyAPI_FUNC(void) PyErr_Display(PyObject *, PyObject *, PyObject *);
 
+/* Py_PyAtExit is for the atexit module, Py_AtExit is for low-level
+ * exit functions.
+ */
+PyAPI_FUNC(void) _Py_PyAtExit(void (*func)(void));
 PyAPI_FUNC(int) Py_AtExit(void (*func)(void));
 
 PyAPI_FUNC(void) Py_Exit(int);
@@ -123,6 +126,7 @@ PyAPI_FUNC(void) _PyImportHooks_Init(void);
 PyAPI_FUNC(int) _PyFrame_Init(void);
 PyAPI_FUNC(int) _PyInt_Init(void);
 PyAPI_FUNC(void) _PyFloat_Init(void);
+PyAPI_FUNC(int) PyBytes_Init(void);
 
 /* Various internal finalizers */
 PyAPI_FUNC(void) _PyExc_Fini(void);
@@ -134,6 +138,7 @@ PyAPI_FUNC(void) PyTuple_Fini(void);
 PyAPI_FUNC(void) PyList_Fini(void);
 PyAPI_FUNC(void) PySet_Fini(void);
 PyAPI_FUNC(void) PyString_Fini(void);
+PyAPI_FUNC(void) PyBytes_Fini(void);
 PyAPI_FUNC(void) PyInt_Fini(void);
 PyAPI_FUNC(void) PyFloat_Fini(void);
 PyAPI_FUNC(void) PyOS_FiniInterrupts(void);

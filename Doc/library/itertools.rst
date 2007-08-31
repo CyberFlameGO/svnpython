@@ -163,19 +163,19 @@ loops that truncate the stream.
                   key = lambda x: x
               self.keyfunc = key
               self.it = iter(iterable)
-              self.tgtkey = self.currkey = self.currvalue = xrange(0)
+              self.tgtkey = self.currkey = self.currvalue = []
           def __iter__(self):
               return self
-          def next(self):
+          def __next__(self):
               while self.currkey == self.tgtkey:
-                  self.currvalue = self.it.next() # Exit on StopIteration
+                  self.currvalue = next(self.it) # Exit on StopIteration
                   self.currkey = self.keyfunc(self.currvalue)
               self.tgtkey = self.currkey
               return (self.currkey, self._grouper(self.tgtkey))
           def _grouper(self, tgtkey):
               while self.currkey == tgtkey:
                   yield self.currvalue
-                  self.currvalue = self.it.next() # Exit on StopIteration
+                  self.currvalue = next(self.it) # Exit on StopIteration
                   self.currkey = self.keyfunc(self.currvalue)
 
    .. versionadded:: 2.4
@@ -222,7 +222,7 @@ loops that truncate the stream.
       def imap(function, *iterables):
           iterables = map(iter, iterables)
           while True:
-              args = [i.next() for i in iterables]
+              args = [next(i) for i in iterables]
               if function is None:
                   yield tuple(args)
               else:
@@ -243,12 +243,12 @@ loops that truncate the stream.
 
       def islice(iterable, *args):
           s = slice(*args)
-          it = iter(xrange(s.start or 0, s.stop or sys.maxint, s.step or 1))
-          nexti = it.next()
+          it = iter(range(s.start or 0, s.stop or sys.maxint, s.step or 1))
+          nexti = next(it)
           for i, element in enumerate(iterable):
               if i == nexti:
                   yield element
-                  nexti = it.next()          
+                  nexti = next(it)
 
    If *start* is ``None``, then iteration starts at zero. If *step* is ``None``,
    then the step defaults to one.
@@ -266,7 +266,7 @@ loops that truncate the stream.
       def izip(*iterables):
           iterables = map(iter, iterables)
           while iterables:
-              result = [it.next() for it in iterables]
+              result = [next(it) for it in iterables]
               yield tuple(result)
 
    .. versionchanged:: 2.4
@@ -283,10 +283,10 @@ loops that truncate the stream.
    iteration over the longer iterables cannot reliably be continued after
    :func:`izip` terminates.  Potentially, up to one entry will be missing from
    each of the left-over iterables. This occurs because a value is fetched from
-   each iterator in turn, but the process ends when one of the iterators
+   each iterator in- turn, but the process ends when one of the iterators
    terminates.  This leaves the last fetched values in limbo (they cannot be
    returned in a final, incomplete tuple and they are cannot be pushed back into
-   the iterator for retrieval with ``it.next()``).  In general, :func:`izip`
+   the iterator for retrieval with ``next(it)``).  In general, :func:`izip`
    should only be used with unequal length inputs when you don't care about
    trailing, unmatched values from the longer iterables.
 
@@ -328,7 +328,7 @@ loops that truncate the stream.
               while True:
                   yield object
           else:
-              for i in xrange(times):
+              for i in range(times):
                   yield object
 
 
@@ -343,7 +343,7 @@ loops that truncate the stream.
       def starmap(function, iterable):
           iterable = iter(iterable)
           while True:
-              yield function(*iterable.next())
+              yield function(*next(iterable))
 
 
 .. function:: takewhile(predicate, iterable)
@@ -374,7 +374,7 @@ loops that truncate the stream.
                       item = data.pop(i)
                   yield item
           it = iter(iterable)
-          return (gen(it.next), gen(it.next))
+          return (gen(it.__next__), gen(it.__next__))
 
    Note, once :func:`tee` has made a split, the original *iterable* should not be
    used anywhere else; otherwise, the *iterable* could get advanced without the tee
@@ -405,7 +405,7 @@ can be combined. ::
    Check 1202 is for $823.14
 
    >>> import operator
-   >>> for cube in imap(operator.pow, xrange(1,5), repeat(3)):
+   >>> for cube in imap(operator.pow, range(1,5), repeat(3)):
    ...    print cube
    ...
    1
@@ -439,7 +439,7 @@ can be combined. ::
    # is differencing with a range so that consecutive numbers all appear in
    # same group.
    >>> data = [ 1,  4,5,6, 10, 15,16,17,18, 22, 25,26,27,28]
-   >>> for k, g in groupby(enumerate(data), lambda (i,x):i-x):
+   >>> for k, g in groupby(enumerate(data), lambda t:t[0]-t[1]):
    ...     print map(operator.itemgetter(1), g)
    ... 
    [1]
@@ -536,10 +536,7 @@ incur interpreter overhead. ::
    def pairwise(iterable):
        "s -> (s0,s1), (s1,s2), (s2, s3), ..."
        a, b = tee(iterable)
-       try:
-           b.next()
-       except StopIteration:
-           pass
+       next(b, None)
        return izip(a, b)
 
    def grouper(n, iterable, padvalue=None):

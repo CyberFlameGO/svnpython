@@ -170,7 +170,7 @@ class GCTests(unittest.TestCase):
         # Tricky: f -> d -> f, code should call d.clear() after the exec to
         # break the cycle.
         d = {}
-        exec("def f(): pass\n") in d
+        exec("def f(): pass\n", d)
         gc.collect()
         del d
         self.assertEqual(gc.collect(), 2)
@@ -399,7 +399,7 @@ class GCTests(unittest.TestCase):
 
         got = gc.get_referents([1, 2], {3: 4}, (0, 0, 0))
         got.sort()
-        self.assertEqual(got, [0, 0] + range(5))
+        self.assertEqual(got, [0, 0] + list(range(5)))
 
         self.assertEqual(gc.get_referents(1, 'a', 4j), [])
 
@@ -585,7 +585,7 @@ def test_main():
         gc.set_debug(debug)
         # test gc.enable() even if GC is disabled by default
         if verbose:
-            print "restoring automatic collection"
+            print("restoring automatic collection")
         # make sure to always test gc.enable()
         gc.enable()
         assert gc.isenabled()

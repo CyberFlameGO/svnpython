@@ -74,7 +74,7 @@ This syntax is used in the following situations:
 
 * when parsing a module;
 
-* when parsing a string passed to the :keyword:`exec` statement;
+* when parsing a string passed to the :func:`exec` function;
 
 
 .. _interactive:
@@ -116,10 +116,8 @@ The input line read by :func:`input` must have the following form:
 .. index::
    object: file
    single: input; raw
-   single: raw input
-   builtin: raw_input
    single: readline() (file method)
 
-Note: to read 'raw' input line without interpretation, you can use the built-in
-function :func:`raw_input` or the :meth:`readline` method of file objects.
+Note: to read 'raw' input line without interpretation, you can use the the
+:meth:`readline` method of file objects, including ``sys.stdin``.
 

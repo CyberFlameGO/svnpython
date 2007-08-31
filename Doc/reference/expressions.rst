@@ -5,11 +5,9 @@
 Expressions
 ***********
 
-.. index:: single: expression
+.. index:: expression, BNF
 
 This chapter explains the meaning of the elements of expressions in Python.
-
-.. index:: single: BNF
 
 **Syntax Notes:** In this and the following chapters, extended BNF notation will
 be used to describe syntax, not lexical analysis.  When (one alternative of) a
@@ -17,8 +15,6 @@ syntax rule has the form
 
 .. productionlist:: *
    name: `othername`
-
-.. index:: single: syntax
 
 and no semantics are given, the semantics of this form of ``name`` are the same
 as for ``othername``.
@@ -31,9 +27,11 @@ Arithmetic conversions
 
 .. index:: pair: arithmetic; conversion
 
+.. XXX no coercion rules are documented anymore
+
 When a description of an arithmetic operator below uses the phrase "the numeric
 arguments are converted to a common type," the arguments are coerced using the
-coercion rules listed at  :ref:`coercion-rules`.  If both arguments are standard
+coercion rules.  If both arguments are standard
 numeric types, the following coercions are applied:
 
 * If either argument is a complex number, the other is converted to complex;
@@ -233,7 +231,7 @@ evaluating the expression to yield a value that is reached the innermost block
 for each iteration.
 
 Variables used in the generator expression are evaluated lazily when the
-:meth:`next` method is called for generator object (in the same fashion as
+:meth:`__next__` method is called for generator object (in the same fashion as
 normal generators). However, the leftmost :keyword:`for` clause is immediately
 evaluated so that error produced by it can be seen before any other possible
 error in the code that handles the generator expression. Subsequent
@@ -280,51 +278,6 @@ Restrictions on the types of the key values are listed earlier in section
 all mutable objects.)  Clashes between duplicate keys are not detected; the last
 datum (textually rightmost in the display) stored for a given key value
 prevails.
-
-
-.. _string-conversions:
-
-String conversions
-------------------
-
-.. index::
-   pair: string; conversion
-   pair: reverse; quotes
-   pair: backward; quotes
-   single: back-quotes
-
-A string conversion is an expression list enclosed in reverse (a.k.a. backward)
-quotes:
-
-.. productionlist::
-   string_conversion: "'" `expression_list` "'"
-
-A string conversion evaluates the contained expression list and converts the
-resulting object into a string according to rules specific to its type.
-
-If the object is a string, a number, ``None``, or a tuple, list or dictionary
-containing only objects whose type is one of these, the resulting string is a
-valid Python expression which can be passed to the built-in function
-:func:`eval` to yield an expression with the same value (or an approximation, if
-floating point numbers are involved).
-
-(In particular, converting a string adds quotes around it and converts "funny"
-characters to escape sequences that are safe to print.)
-
-.. index:: object: recursive
-
-Recursive objects (for example, lists or dictionaries that contain a reference
-to themselves, directly or indirectly) use ``...`` to indicate a recursive
-reference, and the result cannot be passed to :func:`eval` to get an equal value
-(:exc:`SyntaxError` will be raised instead).
-
-.. index::
-   builtin: repr
-   builtin: str
-
-The built-in function :func:`repr` performs exactly the same conversion in its
-argument as enclosing it in parentheses and reverse quotes does.  The built-in
-function :func:`str` performs a similar but more user-friendly conversion.
 
 
 .. _yieldexpr:
@@ -605,8 +558,7 @@ to a mapping object, and it is indexed with a key that is constructed from the
 slice list, as follows.  If the slice list contains at least one comma, the key
 is a tuple containing the conversion of the slice items; otherwise, the
 conversion of the lone slice item is the key.  The conversion of a slice item
-that is an expression is that expression.  The conversion of an ellipsis slice
-item is the built-in ``Ellipsis`` object.  The conversion of a proper slice is a
+that is an expression is that expression.  The conversion of a proper slice is a
 slice object (see section :ref:`types`) whose :attr:`start`, :attr:`stop` and
 :attr:`step` attributes are the values of the expressions given as lower bound,
 upper bound and stride, respectively, substituting ``None`` for missing
@@ -711,11 +663,7 @@ arguments.  In the case of a keyword appearing in both ``expression`` and as an
 explicit keyword argument, a :exc:`TypeError` exception is raised.
 
 Formal parameters using the syntax ``*identifier`` or ``**identifier`` cannot be
-used as positional argument slots or as keyword argument names.  Formal
-parameters using the syntax ``(sublist)`` cannot be used as keyword argument
-names; the outermost sublist corresponds to a single unnamed argument slot, and
-the argument value is assigned to the sublist using the usual tuple assignment
-rules after all other parameter processing is done.
+used as positional argument slots or as keyword argument names.
 
 A call always returns some value, possibly ``None``, unless it raises an
 exception.  How this value is computed depends on the type of the callable
@@ -900,14 +848,13 @@ identities hold approximately where ``x/y`` is replaced by ``floor(x/y)`` or
 ``floor(x/y) - 1`` [#]_.
 
 In addition to performing the modulo operation on numbers, the ``%`` operator is
-also overloaded by string and unicode objects to perform string formatting (also
+also overloaded by string objects to perform string formatting (also
 known as interpolation). The syntax for string formatting is described in the
-Python Library Reference, section :ref:`string-formatting`.
+Python Library Reference, section :ref:`old-string-formatting`.
 
-.. deprecated:: 2.3
-   The floor division operator, the modulo operator, and the :func:`divmod`
-   function are no longer defined for complex numbers.  Instead, convert to a
-   floating point number using the :func:`abs` function if appropriate.
+The floor division operator, the modulo operator, and the :func:`divmod`
+function are not defined for complex numbers.  Instead, convert to a
+floating point number using the :func:`abs` function if appropriate.
 
 .. index:: single: addition
 
@@ -997,7 +944,7 @@ in mathematics:
 
 .. productionlist::
    comparison: `or_expr` ( `comp_operator` `or_expr` )*
-   comp_operator: "<" | ">" | "==" | ">=" | "<=" | "<>" | "!="
+   comp_operator: "<" | ">" | "==" | ">=" | "<=" | "!="
                 : | "is" ["not"] | ["not"] "in"
 
 Comparisons yield boolean values: ``True`` or ``False``.
@@ -1017,10 +964,6 @@ Note that ``a op1 b op2 c`` doesn't imply any kind of comparison between *a* and
 *c*, so that, e.g., ``x < y > z`` is perfectly legal (though perhaps not
 pretty).
 
-The forms ``<>`` and ``!=`` are equivalent; for consistency with C, ``!=`` is
-preferred; where ``!=`` is mentioned below ``<>`` is also accepted.  The ``<>``
-spelling is considered obsolescent.
-
 The operators ``<``, ``>``, ``==``, ``>=``, ``<=``, and ``!=`` compare the
 values of two objects.  The objects need not have the same type. If both are
 numbers, they are converted to a common type.  Otherwise, objects of different
@@ -1038,9 +981,12 @@ Comparison of objects of the same type depends on the type:
 
 * Numbers are compared arithmetically.
 
+* Bytes objects are compared lexicographically using the numeric values of
+  their elements.
+
 * Strings are compared lexicographically using the numeric equivalents (the
-  result of the built-in function :func:`ord`) of their characters.  Unicode and
-  8-bit strings are fully interoperable in this behavior. [#]_
+  result of the built-in function :func:`ord`) of their characters. [#]_
+  String and bytes object can't be compared!
 
 * Tuples and lists are compared lexicographically using comparison of
   corresponding elements.  This means that to compare equal, each element must
@@ -1073,11 +1019,10 @@ particular, dictionaries support membership testing as a nicer way of spelling
 For the list and tuple types, ``x in y`` is true if and only if there exists an
 index *i* such that ``x == y[i]`` is true.
 
-For the Unicode and string types, ``x in y`` is true if and only if *x* is a
-substring of *y*.  An equivalent test is ``y.find(x) != -1``.  Note, *x* and *y*
-need not be the same type; consequently, ``u'ab' in 'abc'`` will return
-``True``. Empty strings are always considered to be a substring of any other
-string, so ``"" in "abc"`` will return ``True``.
+For the string and bytes types, ``x in y`` is true if and only if *x* is a
+substring of *y*.  An equivalent test is ``y.find(x) != -1``.  Empty strings are
+always considered to be a substring of any other string, so ``"" in "abc"`` will
+return ``True``.
 
 .. versionchanged:: 2.3
    Previously, *x* was required to be a string of length ``1``.
@@ -1188,7 +1133,7 @@ behaves like a function object defined with ::
        return expression
 
 See section :ref:`function` for the syntax of parameter lists.  Note that
-functions created with lambda forms cannot contain statements.
+functions created with lambda forms cannot contain statements or annotations.
 
 .. _lambda:
 
@@ -1254,58 +1199,55 @@ comparisons, including tests, which all have the same precedence and chain from
 left to right --- see section :ref:`comparisons` --- and exponentiation, which
 groups from right to left).
 
-+-----------------------------------------------+-------------------------------------+
-| Operator                                      | Description                         |
-+===============================================+=====================================+
-| :keyword:`lambda`                             | Lambda expression                   |
-+-----------------------------------------------+-------------------------------------+
-| :keyword:`or`                                 | Boolean OR                          |
-+-----------------------------------------------+-------------------------------------+
-| :keyword:`and`                                | Boolean AND                         |
-+-----------------------------------------------+-------------------------------------+
-| :keyword:`not` *x*                            | Boolean NOT                         |
-+-----------------------------------------------+-------------------------------------+
-| :keyword:`in`, :keyword:`not` :keyword:`in`   | Membership tests                    |
-+-----------------------------------------------+-------------------------------------+
-| :keyword:`is`, :keyword:`is not`              | Identity tests                      |
-+-----------------------------------------------+-------------------------------------+
-| ``<``, ``<=``, ``>``, ``>=``, ``<>``, ``!=``, | Comparisons                         |
-| ``==``                                        |                                     |
-+-----------------------------------------------+-------------------------------------+
-| ``|``                                         | Bitwise OR                          |
-+-----------------------------------------------+-------------------------------------+
-| ``^``                                         | Bitwise XOR                         |
-+-----------------------------------------------+-------------------------------------+
-| ``&``                                         | Bitwise AND                         |
-+-----------------------------------------------+-------------------------------------+
-| ``<<``, ``>>``                                | Shifts                              |
-+-----------------------------------------------+-------------------------------------+
-| ``+``, ``-``                                  | Addition and subtraction            |
-+-----------------------------------------------+-------------------------------------+
-| ``*``, ``/``, ``%``                           | Multiplication, division, remainder |
-+-----------------------------------------------+-------------------------------------+
-| ``+x``, ``-x``                                | Positive, negative                  |
-+-----------------------------------------------+-------------------------------------+
-| ``~x``                                        | Bitwise not                         |
-+-----------------------------------------------+-------------------------------------+
-| ``**``                                        | Exponentiation                      |
-+-----------------------------------------------+-------------------------------------+
-| ``x.attribute``                               | Attribute reference                 |
-+-----------------------------------------------+-------------------------------------+
-| ``x[index]``                                  | Subscription                        |
-+-----------------------------------------------+-------------------------------------+
-| ``x[index:index]``                            | Slicing                             |
-+-----------------------------------------------+-------------------------------------+
-| ``f(arguments...)``                           | Function call                       |
-+-----------------------------------------------+-------------------------------------+
-| ``(expressions...)``                          | Binding or tuple display            |
-+-----------------------------------------------+-------------------------------------+
-| ``[expressions...]``                          | List display                        |
-+-----------------------------------------------+-------------------------------------+
-| ``{key:datum...}``                            | Dictionary display                  |
-+-----------------------------------------------+-------------------------------------+
-| ```expressions...```                          | String conversion                   |
-+-----------------------------------------------+-------------------------------------+
++----------------------------------------------+-------------------------------------+
+| Operator                                     | Description                         |
++==============================================+=====================================+
+| :keyword:`lambda`                            | Lambda expression                   |
++----------------------------------------------+-------------------------------------+
+| :keyword:`or`                                | Boolean OR                          |
++----------------------------------------------+-------------------------------------+
+| :keyword:`and`                               | Boolean AND                         |
++----------------------------------------------+-------------------------------------+
+| :keyword:`not` *x*                           | Boolean NOT                         |
++----------------------------------------------+-------------------------------------+
+| :keyword:`in`, :keyword:`not` :keyword:`in`  | Membership tests                    |
++----------------------------------------------+-------------------------------------+
+| :keyword:`is`, :keyword:`is not`             | Identity tests                      |
++----------------------------------------------+-------------------------------------+
+| ``<``, ``<=``, ``>``, ``>=``, ``!=``, ``==`` | Comparisons                         |
++----------------------------------------------+-------------------------------------+
+| ``|``                                        | Bitwise OR                          |
++----------------------------------------------+-------------------------------------+
+| ``^``                                        | Bitwise XOR                         |
++----------------------------------------------+-------------------------------------+
+| ``&``                                        | Bitwise AND                         |
++----------------------------------------------+-------------------------------------+
+| ``<<``, ``>>``                               | Shifts                              |
++----------------------------------------------+-------------------------------------+
+| ``+``, ``-``                                 | Addition and subtraction            |
++----------------------------------------------+-------------------------------------+
+| ``*``, ``/``, ``%``                          | Multiplication, division, remainder |
++----------------------------------------------+-------------------------------------+
+| ``+x``, ``-x``                               | Positive, negative                  |
++----------------------------------------------+-------------------------------------+
+| ``~x``                                       | Bitwise not                         |
++----------------------------------------------+-------------------------------------+
+| ``**``                                       | Exponentiation                      |
++----------------------------------------------+-------------------------------------+
+| ``x.attribute``                              | Attribute reference                 |
++----------------------------------------------+-------------------------------------+
+| ``x[index]``                                 | Subscription                        |
++----------------------------------------------+-------------------------------------+
+| ``x[index:index]``                           | Slicing                             |
++----------------------------------------------+-------------------------------------+
+| ``f(arguments...)``                          | Function call                       |
++----------------------------------------------+-------------------------------------+
+| ``(expressions...)``                         | Binding or tuple display            |
++----------------------------------------------+-------------------------------------+
+| ``[expressions...]``                         | List display                        |
++----------------------------------------------+-------------------------------------+
+| ``{key:datum...}``                           | Dictionary display                  |
++----------------------------------------------+-------------------------------------+
 
 .. rubric:: Footnotes
 
@@ -1328,9 +1270,9 @@ groups from right to left).
    cases, Python returns the latter result, in order to preserve that
    ``divmod(x,y)[0] * y + x % y`` be very close to ``x``.
 
-.. [#] While comparisons between unicode strings make sense at the byte
+.. [#] While comparisons between strings make sense at the byte
    level, they may be counter-intuitive to users. For example, the
-   strings ``u"\u00C7"`` and ``u"\u0327\u0043"`` compare differently,
+   strings ``"\u00C7"`` and ``"\u0327\u0043"`` compare differently,
    even though they both represent the same unicode character (LATIN
    CAPTITAL LETTER C WITH CEDILLA).
 

@@ -15,8 +15,7 @@ class TestIsInstanceExceptions(unittest.TestCase):
     # (leading to an "undetected error" in the debug build).  Set up is,
     # isinstance(inst, cls) where:
     #
-    # - inst isn't an InstanceType
-    # - cls isn't a ClassType, a TypeType, or a TupleType
+    # - cls isn't a a type, or a tuple
     # - cls has a __bases__ attribute
     # - inst has a __class__ attribute
     # - inst.__class__ as no __bases__ attribute
@@ -242,9 +241,8 @@ class TestIsInstanceIsSubclass(unittest.TestCase):
         self.assertEqual(False, issubclass(NewChild, ()))
         self.assertEqual(True, issubclass(NewSuper, (NewChild, (NewSuper,))))
 
-        self.assertEqual(True, issubclass(int, (long, (float, int))))
-        if test_support.have_unicode:
-            self.assertEqual(True, issubclass(str, (unicode, (Child, NewChild, basestring))))
+        self.assertEqual(True, issubclass(int, (int, (float, int))))
+        self.assertEqual(True, issubclass(str, (str, (Child, NewChild, basestring))))
 
     def test_subclass_recursion_limit(self):
         # make sure that issubclass raises RuntimeError before the C stack is
@@ -260,7 +258,7 @@ def blowstack(fxn, arg, compare_to):
     # Make sure that calling isinstance with a deeply nested tuple for its
     # argument will raise RuntimeError eventually.
     tuple_arg = (compare_to,)
-    for cnt in xrange(sys.getrecursionlimit()+5):
+    for cnt in range(sys.getrecursionlimit()+5):
         tuple_arg = (tuple_arg,)
         fxn(arg, tuple_arg)
 

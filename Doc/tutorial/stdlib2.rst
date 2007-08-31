@@ -104,7 +104,12 @@ Template subclasses can specify a custom delimiter.  For example, a batch
 renaming utility for a photo browser may elect to use percent signs for
 placeholders such as the current date, image sequence number, or file format::
 
-   >>> import time, os.path
+   >>> import time, os.path, sys
+   >>> def raw_input(prompt):
+   ...     sys.stdout.write(prompt)
+   ...     sys.stdout.flush()
+   ...     return sys.stdin.readline()
+   ... 
    >>> photofiles = ['img_1074.jpg', 'img_1076.jpg', 'img_1077.jpg']
    >>> class BatchRename(Template):
    ...     delimiter = '%'
@@ -179,14 +184,14 @@ tasks in background while the main program continues to run::
            f = zipfile.ZipFile(self.outfile, 'w', zipfile.ZIP_DEFLATED)
            f.write(self.infile)
            f.close()
-           print 'Finished background zip of: ', self.infile
+           print('Finished background zip of: ', self.infile)
 
    background = AsyncZip('mydata.txt', 'myarchive.zip')
    background.start()
-   print 'The main program continues to run in foreground.'
+   print('The main program continues to run in foreground.')
 
    background.join()    # Wait for the background task to finish
-   print 'Main program waited until background was done.'
+   print('Main program waited until background was done.')
 
 The principal challenge of multi-threaded applications is coordinating threads
 that share data or other resources.  To that end, the threading module provides
@@ -269,7 +274,7 @@ applications include caching objects that are expensive to create::
    Traceback (most recent call last):
      File "<pyshell#108>", line 1, in -toplevel-
        d['primary']                # entry was automatically removed
-     File "C:/python26/lib/weakref.py", line 46, in __getitem__
+     File "C:/python30/lib/weakref.py", line 46, in __getitem__
        o = self.data[key]()
    KeyError: 'primary'
 
@@ -304,7 +309,7 @@ tree searches::
    >>> from collections import deque
    >>> d = deque(["task1", "task2", "task3"])
    >>> d.append("task4")
-   >>> print "Handling", d.popleft()
+   >>> print("Handling", d.popleft())
    Handling task1
 
    unsearched = deque([starting_node])

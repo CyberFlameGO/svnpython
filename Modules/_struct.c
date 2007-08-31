@@ -127,8 +127,6 @@ get_pylong(PyObject *v)
 	PyNumberMethods *m;
 
 	assert(v != NULL);
-	if (PyInt_Check(v))
-		return PyLong_FromLong(PyInt_AS_LONG(v));
 	if (PyLong_Check(v)) {
 		Py_INCREF(v);
 		return v;
@@ -610,9 +608,14 @@ np_ubyte(char *p, PyObject *v, const formatdef *f)
 static int
 np_char(char *p, PyObject *v, const formatdef *f)
 {
+	if (PyUnicode_Check(v)) {
+		v = _PyUnicode_AsDefaultEncodedString(v, NULL);
+		if (v == NULL)
+			return -1;
+	}
 	if (!PyString_Check(v) || PyString_Size(v) != 1) {
 		PyErr_SetString(StructError,
-				"char format require string of length 1");
+				"char format requires string of length 1");
 		return -1;
 	}
 	*p = *PyString_AsString(v);
@@ -1525,10 +1528,10 @@ fail:
 
 
 PyDoc_STRVAR(s_unpack__doc__,
-"S.unpack(str) -> (v1, v2, ...)\n\
+"S.unpack(buffer) -> (v1, v2, ...)\n\
 \n\
 Return tuple containing values unpacked according to this Struct's format.\n\
-Requires len(str) == self.size. See struct.__doc__ for more on format\n\
+Requires len(buffer) == self.size. See struct.__doc__ for more on format\n\
 strings.");
 
 static PyObject *
@@ -1637,27 +1640,57 @@ s_pack_internal(PyStructObject *soself, PyObject *args, int offset, char* buf)
 		const formatdef *e = code->fmtdef;
 		char *res = buf + code->offset;
 		if (e->format == 's') {
-			if (!PyString_Check(v)) {
+			int isstring;
+			void *p;
+			if (PyUnicode_Check(v)) {
+				v = _PyUnicode_AsDefaultEncodedString(v, NULL);
+				if (v == NULL)
+					return -1;
+			}
+			isstring = PyString_Check(v);
+			if (!isstring && !PyBytes_Check(v)) {
 				PyErr_SetString(StructError,
 						"argument for 's' must be a string");
 				return -1;
 			}
-			n = PyString_GET_SIZE(v);
+			if (isstring) {
+				n = PyString_GET_SIZE(v);
+				p = PyString_AS_STRING(v);
+			}
+			else {
+				n = PyBytes_GET_SIZE(v);
+				p = PyBytes_AS_STRING(v);
+			}
 			if (n > code->size)
 				n = code->size;
 			if (n > 0)
-				memcpy(res, PyString_AS_STRING(v), n);
+				memcpy(res, p, n);
 		} else if (e->format == 'p') {
-			if (!PyString_Check(v)) {
+			int isstring;
+			void *p;
+			if (PyUnicode_Check(v)) {
+				v = _PyUnicode_AsDefaultEncodedString(v, NULL);
+				if (v == NULL)
+					return -1;
+			}
+			isstring = PyString_Check(v);
+			if (!isstring && !PyBytes_Check(v)) {
 				PyErr_SetString(StructError,
 						"argument for 'p' must be a string");
 				return -1;
 			}
-			n = PyString_GET_SIZE(v);
+			if (isstring) {
+				n = PyString_GET_SIZE(v);
+				p = PyString_AS_STRING(v);
+			}
+			else {
+				n = PyBytes_GET_SIZE(v);
+				p = PyBytes_AS_STRING(v);
+			}
 			if (n > (code->size - 1))
 				n = code->size - 1;
 			if (n > 0)
-				memcpy(res + 1, PyString_AS_STRING(v), n);
+				memcpy(res + 1, p, n);
 			if (n > 255)
 				n = 255;
 			*res = Py_SAFE_DOWNCAST(n, Py_ssize_t, unsigned char);
@@ -1825,7 +1858,7 @@ PyTypeObject PyStructType = {
 	PyObject_GenericGetAttr,	/* tp_getattro */
 	PyObject_GenericSetAttr,	/* tp_setattro */
 	0,					/* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_WEAKREFS,/* tp_flags */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
 	s__doc__,			/* tp_doc */
 	0,					/* tp_traverse */
 	0,					/* tp_clear */

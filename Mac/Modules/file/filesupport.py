@@ -340,7 +340,7 @@ PyMac_INIT_TOOLBOX_OBJECT_CONVERT(FSSpec, PyMac_GetFSSpec);
 PyMac_INIT_TOOLBOX_OBJECT_CONVERT(FSRef, PyMac_GetFSRef);
 """
 
-execfile(string.lower(MODPREFIX) + 'typetest.py')
+exec(open(string.lower(MODPREFIX) + 'typetest.py').read())
 
 # Our object types:
 class FSCatalogInfoDefinition(PEP253Mixin, ObjectDefinition):
@@ -774,7 +774,7 @@ class Arg2MethodGenerator(OSErrMethodGenerator):
         t0, n0, m0 = arg1
         args = args0 + argsrest
         if m0 != InMode:
-            raise ValueError, "method's 'self' must be 'InMode'"
+            raise ValueError("method's 'self' must be 'InMode'")
         self.itself = Variable(t0, "_self->ob_itself", SelfMode)
         FunctionGenerator.parseArgumentList(self, args)
         self.argumentList.insert(2, self.itself)
@@ -806,7 +806,7 @@ functions = []
 alias_methods = []
 fsref_methods = []
 fsspec_methods = []
-execfile(INPUTFILE)
+exec(open(INPUTFILE).read())
 
 # Manual generators:
 FSRefMakePath_body = """

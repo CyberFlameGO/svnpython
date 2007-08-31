@@ -427,13 +427,13 @@ PyDoc_STRVAR(ssl_doc,
 static PyObject *
 PySSL_server(PySSLObject *self)
 {
-	return PyString_FromString(self->server);
+	return PyUnicode_FromString(self->server);
 }
 
 static PyObject *
 PySSL_issuer(PySSLObject *self)
 {
-	return PyString_FromString(self->issuer);
+	return PyUnicode_FromString(self->issuer);
 }
 
 static PyObject *
@@ -743,7 +743,7 @@ static PyObject *PySSL_SSLread(PySSLObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "|i:read", &len))
 		return NULL;
 
-	if (!(buf = PyString_FromStringAndSize((char *) 0, len)))
+	if (!(buf = PyBytes_FromStringAndSize((char *) 0, len)))
 		return NULL;
 
 	/* first check if there are bytes ready to be read */
@@ -781,7 +781,7 @@ static PyObject *PySSL_SSLread(PySSLObject *self, PyObject *args)
 	do {
 		err = 0;
 		Py_BEGIN_ALLOW_THREADS
-		count = SSL_read(self->ssl, PyString_AsString(buf), len);
+		count = SSL_read(self->ssl, PyBytes_AS_STRING(buf), len);
 		err = SSL_get_error(self->ssl, count);
 		Py_END_ALLOW_THREADS
 		if(PyErr_CheckSignals()) {
@@ -817,12 +817,15 @@ static PyObject *PySSL_SSLread(PySSLObject *self, PyObject *args)
 		return PySSL_SetError(self, count, __FILE__, __LINE__);
 	}
 	if (count != len)
-		_PyString_Resize(&buf, count);
+		if (PyBytes_Resize(buf, count) < 0) {
+                        Py_DECREF(buf);
+                        return NULL;
+                }
 	return buf;
 }
 
 PyDoc_STRVAR(PySSL_SSLread_doc,
-"read([len]) -> string\n\
+"read([len]) -> bytes\n\
 \n\
 Read up to len bytes from the SSL socket.");
 
@@ -921,15 +924,15 @@ bound on the entropy contained in string.");
 static PyObject *
 PySSL_RAND_status(PyObject *self)
 {
-    return PyInt_FromLong(RAND_status());
+    return PyBool_FromLong(RAND_status());
 }
 
 PyDoc_STRVAR(PySSL_RAND_status_doc,
 "RAND_status() -> 0 or 1\n\
 \n\
-Returns 1 if the OpenSSL PRNG has been seeded with enough data and 0 if not.\n\
-It is necessary to seed the PRNG with RAND_add() on some platforms before\n\
-using the ssl() function.");
+Returns True if the OpenSSL PRNG has been seeded with enough data and\n\
+False if not.  It is necessary to seed the PRNG with RAND_add()\n\
+on some platforms before using the ssl() function.");
 
 static PyObject *
 PySSL_RAND_egd(PyObject *self, PyObject *arg)

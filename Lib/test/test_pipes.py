@@ -23,14 +23,14 @@ class SimplePipeTests(unittest.TestCase):
         self.assertEqual(open(TESTFN).read(), 'HELLO WORLD #1')
 
     def testSimplePipe2(self):
-        file(TESTFN, 'w').write('hello world #2')
+        open(TESTFN, 'w').write('hello world #2')
         t = pipes.Template()
         t.append('tr a-z A-Z < $IN > $OUT', pipes.FILEIN_FILEOUT)
         t.copy(TESTFN, TESTFN2)
         self.assertEqual(open(TESTFN2).read(), 'HELLO WORLD #2')
 
     def testSimplePipe3(self):
-        file(TESTFN, 'w').write('hello world #2')
+        open(TESTFN, 'w').write('hello world #2')
         t = pipes.Template()
         t.append('tr a-z A-Z < $IN', pipes.FILEIN_STDOUT)
         self.assertEqual(t.open(TESTFN, 'r').read(), 'HELLO WORLD #2')
@@ -38,8 +38,8 @@ class SimplePipeTests(unittest.TestCase):
     def testEmptyPipeline1(self):
         # copy through empty pipe
         d = 'empty pipeline test COPY'
-        file(TESTFN, 'w').write(d)
-        file(TESTFN2, 'w').write('')
+        open(TESTFN, 'w').write(d)
+        open(TESTFN2, 'w').write('')
         t=pipes.Template()
         t.copy(TESTFN, TESTFN2)
         self.assertEqual(open(TESTFN2).read(), d)
@@ -47,7 +47,7 @@ class SimplePipeTests(unittest.TestCase):
     def testEmptyPipeline2(self):
         # read through empty pipe
         d = 'empty pipeline test READ'
-        file(TESTFN, 'w').write(d)
+        open(TESTFN, 'w').write(d)
         t=pipes.Template()
         self.assertEqual(t.open(TESTFN, 'r').read(), d)
 

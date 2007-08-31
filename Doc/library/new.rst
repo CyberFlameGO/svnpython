@@ -17,14 +17,6 @@ non-sensical arguments which crash the interpreter when the object is used.
 The :mod:`new` module defines the following functions:
 
 
-.. function:: instance(class[, dict])
-
-   This function creates an instance of *class* with dictionary *dict* without
-   calling the :meth:`__init__` constructor.  If *dict* is omitted or ``None``, a
-   new, empty dictionary is created for the new instance.  Note that there are no
-   guarantees that the object will be in a consistent state.
-
-
 .. function:: instancemethod(function, instance, class)
 
    This function will return a method object, bound to *instance*, or unbound if

@@ -38,17 +38,9 @@ documented beyond this mention.  There's little need to document these.
 :mod:`posixpath`
    --- Implementation of :mod:`os.path` on POSIX.
 
-:mod:`bsddb185`
-   --- Backwards compatibility module for systems which still use the Berkeley DB
-   1.85 module.  It is normally only available on certain BSD Unix-based systems.
-   It should never be used directly.
-
 
 Multimedia
 ==========
-
-:mod:`audiodev`
-   --- Platform-independent API for playing audio data.
 
 :mod:`linuxaudiodev`
    --- Play audio data on the Linux audio device.  Replaced in Python 2.3 by the
@@ -56,10 +48,6 @@ Multimedia
 
 :mod:`sunaudio`
    --- Interpret Sun audio headers (may become obsolete or a tool/demo).
-
-:mod:`toaiff`
-   --- Convert "arbitrary" sound files to AIFF files; should probably become a tool
-   or demo.  Requires the external program :program:`sox`.
 
 
 .. _undoc-mac-modules:
@@ -87,19 +75,6 @@ Undocumented Mac OS modules
 
 .. deprecated:: 2.4
 
-:mod:`cfmfile` --- Code Fragment Resource module
-------------------------------------------------
-
-.. module:: cfmfile
-   :platform: Mac
-   :synopsis: Code Fragment Resource module.
-
-
-:mod:`cfmfile` is a module that understands Code Fragments and the accompanying
-"cfrg" resources. It can parse them and merge them, and is used by
-BuildApplication to combine all plugin modules to a single executable.
-
-.. deprecated:: 2.4
 
 :mod:`icopen` --- Internet Config replacement for :meth:`open`
 --------------------------------------------------------------
@@ -206,19 +181,6 @@ extensions.
 
 .. % XXX need Windows instructions!
 
-:mod:`timing`
-   --- Measure time intervals to high resolution (use :func:`time.clock` instead).
 
-
-SGI-specific Extension modules
-==============================
-
-The following are SGI specific, and may be out of touch with the current version
-of reality.
-
-:mod:`cl`
-   --- Interface to the SGI compression library.
-
-:mod:`sv`
-   --- Interface to the "simple video" board on SGI Indigo (obsolete hardware).
+   --- This section should be empty for Python 3.0.
 

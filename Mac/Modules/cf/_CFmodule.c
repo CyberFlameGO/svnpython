@@ -116,7 +116,7 @@ static PyObject *CF_Error;
 
 PyTypeObject CFTypeRef_Type;
 
-#define CFTypeRefObj_Check(x) ((x)->ob_type == &CFTypeRef_Type || PyObject_TypeCheck((x), &CFTypeRef_Type))
+#define CFTypeRefObj_Check(x) (Py_Type(x) == &CFTypeRef_Type || PyObject_TypeCheck((x), &CFTypeRef_Type))
 
 typedef struct CFTypeRefObject {
 	PyObject_HEAD
@@ -161,7 +161,7 @@ static void CFTypeRefObj_dealloc(CFTypeRefObject *self)
 		self->ob_freeit((CFTypeRef)self->ob_itself);
 		self->ob_itself = NULL;
 	}
-	self->ob_type->tp_free((PyObject *)self);
+	Py_Type(self)->tp_free((PyObject *)self);
 }
 
 static PyObject *CFTypeRefObj_CFGetTypeID(CFTypeRefObject *_self, PyObject *_args)
@@ -392,7 +392,7 @@ static PyObject * CFTypeRefObj_repr(CFTypeRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFTypeRef type-%d object at 0x%8.8x for 0x%8.8x>", (int)CFGetTypeID(self->ob_itself), (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFTypeRefObj_hash(CFTypeRefObject *self)
@@ -428,8 +428,7 @@ static PyObject *CFTypeRefObj_tp_new(PyTypeObject *type, PyObject *_args, PyObje
 
 
 PyTypeObject CFTypeRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFTypeRef", /*tp_name*/
 	sizeof(CFTypeRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -478,7 +477,7 @@ PyTypeObject CFTypeRef_Type = {
 
 PyTypeObject CFArrayRef_Type;
 
-#define CFArrayRefObj_Check(x) ((x)->ob_type == &CFArrayRef_Type || PyObject_TypeCheck((x), &CFArrayRef_Type))
+#define CFArrayRefObj_Check(x) (Py_Type(x) == &CFArrayRef_Type || PyObject_TypeCheck((x), &CFArrayRef_Type))
 
 typedef struct CFArrayRefObject {
 	PyObject_HEAD
@@ -596,7 +595,7 @@ static PyObject * CFArrayRefObj_repr(CFArrayRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFArrayRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFArrayRefObj_hash(CFArrayRefObject *self)
@@ -639,8 +638,7 @@ static PyObject *CFArrayRefObj_tp_new(PyTypeObject *type, PyObject *_args, PyObj
 
 
 PyTypeObject CFArrayRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFArrayRef", /*tp_name*/
 	sizeof(CFArrayRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -689,7 +687,7 @@ PyTypeObject CFArrayRef_Type = {
 
 PyTypeObject CFMutableArrayRef_Type;
 
-#define CFMutableArrayRefObj_Check(x) ((x)->ob_type == &CFMutableArrayRef_Type || PyObject_TypeCheck((x), &CFMutableArrayRef_Type))
+#define CFMutableArrayRefObj_Check(x) (Py_Type(x) == &CFMutableArrayRef_Type || PyObject_TypeCheck((x), &CFMutableArrayRef_Type))
 
 typedef struct CFMutableArrayRefObject {
 	PyObject_HEAD
@@ -836,7 +834,7 @@ static PyObject * CFMutableArrayRefObj_repr(CFMutableArrayRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFMutableArrayRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFMutableArrayRefObj_hash(CFMutableArrayRefObject *self)
@@ -879,8 +877,7 @@ static PyObject *CFMutableArrayRefObj_tp_new(PyTypeObject *type, PyObject *_args
 
 
 PyTypeObject CFMutableArrayRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFMutableArrayRef", /*tp_name*/
 	sizeof(CFMutableArrayRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -929,7 +926,7 @@ PyTypeObject CFMutableArrayRef_Type = {
 
 PyTypeObject CFDictionaryRef_Type;
 
-#define CFDictionaryRefObj_Check(x) ((x)->ob_type == &CFDictionaryRef_Type || PyObject_TypeCheck((x), &CFDictionaryRef_Type))
+#define CFDictionaryRefObj_Check(x) (Py_Type(x) == &CFDictionaryRef_Type || PyObject_TypeCheck((x), &CFDictionaryRef_Type))
 
 typedef struct CFDictionaryRefObject {
 	PyObject_HEAD
@@ -1029,7 +1026,7 @@ static PyObject * CFDictionaryRefObj_repr(CFDictionaryRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFDictionaryRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFDictionaryRefObj_hash(CFDictionaryRefObject *self)
@@ -1072,8 +1069,7 @@ static PyObject *CFDictionaryRefObj_tp_new(PyTypeObject *type, PyObject *_args, 
 
 
 PyTypeObject CFDictionaryRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFDictionaryRef", /*tp_name*/
 	sizeof(CFDictionaryRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -1122,7 +1118,7 @@ PyTypeObject CFDictionaryRef_Type = {
 
 PyTypeObject CFMutableDictionaryRef_Type;
 
-#define CFMutableDictionaryRefObj_Check(x) ((x)->ob_type == &CFMutableDictionaryRef_Type || PyObject_TypeCheck((x), &CFMutableDictionaryRef_Type))
+#define CFMutableDictionaryRefObj_Check(x) (Py_Type(x) == &CFMutableDictionaryRef_Type || PyObject_TypeCheck((x), &CFMutableDictionaryRef_Type))
 
 typedef struct CFMutableDictionaryRefObject {
 	PyObject_HEAD
@@ -1206,7 +1202,7 @@ static PyObject * CFMutableDictionaryRefObj_repr(CFMutableDictionaryRefObject *s
 {
 	char buf[100];
 	sprintf(buf, "<CFMutableDictionaryRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFMutableDictionaryRefObj_hash(CFMutableDictionaryRefObject *self)
@@ -1249,8 +1245,7 @@ static PyObject *CFMutableDictionaryRefObj_tp_new(PyTypeObject *type, PyObject *
 
 
 PyTypeObject CFMutableDictionaryRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFMutableDictionaryRef", /*tp_name*/
 	sizeof(CFMutableDictionaryRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -1299,7 +1294,7 @@ PyTypeObject CFMutableDictionaryRef_Type = {
 
 PyTypeObject CFDataRef_Type;
 
-#define CFDataRefObj_Check(x) ((x)->ob_type == &CFDataRef_Type || PyObject_TypeCheck((x), &CFDataRef_Type))
+#define CFDataRefObj_Check(x) (Py_Type(x) == &CFDataRef_Type || PyObject_TypeCheck((x), &CFDataRef_Type))
 
 typedef struct CFDataRefObject {
 	PyObject_HEAD
@@ -1437,7 +1432,7 @@ static PyObject * CFDataRefObj_repr(CFDataRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFDataRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFDataRefObj_hash(CFDataRefObject *self)
@@ -1480,8 +1475,7 @@ static PyObject *CFDataRefObj_tp_new(PyTypeObject *type, PyObject *_args, PyObje
 
 
 PyTypeObject CFDataRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFDataRef", /*tp_name*/
 	sizeof(CFDataRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -1530,7 +1524,7 @@ PyTypeObject CFDataRef_Type = {
 
 PyTypeObject CFMutableDataRef_Type;
 
-#define CFMutableDataRefObj_Check(x) ((x)->ob_type == &CFMutableDataRef_Type || PyObject_TypeCheck((x), &CFMutableDataRef_Type))
+#define CFMutableDataRefObj_Check(x) (Py_Type(x) == &CFMutableDataRef_Type || PyObject_TypeCheck((x), &CFMutableDataRef_Type))
 
 typedef struct CFMutableDataRefObject {
 	PyObject_HEAD
@@ -1702,7 +1696,7 @@ static PyObject * CFMutableDataRefObj_repr(CFMutableDataRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFMutableDataRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFMutableDataRefObj_hash(CFMutableDataRefObject *self)
@@ -1745,8 +1739,7 @@ static PyObject *CFMutableDataRefObj_tp_new(PyTypeObject *type, PyObject *_args,
 
 
 PyTypeObject CFMutableDataRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFMutableDataRef", /*tp_name*/
 	sizeof(CFMutableDataRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -1795,7 +1788,7 @@ PyTypeObject CFMutableDataRef_Type = {
 
 PyTypeObject CFStringRef_Type;
 
-#define CFStringRefObj_Check(x) ((x)->ob_type == &CFStringRef_Type || PyObject_TypeCheck((x), &CFStringRef_Type))
+#define CFStringRefObj_Check(x) (Py_Type(x) == &CFStringRef_Type || PyObject_TypeCheck((x), &CFStringRef_Type))
 
 typedef struct CFStringRefObject {
 	PyObject_HEAD
@@ -2444,7 +2437,7 @@ static PyObject * CFStringRefObj_repr(CFStringRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFStringRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFStringRefObj_hash(CFStringRefObject *self)
@@ -2487,8 +2480,7 @@ static PyObject *CFStringRefObj_tp_new(PyTypeObject *type, PyObject *_args, PyOb
 
 
 PyTypeObject CFStringRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFStringRef", /*tp_name*/
 	sizeof(CFStringRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -2537,7 +2529,7 @@ PyTypeObject CFStringRef_Type = {
 
 PyTypeObject CFMutableStringRef_Type;
 
-#define CFMutableStringRefObj_Check(x) ((x)->ob_type == &CFMutableStringRef_Type || PyObject_TypeCheck((x), &CFMutableStringRef_Type))
+#define CFMutableStringRefObj_Check(x) (Py_Type(x) == &CFMutableStringRef_Type || PyObject_TypeCheck((x), &CFMutableStringRef_Type))
 
 typedef struct CFMutableStringRefObject {
 	PyObject_HEAD
@@ -2832,7 +2824,7 @@ static PyObject * CFMutableStringRefObj_repr(CFMutableStringRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFMutableStringRef object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFMutableStringRefObj_hash(CFMutableStringRefObject *self)
@@ -2875,8 +2867,7 @@ static PyObject *CFMutableStringRefObj_tp_new(PyTypeObject *type, PyObject *_arg
 
 
 PyTypeObject CFMutableStringRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFMutableStringRef", /*tp_name*/
 	sizeof(CFMutableStringRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -2925,7 +2916,7 @@ PyTypeObject CFMutableStringRef_Type = {
 
 PyTypeObject CFURLRef_Type;
 
-#define CFURLRefObj_Check(x) ((x)->ob_type == &CFURLRef_Type || PyObject_TypeCheck((x), &CFURLRef_Type))
+#define CFURLRefObj_Check(x) (Py_Type(x) == &CFURLRef_Type || PyObject_TypeCheck((x), &CFURLRef_Type))
 
 typedef struct CFURLRefObject {
 	PyObject_HEAD
@@ -3484,7 +3475,7 @@ static PyObject * CFURLRefObj_repr(CFURLRefObject *self)
 {
 	char buf[100];
 	sprintf(buf, "<CFURL object at 0x%8.8x for 0x%8.8x>", (unsigned)self, (unsigned)self->ob_itself);
-	return PyString_FromString(buf);
+	return PyUnicode_FromString(buf);
 }
 
 static int CFURLRefObj_hash(CFURLRefObject *self)
@@ -3527,8 +3518,7 @@ static PyObject *CFURLRefObj_tp_new(PyTypeObject *type, PyObject *_args, PyObjec
 
 
 PyTypeObject CFURLRef_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0, /*ob_size*/
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_CF.CFURLRef", /*tp_name*/
 	sizeof(CFURLRefObject), /*tp_basicsize*/
 	0, /*tp_itemsize*/
@@ -4899,14 +4889,14 @@ void init_CF(void)
 	if (CF_Error == NULL ||
 	    PyDict_SetItemString(d, "Error", CF_Error) != 0)
 		return;
-	CFTypeRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFTypeRef_Type) = &PyType_Type;
 	if (PyType_Ready(&CFTypeRef_Type) < 0) return;
 	Py_INCREF(&CFTypeRef_Type);
 	PyModule_AddObject(m, "CFTypeRef", (PyObject *)&CFTypeRef_Type);
 	/* Backward-compatible name */
 	Py_INCREF(&CFTypeRef_Type);
 	PyModule_AddObject(m, "CFTypeRefType", (PyObject *)&CFTypeRef_Type);
-	CFArrayRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFArrayRef_Type) = &PyType_Type;
 	CFArrayRef_Type.tp_base = &CFTypeRef_Type;
 	if (PyType_Ready(&CFArrayRef_Type) < 0) return;
 	Py_INCREF(&CFArrayRef_Type);
@@ -4914,7 +4904,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFArrayRef_Type);
 	PyModule_AddObject(m, "CFArrayRefType", (PyObject *)&CFArrayRef_Type);
-	CFMutableArrayRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFMutableArrayRef_Type) = &PyType_Type;
 	CFMutableArrayRef_Type.tp_base = &CFArrayRef_Type;
 	if (PyType_Ready(&CFMutableArrayRef_Type) < 0) return;
 	Py_INCREF(&CFMutableArrayRef_Type);
@@ -4922,7 +4912,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFMutableArrayRef_Type);
 	PyModule_AddObject(m, "CFMutableArrayRefType", (PyObject *)&CFMutableArrayRef_Type);
-	CFDictionaryRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFDictionaryRef_Type) = &PyType_Type;
 	CFDictionaryRef_Type.tp_base = &CFTypeRef_Type;
 	if (PyType_Ready(&CFDictionaryRef_Type) < 0) return;
 	Py_INCREF(&CFDictionaryRef_Type);
@@ -4930,7 +4920,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFDictionaryRef_Type);
 	PyModule_AddObject(m, "CFDictionaryRefType", (PyObject *)&CFDictionaryRef_Type);
-	CFMutableDictionaryRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFMutableDictionaryRef_Type) = &PyType_Type;
 	CFMutableDictionaryRef_Type.tp_base = &CFDictionaryRef_Type;
 	if (PyType_Ready(&CFMutableDictionaryRef_Type) < 0) return;
 	Py_INCREF(&CFMutableDictionaryRef_Type);
@@ -4938,7 +4928,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFMutableDictionaryRef_Type);
 	PyModule_AddObject(m, "CFMutableDictionaryRefType", (PyObject *)&CFMutableDictionaryRef_Type);
-	CFDataRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFDataRef_Type) = &PyType_Type;
 	CFDataRef_Type.tp_base = &CFTypeRef_Type;
 	if (PyType_Ready(&CFDataRef_Type) < 0) return;
 	Py_INCREF(&CFDataRef_Type);
@@ -4946,7 +4936,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFDataRef_Type);
 	PyModule_AddObject(m, "CFDataRefType", (PyObject *)&CFDataRef_Type);
-	CFMutableDataRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFMutableDataRef_Type) = &PyType_Type;
 	CFMutableDataRef_Type.tp_base = &CFDataRef_Type;
 	if (PyType_Ready(&CFMutableDataRef_Type) < 0) return;
 	Py_INCREF(&CFMutableDataRef_Type);
@@ -4954,7 +4944,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFMutableDataRef_Type);
 	PyModule_AddObject(m, "CFMutableDataRefType", (PyObject *)&CFMutableDataRef_Type);
-	CFStringRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFStringRef_Type) = &PyType_Type;
 	CFStringRef_Type.tp_base = &CFTypeRef_Type;
 	if (PyType_Ready(&CFStringRef_Type) < 0) return;
 	Py_INCREF(&CFStringRef_Type);
@@ -4962,7 +4952,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFStringRef_Type);
 	PyModule_AddObject(m, "CFStringRefType", (PyObject *)&CFStringRef_Type);
-	CFMutableStringRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFMutableStringRef_Type) = &PyType_Type;
 	CFMutableStringRef_Type.tp_base = &CFStringRef_Type;
 	if (PyType_Ready(&CFMutableStringRef_Type) < 0) return;
 	Py_INCREF(&CFMutableStringRef_Type);
@@ -4970,7 +4960,7 @@ void init_CF(void)
 	/* Backward-compatible name */
 	Py_INCREF(&CFMutableStringRef_Type);
 	PyModule_AddObject(m, "CFMutableStringRefType", (PyObject *)&CFMutableStringRef_Type);
-	CFURLRef_Type.ob_type = &PyType_Type;
+	Py_Type(&CFURLRef_Type) = &PyType_Type;
 	CFURLRef_Type.tp_base = &CFTypeRef_Type;
 	if (PyType_Ready(&CFURLRef_Type) < 0) return;
 	Py_INCREF(&CFURLRef_Type);

@@ -2,7 +2,8 @@
 TestCases for testing the locking sub-system.
 """
 
-import sys, os, string
+import shutil
+import sys, os
 import tempfile
 import time
 from pprint import pprint
@@ -15,7 +16,7 @@ except ImportError:
 
 
 import unittest
-from test_all import verbose
+from bsddb.test.test_all import verbose
 
 try:
     # For Pythons w/distutils pybsddb
@@ -30,46 +31,40 @@ except ImportError:
 class LockingTestCase(unittest.TestCase):
 
     def setUp(self):
-        homeDir = os.path.join(tempfile.gettempdir(), 'db_home')
-        self.homeDir = homeDir
-        try: os.mkdir(homeDir)
-        except os.error: pass
+        self.homeDir = tempfile.mkdtemp()
         self.env = db.DBEnv()
-        self.env.open(homeDir, db.DB_THREAD | db.DB_INIT_MPOOL |
+        self.env.open(self.homeDir, db.DB_THREAD | db.DB_INIT_MPOOL |
                       db.DB_INIT_LOCK | db.DB_CREATE)
 
 
     def tearDown(self):
         self.env.close()
-        import glob
-        files = glob.glob(os.path.join(self.homeDir, '*'))
-        for file in files:
-            os.remove(file)
+        shutil.rmtree(self.homeDir)
 
 
     def test01_simple(self):
         if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test01_simple..." % self.__class__.__name__
+            print('\n', '-=' * 30)
+            print("Running %s.test01_simple..." % self.__class__.__name__)
 
         anID = self.env.lock_id()
         if verbose:
-            print "locker ID: %s" % anID
-        lock = self.env.lock_get(anID, "some locked thing", db.DB_LOCK_WRITE)
+            print("locker ID: %s" % anID)
+        lock = self.env.lock_get(anID, b"some locked thing", db.DB_LOCK_WRITE)
         if verbose:
-            print "Aquired lock: %s" % lock
+            print("Aquired lock: %s" % lock)
         time.sleep(1)
         self.env.lock_put(lock)
         if verbose:
-            print "Released lock: %s" % lock
+            print("Released lock: %s" % lock)
 
 
 
 
     def test02_threaded(self):
         if verbose:
-            print '\n', '-=' * 30
-            print "Running %s.test02_threaded..." % self.__class__.__name__
+            print('\n', '-=' * 30)
+            print("Running %s.test02_threaded..." % self.__class__.__name__)
 
         threads = []
         threads.append(Thread(target = self.theThread,
@@ -113,17 +108,17 @@ class LockingTestCase(unittest.TestCase):
 
         anID = self.env.lock_id()
         if verbose:
-            print "%s: locker ID: %s" % (name, anID)
+            print("%s: locker ID: %s" % (name, anID))
 
-        lock = self.env.lock_get(anID, "some locked thing", lockType)
+        lock = self.env.lock_get(anID, b"some locked thing", lockType)
         if verbose:
-            print "%s: Aquired %s lock: %s" % (name, lt, lock)
+            print("%s: Aquired %s lock: %s" % (name, lt, lock))
 
         time.sleep(sleepTime)
 
         self.env.lock_put(lock)
         if verbose:
-            print "%s: Released %s lock: %s" % (name, lt, lock)
+            print("%s: Released %s lock: %s" % (name, lt, lock))
 
 
 #----------------------------------------------------------------------

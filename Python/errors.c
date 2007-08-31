@@ -52,6 +52,13 @@ PyErr_Restore(PyObject *type, PyObject *value, PyObject *traceback)
 void
 PyErr_SetObject(PyObject *exception, PyObject *value)
 {
+	if (exception != NULL &&
+	    !PyExceptionClass_Check(exception)) {
+		PyErr_Format(PyExc_SystemError,
+			     "exception %R not a BaseException subclass",
+			     exception);
+		return;
+	}
 	Py_XINCREF(exception);
 	Py_XINCREF(value);
 	PyErr_Restore(exception, value, (PyObject *)NULL);
@@ -66,7 +73,7 @@ PyErr_SetNone(PyObject *exception)
 void
 PyErr_SetString(PyObject *exception, const char *string)
 {
-	PyObject *value = PyString_FromString(string);
+	PyObject *value = PyUnicode_FromString(string);
 	PyErr_SetObject(exception, value);
 	Py_XDECREF(value);
 }
@@ -326,9 +333,9 @@ PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
 #endif /* Unix/Windows */
 #endif /* PLAN 9*/
 	if (filenameObject != NULL)
-		v = Py_BuildValue("(isO)", i, s, filenameObject);
+		v = Py_BuildValue("(iUO)", i, s, filenameObject);
 	else
-		v = Py_BuildValue("(is)", i, s);
+		v = Py_BuildValue("(iU)", i, s);
 	if (v != NULL) {
 		PyErr_SetObject(exc, v);
 		Py_DECREF(v);
@@ -341,9 +348,9 @@ PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
 
 
 PyObject *
-PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
+PyErr_SetFromErrnoWithFilename(PyObject *exc, const char *filename)
 {
-	PyObject *name = filename ? PyString_FromString(filename) : NULL;
+	PyObject *name = filename ? PyUnicode_FromString(filename) : NULL;
 	PyObject *result = PyErr_SetFromErrnoWithFilenameObject(exc, name);
 	Py_XDECREF(name);
 	return result;
@@ -351,7 +358,7 @@ PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
 
 #ifdef Py_WIN_WIDE_FILENAMES
 PyObject *
-PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, Py_UNICODE *filename)
+PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, const Py_UNICODE *filename)
 {
 	PyObject *name = filename ?
 	                 PyUnicode_FromUnicode(filename, wcslen(filename)) :
@@ -406,9 +413,9 @@ PyObject *PyErr_SetExcFromWindowsErrWithFilenameObject(
 			s[--len] = '\0';
 	}
 	if (filenameObject != NULL)
-		v = Py_BuildValue("(isO)", err, s, filenameObject);
+		v = Py_BuildValue("(iUO)", err, s, filenameObject);
 	else
-		v = Py_BuildValue("(is)", err, s);
+		v = Py_BuildValue("(iU)", err, s);
 	if (v != NULL) {
 		PyErr_SetObject(exc, v);
 		Py_DECREF(v);
@@ -422,7 +429,7 @@ PyObject *PyErr_SetExcFromWindowsErrWithFilename(
 	int ierr,
 	const char *filename)
 {
-	PyObject *name = filename ? PyString_FromString(filename) : NULL;
+	PyObject *name = filename ? PyUnicode_FromString(filename) : NULL;
 	PyObject *ret = PyErr_SetExcFromWindowsErrWithFilenameObject(exc,
 	                                                             ierr,
 	                                                             name);
@@ -461,7 +468,7 @@ PyObject *PyErr_SetFromWindowsErrWithFilename(
 	int ierr,
 	const char *filename)
 {
-	PyObject *name = filename ? PyString_FromString(filename) : NULL;
+	PyObject *name = filename ? PyUnicode_FromString(filename) : NULL;
 	PyObject *result = PyErr_SetExcFromWindowsErrWithFilenameObject(
 						      PyExc_WindowsError,
 						      ierr, name);
@@ -487,7 +494,7 @@ PyObject *PyErr_SetFromWindowsErrWithUnicodeFilename(
 #endif /* MS_WINDOWS */
 
 void
-_PyErr_BadInternalCall(char *filename, int lineno)
+_PyErr_BadInternalCall(const char *filename, int lineno)
 {
 	PyErr_Format(PyExc_SystemError,
 		     "%s:%d: bad argument to internal function",
@@ -519,7 +526,7 @@ PyErr_Format(PyObject *exception, const char *format, ...)
 	va_start(vargs);
 #endif
 
-	string = PyString_FromFormatV(format, vargs);
+	string = PyUnicode_FromFormatV(format, vargs);
 	PyErr_SetObject(exception, string);
 	Py_XDECREF(string);
 	va_end(vargs);
@@ -529,9 +536,9 @@ PyErr_Format(PyObject *exception, const char *format, ...)
 
 
 PyObject *
-PyErr_NewException(char *name, PyObject *base, PyObject *dict)
+PyErr_NewException(const char *name, PyObject *base, PyObject *dict)
 {
-	char *dot;
+	const char *dot;
 	PyObject *modulename = NULL;
 	PyObject *classname = NULL;
 	PyObject *mydict = NULL;
@@ -551,7 +558,7 @@ PyErr_NewException(char *name, PyObject *base, PyObject *dict)
 			goto failure;
 	}
 	if (PyDict_GetItemString(dict, "__module__") == NULL) {
-		modulename = PyString_FromStringAndSize(name,
+		modulename = PyUnicode_FromStringAndSize(name,
 						     (Py_ssize_t)(dot-name));
 		if (modulename == NULL)
 			goto failure;
@@ -603,9 +610,9 @@ PyErr_WriteUnraisable(PyObject *obj)
 			if (moduleName == NULL)
 				PyFile_WriteString("<unknown>", f);
 			else {
-				char* modstr = PyString_AsString(moduleName);
+				char* modstr = PyUnicode_AsString(moduleName);
 				if (modstr &&
-				    strcmp(modstr, "exceptions") != 0)
+				    strcmp(modstr, "__builtin__") != 0)
 				{
 					PyFile_WriteString(modstr, f);
 					PyFile_WriteString(".", f);
@@ -661,17 +668,6 @@ PyErr_WarnEx(PyObject *category, const char *message, Py_ssize_t stack_level)
 		Py_DECREF(res);
 		return 0;
 	}
-}
-
-/* PyErr_Warn is only for backwards compatability and will be removed.
-   Use PyErr_WarnEx instead. */
-
-#undef PyErr_Warn
-
-PyAPI_FUNC(int)
-PyErr_Warn(PyObject *category, char *message)
-{
-	return PyErr_WarnEx(category, message, 1);
 }
 
 /* Warning with explicit origin */
@@ -732,7 +728,7 @@ PyErr_SyntaxLocation(const char *filename, int lineno)
 		Py_DECREF(tmp);
 	}
 	if (filename != NULL) {
-		tmp = PyString_FromString(filename);
+		tmp = PyUnicode_FromString(filename);
 		if (tmp == NULL)
 			PyErr_Clear();
 		else {
@@ -809,7 +805,7 @@ PyErr_ProgramText(const char *filename, int lineno)
 		char *p = linebuf;
 		while (*p == ' ' || *p == '\t' || *p == '\014')
 			p++;
-		return PyString_FromString(p);
+		return PyUnicode_FromString(p);
 	}
 	return NULL;
 }
@@ -817,4 +813,3 @@ PyErr_ProgramText(const char *filename, int lineno)
 #ifdef __cplusplus
 }
 #endif
-

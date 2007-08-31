@@ -26,7 +26,7 @@ Copyright (C) 2001-2007 Vinay Sajip. All Rights Reserved.
 To use, simply 'import logging' and log away!
 """
 
-import sys, os, types, time, string, cStringIO, traceback
+import sys, os, time, io, traceback
 
 try:
     import codecs
@@ -48,13 +48,15 @@ __date__    = "16 February 2007"
 #   Miscellaneous module data
 #---------------------------------------------------------------------------
 
+_unicode = 'unicode' in dir(__builtins__)
+
 #
 # _srcfile is used when walking the stack to check when we've got the first
 # caller stack frame.
 #
 if hasattr(sys, 'frozen'): #support for py2exe
     _srcfile = "logging%s__init__%s" % (os.sep, __file__[-4:])
-elif string.lower(__file__[-4:]) in ['.pyc', '.pyo']:
+elif __file__[-4:].lower() in ['.pyc', '.pyo']:
     _srcfile = __file__[:-4] + '.py'
 else:
     _srcfile = __file__
@@ -66,7 +68,7 @@ def currentframe():
     try:
         raise Exception
     except:
-        return sys.exc_traceback.tb_frame.f_back
+        return sys.exc_info()[2].tb_frame.f_back
 
 if hasattr(sys, '_getframe'): currentframe = lambda: sys._getframe(3)
 # done filching
@@ -234,7 +236,7 @@ class LogRecord:
         # 'Value is %d' instead of 'Value is 0'.
         # For the use case of passing a dictionary, this should not be a
         # problem.
-        if args and (len(args) == 1) and args[0] and (type(args[0]) == types.DictType):
+        if args and (len(args) == 1) and args[0] and isinstance(args[0], dict):
             args = args[0]
         self.args = args
         self.levelname = getLevelName(level)
@@ -251,7 +253,7 @@ class LogRecord:
         self.lineno = lineno
         self.funcName = func
         self.created = ct
-        self.msecs = (ct - long(ct)) * 1000
+        self.msecs = (ct - int(ct)) * 1000
         self.relativeCreated = (self.created - _startTime) * 1000
         if logThreads and thread:
             self.thread = thread.get_ident()
@@ -275,11 +277,11 @@ class LogRecord:
         Return the message for this LogRecord after merging any user-supplied
         arguments with the message.
         """
-        if not hasattr(types, "UnicodeType"): #if no unicode support...
+        if not _unicode: #if no unicode support...
             msg = str(self.msg)
         else:
             msg = self.msg
-            if type(msg) not in (types.UnicodeType, types.StringType):
+            if not isinstance(msg, basestring):
                 try:
                     msg = str(self.msg)
                 except UnicodeError:
@@ -394,7 +396,7 @@ class Formatter:
         This default implementation just uses
         traceback.print_exception()
         """
-        sio = cStringIO.StringIO()
+        sio = io.StringIO()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sio)
         s = sio.getvalue()
         sio.close()
@@ -416,7 +418,7 @@ class Formatter:
         formatException() and appended to the message.
         """
         record.message = record.getMessage()
-        if string.find(self._fmt,"%(asctime)") >= 0:
+        if self._fmt.find("%(asctime)") >= 0:
             record.asctime = self.formatTime(record, self.datefmt)
         s = self._fmt % record.__dict__
         if record.exc_info:
@@ -510,7 +512,7 @@ class Filter:
             return 1
         elif self.name == record.name:
             return 1
-        elif string.find(record.name, self.name, 0, self.nlen) != 0:
+        elif record.name.find(self.name, 0, self.nlen) != 0:
             return 0
         return (record.name[self.nlen] == ".")
 
@@ -636,8 +638,8 @@ class Handler(Filterer):
         This version is intended to be implemented by subclasses and so
         raises a NotImplementedError.
         """
-        raise NotImplementedError, 'emit must be implemented '\
-                                    'by Handler subclasses'
+        raise NotImplementedError('emit must be implemented '
+                                  'by Handler subclasses')
 
     def handle(self, record):
         """
@@ -743,7 +745,7 @@ class StreamHandler(Handler):
         try:
             msg = self.format(record)
             fs = "%s\n"
-            if not hasattr(types, "UnicodeType"): #if no unicode support...
+            if not _unicode: #if no unicode support...
                 self.stream.write(fs % msg)
             else:
                 try:
@@ -815,7 +817,7 @@ class PlaceHolder:
         Add the specified logger as a child of this placeholder.
         """
         #if alogger not in self.loggers:
-        if not self.loggerMap.has_key(alogger):
+        if alogger not in self.loggerMap:
             #self.loggers.append(alogger)
             self.loggerMap[alogger] = None
 
@@ -832,8 +834,8 @@ def setLoggerClass(klass):
     """
     if klass != Logger:
         if not issubclass(klass, Logger):
-            raise TypeError, "logger not derived from logging.Logger: " + \
-                            klass.__name__
+            raise TypeError("logger not derived from logging.Logger: "
+                            + klass.__name__)
     global _loggerClass
     _loggerClass = klass
 
@@ -872,7 +874,7 @@ class Manager:
         rv = None
         _acquireLock()
         try:
-            if self.loggerDict.has_key(name):
+            if name in self.loggerDict:
                 rv = self.loggerDict[name]
                 if isinstance(rv, PlaceHolder):
                     ph = rv
@@ -896,11 +898,11 @@ class Manager:
         from the specified logger to the root of the logger hierarchy.
         """
         name = alogger.name
-        i = string.rfind(name, ".")
+        i = name.rfind(".")
         rv = None
         while (i > 0) and not rv:
             substr = name[:i]
-            if not self.loggerDict.has_key(substr):
+            if substr not in self.loggerDict:
                 self.loggerDict[substr] = PlaceHolder(alogger)
             else:
                 obj = self.loggerDict[substr]
@@ -909,7 +911,7 @@ class Manager:
                 else:
                     assert isinstance(obj, PlaceHolder)
                     obj.append(alogger)
-            i = string.rfind(name, ".", 0, i - 1)
+            i = name.rfind(".", 0, i - 1)
         if not rv:
             rv = self.root
         alogger.parent = rv
@@ -923,7 +925,6 @@ class Manager:
         namelen = len(name)
         for c in ph.loggerMap.keys():
             #The if means ... if not c.parent.name.startswith(nm)
-            #if string.find(c.parent.name, nm) <> 0:
             if c.parent.name[:namelen] != name:
                 alogger.parent = c.parent
                 c.parent = alogger
@@ -975,7 +976,7 @@ class Logger(Filterer):
         logger.debug("Houston, we have a %s", "thorny problem", exc_info=1)
         """
         if self.isEnabledFor(DEBUG):
-            apply(self._log, (DEBUG, msg, args), kwargs)
+            self._log(DEBUG, msg, args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
         """
@@ -987,7 +988,7 @@ class Logger(Filterer):
         logger.info("Houston, we have a %s", "interesting problem", exc_info=1)
         """
         if self.isEnabledFor(INFO):
-            apply(self._log, (INFO, msg, args), kwargs)
+            self._log(INFO, msg, args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
         """
@@ -999,7 +1000,7 @@ class Logger(Filterer):
         logger.warning("Houston, we have a %s", "bit of a problem", exc_info=1)
         """
         if self.isEnabledFor(WARNING):
-            apply(self._log, (WARNING, msg, args), kwargs)
+            self._log(WARNING, msg, args, **kwargs)
 
     warn = warning
 
@@ -1013,13 +1014,13 @@ class Logger(Filterer):
         logger.error("Houston, we have a %s", "major problem", exc_info=1)
         """
         if self.isEnabledFor(ERROR):
-            apply(self._log, (ERROR, msg, args), kwargs)
+            self._log(ERROR, msg, args, **kwargs)
 
     def exception(self, msg, *args):
         """
         Convenience method for logging an ERROR with exception information.
         """
-        apply(self.error, (msg,) + args, {'exc_info': 1})
+        self.error(msg, exc_info=1, *args)
 
     def critical(self, msg, *args, **kwargs):
         """
@@ -1031,7 +1032,7 @@ class Logger(Filterer):
         logger.critical("Houston, we have a %s", "major disaster", exc_info=1)
         """
         if self.isEnabledFor(CRITICAL):
-            apply(self._log, (CRITICAL, msg, args), kwargs)
+            self._log(CRITICAL, msg, args, **kwargs)
 
     fatal = critical
 
@@ -1044,13 +1045,13 @@ class Logger(Filterer):
 
         logger.log(level, "We have a %s", "mysterious problem", exc_info=1)
         """
-        if type(level) != types.IntType:
+        if not isinstance(level, int):
             if raiseExceptions:
-                raise TypeError, "level must be an integer"
+                raise TypeError("level must be an integer")
             else:
                 return
         if self.isEnabledFor(level):
-            apply(self._log, (level, msg, args), kwargs)
+            self._log(level, msg, args, **kwargs)
 
     def findCaller(self):
         """
@@ -1092,7 +1093,7 @@ class Logger(Filterer):
         else:
             fn, lno, func = "(unknown file)", 0, "(unknown function)"
         if exc_info:
-            if type(exc_info) != types.TupleType:
+            if not isinstance(exc_info, tuple):
                 exc_info = sys.exc_info()
         record = self.makeRecord(self.name, level, fn, lno, msg, args, exc_info, func, extra)
         self.handle(record)
@@ -1278,7 +1279,7 @@ def critical(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    apply(root.critical, (msg,)+args, kwargs)
+    root.critical(msg, *args, **kwargs)
 
 fatal = critical
 
@@ -1288,14 +1289,14 @@ def error(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    apply(root.error, (msg,)+args, kwargs)
+    root.error(msg, *args, **kwargs)
 
 def exception(msg, *args):
     """
     Log a message with severity 'ERROR' on the root logger,
     with exception information.
     """
-    apply(error, (msg,)+args, {'exc_info': 1})
+    error(msg, exc_info=1, *args)
 
 def warning(msg, *args, **kwargs):
     """
@@ -1303,7 +1304,7 @@ def warning(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    apply(root.warning, (msg,)+args, kwargs)
+    root.warning(msg, *args, **kwargs)
 
 warn = warning
 
@@ -1313,7 +1314,7 @@ def info(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    apply(root.info, (msg,)+args, kwargs)
+    root.info(msg, *args, **kwargs)
 
 def debug(msg, *args, **kwargs):
     """
@@ -1321,7 +1322,7 @@ def debug(msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    apply(root.debug, (msg,)+args, kwargs)
+    root.debug(msg, *args, **kwargs)
 
 def log(level, msg, *args, **kwargs):
     """
@@ -1329,7 +1330,7 @@ def log(level, msg, *args, **kwargs):
     """
     if len(root.handlers) == 0:
         basicConfig()
-    apply(root.log, (level, msg)+args, kwargs)
+    root.log(level, msg, *args, **kwargs)
 
 def disable(level):
     """

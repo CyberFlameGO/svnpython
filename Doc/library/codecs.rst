@@ -439,6 +439,25 @@ define in order to be compatible with the Python codec registry.
    Reset the encoder to the initial state.
 
 
+.. method:: IncrementalEncoder.getstate()
+
+   Return the current state of the encoder which must be an integer. The
+   implementation should make sure that ``0`` is the most common state. (States
+   that are more complicated than integers can be converted into an integer by
+   marshaling/pickling the state and encoding the bytes of the resulting string
+   into an integer).
+
+   .. versionadded:: 3.0
+
+
+.. method:: IncrementalEncoder.setstate(state)
+
+   Set the state of the encoder to *state*. *state* must be an encoder state
+   returned by :meth:`getstate`.
+
+   .. versionadded:: 3.0
+
+
 .. _incremental-decoder-objects:
 
 IncrementalDecoder Objects
@@ -489,6 +508,31 @@ define in order to be compatible with the Python codec registry.
 .. method:: IncrementalDecoder.reset()
 
    Reset the decoder to the initial state.
+
+
+.. method:: IncrementalDecoder.getstate()
+
+   Return the current state of the decoder. This must be a tuple with two items,
+   the first must be the buffer containing the still undecoded input. The second
+   must be an integer and can be additional state info. (The implementation should
+   make sure that ``0`` is the most common additional state info.) If this
+   additional state info is ``0`` it must be possible to set the decoder to the
+   state which has no input buffered and ``0`` as the additional state info, so
+   that feeding the previously buffered input to the decoder returns it to the
+   previous state without producing any output. (Additional state info that is more
+   complicated than integers can be converted into an integer by
+   marshaling/pickling the info and encoding the bytes of the resulting string into
+   an integer.)
+
+   .. versionadded:: 3.0
+
+
+.. method:: IncrementalDecoder.setstate(state)
+
+   Set the state of the encoder to *state*. *state* must be a decoder state
+   returned by :meth:`getstate`.
+
+   .. versionadded:: 3.0
 
 The :class:`StreamWriter` and :class:`StreamReader` classes provide generic
 working interfaces which can be used to implement new encoding submodules very
@@ -1073,71 +1117,45 @@ For the codecs listed below, the result in the "encoding" direction is always a
 byte string. The result of the "decoding" direction is listed as operand type in
 the table.
 
-+--------------------+---------------------------+----------------+---------------------------+
-| Codec              | Aliases                   | Operand type   | Purpose                   |
-+====================+===========================+================+===========================+
-| base64_codec       | base64, base-64           | byte string    | Convert operand to MIME   |
-|                    |                           |                | base64                    |
-+--------------------+---------------------------+----------------+---------------------------+
-| bz2_codec          | bz2                       | byte string    | Compress the operand      |
-|                    |                           |                | using bz2                 |
-+--------------------+---------------------------+----------------+---------------------------+
-| hex_codec          | hex                       | byte string    | Convert operand to        |
-|                    |                           |                | hexadecimal               |
-|                    |                           |                | representation, with two  |
-|                    |                           |                | digits per byte           |
-+--------------------+---------------------------+----------------+---------------------------+
-| idna               |                           | Unicode string | Implements :rfc:`3490`,   |
-|                    |                           |                | see also                  |
-|                    |                           |                | :mod:`encodings.idna`     |
-+--------------------+---------------------------+----------------+---------------------------+
-| mbcs               | dbcs                      | Unicode string | Windows only: Encode      |
-|                    |                           |                | operand according to the  |
-|                    |                           |                | ANSI codepage (CP_ACP)    |
-+--------------------+---------------------------+----------------+---------------------------+
-| palmos             |                           | Unicode string | Encoding of PalmOS 3.5    |
-+--------------------+---------------------------+----------------+---------------------------+
-| punycode           |                           | Unicode string | Implements :rfc:`3492`    |
-+--------------------+---------------------------+----------------+---------------------------+
-| quopri_codec       | quopri, quoted-printable, | byte string    | Convert operand to MIME   |
-|                    | quotedprintable           |                | quoted printable          |
-+--------------------+---------------------------+----------------+---------------------------+
-| raw_unicode_escape |                           | Unicode string | Produce a string that is  |
-|                    |                           |                | suitable as raw Unicode   |
-|                    |                           |                | literal in Python source  |
-|                    |                           |                | code                      |
-+--------------------+---------------------------+----------------+---------------------------+
-| rot_13             | rot13                     | Unicode string | Returns the Caesar-cypher |
-|                    |                           |                | encryption of the operand |
-+--------------------+---------------------------+----------------+---------------------------+
-| string_escape      |                           | byte string    | Produce a string that is  |
-|                    |                           |                | suitable as string        |
-|                    |                           |                | literal in Python source  |
-|                    |                           |                | code                      |
-+--------------------+---------------------------+----------------+---------------------------+
-| undefined          |                           | any            | Raise an exception for    |
-|                    |                           |                | all conversions. Can be   |
-|                    |                           |                | used as the system        |
-|                    |                           |                | encoding if no automatic  |
-|                    |                           |                | coercion between byte and |
-|                    |                           |                | Unicode strings is        |
-|                    |                           |                | desired.                  |
-+--------------------+---------------------------+----------------+---------------------------+
-| unicode_escape     |                           | Unicode string | Produce a string that is  |
-|                    |                           |                | suitable as Unicode       |
-|                    |                           |                | literal in Python source  |
-|                    |                           |                | code                      |
-+--------------------+---------------------------+----------------+---------------------------+
-| unicode_internal   |                           | Unicode string | Return the internal       |
-|                    |                           |                | representation of the     |
-|                    |                           |                | operand                   |
-+--------------------+---------------------------+----------------+---------------------------+
-| uu_codec           | uu                        | byte string    | Convert the operand using |
-|                    |                           |                | uuencode                  |
-+--------------------+---------------------------+----------------+---------------------------+
-| zlib_codec         | zip, zlib                 | byte string    | Compress the operand      |
-|                    |                           |                | using gzip                |
-+--------------------+---------------------------+----------------+---------------------------+
+.. XXX fix here, should be in above table
+
++--------------------+---------+----------------+---------------------------+
+| Codec              | Aliases | Operand type   | Purpose                   |
++====================+=========+================+===========================+
+| idna               |         | Unicode string | Implements :rfc:`3490`,   |
+|                    |         |                | see also                  |
+|                    |         |                | :mod:`encodings.idna`     |
++--------------------+---------+----------------+---------------------------+
+| mbcs               | dbcs    | Unicode string | Windows only: Encode      |
+|                    |         |                | operand according to the  |
+|                    |         |                | ANSI codepage (CP_ACP)    |
++--------------------+---------+----------------+---------------------------+
+| palmos             |         | Unicode string | Encoding of PalmOS 3.5    |
++--------------------+---------+----------------+---------------------------+
+| punycode           |         | Unicode string | Implements :rfc:`3492`    |
++--------------------+---------+----------------+---------------------------+
+| raw_unicode_escape |         | Unicode string | Produce a string that is  |
+|                    |         |                | suitable as raw Unicode   |
+|                    |         |                | literal in Python source  |
+|                    |         |                | code                      |
++--------------------+---------+----------------+---------------------------+
+| undefined          |         | any            | Raise an exception for    |
+|                    |         |                | all conversions. Can be   |
+|                    |         |                | used as the system        |
+|                    |         |                | encoding if no automatic  |
+|                    |         |                | coercion between byte and |
+|                    |         |                | Unicode strings is        |
+|                    |         |                | desired.                  |
++--------------------+---------+----------------+---------------------------+
+| unicode_escape     |         | Unicode string | Produce a string that is  |
+|                    |         |                | suitable as Unicode       |
+|                    |         |                | literal in Python source  |
+|                    |         |                | code                      |
++--------------------+---------+----------------+---------------------------+
+| unicode_internal   |         | Unicode string | Return the internal       |
+|                    |         |                | representation of the     |
+|                    |         |                | operand                   |
++--------------------+---------+----------------+---------------------------+
 
 .. versionadded:: 2.3
    The ``idna`` and ``punycode`` encodings.

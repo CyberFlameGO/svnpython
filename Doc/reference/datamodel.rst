@@ -146,9 +146,8 @@ Ellipsis
    .. index:: object: Ellipsis
 
    This type has a single value.  There is a single object with this value. This
-   object is accessed through the built-in name ``Ellipsis``. It is used to
-   indicate the presence of the ``...`` syntax in a slice.  Its truth value is
-   true.
+   object is accessed through the literal ``...`` or the built-in name
+   ``Ellipsis``.  Its truth value is true.
 
 Numbers
    .. index:: object: numeric
@@ -477,54 +476,58 @@ Callable types
 
       Special attributes:
 
-      +-----------------------+-------------------------------+-----------+
-      | Attribute             | Meaning                       |           |
-      +=======================+===============================+===========+
-      | :attr:`func_doc`      | The function's documentation  | Writable  |
-      |                       | string, or ``None`` if        |           |
-      |                       | unavailable                   |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`__doc__`       | Another way of spelling       | Writable  |
-      |                       | :attr:`func_doc`              |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`func_name`     | The function's name           | Writable  |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`__name__`      | Another way of spelling       | Writable  |
-      |                       | :attr:`func_name`             |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`__module__`    | The name of the module the    | Writable  |
-      |                       | function was defined in, or   |           |
-      |                       | ``None`` if unavailable.      |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`func_defaults` | A tuple containing default    | Writable  |
-      |                       | argument values for those     |           |
-      |                       | arguments that have defaults, |           |
-      |                       | or ``None`` if no arguments   |           |
-      |                       | have a default value          |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`func_code`     | The code object representing  | Writable  |
-      |                       | the compiled function body.   |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`func_globals`  | A reference to the dictionary | Read-only |
-      |                       | that holds the function's     |           |
-      |                       | global variables --- the      |           |
-      |                       | global namespace of the       |           |
-      |                       | module in which the function  |           |
-      |                       | was defined.                  |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`func_dict`     | The namespace supporting      | Writable  |
-      |                       | arbitrary function            |           |
-      |                       | attributes.                   |           |
-      +-----------------------+-------------------------------+-----------+
-      | :attr:`func_closure`  | ``None`` or a tuple of cells  | Read-only |
-      |                       | that contain bindings for the |           |
-      |                       | function's free variables.    |           |
-      +-----------------------+-------------------------------+-----------+
+      +-------------------------+-------------------------------+-----------+
+      | Attribute               | Meaning                       |           |
+      +=========================+===============================+===========+
+      | :attr:`__doc__`         | The function's documentation  | Writable  |
+      |                         | string, or ``None`` if        |           |
+      |                         | unavailable                   |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__name__`        | The function's name           | Writable  |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__module__`      | The name of the module the    | Writable  |
+      |                         | function was defined in, or   |           |
+      |                         | ``None`` if unavailable.      |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__defaults__`    | A tuple containing default    | Writable  |
+      |                         | argument values for those     |           |
+      |                         | arguments that have defaults, |           |
+      |                         | or ``None`` if no arguments   |           |
+      |                         | have a default value          |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__code__`        | The code object representing  | Writable  |
+      |                         | the compiled function body.   |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__globals__`     | A reference to the dictionary | Read-only |
+      |                         | that holds the function's     |           |
+      |                         | global variables --- the      |           |
+      |                         | global namespace of the       |           |
+      |                         | module in which the function  |           |
+      |                         | was defined.                  |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__dict__`        | The namespace supporting      | Writable  |
+      |                         | arbitrary function            |           |
+      |                         | attributes.                   |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__closure__`     | ``None`` or a tuple of cells  | Read-only |
+      |                         | that contain bindings for the |           |
+      |                         | function's free variables.    |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__annotations__` | A dict containing annotations | Writable  |
+      |                         | of parameters.  The keys of   |           |
+      |                         | the dict are the parameter    |           |
+      |                         | names, or ``'return'`` for    |           |
+      |                         | the return annotation, if     |           |
+      |                         | provided.                     |           |
+      +-------------------------+-------------------------------+-----------+
+      | :attr:`__kwdefaults__`  | A dict containing defaults    | Writable  |
+      |                         | for keyword-only parameters.  |           |
+      +-------------------------+-------------------------------+-----------+
 
       Most of the attributes labelled "Writable" check the type of the assigned value.
 
       .. versionchanged:: 2.4
-         ``func_name`` is now writable.
+         ``__name__`` is now writable.
 
       Function objects also support getting and setting arbitrary attributes, which
       can be used, for example, to attach metadata to functions.  Regular attribute
@@ -536,16 +539,16 @@ Callable types
       code object; see the description of internal types below.
 
       .. index::
-         single: func_doc (function attribute)
          single: __doc__ (function attribute)
          single: __name__ (function attribute)
          single: __module__ (function attribute)
          single: __dict__ (function attribute)
-         single: func_defaults (function attribute)
-         single: func_closure (function attribute)
-         single: func_code (function attribute)
-         single: func_globals (function attribute)
-         single: func_dict (function attribute)
+         single: __defaults__ (function attribute)
+         single: __closure__ (function attribute)
+         single: __code__ (function attribute)
+         single: __globals__ (function attribute)
+         single: __annotations__ (function attribute)
+         single: __kwdefaults__ (function attribute)
          pair: global; namespace
 
    User-defined methods
@@ -652,8 +655,8 @@ Callable types
       :ref:`yield`) is called a :dfn:`generator
       function`.  Such a function, when called, always returns an iterator object
       which can be used to execute the body of the function:  calling the iterator's
-      :meth:`next` method will cause the function to execute until it provides a value
-      using the :keyword:`yield` statement.  When the function executes a
+      :meth:`__next__` method will cause the function to execute until it provides a
+      value using the :keyword:`yield` statement.  When the function executes a
       :keyword:`return` statement or falls off the end, a :exc:`StopIteration`
       exception is raised and the iterator will have reached the end of the set of
       values to be returned.
@@ -719,7 +722,7 @@ Modules
    Modules are imported by the :keyword:`import` statement (see section
    :ref:`import`). A module object has a
    namespace implemented by a dictionary object (this is the dictionary referenced
-   by the func_globals attribute of functions defined in the module).  Attribute
+   by the __globals__ attribute of functions defined in the module).  Attribute
    references are translated to lookups in this dictionary, e.g., ``m.x`` is
    equivalent to ``m.__dict__["x"]``. A module object does not contain the code
    object used to initialize the module (since it isn't needed once the
@@ -960,16 +963,14 @@ Internal types
          single: f_locals (frame attribute)
          single: f_lasti (frame attribute)
          single: f_builtins (frame attribute)
-         single: f_restricted (frame attribute)
 
       Special read-only attributes: :attr:`f_back` is to the previous stack frame
       (towards the caller), or ``None`` if this is the bottom stack frame;
       :attr:`f_code` is the code object being executed in this frame; :attr:`f_locals`
       is the dictionary used to look up local variables; :attr:`f_globals` is used for
       global variables; :attr:`f_builtins` is used for built-in (intrinsic) names;
-      :attr:`f_restricted` is a flag indicating whether the function is executing in
-      restricted execution mode; :attr:`f_lasti` gives the precise instruction (this
-      is an index into the bytecode string of the code object).
+      :attr:`f_lasti` gives the precise instruction (this is an index into the
+      bytecode string of the code object).
 
       .. index::
          single: f_trace (frame attribute)
@@ -997,7 +998,6 @@ Internal types
          single: exc_traceback (in module sys)
          single: last_traceback (in module sys)
          single: sys.exc_info
-         single: sys.exc_traceback
          single: sys.last_traceback
 
       Traceback objects represent a stack trace of an exception.  A traceback object
@@ -1005,13 +1005,11 @@ Internal types
       unwinds the execution stack, at each unwound level a traceback object is
       inserted in front of the current traceback.  When an exception handler is
       entered, the stack trace is made available to the program. (See section
-      :ref:`try`.) It is accessible as ``sys.exc_traceback``,
-      and also as the third item of the tuple returned by ``sys.exc_info()``.  The
-      latter is the preferred interface, since it works correctly when the program is
-      using multiple threads. When the program contains no suitable handler, the stack
-      trace is written (nicely formatted) to the standard error stream; if the
-      interpreter is interactive, it is also made available to the user as
-      ``sys.last_traceback``.
+      :ref:`try`.) It is accessible as the third item of the
+      tuple returned by ``sys.exc_info()``. When the program contains no suitable
+      handler, the stack trace is written (nicely formatted) to the standard error
+      stream; if the interpreter is interactive, it is also made available to the user
+      as ``sys.last_traceback``.
 
       .. index::
          single: tb_next (traceback attribute)
@@ -1224,18 +1222,18 @@ Basic customization
       circular references between objects (e.g., a doubly-linked list or a tree
       data structure with parent and child pointers); a reference to the object
       on the stack frame of a function that caught an exception (the traceback
-      stored in ``sys.exc_traceback`` keeps the stack frame alive); or a
+      stored in ``sys.exc_info()[2]`` keeps the stack frame alive); or a
       reference to the object on the stack frame that raised an unhandled
       exception in interactive mode (the traceback stored in
       ``sys.last_traceback`` keeps the stack frame alive).  The first situation
       can only be remedied by explicitly breaking the cycles; the latter two
-      situations can be resolved by storing ``None`` in ``sys.exc_traceback`` or
-      ``sys.last_traceback``.  Circular references which are garbage are
-      detected when the option cycle detector is enabled (it's on by default),
-      but can only be cleaned up if there are no Python-level :meth:`__del__`
-      methods involved. Refer to the documentation for the :mod:`gc` module for
-      more information about how :meth:`__del__` methods are handled by the
-      cycle detector, particularly the description of the ``garbage`` value.
+      situations can be resolved by storing ``None`` in ``sys.last_traceback``.
+      Circular references which are garbage are detected when the option cycle
+      detector is enabled (it's on by default), but can only be cleaned up if
+      there are no Python- level :meth:`__del__` methods involved. Refer to the
+      documentation for the :mod:`gc` module for more information about how
+      :meth:`__del__` methods are handled by the cycle detector, particularly
+      the description of the ``garbage`` value.
 
    .. warning::
 
@@ -1281,12 +1279,33 @@ Basic customization
 
    .. index::
       builtin: str
-      statement: print
+      builtin: print
 
-   Called by the :func:`str` built-in function and by the :keyword:`print`
-   statement to compute the "informal" string representation of an object.  This
+   Called by the :func:`str` built-in function and by the :func:`print`
+   function to compute the "informal" string representation of an object.  This
    differs from :meth:`__repr__` in that it does not have to be a valid Python
    expression: a more convenient or concise representation may be used instead.
+   The return value must be a string object.
+
+
+.. method:: object.__format__(self, format_spec)
+
+   .. index::
+      pair: string; conversion
+      builtin: str
+      builtin: print
+
+   Called by the :func:`format` built-in function (and by extension, the
+   :meth:`format` method of class :class:`str`) to produce a "formatted"
+   string representation of an object. The ``format_spec`` argument is
+   a string that contains a description of the formatting options desired.
+   The interpretation of the ``format_spec`` argument is up to the type
+   implementing :meth:`__format__`, however most classes will either
+   delegate formatting to one of the built-in types, or use a similar
+   formatting option syntax.
+   
+   See :ref:`formatspec` for a description of the standard formatting syntax.
+
    The return value must be a string object.
 
 
@@ -1302,8 +1321,8 @@ Basic customization
    These are the so-called "rich comparison" methods, and are called for comparison
    operators in preference to :meth:`__cmp__` below. The correspondence between
    operator symbols and method names is as follows: ``x<y`` calls ``x.__lt__(y)``,
-   ``x<=y`` calls ``x.__le__(y)``, ``x==y`` calls ``x.__eq__(y)``, ``x!=y`` and
-   ``x<>y`` call ``x.__ne__(y)``, ``x>y`` calls ``x.__gt__(y)``, and ``x>=y`` calls
+   ``x<=y`` calls ``x.__le__(y)``, ``x==y`` calls ``x.__eq__(y)``, ``x!=y`` calls
+   ``x.__ne__(y)``, ``x>y`` calls ``x.__gt__(y)``, and ``x>=y`` calls
    ``x.__ge__(y)``.
 
    A rich comparison method may return the singleton ``NotImplemented`` if it does
@@ -1376,15 +1395,15 @@ Basic customization
    .. index:: single: __cmp__() (object method)
 
 
-.. method:: object.__nonzero__(self)
+.. method:: object.__bool__(self)
 
    .. index:: single: __len__() (mapping object method)
 
    Called to implement truth value testing, and the built-in operation ``bool()``;
-   should return ``False`` or ``True``, or their integer equivalents ``0`` or
-   ``1``. When this method is not defined, :meth:`__len__` is called, if it is
-   defined (see below).  If a class defines neither :meth:`__len__` nor
-   :meth:`__nonzero__`, all its instances are considered true.
+   should return ``False`` or ``True``. When this method is not defined,
+   :meth:`__len__` is called, if it is defined (see below) and ``True`` is returned
+   when the length is not zero.  If a class defines neither :meth:`__len__` nor
+   :meth:`__bool__`, all its instances are considered true.
 
 
 .. method:: object.__unicode__(self)
@@ -1723,25 +1742,25 @@ objects.  Finally, sequence types should implement addition (meaning
 concatenation) and multiplication (meaning repetition) by defining the methods
 :meth:`__add__`, :meth:`__radd__`, :meth:`__iadd__`, :meth:`__mul__`,
 :meth:`__rmul__` and :meth:`__imul__` described below; they should not define
-:meth:`__coerce__` or other numerical operators.  It is recommended that both
-mappings and sequences implement the :meth:`__contains__` method to allow
-efficient use of the ``in`` operator; for mappings, ``in`` should be equivalent
-of :meth:`has_key`; for sequences, it should search through the values.  It is
-further recommended that both mappings and sequences implement the
-:meth:`__iter__` method to allow efficient iteration through the container; for
-mappings, :meth:`__iter__` should be the same as :meth:`iterkeys`; for
-sequences, it should iterate through the values.
+other numerical operators.  It is recommended that both mappings and sequences
+implement the :meth:`__contains__` method to allow efficient use of the ``in``
+operator; for mappings, ``in`` should be equivalent of :meth:`has_key`; for
+sequences, it should search through the values.  It is further recommended that
+both mappings and sequences implement the :meth:`__iter__` method to allow
+efficient iteration through the container; for mappings, :meth:`__iter__` should
+be the same as :meth:`iterkeys`; for sequences, it should iterate through the
+values.
 
 
 .. method:: object.__len__(self)
 
    .. index::
       builtin: len
-      single: __nonzero__() (object method)
+      single: __bool__() (object method)
 
    Called to implement the built-in function :func:`len`.  Should return the length
    of the object, an integer ``>=`` 0.  Also, an object that doesn't define a
-   :meth:`__nonzero__` method and whose :meth:`__len__` method returns zero is
+   :meth:`__bool__` method and whose :meth:`__len__` method returns zero is
    considered to be false in a Boolean context.
 
 
@@ -2043,138 +2062,13 @@ left undefined.
    :func:`long`, and :func:`float`.  Should return a value of the appropriate type.
 
 
-.. method:: object.__oct__(self)
-            object.__hex__(self)
-
-   .. index::
-      builtin: oct
-      builtin: hex
-
-   Called to implement the built-in functions :func:`oct` and :func:`hex`.  Should
-   return a string value.
-
-
 .. method:: object.__index__(self)
 
    Called to implement :func:`operator.index`.  Also called whenever Python needs
-   an integer object (such as in slicing).  Must return an integer (int or long).
+   an integer object (such as in slicing, or in the built-in :func:`bin`,
+   :func:`hex` and :func:`oct` functions). Must return an integer (int or long).
 
    .. versionadded:: 2.5
-
-
-.. method:: object.__coerce__(self, other)
-
-   Called to implement "mixed-mode" numeric arithmetic.  Should either return a
-   2-tuple containing *self* and *other* converted to a common numeric type, or
-   ``None`` if conversion is impossible.  When the common type would be the type of
-   ``other``, it is sufficient to return ``None``, since the interpreter will also
-   ask the other object to attempt a coercion (but sometimes, if the implementation
-   of the other type cannot be changed, it is useful to do the conversion to the
-   other type here).  A return value of ``NotImplemented`` is equivalent to
-   returning ``None``.
-
-
-.. _coercion-rules:
-
-Coercion rules
---------------
-
-This section used to document the rules for coercion.  As the language has
-evolved, the coercion rules have become hard to document precisely; documenting
-what one version of one particular implementation does is undesirable.  Instead,
-here are some informal guidelines regarding coercion.  In Python 3.0, coercion
-will not be supported.
-
-*
-
-  If the left operand of a % operator is a string or Unicode object, no coercion
-  takes place and the string formatting operation is invoked instead.
-
-*
-
-  It is no longer recommended to define a coercion operation. Mixed-mode
-  operations on types that don't define coercion pass the original arguments to
-  the operation.
-
-*
-
-  New-style classes (those derived from :class:`object`) never invoke the
-  :meth:`__coerce__` method in response to a binary operator; the only time
-  :meth:`__coerce__` is invoked is when the built-in function :func:`coerce` is
-  called.
-
-*
-
-  For most intents and purposes, an operator that returns ``NotImplemented`` is
-  treated the same as one that is not implemented at all.
-
-*
-
-  Below, :meth:`__op__` and :meth:`__rop__` are used to signify the generic method
-  names corresponding to an operator; :meth:`__iop__` is used for the
-  corresponding in-place operator.  For example, for the operator '``+``',
-  :meth:`__add__` and :meth:`__radd__` are used for the left and right variant of
-  the binary operator, and :meth:`__iadd__` for the in-place variant.
-
-*
-
-  For objects *x* and *y*, first ``x.__op__(y)`` is tried.  If this is not
-  implemented or returns ``NotImplemented``, ``y.__rop__(x)`` is tried.  If this
-  is also not implemented or returns ``NotImplemented``, a :exc:`TypeError`
-  exception is raised.  But see the following exception:
-
-*
-
-  Exception to the previous item: if the left operand is an instance of a built-in
-  type or a new-style class, and the right operand is an instance of a proper
-  subclass of that type or class and overrides the base's :meth:`__rop__` method,
-  the right operand's :meth:`__rop__` method is tried *before* the left operand's
-  :meth:`__op__` method.
-
-  This is done so that a subclass can completely override binary operators.
-  Otherwise, the left operand's :meth:`__op__` method would always accept the
-  right operand: when an instance of a given class is expected, an instance of a
-  subclass of that class is always acceptable.
-
-*
-
-  When either operand type defines a coercion, this coercion is called before that
-  type's :meth:`__op__` or :meth:`__rop__` method is called, but no sooner.  If
-  the coercion returns an object of a different type for the operand whose
-  coercion is invoked, part of the process is redone using the new object.
-
-*
-
-  When an in-place operator (like '``+=``') is used, if the left operand
-  implements :meth:`__iop__`, it is invoked without any coercion.  When the
-  operation falls back to :meth:`__op__` and/or :meth:`__rop__`, the normal
-  coercion rules apply.
-
-*
-
-  In *x*``+``*y*, if *x* is a sequence that implements sequence concatenation,
-  sequence concatenation is invoked.
-
-*
-
-  In *x*``*``*y*, if one operator is a sequence that implements sequence
-  repetition, and the other is an integer (:class:`int` or :class:`long`),
-  sequence repetition is invoked.
-
-*
-
-  Rich comparisons (implemented by methods :meth:`__eq__` and so on) never use
-  coercion.  Three-way comparison (implemented by :meth:`__cmp__`) does use
-  coercion under the same conditions as other binary operations use it.
-
-*
-
-  In the current implementation, the built-in numeric types :class:`int`,
-  :class:`long` and :class:`float` do not use coercion; the type :class:`complex`
-  however does use it.  The difference can become apparent when subclassing these
-  types.  Over time, the type :class:`complex` may be fixed to avoid coercion.
-  All these types implement a :meth:`__coerce__` method, for use by the built-in
-  :func:`coerce` function.
 
 
 .. _context-managers:

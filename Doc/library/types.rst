@@ -9,14 +9,13 @@
 This module defines names for some object types that are used by the standard
 Python interpreter, but not for the types defined by various extension modules.
 Also, it does not include some of the types that arise during processing such as
-the ``listiterator`` type. It is safe to use ``from types import *`` --- the
-module does not export any names besides the ones listed here. New names
-exported by future versions of this module will all end in ``Type``.
+the ``listiterator`` type. New names exported by future versions of this module
+will all end in ``Type``.
 
 Typical use is for functions that do different things depending on their
 argument types, like the following::
 
-   from types import *
+   from types import IntType
    def delete(mylist, item):
        if type(item) is IntType:
           del mylist[item]
@@ -86,13 +85,6 @@ The module defines the following names:
    :class:`str`.
 
 
-.. data:: UnicodeType
-
-   The type of Unicode character strings (e.g. ``u'Spam'``).  This is not defined
-   if Python was built without Unicode support.  It's an alias of the built-in
-   :class:`unicode`.
-
-
 .. data:: TupleType
 
    The type of tuples (e.g. ``(1, 2, 3, 'Spam')``); alias of the built-in
@@ -146,11 +138,6 @@ The module defines the following names:
    The type of user-defined classes.
 
 
-.. data:: InstanceType
-
-   The type of instances of user-defined classes.
-
-
 .. data:: MethodType
 
    The type of methods of user-defined class instances.
@@ -182,12 +169,12 @@ The module defines the following names:
    :class:`file`.
 
 
-.. data:: XRangeType
+.. data:: RangeType
 
-   .. index:: builtin: xrange
+   .. index:: builtin: range
 
-   The type of range objects returned by :func:`xrange`; alias of the built-in
-   :class:`xrange`.
+   The type of range objects returned by :func:`range`; alias of the built-in
+   :class:`range`.
 
 
 .. data:: SliceType
@@ -205,7 +192,7 @@ The module defines the following names:
 
 .. data:: TracebackType
 
-   The type of traceback objects such as found in ``sys.exc_traceback``.
+   The type of traceback objects such as found in ``sys.exc_info()[2]``.
 
 
 .. data:: FrameType

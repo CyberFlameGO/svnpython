@@ -7,31 +7,20 @@ import sys
 # Iterators in Python aren't a matter of type but of protocol.  A large
 # and changing number of builtin types implement *some* flavor of
 # iterator.  Don't check the type!  Use hasattr to check for both
-# "__iter__" and "next" attributes instead.
+# "__iter__" and "__next__" attributes instead.
 
 NoneType = type(None)
 TypeType = type
 ObjectType = object
 
 IntType = int
-LongType = long
+LongType = int
 FloatType = float
 BooleanType = bool
 try:
     ComplexType = complex
 except NameError:
     pass
-
-StringType = str
-
-# StringTypes is already outdated.  Instead of writing "type(x) in
-# types.StringTypes", you should use "isinstance(x, basestring)".  But
-# we keep around for compatibility with Python 2.2.
-try:
-    UnicodeType = unicode
-    StringTypes = (StringType, UnicodeType)
-except NameError:
-    StringTypes = (StringType,)
 
 BufferType = buffer
 
@@ -42,11 +31,7 @@ DictType = DictionaryType = dict
 def _f(): pass
 FunctionType = type(_f)
 LambdaType = type(lambda: None)         # Same as FunctionType
-try:
-    CodeType = type(_f.func_code)
-except RuntimeError:
-    # Execution in restricted environment
-    pass
+CodeType = type(_f.__code__)
 
 def _g():
     yield 1
@@ -54,30 +39,21 @@ GeneratorType = type(_g())
 
 class _C:
     def _m(self): pass
-ClassType = type(_C)
+ClassType = type
 UnboundMethodType = type(_C._m)         # Same as MethodType
-_x = _C()
-InstanceType = type(_x)
-MethodType = type(_x._m)
+MethodType = type(_C()._m)
 
 BuiltinFunctionType = type(len)
 BuiltinMethodType = type([].append)     # Same as BuiltinFunctionType
 
 ModuleType = type(sys)
-FileType = file
-XRangeType = xrange
 
 try:
     raise TypeError
 except TypeError:
-    try:
-        tb = sys.exc_info()[2]
-        TracebackType = type(tb)
-        FrameType = type(tb.tb_frame)
-    except AttributeError:
-        # In the restricted environment, exc_info returns (None, None,
-        # None) Then, tb.tb_frame gives an attribute error
-        pass
+    tb = sys.exc_info()[2]
+    TracebackType = type(tb)
+    FrameType = type(tb.tb_frame)
     tb = None; del tb
 
 SliceType = slice
@@ -98,4 +74,4 @@ else:
     MemberDescriptorType = type(_types.Helper.member)
     del _types
 
-del sys, _f, _g, _C, _x                           # Not for export
+del sys, _f, _g, _C,                              # Not for export

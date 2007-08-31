@@ -77,7 +77,7 @@ class HotShotTestCase(unittest.TestCase):
         log = self.get_logreader()
         info = log._info
         list(log)
-        self.failUnless(info["test-key"] == ["test-value"])
+        self.assertEqual(info["test-key"], ["test-value"])
 
     def test_line_numbers(self):
         def f():
@@ -85,8 +85,8 @@ class HotShotTestCase(unittest.TestCase):
             x = 1
         def g():
             f()
-        f_lineno = f.func_code.co_firstlineno
-        g_lineno = g.func_code.co_firstlineno
+        f_lineno = f.__code__.co_firstlineno
+        g_lineno = g.__code__.co_firstlineno
         events = [(ENTER, ("test_hotshot", g_lineno, "g")),
                   (LINE,  ("test_hotshot", g_lineno+1, "g")),
                   (ENTER, ("test_hotshot", f_lineno, "f")),

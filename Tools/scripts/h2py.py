@@ -50,9 +50,7 @@ except KeyError:
         searchdirs=os.environ['INCLUDE'].split(';')
     except KeyError:
         try:
-            if  sys.platform.find("beos") == 0:
-                searchdirs=os.environ['BEINCLUDES'].split(';')
-            elif sys.platform.startswith("atheos"):
+            if sys.platform.startswith("atheos"):
                 searchdirs=os.environ['C_INCLUDE_PATH'].split(':')
             else:
                 raise KeyError
@@ -130,7 +128,7 @@ def process(fp, outfp, env = {}):
             ok = 0
             stmt = '%s = %s\n' % (name, body.strip())
             try:
-                exec stmt in env
+                exec(stmt, env)
             except:
                 sys.stderr.write('Skipping: %s' % stmt)
             else:
@@ -142,7 +140,7 @@ def process(fp, outfp, env = {}):
             body = pytify(body)
             stmt = 'def %s(%s): return %s\n' % (macro, arg, body)
             try:
-                exec stmt in env
+                exec(stmt, env)
             except:
                 sys.stderr.write('Skipping: %s' % stmt)
             else:
