@@ -8,8 +8,6 @@
 .. sectionauthor:: Anthony Baxter <anthony@interlink.com.au>
 
 
-.. versionadded:: 2.2
-
 This module provides a nicer interface to the :mod:`_hotshot` C module. Hotshot
 is a replacement for the existing :mod:`profile` module. As it's written mostly
 in C, it should result in a much smaller performance impact than the existing
@@ -21,10 +19,6 @@ in C, it should result in a much smaller performance impact than the existing
    the expense of long data post-processing times. For common usages it is
    recommended to use :mod:`cProfile` instead. :mod:`hotshot` is not maintained and
    might be removed from the standard library in the future.
-
-.. versionchanged:: 2.5
-   the results should be more meaningful than in the past: the timing core
-   contained a critical bug.
 
 .. warning::
 
@@ -68,7 +62,7 @@ Profile objects have the following methods:
 
 .. method:: Profile.run(cmd)
 
-   Profile an :keyword:`exec`\ -compatible string in the script environment. The
+   Profile an :func:`exec`\ -compatible string in the script environment. The
    globals from the :mod:`__main__` module are used as both the globals and locals
    for the script.
 
@@ -83,7 +77,7 @@ Profile objects have the following methods:
 
 .. method:: Profile.runctx(cmd, globals, locals)
 
-   Evaluate an :keyword:`exec`\ -compatible string in a specific environment. The
+   Profile an :func:`exec`\ -compatible string in a specific environment. The
    string is compiled before profiling begins.
 
 
@@ -103,8 +97,6 @@ Using hotshot data
 .. module:: hotshot.stats
    :synopsis: Statistical analysis for Hotshot
 
-
-.. versionadded:: 2.2
 
 This module loads hotshot profiling data into the standard :mod:`pstats` Stats
 objects.

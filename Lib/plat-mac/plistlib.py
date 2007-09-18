@@ -12,8 +12,8 @@ To parse a plist from a file, use the readPlist(pathOrFile) function,
 with a file name or a (readable) file object as the only argument. It
 returns the top level object (again, usually a dictionary).
 
-To work with plist data in strings, you can use readPlistFromString()
-and writePlistToString().
+To work with plist data in bytes objects, you can use readPlistFromBytes()
+and writePlistToBytes().
 
 Values can be strings, integers, floats, booleans, tuples, lists,
 dictionaries, Data or datetime.datetime objects. String values (including
@@ -21,7 +21,7 @@ dictionary keys) may be unicode strings -- they will be written out as
 UTF-8.
 
 The <data> plist type is supported through the Data class. This is a
-thin wrapper around a Python string.
+thin wrapper around a Python bytes object.
 
 Generate Plist example:
 
@@ -36,8 +36,8 @@ Generate Plist example:
             aTrueValue=True,
             aFalseValue=False,
         ),
-        someData = Data("<binary gunk>"),
-        someMoreData = Data("<lots of binary gunk>" * 10),
+        someData = Data(b"<binary gunk>"),
+        someMoreData = Data(b"<lots of binary gunk>" * 10),
         aDate = datetime.datetime.fromtimestamp(time.mktime(time.gmtime())),
     )
     # unicode keys are possible, but a little awkward to use:
@@ -52,7 +52,7 @@ Parse Plist example:
 
 
 __all__ = [
-    "readPlist", "writePlist", "readPlistFromString", "writePlistToString",
+    "readPlist", "writePlist", "readPlistFromBytes", "writePlistToBytes",
     "readPlistFromResource", "writePlistToResource",
     "Plist", "Data", "Dict"
 ]
@@ -60,7 +60,7 @@ __all__ = [
 
 import binascii
 import datetime
-from cStringIO import StringIO
+from io import BytesIO
 import re
 
 
@@ -69,10 +69,10 @@ def readPlist(pathOrFile):
     (readable) file object. Return the unpacked root object (which
     usually is a dictionary).
     """
-    didOpen = 0
-    if isinstance(pathOrFile, (str, unicode)):
-        pathOrFile = open(pathOrFile)
-        didOpen = 1
+    didOpen = False
+    if isinstance(pathOrFile, str):
+        pathOrFile = open(pathOrFile, 'rb')
+        didOpen = True
     p = PlistParser()
     rootObject = p.parse(pathOrFile)
     if didOpen:
@@ -84,10 +84,10 @@ def writePlist(rootObject, pathOrFile):
     """Write 'rootObject' to a .plist file. 'pathOrFile' may either be a
     file name or a (writable) file object.
     """
-    didOpen = 0
-    if isinstance(pathOrFile, (str, unicode)):
-        pathOrFile = open(pathOrFile, "w")
-        didOpen = 1
+    didOpen = False
+    if isinstance(pathOrFile, str):
+        pathOrFile = open(pathOrFile, 'wb')
+        didOpen = True
     writer = PlistWriter(pathOrFile)
     writer.writeln("<plist version=\"1.0\">")
     writer.writeValue(rootObject)
@@ -96,16 +96,16 @@ def writePlist(rootObject, pathOrFile):
         pathOrFile.close()
 
 
-def readPlistFromString(data):
-    """Read a plist data from a string. Return the root object.
+def readPlistFromBytes(data):
+    """Read a plist data from a bytes object. Return the root object.
     """
-    return readPlist(StringIO(data))
+    return readPlist(BytesIO(data))
 
 
-def writePlistToString(rootObject):
-    """Return 'rootObject' as a plist-formatted string.
+def writePlistToBytes(rootObject):
+    """Return 'rootObject' as a plist-formatted bytes object.
     """
-    f = StringIO()
+    f = BytesIO()
     writePlist(rootObject, f)
     return f.getvalue()
 
@@ -145,7 +145,6 @@ def writePlistToResource(rootObject, path, restype='plst', resid=0):
 
 
 class DumbXMLWriter:
-
     def __init__(self, file, indentLevel=0, indent="\t"):
         self.file = file
         self.stack = []
@@ -172,9 +171,12 @@ class DumbXMLWriter:
 
     def writeln(self, line):
         if line:
-            self.file.write(self.indentLevel * self.indent + line + "\n")
-        else:
-            self.file.write("\n")
+            # plist has fixed encoding of utf-8
+            if isinstance(line, str):
+                line = line.encode('utf-8')
+            self.file.write(self.indentLevel * self.indent)
+            self.file.write(line)
+        self.file.write(b'\n')
 
 
 # Contents should conform to a subset of ISO 8601
@@ -218,20 +220,20 @@ def _escapeAndEncode(text):
     return text.encode("utf-8")             # encode as UTF-8
 
 
-PLISTHEADER = """\
+PLISTHEADER = b"""\
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 """
 
 class PlistWriter(DumbXMLWriter):
 
-    def __init__(self, file, indentLevel=0, indent="\t", writeHeader=1):
+    def __init__(self, file, indentLevel=0, indent=b"\t", writeHeader=1):
         if writeHeader:
             file.write(PLISTHEADER)
         DumbXMLWriter.__init__(self, file, indentLevel, indent)
 
     def writeValue(self, value):
-        if isinstance(value, (str, unicode)):
+        if isinstance(value, str):
             self.simpleElement("string", value)
         elif isinstance(value, bool):
             # must switch for bool before int, as bool is a
@@ -258,9 +260,9 @@ class PlistWriter(DumbXMLWriter):
     def writeData(self, data):
         self.beginElement("data")
         self.indentLevel -= 1
-        maxlinelength = 76 - len(self.indent.replace("\t", " " * 8) *
+        maxlinelength = 76 - len(self.indent.replace(b"\t", b" " * 8) *
                                  self.indentLevel)
-        for line in data.asBase64(maxlinelength).split("\n"):
+        for line in data.asBase64(maxlinelength).split(b"\n"):
             if line:
                 self.writeln(line)
         self.indentLevel += 1
@@ -268,10 +270,9 @@ class PlistWriter(DumbXMLWriter):
 
     def writeDict(self, d):
         self.beginElement("dict")
-        items = d.items()
-        items.sort()
+        items = sorted(d.items())
         for key, value in items:
-            if not isinstance(key, (str, unicode)):
+            if not isinstance(key, str):
                 raise TypeError("keys must be strings")
             self.simpleElement("key", key)
             self.writeValue(value)
@@ -294,7 +295,7 @@ class _InternalDict(dict):
         try:
             value = self[attr]
         except KeyError:
-            raise AttributeError, attr
+            raise AttributeError(attr)
         from warnings import warn
         warn("Attribute access from plist dicts is deprecated, use d[key] "
              "notation instead", PendingDeprecationWarning)
@@ -310,7 +311,7 @@ class _InternalDict(dict):
         try:
             del self[attr]
         except KeyError:
-            raise AttributeError, attr
+            raise AttributeError(attr)
         from warnings import warn
         warn("Attribute access from plist dicts is deprecated, use d[key] "
              "notation instead", PendingDeprecationWarning)
@@ -321,7 +322,7 @@ class Dict(_InternalDict):
         from warnings import warn
         warn("The plistlib.Dict class is deprecated, use builtin dict instead",
              PendingDeprecationWarning)
-        super(Dict, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
 
 class Plist(_InternalDict):
@@ -334,7 +335,7 @@ class Plist(_InternalDict):
         from warnings import warn
         warn("The Plist class is deprecated, use the readPlist() and "
              "writePlist() functions instead", PendingDeprecationWarning)
-        super(Plist, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def fromFile(cls, pathOrFile):
         """Deprecated. Use the readPlist() function instead."""
@@ -356,31 +357,33 @@ def _encodeBase64(s, maxlinelength=76):
     for i in range(0, len(s), maxbinsize):
         chunk = s[i : i + maxbinsize]
         pieces.append(binascii.b2a_base64(chunk))
-    return "".join(pieces)
+    return b''.join(pieces)
 
 class Data:
 
     """Wrapper for binary data."""
 
     def __init__(self, data):
+        if not isinstance(data, bytes):
+            raise TypeError("data must be as bytes")
         self.data = data
 
+    @classmethod
     def fromBase64(cls, data):
         # base64.decodestring just calls binascii.a2b_base64;
         # it seems overkill to use both base64 and binascii.
         return cls(binascii.a2b_base64(data))
-    fromBase64 = classmethod(fromBase64)
 
     def asBase64(self, maxlinelength=76):
         return _encodeBase64(self.data, maxlinelength)
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
         if isinstance(other, self.__class__):
-            return cmp(self.data, other.data)
+            return self.data == other.data
         elif isinstance(other, str):
-            return cmp(self.data, other)
+            return self.data == other
         else:
-            return cmp(id(self), id(other))
+            return id(self) == id(other)
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, repr(self.data))
@@ -427,11 +430,7 @@ class PlistParser:
             self.stack[-1].append(value)
 
     def getData(self):
-        data = "".join(self.data)
-        try:
-            data = data.encode("ascii")
-        except UnicodeError:
-            pass
+        data = ''.join(self.data)
         self.data = []
         return data
 
@@ -465,6 +464,6 @@ class PlistParser:
     def end_string(self):
         self.addObject(self.getData())
     def end_data(self):
-        self.addObject(Data.fromBase64(self.getData()))
+        self.addObject(Data.fromBase64(self.getData().encode("utf-8")))
     def end_date(self):
         self.addObject(_dateFromString(self.getData()))

@@ -23,9 +23,6 @@ Allocating Objects on the Heap
 .. cfunction:: PyVarObject* _PyObject_NewVar(PyTypeObject *type, Py_ssize_t size)
 
 
-.. cfunction:: void _PyObject_Del(PyObject *op)
-
-
 .. cfunction:: PyObject* PyObject_Init(PyObject *op, PyTypeObject *type)
 
    Initialize a newly-allocated object *op* with its type and initial reference.
@@ -70,49 +67,41 @@ Allocating Objects on the Heap
 
 .. cfunction:: PyObject* Py_InitModule(char *name, PyMethodDef *methods)
 
-   Create a new module object based on a name and table of functions, returning the
-   new module object.
-
-   .. versionchanged:: 2.3
-      Older versions of Python did not support *NULL* as the value for the *methods*
-      argument.
+   Create a new module object based on a name and table of functions, returning
+   the new module object; the *methods* argument can be *NULL* if no methods are
+   to be defined for the module.
 
 
 .. cfunction:: PyObject* Py_InitModule3(char *name, PyMethodDef *methods, char *doc)
 
-   Create a new module object based on a name and table of functions, returning the
-   new module object.  If *doc* is non-*NULL*, it will be used to define the
-   docstring for the module.
-
-   .. versionchanged:: 2.3
-      Older versions of Python did not support *NULL* as the value for the *methods*
-      argument.
+   Create a new module object based on a name and table of functions, returning
+   the new module object.  The *methods* argument can be *NULL* if no methods
+   are to be defined for the module.  If *doc* is non-*NULL*, it will be used to
+   define the docstring for the module.
 
 
 .. cfunction:: PyObject* Py_InitModule4(char *name, PyMethodDef *methods, char *doc, PyObject *self, int apiver)
 
-   Create a new module object based on a name and table of functions, returning the
-   new module object.  If *doc* is non-*NULL*, it will be used to define the
-   docstring for the module.  If *self* is non-*NULL*, it will passed to the
-   functions of the module as their (otherwise *NULL*) first parameter.  (This was
-   added as an experimental feature, and there are no known uses in the current
-   version of Python.)  For *apiver*, the only value which should be passed is
-   defined by the constant :const:`PYTHON_API_VERSION`.
+   Create a new module object based on a name and table of functions, returning
+   the new module object.  The *methods* argument can be *NULL* if no methods
+   are to be defined for the module.  If *doc* is non-*NULL*, it will be used to
+   define the docstring for the module.  If *self* is non-*NULL*, it will passed
+   to the functions of the module as their (otherwise *NULL*) first parameter.
+   (This was added as an experimental feature, and there are no known uses in
+   the current version of Python.)  For *apiver*, the only value which should be
+   passed is defined by the constant :const:`PYTHON_API_VERSION`.
 
    .. note::
 
       Most uses of this function should probably be using the :cfunc:`Py_InitModule3`
       instead; only use this if you are sure you need it.
 
-   .. versionchanged:: 2.3
-      Older versions of Python did not support *NULL* as the value for the *methods*
-      argument.
-
 
 .. cvar:: PyObject _Py_NoneStruct
 
    Object which is visible in Python as ``None``.  This should only be accessed
-   using the ``Py_None`` macro, which evaluates to a pointer to this object.
+   using the :cmacro:`Py_None` macro, which evaluates to a pointer to this
+   object.
 
 
 .. _common-structs:
@@ -150,6 +139,7 @@ definition of all other Python objects.
 These macros are used in the definition of :ctype:`PyObject` and
 :ctype:`PyVarObject`:
 
+.. XXX need to document PEP 3123 changes here
 
 .. cmacro:: PyObject_HEAD
 
@@ -182,7 +172,7 @@ These macros are used in the definition of :ctype:`PyObject` and
    Note that :cmacro:`PyObject_HEAD` is part of the expansion, and that its own
    expansion varies depending on the definition of :cmacro:`Py_TRACE_REFS`.
 
-PyObject_HEAD_INIT
+.. cmacro:: PyObject_HEAD_INIT
 
 
 .. ctype:: PyCFunction
@@ -192,6 +182,14 @@ PyObject_HEAD_INIT
    the return value is *NULL*, an exception shall have been set.  If not *NULL*,
    the return value is interpreted as the return value of the function as exposed
    in Python.  The function must return a new reference.
+
+
+.. ctype:: PyCFunctionWithKeywords
+
+   Type of the functions used to implement Python callables in C that take
+   keyword arguments: they take three :ctype:`PyObject\*` parameters and return
+   one such value.  See :ctype:`PyCFunction` above for the meaning of the return
+   value.
 
 
 .. ctype:: PyMethodDef
@@ -266,15 +264,6 @@ convention flags can be combined with a binding flag.
    :ctype:`PyObject\*` parameter representing the single argument.
 
 
-.. data:: METH_OLDARGS
-
-   This calling convention is deprecated.  The method must be of type
-   :ctype:`PyCFunction`.  The second argument is *NULL* if no arguments are given,
-   a single object if exactly one argument is given, and a tuple of objects if more
-   than one argument is given.  There is no way for a function using this
-   convention to distinguish between a call with multiple arguments and a call with
-   a tuple as the only argument.
-
 These two constants are not used to indicate the calling convention but the
 binding when use with methods of classes.  These may not be used for functions
 defined for modules.  At most one of these flags may be set for any given
@@ -289,8 +278,6 @@ method.
    instance of the type.  This is used to create *class methods*, similar to what
    is created when using the :func:`classmethod` built-in function.
 
-   .. versionadded:: 2.3
-
 
 .. data:: METH_STATIC
 
@@ -299,8 +286,6 @@ method.
    The method will be passed *NULL* as the first parameter rather than an instance
    of the type.  This is used to create *static methods*, similar to what is
    created when using the :func:`staticmethod` built-in function.
-
-   .. versionadded:: 2.3
 
 One other constant controls whether a method is loaded in place of another
 definition with the same method name.
@@ -316,8 +301,6 @@ definition with the same method name.
    With the flag defined, the PyCFunction will be loaded in place of the wrapper
    object and will co-exist with the slot.  This is helpful because calls to
    PyCFunctions are optimized more than wrapper object calls.
-
-   .. versionadded:: 2.4
 
 
 .. cfunction:: PyObject* Py_FindMethod(PyMethodDef table[], PyObject *ob, char *name)
@@ -662,8 +645,8 @@ type objects) *must* have the :attr:`ob_size` field.
 
    The signature is the same as for :cfunc:`PyObject_Str`; it must return a string
    or a Unicode object.  This function should return a "friendly" string
-   representation of the object, as this is the representation that will be used by
-   the print statement.
+   representation of the object, as this is the representation that will be used,
+   among other things, by the :func:`print` function.
 
    When this field is not set, :cfunc:`PyObject_Repr` is called to return a string
    representation.
@@ -1060,8 +1043,8 @@ set.
    An optional pointer to a function that returns the next item in an iterator, or
    raises :exc:`StopIteration` when the iterator is exhausted.  Its presence
    normally signals that the instances of this type are iterators (although classic
-   instances always have this function, even if they don't define a :meth:`next`
-   method).
+   instances always have this function, even if they don't define a
+   :meth:`__next__` method).
 
    Iterator types should also define the :attr:`tp_iter` function, and that
    function should return the iterator instance itself (not a new iterator
@@ -1158,7 +1141,7 @@ The next fields, up to and including :attr:`tp_weaklist`, only exist if the
 
       PyObject * tp_descr_get(PyObject *self, PyObject *obj, PyObject *type);
 
-   XXX blah, blah.
+   XXX more
 
    This field is inherited by subtypes.
 
@@ -1173,7 +1156,7 @@ The next fields, up to and including :attr:`tp_weaklist`, only exist if the
 
    This field is inherited by subtypes.
 
-   XXX blah, blah.
+   XXX more
 
 
 .. cmember:: long PyTypeObject.tp_dictoffset
@@ -1331,7 +1314,7 @@ The next fields, up to and including :attr:`tp_weaklist`, only exist if the
 
       void tp_free(void *)
 
-   The only initializer that is compatible with both versions is ``_PyObject_Del``,
+   The only initializer that is compatible with both versions is ``PyObject_Free``,
    whose definition has suitably adapted in Python 2.3.
 
    This field is inherited by static subtypes, but not by dynamic subtypes
@@ -1598,9 +1581,6 @@ objects which may also be containers.  Types which do not store references to
 other objects, or which only store references to atomic types (such as numbers
 or strings), do not need to provide any explicit support for garbage collection.
 
-.. An example showing the use of these interfaces can be found in "Supporting the
-.. Cycle Collector (XXX not found: ../ext/example-cycle-support.html)".
-
 To create a container type, the :attr:`tp_flags` field of the type object must
 include the :const:`Py_TPFLAGS_HAVE_GC` and provide an implementation of the
 :attr:`tp_traverse` handler.  If instances of the type are mutable, a
@@ -1723,8 +1703,6 @@ must name its arguments exactly *visit* and *arg*:
           Py_VISIT(self->bar);
           return 0;
       }
-
-   .. versionadded:: 2.4
 
 The :attr:`tp_clear` handler must be of the :ctype:`inquiry` type, or *NULL* if
 the object is immutable.

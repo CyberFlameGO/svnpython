@@ -10,6 +10,7 @@ extern "C" {
 typedef struct {
     PyObject_HEAD
     int co_argcount;		/* #arguments, except *args */
+    int co_kwonlyargcount;	/* #keyword only arguments */
     int co_nlocals;		/* #local variables */
     int co_stacksize;		/* #entries needed for evaluation stack */
     int co_flags;		/* CO_..., see below */
@@ -42,19 +43,17 @@ typedef struct {
 #define CO_NOFREE       0x0040
 
 #if 0
-/* This is no longer used.  Stopped defining in 2.5, do not re-use. */
+/* These are no longer used. */
 #define CO_GENERATOR_ALLOWED    0x1000
-#endif
 #define CO_FUTURE_DIVISION    	0x2000
 #define CO_FUTURE_ABSOLUTE_IMPORT 0x4000 /* do absolute imports by default */
 #define CO_FUTURE_WITH_STATEMENT  0x8000
+#endif
 
 /* This should be defined if a future statement modifies the syntax.
    For example, when a keyword is added.
 */
-#if 0
-#define PY_PARSER_REQUIRES_FUTURE_KEYWORD
-#endif
+/* #define PY_PARSER_REQUIRES_FUTURE_KEYWORD */
 
 #define CO_MAXBLOCKS 20 /* Max static block nesting within a function */
 
@@ -65,8 +64,9 @@ PyAPI_DATA(PyTypeObject) PyCode_Type;
 
 /* Public interface */
 PyAPI_FUNC(PyCodeObject *) PyCode_New(
-	int, int, int, int, PyObject *, PyObject *, PyObject *, PyObject *,
-	PyObject *, PyObject *, PyObject *, PyObject *, int, PyObject *); 
+	int, int, int, int, int, PyObject *, PyObject *,
+	PyObject *, PyObject *, PyObject *, PyObject *,
+	PyObject *, PyObject *, int, PyObject *); 
         /* same as struct above */
 PyAPI_FUNC(int) PyCode_Addr2Line(PyCodeObject *, int);
 

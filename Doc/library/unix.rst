@@ -23,7 +23,6 @@ of it.  Here's an overview:
    pty.rst
    fcntl.rst
    pipes.rst
-   posixfile.rst
    resource.rst
    nis.rst
    syslog.rst

@@ -22,8 +22,6 @@ interpreter.
 The principal built-in types are numerics, sequences, mappings, files, classes,
 instances and exceptions.
 
-.. index:: statement: print
-
 Some operations are supported by several object types; in particular,
 practically all objects can be compared, tested for truth value, and converted
 to a string (with the :func:`repr` function or the slightly different
@@ -61,8 +59,8 @@ following values are considered false:
 
 * any empty mapping, for example, ``{}``.
 
-* instances of user-defined classes, if the class defines a :meth:`__nonzero__`
-  or :meth:`__len__` method, when that method returns the integer zero or
+* instances of user-defined classes, if the class defines a :meth:`__bool__` or
+  :meth:`__len__` method, when that method returns the integer zero or
   :class:`bool` value ``False``. [#]_
 
 .. index:: single: true
@@ -137,6 +135,17 @@ be chained arbitrarily; for example, ``x < y <= z`` is equivalent to ``x < y and
 y <= z``, except that *y* is evaluated only once (but in both cases *z* is not
 evaluated at all when ``x < y`` is found to be false).
 
+.. index::
+   pair: operator; comparison
+   operator: ==
+   operator: <
+   operator: >
+   operator: <=
+   operator: >=
+   operator: !=
+   operator: is
+   operator: is not
+
 This table summarizes the comparison operations:
 
 +------------+-------------------------+-------+
@@ -152,27 +161,12 @@ This table summarizes the comparison operations:
 +------------+-------------------------+-------+
 | ``==``     | equal                   |       |
 +------------+-------------------------+-------+
-| ``!=``     | not equal               | \(1)  |
+| ``!=``     | not equal               |       |
 +------------+-------------------------+-------+
 | ``is``     | object identity         |       |
 +------------+-------------------------+-------+
 | ``is not`` | negated object identity |       |
 +------------+-------------------------+-------+
-
-.. index::
-   pair: operator; comparison
-   operator: ==
-   operator: is
-   operator: is not
-
-.. % XXX *All* others have funny characters < ! >
-
-Notes:
-
-(1)
-    ``!=`` can also be written ``<>``, but this is an obsolete usage
-    kept for backwards compatibility only. New code should always use
-    ``!=``.
 
 .. index::
    pair: object; numeric
@@ -421,8 +415,6 @@ Notes:
 Iterator Types
 ==============
 
-.. versionadded:: 2.2
-
 .. index::
    single: iterator protocol
    single: protocol; iterator
@@ -473,7 +465,7 @@ specific sequence types, dictionaries, and other more specialized forms.  The
 specific types are not important beyond their implementation of the iterator
 protocol.
 
-The intention of the protocol is that once an iterator's :meth:`next` method
+The intention of the protocol is that once an iterator's :meth:`__next__` method
 raises :exc:`StopIteration`, it will continue to do so on subsequent calls.
 Implementations that do not obey this property are deemed broken.  (This
 constraint was added in Python 2.3; in Python 2.2, various iterators are broken
@@ -482,50 +474,63 @@ according to this rule.)
 Python's generators provide a convenient way to implement the iterator protocol.
 If a container object's :meth:`__iter__` method is implemented as a generator,
 it will automatically return an iterator object (technically, a generator
-object) supplying the :meth:`__iter__` and :meth:`next` methods.
+object) supplying the :meth:`__iter__` and :meth:`__next__` methods.
 
 
 .. _typesseq:
 
-Sequence Types --- :class:`str`, :class:`unicode`, :class:`list`, :class:`tuple`, :class:`buffer`, :class:`xrange`
-==================================================================================================================
+Sequence Types --- :class:`str`, :class:`bytes`, :class:`list`, :class:`tuple`, :class:`buffer`, :class:`range`
+===============================================================================================================
 
-There are six sequence types: strings, Unicode strings, lists, tuples, buffers,
-and xrange objects.
-(For other containers see the built in :class:`dict`, :class:`list`,
-:class:`set`, and :class:`tuple` classes, and the :mod:`collections`
-module.)
-
+There are five sequence types: strings, byte sequences, lists, tuples, buffers,
+and range objects.  (For other containers see the built in :class:`dict`,
+:class:`list`, :class:`set`, and :class:`tuple` classes, and the
+:mod:`collections` module.)
 
 .. index::
    object: sequence
    object: string
-   object: Unicode
+   object: bytes
    object: tuple
    object: list
    object: buffer
-   object: xrange
+   object: range
 
 String literals are written in single or double quotes: ``'xyzzy'``,
-``"frobozz"``.  See :ref:`strings` for more about string literals.
-Unicode strings are much like strings, but are specified in the syntax
-using a preceding ``'u'`` character: ``u'abc'``, ``u"def"``. In addition
-to the functionality described here, there are also string-specific
-methods described in the :ref:`string-methods` section. Lists are
-constructed with square brackets, separating items with commas: ``[a, b, c]``.
-Tuples are constructed by the comma operator (not within square
-brackets), with or without enclosing parentheses, but an empty tuple
-must have the enclosing parentheses, such as ``a, b, c`` or ``()``.  A
-single item tuple must have a trailing comma, such as ``(d,)``.
+``"frobozz"``.  See :ref:`strings` for more about string literals.  In addition
+to the functionality described here, there are also string-specific methods
+described in the :ref:`string-methods` section.  Bytes objects can be
+constructed from literals too; use a ``b`` prefix with normal string syntax:
+``b'xyzzy'``.
+
+.. warning::
+
+   While string objects are sequences of characters (represented by strings of
+   length 1), bytes objects are sequences of *integers* (between 0 and 255),
+   representing the ASCII value of single bytes.  That means that for a bytes
+   object *b*, ``b[0]`` will be an integer, while ``b[0:1]`` will be a bytes
+   object of length 1.
+
+   Also, while in previous Python versions, byte strings and Unicode strings
+   could be exchanged for each other rather freely (barring encoding issues),
+   strings and bytes are completely separate concepts.  There's no implicit
+   en-/decoding if you pass and object of the wrong type or try to e.g. compare
+   a string with a bytes object.
+
+Lists are constructed with square brackets, separating items with commas: ``[a,
+b, c]``.  Tuples are constructed by the comma operator (not within square
+brackets), with or without enclosing parentheses, but an empty tuple must have
+the enclosing parentheses, such as ``a, b, c`` or ``()``.  A single item tuple
+must have a trailing comma, such as ``(d,)``.
 
 Buffer objects are not directly supported by Python syntax, but can be created
 by calling the builtin function :func:`buffer`.  They don't support
 concatenation or repetition.
 
-Objects of type xrange are similar to buffers in that there is no specific syntax to
-create them, but they are created using the :func:`xrange` function.  They don't
-support slicing, concatenation or repetition, and using ``in``, ``not in``,
-:func:`min` or :func:`max` on them is inefficient.
+Objects of type range are similar to buffers in that there is no specific syntax
+to create them, but they are created using the :func:`range` function.  They
+don't support slicing, concatenation or repetition, and using ``in``, ``not
+in``, :func:`min` or :func:`max` on them is inefficient.
 
 Most sequence types support the following operations.  The ``in`` and ``not in``
 operations have the same priorities as the comparison operations.  The ``+`` and
@@ -565,12 +570,11 @@ are sequences of the same type; *n*, *i* and *j* are integers:
 | ``max(s)``       | largest item of *s*            |          |
 +------------------+--------------------------------+----------+
 
-Sequence types also support comparisons. In particular, tuples and lists
-are compared lexicographically by comparing corresponding
-elements. This means that to compare equal, every element must compare
-equal and the two sequences must be of the same type and have the same
-length. (For full details see :ref:`comparisons` in the language
-reference.)
+Sequence types also support comparisons. In particular, tuples and lists are
+compared lexicographically by comparing corresponding elements. This means that
+to compare equal, every element must compare equal and the two sequences must be
+of the same type and have the same length. (For full details see
+:ref:`comparisons` in the language reference.)
 
 .. index::
    triple: operations on; sequence; types
@@ -581,17 +585,14 @@ reference.)
    pair: repetition; operation
    pair: subscript; operation
    pair: slice; operation
-   pair: extended slice; operation
    operator: in
    operator: not in
 
 Notes:
 
 (1)
-   When *s* is a string or Unicode string object the ``in`` and ``not in``
-   operations act like a substring test.  In Python versions before 2.3, *x* had to
-   be a string of length 1. In Python 2.3 and beyond, *x* may be a string of any
-   length.
+   When *s* is a string object, the ``in`` and ``not in`` operations act like a
+   substring test.
 
 (2)
    Values of *n* less than ``0`` are treated as ``0`` (which yields an empty
@@ -648,9 +649,6 @@ Notes:
    method which assures consistent linear concatenation performance across versions
    and implementations.
 
-   .. versionchanged:: 2.4
-      Formerly, string concatenation never occurred in-place.
-
 
 .. _string-methods:
 
@@ -659,27 +657,20 @@ String Methods
 
 .. index:: pair: string; methods
 
-Below are listed the string methods which both 8-bit strings and Unicode objects
-support. In addition, Python's strings support the sequence type methods
-described in the :ref:`typesseq` section. To output formatted strings
-use template strings or the ``%`` operator described in the
-:ref:`string-formatting` section. Also, see the :mod:`re` module for
-string functions based on regular expressions.
+String objects support the methods listed below.  In addition, Python's strings
+support the sequence type methods described in the :ref:`typesseq` section. To
+output formatted strings, see the :ref:`string-formatting` section. Also, see
+the :mod:`re` module for string functions based on regular expressions.
 
 .. method:: str.capitalize()
 
    Return a copy of the string with only its first character capitalized.
-
-   For 8-bit strings, this method is locale-dependent.
 
 
 .. method:: str.center(width[, fillchar])
 
    Return centered in a string of length *width*. Padding is done using the
    specified *fillchar* (default is a space).
-
-   .. versionchanged:: 2.4
-      Support for the *fillchar* argument.
 
 
 .. method:: str.count(sub[, start[, end]])
@@ -689,22 +680,7 @@ string functions based on regular expressions.
    slice notation.
 
 
-.. method:: str.decode([encoding[, errors]])
-
-   Decodes the string using the codec registered for *encoding*. *encoding*
-   defaults to the default string encoding.  *errors* may be given to set a
-   different error handling scheme.  The default is ``'strict'``, meaning that
-   encoding errors raise :exc:`UnicodeError`.  Other possible values are
-   ``'ignore'``, ``'replace'`` and any other name registered via
-   :func:`codecs.register_error`, see section :ref:`codec-base-classes`.
-
-   .. versionadded:: 2.2
-
-   .. versionchanged:: 2.3
-      Support for other error handling schemes added.
-
-
-.. method:: str.encode([encoding[,errors]])
+.. method:: str.encode([encoding[, errors]])
 
    Return an encoded version of the string.  Default encoding is the current
    default string encoding.  *errors* may be given to set a different error
@@ -715,12 +691,6 @@ string functions based on regular expressions.
    :ref:`codec-base-classes`. For a list of possible encodings, see section
    :ref:`standard-encodings`.
 
-   .. versionadded:: 2.0
-
-   .. versionchanged:: 2.3
-      Support for ``'xmlcharrefreplace'`` and ``'backslashreplace'`` and other error
-      handling schemes added.
-
 
 .. method:: str.endswith(suffix[, start[, end]])
 
@@ -728,9 +698,6 @@ string functions based on regular expressions.
    ``False``.  *suffix* can also be a tuple of suffixes to look for.  With optional
    *start*, test beginning at that position.  With optional *end*, stop comparing
    at that position.
-
-   .. versionchanged:: 2.5
-      Accept tuples as *suffix*.
 
 
 .. method:: str.expandtabs([tabsize])
@@ -747,6 +714,22 @@ string functions based on regular expressions.
    found.
 
 
+.. method:: str.format(format_string, *args, **ksargs)
+
+   Perform a string formatting operation.  The *format_string* argument can
+   contain literal text or replacement fields delimited by braces ``{}``.  Each
+   replacement field contains either the numeric index of a positional argument,
+   or the name of a keyword argument.  Returns a copy of *format_string* where
+   each replacement field is replaced with the string value of the corresponding
+   argument.
+
+      >>> "The sum of 1 + 2 is {0}".format(1+2)
+      'The sum of 1 + 2 is 3'
+
+   See :ref:`formatstrings` for a description of the various formatting options
+   that can be specified in format strings.
+
+
 .. method:: str.index(sub[, start[, end]])
 
    Like :meth:`find`, but raise :exc:`ValueError` when the substring is not found.
@@ -757,15 +740,11 @@ string functions based on regular expressions.
    Return true if all characters in the string are alphanumeric and there is at
    least one character, false otherwise.
 
-   For 8-bit strings, this method is locale-dependent.
-
 
 .. method:: str.isalpha()
 
    Return true if all characters in the string are alphabetic and there is at least
    one character, false otherwise.
-
-   For 8-bit strings, this method is locale-dependent.
 
 
 .. method:: str.isdigit()
@@ -773,7 +752,11 @@ string functions based on regular expressions.
    Return true if all characters in the string are digits and there is at least one
    character, false otherwise.
 
-   For 8-bit strings, this method is locale-dependent.
+
+.. method:: str.isidentifier()
+
+   Return true if the string is a valid identifier according to the language
+   definition, section :ref:`identifiers`.
 
 
 .. method:: str.islower()
@@ -781,15 +764,11 @@ string functions based on regular expressions.
    Return true if all cased characters in the string are lowercase and there is at
    least one cased character, false otherwise.
 
-   For 8-bit strings, this method is locale-dependent.
-
 
 .. method:: str.isspace()
 
    Return true if there are only whitespace characters in the string and there is
    at least one character, false otherwise.
-
-   For 8-bit strings, this method is locale-dependent.
 
 
 .. method:: str.istitle()
@@ -798,15 +777,11 @@ string functions based on regular expressions.
    character, for example uppercase characters may only follow uncased characters
    and lowercase characters only cased ones.  Return false otherwise.
 
-   For 8-bit strings, this method is locale-dependent.
-
 
 .. method:: str.isupper()
 
    Return true if all cased characters in the string are uppercase and there is at
    least one cased character, false otherwise.
-
-   For 8-bit strings, this method is locale-dependent.
 
 
 .. method:: str.join(seq)
@@ -821,15 +796,10 @@ string functions based on regular expressions.
    using the specified *fillchar* (default is a space).  The original string is
    returned if *width* is less than ``len(s)``.
 
-   .. versionchanged:: 2.4
-      Support for the *fillchar* argument.
-
 
 .. method:: str.lower()
 
    Return a copy of the string converted to lowercase.
-
-   For 8-bit strings, this method is locale-dependent.
 
 
 .. method:: str.lstrip([chars])
@@ -844,9 +814,6 @@ string functions based on regular expressions.
       >>> 'www.example.com'.lstrip('cmowz.')
       'example.com'
 
-   .. versionchanged:: 2.2.2
-      Support for the *chars* argument.
-
 
 .. method:: str.partition(sep)
 
@@ -854,8 +821,6 @@ string functions based on regular expressions.
    containing the part before the separator, the separator itself, and the part
    after the separator.  If the separator is not found, return a 3-tuple containing
    the string itself, followed by two empty strings.
-
-   .. versionadded:: 2.5
 
 
 .. method:: str.replace(old, new[, count])
@@ -865,7 +830,7 @@ string functions based on regular expressions.
    occurrences are replaced.
 
 
-.. method:: str.rfind(sub [,start [,end]])
+.. method:: str.rfind(sub[, start[, end]])
 
    Return the highest index in the string where substring *sub* is found, such that
    *sub* is contained within s[start,end].  Optional arguments *start* and *end*
@@ -884,9 +849,6 @@ string functions based on regular expressions.
    using the specified *fillchar* (default is a space). The original string is
    returned if *width* is less than ``len(s)``.
 
-   .. versionchanged:: 2.4
-      Support for the *fillchar* argument.
-
 
 .. method:: str.rpartition(sep)
 
@@ -895,18 +857,14 @@ string functions based on regular expressions.
    after the separator.  If the separator is not found, return a 3-tuple containing
    two empty strings, followed by the string itself.
 
-   .. versionadded:: 2.5
 
-
-.. method:: str.rsplit([sep [,maxsplit]])
+.. method:: str.rsplit([sep[, maxsplit]])
 
    Return a list of the words in the string, using *sep* as the delimiter string.
    If *maxsplit* is given, at most *maxsplit* splits are done, the *rightmost*
    ones.  If *sep* is not specified or ``None``, any whitespace string is a
    separator.  Except for splitting from the right, :meth:`rsplit` behaves like
    :meth:`split` which is described in detail below.
-
-   .. versionadded:: 2.4
 
 
 .. method:: str.rstrip([chars])
@@ -921,21 +879,18 @@ string functions based on regular expressions.
       >>> 'mississippi'.rstrip('ipz')
       'mississ'
 
-   .. versionchanged:: 2.2.2
-      Support for the *chars* argument.
 
+.. method:: str.split([sep[, maxsplit]])
 
-.. method:: str.split([sep [,maxsplit]])
-
-   Return a list of the words in the string, using *sep* as the delimiter string.
-   If *maxsplit* is given, at most *maxsplit* splits are done. (thus, the list will
-   have at most ``maxsplit+1`` elements).  If *maxsplit* is not specified, then
-   there is no limit on the number of splits (all possible splits are made).
-   Consecutive delimiters are not grouped together and are deemed to delimit empty
-   strings (for example, ``'1,,2'.split(',')`` returns ``['1', '', '2']``).  The
-   *sep* argument may consist of multiple characters (for example, ``'1, 2,
-   3'.split(', ')`` returns ``['1', '2', '3']``).  Splitting an empty string with a
-   specified separator returns ``['']``.
+   Return a list of the words in the string, using *sep* as the delimiter
+   string.  If *maxsplit* is given, at most *maxsplit* splits are done (thus,
+   the list will have at most ``maxsplit+1`` elements).  If *maxsplit* is not
+   specified, then there is no limit on the number of splits (all possible
+   splits are made).  Consecutive delimiters are not grouped together and are
+   deemed to delimit empty strings (for example, ``'1,,2'.split(',')`` returns
+   ``['1', '', '2']``).  The *sep* argument may consist of multiple characters
+   (for example, ``'1, 2, 3'.split(', ')`` returns ``['1', '2', '3']``).
+   Splitting an empty string with a specified separator returns ``['']``.
 
    If *sep* is not specified or is ``None``, a different splitting algorithm is
    applied.  First, whitespace characters (spaces, tabs, newlines, returns, and
@@ -960,9 +915,6 @@ string functions based on regular expressions.
    test string beginning at that position.  With optional *end*, stop comparing
    string at that position.
 
-   .. versionchanged:: 2.5
-      Accept tuples as *prefix*.
-
 
 .. method:: str.strip([chars])
 
@@ -977,16 +929,11 @@ string functions based on regular expressions.
       >>> 'www.example.com'.strip('cmowz.')
       'example'
 
-   .. versionchanged:: 2.2.2
-      Support for the *chars* argument.
-
 
 .. method:: str.swapcase()
 
    Return a copy of the string with uppercase characters converted to lowercase and
    vice versa.
-
-   For 8-bit strings, this method is locale-dependent.
 
 
 .. method:: str.title()
@@ -994,41 +941,25 @@ string functions based on regular expressions.
    Return a titlecased version of the string: words start with uppercase
    characters, all remaining cased characters are lowercase.
 
-   For 8-bit strings, this method is locale-dependent.
 
+.. method:: str.translate(map)
 
-.. method:: str.translate(table[, deletechars])
-
-   Return a copy of the string where all characters occurring in the optional
-   argument *deletechars* are removed, and the remaining characters have been
-   mapped through the given translation table, which must be a string of length
-   256.
-
-   You can use the :func:`maketrans` helper function in the :mod:`string` module to
-   create a translation table. For string objects, set the *table* argument to
-   ``None`` for translations that only delete characters::
-
-      >>> 'read this short text'.translate(None, 'aeiou')
-      'rd ths shrt txt'
-
-   .. versionadded:: 2.6
-      Support for a ``None`` *table* argument.
-
-   For Unicode objects, the :meth:`translate` method does not accept the optional
-   *deletechars* argument.  Instead, it returns a copy of the *s* where all
-   characters have been mapped through the given translation table which must be a
-   mapping of Unicode ordinals to Unicode ordinals, Unicode strings or ``None``.
+   Return a copy of the *s* where all characters have been mapped through the
+   *map* which must be a dictionary of characters (strings of length 1) or
+   Unicode ordinals (integers) to Unicode ordinals, strings or ``None``.
    Unmapped characters are left untouched. Characters mapped to ``None`` are
-   deleted.  Note, a more flexible approach is to create a custom character mapping
-   codec using the :mod:`codecs` module (see :mod:`encodings.cp1251` for an
-   example).
+   deleted.
+
+   .. note::
+
+      A more flexible approach is to create a custom character mapping codec
+      using the :mod:`codecs` module (see :mod:`encodings.cp1251` for an
+      example).
 
 
 .. method:: str.upper()
 
    Return a copy of the string converted to uppercase.
-
-   For 8-bit strings, this method is locale-dependent.
 
 
 .. method:: str.zfill(width)
@@ -1036,13 +967,11 @@ string functions based on regular expressions.
    Return the numeric string left filled with zeros in a string of length *width*.
    The original string is returned if *width* is less than ``len(s)``.
 
-   .. versionadded:: 2.2.2
 
+.. _old-string-formatting:
 
-.. _string-formatting:
-
-String Formatting Operations
-----------------------------
+Old String Formatting Operations
+--------------------------------
 
 .. index::
    single: formatting, string (%)
@@ -1054,14 +983,18 @@ String Formatting Operations
    single: % formatting
    single: % interpolation
 
-String and Unicode objects have one unique built-in operation: the ``%``
-operator (modulo).  This is also known as the string *formatting* or
-*interpolation* operator.  Given ``format % values`` (where *format* is a string
-or Unicode object), ``%`` conversion specifications in *format* are replaced
-with zero or more elements of *values*.  The effect is similar to the using
-:cfunc:`sprintf` in the C language.  If *format* is a Unicode object, or if any
-of the objects being converted using the ``%s`` conversion are Unicode objects,
-the result will also be a Unicode object.
+.. XXX is the note enough?
+
+.. note::
+
+   The formatting operations described here are obsolete and may go away in future
+   versions of Python.  Use the new :ref:`string-formatting` in new code.
+
+String objects have one unique built-in operation: the ``%`` operator (modulo).
+This is also known as the string *formatting* or *interpolation* operator.
+Given ``format % values`` (where *format* is a string), ``%`` conversion
+specifications in *format* are replaced with zero or more elements of *values*.
+The effect is similar to the using :cfunc:`sprintf` in the C language.
 
 If *format* requires a single argument, *values* may be a single non-tuple
 object. [#]_  Otherwise, *values* must be a tuple with exactly the number of
@@ -1097,8 +1030,8 @@ formats in the string *must* include a parenthesised mapping key into that
 dictionary inserted immediately after the ``'%'`` character. The mapping key
 selects the value to be formatted from the mapping.  For example::
 
-   >>> print '%(language)s has %(#)03d quote types.' % \
-             {'language': "Python", "#": 2}
+   >>> print('%(language)s has %(#)03d quote types.' %
+             {'language': "Python", "#": 2})
    Python has 002 quote types.
 
 In this case no ``*`` specifiers may occur in a format (since they require a
@@ -1166,7 +1099,7 @@ The conversion types are:
 | ``'r'``    | String (converts any python object using            | \(5)  |
 |            | :func:`repr`).                                      |       |
 +------------+-----------------------------------------------------+-------+
-| ``'s'``    | String (converts any python object using            | \(6)  |
+| ``'s'``    | String (converts any python object using            |       |
 |            | :func:`str`).                                       |       |
 +------------+-----------------------------------------------------+-------+
 | ``'%'``    | No argument is converted, results in a ``'%'``      |       |
@@ -1205,16 +1138,11 @@ Notes:
 
    The precision determines the maximal number of characters used.
 
-(6)
-   If the object or format provided is a :class:`unicode` string, the resulting
-   string will also be :class:`unicode`.
 
    The precision determines the maximal number of characters used.
 
 Since Python strings have an explicit length, ``%s`` conversions do not assume
 that ``'\0'`` is the end of the string.
-
-.. % XXX Examples?
 
 For safety reasons, floating point precisions are clipped to 50; ``%f``
 conversions for numbers whose absolute value is over 1e25 are replaced by ``%g``
@@ -1228,15 +1156,15 @@ Additional string operations are defined in standard modules :mod:`string` and
 :mod:`re`.
 
 
-.. _typesseq-xrange:
+.. _typesseq-range:
 
 XRange Type
 -----------
 
-.. index:: object: xrange
+.. index:: object: range
 
-The :class:`xrange` type is an immutable sequence which is commonly used for
-looping.  The advantage of the :class:`xrange` type is that an :class:`xrange`
+The :class:`range` type is an immutable sequence which is commonly used for
+looping.  The advantage of the :class:`range` type is that an :class:`range`
 object will always take the same amount of memory, no matter the size of the
 range it represents.  There are no consistent performance advantages.
 
@@ -1252,12 +1180,17 @@ Mutable Sequence Types
 .. index::
    triple: mutable; sequence; types
    object: list
+   object: bytes
 
-List objects support additional operations that allow in-place modification of
-the object. Other mutable sequence types (when added to the language) should
-also support these operations. Strings and tuples are immutable sequence types:
-such objects cannot be modified once created. The following operations are
-defined on mutable sequence types (where *x* is an arbitrary object):
+List and bytes objects support additional operations that allow in-place
+modification of the object.  Other mutable sequence types (when added to the
+language) should also support these operations.  Strings and tuples are
+immutable sequence types: such objects cannot be modified once created. The
+following operations are defined on mutable sequence types (where *x* is an
+arbitrary object).
+
+Note that while lists allow their items to be of any type, bytes object
+"items" are all integers in the range 0 <= x < 256.
 
 +------------------------------+--------------------------------+---------------------+
 | Operation                    | Result                         | Notes               |
@@ -1277,30 +1210,30 @@ defined on mutable sequence types (where *x* is an arbitrary object):
 | ``del s[i:j:k]``             | removes the elements of        |                     |
 |                              | ``s[i:j:k]`` from the list     |                     |
 +------------------------------+--------------------------------+---------------------+
-| ``s.append(x)``              | same as ``s[len(s):len(s)] =   | \(2)                |
+| ``s.append(x)``              | same as ``s[len(s):len(s)] =   |                     |
 |                              | [x]``                          |                     |
 +------------------------------+--------------------------------+---------------------+
-| ``s.extend(x)``              | same as ``s[len(s):len(s)] =   | \(3)                |
+| ``s.extend(x)``              | same as ``s[len(s):len(s)] =   | \(2)                |
 |                              | x``                            |                     |
 +------------------------------+--------------------------------+---------------------+
 | ``s.count(x)``               | return number of *i*'s for     |                     |
 |                              | which ``s[i] == x``            |                     |
 +------------------------------+--------------------------------+---------------------+
-| ``s.index(x[, i[, j]])``     | return smallest *k* such that  | \(4)                |
+| ``s.index(x[, i[, j]])``     | return smallest *k* such that  | \(3)                |
 |                              | ``s[k] == x`` and ``i <= k <   |                     |
 |                              | j``                            |                     |
 +------------------------------+--------------------------------+---------------------+
-| ``s.insert(i, x)``           | same as ``s[i:i] = [x]``       | \(5)                |
+| ``s.insert(i, x)``           | same as ``s[i:i] = [x]``       | \(4)                |
 +------------------------------+--------------------------------+---------------------+
-| ``s.pop([i])``               | same as ``x = s[i]; del s[i];  | \(6)                |
+| ``s.pop([i])``               | same as ``x = s[i]; del s[i];  | \(5)                |
 |                              | return x``                     |                     |
 +------------------------------+--------------------------------+---------------------+
-| ``s.remove(x)``              | same as ``del s[s.index(x)]``  | \(4)                |
+| ``s.remove(x)``              | same as ``del s[s.index(x)]``  | \(3)                |
 +------------------------------+--------------------------------+---------------------+
-| ``s.reverse()``              | reverses the items of *s* in   | \(7)                |
+| ``s.reverse()``              | reverses the items of *s* in   | \(6)                |
 |                              | place                          |                     |
 +------------------------------+--------------------------------+---------------------+
-| ``s.sort([cmp[, key[,        | sort the items of *s* in place | (7), (8), (9), (10) |
+| ``s.sort([cmp[, key[,        | sort the items of *s* in place | (6), (7)            |
 | reverse]]])``                |                                |                     |
 +------------------------------+--------------------------------+---------------------+
 
@@ -1309,60 +1242,49 @@ defined on mutable sequence types (where *x* is an arbitrary object):
    triple: operations on; list; type
    pair: subscript; assignment
    pair: slice; assignment
-   pair: extended slice; assignment
    statement: del
-   single: append() (list method)
-   single: extend() (list method)
-   single: count() (list method)
-   single: index() (list method)
-   single: insert() (list method)
-   single: pop() (list method)
-   single: remove() (list method)
-   single: reverse() (list method)
-   single: sort() (list method)
+   single: append() (sequence method)
+   single: extend() (sequence method)
+   single: count() (sequence method)
+   single: index() (sequence method)
+   single: insert() (sequence method)
+   single: pop() (sequence method)
+   single: remove() (sequence method)
+   single: reverse() (sequence method)
+   single: sort() (sequence method)
 
 Notes:
 
 (1)
-   *t* must have the same length as the slice it is  replacing.
+   *t* must have the same length as the slice it is replacing.
 
 (2)
-   The C implementation of Python has historically accepted multiple parameters and
-   implicitly joined them into a tuple; this no longer works in Python 2.0.  Use of
-   this misfeature has been deprecated since Python 1.4.
-
-(3)
    *x* can be any iterable object.
 
-(4)
+(3)
    Raises :exc:`ValueError` when *x* is not found in *s*. When a negative index is
-   passed as the second or third parameter to the :meth:`index` method, the list
+   passed as the second or third parameter to the :meth:`index` method, the sequence
    length is added, as for slice indices.  If it is still negative, it is truncated
    to zero, as for slice indices.
 
-   .. versionchanged:: 2.3
-      Previously, :meth:`index` didn't have arguments for specifying start and stop
-      positions.
-
-(5)
+(4)
    When a negative index is passed as the first parameter to the :meth:`insert`
-   method, the list length is added, as for slice indices.  If it is still
+   method, the sequence length is added, as for slice indices.  If it is still
    negative, it is truncated to zero, as for slice indices.
 
-   .. versionchanged:: 2.3
-      Previously, all negative indices were truncated to zero.
+(5)
+   The optional argument *i* defaults to ``-1``, so that by default the last
+   item is removed and returned.
 
 (6)
-   The :meth:`pop` method is only supported by the list and array types.  The
-   optional argument *i* defaults to ``-1``, so that by default the last item is
-   removed and returned.
+   The :meth:`sort` and :meth:`reverse` methods modify the sequence in place for
+   economy of space when sorting or reversing a large sequence.  To remind you
+   that they operate by side effect, they don't return the sorted or reversed
+   sequence.
 
 (7)
-   The :meth:`sort` and :meth:`reverse` methods modify the list in place for
-   economy of space when sorting or reversing a large list.  To remind you that
-   they operate by side effect, they don't return the sorted or reversed list.
+   :meth:`sort` is not supported by bytes objects.
 
-(8)
    The :meth:`sort` method takes optional arguments for controlling the
    comparisons.
 
@@ -1382,23 +1304,197 @@ Notes:
    multiple times for each list element while *key* and *reverse* touch each
    element only once.
 
-   .. versionchanged:: 2.3
-      Support for ``None`` as an equivalent to omitting *cmp* was added.
-
-   .. versionchanged:: 2.4
-      Support for *key* and *reverse* was added.
-
-(9)
    Starting with Python 2.3, the :meth:`sort` method is guaranteed to be stable.  A
    sort is stable if it guarantees not to change the relative order of elements
    that compare equal --- this is helpful for sorting in multiple passes (for
    example, sort by department, then by salary grade).
 
-(10)
    While a list is being sorted, the effect of attempting to mutate, or even
    inspect, the list is undefined.  The C implementation of Python 2.3 and newer
    makes the list appear empty for the duration, and raises :exc:`ValueError` if it
    can detect that the list has been mutated during a sort.
+
+
+.. _bytes-methods:
+
+Bytes Methods
+-------------
+
+.. index:: pair: bytes; methods
+
+In addition to the operations on mutable sequence types (see
+:ref:`typesseq-mutable`), bytes objects, being "mutable ASCII strings" have
+further useful methods also found on strings.
+
+.. XXX "count" is documented as a mutable sequence method differently above
+.. XXX perhaps just split bytes and list methods
+
+.. method:: bytes.count(sub[, start[, end]])
+
+   In contrast to the standard sequence ``count`` method, this returns the
+   number of occurrences of substring (not item) *sub* in the slice
+   ``[start:end]``.  Optional arguments *start* and *end* are interpreted as in
+   slice notation.
+
+
+.. method:: bytes.decode([encoding[, errors]])
+
+   Decode the bytes using the codec registered for *encoding*. *encoding*
+   defaults to the default string encoding.  *errors* may be given to set a
+   different error handling scheme.  The default is ``'strict'``, meaning that
+   encoding errors raise :exc:`UnicodeError`.  Other possible values are
+   ``'ignore'``, ``'replace'`` and any other name registered via
+   :func:`codecs.register_error`, see section :ref:`codec-base-classes`.
+
+
+.. method:: bytes.endswith(suffix[, start[, end]])
+
+   Return ``True`` if the bytes object ends with the specified *suffix*,
+   otherwise return ``False``.  *suffix* can also be a tuple of suffixes to look
+   for.  With optional *start*, test beginning at that position.  With optional
+   *end*, stop comparing at that position.
+
+
+.. method:: bytes.find(sub[, start[, end]])
+
+   Return the lowest index in the string where substring *sub* is found, such that
+   *sub* is contained in the range [*start*, *end*].  Optional arguments *start*
+   and *end* are interpreted as in slice notation.  Return ``-1`` if *sub* is not
+   found.
+
+
+.. method:: bytes.fromhex(string)
+
+   This :class:`bytes` class method returns a bytes object, decoding the given
+   string object.  The string must contain two hexadecimal digits per byte, spaces
+   are ignored.
+
+   Example::
+   
+      >>> bytes.fromhex('f0 f1f2  ')
+      b'\xf0\xf1\xf2'
+
+
+.. method:: bytes.index(sub[, start[, end]])
+
+   Like :meth:`find`, but raise :exc:`ValueError` when the substring is not found.
+
+
+.. method:: bytes.join(seq)
+
+   Return a bytes object which is the concatenation of the bytes objects in the
+   sequence *seq*.  The separator between elements is the bytes object providing
+   this method.
+
+
+.. method:: bytes.lstrip(which)
+
+   Return a copy of the bytes object with leading bytes removed.  The *which*
+   argument is a bytes object specifying the set of bytes to be removed.  As
+   with :meth:`str.lstrip`, the *which* argument is not a prefix; rather, all
+   combinations of its values are stripped.
+
+
+.. method:: bytes.partition(sep)
+
+   Split the bytes object at the first occurrence of *sep*, and return a 3-tuple
+   containing the part before the separator, the separator itself, and the part
+   after the separator.  If the separator is not found, return a 3-tuple
+   containing the bytes object itself, followed by two empty strings.
+
+
+.. method:: bytes.replace(old, new[, count])
+
+   Return a copy of the bytes object with all occurrences of substring *old*
+   replaced by *new*.  If the optional argument *count* is given, only the first
+   *count* occurrences are replaced.
+
+
+.. method:: bytes.rfind(sub[, start[, end]])
+
+   Return the highest index in the string where substring *sub* is found, such
+   that *sub* is contained within the slice ``[start:end]``.  Optional arguments
+   *start* and *end* are interpreted as in slice notation.  Return ``-1`` on
+   failure.
+
+
+.. method:: bytes.rindex(sub[, start[, end]])
+
+   Like :meth:`rfind` but raises :exc:`ValueError` when the substring *sub* is
+   not found.
+
+
+.. method:: bytes.rpartition(sep)
+
+   Split the bytes object at the last occurrence of *sep*, and return a 3-tuple
+   containing the part before the separator, the separator itself, and the part
+   after the separator.  If the separator is not found, return a 3-tuple
+   containing two empty strings, followed by the string itself.
+
+
+.. method:: bytes.rsplit(sep[, maxsplit])
+
+   Return a list of substrings, using *sep* as the delimiter.  If *maxsplit* is
+   given, at most *maxsplit* splits are done, the *rightmost* ones.  Except for
+   splitting from the right, :meth:`rsplit` behaves like :meth:`split` which is
+   described in detail below.
+
+
+.. method:: bytes.rstrip(which)
+
+   Return a copy of the bytes object with trailing bytes removed.  The *which*
+   argument is a bytes object specifying the set of bytes to be removed.  As
+   with :meth:`str.rstrip`, The *chars* argument is not a suffix; rather, all
+   combinations of its values are stripped.
+
+
+.. method:: bytes.split(sep[, maxsplit])
+
+   Return a list of substrings, using *sep* as the delimiter.  If *maxsplit* is
+   given, at most *maxsplit* splits are done (thus, the list will have at most
+   ``maxsplit+1`` elements).  If *maxsplit* is not specified, then there is no
+   limit on the number of splits (all possible splits are made).  Consecutive
+   delimiters are not grouped together and are deemed to delimit empty strings
+   (for example, ``b'1,,2'.split(b',')`` returns ``[b'1', b'', b'2']``).  The
+   *sep* argument may consist of multiple bytes (for example, ``b'1, 2,
+   3'.split(b', ')`` returns ``[b'1', b'2', b'3']``).  Splitting an empty string
+   with a specified separator returns ``[b'']``.
+
+
+.. method:: bytes.startswith(prefix[, start[, end]])
+
+   Return ``True`` if the bytes object starts with the *prefix*, otherwise
+   return ``False``.  *prefix* can also be a tuple of prefixes to look for.
+   With optional *start*, test string beginning at that position.  With optional
+   *end*, stop comparing string at that position.
+
+
+.. method:: bytes.strip(which)
+
+   Return a copy of the bytes object with leading and trailing bytes found in
+   *which* removed.  The *which* argument is a bytes object specifying the set
+   of characters to be removed.  The *which* argument is not a prefix or suffix;
+   rather, all combinations of its values are stripped::
+
+      >>> b'www.example.com'.strip(b'cmowz.')
+      b'example'
+
+
+.. method:: bytes.translate(table[, delete])
+
+   Return a copy of the bytes object where all bytes occurring in the optional
+   argument *delete* are removed, and the remaining bytes have been mapped
+   through the given translation table, which must be a bytes object of length
+   256.
+
+   You can use the :func:`maketrans` helper function in the :mod:`string` module to
+   create a translation table.
+
+   .. XXX a None table doesn't seem to be supported
+      Set the *table* argument to ``None`` for translations that only delete characters::
+
+         >>> 'read this short text'.translate(None, 'aeiou')
+         'rd ths shrt txt'
 
 
 .. _types-set:
@@ -1414,9 +1510,6 @@ computing mathematical operations such as intersection, union, difference, and
 symmetric difference.
 (For other containers see the built in :class:`dict`, :class:`list`,
 and :class:`tuple` classes, and the :mod:`collections` module.)
-
-
-.. versionadded:: 2.4
 
 Like other collections, sets support ``x in set``, ``len(set)``, and ``for x in
 set``.  Being an unordered collection, sets do not record element position or
@@ -1585,15 +1678,6 @@ Note, the non-operator versions of the :meth:`update`,
 :meth:`symmetric_difference_update` methods will accept any iterable as an
 argument.
 
-The design of the set types was based on lessons learned from the Python
-implementation found in the :mod:`sets` module.
-
-
-.. seealso::
-
-   `Comparison to the built-in set types <comparison-to-builtin-set.html>`_
-      Differences between the :mod:`sets` module and the built-in set types.
-
 
 .. _typesmapping:
 
@@ -1615,14 +1699,13 @@ are mutable objects.  There is currently only one standard mapping type, the
 :class:`set`, and :class:`tuple` classes, and the :mod:`collections`
 module.)
 
-A dictionary's keys are *almost* arbitrary values.  Only
-values containing lists, dictionaries or other mutable types (that are compared
-by value rather than by object identity) may not be used as keys. Numeric types
-used for keys obey the normal rules for numeric comparison: if two numbers
-compare equal (such as ``1`` and ``1.0``) then they can be used interchangeably
-to index the same dictionary entry. (Note however, that since computers
-store floating-point numbers as approximations it is usually unwise to
-use them as dictionary keys.)
+A dictionary's keys are *almost* arbitrary values.  Only values containing
+lists, dictionaries or other mutable types (that are compared by value rather
+than by object identity) may not be used as keys.  Numeric types used for keys
+obey the normal rules for numeric comparison: if two numbers compare equal (such
+as ``1`` and ``1.0``) then they can be used interchangeably to index the same
+dictionary entry. (Note however, that since computers store floating-point
+numbers as approximations it is usually unwise to use them as dictionary keys.)
 
 Dictionaries can be created by placing a comma-separated list of ``key: value``
 pairs within braces, for example: ``{'jack': 4098, 'sjoerd': 4127}`` or ``{4098:
@@ -1630,38 +1713,31 @@ pairs within braces, for example: ``{'jack': 4098, 'sjoerd': 4127}`` or ``{4098:
 
 .. class:: dict([arg])
 
-   Return a new dictionary initialized from an optional positional argument or from
-   a set of keyword arguments. If no arguments are given, return a new empty
-   dictionary. If the positional argument *arg* is a mapping object, return a
-   dictionary mapping the same keys to the same values as does the mapping object.
-   Otherwise the positional argument must be a sequence, a container that supports
-   iteration, or an iterator object.  The elements of the argument must each also
-   be of one of those kinds, and each must in turn contain exactly two objects.
-   The first is used as a key in the new dictionary, and the second as the key's
-   value.  If a given key is seen more than once, the last value associated with it
-   is retained in the new dictionary.
+   Return a new dictionary initialized from an optional positional argument or
+   from a set of keyword arguments.  If no arguments are given, return a new
+   empty dictionary.  If the positional argument *arg* is a mapping object,
+   return a dictionary mapping the same keys to the same values as does the
+   mapping object.  Otherwise the positional argument must be a sequence, a
+   container that supports iteration, or an iterator object.  The elements of
+   the argument must each also be of one of those kinds, and each must in turn
+   contain exactly two objects.  The first is used as a key in the new
+   dictionary, and the second as the key's value.  If a given key is seen more
+   than once, the last value associated with it is retained in the new
+   dictionary.
 
    If keyword arguments are given, the keywords themselves with their associated
-   values are added as items to the dictionary. If a key is specified both in the
-   positional argument and as a keyword argument, the value associated with the
-   keyword is retained in the dictionary. For example, these all return a
+   values are added as items to the dictionary.  If a key is specified both in
+   the positional argument and as a keyword argument, the value associated with
+   the keyword is retained in the dictionary.  For example, these all return a
    dictionary equal to ``{"one": 2, "two": 3}``:
 
    * ``dict(one=2, two=3)``
-
    * ``dict({'one': 2, 'two': 3})``
-
    * ``dict(zip(('one', 'two'), (2, 3)))``
-
    * ``dict([['two', 3], ['one', 2]])``
 
-   The first example only works for keys that are valid Python
-   identifiers; the others work with any valid keys.
-
-   .. versionadded:: 2.2
-
-   .. versionchanged:: 2.3
-      Support for building a dictionary from keyword arguments added.
+   The first example only works for keys that are valid Python identifiers; the
+   others work with any valid keys.
 
 
 These are the operations that dictionaries support (and therefore, custom mapping
@@ -1676,16 +1752,14 @@ types should support too):
    Return the item of *d* with key *key*.  Raises a :exc:`KeyError` if *key* is
    not in the map.
    
-   .. versionadded:: 2.5
-      If a subclass of dict defines a method :meth:`__missing__`, if the key
-      *key* is not present, the ``d[key]`` operation calls that method with the
-      key *key* as argument.  The ``d[key]`` operation then returns or raises
-      whatever is returned or raised by the ``__missing__(key)`` call if the key
-      is not present. No other operations or methods invoke
-      :meth:`__missing__`. If :meth:`__missing__` is not defined,
-      :exc:`KeyError` is raised.  :meth:`__missing__` must be a method; it
-      cannot be an instance variable. For an example, see
-      :class:`collections.defaultdict`.
+   If a subclass of dict defines a method :meth:`__missing__`, if the key *key*
+   is not present, the ``d[key]`` operation calls that method with the key *key*
+   as argument.  The ``d[key]`` operation then returns or raises whatever is
+   returned or raised by the ``__missing__(key)`` call if the key is not
+   present. No other operations or methods invoke :meth:`__missing__`. If
+   :meth:`__missing__` is not defined, :exc:`KeyError` is raised.
+   :meth:`__missing__` must be a method; it cannot be an instance variable. For
+   an example, see :class:`collections.defaultdict`.
 
 .. describe:: d[key] = value
 
@@ -1700,13 +1774,9 @@ types should support too):
 
    Return ``True`` if *d* has a key *key*, else ``False``.
 
-   .. versionadded:: 2.2
-
 .. describe:: key not in d
 
    Equivalent to ``not key in d``.
-
-   .. versionadded:: 2.2
 
 .. method:: dict.clear()
 
@@ -1723,68 +1793,27 @@ types should support too):
    :func:`fromkeys` is a class method that returns a new dictionary. *value*
    defaults to ``None``.
 
-   .. versionadded:: 2.3
-
 .. method:: dict.get(key[, default])
 
    Return the value for *key* if *key* is in the dictionary, else *default*.  If
    *default* is not given, it defaults to ``None``, so that this method never
    raises a :exc:`KeyError`.
 
-.. method:: dict.has_key(key)
-
-   ``d.has_key(key)`` is equivalent to ``key in d``, but deprecated.
-
 .. method:: dict.items()
 
-   Return a copy of the dictionary's list of ``(key, value)`` pairs.
-
-   .. note::
-
-      Keys and values are listed in an arbitrary order which is non-random, varies
-      across Python implementations, and depends on the dictionary's history of
-      insertions and deletions. If :meth:`items`, :meth:`keys`, :meth:`values`,
-      :meth:`iteritems`, :meth:`iterkeys`, and :meth:`itervalues` are called with no
-      intervening modifications to the dictionary, the lists will directly correspond.
-      This allows the creation of ``(value, key)`` pairs using :func:`zip`: ``pairs =
-      zip(d.values(), d.keys())``.  The same relationship holds for the
-      :meth:`iterkeys` and :meth:`itervalues` methods: ``pairs = zip(d.itervalues(),
-      d.iterkeys())`` provides the same value for ``pairs``. Another way to create the
-      same list is ``pairs = [(v, k) for (k, v) in d.iteritems()]``.
-
-.. method:: dict.iteritems()
-
-   Return an iterator over the dictionary's ``(key, value)`` pairs.
-   See the note for :meth:`dict.items`.
-
-   .. versionadded:: 2.2
-
-.. method:: dict.iterkeys()
-
-   Return an iterator over the dictionary's keys.  See the note for
-   :meth:`dict.items`.
-
-   .. versionadded:: 2.2
-
-.. method:: dict.itervalues()
-
-   Return an iterator over the dictionary's values.  See the note for
-   :meth:`dict.items`.
-
-   .. versionadded:: 2.2
+   Return a new view of the dictionary's items (``(key, value)`` pairs).  See
+   below for documentation of view objects.
 
 .. method:: dict.keys()
 
-   Return a copy of the dictionary's list of keys.  See the note for
-   :meth:`dict.items`.
+   Return a new view of the dictionary's keys.  See below for documentation of
+   view objects.
 
 .. method:: dict.pop(key[, default])
 
    If *key* is in the dictionary, remove it and return its value, else return
    *default*.  If *default* is not given and *key* is not in the dictionary, a
    :exc:`KeyError` is raised.
-
-   .. versionadded:: 2.3
 
 .. method:: dict.popitem()
 
@@ -1796,27 +1825,115 @@ types should support too):
 
 .. method:: dict.setdefault(key[, default])
 
-   If *key* is in the dictionary, return its value.  If not, insert *key* with a
-   value of *default* and return *default*.  *default* defaults to ``None``.
+   If *key* is in the dictionary, return its value.  If not, insert *key* with
+   a value of *default* and return *default*.  *default* defaults to ``None``.
 
 .. method:: dict.update([other])
 
-   Update the dictionary with the key/value pairs from *other*, overwriting existing
-   keys.  Return ``None``.
+   Update the dictionary with the key/value pairs from *other*, overwriting
+   existing keys.  Return ``None``.
 
    :func:`update` accepts either another dictionary object or an iterable of
    key/value pairs (as a tuple or other iterable of length two).  If keyword
    arguments are specified, the dictionary is then is updated with those
    key/value pairs: ``d.update(red=1, blue=2)``.
 
-   .. versionchanged:: 2.4
-      Allowed the argument to be an iterable of key/value pairs and allowed
-      keyword arguments.
-
 .. method:: dict.values()
 
-   Return a copy of the dictionary's list of values.  See the note for
-   :meth:`mapping.items`.
+   Return a new view of the dictionary's values.  See below for documentation of
+   view objects.
+
+
+Dictionary view objects
+-----------------------
+
+The objects returned by :meth:`dict.keys`, :meth:`dict.values` and
+:meth:`dict.items` are *view objects*.  They provide a dynamic view on the
+dictionary's entries, which means that when the dictionary changes, the view
+reflects these changes.  The keys and items views have a set-like character
+since their entries
+
+Dictionary views can be iterated over to yield their respective data, and
+support membership tests:
+
+.. describe:: len(dictview)
+
+   Return the number of entries in the dictionary.
+
+.. describe:: iter(dictview)
+
+   Return an iterator over the keys, values or items (represented as tuples of
+   ``(key, value)``) in the dictionary.
+
+   Keys and values are iterated over in an arbitrary order which is non-random,
+   varies across Python implementations, and depends on the dictionary's history
+   of insertions and deletions. If keys, values and items views are iterated
+   over with no intervening modifications to the dictionary, the order of items
+   will directly correspond.  This allows the creation of ``(value, key)`` pairs
+   using :func:`zip`: ``pairs = zip(d.values(), d.keys())``.  Another way to
+   create the same list is ``pairs = [(v, k) for (k, v) in d.items()]``.
+
+.. describe:: x in dictview
+
+   Return ``True`` if *x* is in the underlying dictionary's keys, values or
+   items (in the latter case, *x* should be a ``(key, value)`` tuple).
+
+
+The keys and items views also provide set-like operations ("other" here refers
+to another dictionary view or a set):
+
+.. describe:: dictview & other
+
+   Return the intersection of the dictview and the other object as a new set.
+
+.. describe:: dictview | other
+
+   Return the union of the dictview and the other object as a new set.
+
+.. describe:: dictview - other
+
+   Return the difference between the dictview and the other object (all elements
+   in *dictview* that aren't in *other*) as a new set.
+
+.. describe:: dictview ^ other
+
+   Return the symmetric difference (all elements either in *dictview* or
+   *other*, but not in both) of the dictview and the other object as a new set.
+
+.. warning::
+
+   Since a dictionary's values are not required to be hashable, any of these
+   four operations will fail if an involved dictionary contains such a value.
+
+
+An example of dictionary view usage::
+
+   >>> dishes = {'eggs': 2, 'sausage': 1, 'bacon': 1, 'spam': 500}
+   >>> keys = dishes.keys()
+   >>> values = dishes.values()
+
+   >>> # iteration
+   >>> n = 0
+   >>> for val in values:
+   ...     n += val
+   >>> print(n)
+   504
+
+   >>> # keys and values are iterated over in the same order
+   >>> list(keys)
+   ['eggs', 'bacon', 'sausage', 'spam']
+   >>> list(values)
+   [2, 1, 1, 500]
+
+   >>> # view objects are dynamic and reflect dict changes
+   >>> del dishes['eggs']
+   >>> del dishes['sausage']
+   >>> list(keys)
+   ['spam', 'bacon']
+
+   >>> # set operations
+   >>> keys & {'eggs', 'bacon', 'salad'}
+   {'eggs', 'bacon'}
 
 
 .. _bltin-file-objects:
@@ -1829,6 +1946,8 @@ File Objects
    builtin: file
    module: os
    module: socket
+
+.. XXX this is quite out of date, must be updated with "io" module
 
 File objects are implemented using C's ``stdio`` package and can be
 created with the built-in :func:`file` and (more usually) :func:`open`
@@ -1859,7 +1978,7 @@ Files have the following methods:
 
       with open("hello.txt") as f:
           for line in f:
-              print line
+              print(line)
 
    In older versions of Python, you would have needed to do this to get the same
    effect::
@@ -1867,7 +1986,7 @@ Files have the following methods:
       f = open("hello.txt")
       try:
           for line in f:
-              print line
+              print(line)
       finally:
           f.close()
 
@@ -1913,22 +2032,20 @@ Files have the following methods:
       *not* be implemented.
 
 
-.. method:: file.next()
+.. method:: file.__next__()
 
    A file object is its own iterator, for example ``iter(f)`` returns *f* (unless
    *f* is closed).  When a file is used as an iterator, typically in a
-   :keyword:`for` loop (for example, ``for line in f: print line``), the
-   :meth:`next` method is called repeatedly.  This method returns the next input
-   line, or raises :exc:`StopIteration` when EOF is hit when the file is open for
-   reading (behavior is undefined when the file is open for writing).  In order to
-   make a :keyword:`for` loop the most efficient way of looping over the lines of a
-   file (a very common operation), the :meth:`next` method uses a hidden read-ahead
-   buffer.  As a consequence of using a read-ahead buffer, combining :meth:`next`
-   with other file methods (like :meth:`readline`) does not work right.  However,
-   using :meth:`seek` to reposition the file to an absolute position will flush the
-   read-ahead buffer.
-
-   .. versionadded:: 2.3
+   :keyword:`for` loop (for example, ``for line in f: print(line)``), the
+   :meth:`__next__` method is called repeatedly.  This method returns the next
+   input line, or raises :exc:`StopIteration` when EOF is hit when the file is open
+   for reading (behavior is undefined when the file is open for writing).  In order
+   to make a :keyword:`for` loop the most efficient way of looping over the lines
+   of a file (a very common operation), the :meth:`__next__` method uses a hidden
+   read-ahead buffer.  As a consequence of using a read-ahead buffer, combining
+   :meth:`__next__` with other file methods (like :meth:`readline`) does not work
+   right.  However, using :meth:`seek` to reposition the file to an absolute
+   position will flush the read-ahead buffer.
 
 
 .. method:: file.read([size])
@@ -1968,16 +2085,6 @@ Files have the following methods:
    cannot be implemented, or cannot be implemented efficiently.
 
 
-.. method:: file.xreadlines()
-
-   This method returns the same thing as ``iter(f)``.
-
-   .. versionadded:: 2.1
-
-   .. deprecated:: 2.3
-      Use ``for line in file`` instead.
-
-
 .. method:: file.seek(offset[, whence])
 
    Set the file's current position, like ``stdio``'s :cfunc:`fseek`. The *whence*
@@ -1993,9 +2100,6 @@ Files have the following methods:
    legal.  Use of other offsets causes undefined behavior.
 
    Note that not all file objects are seekable.
-
-   .. versionchanged:: 2.6
-      Passing float values as offset has been deprecated
 
 
 .. method:: file.tell()
@@ -2050,6 +2154,7 @@ the particular object.
    on all file-like objects.
 
 
+.. XXX does this still apply?
 .. attribute:: file.encoding
 
    The encoding that this file uses. When Unicode strings are written to a file,
@@ -2059,8 +2164,6 @@ the particular object.
    misconfigured the  terminal). The attribute is read-only and may not be present
    on all file-like objects. It may also be ``None``, in which case the file uses
    the system default encoding for converting Unicode strings.
-
-   .. versionadded:: 2.3
 
 
 .. attribute:: file.mode
@@ -2090,29 +2193,10 @@ the particular object.
    mode the value of this attribute will be ``None``.
 
 
-.. attribute:: file.softspace
-
-   Boolean that indicates whether a space character needs to be printed before
-   another value when using the :keyword:`print` statement. Classes that are trying
-   to simulate a file object should also have a writable :attr:`softspace`
-   attribute, which should be initialized to zero.  This will be automatic for most
-   classes implemented in Python (care may be needed for objects that override
-   attribute access); types implemented in C will have to provide a writable
-   :attr:`softspace` attribute.
-
-   .. note::
-
-      This attribute is not used to control the :keyword:`print` statement, but to
-      allow the implementation of :keyword:`print` to keep track of its internal
-      state.
-
-
 .. _typecontextmanager:
 
 Context Manager Types
 =====================
-
-.. versionadded:: 2.5
 
 .. index::
    single: context manager
@@ -2294,21 +2378,21 @@ Code Objects
 
 .. index::
    builtin: compile
-   single: func_code (function object attribute)
+   single: __code__ (function object attribute)
 
 Code objects are used by the implementation to represent "pseudo-compiled"
 executable Python code such as a function body. They differ from function
 objects because they don't contain a reference to their global execution
 environment.  Code objects are returned by the built-in :func:`compile` function
-and can be extracted from function objects through their :attr:`func_code`
+and can be extracted from function objects through their :attr:`__code__`
 attribute. See also the :mod:`code` module.
 
 .. index::
-   statement: exec
+   builtin: exec
    builtin: eval
 
 A code object can be executed or evaluated by passing it (instead of a source
-string) to the :keyword:`exec` statement or the built-in :func:`eval` function.
+string) to the :func:`exec` or :func:`eval`  built-in functions.
 
 See :ref:`types` for more information.
 
@@ -2347,11 +2431,11 @@ It is written as ``None``.
 The Ellipsis Object
 -------------------
 
-This object is used by extended slice notation (see :ref:`slicings`).  It
-supports no special operations.  There is exactly one ellipsis object, named
+This object is commonly used by slicing (see :ref:`slicings`).  It supports no
+special operations.  There is exactly one ellipsis object, named
 :const:`Ellipsis` (a built-in name).
 
-It is written as ``Ellipsis``.
+It is written as ``Ellipsis`` or ``...``.
 
 
 Boolean Values
@@ -2396,20 +2480,6 @@ types, where they are relevant.  Some of these are not reported by the
 
    A dictionary or other mapping object used to store an object's (writable)
    attributes.
-
-
-.. attribute:: object.__methods__
-
-   .. deprecated:: 2.2
-      Use the built-in function :func:`dir` to get a list of an object's attributes.
-      This attribute is no longer available.
-
-
-.. attribute:: object.__members__
-
-   .. deprecated:: 2.2
-      Use the built-in function :func:`dir` to get a list of an object's attributes.
-      This attribute is no longer available.
 
 
 .. attribute:: instance.__class__

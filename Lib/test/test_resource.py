@@ -50,9 +50,9 @@ class ResourceTest(unittest.TestCase):
                     limit_set = False
                 f = open(test_support.TESTFN, "wb")
                 try:
-                    f.write("X" * 1024)
+                    f.write(b"X" * 1024)
                     try:
-                        f.write("Y")
+                        f.write(b"Y")
                         f.flush()
                     except IOError:
                         if not limit_set:
@@ -70,7 +70,7 @@ class ResourceTest(unittest.TestCase):
 
     def test_fsize_toobig(self):
         # Be sure that setrlimit is checking for really large values
-        too_big = 10L**50
+        too_big = 10**50
         try:
             (cur, max) = resource.getrlimit(resource.RLIMIT_FSIZE)
         except AttributeError:

@@ -4,7 +4,7 @@ import sys
 import unittest
 from test import test_support
 
-import warning_tests
+from test import warning_tests
 
 class TestModule(unittest.TestCase):
     def setUp(self):

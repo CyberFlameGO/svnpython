@@ -1,23 +1,25 @@
 import sys
 import os
 import re
+import string
 import imp
 from itertools import count
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
-from MultiCall import MultiCallCreator
-
+import traceback
 import webbrowser
-import idlever
-import WindowList
-import SearchDialog
-import GrepDialog
-import ReplaceDialog
-import PyParse
-from configHandler import idleConf
-import aboutDialog, textView, configDialog
-import macosxSupport
+
+from idlelib.MultiCall import MultiCallCreator
+from idlelib import idlever
+from idlelib import WindowList
+from idlelib import SearchDialog
+from idlelib import GrepDialog
+from idlelib import ReplaceDialog
+from idlelib import PyParse
+from idlelib.configHandler import idleConf
+from idlelib import aboutDialog, textView, configDialog
+from idlelib import macosxSupport
 
 # The default tab setting for a Text widget, in average-width characters.
 TK_TABWIDTH_DEFAULT = 8
@@ -36,17 +38,17 @@ def _find_module(fullname, path=None):
         try:
             path = module.__path__
         except AttributeError:
-            raise ImportError, 'No source for module ' + module.__name__
+            raise ImportError('No source for module ' + module.__name__)
     return file, filename, descr
 
 class EditorWindow(object):
-    from Percolator import Percolator
-    from ColorDelegator import ColorDelegator
-    from UndoDelegator import UndoDelegator
-    from IOBinding import IOBinding, filesystemencoding, encoding
-    import Bindings
+    from idlelib.Percolator import Percolator
+    from idlelib.ColorDelegator import ColorDelegator
+    from idlelib.UndoDelegator import UndoDelegator
+    from idlelib.IOBinding import IOBinding, filesystemencoding, encoding
+    from idlelib import Bindings
     from Tkinter import Toplevel
-    from MultiStatusBar import MultiStatusBar
+    from idlelib.MultiStatusBar import MultiStatusBar
 
     help_url = None
 
@@ -80,7 +82,7 @@ class EditorWindow(object):
                     # Safari requires real file:-URLs
                     EditorWindow.help_url = 'file://' + EditorWindow.help_url
             else:
-                EditorWindow.help_url = "http://www.python.org/doc/current"
+                EditorWindow.help_url = "http://docs.python.org/dev/3.0/"
         currentTheme=idleConf.CurrentTheme()
         self.flist = flist
         root = root or flist.root
@@ -222,42 +224,32 @@ class EditorWindow(object):
         # conceivable file).
         # Making the initial values larger slows things down more often.
         self.num_context_lines = 50, 500, 5000000
-
         self.per = per = self.Percolator(text)
-        if self.ispythonsource(filename):
-            self.color = color = self.ColorDelegator()
-            per.insertfilter(color)
-        else:
-            self.color = None
-
+        self.color = None
         self.undo = undo = self.UndoDelegator()
         per.insertfilter(undo)
         text.undo_block_start = undo.undo_block_start
         text.undo_block_stop = undo.undo_block_stop
         undo.set_saved_change_hook(self.saved_change_hook)
-
         # IOBinding implements file I/O and printing functionality
         self.io = io = self.IOBinding(self)
         io.set_filename_change_hook(self.filename_change_hook)
-
-        # Create the recent files submenu
-        self.recent_files_menu = Menu(self.menubar)
-        self.menudict['file'].insert_cascade(3, label='Recent Files',
-                                             underline=0,
-                                             menu=self.recent_files_menu)
-        self.update_recent_files_list()
-
+        self.good_load = False
+        self.set_indentation_params(False)
         if filename:
             if os.path.exists(filename) and not os.path.isdir(filename):
-                io.loadfile(filename)
+                if io.loadfile(filename):
+                    self.good_load = True
+                    is_py_src = self.ispythonsource(filename)
+                    self.set_indentation_params(is_py_src)
+                    if is_py_src:
+                        self.color = color = self.ColorDelegator()
+                        per.insertfilter(color)
             else:
                 io.set_filename(filename)
         self.saved_change_hook()
-
-        self.set_indentation_params(self.ispythonsource(filename))
-
+        self.update_recent_files_list()
         self.load_extensions()
-
         menu = self.menudict.get('windows')
         if menu:
             end = menu.index("end")
@@ -276,7 +268,7 @@ class EditorWindow(object):
 
     def _filename_to_unicode(self, filename):
         """convert filename to unicode in order to display it in Tk"""
-        if isinstance(filename, unicode) or not filename:
+        if isinstance(filename, str) or not filename:
             return filename
         else:
             try:
@@ -335,13 +327,15 @@ class EditorWindow(object):
             underline, label = prepstr(label)
             menudict[name] = menu = Menu(mbar, name=name)
             mbar.add_cascade(label=label, menu=menu, underline=underline)
-
         if sys.platform == 'darwin' and '.framework' in sys.executable:
             # Insert the application menu
             menudict['application'] = menu = Menu(mbar, name='apple')
             mbar.add_cascade(label='IDLE', menu=menu)
-
         self.fill_menus()
+        self.recent_files_menu = Menu(self.menubar)
+        self.menudict['file'].insert_cascade(3, label='Recent Files',
+                                             underline=0,
+                                             menu=self.recent_files_menu)
         self.base_helpmenu_length = self.menudict['help'].index(END)
         self.reset_help_menu_entries()
 
@@ -487,7 +481,7 @@ class EditorWindow(object):
         text.see("insert")
 
     def open_module(self, event=None):
-        # XXX Shouldn't this be in IOBinding or in FileList?
+        # XXX Shouldn't this be in IOBinding?
         try:
             name = self.text.get("sel.first", "sel.last")
         except TclError:
@@ -505,7 +499,7 @@ class EditorWindow(object):
         # XXX Ought to insert current file's directory in front of path
         try:
             (f, file, (suffix, mode, type)) = _find_module(name)
-        except (NameError, ImportError), msg:
+        except (NameError, ImportError) as msg:
             tkMessageBox.showerror("Import error", str(msg), parent=self.text)
             return
         if type != imp.PY_SOURCE:
@@ -530,11 +524,11 @@ class EditorWindow(object):
             return None
         head, tail = os.path.split(filename)
         base, ext = os.path.splitext(tail)
-        import ClassBrowser
+        from idlelib import ClassBrowser
         ClassBrowser.ClassBrowser(self.flist, base, [head])
 
     def open_path_browser(self, event=None):
-        import PathBrowser
+        from idlelib import PathBrowser
         PathBrowser.PathBrowser(self.flist)
 
     def gotoline(self, lineno):
@@ -550,13 +544,8 @@ class EditorWindow(object):
         base, ext = os.path.splitext(os.path.basename(filename))
         if os.path.normcase(ext) in (".py", ".pyw"):
             return True
-        try:
-            f = open(filename)
-            line = f.readline()
-            f.close()
-        except IOError:
-            return False
-        return line.startswith('#!') and line.find('python') >= 0
+        line = self.text.get('1.0', '1.0 lineend')
+        return line.startswith('#!') and 'python' in line
 
     def close_hook(self):
         if self.flist:
@@ -601,6 +590,19 @@ class EditorWindow(object):
         theme = idleConf.GetOption('main','Theme','name')
         self.text.config(idleConf.GetHighlight(theme, "normal"))
 
+    IDENTCHARS = string.ascii_letters + string.digits + "_"
+
+    def colorize_syntax_error(self, text, pos):
+        text.tag_add("ERROR", pos)
+        char = text.get(pos)
+        if char and char in self.IDENTCHARS:
+            text.tag_add("ERROR", pos + " wordstart", pos)
+        if '\n' == text.get(pos):   # error at line end
+            text.mark_set("insert", pos)
+        else:
+            text.mark_set("insert", pos + "+1c")
+        text.see(pos)
+
     def ResetFont(self):
         "Update the text widgets' font if it is changed"
         # Called from configDialog.py
@@ -639,7 +641,7 @@ class EditorWindow(object):
             for item in menu[1]:
                 if item:
                     menuEventDict[menu[0]][prepstr(item[0])[1]] = item[1]
-        for menubarItem in self.menudict.keys():
+        for menubarItem in self.menudict:
             menu = self.menudict[menubarItem]
             end = menu.index(END) + 1
             for index in range(0, end):
@@ -648,8 +650,8 @@ class EditorWindow(object):
                     if accel:
                         itemName = menu.entrycget(index, 'label')
                         event = ''
-                        if menuEventDict.has_key(menubarItem):
-                            if menuEventDict[menubarItem].has_key(itemName):
+                        if menubarItem in menuEventDict:
+                            if itemName in menuEventDict[menubarItem]:
                                 event = menuEventDict[menubarItem][itemName]
                         if event:
                             accel = get_accelerator(keydefs, event)
@@ -718,7 +720,7 @@ class EditorWindow(object):
         finally:
             rf_file.close()
         # for each edit window instance, construct the recent files menu
-        for instance in self.top.instance_dict.keys():
+        for instance in self.top.instance_dict:
             menu = instance.recent_files_menu
             menu.delete(1, END)  # clear, and rebuild:
             for i, file in zip(count(), rf_list):
@@ -802,8 +804,7 @@ class EditorWindow(object):
         "Return (width, height, x, y)"
         geom = self.top.wm_geometry()
         m = re.match(r"(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", geom)
-        tuple = (map(int, m.groups()))
-        return tuple
+        return list(map(int, m.groups()))
 
     def close_event(self, event):
         self.close()
@@ -849,7 +850,7 @@ class EditorWindow(object):
         self.load_standard_extensions()
 
     def unload_extensions(self):
-        for ins in self.extensions.values():
+        for ins in list(self.extensions.values()):
             if hasattr(ins, "close"):
                 ins.close()
         self.extensions = {}
@@ -859,8 +860,7 @@ class EditorWindow(object):
             try:
                 self.load_extension(name)
             except:
-                print "Failed to load extension", repr(name)
-                import traceback
+                print("Failed to load extension", repr(name))
                 traceback.print_exc()
 
     def get_standard_extension_names(self):
@@ -870,8 +870,8 @@ class EditorWindow(object):
         try:
             mod = __import__(name, globals(), locals(), [])
         except ImportError:
-            print "\nFailed to import extension: ", name
-            return
+            print("\nFailed to import extension: ", name)
+            raise
         cls = getattr(mod, name)
         keydefs = idleConf.GetExtensionBindings(name)
         if hasattr(cls, "menudefs"):
@@ -880,7 +880,7 @@ class EditorWindow(object):
         self.extensions[name] = ins
         if keydefs:
             self.apply_bindings(keydefs)
-            for vevent in keydefs.keys():
+            for vevent in keydefs:
                 methodname = vevent.replace("-", "_")
                 while methodname[:1] == '<':
                     methodname = methodname[1:]
@@ -942,14 +942,14 @@ class EditorWindow(object):
             value = var.get()
             return value
         else:
-            raise NameError, name
+            raise NameError(name)
 
     def setvar(self, name, value, vartype=None):
         var = self.get_var_obj(name, vartype)
         if var:
             var.set(value)
         else:
-            raise NameError, name
+            raise NameError(name)
 
     def get_var_obj(self, name, vartype=None):
         var = self.tkinter_vars.get(name)
@@ -990,34 +990,31 @@ class EditorWindow(object):
     # Return the text widget's current view of what a tab stop means
     # (equivalent width in spaces).
 
-    def get_tabwidth(self):
+    def get_tk_tabwidth(self):
         current = self.text['tabs'] or TK_TABWIDTH_DEFAULT
         return int(current)
 
     # Set the text widget's current view of what a tab stop means.
 
-    def set_tabwidth(self, newtabwidth):
+    def set_tk_tabwidth(self, newtabwidth):
         text = self.text
-        if self.get_tabwidth() != newtabwidth:
+        if self.get_tk_tabwidth() != newtabwidth:
+            # Set text widget tab width
             pixels = text.tk.call("font", "measure", text["font"],
                                   "-displayof", text.master,
                                   "n" * newtabwidth)
             text.configure(tabs=pixels)
 
-    # If ispythonsource and guess are true, guess a good value for
-    # indentwidth based on file content (if possible), and if
-    # indentwidth != tabwidth set usetabs false.
-    # In any case, adjust the Text widget's view of what a tab
-    # character means.
+### begin autoindent code ###  (configuration was moved to beginning of class)
 
-    def set_indentation_params(self, ispythonsource, guess=True):
-        if guess and ispythonsource:
+    def set_indentation_params(self, is_py_src, guess=True):
+        if is_py_src and guess:
             i = self.guess_indent()
             if 2 <= i <= 8:
                 self.indentwidth = i
             if self.indentwidth != self.tabwidth:
                 self.usetabs = False
-        self.set_tabwidth(self.tabwidth)
+        self.set_tk_tabwidth(self.tabwidth)
 
     def smart_backspace_event(self, event):
         text = self.text
@@ -1138,7 +1135,7 @@ class EditorWindow(object):
             if not self.context_use_ps1:
                 for context in self.num_context_lines:
                     startat = max(lno - context, 1)
-                    startatindex = `startat` + ".0"
+                    startatindex = repr(startat) + ".0"
                     rawtext = text.get(startatindex, "insert")
                     y.set_str(rawtext)
                     bod = y.find_good_parse_start(

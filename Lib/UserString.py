@@ -20,25 +20,49 @@ class UserString:
     def __str__(self): return str(self.data)
     def __repr__(self): return repr(self.data)
     def __int__(self): return int(self.data)
-    def __long__(self): return long(self.data)
+    def __long__(self): return int(self.data)
     def __float__(self): return float(self.data)
     def __complex__(self): return complex(self.data)
     def __hash__(self): return hash(self.data)
 
-    def __cmp__(self, string):
+    def __eq__(self, string):
         if isinstance(string, UserString):
-            return cmp(self.data, string.data)
+            return self.data == string.data
         else:
-            return cmp(self.data, string)
+            return self.data == string
+    def __ne__(self, string):
+        if isinstance(string, UserString):
+            return self.data != string.data
+        else:
+            return self.data != string
+    def __lt__(self, string):
+        if isinstance(string, UserString):
+            return self.data < string.data
+        else:
+            return self.data < string
+    def __le__(self, string):
+        if isinstance(string, UserString):
+            return self.data <= string.data
+        else:
+            return self.data <= string
+    def __gt__(self, string):
+        if isinstance(string, UserString):
+            return self.data > string.data
+        else:
+            return self.data > string
+    def __ge__(self, string):
+        if isinstance(string, UserString):
+            return self.data >= string.data
+        else:
+            return self.data >= string
+
     def __contains__(self, char):
+        if isinstance(char, UserString):
+            char = char.data
         return char in self.data
 
     def __len__(self): return len(self.data)
     def __getitem__(self, index): return self.__class__(self.data[index])
-    def __getslice__(self, start, end):
-        start = max(start, 0); end = max(end, 0)
-        return self.__class__(self.data[start:end])
-
     def __add__(self, other):
         if isinstance(other, UserString):
             return self.__class__(self.data + other.data)
@@ -62,6 +86,8 @@ class UserString:
     def center(self, width, *args):
         return self.__class__(self.data.center(width, *args))
     def count(self, sub, start=0, end=sys.maxint):
+        if isinstance(sub, UserString):
+            sub = sub.data
         return self.data.count(sub, start, end)
     def decode(self, encoding=None, errors=None): # XXX improve this?
         if encoding:
@@ -84,6 +110,8 @@ class UserString:
     def expandtabs(self, tabsize=8):
         return self.__class__(self.data.expandtabs(tabsize))
     def find(self, sub, start=0, end=sys.maxint):
+        if isinstance(sub, UserString):
+            sub = sub.data
         return self.data.find(sub, start, end)
     def index(self, sub, start=0, end=sys.maxint):
         return self.data.index(sub, start, end)
@@ -104,6 +132,10 @@ class UserString:
     def partition(self, sep):
         return self.data.partition(sep)
     def replace(self, old, new, maxsplit=-1):
+        if isinstance(old, UserString):
+            old = old.data
+        if isinstance(new, UserString):
+            new = new.data
         return self.__class__(self.data.replace(old, new, maxsplit))
     def rfind(self, sub, start=0, end=sys.maxint):
         return self.data.rfind(sub, start, end)
@@ -147,7 +179,7 @@ class MutableString(UserString):
     def __init__(self, string=""):
         self.data = string
     def __hash__(self):
-        raise TypeError, "unhashable type (it is mutable)"
+        raise TypeError("unhashable type (it is mutable)")
     def __setitem__(self, index, sub):
         if isinstance(index, slice):
             if isinstance(sub, UserString):
@@ -161,7 +193,7 @@ class MutableString(UserString):
             elif step != 1:
                 # XXX(twouters): I guess we should be reimplementing
                 # the extended slice assignment/deletion algorithm here...
-                raise TypeError, "invalid step in slicing assignment"
+                raise TypeError("invalid step in slicing assignment")
             start = min(start, stop)
             self.data = self.data[:start] + sub + self.data[stop:]
         else:
@@ -176,7 +208,7 @@ class MutableString(UserString):
                 start, stop = stop+1, start+1
             elif step != 1:
                 # XXX(twouters): see same block in __setitem__
-                raise TypeError, "invalid step in slicing deletion"
+                raise TypeError("invalid step in slicing deletion")
             start = min(start, stop)
             self.data = self.data[:start] + self.data[stop:]
         else:
@@ -184,17 +216,6 @@ class MutableString(UserString):
                 index += len(self.data)
             if index < 0 or index >= len(self.data): raise IndexError
             self.data = self.data[:index] + self.data[index+1:]
-    def __setslice__(self, start, end, sub):
-        start = max(start, 0); end = max(end, 0)
-        if isinstance(sub, UserString):
-            self.data = self.data[:start]+sub.data+self.data[end:]
-        elif isinstance(sub, basestring):
-            self.data = self.data[:start]+sub+self.data[end:]
-        else:
-            self.data =  self.data[:start]+str(sub)+self.data[end:]
-    def __delslice__(self, start, end):
-        start = max(start, 0); end = max(end, 0)
-        self.data = self.data[:start] + self.data[end:]
     def immutable(self):
         return UserString(self.data)
     def __iadd__(self, other):

@@ -19,14 +19,14 @@ class Finder_Basics_Events:
         _code = 'misc'
         _subcode = 'copy'
 
-        if _arguments: raise TypeError, 'No optional args expected'
-        if _no_object != None: raise TypeError, 'No direct arg expected'
+        if _arguments: raise TypeError('No optional args expected')
+        if _no_object != None: raise TypeError('No direct arg expected')
 
 
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -52,7 +52,7 @@ class Finder_Basics_Events:
         _reply, _arguments, _attributes = self.send(_code, _subcode,
                 _arguments, _attributes)
         if _arguments.get('errn', 0):
-            raise aetools.Error, aetools.decodeerror(_arguments)
+            raise aetools.Error(aetools.decodeerror(_arguments))
         # XXXX Optionally decode result
         if _arguments.has_key('----'):
             return _arguments['----']
@@ -141,10 +141,10 @@ visible = _Prop_visible()
 #        element 'lwnd' as ['indx', 'name']
 #        element 'pack' as ['indx', 'name']
 application._superclassnames = []
-import Files
-import Window_classes
-import Containers_and_folders
-import Finder_items
+from . import Files
+from . import Window_classes
+from . import Containers_and_folders
+from . import Finder_items
 application._privpropdict = {
     'Finder_preferences' : _Prop_Finder_preferences,
     'clipboard' : _Prop_clipboard,

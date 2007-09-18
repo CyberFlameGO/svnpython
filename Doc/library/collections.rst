@@ -8,8 +8,6 @@
 .. sectionauthor:: Raymond Hettinger <python@rcn.com>
 
 
-.. versionadded:: 2.4
-
 This module implements high-performance container datatypes.  Currently,
 there are two datatypes, :class:`deque` and :class:`defaultdict`, and
 one datatype factory function, :func:`NamedTuple`. Python already
@@ -21,11 +19,54 @@ or file based ordered dictionaries with string keys.
 Future editions of the standard library may include balanced trees and
 ordered dictionaries.
 
-.. versionchanged:: 2.5
-   Added :class:`defaultdict`.
+In addition to containers, the collections module provides some ABCs
+(abstract base classes) that can be used to test whether
+a class provides a particular interface, for example, is it hashable or
+a mapping. The ABCs provided include those in the following table:
 
-.. versionchanged:: 2.6
-   Added :class:`NamedTuple`.
+=====================================  ========================================
+ABC                                    Notes
+=====================================  ========================================
+:class:`collections.Container`         Defines ``__contains__()``
+:class:`collections.Hashable`          Defines ``__hash__()``
+:class:`collections.Iterable`          Defines ``__iter__()``
+:class:`collections.Iterator`          Derived from :class:`Iterable` and in
+                                       addition defines ``__next__()``
+:class:`collections.Mapping`           Derived from :class:`Container`,
+                                       :class:`Iterable`,
+                                       and :class:`Sized`, and in addition
+                                       defines ``__getitem__()``, ``get()``,
+                                       ``__contains__()``, ``__len__()``,
+                                       ``__iter__()``, ``keys()``,
+                                       ``items()``, and ``values()``
+:class:`collections.MutableMapping`    Derived from :class:`Mapping`
+:class:`collections.MutableSequence`   Derived from :class:`Sequence`
+:class:`collections.MutableSet`        Derived from :class:`Set` and in
+                                       addition defines ``add()``,
+                                       ``clear()``, ``discard()``, ``pop()``,
+                                       and ``toggle()``
+:class:`collections.Sequence`          Derived from :class:`Container`,
+                                       :class:`Iterable`, and :class:`Sized`,
+                                       and in addition defines
+                                       ``__getitem__()``
+:class:`collections.Set`               Derived from :class:`Container`, :class:`Iterable`, and :class:`Sized`
+:class:`collections.Sized`             Defines ``__len__()``
+=====================================  ========================================
+
+.. XXX Have not included them all and the notes are imcomplete
+.. Deliberately did one row wide to get a neater output
+
+These ABCs allow us to ask classes or instances if they provide
+particular functionality, for example::
+
+    from collections import Sized
+
+    size = None
+    if isinstance(myvar, Sized):
+	size = len(myvar)
+
+(For more about ABCs, see the :mod:`abc` module and :pep:`3119`.)
+
 
 
 .. _deque-objects:
@@ -49,10 +90,8 @@ ordered dictionaries.
    ``pop(0)`` and ``insert(0, v)`` operations which change both the size and
    position of the underlying data representation.
 
-   .. versionadded:: 2.4
 
 Deque objects support the following methods:
-
 
 .. method:: deque.append(x)
 
@@ -99,8 +138,6 @@ Deque objects support the following methods:
    Removed the first occurrence of *value*.  If not found, raises a
    :exc:`ValueError`.
 
-   .. versionadded:: 2.5
-
 
 .. method:: deque.rotate(n)
 
@@ -117,7 +154,7 @@ Example::
    >>> from collections import deque
    >>> d = deque('ghi')                 # make a new deque with three items
    >>> for elem in d:                   # iterate over the deque's elements
-   ...     print elem.upper()	
+   ...     print(elem.upper())
    G
    H
    I
@@ -200,13 +237,13 @@ the tasklist if the input stream is not exhausted::
    ...     while pending:
    ...         task = pending.popleft()
    ...         try:
-   ...             yield task.next()
+   ...             yield next(task)
    ...         except StopIteration:
    ...             continue
    ...         pending.append(task)
    ...
    >>> for value in roundrobin('abc', 'd', 'efgh'):
-   ...     print value
+   ...     print(value)
 
    a
    d
@@ -233,7 +270,7 @@ two adjacent nodes into one by grouping them in a list::
    ...         d.append(pair)
    ...     return list(d)
    ...
-   >>> print maketree('abcdefgh')
+   >>> print(maketree('abcdefgh'))
    [[[['a', 'b'], ['c', 'd']], [['e', 'f'], ['g', 'h']]]]
 
 
@@ -256,11 +293,9 @@ two adjacent nodes into one by grouping them in a list::
    as if they were passed to the :class:`dict` constructor, including keyword
    arguments.
 
-   .. versionadded:: 2.5
 
 :class:`defaultdict` objects support the following method in addition to the
 standard :class:`dict` operations:
-
 
 .. method:: defaultdict.__missing__(key)
 
@@ -336,11 +371,11 @@ zero.  The increment operation then builds up the count for each letter.
 
 The function :func:`int` which always returns zero is just a special case of
 constant functions.  A faster and more flexible way to create constant functions
-is to use :func:`itertools.repeat` which can supply any constant value (not just
+is to use a lambda function which can supply any constant value (not just
 zero)::
 
    >>> def constant_factory(value):
-   ...     return itertools.repeat(value).next
+   ...     return lambda: value
    >>> d = defaultdict(constant_factory('<missing>'))
    >>> d.update(name='John', action='ran')
    >>> '%(name)s %(action)s to %(object)s' % d
@@ -364,7 +399,7 @@ Setting the :attr:`default_factory` to :class:`set` makes the
 --------------------------------------------
 
 
-.. function:: NamedTuple(typename, fieldnames, [verbose])
+.. function:: NamedTuple(typename, fieldnames)
 
    Returns a new tuple subclass named *typename*.  The new subclass is used to
    create tuple-like objects that have fields accessable by attribute lookup as
@@ -372,10 +407,8 @@ Setting the :attr:`default_factory` to :class:`set` makes the
    helpful docstring (with typename and fieldnames) and a helpful :meth:`__repr__`
    method which lists the tuple contents in a ``name=value`` format.
 
-   .. versionadded:: 2.6
-
-   The *fieldnames* are specified in a single string and are separated by spaces
-   and/or commas.  Any valid Python identifier may be used for a field name.
+   The *fieldnames* are specified in a single string and are separated by spaces.
+   Any valid Python identifier may be used for a field name.
 
    Example::
 
@@ -395,71 +428,22 @@ Setting the :attr:`default_factory` to :class:`set` makes the
 
    The use cases are the same as those for tuples.  The named factories assign
    meaning to each tuple position and allow for more readable, self-documenting
-   code.  Named tuples can also be used to assign field names to tuples returned
+   code.  Named tuples can also be used to assign field names  to tuples returned
    by the :mod:`csv` or :mod:`sqlite3` modules. For example::
 
       from itertools import starmap
       import csv
       EmployeeRecord = NamedTuple('EmployeeRecord', 'name age title department paygrade')
       for record in starmap(EmployeeRecord, csv.reader(open("employees.csv", "rb"))):
-          print record
+          print(record)
 
    To cast an individual record stored as :class:`list`, :class:`tuple`, or some
    other iterable type, use the star-operator [#]_ to unpack the values::
 
       >>> Color = NamedTuple('Color', 'name code')
       >>> m = dict(red=1, green=2, blue=3)
-      >>> print Color(*m.popitem())
+      >>> print(Color(*m.popitem()))
       Color(name='blue', code=3)
-
-   If *verbose* is true, the *NamedTuple* call will print the class definition::
-
-       >>> Point = NamedTuple('Point', 'x y', verbose=True)
-       class Point(tuple):
-               'Point(x, y)'
-               __slots__ = ()
-               __fields__ = ('x', 'y')
-               def __new__(cls, x, y):
-                   return tuple.__new__(cls, (x, y))
-               def __repr__(self):
-                   return 'Point(x=%r, y=%r)' % self
-               def __replace__(self, field, value):
-                   'Return a new Point object replacing one field with a new value'
-                   return Point(**dict(zip(('x', 'y'), self) + [(field, value)]))
-               x = property(itemgetter(0))
-               y = property(itemgetter(1))
-
-In addition to the methods inherited from tuples, named tuples support
-an additonal method and an informational read-only attribute.
-
-.. method:: somenamedtuple.replace(field, value)
-
-   Return a new instance of the named tuple with *field* replaced with *value*.
-
-   Examples::
-
-      >>> p = Point(x=11, y=22)      
-      >>> p.__replace__('x', 33)
-      Point(x=33, y=22)
-
-      >>> for recordnum, record in inventory:
-      ...     inventory[recordnum] = record.replace('total', record.price * record.quantity)
-
-
-.. attribute:: somenamedtuple.__fields__
-
-   Return a tuple of strings listing the field names.  This is useful for introspection,
-   for converting a named tuple instance to a dictionary, and for creating new named tuple
-   types from existing types.
-
-   Examples::
-
-      >>> dict(zip(p.__fields__, p))           # make a dictionary from a named tuple instance
-      {'y': 20, 'x': 10}
-
-      >>> ColorPoint = NamedTuple('ColorPoint', ' '.join(Point.__fields__) + ' color')
-      >>> ColorPoint(10, 20, 'red')
-      ColorPoint(x=10, y=20, color='red')
 
 .. rubric:: Footnotes
 

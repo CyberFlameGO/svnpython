@@ -41,10 +41,7 @@ import urllib
 import mimetools
 import rfc822
 import UserDict
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO
 
 __all__ = ["MiniFieldStorage", "FieldStorage", "FormContentDict",
            "SvFormContentDict", "InterpFormContentDict", "FormContent",
@@ -143,7 +140,7 @@ def parse(fp=None, environ=os.environ, keep_blank_values=0, strict_parsing=0):
         elif ctype == 'application/x-www-form-urlencoded':
             clength = int(environ['CONTENT_LENGTH'])
             if maxlen and clength > maxlen:
-                raise ValueError, 'Maximum content length exceeded'
+                raise ValueError('Maximum content length exceeded')
             qs = fp.read(clength)
         else:
             qs = ''                     # Unknown content-type
@@ -218,7 +215,7 @@ def parse_qsl(qs, keep_blank_values=0, strict_parsing=0):
         nv = name_value.split('=', 1)
         if len(nv) != 2:
             if strict_parsing:
-                raise ValueError, "bad query field: %r" % (name_value,)
+                raise ValueError("bad query field: %r" % (name_value,))
             # Handle case of a control-name with no equal sign
             if keep_blank_values:
                 nv.append('')
@@ -261,7 +258,7 @@ def parse_multipart(fp, pdict):
     if 'boundary' in pdict:
         boundary = pdict['boundary']
     if not valid_boundary(boundary):
-        raise ValueError,  ('Invalid boundary in multipart form: %r'
+        raise ValueError('Invalid boundary in multipart form: %r'
                             % (boundary,))
 
     nextpart = "--" + boundary
@@ -283,7 +280,7 @@ def parse_multipart(fp, pdict):
                     pass
             if bytes > 0:
                 if maxlen and bytes > maxlen:
-                    raise ValueError, 'Maximum content length exceeded'
+                    raise ValueError('Maximum content length exceeded')
                 data = fp.read(bytes)
             else:
                 data = ""
@@ -523,7 +520,7 @@ class FieldStorage:
             except ValueError:
                 pass
             if maxlen and clen > maxlen:
-                raise ValueError, 'Maximum content length exceeded'
+                raise ValueError('Maximum content length exceeded')
         self.length = clen
 
         self.list = self.file = None
@@ -545,7 +542,7 @@ class FieldStorage:
 
     def __getattr__(self, name):
         if name != 'value':
-            raise AttributeError, name
+            raise AttributeError(name)
         if self.file:
             self.file.seek(0)
             value = self.file.read()
@@ -559,12 +556,12 @@ class FieldStorage:
     def __getitem__(self, key):
         """Dictionary style indexing."""
         if self.list is None:
-            raise TypeError, "not indexable"
+            raise TypeError("not indexable")
         found = []
         for item in self.list:
             if item.name == key: found.append(item)
         if not found:
-            raise KeyError, key
+            raise KeyError(key)
         if len(found) == 1:
             return found[0]
         else:
@@ -575,7 +572,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return [x.value for x in value]
             else:
                 return value.value
         else:
@@ -597,7 +594,7 @@ class FieldStorage:
         if key in self:
             value = self[key]
             if type(value) is type([]):
-                return map(attrgetter('value'), value)
+                return [x.value for x in value]
             else:
                 return [value.value]
         else:
@@ -606,24 +603,16 @@ class FieldStorage:
     def keys(self):
         """Dictionary style keys() method."""
         if self.list is None:
-            raise TypeError, "not indexable"
+            raise TypeError("not indexable")
         keys = []
         for item in self.list:
             if item.name not in keys: keys.append(item.name)
         return keys
 
-    def has_key(self, key):
-        """Dictionary style has_key() method."""
-        if self.list is None:
-            raise TypeError, "not indexable"
-        for item in self.list:
-            if item.name == key: return True
-        return False
-
     def __contains__(self, key):
         """Dictionary style __contains__ method."""
         if self.list is None:
-            raise TypeError, "not indexable"
+            raise TypeError("not indexable")
         for item in self.list:
             if item.name == key: return True
         return False
@@ -647,7 +636,7 @@ class FieldStorage:
         """Internal: read a part that is itself multipart."""
         ib = self.innerboundary
         if not valid_boundary(ib):
-            raise ValueError, 'Invalid boundary in multipart form: %r' % (ib,)
+            raise ValueError('Invalid boundary in multipart form: %r' % (ib,))
         self.list = []
         klass = self.FieldStorageClass or self.__class__
         part = klass(self.fp, {}, ib,
@@ -673,7 +662,7 @@ class FieldStorage:
 
     def read_binary(self):
         """Internal: read binary data."""
-        self.file = self.make_file('b')
+        self.file = self.make_file()
         todo = self.length
         if todo >= 0:
             while todo > 0:
@@ -695,8 +684,9 @@ class FieldStorage:
     def __write(self, line):
         if self.__file is not None:
             if self.__file.tell() + len(line) > 1000:
-                self.file = self.make_file('')
-                self.file.write(self.__file.getvalue())
+                self.file = self.make_file()
+                data = self.__file.getvalue()
+                self.file.write(data)
                 self.__file = None
         self.file.write(line)
 
@@ -762,7 +752,7 @@ class FieldStorage:
                     break
             last_line_lfend = line.endswith('\n')
 
-    def make_file(self, binary=None):
+    def make_file(self):
         """Overridable: return a readable & writable file.
 
         The file will be used as follows:
@@ -770,8 +760,7 @@ class FieldStorage:
         - seek(0)
         - data is read from it
 
-        The 'binary' argument is unused -- the file is always opened
-        in binary mode.
+        The file is always opened in text mode.
 
         This version opens a temporary file for reading and writing,
         and immediately deletes (unlinks) it.  The trick (on Unix!) is
@@ -787,7 +776,7 @@ class FieldStorage:
 
         """
         import tempfile
-        return tempfile.TemporaryFile("w+b")
+        return tempfile.TemporaryFile("w+", encoding="utf-8", newline="\n")
 
 
 
@@ -828,7 +817,7 @@ class SvFormContentDict(FormContentDict):
     """
     def __getitem__(self, key):
         if len(self.dict[key]) > 1:
-            raise IndexError, 'expecting a single value'
+            raise IndexError('expecting a single value')
         return self.dict[key][0]
     def getlist(self, key):
         return self.dict[key]
@@ -909,8 +898,8 @@ def test(environ=os.environ):
     the script in HTML form.
 
     """
-    print "Content-type: text/html"
-    print
+    print("Content-type: text/html")
+    print()
     sys.stderr = sys.stdout
     try:
         form = FieldStorage()   # Replace with other classes to test those
@@ -920,15 +909,15 @@ def test(environ=os.environ):
         print_environ(environ)
         print_environ_usage()
         def f():
-            exec "testing print_exception() -- <I>italics?</I>"
+            exec("testing print_exception() -- <I>italics?</I>")
         def g(f=f):
             f()
-        print "<H3>What follows is a test, not an actual exception:</H3>"
+        print("<H3>What follows is a test, not an actual exception:</H3>")
         g()
     except:
         print_exception()
 
-    print "<H1>Second try with a small maxlen...</H1>"
+    print("<H1>Second try with a small maxlen...</H1>")
 
     global maxlen
     maxlen = 50
@@ -945,67 +934,65 @@ def print_exception(type=None, value=None, tb=None, limit=None):
     if type is None:
         type, value, tb = sys.exc_info()
     import traceback
-    print
-    print "<H3>Traceback (most recent call last):</H3>"
+    print()
+    print("<H3>Traceback (most recent call last):</H3>")
     list = traceback.format_tb(tb, limit) + \
            traceback.format_exception_only(type, value)
-    print "<PRE>%s<B>%s</B></PRE>" % (
+    print("<PRE>%s<B>%s</B></PRE>" % (
         escape("".join(list[:-1])),
         escape(list[-1]),
-        )
+        ))
     del tb
 
 def print_environ(environ=os.environ):
     """Dump the shell environment as HTML."""
-    keys = environ.keys()
-    keys.sort()
-    print
-    print "<H3>Shell Environment:</H3>"
-    print "<DL>"
+    keys = sorted(environ.keys())
+    print()
+    print("<H3>Shell Environment:</H3>")
+    print("<DL>")
     for key in keys:
-        print "<DT>", escape(key), "<DD>", escape(environ[key])
-    print "</DL>"
-    print
+        print("<DT>", escape(key), "<DD>", escape(environ[key]))
+    print("</DL>")
+    print()
 
 def print_form(form):
     """Dump the contents of a form as HTML."""
-    keys = form.keys()
-    keys.sort()
-    print
-    print "<H3>Form Contents:</H3>"
+    keys = sorted(form.keys())
+    print()
+    print("<H3>Form Contents:</H3>")
     if not keys:
-        print "<P>No form fields."
-    print "<DL>"
+        print("<P>No form fields.")
+    print("<DL>")
     for key in keys:
-        print "<DT>" + escape(key) + ":",
+        print("<DT>" + escape(key) + ":", end=' ')
         value = form[key]
-        print "<i>" + escape(repr(type(value))) + "</i>"
-        print "<DD>" + escape(repr(value))
-    print "</DL>"
-    print
+        print("<i>" + escape(repr(type(value))) + "</i>")
+        print("<DD>" + escape(repr(value)))
+    print("</DL>")
+    print()
 
 def print_directory():
     """Dump the current directory as HTML."""
-    print
-    print "<H3>Current Working Directory:</H3>"
+    print()
+    print("<H3>Current Working Directory:</H3>")
     try:
         pwd = os.getcwd()
-    except os.error, msg:
-        print "os.error:", escape(str(msg))
+    except os.error as msg:
+        print("os.error:", escape(str(msg)))
     else:
-        print escape(pwd)
-    print
+        print(escape(pwd))
+    print()
 
 def print_arguments():
-    print
-    print "<H3>Command Line Arguments:</H3>"
-    print
-    print sys.argv
-    print
+    print()
+    print("<H3>Command Line Arguments:</H3>")
+    print()
+    print(sys.argv)
+    print()
 
 def print_environ_usage():
     """Dump a list of environment variables used by CGI as HTML."""
-    print """
+    print("""
 <H3>These environment variables could have been set:</H3>
 <UL>
 <LI>AUTH_TYPE
@@ -1044,7 +1031,7 @@ environment as well.  Here are some common variable names:
 <LI>HTTP_REFERER
 <LI>HTTP_USER_AGENT
 </UL>
-"""
+""")
 
 
 # Utilities

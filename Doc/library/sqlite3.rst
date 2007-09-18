@@ -7,8 +7,6 @@
 .. sectionauthor:: Gerhard HÃ¤ring <gh@ghaering.de>
 
 
-.. versionadded:: 2.5
-
 SQLite is a C library that provides a lightweight disk-based database that
 doesn't require a separate server process and allows accessing the database
 using a nonstandard variant of the SQL query language. Some applications can use
@@ -81,7 +79,7 @@ This example uses the iterator form::
    >>> c = conn.cursor()
    >>> c.execute('select * from stocks order by price')
    >>> for row in c:
-   ...    print row
+   ...    print(row)
    ...
    (u'2006-01-05', u'BUY', u'RHAT', 100, 35.140000000000001)
    (u'2006-03-28', u'BUY', u'IBM', 1000, 45.0)
@@ -546,11 +544,6 @@ Registering an adapter callable
 
 The other possibility is to create a function that converts the type to the
 string representation and register the function with :meth:`register_adapter`.
-
-.. note::
-
-   The type/class to adapt must be a new-style class, i. e. it must have
-   :class:`object` as one of its bases.
 
 .. literalinclude:: ../includes/sqlite3/adapter_point_2.py
 

@@ -29,6 +29,7 @@ __all__ = [
 
 # Imports.
 
+import io as _io
 import os as _os
 import errno as _errno
 from random import Random as _Random
@@ -36,11 +37,6 @@ from random import Random as _Random
 if _os.name == 'mac':
     import Carbon.Folder as _Folder
     import Carbon.Folders as _Folders
-
-try:
-    from cStringIO import StringIO as _StringIO
-except:
-    from StringIO import StringIO as _StringIO
 
 try:
     import fcntl as _fcntl
@@ -130,7 +126,7 @@ class _RandomNameSequence:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         m = self.mutex
         c = self.characters
         choose = self.rng.choice
@@ -163,9 +159,6 @@ def _candidate_tempdir_list():
             dirlist.append(dirname)
         except _Folder.error:
             pass
-    elif _os.name == 'riscos':
-        dirname = _os.getenv('Wimp$ScrapDir')
-        if dirname: dirlist.append(dirname)
     elif _os.name == 'nt':
         dirlist.extend([ r'c:\temp', r'c:\tmp', r'\temp', r'\tmp' ])
     else:
@@ -196,23 +189,23 @@ def _get_default_tempdir():
         if dir != _os.curdir:
             dir = _os.path.normcase(_os.path.abspath(dir))
         # Try only a few names per directory.
-        for seq in xrange(100):
-            name = namer.next()
+        for seq in range(100):
+            name = next(namer)
             filename = _os.path.join(dir, name)
             try:
-                fd = _os.open(filename, flags, 0600)
-                fp = _os.fdopen(fd, 'w')
-                fp.write('blat')
+                fd = _os.open(filename, flags, 0o600)
+                fp = _io.open(fd, 'wb')
+                fp.write(b'blat')
                 fp.close()
                 _os.unlink(filename)
                 del fp, fd
                 return dir
-            except (OSError, IOError), e:
+            except (OSError, IOError) as e:
                 if e[0] != _errno.EEXIST:
                     break # no point trying more names in this directory
                 pass
-    raise IOError, (_errno.ENOENT,
-                    ("No usable temporary directory found in %s" % dirlist))
+    raise IOError(_errno.ENOENT,
+                  "No usable temporary directory found in %s" % dirlist)
 
 _name_sequence = None
 
@@ -235,19 +228,19 @@ def _mkstemp_inner(dir, pre, suf, flags):
 
     names = _get_candidate_names()
 
-    for seq in xrange(TMP_MAX):
-        name = names.next()
+    for seq in range(TMP_MAX):
+        name = next(names)
         file = _os.path.join(dir, pre + name + suf)
         try:
-            fd = _os.open(file, flags, 0600)
+            fd = _os.open(file, flags, 0o600)
             _set_cloexec(fd)
             return (fd, _os.path.abspath(file))
-        except OSError, e:
+        except OSError as e:
             if e.errno == _errno.EEXIST:
                 continue # try again
             raise
 
-    raise IOError, (_errno.EEXIST, "No usable temporary file name found")
+    raise IOError(_errno.EEXIST, "No usable temporary file name found")
 
 
 # User visible interfaces.
@@ -327,18 +320,18 @@ def mkdtemp(suffix="", prefix=template, dir=None):
 
     names = _get_candidate_names()
 
-    for seq in xrange(TMP_MAX):
-        name = names.next()
+    for seq in range(TMP_MAX):
+        name = next(names)
         file = _os.path.join(dir, prefix + name + suffix)
         try:
-            _os.mkdir(file, 0700)
+            _os.mkdir(file, 0o700)
             return file
-        except OSError, e:
+        except OSError as e:
             if e.errno == _errno.EEXIST:
                 continue # try again
             raise
 
-    raise IOError, (_errno.EEXIST, "No usable temporary directory name found")
+    raise IOError(_errno.EEXIST, "No usable temporary directory name found")
 
 def mktemp(suffix="", prefix=template, dir=None):
     """mktemp([suffix, [prefix, [dir]]])
@@ -362,13 +355,13 @@ def mktemp(suffix="", prefix=template, dir=None):
         dir = gettempdir()
 
     names = _get_candidate_names()
-    for seq in xrange(TMP_MAX):
-        name = names.next()
+    for seq in range(TMP_MAX):
+        name = next(names)
         file = _os.path.join(dir, prefix + name + suffix)
         if not _exists(file):
             return file
 
-    raise IOError, (_errno.EEXIST, "No usable temporary filename found")
+    raise IOError(_errno.EEXIST, "No usable temporary filename found")
 
 class _TemporaryFileWrapper:
     """Temporary file wrapper
@@ -413,13 +406,16 @@ class _TemporaryFileWrapper:
         def __del__(self):
             self.close()
 
-def NamedTemporaryFile(mode='w+b', bufsize=-1, suffix="",
-                       prefix=template, dir=None, delete=True):
+def NamedTemporaryFile(mode='w+b', buffering=-1, encoding=None,
+                       newline=None, suffix="", prefix=template,
+                       dir=None, delete=True):
     """Create and return a temporary file.
     Arguments:
     'prefix', 'suffix', 'dir' -- as for mkstemp.
-    'mode' -- the mode argument to os.fdopen (default "w+b").
-    'bufsize' -- the buffer size argument to os.fdopen (default -1).
+    'mode' -- the mode argument to io.open (default "w+b").
+    'buffering' -- the buffer size argument to io.open (default -1).
+    'encoding' -- the encoding argument to io.open (default None)
+    'newline' -- the newline argument to io.open (default None)
     'delete' -- whether the file is deleted on close (default True).
     The file is created as mkstemp() would do it.
 
@@ -442,7 +438,9 @@ def NamedTemporaryFile(mode='w+b', bufsize=-1, suffix="",
         flags |= _os.O_TEMPORARY
 
     (fd, name) = _mkstemp_inner(dir, prefix, suffix, flags)
-    file = _os.fdopen(fd, mode, bufsize)
+    file = _io.open(fd, mode, buffering=buffering,
+                    newline=newline, encoding=encoding)
+
     return _TemporaryFileWrapper(file, name, delete)
 
 if _os.name != 'posix' or _os.sys.platform == 'cygwin':
@@ -451,13 +449,16 @@ if _os.name != 'posix' or _os.sys.platform == 'cygwin':
     TemporaryFile = NamedTemporaryFile
 
 else:
-    def TemporaryFile(mode='w+b', bufsize=-1, suffix="",
-                      prefix=template, dir=None):
+    def TemporaryFile(mode='w+b', buffering=-1, encoding=None,
+                      newline=None, suffix="", prefix=template,
+                      dir=None):
         """Create and return a temporary file.
         Arguments:
         'prefix', 'suffix', 'dir' -- as for mkstemp.
-        'mode' -- the mode argument to os.fdopen (default "w+b").
-        'bufsize' -- the buffer size argument to os.fdopen (default -1).
+        'mode' -- the mode argument to io.open (default "w+b").
+        'buffering' -- the buffer size argument to io.open (default -1).
+        'encoding' -- the encoding argument to io.open (default None)
+        'newline' -- the newline argument to io.open (default None)
         The file is created as mkstemp() would do it.
 
         Returns an object with a file-like interface.  The file has no
@@ -475,7 +476,8 @@ else:
         (fd, name) = _mkstemp_inner(dir, prefix, suffix, flags)
         try:
             _os.unlink(name)
-            return _os.fdopen(fd, mode, bufsize)
+            return _io.open(fd, mode, buffering=buffering,
+                            newline=newline, encoding=encoding)
         except:
             _os.close(fd)
             raise
@@ -487,12 +489,19 @@ class SpooledTemporaryFile:
     """
     _rolled = False
 
-    def __init__(self, max_size=0, mode='w+b', bufsize=-1,
+    def __init__(self, max_size=0, mode='w+b', buffering=-1,
+                 encoding=None, newline=None,
                  suffix="", prefix=template, dir=None):
-        self._file = _StringIO()
+        if 'b' in mode:
+            self._file = _io.BytesIO()
+        else:
+            self._file = _io.StringIO(encoding=encoding, newline=newline)
         self._max_size = max_size
         self._rolled = False
-        self._TemporaryFileArgs = (mode, bufsize, suffix, prefix, dir)
+        self._TemporaryFileArgs = {'mode': mode, 'buffering': buffering,
+                                   'suffix': suffix, 'prefix': prefix,
+                                   'encoding': encoding, 'newline': newline,
+                                   'dir': dir}
 
     def _check(self, file):
         if self._rolled: return
@@ -503,7 +512,7 @@ class SpooledTemporaryFile:
     def rollover(self):
         if self._rolled: return
         file = self._file
-        newfile = self._file = TemporaryFile(*self._TemporaryFileArgs)
+        newfile = self._file = TemporaryFile(**self._TemporaryFileArgs)
         del self._TemporaryFileArgs
 
         newfile.write(file.getvalue())

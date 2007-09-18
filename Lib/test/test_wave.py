@@ -4,7 +4,7 @@ import wave
 
 def check(t, msg=None):
     if not t:
-        raise TestFailed, msg
+        raise TestFailed(msg)
 
 nchannels = 2
 sampwidth = 2
@@ -16,7 +16,7 @@ f.setnchannels(nchannels)
 f.setsampwidth(sampwidth)
 f.setframerate(framerate)
 f.setnframes(nframes)
-output = '\0' * nframes * nchannels * sampwidth
+output = b'\0' * nframes * nchannels * sampwidth
 f.writeframes(output)
 f.close()
 

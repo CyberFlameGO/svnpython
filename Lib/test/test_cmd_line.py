@@ -4,7 +4,7 @@ import sys
 import subprocess
 
 def _spawn_python(*args):
-    cmd_line = [sys.executable, '-E']
+    cmd_line = [sys.executable]
     cmd_line.extend(args)
     return subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -24,7 +24,7 @@ class CmdLineTest(unittest.TestCase):
         return _kill_python(p)
 
     def exit_code(self, *args):
-        cmd_line = [sys.executable, '-E']
+        cmd_line = [sys.executable]
         cmd_line.extend(args)
         return subprocess.call(cmd_line, stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE)
@@ -35,8 +35,11 @@ class CmdLineTest(unittest.TestCase):
 
     def verify_valid_flag(self, cmd_line):
         data = self.start_python(cmd_line)
-        self.assertTrue(data == '' or data.endswith('\n'))
-        self.assertTrue('Traceback' not in data)
+        self.assertTrue(data == b'' or data.endswith(b'\n'))
+        self.assertTrue(b'Traceback' not in data)
+
+    def test_environment(self):
+        self.verify_valid_flag('-E')
 
     def test_optimize(self):
         self.verify_valid_flag('-O')
@@ -52,10 +55,10 @@ class CmdLineTest(unittest.TestCase):
         self.verify_valid_flag('-S')
 
     def test_usage(self):
-        self.assertTrue('usage' in self.start_python('-h'))
+        self.assertTrue(b'usage' in self.start_python('-h'))
 
     def test_version(self):
-        version = 'Python %d.%d' % sys.version_info[:2]
+        version = ('Python %d.%d' % sys.version_info[:2]).encode("ascii")
         self.assertTrue(self.start_python('-V').startswith(version))
 
     def test_run_module(self):
@@ -81,11 +84,11 @@ class CmdLineTest(unittest.TestCase):
         # Runs the timeit module and checks the __main__
         # namespace has been populated appropriately
         p = _spawn_python('-i', '-m', 'timeit', '-n', '1')
-        p.stdin.write('Timer\n')
-        p.stdin.write('exit()\n')
+        p.stdin.write(b'Timer\n')
+        p.stdin.write(b'exit()\n')
         data = _kill_python(p)
-        self.assertTrue(data.startswith('1 loop'))
-        self.assertTrue('__main__.Timer' in data)
+        self.assertTrue(data.find(b'1 loop') != -1)
+        self.assertTrue(data.find(b'__main__.Timer') != -1)
 
     def test_run_code(self):
         # Test expected operation of the '-c' switch

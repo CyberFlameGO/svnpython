@@ -103,7 +103,7 @@ class test__RandomNameSequence(TC):
 
     def test_get_six_char_str(self):
         # _RandomNameSequence returns a six-character string
-        s = self.r.next()
+        s = next(self.r)
         self.nameCheck(s, '', '', '')
 
     def test_many(self):
@@ -111,8 +111,8 @@ class test__RandomNameSequence(TC):
 
         dict = {}
         r = self.r
-        for i in xrange(TEST_FILES):
-            s = r.next()
+        for i in range(TEST_FILES):
+            s = next(r)
             self.nameCheck(s, '', '', '')
             self.failIf(s in dict)
             dict[s] = 1
@@ -237,15 +237,15 @@ class test__mkstemp_inner(TC):
 
     def test_basic(self):
         # _mkstemp_inner can create files
-        self.do_create().write("blat")
-        self.do_create(pre="a").write("blat")
-        self.do_create(suf="b").write("blat")
-        self.do_create(pre="a", suf="b").write("blat")
-        self.do_create(pre="aa", suf=".txt").write("blat")
+        self.do_create().write(b"blat")
+        self.do_create(pre="a").write(b"blat")
+        self.do_create(suf="b").write(b"blat")
+        self.do_create(pre="a", suf="b").write(b"blat")
+        self.do_create(pre="aa", suf=".txt").write(b"blat")
 
     def test_basic_many(self):
         # _mkstemp_inner can create many files (stochastic)
-        extant = range(TEST_FILES)
+        extant = list(range(TEST_FILES))
         for i in extant:
             extant[i] = self.do_create(pre="aa")
 
@@ -264,7 +264,7 @@ class test__mkstemp_inner(TC):
 
         file = self.do_create()
         mode = stat.S_IMODE(os.stat(file.name).st_mode)
-        expected = 0600
+        expected = 0o600
         if sys.platform in ('win32', 'os2emx', 'mac'):
             # There's no distinction among 'user', 'group' and 'world';
             # replicate the 'user' bits.
@@ -373,7 +373,7 @@ class test_gettempdir(TC):
         # gettempdir.
         try:
             file = tempfile.NamedTemporaryFile()
-            file.write("blat")
+            file.write(b"blat")
             file.close()
         except:
             self.failOnException("create file in %s" % tempfile.gettempdir())
@@ -457,7 +457,7 @@ class test_mkdtemp(TC):
 
     def test_basic_many(self):
         # mkdtemp can create many directories (stochastic)
-        extant = range(TEST_FILES)
+        extant = list(range(TEST_FILES))
         try:
             for i in extant:
                 extant[i] = self.do_create(pre="aa")
@@ -482,8 +482,8 @@ class test_mkdtemp(TC):
         dir = self.do_create()
         try:
             mode = stat.S_IMODE(os.stat(dir).st_mode)
-            mode &= 0777 # Mask off sticky bits inherited from /tmp
-            expected = 0700
+            mode &= 0o777 # Mask off sticky bits inherited from /tmp
+            expected = 0o700
             if sys.platform in ('win32', 'os2emx', 'mac'):
                 # There's no distinction among 'user', 'group' and 'world';
                 # replicate the 'user' bits.
@@ -517,7 +517,7 @@ class test_mktemp(TC):
             self.name = tempfile.mktemp(dir=dir, prefix=pre, suffix=suf)
             # Create the file.  This will raise an exception if it's
             # mysteriously appeared in the meanwhile.
-            os.close(os.open(self.name, self._bflags, 0600))
+            os.close(os.open(self.name, self._bflags, 0o600))
 
         def __del__(self):
             self._unlink(self.name)
@@ -541,7 +541,7 @@ class test_mktemp(TC):
 
     def test_many(self):
         # mktemp can choose many usable file names (stochastic)
-        extant = range(TEST_FILES)
+        extant = list(range(TEST_FILES))
         for i in extant:
             extant[i] = self.do_create(pre="aa")
 
@@ -594,7 +594,7 @@ class test_NamedTemporaryFile(TC):
         dir = tempfile.mkdtemp()
         try:
             f = tempfile.NamedTemporaryFile(dir=dir)
-            f.write('blat')
+            f.write(b'blat')
             f.close()
             self.failIf(os.path.exists(f.name),
                         "NamedTemporaryFile %s exists after close" % f.name)
@@ -608,7 +608,7 @@ class test_NamedTemporaryFile(TC):
         try:
             f = tempfile.NamedTemporaryFile(dir=dir, delete=False)
             tmp = f.name
-            f.write('blat')
+            f.write(b'blat')
             f.close()
             self.failUnless(os.path.exists(f.name),
                         "NamedTemporaryFile %s missing after close" % f.name)
@@ -621,7 +621,7 @@ class test_NamedTemporaryFile(TC):
         # A NamedTemporaryFile can be closed many times without error
 
         f = tempfile.NamedTemporaryFile()
-        f.write('abc\n')
+        f.write(b'abc\n')
         f.close()
         try:
             f.close()
@@ -660,11 +660,11 @@ class test_SpooledTemporaryFile(TC):
         try:
             f = tempfile.SpooledTemporaryFile(max_size=10, dir=dir)
             self.failIf(f._rolled)
-            f.write('blat ' * 5)
+            f.write(b'blat ' * 5)
             self.failUnless(f._rolled)
             filename = f.name
             f.close()
-            self.failIf(os.path.exists(filename),
+            self.failIf(isinstance(filename, str) and os.path.exists(filename),
                         "SpooledTemporaryFile %s exists after close" % filename)
         finally:
             os.rmdir(dir)
@@ -675,7 +675,7 @@ class test_SpooledTemporaryFile(TC):
         self.failIf(f._rolled)
         for i in range(5):
             f.seek(0, 0)
-            f.write('x' * 20)
+            f.write(b'x' * 20)
         self.failIf(f._rolled)
 
     def test_write_sequential(self):
@@ -683,11 +683,11 @@ class test_SpooledTemporaryFile(TC):
         # over afterward
         f = self.do_create(max_size=30)
         self.failIf(f._rolled)
-        f.write('x' * 20)
+        f.write(b'x' * 20)
         self.failIf(f._rolled)
-        f.write('x' * 10)
+        f.write(b'x' * 10)
         self.failIf(f._rolled)
-        f.write('x')
+        f.write(b'x')
         self.failUnless(f._rolled)
 
     def test_sparse(self):
@@ -697,7 +697,7 @@ class test_SpooledTemporaryFile(TC):
         self.failIf(f._rolled)
         f.seek(100, 0)
         self.failIf(f._rolled)
-        f.write('x')
+        f.write(b'x')
         self.failUnless(f._rolled)
 
     def test_fileno(self):
@@ -710,7 +710,7 @@ class test_SpooledTemporaryFile(TC):
     def test_multiple_close(self):
         # A SpooledTemporaryFile can be closed many times without error
         f = tempfile.SpooledTemporaryFile()
-        f.write('abc\n')
+        f.write(b'abc\n')
         f.close()
         try:
             f.close()
@@ -727,10 +727,37 @@ class test_SpooledTemporaryFile(TC):
         write = f.write
         seek = f.seek
 
-        write("a" * 35)
-        write("b" * 35)
+        write(b"a" * 35)
+        write(b"b" * 35)
         seek(0, 0)
-        self.failUnless(read(70) == 'a'*35 + 'b'*35)
+        self.assertEqual(read(70), b'a'*35 + b'b'*35)
+
+    def test_text_mode(self):
+        # Creating a SpooledTemporaryFile with a text mode should produce
+        # a file object reading and writing (Unicode) text strings.
+        f = tempfile.SpooledTemporaryFile(mode='w+', max_size=10)
+        f.write("abc\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "abc\n")
+        f.write("def\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "abc\ndef\n")
+        f.write("xyzzy\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "abc\ndef\nxyzzy\n")
+
+    def test_text_newline_and_encoding(self):
+        f = tempfile.SpooledTemporaryFile(mode='w+', max_size=10,
+                                          newline='', encoding='utf-8')
+        f.write("\u039B\r\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "\u039B\r\n")
+        self.failIf(f._rolled)
+
+        f.write("\u039B" * 20 + "\r\n")
+        f.seek(0)
+        self.assertEqual(f.read(), "\u039B\r\n" + ("\u039B" * 20) + "\r\n")
+        self.failUnless(f._rolled)
 
 test_classes.append(test_SpooledTemporaryFile)
 
@@ -750,7 +777,7 @@ class test_TemporaryFile(TC):
         # TemporaryFile creates files with no names (on this system)
         dir = tempfile.mkdtemp()
         f = tempfile.TemporaryFile(dir=dir)
-        f.write('blat')
+        f.write(b'blat')
 
         # Sneaky: because this file has no name, it should not prevent
         # us from removing the directory it was created in.
@@ -766,7 +793,7 @@ class test_TemporaryFile(TC):
     def test_multiple_close(self):
         # A TemporaryFile can be closed many times without error
         f = tempfile.TemporaryFile()
-        f.write('abc\n')
+        f.write(b'abc\n')
         f.close()
         try:
             f.close()
@@ -775,6 +802,18 @@ class test_TemporaryFile(TC):
             self.failOnException("close")
 
     # How to test the mode and bufsize parameters?
+    def test_mode_and_encoding(self):
+
+        def roundtrip(input, *args, **kwargs):
+            with tempfile.TemporaryFile(*args, **kwargs) as fileobj:
+                fileobj.write(input)
+                fileobj.seek(0)
+                self.assertEquals(input, fileobj.read())
+
+        roundtrip(b"1234", "w+b")
+        roundtrip("abdc\n", "w+")
+        roundtrip("\u039B", "w+", encoding="utf-16")
+        roundtrip("foo\r\n", "w+", newline="")
 
 
 if tempfile.NamedTemporaryFile is not tempfile.TemporaryFile:

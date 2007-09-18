@@ -79,7 +79,7 @@ class Font:
             self.delete_font = False
             # confirm font exists
             if self.name not in root.tk.call("font", "names"):
-                raise Tkinter._tkinter.TclError, "named font %s does not already exist" % (self.name,)
+                raise Tkinter._tkinter.TclError("named font %s does not already exist" % (self.name,))
             # if font config info supplied, apply it
             if font:
                 root.tk.call("font", "configure", self.name, *font)
@@ -185,22 +185,22 @@ if __name__ == "__main__":
     # create a font
     f = Font(family="times", size=30, weight=NORMAL)
 
-    print f.actual()
-    print f.actual("family")
-    print f.actual("weight")
+    print(f.actual())
+    print(f.actual("family"))
+    print(f.actual("weight"))
 
-    print f.config()
-    print f.cget("family")
-    print f.cget("weight")
+    print(f.config())
+    print(f.cget("family"))
+    print(f.cget("weight"))
 
-    print names()
+    print(names())
 
-    print f.measure("hello"), f.metrics("linespace")
+    print(f.measure("hello"), f.metrics("linespace"))
 
-    print f.metrics()
+    print(f.metrics())
 
     f = Font(font=("Courier", 20, "bold"))
-    print f.measure("hello"), f.metrics("linespace")
+    print(f.measure("hello"), f.metrics("linespace"))
 
     w = Tkinter.Label(root, text="Hello, world", font=f)
     w.pack()

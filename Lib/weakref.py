@@ -20,8 +20,6 @@ from _weakref import (
      ProxyType,
      ReferenceType)
 
-from exceptions import ReferenceError
-
 
 ProxyTypes = (ProxyType, CallableProxyType)
 
@@ -53,18 +51,11 @@ class WeakValueDictionary(UserDict.UserDict):
     def __getitem__(self, key):
         o = self.data[key]()
         if o is None:
-            raise KeyError, key
+            raise KeyError(key)
         else:
             return o
 
     def __contains__(self, key):
-        try:
-            o = self.data[key]()
-        except KeyError:
-            return False
-        return o is not None
-
-    def has_key(self, key):
         try:
             o = self.data[key]()
         except KeyError:
@@ -107,16 +98,16 @@ class WeakValueDictionary(UserDict.UserDict):
         return L
 
     def iteritems(self):
-        for wr in self.data.itervalues():
+        for wr in self.data.values():
             value = wr()
             if value is not None:
                 yield wr.key, value
 
     def iterkeys(self):
-        return self.data.iterkeys()
+        return iter(self.data.keys())
 
     def __iter__(self):
-        return self.data.iterkeys()
+        return iter(self.data.keys())
 
     def itervaluerefs(self):
         """Return an iterator that yields the weak references to the values.
@@ -128,10 +119,10 @@ class WeakValueDictionary(UserDict.UserDict):
         keep the values around longer than needed.
 
         """
-        return self.data.itervalues()
+        return self.data.values()
 
     def itervalues(self):
-        for wr in self.data.itervalues():
+        for wr in self.data.values():
             obj = wr()
             if obj is not None:
                 yield obj
@@ -151,7 +142,7 @@ class WeakValueDictionary(UserDict.UserDict):
                 return args[0]
             raise
         if o is None:
-            raise KeyError, key
+            raise KeyError(key)
         else:
             return o
 
@@ -213,7 +204,7 @@ class KeyedRef(ref):
         return self
 
     def __init__(self, ob, callback, key):
-        super(KeyedRef,  self).__init__(ob, callback)
+        super().__init__(ob, callback)
 
 
 class WeakKeyDictionary(UserDict.UserDict):
@@ -259,13 +250,6 @@ class WeakKeyDictionary(UserDict.UserDict):
     def get(self, key, default=None):
         return self.data.get(ref(key),default)
 
-    def has_key(self, key):
-        try:
-            wr = ref(key)
-        except TypeError:
-            return 0
-        return wr in self.data
-
     def __contains__(self, key):
         try:
             wr = ref(key)
@@ -282,7 +266,7 @@ class WeakKeyDictionary(UserDict.UserDict):
         return L
 
     def iteritems(self):
-        for wr, value in self.data.iteritems():
+        for wr, value in self.data.items():
             key = wr()
             if key is not None:
                 yield key, value
@@ -297,19 +281,19 @@ class WeakKeyDictionary(UserDict.UserDict):
         keep the keys around longer than needed.
 
         """
-        return self.data.iterkeys()
+        return self.data.keys()
 
     def iterkeys(self):
-        for wr in self.data.iterkeys():
+        for wr in self.data.keys():
             obj = wr()
             if obj is not None:
                 yield obj
 
     def __iter__(self):
-        return self.iterkeys()
+        return iter(self.keys())
 
     def itervalues(self):
-        return self.data.itervalues()
+        return iter(self.data.values())
 
     def keyrefs(self):
         """Return a list of weak references to the keys.

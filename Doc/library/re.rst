@@ -287,7 +287,6 @@ The special characters are:
    matching pattern, which will match with ``'<user@host.com>'`` as well as
    ``'user@host.com'``, but not with ``'<user@host.com'``.
 
-   .. versionadded:: 2.4
 
 The special sequences consist of ``'\'`` and a character from the list below.
 If the ordinary character is not on the list, then the resulting RE will match
@@ -492,8 +491,6 @@ form.
    Make ``\w``, ``\W``, ``\b``, ``\B``, ``\d``, ``\D``, ``\s`` and ``\S`` dependent
    on the Unicode character properties database.
 
-   .. versionadded:: 2.0
-
 
 .. data:: X
           VERBOSE
@@ -504,7 +501,12 @@ form.
    character class or preceded by an unescaped backslash, all characters from the
    leftmost such ``'#'`` through the end of the line are ignored.
 
-   .. % XXX should add an example here
+   This means that the two following regular expression objects are equal::
+
+      re.compile(r""" [a-z]+   # some letters
+                      \.\.     # two dots
+                      [a-z]*   # perhaps more letters""")
+      re.compile(r"[a-z]+\.\.[a-z]*")
 
 
 .. function:: search(pattern, string[, flags])
@@ -559,22 +561,12 @@ form.
    a list of tuples if the pattern has more than one group.  Empty matches are
    included in the result unless they touch the beginning of another match.
 
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
-
 
 .. function:: finditer(pattern, string[, flags])
 
    Return an iterator over all non-overlapping matches for the RE *pattern* in
    *string*.  For each match, the iterator returns a match object.  Empty matches
    are included in the result unless they touch the beginning of another match.
-
-   .. versionadded:: 2.2
-
-   .. versionchanged:: 2.4
-      Added the optional flags argument.
 
 
 .. function:: sub(pattern, repl, string[, count])

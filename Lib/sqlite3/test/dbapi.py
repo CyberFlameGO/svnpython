@@ -40,12 +40,12 @@ class ModuleTests(unittest.TestCase):
                          sqlite.paramstyle)
 
     def CheckWarning(self):
-        self.assert_(issubclass(sqlite.Warning, StandardError),
-                     "Warning is not a subclass of StandardError")
+        self.assert_(issubclass(sqlite.Warning, Exception),
+                     "Warning is not a subclass of Exception")
 
     def CheckError(self):
-        self.failUnless(issubclass(sqlite.Error, StandardError),
-                        "Error is not a subclass of StandardError")
+        self.failUnless(issubclass(sqlite.Error, Exception),
+                        "Error is not a subclass of Exception")
 
     def CheckInterfaceError(self):
         self.failUnless(issubclass(sqlite.InterfaceError, sqlite.Error),
@@ -286,7 +286,7 @@ class CursorTests(unittest.TestCase):
             def __init__(self):
                 self.value = 5
 
-            def next(self):
+            def __next__(self):
                 if self.value == 10:
                     raise StopIteration
                 else:
@@ -326,8 +326,8 @@ class CursorTests(unittest.TestCase):
             self.fail("should have raised a TypeError")
         except TypeError:
             return
-        except Exception, e:
-            print "raised", e.__class__
+        except Exception as e:
+            print("raised", e.__class__)
             self.fail("raised wrong exception.")
 
     def CheckFetchIter(self):
@@ -612,7 +612,7 @@ class ExtensionTests(unittest.TestCase):
     def CheckScriptStringUnicode(self):
         con = sqlite.connect(":memory:")
         cur = con.cursor()
-        cur.executescript(u"""
+        cur.executescript("""
             create table a(i);
             insert into a(i) values (5);
             select i from a;

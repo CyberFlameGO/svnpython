@@ -42,24 +42,23 @@ the rich comparison operators they support:
    return any value, which may or may not be interpretable as a Boolean value.
    See :ref:`comparisons` for more information about rich comparisons.
 
-   .. versionadded:: 2.2
 
 The logical operations are also generally applicable to all objects, and support
 truth tests, identity tests, and boolean operations:
 
 
-.. function:: not_(obj)
-              __not__(obj)
+.. function:: not_(o)
+              __not__(o)
 
-   Return the outcome of :keyword:`not` *obj*.  (Note that there is no
+   Return the outcome of :keyword:`not` *o*.  (Note that there is no
    :meth:`__not__` method for object instances; only the interpreter core defines
-   this operation.  The result is affected by the :meth:`__nonzero__` and
+   this operation.  The result is affected by the :meth:`__bool__` and
    :meth:`__len__` methods.)
 
 
-.. function:: truth(obj)
+.. function:: truth(o)
 
-   Return :const:`True` if *obj* is true, and :const:`False` otherwise.  This is
+   Return :const:`True` if *o* is true, and :const:`False` otherwise.  This is
    equivalent to using the :class:`bool` constructor.
 
 
@@ -67,22 +66,19 @@ truth tests, identity tests, and boolean operations:
 
    Return ``a is b``.  Tests object identity.
 
-   .. versionadded:: 2.3
-
 
 .. function:: is_not(a, b)
 
    Return ``a is not b``.  Tests object identity.
 
-   .. versionadded:: 2.3
 
 The mathematical and bitwise operations are the most numerous:
 
 
-.. function:: abs(obj)
-              __abs__(obj)
+.. function:: abs(o)
+              __abs__(o)
 
-   Return the absolute value of *obj*.
+   Return the absolute value of *o*.
 
 
 .. function:: add(a, b)
@@ -109,18 +105,13 @@ The mathematical and bitwise operations are the most numerous:
 
    Return ``a // b``.
 
-   .. versionadded:: 2.2
 
+.. function:: inv(o)
+              invert(o)
+              __inv__(o)
+              __invert__(o)
 
-.. function:: inv(obj)
-              invert(obj)
-              __inv__(obj)
-              __invert__(obj)
-
-   Return the bitwise inverse of the number *obj*.  This is equivalent to ``~obj``.
-
-   .. versionadded:: 2.0
-      The names :func:`invert` and :func:`__invert__`.
+   Return the bitwise inverse of the number *o*.  This is equivalent to ``~o``.
 
 
 .. function:: lshift(a, b)
@@ -141,10 +132,10 @@ The mathematical and bitwise operations are the most numerous:
    Return ``a * b``, for *a* and *b* numbers.
 
 
-.. function:: neg(obj)
-              __neg__(obj)
+.. function:: neg(o)
+              __neg__(o)
 
-   Return *obj* negated.
+   Return *o* negated.
 
 
 .. function:: or_(a, b)
@@ -153,18 +144,16 @@ The mathematical and bitwise operations are the most numerous:
    Return the bitwise or of *a* and *b*.
 
 
-.. function:: pos(obj)
-              __pos__(obj)
+.. function:: pos(o)
+              __pos__(o)
 
-   Return *obj* positive.
+   Return *o* positive.
 
 
 .. function:: pow(a, b)
               __pow__(a, b)
 
    Return ``a ** b``, for *a* and *b* numbers.
-
-   .. versionadded:: 2.3
 
 
 .. function:: rshift(a, b)
@@ -185,8 +174,6 @@ The mathematical and bitwise operations are the most numerous:
    Return ``a / b`` when ``__future__.division`` is in effect.  This is also
    known as "true" division.
 
-   .. versionadded:: 2.2
-
 
 .. function:: xor(a, b)
               __xor__(a, b)
@@ -198,8 +185,6 @@ The mathematical and bitwise operations are the most numerous:
               __index__(a)
 
    Return *a* converted to an integer.  Equivalent to ``a.__index__()``.
-
-   .. versionadded:: 2.5
 
 
 Operations which work with sequences include:
@@ -214,9 +199,6 @@ Operations which work with sequences include:
               __contains__(a, b)
 
    Return the outcome of the test ``b in a``. Note the reversed operands.
-
-   .. versionadded:: 2.0
-      The name :func:`__contains__`.
 
 
 .. function:: countOf(a, b)
@@ -290,23 +272,17 @@ to the compound statement ``z = x; z += y``.
 
    ``a = iadd(a, b)`` is equivalent to ``a += b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: iand(a, b)
               __iand__(a, b)
 
    ``a = iand(a, b)`` is equivalent to ``a &= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: iconcat(a, b)
               __iconcat__(a, b)
 
    ``a = iconcat(a, b)`` is equivalent to ``a += b`` for *a* and *b* sequences.
-
-   .. versionadded:: 2.5
 
 
 .. function:: idiv(a, b)
@@ -315,23 +291,17 @@ to the compound statement ``z = x; z += y``.
    ``a = idiv(a, b)`` is equivalent to ``a /= b`` when ``__future__.division`` is
    not in effect.
 
-   .. versionadded:: 2.5
-
 
 .. function:: ifloordiv(a, b)
               __ifloordiv__(a, b)
 
    ``a = ifloordiv(a, b)`` is equivalent to ``a //= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: ilshift(a, b)
               __ilshift__(a, b)
 
-   ``a = ilshift(a, b)`` is equivalent to ``a <``\ ``<= b``.
-
-   .. versionadded:: 2.5
+   ``a = ilshift(a, b)`` is equivalent to ``a <<= b``.
 
 
 .. function:: imod(a, b)
@@ -339,15 +309,11 @@ to the compound statement ``z = x; z += y``.
 
    ``a = imod(a, b)`` is equivalent to ``a %= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: imul(a, b)
               __imul__(a, b)
 
    ``a = imul(a, b)`` is equivalent to ``a *= b``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: ior(a, b)
@@ -355,15 +321,11 @@ to the compound statement ``z = x; z += y``.
 
    ``a = ior(a, b)`` is equivalent to ``a |= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: ipow(a, b)
               __ipow__(a, b)
 
    ``a = ipow(a, b)`` is equivalent to ``a **= b``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: irepeat(a, b)
@@ -372,23 +334,17 @@ to the compound statement ``z = x; z += y``.
    ``a = irepeat(a, b)`` is equivalent to ``a *= b`` where *a* is a sequence and
    *b* is an integer.
 
-   .. versionadded:: 2.5
-
 
 .. function:: irshift(a, b)
               __irshift__(a, b)
 
    ``a = irshift(a, b)`` is equivalent to ``a >>= b``.
 
-   .. versionadded:: 2.5
-
 
 .. function:: isub(a, b)
               __isub__(a, b)
 
    ``a = isub(a, b)`` is equivalent to ``a -= b``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: itruediv(a, b)
@@ -397,15 +353,11 @@ to the compound statement ``z = x; z += y``.
    ``a = itruediv(a, b)`` is equivalent to ``a /= b`` when ``__future__.division``
    is in effect.
 
-   .. versionadded:: 2.5
-
 
 .. function:: ixor(a, b)
               __ixor__(a, b)
 
    ``a = ixor(a, b)`` is equivalent to ``a ^= b``.
-
-   .. versionadded:: 2.5
 
 
 The :mod:`operator` module also defines a few predicates to test the type of
@@ -421,30 +373,24 @@ objects.
       ...     pass
       ... 
       >>> import operator
-      >>> obj = C()
-      >>> operator.isMappingType(obj)
+      >>> o = C()
+      >>> operator.isMappingType(o)
       True
 
-.. note::
 
-   Python 3 is expected to introduce abstract base classes for
-   collection types, so it should be possible to write, for example,
-   ``isinstance(obj, collections.Mapping)`` and ``isinstance(obj,
-   collections.Sequence)``.
-
-.. function:: isCallable(obj)
+.. function:: isCallable(o)
 
    .. deprecated:: 2.0
       Use the :func:`callable` built-in function instead.
 
-   Returns true if the object *obj* can be called like a function, otherwise it
+   Returns true if the object *o* can be called like a function, otherwise it
    returns false.  True is returned for functions, bound and unbound methods, class
    objects, and instance objects which support the :meth:`__call__` method.
 
 
-.. function:: isMappingType(obj)
+.. function:: isMappingType(o)
 
-   Returns true if the object *obj* supports the mapping interface. This is true for
+   Returns true if the object *o* supports the mapping interface. This is true for
    dictionaries and all instance objects defining :meth:`__getitem__`.
 
    .. warning::
@@ -454,9 +400,9 @@ objects.
       useful than it otherwise might be.
 
 
-.. function:: isNumberType(obj)
+.. function:: isNumberType(o)
 
-   Returns true if the object *obj* represents a number.  This is true for all
+   Returns true if the object *o* represents a number.  This is true for all
    numeric types implemented in C.
 
    .. warning::
@@ -466,9 +412,9 @@ objects.
       useful than it otherwise might be.
 
 
-.. function:: isSequenceType(obj)
+.. function:: isSequenceType(o)
 
-   Returns true if the object *obj* supports the sequence protocol. This returns true
+   Returns true if the object *o* supports the sequence protocol. This returns true
    for all objects which define sequence methods in C, and for all instance objects
    defining :meth:`__getitem__`.
 
@@ -503,11 +449,6 @@ expect a function argument.
    ``f=attrgetter('name', 'date')``, the call ``f(b)`` returns ``(b.name,
    b.date)``.
 
-   .. versionadded:: 2.4
-
-   .. versionchanged:: 2.5
-      Added support for multiple attributes.
-
 
 .. function:: itemgetter(item[, args...])
 
@@ -516,10 +457,6 @@ expect a function argument.
    call ``f(b)`` returns ``b[2]``. After, ``f=itemgetter(2,5,3)``, the call
    ``f(b)`` returns ``(b[2], b[5], b[3])``.
 
-   .. versionadded:: 2.4
-
-   .. versionchanged:: 2.5
-      Added support for multiple item extraction.
 
 Examples::
 
@@ -547,7 +484,7 @@ Python syntax and the functions in the :mod:`operator` module.
 +-----------------------+-------------------------+---------------------------------+
 | Concatenation         | ``seq1 + seq2``         | ``concat(seq1, seq2)``          |
 +-----------------------+-------------------------+---------------------------------+
-| Containment Test      | ``obj in seq``          | ``contains(seq, obj)``          |
+| Containment Test      | ``o in seq``            | ``contains(seq, o)``            |
 +-----------------------+-------------------------+---------------------------------+
 | Division              | ``a / b``               | ``div(a, b)`` (without          |
 |                       |                         | ``__future__.division``)        |
@@ -571,11 +508,11 @@ Python syntax and the functions in the :mod:`operator` module.
 +-----------------------+-------------------------+---------------------------------+
 | Identity              | ``a is not b``          | ``is_not(a, b)``                |
 +-----------------------+-------------------------+---------------------------------+
-| Indexed Assignment    | ``obj[k] = v``          | ``setitem(obj, k, v)``          |
+| Indexed Assignment    | ``o[k] = v``            | ``setitem(o, k, v)``            |
 +-----------------------+-------------------------+---------------------------------+
-| Indexed Deletion      | ``del obj[k]``          | ``delitem(obj, k)``             |
+| Indexed Deletion      | ``del o[k]``            | ``delitem(o, k)``               |
 +-----------------------+-------------------------+---------------------------------+
-| Indexing              | ``obj[k]``              | ``getitem(obj, k)``             |
+| Indexing              | ``o[k]``                | ``getitem(o, k)``               |
 +-----------------------+-------------------------+---------------------------------+
 | Left Shift            | ``a << b``              | ``lshift(a, b)``                |
 +-----------------------+-------------------------+---------------------------------+
@@ -597,11 +534,11 @@ Python syntax and the functions in the :mod:`operator` module.
 +-----------------------+-------------------------+---------------------------------+
 | Slicing               | ``seq[i:j]``            | ``getslice(seq, i, j)``         |
 +-----------------------+-------------------------+---------------------------------+
-| String Formatting     | ``s % obj``             | ``mod(s, obj)``                 |
+| String Formatting     | ``s % o``               | ``mod(s, o)``                   |
 +-----------------------+-------------------------+---------------------------------+
 | Subtraction           | ``a - b``               | ``sub(a, b)``                   |
 +-----------------------+-------------------------+---------------------------------+
-| Truth Test            | ``obj``                 | ``truth(obj)``                  |
+| Truth Test            | ``o``                   | ``truth(o)``                    |
 +-----------------------+-------------------------+---------------------------------+
 | Ordering              | ``a < b``               | ``lt(a, b)``                    |
 +-----------------------+-------------------------+---------------------------------+

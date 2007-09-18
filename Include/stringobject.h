@@ -28,7 +28,7 @@ functions should be applied to nil objects.
    Interning strings (ob_sstate) tries to ensure that only one string
    object with a given value exists, so equality tests can be one pointer
    comparison.  This is generally restricted to strings that "look like"
-   Python identifiers, although the intern() builtin can be used to force
+   Python identifiers, although the sys.intern() function can be used to force
    interning of any string.
    Together, these sped the interpreter by up to 20%. */
 
@@ -47,10 +47,6 @@ typedef struct {
      *       from 'interned' to this object are *not counted* in ob_refcnt.
      */
 } PyStringObject;
-
-#define SSTATE_NOT_INTERNED 0
-#define SSTATE_INTERNED_MORTAL 1
-#define SSTATE_INTERNED_IMMORTAL 2
 
 PyAPI_DATA(PyTypeObject) PyBaseString_Type;
 PyAPI_DATA(PyTypeObject) PyString_Type;
@@ -88,8 +84,8 @@ PyAPI_FUNC(void) _Py_ReleaseInternedStrings(void);
 #define PyString_CHECK_INTERNED(op) (((PyStringObject *)(op))->ob_sstate)
 
 /* Macro, trading safety for speed */
-#define PyString_AS_STRING(op) (((PyStringObject *)(op))->ob_sval)
-#define PyString_GET_SIZE(op)  Py_Size(op)
+#define PyString_AS_STRING(op) (assert(PyString_Check(op)),(((PyStringObject *)(op))->ob_sval))
+#define PyString_GET_SIZE(op)  (assert(PyString_Check(op)),Py_Size(op))
 
 /* _PyString_Join(sep, x) is like sep.join(x).  sep must be PyStringObject*,
    x must be an iterable object. */

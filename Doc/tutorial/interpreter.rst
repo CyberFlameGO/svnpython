@@ -22,11 +22,11 @@ guru or system administrator.  (E.g., :file:`/usr/local/python` is a popular
 alternative location.)
 
 On Windows machines, the Python installation is usually placed in
-:file:`C:\Python26`, though you can change this when you're running the
+:file:`C:\Python30`, though you can change this when you're running the
 installer.  To add this directory to your path,  you can type the following
 command into the command prompt in a DOS box::
 
-   set path=%path%;C:\python26
+   set path=%path%;C:\python30
 
 Typing an end-of-file character (:kbd:`Control-D` on Unix, :kbd:`Control-Z` on
 Windows) at the primary prompt causes the interpreter to exit with a zero exit
@@ -59,12 +59,12 @@ Some Python modules are also useful as scripts.  These can be invoked using
 if you had spelled out its full name on the command line.
 
 Note that there is a difference between ``python file`` and ``python <file``.
-In the latter case, input requests from the program, such as calls to
-:func:`input` and :func:`raw_input`, are satisfied from *file*.  Since this file
-has already been read until the end by the parser before the program starts
-executing, the program will encounter end-of-file immediately.  In the former
-case (which is usually what you want) they are satisfied from whatever file or
-device is connected to standard input of the Python interpreter.
+In the latter case, input requests from the program, such as calling
+``sys.stdin.read()``, are satisfied from *file*.  Since this file has already
+been read until the end by the parser before the program starts executing, the
+program will encounter end-of-file immediately.  In the former case (which is
+usually what you want) they are satisfied from whatever file or device is
+connected to standard input of the Python interpreter.
 
 When a script file is used, it is sometimes useful to be able to run the script
 and enter interactive mode afterwards.  This can be done by passing :option:`-i`
@@ -111,7 +111,7 @@ example, take a look at this :keyword:`if` statement::
 
    >>> the_world_is_flat = 1
    >>> if the_world_is_flat:
-   ...     print "Be careful not to fall off!"
+   ...     print("Be careful not to fall off!")
    ... 
    Be careful not to fall off!
 
@@ -170,6 +170,8 @@ The script can be given an executable mode, or permission, using the
 Source Code Encoding
 --------------------
 
+.. XXX out of date!
+
 It is possible to use encodings different than ASCII in Python source files. The
 best way to do it is to put one more special comment line right after the ``#!``
 line to define the source file encoding::
@@ -191,7 +193,7 @@ to the Euro symbol) and then exit::
    # -*- coding: iso-8859-15 -*-
 
    currency = u"€"
-   print ord(currency)
+   print(ord(currency))
 
 If your editor supports saving files as ``UTF-8`` with a UTF-8 *byte order mark*
 (aka BOM), you can use that instead of an encoding declaration. IDLE supports
@@ -232,13 +234,14 @@ file.
 
 If you want to read an additional start-up file from the current directory, you
 can program this in the global start-up file using code like ``if
-os.path.isfile('.pythonrc.py'): execfile('.pythonrc.py')``.  If you want to use
-the startup file in a script, you must do this explicitly in the script::
+os.path.isfile('.pythonrc.py'): exec(open('.pythonrc.py').read())``.
+If you want to use the startup file in a script, you must do this explicitly
+in the script::
 
    import os
    filename = os.environ.get('PYTHONSTARTUP')
    if filename and os.path.isfile(filename):
-       execfile(filename)
+       exec(open(filename).read())
 
 
 .. rubric:: Footnotes

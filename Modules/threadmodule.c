@@ -190,7 +190,7 @@ local_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 	Py_XINCREF(kw);
 	self->kw = kw;
 	self->dict = NULL;	/* making sure */
-	self->key = PyString_FromFormat("thread.local.%p", self);
+	self->key = PyUnicode_FromFormat("thread.local.%p", self);
 	if (self->key == NULL) 
 		goto err;
 
@@ -694,6 +694,8 @@ initthread(void)
 	
 	/* Initialize types: */
 	if (PyType_Ready(&localtype) < 0)
+		return;
+	if (PyType_Ready(&Locktype) < 0)
 		return;
 
 	/* Create the module and add the functions */

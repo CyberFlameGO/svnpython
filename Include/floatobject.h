@@ -21,10 +21,8 @@ PyAPI_DATA(PyTypeObject) PyFloat_Type;
 #define PyFloat_Check(op) PyObject_TypeCheck(op, &PyFloat_Type)
 #define PyFloat_CheckExact(op) (Py_Type(op) == &PyFloat_Type)
 
-/* Return Python float from string PyObject.  Second argument ignored on
-   input, and, if non-NULL, NULL is stored into *junk (this tried to serve a
-   purpose once but can't be made to work as intended). */
-PyAPI_FUNC(PyObject *) PyFloat_FromString(PyObject*, char** junk);
+/* Return Python float from string PyObject. */
+PyAPI_FUNC(PyObject *) PyFloat_FromString(PyObject*);
 
 /* Return Python float from C double. */
 PyAPI_FUNC(PyObject *) PyFloat_FromDouble(double);
@@ -33,19 +31,6 @@ PyAPI_FUNC(PyObject *) PyFloat_FromDouble(double);
    speed. */
 PyAPI_FUNC(double) PyFloat_AsDouble(PyObject *);
 #define PyFloat_AS_DOUBLE(op) (((PyFloatObject *)(op))->ob_fval)
-
-/* Write repr(v) into the char buffer argument, followed by null byte.  The
-   buffer must be "big enough"; >= 100 is very safe.
-   PyFloat_AsReprString(buf, x) strives to print enough digits so that
-   PyFloat_FromString(buf) then reproduces x exactly. */
-PyAPI_FUNC(void) PyFloat_AsReprString(char*, PyFloatObject *v);
-
-/* Write str(v) into the char buffer argument, followed by null byte.  The
-   buffer must be "big enough"; >= 100 is very safe.  Note that it's
-   unusual to be able to get back the float you started with from
-   PyFloat_AsString's result -- use PyFloat_AsReprString() if you want to
-   preserve precision across conversions. */
-PyAPI_FUNC(void) PyFloat_AsString(char*, PyFloatObject *v);
 
 /* _PyFloat_{Pack,Unpack}{4,8}
  *
@@ -82,6 +67,11 @@ PyAPI_FUNC(void) PyFloat_AsString(char*, PyFloatObject *v);
 PyAPI_FUNC(int) _PyFloat_Pack4(double x, unsigned char *p, int le);
 PyAPI_FUNC(int) _PyFloat_Pack8(double x, unsigned char *p, int le);
 
+/* Needed for the old way for marshal to store a floating point number.
+   Returns the string length copied into p, -1 on error.
+ */
+PyAPI_FUNC(int) _PyFloat_Repr(double x, char *p, size_t len);
+
 /* The unpack routines read 4 or 8 bytes, starting at p.  le is a bool
  * argument, true if the string is in little-endian format (exponent
  * last, at p+3 or p+7), false if big-endian (exponent first, at p).
@@ -92,7 +82,6 @@ PyAPI_FUNC(int) _PyFloat_Pack8(double x, unsigned char *p, int le);
  */
 PyAPI_FUNC(double) _PyFloat_Unpack4(const unsigned char *p, int le);
 PyAPI_FUNC(double) _PyFloat_Unpack8(const unsigned char *p, int le);
-
 
 #ifdef __cplusplus
 }

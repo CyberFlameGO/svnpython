@@ -90,6 +90,12 @@ technique using a separate :func:`tcgetattr` call and a :keyword:`try` ...
 :keyword:`finally` statement to ensure that the old tty attributes are restored
 exactly no matter what happens::
 
+   def raw_input(prompt):
+       import sys
+       sys.stdout.write(prompt)
+       sys.stdout.flush()
+       return sys.stdin.readline()
+
    def getpass(prompt = "Password: "):
        import termios, sys
        fd = sys.stdin.fileno()

@@ -8,10 +8,9 @@
 
 This module provides a more portable way of using operating system dependent
 functionality than importing a operating system dependent built-in module like
-:mod:`posix` or :mod:`nt`. If you just want to read or write a file see
-:func:`open`, if you want to manipulate paths, see the :mod:`os.path`
-module, and if you want to read all the lines in all the files on the
-command line see the :mod:`fileinput` module.
+:mod:`posix` or :mod:`nt`. (If you just want to read or write a file see
+:func:`open`, and if you want to manipulate paths, see the :mod:`os.path`
+module.)
 
 This module searches for an operating system dependent built-in module like
 :mod:`mac` or :mod:`posix` and exports the same functions and data as found
@@ -32,14 +31,6 @@ system dependent built-in module, so there should be *no* reason not to use
 The :mod:`os` module contains many functions and data values. The items below
 and in the following sub-sections are all available directly from the :mod:`os`
 module.
-
-.. % Frank Stajano <fstajano@uk.research.att.com> complained that it
-.. % wasn't clear that the entries described in the subsections were all
-.. % available at the module level (most uses of subsections are
-.. % different); I think this is only a problem for the HTML version,
-.. % where the relationship may not be as clear.
-.. % 
-
 
 .. exception:: error
 
@@ -65,7 +56,7 @@ module.
 
    The name of the operating system dependent module imported.  The following names
    have currently been registered: ``'posix'``, ``'nt'``, ``'mac'``, ``'os2'``,
-   ``'ce'``, ``'java'``, ``'riscos'``.
+   ``'ce'``, ``'java'``.
 
 
 .. data:: path
@@ -175,8 +166,6 @@ process and user.
    Return the process group id of the process with process id *pid*. If *pid* is 0,
    the process group id of the current process is returned. Availability: Unix.
 
-   .. versionadded:: 2.3
-
 
 .. function:: getpgrp()
 
@@ -255,8 +244,6 @@ process and user.
    identifying a group. This operation is typical available only to the superuser.
    Availability: Unix.
 
-   .. versionadded:: 2.2
-
 
 .. function:: setpgrp()
 
@@ -286,8 +273,6 @@ process and user.
 
    Calls the system call :cfunc:`getsid`.  See the Unix manual for the semantics.
    Availability: Unix.
-
-   .. versionadded:: 2.4
 
 
 .. function:: setsid()
@@ -362,14 +347,12 @@ These functions create new file objects. (See also :func:`open`.)
    and *bufsize* arguments have the same meaning as the corresponding arguments to
    the built-in :func:`open` function. Availability: Macintosh, Unix, Windows.
 
-   .. versionchanged:: 2.3
-      When specified, the *mode* argument must now start with one of the letters
-      ``'r'``, ``'w'``, or ``'a'``, otherwise a :exc:`ValueError` is raised.
+   When specified, the *mode* argument must start with one of the letters
+   ``'r'``, ``'w'``, or ``'a'``, otherwise a :exc:`ValueError` is raised.
 
-   .. versionchanged:: 2.5
-      On Unix, when the *mode* argument starts with ``'a'``, the *O_APPEND* flag is
-      set on the file descriptor (which the :cfunc:`fdopen` implementation already
-      does on most platforms).
+   On Unix, when the *mode* argument starts with ``'a'``, the *O_APPEND* flag is
+   set on the file descriptor (which the :cfunc:`fdopen` implementation already
+   does on most platforms).
 
 
 .. function:: popen(command[, mode[, bufsize]])
@@ -386,12 +369,6 @@ These functions create new file objects. (See also :func:`open`.)
    .. deprecated:: 2.6
       This function is obsolete.  Use the :mod:`subprocess` module.
 
-   .. versionchanged:: 2.0
-      This function worked unreliably under Windows in earlier versions of Python.
-      This was due to the use of the :cfunc:`_popen` function from the libraries
-      provided with Windows.  Newer versions of Python do not use the broken
-      implementation from the Windows libraries.
-
 
 .. function:: tmpfile()
 
@@ -399,82 +376,6 @@ These functions create new file objects. (See also :func:`open`.)
    directory entries associated with it and will be automatically deleted once
    there are no file descriptors for the file. Availability: Macintosh, Unix,
    Windows.
-
-There are a number of different :func:`popen\*` functions that provide slightly
-different ways to create subprocesses.
-
-.. deprecated:: 2.6
-   All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-   module.
-
-For each of the :func:`popen\*` variants, if *bufsize* is specified, it
-specifies the buffer size for the I/O pipes. *mode*, if provided, should be the
-string ``'b'`` or ``'t'``; on Windows this is needed to determine whether the
-file objects should be opened in binary or text mode.  The default value for
-*mode* is ``'t'``.
-
-Also, for each of these variants, on Unix, *cmd* may be a sequence, in which
-case arguments will be passed directly to the program without shell intervention
-(as with :func:`os.spawnv`). If *cmd* is a string it will be passed to the shell
-(as with :func:`os.system`).
-
-These methods do not make it possible to retrieve the exit status from the child
-processes.  The only way to control the input and output streams and also
-retrieve the return codes is to use the :mod:`subprocess` module; these are only
-available on Unix.
-
-For a discussion of possible deadlock conditions related to the use of these
-functions, see :ref:`popen2-flow-control`.
-
-
-.. function:: popen2(cmd[, mode[, bufsize]])
-
-   Executes *cmd* as a sub-process.  Returns the file objects ``(child_stdin,
-   child_stdout)``.
-
-   .. deprecated:: 2.6
-      All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-      module.
-
-   Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 2.0
-
-
-.. function:: popen3(cmd[, mode[, bufsize]])
-
-   Executes *cmd* as a sub-process.  Returns the file objects ``(child_stdin,
-   child_stdout, child_stderr)``.
-
-   .. deprecated:: 2.6
-      All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-      module.
-
-   Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 2.0
-
-
-.. function:: popen4(cmd[, mode[, bufsize]])
-
-   Executes *cmd* as a sub-process.  Returns the file objects ``(child_stdin,
-   child_stdout_and_stderr)``.
-
-   .. deprecated:: 2.6
-      All of the :func:`popen\*` functions are obsolete. Use the :mod:`subprocess`
-      module.
-
-   Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 2.0
-
-(Note that ``child_stdin, child_stdout, and child_stderr`` are named from the
-point of view of the child process, so *child_stdin* is the child's standard
-input.)
-
-This functionality is also available in the :mod:`popen2` module using functions
-of the same names, but the return values of those functions have a different
-order.
 
 
 .. _os-fd-ops:
@@ -721,8 +622,6 @@ platforms.  For descriptions of their availability and use, consult
    Parameters to the :func:`lseek` function. Their values are 0, 1, and 2,
    respectively. Availability: Windows, Macintosh, Unix.
 
-   .. versionadded:: 2.5
-
 
 .. _os-file-dir:
 
@@ -793,8 +692,6 @@ Files and Directories
    descriptor *fd*.  The descriptor must refer to an opened directory, not an open
    file. Availability: Unix.
 
-   .. versionadded:: 2.3
-
 
 .. function:: getcwd()
 
@@ -806,8 +703,6 @@ Files and Directories
 
    Return a Unicode object representing the current working directory.
    Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 2.3
 
 
 .. function:: chflags(path, flags)
@@ -828,15 +723,11 @@ Files and Directories
 
    Availability: Macintosh, Unix.
 
-   .. versionadded:: 2.6
-
 
 .. function:: chroot(path)
 
    Change the root directory of the current process to *path*. Availability:
    Macintosh, Unix.
-
-   .. versionadded:: 2.2
 
 
 .. function:: chmod(path, mode)
@@ -844,7 +735,6 @@ Files and Directories
    Change the mode of *path* to the numeric *mode*. *mode* may take one of the
    following values (as defined in the :mod:`stat` module) or bitwise or-ed
    combinations of them:
-
 
    * ``stat.S_ISUID``
    * ``stat.S_ISGID``
@@ -887,15 +777,11 @@ Files and Directories
    Set the flags of *path* to the numeric *flags*, like :func:`chflags`, but do not
    follow symbolic links. Availability: Unix.
 
-   .. versionadded:: 2.6
-
 
 .. function:: lchown(path, uid, gid)
 
    Change the owner and group id of *path* to the numeric *uid* and gid. This
    function will not follow symbolic links. Availability: Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. function:: link(src, dst)
@@ -910,9 +796,8 @@ Files and Directories
    ``'..'`` even if they are present in the directory. Availability: Macintosh,
    Unix, Windows.
 
-   .. versionchanged:: 2.3
-      On Windows NT/2k/XP and Unix, if *path* is a Unicode object, the result will be
-      a list of Unicode objects.
+   On Windows NT/2k/XP and Unix, if *path* is a Unicode object, the result will be
+   a list of Unicode objects.
 
 
 .. function:: lstat(path)
@@ -945,15 +830,11 @@ Files and Directories
    ``stat.S_IFBLK``, *device* defines the newly created device special file (probably using
    :func:`os.makedev`), otherwise it is ignored.
 
-   .. versionadded:: 2.3
-
 
 .. function:: major(device)
 
    Extracts the device major number from a raw device number (usually the
    :attr:`st_dev` or :attr:`st_rdev` field from :ctype:`stat`).
-
-   .. versionadded:: 2.3
 
 
 .. function:: minor(device)
@@ -961,14 +842,10 @@ Files and Directories
    Extracts the device minor number from a raw device number (usually the
    :attr:`st_dev` or :attr:`st_rdev` field from :ctype:`stat`).
 
-   .. versionadded:: 2.3
-
 
 .. function:: makedev(major, minor)
 
    Composes a raw device number from the major and minor device numbers.
-
-   .. versionadded:: 2.3
 
 
 .. function:: mkdir(path[, mode])
@@ -995,10 +872,7 @@ Files and Directories
       :func:`makedirs` will become confused if the path elements to create include
       *os.pardir*.
 
-   .. versionadded:: 1.5.2
-
-   .. versionchanged:: 2.3
-      This function now handles UNC paths correctly.
+   This function handles UNC paths correctly.
 
 
 .. function:: pathconf(path, name)
@@ -1033,8 +907,7 @@ Files and Directories
    be converted to an absolute pathname using ``os.path.join(os.path.dirname(path),
    result)``.
 
-   .. versionchanged:: 2.6
-      If the *path* is a Unicode object the result will also be a Unicode object.
+   If the *path* is a Unicode object, the result will also be a Unicode object.
 
    Availability: Macintosh, Unix.
 
@@ -1063,8 +936,6 @@ Files and Directories
    they are empty. Raises :exc:`OSError` if the leaf directory could not be
    successfully removed.
 
-   .. versionadded:: 1.5.2
-
 
 .. function:: rename(src, dst)
 
@@ -1084,8 +955,6 @@ Files and Directories
    creation of any intermediate directories needed to make the new pathname good is
    attempted first. After the rename, directories corresponding to rightmost path
    segments of the old name will be pruned away using :func:`removedirs`.
-
-   .. versionadded:: 1.5.2
 
    .. note::
 
@@ -1118,11 +987,10 @@ Files and Directories
       926L
       >>>
 
-   .. versionchanged:: 2.3
-      If :func:`stat_float_times` returns true, the time values are floats, measuring
-      seconds. Fractions of a second may be reported if the system supports that. On
-      Mac OS, the times are always floats. See :func:`stat_float_times` for further
-      discussion.
+   If :func:`stat_float_times` returns true, the time values are floats, measuring
+   seconds. Fractions of a second may be reported if the system supports that. On
+   Mac OS, the times are always floats. See :func:`stat_float_times` for further
+   discussion.
 
    On some Unix systems (such as Linux), the following attributes may also be
    available: :attr:`st_blocks` (number of blocks allocated for file),
@@ -1135,9 +1003,6 @@ Files and Directories
 
    On Mac OS systems, the following attributes may also be available:
    :attr:`st_rsize`, :attr:`st_creator`, :attr:`st_type`.
-
-   On RISCOS systems, the following attributes are also available: :attr:`st_ftype`
-   (file type), :attr:`st_attrs` (attributes), :attr:`st_obtype` (object type).
 
    .. index:: module: stat
 
@@ -1161,12 +1026,6 @@ Files and Directories
 
    Availability: Macintosh, Unix, Windows.
 
-   .. versionchanged:: 2.2
-      Added access to values as attributes of the returned object.
-
-   .. versionchanged:: 2.5
-      Added st_gen, st_birthtime.
-
 
 .. function:: stat_float_times([newvalue])
 
@@ -1178,10 +1037,9 @@ Files and Directories
    For compatibility with older Python versions, accessing :class:`stat_result` as
    a tuple always returns integers.
 
-   .. versionchanged:: 2.5
-      Python now returns float values by default. Applications which do not work
-      correctly with floating point time stamps can use this function to restore the
-      old behaviour.
+   Python now returns float values by default. Applications which do not work
+   correctly with floating point time stamps can use this function to restore the
+   old behaviour.
 
    The resolution of the timestamps (that is the smallest possible fraction)
    depends on the system. Some systems only support second resolution; on these
@@ -1211,9 +1069,6 @@ Files and Directories
    information from a :ctype:`statvfs` structure when accessing it as a sequence;
    this remains useful when writing code that needs to work with versions of Python
    that don't support accessing the fields as attributes.
-
-   .. versionchanged:: 2.2
-      Added access to values as attributes of the returned object.
 
 
 .. function:: symlink(src, dst)
@@ -1287,9 +1142,6 @@ Files and Directories
    depending on the resolution with which your operating system records access and
    modification times; see :func:`stat`.
 
-   .. versionchanged:: 2.0
-      Added support for ``None`` for *times*.
-
    Availability: Macintosh, Unix, Windows.
 
 
@@ -1336,9 +1188,6 @@ Files and Directories
    directories. Set *followlinks* to True to visit directories pointed to by
    symlinks, on systems that support them.
 
-   .. versionadded:: 2.6
-      The *followlinks* parameter.
-
    .. note::
 
       Be aware that setting *followlinks* to true can lead to infinite recursion if a
@@ -1358,9 +1207,9 @@ Files and Directories
       import os
       from os.path import join, getsize
       for root, dirs, files in os.walk('python/Lib/email'):
-          print root, "consumes",
-          print sum(getsize(join(root, name)) for name in files),
-          print "bytes in", len(files), "non-directory files"
+          print(root, "consumes", end=" ")
+          print(sum(getsize(join(root, name)) for name in files), end=" ")
+          print("bytes in", len(files), "non-directory files")
           if 'CVS' in dirs:
               dirs.remove('CVS')  # don't visit CVS directories
 
@@ -1377,8 +1226,6 @@ Files and Directories
               os.remove(os.path.join(root, name))
           for name in dirs:
               os.rmdir(os.path.join(root, name))
-
-   .. versionadded:: 2.3
 
 
 .. _os-process:
@@ -1472,15 +1319,11 @@ written in Python, such as a mail server's external command delivery program.
 
    Exit code that means no error occurred. Availability: Macintosh, Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_USAGE
 
    Exit code that means the command was used incorrectly, such as when the wrong
    number of arguments are given. Availability: Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. data:: EX_DATAERR
@@ -1488,15 +1331,11 @@ written in Python, such as a mail server's external command delivery program.
    Exit code that means the input data was incorrect. Availability: Macintosh,
    Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_NOINPUT
 
    Exit code that means an input file did not exist or was not readable.
    Availability: Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. data:: EX_NOUSER
@@ -1504,15 +1343,11 @@ written in Python, such as a mail server's external command delivery program.
    Exit code that means a specified user did not exist. Availability: Macintosh,
    Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_NOHOST
 
    Exit code that means a specified host did not exist. Availability: Macintosh,
    Unix.
-
-   .. versionadded:: 2.3
 
 
 .. data:: EX_UNAVAILABLE
@@ -1520,15 +1355,11 @@ written in Python, such as a mail server's external command delivery program.
    Exit code that means that a required service is unavailable. Availability:
    Macintosh, Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_SOFTWARE
 
    Exit code that means an internal software error was detected. Availability:
    Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. data:: EX_OSERR
@@ -1536,15 +1367,11 @@ written in Python, such as a mail server's external command delivery program.
    Exit code that means an operating system error was detected, such as the
    inability to fork or create a pipe. Availability: Macintosh, Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_OSFILE
 
    Exit code that means some system file did not exist, could not be opened, or had
    some other kind of error. Availability: Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. data:: EX_CANTCREAT
@@ -1552,15 +1379,11 @@ written in Python, such as a mail server's external command delivery program.
    Exit code that means a user specified output file could not be created.
    Availability: Macintosh, Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_IOERR
 
    Exit code that means that an error occurred while doing I/O on some file.
    Availability: Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. data:: EX_TEMPFAIL
@@ -1569,15 +1392,11 @@ written in Python, such as a mail server's external command delivery program.
    that may not really be an error, such as a network connection that couldn't be
    made during a retryable operation. Availability: Macintosh, Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_PROTOCOL
 
    Exit code that means that a protocol exchange was illegal, invalid, or not
    understood. Availability: Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. data:: EX_NOPERM
@@ -1586,23 +1405,17 @@ written in Python, such as a mail server's external command delivery program.
    operation (but not intended for file system problems). Availability: Macintosh,
    Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_CONFIG
 
    Exit code that means that some kind of configuration error occurred.
    Availability: Macintosh, Unix.
 
-   .. versionadded:: 2.3
-
 
 .. data:: EX_NOTFOUND
 
    Exit code that means something like "an entry was not found". Availability:
    Macintosh, Unix.
-
-   .. versionadded:: 2.3
 
 
 .. function:: fork()
@@ -1640,8 +1453,6 @@ written in Python, such as a mail server's external command delivery program.
    Send the signal *sig* to the process group *pgid*. Availability: Macintosh,
    Unix.
 
-   .. versionadded:: 2.3
-
 
 .. function:: nice(increment)
 
@@ -1657,9 +1468,6 @@ written in Python, such as a mail server's external command delivery program.
 
 
 .. function:: popen(...)
-              popen2(...)
-              popen3(...)
-              popen4(...)
    :noindex:
 
    Run child processes, returning opened pipes for communications.  These functions
@@ -1724,8 +1532,6 @@ written in Python, such as a mail server's external command delivery program.
    Availability: Unix, Windows.  :func:`spawnlp`, :func:`spawnlpe`, :func:`spawnvp`
    and :func:`spawnvpe` are not available on Windows.
 
-   .. versionadded:: 1.6
-
 
 .. data:: P_NOWAIT
           P_NOWAITO
@@ -1735,8 +1541,6 @@ written in Python, such as a mail server's external command delivery program.
    will return as soon as the new process has been created, with the process ID as
    the return value. Availability: Macintosh, Unix, Windows.
 
-   .. versionadded:: 1.6
-
 
 .. data:: P_WAIT
 
@@ -1745,8 +1549,6 @@ written in Python, such as a mail server's external command delivery program.
    return until the new process has run to completion and will return the exit code
    of the process the run is successful, or ``-signal`` if a signal kills the
    process. Availability: Macintosh, Unix, Windows.
-
-   .. versionadded:: 1.6
 
 
 .. data:: P_DETACH
@@ -1758,8 +1560,6 @@ written in Python, such as a mail server's external command delivery program.
    console of the calling process. If :const:`P_OVERLAY` is used, the current
    process will be replaced; the :func:`spawn\*` function will not return.
    Availability: Windows.
-
-   .. versionadded:: 1.6
 
 
 .. function:: startfile(path[, operation])
@@ -1783,11 +1583,6 @@ written in Python, such as a mail server's external command delivery program.
    is not a slash (``'/'``); the underlying Win32 :cfunc:`ShellExecute` function
    doesn't work if it is.  Use the :func:`os.path.normpath` function to ensure that
    the path is properly encoded for Win32. Availability: Windows.
-
-   .. versionadded:: 2.0
-
-   .. versionadded:: 2.5
-      The *operation* parameter.
 
 
 .. function:: system(command)
@@ -1869,8 +1664,6 @@ written in Python, such as a mail server's external command delivery program.
    argument is the same as that provided to :func:`waitpid` and :func:`wait4`.
    Availability: Unix.
 
-   .. versionadded:: 2.5
-
 
 .. function:: wait4(pid, options)
 
@@ -1879,8 +1672,6 @@ written in Python, such as a mail server's external command delivery program.
    Refer to :mod:`resource`.\ :func:`getrusage` for details on resource usage
    information.  The arguments to :func:`wait4` are the same as those provided to
    :func:`waitpid`. Availability: Unix.
-
-   .. versionadded:: 2.5
 
 
 .. data:: WNOHANG
@@ -1896,8 +1687,6 @@ written in Python, such as a mail server's external command delivery program.
    from a job control stop since their status was last reported. Availability: Some
    Unix systems.
 
-   .. versionadded:: 2.3
-
 
 .. data:: WUNTRACED
 
@@ -1905,27 +1694,21 @@ written in Python, such as a mail server's external command delivery program.
    their current state has not been reported since they were stopped. Availability:
    Macintosh, Unix.
 
-   .. versionadded:: 2.3
 
 The following functions take a process status code as returned by
 :func:`system`, :func:`wait`, or :func:`waitpid` as a parameter.  They may be
 used to determine the disposition of a process.
-
 
 .. function:: WCOREDUMP(status)
 
    Returns ``True`` if a core dump was generated for the process, otherwise it
    returns ``False``. Availability: Macintosh, Unix.
 
-   .. versionadded:: 2.3
-
 
 .. function:: WIFCONTINUED(status)
 
    Returns ``True`` if the process has been continued from a job control stop,
    otherwise it returns ``False``. Availability: Unix.
-
-   .. versionadded:: 2.3
 
 
 .. function:: WIFSTOPPED(status)
@@ -2004,8 +1787,6 @@ Miscellaneous System Information
    5, and 15 minutes or raises :exc:`OSError` if the load  average was
    unobtainable.
 
-   .. versionadded:: 2.3
-
 
 .. function:: sysconf(name)
 
@@ -2064,8 +1845,6 @@ Higher-level operations on pathnames are defined in the :mod:`os.path` module.
    The character which separates the base filename from the extension; for example,
    the ``'.'`` in :file:`os.py`. Also available via :mod:`os.path`.
 
-   .. versionadded:: 2.2
-
 
 .. data:: pathsep
 
@@ -2094,8 +1873,6 @@ Higher-level operations on pathnames are defined in the :mod:`os.path` module.
    The file path of the null device. For example: ``'/dev/null'`` for POSIX or
    ``'Dev:Nul'`` for Mac OS 9. Also available via :mod:`os.path`.
 
-   .. versionadded:: 2.4
-
 
 .. _os-miscfunc:
 
@@ -2112,6 +1889,3 @@ Miscellaneous Functions
    though its exact quality depends on the OS implementation.  On a UNIX-like
    system this will query /dev/urandom, and on Windows it will use CryptGenRandom.
    If a randomness source is not found, :exc:`NotImplementedError` will be raised.
-
-   .. versionadded:: 2.4
-

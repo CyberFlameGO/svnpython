@@ -8,8 +8,6 @@
 .. sectionauthor:: Mark Hammond <MarkH@ActiveState.com>
 
 
-.. versionadded:: 2.0
-
 These functions expose the Windows registry API to Python.  Instead of using an
 integer as the registry handle, a handle object is used to ensure that the
 handles are closed correctly, even if the programmer neglects to explicitly
@@ -382,10 +380,10 @@ All registry functions in this module return one of these objects.
 All registry functions in this module which accept a handle object  also accept
 an integer, however, use of the handle object is  encouraged.
 
-Handle objects provide semantics for :meth:`__nonzero__` - thus  ::
+Handle objects provide semantics for :meth:`__bool__` - thus  ::
 
    if handle:
-       print "Yes"
+       print("Yes")
 
 will print ``Yes`` if the handle is currently valid (has not been closed or
 detached).

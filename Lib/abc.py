@@ -56,8 +56,6 @@ class _Abstract(object):
     """Helper class inserted into the bases by ABCMeta (using _fix_bases()).
 
     You should never need to explicitly subclass this class.
-
-    There should never be a base class between _Abstract and object.
     """
 
     def __new__(cls, *args, **kwds):
@@ -69,7 +67,7 @@ class _Abstract(object):
         if (args or kwds) and cls.__init__ is object.__init__:
             raise TypeError("Can't pass arguments to __new__ "
                             "without overriding __init__")
-        return object.__new__(cls)
+        return super().__new__(cls)
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -120,11 +118,11 @@ class ABCMeta(type):
 
     def __new__(mcls, name, bases, namespace):
         bases = _fix_bases(bases)
-        cls = super(ABCMeta, mcls).__new__(mcls, name, bases, namespace)
+        cls = super().__new__(mcls, name, bases, namespace)
         # Compute set of abstract method names
-        abstracts = set(name
+        abstracts = {name
                      for name, value in namespace.items()
-                     if getattr(value, "__isabstractmethod__", False))
+                     if getattr(value, "__isabstractmethod__", False)}
         for base in bases:
             for name in getattr(base, "__abstractmethods__", set()):
                 value = getattr(cls, name, None)
@@ -154,17 +152,17 @@ class ABCMeta(type):
 
     def _dump_registry(cls, file=None):
         """Debug helper to print the ABC registry."""
-        print >> file, "Class: %s.%s" % (cls.__module__, cls.__name__)
-        print >> file, "Inv.counter: %s" % ABCMeta._abc_invalidation_counter
+        print("Class: %s.%s" % (cls.__module__, cls.__name__), file=file)
+        print("Inv.counter: %s" % ABCMeta._abc_invalidation_counter, file=file)
         for name in sorted(cls.__dict__.keys()):
             if name.startswith("_abc_"):
                 value = getattr(cls, name)
-                print >> file, "%s: %r" % (name, value)
+                print("%s: %r" % (name, value), file=file)
 
     def __instancecheck__(cls, instance):
         """Override for isinstance(instance, cls)."""
         return any(cls.__subclasscheck__(c)
-                   for c in set([instance.__class__, type(instance)]))
+                   for c in {instance.__class__, type(instance)})
 
     def __subclasscheck__(cls, subclass):
         """Override for issubclass(subclass, cls)."""

@@ -6,7 +6,7 @@
 
 .. |release| replace:: 1.01
 
-.. % $Id: whatsnew23.tex 54631 2007-03-31 11:58:36Z georg.brandl $
+.. % $Id: whatsnew23.tex 55005 2007-04-27 19:54:29Z guido.van.rossum $
 
 This article explains the new features in Python 2.3.  Python 2.3 was released
 on July 29, 2003.

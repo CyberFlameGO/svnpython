@@ -24,7 +24,7 @@ class Stats:
         self.addstats("<dir>", "dirs", 1)
         try:
             names = os.listdir(dir)
-        except os.error, err:
+        except os.error as err:
             sys.stderr.write("Can't list %s: %s\n" % (dir, err))
             self.addstats("<dir>", "unlistable", 1)
             return
@@ -53,7 +53,7 @@ class Stats:
         self.addstats(ext, "files", 1)
         try:
             f = open(filename, "rb")
-        except IOError, err:
+        except IOError as err:
             sys.stderr.write("Can't open %s: %s\n" % (filename, err))
             self.addstats(ext, "unopenable", 1)
             return
@@ -109,14 +109,14 @@ class Stats:
         cols.insert(0, "ext")
         def printheader():
             for col in cols:
-                print "%*s" % (colwidth[col], col),
-            print
+                print("%*s" % (colwidth[col], col), end=' ')
+            print()
         printheader()
         for ext in exts:
             for col in cols:
                 value = self.stats[ext].get(col, "")
-                print "%*s" % (colwidth[col], value),
-            print
+                print("%*s" % (colwidth[col], value), end=' ')
+            print()
         printheader() # Another header at the bottom
 
 def main():

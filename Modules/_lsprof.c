@@ -117,7 +117,7 @@ typedef struct {
 #define POF_BUILTINS    0x004
 #define POF_NOMEMORY    0x100
 
-staticforward PyTypeObject PyProfiler_Type;
+static PyTypeObject PyProfiler_Type;
 
 #define PyProfiler_Check(op) PyObject_TypeCheck(op, &PyProfiler_Type)
 #define PyProfiler_CheckExact(op) (Py_Type(op) == &PyProfiler_Type)
@@ -178,9 +178,12 @@ normalizeUserObj(PyObject *obj)
 	if (fn->m_self == NULL) {
 		/* built-in function: look up the module name */
 		PyObject *mod = fn->m_module;
-		char *modname;
+		const char *modname;
 		if (mod && PyString_Check(mod)) {
 			modname = PyString_AS_STRING(mod);
+		}
+		else if (mod && PyUnicode_Check(mod)) {
+			modname = PyUnicode_AsString(mod);
 		}
 		else if (mod && PyModule_Check(mod)) {
 			modname = PyModule_GetName(mod);
@@ -193,19 +196,19 @@ normalizeUserObj(PyObject *obj)
 			modname = "__builtin__";
 		}
 		if (strcmp(modname, "__builtin__") != 0)
-			return PyString_FromFormat("<%s.%s>",
-						   modname,
-						   fn->m_ml->ml_name);
+			return PyUnicode_FromFormat("<%s.%s>",
+						    modname,
+						    fn->m_ml->ml_name);
 		else
-			return PyString_FromFormat("<%s>",
-						   fn->m_ml->ml_name);
+			return PyUnicode_FromFormat("<%s>",
+						    fn->m_ml->ml_name);
 	}
 	else {
 		/* built-in method: try to return
 			repr(getattr(type(__self__), __name__))
 		*/
 		PyObject *self = fn->m_self;
-		PyObject *name = PyString_FromString(fn->m_ml->ml_name);
+		PyObject *name = PyUnicode_FromString(fn->m_ml->ml_name);
 		if (name != NULL) {
 			PyObject *mo = _PyType_Lookup(Py_Type(self), name);
 			Py_XINCREF(mo);
@@ -218,8 +221,8 @@ normalizeUserObj(PyObject *obj)
 			}
 		}
 		PyErr_Clear();
-		return PyString_FromFormat("<built-in method %s>",
-					   fn->m_ml->ml_name);
+		return PyUnicode_FromFormat("<built-in method %s>",
+					    fn->m_ml->ml_name);
 	}
 }
 
@@ -811,9 +814,8 @@ Profiler(custom_timer=None, time_unit=None, subcalls=True, builtins=True)\n\
     is, in seconds).\n\
 ");
 
-statichere PyTypeObject PyProfiler_Type = {
-	PyObject_HEAD_INIT(NULL)
-	0,                                      /* ob_size */
+static PyTypeObject PyProfiler_Type = {
+	PyVarObject_HEAD_INIT(NULL, 0)
 	"_lsprof.Profiler",                     /* tp_name */
 	sizeof(ProfilerObject),                 /* tp_basicsize */
 	0,                                      /* tp_itemsize */

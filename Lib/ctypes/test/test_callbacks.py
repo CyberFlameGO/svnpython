@@ -82,8 +82,8 @@ class Callbacks(unittest.TestCase):
         self.check_type(c_longdouble, -3.14)
 
     def test_char(self):
-        self.check_type(c_char, "x")
-        self.check_type(c_char, "a")
+        self.check_type(c_char, b"x")
+        self.check_type(c_char, b"a")
 
     # disabled: would now (correctly) raise a RuntimeWarning about
     # a memory leak.  A callback function cannot return a non-integral

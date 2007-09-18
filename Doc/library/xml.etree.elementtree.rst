@@ -7,8 +7,6 @@
 .. moduleauthor:: Fredrik Lundh <fredrik@pythonware.com>
 
 
-.. versionadded:: 2.5
-
 The Element type is a flexible container object, designed to store hierarchical
 data structures in memory. The type can be described as a cross between a list
 and a dictionary.
@@ -280,10 +278,10 @@ elements with no subelements will test as ``False``. ::
    element = root.find('foo')
 
    if not element: # careful!
-       print "element not found, or element has no subelements"
+       print("element not found, or element has no subelements")
 
    if element is None:
-       print "element not found"
+       print("element not found")
 
 
 .. _elementtree-elementtree-objects:

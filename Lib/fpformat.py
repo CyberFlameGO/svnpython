@@ -36,7 +36,7 @@ def extract(s):
     fraction is 0 or more digits
     expo is an integer"""
     res = decoder.match(s)
-    if res is None: raise NotANumber, s
+    if res is None: raise NotANumber(s)
     sign, intpart, fraction, exppart = res.group(1,2,3,4)
     if sign == '+': sign = ''
     if fraction: fraction = fraction[1:]
@@ -137,6 +137,6 @@ def test():
     try:
         while 1:
             x, digs = input('Enter (x, digs): ')
-            print x, fix(x, digs), sci(x, digs)
+            print(x, fix(x, digs), sci(x, digs))
     except (EOFError, KeyboardInterrupt):
         pass

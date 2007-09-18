@@ -162,6 +162,6 @@ interpreter objects as well as the following additions.
 
    Write a prompt and read a line.  The returned line does not include the trailing
    newline.  When the user enters the EOF key sequence, :exc:`EOFError` is raised.
-   The base implementation uses the built-in function :func:`raw_input`; a subclass
-   may replace this with a different implementation.
+   The base implementation reads from ``sys.stdin``; a subclass may replace this
+   with a different implementation.
 

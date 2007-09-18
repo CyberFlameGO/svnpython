@@ -58,6 +58,19 @@ class MathTests(unittest.TestCase):
         self.ftest('ceil(-1.0)', math.ceil(-1.0), -1)
         self.ftest('ceil(-1.5)', math.ceil(-1.5), -1)
 
+        class TestCeil:
+            def __ceil__(self):
+                return 42
+        class TestNoCeil:
+            pass
+        self.ftest('ceil(TestCeil())', math.ceil(TestCeil()), 42)
+        self.assertRaises(TypeError, math.ceil, TestNoCeil())
+
+        t = TestNoCeil()
+        t.__ceil__ = lambda *args: args
+        self.assertRaises(TypeError, math.ceil, t)
+        self.assertRaises(TypeError, math.ceil, t, 0)
+
     def testCos(self):
         self.assertRaises(TypeError, math.cos)
         self.ftest('cos(-pi/2)', math.cos(-math.pi/2), 0)
@@ -101,6 +114,19 @@ class MathTests(unittest.TestCase):
         self.ftest('floor(1.23e167)', math.floor(1.23e167), 1.23e167)
         self.ftest('floor(-1.23e167)', math.floor(-1.23e167), -1.23e167)
 
+        class TestFloor:
+            def __floor__(self):
+                return 42
+        class TestNoFloor:
+            pass
+        self.ftest('floor(TestFloor())', math.floor(TestFloor()), 42)
+        self.assertRaises(TypeError, math.floor, TestNoFloor())
+
+        t = TestNoFloor()
+        t.__floor__ = lambda *args: args
+        self.assertRaises(TypeError, math.floor, t)
+        self.assertRaises(TypeError, math.floor, t, 0)
+
     def testFmod(self):
         self.assertRaises(TypeError, math.fmod)
         self.ftest('fmod(10,1)', math.fmod(10,1), 0)
@@ -113,10 +139,11 @@ class MathTests(unittest.TestCase):
     def testFrexp(self):
         self.assertRaises(TypeError, math.frexp)
 
-        def testfrexp(name, (mant, exp), (emant, eexp)):
+        def testfrexp(name, result, expected):
+            (mant, exp), (emant, eexp) = result, expected
             if abs(mant-emant) > eps or exp != eexp:
                 self.fail('%s returned %r, expected %r'%\
-                          (name, (mant, exp), (emant,eexp)))
+                          (name, result, expected))
 
         testfrexp('frexp(-1)', math.frexp(-1), (-0.5, 1))
         testfrexp('frexp(0)', math.frexp(0), (0, 0))
@@ -153,10 +180,11 @@ class MathTests(unittest.TestCase):
     def testModf(self):
         self.assertRaises(TypeError, math.modf)
 
-        def testmodf(name, (v1, v2), (e1, e2)):
+        def testmodf(name, result, expected):
+            (v1, v2), (e1, e2) = result, expected
             if abs(v1-e1) > eps or abs(v2-e2):
                 self.fail('%s returned %r, expected %r'%\
-                          (name, (v1,v2), (e1,e2)))
+                          (name, result, expected))
 
         testmodf('modf(1.5)', math.modf(1.5), (0.5, 1.0))
         testmodf('modf(-1.5)', math.modf(-1.5), (-0.5, -1.0))

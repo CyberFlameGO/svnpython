@@ -27,7 +27,7 @@ class Context:
 
         self.map = db.DB(self.env)
         self.map.open('xxx.db', "p",
-                      db.DB_HASH, db.DB_CREATE, 0666, txn=self.the_txn)
+                      db.DB_HASH, db.DB_CREATE, 0o666, txn=self.the_txn)
         del self.env
         del self.the_txn
 

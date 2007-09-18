@@ -11,11 +11,8 @@ def test_main():
         if name.startswith('test_'):
             test = getattr(_testcapi, name)
             if test_support.verbose:
-                print "internal", name
-            try:
-                test()
-            except _testcapi.error:
-                raise test_support.TestFailed, sys.exc_info()[1]
+                print("internal", name)
+            test()
 
     # some extra thread-state tests driven via _testcapi
     def TestThreadState():
@@ -23,7 +20,7 @@ def test_main():
         import time
 
         if test_support.verbose:
-            print "auto-thread-state"
+            print("auto-thread-state")
 
         idents = []
 
@@ -35,8 +32,8 @@ def test_main():
         time.sleep(1)
         # Check our main thread is in the list exactly 3 times.
         if idents.count(thread.get_ident()) != 3:
-            raise test_support.TestFailed, \
-                  "Couldn't find main thread correctly in the list"
+            raise test_support.TestFailed(
+                        "Couldn't find main thread correctly in the list")
 
     try:
         _testcapi._test_thread_state

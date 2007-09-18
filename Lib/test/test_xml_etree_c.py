@@ -34,24 +34,21 @@ def sanity():
     """
 
 def check_method(method):
-    if not callable(method):
-        print method, "not callable"
+    if not hasattr(method, '__call__'):
+        print(method, "not callable")
 
-def serialize(ET, elem, encoding=None):
-    import StringIO
-    file = StringIO.StringIO()
+def serialize(ET, elem):
+    import io
+    file = io.StringIO()
     tree = ET.ElementTree(elem)
-    if encoding:
-        tree.write(file, encoding)
-    else:
-        tree.write(file)
+    tree.write(file)
     return file.getvalue()
 
 def summarize(elem):
     return elem.tag
 
 def summarize_list(seq):
-    return map(summarize, seq)
+    return list(map(summarize, seq))
 
 def interface():
     """
@@ -176,9 +173,9 @@ def parseliteral():
     >>> element = ET.fromstring("<html><body>text</body></html>")
     >>> ET.ElementTree(element).write(sys.stdout)
     <html><body>text</body></html>
-    >>> print ET.tostring(element)
+    >>> print(ET.tostring(element))
     <html><body>text</body></html>
-    >>> print ET.tostring(element, "ascii")
+    >>> print(ET.tostring(element, "ascii"))
     <?xml version='1.0' encoding='ascii'?>
     <html><body>text</body></html>
     >>> _, ids = ET.XMLID("<html><body>text</body></html>")

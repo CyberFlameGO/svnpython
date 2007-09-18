@@ -9,7 +9,7 @@
    Greg Stein (gstein@lyra.org)
    Trevor Perrin (trevp@trevp.net)
 
-   Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
+   Copyright (C) 2005-2007   Gregory P. Smith (greg@krypto.org)
    Licensed to PSF under a Contributor Agreement.
 
 */
@@ -103,7 +103,7 @@ static void SHAcopy(SHAobject *src, SHAobject *dest)
  * The library is free for all purposes without any express
  * gurantee it works.
  *
- * Tom St Denis, tomstdenis@iahu.ca, http://libtomcrypt.org
+ * Tom St Denis, tomstdenis@iahu.ca, http://libtom.org
  */
 
 
@@ -432,7 +432,7 @@ SHA256_digest(SHAobject *self, PyObject *unused)
 
     SHAcopy(self, &temp);
     sha_final(digest, &temp);
-    return PyString_FromStringAndSize((const char *)digest, self->digestsize);
+    return PyBytes_FromStringAndSize((const char *)digest, self->digestsize);
 }
 
 PyDoc_STRVAR(SHA256_hexdigest__doc__,
@@ -444,7 +444,7 @@ SHA256_hexdigest(SHAobject *self, PyObject *unused)
     unsigned char digest[SHA_DIGESTSIZE];
     SHAobject temp;
     PyObject *retval;
-    char *hex_digest;
+    Py_UNICODE *hex_digest;
     int i, j;
 
     /* Get the raw (binary) digest value */
@@ -452,10 +452,10 @@ SHA256_hexdigest(SHAobject *self, PyObject *unused)
     sha_final(digest, &temp);
 
     /* Create a new string */
-    retval = PyString_FromStringAndSize(NULL, self->digestsize * 2);
+    retval = PyUnicode_FromStringAndSize(NULL, self->digestsize * 2);
     if (!retval)
 	    return NULL;
-    hex_digest = PyString_AsString(retval);
+    hex_digest = PyUnicode_AS_UNICODE(retval);
     if (!hex_digest) {
 	    Py_DECREF(retval);
 	    return NULL;
@@ -510,9 +510,9 @@ static PyObject *
 SHA256_get_name(PyObject *self, void *closure)
 {
     if (((SHAobject *)self)->digestsize == 32)
-        return PyString_FromStringAndSize("SHA256", 6);
+        return PyUnicode_FromStringAndSize("SHA256", 6);
     else
-        return PyString_FromStringAndSize("SHA224", 6);
+        return PyUnicode_FromStringAndSize("SHA224", 6);
 }
 
 static PyGetSetDef SHA_getseters[] = {

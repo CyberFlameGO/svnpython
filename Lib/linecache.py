@@ -7,6 +7,7 @@ that name.
 
 import sys
 import os
+import re
 
 __all__ = ["getline", "clearcache", "checkcache"]
 
@@ -45,7 +46,7 @@ def checkcache(filename=None):
     (This is not checked upon each call!)"""
 
     if filename is None:
-        filenames = cache.keys()
+        filenames = list(cache.keys())
     else:
         if filename in cache:
             filenames = [filename]
@@ -78,7 +79,7 @@ def updatecache(filename, module_globals=None):
     fullname = filename
     try:
         stat = os.stat(fullname)
-    except os.error, msg:
+    except os.error as msg:
         basename = os.path.split(filename)[1]
 
         # Try for a __loader__, if available
@@ -124,13 +125,25 @@ def updatecache(filename, module_globals=None):
             # No luck
 ##          print '*** Cannot stat', filename, ':', msg
             return []
+##  print("Refreshing cache for %s..." % fullname)
     try:
         fp = open(fullname, 'rU')
         lines = fp.readlines()
         fp.close()
-    except IOError, msg:
+    except Exception as msg:
 ##      print '*** Cannot open', fullname, ':', msg
         return []
+    coding = "utf-8"
+    for line in lines[:2]:
+        m = re.search(r"coding[:=]\s*([-\w.]+)", line)
+        if m:
+            coding = m.group(1)
+            break
+    try:
+        lines = [line if isinstance(line, str) else str(line, coding)
+                 for line in lines]
+    except:
+        pass  # Hope for the best
     size, mtime = stat.st_size, stat.st_mtime
     cache[filename] = size, mtime, lines, fullname
     return lines

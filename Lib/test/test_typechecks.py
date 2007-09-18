@@ -9,19 +9,17 @@ class ABC(type):
     def __instancecheck__(cls, inst):
         """Implement isinstance(inst, cls)."""
         return any(cls.__subclasscheck__(c)
-                   for c in set([type(inst), inst.__class__]))
+                   for c in {type(inst), inst.__class__})
 
     def __subclasscheck__(cls, sub):
         """Implement issubclass(sub, cls)."""
-        candidates = cls.__dict__.get("__subclass__", set()) | set([cls])
+        candidates = cls.__dict__.get("__subclass__", set()) | {cls}
         return any(c in candidates for c in sub.mro())
 
 
-class Integer:
+class Integer(metaclass=ABC):
 
-    __metaclass__ = ABC
-
-    __subclass__ = set([int])
+    __subclass__ = {int}
 
 
 class SubInt(Integer):

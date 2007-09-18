@@ -19,6 +19,7 @@ def capture(*args, **kw):
     """capture all positional and keyword arguments"""
     return args, kw
 
+
 class TestPartial(unittest.TestCase):
 
     thetype = functools.partial
@@ -28,7 +29,7 @@ class TestPartial(unittest.TestCase):
         self.assertEqual(p(3, 4, b=30, c=40),
                          ((1, 2, 3, 4), dict(a=10, b=30, c=40)))
         p = self.thetype(map, lambda x: x*10)
-        self.assertEqual(p([1,2,3,4]), [10, 20, 30, 40])
+        self.assertEqual(list(p([1,2,3,4])), [10, 20, 30, 40])
 
     def test_attributes(self):
         p = self.thetype(capture, 1, 2, a=10, b=20)
@@ -134,7 +135,7 @@ class TestPartial(unittest.TestCase):
         self.assertRaises(ReferenceError, getattr, p, 'func')
 
     def test_with_bound_and_unbound_methods(self):
-        data = map(str, range(10))
+        data = list(map(str, range(10)))
         join = self.thetype(str.join, '')
         self.assertEqual(join(data), '0123456789')
         join = self.thetype(''.join)
@@ -266,6 +267,74 @@ class TestWraps(TestUpdateWrapper):
         self.assertEqual(wrapper.attr, 'This is a different test')
         self.assertEqual(wrapper.dict_attr, f.dict_attr)
 
+class TestReduce(unittest.TestCase):
+    func = functools.reduce
+
+    def test_reduce(self):
+        class Squares:
+            def __init__(self, max):
+                self.max = max
+                self.sofar = []
+
+            def __len__(self):
+                return len(self.sofar)
+
+            def __getitem__(self, i):
+                if not 0 <= i < self.max: raise IndexError
+                n = len(self.sofar)
+                while n <= i:
+                    self.sofar.append(n*n)
+                    n += 1
+                return self.sofar[i]
+
+        self.assertEqual(self.func(lambda x, y: x+y, ['a', 'b', 'c'], ''), 'abc')
+        self.assertEqual(
+            self.func(lambda x, y: x+y, [['a', 'c'], [], ['d', 'w']], []),
+            ['a','c','d','w']
+        )
+        self.assertEqual(self.func(lambda x, y: x*y, range(2,8), 1), 5040)
+        self.assertEqual(
+            self.func(lambda x, y: x*y, range(2,21), 1),
+            2432902008176640000
+        )
+        self.assertEqual(self.func(lambda x, y: x+y, Squares(10)), 285)
+        self.assertEqual(self.func(lambda x, y: x+y, Squares(10), 0), 285)
+        self.assertEqual(self.func(lambda x, y: x+y, Squares(0), 0), 0)
+        self.assertRaises(TypeError, self.func)
+        self.assertRaises(TypeError, self.func, 42, 42)
+        self.assertRaises(TypeError, self.func, 42, 42, 42)
+        self.assertEqual(self.func(42, "1"), "1") # func is never called with one item
+        self.assertEqual(self.func(42, "", "1"), "1") # func is never called with one item
+        self.assertRaises(TypeError, self.func, 42, (42, 42))
+
+        class BadSeq:
+            def __getitem__(self, index):
+                raise ValueError
+        self.assertRaises(ValueError, self.func, 42, BadSeq())
+
+    # Test reduce()'s use of iterators.
+    def test_iterator_usage(self):
+        class SequenceClass:
+            def __init__(self, n):
+                self.n = n
+            def __getitem__(self, i):
+                if 0 <= i < self.n:
+                    return i
+                else:
+                    raise IndexError
+
+        from operator import add
+        self.assertEqual(self.func(add, SequenceClass(5)), 10)
+        self.assertEqual(self.func(add, SequenceClass(5), 42), 52)
+        self.assertRaises(TypeError, self.func, add, SequenceClass(0))
+        self.assertEqual(self.func(add, SequenceClass(0), 42), 42)
+        self.assertEqual(self.func(add, SequenceClass(1)), 0)
+        self.assertEqual(self.func(add, SequenceClass(1), 42), 42)
+
+        d = {"one": 1, "two": 2, "three": 3}
+        self.assertEqual(self.func(add, d), "".join(d.keys()))
+
+
 
 
 def test_main(verbose=None):
@@ -275,7 +344,8 @@ def test_main(verbose=None):
         TestPartialSubclass,
         TestPythonPartial,
         TestUpdateWrapper,
-        TestWraps
+        TestWraps,
+        TestReduce
     )
     test_support.run_unittest(*test_classes)
 
@@ -283,11 +353,11 @@ def test_main(verbose=None):
     if verbose and hasattr(sys, "gettotalrefcount"):
         import gc
         counts = [None] * 5
-        for i in xrange(len(counts)):
+        for i in range(len(counts)):
             test_support.run_unittest(*test_classes)
             gc.collect()
             counts[i] = sys.gettotalrefcount()
-        print counts
+        print(counts)
 
 if __name__ == '__main__':
     test_main(verbose=True)

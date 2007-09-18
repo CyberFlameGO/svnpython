@@ -80,9 +80,9 @@ attributes by using the .output() function
    >>> C = Cookie.SmartCookie()
    >>> C["rocky"] = "road"
    >>> C["rocky"]["path"] = "/cookie"
-   >>> print C.output(header="Cookie:")
+   >>> print(C.output(header="Cookie:"))
    Cookie: rocky=road; Path=/cookie
-   >>> print C.output(attrs=[], header="Cookie:")
+   >>> print(C.output(attrs=[], header="Cookie:"))
    Cookie: rocky=road
 
 The load() method of a Cookie extracts cookies from a string.  In a
@@ -100,7 +100,7 @@ such trickeries do not confuse it.
 
    >>> C = Cookie.SmartCookie()
    >>> C.load('keebler="E=everybody; L=\\"Loves\\"; fudge=\\012;";')
-   >>> print C
+   >>> print(C)
    Set-Cookie: keebler="E=everybody; L=\"Loves\"; fudge=\012;"
 
 Each element of the Cookie also supports all of the RFC 2109
@@ -110,7 +110,7 @@ attribute.
    >>> C = Cookie.SmartCookie()
    >>> C["oreo"] = "doublestuff"
    >>> C["oreo"]["path"] = "/"
-   >>> print C
+   >>> print(C)
    Set-Cookie: oreo=doublestuff; Path=/
 
 Each dictionary element has a 'value' attribute, which gives you
@@ -149,11 +149,10 @@ the value to a string, when the values are set dictionary-style.
 SerialCookie
 
 The SerialCookie expects that all values should be serialized using
-cPickle (or pickle, if cPickle isn't available).  As a result of
-serializing, SerialCookie can save almost any Python object to a
-value, and recover the exact same object when the cookie has been
-returned.  (SerialCookie can yield some strange-looking cookie
-values, however.)
+pickle.  As a result of serializing, SerialCookie can save almost any
+Python object to a value, and recover the exact same object when the
+cookie has been returned.  (SerialCookie can yield some
+strange-looking cookie values, however.)
 
    >>> C = Cookie.SerialCookie()
    >>> C["number"] = 7
@@ -163,7 +162,7 @@ values, however.)
    >>> C["string"].value
    'seven'
    >>> C.output()
-   'Set-Cookie: number="I7\\012."\r\nSet-Cookie: string="S\'seven\'\\012p1\\012."'
+   'Set-Cookie: number="L7\\012."\r\nSet-Cookie: string="Vseven\\012p0\\012."'
 
 Be warned, however, if SerialCookie cannot de-serialize a value (because
 it isn't a valid pickle'd object), IT WILL RAISE AN EXCEPTION.
@@ -173,7 +172,7 @@ SmartCookie
 
 The SmartCookie combines aspects of each of the other two flavors.
 When setting a value in a dictionary-fashion, the SmartCookie will
-serialize (ala cPickle) the value *if and only if* it isn't a
+serialize (ala pickle) the value *if and only if* it isn't a
 Python string.  String objects are *not* serialized.  Similarly,
 when the load() method parses out values, it attempts to de-serialize
 the value.  If it fails, then it fallsback to treating the value
@@ -187,7 +186,7 @@ as a string.
    >>> C["string"].value
    'seven'
    >>> C.output()
-   'Set-Cookie: number="I7\\012."\r\nSet-Cookie: string=seven'
+   'Set-Cookie: number="L7\\012."\r\nSet-Cookie: string=seven'
 
 
 Backwards Compatibility
@@ -198,7 +197,7 @@ it is still possible to use Cookie.Cookie() to create a Cookie.  In
 fact, this simply returns a SmartCookie.
 
    >>> C = Cookie.Cookie()
-   >>> print C.__class__.__name__
+   >>> print(C.__class__.__name__)
    SmartCookie
 
 
@@ -212,10 +211,7 @@ Finis.
 #
 import string
 
-try:
-    from cPickle import dumps, loads
-except ImportError:
-    from pickle import dumps, loads
+from pickle import dumps, loads
 
 import re, warnings
 
@@ -305,17 +301,14 @@ _Translator       = {
     '\375' : '\\375',  '\376' : '\\376',  '\377' : '\\377'
     }
 
-_idmap = ''.join(chr(x) for x in xrange(256))
-
-def _quote(str, LegalChars=_LegalChars,
-           idmap=_idmap, translate=string.translate):
+def _quote(str, LegalChars=_LegalChars):
     #
     # If the string does not need to be double-quoted,
     # then just return the string.  Otherwise, surround
     # the string in doublequotes and precede quote (with a \)
     # special characters.
     #
-    if "" == translate(str, idmap, LegalChars):
+    if all(c in LegalChars for c in str):
         return str
     else:
         return '"' + _nulljoin( map(_Translator.get, str, str) ) + '"'
@@ -440,14 +433,12 @@ class Morsel(dict):
         return K.lower() in self._reserved
     # end isReservedKey
 
-    def set(self, key, val, coded_val,
-            LegalChars=_LegalChars,
-            idmap=_idmap, translate=string.translate):
+    def set(self, key, val, coded_val, LegalChars=_LegalChars):
         # First we verify that the key isn't a reserved word
         # Second we make sure it only contains legal characters
         if key.lower() in self._reserved:
             raise CookieError("Attempt to set a reserved key: %s" % key)
-        if "" != translate(key, idmap, LegalChars):
+        if any(c not in LegalChars for c in key):
             raise CookieError("Illegal key value: %s" % key)
 
         # It's a good key, so save it.
@@ -488,8 +479,7 @@ class Morsel(dict):
         # Now add any defined attributes
         if attrs is None:
             attrs = self._reserved
-        items = self.items()
-        items.sort()
+        items = sorted(self.items())
         for K,V in items:
             if V == "": continue
             if K not in attrs: continue
@@ -582,8 +572,7 @@ class BaseCookie(dict):
     def output(self, attrs=None, header="Set-Cookie:", sep="\015\012"):
         """Return a string suitable for HTTP."""
         result = []
-        items = self.items()
-        items.sort()
+        items = sorted(self.items())
         for K,V in items:
             result.append( V.output(attrs, header) )
         return sep.join(result)
@@ -593,8 +582,7 @@ class BaseCookie(dict):
 
     def __repr__(self):
         L = []
-        items = self.items()
-        items.sort()
+        items = sorted(self.items())
         for K,V in items:
             L.append( '%s=%s' % (K,repr(V.value) ) )
         return '<%s: %s>' % (self.__class__.__name__, _spacejoin(L))
@@ -602,8 +590,7 @@ class BaseCookie(dict):
     def js_output(self, attrs=None):
         """Return a string suitable for JavaScript."""
         result = []
-        items = self.items()
-        items.sort()
+        items = sorted(self.items())
         for K,V in items:
             result.append( V.js_output(attrs) )
         return _nulljoin(result)
@@ -669,7 +656,7 @@ class SimpleCookie(BaseCookie):
 class SerialCookie(BaseCookie):
     """SerialCookie
     SerialCookie supports arbitrary objects as cookie values. All
-    values are serialized (using cPickle) before being sent to the
+    values are serialized (using pickle) before being sent to the
     client.  All incoming values are assumed to be valid Pickle
     representations.  IF AN INCOMING VALUE IS NOT IN A VALID PICKLE
     FORMAT, THEN AN EXCEPTION WILL BE RAISED.
@@ -687,16 +674,16 @@ class SerialCookie(BaseCookie):
     # end __init__
     def value_decode(self, val):
         # This could raise an exception!
-        return loads( _unquote(val) ), val
+        return loads( _unquote(val).encode('latin-1') ), val
     def value_encode(self, val):
-        return val, _quote( dumps(val) )
+        return val, _quote( dumps(val, 0).decode('latin-1') )
 # end SerialCookie
 
 class SmartCookie(BaseCookie):
     """SmartCookie
     SmartCookie supports arbitrary objects as cookie values.  If the
     object is a string, then it is quoted.  If the object is not a
-    string, however, then SmartCookie will use cPickle to serialize
+    string, however, then SmartCookie will use pickle to serialize
     the object into a string representation.
 
     Note: Large cookie values add overhead because they must be
@@ -713,14 +700,14 @@ class SmartCookie(BaseCookie):
     def value_decode(self, val):
         strval = _unquote(val)
         try:
-            return loads(strval), val
+            return loads(strval.encode('latin-1')), val
         except:
             return strval, val
     def value_encode(self, val):
-        if type(val) == type(""):
+        if isinstance(val, str):
             return val, _quote(val)
         else:
-            return val, _quote( dumps(val) )
+            return val, _quote( dumps(val, 0).decode('latin-1') )
 # end SmartCookie
 
 

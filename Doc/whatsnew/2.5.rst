@@ -637,7 +637,7 @@ precision and rounding characteristics for computations::
        print v.sqrt()
 
 
-.. _new-25-context-managers:
+.. _context-managers:
 
 Writing Context Managers
 ------------------------

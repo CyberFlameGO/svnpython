@@ -340,7 +340,7 @@ static PySequenceMethods structseq_as_sequence = {
 	(binaryfunc)structseq_concat,           /* sq_concat */
 	(ssizeargfunc)structseq_repeat,         /* sq_repeat */
 	(ssizeargfunc)structseq_item,		/* sq_item */
-	(ssizessizeargfunc)structseq_slice,	/* sq_slice */
+	0,					/* sq_slice */
 	0,					/* sq_ass_item */
 	0,					/* sq_ass_slice */
 	(objobjproc)structseq_contains,	        /* sq_contains */
@@ -408,7 +408,7 @@ PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)
 #ifdef Py_TRACE_REFS
 	/* if the type object was chained, unchain it first
 	   before overwriting its storage */
-	if (type->_ob_next) {
+	if (type->ob_base.ob_base._ob_next) {
 		_Py_ForgetReference((PyObject*)type);
 	}
 #endif

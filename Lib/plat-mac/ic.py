@@ -1,7 +1,6 @@
 """IC wrapper module, based on Internet Config 1.3"""
 
 import icglue
-import string
 import sys
 import os
 from Carbon import Res
@@ -94,7 +93,7 @@ def _code_fontrecord(data, key):
         chr(0) + _code_default(name)
 
 def _code_boolean(data, key):
-    print 'XXXX boolean:', repr(data)
+    print('XXXX boolean:', repr(data))
     return chr(data)
 
 def _code_text(data, key):
@@ -135,10 +134,10 @@ _decoder_table = {
 
 def _decode(data, key):
     if '\245' in key:
-        key2 = key[:string.index(key, '\245')+1]
+        key2 = key[:key.index('\245')+1]
     else:
         key2 = key
-    if _decoder_table.has_key(key2):
+    if key2 in _decoder_table:
         decoder = _decoder_table[key2][0]
     else:
         decoder = _decode_default
@@ -148,10 +147,10 @@ def _code(data, key):
     if type(data) == _ICOpaqueDataType:
         return data.data
     if '\245' in key:
-        key2 = key[:string.index(key, '\245')+1]
+        key2 = key[:key.index('\245')+1]
     else:
         key2 = key
-    if _decoder_table.has_key(key2):
+    if key2 in _decoder_table:
         coder = _decoder_table[key2][1]
     else:
         coder = _code_default
@@ -175,9 +174,6 @@ class IC:
             rv.append(self.ic.ICGetIndPref(i+1))
         self.ic.ICEnd()
         return rv
-
-    def has_key(self, key):
-        return self.__contains__(key)
 
     def __contains__(self, key):
         try:
@@ -261,7 +257,7 @@ def _test():
             v = ic[k]
         except error:
             v = '????'
-        print k, '\t', v
+        print(k, '\t', v)
     sys.exit(1)
 
 if __name__ == '__main__':

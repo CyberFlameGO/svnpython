@@ -115,10 +115,9 @@ inside the interpreter; if this variable is *NULL* no exception has occurred.  A
 second global variable stores the "associated value" of the exception (the
 second argument to :keyword:`raise`).  A third variable contains the stack
 traceback in case the error originated in Python code.  These three variables
-are the C equivalents of the Python variables ``sys.exc_type``,
-``sys.exc_value`` and ``sys.exc_traceback`` (see the section on module
-:mod:`sys` in the Python Library Reference).  It is important to know about them
-to understand how errors are passed around.
+are the C equivalents of the result in Python of :meth:`sys.exc_info` (see the
+section on module :mod:`sys` in the Python Library Reference).  It is important
+to know about them to understand how errors are passed around.
 
 The Python API defines a number of functions to set various types of exceptions.
 
@@ -357,11 +356,7 @@ source distribution.
    multiple interpreters within a process (or following a :cfunc:`fork` without an
    intervening :cfunc:`exec`) can create problems for some extension modules.
    Extension module authors should exercise caution when initializing internal data
-   structures. Note also that the :func:`reload` function can be used with
-   extension modules, and will call the module initialization function
-   (:cfunc:`initspam` in the example), but will not load the module again if it was
-   loaded from a dynamically loadable object file (:file:`.so` on Unix,
-   :file:`.dll` on Windows).
+   structures.
 
 A more substantial example module is included in the Python source distribution
 as :file:`Modules/xxmodule.c`.  This file may be used as a  template or simply
@@ -732,8 +727,10 @@ Examples (to the left the call, to the right the resulting Python value)::
    Py_BuildValue("i", 123)                  123
    Py_BuildValue("iii", 123, 456, 789)      (123, 456, 789)
    Py_BuildValue("s", "hello")              'hello'
+   Py_BuildValue("y", "hello")              b'hello'
    Py_BuildValue("ss", "hello", "world")    ('hello', 'world')
    Py_BuildValue("s#", "hello", 4)          'hell'
+   Py_BuildValue("y#", "hello", 4)          b'hell'
    Py_BuildValue("()")                      ()
    Py_BuildValue("(i)", 123)                (123,)
    Py_BuildValue("(ii)", 123, 456)          (123, 456)

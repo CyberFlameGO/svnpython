@@ -17,7 +17,6 @@
 
 import sys
 import getopt
-import string
 import time
 import os
 from stat import *
@@ -85,7 +84,7 @@ class WorkQ:
             if not job:
                 break
             func, args = job
-            apply(func, args)
+            func(*args)
             self._donework()
 
     def run(self, nworkers):
@@ -104,7 +103,7 @@ def main():
     opts, args = getopt.getopt(sys.argv[1:], '-w:')
     for opt, arg in opts:
         if opt == '-w':
-            nworkers = string.atoi(arg)
+            nworkers = int(arg)
     if not args:
         args = [os.curdir]
 
@@ -124,7 +123,7 @@ def main():
 
 def selector(dir, name, fullname, stat):
     # Look for world writable files that are not symlinks
-    return (stat[ST_MODE] & 0002) != 0 and not S_ISLNK(stat[ST_MODE])
+    return (stat[ST_MODE] & 0o002) != 0 and not S_ISLNK(stat[ST_MODE])
 
 
 # The find procedure -- calls wq.addwork() for subdirectories
@@ -132,19 +131,19 @@ def selector(dir, name, fullname, stat):
 def find(dir, pred, wq):
     try:
         names = os.listdir(dir)
-    except os.error, msg:
-        print repr(dir), ':', msg
+    except os.error as msg:
+        print(repr(dir), ':', msg)
         return
     for name in names:
         if name not in (os.curdir, os.pardir):
             fullname = os.path.join(dir, name)
             try:
                 stat = os.lstat(fullname)
-            except os.error, msg:
-                print repr(fullname), ':', msg
+            except os.error as msg:
+                print(repr(fullname), ':', msg)
                 continue
             if pred(dir, name, fullname, stat):
-                print fullname
+                print(fullname)
             if S_ISDIR(stat[ST_MODE]):
                 if not os.path.ismount(fullname):
                     wq.addwork(find, (fullname, pred, wq))

@@ -7,9 +7,8 @@
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
 
-This module implements a helper class and functions to quickly write a
-loop over standard input or a list of files. If you just want to read or
-write one file see :func:`open`.
+This module implements a helper class and functions to quickly write a loop over
+standard input or a list of files.
 
 The typical use is::
 
@@ -20,10 +19,10 @@ The typical use is::
 This iterates over the lines of all files listed in ``sys.argv[1:]``, defaulting
 to ``sys.stdin`` if the list is empty.  If a filename is ``'-'``, it is also
 replaced by ``sys.stdin``.  To specify an alternative list of filenames, pass it
-as the first argument to :func:`input`.  A single file name is also allowed.
+as the first argument to :func:`.input`.  A single file name is also allowed.
 
 All files are opened in text mode by default, but you can override this by
-specifying the *mode* parameter in the call to :func:`input` or
+specifying the *mode* parameter in the call to :func:`.input` or
 :class:`FileInput()`.  If an I/O error occurs during opening or reading a file,
 :exc:`IOError` is raised.
 
@@ -54,8 +53,6 @@ The following function is the primary interface of this module:
    during iteration.  The parameters to this function will be passed along to the
    constructor of the :class:`FileInput` class.
 
-   .. versionchanged:: 2.5
-      Added the *mode* and *openhook* parameters.
 
 The following functions use the global state created by :func:`fileinput.input`;
 if there is no active state, :exc:`RuntimeError` is raised.
@@ -71,8 +68,6 @@ if there is no active state, :exc:`RuntimeError` is raised.
 
    Return the integer "file descriptor" for the current file. When no file is
    opened (before the first line and between files), returns ``-1``.
-
-   .. versionadded:: 2.5
 
 
 .. function:: lineno()
@@ -136,8 +131,6 @@ available for subclassing as well:
    *filename* and *mode*, and returns an accordingly opened file-like object. You
    cannot use *inplace* and *openhook* together.
 
-   .. versionchanged:: 2.5
-      Added the *mode* and *openhook* parameters.
 
 **Optional in-place filtering:** if the keyword argument ``inplace=1`` is passed
 to :func:`fileinput.input` or to the :class:`FileInput` constructor, the file is
@@ -166,8 +159,6 @@ The two following opening hooks are provided by this module:
 
    Usage example:  ``fi = fileinput.FileInput(openhook=fileinput.hook_compressed)``
 
-   .. versionadded:: 2.5
-
 
 .. function:: hook_encoded(encoding)
 
@@ -181,6 +172,4 @@ The two following opening hooks are provided by this module:
 
       With this hook, :class:`FileInput` might return Unicode strings depending on the
       specified *encoding*.
-
-   .. versionadded:: 2.5
 
